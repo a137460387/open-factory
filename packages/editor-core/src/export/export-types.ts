@@ -1,0 +1,170 @@
+export interface ExportSettings {
+  width: number;
+  height: number;
+  fps: number;
+  sampleRate: number;
+  videoCodec: string;
+  audioCodec: string;
+  outputPath: string;
+  format: string;
+  videoBitrate?: string | null;
+  audioBitrate?: string | null;
+  outputMode?: 'video' | 'audio';
+  scaleMode?: 'none' | 'fit';
+  subtitleMode?: ExportSubtitleMode;
+}
+
+export interface ExportTransform {
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number;
+  opacity: number;
+}
+
+export interface ExportColorCorrection {
+  brightness: number;
+  contrast: number;
+  saturation: number;
+  hue: number;
+  lutPath?: string | null;
+}
+
+export type ExportKeyframeEasing = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out';
+
+export interface ExportKeyframe {
+  id: string;
+  time: number;
+  value: number;
+  easing: ExportKeyframeEasing;
+}
+
+export interface ExportClipKeyframes {
+  opacity?: ExportKeyframe[];
+  volume?: ExportKeyframe[];
+  x?: ExportKeyframe[];
+  y?: ExportKeyframe[];
+  scaleX?: ExportKeyframe[];
+  scaleY?: ExportKeyframe[];
+}
+
+export interface ExportTextStyle {
+  text: string;
+  fontSize: number;
+  fontColor: string;
+  backgroundColor: string;
+  backgroundOpacity: number;
+  fontFamily: string;
+  fontPath: string | null;
+  x: number;
+  y: number;
+  opacity: number;
+  bold: boolean;
+  italic: boolean;
+}
+
+export type ExportSubtitleMode = 'burn-in' | 'soft-sub';
+export type TextArtifactPathMode = 'filter' | 'argument';
+
+export interface ExportSubtitleStyle extends ExportTextStyle {
+  yOffset: number;
+}
+
+export type ExportClipType = 'video' | 'audio' | 'image' | 'text' | 'subtitle';
+export type ExportTrackType = 'video' | 'audio' | 'text' | 'subtitle';
+export type ExportTransitionType = 'fade-black' | 'dissolve';
+
+export interface ExportClip {
+  id: string;
+  type: ExportClipType;
+  mediaPath: string | null;
+  start: number;
+  duration: number;
+  trimStart: number;
+  trimEnd: number;
+  speed: number;
+  sourceDuration: number;
+  trackIndex: number;
+  transform: ExportTransform;
+  colorCorrection: ExportColorCorrection;
+  keyframes: ExportClipKeyframes | null;
+  kenBurns: boolean;
+  volume: number;
+  pan: number;
+  muted: boolean;
+  fadeInDuration: number;
+  fadeOutDuration: number;
+  hasEmbeddedAudio: boolean;
+  audioChannels: number;
+  audioSampleRate: number;
+  textStyle: ExportTextStyle | null;
+  subtitleStyle: ExportSubtitleStyle | null;
+  subtitleMode: ExportSubtitleMode | null;
+}
+
+export interface ExportTrack {
+  index: number;
+  type: ExportTrackType;
+  muted: boolean;
+  solo: boolean;
+  locked: boolean;
+  volume: number;
+  pan: number;
+  clips: ExportClip[];
+}
+
+export interface ExportTransition {
+  id: string;
+  type: ExportTransitionType;
+  duration: number;
+  fromClipId: string;
+  toClipId: string;
+}
+
+export interface ExportTimeline {
+  duration: number;
+  tracks: ExportTrack[];
+  transitions: ExportTransition[];
+}
+
+export interface ExportProject {
+  settings: ExportSettings;
+  masterVolume: number;
+  timeline: ExportTimeline;
+}
+
+export interface FfmpegInput {
+  index: number;
+  path: string;
+  args: string[];
+}
+
+export interface TextArtifact {
+  clipId: string;
+  text: string;
+  fileName: string;
+  placeholder: string;
+  pathMode?: TextArtifactPathMode;
+}
+
+export interface FfmpegExportPlan {
+  inputs: FfmpegInput[];
+  filterComplex: string;
+  maps: string[];
+  outputArgs: string[];
+  fullArgs: string[];
+  warnings: string[];
+  textArtifacts: TextArtifact[];
+  displayCommand?: string;
+  duration: number;
+}
+
+export interface FfmpegCapabilities {
+  available: boolean;
+  version: string | null;
+  hasLibx264: boolean;
+  hasAac: boolean;
+  hasDrawtext: boolean;
+  hasLibfreetype: boolean;
+  drawtextWarning: string | null;
+}

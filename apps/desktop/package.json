@@ -1,0 +1,44 @@
+{
+  "name": "@open-factory/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host localhost",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host localhost",
+    "e2e": "playwright test",
+    "e2e:headed": "playwright test --headed",
+    "e2e:ui": "playwright test --ui",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
+    "smoke:tauri": "node scripts/tauri-smoke.mjs",
+    "smoke:preview": "node scripts/preview-smoke.mjs",
+    "smoke:dialog": "node scripts/dialog-smoke.mjs",
+    "smoke:cancel": "node scripts/cancel-smoke.mjs",
+    "smoke:golden": "bun scripts/golden-smoke.mjs",
+    "typecheck": "tsc -b"
+  },
+  "dependencies": {
+    "@open-factory/editor-core": "0.1.0",
+    "@tauri-apps/api": "^2.6.0",
+    "@tauri-apps/plugin-dialog": "^2.2.2",
+    "@tauri-apps/plugin-fs": "^2.4.0",
+    "@tauri-apps/plugin-shell": "^2.2.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.468.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zustand": "^5.0.5"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.6.2",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.5.2",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.17",
+    "vite": "^6.3.5"
+  }
+}

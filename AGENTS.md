@@ -1,0 +1,26 @@
+# AI Agent Rules
+
+- Do not upload user media. open-factory is local-first and must not add telemetry, login, or cloud services.
+- Timeline mutation must go through command objects. Do not directly call Zustand setters to modify timeline clips or tracks from React components.
+- Core timeline algorithms must have Vitest coverage. Keep `packages/editor-core` coverage at or above 80%.
+- Do not copy third-party project code, assets, logo, or wording. Keep implementation clean-room.
+- Local media preview must use Tauri `convertFileSrc`; never assign `file://` directly to video, image, or audio sources.
+- Run typecheck, tests, and build before summarizing completed work.
+- Follow the implementation order in `goal-open-factory.md`: core first, then app shell, media, timeline, preview, inspector, project files, export, shortcuts, error handling.
+- Modify `packages/editor-core/src/export/ffmpeg-builder.ts` only with matching `ffmpeg-builder.test.ts` coverage.
+- Modify project schema only with matching `project-migration.ts` and migration tests.
+- Media import changes must consider `apps/desktop/src/cache/cache-service.ts`.
+- Main UI flow changes must keep useful `data-testid` coverage for Playwright E2E.
+- All Tauri invoke/listen/dialog/shell calls from frontend business code must go through `apps/desktop/src/lib/tauri-bridge.ts`.
+- New Tauri commands must be registered in `apps/desktop/src-tauri/src/lib.rs`.
+- FFmpeg execution must use `Command::new("ffmpeg").args(&plan.full_args)` style argument arrays; do not execute shell strings.
+- Cache key rule changes must update `cache-key.test.ts`.
+- Relink scoring changes must update `relink-score.test.ts`.
+- Large file processing must stay asynchronous and must not block the UI thread.
+- Do not fake successful export, tests, or builds.
+- Export queue changes must keep per-task status visible in the UI and keep cancellation wired to `cancel_export` for running tasks.
+- Proxy media must remain local cache data; preview may use proxy, but export must continue to use original source media.
+- Native smoke tests must report real environment results and must not block on unattended OS dialogs.
+- Background media jobs should stay sequential or explicitly throttled; do not launch unbounded FFmpeg/waveform work.
+- Export preset changes must be reflected in E2E or core builder tests.
+- Preview audio changes must preserve local-only media access and avoid using silent proxy files for embedded audio.

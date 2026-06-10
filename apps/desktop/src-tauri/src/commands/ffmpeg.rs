@@ -1,0 +1,714 @@
+use crate::path_validator::{validate_path, validate_path_for_write};
+use serde::{Deserialize, Serialize};
+use std::fs;
+use std::io::{BufRead, BufReader};
+use std::path::{Path, PathBuf};
+use std::process::{Child, Command, Stdio};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex, OnceLock};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use tauri::{AppHandle, Emitter};
+
+static EXPORT_CHILD: OnceLock<Mutex<Option<Child>>> = OnceLock::new();
+static EXPORT_TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
+
+fn export_child() -> &'static Mutex<Option<Child>> {
+    EXPORT_CHILD.get_or_init(|| Mutex::new(None))
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FfmpegCapabilities {
+    available: bool,
+    version: Option<String>,
+    has_libx264: bool,
+    has_aac: bool,
+    has_drawtext: bool,
+    has_libfreetype: bool,
+    drawtext_warning: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TextArtifactDto {
+    clip_id: String,
+    text: String,
+    file_name: String,
+    placeholder: String,
+    path_mode: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FfmpegExportPlanDto {
+    full_args: Vec<String>,
+    warnings: Vec<String>,
+    text_artifacts: Vec<TextArtifactDto>,
+    duration: f64,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportResult {
+    success: bool,
+    output_path: String,
+    duration_ms: u128,
+    warnings: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportProgressPayload {
+    progress: f32,
+    progress_pct: f32,
+    out_time_us: Option<u64>,
+    expected_duration_us: u64,
+}
+
+#[tauri::command]
+pub fn detect_ffmpeg() -> bool {
+    Command::new(ffmpeg_binary())
+        .arg("-version")
+        .output()
+        .is_ok()
+}
+
+#[tauri::command]
+pub fn get_ffmpeg_capabilities() -> FfmpegCapabilities {
+    let version_output = command_text(&["-version"]);
+    let available = version_output.is_some();
+    let filters = command_text(&["-filters"]).unwrap_or_default();
+    let buildconf = command_text(&["-buildconf"]).unwrap_or_default();
+    let encoders = command_text(&["-encoders"]).unwrap_or_default();
+    let has_drawtext = filters.contains("drawtext");
+    let has_libfreetype =
+        buildconf.contains("enable-libfreetype") || buildconf.contains("libfreetype");
+
+    FfmpegCapabilities {
+        available,
+        version: version_output
+            .as_deref()
+            .and_then(|text| text.lines().next())
+            .map(ToOwned::to_owned),
+        has_libx264: encoders.contains("libx264"),
+        has_aac: encoders.to_lowercase().contains(" aac"),
+        has_drawtext,
+        has_libfreetype,
+        drawtext_warning: if available && (!has_drawtext || !has_libfreetype) {
+            Some("Current FFmpeg does not support drawtext/libfreetype. Install an FFmpeg build with libfreetype to export text overlays.".to_string())
+        } else {
+            None
+        },
+    }
+}
+
+#[tauri::command]
+pub fn cancel_export() -> Result<(), String> {
+    if let Some(mut child) = export_child()
+        .lock()
+        .map_err(|_| "Unable to lock export process".to_string())?
+        .take()
+    {
+        child.kill().map_err(|error| error.to_string())?;
+        let _ = child.wait();
+    }
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn run_export(app: AppHandle, plan: FfmpegExportPlanDto) -> Result<ExportResult, String> {
+    let mut plan = plan;
+    if plan.full_args.is_empty() {
+        return Err("FFmpeg argument list is empty.".to_string());
+    }
+    validate_export_paths(&app, &mut plan.full_args)?;
+    let output_path = plan
+        .full_args
+        .last()
+        .cloned()
+        .ok_or_else(|| "Export plan is missing output path.".to_string())?;
+    if let Some(parent) = Path::new(&output_path).parent() {
+        if !parent.as_os_str().is_empty() && !parent.exists() {
+            return Err(format!(
+                "Export output directory does not exist: {}",
+                normalize_path(parent)
+            ));
+        }
+    }
+    let output_existed_before = Path::new(&output_path).exists();
+
+    let started = Instant::now();
+    let progress_app = app.clone();
+    let emit_progress: ProgressEmitter = Arc::new(move |progress| {
+        let _ = progress_app.emit("export-progress", progress);
+    });
+    let started_app = app.clone();
+    let emit_started: StartedEmitter = Arc::new(move || {
+        let _ = started_app.emit("export-started", ());
+    });
+    let result = with_temp_text_artifacts(&plan, |args, _temp_dir| {
+        spawn_and_wait_with_progress(args, plan.duration, emit_progress, emit_started)
+    });
+
+    match result {
+        Ok(()) => Ok(ExportResult {
+            success: true,
+            output_path,
+            duration_ms: started.elapsed().as_millis(),
+            warnings: plan.warnings,
+        }),
+        Err(error) => {
+            cleanup_incomplete_output(Path::new(&output_path), output_existed_before)?;
+            Err(error)
+        }
+    }
+}
+
+fn validate_export_paths(app: &AppHandle, args: &mut [String]) -> Result<(), String> {
+    let mut index = 0;
+    while index + 1 < args.len() {
+        if args[index] == "-i" {
+            let safe_input = validate_path(app, Path::new(&args[index + 1]))?;
+            args[index + 1] = normalize_path(&safe_input);
+            index += 2;
+        } else {
+            index += 1;
+        }
+    }
+    let output_index = args
+        .len()
+        .checked_sub(1)
+        .ok_or_else(|| "FFmpeg argument list is empty.".to_string())?;
+    let safe_output = validate_path_for_write(app, Path::new(&args[output_index]))?;
+    args[output_index] = normalize_path(&safe_output);
+    Ok(())
+}
+
+type ProgressEmitter = Arc<dyn Fn(ExportProgressPayload) + Send + Sync + 'static>;
+type StartedEmitter = Arc<dyn Fn() + Send + Sync + 'static>;
+
+fn spawn_and_wait_with_progress(
+    args: Vec<String>,
+    duration: f64,
+    emit_progress: ProgressEmitter,
+    emit_started: StartedEmitter,
+) -> Result<(), String> {
+    let mut child = Command::new(ffmpeg_binary())
+        .args(&args)
+        .stderr(Stdio::piped())
+        .stdout(Stdio::null())
+        .spawn()
+        .map_err(|error| format!("Unable to start FFmpeg: {}", error))?;
+
+    let stderr = child
+        .stderr
+        .take()
+        .ok_or_else(|| "Unable to capture FFmpeg stderr.".to_string())?;
+    {
+        let mut slot = export_child()
+            .lock()
+            .map_err(|_| "Unable to lock export process".to_string())?;
+        *slot = Some(child);
+    }
+    emit_started();
+
+    let stderr_lines = Arc::new(Mutex::new(Vec::<String>::new()));
+    let stderr_for_thread = Arc::clone(&stderr_lines);
+    let emit_from_thread = Arc::clone(&emit_progress);
+    let progress_thread = std::thread::spawn(move || {
+        let reader = BufReader::new(stderr);
+        for line in reader.lines().map_while(Result::ok) {
+            if let Ok(mut lines) = stderr_for_thread.lock() {
+                lines.push(line.clone());
+            }
+            if let Some(progress) = parse_progress(&line, duration) {
+                emit_from_thread(progress);
+            }
+        }
+    });
+
+    let status_result = loop {
+        let maybe_status = {
+            let mut slot = export_child()
+                .lock()
+                .map_err(|_| "Unable to lock export process".to_string())?;
+            let Some(child) = slot.as_mut() else {
+                break Err("Export canceled.".to_string());
+            };
+            child.try_wait().map_err(|error| error.to_string())?
+        };
+        if let Some(status) = maybe_status {
+            let _ = export_child()
+                .lock()
+                .map_err(|_| "Unable to lock export process".to_string())?
+                .take();
+            break Ok(status);
+        }
+        std::thread::sleep(Duration::from_millis(100));
+    };
+
+    let _ = progress_thread.join();
+    match status_result {
+        Ok(status) if status.success() => {
+            emit_progress(ExportProgressPayload::complete(duration));
+            Ok(())
+        }
+        Ok(status) => {
+            let stderr = stderr_lines
+                .lock()
+                .map(|lines| {
+                    lines
+                        .iter()
+                        .rev()
+                        .take(20)
+                        .cloned()
+                        .collect::<Vec<_>>()
+                        .into_iter()
+                        .rev()
+                        .collect::<Vec<_>>()
+                        .join("\n")
+                })
+                .unwrap_or_default();
+            Err(format!("FFmpeg exited with status {}.\n{}", status, stderr))
+        }
+        Err(error) => Err(error),
+    }
+}
+
+fn with_temp_text_artifacts<T>(
+    plan: &FfmpegExportPlanDto,
+    run: impl FnOnce(Vec<String>, &Path) -> Result<T, String>,
+) -> Result<T, String> {
+    let temp_dir = create_export_temp_dir()?;
+    let mut args = plan.full_args.clone();
+    let result = write_text_artifacts(&temp_dir, &plan.text_artifacts).and_then(|artifact_paths| {
+        replace_text_placeholders(&mut args, &artifact_paths);
+        run(args, &temp_dir)
+    });
+    let cleanup = fs::remove_dir_all(&temp_dir).map_err(|error| {
+        format!(
+            "Unable to clean export temporary directory {}: {}",
+            normalize_path(&temp_dir),
+            error
+        )
+    });
+    match (result, cleanup) {
+        (Ok(value), Ok(())) => Ok(value),
+        (Err(error), _) => Err(error),
+        (Ok(_), Err(error)) => Err(error),
+    }
+}
+
+fn write_text_artifacts(
+    temp_dir: &Path,
+    artifacts: &[TextArtifactDto],
+) -> Result<Vec<(String, String)>, String> {
+    let mut result = Vec::new();
+    for artifact in artifacts {
+        let safe_name = safe_file_name(&artifact.file_name);
+        let path = temp_dir.join(safe_name);
+        fs::write(&path, artifact.text.as_bytes()).map_err(|error| {
+            format!(
+                "Unable to write text artifact {}: {}",
+                artifact.clip_id, error
+            )
+        })?;
+        result.push((
+            artifact.placeholder.clone(),
+            artifact_path_for_mode(&path, artifact.path_mode.as_deref()),
+        ));
+    }
+    Ok(result)
+}
+
+fn artifact_path_for_mode(path: &Path, path_mode: Option<&str>) -> String {
+    let normalized = normalize_path(path);
+    match path_mode {
+        Some("argument") => normalized,
+        _ => escape_drawtext_path(&normalized),
+    }
+}
+
+fn replace_text_placeholders(args: &mut [String], artifacts: &[(String, String)]) {
+    for arg in args {
+        for (placeholder, path) in artifacts {
+            *arg = arg.replace(placeholder, path);
+        }
+    }
+}
+
+fn create_export_temp_dir() -> Result<PathBuf, String> {
+    let millis = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|error| error.to_string())?
+        .as_millis();
+    let counter = EXPORT_TEMP_COUNTER.fetch_add(1, Ordering::Relaxed);
+    let dir = std::env::temp_dir().join(format!(
+        "open-factory-export-{}-{}-{}",
+        std::process::id(),
+        millis,
+        counter
+    ));
+    fs::create_dir_all(&dir).map_err(|error| error.to_string())?;
+    Ok(dir)
+}
+
+fn cleanup_incomplete_output(output_path: &Path, existed_before: bool) -> Result<(), String> {
+    if existed_before || !output_path.exists() {
+        return Ok(());
+    }
+    fs::remove_file(output_path).map_err(|error| {
+        format!(
+            "Unable to remove incomplete export output {}: {}",
+            normalize_path(output_path),
+            error
+        )
+    })
+}
+
+fn command_text(args: &[&str]) -> Option<String> {
+    let output = Command::new(ffmpeg_binary()).args(args).output().ok()?;
+    let mut text = String::from_utf8_lossy(&output.stdout).to_string();
+    text.push_str(&String::from_utf8_lossy(&output.stderr));
+    Some(text)
+}
+
+fn ffmpeg_binary() -> &'static str {
+    if cfg!(windows) {
+        "ffmpeg.exe"
+    } else {
+        "ffmpeg"
+    }
+}
+
+fn parse_progress(line: &str, total_duration: f64) -> Option<ExportProgressPayload> {
+    if let Some(value) = line.strip_prefix("out_time_us=") {
+        let out_time_us = value.trim().parse::<u64>().ok()?;
+        return Some(ExportProgressPayload::from_out_time_us(
+            out_time_us,
+            expected_duration_us(total_duration),
+        ));
+    }
+    let (_, rest) = line.split_once("time=")?;
+    let time = rest.split_whitespace().next()?;
+    let seconds = parse_ffmpeg_time(time)?;
+    Some(ExportProgressPayload::from_out_time_us(
+        seconds_to_us(seconds),
+        expected_duration_us(total_duration),
+    ))
+}
+
+fn parse_ffmpeg_time(value: &str) -> Option<f64> {
+    let mut parts = value.split(':');
+    let hours = parts.next()?.parse::<f64>().ok()?;
+    let minutes = parts.next()?.parse::<f64>().ok()?;
+    let seconds = parts.next()?.parse::<f64>().ok()?;
+    Some(hours * 3600.0 + minutes * 60.0 + seconds)
+}
+
+fn safe_file_name(value: &str) -> String {
+    value
+        .chars()
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() || ch == '.' || ch == '-' || ch == '_' {
+                ch
+            } else {
+                '_'
+            }
+        })
+        .collect()
+}
+
+fn expected_duration_us(total_duration: f64) -> u64 {
+    if total_duration.is_finite() && total_duration > 0.0 {
+        seconds_to_us(total_duration)
+    } else {
+        0
+    }
+}
+
+fn seconds_to_us(seconds: f64) -> u64 {
+    (seconds.max(0.0) * 1_000_000.0).round() as u64
+}
+
+fn calculate_progress_pct(out_time_us: u64, expected_duration_us: u64) -> f32 {
+    if expected_duration_us == 0 {
+        return 0.0;
+    }
+    (((out_time_us as f64 / expected_duration_us as f64) * 100.0).clamp(0.0, 100.0)) as f32
+}
+
+impl ExportProgressPayload {
+    fn from_out_time_us(out_time_us: u64, expected_duration_us: u64) -> Self {
+        let progress_pct = calculate_progress_pct(out_time_us, expected_duration_us);
+        Self {
+            progress: progress_pct / 100.0,
+            progress_pct,
+            out_time_us: Some(out_time_us),
+            expected_duration_us,
+        }
+    }
+
+    fn complete(total_duration: f64) -> Self {
+        let duration_us = expected_duration_us(total_duration);
+        Self {
+            progress: 1.0,
+            progress_pct: 100.0,
+            out_time_us: Some(duration_us),
+            expected_duration_us: duration_us,
+        }
+    }
+}
+
+fn normalize_path(path: &Path) -> String {
+    path.to_string_lossy().replace('\\', "/")
+}
+
+fn escape_drawtext_path(path: &str) -> String {
+    path.replace('\\', "/")
+        .replace(':', "\\\\:")
+        .replace('\'', "\\'")
+        .replace('%', "\\%")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_ffmpeg_progress_lines() {
+        assert_eq!(
+            parse_progress(
+                "frame=10 fps=0.0 q=-1.0 time=00:00:02.50 bitrate=1.0kbits/s",
+                10.0
+            ),
+            Some(ExportProgressPayload::from_out_time_us(
+                2_500_000, 10_000_000
+            ))
+        );
+        assert_eq!(
+            parse_progress("out_time_us=2500000", 10.0),
+            Some(ExportProgressPayload::from_out_time_us(
+                2_500_000, 10_000_000
+            ))
+        );
+        assert_eq!(
+            parse_progress("frame=10 time=00:00:12.00", 10.0),
+            Some(ExportProgressPayload::from_out_time_us(
+                12_000_000, 10_000_000
+            ))
+        );
+        assert_eq!(parse_progress("frame=10 speed=1x", 10.0), None);
+    }
+
+    #[test]
+    fn calculates_progress_pct_with_clamped_boundaries() {
+        assert_eq!(calculate_progress_pct(0, 10_000_000), 0.0);
+        assert_eq!(calculate_progress_pct(2_500_000, 10_000_000), 25.0);
+        assert_eq!(calculate_progress_pct(12_000_000, 10_000_000), 100.0);
+        assert_eq!(calculate_progress_pct(1_000_000, 0), 0.0);
+    }
+
+    #[test]
+    fn completion_progress_payload_converges_to_one_hundred_percent() {
+        assert_eq!(
+            ExportProgressPayload::complete(1.5),
+            ExportProgressPayload {
+                progress: 1.0,
+                progress_pct: 100.0,
+                out_time_us: Some(1_500_000),
+                expected_duration_us: 1_500_000,
+            }
+        );
+    }
+
+    #[test]
+    fn parses_ffmpeg_time_values_defensively() {
+        assert_eq!(parse_ffmpeg_time("01:02:03.50"), Some(3723.5));
+        assert_eq!(parse_ffmpeg_time("not-a-time"), None);
+        assert_eq!(parse_ffmpeg_time("00:bad:01.00"), None);
+    }
+
+    #[test]
+    fn safe_file_name_removes_path_and_filter_delimiters() {
+        assert_eq!(safe_file_name("../clip:text 01.txt"), ".._clip_text_01.txt");
+        assert_eq!(safe_file_name("标题%clip.txt"), "___clip.txt");
+    }
+
+    #[test]
+    fn cancel_export_is_ok_when_idle() {
+        *export_child().lock().expect("export child lock") = None;
+        cancel_export().expect("idle cancellation should not fail");
+    }
+
+    #[test]
+    fn cancel_export_clears_running_child_slot() {
+        let child = spawn_long_running_child();
+        *export_child().lock().expect("export child lock") = Some(child);
+
+        cancel_export().expect("running cancellation should not fail");
+
+        assert!(export_child().lock().expect("export child lock").is_none());
+    }
+
+    #[test]
+    fn temp_text_artifacts_are_removed_on_failure() {
+        let plan = FfmpegExportPlanDto {
+            full_args: vec![
+                "-filter_complex".to_string(),
+                "drawtext=textfile=__TEXTFILE_clip_text__".to_string(),
+                "out.mp4".to_string(),
+            ],
+            warnings: vec![],
+            text_artifacts: vec![TextArtifactDto {
+                clip_id: "clip-text".to_string(),
+                text: "hello from a text artifact".to_string(),
+                file_name: "../clip:text.txt".to_string(),
+                placeholder: "__TEXTFILE_clip_text__".to_string(),
+                path_mode: None,
+            }],
+            duration: 1.0,
+        };
+        let mut observed_temp_dir: Option<PathBuf> = None;
+
+        let result: Result<(), String> =
+            with_temp_text_artifacts(&plan, |args, temp_dir| {
+                let safe_artifact = temp_dir.join(".._clip_text.txt");
+                assert!(temp_dir.exists());
+                assert!(safe_artifact.exists());
+                assert!(args.iter().any(|arg| arg.contains("drawtext=textfile=")
+                    && !arg.contains("__TEXTFILE_clip_text__")));
+                observed_temp_dir = Some(temp_dir.to_path_buf());
+                Err("forced export failure".to_string())
+            });
+
+        assert_eq!(result.unwrap_err(), "forced export failure");
+        let temp_dir = observed_temp_dir.expect("temp dir should be observed");
+        assert!(
+            !temp_dir.exists(),
+            "temporary export dir should be removed after failure"
+        );
+    }
+
+    #[test]
+    fn drawtext_paths_are_escaped_for_filter_graph_parsing() {
+        let cases = [
+            (
+                "Windows drive, backslashes, and spaces",
+                r"C:\Media Files\clip title.txt",
+                r"C\\:/Media Files/clip title.txt",
+            ),
+            (
+                "Windows path with nested colon and quote",
+                r"D:\Fonts\A:rial's.ttf",
+                r"D\\:/Fonts/A\\:rial\'s.ttf",
+            ),
+            (
+                "Windows path with percent signs",
+                r"E:\Exports\100% ready\text.txt",
+                r"E\\:/Exports/100\% ready/text.txt",
+            ),
+            (
+                "macOS absolute path with spaces and parentheses",
+                "/Users/editor/Video Text (Final).txt",
+                "/Users/editor/Video Text (Final).txt",
+            ),
+            (
+                "Linux absolute path with a single quote",
+                "/home/editor/it's ready/text.txt",
+                r"/home/editor/it\'s ready/text.txt",
+            ),
+            (
+                "Linux absolute path with equals and ampersand",
+                "/tmp/filter=a&b/title.txt",
+                "/tmp/filter=a&b/title.txt",
+            ),
+            (
+                "path with Chinese characters",
+                r"C:\素材\标题 文本.txt",
+                r"C\\:/素材/标题 文本.txt",
+            ),
+            (
+                "mixed path with percent, ampersand, equals, and quote",
+                "/mnt/media/标题 100%/a&b='yes'.txt",
+                r"/mnt/media/标题 100\%/a&b=\'yes\'.txt",
+            ),
+        ];
+
+        for (name, input, expected) in cases {
+            assert_eq!(escape_drawtext_path(input), expected, "{name}");
+        }
+    }
+
+    #[test]
+    fn artifact_argument_paths_are_not_filter_escaped() {
+        let path = Path::new(r"C:\Temp\subtitle file.srt");
+
+        assert_eq!(
+            artifact_path_for_mode(path, Some("argument")),
+            "C:/Temp/subtitle file.srt"
+        );
+        assert_eq!(
+            artifact_path_for_mode(path, Some("filter")),
+            r"C\\:/Temp/subtitle file.srt"
+        );
+    }
+
+    #[test]
+    fn incomplete_output_cleanup_removes_only_new_files() {
+        let temp_dir = create_export_temp_dir().expect("temp dir");
+        let new_output = temp_dir.join("new-output.mp4");
+        fs::write(&new_output, b"partial").expect("partial output");
+
+        cleanup_incomplete_output(&new_output, false).expect("new partial cleanup");
+        assert!(!new_output.exists());
+
+        let existing_output = temp_dir.join("existing-output.mp4");
+        fs::write(&existing_output, b"existing").expect("existing output");
+        cleanup_incomplete_output(&existing_output, true).expect("existing output preserved");
+        assert!(existing_output.exists());
+
+        fs::remove_dir_all(&temp_dir).expect("temp dir cleanup");
+    }
+
+    #[test]
+    fn real_ffmpeg_failure_is_reported_and_child_slot_is_cleared() {
+        if !detect_ffmpeg() {
+            return;
+        }
+        let progress_values = Arc::new(Mutex::new(Vec::<ExportProgressPayload>::new()));
+        let progress_values_for_emit = Arc::clone(&progress_values);
+
+        let result = spawn_and_wait_with_progress(
+            vec!["-this-option-does-not-exist".to_string()],
+            1.0,
+            Arc::new(move |progress| {
+                progress_values_for_emit
+                    .lock()
+                    .expect("progress lock")
+                    .push(progress);
+            }),
+            Arc::new(|| {}),
+        );
+
+        let error = result.expect_err("invalid ffmpeg args should fail");
+        assert!(error.contains("FFmpeg exited with status"), "{error}");
+        assert!(export_child().lock().expect("export child lock").is_none());
+    }
+
+    #[cfg(windows)]
+    fn spawn_long_running_child() -> Child {
+        Command::new("cmd")
+            .args(["/C", "ping -n 30 127.0.0.1 >NUL"])
+            .spawn()
+            .expect("spawn long running child")
+    }
+
+    #[cfg(not(windows))]
+    fn spawn_long_running_child() -> Child {
+        Command::new("sh")
+            .args(["-c", "sleep 30"])
+            .spawn()
+            .expect("spawn long running child")
+    }
+}

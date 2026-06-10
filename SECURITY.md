@@ -1,0 +1,3 @@
+# Security Notes
+
+open-factory is local-first and treats renderer compromise as the primary desktop threat model: a script injection must not turn custom Tauri commands into arbitrary local file read, write, delete, probe, or FFmpeg execution primitives. Custom Rust file and media commands canonicalize requested paths, reject parent traversal, reject symlink escapes, and only allow app data, app cache, or paths authorized through native file selection, drag-and-drop, or smoke-test environment setup. The Tauri asset protocol no longer exposes the whole filesystem; it is limited to app/cache locations and common user media folders needed for local preview, while command-level access remains bounded by the runtime allowlist.

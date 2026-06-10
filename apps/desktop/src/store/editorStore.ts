@@ -1,0 +1,155 @@
+import type { Clip, HistoryMeta, KeyframeProperty, MediaAsset, Project, Timeline } from '@open-factory/editor-core';
+import { clampTimelineZoom, createProject, getTimelineDuration } from '@open-factory/editor-core';
+import { create } from 'zustand';
+
+export interface SelectedKeyframeRef {
+  clipId: string;
+  property: KeyframeProperty;
+  keyframeId: string;
+}
+
+export interface EditorState {
+  project: Project;
+  selectedClipId?: string;
+  selectedClipIds: string[];
+  selectedKeyframe?: SelectedKeyframeRef;
+  playheadTime: number;
+  isPlaying: boolean;
+  playbackRate: -1 | 1;
+  inPoint?: number;
+  outPoint?: number;
+  timelineZoom: number;
+  projectPath?: string;
+  dirty: boolean;
+  exportProgress?: number;
+  isExporting: boolean;
+  historyMeta: HistoryMeta;
+  previewTimeline?: Timeline;
+  replaceProject: (project: Project) => void;
+  replaceTimeline: (timeline: Timeline) => void;
+  setProject: (project: Project, projectPath?: string) => void;
+  resetProject: () => void;
+  setMedia: (media: MediaAsset[]) => void;
+  addMedia: (media: MediaAsset[]) => void;
+  setSelectedClipId: (clipId?: string) => void;
+  setSelectedClipIds: (clipIds: string[]) => void;
+  toggleSelectedClipId: (clipId: string) => void;
+  clearSelectedClipIds: () => void;
+  setSelectedKeyframe: (keyframe?: SelectedKeyframeRef) => void;
+  setPlayheadTime: (time: number) => void;
+  setIsPlaying: (isPlaying: boolean) => void;
+  setPlaybackRate: (playbackRate: -1 | 1) => void;
+  setInPoint: (time?: number) => void;
+  setOutPoint: (time?: number) => void;
+  setTimelineZoom: (zoom: number) => void;
+  setProjectPath: (projectPath?: string) => void;
+  setDirty: (dirty: boolean) => void;
+  setHistoryMeta: (meta: HistoryMeta) => void;
+  setExportProgress: (progress?: number) => void;
+  setIsExporting: (isExporting: boolean) => void;
+  setPreviewTimeline: (timeline?: Timeline) => void;
+}
+
+export const useEditorStore = create<EditorState>((set, get) => ({
+  project: createProject('Open Factory Project'),
+  selectedClipIds: [],
+  playheadTime: 0,
+  isPlaying: false,
+  playbackRate: 1,
+  timelineZoom: 80,
+  dirty: false,
+  isExporting: false,
+  historyMeta: { canUndo: false, canRedo: false },
+  replaceProject: (project) =>
+    set({
+      project: { ...project, updatedAt: new Date().toISOString() },
+      dirty: true
+    }),
+  replaceTimeline: (timeline) =>
+    set((state) => ({
+      project: { ...state.project, timeline, updatedAt: new Date().toISOString() },
+      dirty: true
+    })),
+  setProject: (project, projectPath) =>
+    set({
+      project,
+      projectPath,
+      selectedClipId: undefined,
+      selectedClipIds: [],
+      selectedKeyframe: undefined,
+      playheadTime: 0,
+      isPlaying: false,
+      playbackRate: 1,
+      inPoint: undefined,
+      outPoint: undefined,
+      dirty: false
+    }),
+  resetProject: () =>
+    set({
+      project: createProject('Open Factory Project'),
+      projectPath: undefined,
+      selectedClipId: undefined,
+      selectedClipIds: [],
+      selectedKeyframe: undefined,
+      playheadTime: 0,
+      isPlaying: false,
+      playbackRate: 1,
+      inPoint: undefined,
+      outPoint: undefined,
+      dirty: false
+    }),
+  setMedia: (media) =>
+    set((state) => ({
+      project: { ...state.project, media, updatedAt: new Date().toISOString() },
+      dirty: true
+    })),
+  addMedia: (media) =>
+    set((state) => {
+      const existingPaths = new Set(state.project.media.map((asset) => asset.path));
+      const nextMedia = [...state.project.media, ...media.filter((asset) => !existingPaths.has(asset.path))];
+      return {
+        project: { ...state.project, media: nextMedia, updatedAt: new Date().toISOString() },
+        dirty: nextMedia.length !== state.project.media.length || state.dirty
+      };
+    }),
+  setSelectedClipId: (selectedClipId) => set({ selectedClipId, selectedClipIds: selectedClipId ? [selectedClipId] : [], selectedKeyframe: undefined }),
+  setSelectedClipIds: (selectedClipIds) => {
+    const unique = Array.from(new Set(selectedClipIds));
+    set({ selectedClipIds: unique, selectedClipId: unique.length === 1 ? unique[0] : undefined, selectedKeyframe: undefined });
+  },
+  toggleSelectedClipId: (clipId) =>
+    set((state) => {
+      const selected = new Set(state.selectedClipIds);
+      if (selected.has(clipId)) {
+        selected.delete(clipId);
+      } else {
+        selected.add(clipId);
+      }
+      const selectedClipIds = Array.from(selected);
+      return { selectedClipIds, selectedClipId: selectedClipIds.length === 1 ? selectedClipIds[0] : undefined, selectedKeyframe: undefined };
+    }),
+  clearSelectedClipIds: () => set({ selectedClipId: undefined, selectedClipIds: [], selectedKeyframe: undefined }),
+  setSelectedKeyframe: (selectedKeyframe) => set({ selectedKeyframe }),
+  setPlayheadTime: (time) => {
+    const duration = getTimelineDuration(get().project.timeline);
+    set({ playheadTime: Math.min(Math.max(0, time), Math.max(duration, 0)) });
+  },
+  setIsPlaying: (isPlaying) => set({ isPlaying }),
+  setPlaybackRate: (playbackRate) => set({ playbackRate }),
+  setInPoint: (inPoint) => set({ inPoint }),
+  setOutPoint: (outPoint) => set({ outPoint }),
+  setTimelineZoom: (zoom) => set({ timelineZoom: clampTimelineZoom(zoom) }),
+  setProjectPath: (projectPath) => set({ projectPath }),
+  setDirty: (dirty) => set({ dirty }),
+  setHistoryMeta: (historyMeta) => set({ historyMeta }),
+  setExportProgress: (exportProgress) => set({ exportProgress }),
+  setIsExporting: (isExporting) => set({ isExporting }),
+  setPreviewTimeline: (previewTimeline) => set({ previewTimeline })
+}));
+
+export function selectClipById(project: Project, clipId?: string): Clip | undefined {
+  if (!clipId) {
+    return undefined;
+  }
+  return project.timeline.tracks.flatMap((track) => track.clips).find((clip) => clip.id === clipId);
+}

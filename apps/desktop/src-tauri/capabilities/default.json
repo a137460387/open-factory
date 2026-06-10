@@ -1,0 +1,29 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default permissions for local media editing.",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:window:default",
+    "core:event:default",
+    "dialog:default",
+    "fs:read-files",
+    "fs:write-files",
+    "fs:allow-exists",
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        { "path": "$APPDATA/open-factory/**" },
+        { "path": "$APPCACHE/open-factory/**" },
+        { "path": "$TEMP/open-factory-*/**" },
+        { "path": "$DOCUMENT/**" },
+        { "path": "$DOWNLOAD/**" },
+        { "path": "$VIDEO/**" },
+        { "path": "$AUDIO/**" },
+        { "path": "$PICTURE/**" }
+      ]
+    },
+    "shell:allow-open"
+  ]
+}

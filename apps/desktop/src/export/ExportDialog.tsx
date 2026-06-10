@@ -1,0 +1,498 @@
+import type { ExportTaskStatus, FfmpegCapabilities, Project } from '@open-factory/editor-core';
+import { FolderOpen, ListPlus, Save, Trash2, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import { chooseExportPath, revealExport } from '../lib/exportVideo';
+import { getFfmpegCapabilities } from '../lib/tauri-bridge';
+import { showToast } from '../lib/toast';
+import { cancelQueuedExportTask, enqueueExport, retryQueuedExportTask } from './export-queue-runner';
+import { useExportQueueStore } from './export-queue-store';
+import {
+  BUILTIN_EXPORT_PRESETS,
+  deleteCustomExportPreset,
+  getExportPreset,
+  loadExportPresets,
+  saveCustomExportPreset,
+  type ExportPreset,
+  type ExportPresetSettings
+} from './export-presets';
+
+interface ExportDialogProps {
+  project: Project;
+  onClose(): void;
+  onCompleted(path: string): void;
+}
+
+export function ExportDialog({ project, onClose, onCompleted }: ExportDialogProps) {
+  const [outputPath, setOutputPath] = useState('');
+  const [capabilities, setCapabilities] = useState<FfmpegCapabilities | undefined>();
+  const [error, setError] = useState<string>();
+  const [presets, setPresets] = useState<ExportPreset[]>(BUILTIN_EXPORT_PRESETS);
+  const [presetId, setPresetId] = useState(BUILTIN_EXPORT_PRESETS[0].id);
+  const [draftSettings, setDraftSettings] = useState<ExportPresetSettings>({ ...BUILTIN_EXPORT_PRESETS[0].settings });
+  const [customPresetName, setCustomPresetName] = useState('');
+  const [batchOutputPaths, setBatchOutputPaths] = useState('');
+  const tasks = useExportQueueStore((state) => state.tasks);
+  const runnerActive = useExportQueueStore((state) => state.runnerActive);
+  const clearFinishedTasks = useExportQueueStore((state) => state.clearFinishedTasks);
+  const notifiedSuccess = useRef(new Set<string>());
+  const selectedPreset = useMemo(() => getExportPreset(presetId, presets), [presetId, presets]);
+  const exportSettings = useMemo(() => normalizeDraftSettings(draftSettings), [draftSettings]);
+  const isAudioOnly = exportSettings.outputMode === 'audio' || exportSettings.format === 'm4a';
+
+  useEffect(() => {
+    let canceled = false;
+    void getFfmpegCapabilities()
+      .then((result) => {
+        if (!canceled) {
+          setCapabilities(result);
+        }
+      })
+      .catch((reason) => {
+        if (!canceled) {
+          setError(reason instanceof Error ? reason.message : 'Unable to detect FFmpeg.');
+        }
+      });
+    return () => {
+      canceled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let canceled = false;
+    void loadExportPresets()
+      .then((nextPresets) => {
+        if (canceled) {
+          return;
+        }
+        setPresets(nextPresets);
+        setPresetId((current) => (nextPresets.some((preset) => preset.id === current) ? current : nextPresets[0]?.id ?? BUILTIN_EXPORT_PRESETS[0].id));
+      })
+      .catch((reason) => {
+        if (!canceled) {
+          setError(reason instanceof Error ? reason.message : 'Unable to load export presets.');
+        }
+      });
+    return () => {
+      canceled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    setDraftSettings({ ...selectedPreset.settings });
+    setCustomPresetName('');
+  }, [selectedPreset]);
+
+  useEffect(() => {
+    for (const task of tasks) {
+      if (task.status === 'success' && !notifiedSuccess.current.has(task.id)) {
+        notifiedSuccess.current.add(task.id);
+        onCompleted(task.outputPath);
+        showToast({ kind: 'success', title: 'Export complete', message: task.outputPath });
+      }
+    }
+  }, [onCompleted, tasks]);
+
+  async function choosePath(): Promise<void> {
+    const path = await chooseExportPath(project, exportSettings.format);
+    if (path) {
+      setOutputPath(path);
+    }
+  }
+
+  async function savePreset(): Promise<void> {
+    try {
+      setError(undefined);
+      const nextPresets = await saveCustomExportPreset(customPresetName || `${selectedPreset.name} copy`, exportSettings);
+      const createdPreset = nextPresets.filter((preset) => !preset.builtin).at(-1);
+      setPresets(nextPresets);
+      setPresetId(createdPreset?.id ?? nextPresets[0]?.id ?? BUILTIN_EXPORT_PRESETS[0].id);
+      showToast({ kind: 'success', title: 'Preset saved', message: createdPreset?.name ?? customPresetName });
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Unable to save preset.');
+    }
+  }
+
+  async function deletePreset(): Promise<void> {
+    if (selectedPreset.builtin) {
+      return;
+    }
+    try {
+      setError(undefined);
+      const nextPresets = await deleteCustomExportPreset(selectedPreset.id);
+      setPresets(nextPresets);
+      setPresetId(nextPresets[0]?.id ?? BUILTIN_EXPORT_PRESETS[0].id);
+      showToast({ kind: 'info', title: 'Preset deleted', message: selectedPreset.name });
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Unable to delete preset.');
+    }
+  }
+
+  async function addToQueue(): Promise<void> {
+    try {
+      const paths = batchOutputPaths
+        .split(/\r?\n/)
+        .map((path) => path.trim())
+        .filter(Boolean);
+      const selectedPaths = paths.length > 0 ? paths : [outputPath || (await chooseExportPath(project, exportSettings.format))].filter((path): path is string => Boolean(path));
+      if (selectedPaths.length === 0) {
+        return;
+      }
+      setOutputPath(selectedPaths[0]);
+      setError(undefined);
+      for (const path of selectedPaths) {
+        const task = await enqueueExport(project, path, exportSettings);
+        for (const warning of task.plan.warnings) {
+          showToast({ kind: 'warning', title: 'Export warning', message: warning });
+        }
+      }
+      showToast({ kind: 'info', title: 'Export queued', message: `${selectedPaths.length} task(s) using ${selectedPreset.name}.` });
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Unable to export video.');
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/35 p-4" data-testid="export-dialog">
+      <section className="w-full max-w-3xl rounded-md border border-line bg-white shadow-soft">
+        <div className="flex items-center justify-between border-b border-line px-4 py-3">
+          <div>
+            <h2 className="text-sm font-semibold">Export video</h2>
+            <p className="text-xs text-slate-500">Named presets, local FFmpeg queue, no cloud upload</p>
+          </div>
+          <button className="rounded p-1 text-slate-500 hover:bg-panel" aria-label="Close export dialog" onClick={onClose}>
+            <X size={18} />
+          </button>
+        </div>
+        <div className="max-h-[78vh] space-y-4 overflow-y-auto p-4 text-sm">
+          <div className="grid grid-cols-[110px_1fr_auto] items-center gap-2">
+            <label className="text-xs font-medium text-slate-600">Output</label>
+            <input className="min-w-0 rounded-md border border-line px-2 py-1.5" value={outputPath} onChange={(event) => setOutputPath(event.target.value)} data-testid="export-output-path" />
+            <button className="rounded-md border border-line p-2 hover:bg-panel" title="Choose output path" onClick={() => void choosePath()}>
+              <FolderOpen size={16} />
+            </button>
+          </div>
+          <div className="grid grid-cols-[110px_1fr_auto] gap-2">
+            <label className="pt-1.5 text-xs font-medium text-slate-600">Preset</label>
+            <div>
+              <select className="w-full rounded-md border border-line px-2 py-1.5" value={presetId} onChange={(event) => setPresetId(event.target.value)} data-testid="export-preset-select">
+                {presets.map((preset) => (
+                  <option key={preset.id} value={preset.id}>
+                    {preset.name}
+                  </option>
+                ))}
+              </select>
+              <div className="mt-1 text-[11px] text-slate-500">{selectedPreset.description}</div>
+            </div>
+            <button
+              className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-45"
+              disabled={selectedPreset.builtin}
+              data-testid="export-delete-preset-button"
+              onClick={() => void deletePreset()}
+            >
+              <Trash2 size={13} />
+              Delete
+            </button>
+          </div>
+          <div className="grid grid-cols-[110px_1fr_auto] items-center gap-2">
+            <label className="text-xs font-medium text-slate-600">Save as</label>
+            <input
+              className="min-w-0 rounded-md border border-line px-2 py-1.5"
+              placeholder="Custom preset name"
+              value={customPresetName}
+              onChange={(event) => setCustomPresetName(event.target.value)}
+              data-testid="export-preset-name-input"
+            />
+            <button className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel" data-testid="export-save-preset-button" onClick={() => void savePreset()}>
+              <Save size={13} />
+              Save
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-3 rounded-md border border-line p-3 md:grid-cols-4">
+            <PresetNumberField label="Width" value={draftSettings.width} disabled={isAudioOnly} onChange={(value) => updateNumberSetting(setDraftSettings, 'width', value)} testId="export-width-input" />
+            <PresetNumberField label="Height" value={draftSettings.height} disabled={isAudioOnly} onChange={(value) => updateNumberSetting(setDraftSettings, 'height', value)} testId="export-height-input" />
+            <PresetNumberField label="FPS" value={draftSettings.fps} disabled={isAudioOnly} onChange={(value) => updateNumberSetting(setDraftSettings, 'fps', value)} testId="export-fps-input" />
+            <PresetSelectField label="Format" value={exportSettings.format ?? 'mp4'} onChange={(value) => updateFormat(setDraftSettings, value)} testId="export-format-select" options={['mp4', 'mov', 'webm', 'm4a']} />
+            <PresetTextField label="Video bitrate" value={draftSettings.videoBitrate ?? ''} disabled={isAudioOnly} onChange={(value) => updateStringSetting(setDraftSettings, 'videoBitrate', value)} testId="export-video-bitrate-input" />
+            <PresetTextField label="Audio bitrate" value={draftSettings.audioBitrate ?? ''} onChange={(value) => updateStringSetting(setDraftSettings, 'audioBitrate', value)} testId="export-audio-bitrate-input" />
+            <PresetSelectField label="Subtitles" value={draftSettings.subtitleMode ?? 'default'} disabled={isAudioOnly} onChange={(value) => updateSubtitleMode(setDraftSettings, value)} testId="export-subtitle-mode-select" options={['default', 'burn-in', 'soft-sub']} />
+            <PresetSelectField label="Scale" value={draftSettings.scaleMode ?? 'none'} disabled={isAudioOnly} onChange={(value) => updateScaleMode(setDraftSettings, value)} testId="export-scale-mode-select" options={['none', 'fit']} />
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 md:grid-cols-4">
+            <Info label="Resolution" value={isAudioOnly ? 'Audio only' : `${exportSettings.width ?? project.settings.width} x ${exportSettings.height ?? project.settings.height}`} />
+            <Info label="FPS" value={isAudioOnly ? 'Audio only' : String(exportSettings.fps ?? project.settings.fps)} />
+            <Info label="Format" value={exportSettings.format ?? 'mp4'} />
+            <Info label="Bitrate" value={`${isAudioOnly ? 'no video' : exportSettings.videoBitrate || 'auto'} / ${exportSettings.audioBitrate || 'auto'}`} />
+            <Info label="Video codec" value={isAudioOnly ? 'none' : exportSettings.videoCodec ?? 'libx264'} />
+            <Info label="Audio codec" value={exportSettings.audioCodec ?? 'aac'} />
+            <Info label="FFmpeg" value={capabilities?.available ? capabilities.version ?? 'Available' : 'Missing'} tone={capabilities?.available ? 'ok' : 'bad'} />
+            <Info label="Drawtext" value={capabilities?.hasDrawtext && capabilities.hasLibfreetype ? 'Available' : 'Unavailable'} tone={capabilities?.hasDrawtext && capabilities.hasLibfreetype ? 'ok' : 'warn'} />
+          </div>
+          <div className="grid grid-cols-[110px_1fr] gap-2">
+            <label className="pt-1.5 text-xs font-medium text-slate-600">Batch paths</label>
+            <textarea
+              className="min-h-16 resize-y rounded-md border border-line px-2 py-1.5 text-xs"
+              placeholder="Optional: one output path per line"
+              value={batchOutputPaths}
+              onChange={(event) => setBatchOutputPaths(event.target.value)}
+              data-testid="export-batch-paths"
+            />
+          </div>
+          {capabilities?.drawtextWarning ? <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900">{capabilities.drawtextWarning}</div> : null}
+          {error ? <pre className="max-h-32 overflow-auto rounded-md bg-rose-50 p-2 text-xs text-rose-800 whitespace-pre-wrap">{error}</pre> : null}
+          <div className="rounded-md border border-line" data-testid="export-queue-list">
+            <div className="flex items-center justify-between border-b border-line px-3 py-2">
+              <div>
+                <div className="text-xs font-semibold text-slate-700">Export queue</div>
+                <div className="text-[11px] text-slate-500">{runnerActive ? 'Running queued tasks one at a time' : 'Idle'}</div>
+              </div>
+              <button className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel" onClick={clearFinishedTasks}>
+                <Trash2 size={13} />
+                Clear finished
+              </button>
+            </div>
+            <div className="max-h-56 overflow-y-auto">
+              {tasks.length === 0 ? (
+                <div className="px-3 py-5 text-center text-xs text-slate-500">No export tasks queued.</div>
+              ) : (
+                tasks.map((task) => <ExportTaskRow key={task.id} taskId={task.id} />)
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 border-t border-line px-4 py-3">
+          <button className="inline-flex items-center gap-2 rounded-md bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-[#176858]" onClick={() => void addToQueue()} data-testid="export-enqueue-button">
+            <ListPlus size={15} />
+            Add to queue
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function normalizeDraftSettings(settings: ExportPresetSettings): ExportPresetSettings {
+  const format = settings.format ?? 'mp4';
+  return {
+    ...settings,
+    format,
+    outputMode: format === 'm4a' ? 'audio' : settings.outputMode ?? 'video'
+  };
+}
+
+function updateNumberSetting(
+  setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>,
+  key: 'width' | 'height' | 'fps',
+  value: string
+): void {
+  setDraftSettings((current) => {
+    const next = { ...current };
+    const parsed = Number(value);
+    if (value.trim() && Number.isFinite(parsed) && parsed > 0) {
+      next[key] = parsed;
+    } else {
+      delete next[key];
+    }
+    return next;
+  });
+}
+
+function updateStringSetting(
+  setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>,
+  key: 'videoBitrate' | 'audioBitrate',
+  value: string
+): void {
+  setDraftSettings((current) => ({ ...current, [key]: value.trim() || null }));
+}
+
+function updateFormat(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, value: string): void {
+  setDraftSettings((current) => {
+    const next: ExportPresetSettings = { ...current, format: value };
+    if (value === 'm4a') {
+      next.outputMode = 'audio';
+      next.audioCodec = 'aac';
+      delete next.videoCodec;
+      delete next.videoBitrate;
+      return next;
+    }
+    next.outputMode = 'video';
+    if (value === 'webm') {
+      next.videoCodec = 'libvpx-vp9';
+      next.audioCodec = 'libopus';
+    } else {
+      next.videoCodec = 'libx264';
+      next.audioCodec = 'aac';
+    }
+    return next;
+  });
+}
+
+function updateSubtitleMode(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, value: string): void {
+  setDraftSettings((current) => {
+    const next = { ...current };
+    if (value === 'burn-in' || value === 'soft-sub') {
+      next.subtitleMode = value;
+    } else {
+      delete next.subtitleMode;
+    }
+    return next;
+  });
+}
+
+function updateScaleMode(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, value: string): void {
+  setDraftSettings((current) => ({ ...current, scaleMode: value === 'fit' ? 'fit' : 'none' }));
+}
+
+function PresetNumberField({
+  label,
+  value,
+  disabled,
+  onChange,
+  testId
+}: {
+  label: string;
+  value?: number;
+  disabled?: boolean;
+  onChange(value: string): void;
+  testId: string;
+}) {
+  return (
+    <label className="space-y-1 text-xs font-medium text-slate-600">
+      <span>{label}</span>
+      <input className="w-full rounded-md border border-line px-2 py-1.5 disabled:bg-slate-100" type="number" min={1} value={value ?? ''} disabled={disabled} onChange={(event) => onChange(event.target.value)} data-testid={testId} />
+    </label>
+  );
+}
+
+function PresetTextField({
+  label,
+  value,
+  disabled,
+  onChange,
+  testId
+}: {
+  label: string;
+  value: string;
+  disabled?: boolean;
+  onChange(value: string): void;
+  testId: string;
+}) {
+  return (
+    <label className="space-y-1 text-xs font-medium text-slate-600">
+      <span>{label}</span>
+      <input className="w-full rounded-md border border-line px-2 py-1.5 disabled:bg-slate-100" value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} data-testid={testId} />
+    </label>
+  );
+}
+
+function PresetSelectField({
+  label,
+  value,
+  disabled,
+  onChange,
+  options,
+  testId
+}: {
+  label: string;
+  value: string;
+  disabled?: boolean;
+  onChange(value: string): void;
+  options: string[];
+  testId: string;
+}) {
+  return (
+    <label className="space-y-1 text-xs font-medium text-slate-600">
+      <span>{label}</span>
+      <select className="w-full rounded-md border border-line px-2 py-1.5 disabled:bg-slate-100" value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} data-testid={testId}>
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {formatOptionLabel(option)}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function formatOptionLabel(value: string): string {
+  if (value === 'm4a') {
+    return 'm4a';
+  }
+  return value
+    .split('-')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function Info({ label, value, tone }: { label: string; value: string; tone?: 'ok' | 'warn' | 'bad' }) {
+  const toneClass = tone === 'ok' ? 'text-emerald-700' : tone === 'warn' ? 'text-amber-700' : tone === 'bad' ? 'text-rose-700' : 'text-slate-700';
+  return (
+    <div className="rounded-md bg-panel p-2">
+      <div className="text-[11px] uppercase tracking-normal text-slate-500">{label}</div>
+      <div className={`truncate font-medium ${toneClass}`}>{value}</div>
+    </div>
+  );
+}
+
+function ExportTaskRow({ taskId }: { taskId: string }) {
+  const task = useExportQueueStore((state) => state.tasks.find((item) => item.id === taskId));
+  if (!task) {
+    return null;
+  }
+  const progress = Math.round(task.progress * 100);
+  const canCancel = task.status === 'pending' || task.status === 'running';
+  return (
+    <div className="border-b border-line px-3 py-2 last:border-b-0" data-testid={`export-task-${task.id}`}>
+      <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-xs font-medium text-slate-800" title={task.outputPath}>
+            {task.name}
+          </div>
+          <div className="truncate text-[11px] text-slate-500">{task.outputPath}</div>
+        </div>
+        <StatusPill status={task.status} />
+        {canCancel ? (
+          <button
+            className="rounded-md border border-rose-300 bg-rose-50 px-2 py-1 text-xs font-medium text-rose-800 hover:bg-rose-100"
+            data-testid="export-task-cancel-button"
+            onClick={() => void cancelQueuedExportTask(task.id)}
+          >
+            Cancel
+          </button>
+        ) : task.status === 'success' ? (
+          <button className="rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel" onClick={() => void revealExport(task.outputPath)}>
+            Open folder
+          </button>
+        ) : task.status === 'error' || task.status === 'canceled' ? (
+          <button className="rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel" data-testid="export-task-retry-button" onClick={() => retryQueuedExportTask(task.id)}>
+            Retry
+          </button>
+        ) : null}
+      </div>
+      <div className="mt-2 flex items-center gap-2">
+        <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-200">
+          <div className="h-full bg-brand transition-all" style={{ width: `${progress}%` }} />
+        </div>
+        <div className="w-9 text-right text-[11px] tabular-nums text-slate-500">{progress}%</div>
+      </div>
+      {task.error ? <div className="mt-1 whitespace-pre-wrap text-[11px] text-rose-700">{task.error}</div> : null}
+    </div>
+  );
+}
+
+function StatusPill({ status }: { status: ExportTaskStatus }) {
+  const className =
+    status === 'success'
+      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+      : status === 'running'
+        ? 'bg-sky-50 text-sky-700 border-sky-200'
+        : status === 'error'
+          ? 'bg-rose-50 text-rose-700 border-rose-200'
+          : status === 'canceled'
+            ? 'bg-slate-100 text-slate-600 border-slate-200'
+            : 'bg-amber-50 text-amber-700 border-amber-200';
+  return (
+    <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold capitalize ${className}`} data-testid="export-task-status">
+      {status}
+    </span>
+  );
+}

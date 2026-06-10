@@ -1,0 +1,85 @@
+# Dependencies and package managers
+node_modules/
+**/node_modules/
+.pnp.*
+bun.lockb.tmp
+
+# Rust / Tauri build outputs
+target/
+**/target/
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/gen/
+
+# Frontend build outputs
+dist/
+build/
+**/dist/
+**/build/
+apps/desktop/dist/
+apps/desktop/build/
+
+# Tests and coverage
+coverage/
+**/coverage/
+playwright-report/
+test-results/
+.nyc_output/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+bun-debug.log*
+
+# Environment variables and local config
+.env
+.env.*
+!.env.example
+*.local
+
+# System files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# Tauri signing keys and installers
+*.msi
+*.exe
+*-setup.exe
+*.dmg
+*.app
+*.AppImage
+*.deb
+*.rpm
+*.sig
+*.pem
+*.key
+*.p12
+*.pfx
+private-key*
+tauri.key
+
+# Temporary and cache files
+/tmp/
+/temp/
+/.tmp/
+/.cache/
+/cache/
+**/.cache/
+.turbo/
+*.tsbuildinfo
+*.bak
+
+# Local project/session artifacts
+*.cutproj.json
+!.example.cutproj.json
