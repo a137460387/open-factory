@@ -113,6 +113,7 @@ export type TauriMocks = Partial<{
   readFile(path: string): Promise<string> | string;
   writeFile(path: string, contents: string): Promise<void> | void;
   removeFile(path: string): Promise<void> | void;
+  copyFile(sourcePath: string, destinationPath: string): Promise<void> | void;
   fsExists(path: string): Promise<boolean> | boolean;
   getAppDataDir(): Promise<string> | string;
   getFileStat(path: string): Promise<FileStat> | FileStat;
@@ -248,6 +249,15 @@ export async function removeFile(path: string): Promise<void> {
     return;
   }
   await invoke('remove_file', { path });
+}
+
+export async function copyFile(sourcePath: string, destinationPath: string): Promise<void> {
+  const mock = getTauriMocks()?.copyFile;
+  if (mock) {
+    await mock(sourcePath, destinationPath);
+    return;
+  }
+  await invoke('copy_file', { sourcePath, destinationPath });
 }
 
 export async function fsExists(path: string): Promise<boolean> {

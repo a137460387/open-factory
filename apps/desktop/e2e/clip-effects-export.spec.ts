@@ -80,3 +80,22 @@ test('analyzes stabilization and includes vidstabtransform in the export plan', 
   const plan = await page.evaluate(() => window.__E2E_ACTIONS__!.getLastExportPlan!() as { filterComplex: string });
   expect(plan.filterComplex).toContain('vidstabtransform=smoothing=45:zoom=1.2:input=C\\\\:/Users/E2E/AppData/Roaming/open-factory/stabilization/');
 });
+
+test('enables frame interpolation and includes minterpolate in the export plan', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.getByTestId('import-media-button').click();
+  await addMediaCardToTimeline(page, 0);
+  await page.locator('[data-testid^="timeline-clip-"]').first().click();
+
+  await expect(page.getByTestId('frame-interpolation-toggle')).toBeEnabled();
+  await page.getByTestId('frame-interpolation-toggle').check();
+  await page.getByTestId('frame-interpolation-fps-select').selectOption('60');
+
+  await openExportDialog(page);
+  await page.getByTestId('export-enqueue-button').click();
+  await expectExportTaskStatus(page, 0, 'success');
+
+  const plan = await page.evaluate(() => window.__E2E_ACTIONS__!.getLastExportPlan!() as { filterComplex: string });
+  expect(plan.filterComplex).toContain('minterpolate=fps=60:mi_mode=mci:mc_mode=aobmc');
+});

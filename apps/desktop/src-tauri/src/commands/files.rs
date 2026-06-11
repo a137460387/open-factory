@@ -125,6 +125,29 @@ pub fn remove_file(app: AppHandle, path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn copy_file(app: AppHandle, source_path: String, destination_path: String) -> Result<(), String> {
+    let safe_source = validate_path(&app, Path::new(&source_path))?;
+    let safe_destination = validate_path_for_write(&app, Path::new(&destination_path))?;
+    if safe_source == safe_destination {
+        return Ok(());
+    }
+    if let Some(parent) = safe_destination.parent() {
+        if !parent.as_os_str().is_empty() {
+            fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+        }
+    }
+    fs::copy(&safe_source, &safe_destination).map_err(|error| {
+        format!(
+            "Unable to copy {} to {}: {}",
+            normalize_path(&safe_source),
+            normalize_path(&safe_destination),
+            error
+        )
+    })?;
+    Ok(())
+}
+
+#[tauri::command]
 pub fn fs_exists(app: AppHandle, path: String) -> Result<bool, String> {
     let safe_path = validate_path_for_write(&app, Path::new(&path))?;
     Ok(safe_path.exists())

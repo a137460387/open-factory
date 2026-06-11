@@ -64,6 +64,11 @@ export interface ExportStabilization {
   trfPath?: string | null;
 }
 
+export interface ExportFrameInterpolation {
+  enabled: boolean;
+  targetFps: 24 | 30 | 48 | 60 | 120;
+}
+
 export interface ExportImageSequence {
   frameRate: number;
   frameCount: number;
@@ -131,6 +136,7 @@ export interface ExportClip {
   colorCorrection: ExportColorCorrection;
   chromaKey: ExportChromaKey;
   stabilization: ExportStabilization;
+  frameInterpolation: ExportFrameInterpolation;
   masks: ExportMask[];
   imageSequence: ExportImageSequence | null;
   sequenceFrameRate?: number;
@@ -237,6 +243,7 @@ export interface FfmpegCapabilities {
   hasAac: boolean;
   hasDrawtext: boolean;
   hasLibfreetype: boolean;
+  hasMinterpolate?: boolean;
   hardwareEncoderAvailable: boolean;
   hardwareEncoder: string | null;
   drawtextWarning: string | null;

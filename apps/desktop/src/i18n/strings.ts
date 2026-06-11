@@ -28,6 +28,7 @@ export const zhCN = {
     newProject: '新建项目',
     openProject: '打开项目',
     saveProject: '保存项目',
+    archiveProject: '归档项目',
     importMedia: '导入媒体',
     importSubtitles: '导入字幕',
     exportVideo: '导出视频',
@@ -278,6 +279,7 @@ export const zhCN = {
       transform: '变换',
       chromaKey: '抠像',
       masks: '遮罩',
+      frameInterpolation: '补帧',
       stabilization: '稳定化',
       imageSequence: 'PNG 序列',
       keyframe: '关键帧',
@@ -316,6 +318,8 @@ export const zhCN = {
       stabilizationAnalyzed: '已分析',
       stabilizationNotAnalyzed: '未分析',
       stabilizationProgress: (progress: number) => `分析 ${Math.round(progress * 100)}%`,
+      targetFrameRate: '目标帧率',
+      frameInterpolationUnsupported: '当前FFmpeg版本不支持',
       sequenceFrameRate: '序列帧率',
       time: '时间',
       value: '数值',
@@ -586,6 +590,13 @@ export const zhCN = {
     noBrowserAutosave: '没有可用的浏览器自动保存项目。',
     projectPathRequired: '保存项目需要项目路径。',
     autosaveDeleteFailed: '无法删除自动保存文件'
+  },
+  projectArchive: {
+    title: '归档项目',
+    copying: (copied: number, total: number) => `正在复制 ${copied}/${total}`,
+    success: '项目已归档',
+    failed: '归档失败',
+    failedMessage: '无法归档项目。'
   },
   closeGuard: {
     message: '关闭前保存更改？',

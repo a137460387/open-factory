@@ -8,6 +8,7 @@ import {
   DEFAULT_COLOR_CORRECTION,
   DEFAULT_THREE_WAY_COLOR,
   EFFECT_TYPES,
+  FRAME_INTERPOLATION_TARGET_FPS,
   KEYFRAME_PROPERTY_LIMITS,
   MAX_CLIP_SPEED,
   MIN_CLIP_SPEED,
@@ -29,6 +30,7 @@ import {
   normalizeColorCorrection,
   normalizeColorWheelValue,
   normalizeCurvePoints,
+  normalizeFrameInterpolation,
   normalizeMasks,
   normalizeSequenceFrameRate,
   normalizeStabilization,
@@ -51,7 +53,7 @@ import {
 import { ArrowDown, ArrowUp, GripVertical, Palette, Plus, SlidersHorizontal, Trash2, X } from 'lucide-react';
 import { zhCN } from '../../i18n/strings';
 import { commandManager, timelineAccessor } from '../../store/commandManager';
-import { analyzeClip, listenBridge, openFileDialog, type ClipAnalysisProgressEvent } from '../../lib/tauri-bridge';
+import { analyzeClip, getFfmpegCapabilities, listenBridge, openFileDialog, type ClipAnalysisProgressEvent } from '../../lib/tauri-bridge';
 import { showToast } from '../../lib/toast';
 import type { SelectedKeyframeRef } from '../../store/editorStore';
 
@@ -85,6 +87,7 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
 
   const asset = 'mediaId' in clip ? media.find((item) => item.id === clip.mediaId) : undefined;
   const [analysisProgress, setAnalysisProgress] = useState<number | undefined>();
+  const [frameInterpolationSupported, setFrameInterpolationSupported] = useState<boolean | undefined>();
   const commit = (patch: ClipPatch) => {
     try {
       commandManager.execute(new UpdateClipCommand(timelineAccessor, clip.id, patch));
@@ -145,6 +148,8 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
   const colorCorrection = normalizeColorCorrection(clip.colorCorrection);
   const chromaKey = normalizeChromaKey(clip.chromaKey);
   const stabilization = normalizeStabilization(clip.stabilization);
+  const frameInterpolation = normalizeFrameInterpolation(clip.frameInterpolation);
+  const frameInterpolationUnavailable = frameInterpolationSupported === false;
   const masks = normalizeMasks(clip.masks);
   const colorCurves = normalizeColorCurves(colorCorrection.colorCurves);
   const threeWayColor = normalizeThreeWayColor(colorCorrection.threeWayColor);
@@ -167,6 +172,23 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
       unlisten?.();
     };
   }, [clip.id]);
+  useEffect(() => {
+    let disposed = false;
+    void getFfmpegCapabilities()
+      .then((capabilities) => {
+        if (!disposed) {
+          setFrameInterpolationSupported(capabilities.available && capabilities.hasMinterpolate === true);
+        }
+      })
+      .catch(() => {
+        if (!disposed) {
+          setFrameInterpolationSupported(false);
+        }
+      });
+    return () => {
+      disposed = true;
+    };
+  }, []);
   const runStabilizationAnalysis = async () => {
     if (clip.type !== 'video' || !asset?.path) {
       return;
@@ -314,6 +336,37 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
         {clip.type === 'video' || clip.type === 'image' || clip.type === 'nested-sequence' ? (
           <Section title={zhCN.inspector.sections.masks}>
             <MasksEditor masks={masks} onAdd={addMask} onUpdate={updateMask} onRemove={removeMask} />
+          </Section>
+        ) : null}
+
+        {clip.type === 'video' ? (
+          <Section title={zhCN.inspector.sections.frameInterpolation}>
+            <ToggleField
+              label={zhCN.inspector.fields.enabled}
+              checked={frameInterpolation.enabled}
+              disabled={frameInterpolationUnavailable}
+              onCommit={(enabled) => commit({ frameInterpolation: { ...frameInterpolation, enabled } })}
+              testId="frame-interpolation-toggle"
+            />
+            <label className="block text-xs font-medium text-slate-600">
+              <span>{zhCN.inspector.fields.targetFrameRate}</span>
+              <select
+                className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60"
+                value={frameInterpolation.targetFps}
+                disabled={frameInterpolationUnavailable || !frameInterpolation.enabled}
+                onChange={(event) => commit({ frameInterpolation: { ...frameInterpolation, targetFps: Number(event.target.value) as typeof frameInterpolation.targetFps } })}
+                data-testid="frame-interpolation-fps-select"
+              >
+                {FRAME_INTERPOLATION_TARGET_FPS.map((fps) => (
+                  <option key={fps} value={fps}>{fps} fps</option>
+                ))}
+              </select>
+            </label>
+            {frameInterpolationUnavailable ? (
+              <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs font-medium text-amber-800" data-testid="frame-interpolation-unavailable">
+                {zhCN.inspector.fields.frameInterpolationUnsupported}
+              </div>
+            ) : null}
           </Section>
         ) : null}
 
@@ -1501,11 +1554,11 @@ function ColorField({ label, value, onCommit, testId }: { label: string; value: 
   );
 }
 
-function ToggleField({ label, checked, onCommit, testId }: { label: string; checked: boolean; onCommit(value: boolean): void; testId?: string }) {
+function ToggleField({ label, checked, disabled, onCommit, testId }: { label: string; checked: boolean; disabled?: boolean; onCommit(value: boolean): void; testId?: string }) {
   return (
     <label className="flex items-center justify-between text-xs font-medium text-slate-600">
       {label}
-      <input className="h-4 w-4 accent-brand" type="checkbox" checked={checked} onChange={(event) => onCommit(event.target.checked)} data-testid={testId} />
+      <input className="h-4 w-4 accent-brand disabled:cursor-not-allowed disabled:opacity-60" type="checkbox" checked={checked} disabled={disabled} onChange={(event) => onCommit(event.target.checked)} data-testid={testId} />
     </label>
   );
 }

@@ -41,6 +41,7 @@ pub fn run() {
             commands::files::read_file,
             commands::files::write_file,
             commands::files::remove_file,
+            commands::files::copy_file,
             commands::files::fs_exists,
             commands::files::get_app_data_dir,
             commands::files::get_file_stat,

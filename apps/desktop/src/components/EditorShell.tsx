@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AddClipCommand, AddTrackCommand, DeleteClipsCommand, SplitClipCommand, getTimelineDuration, instantiateTitleTemplate, type TitleTemplateId } from '@open-factory/editor-core';
+import { AddClipCommand, AddTrackCommand, DeleteClipsCommand, SplitClipCommand, dirname, getTimelineDuration, instantiateTitleTemplate, type TitleTemplateId } from '@open-factory/editor-core';
 import { Toolbar } from './Toolbar';
 import { AudioMixer } from './AudioMixer/AudioMixer';
 import { ErrorBoundary } from './common/ErrorBoundary';
@@ -19,6 +19,7 @@ import { createClipFromAsset, findPreferredTrack } from '../lib/clipFactory';
 import { zhCN } from '../i18n/strings';
 import { pickMediaPaths, probeMediaPaths } from '../lib/media';
 import { buildSubtitleTrackFromSrt, isSubtitlePath, pickSubtitlePaths, readSubtitleText } from '../lib/subtitles';
+import { createProjectArchivePlan, writeProjectArchive, type ArchiveProgress } from '../lib/projectArchive';
 import {
   chooseProjectSavePath,
   chooseProjectToOpen,
@@ -33,6 +34,7 @@ import {
   writeProjectFile,
   type AutosaveRecoveryCandidate
 } from '../lib/projectFiles';
+import { copyFile as bridgeCopyFile, openDirectoryDialog, writeFile as bridgeWriteFile } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
 import { createProxyForAsset } from '../media/proxy';
 import { relinkMissingMediaInDirectory, relinkSingleMedia } from '../media/relink';
@@ -66,6 +68,7 @@ export function EditorShell() {
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [autosaveIntervalSeconds, setAutosaveIntervalSeconds] = useState(() => readAutosaveIntervalSeconds());
   const [recoveryCandidate, setRecoveryCandidate] = useState<AutosaveRecoveryCandidate>();
+  const [archiveProgress, setArchiveProgress] = useState<ArchiveProgress>();
 
   const selectedClip = useMemo(() => selectClipById(project, selectedClipId), [project, selectedClipId]);
   const selectedClipLocked = useMemo(
@@ -88,6 +91,27 @@ export function EditorShell() {
     setDirty(false);
     showToast({ kind: 'success', title: zhCN.editorToasts.projectSaved });
   }, [project, projectPath, setDirty, setProjectPath]);
+
+  const archiveCurrentProject = useCallback(async () => {
+    try {
+      const archiveParentDir = projectPath ? dirname(projectPath) : await openDirectoryDialog();
+      if (!archiveParentDir) {
+        return;
+      }
+      const plan = createProjectArchivePlan(project, archiveParentDir);
+      setArchiveProgress({ copied: 0, total: plan.copyTasks.filter((task) => task.copyRequired).length });
+      await writeProjectArchive(plan, { copyFile: bridgeCopyFile, writeFile: bridgeWriteFile }, setArchiveProgress);
+      commandManager.clear();
+      setProject(plan.project, plan.projectPath);
+      setProjectPath(plan.projectPath);
+      setDirty(false);
+      showToast({ kind: 'success', title: zhCN.projectArchive.success, message: plan.projectPath });
+    } catch (error) {
+      showToast({ kind: 'error', title: zhCN.projectArchive.failed, message: error instanceof Error ? error.message : zhCN.projectArchive.failedMessage });
+    } finally {
+      setArchiveProgress(undefined);
+    }
+  }, [project, projectPath, setDirty, setProject, setProjectPath]);
 
   useEffect(() => {
     let canceled = false;
@@ -410,6 +434,7 @@ export function EditorShell() {
           onNewProject={newProject}
           onOpenProject={openProject}
           onSaveProject={() => void saveProject()}
+          onArchiveProject={() => void archiveCurrentProject()}
           onImportMedia={() => void importMedia()}
           onImportSubtitles={() => void importSubtitles()}
           onExportVideo={() => setExportDialogOpen(true)}
@@ -476,6 +501,7 @@ export function EditorShell() {
             onDiscard={() => void discardRecovery()}
           />
         ) : null}
+        {archiveProgress ? <ArchiveProgressDialog progress={archiveProgress} /> : null}
       </div>
     </ErrorBoundary>
   );
@@ -564,6 +590,29 @@ function AutosaveRecoveryDialog({ onRestore, onDiscard }: { onRestore(): void; o
           <button className="rounded-md bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-[#176858]" onClick={onRestore} data-testid="autosave-restore-button">
             {zhCN.autosaveRecovery.restore}
           </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function ArchiveProgressDialog({ progress }: { progress: ArchiveProgress }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" data-testid="archive-progress-dialog">
+      <section className="w-full max-w-sm rounded-md border border-line bg-white shadow-soft">
+        <div className="border-b border-line px-4 py-3">
+          <h2 className="text-sm font-semibold">{zhCN.projectArchive.title}</h2>
+        </div>
+        <div className="space-y-2 px-4 py-3">
+          <div className="text-sm font-medium text-ink" data-testid="archive-progress-message">
+            {zhCN.projectArchive.copying(progress.copied, progress.total)}
+          </div>
+          <div className="h-2 overflow-hidden rounded bg-panel">
+            <div
+              className="h-full bg-brand transition-[width]"
+              style={{ width: `${progress.total > 0 ? Math.round((progress.copied / progress.total) * 100) : 100}%` }}
+            />
+          </div>
         </div>
       </section>
     </div>

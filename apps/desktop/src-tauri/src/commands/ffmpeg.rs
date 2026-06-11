@@ -26,6 +26,7 @@ pub struct FfmpegCapabilities {
     has_aac: bool,
     has_drawtext: bool,
     has_libfreetype: bool,
+    has_minterpolate: bool,
     hardware_encoder_available: bool,
     hardware_encoder: Option<String>,
     drawtext_warning: Option<String>,
@@ -135,6 +136,7 @@ pub fn get_ffmpeg_capabilities() -> FfmpegCapabilities {
     let buildconf = command_text(&["-buildconf"]).unwrap_or_default();
     let encoders = command_text(&["-encoders"]).unwrap_or_default();
     let has_drawtext = filters.contains("drawtext");
+    let has_minterpolate = filters.contains("minterpolate");
     let has_libfreetype =
         buildconf.contains("enable-libfreetype") || buildconf.contains("libfreetype");
     let hardware_encoder = detect_hardware_encoder(&encoders);
@@ -149,6 +151,7 @@ pub fn get_ffmpeg_capabilities() -> FfmpegCapabilities {
         has_aac: encoders.to_lowercase().contains(" aac"),
         has_drawtext,
         has_libfreetype,
+        has_minterpolate,
         hardware_encoder_available: hardware_encoder.available,
         hardware_encoder: hardware_encoder.encoder,
         drawtext_warning: if available && (!has_drawtext || !has_libfreetype) {

@@ -13,6 +13,7 @@ import {
   type KeyframeProperty,
   normalizeColorCorrection,
   normalizeChromaKey,
+  normalizeFrameInterpolation,
   normalizeMask,
   normalizeMasks,
   normalizeSequenceFrameRate,
@@ -26,6 +27,7 @@ import {
   type Clip,
   type ClipKeyframes,
   type ChromaKey,
+  type ClipFrameInterpolation,
   type ClipStabilization,
   type ClipMask,
   type ColorCorrection,
@@ -904,7 +906,7 @@ export class RemoveKeyframeCommand implements Command {
   }
 }
 
-export type ClipPatch = Partial<Omit<Clip, 'type' | 'id' | 'transform' | 'colorCorrection' | 'chromaKey' | 'stabilization'>> & {
+export type ClipPatch = Partial<Omit<Clip, 'type' | 'id' | 'transform' | 'colorCorrection' | 'chromaKey' | 'stabilization' | 'frameInterpolation'>> & {
   keyframes?: ClipKeyframes;
   kenBurns?: boolean;
   volume?: number;
@@ -914,6 +916,7 @@ export type ClipPatch = Partial<Omit<Clip, 'type' | 'id' | 'transform' | 'colorC
   speed?: number;
   chromaKey?: Partial<ChromaKey>;
   stabilization?: Partial<ClipStabilization>;
+  frameInterpolation?: Partial<ClipFrameInterpolation>;
   masks?: ClipMask[];
   sequenceFrameRate?: number;
   colorCorrection?: Partial<ColorCorrection>;
@@ -939,6 +942,7 @@ export class UpdateClipCommand implements Command {
       colorCorrection: normalizeColorCorrection({ ...this.before.colorCorrection, ...this.patch.colorCorrection }),
       chromaKey: normalizeChromaKey({ ...this.before.chromaKey, ...this.patch.chromaKey }),
       stabilization: normalizeStabilization({ ...this.before.stabilization, ...this.patch.stabilization }),
+      frameInterpolation: normalizeFrameInterpolation({ ...this.before.frameInterpolation, ...this.patch.frameInterpolation }),
       masks: this.patch.masks === undefined ? normalizeMasks(this.before.masks) : normalizeMasks(this.patch.masks),
       sequenceFrameRate: normalizeSequenceFrameRate(this.patch.sequenceFrameRate ?? this.before.sequenceFrameRate),
       transform: { ...this.before.transform, ...this.patch.transform }
@@ -1322,6 +1326,7 @@ function cloneClipForNestedSequence<TClip extends Clip>(clip: TClip): TClip {
     transform: { ...clip.transform },
     chromaKey: normalizeChromaKey(clip.chromaKey),
     stabilization: normalizeStabilization(clip.stabilization),
+    frameInterpolation: normalizeFrameInterpolation(clip.frameInterpolation),
     masks: normalizeMasks(clip.masks),
     sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
     keyframes: normalizeClipKeyframes(cloneClipKeyframes(clip.keyframes), clip.duration),

@@ -1,4 +1,4 @@
-import { Captions, Download, FileDown, FilePlus2, FolderOpen, ImageDown, Mic2, Pause, Play, Redo2, RotateCcw, Save, Scissors, Trash2, Undo2, XCircle } from 'lucide-react';
+import { Archive, Captions, Download, FileDown, FilePlus2, FolderOpen, ImageDown, Mic2, Pause, Play, Redo2, RotateCcw, Save, Scissors, Trash2, Undo2, XCircle } from 'lucide-react';
 import { timelineHasExportableVideo } from '@open-factory/editor-core';
 import { clsx } from 'clsx';
 import { useExportQueueStore } from '../export/export-queue-store';
@@ -12,6 +12,7 @@ interface ToolbarProps {
   onNewProject(): void;
   onOpenProject(): void;
   onSaveProject(): void;
+  onArchiveProject(): void;
   onImportMedia(): void;
   onImportSubtitles(): void;
   onExportVideo(): void;
@@ -72,6 +73,7 @@ export function Toolbar(props: ToolbarProps) {
       <ToolButton title={t.newProject} onClick={props.onNewProject} icon={<FilePlus2 size={17} />} testId="toolbar-new-project-button" />
       <ToolButton title={t.openProject} onClick={props.onOpenProject} icon={<FolderOpen size={17} />} testId="toolbar-open-project-button" />
       <ToolButton title={t.saveProject} onClick={props.onSaveProject} icon={<Save size={17} />} testId="toolbar-save-project-button" />
+      <ToolButton title={t.archiveProject} onClick={props.onArchiveProject} icon={<Archive size={17} />} testId="toolbar-archive-project-button" />
       <div className="mx-1 h-7 w-px bg-line" />
       <ToolButton title={t.importMedia} onClick={props.onImportMedia} icon={<FileDown size={17} />} testId="toolbar-import-media-button" />
       <ToolButton title={t.importSubtitles} onClick={props.onImportSubtitles} icon={<Captions size={17} />} testId="import-subtitles-button" />

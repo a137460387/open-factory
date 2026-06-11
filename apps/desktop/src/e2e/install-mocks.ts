@@ -121,6 +121,13 @@ const mocks: TauriMocks = {
     mtimes.delete(path);
     persistFiles();
   },
+  copyFile: (sourcePath, destinationPath) => {
+    const value = files.get(sourcePath) ?? `mock copy of ${sourcePath}`;
+    files.set(destinationPath, value);
+    exists.set(destinationPath, true);
+    mtimes.set(destinationPath, Date.now());
+    persistFiles();
+  },
   fsExists: (path) => exists.get(path) ?? !path.endsWith('.autosave'),
   getAppDataDir: () => appDataDir,
   getFileStat: (path) => ({
@@ -137,6 +144,7 @@ const mocks: TauriMocks = {
     hasAac: true,
     hasDrawtext: true,
     hasLibfreetype: true,
+    hasMinterpolate: true,
     hardwareEncoderAvailable: true,
     hardwareEncoder: 'h264_nvenc',
     drawtextWarning: null

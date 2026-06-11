@@ -10,6 +10,7 @@ import {
   normalizeTimelineMarkers,
   normalizeChromaKey,
   normalizeColorCorrection,
+  normalizeFrameInterpolation,
   normalizeMasks,
   normalizeMasterVolume,
   normalizeSequenceFrameRate,
@@ -28,7 +29,7 @@ import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
 import { cloneEffects } from '../effects';
 import { clampTransitionDuration, findAdjacentTransitionClips, getTimelineDuration } from '../timeline';
 import type { MigrationResult, ProjectFile, ProjectFileV1, ProjectFileV2 } from './project-types';
-import { makeRelativePath, normalizePath, resolveMediaPath } from './relative-paths';
+import { isAbsolutePath, makeRelativePath, normalizePath, resolveMediaPath } from './relative-paths';
 
 const DEFAULT_SETTINGS = { fps: 30, width: 1280, height: 720 };
 
@@ -164,11 +165,17 @@ function normalizeImageSequence(sequence: ImageSequenceInfo | undefined, project
   if (!sequence || !Array.isArray(sequence.paths) || sequence.paths.length === 0) {
     return undefined;
   }
-  const paths = sequence.paths.map((item) => normalizePath(resolveMediaPath({ path: item } as MediaAsset, projectPath)));
+  const paths = sequence.paths.map((item) =>
+    normalizePath(resolveMediaPath({ path: item, relativePath: isAbsolutePath(item) ? null : item } as MediaAsset, projectPath))
+  );
+  const pattern =
+    typeof sequence.pattern === 'string' && sequence.pattern.trim()
+      ? normalizePath(resolveMediaPath({ path: sequence.pattern, relativePath: isAbsolutePath(sequence.pattern) ? null : sequence.pattern } as MediaAsset, projectPath))
+      : paths[0];
   const frameRate = normalizeSequenceFrameRate(sequence.frameRate) ?? 30;
   const frameCount = Math.max(1, Math.round(sequence.frameCount || paths.length));
   return {
-    pattern: typeof sequence.pattern === 'string' && sequence.pattern.trim() ? sequence.pattern.trim() : paths[0],
+    pattern,
     startNumber: Math.max(0, Math.round(sequence.startNumber || 0)),
     frameCount,
     frameRate,
@@ -260,6 +267,7 @@ function cloneClip<TClip extends Clip>(clip: TClip): TClip {
     transform: { ...clip.transform },
     chromaKey: normalizeChromaKey(clip.chromaKey),
     stabilization: normalizeStabilization(clip.stabilization),
+    frameInterpolation: normalizeFrameInterpolation(clip.frameInterpolation),
     masks: normalizeMasks(clip.masks),
     sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
     keyframes: normalizeClipKeyframes(cloneClipKeyframes(clip.keyframes), clip.duration),

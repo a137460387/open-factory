@@ -14,6 +14,7 @@ import {
   isChromaKeyEnabled,
   isStabilizationExportable,
   normalizeChromaKey,
+  normalizeFrameInterpolation,
   normalizeSequenceFrameRate,
   normalizeStabilization,
   normalizeMasks,
@@ -149,6 +150,7 @@ function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project[
             colorCorrection: normalizeColorCorrection(clip.colorCorrection),
             chromaKey: normalizeChromaKey(clip.chromaKey),
             stabilization: normalizeStabilization(clip.stabilization),
+            frameInterpolation: normalizeFrameInterpolation(clip.frameInterpolation),
             masks: normalizeMasks(clip.masks),
             imageSequence:
               clip.type === 'image' && media?.imageSequence
@@ -297,7 +299,8 @@ export function buildFfmpegExportPlan(
       settings,
       filters,
       warnings,
-      textArtifacts
+      textArtifacts,
+      capabilities
     );
 
     for (const item of visualItems) {
@@ -574,7 +577,8 @@ function buildVisualItems(
   settings: ExportSettings,
   filters: string[],
   warnings: string[],
-  textArtifacts: TextArtifact[]
+  textArtifacts: TextArtifact[],
+  capabilities: FfmpegCapabilities | undefined
 ): VisualItem[] {
   const consumedClipIds = new Set<string>();
   const items: VisualItem[] = [];
@@ -605,8 +609,8 @@ function buildVisualItems(
     const label = `xfade${safeLabel(transition.id)}`;
     const start = playbackStartByClipId.get(pair.fromClip.id) ?? pair.fromClip.start;
     const pairDuration = round(pair.fromClip.duration + pair.toClip.duration - duration);
-    filters.push(buildTransitionClipFilter(fromInput, pair.fromClip, `${label}_from`, settings, textArtifacts, warnings));
-    filters.push(buildTransitionClipFilter(toInput, pair.toClip, `${label}_to`, settings, textArtifacts, warnings));
+    filters.push(buildTransitionClipFilter(fromInput, pair.fromClip, `${label}_from`, settings, textArtifacts, warnings, capabilities));
+    filters.push(buildTransitionClipFilter(toInput, pair.toClip, `${label}_to`, settings, textArtifacts, warnings, capabilities));
     filters.push(
       `[${label}_from][${label}_to]xfade=transition=${mapTransitionType(transition.type)}:duration=${formatFfmpegSeconds(
         duration
@@ -641,7 +645,7 @@ function buildVisualItems(
       continue;
     }
     const clipLabel = `v${safeLabel(clip.id)}`;
-    filters.push(buildVisualClipFilter(inputIndex, clip, clipLabel, settings, textArtifacts, warnings));
+    filters.push(buildVisualClipFilter(inputIndex, clip, clipLabel, settings, textArtifacts, warnings, capabilities));
     items.push({
       kind: 'media',
       trackIndex: clip.trackIndex,
@@ -701,7 +705,8 @@ function buildTransitionClipFilter(
   label: string,
   settings: ExportSettings,
   textArtifacts: TextArtifact[],
-  warnings: string[]
+  warnings: string[],
+  capabilities: FfmpegCapabilities | undefined
 ): string {
   const sourceDuration = getExportClipSourceDuration(clip);
   const trim = clip.type === 'video' || clip.type === 'nested-sequence' ? `trim=start=0:duration=${formatFfmpegSeconds(sourceDuration)}` : `trim=duration=${formatFfmpegSeconds(sourceDuration)}`;
@@ -713,6 +718,7 @@ function buildTransitionClipFilter(
     `scale=${settings.width}:${settings.height}:force_original_aspect_ratio=decrease`,
     `pad=${settings.width}:${settings.height}:(ow-iw)/2:(oh-ih)/2:color=black`,
     `fps=${settings.fps}`,
+    ...buildFrameInterpolationFilters(clip, capabilities, warnings),
     'format=rgba'
   ];
   filters.push(...buildMaskFilters(clip));
@@ -748,7 +754,8 @@ function buildVisualClipFilter(
   label: string,
   settings: ExportSettings,
   textArtifacts: TextArtifact[],
-  warnings: string[]
+  warnings: string[],
+  capabilities: FfmpegCapabilities | undefined
 ): string {
   const sourceDuration = getExportClipSourceDuration(clip);
   const trim = clip.type === 'video' || clip.type === 'nested-sequence' ? `trim=start=0:duration=${formatFfmpegSeconds(sourceDuration)}` : `trim=duration=${formatFfmpegSeconds(sourceDuration)}`;
@@ -764,6 +771,7 @@ function buildVisualClipFilter(
       `pad=${settings.width}:${settings.height}:(ow-iw)/2:(oh-ih)/2:color=black`
     );
   }
+  filters.push(...buildFrameInterpolationFilters(clip, capabilities, warnings));
   filters.push('format=rgba');
   filters.push(...buildMaskFilters(clip));
   filters.push(...buildColorCorrectionFilters(clip, textArtifacts));
@@ -798,6 +806,17 @@ function buildStabilizationFilters(clip: ExportClip): string[] {
       trfPath
     )}`
   ];
+}
+
+function buildFrameInterpolationFilters(clip: ExportClip, capabilities: FfmpegCapabilities | undefined, warnings: string[]): string[] {
+  if (!clip.frameInterpolation.enabled || (clip.type !== 'video' && clip.type !== 'nested-sequence')) {
+    return [];
+  }
+  if (capabilities?.hasMinterpolate === false) {
+    warnings.push(`Frame interpolation for clip ${clip.id} was skipped because the current FFmpeg build does not support minterpolate.`);
+    return [];
+  }
+  return [`minterpolate=fps=${clip.frameInterpolation.targetFps}:mi_mode=mci:mc_mode=aobmc`];
 }
 
 function buildMaskFilters(clip: ExportClip): string[] {

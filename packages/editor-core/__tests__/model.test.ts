@@ -25,6 +25,7 @@ import {
   getNestedSequenceDepth,
   isNestedSequenceDepthExceeded,
   normalizeChromaKey,
+  normalizeFrameInterpolation,
   normalizeMask,
   normalizeMasks,
   normalizeMasterVolume,
@@ -128,6 +129,9 @@ describe('model factories', () => {
       trfPath: 'C:\\Temp\\clip.trf'
     });
     expect(normalizeStabilization(undefined)).toEqual({ enabled: false, smoothing: 30, zoom: 0, analyzed: false, trfPath: null });
+    expect(normalizeFrameInterpolation({ enabled: true, targetFps: 120 })).toEqual({ enabled: true, targetFps: 120 });
+    expect(normalizeFrameInterpolation({ enabled: true, targetFps: 144 as never })).toEqual({ enabled: true, targetFps: 60 });
+    expect(normalizeFrameInterpolation(undefined)).toEqual({ enabled: false, targetFps: 60 });
     expect(normalizeSequenceFrameRate(240)).toBe(120);
     expect(normalizeSequenceFrameRate(Number.NaN)).toBeUndefined();
   });

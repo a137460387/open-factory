@@ -729,6 +729,59 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.filterComplex).toContain('vidstabtransform=smoothing=40:zoom=1.5:input=C\\\\:/Stabilization/clip.trf');
   });
 
+  it('inserts minterpolate for clips with frame interpolation enabled', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-interpolated',
+        duration: 2,
+        frameInterpolation: { enabled: true, targetFps: 60 }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }), {
+      available: true,
+      version: 'ffmpeg',
+      hasLibx264: true,
+      hasAac: true,
+      hasDrawtext: true,
+      hasLibfreetype: true,
+      hasMinterpolate: true,
+      hardwareEncoderAvailable: true,
+      hardwareEncoder: 'h264_nvenc',
+      drawtextWarning: null
+    });
+
+    expect(plan.filterComplex).toContain('minterpolate=fps=60:mi_mode=mci:mc_mode=aobmc,format=rgba');
+  });
+
+  it('skips frame interpolation with a warning when minterpolate is unavailable', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-interpolation-unavailable',
+        duration: 2,
+        frameInterpolation: { enabled: true, targetFps: 120 }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }), {
+      available: true,
+      version: 'ffmpeg',
+      hasLibx264: true,
+      hasAac: true,
+      hasDrawtext: true,
+      hasLibfreetype: true,
+      hasMinterpolate: false,
+      hardwareEncoderAvailable: true,
+      hardwareEncoder: 'h264_nvenc',
+      drawtextWarning: null
+    });
+
+    expect(plan.filterComplex).not.toContain('minterpolate=');
+    expect(plan.warnings).toContain('Frame interpolation for clip clip-interpolation-unavailable was skipped because the current FFmpeg build does not support minterpolate.');
+  });
+
   it('builds image sequence inputs through a local concat artifact', () => {
     const project = makeProject();
     project.media = [

@@ -144,6 +144,7 @@ describe('project schema migration', () => {
       type: 'image',
       mediaId: 'asset-sequence',
       stabilization: { enabled: true, smoothing: 120, zoom: -1, analyzed: true, trfPath: ' C:\\Temp\\clip.trf ' },
+      frameInterpolation: { enabled: true, targetFps: 999 },
       sequenceFrameRate: 240
     } as never;
 
@@ -154,7 +155,38 @@ describe('project schema migration', () => {
     expect(file.project.media[0].imageSequence?.paths[0]).toBe('C:/Media/frame001.png');
     expect(migrated.project.media[0].imageSequence).toMatchObject({ pattern: 'C:/Media/frame%03d.png', frameRate: 24, frameCount: 3 });
     expect(clip.stabilization).toEqual({ enabled: true, smoothing: 100, zoom: 0, analyzed: true, trfPath: 'C:\\Temp\\clip.trf' });
+    expect(clip.frameInterpolation).toEqual({ enabled: true, targetFps: 60 });
     expect(clip.sequenceFrameRate).toBe(120);
+  });
+
+  it('resolves archived relative PNG sequence paths from the project file directory', () => {
+    const project = makeProject();
+    project.media[0] = {
+      id: 'asset-sequence',
+      type: 'image',
+      name: 'frame001.png',
+      path: 'media/frame001.png',
+      relativePath: 'media/frame001.png',
+      duration: 0.1,
+      width: 640,
+      height: 360,
+      imageSequence: {
+        pattern: 'media/frame%03d.png',
+        startNumber: 1,
+        frameCount: 2,
+        frameRate: 24,
+        paths: ['media/frame001.png', 'media/frame002.png']
+      }
+    };
+
+    const migrated = migrateProjectFile(serializeProject(project), 'C:/Projects/Demo_archive/Demo.cutproj.json');
+
+    expect(migrated.project.media[0].path).toBe('C:/Projects/Demo_archive/media/frame001.png');
+    expect(migrated.project.media[0].imageSequence?.pattern).toBe('C:/Projects/Demo_archive/media/frame%03d.png');
+    expect(migrated.project.media[0].imageSequence?.paths).toEqual([
+      'C:/Projects/Demo_archive/media/frame001.png',
+      'C:/Projects/Demo_archive/media/frame002.png'
+    ]);
   });
 
   it('normalizes timeline markers during migration', () => {

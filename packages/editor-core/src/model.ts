@@ -58,6 +58,13 @@ export interface ClipStabilization {
   trfPath?: string | null;
 }
 
+export type FrameInterpolationTargetFps = 24 | 30 | 48 | 60 | 120;
+
+export interface ClipFrameInterpolation {
+  enabled: boolean;
+  targetFps: FrameInterpolationTargetFps;
+}
+
 export interface ClipMask {
   id: string;
   type: MaskType;
@@ -214,6 +221,7 @@ export interface BaseClip {
   transform: Transform;
   chromaKey?: ChromaKey;
   stabilization?: ClipStabilization;
+  frameInterpolation?: ClipFrameInterpolation;
   masks?: ClipMask[];
   keyframes?: ClipKeyframes;
   effects?: Effect[];
@@ -337,6 +345,13 @@ export const DEFAULT_STABILIZATION: ClipStabilization = {
   zoom: 0,
   analyzed: false,
   trfPath: null
+};
+
+export const FRAME_INTERPOLATION_TARGET_FPS: readonly FrameInterpolationTargetFps[] = [24, 30, 48, 60, 120];
+
+export const DEFAULT_FRAME_INTERPOLATION: ClipFrameInterpolation = {
+  enabled: false,
+  targetFps: 60
 };
 
 export const DEFAULT_MASK: Omit<ClipMask, 'id'> = {
@@ -505,6 +520,7 @@ export function createBaseClip(
     transform: { ...DEFAULT_TRANSFORM, ...input.transform },
     chromaKey: normalizeChromaKey(input.chromaKey),
     stabilization: normalizeStabilization(input.stabilization),
+    frameInterpolation: normalizeFrameInterpolation(input.frameInterpolation),
     masks: normalizeMasks(input.masks),
     keyframes: cloneClipKeyframesLocal(input.keyframes),
     effects: cloneEffects(input.effects),
@@ -573,6 +589,16 @@ export function normalizeStabilization(stabilization: Partial<ClipStabilization>
 export function isStabilizationExportable(stabilization: Partial<ClipStabilization> | undefined): boolean {
   const normalized = normalizeStabilization(stabilization);
   return normalized.enabled && normalized.analyzed && Boolean(normalized.trfPath);
+}
+
+export function normalizeFrameInterpolation(frameInterpolation: Partial<ClipFrameInterpolation> | undefined): ClipFrameInterpolation {
+  const targetFps = FRAME_INTERPOLATION_TARGET_FPS.includes(frameInterpolation?.targetFps as FrameInterpolationTargetFps)
+    ? (frameInterpolation?.targetFps as FrameInterpolationTargetFps)
+    : DEFAULT_FRAME_INTERPOLATION.targetFps;
+  return {
+    enabled: frameInterpolation?.enabled === true,
+    targetFps
+  };
 }
 
 export function createMask(mask: Partial<ClipMask> = {}): ClipMask {
