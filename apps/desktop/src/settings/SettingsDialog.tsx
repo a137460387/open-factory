@@ -4,6 +4,7 @@ import { UpdateClipCommand, type Clip, type Project, type Timeline } from '@open
 import { zhCN } from '../i18n/strings';
 import { loadLutLibrary, toggleLutFavorite, type LutLibraryItem } from '../lib/lutLibrary';
 import { showToast } from '../lib/toast';
+import { refreshPluginRegistry, type PluginRegistry } from '../plugins/plugin-manager';
 import { writeCustomKeybindings } from '../shortcuts/keybindings';
 import {
   TIMELINE_SHORTCUT_DEFINITIONS,
@@ -15,6 +16,7 @@ import {
 } from '../shortcuts/timeline-shortcuts';
 import { commandManager, timelineAccessor } from '../store/commandManager';
 import { useEditorStore } from '../store/editorStore';
+import { useTranslationSettingsStore, type TranslationProvider } from '../store/translationSettingsStore';
 
 interface SettingsDialogProps {
   open: boolean;
@@ -25,7 +27,7 @@ interface SettingsDialogProps {
   onClose(): void;
 }
 
-type SettingsTab = 'lut-library' | 'shortcuts';
+type SettingsTab = 'lut-library' | 'shortcuts' | 'translation' | 'plugins';
 
 export function SettingsDialog({ open, project, selectedClip, shortcutBindings, onShortcutBindingsChange, onClose }: SettingsDialogProps) {
   const t = zhCN.settings;
@@ -35,6 +37,15 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
   const [capturingAction, setCapturingAction] = useState<TimelineShortcutAction>();
+  const [pluginRegistry, setPluginRegistry] = useState<PluginRegistry>();
+  const [pluginsLoading, setPluginsLoading] = useState(false);
+  const [pluginsError, setPluginsError] = useState<string>();
+  const translationProvider = useTranslationSettingsStore((state) => state.provider);
+  const translationApiKey = useTranslationSettingsStore((state) => state.apiKey);
+  const translationTargetLanguage = useTranslationSettingsStore((state) => state.targetLanguage);
+  const setTranslationProvider = useTranslationSettingsStore((state) => state.setProvider);
+  const setTranslationApiKey = useTranslationSettingsStore((state) => state.setApiKey);
+  const setTranslationTargetLanguage = useTranslationSettingsStore((state) => state.setTargetLanguage);
   const selectedClipCanUseLut = selectedClip?.type === 'video' || selectedClip?.type === 'image';
   const effectiveBindings = useMemo(() => getEffectiveTimelineShortcutBindings(shortcutBindings), [shortcutBindings]);
   const conflicts = useMemo(() => detectTimelineShortcutConflicts(shortcutBindings), [shortcutBindings]);
@@ -44,6 +55,7 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
       return;
     }
     void refresh();
+    void refreshPlugins();
     return () => setPreviewTimeline(undefined);
   }, [open, setPreviewTimeline]);
 
@@ -87,6 +99,20 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
       showToast({ kind: 'warning', title: t.lutLibrary.loadFailed, message });
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function refreshPlugins() {
+    try {
+      setPluginsLoading(true);
+      setPluginsError(undefined);
+      setPluginRegistry(await refreshPluginRegistry());
+    } catch (pluginError) {
+      const message = pluginError instanceof Error ? pluginError.message : t.plugins.loadFailedMessage;
+      setPluginsError(message);
+      showToast({ kind: 'warning', title: t.plugins.loadFailed, message });
+    } finally {
+      setPluginsLoading(false);
     }
   }
 
@@ -175,74 +201,91 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
             >
               {t.tabs.shortcuts}
             </button>
+            <button
+              className={`mt-1 w-full rounded-md px-3 py-2 text-left text-sm font-semibold ${tab === 'translation' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}
+              type="button"
+              data-testid="settings-tab-translation"
+              onClick={() => setTab('translation')}
+            >
+              {t.tabs.translation}
+            </button>
+            <button
+              className={`mt-1 w-full rounded-md px-3 py-2 text-left text-sm font-semibold ${tab === 'plugins' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}
+              type="button"
+              data-testid="settings-tab-plugins"
+              onClick={() => setTab('plugins')}
+            >
+              {t.tabs.plugins}
+            </button>
           </nav>
           <main className="min-w-0 flex-1 overflow-y-auto p-4">
             {tab === 'lut-library' ? (
               <>
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div>
-                <h3 className="text-sm font-semibold text-ink">{t.lutLibrary.title}</h3>
-                <p className="text-xs text-slate-500">{selectedClipCanUseLut ? t.lutLibrary.readyForClip(selectedClip?.name ?? '') : t.lutLibrary.noClipSelectedMessage}</p>
-              </div>
-              <button
-                className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
-                type="button"
-                onClick={() => void refresh()}
-                data-testid="lut-library-refresh-button"
-              >
-                {t.lutLibrary.refresh}
-              </button>
-            </div>
-            {loading ? <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">{t.lutLibrary.loading}</div> : null}
-            {error ? <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{error}</div> : null}
-            {!loading && items.length === 0 ? <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">{t.lutLibrary.empty}</div> : null}
-            <div className="grid gap-3 sm:grid-cols-2">
-              {items.map((item) => (
-                <div key={item.path} className="rounded-md border border-line bg-white p-3 shadow-sm" data-testid="lut-library-item">
-                  <div className="flex items-start gap-3">
-                    <div className="h-[54px] w-24 shrink-0 overflow-hidden rounded bg-slate-100">
-                      {item.previewDataUrl ? <img className="h-full w-full object-cover" src={item.previewDataUrl} alt="" /> : null}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-semibold text-ink" title={item.path}>{item.name}</div>
-                      <div className="truncate text-xs text-slate-500" title={item.path}>{item.path}</div>
-                    </div>
-                    <button
-                      className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line ${item.favorite ? 'bg-amber-50 text-amber-600' : 'bg-white text-slate-500'} hover:bg-panel`}
-                      type="button"
-                      title={item.favorite ? t.lutLibrary.unfavorite : t.lutLibrary.favorite}
-                      aria-label={item.favorite ? t.lutLibrary.unfavorite : t.lutLibrary.favorite}
-                      data-testid="lut-library-favorite-button"
-                      onClick={() => void toggleFavorite(item)}
-                    >
-                      <Star size={15} fill={item.favorite ? 'currentColor' : 'none'} />
-                    </button>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-ink">{t.lutLibrary.title}</h3>
+                    <p className="text-xs text-slate-500">{selectedClipCanUseLut ? t.lutLibrary.readyForClip(selectedClip?.name ?? '') : t.lutLibrary.noClipSelectedMessage}</p>
                   </div>
-                  <div className="mt-3 flex gap-2">
-                    <button
-                      className="flex-1 rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
-                      type="button"
-                      disabled={!selectedClipCanUseLut}
-                      data-testid="lut-library-preview-button"
-                      onClick={() => preview(item)}
-                    >
-                      {t.lutLibrary.preview}
-                    </button>
-                    <button
-                      className="flex-1 rounded-md bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#176858] disabled:cursor-not-allowed disabled:opacity-50"
-                      type="button"
-                      disabled={!selectedClipCanUseLut}
-                      data-testid="lut-library-apply-button"
-                      onClick={() => apply(item)}
-                    >
-                      {t.lutLibrary.apply}
-                    </button>
-                  </div>
+                  <button
+                    className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
+                    type="button"
+                    onClick={() => void refresh()}
+                    data-testid="lut-library-refresh-button"
+                  >
+                    {t.lutLibrary.refresh}
+                  </button>
                 </div>
-              ))}
-            </div>
+                {loading ? <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">{t.lutLibrary.loading}</div> : null}
+                {error ? <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{error}</div> : null}
+                {!loading && items.length === 0 ? <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">{t.lutLibrary.empty}</div> : null}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {items.map((item) => (
+                    <div key={item.path} className="rounded-md border border-line bg-white p-3 shadow-sm" data-testid="lut-library-item">
+                      <div className="flex items-start gap-3">
+                        <div className="h-[54px] w-24 shrink-0 overflow-hidden rounded bg-slate-100">
+                          {item.previewDataUrl ? <img className="h-full w-full object-cover" src={item.previewDataUrl} alt="" /> : null}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm font-semibold text-ink" title={item.path}>{item.name}</div>
+                          <div className="truncate text-xs text-slate-500" title={item.path}>{item.path}</div>
+                        </div>
+                        <button
+                          className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line ${item.favorite ? 'bg-amber-50 text-amber-600' : 'bg-white text-slate-500'} hover:bg-panel`}
+                          type="button"
+                          title={item.favorite ? t.lutLibrary.unfavorite : t.lutLibrary.favorite}
+                          aria-label={item.favorite ? t.lutLibrary.unfavorite : t.lutLibrary.favorite}
+                          data-testid="lut-library-favorite-button"
+                          onClick={() => void toggleFavorite(item)}
+                        >
+                          <Star size={15} fill={item.favorite ? 'currentColor' : 'none'} />
+                        </button>
+                      </div>
+                      <div className="mt-3 flex gap-2">
+                        <button
+                          className="flex-1 rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+                          type="button"
+                          disabled={!selectedClipCanUseLut}
+                          data-testid="lut-library-preview-button"
+                          onClick={() => preview(item)}
+                        >
+                          {t.lutLibrary.preview}
+                        </button>
+                        <button
+                          className="flex-1 rounded-md bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#176858] disabled:cursor-not-allowed disabled:opacity-50"
+                          type="button"
+                          disabled={!selectedClipCanUseLut}
+                          data-testid="lut-library-apply-button"
+                          onClick={() => apply(item)}
+                        >
+                          {t.lutLibrary.apply}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </>
-            ) : (
+            ) : null}
+            {tab === 'shortcuts' ? (
               <div>
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
@@ -292,10 +335,121 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
                   })}
                 </div>
               </div>
-            )}
+            ) : null}
+            {tab === 'translation' ? (
+              <TranslationSettingsPanel
+                provider={translationProvider}
+                apiKey={translationApiKey}
+                targetLanguage={translationTargetLanguage}
+                onProviderChange={setTranslationProvider}
+                onApiKeyChange={setTranslationApiKey}
+                onTargetLanguageChange={setTranslationTargetLanguage}
+              />
+            ) : null}
+            {tab === 'plugins' ? <PluginsSettingsPanel registry={pluginRegistry} loading={pluginsLoading} error={pluginsError} onRefresh={() => void refreshPlugins()} /> : null}
           </main>
         </div>
       </div>
+    </div>
+  );
+}
+
+function TranslationSettingsPanel({
+  provider,
+  apiKey,
+  targetLanguage,
+  onProviderChange,
+  onApiKeyChange,
+  onTargetLanguageChange
+}: {
+  provider: TranslationProvider;
+  apiKey: string;
+  targetLanguage: string;
+  onProviderChange(provider: TranslationProvider): void;
+  onApiKeyChange(apiKey: string): void;
+  onTargetLanguageChange(targetLanguage: string): void;
+}) {
+  const t = zhCN.settings.translation;
+  return (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-sm font-semibold text-ink">{t.title}</h3>
+        <p className="text-xs text-slate-500">{t.description}</p>
+      </div>
+      <label className="block text-xs font-medium text-slate-600">
+        {t.provider}
+        <select
+          className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+          value={provider}
+          data-testid="translation-provider-select"
+          onChange={(event) => onProviderChange(event.target.value === 'google' ? 'google' : 'deepl')}
+        >
+          <option value="deepl">DeepL</option>
+          <option value="google">Google</option>
+        </select>
+      </label>
+      <label className="block text-xs font-medium text-slate-600">
+        {t.apiKey}
+        <input
+          className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink"
+          type="password"
+          value={apiKey}
+          data-testid="translation-api-key-input"
+          onChange={(event) => onApiKeyChange(event.target.value)}
+        />
+      </label>
+      <label className="block text-xs font-medium text-slate-600">
+        {t.targetLanguage}
+        <input
+          className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm uppercase text-ink"
+          value={targetLanguage}
+          data-testid="translation-target-language-input"
+          onChange={(event) => onTargetLanguageChange(event.target.value)}
+        />
+      </label>
+      <div className="rounded-md border border-line bg-panel p-3 text-xs text-slate-600">{t.localOnlyNote}</div>
+    </div>
+  );
+}
+
+function PluginsSettingsPanel({ registry, loading, error, onRefresh }: { registry?: PluginRegistry; loading: boolean; error?: string; onRefresh(): void }) {
+  const t = zhCN.settings.plugins;
+  const plugins = registry?.plugins ?? [];
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold text-ink">{t.title}</h3>
+          <p className="text-xs text-slate-500">{t.description}</p>
+        </div>
+        <button className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel" type="button" data-testid="plugins-refresh-button" onClick={onRefresh}>
+          {t.refresh}
+        </button>
+      </div>
+      {loading ? <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">{t.loading}</div> : null}
+      {error ? <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{error}</div> : null}
+      {!loading && plugins.length === 0 ? <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">{t.empty}</div> : null}
+      <div className="space-y-2">
+        {plugins.map((entry) => (
+          <div key={`${entry.sourcePath}-${entry.plugin.id}`} className="rounded-md border border-line bg-white p-3" data-testid="plugin-list-item">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="truncate text-sm font-semibold text-ink">{entry.plugin.name}</div>
+                <div className="truncate text-xs text-slate-500">{entry.plugin.id} · {entry.plugin.version}</div>
+              </div>
+              <span className="rounded bg-panel px-2 py-1 text-[11px] font-semibold text-slate-600">{entry.builtin ? t.builtin : t.user}</span>
+            </div>
+            <div className="mt-2 text-xs text-slate-500">{t.hooks}: {Object.keys(entry.plugin.hooks).join(', ') || zhCN.common.none}</div>
+            {entry.errors.length > 0 ? <div className="mt-2 text-xs font-medium text-amber-700">{t.errors}: {entry.errors.join('; ')}</div> : null}
+          </div>
+        ))}
+      </div>
+      {registry?.errors.map((loadError) => (
+        <div key={loadError.sourcePath} className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800" data-testid="plugin-load-error">
+          <div className="font-semibold">{t.loadFailed}</div>
+          <div className="break-all">{loadError.sourcePath}: {loadError.message}</div>
+        </div>
+      ))}
     </div>
   );
 }

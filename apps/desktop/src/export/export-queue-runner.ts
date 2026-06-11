@@ -8,6 +8,7 @@ import {
 } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { cancelExport as bridgeCancelExport, getFfmpegCapabilities, listenBridge, runExport } from '../lib/tauri-bridge';
+import { runExportBeforePlugins } from '../plugins/plugin-manager';
 import { normalizeExportProgressPayload, type ExportProgressEvent } from './export-progress';
 import { useExportQueueStore } from './export-queue-store';
 
@@ -21,6 +22,7 @@ export async function enqueueExport(project: Project, outputPath: string, settin
   if (!capabilities.available) {
     throw new Error(zhCN.errors.ffmpegMissing);
   }
+  await runExportBeforePlugins(project, outputPath, settings);
   const exportProject = buildExportProjectFromProject(project, { outputPath, settings });
   const plan = buildFfmpegExportPlan(exportProject, capabilities);
   const task = useExportQueueStore.getState().addTask({

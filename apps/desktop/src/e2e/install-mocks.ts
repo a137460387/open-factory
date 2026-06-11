@@ -15,6 +15,7 @@ import {
 import { commandManager, timelineAccessor } from '../store/commandManager';
 import { useEditorStore } from '../store/editorStore';
 import type { TauriMocks } from '../lib/tauri-bridge';
+import { clearPluginHookLog, getPluginHookLog, refreshPluginRegistry } from '../plugins/plugin-manager';
 
 const PERSISTED_FILES_KEY = 'open-factory:e2e-files';
 const PERSISTED_MTIMES_KEY = 'open-factory:e2e-mtimes';
@@ -53,6 +54,9 @@ const exportPresetsPath = `${appDataDir}/presets.json`;
 const lutLibraryPath = `${appDataDir}/luts/Warm Contrast.cube`;
 const lutFavoritesPath = `${appDataDir}/lut-favorites.json`;
 const keybindingsPath = `${appDataDir}/keybindings.json`;
+const pluginDir = `${appDataDir}/plugins`;
+const pluginPath = `${pluginDir}/export-count.js`;
+const brokenPluginPath = `${pluginDir}/broken.js`;
 
 files.set(sampleProjectPath, JSON.stringify(makeProjectFile(tinyVideo, false), null, 2));
 files.set(missingProjectPath, JSON.stringify(makeProjectFile('C:/Missing/tiny-video.mp4', true), null, 2));
@@ -62,6 +66,22 @@ files.set(
   ['1', '00:00:00,500 --> 00:00:02,000', 'Hello subtitle', '', '2', '00:00:02,500 --> 00:00:04,000', 'Second subtitle', ''].join('\n')
 );
 files.set(lutLibraryPath, makeWarmContrastCube());
+files.set(
+  pluginPath,
+  [
+    'module.exports = {',
+    '  id: "e2e.export-count",',
+    '  name: "E2E Export Count",',
+    '  version: "1.0.0",',
+    '  hooks: {',
+    '    onExportBefore(payload) {',
+    '      return { clipCount: payload.project.timeline.tracks.reduce((count, track) => count + track.clips.length, 0) };',
+    '    }',
+    '  }',
+    '};'
+  ].join('\n')
+);
+files.set(brokenPluginPath, 'throw new Error("broken plugin");');
 for (const path of [
   tinyVideo,
   tinyVideoB,
@@ -78,6 +98,8 @@ for (const path of [
   relinkedAudio,
   relinkedImage,
   lutLibraryPath,
+  pluginPath,
+  brokenPluginPath,
   sampleProjectPath,
   missingProjectPath,
   batchMissingProjectPath
@@ -85,6 +107,7 @@ for (const path of [
   exists.set(path, true);
   mtimes.set(path, path.includes('Relink') ? 2_000 : 1_000);
 }
+exists.set(pluginDir, true);
 exists.set('C:/Missing/tiny-video.mp4', false);
 exists.set('C:/Missing/tiny-audio.wav', false);
 exists.set('C:/Missing/test-image.png', false);
@@ -152,8 +175,11 @@ const mocks: TauriMocks = {
     mtimeMs: mtimes.get(path) ?? (path.includes('Relink') ? 2_000 : 1_000)
   }),
   scanDirectory: (path) => {
+    if (path === pluginDir) {
+      return [pluginPath, brokenPluginPath];
+    }
     if (path === appDataDir) {
-      return [lutLibraryPath, `${appDataDir}/luts/readme.txt`];
+      return [lutLibraryPath, `${appDataDir}/luts/readme.txt`, pluginPath, brokenPluginPath];
     }
     return [relinkedVideo, relinkedAudio, relinkedImage, 'C:/Relink/other.mp4'];
   },
@@ -272,6 +298,16 @@ const silencePatternWav = createSilencePatternWav();
 const realFetch = window.fetch.bind(window);
 window.fetch = (input, init) => {
   const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input);
+  if (url.includes('api-free.deepl.com/v2/translate')) {
+    const body = init?.body as URLSearchParams;
+    const texts = body.getAll('text');
+    return Promise.resolve(new Response(JSON.stringify({ translations: texts.map((text) => ({ text: `${text} 翻译` })) }), { status: 200 }));
+  }
+  if (url.includes('translation.googleapis.com/language/translate/v2')) {
+    const body = JSON.parse(String(init?.body ?? '{}')) as { q?: string[] };
+    const texts = Array.isArray(body.q) ? body.q : [];
+    return Promise.resolve(new Response(JSON.stringify({ data: { translations: texts.map((text) => ({ translatedText: `${text} 翻译` })) } }), { status: 200 }));
+  }
   if (url === silencePatternAudio) {
     return Promise.resolve(new Response(silencePatternWav.buffer.slice(0) as ArrayBuffer, { headers: { 'Content-Type': 'audio/wav' } }));
   }
@@ -471,7 +507,10 @@ window.__E2E_ACTIONS__ = {
     exists.set(exportPresetsPath, false);
     mtimes.delete(exportPresetsPath);
     persistFiles();
-  }
+  },
+  refreshPluginRegistry: () => refreshPluginRegistry(),
+  getPluginHookLog: () => getPluginHookLog(),
+  clearPluginHookLog: () => clearPluginHookLog()
 };
 
 function makeWhisperVideoClip(): Extract<import('@open-factory/editor-core').Clip, { type: 'video' }> {

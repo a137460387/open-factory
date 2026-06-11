@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import type { Clip, MediaAsset } from '@open-factory/editor-core';
 import {
+  AddSubtitleClipCommand,
+  AddTrackCommand,
   AddKeyframeCommand,
   AddEffectCommand,
   AddMaskCommand,
@@ -38,6 +40,7 @@ import {
   normalizeThreeWayColor,
   sampleCurve,
   setKenBurnsEndScaleKeyframes,
+  createTrack,
   type ClipPatch,
   type ColorCurves,
   type ColorWheelValue,
@@ -56,8 +59,10 @@ import { zhCN } from '../../i18n/strings';
 import { commandManager, timelineAccessor } from '../../store/commandManager';
 import { analyzeClip, getFfmpegCapabilities, listenBridge, openFileDialog, type ClipAnalysisProgressEvent } from '../../lib/tauri-bridge';
 import { buildClipColorMatchCurves } from '../../lib/colorMatch';
+import { subtitleClipsToTranslationItems, translateSubtitleItems } from '../../lib/subtitleTranslation';
 import { showToast } from '../../lib/toast';
 import { useEditorStore, type SelectedKeyframeRef } from '../../store/editorStore';
+import { isTranslationConfigured, useTranslationSettingsStore } from '../../store/translationSettingsStore';
 
 interface InspectorProps {
   clip?: Clip;
@@ -89,11 +94,20 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
 
   const asset = 'mediaId' in clip ? media.find((item) => item.id === clip.mediaId) : undefined;
   const project = useEditorStore((state) => state.project);
+  const setSelectedClipIds = useEditorStore((state) => state.setSelectedClipIds);
+  const translationProvider = useTranslationSettingsStore((state) => state.provider);
+  const translationApiKey = useTranslationSettingsStore((state) => state.apiKey);
+  const translationTargetLanguage = useTranslationSettingsStore((state) => state.targetLanguage);
+  const translationSettings = useMemo(
+    () => ({ provider: translationProvider, apiKey: translationApiKey, targetLanguage: translationTargetLanguage }),
+    [translationApiKey, translationProvider, translationTargetLanguage]
+  );
   const [analysisProgress, setAnalysisProgress] = useState<number | undefined>();
   const [frameInterpolationSupported, setFrameInterpolationSupported] = useState<boolean | undefined>();
   const [audioDenoiseSupported, setAudioDenoiseSupported] = useState<boolean | undefined>();
   const [colorMatchReferenceClipId, setColorMatchReferenceClipId] = useState<string>('');
   const [colorMatchBusy, setColorMatchBusy] = useState(false);
+  const [subtitleTranslationProgress, setSubtitleTranslationProgress] = useState<{ completed: number; total: number }>();
   const commit = (patch: ClipPatch) => {
     try {
       commandManager.execute(new UpdateClipCommand(timelineAccessor, clip.id, patch));
@@ -263,6 +277,54 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
       showToast({ kind: 'warning', title: zhCN.inspector.colorMatch.failed, message: error instanceof Error ? error.message : zhCN.inspector.colorMatch.failedMessage });
     } finally {
       setColorMatchBusy(false);
+    }
+  };
+  const translateSubtitleTrack = async () => {
+    if (clip.type !== 'subtitle' || !isTranslationConfigured(translationSettings)) {
+      return;
+    }
+    const sourceTrack = project.timeline.tracks.find((track) => track.id === clip.trackId);
+    if (!sourceTrack || sourceTrack.type !== 'subtitle') {
+      return;
+    }
+    const sourceClips = sourceTrack.clips.filter((item): item is Extract<Clip, { type: 'subtitle' }> => item.type === 'subtitle');
+    try {
+      setSubtitleTranslationProgress({ completed: 0, total: sourceClips.length });
+      const translated = await translateSubtitleItems(subtitleClipsToTranslationItems(sourceClips), translationSettings, fetch, (completed, total) => {
+        setSubtitleTranslationProgress({ completed, total });
+      });
+      const translatedById = new Map(translated.map((item) => [item.id, item.translatedText]));
+      const track = createTrack({
+        id: createId('track'),
+        type: 'subtitle',
+        name: zhCN.inspector.translation.trackName(sourceTrack.name, translationSettings.targetLanguage),
+        clips: []
+      });
+      commandManager.execute(new AddTrackCommand(timelineAccessor, track));
+      const addedClipIds: string[] = [];
+      for (const sourceClip of sourceClips) {
+        const translatedText = translatedById.get(sourceClip.id) ?? sourceClip.text;
+        const translatedClip: Extract<Clip, { type: 'subtitle' }> = {
+          ...sourceClip,
+          id: createId('subtitle'),
+          trackId: track.id,
+          name: zhCN.inspector.translation.clipName(sourceClip.name, translationSettings.targetLanguage),
+          text: translatedText,
+          style: { ...sourceClip.style },
+          transform: { ...sourceClip.transform },
+          colorCorrection: { ...sourceClip.colorCorrection }
+        };
+        commandManager.execute(new AddSubtitleClipCommand(timelineAccessor, translatedClip));
+        addedClipIds.push(translatedClip.id);
+      }
+      if (addedClipIds[0]) {
+        setSelectedClipIds([addedClipIds[0]]);
+      }
+      showToast({ kind: 'success', title: zhCN.inspector.translation.completeTitle, message: zhCN.inspector.translation.completeMessage(addedClipIds.length) });
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.inspector.translation.failedTitle, message: error instanceof Error ? error.message : zhCN.inspector.translation.failedMessage });
+    } finally {
+      setSubtitleTranslationProgress(undefined);
     }
   };
 
@@ -744,6 +806,25 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
             />
             {clip.type === 'subtitle' ? (
               <>
+                <button
+                  className="w-full rounded-md border border-line bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+                  type="button"
+                  disabled={!isTranslationConfigured(translationSettings) || Boolean(subtitleTranslationProgress)}
+                  data-testid="subtitle-translate-button"
+                  onClick={() => void translateSubtitleTrack()}
+                >
+                  {subtitleTranslationProgress ? zhCN.inspector.translation.progress(subtitleTranslationProgress.completed, subtitleTranslationProgress.total) : zhCN.inspector.translation.button}
+                </button>
+                {!isTranslationConfigured(translationSettings) ? (
+                  <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs font-medium text-amber-800" data-testid="subtitle-translation-not-configured">
+                    {zhCN.inspector.translation.notConfigured}
+                  </div>
+                ) : null}
+                {subtitleTranslationProgress ? (
+                  <div className="rounded-md bg-panel p-2 text-xs text-slate-600" data-testid="subtitle-translation-progress">
+                    {zhCN.inspector.translation.progress(subtitleTranslationProgress.completed, subtitleTranslationProgress.total)}
+                  </div>
+                ) : null}
                 <NumberField label={zhCN.inspector.fields.bottomMargin} value={clip.style.yOffset} min={0} step={1} onCommit={(yOffset) => commit({ style: { yOffset } })} />
                 <label className="block text-xs font-medium text-slate-600">
                   {zhCN.inspector.fields.exportMode}

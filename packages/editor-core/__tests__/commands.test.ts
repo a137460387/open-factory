@@ -4,6 +4,7 @@ import {
   AddEffectCommand,
   AddKeyframeCommand,
   AddMaskCommand,
+  AddSubtitleClipCommand,
   AddTrackCommand,
   AddTimelineMarkerCommand,
   AddTransitionCommand,
@@ -31,9 +32,10 @@ import {
   UpdateTimelineMarkerCommand,
   UpdateMaskCommand,
   UpdateProjectAudioCommand,
-  UpdateTrackCommand
+  UpdateTrackCommand,
+  createTrack
 } from '../src';
-import { makeAccessor, makeAudioClip, makeProject, makeTextClip, makeTimeline, makeVideoClip } from './test-utils';
+import { makeAccessor, makeAudioClip, makeProject, makeSubtitleClip, makeTextClip, makeTimeline, makeVideoClip } from './test-utils';
 
 describe('timeline commands', () => {
   it('adds tracks and clips with undo/redo', () => {
@@ -54,6 +56,29 @@ describe('timeline commands', () => {
     expect(accessor.current().tracks[0].clips).toHaveLength(0);
     manager.redo();
     expect(accessor.current().tracks[0].clips[0].id).toBe(clip.id);
+  });
+
+  it('adds subtitle clips only to subtitle tracks with undo and redo', () => {
+    const accessor = makeAccessor({
+      ...makeTimeline(),
+      tracks: [
+        ...makeTimeline().tracks,
+        createTrack({ id: 'track-subtitle', type: 'subtitle', name: 'Subtitle 1', clips: [] })
+      ]
+    });
+    const manager = new CommandManager();
+    const subtitle = makeSubtitleClip({ id: 'subtitle-a', trackId: 'track-subtitle', start: 0, duration: 1.5 });
+
+    manager.execute(new AddSubtitleClipCommand(accessor, subtitle));
+    expect(accessor.current().tracks.find((track) => track.id === 'track-subtitle')?.clips).toHaveLength(1);
+
+    manager.undo();
+    expect(accessor.current().tracks.find((track) => track.id === 'track-subtitle')?.clips).toHaveLength(0);
+
+    manager.redo();
+    expect(accessor.current().tracks.find((track) => track.id === 'track-subtitle')?.clips.map((clip) => clip.id)).toEqual(['subtitle-a']);
+    expect(() => manager.execute(new AddSubtitleClipCommand(accessor, makeSubtitleClip({ id: 'subtitle-overlap', trackId: 'track-subtitle', start: 0.5, duration: 1 })))).toThrow('overlaps');
+    expect(() => manager.execute(new AddSubtitleClipCommand(accessor, makeSubtitleClip({ id: 'subtitle-wrong-track', trackId: 'track-text' })))).toThrow('subtitle tracks');
   });
 
   it('updates track controls with undo and redo', () => {

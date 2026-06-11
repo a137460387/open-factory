@@ -58,7 +58,9 @@ export const zhCN = {
     subtitle: '本地配置和素材库',
     tabs: {
       lutLibrary: 'LUT库',
-      shortcuts: '快捷键'
+      shortcuts: '快捷键',
+      translation: '字幕翻译',
+      plugins: '插件'
     },
     lutLibrary: {
       title: 'LUT库',
@@ -107,6 +109,27 @@ export const zhCN = {
         save: '保存项目',
         'export-current-frame': '导出当前帧'
       }
+    },
+    translation: {
+      title: '字幕翻译',
+      description: '配置本地保存的翻译 API，用于把字幕复制到新的字幕轨。',
+      provider: '服务',
+      apiKey: 'API Key',
+      targetLanguage: '目标语言',
+      localOnlyNote: '只发送字幕文本，不上传媒体文件；密钥保存在本机浏览器存储。'
+    },
+    plugins: {
+      title: '插件',
+      description: '从本机插件目录加载 JS 插件，Hook 在 Worker 中运行。',
+      refresh: '刷新',
+      loading: '正在加载插件...',
+      empty: '没有加载到插件。',
+      builtin: '内置',
+      user: '用户',
+      hooks: 'Hook',
+      errors: '错误',
+      loadFailed: '插件加载失败',
+      loadFailedMessage: '无法读取插件目录。'
     }
   },
   timelineExport: {
@@ -463,6 +486,17 @@ export const zhCN = {
     subtitleMode: {
       burnIn: '烧录字幕',
       softSub: '软字幕'
+    },
+    translation: {
+      button: '翻译字幕轨',
+      notConfigured: '请先在设置中配置翻译 API。',
+      progress: (completed: number, total: number) => `翻译 ${completed}/${total}`,
+      trackName: (name: string, language: string) => `${name} ${language}`,
+      clipName: (name: string, language: string) => `${name} ${language}`,
+      completeTitle: '字幕翻译完成',
+      completeMessage: (count: number) => `已生成 ${count} 条翻译字幕。`,
+      failedTitle: '字幕翻译失败',
+      failedMessage: '无法完成字幕翻译。'
     },
     easing: {
       linear: '线性',

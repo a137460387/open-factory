@@ -32,3 +32,4 @@ export * from './audio/vu-meter';
 export * from './audio/silence-detection';
 export * from './scopes/color-scopes';
 export * from './subtitles/srt';
+export * from './subtitles/translation';

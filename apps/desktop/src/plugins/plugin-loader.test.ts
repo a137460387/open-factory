@@ -1,0 +1,69 @@
+import { describe, expect, it, vi } from 'vitest';
+import { createProject } from '@open-factory/editor-core';
+import { createBuiltinExamplePlugin, loadPluginFiles, normalizePluginMetadata, type PluginRuntime, type PluginSourceFile } from './plugin-loader';
+
+describe('plugin loader', () => {
+  it('loads valid plugins and isolates load errors', async () => {
+    const files: PluginSourceFile[] = [
+      { path: 'C:/Plugins/good.js', code: 'good' },
+      { path: 'C:/Plugins/bad.js', code: 'bad' }
+    ];
+    const registry = await loadPluginFiles(files, async (source) => {
+      if (source.code === 'bad') {
+        throw new Error('load failed');
+      }
+      return makeRuntime({ id: 'good', name: 'Good Plugin', version: '1.0.0', hooks: {} });
+    });
+
+    expect(registry.plugins.map((entry) => entry.plugin.id)).toEqual(['good']);
+    expect(registry.errors).toEqual([{ sourcePath: 'C:/Plugins/bad.js', message: 'load failed' }]);
+  });
+
+  it('invokes plugin hooks through the runtime', async () => {
+    const hook = vi.fn(() => ({ ok: true }));
+    const registry = await loadPluginFiles([{ path: 'C:/Plugins/hook.js', code: 'hook' }], () =>
+      makeRuntime({
+        id: 'hook-plugin',
+        name: 'Hook Plugin',
+        version: '1.0.0',
+        hooks: { onExportBefore: hook }
+      })
+    );
+
+    const result = await registry.plugins[0].runtime.invokeHook('onExportBefore', {
+      project: createProject('Plugin Test'),
+      outputPath: 'C:/Exports/out.mp4'
+    });
+
+    expect(result).toEqual({ ok: true });
+    expect(hook).toHaveBeenCalledWith(expect.objectContaining({ outputPath: 'C:/Exports/out.mp4' }));
+  });
+
+  it('normalizes metadata and provides a builtin export-count example plugin', async () => {
+    expect(normalizePluginMetadata({ hooks: { onClipSelected: () => undefined } })).toMatchObject({
+      name: expect.any(String),
+      version: '0.0.0'
+    });
+
+    const builtin = createBuiltinExamplePlugin();
+    const project = createProject('Builtin Test');
+    const result = await builtin.runtime.invokeHook('onExportBefore', { project, outputPath: 'C:/Exports/out.mp4' });
+
+    expect(builtin.builtin).toBe(true);
+    expect(builtin.plugin.hooks.onExportBefore).toBeTypeOf('function');
+    expect(result).toEqual({ message: '导出前片段数: 0' });
+  });
+});
+
+function makeRuntime(plugin: PluginRuntime['plugin']): PluginRuntime {
+  return {
+    plugin,
+    invokeHook(hookName, payload) {
+      const hook = plugin.hooks[hookName] as ((input: unknown) => unknown) | undefined;
+      return Promise.resolve(hook?.(payload));
+    },
+    dispose() {
+      return undefined;
+    }
+  };
+}

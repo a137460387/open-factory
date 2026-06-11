@@ -526,6 +526,30 @@ export class AddClipCommand implements Command {
   }
 }
 
+export class AddSubtitleClipCommand implements Command {
+  readonly description: string;
+
+  constructor(private readonly accessor: TimelineAccessor, private readonly clip: Extract<Clip, { type: 'subtitle' }>) {
+    this.description = `Add subtitle clip ${clip.name}`;
+  }
+
+  execute(): void {
+    const timeline = this.accessor.getTimeline();
+    const track = findTrack(timeline, this.clip.trackId);
+    if (track.type !== 'subtitle') {
+      throw new Error('Subtitle clips can only be added to subtitle tracks');
+    }
+    if (detectOverlap(track, this.clip)) {
+      throw new Error('Clip overlaps another clip on this track');
+    }
+    this.accessor.setTimeline(insertClip(timeline, this.clip));
+  }
+
+  undo(): void {
+    this.accessor.setTimeline(removeClip(this.accessor.getTimeline(), this.clip.id).timeline);
+  }
+}
+
 export class MoveClipCommand implements Command {
   readonly description = 'Move clip';
   private before?: Clip;
