@@ -7,6 +7,7 @@ export type TimelineShortcutAction =
   | 'step-forward'
   | 'set-in-point'
   | 'set-out-point'
+  | 'split-selected'
   | 'delete-selected'
   | 'select-all'
   | 'clear-selection'
@@ -20,63 +21,163 @@ export interface TimelineShortcutKey {
   code?: string;
   ctrlKey?: boolean;
   metaKey?: boolean;
+  altKey?: boolean;
   shiftKey?: boolean;
   isTyping?: boolean;
 }
 
-export function resolveTimelineShortcutAction(event: TimelineShortcutKey): TimelineShortcutAction | null {
+export interface TimelineShortcutDefinition {
+  action: TimelineShortcutAction;
+  defaultBindings: string[];
+}
+
+export type TimelineShortcutBindings = Partial<Record<TimelineShortcutAction, string[]>>;
+
+export const TIMELINE_SHORTCUT_DEFINITIONS: TimelineShortcutDefinition[] = [
+  { action: 'toggle-playback', defaultBindings: ['Space'] },
+  { action: 'reverse-playback', defaultBindings: ['J'] },
+  { action: 'pause-playback', defaultBindings: ['K'] },
+  { action: 'forward-playback', defaultBindings: ['L'] },
+  { action: 'step-back', defaultBindings: ['ArrowLeft'] },
+  { action: 'step-forward', defaultBindings: ['ArrowRight'] },
+  { action: 'set-in-point', defaultBindings: ['I'] },
+  { action: 'set-out-point', defaultBindings: ['O'] },
+  { action: 'split-selected', defaultBindings: ['S'] },
+  { action: 'delete-selected', defaultBindings: ['Delete', 'Backspace'] },
+  { action: 'select-all', defaultBindings: ['Ctrl+A'] },
+  { action: 'clear-selection', defaultBindings: ['Escape'] },
+  { action: 'undo', defaultBindings: ['Ctrl+Z'] },
+  { action: 'redo', defaultBindings: ['Ctrl+Shift+Z', 'Ctrl+Y'] },
+  { action: 'save', defaultBindings: ['Ctrl+S'] },
+  { action: 'export-current-frame', defaultBindings: ['Shift+E'] }
+];
+
+export function resolveTimelineShortcutAction(event: TimelineShortcutKey, customBindings: TimelineShortcutBindings = {}): TimelineShortcutAction | null {
   if (event.isTyping) {
     return null;
   }
 
-  const key = event.key.toLowerCase();
-  const mod = Boolean(event.ctrlKey || event.metaKey);
-
-  if (mod && key === 'z') {
-    return event.shiftKey ? 'redo' : 'undo';
-  }
-  if (mod && key === 'y') {
-    return 'redo';
-  }
-  if (mod && key === 's') {
-    return 'save';
-  }
-  if (mod && key === 'a') {
-    return 'select-all';
-  }
-  if (mod) {
+  const accelerator = eventToAccelerator(event);
+  if (!accelerator) {
     return null;
   }
-
-  if (event.shiftKey && key === 'e') {
-    return 'export-current-frame';
+  for (const definition of TIMELINE_SHORTCUT_DEFINITIONS) {
+    const bindings = getEffectiveBindings(definition, customBindings);
+    if (bindings.some((binding) => normalizeAccelerator(binding) === accelerator)) {
+      return definition.action;
+    }
   }
+  return null;
+}
 
+export function getEffectiveTimelineShortcutBindings(customBindings: TimelineShortcutBindings = {}): Record<TimelineShortcutAction, string[]> {
+  return Object.fromEntries(TIMELINE_SHORTCUT_DEFINITIONS.map((definition) => [definition.action, getEffectiveBindings(definition, customBindings)])) as Record<TimelineShortcutAction, string[]>;
+}
+
+export function detectTimelineShortcutConflicts(bindings: TimelineShortcutBindings): Record<TimelineShortcutAction, string[]> {
+  const conflicts = {} as Record<TimelineShortcutAction, string[]>;
+  for (const definition of TIMELINE_SHORTCUT_DEFINITIONS) {
+    conflicts[definition.action] = [];
+  }
+  const seen = new Map<string, TimelineShortcutAction[]>();
+  const effective = getEffectiveTimelineShortcutBindings(bindings);
+  for (const definition of TIMELINE_SHORTCUT_DEFINITIONS) {
+    for (const binding of effective[definition.action]) {
+      const normalized = normalizeAccelerator(binding);
+      const actions = seen.get(normalized) ?? [];
+      actions.push(definition.action);
+      seen.set(normalized, actions);
+    }
+  }
+  for (const [binding, actions] of seen) {
+    if (actions.length <= 1) {
+      continue;
+    }
+    for (const action of actions) {
+      conflicts[action].push(binding);
+    }
+  }
+  return conflicts;
+}
+
+export function eventToAccelerator(event: TimelineShortcutKey): string | null {
+  const key = normalizeKey(event);
+  if (!key) {
+    return null;
+  }
+  const parts: string[] = [];
+  if (event.ctrlKey || event.metaKey) {
+    parts.push('Ctrl');
+  }
+  if (event.altKey) {
+    parts.push('Alt');
+  }
+  if (event.shiftKey && key !== 'Shift') {
+    parts.push('Shift');
+  }
+  parts.push(key);
+  return normalizeAccelerator(parts.join('+'));
+}
+
+export function normalizeAccelerator(input: string): string {
+  const parts = input
+    .split('+')
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const key = parts.pop();
+  if (!key) {
+    return '';
+  }
+  const modifiers = new Set(parts.map(normalizeModifier).filter(Boolean));
+  const ordered = ['Ctrl', 'Alt', 'Shift'].filter((modifier) => modifiers.has(modifier));
+  return [...ordered, normalizeKeyName(key)].join('+');
+}
+
+function getEffectiveBindings(definition: TimelineShortcutDefinition, customBindings: TimelineShortcutBindings): string[] {
+  const custom = customBindings[definition.action]?.map(normalizeAccelerator).filter(Boolean);
+  return custom && custom.length > 0 ? custom : definition.defaultBindings;
+}
+
+function normalizeKey(event: TimelineShortcutKey): string {
   if (event.code === 'Space' || event.key === ' ') {
-    return 'toggle-playback';
+    return 'Space';
   }
+  return normalizeKeyName(event.key);
+}
 
-  switch (key) {
-    case 'escape':
-      return 'clear-selection';
-    case 'j':
-      return 'reverse-playback';
-    case 'k':
-      return 'pause-playback';
-    case 'l':
-      return 'forward-playback';
-    case 'arrowleft':
-      return 'step-back';
-    case 'arrowright':
-      return 'step-forward';
-    case 'i':
-      return 'set-in-point';
-    case 'o':
-      return 'set-out-point';
-    case 'delete':
-    case 'backspace':
-      return 'delete-selected';
-    default:
-      return null;
+function normalizeKeyName(key: string): string {
+  const lower = key.toLowerCase();
+  if (lower === ' ') {
+    return 'Space';
   }
+  if (lower === 'spacebar') {
+    return 'Space';
+  }
+  if (lower.startsWith('arrow')) {
+    return `Arrow${lower.slice('arrow'.length, 'arrow'.length + 1).toUpperCase()}${lower.slice('arrow'.length + 1)}`;
+  }
+  if (lower === 'esc') {
+    return 'Escape';
+  }
+  if (lower === 'del') {
+    return 'Delete';
+  }
+  if (key.length === 1) {
+    return key.toUpperCase();
+  }
+  return key.slice(0, 1).toUpperCase() + key.slice(1);
+}
+
+function normalizeModifier(modifier: string): string {
+  const lower = modifier.toLowerCase();
+  if (lower === 'cmd' || lower === 'command' || lower === 'meta' || lower === 'control' || lower === 'ctrl') {
+    return 'Ctrl';
+  }
+  if (lower === 'option' || lower === 'alt') {
+    return 'Alt';
+  }
+  if (lower === 'shift') {
+    return 'Shift';
+  }
+  return '';
 }

@@ -9,9 +9,12 @@ import { PreviewCanvas } from './PreviewCanvas/PreviewCanvas';
 import { Timeline } from './Timeline/Timeline';
 import { ExportDialog } from '../export/ExportDialog';
 import { SettingsDialog } from '../settings/SettingsDialog';
+import { TimelineExportDialog } from '../timeline-export/TimelineExportDialog';
 import { useAutosave } from '../hooks/useAutosave';
 import { useCloseGuard } from '../hooks/useCloseGuard';
 import { useShortcuts } from '../hooks/useShortcuts';
+import { readCustomKeybindings } from '../shortcuts/keybindings';
+import type { TimelineShortcutBindings } from '../shortcuts/timeline-shortcuts';
 import { cancelQueuedExportTask } from '../export/export-queue-runner';
 import { useExportQueueStore } from '../export/export-queue-store';
 import { chooseCurrentFrameExportPath, revealExport, startCurrentFrameExport } from '../lib/exportVideo';
@@ -67,7 +70,9 @@ export function EditorShell() {
   const setOutPoint = useEditorStore((state) => state.setOutPoint);
   const [lastExportPath, setLastExportPath] = useState<string>();
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [timelineExportDialogOpen, setTimelineExportDialogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [shortcutBindings, setShortcutBindings] = useState<TimelineShortcutBindings>({});
   const [autosaveIntervalSeconds, setAutosaveIntervalSeconds] = useState(() => readAutosaveIntervalSeconds());
   const [recoveryCandidate, setRecoveryCandidate] = useState<AutosaveRecoveryCandidate>();
   const [archiveProgress, setArchiveProgress] = useState<ArchiveProgress>();
@@ -125,6 +130,22 @@ export function EditorShell() {
       })
       .catch((error) => {
         console.warn(zhCN.editorToasts.autosaveCheckFailed, error);
+      });
+    return () => {
+      canceled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let canceled = false;
+    void readCustomKeybindings()
+      .then((bindings) => {
+        if (!canceled) {
+          setShortcutBindings(bindings);
+        }
+      })
+      .catch((error) => {
+        console.warn(zhCN.settings.shortcuts.loadFailed, error);
       });
     return () => {
       canceled = true;
@@ -399,6 +420,7 @@ export function EditorShell() {
       setInPoint: () => setInPoint(useEditorStore.getState().playheadTime),
       setOutPoint: () => setOutPoint(useEditorStore.getState().playheadTime),
       deleteSelected,
+      splitSelected,
       selectAll: () => setSelectedClipIds(useEditorStore.getState().project.timeline.tracks.flatMap((track) => track.clips.map((clip) => clip.id))),
       clearSelection: clearSelectedClipIds,
       undo,
@@ -418,6 +440,7 @@ export function EditorShell() {
       setInPoint,
       setOutPoint,
       setSelectedClipIds,
+      splitSelected,
       stepFrame,
       togglePlayback,
       undo
@@ -426,7 +449,7 @@ export function EditorShell() {
 
   useAutosave(autosaveIntervalSeconds);
   useCloseGuard(saveProject);
-  useShortcuts(shortcutHandlers);
+  useShortcuts(shortcutHandlers, shortcutBindings);
   useBackgroundMediaJobs(project.media);
 
   return (
@@ -440,6 +463,7 @@ export function EditorShell() {
           onImportMedia={() => void importMedia()}
           onImportSubtitles={() => void importSubtitles()}
           onExportVideo={() => setExportDialogOpen(true)}
+          onExportTimeline={() => setTimelineExportDialogOpen(true)}
           onExportCurrentFrame={() => void exportCurrentFrame()}
           onCancelExport={() => void cancelCurrentExport()}
           onSplitSelected={splitSelected}
@@ -498,7 +522,15 @@ export function EditorShell() {
             }}
           />
         ) : null}
-        <SettingsDialog open={settingsOpen} project={project} selectedClip={selectedClip} onClose={() => setSettingsOpen(false)} />
+        {timelineExportDialogOpen ? <TimelineExportDialog project={project} onClose={() => setTimelineExportDialogOpen(false)} /> : null}
+        <SettingsDialog
+          open={settingsOpen}
+          project={project}
+          selectedClip={selectedClip}
+          shortcutBindings={shortcutBindings}
+          onShortcutBindingsChange={setShortcutBindings}
+          onClose={() => setSettingsOpen(false)}
+        />
         {recoveryCandidate ? (
           <AutosaveRecoveryDialog
             onRestore={() => void restoreRecovery()}

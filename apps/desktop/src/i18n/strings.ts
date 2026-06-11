@@ -32,6 +32,7 @@ export const zhCN = {
     importMedia: '导入媒体',
     importSubtitles: '导入字幕',
     exportVideo: '导出视频',
+    exportTimeline: '导出时间线',
     exportCurrentFrame: '导出当前帧',
     exportDisabled: '请先向时间线添加媒体',
     settings: '设置',
@@ -55,7 +56,8 @@ export const zhCN = {
     title: '设置',
     subtitle: '本地配置和素材库',
     tabs: {
-      lutLibrary: 'LUT库'
+      lutLibrary: 'LUT库',
+      shortcuts: '快捷键'
     },
     lutLibrary: {
       title: 'LUT库',
@@ -76,6 +78,49 @@ export const zhCN = {
       noClipSelected: '未选择可用片段',
       noClipSelectedMessage: '请选择视频或图片片段后再预览或应用 LUT。',
       readyForClip: (name: string) => `将应用到 ${name}`
+    },
+    shortcuts: {
+      title: '快捷键',
+      description: '重新绑定时间线和导出快捷键。',
+      pressKeys: '按下按键...',
+      resetAll: '全部重置',
+      saveFailed: '快捷键保存失败',
+      saveFailedMessage: '无法写入快捷键配置。',
+      loadFailed: '快捷键加载失败',
+      conflict: (keys: string) => `冲突：${keys}`,
+      actions: {
+        'toggle-playback': '播放/暂停',
+        'reverse-playback': '反向播放',
+        'pause-playback': '暂停',
+        'forward-playback': '正向播放',
+        'step-back': '后退一帧',
+        'step-forward': '前进一帧',
+        'set-in-point': '设置入点',
+        'set-out-point': '设置出点',
+        'split-selected': '分割选中片段',
+        'delete-selected': '删除选中片段',
+        'select-all': '全选片段',
+        'clear-selection': '清除选择',
+        undo: '撤销',
+        redo: '重做',
+        save: '保存项目',
+        'export-current-frame': '导出当前帧'
+      }
+    }
+  },
+  timelineExport: {
+    title: '导出时间线',
+    description: '导出主序列为剪辑交换格式。',
+    format: '格式',
+    export: '导出',
+    exporting: '正在导出...',
+    success: '时间线已导出',
+    failed: '时间线导出失败',
+    failedMessage: '无法导出时间线。',
+    filterName: (format: string) => (format === 'fcp-xml' ? 'Final Cut Pro XML' : 'CMX3600 EDL'),
+    formats: {
+      edl: 'CMX3600 EDL',
+      fcpXml: 'Final Cut Pro 7 XML'
     }
   },
   mediaBin: {

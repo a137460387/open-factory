@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { resolveTimelineShortcutAction } from '../shortcuts/timeline-shortcuts';
+import { resolveTimelineShortcutAction, type TimelineShortcutBindings } from '../shortcuts/timeline-shortcuts';
 
 interface ShortcutHandlers {
   togglePlayback(): void;
@@ -11,6 +11,7 @@ interface ShortcutHandlers {
   setInPoint(): void;
   setOutPoint(): void;
   deleteSelected(): void;
+  splitSelected(): void;
   selectAll(): void;
   clearSelection(): void;
   undo(): void;
@@ -19,7 +20,7 @@ interface ShortcutHandlers {
   exportCurrentFrame(): void;
 }
 
-export function useShortcuts(handlers: ShortcutHandlers): void {
+export function useShortcuts(handlers: ShortcutHandlers, bindings: TimelineShortcutBindings = {}): void {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
@@ -39,9 +40,10 @@ export function useShortcuts(handlers: ShortcutHandlers): void {
         code: event.code,
         ctrlKey: event.ctrlKey,
         metaKey: event.metaKey,
+        altKey: event.altKey,
         shiftKey: event.shiftKey,
         isTyping
-      });
+      }, bindings);
       if (!action) {
         return;
       }
@@ -75,6 +77,9 @@ export function useShortcuts(handlers: ShortcutHandlers): void {
         case 'delete-selected':
           handlers.deleteSelected();
           break;
+        case 'split-selected':
+          handlers.splitSelected();
+          break;
         case 'select-all':
           handlers.selectAll();
           break;
@@ -97,7 +102,7 @@ export function useShortcuts(handlers: ShortcutHandlers): void {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [handlers]);
+  }, [bindings, handlers]);
 }
 
 function isTimelineShortcutScopeActive(target: HTMLElement | null): boolean {

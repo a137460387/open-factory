@@ -247,3 +247,13 @@ fn authorize_parent_directory(app: &AppHandle, path: &Path) -> Result<(), String
 fn normalize_path(path: &Path) -> String {
     path.to_string_lossy().replace('\\', "/")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn normalize_path_rewrites_windows_separators() {
+        assert_eq!(normalize_path(Path::new(r"C:\Users\E2E\clip.cube")), "C:/Users/E2E/clip.cube");
+    }
+}

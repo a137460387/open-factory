@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { resolveTimelineShortcutAction, type TimelineShortcutAction, type TimelineShortcutKey } from './timeline-shortcuts';
+import {
+  detectTimelineShortcutConflicts,
+  eventToAccelerator,
+  resolveTimelineShortcutAction,
+  type TimelineShortcutAction,
+  type TimelineShortcutKey
+} from './timeline-shortcuts';
 
 describe('timeline shortcut mapping', () => {
   it.each<[string, TimelineShortcutKey, TimelineShortcutAction]>([
@@ -11,6 +17,7 @@ describe('timeline shortcut mapping', () => {
     ['ArrowRight', { key: 'ArrowRight' }, 'step-forward'],
     ['I', { key: 'i' }, 'set-in-point'],
     ['O', { key: 'o' }, 'set-out-point'],
+    ['S', { key: 's' }, 'split-selected'],
     ['Delete', { key: 'Delete' }, 'delete-selected'],
     ['Backspace', { key: 'Backspace' }, 'delete-selected'],
     ['Ctrl+A', { key: 'a', ctrlKey: true }, 'select-all'],
@@ -23,15 +30,28 @@ describe('timeline shortcut mapping', () => {
     expect(resolveTimelineShortcutAction(event)).toBe(action);
   });
 
-  it('ignores plain S because split remains a toolbar command', () => {
-    expect(resolveTimelineShortcutAction({ key: 's' })).toBeNull();
-  });
-
   it('ignores editing targets', () => {
     expect(resolveTimelineShortcutAction({ key: 'Delete', isTyping: true })).toBeNull();
   });
 
   it('ignores unrelated modified keys', () => {
     expect(resolveTimelineShortcutAction({ key: 'o', ctrlKey: true })).toBeNull();
+  });
+
+  it('uses custom keybindings instead of defaults', () => {
+    const bindings = { 'toggle-playback': ['P'] };
+    expect(resolveTimelineShortcutAction({ key: 'p' }, bindings)).toBe('toggle-playback');
+    expect(resolveTimelineShortcutAction({ key: ' ', code: 'Space' }, bindings)).toBeNull();
+  });
+
+  it('normalizes captured key events into accelerators', () => {
+    expect(eventToAccelerator({ key: 'z', ctrlKey: true, shiftKey: true })).toBe('Ctrl+Shift+Z');
+    expect(eventToAccelerator({ key: ' ', code: 'Space' })).toBe('Space');
+  });
+
+  it('detects conflicting effective bindings', () => {
+    const conflicts = detectTimelineShortcutConflicts({ 'toggle-playback': ['K'] });
+    expect(conflicts['toggle-playback']).toContain('K');
+    expect(conflicts['pause-playback']).toContain('K');
   });
 });

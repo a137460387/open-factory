@@ -51,6 +51,7 @@ const appDataDir = 'C:/Users/E2E/AppData/Roaming/open-factory';
 const exportPresetsPath = `${appDataDir}/presets.json`;
 const lutLibraryPath = `${appDataDir}/luts/Warm Contrast.cube`;
 const lutFavoritesPath = `${appDataDir}/lut-favorites.json`;
+const keybindingsPath = `${appDataDir}/keybindings.json`;
 
 files.set(sampleProjectPath, JSON.stringify(makeProjectFile(tinyVideo, false), null, 2));
 files.set(missingProjectPath, JSON.stringify(makeProjectFile('C:/Missing/tiny-video.mp4', true), null, 2));
@@ -403,6 +404,9 @@ window.__E2E_ACTIONS__ = {
     files.delete(lutFavoritesPath);
     exists.set(lutFavoritesPath, false);
     mtimes.delete(lutFavoritesPath);
+    files.delete(keybindingsPath);
+    exists.set(keybindingsPath, false);
+    mtimes.delete(keybindingsPath);
   },
   clearExportPresets: () => {
     files.delete(exportPresetsPath);

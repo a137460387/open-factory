@@ -1,9 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Star, X } from 'lucide-react';
 import { UpdateClipCommand, type Clip, type Project, type Timeline } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { loadLutLibrary, toggleLutFavorite, type LutLibraryItem } from '../lib/lutLibrary';
 import { showToast } from '../lib/toast';
+import { writeCustomKeybindings } from '../shortcuts/keybindings';
+import {
+  TIMELINE_SHORTCUT_DEFINITIONS,
+  detectTimelineShortcutConflicts,
+  eventToAccelerator,
+  getEffectiveTimelineShortcutBindings,
+  type TimelineShortcutAction,
+  type TimelineShortcutBindings
+} from '../shortcuts/timeline-shortcuts';
 import { commandManager, timelineAccessor } from '../store/commandManager';
 import { useEditorStore } from '../store/editorStore';
 
@@ -11,16 +20,24 @@ interface SettingsDialogProps {
   open: boolean;
   project: Project;
   selectedClip?: Clip;
+  shortcutBindings: TimelineShortcutBindings;
+  onShortcutBindingsChange(bindings: TimelineShortcutBindings): void;
   onClose(): void;
 }
 
-export function SettingsDialog({ open, project, selectedClip, onClose }: SettingsDialogProps) {
+type SettingsTab = 'lut-library' | 'shortcuts';
+
+export function SettingsDialog({ open, project, selectedClip, shortcutBindings, onShortcutBindingsChange, onClose }: SettingsDialogProps) {
   const t = zhCN.settings;
   const setPreviewTimeline = useEditorStore((state) => state.setPreviewTimeline);
+  const [tab, setTab] = useState<SettingsTab>('lut-library');
   const [items, setItems] = useState<LutLibraryItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
+  const [capturingAction, setCapturingAction] = useState<TimelineShortcutAction>();
   const selectedClipCanUseLut = selectedClip?.type === 'video' || selectedClip?.type === 'image';
+  const effectiveBindings = useMemo(() => getEffectiveTimelineShortcutBindings(shortcutBindings), [shortcutBindings]);
+  const conflicts = useMemo(() => detectTimelineShortcutConflicts(shortcutBindings), [shortcutBindings]);
 
   useEffect(() => {
     if (!open) {
@@ -29,6 +46,31 @@ export function SettingsDialog({ open, project, selectedClip, onClose }: Setting
     void refresh();
     return () => setPreviewTimeline(undefined);
   }, [open, setPreviewTimeline]);
+
+  useEffect(() => {
+    if (!capturingAction) {
+      return undefined;
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      const accelerator = eventToAccelerator({
+        key: event.key,
+        code: event.code,
+        ctrlKey: event.ctrlKey,
+        metaKey: event.metaKey,
+        altKey: event.altKey,
+        shiftKey: event.shiftKey
+      });
+      event.preventDefault();
+      event.stopPropagation();
+      if (!accelerator) {
+        return;
+      }
+      void updateShortcutBinding({ ...shortcutBindings, [capturingAction]: [accelerator] });
+      setCapturingAction(undefined);
+    };
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+  }, [capturingAction, shortcutBindings]);
 
   if (!open) {
     return null;
@@ -84,6 +126,25 @@ export function SettingsDialog({ open, project, selectedClip, onClose }: Setting
     }
   }
 
+  async function updateShortcutBinding(nextBindings: TimelineShortcutBindings) {
+    try {
+      const saved = await writeCustomKeybindings(nextBindings);
+      onShortcutBindingsChange(saved);
+    } catch (shortcutError) {
+      showToast({ kind: 'warning', title: t.shortcuts.saveFailed, message: shortcutError instanceof Error ? shortcutError.message : t.shortcuts.saveFailedMessage });
+    }
+  }
+
+  function resetShortcut(action: TimelineShortcutAction) {
+    const next = { ...shortcutBindings };
+    delete next[action];
+    void updateShortcutBinding(next);
+  }
+
+  function resetAllShortcuts() {
+    void updateShortcutBinding({});
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-testid="settings-dialog">
       <div className="flex max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg bg-white shadow-soft">
@@ -98,11 +159,26 @@ export function SettingsDialog({ open, project, selectedClip, onClose }: Setting
         </div>
         <div className="flex min-h-0 flex-1">
           <nav className="w-44 shrink-0 border-r border-line bg-panel p-2">
-            <button className="w-full rounded-md bg-white px-3 py-2 text-left text-sm font-semibold text-ink shadow-sm" type="button" data-testid="settings-tab-lut-library">
+            <button
+              className={`w-full rounded-md px-3 py-2 text-left text-sm font-semibold ${tab === 'lut-library' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}
+              type="button"
+              data-testid="settings-tab-lut-library"
+              onClick={() => setTab('lut-library')}
+            >
               {t.tabs.lutLibrary}
+            </button>
+            <button
+              className={`mt-1 w-full rounded-md px-3 py-2 text-left text-sm font-semibold ${tab === 'shortcuts' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}
+              type="button"
+              data-testid="settings-tab-shortcuts"
+              onClick={() => setTab('shortcuts')}
+            >
+              {t.tabs.shortcuts}
             </button>
           </nav>
           <main className="min-w-0 flex-1 overflow-y-auto p-4">
+            {tab === 'lut-library' ? (
+              <>
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
                 <h3 className="text-sm font-semibold text-ink">{t.lutLibrary.title}</h3>
@@ -165,6 +241,58 @@ export function SettingsDialog({ open, project, selectedClip, onClose }: Setting
                 </div>
               ))}
             </div>
+              </>
+            ) : (
+              <div>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-ink">{t.shortcuts.title}</h3>
+                    <p className="text-xs text-slate-500">{t.shortcuts.description}</p>
+                  </div>
+                  <button className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel" type="button" onClick={resetAllShortcuts} data-testid="shortcuts-reset-all-button">
+                    {t.shortcuts.resetAll}
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {TIMELINE_SHORTCUT_DEFINITIONS.map((definition) => {
+                    const conflictList = conflicts[definition.action];
+                    const hasConflict = conflictList.length > 0;
+                    const label = t.shortcuts.actions[definition.action];
+                    return (
+                      <div
+                        key={definition.action}
+                        className={`rounded-md border p-3 ${hasConflict ? 'border-rose-300 bg-rose-50' : 'border-line bg-white'}`}
+                        data-testid={`shortcut-row-${definition.action}`}
+                        data-conflict={hasConflict ? 'true' : 'false'}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-semibold text-ink">{label}</div>
+                            {hasConflict ? <div className="text-xs font-medium text-rose-700">{t.shortcuts.conflict(conflictList.join(', '))}</div> : null}
+                          </div>
+                          <button
+                            className="min-w-28 rounded-md border border-line bg-panel px-3 py-1.5 text-sm font-semibold text-slate-700"
+                            type="button"
+                            data-testid={`shortcut-bind-${definition.action}`}
+                            onClick={() => setCapturingAction(definition.action)}
+                          >
+                            {capturingAction === definition.action ? t.shortcuts.pressKeys : effectiveBindings[definition.action].join(' / ')}
+                          </button>
+                          <button
+                            className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
+                            type="button"
+                            data-testid={`shortcut-reset-${definition.action}`}
+                            onClick={() => resetShortcut(definition.action)}
+                          >
+                            {zhCN.common.reset}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </main>
         </div>
       </div>

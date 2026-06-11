@@ -1,0 +1,67 @@
+import { useState } from 'react';
+import { exportTimeline, type Project, type TimelineExportFormat } from '@open-factory/editor-core';
+import { zhCN } from '../i18n/strings';
+import { saveFileDialog, writeFile } from '../lib/tauri-bridge';
+import { showToast } from '../lib/toast';
+
+interface TimelineExportDialogProps {
+  project: Project;
+  onClose(): void;
+  onCompleted?(path: string): void;
+}
+
+export function TimelineExportDialog({ project, onClose, onCompleted }: TimelineExportDialogProps) {
+  const t = zhCN.timelineExport;
+  const [format, setFormat] = useState<TimelineExportFormat>('edl');
+  const [busy, setBusy] = useState(false);
+
+  async function exportFile() {
+    try {
+      setBusy(true);
+      const extension = format === 'edl' ? 'edl' : 'xml';
+      const path = await saveFileDialog(`${project.name || 'timeline'}.${extension}`, [{ name: t.filterName(format), extensions: [extension] }]);
+      if (!path) {
+        return;
+      }
+      await writeFile(path, exportTimeline(project, format));
+      showToast({ kind: 'success', title: t.success, message: path });
+      onCompleted?.(path);
+      onClose();
+    } catch (error) {
+      showToast({ kind: 'error', title: t.failed, message: error instanceof Error ? error.message : t.failedMessage });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-testid="timeline-export-dialog">
+      <div className="w-full max-w-md rounded-lg bg-white p-4 shadow-soft">
+        <div className="mb-4">
+          <h2 className="text-base font-semibold text-ink">{t.title}</h2>
+          <p className="text-sm text-slate-500">{t.description}</p>
+        </div>
+        <label className="block text-xs font-medium text-slate-600">
+          <span>{t.format}</span>
+          <select
+            className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+            value={format}
+            onChange={(event) => setFormat(event.target.value === 'fcp-xml' ? 'fcp-xml' : 'edl')}
+            data-testid="timeline-export-format-select"
+          >
+            <option value="edl">{t.formats.edl}</option>
+            <option value="fcp-xml">{t.formats.fcpXml}</option>
+          </select>
+        </label>
+        <div className="mt-5 flex justify-end gap-2">
+          <button className="rounded-md border border-line px-3 py-2 text-sm font-medium text-slate-700 hover:bg-panel" type="button" onClick={onClose} disabled={busy}>
+            {zhCN.common.cancel}
+          </button>
+          <button className="rounded-md bg-brand px-3 py-2 text-sm font-semibold text-white hover:bg-[#176858] disabled:opacity-50" type="button" onClick={() => void exportFile()} disabled={busy} data-testid="timeline-export-save-button">
+            {busy ? t.exporting : t.export}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
