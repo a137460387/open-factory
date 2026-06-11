@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { waitForE2eActions } from './e2e-actions';
+import { addMediaCardToTimeline, waitForE2eActions } from './e2e-actions';
 
 test('persists a custom export preset across reload', async ({ page }) => {
   await openExportDialog(page);
@@ -57,9 +57,9 @@ async function openExportDialog(page: Page): Promise<void> {
 
 async function addVideoClip(page: Page): Promise<void> {
   await page.getByTestId('import-media-button').click();
-  await page.locator('[data-testid^="media-card-"]').nth(0).getByText('Add to timeline').click();
+  await addMediaCardToTimeline(page, 0);
 }
 
 async function clickExportButton(page: Page): Promise<void> {
-  await page.getByRole('button', { name: 'Export video' }).click();
+  await page.getByTestId('toolbar-export-button').click();
 }

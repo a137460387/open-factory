@@ -1,26 +1,35 @@
 import { describe, expect, it } from 'vitest';
 import {
   AddClipCommand,
+  AddEffectCommand,
   AddKeyframeCommand,
+  AddMaskCommand,
   AddTrackCommand,
   AddTimelineMarkerCommand,
   AddTransitionCommand,
+  DEFAULT_COLOR_CORRECTION,
   type Command,
   CommandManager,
   DeleteClipCommand,
   DeleteClipsCommand,
   MoveClipCommand,
   MoveClipsCommand,
+  PackNestedSequenceCommand,
+  RemoveEffectCommand,
+  RemoveMaskCommand,
   RemoveKeyframeCommand,
   RemoveTimelineMarkerCommand,
   RemoveTransitionCommand,
+  ReorderEffectsCommand,
   RemoveSilenceCommand,
   SplitClipCommand,
   SplitClipAtTimesCommand,
   TrimClipCommand,
   UpdateKeyframeCommand,
   UpdateClipCommand,
+  UpdateEffectCommand,
   UpdateTimelineMarkerCommand,
+  UpdateMaskCommand,
   UpdateProjectAudioCommand,
   UpdateTrackCommand
 } from '../src';
@@ -59,6 +68,36 @@ describe('timeline commands', () => {
 
     manager.redo();
     expect(accessor.current().tracks[0]).toMatchObject({ muted: true, solo: true, locked: true, volume: 0.5, pan: -0.75 });
+  });
+
+  it('updates track EQ and compressor controls with undo and redo', () => {
+    const accessor = makeAccessor(makeTimeline());
+    const manager = new CommandManager();
+
+    manager.execute(
+      new UpdateTrackCommand(accessor, 'track-video', {
+        eq: {
+          enabled: true,
+          bands: [
+            { id: 'eq-low', type: 'lowshelf', frequency: 90, gain: 3, q: 0.8 },
+            { id: 'eq-low-mid', type: 'peaking', frequency: 450, gain: -2, q: 1.2 },
+            { id: 'eq-high-mid', type: 'peaking', frequency: 3000, gain: 0, q: 1 },
+            { id: 'eq-high', type: 'highshelf', frequency: 9000, gain: 1.5, q: 0.7 }
+          ]
+        },
+        compressor: { enabled: true, threshold: -24, ratio: 4, attack: 12, release: 180, makeupGain: 6 }
+      })
+    );
+    expect(accessor.current().tracks[0].eq?.bands.map((band) => band.gain)).toEqual([3, -2, 0, 1.5]);
+    expect(accessor.current().tracks[0].compressor).toMatchObject({ enabled: true, threshold: -24, ratio: 4, attack: 12, release: 180, makeupGain: 6 });
+
+    manager.undo();
+    expect(accessor.current().tracks[0].eq?.bands.every((band) => band.gain === 0)).toBe(true);
+    expect(accessor.current().tracks[0].compressor?.enabled).toBe(false);
+
+    manager.redo();
+    expect(accessor.current().tracks[0].eq?.bands[1]).toMatchObject({ frequency: 450, gain: -2, q: 1.2 });
+    expect(accessor.current().tracks[0].compressor?.ratio).toBe(4);
   });
 
   it('adds and removes adjacent clip transitions with undo and redo', () => {
@@ -136,6 +175,36 @@ describe('timeline commands', () => {
     expect(accessor.current().markers?.find((marker) => marker.id === 'marker-b')?.label).toBe('Outro');
   });
 
+  it('packs selected clips into a nested sequence with undo and redo', () => {
+    let project = makeProject();
+    project.timeline = makeTimeline([makeVideoClip({ id: 'clip-a', start: 0, duration: 2 }), makeVideoClip({ id: 'clip-b', start: 2, duration: 2 })]);
+    const accessor = {
+      getProject: () => project,
+      setProject: (next: typeof project) => {
+        project = next;
+      }
+    };
+    const manager = new CommandManager();
+
+    manager.execute(new PackNestedSequenceCommand(accessor, ['clip-a', 'clip-b'], 'Nested A'));
+
+    const nestedClip = project.timeline.tracks[0].clips[0];
+    expect(nestedClip).toMatchObject({ type: 'nested-sequence', name: 'Nested A', start: 0, duration: 4 });
+    expect(project.sequences).toHaveLength(2);
+    expect(project.sequences[1].timeline.tracks[0].clips.map((clip) => ({ id: clip.id, start: clip.start }))).toEqual([
+      { id: 'clip-a', start: 0 },
+      { id: 'clip-b', start: 2 }
+    ]);
+
+    manager.undo();
+    expect(project.timeline.tracks[0].clips.map((clip) => clip.id)).toEqual(['clip-a', 'clip-b']);
+    expect(project.sequences).toHaveLength(1);
+
+    manager.redo();
+    expect(project.timeline.tracks[0].clips[0].type).toBe('nested-sequence');
+    expect(project.sequences).toHaveLength(2);
+  });
+
   it('rejects updates and removals for missing timeline markers', () => {
     const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'clip-1' })]));
     const manager = new CommandManager();
@@ -151,6 +220,30 @@ describe('timeline commands', () => {
     manager.execute(new UpdateTrackCommand(accessor, 'track-video', { volume: 9, pan: 9 }));
     expect(accessor.current().tracks[0].volume).toBe(2);
     expect(accessor.current().tracks[0].pan).toBe(1);
+  });
+
+  it('clamps track EQ and compressor updates', () => {
+    const accessor = makeAccessor(makeTimeline());
+    const manager = new CommandManager();
+
+    manager.execute(
+      new UpdateTrackCommand(accessor, 'track-video', {
+        eq: {
+          enabled: true,
+          bands: [
+            { id: 'eq-low', type: 'lowshelf', frequency: 5, gain: 99, q: 0.01 },
+            { id: 'eq-low-mid', type: 'peaking', frequency: 50_000, gain: -99, q: 9 },
+            { id: 'eq-high-mid', type: 'peaking', frequency: 2500, gain: 0, q: 1 },
+            { id: 'eq-high', type: 'highshelf', frequency: 8000, gain: 0, q: 1 }
+          ]
+        },
+        compressor: { enabled: true, threshold: -90, ratio: 99, attack: -1, release: 99_999, makeupGain: 99 }
+      })
+    );
+
+    expect(accessor.current().tracks[0].eq?.bands[0]).toMatchObject({ frequency: 20, gain: 24, q: 0.1 });
+    expect(accessor.current().tracks[0].eq?.bands[1]).toMatchObject({ frequency: 20000, gain: -24, q: 4 });
+    expect(accessor.current().tracks[0].compressor).toMatchObject({ threshold: -60, ratio: 20, attack: 0.01, release: 9000, makeupGain: 24 });
   });
 
   it('updates project audio controls with undo and redo', () => {
@@ -401,13 +494,13 @@ describe('timeline commands', () => {
     const updated = accessor.current().tracks[0].clips[0];
     expect(updated.speed).toBe(2);
     expect(updated.duration).toBe(1.5);
-    expect(updated.colorCorrection).toEqual({ brightness: 0.5, contrast: 1.25, saturation: 1.5, hue: 60, lutPath: null });
+    expect(updated.colorCorrection).toEqual({ ...DEFAULT_COLOR_CORRECTION, brightness: 0.5, contrast: 1.25, saturation: 1.5, hue: 60, lutPath: null });
 
     manager.undo();
     const reverted = accessor.current().tracks[0].clips[0];
     expect(reverted.speed).toBe(1);
     expect(reverted.duration).toBe(3);
-    expect(reverted.colorCorrection).toEqual({ brightness: 0, contrast: 1, saturation: 1, hue: 0, lutPath: null });
+    expect(reverted.colorCorrection).toEqual(DEFAULT_COLOR_CORRECTION);
   });
 
   it('clamps speed and color correction patches', () => {
@@ -418,7 +511,108 @@ describe('timeline commands', () => {
 
     const updated = accessor.current().tracks[0].clips[0];
     expect(updated.speed).toBe(4);
-    expect(updated.colorCorrection).toEqual({ brightness: 1, contrast: 2, saturation: 0, hue: 180, lutPath: null });
+    expect(updated.colorCorrection).toEqual({ ...DEFAULT_COLOR_CORRECTION, brightness: 1, contrast: 2, saturation: 0, hue: 180, lutPath: null });
+  });
+
+  it('normalizes stabilization and PNG sequence frame rate patches with undo', () => {
+    const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'clip-video', duration: 3 })]));
+    const manager = new CommandManager();
+
+    manager.execute(
+      new UpdateClipCommand(accessor, 'clip-video', {
+        stabilization: { enabled: true, smoothing: 999, zoom: -1, analyzed: true, trfPath: ' C:\\Temp\\clip.trf ' },
+        sequenceFrameRate: 240
+      })
+    );
+
+    expect(accessor.current().tracks[0].clips[0]).toMatchObject({
+      stabilization: { enabled: true, smoothing: 100, zoom: 0, analyzed: true, trfPath: 'C:\\Temp\\clip.trf' },
+      sequenceFrameRate: 120
+    });
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips[0]).toMatchObject({
+      stabilization: { enabled: false, smoothing: 30, zoom: 0, analyzed: false, trfPath: null },
+      sequenceFrameRate: undefined
+    });
+  });
+
+  it('adds, updates, removes, and restores effects with undo and redo', () => {
+    const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'clip-video', duration: 3 })]));
+    const manager = new CommandManager();
+
+    manager.execute(new AddEffectCommand(accessor, 'clip-video', { id: 'effect-blur', type: 'blur', params: { radius: 60 } }));
+    expect(accessor.current().tracks[0].clips[0].effects).toEqual([{ id: 'effect-blur', type: 'blur', enabled: true, params: { radius: 50 } }]);
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips[0].effects).toBeUndefined();
+
+    manager.redo();
+    expect(accessor.current().tracks[0].clips[0].effects?.map((effect) => effect.id)).toEqual(['effect-blur']);
+
+    manager.execute(new UpdateEffectCommand(accessor, 'clip-video', 'effect-blur', { enabled: false, params: { radius: 4 } }));
+    expect(accessor.current().tracks[0].clips[0].effects?.[0]).toEqual({ id: 'effect-blur', type: 'blur', enabled: false, params: { radius: 4 } });
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips[0].effects?.[0].enabled).toBe(true);
+
+    manager.execute(new RemoveEffectCommand(accessor, 'clip-video', 'effect-blur'));
+    expect(accessor.current().tracks[0].clips[0].effects).toBeUndefined();
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips[0].effects?.map((effect) => effect.id)).toEqual(['effect-blur']);
+  });
+
+  it('adds, updates, removes, and restores masks with undo and redo', () => {
+    const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'clip-video', duration: 3 })]));
+    const manager = new CommandManager();
+
+    manager.execute(new AddMaskCommand(accessor, 'clip-video', { id: 'mask-rect', type: 'rect' }));
+    expect(accessor.current().tracks[0].clips[0].masks).toEqual([
+      expect.objectContaining({ id: 'mask-rect', type: 'rect', x: 0.25, y: 0.25, w: 0.5, h: 0.5, enabled: true })
+    ]);
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips[0].masks).toEqual([]);
+
+    manager.redo();
+    manager.execute(new UpdateMaskCommand(accessor, 'clip-video', 'mask-rect', { type: 'ellipse', x: 0.1, y: 0.2, w: 0.4, h: 0.3, inverted: true, feather: 0.2 }));
+    expect(accessor.current().tracks[0].clips[0].masks?.[0]).toEqual(
+      expect.objectContaining({ id: 'mask-rect', type: 'ellipse', x: 0.1, y: 0.2, w: 0.4, h: 0.3, inverted: true, feather: 0.2 })
+    );
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips[0].masks?.[0]).toEqual(expect.objectContaining({ id: 'mask-rect', type: 'rect', inverted: false }));
+
+    manager.execute(new RemoveMaskCommand(accessor, 'clip-video', 'mask-rect'));
+    expect(accessor.current().tracks[0].clips[0].masks).toEqual([]);
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips[0].masks?.map((mask) => mask.id)).toEqual(['mask-rect']);
+  });
+
+  it('reorders effects and restores the original order on undo', () => {
+    const accessor = makeAccessor(
+      makeTimeline([
+        makeVideoClip({
+          id: 'clip-video',
+          effects: [
+            { id: 'effect-blur', type: 'blur', enabled: true, params: { radius: 4 } },
+            { id: 'effect-sharpen', type: 'sharpen', enabled: true, params: { strength: 1 } },
+            { id: 'effect-grain', type: 'film-grain', enabled: true, params: { strength: 0.3, size: 2 } }
+          ]
+        })
+      ])
+    );
+    const manager = new CommandManager();
+
+    manager.execute(new ReorderEffectsCommand(accessor, 'clip-video', ['effect-grain', 'effect-blur', 'effect-sharpen']));
+    expect(accessor.current().tracks[0].clips[0].effects?.map((effect) => effect.id)).toEqual(['effect-grain', 'effect-blur', 'effect-sharpen']);
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips[0].effects?.map((effect) => effect.id)).toEqual(['effect-blur', 'effect-sharpen', 'effect-grain']);
+
+    expect(() => manager.execute(new ReorderEffectsCommand(accessor, 'clip-video', ['missing-effect']))).toThrow('Effect order');
   });
 
   it('clears redo stack when executing after undo', () => {

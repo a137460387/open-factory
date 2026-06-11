@@ -1,4 +1,5 @@
 import type { Clip } from '@open-factory/editor-core';
+import { zhCN } from '../../i18n/strings';
 import { recordPreviewDraw } from './debug';
 import { drawTransformedSource2d } from './transform-2d';
 import type { WebGlPreviewCompositor } from './webgl-compositor';
@@ -28,7 +29,7 @@ export function drawText2d(context: CanvasRenderingContext2D, canvas: HTMLCanvas
 }
 
 export function drawTextWebGl(compositor: WebGlPreviewCompositor, clip: TextClip): void {
-  compositor.drawText(clip.text, clip.transform, clip.style, clip.colorCorrection);
+  compositor.drawText(clip.text, clip.transform, clip.style, clip.colorCorrection, clip.effects);
   recordPreviewDraw(clip.type, 'text');
 }
 
@@ -46,7 +47,7 @@ export function drawMissing2d(context: CanvasRenderingContext2D, canvas: HTMLCan
   missingContext.textAlign = 'center';
   missingContext.textBaseline = 'middle';
   missingContext.font = '600 36px Inter, Arial, sans-serif';
-  missingContext.fillText(`Missing media: ${name}`, missing.width / 2, missing.height / 2);
+  missingContext.fillText(zhCN.preview.missingMedia(name), missing.width / 2, missing.height / 2);
   drawTransformedSource2d(context, canvas, missing, { width: 340, height: 68 }, { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 });
   recordPreviewDraw(clipType, 'missing');
 }

@@ -60,7 +60,7 @@ export function buildSingleVideoTrackExportPlan(project: Project): ExportPlan {
 
 export function timelineHasExportableVideo(timeline: Timeline): boolean {
   return timeline.tracks.some((track) =>
-    track.clips.some((clip) => clip.type === 'video' || clip.type === 'image' || clip.type === 'text' || clip.type === 'subtitle' || clip.type === 'audio')
+    track.clips.some((clip) => clip.type === 'video' || clip.type === 'image' || clip.type === 'text' || clip.type === 'subtitle' || clip.type === 'audio' || clip.type === 'nested-sequence')
   );
 }
 

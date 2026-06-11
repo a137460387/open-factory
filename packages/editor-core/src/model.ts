@@ -1,3 +1,14 @@
+import {
+  DEFAULT_COLOR_CURVES,
+  DEFAULT_THREE_WAY_COLOR,
+  isDefaultColorCurves,
+  isNeutralThreeWayColor,
+  normalizeColorCurves,
+  normalizeThreeWayColor,
+  type ColorCurves,
+  type ThreeWayColor
+} from './color-grading';
+import { cloneEffects, type Effect } from './effects';
 import { migrateProjectFile, serializeProjectFile } from './project/project-migration';
 import type { ProjectFile } from './project/project-types';
 import { round } from './time';
@@ -5,7 +16,7 @@ import { round } from './time';
 export type ProjectVersion = '0.2';
 export type AssetType = 'video' | 'audio' | 'image';
 export type TrackType = 'video' | 'audio' | 'text' | 'subtitle';
-export type ClipType = 'video' | 'audio' | 'image' | 'text' | 'subtitle';
+export type ClipType = 'video' | 'audio' | 'image' | 'text' | 'subtitle' | 'nested-sequence';
 export type TransitionType = 'fade-black' | 'dissolve';
 export type SubtitleMode = 'burn-in' | 'soft-sub';
 export type KeyframeEasing = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out';
@@ -24,9 +35,42 @@ export interface ClipKeyframes {
   y?: Keyframe<number>[];
   scaleX?: Keyframe<number>[];
   scaleY?: Keyframe<number>[];
+  speed?: Keyframe<number>[];
 }
 
 export type KeyframeProperty = keyof ClipKeyframes;
+
+export type ChromaKeyColor = [number, number, number];
+export type MaskType = 'rect' | 'ellipse';
+
+export interface ChromaKey {
+  enabled: boolean;
+  color: ChromaKeyColor;
+  similarity: number;
+  blend: number;
+}
+
+export interface ClipStabilization {
+  enabled: boolean;
+  smoothing: number;
+  zoom: number;
+  analyzed: boolean;
+  trfPath?: string | null;
+}
+
+export interface ClipMask {
+  id: string;
+  type: MaskType;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  inverted: boolean;
+  feather: number;
+  enabled: boolean;
+}
+
+export type Mask = ClipMask;
 
 export interface Project {
   version: ProjectVersion;
@@ -37,7 +81,10 @@ export interface Project {
   masterVolume: number;
   settings: ProjectSettings;
   media: MediaAsset[];
+  mediaMetadata: Record<string, MediaMetadata>;
   timeline: Timeline;
+  sequences: Sequence[];
+  activeSequenceId: string;
 }
 
 export interface ProjectSettings {
@@ -70,12 +117,33 @@ export interface MediaAsset {
   proxyPath?: string;
   proxyStatus?: 'none' | 'pending' | 'ready' | 'error';
   proxyError?: string;
+  imageSequence?: ImageSequenceInfo;
+}
+
+export interface ImageSequenceInfo {
+  pattern: string;
+  startNumber: number;
+  frameCount: number;
+  frameRate: number;
+  paths: string[];
+}
+
+export type MediaLabelColor = 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple';
+
+export interface MediaMetadata {
+  labelColor?: MediaLabelColor;
 }
 
 export interface Timeline {
   tracks: Track[];
   transitions?: Transition[];
   markers?: TimelineMarker[];
+}
+
+export interface Sequence {
+  id: string;
+  name: string;
+  timeline: Timeline;
 }
 
 export interface Track {
@@ -87,10 +155,36 @@ export interface Track {
   locked?: boolean;
   volume?: number;
   pan?: number;
+  eq?: TrackEQ;
+  compressor?: TrackCompressor;
   clips: Clip[];
 }
 
-export type Clip = VideoClip | AudioClip | ImageClip | TextClip | SubtitleClip;
+export type TrackEQBandType = 'lowshelf' | 'peaking' | 'highshelf';
+
+export interface TrackEQBand {
+  id: string;
+  type: TrackEQBandType;
+  frequency: number;
+  gain: number;
+  q: number;
+}
+
+export interface TrackEQ {
+  enabled: boolean;
+  bands: TrackEQBand[];
+}
+
+export interface TrackCompressor {
+  enabled: boolean;
+  threshold: number;
+  ratio: number;
+  attack: number;
+  release: number;
+  makeupGain: number;
+}
+
+export type Clip = VideoClip | AudioClip | ImageClip | TextClip | SubtitleClip | NestedSequenceClip;
 
 export interface Transition {
   id: string;
@@ -118,7 +212,12 @@ export interface BaseClip {
   speed: number;
   colorCorrection: ColorCorrection;
   transform: Transform;
+  chromaKey?: ChromaKey;
+  stabilization?: ClipStabilization;
+  masks?: ClipMask[];
   keyframes?: ClipKeyframes;
+  effects?: Effect[];
+  sequenceFrameRate?: number;
 }
 
 export interface ColorCorrection {
@@ -127,6 +226,8 @@ export interface ColorCorrection {
   saturation: number;
   hue: number;
   lutPath?: string | null;
+  colorCurves?: ColorCurves;
+  threeWayColor?: ThreeWayColor;
 }
 
 export interface Transform {
@@ -174,6 +275,15 @@ export interface SubtitleClip extends BaseClip {
   subtitleMode: SubtitleMode;
 }
 
+export interface NestedSequenceClip extends BaseClip {
+  type: 'nested-sequence';
+  sequenceId: string;
+  volume: number;
+  muted?: boolean;
+  fadeInDuration?: number;
+  fadeOutDuration?: number;
+}
+
 export interface TextStyle {
   fontSize: number;
   color: string;
@@ -209,12 +319,61 @@ export const DEFAULT_COLOR_CORRECTION: ColorCorrection = {
   contrast: 1,
   saturation: 1,
   hue: 0,
-  lutPath: null
+  lutPath: null,
+  colorCurves: DEFAULT_COLOR_CURVES,
+  threeWayColor: DEFAULT_THREE_WAY_COLOR
+};
+
+export const DEFAULT_CHROMA_KEY: ChromaKey = {
+  enabled: false,
+  color: [0, 255, 0],
+  similarity: 0.1,
+  blend: 0.05
+};
+
+export const DEFAULT_STABILIZATION: ClipStabilization = {
+  enabled: false,
+  smoothing: 30,
+  zoom: 0,
+  analyzed: false,
+  trfPath: null
+};
+
+export const DEFAULT_MASK: Omit<ClipMask, 'id'> = {
+  type: 'rect',
+  x: 0.25,
+  y: 0.25,
+  w: 0.5,
+  h: 0.5,
+  inverted: false,
+  feather: 0,
+  enabled: true
 };
 
 export const DEFAULT_TRACK_VOLUME = 1;
 export const DEFAULT_TRACK_PAN = 0;
 export const DEFAULT_MASTER_VOLUME = 1;
+export const DEFAULT_TRACK_EQ: TrackEQ = {
+  enabled: true,
+  bands: [
+    { id: 'eq-low', type: 'lowshelf', frequency: 100, gain: 0, q: 0.7 },
+    { id: 'eq-low-mid', type: 'peaking', frequency: 400, gain: 0, q: 1 },
+    { id: 'eq-high-mid', type: 'peaking', frequency: 2500, gain: 0, q: 1 },
+    { id: 'eq-high', type: 'highshelf', frequency: 8000, gain: 0, q: 0.7 }
+  ]
+};
+export const DEFAULT_TRACK_COMPRESSOR: TrackCompressor = {
+  enabled: false,
+  threshold: -18,
+  ratio: 3,
+  attack: 10,
+  release: 120,
+  makeupGain: 0
+};
+export const PRIMARY_SEQUENCE_ID = 'sequence-main';
+export const DEFAULT_PRIMARY_SEQUENCE_NAME = 'Main Sequence';
+export const DEFAULT_NESTED_SEQUENCE_NAME = 'Nested Sequence';
+export const MAX_NESTED_SEQUENCE_DEPTH = 3;
 export const DEFAULT_TRANSITION_TYPE: TransitionType = 'dissolve';
 export const DEFAULT_TRANSITION_DURATION = 0.5;
 export const DEFAULT_TIMELINE_MARKER_COLOR = '#f97316';
@@ -287,7 +446,8 @@ export function createTimelineMarker(
 }
 
 export function createTrack(
-  track: Omit<Track, 'muted' | 'solo' | 'locked' | 'volume' | 'pan'> & Partial<Pick<Track, 'muted' | 'solo' | 'locked' | 'volume' | 'pan'>>
+  track: Omit<Track, 'muted' | 'solo' | 'locked' | 'volume' | 'pan' | 'eq' | 'compressor'> &
+    Partial<Pick<Track, 'muted' | 'solo' | 'locked' | 'volume' | 'pan' | 'eq' | 'compressor'>>
 ): Track {
   return {
     ...track,
@@ -295,12 +455,15 @@ export function createTrack(
     solo: Boolean(track.solo),
     locked: Boolean(track.locked),
     volume: normalizeTrackVolume(track.volume),
-    pan: normalizeTrackPan(track.pan)
+    pan: normalizeTrackPan(track.pan),
+    eq: normalizeTrackEQ(track.eq),
+    compressor: normalizeTrackCompressor(track.compressor)
   };
 }
 
 export function createProject(name = 'Untitled Project'): Project {
   const now = new Date().toISOString();
+  const timeline = createDefaultTimeline();
   return {
     version: '0.2',
     id: createId('project'),
@@ -310,7 +473,18 @@ export function createProject(name = 'Untitled Project'): Project {
     masterVolume: DEFAULT_MASTER_VOLUME,
     settings: { ...DEFAULT_PROJECT_SETTINGS },
     media: [],
-    timeline: createDefaultTimeline()
+    mediaMetadata: {},
+    timeline,
+    sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+    activeSequenceId: PRIMARY_SEQUENCE_ID
+  };
+}
+
+export function createSequence(sequence: Omit<Sequence, 'id' | 'name'> & Partial<Pick<Sequence, 'id' | 'name'>>): Sequence {
+  return {
+    id: sequence.id ?? createId('sequence'),
+    name: normalizeSequenceName(sequence.name),
+    timeline: sequence.timeline
   };
 }
 
@@ -329,7 +503,27 @@ export function createBaseClip(
     speed: clampClipSpeed(input.speed),
     colorCorrection: normalizeColorCorrection(input.colorCorrection),
     transform: { ...DEFAULT_TRANSFORM, ...input.transform },
-    keyframes: cloneClipKeyframesLocal(input.keyframes)
+    chromaKey: normalizeChromaKey(input.chromaKey),
+    stabilization: normalizeStabilization(input.stabilization),
+    masks: normalizeMasks(input.masks),
+    keyframes: cloneClipKeyframesLocal(input.keyframes),
+    effects: cloneEffects(input.effects),
+    sequenceFrameRate: normalizeSequenceFrameRate(input.sequenceFrameRate)
+  };
+}
+
+export function createNestedSequenceClip(
+  input: Omit<NestedSequenceClip, 'id' | 'transform' | 'speed' | 'colorCorrection' | 'volume'> &
+    Partial<Pick<NestedSequenceClip, 'id' | 'transform' | 'speed' | 'colorCorrection' | 'volume'>>
+): NestedSequenceClip {
+  return {
+    ...createBaseClip(input),
+    type: 'nested-sequence',
+    sequenceId: input.sequenceId,
+    volume: normalizeTrackVolume(input.volume),
+    muted: input.muted,
+    fadeInDuration: input.fadeInDuration,
+    fadeOutDuration: input.fadeOutDuration
   };
 }
 
@@ -346,8 +540,70 @@ export function normalizeColorCorrection(colorCorrection: Partial<ColorCorrectio
     contrast: round(Math.min(2, Math.max(0, colorCorrection?.contrast ?? DEFAULT_COLOR_CORRECTION.contrast))),
     saturation: round(Math.min(2, Math.max(0, colorCorrection?.saturation ?? DEFAULT_COLOR_CORRECTION.saturation))),
     hue: round(Math.min(180, Math.max(-180, colorCorrection?.hue ?? DEFAULT_COLOR_CORRECTION.hue))),
-    lutPath: normalizeLutPath(colorCorrection?.lutPath)
+    lutPath: normalizeLutPath(colorCorrection?.lutPath),
+    colorCurves: normalizeColorCurves(colorCorrection?.colorCurves),
+    threeWayColor: normalizeThreeWayColor(colorCorrection?.threeWayColor)
   };
+}
+
+export function normalizeChromaKey(chromaKey: Partial<ChromaKey> | undefined): ChromaKey {
+  return {
+    enabled: chromaKey?.enabled === true,
+    color: normalizeRgbColor(chromaKey?.color),
+    similarity: round(Math.min(1, Math.max(0, finiteOrDefault(chromaKey?.similarity, DEFAULT_CHROMA_KEY.similarity)))),
+    blend: round(Math.min(1, Math.max(0, finiteOrDefault(chromaKey?.blend, DEFAULT_CHROMA_KEY.blend))))
+  };
+}
+
+export function isChromaKeyEnabled(chromaKey: Partial<ChromaKey> | undefined): boolean {
+  return normalizeChromaKey(chromaKey).enabled;
+}
+
+export function normalizeStabilization(stabilization: Partial<ClipStabilization> | undefined): ClipStabilization {
+  const trfPath = typeof stabilization?.trfPath === 'string' && stabilization.trfPath.trim() ? stabilization.trfPath.trim() : null;
+  return {
+    enabled: stabilization?.enabled === true,
+    smoothing: Math.round(Math.min(100, Math.max(1, finiteOrDefault(stabilization?.smoothing, DEFAULT_STABILIZATION.smoothing)))),
+    zoom: round(Math.min(5, Math.max(0, finiteOrDefault(stabilization?.zoom, DEFAULT_STABILIZATION.zoom)))),
+    analyzed: stabilization?.analyzed === true,
+    trfPath
+  };
+}
+
+export function isStabilizationExportable(stabilization: Partial<ClipStabilization> | undefined): boolean {
+  const normalized = normalizeStabilization(stabilization);
+  return normalized.enabled && normalized.analyzed && Boolean(normalized.trfPath);
+}
+
+export function createMask(mask: Partial<ClipMask> = {}): ClipMask {
+  return normalizeMask({ ...mask, id: mask.id ?? createId('mask') });
+}
+
+export function normalizeMask(mask: Partial<ClipMask> | undefined): ClipMask {
+  const w = normalizePositiveUnit(mask?.w, DEFAULT_MASK.w);
+  const h = normalizePositiveUnit(mask?.h, DEFAULT_MASK.h);
+  return {
+    id: typeof mask?.id === 'string' && mask.id.trim() ? mask.id : createId('mask'),
+    type: mask?.type === 'ellipse' ? 'ellipse' : 'rect',
+    x: round(Math.min(1 - w, Math.max(0, finiteOrDefault(mask?.x, DEFAULT_MASK.x)))),
+    y: round(Math.min(1 - h, Math.max(0, finiteOrDefault(mask?.y, DEFAULT_MASK.y)))),
+    w,
+    h,
+    inverted: mask?.inverted === true,
+    feather: normalizeUnit(mask?.feather, DEFAULT_MASK.feather),
+    enabled: mask?.enabled !== false
+  };
+}
+
+export function normalizeMasks(masks: ClipMask[] | undefined): ClipMask[] {
+  return Array.isArray(masks) ? masks.map((mask) => normalizeMask(mask)) : [];
+}
+
+export function normalizeSequenceFrameRate(frameRate: number | undefined): number | undefined {
+  if (typeof frameRate !== 'number' || !Number.isFinite(frameRate)) {
+    return undefined;
+  }
+  return round(Math.min(120, Math.max(1, frameRate)));
 }
 
 export function normalizeTimelineMarker(marker: TimelineMarker, maxTime?: number): TimelineMarker {
@@ -374,11 +630,136 @@ export function normalizeTrackPan(pan: number | undefined): number {
   return round(Math.min(1, Math.max(-1, pan)));
 }
 
+export function normalizeTrackEQ(eq: Partial<TrackEQ> | undefined): TrackEQ {
+  const inputBands = Array.isArray(eq?.bands) ? eq.bands : [];
+  return {
+    enabled: eq?.enabled !== false,
+    bands: DEFAULT_TRACK_EQ.bands.map((fallback, index) => normalizeTrackEQBand(inputBands[index], fallback))
+  };
+}
+
+export function normalizeTrackEQBand(band: Partial<TrackEQBand> | undefined, fallback: TrackEQBand = DEFAULT_TRACK_EQ.bands[1]): TrackEQBand {
+  return {
+    id: typeof band?.id === 'string' && band.id.trim() ? band.id : fallback.id,
+    type: normalizeTrackEQBandType(band?.type, fallback.type),
+    frequency: round(Math.min(20_000, Math.max(20, finiteOrDefault(band?.frequency, fallback.frequency)))),
+    gain: round(Math.min(24, Math.max(-24, finiteOrDefault(band?.gain, fallback.gain)))),
+    q: round(Math.min(4, Math.max(0.1, finiteOrDefault(band?.q, fallback.q))))
+  };
+}
+
+export function normalizeTrackCompressor(compressor: Partial<TrackCompressor> | undefined): TrackCompressor {
+  return {
+    enabled: compressor?.enabled === true,
+    threshold: round(Math.min(0, Math.max(-60, finiteOrDefault(compressor?.threshold, DEFAULT_TRACK_COMPRESSOR.threshold)))),
+    ratio: round(Math.min(20, Math.max(1, finiteOrDefault(compressor?.ratio, DEFAULT_TRACK_COMPRESSOR.ratio)))),
+    attack: round(Math.min(2000, Math.max(0.01, finiteOrDefault(compressor?.attack, DEFAULT_TRACK_COMPRESSOR.attack)))),
+    release: round(Math.min(9000, Math.max(0.01, finiteOrDefault(compressor?.release, DEFAULT_TRACK_COMPRESSOR.release)))),
+    makeupGain: round(Math.min(24, Math.max(0, finiteOrDefault(compressor?.makeupGain, DEFAULT_TRACK_COMPRESSOR.makeupGain))))
+  };
+}
+
 export function normalizeMasterVolume(volume: number | undefined): number {
   if (typeof volume !== 'number' || !Number.isFinite(volume)) {
     return DEFAULT_MASTER_VOLUME;
   }
   return round(Math.min(2, Math.max(0, volume)));
+}
+
+export function normalizeSequenceName(name: string | undefined): string {
+  const trimmed = typeof name === 'string' ? name.trim() : '';
+  return trimmed || DEFAULT_NESTED_SEQUENCE_NAME;
+}
+
+export function getProjectSequences(project: Pick<Project, 'timeline' | 'sequences'>): Sequence[] {
+  const sequences = project.sequences && project.sequences.length > 0 ? project.sequences : [];
+  if (sequences.some((sequence) => sequence.id === PRIMARY_SEQUENCE_ID)) {
+    return sequences;
+  }
+  return [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline: project.timeline }, ...sequences];
+}
+
+export function getProjectActiveSequenceId(project: Pick<Project, 'activeSequenceId' | 'sequences' | 'timeline'>): string {
+  const sequences = getProjectSequences(project);
+  return sequences.some((sequence) => sequence.id === project.activeSequenceId) ? project.activeSequenceId : PRIMARY_SEQUENCE_ID;
+}
+
+export function getProjectPrimaryTimeline(project: Pick<Project, 'activeSequenceId' | 'timeline' | 'sequences'>): Timeline {
+  const synced = replaceProjectActiveTimeline(project as Project, project.timeline);
+  return getProjectSequences(synced).find((sequence) => sequence.id === PRIMARY_SEQUENCE_ID)?.timeline ?? synced.timeline;
+}
+
+export function replaceProjectActiveTimeline(project: Project, timeline: Timeline): Project {
+  const activeSequenceId = getProjectActiveSequenceId(project);
+  const sequences = getProjectSequences(project).map((sequence) => (sequence.id === activeSequenceId ? { ...sequence, timeline } : sequence));
+  return { ...project, timeline, sequences, activeSequenceId };
+}
+
+export function switchProjectActiveSequence(project: Project, sequenceId: string): Project {
+  const synced = replaceProjectActiveTimeline(project, project.timeline);
+  const target = getProjectSequences(synced).find((sequence) => sequence.id === sequenceId);
+  if (!target) {
+    return synced;
+  }
+  return { ...synced, timeline: target.timeline, activeSequenceId: target.id };
+}
+
+export function getNestedSequenceDepth(project: Project, sequenceId = PRIMARY_SEQUENCE_ID): number {
+  const sequences = getProjectSequences(project);
+  const sequence = sequences.find((item) => item.id === sequenceId);
+  if (!sequence) {
+    return 0;
+  }
+  return getNestedSequenceDepthForTimeline(project, sequence.timeline, new Set([sequenceId]));
+}
+
+export function isNestedSequenceDepthExceeded(project: Project, sequenceId = PRIMARY_SEQUENCE_ID, maxDepth = MAX_NESTED_SEQUENCE_DEPTH): boolean {
+  return getNestedSequenceDepth(project, sequenceId) > maxDepth;
+}
+
+function normalizeTrackEQBandType(type: TrackEQBandType | undefined, fallback: TrackEQBandType): TrackEQBandType {
+  return type === 'lowshelf' || type === 'peaking' || type === 'highshelf' ? type : fallback;
+}
+
+function finiteOrDefault(value: number | undefined, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
+function normalizeRgbColor(color: ChromaKeyColor | readonly number[] | undefined): ChromaKeyColor {
+  const input = Array.isArray(color) ? color : DEFAULT_CHROMA_KEY.color;
+  return [normalizeRgbChannel(input[0]), normalizeRgbChannel(input[1]), normalizeRgbChannel(input[2])];
+}
+
+function normalizeRgbChannel(value: number | undefined): number {
+  return Math.round(Math.min(255, Math.max(0, finiteOrDefault(value, 0))));
+}
+
+function normalizeUnit(value: number | undefined, fallback: number): number {
+  return round(Math.min(1, Math.max(0, finiteOrDefault(value, fallback))));
+}
+
+function normalizePositiveUnit(value: number | undefined, fallback: number): number {
+  return round(Math.min(1, Math.max(0.001, finiteOrDefault(value, fallback))));
+}
+
+function getNestedSequenceDepthForTimeline(project: Project, timeline: Timeline, visited: Set<string>): number {
+  let depth = 0;
+  for (const clip of timeline.tracks.flatMap((track) => track.clips)) {
+    if (clip.type !== 'nested-sequence') {
+      continue;
+    }
+    if (visited.has(clip.sequenceId)) {
+      return MAX_NESTED_SEQUENCE_DEPTH + 1;
+    }
+    const sequence = getProjectSequences(project).find((item) => item.id === clip.sequenceId);
+    if (!sequence) {
+      continue;
+    }
+    const nextVisited = new Set(visited);
+    nextVisited.add(clip.sequenceId);
+    depth = Math.max(depth, 1 + getNestedSequenceDepthForTimeline(project, sequence.timeline, nextVisited));
+  }
+  return depth;
 }
 
 export function normalizeTransitionType(type: TransitionType | undefined): TransitionType {
@@ -399,7 +780,9 @@ export function isDefaultColorCorrection(colorCorrection: Partial<ColorCorrectio
     normalized.contrast === DEFAULT_COLOR_CORRECTION.contrast &&
     normalized.saturation === DEFAULT_COLOR_CORRECTION.saturation &&
     normalized.hue === DEFAULT_COLOR_CORRECTION.hue &&
-    normalized.lutPath === DEFAULT_COLOR_CORRECTION.lutPath
+    normalized.lutPath === DEFAULT_COLOR_CORRECTION.lutPath &&
+    isDefaultColorCurves(normalized.colorCurves) &&
+    isNeutralThreeWayColor(normalized.threeWayColor)
   );
 }
 
@@ -434,7 +817,15 @@ export function serializeLegacyProject(project: Project): {
       transitions: project.timeline.transitions?.map((transition) => ({ ...transition })) ?? [],
       tracks: project.timeline.tracks.map((track) => ({
         ...track,
-        clips: track.clips.map((clip) => ({ ...clip, transform: { ...clip.transform }, keyframes: cloneClipKeyframesLocal(clip.keyframes) }))
+        clips: track.clips.map((clip) => ({
+          ...clip,
+          transform: { ...clip.transform },
+          chromaKey: normalizeChromaKey(clip.chromaKey),
+          stabilization: normalizeStabilization(clip.stabilization),
+          masks: normalizeMasks(clip.masks),
+          sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
+          keyframes: cloneClipKeyframesLocal(clip.keyframes)
+        }))
       }))
     }
   };

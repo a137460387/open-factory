@@ -1,0 +1,38 @@
+import { describe, expect, it } from 'vitest';
+import { filterMediaAssets, type MediaAsset } from '../src';
+
+const media: MediaAsset[] = [
+  makeAsset('video-1', 'video', 'Intro Shot.MP4'),
+  makeAsset('audio-1', 'audio', 'voice-over.wav'),
+  makeAsset('image-1', 'image', 'Poster Frame.png')
+];
+
+describe('media bin filtering', () => {
+  it('filters by filename case-insensitively and returns all media for empty search', () => {
+    expect(filterMediaAssets(media, { query: 'intro' }).map((asset) => asset.id)).toEqual(['video-1']);
+    expect(filterMediaAssets(media, { query: 'VOICE' }).map((asset) => asset.id)).toEqual(['audio-1']);
+    expect(filterMediaAssets(media, { query: '   ' }).map((asset) => asset.id)).toEqual(['video-1', 'audio-1', 'image-1']);
+  });
+
+  it('filters by asset type', () => {
+    expect(filterMediaAssets(media, { filter: 'video' }).map((asset) => asset.id)).toEqual(['video-1']);
+    expect(filterMediaAssets(media, { filter: 'audio' }).map((asset) => asset.id)).toEqual(['audio-1']);
+    expect(filterMediaAssets(media, { filter: 'image' }).map((asset) => asset.id)).toEqual(['image-1']);
+  });
+
+  it('filters tagged media using project media metadata', () => {
+    expect(filterMediaAssets(media, { filter: 'tagged', metadata: { 'image-1': { labelColor: 'purple' } } }).map((asset) => asset.id)).toEqual(['image-1']);
+  });
+});
+
+function makeAsset(id: string, type: MediaAsset['type'], name: string): MediaAsset {
+  return {
+    id,
+    type,
+    name,
+    path: `C:/Media/${name}`,
+    duration: type === 'image' ? 0 : 1,
+    width: type === 'audio' ? 0 : 1280,
+    height: type === 'audio' ? 0 : 720
+  };
+}

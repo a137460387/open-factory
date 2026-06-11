@@ -1,5 +1,6 @@
 import type { ColorScopes } from '@open-factory/editor-core';
 import { useEffect, useRef, useState } from 'react';
+import { zhCN } from '../../i18n/strings';
 import type { PreviewFrameReadback } from '../../lib/preview/renderer';
 import type { ColorScopesWorkerRequest, ColorScopesWorkerResponse } from '../../workers/color-scopes.worker';
 
@@ -47,9 +48,9 @@ export function ColorScopesPanel({ frame, active }: { frame?: PreviewFrameReadba
     <section className="min-h-0 border-t border-black/30 bg-[#10141b]" data-testid="color-scopes-panel">
       <div className="flex h-9 items-center justify-between border-b border-white/10 px-3">
         <div className="flex items-center gap-1">
-          <ScopeTabButton label="Histogram" active={tab === 'histogram'} onClick={() => setTab('histogram')} />
-          <ScopeTabButton label="Waveform" active={tab === 'waveform'} onClick={() => setTab('waveform')} />
-          <ScopeTabButton label="Vectorscope" active={tab === 'vectorscope'} onClick={() => setTab('vectorscope')} />
+          <ScopeTabButton id="histogram" label={zhCN.scopes.histogram} active={tab === 'histogram'} onClick={() => setTab('histogram')} />
+          <ScopeTabButton id="waveform" label={zhCN.scopes.waveform} active={tab === 'waveform'} onClick={() => setTab('waveform')} />
+          <ScopeTabButton id="vectorscope" label={zhCN.scopes.vectorscope} active={tab === 'vectorscope'} onClick={() => setTab('vectorscope')} />
         </div>
       </div>
       <div className="h-[140px] px-3 py-2">
@@ -61,14 +62,14 @@ export function ColorScopesPanel({ frame, active }: { frame?: PreviewFrameReadba
   );
 }
 
-function ScopeTabButton({ label, active, onClick }: { label: string; active: boolean; onClick(): void }) {
+function ScopeTabButton({ id, label, active, onClick }: { id: ScopeTab; label: string; active: boolean; onClick(): void }) {
   return (
     <button
       type="button"
       className={`h-7 rounded border px-2 text-[11px] font-medium ${
         active ? 'border-emerald-400 bg-emerald-400/15 text-white' : 'border-white/10 bg-white/5 text-slate-300 hover:bg-white/10'
       }`}
-      data-testid={`color-scope-tab-${label.toLowerCase()}`}
+      data-testid={`color-scope-tab-${id}`}
       onClick={onClick}
     >
       {label}

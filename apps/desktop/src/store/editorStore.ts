@@ -1,6 +1,7 @@
-import type { Clip, HistoryMeta, KeyframeProperty, MediaAsset, Project, Timeline } from '@open-factory/editor-core';
-import { clampTimelineZoom, createProject, getTimelineDuration } from '@open-factory/editor-core';
+import type { Clip, HistoryMeta, KeyframeProperty, MediaAsset, MediaMetadata, Project, Timeline } from '@open-factory/editor-core';
+import { clampTimelineZoom, createProject, getTimelineDuration, replaceProjectActiveTimeline, switchProjectActiveSequence } from '@open-factory/editor-core';
 import { create } from 'zustand';
+import { zhCN } from '../i18n/strings';
 
 export interface SelectedKeyframeRef {
   clipId: string;
@@ -27,10 +28,12 @@ export interface EditorState {
   previewTimeline?: Timeline;
   replaceProject: (project: Project) => void;
   replaceTimeline: (timeline: Timeline) => void;
+  setActiveSequenceId: (sequenceId: string) => void;
   setProject: (project: Project, projectPath?: string) => void;
   resetProject: () => void;
   setMedia: (media: MediaAsset[]) => void;
   addMedia: (media: MediaAsset[]) => void;
+  setMediaMetadata: (assetId: string, metadata?: MediaMetadata) => void;
   setSelectedClipId: (clipId?: string) => void;
   setSelectedClipIds: (clipIds: string[]) => void;
   toggleSelectedClipId: (clipId: string) => void;
@@ -51,7 +54,7 @@ export interface EditorState {
 }
 
 export const useEditorStore = create<EditorState>((set, get) => ({
-  project: createProject('Open Factory Project'),
+  project: createProject(zhCN.project.defaultName),
   selectedClipIds: [],
   playheadTime: 0,
   isPlaying: false,
@@ -67,8 +70,19 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }),
   replaceTimeline: (timeline) =>
     set((state) => ({
-      project: { ...state.project, timeline, updatedAt: new Date().toISOString() },
+      project: { ...replaceProjectActiveTimeline(state.project, timeline), updatedAt: new Date().toISOString() },
       dirty: true
+    })),
+  setActiveSequenceId: (sequenceId) =>
+    set((state) => ({
+      project: { ...switchProjectActiveSequence(state.project, sequenceId), updatedAt: new Date().toISOString() },
+      selectedClipId: undefined,
+      selectedClipIds: [],
+      selectedKeyframe: undefined,
+      playheadTime: 0,
+      isPlaying: false,
+      previewTimeline: undefined,
+      dirty: state.dirty
     })),
   setProject: (project, projectPath) =>
     set({
@@ -86,7 +100,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     }),
   resetProject: () =>
     set({
-      project: createProject('Open Factory Project'),
+      project: createProject(zhCN.project.defaultName),
       projectPath: undefined,
       selectedClipId: undefined,
       selectedClipIds: [],
@@ -110,6 +124,19 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       return {
         project: { ...state.project, media: nextMedia, updatedAt: new Date().toISOString() },
         dirty: nextMedia.length !== state.project.media.length || state.dirty
+      };
+    }),
+  setMediaMetadata: (assetId, metadata) =>
+    set((state) => {
+      const mediaMetadata = { ...state.project.mediaMetadata };
+      if (metadata?.labelColor) {
+        mediaMetadata[assetId] = { labelColor: metadata.labelColor };
+      } else {
+        delete mediaMetadata[assetId];
+      }
+      return {
+        project: { ...state.project, mediaMetadata, updatedAt: new Date().toISOString() },
+        dirty: true
       };
     }),
   setSelectedClipId: (selectedClipId) => set({ selectedClipId, selectedClipIds: selectedClipId ? [selectedClipId] : [], selectedKeyframe: undefined }),

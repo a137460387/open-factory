@@ -1,5 +1,6 @@
 import React from 'react';
 import { RefreshCw } from 'lucide-react';
+import { zhCN } from '../../i18n/strings';
 import { showToast } from '../../lib/toast';
 
 interface ErrorBoundaryProps {
@@ -21,8 +22,8 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   componentDidCatch(error: unknown): void {
     showToast({
       kind: 'error',
-      title: `${this.props.name} crashed`,
-      message: error instanceof Error ? error.message : 'An unexpected panel error occurred.'
+      title: zhCN.errors.panelCrashed(this.props.name),
+      message: error instanceof Error ? error.message : zhCN.errors.panelUnexpected
     });
   }
 
@@ -33,13 +34,13 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 
     return (
       <div className="flex h-full min-h-[180px] flex-col items-center justify-center gap-3 rounded-md border border-rose-300 bg-rose-50 p-4 text-center">
-        <div className="text-sm font-semibold text-rose-900">{this.props.name} could not render.</div>
+        <div className="text-sm font-semibold text-rose-900">{zhCN.errors.panelCouldNotRender(this.props.name)}</div>
         <button
           className="inline-flex items-center gap-2 rounded-md border border-rose-300 bg-white px-3 py-2 text-sm font-medium text-rose-900 hover:bg-rose-100"
           onClick={() => this.setState({ hasError: false })}
         >
           <RefreshCw size={16} />
-          Reload panel
+          {zhCN.errors.reloadPanel}
         </button>
       </div>
     );

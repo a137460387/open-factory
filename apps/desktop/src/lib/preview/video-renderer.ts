@@ -1,4 +1,4 @@
-import { getClipSpeed, type Clip, type MediaAsset } from '@open-factory/editor-core';
+import { calculateSpeedCurveSourceDuration, getClipSpeed, type Clip, type MediaAsset } from '@open-factory/editor-core';
 import { recordPreviewDraw, recordPreviewError } from './debug';
 import { drawTransformedSource2d } from './transform-2d';
 import type { WebGlPreviewCompositor } from './webgl-compositor';
@@ -15,7 +15,7 @@ export async function drawVideo2d(
   seekVideo: (video: HTMLVideoElement, time: number) => Promise<void>,
   loadThumbnail: (asset: MediaAsset) => Promise<HTMLImageElement | undefined>
 ): Promise<void> {
-  const sourceTime = Math.max(0, (playheadTime - clip.start) * getClipSpeed(clip) + clip.trimStart);
+  const sourceTime = getPreviewSourceTime(clip, playheadTime);
   try {
     await seekVideo(video, sourceTime);
     drawVideoSource2d(context, canvas, video, asset, clip);
@@ -39,19 +39,24 @@ export async function drawVideoWebGl(
   seekVideo: (video: HTMLVideoElement, time: number) => Promise<void>,
   loadThumbnail: (asset: MediaAsset) => Promise<HTMLImageElement | undefined>
 ): Promise<void> {
-  const sourceTime = Math.max(0, (playheadTime - clip.start) * getClipSpeed(clip) + clip.trimStart);
+  const sourceTime = getPreviewSourceTime(clip, playheadTime);
   try {
     await seekVideo(video, sourceTime);
-    compositor.drawSource(video, asset.width || 1280, asset.height || 720, clip.transform, clip.colorCorrection);
+    compositor.drawSource(video, asset.width || 1280, asset.height || 720, clip.transform, clip.colorCorrection, clip.effects, clip.chromaKey, clip.masks);
     recordPreviewDraw('video', 'video');
   } catch (error) {
     recordPreviewError(error instanceof Error ? error.message : 'WebGL video preview failed.');
     const fallback = await loadThumbnail(asset);
     if (fallback) {
-      compositor.drawSource(fallback, asset.width || 1280, asset.height || 720, clip.transform, clip.colorCorrection);
+      compositor.drawSource(fallback, asset.width || 1280, asset.height || 720, clip.transform, clip.colorCorrection, clip.effects, clip.chromaKey, clip.masks);
       recordPreviewDraw('video', 'thumbnail');
     }
   }
+}
+
+function getPreviewSourceTime(clip: VideoClip, playheadTime: number): number {
+  const localTime = Math.max(0, playheadTime - clip.start);
+  return Math.max(0, calculateSpeedCurveSourceDuration(localTime, clip.keyframes, getClipSpeed(clip)) + clip.trimStart);
 }
 
 function drawVideoSource2d(

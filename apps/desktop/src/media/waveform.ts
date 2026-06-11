@@ -1,5 +1,6 @@
 import { extractDecodedWaveform, type MediaAsset, type WaveformCacheEntry } from '@open-factory/editor-core';
 import { readWaveformFromCache, writeWaveformToCache } from '../cache/cache-service';
+import { zhCN } from '../i18n/strings';
 import { sourceUrl } from '../lib/media';
 import { analyzeWaveform, getFileStat, type FileStat } from '../lib/tauri-bridge';
 import type { WaveformWorkerInput, WaveformWorkerOutput } from '../workers/waveform.worker';
@@ -77,7 +78,7 @@ async function getNativeFileStat(asset: MediaAsset): Promise<FileStat | undefine
 async function decodeWaveform(arrayBuffer: ArrayBuffer, pointsPerSecond: number): Promise<WaveformResult> {
   const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
   if (!AudioContextCtor) {
-    throw new Error('Web Audio decoding is unavailable.');
+    throw new Error(zhCN.errors.waveformDecodeUnavailable);
   }
   const context = new AudioContextCtor();
   try {
@@ -119,7 +120,7 @@ function extractWithWorker(arrayBuffer: ArrayBuffer, pointsPerSecond: number, du
     worker.onmessage = (event: MessageEvent<WaveformWorkerOutput>) => {
       worker.terminate();
       if (!event.data.success) {
-        reject(new Error(event.data.error ?? 'Waveform worker failed.'));
+        reject(new Error(event.data.error ?? zhCN.errors.waveformWorkerFailed));
         return;
       }
       resolve({ peaks: event.data.peaks, duration: event.data.duration, channels: event.data.channels, isSampled: true });

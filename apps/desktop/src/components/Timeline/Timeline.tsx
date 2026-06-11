@@ -4,9 +4,12 @@ import {
   AddTrackCommand,
   AddTransitionCommand,
   DeleteClipsCommand,
+  PackNestedSequenceCommand,
   UpdateTrackCommand,
   RemoveTimelineMarkerCommand,
   RemoveTransitionCommand,
+  calculateSpeedCurveDisplayDuration,
+  calculateSpeedCurveSourceDuration,
   calculateAnchoredScrollLeft,
   clampTimelineZoom,
   findTimelineSnapTarget,
@@ -27,6 +30,7 @@ import {
   getTimelineDuration,
   getClipSourceVisibleDuration,
   getClipSpeed,
+  isNestedSequenceDepthExceeded,
   moveClip,
   round,
   snapTime,
@@ -44,10 +48,11 @@ import {
 import { Captions, Flag, Plus, Scissors, Trash2, Type } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import { createTextClip } from '../../lib/clipFactory';
+import { zhCN } from '../../i18n/strings';
 import { showToast } from '../../lib/toast';
 import { detectClipSilence } from '../../lib/silenceDetection';
 import { detectSceneChanges, listenBridge } from '../../lib/tauri-bridge';
-import { commandManager, timelineAccessor } from '../../store/commandManager';
+import { commandManager, projectAccessor, timelineAccessor } from '../../store/commandManager';
 import { useEditorStore } from '../../store/editorStore';
 import { LABEL_WIDTH, Ruler, TrackRow, buildTicks, type ClipMenuRequest, type DragState } from './TimelineParts';
 
@@ -68,6 +73,7 @@ export function Timeline() {
   const setPlayheadTime = useEditorStore((state) => state.setPlayheadTime);
   const setTimelineZoom = useEditorStore((state) => state.setTimelineZoom);
   const setPreviewTimeline = useEditorStore((state) => state.setPreviewTimeline);
+  const setActiveSequenceId = useEditorStore((state) => state.setActiveSequenceId);
   const [drag, setDrag] = useState<DragState | undefined>();
   const [selectionRect, setSelectionRect] = useState<SelectionRect | undefined>();
   const [selectionStart, setSelectionStart] = useState<{ x: number; y: number } | undefined>();
@@ -84,13 +90,15 @@ export function Timeline() {
   const width = Math.max(960, timelineDuration * zoom);
   const ticks = useMemo(() => buildTicks(timelineDuration), [timelineDuration]);
   const allClips = useMemo(() => project.timeline.tracks.flatMap((track) => track.clips), [project.timeline]);
+  const activeSequence = project.sequences.find((sequence) => sequence.id === project.activeSequenceId);
+  const isMainSequence = project.activeSequenceId === 'sequence-main';
 
   function addTrack(type: Track['type']): void {
     commandManager.execute(
       new AddTrackCommand(timelineAccessor, createTrack({
         id: createId('track'),
         type,
-        name: `${type[0].toUpperCase()}${type.slice(1)} ${project.timeline.tracks.filter((track) => track.type === type).length + 1}`,
+        name: zhCN.timeline.newTrackName(type, project.timeline.tracks.filter((track) => track.type === type).length + 1),
         clips: []
       }))
     );
@@ -115,7 +123,7 @@ export function Timeline() {
       );
       setTransitionMenu(undefined);
     } catch (error) {
-      showToast({ kind: 'warning', title: 'Transition unavailable', message: error instanceof Error ? error.message : 'The transition could not be added.' });
+      showToast({ kind: 'warning', title: zhCN.timeline.transitionUnavailableTitle, message: error instanceof Error ? error.message : zhCN.timeline.transitionUnavailableMessage });
     }
   }
 
@@ -130,7 +138,7 @@ export function Timeline() {
   function addText(): void {
     const track = project.timeline.tracks.find((item) => item.type === 'text');
     if (!track) {
-      showToast({ kind: 'warning', title: 'No text track', message: 'Add a text track first.' });
+      showToast({ kind: 'warning', title: zhCN.timeline.noTextTrackTitle, message: zhCN.timeline.noTextTrackMessage });
       return;
     }
     const clip = createTextClip(track, project.timeline);
@@ -144,11 +152,11 @@ export function Timeline() {
         new AddTimelineMarkerCommand(timelineAccessor, {
           id: createId('marker'),
           time: playheadTime,
-          label: `Marker ${(project.timeline.markers?.length ?? 0) + 1}`
+          label: zhCN.timeline.markerLabel((project.timeline.markers?.length ?? 0) + 1)
         })
       );
     } catch (error) {
-      showToast({ kind: 'warning', title: 'Marker rejected', message: error instanceof Error ? error.message : 'Unable to add marker.' });
+      showToast({ kind: 'warning', title: zhCN.timeline.markerRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.addMarkerFailed });
     }
   }
 
@@ -156,7 +164,7 @@ export function Timeline() {
     try {
       commandManager.execute(new RemoveTimelineMarkerCommand(timelineAccessor, markerId));
     } catch (error) {
-      showToast({ kind: 'warning', title: 'Marker rejected', message: error instanceof Error ? error.message : 'Unable to remove marker.' });
+      showToast({ kind: 'warning', title: zhCN.timeline.markerRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.removeMarkerFailed });
     }
   }
 
@@ -167,7 +175,7 @@ export function Timeline() {
     try {
       commandManager.execute(new SplitClipCommand(timelineAccessor, selectedClipId, playheadTime));
     } catch (error) {
-      showToast({ kind: 'warning', title: 'Split unavailable', message: error instanceof Error ? error.message : 'Move the playhead inside the clip.' });
+      showToast({ kind: 'warning', title: zhCN.timeline.splitUnavailableTitle, message: error instanceof Error ? error.message : zhCN.timeline.splitUnavailableMessage });
     }
   }
 
@@ -274,7 +282,7 @@ export function Timeline() {
           const preview = moveClip(current.clip, current.previewStart);
           const track = project.timeline.tracks.find((item) => item.id === preview.trackId);
           if (track && detectOverlap(track, preview, current.clip.id)) {
-            showToast({ kind: 'warning', title: 'Clip overlap', message: 'This position overlaps another clip.' });
+            showToast({ kind: 'warning', title: zhCN.timeline.clipOverlapTitle, message: zhCN.timeline.clipOverlapMessage });
             return;
           }
           commandManager.execute(new MoveClipCommand(timelineAccessor, current.clip.id, current.previewStart));
@@ -285,7 +293,7 @@ export function Timeline() {
         );
       }
     } catch (error) {
-      showToast({ kind: 'warning', title: 'Timeline edit rejected', message: error instanceof Error ? error.message : 'The edit could not be applied.' });
+      showToast({ kind: 'warning', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage });
     }
   }
 
@@ -316,6 +324,26 @@ export function Timeline() {
     setSelectedKeyframe(keyframe);
   }
 
+  function openNestedSequence(clip: Clip): void {
+    if (clip.type !== 'nested-sequence') {
+      return;
+    }
+    setActiveSequenceId(clip.sequenceId);
+    if (isNestedSequenceDepthExceeded(useEditorStore.getState().project)) {
+      showToast({ kind: 'warning', title: zhCN.timeline.nestedSequenceDepthTitle, message: zhCN.timeline.nestedSequenceDepthMessage });
+    }
+  }
+
+  function packClipMenuSelection(clipId: string): void {
+    const clipIds = selectedClipIds.includes(clipId) ? selectedClipIds : [clipId];
+    try {
+      commandManager.execute(new PackNestedSequenceCommand(projectAccessor, clipIds, zhCN.timeline.nestedSequenceName(project.sequences.length)));
+      setClipMenu(undefined);
+    } catch (error) {
+      showToast({ kind: 'error', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
+    }
+  }
+
   function onTrackPointerDown(event: React.PointerEvent<HTMLDivElement>): void {
     setTransitionMenu(undefined);
     setClipMenu(undefined);
@@ -343,7 +371,7 @@ export function Timeline() {
     setClipMenu(undefined);
     setSelectedClipId(clip.id);
     if (!asset || (clip.type === 'video' && !asset.hasAudio) || (clip.type !== 'video' && clip.type !== 'audio')) {
-      showToast({ kind: 'warning', title: '无法检测静音', message: '请选择带音频的音频或视频 clip。' });
+      showToast({ kind: 'warning', title: zhCN.timeline.silenceUnavailableTitle, message: zhCN.timeline.silenceUnavailableMessage });
       return;
     }
     setSilenceDialog({ clip, asset });
@@ -354,18 +382,18 @@ export function Timeline() {
       commandManager.execute(new RemoveSilenceCommand(timelineAccessor, clipId, ranges));
       setSilenceDialog(undefined);
       clearSelectedClipIds();
-      showToast({ kind: 'success', title: '静音段已删除', message: `删除 ${ranges.length} 段静音。` });
+      showToast({ kind: 'success', title: zhCN.timeline.silenceRemovedTitle, message: zhCN.timeline.silenceRemovedMessage(ranges.length) });
     } catch (error) {
-      showToast({ kind: 'warning', title: '静音删除失败', message: error instanceof Error ? error.message : '时间线拒绝了该操作。' });
+      showToast({ kind: 'warning', title: zhCN.timeline.silenceRemoveFailedTitle, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
     }
   }
 
   function splitBySceneTimes(clipId: string, times: number[]): void {
     try {
       commandManager.execute(new SplitClipAtTimesCommand(timelineAccessor, clipId, times));
-      showToast({ kind: 'success', title: '场景已分割', message: `分割 ${times.length} 个切点。` });
+      showToast({ kind: 'success', title: zhCN.timeline.sceneSplitTitle, message: zhCN.timeline.sceneSplitMessage(times.length) });
     } catch (error) {
-      showToast({ kind: 'warning', title: '场景分割失败', message: error instanceof Error ? error.message : '时间线拒绝了该操作。' });
+      showToast({ kind: 'warning', title: zhCN.timeline.sceneSplitFailedTitle, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
     }
   }
 
@@ -375,7 +403,7 @@ export function Timeline() {
     setClipMenu(undefined);
     setSelectedClipId(clip.id);
     if (clip.type !== 'video' || !asset) {
-      showToast({ kind: 'warning', title: '无法检测场景', message: '请选择视频 clip。' });
+      showToast({ kind: 'warning', title: zhCN.timeline.sceneUnavailableTitle, message: zhCN.timeline.sceneUnavailableMessage });
       return;
     }
     setSceneDialog({ clip, progress: 0 });
@@ -392,12 +420,12 @@ export function Timeline() {
         .filter((time) => time > sourceStart + 0.000001 && time < sourceEnd - 0.000001)
         .map((time) => round((time - sourceStart) / speed));
       if (splitTimes.length === 0) {
-        showToast({ kind: 'info', title: '未检测到场景切点' });
+        showToast({ kind: 'info', title: zhCN.timeline.noSceneCutsTitle });
         return;
       }
       splitBySceneTimes(clip.id, splitTimes);
     } catch (error) {
-      showToast({ kind: 'error', title: '场景检测失败', message: error instanceof Error ? error.message : '无法运行 FFmpeg 场景检测。' });
+      showToast({ kind: 'error', title: zhCN.timeline.sceneDetectFailedTitle, message: error instanceof Error ? error.message : zhCN.timeline.sceneDetectFailedMessage });
     } finally {
       unlisten?.();
       setSceneDialog(undefined);
@@ -493,22 +521,26 @@ export function Timeline() {
     const speed = getClipSpeed(clip);
     const sourceDuration = clip.trimStart + getClipSourceVisibleDuration(clip) + clip.trimEnd;
     const minDuration = minFrameDuration();
+    const minSourceDuration = calculateSpeedCurveSourceDuration(minDuration, clip.keyframes, speed);
     if (edge === 'left') {
-      const maxTrimStart = Math.max(0, sourceDuration - clip.trimEnd - minDuration * speed);
-      const trimStart = round(Math.min(maxTrimStart, Math.max(0, clip.trimStart + delta * speed)));
+      const sourceDelta = delta >= 0 ? calculateSpeedCurveSourceDuration(delta, clip.keyframes, speed) : delta * speed;
+      const maxTrimStart = Math.max(0, sourceDuration - clip.trimEnd - minSourceDuration);
+      const trimStart = round(Math.min(maxTrimStart, Math.max(0, clip.trimStart + sourceDelta)));
+      const visibleSourceDuration = Math.max(0, sourceDuration - trimStart - clip.trimEnd);
       return {
         ...clip,
         trimStart,
-        duration: round(Math.max(minDuration, (sourceDuration - trimStart - clip.trimEnd) / speed)),
+        duration: round(Math.max(minDuration, calculateSpeedCurveDisplayDuration(visibleSourceDuration, clip.keyframes, speed))),
         transform: { ...clip.transform }
       } as Clip;
     }
     const proposedEnd = snapClipEnd(clip.start + Math.max(minDuration, clip.duration + delta), clip, snappingDisabled);
-    const maxDuration = Math.max(minDuration, (sourceDuration - clip.trimStart) / speed);
+    const maxDuration = Math.max(minDuration, calculateSpeedCurveDisplayDuration(sourceDuration - clip.trimStart, clip.keyframes, speed));
     const duration = round(Math.min(maxDuration, Math.max(minDuration, proposedEnd - clip.start)));
+    const visibleSourceDuration = calculateSpeedCurveSourceDuration(duration, clip.keyframes, speed);
     return {
       ...clip,
-      trimEnd: round(Math.max(0, sourceDuration - clip.trimStart - duration * speed)),
+      trimEnd: round(Math.max(0, sourceDuration - clip.trimStart - visibleSourceDuration)),
       duration,
       transform: { ...clip.transform }
     } as Clip;
@@ -603,33 +635,46 @@ export function Timeline() {
     >
       <div className="flex items-center gap-2 border-b border-line px-3 py-2">
         <div className="mr-auto">
-          <div className="text-sm font-semibold">Timeline</div>
-          <div className="text-xs text-slate-500">Drag clips, trim edges, split at playhead</div>
+          <div className="text-sm font-semibold">{zhCN.timeline.title}</div>
+          <div className="text-xs text-slate-500">{zhCN.timeline.subtitle}</div>
+          <div className="mt-1 flex items-center gap-1 text-[11px] text-slate-500" data-testid="sequence-breadcrumb">
+            {isMainSequence ? (
+              <span>{zhCN.timeline.mainSequence}</span>
+            ) : (
+              <>
+                <button className="text-brand hover:underline" type="button" data-testid="sequence-back-main" onClick={() => setActiveSequenceId('sequence-main')}>
+                  {zhCN.timeline.backToMainSequence}
+                </button>
+                <span>/</span>
+                <span className="font-medium text-slate-700">{activeSequence?.name ?? zhCN.timeline.mainSequence}</span>
+              </>
+            )}
+          </div>
         </div>
-        <button className="rounded-md border border-line p-2 hover:bg-panel" title="Add video track" onClick={() => addTrack('video')}>
+        <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.addVideoTrack} data-testid="add-video-track-button" onClick={() => addTrack('video')}>
           <Plus size={16} />
         </button>
-        <button className="rounded-md border border-line p-2 hover:bg-panel" title="Add audio track" onClick={() => addTrack('audio')}>
+        <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.addAudioTrack} data-testid="add-audio-track-button" onClick={() => addTrack('audio')}>
           <Plus size={16} />
         </button>
-        <button className="rounded-md border border-line p-2 hover:bg-panel" title="Add subtitle track" onClick={() => addTrack('subtitle')}>
+        <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.addSubtitleTrack} data-testid="add-subtitle-track-button" onClick={() => addTrack('subtitle')}>
           <Captions size={16} />
         </button>
-        <button className="rounded-md border border-line p-2 hover:bg-panel" title="Add text clip" onClick={addText}>
+        <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.addTextClip} data-testid="add-text-clip-button" onClick={addText}>
           <Type size={16} />
         </button>
-        <button className="rounded-md border border-line p-2 hover:bg-panel" title="Add marker at playhead" data-testid="add-timeline-marker-button" onClick={addTimelineMarker}>
+        <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.addMarker} data-testid="add-timeline-marker-button" onClick={addTimelineMarker}>
           <Flag size={16} />
         </button>
-        <button className="rounded-md border border-line p-2 hover:bg-panel" title="Split selected clip" onClick={splitSelected}>
+        <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.splitSelectedClip} onClick={splitSelected}>
           <Scissors size={16} />
         </button>
-        <button className="rounded-md border border-line p-2 hover:bg-panel" title="Delete selected clip" onClick={deleteSelected}>
+        <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.deleteSelectedClip} onClick={deleteSelected}>
           <Trash2 size={16} />
         </button>
         <input
           className="w-28 accent-brand"
-          title="Timeline zoom"
+          title={zhCN.timeline.zoom}
           type="range"
           min={8}
           max={1600}
@@ -668,6 +713,7 @@ export function Timeline() {
                   })
                 }
                 onClipMenu={openClipMenu}
+                onClipDoubleClick={openNestedSequence}
               />
             ))}
             {(project.timeline.markers ?? []).map((marker) => (
@@ -695,6 +741,7 @@ export function Timeline() {
                 asset={allClips.find((clip) => clip.id === clipMenu.clipId) ? getClipMediaAsset(allClips.find((clip) => clip.id === clipMenu.clipId)!) : undefined}
                 onSilence={() => openSilenceDetection(clipMenu.clipId)}
                 onScene={() => void openSceneDetection(clipMenu.clipId)}
+                onPack={() => packClipMenuSelection(clipMenu.clipId)}
                 onClose={() => setClipMenu(undefined)}
               />
             ) : null}
@@ -703,7 +750,7 @@ export function Timeline() {
         <div
                 className="absolute bottom-0 top-0 z-10 w-0.5 bg-emerald-500"
                 style={{ left: LABEL_WIDTH + inPoint * zoom }}
-                title="In point"
+                title={zhCN.timeline.inPoint}
                 data-testid="timeline-in-point-marker"
               />
             ) : null}
@@ -711,7 +758,7 @@ export function Timeline() {
               <div
                 className="absolute bottom-0 top-0 z-10 w-0.5 bg-amber-500"
                 style={{ left: LABEL_WIDTH + outPoint * zoom }}
-                title="Out point"
+                title={zhCN.timeline.outPoint}
                 data-testid="timeline-out-point-marker"
               />
             ) : null}
@@ -824,21 +871,21 @@ function TransitionMenu({
       data-testid="transition-menu"
       onPointerDown={(event) => event.stopPropagation()}
     >
-      <div className="mb-2 font-semibold text-slate-700">添加过渡</div>
+      <div className="mb-2 font-semibold text-slate-700">{zhCN.timeline.addTransition}</div>
       <label className="mb-2 block text-slate-600">
-        类型
+        {zhCN.timeline.transitionType}
         <select
           className="mt-1 w-full rounded border border-line px-2 py-1"
           value={menu.type}
           data-testid="transition-type-select"
           onChange={(event) => onChange({ ...menu, type: event.target.value as TransitionType })}
         >
-          <option value="dissolve">Dissolve</option>
-          <option value="fade-black">Fade black</option>
+          <option value="dissolve">{zhCN.timeline.transitionNames.dissolve}</option>
+          <option value="fade-black">{zhCN.timeline.transitionNames['fade-black']}</option>
         </select>
       </label>
       <label className="mb-3 block text-slate-600">
-        时长
+        {zhCN.timeline.transitionDuration}
         <input
           className="mt-1 w-full rounded border border-line px-2 py-1"
           type="number"
@@ -851,15 +898,15 @@ function TransitionMenu({
       </label>
       <div className="flex justify-end gap-2">
         <button className="rounded border border-line px-2 py-1 hover:bg-panel" type="button" onClick={onClose}>
-          关闭
+          {zhCN.timeline.close}
         </button>
         {onRemove ? (
           <button className="rounded border border-rose-300 px-2 py-1 text-rose-700 hover:bg-rose-50" type="button" data-testid="transition-remove-button" onClick={onRemove}>
-            移除
+            {zhCN.timeline.remove}
           </button>
         ) : null}
         <button className="rounded bg-brand px-2 py-1 font-medium text-white" type="button" data-testid="transition-add-button" onClick={onAdd}>
-          添加
+          {zhCN.timeline.add}
         </button>
       </div>
     </div>
@@ -872,6 +919,7 @@ function ClipActionMenu({
   asset,
   onSilence,
   onScene,
+  onPack,
   onClose
 }: {
   menu: ClipMenuState;
@@ -879,6 +927,7 @@ function ClipActionMenu({
   asset?: MediaAsset;
   onSilence(): void;
   onScene(): void;
+  onPack(): void;
   onClose(): void;
 }) {
   const canDetectSilence = Boolean(clip && (clip.type === 'audio' || (clip.type === 'video' && asset?.hasAudio)));
@@ -897,7 +946,7 @@ function ClipActionMenu({
         data-testid="clip-action-silence"
         onClick={onSilence}
       >
-        自动剪切静音段
+        {zhCN.timeline.silenceAction}
       </button>
       <button
         className="block w-full rounded px-2 py-2 text-left hover:bg-panel disabled:opacity-40"
@@ -906,10 +955,19 @@ function ClipActionMenu({
         data-testid="clip-action-scene"
         onClick={onScene}
       >
-        自动按场景分割
+        {zhCN.timeline.sceneAction}
+      </button>
+      <button
+        className="block w-full rounded px-2 py-2 text-left hover:bg-panel disabled:opacity-40"
+        type="button"
+        disabled={!clip}
+        data-testid="clip-action-pack-nested"
+        onClick={onPack}
+      >
+        {zhCN.timeline.packNestedSequence}
       </button>
       <button className="mt-1 block w-full rounded px-2 py-1.5 text-left text-slate-500 hover:bg-panel" type="button" onClick={onClose}>
-        关闭
+        {zhCN.timeline.close}
       </button>
     </div>
   );
@@ -946,7 +1004,7 @@ function SilenceDetectionDialog({
       setRanges(nextRanges);
       setStatus('preview');
     } catch (detectError) {
-      setError(detectError instanceof Error ? detectError.message : '无法解码音频。');
+      setError(detectError instanceof Error ? detectError.message : zhCN.timeline.silenceDecodeFailed);
       setStatus('error');
     }
   }
@@ -955,18 +1013,18 @@ function SilenceDetectionDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" data-testid="silence-dialog">
       <section className="w-full max-w-md rounded-md border border-line bg-white shadow-soft">
         <div className="border-b border-line px-4 py-3">
-          <h2 className="text-sm font-semibold">静音检测</h2>
+          <h2 className="text-sm font-semibold">{zhCN.timeline.silenceDialogTitle}</h2>
           <div className="mt-1 truncate text-xs text-slate-500">{clip.name}</div>
         </div>
         <div className="space-y-3 px-4 py-3 text-sm">
           {status === 'detecting' ? (
             <div className="rounded border border-line bg-panel px-3 py-6 text-center text-sm text-slate-600" data-testid="silence-loading">
-              正在解码并扫描音频...
+              {zhCN.timeline.silenceScanning}
             </div>
           ) : (
             <>
               <label className="block text-xs font-medium text-slate-600">
-                静音阈值 dB
+                {zhCN.timeline.silenceThreshold}
                 <input
                   className="mt-1 w-full rounded border border-line px-2 py-1.5 text-sm"
                   type="number"
@@ -977,7 +1035,7 @@ function SilenceDetectionDialog({
                 />
               </label>
               <label className="block text-xs font-medium text-slate-600">
-                最小静音时长 s
+                {zhCN.timeline.silenceMinDuration}
                 <input
                   className="mt-1 w-full rounded border border-line px-2 py-1.5 text-sm"
                   type="number"
@@ -989,7 +1047,7 @@ function SilenceDetectionDialog({
                 />
               </label>
               <label className="block text-xs font-medium text-slate-600">
-                边距 ms
+                {zhCN.timeline.silenceMargin}
                 <input
                   className="mt-1 w-full rounded border border-line px-2 py-1.5 text-sm"
                   type="number"
@@ -1002,7 +1060,7 @@ function SilenceDetectionDialog({
               </label>
               {status === 'preview' ? (
                 <div className="rounded border border-line bg-panel px-3 py-2 text-xs text-slate-700" data-testid="silence-preview">
-                  <div className="font-semibold">将删除 {ranges.length} 段，合计 {totalDuration.toFixed(2)}s</div>
+                  <div className="font-semibold">{zhCN.timeline.silencePreview(ranges.length, totalDuration.toFixed(2))}</div>
                   {ranges.length > 0 ? (
                     <div className="mt-2 max-h-24 overflow-auto">
                       {ranges.slice(0, 6).map((range) => (
@@ -1012,7 +1070,7 @@ function SilenceDetectionDialog({
                       ))}
                     </div>
                   ) : (
-                    <div className="mt-1 text-slate-500">未找到符合条件的静音段。</div>
+                    <div className="mt-1 text-slate-500">{zhCN.timeline.noSilenceFound}</div>
                   )}
                 </div>
               ) : null}
@@ -1022,11 +1080,11 @@ function SilenceDetectionDialog({
         </div>
         <div className="flex justify-end gap-2 border-t border-line px-4 py-3">
           <button className="rounded border border-line px-3 py-2 text-sm font-medium hover:bg-panel" type="button" onClick={onClose}>
-            关闭
+            {zhCN.timeline.close}
           </button>
           {status === 'preview' && ranges.length > 0 ? (
             <button className="rounded bg-brand px-3 py-2 text-sm font-medium text-white" type="button" data-testid="silence-confirm-button" onClick={() => onApply(ranges)}>
-              确认剪切
+              {zhCN.timeline.confirmSilenceCut}
             </button>
           ) : (
             <button
@@ -1036,7 +1094,7 @@ function SilenceDetectionDialog({
               data-testid="silence-detect-button"
               onClick={() => void runDetection()}
             >
-              开始检测
+              {zhCN.timeline.startSilenceDetect}
             </button>
           )}
         </div>
@@ -1050,10 +1108,10 @@ function SceneDetectionDialog({ progress }: { progress: number }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" data-testid="scene-detect-dialog">
       <section className="w-full max-w-sm rounded-md border border-line bg-white shadow-soft">
         <div className="border-b border-line px-4 py-3">
-          <h2 className="text-sm font-semibold">场景检测</h2>
+          <h2 className="text-sm font-semibold">{zhCN.timeline.sceneDialogTitle}</h2>
         </div>
         <div className="px-4 py-5">
-          <div className="mb-2 text-sm text-slate-600">正在分析视频切点...</div>
+          <div className="mb-2 text-sm text-slate-600">{zhCN.timeline.sceneScanning}</div>
           <div className="h-2 overflow-hidden rounded-full bg-slate-200">
             <div className="h-full bg-brand transition-all" style={{ width: `${Math.round(Math.max(0, Math.min(1, progress)) * 100)}%` }} />
           </div>

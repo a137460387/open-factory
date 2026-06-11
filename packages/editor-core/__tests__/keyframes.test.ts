@@ -107,6 +107,23 @@ describe('keyframe interpolation', () => {
     expect(resolveAnimatedVolume(normalized, 1)).toBe(0.75);
   });
 
+  it('normalizes speed keyframes to the clip speed range', () => {
+    const normalized = normalizeClipKeyframes(
+      {
+        speed: [
+          { id: 'speed-slow', time: -1, value: 0.01, easing: 'linear' },
+          { id: 'speed-fast', time: 3, value: 9, easing: 'linear' }
+        ]
+      },
+      2
+    );
+
+    expect(normalized?.speed).toEqual([
+      { id: 'speed-slow', time: 0, value: 0.25, easing: 'linear' },
+      { id: 'speed-fast', time: 2, value: 4, easing: 'linear' }
+    ]);
+  });
+
   it('resolves static keyframe values and applies animated transforms to non-audio clips', () => {
     const text = makeTextClip({
       transform: { x: 10, y: 20, scale: 1, opacity: 0.5 },
@@ -124,6 +141,7 @@ describe('keyframe interpolation', () => {
     expect(getClipStaticKeyframeValue(text, 'x')).toBe(10);
     expect(getClipStaticKeyframeValue(text, 'y')).toBe(20);
     expect(getClipStaticKeyframeValue(text, 'volume')).toBe(1);
+    expect(getClipStaticKeyframeValue(makeVideoClip({ speed: 1.5 }), 'speed')).toBe(1.5);
     expect(getClipKeyframeValue(text, 'x', 0.5)).toBe(0.5);
     expect(animated).toMatchObject({ transform: { x: 0.5, y: -0.5, opacity: 0.75 } });
     expect('volume' in animated).toBe(false);

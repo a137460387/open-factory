@@ -16,6 +16,7 @@ interface ShortcutHandlers {
   undo(): void;
   redo(): void;
   save(): void;
+  exportCurrentFrame(): void;
 }
 
 export function useShortcuts(handlers: ShortcutHandlers): void {
@@ -88,6 +89,9 @@ export function useShortcuts(handlers: ShortcutHandlers): void {
           break;
         case 'save':
           handlers.save();
+          break;
+        case 'export-current-frame':
+          handlers.exportCurrentFrame();
           break;
       }
     };

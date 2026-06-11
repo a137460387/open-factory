@@ -2,14 +2,14 @@ import { expect, test } from '@playwright/test';
 
 test('brightens the WebGL preview when clip color correction changes', async ({ page }) => {
   await page.goto('/');
-  await page.getByTitle('Add text clip').click();
-  await page.getByLabel('Text').fill(' ');
-  await page.getByLabel('Text').blur();
+  await page.getByTestId('add-text-clip-button').click();
+  await page.getByTestId('clip-text-input').fill(' ');
+  await page.getByTestId('clip-text-input').blur();
   await page.locator('input[type="color"]').nth(1).fill('#555555');
-  await page.getByLabel(/Background opacity/).fill('1');
+  await page.getByTestId('clip-background-opacity-slider').fill('1');
 
   const before = await waitForPreviewPixel(page);
-  await page.getByRole('spinbutton', { name: 'Brightness' }).fill('0.5');
+  await page.getByTestId('clip-brightness-input').fill('0.5');
   const after = await waitForPreviewPixel(page, before);
 
   expect(sumRgb(after)).toBeGreaterThan(sumRgb(before) + 40);

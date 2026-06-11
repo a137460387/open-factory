@@ -1,7 +1,8 @@
-import { Captions, Download, FileDown, FilePlus2, FolderOpen, Pause, Play, Redo2, RotateCcw, Save, Scissors, Trash2, Undo2, XCircle } from 'lucide-react';
+import { Captions, Download, FileDown, FilePlus2, FolderOpen, ImageDown, Pause, Play, Redo2, RotateCcw, Save, Scissors, Trash2, Undo2, XCircle } from 'lucide-react';
 import { timelineHasExportableVideo } from '@open-factory/editor-core';
 import { clsx } from 'clsx';
 import { useExportQueueStore } from '../export/export-queue-store';
+import { zhCN } from '../i18n/strings';
 import { useEditorStore } from '../store/editorStore';
 
 interface ToolbarProps {
@@ -11,6 +12,7 @@ interface ToolbarProps {
   onImportMedia(): void;
   onImportSubtitles(): void;
   onExportVideo(): void;
+  onExportCurrentFrame(): void;
   onCancelExport(): void;
   onSplitSelected(): void;
   onUndo(): void;
@@ -23,6 +25,7 @@ interface ToolbarProps {
 }
 
 export function Toolbar(props: ToolbarProps) {
+  const t = zhCN.toolbar;
   const project = useEditorStore((state) => state.project);
   const isPlaying = useEditorStore((state) => state.isPlaying);
   const setIsPlaying = useEditorStore((state) => state.setIsPlaying);
@@ -37,18 +40,25 @@ export function Toolbar(props: ToolbarProps) {
     <header className="flex min-h-14 items-center gap-2 border-b border-line bg-white px-3">
       <div className="mr-2 min-w-0">
         <div className="truncate text-sm font-semibold text-ink">{project.name}</div>
-        <div className="text-xs text-slate-500">{dirty ? 'Unsaved changes' : 'Saved'}</div>
+        <div className="text-xs text-slate-500">{dirty ? zhCN.common.unsavedChanges : zhCN.common.saved}</div>
       </div>
-      <ToolButton title="New project" onClick={props.onNewProject} icon={<FilePlus2 size={17} />} />
-      <ToolButton title="Open project" onClick={props.onOpenProject} icon={<FolderOpen size={17} />} />
-      <ToolButton title="Save project" onClick={props.onSaveProject} icon={<Save size={17} />} />
+      <ToolButton title={t.newProject} onClick={props.onNewProject} icon={<FilePlus2 size={17} />} testId="toolbar-new-project-button" />
+      <ToolButton title={t.openProject} onClick={props.onOpenProject} icon={<FolderOpen size={17} />} testId="toolbar-open-project-button" />
+      <ToolButton title={t.saveProject} onClick={props.onSaveProject} icon={<Save size={17} />} testId="toolbar-save-project-button" />
       <div className="mx-1 h-7 w-px bg-line" />
-      <ToolButton title="Import media" onClick={props.onImportMedia} icon={<FileDown size={17} />} />
-      <ToolButton title="Import subtitles" onClick={props.onImportSubtitles} icon={<Captions size={17} />} testId="import-subtitles-button" />
-      <ToolButton title={canExport ? 'Export video' : 'Please add media to the timeline'} disabled={!canExport || isExporting} onClick={props.onExportVideo} icon={<Download size={17} />} />
-      <ToolButton title="Clear media cache" onClick={props.onClearCache} icon={<Trash2 size={17} />} testId="settings-clear-cache-button" />
-      <label className="ml-1 inline-flex h-9 items-center gap-1 rounded-md border border-line bg-panel px-2 text-[11px] text-slate-600" title="Autosave interval">
-        <span>Autosave</span>
+      <ToolButton title={t.importMedia} onClick={props.onImportMedia} icon={<FileDown size={17} />} testId="toolbar-import-media-button" />
+      <ToolButton title={t.importSubtitles} onClick={props.onImportSubtitles} icon={<Captions size={17} />} testId="import-subtitles-button" />
+      <ToolButton title={canExport ? t.exportVideo : t.exportDisabled} disabled={!canExport || isExporting} onClick={props.onExportVideo} icon={<Download size={17} />} testId="toolbar-export-button" />
+      <ToolButton
+        title={canExport ? t.exportCurrentFrame : t.exportDisabled}
+        disabled={!canExport || isExporting}
+        onClick={props.onExportCurrentFrame}
+        icon={<ImageDown size={17} />}
+        testId="toolbar-export-frame-button"
+      />
+      <ToolButton title={t.clearMediaCache} onClick={props.onClearCache} icon={<Trash2 size={17} />} testId="settings-clear-cache-button" />
+      <label className="ml-1 inline-flex h-9 items-center gap-1 rounded-md border border-line bg-panel px-2 text-[11px] text-slate-600" title={t.autosaveInterval}>
+        <span>{t.autosave}</span>
         <input
           className="h-6 w-12 rounded border border-line bg-white px-1 text-right tabular-nums text-slate-700"
           type="number"
@@ -59,29 +69,29 @@ export function Toolbar(props: ToolbarProps) {
           onChange={(event) => props.onAutosaveIntervalSecondsChange(Number(event.target.value))}
           data-testid="autosave-interval-input"
         />
-        <span>s</span>
+        <span>{zhCN.common.secondsShort}</span>
       </label>
       <div className="mx-1 h-7 w-px bg-line" />
-      <ToolButton title="Undo" disabled={!historyMeta.canUndo} onClick={props.onUndo} icon={<Undo2 size={17} />} />
-      <ToolButton title="Redo" disabled={!historyMeta.canRedo} onClick={props.onRedo} icon={<Redo2 size={17} />} />
-      <ToolButton title="Split selected clip" onClick={props.onSplitSelected} icon={<Scissors size={17} />} />
+      <ToolButton title={t.undo} disabled={!historyMeta.canUndo} onClick={props.onUndo} icon={<Undo2 size={17} />} testId="toolbar-undo-button" />
+      <ToolButton title={t.redo} disabled={!historyMeta.canRedo} onClick={props.onRedo} icon={<Redo2 size={17} />} testId="toolbar-redo-button" />
+      <ToolButton title={t.splitSelectedClip} onClick={props.onSplitSelected} icon={<Scissors size={17} />} testId="toolbar-split-button" />
       <div className="mx-1 h-7 w-px bg-line" />
-      <ToolButton title={isPlaying ? 'Pause' : 'Play'} onClick={() => setIsPlaying(!isPlaying)} icon={isPlaying ? <Pause size={17} /> : <Play size={17} />} />
+      <ToolButton title={isPlaying ? t.pause : t.play} onClick={() => setIsPlaying(!isPlaying)} icon={isPlaying ? <Pause size={17} /> : <Play size={17} />} testId="toolbar-playback-button" playbackState={isPlaying ? 'playing' : 'paused'} />
       {typeof exportProgress === 'number' ? (
         <div className="ml-auto flex min-w-[220px] items-center gap-2">
           <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-200">
             <div className="h-full bg-brand transition-all" style={{ width: `${Math.round(exportProgress * 100)}%` }} />
           </div>
           <div className="w-10 text-right text-xs tabular-nums text-slate-600">{Math.round(exportProgress * 100)}%</div>
-          {isExporting ? <ToolButton title="Cancel export" onClick={props.onCancelExport} icon={<XCircle size={16} />} /> : null}
+          {isExporting ? <ToolButton title={t.cancelExport} onClick={props.onCancelExport} icon={<XCircle size={16} />} testId="toolbar-cancel-export-button" /> : null}
           {props.lastExportPath && props.onRevealExport ? (
-            <button className="rounded-md border border-line bg-white p-2 text-slate-700 hover:bg-panel" title="Open export folder" onClick={props.onRevealExport}>
+            <button className="rounded-md border border-line bg-white p-2 text-slate-700 hover:bg-panel" title={t.openExportFolder} onClick={props.onRevealExport} data-testid="toolbar-open-export-folder-button">
               <RotateCcw size={15} />
             </button>
           ) : null}
         </div>
       ) : (
-        <div className="ml-auto text-xs text-slate-500">Local multitrack export</div>
+        <div className="ml-auto text-xs text-slate-500">{t.localExport}</div>
       )}
     </header>
   );
@@ -93,9 +103,10 @@ interface ToolButtonProps {
   disabled?: boolean;
   onClick(): void;
   testId?: string;
+  playbackState?: 'playing' | 'paused';
 }
 
-function ToolButton({ title, icon, disabled, onClick, testId }: ToolButtonProps) {
+function ToolButton({ title, icon, disabled, onClick, testId, playbackState }: ToolButtonProps) {
   return (
     <button
       className={clsx(
@@ -105,6 +116,7 @@ function ToolButton({ title, icon, disabled, onClick, testId }: ToolButtonProps)
       title={title}
       aria-label={title}
       data-testid={testId}
+      data-playback-state={playbackState}
       disabled={disabled}
       onClick={onClick}
     >

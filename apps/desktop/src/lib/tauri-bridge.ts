@@ -4,6 +4,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { confirm, message as dialogMessage } from '@tauri-apps/plugin-dialog';
 import { open as openShellPath } from '@tauri-apps/plugin-shell';
 import type { FfmpegCapabilities, FfmpegExportPlan, ProxyPlan } from '@open-factory/editor-core';
+import { zhCN } from '../i18n/strings';
 import { isTauriRuntime } from './tauri';
 
 export interface FileDialogFilter {
@@ -35,6 +36,24 @@ export interface ProxyResult {
   assetId: string;
   proxyPath: string;
   durationMs: number;
+}
+
+export interface AnalyzeClipRequest {
+  clipId: string;
+  mediaPath: string;
+  duration: number;
+}
+
+export interface AnalyzeClipResult {
+  clipId: string;
+  trfPath: string;
+  durationMs: number;
+}
+
+export interface ClipAnalysisProgressEvent {
+  clipId: string;
+  progress: number;
+  progressPct: number;
 }
 
 export interface SceneDetectRequest {
@@ -83,6 +102,7 @@ export type TauriMocks = Partial<{
   detectFfmpeg(): Promise<boolean> | boolean;
   getFfmpegCapabilities(): Promise<FfmpegCapabilities> | FfmpegCapabilities;
   runExport(plan: FfmpegExportPlan): Promise<ExportResult> | ExportResult;
+  analyzeClip(request: AnalyzeClipRequest): Promise<AnalyzeClipResult> | AnalyzeClipResult;
   cancelExport(): Promise<void> | void;
   getCacheDir(): Promise<string> | string;
   readCache(path: string): Promise<string | null> | string | null;
@@ -127,20 +147,20 @@ export async function chooseUnsavedCloseAction(): Promise<UnsavedCloseAction> {
     return mock();
   }
   if (isTauriRuntime()) {
-    const result = await dialogMessage('Save changes before closing?', {
-      title: 'Unsaved changes',
+    const result = await dialogMessage(zhCN.closeGuard.message, {
+      title: zhCN.closeGuard.title,
       kind: 'warning',
-      buttons: { yes: 'Save', no: 'Discard', cancel: 'Cancel' }
+      buttons: { yes: zhCN.closeGuard.save, no: zhCN.closeGuard.discard, cancel: zhCN.closeGuard.cancel }
     });
-    if (result === 'Yes' || result === 'Save') {
+    if (result === 'Yes' || result === 'Save' || result === zhCN.closeGuard.save) {
       return 'save';
     }
-    if (result === 'No' || result === 'Discard') {
+    if (result === 'No' || result === 'Discard' || result === zhCN.closeGuard.discard) {
       return 'discard';
     }
     return 'cancel';
   }
-  const result = window.prompt('Save changes before closing? Type save, discard, or cancel.', 'cancel')?.trim().toLowerCase();
+  const result = window.prompt(zhCN.closeGuard.browserPrompt, 'cancel')?.trim().toLowerCase();
   return result === 'save' || result === 'discard' ? result : 'cancel';
 }
 
@@ -150,7 +170,7 @@ export async function openFileDialog(multiple: boolean, filters: FileDialogFilte
     return mock({ multiple, filters });
   }
   if (!isTauriRuntime()) {
-    throw new Error('openFileDialog requires Tauri or a __TAURI_MOCKS__ implementation.');
+    throw new Error('openFileDialog 需要 Tauri 或 __TAURI_MOCKS__ 实现。');
   }
   return invoke<string[]>('open_file_dialog', { multiple, filters });
 }
@@ -168,7 +188,7 @@ export async function saveFileDialog(defaultPath: string | undefined, filters: F
     return mock({ defaultPath, filters });
   }
   if (!isTauriRuntime()) {
-    throw new Error('saveFileDialog requires Tauri or a __TAURI_MOCKS__ implementation.');
+    throw new Error('saveFileDialog 需要 Tauri 或 __TAURI_MOCKS__ 实现。');
   }
   return invoke<string | undefined>('save_file_dialog', { defaultPath, filters });
 }
@@ -179,7 +199,7 @@ export async function openDirectoryDialog(): Promise<string | undefined> {
     return mock();
   }
   if (!isTauriRuntime()) {
-    throw new Error('openDirectoryDialog requires Tauri or a __TAURI_MOCKS__ implementation.');
+    throw new Error('openDirectoryDialog 需要 Tauri 或 __TAURI_MOCKS__ 实现。');
   }
   return invoke<string | undefined>('open_directory_dialog');
 }
@@ -342,6 +362,14 @@ export async function runExport(plan: FfmpegExportPlan): Promise<ExportResult> {
   return invoke<ExportResult>('run_export', { plan });
 }
 
+export async function analyzeClip(request: AnalyzeClipRequest): Promise<AnalyzeClipResult> {
+  const mock = getTauriMocks()?.analyzeClip;
+  if (mock) {
+    return mock(request);
+  }
+  return invoke<AnalyzeClipResult>('analyze_clip', { request });
+}
+
 export async function cancelExport(): Promise<void> {
   const mock = getTauriMocks()?.cancelExport;
   if (mock) {
@@ -447,7 +475,7 @@ export async function listenDragDrop(handler: (event: { type: string; paths?: st
       void authorizePaths(payload.paths)
         .then(() => handler(payload))
         .catch((error) => {
-          console.warn('Dropped paths were not authorized', error);
+          console.warn(zhCN.errors.droppedPathsNotAuthorized, error);
           handler({ type: payload.type, paths: [] });
         });
       return;

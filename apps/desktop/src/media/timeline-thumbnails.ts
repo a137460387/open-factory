@@ -5,6 +5,7 @@ import {
   type Clip,
   type MediaAsset
 } from '@open-factory/editor-core';
+import { zhCN } from '../i18n/strings';
 import { sourceUrl } from '../lib/media';
 import { getPreviewMediaPath } from './proxy';
 import type { TimelineThumbnailWorkerInput, TimelineThumbnailWorkerOutput } from '../workers/timeline-thumbnail.worker';
@@ -32,7 +33,8 @@ export function getTimelineThumbnailPlaceholders(asset: MediaAsset, clip: VideoC
     clipDuration: clip.duration,
     clipPixelWidth: pixelWidth,
     trimStart: clip.trimStart,
-    speed: clip.speed
+    speed: clip.speed,
+    keyframes: clip.keyframes
   }).map((timestamp) => {
     const key = buildTimelineThumbnailCacheKey(mediaPath, timestamp);
     return { key, timestamp, dataUrl: thumbnailCache.get(key) };
@@ -110,7 +112,7 @@ function renderBitmapInWorker(bitmap: ImageBitmap, width: number, height: number
   const currentWorker = getWorker();
   if (!currentWorker) {
     bitmap.close();
-    return Promise.reject(new Error('Timeline thumbnail worker unavailable.'));
+    return Promise.reject(new Error('时间线缩略图 worker 不可用。'));
   }
   return new Promise((resolve, reject) => {
     const id = `thumb-${workerRequestId++}`;
@@ -138,7 +140,7 @@ function getWorker(): Worker | undefined {
       if (event.data.success && event.data.dataUrl) {
         request.resolve(event.data.dataUrl);
       } else {
-        request.reject(new Error(event.data.error ?? 'Timeline thumbnail worker failed.'));
+        request.reject(new Error(event.data.error ?? '时间线缩略图 worker 失败。'));
       }
     };
     worker.onerror = (event) => {
@@ -168,7 +170,7 @@ function once(target: EventTarget, eventName: string): Promise<void> {
     };
     const onError = () => {
       cleanup();
-      reject(new Error(`Media event failed: ${eventName}`));
+      reject(new Error(zhCN.errors.mediaEventFailed(eventName)));
     };
     target.addEventListener(eventName, onEvent, { once: true });
     target.addEventListener('error', onError, { once: true });

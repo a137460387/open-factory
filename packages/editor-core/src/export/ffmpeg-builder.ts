@@ -1,16 +1,37 @@
 import {
   DEFAULT_COLOR_CORRECTION,
   DEFAULT_SUBTITLE_MODE,
+  MAX_NESTED_SEQUENCE_DEPTH,
   isDefaultColorCorrection,
   normalizeColorCorrection,
   normalizeMasterVolume,
+  normalizeTrackCompressor,
+  normalizeTrackEQ,
   normalizeTransitionDuration,
   normalizeTransitionType,
+  getProjectPrimaryTimeline,
+  getProjectSequences,
+  isChromaKeyEnabled,
+  isStabilizationExportable,
+  normalizeChromaKey,
+  normalizeSequenceFrameRate,
+  normalizeStabilization,
+  normalizeMasks,
   type ClipKeyframes,
-  type Project
+  type Project,
+  type Timeline
 } from '../model';
+import {
+  isDefaultColorCurves,
+  isNeutralThreeWayColor,
+  normalizeThreeWayColor,
+  serializeColorCurvesToCube,
+  type ColorWheelValue,
+  type ThreeWayColor
+} from '../color-grading';
+import { cloneEffects, type Effect } from '../effects';
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
-import { getClipSourceVisibleDuration, getClipSpeed, getRenderableTracks, getTimelinePlaybackDuration, getTrackPan, getTrackVolume } from '../timeline';
+import { calculateSpeedCurveSourceDuration, getClipSourceVisibleDuration, getClipSpeed, getRenderableTracks, getTimelinePlaybackDuration, getTrackPan, getTrackVolume } from '../timeline';
 import { round } from '../time';
 import { serializeSrt } from '../subtitles/srt';
 import { cssColorToFfmpeg, escapeDrawtextValue, formatFfmpegSeconds, normalizeFfmpegPath, quoteForDisplay } from './ffmpeg-escape';
@@ -26,6 +47,7 @@ import type {
   FfmpegCapabilities,
   FfmpegExportPlan,
   FfmpegInput,
+  NestedFfmpegExportPlan,
   TextArtifact
 } from './export-types';
 
@@ -50,108 +72,143 @@ export const DEFAULT_EXPORT_SETTINGS: Omit<ExportSettings, 'outputPath'> = {
   subtitleMode: undefined
 };
 
+export const SETPTS_EXPRESSION_LIMIT = 4096;
+
+interface BuildFfmpegExportPlanOptions {
+  frameExport?: {
+    time: number;
+  };
+}
+
 export function buildExportProjectFromProject(project: Project, options: BuildExportProjectOptions): ExportProject {
   const mediaById = new Map(project.media.map((asset) => [asset.id, asset]));
-  const duration = getTimelinePlaybackDuration(project.timeline);
+  const primaryTimeline = getProjectPrimaryTimeline(project);
+  const settings = {
+    ...DEFAULT_EXPORT_SETTINGS,
+    width: project.settings.width || DEFAULT_EXPORT_SETTINGS.width,
+    height: project.settings.height || DEFAULT_EXPORT_SETTINGS.height,
+    fps: project.settings.fps || DEFAULT_EXPORT_SETTINGS.fps,
+    ...options.settings,
+    outputPath: normalizeFfmpegPath(options.outputPath)
+  };
   return {
-    settings: {
-      ...DEFAULT_EXPORT_SETTINGS,
-      width: project.settings.width || DEFAULT_EXPORT_SETTINGS.width,
-      height: project.settings.height || DEFAULT_EXPORT_SETTINGS.height,
-      fps: project.settings.fps || DEFAULT_EXPORT_SETTINGS.fps,
-      ...options.settings,
-      outputPath: normalizeFfmpegPath(options.outputPath)
-    },
+    settings,
     masterVolume: normalizeMasterVolume(project.masterVolume),
-    timeline: {
-      duration,
-      transitions: (project.timeline.transitions ?? []).map(
-        (transition) =>
-          ({
-            id: transition.id,
-            type: normalizeTransitionType(transition.type),
-            duration: normalizeTransitionDuration(transition.duration),
-            fromClipId: transition.fromClipId,
-            toClipId: transition.toClipId
-          }) satisfies ExportTransition
-      ),
-      tracks: project.timeline.tracks.map((track, trackIndex) => {
-        const trackVolume = getTrackVolume(track);
-        const trackPan = getTrackPan(track);
-        return {
-          index: trackIndex,
-          type: track.type,
-          muted: Boolean(track.muted),
-          solo: Boolean(track.solo),
-          locked: Boolean(track.locked),
-          volume: trackVolume,
-          pan: trackPan,
-          clips: track.clips.map((clip) => {
-            const media = 'mediaId' in clip ? mediaById.get(clip.mediaId) : undefined;
-            return {
-              id: clip.id,
-              type: clip.type,
-              mediaPath: media ? normalizeFfmpegPath(media.path) : null,
-              start: clip.start,
-              duration: clip.duration,
-              trimStart: clip.trimStart,
-              trimEnd: clip.trimEnd,
-              speed: getClipSpeed(clip),
-              sourceDuration: getClipSourceVisibleDuration(clip),
-              trackIndex,
-              transform: { ...clip.transform },
-              colorCorrection: normalizeColorCorrection(clip.colorCorrection),
-              keyframes: buildExportClipKeyframes(clip.keyframes, clip.duration, trackVolume),
-              kenBurns: clip.type === 'image' ? Boolean(clip.kenBurns) : false,
-              volume: ('volume' in clip ? clip.volume : 1) * trackVolume,
-              pan: trackPan,
-              muted: 'muted' in clip ? Boolean(clip.muted) : false,
-              fadeInDuration: 'fadeInDuration' in clip ? Math.max(0, clip.fadeInDuration ?? 0) : 0,
-              fadeOutDuration: 'fadeOutDuration' in clip ? Math.max(0, clip.fadeOutDuration ?? 0) : 0,
-              hasEmbeddedAudio: clip.type === 'video' && Boolean(media?.hasAudio),
-              audioChannels: media?.audioChannels ?? 2,
-              audioSampleRate: media?.audioSampleRate ?? DEFAULT_EXPORT_SETTINGS.sampleRate,
-              textStyle:
-                clip.type === 'text'
-                  ? {
-                      text: clip.text,
-                      fontSize: clip.style.fontSize,
-                      fontColor: clip.style.color,
-                      backgroundColor: clip.style.backgroundColor,
-                      backgroundOpacity: clip.style.backgroundOpacity,
-                      fontFamily: clip.style.fontFamily,
-                      fontPath: options.defaultFontPath ?? null,
-                      x: clip.transform.x,
-                      y: clip.transform.y,
-                      opacity: clip.transform.opacity,
-                      bold: clip.style.bold,
-                      italic: clip.style.italic
-                    }
-                  : null,
-              subtitleStyle:
-                clip.type === 'subtitle'
-                  ? {
-                      text: clip.text,
-                      fontSize: clip.style.fontSize,
-                      fontColor: clip.style.color,
-                      backgroundColor: clip.style.backgroundColor,
-                      backgroundOpacity: clip.style.backgroundOpacity,
-                      fontFamily: clip.style.fontFamily,
-                      fontPath: options.defaultFontPath ?? null,
-                      x: clip.transform.x,
-                      y: clip.transform.y,
-                      opacity: clip.transform.opacity,
-                      bold: clip.style.bold,
-                      italic: clip.style.italic,
-                      yOffset: clip.style.yOffset
-                    }
-                  : null,
-              subtitleMode: clip.type === 'subtitle' ? (clip.subtitleMode ?? DEFAULT_SUBTITLE_MODE) : null
-            } satisfies ExportClip;
-          })
-        };
-      })
-    }
+    timeline: buildExportTimeline(primaryTimeline, mediaById, options),
+    sequences: getProjectSequences(project)
+      .filter((sequence) => sequence.id !== 'sequence-main')
+      .map((sequence) => ({ id: sequence.id, name: sequence.name, timeline: buildExportTimeline(sequence.timeline, mediaById, options) }))
+  };
+}
+
+function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project['media'][number]>, options: BuildExportProjectOptions): ExportTimeline {
+  return {
+    duration: getTimelinePlaybackDuration(timeline),
+    transitions: (timeline.transitions ?? []).map(
+      (transition) =>
+        ({
+          id: transition.id,
+          type: normalizeTransitionType(transition.type),
+          duration: normalizeTransitionDuration(transition.duration),
+          fromClipId: transition.fromClipId,
+          toClipId: transition.toClipId
+        }) satisfies ExportTransition
+    ),
+    tracks: timeline.tracks.map((track, trackIndex) => {
+      const trackVolume = getTrackVolume(track);
+      const trackPan = getTrackPan(track);
+      const trackEQ = normalizeTrackEQ(track.eq);
+      const trackCompressor = normalizeTrackCompressor(track.compressor);
+      return {
+        index: trackIndex,
+        type: track.type,
+        muted: Boolean(track.muted),
+        solo: Boolean(track.solo),
+        locked: Boolean(track.locked),
+        volume: trackVolume,
+        pan: trackPan,
+        clips: track.clips.map((clip) => {
+          const media = 'mediaId' in clip ? mediaById.get(clip.mediaId) : undefined;
+          const nestedSequenceId = clip.type === 'nested-sequence' ? clip.sequenceId : null;
+          return {
+            id: clip.id,
+            type: clip.type,
+            mediaPath: nestedSequenceId ? nestedInputPlaceholder(nestedSequenceId) : media ? normalizeFfmpegPath(media.path) : null,
+            nestedSequenceId,
+            start: clip.start,
+            duration: clip.duration,
+            trimStart: clip.trimStart,
+            trimEnd: clip.trimEnd,
+            speed: getClipSpeed(clip),
+            sourceDuration: clip.type === 'nested-sequence' ? clip.duration : getClipSourceVisibleDuration(clip),
+            trackIndex,
+            transform: { ...clip.transform },
+            colorCorrection: normalizeColorCorrection(clip.colorCorrection),
+            chromaKey: normalizeChromaKey(clip.chromaKey),
+            stabilization: normalizeStabilization(clip.stabilization),
+            masks: normalizeMasks(clip.masks),
+            imageSequence:
+              clip.type === 'image' && media?.imageSequence
+                ? {
+                    frameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate ?? media.imageSequence.frameRate) ?? media.imageSequence.frameRate,
+                    frameCount: media.imageSequence.frameCount,
+                    paths: media.imageSequence.paths.map(normalizeFfmpegPath)
+                  }
+                : null,
+            sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
+            effects: cloneEffects(clip.effects) ?? [],
+            keyframes: buildExportClipKeyframes(clip.keyframes, clip.duration, trackVolume),
+            kenBurns: clip.type === 'image' ? Boolean(clip.kenBurns) : false,
+            volume: ('volume' in clip ? clip.volume : 1) * trackVolume,
+            pan: trackPan,
+            eq: trackEQ,
+            compressor: trackCompressor,
+            muted: 'muted' in clip ? Boolean(clip.muted) : false,
+            fadeInDuration: 'fadeInDuration' in clip ? Math.max(0, clip.fadeInDuration ?? 0) : 0,
+            fadeOutDuration: 'fadeOutDuration' in clip ? Math.max(0, clip.fadeOutDuration ?? 0) : 0,
+            hasEmbeddedAudio: clip.type === 'nested-sequence' || (clip.type === 'video' && Boolean(media?.hasAudio)),
+            audioChannels: media?.audioChannels ?? 2,
+            audioSampleRate: media?.audioSampleRate ?? DEFAULT_EXPORT_SETTINGS.sampleRate,
+            textStyle:
+              clip.type === 'text'
+                ? {
+                    text: clip.text,
+                    fontSize: clip.style.fontSize,
+                    fontColor: clip.style.color,
+                    backgroundColor: clip.style.backgroundColor,
+                    backgroundOpacity: clip.style.backgroundOpacity,
+                    fontFamily: clip.style.fontFamily,
+                    fontPath: options.defaultFontPath ?? null,
+                    x: clip.transform.x,
+                    y: clip.transform.y,
+                    opacity: clip.transform.opacity,
+                    bold: clip.style.bold,
+                    italic: clip.style.italic
+                  }
+                : null,
+            subtitleStyle:
+              clip.type === 'subtitle'
+                ? {
+                    text: clip.text,
+                    fontSize: clip.style.fontSize,
+                    fontColor: clip.style.color,
+                    backgroundColor: clip.style.backgroundColor,
+                    backgroundOpacity: clip.style.backgroundOpacity,
+                    fontFamily: clip.style.fontFamily,
+                    fontPath: options.defaultFontPath ?? null,
+                    x: clip.transform.x,
+                    y: clip.transform.y,
+                    opacity: clip.transform.opacity,
+                    bold: clip.style.bold,
+                    italic: clip.style.italic,
+                    yOffset: clip.style.yOffset
+                  }
+                : null,
+            subtitleMode: clip.type === 'subtitle' ? (clip.subtitleMode ?? DEFAULT_SUBTITLE_MODE) : null
+          } satisfies ExportClip;
+        })
+      };
+    })
   };
 }
 
@@ -166,10 +223,19 @@ function buildExportClipKeyframes(keyframes: ClipKeyframes | undefined, duration
   };
 }
 
-export function buildFfmpegExportPlan(project: ExportProject, capabilities?: FfmpegCapabilities): FfmpegExportPlan {
+export function buildFfmpegExportPlan(
+  project: ExportProject,
+  capabilities?: FfmpegCapabilities,
+  depth = 0,
+  sequenceStack: string[] = [],
+  options: BuildFfmpegExportPlanOptions = {}
+): FfmpegExportPlan {
   const duration = Math.max(project.timeline.duration, 0.001);
   const settings = project.settings;
   const audioOnly = settings.outputMode === 'audio' || settings.format === 'm4a';
+  const pngSequence = settings.format === 'png-sequence';
+  const frameExportTime = options.frameExport ? Math.min(duration, Math.max(0, options.frameExport.time)) : null;
+  const videoFramesOnly = frameExportTime !== null || pngSequence;
   const warnings: string[] = [];
   const inputs: FfmpegInput[] = [];
   const inputByClipId = new Map<string, number>();
@@ -192,9 +258,13 @@ export function buildFfmpegExportPlan(project: ExportProject, capabilities?: Ffm
     if (!clip.mediaPath || clip.type === 'text' || clip.type === 'subtitle') {
       continue;
     }
+    const sequenceArtifact = clip.imageSequence ? buildImageSequenceArtifact(clip) : undefined;
+    if (sequenceArtifact) {
+      textArtifacts.push(sequenceArtifact);
+    }
     const input: FfmpegInput = {
       index: inputs.length,
-      path: normalizeFfmpegPath(clip.mediaPath),
+      path: sequenceArtifact?.placeholder ?? normalizeFfmpegPath(clip.mediaPath),
       args: buildInputArgs(clip)
     };
     inputs.push(input);
@@ -211,7 +281,17 @@ export function buildFfmpegExportPlan(project: ExportProject, capabilities?: Ffm
   if (!audioOnly) {
     filters.push(`color=c=black:s=${settings.width}x${settings.height}:r=${settings.fps}:d=${formatFfmpegSeconds(duration)}[base0]`);
 
-    const visualItems = buildVisualItems(project.timeline, orderedPlaybackClips, playbackStartByClipId, renderableTrackIndexes, inputByClipId, settings, filters, warnings);
+    const visualItems = buildVisualItems(
+      project.timeline,
+      orderedPlaybackClips,
+      playbackStartByClipId,
+      renderableTrackIndexes,
+      inputByClipId,
+      settings,
+      filters,
+      warnings,
+      textArtifacts
+    );
 
     for (const item of visualItems) {
       if (item.kind === 'text') {
@@ -249,7 +329,7 @@ export function buildFfmpegExportPlan(project: ExportProject, capabilities?: Ffm
     textArtifacts.push(artifact);
     currentVideo = nextVideo;
     videoStep += 1;
-  } else if (!audioOnly && subtitleClips.length > 0 && subtitleMode === 'soft-sub') {
+  } else if (!audioOnly && !videoFramesOnly && subtitleClips.length > 0 && subtitleMode === 'soft-sub') {
     const artifact = buildSubtitleArtifact(subtitleClips, 'argument');
     softSubtitleInputIndex = inputs.length;
     inputs.push({
@@ -261,41 +341,49 @@ export function buildFfmpegExportPlan(project: ExportProject, capabilities?: Ffm
   }
 
   if (!audioOnly) {
-    filters.push(`[${currentVideo}]trim=duration=${formatFfmpegSeconds(duration)},setpts=PTS-STARTPTS,fps=${settings.fps},format=yuv420p[vout]`);
+    const outputPixelFormat = pngSequence ? 'rgba' : 'yuv420p';
+    filters.push(`[${currentVideo}]trim=duration=${formatFfmpegSeconds(duration)},setpts=PTS-STARTPTS,fps=${settings.fps},format=${outputPixelFormat}[vout]`);
   }
 
-  const masterVolume = normalizeMasterVolume(project.masterVolume);
-  const audioLabels = buildAudioFilters(orderedPlaybackClips, inputByClipId, settings, filters);
-  if (audioLabels.length === 0) {
-    filters.push(`anullsrc=channel_layout=stereo:sample_rate=${settings.sampleRate}:d=${formatFfmpegSeconds(duration)},volume=${formatVolume(masterVolume)}[aout]`);
-  } else {
-    filters.push(
-      `${audioLabels.map((label) => `[${label}]`).join('')}amix=inputs=${audioLabels.length}:duration=longest:normalize=0,atrim=duration=${formatFfmpegSeconds(
-        duration
-      )},asetpts=PTS-STARTPTS,aresample=${settings.sampleRate},volume=${formatVolume(masterVolume)}[aout]`
-    );
+  if (!videoFramesOnly) {
+    const masterVolume = normalizeMasterVolume(project.masterVolume);
+    const audioLabels = buildAudioFilters(orderedPlaybackClips, inputByClipId, settings, filters);
+    if (audioLabels.length === 0) {
+      filters.push(`anullsrc=channel_layout=stereo:sample_rate=${settings.sampleRate}:d=${formatFfmpegSeconds(duration)},volume=${formatVolume(masterVolume)}[aout]`);
+    } else {
+      filters.push(
+        `${audioLabels.map((label) => `[${label}]`).join('')}amix=inputs=${audioLabels.length}:duration=longest:normalize=0,atrim=duration=${formatFfmpegSeconds(
+          duration
+        )},asetpts=PTS-STARTPTS,aresample=${settings.sampleRate},volume=${formatVolume(masterVolume)}[aout]`
+      );
+    }
   }
 
   const filterComplex = filters.join(';');
-  const maps = audioOnly ? ['-map', '[aout]'] : ['-map', '[vout]', '-map', '[aout]'];
+  const maps = videoFramesOnly ? ['-map', '[vout]'] : audioOnly ? ['-map', '[aout]'] : ['-map', '[vout]', '-map', '[aout]'];
   const subtitleOutputArgs: string[] = [];
   if (softSubtitleInputIndex !== undefined) {
     maps.push('-map', `${softSubtitleInputIndex}:s:0`);
     subtitleOutputArgs.push('-c:s', 'mov_text');
   }
-  const outputArgs = [
-    ...(audioOnly
-      ? []
-      : ['-c:v', settings.videoCodec, ...buildBitrateArgs('-b:v', settings.videoBitrate), '-pix_fmt', 'yuv420p', '-r', String(settings.fps)]),
-    '-c:a',
-    settings.audioCodec,
-    ...buildBitrateArgs('-b:a', settings.audioBitrate),
-    ...subtitleOutputArgs,
-    '-t',
-    formatFfmpegSeconds(duration),
-    ...buildContainerArgs(settings),
-    normalizeFfmpegPath(settings.outputPath)
-  ];
+  const outputArgs =
+    pngSequence
+      ? ['-r', String(settings.fps), '-f', 'image2', pngSequenceOutputPath(settings.outputPath)]
+      : frameExportTime === null
+      ? [
+          ...(audioOnly
+            ? []
+            : ['-c:v', settings.videoCodec, ...buildBitrateArgs('-b:v', settings.videoBitrate), '-pix_fmt', 'yuv420p', '-r', String(settings.fps)]),
+          '-c:a',
+          settings.audioCodec,
+          ...buildBitrateArgs('-b:a', settings.audioBitrate),
+          ...subtitleOutputArgs,
+          '-t',
+          formatFfmpegSeconds(duration),
+          ...buildContainerArgs(settings),
+          normalizeFfmpegPath(settings.outputPath)
+        ]
+      : ['-ss', formatFfmpegSeconds(frameExportTime), '-frames:v', '1', '-f', 'image2', normalizeFfmpegPath(settings.outputPath)];
   const fullArgs = [
     '-y',
     '-progress',
@@ -307,6 +395,8 @@ export function buildFfmpegExportPlan(project: ExportProject, capabilities?: Ffm
     ...maps,
     ...outputArgs
   ];
+  const nestedPlans = buildNestedSequencePlans(project, capabilities, warnings, depth, sequenceStack);
+  const planDuration = frameExportTime === null ? duration : Math.max(1 / Math.max(1, settings.fps), 0.001);
 
   return {
     inputs,
@@ -316,9 +406,53 @@ export function buildFfmpegExportPlan(project: ExportProject, capabilities?: Ffm
     fullArgs,
     warnings,
     textArtifacts,
+    nestedPlans,
     displayCommand: ['ffmpeg', ...fullArgs.map(quoteForDisplay)].join(' '),
-    duration
+    duration: planDuration
   };
+}
+
+export function buildFfmpegCurrentFrameExportPlan(project: ExportProject, time: number, capabilities?: FfmpegCapabilities): FfmpegExportPlan {
+  return buildFfmpegExportPlan(project, capabilities, 0, [], { frameExport: { time } });
+}
+
+function buildNestedSequencePlans(
+  project: ExportProject,
+  capabilities: FfmpegCapabilities | undefined,
+  warnings: string[],
+  depth: number,
+  sequenceStack: string[]
+): NestedFfmpegExportPlan[] {
+  const sequenceIds = new Set(
+    project.timeline.tracks.flatMap((track) => track.clips.flatMap((clip) => (clip.type === 'nested-sequence' && clip.nestedSequenceId ? [clip.nestedSequenceId] : [])))
+  );
+  const nestedPlans: NestedFfmpegExportPlan[] = [];
+  for (const sequenceId of sequenceIds) {
+    if (sequenceStack.includes(sequenceId)) {
+      warnings.push(`Nested sequence ${sequenceId} was skipped because it would create a recursive export.`);
+      continue;
+    }
+    if (depth + 1 > MAX_NESTED_SEQUENCE_DEPTH) {
+      warnings.push(`Nested sequence ${sequenceId} exceeds maximum depth ${MAX_NESTED_SEQUENCE_DEPTH}.`);
+    }
+    const sequence = project.sequences.find((item) => item.id === sequenceId);
+    if (!sequence) {
+      warnings.push(`Nested sequence ${sequenceId} was skipped because the sequence is missing.`);
+      continue;
+    }
+    const placeholder = nestedInputPlaceholder(sequenceId);
+    const nestedProject: ExportProject = {
+      ...project,
+      settings: { ...project.settings, outputPath: placeholder, format: 'mp4', outputMode: 'video' },
+      timeline: sequence.timeline
+    };
+    nestedPlans.push({
+      sequenceId,
+      placeholder,
+      plan: buildFfmpegExportPlan(nestedProject, capabilities, depth + 1, [...sequenceStack, sequenceId])
+    });
+  }
+  return nestedPlans;
 }
 
 type VisualItem =
@@ -347,7 +481,8 @@ function buildVisualItems(
   inputByClipId: Map<string, number>,
   settings: ExportSettings,
   filters: string[],
-  warnings: string[]
+  warnings: string[],
+  textArtifacts: TextArtifact[]
 ): VisualItem[] {
   const consumedClipIds = new Set<string>();
   const items: VisualItem[] = [];
@@ -378,8 +513,8 @@ function buildVisualItems(
     const label = `xfade${safeLabel(transition.id)}`;
     const start = playbackStartByClipId.get(pair.fromClip.id) ?? pair.fromClip.start;
     const pairDuration = round(pair.fromClip.duration + pair.toClip.duration - duration);
-    filters.push(buildTransitionClipFilter(fromInput, pair.fromClip, `${label}_from`, settings));
-    filters.push(buildTransitionClipFilter(toInput, pair.toClip, `${label}_to`, settings));
+    filters.push(buildTransitionClipFilter(fromInput, pair.fromClip, `${label}_from`, settings, textArtifacts, warnings));
+    filters.push(buildTransitionClipFilter(toInput, pair.toClip, `${label}_to`, settings, textArtifacts, warnings));
     filters.push(
       `[${label}_from][${label}_to]xfade=transition=${mapTransitionType(transition.type)}:duration=${formatFfmpegSeconds(
         duration
@@ -399,7 +534,7 @@ function buildVisualItems(
     consumedClipIds.add(pair.toClip.id);
   }
 
-  for (const clip of orderedPlaybackClips.filter((item) => item.type === 'video' || item.type === 'image' || item.type === 'text')) {
+  for (const clip of orderedPlaybackClips.filter((item) => item.type === 'video' || item.type === 'image' || item.type === 'text' || item.type === 'nested-sequence')) {
     if (consumedClipIds.has(clip.id)) {
       continue;
     }
@@ -414,7 +549,7 @@ function buildVisualItems(
       continue;
     }
     const clipLabel = `v${safeLabel(clip.id)}`;
-    filters.push(buildVisualClipFilter(inputIndex, clip, clipLabel, settings));
+    filters.push(buildVisualClipFilter(inputIndex, clip, clipLabel, settings, textArtifacts, warnings));
     items.push({
       kind: 'media',
       trackIndex: clip.trackIndex,
@@ -468,24 +603,35 @@ function findExportTransitionPair(
   return undefined;
 }
 
-function buildTransitionClipFilter(inputIndex: number, clip: ExportClip, label: string, settings: ExportSettings): string {
+function buildTransitionClipFilter(
+  inputIndex: number,
+  clip: ExportClip,
+  label: string,
+  settings: ExportSettings,
+  textArtifacts: TextArtifact[],
+  warnings: string[]
+): string {
   const sourceDuration = getExportClipSourceDuration(clip);
-  const trim = clip.type === 'video' ? `trim=start=0:duration=${formatFfmpegSeconds(sourceDuration)}` : `trim=duration=${formatFfmpegSeconds(sourceDuration)}`;
+  const trim = clip.type === 'video' || clip.type === 'nested-sequence' ? `trim=start=0:duration=${formatFfmpegSeconds(sourceDuration)}` : `trim=duration=${formatFfmpegSeconds(sourceDuration)}`;
   const filters = [
     `[${inputIndex}:v]${trim}`,
-    buildSetptsFilter(clip, false),
+    ...buildChromaKeyFilters(clip),
+    buildSetptsFilter(clip, false, warnings),
+    ...buildStabilizationFilters(clip),
     `scale=${settings.width}:${settings.height}:force_original_aspect_ratio=decrease`,
     `pad=${settings.width}:${settings.height}:(ow-iw)/2:(oh-ih)/2:color=black`,
     `fps=${settings.fps}`,
     'format=rgba'
   ];
-  filters.push(...buildColorCorrectionFilters(clip));
+  filters.push(...buildMaskFilters(clip));
+  filters.push(...buildColorCorrectionFilters(clip, textArtifacts));
+  filters.push(...buildEffectFilters(clip.effects));
   filters.push(`colorchannelmixer=aa=${formatOpacity(clip.transform.opacity)}[${label}]`);
   return filters.join(',');
 }
 
 function isTransitionVisualClip(clip: ExportClip): boolean {
-  return clip.type === 'video' || clip.type === 'image';
+  return clip.type === 'video' || clip.type === 'image' || clip.type === 'nested-sequence';
 }
 
 function areExportClipsAdjacent(fromClip: ExportClip, toClip: ExportClip): boolean {
@@ -504,14 +650,21 @@ function visualKindOrder(item: VisualItem): number {
   return item.kind === 'media' ? 0 : 1;
 }
 
-function buildVisualClipFilter(inputIndex: number, clip: ExportClip, label: string, settings: ExportSettings): string {
+function buildVisualClipFilter(
+  inputIndex: number,
+  clip: ExportClip,
+  label: string,
+  settings: ExportSettings,
+  textArtifacts: TextArtifact[],
+  warnings: string[]
+): string {
   const sourceDuration = getExportClipSourceDuration(clip);
-  const trim = clip.type === 'video' ? `trim=start=0:duration=${formatFfmpegSeconds(sourceDuration)}` : `trim=duration=${formatFfmpegSeconds(sourceDuration)}`;
-  const filters = [`[${inputIndex}:v]${trim}`];
+  const trim = clip.type === 'video' || clip.type === 'nested-sequence' ? `trim=start=0:duration=${formatFfmpegSeconds(sourceDuration)}` : `trim=duration=${formatFfmpegSeconds(sourceDuration)}`;
+  const filters = [`[${inputIndex}:v]${trim}`, ...buildChromaKeyFilters(clip)];
   if (isKenBurnsAnimatedScaleClip(clip)) {
-    filters.push(buildSetptsFilter(clip, false), buildKenBurnsZoompanFilter(clip, settings), 'setsar=1', buildSetptsFilter(clip, true));
+    filters.push(buildSetptsFilter(clip, false, warnings), buildKenBurnsZoompanFilter(clip, settings), 'setsar=1', buildSetptsFilter(clip, true, warnings));
   } else {
-    filters.push(buildSetptsFilter(clip, true), buildScaleFilter(clip), 'setsar=1');
+    filters.push(buildSetptsFilter(clip, true, warnings), ...buildStabilizationFilters(clip), buildScaleFilter(clip), 'setsar=1');
   }
   if (settings.scaleMode === 'fit') {
     filters.push(
@@ -520,7 +673,9 @@ function buildVisualClipFilter(inputIndex: number, clip: ExportClip, label: stri
     );
   }
   filters.push('format=rgba');
-  filters.push(...buildColorCorrectionFilters(clip));
+  filters.push(...buildMaskFilters(clip));
+  filters.push(...buildColorCorrectionFilters(clip, textArtifacts));
+  filters.push(...buildEffectFilters(clip.effects));
   if (Math.abs(clip.transform.rotation) > 0.001) {
     filters.push(`rotate=${((clip.transform.rotation * Math.PI) / 180).toFixed(6)}:c=none`);
   }
@@ -532,12 +687,166 @@ function isKenBurnsAnimatedScaleClip(clip: ExportClip): boolean {
   return clip.type === 'image' && clip.kenBurns && (getAnimatedFrames(clip, 'scaleX').length >= 2 || getAnimatedFrames(clip, 'scaleY').length >= 2);
 }
 
-function buildSetptsFilter(clip: ExportClip, includeStartOffset: boolean): string {
+function buildChromaKeyFilters(clip: ExportClip): string[] {
+  if (!isChromaKeyEnabled(clip.chromaKey)) {
+    return [];
+  }
+  const [red, green, blue] = clip.chromaKey.color;
+  const color = [red, green, blue].map((channel) => Math.round(channel).toString(16).padStart(2, '0')).join('').toUpperCase();
+  return [`chromakey=color=0x${color}:similarity=${formatFfmpegNumber(clip.chromaKey.similarity)}:blend=${formatFfmpegNumber(clip.chromaKey.blend)}`];
+}
+
+function buildStabilizationFilters(clip: ExportClip): string[] {
+  if (!isStabilizationExportable(clip.stabilization)) {
+    return [];
+  }
+  const trfPath = clip.stabilization.trfPath ?? '';
+  return [
+    `vidstabtransform=smoothing=${formatFfmpegNumber(clip.stabilization.smoothing)}:zoom=${formatFfmpegNumber(clip.stabilization.zoom)}:input=${escapeDrawtextValue(
+      trfPath
+    )}`
+  ];
+}
+
+function buildMaskFilters(clip: ExportClip): string[] {
+  const masks = clip.masks.filter((mask) => mask.enabled);
+  if (masks.length === 0) {
+    return [];
+  }
+  if (masks.length === 1 && isSimpleRectMask(masks[0])) {
+    return [buildSimpleRectMaskFilter(masks[0])];
+  }
+  return [buildGeqMaskFilter(masks)];
+}
+
+function isSimpleRectMask(mask: ExportClip['masks'][number]): boolean {
+  return mask.type === 'rect' && !mask.inverted && mask.feather <= 0.001;
+}
+
+function buildSimpleRectMaskFilter(mask: ExportClip['masks'][number]): string {
+  const x = formatFfmpegNumber(mask.x);
+  const y = formatFfmpegNumber(mask.y);
+  const w = formatFfmpegNumber(Math.max(0.001, mask.w));
+  const h = formatFfmpegNumber(Math.max(0.001, mask.h));
+  return `crop=w='iw*${w}':h='ih*${h}':x='iw*${x}':y='ih*${y}',pad=w='iw/${w}':h='ih/${h}':x='ow*${x}':y='oh*${y}':color=black@0`;
+}
+
+function buildGeqMaskFilter(masks: ExportClip['masks']): string {
+  const expression = masks.map((mask) => {
+    const inside = mask.type === 'ellipse' ? buildEllipseMaskExpression(mask) : buildRectMaskExpression(mask);
+    return mask.inverted ? `(1-(${inside}))` : `(${inside})`;
+  });
+  return `geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='alpha(X,Y)*(${expression.join('*')})'`;
+}
+
+function buildRectMaskExpression(mask: ExportClip['masks'][number]): string {
+  const x1 = formatFfmpegNumber(mask.x);
+  const y1 = formatFfmpegNumber(mask.y);
+  const x2 = formatFfmpegNumber(Math.min(1, mask.x + mask.w));
+  const y2 = formatFfmpegNumber(Math.min(1, mask.y + mask.h));
+  return `between(X,iw*${x1},iw*${x2})*between(Y,ih*${y1},ih*${y2})`;
+}
+
+function buildEllipseMaskExpression(mask: ExportClip['masks'][number]): string {
+  const centerX = formatFfmpegNumber(Math.min(1, mask.x + mask.w / 2));
+  const centerY = formatFfmpegNumber(Math.min(1, mask.y + mask.h / 2));
+  const radiusX = formatFfmpegNumber(Math.max(0.001, mask.w / 2));
+  const radiusY = formatFfmpegNumber(Math.max(0.001, mask.h / 2));
+  return `lte(pow((X-(iw*${centerX}))/max(iw*${radiusX},1),2)+pow((Y-(ih*${centerY}))/max(ih*${radiusY},1),2),1)`;
+}
+
+function buildSetptsFilter(clip: ExportClip, includeStartOffset: boolean, warnings?: string[]): string {
+  if (clip.type !== 'image' && getAnimatedFrames(clip, 'speed').length > 0) {
+    const expression = buildSpeedRampSetptsExpression(clip, includeStartOffset);
+    const filter = `setpts='${expression}'`;
+    if (filter.length <= SETPTS_EXPRESSION_LIMIT) {
+      return filter;
+    }
+    warnings?.push(`Speed ramp setpts for clip ${clip.id} exceeded 4096 characters and fell back to average speed.`);
+    return buildStaticSetptsFilter(clip, includeStartOffset, getAverageClipSpeed(clip));
+  }
+  return buildStaticSetptsFilter(clip, includeStartOffset, clip.speed);
+}
+
+function buildStaticSetptsFilter(clip: ExportClip, includeStartOffset: boolean, speed: number): string {
   const startOffset = `${formatFfmpegSeconds(clip.start)}/TB`;
-  if (Math.abs(clip.speed - 1) < 0.001 || clip.type === 'image') {
+  const playbackSpeed = getClipSpeed({ speed });
+  if (Math.abs(playbackSpeed - 1) < 0.001 || clip.type === 'image') {
     return includeStartOffset ? `setpts=PTS-STARTPTS+${startOffset}` : 'setpts=PTS-STARTPTS';
   }
-  return includeStartOffset ? `setpts=(PTS-STARTPTS)/${formatFfmpegSeconds(clip.speed)}+${startOffset}` : `setpts=(PTS-STARTPTS)/${formatFfmpegSeconds(clip.speed)}`;
+  return includeStartOffset ? `setpts=(PTS-STARTPTS)/${formatFfmpegSeconds(playbackSpeed)}+${startOffset}` : `setpts=(PTS-STARTPTS)/${formatFfmpegSeconds(playbackSpeed)}`;
+}
+
+function buildSpeedRampSetptsExpression(clip: ExportClip, includeStartOffset: boolean): string {
+  const sourceTime = '((PTS-STARTPTS)*TB)';
+  const segments = buildSpeedRampSegments(clip);
+  let secondsExpression = formatFfmpegSeconds(clip.duration);
+  for (let index = segments.length - 1; index >= 0; index -= 1) {
+    const segment = segments[index];
+    const localExpression = `${formatFfmpegSeconds(segment.displayStart)}+(${sourceTime}-${formatFfmpegSeconds(segment.sourceStart)})/${formatFfmpegSeconds(segment.speed)}`;
+    secondsExpression = `if(lte(${sourceTime},${formatFfmpegSeconds(segment.sourceEnd)}),${localExpression},${secondsExpression})`;
+  }
+  const startOffset = includeStartOffset ? `+${formatFfmpegSeconds(clip.start)}/TB` : '';
+  return `(${secondsExpression})/TB${startOffset}`;
+}
+
+function buildSpeedRampSegments(clip: ExportClip): Array<{ displayStart: number; displayEnd: number; sourceStart: number; sourceEnd: number; speed: number }> {
+  const duration = Math.max(0, clip.duration);
+  const frames = getAnimatedFrames(clip, 'speed');
+  if (duration <= 0 || frames.length === 0) {
+    return [];
+  }
+
+  const points = [...frames];
+  if (points[0].time > 0.000001) {
+    points.unshift({ id: `${clip.id}-speed-start`, time: 0, value: clip.speed, easing: 'linear' });
+  } else {
+    points[0] = { ...points[0], time: 0 };
+  }
+  const lastPoint = points[points.length - 1];
+  if (lastPoint.time < duration - 0.000001) {
+    points.push({ ...lastPoint, id: `${clip.id}-speed-end`, time: duration });
+  } else {
+    points[points.length - 1] = { ...lastPoint, time: duration };
+  }
+
+  let sourceStart = 0;
+  const segments: Array<{ displayStart: number; displayEnd: number; sourceStart: number; sourceEnd: number; speed: number }> = [];
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const left = points[index];
+    const right = points[index + 1];
+    const displayStart = Math.max(0, Math.min(duration, left.time));
+    const displayEnd = Math.max(0, Math.min(duration, right.time));
+    const displayDuration = displayEnd - displayStart;
+    if (displayDuration <= 0.000001) {
+      continue;
+    }
+    const localSpeedFrames = {
+      speed: [
+        { ...left, time: 0 },
+        { ...right, time: displayDuration }
+      ]
+    };
+    const sourceDuration = calculateSpeedCurveSourceDuration(displayDuration, localSpeedFrames, left.value);
+    const segmentSpeed = Math.max(0.001, sourceDuration / displayDuration);
+    const sourceEnd = round(sourceStart + sourceDuration);
+    segments.push({
+      displayStart,
+      displayEnd,
+      sourceStart,
+      sourceEnd,
+      speed: segmentSpeed
+    });
+    sourceStart = sourceEnd;
+  }
+  return segments;
+}
+
+function getAverageClipSpeed(clip: ExportClip): number {
+  if (clip.duration <= 0.000001) {
+    return clip.speed;
+  }
+  return getClipSpeed({ speed: clip.sourceDuration / clip.duration });
 }
 
 function buildScaleFilter(clip: ExportClip): string {
@@ -605,7 +914,7 @@ function buildOverlayYExpression(clip: ExportClip): string {
   return `(main_h-overlay_h)/2+${formatSigned(clip.transform.y)}`;
 }
 
-function buildColorCorrectionFilters(clip: ExportClip): string[] {
+function buildColorCorrectionFilters(clip: ExportClip, textArtifacts: TextArtifact[]): string[] {
   const colorCorrection = normalizeColorCorrection(clip.colorCorrection);
   if (isDefaultColorCorrection(colorCorrection)) {
     return [];
@@ -626,20 +935,102 @@ function buildColorCorrectionFilters(clip: ExportClip): string[] {
   if (Math.abs(colorCorrection.hue) > 0.001) {
     filters.push(`hue=h=${formatFfmpegNumber(colorCorrection.hue)}`);
   }
+  if (!isNeutralThreeWayColor(colorCorrection.threeWayColor)) {
+    filters.push(buildThreeWayColorFilter(colorCorrection.threeWayColor));
+  }
+  if (!isDefaultColorCurves(colorCorrection.colorCurves)) {
+    const safeClipId = safeLabel(clip.id);
+    const placeholder = `__CURVE_LUT_${safeClipId}__`;
+    textArtifacts.push({
+      clipId: `${clip.id}:color-curves`,
+      text: serializeColorCurvesToCube(colorCorrection.colorCurves, 17, `open-factory curves ${clip.id}`),
+      fileName: `curves-${safeClipId}.cube`,
+      placeholder,
+      pathMode: 'filter'
+    });
+    filters.push(`lut1d=file=${placeholder}`);
+  }
   if (colorCorrection.lutPath) {
     filters.push(`lut3d=file=${escapeDrawtextValue(colorCorrection.lutPath)}`);
   }
   return filters;
 }
 
+function buildThreeWayColorFilter(value: ThreeWayColor | undefined): string {
+  const color = normalizeThreeWayColor(value);
+  const params = [
+    ['rs', colorBalanceValue(color.lift, 'r')],
+    ['gs', colorBalanceValue(color.lift, 'g')],
+    ['bs', colorBalanceValue(color.lift, 'b')],
+    ['rm', colorBalanceValue(color.gamma, 'r')],
+    ['gm', colorBalanceValue(color.gamma, 'g')],
+    ['bm', colorBalanceValue(color.gamma, 'b')],
+    ['rh', colorBalanceValue(color.gain, 'r')],
+    ['gh', colorBalanceValue(color.gain, 'g')],
+    ['bh', colorBalanceValue(color.gain, 'b')]
+  ].filter(([, value]) => Math.abs(value as number) > 0.001);
+  return `colorbalance=${params.map(([name, value]) => `${name}=${formatFfmpegNumber(value as number)}`).join(':')}`;
+}
+
+function colorBalanceValue(value: ColorWheelValue, channel: 'r' | 'g' | 'b'): number {
+  return Math.min(1, Math.max(-1, value[channel] + value.intensity - 1));
+}
+
+function buildEffectFilters(effects: Effect[]): string[] {
+  return effects.flatMap((effect) => {
+    if (!effect.enabled) {
+      return [];
+    }
+    if (effect.type === 'blur') {
+      return [`gblur=sigma=${formatFfmpegNumber(effect.params.radius)}`];
+    }
+    if (effect.type === 'sharpen') {
+      return [`unsharp=luma_msize_x=5:luma_msize_y=5:luma_amount=${formatFfmpegNumber(effect.params.strength)}`];
+    }
+    if (effect.type === 'vignette') {
+      const angle = formatFfmpegNumber((Math.PI / 4) * effect.params.intensity);
+      return [`vignette=angle=${angle}:x0=w/2:y0=h/2:eval=frame`];
+    }
+    if (effect.type === 'film-grain') {
+      return [`noise=alls=${formatFfmpegNumber(effect.params.strength * 100)}:allf=t`];
+    }
+    return [`rgbashift=rh=${formatFfmpegNumber(effect.params.strength)}:bh=${formatFfmpegNumber(-effect.params.strength)}`];
+  });
+}
+
 function buildInputArgs(clip: ExportClip): string[] {
+  if (clip.imageSequence) {
+    return ['-f', 'concat', '-safe', '0'];
+  }
   if (clip.type === 'image') {
     return ['-loop', '1', '-t', formatFfmpegSeconds(clip.duration)];
   }
-  if (clip.type === 'video' || clip.type === 'audio') {
+  if (clip.type === 'video' || clip.type === 'audio' || clip.type === 'nested-sequence') {
     return ['-ss', formatFfmpegSeconds(clip.trimStart), '-t', formatFfmpegSeconds(getExportClipSourceDuration(clip))];
   }
   return [];
+}
+
+function buildImageSequenceArtifact(clip: ExportClip): TextArtifact {
+  const safeId = safeLabel(clip.id);
+  const frameDuration = 1 / Math.max(1, clip.imageSequence?.frameRate ?? 30);
+  const paths = clip.imageSequence?.paths ?? [];
+  const lines = ['ffconcat version 1.0'];
+  for (const path of paths) {
+    lines.push(`file '${escapeConcatPath(path)}'`);
+    lines.push(`duration ${formatSequenceFrameDuration(frameDuration)}`);
+  }
+  const lastPath = paths.at(-1);
+  if (lastPath) {
+    lines.push(`file '${escapeConcatPath(lastPath)}'`);
+  }
+  return {
+    clipId: `${clip.id}:image-sequence`,
+    text: `${lines.join('\n')}\n`,
+    fileName: `sequence-${safeId}.ffconcat`,
+    placeholder: `__IMAGE_SEQUENCE_${safeId}__`,
+    pathMode: 'argument'
+  };
 }
 
 function buildBitrateArgs(flag: '-b:v' | '-b:a', bitrate: string | null | undefined): string[] {
@@ -649,7 +1040,7 @@ function buildBitrateArgs(flag: '-b:v' | '-b:a', bitrate: string | null | undefi
 
 function buildContainerArgs(settings: ExportSettings): string[] {
   const format = settings.format.toLowerCase();
-  if (settings.outputMode === 'audio' || format === 'm4a') {
+  if (settings.outputMode === 'audio' || format === 'm4a' || format === 'png-sequence') {
     return [];
   }
   if (format === 'mp4' || format === 'mov') {
@@ -658,8 +1049,25 @@ function buildContainerArgs(settings: ExportSettings): string[] {
   return [];
 }
 
+function pngSequenceOutputPath(outputPath: string): string {
+  const normalized = normalizeFfmpegPath(outputPath);
+  const lower = normalized.toLowerCase();
+  if (lower.includes('%') || lower.endsWith('.png')) {
+    return normalized;
+  }
+  return `${normalized.replace(/\/+$/g, '')}/frame%04d.png`;
+}
+
+function escapeConcatPath(path: string): string {
+  return normalizeFfmpegPath(path).replace(/'/g, "'\\''");
+}
+
+function formatSequenceFrameDuration(value: number): string {
+  return value.toFixed(6).replace(/0+$/g, '').replace(/\.$/g, '');
+}
+
 function getExportClipSourceDuration(clip: ExportClip): number {
-  return clip.type === 'video' || clip.type === 'audio' ? Math.max(0.001, clip.sourceDuration) : Math.max(0.001, clip.duration);
+  return clip.type === 'video' || clip.type === 'audio' || clip.type === 'nested-sequence' ? Math.max(0.001, clip.sourceDuration) : Math.max(0.001, clip.duration);
 }
 
 function buildTextFilter(inputLabel: string, outputLabel: string, clip: ExportClip): { filter: string; artifact: TextArtifact } {
@@ -737,7 +1145,7 @@ function buildAudioFilters(
   filters: string[]
 ): string[] {
   const labels: string[] = [];
-  for (const clip of clips.filter((item) => item.type === 'audio' || (item.type === 'video' && item.hasEmbeddedAudio))) {
+  for (const clip of clips.filter((item) => item.type === 'audio' || ((item.type === 'video' || item.type === 'nested-sequence') && item.hasEmbeddedAudio))) {
     if (clip.muted || clip.volume <= 0) {
       continue;
     }
@@ -745,14 +1153,15 @@ function buildAudioFilters(
     if (inputIndex === undefined) {
       continue;
     }
-    const label = `${clip.type === 'video' ? 'av' : 'a'}${safeLabel(clip.id)}`;
+    const label = `${clip.type === 'video' || clip.type === 'nested-sequence' ? 'av' : 'a'}${safeLabel(clip.id)}`;
     const delay = Math.max(0, Math.round(clip.start * 1000));
-    const speedFilters = buildAtempoFilters(clip.speed);
+    const speedFilters = buildAtempoFilters(getAnimatedFrames(clip, 'speed').length > 0 ? getAverageClipSpeed(clip) : clip.speed);
     const fadeFilters = buildAudioFadeFilters(clip);
+    const trackProcessingFilters = buildTrackAudioFilters(clip);
     filters.push(
       `[${inputIndex}:a:0]atrim=start=0:duration=${formatFfmpegSeconds(
         getExportClipSourceDuration(clip)
-      )},asetpts=PTS-STARTPTS${speedFilters.length > 0 ? `,${speedFilters.join(',')}` : ''}${fadeFilters},adelay=${delay}:all=1,${buildVolumeFilter(
+      )},asetpts=PTS-STARTPTS${speedFilters.length > 0 ? `,${speedFilters.join(',')}` : ''}${fadeFilters}${trackProcessingFilters},adelay=${delay}:all=1,${buildVolumeFilter(
         clip
       )}${buildPanFilter(clip)},aformat=channel_layouts=stereo,aresample=${settings.sampleRate}[${label}]`
     );
@@ -766,6 +1175,30 @@ function buildPanFilter(clip: ExportClip): string {
     return '';
   }
   return `,stereopan=pan=${formatPan(clip.pan)}`;
+}
+
+function buildTrackAudioFilters(clip: ExportClip): string {
+  const filters: string[] = [];
+  if (clip.eq.enabled) {
+    for (const band of clip.eq.bands) {
+      if (Math.abs(band.gain) < 0.001) {
+        continue;
+      }
+      filters.push(
+        `equalizer=f=${formatFfmpegNumber(band.frequency)}:width_type=o:width=${formatFfmpegNumber(band.q)}:g=${formatFfmpegNumber(band.gain)}`
+      );
+    }
+  }
+  if (clip.compressor.enabled) {
+    filters.push(
+      `acompressor=threshold=${formatCompressorLinear(clip.compressor.threshold)}:ratio=${formatFfmpegNumber(
+        clip.compressor.ratio
+      )}:attack=${formatFfmpegNumber(clip.compressor.attack)}:release=${formatFfmpegNumber(clip.compressor.release)}:makeup=${formatCompressorLinear(
+        clip.compressor.makeupGain
+      )}`
+    );
+  }
+  return filters.length > 0 ? `,${filters.join(',')}` : '';
 }
 
 function buildAudioFadeFilters(clip: ExportClip): string {
@@ -877,6 +1310,10 @@ function safeLabel(value: string): string {
   return value.replace(/[^a-zA-Z0-9_]/g, '_');
 }
 
+function nestedInputPlaceholder(sequenceId: string): string {
+  return `__NESTED_SEQUENCE_${safeLabel(sequenceId)}__.mp4`;
+}
+
 function formatScale(value: number): string {
   return formatFfmpegSeconds(Math.max(0.01, value || 1));
 }
@@ -891,6 +1328,10 @@ function formatVolume(value: number): string {
 
 function formatPan(value: number): string {
   return formatFfmpegNumber(Math.min(1, Math.max(-1, value)));
+}
+
+function formatCompressorLinear(db: number): string {
+  return formatFfmpegNumber(Math.min(64, Math.max(0.000976563, 10 ** (db / 20))));
 }
 
 function formatSigned(value: number): string {

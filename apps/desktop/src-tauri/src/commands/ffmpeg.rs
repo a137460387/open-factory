@@ -7,7 +7,7 @@ use std::process::{Child, Command, Stdio};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 
 static EXPORT_CHILD: OnceLock<Mutex<Option<Child>>> = OnceLock::new();
 static EXPORT_TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
@@ -44,7 +44,17 @@ pub struct FfmpegExportPlanDto {
     full_args: Vec<String>,
     warnings: Vec<String>,
     text_artifacts: Vec<TextArtifactDto>,
+    #[serde(default)]
+    nested_plans: Vec<NestedFfmpegExportPlanDto>,
     duration: f64,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NestedFfmpegExportPlanDto {
+    sequence_id: String,
+    placeholder: String,
+    plan: Box<FfmpegExportPlanDto>,
 }
 
 #[derive(Debug, Serialize)]
@@ -63,6 +73,30 @@ pub struct ExportProgressPayload {
     progress_pct: f32,
     out_time_us: Option<u64>,
     expected_duration_us: u64,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AnalyzeClipRequest {
+    clip_id: String,
+    media_path: String,
+    duration: f64,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AnalyzeClipResult {
+    clip_id: String,
+    trf_path: String,
+    duration_ms: u128,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ClipAnalysisProgressPayload {
+    clip_id: String,
+    progress: f32,
+    progress_pct: f32,
 }
 
 #[tauri::command]
@@ -116,12 +150,37 @@ pub fn cancel_export() -> Result<(), String> {
 }
 
 #[tauri::command]
+pub async fn analyze_clip(
+    app: AppHandle,
+    request: AnalyzeClipRequest,
+) -> Result<AnalyzeClipResult, String> {
+    tauri::async_runtime::spawn_blocking(move || analyze_clip_blocking(app, request))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
 pub async fn run_export(app: AppHandle, plan: FfmpegExportPlanDto) -> Result<ExportResult, String> {
     let mut plan = plan;
     if plan.full_args.is_empty() {
         return Err("FFmpeg argument list is empty.".to_string());
     }
-    validate_export_paths(&app, &mut plan.full_args)?;
+    let nested_dir = if plan.nested_plans.is_empty() {
+        None
+    } else {
+        Some(create_nested_export_dir()?)
+    };
+    let nested_result = if let Some(dir) = nested_dir.as_deref() {
+        run_nested_export_plans(&app, &mut plan, dir)
+    } else {
+        Ok(())
+    };
+    if let Err(error) = nested_result {
+        if let Some(dir) = nested_dir.as_deref() {
+            let _ = fs::remove_dir_all(dir);
+        }
+        return Err(error);
+    }
     let output_path = plan
         .full_args
         .last()
@@ -147,33 +206,106 @@ pub async fn run_export(app: AppHandle, plan: FfmpegExportPlanDto) -> Result<Exp
         let _ = started_app.emit("export-started", ());
     });
     let result = with_temp_text_artifacts(&plan, |args, _temp_dir| {
+        let mut args = args;
+        validate_export_paths(&app, &mut args, nested_dir.as_deref(), Some(_temp_dir), true)?;
         spawn_and_wait_with_progress(args, plan.duration, emit_progress, emit_started)
     });
 
     match result {
-        Ok(()) => Ok(ExportResult {
-            success: true,
-            output_path,
-            duration_ms: started.elapsed().as_millis(),
-            warnings: plan.warnings,
-        }),
+        Ok(()) => {
+            if let Some(dir) = nested_dir.as_deref() {
+                fs::remove_dir_all(dir).map_err(|error| {
+                    format!(
+                        "Unable to clean nested export temporary directory {}: {}",
+                        normalize_path(dir),
+                        error
+                    )
+                })?;
+            }
+            Ok(ExportResult {
+                success: true,
+                output_path,
+                duration_ms: started.elapsed().as_millis(),
+                warnings: plan.warnings,
+            })
+        }
         Err(error) => {
+            if let Some(dir) = nested_dir.as_deref() {
+                let _ = fs::remove_dir_all(dir);
+            }
             cleanup_incomplete_output(Path::new(&output_path), output_existed_before)?;
             Err(error)
         }
     }
 }
 
-fn validate_export_paths(app: &AppHandle, args: &mut [String]) -> Result<(), String> {
+fn analyze_clip_blocking(
+    app: AppHandle,
+    request: AnalyzeClipRequest,
+) -> Result<AnalyzeClipResult, String> {
+    let safe_input = validate_path(&app, Path::new(&request.media_path))?;
+    let output_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| error.to_string())?
+        .join("stabilization");
+    fs::create_dir_all(&output_dir).map_err(|error| error.to_string())?;
+    let millis = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|error| error.to_string())?
+        .as_millis();
+    let output_path = output_dir.join(format!(
+        "{}-{}.trf",
+        safe_file_name(&request.clip_id),
+        millis
+    ));
+    let args = build_vidstabdetect_args(&safe_input, &output_path);
+    let started = Instant::now();
+    let clip_id = request.clip_id.clone();
+    let progress_app = app.clone();
+    spawn_and_wait_for_clip_analysis(args, request.duration, move |progress| {
+        let _ = progress_app.emit(
+            "clip-analysis-progress",
+            ClipAnalysisProgressPayload {
+                clip_id: clip_id.clone(),
+                progress: progress.progress,
+                progress_pct: progress.progress_pct,
+            },
+        );
+    })?;
+    Ok(AnalyzeClipResult {
+        clip_id: request.clip_id,
+        trf_path: normalize_path(&output_path),
+        duration_ms: started.elapsed().as_millis(),
+    })
+}
+
+fn validate_export_paths(
+    app: &AppHandle,
+    args: &mut [String],
+    nested_dir: Option<&Path>,
+    artifact_dir: Option<&Path>,
+    validate_output: bool,
+) -> Result<(), String> {
     let mut index = 0;
     while index + 1 < args.len() {
         if args[index] == "-i" {
-            let safe_input = validate_path(app, Path::new(&args[index + 1]))?;
-            args[index + 1] = normalize_path(&safe_input);
+            let input = Path::new(&args[index + 1]);
+            if nested_dir.is_some_and(|dir| is_path_inside(input, dir))
+                || artifact_dir.is_some_and(|dir| is_path_inside(input, dir))
+            {
+                args[index + 1] = normalize_path(input);
+            } else {
+                let safe_input = validate_path(app, input)?;
+                args[index + 1] = normalize_path(&safe_input);
+            }
             index += 2;
         } else {
             index += 1;
         }
+    }
+    if !validate_output {
+        return Ok(());
     }
     let output_index = args
         .len()
@@ -181,6 +313,27 @@ fn validate_export_paths(app: &AppHandle, args: &mut [String]) -> Result<(), Str
         .ok_or_else(|| "FFmpeg argument list is empty.".to_string())?;
     let safe_output = validate_path_for_write(app, Path::new(&args[output_index]))?;
     args[output_index] = normalize_path(&safe_output);
+    Ok(())
+}
+
+fn run_nested_export_plans(app: &AppHandle, plan: &mut FfmpegExportPlanDto, nested_dir: &Path) -> Result<(), String> {
+    for nested in &mut plan.nested_plans {
+        let output_path = nested_dir.join(safe_file_name(&nested.placeholder));
+        run_nested_export_plans(app, &mut nested.plan, nested_dir)?;
+        replace_placeholder(&mut nested.plan.full_args, &nested.placeholder, &normalize_path(&output_path));
+        with_temp_text_artifacts(&nested.plan, |args, _temp_dir| {
+            let mut args = args;
+            validate_export_paths(app, &mut args, Some(nested_dir), Some(_temp_dir), false)?;
+            spawn_and_wait_with_progress(
+                args,
+                nested.plan.duration,
+                Arc::new(|_| {}),
+                Arc::new(|| {}),
+            )
+        })
+        .map_err(|error| format!("Nested sequence {} export failed: {}", nested.sequence_id, error))?;
+        replace_placeholder(&mut plan.full_args, &nested.placeholder, &normalize_path(&output_path));
+    }
     Ok(())
 }
 
@@ -275,6 +428,60 @@ fn spawn_and_wait_with_progress(
     }
 }
 
+fn spawn_and_wait_for_clip_analysis(
+    args: Vec<String>,
+    duration: f64,
+    emit_progress: impl Fn(ExportProgressPayload) + Send + 'static,
+) -> Result<(), String> {
+    let mut child = Command::new(ffmpeg_binary())
+        .args(&args)
+        .stderr(Stdio::piped())
+        .stdout(Stdio::null())
+        .spawn()
+        .map_err(|error| format!("Unable to start FFmpeg stabilization analysis: {}", error))?;
+    let stderr = child
+        .stderr
+        .take()
+        .ok_or_else(|| "Unable to capture FFmpeg stabilization stderr.".to_string())?;
+    let reader = BufReader::new(stderr);
+    let mut stderr_tail = Vec::<String>::new();
+    for line in reader.lines().map_while(Result::ok) {
+        if stderr_tail.len() >= 20 {
+            stderr_tail.remove(0);
+        }
+        stderr_tail.push(line.clone());
+        if let Some(progress) = parse_progress(&line, duration) {
+            emit_progress(progress);
+        }
+    }
+    let status = child.wait().map_err(|error| error.to_string())?;
+    if !status.success() {
+        return Err(format!(
+            "FFmpeg stabilization analysis failed with status {}.\n{}",
+            status,
+            stderr_tail.join("\n")
+        ));
+    }
+    emit_progress(ExportProgressPayload::complete(duration));
+    Ok(())
+}
+
+fn build_vidstabdetect_args(input_path: &Path, output_path: &Path) -> Vec<String> {
+    vec![
+        "-y".to_string(),
+        "-progress".to_string(),
+        "pipe:2".to_string(),
+        "-nostats".to_string(),
+        "-i".to_string(),
+        normalize_path(input_path),
+        "-vf".to_string(),
+        format!("vidstabdetect=result={}", escape_filter_path(output_path)),
+        "-f".to_string(),
+        "null".to_string(),
+        "-".to_string(),
+    ]
+}
+
 fn with_temp_text_artifacts<T>(
     plan: &FfmpegExportPlanDto,
     run: impl FnOnce(Vec<String>, &Path) -> Result<T, String>,
@@ -351,6 +558,32 @@ fn create_export_temp_dir() -> Result<PathBuf, String> {
     ));
     fs::create_dir_all(&dir).map_err(|error| error.to_string())?;
     Ok(dir)
+}
+
+fn create_nested_export_dir() -> Result<PathBuf, String> {
+    let millis = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map_err(|error| error.to_string())?
+        .as_millis();
+    let counter = EXPORT_TEMP_COUNTER.fetch_add(1, Ordering::Relaxed);
+    let dir = std::env::temp_dir()
+        .join("open-factory")
+        .join("nested")
+        .join(format!("{}-{}-{}", std::process::id(), millis, counter));
+    fs::create_dir_all(&dir).map_err(|error| error.to_string())?;
+    Ok(dir)
+}
+
+fn replace_placeholder(args: &mut [String], placeholder: &str, value: &str) {
+    for arg in args {
+        *arg = arg.replace(placeholder, value);
+    }
+}
+
+fn is_path_inside(path: &Path, parent: &Path) -> bool {
+    let path = path.components().collect::<Vec<_>>();
+    let parent = parent.components().collect::<Vec<_>>();
+    path.len() >= parent.len() && path.iter().zip(parent.iter()).all(|(left, right)| left == right)
 }
 
 fn cleanup_incomplete_output(output_path: &Path, existed_before: bool) -> Result<(), String> {
@@ -471,6 +704,13 @@ fn escape_drawtext_path(path: &str) -> String {
         .replace('%', "\\%")
 }
 
+fn escape_filter_path(path: &Path) -> String {
+    normalize_path(path)
+        .replace(':', "\\:")
+        .replace('\'', "\\'")
+        .replace('%', "\\%")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -499,6 +739,31 @@ mod tests {
             ))
         );
         assert_eq!(parse_progress("frame=10 speed=1x", 10.0), None);
+    }
+
+    #[test]
+    fn builds_vidstabdetect_argument_array_without_shell_strings() {
+        let args = build_vidstabdetect_args(
+            Path::new(r"C:\Media\clip.mp4"),
+            Path::new(r"C:\Temp\open factory\clip.trf"),
+        );
+
+        assert_eq!(args[0], "-y");
+        assert_eq!(args.iter().filter(|arg| arg.as_str() == "-i").count(), 1);
+        assert_eq!(args, vec![
+            "-y",
+            "-progress",
+            "pipe:2",
+            "-nostats",
+            "-i",
+            "C:/Media/clip.mp4",
+            "-vf",
+            r"vidstabdetect=result=C\:/Temp/open factory/clip.trf",
+            "-f",
+            "null",
+            "-"
+        ]);
+        assert!(!args.iter().any(|arg| arg.contains("cmd /C") || arg.contains("&&")));
     }
 
     #[test]
@@ -567,6 +832,7 @@ mod tests {
                 placeholder: "__TEXTFILE_clip_text__".to_string(),
                 path_mode: None,
             }],
+            nested_plans: vec![],
             duration: 1.0,
         };
         let mut observed_temp_dir: Option<PathBuf> = None;

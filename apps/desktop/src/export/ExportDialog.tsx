@@ -1,6 +1,7 @@
 import type { ExportTaskStatus, FfmpegCapabilities, Project } from '@open-factory/editor-core';
 import { FolderOpen, ListPlus, Save, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import { zhCN } from '../i18n/strings';
 import { chooseExportPath, revealExport } from '../lib/exportVideo';
 import { getFfmpegCapabilities } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
@@ -23,6 +24,7 @@ interface ExportDialogProps {
 }
 
 export function ExportDialog({ project, onClose, onCompleted }: ExportDialogProps) {
+  const t = zhCN.exportDialog;
   const [outputPath, setOutputPath] = useState('');
   const [capabilities, setCapabilities] = useState<FfmpegCapabilities | undefined>();
   const [error, setError] = useState<string>();
@@ -49,7 +51,7 @@ export function ExportDialog({ project, onClose, onCompleted }: ExportDialogProp
       })
       .catch((reason) => {
         if (!canceled) {
-          setError(reason instanceof Error ? reason.message : 'Unable to detect FFmpeg.');
+          setError(reason instanceof Error ? reason.message : t.detectFfmpegFailed);
         }
       });
     return () => {
@@ -69,7 +71,7 @@ export function ExportDialog({ project, onClose, onCompleted }: ExportDialogProp
       })
       .catch((reason) => {
         if (!canceled) {
-          setError(reason instanceof Error ? reason.message : 'Unable to load export presets.');
+          setError(reason instanceof Error ? reason.message : t.loadPresetsFailed);
         }
       });
     return () => {
@@ -87,7 +89,7 @@ export function ExportDialog({ project, onClose, onCompleted }: ExportDialogProp
       if (task.status === 'success' && !notifiedSuccess.current.has(task.id)) {
         notifiedSuccess.current.add(task.id);
         onCompleted(task.outputPath);
-        showToast({ kind: 'success', title: 'Export complete', message: task.outputPath });
+        showToast({ kind: 'success', title: t.completeTitle, message: task.outputPath });
       }
     }
   }, [onCompleted, tasks]);
@@ -102,13 +104,13 @@ export function ExportDialog({ project, onClose, onCompleted }: ExportDialogProp
   async function savePreset(): Promise<void> {
     try {
       setError(undefined);
-      const nextPresets = await saveCustomExportPreset(customPresetName || `${selectedPreset.name} copy`, exportSettings);
+      const nextPresets = await saveCustomExportPreset(customPresetName || `${selectedPreset.name} ${t.presetCopySuffix}`, exportSettings);
       const createdPreset = nextPresets.filter((preset) => !preset.builtin).at(-1);
       setPresets(nextPresets);
       setPresetId(createdPreset?.id ?? nextPresets[0]?.id ?? BUILTIN_EXPORT_PRESETS[0].id);
-      showToast({ kind: 'success', title: 'Preset saved', message: createdPreset?.name ?? customPresetName });
+      showToast({ kind: 'success', title: t.presetSavedTitle, message: createdPreset?.name ?? customPresetName });
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Unable to save preset.');
+      setError(reason instanceof Error ? reason.message : t.savePresetFailed);
     }
   }
 
@@ -121,9 +123,9 @@ export function ExportDialog({ project, onClose, onCompleted }: ExportDialogProp
       const nextPresets = await deleteCustomExportPreset(selectedPreset.id);
       setPresets(nextPresets);
       setPresetId(nextPresets[0]?.id ?? BUILTIN_EXPORT_PRESETS[0].id);
-      showToast({ kind: 'info', title: 'Preset deleted', message: selectedPreset.name });
+      showToast({ kind: 'info', title: t.presetDeletedTitle, message: selectedPreset.name });
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Unable to delete preset.');
+      setError(reason instanceof Error ? reason.message : t.deletePresetFailed);
     }
   }
 
@@ -142,12 +144,12 @@ export function ExportDialog({ project, onClose, onCompleted }: ExportDialogProp
       for (const path of selectedPaths) {
         const task = await enqueueExport(project, path, exportSettings);
         for (const warning of task.plan.warnings) {
-          showToast({ kind: 'warning', title: 'Export warning', message: warning });
+          showToast({ kind: 'warning', title: t.exportWarningTitle, message: formatExportWarning(warning) });
         }
       }
-      showToast({ kind: 'info', title: 'Export queued', message: `${selectedPaths.length} task(s) using ${selectedPreset.name}.` });
+      showToast({ kind: 'info', title: t.queuedTitle, message: t.queuedMessage(selectedPaths.length, selectedPreset.name) });
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Unable to export video.');
+      setError(reason instanceof Error ? reason.message : t.exportFailed);
     }
   }
 
@@ -156,23 +158,23 @@ export function ExportDialog({ project, onClose, onCompleted }: ExportDialogProp
       <section className="w-full max-w-3xl rounded-md border border-line bg-white shadow-soft">
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
           <div>
-            <h2 className="text-sm font-semibold">Export video</h2>
-            <p className="text-xs text-slate-500">Named presets, local FFmpeg queue, no cloud upload</p>
+            <h2 className="text-sm font-semibold">{t.title}</h2>
+            <p className="text-xs text-slate-500">{t.subtitle}</p>
           </div>
-          <button className="rounded p-1 text-slate-500 hover:bg-panel" aria-label="Close export dialog" onClick={onClose}>
+          <button className="rounded p-1 text-slate-500 hover:bg-panel" aria-label={t.close} onClick={onClose}>
             <X size={18} />
           </button>
         </div>
         <div className="max-h-[78vh] space-y-4 overflow-y-auto p-4 text-sm">
           <div className="grid grid-cols-[110px_1fr_auto] items-center gap-2">
-            <label className="text-xs font-medium text-slate-600">Output</label>
+            <label className="text-xs font-medium text-slate-600">{t.output}</label>
             <input className="min-w-0 rounded-md border border-line px-2 py-1.5" value={outputPath} onChange={(event) => setOutputPath(event.target.value)} data-testid="export-output-path" />
-            <button className="rounded-md border border-line p-2 hover:bg-panel" title="Choose output path" onClick={() => void choosePath()}>
+            <button className="rounded-md border border-line p-2 hover:bg-panel" title={t.chooseOutputPath} onClick={() => void choosePath()}>
               <FolderOpen size={16} />
             </button>
           </div>
           <div className="grid grid-cols-[110px_1fr_auto] gap-2">
-            <label className="pt-1.5 text-xs font-medium text-slate-600">Preset</label>
+            <label className="pt-1.5 text-xs font-medium text-slate-600">{t.preset}</label>
             <div>
               <select className="w-full rounded-md border border-line px-2 py-1.5" value={presetId} onChange={(event) => setPresetId(event.target.value)} data-testid="export-preset-select">
                 {presets.map((preset) => (
@@ -190,69 +192,69 @@ export function ExportDialog({ project, onClose, onCompleted }: ExportDialogProp
               onClick={() => void deletePreset()}
             >
               <Trash2 size={13} />
-              Delete
+              {t.delete}
             </button>
           </div>
           <div className="grid grid-cols-[110px_1fr_auto] items-center gap-2">
-            <label className="text-xs font-medium text-slate-600">Save as</label>
+            <label className="text-xs font-medium text-slate-600">{t.saveAs}</label>
             <input
               className="min-w-0 rounded-md border border-line px-2 py-1.5"
-              placeholder="Custom preset name"
+              placeholder={t.customPresetName}
               value={customPresetName}
               onChange={(event) => setCustomPresetName(event.target.value)}
               data-testid="export-preset-name-input"
             />
             <button className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel" data-testid="export-save-preset-button" onClick={() => void savePreset()}>
               <Save size={13} />
-              Save
+              {t.save}
             </button>
           </div>
           <div className="grid grid-cols-2 gap-3 rounded-md border border-line p-3 md:grid-cols-4">
-            <PresetNumberField label="Width" value={draftSettings.width} disabled={isAudioOnly} onChange={(value) => updateNumberSetting(setDraftSettings, 'width', value)} testId="export-width-input" />
-            <PresetNumberField label="Height" value={draftSettings.height} disabled={isAudioOnly} onChange={(value) => updateNumberSetting(setDraftSettings, 'height', value)} testId="export-height-input" />
-            <PresetNumberField label="FPS" value={draftSettings.fps} disabled={isAudioOnly} onChange={(value) => updateNumberSetting(setDraftSettings, 'fps', value)} testId="export-fps-input" />
-            <PresetSelectField label="Format" value={exportSettings.format ?? 'mp4'} onChange={(value) => updateFormat(setDraftSettings, value)} testId="export-format-select" options={['mp4', 'mov', 'webm', 'm4a']} />
-            <PresetTextField label="Video bitrate" value={draftSettings.videoBitrate ?? ''} disabled={isAudioOnly} onChange={(value) => updateStringSetting(setDraftSettings, 'videoBitrate', value)} testId="export-video-bitrate-input" />
-            <PresetTextField label="Audio bitrate" value={draftSettings.audioBitrate ?? ''} onChange={(value) => updateStringSetting(setDraftSettings, 'audioBitrate', value)} testId="export-audio-bitrate-input" />
-            <PresetSelectField label="Subtitles" value={draftSettings.subtitleMode ?? 'default'} disabled={isAudioOnly} onChange={(value) => updateSubtitleMode(setDraftSettings, value)} testId="export-subtitle-mode-select" options={['default', 'burn-in', 'soft-sub']} />
-            <PresetSelectField label="Scale" value={draftSettings.scaleMode ?? 'none'} disabled={isAudioOnly} onChange={(value) => updateScaleMode(setDraftSettings, value)} testId="export-scale-mode-select" options={['none', 'fit']} />
+            <PresetNumberField label={t.fields.width} value={draftSettings.width} disabled={isAudioOnly} onChange={(value) => updateNumberSetting(setDraftSettings, 'width', value)} testId="export-width-input" />
+            <PresetNumberField label={t.fields.height} value={draftSettings.height} disabled={isAudioOnly} onChange={(value) => updateNumberSetting(setDraftSettings, 'height', value)} testId="export-height-input" />
+            <PresetNumberField label={t.fields.fps} value={draftSettings.fps} disabled={isAudioOnly} onChange={(value) => updateNumberSetting(setDraftSettings, 'fps', value)} testId="export-fps-input" />
+            <PresetSelectField label={t.fields.format} value={exportSettings.format ?? 'mp4'} onChange={(value) => updateFormat(setDraftSettings, value)} testId="export-format-select" options={['mp4', 'mov', 'webm', 'm4a', 'png-sequence']} />
+            <PresetTextField label={t.fields.videoBitrate} value={draftSettings.videoBitrate ?? ''} disabled={isAudioOnly} onChange={(value) => updateStringSetting(setDraftSettings, 'videoBitrate', value)} testId="export-video-bitrate-input" />
+            <PresetTextField label={t.fields.audioBitrate} value={draftSettings.audioBitrate ?? ''} onChange={(value) => updateStringSetting(setDraftSettings, 'audioBitrate', value)} testId="export-audio-bitrate-input" />
+            <PresetSelectField label={t.fields.subtitles} value={draftSettings.subtitleMode ?? 'default'} disabled={isAudioOnly} onChange={(value) => updateSubtitleMode(setDraftSettings, value)} testId="export-subtitle-mode-select" options={['default', 'burn-in', 'soft-sub']} />
+            <PresetSelectField label={t.fields.scale} value={draftSettings.scaleMode ?? 'none'} disabled={isAudioOnly} onChange={(value) => updateScaleMode(setDraftSettings, value)} testId="export-scale-mode-select" options={['none', 'fit']} />
           </div>
           <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 md:grid-cols-4">
-            <Info label="Resolution" value={isAudioOnly ? 'Audio only' : `${exportSettings.width ?? project.settings.width} x ${exportSettings.height ?? project.settings.height}`} />
-            <Info label="FPS" value={isAudioOnly ? 'Audio only' : String(exportSettings.fps ?? project.settings.fps)} />
-            <Info label="Format" value={exportSettings.format ?? 'mp4'} />
-            <Info label="Bitrate" value={`${isAudioOnly ? 'no video' : exportSettings.videoBitrate || 'auto'} / ${exportSettings.audioBitrate || 'auto'}`} />
-            <Info label="Video codec" value={isAudioOnly ? 'none' : exportSettings.videoCodec ?? 'libx264'} />
-            <Info label="Audio codec" value={exportSettings.audioCodec ?? 'aac'} />
-            <Info label="FFmpeg" value={capabilities?.available ? capabilities.version ?? 'Available' : 'Missing'} tone={capabilities?.available ? 'ok' : 'bad'} />
-            <Info label="Drawtext" value={capabilities?.hasDrawtext && capabilities.hasLibfreetype ? 'Available' : 'Unavailable'} tone={capabilities?.hasDrawtext && capabilities.hasLibfreetype ? 'ok' : 'warn'} />
+            <Info label={t.info.resolution} value={isAudioOnly ? zhCN.common.audioOnly : `${exportSettings.width ?? project.settings.width} x ${exportSettings.height ?? project.settings.height}`} />
+            <Info label={t.info.fps} value={isAudioOnly ? zhCN.common.audioOnly : String(exportSettings.fps ?? project.settings.fps)} />
+            <Info label={t.info.format} value={exportSettings.format ?? 'mp4'} />
+            <Info label={t.info.bitrate} value={`${isAudioOnly ? zhCN.common.noVideo : exportSettings.videoBitrate || zhCN.common.auto} / ${exportSettings.audioBitrate || zhCN.common.auto}`} />
+            <Info label={t.info.videoCodec} value={isAudioOnly ? zhCN.common.none : exportSettings.videoCodec ?? 'libx264'} />
+            <Info label={t.info.audioCodec} value={exportSettings.audioCodec ?? 'aac'} />
+            <Info label={t.info.ffmpeg} value={capabilities?.available ? capabilities.version ?? zhCN.common.available : zhCN.common.missing} tone={capabilities?.available ? 'ok' : 'bad'} />
+            <Info label={t.info.drawtext} value={capabilities?.hasDrawtext && capabilities.hasLibfreetype ? zhCN.common.available : zhCN.common.unavailable} tone={capabilities?.hasDrawtext && capabilities.hasLibfreetype ? 'ok' : 'warn'} />
           </div>
           <div className="grid grid-cols-[110px_1fr] gap-2">
-            <label className="pt-1.5 text-xs font-medium text-slate-600">Batch paths</label>
+            <label className="pt-1.5 text-xs font-medium text-slate-600">{t.batchPaths}</label>
             <textarea
               className="min-h-16 resize-y rounded-md border border-line px-2 py-1.5 text-xs"
-              placeholder="Optional: one output path per line"
+              placeholder={t.batchPlaceholder}
               value={batchOutputPaths}
               onChange={(event) => setBatchOutputPaths(event.target.value)}
               data-testid="export-batch-paths"
             />
           </div>
-          {capabilities?.drawtextWarning ? <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900">{capabilities.drawtextWarning}</div> : null}
+          {capabilities?.drawtextWarning ? <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900">{formatExportWarning(capabilities.drawtextWarning)}</div> : null}
           {error ? <pre className="max-h-32 overflow-auto rounded-md bg-rose-50 p-2 text-xs text-rose-800 whitespace-pre-wrap">{error}</pre> : null}
           <div className="rounded-md border border-line" data-testid="export-queue-list">
             <div className="flex items-center justify-between border-b border-line px-3 py-2">
               <div>
-                <div className="text-xs font-semibold text-slate-700">Export queue</div>
-                <div className="text-[11px] text-slate-500">{runnerActive ? 'Running queued tasks one at a time' : 'Idle'}</div>
+                <div className="text-xs font-semibold text-slate-700">{t.queueTitle}</div>
+                <div className="text-[11px] text-slate-500">{runnerActive ? t.queueRunning : zhCN.common.idle}</div>
               </div>
               <button className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel" onClick={clearFinishedTasks}>
                 <Trash2 size={13} />
-                Clear finished
+                {t.clearFinished}
               </button>
             </div>
             <div className="max-h-56 overflow-y-auto">
               {tasks.length === 0 ? (
-                <div className="px-3 py-5 text-center text-xs text-slate-500">No export tasks queued.</div>
+                <div className="px-3 py-5 text-center text-xs text-slate-500">{t.noTasks}</div>
               ) : (
                 tasks.map((task) => <ExportTaskRow key={task.id} taskId={task.id} />)
               )}
@@ -262,7 +264,7 @@ export function ExportDialog({ project, onClose, onCompleted }: ExportDialogProp
         <div className="flex justify-end gap-2 border-t border-line px-4 py-3">
           <button className="inline-flex items-center gap-2 rounded-md bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-[#176858]" onClick={() => void addToQueue()} data-testid="export-enqueue-button">
             <ListPlus size={15} />
-            Add to queue
+            {t.addToQueue}
           </button>
         </div>
       </section>
@@ -312,6 +314,14 @@ function updateFormat(setDraftSettings: Dispatch<SetStateAction<ExportPresetSett
       next.audioCodec = 'aac';
       delete next.videoCodec;
       delete next.videoBitrate;
+      return next;
+    }
+    if (value === 'png-sequence') {
+      next.outputMode = 'video';
+      next.videoCodec = 'png';
+      next.audioCodec = 'aac';
+      delete next.videoBitrate;
+      delete next.audioBitrate;
       return next;
     }
     next.outputMode = 'video';
@@ -414,13 +424,62 @@ function PresetSelectField({
 }
 
 function formatOptionLabel(value: string): string {
+  if (value === 'default') {
+    return zhCN.exportDialog.options.default;
+  }
+  if (value === 'burn-in') {
+    return zhCN.exportDialog.options.burnIn;
+  }
+  if (value === 'soft-sub') {
+    return zhCN.exportDialog.options.softSub;
+  }
+  if (value === 'none') {
+    return zhCN.exportDialog.options.none;
+  }
+  if (value === 'fit') {
+    return zhCN.exportDialog.options.fit;
+  }
   if (value === 'm4a') {
     return 'm4a';
+  }
+  if (value === 'png-sequence') {
+    return zhCN.exportDialog.options.pngSequence;
   }
   return value
     .split('-')
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
+}
+
+function formatExportWarning(warning: string): string {
+  const textClip = warning.match(/^Text clip (.+) was skipped because FFmpeg drawtext\/libfreetype is unavailable\.$/);
+  if (textClip) {
+    return zhCN.exportDialog.textClipSkippedDrawtext(textClip[1]);
+  }
+  const transitionVisual = warning.match(/^Transition (.+) was skipped because both clips must be visual media clips\.$/);
+  if (transitionVisual) {
+    return zhCN.exportDialog.transitionSkippedVisualOnly(transitionVisual[1]);
+  }
+  const transitionChained = warning.match(/^Transition (.+) was skipped because chained transitions are not yet supported in one export segment\.$/);
+  if (transitionChained) {
+    return zhCN.exportDialog.transitionSkippedChained(transitionChained[1]);
+  }
+  const transitionMissingInput = warning.match(/^Transition (.+) was skipped because one of its clips has no media input\.$/);
+  if (transitionMissingInput) {
+    return zhCN.exportDialog.transitionSkippedMissingInput(transitionMissingInput[1]);
+  }
+  const missingMedia = warning.match(/^Clip (.+) has no media path and was skipped\.$/);
+  if (missingMedia) {
+    return zhCN.exportDialog.clipSkippedMissingMedia(missingMedia[1]);
+  }
+  const speedRampFallback = warning.match(/^Speed ramp setpts for clip (.+) exceeded 4096 characters and fell back to average speed\.$/);
+  if (speedRampFallback) {
+    return zhCN.exportDialog.speedRampSetptsFallback(speedRampFallback[1]);
+  }
+  if (warning === 'Current FFmpeg does not support drawtext/libfreetype. Install an FFmpeg build with libfreetype to export text overlays.') {
+    return zhCN.exportDialog.ffmpegDrawtextUnavailable;
+  }
+  return warning;
 }
 
 function Info({ label, value, tone }: { label: string; value: string; tone?: 'ok' | 'warn' | 'bad' }) {
@@ -456,15 +515,15 @@ function ExportTaskRow({ taskId }: { taskId: string }) {
             data-testid="export-task-cancel-button"
             onClick={() => void cancelQueuedExportTask(task.id)}
           >
-            Cancel
+            {zhCN.exportDialog.cancelTask}
           </button>
         ) : task.status === 'success' ? (
           <button className="rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel" onClick={() => void revealExport(task.outputPath)}>
-            Open folder
+            {zhCN.exportDialog.openFolder}
           </button>
         ) : task.status === 'error' || task.status === 'canceled' ? (
           <button className="rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel" data-testid="export-task-retry-button" onClick={() => retryQueuedExportTask(task.id)}>
-            Retry
+            {zhCN.exportDialog.retryTask}
           </button>
         ) : null}
       </div>
@@ -491,8 +550,8 @@ function StatusPill({ status }: { status: ExportTaskStatus }) {
             ? 'bg-slate-100 text-slate-600 border-slate-200'
             : 'bg-amber-50 text-amber-700 border-amber-200';
   return (
-    <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold capitalize ${className}`} data-testid="export-task-status">
-      {status}
+    <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${className}`} data-testid="export-task-status" data-status={status}>
+      {zhCN.exportDialog.status[status]}
     </span>
   );
 }

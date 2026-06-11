@@ -10,13 +10,14 @@ import {
   type Timeline,
   type Track
 } from '@open-factory/editor-core';
+import { zhCN } from '../i18n/strings';
 import { fileNameFromPath } from './tauri';
 import { openFileDialog, readFile } from './tauri-bridge';
 
 export const SUBTITLE_EXTENSIONS = ['srt'];
 
 export async function pickSubtitlePaths(): Promise<string[]> {
-  return openFileDialog(true, [{ name: 'SubRip subtitles', extensions: SUBTITLE_EXTENSIONS }]);
+  return openFileDialog(true, [{ name: zhCN.fileDialogs.subtitles, extensions: SUBTITLE_EXTENSIONS }]);
 }
 
 export async function readSubtitleText(path: string): Promise<string> {
@@ -26,7 +27,7 @@ export async function readSubtitleText(path: string): Promise<string> {
 export function buildSubtitleTrackFromSrt(path: string, contents: string, timeline: Timeline): Track {
   const cues = parseSrt(contents);
   const trackId = createId('track');
-  const name = fileNameFromPath(path).replace(/\.[^.]+$/, '') || 'Subtitles';
+  const name = fileNameFromPath(path).replace(/\.[^.]+$/, '') || zhCN.inspector.sections.subtitle;
   const trackNumber = timeline.tracks.filter((track) => track.type === 'subtitle').length + 1;
   return createTrack({
     id: trackId,
@@ -35,7 +36,7 @@ export function buildSubtitleTrackFromSrt(path: string, contents: string, timeli
     clips: cues.map((cue) => ({
       id: createId('clip'),
       type: 'subtitle' as const,
-      name: `Subtitle ${cue.index}`,
+      name: `${zhCN.inspector.sections.subtitle} ${cue.index}`,
       trackId,
       start: cue.startMs / 1000,
       duration: (cue.endMs - cue.startMs) / 1000,

@@ -9,6 +9,7 @@ import {
   serializeCustomExportPresets,
   type ExportPresetStorage
 } from './export-presets';
+import { zhCN } from '../i18n/strings';
 
 describe('export presets', () => {
   it('loads built-in presets when presets.json is missing', async () => {
@@ -16,7 +17,13 @@ describe('export presets', () => {
 
     const presets = await loadExportPresets(storage);
 
-    expect(presets.map((preset) => preset.name)).toEqual(['Web 1080p', '4K', 'YouTube Shorts', 'Twitter/X', 'Audio-only m4a']);
+    expect(presets.map((preset) => preset.name)).toEqual([
+      zhCN.exportPresets.builtins.web1080p.name,
+      zhCN.exportPresets.builtins.fourK.name,
+      zhCN.exportPresets.builtins.youtubeShorts.name,
+      zhCN.exportPresets.builtins.twitterX.name,
+      zhCN.exportPresets.builtins.audioM4a.name
+    ]);
     expect(presets.every((preset) => preset.builtin)).toBe(true);
   });
 
@@ -71,7 +78,7 @@ describe('export presets', () => {
   it('rejects deleting built-in presets', async () => {
     const { storage } = makeStorage();
 
-    await expect(deleteCustomExportPreset(BUILTIN_EXPORT_PRESETS[0].id, storage)).rejects.toThrow('Built-in export presets cannot be deleted');
+    await expect(deleteCustomExportPreset(BUILTIN_EXPORT_PRESETS[0].id, storage)).rejects.toThrow(zhCN.exportPresets.cannotDeleteBuiltin);
   });
 
   it('parses only valid custom preset fields', () => {
@@ -117,6 +124,19 @@ describe('export presets', () => {
     ]);
     expect(parseStoredExportPresets('{broken')).toEqual([]);
     expect(serializeCustomExportPresets([...BUILTIN_EXPORT_PRESETS, ...parsed])).toContain('"schemaVersion": 1');
+  });
+
+  it('persists PNG sequence custom preset settings', async () => {
+    const { storage } = makeStorage();
+
+    const presets = await saveCustomExportPreset('PNG Frames', { format: 'png-sequence', outputMode: 'video', fps: 12, videoCodec: 'png' }, storage);
+
+    expect(presets.find((preset) => preset.name === 'PNG Frames')?.settings).toMatchObject({
+      format: 'png-sequence',
+      outputMode: 'video',
+      fps: 12,
+      videoCodec: 'png'
+    });
   });
 });
 

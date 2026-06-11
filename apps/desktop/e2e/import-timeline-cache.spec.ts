@@ -12,10 +12,10 @@ test('imports media, adds clips, shows waveform, and clears cache', async ({ pag
   await expect(videoCard).toBeVisible();
   await expect(audioCard).toBeVisible();
   await expect(page.getByTestId('media-job-queue')).toBeVisible();
-  await expect(videoCard.getByText('Proxy ready')).toBeVisible();
+  await expect(videoCard.locator('[data-testid^="proxy-status-"]')).toHaveAttribute('data-proxy-status', 'ready');
 
-  await videoCard.getByText('Add to timeline').click();
-  await audioCard.getByText('Add to timeline').click();
+  await videoCard.locator('[data-testid^="add-to-timeline-"]').click();
+  await audioCard.locator('[data-testid^="add-to-timeline-"]').click();
 
   const firstClip = page.locator('[data-testid^="timeline-clip-"]').first();
   await expect(firstClip).toBeVisible();

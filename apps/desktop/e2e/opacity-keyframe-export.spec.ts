@@ -2,7 +2,7 @@ import { execFile } from 'node:child_process';
 import { mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { expect, test } from '@playwright/test';
-import { waitForE2eActions } from './e2e-actions';
+import { addMediaCardToTimeline, expectExportTaskStatus, openExportDialog, waitForE2eActions } from './e2e-actions';
 
 test('exports opacity keyframes with visibly darker end frames', async ({ page }, testInfo) => {
   const sourcePath = testInfo.outputPath('opacity-source.mp4');
@@ -13,7 +13,7 @@ test('exports opacity keyframes with visibly darker end frames', async ({ page }
   await waitForE2eActions(page);
   await page.evaluate((mediaPath) => window.__E2E_ACTIONS__!.setOpenFileDialogPaths!([mediaPath]), normalizePath(sourcePath));
   await page.getByTestId('import-media-button').click();
-  await page.locator('[data-testid^="media-card-"]').first().getByText('Add to timeline').click();
+  await addMediaCardToTimeline(page);
 
   const clip = page.locator('[data-testid^="timeline-clip-"]').first();
   const clipId = await clip.getAttribute('data-clip-id');
@@ -25,10 +25,10 @@ test('exports opacity keyframes with visibly darker end frames', async ({ page }
   }, clipId);
   await expect(page.locator(`[data-testid^="timeline-keyframe-${clipId}-opacity-"]`)).toHaveCount(2);
 
-  await page.getByLabel('Export video').click();
+  await openExportDialog(page);
   await page.getByTestId('export-output-path').fill(normalizePath(outputPath));
   await page.getByTestId('export-enqueue-button').click();
-  await expect(page.getByTestId('export-task-status')).toHaveText('success');
+  await expectExportTaskStatus(page, 0, 'success');
 
   const plan = await page.evaluate(() => window.__E2E_ACTIONS__!.getLastExportPlan!() as { fullArgs: string[]; filterComplex: string });
   expect(plan.filterComplex).toContain('fade=t=out:st=0:d=1:alpha=1');

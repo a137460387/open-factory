@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { waitForE2eActions } from './e2e-actions';
+import { openExportDialog, waitForE2eActions } from './e2e-actions';
 
 test('imports SRT subtitles and exports them as a soft subtitle stream', async ({ page }) => {
   await page.goto('/');
@@ -16,7 +16,7 @@ test('imports SRT subtitles and exports them as a soft subtitle stream', async (
   await page.getByTestId('subtitle-mode-select').selectOption('soft-sub');
 
   await page.evaluate(() => window.__E2E_ACTIONS__!.setSavePath!('C:/Exports/subtitles-soft.mp4'));
-  await page.getByLabel('Export video').click();
+  await openExportDialog(page);
   await page.getByTestId('export-enqueue-button').click();
 
   await expect

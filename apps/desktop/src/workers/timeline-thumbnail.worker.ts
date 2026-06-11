@@ -1,3 +1,5 @@
+import { zhCN } from '../i18n/strings';
+
 export interface TimelineThumbnailWorkerInput {
   id: string;
   bitmap: ImageBitmap;
@@ -16,12 +18,12 @@ self.onmessage = async (event: MessageEvent<TimelineThumbnailWorkerInput>) => {
   const { id, bitmap, width, height } = event.data;
   try {
     if (typeof OffscreenCanvas === 'undefined') {
-      throw new Error('OffscreenCanvas is unavailable.');
+      throw new Error(zhCN.errors.thumbnailOffscreenUnavailable);
     }
     const canvas = new OffscreenCanvas(width, height);
     const context = canvas.getContext('2d');
     if (!context) {
-      throw new Error('Unable to create thumbnail worker canvas.');
+      throw new Error(zhCN.errors.thumbnailWorkerCanvasFailed);
     }
     context.fillStyle = '#dbeafe';
     context.fillRect(0, 0, width, height);
@@ -35,7 +37,7 @@ self.onmessage = async (event: MessageEvent<TimelineThumbnailWorkerInput>) => {
     const payload: TimelineThumbnailWorkerOutput = {
       id,
       success: false,
-      error: error instanceof Error ? error.message : 'Unable to render timeline thumbnail.'
+      error: error instanceof Error ? error.message : zhCN.errors.thumbnailRenderFailed
     };
     self.postMessage(payload);
   }

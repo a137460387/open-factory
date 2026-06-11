@@ -1,9 +1,11 @@
 import type { Clip, ClipKeyframes, KeyframeProperty, Timeline, Track, Transition } from './model';
-import { clampClipSpeed, createId, normalizeTrackPan, normalizeTransitionDuration } from './model';
-import { cloneClipKeyframes, normalizeClipKeyframes } from './keyframes';
+import { MIN_CLIP_SPEED, clampClipSpeed, createId, normalizeChromaKey, normalizeMasks, normalizeSequenceFrameRate, normalizeStabilization, normalizeTrackPan, normalizeTransitionDuration } from './model';
+import { cloneEffects } from './effects';
+import { cloneClipKeyframes, interpolateKeyframes, normalizeClipKeyframes } from './keyframes';
 import { DEFAULT_SNAP_GRID, round, snap } from './time';
 
 const EPSILON = 0.000001;
+export const SPEED_CURVE_INTEGRATION_STEPS = 100;
 
 export function findClipAtTime(track: Track, time: number): Clip | undefined {
   return track.clips.find((clip) => time >= clip.start && time < clip.start + clip.duration);
@@ -22,22 +24,35 @@ export function splitClip<TClip extends Clip>(clip: TClip, splitTime: number): [
 
   const leftDuration = round(splitTime - clip.start);
   const rightDuration = round(clip.duration - leftDuration);
+  const sourceVisibleDuration = getClipSourceVisibleDuration(clip);
+  const leftSourceDuration = calculateSpeedCurveSourceDuration(leftDuration, clip.keyframes, speed);
+  const rightSourceDuration = round(Math.max(0, sourceVisibleDuration - leftSourceDuration));
   const left = {
     ...clip,
     id: createId('clip'),
     duration: leftDuration,
-    trimEnd: round(clip.trimEnd + rightDuration * speed),
+    trimEnd: round(clip.trimEnd + rightSourceDuration),
     transform: { ...clip.transform },
-    keyframes: normalizeClipKeyframes(cloneClipKeyframes(clip.keyframes), leftDuration)
+    chromaKey: normalizeChromaKey(clip.chromaKey),
+    stabilization: normalizeStabilization(clip.stabilization),
+    masks: normalizeMasks(clip.masks),
+    sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
+    keyframes: normalizeClipKeyframes(cloneClipKeyframes(clip.keyframes), leftDuration),
+    effects: cloneEffects(clip.effects)
   } as TClip;
   const right = {
     ...clip,
     id: createId('clip'),
     start: round(splitTime),
     duration: rightDuration,
-    trimStart: round(clip.trimStart + leftDuration * speed),
+    trimStart: round(clip.trimStart + leftSourceDuration),
     transform: { ...clip.transform },
-    keyframes: shiftClipKeyframes(cloneClipKeyframes(clip.keyframes), leftDuration, rightDuration)
+    chromaKey: normalizeChromaKey(clip.chromaKey),
+    stabilization: normalizeStabilization(clip.stabilization),
+    masks: normalizeMasks(clip.masks),
+    sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
+    keyframes: shiftClipKeyframes(cloneClipKeyframes(clip.keyframes), leftDuration, rightDuration),
+    effects: cloneEffects(clip.effects)
   } as TClip;
 
   return [left, right];
@@ -52,14 +67,19 @@ export function trimClip<TClip extends Clip>(clip: TClip, newTrimStart: number, 
     throw new RangeError('trim values leave no visible clip duration');
   }
 
-  const duration = getClipDisplayDuration(sourceDuration - trimStart - trimEnd, speed);
+  const duration = getClipDisplayDuration(sourceDuration - trimStart - trimEnd, speed, clip.keyframes);
   return {
     ...clip,
     trimStart,
     trimEnd,
     duration,
     transform: { ...clip.transform },
-    keyframes: normalizeClipKeyframes(cloneClipKeyframes(clip.keyframes), duration)
+    chromaKey: normalizeChromaKey(clip.chromaKey),
+    stabilization: normalizeStabilization(clip.stabilization),
+    masks: normalizeMasks(clip.masks),
+    sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
+    keyframes: normalizeClipKeyframes(cloneClipKeyframes(clip.keyframes), duration),
+    effects: cloneEffects(clip.effects)
   } as TClip;
 }
 
@@ -68,7 +88,12 @@ export function moveClip<TClip extends Clip>(clip: TClip, newStart: number): TCl
     ...clip,
     start: round(Math.max(0, newStart)),
     transform: { ...clip.transform },
-    keyframes: cloneClipKeyframes(clip.keyframes)
+    chromaKey: normalizeChromaKey(clip.chromaKey),
+    stabilization: normalizeStabilization(clip.stabilization),
+    masks: normalizeMasks(clip.masks),
+    sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
+    keyframes: cloneClipKeyframes(clip.keyframes),
+    effects: cloneEffects(clip.effects)
   } as TClip;
 }
 
@@ -227,24 +252,100 @@ export function getClipSpeed(clip: Pick<Clip, 'speed'> | { speed?: number }): nu
   return clampClipSpeed(clip.speed);
 }
 
-export function getClipSourceVisibleDuration(clip: Pick<Clip, 'duration' | 'speed'> | { duration: number; speed?: number }): number {
-  return round(Math.max(0, clip.duration) * getClipSpeed(clip));
+export function getClipSpeedAtTime(clip: Pick<Clip, 'speed' | 'keyframes'> | { speed?: number; keyframes?: ClipKeyframes }, localTime: number): number {
+  return getSpeedAtTime(clip.keyframes, localTime, getClipSpeed(clip));
 }
 
-export function getClipDisplayDuration(sourceVisibleDuration: number, speed: number | undefined): number {
-  return round(Math.max(0, sourceVisibleDuration) / getClipSpeed({ speed }));
+export function hasSpeedKeyframes(keyframes: ClipKeyframes | undefined): boolean {
+  return Boolean(keyframes?.speed?.length);
+}
+
+export function getClipSourceVisibleDuration(
+  clip: Pick<Clip, 'duration' | 'speed' | 'keyframes'> | { duration: number; speed?: number; keyframes?: ClipKeyframes }
+): number {
+  return calculateSpeedCurveSourceDuration(Math.max(0, clip.duration), clip.keyframes, getClipSpeed(clip));
+}
+
+export function getClipDisplayDuration(sourceVisibleDuration: number, speed: number | undefined, keyframes?: ClipKeyframes): number {
+  return calculateSpeedCurveDisplayDuration(sourceVisibleDuration, keyframes, getClipSpeed({ speed }));
 }
 
 export function setClipSpeed<TClip extends Clip>(clip: TClip, speed: number): TClip {
   const nextSpeed = getClipSpeed({ speed });
-  const duration = getClipDisplayDuration(getClipSourceVisibleDuration(clip), nextSpeed);
+  const duration = getClipDisplayDuration(getClipSourceVisibleDuration(clip), nextSpeed, clip.keyframes);
   return {
     ...clip,
     speed: nextSpeed,
     duration,
     transform: { ...clip.transform },
-    keyframes: normalizeClipKeyframes(cloneClipKeyframes(clip.keyframes), duration)
+    chromaKey: normalizeChromaKey(clip.chromaKey),
+    stabilization: normalizeStabilization(clip.stabilization),
+    masks: normalizeMasks(clip.masks),
+    sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
+    keyframes: normalizeClipKeyframes(cloneClipKeyframes(clip.keyframes), duration),
+    effects: cloneEffects(clip.effects)
   } as TClip;
+}
+
+export function calculateSpeedCurveSourceDuration(
+  displayDuration: number,
+  keyframes: ClipKeyframes | undefined,
+  fallbackSpeed: number | undefined,
+  steps = SPEED_CURVE_INTEGRATION_STEPS
+): number {
+  const duration = Math.max(0, displayDuration);
+  const speed = getClipSpeed({ speed: fallbackSpeed });
+  if (duration <= EPSILON) {
+    return 0;
+  }
+  if (!hasSpeedKeyframes(keyframes)) {
+    return round(duration * speed);
+  }
+  const sampleCount = Math.max(1, Math.round(steps));
+  const stepDuration = duration / sampleCount;
+  let sourceDuration = 0;
+  for (let index = 0; index < sampleCount; index += 1) {
+    const sampleTime = (index + 0.5) * stepDuration;
+    sourceDuration += getSpeedAtTime(keyframes, sampleTime, speed) * stepDuration;
+  }
+  return round(sourceDuration);
+}
+
+export function calculateSpeedCurveDisplayDuration(
+  sourceVisibleDuration: number,
+  keyframes: ClipKeyframes | undefined,
+  fallbackSpeed: number | undefined,
+  steps = SPEED_CURVE_INTEGRATION_STEPS
+): number {
+  const sourceDuration = Math.max(0, sourceVisibleDuration);
+  const speed = getClipSpeed({ speed: fallbackSpeed });
+  if (sourceDuration <= EPSILON) {
+    return 0;
+  }
+  if (!hasSpeedKeyframes(keyframes)) {
+    return round(sourceDuration / speed);
+  }
+
+  const lastKeyframeTime = Math.max(0, ...(keyframes?.speed ?? []).map((frame) => (Number.isFinite(frame.time) ? frame.time : 0)));
+  let low = 0;
+  let high = Math.max(sourceDuration / MIN_CLIP_SPEED, lastKeyframeTime, sourceDuration / speed, 1 / 30);
+  while (calculateSpeedCurveSourceDuration(high, keyframes, speed, steps) < sourceDuration && high < sourceDuration / MIN_CLIP_SPEED + lastKeyframeTime + 1) {
+    high *= 2;
+  }
+  for (let index = 0; index < 32; index += 1) {
+    const mid = (low + high) / 2;
+    const integrated = calculateSpeedCurveSourceDuration(mid, keyframes, speed, steps);
+    if (integrated < sourceDuration) {
+      low = mid;
+    } else {
+      high = mid;
+    }
+  }
+  return round(high);
+}
+
+function getSpeedAtTime(keyframes: ClipKeyframes | undefined, localTime: number, fallbackSpeed: number): number {
+  return clampClipSpeed(interpolateKeyframes(keyframes?.speed, localTime, fallbackSpeed));
 }
 
 export function replaceClip(timeline: Timeline, replacement: Clip): Timeline {

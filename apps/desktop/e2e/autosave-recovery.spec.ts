@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { waitForE2eActions } from './e2e-actions';
+import { addMediaCardToTimeline, waitForE2eActions } from './e2e-actions';
 
 test('restores an unsaved autosave after reload', async ({ page }) => {
   await page.addInitScript(() => {
@@ -14,7 +14,7 @@ test('restores an unsaved autosave after reload', async ({ page }) => {
   await page.evaluate(() => window.__E2E_ACTIONS__!.clearE2eFiles!());
   await page.getByTestId('autosave-interval-input').fill('1');
   await page.getByTestId('import-media-button').click();
-  await page.locator('[data-testid^="media-card-"]').first().getByText('Add to timeline').click();
+  await addMediaCardToTimeline(page);
 
   const autosavePath = 'C:/Users/E2E/AppData/Roaming/open-factory/unsaved.cutproj.json.autosave';
   await expect

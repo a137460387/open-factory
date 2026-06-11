@@ -13,8 +13,8 @@ test('relinks three missing media files from a folder', async ({ page }) => {
     window.__E2E_ACTIONS__!.setOpenFileDialogPaths!(['C:/Projects/batch-missing.cutproj.json']);
   });
 
-  await page.getByLabel('Open project').click();
-  const missingCards = page.locator('[data-testid^="media-card-"]').filter({ hasText: 'Missing' });
+  await page.getByTestId('toolbar-open-project-button').click();
+  const missingCards = page.locator('[data-testid^="media-card-"][data-missing="true"]');
   await expect(missingCards).toHaveCount(3);
 
   await page.getByTestId('relink-all-button').click();

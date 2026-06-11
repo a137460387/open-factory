@@ -1,11 +1,28 @@
 import type { Clip, MediaAsset, Timeline } from '@open-factory/editor-core';
-import { createVuMeterState, getActiveClipsAtTime, getClipSpeed, getTrackPan, getTrackVolume, readVuMeter, resolveAnimatedVolume, type Track, type VuMeterState } from '@open-factory/editor-core';
+import {
+  calculateSpeedCurveSourceDuration,
+  createVuMeterState,
+  getActiveClipsAtTime,
+  getClipSpeed,
+  getClipSpeedAtTime,
+  getTrackPan,
+  getTrackVolume,
+  normalizeTrackCompressor,
+  normalizeTrackEQ,
+  readVuMeter,
+  resolveAnimatedVolume,
+  type Track,
+  type VuMeterState
+} from '@open-factory/editor-core';
 import { createAudioElement } from './media-elements';
 import { recordAudioMix } from './debug';
 import type { AudioMeterLevel } from '../../store/audioMeterStore';
 
 interface AudioNodeSet {
   source: MediaElementAudioSourceNode;
+  eqNodes?: BiquadFilterNode[];
+  compressor?: DynamicsCompressorNode;
+  compressorMakeup?: GainNode;
   gain: GainNode;
   panner?: StereoPannerNode;
   analyser?: AnalyserNode;
@@ -94,10 +111,12 @@ export class PreviewAudioRenderer {
       return;
     }
     const audio = this.getAudio(clip.id, asset);
-    const speed = getClipSpeed(clip);
-    const sourceTime = Math.max(0, (playheadTime - clip.start) * speed + clip.trimStart);
+    const localTime = Math.max(0, playheadTime - clip.start);
+    const speed = getClipSpeedAtTime(clip, localTime);
+    const sourceTime = Math.max(0, calculateSpeedCurveSourceDuration(localTime, clip.keyframes, getClipSpeed(clip)) + clip.trimStart);
     const node = this.getAudioNode(clip.id, audio);
-    const volume = resolveAnimatedVolume(clip, Math.max(0, playheadTime - clip.start));
+    this.applyTrackProcessing(node, track);
+    const volume = resolveAnimatedVolume(clip, localTime);
     const muted = 'muted' in clip ? Boolean(clip.muted) : false;
     node.gain.gain.value = muted ? 0 : volume * (track ? getTrackVolume(track) : 1) * getFadeMultiplier(clip, playheadTime);
     if (node.panner) {
@@ -144,11 +163,23 @@ export class PreviewAudioRenderer {
     }
     this.audioContext ??= new AudioContextCtor();
     const source = this.audioContext.createMediaElementSource(audio);
+    const eqNodes = Array.from({ length: 4 }, () => this.audioContext!.createBiquadFilter());
+    const compressor = typeof this.audioContext.createDynamicsCompressor === 'function' ? this.audioContext.createDynamicsCompressor() : undefined;
+    const compressorMakeup = compressor ? this.audioContext.createGain() : undefined;
     const gain = this.audioContext.createGain();
     const analyser = this.audioContext.createAnalyser();
     analyser.fftSize = 1024;
     const panner = typeof this.audioContext.createStereoPanner === 'function' ? this.audioContext.createStereoPanner() : undefined;
-    source.connect(gain);
+    let current: AudioNode = source;
+    for (const eqNode of eqNodes) {
+      current.connect(eqNode);
+      current = eqNode;
+    }
+    if (compressor && compressorMakeup) {
+      current.connect(compressor).connect(compressorMakeup);
+      current = compressorMakeup;
+    }
+    current.connect(gain);
     if (panner) {
       gain.connect(panner).connect(analyser);
     } else {
@@ -156,7 +187,7 @@ export class PreviewAudioRenderer {
     }
     const master = this.getMasterNodes();
     analyser.connect(master?.gain ?? this.audioContext.destination);
-    const nodes = { source, gain, panner, analyser, meterState: createVuMeterState() };
+    const nodes = { source, eqNodes, compressor, compressorMakeup, gain, panner, analyser, meterState: createVuMeterState() };
     this.audioNodes.set(clipId, nodes);
     return nodes;
   }
@@ -174,6 +205,28 @@ export class PreviewAudioRenderer {
       this.masterGain.connect(this.masterAnalyser).connect(this.audioContext.destination);
     }
     return { gain: this.masterGain, analyser: this.masterAnalyser };
+  }
+
+  private applyTrackProcessing(node: AudioNodeSet, track: Track | undefined): void {
+    const eq = normalizeTrackEQ(track?.eq);
+    node.eqNodes?.forEach((eqNode, index) => {
+      const band = eq.bands[index];
+      eqNode.type = band.type;
+      eqNode.frequency.value = band.frequency;
+      eqNode.gain.value = eq.enabled ? band.gain : 0;
+      eqNode.Q.value = band.q;
+    });
+
+    const compressor = normalizeTrackCompressor(track?.compressor);
+    if (node.compressor) {
+      node.compressor.threshold.value = compressor.enabled ? compressor.threshold : 0;
+      node.compressor.ratio.value = compressor.enabled ? compressor.ratio : 1;
+      node.compressor.attack.value = compressor.enabled ? compressor.attack / 1000 : 0.001;
+      node.compressor.release.value = compressor.enabled ? compressor.release / 1000 : 0.01;
+    }
+    if (node.compressorMakeup) {
+      node.compressorMakeup.gain.value = compressor.enabled ? 10 ** (compressor.makeupGain / 20) : 1;
+    }
   }
 }
 

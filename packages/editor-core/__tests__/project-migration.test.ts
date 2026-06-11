@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createTrack, migrateProjectFile, serializeProject, type ProjectFileV1 } from '../src';
+import { DEFAULT_COLOR_CORRECTION, createTrack, migrateProjectFile, serializeProject, type ProjectFileV1 } from '../src';
 import { makeProject, makeSubtitleClip } from './test-utils';
 
 describe('project schema migration', () => {
@@ -36,7 +36,23 @@ describe('project schema migration', () => {
     const migrated = migrateProjectFile(legacy);
     expect(migrated.project.version).toBe('0.2');
     expect(migrated.project.media[0].path).toBe('C:/Videos/sample.mp4');
+    expect(migrated.project.mediaMetadata).toEqual({});
     expect(migrated.warnings[0]).toContain('legacy');
+  });
+
+  it('serializes and migrates media metadata labels', () => {
+    const project = makeProject();
+    project.mediaMetadata = {
+      'asset-1': { labelColor: 'blue' },
+      'missing-asset': { labelColor: 'red' },
+      invalid: { labelColor: 'cyan' as never }
+    };
+
+    const file = serializeProject(project);
+    const migrated = migrateProjectFile(file);
+
+    expect(file.project.mediaMetadata).toEqual({ 'asset-1': { labelColor: 'blue' } });
+    expect(migrated.project.mediaMetadata).toEqual({ 'asset-1': { labelColor: 'blue' } });
   });
 
   it('backfills missing text background style defaults during migration', () => {
@@ -102,7 +118,43 @@ describe('project schema migration', () => {
     const clip = migrated.project.timeline.tracks[0].clips[0];
 
     expect(clip.speed).toBe(1);
-    expect(clip.colorCorrection).toEqual({ brightness: 0, contrast: 1, saturation: 1, hue: 0, lutPath: null });
+    expect(clip.colorCorrection).toEqual(DEFAULT_COLOR_CORRECTION);
+  });
+
+  it('serializes and migrates stabilization and PNG sequence metadata', () => {
+    const project = makeProject();
+    project.media[0] = {
+      id: 'asset-sequence',
+      type: 'image',
+      name: 'frame001.png 序列',
+      path: 'C:\\Media\\frame001.png',
+      duration: 0.1,
+      width: 640,
+      height: 360,
+      imageSequence: {
+        pattern: 'C:\\Media\\frame%03d.png',
+        startNumber: 1,
+        frameCount: 3,
+        frameRate: 24,
+        paths: ['C:\\Media\\frame001.png', 'C:\\Media\\frame002.png', 'C:\\Media\\frame003.png']
+      }
+    };
+    project.timeline.tracks[0].clips[0] = {
+      ...project.timeline.tracks[0].clips[0],
+      type: 'image',
+      mediaId: 'asset-sequence',
+      stabilization: { enabled: true, smoothing: 120, zoom: -1, analyzed: true, trfPath: ' C:\\Temp\\clip.trf ' },
+      sequenceFrameRate: 240
+    } as never;
+
+    const file = serializeProject(project);
+    const migrated = migrateProjectFile(file);
+    const clip = migrated.project.timeline.tracks[0].clips[0];
+
+    expect(file.project.media[0].imageSequence?.paths[0]).toBe('C:/Media/frame001.png');
+    expect(migrated.project.media[0].imageSequence).toMatchObject({ pattern: 'C:/Media/frame%03d.png', frameRate: 24, frameCount: 3 });
+    expect(clip.stabilization).toEqual({ enabled: true, smoothing: 100, zoom: 0, analyzed: true, trfPath: 'C:\\Temp\\clip.trf' });
+    expect(clip.sequenceFrameRate).toBe(120);
   });
 
   it('normalizes timeline markers during migration', () => {
@@ -143,11 +195,35 @@ describe('project schema migration', () => {
     delete (legacyTrack as Partial<typeof legacyTrack>).locked;
     delete (legacyTrack as Partial<typeof legacyTrack>).volume;
     delete (legacyTrack as Partial<typeof legacyTrack>).pan;
+    delete (legacyTrack as Partial<typeof legacyTrack>).eq;
+    delete (legacyTrack as Partial<typeof legacyTrack>).compressor;
     project.timeline.tracks[0] = legacyTrack;
 
     const migrated = migrateProjectFile(serializeProject(project));
 
     expect(migrated.project.timeline.tracks[0]).toMatchObject({ muted: false, solo: false, locked: false, volume: 1, pan: 0 });
+    expect(migrated.project.timeline.tracks[0].eq).toMatchObject({ enabled: true, bands: expect.arrayContaining([expect.objectContaining({ type: 'lowshelf', gain: 0 })]) });
+    expect(migrated.project.timeline.tracks[0].compressor).toMatchObject({ enabled: false, threshold: -18, ratio: 3, attack: 10, release: 120, makeupGain: 0 });
+  });
+
+  it('normalizes track EQ and compressor data during migration', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].eq = {
+      enabled: true,
+      bands: [
+        { id: 'low', type: 'lowshelf', frequency: 1, gain: 50, q: 0.01 },
+        { id: 'mid', type: 'peaking', frequency: 1000, gain: -5, q: 1 },
+        { id: 'presence', type: 'peaking', frequency: 2500, gain: 0, q: 1 },
+        { id: 'high', type: 'highshelf', frequency: 100000, gain: -50, q: 9 }
+      ]
+    };
+    project.timeline.tracks[0].compressor = { enabled: true, threshold: 9, ratio: 99, attack: -1, release: 99_999, makeupGain: 99 };
+
+    const migrated = migrateProjectFile(serializeProject(project));
+
+    expect(migrated.project.timeline.tracks[0].eq?.bands[0]).toMatchObject({ frequency: 20, gain: 24, q: 0.1 });
+    expect(migrated.project.timeline.tracks[0].eq?.bands[3]).toMatchObject({ frequency: 20000, gain: -24, q: 4 });
+    expect(migrated.project.timeline.tracks[0].compressor).toMatchObject({ threshold: 0, ratio: 20, attack: 0.01, release: 9000, makeupGain: 24 });
   });
 
   it('backfills and clamps project master volume during migration', () => {

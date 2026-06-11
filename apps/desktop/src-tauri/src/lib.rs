@@ -31,6 +31,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::ffmpeg::detect_ffmpeg,
             commands::ffmpeg::get_ffmpeg_capabilities,
+            commands::ffmpeg::analyze_clip,
             commands::ffmpeg::run_export,
             commands::ffmpeg::cancel_export,
             commands::files::open_file_dialog,

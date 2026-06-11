@@ -1,4 +1,4 @@
-import type { MediaAsset, ProjectSettings, Timeline } from '../model';
+import type { MediaAsset, MediaMetadata, ProjectSettings, Sequence, Timeline } from '../model';
 
 export interface ProjectFileV1 {
   version: '0.1';
@@ -23,7 +23,10 @@ export interface ProjectFileV2 {
     masterVolume?: number;
     settings: ProjectSettings;
     media: MediaAsset[];
+    mediaMetadata?: Record<string, MediaMetadata>;
     timeline: Timeline;
+    sequences?: Sequence[];
+    activeSequenceId?: string;
   };
   warnings?: string[];
 }

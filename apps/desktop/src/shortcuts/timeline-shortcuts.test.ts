@@ -17,7 +17,8 @@ describe('timeline shortcut mapping', () => {
     ['Escape', { key: 'Escape' }, 'clear-selection'],
     ['Ctrl+Z', { key: 'z', ctrlKey: true }, 'undo'],
     ['Cmd+Shift+Z', { key: 'z', metaKey: true, shiftKey: true }, 'redo'],
-    ['Ctrl+S', { key: 's', ctrlKey: true }, 'save']
+    ['Ctrl+S', { key: 's', ctrlKey: true }, 'save'],
+    ['Shift+E', { key: 'E', shiftKey: true }, 'export-current-frame']
   ])('maps %s', (_name, event, action) => {
     expect(resolveTimelineShortcutAction(event)).toBe(action);
   });

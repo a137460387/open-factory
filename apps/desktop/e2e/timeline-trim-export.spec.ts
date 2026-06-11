@@ -1,21 +1,21 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
-import { waitForE2eActions } from './e2e-actions';
+import { addMediaCardToTimeline, expectExportTaskStatus, openExportDialog, waitForE2eActions } from './e2e-actions';
 
 test('right-edge trim updates the exported duration', async ({ page }) => {
   await page.goto('/');
   await waitForE2eActions(page);
   await page.getByTestId('import-media-button').click();
-  await page.locator('[data-testid^="media-card-"]').first().getByText('Add to timeline').click();
+  await addMediaCardToTimeline(page);
 
   const clip = page.locator('[data-testid^="timeline-clip-"]').first();
   const clipId = await clip.getAttribute('data-clip-id');
   expect(clipId).toBeTruthy();
   await dragHandleBy(page.getByTestId(`timeline-trim-right-${clipId}`), page, -160);
 
-  await page.getByLabel('Export video').click();
+  await openExportDialog(page);
   await page.getByTestId('export-output-path').fill('C:/Exports/trimmed-output.mp4');
   await page.getByTestId('export-enqueue-button').click();
-  await expect(page.getByTestId('export-task-status')).toHaveText('success');
+  await expectExportTaskStatus(page, 0, 'success');
 
   const plan = await page.evaluate(() => window.__E2E_ACTIONS__!.getLastExportPlan!() as { duration: number; inputs: Array<{ args: string[] }> });
   expect(plan.duration).toBeCloseTo(4, 1);

@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { buildAtempoFilters, buildExportProjectFromProject, buildFfmpegExportPlan, createTrack, type Clip } from '../src';
+import {
+  buildAtempoFilters,
+  buildExportProjectFromProject,
+  buildFfmpegCurrentFrameExportPlan,
+  buildFfmpegExportPlan,
+  createNestedSequenceClip,
+  createSequence,
+  createTrack,
+  type Clip
+} from '../src';
 import { makeProject, makeSubtitleClip, makeTextClip, makeVideoClip } from './test-utils';
 
 describe('multitrack ffmpeg builder', () => {
@@ -171,6 +180,44 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.filterComplex).toContain('s=1920x1080:r=60');
     expect(plan.filterComplex).toContain('aresample=48000');
     expect(plan.outputArgs).toContain('60');
+  });
+
+  it('builds current-frame image exports with output seek and one video frame', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-frame', duration: 3 })];
+
+    const plan = buildFfmpegCurrentFrameExportPlan(buildExportProjectFromProject(project, { outputPath: 'D:\\Exports\\frame.jpg' }), 1.25);
+
+    expect(plan.fullArgs[0]).toBe('-y');
+    expect(plan.fullArgs).toContain('-filter_complex');
+    expect(plan.maps).toEqual(['-map', '[vout]']);
+    expect(plan.outputArgs).toEqual(['-ss', '1.25', '-frames:v', '1', '-f', 'image2', 'D:/Exports/frame.jpg']);
+    expect(plan.fullArgs).toEqual(expect.arrayContaining(['-ss', '1.25', '-frames:v', '1']));
+    expect(plan.fullArgs).not.toContain('[aout]');
+    expect(plan.fullArgs).not.toContain('-c:a');
+    expect(plan.fullArgs.at(-1)).toBe('D:/Exports/frame.jpg');
+    expect(plan.duration).toBeCloseTo(1 / 30);
+  });
+
+  it('clamps current-frame seek time and omits soft subtitle streams from image exports', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-frame-bounds', duration: 2 })];
+    project.timeline.tracks.push(
+      createTrack({
+        id: 'track-soft-subtitle',
+        type: 'subtitle',
+        name: 'Soft Subtitles',
+        clips: [makeSubtitleClip({ id: 'subtitle-soft-frame', start: 0, duration: 2, text: 'Soft', subtitleMode: 'soft-sub' })]
+      })
+    );
+
+    const latePlan = buildFfmpegCurrentFrameExportPlan(buildExportProjectFromProject(project, { outputPath: 'frame.png' }), 99);
+    const earlyPlan = buildFfmpegCurrentFrameExportPlan(buildExportProjectFromProject(project, { outputPath: 'frame.jpg' }), -1);
+
+    expect(latePlan.outputArgs).toEqual(['-ss', '2', '-frames:v', '1', '-f', 'image2', 'frame.png']);
+    expect(earlyPlan.outputArgs).toEqual(['-ss', '0', '-frames:v', '1', '-f', 'image2', 'frame.jpg']);
+    expect(latePlan.maps).toEqual(['-map', '[vout]']);
+    expect(latePlan.inputs.some((input) => input.args.includes('-f') && input.path.includes('SUBTITLE'))).toBe(false);
   });
 
   it('applies fit scaling and padding for vertical Shorts-style exports', () => {
@@ -536,6 +583,159 @@ describe('multitrack ffmpeg builder', () => {
     expect(defaultPlan.filterComplex).not.toContain('hue=h=');
   });
 
+  it('skips chroma key filters when the clip chroma key is disabled', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-chroma-disabled',
+        chromaKey: { enabled: false, color: [0, 255, 0], similarity: 0.2, blend: 0.1 }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).not.toContain('chromakey=');
+  });
+
+  it('places enabled chroma key filters before scaling and color correction', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-chroma-enabled',
+        duration: 2,
+        colorCorrection: { brightness: 0.1 },
+        chromaKey: { enabled: true, color: [0, 255, 0], similarity: 0.24, blend: 0.08 }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+    const filter = plan.filterComplex;
+
+    expect(filter).toContain('chromakey=color=0x00FF00:similarity=0.24:blend=0.08');
+    expect(filter.indexOf('chromakey=color=0x00FF00')).toBeLessThan(filter.indexOf('scale=trunc'));
+    expect(filter.indexOf('chromakey=color=0x00FF00')).toBeLessThan(filter.indexOf('eq=brightness=0.1'));
+  });
+
+  it('exports simple rect masks as crop plus transparent pad filters', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-rect-mask',
+        duration: 2,
+        masks: [{ id: 'mask-rect', type: 'rect', x: 0.25, y: 0.2, w: 0.5, h: 0.4, inverted: false, feather: 0, enabled: true }]
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain("crop=w='iw*0.5':h='ih*0.4':x='iw*0.25':y='ih*0.2'");
+    expect(plan.filterComplex).toContain("pad=w='iw/0.5':h='ih/0.4':x='ow*0.25':y='oh*0.2':color=black@0");
+  });
+
+  it('exports ellipse and inverted masks as geq alpha expressions', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-ellipse-mask',
+        duration: 2,
+        masks: [{ id: 'mask-ellipse', type: 'ellipse', x: 0.1, y: 0.2, w: 0.6, h: 0.5, inverted: true, feather: 0.1, enabled: true }]
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain("geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='alpha(X,Y)*(");
+    expect(plan.filterComplex).toContain('lte(pow((X-(iw*0.4))/max(iw*0.3,1),2)+pow((Y-(ih*0.45))/max(ih*0.25,1),2),1)');
+  });
+
+  it('skips stabilization until analysis has produced a trf path', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-stabilization-pending',
+        duration: 2,
+        stabilization: { enabled: true, smoothing: 40, zoom: 1.5, analyzed: false, trfPath: null }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).not.toContain('vidstabtransform=');
+  });
+
+  it('exports analyzed stabilization with vidstabtransform parameters', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-stabilized',
+        duration: 2,
+        stabilization: { enabled: true, smoothing: 40, zoom: 1.5, analyzed: true, trfPath: 'C:/Stabilization/clip.trf' }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('vidstabtransform=smoothing=40:zoom=1.5:input=C\\\\:/Stabilization/clip.trf');
+  });
+
+  it('builds image sequence inputs through a local concat artifact', () => {
+    const project = makeProject();
+    project.media = [
+      {
+        id: 'asset-sequence',
+        type: 'image',
+        name: 'frame001.png 序列',
+        path: 'D:\\Media\\frame001.png',
+        duration: 0.1,
+        width: 320,
+        height: 180,
+        imageSequence: {
+          pattern: 'D:/Media/frame%03d.png',
+          startNumber: 1,
+          frameCount: 3,
+          frameRate: 30,
+          paths: ['D:\\Media\\frame001.png', 'D:\\Media\\frame002.png', 'D:\\Media\\frame003.png']
+        }
+      }
+    ];
+    project.timeline.tracks[0].clips = [
+      {
+        ...makeVideoClip({ id: 'clip-sequence', mediaId: 'asset-sequence', duration: 0.1 }),
+        type: 'image',
+        volume: undefined,
+        sequenceFrameRate: 24
+      } as Clip
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.inputs[0]).toEqual(expect.objectContaining({ args: ['-f', 'concat', '-safe', '0'], path: '__IMAGE_SEQUENCE_clip_sequence__' }));
+    expect(plan.textArtifacts[0]).toEqual(
+      expect.objectContaining({
+        fileName: 'sequence-clip_sequence.ffconcat',
+        pathMode: 'argument',
+        text: expect.stringContaining("file 'D:/Media/frame001.png'\nduration 0.041667")
+      })
+    );
+  });
+
+  it('exports PNG sequences as image2 frames without audio mapping', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-png-sequence', duration: 1 })];
+
+    const plan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(project, {
+        outputPath: 'D:\\Exports\\frames',
+        settings: { format: 'png-sequence', fps: 12 }
+      })
+    );
+
+    expect(plan.maps).toEqual(['-map', '[vout]']);
+    expect(plan.outputArgs).toEqual(['-r', '12', '-f', 'image2', 'D:/Exports/frames/frame%04d.png']);
+    expect(plan.fullArgs).not.toContain('-c:a');
+    expect(plan.filterComplex).toContain('format=rgba[vout]');
+  });
+
   it('passes clip LUT paths into export project color correction data', () => {
     const project = makeProject();
     project.timeline.tracks[0].clips = [
@@ -567,6 +767,99 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.filterComplex).not.toContain('eq=brightness=0:contrast=1:saturation=1');
   });
 
+  it('generates a temporary 1D LUT only for non-default curves', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-curves',
+        duration: 2,
+        colorCorrection: {
+          colorCurves: {
+            master: [
+              { x: 0, y: 1 },
+              { x: 1, y: 1 }
+            ],
+            r: [
+              { x: 0, y: 0 },
+              { x: 1, y: 1 }
+            ],
+            g: [
+              { x: 0, y: 0 },
+              { x: 1, y: 1 }
+            ],
+            b: [
+              { x: 0, y: 0 },
+              { x: 1, y: 1 }
+            ]
+          }
+        }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('lut1d=file=__CURVE_LUT_clip_curves__');
+    expect(plan.fullArgs.join(' ')).toContain('__CURVE_LUT_clip_curves__');
+    expect(plan.textArtifacts).toEqual([
+      expect.objectContaining({
+        clipId: 'clip-curves:color-curves',
+        fileName: 'curves-clip_curves.cube',
+        placeholder: '__CURVE_LUT_clip_curves__',
+        text: expect.stringContaining('LUT_1D_SIZE 17')
+      })
+    ]);
+
+    const defaultPlan = buildFfmpegExportPlan(buildExportProjectFromProject(makeProject(), { outputPath: 'out.mp4' }));
+    expect(defaultPlan.filterComplex).not.toContain('lut1d=file=');
+  });
+
+  it('generates colorbalance filters only for non-neutral three-way color', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-wheel',
+        duration: 2,
+        colorCorrection: {
+          threeWayColor: {
+            lift: { r: 0.2, g: 0, b: 0, intensity: 1 },
+            gamma: { r: 0, g: 0, b: 0, intensity: 1 },
+            gain: { r: 0, g: 0, b: 0, intensity: 1 }
+          }
+        }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('colorbalance=rs=0.2');
+
+    const defaultPlan = buildFfmpegExportPlan(buildExportProjectFromProject(makeProject(), { outputPath: 'out.mp4' }));
+    expect(defaultPlan.filterComplex).not.toContain('colorbalance=');
+  });
+
+  it('chains enabled clip effects after color correction and skips disabled effects', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-effects',
+        duration: 2,
+        colorCorrection: { brightness: 0.1 },
+        effects: [
+          { id: 'effect-blur', type: 'blur', enabled: true, params: { radius: 6 } },
+          { id: 'effect-grain-disabled', type: 'film-grain', enabled: false, params: { strength: 1, size: 3 } },
+          { id: 'effect-sharpen', type: 'sharpen', enabled: true, params: { strength: 1.5 } },
+          { id: 'effect-chromatic', type: 'chromatic-aberration', enabled: true, params: { strength: 3 } }
+        ]
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+    const filter = plan.filterComplex;
+
+    expect(filter).toContain('eq=brightness=0.1:contrast=1:saturation=1,gblur=sigma=6,unsharp=luma_msize_x=5:luma_msize_y=5:luma_amount=1.5,rgbashift=rh=3:bh=-3');
+    expect(filter).not.toContain('noise=alls=');
+  });
+
   it('chains atempo filters for speeds outside ffmpeg single-filter bounds', () => {
     expect(buildAtempoFilters(0.25)).toEqual(['atempo=0.5', 'atempo=0.5']);
     expect(buildAtempoFilters(3)).toEqual(['atempo=2.0', 'atempo=1.5']);
@@ -583,6 +876,56 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.filterComplex).toContain('[0:v]trim=start=0:duration=1.5,setpts=(PTS-STARTPTS)/2+0/TB');
     expect(plan.filterComplex).toContain('[0:a:0]atrim=start=0:duration=1.5,asetpts=PTS-STARTPTS,atempo=2.0');
     expect(plan.duration).toBe(0.75);
+  });
+
+  it('builds segmented setpts expressions for speed keyframes', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-speed-ramp',
+        duration: 1,
+        speed: 1,
+        keyframes: {
+          speed: [
+            { id: 'speed-a', time: 0, value: 1, easing: 'linear' },
+            { id: 'speed-b', time: 0.5, value: 2, easing: 'linear' },
+            { id: 'speed-c', time: 1, value: 1, easing: 'linear' }
+          ]
+        }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.inputs[0].args).toEqual(['-ss', '0', '-t', '1.5']);
+    expect(plan.filterComplex).toContain("setpts='(if(lte(((PTS-STARTPTS)*TB),0.75)");
+    expect(plan.filterComplex).toContain("if(lte(((PTS-STARTPTS)*TB),1.5)");
+    expect(plan.filterComplex).toContain('/1.5');
+    expect(plan.duration).toBe(1);
+  });
+
+  it('falls back to average speed and warns when speed ramp setpts exceeds the expression limit', () => {
+    const project = makeProject();
+    const speedFrames = Array.from({ length: 120 }, (_, index) => ({
+      id: `speed-${index}`,
+      time: index / 30,
+      value: index % 2 === 0 ? 1 : 2,
+      easing: 'linear' as const
+    }));
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-long-speed-ramp',
+        duration: 4,
+        speed: 1,
+        keyframes: { speed: speedFrames }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.warnings).toContain('Speed ramp setpts for clip clip-long-speed-ramp exceeded 4096 characters and fell back to average speed.');
+    expect(plan.filterComplex).toContain('setpts=(PTS-STARTPTS)/');
+    expect(plan.filterComplex).not.toContain("vclip_long_speed_ramp],setpts='");
   });
 
   it('multiplies clip audio volume by track volume', () => {
@@ -604,6 +947,115 @@ describe('multitrack ffmpeg builder', () => {
     const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
 
     expect(plan.filterComplex).toContain('adelay=0:all=1,volume=0.4,stereopan=pan=-1,aformat=channel_layouts=stereo');
+  });
+
+  it('adds enabled track EQ bands and compressor filters to audio export', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].eq = {
+      enabled: true,
+      bands: [
+        { id: 'eq-low', type: 'lowshelf', frequency: 100, gain: 3, q: 0.7 },
+        { id: 'eq-low-mid', type: 'peaking', frequency: 400, gain: -2, q: 1.1 },
+        { id: 'eq-high-mid', type: 'peaking', frequency: 2500, gain: 0, q: 1 },
+        { id: 'eq-high', type: 'highshelf', frequency: 8000, gain: 1.5, q: 0.8 }
+      ]
+    };
+    project.timeline.tracks[0].compressor = { enabled: true, threshold: -24, ratio: 4, attack: 12, release: 180, makeupGain: 6 };
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('equalizer=f=100:width_type=o:width=0.7:g=3');
+    expect(plan.filterComplex).toContain('equalizer=f=400:width_type=o:width=1.1:g=-2');
+    expect(plan.filterComplex).toContain('equalizer=f=8000:width_type=o:width=0.8:g=1.5');
+    expect(plan.filterComplex).not.toContain('equalizer=f=2500:width_type=o:width=1:g=0');
+    expect(plan.filterComplex).toContain('acompressor=threshold=0.063:ratio=4:attack=12:release=180:makeup=1.995');
+  });
+
+  it('skips disabled track EQ and compressor filters', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].eq = {
+      enabled: false,
+      bands: [
+        { id: 'eq-low', type: 'lowshelf', frequency: 100, gain: 6, q: 0.7 },
+        { id: 'eq-low-mid', type: 'peaking', frequency: 400, gain: 6, q: 1 },
+        { id: 'eq-high-mid', type: 'peaking', frequency: 2500, gain: 6, q: 1 },
+        { id: 'eq-high', type: 'highshelf', frequency: 8000, gain: 6, q: 0.7 }
+      ]
+    };
+    project.timeline.tracks[0].compressor = { enabled: false, threshold: -24, ratio: 4, attack: 12, release: 180, makeupGain: 6 };
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).not.toContain('equalizer=');
+    expect(plan.filterComplex).not.toContain('acompressor=');
+  });
+
+  it('builds nested sequence export plans before the main sequence input', () => {
+    const project = makeProject();
+    const nestedClip = createNestedSequenceClip({
+      id: 'clip-nested',
+      type: 'nested-sequence',
+      name: 'Nested A',
+      trackId: 'track-video',
+      sequenceId: 'sequence-a',
+      start: 0,
+      duration: 2,
+      trimStart: 0,
+      trimEnd: 0
+    });
+    project.timeline.tracks[0].clips = [nestedClip];
+    project.sequences = [
+      createSequence({ id: 'sequence-main', name: 'Main Sequence', timeline: project.timeline }),
+      createSequence({
+        id: 'sequence-a',
+        name: 'Nested A',
+        timeline: {
+          tracks: [createTrack({ id: 'track-nested-video', type: 'video', name: 'Nested Video', clips: [makeVideoClip({ id: 'nested-source', duration: 2 })] })],
+          transitions: []
+        }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.inputs[0].path).toBe('__NESTED_SEQUENCE_sequence_a__.mp4');
+    expect(plan.nestedPlans).toHaveLength(1);
+    expect(plan.nestedPlans[0].sequenceId).toBe('sequence-a');
+    expect(plan.nestedPlans[0].placeholder).toBe('__NESTED_SEQUENCE_sequence_a__.mp4');
+    expect(plan.nestedPlans[0].plan.fullArgs.at(-1)).toBe('__NESTED_SEQUENCE_sequence_a__.mp4');
+    expect(plan.duration).toBe(2);
+  });
+
+  it('warns when nested sequence export depth exceeds the limit', () => {
+    const project = makeProject();
+    const makeNestedClip = (id: string, sequenceId: string) =>
+      createNestedSequenceClip({
+        id,
+        type: 'nested-sequence',
+        name: sequenceId,
+        trackId: `track-${id}`,
+        sequenceId,
+        start: 0,
+        duration: 1,
+        trimStart: 0,
+        trimEnd: 0
+      });
+    project.timeline.tracks[0].clips = [makeNestedClip('main-nested', 'sequence-a')];
+    project.sequences = [
+      createSequence({ id: 'sequence-main', name: 'Main Sequence', timeline: project.timeline }),
+      createSequence({ id: 'sequence-a', name: 'A', timeline: { tracks: [createTrack({ id: 'track-a', type: 'video', name: 'A', clips: [makeNestedClip('a-nested', 'sequence-b')] })] } }),
+      createSequence({ id: 'sequence-b', name: 'B', timeline: { tracks: [createTrack({ id: 'track-b', type: 'video', name: 'B', clips: [makeNestedClip('b-nested', 'sequence-c')] })] } }),
+      createSequence({ id: 'sequence-c', name: 'C', timeline: { tracks: [createTrack({ id: 'track-c', type: 'video', name: 'C', clips: [makeNestedClip('c-nested', 'sequence-d')] })] } }),
+      createSequence({
+        id: 'sequence-d',
+        name: 'D',
+        timeline: { tracks: [createTrack({ id: 'track-d', type: 'video', name: 'D', clips: [makeVideoClip({ id: 'leaf-video', trackId: 'track-d', duration: 1 })] })] }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(JSON.stringify(plan)).toContain('exceeds maximum depth 3');
   });
 
   it('omits stereopan for centered tracks', () => {

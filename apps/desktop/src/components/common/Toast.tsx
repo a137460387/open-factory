@@ -1,6 +1,7 @@
 import { X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
+import { zhCN } from '../../i18n/strings';
 import type { ToastEventDetail } from '../../lib/toast';
 
 interface ToastItem extends ToastEventDetail {
@@ -45,7 +46,7 @@ export function ToastViewport() {
             </div>
             <button
               className="rounded p-1 text-slate-500 hover:bg-black/5"
-              aria-label="Dismiss toast"
+              aria-label={zhCN.errors.dismissToast}
               onClick={() => setItems((current) => current.filter((candidate) => candidate.id !== item.id))}
             >
               <X size={16} />

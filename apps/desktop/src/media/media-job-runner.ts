@@ -1,4 +1,5 @@
 import type { MediaAsset } from '@open-factory/editor-core';
+import { zhCN } from '../i18n/strings';
 import { useEditorStore } from '../store/editorStore';
 import { createProxyForAsset } from './proxy';
 import { getWaveform } from './waveform';
@@ -33,12 +34,12 @@ async function runJobs(): Promise<void> {
       await runJob(job);
       useMediaJobStore.getState().finishJob(job.id);
     } catch (error) {
-      useMediaJobStore.getState().failJob(job.id, error instanceof Error ? error.message : 'Media job failed.');
+      useMediaJobStore.getState().failJob(job.id, error instanceof Error ? error.message : zhCN.errors.mediaJobFailed);
       if (job.type === 'proxy') {
         updateMediaAsset(job.assetId, (asset) => ({
           ...asset,
           proxyStatus: 'error',
-          proxyError: error instanceof Error ? error.message : 'Proxy generation failed.'
+          proxyError: error instanceof Error ? error.message : zhCN.errors.proxyGenerationFailed
         }));
       }
     }

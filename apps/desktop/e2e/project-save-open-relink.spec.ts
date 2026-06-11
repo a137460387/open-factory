@@ -1,14 +1,14 @@
 import { expect, test } from '@playwright/test';
-import { waitForE2eActions } from './e2e-actions';
+import { addMediaCardToTimeline, waitForE2eActions } from './e2e-actions';
 
 test('saves schemaVersion 2 project, opens missing media, and relinks it', async ({ page }) => {
   await page.goto('/');
   await waitForE2eActions(page);
   await page.evaluate(() => window.__E2E_ACTIONS__!.setSavePath!('C:/Projects/saved.cutproj.json'));
   await page.getByTestId('import-media-button').click();
-  await page.locator('[data-testid^="media-card-"]').nth(0).getByText('Add to timeline').click();
+  await addMediaCardToTimeline(page, 0);
 
-  await page.getByLabel('Save project').click();
+  await page.getByTestId('toolbar-save-project-button').click();
   await expect.poll(() => page.evaluate(() => window.__E2E_ACTIONS__!.getWrittenFile!('C:/Projects/saved.cutproj.json') as string | undefined)).not.toBeUndefined();
   const saved = await page.evaluate(() => window.__E2E_ACTIONS__!.getWrittenFile!('C:/Projects/saved.cutproj.json') as string);
   const parsed = JSON.parse(saved) as { schemaVersion: number; project: { media: unknown[] } };
@@ -16,9 +16,9 @@ test('saves schemaVersion 2 project, opens missing media, and relinks it', async
   expect(parsed.project.media).toHaveLength(3);
 
   await page.evaluate(() => window.__E2E_ACTIONS__!.setMissingProjectNext!());
-  await page.getByLabel('Open project').click();
-  await expect(page.getByText('Missing')).toBeVisible();
+  await page.getByTestId('toolbar-open-project-button').click();
+  await expect(page.locator('[data-testid^="media-card-"][data-missing="true"]')).toBeVisible();
 
   await page.getByTestId('relink-all-button').click();
-  await expect(page.getByText('Missing')).toHaveCount(0);
+  await expect(page.locator('[data-testid^="media-card-"][data-missing="true"]')).toHaveCount(0);
 });

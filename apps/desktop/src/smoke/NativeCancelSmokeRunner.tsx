@@ -161,7 +161,7 @@ async function runNativeCancelSmoke(): Promise<void> {
 
 async function clickExportToolbarButton(): Promise<void> {
   const button = await waitFor(() => {
-    const item = document.querySelector<HTMLButtonElement>('button[aria-label="Export video"]');
+    const item = document.querySelector<HTMLButtonElement>('[data-testid="toolbar-export-button"]');
     return item && !item.disabled ? item : undefined;
   }, 10_000, 'Export toolbar button was not enabled.');
   button.click();

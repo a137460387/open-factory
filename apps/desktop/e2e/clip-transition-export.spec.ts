@@ -1,13 +1,12 @@
 import { expect, test } from '@playwright/test';
-import { waitForE2eActions } from './e2e-actions';
+import { addMediaCardToTimeline, expectExportTaskStatus, openExportDialog, waitForE2eActions } from './e2e-actions';
 
 test('adds a dissolve transition between adjacent clips and exports shortened duration', async ({ page }) => {
   await page.goto('/');
   await waitForE2eActions(page);
   await page.getByTestId('import-media-button').click();
-  const videoCard = page.locator('[data-testid^="media-card-"]').first();
-  await videoCard.getByText('Add to timeline').click();
-  await videoCard.getByText('Add to timeline').click();
+  await addMediaCardToTimeline(page);
+  await addMediaCardToTimeline(page);
 
   const firstClip = page.locator('[data-testid^="timeline-clip-"]').first();
   const box = await firstClip.boundingBox();
@@ -19,10 +18,10 @@ test('adds a dissolve transition between adjacent clips and exports shortened du
   await page.getByTestId('transition-add-button').click();
   await expect(page.locator('[data-testid^="timeline-transition-"]')).toBeVisible();
 
-  await page.getByLabel('Export video').click();
+  await openExportDialog(page);
   await page.getByTestId('export-output-path').fill('C:/Exports/transition-output.mp4');
   await page.getByTestId('export-enqueue-button').click();
-  await expect(page.getByTestId('export-task-status')).toHaveText('success');
+  await expectExportTaskStatus(page, 0, 'success');
 
   const plan = await page.evaluate(
     () => window.__E2E_ACTIONS__!.getLastExportPlan!() as { duration: number; inputs: Array<{ args: string[] }>; filterComplex: string }

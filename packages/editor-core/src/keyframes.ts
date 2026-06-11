@@ -9,13 +9,18 @@ import {
 } from './model';
 import { round } from './time';
 
+const KEYFRAME_MIN_CLIP_SPEED = 0.25;
+const KEYFRAME_MAX_CLIP_SPEED = 4;
+const KEYFRAME_DEFAULT_CLIP_SPEED = 1;
+
 export const KEYFRAME_PROPERTY_LIMITS: Record<KeyframeProperty, { min: number; max: number }> = {
   opacity: { min: 0, max: 1 },
   volume: { min: 0, max: 2 },
   x: { min: -1, max: 1 },
   y: { min: -1, max: 1 },
   scaleX: { min: 0.01, max: 4 },
-  scaleY: { min: 0.01, max: 4 }
+  scaleY: { min: 0.01, max: 4 },
+  speed: { min: KEYFRAME_MIN_CLIP_SPEED, max: KEYFRAME_MAX_CLIP_SPEED }
 };
 
 export interface KeyframeInput {
@@ -81,7 +86,7 @@ export function normalizeClipKeyframes(keyframes: ClipKeyframes | undefined, dur
   }
   const output: ClipKeyframes = {};
   for (const property of Object.keys(KEYFRAME_PROPERTY_LIMITS) as KeyframeProperty[]) {
-    const fallback = property === 'opacity' ? 1 : property === 'volume' ? 1 : property === 'scaleX' || property === 'scaleY' ? 1 : 0;
+    const fallback = getKeyframeFallbackValue(property);
     const frames = normalizeKeyframes(keyframes[property], duration, fallback, property);
     if (frames.length > 0) {
       output[property] = frames;
@@ -145,6 +150,9 @@ export function getClipStaticKeyframeValue(clip: Clip, property: KeyframePropert
   if (property === 'scaleX' || property === 'scaleY') {
     return clip.transform.scale;
   }
+  if (property === 'speed') {
+    return clip.speed;
+  }
   return 0;
 }
 
@@ -180,7 +188,7 @@ export function applyClipKeyframes<TClip extends Clip>(clip: TClip, localTime: n
 }
 
 export function createKeyframe(property: KeyframeProperty, input: KeyframeInput, clipDuration: number): Keyframe<number> {
-  const fallback = property === 'opacity' ? 1 : property === 'volume' ? 1 : property === 'scaleX' || property === 'scaleY' ? 1 : 0;
+  const fallback = getKeyframeFallbackValue(property);
   return normalizeKeyframes(
     [
       {
@@ -194,6 +202,16 @@ export function createKeyframe(property: KeyframeProperty, input: KeyframeInput,
     fallback,
     property
   )[0];
+}
+
+function getKeyframeFallbackValue(property: KeyframeProperty): number {
+  if (property === 'opacity' || property === 'volume' || property === 'scaleX' || property === 'scaleY') {
+    return 1;
+  }
+  if (property === 'speed') {
+    return KEYFRAME_DEFAULT_CLIP_SPEED;
+  }
+  return 0;
 }
 
 export function setKeyframeForProperty(

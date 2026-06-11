@@ -19,6 +19,22 @@ describe('timeline thumbnail sampling', () => {
     expect(calculateTimelineThumbnailTimestamps({ clipDuration: 2, clipPixelWidth: 160, trimStart: 1, speed: 2 })).toEqual([2, 4]);
   });
 
+  it('accounts for speed keyframes when mapping thumbnail timestamps', () => {
+    expect(
+      calculateTimelineThumbnailTimestamps({
+        clipDuration: 1,
+        clipPixelWidth: 160,
+        speed: 1,
+        keyframes: {
+          speed: [
+            { id: 'speed-a', time: 0, value: 1, easing: 'linear' },
+            { id: 'speed-b', time: 1, value: 2, easing: 'linear' }
+          ]
+        }
+      })
+    ).toEqual([0.28125, 1.03125]);
+  });
+
   it('reports cache hits and misses for requested timestamps', () => {
     const path = 'D:\\Media\\clip.mp4';
     const timestamps = [0.5, 1.5, 2.5];

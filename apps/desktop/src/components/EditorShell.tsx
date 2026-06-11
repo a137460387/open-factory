@@ -13,9 +13,10 @@ import { useCloseGuard } from '../hooks/useCloseGuard';
 import { useShortcuts } from '../hooks/useShortcuts';
 import { cancelQueuedExportTask } from '../export/export-queue-runner';
 import { useExportQueueStore } from '../export/export-queue-store';
-import { revealExport } from '../lib/exportVideo';
+import { chooseCurrentFrameExportPath, revealExport, startCurrentFrameExport } from '../lib/exportVideo';
 import { clearMediaCache } from '../cache/cache-service';
 import { createClipFromAsset, findPreferredTrack } from '../lib/clipFactory';
+import { zhCN } from '../i18n/strings';
 import { pickMediaPaths, probeMediaPaths } from '../lib/media';
 import { buildSubtitleTrackFromSrt, isSubtitlePath, pickSubtitlePaths, readSubtitleText } from '../lib/subtitles';
 import {
@@ -51,6 +52,7 @@ export function EditorShell() {
   const resetProject = useEditorStore((state) => state.resetProject);
   const setMedia = useEditorStore((state) => state.setMedia);
   const addMedia = useEditorStore((state) => state.addMedia);
+  const setMediaMetadata = useEditorStore((state) => state.setMediaMetadata);
   const setDirty = useEditorStore((state) => state.setDirty);
   const setProjectPath = useEditorStore((state) => state.setProjectPath);
   const setSelectedClipId = useEditorStore((state) => state.setSelectedClipId);
@@ -84,7 +86,7 @@ export function EditorShell() {
     await deleteAutosaveAfterSave(targetPath, projectPath);
     setProjectPath(targetPath);
     setDirty(false);
-    showToast({ kind: 'success', title: 'Project saved' });
+    showToast({ kind: 'success', title: zhCN.editorToasts.projectSaved });
   }, [project, projectPath, setDirty, setProjectPath]);
 
   useEffect(() => {
@@ -96,7 +98,7 @@ export function EditorShell() {
         }
       })
       .catch((error) => {
-        console.warn('Unable to check autosave recovery', error);
+        console.warn(zhCN.editorToasts.autosaveCheckFailed, error);
       });
     return () => {
       canceled = true;
@@ -111,14 +113,14 @@ export function EditorShell() {
       }
       const result = await probeMediaPaths(paths, project.media);
       if (result.duplicateCount > 0) {
-        showToast({ kind: 'info', title: 'Already exists', message: `${result.duplicateCount} duplicate file(s) were skipped.` });
+        showToast({ kind: 'info', title: zhCN.editorToasts.duplicateTitle, message: zhCN.editorToasts.duplicateMessage(result.duplicateCount) });
       }
       if (result.media.length > 0) {
         addMedia(result.media);
-        showToast({ kind: 'success', title: 'Media imported', message: `${result.media.length} file(s) added.` });
+        showToast({ kind: 'success', title: zhCN.editorToasts.mediaImported, message: zhCN.editorToasts.mediaImportedMessage(result.media.length) });
       }
     } catch (error) {
-      showToast({ kind: 'error', title: 'Import failed', message: error instanceof Error ? error.message : 'Unable to import media.' });
+      showToast({ kind: 'error', title: zhCN.editorToasts.importFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.importFailedMessage });
     }
   }, [addMedia, project.media]);
 
@@ -127,7 +129,7 @@ export function EditorShell() {
       const paths = await pickSubtitlePaths();
       await importSubtitlePaths(paths);
     } catch (error) {
-      showToast({ kind: 'error', title: 'Subtitle import failed', message: error instanceof Error ? error.message : 'Unable to import subtitles.' });
+      showToast({ kind: 'error', title: zhCN.editorToasts.subtitleImportFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.subtitleImportFailedMessage });
     }
   }, [project.timeline]);
 
@@ -136,7 +138,7 @@ export function EditorShell() {
       const asset = project.media.find((item) => item.id === assetId);
       const track = asset ? findPreferredTrack(project.timeline, asset) : undefined;
       if (!asset || !track) {
-        showToast({ kind: 'error', title: 'No compatible track', message: 'Add a matching track before placing this asset.' });
+        showToast({ kind: 'error', title: zhCN.editorToasts.noCompatibleTrack, message: zhCN.editorToasts.noCompatibleTrackMessage });
         return;
       }
       try {
@@ -144,7 +146,7 @@ export function EditorShell() {
         commandManager.execute(new AddClipCommand(timelineAccessor, clip));
         setSelectedClipId(clip.id);
       } catch (error) {
-        showToast({ kind: 'error', title: 'Could not add clip', message: error instanceof Error ? error.message : 'Timeline rejected the clip.' });
+        showToast({ kind: 'error', title: zhCN.editorToasts.addClipFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.addClipFailedMessage });
       }
     },
     [project, setSelectedClipId]
@@ -162,9 +164,9 @@ export function EditorShell() {
           return;
         }
         setMedia(project.media.map((item) => (item.id === assetId ? relinked : item)));
-        showToast({ kind: 'success', title: 'Media relinked', message: relinked.name });
+        showToast({ kind: 'success', title: zhCN.editorToasts.mediaRelinked, message: relinked.name });
       } catch (error) {
-        showToast({ kind: 'error', title: 'Relink failed', message: error instanceof Error ? error.message : 'Unable to relink media.' });
+        showToast({ kind: 'error', title: zhCN.editorToasts.relinkFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.relinkFailedMessage });
       }
     },
     [project.media, setMedia]
@@ -176,11 +178,11 @@ export function EditorShell() {
       setMedia(result.media);
       showToast({
         kind: result.relinkedCount > 0 ? 'success' : 'warning',
-        title: 'Relink complete',
-        message: `${result.relinkedCount} missing file(s) relinked.${result.warnings.length > 0 ? ` ${result.warnings.length} warning(s).` : ''}`
+        title: zhCN.editorToasts.relinkComplete,
+        message: zhCN.editorToasts.relinkCompleteMessage(result.relinkedCount, result.warnings.length)
       });
     } catch (error) {
-      showToast({ kind: 'error', title: 'Relink failed', message: error instanceof Error ? error.message : 'Unable to relink missing media.' });
+      showToast({ kind: 'error', title: zhCN.editorToasts.relinkFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.relinkMissingFailedMessage });
     }
   }, [project.media, setMedia]);
 
@@ -204,9 +206,9 @@ export function EditorShell() {
       const nextProject = await readProjectFile(path);
       commandManager.clear();
       setProject(nextProject, path);
-      showToast({ kind: 'success', title: 'Project opened' });
+      showToast({ kind: 'success', title: zhCN.editorToasts.projectOpened });
     } catch (error) {
-      showToast({ kind: 'error', title: 'Open failed', message: error instanceof Error ? error.message : 'Unable to open project.' });
+      showToast({ kind: 'error', title: zhCN.editorToasts.openFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.openFailedMessage });
     }
   }, [dirty, setProject]);
 
@@ -217,7 +219,7 @@ export function EditorShell() {
     try {
       commandManager.execute(new SplitClipCommand(timelineAccessor, selectedClip.id, playheadTime));
     } catch (error) {
-      showToast({ kind: 'warning', title: 'Split unavailable', message: error instanceof Error ? error.message : 'Move the playhead inside the clip.' });
+      showToast({ kind: 'warning', title: zhCN.editorToasts.splitUnavailable, message: error instanceof Error ? error.message : zhCN.editorToasts.splitUnavailableMessage });
     }
   }, [playheadTime, selectedClip]);
 
@@ -234,7 +236,33 @@ export function EditorShell() {
     const runningTask = useExportQueueStore.getState().tasks.find((task) => task.status === 'running');
     if (runningTask) {
       await cancelQueuedExportTask(runningTask.id);
-      showToast({ kind: 'info', title: 'Export canceled', message: runningTask.name });
+      showToast({ kind: 'info', title: zhCN.editorToasts.exportCanceled, message: runningTask.name });
+    }
+  }, []);
+
+  const exportCurrentFrame = useCallback(async () => {
+    const state = useEditorStore.getState();
+    try {
+      const outputPath = await chooseCurrentFrameExportPath(state.project, state.playheadTime);
+      if (!outputPath) {
+        return;
+      }
+      await startCurrentFrameExport(state.project, outputPath, state.playheadTime, {
+        onProgress: () => undefined,
+        onWarnings: (warnings) => {
+          if (warnings.length > 0) {
+            showToast({ kind: 'warning', title: zhCN.exportDialog.exportWarningTitle, message: warnings.join('\n') });
+          }
+        }
+      });
+      setLastExportPath(outputPath);
+      showToast({ kind: 'success', title: zhCN.editorToasts.currentFrameExported, message: outputPath });
+    } catch (error) {
+      showToast({
+        kind: 'error',
+        title: zhCN.editorToasts.currentFrameExportFailed,
+        message: error instanceof Error ? error.message : zhCN.editorToasts.currentFrameExportFailedMessage
+      });
     }
   }, []);
 
@@ -248,18 +276,18 @@ export function EditorShell() {
       try {
         const proxyAsset = await createProxyForAsset({ ...asset, proxyStatus: 'pending', proxyError: undefined });
         setMedia(useEditorStore.getState().project.media.map((item) => (item.id === assetId ? proxyAsset : item)));
-        showToast({ kind: 'success', title: 'Proxy ready', message: proxyAsset.name });
+        showToast({ kind: 'success', title: zhCN.editorToasts.proxyReady, message: proxyAsset.name });
       } catch (error) {
         setMedia(
           useEditorStore
             .getState()
             .project.media.map((item) =>
               item.id === assetId
-                ? { ...item, proxyStatus: 'error', proxyError: error instanceof Error ? error.message : 'Unable to generate proxy.' }
+                ? { ...item, proxyStatus: 'error', proxyError: error instanceof Error ? error.message : zhCN.editorToasts.proxyFailedMessage }
                 : item
             )
         );
-        showToast({ kind: 'error', title: 'Proxy failed', message: error instanceof Error ? error.message : 'Unable to generate proxy.' });
+        showToast({ kind: 'error', title: zhCN.editorToasts.proxyFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.proxyFailedMessage });
       }
     },
     [setMedia]
@@ -268,9 +296,9 @@ export function EditorShell() {
   const clearCache = useCallback(async () => {
     try {
       await clearMediaCache();
-      showToast({ kind: 'success', title: 'Cache cleared' });
+      showToast({ kind: 'success', title: zhCN.editorToasts.cacheCleared });
     } catch (error) {
-      showToast({ kind: 'error', title: 'Cache clear failed', message: error instanceof Error ? error.message : 'Unable to clear media cache.' });
+      showToast({ kind: 'error', title: zhCN.editorToasts.cacheClearFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.cacheClearFailedMessage });
     }
   }, []);
 
@@ -327,9 +355,25 @@ export function EditorShell() {
       clearSelection: clearSelectedClipIds,
       undo,
       redo,
-      save: () => void saveProject()
+      save: () => void saveProject(),
+      exportCurrentFrame: () => void exportCurrentFrame()
     }),
-    [clearSelectedClipIds, deleteSelected, forwardPlayback, pausePlayback, redo, reversePlayback, saveProject, setInPoint, setOutPoint, setSelectedClipIds, stepFrame, togglePlayback, undo]
+    [
+      clearSelectedClipIds,
+      deleteSelected,
+      exportCurrentFrame,
+      forwardPlayback,
+      pausePlayback,
+      redo,
+      reversePlayback,
+      saveProject,
+      setInPoint,
+      setOutPoint,
+      setSelectedClipIds,
+      stepFrame,
+      togglePlayback,
+      undo
+    ]
   );
 
   useAutosave(autosaveIntervalSeconds);
@@ -338,7 +382,7 @@ export function EditorShell() {
   useBackgroundMediaJobs(project.media);
 
   return (
-    <ErrorBoundary name="Editor">
+    <ErrorBoundary name={zhCN.panels.editor}>
       <div className="grid h-full grid-rows-[auto_1fr_260px] bg-[#edeff3] text-ink">
         <Toolbar
           onNewProject={newProject}
@@ -347,6 +391,7 @@ export function EditorShell() {
           onImportMedia={() => void importMedia()}
           onImportSubtitles={() => void importSubtitles()}
           onExportVideo={() => setExportDialogOpen(true)}
+          onExportCurrentFrame={() => void exportCurrentFrame()}
           onCancelExport={() => void cancelCurrentExport()}
           onSplitSelected={splitSelected}
           onUndo={undo}
@@ -362,18 +407,20 @@ export function EditorShell() {
         <main className="grid min-h-0 grid-cols-[280px_minmax(360px,1fr)_360px] gap-px bg-line">
           <MediaBin
             media={project.media}
+            mediaMetadata={project.mediaMetadata}
             onImport={() => void importMedia()}
             onImportPaths={(paths) => void importDropped(paths)}
             onAddToTimeline={addAssetToTimeline}
             onRelink={(assetId) => void relinkMedia(assetId)}
             onRelinkAll={() => void relinkAllMissing()}
             onGenerateProxy={(assetId) => void generateProxyForMedia(assetId)}
+            onSetLabel={(assetId, labelColor) => setMediaMetadata(assetId, labelColor ? { labelColor } : undefined)}
           />
-          <ErrorBoundary name="Preview">
+          <ErrorBoundary name={zhCN.panels.preview}>
             <PreviewCanvas />
           </ErrorBoundary>
           <aside className="grid min-h-0 grid-rows-[minmax(0,1fr)_220px] gap-px bg-line">
-            <ErrorBoundary name="Inspector">
+            <ErrorBoundary name={zhCN.panels.inspector}>
               <Inspector
                 clip={selectedClip}
                 selectedCount={selectedClipIds.length}
@@ -383,12 +430,12 @@ export function EditorShell() {
                 playheadTime={playheadTime}
               />
             </ErrorBoundary>
-            <ErrorBoundary name="Audio Mixer">
+            <ErrorBoundary name={zhCN.panels.audioMixer}>
               <AudioMixer />
             </ErrorBoundary>
           </aside>
         </main>
-        <ErrorBoundary name="Timeline">
+        <ErrorBoundary name={zhCN.panels.timeline}>
           <Timeline />
         </ErrorBoundary>
         {exportDialogOpen ? (
@@ -420,9 +467,9 @@ export function EditorShell() {
       setProject(restored, recoveryCandidate.projectPath);
       setDirty(true);
       setRecoveryCandidate(undefined);
-      showToast({ kind: 'success', title: 'Recovery restored', message: recoveryCandidate.autosavePath });
+      showToast({ kind: 'success', title: zhCN.editorToasts.recoveryRestored, message: recoveryCandidate.autosavePath });
     } catch (error) {
-      showToast({ kind: 'error', title: 'Recovery failed', message: error instanceof Error ? error.message : 'Unable to restore autosave.' });
+      showToast({ kind: 'error', title: zhCN.editorToasts.recoveryFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.recoveryFailedMessage });
     }
   }
 
@@ -433,9 +480,9 @@ export function EditorShell() {
     try {
       await discardAutosaveRecovery(recoveryCandidate);
       setRecoveryCandidate(undefined);
-      showToast({ kind: 'info', title: 'Recovery discarded' });
+      showToast({ kind: 'info', title: zhCN.editorToasts.recoveryDiscarded });
     } catch (error) {
-      showToast({ kind: 'error', title: 'Discard failed', message: error instanceof Error ? error.message : 'Unable to discard autosave.' });
+      showToast({ kind: 'error', title: zhCN.editorToasts.discardFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.discardFailedMessage });
     }
   }
 
@@ -446,7 +493,7 @@ export function EditorShell() {
       if (mediaPaths.length > 0) {
         const result = await probeMediaPaths(mediaPaths, project.media);
         if (result.duplicateCount > 0) {
-          showToast({ kind: 'info', title: 'Already exists', message: `${result.duplicateCount} duplicate file(s) were skipped.` });
+          showToast({ kind: 'info', title: zhCN.editorToasts.duplicateTitle, message: zhCN.editorToasts.duplicateMessage(result.duplicateCount) });
         }
         addMedia(result.media);
       }
@@ -454,7 +501,7 @@ export function EditorShell() {
         await importSubtitlePaths(subtitlePaths);
       }
     } catch (error) {
-      showToast({ kind: 'error', title: 'Drop import failed', message: error instanceof Error ? error.message : 'Unable to import dropped files.' });
+      showToast({ kind: 'error', title: zhCN.editorToasts.dropImportFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.dropImportFailedMessage });
     }
   }
 
@@ -467,7 +514,7 @@ export function EditorShell() {
       const contents = await readSubtitleText(path);
       const track = buildSubtitleTrackFromSrt(path, contents, useEditorStore.getState().project.timeline);
       if (track.clips.length === 0) {
-        showToast({ kind: 'warning', title: 'No subtitles found', message: path });
+        showToast({ kind: 'warning', title: zhCN.editorToasts.noSubtitlesFound, message: path });
         continue;
       }
       commandManager.execute(new AddTrackCommand(timelineAccessor, track));
@@ -475,7 +522,7 @@ export function EditorShell() {
       setSelectedClipId(track.clips[0]?.id);
     }
     if (importedCount > 0) {
-      showToast({ kind: 'success', title: 'Subtitles imported', message: `${importedCount} subtitle clip(s) added.` });
+      showToast({ kind: 'success', title: zhCN.editorToasts.subtitlesImported, message: zhCN.editorToasts.subtitlesImportedMessage(importedCount) });
     }
   }
 }
@@ -485,14 +532,14 @@ function AutosaveRecoveryDialog({ onRestore, onDiscard }: { onRestore(): void; o
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" data-testid="autosave-recovery-dialog">
       <section className="w-full max-w-sm rounded-md border border-line bg-white shadow-soft">
         <div className="border-b border-line px-4 py-3">
-          <h2 className="text-sm font-semibold">检测到未保存的恢复点，是否恢复？</h2>
+          <h2 className="text-sm font-semibold">{zhCN.autosaveRecovery.title}</h2>
         </div>
         <div className="flex justify-end gap-2 px-4 py-3">
           <button className="rounded-md border border-line px-3 py-2 text-sm font-medium hover:bg-panel" onClick={onDiscard} data-testid="autosave-discard-button">
-            放弃
+            {zhCN.autosaveRecovery.discard}
           </button>
           <button className="rounded-md bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-[#176858]" onClick={onRestore} data-testid="autosave-restore-button">
-            恢复
+            {zhCN.autosaveRecovery.restore}
           </button>
         </div>
       </section>

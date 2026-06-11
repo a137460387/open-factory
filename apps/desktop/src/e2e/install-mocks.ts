@@ -35,6 +35,9 @@ const batchMissingProjectPath = 'C:/Projects/batch-missing.cutproj.json';
 const tinyVideo = 'C:/Media/tiny-video.mp4';
 const tinyAudio = 'C:/Media/tiny-audio.wav';
 const tinyImage = 'C:/Media/test-image.png';
+const pngFrame001 = 'C:/Media/frame001.png';
+const pngFrame002 = 'C:/Media/frame002.png';
+const pngFrame003 = 'C:/Media/frame003.png';
 const tinySrt = 'C:/Media/tiny-subtitles.srt';
 const silencePatternAudio = 'C:/Media/silence-pattern.wav';
 const relinkedVideo = 'C:/Relink/tiny-video.mp4';
@@ -54,6 +57,9 @@ for (const path of [
   tinyVideo,
   tinyAudio,
   tinyImage,
+  pngFrame001,
+  pngFrame002,
+  pngFrame003,
   tinySrt,
   silencePatternAudio,
   relinkedVideo,
@@ -136,8 +142,32 @@ const mocks: TauriMocks = {
       throw new Error('Export canceled.');
     }
     emit('export-progress', 1);
-    files.set(plan.fullArgs.at(-1) ?? savePath, 'mock mp4');
-    return { success: true, outputPath: plan.fullArgs.at(-1) ?? savePath, durationMs: 20, warnings: plan.warnings };
+    const outputPath = plan.fullArgs.at(-1) ?? savePath;
+    if (outputPath.includes('%')) {
+      for (const frame of ['0001', '0002', '0003']) {
+        const framePath = outputPath.replace(/%0?\d*d/, frame);
+        files.set(framePath, `mock png frame ${frame}`);
+        exists.set(framePath, true);
+        mtimes.set(framePath, Date.now());
+      }
+    } else {
+      files.set(outputPath, outputPath.endsWith('.png') || outputPath.endsWith('.jpg') || outputPath.endsWith('.jpeg') ? 'mock image frame' : 'mock mp4');
+      exists.set(outputPath, true);
+      mtimes.set(outputPath, Date.now());
+    }
+    persistFiles();
+    return { success: true, outputPath, durationMs: 20, warnings: plan.warnings };
+  },
+  analyzeClip: async ({ clipId }) => {
+    emit('clip-analysis-progress', { clipId, progress: 0.35, progressPct: 35 });
+    await wait(10);
+    emit('clip-analysis-progress', { clipId, progress: 1, progressPct: 100 });
+    const trfPath = `C:/Users/E2E/AppData/Roaming/open-factory/stabilization/${clipId}.trf`;
+    files.set(trfPath, 'mock vidstab transforms');
+    exists.set(trfPath, true);
+    mtimes.set(trfPath, Date.now());
+    persistFiles();
+    return { clipId, trfPath, durationMs: 10 };
   },
   cancelExport: () => {
     exportCanceled = true;
@@ -252,6 +282,7 @@ window.__E2E_ACTIONS__ = {
     }
   },
   getWrittenFile: (path: unknown) => (typeof path === 'string' ? files.get(path) : undefined),
+  getWrittenFileSize: (path: unknown) => (typeof path === 'string' ? files.get(path)?.length ?? 0 : 0),
   getLastExportPlan: () => lastExportPlan,
   addKeyframe: (clipId: unknown, property: unknown, time: unknown, value: unknown) => {
     if (typeof clipId !== 'string' || !isKeyframeProperty(property) || typeof time !== 'number' || typeof value !== 'number') {
@@ -349,7 +380,7 @@ function writeAscii(bytes: Uint8Array, offset: number, value: string): void {
 }
 
 function isKeyframeProperty(value: unknown): value is KeyframeProperty {
-  return value === 'x' || value === 'y' || value === 'scaleX' || value === 'scaleY' || value === 'rotation' || value === 'opacity' || value === 'volume';
+  return value === 'x' || value === 'y' || value === 'scaleX' || value === 'scaleY' || value === 'opacity' || value === 'volume' || value === 'speed';
 }
 
 function emit(event: string, payload: unknown): void {

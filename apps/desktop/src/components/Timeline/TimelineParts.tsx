@@ -1,6 +1,7 @@
 import { areClipsAdjacent, type Clip, type KeyframeProperty, type MediaAsset, snapTime, type Track, type Transition, type TransitionType } from '@open-factory/editor-core';
 import { clsx } from 'clsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { formatTrackType, zhCN } from '../../i18n/strings';
 import { getTimelineThumbnailPlaceholders, getTimelineThumbnails, type TimelineThumbnailFrame } from '../../media/timeline-thumbnails';
 import { getWaveform, type WaveformResult } from '../../media/waveform';
 import type { SelectedKeyframeRef } from '../../store/editorStore';
@@ -29,7 +30,7 @@ export const LABEL_WIDTH = 138;
 export function Ruler({ ticks, zoom, width, onSeek }: { ticks: number[]; zoom: number; width: number; onSeek(time: number): void }) {
   return (
     <div className="sticky top-0 z-30 grid h-8 grid-cols-[138px_1fr] border-b border-line bg-panel">
-      <div className="border-r border-line px-3 py-1 text-xs font-medium text-slate-600">Tracks</div>
+      <div className="border-r border-line px-3 py-1 text-xs font-medium text-slate-600">{zhCN.timeline.tracks}</div>
       <div
         className="relative"
         style={{ width }}
@@ -64,7 +65,8 @@ export function TrackRow({
   onTrackUpdate,
   transitions,
   onTransitionMenu,
-  onClipMenu
+  onClipMenu,
+  onClipDoubleClick
 }: {
   track: Track;
   zoom: number;
@@ -81,6 +83,7 @@ export function TrackRow({
   transitions: Transition[];
   onTransitionMenu(request: TransitionMenuRequest): void;
   onClipMenu(request: ClipMenuRequest): void;
+  onClipDoubleClick(clip: Clip): void;
 }) {
   const mediaById = new Map(media.map((asset) => [asset.id, asset]));
   const locked = Boolean(track.locked);
@@ -98,16 +101,16 @@ export function TrackRow({
       <div className="flex items-center gap-2 border-r border-line bg-panel px-3">
         <div className="min-w-0 flex-1">
           <div className="truncate text-xs font-semibold">{track.name}</div>
-          <div className="text-[11px] uppercase tracking-normal text-slate-500">{track.type}</div>
+          <div className="text-[11px] uppercase tracking-normal text-slate-500">{formatTrackType(track.type)}</div>
         </div>
         <div className="flex items-center gap-1">
-          <TrackToggle label="M" title="Mute track" active={Boolean(track.muted)} testId={`track-mute-${track.id}`} onClick={() => onTrackUpdate(track.id, { muted: !track.muted })} />
-          <TrackToggle label="S" title="Solo track" active={Boolean(track.solo)} testId={`track-solo-${track.id}`} onClick={() => onTrackUpdate(track.id, { solo: !track.solo })} />
-          <TrackToggle label="L" title="Lock track" active={locked} testId={`track-lock-${track.id}`} onClick={() => onTrackUpdate(track.id, { locked: !track.locked })} />
+          <TrackToggle label="M" title={zhCN.timeline.muteTrack} active={Boolean(track.muted)} testId={`track-mute-${track.id}`} onClick={() => onTrackUpdate(track.id, { muted: !track.muted })} />
+          <TrackToggle label="S" title={zhCN.timeline.soloTrack} active={Boolean(track.solo)} testId={`track-solo-${track.id}`} onClick={() => onTrackUpdate(track.id, { solo: !track.solo })} />
+          <TrackToggle label="L" title={zhCN.timeline.lockTrack} active={locked} testId={`track-lock-${track.id}`} onClick={() => onTrackUpdate(track.id, { locked: !track.locked })} />
         </div>
         <input
           className="w-14 accent-brand"
-          title="Track volume"
+          title={zhCN.timeline.trackVolume}
           type="range"
           min={0}
           max={2}
@@ -146,6 +149,7 @@ export function TrackRow({
               transition={transitions.find((transition) => transition.fromClipId === clip.id && transition.toClipId === nextAdjacentByClipId.get(clip.id)?.id)}
               onTransitionMenu={onTransitionMenu}
               onClipMenu={onClipMenu}
+              onClipDoubleClick={onClipDoubleClick}
             />
           );
         })}
@@ -216,7 +220,8 @@ function ClipBlock({
   nextAdjacentClip,
   transition,
   onTransitionMenu,
-  onClipMenu
+  onClipMenu,
+  onClipDoubleClick
 }: {
   clip: Clip;
   asset?: MediaAsset;
@@ -237,6 +242,7 @@ function ClipBlock({
   transition?: Transition;
   onTransitionMenu(request: TransitionMenuRequest): void;
   onClipMenu(request: ClipMenuRequest): void;
+  onClipDoubleClick(clip: Clip): void;
 }) {
   const waveformColor = getTrackWaveformColor(trackType);
   return (
@@ -292,7 +298,11 @@ function ClipBlock({
         }
         onClipMenu({ x: event.clientX, y: event.clientY, clipId: clip.id, clipType: clip.type });
       }}
-      title={asset?.missing ? 'Media file is missing' : `${clip.name} (${clip.duration.toFixed(2)}s)`}
+      onDoubleClick={(event) => {
+        event.stopPropagation();
+        onClipDoubleClick(clip);
+      }}
+      title={asset?.missing ? zhCN.timeline.mediaMissing : `${clip.name} (${clip.duration.toFixed(2)}s)`}
       data-testid={`timeline-clip-${clip.id}`}
       data-clip-type={clip.type}
       data-clip-id={clip.id}
@@ -346,7 +356,7 @@ function ClipBlock({
             isSelectedKeyframe ? 'border-black bg-white' : 'border-white bg-coral'
           )}
           style={{ left: `${Math.min(100, Math.max(0, (markerTime / Math.max(0.001, clip.duration)) * 100))}%` }}
-          title={`${marker.property} keyframe ${marker.time.toFixed(2)}s`}
+          title={zhCN.timeline.keyframeTitle(formatTimelineKeyframeProperty(marker.property), marker.time)}
           data-testid={`timeline-keyframe-${clip.id}-${marker.property}-${marker.id}`}
           onPointerDown={(event) => {
             event.stopPropagation();
@@ -416,6 +426,9 @@ function getClipToneClass(type: Clip['type']): string {
   if (type === 'subtitle') {
     return 'bg-indigo-100 text-indigo-950';
   }
+  if (type === 'nested-sequence') {
+    return 'bg-violet-100 text-violet-950';
+  }
   return 'bg-sky-100 text-sky-950';
 }
 
@@ -440,7 +453,7 @@ function VideoThumbnailStrip({ clip, asset, pixelWidth }: { clip: Extract<Clip, 
     return () => {
       canceled = true;
     };
-  }, [asset, clip.duration, clip.speed, clip.trimStart, pixelWidth]);
+  }, [asset, clip.duration, clip.keyframes, clip.speed, clip.trimStart, pixelWidth]);
 
   if (frames.length === 0) {
     return null;
@@ -517,7 +530,7 @@ function WaveformStrip({
     <span
       className={clsx('absolute z-0 overflow-hidden', compact ? 'bottom-0 left-0 right-0 h-4 border-t border-white/20 bg-black/20' : 'inset-0')}
       data-testid={`timeline-waveform-${clipId}`}
-      title={waveform?.isSampled ? 'Sampled waveform preview' : 'Waveform preview'}
+      title={waveform?.isSampled ? zhCN.timeline.sampledWaveform : zhCN.timeline.waveform}
       style={{ opacity: muted ? 0.2 : compact ? 0.62 : 0.48 }}
     >
       <canvas ref={canvasRef} width={canvasWidth} height={canvasHeight} className="h-full w-full" />
@@ -549,6 +562,10 @@ function getTrackWaveformColor(trackType: Track['type']): string {
     return '#0f766e';
   }
   return '#047857';
+}
+
+function formatTimelineKeyframeProperty(property: KeyframeProperty): string {
+  return zhCN.inspector.keyframeProperty[property] ?? property;
 }
 
 export function buildTicks(duration: number): number[] {

@@ -1,4 +1,5 @@
 import type { MediaAsset } from '@open-factory/editor-core';
+import { zhCN } from '../../i18n/strings';
 import { getAudioPreviewMediaPath, getPreviewMediaPath } from '../../media/proxy';
 import { sourceUrl } from '../media';
 
@@ -34,7 +35,7 @@ export function loadImage(asset: MediaAsset): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error(`Unable to load image ${asset.name}`));
+    img.onerror = () => reject(new Error(`无法加载图片 ${asset.name}`));
     img.src = sourceUrl(getPreviewMediaPath(asset));
   });
 }
@@ -63,7 +64,7 @@ function once(target: EventTarget, eventName: string): Promise<void> {
     };
     const onError = () => {
       cleanup();
-      reject(new Error(`Media event failed: ${eventName}`));
+      reject(new Error(zhCN.errors.mediaEventFailed(eventName)));
     };
     target.addEventListener(eventName, onEvent, { once: true });
     target.addEventListener('error', onError, { once: true });

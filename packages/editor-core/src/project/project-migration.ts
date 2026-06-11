@@ -2,19 +2,30 @@ import {
   DEFAULT_SUBTITLE_MODE,
   DEFAULT_SUBTITLE_STYLE,
   DEFAULT_TEXT_STYLE,
+  PRIMARY_SEQUENCE_ID,
   clampClipSpeed,
+  createSequence,
   createTransition,
   createTrack,
   normalizeTimelineMarkers,
+  normalizeChromaKey,
   normalizeColorCorrection,
+  normalizeMasks,
   normalizeMasterVolume,
+  normalizeSequenceFrameRate,
+  normalizeSequenceName,
+  normalizeStabilization,
   type Clip,
+  type ImageSequenceInfo,
   type MediaAsset,
+  type MediaMetadata,
   type Project,
+  type Sequence,
   type Timeline,
   type Transition
 } from '../model';
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
+import { cloneEffects } from '../effects';
 import { clampTransitionDuration, findAdjacentTransitionClips, getTimelineDuration } from '../timeline';
 import type { MigrationResult, ProjectFile, ProjectFileV1, ProjectFileV2 } from './project-types';
 import { makeRelativePath, normalizePath, resolveMediaPath } from './relative-paths';
@@ -33,7 +44,14 @@ export function serializeProjectFile(project: Project, projectPath?: string): Pr
       ...asset,
       path: normalizedPath,
       relativePath,
-      originalAbsolutePath: asset.originalAbsolutePath ?? normalizedPath
+      originalAbsolutePath: asset.originalAbsolutePath ?? normalizedPath,
+      imageSequence: asset.imageSequence
+        ? {
+            ...asset.imageSequence,
+            pattern: normalizePath(asset.imageSequence.pattern),
+            paths: asset.imageSequence.paths.map(normalizePath)
+          }
+        : undefined
     };
   });
 
@@ -47,7 +65,10 @@ export function serializeProjectFile(project: Project, projectPath?: string): Pr
       masterVolume: normalizeMasterVolume(project.masterVolume),
       settings: { ...DEFAULT_SETTINGS, ...project.settings },
       media,
-      timeline: cloneTimeline(project.timeline)
+      mediaMetadata: normalizeMediaMetadata(project.mediaMetadata, media),
+      timeline: clonePrimaryTimeline(project),
+      sequences: cloneProjectSequences(project),
+      activeSequenceId: project.activeSequenceId ?? PRIMARY_SEQUENCE_ID
     },
     warnings: warnings.length > 0 ? warnings : undefined
   };
@@ -56,6 +77,9 @@ export function serializeProjectFile(project: Project, projectPath?: string): Pr
 export function migrateProjectFile(file: ProjectFile, projectPath?: string): MigrationResult {
   if (isProjectFileV2(file)) {
     const media = file.project.media.map((asset) => normalizeMediaAsset(asset, projectPath));
+    const primaryTimeline = cloneTimeline(file.project.timeline);
+    const sequences = cloneFileSequences(file.project.sequences, primaryTimeline);
+    const activeSequenceId = normalizeActiveSequenceId(file.project.activeSequenceId, sequences);
     return {
       project: {
         version: '0.2',
@@ -66,7 +90,10 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         masterVolume: normalizeMasterVolume(file.project.masterVolume),
         settings: { ...DEFAULT_SETTINGS, ...file.project.settings },
         media,
-        timeline: cloneTimeline(file.project.timeline)
+        mediaMetadata: normalizeMediaMetadata(file.project.mediaMetadata, media),
+        timeline: sequences.find((sequence) => sequence.id === activeSequenceId)?.timeline ?? primaryTimeline,
+        sequences,
+        activeSequenceId
       },
       warnings: [...(file.warnings ?? [])]
     };
@@ -74,6 +101,8 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
 
   if (isProjectFileV1(file)) {
     const media = file.assets.map((asset) => normalizeMediaAsset(asset, projectPath));
+    const primaryTimeline = cloneTimeline(file.timeline);
+    const sequences = [createSequence({ id: PRIMARY_SEQUENCE_ID, name: 'Main Sequence', timeline: primaryTimeline })];
     return {
       project: {
         version: '0.2',
@@ -84,13 +113,32 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         masterVolume: 1,
         settings: { ...DEFAULT_SETTINGS, ...file.project.settings },
         media,
-        timeline: cloneTimeline(file.timeline)
+        mediaMetadata: {},
+        timeline: primaryTimeline,
+        sequences,
+        activeSequenceId: PRIMARY_SEQUENCE_ID
       },
       warnings: ['Migrated legacy version 0.1 project file from assets to media.']
     };
   }
 
   throw new Error('Unsupported project file format.');
+}
+
+function normalizeMediaMetadata(metadata: Record<string, MediaMetadata> | undefined, media: MediaAsset[]): Record<string, MediaMetadata> {
+  const mediaIds = new Set(media.map((asset) => asset.id));
+  const output: Record<string, MediaMetadata> = {};
+  for (const [assetId, value] of Object.entries(metadata ?? {})) {
+    if (!mediaIds.has(assetId) || !value || !isMediaLabelColor(value.labelColor)) {
+      continue;
+    }
+    output[assetId] = { labelColor: value.labelColor };
+  }
+  return output;
+}
+
+function isMediaLabelColor(value: unknown): value is NonNullable<MediaMetadata['labelColor']> {
+  return value === 'red' || value === 'orange' || value === 'yellow' || value === 'green' || value === 'blue' || value === 'purple';
 }
 
 export function isProjectFileV2(file: ProjectFile | unknown): file is ProjectFileV2 {
@@ -107,7 +155,24 @@ function normalizeMediaAsset(asset: MediaAsset, projectPath?: string): MediaAsse
     ...asset,
     path,
     originalAbsolutePath: asset.originalAbsolutePath ?? path,
-    relativePath: asset.relativePath === undefined ? null : asset.relativePath
+    relativePath: asset.relativePath === undefined ? null : asset.relativePath,
+    imageSequence: normalizeImageSequence(asset.imageSequence, projectPath)
+  };
+}
+
+function normalizeImageSequence(sequence: ImageSequenceInfo | undefined, projectPath?: string): ImageSequenceInfo | undefined {
+  if (!sequence || !Array.isArray(sequence.paths) || sequence.paths.length === 0) {
+    return undefined;
+  }
+  const paths = sequence.paths.map((item) => normalizePath(resolveMediaPath({ path: item } as MediaAsset, projectPath)));
+  const frameRate = normalizeSequenceFrameRate(sequence.frameRate) ?? 30;
+  const frameCount = Math.max(1, Math.round(sequence.frameCount || paths.length));
+  return {
+    pattern: typeof sequence.pattern === 'string' && sequence.pattern.trim() ? sequence.pattern.trim() : paths[0],
+    startNumber: Math.max(0, Math.round(sequence.startNumber || 0)),
+    frameCount,
+    frameRate,
+    paths: paths.slice(0, frameCount)
   };
 }
 
@@ -124,6 +189,55 @@ function cloneTimeline(timeline: Timeline): Timeline {
     markers: normalizeTimelineMarkers(timeline.markers, getTimelineDuration({ tracks })),
     transitions: (timeline.transitions ?? []).map((transition) => cloneTransition(transition, draft))
   };
+}
+
+function clonePrimaryTimeline(project: Project): Timeline {
+  const sequences = cloneProjectSequences(project);
+  return sequences.find((sequence) => sequence.id === PRIMARY_SEQUENCE_ID)?.timeline ?? cloneTimeline(project.timeline);
+}
+
+function cloneProjectSequences(project: Project): Sequence[] {
+  const sourceSequences =
+    project.sequences && project.sequences.length > 0
+      ? project.sequences
+      : [{ id: PRIMARY_SEQUENCE_ID, name: 'Main Sequence', timeline: project.timeline }];
+  const activeSequenceId = project.activeSequenceId ?? PRIMARY_SEQUENCE_ID;
+  const cloned = sourceSequences.map((sequence) =>
+    createSequence({
+      id: sequence.id,
+      name: sequence.name,
+      timeline: cloneTimeline(sequence.id === activeSequenceId ? project.timeline : sequence.timeline)
+    })
+  );
+  if (!cloned.some((sequence) => sequence.id === PRIMARY_SEQUENCE_ID)) {
+    cloned.unshift(createSequence({ id: PRIMARY_SEQUENCE_ID, name: 'Main Sequence', timeline: cloneTimeline(project.timeline) }));
+  }
+  return orderPrimarySequenceFirst(cloned);
+}
+
+function cloneFileSequences(sequences: Sequence[] | undefined, primaryTimeline: Timeline): Sequence[] {
+  const cloned = (sequences ?? []).map((sequence) =>
+    createSequence({
+      id: sequence.id,
+      name: normalizeSequenceName(sequence.name),
+      timeline: cloneTimeline(sequence.timeline)
+    })
+  );
+  const primaryIndex = cloned.findIndex((sequence) => sequence.id === PRIMARY_SEQUENCE_ID);
+  if (primaryIndex >= 0) {
+    cloned[primaryIndex] = createSequence({ ...cloned[primaryIndex], timeline: primaryTimeline });
+  } else {
+    cloned.unshift(createSequence({ id: PRIMARY_SEQUENCE_ID, name: 'Main Sequence', timeline: primaryTimeline }));
+  }
+  return orderPrimarySequenceFirst(cloned);
+}
+
+function orderPrimarySequenceFirst(sequences: Sequence[]): Sequence[] {
+  return [...sequences].sort((left, right) => (left.id === PRIMARY_SEQUENCE_ID ? -1 : right.id === PRIMARY_SEQUENCE_ID ? 1 : left.name.localeCompare(right.name)));
+}
+
+function normalizeActiveSequenceId(activeSequenceId: string | undefined, sequences: Sequence[]): string {
+  return sequences.some((sequence) => sequence.id === activeSequenceId) ? activeSequenceId! : PRIMARY_SEQUENCE_ID;
 }
 
 function cloneTransition(transition: Transition, timeline: Timeline): Transition {
@@ -144,7 +258,12 @@ function cloneClip<TClip extends Clip>(clip: TClip): TClip {
     speed: clampClipSpeed(clip.speed),
     colorCorrection: normalizeColorCorrection(clip.colorCorrection),
     transform: { ...clip.transform },
-    keyframes: normalizeClipKeyframes(cloneClipKeyframes(clip.keyframes), clip.duration)
+    chromaKey: normalizeChromaKey(clip.chromaKey),
+    stabilization: normalizeStabilization(clip.stabilization),
+    masks: normalizeMasks(clip.masks),
+    sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
+    keyframes: normalizeClipKeyframes(cloneClipKeyframes(clip.keyframes), clip.duration),
+    effects: cloneEffects(clip.effects)
   };
   if (clip.type === 'text') {
     return { ...cloned, style: { ...DEFAULT_TEXT_STYLE, ...clip.style } } as TClip;

@@ -2,6 +2,7 @@ import {
   DEFAULT_TEXT_STYLE,
   DEFAULT_TRANSFORM,
   DEFAULT_CLIP_SPEED,
+  DEFAULT_CHROMA_KEY,
   DEFAULT_COLOR_CORRECTION,
   type Clip,
   type MediaAsset,
@@ -10,9 +11,10 @@ import {
   createId,
   getTimelineDuration
 } from '@open-factory/editor-core';
+import { zhCN } from '../i18n/strings';
 
 export function createClipFromAsset(asset: MediaAsset, track: Track, timeline: Timeline): Clip {
-  const duration = asset.type === 'image' ? 5 : Math.max(asset.duration || 5, 1);
+  const duration = asset.imageSequence ? Math.max(asset.imageSequence.frameCount / asset.imageSequence.frameRate, 1 / asset.imageSequence.frameRate) : asset.type === 'image' ? 5 : Math.max(asset.duration || 5, 1);
   const start = findAppendStart(track, timeline);
   const base = {
     id: createId('clip'),
@@ -24,7 +26,10 @@ export function createClipFromAsset(asset: MediaAsset, track: Track, timeline: T
     trimEnd: 0,
     speed: DEFAULT_CLIP_SPEED,
     colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
-    transform: { ...DEFAULT_TRANSFORM }
+    transform: { ...DEFAULT_TRANSFORM },
+    chromaKey: { ...DEFAULT_CHROMA_KEY, color: [...DEFAULT_CHROMA_KEY.color] as [number, number, number] },
+    masks: [],
+    sequenceFrameRate: asset.imageSequence?.frameRate
   };
 
   if (asset.type === 'audio') {
@@ -40,7 +45,7 @@ export function createTextClip(track: Track, timeline: Timeline): Clip {
   return {
     id: createId('clip'),
     type: 'text',
-    name: 'Text',
+    name: zhCN.clips.defaultTextName,
     trackId: track.id,
     start: findAppendStart(track, timeline),
     duration: 5,
@@ -49,7 +54,9 @@ export function createTextClip(track: Track, timeline: Timeline): Clip {
     speed: DEFAULT_CLIP_SPEED,
     colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
     transform: { ...DEFAULT_TRANSFORM },
-    text: 'Title',
+    chromaKey: { ...DEFAULT_CHROMA_KEY, color: [...DEFAULT_CHROMA_KEY.color] as [number, number, number] },
+    masks: [],
+    text: zhCN.clips.defaultTextContent,
     style: { ...DEFAULT_TEXT_STYLE }
   };
 }

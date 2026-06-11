@@ -11,6 +11,6 @@ export function drawImage2d(context: CanvasRenderingContext2D, canvas: HTMLCanva
 }
 
 export function drawImageWebGl(compositor: WebGlPreviewCompositor, clip: ImageClip, asset: MediaAsset, img: HTMLImageElement): void {
-  compositor.drawSource(img, asset.width || 1280, asset.height || 720, clip.transform, clip.colorCorrection);
+  compositor.drawSource(img, asset.width || 1280, asset.height || 720, clip.transform, clip.colorCorrection, clip.effects, clip.chromaKey, clip.masks);
   recordPreviewDraw('image', 'image');
 }

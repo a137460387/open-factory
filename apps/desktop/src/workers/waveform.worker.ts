@@ -1,3 +1,5 @@
+import { zhCN } from '../i18n/strings';
+
 export interface WaveformWorkerInput {
   arrayBuffer: ArrayBuffer;
   pointsPerSecond: number;
@@ -27,7 +29,7 @@ self.onmessage = (event: MessageEvent<WaveformWorkerInput>) => {
       peaks: [],
       duration: 0,
       channels: 0,
-      error: error instanceof Error ? error.message : 'Unable to generate waveform.'
+      error: error instanceof Error ? error.message : zhCN.errors.waveformGenerateFailed
     };
     self.postMessage(payload);
   }

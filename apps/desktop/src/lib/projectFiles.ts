@@ -1,4 +1,5 @@
 import { deserializeProject, serializeProject, type CutProjectFile, type Project } from '@open-factory/editor-core';
+import { zhCN } from '../i18n/strings';
 import { isTauriRuntime } from './tauri';
 import {
   bridgeConfirm,
@@ -31,9 +32,9 @@ export interface AutosaveRecoveryCandidate {
 
 export async function confirmDiscardChanges(): Promise<boolean> {
   if (!isTauriRuntime() && !window.__TAURI_MOCKS__) {
-    return window.confirm('Discard unsaved changes?');
+    return window.confirm(zhCN.projectFiles.discardChanges);
   }
-  return bridgeConfirm('Discard unsaved changes?', { title: 'Unsaved changes', kind: 'warning' });
+  return bridgeConfirm(zhCN.projectFiles.discardChanges, { title: zhCN.projectFiles.unsavedChanges, kind: 'warning' });
 }
 
 export async function chooseUnsavedCloseActionForWindow(): Promise<UnsavedCloseAction> {
@@ -44,21 +45,21 @@ export async function chooseProjectToOpen(): Promise<string | undefined> {
   if (!isTauriRuntime() && !window.__TAURI_MOCKS__) {
     return undefined;
   }
-  return (await openFileDialog(false, [{ name: 'open-factory project', extensions: ['cutproj.json', 'json'] }]))[0];
+  return (await openFileDialog(false, [{ name: zhCN.projectFiles.projectFilter, extensions: ['cutproj.json', 'json'] }]))[0];
 }
 
 export async function chooseProjectSavePath(defaultPath = 'open-factory.cutproj.json'): Promise<string | undefined> {
   if (!isTauriRuntime() && !window.__TAURI_MOCKS__) {
     return undefined;
   }
-  return saveFileDialog(defaultPath, [{ name: 'open-factory project', extensions: ['cutproj.json', 'json'] }]);
+  return saveFileDialog(defaultPath, [{ name: zhCN.projectFiles.projectFilter, extensions: ['cutproj.json', 'json'] }]);
 }
 
 export async function readProjectFile(path: string, projectPathForMedia = path): Promise<Project> {
   if (!hasNativeFileRuntime()) {
     const raw = getBrowserStorage()?.getItem(AUTOSAVE_KEY);
     if (!raw) {
-      throw new Error('No browser autosave project is available.');
+      throw new Error(zhCN.projectFiles.noBrowserAutosave);
     }
     return deserializeProject(JSON.parse(raw) as CutProjectFile);
   }
@@ -79,7 +80,7 @@ export async function writeProjectFile(project: Project, path?: string): Promise
     return undefined;
   }
   if (!path) {
-    throw new Error('A project path is required for saving.');
+    throw new Error(zhCN.projectFiles.projectPathRequired);
   }
   await writeFile(path, serialized);
   recordRecentProjectPath(path);
@@ -139,7 +140,7 @@ export async function deleteAutosaveAfterSave(savedProjectPath: string, previous
     try {
       await removeFile(path);
     } catch (error) {
-      console.warn('Unable to delete autosave file', error);
+      console.warn(zhCN.projectFiles.autosaveDeleteFailed, error);
     }
   }
 }

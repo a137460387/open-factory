@@ -1,3 +1,7 @@
+import type { ColorCurves, ThreeWayColor } from '../color-grading';
+import type { Effect } from '../effects';
+import type { TrackCompressor, TrackEQ } from '../model';
+
 export interface ExportSettings {
   width: number;
   height: number;
@@ -28,6 +32,41 @@ export interface ExportColorCorrection {
   saturation: number;
   hue: number;
   lutPath?: string | null;
+  colorCurves?: ColorCurves;
+  threeWayColor?: ThreeWayColor;
+}
+
+export interface ExportChromaKey {
+  enabled: boolean;
+  color: [number, number, number];
+  similarity: number;
+  blend: number;
+}
+
+export interface ExportMask {
+  id: string;
+  type: 'rect' | 'ellipse';
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  inverted: boolean;
+  feather: number;
+  enabled: boolean;
+}
+
+export interface ExportStabilization {
+  enabled: boolean;
+  smoothing: number;
+  zoom: number;
+  analyzed: boolean;
+  trfPath?: string | null;
+}
+
+export interface ExportImageSequence {
+  frameRate: number;
+  frameCount: number;
+  paths: string[];
 }
 
 export type ExportKeyframeEasing = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out';
@@ -46,6 +85,7 @@ export interface ExportClipKeyframes {
   y?: ExportKeyframe[];
   scaleX?: ExportKeyframe[];
   scaleY?: ExportKeyframe[];
+  speed?: ExportKeyframe[];
 }
 
 export interface ExportTextStyle {
@@ -70,7 +110,7 @@ export interface ExportSubtitleStyle extends ExportTextStyle {
   yOffset: number;
 }
 
-export type ExportClipType = 'video' | 'audio' | 'image' | 'text' | 'subtitle';
+export type ExportClipType = 'video' | 'audio' | 'image' | 'text' | 'subtitle' | 'nested-sequence';
 export type ExportTrackType = 'video' | 'audio' | 'text' | 'subtitle';
 export type ExportTransitionType = 'fade-black' | 'dissolve';
 
@@ -78,6 +118,7 @@ export interface ExportClip {
   id: string;
   type: ExportClipType;
   mediaPath: string | null;
+  nestedSequenceId: string | null;
   start: number;
   duration: number;
   trimStart: number;
@@ -87,10 +128,18 @@ export interface ExportClip {
   trackIndex: number;
   transform: ExportTransform;
   colorCorrection: ExportColorCorrection;
+  chromaKey: ExportChromaKey;
+  stabilization: ExportStabilization;
+  masks: ExportMask[];
+  imageSequence: ExportImageSequence | null;
+  sequenceFrameRate?: number;
+  effects: Effect[];
   keyframes: ExportClipKeyframes | null;
   kenBurns: boolean;
   volume: number;
   pan: number;
+  eq: TrackEQ;
+  compressor: TrackCompressor;
   muted: boolean;
   fadeInDuration: number;
   fadeOutDuration: number;
@@ -127,10 +176,17 @@ export interface ExportTimeline {
   transitions: ExportTransition[];
 }
 
+export interface ExportSequence {
+  id: string;
+  name: string;
+  timeline: ExportTimeline;
+}
+
 export interface ExportProject {
   settings: ExportSettings;
   masterVolume: number;
   timeline: ExportTimeline;
+  sequences: ExportSequence[];
 }
 
 export interface FfmpegInput {
@@ -155,8 +211,15 @@ export interface FfmpegExportPlan {
   fullArgs: string[];
   warnings: string[];
   textArtifacts: TextArtifact[];
+  nestedPlans: NestedFfmpegExportPlan[];
   displayCommand?: string;
   duration: number;
+}
+
+export interface NestedFfmpegExportPlan {
+  sequenceId: string;
+  placeholder: string;
+  plan: FfmpegExportPlan;
 }
 
 export interface FfmpegCapabilities {

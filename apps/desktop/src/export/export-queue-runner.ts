@@ -6,6 +6,7 @@ import {
   type ExportTask,
   type Project
 } from '@open-factory/editor-core';
+import { zhCN } from '../i18n/strings';
 import { cancelExport as bridgeCancelExport, getFfmpegCapabilities, listenBridge, runExport } from '../lib/tauri-bridge';
 import { normalizeExportProgressPayload, type ExportProgressEvent } from './export-progress';
 import { useExportQueueStore } from './export-queue-store';
@@ -14,16 +15,16 @@ let runnerPromise: Promise<void> | undefined;
 
 export async function enqueueExport(project: Project, outputPath: string, settings?: Partial<Omit<ExportSettings, 'outputPath'>>): Promise<ExportTask> {
   if (!timelineHasExportableVideo(project.timeline)) {
-    throw new Error('Please add video clips to the timeline before exporting.');
+    throw new Error(zhCN.errors.exportNeedsVideo);
   }
   const capabilities = await getFfmpegCapabilities();
   if (!capabilities.available) {
-    throw new Error('ffmpeg was not found. Install it with winget install ffmpeg, brew install ffmpeg, or apt install ffmpeg.');
+    throw new Error(zhCN.errors.ffmpegMissing);
   }
   const exportProject = buildExportProjectFromProject(project, { outputPath, settings });
   const plan = buildFfmpegExportPlan(exportProject, capabilities);
   const task = useExportQueueStore.getState().addTask({
-    name: fileNameFromPath(outputPath) || `${project.name} export`,
+    name: fileNameFromPath(outputPath) || `${project.name} 导出`,
     outputPath,
     plan
   });
@@ -89,7 +90,7 @@ async function runQueue(): Promise<void> {
     } catch (error) {
       const latest = useExportQueueStore.getState().tasks.find((task) => task.id === runningTask.id);
       if (latest?.status === 'running') {
-        useExportQueueStore.getState().failTask(runningTask.id, error instanceof Error ? error.message : 'Unable to export video.');
+        useExportQueueStore.getState().failTask(runningTask.id, error instanceof Error ? error.message : zhCN.errors.exportFailed);
       }
     } finally {
       unlisten();

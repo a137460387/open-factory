@@ -1,15 +1,18 @@
-import type { Clip, MediaAsset, Timeline, Transition } from '@open-factory/editor-core';
+import type { Clip, MediaAsset, Sequence, Timeline, Transition } from '@open-factory/editor-core';
 import { applyClipKeyframes, getClipPlaybackStart, getRenderableTracks, getTimelinePlaybackDuration, getTransitionPlaybackWindow } from '@open-factory/editor-core';
 import { PreviewAudioRenderer } from './audio-renderer';
-import { recordPreviewMode, recordPreviewReadback } from './debug';
+import { recordPreviewError, recordPreviewMode, recordPreviewReadback } from './debug';
 import { drawImage2d, drawImageWebGl } from './image-renderer';
 import { createVideoElement, loadImage, loadThumbnail, seekVideo } from './media-elements';
 import { drawMissing2d, drawMissingWebGl, drawText2d, drawTextWebGl } from './text-renderer';
 import { drawVideo2d, drawVideoWebGl } from './video-renderer';
+import { drawTransformedSource2d } from './transform-2d';
 import { WebGlPreviewCompositor } from './webgl-compositor';
 
 export interface PreviewRenderOptions {
   captureFrame?: boolean;
+  sequences?: Sequence[];
+  depth?: number;
 }
 
 export interface PreviewFrameReadback {
@@ -37,6 +40,8 @@ export class PreviewRenderer {
   ): Promise<PreviewRenderResult> {
     const token = ++this.renderToken;
     const mediaById = new Map(media.map((asset) => [asset.id, asset]));
+    const sequenceById = new Map((options.sequences ?? []).map((sequence) => [sequence.id, sequence]));
+    const depth = options.depth ?? 0;
     const visibleClips = getTransitionAwareClipInstances(timeline, playheadTime);
     const webgl = this.getWebGl(canvas);
 
@@ -47,7 +52,7 @@ export class PreviewRenderer {
         if (token !== this.renderToken) {
           return {};
         }
-        await this.drawClipWebGl(webgl, clip, mediaById, clipPlayheadTime, canvas.width, canvas.height);
+        await this.drawClipWebGl(webgl, clip, mediaById, sequenceById, media, clipPlayheadTime, canvas.width, canvas.height, depth);
       }
       webgl.finish();
       recordPreviewReadback(webgl.readCenterPixel());
@@ -67,7 +72,7 @@ export class PreviewRenderer {
       if (token !== this.renderToken) {
         return {};
       }
-      await this.drawClip2d(context, canvas, clip, mediaById, clipPlayheadTime);
+      await this.drawClip2d(context, canvas, clip, mediaById, sequenceById, media, clipPlayheadTime, depth);
     }
     try {
       recordPreviewReadback(Array.from(context.getImageData(Math.floor(canvas.width / 2), Math.floor(canvas.height / 2), 1, 1).data));
@@ -97,11 +102,23 @@ export class PreviewRenderer {
     compositor: WebGlPreviewCompositor,
     clip: Clip,
     mediaById: Map<string, MediaAsset>,
+    sequenceById: Map<string, Sequence>,
+    media: MediaAsset[],
     playheadTime: number,
     canvasWidth: number,
-    canvasHeight: number
+    canvasHeight: number,
+    depth: number
   ): Promise<void> {
     const renderClip = withCanvasKeyframedPosition(clip, canvasWidth, canvasHeight);
+    if (renderClip.type === 'nested-sequence') {
+      const nested = await this.renderNestedCanvas(renderClip, sequenceById, media, playheadTime, canvasWidth, canvasHeight, depth);
+      if (!nested) {
+        drawMissingWebGl(compositor, renderClip.name, renderClip.type);
+        return;
+      }
+      compositor.drawSource(nested, canvasWidth, canvasHeight, renderClip.transform, renderClip.colorCorrection, renderClip.effects, renderClip.chromaKey, renderClip.masks);
+      return;
+    }
     if (renderClip.type === 'video') {
       const asset = mediaById.get(renderClip.mediaId);
       if (!asset || asset.missing) {
@@ -132,9 +149,21 @@ export class PreviewRenderer {
     canvas: HTMLCanvasElement,
     clip: Clip,
     mediaById: Map<string, MediaAsset>,
-    playheadTime: number
+    sequenceById: Map<string, Sequence>,
+    media: MediaAsset[],
+    playheadTime: number,
+    depth: number
   ): Promise<void> {
     const renderClip = withCanvasKeyframedPosition(clip, canvas.width, canvas.height);
+    if (renderClip.type === 'nested-sequence') {
+      const nested = await this.renderNestedCanvas(renderClip, sequenceById, media, playheadTime, canvas.width, canvas.height, depth);
+      if (!nested) {
+        drawMissing2d(context, canvas, renderClip.name, renderClip.type);
+        return;
+      }
+      drawTransformedSource2d(context, canvas, nested, { width: canvas.width, height: canvas.height }, renderClip.transform, renderClip.colorCorrection);
+      return;
+    }
     if (renderClip.type === 'video') {
       const asset = mediaById.get(renderClip.mediaId);
       if (!asset || asset.missing) {
@@ -160,6 +189,30 @@ export class PreviewRenderer {
     }
   }
 
+  private async renderNestedCanvas(
+    clip: Extract<Clip, { type: 'nested-sequence' }>,
+    sequenceById: Map<string, Sequence>,
+    media: MediaAsset[],
+    playheadTime: number,
+    width: number,
+    height: number,
+    depth: number
+  ): Promise<HTMLCanvasElement | undefined> {
+    if (depth >= 3) {
+      return undefined;
+    }
+    const sequence = sequenceById.get(clip.sequenceId);
+    if (!sequence) {
+      return undefined;
+    }
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const localTime = Math.max(0, playheadTime - clip.start + clip.trimStart);
+    await new PreviewRenderer().render(canvas, sequence.timeline, media, localTime, { sequences: Array.from(sequenceById.values()), depth: depth + 1 });
+    return canvas;
+  }
+
   private getVideo(asset: MediaAsset): HTMLVideoElement {
     const existing = this.videos.get(asset.id);
     if (existing) {
@@ -176,7 +229,8 @@ export class PreviewRenderer {
     }
     try {
       this.webgl = new WebGlPreviewCompositor(canvas);
-    } catch {
+    } catch (error) {
+      recordPreviewError(error instanceof Error ? error.message : String(error));
       this.webgl = null;
     }
     return this.webgl;

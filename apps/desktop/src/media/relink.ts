@@ -1,4 +1,5 @@
 import { fileNameFromPath, planBatchRelinkByFileName, scoreRelinkCandidate, type MediaAsset } from '@open-factory/editor-core';
+import { zhCN } from '../i18n/strings';
 import { inferAssetType, probeMediaPath, VIDEO_EXTENSIONS, AUDIO_EXTENSIONS, IMAGE_EXTENSIONS } from '../lib/media';
 import { openDirectoryDialog, openFileDialog, scanDirectory } from '../lib/tauri-bridge';
 
@@ -11,7 +12,7 @@ export interface RelinkFolderResult {
 }
 
 export async function relinkSingleMedia(asset: MediaAsset): Promise<MediaAsset | undefined> {
-  const selected = await openFileDialog(false, [{ name: 'Media', extensions: MEDIA_EXTENSIONS }]);
+  const selected = await openFileDialog(false, [{ name: zhCN.fileDialogs.media, extensions: MEDIA_EXTENSIONS }]);
   const path = selected[0];
   if (!path) {
     return undefined;
@@ -49,7 +50,7 @@ export async function relinkMissingMediaInDirectory(media: MediaAsset[]): Promis
     if (probed.type === asset.type) {
       replacements.set(asset.id, mergeRelinkedAsset(asset, probed));
     } else {
-      warnings.push(`${fileNameFromPath(replacement.candidatePath)}: skipped because the media type changed.`);
+      warnings.push(zhCN.errors.relinkTypeChanged(fileNameFromPath(replacement.candidatePath)));
     }
   }
 

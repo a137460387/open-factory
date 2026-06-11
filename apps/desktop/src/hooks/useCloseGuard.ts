@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { zhCN } from '../i18n/strings';
 import { chooseUnsavedCloseActionForWindow, forceCloseWindow } from '../lib/projectFiles';
 import { isTauriRuntime } from '../lib/tauri';
 import { listenBridge } from '../lib/tauri-bridge';
@@ -25,7 +26,7 @@ export function useCloseGuard(saveProject: () => Promise<void>): void {
           await saveProject();
           await forceCloseWindow();
         } catch (error) {
-          showToast({ kind: 'error', title: 'Save failed', message: error instanceof Error ? error.message : 'Unable to save project.' });
+          showToast({ kind: 'error', title: zhCN.editorToasts.saveFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.saveFailedMessage });
         }
         return;
       }

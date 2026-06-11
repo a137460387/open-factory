@@ -1,4 +1,5 @@
 import type { ExportSettings } from '@open-factory/editor-core';
+import { zhCN } from '../i18n/strings';
 import { fsExists, getAppDataDir, readFile, writeFile } from '../lib/tauri-bridge';
 
 export type ExportPresetSettings = Partial<Omit<ExportSettings, 'outputPath'>>;
@@ -28,8 +29,8 @@ const PRESETS_FILE_NAME = 'presets.json';
 export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
   {
     id: 'web-1080p',
-    name: 'Web 1080p',
-    description: 'Full HD MP4 for local review and web sharing.',
+    name: zhCN.exportPresets.builtins.web1080p.name,
+    description: zhCN.exportPresets.builtins.web1080p.description,
     builtin: true,
     settings: {
       width: 1920,
@@ -46,8 +47,8 @@ export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
   },
   {
     id: '4k',
-    name: '4K',
-    description: 'UHD MP4 export for high-resolution delivery.',
+    name: zhCN.exportPresets.builtins.fourK.name,
+    description: zhCN.exportPresets.builtins.fourK.description,
     builtin: true,
     settings: {
       width: 3840,
@@ -64,8 +65,8 @@ export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
   },
   {
     id: 'youtube-shorts',
-    name: 'YouTube Shorts',
-    description: '9:16 vertical MP4 with fit-and-pad scaling.',
+    name: zhCN.exportPresets.builtins.youtubeShorts.name,
+    description: zhCN.exportPresets.builtins.youtubeShorts.description,
     builtin: true,
     settings: {
       width: 1080,
@@ -82,8 +83,8 @@ export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
   },
   {
     id: 'twitter-x',
-    name: 'Twitter/X',
-    description: 'Compact MP4 tuned for social previews.',
+    name: zhCN.exportPresets.builtins.twitterX.name,
+    description: zhCN.exportPresets.builtins.twitterX.description,
     builtin: true,
     settings: {
       width: 1280,
@@ -100,8 +101,8 @@ export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
   },
   {
     id: 'audio-m4a',
-    name: 'Audio-only m4a',
-    description: 'AAC audio export with no video stream.',
+    name: zhCN.exportPresets.builtins.audioM4a.name,
+    description: zhCN.exportPresets.builtins.audioM4a.description,
     builtin: true,
     settings: {
       audioCodec: 'aac',
@@ -143,13 +144,13 @@ export async function saveCustomExportPreset(
 ): Promise<ExportPreset[]> {
   const trimmedName = name.trim();
   if (!trimmedName) {
-    throw new Error('Preset name is required.');
+    throw new Error(zhCN.exportPresets.nameRequired);
   }
   const customs = await loadCustomExportPresets(storage);
   const nextPreset: ExportPreset = {
     id: createCustomPresetId(trimmedName),
     name: trimmedName,
-    description: 'Custom export preset.',
+    description: zhCN.exportPresets.customDescription,
     builtin: false,
     settings: sanitizeExportSettings(settings)
   };
@@ -159,7 +160,7 @@ export async function saveCustomExportPreset(
 
 export async function deleteCustomExportPreset(id: string, storage: ExportPresetStorage = bridgePresetStorage): Promise<ExportPreset[]> {
   if (isBuiltinExportPreset(id)) {
-    throw new Error('Built-in export presets cannot be deleted.');
+    throw new Error(zhCN.exportPresets.cannotDeleteBuiltin);
   }
   const customs = await loadCustomExportPresets(storage);
   const remaining = customs.filter((preset) => preset.id !== id);
@@ -189,7 +190,7 @@ export function parseStoredExportPresets(contents: string): ExportPreset[] {
         {
           id: preset.id,
           name: preset.name,
-          description: typeof preset.description === 'string' ? preset.description : 'Custom export preset.',
+          description: typeof preset.description === 'string' ? preset.description : zhCN.exportPresets.customDescription,
           builtin: false,
           settings: sanitizeExportSettings(preset.settings)
         }

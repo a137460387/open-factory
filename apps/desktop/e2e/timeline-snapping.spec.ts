@@ -1,10 +1,11 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { addMediaCardToTimeline } from './e2e-actions';
 
 test('snaps a dragged clip to a neighboring clip edge', async ({ page }) => {
   await page.goto('/');
   await page.getByTestId('import-media-button').click();
-  await page.locator('[data-testid^="media-card-"]').nth(0).getByText('Add to timeline').click();
-  await page.locator('[data-testid^="media-card-"]').nth(2).getByText('Add to timeline').click();
+  await addMediaCardToTimeline(page, 0);
+  await addMediaCardToTimeline(page, 2);
 
   const imageClip = page.locator('[data-testid^="timeline-clip-"]').nth(1);
   await expect(imageClip).toBeVisible();

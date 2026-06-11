@@ -12,7 +12,8 @@ export type TimelineShortcutAction =
   | 'clear-selection'
   | 'undo'
   | 'redo'
-  | 'save';
+  | 'save'
+  | 'export-current-frame';
 
 export interface TimelineShortcutKey {
   key: string;
@@ -45,6 +46,10 @@ export function resolveTimelineShortcutAction(event: TimelineShortcutKey): Timel
   }
   if (mod) {
     return null;
+  }
+
+  if (event.shiftKey && key === 'e') {
+    return 'export-current-frame';
   }
 
   if (event.code === 'Space' || event.key === ' ') {

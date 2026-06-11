@@ -8,6 +8,7 @@ import {
   type SilenceDetectionOptions,
   type SilentRange
 } from '@open-factory/editor-core';
+import { zhCN } from '../i18n/strings';
 import { getAudioPreviewMediaPath } from '../media/proxy';
 import { sourceUrl } from './media';
 import { detectSilence, getFileStat } from './tauri-bridge';
@@ -22,10 +23,10 @@ export const NATIVE_AUDIO_ANALYSIS_THRESHOLD_BYTES = 50 * 1024 * 1024;
 
 export async function detectClipSilence(clip: Clip, asset: MediaAsset, options: ClipSilenceDetectionOptions): Promise<SilentRange[]> {
   if (clip.type !== 'audio' && clip.type !== 'video') {
-    throw new Error('Silence detection requires an audio or video clip.');
+    throw new Error(zhCN.errors.silenceNeedsAudio);
   }
   if (clip.type === 'video' && !asset.hasAudio) {
-    throw new Error('This video clip has no audio stream.');
+    throw new Error(zhCN.errors.videoHasNoAudio);
   }
 
   const mediaPath = getAudioPreviewMediaPath(asset);
@@ -98,7 +99,7 @@ async function decodeAudio(arrayBuffer: ArrayBuffer): Promise<AudioBuffer> {
   }
   const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
   if (!AudioContextCtor) {
-    throw new Error('Web Audio decoding is unavailable.');
+    throw new Error(zhCN.errors.webAudioUnavailable);
   }
   const context = new AudioContextCtor();
   try {

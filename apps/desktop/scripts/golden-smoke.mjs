@@ -13,6 +13,7 @@ const readmePreviewPath = join(repoDir, 'docs', 'open-factory-golden-preview.png
 
 const COLORS = {
   green: { ffmpeg: '0x2fd17e', rgb: [47, 209, 126] },
+  keyGreen: { ffmpeg: '0x00ff00', rgb: [0, 255, 0] },
   darkBlue: { ffmpeg: '0x243247', rgb: [36, 50, 71] },
   coral: { ffmpeg: '0xd9553f', rgb: [217, 85, 63] },
   blue: { ffmpeg: '0x2d6cdf', rgb: [45, 108, 223] },
@@ -20,6 +21,8 @@ const COLORS = {
   violet: { ffmpeg: '0x8557d6', rgb: [133, 87, 214] },
   pink: { ffmpeg: '0xff4fd8', rgb: [255, 79, 216] },
   cyan: { ffmpeg: '0x00e5ff', rgb: [0, 229, 255] },
+  gray: { ffmpeg: '0x808080', rgb: [128, 128, 128] },
+  lightGray: { ffmpeg: '0xb0b0b0', rgb: [176, 176, 176] },
   black: { ffmpeg: '0x000000', rgb: [0, 0, 0] },
   white: { ffmpeg: '0xffffff', rgb: [255, 255, 255] }
 };
@@ -91,6 +94,33 @@ const fixtures = [
     validate: validateColorCorrectionFixture
   },
   {
+    name: 'chroma-key',
+    description: 'green video clip keyed transparent over the black export base',
+    outputWidth: 1280,
+    outputHeight: 720,
+    expectedDuration: 1.5,
+    create: createChromaKeyFixture,
+    validate: validateChromaKeyFixture
+  },
+  {
+    name: 'color-curves',
+    description: 'gray video clip darkened by a master RGB curve midpoint',
+    outputWidth: 1280,
+    outputHeight: 720,
+    expectedDuration: 1.5,
+    create: createColorCurvesFixture,
+    validate: validateColorCurvesFixture
+  },
+  {
+    name: 'color-wheel',
+    description: 'light gray video clip shifted red with three-way gain',
+    outputWidth: 1280,
+    outputHeight: 720,
+    expectedDuration: 1.5,
+    create: createColorWheelFixture,
+    validate: validateColorWheelFixture
+  },
+  {
     name: 'speed-change',
     description: '1.5s video exported at 2x per-clip speed',
     outputWidth: 1280,
@@ -98,6 +128,15 @@ const fixtures = [
     expectedDuration: 0.75,
     create: createSpeedChangeFixture,
     validate: validateSpeedChangeFixture
+  },
+  {
+    name: 'speed-ramp',
+    description: '2s video exported through a 1x to 2x speed keyframe ramp',
+    outputWidth: 1280,
+    outputHeight: 720,
+    expectedDuration: 1.25,
+    create: createSpeedRampFixture,
+    validate: validateSpeedRampFixture
   },
   {
     name: 'mute-track',
@@ -757,6 +796,272 @@ async function validateColorCorrectionFixture(context) {
   };
 }
 
+async function createChromaKeyFixture(context) {
+  const sourcePath = join(context.fixtureDir, 'chroma-green-source.mp4');
+  await createColorVideoFixture(sourcePath, {
+    color: COLORS.keyGreen.ffmpeg,
+    width: context.outputWidth,
+    height: context.outputHeight,
+    duration: context.fixture.expectedDuration,
+    audio: false
+  });
+  return buildProject({
+    id: 'golden-chroma-key',
+    name: 'Golden Chroma Key',
+    width: context.outputWidth,
+    height: context.outputHeight,
+    media: [
+      videoAsset({
+        id: 'asset-chroma-green-source',
+        name: 'chroma-green-source.mp4',
+        path: sourcePath,
+        duration: context.fixture.expectedDuration,
+        width: context.outputWidth,
+        height: context.outputHeight,
+        hasAudio: false,
+        stat: statSync(sourcePath)
+      })
+    ],
+    tracks: [
+      {
+        id: 'track-chroma-video',
+        type: 'video',
+        name: 'Chroma Video',
+        clips: [
+          videoClip({
+            id: 'clip-chroma-key',
+            name: 'Green keyed source',
+            mediaId: 'asset-chroma-green-source',
+            trackId: 'track-chroma-video',
+            duration: context.fixture.expectedDuration,
+            chromaKey: {
+              enabled: true,
+              color: COLORS.keyGreen.rgb,
+              similarity: 0.28,
+              blend: 0.08
+            }
+          })
+        ]
+      },
+      emptyAudioTrack(),
+      emptyTextTrack()
+    ]
+  });
+}
+
+async function validateChromaKeyFixture(context) {
+  const sourcePath = context.project.media.find((asset) => asset.id === 'asset-chroma-green-source')?.path;
+  const keyedAlpha = sourcePath
+    ? await readChromaKeyAlpha(sourcePath, {
+        color: '0x00FF00',
+        similarity: 0.28,
+        blend: 0.08,
+        x: Math.floor(context.outputWidth / 2),
+        y: Math.floor(context.outputHeight / 2)
+      })
+    : 255;
+  return {
+    checks: [
+      {
+        name: 'chroma-key-filter',
+        passed: context.plan.filterComplex.includes('chromakey=color=0x00FF00:similarity=0.28:blend=0.08'),
+        actual: context.plan.filterComplex.includes('chromakey=color=0x00FF00:similarity=0.28:blend=0.08'),
+        expected: true
+      },
+      {
+        name: 'chroma-key-output-center-reveals-base',
+        passed: pixelNear(context.centerPixel, COLORS.black.rgb, 18),
+        actual: context.centerPixel,
+        expected: `${COLORS.black.rgb.join(',')} +/- 18`
+      },
+      {
+        name: 'chroma-key-center-alpha-reduced',
+        passed: keyedAlpha < 32,
+        actual: keyedAlpha,
+        expected: '< 32 alpha after chromakey'
+      }
+    ]
+  };
+}
+
+async function createColorCurvesFixture(context) {
+  const sourcePath = join(context.fixtureDir, 'gray-curve-source.mp4');
+  await createColorVideoFixture(sourcePath, {
+    color: COLORS.gray.ffmpeg,
+    width: context.outputWidth,
+    height: context.outputHeight,
+    duration: context.fixture.expectedDuration,
+    audio: false
+  });
+  return buildProject({
+    id: 'golden-color-curves',
+    name: 'Golden Color Curves',
+    width: context.outputWidth,
+    height: context.outputHeight,
+    media: [
+      videoAsset({
+        id: 'asset-gray-curve-source',
+        name: 'gray-curve-source.mp4',
+        path: sourcePath,
+        duration: context.fixture.expectedDuration,
+        width: context.outputWidth,
+        height: context.outputHeight,
+        hasAudio: false,
+        stat: statSync(sourcePath)
+      })
+    ],
+    tracks: [
+      {
+        id: 'track-color-curves',
+        type: 'video',
+        name: 'Color Curves',
+        clips: [
+          videoClip({
+            id: 'clip-color-curves',
+            name: 'Darkened curve gray',
+            mediaId: 'asset-gray-curve-source',
+            trackId: 'track-color-curves',
+            duration: context.fixture.expectedDuration,
+            colorCorrection: {
+              brightness: 0,
+              contrast: 1,
+              saturation: 1,
+              hue: 0,
+              colorCurves: {
+                master: [
+                  { x: 0, y: 0 },
+                  { x: 0.5, y: 0.3 },
+                  { x: 1, y: 1 }
+                ],
+                r: [
+                  { x: 0, y: 0 },
+                  { x: 1, y: 1 }
+                ],
+                g: [
+                  { x: 0, y: 0 },
+                  { x: 1, y: 1 }
+                ],
+                b: [
+                  { x: 0, y: 0 },
+                  { x: 1, y: 1 }
+                ]
+              }
+            }
+          })
+        ]
+      },
+      emptyAudioTrack(),
+      emptyTextTrack()
+    ]
+  });
+}
+
+async function validateColorCurvesFixture(context) {
+  const centerBrightness = (context.centerPixel[0] + context.centerPixel[1] + context.centerPixel[2]) / 3;
+  const sourceBrightness = (COLORS.gray.rgb[0] + COLORS.gray.rgb[1] + COLORS.gray.rgb[2]) / 3;
+  const curveArtifact = context.plan.textArtifacts.find((artifact) => artifact.fileName === 'curves-clip_color_curves.cube');
+  return {
+    checks: [
+      {
+        name: 'curve-lut-artifact',
+        passed: Boolean(curveArtifact?.text.includes('LUT_1D_SIZE 17')) && context.plan.filterComplex.includes('lut1d=file=__CURVE_LUT_clip_color_curves__'),
+        actual: {
+          textArtifacts: context.plan.textArtifacts.map((artifact) => artifact.fileName),
+          hasLut1dFilter: context.plan.filterComplex.includes('lut1d=file=__CURVE_LUT_clip_color_curves__')
+        },
+        expected: '17 point curve .cube artifact and lut1d filter'
+      },
+      {
+        name: 'curve-center-pixel-darkened',
+        passed: centerBrightness < sourceBrightness - 30,
+        actual: {
+          centerPixel: context.centerPixel,
+          centerBrightness: round(centerBrightness),
+          sourceBrightness
+        },
+        expected: 'center brightness at least 30 below source gray'
+      }
+    ]
+  };
+}
+
+async function createColorWheelFixture(context) {
+  const sourcePath = join(context.fixtureDir, 'light-gray-wheel-source.mp4');
+  await createColorVideoFixture(sourcePath, {
+    color: COLORS.lightGray.ffmpeg,
+    width: context.outputWidth,
+    height: context.outputHeight,
+    duration: context.fixture.expectedDuration,
+    audio: false
+  });
+  return buildProject({
+    id: 'golden-color-wheel',
+    name: 'Golden Color Wheel',
+    width: context.outputWidth,
+    height: context.outputHeight,
+    media: [
+      videoAsset({
+        id: 'asset-light-gray-wheel-source',
+        name: 'light-gray-wheel-source.mp4',
+        path: sourcePath,
+        duration: context.fixture.expectedDuration,
+        width: context.outputWidth,
+        height: context.outputHeight,
+        hasAudio: false,
+        stat: statSync(sourcePath)
+      })
+    ],
+    tracks: [
+      {
+        id: 'track-color-wheel',
+        type: 'video',
+        name: 'Color Wheel',
+        clips: [
+          videoClip({
+            id: 'clip-color-wheel',
+            name: 'Red gain gray',
+            mediaId: 'asset-light-gray-wheel-source',
+            trackId: 'track-color-wheel',
+            duration: context.fixture.expectedDuration,
+            colorCorrection: {
+              brightness: 0,
+              contrast: 1,
+              saturation: 1,
+              hue: 0,
+              threeWayColor: {
+                lift: { r: 0, g: 0, b: 0, intensity: 1 },
+                gamma: { r: 0, g: 0, b: 0, intensity: 1 },
+                gain: { r: 0.3, g: 0, b: 0, intensity: 1 }
+              }
+            }
+          })
+        ]
+      },
+      emptyAudioTrack(),
+      emptyTextTrack()
+    ]
+  });
+}
+
+async function validateColorWheelFixture(context) {
+  return {
+    checks: [
+      {
+        name: 'color-wheel-filter',
+        passed: context.plan.filterComplex.includes('colorbalance=rh=0.3'),
+        actual: context.plan.filterComplex.includes('colorbalance=rh=0.3'),
+        expected: true
+      },
+      {
+        name: 'color-wheel-center-pixel-red-dominant',
+        passed: context.centerPixel[0] > context.centerPixel[1] + 20 && context.centerPixel[0] > context.centerPixel[2] + 20,
+        actual: context.centerPixel,
+        expected: 'R channel > G/B by at least 20'
+      }
+    ]
+  };
+}
+
 async function createSpeedChangeFixture(context) {
   const sourcePath = join(context.fixtureDir, 'speed-source.mp4');
   await createColorVideoFixture(sourcePath, {
@@ -832,6 +1137,94 @@ async function validateSpeedChangeFixture(context) {
         passed: pixelNear(context.centerPixel, COLORS.green.rgb, 14),
         actual: context.centerPixel,
         expected: `${COLORS.green.rgb.join(',')} +/- 14`
+      }
+    ]
+  };
+}
+
+async function createSpeedRampFixture(context) {
+  const sourcePath = join(context.fixtureDir, 'speed-ramp-source.mp4');
+  await createColorVideoFixture(sourcePath, {
+    color: COLORS.blue.ffmpeg,
+    width: context.outputWidth,
+    height: context.outputHeight,
+    duration: 2,
+    audio: false
+  });
+  return buildProject({
+    id: 'golden-speed-ramp',
+    name: 'Golden Speed Ramp',
+    width: context.outputWidth,
+    height: context.outputHeight,
+    media: [
+      videoAsset({
+        id: 'asset-speed-ramp-source',
+        name: 'speed-ramp-source.mp4',
+        path: sourcePath,
+        duration: 2,
+        width: context.outputWidth,
+        height: context.outputHeight,
+        hasAudio: false,
+        stat: statSync(sourcePath)
+      })
+    ],
+    tracks: [
+      {
+        id: 'track-speed-ramp-video',
+        type: 'video',
+        name: 'Speed Ramp Video',
+        clips: [
+          videoClip({
+            id: 'clip-speed-ramp',
+            name: 'Speed Ramp 1x to 2x',
+            mediaId: 'asset-speed-ramp-source',
+            trackId: 'track-speed-ramp-video',
+            duration: 1.25,
+            speed: 1,
+            keyframes: {
+              speed: [
+                { id: 'speed-ramp-start', time: 0, value: 1, easing: 'linear' },
+                { id: 'speed-ramp-fast', time: 1, value: 2, easing: 'linear' }
+              ]
+            }
+          })
+        ]
+      },
+      emptyAudioTrack(),
+      emptyTextTrack()
+    ]
+  });
+}
+
+async function validateSpeedRampFixture(context) {
+  return {
+    checks: [
+      {
+        name: 'speed-ramp-segmented-setpts',
+        passed:
+          context.plan.filterComplex.includes("setpts='(") &&
+          context.plan.filterComplex.includes('if(lte(((PTS-STARTPTS)*TB),1.5)') &&
+          context.plan.filterComplex.includes('if(lte(((PTS-STARTPTS)*TB),2)'),
+        actual: context.plan.filterComplex,
+        expected: 'segmented setpts expression with source cut points at 1.5s and 2s'
+      },
+      {
+        name: 'speed-ramp-duration-under-source',
+        passed: context.outputDuration < 2,
+        actual: round(context.outputDuration),
+        expected: '< 2s source duration'
+      },
+      {
+        name: 'speed-ramp-duration',
+        passed: Math.abs(context.outputDuration - 1.25) <= 2 / 30 + 0.08,
+        actual: round(context.outputDuration),
+        expected: '1.25s +/- 2 frames'
+      },
+      {
+        name: 'speed-ramp-center-pixel',
+        passed: pixelNear(context.centerPixel, COLORS.blue.rgb, 14),
+        actual: context.centerPixel,
+        expected: `${COLORS.blue.rgb.join(',')} +/- 14`
       }
     ]
   };
@@ -1419,6 +1812,27 @@ async function readPixel(videoPath, options) {
   return Array.from(stdout.subarray(0, 4));
 }
 
+async function readChromaKeyAlpha(videoPath, options) {
+  const stdout = await runCollectStdout('ffmpeg', [
+    '-hide_banner',
+    '-v',
+    'error',
+    '-i',
+    videoPath,
+    '-frames:v',
+    '1',
+    '-vf',
+    `chromakey=color=${options.color}:similarity=${formatSeconds(options.similarity)}:blend=${formatSeconds(options.blend)},format=rgba,crop=1:1:${options.x}:${options.y}`,
+    '-f',
+    'rawvideo',
+    '-'
+  ]);
+  if (stdout.length < 4) {
+    throw new Error(`Unable to read chroma key alpha from ${videoPath}.`);
+  }
+  return stdout[3];
+}
+
 async function readFrame(videoPath, options) {
   const stdout = await runCollectStdout('ffmpeg', [
     '-hide_banner',
@@ -1522,6 +1936,7 @@ function videoClip(input) {
     trimEnd: input.trimEnd ?? 0,
     speed: input.speed ?? 1,
     colorCorrection: input.colorCorrection ?? { brightness: 0, contrast: 1, saturation: 1, hue: 0 },
+    chromaKey: input.chromaKey,
     transform: input.transform ?? { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
     keyframes: input.keyframes,
     volume: input.volume ?? 1,
@@ -1544,6 +1959,7 @@ function imageClip(input) {
     trimEnd: input.trimEnd ?? 0,
     speed: input.speed ?? 1,
     colorCorrection: input.colorCorrection ?? { brightness: 0, contrast: 1, saturation: 1, hue: 0 },
+    chromaKey: input.chromaKey,
     transform: input.transform ?? { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
     keyframes: input.keyframes,
     kenBurns: input.kenBurns

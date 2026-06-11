@@ -1,5 +1,7 @@
 import { normalizeCachePath } from './cache/cache-key';
+import type { ClipKeyframes } from './model';
 import { round } from './time';
+import { calculateSpeedCurveSourceDuration } from './timeline';
 
 export const TIMELINE_THUMBNAIL_WIDTH = 80;
 
@@ -9,6 +11,7 @@ export interface TimelineThumbnailSamplingInput {
   thumbWidth?: number;
   trimStart?: number;
   speed?: number;
+  keyframes?: ClipKeyframes;
 }
 
 export interface TimelineThumbnailCachePlan {
@@ -26,10 +29,17 @@ export function calculateTimelineThumbnailTimestamps(input: TimelineThumbnailSam
   const count = Math.max(1, Math.ceil(Math.max(1, input.clipPixelWidth) / thumbWidth));
   const sourceStart = Math.max(0, input.trimStart ?? 0);
   const speed = Math.max(0.001, input.speed ?? 1);
-  const sourceVisibleDuration = clipDuration * speed;
-  const segmentDuration = sourceVisibleDuration / count;
+  if (!input.keyframes?.speed?.length) {
+    const sourceVisibleDuration = clipDuration * speed;
+    const sourceSegmentDuration = sourceVisibleDuration / count;
+    return Array.from({ length: count }, (_, index) => round(sourceStart + sourceSegmentDuration * (index + 0.5)));
+  }
+  const segmentDuration = clipDuration / count;
 
-  return Array.from({ length: count }, (_, index) => round(sourceStart + segmentDuration * (index + 0.5)));
+  return Array.from({ length: count }, (_, index) => {
+    const localTime = segmentDuration * (index + 0.5);
+    return round(sourceStart + calculateSpeedCurveSourceDuration(localTime, input.keyframes, speed));
+  });
 }
 
 export function buildTimelineThumbnailCacheKey(mediaPath: string, timestamp: number): string {

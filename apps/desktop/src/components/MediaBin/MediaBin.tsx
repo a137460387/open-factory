@@ -1,24 +1,31 @@
-import { shouldGenerateProxy, type MediaAsset } from '@open-factory/editor-core';
-import { AlertCircle, BadgeCheck, FileAudio2, FileImage, FileVideo2, Gauge, Import, Link2, Loader2, Plus } from 'lucide-react';
+import { filterMediaAssets, shouldGenerateProxy, type MediaAsset, type MediaBinFilter, type MediaLabelColor, type MediaMetadata } from '@open-factory/editor-core';
+import { AlertCircle, BadgeCheck, FileAudio2, FileImage, FileVideo2, Gauge, Import, Link2, Loader2, Plus, Search, Tag } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
+import { zhCN } from '../../i18n/strings';
 import { isTauriRuntime } from '../../lib/tauri';
 import { listenDragDrop } from '../../lib/tauri-bridge';
 import { useMediaJobStore } from '../../media/media-job-store';
 
 interface MediaBinProps {
   media: MediaAsset[];
+  mediaMetadata: Record<string, MediaMetadata>;
   onImport(): void;
   onImportPaths(paths: string[]): void;
   onAddToTimeline(assetId: string): void;
   onRelink(assetId: string): void;
   onRelinkAll(): void;
   onGenerateProxy(assetId: string): void;
+  onSetLabel(assetId: string, labelColor?: MediaLabelColor): void;
 }
 
-export function MediaBin({ media, onImport, onImportPaths, onAddToTimeline, onRelink, onRelinkAll, onGenerateProxy }: MediaBinProps) {
+export function MediaBin({ media, mediaMetadata, onImport, onImportPaths, onAddToTimeline, onRelink, onRelinkAll, onGenerateProxy, onSetLabel }: MediaBinProps) {
+  const t = zhCN.mediaBin;
   const [dragOver, setDragOver] = useState(false);
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState<MediaBinFilter>('all');
   const missingCount = media.filter((asset) => asset.missing).length;
+  const visibleMedia = filterMediaAssets(media, { query: search, filter, metadata: mediaMetadata });
   const jobs = useMediaJobStore((state) => state.jobs);
   const runnerActive = useMediaJobStore((state) => state.runnerActive);
   const clearFinishedJobs = useMediaJobStore((state) => state.clearFinishedJobs);
@@ -71,8 +78,8 @@ export function MediaBin({ media, onImport, onImportPaths, onAddToTimeline, onRe
     >
       <div className="flex items-center justify-between border-b border-line px-3 py-2">
         <div>
-          <div className="text-sm font-semibold">Media</div>
-          <div className="text-xs text-slate-500">{media.length} item(s)</div>
+          <div className="text-sm font-semibold">{t.title}</div>
+          <div className="text-xs text-slate-500">{t.itemCount(media.length)}</div>
         </div>
         <div className="flex items-center gap-2">
           {missingCount > 0 ? (
@@ -82,7 +89,7 @@ export function MediaBin({ media, onImport, onImportPaths, onAddToTimeline, onRe
               data-testid="relink-all-button"
             >
               <Link2 size={14} />
-              Relink Folder
+              {t.relinkFolder}
             </button>
           ) : null}
           <button
@@ -91,23 +98,52 @@ export function MediaBin({ media, onImport, onImportPaths, onAddToTimeline, onRe
             data-testid="import-media-button"
           >
             <Import size={16} />
-            Import
+            {t.import}
           </button>
         </div>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
+        <div className="mb-3 space-y-2">
+          <label className="relative block">
+            <span className="sr-only">{t.searchPlaceholder}</span>
+            <Search className="pointer-events-none absolute left-2 top-2.5 text-slate-400" size={15} />
+            <input
+              className="w-full rounded-md border border-line bg-white py-2 pl-8 pr-2 text-sm text-ink"
+              value={search}
+              placeholder={t.searchPlaceholder}
+              data-testid="media-search-input"
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </label>
+          <div className="grid grid-cols-5 gap-1" data-testid="media-filter-bar">
+            {(['all', 'video', 'audio', 'image', 'tagged'] as MediaBinFilter[]).map((item) => (
+              <button
+                key={item}
+                className={clsx(
+                  'rounded-md border px-1.5 py-1 text-xs font-semibold',
+                  filter === item ? 'border-brand bg-white text-brand' : 'border-line bg-white text-slate-600 hover:bg-panel'
+                )}
+                type="button"
+                data-testid={`media-filter-${item}`}
+                onClick={() => setFilter(item)}
+              >
+                {t.filters[item]}
+              </button>
+            ))}
+          </div>
+        </div>
         {jobs.length > 0 ? (
           <div className="mb-3 rounded-md border border-line bg-panel p-2 text-xs" data-testid="media-job-queue">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <div className="font-semibold text-slate-700">Media jobs</div>
+                <div className="font-semibold text-slate-700">{t.mediaJobs}</div>
                 <div className="truncate text-slate-500">
-                  {runningJob ? `${runningJob.type} · ${runningJob.assetName}` : runnerActive ? 'Preparing queue' : 'Idle'} · {pendingCount} pending
-                  {failedCount > 0 ? ` · ${failedCount} failed` : ''}
+                  {runningJob ? `${t.jobType[runningJob.type]} · ${runningJob.assetName}` : runnerActive ? t.preparingQueue : zhCN.common.idle} · {t.pendingCount(pendingCount)}
+                  {failedCount > 0 ? ` · ${t.failedCount(failedCount)}` : ''}
                 </div>
               </div>
               <button className="rounded-md border border-line bg-white px-2 py-1 text-[11px] font-medium hover:bg-white/80" onClick={clearFinishedJobs}>
-                Clear
+                {zhCN.common.clear}
               </button>
             </div>
           </div>
@@ -118,17 +154,19 @@ export function MediaBin({ media, onImport, onImportPaths, onAddToTimeline, onRe
             onClick={onImport}
           >
             <Import className="mb-3 text-slate-500" size={30} />
-            Drop media files here or click to import.
+            {t.emptyDrop}
           </button>
         ) : (
           <div className="grid grid-cols-1 gap-3">
-            {media.map((asset) => (
+            {visibleMedia.map((asset) => (
               <MediaCard
                 key={asset.id}
                 asset={asset}
+                metadata={mediaMetadata[asset.id]}
                 onAdd={() => onAddToTimeline(asset.id)}
                 onRelink={() => onRelink(asset.id)}
                 onGenerateProxy={() => onGenerateProxy(asset.id)}
+                onSetLabel={(labelColor) => onSetLabel(asset.id, labelColor)}
               />
             ))}
           </div>
@@ -138,21 +176,91 @@ export function MediaBin({ media, onImport, onImportPaths, onAddToTimeline, onRe
   );
 }
 
-function MediaCard({ asset, onAdd, onRelink, onGenerateProxy }: { asset: MediaAsset; onAdd(): void; onRelink(): void; onGenerateProxy(): void }) {
+const MEDIA_LABEL_COLORS: Array<{ key: MediaLabelColor; value: string }> = [
+  { key: 'red', value: '#ef4444' },
+  { key: 'orange', value: '#f97316' },
+  { key: 'yellow', value: '#eab308' },
+  { key: 'green', value: '#22c55e' },
+  { key: 'blue', value: '#3b82f6' },
+  { key: 'purple', value: '#a855f7' }
+];
+
+function MediaCard({
+  asset,
+  metadata,
+  onAdd,
+  onRelink,
+  onGenerateProxy,
+  onSetLabel
+}: {
+  asset: MediaAsset;
+  metadata?: MediaMetadata;
+  onAdd(): void;
+  onRelink(): void;
+  onGenerateProxy(): void;
+  onSetLabel(labelColor?: MediaLabelColor): void;
+}) {
   const proxyStatus = asset.proxyStatus ?? (asset.type === 'video' ? 'none' : undefined);
   const canGenerateProxy = asset.type === 'video' && (shouldGenerateProxy(asset) || proxyStatus === 'error');
+  const [labelMenuOpen, setLabelMenuOpen] = useState(false);
+  const labelColor = metadata?.labelColor;
   return (
-    <div className={clsx('overflow-hidden rounded-md border bg-white shadow-sm', asset.missing ? 'border-rose-300' : 'border-line')} data-testid={`media-card-${asset.id}`}>
+    <div
+      className={clsx('relative overflow-hidden rounded-md border bg-white shadow-sm', asset.missing ? 'border-rose-300' : 'border-line')}
+      data-testid={`media-card-${asset.id}`}
+      data-missing={asset.missing ? 'true' : 'false'}
+      data-label-color={labelColor ?? 'none'}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        setLabelMenuOpen(true);
+      }}
+    >
       <div className="checkerboard relative aspect-video">
         {asset.thumbnail ? <img className="h-full w-full object-cover" src={asset.thumbnail} alt="" /> : <IconPreview type={asset.type} />}
-        {asset.missing ? <span className="absolute left-2 top-2 rounded bg-rose-600 px-2 py-1 text-xs font-semibold text-white">Missing</span> : null}
+        {asset.missing ? <span className="absolute left-2 top-2 rounded bg-rose-600 px-2 py-1 text-xs font-semibold text-white" data-testid={`missing-media-badge-${asset.id}`}>{zhCN.common.missing}</span> : null}
+        {labelColor ? <span className="absolute right-2 top-2 h-4 w-4 rounded-full border border-white shadow" style={{ backgroundColor: labelColorToHex(labelColor) }} data-testid={`media-label-${asset.id}`} /> : null}
       </div>
+      {labelMenuOpen ? (
+        <div className="absolute right-2 top-2 z-10 w-40 rounded-md border border-line bg-white p-2 text-xs shadow-soft" data-testid={`media-label-menu-${asset.id}`}>
+          <div className="mb-2 flex items-center gap-1 font-semibold text-slate-700">
+            <Tag size={13} />
+            {zhCN.mediaBin.label}
+          </div>
+          <div className="grid grid-cols-3 gap-1">
+            {MEDIA_LABEL_COLORS.map((color) => (
+              <button
+                key={color.key}
+                className="h-7 rounded border border-line"
+                type="button"
+                title={zhCN.mediaBin.labelColors[color.key]}
+                style={{ backgroundColor: color.value }}
+                data-testid={`media-label-color-${color.key}`}
+                onClick={() => {
+                  onSetLabel(color.key);
+                  setLabelMenuOpen(false);
+                }}
+              />
+            ))}
+          </div>
+          <button
+            className="mt-2 w-full rounded-md border border-line px-2 py-1 text-left font-medium text-slate-600 hover:bg-panel"
+            type="button"
+            data-testid="media-label-clear"
+            onClick={() => {
+              onSetLabel(undefined);
+              setLabelMenuOpen(false);
+            }}
+          >
+            {zhCN.mediaBin.clearLabel}
+          </button>
+        </div>
+      ) : null}
       <div className="p-2">
         <div className="truncate text-sm font-medium" title={asset.path}>
           {asset.name}
         </div>
         <div className="mt-1 flex items-center justify-between gap-2 text-xs text-slate-500">
-          <span>{asset.type}</span>
+          <span>{zhCN.mediaBin.assetType[asset.type]}</span>
           <span>{asset.type === 'audio' ? formatDuration(asset.duration) : `${asset.width || '-'}x${asset.height || '-'}`}</span>
         </div>
         {asset.type === 'video' ? (
@@ -162,9 +270,10 @@ function MediaCard({ asset, onAdd, onRelink, onGenerateProxy }: { asset: MediaAs
         <button
           className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md border border-line bg-panel px-2 py-1.5 text-sm font-medium hover:bg-white"
           onClick={onAdd}
+          data-testid={`add-to-timeline-${asset.id}`}
         >
           <Plus size={15} />
-          Add to timeline
+          {zhCN.mediaBin.addToTimeline}
         </button>
         {asset.missing ? (
           <button
@@ -173,12 +282,16 @@ function MediaCard({ asset, onAdd, onRelink, onGenerateProxy }: { asset: MediaAs
             data-testid={`relink-media-${asset.id}`}
           >
             <Link2 size={15} />
-            Relink
+            {zhCN.mediaBin.relink}
           </button>
         ) : null}
       </div>
     </div>
   );
+}
+
+function labelColorToHex(color: MediaLabelColor): string {
+  return MEDIA_LABEL_COLORS.find((item) => item.key === color)?.value ?? '#64748b';
 }
 
 function ProxyStatus({
@@ -195,7 +308,7 @@ function ProxyStatus({
   assetId: string;
 }) {
   const icon = status === 'ready' ? <BadgeCheck size={13} /> : status === 'pending' ? <Loader2 className="animate-spin" size={13} /> : status === 'error' ? <AlertCircle size={13} /> : <Gauge size={13} />;
-  const label = status === 'ready' ? 'Proxy ready' : status === 'pending' ? 'Proxy pending' : status === 'error' ? 'Proxy failed' : canGenerate ? 'Proxy recommended' : 'Proxy not needed';
+  const label = status === 'ready' ? zhCN.mediaBin.proxyStatus.ready : status === 'pending' ? zhCN.mediaBin.proxyStatus.pending : status === 'error' ? zhCN.mediaBin.proxyStatus.error : canGenerate ? zhCN.mediaBin.proxyStatus.recommended : zhCN.mediaBin.proxyStatus.notNeeded;
   const tone =
     status === 'ready'
       ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
@@ -206,7 +319,7 @@ function ProxyStatus({
           : 'border-slate-200 bg-slate-50 text-slate-600';
   return (
     <div className="mt-2 space-y-1">
-      <div className={`inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${tone}`} title={error}>
+      <div className={`inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${tone}`} title={error} data-testid={`proxy-status-${assetId}`} data-proxy-status={status ?? 'none'}>
         {icon}
         <span className="truncate">{label}</span>
       </div>
@@ -218,7 +331,7 @@ function ProxyStatus({
           data-testid={`generate-proxy-${assetId}`}
         >
           <Gauge size={14} />
-          Generate proxy
+          {zhCN.mediaBin.generateProxy}
         </button>
       ) : null}
     </div>
