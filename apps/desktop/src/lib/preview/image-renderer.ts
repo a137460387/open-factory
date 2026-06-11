@@ -10,7 +10,14 @@ export function drawImage2d(context: CanvasRenderingContext2D, canvas: HTMLCanva
   recordPreviewDraw('image', 'image');
 }
 
-export function drawImageWebGl(compositor: WebGlPreviewCompositor, clip: ImageClip, asset: MediaAsset, img: HTMLImageElement): void {
-  compositor.drawSource(img, asset.width || 1280, asset.height || 720, clip.transform, clip.colorCorrection, clip.effects, clip.chromaKey, clip.masks);
+export function drawImage2dBypass(context: CanvasRenderingContext2D, canvas: HTMLCanvasElement, clip: ImageClip, asset: MediaAsset, img: HTMLImageElement): void {
+  drawTransformedSource2d(context, canvas, img, { width: asset.width || canvas.width, height: asset.height || canvas.height }, clip.transform);
+  recordPreviewDraw('image', 'image');
+}
+
+export function drawImageWebGl(compositor: WebGlPreviewCompositor, clip: ImageClip, asset: MediaAsset, img: HTMLImageElement, bypassProcessing = false): void {
+  compositor.drawSource(img, asset.width || 1280, asset.height || 720, clip.transform, clip.colorCorrection, clip.effects, clip.chromaKey, clip.masks, {
+    bypassProcessing
+  });
   recordPreviewDraw('image', 'image');
 }

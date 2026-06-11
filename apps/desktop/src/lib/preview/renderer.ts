@@ -3,7 +3,7 @@ import { applyClipKeyframes, getClipPlaybackStart, getRenderableTracks, getTimel
 import { DEFAULT_TRANSFORM } from '@open-factory/editor-core';
 import { PreviewAudioRenderer } from './audio-renderer';
 import { recordPreviewError, recordPreviewMode, recordPreviewReadback } from './debug';
-import { drawImage2d, drawImageWebGl } from './image-renderer';
+import { drawImage2d, drawImage2dBypass, drawImageWebGl } from './image-renderer';
 import { createVideoElement, loadImage, loadThumbnail, seekVideo } from './media-elements';
 import { drawMissing2d, drawMissingWebGl, drawText2d, drawTextWebGl } from './text-renderer';
 import { drawVideo2d, drawVideoWebGl } from './video-renderer';
@@ -12,6 +12,7 @@ import { WebGlPreviewCompositor } from './webgl-compositor';
 
 export interface PreviewRenderOptions {
   captureFrame?: boolean;
+  bypassProcessing?: boolean;
   sequences?: Sequence[];
   depth?: number;
 }
@@ -20,6 +21,7 @@ export interface PreviewFrameReadback {
   width: number;
   height: number;
   data: Uint8Array | Uint8ClampedArray;
+  origin: 'top-left' | 'bottom-left';
 }
 
 export interface PreviewRenderResult {
@@ -43,6 +45,7 @@ export class PreviewRenderer {
     const mediaById = new Map(media.map((asset) => [asset.id, asset]));
     const sequenceById = new Map((options.sequences ?? []).map((sequence) => [sequence.id, sequence]));
     const depth = options.depth ?? 0;
+    const bypassProcessing = options.bypassProcessing === true;
     const visibleClips = getTransitionAwareClipInstances(timeline, playheadTime);
     const webgl = this.getWebGl(canvas);
 
@@ -53,7 +56,7 @@ export class PreviewRenderer {
         if (token !== this.renderToken) {
           return {};
         }
-        await this.drawClipWebGl(webgl, clip, mediaById, sequenceById, media, clipPlayheadTime, canvas.width, canvas.height, depth);
+        await this.drawClipWebGl(webgl, clip, mediaById, sequenceById, media, clipPlayheadTime, canvas.width, canvas.height, depth, bypassProcessing);
       }
       webgl.finish();
       recordPreviewReadback(webgl.readCenterPixel());
@@ -73,7 +76,7 @@ export class PreviewRenderer {
       if (token !== this.renderToken) {
         return {};
       }
-      await this.drawClip2d(context, canvas, clip, mediaById, sequenceById, media, clipPlayheadTime, depth);
+      await this.drawClip2d(context, canvas, clip, mediaById, sequenceById, media, clipPlayheadTime, depth, bypassProcessing);
     }
     try {
       recordPreviewReadback(Array.from(context.getImageData(Math.floor(canvas.width / 2), Math.floor(canvas.height / 2), 1, 1).data));
@@ -128,16 +131,19 @@ export class PreviewRenderer {
     playheadTime: number,
     canvasWidth: number,
     canvasHeight: number,
-    depth: number
+    depth: number,
+    bypassProcessing: boolean
   ): Promise<void> {
     const renderClip = withCanvasKeyframedPosition(clip, canvasWidth, canvasHeight);
     if (renderClip.type === 'nested-sequence') {
-      const nested = await this.renderNestedCanvas(renderClip, sequenceById, media, playheadTime, canvasWidth, canvasHeight, depth);
+      const nested = await this.renderNestedCanvas(renderClip, sequenceById, media, playheadTime, canvasWidth, canvasHeight, depth, bypassProcessing);
       if (!nested) {
         drawMissingWebGl(compositor, renderClip.name, renderClip.type);
         return;
       }
-      compositor.drawSource(nested, canvasWidth, canvasHeight, renderClip.transform, renderClip.colorCorrection, renderClip.effects, renderClip.chromaKey, renderClip.masks);
+      compositor.drawSource(nested, canvasWidth, canvasHeight, renderClip.transform, renderClip.colorCorrection, renderClip.effects, renderClip.chromaKey, renderClip.masks, {
+        bypassProcessing
+      });
       return;
     }
     if (renderClip.type === 'video') {
@@ -146,7 +152,7 @@ export class PreviewRenderer {
         drawMissingWebGl(compositor, renderClip.name, renderClip.type);
         return;
       }
-      await drawVideoWebGl(compositor, renderClip, asset, this.getVideo(asset), playheadTime, seekVideo, loadThumbnail);
+      await drawVideoWebGl(compositor, renderClip, asset, this.getVideo(asset), playheadTime, seekVideo, loadThumbnail, bypassProcessing);
       return;
     }
 
@@ -156,12 +162,12 @@ export class PreviewRenderer {
         drawMissingWebGl(compositor, renderClip.name, renderClip.type);
         return;
       }
-      drawImageWebGl(compositor, renderClip, asset, await loadImage(asset));
+      drawImageWebGl(compositor, renderClip, asset, await loadImage(asset), bypassProcessing);
       return;
     }
 
     if (renderClip.type === 'text' || renderClip.type === 'subtitle') {
-      drawTextWebGl(compositor, renderClip);
+      drawTextWebGl(compositor, renderClip, bypassProcessing);
     }
   }
 
@@ -173,16 +179,17 @@ export class PreviewRenderer {
     sequenceById: Map<string, Sequence>,
     media: MediaAsset[],
     playheadTime: number,
-    depth: number
+    depth: number,
+    bypassProcessing: boolean
   ): Promise<void> {
     const renderClip = withCanvasKeyframedPosition(clip, canvas.width, canvas.height);
     if (renderClip.type === 'nested-sequence') {
-      const nested = await this.renderNestedCanvas(renderClip, sequenceById, media, playheadTime, canvas.width, canvas.height, depth);
+      const nested = await this.renderNestedCanvas(renderClip, sequenceById, media, playheadTime, canvas.width, canvas.height, depth, bypassProcessing);
       if (!nested) {
         drawMissing2d(context, canvas, renderClip.name, renderClip.type);
         return;
       }
-      drawTransformedSource2d(context, canvas, nested, { width: canvas.width, height: canvas.height }, renderClip.transform, renderClip.colorCorrection);
+      drawTransformedSource2d(context, canvas, nested, { width: canvas.width, height: canvas.height }, renderClip.transform, bypassProcessing ? undefined : renderClip.colorCorrection);
       return;
     }
     if (renderClip.type === 'video') {
@@ -191,7 +198,7 @@ export class PreviewRenderer {
         drawMissing2d(context, canvas, renderClip.name, renderClip.type);
         return;
       }
-      await drawVideo2d(context, canvas, renderClip, asset, this.getVideo(asset), playheadTime, seekVideo, loadThumbnail);
+      await drawVideo2d(context, canvas, renderClip, asset, this.getVideo(asset), playheadTime, seekVideo, loadThumbnail, bypassProcessing);
       return;
     }
 
@@ -201,12 +208,16 @@ export class PreviewRenderer {
         drawMissing2d(context, canvas, renderClip.name, renderClip.type);
         return;
       }
-      drawImage2d(context, canvas, renderClip, asset, await loadImage(asset));
+      if (bypassProcessing) {
+        drawImage2dBypass(context, canvas, renderClip, asset, await loadImage(asset));
+      } else {
+        drawImage2d(context, canvas, renderClip, asset, await loadImage(asset));
+      }
       return;
     }
 
     if (renderClip.type === 'text' || renderClip.type === 'subtitle') {
-      drawText2d(context, canvas, renderClip);
+      drawText2d(context, canvas, renderClip, bypassProcessing);
     }
   }
 
@@ -217,7 +228,8 @@ export class PreviewRenderer {
     playheadTime: number,
     width: number,
     height: number,
-    depth: number
+    depth: number,
+    bypassProcessing: boolean
   ): Promise<HTMLCanvasElement | undefined> {
     if (depth >= 3) {
       return undefined;
@@ -230,7 +242,11 @@ export class PreviewRenderer {
     canvas.width = width;
     canvas.height = height;
     const localTime = Math.max(0, playheadTime - clip.start + clip.trimStart);
-    await new PreviewRenderer().render(canvas, sequence.timeline, media, localTime, { sequences: Array.from(sequenceById.values()), depth: depth + 1 });
+    await new PreviewRenderer().render(canvas, sequence.timeline, media, localTime, {
+      sequences: Array.from(sequenceById.values()),
+      depth: depth + 1,
+      bypassProcessing
+    });
     return canvas;
   }
 
@@ -261,7 +277,7 @@ export class PreviewRenderer {
 function readWebGlFrameSafely(webgl: WebGlPreviewCompositor): PreviewFrameReadback | undefined {
   try {
     const frame = webgl.readFramePixels();
-    return frame.data.length > 0 ? frame : undefined;
+    return frame.data.length > 0 ? { ...frame, origin: 'bottom-left' } : undefined;
   } catch {
     return undefined;
   }
@@ -270,7 +286,7 @@ function readWebGlFrameSafely(webgl: WebGlPreviewCompositor): PreviewFrameReadba
 function read2dFrameSafely(context: CanvasRenderingContext2D, canvas: HTMLCanvasElement): PreviewFrameReadback | undefined {
   try {
     const image = context.getImageData(0, 0, canvas.width, canvas.height);
-    return image.data.length > 0 ? { width: canvas.width, height: canvas.height, data: image.data } : undefined;
+    return image.data.length > 0 ? { width: canvas.width, height: canvas.height, data: image.data, origin: 'top-left' } : undefined;
   } catch {
     return undefined;
   }

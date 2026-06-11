@@ -127,6 +127,11 @@ export const zhCN = {
     title: '预览',
     canvasSize: '1280 x 720 画布',
     colorScopes: '颜色示波器',
+    compareToggle: 'A/B 对比预览',
+    compareLeftRight: '左右分割对比',
+    compareTopBottom: '上下分割对比',
+    compareDifference: '叠加差值对比',
+    compareDivider: '对比分割线',
     renderFailedTitle: '预览渲染失败',
     renderFailedMessage: '无法绘制预览。',
     missingMedia: (name: string) => `媒体缺失：${name}`

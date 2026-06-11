@@ -38,6 +38,17 @@ interface ProgramInfo {
   sharpen: WebGLUniformLocation;
 }
 
+export interface WebGlSourceProcessingOptions {
+  bypassProcessing?: boolean;
+}
+
+export interface WebGlResolvedSourceProcessing {
+  correction: ColorCorrection;
+  key: ChromaKey;
+  maskUniforms: ReturnType<typeof buildMaskUniforms>;
+  effectParams: ReturnType<typeof buildPreviewEffectParams>;
+}
+
 export class WebGlPreviewCompositor {
   private readonly gl: WebGLRenderingContext;
   private readonly program: ProgramInfo;
@@ -93,14 +104,13 @@ export class WebGlPreviewCompositor {
     colorCorrection?: Partial<ColorCorrection>,
     effects?: Effect[],
     chromaKey?: Partial<ChromaKey>,
-    masks?: ClipMask[]
+    masks?: ClipMask[],
+    options: WebGlSourceProcessingOptions = {}
   ): void {
     const gl = this.gl;
     const texture = this.getTexture(source);
-    const correction = normalizeColorCorrection(colorCorrection ?? DEFAULT_COLOR_CORRECTION);
+    const { correction, key, maskUniforms, effectParams } = resolveWebGlSourceProcessing(colorCorrection, effects, chromaKey, masks, options);
     const threeWayColor = normalizeThreeWayColor(correction.threeWayColor);
-    const key = normalizeChromaKey(chromaKey);
-    const maskUniforms = buildMaskUniforms(masks);
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, this.curveTexture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 256, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, buildCurveTextureData(correction.colorCurves));
@@ -114,7 +124,6 @@ export class WebGlPreviewCompositor {
     gl.uniform1i(this.program.maskCount, maskUniforms.count);
     gl.uniform4fv(this.program.maskData, maskUniforms.data);
     gl.uniform4fv(this.program.maskFlags, maskUniforms.flags);
-    const effectParams = buildPreviewEffectParams(effects);
     gl.uniform4f(this.program.effectParams, effectParams.blur, effectParams.grain, effectParams.vignette, effectParams.chromatic);
     gl.uniform1f(this.program.sharpen, effectParams.sharpen);
     gl.activeTexture(gl.TEXTURE0);
@@ -123,7 +132,14 @@ export class WebGlPreviewCompositor {
     this.drawQuad(buildTransformedQuad(gl.canvas.width, gl.canvas.height, mediaWidth, mediaHeight, transform));
   }
 
-  drawText(text: string, transform: Transform, style: TextStyle | SubtitleStyle, colorCorrection?: Partial<ColorCorrection>, effects?: Effect[]): void {
+  drawText(
+    text: string,
+    transform: Transform,
+    style: TextStyle | SubtitleStyle,
+    colorCorrection?: Partial<ColorCorrection>,
+    effects?: Effect[],
+    options: WebGlSourceProcessingOptions = {}
+  ): void {
     const canvas = document.createElement('canvas');
     canvas.width = 1024;
     canvas.height = 256;
@@ -138,7 +154,7 @@ export class WebGlPreviewCompositor {
     drawTextBackground(ctx, canvas.width / 2, canvas.height / 2, text, style);
     ctx.fillStyle = style.color;
     ctx.fillText(text, canvas.width / 2, canvas.height / 2);
-    this.drawSource(canvas, canvas.width, canvas.height, resolveTextTransform(Number(this.gl.canvas.height), transform, style), colorCorrection, effects);
+    this.drawSource(canvas, canvas.width, canvas.height, resolveTextTransform(Number(this.gl.canvas.height), transform, style), colorCorrection, effects, undefined, undefined, options);
   }
 
   drawMissing(name: string): void {
@@ -211,6 +227,29 @@ export class WebGlPreviewCompositor {
     gl.vertexAttribPointer(this.program.texCoord, 2, gl.FLOAT, false, 0, 0);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   }
+}
+
+export function resolveWebGlSourceProcessing(
+  colorCorrection?: Partial<ColorCorrection>,
+  effects?: Effect[],
+  chromaKey?: Partial<ChromaKey>,
+  masks?: ClipMask[],
+  options: WebGlSourceProcessingOptions = {}
+): WebGlResolvedSourceProcessing {
+  if (options.bypassProcessing) {
+    return {
+      correction: normalizeColorCorrection(DEFAULT_COLOR_CORRECTION),
+      key: normalizeChromaKey(undefined),
+      maskUniforms: buildMaskUniforms(undefined),
+      effectParams: buildPreviewEffectParams(undefined)
+    };
+  }
+  return {
+    correction: normalizeColorCorrection(colorCorrection ?? DEFAULT_COLOR_CORRECTION),
+    key: normalizeChromaKey(chromaKey),
+    maskUniforms: buildMaskUniforms(masks),
+    effectParams: buildPreviewEffectParams(effects)
+  };
 }
 
 function drawTextBackground(context: CanvasRenderingContext2D, centerX: number, centerY: number, text: string, style: TextStyle | SubtitleStyle): void {

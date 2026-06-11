@@ -13,18 +13,19 @@ export async function drawVideo2d(
   video: HTMLVideoElement,
   playheadTime: number,
   seekVideo: (video: HTMLVideoElement, time: number) => Promise<void>,
-  loadThumbnail: (asset: MediaAsset) => Promise<HTMLImageElement | undefined>
+  loadThumbnail: (asset: MediaAsset) => Promise<HTMLImageElement | undefined>,
+  bypassProcessing = false
 ): Promise<void> {
   const sourceTime = getPreviewSourceTime(clip, playheadTime);
   try {
     await seekVideo(video, sourceTime);
-    drawVideoSource2d(context, canvas, video, asset, clip);
+    drawVideoSource2d(context, canvas, video, asset, clip, bypassProcessing);
     recordPreviewDraw('video', 'video');
   } catch (error) {
     recordPreviewError(error instanceof Error ? error.message : 'Video preview failed.');
     const fallback = await loadThumbnail(asset);
     if (fallback) {
-      drawVideoSource2d(context, canvas, fallback, asset, clip);
+      drawVideoSource2d(context, canvas, fallback, asset, clip, bypassProcessing);
       recordPreviewDraw('video', 'thumbnail');
     }
   }
@@ -37,18 +38,23 @@ export async function drawVideoWebGl(
   video: HTMLVideoElement,
   playheadTime: number,
   seekVideo: (video: HTMLVideoElement, time: number) => Promise<void>,
-  loadThumbnail: (asset: MediaAsset) => Promise<HTMLImageElement | undefined>
+  loadThumbnail: (asset: MediaAsset) => Promise<HTMLImageElement | undefined>,
+  bypassProcessing = false
 ): Promise<void> {
   const sourceTime = getPreviewSourceTime(clip, playheadTime);
   try {
     await seekVideo(video, sourceTime);
-    compositor.drawSource(video, asset.width || 1280, asset.height || 720, clip.transform, clip.colorCorrection, clip.effects, clip.chromaKey, clip.masks);
+    compositor.drawSource(video, asset.width || 1280, asset.height || 720, clip.transform, clip.colorCorrection, clip.effects, clip.chromaKey, clip.masks, {
+      bypassProcessing
+    });
     recordPreviewDraw('video', 'video');
   } catch (error) {
     recordPreviewError(error instanceof Error ? error.message : 'WebGL video preview failed.');
     const fallback = await loadThumbnail(asset);
     if (fallback) {
-      compositor.drawSource(fallback, asset.width || 1280, asset.height || 720, clip.transform, clip.colorCorrection, clip.effects, clip.chromaKey, clip.masks);
+      compositor.drawSource(fallback, asset.width || 1280, asset.height || 720, clip.transform, clip.colorCorrection, clip.effects, clip.chromaKey, clip.masks, {
+        bypassProcessing
+      });
       recordPreviewDraw('video', 'thumbnail');
     }
   }
@@ -64,7 +70,15 @@ function drawVideoSource2d(
   canvas: HTMLCanvasElement,
   source: CanvasImageSource,
   asset: MediaAsset,
-  clip: VideoClip
+  clip: VideoClip,
+  bypassProcessing: boolean
 ): void {
-  drawTransformedSource2d(context, canvas, source, { width: asset.width || canvas.width, height: asset.height || canvas.height }, clip.transform, clip.colorCorrection);
+  drawTransformedSource2d(
+    context,
+    canvas,
+    source,
+    { width: asset.width || canvas.width, height: asset.height || canvas.height },
+    clip.transform,
+    bypassProcessing ? undefined : clip.colorCorrection
+  );
 }

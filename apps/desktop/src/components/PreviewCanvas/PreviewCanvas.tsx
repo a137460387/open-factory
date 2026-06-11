@@ -1,4 +1,4 @@
-import { BarChart3, Pause, Play } from 'lucide-react';
+import { BarChart3, Blend, Columns2, GitCompareArrows, Pause, Play, Rows2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import {
   buildTimelineRenderFrameKey,
@@ -10,6 +10,13 @@ import {
 } from '@open-factory/editor-core';
 import { ColorScopesPanel } from '../ColorScopes/ColorScopesPanel';
 import { zhCN } from '../../i18n/strings';
+import {
+  buildPreviewCompareDividerStyle,
+  buildPreviewCompareOverlayStyle,
+  calculatePreviewCompareSplitRatio,
+  drawPreviewDifferenceFrame,
+  type PreviewCompareMode
+} from '../../lib/preview/compare';
 import { PreviewRenderer, type PreviewFrameReadback } from '../../lib/preview/renderer';
 import { getTimelineRenderCacheController } from '../../lib/preview/render-cache-controller';
 import { showToast } from '../../lib/toast';
@@ -18,8 +25,12 @@ import { useEditorStore } from '../../store/editorStore';
 
 export function PreviewCanvas() {
   const t = zhCN.preview;
+  const compareFrameRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const originalCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const differenceCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const rendererRef = useRef(new PreviewRenderer());
+  const originalRendererRef = useRef(new PreviewRenderer());
   const previousTimelineRef = useRef<Timeline | undefined>();
   const scopeFrameCounterRef = useRef(0);
   const project = useEditorStore((state) => state.project);
@@ -33,17 +44,26 @@ export function PreviewCanvas() {
   const resetAudioLevels = useAudioMeterStore((state) => state.resetLevels);
   const [scopesOpen, setScopesOpen] = useState(false);
   const [scopeFrame, setScopeFrame] = useState<PreviewFrameReadback>();
+  const [compareMode, setCompareMode] = useState<PreviewCompareMode | 'off'>('off');
+  const [compareSplitRatio, setCompareSplitRatio] = useState(0.5);
+  const [compareDividerDragging, setCompareDividerDragging] = useState(false);
   const prerenderCenter = Math.round(playheadTime * 2) / 2;
   const fps = project.settings.fps || 30;
+  const compareEnabled = compareMode !== 'off';
+  const compareShowsDifference = compareMode === 'difference';
+  const activeCompareMode: PreviewCompareMode = compareMode === 'off' ? 'left-right' : compareMode;
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) {
       return;
     }
+    const originalCanvas = originalCanvasRef.current;
+    const differenceCanvas = differenceCanvasRef.current;
     const timeline = previewTimeline ?? project.timeline;
     const shouldCaptureScopes = scopesOpen && (!isPlaying || scopeFrameCounterRef.current % 4 === 0);
-    const canUseRenderCache = !previewTimeline && !shouldCaptureScopes;
+    const shouldCaptureDifference = compareShowsDifference && Boolean(differenceCanvas);
+    const canUseRenderCache = !previewTimeline && !shouldCaptureScopes && !compareEnabled;
     const frame = Math.max(0, Math.round(playheadTime * fps));
     const frameTime = frame / fps;
     const frameKey = buildTimelineRenderFrameKey({
@@ -73,12 +93,28 @@ export function PreviewCanvas() {
             return;
           }
         }
-        const result = await rendererRef.current.render(canvas, timeline, project.media, playheadTime, { captureFrame: shouldCaptureScopes, sequences: project.sequences });
+        const result = await rendererRef.current.render(canvas, timeline, project.media, playheadTime, {
+          captureFrame: shouldCaptureScopes || shouldCaptureDifference,
+          sequences: project.sequences
+        });
         if (canceled) {
           return;
         }
-        if (result.frame) {
+        if (result.frame && shouldCaptureScopes) {
           setScopeFrame(result.frame);
+        }
+        if (compareEnabled && originalCanvas) {
+          const originalResult = await originalRendererRef.current.render(originalCanvas, timeline, project.media, playheadTime, {
+            bypassProcessing: true,
+            captureFrame: shouldCaptureDifference,
+            sequences: project.sequences
+          });
+          if (canceled) {
+            return;
+          }
+          if (shouldCaptureDifference && result.frame && originalResult.frame && differenceCanvas) {
+            drawPreviewDifferenceFrame(differenceCanvas, result.frame, originalResult.frame);
+          }
         }
         if (canUseRenderCache) {
           const bitmap = await createImageBitmap(canvas);
@@ -106,6 +142,8 @@ export function PreviewCanvas() {
     isPlaying,
     playbackRate,
     playheadTime,
+    compareEnabled,
+    compareShowsDifference,
     previewTimeline,
     project.activeSequenceId,
     project.masterVolume,
@@ -193,6 +231,21 @@ export function PreviewCanvas() {
     }
   }, [project]);
 
+  function toggleCompareMode(): void {
+    setCompareMode((current) => (current === 'off' ? 'left-right' : 'off'));
+  }
+
+  function updateCompareSplitFromPointer(event: { clientX: number; clientY: number }): void {
+    if (compareMode === 'off' || compareMode === 'difference') {
+      return;
+    }
+    const bounds = compareFrameRef.current?.getBoundingClientRect();
+    if (!bounds) {
+      return;
+    }
+    setCompareSplitRatio(calculatePreviewCompareSplitRatio(compareMode, event, bounds));
+  }
+
   useEffect(() => {
     if (!isPlaying) {
       rendererRef.current.pauseAllAudio();
@@ -231,6 +284,48 @@ export function PreviewCanvas() {
           <div className="text-xs text-slate-300">{t.canvasSize}</div>
         </div>
         <div className="flex items-center gap-2">
+          {compareEnabled ? (
+            <div className="flex items-center gap-1 rounded-md border border-white/10 bg-white/10 p-0.5" data-testid="preview-compare-mode-group">
+              <button
+                className={`inline-flex h-8 w-8 items-center justify-center rounded text-white hover:bg-white/20 ${compareMode === 'left-right' ? 'bg-emerald-500/30' : ''}`}
+                title={t.compareLeftRight}
+                aria-label={t.compareLeftRight}
+                data-testid="preview-compare-mode-left-right"
+                onClick={() => setCompareMode('left-right')}
+              >
+                <Columns2 size={16} />
+              </button>
+              <button
+                className={`inline-flex h-8 w-8 items-center justify-center rounded text-white hover:bg-white/20 ${compareMode === 'top-bottom' ? 'bg-emerald-500/30' : ''}`}
+                title={t.compareTopBottom}
+                aria-label={t.compareTopBottom}
+                data-testid="preview-compare-mode-top-bottom"
+                onClick={() => setCompareMode('top-bottom')}
+              >
+                <Rows2 size={16} />
+              </button>
+              <button
+                className={`inline-flex h-8 w-8 items-center justify-center rounded text-white hover:bg-white/20 ${compareMode === 'difference' ? 'bg-emerald-500/30' : ''}`}
+                title={t.compareDifference}
+                aria-label={t.compareDifference}
+                data-testid="preview-compare-mode-difference"
+                onClick={() => setCompareMode('difference')}
+              >
+                <Blend size={16} />
+              </button>
+            </div>
+          ) : null}
+          <button
+            className={`inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/10 text-white hover:bg-white/20 ${
+              compareEnabled ? 'bg-emerald-500/25' : 'bg-white/10'
+            }`}
+            title={t.compareToggle}
+            aria-label={t.compareToggle}
+            data-testid="preview-compare-toggle"
+            onClick={toggleCompareMode}
+          >
+            <GitCompareArrows size={17} />
+          </button>
           <button
             className={`inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/10 text-white hover:bg-white/20 ${
               scopesOpen ? 'bg-emerald-500/25' : 'bg-white/10'
@@ -256,8 +351,55 @@ export function PreviewCanvas() {
       </div>
       <div className={scopesOpen ? 'grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_180px]' : 'flex min-h-0 flex-1 items-center justify-center p-5'}>
         <div className={scopesOpen ? 'flex min-h-0 items-center justify-center p-4' : 'contents'}>
-          <div className="aspect-video w-full max-w-[960px] overflow-hidden rounded-md bg-black shadow-soft">
-            <canvas ref={canvasRef} width={1280} height={720} className="h-full w-full" data-testid="preview-canvas" />
+          <div ref={compareFrameRef} className="relative aspect-video w-full max-w-[960px] overflow-hidden rounded-md bg-black shadow-soft">
+            <canvas
+              ref={canvasRef}
+              width={1280}
+              height={720}
+              className={`absolute inset-0 h-full w-full ${compareShowsDifference ? 'opacity-0' : 'opacity-100'}`}
+              data-testid="preview-canvas"
+            />
+            {compareEnabled ? (
+              <canvas
+                ref={originalCanvasRef}
+                width={1280}
+                height={720}
+                className={`absolute inset-0 h-full w-full ${compareShowsDifference ? 'opacity-0' : 'opacity-100'}`}
+                style={buildPreviewCompareOverlayStyle(activeCompareMode, compareSplitRatio)}
+                data-testid="preview-compare-original-canvas"
+              />
+            ) : null}
+            {compareShowsDifference ? (
+              <canvas ref={differenceCanvasRef} width={1280} height={720} className="absolute inset-0 h-full w-full" data-testid="preview-compare-difference-canvas" />
+            ) : null}
+            {compareEnabled && !compareShowsDifference ? (
+              <div
+                role="separator"
+                aria-label={t.compareDivider}
+                data-testid="preview-compare-divider"
+                data-orientation={activeCompareMode === 'top-bottom' ? 'horizontal' : 'vertical'}
+                className={`absolute z-10 bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.55)] ${activeCompareMode === 'top-bottom' ? 'cursor-row-resize' : 'cursor-col-resize'} ${
+                  compareDividerDragging ? 'opacity-100' : 'opacity-80'
+                }`}
+                style={buildPreviewCompareDividerStyle(activeCompareMode, compareSplitRatio)}
+                onPointerDown={(event) => {
+                  event.currentTarget.setPointerCapture(event.pointerId);
+                  setCompareDividerDragging(true);
+                  updateCompareSplitFromPointer(event);
+                }}
+                onPointerMove={(event) => {
+                  if (compareDividerDragging) {
+                    updateCompareSplitFromPointer(event);
+                  }
+                }}
+                onPointerUp={(event) => {
+                  event.currentTarget.releasePointerCapture(event.pointerId);
+                  setCompareDividerDragging(false);
+                  updateCompareSplitFromPointer(event);
+                }}
+                onPointerCancel={() => setCompareDividerDragging(false)}
+              />
+            ) : null}
           </div>
         </div>
         {scopesOpen ? <ColorScopesPanel frame={scopeFrame} active={scopesOpen} /> : null}

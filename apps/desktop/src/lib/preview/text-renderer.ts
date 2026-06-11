@@ -6,12 +6,14 @@ import type { WebGlPreviewCompositor } from './webgl-compositor';
 
 type TextClip = Extract<Clip, { type: 'text' }> | Extract<Clip, { type: 'subtitle' }>;
 
-export function drawText2d(context: CanvasRenderingContext2D, canvas: HTMLCanvasElement, clip: TextClip): void {
+export function drawText2d(context: CanvasRenderingContext2D, canvas: HTMLCanvasElement, clip: TextClip, bypassProcessing = false): void {
   const previousFilter = context.filter;
   const transform = resolveTextTransform(canvas.height, clip);
   context.save();
   const correction = clip.colorCorrection;
-  context.filter = `brightness(${Math.max(0, 1 + correction.brightness)}) contrast(${correction.contrast}) saturate(${correction.saturation}) hue-rotate(${correction.hue}deg)`;
+  context.filter = bypassProcessing
+    ? 'none'
+    : `brightness(${Math.max(0, 1 + correction.brightness)}) contrast(${correction.contrast}) saturate(${correction.saturation}) hue-rotate(${correction.hue}deg)`;
   context.globalAlpha = transform.opacity;
   context.translate(canvas.width / 2 + transform.x, canvas.height / 2 + transform.y);
   context.rotate((transform.rotation * Math.PI) / 180);
@@ -28,8 +30,8 @@ export function drawText2d(context: CanvasRenderingContext2D, canvas: HTMLCanvas
   recordPreviewDraw(clip.type, 'text');
 }
 
-export function drawTextWebGl(compositor: WebGlPreviewCompositor, clip: TextClip): void {
-  compositor.drawText(clip.text, clip.transform, clip.style, clip.colorCorrection, clip.effects);
+export function drawTextWebGl(compositor: WebGlPreviewCompositor, clip: TextClip, bypassProcessing = false): void {
+  compositor.drawText(clip.text, clip.transform, clip.style, clip.colorCorrection, clip.effects, { bypassProcessing });
   recordPreviewDraw(clip.type, 'text');
 }
 
