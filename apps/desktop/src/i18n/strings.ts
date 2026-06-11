@@ -34,6 +34,7 @@ export const zhCN = {
     exportVideo: '导出视频',
     exportCurrentFrame: '导出当前帧',
     exportDisabled: '请先向时间线添加媒体',
+    settings: '设置',
     clearMediaCache: '清除媒体缓存',
     autosaveInterval: '自动保存间隔',
     autosave: '自动保存',
@@ -49,6 +50,33 @@ export const zhCN = {
     cancelExport: '取消导出',
     openExportFolder: '打开导出文件夹',
     localExport: '本地多轨导出'
+  },
+  settings: {
+    title: '设置',
+    subtitle: '本地配置和素材库',
+    tabs: {
+      lutLibrary: 'LUT库'
+    },
+    lutLibrary: {
+      title: 'LUT库',
+      loading: '正在扫描 LUT...',
+      empty: '配置目录中没有 .cube LUT 文件。',
+      refresh: '刷新',
+      preview: '预览',
+      apply: '确认应用',
+      favorite: '收藏',
+      unfavorite: '取消收藏',
+      applied: 'LUT 已应用',
+      applyFailed: 'LUT 应用失败',
+      applyFailedMessage: '无法应用该 LUT。',
+      favoriteFailed: '收藏失败',
+      favoriteFailedMessage: '无法更新 LUT 收藏。',
+      loadFailed: 'LUT 库加载失败',
+      loadFailedMessage: '无法读取配置目录中的 LUT。',
+      noClipSelected: '未选择可用片段',
+      noClipSelectedMessage: '请选择视频或图片片段后再预览或应用 LUT。',
+      readyForClip: (name: string) => `将应用到 ${name}`
+    }
   },
   mediaBin: {
     title: '媒体',

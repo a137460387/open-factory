@@ -8,6 +8,7 @@ import { MediaBin } from './MediaBin/MediaBin';
 import { PreviewCanvas } from './PreviewCanvas/PreviewCanvas';
 import { Timeline } from './Timeline/Timeline';
 import { ExportDialog } from '../export/ExportDialog';
+import { SettingsDialog } from '../settings/SettingsDialog';
 import { useAutosave } from '../hooks/useAutosave';
 import { useCloseGuard } from '../hooks/useCloseGuard';
 import { useShortcuts } from '../hooks/useShortcuts';
@@ -66,6 +67,7 @@ export function EditorShell() {
   const setOutPoint = useEditorStore((state) => state.setOutPoint);
   const [lastExportPath, setLastExportPath] = useState<string>();
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [autosaveIntervalSeconds, setAutosaveIntervalSeconds] = useState(() => readAutosaveIntervalSeconds());
   const [recoveryCandidate, setRecoveryCandidate] = useState<AutosaveRecoveryCandidate>();
   const [archiveProgress, setArchiveProgress] = useState<ArchiveProgress>();
@@ -444,6 +446,7 @@ export function EditorShell() {
           onUndo={undo}
           onRedo={redo}
           onClearCache={() => void clearCache()}
+          onOpenSettings={() => setSettingsOpen(true)}
           autosaveIntervalSeconds={autosaveIntervalSeconds}
           onAutosaveIntervalSecondsChange={(seconds) => {
             setAutosaveIntervalSeconds(writeAutosaveIntervalSeconds(seconds));
@@ -495,6 +498,7 @@ export function EditorShell() {
             }}
           />
         ) : null}
+        <SettingsDialog open={settingsOpen} project={project} selectedClip={selectedClip} onClose={() => setSettingsOpen(false)} />
         {recoveryCandidate ? (
           <AutosaveRecoveryDialog
             onRestore={() => void restoreRecovery()}

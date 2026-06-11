@@ -49,6 +49,8 @@ const relinkedAudio = 'C:/Relink/tiny-audio.wav';
 const relinkedImage = 'C:/Relink/test-image.png';
 const appDataDir = 'C:/Users/E2E/AppData/Roaming/open-factory';
 const exportPresetsPath = `${appDataDir}/presets.json`;
+const lutLibraryPath = `${appDataDir}/luts/Warm Contrast.cube`;
+const lutFavoritesPath = `${appDataDir}/lut-favorites.json`;
 
 files.set(sampleProjectPath, JSON.stringify(makeProjectFile(tinyVideo, false), null, 2));
 files.set(missingProjectPath, JSON.stringify(makeProjectFile('C:/Missing/tiny-video.mp4', true), null, 2));
@@ -57,6 +59,7 @@ files.set(
   tinySrt,
   ['1', '00:00:00,500 --> 00:00:02,000', 'Hello subtitle', '', '2', '00:00:02,500 --> 00:00:04,000', 'Second subtitle', ''].join('\n')
 );
+files.set(lutLibraryPath, makeWarmContrastCube());
 for (const path of [
   tinyVideo,
   tinyAudio,
@@ -71,6 +74,7 @@ for (const path of [
   relinkedVideo,
   relinkedAudio,
   relinkedImage,
+  lutLibraryPath,
   sampleProjectPath,
   missingProjectPath,
   batchMissingProjectPath
@@ -144,7 +148,12 @@ const mocks: TauriMocks = {
     size: path === silencePatternAudio ? createSilencePatternWav().byteLength : path.endsWith('.wav') ? 2048 : 4096,
     mtimeMs: mtimes.get(path) ?? (path.includes('Relink') ? 2_000 : 1_000)
   }),
-  scanDirectory: () => [relinkedVideo, relinkedAudio, relinkedImage, 'C:/Relink/other.mp4'],
+  scanDirectory: (path) => {
+    if (path === appDataDir) {
+      return [lutLibraryPath, `${appDataDir}/luts/readme.txt`];
+    }
+    return [relinkedVideo, relinkedAudio, relinkedImage, 'C:/Relink/other.mp4'];
+  },
   detectFfmpeg: () => true,
   getFfmpegCapabilities: () => ({
     available: true,
@@ -391,6 +400,9 @@ window.__E2E_ACTIONS__ = {
     files.delete(exportPresetsPath);
     exists.set(exportPresetsPath, false);
     mtimes.delete(exportPresetsPath);
+    files.delete(lutFavoritesPath);
+    exists.set(lutFavoritesPath, false);
+    mtimes.delete(lutFavoritesPath);
   },
   clearExportPresets: () => {
     files.delete(exportPresetsPath);
@@ -488,6 +500,21 @@ function solidColorSample([r, g, b]: [number, number, number]) {
   const height = 8;
   const data = Array.from({ length: width * height }, () => [r, g, b, 255]).flat();
   return { width, height, data };
+}
+
+function makeWarmContrastCube(): string {
+  return [
+    'TITLE "Warm Contrast"',
+    'LUT_3D_SIZE 2',
+    '0 0 0',
+    '1 0.08 0',
+    '0.05 1 0',
+    '1 1 0.04',
+    '0.05 0 1',
+    '1 0.08 1',
+    '0.05 1 1',
+    '1 1 1'
+  ].join('\n');
 }
 
 function persistFiles(): void {

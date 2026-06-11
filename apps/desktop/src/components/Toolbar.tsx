@@ -1,4 +1,4 @@
-import { Archive, Captions, Download, FileDown, FilePlus2, FolderOpen, ImageDown, Mic2, Pause, Play, Redo2, RotateCcw, Save, Scissors, Trash2, Undo2, XCircle } from 'lucide-react';
+import { Archive, Captions, Download, FileDown, FilePlus2, FolderOpen, ImageDown, Mic2, Pause, Play, Redo2, RotateCcw, Save, Scissors, Settings, Trash2, Undo2, XCircle } from 'lucide-react';
 import { timelineHasExportableVideo } from '@open-factory/editor-core';
 import { clsx } from 'clsx';
 import { useExportQueueStore } from '../export/export-queue-store';
@@ -22,6 +22,7 @@ interface ToolbarProps {
   onUndo(): void;
   onRedo(): void;
   onClearCache(): void;
+  onOpenSettings(): void;
   autosaveIntervalSeconds: number;
   onAutosaveIntervalSecondsChange(seconds: number): void;
   onRevealExport?(): void;
@@ -85,6 +86,7 @@ export function Toolbar(props: ToolbarProps) {
         icon={<ImageDown size={17} />}
         testId="toolbar-export-frame-button"
       />
+      <ToolButton title={t.settings} onClick={props.onOpenSettings} icon={<Settings size={17} />} testId="toolbar-settings-button" />
       <ToolButton title={t.clearMediaCache} onClick={props.onClearCache} icon={<Trash2 size={17} />} testId="settings-clear-cache-button" />
       <label className="ml-1 inline-flex h-9 items-center gap-1 rounded-md border border-line bg-panel px-2 text-[11px] text-slate-600" title={t.autosaveInterval}>
         <span>{t.autosave}</span>
