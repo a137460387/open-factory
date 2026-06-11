@@ -40,6 +40,8 @@ export function ExportDialog({ project, onClose, onCompleted }: ExportDialogProp
   const selectedPreset = useMemo(() => getExportPreset(presetId, presets), [presetId, presets]);
   const exportSettings = useMemo(() => normalizeDraftSettings(draftSettings), [draftSettings]);
   const isAudioOnly = exportSettings.outputMode === 'audio' || exportSettings.format === 'm4a';
+  const hardwareEncodingEligible = !isAudioOnly && (exportSettings.format === 'mp4' || exportSettings.format === 'mov');
+  const hardwareEncodingRequested = hardwareEncodingEligible && exportSettings.hardwareEncoding === true;
 
   useEffect(() => {
     let canceled = false;
@@ -218,6 +220,13 @@ export function ExportDialog({ project, onClose, onCompleted }: ExportDialogProp
             <PresetTextField label={t.fields.audioBitrate} value={draftSettings.audioBitrate ?? ''} onChange={(value) => updateStringSetting(setDraftSettings, 'audioBitrate', value)} testId="export-audio-bitrate-input" />
             <PresetSelectField label={t.fields.subtitles} value={draftSettings.subtitleMode ?? 'default'} disabled={isAudioOnly} onChange={(value) => updateSubtitleMode(setDraftSettings, value)} testId="export-subtitle-mode-select" options={['default', 'burn-in', 'soft-sub']} />
             <PresetSelectField label={t.fields.scale} value={draftSettings.scaleMode ?? 'none'} disabled={isAudioOnly} onChange={(value) => updateScaleMode(setDraftSettings, value)} testId="export-scale-mode-select" options={['none', 'fit']} />
+            <PresetCheckboxField
+              label={t.fields.hardwareEncoding}
+              checked={hardwareEncodingRequested}
+              disabled={!hardwareEncodingEligible}
+              onChange={(checked) => updateHardwareEncoding(setDraftSettings, checked)}
+              testId="export-hardware-encoding-toggle"
+            />
           </div>
           <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 md:grid-cols-4">
             <Info label={t.info.resolution} value={isAudioOnly ? zhCN.common.audioOnly : `${exportSettings.width ?? project.settings.width} x ${exportSettings.height ?? project.settings.height}`} />
@@ -228,6 +237,11 @@ export function ExportDialog({ project, onClose, onCompleted }: ExportDialogProp
             <Info label={t.info.audioCodec} value={exportSettings.audioCodec ?? 'aac'} />
             <Info label={t.info.ffmpeg} value={capabilities?.available ? capabilities.version ?? zhCN.common.available : zhCN.common.missing} tone={capabilities?.available ? 'ok' : 'bad'} />
             <Info label={t.info.drawtext} value={capabilities?.hasDrawtext && capabilities.hasLibfreetype ? zhCN.common.available : zhCN.common.unavailable} tone={capabilities?.hasDrawtext && capabilities.hasLibfreetype ? 'ok' : 'warn'} />
+            <Info
+              label={t.info.hardwareEncoder}
+              value={capabilities?.hardwareEncoderAvailable && capabilities.hardwareEncoder ? capabilities.hardwareEncoder : zhCN.common.unavailable}
+              tone={capabilities?.hardwareEncoderAvailable ? 'ok' : 'warn'}
+            />
           </div>
           <div className="grid grid-cols-[110px_1fr] gap-2">
             <label className="pt-1.5 text-xs font-medium text-slate-600">{t.batchPaths}</label>
@@ -240,6 +254,11 @@ export function ExportDialog({ project, onClose, onCompleted }: ExportDialogProp
             />
           </div>
           {capabilities?.drawtextWarning ? <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900">{formatExportWarning(capabilities.drawtextWarning)}</div> : null}
+          {hardwareEncodingRequested && capabilities && !capabilities.hardwareEncoderAvailable ? (
+            <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900" data-testid="export-hardware-fallback-warning">
+              {t.hardwareEncodingFallback}
+            </div>
+          ) : null}
           {error ? <pre className="max-h-32 overflow-auto rounded-md bg-rose-50 p-2 text-xs text-rose-800 whitespace-pre-wrap">{error}</pre> : null}
           <div className="rounded-md border border-line" data-testid="export-queue-list">
             <div className="flex items-center justify-between border-b border-line px-3 py-2">
@@ -274,10 +293,13 @@ export function ExportDialog({ project, onClose, onCompleted }: ExportDialogProp
 
 function normalizeDraftSettings(settings: ExportPresetSettings): ExportPresetSettings {
   const format = settings.format ?? 'mp4';
+  const outputMode = format === 'm4a' ? 'audio' : settings.outputMode ?? 'video';
+  const hardwareEncoding = outputMode === 'video' && (format === 'mp4' || format === 'mov') && settings.hardwareEncoding === true;
   return {
     ...settings,
     format,
-    outputMode: format === 'm4a' ? 'audio' : settings.outputMode ?? 'video'
+    outputMode,
+    hardwareEncoding
   };
 }
 
@@ -314,6 +336,7 @@ function updateFormat(setDraftSettings: Dispatch<SetStateAction<ExportPresetSett
       next.audioCodec = 'aac';
       delete next.videoCodec;
       delete next.videoBitrate;
+      delete next.hardwareEncoding;
       return next;
     }
     if (value === 'png-sequence') {
@@ -322,12 +345,14 @@ function updateFormat(setDraftSettings: Dispatch<SetStateAction<ExportPresetSett
       next.audioCodec = 'aac';
       delete next.videoBitrate;
       delete next.audioBitrate;
+      delete next.hardwareEncoding;
       return next;
     }
     next.outputMode = 'video';
     if (value === 'webm') {
       next.videoCodec = 'libvpx-vp9';
       next.audioCodec = 'libopus';
+      delete next.hardwareEncoding;
     } else {
       next.videoCodec = 'libx264';
       next.audioCodec = 'aac';
@@ -350,6 +375,10 @@ function updateSubtitleMode(setDraftSettings: Dispatch<SetStateAction<ExportPres
 
 function updateScaleMode(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, value: string): void {
   setDraftSettings((current) => ({ ...current, scaleMode: value === 'fit' ? 'fit' : 'none' }));
+}
+
+function updateHardwareEncoding(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, checked: boolean): void {
+  setDraftSettings((current) => ({ ...current, hardwareEncoding: checked }));
 }
 
 function PresetNumberField({
@@ -423,6 +452,27 @@ function PresetSelectField({
   );
 }
 
+function PresetCheckboxField({
+  label,
+  checked,
+  disabled,
+  onChange,
+  testId
+}: {
+  label: string;
+  checked: boolean;
+  disabled?: boolean;
+  onChange(checked: boolean): void;
+  testId: string;
+}) {
+  return (
+    <label className={`flex min-h-[58px] items-center gap-2 rounded-md border border-line px-2 py-1.5 text-xs font-medium text-slate-600 ${disabled ? 'bg-slate-100 opacity-70' : ''}`}>
+      <input className="h-4 w-4 accent-brand" type="checkbox" checked={checked} disabled={disabled} onChange={(event) => onChange(event.target.checked)} data-testid={testId} />
+      <span>{label}</span>
+    </label>
+  );
+}
+
 function formatOptionLabel(value: string): string {
   if (value === 'default') {
     return zhCN.exportDialog.options.default;
@@ -478,6 +528,9 @@ function formatExportWarning(warning: string): string {
   }
   if (warning === 'Current FFmpeg does not support drawtext/libfreetype. Install an FFmpeg build with libfreetype to export text overlays.') {
     return zhCN.exportDialog.ffmpegDrawtextUnavailable;
+  }
+  if (warning === 'Hardware video encoding was requested but no supported H.264 hardware encoder was detected. Falling back to software encoding.') {
+    return zhCN.exportDialog.hardwareEncodingFallback;
   }
   return warning;
 }

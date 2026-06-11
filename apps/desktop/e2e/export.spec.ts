@@ -34,3 +34,20 @@ test('builds a multitrack FFmpeg plan with text artifacts and runs mocked export
   expect(plan.textArtifacts).toHaveLength(1);
   expect(plan.fullArgs.at(-1)).toBe('C:/Exports/e2e-output-2.mp4');
 });
+
+test('uses detected NVENC hardware encoder when hardware encoding is enabled', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.getByTestId('import-media-button').click();
+  await addMediaCardToTimeline(page, 0);
+
+  await openExportDialog(page);
+  await page.getByTestId('export-preset-select').selectOption('web-1080p');
+  await expect(page.getByTestId('export-hardware-encoding-toggle')).toBeEnabled();
+  await page.getByTestId('export-hardware-encoding-toggle').check();
+  await page.getByTestId('export-enqueue-button').click();
+  await expectExportTaskStatus(page, 0, 'success');
+
+  const plan = await page.evaluate(() => window.__E2E_ACTIONS__!.getLastExportPlan!() as { fullArgs: string[] });
+  expect(plan.fullArgs).toEqual(expect.arrayContaining(['-c:v', 'h264_nvenc', '-preset', 'p4', '-cq', '23']));
+});

@@ -11,6 +11,7 @@ use tauri::{AppHandle, Emitter, Manager};
 
 static EXPORT_CHILD: OnceLock<Mutex<Option<Child>>> = OnceLock::new();
 static EXPORT_TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
+static HARDWARE_ENCODER_CACHE: OnceLock<Mutex<Option<HardwareEncoderProbe>>> = OnceLock::new();
 
 fn export_child() -> &'static Mutex<Option<Child>> {
     EXPORT_CHILD.get_or_init(|| Mutex::new(None))
@@ -25,7 +26,16 @@ pub struct FfmpegCapabilities {
     has_aac: bool,
     has_drawtext: bool,
     has_libfreetype: bool,
+    hardware_encoder_available: bool,
+    hardware_encoder: Option<String>,
     drawtext_warning: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct HardwareEncoderProbe {
+    available: bool,
+    encoder: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -117,6 +127,7 @@ pub fn get_ffmpeg_capabilities() -> FfmpegCapabilities {
     let has_drawtext = filters.contains("drawtext");
     let has_libfreetype =
         buildconf.contains("enable-libfreetype") || buildconf.contains("libfreetype");
+    let hardware_encoder = detect_hardware_encoder(&encoders);
 
     FfmpegCapabilities {
         available,
@@ -128,12 +139,51 @@ pub fn get_ffmpeg_capabilities() -> FfmpegCapabilities {
         has_aac: encoders.to_lowercase().contains(" aac"),
         has_drawtext,
         has_libfreetype,
+        hardware_encoder_available: hardware_encoder.available,
+        hardware_encoder: hardware_encoder.encoder,
         drawtext_warning: if available && (!has_drawtext || !has_libfreetype) {
             Some("Current FFmpeg does not support drawtext/libfreetype. Install an FFmpeg build with libfreetype to export text overlays.".to_string())
         } else {
             None
         },
     }
+}
+
+fn detect_hardware_encoder(encoders: &str) -> HardwareEncoderProbe {
+    let cache = HARDWARE_ENCODER_CACHE.get_or_init(|| Mutex::new(None));
+    if let Ok(guard) = cache.lock() {
+        if let Some(cached) = guard.clone() {
+            return cached;
+        }
+    }
+    let probe = parse_hardware_encoder_for_os(encoders, std::env::consts::OS);
+    if let Ok(mut guard) = cache.lock() {
+        *guard = Some(probe.clone());
+    }
+    probe
+}
+
+fn parse_hardware_encoder_for_os(encoders: &str, os: &str) -> HardwareEncoderProbe {
+    let target = preferred_hardware_encoder_for_os(os);
+    let encoder = target.filter(|name| encoder_list_contains(encoders, name));
+    HardwareEncoderProbe {
+        available: encoder.is_some(),
+        encoder: encoder.map(ToOwned::to_owned),
+    }
+}
+
+fn preferred_hardware_encoder_for_os(os: &str) -> Option<&'static str> {
+    match os {
+        "windows" => Some("h264_nvenc"),
+        "macos" => Some("h264_videotoolbox"),
+        _ => None,
+    }
+}
+
+fn encoder_list_contains(encoders: &str, encoder: &str) -> bool {
+    encoders
+        .lines()
+        .any(|line| line.split_whitespace().any(|token| token == encoder))
 }
 
 #[tauri::command]
@@ -739,6 +789,51 @@ mod tests {
             ))
         );
         assert_eq!(parse_progress("frame=10 speed=1x", 10.0), None);
+    }
+
+    #[test]
+    fn parses_preferred_hardware_encoders_by_platform() {
+        let encoders = r#"
+ Encoders:
+ V....D h264_nvenc           NVIDIA NVENC H.264 encoder (codec h264)
+ V....D h264_videotoolbox    VideoToolbox H.264 Encoder
+ V....D h264_nvenc_extra     Not the exact encoder token
+"#;
+
+        assert_eq!(
+            parse_hardware_encoder_for_os(encoders, "windows"),
+            HardwareEncoderProbe {
+                available: true,
+                encoder: Some("h264_nvenc".to_string()),
+            }
+        );
+        assert_eq!(
+            parse_hardware_encoder_for_os(encoders, "macos"),
+            HardwareEncoderProbe {
+                available: true,
+                encoder: Some("h264_videotoolbox".to_string()),
+            }
+        );
+        assert_eq!(
+            parse_hardware_encoder_for_os(encoders, "linux"),
+            HardwareEncoderProbe {
+                available: false,
+                encoder: None,
+            }
+        );
+    }
+
+    #[test]
+    fn hardware_encoder_parser_requires_exact_encoder_token() {
+        let encoders = " V....D h264_nvenc_extra Not exact";
+
+        assert_eq!(
+            parse_hardware_encoder_for_os(encoders, "windows"),
+            HardwareEncoderProbe {
+                available: false,
+                encoder: None,
+            }
+        );
     }
 
     #[test]

@@ -16,6 +16,7 @@ export interface ExportSettings {
   outputMode?: 'video' | 'audio';
   scaleMode?: 'none' | 'fit';
   subtitleMode?: ExportSubtitleMode;
+  hardwareEncoding?: boolean;
 }
 
 export interface ExportTransform {
@@ -229,5 +230,7 @@ export interface FfmpegCapabilities {
   hasAac: boolean;
   hasDrawtext: boolean;
   hasLibfreetype: boolean;
+  hardwareEncoderAvailable: boolean;
+  hardwareEncoder: string | null;
   drawtextWarning: string | null;
 }

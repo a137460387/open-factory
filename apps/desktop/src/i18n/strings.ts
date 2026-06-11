@@ -375,7 +375,8 @@ export const zhCN = {
       videoBitrate: '视频码率',
       audioBitrate: '音频码率',
       subtitles: '字幕',
-      scale: '缩放'
+      scale: '缩放',
+      hardwareEncoding: '硬件编码'
     },
     info: {
       resolution: '分辨率',
@@ -385,7 +386,8 @@ export const zhCN = {
       videoCodec: '视频编码',
       audioCodec: '音频编码',
       ffmpeg: 'FFmpeg',
-      drawtext: 'Drawtext'
+      drawtext: 'Drawtext',
+      hardwareEncoder: '硬件编码器'
     },
     batchPaths: '批量路径',
     batchPlaceholder: '可选：每行一个输出路径',
@@ -412,6 +414,7 @@ export const zhCN = {
     framePngFilterName: 'PNG 图片',
     frameJpegFilterName: 'JPEG 图片',
     ffmpegDrawtextUnavailable: '当前 FFmpeg 不支持 drawtext/libfreetype。请安装包含 libfreetype 的 FFmpeg 版本以导出文字叠加。',
+    hardwareEncodingFallback: '未检测到可用的 H.264 硬件编码器，将回退为软编码。',
     textClipSkippedDrawtext: (clipId: string) => `文字片段 ${clipId} 已跳过：FFmpeg drawtext/libfreetype 不可用。`,
     transitionSkippedVisualOnly: (transitionId: string) => `过渡 ${transitionId} 已跳过：两侧片段都必须是可视媒体。`,
     transitionSkippedChained: (transitionId: string) => `过渡 ${transitionId} 已跳过：单个导出片段暂不支持连续过渡。`,

@@ -131,6 +131,8 @@ const mocks: TauriMocks = {
     hasAac: true,
     hasDrawtext: true,
     hasLibfreetype: true,
+    hardwareEncoderAvailable: true,
+    hardwareEncoder: 'h264_nvenc',
     drawtextWarning: null
   }),
   runExport: async (plan) => {

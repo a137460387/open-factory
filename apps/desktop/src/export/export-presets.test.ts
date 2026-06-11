@@ -99,6 +99,7 @@ describe('export presets', () => {
               audioCodec: ' libopus ',
               audioBitrate: null,
               subtitleMode: 'soft-sub',
+              hardwareEncoding: true,
               extra: 'ignored'
             }
           },
@@ -118,7 +119,8 @@ describe('export presets', () => {
           videoCodec: 'libvpx-vp9',
           audioCodec: 'libopus',
           audioBitrate: null,
-          subtitleMode: 'soft-sub'
+          subtitleMode: 'soft-sub',
+          hardwareEncoding: true
         }
       })
     ]);

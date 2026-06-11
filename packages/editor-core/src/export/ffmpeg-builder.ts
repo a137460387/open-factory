@@ -69,7 +69,8 @@ export const DEFAULT_EXPORT_SETTINGS: Omit<ExportSettings, 'outputPath'> = {
   audioBitrate: null,
   outputMode: 'video',
   scaleMode: 'none',
-  subtitleMode: undefined
+  subtitleMode: undefined,
+  hardwareEncoding: false
 };
 
 export const SETPTS_EXPRESSION_LIMIT = 4096;
@@ -366,6 +367,7 @@ export function buildFfmpegExportPlan(
     maps.push('-map', `${softSubtitleInputIndex}:s:0`);
     subtitleOutputArgs.push('-c:s', 'mov_text');
   }
+  const videoEncodingArgs = buildVideoEncodingArgs(settings, capabilities, warnings, audioOnly || videoFramesOnly);
   const outputArgs =
     pngSequence
       ? ['-r', String(settings.fps), '-f', 'image2', pngSequenceOutputPath(settings.outputPath)]
@@ -373,7 +375,7 @@ export function buildFfmpegExportPlan(
       ? [
           ...(audioOnly
             ? []
-            : ['-c:v', settings.videoCodec, ...buildBitrateArgs('-b:v', settings.videoBitrate), '-pix_fmt', 'yuv420p', '-r', String(settings.fps)]),
+            : videoEncodingArgs),
           '-c:a',
           settings.audioCodec,
           ...buildBitrateArgs('-b:a', settings.audioBitrate),
@@ -1036,6 +1038,22 @@ function buildImageSequenceArtifact(clip: ExportClip): TextArtifact {
 function buildBitrateArgs(flag: '-b:v' | '-b:a', bitrate: string | null | undefined): string[] {
   const value = bitrate?.trim();
   return value ? [flag, value] : [];
+}
+
+function buildVideoEncodingArgs(settings: ExportSettings, capabilities: FfmpegCapabilities | undefined, warnings: string[], skipVideoCodec: boolean): string[] {
+  if (skipVideoCodec) {
+    return [];
+  }
+  if (settings.hardwareEncoding) {
+    const format = settings.format.toLowerCase();
+    const hardwareAllowedForContainer = format === 'mp4' || format === 'mov';
+    const encoder = capabilities?.hardwareEncoderAvailable ? capabilities.hardwareEncoder : null;
+    if (hardwareAllowedForContainer && encoder) {
+      return ['-c:v', encoder, '-preset', 'p4', '-cq', '23', '-pix_fmt', 'yuv420p', '-r', String(settings.fps)];
+    }
+    warnings.push('Hardware video encoding was requested but no supported H.264 hardware encoder was detected. Falling back to software encoding.');
+  }
+  return ['-c:v', settings.videoCodec, ...buildBitrateArgs('-b:v', settings.videoBitrate), '-pix_fmt', 'yuv420p', '-r', String(settings.fps)];
 }
 
 function buildContainerArgs(settings: ExportSettings): string[] {

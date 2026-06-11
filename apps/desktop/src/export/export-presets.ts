@@ -42,7 +42,8 @@ export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
       audioBitrate: '192k',
       format: 'mp4',
       outputMode: 'video',
-      scaleMode: 'none'
+      scaleMode: 'none',
+      hardwareEncoding: false
     }
   },
   {
@@ -60,7 +61,8 @@ export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
       audioBitrate: '320k',
       format: 'mp4',
       outputMode: 'video',
-      scaleMode: 'none'
+      scaleMode: 'none',
+      hardwareEncoding: false
     }
   },
   {
@@ -78,7 +80,8 @@ export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
       audioBitrate: '192k',
       format: 'mp4',
       outputMode: 'video',
-      scaleMode: 'fit'
+      scaleMode: 'fit',
+      hardwareEncoding: false
     }
   },
   {
@@ -96,7 +99,8 @@ export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
       audioBitrate: '128k',
       format: 'mp4',
       outputMode: 'video',
-      scaleMode: 'fit'
+      scaleMode: 'fit',
+      hardwareEncoding: false
     }
   },
   {
@@ -252,6 +256,9 @@ function sanitizeExportSettings(settings: unknown): ExportPresetSettings {
   }
   if (input.subtitleMode === 'burn-in' || input.subtitleMode === 'soft-sub') {
     output.subtitleMode = input.subtitleMode;
+  }
+  if (input.hardwareEncoding === true) {
+    output.hardwareEncoding = true;
   }
   return output;
 }

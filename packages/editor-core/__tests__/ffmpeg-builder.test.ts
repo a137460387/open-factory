@@ -83,11 +83,62 @@ describe('multitrack ffmpeg builder', () => {
       hasAac: true,
       hasDrawtext: false,
       hasLibfreetype: false,
+      hardwareEncoderAvailable: false,
+      hardwareEncoder: null,
       drawtextWarning: 'drawtext missing'
     });
 
     expect(plan.textArtifacts).toHaveLength(0);
     expect(plan.warnings).toContain('drawtext missing');
+  });
+
+  it('uses NVENC hardware encoding args when requested and detected', () => {
+    const project = makeProject();
+    const plan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(project, {
+        outputPath: 'out.mp4',
+        settings: { hardwareEncoding: true }
+      }),
+      {
+        available: true,
+        version: 'ffmpeg',
+        hasLibx264: true,
+        hasAac: true,
+        hasDrawtext: true,
+        hasLibfreetype: true,
+        hardwareEncoderAvailable: true,
+        hardwareEncoder: 'h264_nvenc',
+        drawtextWarning: null
+      }
+    );
+
+    expect(plan.outputArgs).toEqual(expect.arrayContaining(['-c:v', 'h264_nvenc', '-preset', 'p4', '-cq', '23']));
+    expect(plan.outputArgs).not.toContain('-b:v');
+    expect(plan.warnings).not.toContain(expect.stringContaining('Hardware video encoding'));
+  });
+
+  it('falls back to software encoding with a warning when hardware encoding is unavailable', () => {
+    const project = makeProject();
+    const plan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(project, {
+        outputPath: 'out.mp4',
+        settings: { hardwareEncoding: true, videoBitrate: '8M' }
+      }),
+      {
+        available: true,
+        version: 'ffmpeg',
+        hasLibx264: true,
+        hasAac: true,
+        hasDrawtext: true,
+        hasLibfreetype: true,
+        hardwareEncoderAvailable: false,
+        hardwareEncoder: null,
+        drawtextWarning: null
+      }
+    );
+
+    expect(plan.outputArgs).toEqual(expect.arrayContaining(['-c:v', 'libx264', '-b:v', '8M']));
+    expect(plan.warnings).toContain('Hardware video encoding was requested but no supported H.264 hardware encoder was detected. Falling back to software encoding.');
   });
 
   it('exports text-only timelines over a black base with silent audio', () => {
