@@ -129,6 +129,15 @@ const mocks: TauriMocks = {
     persistFiles();
   },
   fsExists: (path) => exists.get(path) ?? !path.endsWith('.autosave'),
+  readColorMatchFrameSample: (path) => {
+    if (path === tinyImage) {
+      return solidColorSample([217, 85, 63]);
+    }
+    if (path === tinyVideo) {
+      return solidColorSample([45, 108, 223]);
+    }
+    return solidColorSample([128, 128, 128]);
+  },
   getAppDataDir: () => appDataDir,
   getFileStat: (path) => ({
     path,
@@ -472,6 +481,13 @@ function emit(event: string, payload: unknown): void {
 
 function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function solidColorSample([r, g, b]: [number, number, number]) {
+  const width = 8;
+  const height = 8;
+  const data = Array.from({ length: width * height }, () => [r, g, b, 255]).flat();
+  return { width, height, data };
 }
 
 function persistFiles(): void {

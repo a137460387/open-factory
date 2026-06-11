@@ -3,7 +3,7 @@ import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { confirm, message as dialogMessage } from '@tauri-apps/plugin-dialog';
 import { open as openShellPath } from '@tauri-apps/plugin-shell';
-import type { FfmpegCapabilities, FfmpegExportPlan, ProxyPlan } from '@open-factory/editor-core';
+import type { ColorMatchFrameSample, FfmpegCapabilities, FfmpegExportPlan, ProxyPlan } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { isTauriRuntime } from './tauri';
 
@@ -115,6 +115,7 @@ export type TauriMocks = Partial<{
   removeFile(path: string): Promise<void> | void;
   copyFile(sourcePath: string, destinationPath: string): Promise<void> | void;
   fsExists(path: string): Promise<boolean> | boolean;
+  readColorMatchFrameSample(path: string): Promise<ColorMatchFrameSample | undefined> | ColorMatchFrameSample | undefined;
   getAppDataDir(): Promise<string> | string;
   getFileStat(path: string): Promise<FileStat> | FileStat;
   scanDirectory(path: string, depth?: number): Promise<string[]> | string[];
@@ -282,6 +283,11 @@ export async function getFileStat(path: string): Promise<FileStat> {
     return mock(path);
   }
   return invoke<FileStat>('get_file_stat', { path });
+}
+
+export async function readColorMatchFrameSample(path: string): Promise<ColorMatchFrameSample | undefined> {
+  const mock = getTauriMocks()?.readColorMatchFrameSample;
+  return mock ? mock(path) : undefined;
 }
 
 export async function authorizePaths(paths: string[]): Promise<void> {

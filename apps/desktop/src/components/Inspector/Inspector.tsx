@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import type { Clip, MediaAsset } from '@open-factory/editor-core';
 import {
   AddKeyframeCommand,
@@ -54,8 +54,9 @@ import { ArrowDown, ArrowUp, GripVertical, Palette, Plus, SlidersHorizontal, Tra
 import { zhCN } from '../../i18n/strings';
 import { commandManager, timelineAccessor } from '../../store/commandManager';
 import { analyzeClip, getFfmpegCapabilities, listenBridge, openFileDialog, type ClipAnalysisProgressEvent } from '../../lib/tauri-bridge';
+import { buildClipColorMatchCurves } from '../../lib/colorMatch';
 import { showToast } from '../../lib/toast';
-import type { SelectedKeyframeRef } from '../../store/editorStore';
+import { useEditorStore, type SelectedKeyframeRef } from '../../store/editorStore';
 
 interface InspectorProps {
   clip?: Clip;
@@ -86,8 +87,11 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
   }
 
   const asset = 'mediaId' in clip ? media.find((item) => item.id === clip.mediaId) : undefined;
+  const project = useEditorStore((state) => state.project);
   const [analysisProgress, setAnalysisProgress] = useState<number | undefined>();
   const [frameInterpolationSupported, setFrameInterpolationSupported] = useState<boolean | undefined>();
+  const [colorMatchReferenceClipId, setColorMatchReferenceClipId] = useState<string>('');
+  const [colorMatchBusy, setColorMatchBusy] = useState(false);
   const commit = (patch: ClipPatch) => {
     try {
       commandManager.execute(new UpdateClipCommand(timelineAccessor, clip.id, patch));
@@ -143,6 +147,13 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
     }
     commit({ keyframes: setKenBurnsEndScaleKeyframes(clip.keyframes, clip.duration, scale) });
   };
+  const colorMatchReferenceClips = useMemo(
+    () =>
+      project.timeline.tracks
+        .flatMap((track) => track.clips)
+        .filter((item) => item.id !== clip.id && (item.type === 'video' || item.type === 'image')),
+    [clip.id, project.timeline.tracks]
+  );
   const selectedKeyframeFrame =
     selectedKeyframe?.clipId === clip.id ? clip.keyframes?.[selectedKeyframe.property]?.find((frame) => frame.id === selectedKeyframe.keyframeId) : undefined;
   const colorCorrection = normalizeColorCorrection(clip.colorCorrection);
@@ -189,6 +200,11 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
       disposed = true;
     };
   }, []);
+  useEffect(() => {
+    if (!colorMatchReferenceClips.some((item) => item.id === colorMatchReferenceClipId)) {
+      setColorMatchReferenceClipId(colorMatchReferenceClips[0]?.id ?? '');
+    }
+  }, [colorMatchReferenceClipId, colorMatchReferenceClips]);
   const runStabilizationAnalysis = async () => {
     if (clip.type !== 'video' || !asset?.path) {
       return;
@@ -226,6 +242,23 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
   const addMask = () => runEffectCommand(new AddMaskCommand(timelineAccessor, clip.id));
   const updateMask = (maskId: string, patch: MaskPatch) => runEffectCommand(new UpdateMaskCommand(timelineAccessor, clip.id, maskId, patch));
   const removeMask = (maskId: string) => runEffectCommand(new RemoveMaskCommand(timelineAccessor, clip.id, maskId));
+  const applyColorMatch = async () => {
+    const referenceClip = colorMatchReferenceClips.find((item) => item.id === colorMatchReferenceClipId);
+    if (!referenceClip) {
+      showToast({ kind: 'warning', title: zhCN.inspector.colorMatch.failed, message: zhCN.inspector.colorMatch.referenceRequired });
+      return;
+    }
+    try {
+      setColorMatchBusy(true);
+      const colorCurves = await buildClipColorMatchCurves(clip, referenceClip, media);
+      commit({ colorCorrection: { colorCurves } });
+      showToast({ kind: 'success', title: zhCN.inspector.colorMatch.applied });
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.inspector.colorMatch.failed, message: error instanceof Error ? error.message : zhCN.inspector.colorMatch.failedMessage });
+    } finally {
+      setColorMatchBusy(false);
+    }
+  };
 
   return (
     <aside className="flex min-h-0 flex-col bg-white">
@@ -413,6 +446,35 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
               onCommit={(zoom) => commit({ stabilization: { ...stabilization, zoom } })}
               testId="stabilization-zoom"
             />
+          </Section>
+        ) : null}
+
+        {clip.type === 'video' || clip.type === 'image' ? (
+          <Section title={zhCN.inspector.sections.colorMatch}>
+            <label className="block text-xs font-medium text-slate-600">
+              <span>{zhCN.inspector.fields.referenceClip}</span>
+              <select
+                className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60"
+                value={colorMatchReferenceClipId}
+                disabled={colorMatchReferenceClips.length === 0 || colorMatchBusy}
+                onChange={(event) => setColorMatchReferenceClipId(event.target.value)}
+                data-testid="color-match-reference-select"
+              >
+                {colorMatchReferenceClips.length === 0 ? <option value="">{zhCN.inspector.colorMatch.noReference}</option> : null}
+                {colorMatchReferenceClips.map((item) => (
+                  <option key={item.id} value={item.id}>{item.name}</option>
+                ))}
+              </select>
+            </label>
+            <button
+              className="w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-60"
+              type="button"
+              disabled={!colorMatchReferenceClipId || colorMatchBusy}
+              onClick={() => void applyColorMatch()}
+              data-testid="apply-color-match-button"
+            >
+              {colorMatchBusy ? zhCN.inspector.colorMatch.applying : zhCN.inspector.colorMatch.apply}
+            </button>
           </Section>
         ) : null}
 

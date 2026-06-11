@@ -7,6 +7,7 @@ const scriptDir = dirname(fileURLToPath(import.meta.url));
 const desktopDir = resolve(scriptDir, '..');
 const repoDir = resolve(desktopDir, '..', '..');
 const coreBuilderModule = join(repoDir, 'packages', 'editor-core', 'dist', 'export', 'ffmpeg-builder.js');
+const coreColorMatchModule = join(repoDir, 'packages', 'editor-core', 'dist', 'color-match.js');
 const smokeDir = join(desktopDir, 'src-tauri', 'target', 'golden-smoke');
 const reportPath = join(smokeDir, 'golden-smoke-report.json');
 const readmePreviewPath = join(repoDir, 'docs', 'open-factory-golden-preview.png');
@@ -46,6 +47,7 @@ if (!existsSync(coreBuilderModule)) {
 mkdirSync(smokeDir, { recursive: true });
 
 const { buildExportProjectFromProject, buildFfmpegExportPlan } = await import(pathToFileURL(coreBuilderModule).href);
+const { buildColorMatchCurves } = await import(pathToFileURL(coreColorMatchModule).href);
 
 const fixtures = [
   {
@@ -110,6 +112,15 @@ const fixtures = [
     expectedDuration: 1.5,
     create: createColorCurvesFixture,
     validate: validateColorCurvesFixture
+  },
+  {
+    name: 'color-match',
+    description: 'blue target clip matched to a coral reference clip through generated RGB curves',
+    outputWidth: 1280,
+    outputHeight: 720,
+    expectedDuration: 3,
+    create: createColorMatchFixture,
+    validate: validateColorMatchFixture
   },
   {
     name: 'color-wheel',
@@ -992,6 +1003,122 @@ async function validateColorCurvesFixture(context) {
           sourceBrightness
         },
         expected: 'center brightness at least 30 below source gray'
+      }
+    ]
+  };
+}
+
+async function createColorMatchFixture(context) {
+  const targetPath = join(context.fixtureDir, 'color-match-target.mp4');
+  const referencePath = join(context.fixtureDir, 'color-match-reference.mp4');
+  const segmentDuration = context.fixture.expectedDuration / 2;
+  await createColorVideoFixture(targetPath, {
+    color: COLORS.blue.ffmpeg,
+    width: context.outputWidth,
+    height: context.outputHeight,
+    duration: segmentDuration,
+    audio: false
+  });
+  await createColorVideoFixture(referencePath, {
+    color: COLORS.coral.ffmpeg,
+    width: context.outputWidth,
+    height: context.outputHeight,
+    duration: segmentDuration,
+    audio: false
+  });
+  const colorCurves = buildColorMatchCurves(solidFrameSample(COLORS.blue.rgb), solidFrameSample(COLORS.coral.rgb));
+  return buildProject({
+    id: 'golden-color-match',
+    name: 'Golden Color Match',
+    width: context.outputWidth,
+    height: context.outputHeight,
+    media: [
+      videoAsset({
+        id: 'asset-color-match-target',
+        name: 'color-match-target.mp4',
+        path: targetPath,
+        duration: segmentDuration,
+        width: context.outputWidth,
+        height: context.outputHeight,
+        hasAudio: false,
+        stat: statSync(targetPath)
+      }),
+      videoAsset({
+        id: 'asset-color-match-reference',
+        name: 'color-match-reference.mp4',
+        path: referencePath,
+        duration: segmentDuration,
+        width: context.outputWidth,
+        height: context.outputHeight,
+        hasAudio: false,
+        stat: statSync(referencePath)
+      })
+    ],
+    tracks: [
+      {
+        id: 'track-color-match',
+        type: 'video',
+        name: 'Color Match',
+        clips: [
+          videoClip({
+            id: 'clip-color-match-target',
+            name: 'Matched blue target',
+            mediaId: 'asset-color-match-target',
+            trackId: 'track-color-match',
+            duration: segmentDuration,
+            colorCorrection: {
+              brightness: 0,
+              contrast: 1,
+              saturation: 1,
+              hue: 0,
+              colorCurves
+            }
+          }),
+          videoClip({
+            id: 'clip-color-match-reference',
+            name: 'Coral reference',
+            mediaId: 'asset-color-match-reference',
+            trackId: 'track-color-match',
+            start: segmentDuration,
+            duration: segmentDuration
+          })
+        ]
+      },
+      emptyAudioTrack(),
+      emptyTextTrack()
+    ]
+  });
+}
+
+async function validateColorMatchFixture(context) {
+  const targetFrame = await readFrame(context.outputPath, { at: 0.75, width: 32, height: 18 });
+  const referenceFrame = await readFrame(context.outputPath, { at: 2.25, width: 32, height: 18 });
+  const targetMean = meanRgb(targetFrame);
+  const referenceMean = meanRgb(referenceFrame);
+  const channelDeltas = targetMean.map((channel, index) => Math.abs(channel - referenceMean[index]));
+  const maxDelta = Math.max(...channelDeltas);
+  const curveArtifact = context.plan.textArtifacts.find((artifact) => artifact.fileName === 'curves-clip_color_match_target.cube');
+  return {
+    checks: [
+      {
+        name: 'color-match-curve-lut-artifact',
+        passed: Boolean(curveArtifact?.text.includes('LUT_1D_SIZE 17')) && context.plan.filterComplex.includes('lut1d=file=__CURVE_LUT_clip_color_match_target__'),
+        actual: {
+          textArtifacts: context.plan.textArtifacts.map((artifact) => artifact.fileName),
+          hasLut1dFilter: context.plan.filterComplex.includes('lut1d=file=__CURVE_LUT_clip_color_match_target__')
+        },
+        expected: 'generated color match curve .cube artifact and lut1d filter'
+      },
+      {
+        name: 'color-match-mean-delta',
+        passed: maxDelta < 15,
+        actual: {
+          targetMean,
+          referenceMean,
+          channelDeltas,
+          maxDelta
+        },
+        expected: 'matched target/reference frame mean channel delta < 15'
       }
     ]
   };
@@ -2254,6 +2381,34 @@ function averageRegion(frame, frameWidth, frameHeight, region) {
 
 function rgbDelta(left, right) {
   return Math.abs(left[0] - right[0]) + Math.abs(left[1] - right[1]) + Math.abs(left[2] - right[2]);
+}
+
+function solidFrameSample(rgb) {
+  const width = 8;
+  const height = 8;
+  return {
+    width,
+    height,
+    data: Array.from({ length: width * height }, () => [rgb[0], rgb[1], rgb[2], 255]).flat()
+  };
+}
+
+function meanRgb(frame) {
+  const sums = [0, 0, 0];
+  let count = 0;
+  for (let offset = 0; offset + 3 < frame.length; offset += 4) {
+    if (frame[offset + 3] <= 200) {
+      continue;
+    }
+    sums[0] += frame[offset];
+    sums[1] += frame[offset + 1];
+    sums[2] += frame[offset + 2];
+    count += 1;
+  }
+  if (count === 0) {
+    return [0, 0, 0];
+  }
+  return sums.map((sum) => round(sum / count));
 }
 
 function pixelNear(pixel, expectedRgb, tolerance) {

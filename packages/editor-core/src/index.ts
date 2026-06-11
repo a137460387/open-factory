@@ -1,6 +1,7 @@
 export * from './time';
 export * from './model';
 export * from './color-grading';
+export * from './color-match';
 export * from './effects';
 export * from './timeline';
 export * from './media-filter';

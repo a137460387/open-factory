@@ -281,6 +281,7 @@ export const zhCN = {
       masks: '遮罩',
       frameInterpolation: '补帧',
       stabilization: '稳定化',
+      colorMatch: '颜色匹配',
       imageSequence: 'PNG 序列',
       keyframe: '关键帧',
       kenBurns: 'Ken Burns',
@@ -290,6 +291,15 @@ export const zhCN = {
       audio: '音频',
       subtitle: '字幕',
       text: '文字'
+    },
+    colorMatch: {
+      apply: '应用',
+      applying: '正在匹配...',
+      applied: '颜色匹配已应用',
+      failed: '颜色匹配失败',
+      failedMessage: '无法完成颜色匹配。',
+      noReference: '没有可用参考片段',
+      referenceRequired: '请选择参考片段。'
     },
     fields: {
       name: '名称',
@@ -320,6 +330,7 @@ export const zhCN = {
       stabilizationProgress: (progress: number) => `分析 ${Math.round(progress * 100)}%`,
       targetFrameRate: '目标帧率',
       frameInterpolationUnsupported: '当前FFmpeg版本不支持',
+      referenceClip: '参考片段',
       sequenceFrameRate: '序列帧率',
       time: '时间',
       value: '数值',
