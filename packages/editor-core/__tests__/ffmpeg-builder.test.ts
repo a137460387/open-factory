@@ -987,6 +987,72 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.filterComplex).not.toContain('eq=brightness=0:contrast=1:saturation=1');
   });
 
+  it('generates built-in camera log LUT artifacts before user cube LUTs', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-log-lut',
+        duration: 2,
+        colorCorrection: {
+          inputColorSpace: 'slog2',
+          lutPath: 'C:\\LUTs\\Cine Look.cube'
+        }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+    const logFilter = 'lut3d=file=__LOG_LUT_slog2_clip_log_lut__';
+    const userFilter = String.raw`lut3d=file=C\\:/LUTs/Cine Look.cube`;
+
+    expect(plan.filterComplex).toContain(logFilter);
+    expect(plan.filterComplex).toContain(userFilter);
+    expect(plan.filterComplex.indexOf(logFilter)).toBeLessThan(plan.filterComplex.indexOf(userFilter));
+    expect(plan.textArtifacts).toEqual([
+      expect.objectContaining({
+        clipId: 'clip-log-lut:input-color-space',
+        fileName: 'log-slog2-clip_log_lut.cube',
+        placeholder: '__LOG_LUT_slog2_clip_log_lut__',
+        text: expect.stringContaining('LUT_3D_SIZE 17')
+      })
+    ]);
+  });
+
+  it('orders color filters as log conversion, user LUT, eq, hue, and color wheel', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-color-order',
+        duration: 2,
+        colorCorrection: {
+          inputColorSpace: 'slog3',
+          lutPath: 'D:\\Looks\\Warm.cube',
+          brightness: 0.1,
+          contrast: 1.2,
+          saturation: 1.1,
+          hue: 20,
+          threeWayColor: {
+            lift: { r: 0.2, g: 0, b: 0, intensity: 1 },
+            gamma: { r: 0, g: 0, b: 0, intensity: 1 },
+            gain: { r: 0, g: 0, b: 0, intensity: 1 }
+          }
+        }
+      })
+    ];
+
+    const filter = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' })).filterComplex;
+    const logIndex = filter.indexOf('lut3d=file=__LOG_LUT_slog3_clip_color_order__');
+    const userLutIndex = filter.indexOf(String.raw`lut3d=file=D\\:/Looks/Warm.cube`);
+    const eqIndex = filter.indexOf('eq=brightness=0.1:contrast=1.2:saturation=1.1');
+    const hueIndex = filter.indexOf('hue=h=20');
+    const wheelIndex = filter.indexOf('colorbalance=rs=0.2');
+
+    expect(logIndex).toBeGreaterThanOrEqual(0);
+    expect(logIndex).toBeLessThan(userLutIndex);
+    expect(userLutIndex).toBeLessThan(eqIndex);
+    expect(eqIndex).toBeLessThan(hueIndex);
+    expect(hueIndex).toBeLessThan(wheelIndex);
+  });
+
   it('generates a temporary 1D LUT only for non-default curves', () => {
     const project = makeProject();
     project.timeline.tracks[0].clips = [

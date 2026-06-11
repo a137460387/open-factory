@@ -31,6 +31,7 @@ import {
   type ColorWheelValue,
   type ThreeWayColor
 } from '../color-grading';
+import { getLogToRec709Lut, isLogInputColorSpace, serializeLogToRec709Cube } from '../color-log-luts';
 import { cloneEffects, type Effect } from '../effects';
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
 import { flattenMulticamProjectForExport } from '../multicam';
@@ -1035,6 +1036,25 @@ function buildColorCorrectionFilters(clip: ExportClip, textArtifacts: TextArtifa
     return [];
   }
   const filters: string[] = [];
+  const inputColorSpace = colorCorrection.inputColorSpace ?? DEFAULT_COLOR_CORRECTION.inputColorSpace ?? 'rec709';
+  if (isLogInputColorSpace(inputColorSpace)) {
+    const lut = getLogToRec709Lut(inputColorSpace);
+    if (lut) {
+      const safeClipId = safeLabel(clip.id);
+      const placeholder = `__LOG_LUT_${safeLabel(inputColorSpace)}_${safeClipId}__`;
+      textArtifacts.push({
+        clipId: `${clip.id}:input-color-space`,
+        text: serializeLogToRec709Cube(lut.colorSpace),
+        fileName: `log-${lut.colorSpace}-${safeClipId}.cube`,
+        placeholder,
+        pathMode: 'filter'
+      });
+      filters.push(`lut3d=file=${placeholder}`);
+    }
+  }
+  if (colorCorrection.lutPath) {
+    filters.push(`lut3d=file=${escapeDrawtextValue(colorCorrection.lutPath)}`);
+  }
   const hasBasicCorrection =
     colorCorrection.brightness !== DEFAULT_COLOR_CORRECTION.brightness ||
     colorCorrection.contrast !== DEFAULT_COLOR_CORRECTION.contrast ||
@@ -1064,9 +1084,6 @@ function buildColorCorrectionFilters(clip: ExportClip, textArtifacts: TextArtifa
       pathMode: 'filter'
     });
     filters.push(`lut1d=file=${placeholder}`);
-  }
-  if (colorCorrection.lutPath) {
-    filters.push(`lut3d=file=${escapeDrawtextValue(colorCorrection.lutPath)}`);
   }
   return filters;
 }

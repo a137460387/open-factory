@@ -1,6 +1,7 @@
 import {
   DEFAULT_COLOR_CORRECTION,
   normalizeColorCorrection,
+  normalizeInputColorSpace,
   normalizeThreeWayColor,
   normalizeChromaKey,
   normalizeMasks,
@@ -10,6 +11,7 @@ import {
   type ColorCorrection,
   type ColorWheelValue,
   type Effect,
+  type InputColorSpace,
   type SubtitleStyle,
   type TextStyle,
   type Transform
@@ -25,6 +27,7 @@ interface ProgramInfo {
   texture: WebGLUniformLocation;
   curveLut: WebGLUniformLocation;
   opacity: WebGLUniformLocation;
+  inputColorSpace: WebGLUniformLocation;
   colorCorrection: WebGLUniformLocation;
   lift: WebGLUniformLocation;
   gamma: WebGLUniformLocation;
@@ -115,6 +118,7 @@ export class WebGlPreviewCompositor {
     gl.bindTexture(gl.TEXTURE_2D, this.curveTexture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 256, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, buildCurveTextureData(correction.colorCurves));
     gl.uniform1f(this.program.opacity, Math.max(0, Math.min(1, transform.opacity)));
+    gl.uniform1f(this.program.inputColorSpace, inputColorSpaceIndex(correction.inputColorSpace));
     gl.uniform4f(this.program.colorCorrection, correction.brightness, correction.contrast, correction.saturation, correction.hue);
     gl.uniform3f(this.program.lift, wheelOffset(threeWayColor.lift, 'r'), wheelOffset(threeWayColor.lift, 'g'), wheelOffset(threeWayColor.lift, 'b'));
     gl.uniform3f(this.program.gamma, wheelValue(threeWayColor.gamma, 'r'), wheelValue(threeWayColor.gamma, 'g'), wheelValue(threeWayColor.gamma, 'b'));
@@ -287,6 +291,25 @@ function wheelValue(value: ColorWheelValue, channel: 'r' | 'g' | 'b'): number {
   return Math.max(0.001, value[channel] + value.intensity);
 }
 
+function inputColorSpaceIndex(value: InputColorSpace | undefined): number {
+  switch (normalizeInputColorSpace(value)) {
+    case 'slog2':
+      return 1;
+    case 'slog3':
+      return 2;
+    case 'clog':
+      return 3;
+    case 'clog3':
+      return 4;
+    case 'llog':
+      return 5;
+    case 'vlog':
+      return 6;
+    default:
+      return 0;
+  }
+}
+
 function buildPreviewEffectParams(effects: Effect[] | undefined): { blur: number; grain: number; vignette: number; chromatic: number; sharpen: number } {
   const params = { blur: 0, grain: 0, vignette: 0, chromatic: 0, sharpen: 0 };
   for (const effect of effects ?? []) {
@@ -385,6 +408,7 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
       uniform sampler2D u_curveLut;
       uniform vec2 u_resolution;
       uniform float u_opacity;
+      uniform float u_inputColorSpace;
       uniform vec4 u_colorCorrection;
       uniform vec3 u_lift;
       uniform vec3 u_gamma;
@@ -408,6 +432,37 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
           0.213 - c * 0.213 - s * 0.787, 0.715 - c * 0.715 + s * 0.715, 0.072 + c * 0.928 + s * 0.072
         );
         return clamp(hueMatrix * color, 0.0, 1.0);
+      }
+
+      vec3 expandLogChannel(vec3 color, float lift, float gamma, float exposure, vec3 shadowTint, vec3 highlightTint, float saturation) {
+        vec3 normalized = max((color - vec3(lift)) / max(1.0 - lift, 0.001), vec3(0.0));
+        vec3 expanded = pow(normalized, vec3(gamma)) * exposure;
+        vec3 tint = mix(shadowTint, highlightTint, color);
+        expanded = clamp(expanded * tint, 0.0, 1.0);
+        float luma = dot(expanded, vec3(0.2126, 0.7152, 0.0722));
+        return clamp(vec3(luma) + (expanded - vec3(luma)) * saturation, 0.0, 1.0);
+      }
+
+      vec3 applyInputColorSpace(vec3 color) {
+        if (u_inputColorSpace < 0.5) {
+          return color;
+        }
+        if (u_inputColorSpace < 1.5) {
+          return expandLogChannel(color, 0.028, 1.48, 1.10, vec3(1.02, 1.0, 0.98), vec3(1.01, 1.0, 0.99), 1.08);
+        }
+        if (u_inputColorSpace < 2.5) {
+          return expandLogChannel(color, 0.035, 1.55, 1.12, vec3(1.01, 1.0, 0.99), vec3(1.02, 1.01, 0.98), 1.10);
+        }
+        if (u_inputColorSpace < 3.5) {
+          return expandLogChannel(color, 0.040, 1.42, 1.08, vec3(1.0), vec3(1.01, 1.0, 0.99), 1.06);
+        }
+        if (u_inputColorSpace < 4.5) {
+          return expandLogChannel(color, 0.045, 1.50, 1.10, vec3(1.0, 1.01, 1.0), vec3(1.01, 1.0, 0.99), 1.08);
+        }
+        if (u_inputColorSpace < 5.5) {
+          return expandLogChannel(color, 0.032, 1.46, 1.09, vec3(1.0, 1.01, 1.02), vec3(1.01, 1.0, 1.0), 1.07);
+        }
+        return expandLogChannel(color, 0.038, 1.52, 1.11, vec3(0.99, 1.0, 1.02), vec3(1.02, 1.01, 1.0), 1.09);
       }
 
       vec3 applyColorCorrection(vec3 color) {
@@ -540,7 +595,8 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
         vec4 color = sampleSource(v_texCoord);
         float keyedAlpha = applyChromaKey(color.rgb);
         float maskAlpha = applyMasks(v_texCoord);
-        vec3 corrected = applyColorCorrection(color.rgb);
+        vec3 corrected = applyInputColorSpace(color.rgb);
+        corrected = applyColorCorrection(corrected);
         corrected = applyThreeWay(corrected);
         corrected = applyCurveLut(corrected);
         corrected = applyPreviewEffects(corrected, v_texCoord);
@@ -562,6 +618,7 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
   const texture = gl.getUniformLocation(program, 'u_texture');
   const curveLut = gl.getUniformLocation(program, 'u_curveLut');
   const opacity = gl.getUniformLocation(program, 'u_opacity');
+  const inputColorSpace = gl.getUniformLocation(program, 'u_inputColorSpace');
   const colorCorrection = gl.getUniformLocation(program, 'u_colorCorrection');
   const lift = gl.getUniformLocation(program, 'u_lift');
   const gamma = gl.getUniformLocation(program, 'u_gamma');
@@ -578,6 +635,7 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
     !texture ||
     !curveLut ||
     !opacity ||
+    !inputColorSpace ||
     !colorCorrection ||
     !lift ||
     !gamma ||
@@ -600,6 +658,7 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
     texture,
     curveLut,
     opacity,
+    inputColorSpace,
     colorCorrection,
     lift,
     gamma,

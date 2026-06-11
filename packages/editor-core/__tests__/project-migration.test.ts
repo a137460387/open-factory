@@ -123,6 +123,21 @@ describe('project schema migration', () => {
     expect(clip.audioDenoise).toEqual({ enabled: false, strength: 0.5 });
   });
 
+  it('backfills missing input color space during migration', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips[0].colorCorrection = {
+      brightness: 0,
+      contrast: 1,
+      saturation: 1,
+      hue: 0,
+      lutPath: null
+    };
+
+    const migrated = migrateProjectFile(serializeProject(project));
+
+    expect(migrated.project.timeline.tracks[0].clips[0].colorCorrection.inputColorSpace).toBe('rec709');
+  });
+
   it('serializes and migrates stabilization and PNG sequence metadata', () => {
     const project = makeProject();
     project.media[0] = {
@@ -245,6 +260,7 @@ describe('project schema migration', () => {
   it('preserves clip LUT paths during migration', () => {
     const project = makeProject();
     project.timeline.tracks[0].clips[0].colorCorrection = {
+      inputColorSpace: 'slog3',
       brightness: 0,
       contrast: 1,
       saturation: 1,
@@ -255,6 +271,7 @@ describe('project schema migration', () => {
     const migrated = migrateProjectFile(serializeProject(project));
 
     expect(migrated.project.timeline.tracks[0].clips[0].colorCorrection.lutPath).toBe('C:\\LUTs\\cinematic.cube');
+    expect(migrated.project.timeline.tracks[0].clips[0].colorCorrection.inputColorSpace).toBe('slog3');
   });
 
   it('backfills track control defaults during migration', () => {

@@ -443,6 +443,7 @@ export const zhCN = {
       endScale: '结束',
       endScaleControl: '结束缩放',
       colorCorrection: '颜色校正',
+      inputColorSpace: '输入色彩空间',
       brightness: '亮度',
       contrast: '对比度',
       saturation: '饱和度',
@@ -482,6 +483,15 @@ export const zhCN = {
       exportMode: '导出模式',
       bold: '加粗',
       italic: '斜体'
+    },
+    inputColorSpaces: {
+      rec709: 'Rec.709 / 标准',
+      slog2: 'Sony S-Log2',
+      slog3: 'Sony S-Log3',
+      clog: 'Canon Log',
+      clog3: 'Canon Log 3',
+      llog: 'Leica L-Log',
+      vlog: 'Panasonic V-Log'
     },
     subtitleMode: {
       burnIn: '烧录字幕',

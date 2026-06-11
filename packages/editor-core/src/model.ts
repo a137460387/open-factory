@@ -8,6 +8,7 @@ import {
   type ColorCurves,
   type ThreeWayColor
 } from './color-grading';
+import { REC709_INPUT_COLOR_SPACE, normalizeInputColorSpace, type InputColorSpace } from './color-log-luts';
 import { cloneEffects, type Effect } from './effects';
 import { migrateProjectFile, serializeProjectFile } from './project/project-migration';
 import type { ProjectFile } from './project/project-types';
@@ -235,6 +236,7 @@ export interface ClipAudioDenoise {
 }
 
 export interface ColorCorrection {
+  inputColorSpace?: InputColorSpace;
   brightness: number;
   contrast: number;
   saturation: number;
@@ -349,6 +351,7 @@ export const DEFAULT_TRANSFORM: Transform = {
 };
 
 export const DEFAULT_COLOR_CORRECTION: ColorCorrection = {
+  inputColorSpace: REC709_INPUT_COLOR_SPACE,
   brightness: 0,
   contrast: 1,
   saturation: 1,
@@ -585,6 +588,7 @@ export function clampClipSpeed(speed: number | undefined): number {
 
 export function normalizeColorCorrection(colorCorrection: Partial<ColorCorrection> | undefined): ColorCorrection {
   return {
+    inputColorSpace: normalizeInputColorSpace(colorCorrection?.inputColorSpace),
     brightness: round(Math.min(1, Math.max(-1, colorCorrection?.brightness ?? DEFAULT_COLOR_CORRECTION.brightness))),
     contrast: round(Math.min(2, Math.max(0, colorCorrection?.contrast ?? DEFAULT_COLOR_CORRECTION.contrast))),
     saturation: round(Math.min(2, Math.max(0, colorCorrection?.saturation ?? DEFAULT_COLOR_CORRECTION.saturation))),
@@ -883,6 +887,7 @@ export function isDefaultColorCorrection(colorCorrection: Partial<ColorCorrectio
   const normalized = normalizeColorCorrection(colorCorrection);
   return (
     normalized.brightness === DEFAULT_COLOR_CORRECTION.brightness &&
+    normalized.inputColorSpace === DEFAULT_COLOR_CORRECTION.inputColorSpace &&
     normalized.contrast === DEFAULT_COLOR_CORRECTION.contrast &&
     normalized.saturation === DEFAULT_COLOR_CORRECTION.saturation &&
     normalized.hue === DEFAULT_COLOR_CORRECTION.hue &&

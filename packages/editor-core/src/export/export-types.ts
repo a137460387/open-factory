@@ -1,4 +1,5 @@
 import type { ColorCurves, ThreeWayColor } from '../color-grading';
+import type { InputColorSpace } from '../color-log-luts';
 import type { Effect } from '../effects';
 import type { TrackCompressor, TrackEQ } from '../model';
 
@@ -28,6 +29,7 @@ export interface ExportTransform {
 }
 
 export interface ExportColorCorrection {
+  inputColorSpace?: InputColorSpace;
   brightness: number;
   contrast: number;
   saturation: number;

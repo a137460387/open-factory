@@ -11,6 +11,7 @@ import {
   DEFAULT_THREE_WAY_COLOR,
   EFFECT_TYPES,
   FRAME_INTERPOLATION_TARGET_FPS,
+  INPUT_COLOR_SPACES,
   KEYFRAME_PROPERTY_LIMITS,
   MAX_CLIP_SPEED,
   MIN_CLIP_SPEED,
@@ -48,6 +49,7 @@ import {
   type Effect,
   type EffectType,
   type EffectPatch,
+  type InputColorSpace,
   type KeyframeEasing,
   type KeyframeProperty,
   type ClipMask,
@@ -673,6 +675,21 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
           <details className="mb-4" open>
             <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-slate-500">{zhCN.inspector.fields.colorCorrection}</summary>
             <div className="space-y-3">
+              <label className="block rounded-md border border-line bg-panel p-2 text-xs font-medium text-slate-600">
+                <span>{zhCN.inspector.fields.inputColorSpace}</span>
+                <select
+                  className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5"
+                  value={colorCorrection.inputColorSpace ?? 'rec709'}
+                  onChange={(event) => commit({ colorCorrection: { inputColorSpace: event.target.value as InputColorSpace } })}
+                  data-testid="clip-input-color-space-select"
+                >
+                  {INPUT_COLOR_SPACES.map((colorSpace) => (
+                    <option key={colorSpace} value={colorSpace}>
+                      {formatInputColorSpaceLabel(colorSpace)}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <RangeNumberField
                 label={zhCN.inspector.fields.brightness}
                 value={colorCorrection.brightness}
@@ -1952,6 +1969,10 @@ function formatLutPath(path: string | null | undefined): string {
     return zhCN.inspector.fields.noLutLoaded;
   }
   return path.split(/[\\/]/).at(-1) ?? path;
+}
+
+function formatInputColorSpaceLabel(colorSpace: InputColorSpace): string {
+  return zhCN.inspector.inputColorSpaces[colorSpace];
 }
 
 function AnimatedField({ label, children, onAddKeyframe, testId }: { label: string; children: ReactNode; onAddKeyframe(): void; testId?: string }) {

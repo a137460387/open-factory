@@ -35,12 +35,14 @@ test('applies a LUT from the settings library and exports with lut3d', async ({ 
   ).toContain('Warm Contrast.cube');
 
   await page.getByTestId('settings-close-button').click();
+  await page.getByTestId('clip-input-color-space-select').selectOption('slog2');
   await openExportDialog(page);
   await page.getByTestId('export-preset-select').selectOption('web-1080p');
   await page.getByTestId('export-enqueue-button').click();
   await expectExportTaskStatus(page, 0, 'success');
 
   const plan = await page.evaluate(() => window.__E2E_ACTIONS__!.getLastExportPlan!() as { filterComplex: string });
-  expect(plan.filterComplex).toContain('lut3d=file=');
+  expect(plan.filterComplex.match(/lut3d=file=/g)).toHaveLength(2);
+  expect(plan.filterComplex).toContain('__LOG_LUT_slog2_');
   expect(plan.filterComplex).toContain('Warm Contrast.cube');
 });

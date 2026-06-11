@@ -8,8 +8,9 @@ describe('WebGL preview compositor bypass processing', () => {
   const masks: ClipMask[] = [{ id: 'mask-a', type: 'rect', x: 0.1, y: 0.1, w: 0.5, h: 0.5, inverted: false, feather: 0.1, enabled: true }];
 
   it('keeps color and effect processing for normal preview draws', () => {
-    const result = resolveWebGlSourceProcessing({ brightness: 0.25 }, effects, chromaKey, masks);
+    const result = resolveWebGlSourceProcessing({ inputColorSpace: 'slog2', brightness: 0.25 }, effects, chromaKey, masks);
 
+    expect(result.correction.inputColorSpace).toBe('slog2');
     expect(result.correction.brightness).toBe(0.25);
     expect(result.effectParams.blur).toBe(6);
     expect(result.key.enabled).toBe(true);

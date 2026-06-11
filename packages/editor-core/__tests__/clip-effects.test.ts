@@ -62,11 +62,18 @@ describe('clip speed and color correction helpers', () => {
     expect(normalizeColorCorrection({ lutPath: '   ' }).lutPath).toBeNull();
   });
 
+  it('normalizes input color space in color correction', () => {
+    expect(normalizeColorCorrection({ inputColorSpace: 'slog2' }).inputColorSpace).toBe('slog2');
+    expect(normalizeColorCorrection({ inputColorSpace: 'invalid' as never }).inputColorSpace).toBe('rec709');
+    expect(normalizeColorCorrection(undefined).inputColorSpace).toBe('rec709');
+  });
+
   it('detects default color correction', () => {
     expect(isDefaultColorCorrection(DEFAULT_COLOR_CORRECTION)).toBe(true);
   });
 
   it('detects non-default color correction', () => {
+    expect(isDefaultColorCorrection({ inputColorSpace: 'slog2' })).toBe(false);
     expect(isDefaultColorCorrection({ hue: 1 })).toBe(false);
     expect(isDefaultColorCorrection({ lutPath: 'C:\\LUTs\\look.cube' })).toBe(false);
   });
