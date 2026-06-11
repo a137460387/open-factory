@@ -787,6 +787,56 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.filterComplex).toContain('format=rgba[vout]');
   });
 
+  it('builds GIF exports as palettegen and paletteuse passes with clamped frame size and fps', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-gif', duration: 1 })];
+
+    const plan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(project, {
+        outputPath: 'D:\\Exports\\loop.gif',
+        settings: { format: 'gif', width: 1920, height: 1200, fps: 60 }
+      })
+    );
+
+    expect(plan.passes).toHaveLength(2);
+    expect(plan.passes?.[0].name).toBe('gif-palettegen');
+    expect(plan.passes?.[0].fullArgs.join(' ')).toContain('palettegen=stats_mode=diff');
+    expect(plan.passes?.[0].fullArgs).toEqual(expect.arrayContaining(['-frames:v', '1', '-update', '1', '-f', 'image2', '__GIF_PALETTE_open_factory__']));
+    expect(plan.passes?.[1].name).toBe('gif-paletteuse');
+    expect(plan.passes?.[1].fullArgs.join(' ')).toContain('paletteuse=dither=sierra2_4a:diff_mode=rectangle');
+    expect(plan.passes?.[1].fullArgs).toEqual(expect.arrayContaining(['-i', '__GIF_PALETTE_open_factory__', '-loop', '0', '-t', '1', '-f', 'gif', 'D:/Exports/loop.gif']));
+    expect(plan.fullArgs).toEqual(plan.passes?.[1].fullArgs);
+    expect(plan.outputArgs).toEqual(['-loop', '0', '-t', '1', '-f', 'gif', 'D:/Exports/loop.gif']);
+    expect(plan.filterComplex).toContain('s=1080x675:r=30');
+    expect(plan.textArtifacts).toContainEqual(expect.objectContaining({ clipId: 'gif-palette', pathMode: 'argument', placeholder: '__GIF_PALETTE_open_factory__' }));
+    expect(plan.fullArgs).not.toContain('-c:a');
+  });
+
+  it('builds animated WebP and APNG exports without audio mapping', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-animated-image', duration: 1 })];
+
+    const webpPlan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(project, {
+        outputPath: 'D:\\Exports\\loop.webp',
+        settings: { format: 'webp', fps: 24 }
+      })
+    );
+    const apngPlan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(project, {
+        outputPath: 'D:\\Exports\\loop.apng',
+        settings: { format: 'apng', fps: 24 }
+      })
+    );
+
+    expect(webpPlan.maps).toEqual(['-map', '[vout]']);
+    expect(webpPlan.outputArgs).toEqual(['-c:v', 'libwebp_anim', '-loop', '0', '-r', '24', '-f', 'webp', 'D:/Exports/loop.webp']);
+    expect(webpPlan.fullArgs).not.toContain('-c:a');
+    expect(apngPlan.maps).toEqual(['-map', '[vout]']);
+    expect(apngPlan.outputArgs).toEqual(['-plays', '0', '-f', 'apng', 'D:/Exports/loop.apng']);
+    expect(apngPlan.fullArgs).not.toContain('-c:a');
+  });
+
   it('passes clip LUT paths into export project color correction data', () => {
     const project = makeProject();
     project.timeline.tracks[0].clips = [

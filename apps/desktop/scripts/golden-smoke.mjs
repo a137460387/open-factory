@@ -174,6 +174,17 @@ const fixtures = [
     expectedDuration: 2,
     create: createSceneDetectFixture,
     validate: validateSceneDetectFixture
+  },
+  {
+    name: 'gif-animation',
+    description: 'two-pass GIF animation export with palettegen and paletteuse',
+    outputWidth: 320,
+    outputHeight: 180,
+    expectedDuration: 1,
+    outputExtension: 'gif',
+    exportSettings: { format: 'gif', width: 320, height: 180, fps: 12 },
+    create: createGifAnimationFixture,
+    validate: validateGifAnimationFixture
   }
 ];
 
@@ -207,7 +218,7 @@ async function runGoldenFixture(fixture) {
   mkdirSync(fixtureDir, { recursive: true });
   rmSync(join(fixtureDir, 'text-artifacts'), { recursive: true, force: true });
 
-  const outputPath = join(fixtureDir, `${fixture.name}.mp4`);
+  const outputPath = join(fixtureDir, `${fixture.name}.${fixture.outputExtension ?? 'mp4'}`);
   const context = {
     fixture,
     fixtureDir,
@@ -218,12 +229,13 @@ async function runGoldenFixture(fixture) {
   const project = await fixture.create(context);
   const exportProject = buildExportProjectFromProject(project, {
     outputPath: normalizePath(outputPath),
-    defaultFontPath: defaultDrawtextFontPath()
+    defaultFontPath: defaultDrawtextFontPath(),
+    settings: fixture.exportSettings
   });
   const plan = buildFfmpegExportPlan(exportProject, FFMPEG_CAPABILITIES);
-  const ffmpegArgs = materializeTextArtifacts(plan, join(fixtureDir, 'text-artifacts'));
+  const materializedPlan = materializeTextArtifacts(plan, join(fixtureDir, 'text-artifacts'));
 
-  await runChecked('ffmpeg', ffmpegArgs);
+  await runMaterializedPlan(materializedPlan);
   if (fixture.updateReadmePreview) {
     await extractPreviewPng(outputPath, readmePreviewPath, fixture.outputWidth, fixture.outputHeight);
   }
@@ -1616,6 +1628,91 @@ async function validateSceneDetectFixture(context) {
   };
 }
 
+async function createGifAnimationFixture(context) {
+  const sourcePath = join(context.fixtureDir, 'gif-source.mp4');
+  await runChecked('ffmpeg', [
+    '-hide_banner',
+    '-y',
+    '-f',
+    'lavfi',
+    '-i',
+    `color=c=${COLORS.coral.ffmpeg}:s=${context.outputWidth}x${context.outputHeight}:r=12:d=0.5`,
+    '-f',
+    'lavfi',
+    '-i',
+    `color=c=${COLORS.blue.ffmpeg}:s=${context.outputWidth}x${context.outputHeight}:r=12:d=0.5`,
+    '-filter_complex',
+    '[0:v][1:v]concat=n=2:v=1:a=0[v]',
+    '-map',
+    '[v]',
+    '-c:v',
+    'libx264',
+    '-pix_fmt',
+    'yuv420p',
+    sourcePath
+  ]);
+  const sourceStat = statSync(sourcePath);
+  return buildProject({
+    id: 'golden-gif-animation',
+    name: 'Golden GIF Animation',
+    width: context.outputWidth,
+    height: context.outputHeight,
+    media: [
+      videoAsset({
+        id: 'asset-gif-source',
+        name: 'gif-source.mp4',
+        path: sourcePath,
+        duration: context.fixture.expectedDuration,
+        width: context.outputWidth,
+        height: context.outputHeight,
+        hasAudio: false,
+        stat: sourceStat
+      })
+    ],
+    tracks: [
+      {
+        id: 'track-gif-video',
+        type: 'video',
+        name: 'GIF Video',
+        clips: [
+          videoClip({
+            id: 'clip-gif-source',
+            name: 'GIF source',
+            mediaId: 'asset-gif-source',
+            trackId: 'track-gif-video',
+            duration: context.fixture.expectedDuration
+          })
+        ]
+      },
+      emptyAudioTrack(),
+      emptyTextTrack()
+    ]
+  });
+}
+
+async function validateGifAnimationFixture(context) {
+  const frameCount = await readVideoFrameCount(context.outputPath);
+  return {
+    checks: [
+      {
+        name: 'gif-two-pass-plan',
+        passed:
+          context.plan.passes?.length === 2 &&
+          context.plan.passes[0].fullArgs.join(' ').includes('palettegen=stats_mode=diff') &&
+          context.plan.passes[1].fullArgs.join(' ').includes('paletteuse=dither=sierra2_4a'),
+        actual: context.plan.passes?.map((pass) => pass.name) ?? [],
+        expected: 'gif-palettegen then gif-paletteuse'
+      },
+      {
+        name: 'gif-frame-count',
+        passed: frameCount > 0,
+        actual: frameCount,
+        expected: '> 0'
+      }
+    ]
+  };
+}
+
 async function readDuration(videoPath) {
   const stdout = await runCollectStdout('ffprobe', [
     '-v',
@@ -1631,6 +1728,26 @@ async function readDuration(videoPath) {
     throw new Error(`Unable to read golden export duration from ${videoPath}.`);
   }
   return duration;
+}
+
+async function readVideoFrameCount(videoPath) {
+  const stdout = await runCollectStdout('ffprobe', [
+    '-v',
+    'error',
+    '-select_streams',
+    'v:0',
+    '-count_frames',
+    '-show_entries',
+    'stream=nb_read_frames',
+    '-of',
+    'default=nw=1:nk=1',
+    videoPath
+  ]);
+  const frameCount = Number(stdout.toString('utf8').trim());
+  if (!Number.isFinite(frameCount)) {
+    throw new Error(`Unable to read frame count from ${videoPath}.`);
+  }
+  return frameCount;
 }
 
 async function createColorVideoFixture(targetPath, options) {
@@ -2044,18 +2161,38 @@ function emptyTextTrack() {
 
 function materializeTextArtifacts(plan, textDir) {
   if (plan.textArtifacts.length === 0) {
-    return plan.fullArgs;
+    return {
+      fullArgs: plan.fullArgs,
+      passes: plan.passes ?? []
+    };
   }
   mkdirSync(textDir, { recursive: true });
   let args = [...plan.fullArgs];
+  const passes = (plan.passes ?? []).map((pass) => ({ ...pass, fullArgs: [...pass.fullArgs] }));
   for (const artifact of plan.textArtifacts) {
     const safeName = artifact.fileName.replace(/[^a-zA-Z0-9_.-]/g, '_');
     const artifactPath = join(textDir, safeName);
     writeFileSync(artifactPath, artifact.text);
     const replacement = artifact.pathMode === 'argument' ? normalizePath(artifactPath) : escapeDrawtextPath(normalizePath(artifactPath));
     args = args.map((arg) => arg.split(artifact.placeholder).join(replacement));
+    for (const pass of passes) {
+      pass.fullArgs = pass.fullArgs.map((arg) => arg.split(artifact.placeholder).join(replacement));
+    }
   }
-  return args;
+  return {
+    fullArgs: args,
+    passes
+  };
+}
+
+async function runMaterializedPlan(plan) {
+  if (plan.passes.length === 0) {
+    await runChecked('ffmpeg', plan.fullArgs);
+    return;
+  }
+  for (const pass of plan.passes) {
+    await runChecked('ffmpeg', pass.fullArgs);
+  }
 }
 
 function countDifferentPixels(frame, expectedRgb, threshold) {

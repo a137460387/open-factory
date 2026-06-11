@@ -74,7 +74,7 @@ export async function revealExport(path: string): Promise<void> {
 
 function normalizeExportExtension(format: string): string {
   const value = format.toLowerCase();
-  return value === 'mov' || value === 'webm' || value === 'm4a' ? value : 'mp4';
+  return value === 'mov' || value === 'webm' || value === 'm4a' || value === 'gif' || value === 'webp' || value === 'apng' ? value : 'mp4';
 }
 
 function normalizeFrameExportExtension(path: string): string {

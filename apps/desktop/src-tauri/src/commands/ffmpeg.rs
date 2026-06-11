@@ -55,7 +55,17 @@ pub struct FfmpegExportPlanDto {
     warnings: Vec<String>,
     text_artifacts: Vec<TextArtifactDto>,
     #[serde(default)]
+    passes: Vec<FfmpegExportPassDto>,
+    #[serde(default)]
     nested_plans: Vec<NestedFfmpegExportPlanDto>,
+    duration: f64,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FfmpegExportPassDto {
+    name: String,
+    full_args: Vec<String>,
     duration: f64,
 }
 
@@ -255,10 +265,16 @@ pub async fn run_export(app: AppHandle, plan: FfmpegExportPlanDto) -> Result<Exp
     let emit_started: StartedEmitter = Arc::new(move || {
         let _ = started_app.emit("export-started", ());
     });
-    let result = with_temp_text_artifacts(&plan, |args, _temp_dir| {
-        let mut args = args;
-        validate_export_paths(&app, &mut args, nested_dir.as_deref(), Some(_temp_dir), true)?;
-        spawn_and_wait_with_progress(args, plan.duration, emit_progress, emit_started)
+    let result = with_temp_export_artifacts(&plan, |materialized, _temp_dir| {
+        run_materialized_export_plan(
+            &app,
+            materialized,
+            plan.duration,
+            nested_dir.as_deref(),
+            _temp_dir,
+            emit_progress,
+            emit_started,
+        )
     });
 
     match result {
@@ -361,6 +377,13 @@ fn validate_export_paths(
         .len()
         .checked_sub(1)
         .ok_or_else(|| "FFmpeg argument list is empty.".to_string())?;
+    let output = Path::new(&args[output_index]);
+    if nested_dir.is_some_and(|dir| is_path_inside(output, dir))
+        || artifact_dir.is_some_and(|dir| is_path_inside(output, dir))
+    {
+        args[output_index] = normalize_path(output);
+        return Ok(());
+    }
     let safe_output = validate_path_for_write(app, Path::new(&args[output_index]))?;
     args[output_index] = normalize_path(&safe_output);
     Ok(())
@@ -371,12 +394,13 @@ fn run_nested_export_plans(app: &AppHandle, plan: &mut FfmpegExportPlanDto, nest
         let output_path = nested_dir.join(safe_file_name(&nested.placeholder));
         run_nested_export_plans(app, &mut nested.plan, nested_dir)?;
         replace_placeholder(&mut nested.plan.full_args, &nested.placeholder, &normalize_path(&output_path));
-        with_temp_text_artifacts(&nested.plan, |args, _temp_dir| {
-            let mut args = args;
-            validate_export_paths(app, &mut args, Some(nested_dir), Some(_temp_dir), false)?;
-            spawn_and_wait_with_progress(
-                args,
+        with_temp_export_artifacts(&nested.plan, |materialized, _temp_dir| {
+            run_materialized_export_plan(
+                app,
+                materialized,
                 nested.plan.duration,
+                Some(nested_dir),
+                _temp_dir,
                 Arc::new(|_| {}),
                 Arc::new(|| {}),
             )
@@ -389,6 +413,48 @@ fn run_nested_export_plans(app: &AppHandle, plan: &mut FfmpegExportPlanDto, nest
 
 type ProgressEmitter = Arc<dyn Fn(ExportProgressPayload) + Send + Sync + 'static>;
 type StartedEmitter = Arc<dyn Fn() + Send + Sync + 'static>;
+
+#[derive(Debug, Clone)]
+struct MaterializedFfmpegExportPlan {
+    full_args: Vec<String>,
+    passes: Vec<MaterializedFfmpegExportPass>,
+}
+
+#[derive(Debug, Clone)]
+struct MaterializedFfmpegExportPass {
+    name: String,
+    full_args: Vec<String>,
+    duration: f64,
+}
+
+fn run_materialized_export_plan(
+    app: &AppHandle,
+    materialized: MaterializedFfmpegExportPlan,
+    fallback_duration: f64,
+    nested_dir: Option<&Path>,
+    artifact_dir: &Path,
+    emit_progress: ProgressEmitter,
+    emit_started: StartedEmitter,
+) -> Result<(), String> {
+    if materialized.passes.is_empty() {
+        let mut args = materialized.full_args;
+        validate_export_paths(app, &mut args, nested_dir, Some(artifact_dir), true)?;
+        return spawn_and_wait_with_progress(args, fallback_duration, emit_progress, emit_started);
+    }
+
+    for pass in materialized.passes {
+        let mut args = pass.full_args;
+        validate_export_paths(app, &mut args, nested_dir, Some(artifact_dir), true)?;
+        spawn_and_wait_with_progress(
+            args,
+            pass.duration,
+            Arc::clone(&emit_progress),
+            Arc::clone(&emit_started),
+        )
+        .map_err(|error| format!("FFmpeg pass {} failed: {}", pass.name, error))?;
+    }
+    Ok(())
+}
 
 fn spawn_and_wait_with_progress(
     args: Vec<String>,
@@ -532,15 +598,31 @@ fn build_vidstabdetect_args(input_path: &Path, output_path: &Path) -> Vec<String
     ]
 }
 
-fn with_temp_text_artifacts<T>(
+fn with_temp_export_artifacts<T>(
     plan: &FfmpegExportPlanDto,
-    run: impl FnOnce(Vec<String>, &Path) -> Result<T, String>,
+    run: impl FnOnce(MaterializedFfmpegExportPlan, &Path) -> Result<T, String>,
 ) -> Result<T, String> {
     let temp_dir = create_export_temp_dir()?;
-    let mut args = plan.full_args.clone();
     let result = write_text_artifacts(&temp_dir, &plan.text_artifacts).and_then(|artifact_paths| {
-        replace_text_placeholders(&mut args, &artifact_paths);
-        run(args, &temp_dir)
+        let mut full_args = plan.full_args.clone();
+        replace_text_placeholders(&mut full_args, &artifact_paths);
+        let passes = plan
+            .passes
+            .iter()
+            .map(|pass| {
+                let mut full_args = pass.full_args.clone();
+                replace_text_placeholders(&mut full_args, &artifact_paths);
+                MaterializedFfmpegExportPass {
+                    name: pass.name.clone(),
+                    full_args,
+                    duration: pass.duration,
+                }
+            })
+            .collect();
+        run(
+            MaterializedFfmpegExportPlan { full_args, passes },
+            &temp_dir,
+        )
     });
     let cleanup = fs::remove_dir_all(&temp_dir).map_err(|error| {
         format!(
@@ -927,13 +1009,15 @@ mod tests {
                 placeholder: "__TEXTFILE_clip_text__".to_string(),
                 path_mode: None,
             }],
+            passes: vec![],
             nested_plans: vec![],
             duration: 1.0,
         };
         let mut observed_temp_dir: Option<PathBuf> = None;
 
         let result: Result<(), String> =
-            with_temp_text_artifacts(&plan, |args, temp_dir| {
+            with_temp_export_artifacts(&plan, |materialized, temp_dir| {
+                let args = materialized.full_args;
                 let safe_artifact = temp_dir.join(".._clip_text.txt");
                 assert!(temp_dir.exists());
                 assert!(safe_artifact.exists());
@@ -948,6 +1032,69 @@ mod tests {
         assert!(
             !temp_dir.exists(),
             "temporary export dir should be removed after failure"
+        );
+    }
+
+    #[test]
+    fn temp_artifacts_are_materialized_for_multi_pass_exports() {
+        let plan = FfmpegExportPlanDto {
+            full_args: vec![
+                "-i".to_string(),
+                "__GIF_PALETTE_open_factory__".to_string(),
+                "D:/Exports/out.gif".to_string(),
+            ],
+            warnings: vec![],
+            text_artifacts: vec![TextArtifactDto {
+                clip_id: "gif-palette".to_string(),
+                text: "".to_string(),
+                file_name: "gif-palette.png".to_string(),
+                placeholder: "__GIF_PALETTE_open_factory__".to_string(),
+                path_mode: Some("argument".to_string()),
+            }],
+            passes: vec![
+                FfmpegExportPassDto {
+                    name: "gif-palettegen".to_string(),
+                    full_args: vec![
+                        "-f".to_string(),
+                        "image2".to_string(),
+                        "__GIF_PALETTE_open_factory__".to_string(),
+                    ],
+                    duration: 1.0,
+                },
+                FfmpegExportPassDto {
+                    name: "gif-paletteuse".to_string(),
+                    full_args: vec![
+                        "-i".to_string(),
+                        "__GIF_PALETTE_open_factory__".to_string(),
+                        "D:/Exports/out.gif".to_string(),
+                    ],
+                    duration: 1.0,
+                },
+            ],
+            nested_plans: vec![],
+            duration: 1.0,
+        };
+        let mut observed_temp_dir: Option<PathBuf> = None;
+
+        with_temp_export_artifacts(&plan, |materialized, temp_dir| {
+            observed_temp_dir = Some(temp_dir.to_path_buf());
+            assert_eq!(materialized.passes.len(), 2);
+            assert!(!materialized
+                .passes
+                .iter()
+                .flat_map(|pass| pass.full_args.iter())
+                .any(|arg| arg.contains("__GIF_PALETTE_open_factory__")));
+            assert!(materialized.passes[0].full_args[2].ends_with("gif-palette.png"));
+            assert_eq!(materialized.passes[0].full_args[2], materialized.passes[1].full_args[1]);
+            assert!(Path::new(&materialized.passes[0].full_args[2]).exists());
+            Ok(())
+        })
+        .expect("multi-pass artifacts should materialize");
+
+        let temp_dir = observed_temp_dir.expect("temp dir should be observed");
+        assert!(
+            !temp_dir.exists(),
+            "temporary export dir should be removed after multi-pass materialization"
         );
     }
 

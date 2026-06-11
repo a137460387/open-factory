@@ -104,6 +104,57 @@ export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
     }
   },
   {
+    id: 'gif-loop',
+    name: zhCN.exportPresets.builtins.gif.name,
+    description: zhCN.exportPresets.builtins.gif.description,
+    builtin: true,
+    settings: {
+      width: 1080,
+      height: 608,
+      fps: 30,
+      videoCodec: 'gif',
+      audioCodec: 'aac',
+      format: 'gif',
+      outputMode: 'video',
+      scaleMode: 'fit',
+      hardwareEncoding: false
+    }
+  },
+  {
+    id: 'webp-animated',
+    name: zhCN.exportPresets.builtins.webp.name,
+    description: zhCN.exportPresets.builtins.webp.description,
+    builtin: true,
+    settings: {
+      width: 1280,
+      height: 720,
+      fps: 24,
+      videoCodec: 'libwebp_anim',
+      audioCodec: 'aac',
+      format: 'webp',
+      outputMode: 'video',
+      scaleMode: 'fit',
+      hardwareEncoding: false
+    }
+  },
+  {
+    id: 'apng',
+    name: zhCN.exportPresets.builtins.apng.name,
+    description: zhCN.exportPresets.builtins.apng.description,
+    builtin: true,
+    settings: {
+      width: 1280,
+      height: 720,
+      fps: 24,
+      videoCodec: 'apng',
+      audioCodec: 'aac',
+      format: 'apng',
+      outputMode: 'video',
+      scaleMode: 'fit',
+      hardwareEncoding: false
+    }
+  },
+  {
     id: 'audio-m4a',
     name: zhCN.exportPresets.builtins.audioM4a.name,
     description: zhCN.exportPresets.builtins.audioM4a.description,

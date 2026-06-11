@@ -427,7 +427,8 @@ export const zhCN = {
       audioCodec: '音频编码',
       ffmpeg: 'FFmpeg',
       drawtext: 'Drawtext',
-      hardwareEncoder: '硬件编码器'
+      hardwareEncoder: '硬件编码器',
+      estimatedSize: '预估大小'
     },
     batchPaths: '批量路径',
     batchPlaceholder: '可选：每行一个输出路径',
@@ -475,7 +476,10 @@ export const zhCN = {
       softSub: '软字幕',
       none: '不缩放',
       fit: '适配留边',
-      pngSequence: 'PNG 序列'
+      pngSequence: 'PNG 序列',
+      gif: 'GIF 动图',
+      webp: 'WebP 动图',
+      apng: 'APNG'
     }
   },
   exportPresets: {
@@ -498,6 +502,18 @@ export const zhCN = {
       twitterX: {
         name: 'Twitter/X',
         description: '适合社交预览的紧凑 MP4。'
+      },
+      gif: {
+        name: 'GIF 动图',
+        description: '两遍调色板导出的循环 GIF，自动限制帧率和尺寸。'
+      },
+      webp: {
+        name: 'WebP 动图',
+        description: '使用 libwebp_anim 的本地 WebP 动图导出。'
+      },
+      apng: {
+        name: 'APNG',
+        description: '透明友好的 APNG 动图导出。'
       },
       audioM4a: {
         name: '仅音频 m4a',

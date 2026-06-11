@@ -1,4 +1,4 @@
-import type { ExportTaskStatus, FfmpegCapabilities, Project } from '@open-factory/editor-core';
+import { getTimelinePlaybackDuration, type ExportTaskStatus, type FfmpegCapabilities, type Project } from '@open-factory/editor-core';
 import { FolderOpen, ListPlus, Save, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { zhCN } from '../i18n/strings';
@@ -6,6 +6,7 @@ import { chooseExportPath, revealExport } from '../lib/exportVideo';
 import { getFfmpegCapabilities } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
 import { cancelQueuedExportTask, enqueueExport, retryQueuedExportTask } from './export-queue-runner';
+import { estimateExportFileSizeBytes, formatEstimatedFileSize } from './export-size-estimate';
 import { useExportQueueStore } from './export-queue-store';
 import {
   BUILTIN_EXPORT_PRESETS,
@@ -40,6 +41,21 @@ export function ExportDialog({ project, onClose, onCompleted }: ExportDialogProp
   const selectedPreset = useMemo(() => getExportPreset(presetId, presets), [presetId, presets]);
   const exportSettings = useMemo(() => normalizeDraftSettings(draftSettings), [draftSettings]);
   const isAudioOnly = exportSettings.outputMode === 'audio' || exportSettings.format === 'm4a';
+  const estimatedSize = useMemo(() => {
+    const dimensions = estimateDimensions(exportSettings.width ?? project.settings.width, exportSettings.height ?? project.settings.height, exportSettings.format ?? 'mp4');
+    return formatEstimatedFileSize(
+      estimateExportFileSizeBytes({
+        width: dimensions.width,
+        height: dimensions.height,
+        fps: exportSettings.fps ?? project.settings.fps,
+        duration: getTimelinePlaybackDuration(project.timeline),
+        format: exportSettings.format ?? 'mp4',
+        outputMode: exportSettings.outputMode,
+        videoBitrate: exportSettings.videoBitrate,
+        audioBitrate: exportSettings.audioBitrate
+      })
+    );
+  }, [exportSettings, project.settings.fps, project.settings.height, project.settings.width, project.timeline]);
   const hardwareEncodingEligible = !isAudioOnly && (exportSettings.format === 'mp4' || exportSettings.format === 'mov');
   const hardwareEncodingRequested = hardwareEncodingEligible && exportSettings.hardwareEncoding === true;
 
@@ -215,7 +231,7 @@ export function ExportDialog({ project, onClose, onCompleted }: ExportDialogProp
             <PresetNumberField label={t.fields.width} value={draftSettings.width} disabled={isAudioOnly} onChange={(value) => updateNumberSetting(setDraftSettings, 'width', value)} testId="export-width-input" />
             <PresetNumberField label={t.fields.height} value={draftSettings.height} disabled={isAudioOnly} onChange={(value) => updateNumberSetting(setDraftSettings, 'height', value)} testId="export-height-input" />
             <PresetNumberField label={t.fields.fps} value={draftSettings.fps} disabled={isAudioOnly} onChange={(value) => updateNumberSetting(setDraftSettings, 'fps', value)} testId="export-fps-input" />
-            <PresetSelectField label={t.fields.format} value={exportSettings.format ?? 'mp4'} onChange={(value) => updateFormat(setDraftSettings, value)} testId="export-format-select" options={['mp4', 'mov', 'webm', 'm4a', 'png-sequence']} />
+            <PresetSelectField label={t.fields.format} value={exportSettings.format ?? 'mp4'} onChange={(value) => updateFormat(setDraftSettings, value)} testId="export-format-select" options={['mp4', 'mov', 'webm', 'm4a', 'gif', 'webp', 'apng', 'png-sequence']} />
             <PresetTextField label={t.fields.videoBitrate} value={draftSettings.videoBitrate ?? ''} disabled={isAudioOnly} onChange={(value) => updateStringSetting(setDraftSettings, 'videoBitrate', value)} testId="export-video-bitrate-input" />
             <PresetTextField label={t.fields.audioBitrate} value={draftSettings.audioBitrate ?? ''} onChange={(value) => updateStringSetting(setDraftSettings, 'audioBitrate', value)} testId="export-audio-bitrate-input" />
             <PresetSelectField label={t.fields.subtitles} value={draftSettings.subtitleMode ?? 'default'} disabled={isAudioOnly} onChange={(value) => updateSubtitleMode(setDraftSettings, value)} testId="export-subtitle-mode-select" options={['default', 'burn-in', 'soft-sub']} />
@@ -228,13 +244,14 @@ export function ExportDialog({ project, onClose, onCompleted }: ExportDialogProp
               testId="export-hardware-encoding-toggle"
             />
           </div>
-          <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 md:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 md:grid-cols-5">
             <Info label={t.info.resolution} value={isAudioOnly ? zhCN.common.audioOnly : `${exportSettings.width ?? project.settings.width} x ${exportSettings.height ?? project.settings.height}`} />
             <Info label={t.info.fps} value={isAudioOnly ? zhCN.common.audioOnly : String(exportSettings.fps ?? project.settings.fps)} />
             <Info label={t.info.format} value={exportSettings.format ?? 'mp4'} />
             <Info label={t.info.bitrate} value={`${isAudioOnly ? zhCN.common.noVideo : exportSettings.videoBitrate || zhCN.common.auto} / ${exportSettings.audioBitrate || zhCN.common.auto}`} />
             <Info label={t.info.videoCodec} value={isAudioOnly ? zhCN.common.none : exportSettings.videoCodec ?? 'libx264'} />
             <Info label={t.info.audioCodec} value={exportSettings.audioCodec ?? 'aac'} />
+            <Info label={t.info.estimatedSize} value={estimatedSize} />
             <Info label={t.info.ffmpeg} value={capabilities?.available ? capabilities.version ?? zhCN.common.available : zhCN.common.missing} tone={capabilities?.available ? 'ok' : 'bad'} />
             <Info label={t.info.drawtext} value={capabilities?.hasDrawtext && capabilities.hasLibfreetype ? zhCN.common.available : zhCN.common.unavailable} tone={capabilities?.hasDrawtext && capabilities.hasLibfreetype ? 'ok' : 'warn'} />
             <Info
@@ -293,7 +310,8 @@ export function ExportDialog({ project, onClose, onCompleted }: ExportDialogProp
 
 function normalizeDraftSettings(settings: ExportPresetSettings): ExportPresetSettings {
   const format = settings.format ?? 'mp4';
-  const outputMode = format === 'm4a' ? 'audio' : settings.outputMode ?? 'video';
+  const animatedImage = format === 'gif' || format === 'webp' || format === 'apng';
+  const outputMode = format === 'm4a' ? 'audio' : animatedImage ? 'video' : settings.outputMode ?? 'video';
   const hardwareEncoding = outputMode === 'video' && (format === 'mp4' || format === 'mov') && settings.hardwareEncoding === true;
   return {
     ...settings,
@@ -345,6 +363,29 @@ function updateFormat(setDraftSettings: Dispatch<SetStateAction<ExportPresetSett
       next.audioCodec = 'aac';
       delete next.videoBitrate;
       delete next.audioBitrate;
+      delete next.hardwareEncoding;
+      return next;
+    }
+    if (value === 'gif') {
+      next.outputMode = 'video';
+      next.videoCodec = 'gif';
+      next.audioCodec = 'aac';
+      next.fps = Math.min(30, next.fps ?? 30);
+      delete next.audioBitrate;
+      delete next.hardwareEncoding;
+      return next;
+    }
+    if (value === 'webp') {
+      next.outputMode = 'video';
+      next.videoCodec = 'libwebp_anim';
+      next.audioCodec = 'aac';
+      delete next.hardwareEncoding;
+      return next;
+    }
+    if (value === 'apng') {
+      next.outputMode = 'video';
+      next.videoCodec = 'apng';
+      next.audioCodec = 'aac';
       delete next.hardwareEncoding;
       return next;
     }
@@ -495,10 +536,36 @@ function formatOptionLabel(value: string): string {
   if (value === 'png-sequence') {
     return zhCN.exportDialog.options.pngSequence;
   }
+  if (value === 'gif') {
+    return zhCN.exportDialog.options.gif;
+  }
+  if (value === 'webp') {
+    return zhCN.exportDialog.options.webp;
+  }
+  if (value === 'apng') {
+    return zhCN.exportDialog.options.apng;
+  }
   return value
     .split('-')
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
+}
+
+function estimateDimensions(width: number, height: number, format: string): { width: number; height: number } {
+  const safeWidth = Math.max(1, Math.round(width));
+  const safeHeight = Math.max(1, Math.round(height));
+  if (format !== 'gif') {
+    return { width: safeWidth, height: safeHeight };
+  }
+  const longest = Math.max(safeWidth, safeHeight);
+  if (longest <= 1080) {
+    return { width: safeWidth, height: safeHeight };
+  }
+  const ratio = 1080 / longest;
+  return {
+    width: Math.max(1, Math.round(safeWidth * ratio)),
+    height: Math.max(1, Math.round(safeHeight * ratio))
+  };
 }
 
 function formatExportWarning(warning: string): string {

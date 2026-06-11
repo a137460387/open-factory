@@ -22,6 +22,9 @@ describe('export presets', () => {
       zhCN.exportPresets.builtins.fourK.name,
       zhCN.exportPresets.builtins.youtubeShorts.name,
       zhCN.exportPresets.builtins.twitterX.name,
+      zhCN.exportPresets.builtins.gif.name,
+      zhCN.exportPresets.builtins.webp.name,
+      zhCN.exportPresets.builtins.apng.name,
       zhCN.exportPresets.builtins.audioM4a.name
     ]);
     expect(presets.every((preset) => preset.builtin)).toBe(true);
@@ -138,6 +141,19 @@ describe('export presets', () => {
       outputMode: 'video',
       fps: 12,
       videoCodec: 'png'
+    });
+  });
+
+  it('keeps animated image custom preset formats', async () => {
+    const { storage } = makeStorage();
+
+    const presets = await saveCustomExportPreset('Small GIF', { format: 'gif', outputMode: 'video', fps: 15, width: 640, height: 360, videoCodec: 'gif' }, storage);
+
+    expect(presets.find((preset) => preset.name === 'Small GIF')?.settings).toMatchObject({
+      format: 'gif',
+      outputMode: 'video',
+      fps: 15,
+      videoCodec: 'gif'
     });
   });
 });

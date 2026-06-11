@@ -210,10 +210,17 @@ export interface FfmpegExportPlan {
   maps: string[];
   outputArgs: string[];
   fullArgs: string[];
+  passes?: FfmpegExportPass[];
   warnings: string[];
   textArtifacts: TextArtifact[];
   nestedPlans: NestedFfmpegExportPlan[];
   displayCommand?: string;
+  duration: number;
+}
+
+export interface FfmpegExportPass {
+  name: string;
+  fullArgs: string[];
   duration: number;
 }
 

@@ -41,6 +41,7 @@ import type {
   ExportKeyframe,
   ExportProject,
   ExportSettings,
+  FfmpegExportPass,
   ExportTimeline,
   ExportTrack,
   ExportTransition,
@@ -74,6 +75,7 @@ export const DEFAULT_EXPORT_SETTINGS: Omit<ExportSettings, 'outputPath'> = {
 };
 
 export const SETPTS_EXPRESSION_LIMIT = 4096;
+const GIF_PALETTE_PLACEHOLDER = '__GIF_PALETTE_open_factory__';
 
 interface BuildFfmpegExportPlanOptions {
   frameExport?: {
@@ -232,11 +234,15 @@ export function buildFfmpegExportPlan(
   options: BuildFfmpegExportPlanOptions = {}
 ): FfmpegExportPlan {
   const duration = Math.max(project.timeline.duration, 0.001);
-  const settings = project.settings;
+  const settings = normalizeSettingsForExportFormat(project.settings);
   const audioOnly = settings.outputMode === 'audio' || settings.format === 'm4a';
   const pngSequence = settings.format === 'png-sequence';
+  const gifExport = settings.format === 'gif';
+  const webpAnimation = settings.format === 'webp';
+  const apngExport = settings.format === 'apng';
+  const animatedImage = gifExport || webpAnimation || apngExport;
   const frameExportTime = options.frameExport ? Math.min(duration, Math.max(0, options.frameExport.time)) : null;
-  const videoFramesOnly = frameExportTime !== null || pngSequence;
+  const videoFramesOnly = frameExportTime !== null || pngSequence || animatedImage;
   const warnings: string[] = [];
   const inputs: FfmpegInput[] = [];
   const inputByClipId = new Map<string, number>();
@@ -342,7 +348,7 @@ export function buildFfmpegExportPlan(
   }
 
   if (!audioOnly) {
-    const outputPixelFormat = pngSequence ? 'rgba' : 'yuv420p';
+    const outputPixelFormat = pngSequence || animatedImage ? 'rgba' : 'yuv420p';
     filters.push(`[${currentVideo}]trim=duration=${formatFfmpegSeconds(duration)},setpts=PTS-STARTPTS,fps=${settings.fps},format=${outputPixelFormat}[vout]`);
   }
 
@@ -371,6 +377,10 @@ export function buildFfmpegExportPlan(
   const outputArgs =
     pngSequence
       ? ['-r', String(settings.fps), '-f', 'image2', pngSequenceOutputPath(settings.outputPath)]
+      : webpAnimation
+      ? ['-c:v', 'libwebp_anim', '-loop', '0', '-r', String(settings.fps), '-f', 'webp', normalizeFfmpegPath(settings.outputPath)]
+      : apngExport
+      ? ['-plays', '0', '-f', 'apng', normalizeFfmpegPath(settings.outputPath)]
       : frameExportTime === null
       ? [
           ...(audioOnly
@@ -386,7 +396,106 @@ export function buildFfmpegExportPlan(
           normalizeFfmpegPath(settings.outputPath)
         ]
       : ['-ss', formatFfmpegSeconds(frameExportTime), '-frames:v', '1', '-f', 'image2', normalizeFfmpegPath(settings.outputPath)];
-  const fullArgs = [
+  const fullArgs = buildFfmpegFullArgs(inputs, filterComplex, maps, outputArgs);
+  const gifPlan = gifExport ? buildGifExportPasses(inputs, filterComplex, settings, duration, textArtifacts) : undefined;
+  const nestedPlans = buildNestedSequencePlans(project, capabilities, warnings, depth, sequenceStack);
+  const planDuration = frameExportTime === null ? duration : Math.max(1 / Math.max(1, settings.fps), 0.001);
+
+  return {
+    inputs,
+    filterComplex: gifPlan?.filterComplex ?? filterComplex,
+    maps: gifPlan?.maps ?? maps,
+    outputArgs: gifPlan?.outputArgs ?? outputArgs,
+    fullArgs: gifPlan?.fullArgs ?? fullArgs,
+    passes: gifPlan?.passes,
+    warnings,
+    textArtifacts,
+    nestedPlans,
+    displayCommand: ['ffmpeg', ...(gifPlan?.fullArgs ?? fullArgs).map(quoteForDisplay)].join(' '),
+    duration: planDuration
+  };
+}
+
+export function buildFfmpegCurrentFrameExportPlan(project: ExportProject, time: number, capabilities?: FfmpegCapabilities): FfmpegExportPlan {
+  return buildFfmpegExportPlan(project, capabilities, 0, [], { frameExport: { time } });
+}
+
+function normalizeSettingsForExportFormat(settings: ExportSettings): ExportSettings {
+  if (settings.format !== 'gif' && settings.format !== 'webp' && settings.format !== 'apng') {
+    return settings;
+  }
+  const base: ExportSettings = {
+    ...settings,
+    outputMode: 'video',
+    audioCodec: settings.audioCodec || 'aac',
+    hardwareEncoding: false
+  };
+  if (settings.format !== 'gif') {
+    return base;
+  }
+  const { width, height } = constrainDimensions(settings.width, settings.height, 1080);
+  return {
+    ...base,
+    width,
+    height,
+    fps: Math.min(30, Math.max(1, Math.round(settings.fps || 30))),
+    outputMode: 'video',
+    videoCodec: 'gif',
+  };
+}
+
+function constrainDimensions(width: number, height: number, maxDimension: number): { width: number; height: number } {
+  const safeWidth = Math.max(1, Math.round(width || DEFAULT_EXPORT_SETTINGS.width));
+  const safeHeight = Math.max(1, Math.round(height || DEFAULT_EXPORT_SETTINGS.height));
+  const longest = Math.max(safeWidth, safeHeight);
+  if (longest <= maxDimension) {
+    return { width: safeWidth, height: safeHeight };
+  }
+  const ratio = maxDimension / longest;
+  return {
+    width: Math.max(1, Math.round(safeWidth * ratio)),
+    height: Math.max(1, Math.round(safeHeight * ratio))
+  };
+}
+
+function buildGifExportPasses(
+  inputs: FfmpegInput[],
+  baseFilterComplex: string,
+  settings: ExportSettings,
+  duration: number,
+  textArtifacts: TextArtifact[]
+): { filterComplex: string; maps: string[]; outputArgs: string[]; fullArgs: string[]; passes: FfmpegExportPass[] } {
+  textArtifacts.push({
+    clipId: 'gif-palette',
+    text: '',
+    fileName: 'gif-palette.png',
+    placeholder: GIF_PALETTE_PLACEHOLDER,
+    pathMode: 'argument'
+  });
+
+  const paletteFilterComplex = `${baseFilterComplex};[vout]palettegen=stats_mode=diff[gifpalette]`;
+  const paletteMaps = ['-map', '[gifpalette]'];
+  const paletteOutputArgs = ['-frames:v', '1', '-update', '1', '-f', 'image2', GIF_PALETTE_PLACEHOLDER];
+  const paletteFullArgs = buildFfmpegFullArgs(inputs, paletteFilterComplex, paletteMaps, paletteOutputArgs);
+  const paletteInput: FfmpegInput = { index: inputs.length, path: GIF_PALETTE_PLACEHOLDER, args: [] };
+  const gifFilterComplex = `${baseFilterComplex};[vout][${paletteInput.index}:v]paletteuse=dither=sierra2_4a:diff_mode=rectangle[gifout]`;
+  const gifMaps = ['-map', '[gifout]'];
+  const gifOutputArgs = ['-loop', '0', '-t', formatFfmpegSeconds(duration), '-f', 'gif', normalizeFfmpegPath(settings.outputPath)];
+  const gifFullArgs = buildFfmpegFullArgs([...inputs, paletteInput], gifFilterComplex, gifMaps, gifOutputArgs);
+  return {
+    filterComplex: gifFilterComplex,
+    maps: gifMaps,
+    outputArgs: gifOutputArgs,
+    fullArgs: gifFullArgs,
+    passes: [
+      { name: 'gif-palettegen', fullArgs: paletteFullArgs, duration },
+      { name: 'gif-paletteuse', fullArgs: gifFullArgs, duration }
+    ]
+  };
+}
+
+function buildFfmpegFullArgs(inputs: FfmpegInput[], filterComplex: string, maps: string[], outputArgs: string[]): string[] {
+  return [
     '-y',
     '-progress',
     'pipe:2',
@@ -397,25 +506,6 @@ export function buildFfmpegExportPlan(
     ...maps,
     ...outputArgs
   ];
-  const nestedPlans = buildNestedSequencePlans(project, capabilities, warnings, depth, sequenceStack);
-  const planDuration = frameExportTime === null ? duration : Math.max(1 / Math.max(1, settings.fps), 0.001);
-
-  return {
-    inputs,
-    filterComplex,
-    maps,
-    outputArgs,
-    fullArgs,
-    warnings,
-    textArtifacts,
-    nestedPlans,
-    displayCommand: ['ffmpeg', ...fullArgs.map(quoteForDisplay)].join(' '),
-    duration: planDuration
-  };
-}
-
-export function buildFfmpegCurrentFrameExportPlan(project: ExportProject, time: number, capabilities?: FfmpegCapabilities): FfmpegExportPlan {
-  return buildFfmpegExportPlan(project, capabilities, 0, [], { frameExport: { time } });
 }
 
 function buildNestedSequencePlans(
