@@ -1,4 +1,14 @@
-import { getTimelinePlaybackDuration, type ExportTaskStatus, type FfmpegCapabilities, type Project } from '@open-factory/editor-core';
+import {
+  TARGET_ASPECT_RATIOS,
+  clampReframeOffset,
+  getTimelinePlaybackDuration,
+  normalizeTargetAspectRatio,
+  resolveReframeDimensions,
+  type ExportTaskStatus,
+  type FfmpegCapabilities,
+  type Project,
+  type TargetAspectRatio
+} from '@open-factory/editor-core';
 import { FolderOpen, ListPlus, Save, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { zhCN } from '../i18n/strings';
@@ -237,6 +247,14 @@ export function ExportDialog({ project, onClose, onCompleted }: ExportDialogProp
             <PresetTextField label={t.fields.audioBitrate} value={draftSettings.audioBitrate ?? ''} onChange={(value) => updateStringSetting(setDraftSettings, 'audioBitrate', value)} testId="export-audio-bitrate-input" />
             <PresetSelectField label={t.fields.subtitles} value={draftSettings.subtitleMode ?? 'default'} disabled={isAudioOnly} onChange={(value) => updateSubtitleMode(setDraftSettings, value)} testId="export-subtitle-mode-select" options={['default', 'burn-in', 'soft-sub']} />
             <PresetSelectField label={t.fields.scale} value={draftSettings.scaleMode ?? 'none'} disabled={isAudioOnly} onChange={(value) => updateScaleMode(setDraftSettings, value)} testId="export-scale-mode-select" options={['none', 'fit']} />
+            <PresetSelectField
+              label={t.fields.targetAspectRatio}
+              value={exportSettings.targetAspectRatio ?? 'source'}
+              disabled={isAudioOnly}
+              onChange={(value) => updateTargetAspectRatio(setDraftSettings, value)}
+              testId="export-target-aspect-select"
+              options={[...TARGET_ASPECT_RATIOS]}
+            />
             <PresetCheckboxField
               label={t.fields.hardwareEncoding}
               checked={hardwareEncodingRequested}
@@ -245,6 +263,13 @@ export function ExportDialog({ project, onClose, onCompleted }: ExportDialogProp
               testId="export-hardware-encoding-toggle"
             />
           </div>
+          {!isAudioOnly && exportSettings.targetAspectRatio && exportSettings.targetAspectRatio !== 'source' ? (
+            <div className="grid gap-3 rounded-md border border-line p-3 md:grid-cols-[1fr_1fr_160px]">
+              <ReframeOffsetField label={t.fields.reframeOffsetX} value={exportSettings.reframeOffsetX ?? 0} axis="x" setDraftSettings={setDraftSettings} />
+              <ReframeOffsetField label={t.fields.reframeOffsetY} value={exportSettings.reframeOffsetY ?? 0} axis="y" setDraftSettings={setDraftSettings} />
+              <ReframePreviewBox aspect={exportSettings.targetAspectRatio} offsetX={exportSettings.reframeOffsetX ?? 0} offsetY={exportSettings.reframeOffsetY ?? 0} />
+            </div>
+          ) : null}
           <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 md:grid-cols-5">
             <Info label={t.info.resolution} value={isAudioOnly ? zhCN.common.audioOnly : `${exportSettings.width ?? project.settings.width} x ${exportSettings.height ?? project.settings.height}`} />
             <Info label={t.info.fps} value={isAudioOnly ? zhCN.common.audioOnly : String(exportSettings.fps ?? project.settings.fps)} />
@@ -331,11 +356,18 @@ function normalizeDraftSettings(settings: ExportPresetSettings): ExportPresetSet
   const animatedImage = format === 'gif' || format === 'webp' || format === 'apng';
   const outputMode = format === 'm4a' ? 'audio' : animatedImage ? 'video' : settings.outputMode ?? 'video';
   const hardwareEncoding = outputMode === 'video' && (format === 'mp4' || format === 'mov') && settings.hardwareEncoding === true;
+  const targetAspectRatio = outputMode === 'video' ? normalizeTargetAspectRatio(settings.targetAspectRatio) : 'source';
+  const dimensions = resolveReframeDimensions(settings.width ?? 1280, settings.height ?? 720, targetAspectRatio);
   return {
     ...settings,
+    width: targetAspectRatio === 'source' ? settings.width : dimensions.width,
+    height: targetAspectRatio === 'source' ? settings.height : dimensions.height,
     format,
     outputMode,
-    hardwareEncoding
+    hardwareEncoding,
+    targetAspectRatio,
+    reframeOffsetX: clampReframeOffset(settings.reframeOffsetX),
+    reframeOffsetY: clampReframeOffset(settings.reframeOffsetY)
   };
 }
 
@@ -436,6 +468,29 @@ function updateScaleMode(setDraftSettings: Dispatch<SetStateAction<ExportPresetS
   setDraftSettings((current) => ({ ...current, scaleMode: value === 'fit' ? 'fit' : 'none' }));
 }
 
+function updateTargetAspectRatio(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, value: string): void {
+  setDraftSettings((current) => {
+    const targetAspectRatio = normalizeTargetAspectRatio(value);
+    if (targetAspectRatio === 'source') {
+      return { ...current, targetAspectRatio };
+    }
+    const dimensions = resolveReframeDimensions(current.width ?? 1280, current.height ?? 720, targetAspectRatio);
+    return {
+      ...current,
+      ...dimensions,
+      targetAspectRatio,
+      scaleMode: 'none',
+      reframeOffsetX: clampReframeOffset(current.reframeOffsetX),
+      reframeOffsetY: clampReframeOffset(current.reframeOffsetY)
+    };
+  });
+}
+
+function updateReframeOffset(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, axis: 'x' | 'y', value: string): void {
+  const key = axis === 'x' ? 'reframeOffsetX' : 'reframeOffsetY';
+  setDraftSettings((current) => ({ ...current, [key]: clampReframeOffset(Number(value)) }));
+}
+
 function updateHardwareEncoding(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, checked: boolean): void {
   setDraftSettings((current) => ({ ...current, hardwareEncoding: checked }));
 }
@@ -532,6 +587,55 @@ function PresetCheckboxField({
   );
 }
 
+function ReframeOffsetField({
+  label,
+  value,
+  axis,
+  setDraftSettings
+}: {
+  label: string;
+  value: number;
+  axis: 'x' | 'y';
+  setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>;
+}) {
+  return (
+    <label className="space-y-1 text-xs font-medium text-slate-600">
+      <span>{label}</span>
+      <div className="flex items-center gap-2">
+        <input
+          className="w-full accent-brand"
+          type="range"
+          min={-1}
+          max={1}
+          step={0.01}
+          value={value}
+          onChange={(event) => updateReframeOffset(setDraftSettings, axis, event.target.value)}
+          data-testid={`export-reframe-offset-${axis}`}
+        />
+        <span className="w-10 text-right tabular-nums">{value.toFixed(2)}</span>
+      </div>
+    </label>
+  );
+}
+
+function ReframePreviewBox({ aspect, offsetX, offsetY }: { aspect: TargetAspectRatio; offsetX: number; offsetY: number }) {
+  const normalized = normalizeTargetAspectRatio(aspect);
+  const ratioClass = normalized === '9:16' ? 'aspect-[9/16]' : normalized === '1:1' ? 'aspect-square' : normalized === '4:5' ? 'aspect-[4/5]' : normalized === '21:9' ? 'aspect-[21/9]' : 'aspect-video';
+  const translateX = `${clampReframeOffset(offsetX) * 18}%`;
+  const translateY = `${clampReframeOffset(offsetY) * 18}%`;
+  return (
+    <div className="flex items-center justify-center rounded-md bg-panel p-2" data-testid="export-reframe-preview">
+      <div className="relative h-24 w-full max-w-32 overflow-hidden rounded border border-line bg-slate-200">
+        <div className="absolute inset-2 rounded bg-gradient-to-br from-slate-500 via-slate-400 to-slate-600" />
+        <div
+          className={`absolute left-1/2 top-1/2 max-h-[88%] w-[58%] -translate-x-1/2 -translate-y-1/2 border-2 border-brand bg-brand/10 ${ratioClass}`}
+          style={{ transform: `translate(calc(-50% + ${translateX}), calc(-50% + ${translateY}))` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 function formatOptionLabel(value: string): string {
   if (value === 'default') {
     return zhCN.exportDialog.options.default;
@@ -547,6 +651,12 @@ function formatOptionLabel(value: string): string {
   }
   if (value === 'fit') {
     return zhCN.exportDialog.options.fit;
+  }
+  if (value === 'source') {
+    return zhCN.exportDialog.options.source;
+  }
+  if (value === '16:9' || value === '9:16' || value === '1:1' || value === '4:5' || value === '21:9') {
+    return value;
   }
   if (value === 'm4a') {
     return 'm4a';

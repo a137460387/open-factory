@@ -60,6 +60,7 @@ export const zhCN = {
       lutLibrary: 'LUT库',
       shortcuts: '快捷键',
       translation: '字幕翻译',
+      proxy: '代理媒体',
       plugins: '插件'
     },
     lutLibrary: {
@@ -117,6 +118,14 @@ export const zhCN = {
       apiKey: 'API Key',
       targetLanguage: '目标语言',
       localOnlyNote: '只发送字幕文本，不上传媒体文件；密钥保存在本机浏览器存储。'
+    },
+    proxy: {
+      title: '代理媒体',
+      description: '自动生成本地 H.264 代理文件，导出仍使用原始媒体。',
+      resolution: '代理分辨率',
+      triggerThreshold: '触发阈值',
+      thresholdOption: (value: number) => `短边 > ${value}p`,
+      reset: '恢复默认'
     },
     plugins: {
       title: '插件',
@@ -556,6 +565,9 @@ export const zhCN = {
       audioBitrate: '音频码率',
       subtitles: '字幕',
       scale: '缩放',
+      targetAspectRatio: '目标比例',
+      reframeOffsetX: '水平偏移',
+      reframeOffsetY: '垂直偏移',
       hardwareEncoding: '硬件编码'
     },
     info: {
@@ -617,6 +629,7 @@ export const zhCN = {
       softSub: '软字幕',
       none: '不缩放',
       fit: '适配留边',
+      source: '原始比例',
       pngSequence: 'PNG 序列',
       gif: 'GIF 动图',
       webp: 'WebP 动图',

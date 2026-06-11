@@ -1,17 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { buildProxyPlan, fitWithin, shouldGenerateProxy } from '../src';
+import { buildProxyPlan, fitWithin, isEditingCodec, shouldGenerateProxy } from '../src';
 import { makeProject } from './test-utils';
 
 describe('proxy planner', () => {
-  it('plans proxy files for large video media', () => {
+  it('plans 720p proxy files for video media above the 1080p threshold', () => {
     const asset = { ...makeProject().media[0], size: 500 * 1024 * 1024, width: 3840, height: 2160 };
     expect(shouldGenerateProxy(asset)).toBe(true);
 
-    const plan = buildProxyPlan(asset, 'C:/Cache/open-factory');
-    expect(plan?.outputPath).toMatch(/^C:\/Cache\/open-factory\/proxies\/[a-f0-9]{16}\.mp4$/);
-    expect(plan?.width).toBe(960);
-    expect(plan?.height).toBe(540);
-    expect(plan?.reason).toBe('large-file');
+    const plan = buildProxyPlan(asset, 'C:/Users/E2E/AppData/Roaming/open-factory');
+    expect(plan?.outputPath).toMatch(/^C:\/Users\/E2E\/AppData\/Roaming\/open-factory\/proxies\/[a-f0-9]{16}\.mp4$/);
+    expect(plan?.width).toBe(1280);
+    expect(plan?.height).toBe(720);
+    expect(plan?.reason).toBe('large-resolution');
   });
 
   it('does not proxy non-video or already ready proxy media', () => {
@@ -22,8 +22,8 @@ describe('proxy planner', () => {
   });
 
   it('fits dimensions to even values', () => {
-    expect(fitWithin(1921, 1081, 960, 540)).toEqual({ width: 960, height: 540 });
-    expect(fitWithin(0, 0, 960, 540)).toEqual({ width: 960, height: 540 });
+    expect(fitWithin(3840, 2160, 1280, 720)).toEqual({ width: 1280, height: 720 });
+    expect(fitWithin(0, 0, 1280, 720)).toEqual({ width: 1280, height: 720 });
   });
 
   it('does not build a cache plan when metadata needed for the key is missing', () => {
@@ -34,14 +34,32 @@ describe('proxy planner', () => {
     expect(buildProxyPlan({ ...asset, size: 500 * 1024 * 1024, mtimeMs: undefined }, 'C:/Cache/open-factory')).toBeNull();
   });
 
-  it('plans resolution-only proxy cache paths with normalized cache directories', () => {
+  it('does not proxy ordinary 1080p or 720p H264 media by default', () => {
+    const hd = { ...makeProject().media[0], size: 500 * 1024 * 1024, width: 1920, height: 1080, mtimeMs: 1234, videoCodec: 'h264' };
+    const small = { ...hd, width: 1280, height: 720 };
+
+    expect(shouldGenerateProxy(hd)).toBe(false);
+    expect(shouldGenerateProxy(small)).toBe(false);
+  });
+
+  it('proxies HEVC and ProRes media even below the resolution threshold', () => {
+    const hevc = { ...makeProject().media[0], size: 10 * 1024 * 1024, width: 1280, height: 720, mtimeMs: 1234, videoCodec: 'hevc' };
+    const prores = { ...hevc, videoCodec: 'prores_ks' };
+
+    expect(isEditingCodec('H.265')).toBe(true);
+    expect(shouldGenerateProxy(hevc)).toBe(true);
+    expect(buildProxyPlan(hevc, 'C:/Users/E2E/AppData/Roaming/open-factory')?.reason).toBe('editing-codec');
+    expect(shouldGenerateProxy(prores)).toBe(true);
+  });
+
+  it('plans resolution-only proxy paths with normalized app data directories', () => {
     const asset = { ...makeProject().media[0], size: 10 * 1024 * 1024, width: 2560, height: 1440, mtimeMs: 1234 };
 
-    const plan = buildProxyPlan(asset, 'C:\\Cache\\open-factory\\');
+    const plan = buildProxyPlan(asset, 'C:\\Users\\E2E\\AppData\\Roaming\\open-factory\\');
 
-    expect(plan?.outputPath).toMatch(/^C:\/Cache\/open-factory\/proxies\/[a-f0-9]{16}\.mp4$/);
+    expect(plan?.outputPath).toMatch(/^C:\/Users\/E2E\/AppData\/Roaming\/open-factory\/proxies\/[a-f0-9]{16}\.mp4$/);
     expect(plan?.reason).toBe('large-resolution');
-    expect(plan?.width).toBe(960);
-    expect(plan?.height).toBe(540);
+    expect(plan?.width).toBe(1280);
+    expect(plan?.height).toBe(720);
   });
 });

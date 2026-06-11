@@ -12,6 +12,7 @@ export * from './render-cache';
 export * from './timeline-snapping';
 export * from './timeline-selection';
 export * from './timeline-zoom';
+export * from './reframe';
 export * from './title-templates';
 export * from './multicam';
 export * from './commands/command';

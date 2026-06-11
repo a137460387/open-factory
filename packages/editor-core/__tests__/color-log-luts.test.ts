@@ -15,13 +15,8 @@ describe('camera log to Rec.709 LUTs', () => {
       expect(lut.size).toBe(LOG_TO_REC709_LUT_SIZE);
       expect(lut.points).toHaveLength(LOG_TO_REC709_LUT_SIZE ** 3);
       expect(lut.points[0]).toEqual([0, 0, 0]);
-      for (const point of lut.points) {
-        expect(point).toHaveLength(3);
-        for (const channel of point) {
-          expect(channel).toBeGreaterThanOrEqual(0);
-          expect(channel).toBeLessThanOrEqual(1);
-        }
-      }
+      const invalidPoint = lut.points.find((point) => point.length !== 3 || point.some((channel) => channel < 0 || channel > 1));
+      expect(invalidPoint).toBeUndefined();
     }
   });
 

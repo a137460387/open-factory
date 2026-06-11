@@ -36,6 +36,7 @@ const sampleProjectPath = 'C:/Projects/sample.cutproj.json';
 const missingProjectPath = 'C:/Projects/missing.cutproj.json';
 const batchMissingProjectPath = 'C:/Projects/batch-missing.cutproj.json';
 const tinyVideo = 'C:/Media/tiny-video.mp4';
+const fourKHevcVideo = 'C:/Media/four-k-hevc.mov';
 const tinyVideoB = 'C:/Media/camera-b.mp4';
 const tinyAudio = 'C:/Media/tiny-audio.wav';
 const tinyImage = 'C:/Media/test-image.png';
@@ -84,6 +85,7 @@ files.set(
 files.set(brokenPluginPath, 'throw new Error("broken plugin");');
 for (const path of [
   tinyVideo,
+  fourKHevcVideo,
   tinyVideoB,
   tinyAudio,
   tinyImage,
@@ -171,7 +173,7 @@ const mocks: TauriMocks = {
   getAppDataDir: () => appDataDir,
   getFileStat: (path) => ({
     path,
-    size: path === silencePatternAudio ? createSilencePatternWav().byteLength : path.endsWith('.wav') ? 2048 : 4096,
+    size: path === silencePatternAudio ? createSilencePatternWav().byteLength : path === fourKHevcVideo ? 500 * 1024 * 1024 : path.endsWith('.wav') ? 2048 : 4096,
     mtimeMs: mtimes.get(path) ?? (path.includes('Relink') ? 2_000 : 1_000)
   }),
   scanDirectory: (path) => {
@@ -256,13 +258,14 @@ const mocks: TauriMocks = {
     hasAudio: path.endsWith('.mp4') || path.endsWith('.wav'),
     audioChannels: path.endsWith('.mp4') || path.endsWith('.wav') ? 2 : undefined,
     audioSampleRate: path.endsWith('.mp4') || path.endsWith('.wav') ? 44_100 : undefined,
-    audioCodec: path.endsWith('.mp4') ? 'aac' : path.endsWith('.wav') ? 'pcm_s16le' : undefined
+    audioCodec: path.endsWith('.mp4') ? 'aac' : path.endsWith('.wav') ? 'pcm_s16le' : undefined,
+    videoCodec: path === fourKHevcVideo ? 'hevc' : path.endsWith('.mp4') || path.endsWith('.mov') ? 'h264' : undefined
   }),
   generateProxy: async (plan) => {
     await wait(10);
     files.set(plan.outputPath, 'mock proxy');
     exists.set(plan.outputPath, true);
-    cache.set(plan.outputPath.replace('C:/Cache/open-factory/', ''), JSON.stringify({ proxyPath: plan.outputPath }));
+    cache.set(plan.outputPath.replace(`${appDataDir}/`, ''), JSON.stringify({ proxyPath: plan.outputPath }));
     return { assetId: plan.assetId, proxyPath: plan.outputPath, durationMs: 10 };
   },
   detectSceneChanges: () => ({ sceneTimes: [1] }),
@@ -281,8 +284,8 @@ const mocks: TauriMocks = {
   probeMediaPath: (path) => {
     const base = {
       duration: path === silencePatternAudio ? 2.5 : path.endsWith('.png') ? 0 : 6,
-      width: path.endsWith('.wav') ? 0 : 1280,
-      height: path.endsWith('.wav') ? 0 : 720,
+      width: path.endsWith('.wav') ? 0 : path === fourKHevcVideo ? 3840 : 1280,
+      height: path.endsWith('.wav') ? 0 : path === fourKHevcVideo ? 2160 : 720,
       thumbnail: 'data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AA/vuUAAA='
     };
     return base;
@@ -446,6 +449,7 @@ window.__E2E_ACTIONS__ = {
     commandManager.clear();
   },
   getTimelineSnapshot: () => useEditorStore.getState().project.timeline,
+  getProjectMedia: () => useEditorStore.getState().project.media,
   setOpenFileDialogPaths: (paths: unknown) => {
     openFileDialogPaths = Array.isArray(paths) ? (paths as string[]) : [];
   },
@@ -507,6 +511,7 @@ window.__E2E_ACTIONS__ = {
     files.delete(keybindingsPath);
     exists.set(keybindingsPath, false);
     mtimes.delete(keybindingsPath);
+    localStorage.removeItem('open-factory:proxy-settings');
   },
   clearExportPresets: () => {
     files.delete(exportPresetsPath);

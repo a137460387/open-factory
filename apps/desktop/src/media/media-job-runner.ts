@@ -1,14 +1,15 @@
-import type { MediaAsset } from '@open-factory/editor-core';
+import type { MediaAsset, ProxySettings } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { useEditorStore } from '../store/editorStore';
+import { useProxySettingsStore } from '../store/proxySettingsStore';
 import { createProxyForAsset } from './proxy';
 import { getWaveform } from './waveform';
 import { useMediaJobStore, type MediaJob } from './media-job-store';
 
 let runnerPromise: Promise<void> | undefined;
 
-export function enqueueBackgroundMediaJobs(media: MediaAsset[]): void {
-  useMediaJobStore.getState().enqueueJobsForMedia(media);
+export function enqueueBackgroundMediaJobs(media: MediaAsset[], proxySettings?: ProxySettings): void {
+  useMediaJobStore.getState().enqueueJobsForMedia(media, proxySettings);
   ensureMediaJobRunner();
 }
 
@@ -53,7 +54,7 @@ async function runJob(job: MediaJob): Promise<void> {
   }
   if (job.type === 'proxy') {
     updateMediaAsset(job.assetId, (item) => ({ ...item, proxyStatus: 'pending', proxyError: undefined }));
-    const proxyAsset = await createProxyForAsset({ ...asset, proxyStatus: 'pending', proxyError: undefined });
+    const proxyAsset = await createProxyForAsset({ ...asset, proxyStatus: 'pending', proxyError: undefined }, useProxySettingsStore.getState().settings);
     updateMediaAsset(job.assetId, () => proxyAsset);
     return;
   }

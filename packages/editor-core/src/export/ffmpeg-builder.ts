@@ -35,6 +35,7 @@ import { getLogToRec709Lut, isLogInputColorSpace, serializeLogToRec709Cube } fro
 import { cloneEffects, type Effect } from '../effects';
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
 import { flattenMulticamProjectForExport } from '../multicam';
+import { buildReframeCropFilter, clampReframeOffset, isReframeEnabled, normalizeTargetAspectRatio, resolveReframeDimensions } from '../reframe';
 import { calculateSpeedCurveSourceDuration, getClipSourceVisibleDuration, getClipSpeed, getRenderableTracks, getTimelinePlaybackDuration, getTrackPan, getTrackVolume } from '../timeline';
 import { round } from '../time';
 import { serializeSrt } from '../subtitles/srt';
@@ -74,6 +75,9 @@ export const DEFAULT_EXPORT_SETTINGS: Omit<ExportSettings, 'outputPath'> = {
   audioBitrate: null,
   outputMode: 'video',
   scaleMode: 'none',
+  targetAspectRatio: 'source',
+  reframeOffsetX: 0,
+  reframeOffsetY: 0,
   subtitleMode: undefined,
   hardwareEncoding: false
 };
@@ -91,14 +95,14 @@ export function buildExportProjectFromProject(project: Project, options: BuildEx
   const exportSourceProject = flattenMulticamProjectForExport(project);
   const mediaById = new Map(exportSourceProject.media.map((asset) => [asset.id, asset]));
   const primaryTimeline = getProjectPrimaryTimeline(exportSourceProject);
-  const settings = {
+  const settings = normalizeExportReframeSettings({
     ...DEFAULT_EXPORT_SETTINGS,
     width: exportSourceProject.settings.width || DEFAULT_EXPORT_SETTINGS.width,
     height: exportSourceProject.settings.height || DEFAULT_EXPORT_SETTINGS.height,
     fps: exportSourceProject.settings.fps || DEFAULT_EXPORT_SETTINGS.fps,
     ...options.settings,
     outputPath: normalizeFfmpegPath(options.outputPath)
-  };
+  });
   return {
     settings,
     masterVolume: normalizeMasterVolume(exportSourceProject.masterVolume),
@@ -428,6 +432,18 @@ export function buildFfmpegCurrentFrameExportPlan(project: ExportProject, time: 
   return buildFfmpegExportPlan(project, capabilities, 0, [], { frameExport: { time } });
 }
 
+function normalizeExportReframeSettings(settings: ExportSettings): ExportSettings {
+  const targetAspectRatio = normalizeTargetAspectRatio(settings.targetAspectRatio);
+  const dimensions = resolveReframeDimensions(settings.width, settings.height, targetAspectRatio);
+  return {
+    ...settings,
+    ...dimensions,
+    targetAspectRatio,
+    reframeOffsetX: clampReframeOffset(settings.reframeOffsetX),
+    reframeOffsetY: clampReframeOffset(settings.reframeOffsetY)
+  };
+}
+
 function normalizeSettingsForExportFormat(settings: ExportSettings): ExportSettings {
   if (settings.format !== 'gif' && settings.format !== 'webp' && settings.format !== 'apng') {
     return settings;
@@ -720,8 +736,10 @@ function buildTransitionClipFilter(
     ...buildChromaKeyFilters(clip),
     buildSetptsFilter(clip, false, warnings),
     ...buildStabilizationFilters(clip),
-    `scale=${settings.width}:${settings.height}:force_original_aspect_ratio=decrease`,
-    `pad=${settings.width}:${settings.height}:(ow-iw)/2:(oh-ih)/2:color=black`,
+    ...buildReframeFilters(settings),
+    ...(isReframeEnabled(settings.targetAspectRatio)
+      ? []
+      : [`scale=${settings.width}:${settings.height}:force_original_aspect_ratio=decrease`, `pad=${settings.width}:${settings.height}:(ow-iw)/2:(oh-ih)/2:color=black`]),
     `fps=${settings.fps}`,
     ...buildFrameInterpolationFilters(clip, capabilities, warnings),
     'format=rgba'
@@ -768,9 +786,9 @@ function buildVisualClipFilter(
   if (isKenBurnsAnimatedScaleClip(clip)) {
     filters.push(buildSetptsFilter(clip, false, warnings), buildKenBurnsZoompanFilter(clip, settings), 'setsar=1', buildSetptsFilter(clip, true, warnings));
   } else {
-    filters.push(buildSetptsFilter(clip, true, warnings), ...buildStabilizationFilters(clip), buildScaleFilter(clip), 'setsar=1');
+    filters.push(buildSetptsFilter(clip, true, warnings), ...buildStabilizationFilters(clip), ...buildReframeFilters(settings), buildScaleFilter(clip), 'setsar=1');
   }
-  if (settings.scaleMode === 'fit') {
+  if (settings.scaleMode === 'fit' && !isReframeEnabled(settings.targetAspectRatio)) {
     filters.push(
       `scale=${settings.width}:${settings.height}:force_original_aspect_ratio=decrease`,
       `pad=${settings.width}:${settings.height}:(ow-iw)/2:(oh-ih)/2:color=black`
@@ -790,6 +808,14 @@ function buildVisualClipFilter(
 
 function isKenBurnsAnimatedScaleClip(clip: ExportClip): boolean {
   return clip.type === 'image' && clip.kenBurns && (getAnimatedFrames(clip, 'scaleX').length >= 2 || getAnimatedFrames(clip, 'scaleY').length >= 2);
+}
+
+function buildReframeFilters(settings: ExportSettings): string[] {
+  const crop = buildReframeCropFilter(settings);
+  if (!crop) {
+    return [];
+  }
+  return [crop, `scale=${settings.width}:${settings.height}`];
 }
 
 function buildChromaKeyFilters(clip: ExportClip): string[] {

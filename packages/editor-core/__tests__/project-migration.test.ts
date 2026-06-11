@@ -55,6 +55,17 @@ describe('project schema migration', () => {
     expect(migrated.project.mediaMetadata).toEqual({ 'asset-1': { labelColor: 'blue' } });
   });
 
+  it('serializes and migrates video codec metadata for proxy decisions', () => {
+    const project = makeProject();
+    project.media[0].videoCodec = ' hevc ';
+
+    const file = serializeProject(project);
+    const migrated = migrateProjectFile(file);
+
+    expect(file.project.media[0].videoCodec).toBe('hevc');
+    expect(migrated.project.media[0].videoCodec).toBe('hevc');
+  });
+
   it('backfills missing text background style defaults during migration', () => {
     const project = makeProject();
     const textClip = {

@@ -48,6 +48,7 @@ export function serializeProjectFile(project: Project, projectPath?: string): Pr
       path: normalizedPath,
       relativePath,
       originalAbsolutePath: asset.originalAbsolutePath ?? normalizedPath,
+      videoCodec: normalizeOptionalString(asset.videoCodec),
       imageSequence: asset.imageSequence
         ? {
             ...asset.imageSequence,
@@ -159,8 +160,13 @@ function normalizeMediaAsset(asset: MediaAsset, projectPath?: string): MediaAsse
     path,
     originalAbsolutePath: asset.originalAbsolutePath ?? path,
     relativePath: asset.relativePath === undefined ? null : asset.relativePath,
+    videoCodec: normalizeOptionalString(asset.videoCodec),
     imageSequence: normalizeImageSequence(asset.imageSequence, projectPath)
   };
+}
+
+function normalizeOptionalString(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
 }
 
 function normalizeImageSequence(sequence: ImageSequenceInfo | undefined, projectPath?: string): ImageSequenceInfo | undefined {

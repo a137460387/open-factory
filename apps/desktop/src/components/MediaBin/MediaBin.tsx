@@ -7,6 +7,7 @@ import { isTauriRuntime } from '../../lib/tauri';
 import { TITLE_TEMPLATE_DRAG_MIME } from '../../lib/titleTemplates';
 import { listenDragDrop } from '../../lib/tauri-bridge';
 import { useMediaJobStore } from '../../media/media-job-store';
+import { useProxySettingsStore } from '../../store/proxySettingsStore';
 
 interface MediaBinProps {
   media: MediaAsset[];
@@ -250,8 +251,9 @@ function MediaCard({
   onGenerateProxy(): void;
   onSetLabel(labelColor?: MediaLabelColor): void;
 }) {
+  const proxySettings = useProxySettingsStore((state) => state.settings);
   const proxyStatus = asset.proxyStatus ?? (asset.type === 'video' ? 'none' : undefined);
-  const canGenerateProxy = asset.type === 'video' && (shouldGenerateProxy(asset) || proxyStatus === 'error');
+  const canGenerateProxy = asset.type === 'video' && (shouldGenerateProxy(asset, proxySettings) || proxyStatus === 'error');
   const [labelMenuOpen, setLabelMenuOpen] = useState(false);
   const labelColor = metadata?.labelColor;
   return (

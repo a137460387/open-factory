@@ -3,10 +3,10 @@ import type { MediaAsset } from '../model';
 import type { ProxyPlan, ProxySettings } from './proxy-types';
 
 export const DEFAULT_PROXY_SETTINGS: ProxySettings = {
-  maxWidth: 960,
-  maxHeight: 540,
-  videoBitrate: '1600k',
-  minSourceBytes: 200 * 1024 * 1024
+  maxWidth: 1280,
+  maxHeight: 720,
+  videoBitrate: '2500k',
+  triggerShortEdge: 1080
 };
 
 export function shouldGenerateProxy(asset: MediaAsset, settings: ProxySettings = DEFAULT_PROXY_SETTINGS): boolean {
@@ -16,27 +16,46 @@ export function shouldGenerateProxy(asset: MediaAsset, settings: ProxySettings =
   if (asset.proxyPath && asset.proxyStatus === 'ready') {
     return false;
   }
-  const largeBytes = typeof asset.size === 'number' && asset.size >= settings.minSourceBytes;
-  const largeDimensions = asset.width > settings.maxWidth || asset.height > settings.maxHeight;
-  return largeBytes || largeDimensions;
+  return getProxyTriggerReason(asset, settings) !== null;
 }
 
-export function buildProxyPlan(asset: MediaAsset, cacheDir: string, settings: ProxySettings = DEFAULT_PROXY_SETTINGS): ProxyPlan | null {
+export function buildProxyPlan(asset: MediaAsset, appDataDir: string, settings: ProxySettings = DEFAULT_PROXY_SETTINGS): ProxyPlan | null {
   if (!shouldGenerateProxy(asset, settings) || !asset.size || !asset.mtimeMs) {
     return null;
   }
   const key = getMediaCacheKey({ path: asset.path, size: asset.size, mtimeMs: asset.mtimeMs, formatVersion: `proxy-${settings.maxWidth}x${settings.maxHeight}-${settings.videoBitrate}` });
   const paths = buildCachePaths('proxy', key);
   const dimensions = fitWithin(asset.width, asset.height, settings.maxWidth, settings.maxHeight);
+  const reason = getProxyTriggerReason(asset, settings) ?? 'large-resolution';
   return {
     assetId: asset.id,
     inputPath: asset.path,
-    outputPath: `${cacheDir.replace(/\\/g, '/').replace(/\/+$/g, '')}/${paths.dataPath}`,
+    outputPath: `${appDataDir.replace(/\\/g, '/').replace(/\/+$/g, '')}/${paths.dataPath}`,
     width: dimensions.width,
     height: dimensions.height,
     videoBitrate: settings.videoBitrate,
-    reason: asset.size >= settings.minSourceBytes ? 'large-file' : 'large-resolution'
+    reason
   };
+}
+
+export function getProxyTriggerReason(asset: MediaAsset, settings: ProxySettings = DEFAULT_PROXY_SETTINGS): ProxyPlan['reason'] | null {
+  if (asset.type !== 'video') {
+    return null;
+  }
+  if (isEditingCodec(asset.videoCodec)) {
+    return 'editing-codec';
+  }
+  const safeThreshold = Math.max(1, Math.round(settings.triggerShortEdge));
+  const shortEdge = Math.min(Math.max(0, asset.width), Math.max(0, asset.height));
+  return shortEdge > safeThreshold ? 'large-resolution' : null;
+}
+
+export function isEditingCodec(codec: unknown): boolean {
+  if (typeof codec !== 'string') {
+    return false;
+  }
+  const normalized = codec.trim().toLowerCase().replace(/[\s.-]+/g, '_');
+  return normalized === 'hevc' || normalized === 'h265' || normalized === 'h_265' || normalized.startsWith('prores');
 }
 
 export function fitWithin(width: number, height: number, maxWidth: number, maxHeight: number): { width: number; height: number } {

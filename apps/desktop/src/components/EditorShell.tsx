@@ -55,6 +55,7 @@ import { relinkMissingMediaInDirectory, relinkSingleMedia } from '../media/relin
 import { useBackgroundMediaJobs } from '../media/useBackgroundMediaJobs';
 import { commandManager, projectAccessor, timelineAccessor } from '../store/commandManager';
 import { selectClipById, useEditorStore } from '../store/editorStore';
+import { useProxySettingsStore } from '../store/proxySettingsStore';
 
 export function EditorShell() {
   const project = useEditorStore((state) => state.project);
@@ -68,6 +69,7 @@ export function EditorShell() {
   const resetProject = useEditorStore((state) => state.resetProject);
   const setMedia = useEditorStore((state) => state.setMedia);
   const addMedia = useEditorStore((state) => state.addMedia);
+  const proxySettings = useProxySettingsStore((state) => state.settings);
   const setMediaMetadata = useEditorStore((state) => state.setMediaMetadata);
   const setDirty = useEditorStore((state) => state.setDirty);
   const setProjectPath = useEditorStore((state) => state.setProjectPath);
@@ -379,7 +381,7 @@ export function EditorShell() {
       }
       setMedia(useEditorStore.getState().project.media.map((item) => (item.id === assetId ? { ...item, proxyStatus: 'pending', proxyError: undefined } : item)));
       try {
-        const proxyAsset = await createProxyForAsset({ ...asset, proxyStatus: 'pending', proxyError: undefined });
+        const proxyAsset = await createProxyForAsset({ ...asset, proxyStatus: 'pending', proxyError: undefined }, proxySettings);
         setMedia(useEditorStore.getState().project.media.map((item) => (item.id === assetId ? proxyAsset : item)));
         showToast({ kind: 'success', title: zhCN.editorToasts.proxyReady, message: proxyAsset.name });
       } catch (error) {
@@ -395,7 +397,7 @@ export function EditorShell() {
         showToast({ kind: 'error', title: zhCN.editorToasts.proxyFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.proxyFailedMessage });
       }
     },
-    [setMedia]
+    [proxySettings, setMedia]
   );
 
   const clearCache = useCallback(async () => {

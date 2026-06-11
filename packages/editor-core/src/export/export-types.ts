@@ -2,6 +2,7 @@ import type { ColorCurves, ThreeWayColor } from '../color-grading';
 import type { InputColorSpace } from '../color-log-luts';
 import type { Effect } from '../effects';
 import type { TrackCompressor, TrackEQ } from '../model';
+import type { TargetAspectRatio } from '../reframe';
 
 export interface ExportSettings {
   width: number;
@@ -16,6 +17,9 @@ export interface ExportSettings {
   audioBitrate?: string | null;
   outputMode?: 'video' | 'audio';
   scaleMode?: 'none' | 'fit';
+  targetAspectRatio?: TargetAspectRatio;
+  reframeOffsetX?: number;
+  reframeOffsetY?: number;
   subtitleMode?: ExportSubtitleMode;
   hardwareEncoding?: boolean;
 }

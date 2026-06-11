@@ -1,4 +1,4 @@
-import type { MediaAsset } from '@open-factory/editor-core';
+import type { MediaAsset, ProxySettings } from '@open-factory/editor-core';
 import { shouldGenerateProxy } from '@open-factory/editor-core';
 import { create } from 'zustand';
 
@@ -21,7 +21,7 @@ export interface MediaJob {
 export interface MediaJobState {
   jobs: MediaJob[];
   runnerActive: boolean;
-  enqueueJobsForMedia: (media: MediaAsset[]) => void;
+  enqueueJobsForMedia: (media: MediaAsset[], proxySettings?: ProxySettings) => void;
   startNextJob: () => MediaJob | undefined;
   finishJob: (jobId: string) => void;
   failJob: (jobId: string, error: string) => void;
@@ -32,9 +32,9 @@ export interface MediaJobState {
 export const useMediaJobStore = create<MediaJobState>((set, get) => ({
   jobs: [],
   runnerActive: false,
-  enqueueJobsForMedia: (media) => {
+  enqueueJobsForMedia: (media, proxySettings) => {
     const existingKeys = new Set(get().jobs.map((job) => job.key));
-    const jobsToAdd = media.flatMap((asset) => buildJobsForAsset(asset)).filter((job) => !existingKeys.has(job.key));
+    const jobsToAdd = media.flatMap((asset) => buildJobsForAsset(asset, proxySettings)).filter((job) => !existingKeys.has(job.key));
     if (jobsToAdd.length === 0) {
       return;
     }
@@ -67,13 +67,13 @@ export const useMediaJobStore = create<MediaJobState>((set, get) => ({
   }
 }));
 
-function buildJobsForAsset(asset: MediaAsset): MediaJob[] {
+function buildJobsForAsset(asset: MediaAsset, proxySettings?: ProxySettings): MediaJob[] {
   if (asset.missing) {
     return [];
   }
   const jobs: MediaJob[] = [];
-  if (shouldGenerateProxy(asset)) {
-    jobs.push(createJob(asset, 'proxy'));
+  if (shouldGenerateProxy(asset, proxySettings)) {
+    jobs.push(createJob(asset, 'proxy', proxySettings));
   }
   if (asset.type === 'audio' || (asset.type === 'video' && asset.hasAudio)) {
     jobs.push(createJob(asset, 'waveform'));
@@ -81,11 +81,12 @@ function buildJobsForAsset(asset: MediaAsset): MediaJob[] {
   return jobs;
 }
 
-function createJob(asset: MediaAsset, type: MediaJobType): MediaJob {
+function createJob(asset: MediaAsset, type: MediaJobType, proxySettings?: ProxySettings): MediaJob {
   const sourceStamp = `${asset.path}|${asset.size ?? 0}|${asset.mtimeMs ?? 0}`;
+  const settingsStamp = type === 'proxy' && proxySettings ? `|${proxySettings.maxWidth}x${proxySettings.maxHeight}|${proxySettings.triggerShortEdge}|${proxySettings.videoBitrate}` : '';
   return {
     id: `${type}-${asset.id}-${Math.random().toString(36).slice(2)}`,
-    key: `${type}|${asset.id}|${sourceStamp}`,
+    key: `${type}|${asset.id}|${sourceStamp}${settingsStamp}`,
     assetId: asset.id,
     assetName: asset.name,
     type,

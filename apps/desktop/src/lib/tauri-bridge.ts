@@ -30,6 +30,7 @@ export interface MediaProbe {
   audioChannels?: number;
   audioSampleRate?: number;
   audioCodec?: string;
+  videoCodec?: string;
 }
 
 export interface ProxyResult {

@@ -43,6 +43,9 @@ export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
       format: 'mp4',
       outputMode: 'video',
       scaleMode: 'none',
+      targetAspectRatio: 'source',
+      reframeOffsetX: 0,
+      reframeOffsetY: 0,
       hardwareEncoding: false
     }
   },
@@ -62,6 +65,9 @@ export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
       format: 'mp4',
       outputMode: 'video',
       scaleMode: 'none',
+      targetAspectRatio: 'source',
+      reframeOffsetX: 0,
+      reframeOffsetY: 0,
       hardwareEncoding: false
     }
   },
@@ -81,6 +87,9 @@ export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
       format: 'mp4',
       outputMode: 'video',
       scaleMode: 'fit',
+      targetAspectRatio: '9:16',
+      reframeOffsetX: 0,
+      reframeOffsetY: 0,
       hardwareEncoding: false
     }
   },
@@ -100,6 +109,9 @@ export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
       format: 'mp4',
       outputMode: 'video',
       scaleMode: 'fit',
+      targetAspectRatio: 'source',
+      reframeOffsetX: 0,
+      reframeOffsetY: 0,
       hardwareEncoding: false
     }
   },
@@ -117,6 +129,9 @@ export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
       format: 'gif',
       outputMode: 'video',
       scaleMode: 'fit',
+      targetAspectRatio: 'source',
+      reframeOffsetX: 0,
+      reframeOffsetY: 0,
       hardwareEncoding: false
     }
   },
@@ -134,6 +149,9 @@ export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
       format: 'webp',
       outputMode: 'video',
       scaleMode: 'fit',
+      targetAspectRatio: 'source',
+      reframeOffsetX: 0,
+      reframeOffsetY: 0,
       hardwareEncoding: false
     }
   },
@@ -151,6 +169,9 @@ export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
       format: 'apng',
       outputMode: 'video',
       scaleMode: 'fit',
+      targetAspectRatio: 'source',
+      reframeOffsetX: 0,
+      reframeOffsetY: 0,
       hardwareEncoding: false
     }
   },
@@ -305,6 +326,11 @@ function sanitizeExportSettings(settings: unknown): ExportPresetSettings {
   if (input.scaleMode === 'none' || input.scaleMode === 'fit') {
     output.scaleMode = input.scaleMode;
   }
+  if (input.targetAspectRatio === 'source' || input.targetAspectRatio === '16:9' || input.targetAspectRatio === '9:16' || input.targetAspectRatio === '1:1' || input.targetAspectRatio === '4:5' || input.targetAspectRatio === '21:9') {
+    output.targetAspectRatio = input.targetAspectRatio;
+  }
+  copyReframeOffset(input, output, 'reframeOffsetX');
+  copyReframeOffset(input, output, 'reframeOffsetY');
   if (input.subtitleMode === 'burn-in' || input.subtitleMode === 'soft-sub') {
     output.subtitleMode = input.subtitleMode;
   }
@@ -318,6 +344,13 @@ function copyNumber(input: Record<string, unknown>, output: ExportPresetSettings
   const value = input[key];
   if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
     output[key] = value;
+  }
+}
+
+function copyReframeOffset(input: Record<string, unknown>, output: ExportPresetSettings, key: 'reframeOffsetX' | 'reframeOffsetY'): void {
+  const value = input[key];
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    output[key] = Math.min(1, Math.max(-1, value));
   }
 }
 

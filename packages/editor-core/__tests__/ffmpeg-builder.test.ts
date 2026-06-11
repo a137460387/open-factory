@@ -289,6 +289,25 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.filterComplex).toContain('pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=black');
   });
 
+  it('injects smart reframe crop and exact output scale for target aspect ratios', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-reframe', duration: 2, transform: { scale: 0.75 } })];
+
+    const exportProject = buildExportProjectFromProject(project, {
+      outputPath: 'out.mp4',
+      settings: { width: 1920, height: 1080, targetAspectRatio: '9:16', reframeOffsetX: 0.5, reframeOffsetY: -0.25 }
+    });
+    const plan = buildFfmpegExportPlan(exportProject);
+
+    expect(exportProject.settings).toMatchObject({ width: 1080, height: 1920, targetAspectRatio: '9:16', reframeOffsetX: 0.5, reframeOffsetY: -0.25 });
+    expect(plan.filterComplex).toContain("crop=w='if(gte(iw/ih\\,0.5625)\\,ih*0.5625\\,iw)'");
+    expect(plan.filterComplex).toContain("x='(iw-ow)/2+(iw-ow)/2*0.5'");
+    expect(plan.filterComplex).toContain("y='(ih-oh)/2+(ih-oh)/2*-0.25'");
+    expect(plan.filterComplex).toContain('scale=1080:1920');
+    expect(plan.filterComplex).toContain('scale=trunc(iw*0.75/2)*2:trunc(ih*0.75/2)*2');
+    expect(plan.filterComplex).not.toContain('pad=1080:1920');
+  });
+
   it('adds preset video and audio bitrate args', () => {
     const project = makeProject();
     project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-bitrate', duration: 2 })];

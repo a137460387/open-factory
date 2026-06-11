@@ -1,10 +1,10 @@
-import { buildProxyPlan, type MediaAsset } from '@open-factory/editor-core';
+import { buildProxyPlan, type MediaAsset, type ProxySettings } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
-import { generateProxy, getCacheDir } from '../lib/tauri-bridge';
+import { generateProxy, getAppDataDir } from '../lib/tauri-bridge';
 
-export async function createProxyForAsset(asset: MediaAsset): Promise<MediaAsset> {
-  const cacheDir = await getCacheDir();
-  const plan = buildProxyPlan(asset, cacheDir);
+export async function createProxyForAsset(asset: MediaAsset, settings?: ProxySettings): Promise<MediaAsset> {
+  const appDataDir = await getAppDataDir();
+  const plan = buildProxyPlan(asset, appDataDir, settings);
   if (!plan) {
     throw new Error(zhCN.errors.proxyNotNeeded);
   }

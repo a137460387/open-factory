@@ -53,6 +53,7 @@ export async function probeMediaPath(path: string, imageSequence?: ImageSequence
     audioChannels: mediaProbe.audioChannels,
     audioSampleRate: mediaProbe.audioSampleRate,
     audioCodec: mediaProbe.audioCodec,
+    videoCodec: mediaProbe.videoCodec,
     proxyStatus: type === 'video' ? 'none' : undefined,
     imageSequence
   };

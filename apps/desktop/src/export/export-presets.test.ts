@@ -44,6 +44,9 @@ describe('export presets', () => {
         audioBitrate: '192k',
         format: 'mp4',
         scaleMode: 'fit',
+        targetAspectRatio: '9:16',
+        reframeOffsetX: 0.25,
+        reframeOffsetY: -0.5,
         subtitleMode: 'burn-in'
       },
       storage
@@ -54,7 +57,7 @@ describe('export presets', () => {
       expect.objectContaining({
         id: 'custom-mywpiww0-mobile-review',
         builtin: false,
-        settings: expect.objectContaining({ width: 1080, height: 1920, scaleMode: 'fit' })
+        settings: expect.objectContaining({ width: 1080, height: 1920, scaleMode: 'fit', targetAspectRatio: '9:16', reframeOffsetX: 0.25, reframeOffsetY: -0.5 })
       })
     );
     expect(JSON.parse(files.get(presetPath) ?? '{}')).toEqual({
@@ -63,7 +66,7 @@ describe('export presets', () => {
         expect.objectContaining({
           id: 'custom-mywpiww0-mobile-review',
           name: 'Mobile Review',
-          settings: expect.objectContaining({ videoBitrate: '9M', subtitleMode: 'burn-in' })
+          settings: expect.objectContaining({ videoBitrate: '9M', subtitleMode: 'burn-in', targetAspectRatio: '9:16' })
         })
       ]
     });
@@ -102,6 +105,9 @@ describe('export presets', () => {
               audioCodec: ' libopus ',
               audioBitrate: null,
               subtitleMode: 'soft-sub',
+              targetAspectRatio: '21:9',
+              reframeOffsetX: 3,
+              reframeOffsetY: -3,
               hardwareEncoding: true,
               extra: 'ignored'
             }
@@ -123,6 +129,9 @@ describe('export presets', () => {
           audioCodec: 'libopus',
           audioBitrate: null,
           subtitleMode: 'soft-sub',
+          targetAspectRatio: '21:9',
+          reframeOffsetX: 1,
+          reframeOffsetY: -1,
           hardwareEncoding: true
         }
       })

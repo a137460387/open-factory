@@ -15,6 +15,7 @@ pub struct MediaProbe {
     audio_channels: Option<u32>,
     audio_sample_rate: Option<u32>,
     audio_codec: Option<String>,
+    video_codec: Option<String>,
 }
 
 #[tauri::command]
@@ -44,6 +45,17 @@ pub fn probe_media(app: AppHandle, path: String) -> Result<MediaProbe, String> {
                     .is_some_and(|kind| kind == "audio")
             })
         });
+    let video = json
+        .get("streams")
+        .and_then(Value::as_array)
+        .and_then(|streams| {
+            streams.iter().find(|stream| {
+                stream
+                    .get("codec_type")
+                    .and_then(Value::as_str)
+                    .is_some_and(|kind| kind == "video")
+            })
+        });
 
     Ok(MediaProbe {
         has_audio: audio.is_some(),
@@ -56,6 +68,10 @@ pub fn probe_media(app: AppHandle, path: String) -> Result<MediaProbe, String> {
             .and_then(Value::as_str)
             .and_then(|value| value.parse::<u32>().ok()),
         audio_codec: audio
+            .and_then(|stream| stream.get("codec_name"))
+            .and_then(Value::as_str)
+            .map(ToOwned::to_owned),
+        video_codec: video
             .and_then(|stream| stream.get("codec_name"))
             .and_then(Value::as_str)
             .map(ToOwned::to_owned),

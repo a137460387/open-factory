@@ -16,6 +16,7 @@ import {
 } from '../shortcuts/timeline-shortcuts';
 import { commandManager, timelineAccessor } from '../store/commandManager';
 import { useEditorStore } from '../store/editorStore';
+import { PROXY_RESOLUTION_PRESETS, PROXY_TRIGGER_THRESHOLDS, useProxySettingsStore, type ProxyResolutionPreset, type ProxyTriggerThreshold } from '../store/proxySettingsStore';
 import { useTranslationSettingsStore, type TranslationProvider } from '../store/translationSettingsStore';
 
 interface SettingsDialogProps {
@@ -27,7 +28,7 @@ interface SettingsDialogProps {
   onClose(): void;
 }
 
-type SettingsTab = 'lut-library' | 'shortcuts' | 'translation' | 'plugins';
+type SettingsTab = 'lut-library' | 'shortcuts' | 'translation' | 'proxy' | 'plugins';
 
 export function SettingsDialog({ open, project, selectedClip, shortcutBindings, onShortcutBindingsChange, onClose }: SettingsDialogProps) {
   const t = zhCN.settings;
@@ -46,6 +47,11 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
   const setTranslationProvider = useTranslationSettingsStore((state) => state.setProvider);
   const setTranslationApiKey = useTranslationSettingsStore((state) => state.setApiKey);
   const setTranslationTargetLanguage = useTranslationSettingsStore((state) => state.setTargetLanguage);
+  const proxyResolutionPreset = useProxySettingsStore((state) => state.resolutionPreset);
+  const proxyTriggerShortEdge = useProxySettingsStore((state) => state.triggerShortEdge);
+  const setProxyResolutionPreset = useProxySettingsStore((state) => state.setResolutionPreset);
+  const setProxyTriggerShortEdge = useProxySettingsStore((state) => state.setTriggerShortEdge);
+  const resetProxySettings = useProxySettingsStore((state) => state.reset);
   const selectedClipCanUseLut = selectedClip?.type === 'video' || selectedClip?.type === 'image';
   const effectiveBindings = useMemo(() => getEffectiveTimelineShortcutBindings(shortcutBindings), [shortcutBindings]);
   const conflicts = useMemo(() => detectTimelineShortcutConflicts(shortcutBindings), [shortcutBindings]);
@@ -210,6 +216,14 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
               {t.tabs.translation}
             </button>
             <button
+              className={`mt-1 w-full rounded-md px-3 py-2 text-left text-sm font-semibold ${tab === 'proxy' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}
+              type="button"
+              data-testid="settings-tab-proxy"
+              onClick={() => setTab('proxy')}
+            >
+              {t.tabs.proxy}
+            </button>
+            <button
               className={`mt-1 w-full rounded-md px-3 py-2 text-left text-sm font-semibold ${tab === 'plugins' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}
               type="button"
               data-testid="settings-tab-plugins"
@@ -346,9 +360,79 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
                 onTargetLanguageChange={setTranslationTargetLanguage}
               />
             ) : null}
+            {tab === 'proxy' ? (
+              <ProxySettingsPanel
+                resolutionPreset={proxyResolutionPreset}
+                triggerShortEdge={proxyTriggerShortEdge}
+                onResolutionPresetChange={setProxyResolutionPreset}
+                onTriggerShortEdgeChange={setProxyTriggerShortEdge}
+                onReset={resetProxySettings}
+              />
+            ) : null}
             {tab === 'plugins' ? <PluginsSettingsPanel registry={pluginRegistry} loading={pluginsLoading} error={pluginsError} onRefresh={() => void refreshPlugins()} /> : null}
           </main>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function ProxySettingsPanel({
+  resolutionPreset,
+  triggerShortEdge,
+  onResolutionPresetChange,
+  onTriggerShortEdgeChange,
+  onReset
+}: {
+  resolutionPreset: ProxyResolutionPreset;
+  triggerShortEdge: ProxyTriggerThreshold;
+  onResolutionPresetChange(preset: ProxyResolutionPreset): void;
+  onTriggerShortEdgeChange(threshold: ProxyTriggerThreshold): void;
+  onReset(): void;
+}) {
+  const t = zhCN.settings.proxy;
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold text-ink">{t.title}</h3>
+          <p className="text-xs text-slate-500">{t.description}</p>
+        </div>
+        <button className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel" type="button" data-testid="proxy-settings-reset-button" onClick={onReset}>
+          {t.reset}
+        </button>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="block text-xs font-medium text-slate-600">
+          {t.resolution}
+          <select
+            className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+            value={resolutionPreset}
+            data-testid="proxy-resolution-select"
+            onChange={(event) => onResolutionPresetChange(normalizeProxyResolutionPreset(event.target.value))}
+          >
+            {Object.keys(PROXY_RESOLUTION_PRESETS).map((preset) => (
+              <option key={preset} value={preset}>
+                {preset}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block text-xs font-medium text-slate-600">
+          {t.triggerThreshold}
+          <select
+            className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+            value={triggerShortEdge}
+            data-testid="proxy-threshold-select"
+            onChange={(event) => onTriggerShortEdgeChange(normalizeProxyTriggerThreshold(event.target.value))}
+          >
+            {PROXY_TRIGGER_THRESHOLDS.map((threshold) => (
+              <option key={threshold} value={threshold}>
+                {t.thresholdOption(threshold)}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
     </div>
   );
@@ -410,6 +494,15 @@ function TranslationSettingsPanel({
       <div className="rounded-md border border-line bg-panel p-3 text-xs text-slate-600">{t.localOnlyNote}</div>
     </div>
   );
+}
+
+function normalizeProxyResolutionPreset(value: string): ProxyResolutionPreset {
+  return value === '540p' || value === '1080p' ? value : '720p';
+}
+
+function normalizeProxyTriggerThreshold(value: string): ProxyTriggerThreshold {
+  const numeric = Number(value);
+  return PROXY_TRIGGER_THRESHOLDS.includes(numeric as ProxyTriggerThreshold) ? (numeric as ProxyTriggerThreshold) : 1080;
 }
 
 function PluginsSettingsPanel({ registry, loading, error, onRefresh }: { registry?: PluginRegistry; loading: boolean; error?: string; onRefresh(): void }) {

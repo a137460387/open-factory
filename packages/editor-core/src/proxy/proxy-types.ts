@@ -4,7 +4,7 @@ export interface ProxySettings {
   maxWidth: number;
   maxHeight: number;
   videoBitrate: string;
-  minSourceBytes: number;
+  triggerShortEdge: number;
 }
 
 export interface ProxyPlan {
@@ -14,7 +14,7 @@ export interface ProxyPlan {
   width: number;
   height: number;
   videoBitrate: string;
-  reason: string;
+  reason: 'large-resolution' | 'editing-codec';
 }
 
 export type ProxyCapableAsset = MediaAsset & { type: 'video' };

@@ -122,6 +122,7 @@ export interface MediaAsset {
   audioChannels?: number;
   audioSampleRate?: number;
   audioCodec?: string;
+  videoCodec?: string;
   proxyPath?: string;
   proxyStatus?: 'none' | 'pending' | 'ready' | 'error';
   proxyError?: string;
