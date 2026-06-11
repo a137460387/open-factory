@@ -1,4 +1,5 @@
 import { areClipsAdjacent, type Clip, type KeyframeProperty, type MediaAsset, snapTime, type Track, type Transition, type TransitionType } from '@open-factory/editor-core';
+import type { TimelineRenderRange } from '@open-factory/editor-core';
 import { clsx } from 'clsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatTrackType, zhCN } from '../../i18n/strings';
@@ -27,24 +28,50 @@ export interface DragState {
 export const TRACK_HEIGHT = 54;
 export const LABEL_WIDTH = 138;
 
-export function Ruler({ ticks, zoom, width, onSeek }: { ticks: number[]; zoom: number; width: number; onSeek(time: number): void }) {
+export function Ruler({
+  ticks,
+  zoom,
+  width,
+  cachedRanges,
+  onSeek
+}: {
+  ticks: number[];
+  zoom: number;
+  width: number;
+  cachedRanges: TimelineRenderRange[];
+  onSeek(time: number): void;
+}) {
   return (
-    <div className="sticky top-0 z-30 grid h-8 grid-cols-[138px_1fr] border-b border-line bg-panel">
-      <div className="border-r border-line px-3 py-1 text-xs font-medium text-slate-600">{zhCN.timeline.tracks}</div>
-      <div
-        className="relative"
-        style={{ width }}
-        data-testid="timeline-ruler"
-        onPointerDown={(event) => {
-          const rect = event.currentTarget.getBoundingClientRect();
-          onSeek(snapTime((event.clientX - rect.left) / zoom));
-        }}
-      >
-        {ticks.map((tick) => (
-          <div key={tick} className="absolute top-0 h-full border-l border-slate-300 pl-1 text-[11px] text-slate-500" style={{ left: tick * zoom }}>
-            {tick}s
-          </div>
-        ))}
+    <div className="sticky top-0 z-30 grid h-10 grid-cols-[138px_1fr] border-b border-line bg-panel">
+      <div className="grid grid-rows-[10px_1fr] border-r border-line">
+        <div className="px-3 text-[9px] font-medium leading-[10px] text-emerald-700">{zhCN.timeline.renderCache}</div>
+        <div className="px-3 py-1 text-xs font-medium text-slate-600">{zhCN.timeline.tracks}</div>
+      </div>
+      <div className="min-w-0" style={{ width }}>
+        <div className="relative h-2 bg-emerald-50" data-testid="timeline-render-cache-bar">
+          {cachedRanges.map((range) => (
+            <span
+              key={`${range.start}-${range.end}`}
+              className="absolute top-0 h-full bg-emerald-500"
+              style={{ left: range.start * zoom, width: Math.max(1, (range.end - range.start) * zoom) }}
+              data-testid="timeline-render-cache-segment"
+            />
+          ))}
+        </div>
+        <div
+          className="relative h-8"
+          data-testid="timeline-ruler"
+          onPointerDown={(event) => {
+            const rect = event.currentTarget.getBoundingClientRect();
+            onSeek(snapTime((event.clientX - rect.left) / zoom));
+          }}
+        >
+          {ticks.map((tick) => (
+            <div key={tick} className="absolute top-0 h-full border-l border-slate-300 pl-1 text-[11px] text-slate-500" style={{ left: tick * zoom }}>
+              {tick}s
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

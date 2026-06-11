@@ -54,6 +54,7 @@ import { detectClipSilence } from '../../lib/silenceDetection';
 import { detectSceneChanges, listenBridge } from '../../lib/tauri-bridge';
 import { commandManager, projectAccessor, timelineAccessor } from '../../store/commandManager';
 import { useEditorStore } from '../../store/editorStore';
+import { useRenderCacheStore } from '../../store/renderCacheStore';
 import { LABEL_WIDTH, Ruler, TrackRow, buildTicks, type ClipMenuRequest, type DragState } from './TimelineParts';
 
 export function Timeline() {
@@ -74,6 +75,7 @@ export function Timeline() {
   const setTimelineZoom = useEditorStore((state) => state.setTimelineZoom);
   const setPreviewTimeline = useEditorStore((state) => state.setPreviewTimeline);
   const setActiveSequenceId = useEditorStore((state) => state.setActiveSequenceId);
+  const renderCacheRanges = useRenderCacheStore((state) => state.ranges);
   const [drag, setDrag] = useState<DragState | undefined>();
   const [selectionRect, setSelectionRect] = useState<SelectionRect | undefined>();
   const [selectionStart, setSelectionStart] = useState<{ x: number; y: number } | undefined>();
@@ -685,7 +687,7 @@ export function Timeline() {
       </div>
       <div ref={scrollRef} className="timeline-scrollbar min-h-0 min-w-0 max-w-full flex-1 overflow-auto" onWheel={onWheel} data-testid="timeline-scroll-container">
         <div className="relative" style={{ width: LABEL_WIDTH + width }}>
-          <Ruler ticks={ticks} zoom={zoom} width={width} onSeek={setPlayheadTime} />
+          <Ruler ticks={ticks} zoom={zoom} width={width} cachedRanges={renderCacheRanges} onSeek={setPlayheadTime} />
           <div className="relative">
             {project.timeline.tracks.map((track) => (
               <TrackRow

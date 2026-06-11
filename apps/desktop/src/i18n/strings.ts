@@ -140,6 +140,7 @@ export const zhCN = {
     title: '时间线',
     subtitle: '拖拽片段、修剪边缘、在播放头处分割',
     tracks: '轨道',
+    renderCache: '缓存',
     addVideoTrack: '添加视频轨道',
     addAudioTrack: '添加音频轨道',
     addSubtitleTrack: '添加字幕轨道',

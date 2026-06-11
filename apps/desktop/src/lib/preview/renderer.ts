@@ -1,5 +1,6 @@
 import type { Clip, MediaAsset, Sequence, Timeline, Transition } from '@open-factory/editor-core';
 import { applyClipKeyframes, getClipPlaybackStart, getRenderableTracks, getTimelinePlaybackDuration, getTransitionPlaybackWindow } from '@open-factory/editor-core';
+import { DEFAULT_TRANSFORM } from '@open-factory/editor-core';
 import { PreviewAudioRenderer } from './audio-renderer';
 import { recordPreviewError, recordPreviewMode, recordPreviewReadback } from './debug';
 import { drawImage2d, drawImageWebGl } from './image-renderer';
@@ -88,6 +89,26 @@ export class PreviewRenderer {
 
   getAudioLevels(nowMs = performance.now()) {
     return this.audioRenderer.getLevels(nowMs);
+  }
+
+  drawCachedFrame(canvas: HTMLCanvasElement, bitmap: ImageBitmap): void {
+    const webgl = this.getWebGl(canvas);
+    if (webgl) {
+      recordPreviewMode('webgl');
+      webgl.begin(canvas.width, canvas.height);
+      webgl.drawSource(bitmap, bitmap.width, bitmap.height, DEFAULT_TRANSFORM);
+      webgl.finish();
+      return;
+    }
+    const context = canvas.getContext('2d');
+    if (!context) {
+      return;
+    }
+    recordPreviewMode('2d');
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = '#141820';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   }
 
   pauseAllAudio(): void {
