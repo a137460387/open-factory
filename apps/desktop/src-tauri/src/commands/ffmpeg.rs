@@ -1,5 +1,6 @@
 use crate::path_validator::{validate_path, validate_path_for_write};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
@@ -9,12 +10,13 @@ use std::sync::{Arc, Mutex, OnceLock};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Emitter, Manager};
 
-static EXPORT_CHILD: OnceLock<Mutex<Option<Child>>> = OnceLock::new();
+const DEFAULT_EXPORT_TASK_ID: &str = "__default_export__";
+static EXPORT_CHILDREN: OnceLock<Mutex<HashMap<String, Child>>> = OnceLock::new();
 static EXPORT_TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 static HARDWARE_ENCODER_CACHE: OnceLock<Mutex<Option<HardwareEncoderProbe>>> = OnceLock::new();
 
-fn export_child() -> &'static Mutex<Option<Child>> {
-    EXPORT_CHILD.get_or_init(|| Mutex::new(None))
+fn export_children() -> &'static Mutex<HashMap<String, Child>> {
+    EXPORT_CHILDREN.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
 #[derive(Debug, Serialize)]
@@ -91,10 +93,19 @@ pub struct ExportResult {
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ExportProgressPayload {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    task_id: Option<String>,
     progress: f32,
     progress_pct: f32,
     out_time_us: Option<u64>,
     expected_duration_us: u64,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportStartedPayload {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    task_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -213,12 +224,13 @@ fn encoder_list_contains(encoders: &str, encoder: &str) -> bool {
         .any(|line| line.split_whitespace().any(|token| token == encoder))
 }
 
-#[tauri::command]
-pub fn cancel_export() -> Result<(), String> {
-    if let Some(mut child) = export_child()
+#[tauri::command(rename_all = "camelCase")]
+pub fn cancel_export(task_id: Option<String>) -> Result<(), String> {
+    let slot_id = export_slot_id(task_id.as_deref());
+    if let Some(mut child) = export_children()
         .lock()
         .map_err(|_| "Unable to lock export process".to_string())?
-        .take()
+        .remove(&slot_id)
     {
         child.kill().map_err(|error| error.to_string())?;
         let _ = child.wait();
@@ -236,19 +248,24 @@ pub async fn analyze_clip(
         .map_err(|error| error.to_string())?
 }
 
-#[tauri::command]
-pub async fn run_export(app: AppHandle, plan: FfmpegExportPlanDto) -> Result<ExportResult, String> {
+#[tauri::command(rename_all = "camelCase")]
+pub async fn run_export(
+    app: AppHandle,
+    plan: FfmpegExportPlanDto,
+    task_id: Option<String>,
+) -> Result<ExportResult, String> {
     let mut plan = plan;
     if plan.full_args.is_empty() {
         return Err("FFmpeg argument list is empty.".to_string());
     }
+    let slot_id = export_slot_id(task_id.as_deref());
     let nested_dir = if plan.nested_plans.is_empty() {
         None
     } else {
         Some(create_nested_export_dir()?)
     };
     let nested_result = if let Some(dir) = nested_dir.as_deref() {
-        run_nested_export_plans(&app, &mut plan, dir)
+        run_nested_export_plans(&app, &mut plan, dir, &slot_id)
     } else {
         Ok(())
     };
@@ -275,12 +292,20 @@ pub async fn run_export(app: AppHandle, plan: FfmpegExportPlanDto) -> Result<Exp
 
     let started = Instant::now();
     let progress_app = app.clone();
-    let emit_progress: ProgressEmitter = Arc::new(move |progress| {
+    let progress_task_id = task_id.clone();
+    let emit_progress: ProgressEmitter = Arc::new(move |mut progress| {
+        progress.task_id = progress_task_id.clone();
         let _ = progress_app.emit("export-progress", progress);
     });
     let started_app = app.clone();
+    let started_task_id = task_id.clone();
     let emit_started: StartedEmitter = Arc::new(move || {
-        let _ = started_app.emit("export-started", ());
+        let _ = started_app.emit(
+            "export-started",
+            ExportStartedPayload {
+                task_id: started_task_id.clone(),
+            },
+        );
     });
     let result = with_temp_export_artifacts(&plan, |materialized, _temp_dir| {
         run_materialized_export_plan(
@@ -289,6 +314,7 @@ pub async fn run_export(app: AppHandle, plan: FfmpegExportPlanDto) -> Result<Exp
             plan.duration,
             nested_dir.as_deref(),
             _temp_dir,
+            &slot_id,
             emit_progress,
             emit_started,
         )
@@ -406,10 +432,15 @@ fn validate_export_paths(
     Ok(())
 }
 
-fn run_nested_export_plans(app: &AppHandle, plan: &mut FfmpegExportPlanDto, nested_dir: &Path) -> Result<(), String> {
+fn run_nested_export_plans(
+    app: &AppHandle,
+    plan: &mut FfmpegExportPlanDto,
+    nested_dir: &Path,
+    slot_id: &str,
+) -> Result<(), String> {
     for nested in &mut plan.nested_plans {
         let output_path = nested_dir.join(safe_file_name(&nested.placeholder));
-        run_nested_export_plans(app, &mut nested.plan, nested_dir)?;
+        run_nested_export_plans(app, &mut nested.plan, nested_dir, slot_id)?;
         replace_placeholder(&mut nested.plan.full_args, &nested.placeholder, &normalize_path(&output_path));
         with_temp_export_artifacts(&nested.plan, |materialized, _temp_dir| {
             run_materialized_export_plan(
@@ -418,6 +449,7 @@ fn run_nested_export_plans(app: &AppHandle, plan: &mut FfmpegExportPlanDto, nest
                 nested.plan.duration,
                 Some(nested_dir),
                 _temp_dir,
+                slot_id,
                 Arc::new(|_| {}),
                 Arc::new(|| {}),
             )
@@ -450,19 +482,21 @@ fn run_materialized_export_plan(
     fallback_duration: f64,
     nested_dir: Option<&Path>,
     artifact_dir: &Path,
+    slot_id: &str,
     emit_progress: ProgressEmitter,
     emit_started: StartedEmitter,
 ) -> Result<(), String> {
     if materialized.passes.is_empty() {
         let mut args = materialized.full_args;
         validate_export_paths(app, &mut args, nested_dir, Some(artifact_dir), true)?;
-        return spawn_and_wait_with_progress(args, fallback_duration, emit_progress, emit_started);
+        return spawn_and_wait_with_progress(slot_id, args, fallback_duration, emit_progress, emit_started);
     }
 
     for pass in materialized.passes {
         let mut args = pass.full_args;
         validate_export_paths(app, &mut args, nested_dir, Some(artifact_dir), true)?;
         spawn_and_wait_with_progress(
+            slot_id,
             args,
             pass.duration,
             Arc::clone(&emit_progress),
@@ -474,6 +508,7 @@ fn run_materialized_export_plan(
 }
 
 fn spawn_and_wait_with_progress(
+    slot_id: &str,
     args: Vec<String>,
     duration: f64,
     emit_progress: ProgressEmitter,
@@ -491,10 +526,10 @@ fn spawn_and_wait_with_progress(
         .take()
         .ok_or_else(|| "Unable to capture FFmpeg stderr.".to_string())?;
     {
-        let mut slot = export_child()
+        let mut children = export_children()
             .lock()
             .map_err(|_| "Unable to lock export process".to_string())?;
-        *slot = Some(child);
+        children.insert(slot_id.to_string(), child);
     }
     emit_started();
 
@@ -515,19 +550,19 @@ fn spawn_and_wait_with_progress(
 
     let status_result = loop {
         let maybe_status = {
-            let mut slot = export_child()
+            let mut children = export_children()
                 .lock()
                 .map_err(|_| "Unable to lock export process".to_string())?;
-            let Some(child) = slot.as_mut() else {
+            let Some(child) = children.get_mut(slot_id) else {
                 break Err("Export canceled.".to_string());
             };
             child.try_wait().map_err(|error| error.to_string())?
         };
         if let Some(status) = maybe_status {
-            let _ = export_child()
+            let _ = export_children()
                 .lock()
                 .map_err(|_| "Unable to lock export process".to_string())?
-                .take();
+                .remove(slot_id);
             break Ok(status);
         }
         std::thread::sleep(Duration::from_millis(100));
@@ -763,6 +798,13 @@ fn ffmpeg_binary() -> &'static str {
     }
 }
 
+fn export_slot_id(task_id: Option<&str>) -> String {
+    task_id
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or(DEFAULT_EXPORT_TASK_ID)
+        .to_string()
+}
+
 fn parse_progress(line: &str, total_duration: f64) -> Option<ExportProgressPayload> {
     if let Some(value) = line.strip_prefix("out_time_us=") {
         let out_time_us = value.trim().parse::<u64>().ok()?;
@@ -824,6 +866,7 @@ impl ExportProgressPayload {
     fn from_out_time_us(out_time_us: u64, expected_duration_us: u64) -> Self {
         let progress_pct = calculate_progress_pct(out_time_us, expected_duration_us);
         Self {
+            task_id: None,
             progress: progress_pct / 100.0,
             progress_pct,
             out_time_us: Some(out_time_us),
@@ -834,6 +877,7 @@ impl ExportProgressPayload {
     fn complete(total_duration: f64) -> Self {
         let duration_us = expected_duration_us(total_duration);
         Self {
+            task_id: None,
             progress: 1.0,
             progress_pct: 100.0,
             out_time_us: Some(duration_us),
@@ -986,6 +1030,7 @@ mod tests {
         assert_eq!(
             ExportProgressPayload::complete(1.5),
             ExportProgressPayload {
+                task_id: None,
                 progress: 1.0,
                 progress_pct: 100.0,
                 out_time_us: Some(1_500_000),
@@ -1009,18 +1054,42 @@ mod tests {
 
     #[test]
     fn cancel_export_is_ok_when_idle() {
-        *export_child().lock().expect("export child lock") = None;
-        cancel_export().expect("idle cancellation should not fail");
+        export_children().lock().expect("export child lock").clear();
+        cancel_export(None).expect("idle cancellation should not fail");
     }
 
     #[test]
     fn cancel_export_clears_running_child_slot() {
         let child = spawn_long_running_child();
-        *export_child().lock().expect("export child lock") = Some(child);
+        export_children()
+            .lock()
+            .expect("export child lock")
+            .insert(DEFAULT_EXPORT_TASK_ID.to_string(), child);
 
-        cancel_export().expect("running cancellation should not fail");
+        cancel_export(None).expect("running cancellation should not fail");
 
-        assert!(export_child().lock().expect("export child lock").is_none());
+        assert!(export_children().lock().expect("export child lock").is_empty());
+    }
+
+    #[test]
+    fn cancel_export_clears_only_requested_child_slot() {
+        export_children().lock().expect("export child lock").clear();
+        let child_a = spawn_long_running_child();
+        let child_b = spawn_long_running_child();
+        {
+            let mut children = export_children().lock().expect("export child lock");
+            children.insert("task-a".to_string(), child_a);
+            children.insert("task-b".to_string(), child_b);
+        }
+
+        cancel_export(Some("task-a".to_string())).expect("task-a cancellation should not fail");
+
+        {
+            let children = export_children().lock().expect("export child lock");
+            assert!(!children.contains_key("task-a"));
+            assert!(children.contains_key("task-b"));
+        }
+        cancel_export(Some("task-b".to_string())).expect("task-b cleanup should not fail");
     }
 
     #[test]
@@ -1218,6 +1287,7 @@ mod tests {
         let progress_values_for_emit = Arc::clone(&progress_values);
 
         let result = spawn_and_wait_with_progress(
+            DEFAULT_EXPORT_TASK_ID,
             vec!["-this-option-does-not-exist".to_string()],
             1.0,
             Arc::new(move |progress| {
@@ -1231,7 +1301,7 @@ mod tests {
 
         let error = result.expect_err("invalid ffmpeg args should fail");
         assert!(error.contains("FFmpeg exited with status"), "{error}");
-        assert!(export_child().lock().expect("export child lock").is_none());
+        assert!(export_children().lock().expect("export child lock").is_empty());
     }
 
     #[cfg(windows)]

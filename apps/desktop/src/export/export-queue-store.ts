@@ -1,9 +1,10 @@
 import {
   cancelExportTask,
+  clampExportConcurrency,
   createExportTask,
   failExportTask,
   finishExportTask,
-  startNextExportTask,
+  startExportTaskSlots,
   updateExportTaskProgress,
   type ExportTask,
   type FfmpegExportPlan
@@ -13,14 +14,16 @@ import { create } from 'zustand';
 export interface ExportQueueState {
   tasks: ExportTask[];
   runnerActive: boolean;
+  maxConcurrent: number;
   lastCompletedPath?: string;
   addTask: (input: { name: string; outputPath: string; plan: FfmpegExportPlan }) => ExportTask;
-  startNextTask: () => void;
+  startNextTasks: () => string[];
   updateTaskProgress: (taskId: string, progress: number) => void;
   finishTask: (taskId: string) => void;
   failTask: (taskId: string, error: string) => void;
   cancelTask: (taskId: string) => void;
   retryTask: (taskId: string) => void;
+  setMaxConcurrent: (maxConcurrent: number) => void;
   setRunnerActive: (runnerActive: boolean) => void;
   clearFinishedTasks: () => void;
 }
@@ -28,13 +31,21 @@ export interface ExportQueueState {
 export const useExportQueueStore = create<ExportQueueState>((set, get) => ({
   tasks: [],
   runnerActive: false,
+  maxConcurrent: 2,
   addTask: (input) => {
     const task = createExportTask(input);
     set((state) => ({ tasks: [...state.tasks, task] }));
     return task;
   },
-  startNextTask: () => {
-    set((state) => ({ tasks: startNextExportTask(state.tasks) }));
+  startNextTasks: () => {
+    const before = get().tasks;
+    const startedAt = new Date().toISOString();
+    const after = startExportTaskSlots(before, get().maxConcurrent, startedAt);
+    const startedIds = after
+      .filter((task) => task.status === 'running' && before.find((previous) => previous.id === task.id)?.status === 'pending')
+      .map((task) => task.id);
+    set({ tasks: after });
+    return startedIds;
   },
   updateTaskProgress: (taskId, progress) => {
     set((state) => ({ tasks: updateExportTaskProgress(state.tasks, taskId, progress) }));
@@ -60,6 +71,9 @@ export const useExportQueueStore = create<ExportQueueState>((set, get) => ({
           : task
       )
     }));
+  },
+  setMaxConcurrent: (maxConcurrent) => {
+    set({ maxConcurrent: clampExportConcurrency(maxConcurrent) });
   },
   setRunnerActive: (runnerActive) => set({ runnerActive }),
   clearFinishedTasks: () => {

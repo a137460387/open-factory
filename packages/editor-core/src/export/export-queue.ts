@@ -30,13 +30,25 @@ export function createExportTask(input: { name: string; outputPath: string; plan
 }
 
 export function startNextExportTask(tasks: ExportTask[], now = new Date().toISOString()): ExportTask[] {
-  if (tasks.some((task) => task.status === 'running')) {
+  return startExportTaskSlots(tasks, 1, now);
+}
+
+export function clampExportConcurrency(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 2;
+  }
+  return Math.min(4, Math.max(1, Math.round(value)));
+}
+
+export function startExportTaskSlots(tasks: ExportTask[], maxConcurrent = 2, now = new Date().toISOString()): ExportTask[] {
+  const limit = clampExportConcurrency(maxConcurrent);
+  let availableSlots = Math.max(0, limit - tasks.filter((task) => task.status === 'running').length);
+  if (availableSlots === 0) {
     return tasks;
   }
-  let started = false;
   return tasks.map((task) => {
-    if (!started && task.status === 'pending') {
-      started = true;
+    if (availableSlots > 0 && task.status === 'pending') {
+      availableSlots -= 1;
       return { ...task, status: 'running', startedAt: now };
     }
     return task;

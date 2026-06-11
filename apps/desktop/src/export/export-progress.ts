@@ -1,4 +1,5 @@
 export interface ExportProgressPayload {
+  taskId?: string;
   progress?: number;
   progressPct?: number;
   outTimeUs?: number;

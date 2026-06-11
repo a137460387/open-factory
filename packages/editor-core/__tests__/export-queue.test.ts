@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { cancelExportTask, createExportTask, failExportTask, finishExportTask, startNextExportTask, updateExportTaskProgress, type FfmpegExportPlan } from '../src';
+import {
+  cancelExportTask,
+  clampExportConcurrency,
+  createExportTask,
+  failExportTask,
+  finishExportTask,
+  startExportTaskSlots,
+  startNextExportTask,
+  updateExportTaskProgress,
+  type FfmpegExportPlan
+} from '../src';
 
 const plan: FfmpegExportPlan = {
   inputs: [],
@@ -44,5 +54,47 @@ describe('export queue helpers', () => {
     next = failExportTask(next, 'a', 'ffmpeg failed', 'error');
     expect(next[0].status).toBe('error');
     expect(next[0].error).toBe('ffmpeg failed');
+  });
+
+  it('starts pending tasks until concurrent slots are full', () => {
+    const tasks = [
+      createExportTask({ id: 'a', name: 'A', outputPath: 'a.mp4', plan }),
+      createExportTask({ id: 'b', name: 'B', outputPath: 'b.mp4', plan }),
+      createExportTask({ id: 'c', name: 'C', outputPath: 'c.mp4', plan })
+    ];
+
+    const next = startExportTaskSlots(tasks, 2, 'start');
+
+    expect(next.map((task) => task.status)).toEqual(['running', 'running', 'pending']);
+    expect(next[0].startedAt).toBe('start');
+    expect(next[1].startedAt).toBe('start');
+    expect(next[2].startedAt).toBeUndefined();
+  });
+
+  it('releases a concurrent slot after finish or cancel', () => {
+    const running = startExportTaskSlots(
+      [
+        createExportTask({ id: 'a', name: 'A', outputPath: 'a.mp4', plan }),
+        createExportTask({ id: 'b', name: 'B', outputPath: 'b.mp4', plan }),
+        createExportTask({ id: 'c', name: 'C', outputPath: 'c.mp4', plan })
+      ],
+      2,
+      'start'
+    );
+
+    const afterFinish = startExportTaskSlots(finishExportTask(running, 'a', 'done'), 2, 'next');
+    expect(afterFinish.map((task) => task.status)).toEqual(['success', 'running', 'running']);
+    expect(afterFinish[2].startedAt).toBe('next');
+
+    const afterCancel = startExportTaskSlots(cancelExportTask(running, 'b', 'cancel'), 2, 'after-cancel');
+    expect(afterCancel.map((task) => task.status)).toEqual(['running', 'canceled', 'running']);
+    expect(afterCancel[2].startedAt).toBe('after-cancel');
+  });
+
+  it('clamps export concurrency to the supported range', () => {
+    expect(clampExportConcurrency(Number.NaN)).toBe(2);
+    expect(clampExportConcurrency(0)).toBe(1);
+    expect(clampExportConcurrency(3.6)).toBe(4);
+    expect(clampExportConcurrency(8)).toBe(4);
   });
 });

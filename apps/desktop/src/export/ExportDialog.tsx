@@ -5,7 +5,7 @@ import { zhCN } from '../i18n/strings';
 import { chooseExportPath, revealExport } from '../lib/exportVideo';
 import { getFfmpegCapabilities } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
-import { cancelQueuedExportTask, enqueueExport, retryQueuedExportTask } from './export-queue-runner';
+import { cancelQueuedExportTask, enqueueExport, retryQueuedExportTask, setExportQueueMaxConcurrent } from './export-queue-runner';
 import { estimateExportFileSizeBytes, formatEstimatedFileSize } from './export-size-estimate';
 import { useExportQueueStore } from './export-queue-store';
 import {
@@ -36,6 +36,7 @@ export function ExportDialog({ project, onClose, onCompleted }: ExportDialogProp
   const [batchOutputPaths, setBatchOutputPaths] = useState('');
   const tasks = useExportQueueStore((state) => state.tasks);
   const runnerActive = useExportQueueStore((state) => state.runnerActive);
+  const maxConcurrent = useExportQueueStore((state) => state.maxConcurrent);
   const clearFinishedTasks = useExportQueueStore((state) => state.clearFinishedTasks);
   const notifiedSuccess = useRef(new Set<string>());
   const selectedPreset = useMemo(() => getExportPreset(presetId, presets), [presetId, presets]);
@@ -281,12 +282,29 @@ export function ExportDialog({ project, onClose, onCompleted }: ExportDialogProp
             <div className="flex items-center justify-between border-b border-line px-3 py-2">
               <div>
                 <div className="text-xs font-semibold text-slate-700">{t.queueTitle}</div>
-                <div className="text-[11px] text-slate-500">{runnerActive ? t.queueRunning : zhCN.common.idle}</div>
+                <div className="text-[11px] text-slate-500">{runnerActive ? t.queueRunning(maxConcurrent) : zhCN.common.idle}</div>
               </div>
-              <button className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel" onClick={clearFinishedTasks}>
-                <Trash2 size={13} />
-                {t.clearFinished}
-              </button>
+              <div className="flex items-center gap-2">
+                <label className="flex items-center gap-1 text-xs font-medium text-slate-600">
+                  <span>{t.maxConcurrent}</span>
+                  <select
+                    className="rounded-md border border-line px-2 py-1"
+                    value={maxConcurrent}
+                    onChange={(event) => setExportQueueMaxConcurrent(Number(event.target.value))}
+                    data-testid="export-max-concurrent-select"
+                  >
+                    {[1, 2, 3, 4].map((value) => (
+                      <option key={value} value={value}>
+                        {value}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel" onClick={clearFinishedTasks}>
+                  <Trash2 size={13} />
+                  {t.clearFinished}
+                </button>
+              </div>
             </div>
             <div className="max-h-56 overflow-y-auto">
               {tasks.length === 0 ? (

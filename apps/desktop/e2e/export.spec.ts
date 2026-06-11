@@ -12,6 +12,7 @@ test('builds a multitrack FFmpeg plan with text artifacts and runs mocked export
   await openExportDialog(page);
   await expect(page.getByTestId('export-dialog')).toBeVisible();
   await page.getByTestId('export-preset-select').selectOption('web-1080p');
+  await page.getByTestId('export-max-concurrent-select').selectOption('1');
   await page.getByTestId('export-fps-input').fill('60');
   await page.getByTestId('export-batch-paths').fill('C:/Exports/e2e-output.mp4\nC:/Exports/e2e-output-2.mp4');
   await page.getByTestId('export-enqueue-button').click();
@@ -33,6 +34,33 @@ test('builds a multitrack FFmpeg plan with text artifacts and runs mocked export
   expect(plan.filterComplex).toContain('amix=inputs=1');
   expect(plan.textArtifacts).toHaveLength(1);
   expect(plan.fullArgs.at(-1)).toBe('C:/Exports/e2e-output-2.mp4');
+});
+
+test('runs export queue with two concurrent tasks and starts the third after a slot frees', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.evaluate(() => window.__E2E_ACTIONS__!.holdExportGate!());
+  await page.getByTestId('import-media-button').click();
+  await addMediaCardToTimeline(page, 0);
+
+  await openExportDialog(page);
+  await page.getByTestId('export-preset-select').selectOption('web-1080p');
+  await page.getByTestId('export-max-concurrent-select').selectOption('2');
+  await page.getByTestId('export-batch-paths').fill('C:/Exports/queue-a.mp4\nC:/Exports/queue-b.mp4\nC:/Exports/queue-c.mp4');
+  await page.getByTestId('export-enqueue-button').click();
+
+  await expectExportTaskStatus(page, 0, 'running');
+  await expectExportTaskStatus(page, 1, 'running');
+  await expectExportTaskStatus(page, 2, 'pending');
+
+  await page.evaluate(() => window.__E2E_ACTIONS__!.releaseExportGate!());
+
+  await expectExportTaskStatus(page, 0, 'success');
+  await expectExportTaskStatus(page, 1, 'running');
+  await expectExportTaskStatus(page, 2, 'running');
+  await page.evaluate(() => window.__E2E_ACTIONS__!.releaseAllExportGates!());
+  await expectExportTaskStatus(page, 1, 'success');
+  await expectExportTaskStatus(page, 2, 'success');
 });
 
 test('uses detected NVENC hardware encoder when hardware encoding is enabled', async ({ page }) => {

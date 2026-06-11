@@ -122,9 +122,9 @@ export type TauriMocks = Partial<{
   authorizePaths(paths: string[]): Promise<void> | void;
   detectFfmpeg(): Promise<boolean> | boolean;
   getFfmpegCapabilities(): Promise<FfmpegCapabilities> | FfmpegCapabilities;
-  runExport(plan: FfmpegExportPlan): Promise<ExportResult> | ExportResult;
+  runExport(plan: FfmpegExportPlan, taskId?: string): Promise<ExportResult> | ExportResult;
   analyzeClip(request: AnalyzeClipRequest): Promise<AnalyzeClipResult> | AnalyzeClipResult;
-  cancelExport(): Promise<void> | void;
+  cancelExport(taskId?: string): Promise<void> | void;
   getCacheDir(): Promise<string> | string;
   readCache(path: string): Promise<string | null> | string | null;
   writeCache(path: string, contents: string): Promise<void> | void;
@@ -398,12 +398,12 @@ export async function getFfmpegCapabilities(): Promise<FfmpegCapabilities> {
   return invoke<FfmpegCapabilities>('get_ffmpeg_capabilities');
 }
 
-export async function runExport(plan: FfmpegExportPlan): Promise<ExportResult> {
+export async function runExport(plan: FfmpegExportPlan, taskId?: string): Promise<ExportResult> {
   const mock = getTauriMocks()?.runExport;
   if (mock) {
-    return mock(plan);
+    return mock(plan, taskId);
   }
-  return invoke<ExportResult>('run_export', { plan });
+  return invoke<ExportResult>('run_export', taskId ? { plan, taskId } : { plan });
 }
 
 export async function analyzeClip(request: AnalyzeClipRequest): Promise<AnalyzeClipResult> {
@@ -414,13 +414,13 @@ export async function analyzeClip(request: AnalyzeClipRequest): Promise<AnalyzeC
   return invoke<AnalyzeClipResult>('analyze_clip', { request });
 }
 
-export async function cancelExport(): Promise<void> {
+export async function cancelExport(taskId?: string): Promise<void> {
   const mock = getTauriMocks()?.cancelExport;
   if (mock) {
-    await mock();
+    await mock(taskId);
     return;
   }
-  await invoke('cancel_export');
+  await invoke('cancel_export', taskId ? { taskId } : {});
 }
 
 export async function getCacheDir(): Promise<string> {

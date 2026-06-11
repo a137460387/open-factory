@@ -28,9 +28,9 @@ let openFileDialogPaths: string[] = [];
 let savePath = 'C:/Exports/open-factory-test.mp4';
 let openDirectoryPath = 'C:/Relink';
 let lastExportPlan: FfmpegExportPlan | undefined;
-let exportCanceled = false;
-let exportGate: Promise<void> | undefined;
-let releaseExportGate: (() => void) | undefined;
+const canceledExportTaskIds = new Set<string>();
+let exportGateHeld = false;
+const exportGates: Array<{ taskId?: string; release: () => void }> = [];
 
 const sampleProjectPath = 'C:/Projects/sample.cutproj.json';
 const missingProjectPath = 'C:/Projects/missing.cutproj.json';
@@ -197,15 +197,16 @@ const mocks: TauriMocks = {
     hardwareEncoder: 'h264_nvenc',
     drawtextWarning: null
   }),
-  runExport: async (plan) => {
+  runExport: async (plan, taskId) => {
     lastExportPlan = plan;
-    exportCanceled = false;
-    emit('export-progress', 0.2);
-    await (exportGate ?? wait(20));
-    if (exportCanceled) {
+    const cancelKey = exportCancelKey(taskId);
+    canceledExportTaskIds.delete(cancelKey);
+    emit('export-progress', taskId ? { taskId, progress: 0.2 } : 0.2);
+    await waitForExportGate(taskId);
+    if (canceledExportTaskIds.has(cancelKey)) {
       throw new Error('Export canceled.');
     }
-    emit('export-progress', 1);
+    emit('export-progress', taskId ? { taskId, progress: 1 } : 1);
     const outputPath = plan.fullArgs.at(-1) ?? savePath;
     if (outputPath.includes('%')) {
       for (const frame of ['0001', '0002', '0003']) {
@@ -233,8 +234,9 @@ const mocks: TauriMocks = {
     persistFiles();
     return { clipId, trfPath, durationMs: 10 };
   },
-  cancelExport: () => {
-    exportCanceled = true;
+  cancelExport: (taskId) => {
+    canceledExportTaskIds.add(exportCancelKey(taskId));
+    releaseExportGateForTask(taskId);
   },
   getCacheDir: () => 'C:/Cache/open-factory',
   readCache: (path) => cache.get(path) ?? null,
@@ -468,14 +470,18 @@ window.__E2E_ACTIONS__ = {
   },
   getCacheKeys: () => Array.from(cache.keys()),
   holdExportGate: () => {
-    exportGate = new Promise((resolve) => {
-      releaseExportGate = resolve;
-    });
+    exportGateHeld = true;
   },
   releaseExportGate: () => {
-    releaseExportGate?.();
-    exportGate = undefined;
-    releaseExportGate = undefined;
+    const next = exportGates.shift();
+    next?.release();
+    exportGateHeld = exportGates.length > 0;
+  },
+  releaseAllExportGates: () => {
+    while (exportGates.length > 0) {
+      exportGates.shift()?.release();
+    }
+    exportGateHeld = false;
   },
   setMissingProjectNext: () => {
     openFileDialogPaths = [missingProjectPath];
@@ -612,6 +618,30 @@ function emit(event: string, payload: unknown): void {
 
 function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function waitForExportGate(taskId?: string): Promise<void> {
+  if (!exportGateHeld) {
+    return wait(20);
+  }
+  return new Promise((resolve) => {
+    exportGates.push({ taskId, release: resolve });
+  });
+}
+
+function releaseExportGateForTask(taskId?: string): void {
+  const key = exportCancelKey(taskId);
+  const index = exportGates.findIndex((gate) => exportCancelKey(gate.taskId) === key);
+  if (index < 0) {
+    return;
+  }
+  const [gate] = exportGates.splice(index, 1);
+  gate.release();
+  exportGateHeld = exportGates.length > 0;
+}
+
+function exportCancelKey(taskId?: string): string {
+  return taskId ?? '__default_export__';
 }
 
 function solidColorSample([r, g, b]: [number, number, number]) {

@@ -13,6 +13,8 @@ import { normalizeExportProgressPayload, type ExportProgressEvent } from './expo
 import { useExportQueueStore } from './export-queue-store';
 
 let runnerPromise: Promise<void> | undefined;
+const activeRuns = new Map<string, Promise<void>>();
+let wakeRunner: (() => void) | undefined;
 
 export async function enqueueExport(project: Project, outputPath: string, settings?: Partial<Omit<ExportSettings, 'outputPath'>>): Promise<ExportTask> {
   if (!timelineHasExportableVideo(project.timeline)) {
@@ -30,12 +32,20 @@ export async function enqueueExport(project: Project, outputPath: string, settin
     outputPath,
     plan
   });
+  signalRunner();
   ensureExportQueueRunner();
   return task;
 }
 
 export function retryQueuedExportTask(taskId: string): void {
   useExportQueueStore.getState().retryTask(taskId);
+  signalRunner();
+  ensureExportQueueRunner();
+}
+
+export function setExportQueueMaxConcurrent(maxConcurrent: number): void {
+  useExportQueueStore.getState().setMaxConcurrent(maxConcurrent);
+  signalRunner();
   ensureExportQueueRunner();
 }
 
@@ -58,46 +68,83 @@ export async function cancelQueuedExportTask(taskId: string): Promise<void> {
   }
   useExportQueueStore.getState().cancelTask(taskId);
   if (task.status === 'running') {
-    await bridgeCancelExport();
+    await bridgeCancelExport(taskId);
   }
+  signalRunner();
 }
 
 async function runQueue(): Promise<void> {
-  while (true) {
-    const pending = useExportQueueStore.getState().tasks.find((task) => task.status === 'pending');
-    if (!pending) {
+  const unlisten = await listenBridge<ExportProgressEvent>('export-progress', (progress) => {
+    const normalized = normalizeExportProgressPayload(progress);
+    const taskId = getProgressTaskId(progress) ?? (activeRuns.size === 1 ? Array.from(activeRuns.keys())[0] : undefined);
+    if (!taskId) {
       return;
     }
+    const latest = useExportQueueStore.getState().tasks.find((task) => task.id === taskId);
+    if (latest?.status === 'running') {
+      useExportQueueStore.getState().updateTaskProgress(taskId, normalized);
+    }
+  });
 
-    useExportQueueStore.getState().startNextTask();
-    const runningTask = useExportQueueStore.getState().tasks.find((task) => task.id === pending.id && task.status === 'running');
-    if (!runningTask) {
+  try {
+    while (true) {
+      startAvailableTasks();
+      const hasPending = useExportQueueStore.getState().tasks.some((task) => task.status === 'pending');
+      if (!hasPending && activeRuns.size === 0) {
+        return;
+      }
+      if (hasPending && activeRuns.size === 0) {
+        continue;
+      }
+      await waitForRunnerWake();
+    }
+  } finally {
+    unlisten();
+  }
+}
+
+function startAvailableTasks(): void {
+  for (const taskId of useExportQueueStore.getState().startNextTasks()) {
+    const task = useExportQueueStore.getState().tasks.find((item) => item.id === taskId);
+    if (!task || activeRuns.has(task.id)) {
       continue;
     }
-
-    const unlisten = await listenBridge<ExportProgressEvent>('export-progress', (progress) => {
-      const normalized = normalizeExportProgressPayload(progress);
-      const latest = useExportQueueStore.getState().tasks.find((task) => task.id === runningTask.id);
-      if (latest?.status === 'running') {
-        useExportQueueStore.getState().updateTaskProgress(runningTask.id, normalized);
-      }
+    const promise = runSingleTask(task).finally(() => {
+      activeRuns.delete(task.id);
+      signalRunner();
     });
+    activeRuns.set(task.id, promise);
+  }
+}
 
-    try {
-      await runExport(runningTask.plan);
-      const latest = useExportQueueStore.getState().tasks.find((task) => task.id === runningTask.id);
-      if (latest?.status === 'running') {
-        useExportQueueStore.getState().finishTask(runningTask.id);
-      }
-    } catch (error) {
-      const latest = useExportQueueStore.getState().tasks.find((task) => task.id === runningTask.id);
-      if (latest?.status === 'running') {
-        useExportQueueStore.getState().failTask(runningTask.id, error instanceof Error ? error.message : zhCN.errors.exportFailed);
-      }
-    } finally {
-      unlisten();
+async function runSingleTask(task: ExportTask): Promise<void> {
+  try {
+    await runExport(task.plan, task.id);
+    const latest = useExportQueueStore.getState().tasks.find((item) => item.id === task.id);
+    if (latest?.status === 'running') {
+      useExportQueueStore.getState().finishTask(task.id);
+    }
+  } catch (error) {
+    const latest = useExportQueueStore.getState().tasks.find((item) => item.id === task.id);
+    if (latest?.status === 'running') {
+      useExportQueueStore.getState().failTask(task.id, error instanceof Error ? error.message : zhCN.errors.exportFailed);
     }
   }
+}
+
+function getProgressTaskId(progress: ExportProgressEvent): string | undefined {
+  return typeof progress === 'object' && progress !== null && typeof progress.taskId === 'string' ? progress.taskId : undefined;
+}
+
+function signalRunner(): void {
+  wakeRunner?.();
+  wakeRunner = undefined;
+}
+
+function waitForRunnerWake(): Promise<void> {
+  return new Promise((resolve) => {
+    wakeRunner = resolve;
+  });
 }
 
 function fileNameFromPath(path: string): string {
