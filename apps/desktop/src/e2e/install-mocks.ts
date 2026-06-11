@@ -35,6 +35,7 @@ const sampleProjectPath = 'C:/Projects/sample.cutproj.json';
 const missingProjectPath = 'C:/Projects/missing.cutproj.json';
 const batchMissingProjectPath = 'C:/Projects/batch-missing.cutproj.json';
 const tinyVideo = 'C:/Media/tiny-video.mp4';
+const tinyVideoB = 'C:/Media/camera-b.mp4';
 const tinyAudio = 'C:/Media/tiny-audio.wav';
 const tinyImage = 'C:/Media/test-image.png';
 const pngFrame001 = 'C:/Media/frame001.png';
@@ -63,6 +64,7 @@ files.set(
 files.set(lutLibraryPath, makeWarmContrastCube());
 for (const path of [
   tinyVideo,
+  tinyVideoB,
   tinyAudio,
   tinyImage,
   pngFrame001,
@@ -282,6 +284,61 @@ window.fetch = (input, init) => {
   return realFetch(input as RequestInfo | URL, init);
 };
 window.__E2E_ACTIONS__ = {
+  setupMulticamFixture: () => {
+    const project = createProject('Multicam E2E');
+    const media: MediaAsset[] = [
+      {
+        id: 'media-camera-a',
+        type: 'video',
+        name: 'camera-a.mp4',
+        path: tinyVideo,
+        duration: 4,
+        width: 1280,
+        height: 720,
+        size: 4096,
+        mtimeMs: 1_000,
+        hasAudio: true,
+        audioChannels: 2,
+        audioSampleRate: 44_100,
+        audioCodec: 'aac'
+      },
+      {
+        id: 'media-camera-b',
+        type: 'video',
+        name: 'camera-b.mp4',
+        path: tinyVideoB,
+        duration: 4,
+        width: 1280,
+        height: 720,
+        size: 4096,
+        mtimeMs: 1_000,
+        hasAudio: true,
+        audioChannels: 2,
+        audioSampleRate: 44_100,
+        audioCodec: 'aac'
+      }
+    ];
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({ id: 'track-camera-a', type: 'video', name: 'Camera A', clips: [makeMulticamVideoClip('clip-camera-a', 'media-camera-a', 'track-camera-a', 'Camera A')] }),
+        createTrack({ id: 'track-camera-b', type: 'video', name: 'Camera B', clips: [makeMulticamVideoClip('clip-camera-b', 'media-camera-b', 'track-camera-b', 'Camera B')] }),
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
+        createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media,
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    useEditorStore.getState().setSelectedClipIds(['clip-camera-a', 'clip-camera-b']);
+    useEditorStore.getState().setPlayheadTime(1);
+    commandManager.clear();
+  },
   setupWhisperFixture: () => {
     const project = createProject('Whisper E2E');
     const asset: MediaAsset = {
@@ -423,6 +480,24 @@ function makeWhisperVideoClip(): Extract<import('@open-factory/editor-core').Cli
     name: 'whisper-video.mp4',
     mediaId: 'media-whisper-video',
     trackId: 'track-video',
+    start: 0,
+    duration: 4,
+    trimStart: 0,
+    trimEnd: 0,
+    speed: DEFAULT_CLIP_SPEED,
+    colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+    transform: { ...DEFAULT_TRANSFORM },
+    volume: 1
+  };
+}
+
+function makeMulticamVideoClip(id: string, mediaId: string, trackId: string, name: string): Extract<import('@open-factory/editor-core').Clip, { type: 'video' }> {
+  return {
+    id,
+    type: 'video',
+    name,
+    mediaId,
+    trackId,
     start: 0,
     duration: 4,
     trimStart: 0,

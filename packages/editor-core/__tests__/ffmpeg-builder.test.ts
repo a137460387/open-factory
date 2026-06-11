@@ -4,6 +4,7 @@ import {
   buildExportProjectFromProject,
   buildFfmpegCurrentFrameExportPlan,
   buildFfmpegExportPlan,
+  createMulticamSequenceProject,
   createNestedSequenceClip,
   createSequence,
   createTrack,
@@ -1178,6 +1179,45 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.nestedPlans[0].placeholder).toBe('__NESTED_SEQUENCE_sequence_a__.mp4');
     expect(plan.nestedPlans[0].plan.fullArgs.at(-1)).toBe('__NESTED_SEQUENCE_sequence_a__.mp4');
     expect(plan.duration).toBe(2);
+  });
+
+  it('flattens multicam sequences to direct angle clips for export', () => {
+    const project = makeProject();
+    project.media.push({
+      id: 'asset-b',
+      type: 'video',
+      name: 'camera-b.mp4',
+      path: 'D:\\Media\\camera-b.mp4',
+      duration: 20,
+      width: 1920,
+      height: 1080,
+      hasAudio: true,
+      audioChannels: 2,
+      audioSampleRate: 48000
+    });
+    project.timeline.tracks = [
+      createTrack({ id: 'track-a', type: 'video', name: 'Camera A', clips: [makeVideoClip({ id: 'clip-a', trackId: 'track-a', mediaId: 'asset-1', duration: 4 })] }),
+      createTrack({ id: 'track-b', type: 'video', name: 'Camera B', clips: [makeVideoClip({ id: 'clip-b', trackId: 'track-b', mediaId: 'asset-b', duration: 4 })] })
+    ];
+    const multicamProject = createMulticamSequenceProject(project, ['clip-a', 'clip-b'], { sequenceName: 'Multicam' }).project;
+    const multicamClip = multicamProject.timeline.tracks[0].clips[0];
+    if (multicamClip.type !== 'nested-sequence' || !multicamClip.multicam) {
+      throw new Error('Expected multicam nested clip');
+    }
+    multicamClip.multicam.switches = [
+      { id: 'switch-0', time: 0, angleId: multicamClip.multicam.angles[0].id },
+      { id: 'switch-1', time: 2, angleId: multicamClip.multicam.angles[1].id }
+    ];
+
+    const exportProject = buildExportProjectFromProject(multicamProject, { outputPath: 'out.mp4' });
+    const plan = buildFfmpegExportPlan(exportProject);
+
+    expect(exportProject.timeline.tracks).toHaveLength(2);
+    expect(exportProject.timeline.tracks[0].clips.map((clip) => clip.type)).toEqual(['video', 'video']);
+    expect(exportProject.timeline.tracks[1].clips).toEqual([]);
+    expect(plan.inputs.map((input) => input.path)).toEqual(['C:/Videos/sample.mp4', 'D:/Media/camera-b.mp4']);
+    expect(plan.nestedPlans).toHaveLength(0);
+    expect(plan.fullArgs.join(' ')).not.toContain('__NESTED_SEQUENCE_');
   });
 
   it('warns when nested sequence export depth exceeds the limit', () => {

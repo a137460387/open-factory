@@ -13,6 +13,7 @@ import {
   normalizeFrameInterpolation,
   normalizeMasks,
   normalizeMasterVolume,
+  normalizeMulticamSequence,
   normalizeSequenceFrameRate,
   normalizeSequenceName,
   normalizeStabilization,
@@ -271,7 +272,8 @@ function cloneClip<TClip extends Clip>(clip: TClip): TClip {
     masks: normalizeMasks(clip.masks),
     sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
     keyframes: normalizeClipKeyframes(cloneClipKeyframes(clip.keyframes), clip.duration),
-    effects: cloneEffects(clip.effects)
+    effects: cloneEffects(clip.effects),
+    multicam: clip.type === 'nested-sequence' ? normalizeMulticamSequence(clip.multicam, clip.duration) : undefined
   };
   if (clip.type === 'text') {
     return { ...cloned, style: { ...DEFAULT_TEXT_STYLE, ...clip.style } } as TClip;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_COLOR_CORRECTION, createTrack, migrateProjectFile, serializeProject, type ProjectFileV1 } from '../src';
-import { makeProject, makeSubtitleClip } from './test-utils';
+import { DEFAULT_COLOR_CORRECTION, createMulticamSequenceProject, createTrack, migrateProjectFile, serializeProject, type ProjectFileV1 } from '../src';
+import { makeProject, makeSubtitleClip, makeVideoClip } from './test-utils';
 
 describe('project schema migration', () => {
   it('serializes schemaVersion 2 project files with media and relativePath', () => {
@@ -157,6 +157,42 @@ describe('project schema migration', () => {
     expect(clip.stabilization).toEqual({ enabled: true, smoothing: 100, zoom: 0, analyzed: true, trfPath: 'C:\\Temp\\clip.trf' });
     expect(clip.frameInterpolation).toEqual({ enabled: true, targetFps: 60 });
     expect(clip.sequenceFrameRate).toBe(120);
+  });
+
+  it('serializes and migrates multicam metadata on nested sequence clips', () => {
+    const project = makeProject();
+    project.media.push({
+      id: 'asset-b',
+      type: 'video',
+      name: 'camera-b.mp4',
+      path: 'C:\\Videos\\camera-b.mp4',
+      duration: 20,
+      width: 1920,
+      height: 1080,
+      hasAudio: true
+    });
+    project.timeline.tracks = [
+      createTrack({ id: 'track-a', type: 'video', name: 'Camera A', clips: [makeVideoClip({ id: 'clip-a', trackId: 'track-a', mediaId: 'asset-1', duration: 4 })] }),
+      createTrack({ id: 'track-b', type: 'video', name: 'Camera B', clips: [makeVideoClip({ id: 'clip-b', trackId: 'track-b', mediaId: 'asset-b', duration: 4 })] })
+    ];
+    const multicamProject = createMulticamSequenceProject(project, ['clip-a', 'clip-b'], { sequenceName: 'Multicam' }).project;
+    const multicamClip = multicamProject.timeline.tracks[0].clips[0];
+    if (multicamClip.type !== 'nested-sequence' || !multicamClip.multicam) {
+      throw new Error('Expected multicam nested clip');
+    }
+    multicamClip.multicam.switches.push({ id: 'switch-out-of-range', time: 99, angleId: 'missing-angle' });
+
+    const migrated = migrateProjectFile(serializeProject(multicamProject));
+    const migratedClip = migrated.project.timeline.tracks[0].clips[0];
+
+    expect(migratedClip.type).toBe('nested-sequence');
+    if (migratedClip.type === 'nested-sequence') {
+      expect(migratedClip.multicam?.angles).toHaveLength(2);
+      expect(migratedClip.multicam?.switches).toEqual([
+        expect.objectContaining({ time: 0, angleId: 'angle-1' }),
+        { id: 'switch-out-of-range', time: 4, angleId: 'angle-1' }
+      ]);
+    }
   });
 
   it('resolves archived relative PNG sequence paths from the project file directory', () => {

@@ -290,6 +290,26 @@ export interface NestedSequenceClip extends BaseClip {
   muted?: boolean;
   fadeInDuration?: number;
   fadeOutDuration?: number;
+  multicam?: MulticamSequence;
+}
+
+export interface MulticamSequence {
+  angles: MulticamAngle[];
+  switches: MulticamSwitch[];
+}
+
+export interface MulticamAngle {
+  id: string;
+  clipId: string;
+  trackId: string;
+  name: string;
+  offset: number;
+}
+
+export interface MulticamSwitch {
+  id: string;
+  time: number;
+  angleId: string;
 }
 
 export interface TextStyle {
@@ -539,7 +559,8 @@ export function createNestedSequenceClip(
     volume: normalizeTrackVolume(input.volume),
     muted: input.muted,
     fadeInDuration: input.fadeInDuration,
-    fadeOutDuration: input.fadeOutDuration
+    fadeOutDuration: input.fadeOutDuration,
+    multicam: normalizeMulticamSequence(input.multicam, input.duration)
   };
 }
 
@@ -623,6 +644,46 @@ export function normalizeMask(mask: Partial<ClipMask> | undefined): ClipMask {
 
 export function normalizeMasks(masks: ClipMask[] | undefined): ClipMask[] {
   return Array.isArray(masks) ? masks.map((mask) => normalizeMask(mask)) : [];
+}
+
+export function normalizeMulticamSequence(multicam: Partial<MulticamSequence> | undefined, duration = Number.POSITIVE_INFINITY): MulticamSequence | undefined {
+  if (!multicam || !Array.isArray(multicam.angles) || multicam.angles.length < 2) {
+    return undefined;
+  }
+  const angles = multicam.angles
+    .map((angle, index) => ({
+      id: typeof angle.id === 'string' && angle.id.trim() ? angle.id.trim() : `angle-${index + 1}`,
+      clipId: typeof angle.clipId === 'string' ? angle.clipId : '',
+      trackId: typeof angle.trackId === 'string' ? angle.trackId : '',
+      name: typeof angle.name === 'string' && angle.name.trim() ? angle.name.trim() : `Camera ${index + 1}`,
+      offset: round(finiteOrDefault(angle.offset, 0))
+    }))
+    .filter((angle) => angle.clipId && angle.trackId)
+    .slice(0, 8);
+  if (angles.length < 2) {
+    return undefined;
+  }
+  const angleIds = new Set(angles.map((angle) => angle.id));
+  const maxTime = Number.isFinite(duration) ? Math.max(0, duration) : Number.POSITIVE_INFINITY;
+  const switches = (Array.isArray(multicam.switches) ? multicam.switches : [])
+    .map((item, index) => ({
+      id: typeof item.id === 'string' && item.id.trim() ? item.id.trim() : createId('multicam-switch'),
+      time: round(Math.min(maxTime, Math.max(0, finiteOrDefault(item.time, index === 0 ? 0 : maxTime)))),
+      angleId: typeof item.angleId === 'string' && angleIds.has(item.angleId) ? item.angleId : angles[0].id
+    }))
+    .filter((item) => item.time <= maxTime)
+    .sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
+  const byTime = new Map<number, MulticamSwitch>();
+  for (const item of switches) {
+    byTime.set(item.time, item);
+  }
+  if (!byTime.has(0)) {
+    byTime.set(0, { id: createId('multicam-switch'), time: 0, angleId: angles[0].id });
+  }
+  return {
+    angles,
+    switches: Array.from(byTime.values()).sort((left, right) => left.time - right.time || left.id.localeCompare(right.id))
+  };
 }
 
 export function normalizeSequenceFrameRate(frameRate: number | undefined): number | undefined {
@@ -849,6 +910,7 @@ export function serializeLegacyProject(project: Project): {
           chromaKey: normalizeChromaKey(clip.chromaKey),
           stabilization: normalizeStabilization(clip.stabilization),
           masks: normalizeMasks(clip.masks),
+          multicam: clip.type === 'nested-sequence' ? normalizeMulticamSequence(clip.multicam, clip.duration) : undefined,
           sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
           keyframes: cloneClipKeyframesLocal(clip.keyframes)
         }))

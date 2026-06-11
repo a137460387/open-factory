@@ -45,6 +45,7 @@ import {
 import { createKeyframe, removeKeyframeForProperty, setKeyframeForProperty } from '../keyframes';
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
 import { cloneEffects, normalizeEffect, normalizeEffects, type Effect, type EffectType } from '../effects';
+import { createMulticamSequenceProject, setMulticamSwitch } from '../multicam';
 import {
   calculateSpeedCurveSourceDuration,
   clampTransitionDuration,
@@ -667,6 +668,70 @@ export class PackNestedSequenceCommand implements Command {
   execute(): void {
     this.before ??= this.accessor.getProject();
     this.after ??= packNestedSequence(this.before, this.clipIds, this.sequenceName);
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class CreateMulticamSequenceCommand implements Command {
+  readonly description = 'Create multicam sequence';
+  private before?: Project;
+  private after?: Project;
+  private resultClipId?: string;
+  private resultSequenceId?: string;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly clipIds: string[],
+    private readonly sequenceName = DEFAULT_NESTED_SEQUENCE_NAME
+  ) {}
+
+  get multicamClipId(): string | undefined {
+    return this.resultClipId;
+  }
+
+  get sequenceId(): string | undefined {
+    return this.resultSequenceId;
+  }
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    if (!this.after) {
+      const result = createMulticamSequenceProject(this.before, this.clipIds, { sequenceName: this.sequenceName });
+      this.after = result.project;
+      this.resultClipId = result.multicamClipId;
+      this.resultSequenceId = result.sequenceId;
+    }
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class CutMulticamClipCommand implements Command {
+  readonly description = 'Cut multicam clip';
+  private before?: Project;
+  private after?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly clipId: string,
+    private readonly sceneTime: number,
+    private readonly angleId: string
+  ) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    this.after ??= cutMulticamClip(this.before, this.clipId, this.sceneTime, this.angleId);
     this.accessor.setProject(this.after);
   }
 
@@ -1317,6 +1382,30 @@ function packNestedSequence(project: Project, clipIds: string[], sequenceName: s
       })
     ]
   };
+}
+
+function cutMulticamClip(project: Project, clipId: string, sceneTime: number, angleId: string): Project {
+  const syncedProject = replaceProjectActiveTimeline(project, project.timeline);
+  const timeline = syncedProject.timeline;
+  const clip = findClip(timeline, clipId);
+  if (clip.type !== 'nested-sequence' || !clip.multicam) {
+    throw new Error('Clip is not a multicam sequence');
+  }
+  if (sceneTime < clip.start - 0.000001 || sceneTime > clip.start + clip.duration + 0.000001) {
+    throw new Error('Multicam cut time must be inside the clip bounds');
+  }
+  const localTime = round(Math.min(clip.duration, Math.max(0, sceneTime - clip.start + clip.trimStart)));
+  const switches = setMulticamSwitch(clip.multicam, localTime, angleId, clip.duration);
+  return replaceProjectActiveTimeline(
+    syncedProject,
+    replaceClip(timeline, {
+      ...clip,
+      multicam: {
+        ...clip.multicam,
+        switches
+      }
+    })
+  );
 }
 
 function cloneClipForNestedSequence<TClip extends Clip>(clip: TClip): TClip {

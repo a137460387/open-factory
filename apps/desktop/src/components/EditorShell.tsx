@@ -1,5 +1,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AddClipCommand, AddTrackCommand, DeleteClipsCommand, SplitClipCommand, dirname, getTimelineDuration, instantiateTitleTemplate, type TitleTemplateId } from '@open-factory/editor-core';
+import {
+  AddClipCommand,
+  AddTrackCommand,
+  CreateMulticamSequenceCommand,
+  DeleteClipsCommand,
+  SplitClipCommand,
+  dirname,
+  getTimelineDuration,
+  instantiateTitleTemplate,
+  type TitleTemplateId
+} from '@open-factory/editor-core';
 import { Toolbar } from './Toolbar';
 import { AudioMixer } from './AudioMixer/AudioMixer';
 import { ErrorBoundary } from './common/ErrorBoundary';
@@ -43,7 +53,7 @@ import { showToast } from '../lib/toast';
 import { createProxyForAsset } from '../media/proxy';
 import { relinkMissingMediaInDirectory, relinkSingleMedia } from '../media/relink';
 import { useBackgroundMediaJobs } from '../media/useBackgroundMediaJobs';
-import { commandManager, timelineAccessor } from '../store/commandManager';
+import { commandManager, projectAccessor, timelineAccessor } from '../store/commandManager';
 import { selectClipById, useEditorStore } from '../store/editorStore';
 
 export function EditorShell() {
@@ -82,6 +92,18 @@ export function EditorShell() {
     () => Boolean(selectedClip && project.timeline.tracks.find((track) => track.id === selectedClip.trackId)?.locked),
     [project.timeline.tracks, selectedClip]
   );
+  const canCreateMulticamSequence = useMemo(() => {
+    if (selectedClipIds.length < 2 || selectedClipIds.length > 8) {
+      return false;
+    }
+    const selected = selectedClipIds
+      .map((id) => project.timeline.tracks.flatMap((track) => track.clips.map((clip) => ({ clip, track }))).find((item) => item.clip.id === id))
+      .filter(Boolean);
+    return (
+      selected.length === selectedClipIds.length &&
+      selected.every((item) => item?.track.type === 'video' && (item.clip.type === 'video' || item.clip.type === 'image'))
+    );
+  }, [project.timeline.tracks, selectedClipIds]);
 
   const saveProject = useCallback(async () => {
     const nextPath = projectPath ?? (await chooseProjectSavePath(`${project.name}.cutproj.json`));
@@ -292,6 +314,20 @@ export function EditorShell() {
     }
   }, [playheadTime, selectedClip]);
 
+  const createMulticamSequence = useCallback(() => {
+    try {
+      const command = new CreateMulticamSequenceCommand(projectAccessor, selectedClipIds, zhCN.timeline.multicamSequenceName(project.sequences.length));
+      commandManager.execute(command);
+      if (command.multicamClipId) {
+        setSelectedClipId(command.multicamClipId);
+        setSelectedClipIds([command.multicamClipId]);
+      }
+      showToast({ kind: 'success', title: zhCN.editorToasts.multicamCreated });
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.editorToasts.multicamCreateFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.multicamCreateFailedMessage });
+    }
+  }, [project.sequences.length, selectedClipIds, setSelectedClipId, setSelectedClipIds]);
+
   const deleteSelected = useCallback(() => {
     const ids = useEditorStore.getState().selectedClipIds;
     if (ids.length === 0) {
@@ -467,6 +503,8 @@ export function EditorShell() {
           onExportCurrentFrame={() => void exportCurrentFrame()}
           onCancelExport={() => void cancelCurrentExport()}
           onSplitSelected={splitSelected}
+          onCreateMulticamSequence={createMulticamSequence}
+          canCreateMulticamSequence={canCreateMulticamSequence}
           onUndo={undo}
           onRedo={redo}
           onClearCache={() => void clearCache()}

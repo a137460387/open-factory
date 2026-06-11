@@ -1,4 +1,4 @@
-import { Archive, Captions, Download, FileDown, FilePlus2, FolderOpen, ImageDown, Mic2, Pause, Play, Redo2, RotateCcw, Save, Scissors, Settings, Trash2, Undo2, XCircle } from 'lucide-react';
+import { Archive, Captions, Download, FileDown, FilePlus2, FolderOpen, ImageDown, Mic2, PanelsTopLeft, Pause, Play, Redo2, RotateCcw, Save, Scissors, Settings, Trash2, Undo2, XCircle } from 'lucide-react';
 import { timelineHasExportableVideo } from '@open-factory/editor-core';
 import { clsx } from 'clsx';
 import { useExportQueueStore } from '../export/export-queue-store';
@@ -20,6 +20,8 @@ interface ToolbarProps {
   onExportCurrentFrame(): void;
   onCancelExport(): void;
   onSplitSelected(): void;
+  onCreateMulticamSequence(): void;
+  canCreateMulticamSequence: boolean;
   onUndo(): void;
   onRedo(): void;
   onClearCache(): void;
@@ -145,6 +147,7 @@ export function Toolbar(props: ToolbarProps) {
       <ToolButton title={t.undo} disabled={!historyMeta.canUndo} onClick={props.onUndo} icon={<Undo2 size={17} />} testId="toolbar-undo-button" />
       <ToolButton title={t.redo} disabled={!historyMeta.canRedo} onClick={props.onRedo} icon={<Redo2 size={17} />} testId="toolbar-redo-button" />
       <ToolButton title={t.splitSelectedClip} onClick={props.onSplitSelected} icon={<Scissors size={17} />} testId="toolbar-split-button" />
+      <ToolButton title={t.createMulticamSequence} disabled={!props.canCreateMulticamSequence} onClick={props.onCreateMulticamSequence} icon={<PanelsTopLeft size={17} />} testId="toolbar-create-multicam-button" />
       <div className="mx-1 h-7 w-px bg-line" />
       <ToolButton title={isPlaying ? t.pause : t.play} onClick={() => setIsPlaying(!isPlaying)} icon={isPlaying ? <Pause size={17} /> : <Play size={17} />} testId="toolbar-playback-button" playbackState={isPlaying ? 'playing' : 'paused'} />
       {typeof exportProgress === 'number' ? (

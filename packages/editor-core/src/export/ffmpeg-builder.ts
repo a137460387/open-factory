@@ -32,6 +32,7 @@ import {
 } from '../color-grading';
 import { cloneEffects, type Effect } from '../effects';
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
+import { flattenMulticamProjectForExport } from '../multicam';
 import { calculateSpeedCurveSourceDuration, getClipSourceVisibleDuration, getClipSpeed, getRenderableTracks, getTimelinePlaybackDuration, getTrackPan, getTrackVolume } from '../timeline';
 import { round } from '../time';
 import { serializeSrt } from '../subtitles/srt';
@@ -85,21 +86,22 @@ interface BuildFfmpegExportPlanOptions {
 }
 
 export function buildExportProjectFromProject(project: Project, options: BuildExportProjectOptions): ExportProject {
-  const mediaById = new Map(project.media.map((asset) => [asset.id, asset]));
-  const primaryTimeline = getProjectPrimaryTimeline(project);
+  const exportSourceProject = flattenMulticamProjectForExport(project);
+  const mediaById = new Map(exportSourceProject.media.map((asset) => [asset.id, asset]));
+  const primaryTimeline = getProjectPrimaryTimeline(exportSourceProject);
   const settings = {
     ...DEFAULT_EXPORT_SETTINGS,
-    width: project.settings.width || DEFAULT_EXPORT_SETTINGS.width,
-    height: project.settings.height || DEFAULT_EXPORT_SETTINGS.height,
-    fps: project.settings.fps || DEFAULT_EXPORT_SETTINGS.fps,
+    width: exportSourceProject.settings.width || DEFAULT_EXPORT_SETTINGS.width,
+    height: exportSourceProject.settings.height || DEFAULT_EXPORT_SETTINGS.height,
+    fps: exportSourceProject.settings.fps || DEFAULT_EXPORT_SETTINGS.fps,
     ...options.settings,
     outputPath: normalizeFfmpegPath(options.outputPath)
   };
   return {
     settings,
-    masterVolume: normalizeMasterVolume(project.masterVolume),
+    masterVolume: normalizeMasterVolume(exportSourceProject.masterVolume),
     timeline: buildExportTimeline(primaryTimeline, mediaById, options),
-    sequences: getProjectSequences(project)
+    sequences: getProjectSequences(exportSourceProject)
       .filter((sequence) => sequence.id !== 'sequence-main')
       .map((sequence) => ({ id: sequence.id, name: sequence.name, timeline: buildExportTimeline(sequence.timeline, mediaById, options) }))
   };

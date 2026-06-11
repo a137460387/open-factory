@@ -1,11 +1,16 @@
 import { BarChart3, Blend, Columns2, GitCompareArrows, Pause, Play, Rows2 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  CutMulticamClipCommand,
   buildTimelineRenderFrameKey,
   buildTimelineRenderFrameRequests,
+  getActiveMulticamAngle,
   getTimelineRenderInvalidationRanges,
   getTimelinePlaybackDuration,
   isNestedSequenceDepthExceeded,
+  type Clip,
+  type Project,
+  type Sequence,
   type Timeline
 } from '@open-factory/editor-core';
 import { ColorScopesPanel } from '../ColorScopes/ColorScopesPanel';
@@ -21,6 +26,7 @@ import { PreviewRenderer, type PreviewFrameReadback } from '../../lib/preview/re
 import { getTimelineRenderCacheController } from '../../lib/preview/render-cache-controller';
 import { showToast } from '../../lib/toast';
 import { useAudioMeterStore } from '../../store/audioMeterStore';
+import { commandManager, projectAccessor } from '../../store/commandManager';
 import { useEditorStore } from '../../store/editorStore';
 
 export function PreviewCanvas() {
@@ -35,6 +41,7 @@ export function PreviewCanvas() {
   const scopeFrameCounterRef = useRef(0);
   const project = useEditorStore((state) => state.project);
   const previewTimeline = useEditorStore((state) => state.previewTimeline);
+  const selectedClipId = useEditorStore((state) => state.selectedClipId);
   const playheadTime = useEditorStore((state) => state.playheadTime);
   const isPlaying = useEditorStore((state) => state.isPlaying);
   const playbackRate = useEditorStore((state) => state.playbackRate);
@@ -52,6 +59,14 @@ export function PreviewCanvas() {
   const compareEnabled = compareMode !== 'off';
   const compareShowsDifference = compareMode === 'difference';
   const activeCompareMode: PreviewCompareMode = compareMode === 'off' ? 'left-right' : compareMode;
+  const selectedMulticamClip = useMemo(() => {
+    const clip = project.timeline.tracks.flatMap((track) => track.clips).find((item) => item.id === selectedClipId);
+    return clip?.type === 'nested-sequence' && clip.multicam ? clip : undefined;
+  }, [project.timeline.tracks, selectedClipId]);
+  const selectedMulticamSequence = useMemo(
+    () => (selectedMulticamClip ? project.sequences.find((sequence) => sequence.id === selectedMulticamClip.sequenceId) : undefined),
+    [project.sequences, selectedMulticamClip]
+  );
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -400,6 +415,26 @@ export function PreviewCanvas() {
                 onPointerCancel={() => setCompareDividerDragging(false)}
               />
             ) : null}
+            {selectedMulticamClip && selectedMulticamSequence ? (
+              <MulticamPreviewGrid
+                clip={selectedMulticamClip}
+                sequence={selectedMulticamSequence}
+                media={project.media}
+                sequences={project.sequences}
+                playheadTime={playheadTime}
+                onSelectAngle={(angleId) => {
+                  try {
+                    commandManager.execute(new CutMulticamClipCommand(projectAccessor, selectedMulticamClip.id, playheadTime, angleId));
+                  } catch (error) {
+                    showToast({
+                      kind: 'warning',
+                      title: t.multicamCutFailedTitle,
+                      message: error instanceof Error ? error.message : t.multicamCutFailedMessage
+                    });
+                  }
+                }}
+              />
+            ) : null}
           </div>
         </div>
         {scopesOpen ? <ColorScopesPanel frame={scopeFrame} active={scopesOpen} /> : null}
@@ -407,6 +442,118 @@ export function PreviewCanvas() {
       <div className="border-t border-black/30 px-3 py-2 text-xs tabular-nums text-slate-300">{formatTime(playheadTime)}</div>
     </section>
   );
+}
+
+interface MulticamPreviewGridProps {
+  clip: Extract<Clip, { type: 'nested-sequence' }>;
+  sequence: Sequence;
+  media: Project['media'];
+  sequences: Sequence[];
+  playheadTime: number;
+  onSelectAngle(angleId: string): void;
+}
+
+function MulticamPreviewGrid({ clip, sequence, media, sequences, playheadTime, onSelectAngle }: MulticamPreviewGridProps) {
+  const t = zhCN.preview;
+  const canvasRefs = useRef(new Map<string, HTMLCanvasElement>());
+  const renderersRef = useRef(new Map<string, PreviewRenderer>());
+  const localTime = Math.min(clip.duration, Math.max(0, playheadTime - clip.start + clip.trimStart));
+  const activeAngleId = useMemo(() => {
+    try {
+      return clip.multicam ? getActiveMulticamAngle(clip.multicam, localTime).id : undefined;
+    } catch {
+      return undefined;
+    }
+  }, [clip.multicam, localTime]);
+  const columns = (clip.multicam?.angles.length ?? 0) <= 4 ? 2 : 3;
+
+  useEffect(() => {
+    let canceled = false;
+    void (async () => {
+      for (const angle of clip.multicam?.angles ?? []) {
+        const canvas = canvasRefs.current.get(angle.id);
+        const track = sequence.timeline.tracks.find((item) => item.id === angle.trackId);
+        if (!canvas || !track) {
+          continue;
+        }
+        const renderer = getAngleRenderer(renderersRef.current, angle.id);
+        const angleTimeline: Timeline = {
+          tracks: [{ ...track, solo: false, muted: false }],
+          transitions: [],
+          markers: []
+        };
+        try {
+          await renderer.render(canvas, angleTimeline, media, localTime, { sequences });
+        } catch {
+          if (!canceled) {
+            const context = canvas.getContext('2d');
+            context?.clearRect(0, 0, canvas.width, canvas.height);
+          }
+        }
+        if (canceled) {
+          break;
+        }
+      }
+    })();
+    return () => {
+      canceled = true;
+    };
+  }, [clip.multicam, localTime, media, sequence.timeline.tracks, sequences]);
+
+  if (!clip.multicam) {
+    return null;
+  }
+
+  return (
+    <div
+      className="absolute inset-2 z-20 grid gap-2 rounded-md border border-white/15 bg-black/70 p-2 shadow-soft"
+      style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
+      data-testid="multicam-preview-grid"
+      aria-label={t.multicamGrid}
+    >
+      {clip.multicam.angles.map((angle, index) => (
+        <button
+          key={angle.id}
+          type="button"
+          className={`group relative min-h-0 overflow-hidden rounded-md border bg-black text-left ${
+            activeAngleId === angle.id ? 'border-emerald-400 ring-2 ring-emerald-400/45' : 'border-white/15 hover:border-white/40'
+          }`}
+          title={t.multicamAngle(angle.name)}
+          aria-label={t.multicamAngle(angle.name)}
+          data-testid={`multicam-angle-button-${angle.id}`}
+          data-active={activeAngleId === angle.id ? 'true' : 'false'}
+          onClick={() => onSelectAngle(angle.id)}
+        >
+          <canvas
+            ref={(node) => {
+              if (node) {
+                canvasRefs.current.set(angle.id, node);
+              } else {
+                canvasRefs.current.delete(angle.id);
+              }
+            }}
+            width={480}
+            height={270}
+            className="h-full w-full object-cover"
+            data-testid={`multicam-angle-canvas-${angle.id}`}
+          />
+          <span className="absolute left-2 top-2 rounded bg-black/75 px-2 py-1 text-[11px] font-medium text-white">
+            {index + 1}. {angle.name}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function getAngleRenderer(renderers: Map<string, PreviewRenderer>, angleId: string): PreviewRenderer {
+  const existing = renderers.get(angleId);
+  if (existing) {
+    return existing;
+  }
+  const renderer = new PreviewRenderer();
+  renderers.set(angleId, renderer);
+  return renderer;
 }
 
 function formatTime(time: number): string {
