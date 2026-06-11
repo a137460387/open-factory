@@ -27,6 +27,7 @@ pub struct FfmpegCapabilities {
     has_drawtext: bool,
     has_libfreetype: bool,
     has_minterpolate: bool,
+    has_arnndn: bool,
     hardware_encoder_available: bool,
     hardware_encoder: Option<String>,
     drawtext_warning: Option<String>,
@@ -135,8 +136,9 @@ pub fn get_ffmpeg_capabilities() -> FfmpegCapabilities {
     let filters = command_text(&["-filters"]).unwrap_or_default();
     let buildconf = command_text(&["-buildconf"]).unwrap_or_default();
     let encoders = command_text(&["-encoders"]).unwrap_or_default();
-    let has_drawtext = filters.contains("drawtext");
-    let has_minterpolate = filters.contains("minterpolate");
+    let has_drawtext = filter_list_contains(&filters, "drawtext");
+    let has_minterpolate = filter_list_contains(&filters, "minterpolate");
+    let has_arnndn = filter_list_contains(&filters, "arnndn");
     let has_libfreetype =
         buildconf.contains("enable-libfreetype") || buildconf.contains("libfreetype");
     let hardware_encoder = detect_hardware_encoder(&encoders);
@@ -152,6 +154,7 @@ pub fn get_ffmpeg_capabilities() -> FfmpegCapabilities {
         has_drawtext,
         has_libfreetype,
         has_minterpolate,
+        has_arnndn,
         hardware_encoder_available: hardware_encoder.available,
         hardware_encoder: hardware_encoder.encoder,
         drawtext_warning: if available && (!has_drawtext || !has_libfreetype) {
@@ -174,6 +177,17 @@ fn detect_hardware_encoder(encoders: &str) -> HardwareEncoderProbe {
         *guard = Some(probe.clone());
     }
     probe
+}
+
+fn filter_list_contains(filters: &str, filter_name: &str) -> bool {
+    filters
+        .lines()
+        .filter_map(|line| {
+            let mut tokens = line.split_whitespace();
+            let _flags = tokens.next()?;
+            tokens.next()
+        })
+        .any(|token| token == filter_name)
 }
 
 fn parse_hardware_encoder_for_os(encoders: &str, os: &str) -> HardwareEncoderProbe {
@@ -919,6 +933,19 @@ mod tests {
                 encoder: None,
             }
         );
+    }
+
+    #[test]
+    fn filter_parser_matches_exact_filter_tokens() {
+        let filters = r#"
+ TSC arnndn            A->A       Reduce noise from speech using Recurrent Neural Networks.
+ ... minterpolate      V->V       Frame rate conversion using Motion Interpolation.
+ ... drawtext_extra    V->V       Not the exact drawtext filter.
+"#;
+
+        assert!(filter_list_contains(filters, "arnndn"));
+        assert!(filter_list_contains(filters, "minterpolate"));
+        assert!(!filter_list_contains(filters, "drawtext"));
     }
 
     #[test]

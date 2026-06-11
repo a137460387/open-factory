@@ -222,10 +222,16 @@ export interface BaseClip {
   chromaKey?: ChromaKey;
   stabilization?: ClipStabilization;
   frameInterpolation?: ClipFrameInterpolation;
+  audioDenoise?: ClipAudioDenoise;
   masks?: ClipMask[];
   keyframes?: ClipKeyframes;
   effects?: Effect[];
   sequenceFrameRate?: number;
+}
+
+export interface ClipAudioDenoise {
+  enabled: boolean;
+  strength: number;
 }
 
 export interface ColorCorrection {
@@ -372,6 +378,11 @@ export const FRAME_INTERPOLATION_TARGET_FPS: readonly FrameInterpolationTargetFp
 export const DEFAULT_FRAME_INTERPOLATION: ClipFrameInterpolation = {
   enabled: false,
   targetFps: 60
+};
+
+export const DEFAULT_AUDIO_DENOISE: ClipAudioDenoise = {
+  enabled: false,
+  strength: 0.5
 };
 
 export const DEFAULT_MASK: Omit<ClipMask, 'id'> = {
@@ -541,6 +552,7 @@ export function createBaseClip(
     chromaKey: normalizeChromaKey(input.chromaKey),
     stabilization: normalizeStabilization(input.stabilization),
     frameInterpolation: normalizeFrameInterpolation(input.frameInterpolation),
+    audioDenoise: normalizeAudioDenoise(input.audioDenoise),
     masks: normalizeMasks(input.masks),
     keyframes: cloneClipKeyframesLocal(input.keyframes),
     effects: cloneEffects(input.effects),
@@ -619,6 +631,13 @@ export function normalizeFrameInterpolation(frameInterpolation: Partial<ClipFram
   return {
     enabled: frameInterpolation?.enabled === true,
     targetFps
+  };
+}
+
+export function normalizeAudioDenoise(audioDenoise: Partial<ClipAudioDenoise> | undefined): ClipAudioDenoise {
+  return {
+    enabled: audioDenoise?.enabled === true,
+    strength: round(Math.min(1, Math.max(0, finiteOrDefault(audioDenoise?.strength, DEFAULT_AUDIO_DENOISE.strength))))
   };
 }
 
@@ -909,6 +928,7 @@ export function serializeLegacyProject(project: Project): {
           transform: { ...clip.transform },
           chromaKey: normalizeChromaKey(clip.chromaKey),
           stabilization: normalizeStabilization(clip.stabilization),
+          audioDenoise: normalizeAudioDenoise(clip.audioDenoise),
           masks: normalizeMasks(clip.masks),
           multicam: clip.type === 'nested-sequence' ? normalizeMulticamSequence(clip.multicam, clip.duration) : undefined,
           sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),

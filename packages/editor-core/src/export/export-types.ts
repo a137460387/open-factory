@@ -69,6 +69,11 @@ export interface ExportFrameInterpolation {
   targetFps: 24 | 30 | 48 | 60 | 120;
 }
 
+export interface ExportAudioDenoise {
+  enabled: boolean;
+  strength: number;
+}
+
 export interface ExportImageSequence {
   frameRate: number;
   frameCount: number;
@@ -137,6 +142,7 @@ export interface ExportClip {
   chromaKey: ExportChromaKey;
   stabilization: ExportStabilization;
   frameInterpolation: ExportFrameInterpolation;
+  audioDenoise: ExportAudioDenoise;
   masks: ExportMask[];
   imageSequence: ExportImageSequence | null;
   sequenceFrameRate?: number;
@@ -244,6 +250,7 @@ export interface FfmpegCapabilities {
   hasDrawtext: boolean;
   hasLibfreetype: boolean;
   hasMinterpolate?: boolean;
+  hasArnndn?: boolean;
   hardwareEncoderAvailable: boolean;
   hardwareEncoder: string | null;
   drawtextWarning: string | null;

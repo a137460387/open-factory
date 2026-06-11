@@ -25,6 +25,7 @@ import {
   createKenBurnsKeyframes,
   getClipSpeed,
   getClipKeyframeValue,
+  normalizeAudioDenoise,
   normalizeChromaKey,
   normalizeColorCurves,
   normalizeColorCorrection,
@@ -90,6 +91,7 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
   const project = useEditorStore((state) => state.project);
   const [analysisProgress, setAnalysisProgress] = useState<number | undefined>();
   const [frameInterpolationSupported, setFrameInterpolationSupported] = useState<boolean | undefined>();
+  const [audioDenoiseSupported, setAudioDenoiseSupported] = useState<boolean | undefined>();
   const [colorMatchReferenceClipId, setColorMatchReferenceClipId] = useState<string>('');
   const [colorMatchBusy, setColorMatchBusy] = useState(false);
   const commit = (patch: ClipPatch) => {
@@ -161,6 +163,8 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
   const stabilization = normalizeStabilization(clip.stabilization);
   const frameInterpolation = normalizeFrameInterpolation(clip.frameInterpolation);
   const frameInterpolationUnavailable = frameInterpolationSupported === false;
+  const audioDenoise = normalizeAudioDenoise(clip.audioDenoise);
+  const audioDenoiseUnavailable = audioDenoiseSupported === false;
   const masks = normalizeMasks(clip.masks);
   const colorCurves = normalizeColorCurves(colorCorrection.colorCurves);
   const threeWayColor = normalizeThreeWayColor(colorCorrection.threeWayColor);
@@ -189,11 +193,13 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
       .then((capabilities) => {
         if (!disposed) {
           setFrameInterpolationSupported(capabilities.available && capabilities.hasMinterpolate === true);
+          setAudioDenoiseSupported(capabilities.available && capabilities.hasArnndn === true);
         }
       })
       .catch(() => {
         if (!disposed) {
           setFrameInterpolationSupported(false);
+          setAudioDenoiseSupported(false);
         }
       });
     return () => {
@@ -295,6 +301,34 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
               />
             </AnimatedField>
             <SpeedCurveEditor clip={clip} onCommit={(speedFrames) => commit({ keyframes: { ...clip.keyframes, speed: speedFrames } })} />
+          </Section>
+        ) : null}
+
+        {clip.type === 'video' || clip.type === 'audio' ? (
+          <Section title={zhCN.inspector.sections.audioDenoise}>
+            <ToggleField
+              label={zhCN.inspector.fields.enabled}
+              checked={audioDenoise.enabled}
+              disabled={audioDenoiseUnavailable}
+              onCommit={(enabled) => commit({ audioDenoise: { ...audioDenoise, enabled } })}
+              testId="audio-denoise-toggle"
+            />
+            <RangeNumberField
+              label={zhCN.inspector.fields.strength}
+              value={audioDenoise.strength}
+              min={0}
+              max={1}
+              step={0.05}
+              format={(value) => `${Math.round(value * 100)}%`}
+              disabled={audioDenoiseUnavailable || !audioDenoise.enabled}
+              onCommit={(strength) => commit({ audioDenoise: { ...audioDenoise, strength } })}
+              testId="audio-denoise-strength"
+            />
+            {audioDenoiseUnavailable ? (
+              <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs font-medium text-amber-800" data-testid="audio-denoise-unavailable">
+                {zhCN.inspector.fields.audioDenoiseUnsupported}
+              </div>
+            ) : null}
           </Section>
         ) : null}
 
@@ -1566,6 +1600,7 @@ function RangeNumberField({
   step,
   format,
   onCommit,
+  disabled,
   testId
 }: {
   label: string;
@@ -1575,6 +1610,7 @@ function RangeNumberField({
   step: number;
   format(value: number): string;
   onCommit(value: number): void;
+  disabled?: boolean;
   testId?: string;
 }) {
   const commitClamped = (nextValue: number) => {
@@ -1588,19 +1624,20 @@ function RangeNumberField({
       <span className="flex items-center justify-between gap-2">
         <span>{label}</span>
         <input
-          className="w-20 rounded-md border border-line px-2 py-1 text-right text-xs tabular-nums text-ink"
+          className="w-20 rounded-md border border-line px-2 py-1 text-right text-xs tabular-nums text-ink disabled:cursor-not-allowed disabled:opacity-60"
           type="number"
           value={Number(value.toFixed(3))}
           min={min}
           max={max}
           step={step}
+          disabled={disabled}
           onChange={(event) => commitClamped(Number(event.target.value))}
           aria-label={label}
           data-testid={testId}
         />
       </span>
       <span className="mt-1 flex items-center gap-2">
-        <input className="min-w-0 flex-1 accent-brand" type="range" min={min} max={max} step={step} value={value} onChange={(event) => commitClamped(Number(event.target.value))} />
+        <input className="min-w-0 flex-1 accent-brand disabled:cursor-not-allowed disabled:opacity-60" type="range" min={min} max={max} step={step} value={value} disabled={disabled} onChange={(event) => commitClamped(Number(event.target.value))} />
         <span className="w-14 text-right text-xs tabular-nums text-slate-500">{format(value)}</span>
       </span>
     </label>

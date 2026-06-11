@@ -107,11 +107,12 @@ describe('project schema migration', () => {
     }
   });
 
-  it('backfills clip speed and color correction defaults during migration', () => {
+  it('backfills clip speed, color correction, and audio denoise defaults during migration', () => {
     const project = makeProject();
     const legacyClip = { ...project.timeline.tracks[0].clips[0] };
     delete (legacyClip as Partial<typeof legacyClip>).speed;
     delete (legacyClip as Partial<typeof legacyClip>).colorCorrection;
+    delete (legacyClip as Partial<typeof legacyClip>).audioDenoise;
     project.timeline.tracks[0].clips = [legacyClip as never];
 
     const migrated = migrateProjectFile(serializeProject(project));
@@ -119,6 +120,7 @@ describe('project schema migration', () => {
 
     expect(clip.speed).toBe(1);
     expect(clip.colorCorrection).toEqual(DEFAULT_COLOR_CORRECTION);
+    expect(clip.audioDenoise).toEqual({ enabled: false, strength: 0.5 });
   });
 
   it('serializes and migrates stabilization and PNG sequence metadata', () => {

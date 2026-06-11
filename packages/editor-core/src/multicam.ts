@@ -9,6 +9,7 @@ import {
   createTrack,
   getProjectActiveSequenceId,
   getProjectSequences,
+  normalizeAudioDenoise,
   normalizeMulticamSequence,
   replaceProjectActiveTimeline,
   type Clip,
@@ -215,6 +216,7 @@ function cloneAngleClip(clip: Extract<Clip, { mediaId: string }>, trackId: strin
     chromaKey: clip.chromaKey ? { ...clip.chromaKey } : clip.chromaKey,
     stabilization: clip.stabilization ? { ...clip.stabilization } : clip.stabilization,
     frameInterpolation: clip.frameInterpolation ? { ...clip.frameInterpolation } : clip.frameInterpolation,
+    audioDenoise: normalizeAudioDenoise(clip.audioDenoise),
     masks: clip.masks ? clip.masks.map((mask) => ({ ...mask })) : undefined,
     keyframes: normalizeClipKeyframes(cloneClipKeyframes(clip.keyframes), clip.duration),
     effects: normalizeEffects(cloneEffects(clip.effects))

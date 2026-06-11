@@ -14,6 +14,7 @@ import {
   isChromaKeyEnabled,
   isStabilizationExportable,
   normalizeChromaKey,
+  normalizeAudioDenoise,
   normalizeFrameInterpolation,
   normalizeSequenceFrameRate,
   normalizeStabilization,
@@ -153,6 +154,7 @@ function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project[
             chromaKey: normalizeChromaKey(clip.chromaKey),
             stabilization: normalizeStabilization(clip.stabilization),
             frameInterpolation: normalizeFrameInterpolation(clip.frameInterpolation),
+            audioDenoise: normalizeAudioDenoise(clip.audioDenoise),
             masks: normalizeMasks(clip.masks),
             imageSequence:
               clip.type === 'image' && media?.imageSequence
@@ -359,7 +361,7 @@ export function buildFfmpegExportPlan(
 
   if (!videoFramesOnly) {
     const masterVolume = normalizeMasterVolume(project.masterVolume);
-    const audioLabels = buildAudioFilters(orderedPlaybackClips, inputByClipId, settings, filters);
+    const audioLabels = buildAudioFilters(orderedPlaybackClips, inputByClipId, settings, filters, capabilities, warnings);
     if (audioLabels.length === 0) {
       filters.push(`anullsrc=channel_layout=stereo:sample_rate=${settings.sampleRate}:d=${formatFfmpegSeconds(duration)},volume=${formatVolume(masterVolume)}[aout]`);
     } else {
@@ -1271,7 +1273,9 @@ function buildAudioFilters(
   clips: ExportClip[],
   inputByClipId: Map<string, number>,
   settings: ExportSettings,
-  filters: string[]
+  filters: string[],
+  capabilities: FfmpegCapabilities | undefined,
+  warnings: string[]
 ): string[] {
   const labels: string[] = [];
   for (const clip of clips.filter((item) => item.type === 'audio' || ((item.type === 'video' || item.type === 'nested-sequence') && item.hasEmbeddedAudio))) {
@@ -1286,17 +1290,29 @@ function buildAudioFilters(
     const delay = Math.max(0, Math.round(clip.start * 1000));
     const speedFilters = buildAtempoFilters(getAnimatedFrames(clip, 'speed').length > 0 ? getAverageClipSpeed(clip) : clip.speed);
     const fadeFilters = buildAudioFadeFilters(clip);
+    const denoiseFilters = buildAudioDenoiseFilters(clip, capabilities, warnings);
     const trackProcessingFilters = buildTrackAudioFilters(clip);
     filters.push(
       `[${inputIndex}:a:0]atrim=start=0:duration=${formatFfmpegSeconds(
         getExportClipSourceDuration(clip)
-      )},asetpts=PTS-STARTPTS${speedFilters.length > 0 ? `,${speedFilters.join(',')}` : ''}${fadeFilters}${trackProcessingFilters},adelay=${delay}:all=1,${buildVolumeFilter(
+      )},asetpts=PTS-STARTPTS${speedFilters.length > 0 ? `,${speedFilters.join(',')}` : ''}${fadeFilters}${denoiseFilters}${trackProcessingFilters},adelay=${delay}:all=1,${buildVolumeFilter(
         clip
       )}${buildPanFilter(clip)},aformat=channel_layouts=stereo,aresample=${settings.sampleRate}[${label}]`
     );
     labels.push(label);
   }
   return labels;
+}
+
+function buildAudioDenoiseFilters(clip: ExportClip, capabilities: FfmpegCapabilities | undefined, warnings: string[]): string {
+  if (!clip.audioDenoise.enabled || clip.audioDenoise.strength <= 0) {
+    return '';
+  }
+  if (capabilities?.hasArnndn === false) {
+    warnings.push(`Audio denoise for clip ${clip.id} was skipped because the current FFmpeg build does not support arnndn.`);
+    return '';
+  }
+  return `,arnndn=m=model.rnnn:mix=${formatFfmpegNumber(clip.audioDenoise.strength)}`;
 }
 
 function buildPanFilter(clip: ExportClip): string {

@@ -13,6 +13,7 @@ import {
   type KeyframeProperty,
   normalizeColorCorrection,
   normalizeChromaKey,
+  normalizeAudioDenoise,
   normalizeFrameInterpolation,
   normalizeMask,
   normalizeMasks,
@@ -25,6 +26,7 @@ import {
   normalizeTrackVolume,
   replaceProjectActiveTimeline,
   type Clip,
+  type ClipAudioDenoise,
   type ClipKeyframes,
   type ChromaKey,
   type ClipFrameInterpolation,
@@ -982,6 +984,7 @@ export type ClipPatch = Partial<Omit<Clip, 'type' | 'id' | 'transform' | 'colorC
   chromaKey?: Partial<ChromaKey>;
   stabilization?: Partial<ClipStabilization>;
   frameInterpolation?: Partial<ClipFrameInterpolation>;
+  audioDenoise?: Partial<ClipAudioDenoise>;
   masks?: ClipMask[];
   sequenceFrameRate?: number;
   colorCorrection?: Partial<ColorCorrection>;
@@ -1008,6 +1011,7 @@ export class UpdateClipCommand implements Command {
       chromaKey: normalizeChromaKey({ ...this.before.chromaKey, ...this.patch.chromaKey }),
       stabilization: normalizeStabilization({ ...this.before.stabilization, ...this.patch.stabilization }),
       frameInterpolation: normalizeFrameInterpolation({ ...this.before.frameInterpolation, ...this.patch.frameInterpolation }),
+      audioDenoise: normalizeAudioDenoise({ ...this.before.audioDenoise, ...this.patch.audioDenoise }),
       masks: this.patch.masks === undefined ? normalizeMasks(this.before.masks) : normalizeMasks(this.patch.masks),
       sequenceFrameRate: normalizeSequenceFrameRate(this.patch.sequenceFrameRate ?? this.before.sequenceFrameRate),
       transform: { ...this.before.transform, ...this.patch.transform }
@@ -1416,6 +1420,7 @@ function cloneClipForNestedSequence<TClip extends Clip>(clip: TClip): TClip {
     chromaKey: normalizeChromaKey(clip.chromaKey),
     stabilization: normalizeStabilization(clip.stabilization),
     frameInterpolation: normalizeFrameInterpolation(clip.frameInterpolation),
+    audioDenoise: normalizeAudioDenoise(clip.audioDenoise),
     masks: normalizeMasks(clip.masks),
     sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
     keyframes: normalizeClipKeyframes(cloneClipKeyframes(clip.keyframes), clip.duration),

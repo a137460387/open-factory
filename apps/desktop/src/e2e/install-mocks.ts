@@ -166,6 +166,7 @@ const mocks: TauriMocks = {
     hasDrawtext: true,
     hasLibfreetype: true,
     hasMinterpolate: true,
+    hasArnndn: true,
     hardwareEncoderAvailable: true,
     hardwareEncoder: 'h264_nvenc',
     drawtextWarning: null

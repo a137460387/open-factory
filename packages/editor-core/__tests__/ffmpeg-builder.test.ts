@@ -783,6 +783,71 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.warnings).toContain('Frame interpolation for clip clip-interpolation-unavailable was skipped because the current FFmpeg build does not support minterpolate.');
   });
 
+  it('inserts arnndn for clips with audio denoise enabled', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-denoise',
+        duration: 2,
+        audioDenoise: { enabled: true, strength: 0.75 }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }), {
+      available: true,
+      version: 'ffmpeg',
+      hasLibx264: true,
+      hasAac: true,
+      hasDrawtext: true,
+      hasLibfreetype: true,
+      hasMinterpolate: true,
+      hasArnndn: true,
+      hardwareEncoderAvailable: true,
+      hardwareEncoder: 'h264_nvenc',
+      drawtextWarning: null
+    });
+
+    expect(plan.filterComplex).toContain('arnndn=m=model.rnnn:mix=0.75');
+  });
+
+  it('skips audio denoise when disabled or arnndn is unavailable', () => {
+    const disabledProject = makeProject();
+    disabledProject.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-denoise-disabled',
+        duration: 2,
+        audioDenoise: { enabled: false, strength: 1 }
+      })
+    ];
+    const disabledPlan = buildFfmpegExportPlan(buildExportProjectFromProject(disabledProject, { outputPath: 'out.mp4' }));
+    expect(disabledPlan.filterComplex).not.toContain('arnndn=');
+
+    const unavailableProject = makeProject();
+    unavailableProject.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-denoise-unavailable',
+        duration: 2,
+        audioDenoise: { enabled: true, strength: 1 }
+      })
+    ];
+    const unavailablePlan = buildFfmpegExportPlan(buildExportProjectFromProject(unavailableProject, { outputPath: 'out.mp4' }), {
+      available: true,
+      version: 'ffmpeg',
+      hasLibx264: true,
+      hasAac: true,
+      hasDrawtext: true,
+      hasLibfreetype: true,
+      hasMinterpolate: true,
+      hasArnndn: false,
+      hardwareEncoderAvailable: true,
+      hardwareEncoder: 'h264_nvenc',
+      drawtextWarning: null
+    });
+
+    expect(unavailablePlan.filterComplex).not.toContain('arnndn=');
+    expect(unavailablePlan.warnings).toContain('Audio denoise for clip clip-denoise-unavailable was skipped because the current FFmpeg build does not support arnndn.');
+  });
+
   it('builds image sequence inputs through a local concat artifact', () => {
     const project = makeProject();
     project.media = [
