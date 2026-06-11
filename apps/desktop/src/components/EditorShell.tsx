@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AddClipCommand, AddTrackCommand, DeleteClipsCommand, SplitClipCommand, getTimelineDuration } from '@open-factory/editor-core';
+import { AddClipCommand, AddTrackCommand, DeleteClipsCommand, SplitClipCommand, getTimelineDuration, instantiateTitleTemplate, type TitleTemplateId } from '@open-factory/editor-core';
 import { Toolbar } from './Toolbar';
 import { AudioMixer } from './AudioMixer/AudioMixer';
 import { ErrorBoundary } from './common/ErrorBoundary';
@@ -150,6 +150,28 @@ export function EditorShell() {
       }
     },
     [project, setSelectedClipId]
+  );
+
+  const addTitleTemplate = useCallback(
+    (templateId: TitleTemplateId) => {
+      const track = project.timeline.tracks.find((item) => item.type === 'text');
+      if (!track) {
+        showToast({ kind: 'warning', title: zhCN.timeline.noTextTrackTitle, message: zhCN.timeline.noTextTrackMessage });
+        return;
+      }
+      try {
+        const label = zhCN.titleTemplates[templateId];
+        const clip = instantiateTitleTemplate(templateId, track, project.timeline, {
+          name: label.name,
+          text: label.defaultText
+        });
+        commandManager.execute(new AddClipCommand(timelineAccessor, clip));
+        setSelectedClipId(clip.id);
+      } catch (error) {
+        showToast({ kind: 'error', title: zhCN.editorToasts.addClipFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.addClipFailedMessage });
+      }
+    },
+    [project.timeline, setSelectedClipId]
   );
 
   const relinkMedia = useCallback(
@@ -383,7 +405,7 @@ export function EditorShell() {
 
   return (
     <ErrorBoundary name={zhCN.panels.editor}>
-      <div className="grid h-full grid-rows-[auto_1fr_260px] bg-[#edeff3] text-ink">
+      <div className="grid h-full min-w-0 grid-rows-[auto_1fr_260px] overflow-hidden bg-[#edeff3] text-ink">
         <Toolbar
           onNewProject={newProject}
           onOpenProject={openProject}
@@ -404,7 +426,7 @@ export function EditorShell() {
           lastExportPath={lastExportPath}
           onRevealExport={lastExportPath ? () => void revealExport(lastExportPath) : undefined}
         />
-        <main className="grid min-h-0 grid-cols-[280px_minmax(360px,1fr)_360px] gap-px bg-line">
+        <main className="grid min-h-0 min-w-0 grid-cols-[280px_minmax(360px,1fr)_360px] gap-px bg-line">
           <MediaBin
             media={project.media}
             mediaMetadata={project.mediaMetadata}
@@ -415,6 +437,7 @@ export function EditorShell() {
             onRelinkAll={() => void relinkAllMissing()}
             onGenerateProxy={(assetId) => void generateProxyForMedia(assetId)}
             onSetLabel={(assetId, labelColor) => setMediaMetadata(assetId, labelColor ? { labelColor } : undefined)}
+            onAddTitleTemplate={addTitleTemplate}
           />
           <ErrorBoundary name={zhCN.panels.preview}>
             <PreviewCanvas />

@@ -57,6 +57,7 @@ pub fn run() {
             commands::media::detect_silence,
             commands::proxy::generate_proxy,
             commands::scene::detect_scene_changes,
+            commands::whisper::run_whisper,
             commands::smoke::get_preview_smoke_config,
             commands::smoke::get_cancel_smoke_config,
             force_close_window

@@ -66,6 +66,25 @@ export interface SceneDetectionResult {
   sceneTimes: number[];
 }
 
+export interface WhisperRequest {
+  executablePath: string;
+  modelPath: string;
+  audioPath: string;
+  clipId: string;
+}
+
+export interface WhisperResult {
+  srtPath: string;
+  contents: string;
+  durationMs: number;
+}
+
+export interface WhisperProgressEvent {
+  clipId: string;
+  progress: number;
+  progressPct: number;
+}
+
 export type NativeSilenceRange = [number, number];
 
 export type UnsavedCloseAction = 'save' | 'discard' | 'cancel';
@@ -118,6 +137,7 @@ export type TauriMocks = Partial<{
   detectSilence(path: string, thresholdDb: number, minGapMs: number): Promise<NativeSilenceRange[]> | NativeSilenceRange[];
   generateProxy(plan: ProxyPlan): Promise<ProxyResult> | ProxyResult;
   detectSceneChanges(request: SceneDetectRequest): Promise<SceneDetectionResult> | SceneDetectionResult;
+  runWhisper(request: WhisperRequest): Promise<WhisperResult> | WhisperResult;
   getPreviewSmokeConfig(): Promise<PreviewSmokeConfig | undefined> | PreviewSmokeConfig | undefined;
   getCancelSmokeConfig(): Promise<CancelSmokeConfig | undefined> | CancelSmokeConfig | undefined;
   listen<T>(event: string, handler: (payload: T) => void): Promise<() => void> | (() => void);
@@ -306,6 +326,14 @@ export async function detectSceneChanges(request: SceneDetectRequest): Promise<S
     return mock(request);
   }
   return invoke<SceneDetectionResult>('detect_scene_changes', { request });
+}
+
+export async function runWhisper(request: WhisperRequest): Promise<WhisperResult> {
+  const mock = getTauriMocks()?.runWhisper;
+  if (mock) {
+    return mock(request);
+  }
+  return invoke<WhisperResult>('run_whisper', { request });
 }
 
 export async function scanDirectory(path: string, depth = 3): Promise<string[]> {

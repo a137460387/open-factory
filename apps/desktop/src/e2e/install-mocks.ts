@@ -3,6 +3,8 @@ import {
   DEFAULT_CLIP_SPEED,
   DEFAULT_COLOR_CORRECTION,
   DEFAULT_TRANSFORM,
+  DEFAULT_PRIMARY_SEQUENCE_NAME,
+  PRIMARY_SEQUENCE_ID,
   createProject,
   createTrack,
   type FfmpegExportPlan,
@@ -40,6 +42,8 @@ const pngFrame002 = 'C:/Media/frame002.png';
 const pngFrame003 = 'C:/Media/frame003.png';
 const tinySrt = 'C:/Media/tiny-subtitles.srt';
 const silencePatternAudio = 'C:/Media/silence-pattern.wav';
+const whisperExecutable = 'C:/Tools/whisper.exe';
+const whisperModel = 'C:/Models/base.bin';
 const relinkedVideo = 'C:/Relink/tiny-video.mp4';
 const relinkedAudio = 'C:/Relink/tiny-audio.wav';
 const relinkedImage = 'C:/Relink/test-image.png';
@@ -62,6 +66,8 @@ for (const path of [
   pngFrame003,
   tinySrt,
   silencePatternAudio,
+  whisperExecutable,
+  whisperModel,
   relinkedVideo,
   relinkedAudio,
   relinkedImage,
@@ -202,6 +208,18 @@ const mocks: TauriMocks = {
     return { assetId: plan.assetId, proxyPath: plan.outputPath, durationMs: 10 };
   },
   detectSceneChanges: () => ({ sceneTimes: [1] }),
+  runWhisper: async ({ clipId }) => {
+    emit('whisper-progress', { clipId, progress: 0.35, progressPct: 35 });
+    await wait(10);
+    emit('whisper-progress', { clipId, progress: 1, progressPct: 100 });
+    const srtPath = `C:/Users/E2E/AppData/Roaming/open-factory/whisper/${clipId}.srt`;
+    const contents = ['1', '00:00:00,000 --> 00:00:01,200', 'First generated caption', '', '2', '00:00:01,400 --> 00:00:02,400', 'Second generated caption', ''].join('\n');
+    files.set(srtPath, contents);
+    exists.set(srtPath, true);
+    mtimes.set(srtPath, Date.now());
+    persistFiles();
+    return { srtPath, contents, durationMs: 10 };
+  },
   probeMediaPath: (path) => {
     const base = {
       duration: path === silencePatternAudio ? 2.5 : path.endsWith('.png') ? 0 : 6,
@@ -237,6 +255,41 @@ window.fetch = (input, init) => {
   return realFetch(input as RequestInfo | URL, init);
 };
 window.__E2E_ACTIONS__ = {
+  setupWhisperFixture: () => {
+    const project = createProject('Whisper E2E');
+    const asset: MediaAsset = {
+      id: 'media-whisper-video',
+      type: 'video',
+      name: 'whisper-video.mp4',
+      path: tinyVideo,
+      duration: 4,
+      width: 1280,
+      height: 720,
+      size: 4096,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 2,
+      audioSampleRate: 44_100,
+      audioCodec: 'aac'
+    };
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({ id: 'track-video', type: 'video', name: 'Video 1', clips: [makeWhisperVideoClip()] }),
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
+        createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    commandManager.clear();
+  },
   setupSilenceDetectionFixture: () => {
     const project = createProject('Silence Detection E2E');
     const asset: MediaAsset = {
@@ -329,6 +382,24 @@ window.__E2E_ACTIONS__ = {
     persistFiles();
   }
 };
+
+function makeWhisperVideoClip(): Extract<import('@open-factory/editor-core').Clip, { type: 'video' }> {
+  return {
+    id: 'clip-whisper-video',
+    type: 'video',
+    name: 'whisper-video.mp4',
+    mediaId: 'media-whisper-video',
+    trackId: 'track-video',
+    start: 0,
+    duration: 4,
+    trimStart: 0,
+    trimEnd: 0,
+    speed: DEFAULT_CLIP_SPEED,
+    colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+    transform: { ...DEFAULT_TRANSFORM },
+    volume: 1
+  };
+}
 
 function makeSilencePatternClip(): Extract<import('@open-factory/editor-core').Clip, { type: 'audio' }> {
   return {

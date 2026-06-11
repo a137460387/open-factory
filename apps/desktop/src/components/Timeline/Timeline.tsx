@@ -31,6 +31,7 @@ import {
   getClipSourceVisibleDuration,
   getClipSpeed,
   isNestedSequenceDepthExceeded,
+  instantiateTitleTemplate,
   moveClip,
   round,
   snapTime,
@@ -46,15 +47,18 @@ import {
   type TransitionType
 } from '@open-factory/editor-core';
 import { Captions, Flag, Plus, Scissors, Trash2, Type } from 'lucide-react';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createTextClip } from '../../lib/clipFactory';
 import { zhCN } from '../../i18n/strings';
 import { showToast } from '../../lib/toast';
 import { detectClipSilence } from '../../lib/silenceDetection';
-import { detectSceneChanges, listenBridge } from '../../lib/tauri-bridge';
+import { canGenerateSubtitlesForClip, buildWhisperSubtitleTrackForClip, getWhisperAvailability, type WhisperAvailability } from '../../lib/whisper';
+import { TITLE_TEMPLATE_DRAG_MIME, isTitleTemplateId } from '../../lib/titleTemplates';
+import { detectSceneChanges, listenBridge, type WhisperProgressEvent } from '../../lib/tauri-bridge';
 import { commandManager, projectAccessor, timelineAccessor } from '../../store/commandManager';
 import { useEditorStore } from '../../store/editorStore';
 import { useRenderCacheStore } from '../../store/renderCacheStore';
+import { useWhisperSettingsStore } from '../../store/whisperSettingsStore';
 import { LABEL_WIDTH, Ruler, TrackRow, buildTicks, type ClipMenuRequest, type DragState } from './TimelineParts';
 
 export function Timeline() {
@@ -83,6 +87,10 @@ export function Timeline() {
   const [clipMenu, setClipMenu] = useState<ClipMenuState | undefined>();
   const [silenceDialog, setSilenceDialog] = useState<SilenceDialogState | undefined>();
   const [sceneDialog, setSceneDialog] = useState<SceneDialogState | undefined>();
+  const [whisperDialog, setWhisperDialog] = useState<WhisperDialogState | undefined>();
+  const [whisperAvailability, setWhisperAvailability] = useState<WhisperAvailability>({ ready: false, error: zhCN.whisper.notConfigured });
+  const whisperExecutablePath = useWhisperSettingsStore((state) => state.executablePath);
+  const whisperModelPath = useWhisperSettingsStore((state) => state.modelPath);
   const rootRef = useRef<HTMLElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const timelineDuration = Math.max(
@@ -94,6 +102,18 @@ export function Timeline() {
   const allClips = useMemo(() => project.timeline.tracks.flatMap((track) => track.clips), [project.timeline]);
   const activeSequence = project.sequences.find((sequence) => sequence.id === project.activeSequenceId);
   const isMainSequence = project.activeSequenceId === 'sequence-main';
+
+  useEffect(() => {
+    let disposed = false;
+    void getWhisperAvailability({ executablePath: whisperExecutablePath, modelPath: whisperModelPath }).then((availability) => {
+      if (!disposed) {
+        setWhisperAvailability(availability);
+      }
+    });
+    return () => {
+      disposed = true;
+    };
+  }, [whisperExecutablePath, whisperModelPath]);
 
   function addTrack(type: Track['type']): void {
     commandManager.execute(
@@ -146,6 +166,26 @@ export function Timeline() {
     const clip = createTextClip(track, project.timeline);
     commandManager.execute(new AddClipCommand(timelineAccessor, clip));
     setSelectedClipId(clip.id);
+  }
+
+  function addTitleTemplate(templateId: Parameters<typeof instantiateTitleTemplate>[0], start?: number): void {
+    const track = project.timeline.tracks.find((item) => item.type === 'text');
+    if (!track) {
+      showToast({ kind: 'warning', title: zhCN.timeline.noTextTrackTitle, message: zhCN.timeline.noTextTrackMessage });
+      return;
+    }
+    try {
+      const label = zhCN.titleTemplates[templateId];
+      const clip = instantiateTitleTemplate(templateId, track, project.timeline, {
+        name: label.name,
+        text: label.defaultText,
+        start
+      });
+      commandManager.execute(new AddClipCommand(timelineAccessor, clip));
+      setSelectedClipId(clip.id);
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage });
+    }
   }
 
   function addTimelineMarker(): void {
@@ -434,6 +474,45 @@ export function Timeline() {
     }
   }
 
+  async function generateSubtitles(clipId: string): Promise<void> {
+    const clip = findClip(clipId);
+    const asset = getClipMediaAsset(clip);
+    setClipMenu(undefined);
+    setSelectedClipId(clip.id);
+    if (!asset || (clip.type !== 'audio' && clip.type !== 'video') || !canGenerateSubtitlesForClip(clip, asset, whisperAvailability.ready)) {
+      showToast({ kind: 'warning', title: zhCN.timeline.whisperUnavailableTitle, message: whisperAvailability.error ?? zhCN.whisper.notConfigured });
+      return;
+    }
+
+    const settings = useWhisperSettingsStore.getState();
+    const currentAvailability = await getWhisperAvailability(settings);
+    if (!currentAvailability.ready) {
+      showToast({ kind: 'warning', title: zhCN.timeline.whisperUnavailableTitle, message: currentAvailability.error ?? zhCN.whisper.notConfigured });
+      return;
+    }
+
+    setWhisperDialog({ clip, progress: 0 });
+    let unlisten: (() => void) | undefined;
+    try {
+      unlisten = await listenBridge<WhisperProgressEvent>('whisper-progress', (payload) => {
+        setWhisperDialog((current) => (current?.clip.id === payload.clipId ? { ...current, progress: payload.progress } : current));
+      });
+      const track = await buildWhisperSubtitleTrackForClip(clip, asset, useEditorStore.getState().project.timeline, settings);
+      if (track.clips.length === 0) {
+        showToast({ kind: 'warning', title: zhCN.timeline.whisperFailedTitle, message: zhCN.whisper.noSubtitleCues });
+        return;
+      }
+      commandManager.execute(new AddTrackCommand(timelineAccessor, track));
+      setSelectedClipId(track.clips[0]?.id);
+      showToast({ kind: 'success', title: zhCN.timeline.whisperCompleteTitle, message: zhCN.editorToasts.subtitlesGenerated(track.clips.length) });
+    } catch (error) {
+      showToast({ kind: 'error', title: zhCN.timeline.whisperFailedTitle, message: error instanceof Error ? error.message : zhCN.whisper.noSubtitleCues });
+    } finally {
+      unlisten?.();
+      setWhisperDialog(undefined);
+    }
+  }
+
   function onWheel(event: React.WheelEvent<HTMLDivElement>): void {
     if (event.ctrlKey || event.metaKey) {
       event.preventDefault();
@@ -452,6 +531,25 @@ export function Timeline() {
         scroll.scrollLeft += event.deltaY || event.deltaX;
       }
     }
+  }
+
+  function onTitleTemplateDragOver(event: React.DragEvent<HTMLDivElement>): void {
+    if (Array.from(event.dataTransfer.types).includes(TITLE_TEMPLATE_DRAG_MIME)) {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'copy';
+    }
+  }
+
+  function onTitleTemplateDrop(event: React.DragEvent<HTMLDivElement>): void {
+    const templateId = event.dataTransfer.getData(TITLE_TEMPLATE_DRAG_MIME);
+    if (!isTitleTemplateId(templateId)) {
+      return;
+    }
+    event.preventDefault();
+    const scroll = scrollRef.current;
+    const rect = scroll?.getBoundingClientRect();
+    const start = rect && scroll ? round(Math.max(0, (event.clientX - rect.left + scroll.scrollLeft - LABEL_WIDTH) / zoom)) : undefined;
+    addTitleTemplate(templateId, start);
   }
 
   function onKeyDown(event: React.KeyboardEvent<HTMLElement>): void {
@@ -685,7 +783,14 @@ export function Timeline() {
           data-testid="timeline-zoom-slider"
         />
       </div>
-      <div ref={scrollRef} className="timeline-scrollbar min-h-0 min-w-0 max-w-full flex-1 overflow-auto" onWheel={onWheel} data-testid="timeline-scroll-container">
+      <div
+        ref={scrollRef}
+        className="timeline-scrollbar min-h-0 min-w-0 max-w-full flex-1 overflow-auto"
+        onWheel={onWheel}
+        onDragOver={onTitleTemplateDragOver}
+        onDrop={onTitleTemplateDrop}
+        data-testid="timeline-scroll-container"
+      >
         <div className="relative" style={{ width: LABEL_WIDTH + width }}>
           <Ruler ticks={ticks} zoom={zoom} width={width} cachedRanges={renderCacheRanges} onSeek={setPlayheadTime} />
           <div className="relative">
@@ -741,8 +846,11 @@ export function Timeline() {
                 menu={clipMenu}
                 clip={allClips.find((clip) => clip.id === clipMenu.clipId)}
                 asset={allClips.find((clip) => clip.id === clipMenu.clipId) ? getClipMediaAsset(allClips.find((clip) => clip.id === clipMenu.clipId)!) : undefined}
+                whisperReady={whisperAvailability.ready}
+                whisperUnavailableMessage={whisperAvailability.error}
                 onSilence={() => openSilenceDetection(clipMenu.clipId)}
                 onScene={() => void openSceneDetection(clipMenu.clipId)}
+                onGenerateSubtitles={() => void generateSubtitles(clipMenu.clipId)}
                 onPack={() => packClipMenuSelection(clipMenu.clipId)}
                 onClose={() => setClipMenu(undefined)}
               />
@@ -785,6 +893,7 @@ export function Timeline() {
         />
       ) : null}
       {sceneDialog ? <SceneDetectionDialog progress={sceneDialog.progress} /> : null}
+      {whisperDialog ? <WhisperGenerationDialog progress={whisperDialog.progress} clipName={whisperDialog.clip.name} /> : null}
     </section>
   );
 }
@@ -814,6 +923,11 @@ interface SilenceDialogState {
 }
 
 interface SceneDialogState {
+  clip: Clip;
+  progress: number;
+}
+
+interface WhisperDialogState {
   clip: Clip;
   progress: number;
 }
@@ -919,21 +1033,28 @@ function ClipActionMenu({
   menu,
   clip,
   asset,
+  whisperReady,
+  whisperUnavailableMessage,
   onSilence,
   onScene,
+  onGenerateSubtitles,
   onPack,
   onClose
 }: {
   menu: ClipMenuState;
   clip?: Clip;
   asset?: MediaAsset;
+  whisperReady: boolean;
+  whisperUnavailableMessage?: string;
   onSilence(): void;
   onScene(): void;
+  onGenerateSubtitles(): void;
   onPack(): void;
   onClose(): void;
 }) {
   const canDetectSilence = Boolean(clip && (clip.type === 'audio' || (clip.type === 'video' && asset?.hasAudio)));
   const canDetectScene = clip?.type === 'video';
+  const canGenerateSubtitles = canGenerateSubtitlesForClip(clip, asset, whisperReady);
   return (
     <div
       className="fixed z-50 w-[230px] rounded-md border border-line bg-white p-2 text-xs shadow-soft"
@@ -958,6 +1079,16 @@ function ClipActionMenu({
         onClick={onScene}
       >
         {zhCN.timeline.sceneAction}
+      </button>
+      <button
+        className="block w-full rounded px-2 py-2 text-left hover:bg-panel disabled:opacity-40"
+        type="button"
+        disabled={!canGenerateSubtitles}
+        title={!canGenerateSubtitles ? whisperUnavailableMessage : undefined}
+        data-testid="clip-action-generate-subtitles"
+        onClick={onGenerateSubtitles}
+      >
+        {zhCN.timeline.generateSubtitlesAction}
       </button>
       <button
         className="block w-full rounded px-2 py-2 text-left hover:bg-panel disabled:opacity-40"
@@ -1114,6 +1245,25 @@ function SceneDetectionDialog({ progress }: { progress: number }) {
         </div>
         <div className="px-4 py-5">
           <div className="mb-2 text-sm text-slate-600">{zhCN.timeline.sceneScanning}</div>
+          <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+            <div className="h-full bg-brand transition-all" style={{ width: `${Math.round(Math.max(0, Math.min(1, progress)) * 100)}%` }} />
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function WhisperGenerationDialog({ progress, clipName }: { progress: number; clipName: string }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" data-testid="whisper-dialog">
+      <section className="w-full max-w-sm rounded-md border border-line bg-white shadow-soft">
+        <div className="border-b border-line px-4 py-3">
+          <h2 className="text-sm font-semibold">{zhCN.timeline.whisperRunningTitle}</h2>
+          <div className="mt-1 truncate text-xs text-slate-500">{clipName}</div>
+        </div>
+        <div className="px-4 py-5">
+          <div className="mb-2 text-sm text-slate-600">{zhCN.timeline.whisperRunningMessage(progress)}</div>
           <div className="h-2 overflow-hidden rounded-full bg-slate-200">
             <div className="h-full bg-brand transition-all" style={{ width: `${Math.round(Math.max(0, Math.min(1, progress)) * 100)}%` }} />
           </div>

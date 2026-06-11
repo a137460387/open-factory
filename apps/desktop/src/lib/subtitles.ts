@@ -6,7 +6,9 @@ import {
   DEFAULT_TRANSFORM,
   createId,
   createTrack,
+  getClipSpeed,
   parseSrt,
+  round,
   type Timeline,
   type Track
 } from '@open-factory/editor-core';
@@ -24,31 +26,53 @@ export async function readSubtitleText(path: string): Promise<string> {
   return readFile(path);
 }
 
-export function buildSubtitleTrackFromSrt(path: string, contents: string, timeline: Timeline): Track {
+export interface SubtitleTimingOptions {
+  timelineStart?: number;
+  sourceStart?: number;
+  sourceDuration?: number;
+  speed?: number;
+}
+
+export function buildSubtitleTrackFromSrt(path: string, contents: string, timeline: Timeline, timing: SubtitleTimingOptions = {}): Track {
   const cues = parseSrt(contents);
   const trackId = createId('track');
   const name = fileNameFromPath(path).replace(/\.[^.]+$/, '') || zhCN.inspector.sections.subtitle;
   const trackNumber = timeline.tracks.filter((track) => track.type === 'subtitle').length + 1;
+  const timelineStart = round(Math.max(0, timing.timelineStart ?? 0));
+  const sourceStart = round(Math.max(0, timing.sourceStart ?? 0));
+  const sourceEnd = typeof timing.sourceDuration === 'number' ? round(sourceStart + Math.max(0, timing.sourceDuration)) : undefined;
+  const speed = getClipSpeed({ speed: timing.speed });
   return createTrack({
     id: trackId,
     type: 'subtitle',
     name: `${name} ${trackNumber}`,
-    clips: cues.map((cue) => ({
-      id: createId('clip'),
-      type: 'subtitle' as const,
-      name: `${zhCN.inspector.sections.subtitle} ${cue.index}`,
-      trackId,
-      start: cue.startMs / 1000,
-      duration: (cue.endMs - cue.startMs) / 1000,
-      trimStart: 0,
-      trimEnd: 0,
-      speed: DEFAULT_CLIP_SPEED,
-      colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
-      transform: { ...DEFAULT_TRANSFORM },
-      text: cue.text,
-      style: { ...DEFAULT_SUBTITLE_STYLE },
-      subtitleMode: DEFAULT_SUBTITLE_MODE
-    }))
+    clips: cues
+      .map((cue) => {
+        const cueStart = cue.startMs / 1000;
+        const cueEnd = cue.endMs / 1000;
+        const clippedStart = Math.max(cueStart, sourceStart);
+        const clippedEnd = Math.min(cueEnd, sourceEnd ?? cueEnd);
+        if (clippedEnd <= clippedStart) {
+          return undefined;
+        }
+        return {
+          id: createId('clip'),
+          type: 'subtitle' as const,
+          name: `${zhCN.inspector.sections.subtitle} ${cue.index}`,
+          trackId,
+          start: round(timelineStart + (clippedStart - sourceStart) / speed),
+          duration: round((clippedEnd - clippedStart) / speed),
+          trimStart: 0,
+          trimEnd: 0,
+          speed: DEFAULT_CLIP_SPEED,
+          colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+          transform: { ...DEFAULT_TRANSFORM },
+          text: cue.text,
+          style: { ...DEFAULT_SUBTITLE_STYLE },
+          subtitleMode: DEFAULT_SUBTITLE_MODE
+        };
+      })
+      .filter((clip): clip is NonNullable<typeof clip> => Boolean(clip))
   });
 }
 

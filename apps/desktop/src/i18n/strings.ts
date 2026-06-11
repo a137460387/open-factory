@@ -36,6 +36,10 @@ export const zhCN = {
     clearMediaCache: '清除媒体缓存',
     autosaveInterval: '自动保存间隔',
     autosave: '自动保存',
+    whisperExecutable: 'Whisper 可执行文件',
+    whisperModel: 'Whisper 模型',
+    chooseWhisperExecutable: '选择 Whisper 可执行文件',
+    chooseWhisperModel: '选择 Whisper 模型文件',
     undo: '撤销',
     redo: '重做',
     splitSelectedClip: '分割选中片段',
@@ -56,7 +60,8 @@ export const zhCN = {
       video: '视频',
       audio: '音频',
       image: '图片',
-      tagged: '已标记'
+      tagged: '已标记',
+      titles: '标题'
     },
     label: '标签',
     clearLabel: '清除标签',
@@ -92,6 +97,30 @@ export const zhCN = {
       video: '视频',
       audio: '音频',
       image: '图片'
+    },
+    titleTemplateCount: (count: number) => `${count} 个标题模板`,
+    addTitleTemplate: '添加标题模板'
+  },
+  titleTemplates: {
+    'lower-third': {
+      name: '下三分之一',
+      defaultText: '人物姓名'
+    },
+    'fullscreen-title': {
+      name: '全屏标题',
+      defaultText: '项目标题'
+    },
+    'caption-bar': {
+      name: '字幕条',
+      defaultText: '重点说明'
+    },
+    'corner-bug': {
+      name: '角标',
+      defaultText: '直播'
+    },
+    counter: {
+      name: '计数器',
+      defaultText: '00:05'
     }
   },
   preview: {
@@ -185,6 +214,7 @@ export const zhCN = {
     close: '关闭',
     silenceAction: '自动剪切静音段',
     sceneAction: '自动按场景分割',
+    generateSubtitlesAction: '自动生成字幕',
     silenceUnavailableTitle: '无法检测静音',
     silenceUnavailableMessage: '请选择带音频的音频或视频片段。',
     silenceRemovedTitle: '静音段已删除',
@@ -198,6 +228,11 @@ export const zhCN = {
     noSceneCutsTitle: '未检测到场景切点',
     sceneDetectFailedTitle: '场景检测失败',
     sceneDetectFailedMessage: '无法运行 FFmpeg 场景检测。',
+    whisperUnavailableTitle: '无法生成字幕',
+    whisperRunningTitle: '字幕生成中',
+    whisperRunningMessage: (progress: number) => `Whisper ${Math.round(progress * 100)}%`,
+    whisperCompleteTitle: '字幕已生成',
+    whisperFailedTitle: '字幕生成失败',
     timelineRejectedMessage: '时间线拒绝了该操作。',
     packNestedSequence: '打包为嵌套序列',
     nestedSequenceName: (index: number) => `嵌套序列 ${index}`,
@@ -512,8 +547,16 @@ export const zhCN = {
     noSubtitlesFound: '未找到字幕',
     subtitlesImported: '字幕已导入',
     subtitlesImportedMessage: (count: number) => `已添加 ${count} 个字幕片段。`,
+    subtitlesGenerated: (count: number) => `已生成 ${count} 个字幕片段。`,
     saveFailed: '保存失败',
     saveFailedMessage: '无法保存项目。'
+  },
+  whisper: {
+    notConfigured: 'Whisper 路径未配置。',
+    executableMissing: 'Whisper 可执行文件不存在。',
+    modelMissing: 'Whisper 模型文件不存在。',
+    noSubtitleCues: 'Whisper 未生成可用字幕。',
+    progress: (progress: number) => `Whisper ${Math.round(progress * 100)}%`
   },
   projectFiles: {
     discardChanges: '放弃未保存的更改？',
@@ -533,7 +576,8 @@ export const zhCN = {
   },
   fileDialogs: {
     media: '媒体',
-    subtitles: 'SubRip 字幕'
+    subtitles: 'SubRip 字幕',
+    whisperModel: 'Whisper 模型'
   },
   errors: {
     panelUnexpected: '面板发生意外错误。',

@@ -5,3 +5,4 @@ pub mod media;
 pub mod proxy;
 pub mod scene;
 pub mod smoke;
+pub mod whisper;

@@ -1,9 +1,10 @@
-import { filterMediaAssets, shouldGenerateProxy, type MediaAsset, type MediaBinFilter, type MediaLabelColor, type MediaMetadata } from '@open-factory/editor-core';
-import { AlertCircle, BadgeCheck, FileAudio2, FileImage, FileVideo2, Gauge, Import, Link2, Loader2, Plus, Search, Tag } from 'lucide-react';
+import { TITLE_TEMPLATE_IDS, filterMediaAssets, shouldGenerateProxy, type MediaAsset, type MediaBinFilter, type MediaLabelColor, type MediaMetadata, type TitleTemplateId } from '@open-factory/editor-core';
+import { AlertCircle, BadgeCheck, FileAudio2, FileImage, FileText, FileVideo2, Gauge, Import, Link2, Loader2, Plus, Search, Tag } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
 import { zhCN } from '../../i18n/strings';
 import { isTauriRuntime } from '../../lib/tauri';
+import { TITLE_TEMPLATE_DRAG_MIME } from '../../lib/titleTemplates';
 import { listenDragDrop } from '../../lib/tauri-bridge';
 import { useMediaJobStore } from '../../media/media-job-store';
 
@@ -17,15 +18,18 @@ interface MediaBinProps {
   onRelinkAll(): void;
   onGenerateProxy(assetId: string): void;
   onSetLabel(assetId: string, labelColor?: MediaLabelColor): void;
+  onAddTitleTemplate(templateId: TitleTemplateId): void;
 }
 
-export function MediaBin({ media, mediaMetadata, onImport, onImportPaths, onAddToTimeline, onRelink, onRelinkAll, onGenerateProxy, onSetLabel }: MediaBinProps) {
+type MediaBinView = MediaBinFilter | 'titles';
+
+export function MediaBin({ media, mediaMetadata, onImport, onImportPaths, onAddToTimeline, onRelink, onRelinkAll, onGenerateProxy, onSetLabel, onAddTitleTemplate }: MediaBinProps) {
   const t = zhCN.mediaBin;
   const [dragOver, setDragOver] = useState(false);
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<MediaBinFilter>('all');
+  const [filter, setFilter] = useState<MediaBinView>('all');
   const missingCount = media.filter((asset) => asset.missing).length;
-  const visibleMedia = filterMediaAssets(media, { query: search, filter, metadata: mediaMetadata });
+  const visibleMedia = filter === 'titles' ? [] : filterMediaAssets(media, { query: search, filter, metadata: mediaMetadata });
   const jobs = useMediaJobStore((state) => state.jobs);
   const runnerActive = useMediaJobStore((state) => state.runnerActive);
   const clearFinishedJobs = useMediaJobStore((state) => state.clearFinishedJobs);
@@ -115,8 +119,8 @@ export function MediaBin({ media, mediaMetadata, onImport, onImportPaths, onAddT
               onChange={(event) => setSearch(event.target.value)}
             />
           </label>
-          <div className="grid grid-cols-5 gap-1" data-testid="media-filter-bar">
-            {(['all', 'video', 'audio', 'image', 'tagged'] as MediaBinFilter[]).map((item) => (
+          <div className="grid grid-cols-3 gap-1" data-testid="media-filter-bar">
+            {(['all', 'video', 'audio', 'image', 'tagged', 'titles'] as MediaBinView[]).map((item) => (
               <button
                 key={item}
                 className={clsx(
@@ -132,7 +136,7 @@ export function MediaBin({ media, mediaMetadata, onImport, onImportPaths, onAddT
             ))}
           </div>
         </div>
-        {jobs.length > 0 ? (
+        {filter !== 'titles' && jobs.length > 0 ? (
           <div className="mb-3 rounded-md border border-line bg-panel p-2 text-xs" data-testid="media-job-queue">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
@@ -148,7 +152,9 @@ export function MediaBin({ media, mediaMetadata, onImport, onImportPaths, onAddT
             </div>
           </div>
         ) : null}
-        {media.length === 0 ? (
+        {filter === 'titles' ? (
+          <TitleTemplateGrid onAddTitleTemplate={onAddTitleTemplate} />
+        ) : media.length === 0 ? (
           <button
             className="flex h-full min-h-[220px] w-full flex-col items-center justify-center rounded-md border border-dashed border-slate-300 bg-panel p-6 text-center text-sm text-slate-600"
             onClick={onImport}
@@ -173,6 +179,50 @@ export function MediaBin({ media, mediaMetadata, onImport, onImportPaths, onAddT
         )}
       </div>
     </aside>
+  );
+}
+
+function TitleTemplateGrid({ onAddTitleTemplate }: { onAddTitleTemplate(templateId: TitleTemplateId): void }) {
+  return (
+    <div className="grid grid-cols-1 gap-3" data-testid="title-template-grid">
+      <div className="rounded-md border border-line bg-panel px-3 py-2 text-xs font-medium text-slate-600">
+        {zhCN.mediaBin.titleTemplateCount(TITLE_TEMPLATE_IDS.length)}
+      </div>
+      {TITLE_TEMPLATE_IDS.map((templateId) => {
+        const label = zhCN.titleTemplates[templateId];
+        return (
+          <div
+            key={templateId}
+            className="rounded-md border border-line bg-white p-3 shadow-sm"
+            draggable
+            data-testid={`title-template-card-${templateId}`}
+            onDragStart={(event) => {
+              event.dataTransfer.effectAllowed = 'copy';
+              event.dataTransfer.setData(TITLE_TEMPLATE_DRAG_MIME, templateId);
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-line bg-panel text-brand">
+                <FileText size={17} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-semibold text-ink">{label.name}</div>
+                <div className="truncate text-xs text-slate-500">{label.defaultText}</div>
+              </div>
+            </div>
+            <button
+              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md border border-line bg-panel px-2 py-1.5 text-sm font-medium hover:bg-white"
+              type="button"
+              data-testid={`add-title-template-${templateId}`}
+              onClick={() => onAddTitleTemplate(templateId)}
+            >
+              <Plus size={15} />
+              {zhCN.mediaBin.addTitleTemplate}
+            </button>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
