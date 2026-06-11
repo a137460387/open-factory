@@ -1,7 +1,39 @@
-import { describe, expect, it, vi } from 'vitest';
-import { translateSubtitleItems } from './subtitleTranslation';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { acceptTranslationTOS, translateSubtitleItems } from './subtitleTranslation';
 
 describe('subtitle translation API client', () => {
+  beforeEach(() => {
+    const storage = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: vi.fn((key: string) => storage.get(key) ?? null),
+      setItem: vi.fn((key: string, value: string) => {
+        storage.set(key, value);
+      }),
+      removeItem: vi.fn((key: string) => {
+        storage.delete(key);
+      }),
+      clear: vi.fn(() => {
+        storage.clear();
+      })
+    });
+    acceptTranslationTOS();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('requires terms acceptance before contacting translation providers', async () => {
+    localStorage.clear();
+    const fetchMock = vi.fn();
+
+    await expect(translateSubtitleItems([{ id: 'cue-a', text: 'Hello' }], { provider: 'deepl', apiKey: 'deepl-key', targetLanguage: 'ZH' }, fetchMock as typeof fetch)).rejects.toThrow(
+      'TRANSLATION_TOS_NOT_ACCEPTED'
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('sends DeepL requests in batches of at most 50', async () => {
     const items = Array.from({ length: 51 }, (_, index) => ({ id: `cue-${index}`, text: `Line ${index}` }));
     const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {

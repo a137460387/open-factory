@@ -117,6 +117,7 @@ export const zhCN = {
       provider: '服务',
       apiKey: 'API Key',
       targetLanguage: '目标语言',
+      keyStorageNote: 'Key 仅存储在您的设备上',
       localOnlyNote: '只发送字幕文本，不上传媒体文件；密钥保存在本机浏览器存储。'
     },
     proxy: {
@@ -129,7 +130,7 @@ export const zhCN = {
     },
     plugins: {
       title: '插件',
-      description: '从本机插件目录加载 JS 插件，Hook 在 Worker 中运行。',
+      description: '从本机插件目录加载可信 JS 插件，Hook 在 Worker 中运行；仅安装来自可信来源的插件。',
       refresh: '刷新',
       loading: '正在加载插件...',
       empty: '没有加载到插件。',
@@ -510,6 +511,8 @@ export const zhCN = {
       button: '翻译字幕轨',
       notConfigured: '请先在设置中配置翻译 API。',
       progress: (completed: number, total: number) => `翻译 ${completed}/${total}`,
+      tosTitle: '启用联网字幕翻译',
+      tosMessage: '字幕翻译需将文本发送至 DeepL / Google Translate 等第三方服务。\n启用即表示您同意将字幕内容发送至上述服务；本项目不代理第三方翻译服务责任。',
       trackName: (name: string, language: string) => `${name} ${language}`,
       clipName: (name: string, language: string) => `${name} ${language}`,
       completeTitle: '字幕翻译完成',

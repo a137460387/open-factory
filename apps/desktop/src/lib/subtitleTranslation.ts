@@ -14,6 +14,14 @@ export type TranslationProgress = (completed: number, total: number) => void;
 
 type FetchLike = typeof fetch;
 
+function hasAcceptedTranslationTOS(): boolean {
+  return localStorage.getItem('translation_tos_accepted') === 'true';
+}
+
+export function acceptTranslationTOS(): void {
+  localStorage.setItem('translation_tos_accepted', 'true');
+}
+
 export async function translateSubtitleItems(
   items: SubtitleTranslationItem[],
   settings: TranslationSettings,
@@ -54,6 +62,9 @@ export function subtitleClipsToTranslationItems(clips: Array<Extract<Clip, { typ
 }
 
 async function translateWithDeepL(texts: string[], settings: TranslationSettings, fetchImpl: FetchLike): Promise<string[]> {
+  if (!hasAcceptedTranslationTOS()) {
+    throw new Error('TRANSLATION_TOS_NOT_ACCEPTED');
+  }
   const body = new URLSearchParams();
   for (const text of texts) {
     body.append('text', text);
@@ -75,6 +86,9 @@ async function translateWithDeepL(texts: string[], settings: TranslationSettings
 }
 
 async function translateWithGoogle(texts: string[], settings: TranslationSettings, fetchImpl: FetchLike): Promise<string[]> {
+  if (!hasAcceptedTranslationTOS()) {
+    throw new Error('TRANSLATION_TOS_NOT_ACCEPTED');
+  }
   const response = await fetchImpl(`https://translation.googleapis.com/language/translate/v2?key=${encodeURIComponent(settings.apiKey)}`, {
     method: 'POST',
     headers: {

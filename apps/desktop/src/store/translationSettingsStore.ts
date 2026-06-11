@@ -70,6 +70,9 @@ function writeTranslationSettings(settings: TranslationSettings): void {
   if (typeof localStorage === 'undefined') {
     return;
   }
+  // 安全说明：API Key 存储于用户本地 localStorage，不上传至任何服务器。
+  // 桌面端生产环境建议迁移至 tauri-plugin-stronghold 或系统 Keychain。
+  // 当前实现为临时方案，适用于个人使用场景。
   localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
 }
 

@@ -472,16 +472,19 @@ function TranslationSettingsPanel({
           <option value="google">Google</option>
         </select>
       </label>
-      <label className="block text-xs font-medium text-slate-600">
-        {t.apiKey}
-        <input
-          className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink"
-          type="password"
-          value={apiKey}
-          data-testid="translation-api-key-input"
-          onChange={(event) => onApiKeyChange(event.target.value)}
-        />
-      </label>
+      <div>
+        <label className="block text-xs font-medium text-slate-600">
+          {t.apiKey}
+          <input
+            className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink"
+            type="password"
+            value={apiKey}
+            data-testid="translation-api-key-input"
+            onChange={(event) => onApiKeyChange(event.target.value)}
+          />
+        </label>
+        <p className="mt-1 text-xs text-slate-500">{t.keyStorageNote}</p>
+      </div>
       <label className="block text-xs font-medium text-slate-600">
         {t.targetLanguage}
         <input

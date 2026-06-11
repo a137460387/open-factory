@@ -1,6 +1,6 @@
 # open-factory
 
-open-factory is a local-first desktop video editor MVP built with Tauri 2, React, TypeScript, Zustand, and a pure `editor-core` package. It keeps user media on the local machine, has no login or telemetry, and implements a clean-room timeline editor with media import, preview, project files, Relink, cache, and FFmpeg export.
+open-factory is a desktop video editor MVP built with Tauri 2, React, TypeScript, Zustand, and a pure `editor-core` package. 本地优先架构；字幕翻译为可选联网功能，需用户主动启用并同意服务条款。 It keeps user media on the local machine, has no login or telemetry, and implements a clean-room timeline editor with media import, preview, project files, Relink, cache, and FFmpeg export.
 
 ![Golden preview frame](docs/open-factory-golden-preview.png)
 
@@ -31,7 +31,7 @@ The golden preview frame is generated locally from a synthetic FFmpeg fixture by
 
 - Rust stable >= 1.77: `rustup install stable`
 - Node.js >= 20 LTS
-- Bun >= 1.1
+- Bun 1.3.14, matching the pinned `packageManager`
 - macOS: `xcode-select --install`
 - Windows: WebView2 Runtime and Microsoft C++ Build Tools from Visual Studio Installer
 - Linux: Tauri WebKit dependencies such as `libwebkit2gtk-4.1-dev libssl-dev libgtk-3-dev librsvg2-dev`
@@ -143,6 +143,10 @@ Use the toolbar cache button to clear cached thumbnails, waveform data, and prox
 ## Proxy Media
 
 Video cards show proxy status. For large files or sources larger than the preview proxy target, the background media job queue automatically generates a proxy. The manual Generate proxy button remains available for retry. Tauri runs FFmpeg with argument arrays to create an H.264 proxy in the app cache. Preview video uses the proxy path when ready; preview audio and export planning still read the original media path for final quality.
+
+## Plugins
+
+Plugins are local JavaScript files loaded from the app data plugin directory. They run in a Worker and do not receive direct Tauri API access, but plugin code is still executed locally; only install plugins from trusted sources.
 
 ## Preview
 

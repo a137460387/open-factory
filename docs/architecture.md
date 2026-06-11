@@ -166,4 +166,6 @@ The script `apps/desktop/scripts/tauri-smoke.mjs` launches the release executabl
 
 ## Local Privacy
 
-open-factory has no login, telemetry, cloud upload, or remote rendering. Media files remain on the local filesystem and are accessed through Tauri permissions and `convertFileSrc`.
+open-factory has no login, telemetry, media upload, or remote rendering. Media files remain on the local filesystem and are accessed through Tauri permissions and `convertFileSrc`.
+
+本地优先架构；字幕翻译为可选联网功能，需用户主动启用并同意服务条款。 When enabled, subtitle translation sends subtitle text only to the selected third-party translation provider; media files remain local.

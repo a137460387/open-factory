@@ -6,7 +6,7 @@
 - Do not copy third-party project code, assets, logo, or wording. Keep implementation clean-room.
 - Local media preview must use Tauri `convertFileSrc`; never assign `file://` directly to video, image, or audio sources.
 - Run typecheck, tests, and build before summarizing completed work.
-- Follow the implementation order in `goal-open-factory.md`: core first, then app shell, media, timeline, preview, inspector, project files, export, shortcuts, error handling.
+- Follow the public roadmap and architecture docs for implementation order: core first, then app shell, media, timeline, preview, inspector, project files, export, shortcuts, error handling.
 - Modify `packages/editor-core/src/export/ffmpeg-builder.ts` only with matching `ffmpeg-builder.test.ts` coverage.
 - Modify project schema only with matching `project-migration.ts` and migration tests.
 - Media import changes must consider `apps/desktop/src/cache/cache-service.ts`.

@@ -83,3 +83,6 @@ tauri.key
 # Local project/session artifacts
 *.cutproj.json
 !.example.cutproj.json
+goal-open-factory.md
+docs/internal/
+package-lock.json

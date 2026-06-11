@@ -2,6 +2,7 @@
 name = "open-factory-desktop"
 version = "0.1.0"
 description = "Local-first desktop video editor MVP."
+license = "MIT"
 authors = ["open-factory"]
 edition = "2021"
 rust-version = "1.77"

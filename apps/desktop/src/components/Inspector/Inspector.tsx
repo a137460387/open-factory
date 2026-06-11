@@ -59,9 +59,9 @@ import {
 import { ArrowDown, ArrowUp, GripVertical, Palette, Plus, SlidersHorizontal, Trash2, X } from 'lucide-react';
 import { zhCN } from '../../i18n/strings';
 import { commandManager, timelineAccessor } from '../../store/commandManager';
-import { analyzeClip, getFfmpegCapabilities, listenBridge, openFileDialog, type ClipAnalysisProgressEvent } from '../../lib/tauri-bridge';
+import { analyzeClip, bridgeConfirm, getFfmpegCapabilities, listenBridge, openFileDialog, type ClipAnalysisProgressEvent } from '../../lib/tauri-bridge';
 import { buildClipColorMatchCurves } from '../../lib/colorMatch';
-import { subtitleClipsToTranslationItems, translateSubtitleItems } from '../../lib/subtitleTranslation';
+import { acceptTranslationTOS, subtitleClipsToTranslationItems, translateSubtitleItems } from '../../lib/subtitleTranslation';
 import { showToast } from '../../lib/toast';
 import { useEditorStore, type SelectedKeyframeRef } from '../../store/editorStore';
 import { isTranslationConfigured, useTranslationSettingsStore } from '../../store/translationSettingsStore';
@@ -292,9 +292,27 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
     const sourceClips = sourceTrack.clips.filter((item): item is Extract<Clip, { type: 'subtitle' }> => item.type === 'subtitle');
     try {
       setSubtitleTranslationProgress({ completed: 0, total: sourceClips.length });
-      const translated = await translateSubtitleItems(subtitleClipsToTranslationItems(sourceClips), translationSettings, fetch, (completed, total) => {
-        setSubtitleTranslationProgress({ completed, total });
-      });
+      const requestTranslation = () =>
+        translateSubtitleItems(subtitleClipsToTranslationItems(sourceClips), translationSettings, fetch, (completed, total) => {
+          setSubtitleTranslationProgress({ completed, total });
+        });
+      let translated: Awaited<ReturnType<typeof translateSubtitleItems>>;
+      try {
+        translated = await requestTranslation();
+      } catch (error) {
+        if (!(error instanceof Error) || error.message !== 'TRANSLATION_TOS_NOT_ACCEPTED') {
+          throw error;
+        }
+        const accepted = await bridgeConfirm(zhCN.inspector.translation.tosMessage, {
+          title: zhCN.inspector.translation.tosTitle,
+          kind: 'warning'
+        });
+        if (!accepted) {
+          return;
+        }
+        acceptTranslationTOS();
+        translated = await requestTranslation();
+      }
       const translatedById = new Map(translated.map((item) => [item.id, item.translatedText]));
       const track = createTrack({
         id: createId('track'),
