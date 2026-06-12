@@ -141,7 +141,29 @@ export const zhCN = {
       builtin: '内置',
       user: '用户',
       hooks: 'Hook',
+      permissions: '权限',
+      status: '状态',
       errors: '错误',
+      enable: '启用',
+      disable: '禁用',
+      uninstall: '卸载',
+      noDescription: '无描述',
+      builtinLocked: '内置插件不能卸载',
+      enabledTitle: '插件已启用',
+      disabledTitle: '插件已禁用',
+      uninstallFailed: '卸载失败',
+      uninstallFailedMessage: '无法删除插件文件。',
+      state: {
+        enabled: '已启用',
+        disabled: '已禁用',
+        error: '错误'
+      },
+      permissionLabels: {
+        'read-project': '读取项目',
+        'write-project': '写入项目',
+        'export-hook': '导出 Hook',
+        'menu-register': '注册菜单'
+      },
       loadFailed: '插件加载失败',
       loadFailedMessage: '无法读取插件目录。'
     }

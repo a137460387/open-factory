@@ -1,5 +1,5 @@
 import type { ExportSettings, Project } from '@open-factory/editor-core';
-import { fsExists, getAppDataDir, readFile, scanDirectory } from '../lib/tauri-bridge';
+import { fsExists, getAppDataDir, readFile, removeFile, scanDirectory } from '../lib/tauri-bridge';
 import {
   createBuiltinExamplePlugin,
   getExportBeforePayload,
@@ -10,6 +10,8 @@ import {
   type PluginRegistry,
   type PluginSourceFile
 } from './plugin-loader';
+
+const PLUGIN_STATE_KEY = 'open-factory:plugins';
 
 export interface PluginHookLogEntry {
   pluginId: string;
@@ -50,8 +52,19 @@ export function getPluginRegistrySnapshot(): PluginRegistry | undefined {
 
 export async function runPluginHook<K extends PluginHookName>(hookName: K, payload: PluginHookPayloads[K]): Promise<PluginHookLogEntry[]> {
   const current = await ensurePluginRegistry();
+  return runPluginHookForRegistry(current, hookName, payload);
+}
+
+export async function runPluginHookForRegistry<K extends PluginHookName>(
+  current: PluginRegistry,
+  hookName: K,
+  payload: PluginHookPayloads[K]
+): Promise<PluginHookLogEntry[]> {
   const entries: PluginHookLogEntry[] = [];
   for (const loaded of current.plugins) {
+    if (!loaded.enabled) {
+      continue;
+    }
     if (!loaded.plugin.hooks[hookName]) {
       continue;
     }
@@ -90,14 +103,46 @@ export function resetPluginRegistryForTests(): void {
   registry = undefined;
   registryPromise = undefined;
   clearPluginHookLog();
+  writeDisabledPluginIds(new Set());
+}
+
+export function setPluginEnabled(pluginId: string, enabled: boolean): PluginRegistry | undefined {
+  const disabled = readDisabledPluginIds();
+  if (enabled) {
+    disabled.delete(pluginId);
+  } else {
+    disabled.add(pluginId);
+  }
+  writeDisabledPluginIds(disabled);
+  if (!registry) {
+    return registry;
+  }
+  registry = {
+    ...registry,
+    plugins: registry.plugins.map((entry) => (entry.plugin.id === pluginId ? { ...entry, enabled } : entry))
+  };
+  return registry;
+}
+
+export async function uninstallPlugin(sourcePath: string): Promise<PluginRegistry> {
+  const entry = registry?.plugins.find((plugin) => plugin.sourcePath === sourcePath);
+  if (entry?.builtin) {
+    throw new Error('Built-in plugins cannot be uninstalled.');
+  }
+  await removeFile(sourcePath);
+  return refreshPluginRegistry();
 }
 
 async function loadRegistry(): Promise<PluginRegistry> {
+  const disabledPluginIds = readDisabledPluginIds();
   const builtin = createBuiltinExamplePlugin();
   const files = await readPluginFiles();
   const loaded = await loadPluginFiles(files);
   return {
-    plugins: [builtin, ...loaded.plugins],
+    plugins: [builtin, ...loaded.plugins].map((entry) => ({
+      ...entry,
+      enabled: !disabledPluginIds.has(entry.plugin.id)
+    })),
     errors: loaded.errors
   };
 }
@@ -118,6 +163,25 @@ async function readPluginFiles(): Promise<PluginSourceFile[]> {
 
 function normalizePath(path: string): string {
   return path.replace(/\\/g, '/');
+}
+
+function readDisabledPluginIds(): Set<string> {
+  if (typeof window === 'undefined') {
+    return new Set();
+  }
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(PLUGIN_STATE_KEY) ?? '{}') as { disabledPluginIds?: unknown };
+    return new Set(Array.isArray(parsed.disabledPluginIds) ? parsed.disabledPluginIds.filter((id): id is string => typeof id === 'string') : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function writeDisabledPluginIds(disabledPluginIds: Set<string>): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  window.localStorage.setItem(PLUGIN_STATE_KEY, JSON.stringify({ disabledPluginIds: Array.from(disabledPluginIds).sort() }));
 }
 
 export type { LoadedPlugin, PluginRegistry };

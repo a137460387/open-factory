@@ -26,6 +26,7 @@ describe('plugin loader', () => {
         id: 'hook-plugin',
         name: 'Hook Plugin',
         version: '1.0.0',
+        permissions: ['export-hook'],
         hooks: { onExportBefore: hook }
       })
     );
@@ -42,7 +43,9 @@ describe('plugin loader', () => {
   it('normalizes metadata and provides a builtin export-count example plugin', async () => {
     expect(normalizePluginMetadata({ hooks: { onClipSelected: () => undefined } })).toMatchObject({
       name: expect.any(String),
-      version: '0.0.0'
+      version: '0.0.0',
+      description: '',
+      permissions: []
     });
 
     const builtin = createBuiltinExamplePlugin();
@@ -51,15 +54,40 @@ describe('plugin loader', () => {
 
     expect(builtin.builtin).toBe(true);
     expect(builtin.plugin.hooks.onExportBefore).toBeTypeOf('function');
+    expect(builtin.plugin.permissions).toEqual(['export-hook']);
     expect(result).toEqual({ message: '导出前片段数: 0' });
+  });
+
+  it('enforces manifest permissions for hooks', async () => {
+    const registry = await loadPluginFiles([{ path: 'C:/Plugins/no-permission.js', code: 'hook' }], () =>
+      makeRuntime({
+        id: 'no-permission',
+        name: 'No Permission',
+        version: '1.0.0',
+        permissions: [],
+        hooks: { onExportBefore: () => ({ ok: true }) }
+      })
+    );
+
+    await expect(
+      registry.plugins[0].runtime.invokeHook('onExportBefore', {
+        project: createProject('Permission Test'),
+        outputPath: 'C:/Exports/out.mp4'
+      })
+    ).rejects.toThrow('export-hook permission');
   });
 });
 
-function makeRuntime(plugin: PluginRuntime['plugin']): PluginRuntime {
+function makeRuntime(plugin: Omit<PluginRuntime['plugin'], 'description' | 'permissions'> & Partial<Pick<PluginRuntime['plugin'], 'description' | 'permissions'>>): PluginRuntime {
+  const normalized = {
+    description: '',
+    permissions: [],
+    ...plugin
+  };
   return {
-    plugin,
+    plugin: normalized,
     invokeHook(hookName, payload) {
-      const hook = plugin.hooks[hookName] as ((input: unknown) => unknown) | undefined;
+      const hook = normalized.hooks[hookName] as ((input: unknown) => unknown) | undefined;
       return Promise.resolve(hook?.(payload));
     },
     dispose() {

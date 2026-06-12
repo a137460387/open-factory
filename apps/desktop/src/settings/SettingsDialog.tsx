@@ -4,7 +4,8 @@ import { UpdateClipCommand, type Clip, type Project, type Timeline } from '@open
 import { zhCN } from '../i18n/strings';
 import { loadLutLibrary, toggleLutFavorite, type LutLibraryItem } from '../lib/lutLibrary';
 import { showToast } from '../lib/toast';
-import { refreshPluginRegistry, type PluginRegistry } from '../plugins/plugin-manager';
+import { getPluginRegistrySnapshot, refreshPluginRegistry, setPluginEnabled, uninstallPlugin, type LoadedPlugin, type PluginRegistry } from '../plugins/plugin-manager';
+import { getLoadedPluginStatus, type PluginPermission } from '../plugins/plugin-loader';
 import { writeCustomKeybindings } from '../shortcuts/keybindings';
 import {
   TIMELINE_SHORTCUT_DEFINITIONS,
@@ -61,7 +62,7 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
       return;
     }
     void refresh();
-    void refreshPlugins();
+    showCurrentPlugins();
     return () => setPreviewTimeline(undefined);
   }, [open, setPreviewTimeline]);
 
@@ -117,6 +118,42 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
       const message = pluginError instanceof Error ? pluginError.message : t.plugins.loadFailedMessage;
       setPluginsError(message);
       showToast({ kind: 'warning', title: t.plugins.loadFailed, message });
+    } finally {
+      setPluginsLoading(false);
+    }
+  }
+
+  function showCurrentPlugins() {
+    const snapshot = getPluginRegistrySnapshot();
+    if (snapshot) {
+      setPluginsError(undefined);
+      setPluginRegistry(snapshot);
+      return;
+    }
+    void refreshPlugins();
+  }
+
+  async function togglePlugin(entry: LoadedPlugin) {
+    try {
+      const nextRegistry = setPluginEnabled(entry.plugin.id, !entry.enabled);
+      setPluginRegistry(nextRegistry ?? (await refreshPluginRegistry()));
+      showToast({ kind: 'info', title: entry.enabled ? t.plugins.disabledTitle : t.plugins.enabledTitle, message: entry.plugin.name });
+    } catch (pluginError) {
+      const message = pluginError instanceof Error ? pluginError.message : t.plugins.loadFailedMessage;
+      setPluginsError(message);
+      showToast({ kind: 'warning', title: t.plugins.loadFailed, message });
+    }
+  }
+
+  async function removePlugin(entry: LoadedPlugin) {
+    try {
+      setPluginsLoading(true);
+      setPluginsError(undefined);
+      setPluginRegistry(await uninstallPlugin(entry.sourcePath));
+    } catch (pluginError) {
+      const message = pluginError instanceof Error ? pluginError.message : t.plugins.uninstallFailedMessage;
+      setPluginsError(message);
+      showToast({ kind: 'warning', title: t.plugins.uninstallFailed, message });
     } finally {
       setPluginsLoading(false);
     }
@@ -369,7 +406,16 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
                 onReset={resetProxySettings}
               />
             ) : null}
-            {tab === 'plugins' ? <PluginsSettingsPanel registry={pluginRegistry} loading={pluginsLoading} error={pluginsError} onRefresh={() => void refreshPlugins()} /> : null}
+            {tab === 'plugins' ? (
+              <PluginsSettingsPanel
+                registry={pluginRegistry}
+                loading={pluginsLoading}
+                error={pluginsError}
+                onRefresh={() => void refreshPlugins()}
+                onTogglePlugin={(entry) => void togglePlugin(entry)}
+                onUninstallPlugin={(entry) => void removePlugin(entry)}
+              />
+            ) : null}
           </main>
         </div>
       </div>
@@ -508,7 +554,21 @@ function normalizeProxyTriggerThreshold(value: string): ProxyTriggerThreshold {
   return PROXY_TRIGGER_THRESHOLDS.includes(numeric as ProxyTriggerThreshold) ? (numeric as ProxyTriggerThreshold) : 1080;
 }
 
-function PluginsSettingsPanel({ registry, loading, error, onRefresh }: { registry?: PluginRegistry; loading: boolean; error?: string; onRefresh(): void }) {
+function PluginsSettingsPanel({
+  registry,
+  loading,
+  error,
+  onRefresh,
+  onTogglePlugin,
+  onUninstallPlugin
+}: {
+  registry?: PluginRegistry;
+  loading: boolean;
+  error?: string;
+  onRefresh(): void;
+  onTogglePlugin(entry: LoadedPlugin): void;
+  onUninstallPlugin(entry: LoadedPlugin): void;
+}) {
   const t = zhCN.settings.plugins;
   const plugins = registry?.plugins ?? [];
   return (
@@ -526,19 +586,41 @@ function PluginsSettingsPanel({ registry, loading, error, onRefresh }: { registr
       {error ? <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{error}</div> : null}
       {!loading && plugins.length === 0 ? <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">{t.empty}</div> : null}
       <div className="space-y-2">
-        {plugins.map((entry) => (
-          <div key={`${entry.sourcePath}-${entry.plugin.id}`} className="rounded-md border border-line bg-white p-3" data-testid="plugin-list-item">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <div className="truncate text-sm font-semibold text-ink">{entry.plugin.name}</div>
-                <div className="truncate text-xs text-slate-500">{entry.plugin.id} · {entry.plugin.version}</div>
+        {plugins.map((entry) => {
+          const status = getLoadedPluginStatus(entry);
+          return (
+            <div key={`${entry.sourcePath}-${entry.plugin.id}`} className="rounded-md border border-line bg-white p-3" data-testid="plugin-list-item" data-plugin-id={entry.plugin.id}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold text-ink">{entry.plugin.name}</div>
+                  <div className="truncate text-xs text-slate-500">{entry.plugin.id} · {entry.plugin.version}</div>
+                  <div className="mt-1 truncate text-xs text-slate-500">{entry.plugin.description || t.noDescription}</div>
+                </div>
+                <span className="rounded bg-panel px-2 py-1 text-[11px] font-semibold text-slate-600">{entry.builtin ? t.builtin : t.user}</span>
               </div>
-              <span className="rounded bg-panel px-2 py-1 text-[11px] font-semibold text-slate-600">{entry.builtin ? t.builtin : t.user}</span>
+              <div className="mt-2 grid gap-1 text-xs text-slate-500">
+                <div>{t.permissions}: <span data-testid="plugin-permissions">{formatPluginPermissions(entry.plugin.permissions)}</span></div>
+                <div>{t.hooks}: {Object.keys(entry.plugin.hooks).join(', ') || zhCN.common.none}</div>
+                <div>
+                  {t.status}: <span className={`font-semibold ${pluginStatusClass(status)}`} data-testid="plugin-status" data-status={status}>{t.state[status]}</span>
+                </div>
+              </div>
+              {entry.errors.length > 0 ? <div className="mt-2 text-xs font-medium text-amber-700" data-testid="plugin-entry-error">{t.errors}: {entry.errors.join('; ')}</div> : null}
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button className="rounded-md border border-line bg-panel px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-white" type="button" data-testid="plugin-toggle-button" onClick={() => onTogglePlugin(entry)}>
+                  {entry.enabled ? t.disable : t.enable}
+                </button>
+                {!entry.builtin ? (
+                  <button className="rounded-md border border-rose-200 bg-rose-50 px-2 py-1.5 text-xs font-medium text-rose-700 hover:bg-rose-100" type="button" data-testid="plugin-uninstall-button" onClick={() => onUninstallPlugin(entry)}>
+                    {t.uninstall}
+                  </button>
+                ) : (
+                  <span className="rounded-md border border-line bg-panel px-2 py-1.5 text-xs font-medium text-slate-500">{t.builtinLocked}</span>
+                )}
+              </div>
             </div>
-            <div className="mt-2 text-xs text-slate-500">{t.hooks}: {Object.keys(entry.plugin.hooks).join(', ') || zhCN.common.none}</div>
-            {entry.errors.length > 0 ? <div className="mt-2 text-xs font-medium text-amber-700">{t.errors}: {entry.errors.join('; ')}</div> : null}
-          </div>
-        ))}
+          );
+        })}
       </div>
       {registry?.errors.map((loadError) => (
         <div key={loadError.sourcePath} className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800" data-testid="plugin-load-error">
@@ -548,6 +630,20 @@ function PluginsSettingsPanel({ registry, loading, error, onRefresh }: { registr
       ))}
     </div>
   );
+}
+
+function formatPluginPermissions(permissions: PluginPermission[]): string {
+  return permissions.map((permission) => zhCN.settings.plugins.permissionLabels[permission]).join(', ') || zhCN.common.none;
+}
+
+function pluginStatusClass(status: 'enabled' | 'disabled' | 'error'): string {
+  if (status === 'enabled') {
+    return 'text-emerald-700';
+  }
+  if (status === 'disabled') {
+    return 'text-slate-600';
+  }
+  return 'text-amber-700';
 }
 
 function buildPreviewTimelineWithLut(timeline: Timeline, clipId: string, lutPath: string): Timeline {

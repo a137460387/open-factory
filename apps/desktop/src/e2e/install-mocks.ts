@@ -59,6 +59,7 @@ const lutFavoritesPath = `${appDataDir}/lut-favorites.json`;
 const keybindingsPath = `${appDataDir}/keybindings.json`;
 const pluginDir = `${appDataDir}/plugins`;
 const pluginPath = `${pluginDir}/export-count.js`;
+const permissionDeniedPluginPath = `${pluginDir}/missing-permission.js`;
 const brokenPluginPath = `${pluginDir}/broken.js`;
 
 files.set(sampleProjectPath, JSON.stringify(makeProjectFile(tinyVideo, false), null, 2));
@@ -73,12 +74,35 @@ files.set(
   pluginPath,
   [
     'module.exports = {',
-    '  id: "e2e.export-count",',
-    '  name: "E2E Export Count",',
-    '  version: "1.0.0",',
+    '  manifest: {',
+    '    id: "e2e.export-count",',
+    '    name: "E2E Export Count",',
+    '    version: "1.0.0",',
+    '    description: "Counts clips before export.",',
+    '    permissions: ["export-hook"]',
+    '  },',
     '  hooks: {',
     '    onExportBefore(payload) {',
     '      return { clipCount: payload.project.timeline.tracks.reduce((count, track) => count + track.clips.length, 0) };',
+    '    }',
+    '  }',
+    '};'
+  ].join('\n')
+);
+files.set(
+  permissionDeniedPluginPath,
+  [
+    'module.exports = {',
+    '  manifest: {',
+    '    id: "e2e.missing-permission",',
+    '    name: "E2E Missing Permission",',
+    '    version: "1.0.0",',
+    '    description: "Registers an export hook without permission.",',
+    '    permissions: []',
+    '  },',
+    '  hooks: {',
+    '    onExportBefore() {',
+    '      return { shouldNotRun: true };',
     '    }',
     '  }',
     '};'
@@ -103,6 +127,7 @@ for (const path of [
   relinkedImage,
   lutLibraryPath,
   pluginPath,
+  permissionDeniedPluginPath,
   brokenPluginPath,
   sampleProjectPath,
   missingProjectPath,
@@ -180,10 +205,10 @@ const mocks: TauriMocks = {
   }),
   scanDirectory: (path) => {
     if (path === pluginDir) {
-      return [pluginPath, brokenPluginPath];
+      return [pluginPath, permissionDeniedPluginPath, brokenPluginPath].filter((candidate) => exists.get(candidate) !== false);
     }
     if (path === appDataDir) {
-      return [lutLibraryPath, `${appDataDir}/luts/readme.txt`, pluginPath, brokenPluginPath];
+      return [lutLibraryPath, `${appDataDir}/luts/readme.txt`, pluginPath, permissionDeniedPluginPath, brokenPluginPath].filter((candidate) => exists.get(candidate) !== false);
     }
     return [relinkedVideo, relinkedAudio, relinkedImage, 'C:/Relink/other.mp4'];
   },
@@ -655,6 +680,7 @@ window.__E2E_ACTIONS__ = {
     exists.set(keybindingsPath, false);
     mtimes.delete(keybindingsPath);
     localStorage.removeItem('open-factory:proxy-settings');
+    localStorage.removeItem('open-factory:plugins');
   },
   clearExportPresets: () => {
     files.delete(exportPresetsPath);

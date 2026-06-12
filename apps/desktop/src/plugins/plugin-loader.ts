@@ -1,6 +1,7 @@
 import type { Clip, ExportSettings, Project } from '@open-factory/editor-core';
 
 export type PluginHookName = 'onClipSelected' | 'onExportBefore' | 'onMenuRegister';
+export type PluginPermission = 'read-project' | 'write-project' | 'export-hook' | 'menu-register';
 
 export interface PluginHookPayloads {
   onClipSelected: { clip?: Clip };
@@ -16,6 +17,8 @@ export interface OpenFactoryPlugin {
   id: string;
   name: string;
   version: string;
+  description: string;
+  permissions: PluginPermission[];
   hooks: PluginHooks;
 }
 
@@ -36,6 +39,7 @@ export interface LoadedPlugin {
   runtime: PluginRuntime;
   errors: string[];
   builtin: boolean;
+  enabled: boolean;
 }
 
 export interface PluginRegistry {
@@ -54,9 +58,10 @@ export async function loadPluginFiles(files: PluginSourceFile[], runtimeFactory:
       plugins.push({
         sourcePath: file.path,
         plugin: runtime.plugin,
-        runtime,
+        runtime: withPermissionGuard(runtime),
         errors: [],
-        builtin: false
+        builtin: false,
+        enabled: true
       });
     } catch (error) {
       errors.push({
@@ -73,6 +78,8 @@ export function createBuiltinExamplePlugin(): LoadedPlugin {
     id: 'open-factory.example.export-count',
     name: '导出片段计数示例',
     version: '1.0.0',
+    description: '导出前统计项目片段数量。',
+    permissions: ['export-hook'],
     hooks: {
       onExportBefore(payload: PluginHookPayloads['onExportBefore']) {
         const clipCount = payload.project.timeline.tracks.reduce((count, track) => count + track.clips.length, 0);
@@ -90,12 +97,14 @@ export function createBuiltinExamplePlugin(): LoadedPlugin {
       return undefined;
     }
   };
+  const guardedRuntime = withPermissionGuard(runtime);
   return {
     sourcePath: 'builtin:export-count',
     plugin,
-    runtime,
+    runtime: guardedRuntime,
     errors: [],
-    builtin: true
+    builtin: true,
+    enabled: true
   };
 }
 
@@ -109,6 +118,7 @@ export function getExportBeforePayload(
 
 export function normalizePluginMetadata(input: unknown): OpenFactoryPlugin {
   const record = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
+  const manifest = record.manifest && typeof record.manifest === 'object' ? (record.manifest as Record<string, unknown>) : record;
   const hooks = record.hooks && typeof record.hooks === 'object' ? (record.hooks as Record<string, unknown>) : {};
   const normalizedHooks: PluginHooks = {};
   for (const hookName of ['onClipSelected', 'onExportBefore', 'onMenuRegister'] as const) {
@@ -116,10 +126,11 @@ export function normalizePluginMetadata(input: unknown): OpenFactoryPlugin {
       normalizedHooks[hookName] = hooks[hookName] as never;
     }
   }
-  const id = typeof record.id === 'string' && record.id.trim() ? record.id.trim() : `plugin-${stableHash(JSON.stringify(Object.keys(normalizedHooks)))}`;
-  const name = typeof record.name === 'string' && record.name.trim() ? record.name.trim() : id;
-  const version = typeof record.version === 'string' && record.version.trim() ? record.version.trim() : '0.0.0';
-  return { id, name, version, hooks: normalizedHooks };
+  const id = typeof manifest.id === 'string' && manifest.id.trim() ? manifest.id.trim() : `plugin-${stableHash(JSON.stringify(Object.keys(normalizedHooks)))}`;
+  const name = typeof manifest.name === 'string' && manifest.name.trim() ? manifest.name.trim() : id;
+  const version = typeof manifest.version === 'string' && manifest.version.trim() ? manifest.version.trim() : '0.0.0';
+  const description = typeof manifest.description === 'string' ? manifest.description.trim() : '';
+  return { id, name, version, description, permissions: normalizePluginPermissions(manifest.permissions), hooks: normalizedHooks };
 }
 
 async function createWorkerPluginRuntime(source: PluginSourceFile): Promise<PluginRuntime> {
@@ -188,8 +199,61 @@ function normalizeWorkerMetadata(input: unknown): OpenFactoryPlugin {
     id: typeof record.id === 'string' ? record.id : 'plugin',
     name: typeof record.name === 'string' ? record.name : 'plugin',
     version: typeof record.version === 'string' ? record.version : '0.0.0',
+    description: typeof record.description === 'string' ? record.description : '',
+    permissions: normalizePluginPermissions(record.permissions),
     hooks: hookMap
   };
+}
+
+export function getRequiredPermissionForHook(hookName: PluginHookName): PluginPermission {
+  if (hookName === 'onExportBefore') {
+    return 'export-hook';
+  }
+  if (hookName === 'onMenuRegister') {
+    return 'menu-register';
+  }
+  return 'read-project';
+}
+
+export function assertPluginHookPermission(plugin: OpenFactoryPlugin, hookName: PluginHookName): void {
+  const required = getRequiredPermissionForHook(hookName);
+  if (!plugin.permissions.includes(required)) {
+    throw new Error(`${plugin.name} missing ${required} permission for ${hookName}`);
+  }
+}
+
+export function getLoadedPluginStatus(plugin: LoadedPlugin): 'enabled' | 'disabled' | 'error' {
+  if (!plugin.enabled) {
+    return 'disabled';
+  }
+  return plugin.errors.length > 0 ? 'error' : 'enabled';
+}
+
+function withPermissionGuard(runtime: PluginRuntime): PluginRuntime {
+  return {
+    plugin: runtime.plugin,
+    async invokeHook(hookName, payload) {
+      if (!runtime.plugin.hooks[hookName]) {
+        return undefined;
+      }
+      assertPluginHookPermission(runtime.plugin, hookName);
+      return runtime.invokeHook(hookName, payload);
+    },
+    dispose() {
+      runtime.dispose();
+    }
+  };
+}
+
+function normalizePluginPermissions(input: unknown): PluginPermission[] {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+  return Array.from(new Set(input.filter(isPluginPermission)));
+}
+
+function isPluginPermission(value: unknown): value is PluginPermission {
+  return value === 'read-project' || value === 'write-project' || value === 'export-hook' || value === 'menu-register';
 }
 
 function isPluginHookName(value: unknown): value is PluginHookName {
@@ -219,11 +283,14 @@ const WORKER_BOOTSTRAP = `
 let loadedPlugin;
 function normalizePlugin(input) {
   const record = input && typeof input === 'object' ? input : {};
+  const manifest = record.manifest && typeof record.manifest === 'object' ? record.manifest : record;
   const hooks = record.hooks && typeof record.hooks === 'object' ? record.hooks : {};
   return {
-    id: typeof record.id === 'string' && record.id.trim() ? record.id.trim() : 'plugin',
-    name: typeof record.name === 'string' && record.name.trim() ? record.name.trim() : 'plugin',
-    version: typeof record.version === 'string' && record.version.trim() ? record.version.trim() : '0.0.0',
+    id: typeof manifest.id === 'string' && manifest.id.trim() ? manifest.id.trim() : 'plugin',
+    name: typeof manifest.name === 'string' && manifest.name.trim() ? manifest.name.trim() : 'plugin',
+    version: typeof manifest.version === 'string' && manifest.version.trim() ? manifest.version.trim() : '0.0.0',
+    description: typeof manifest.description === 'string' && manifest.description.trim() ? manifest.description.trim() : '',
+    permissions: Array.isArray(manifest.permissions) ? Array.from(new Set(manifest.permissions.filter((permission) => ['read-project', 'write-project', 'export-hook', 'menu-register'].includes(permission)))) : [],
     hooks
   };
 }
@@ -232,6 +299,8 @@ function metadata(plugin) {
     id: plugin.id,
     name: plugin.name,
     version: plugin.version,
+    description: plugin.description,
+    permissions: plugin.permissions,
     hooks: Object.keys(plugin.hooks).filter((key) => typeof plugin.hooks[key] === 'function')
   };
 }
