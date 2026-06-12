@@ -20,6 +20,19 @@ const zh = {
   project: {
     defaultName: '未命名项目'
   },
+  projectTemplates: {
+    title: '从模板新建',
+    subtitle: '选择一个项目起点',
+    select: '使用模板',
+    close: '关闭',
+    templates: {
+      verticalShort: { name: '竖版短视频', description: '9:16, 30fps, 1080x1920' },
+      youtubeHorizontal: { name: '横版 YouTube', description: '16:9, 30fps, 1920x1080' },
+      squareSocial: { name: '正方形社交', description: '1:1, 30fps, 1080x1080' },
+      podcast: { name: '播客', description: '纯音频轨，导出 M4A' },
+      cinema: { name: '电影', description: '16:9, 24fps, 4K, LUT 预设' }
+    }
+  },
   clips: {
     defaultTextName: '文字',
     defaultTextContent: '标题'
@@ -27,6 +40,7 @@ const zh = {
   toolbar: {
     fileMenu: '文件',
     newProject: '新建项目',
+    newFromTemplate: '从模板新建',
     openProject: '打开项目',
     saveProject: '保存项目',
     archiveProject: '归档项目',
@@ -1091,6 +1105,19 @@ const enOverrides = {
   project: {
     defaultName: 'Untitled Project'
   },
+  projectTemplates: {
+    title: 'New From Template',
+    subtitle: 'Choose a project starting point',
+    select: 'Use Template',
+    close: 'Close',
+    templates: {
+      verticalShort: { name: 'Vertical Short Video', description: '9:16, 30fps, 1080x1920' },
+      youtubeHorizontal: { name: 'Horizontal YouTube', description: '16:9, 30fps, 1920x1080' },
+      squareSocial: { name: 'Square Social', description: '1:1, 30fps, 1080x1080' },
+      podcast: { name: 'Podcast', description: 'Audio-only tracks, exports to M4A' },
+      cinema: { name: 'Cinema', description: '16:9, 24fps, 4K, LUT preset' }
+    }
+  },
   clips: {
     defaultTextName: 'Text',
     defaultTextContent: 'Title'
@@ -1098,6 +1125,7 @@ const enOverrides = {
   toolbar: {
     fileMenu: 'File',
     newProject: 'New Project',
+    newFromTemplate: 'New From Template',
     openProject: 'Open Project',
     saveProject: 'Save Project',
     archiveProject: 'Archive Project',

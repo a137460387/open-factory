@@ -7,17 +7,21 @@ import {
   DEFAULT_PROJECT_ANNOTATION_COLOR,
   DeleteClipsCommand,
   MergeMediaCommand,
+  NewProjectCommand,
   RemoveMediaCommand,
   RippleDeleteCommand,
   SplitClipCommand,
+  createProject,
   dirname,
   getTimelineDuration,
+  instantiateProjectTemplate,
   instantiateTitleTemplate,
   type DuplicateMediaGroup,
   type DuplicateMediaIssue,
   type MissingMediaIssue,
   type OrphanMediaIssue,
   type ProjectHealthReport,
+  type ProjectTemplateId,
   type ProxyMissingIssue,
   type TitleTemplateId
 } from '@open-factory/editor-core';
@@ -36,6 +40,7 @@ import { chooseCurrentFrameExportPath, revealExport, startCurrentFrameExport } f
 import { clearMediaCache } from '../cache/cache-service';
 import { createClipFromAsset, findPreferredTrack } from '../lib/clipFactory';
 import { zhCN } from '../i18n/strings';
+import type { ExportPreset } from '../export/export-presets';
 import { pickMediaPaths, probeMediaPaths } from '../lib/media';
 import { scanDuplicateMediaGroups } from '../lib/duplicateMedia';
 import { buildSubtitleTrackFromSrt, isSubtitlePath, pickSubtitlePaths, readSubtitleText } from '../lib/subtitles';
@@ -66,6 +71,7 @@ import { useMediaJobStore } from '../media/media-job-store';
 import { relinkMissingMediaInDirectory, relinkSingleMedia } from '../media/relink';
 import { useBackgroundMediaJobs } from '../media/useBackgroundMediaJobs';
 import { ProjectHealthDialog } from '../project-health/ProjectHealthDialog';
+import { ProjectTemplateDialog } from '../project-templates/ProjectTemplateDialog';
 import { commandManager, projectAccessor, timelineAccessor } from '../store/commandManager';
 import { selectClipById, useEditorStore } from '../store/editorStore';
 import { useProxySettingsStore } from '../store/proxySettingsStore';
@@ -87,7 +93,6 @@ export function EditorShell() {
   const dirty = useEditorStore((state) => state.dirty);
   const projectPath = useEditorStore((state) => state.projectPath);
   const setProject = useEditorStore((state) => state.setProject);
-  const resetProject = useEditorStore((state) => state.resetProject);
   const setMedia = useEditorStore((state) => state.setMedia);
   const addMedia = useEditorStore((state) => state.addMedia);
   const proxySettings = useProxySettingsStore((state) => state.settings);
@@ -104,6 +109,8 @@ export function EditorShell() {
   const [lastExportPath, setLastExportPath] = useState<string>();
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [timelineExportDialogOpen, setTimelineExportDialogOpen] = useState(false);
+  const [projectTemplateOpen, setProjectTemplateOpen] = useState(false);
+  const [templateExportPreset, setTemplateExportPreset] = useState<ExportPreset>();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [smartRoughCutOpen, setSmartRoughCutOpen] = useState(false);
   const [projectHealthOpen, setProjectHealthOpen] = useState(false);
@@ -466,13 +473,51 @@ export function EditorShell() {
     [refreshProjectHealth]
   );
 
+  const executeNewProject = useCallback(
+    (nextProject: ReturnType<typeof createProject>, nextTemplatePreset?: ExportPreset) => {
+      commandManager.execute(
+        new NewProjectCommand(
+          {
+            getProject: projectAccessor.getProject,
+            setProject: (project) => setProject(project, undefined)
+          },
+          nextProject,
+          zhCN.toolbar.newProject
+        )
+      );
+      commandManager.clear();
+      setProjectPath(undefined);
+      setDirty(false);
+      setTemplateExportPreset(nextTemplatePreset);
+    },
+    [setDirty, setProject, setProjectPath]
+  );
+
   const newProject = useCallback(async () => {
     if (dirty && !(await confirmDiscardChanges())) {
       return;
     }
-    commandManager.clear();
-    resetProject();
-  }, [dirty, resetProject]);
+    executeNewProject(createProject(zhCN.project.defaultName));
+  }, [dirty, executeNewProject]);
+
+  const createProjectFromTemplate = useCallback(
+    async (templateId: ProjectTemplateId) => {
+      if (dirty && !(await confirmDiscardChanges())) {
+        return;
+      }
+      const copy = projectTemplateCopy(templateId);
+      const instance = instantiateProjectTemplate(templateId, { name: copy.name });
+      executeNewProject(instance.project, {
+        id: `template-${templateId}`,
+        name: copy.name,
+        description: copy.description,
+        builtin: true,
+        settings: instance.exportSettings
+      });
+      setProjectTemplateOpen(false);
+    },
+    [dirty, executeNewProject]
+  );
 
   const openProject = useCallback(async () => {
     try {
@@ -486,6 +531,7 @@ export function EditorShell() {
       const nextProject = await readProjectFile(path);
       commandManager.clear();
       setProject(nextProject, path);
+      setTemplateExportPreset(undefined);
       showToast({ kind: 'success', title: zhCN.editorToasts.projectOpened });
     } catch (error) {
       showToast({ kind: 'error', title: zhCN.editorToasts.openFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.openFailedMessage });
@@ -710,6 +756,7 @@ export function EditorShell() {
       <div className="grid h-full min-w-0 grid-rows-[auto_1fr_260px] overflow-hidden bg-[#edeff3] text-ink">
         <Toolbar
           onNewProject={newProject}
+          onNewFromTemplate={() => setProjectTemplateOpen(true)}
           onOpenProject={openProject}
           onSaveProject={() => void saveProject()}
           onArchiveProject={() => void archiveCurrentProject()}
@@ -789,6 +836,7 @@ export function EditorShell() {
           {exportDialogOpen ? (
             <ExportDialog
               project={project}
+              initialPreset={templateExportPreset}
               onClose={() => setExportDialogOpen(false)}
               onCompleted={(path) => {
                 setLastExportPath(path);
@@ -796,6 +844,7 @@ export function EditorShell() {
               onRelinkMissing={() => void relinkAllMissing()}
             />
           ) : null}
+          {projectTemplateOpen ? <ProjectTemplateDialog onSelect={(templateId) => void createProjectFromTemplate(templateId)} onClose={() => setProjectTemplateOpen(false)} /> : null}
           {timelineExportDialogOpen ? <TimelineExportDialog project={project} onClose={() => setTimelineExportDialogOpen(false)} /> : null}
           {settingsOpen ? (
             <SettingsDialog
@@ -981,4 +1030,20 @@ function SharePackageProgressDialog({ progress }: { progress: SharePackageWorkfl
       </section>
     </div>
   );
+}
+
+function projectTemplateCopy(templateId: ProjectTemplateId): { name: string; description: string } {
+  const templates = zhCN.projectTemplates.templates;
+  switch (templateId) {
+    case 'vertical-short':
+      return templates.verticalShort;
+    case 'youtube-horizontal':
+      return templates.youtubeHorizontal;
+    case 'square-social':
+      return templates.squareSocial;
+    case 'podcast':
+      return templates.podcast;
+    case 'cinema':
+      return templates.cinema;
+  }
 }

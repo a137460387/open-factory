@@ -24,6 +24,7 @@ coverage/
 playwright-report/
 test-results/
 stress-test-report.json
+media-compat-report.json
 .nyc_output/
 
 # Logs

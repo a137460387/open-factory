@@ -11,6 +11,7 @@ import { useWhisperSettingsStore } from '../store/whisperSettingsStore';
 
 interface ToolbarProps {
   onNewProject(): void;
+  onNewFromTemplate(): void;
   onOpenProject(): void;
   onSaveProject(): void;
   onArchiveProject(): void;
@@ -90,6 +91,17 @@ export function Toolbar(props: ToolbarProps) {
         </button>
         {fileMenuOpen ? (
           <div className="absolute left-0 top-10 z-20 min-w-44 rounded-md border border-line bg-white py-1 shadow-soft" data-testid="toolbar-file-menu">
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-file-new-template-menu-item"
+              onClick={() => {
+                setFileMenuOpen(false);
+                props.onNewFromTemplate();
+              }}
+            >
+              <span>{t.newFromTemplate}</span>
+            </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
               type="button"

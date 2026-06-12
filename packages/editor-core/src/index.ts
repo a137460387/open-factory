@@ -30,6 +30,7 @@ export * from './project/batch-relink';
 export * from './project/project-health-check';
 export * from './project/duplicate-media';
 export * from './project/media-report';
+export * from './project/project-templates';
 export * from './cache/cache-types';
 export * from './cache/cache-key';
 export * from './proxy/proxy-types';

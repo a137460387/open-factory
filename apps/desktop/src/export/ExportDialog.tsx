@@ -38,20 +38,21 @@ import {
 
 interface ExportDialogProps {
   project: Project;
+  initialPreset?: ExportPreset;
   onClose(): void;
   onCompleted(path: string): void;
   onRelinkMissing?(): void;
 }
 
-export function ExportDialog({ project, onClose, onCompleted, onRelinkMissing }: ExportDialogProps) {
+export function ExportDialog({ project, initialPreset, onClose, onCompleted, onRelinkMissing }: ExportDialogProps) {
   const t = zhCN.exportDialog;
   const [outputPath, setOutputPath] = useState('');
   const [capabilities, setCapabilities] = useState<FfmpegCapabilities | undefined>();
   const [error, setError] = useState<string>();
   const [preflight, setPreflight] = useState<{ issues: PreflightResult[]; selectedPaths: string[] }>();
-  const [presets, setPresets] = useState<ExportPreset[]>(BUILTIN_EXPORT_PRESETS);
-  const [presetId, setPresetId] = useState(BUILTIN_EXPORT_PRESETS[0].id);
-  const [draftSettings, setDraftSettings] = useState<ExportPresetSettings>({ ...BUILTIN_EXPORT_PRESETS[0].settings });
+  const [presets, setPresets] = useState<ExportPreset[]>(initialPreset ? [initialPreset, ...BUILTIN_EXPORT_PRESETS] : BUILTIN_EXPORT_PRESETS);
+  const [presetId, setPresetId] = useState(initialPreset?.id ?? BUILTIN_EXPORT_PRESETS[0].id);
+  const [draftSettings, setDraftSettings] = useState<ExportPresetSettings>({ ...(initialPreset?.settings ?? BUILTIN_EXPORT_PRESETS[0].settings) });
   const [customPresetName, setCustomPresetName] = useState('');
   const [batchOutputPaths, setBatchOutputPaths] = useState('');
   const [priority, setPriority] = useState<ExportTaskPriority>('normal');
@@ -115,8 +116,9 @@ export function ExportDialog({ project, onClose, onCompleted, onRelinkMissing }:
         if (canceled) {
           return;
         }
-        setPresets(nextPresets);
-        setPresetId((current) => (nextPresets.some((preset) => preset.id === current) ? current : nextPresets[0]?.id ?? BUILTIN_EXPORT_PRESETS[0].id));
+        const nextWithInitial = initialPreset ? [initialPreset, ...nextPresets] : nextPresets;
+        setPresets(nextWithInitial);
+        setPresetId((current) => (nextWithInitial.some((preset) => preset.id === current) ? current : nextWithInitial[0]?.id ?? BUILTIN_EXPORT_PRESETS[0].id));
       })
       .catch((reason) => {
         if (!canceled) {
@@ -126,7 +128,7 @@ export function ExportDialog({ project, onClose, onCompleted, onRelinkMissing }:
     return () => {
       canceled = true;
     };
-  }, []);
+  }, [initialPreset]);
 
   useEffect(() => {
     setDraftSettings({ ...selectedPreset.settings });

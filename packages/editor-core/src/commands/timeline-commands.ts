@@ -82,6 +82,30 @@ export interface ProjectAccessor {
   setProject(project: Project): void;
 }
 
+export class NewProjectCommand implements Command {
+  description: string;
+  private before?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly nextProject: Project,
+    description = 'New project'
+  ) {
+    this.description = description;
+  }
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    this.accessor.setProject(this.nextProject);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
 function insertClip(timeline: Timeline, clip: Clip, index?: number): Timeline {
   return {
     ...timeline,
