@@ -33,6 +33,7 @@ const canceledExportTaskIds = new Set<string>();
 let exportGateHeld = false;
 const exportGates: Array<{ taskId?: string; release: () => void }> = [];
 let mockSceneTimes = [1];
+let lastConfirmMessage: string | undefined;
 
 const sampleProjectPath = 'C:/Projects/sample.cutproj.json';
 const missingProjectPath = 'C:/Projects/missing.cutproj.json';
@@ -148,7 +149,10 @@ exists.set('C:/Missing/test-image.png', false);
 restorePersistedFiles();
 
 const mocks: TauriMocks = {
-  confirm: () => true,
+  confirm: (message) => {
+    lastConfirmMessage = String(message);
+    return true;
+  },
   openFileDialog: ({ filters }) => {
     if (openFileDialogPaths.length > 0) {
       const paths = openFileDialogPaths;
@@ -716,6 +720,7 @@ window.__E2E_ACTIONS__ = {
   },
   getWrittenFile: (path: unknown) => (typeof path === 'string' ? files.get(path) : undefined),
   getWrittenFileSize: (path: unknown) => (typeof path === 'string' ? files.get(path)?.length ?? 0 : 0),
+  getLastConfirmMessage: () => lastConfirmMessage,
   getLastExportPlan: () => lastExportPlan,
   addKeyframe: (clipId: unknown, property: unknown, time: unknown, value: unknown) => {
     if (typeof clipId !== 'string' || !isKeyframeProperty(property) || typeof time !== 'number' || typeof value !== 'number') {

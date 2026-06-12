@@ -30,6 +30,7 @@ const zh = {
     openProject: '打开项目',
     saveProject: '保存项目',
     archiveProject: '归档项目',
+    mediaReport: '素材报告',
     createSharePackage: '创建分享包',
     importMedia: '导入媒体',
     importSubtitles: '导入字幕',
@@ -933,9 +934,15 @@ const zh = {
   projectArchive: {
     title: '归档项目',
     copying: (copied: number, total: number) => `正在复制 ${copied}/${total}`,
+    missingMediaConfirm: (count: number) => `${count} 个媒体文件缺失，继续归档将跳过这些文件，是否继续？`,
     success: '项目已归档',
     failed: '归档失败',
     failedMessage: '无法归档项目。'
+  },
+  mediaReport: {
+    success: '素材报告已生成',
+    failed: '素材报告生成失败',
+    failedMessage: '无法生成素材报告。'
   },
   sharePackage: {
     title: '创建分享包',
@@ -975,6 +982,7 @@ const zh = {
   },
   fileDialogs: {
     media: '媒体',
+    htmlReport: 'HTML 报告',
     subtitles: 'SubRip 字幕',
     whisperModel: 'Whisper 模型'
   },
@@ -1083,6 +1091,7 @@ const enOverrides = {
     openProject: 'Open Project',
     saveProject: 'Save Project',
     archiveProject: 'Archive Project',
+    mediaReport: 'Media Report',
     createSharePackage: 'Create Share Package',
     importMedia: 'Import Media',
     importSubtitles: 'Import Subtitles',
@@ -1638,9 +1647,15 @@ const enOverrides = {
   projectArchive: {
     title: 'Archive Project',
     copying: (copied: number, total: number) => `Copying ${copied}/${total}`,
+    missingMediaConfirm: (count: number) => `${count} media files are missing. Continuing will skip them. Continue?`,
     success: 'Project archived',
     failed: 'Archive failed',
     failedMessage: 'Unable to archive project.'
+  },
+  mediaReport: {
+    success: 'Media report generated',
+    failed: 'Media report failed',
+    failedMessage: 'Unable to generate the media report.'
   },
   sharePackage: {
     title: 'Create Share Package',
@@ -1680,6 +1695,7 @@ const enOverrides = {
   },
   fileDialogs: {
     media: 'Media',
+    htmlReport: 'HTML Report',
     subtitles: 'SubRip Subtitles',
     whisperModel: 'Whisper Model'
   },

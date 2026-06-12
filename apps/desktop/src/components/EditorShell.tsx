@@ -40,6 +40,7 @@ import { pickMediaPaths, probeMediaPaths } from '../lib/media';
 import { scanDuplicateMediaGroups } from '../lib/duplicateMedia';
 import { buildSubtitleTrackFromSrt, isSubtitlePath, pickSubtitlePaths, readSubtitleText } from '../lib/subtitles';
 import { createProjectArchivePlan, writeProjectArchive, type ArchiveProgress } from '../lib/projectArchive';
+import { collectProjectArchivePreflight, saveOfflineMediaReport } from '../lib/mediaReport';
 import { scanProjectHealth } from '../lib/projectHealth';
 import { createSharePackageFromProject, type SharePackageWorkflowProgress } from '../lib/sharePackage';
 import {
@@ -56,7 +57,7 @@ import {
   writeProjectFile,
   type AutosaveRecoveryCandidate
 } from '../lib/projectFiles';
-import { copyFile as bridgeCopyFile, openDirectoryDialog, writeFile as bridgeWriteFile } from '../lib/tauri-bridge';
+import { bridgeConfirm, copyFile as bridgeCopyFile, openDirectoryDialog, writeFile as bridgeWriteFile } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
 import { createProxyForAsset } from '../media/proxy';
 import { ensureMediaJobRunner } from '../media/media-job-runner';
@@ -153,11 +154,21 @@ export function EditorShell() {
 
   const archiveCurrentProject = useCallback(async () => {
     try {
+      const preflight = await collectProjectArchivePreflight(project);
+      if (preflight.missingRows.length > 0) {
+        const shouldContinue = await bridgeConfirm(zhCN.projectArchive.missingMediaConfirm(preflight.missingRows.length), {
+          title: zhCN.projectArchive.title,
+          kind: 'warning'
+        });
+        if (!shouldContinue) {
+          return;
+        }
+      }
       const archiveParentDir = projectPath ? dirname(projectPath) : await openDirectoryDialog();
       if (!archiveParentDir) {
         return;
       }
-      const plan = createProjectArchivePlan(project, archiveParentDir);
+      const plan = createProjectArchivePlan(project, archiveParentDir, { skipSourcePaths: preflight.missingPaths });
       setArchiveProgress({ copied: 0, total: plan.copyTasks.filter((task) => task.copyRequired).length });
       await writeProjectArchive(plan, { copyFile: bridgeCopyFile, writeFile: bridgeWriteFile }, setArchiveProgress);
       commandManager.clear();
@@ -171,6 +182,17 @@ export function EditorShell() {
       setArchiveProgress(undefined);
     }
   }, [project, projectPath, setDirty, setProject, setProjectPath]);
+
+  const createMediaReport = useCallback(async () => {
+    try {
+      const outputPath = await saveOfflineMediaReport(project);
+      if (outputPath) {
+        showToast({ kind: 'success', title: zhCN.mediaReport.success, message: outputPath });
+      }
+    } catch (error) {
+      showToast({ kind: 'error', title: zhCN.mediaReport.failed, message: error instanceof Error ? error.message : zhCN.mediaReport.failedMessage });
+    }
+  }, [project]);
 
   const createCurrentSharePackage = useCallback(async () => {
     if (sharePackageBusy) {
@@ -691,6 +713,7 @@ export function EditorShell() {
           onOpenProject={openProject}
           onSaveProject={() => void saveProject()}
           onArchiveProject={() => void archiveCurrentProject()}
+          onCreateMediaReport={() => void createMediaReport()}
           onCreateSharePackage={() => void createCurrentSharePackage()}
           onImportMedia={() => void importMedia()}
           onImportSubtitles={() => void importSubtitles()}

@@ -94,4 +94,21 @@ describe('project archive', () => {
     ]);
     expect(plan.project.media.map((asset) => asset.path)).toEqual(['media/clip.mp4', 'media/clip-2.mp4']);
   });
+
+  it('skips missing source paths when archive preflight continues', () => {
+    const project = createProject('Demo');
+    project.media = [
+      makeAsset({ id: 'present', path: 'C:/Media/present.mp4' }),
+      makeAsset({ id: 'missing', path: 'C:/Missing/missing.mp4' })
+    ];
+
+    const plan = createProjectArchivePlan(project, 'C:/Projects', { skipSourcePaths: ['C:/Missing/missing.mp4'] });
+
+    expect(plan.copyTasks.map((task) => task.sourcePath)).toEqual(['C:/Media/present.mp4']);
+    expect(plan.project.media.find((asset) => asset.id === 'present')?.path).toBe('media/present.mp4');
+    expect(plan.project.media.find((asset) => asset.id === 'missing')).toMatchObject({
+      path: '../../Missing/missing.mp4',
+      missing: true
+    });
+  });
 });

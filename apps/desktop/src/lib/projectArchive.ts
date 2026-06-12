@@ -15,6 +15,10 @@ export interface ProjectArchivePlan {
   copyTasks: ArchiveCopyTask[];
 }
 
+export interface ProjectArchivePlanOptions {
+  skipSourcePaths?: Iterable<string>;
+}
+
 export interface ArchiveProgress {
   copied: number;
   total: number;
@@ -36,14 +40,15 @@ export function collectProjectMediaPaths(project: Project): string[] {
   return Array.from(paths.values());
 }
 
-export function createProjectArchivePlan(project: Project, archiveParentDir: string): ProjectArchivePlan {
+export function createProjectArchivePlan(project: Project, archiveParentDir: string, options: ProjectArchivePlanOptions = {}): ProjectArchivePlan {
   const baseName = sanitizeArchiveBaseName(project.name);
   const archiveDir = joinPath(normalizePath(archiveParentDir), `${baseName}_archive`);
   const mediaDir = joinPath(archiveDir, 'media');
   const projectPath = joinPath(archiveDir, `${baseName}.cutproj.json`);
   const allocator = new DestinationAllocator(mediaDir);
   const mappings = new Map<string, ArchiveCopyTask>();
-  const mediaPaths = collectProjectMediaPaths(project);
+  const skipped = new Set(Array.from(options.skipSourcePaths ?? []).map(pathKey));
+  const mediaPaths = collectProjectMediaPaths(project).filter((path) => !skipped.has(pathKey(path)));
 
   for (const sourcePath of mediaPaths) {
     const normalizedSource = normalizePath(sourcePath);
@@ -69,7 +74,7 @@ export function createProjectArchivePlan(project: Project, archiveParentDir: str
     archiveDir,
     mediaDir,
     projectPath,
-    project: relativizeProject(project, mappings, projectPath, mediaDir, archiveDir),
+    project: relativizeProject(project, mappings, projectPath, mediaDir, archiveDir, skipped),
     copyTasks: Array.from(mappings.values())
   };
 }
@@ -88,15 +93,15 @@ export function serializeArchivedProject(project: Project): string {
   return JSON.stringify(serializeProject(project), null, 2);
 }
 
-function relativizeProject(project: Project, mappings: Map<string, ArchiveCopyTask>, projectPath: string, mediaDir: string, archiveDir: string): Project {
+function relativizeProject(project: Project, mappings: Map<string, ArchiveCopyTask>, projectPath: string, mediaDir: string, archiveDir: string, skipped: Set<string>): Project {
   return {
     ...project,
-    media: project.media.map((asset) => relativizeAsset(asset, mappings, projectPath, mediaDir, archiveDir)),
+    media: project.media.map((asset) => relativizeAsset(asset, mappings, projectPath, mediaDir, archiveDir, skipped)),
     updatedAt: new Date().toISOString()
   };
 }
 
-function relativizeAsset(asset: MediaAsset, mappings: Map<string, ArchiveCopyTask>, projectPath: string, mediaDir: string, archiveDir: string): MediaAsset {
+function relativizeAsset(asset: MediaAsset, mappings: Map<string, ArchiveCopyTask>, projectPath: string, mediaDir: string, archiveDir: string, skipped: Set<string>): MediaAsset {
   const sourcePath = normalizePath(asset.path);
   const mapping = mappings.get(pathKey(sourcePath));
   const relativePath = mapping?.relativePath ?? makeRelativePath(sourcePath, projectPath) ?? sourcePath;
@@ -113,12 +118,16 @@ function relativizeAsset(asset: MediaAsset, mappings: Map<string, ArchiveCopyTas
     path: relativePath,
     relativePath,
     originalAbsolutePath: asset.originalAbsolutePath ?? sourcePath,
+    missing: asset.missing || skipped.has(pathKey(sourcePath)),
     proxyStatus: asset.proxyPath ? 'none' : asset.proxyStatus,
     imageSequence: asset.imageSequence
       ? {
           ...asset.imageSequence,
           pattern: relativizeImageSequencePattern(asset.imageSequence.pattern, projectPath, mediaDir, archiveDir),
-          paths: asset.imageSequence.paths.map((framePath) => mappings.get(pathKey(normalizePath(framePath)))?.relativePath ?? normalizePath(framePath))
+          paths: asset.imageSequence.paths.map((framePath) => {
+            const normalized = normalizePath(framePath);
+            return mappings.get(pathKey(normalized))?.relativePath ?? makeRelativePath(normalized, projectPath) ?? normalized;
+          })
         }
       : undefined
   };
