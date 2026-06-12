@@ -739,6 +739,7 @@ describe('timeline commands', () => {
       new UpdateClipCommand(accessor, 'clip-video', {
         stabilization: { enabled: true, smoothing: 999, zoom: -1, analyzed: true, trfPath: ' C:\\Temp\\clip.trf ' },
         frameInterpolation: { enabled: true, targetFps: 144 as never },
+        slowMotionMode: 'optical-flow',
         sequenceFrameRate: 240
       })
     );
@@ -746,13 +747,25 @@ describe('timeline commands', () => {
     expect(accessor.current().tracks[0].clips[0]).toMatchObject({
       stabilization: { enabled: true, smoothing: 100, zoom: 0, analyzed: true, trfPath: 'C:\\Temp\\clip.trf' },
       frameInterpolation: { enabled: true, targetFps: 60 },
+      slowMotionMode: 'optical-flow',
       sequenceFrameRate: 120
+    });
+
+    manager.execute(new UpdateClipCommand(accessor, 'clip-video', { slowMotionMode: 'invalid' as never }));
+    expect(accessor.current().tracks[0].clips[0]).toMatchObject({
+      slowMotionMode: 'none'
+    });
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips[0]).toMatchObject({
+      slowMotionMode: 'optical-flow'
     });
 
     manager.undo();
     expect(accessor.current().tracks[0].clips[0]).toMatchObject({
       stabilization: { enabled: false, smoothing: 30, zoom: 0, analyzed: false, trfPath: null },
       frameInterpolation: { enabled: false, targetFps: 60 },
+      slowMotionMode: 'none',
       sequenceFrameRate: undefined
     });
   });

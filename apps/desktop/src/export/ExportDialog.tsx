@@ -1244,6 +1244,14 @@ function formatExportWarning(warning: string): string {
   if (customShaderSlowWarning) {
     return zhCN.exportDialog.customShaderSlowWarning(customShaderSlowWarning[1]);
   }
+  const opticalFlowFallback = warning.match(/^Optical flow slow motion for clip (.+) fell back to blend because the current FFmpeg build did not report minterpolate support\.$/);
+  if (opticalFlowFallback) {
+    return zhCN.exportDialog.opticalFlowFallbackBlend(opticalFlowFallback[1]);
+  }
+  const slowMotionSkipped = warning.match(/^Slow motion interpolation for clip (.+) was skipped because the current FFmpeg build does not support minterpolate\.$/);
+  if (slowMotionSkipped) {
+    return zhCN.exportDialog.slowMotionInterpolationSkipped(slowMotionSkipped[1]);
+  }
   if (warning === 'Current FFmpeg does not support drawtext/libfreetype. Install an FFmpeg build with libfreetype to export text overlays.') {
     return zhCN.exportDialog.ffmpegDrawtextUnavailable;
   }

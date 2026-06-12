@@ -72,6 +72,8 @@ export interface ClipFrameInterpolation {
   targetFps: FrameInterpolationTargetFps;
 }
 
+export type ClipSlowMotionMode = 'none' | 'blend' | 'optical-flow';
+
 export interface MotionTrackPoint {
   time: number;
   dx: number;
@@ -257,6 +259,7 @@ export interface BaseClip {
   chromaKey?: ChromaKey;
   stabilization?: ClipStabilization;
   frameInterpolation?: ClipFrameInterpolation;
+  slowMotionMode?: ClipSlowMotionMode;
   audioDenoise?: ClipAudioDenoise;
   masks?: ClipMask[];
   motionTrack?: MotionTrackPoint[];
@@ -440,6 +443,9 @@ export const DEFAULT_FRAME_INTERPOLATION: ClipFrameInterpolation = {
   enabled: false,
   targetFps: 60
 };
+
+export const CLIP_SLOW_MOTION_MODES: readonly ClipSlowMotionMode[] = ['none', 'blend', 'optical-flow'];
+export const DEFAULT_SLOW_MOTION_MODE: ClipSlowMotionMode = 'none';
 
 export const DEFAULT_AUDIO_DENOISE: ClipAudioDenoise = {
   enabled: false,
@@ -632,6 +638,7 @@ export function createBaseClip(
     chromaKey: normalizeChromaKey(input.chromaKey),
     stabilization: normalizeStabilization(input.stabilization),
     frameInterpolation: normalizeFrameInterpolation(input.frameInterpolation),
+    slowMotionMode: normalizeSlowMotionMode(input.slowMotionMode),
     audioDenoise: normalizeAudioDenoise(input.audioDenoise),
     masks: normalizeMasks(input.masks),
     motionTrack: normalizeMotionTrack(input.motionTrack, input.duration),
@@ -732,6 +739,10 @@ export function normalizeFrameInterpolation(frameInterpolation: Partial<ClipFram
     enabled: frameInterpolation?.enabled === true,
     targetFps
   };
+}
+
+export function normalizeSlowMotionMode(mode: ClipSlowMotionMode | string | undefined): ClipSlowMotionMode {
+  return CLIP_SLOW_MOTION_MODES.includes(mode as ClipSlowMotionMode) ? (mode as ClipSlowMotionMode) : DEFAULT_SLOW_MOTION_MODE;
 }
 
 export function normalizeMotionTrack(points: readonly Partial<MotionTrackPoint>[] | undefined, duration = Number.POSITIVE_INFINITY): MotionTrackPoint[] | undefined {

@@ -20,6 +20,7 @@ import {
   normalizeAudioPitchSemitones,
   normalizeFrameInterpolation,
   normalizeSequenceFrameRate,
+  normalizeSlowMotionMode,
   normalizeStabilization,
   normalizeTransform,
   normalizeMasks,
@@ -185,6 +186,7 @@ function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project[
             trimStart: clip.trimStart,
             trimEnd: clip.trimEnd,
             speed: getClipSpeed(clip),
+            slowMotionMode: normalizeSlowMotionMode(clip.slowMotionMode),
             sourceDuration: clip.type === 'nested-sequence' ? clip.duration : getClipSourceVisibleDuration(clip),
             trackIndex,
             transform: normalizeTransform(clip.transform),
@@ -1021,6 +1023,7 @@ function buildTransitionClipFilter(
       ? []
       : [`scale=${settings.width}:${settings.height}:force_original_aspect_ratio=decrease`, `pad=${settings.width}:${settings.height}:(ow-iw)/2:(oh-ih)/2:color=black`]),
     `fps=${settings.fps}`,
+    ...buildSlowMotionFilters(clip, settings, capabilities, warnings),
     ...buildFrameInterpolationFilters(clip, capabilities, warnings),
     'format=rgba'
   ];
@@ -1093,6 +1096,7 @@ function buildVisualClipFilter(
       `pad=${settings.width}:${settings.height}:(ow-iw)/2:(oh-ih)/2:color=black`
     );
   }
+  filters.push(...buildSlowMotionFilters(clip, settings, capabilities, warnings));
   filters.push(...buildFrameInterpolationFilters(clip, capabilities, warnings));
   filters.push('format=rgba');
   filters.push(...buildMaskFilters(clip));
@@ -1152,6 +1156,29 @@ function buildStabilizationFilters(clip: ExportClip): string[] {
   ];
 }
 
+function buildSlowMotionFilters(clip: ExportClip, settings: ExportSettings, capabilities: FfmpegCapabilities | undefined, warnings: string[]): string[] {
+  if (clip.type !== 'video' && clip.type !== 'nested-sequence') {
+    return [];
+  }
+  const mode = normalizeSlowMotionMode(clip.slowMotionMode);
+  if (mode === 'none' || getMinimumClipSpeed(clip) >= 1) {
+    return [];
+  }
+  const fps = Math.max(1, Math.round(settings.fps));
+  if (mode === 'optical-flow' && capabilities?.hasMinterpolate === false) {
+    warnings.push(`Optical flow slow motion for clip ${clip.id} fell back to blend because the current FFmpeg build did not report minterpolate support.`);
+    return [`minterpolate=fps=${fps}:mi_mode=blend`];
+  }
+  if (capabilities?.hasMinterpolate === false) {
+    warnings.push(`Slow motion interpolation for clip ${clip.id} was skipped because the current FFmpeg build does not support minterpolate.`);
+    return [];
+  }
+  if (mode === 'blend') {
+    return [`minterpolate=fps=${fps}:mi_mode=blend`];
+  }
+  return [`minterpolate=fps=${fps}:mi_mode=mci:mc_mode=aobmc:vsbmc=1`];
+}
+
 function buildFrameInterpolationFilters(clip: ExportClip, capabilities: FfmpegCapabilities | undefined, warnings: string[]): string[] {
   if (!clip.frameInterpolation.enabled || (clip.type !== 'video' && clip.type !== 'nested-sequence')) {
     return [];
@@ -1161,6 +1188,14 @@ function buildFrameInterpolationFilters(clip: ExportClip, capabilities: FfmpegCa
     return [];
   }
   return [`minterpolate=fps=${clip.frameInterpolation.targetFps}:mi_mode=mci:mc_mode=aobmc`];
+}
+
+function getMinimumClipSpeed(clip: ExportClip): number {
+  const frames = getAnimatedFrames(clip, 'speed');
+  if (frames.length === 0) {
+    return clip.speed;
+  }
+  return Math.min(clip.speed, ...frames.map((frame) => frame.value));
 }
 
 function buildMaskFilters(clip: ExportClip): string[] {

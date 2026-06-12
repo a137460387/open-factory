@@ -709,6 +709,7 @@ const zh = {
       speedCurve: '变速曲线',
       speedCurveMin: '0.25x',
       speedCurveMax: '4x',
+      slowMotionMode: '慢动作模式',
       scale: '缩放',
       scaleX: '缩放 X',
       scaleY: '缩放 Y',
@@ -871,6 +872,11 @@ const zh = {
       top: '顶部',
       bottom: '底部'
     },
+    slowMotionModes: {
+      none: '无',
+      blend: '混合插帧',
+      'optical-flow': '光流插帧'
+    },
     missingFile: '文件缺失',
     title: '检查器',
     subtitle: '片段属性',
@@ -1032,6 +1038,8 @@ const zh = {
     clipSkippedMissingMedia: (clipId: string) => `片段 ${clipId} 没有媒体路径，已跳过。`,
     speedRampSetptsFallback: (clipId: string) => `片段 ${clipId} 的变速曲线过长，已回退为平均速度导出。`,
     customShaderSlowWarning: (clipId: string) => `片段 ${clipId} 的自定义 Shader 将逐帧渲染，导出可能较慢。`,
+    opticalFlowFallbackBlend: (clipId: string) => `片段 ${clipId} 的光流慢动作已回退为混合插帧：当前 FFmpeg 未报告 minterpolate 支持。`,
+    slowMotionInterpolationSkipped: (clipId: string) => `片段 ${clipId} 的慢动作插帧已跳过：当前 FFmpeg 不支持 minterpolate。`,
     presetCopySuffix: '副本',
     status: {
       pending: '等待中',
@@ -1915,6 +1923,7 @@ const enOverrides = {
       start: 'Start',
       duration: 'Duration',
       speed: 'Speed',
+      slowMotionMode: 'Slow Motion Mode',
       scale: 'Scale',
       scaleX: 'Scale X',
       scaleY: 'Scale Y',
@@ -1997,6 +2006,11 @@ const enOverrides = {
     audioSpectrumPositions: {
       top: 'Top',
       bottom: 'Bottom'
+    },
+    slowMotionModes: {
+      none: 'None',
+      blend: 'Blend',
+      'optical-flow': 'Optical Flow'
     },
     missingFile: 'Missing file'
   },

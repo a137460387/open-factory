@@ -1225,6 +1225,112 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.warnings).toContain('Frame interpolation for clip clip-interpolation-unavailable was skipped because the current FFmpeg build does not support minterpolate.');
   });
 
+  it('inserts blend slow motion interpolation for slowed clips', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-slow-blend',
+        duration: 4,
+        speed: 0.5,
+        slowMotionMode: 'blend'
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('minterpolate=fps=30:mi_mode=blend');
+  });
+
+  it('inserts optical flow slow motion interpolation for slowed clips', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-slow-optical-flow',
+        duration: 4,
+        speed: 0.4,
+        slowMotionMode: 'optical-flow'
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('minterpolate=fps=30:mi_mode=mci:mc_mode=aobmc:vsbmc=1');
+  });
+
+  it('does not insert slow motion interpolation for realtime or faster clips', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-not-slow',
+        duration: 2,
+        speed: 1,
+        slowMotionMode: 'optical-flow'
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).not.toContain('minterpolate=');
+  });
+
+  it('falls back optical flow slow motion to blend when minterpolate support is not reported', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-optical-flow-fallback',
+        duration: 4,
+        speed: 0.5,
+        slowMotionMode: 'optical-flow'
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }), {
+      available: true,
+      version: 'ffmpeg',
+      hasLibx264: true,
+      hasAac: true,
+      hasDrawtext: true,
+      hasLibfreetype: true,
+      hasMinterpolate: false,
+      hardwareEncoderAvailable: true,
+      hardwareEncoder: 'h264_nvenc',
+      drawtextWarning: null
+    });
+
+    expect(plan.filterComplex).toContain('minterpolate=fps=30:mi_mode=blend');
+    expect(plan.warnings).toContain(
+      'Optical flow slow motion for clip clip-optical-flow-fallback fell back to blend because the current FFmpeg build did not report minterpolate support.'
+    );
+  });
+
+  it('skips blend slow motion interpolation with a warning when minterpolate is unavailable', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-blend-unavailable',
+        duration: 4,
+        speed: 0.5,
+        slowMotionMode: 'blend'
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }), {
+      available: true,
+      version: 'ffmpeg',
+      hasLibx264: true,
+      hasAac: true,
+      hasDrawtext: true,
+      hasLibfreetype: true,
+      hasMinterpolate: false,
+      hardwareEncoderAvailable: true,
+      hardwareEncoder: 'h264_nvenc',
+      drawtextWarning: null
+    });
+
+    expect(plan.filterComplex).not.toContain('minterpolate=');
+    expect(plan.warnings).toContain('Slow motion interpolation for clip clip-blend-unavailable was skipped because the current FFmpeg build does not support minterpolate.');
+  });
+
   it('inserts arnndn for clips with audio denoise enabled', () => {
     const project = makeProject();
     project.timeline.tracks[0].clips = [

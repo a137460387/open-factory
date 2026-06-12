@@ -34,6 +34,7 @@ import {
   createDefaultColorCurves,
   createId,
   createKenBurnsKeyframes,
+  CLIP_SLOW_MOTION_MODES,
   getClipSpeed,
   getClipKeyframeValue,
   getEffectNumberParam,
@@ -55,6 +56,7 @@ import {
   normalizeMasks,
   normalizeMotionTrack,
   normalizeSequenceFrameRate,
+  normalizeSlowMotionMode,
   normalizeStabilization,
   normalizeThreeWayColor,
   sampleCurve,
@@ -73,6 +75,7 @@ import {
   type KeyframeEasing,
   type KeyframeProperty,
   type ClipMask,
+  type ClipSlowMotionMode,
   type MaskPatch,
   type TextAnimationDirection,
   type TextAnimationPreset,
@@ -220,6 +223,8 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
   const stabilization = normalizeStabilization(clip.stabilization);
   const frameInterpolation = normalizeFrameInterpolation(clip.frameInterpolation);
   const frameInterpolationUnavailable = frameInterpolationSupported === false;
+  const slowMotionMode = normalizeSlowMotionMode(clip.slowMotionMode);
+  const showSlowMotionMode = clip.type === 'video' && getClipSpeed(clip) < 1;
   const audioDenoise = normalizeAudioDenoise(clip.audioDenoise);
   const audioDenoiseUnavailable = audioDenoiseSupported === false;
   const audioPitchSemitones = 'pitchSemitones' in clip ? normalizeAudioPitchSemitones(clip.pitchSemitones) : 0;
@@ -527,6 +532,23 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
                 testId="clip-speed-input"
               />
             </AnimatedField>
+            {showSlowMotionMode ? (
+              <label className="block text-xs font-medium text-slate-600">
+                {zhCN.inspector.fields.slowMotionMode}
+                <select
+                  className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                  value={slowMotionMode}
+                  data-testid="clip-slow-motion-mode-select"
+                  onChange={(event) => commit({ slowMotionMode: event.target.value as ClipSlowMotionMode })}
+                >
+                  {CLIP_SLOW_MOTION_MODES.map((mode) => (
+                    <option key={mode} value={mode}>
+                      {zhCN.inspector.slowMotionModes[mode]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
             <SpeedCurveEditor clip={clip} onCommit={(speedFrames) => commit({ keyframes: { ...clip.keyframes, speed: speedFrames } })} />
           </Section>
         ) : null}

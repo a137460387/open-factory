@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   DEFAULT_PROJECT_SETTINGS,
+  DEFAULT_SLOW_MOTION_MODE,
   DEFAULT_NESTED_SEQUENCE_NAME,
   DEFAULT_TEXT_STYLE,
   DEFAULT_TRACK_COMPRESSOR,
@@ -29,6 +30,7 @@ import {
   normalizeMask,
   normalizeMasks,
   normalizeMasterVolume,
+  normalizeSlowMotionMode,
   normalizeSequenceFrameRate,
   normalizeSequenceName,
   normalizeStabilization,
@@ -167,6 +169,9 @@ describe('model factories', () => {
     expect(normalizeFrameInterpolation({ enabled: true, targetFps: 120 })).toEqual({ enabled: true, targetFps: 120 });
     expect(normalizeFrameInterpolation({ enabled: true, targetFps: 144 as never })).toEqual({ enabled: true, targetFps: 60 });
     expect(normalizeFrameInterpolation(undefined)).toEqual({ enabled: false, targetFps: 60 });
+    expect(normalizeSlowMotionMode('optical-flow')).toBe('optical-flow');
+    expect(normalizeSlowMotionMode('bad-mode')).toBe(DEFAULT_SLOW_MOTION_MODE);
+    expect(normalizeSlowMotionMode(undefined)).toBe(DEFAULT_SLOW_MOTION_MODE);
     expect(normalizeSequenceFrameRate(240)).toBe(120);
     expect(normalizeSequenceFrameRate(Number.NaN)).toBeUndefined();
   });
@@ -224,6 +229,7 @@ describe('model factories', () => {
     expect(clip.trimStart).toBe(0);
     expect(clip.trimEnd).toBe(1.23456);
     expect(clip.transform).toEqual({ ...DEFAULT_TRANSFORM, opacity: 0.25, x: 12 });
+    expect(clip.slowMotionMode).toBe('none');
   });
 
   it('serializes legacy projects without sharing nested transform objects', () => {

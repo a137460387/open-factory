@@ -50,3 +50,22 @@ test('exports a speed-ramped clip with integrated duration', async ({ page }) =>
   expect(plan.filterComplex).toContain("setpts='(");
   expect(plan.filterComplex).toContain('if(lte(((PTS-STARTPTS)*TB)');
 });
+
+test('exports optical-flow slow motion with mci interpolation', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.getByTestId('import-media-button').click();
+  await addMediaCardToTimeline(page);
+
+  await page.getByTestId('clip-speed-input').fill('0.4');
+  await expect(page.getByTestId('clip-slow-motion-mode-select')).toBeVisible();
+  await page.getByTestId('clip-slow-motion-mode-select').selectOption('optical-flow');
+
+  await openExportDialog(page);
+  await page.getByTestId('export-output-path').fill('C:/Exports/optical-flow-output.mp4');
+  await page.getByTestId('export-enqueue-button').click();
+  await expectExportTaskStatus(page, 0, 'success');
+
+  const plan = await page.evaluate(() => window.__E2E_ACTIONS__!.getLastExportPlan!() as { filterComplex: string });
+  expect(plan.filterComplex).toContain('minterpolate=fps=30:mi_mode=mci:mc_mode=aobmc:vsbmc=1');
+});
