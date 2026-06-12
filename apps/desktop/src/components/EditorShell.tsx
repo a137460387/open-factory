@@ -11,6 +11,7 @@ import {
   dirname,
   getTimelineDuration,
   instantiateTitleTemplate,
+  type DuplicateMediaGroup,
   type DuplicateMediaIssue,
   type MissingMediaIssue,
   type OrphanMediaIssue,
@@ -34,6 +35,7 @@ import { clearMediaCache } from '../cache/cache-service';
 import { createClipFromAsset, findPreferredTrack } from '../lib/clipFactory';
 import { zhCN } from '../i18n/strings';
 import { pickMediaPaths, probeMediaPaths } from '../lib/media';
+import { scanDuplicateMediaGroups } from '../lib/duplicateMedia';
 import { buildSubtitleTrackFromSrt, isSubtitlePath, pickSubtitlePaths, readSubtitleText } from '../lib/subtitles';
 import { createProjectArchivePlan, writeProjectArchive, type ArchiveProgress } from '../lib/projectArchive';
 import { scanProjectHealth } from '../lib/projectHealth';
@@ -55,6 +57,7 @@ import { copyFile as bridgeCopyFile, openDirectoryDialog, writeFile as bridgeWri
 import { showToast } from '../lib/toast';
 import { createProxyForAsset } from '../media/proxy';
 import { ensureMediaJobRunner } from '../media/media-job-runner';
+import { DuplicateMediaDialog, type DuplicateMediaMergeSelection } from '../media/DuplicateMediaDialog';
 import { useMediaJobStore } from '../media/media-job-store';
 import { relinkMissingMediaInDirectory, relinkSingleMedia } from '../media/relink';
 import { useBackgroundMediaJobs } from '../media/useBackgroundMediaJobs';
@@ -102,6 +105,8 @@ export function EditorShell() {
   const [projectHealthOpen, setProjectHealthOpen] = useState(false);
   const [projectHealthReport, setProjectHealthReport] = useState<ProjectHealthReport>();
   const [projectHealthScanning, setProjectHealthScanning] = useState(false);
+  const [duplicateMediaGroups, setDuplicateMediaGroups] = useState<DuplicateMediaGroup[]>([]);
+  const [duplicateMediaOpen, setDuplicateMediaOpen] = useState(false);
   const [shortcutBindings, setShortcutBindings] = useState<TimelineShortcutBindings>({});
   const [autosaveIntervalSeconds, setAutosaveIntervalSeconds] = useState(() => readAutosaveIntervalSeconds());
   const [recoveryCandidate, setRecoveryCandidate] = useState<AutosaveRecoveryCandidate>();
@@ -212,6 +217,37 @@ export function EditorShell() {
       showToast({ kind: 'error', title: zhCN.editorToasts.importFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.importFailedMessage });
     }
   }, [addMedia, project.media]);
+
+  const scanDuplicateMedia = useCallback(async () => {
+    try {
+      const groups = await scanDuplicateMediaGroups(useEditorStore.getState().project.media);
+      if (groups.length === 0) {
+        showToast({ kind: 'info', title: zhCN.duplicateMedia.empty });
+        return;
+      }
+      setDuplicateMediaGroups(groups);
+      setDuplicateMediaOpen(true);
+    } catch (error) {
+      showToast({
+        kind: 'error',
+        title: zhCN.duplicateMedia.scanFailed,
+        message: error instanceof Error ? error.message : zhCN.duplicateMedia.scanFailedMessage
+      });
+    }
+  }, []);
+
+  const mergeDuplicateMediaGroups = useCallback((selections: DuplicateMediaMergeSelection[]) => {
+    try {
+      for (const selection of selections) {
+        commandManager.execute(new MergeMediaCommand(projectAccessor, selection.keepAssetId, selection.assetIds));
+      }
+      setDuplicateMediaOpen(false);
+      setDuplicateMediaGroups([]);
+      showToast({ kind: 'success', title: zhCN.duplicateMedia.mergedTitle, message: zhCN.duplicateMedia.mergedMessage(selections.length) });
+    } catch (error) {
+      showToast({ kind: 'error', title: zhCN.projectHealth.toasts.fixFailed, message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage });
+    }
+  }, []);
 
   const importSubtitles = useCallback(async () => {
     try {
@@ -643,6 +679,7 @@ export function EditorShell() {
             mediaMetadata={project.mediaMetadata}
             onImport={() => void importMedia()}
             onImportPaths={(paths) => void importDropped(paths)}
+            onScanDuplicates={() => void scanDuplicateMedia()}
             onAddToTimeline={addAssetToTimeline}
             onRelink={(assetId) => void relinkMedia(assetId)}
             onRelinkAll={() => void relinkAllMissing()}
@@ -715,6 +752,13 @@ export function EditorShell() {
             onRemoveOrphan={(issue) => void removeOrphanFromHealth(issue)}
             onMergeDuplicate={(issue) => void mergeDuplicateFromHealth(issue)}
             onQueueProxy={(issue) => void queueProxyFromHealth(issue)}
+          />
+        ) : null}
+        {duplicateMediaOpen ? (
+          <DuplicateMediaDialog
+            groups={duplicateMediaGroups}
+            onConfirm={mergeDuplicateMediaGroups}
+            onClose={() => setDuplicateMediaOpen(false)}
           />
         ) : null}
         {recoveryCandidate ? (

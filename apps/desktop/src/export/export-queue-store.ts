@@ -7,6 +7,7 @@ import {
   startExportTaskSlots,
   updateExportTaskProgress,
   type ExportTask,
+  type ExportReport,
   type FfmpegExportPlan
 } from '@open-factory/editor-core';
 import { create } from 'zustand';
@@ -19,7 +20,7 @@ export interface ExportQueueState {
   addTask: (input: { name: string; outputPath: string; plan: FfmpegExportPlan }) => ExportTask;
   startNextTasks: () => string[];
   updateTaskProgress: (taskId: string, progress: number) => void;
-  finishTask: (taskId: string) => void;
+  finishTask: (taskId: string, report?: ExportReport) => void;
   failTask: (taskId: string, error: string) => void;
   cancelTask: (taskId: string) => void;
   retryTask: (taskId: string) => void;
@@ -50,10 +51,10 @@ export const useExportQueueStore = create<ExportQueueState>((set, get) => ({
   updateTaskProgress: (taskId, progress) => {
     set((state) => ({ tasks: updateExportTaskProgress(state.tasks, taskId, progress) }));
   },
-  finishTask: (taskId) => {
+  finishTask: (taskId, report) => {
     const task = get().tasks.find((item) => item.id === taskId);
     set((state) => ({
-      tasks: finishExportTask(state.tasks, taskId),
+      tasks: finishExportTask(state.tasks, taskId, report),
       lastCompletedPath: task?.outputPath ?? state.lastCompletedPath
     }));
   },
@@ -67,7 +68,7 @@ export const useExportQueueStore = create<ExportQueueState>((set, get) => ({
     set((state) => ({
       tasks: state.tasks.map((task) =>
         task.id === taskId && (task.status === 'error' || task.status === 'canceled')
-          ? { ...task, status: 'pending', progress: 0, error: undefined, startedAt: undefined, finishedAt: undefined }
+          ? { ...task, status: 'pending', progress: 0, error: undefined, report: undefined, startedAt: undefined, finishedAt: undefined }
           : task
       )
     }));

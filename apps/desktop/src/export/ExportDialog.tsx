@@ -6,6 +6,7 @@ import {
   normalizeTargetAspectRatio,
   resolveReframeDimensions,
   type ExportTaskStatus,
+  type ExportLoudnessNormalization,
   type FfmpegCapabilities,
   type PreflightResult,
   type Project,
@@ -61,6 +62,7 @@ export function ExportDialog({ project, onClose, onCompleted, onRelinkMissing }:
   const selectedPreset = useMemo(() => getExportPreset(presetId, presets), [presetId, presets]);
   const exportSettings = useMemo(() => normalizeDraftSettings(draftSettings), [draftSettings]);
   const isAudioOnly = exportSettings.outputMode === 'audio' || exportSettings.format === 'm4a';
+  const loudnessNormalizationEligible = supportsLoudnessNormalization(exportSettings.format ?? 'mp4', exportSettings.outputMode);
   const estimatedSize = useMemo(() => {
     const dimensions = estimateDimensions(exportSettings.width ?? project.settings.width, exportSettings.height ?? project.settings.height, exportSettings.format ?? 'mp4');
     return formatEstimatedFileSize(
@@ -316,6 +318,14 @@ export function ExportDialog({ project, onClose, onCompleted, onRelinkMissing }:
               onChange={(checked) => updateHardwareEncoding(setDraftSettings, checked)}
               testId="export-hardware-encoding-toggle"
             />
+            <PresetSelectField
+              label={t.fields.loudnessNormalization}
+              value={exportSettings.loudnessNormalization ?? 'off'}
+              disabled={!loudnessNormalizationEligible}
+              onChange={(value) => updateLoudnessNormalization(setDraftSettings, value)}
+              testId="export-loudness-normalization-select"
+              options={['off', 'youtube', 'ebu-r128']}
+            />
           </div>
           {!isAudioOnly && exportSettings.targetAspectRatio && exportSettings.targetAspectRatio !== 'source' ? (
             <div className="grid gap-3 rounded-md border border-line p-3 md:grid-cols-[1fr_1fr_160px]">
@@ -413,6 +423,7 @@ function normalizeDraftSettings(settings: ExportPresetSettings): ExportPresetSet
   const hardwareEncoding = outputMode === 'video' && (format === 'mp4' || format === 'mov') && settings.hardwareEncoding === true;
   const targetAspectRatio = outputMode === 'video' ? normalizeTargetAspectRatio(settings.targetAspectRatio) : 'source';
   const dimensions = resolveReframeDimensions(settings.width ?? 1280, settings.height ?? 720, targetAspectRatio);
+  const loudnessNormalization = supportsLoudnessNormalization(format, outputMode) ? normalizeLoudnessNormalization(settings.loudnessNormalization) : 'off';
   return {
     ...settings,
     width: targetAspectRatio === 'source' ? settings.width : dimensions.width,
@@ -420,6 +431,7 @@ function normalizeDraftSettings(settings: ExportPresetSettings): ExportPresetSet
     format,
     outputMode,
     hardwareEncoding,
+    loudnessNormalization,
     targetAspectRatio,
     reframeOffsetX: clampReframeOffset(settings.reframeOffsetX),
     reframeOffsetY: clampReframeOffset(settings.reframeOffsetY)
@@ -548,6 +560,21 @@ function updateReframeOffset(setDraftSettings: Dispatch<SetStateAction<ExportPre
 
 function updateHardwareEncoding(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, checked: boolean): void {
   setDraftSettings((current) => ({ ...current, hardwareEncoding: checked }));
+}
+
+function updateLoudnessNormalization(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, value: string): void {
+  setDraftSettings((current) => ({ ...current, loudnessNormalization: normalizeLoudnessNormalization(value) }));
+}
+
+function normalizeLoudnessNormalization(value: unknown): ExportLoudnessNormalization {
+  return value === 'youtube' || value === 'ebu-r128' ? value : 'off';
+}
+
+function supportsLoudnessNormalization(format: string, outputMode: ExportPresetSettings['outputMode']): boolean {
+  if (outputMode === 'audio' || format === 'm4a') {
+    return true;
+  }
+  return format !== 'gif' && format !== 'webp' && format !== 'apng' && format !== 'png-sequence';
 }
 
 function PresetNumberField({
@@ -770,6 +797,9 @@ function formatPreflightMessage(issue: PreflightResult): string {
 }
 
 function formatOptionLabel(value: string): string {
+  if (isLoudnessNormalizationOption(value)) {
+    return zhCN.exportDialog.loudnessNormalization[value];
+  }
   if (value === 'default') {
     return zhCN.exportDialog.options.default;
   }
@@ -810,6 +840,10 @@ function formatOptionLabel(value: string): string {
     .split('-')
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
+}
+
+function isLoudnessNormalizationOption(value: string): value is ExportLoudnessNormalization {
+  return value === 'off' || value === 'youtube' || value === 'ebu-r128';
 }
 
 function estimateDimensions(width: number, height: number, format: string): { width: number; height: number } {
@@ -915,8 +949,17 @@ function ExportTaskRow({ taskId }: { taskId: string }) {
         <div className="w-9 text-right text-[11px] tabular-nums text-slate-500">{progress}%</div>
       </div>
       {task.error ? <div className="mt-1 whitespace-pre-wrap text-[11px] text-rose-700">{task.error}</div> : null}
+      {task.report?.loudness ? (
+        <div className="mt-1 text-[11px] text-slate-600" data-testid="export-task-loudness-report">
+          {zhCN.exportDialog.loudnessReport(formatLoudness(task.report.loudness.integratedLoudness))}
+        </div>
+      ) : null}
     </div>
   );
+}
+
+function formatLoudness(value: number): string {
+  return Number.isFinite(value) ? value.toFixed(1) : zhCN.common.unavailable;
 }
 
 function StatusPill({ status }: { status: ExportTaskStatus }) {

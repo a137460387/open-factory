@@ -28,6 +28,7 @@ export * from './project/relative-paths';
 export * from './project/relink-score';
 export * from './project/batch-relink';
 export * from './project/project-health-check';
+export * from './project/duplicate-media';
 export * from './cache/cache-types';
 export * from './cache/cache-key';
 export * from './proxy/proxy-types';

@@ -34,9 +34,10 @@ describe('export queue helpers', () => {
     tasks = updateExportTaskProgress(tasks, 'task-1', 1.5);
     expect(tasks[0].progress).toBe(1);
 
-    tasks = finishExportTask(tasks, 'task-1', 't2');
+    tasks = finishExportTask(tasks, 'task-1', { loudness: { integratedLoudness: -14.1 } }, 't2');
     expect(tasks[0].status).toBe('success');
     expect(tasks[0].finishedAt).toBe('t2');
+    expect(tasks[0].report?.loudness?.integratedLoudness).toBe(-14.1);
   });
 
   it('keeps only one running task and supports cancel/error states', () => {
@@ -82,7 +83,7 @@ describe('export queue helpers', () => {
       'start'
     );
 
-    const afterFinish = startExportTaskSlots(finishExportTask(running, 'a', 'done'), 2, 'next');
+    const afterFinish = startExportTaskSlots(finishExportTask(running, 'a', undefined, 'done'), 2, 'next');
     expect(afterFinish.map((task) => task.status)).toEqual(['success', 'running', 'running']);
     expect(afterFinish[2].startedAt).toBe('next');
 

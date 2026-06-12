@@ -44,6 +44,7 @@ import type {
   ExportClip,
   ExportClipKeyframes,
   ExportKeyframe,
+  ExportLoudnessNormalization,
   ExportProject,
   ExportSettings,
   FfmpegExportPass,
@@ -79,11 +80,22 @@ export const DEFAULT_EXPORT_SETTINGS: Omit<ExportSettings, 'outputPath'> = {
   reframeOffsetX: 0,
   reframeOffsetY: 0,
   subtitleMode: undefined,
-  hardwareEncoding: false
+  hardwareEncoding: false,
+  loudnessNormalization: 'off'
 };
 
 export const SETPTS_EXPRESSION_LIMIT = 4096;
 const GIF_PALETTE_PLACEHOLDER = '__GIF_PALETTE_open_factory__';
+const LOUDNORM_MEASURED_I_PLACEHOLDER = '__LOUDNORM_MEASURED_I__';
+const LOUDNORM_MEASURED_TP_PLACEHOLDER = '__LOUDNORM_MEASURED_TP__';
+const LOUDNORM_MEASURED_LRA_PLACEHOLDER = '__LOUDNORM_MEASURED_LRA__';
+const LOUDNORM_MEASURED_THRESH_PLACEHOLDER = '__LOUDNORM_MEASURED_THRESH__';
+const LOUDNORM_OFFSET_PLACEHOLDER = '__LOUDNORM_OFFSET__';
+
+interface LoudnessNormalizationPreset {
+  mode: Exclude<ExportLoudnessNormalization, 'off'>;
+  args: string[];
+}
 
 interface BuildFfmpegExportPlanOptions {
   frameExport?: {
@@ -364,17 +376,27 @@ export function buildFfmpegExportPlan(
     filters.push(`[${currentVideo}]trim=duration=${formatFfmpegSeconds(duration)},setpts=PTS-STARTPTS,fps=${settings.fps},format=${outputPixelFormat}[vout]`);
   }
 
+  let loudnessAnalysisFilterComplex: string | undefined;
   if (!videoFramesOnly) {
     const masterVolume = normalizeMasterVolume(project.masterVolume);
-    const audioLabels = buildAudioFilters(orderedPlaybackClips, inputByClipId, settings, filters, capabilities, warnings);
+    const audioFilters: string[] = [];
+    const audioLabels = buildAudioFilters(orderedPlaybackClips, inputByClipId, settings, audioFilters, capabilities, warnings);
+    const loudnessPreset = audioLabels.length > 0 ? getLoudnessNormalizationPreset(settings.loudnessNormalization) : undefined;
+    const audioOutputLabel = loudnessPreset ? 'apremaster' : 'aout';
     if (audioLabels.length === 0) {
-      filters.push(`anullsrc=channel_layout=stereo:sample_rate=${settings.sampleRate}:d=${formatFfmpegSeconds(duration)},volume=${formatVolume(masterVolume)}[aout]`);
+      audioFilters.push(`anullsrc=channel_layout=stereo:sample_rate=${settings.sampleRate}:d=${formatFfmpegSeconds(duration)},volume=${formatVolume(masterVolume)}[${audioOutputLabel}]`);
     } else {
-      filters.push(
+      audioFilters.push(
         `${audioLabels.map((label) => `[${label}]`).join('')}amix=inputs=${audioLabels.length}:duration=longest:normalize=0,atrim=duration=${formatFfmpegSeconds(
           duration
-        )},asetpts=PTS-STARTPTS,aresample=${settings.sampleRate},volume=${formatVolume(masterVolume)}[aout]`
+        )},asetpts=PTS-STARTPTS,aresample=${settings.sampleRate},volume=${formatVolume(masterVolume)}[${audioOutputLabel}]`
       );
+    }
+    if (loudnessPreset) {
+      loudnessAnalysisFilterComplex = [...audioFilters, `[${audioOutputLabel}]${buildLoudnormAnalysisFilter(loudnessPreset)}[aout]`].join(';');
+      filters.push(...audioFilters, `[${audioOutputLabel}]${buildLoudnormRenderFilter(loudnessPreset)}[aout]`);
+    } else {
+      filters.push(...audioFilters);
     }
   }
 
@@ -410,6 +432,7 @@ export function buildFfmpegExportPlan(
       : ['-ss', formatFfmpegSeconds(frameExportTime), '-frames:v', '1', '-f', 'image2', normalizeFfmpegPath(settings.outputPath)];
   const fullArgs = buildFfmpegFullArgs(inputs, filterComplex, maps, outputArgs);
   const gifPlan = gifExport ? buildGifExportPasses(inputs, filterComplex, settings, duration, textArtifacts) : undefined;
+  const loudnessPlan = loudnessAnalysisFilterComplex ? buildLoudnessNormalizationPasses(inputs, loudnessAnalysisFilterComplex, fullArgs, duration) : undefined;
   const nestedPlans = buildNestedSequencePlans(project, capabilities, warnings, depth, sequenceStack);
   const planDuration = frameExportTime === null ? duration : Math.max(1 / Math.max(1, settings.fps), 0.001);
 
@@ -419,7 +442,7 @@ export function buildFfmpegExportPlan(
     maps: gifPlan?.maps ?? maps,
     outputArgs: gifPlan?.outputArgs ?? outputArgs,
     fullArgs: gifPlan?.fullArgs ?? fullArgs,
-    passes: gifPlan?.passes,
+    passes: gifPlan?.passes ?? loudnessPlan?.passes,
     warnings,
     textArtifacts,
     nestedPlans,
@@ -440,7 +463,8 @@ function normalizeExportReframeSettings(settings: ExportSettings): ExportSetting
     ...dimensions,
     targetAspectRatio,
     reframeOffsetX: clampReframeOffset(settings.reframeOffsetX),
-    reframeOffsetY: clampReframeOffset(settings.reframeOffsetY)
+    reframeOffsetY: clampReframeOffset(settings.reframeOffsetY),
+    loudnessNormalization: normalizeLoudnessNormalization(settings.loudnessNormalization)
   };
 }
 
@@ -452,7 +476,8 @@ function normalizeSettingsForExportFormat(settings: ExportSettings): ExportSetti
     ...settings,
     outputMode: 'video',
     audioCodec: settings.audioCodec || 'aac',
-    hardwareEncoding: false
+    hardwareEncoding: false,
+    loudnessNormalization: 'off'
   };
   if (settings.format !== 'gif') {
     return base;
@@ -514,6 +539,21 @@ function buildGifExportPasses(
     passes: [
       { name: 'gif-palettegen', fullArgs: paletteFullArgs, duration },
       { name: 'gif-paletteuse', fullArgs: gifFullArgs, duration }
+    ]
+  };
+}
+
+function buildLoudnessNormalizationPasses(
+  inputs: FfmpegInput[],
+  analysisFilterComplex: string,
+  renderFullArgs: string[],
+  duration: number
+): { passes: FfmpegExportPass[] } {
+  const analysisFullArgs = buildFfmpegFullArgs(inputs, analysisFilterComplex, ['-map', '[aout]'], ['-f', 'null', '-']);
+  return {
+    passes: [
+      { name: 'loudness-analysis', kind: 'loudness-analysis', fullArgs: analysisFullArgs, duration },
+      { name: 'loudness-render', kind: 'render', fullArgs: renderFullArgs, duration }
     ]
   };
 }
@@ -1345,6 +1385,37 @@ function buildAudioFilters(
     labels.push(label);
   }
   return labels;
+}
+
+function getLoudnessNormalizationPreset(mode: ExportLoudnessNormalization | undefined): LoudnessNormalizationPreset | undefined {
+  if (mode === 'youtube') {
+    return { mode, args: ['I=-14', 'TP=-1.5', 'LRA=11'] };
+  }
+  if (mode === 'ebu-r128') {
+    return { mode, args: ['I=-23'] };
+  }
+  return undefined;
+}
+
+function normalizeLoudnessNormalization(mode: ExportLoudnessNormalization | undefined): ExportLoudnessNormalization {
+  return mode === 'youtube' || mode === 'ebu-r128' ? mode : 'off';
+}
+
+function buildLoudnormAnalysisFilter(preset: LoudnessNormalizationPreset): string {
+  return `loudnorm=${[...preset.args, 'print_format=json'].join(':')}`;
+}
+
+function buildLoudnormRenderFilter(preset: LoudnessNormalizationPreset): string {
+  return `loudnorm=${[
+    ...preset.args,
+    `measured_I=${LOUDNORM_MEASURED_I_PLACEHOLDER}`,
+    `measured_TP=${LOUDNORM_MEASURED_TP_PLACEHOLDER}`,
+    `measured_LRA=${LOUDNORM_MEASURED_LRA_PLACEHOLDER}`,
+    `measured_thresh=${LOUDNORM_MEASURED_THRESH_PLACEHOLDER}`,
+    `offset=${LOUDNORM_OFFSET_PLACEHOLDER}`,
+    'linear=true',
+    'print_format=summary'
+  ].join(':')}`;
 }
 
 function buildAudioDenoiseFilters(clip: ExportClip, capabilities: FfmpegCapabilities | undefined, warnings: string[]): string {

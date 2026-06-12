@@ -47,7 +47,8 @@ describe('export presets', () => {
         targetAspectRatio: '9:16',
         reframeOffsetX: 0.25,
         reframeOffsetY: -0.5,
-        subtitleMode: 'burn-in'
+        subtitleMode: 'burn-in',
+        loudnessNormalization: 'youtube'
       },
       storage
     );
@@ -66,7 +67,7 @@ describe('export presets', () => {
         expect.objectContaining({
           id: 'custom-mywpiww0-mobile-review',
           name: 'Mobile Review',
-          settings: expect.objectContaining({ videoBitrate: '9M', subtitleMode: 'burn-in', targetAspectRatio: '9:16' })
+          settings: expect.objectContaining({ videoBitrate: '9M', subtitleMode: 'burn-in', targetAspectRatio: '9:16', loudnessNormalization: 'youtube' })
         })
       ]
     });
@@ -109,6 +110,7 @@ describe('export presets', () => {
               reframeOffsetX: 3,
               reframeOffsetY: -3,
               hardwareEncoding: true,
+              loudnessNormalization: 'ebu-r128',
               extra: 'ignored'
             }
           },
@@ -132,7 +134,8 @@ describe('export presets', () => {
           targetAspectRatio: '21:9',
           reframeOffsetX: 1,
           reframeOffsetY: -1,
-          hardwareEncoding: true
+          hardwareEncoding: true,
+          loudnessNormalization: 'ebu-r128'
         }
       })
     ]);

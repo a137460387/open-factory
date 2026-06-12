@@ -74,6 +74,53 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.outputArgs).toContain('5');
   });
 
+  it('builds YouTube loudness normalization as a two-pass loudnorm plan', () => {
+    const project = makeProject();
+    const plan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(project, {
+        outputPath: 'D:\\Exports\\loud.mp4',
+        settings: { loudnessNormalization: 'youtube' }
+      })
+    );
+
+    expect(plan.passes).toHaveLength(2);
+    expect(plan.passes?.[0]).toMatchObject({ name: 'loudness-analysis', kind: 'loudness-analysis' });
+    expect(plan.passes?.[1]).toMatchObject({ name: 'loudness-render', kind: 'render' });
+    expect(plan.passes?.[0].fullArgs.join(' ')).toContain('loudnorm=I=-14:TP=-1.5:LRA=11:print_format=json');
+    expect(plan.passes?.[0].fullArgs).toEqual(expect.arrayContaining(['-map', '[aout]', '-f', 'null', '-']));
+    expect(plan.filterComplex).toContain('loudnorm=I=-14:TP=-1.5:LRA=11');
+    expect(plan.filterComplex).toContain('measured_I=__LOUDNORM_MEASURED_I__');
+    expect(plan.filterComplex).toContain('linear=true');
+    expect(plan.fullArgs.at(-1)).toBe('D:/Exports/loud.mp4');
+  });
+
+  it('builds EBU R128 loudness normalization with the broadcast target', () => {
+    const project = makeProject();
+    const plan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(project, {
+        outputPath: 'D:\\Exports\\ebu.mp4',
+        settings: { loudnessNormalization: 'ebu-r128' }
+      })
+    );
+
+    expect(plan.passes?.[0].fullArgs.join(' ')).toContain('loudnorm=I=-23:print_format=json');
+    expect(plan.filterComplex).toContain('loudnorm=I=-23:measured_I=__LOUDNORM_MEASURED_I__');
+    expect(plan.filterComplex).not.toContain('TP=-1.5');
+  });
+
+  it('skips loudness normalization for animated image exports', () => {
+    const project = makeProject();
+    const plan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(project, {
+        outputPath: 'D:\\Exports\\loop.gif',
+        settings: { format: 'gif', videoCodec: 'gif', loudnessNormalization: 'youtube' }
+      })
+    );
+
+    expect(plan.filterComplex).not.toContain('loudnorm=');
+    expect(plan.passes?.map((pass) => pass.kind)).not.toContain('loudness-analysis');
+  });
+
   it('skips text with a warning when drawtext is unavailable', () => {
     const project = makeProject();
     project.timeline.tracks[2].clips = [makeTextClip({ id: 'clip-text' })];

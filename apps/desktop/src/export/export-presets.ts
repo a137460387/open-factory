@@ -337,6 +337,9 @@ function sanitizeExportSettings(settings: unknown): ExportPresetSettings {
   if (input.hardwareEncoding === true) {
     output.hardwareEncoding = true;
   }
+  if (input.loudnessNormalization === 'off' || input.loudnessNormalization === 'youtube' || input.loudnessNormalization === 'ebu-r128') {
+    output.loudnessNormalization = input.loudnessNormalization;
+  }
   return output;
 }
 

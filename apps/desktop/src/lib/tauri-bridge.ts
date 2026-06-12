@@ -3,7 +3,7 @@ import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { confirm, message as dialogMessage } from '@tauri-apps/plugin-dialog';
 import { open as openShellPath } from '@tauri-apps/plugin-shell';
-import type { ColorMatchFrameSample, FfmpegCapabilities, FfmpegExportPlan, ProxyPlan } from '@open-factory/editor-core';
+import type { ColorMatchFrameSample, ExportReport, FfmpegCapabilities, FfmpegExportPlan, ProxyPlan } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { isTauriRuntime } from './tauri';
 
@@ -23,6 +23,7 @@ export interface ExportResult {
   outputPath: string;
   durationMs: number;
   warnings: string[];
+  report?: ExportReport;
 }
 
 export interface MediaProbe {

@@ -119,10 +119,10 @@ function startAvailableTasks(): void {
 
 async function runSingleTask(task: ExportTask): Promise<void> {
   try {
-    await runExport(task.plan, task.id);
+    const result = await runExport(task.plan, task.id);
     const latest = useExportQueueStore.getState().tasks.find((item) => item.id === task.id);
     if (latest?.status === 'running') {
-      useExportQueueStore.getState().finishTask(task.id);
+      useExportQueueStore.getState().finishTask(task.id, result.report);
     }
   } catch (error) {
     const latest = useExportQueueStore.getState().tasks.find((item) => item.id === task.id);

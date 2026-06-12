@@ -42,6 +42,8 @@ const fourKHevcVideo = 'C:/Media/four-k-hevc.mov';
 const tinyVideoB = 'C:/Media/camera-b.mp4';
 const tinyAudio = 'C:/Media/tiny-audio.wav';
 const tinyImage = 'C:/Media/test-image.png';
+const duplicateVideoA = 'C:/Media/duplicate-a.mp4';
+const duplicateVideoB = 'C:/Media/duplicate-b.mp4';
 const pngFrame001 = 'C:/Media/frame001.png';
 const pngFrame002 = 'C:/Media/frame002.png';
 const pngFrame003 = 'C:/Media/frame003.png';
@@ -115,6 +117,8 @@ for (const path of [
   tinyVideoB,
   tinyAudio,
   tinyImage,
+  duplicateVideoA,
+  duplicateVideoB,
   pngFrame001,
   pngFrame002,
   pngFrame003,
@@ -250,7 +254,13 @@ const mocks: TauriMocks = {
       mtimes.set(outputPath, Date.now());
     }
     persistFiles();
-    return { success: true, outputPath, durationMs: 20, warnings: plan.warnings };
+    return {
+      success: true,
+      outputPath,
+      durationMs: 20,
+      warnings: plan.warnings,
+      report: plan.passes?.some((pass) => pass.kind === 'loudness-analysis') ? { loudness: { integratedLoudness: -14.1 } } : undefined
+    };
   },
   analyzeClip: async ({ clipId }) => {
     emit('clip-analysis-progress', { clipId, progress: 0.35, progressPct: 35 });
@@ -613,6 +623,60 @@ window.__E2E_ACTIONS__ = {
     });
     commandManager.clear();
   },
+  setupDuplicateMediaFixture: () => {
+    const project = createProject('Duplicate Media E2E');
+    const media: MediaAsset[] = [
+      {
+        id: 'media-duplicate-a',
+        type: 'video',
+        name: 'duplicate-a.mp4',
+        path: duplicateVideoA,
+        duration: 6,
+        width: 1280,
+        height: 720,
+        size: 4096,
+        mtimeMs: 1_000,
+        hasAudio: true,
+        audioChannels: 2,
+        audioSampleRate: 44_100,
+        audioCodec: 'aac',
+        videoCodec: 'h264'
+      },
+      {
+        id: 'media-duplicate-b',
+        type: 'video',
+        name: 'duplicate-b.mp4',
+        path: duplicateVideoB,
+        duration: 6,
+        width: 1280,
+        height: 720,
+        size: 4096,
+        mtimeMs: 1_000,
+        hasAudio: true,
+        audioChannels: 2,
+        audioSampleRate: 44_100,
+        audioCodec: 'aac',
+        videoCodec: 'h264'
+      }
+    ];
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({ id: 'track-video', type: 'video', name: 'Video 1', clips: [makeDuplicateVideoClip()] }),
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
+        createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media,
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    commandManager.clear();
+  },
   getTimelineSnapshot: () => useEditorStore.getState().project.timeline,
   getProjectMedia: () => useEditorStore.getState().project.media,
   setOpenFileDialogPaths: (paths: unknown) => {
@@ -717,6 +781,24 @@ function makeHealthVideoClip(): Extract<import('@open-factory/editor-core').Clip
     type: 'video',
     name: 'Health Missing Video',
     mediaId: 'media-health-missing',
+    trackId: 'track-video',
+    start: 0,
+    duration: 4,
+    trimStart: 0,
+    trimEnd: 0,
+    speed: DEFAULT_CLIP_SPEED,
+    colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+    transform: { ...DEFAULT_TRANSFORM },
+    volume: 1
+  };
+}
+
+function makeDuplicateVideoClip(): Extract<import('@open-factory/editor-core').Clip, { type: 'video' }> {
+  return {
+    id: 'clip-duplicate-b',
+    type: 'video',
+    name: 'Duplicate B',
+    mediaId: 'media-duplicate-b',
     trackId: 'track-video',
     start: 0,
     duration: 4,

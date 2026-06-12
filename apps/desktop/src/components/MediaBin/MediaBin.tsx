@@ -1,5 +1,5 @@
 import { TITLE_TEMPLATE_IDS, filterMediaAssets, shouldGenerateProxy, type MediaAsset, type MediaBinFilter, type MediaLabelColor, type MediaMetadata, type TitleTemplateId } from '@open-factory/editor-core';
-import { AlertCircle, BadgeCheck, FileAudio2, FileImage, FileText, FileVideo2, Gauge, Import, Link2, Loader2, Plus, Search, Tag } from 'lucide-react';
+import { AlertCircle, BadgeCheck, FileAudio2, FileImage, FileText, FileVideo2, Gauge, Import, Link2, Loader2, Merge, Plus, Search, Tag } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
 import { zhCN } from '../../i18n/strings';
@@ -14,6 +14,7 @@ interface MediaBinProps {
   mediaMetadata: Record<string, MediaMetadata>;
   onImport(): void;
   onImportPaths(paths: string[]): void;
+  onScanDuplicates(): void;
   onAddToTimeline(assetId: string): void;
   onRelink(assetId: string): void;
   onRelinkAll(): void;
@@ -24,7 +25,7 @@ interface MediaBinProps {
 
 type MediaBinView = MediaBinFilter | 'titles';
 
-export function MediaBin({ media, mediaMetadata, onImport, onImportPaths, onAddToTimeline, onRelink, onRelinkAll, onGenerateProxy, onSetLabel, onAddTitleTemplate }: MediaBinProps) {
+export function MediaBin({ media, mediaMetadata, onImport, onImportPaths, onScanDuplicates, onAddToTimeline, onRelink, onRelinkAll, onGenerateProxy, onSetLabel, onAddTitleTemplate }: MediaBinProps) {
   const t = zhCN.mediaBin;
   const [dragOver, setDragOver] = useState(false);
   const [search, setSearch] = useState('');
@@ -97,6 +98,14 @@ export function MediaBin({ media, mediaMetadata, onImport, onImportPaths, onAddT
               {t.relinkFolder}
             </button>
           ) : null}
+          <button
+            className="inline-flex items-center gap-2 rounded-md border border-line bg-panel px-2 py-2 text-sm font-medium text-slate-700 hover:bg-white"
+            onClick={onScanDuplicates}
+            data-testid="scan-duplicate-media-button"
+          >
+            <Merge size={15} />
+            {t.scanDuplicates}
+          </button>
           <button
             className="inline-flex items-center gap-2 rounded-md bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-[#176858]"
             onClick={onImport}

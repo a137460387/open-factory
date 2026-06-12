@@ -188,6 +188,7 @@ export const zhCN = {
     itemCount: (count: number) => `${count} 个素材`,
     relinkFolder: '重连文件夹',
     import: '导入',
+    scanDuplicates: '扫描重复',
     searchPlaceholder: '搜索媒体',
     filters: {
       all: '全部',
@@ -234,6 +235,19 @@ export const zhCN = {
     },
     titleTemplateCount: (count: number) => `${count} 个标题模板`,
     addTitleTemplate: '添加标题模板'
+  },
+  duplicateMedia: {
+    title: (count: number) => `${count} 组重复素材`,
+    subtitle: '按文件大小和前 4KB 内容 hash 检测。',
+    keep: '保留',
+    merge: '合并引用',
+    cancel: '取消',
+    empty: '没有发现重复素材。',
+    groupSummary: (count: number, size: string) => `${count} 个文件 · ${size}`,
+    scanFailed: '重复素材扫描失败',
+    scanFailedMessage: '无法扫描媒体文件。',
+    mergedTitle: '重复素材已合并',
+    mergedMessage: (count: number) => `已合并 ${count} 组重复素材。`
   },
   projectHealth: {
     title: '项目健康检查',
@@ -674,7 +688,13 @@ export const zhCN = {
       targetAspectRatio: '目标比例',
       reframeOffsetX: '水平偏移',
       reframeOffsetY: '垂直偏移',
-      hardwareEncoding: '硬件编码'
+      hardwareEncoding: '硬件编码',
+      loudnessNormalization: '响度标准化'
+    },
+    loudnessNormalization: {
+      off: '关闭',
+      youtube: 'YouTube -14 LUFS',
+      'ebu-r128': 'EBU R128 广播 -23 LUFS'
     },
     info: {
       resolution: '分辨率',
@@ -699,6 +719,7 @@ export const zhCN = {
     cancelTask: '取消',
     openFolder: '打开文件夹',
     retryTask: '重试',
+    loudnessReport: (value: string) => `实际响度：${value} LUFS`,
     detectFfmpegFailed: '无法检测 FFmpeg。',
     loadPresetsFailed: '无法加载导出预设。',
     completeTitle: '导出完成',

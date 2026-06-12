@@ -1,5 +1,5 @@
 import { createId } from '../model';
-import type { FfmpegExportPlan } from './export-types';
+import type { ExportReport, FfmpegExportPlan } from './export-types';
 
 export type ExportTaskStatus = 'pending' | 'running' | 'canceled' | 'error' | 'success';
 
@@ -14,6 +14,7 @@ export interface ExportTask {
   startedAt?: string;
   finishedAt?: string;
   error?: string;
+  report?: ExportReport;
 }
 
 export function createExportTask(input: { name: string; outputPath: string; plan: FfmpegExportPlan; id?: string; now?: string }): ExportTask {
@@ -59,8 +60,8 @@ export function updateExportTaskProgress(tasks: ExportTask[], taskId: string, pr
   return tasks.map((task) => (task.id === taskId ? { ...task, progress: Math.min(1, Math.max(0, progress)) } : task));
 }
 
-export function finishExportTask(tasks: ExportTask[], taskId: string, now = new Date().toISOString()): ExportTask[] {
-  return tasks.map((task) => (task.id === taskId ? { ...task, status: 'success', progress: 1, finishedAt: now } : task));
+export function finishExportTask(tasks: ExportTask[], taskId: string, report?: ExportReport, now = new Date().toISOString()): ExportTask[] {
+  return tasks.map((task) => (task.id === taskId ? { ...task, status: 'success', progress: 1, report, finishedAt: now } : task));
 }
 
 export function failExportTask(tasks: ExportTask[], taskId: string, error: string, now = new Date().toISOString()): ExportTask[] {

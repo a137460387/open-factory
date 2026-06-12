@@ -1,5 +1,6 @@
 use crate::path_validator::{validate_path, validate_path_for_write};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::HashMap;
 use std::fs;
 use std::io::{BufRead, BufReader};
@@ -71,6 +72,8 @@ pub struct FfmpegExportPassDto {
     name: String,
     full_args: Vec<String>,
     duration: f64,
+    #[serde(default)]
+    kind: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -88,6 +91,20 @@ pub struct ExportResult {
     output_path: String,
     duration_ms: u128,
     warnings: Vec<String>,
+    report: ExportReport,
+}
+
+#[derive(Debug, Clone, Default, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportReport {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    loudness: Option<LoudnessReport>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct LoudnessReport {
+    integrated_loudness: f64,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -321,7 +338,7 @@ pub async fn run_export(
     });
 
     match result {
-        Ok(()) => {
+        Ok(report) => {
             if let Some(dir) = nested_dir.as_deref() {
                 fs::remove_dir_all(dir).map_err(|error| {
                     format!(
@@ -336,6 +353,7 @@ pub async fn run_export(
                 output_path,
                 duration_ms: started.elapsed().as_millis(),
                 warnings: plan.warnings,
+                report,
             })
         }
         Err(error) => {
@@ -474,6 +492,7 @@ struct MaterializedFfmpegExportPass {
     name: String,
     full_args: Vec<String>,
     duration: f64,
+    kind: Option<String>,
 }
 
 fn run_materialized_export_plan(
@@ -485,17 +504,27 @@ fn run_materialized_export_plan(
     slot_id: &str,
     emit_progress: ProgressEmitter,
     emit_started: StartedEmitter,
-) -> Result<(), String> {
+) -> Result<ExportReport, String> {
     if materialized.passes.is_empty() {
         let mut args = materialized.full_args;
         validate_export_paths(app, &mut args, nested_dir, Some(artifact_dir), true)?;
-        return spawn_and_wait_with_progress(slot_id, args, fallback_duration, emit_progress, emit_started);
+        spawn_and_wait_with_progress(slot_id, args, fallback_duration, emit_progress, emit_started)?;
+        return Ok(ExportReport::default());
     }
 
+    let mut report = ExportReport::default();
+    let mut loudness_measurement: Option<LoudnormMeasurement> = None;
     for pass in materialized.passes {
         let mut args = pass.full_args;
-        validate_export_paths(app, &mut args, nested_dir, Some(artifact_dir), true)?;
-        spawn_and_wait_with_progress(
+        if requires_loudnorm_measurement(&args) {
+            let measurement = loudness_measurement
+                .as_ref()
+                .ok_or_else(|| "Loudness render pass is missing analysis measurements.".to_string())?;
+            replace_loudnorm_placeholders(&mut args, measurement);
+        }
+        let is_loudness_analysis = pass.kind.as_deref() == Some("loudness-analysis");
+        validate_export_paths(app, &mut args, nested_dir, Some(artifact_dir), !is_loudness_analysis)?;
+        let output = spawn_and_wait_with_progress(
             slot_id,
             args,
             pass.duration,
@@ -503,8 +532,144 @@ fn run_materialized_export_plan(
             Arc::clone(&emit_started),
         )
         .map_err(|error| format!("FFmpeg pass {} failed: {}", pass.name, error))?;
+        if is_loudness_analysis {
+            let measurement = parse_loudnorm_measurement(&output.stderr)
+                .ok_or_else(|| format!("Unable to parse FFmpeg loudnorm analysis output for pass {}.", pass.name))?;
+            report.loudness = Some(LoudnessReport {
+                integrated_loudness: measurement.measured_i,
+            });
+            loudness_measurement = Some(measurement);
+        }
     }
-    Ok(())
+    Ok(report)
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct FfmpegRunOutput {
+    stderr: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct LoudnormMeasurement {
+    measured_i: f64,
+    measured_tp: f64,
+    measured_lra: f64,
+    measured_thresh: f64,
+    offset: f64,
+}
+
+fn requires_loudnorm_measurement(args: &[String]) -> bool {
+    args.iter().any(|arg| {
+        arg.contains("__LOUDNORM_MEASURED_I__")
+            || arg.contains("__LOUDNORM_MEASURED_TP__")
+            || arg.contains("__LOUDNORM_MEASURED_LRA__")
+            || arg.contains("__LOUDNORM_MEASURED_THRESH__")
+            || arg.contains("__LOUDNORM_OFFSET__")
+    })
+}
+
+fn replace_loudnorm_placeholders(args: &mut [String], measurement: &LoudnormMeasurement) {
+    for arg in args {
+        *arg = arg
+            .replace("__LOUDNORM_MEASURED_I__", &format_loudnorm_number(measurement.measured_i))
+            .replace("__LOUDNORM_MEASURED_TP__", &format_loudnorm_number(measurement.measured_tp))
+            .replace("__LOUDNORM_MEASURED_LRA__", &format_loudnorm_number(measurement.measured_lra))
+            .replace(
+                "__LOUDNORM_MEASURED_THRESH__",
+                &format_loudnorm_number(measurement.measured_thresh),
+            )
+            .replace("__LOUDNORM_OFFSET__", &format_loudnorm_number(measurement.offset));
+    }
+}
+
+fn parse_loudnorm_measurement(stderr: &str) -> Option<LoudnormMeasurement> {
+    parse_loudnorm_json_measurement(stderr).or_else(|| parse_loudnorm_key_value_measurement(stderr))
+}
+
+fn parse_loudnorm_json_measurement(stderr: &str) -> Option<LoudnormMeasurement> {
+    let start = stderr.find('{')?;
+    let end = stderr.rfind('}')?;
+    if end <= start {
+        return None;
+    }
+    let value: Value = serde_json::from_str(&stderr[start..=end]).ok()?;
+    Some(LoudnormMeasurement {
+        measured_i: json_number(&value, &["measured_I", "input_i"])?,
+        measured_tp: json_number(&value, &["measured_TP", "input_tp"])?,
+        measured_lra: json_number(&value, &["measured_LRA", "input_lra"])?,
+        measured_thresh: json_number(&value, &["measured_thresh", "input_thresh"])?,
+        offset: json_number(&value, &["offset", "target_offset"])?,
+    })
+}
+
+fn parse_loudnorm_key_value_measurement(stderr: &str) -> Option<LoudnormMeasurement> {
+    Some(LoudnormMeasurement {
+        measured_i: stderr_number(stderr, &["measured_I", "input_i"])?,
+        measured_tp: stderr_number(stderr, &["measured_TP", "input_tp"])?,
+        measured_lra: stderr_number(stderr, &["measured_LRA", "input_lra"])?,
+        measured_thresh: stderr_number(stderr, &["measured_thresh", "input_thresh"])?,
+        offset: stderr_number(stderr, &["offset", "target_offset"])?,
+    })
+}
+
+fn json_number(value: &Value, keys: &[&str]) -> Option<f64> {
+    for key in keys {
+        let Some(item) = value.get(*key) else {
+            continue;
+        };
+        if let Some(number) = item.as_f64() {
+            return Some(number);
+        }
+        if let Some(number) = item.as_str().and_then(parse_loudnorm_number) {
+            return Some(number);
+        }
+    }
+    None
+}
+
+fn stderr_number(stderr: &str, keys: &[&str]) -> Option<f64> {
+    for line in stderr.lines() {
+        let trimmed = line.trim().trim_matches(',').trim_matches('"');
+        for key in keys {
+            if let Some(rest) = trimmed.strip_prefix(key) {
+                let value = rest.trim_start_matches(|ch: char| ch == ':' || ch == '=' || ch.is_whitespace());
+                if let Some(number) = parse_loudnorm_number(value) {
+                    return Some(number);
+                }
+            }
+        }
+    }
+    None
+}
+
+fn parse_loudnorm_number(value: &str) -> Option<f64> {
+    let token = value
+        .trim()
+        .trim_matches(',')
+        .trim_matches('"')
+        .split_whitespace()
+        .next()?
+        .trim_matches(',')
+        .trim_matches('"');
+    let number = token.parse::<f64>().ok()?;
+    number.is_finite().then_some(number)
+}
+
+fn format_loudnorm_number(value: f64) -> String {
+    let mut text = format!("{:.3}", value);
+    while text.contains('.') && text.ends_with('0') {
+        text.pop();
+    }
+    if text.ends_with('.') {
+        text.pop();
+    }
+    text
+}
+
+fn stderr_tail(stderr: &str, count: usize) -> String {
+    let lines = stderr.lines().collect::<Vec<_>>();
+    let start = lines.len().saturating_sub(count);
+    lines[start..].join("\n")
 }
 
 fn spawn_and_wait_with_progress(
@@ -513,7 +678,7 @@ fn spawn_and_wait_with_progress(
     duration: f64,
     emit_progress: ProgressEmitter,
     emit_started: StartedEmitter,
-) -> Result<(), String> {
+) -> Result<FfmpegRunOutput, String> {
     let mut child = Command::new(ffmpeg_binary())
         .args(&args)
         .stderr(Stdio::piped())
@@ -569,28 +734,23 @@ fn spawn_and_wait_with_progress(
     };
 
     let _ = progress_thread.join();
+    let stderr_text = stderr_lines
+        .lock()
+        .map(|lines| lines.join("\n"))
+        .unwrap_or_default();
     match status_result {
         Ok(status) if status.success() => {
             emit_progress(ExportProgressPayload::complete(duration));
-            Ok(())
+            Ok(FfmpegRunOutput {
+                stderr: stderr_text,
+            })
         }
         Ok(status) => {
-            let stderr = stderr_lines
-                .lock()
-                .map(|lines| {
-                    lines
-                        .iter()
-                        .rev()
-                        .take(20)
-                        .cloned()
-                        .collect::<Vec<_>>()
-                        .into_iter()
-                        .rev()
-                        .collect::<Vec<_>>()
-                        .join("\n")
-                })
-                .unwrap_or_default();
-            Err(format!("FFmpeg exited with status {}.\n{}", status, stderr))
+            Err(format!(
+                "FFmpeg exited with status {}.\n{}",
+                status,
+                stderr_tail(&stderr_text, 20)
+            ))
         }
         Err(error) => Err(error),
     }
@@ -668,6 +828,7 @@ fn with_temp_export_artifacts<T>(
                     name: pass.name.clone(),
                     full_args,
                     duration: pass.duration,
+                    kind: pass.kind.clone(),
                 }
             })
             .collect();
@@ -935,6 +1096,57 @@ mod tests {
     }
 
     #[test]
+    fn parses_loudnorm_measurement_from_ffmpeg_stderr_json() {
+        let stderr = r#"
+[Parsed_loudnorm_0 @ 000001]
+{
+  "input_i" : "-18.45",
+  "input_tp" : "-1.20",
+  "input_lra" : "7.10",
+  "input_thresh" : "-29.30",
+  "target_offset" : "0.15"
+}
+"#;
+
+        assert_eq!(
+            parse_loudnorm_measurement(stderr),
+            Some(LoudnormMeasurement {
+                measured_i: -18.45,
+                measured_tp: -1.2,
+                measured_lra: 7.1,
+                measured_thresh: -29.3,
+                offset: 0.15,
+            })
+        );
+    }
+
+    #[test]
+    fn parses_measured_i_key_values_and_injects_loudnorm_placeholders() {
+        let stderr = r#"
+measured_I=-20.75
+measured_TP=-2.10
+measured_LRA=5.25
+measured_thresh=-31.60
+offset=1.35
+"#;
+        let measurement = parse_loudnorm_measurement(stderr).expect("measurement");
+        let mut args = vec![
+            "-filter_complex".to_string(),
+            "loudnorm=I=-14:measured_I=__LOUDNORM_MEASURED_I__:measured_TP=__LOUDNORM_MEASURED_TP__:measured_LRA=__LOUDNORM_MEASURED_LRA__:measured_thresh=__LOUDNORM_MEASURED_THRESH__:offset=__LOUDNORM_OFFSET__".to_string(),
+        ];
+
+        assert!(requires_loudnorm_measurement(&args));
+        replace_loudnorm_placeholders(&mut args, &measurement);
+
+        assert!(!requires_loudnorm_measurement(&args));
+        assert!(args[1].contains("measured_I=-20.75"));
+        assert!(args[1].contains("measured_TP=-2.1"));
+        assert!(args[1].contains("measured_LRA=5.25"));
+        assert!(args[1].contains("measured_thresh=-31.6"));
+        assert!(args[1].contains("offset=1.35"));
+    }
+
+    #[test]
     fn parses_preferred_hardware_encoders_by_platform() {
         let encoders = r#"
  Encoders:
@@ -1159,6 +1371,7 @@ mod tests {
                         "__GIF_PALETTE_open_factory__".to_string(),
                     ],
                     duration: 1.0,
+                    kind: None,
                 },
                 FfmpegExportPassDto {
                     name: "gif-paletteuse".to_string(),
@@ -1168,6 +1381,7 @@ mod tests {
                         "D:/Exports/out.gif".to_string(),
                     ],
                     duration: 1.0,
+                    kind: None,
                 },
             ],
             nested_plans: vec![],

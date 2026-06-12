@@ -4,6 +4,8 @@ import type { Effect } from '../effects';
 import type { TrackCompressor, TrackEQ } from '../model';
 import type { TargetAspectRatio } from '../reframe';
 
+export type ExportLoudnessNormalization = 'off' | 'youtube' | 'ebu-r128';
+
 export interface ExportSettings {
   width: number;
   height: number;
@@ -22,6 +24,7 @@ export interface ExportSettings {
   reframeOffsetY?: number;
   subtitleMode?: ExportSubtitleMode;
   hardwareEncoding?: boolean;
+  loudnessNormalization?: ExportLoudnessNormalization;
 }
 
 export interface ExportTransform {
@@ -236,10 +239,13 @@ export interface FfmpegExportPlan {
   duration: number;
 }
 
+export type FfmpegExportPassKind = 'loudness-analysis' | 'render';
+
 export interface FfmpegExportPass {
   name: string;
   fullArgs: string[];
   duration: number;
+  kind?: FfmpegExportPassKind;
 }
 
 export interface NestedFfmpegExportPlan {
@@ -260,4 +266,12 @@ export interface FfmpegCapabilities {
   hardwareEncoderAvailable: boolean;
   hardwareEncoder: string | null;
   drawtextWarning: string | null;
+}
+
+export interface ExportLoudnessReport {
+  integratedLoudness: number;
+}
+
+export interface ExportReport {
+  loudness?: ExportLoudnessReport;
 }
