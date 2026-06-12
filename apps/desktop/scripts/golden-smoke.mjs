@@ -186,6 +186,15 @@ const fixtures = [
     validate: validateSpeedRampFixture
   },
   {
+    name: 'custom-shader',
+    description: 'test pattern video exported through a custom pixelate shader sequence',
+    outputWidth: 320,
+    outputHeight: 180,
+    expectedDuration: 1.5,
+    create: createCustomShaderFixture,
+    validate: validateCustomShaderFixture
+  },
+  {
     name: 'mute-track',
     description: 'muted audio track is excluded from export and replaced by silent audio',
     outputWidth: 1280,
@@ -280,7 +289,7 @@ async function runGoldenFixture(fixture) {
     settings: fixture.exportSettings
   });
   const plan = buildFfmpegExportPlan(exportProject, FFMPEG_CAPABILITIES);
-  const materializedPlan = materializeTextArtifacts(plan, join(fixtureDir, 'text-artifacts'));
+  const materializedPlan = await materializeTextArtifacts(plan, join(fixtureDir, 'text-artifacts'));
 
   await runMaterializedPlan(materializedPlan);
   if (fixture.updateReadmePreview) {
@@ -1751,6 +1760,102 @@ async function validateSpeedRampFixture(context) {
   };
 }
 
+async function createCustomShaderFixture(context) {
+  const sourcePath = join(context.fixtureDir, 'custom-shader-source.mp4');
+  await createTestPatternVideoFixture(sourcePath, {
+    width: context.outputWidth,
+    height: context.outputHeight,
+    duration: context.fixture.expectedDuration
+  });
+  return buildProject({
+    id: 'golden-custom-shader',
+    name: 'Golden Custom Shader',
+    width: context.outputWidth,
+    height: context.outputHeight,
+    media: [
+      videoAsset({
+        id: 'asset-custom-shader-source',
+        name: 'custom-shader-source.mp4',
+        path: sourcePath,
+        duration: context.fixture.expectedDuration,
+        width: context.outputWidth,
+        height: context.outputHeight,
+        hasAudio: false,
+        stat: statSync(sourcePath)
+      })
+    ],
+    tracks: [
+      {
+        id: 'track-custom-shader-video',
+        type: 'video',
+        name: 'Custom Shader Video',
+        clips: [
+          videoClip({
+            id: 'clip-custom-shader',
+            name: 'Pixelate Shader',
+            mediaId: 'asset-custom-shader-source',
+            trackId: 'track-custom-shader-video',
+            duration: context.fixture.expectedDuration,
+            effects: [
+              {
+                id: 'effect-custom-shader-pixelate',
+                type: 'custom-shader',
+                enabled: true,
+                params: {
+                  preset: 'pixelate',
+                  source: `vec2 blockSize = vec2(18.0) / u_resolution;
+vec2 uv = floor(v_texCoord / blockSize) * blockSize + blockSize * 0.5;
+gl_FragColor = texture2D(u_texture, uv);`
+                }
+              }
+            ]
+          })
+        ]
+      },
+      emptyAudioTrack(),
+      emptyTextTrack()
+    ]
+  });
+}
+
+async function validateCustomShaderFixture(context) {
+  const frame = await readFrame(context.outputPath, {
+    at: 0.35,
+    width: context.outputWidth,
+    height: context.outputHeight
+  });
+  const repeatedBlocks = countPixelatedBlocks(frame, context.outputWidth, context.outputHeight, 18, 18);
+  const artifact = context.plan.textArtifacts.find((item) => item.pathMode === 'shader-sequence');
+  return {
+    checks: [
+      {
+        name: 'custom-shader-artifact',
+        passed: Boolean(artifact) && artifact.fileName === 'custom-shader-clip_custom_shader.json',
+        actual: context.plan.textArtifacts.map((item) => ({ fileName: item.fileName, pathMode: item.pathMode })),
+        expected: 'shader-sequence artifact'
+      },
+      {
+        name: 'custom-shader-overlay',
+        passed: context.plan.filterComplex.includes('overlay='),
+        actual: context.plan.filterComplex.includes('overlay='),
+        expected: true
+      },
+      {
+        name: 'custom-shader-warning',
+        passed: context.plan.warnings.some((warning) => warning.includes('will render frame-by-frame')),
+        actual: context.plan.warnings,
+        expected: 'frame-by-frame warning'
+      },
+      {
+        name: 'custom-shader-blocky-frame',
+        passed: repeatedBlocks >= 70,
+        actual: repeatedBlocks,
+        expected: '>= 70 repeated pixel blocks'
+      }
+    ]
+  };
+}
+
 async function createMuteTrackFixture(context) {
   const videoPath = join(context.fixtureDir, 'mute-video-source.mp4');
   const audioPath = join(context.fixtureDir, 'muted-audio-source.wav');
@@ -2287,6 +2392,24 @@ async function createColorVideoFixture(targetPath, options) {
   await runChecked('ffmpeg', args);
 }
 
+async function createTestPatternVideoFixture(targetPath, options) {
+  await runChecked('ffmpeg', [
+    '-hide_banner',
+    '-y',
+    '-f',
+    'lavfi',
+    '-i',
+    `testsrc2=s=${options.width}x${options.height}:r=30:d=${formatSeconds(options.duration)}`,
+    '-c:v',
+    'libx264',
+    '-pix_fmt',
+    'yuv420p',
+    '-movflags',
+    '+faststart',
+    targetPath
+  ]);
+}
+
 async function createHardCutVideoFixture(targetPath, options) {
   await runChecked('ffmpeg', [
     '-hide_banner',
@@ -2688,7 +2811,7 @@ function emptyTextTrack() {
   return { id: 'track-text', type: 'text', name: 'Text', clips: [] };
 }
 
-function materializeTextArtifacts(plan, textDir) {
+async function materializeTextArtifacts(plan, textDir) {
   if (plan.textArtifacts.length === 0) {
     return {
       fullArgs: plan.fullArgs,
@@ -2701,8 +2824,13 @@ function materializeTextArtifacts(plan, textDir) {
   for (const artifact of plan.textArtifacts) {
     const safeName = artifact.fileName.replace(/[^a-zA-Z0-9_.-]/g, '_');
     const artifactPath = join(textDir, safeName);
-    writeFileSync(artifactPath, artifact.text);
-    const replacement = artifact.pathMode === 'argument' ? normalizePath(artifactPath) : escapeDrawtextPath(normalizePath(artifactPath));
+    let replacement;
+    if (artifact.pathMode === 'shader-sequence') {
+      replacement = await materializeCustomShaderSequenceArtifact(artifact, textDir, safeName);
+    } else {
+      writeFileSync(artifactPath, artifact.text);
+      replacement = artifact.pathMode === 'argument' ? normalizePath(artifactPath) : escapeDrawtextPath(normalizePath(artifactPath));
+    }
     args = args.map((arg) => arg.split(artifact.placeholder).join(replacement));
     for (const pass of passes) {
       pass.fullArgs = pass.fullArgs.map((arg) => arg.split(artifact.placeholder).join(replacement));
@@ -2712,6 +2840,70 @@ function materializeTextArtifacts(plan, textDir) {
     fullArgs: args,
     passes
   };
+}
+
+async function materializeCustomShaderSequenceArtifact(artifact, textDir, safeName) {
+  const manifest = JSON.parse(artifact.text);
+  if (manifest.kind !== 'custom-shader-sequence') {
+    throw new Error(`Unsupported custom shader artifact kind: ${manifest.kind}`);
+  }
+  const sequenceDir = join(textDir, safeName.replace(/\.json$/i, ''));
+  mkdirSync(sequenceDir, { recursive: true });
+  const framePattern = join(sequenceDir, 'frame%04d.png');
+  const args = ['-hide_banner', '-y'];
+  if (manifest.clipType === 'image') {
+    args.push('-loop', '1', '-t', formatSeconds(manifest.duration));
+  } else {
+    args.push('-ss', formatSeconds(manifest.trimStart), '-t', formatSeconds(manifest.sourceDuration));
+  }
+  args.push(
+    '-i',
+    manifest.mediaPath,
+    '-vf',
+    buildCustomShaderBakeFilter(manifest),
+    '-frames:v',
+    String(Math.max(1, Math.round(manifest.frameCount ?? 1))),
+    '-start_number',
+    '1',
+    '-f',
+    'image2',
+    framePattern
+  );
+  await runChecked('ffmpeg', args);
+  return normalizePath(framePattern);
+}
+
+function buildCustomShaderBakeFilter(manifest) {
+  const width = Math.max(1, Math.round(manifest.width));
+  const height = Math.max(1, Math.round(manifest.height));
+  const filters = [
+    `scale=${width}:${height}:force_original_aspect_ratio=decrease`,
+    `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:color=black`,
+    'setsar=1'
+  ];
+  if (manifest.clipType !== 'image' && Math.abs((manifest.speed ?? 1) - 1) > 0.001) {
+    filters.push(`setpts=(PTS-STARTPTS)/${formatSeconds(manifest.speed)}`);
+  }
+  filters.push(customShaderEquivalentFilter(manifest));
+  filters.push(`fps=${formatSeconds(manifest.fps ?? 30)}`, 'format=rgba');
+  return filters.join(',');
+}
+
+function customShaderEquivalentFilter(manifest) {
+  if (manifest.preset === 'pixelate') {
+    const width = Math.max(1, Math.round(manifest.width));
+    const height = Math.max(1, Math.round(manifest.height));
+    const lowWidth = Math.max(1, Math.floor(width / 18));
+    const lowHeight = Math.max(1, Math.floor(height / 18));
+    return `scale=${lowWidth}:${lowHeight}:flags=neighbor,scale=${width}:${height}:flags=neighbor`;
+  }
+  if (manifest.preset === 'posterize') {
+    return "lutrgb=r='floor(val/52)*52':g='floor(val/52)*52':b='floor(val/52)*52'";
+  }
+  if (manifest.preset === 'old-film') {
+    return 'colorchannelmixer=.393:.769:.189:0:.349:.686:.168:0:.272:.534:.131,noise=alls=8:allf=t';
+  }
+  return 'null';
 }
 
 async function runMaterializedPlan(plan) {
@@ -2750,6 +2942,25 @@ function countNearPixels(frame, expectedRgb, threshold) {
     }
   }
   return count;
+}
+
+function countPixelatedBlocks(frame, frameWidth, frameHeight, blockSize, tolerance) {
+  let count = 0;
+  for (let y = blockSize; y + blockSize < frameHeight; y += blockSize) {
+    for (let x = blockSize; x + blockSize < frameWidth; x += blockSize) {
+      const first = readFrameRgb(frame, frameWidth, x + 2, y + 2);
+      const second = readFrameRgb(frame, frameWidth, x + blockSize - 3, y + blockSize - 3);
+      if (rgbDelta(first, second) <= tolerance) {
+        count += 1;
+      }
+    }
+  }
+  return count;
+}
+
+function readFrameRgb(frame, frameWidth, x, y) {
+  const offset = (y * frameWidth + x) * 4;
+  return [frame[offset], frame[offset + 1], frame[offset + 2]];
 }
 
 function averageRegion(frame, frameWidth, frameHeight, region) {

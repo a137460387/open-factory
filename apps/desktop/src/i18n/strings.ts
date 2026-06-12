@@ -679,6 +679,16 @@ const zh = {
       pickFailedMessage: '无法读取预览像素。',
       sampleColor: (index: number) => `采样色 ${index}`
     },
+    customShader: {
+      compileFailed: 'Shader 编译失败',
+      webglUnavailable: '当前环境无法创建 WebGL 上下文。',
+      custom: '自定义',
+      examples: {
+        pixelate: '像素化',
+        posterize: '色调分离',
+        'old-film': '老电影噪点'
+      }
+    },
     motionTrack: {
       analyze: '分析',
       cancel: '取消',
@@ -766,6 +776,8 @@ const zh = {
       radius: '半径',
       size: '大小',
       strength: '强度',
+      shaderExample: 'Shader 示例',
+      shaderCode: 'Fragment Shader',
       style: '样式',
       height: '高度',
       position: '位置',
@@ -847,7 +859,8 @@ const zh = {
       vignette: '暗角',
       'film-grain': '胶片颗粒',
       'chromatic-aberration': '色散',
-      'audio-spectrum': '音频频谱'
+      'audio-spectrum': '音频频谱',
+      'custom-shader': '自定义 Shader'
     },
     audioSpectrumStyles: {
       bars: '柱状',
@@ -1018,6 +1031,7 @@ const zh = {
     transitionSkippedMissingInput: (transitionId: string) => `过渡 ${transitionId} 已跳过：其中一个片段没有媒体输入。`,
     clipSkippedMissingMedia: (clipId: string) => `片段 ${clipId} 没有媒体路径，已跳过。`,
     speedRampSetptsFallback: (clipId: string) => `片段 ${clipId} 的变速曲线过长，已回退为平均速度导出。`,
+    customShaderSlowWarning: (clipId: string) => `片段 ${clipId} 的自定义 Shader 将逐帧渲染，导出可能较慢。`,
     presetCopySuffix: '副本',
     status: {
       pending: '等待中',
@@ -1874,6 +1888,16 @@ const enOverrides = {
       pickFailedMessage: 'Unable to read the preview pixel.',
       sampleColor: (index: number) => `Sample Color ${index}`
     },
+    customShader: {
+      compileFailed: 'Shader compile failed',
+      webglUnavailable: 'Unable to create a WebGL context in this environment.',
+      custom: 'Custom',
+      examples: {
+        pixelate: 'Pixelate',
+        posterize: 'Posterize',
+        'old-film': 'Old Film Noise'
+      }
+    },
     motionTrack: {
       analyze: 'Analyze',
       cancel: 'Cancel',
@@ -1917,6 +1941,8 @@ const enOverrides = {
       radius: 'Radius',
       size: 'Size',
       strength: 'Strength',
+      shaderExample: 'Shader Example',
+      shaderCode: 'Fragment Shader',
       style: 'Style',
       height: 'Height',
       position: 'Position',
@@ -1960,7 +1986,8 @@ const enOverrides = {
       vignette: 'Vignette',
       'film-grain': 'Film Grain',
       'chromatic-aberration': 'Chromatic Aberration',
-      'audio-spectrum': 'Audio Spectrum'
+      'audio-spectrum': 'Audio Spectrum',
+      'custom-shader': 'Custom Shader'
     },
     audioSpectrumStyles: {
       bars: 'Bars',

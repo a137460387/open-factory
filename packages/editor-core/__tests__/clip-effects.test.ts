@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
+  buildCustomShaderFragmentSource,
+  CUSTOM_SHADER_UNIFORM_NAMES,
   DEFAULT_COLOR_CORRECTION,
   calculateSpeedCurveDisplayDuration,
   calculateSpeedCurveSourceDuration,
@@ -7,6 +9,7 @@ import {
   getClipDisplayDuration,
   getClipSourceVisibleDuration,
   isDefaultColorCorrection,
+  normalizeCustomShaderParams,
   normalizeColorCorrection,
   normalizeTransitionDuration,
   normalizeTransitionType,
@@ -88,6 +91,35 @@ describe('clip speed and color correction helpers', () => {
 
   it('updates speed while preserving source duration', () => {
     expect(setClipSpeed(makeVideoClip({ duration: 2, speed: 1 }), 4)).toMatchObject({ speed: 4, duration: 0.5 });
+  });
+
+  it('normalizes custom shader params with the built-in pixelate example', () => {
+    const params = normalizeCustomShaderParams({ source: '', preset: 'unknown' });
+
+    expect(params.preset).toBe('custom');
+    expect(params.source).toContain('texture2D(u_texture');
+  });
+
+  it('injects built-in custom shader uniforms for shader bodies', () => {
+    const fragment = buildCustomShaderFragmentSource('gl_FragColor = texture2D(u_texture, v_texCoord);');
+
+    for (const uniform of CUSTOM_SHADER_UNIFORM_NAMES) {
+      expect(fragment).toContain(`uniform ${uniform === 'u_texture' ? 'sampler2D' : uniform === 'u_resolution' ? 'vec2' : 'float'} ${uniform};`);
+    }
+    expect(fragment).toContain('varying vec2 v_texCoord;');
+    expect(fragment).toContain('void main()');
+  });
+
+  it('preserves a full custom shader main function and avoids duplicate uniform declarations', () => {
+    const fragment = buildCustomShaderFragmentSource(`uniform sampler2D u_texture;
+void main() {
+  gl_FragColor = texture2D(u_texture, vec2(0.5));
+}`);
+
+    expect(fragment.match(/uniform sampler2D u_texture;/g)).toHaveLength(1);
+    expect(fragment).toContain('uniform vec2 u_resolution;');
+    expect(fragment).toContain('uniform float u_time;');
+    expect(fragment).toContain('uniform float u_progress;');
   });
 
   it('integrates speed keyframes with the 100-step speed curve sampler', () => {

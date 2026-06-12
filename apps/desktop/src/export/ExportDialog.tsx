@@ -1240,6 +1240,10 @@ function formatExportWarning(warning: string): string {
   if (speedRampFallback) {
     return zhCN.exportDialog.speedRampSetptsFallback(speedRampFallback[1]);
   }
+  const customShaderSlowWarning = warning.match(/^Custom shader effect for clip (.+) will render frame-by-frame and may be slow\.$/);
+  if (customShaderSlowWarning) {
+    return zhCN.exportDialog.customShaderSlowWarning(customShaderSlowWarning[1]);
+  }
   if (warning === 'Current FFmpeg does not support drawtext/libfreetype. Install an FFmpeg build with libfreetype to export text overlays.') {
     return zhCN.exportDialog.ffmpegDrawtextUnavailable;
   }

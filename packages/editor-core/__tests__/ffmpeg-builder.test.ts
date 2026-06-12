@@ -9,6 +9,7 @@ import {
   createNestedSequenceClip,
   createSequence,
   createTrack,
+  DEFAULT_CUSTOM_SHADER_SOURCE,
   type Clip
 } from '../src';
 import { makeAdjustmentClip, makeProject, makeSubtitleClip, makeTextClip, makeVideoClip } from './test-utils';
@@ -1125,6 +1126,50 @@ describe('multitrack ffmpeg builder', () => {
     const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
 
     expect(plan.filterComplex).toContain('vidstabtransform=smoothing=40:zoom=1.5:input=C\\\\:/Stabilization/clip.trf');
+  });
+
+  it('exports custom shader clips through a temporary PNG sequence artifact', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-shader',
+        duration: 1,
+        effects: [
+          {
+            id: 'effect-shader',
+            type: 'custom-shader',
+            enabled: true,
+            params: { source: DEFAULT_CUSTOM_SHADER_SOURCE, preset: 'pixelate' }
+          }
+        ]
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+    const artifact = plan.textArtifacts.find((item) => item.pathMode === 'shader-sequence');
+    const manifest = JSON.parse(artifact?.text ?? '{}') as { fragmentSource?: string; mediaPath?: string; frameCount?: number };
+
+    expect(plan.inputs[0]).toMatchObject({
+      path: '__CUSTOM_SHADER_SEQUENCE_clip_shader__',
+      args: ['-f', 'image2', '-framerate', '30', '-start_number', '1']
+    });
+    expect(plan.inputs[1]).toMatchObject({ path: 'C:/Videos/sample.mp4', args: ['-ss', '0', '-t', '1'] });
+    expect(plan.filterComplex).toContain('overlay=');
+    expect(plan.filterComplex).toContain('[0:v]trim=start=0:duration=1,setpts=PTS-STARTPTS+0/TB');
+    expect(plan.filterComplex).toContain('[1:a:0]atrim=start=0:duration=1');
+    expect(plan.warnings).toContain('Custom shader effect for clip clip-shader will render frame-by-frame and may be slow.');
+    expect(artifact).toMatchObject({
+      clipId: 'clip-shader:custom-shader',
+      fileName: 'custom-shader-clip_shader.json',
+      placeholder: '__CUSTOM_SHADER_SEQUENCE_clip_shader__',
+      pathMode: 'shader-sequence'
+    });
+    expect(manifest.mediaPath).toBe('C:/Videos/sample.mp4');
+    expect(manifest.frameCount).toBe(30);
+    expect(manifest.fragmentSource).toContain('uniform sampler2D u_texture;');
+    expect(manifest.fragmentSource).toContain('uniform vec2 u_resolution;');
+    expect(manifest.fragmentSource).toContain('uniform float u_time;');
+    expect(manifest.fragmentSource).toContain('uniform float u_progress;');
   });
 
   it('inserts minterpolate for clips with frame interpolation enabled', () => {

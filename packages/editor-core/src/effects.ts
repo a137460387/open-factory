@@ -1,10 +1,11 @@
 import { clamp, round } from './time';
 
-export type EffectType = 'blur' | 'sharpen' | 'vignette' | 'film-grain' | 'chromatic-aberration' | 'audio-spectrum';
+export type EffectType = 'blur' | 'sharpen' | 'vignette' | 'film-grain' | 'chromatic-aberration' | 'audio-spectrum' | 'custom-shader';
 export type EffectParamValue = number | string;
 export type EffectParams = Record<string, EffectParamValue>;
 export type AudioSpectrumStyle = 'bars' | 'waveform' | 'circle';
 export type AudioSpectrumPosition = 'top' | 'bottom';
+export type CustomShaderExampleId = 'pixelate' | 'posterize' | 'old-film';
 
 export interface AudioSpectrumParams extends EffectParams {
   style: AudioSpectrumStyle;
@@ -14,6 +15,17 @@ export interface AudioSpectrumParams extends EffectParams {
   sensitivity: number;
 }
 
+export interface CustomShaderParams extends EffectParams {
+  source: string;
+  preset: string;
+}
+
+export interface CustomShaderExample {
+  id: CustomShaderExampleId;
+  name: string;
+  source: string;
+}
+
 export interface Effect {
   id: string;
   type: EffectType;
@@ -21,7 +33,43 @@ export interface Effect {
   params: EffectParams;
 }
 
-export const EFFECT_TYPES: EffectType[] = ['blur', 'sharpen', 'vignette', 'film-grain', 'chromatic-aberration', 'audio-spectrum'];
+export const CUSTOM_SHADER_UNIFORM_NAMES = ['u_texture', 'u_resolution', 'u_time', 'u_progress'] as const;
+export const CUSTOM_SHADER_VARYING_NAME = 'v_texCoord';
+
+export const CUSTOM_SHADER_EXAMPLES: readonly CustomShaderExample[] = [
+  {
+    id: 'pixelate',
+    name: 'Pixelate',
+    source: `vec2 blockSize = vec2(18.0) / u_resolution;
+vec2 uv = floor(v_texCoord / blockSize) * blockSize + blockSize * 0.5;
+gl_FragColor = texture2D(u_texture, uv);`
+  },
+  {
+    id: 'posterize',
+    name: 'Posterize',
+    source: `vec4 color = texture2D(u_texture, v_texCoord);
+vec3 levels = floor(color.rgb * 5.0) / 5.0;
+gl_FragColor = vec4(levels, color.a);`
+  },
+  {
+    id: 'old-film',
+    name: 'Old Film Noise',
+    source: `vec4 color = texture2D(u_texture, v_texCoord);
+float grain = fract(sin(dot(v_texCoord * u_resolution + u_time, vec2(12.9898, 78.233))) * 43758.5453);
+vec3 sepia = vec3(
+  dot(color.rgb, vec3(0.393, 0.769, 0.189)),
+  dot(color.rgb, vec3(0.349, 0.686, 0.168)),
+  dot(color.rgb, vec3(0.272, 0.534, 0.131))
+);
+float vignette = smoothstep(0.85, 0.25, distance(v_texCoord, vec2(0.5)));
+gl_FragColor = vec4(clamp(sepia * vignette + (grain - 0.5) * 0.08, 0.0, 1.0), color.a);`
+  }
+];
+
+export const DEFAULT_CUSTOM_SHADER_SOURCE = CUSTOM_SHADER_EXAMPLES[0].source;
+export const DEFAULT_CUSTOM_SHADER_PRESET: CustomShaderExampleId = CUSTOM_SHADER_EXAMPLES[0].id;
+
+export const EFFECT_TYPES: EffectType[] = ['blur', 'sharpen', 'vignette', 'film-grain', 'chromatic-aberration', 'audio-spectrum', 'custom-shader'];
 export const AUDIO_SPECTRUM_STYLES: AudioSpectrumStyle[] = ['bars', 'waveform', 'circle'];
 export const AUDIO_SPECTRUM_POSITIONS: AudioSpectrumPosition[] = ['bottom', 'top'];
 
@@ -31,7 +79,8 @@ export const DEFAULT_EFFECT_PARAMS: Record<EffectType, EffectParams> = {
   vignette: { intensity: 0.35, radius: 0.6 },
   'film-grain': { strength: 0.2, size: 2 },
   'chromatic-aberration': { strength: 4 },
-  'audio-spectrum': { style: 'bars', color: '#22d3ee', height: 25, position: 'bottom', sensitivity: 1 }
+  'audio-spectrum': { style: 'bars', color: '#22d3ee', height: 25, position: 'bottom', sensitivity: 1 },
+  'custom-shader': { source: DEFAULT_CUSTOM_SHADER_SOURCE, preset: DEFAULT_CUSTOM_SHADER_PRESET }
 };
 
 export function isEffectType(type: string | undefined): type is EffectType {
@@ -85,7 +134,10 @@ export function normalizeEffectParams(type: EffectType, params: EffectParams | u
   if (type === 'chromatic-aberration') {
     return { strength: normalizeParam(params?.strength, numberParam(defaults.strength, 4), 0, 20) };
   }
-  return normalizeAudioSpectrumParams(params);
+  if (type === 'audio-spectrum') {
+    return normalizeAudioSpectrumParams(params);
+  }
+  return normalizeCustomShaderParams(params);
 }
 
 export function normalizeAudioSpectrumParams(params: EffectParams | undefined): AudioSpectrumParams {
@@ -105,6 +157,52 @@ export function getEffectNumberParam(params: EffectParams | undefined, key: stri
 
 export function getEffectStringParam(params: EffectParams | undefined, key: string, fallback: string): string {
   return stringParam(params?.[key], fallback);
+}
+
+export function normalizeCustomShaderParams(params: EffectParams | undefined): CustomShaderParams {
+  return {
+    source: normalizeShaderSource(params?.source),
+    preset: normalizeShaderPreset(params?.preset)
+  };
+}
+
+export function getCustomShaderSource(effect: Pick<Effect, 'type' | 'params'>): string | undefined {
+  if (effect.type !== 'custom-shader') {
+    return undefined;
+  }
+  return normalizeCustomShaderParams(effect.params).source;
+}
+
+export function getEnabledCustomShaderEffect(effects: Effect[] | undefined): Effect | undefined {
+  return (effects ?? []).find((effect) => effect.enabled && effect.type === 'custom-shader' && normalizeCustomShaderParams(effect.params).source.trim().length > 0);
+}
+
+export function buildCustomShaderFragmentSource(source: string): string {
+  const body = normalizeShaderSource(source);
+  const declarations = [
+    'precision mediump float;',
+    'uniform sampler2D u_texture;',
+    'uniform vec2 u_resolution;',
+    'uniform float u_time;',
+    'uniform float u_progress;',
+    'varying vec2 v_texCoord;'
+  ];
+  const withDeclarations = declarations.reduce((current, declaration) => {
+    const key = declaration.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\ /g, '\\s+');
+    return new RegExp(key).test(current) ? current : `${declaration}\n${current}`;
+  }, body);
+  if (/void\s+main\s*\(\s*\)/.test(withDeclarations)) {
+    return withDeclarations;
+  }
+  const shaderBody = declarations.reduce((current, declaration) => {
+    const key = declaration.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\ /g, '\\s+');
+    return current.replace(new RegExp(`^\\s*${key}\\s*\\n?`, 'm'), '');
+  }, body);
+  return `${declarations.join('\n')}\nvoid main() {\n${shaderBody.trim()}\n}`;
+}
+
+export function getCustomShaderExample(id: string | undefined): CustomShaderExample {
+  return CUSTOM_SHADER_EXAMPLES.find((example) => example.id === id) ?? CUSTOM_SHADER_EXAMPLES[0];
 }
 
 function normalizeParam(value: EffectParamValue | undefined, fallback: number, min: number, max: number): number {
@@ -139,4 +237,17 @@ function normalizeHexColor(value: EffectParamValue | undefined, fallback: string
   const candidate = stringParam(value, fallback);
   const match = /^#?([0-9a-fA-F]{6})$/.exec(candidate);
   return match ? `#${match[1].toLowerCase()}` : fallback;
+}
+
+function normalizeShaderSource(value: EffectParamValue | undefined): string {
+  const source = typeof value === 'string' ? value.trim() : '';
+  return source || DEFAULT_CUSTOM_SHADER_SOURCE;
+}
+
+function normalizeShaderPreset(value: EffectParamValue | undefined): string {
+  if (typeof value !== 'string' || !value.trim()) {
+    return DEFAULT_CUSTOM_SHADER_PRESET;
+  }
+  const preset = value.trim();
+  return CUSTOM_SHADER_EXAMPLES.some((example) => example.id === preset) || preset === 'custom' ? preset : 'custom';
 }

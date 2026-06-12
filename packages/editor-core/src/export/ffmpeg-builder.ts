@@ -36,7 +36,16 @@ import {
   type ThreeWayColor
 } from '../color-grading';
 import { getLogToRec709Lut, isLogInputColorSpace, serializeLogToRec709Cube } from '../color-log-luts';
-import { cloneEffects, getEffectNumberParam, normalizeAudioSpectrumParams, type AudioSpectrumParams, type Effect } from '../effects';
+import {
+  buildCustomShaderFragmentSource,
+  cloneEffects,
+  getEffectNumberParam,
+  getEnabledCustomShaderEffect,
+  normalizeAudioSpectrumParams,
+  normalizeCustomShaderParams,
+  type AudioSpectrumParams,
+  type Effect
+} from '../effects';
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
 import { triangulatePathMask } from '../masks/path-mask';
 import { flattenMulticamProjectForExport } from '../multicam';
@@ -102,6 +111,7 @@ const LOUDNORM_MEASURED_LRA_PLACEHOLDER = '__LOUDNORM_MEASURED_LRA__';
 const LOUDNORM_MEASURED_THRESH_PLACEHOLDER = '__LOUDNORM_MEASURED_THRESH__';
 const LOUDNORM_OFFSET_PLACEHOLDER = '__LOUDNORM_OFFSET__';
 const WATERMARK_MARGIN_PX = 24;
+const CUSTOM_SHADER_SEQUENCE_KIND = 'custom-shader-sequence';
 
 interface LoudnessNormalizationPreset {
   mode: Exclude<ExportLoudnessNormalization, 'off'>;
@@ -284,7 +294,9 @@ export function buildFfmpegExportPlan(
   const watermark = !audioOnly && !videoFramesOnly ? normalizeExportWatermark(settings.watermark) : null;
   const warnings: string[] = [];
   const inputs: FfmpegInput[] = [];
-  const inputByClipId = new Map<string, number>();
+  const visualInputByClipId = new Map<string, number>();
+  const audioInputByClipId = new Map<string, number>();
+  const customShaderSequenceClips = new Map<string, ExportClip>();
   const filters: string[] = [];
   const textArtifacts: TextArtifact[] = [];
   const allClips = project.timeline.tracks.flatMap((track) => track.clips).filter((clip) => clip.duration > 0);
@@ -305,17 +317,34 @@ export function buildFfmpegExportPlan(
     if (!clip.mediaPath || clip.type === 'text' || clip.type === 'subtitle') {
       continue;
     }
-    const sequenceArtifact = clip.imageSequence ? buildImageSequenceArtifact(clip) : undefined;
+    const customShaderArtifact = !audioOnly && !videoFramesOnly ? buildCustomShaderSequenceArtifact(clip, settings) : undefined;
+    if (customShaderArtifact) {
+      textArtifacts.push(customShaderArtifact);
+      customShaderSequenceClips.set(clip.id, buildCustomShaderSequenceClip(clip));
+      warnings.push(`Custom shader effect for clip ${clip.id} will render frame-by-frame and may be slow.`);
+    }
+    const sequenceArtifact = !customShaderArtifact && clip.imageSequence ? buildImageSequenceArtifact(clip) : undefined;
     if (sequenceArtifact) {
       textArtifacts.push(sequenceArtifact);
     }
     const input: FfmpegInput = {
       index: inputs.length,
-      path: sequenceArtifact?.placeholder ?? normalizeFfmpegPath(clip.mediaPath),
-      args: buildInputArgs(clip)
+      path: customShaderArtifact?.placeholder ?? sequenceArtifact?.placeholder ?? normalizeFfmpegPath(clip.mediaPath),
+      args: customShaderArtifact ? buildCustomShaderSequenceInputArgs(settings) : buildInputArgs(clip)
     };
     inputs.push(input);
-    inputByClipId.set(clip.id, input.index);
+    visualInputByClipId.set(clip.id, input.index);
+    if (!customShaderArtifact || !clip.hasEmbeddedAudio) {
+      audioInputByClipId.set(clip.id, input.index);
+      continue;
+    }
+    const audioInput: FfmpegInput = {
+      index: inputs.length,
+      path: normalizeFfmpegPath(clip.mediaPath),
+      args: buildInputArgs(clip)
+    };
+    inputs.push(audioInput);
+    audioInputByClipId.set(clip.id, audioInput.index);
   }
 
   if (allClips.length === 0) {
@@ -343,7 +372,8 @@ export function buildFfmpegExportPlan(
       orderedPlaybackClips,
       playbackStartByClipId,
       renderableTrackIndexes,
-      inputByClipId,
+      visualInputByClipId,
+      customShaderSequenceClips,
       settings,
       filters,
       warnings,
@@ -412,7 +442,7 @@ export function buildFfmpegExportPlan(
   if (!videoFramesOnly) {
     const masterVolume = normalizeMasterVolume(project.masterVolume);
     const audioFilters: string[] = [];
-    const audioLabels = buildAudioFilters(orderedPlaybackClips, inputByClipId, settings, audioFilters, capabilities, warnings);
+    const audioLabels = buildAudioFilters(orderedPlaybackClips, audioInputByClipId, settings, audioFilters, capabilities, warnings);
     const loudnessPreset = audioLabels.length > 0 ? getLoudnessNormalizationPreset(settings.loudnessNormalization) : undefined;
     const spectrumSplitLabels = audioSpectrumEffects.map((_, index) => `spectrum_audio_${index}`);
     const needsSpectrumSplit = spectrumSplitLabels.length > 0;
@@ -840,6 +870,7 @@ function buildVisualItems(
   playbackStartByClipId: Map<string, number>,
   renderableTrackIndexes: Set<number>,
   inputByClipId: Map<string, number>,
+  customShaderSequenceClips: Map<string, ExportClip>,
   settings: ExportSettings,
   filters: string[],
   warnings: string[],
@@ -875,8 +906,8 @@ function buildVisualItems(
     const label = `xfade${safeLabel(transition.id)}`;
     const start = playbackStartByClipId.get(pair.fromClip.id) ?? pair.fromClip.start;
     const pairDuration = round(pair.fromClip.duration + pair.toClip.duration - duration);
-    filters.push(buildTransitionClipFilter(fromInput, pair.fromClip, `${label}_from`, settings, textArtifacts, warnings, capabilities));
-    filters.push(buildTransitionClipFilter(toInput, pair.toClip, `${label}_to`, settings, textArtifacts, warnings, capabilities));
+    filters.push(buildTransitionClipFilter(fromInput, customShaderSequenceClips.get(pair.fromClip.id) ?? pair.fromClip, `${label}_from`, settings, textArtifacts, warnings, capabilities));
+    filters.push(buildTransitionClipFilter(toInput, customShaderSequenceClips.get(pair.toClip.id) ?? pair.toClip, `${label}_to`, settings, textArtifacts, warnings, capabilities));
     filters.push(
       `[${label}_from][${label}_to]xfade=transition=${mapTransitionType(transition.type)}:duration=${formatFfmpegSeconds(
         duration
@@ -915,7 +946,7 @@ function buildVisualItems(
       continue;
     }
     const clipLabel = `v${safeLabel(clip.id)}`;
-    filters.push(buildVisualClipFilter(inputIndex, clip, clipLabel, settings, textArtifacts, warnings, capabilities));
+    filters.push(buildVisualClipFilter(inputIndex, customShaderSequenceClips.get(clip.id) ?? clip, clipLabel, settings, textArtifacts, warnings, capabilities));
     items.push({
       kind: 'media',
       trackIndex: clip.trackIndex,
@@ -1549,6 +1580,61 @@ function buildInputArgs(clip: ExportClip): string[] {
     return ['-ss', formatFfmpegSeconds(clip.trimStart), '-t', formatFfmpegSeconds(getExportClipSourceDuration(clip))];
   }
   return [];
+}
+
+function buildCustomShaderSequenceInputArgs(settings: ExportSettings): string[] {
+  return ['-f', 'image2', '-framerate', String(settings.fps), '-start_number', '1'];
+}
+
+function buildCustomShaderSequenceClip(clip: ExportClip): ExportClip {
+  return {
+    ...clip,
+    trimStart: 0,
+    trimEnd: 0,
+    speed: 1,
+    sourceDuration: clip.duration,
+    keyframes: clip.keyframes ? { ...clip.keyframes, speed: [] } : clip.keyframes
+  };
+}
+
+function buildCustomShaderSequenceArtifact(clip: ExportClip, settings: ExportSettings): TextArtifact | undefined {
+  if (clip.type !== 'video' && clip.type !== 'image' && clip.type !== 'nested-sequence') {
+    return undefined;
+  }
+  if (!clip.mediaPath || clip.imageSequence) {
+    return undefined;
+  }
+  const effect = getEnabledCustomShaderEffect(clip.effects);
+  if (!effect) {
+    return undefined;
+  }
+  const safeId = safeLabel(clip.id);
+  const params = normalizeCustomShaderParams(effect.params);
+  const frameCount = Math.max(1, Math.ceil(Math.max(clip.duration, 1 / Math.max(1, settings.fps)) * Math.max(1, settings.fps)));
+  return {
+    clipId: `${clip.id}:custom-shader`,
+    text: JSON.stringify({
+      kind: CUSTOM_SHADER_SEQUENCE_KIND,
+      version: 1,
+      clipId: clip.id,
+      preset: params.preset,
+      shaderSource: params.source,
+      fragmentSource: buildCustomShaderFragmentSource(params.source),
+      mediaPath: normalizeFfmpegPath(clip.mediaPath),
+      clipType: clip.type,
+      trimStart: clip.trimStart,
+      sourceDuration: getExportClipSourceDuration(clip),
+      duration: clip.duration,
+      speed: clip.speed,
+      width: Math.max(1, Math.round(settings.width)),
+      height: Math.max(1, Math.round(settings.height)),
+      fps: Math.max(1, settings.fps),
+      frameCount
+    }),
+    fileName: `custom-shader-${safeId}.json`,
+    placeholder: `__CUSTOM_SHADER_SEQUENCE_${safeId}__`,
+    pathMode: 'shader-sequence'
+  };
 }
 
 function buildImageSequenceArtifact(clip: ExportClip): TextArtifact {

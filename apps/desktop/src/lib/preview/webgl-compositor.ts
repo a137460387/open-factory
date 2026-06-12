@@ -1,9 +1,12 @@
 import {
   DEFAULT_COLOR_CORRECTION,
   DEFAULT_TRANSFORM,
+  buildCustomShaderFragmentSource,
+  getEnabledCustomShaderEffect,
   getEffectNumberParam,
   getTransformScaleX,
   getTransformScaleY,
+  normalizeCustomShaderParams,
   normalizeColorCorrection,
   normalizeInputColorSpace,
   normalizeThreeWayColor,
@@ -50,8 +53,20 @@ interface ProgramInfo {
   sharpen: WebGLUniformLocation;
 }
 
+interface CustomShaderProgramInfo {
+  program: WebGLProgram;
+  position: number;
+  texCoord: number;
+  resolution: WebGLUniformLocation | null;
+  texture: WebGLUniformLocation | null;
+  time: WebGLUniformLocation | null;
+  progress: WebGLUniformLocation | null;
+}
+
 export interface WebGlSourceProcessingOptions {
   bypassProcessing?: boolean;
+  customShaderTime?: number;
+  customShaderProgress?: number;
 }
 
 export interface WebGlResolvedSourceProcessing {
@@ -68,6 +83,7 @@ export class WebGlPreviewCompositor {
   private readonly texCoordBuffer: WebGLBuffer;
   private readonly curveTexture: WebGLTexture;
   private readonly textures = new WeakMap<TexImageSource, WebGLTexture>();
+  private readonly customPrograms = new Map<string, CustomShaderProgramInfo | null>();
 
   constructor(canvas: HTMLCanvasElement) {
     const gl = canvas.getContext('webgl', {
@@ -121,6 +137,14 @@ export class WebGlPreviewCompositor {
   ): void {
     const gl = this.gl;
     const texture = this.getTexture(source);
+    const customShader = options.bypassProcessing ? undefined : getEnabledCustomShaderEffect(effects);
+    if (customShader) {
+      const params = normalizeCustomShaderParams(customShader.params);
+      if (this.drawCustomShaderSource(source, texture, mediaWidth, mediaHeight, transform, params.source, options)) {
+        return;
+      }
+    }
+    gl.useProgram(this.program.program);
     const { correction, key, maskUniforms, effectParams } = resolveWebGlSourceProcessing(colorCorrection, effects, chromaKey, masks, options);
     const threeWayColor = normalizeThreeWayColor(correction.threeWayColor);
     gl.activeTexture(gl.TEXTURE1);
@@ -146,7 +170,7 @@ export class WebGlPreviewCompositor {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
-    this.drawQuad(buildTransformedQuad(gl.canvas.width, gl.canvas.height, mediaWidth, mediaHeight, transform));
+    this.drawQuad(buildTransformedQuad(gl.canvas.width, gl.canvas.height, mediaWidth, mediaHeight, transform), this.program);
   }
 
   drawText(
@@ -251,17 +275,67 @@ export class WebGlPreviewCompositor {
     return texture;
   }
 
-  private drawQuad(points: number[]): void {
+  private drawCustomShaderSource(
+    source: TexImageSource,
+    texture: WebGLTexture,
+    mediaWidth: number,
+    mediaHeight: number,
+    transform: Transform,
+    sourceCode: string,
+    options: WebGlSourceProcessingOptions
+  ): boolean {
+    const gl = this.gl;
+    const program = this.getCustomProgram(sourceCode);
+    if (!program) {
+      return false;
+    }
+    gl.useProgram(program.program);
+    if (program.resolution) {
+      gl.uniform2f(program.resolution, Number(gl.canvas.width), Number(gl.canvas.height));
+    }
+    if (program.texture) {
+      gl.uniform1i(program.texture, 0);
+    }
+    if (program.time) {
+      gl.uniform1f(program.time, options.customShaderTime ?? performance.now() / 1000);
+    }
+    if (program.progress) {
+      gl.uniform1f(program.progress, Math.min(1, Math.max(0, options.customShaderProgress ?? 0)));
+    }
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+    this.drawQuad(buildTransformedQuad(gl.canvas.width, gl.canvas.height, mediaWidth, mediaHeight, transform), program);
+    return true;
+  }
+
+  private getCustomProgram(sourceCode: string): CustomShaderProgramInfo | null {
+    const cached = this.customPrograms.get(sourceCode);
+    if (cached !== undefined) {
+      return cached;
+    }
+    try {
+      const program = createCustomShaderProgram(this.gl, sourceCode);
+      this.customPrograms.set(sourceCode, program);
+      return program;
+    } catch (error) {
+      console.warn('Unable to compile custom preview shader', error);
+      this.customPrograms.set(sourceCode, null);
+      return null;
+    }
+  }
+
+  private drawQuad(points: number[], program: Pick<ProgramInfo, 'position' | 'texCoord'> | Pick<CustomShaderProgramInfo, 'position' | 'texCoord'>): void {
     const gl = this.gl;
     gl.bindBuffer(gl.ARRAY_BUFFER, this.positionBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points), gl.DYNAMIC_DRAW);
-    gl.enableVertexAttribArray(this.program.position);
-    gl.vertexAttribPointer(this.program.position, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(program.position);
+    gl.vertexAttribPointer(program.position, 2, gl.FLOAT, false, 0, 0);
 
     gl.bindBuffer(gl.ARRAY_BUFFER, this.texCoordBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([0, 0, 1, 0, 0, 1, 0, 1, 1, 0, 1, 1]), gl.STATIC_DRAW);
-    gl.enableVertexAttribArray(this.program.texCoord);
-    gl.vertexAttribPointer(this.program.texCoord, 2, gl.FLOAT, false, 0, 0);
+    gl.enableVertexAttribArray(program.texCoord);
+    gl.vertexAttribPointer(program.texCoord, 2, gl.FLOAT, false, 0, 0);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
   }
 }
@@ -462,19 +536,7 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
   const vertexShader = compileShader(
     gl,
     gl.VERTEX_SHADER,
-    `
-      precision mediump float;
-      attribute vec2 a_position;
-      attribute vec2 a_texCoord;
-      uniform vec2 u_resolution;
-      varying vec2 v_texCoord;
-      void main() {
-        vec2 zeroToOne = a_position / u_resolution;
-        vec2 clipSpace = zeroToOne * 2.0 - 1.0;
-        gl_Position = vec4(clipSpace * vec2(1.0, -1.0), 0.0, 1.0);
-        v_texCoord = a_texCoord;
-      }
-    `
+    VERTEX_SHADER_SOURCE
   );
   const fragmentShader = compileShader(
     gl,
@@ -798,6 +860,44 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
     pathMaskInverted,
     effectParams,
     sharpen
+  };
+}
+
+const VERTEX_SHADER_SOURCE = `
+  precision mediump float;
+  attribute vec2 a_position;
+  attribute vec2 a_texCoord;
+  uniform vec2 u_resolution;
+  varying vec2 v_texCoord;
+  void main() {
+    vec2 zeroToOne = a_position / u_resolution;
+    vec2 clipSpace = zeroToOne * 2.0 - 1.0;
+    gl_Position = vec4(clipSpace * vec2(1.0, -1.0), 0.0, 1.0);
+    v_texCoord = a_texCoord;
+  }
+`;
+
+function createCustomShaderProgram(gl: WebGLRenderingContext, sourceCode: string): CustomShaderProgramInfo {
+  const vertexShader = compileShader(gl, gl.VERTEX_SHADER, VERTEX_SHADER_SOURCE);
+  const fragmentShader = compileShader(gl, gl.FRAGMENT_SHADER, buildCustomShaderFragmentSource(sourceCode));
+  const program = gl.createProgram();
+  if (!program) {
+    throw new Error(zhCN.errors.webglProgramCreateFailed);
+  }
+  gl.attachShader(program, vertexShader);
+  gl.attachShader(program, fragmentShader);
+  gl.linkProgram(program);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    throw new Error(gl.getProgramInfoLog(program) ?? zhCN.errors.webglProgramLinkFailed);
+  }
+  return {
+    program,
+    position: gl.getAttribLocation(program, 'a_position'),
+    texCoord: gl.getAttribLocation(program, 'a_texCoord'),
+    resolution: gl.getUniformLocation(program, 'u_resolution'),
+    texture: gl.getUniformLocation(program, 'u_texture'),
+    time: gl.getUniformLocation(program, 'u_time'),
+    progress: gl.getUniformLocation(program, 'u_progress')
   };
 }
 

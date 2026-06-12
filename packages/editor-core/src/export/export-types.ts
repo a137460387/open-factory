@@ -166,7 +166,7 @@ export interface ExportTextStyle {
 }
 
 export type ExportSubtitleMode = 'burn-in' | 'soft-sub';
-export type TextArtifactPathMode = 'filter' | 'argument';
+export type TextArtifactPathMode = 'filter' | 'argument' | 'shader-sequence';
 
 export interface ExportSubtitleStyle extends ExportTextStyle {
   yOffset: number;

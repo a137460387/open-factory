@@ -44,6 +44,40 @@ test('adds an audio spectrum effect and includes showfreqs in the export plan', 
   expect(plan.filterComplex).toContain('[amixout]asplit=2[aout][spectrum_audio_0]');
 });
 
+test('adds a custom shader effect, keeps preview visible, and exports through overlay args', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.getByTestId('import-media-button').click();
+  await addMediaCardToTimeline(page, 0);
+  await page.locator('[data-testid^="timeline-clip-"]').first().click();
+
+  await page.getByText('特效', { exact: true }).click();
+  await page.getByTestId('effect-type-select').selectOption('custom-shader');
+  await page.getByTestId('add-effect-button').click();
+  await expect(page.getByTestId('effect-item-custom-shader')).toBeVisible();
+  await page.getByTestId('custom-shader-example-select').selectOption('pixelate');
+  await expect(page.getByTestId(/^effect-param-.*-shader-source$/)).toBeVisible();
+  await expect(page.getByTestId('preview-canvas')).toBeVisible();
+
+  await openExportDialog(page);
+  await page.getByTestId('export-enqueue-button').click();
+  await expectExportTaskStatus(page, 0, 'success');
+
+  const plan = await page.evaluate(
+    () =>
+      window.__E2E_ACTIONS__!.getLastExportPlan!() as {
+        filterComplex: string;
+        fullArgs: string[];
+        textArtifacts: Array<{ pathMode?: string; fileName: string }>;
+        warnings: string[];
+      }
+  );
+  expect(plan.filterComplex).toContain('overlay=');
+  expect(plan.fullArgs.join(' ')).toContain('__CUSTOM_SHADER_SEQUENCE_');
+  expect(plan.textArtifacts.some((artifact) => artifact.pathMode === 'shader-sequence' && artifact.fileName.includes('custom-shader'))).toBe(true);
+  expect(plan.warnings.some((warning) => warning.includes('will render frame-by-frame'))).toBe(true);
+});
+
 test('enables chroma key and includes chromakey in the export plan', async ({ page }) => {
   await page.goto('/');
   await waitForE2eActions(page);

@@ -7,6 +7,7 @@ import {
   AddEffectCommand,
   AddMaskCommand,
   ApplyTextAnimationCommand,
+  CUSTOM_SHADER_EXAMPLES,
   AUDIO_SPECTRUM_POSITIONS,
   AUDIO_SPECTRUM_STYLES,
   DEFAULT_EFFECT_PARAMS,
@@ -48,6 +49,7 @@ import {
   normalizeColorCorrection,
   normalizeColorWheelValue,
   normalizeCurvePoints,
+  normalizeCustomShaderParams,
   normalizeAudioSpectrumParams,
   normalizeFrameInterpolation,
   normalizeMasks,
@@ -92,6 +94,7 @@ import {
 } from '../../lib/tauri-bridge';
 import { buildClipColorMatchCurves } from '../../lib/colorMatch';
 import { acceptTranslationTOS, subtitleClipsToTranslationItems, translateSubtitleItems } from '../../lib/subtitleTranslation';
+import { validateCustomShaderSource } from '../../lib/preview/custom-shader';
 import { showToast } from '../../lib/toast';
 import { useEditorStore, type SelectedKeyframeRef } from '../../store/editorStore';
 import { isTranslationConfigured, useTranslationSettingsStore } from '../../store/translationSettingsStore';
@@ -1993,6 +1996,8 @@ function EffectsEditor({
             <div className="space-y-3 border-t border-line p-2">
               {effect.type === 'audio-spectrum' ? (
                 <AudioSpectrumEffectFields effect={effect} onUpdate={onUpdate} />
+              ) : effect.type === 'custom-shader' ? (
+                <CustomShaderEffectFields effect={effect} onUpdate={onUpdate} />
               ) : (
                 getEffectParamConfig(effect.type).map((param) => (
                   <RangeNumberField
@@ -2060,6 +2065,95 @@ function TextAreaField({ label, value, onCommit, testId }: { label: string; valu
       {label}
       <textarea className="mt-1 min-h-20 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink" defaultValue={value} onBlur={(event) => onCommit(event.target.value)} data-testid={testId} />
     </label>
+  );
+}
+
+function CustomShaderEffectFields({
+  effect,
+  onUpdate
+}: {
+  effect: Effect;
+  onUpdate(effectId: string, patch: EffectPatch): void;
+}) {
+  const params = normalizeCustomShaderParams(effect.params);
+  const [source, setSource] = useState(params.source);
+  const [compileError, setCompileError] = useState<string | undefined>();
+
+  useEffect(() => {
+    setSource(params.source);
+    setCompileError(undefined);
+  }, [effect.id, params.source]);
+
+  const compile = (nextSource: string): boolean => {
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl');
+    if (!gl) {
+      setCompileError(zhCN.inspector.customShader.webglUnavailable);
+      return false;
+    }
+    const result = validateCustomShaderSource(gl, nextSource);
+    setCompileError(result.ok ? undefined : result.error ?? zhCN.inspector.customShader.compileFailed);
+    return result.ok;
+  };
+
+  const commitSource = (nextSource: string) => {
+    const trimmed = nextSource.trim() || params.source;
+    setSource(trimmed);
+    if (compile(trimmed)) {
+      onUpdate(effect.id, { params: { source: trimmed, preset: 'custom' } });
+    }
+  };
+
+  const applyExample = (exampleId: string) => {
+    const example = CUSTOM_SHADER_EXAMPLES.find((item) => item.id === exampleId);
+    if (!example) {
+      return;
+    }
+    setSource(example.source);
+    setCompileError(undefined);
+    onUpdate(effect.id, { params: { source: example.source, preset: example.id } });
+  };
+
+  return (
+    <div className="space-y-3">
+      <label className="block text-xs font-medium text-slate-600">
+        {zhCN.inspector.fields.shaderExample}
+        <select
+          className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+          value={params.preset}
+          data-testid="custom-shader-example-select"
+          onChange={(event) => applyExample(event.target.value)}
+        >
+          {CUSTOM_SHADER_EXAMPLES.map((example) => (
+            <option key={example.id} value={example.id}>
+              {zhCN.inspector.customShader.examples[example.id]}
+            </option>
+          ))}
+          <option value="custom">{zhCN.inspector.customShader.custom}</option>
+        </select>
+      </label>
+      <label className="block text-xs font-medium text-slate-600">
+        {zhCN.inspector.fields.shaderCode}
+        <textarea
+          className="mt-1 min-h-48 w-full resize-y rounded-md border border-line bg-slate-950 px-2 py-2 font-mono text-xs leading-5 text-slate-50 outline-none focus:ring-2 focus:ring-brand"
+          value={source}
+          spellCheck={false}
+          data-testid={`effect-param-${effect.id}-shader-source`}
+          onChange={(event) => {
+            setSource(event.target.value);
+            if (compileError) {
+              setCompileError(undefined);
+            }
+          }}
+          onBlur={(event) => commitSource(event.target.value)}
+        />
+      </label>
+      {compileError ? (
+        <div className="rounded-md border border-rose-200 bg-rose-50 p-2 font-mono text-[11px] leading-4 text-rose-800" data-testid="custom-shader-error">
+          {compileError}
+        </div>
+      ) : null}
+    </div>
   );
 }
 

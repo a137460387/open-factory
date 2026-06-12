@@ -61,6 +61,24 @@ pub struct TextArtifactDto {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+struct CustomShaderSequenceManifest {
+    kind: String,
+    clip_id: String,
+    preset: Option<String>,
+    media_path: String,
+    clip_type: String,
+    trim_start: f64,
+    source_duration: f64,
+    duration: f64,
+    speed: f64,
+    width: u32,
+    height: u32,
+    fps: f64,
+    frame_count: u32,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FfmpegExportPlanDto {
     full_args: Vec<String>,
     warnings: Vec<String>,
@@ -1131,6 +1149,19 @@ fn parse_timecode(value: &str) -> Option<f64> {
     Some(hours * 3600.0 + minutes * 60.0 + seconds)
 }
 
+fn format_seconds_arg(value: f64) -> String {
+    let clamped = if value.is_finite() {
+        value.max(0.0)
+    } else {
+        0.0
+    };
+    let formatted = format!("{:.6}", clamped);
+    formatted
+        .trim_end_matches('0')
+        .trim_end_matches('.')
+        .to_string()
+}
+
 fn with_temp_export_artifacts<T>(
     plan: &FfmpegExportPlanDto,
     run: impl FnOnce(MaterializedFfmpegExportPlan, &Path) -> Result<T, String>,
@@ -1179,6 +1210,11 @@ fn write_text_artifacts(
     let mut result = Vec::new();
     for artifact in artifacts {
         let safe_name = safe_file_name(&artifact.file_name);
+        if artifact.path_mode.as_deref() == Some("shader-sequence") {
+            let sequence_path = materialize_custom_shader_sequence(temp_dir, artifact, &safe_name)?;
+            result.push((artifact.placeholder.clone(), sequence_path));
+            continue;
+        }
         let path = temp_dir.join(safe_name);
         fs::write(&path, artifact.text.as_bytes()).map_err(|error| {
             format!(
@@ -1192,6 +1228,139 @@ fn write_text_artifacts(
         ));
     }
     Ok(result)
+}
+
+fn materialize_custom_shader_sequence(
+    temp_dir: &Path,
+    artifact: &TextArtifactDto,
+    safe_name: &str,
+) -> Result<String, String> {
+    let manifest: CustomShaderSequenceManifest =
+        serde_json::from_str(&artifact.text).map_err(|error| {
+            format!(
+                "Unable to parse custom shader artifact {}: {}",
+                artifact.clip_id, error
+            )
+        })?;
+    if manifest.kind != "custom-shader-sequence" {
+        return Err(format!(
+            "Unsupported custom shader artifact kind for {}.",
+            artifact.clip_id
+        ));
+    }
+    let stem = safe_name.trim_end_matches(".json");
+    let sequence_dir = temp_dir.join(stem);
+    fs::create_dir_all(&sequence_dir).map_err(|error| {
+        format!(
+            "Unable to create custom shader sequence directory {}: {}",
+            normalize_path(&sequence_dir),
+            error
+        )
+    })?;
+    let frame_pattern = sequence_dir.join("frame%04d.png");
+    bake_custom_shader_sequence(&manifest, &frame_pattern)?;
+    Ok(normalize_path(&frame_pattern))
+}
+
+fn bake_custom_shader_sequence(
+    manifest: &CustomShaderSequenceManifest,
+    frame_pattern: &Path,
+) -> Result<(), String> {
+    let mut args = vec!["-hide_banner".to_string(), "-y".to_string()];
+    if manifest.clip_type == "image" {
+        args.extend([
+            "-loop".to_string(),
+            "1".to_string(),
+            "-t".to_string(),
+            format_seconds_arg(manifest.duration),
+        ]);
+    } else {
+        args.extend([
+            "-ss".to_string(),
+            format_seconds_arg(manifest.trim_start),
+            "-t".to_string(),
+            format_seconds_arg(manifest.source_duration),
+        ]);
+    }
+    args.extend([
+        "-i".to_string(),
+        manifest.media_path.clone(),
+        "-vf".to_string(),
+        build_custom_shader_bake_filter(manifest),
+        "-frames:v".to_string(),
+        manifest.frame_count.max(1).to_string(),
+        "-start_number".to_string(),
+        "1".to_string(),
+        "-f".to_string(),
+        "image2".to_string(),
+        normalize_path(frame_pattern),
+    ]);
+    let output = Command::new(ffmpeg_binary())
+        .args(&args)
+        .output()
+        .map_err(|error| {
+            format!(
+                "Unable to render custom shader sequence for {}: {}",
+                manifest.clip_id, error
+            )
+        })?;
+    if output.status.success() {
+        return Ok(());
+    }
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    Err(format!(
+        "Custom shader sequence render failed for {}: {}",
+        manifest.clip_id, stderr
+    ))
+}
+
+fn build_custom_shader_bake_filter(manifest: &CustomShaderSequenceManifest) -> String {
+    let width = manifest.width.max(1);
+    let height = manifest.height.max(1);
+    let fps = manifest.fps.max(1.0);
+    let mut filters = vec![
+        format!(
+            "scale={}:{}:force_original_aspect_ratio=decrease",
+            width, height
+        ),
+        format!(
+            "pad={}:{}:(ow-iw)/2:(oh-ih)/2:color=black",
+            width, height
+        ),
+        "setsar=1".to_string(),
+    ];
+    if (manifest.speed - 1.0).abs() > 0.001 && manifest.clip_type != "image" {
+        filters.push(format!(
+            "setpts=(PTS-STARTPTS)/{}",
+            format_seconds_arg(manifest.speed)
+        ));
+    }
+    filters.push(custom_shader_equivalent_filter(manifest));
+    filters.push(format!("fps={}", format_seconds_arg(fps)));
+    filters.push("format=rgba".to_string());
+    filters.join(",")
+}
+
+fn custom_shader_equivalent_filter(manifest: &CustomShaderSequenceManifest) -> String {
+    match manifest.preset.as_deref() {
+        Some("pixelate") => {
+            let width = manifest.width.max(1);
+            let height = manifest.height.max(1);
+            let low_width = (width / 18).max(1);
+            let low_height = (height / 18).max(1);
+            format!(
+                "scale={}:{}:flags=neighbor,scale={}:{}:flags=neighbor",
+                low_width, low_height, width, height
+            )
+        }
+        Some("posterize") => {
+            "lutrgb=r='floor(val/52)*52':g='floor(val/52)*52':b='floor(val/52)*52'".to_string()
+        }
+        Some("old-film") => {
+            "colorchannelmixer=.393:.769:.189:0:.349:.686:.168:0:.272:.534:.131,noise=alls=8:allf=t".to_string()
+        }
+        _ => "null".to_string(),
+    }
 }
 
 fn artifact_path_for_mode(path: &Path, path_mode: Option<&str>) -> String {
@@ -1779,6 +1948,95 @@ unrelated line
             !temp_dir.exists(),
             "temporary export dir should be removed after multi-pass materialization"
         );
+    }
+
+    #[test]
+    fn custom_shader_bake_filter_uses_pixelate_neighbor_scaling() {
+        let manifest = CustomShaderSequenceManifest {
+            kind: "custom-shader-sequence".to_string(),
+            clip_id: "clip-shader".to_string(),
+            preset: Some("pixelate".to_string()),
+            media_path: "source.mp4".to_string(),
+            clip_type: "video".to_string(),
+            trim_start: 0.25,
+            source_duration: 1.0,
+            duration: 1.0,
+            speed: 0.5,
+            width: 180,
+            height: 90,
+            fps: 30.0,
+            frame_count: 30,
+        };
+
+        let filter = build_custom_shader_bake_filter(&manifest);
+
+        assert!(filter.contains("scale=180:90:force_original_aspect_ratio=decrease"));
+        assert!(filter.contains("setpts=(PTS-STARTPTS)/0.5"));
+        assert!(filter.contains("scale=10:5:flags=neighbor,scale=180:90:flags=neighbor"));
+        assert!(filter.ends_with("fps=30,format=rgba"));
+    }
+
+    #[test]
+    fn custom_shader_sequence_artifact_materializes_frames_and_replaces_placeholder() {
+        if !detect_ffmpeg() {
+            return;
+        }
+        let source_dir = create_export_temp_dir().expect("source temp dir should be created");
+        let source_path = source_dir.join("shader-source.ppm");
+        fs::write(
+            &source_path,
+            [
+                b"P6\n2 2\n255\n".as_slice(),
+                &[255, 0, 0, 0, 255, 0, 0, 0, 255, 255, 255, 0],
+            ]
+            .concat(),
+        )
+        .expect("source image should be written");
+        let artifact_text = serde_json::json!({
+            "kind": "custom-shader-sequence",
+            "clipId": "clip-shader",
+            "preset": "pixelate",
+            "mediaPath": normalize_path(&source_path),
+            "clipType": "image",
+            "trimStart": 0,
+            "sourceDuration": 0.1,
+            "duration": 0.1,
+            "speed": 1,
+            "width": 32,
+            "height": 32,
+            "fps": 10,
+            "frameCount": 1
+        })
+        .to_string();
+        let plan = FfmpegExportPlanDto {
+            full_args: vec![
+                "-i".to_string(),
+                "__CUSTOM_SHADER_SEQUENCE_clip_shader__".to_string(),
+                "D:/Exports/out.mp4".to_string(),
+            ],
+            warnings: vec![],
+            text_artifacts: vec![TextArtifactDto {
+                clip_id: "clip-shader:custom-shader".to_string(),
+                text: artifact_text,
+                file_name: "custom-shader-clip-shader.json".to_string(),
+                placeholder: "__CUSTOM_SHADER_SEQUENCE_clip_shader__".to_string(),
+                path_mode: Some("shader-sequence".to_string()),
+            }],
+            passes: vec![],
+            nested_plans: vec![],
+            duration: 1.0,
+        };
+
+        with_temp_export_artifacts(&plan, |materialized, _temp_dir| {
+            let pattern = &materialized.full_args[1];
+            assert!(!pattern.contains("__CUSTOM_SHADER_SEQUENCE_clip_shader__"));
+            assert!(pattern.ends_with("frame%04d.png"));
+            assert!(Path::new(&pattern.replace("%04d", "0001")).exists());
+            Ok(())
+        })
+        .expect("custom shader artifact should materialize");
+
+        fs::remove_dir_all(source_dir).expect("source temp dir should be removed");
     }
 
     #[test]
