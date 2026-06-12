@@ -2,6 +2,7 @@ import { BarChart3, Blend, Columns2, GitCompareArrows, MousePointer2, Pause, Pla
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import {
   CutMulticamClipCommand,
+  MAX_CHROMA_KEY_COLORS,
   UpdateClipCommand,
   UpdateMaskCommand,
   buildClipTransformBox,
@@ -16,6 +17,7 @@ import {
   isPathMaskClosed,
   isNestedSequenceDepthExceeded,
   moveTransformByCanvasDelta,
+  normalizeChromaKey,
   normalizeTransform,
   resizeClipTransform,
   rotateClipTransform,
@@ -26,6 +28,7 @@ import {
   type ClipTransformBox,
   type CanvasPoint,
   type CanvasTransformHandle,
+  type ChromaKeyColor,
   type PathPoint,
   type PathPointHandle,
   type Project,
@@ -74,6 +77,8 @@ export function PreviewCanvas() {
   const setPlayheadTime = useEditorStore((state) => state.setPlayheadTime);
   const setIsPlaying = useEditorStore((state) => state.setIsPlaying);
   const setSelectedClipIds = useEditorStore((state) => state.setSelectedClipIds);
+  const chromaKeyPickClipId = useEditorStore((state) => state.chromaKeyPickClipId);
+  const setChromaKeyPickClipId = useEditorStore((state) => state.setChromaKeyPickClipId);
   const setAudioLevels = useAudioMeterStore((state) => state.setLevels);
   const resetAudioLevels = useAudioMeterStore((state) => state.resetLevels);
   const [scopesOpen, setScopesOpen] = useState(false);
@@ -97,7 +102,14 @@ export function PreviewCanvas() {
   );
   const editableCanvasClips = useMemo(() => buildEditableCanvasClips(project, playheadTime), [project, playheadTime]);
   const selectedEditableClip = useMemo(() => editableCanvasClips.find((item) => item.clip.id === selectedClipId), [editableCanvasClips, selectedClipId]);
+  const chromaKeyPickTarget = useMemo(() => editableCanvasClips.find((item) => item.clip.id === chromaKeyPickClipId), [chromaKeyPickClipId, editableCanvasClips]);
   const selectedPathMask = useMemo(() => selectedEditableClip?.clip.masks?.find((mask) => mask.type === 'path'), [selectedEditableClip]);
+
+  useEffect(() => {
+    if (chromaKeyPickClipId && !chromaKeyPickTarget) {
+      setChromaKeyPickClipId(undefined);
+    }
+  }, [chromaKeyPickClipId, chromaKeyPickTarget, setChromaKeyPickClipId]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -309,6 +321,40 @@ export function PreviewCanvas() {
         canvasHeight: canvas.height
       }
     );
+  }
+
+  function pickChromaKeyColor(event: ReactPointerEvent<HTMLDivElement>): void {
+    if (!chromaKeyPickTarget) {
+      setChromaKeyPickClipId(undefined);
+      return;
+    }
+    const canvas = canvasRef.current;
+    const bounds = compareFrameRef.current?.getBoundingClientRect();
+    const color = canvas && bounds ? readPreviewCanvasPixel(canvas, bounds, event) : undefined;
+    if (!color) {
+      showToast({ kind: 'warning', title: zhCN.inspector.chromaKey.pickFailedTitle, message: zhCN.inspector.chromaKey.pickFailedMessage });
+      setChromaKeyPickClipId(undefined);
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const chromaKey = normalizeChromaKey(chromaKeyPickTarget.clip.chromaKey);
+    const colors =
+      chromaKey.colors.length >= MAX_CHROMA_KEY_COLORS
+        ? [...chromaKey.colors.slice(0, MAX_CHROMA_KEY_COLORS - 1), color]
+        : [...chromaKey.colors, color];
+    try {
+      commandManager.execute(
+        new UpdateClipCommand(timelineAccessor, chromaKeyPickTarget.clip.id, {
+          chromaKey: { ...chromaKey, enabled: true, color: colors[0], colors }
+        })
+      );
+      setSelectedClipIds([chromaKeyPickTarget.clip.id]);
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+    } finally {
+      setChromaKeyPickClipId(undefined);
+    }
   }
 
   function beginCanvasTransformDrag(
@@ -709,6 +755,15 @@ export function PreviewCanvas() {
                 onPointerCancel={() => setCompareDividerDragging(false)}
               />
             ) : null}
+            {chromaKeyPickTarget ? (
+              <div
+                className="absolute inset-0 z-40 cursor-crosshair"
+                title={zhCN.inspector.chromaKey.pickFromPreview}
+                aria-label={zhCN.inspector.chromaKey.pickFromPreview}
+                data-testid="chroma-key-pick-overlay"
+                onPointerDown={pickChromaKeyColor}
+              />
+            ) : null}
             {canvasEditMode && selectedEditableClip && selectedPathMask ? (
               <div
                 className="absolute inset-0 z-30 cursor-crosshair"
@@ -787,6 +842,18 @@ interface CanvasTransformDrag {
   startTransform: Transform;
   command?: UpdateClipCommand;
   patch?: ClipPatch;
+}
+
+function readPreviewCanvasPixel(canvas: HTMLCanvasElement, bounds: DOMRect, event: { clientX: number; clientY: number }): ChromaKeyColor | undefined {
+  const gl = canvas.getContext('webgl');
+  if (!gl) {
+    return undefined;
+  }
+  const x = Math.min(canvas.width - 1, Math.max(0, Math.floor(((event.clientX - bounds.left) / Math.max(1, bounds.width)) * canvas.width)));
+  const y = Math.min(canvas.height - 1, Math.max(0, canvas.height - 1 - Math.floor(((event.clientY - bounds.top) / Math.max(1, bounds.height)) * canvas.height)));
+  const pixel = new Uint8Array(4);
+  gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+  return [pixel[0], pixel[1], pixel[2]];
 }
 
 interface PathMaskDrag {

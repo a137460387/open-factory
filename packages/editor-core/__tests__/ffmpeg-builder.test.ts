@@ -870,7 +870,7 @@ describe('multitrack ffmpeg builder', () => {
     project.timeline.tracks[0].clips = [
       makeVideoClip({
         id: 'clip-chroma-disabled',
-        chromaKey: { enabled: false, color: [0, 255, 0], similarity: 0.2, blend: 0.1 }
+        chromaKey: { enabled: false, color: [0, 255, 0], colors: [[0, 255, 0]], similarity: 0.2, blend: 0.1, spillSuppression: false, erosion: 0 }
       })
     ];
 
@@ -886,7 +886,7 @@ describe('multitrack ffmpeg builder', () => {
         id: 'clip-chroma-enabled',
         duration: 2,
         colorCorrection: { brightness: 0.1 },
-        chromaKey: { enabled: true, color: [0, 255, 0], similarity: 0.24, blend: 0.08 }
+        chromaKey: { enabled: true, color: [0, 255, 0], colors: [[0, 255, 0]], similarity: 0.24, blend: 0.08, spillSuppression: false, erosion: 0 }
       })
     ];
 
@@ -896,6 +896,80 @@ describe('multitrack ffmpeg builder', () => {
     expect(filter).toContain('chromakey=color=0x00FF00:similarity=0.24:blend=0.08');
     expect(filter.indexOf('chromakey=color=0x00FF00')).toBeLessThan(filter.indexOf('scale=trunc'));
     expect(filter.indexOf('chromakey=color=0x00FF00')).toBeLessThan(filter.indexOf('eq=brightness=0.1'));
+    expect(filter).not.toContain('hue=s=0');
+    expect(filter).not.toContain('erosion=');
+    expect(filter).not.toContain('dilation=');
+  });
+
+  it('chains chroma key filters for multiple sampled colors', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-chroma-multi',
+        chromaKey: {
+          enabled: true,
+          color: [0, 255, 0],
+          colors: [
+            [0, 255, 0],
+            [0, 0, 255]
+          ],
+          similarity: 0.22,
+          blend: 0.06,
+          spillSuppression: false,
+          erosion: 0
+        }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain(
+      'chromakey=color=0x00FF00:similarity=0.22:blend=0.06,chromakey=color=0x0000FF:similarity=0.22:blend=0.06'
+    );
+  });
+
+  it('adds spill suppression and edge erosion filters only when requested', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-chroma-spill',
+        chromaKey: {
+          enabled: true,
+          color: [0, 255, 0],
+          colors: [[0, 255, 0]],
+          similarity: 0.18,
+          blend: 0.04,
+          spillSuppression: true,
+          erosion: 2
+        }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('chromakey=color=0x00FF00:similarity=0.18:blend=0.04,erosion=coordinates=255,erosion=coordinates=255,hue=s=0');
+  });
+
+  it('uses dilation for negative chroma key erosion values', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-chroma-dilation',
+        chromaKey: {
+          enabled: true,
+          color: [0, 255, 0],
+          colors: [[0, 255, 0]],
+          similarity: 0.2,
+          blend: 0.05,
+          spillSuppression: false,
+          erosion: -1
+        }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('chromakey=color=0x00FF00:similarity=0.2:blend=0.05,dilation=coordinates=255');
   });
 
   it('exports simple rect masks as crop plus transparent pad filters', () => {

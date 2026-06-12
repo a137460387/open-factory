@@ -44,13 +44,17 @@ export interface ClipKeyframes {
 export type KeyframeProperty = keyof ClipKeyframes;
 
 export type ChromaKeyColor = [number, number, number];
+export const MAX_CHROMA_KEY_COLORS = 3;
 export type MaskType = 'rect' | 'ellipse' | 'path';
 
 export interface ChromaKey {
   enabled: boolean;
   color: ChromaKeyColor;
+  colors: ChromaKeyColor[];
   similarity: number;
   blend: number;
+  spillSuppression: boolean;
+  erosion: number;
 }
 
 export interface ClipStabilization {
@@ -408,8 +412,11 @@ export const DEFAULT_COLOR_CORRECTION: ColorCorrection = {
 export const DEFAULT_CHROMA_KEY: ChromaKey = {
   enabled: false,
   color: [0, 255, 0],
+  colors: [[0, 255, 0]],
   similarity: 0.1,
-  blend: 0.05
+  blend: 0.05,
+  spillSuppression: false,
+  erosion: 0
 };
 
 export const DEFAULT_STABILIZATION: ClipStabilization = {
@@ -677,11 +684,15 @@ export function normalizeColorCorrection(colorCorrection: Partial<ColorCorrectio
 }
 
 export function normalizeChromaKey(chromaKey: Partial<ChromaKey> | undefined): ChromaKey {
+  const colors = normalizeChromaKeyColors(chromaKey);
   return {
     enabled: chromaKey?.enabled === true,
-    color: normalizeRgbColor(chromaKey?.color),
+    color: colors[0] ?? [...DEFAULT_CHROMA_KEY.color],
+    colors,
     similarity: round(Math.min(1, Math.max(0, finiteOrDefault(chromaKey?.similarity, DEFAULT_CHROMA_KEY.similarity)))),
-    blend: round(Math.min(1, Math.max(0, finiteOrDefault(chromaKey?.blend, DEFAULT_CHROMA_KEY.blend))))
+    blend: round(Math.min(1, Math.max(0, finiteOrDefault(chromaKey?.blend, DEFAULT_CHROMA_KEY.blend)))),
+    spillSuppression: chromaKey?.spillSuppression === true,
+    erosion: round(Math.min(5, Math.max(-5, finiteOrDefault(chromaKey?.erosion, DEFAULT_CHROMA_KEY.erosion))))
   };
 }
 
@@ -981,6 +992,12 @@ function finiteOrDefault(value: number | undefined, fallback: number): number {
 function normalizeRgbColor(color: ChromaKeyColor | readonly number[] | undefined): ChromaKeyColor {
   const input = Array.isArray(color) ? color : DEFAULT_CHROMA_KEY.color;
   return [normalizeRgbChannel(input[0]), normalizeRgbChannel(input[1]), normalizeRgbChannel(input[2])];
+}
+
+function normalizeChromaKeyColors(chromaKey: Partial<ChromaKey> | undefined): ChromaKeyColor[] {
+  const candidates = Array.isArray(chromaKey?.colors) && chromaKey.colors.length > 0 ? chromaKey.colors : [chromaKey?.color ?? DEFAULT_CHROMA_KEY.color];
+  const colors = candidates.slice(0, MAX_CHROMA_KEY_COLORS).map((color) => normalizeRgbColor(color));
+  return colors.length > 0 ? colors : [[...DEFAULT_CHROMA_KEY.color]];
 }
 
 function normalizeRgbChannel(value: number | undefined): number {

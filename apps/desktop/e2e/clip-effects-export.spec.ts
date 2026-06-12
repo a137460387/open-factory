@@ -53,6 +53,8 @@ test('enables chroma key and includes chromakey in the export plan', async ({ pa
 
   await page.getByTestId('chroma-key-toggle').check();
   await page.getByTestId('chroma-key-color').fill('#00ff00');
+  await page.getByTestId('chroma-key-add-color').click();
+  await page.getByTestId('chroma-key-color-1').fill('#0000ff');
   await page.getByTestId('chroma-key-similarity').fill('0.24');
   await page.getByTestId('chroma-key-blend').fill('0.08');
 
@@ -62,6 +64,7 @@ test('enables chroma key and includes chromakey in the export plan', async ({ pa
 
   const plan = await page.evaluate(() => window.__E2E_ACTIONS__!.getLastExportPlan!() as { filterComplex: string });
   expect(plan.filterComplex).toContain('chromakey=color=0x00FF00:similarity=0.24:blend=0.08');
+  expect(plan.filterComplex).toContain('chromakey=color=0x0000FF:similarity=0.24:blend=0.08');
 });
 
 test('adds a rect mask and includes mask crop filters in the export plan', async ({ page }) => {

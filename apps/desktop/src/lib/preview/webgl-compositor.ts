@@ -37,7 +37,7 @@ interface ProgramInfo {
   lift: WebGLUniformLocation;
   gamma: WebGLUniformLocation;
   gain: WebGLUniformLocation;
-  chromaKeyColor: WebGLUniformLocation;
+  chromaKeyColors: WebGLUniformLocation;
   chromaKeyParams: WebGLUniformLocation;
   maskCount: WebGLUniformLocation;
   maskData: WebGLUniformLocation;
@@ -132,8 +132,8 @@ export class WebGlPreviewCompositor {
     gl.uniform3f(this.program.lift, wheelOffset(threeWayColor.lift, 'r'), wheelOffset(threeWayColor.lift, 'g'), wheelOffset(threeWayColor.lift, 'b'));
     gl.uniform3f(this.program.gamma, wheelValue(threeWayColor.gamma, 'r'), wheelValue(threeWayColor.gamma, 'g'), wheelValue(threeWayColor.gamma, 'b'));
     gl.uniform3f(this.program.gain, wheelValue(threeWayColor.gain, 'r'), wheelValue(threeWayColor.gain, 'g'), wheelValue(threeWayColor.gain, 'b'));
-    gl.uniform3f(this.program.chromaKeyColor, key.color[0] / 255, key.color[1] / 255, key.color[2] / 255);
-    gl.uniform3f(this.program.chromaKeyParams, key.enabled ? 1 : 0, key.similarity, key.blend);
+    gl.uniform3fv(this.program.chromaKeyColors, buildChromaKeyColorUniforms(key));
+    gl.uniform4f(this.program.chromaKeyParams, key.enabled ? 1 : 0, key.similarity, key.blend, key.colors.length);
     gl.uniform1i(this.program.maskCount, maskUniforms.count);
     gl.uniform4fv(this.program.maskData, maskUniforms.data);
     gl.uniform4fv(this.program.maskFlags, maskUniforms.flags);
@@ -287,6 +287,18 @@ export function resolveWebGlSourceProcessing(
     maskUniforms: buildMaskUniforms(masks),
     effectParams: buildPreviewEffectParams(effects)
   };
+}
+
+function buildChromaKeyColorUniforms(chromaKey: ChromaKey): Float32Array {
+  const values = new Float32Array(9);
+  const colors = chromaKey.colors.length > 0 ? chromaKey.colors : [chromaKey.color];
+  for (let index = 0; index < 3; index += 1) {
+    const color = colors[index] ?? colors[0] ?? [0, 255, 0];
+    values[index * 3] = color[0] / 255;
+    values[index * 3 + 1] = color[1] / 255;
+    values[index * 3 + 2] = color[2] / 255;
+  }
+  return values;
 }
 
 function drawTextBackground(context: CanvasRenderingContext2D, centerX: number, centerY: number, text: string, style: TextStyle | SubtitleStyle): void {
@@ -478,8 +490,8 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
       uniform vec3 u_lift;
       uniform vec3 u_gamma;
       uniform vec3 u_gain;
-      uniform vec3 u_chromaKeyColor;
-      uniform vec3 u_chromaKeyParams;
+      uniform vec3 u_chromaKeyColors[3];
+      uniform vec4 u_chromaKeyParams;
       uniform int u_maskCount;
       uniform vec4 u_maskData[8];
       uniform vec4 u_maskFlags[8];
@@ -611,7 +623,13 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
         if (u_chromaKeyParams.x < 0.5) {
           return 1.0;
         }
-        float delta = distance(color, u_chromaKeyColor);
+        float delta = distance(color, u_chromaKeyColors[0]);
+        if (u_chromaKeyParams.w > 1.5) {
+          delta = min(delta, distance(color, u_chromaKeyColors[1]));
+        }
+        if (u_chromaKeyParams.w > 2.5) {
+          delta = min(delta, distance(color, u_chromaKeyColors[2]));
+        }
         float similarity = clamp(u_chromaKeyParams.y, 0.0, 1.0);
         float blend = max(u_chromaKeyParams.z, 0.0001);
         return smoothstep(similarity, similarity + blend, delta);
@@ -721,7 +739,7 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
   const lift = gl.getUniformLocation(program, 'u_lift');
   const gamma = gl.getUniformLocation(program, 'u_gamma');
   const gain = gl.getUniformLocation(program, 'u_gain');
-  const chromaKeyColor = gl.getUniformLocation(program, 'u_chromaKeyColor');
+  const chromaKeyColors = gl.getUniformLocation(program, 'u_chromaKeyColors[0]');
   const chromaKeyParams = gl.getUniformLocation(program, 'u_chromaKeyParams');
   const maskCount = gl.getUniformLocation(program, 'u_maskCount');
   const maskData = gl.getUniformLocation(program, 'u_maskData[0]');
@@ -742,7 +760,7 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
     !lift ||
     !gamma ||
     !gain ||
-    !chromaKeyColor ||
+    !chromaKeyColors ||
     !chromaKeyParams ||
     !maskCount ||
     !maskData ||
@@ -769,7 +787,7 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
     lift,
     gamma,
     gain,
-    chromaKeyColor,
+    chromaKeyColors,
     chromaKeyParams,
     maskCount,
     maskData,

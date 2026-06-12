@@ -664,6 +664,45 @@ describe('timeline commands', () => {
     expect(updated.colorCorrection).toEqual({ ...DEFAULT_COLOR_CORRECTION, brightness: 1, contrast: 2, saturation: 0, hue: 180, lutPath: null });
   });
 
+  it('updates the first chroma key sample when patching the legacy color field', () => {
+    const accessor = makeAccessor(
+      makeTimeline([
+        makeVideoClip({
+          id: 'clip-video',
+          duration: 3,
+          chromaKey: {
+            enabled: true,
+            color: [0, 255, 0],
+            colors: [
+              [0, 255, 0],
+              [0, 0, 255]
+            ],
+            similarity: 0.2,
+            blend: 0.05,
+            spillSuppression: false,
+            erosion: 0
+          }
+        })
+      ])
+    );
+    const manager = new CommandManager();
+
+    manager.execute(new UpdateClipCommand(accessor, 'clip-video', { chromaKey: { color: [255, 0, 0] } }));
+
+    expect(accessor.current().tracks[0].clips[0].chromaKey).toMatchObject({
+      color: [255, 0, 0],
+      colors: [
+        [255, 0, 0],
+        [0, 0, 255]
+      ]
+    });
+    manager.undo();
+    expect(accessor.current().tracks[0].clips[0].chromaKey?.colors).toEqual([
+      [0, 255, 0],
+      [0, 0, 255]
+    ]);
+  });
+
   it('clamps advanced audio clip patches', () => {
     const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'clip-video', duration: 3 })]));
     const manager = new CommandManager();

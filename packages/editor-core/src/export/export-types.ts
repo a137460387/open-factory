@@ -83,8 +83,11 @@ export interface ExportColorCorrection {
 export interface ExportChromaKey {
   enabled: boolean;
   color: [number, number, number];
+  colors: [number, number, number][];
   similarity: number;
   blend: number;
+  spillSuppression: boolean;
+  erosion: number;
 }
 
 export interface ExportMask {

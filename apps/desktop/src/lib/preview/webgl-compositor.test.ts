@@ -4,7 +4,7 @@ import { resolveWebGlSourceProcessing } from './webgl-compositor';
 
 describe('WebGL preview compositor bypass processing', () => {
   const effects: Effect[] = [{ id: 'effect-blur', type: 'blur', enabled: true, params: { radius: 6 } }];
-  const chromaKey: ChromaKey = { enabled: true, color: [0, 255, 0], similarity: 0.3, blend: 0.1 };
+  const chromaKey: ChromaKey = { enabled: true, color: [0, 255, 0], colors: [[0, 255, 0]], similarity: 0.3, blend: 0.1, spillSuppression: false, erosion: 0 };
   const masks: ClipMask[] = [{ id: 'mask-a', type: 'rect', x: 0.1, y: 0.1, w: 0.5, h: 0.5, inverted: false, feather: 0.1, enabled: true }];
 
   it('keeps color and effect processing for normal preview draws', () => {

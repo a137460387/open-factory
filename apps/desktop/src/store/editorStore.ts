@@ -26,6 +26,7 @@ export interface EditorState {
   isExporting: boolean;
   historyMeta: HistoryMeta;
   previewTimeline?: Timeline;
+  chromaKeyPickClipId?: string;
   replaceProject: (project: Project) => void;
   replaceTimeline: (timeline: Timeline) => void;
   setActiveSequenceId: (sequenceId: string) => void;
@@ -51,6 +52,7 @@ export interface EditorState {
   setExportProgress: (progress?: number) => void;
   setIsExporting: (isExporting: boolean) => void;
   setPreviewTimeline: (timeline?: Timeline) => void;
+  setChromaKeyPickClipId: (clipId?: string) => void;
 }
 
 export const useEditorStore = create<EditorState>((set, get) => ({
@@ -82,6 +84,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       playheadTime: 0,
       isPlaying: false,
       previewTimeline: undefined,
+      chromaKeyPickClipId: undefined,
       dirty: state.dirty
     })),
   setProject: (project, projectPath) =>
@@ -96,6 +99,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       playbackRate: 1,
       inPoint: undefined,
       outPoint: undefined,
+      chromaKeyPickClipId: undefined,
       dirty: false
     }),
   resetProject: () =>
@@ -110,6 +114,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       playbackRate: 1,
       inPoint: undefined,
       outPoint: undefined,
+      chromaKeyPickClipId: undefined,
       dirty: false
     }),
   setMedia: (media) =>
@@ -171,7 +176,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setHistoryMeta: (historyMeta) => set({ historyMeta }),
   setExportProgress: (exportProgress) => set({ exportProgress }),
   setIsExporting: (isExporting) => set({ isExporting }),
-  setPreviewTimeline: (previewTimeline) => set({ previewTimeline })
+  setPreviewTimeline: (previewTimeline) => set({ previewTimeline }),
+  setChromaKeyPickClipId: (chromaKeyPickClipId) => set({ chromaKeyPickClipId })
 }));
 
 export function selectClipById(project: Project, clipId?: string): Clip | undefined {

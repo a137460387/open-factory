@@ -16,6 +16,7 @@ import {
   FRAME_INTERPOLATION_TARGET_FPS,
   INPUT_COLOR_SPACES,
   KEYFRAME_PROPERTY_LIMITS,
+  MAX_CHROMA_KEY_COLORS,
   MAX_CLIP_SPEED,
   MIN_CLIP_SPEED,
   TEXT_ANIMATION_DIRECTIONS,
@@ -56,6 +57,7 @@ import {
   setKenBurnsEndScaleKeyframes,
   createTrack,
   type AudioFadeCurve,
+  type ChromaKeyColor,
   type ClipPatch,
   type ColorCurves,
   type ColorWheelValue,
@@ -72,7 +74,7 @@ import {
   type TextAnimationPreset,
   type ThreeWayColor
 } from '@open-factory/editor-core';
-import { ArrowDown, ArrowUp, GripVertical, Palette, Plus, SlidersHorizontal, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, GripVertical, Palette, Pipette, Plus, SlidersHorizontal, Trash2, X } from 'lucide-react';
 import { zhCN } from '../../i18n/strings';
 import { commandManager, timelineAccessor } from '../../store/commandManager';
 import { analyzeClip, bridgeConfirm, getFfmpegCapabilities, listenBridge, openFileDialog, type ClipAnalysisProgressEvent } from '../../lib/tauri-bridge';
@@ -113,6 +115,8 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
   const asset = 'mediaId' in clip ? media.find((item) => item.id === clip.mediaId) : undefined;
   const project = useEditorStore((state) => state.project);
   const setSelectedClipIds = useEditorStore((state) => state.setSelectedClipIds);
+  const chromaKeyPickClipId = useEditorStore((state) => state.chromaKeyPickClipId);
+  const setChromaKeyPickClipId = useEditorStore((state) => state.setChromaKeyPickClipId);
   const translationProvider = useTranslationSettingsStore((state) => state.provider);
   const translationApiKey = useTranslationSettingsStore((state) => state.apiKey);
   const translationTargetLanguage = useTranslationSettingsStore((state) => state.targetLanguage);
@@ -195,6 +199,7 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
     selectedKeyframe?.clipId === clip.id ? clip.keyframes?.[selectedKeyframe.property]?.find((frame) => frame.id === selectedKeyframe.keyframeId) : undefined;
   const colorCorrection = normalizeColorCorrection(clip.colorCorrection);
   const chromaKey = normalizeChromaKey(clip.chromaKey);
+  const chromaKeyPickActive = chromaKeyPickClipId === clip.id;
   const stabilization = normalizeStabilization(clip.stabilization);
   const frameInterpolation = normalizeFrameInterpolation(clip.frameInterpolation);
   const frameInterpolationUnavailable = frameInterpolationSupported === false;
@@ -209,6 +214,36 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
   const masks = normalizeMasks(clip.masks);
   const colorCurves = normalizeColorCurves(colorCorrection.colorCurves);
   const threeWayColor = normalizeThreeWayColor(colorCorrection.threeWayColor);
+  const commitChromaKeyColors = (colors: ChromaKeyColor[]) => {
+    const nextColors = colors.slice(0, MAX_CHROMA_KEY_COLORS);
+    const color = nextColors[0] ?? chromaKey.color;
+    commit({ chromaKey: { ...chromaKey, color, colors: nextColors.length > 0 ? nextColors : [color] } });
+  };
+  const updateChromaKeyColor = (index: number, color: ChromaKeyColor) => {
+    const nextColors = chromaKey.colors.map((item, itemIndex) => (itemIndex === index ? color : item));
+    commitChromaKeyColors(nextColors);
+  };
+  const addChromaKeyColor = () => {
+    if (chromaKey.colors.length >= MAX_CHROMA_KEY_COLORS) {
+      return;
+    }
+    const fallback = chromaKey.colors.at(-1) ?? chromaKey.color;
+    commitChromaKeyColors([...chromaKey.colors, [...fallback] as ChromaKeyColor]);
+  };
+  const removeChromaKeyColor = (index: number) => {
+    if (chromaKey.colors.length <= 1) {
+      return;
+    }
+    commitChromaKeyColors(chromaKey.colors.filter((_, itemIndex) => itemIndex !== index));
+  };
+  const toggleChromaKeyPicker = () => {
+    if (chromaKeyPickActive) {
+      setChromaKeyPickClipId(undefined);
+      return;
+    }
+    setSelectedClipIds([clip.id]);
+    setChromaKeyPickClipId(clip.id);
+  };
   useEffect(() => {
     let disposed = false;
     let unlisten: (() => void) | undefined;
@@ -534,12 +569,60 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
               onCommit={(enabled) => commit({ chromaKey: { ...chromaKey, enabled } })}
               testId="chroma-key-toggle"
             />
-            <ColorField
-              label={zhCN.inspector.fields.chromaKeyColor}
-              value={rgbToHex(chromaKey.color)}
-              onCommit={(color) => commit({ chromaKey: { ...chromaKey, color: hexToRgb(color) } })}
-              testId="chroma-key-color"
-            />
+            <div className="space-y-2" data-testid="chroma-key-color-list">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-slate-600">{zhCN.inspector.fields.chromaKeyColor}</span>
+                <div className="flex items-center gap-1">
+                  <button
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-white text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+                    type="button"
+                    title={zhCN.inspector.chromaKey.addSampleColor}
+                    aria-label={zhCN.inspector.chromaKey.addSampleColor}
+                    disabled={chromaKey.colors.length >= MAX_CHROMA_KEY_COLORS}
+                    onClick={addChromaKeyColor}
+                    data-testid="chroma-key-add-color"
+                  >
+                    <Plus size={15} />
+                  </button>
+                  <button
+                    className={`inline-flex h-8 w-8 items-center justify-center rounded-md border border-line text-slate-700 hover:bg-panel ${
+                      chromaKeyPickActive ? 'bg-emerald-50 ring-1 ring-emerald-300' : 'bg-white'
+                    }`}
+                    type="button"
+                    title={zhCN.inspector.chromaKey.pickFromPreview}
+                    aria-label={zhCN.inspector.chromaKey.pickFromPreview}
+                    onClick={toggleChromaKeyPicker}
+                    data-testid="chroma-key-pick-preview"
+                    data-active={chromaKeyPickActive ? 'true' : 'false'}
+                  >
+                    <Pipette size={15} />
+                  </button>
+                </div>
+              </div>
+              {chromaKey.colors.map((color, index) => (
+                <div key={`chroma-key-color-${index}`} className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1">
+                    <ColorField
+                      label={zhCN.inspector.chromaKey.sampleColor(index + 1)}
+                      value={rgbToHex(color)}
+                      onCommit={(value) => updateChromaKeyColor(index, hexToRgb(value))}
+                      testId={index === 0 ? 'chroma-key-color' : `chroma-key-color-${index}`}
+                    />
+                  </div>
+                  <button
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-white text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+                    type="button"
+                    title={zhCN.inspector.chromaKey.removeSampleColor}
+                    aria-label={zhCN.inspector.chromaKey.removeSampleColor}
+                    disabled={chromaKey.colors.length <= 1}
+                    onClick={() => removeChromaKeyColor(index)}
+                    data-testid={`chroma-key-remove-color-${index}`}
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              ))}
+            </div>
             <RangeNumberField
               label={zhCN.inspector.fields.similarity}
               value={chromaKey.similarity}
@@ -559,6 +642,22 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
               format={(value) => value.toFixed(2)}
               onCommit={(blend) => commit({ chromaKey: { ...chromaKey, blend } })}
               testId="chroma-key-blend"
+            />
+            <RangeNumberField
+              label={zhCN.inspector.fields.erosion}
+              value={chromaKey.erosion}
+              min={-5}
+              max={5}
+              step={1}
+              format={(value) => `${value}px`}
+              onCommit={(erosion) => commit({ chromaKey: { ...chromaKey, erosion } })}
+              testId="chroma-key-erosion"
+            />
+            <ToggleField
+              label={zhCN.inspector.fields.spillSuppression}
+              checked={chromaKey.spillSuppression}
+              onCommit={(spillSuppression) => commit({ chromaKey: { ...chromaKey, spillSuppression } })}
+              testId="chroma-key-spill-suppression"
             />
           </Section>
         ) : null}

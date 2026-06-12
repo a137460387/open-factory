@@ -670,6 +670,14 @@ const zh = {
       noReference: '没有可用参考片段',
       referenceRequired: '请选择参考片段。'
     },
+    chromaKey: {
+      addSampleColor: '添加采样色',
+      removeSampleColor: '删除采样色',
+      pickFromPreview: '从预览取色',
+      pickFailedTitle: '取色失败',
+      pickFailedMessage: '无法读取预览像素。',
+      sampleColor: (index: number) => `采样色 ${index}`
+    },
     fields: {
       name: '名称',
       start: '开始',
@@ -686,6 +694,8 @@ const zh = {
       chromaKeyColor: '目标颜色',
       similarity: '相似度',
       blend: '混合',
+      erosion: '边缘收缩/扩张',
+      spillSuppression: '溢色抑制',
       addMask: '添加遮罩',
       maskType: '形状',
       rectMask: '矩形',
@@ -1824,6 +1834,14 @@ const enOverrides = {
       text: 'Text',
       textAnimation: 'Animation'
     },
+    chromaKey: {
+      addSampleColor: 'Add Sample Color',
+      removeSampleColor: 'Remove Sample Color',
+      pickFromPreview: 'Pick From Preview',
+      pickFailedTitle: 'Pick Failed',
+      pickFailedMessage: 'Unable to read the preview pixel.',
+      sampleColor: (index: number) => `Sample Color ${index}`
+    },
     fields: {
       name: 'Name',
       start: 'Start',
@@ -1834,6 +1852,11 @@ const enOverrides = {
       scaleY: 'Scale Y',
       rotation: 'Rotation',
       opacity: 'Opacity',
+      chromaKeyColor: 'Key Color',
+      similarity: 'Similarity',
+      blend: 'Blend',
+      erosion: 'Edge Erosion',
+      spillSuppression: 'Spill Suppression',
       addMask: 'Add Mask',
       maskType: 'Shape',
       rectMask: 'Rectangle',

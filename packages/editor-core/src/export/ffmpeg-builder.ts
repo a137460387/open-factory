@@ -1086,9 +1086,23 @@ function buildChromaKeyFilters(clip: ExportClip): string[] {
   if (!isChromaKeyEnabled(clip.chromaKey)) {
     return [];
   }
-  const [red, green, blue] = clip.chromaKey.color;
-  const color = [red, green, blue].map((channel) => Math.round(channel).toString(16).padStart(2, '0')).join('').toUpperCase();
-  return [`chromakey=color=0x${color}:similarity=${formatFfmpegNumber(clip.chromaKey.similarity)}:blend=${formatFfmpegNumber(clip.chromaKey.blend)}`];
+  const filters = clip.chromaKey.colors.map(
+    (color) =>
+      `chromakey=color=0x${formatChromaKeyColor(color)}:similarity=${formatFfmpegNumber(clip.chromaKey.similarity)}:blend=${formatFfmpegNumber(clip.chromaKey.blend)}`
+  );
+  const erosion = Math.round(clip.chromaKey.erosion);
+  const edgeFilter = erosion > 0 ? 'erosion=coordinates=255' : erosion < 0 ? 'dilation=coordinates=255' : undefined;
+  if (edgeFilter) {
+    filters.push(...Array.from({ length: Math.abs(erosion) }, () => edgeFilter));
+  }
+  if (clip.chromaKey.spillSuppression) {
+    filters.push('hue=s=0');
+  }
+  return filters;
+}
+
+function formatChromaKeyColor(color: [number, number, number]): string {
+  return color.map((channel) => Math.round(channel).toString(16).padStart(2, '0')).join('').toUpperCase();
 }
 
 function buildStabilizationFilters(clip: ExportClip): string[] {

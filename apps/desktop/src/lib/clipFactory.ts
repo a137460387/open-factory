@@ -8,6 +8,7 @@ import {
   DEFAULT_AUDIO_FADE_DURATION,
   DEFAULT_AUDIO_PITCH_SEMITONES,
   DEFAULT_AUDIO_REVERSE,
+  normalizeChromaKey,
   type Clip,
   type MediaAsset,
   type Timeline,
@@ -32,7 +33,7 @@ export function createClipFromAsset(asset: MediaAsset, track: Track, timeline: T
     speed: DEFAULT_CLIP_SPEED,
     colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
     transform: { ...DEFAULT_TRANSFORM },
-    chromaKey: { ...DEFAULT_CHROMA_KEY, color: [...DEFAULT_CHROMA_KEY.color] as [number, number, number] },
+    chromaKey: normalizeChromaKey(DEFAULT_CHROMA_KEY),
     masks: [],
     sequenceFrameRate: asset.imageSequence?.frameRate
   };
@@ -81,7 +82,7 @@ export function createTextClip(track: Track, timeline: Timeline): Clip {
     speed: DEFAULT_CLIP_SPEED,
     colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
     transform: { ...DEFAULT_TRANSFORM },
-    chromaKey: { ...DEFAULT_CHROMA_KEY, color: [...DEFAULT_CHROMA_KEY.color] as [number, number, number] },
+    chromaKey: normalizeChromaKey(DEFAULT_CHROMA_KEY),
     masks: [],
     text: zhCN.clips.defaultTextContent,
     style: { ...DEFAULT_TEXT_STYLE }

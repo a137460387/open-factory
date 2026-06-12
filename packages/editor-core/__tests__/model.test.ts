@@ -111,10 +111,45 @@ describe('model factories', () => {
     expect(normalizeChromaKey({ enabled: true, color: [-10, 128.4, 999], similarity: 4, blend: -2 })).toEqual({
       enabled: true,
       color: [0, 128, 255],
+      colors: [[0, 128, 255]],
       similarity: 1,
-      blend: 0
+      blend: 0,
+      spillSuppression: false,
+      erosion: 0
     });
-    expect(normalizeChromaKey(undefined)).toEqual({ enabled: false, color: [0, 255, 0], similarity: 0.1, blend: 0.05 });
+    expect(
+      normalizeChromaKey({
+        colors: [
+          [0, 255, 0],
+          [0, 0, 255],
+          [300, -1, 125.4],
+          [255, 0, 0]
+        ],
+        spillSuppression: true,
+        erosion: 99
+      })
+    ).toEqual({
+      enabled: false,
+      color: [0, 255, 0],
+      colors: [
+        [0, 255, 0],
+        [0, 0, 255],
+        [255, 0, 125]
+      ],
+      similarity: 0.1,
+      blend: 0.05,
+      spillSuppression: true,
+      erosion: 5
+    });
+    expect(normalizeChromaKey(undefined)).toEqual({
+      enabled: false,
+      color: [0, 255, 0],
+      colors: [[0, 255, 0]],
+      similarity: 0.1,
+      blend: 0.05,
+      spillSuppression: false,
+      erosion: 0
+    });
 
     const mask = createMask({ id: 'mask-a', type: 'ellipse', x: 0.9, y: -1, w: 0.4, h: 0, feather: 4, inverted: true });
     expect(mask).toEqual({ id: 'mask-a', type: 'ellipse', x: 0.6, y: 0, w: 0.4, h: 0.001, feather: 1, inverted: true, enabled: true });

@@ -210,6 +210,28 @@ describe('project schema migration', () => {
     expect(clip.audioDenoise).toEqual({ enabled: false, strength: 0.5 });
   });
 
+  it('backfills enhanced chroma key fields during migration', () => {
+    const project = makeProject();
+    const legacyClip = {
+      ...project.timeline.tracks[0].clips[0],
+      chromaKey: { enabled: true, color: [0, 128, 255], similarity: 0.24, blend: 0.08 }
+    };
+    project.timeline.tracks[0].clips = [legacyClip as never];
+
+    const migrated = migrateProjectFile(serializeProject(project));
+    const clip = migrated.project.timeline.tracks[0].clips[0];
+
+    expect(clip.chromaKey).toEqual({
+      enabled: true,
+      color: [0, 128, 255],
+      colors: [[0, 128, 255]],
+      similarity: 0.24,
+      blend: 0.08,
+      spillSuppression: false,
+      erosion: 0
+    });
+  });
+
   it('backfills and clamps advanced audio clip defaults during migration', () => {
     const project = makeProject();
     const legacyClip = { ...project.timeline.tracks[0].clips[0] };

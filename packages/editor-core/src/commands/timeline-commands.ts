@@ -1743,6 +1743,21 @@ export type ClipPatch = Partial<Omit<Clip, 'type' | 'id' | 'transform' | 'colorC
   style?: Partial<TextStyle> | Partial<SubtitleStyle>;
 };
 
+function mergeChromaKeyPatch(before: ChromaKey | undefined, patch: Partial<ChromaKey> | undefined): ChromaKey {
+  if (!patch) {
+    return normalizeChromaKey(before);
+  }
+  if (patch.color && !patch.colors) {
+    const current = normalizeChromaKey(before);
+    return normalizeChromaKey({
+      ...current,
+      ...patch,
+      colors: [patch.color, ...current.colors.slice(1)]
+    });
+  }
+  return normalizeChromaKey({ ...before, ...patch });
+}
+
 export class UpdateClipCommand implements Command {
   readonly description = 'Update clip';
   private before?: Clip;
@@ -1759,7 +1774,7 @@ export class UpdateClipCommand implements Command {
       ...this.patch,
       speed: nextSpeed ?? this.before.speed,
       colorCorrection: normalizeColorCorrection({ ...this.before.colorCorrection, ...this.patch.colorCorrection }),
-      chromaKey: normalizeChromaKey({ ...this.before.chromaKey, ...this.patch.chromaKey }),
+      chromaKey: mergeChromaKeyPatch(this.before.chromaKey, this.patch.chromaKey),
       stabilization: normalizeStabilization({ ...this.before.stabilization, ...this.patch.stabilization }),
       frameInterpolation: normalizeFrameInterpolation({ ...this.before.frameInterpolation, ...this.patch.frameInterpolation }),
       audioDenoise: normalizeAudioDenoise({ ...this.before.audioDenoise, ...this.patch.audioDenoise }),
