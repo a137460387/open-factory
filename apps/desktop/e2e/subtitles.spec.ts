@@ -18,6 +18,9 @@ test('imports SRT subtitles and exports them as a soft subtitle stream', async (
   await page.evaluate(() => window.__E2E_ACTIONS__!.setSavePath!('C:/Exports/subtitles-soft.mp4'));
   await openExportDialog(page);
   await page.getByTestId('export-enqueue-button').click();
+  if (await page.getByTestId('export-preflight-panel').isVisible({ timeout: 1000 }).catch(() => false)) {
+    await page.getByTestId('export-preflight-continue-button').click();
+  }
 
   await expect
     .poll(() => page.evaluate(() => window.__E2E_ACTIONS__!.getLastExportPlan!()))

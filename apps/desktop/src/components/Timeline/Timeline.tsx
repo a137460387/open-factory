@@ -17,6 +17,7 @@ import {
   clampTimelineZoom,
   findTimelineSnapTarget,
   fitTimelineZoomToWindow,
+  getTimelineVirtualRenderWindow,
   ensurePlayheadVisible,
   MoveClipCommand,
   MoveClipsCommand,
@@ -100,6 +101,7 @@ export function Timeline() {
   const [rollingTrimActive, setRollingTrimActive] = useState(false);
   const [slipEditActive, setSlipEditActive] = useState(false);
   const [slideEditActive, setSlideEditActive] = useState(false);
+  const [scrollViewport, setScrollViewport] = useState({ scrollLeft: 0, viewportWidth: 960 });
   const whisperExecutablePath = useWhisperSettingsStore((state) => state.executablePath);
   const whisperModelPath = useWhisperSettingsStore((state) => state.modelPath);
   const rootRef = useRef<HTMLElement | null>(null);
@@ -111,6 +113,17 @@ export function Timeline() {
   const width = Math.max(960, timelineDuration * zoom);
   const ticks = useMemo(() => buildTicks(timelineDuration), [timelineDuration]);
   const allClips = useMemo(() => project.timeline.tracks.flatMap((track) => track.clips), [project.timeline]);
+  const virtualWindow = useMemo(
+    () =>
+      getTimelineVirtualRenderWindow({
+        scrollLeft: scrollViewport.scrollLeft,
+        viewportWidth: scrollViewport.viewportWidth,
+        zoom,
+        labelWidth: LABEL_WIDTH,
+        overscanScreens: 2
+      }),
+    [scrollViewport.scrollLeft, scrollViewport.viewportWidth, zoom]
+  );
   const activeSequence = project.sequences.find((sequence) => sequence.id === project.activeSequenceId);
   const isMainSequence = project.activeSequenceId === 'sequence-main';
 
@@ -162,6 +175,12 @@ export function Timeline() {
       window.removeEventListener('keyup', onKeyUp);
       window.removeEventListener('blur', onBlur);
     };
+  }, []);
+
+  useEffect(() => {
+    syncScrollViewport();
+    window.addEventListener('resize', syncScrollViewport);
+    return () => window.removeEventListener('resize', syncScrollViewport);
   }, []);
 
   function addTrack(type: Track['type']): void {
@@ -658,8 +677,17 @@ export function Timeline() {
       const scroll = scrollRef.current;
       if (scroll) {
         scroll.scrollLeft += event.deltaY || event.deltaX;
+        syncScrollViewport();
       }
     }
+  }
+
+  function syncScrollViewport(): void {
+    const scroll = scrollRef.current;
+    if (!scroll) {
+      return;
+    }
+    setScrollViewport({ scrollLeft: scroll.scrollLeft, viewportWidth: scroll.clientWidth || 960 });
   }
 
   function onTitleTemplateDragOver(event: React.DragEvent<HTMLDivElement>): void {
@@ -916,6 +944,7 @@ export function Timeline() {
         ref={scrollRef}
         className="timeline-scrollbar min-h-0 min-w-0 max-w-full flex-1 overflow-auto"
         onWheel={onWheel}
+        onScroll={syncScrollViewport}
         onDragOver={onTitleTemplateDragOver}
         onDrop={onTitleTemplateDrop}
         data-testid="timeline-scroll-container"
@@ -955,6 +984,7 @@ export function Timeline() {
                 onGapMenu={openGapMenu}
                 onClipMenu={openClipMenu}
                 onClipDoubleClick={openNestedSequence}
+                virtualWindow={virtualWindow}
                 rollingTrimActive={rollingTrimActive}
                 slipEditActive={slipEditActive}
                 slideEditActive={slideEditActive}

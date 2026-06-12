@@ -32,6 +32,33 @@ test('smart rough cut panel runs scene, silence, and Whisper steps', async ({ pa
   await expect(page.getByTestId('smart-rough-cut-report')).toContainText('生成 2 条字幕');
 });
 
+test('smart rough cut applies only selected scene result items', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.evaluate(() => {
+    window.__E2E_ACTIONS__!.setupSmartRoughCutFixture!();
+    window.__E2E_ACTIONS__!.setSceneDetectionTimes!([0.8, 1.7]);
+  });
+
+  await page.getByTestId('toolbar-smart-rough-cut-button').click();
+  await page.getByTestId('smart-scene-button').click();
+  await expect(page.getByTestId('smart-scene-status')).toHaveAttribute('data-status', 'complete');
+  await expect(page.locator('[data-testid^="smart-scene-item-"]')).toHaveCount(3);
+
+  await page.getByTestId('smart-scene-checkbox-scene-1').uncheck();
+  await page.getByTestId('smart-scene-apply-button').click();
+
+  const clips = await page.evaluate(() => {
+    const timeline = window.__E2E_ACTIONS__!.getTimelineSnapshot!() as {
+      tracks: Array<{ id: string; clips: Array<{ start: number; duration: number }> }>;
+    };
+    return timeline.tracks.find((track) => track.id === 'track-video')?.clips ?? [];
+  });
+  expect(clips).toHaveLength(2);
+  expect(clips[0]).toMatchObject({ start: 0, duration: 0.8 });
+  expect(clips[1]).toMatchObject({ start: 0.8 });
+});
+
 async function getVideoClipCount(page: Page): Promise<number> {
   return page.evaluate(() => {
     const timeline = window.__E2E_ACTIONS__!.getTimelineSnapshot!() as {

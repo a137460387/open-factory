@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   createInitialSmartRoughCutState,
+  createSmartRoughCutSelection,
+  getSelectedSmartRoughCutIds,
   markSmartRoughCutStepComplete,
   markSmartRoughCutStepError,
-  markSmartRoughCutStepRunning
+  markSmartRoughCutStepRunning,
+  setAllSmartRoughCutSelection,
+  toggleSmartRoughCutSelection
 } from './smart-rough-cut-state';
 
 describe('smart rough cut state', () => {
@@ -32,5 +36,20 @@ describe('smart rough cut state', () => {
     expect(failed.steps.whisper.status).toBe('complete');
     expect(failed.steps.scene).toEqual({ status: 'error', error: 'No scene cuts' });
     expect(failed.report.subtitleClips).toBe(2);
+  });
+
+  it('tracks selectable rough cut result items', () => {
+    const initial = createSmartRoughCutSelection(['a', 'b', 'c']);
+    expect(getSelectedSmartRoughCutIds(initial)).toEqual(['a', 'b', 'c']);
+
+    const toggled = toggleSmartRoughCutSelection(initial, 'b');
+    expect(getSelectedSmartRoughCutIds(toggled)).toEqual(['a', 'c']);
+    expect(toggleSmartRoughCutSelection(toggled, 'missing')).toBe(toggled);
+
+    const none = setAllSmartRoughCutSelection(toggled, false);
+    expect(getSelectedSmartRoughCutIds(none)).toEqual([]);
+
+    const all = setAllSmartRoughCutSelection(none, true);
+    expect(getSelectedSmartRoughCutIds(all)).toEqual(['a', 'b', 'c']);
   });
 });

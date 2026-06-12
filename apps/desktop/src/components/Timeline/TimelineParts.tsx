@@ -1,4 +1,15 @@
-import { areClipsAdjacent, type Clip, type KeyframeProperty, type MediaAsset, snapTime, type Track, type Transition, type TransitionType } from '@open-factory/editor-core';
+import {
+  areClipsAdjacent,
+  filterTimelineVirtualClips,
+  type Clip,
+  type KeyframeProperty,
+  type MediaAsset,
+  snapTime,
+  type TimelineVirtualRenderWindow,
+  type Track,
+  type Transition,
+  type TransitionType
+} from '@open-factory/editor-core';
 import type { TimelineRenderRange } from '@open-factory/editor-core';
 import { clsx } from 'clsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -100,6 +111,7 @@ export function TrackRow({
   onGapMenu,
   onClipMenu,
   onClipDoubleClick,
+  virtualWindow,
   rollingTrimActive,
   slipEditActive,
   slideEditActive
@@ -121,6 +133,7 @@ export function TrackRow({
   onGapMenu(request: GapMenuRequest): void;
   onClipMenu(request: ClipMenuRequest): void;
   onClipDoubleClick(clip: Clip): void;
+  virtualWindow: TimelineVirtualRenderWindow;
   rollingTrimActive: boolean;
   slipEditActive: boolean;
   slideEditActive: boolean;
@@ -129,6 +142,7 @@ export function TrackRow({
   const locked = Boolean(track.locked);
   const nextAdjacentByClipId = new Map<string, Clip>();
   const sortedClips = [...track.clips].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id));
+  const virtualClips = filterTimelineVirtualClips(track.clips, virtualWindow);
   for (let index = 0; index < sortedClips.length - 1; index += 1) {
     const current = sortedClips[index];
     const next = sortedClips[index + 1];
@@ -178,7 +192,7 @@ export function TrackRow({
           });
         }}
       >
-        {track.clips.map((clip) => {
+        {virtualClips.map((clip) => {
           const isSelected = selectedClipIds.includes(clip.id) || selectedClipId === clip.id;
           const trimPreview = drag?.clip?.id === clip.id && (drag.mode === 'trim-left' || drag.mode === 'trim-right') ? drag : undefined;
           const previewClip = drag?.previewClipsById?.[clip.id];

@@ -3,6 +3,7 @@ import { readWaveformFromCache, writeWaveformToCache } from '../cache/cache-serv
 import { zhCN } from '../i18n/strings';
 import { sourceUrl } from '../lib/media';
 import { analyzeWaveform, getFileStat, type FileStat } from '../lib/tauri-bridge';
+import { runBackgroundMediaTask } from './background-media-task-queue';
 import type { WaveformWorkerInput, WaveformWorkerOutput } from '../workers/waveform.worker';
 
 export interface WaveformResult {
@@ -22,7 +23,14 @@ export async function getWaveform(asset: MediaAsset, pointsPerSecond = DEFAULT_P
   if (cached && cached.pointsPerSecond >= pointsPerSecond) {
     return toResult(cached);
   }
+  return runBackgroundMediaTask(() => getWaveformUnthrottled(asset, pointsPerSecond));
+}
 
+async function getWaveformUnthrottled(asset: MediaAsset, pointsPerSecond = DEFAULT_POINTS_PER_SECOND): Promise<WaveformResult> {
+  const cached = await readWaveformFromCache(asset);
+  if (cached && cached.pointsPerSecond >= pointsPerSecond) {
+    return toResult(cached);
+  }
   const stat = await getNativeFileStat(asset);
   const sizeBeforeFetch = asset.size ?? stat?.size;
   if (typeof sizeBeforeFetch === 'number' && sizeBeforeFetch > NATIVE_AUDIO_ANALYSIS_THRESHOLD_BYTES) {

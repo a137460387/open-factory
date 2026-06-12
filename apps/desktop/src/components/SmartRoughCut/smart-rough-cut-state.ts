@@ -16,6 +16,8 @@ export interface SmartRoughCutState {
   report: SmartRoughCutReport;
 }
 
+export type SmartRoughCutSelection = Record<string, boolean>;
+
 export function createInitialSmartRoughCutState(): SmartRoughCutState {
   return {
     steps: {
@@ -66,4 +68,28 @@ export function markSmartRoughCutStepError(state: SmartRoughCutState, step: Smar
       [step]: { status: 'error', error }
     }
   };
+}
+
+export function createSmartRoughCutSelection(ids: string[], selected = true): SmartRoughCutSelection {
+  return Object.fromEntries(ids.map((id) => [id, selected]));
+}
+
+export function toggleSmartRoughCutSelection(selection: SmartRoughCutSelection, id: string, selected?: boolean): SmartRoughCutSelection {
+  if (!(id in selection)) {
+    return selection;
+  }
+  return {
+    ...selection,
+    [id]: selected ?? !selection[id]
+  };
+}
+
+export function setAllSmartRoughCutSelection(selection: SmartRoughCutSelection, selected: boolean): SmartRoughCutSelection {
+  return Object.fromEntries(Object.keys(selection).map((id) => [id, selected]));
+}
+
+export function getSelectedSmartRoughCutIds(selection: SmartRoughCutSelection): string[] {
+  return Object.entries(selection)
+    .filter(([, selected]) => selected)
+    .map(([id]) => id);
 }

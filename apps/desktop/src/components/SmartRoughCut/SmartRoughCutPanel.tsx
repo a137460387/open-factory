@@ -19,10 +19,14 @@ import { useEditorStore } from '../../store/editorStore';
 import { useWhisperSettingsStore } from '../../store/whisperSettingsStore';
 import {
   createInitialSmartRoughCutState,
+  createSmartRoughCutSelection,
+  getSelectedSmartRoughCutIds,
   markSmartRoughCutStepComplete,
   markSmartRoughCutStepError,
   markSmartRoughCutStepRunning,
+  setAllSmartRoughCutSelection,
   type SmartRoughCutStep,
+  type SmartRoughCutSelection,
   type SmartRoughCutStepStatus
 } from './smart-rough-cut-state';
 
@@ -31,10 +35,23 @@ interface SmartRoughCutPanelProps {
   media: MediaAsset[];
 }
 
+interface SceneCandidate {
+  id: string;
+  start: number;
+  end: number;
+  splitTime?: number;
+  thumbnail?: string;
+}
+
+interface SilenceCandidate {
+  id: string;
+  range: SilentRange;
+}
+
 export function SmartRoughCutPanel({ selectedClip, media }: SmartRoughCutPanelProps) {
   const [state, setState] = useState(createInitialSmartRoughCutState);
-  const [pendingScene, setPendingScene] = useState<{ clipId: string; splitTimes: number[] }>();
-  const [pendingSilence, setPendingSilence] = useState<{ clipId: string; ranges: SilentRange[] }>();
+  const [pendingScene, setPendingScene] = useState<{ clipId: string; items: SceneCandidate[]; selection: SmartRoughCutSelection }>();
+  const [pendingSilence, setPendingSilence] = useState<{ clipId: string; items: SilenceCandidate[]; selection: SmartRoughCutSelection }>();
   const [whisperAvailability, setWhisperAvailability] = useState<WhisperAvailability>({ ready: false, error: zhCN.whisper.notConfigured });
   const whisperExecutablePath = useWhisperSettingsStore((item) => item.executablePath);
   const whisperModelPath = useWhisperSettingsStore((item) => item.modelPath);
@@ -70,7 +87,8 @@ export function SmartRoughCutPanel({ selectedClip, media }: SmartRoughCutPanelPr
       const splitTimes = result.sceneTimes
         .filter((time) => time > sourceStart + 0.000001 && time < sourceEnd - 0.000001)
         .map((time) => round((time - sourceStart) / speed));
-      setPendingScene({ clipId: clip.id, splitTimes });
+      const items = buildSceneCandidates(splitTimes, clip.duration, mediaAsset.thumbnail);
+      setPendingScene({ clipId: clip.id, items, selection: createSmartRoughCutSelection(items.map((item) => item.id)) });
       return {};
     });
   }
@@ -89,7 +107,8 @@ export function SmartRoughCutPanel({ selectedClip, media }: SmartRoughCutPanelPr
         minSilenceDuration: 0.5,
         marginDuration: 0.1
       });
-      setPendingSilence({ clipId: clip.id, ranges });
+      const items = ranges.map((range, index) => ({ id: `silence-${index}`, range }));
+      setPendingSilence({ clipId: clip.id, items, selection: createSmartRoughCutSelection(items.map((item) => item.id)) });
       return {};
     });
   }
@@ -99,10 +118,14 @@ export function SmartRoughCutPanel({ selectedClip, media }: SmartRoughCutPanelPr
       return;
     }
     try {
-      if (pendingScene.splitTimes.length > 0) {
-        commandManager.execute(new SplitClipAtTimesCommand(timelineAccessor, pendingScene.clipId, pendingScene.splitTimes));
+      const selectedIds = new Set(getSelectedSmartRoughCutIds(pendingScene.selection));
+      const splitTimes = pendingScene.items
+        .filter((item) => selectedIds.has(item.id) && typeof item.splitTime === 'number')
+        .map((item) => item.splitTime!);
+      if (splitTimes.length > 0) {
+        commandManager.execute(new SplitClipAtTimesCommand(timelineAccessor, pendingScene.clipId, splitTimes));
       }
-      setState((current) => markSmartRoughCutStepComplete(current, 'scene', { sceneSplits: pendingScene.splitTimes.length }));
+      setState((current) => markSmartRoughCutStepComplete(current, 'scene', { sceneSplits: splitTimes.length }));
       setPendingScene(undefined);
     } catch (error) {
       const message = error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage;
@@ -116,10 +139,12 @@ export function SmartRoughCutPanel({ selectedClip, media }: SmartRoughCutPanelPr
       return;
     }
     try {
-      if (pendingSilence.ranges.length > 0) {
-        commandManager.execute(new RemoveSilenceCommand(timelineAccessor, pendingSilence.clipId, pendingSilence.ranges));
+      const selectedIds = new Set(getSelectedSmartRoughCutIds(pendingSilence.selection));
+      const ranges = pendingSilence.items.filter((item) => selectedIds.has(item.id)).map((item) => item.range);
+      if (ranges.length > 0) {
+        commandManager.execute(new RemoveSilenceCommand(timelineAccessor, pendingSilence.clipId, ranges));
       }
-      setState((current) => markSmartRoughCutStepComplete(current, 'silence', { removedSilenceSeconds: sumSilentDuration(pendingSilence.ranges) }));
+      setState((current) => markSmartRoughCutStepComplete(current, 'silence', { removedSilenceSeconds: sumSilentDuration(ranges) }));
       setPendingSilence(undefined);
     } catch (error) {
       const message = error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage;
@@ -191,10 +216,10 @@ export function SmartRoughCutPanel({ selectedClip, media }: SmartRoughCutPanelPr
           onRun={() => void runSceneDetection()}
         >
           {pendingScene ? (
-            <PreviewAction
-              testId="smart-scene"
-              text={zhCN.smartRoughCut.scenePreview(pendingScene.splitTimes)}
-              buttonLabel={zhCN.smartRoughCut.applySceneSplit}
+            <SceneResultList
+              items={pendingScene.items}
+              selection={pendingScene.selection}
+              onSelectionChange={(selection) => setPendingScene((current) => (current ? { ...current, selection } : current))}
               onApply={applySceneSplit}
             />
           ) : null}
@@ -210,10 +235,10 @@ export function SmartRoughCutPanel({ selectedClip, media }: SmartRoughCutPanelPr
           onRun={() => void runSilenceDetection()}
         >
           {pendingSilence ? (
-            <PreviewAction
-              testId="smart-silence"
-              text={zhCN.smartRoughCut.silencePreview(pendingSilence.ranges.length, sumSilentDuration(pendingSilence.ranges).toFixed(1))}
-              buttonLabel={zhCN.smartRoughCut.applySilenceRemoval}
+            <SilenceResultList
+              items={pendingSilence.items}
+              selection={pendingSilence.selection}
+              onSelectionChange={(selection) => setPendingSilence((current) => (current ? { ...current, selection } : current))}
               onApply={applySilenceRemoval}
             />
           ) : null}
@@ -275,12 +300,128 @@ function SmartStep({
   );
 }
 
-function PreviewAction({ testId, text, buttonLabel, onApply }: { testId: string; text: string; buttonLabel: string; onApply(): void }) {
+function SceneResultList({
+  items,
+  selection,
+  onSelectionChange,
+  onApply
+}: {
+  items: SceneCandidate[];
+  selection: SmartRoughCutSelection;
+  onSelectionChange(selection: SmartRoughCutSelection): void;
+  onApply(): void;
+}) {
+  const selectedCount = getSelectedSmartRoughCutIds(selection).length;
+  return (
+    <SelectableResultList
+      testId="smart-scene"
+      summary={zhCN.smartRoughCut.scenePreview(items.flatMap((item) => (typeof item.splitTime === 'number' ? [item.splitTime] : [])))}
+      selection={selection}
+      selectedCount={selectedCount}
+      totalCount={items.length}
+      applyLabel={zhCN.smartRoughCut.applySelectedScene}
+      onSelectionChange={onSelectionChange}
+      onApply={onApply}
+    >
+      {items.map((item) => (
+        <label key={item.id} className="flex items-center gap-2 rounded border border-line bg-white p-2" data-testid={`smart-scene-item-${item.id}`}>
+          <input
+            className="h-4 w-4 accent-brand"
+            type="checkbox"
+            checked={selection[item.id] ?? false}
+            onChange={(event) => onSelectionChange({ ...selection, [item.id]: event.target.checked })}
+            data-testid={`smart-scene-checkbox-${item.id}`}
+          />
+          <span className="h-10 w-16 flex-none overflow-hidden rounded bg-slate-200">
+            {item.thumbnail ? <img className="h-full w-full object-cover" src={item.thumbnail} alt="" /> : null}
+          </span>
+          <span className="min-w-0 flex-1 text-slate-700">{zhCN.smartRoughCut.sceneRange(formatSeconds(item.start), formatSeconds(item.end))}</span>
+        </label>
+      ))}
+    </SelectableResultList>
+  );
+}
+
+function SilenceResultList({
+  items,
+  selection,
+  onSelectionChange,
+  onApply
+}: {
+  items: SilenceCandidate[];
+  selection: SmartRoughCutSelection;
+  onSelectionChange(selection: SmartRoughCutSelection): void;
+  onApply(): void;
+}) {
+  const selectedIds = new Set(getSelectedSmartRoughCutIds(selection));
+  const selectedRanges = items.filter((item) => selectedIds.has(item.id)).map((item) => item.range);
+  return (
+    <SelectableResultList
+      testId="smart-silence"
+      summary={zhCN.smartRoughCut.silencePreview(selectedRanges.length, sumSilentDuration(selectedRanges).toFixed(1))}
+      selection={selection}
+      selectedCount={selectedRanges.length}
+      totalCount={items.length}
+      applyLabel={zhCN.smartRoughCut.applySelectedSilence}
+      onSelectionChange={onSelectionChange}
+      onApply={onApply}
+    >
+      {items.map((item) => (
+        <label key={item.id} className="flex items-center gap-2 rounded border border-line bg-white p-2" data-testid={`smart-silence-item-${item.id}`}>
+          <input
+            className="h-4 w-4 accent-brand"
+            type="checkbox"
+            checked={selection[item.id] ?? false}
+            onChange={(event) => onSelectionChange({ ...selection, [item.id]: event.target.checked })}
+            data-testid={`smart-silence-checkbox-${item.id}`}
+          />
+          <span className="min-w-0 flex-1 text-slate-700">
+            {zhCN.smartRoughCut.silenceRange(formatSeconds(item.range.start), formatSeconds(item.range.end), formatSeconds(item.range.duration))}
+          </span>
+        </label>
+      ))}
+    </SelectableResultList>
+  );
+}
+
+function SelectableResultList({
+  testId,
+  summary,
+  selection,
+  selectedCount,
+  totalCount,
+  applyLabel,
+  onSelectionChange,
+  onApply,
+  children
+}: {
+  testId: string;
+  summary: string;
+  selection: SmartRoughCutSelection;
+  selectedCount: number;
+  totalCount: number;
+  applyLabel: string;
+  onSelectionChange(selection: SmartRoughCutSelection): void;
+  onApply(): void;
+  children: ReactNode;
+}) {
   return (
     <div className="mt-2 rounded-md border border-line bg-panel p-2 text-xs text-slate-600" data-testid={`${testId}-preview`}>
-      <div>{text}</div>
-      <button className="mt-2 rounded-md border border-line bg-white px-2 py-1.5 font-medium text-slate-700 hover:bg-panel" type="button" data-testid={`${testId}-apply-button`} onClick={onApply}>
-        {buttonLabel}
+      <div className="flex items-center justify-between gap-2">
+        <div>{summary}</div>
+        <div className="whitespace-nowrap text-[11px] text-slate-500">{zhCN.smartRoughCut.selectedCount(selectedCount, totalCount)}</div>
+      </div>
+      <div className="mt-2 flex gap-2">
+        <button className="rounded-md border border-line bg-white px-2 py-1 font-medium text-slate-700 hover:bg-panel" type="button" data-testid={`${testId}-select-all`} onClick={() => onSelectionChange(setAllSmartRoughCutSelection(selection, true))}>
+          {zhCN.smartRoughCut.selectAll}
+        </button>
+        <button className="rounded-md border border-line bg-white px-2 py-1 font-medium text-slate-700 hover:bg-panel" type="button" data-testid={`${testId}-select-none`} onClick={() => onSelectionChange(setAllSmartRoughCutSelection(selection, false))}>
+          {zhCN.smartRoughCut.selectNone}
+        </button>
+      </div>
+      <div className="mt-2 max-h-40 space-y-1 overflow-auto">{children}</div>
+      <button className="mt-2 rounded-md border border-line bg-white px-2 py-1.5 font-medium text-slate-700 hover:bg-panel" type="button" disabled={selectedCount === 0} data-testid={`${testId}-apply-button`} onClick={onApply}>
+        {applyLabel}
       </button>
     </div>
   );
@@ -295,4 +436,22 @@ function getClipMediaAsset(clip: Clip | undefined, media: MediaAsset[]): MediaAs
 
 function sumSilentDuration(ranges: SilentRange[]): number {
   return round(ranges.reduce((total, range) => total + range.duration, 0));
+}
+
+function buildSceneCandidates(splitTimes: number[], duration: number, thumbnail?: string): SceneCandidate[] {
+  const points = Array.from(new Set(splitTimes.map((time) => round(Math.min(duration, Math.max(0, time))))))
+    .filter((time) => time > 0.000001 && time < duration - 0.000001)
+    .sort((left, right) => left - right);
+  const boundaries = [0, ...points, duration];
+  return boundaries.slice(0, -1).map((start, index) => ({
+    id: `scene-${index}`,
+    start,
+    end: boundaries[index + 1],
+    splitTime: index < points.length ? boundaries[index + 1] : undefined,
+    thumbnail
+  }));
+}
+
+function formatSeconds(value: number): string {
+  return `${round(value).toFixed(2)}s`;
 }

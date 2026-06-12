@@ -8,6 +8,7 @@ import {
 import { zhCN } from '../i18n/strings';
 import { sourceUrl } from '../lib/media';
 import { getPreviewMediaPath } from './proxy';
+import { runBackgroundMediaTask } from './background-media-task-queue';
 import type { TimelineThumbnailWorkerInput, TimelineThumbnailWorkerOutput } from '../workers/timeline-thumbnail.worker';
 
 type VideoClip = Extract<Clip, { type: 'video' }>;
@@ -42,6 +43,14 @@ export function getTimelineThumbnailPlaceholders(asset: MediaAsset, clip: VideoC
 }
 
 export async function getTimelineThumbnails(asset: MediaAsset, clip: VideoClip, pixelWidth: number): Promise<TimelineThumbnailFrame[]> {
+  const frames = getTimelineThumbnailPlaceholders(asset, clip, pixelWidth);
+  if (frames.every((frame) => thumbnailCache.has(frame.key))) {
+    return frames.map((frame) => ({ ...frame, dataUrl: thumbnailCache.get(frame.key) }));
+  }
+  return runBackgroundMediaTask(() => getTimelineThumbnailsUnthrottled(asset, clip, pixelWidth));
+}
+
+async function getTimelineThumbnailsUnthrottled(asset: MediaAsset, clip: VideoClip, pixelWidth: number): Promise<TimelineThumbnailFrame[]> {
   const mediaPath = getPreviewMediaPath(asset);
   const frames = getTimelineThumbnailPlaceholders(asset, clip, pixelWidth);
   for (const frame of frames) {

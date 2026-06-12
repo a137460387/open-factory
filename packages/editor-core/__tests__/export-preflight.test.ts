@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createTrack, runExportPreflight, parseFontFamilyList, type MediaAsset } from '../src';
+import { createTrack, runExportPreflight, parseFontFamilyList, PRIMARY_SEQUENCE_ID, type MediaAsset } from '../src';
 import { makeProject, makeSubtitleClip, makeTextClip, makeTimeline, makeVideoClip } from './test-utils';
 
 describe('export preflight', () => {
@@ -46,6 +46,28 @@ describe('export preflight', () => {
     expect(runExportPreflight(project).some((issue) => issue.type === 'missing-media')).toBe(false);
   });
 
+  it('checks missing media inside reachable nested sequences', () => {
+    const project = makeProject();
+    project.media = [
+      project.media[0],
+      { ...project.media[0], id: 'asset-nested', name: 'nested-missing.mp4', path: '', missing: true }
+    ];
+    project.timeline = makeTimeline([
+      {
+        ...makeVideoClip({ id: 'nested-wrapper', mediaId: 'asset-1' }),
+        type: 'nested-sequence',
+        sequenceId: 'sequence-nested',
+        volume: 1
+      }
+    ]);
+    project.sequences = [
+      { id: PRIMARY_SEQUENCE_ID, name: 'Main Sequence', timeline: project.timeline },
+      { id: 'sequence-nested', name: 'Nested', timeline: makeTimeline([makeVideoClip({ id: 'nested-child', mediaId: 'asset-nested' })]) }
+    ];
+
+    expect(runExportPreflight(project)).toContainEqual(expect.objectContaining({ type: 'missing-media', items: ['nested-missing.mp4'] }));
+  });
+
   it('warns when text drawtext fonts are not available', () => {
     const project = makeProject();
     project.timeline = makeTimeline([
@@ -65,6 +87,13 @@ describe('export preflight', () => {
         clipIds: ['text-a']
       })
     );
+  });
+
+  it('does not warn when a font stack has an available fallback family', () => {
+    const project = makeProject();
+    project.timeline = makeTimeline([makeTextClip({ id: 'text-fallback', style: { fontFamily: 'Missing Brand, Arial' } })]);
+
+    expect(runExportPreflight(project, { isFontFamilyAvailable: (fontFamily) => fontFamily === 'Arial' }).some((issue) => issue.type === 'missing-font')).toBe(false);
   });
 
   it('blocks when FFmpeg is unavailable', () => {

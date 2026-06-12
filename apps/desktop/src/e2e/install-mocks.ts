@@ -32,6 +32,7 @@ let lastExportPlan: FfmpegExportPlan | undefined;
 const canceledExportTaskIds = new Set<string>();
 let exportGateHeld = false;
 const exportGates: Array<{ taskId?: string; release: () => void }> = [];
+let mockSceneTimes = [1];
 
 const sampleProjectPath = 'C:/Projects/sample.cutproj.json';
 const missingProjectPath = 'C:/Projects/missing.cutproj.json';
@@ -269,7 +270,7 @@ const mocks: TauriMocks = {
     cache.set(plan.outputPath.replace(`${appDataDir}/`, ''), JSON.stringify({ proxyPath: plan.outputPath }));
     return { assetId: plan.assetId, proxyPath: plan.outputPath, durationMs: 10 };
   },
-  detectSceneChanges: () => ({ sceneTimes: [1] }),
+  detectSceneChanges: () => ({ sceneTimes: mockSceneTimes }),
   runWhisper: async ({ clipId }) => {
     emit('whisper-progress', { clipId, progress: 0.35, progressPct: 35 });
     await wait(10);
@@ -548,6 +549,9 @@ window.__E2E_ACTIONS__ = {
     if (typeof path === 'string') {
       openDirectoryPath = path;
     }
+  },
+  setSceneDetectionTimes: (times: unknown) => {
+    mockSceneTimes = Array.isArray(times) ? times.filter((time): time is number => typeof time === 'number' && Number.isFinite(time)) : [1];
   },
   getWrittenFile: (path: unknown) => (typeof path === 'string' ? files.get(path) : undefined),
   getWrittenFileSize: (path: unknown) => (typeof path === 'string' ? files.get(path)?.length ?? 0 : 0),
