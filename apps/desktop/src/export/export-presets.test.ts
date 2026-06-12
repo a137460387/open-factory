@@ -168,6 +168,70 @@ describe('export presets', () => {
       videoCodec: 'gif'
     });
   });
+
+  it('persists and sanitizes watermark preset settings', async () => {
+    const { storage, files, presetPath } = makeStorage();
+
+    const presets = await saveCustomExportPreset(
+      'Watermarked',
+      {
+        format: 'mp4',
+        outputMode: 'video',
+        watermark: {
+          enabled: true,
+          type: 'text',
+          text: 'Draft',
+          fontFamily: 'Arial',
+          color: '#ffcc00',
+          fontSize: 48,
+          position: 'bottom-center'
+        }
+      },
+      storage
+    );
+
+    expect(presets.find((preset) => preset.name === 'Watermarked')?.settings.watermark).toEqual({
+      enabled: true,
+      type: 'text',
+      text: 'Draft',
+      fontFamily: 'Arial',
+      color: '#ffcc00',
+      fontSize: 48,
+      position: 'bottom-center'
+    });
+    expect(JSON.parse(files.get(presetPath) ?? '{}').presets[0].settings.watermark).toEqual(expect.objectContaining({ type: 'text', text: 'Draft' }));
+
+    const parsed = parseStoredExportPresets(
+      JSON.stringify({
+        schemaVersion: 1,
+        presets: [
+          {
+            id: 'custom-watermark',
+            name: 'Watermark',
+            settings: {
+              watermark: {
+                enabled: true,
+                type: 'image',
+                path: 'C:\\Brand\\logo.png',
+                position: 'invalid',
+                scalePercent: 99,
+                opacity: -1
+              }
+            }
+          }
+        ]
+      })
+    );
+
+    expect(parsed[0].settings.watermark).toEqual({
+      enabled: true,
+      type: 'image',
+      path: 'C:\\Brand\\logo.png',
+      position: 'bottom-right',
+      scalePercent: 50,
+      opacity: 0
+    });
+  });
 });
 
 function makeStorage() {

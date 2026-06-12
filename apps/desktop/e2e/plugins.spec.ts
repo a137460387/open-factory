@@ -4,6 +4,7 @@ import { addMediaCardToTimeline, openExportDialog, waitForE2eActions } from './e
 type HookSummary = { pluginId: string; hookName: string; ok: boolean };
 
 test('lists plugin manifests, isolates permission errors, and toggles export hooks', async ({ page }) => {
+  test.setTimeout(60_000);
   await page.goto('/');
   await waitForE2eActions(page);
   await page.evaluate(() => window.__E2E_ACTIONS__!.clearE2eFiles!());

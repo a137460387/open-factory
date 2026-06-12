@@ -4,6 +4,7 @@ import {
   buildExportProjectFromProject,
   buildFfmpegCurrentFrameExportPlan,
   buildFfmpegExportPlan,
+  calculateWatermarkOverlayPosition,
   createMulticamSequenceProject,
   createNestedSequenceClip,
   createSequence,
@@ -425,6 +426,73 @@ describe('multitrack ffmpeg builder', () => {
 
     expect(plan.filterComplex).not.toContain('adjustment_neutral');
     expect(plan.filterComplex).not.toContain('[base1]split=2');
+  });
+
+  it('calculates image watermark overlay coordinates for nine-grid positions', () => {
+    expect(calculateWatermarkOverlayPosition('bottom-right', 1920, 1080, 192, 108)).toEqual({ x: 1704, y: 948 });
+    expect(calculateWatermarkOverlayPosition('top-left', 1920, 1080, 192, 108)).toEqual({ x: 24, y: 24 });
+    expect(calculateWatermarkOverlayPosition('center', 1920, 1080, 192, 108)).toEqual({ x: 864, y: 486 });
+  });
+
+  it('adds image watermark input, opacity, and overlay expressions', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-watermark-base', duration: 2 })];
+
+    const plan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(project, {
+        outputPath: 'out.mp4',
+        settings: {
+          width: 1920,
+          height: 1080,
+          watermark: {
+            enabled: true,
+            type: 'image',
+            path: 'D:\\Brand\\logo.png',
+            position: 'bottom-right',
+            scalePercent: 10,
+            opacity: 0.5
+          }
+        }
+      })
+    );
+
+    expect(plan.inputs.at(-1)).toEqual(expect.objectContaining({ path: 'D:/Brand/logo.png', args: ['-loop', '1', '-t', '2'] }));
+    expect(plan.filterComplex).toContain('[1:v]scale=192:-1,format=rgba,colorchannelmixer=aa=0.5[watermark_1]');
+    expect(plan.filterComplex).toContain("[base1][watermark_1]overlay=x='main_w-overlay_w-24':y='main_h-overlay_h-24':eval=frame");
+  });
+
+  it('adds text watermark drawtext args', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-text-watermark-base', duration: 2 })];
+
+    const plan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(project, {
+        outputPath: 'out.mp4',
+        settings: {
+          watermark: {
+            enabled: true,
+            type: 'text',
+            text: 'Draft',
+            fontFamily: 'Arial',
+            color: '#ffcc00',
+            fontSize: 42,
+            position: 'top-left'
+          }
+        }
+      })
+    );
+
+    expect(plan.filterComplex).toContain("drawtext=text='Draft':font='Arial':fontsize=42:fontcolor=0xffcc00:x='24':y='24'");
+  });
+
+  it('omits watermark filters for default disabled watermarks', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-no-watermark', duration: 2 })];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).not.toContain('watermark_');
+    expect(plan.filterComplex).not.toContain("drawtext=text='");
   });
 
   it('adds preset video and audio bitrate args', () => {

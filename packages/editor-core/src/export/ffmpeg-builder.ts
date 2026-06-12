@@ -51,6 +51,7 @@ import type {
   ExportLoudnessNormalization,
   ExportProject,
   ExportSettings,
+  ExportWatermarkPosition,
   FfmpegExportPass,
   ExportTimeline,
   ExportTrack,
@@ -85,7 +86,8 @@ export const DEFAULT_EXPORT_SETTINGS: Omit<ExportSettings, 'outputPath'> = {
   reframeOffsetY: 0,
   subtitleMode: undefined,
   hardwareEncoding: false,
-  loudnessNormalization: 'off'
+  loudnessNormalization: 'off',
+  watermark: null
 };
 
 export const SETPTS_EXPRESSION_LIMIT = 4096;
@@ -95,6 +97,7 @@ const LOUDNORM_MEASURED_TP_PLACEHOLDER = '__LOUDNORM_MEASURED_TP__';
 const LOUDNORM_MEASURED_LRA_PLACEHOLDER = '__LOUDNORM_MEASURED_LRA__';
 const LOUDNORM_MEASURED_THRESH_PLACEHOLDER = '__LOUDNORM_MEASURED_THRESH__';
 const LOUDNORM_OFFSET_PLACEHOLDER = '__LOUDNORM_OFFSET__';
+const WATERMARK_MARGIN_PX = 24;
 
 interface LoudnessNormalizationPreset {
   mode: Exclude<ExportLoudnessNormalization, 'off'>;
@@ -274,6 +277,7 @@ export function buildFfmpegExportPlan(
   const animatedImage = gifExport || webpAnimation || apngExport;
   const frameExportTime = options.frameExport ? Math.min(duration, Math.max(0, options.frameExport.time)) : null;
   const videoFramesOnly = frameExportTime !== null || pngSequence || animatedImage;
+  const watermark = !audioOnly && !videoFramesOnly ? normalizeExportWatermark(settings.watermark) : null;
   const warnings: string[] = [];
   const inputs: FfmpegInput[] = [];
   const inputByClipId = new Map<string, number>();
@@ -312,6 +316,16 @@ export function buildFfmpegExportPlan(
 
   if (allClips.length === 0) {
     throw new Error('The timeline is empty. Add media or text clips before exporting.');
+  }
+
+  let imageWatermarkInputIndex: number | undefined;
+  if (watermark?.enabled && watermark.type === 'image') {
+    imageWatermarkInputIndex = inputs.length;
+    inputs.push({
+      index: imageWatermarkInputIndex,
+      path: normalizeFfmpegPath(watermark.path),
+      args: ['-loop', '1', '-t', formatFfmpegSeconds(duration)]
+    });
   }
 
   let currentVideo = 'base0';
@@ -444,6 +458,22 @@ export function buildFfmpegExportPlan(
     });
   }
 
+  if (watermark?.enabled) {
+    if (watermark.type === 'text' && capabilities && (!capabilities.hasDrawtext || !capabilities.hasLibfreetype)) {
+      warnings.push(
+        capabilities.drawtextWarning ?? 'Current FFmpeg does not support drawtext/libfreetype. Install an FFmpeg build with libfreetype to export text overlays.'
+      );
+    } else {
+      const nextVideo = `base${videoStep + 1}`;
+      const watermarkFilters = buildWatermarkFilters(currentVideo, nextVideo, watermark, settings, imageWatermarkInputIndex);
+      if (watermarkFilters.length > 0) {
+        filters.push(...watermarkFilters);
+        currentVideo = nextVideo;
+        videoStep += 1;
+      }
+    }
+  }
+
   if (!audioOnly) {
     const outputPixelFormat = pngSequence || animatedImage ? 'rgba' : 'yuv420p';
     filters.push(`[${currentVideo}]trim=duration=${formatFfmpegSeconds(duration)},setpts=PTS-STARTPTS,fps=${settings.fps},format=${outputPixelFormat}[vout]`);
@@ -513,7 +543,8 @@ function normalizeExportReframeSettings(settings: ExportSettings): ExportSetting
     targetAspectRatio,
     reframeOffsetX: clampReframeOffset(settings.reframeOffsetX),
     reframeOffsetY: clampReframeOffset(settings.reframeOffsetY),
-    loudnessNormalization: normalizeLoudnessNormalization(settings.loudnessNormalization)
+    loudnessNormalization: normalizeLoudnessNormalization(settings.loudnessNormalization),
+    watermark: normalizeExportWatermark(settings.watermark)
   };
 }
 
@@ -554,6 +585,119 @@ function constrainDimensions(width: number, height: number, maxDimension: number
     width: Math.max(1, Math.round(safeWidth * ratio)),
     height: Math.max(1, Math.round(safeHeight * ratio))
   };
+}
+
+function normalizeExportWatermark(watermark: ExportSettings['watermark'] | undefined): ExportSettings['watermark'] {
+  if (!watermark || watermark.enabled !== true) {
+    return null;
+  }
+  const position = normalizeWatermarkPosition(watermark.position);
+  if (watermark.type === 'image') {
+    const path = typeof watermark.path === 'string' ? watermark.path.trim() : '';
+    if (!path) {
+      return null;
+    }
+    return {
+      enabled: true,
+      type: 'image',
+      path,
+      position,
+      scalePercent: Math.min(50, Math.max(1, finiteNumber(watermark.scalePercent, 12))),
+      opacity: Math.min(1, Math.max(0, finiteNumber(watermark.opacity, 0.75)))
+    };
+  }
+  if (watermark.type === 'text') {
+    const text = typeof watermark.text === 'string' ? watermark.text.trim() : '';
+    if (!text) {
+      return null;
+    }
+    return {
+      enabled: true,
+      type: 'text',
+      text,
+      fontFamily: typeof watermark.fontFamily === 'string' && watermark.fontFamily.trim() ? watermark.fontFamily.trim() : 'Arial',
+      color: typeof watermark.color === 'string' && watermark.color.trim() ? watermark.color.trim() : '#ffffff',
+      fontSize: Math.round(Math.min(240, Math.max(8, finiteNumber(watermark.fontSize, 36)))),
+      position
+    };
+  }
+  return null;
+}
+
+function normalizeWatermarkPosition(position: ExportWatermarkPosition | undefined): ExportWatermarkPosition {
+  return position === 'top-left' ||
+    position === 'top-center' ||
+    position === 'top-right' ||
+    position === 'middle-left' ||
+    position === 'center' ||
+    position === 'middle-right' ||
+    position === 'bottom-left' ||
+    position === 'bottom-center' ||
+    position === 'bottom-right'
+    ? position
+    : 'bottom-right';
+}
+
+function buildWatermarkFilters(
+  inputLabel: string,
+  outputLabel: string,
+  watermark: NonNullable<ExportSettings['watermark']>,
+  settings: ExportSettings,
+  imageInputIndex: number | undefined
+): string[] {
+  if (watermark.type === 'image') {
+    if (imageInputIndex === undefined) {
+      return [];
+    }
+    const preparedLabel = `watermark_${imageInputIndex}`;
+    const targetWidth = Math.max(1, Math.round(settings.width * (watermark.scalePercent / 100)));
+    const position = buildWatermarkExpression(watermark.position, 'main_w', 'main_h', 'overlay_w', 'overlay_h');
+    return [
+      `[${imageInputIndex}:v]scale=${targetWidth}:-1,format=rgba,colorchannelmixer=aa=${formatOpacity(watermark.opacity)}[${preparedLabel}]`,
+      `[${inputLabel}][${preparedLabel}]overlay=x='${position.x}':y='${position.y}':eval=frame[${outputLabel}]`
+    ];
+  }
+
+  const position = buildWatermarkExpression(watermark.position, 'w', 'h', 'text_w', 'text_h');
+  const font = watermark.fontFamily ? `:font='${escapeDrawtextValue(watermark.fontFamily)}'` : '';
+  return [
+    `[${inputLabel}]drawtext=text='${escapeDrawtextValue(watermark.text)}'${font}:fontsize=${watermark.fontSize}:fontcolor=${cssColorToFfmpeg(
+      watermark.color
+    )}:x='${position.x}':y='${position.y}'[${outputLabel}]`
+  ];
+}
+
+function buildWatermarkExpression(
+  position: ExportWatermarkPosition,
+  widthVar: string,
+  heightVar: string,
+  itemWidthVar: string,
+  itemHeightVar: string
+): { x: string; y: string } {
+  const horizontal = position.endsWith('left') ? 'left' : position.endsWith('right') ? 'right' : 'center';
+  const vertical = position.startsWith('top') ? 'top' : position.startsWith('bottom') ? 'bottom' : 'middle';
+  const x = horizontal === 'left' ? String(WATERMARK_MARGIN_PX) : horizontal === 'right' ? `${widthVar}-${itemWidthVar}-${WATERMARK_MARGIN_PX}` : `(${widthVar}-${itemWidthVar})/2`;
+  const y = vertical === 'top' ? String(WATERMARK_MARGIN_PX) : vertical === 'bottom' ? `${heightVar}-${itemHeightVar}-${WATERMARK_MARGIN_PX}` : `(${heightVar}-${itemHeightVar})/2`;
+  return { x, y };
+}
+
+export function calculateWatermarkOverlayPosition(
+  position: ExportWatermarkPosition,
+  canvasWidth: number,
+  canvasHeight: number,
+  watermarkWidth: number,
+  watermarkHeight: number
+): { x: number; y: number } {
+  const safePosition = normalizeWatermarkPosition(position);
+  const horizontal = safePosition.endsWith('left') ? 'left' : safePosition.endsWith('right') ? 'right' : 'center';
+  const vertical = safePosition.startsWith('top') ? 'top' : safePosition.startsWith('bottom') ? 'bottom' : 'middle';
+  const x = horizontal === 'left' ? WATERMARK_MARGIN_PX : horizontal === 'right' ? canvasWidth - watermarkWidth - WATERMARK_MARGIN_PX : (canvasWidth - watermarkWidth) / 2;
+  const y = vertical === 'top' ? WATERMARK_MARGIN_PX : vertical === 'bottom' ? canvasHeight - watermarkHeight - WATERMARK_MARGIN_PX : (canvasHeight - watermarkHeight) / 2;
+  return { x: Math.round(x), y: Math.round(y) };
+}
+
+function finiteNumber(value: number | undefined, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 }
 
 function buildGifExportPasses(

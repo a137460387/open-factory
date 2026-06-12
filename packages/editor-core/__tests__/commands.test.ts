@@ -1042,14 +1042,14 @@ describe('timeline commands', () => {
 
   it('keeps undo and redo as no-ops at history boundaries', () => {
     const manager = new CommandManager();
-    const changes: Array<{ canUndo: boolean; canRedo: boolean }> = [];
+    const changes: ReturnType<CommandManager['getHistoryMeta']>[] = [];
     manager.setOnChange((meta) => changes.push(meta));
 
     manager.undo();
     manager.redo();
 
-    expect(manager.getHistoryMeta()).toEqual({ canUndo: false, canRedo: false });
-    expect(changes).toEqual([{ canUndo: false, canRedo: false }]);
+    expect(manager.getHistoryMeta()).toMatchObject({ canUndo: false, canRedo: false, cursor: -1, position: 0, total: 0, entries: [] });
+    expect(changes).toEqual([{ canUndo: false, canRedo: false, cursor: -1, entries: [], position: 0, total: 0 }]);
   });
 
   it('does not record a command when execute throws', () => {
@@ -1083,8 +1083,40 @@ describe('timeline commands', () => {
     expect(manager.canRedo()).toBe(true);
 
     manager.clear();
-    expect(manager.getHistoryMeta()).toEqual({ canUndo: false, canRedo: false });
+    expect(manager.getHistoryMeta()).toMatchObject({ canUndo: false, canRedo: false, cursor: -1, position: 0, total: 0, entries: [] });
     manager.redo();
+    expect(accessor.current().tracks[0].clips[0].start).toBe(1);
+  });
+
+  it('jumps to a selected history entry with undo and redo operations', () => {
+    const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'clip-1', start: 0 })]));
+    const manager = new CommandManager();
+
+    manager.execute(new MoveClipCommand(accessor, 'clip-1', 1));
+    manager.execute(new MoveClipCommand(accessor, 'clip-1', 2));
+    manager.execute(new MoveClipCommand(accessor, 'clip-1', 3));
+
+    manager.jumpTo(0);
+    expect(accessor.current().tracks[0].clips[0].start).toBe(1);
+    expect(manager.getHistoryMeta()).toMatchObject({ cursor: 0, position: 1, total: 3 });
+
+    manager.jumpTo(2);
+    expect(accessor.current().tracks[0].clips[0].start).toBe(3);
+    expect(manager.getHistoryMeta()).toMatchObject({ cursor: 2, position: 3, total: 3 });
+  });
+
+  it('evicts the oldest history entries at the configured limit', () => {
+    const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'clip-1', start: 0 })]));
+    const manager = new CommandManager(2);
+
+    manager.execute(new MoveClipCommand(accessor, 'clip-1', 1));
+    manager.execute(new MoveClipCommand(accessor, 'clip-1', 2));
+    manager.execute(new MoveClipCommand(accessor, 'clip-1', 3));
+
+    const meta = manager.getHistoryMeta();
+    expect(meta.total).toBe(2);
+    expect(meta.entries.map((entry) => entry.description)).toEqual(['Move clip', 'Move clip']);
+    manager.jumpTo(-1);
     expect(accessor.current().tracks[0].clips[0].start).toBe(1);
   });
 

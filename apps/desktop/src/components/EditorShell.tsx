@@ -86,6 +86,7 @@ const AudioMixer = lazy(() => import('./AudioMixer/AudioMixer').then((module) =>
 const Inspector = lazy(() => import('./Inspector/Inspector').then((module) => ({ default: module.Inspector })));
 const PreviewCanvas = lazy(() => import('./PreviewCanvas/PreviewCanvas').then((module) => ({ default: module.PreviewCanvas })));
 const SmartRoughCutPanel = lazy(() => import('./SmartRoughCut/SmartRoughCutPanel').then((module) => ({ default: module.SmartRoughCutPanel })));
+const HistoryPanel = lazy(() => import('./History/HistoryPanel').then((module) => ({ default: module.HistoryPanel })));
 const ExportDialog = lazy(() => import('../export/ExportDialog').then((module) => ({ default: module.ExportDialog })));
 const SettingsDialog = lazy(() => import('../settings/SettingsDialog').then((module) => ({ default: module.SettingsDialog })));
 const TimelineExportDialog = lazy(() => import('../timeline-export/TimelineExportDialog').then((module) => ({ default: module.TimelineExportDialog })));
@@ -127,6 +128,7 @@ export function EditorShell() {
   const [templateExportPreset, setTemplateExportPreset] = useState<ExportPreset>();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [smartRoughCutOpen, setSmartRoughCutOpen] = useState(false);
+  const [historyPanelOpen, setHistoryPanelOpen] = useState(false);
   const [projectHealthOpen, setProjectHealthOpen] = useState(false);
   const [projectHealthReport, setProjectHealthReport] = useState<ProjectHealthReport>();
   const [projectHealthScanning, setProjectHealthScanning] = useState(false);
@@ -830,10 +832,18 @@ export function EditorShell() {
           onExportCurrentFrame={() => void exportCurrentFrame()}
           onCancelExport={() => void cancelCurrentExport()}
           onSplitSelected={splitSelected}
-          onToggleSmartRoughCut={() => setSmartRoughCutOpen((open) => !open)}
+          onToggleSmartRoughCut={() => {
+            setHistoryPanelOpen(false);
+            setSmartRoughCutOpen((open) => !open);
+          }}
           onCreateMulticamSequence={createMulticamSequence}
           canCreateMulticamSequence={canCreateMulticamSequence}
           smartRoughCutOpen={smartRoughCutOpen}
+          historyPanelOpen={historyPanelOpen}
+          onToggleHistoryPanel={() => {
+            setSmartRoughCutOpen(false);
+            setHistoryPanelOpen((open) => !open);
+          }}
           onUndo={undo}
           onRedo={redo}
           onClearCache={() => void clearCache()}
@@ -869,9 +879,11 @@ export function EditorShell() {
             </Suspense>
           </ErrorBoundary>
           <aside className="grid min-h-0 grid-rows-[minmax(0,1fr)_220px] gap-px bg-line">
-            <ErrorBoundary name={smartRoughCutOpen ? zhCN.panels.smartRoughCut : zhCN.panels.inspector}>
-              <Suspense fallback={<PanelLoading label={smartRoughCutOpen ? zhCN.panels.smartRoughCut : zhCN.panels.inspector} />}>
-                {smartRoughCutOpen ? (
+            <ErrorBoundary name={historyPanelOpen ? zhCN.panels.history : smartRoughCutOpen ? zhCN.panels.smartRoughCut : zhCN.panels.inspector}>
+              <Suspense fallback={<PanelLoading label={historyPanelOpen ? zhCN.panels.history : smartRoughCutOpen ? zhCN.panels.smartRoughCut : zhCN.panels.inspector} />}>
+                {historyPanelOpen ? (
+                  <HistoryPanel />
+                ) : smartRoughCutOpen ? (
                   <SmartRoughCutPanel selectedClip={selectedClip} media={project.media} />
                 ) : (
                   <Inspector

@@ -8,6 +8,7 @@ import {
   type ExportTaskStatus,
   type ExportTaskPriority,
   type ExportLoudnessNormalization,
+  type ExportWatermarkPosition,
   type FfmpegCapabilities,
   type PreflightResult,
   type Project,
@@ -18,7 +19,7 @@ import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateActio
 import { zhCN } from '../i18n/strings';
 import { chooseExportPath, revealExport } from '../lib/exportVideo';
 import { isFontFamilyAvailable } from '../lib/fonts';
-import { getFfmpegCapabilities, openPath } from '../lib/tauri-bridge';
+import { getFfmpegCapabilities, openFileDialog, openPath } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
 import { getWhisperAvailability } from '../lib/whisper';
 import { useWhisperSettingsStore } from '../store/whisperSettingsStore';
@@ -43,6 +44,18 @@ interface ExportDialogProps {
   onCompleted(path: string): void;
   onRelinkMissing?(): void;
 }
+
+const WATERMARK_POSITIONS: ExportWatermarkPosition[] = [
+  'top-left',
+  'top-center',
+  'top-right',
+  'middle-left',
+  'center',
+  'middle-right',
+  'bottom-left',
+  'bottom-center',
+  'bottom-right'
+];
 
 export function ExportDialog({ project, initialPreset, onClose, onCompleted, onRelinkMissing }: ExportDialogProps) {
   const t = zhCN.exportDialog;
@@ -149,6 +162,17 @@ export function ExportDialog({ project, initialPreset, onClose, onCompleted, onR
     const path = await chooseExportPath(project, exportSettings.format);
     if (path) {
       setOutputPath(path);
+    }
+  }
+
+  async function chooseWatermarkImage(): Promise<void> {
+    try {
+      const [path] = await openFileDialog(false, [{ name: t.watermark.imageFilter, extensions: ['png'] }]);
+      if (path) {
+        updateImageWatermarkPath(setDraftSettings, path);
+      }
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : t.watermark.chooseImageFailed);
     }
   }
 
@@ -345,6 +369,7 @@ export function ExportDialog({ project, initialPreset, onClose, onCompleted, onR
               <ReframePreviewBox aspect={exportSettings.targetAspectRatio} offsetX={exportSettings.reframeOffsetX ?? 0} offsetY={exportSettings.reframeOffsetY ?? 0} />
             </div>
           ) : null}
+          {!isAudioOnly ? <WatermarkSection watermark={draftSettings.watermark} setDraftSettings={setDraftSettings} onChooseImage={() => void chooseWatermarkImage()} /> : null}
           <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 md:grid-cols-5">
             <Info label={t.info.resolution} value={isAudioOnly ? zhCN.common.audioOnly : `${exportSettings.width ?? project.settings.width} x ${exportSettings.height ?? project.settings.height}`} />
             <Info label={t.info.fps} value={isAudioOnly ? zhCN.common.audioOnly : String(exportSettings.fps ?? project.settings.fps)} />
@@ -469,6 +494,7 @@ function normalizeDraftSettings(settings: ExportPresetSettings): ExportPresetSet
   const targetAspectRatio = outputMode === 'video' ? normalizeTargetAspectRatio(settings.targetAspectRatio) : 'source';
   const dimensions = resolveReframeDimensions(settings.width ?? 1280, settings.height ?? 720, targetAspectRatio);
   const loudnessNormalization = supportsLoudnessNormalization(format, outputMode) ? normalizeLoudnessNormalization(settings.loudnessNormalization) : 'off';
+  const watermark = outputMode === 'video' && !animatedImage ? (settings.watermark ?? null) : null;
   return {
     ...settings,
     width: targetAspectRatio === 'source' ? settings.width : dimensions.width,
@@ -479,7 +505,8 @@ function normalizeDraftSettings(settings: ExportPresetSettings): ExportPresetSet
     loudnessNormalization,
     targetAspectRatio,
     reframeOffsetX: clampReframeOffset(settings.reframeOffsetX),
-    reframeOffsetY: clampReframeOffset(settings.reframeOffsetY)
+    reframeOffsetY: clampReframeOffset(settings.reframeOffsetY),
+    watermark
   };
 }
 
@@ -611,6 +638,111 @@ function updateLoudnessNormalization(setDraftSettings: Dispatch<SetStateAction<E
   setDraftSettings((current) => ({ ...current, loudnessNormalization: normalizeLoudnessNormalization(value) }));
 }
 
+function updateWatermarkEnabled(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, checked: boolean): void {
+  setDraftSettings((current) => ({ ...current, watermark: checked ? enableWatermark(current.watermark) : null }));
+}
+
+function updateWatermarkType(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, value: string): void {
+  setDraftSettings((current) => ({
+    ...current,
+    watermark: value === 'image' ? imageWatermarkFrom(current.watermark) : textWatermarkFrom(current.watermark)
+  }));
+}
+
+function updateWatermarkPosition(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, value: string): void {
+  const position = isWatermarkPosition(value) ? value : 'bottom-right';
+  setDraftSettings((current) => {
+    const watermark = enableWatermark(current.watermark);
+    return { ...current, watermark: { ...watermark, position } };
+  });
+}
+
+function updateImageWatermarkPath(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, path: string): void {
+  setDraftSettings((current) => ({ ...current, watermark: { ...imageWatermarkFrom(current.watermark), path } }));
+}
+
+function updateImageWatermarkScale(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, value: string): void {
+  setDraftSettings((current) => ({
+    ...current,
+    watermark: { ...imageWatermarkFrom(current.watermark), scalePercent: clampUiNumber(value, 1, 50, 12) }
+  }));
+}
+
+function updateImageWatermarkOpacity(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, value: string): void {
+  setDraftSettings((current) => ({
+    ...current,
+    watermark: { ...imageWatermarkFrom(current.watermark), opacity: clampUiNumber(value, 0, 1, 0.75) }
+  }));
+}
+
+function updateTextWatermarkText(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, value: string): void {
+  setDraftSettings((current) => ({ ...current, watermark: { ...textWatermarkFrom(current.watermark), text: value } }));
+}
+
+function updateTextWatermarkFont(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, value: string): void {
+  setDraftSettings((current) => ({ ...current, watermark: { ...textWatermarkFrom(current.watermark), fontFamily: value } }));
+}
+
+function updateTextWatermarkColor(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, value: string): void {
+  setDraftSettings((current) => ({ ...current, watermark: { ...textWatermarkFrom(current.watermark), color: value } }));
+}
+
+function updateTextWatermarkSize(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, value: string): void {
+  setDraftSettings((current) => ({
+    ...current,
+    watermark: { ...textWatermarkFrom(current.watermark), fontSize: Math.round(clampUiNumber(value, 8, 240, 36)) }
+  }));
+}
+
+function enableWatermark(watermark: ExportPresetSettings['watermark']): NonNullable<ExportPresetSettings['watermark']> {
+  if (watermark?.type === 'image') {
+    return imageWatermarkFrom(watermark);
+  }
+  return textWatermarkFrom(watermark);
+}
+
+function imageWatermarkFrom(watermark: ExportPresetSettings['watermark']): NonNullable<ExportPresetSettings['watermark']> & { type: 'image' } {
+  if (watermark?.type === 'image') {
+    return { ...watermark, enabled: true, position: normalizeWatermarkPosition(watermark.position) };
+  }
+  return {
+    enabled: true,
+    type: 'image',
+    path: '',
+    position: normalizeWatermarkPosition(watermark?.position),
+    scalePercent: 12,
+    opacity: 0.75
+  };
+}
+
+function textWatermarkFrom(watermark: ExportPresetSettings['watermark']): NonNullable<ExportPresetSettings['watermark']> & { type: 'text' } {
+  if (watermark?.type === 'text') {
+    return { ...watermark, enabled: true, position: normalizeWatermarkPosition(watermark.position) };
+  }
+  return {
+    enabled: true,
+    type: 'text',
+    text: zhCN.exportDialog.watermark.defaultText,
+    fontFamily: 'Arial',
+    color: '#ffffff',
+    fontSize: 36,
+    position: normalizeWatermarkPosition(watermark?.position)
+  };
+}
+
+function normalizeWatermarkPosition(position: ExportWatermarkPosition | undefined): ExportWatermarkPosition {
+  return typeof position === 'string' && isWatermarkPosition(position) ? position : 'bottom-right';
+}
+
+function isWatermarkPosition(value: string): value is ExportWatermarkPosition {
+  return WATERMARK_POSITIONS.includes(value as ExportWatermarkPosition);
+}
+
+function clampUiNumber(value: string, min: number, max: number, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.min(max, Math.max(min, parsed)) : fallback;
+}
+
 function normalizeLoudnessNormalization(value: unknown): ExportLoudnessNormalization {
   return value === 'youtube' || value === 'ebu-r128' ? value : 'off';
 }
@@ -620,6 +752,148 @@ function supportsLoudnessNormalization(format: string, outputMode: ExportPresetS
     return true;
   }
   return format !== 'gif' && format !== 'webp' && format !== 'apng' && format !== 'png-sequence';
+}
+
+function WatermarkSection({
+  watermark,
+  setDraftSettings,
+  onChooseImage
+}: {
+  watermark: ExportPresetSettings['watermark'];
+  setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>;
+  onChooseImage(): void;
+}) {
+  const t = zhCN.exportDialog.watermark;
+  const enabled = watermark?.enabled === true;
+  const type = watermark?.type ?? 'text';
+  const position = normalizeWatermarkPosition(watermark?.position);
+  const imageWatermark = watermark?.type === 'image' ? watermark : imageWatermarkFrom(watermark);
+  const textWatermark = watermark?.type === 'text' ? watermark : textWatermarkFrom(watermark);
+
+  return (
+    <details className="rounded-md border border-line p-3" data-testid="export-watermark-section">
+      <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-semibold text-slate-700" data-testid="export-watermark-summary">
+        <span>{t.title}</span>
+        <span className="text-[11px] font-normal text-slate-500">{enabled ? t.on : t.off}</span>
+      </summary>
+      <div className="mt-3 grid gap-3">
+        <div className="grid gap-3 md:grid-cols-[180px_180px_1fr]">
+          <PresetCheckboxField label={t.enabled} checked={enabled} onChange={(checked) => updateWatermarkEnabled(setDraftSettings, checked)} testId="export-watermark-enabled-toggle" />
+          <label className="space-y-1 text-xs font-medium text-slate-600">
+            <span>{t.type}</span>
+            <select
+              className="w-full rounded-md border border-line px-2 py-1.5 disabled:bg-slate-100"
+              value={type}
+              disabled={!enabled}
+              onChange={(event) => updateWatermarkType(setDraftSettings, event.target.value)}
+              data-testid="export-watermark-type-select"
+            >
+              <option value="text">{t.types.text}</option>
+              <option value="image">{t.types.image}</option>
+            </select>
+          </label>
+          <label className="space-y-1 text-xs font-medium text-slate-600">
+            <span>{t.position}</span>
+            <select
+              className="w-full rounded-md border border-line px-2 py-1.5 disabled:bg-slate-100"
+              value={position}
+              disabled={!enabled}
+              onChange={(event) => updateWatermarkPosition(setDraftSettings, event.target.value)}
+              data-testid="export-watermark-position-select"
+            >
+              {WATERMARK_POSITIONS.map((option) => (
+                <option key={option} value={option}>
+                  {t.positions[option]}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        {type === 'image' ? (
+          <div className="grid gap-3 md:grid-cols-[1fr_120px_120px]">
+            <label className="space-y-1 text-xs font-medium text-slate-600">
+              <span>{t.imagePath}</span>
+              <div className="flex gap-2">
+                <input
+                  className="min-w-0 flex-1 rounded-md border border-line px-2 py-1.5 disabled:bg-slate-100"
+                  value={imageWatermark.path}
+                  disabled={!enabled}
+                  onChange={(event) => updateImageWatermarkPath(setDraftSettings, event.target.value)}
+                  data-testid="export-image-watermark-path-input"
+                />
+                <button
+                  className="rounded-md border border-line p-2 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-45"
+                  title={t.chooseImage}
+                  type="button"
+                  disabled={!enabled}
+                  onClick={onChooseImage}
+                  data-testid="export-image-watermark-choose-button"
+                >
+                  <FolderOpen size={16} />
+                </button>
+              </div>
+            </label>
+            <WatermarkNumberField label={t.scalePercent} value={imageWatermark.scalePercent} min={1} max={50} step={1} disabled={!enabled} testId="export-image-watermark-scale-input" onChange={(value) => updateImageWatermarkScale(setDraftSettings, value)} />
+            <WatermarkNumberField label={t.opacity} value={imageWatermark.opacity} min={0} max={1} step={0.05} disabled={!enabled} testId="export-image-watermark-opacity-input" onChange={(value) => updateImageWatermarkOpacity(setDraftSettings, value)} />
+          </div>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-[1fr_150px_110px_110px]">
+            <PresetTextField label={t.text} value={textWatermark.text} disabled={!enabled} onChange={(value) => updateTextWatermarkText(setDraftSettings, value)} testId="export-text-watermark-input" />
+            <PresetTextField label={t.fontFamily} value={textWatermark.fontFamily} disabled={!enabled} onChange={(value) => updateTextWatermarkFont(setDraftSettings, value)} testId="export-text-watermark-font-input" />
+            <label className="space-y-1 text-xs font-medium text-slate-600">
+              <span>{t.color}</span>
+              <input
+                className="h-[34px] w-full rounded-md border border-line px-1 py-1 disabled:bg-slate-100"
+                type="color"
+                value={/^#[0-9a-fA-F]{6}$/.test(textWatermark.color) ? textWatermark.color : '#ffffff'}
+                disabled={!enabled}
+                onChange={(event) => updateTextWatermarkColor(setDraftSettings, event.target.value)}
+                data-testid="export-text-watermark-color-input"
+              />
+            </label>
+            <WatermarkNumberField label={t.fontSize} value={textWatermark.fontSize} min={8} max={240} step={1} disabled={!enabled} testId="export-text-watermark-size-input" onChange={(value) => updateTextWatermarkSize(setDraftSettings, value)} />
+          </div>
+        )}
+      </div>
+    </details>
+  );
+}
+
+function WatermarkNumberField({
+  label,
+  value,
+  min,
+  max,
+  step,
+  disabled,
+  onChange,
+  testId
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  disabled?: boolean;
+  onChange(value: string): void;
+  testId: string;
+}) {
+  return (
+    <label className="space-y-1 text-xs font-medium text-slate-600">
+      <span>{label}</span>
+      <input
+        className="w-full rounded-md border border-line px-2 py-1.5 disabled:bg-slate-100"
+        type="number"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+        data-testid={testId}
+      />
+    </label>
+  );
 }
 
 function PresetNumberField({

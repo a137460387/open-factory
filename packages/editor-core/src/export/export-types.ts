@@ -5,6 +5,37 @@ import type { AudioFadeCurve, TrackCompressor, TrackEQ } from '../model';
 import type { TargetAspectRatio } from '../reframe';
 
 export type ExportLoudnessNormalization = 'off' | 'youtube' | 'ebu-r128';
+export type ExportWatermarkPosition =
+  | 'top-left'
+  | 'top-center'
+  | 'top-right'
+  | 'middle-left'
+  | 'center'
+  | 'middle-right'
+  | 'bottom-left'
+  | 'bottom-center'
+  | 'bottom-right';
+
+export interface ExportImageWatermark {
+  enabled: boolean;
+  type: 'image';
+  path: string;
+  position: ExportWatermarkPosition;
+  scalePercent: number;
+  opacity: number;
+}
+
+export interface ExportTextWatermark {
+  enabled: boolean;
+  type: 'text';
+  text: string;
+  fontFamily: string;
+  color: string;
+  fontSize: number;
+  position: ExportWatermarkPosition;
+}
+
+export type ExportWatermark = ExportImageWatermark | ExportTextWatermark;
 
 export interface ExportSettings {
   width: number;
@@ -25,6 +56,7 @@ export interface ExportSettings {
   subtitleMode?: ExportSubtitleMode;
   hardwareEncoding?: boolean;
   loudnessNormalization?: ExportLoudnessNormalization;
+  watermark?: ExportWatermark | null;
 }
 
 export interface ExportTransform {

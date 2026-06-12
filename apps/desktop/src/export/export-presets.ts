@@ -340,7 +340,70 @@ function sanitizeExportSettings(settings: unknown): ExportPresetSettings {
   if (input.loudnessNormalization === 'off' || input.loudnessNormalization === 'youtube' || input.loudnessNormalization === 'ebu-r128') {
     output.loudnessNormalization = input.loudnessNormalization;
   }
+  const watermark = sanitizeWatermark(input.watermark);
+  if (watermark) {
+    output.watermark = watermark;
+  }
   return output;
+}
+
+function sanitizeWatermark(value: unknown): ExportPresetSettings['watermark'] | undefined {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+  const input = value as Record<string, unknown>;
+  const position = sanitizeWatermarkPosition(input.position);
+  if (input.enabled !== true) {
+    return undefined;
+  }
+  if (input.type === 'image') {
+    const path = typeof input.path === 'string' ? input.path.trim() : '';
+    if (!path) {
+      return undefined;
+    }
+    return {
+      enabled: true,
+      type: 'image',
+      path,
+      position,
+      scalePercent: clampWatermarkNumber(input.scalePercent, 1, 50, 12),
+      opacity: clampWatermarkNumber(input.opacity, 0, 1, 0.75)
+    };
+  }
+  if (input.type === 'text') {
+    const text = typeof input.text === 'string' ? input.text.trim() : '';
+    if (!text) {
+      return undefined;
+    }
+    return {
+      enabled: true,
+      type: 'text',
+      text,
+      fontFamily: typeof input.fontFamily === 'string' && input.fontFamily.trim() ? input.fontFamily.trim() : 'Arial',
+      color: typeof input.color === 'string' && input.color.trim() ? input.color.trim() : '#ffffff',
+      fontSize: Math.round(clampWatermarkNumber(input.fontSize, 8, 240, 36)),
+      position
+    };
+  }
+  return undefined;
+}
+
+function sanitizeWatermarkPosition(value: unknown): NonNullable<ExportPresetSettings['watermark']>['position'] {
+  return value === 'top-left' ||
+    value === 'top-center' ||
+    value === 'top-right' ||
+    value === 'middle-left' ||
+    value === 'center' ||
+    value === 'middle-right' ||
+    value === 'bottom-left' ||
+    value === 'bottom-center' ||
+    value === 'bottom-right'
+    ? value
+    : 'bottom-right';
+}
+
+function clampWatermarkNumber(value: unknown, min: number, max: number, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : fallback;
 }
 
 function copyNumber(input: Record<string, unknown>, output: ExportPresetSettings, key: 'width' | 'height' | 'fps' | 'sampleRate'): void {

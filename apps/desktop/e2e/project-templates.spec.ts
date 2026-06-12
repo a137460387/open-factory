@@ -9,7 +9,7 @@ test('creates a project from the vertical short template and prefills export set
   await page.getByTestId('toolbar-file-new-template-menu-item').click();
   await page.getByTestId('project-template-vertical-short').click();
 
-  await expect(page.getByText('竖版短视频').first()).toBeVisible();
+  await expect(page.getByTestId('toolbar-project-name')).toHaveText('竖版短视频');
   const timeline = await page.evaluate(() => window.__E2E_ACTIONS__!.getTimelineSnapshot!() as { tracks: Array<{ type: string; clips: unknown[] }> });
   expect(timeline.tracks.map((track) => track.type)).toEqual(['video', 'audio', 'text']);
   expect(timeline.tracks.every((track) => track.clips.length === 0)).toBe(true);

@@ -66,6 +66,7 @@ const zh = {
     chooseWhisperModel: '选择 Whisper 模型文件',
     undo: '撤销',
     redo: '重做',
+    history: '历史',
     splitSelectedClip: '分割选中片段',
     smartRoughCut: '智能粗剪',
     createMulticamSequence: '创建多机位序列',
@@ -79,6 +80,15 @@ const zh = {
   editMenu: {
     saveSnapshot: '保存快照',
     snapshotHistory: '快照历史'
+  },
+  historyPanel: {
+    title: '编辑历史',
+    subtitle: '撤销与重做状态',
+    empty: '还没有可用历史。',
+    affectedClips: (count: number) => `${count} 个片段`,
+    position: (position: number, total: number) => `当前位置 ${position}/${total}`,
+    jumpFailed: '历史跳转失败',
+    jumpFailedMessage: '无法跳转到该历史状态。'
   },
   settings: {
     title: '设置',
@@ -787,6 +797,40 @@ const zh = {
       youtube: 'YouTube -14 LUFS',
       'ebu-r128': 'EBU R128 广播 -23 LUFS'
     },
+    watermark: {
+      title: '水印',
+      on: '已开启',
+      off: '已关闭',
+      enabled: '启用水印',
+      type: '类型',
+      types: {
+        text: '文字',
+        image: '图片'
+      },
+      imageFilter: 'PNG 水印',
+      chooseImage: '选择 PNG',
+      chooseImageFailed: '无法选择水印图片。',
+      imagePath: 'PNG 文件',
+      position: '位置',
+      scalePercent: '宽度占比 %',
+      opacity: '不透明度',
+      text: '文字',
+      fontFamily: '字体',
+      color: '颜色',
+      fontSize: '字号',
+      defaultText: '水印',
+      positions: {
+        'top-left': '左上',
+        'top-center': '上中',
+        'top-right': '右上',
+        'middle-left': '左中',
+        center: '居中',
+        'middle-right': '右中',
+        'bottom-left': '左下',
+        'bottom-center': '下中',
+        'bottom-right': '右下'
+      }
+    },
     info: {
       resolution: '分辨率',
       fps: '帧率',
@@ -1154,6 +1198,7 @@ const zh = {
     editor: '编辑器',
     preview: '预览',
     inspector: '检查器',
+    history: '历史',
     smartRoughCut: '智能粗剪',
     audioMixer: '音频混音器',
     timeline: '时间线'
@@ -1254,6 +1299,7 @@ const enOverrides = {
     chooseWhisperModel: 'Choose Whisper Model File',
     undo: 'Undo',
     redo: 'Redo',
+    history: 'History',
     splitSelectedClip: 'Split Selected Clip',
     smartRoughCut: 'Smart Rough Cut',
     createMulticamSequence: 'Create Multicam Sequence',
@@ -1679,6 +1725,15 @@ const enOverrides = {
     },
     missingFile: 'Missing file'
   },
+  historyPanel: {
+    title: 'Edit History',
+    subtitle: 'Undo and redo states',
+    empty: 'No history yet.',
+    affectedClips: (count: number) => `${count} clips`,
+    position: (position: number, total: number) => `Position ${position}/${total}`,
+    jumpFailed: 'History Jump Failed',
+    jumpFailedMessage: 'Unable to jump to that history state.'
+  },
   exportDialog: {
     title: 'Export Video',
     subtitle: 'Named presets, local FFmpeg queue, no cloud upload',
@@ -1704,6 +1759,45 @@ const enOverrides = {
       reframeOffsetY: 'Vertical Offset',
       hardwareEncoding: 'Hardware Encoding',
       loudnessNormalization: 'Loudness Normalization'
+    },
+    loudnessNormalization: {
+      off: 'Off',
+      youtube: 'YouTube -14 LUFS',
+      'ebu-r128': 'EBU R128 Broadcast -23 LUFS'
+    },
+    watermark: {
+      title: 'Watermark',
+      on: 'On',
+      off: 'Off',
+      enabled: 'Enable Watermark',
+      type: 'Type',
+      types: {
+        text: 'Text',
+        image: 'Image'
+      },
+      imageFilter: 'PNG Watermark',
+      chooseImage: 'Choose PNG',
+      chooseImageFailed: 'Unable to choose watermark image.',
+      imagePath: 'PNG File',
+      position: 'Position',
+      scalePercent: 'Width %',
+      opacity: 'Opacity',
+      text: 'Text',
+      fontFamily: 'Font',
+      color: 'Color',
+      fontSize: 'Size',
+      defaultText: 'Watermark',
+      positions: {
+        'top-left': 'Top Left',
+        'top-center': 'Top Center',
+        'top-right': 'Top Right',
+        'middle-left': 'Middle Left',
+        center: 'Center',
+        'middle-right': 'Middle Right',
+        'bottom-left': 'Bottom Left',
+        'bottom-center': 'Bottom Center',
+        'bottom-right': 'Bottom Right'
+      }
     },
     info: {
       resolution: 'Resolution',
@@ -1994,6 +2088,7 @@ const enOverrides = {
     editor: 'Editor',
     preview: 'Preview',
     inspector: 'Inspector',
+    history: 'History',
     smartRoughCut: 'Smart Rough Cut',
     audioMixer: 'Audio Mixer',
     timeline: 'Timeline'

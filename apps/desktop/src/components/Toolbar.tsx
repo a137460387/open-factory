@@ -1,4 +1,4 @@
-import { Archive, Captions, ChevronDown, Download, FileDown, FilePlus2, FolderOpen, ImageDown, Mic2, PanelsTopLeft, Pause, Play, Redo2, RotateCcw, Save, Scissors, Settings, Trash2, Undo2, WandSparkles, XCircle } from 'lucide-react';
+import { Archive, Captions, ChevronDown, Download, FileDown, FilePlus2, FolderOpen, History, ImageDown, Mic2, PanelsTopLeft, Pause, Play, Redo2, RotateCcw, Save, Scissors, Settings, Trash2, Undo2, WandSparkles, XCircle } from 'lucide-react';
 import { timelineHasExportableVideo } from '@open-factory/editor-core';
 import { clsx } from 'clsx';
 import { useState } from 'react';
@@ -31,6 +31,8 @@ interface ToolbarProps {
   onCreateMulticamSequence(): void;
   canCreateMulticamSequence: boolean;
   smartRoughCutOpen: boolean;
+  historyPanelOpen: boolean;
+  onToggleHistoryPanel(): void;
   onUndo(): void;
   onRedo(): void;
   onClearCache(): void;
@@ -232,7 +234,9 @@ export function Toolbar(props: ToolbarProps) {
         ) : null}
       </div>
       <div className="mr-2 min-w-0">
-        <div className="truncate text-sm font-semibold text-ink">{project.name}</div>
+        <div className="truncate text-sm font-semibold text-ink" data-testid="toolbar-project-name">
+          {project.name}
+        </div>
         <div className="text-xs text-slate-500">{dirty ? zhCN.common.unsavedChanges : zhCN.common.saved}</div>
       </div>
       <ToolButton title={t.newProject} onClick={props.onNewProject} icon={<FilePlus2 size={17} />} testId="toolbar-new-project-button" />
@@ -307,6 +311,7 @@ export function Toolbar(props: ToolbarProps) {
       <div className="mx-1 h-7 w-px bg-line" />
       <ToolButton title={t.undo} disabled={!historyMeta.canUndo} onClick={props.onUndo} icon={<Undo2 size={17} />} testId="toolbar-undo-button" />
       <ToolButton title={t.redo} disabled={!historyMeta.canRedo} onClick={props.onRedo} icon={<Redo2 size={17} />} testId="toolbar-redo-button" />
+      <ToolButton title={t.history} onClick={props.onToggleHistoryPanel} icon={<History size={17} />} testId="toolbar-history-button" active={props.historyPanelOpen} />
       <ToolButton title={t.splitSelectedClip} onClick={props.onSplitSelected} icon={<Scissors size={17} />} testId="toolbar-split-button" />
       <ToolButton title={t.smartRoughCut} onClick={props.onToggleSmartRoughCut} icon={<WandSparkles size={17} />} testId="toolbar-smart-rough-cut-button" active={props.smartRoughCutOpen} />
       <ToolButton title={t.createMulticamSequence} disabled={!props.canCreateMulticamSequence} onClick={props.onCreateMulticamSequence} icon={<PanelsTopLeft size={17} />} testId="toolbar-create-multicam-button" />

@@ -62,7 +62,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   timelineZoom: 80,
   dirty: false,
   isExporting: false,
-  historyMeta: { canUndo: false, canRedo: false },
+  historyMeta: { canUndo: false, canRedo: false, cursor: -1, entries: [], position: 0, total: 0 },
   replaceProject: (project) =>
     set({
       project: { ...project, updatedAt: new Date().toISOString() },
