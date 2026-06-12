@@ -535,6 +535,59 @@ window.__E2E_ACTIONS__ = {
     });
     commandManager.clear();
   },
+  setupProjectHealthFixture: () => {
+    const project = createProject('Project Health E2E');
+    const missingAsset: MediaAsset = {
+      id: 'media-health-missing',
+      type: 'video',
+      name: 'tiny-video.mp4',
+      path: 'C:/Missing/tiny-video.mp4',
+      duration: 6,
+      width: 1280,
+      height: 720,
+      missing: true,
+      size: 4096,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 2,
+      audioSampleRate: 44_100,
+      audioCodec: 'aac',
+      videoCodec: 'h264',
+      proxyStatus: 'none'
+    };
+    const orphanAsset: MediaAsset = {
+      id: 'media-health-orphan',
+      type: 'audio',
+      name: 'tiny-audio.wav',
+      path: tinyAudio,
+      duration: 6,
+      width: 0,
+      height: 0,
+      size: 2048,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 2,
+      audioSampleRate: 44_100,
+      audioCodec: 'pcm_s16le'
+    };
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({ id: 'track-video', type: 'video', name: 'Video 1', clips: [makeHealthVideoClip()] }),
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
+        createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [missingAsset, orphanAsset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    commandManager.clear();
+  },
   getTimelineSnapshot: () => useEditorStore.getState().project.timeline,
   getProjectMedia: () => useEditorStore.getState().project.media,
   setOpenFileDialogPaths: (paths: unknown) => {
@@ -620,6 +673,24 @@ function makeWhisperVideoClip(): Extract<import('@open-factory/editor-core').Cli
     type: 'video',
     name: 'whisper-video.mp4',
     mediaId: 'media-whisper-video',
+    trackId: 'track-video',
+    start: 0,
+    duration: 4,
+    trimStart: 0,
+    trimEnd: 0,
+    speed: DEFAULT_CLIP_SPEED,
+    colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+    transform: { ...DEFAULT_TRANSFORM },
+    volume: 1
+  };
+}
+
+function makeHealthVideoClip(): Extract<import('@open-factory/editor-core').Clip, { type: 'video' }> {
+  return {
+    id: 'clip-health-missing',
+    type: 'video',
+    name: 'Health Missing Video',
+    mediaId: 'media-health-missing',
     trackId: 'track-video',
     start: 0,
     duration: 4,

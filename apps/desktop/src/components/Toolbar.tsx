@@ -1,6 +1,7 @@
-import { Archive, Captions, Download, FileDown, FilePlus2, FolderOpen, ImageDown, Mic2, PanelsTopLeft, Pause, Play, Redo2, RotateCcw, Save, Scissors, Settings, Trash2, Undo2, WandSparkles, XCircle } from 'lucide-react';
+import { Archive, Captions, ChevronDown, Download, FileDown, FilePlus2, FolderOpen, ImageDown, Mic2, PanelsTopLeft, Pause, Play, Redo2, RotateCcw, Save, Scissors, Settings, Trash2, Undo2, WandSparkles, XCircle } from 'lucide-react';
 import { timelineHasExportableVideo } from '@open-factory/editor-core';
 import { clsx } from 'clsx';
+import { useState } from 'react';
 import { useExportQueueStore } from '../export/export-queue-store';
 import { zhCN } from '../i18n/strings';
 import { pickWhisperExecutablePath, pickWhisperModelPath } from '../lib/whisper';
@@ -28,6 +29,7 @@ interface ToolbarProps {
   onRedo(): void;
   onClearCache(): void;
   onOpenSettings(): void;
+  onOpenProjectHealth(): void;
   autosaveIntervalSeconds: number;
   onAutosaveIntervalSecondsChange(seconds: number): void;
   onRevealExport?(): void;
@@ -36,6 +38,7 @@ interface ToolbarProps {
 
 export function Toolbar(props: ToolbarProps) {
   const t = zhCN.toolbar;
+  const [fileMenuOpen, setFileMenuOpen] = useState(false);
   const project = useEditorStore((state) => state.project);
   const isPlaying = useEditorStore((state) => state.isPlaying);
   const setIsPlaying = useEditorStore((state) => state.setIsPlaying);
@@ -72,6 +75,32 @@ export function Toolbar(props: ToolbarProps) {
 
   return (
     <header className="flex min-h-14 min-w-0 items-center gap-2 overflow-x-auto border-b border-line bg-white px-3">
+      <div className="relative">
+        <button
+          className="inline-flex h-9 items-center gap-1 rounded-md border border-transparent px-3 text-sm font-medium text-slate-700 hover:border-line hover:bg-panel hover:text-ink"
+          type="button"
+          data-testid="toolbar-file-menu-button"
+          onClick={() => setFileMenuOpen((open) => !open)}
+        >
+          {t.fileMenu}
+          <ChevronDown size={14} />
+        </button>
+        {fileMenuOpen ? (
+          <div className="absolute left-0 top-10 z-20 min-w-44 rounded-md border border-line bg-white py-1 shadow-soft" data-testid="toolbar-file-menu">
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-file-project-health-menu-item"
+              onClick={() => {
+                setFileMenuOpen(false);
+                props.onOpenProjectHealth();
+              }}
+            >
+              <span>{t.projectHealthCheck}</span>
+            </button>
+          </div>
+        ) : null}
+      </div>
       <div className="mr-2 min-w-0">
         <div className="truncate text-sm font-semibold text-ink">{project.name}</div>
         <div className="text-xs text-slate-500">{dirty ? zhCN.common.unsavedChanges : zhCN.common.saved}</div>

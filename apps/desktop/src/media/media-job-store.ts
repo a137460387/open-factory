@@ -22,6 +22,7 @@ export interface MediaJobState {
   jobs: MediaJob[];
   runnerActive: boolean;
   enqueueJobsForMedia: (media: MediaAsset[], proxySettings?: ProxySettings) => void;
+  enqueueProxyJobsForMedia: (media: MediaAsset[], proxySettings?: ProxySettings) => void;
   startNextJob: () => MediaJob | undefined;
   finishJob: (jobId: string) => void;
   failJob: (jobId: string, error: string) => void;
@@ -35,6 +36,16 @@ export const useMediaJobStore = create<MediaJobState>((set, get) => ({
   enqueueJobsForMedia: (media, proxySettings) => {
     const existingKeys = new Set(get().jobs.map((job) => job.key));
     const jobsToAdd = media.flatMap((asset) => buildJobsForAsset(asset, proxySettings)).filter((job) => !existingKeys.has(job.key));
+    if (jobsToAdd.length === 0) {
+      return;
+    }
+    set((state) => ({ jobs: [...state.jobs, ...jobsToAdd] }));
+  },
+  enqueueProxyJobsForMedia: (media, proxySettings) => {
+    const existingKeys = new Set(get().jobs.map((job) => job.key));
+    const jobsToAdd = media
+      .flatMap((asset) => buildJobsForAsset(asset, proxySettings).filter((job) => job.type === 'proxy'))
+      .filter((job) => !existingKeys.has(job.key));
     if (jobsToAdd.length === 0) {
       return;
     }

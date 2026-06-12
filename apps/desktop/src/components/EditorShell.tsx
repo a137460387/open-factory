@@ -4,11 +4,18 @@ import {
   AddTrackCommand,
   CreateMulticamSequenceCommand,
   DeleteClipsCommand,
+  MergeMediaCommand,
+  RemoveMediaCommand,
   RippleDeleteCommand,
   SplitClipCommand,
   dirname,
   getTimelineDuration,
   instantiateTitleTemplate,
+  type DuplicateMediaIssue,
+  type MissingMediaIssue,
+  type OrphanMediaIssue,
+  type ProjectHealthReport,
+  type ProxyMissingIssue,
   type TitleTemplateId
 } from '@open-factory/editor-core';
 import { Toolbar } from './Toolbar';
@@ -29,6 +36,7 @@ import { zhCN } from '../i18n/strings';
 import { pickMediaPaths, probeMediaPaths } from '../lib/media';
 import { buildSubtitleTrackFromSrt, isSubtitlePath, pickSubtitlePaths, readSubtitleText } from '../lib/subtitles';
 import { createProjectArchivePlan, writeProjectArchive, type ArchiveProgress } from '../lib/projectArchive';
+import { scanProjectHealth } from '../lib/projectHealth';
 import {
   chooseProjectSavePath,
   chooseProjectToOpen,
@@ -46,8 +54,11 @@ import {
 import { copyFile as bridgeCopyFile, openDirectoryDialog, writeFile as bridgeWriteFile } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
 import { createProxyForAsset } from '../media/proxy';
+import { ensureMediaJobRunner } from '../media/media-job-runner';
+import { useMediaJobStore } from '../media/media-job-store';
 import { relinkMissingMediaInDirectory, relinkSingleMedia } from '../media/relink';
 import { useBackgroundMediaJobs } from '../media/useBackgroundMediaJobs';
+import { ProjectHealthDialog } from '../project-health/ProjectHealthDialog';
 import { commandManager, projectAccessor, timelineAccessor } from '../store/commandManager';
 import { selectClipById, useEditorStore } from '../store/editorStore';
 import { useProxySettingsStore } from '../store/proxySettingsStore';
@@ -88,6 +99,9 @@ export function EditorShell() {
   const [timelineExportDialogOpen, setTimelineExportDialogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [smartRoughCutOpen, setSmartRoughCutOpen] = useState(false);
+  const [projectHealthOpen, setProjectHealthOpen] = useState(false);
+  const [projectHealthReport, setProjectHealthReport] = useState<ProjectHealthReport>();
+  const [projectHealthScanning, setProjectHealthScanning] = useState(false);
   const [shortcutBindings, setShortcutBindings] = useState<TimelineShortcutBindings>({});
   const [autosaveIntervalSeconds, setAutosaveIntervalSeconds] = useState(() => readAutosaveIntervalSeconds());
   const [recoveryCandidate, setRecoveryCandidate] = useState<AutosaveRecoveryCandidate>();
@@ -282,6 +296,93 @@ export function EditorShell() {
       showToast({ kind: 'error', title: zhCN.editorToasts.relinkFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.relinkMissingFailedMessage });
     }
   }, [project.media, setMedia]);
+
+  const refreshProjectHealth = useCallback(async () => {
+    try {
+      setProjectHealthScanning(true);
+      const state = useEditorStore.getState();
+      setProjectHealthReport(await scanProjectHealth(state.project, useProxySettingsStore.getState().settings));
+    } catch (error) {
+      showToast({
+        kind: 'error',
+        title: zhCN.projectHealth.toasts.scanFailed,
+        message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.scanFailedMessage
+      });
+    } finally {
+      setProjectHealthScanning(false);
+    }
+  }, []);
+
+  const openProjectHealth = useCallback(() => {
+    setProjectHealthOpen(true);
+    void refreshProjectHealth();
+  }, [refreshProjectHealth]);
+
+  const relinkMissingFromHealth = useCallback(
+    async (issue: MissingMediaIssue) => {
+      const state = useEditorStore.getState();
+      const asset = state.project.media.find((item) => item.id === issue.assetId);
+      if (!asset) {
+        return;
+      }
+      try {
+        const relinked = await relinkSingleMedia(asset);
+        if (relinked) {
+          const current = useEditorStore.getState();
+          current.setMedia(current.project.media.map((item) => (item.id === issue.assetId ? relinked : item)));
+          showToast({ kind: 'success', title: zhCN.editorToasts.mediaRelinked, message: relinked.name });
+        }
+        await refreshProjectHealth();
+      } catch (error) {
+        showToast({ kind: 'error', title: zhCN.editorToasts.relinkFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.relinkFailedMessage });
+      }
+    },
+    [refreshProjectHealth]
+  );
+
+  const removeOrphanFromHealth = useCallback(
+    async (issue: OrphanMediaIssue) => {
+      try {
+        commandManager.execute(new RemoveMediaCommand(projectAccessor, issue.assetId));
+        showToast({ kind: 'success', title: zhCN.projectHealth.toasts.orphanRemoved, message: issue.name });
+        await refreshProjectHealth();
+      } catch (error) {
+        showToast({ kind: 'error', title: zhCN.projectHealth.toasts.fixFailed, message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage });
+      }
+    },
+    [refreshProjectHealth]
+  );
+
+  const mergeDuplicateFromHealth = useCallback(
+    async (issue: DuplicateMediaIssue) => {
+      try {
+        commandManager.execute(new MergeMediaCommand(projectAccessor, issue.keepAssetId, issue.assets.map((asset) => asset.assetId)));
+        showToast({ kind: 'success', title: zhCN.projectHealth.toasts.duplicateMerged });
+        await refreshProjectHealth();
+      } catch (error) {
+        showToast({ kind: 'error', title: zhCN.projectHealth.toasts.fixFailed, message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage });
+      }
+    },
+    [refreshProjectHealth]
+  );
+
+  const queueProxyFromHealth = useCallback(
+    async (issue: ProxyMissingIssue) => {
+      const asset = useEditorStore.getState().project.media.find((item) => item.id === issue.assetId);
+      if (!asset) {
+        return;
+      }
+      try {
+        useMediaJobStore.getState().enqueueProxyJobsForMedia([asset], useProxySettingsStore.getState().settings);
+        void ensureMediaJobRunner();
+        showToast({ kind: 'success', title: zhCN.projectHealth.toasts.proxyQueued, message: issue.name });
+        await refreshProjectHealth();
+      } catch (error) {
+        showToast({ kind: 'error', title: zhCN.projectHealth.toasts.fixFailed, message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage });
+      }
+    },
+    [refreshProjectHealth]
+  );
 
   const newProject = useCallback(async () => {
     if (dirty && !(await confirmDiscardChanges())) {
@@ -528,6 +629,7 @@ export function EditorShell() {
           onRedo={redo}
           onClearCache={() => void clearCache()}
           onOpenSettings={() => setSettingsOpen(true)}
+          onOpenProjectHealth={openProjectHealth}
           autosaveIntervalSeconds={autosaveIntervalSeconds}
           onAutosaveIntervalSecondsChange={(seconds) => {
             setAutosaveIntervalSeconds(writeAutosaveIntervalSeconds(seconds));
@@ -603,6 +705,18 @@ export function EditorShell() {
             />
           ) : null}
         </Suspense>
+        {projectHealthOpen ? (
+          <ProjectHealthDialog
+            report={projectHealthReport}
+            scanning={projectHealthScanning}
+            onClose={() => setProjectHealthOpen(false)}
+            onRescan={() => void refreshProjectHealth()}
+            onRelink={(issue) => void relinkMissingFromHealth(issue)}
+            onRemoveOrphan={(issue) => void removeOrphanFromHealth(issue)}
+            onMergeDuplicate={(issue) => void mergeDuplicateFromHealth(issue)}
+            onQueueProxy={(issue) => void queueProxyFromHealth(issue)}
+          />
+        ) : null}
         {recoveryCandidate ? (
           <AutosaveRecoveryDialog
             onRestore={() => void restoreRecovery()}

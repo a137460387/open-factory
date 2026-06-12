@@ -7,6 +7,7 @@ import {
   createTimelineMarker,
   createTrack,
   DEFAULT_NESTED_SEQUENCE_NAME,
+  getProjectSequences,
   normalizeMasterVolume,
   type Keyframe,
   type KeyframeEasing,
@@ -33,6 +34,7 @@ import {
   type ClipStabilization,
   type ClipMask,
   type ColorCorrection,
+  type MediaMetadata,
   type Project,
   type SubtitleMode,
   type SubtitleStyle,
@@ -483,6 +485,148 @@ export class UpdateProjectAudioCommand implements Command {
     }
     this.accessor.setProject(this.before);
   }
+}
+
+export class RemoveMediaCommand implements Command {
+  readonly description = 'Remove media';
+  private before?: Project;
+  private after?: Project;
+
+  constructor(private readonly accessor: ProjectAccessor, private readonly assetIds: string | string[]) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    if (!this.after) {
+      const removeIds = normalizeAssetIdSet(this.assetIds);
+      assertMediaAssetsExist(this.before, removeIds);
+      const referencedIds = collectProjectMediaIds(this.before);
+      const referenced = Array.from(removeIds).filter((assetId) => referencedIds.has(assetId));
+      if (referenced.length > 0) {
+        throw new Error(`Media asset is still used by timeline clips: ${referenced.join(', ')}`);
+      }
+      this.after = removeMediaAssets(this.before, removeIds);
+    }
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class MergeMediaCommand implements Command {
+  readonly description = 'Merge media references';
+  private before?: Project;
+  private after?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly keepAssetId: string,
+    private readonly mergedAssetIds: string[]
+  ) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    if (!this.after) {
+      const removeIds = normalizeAssetIdSet(this.mergedAssetIds.filter((assetId) => assetId !== this.keepAssetId));
+      if (removeIds.size === 0) {
+        throw new Error('No duplicate media assets selected');
+      }
+      assertMediaAssetsExist(this.before, new Set([this.keepAssetId, ...removeIds]));
+      this.after = mergeMediaReferences(this.before, this.keepAssetId, removeIds);
+    }
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+function normalizeAssetIdSet(assetIds: string | string[]): Set<string> {
+  const ids = Array.isArray(assetIds) ? assetIds : [assetIds];
+  const normalized = new Set(ids.map((assetId) => assetId.trim()).filter(Boolean));
+  if (normalized.size === 0) {
+    throw new Error('No media assets selected');
+  }
+  return normalized;
+}
+
+function assertMediaAssetsExist(project: Project, assetIds: Set<string>): void {
+  const available = new Set(project.media.map((asset) => asset.id));
+  const missing = Array.from(assetIds).filter((assetId) => !available.has(assetId));
+  if (missing.length > 0) {
+    throw new Error(`Media asset not found: ${missing.join(', ')}`);
+  }
+}
+
+function collectProjectMediaIds(project: Project): Set<string> {
+  const synced = replaceProjectActiveTimeline(project, project.timeline);
+  const ids = new Set<string>();
+  for (const sequence of getProjectSequences(synced)) {
+    for (const clip of sequence.timeline.tracks.flatMap((track) => track.clips)) {
+      if ('mediaId' in clip) {
+        ids.add(clip.mediaId);
+      }
+    }
+  }
+  return ids;
+}
+
+function removeMediaAssets(project: Project, removeIds: Set<string>): Project {
+  const mediaMetadata = filterMediaMetadata(project.mediaMetadata, removeIds);
+  return touchProject({
+    ...project,
+    media: project.media.filter((asset) => !removeIds.has(asset.id)),
+    mediaMetadata
+  });
+}
+
+function mergeMediaReferences(project: Project, keepAssetId: string, removeIds: Set<string>): Project {
+  const synced = replaceProjectActiveTimeline(project, project.timeline);
+  const sequences = getProjectSequences(synced).map((sequence) => ({
+    ...sequence,
+    timeline: replaceTimelineMediaReferences(sequence.timeline, keepAssetId, removeIds)
+  }));
+  const activeTimeline = sequences.find((sequence) => sequence.id === synced.activeSequenceId)?.timeline ?? synced.timeline;
+  return touchProject({
+    ...synced,
+    media: synced.media.filter((asset) => !removeIds.has(asset.id)),
+    mediaMetadata: filterMediaMetadata(synced.mediaMetadata, removeIds),
+    timeline: activeTimeline,
+    sequences
+  });
+}
+
+function replaceTimelineMediaReferences(timeline: Timeline, keepAssetId: string, removeIds: Set<string>): Timeline {
+  return {
+    ...timeline,
+    tracks: timeline.tracks.map((track) => ({
+      ...track,
+      clips: track.clips.map((clip) => {
+        if (!('mediaId' in clip) || !removeIds.has(clip.mediaId)) {
+          return clip;
+        }
+        return { ...clip, mediaId: keepAssetId } as Clip;
+      })
+    }))
+  };
+}
+
+function filterMediaMetadata(metadata: Record<string, MediaMetadata>, removeIds: Set<string>): Record<string, MediaMetadata> {
+  const next = { ...metadata };
+  for (const assetId of removeIds) {
+    delete next[assetId];
+  }
+  return next;
+}
+
+function touchProject(project: Project): Project {
+  return { ...project, updatedAt: new Date().toISOString() };
 }
 
 export interface TransitionInput {

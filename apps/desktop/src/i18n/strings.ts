@@ -25,6 +25,7 @@ export const zhCN = {
     defaultTextContent: '标题'
   },
   toolbar: {
+    fileMenu: '文件',
     newProject: '新建项目',
     openProject: '打开项目',
     saveProject: '保存项目',
@@ -52,7 +53,8 @@ export const zhCN = {
     pause: '暂停',
     cancelExport: '取消导出',
     openExportFolder: '打开导出文件夹',
-    localExport: '本地多轨导出'
+    localExport: '本地多轨导出',
+    projectHealthCheck: '项目健康检查'
   },
   settings: {
     title: '设置',
@@ -210,6 +212,43 @@ export const zhCN = {
     },
     titleTemplateCount: (count: number) => `${count} 个标题模板`,
     addTitleTemplate: '添加标题模板'
+  },
+  projectHealth: {
+    title: '项目健康检查',
+    subtitle: '扫描媒体引用、代理文件和字幕字体。',
+    scanning: '正在扫描项目...',
+    empty: '未发现项目健康问题。',
+    total: (count: number) => `发现 ${count} 项`,
+    rescan: '重新检查',
+    sections: {
+      missingMedia: '缺失媒体',
+      duplicateMedia: '重复素材',
+      orphanMedia: '孤立媒体',
+      proxyMissing: '代理未生成',
+      missingFonts: '缺失字幕字体'
+    },
+    sectionCount: (count: number) => `${count} 项`,
+    actions: {
+      relink: '跳转重连',
+      removeOrphan: '从媒体库移除',
+      mergeDuplicate: '合并引用',
+      enqueueProxy: '加入生成队列'
+    },
+    detail: {
+      clipRef: (clipName: string, trackName: string) => `${clipName} / ${trackName}`,
+      duplicateGroup: (count: number, size: number) => `${count} 个路径，${formatBytes(size)}`,
+      proxyResolution: (width: number, height: number) => `${width} x ${height}`,
+      missingFont: (fontFamily: string) => `字幕字体：${fontFamily}`
+    },
+    toasts: {
+      scanFailed: '健康检查失败',
+      scanFailedMessage: '无法完成项目健康检查。',
+      orphanRemoved: '孤立素材已移除',
+      duplicateMerged: '重复素材引用已合并',
+      proxyQueued: '代理任务已加入队列',
+      fixFailed: '修复失败',
+      fixFailedMessage: '无法应用该修复。'
+    }
   },
   titleTemplates: {
     'lower-third': {
@@ -897,4 +936,17 @@ export function formatTrackType(type: string): string {
     return '字幕';
   }
   return type;
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes >= 1024 * 1024 * 1024) {
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+  }
+  if (bytes >= 1024 * 1024) {
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+  if (bytes >= 1024) {
+    return `${Math.round(bytes / 1024)} KB`;
+  }
+  return `${bytes} B`;
 }
