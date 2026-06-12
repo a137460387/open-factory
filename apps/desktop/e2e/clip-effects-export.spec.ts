@@ -21,6 +21,29 @@ test('adds a blur effect and includes gblur in the export plan', async ({ page }
   expect(plan.filterComplex).toContain('gblur=sigma=8');
 });
 
+test('adds an audio spectrum effect and includes showfreqs in the export plan', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.getByTestId('import-media-button').click();
+  await addMediaCardToTimeline(page, 0);
+  await page.locator('[data-testid^="timeline-clip-"]').first().click();
+
+  await page.getByText('特效', { exact: true }).click();
+  await page.getByTestId('effect-type-select').selectOption('audio-spectrum');
+  await page.getByTestId('add-effect-button').click();
+  await expect(page.getByTestId('effect-item-audio-spectrum')).toBeVisible();
+  await page.getByTestId(/^effect-param-.*-style$/).selectOption('bars');
+
+  await openExportDialog(page);
+  await page.getByTestId('export-enqueue-button').click();
+  await expectExportTaskStatus(page, 0, 'success');
+
+  const plan = await page.evaluate(() => window.__E2E_ACTIONS__!.getLastExportPlan!() as { filterComplex: string });
+  expect(plan.filterComplex).toContain('showfreqs=s=');
+  expect(plan.filterComplex).toContain('mode=bar:ascale=log');
+  expect(plan.filterComplex).toContain('[amixout]asplit=2[aout][spectrum_audio_0]');
+});
+
 test('enables chroma key and includes chromakey in the export plan', async ({ page }) => {
   await page.goto('/');
   await waitForE2eActions(page);

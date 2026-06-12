@@ -218,6 +218,9 @@ const mocks: TauriMocks = {
     mtimeMs: mtimes.get(path) ?? (path.includes('Relink') ? 2_000 : 1_000)
   }),
   scanDirectory: (path) => {
+    if (path.includes('/snapshots/')) {
+      return Array.from(files.keys()).filter((candidate) => candidate.startsWith(`${path}/`) && exists.get(candidate) !== false);
+    }
     if (path === pluginDir) {
       return [pluginPath, permissionDeniedPluginPath, brokenPluginPath].filter((candidate) => exists.get(candidate) !== false);
     }
@@ -802,6 +805,11 @@ window.__E2E_ACTIONS__ = {
     localStorage.removeItem(PERSISTED_FILES_KEY);
     localStorage.removeItem(PERSISTED_MTIMES_KEY);
     for (const path of Array.from(files.keys()).filter((item) => item.endsWith('.autosave'))) {
+      files.delete(path);
+      exists.set(path, false);
+      mtimes.delete(path);
+    }
+    for (const path of Array.from(files.keys()).filter((item) => item.includes('/snapshots/'))) {
       files.delete(path);
       exists.set(path, false);
       mtimes.delete(path);

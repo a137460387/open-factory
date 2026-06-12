@@ -1,5 +1,5 @@
-import type { Clip, MediaAsset, Sequence, Timeline, Transition } from '@open-factory/editor-core';
-import { applyClipKeyframes, getClipPlaybackStart, getRenderableTracks, getTimelinePlaybackDuration, getTransitionPlaybackWindow } from '@open-factory/editor-core';
+import type { AudioSpectrumParams, Clip, MediaAsset, Sequence, Timeline, Transition } from '@open-factory/editor-core';
+import { applyClipKeyframes, getActiveClipsAtTime, getClipPlaybackStart, getRenderableTracks, getTimelinePlaybackDuration, getTransitionPlaybackWindow, normalizeAudioSpectrumParams } from '@open-factory/editor-core';
 import { DEFAULT_TRANSFORM } from '@open-factory/editor-core';
 import { PreviewAudioRenderer } from './audio-renderer';
 import { recordPreviewError, recordPreviewMode, recordPreviewReadback } from './debug';
@@ -58,6 +58,9 @@ export class PreviewRenderer {
         }
         await this.drawClipWebGl(webgl, clip, mediaById, sequenceById, media, clipPlayheadTime, canvas.width, canvas.height, depth, bypassProcessing);
       }
+      if (!bypassProcessing) {
+        this.drawAudioSpectrumWebGl(webgl, timeline, playheadTime, canvas.width, canvas.height);
+      }
       webgl.finish();
       recordPreviewReadback(webgl.readCenterPixel());
       return { frame: options.captureFrame ? readWebGlFrameSafely(webgl) : undefined };
@@ -77,6 +80,9 @@ export class PreviewRenderer {
         return {};
       }
       await this.drawClip2d(context, canvas, clip, mediaById, sequenceById, media, clipPlayheadTime, depth, bypassProcessing);
+    }
+    if (!bypassProcessing) {
+      this.drawAudioSpectrum2d(context, timeline, playheadTime, canvas.width, canvas.height);
     }
     try {
       recordPreviewReadback(Array.from(context.getImageData(Math.floor(canvas.width / 2), Math.floor(canvas.height / 2), 1, 1).data));
@@ -271,6 +277,130 @@ export class PreviewRenderer {
       this.webgl = null;
     }
     return this.webgl;
+  }
+
+  private drawAudioSpectrumWebGl(compositor: WebGlPreviewCompositor, timeline: Timeline, playheadTime: number, width: number, height: number): void {
+    const overlay = drawAudioSpectrumToCanvas(timeline, playheadTime, width, height, (kind) => this.audioRenderer.readAnalysisFrame(kind));
+    if (!overlay) {
+      return;
+    }
+    compositor.drawSource(overlay, width, height, DEFAULT_TRANSFORM, undefined, undefined, undefined, undefined, { bypassProcessing: true });
+  }
+
+  private drawAudioSpectrum2d(context: CanvasRenderingContext2D, timeline: Timeline, playheadTime: number, width: number, height: number): void {
+    const overlay = drawAudioSpectrumToCanvas(timeline, playheadTime, width, height, (kind) => this.audioRenderer.readAnalysisFrame(kind));
+    if (!overlay) {
+      return;
+    }
+    context.drawImage(overlay, 0, 0, width, height);
+  }
+}
+
+function drawAudioSpectrumToCanvas(
+  timeline: Timeline,
+  playheadTime: number,
+  width: number,
+  height: number,
+  readAnalysisFrame: (kind: 'frequency' | 'waveform') => Uint8Array | undefined
+): HTMLCanvasElement | undefined {
+  const activeParams = getActiveAudioSpectrumParams(timeline, playheadTime);
+  if (activeParams.length === 0) {
+    return undefined;
+  }
+  const overlay = document.createElement('canvas');
+  overlay.width = width;
+  overlay.height = height;
+  const context = overlay.getContext('2d');
+  if (!context) {
+    return undefined;
+  }
+  let drew = false;
+  for (const params of activeParams) {
+    const data = readAnalysisFrame(params.style === 'waveform' ? 'waveform' : 'frequency');
+    if (!data) {
+      continue;
+    }
+    drawAudioSpectrumOverlay(context, width, height, params, data);
+    drew = true;
+  }
+  return drew ? overlay : undefined;
+}
+
+function getActiveAudioSpectrumParams(timeline: Timeline, playheadTime: number): AudioSpectrumParams[] {
+  return getActiveClipsAtTime(timeline, playheadTime).flatMap((clip) =>
+    (clip.effects ?? []).flatMap((effect) => {
+      if (!effect.enabled || effect.type !== 'audio-spectrum') {
+        return [];
+      }
+      const params = normalizeAudioSpectrumParams(effect.params);
+      return params.height > 0 ? [params] : [];
+    })
+  );
+}
+
+function drawAudioSpectrumOverlay(context: CanvasRenderingContext2D, width: number, height: number, params: AudioSpectrumParams, data: Uint8Array): void {
+  const overlayHeight = Math.max(2, Math.round(height * (params.height / 100)));
+  const y = params.position === 'top' ? 0 : height - overlayHeight;
+  context.save();
+  context.globalAlpha = 0.9;
+  context.strokeStyle = params.color;
+  context.fillStyle = params.color;
+  context.lineWidth = 2;
+  if (params.style === 'waveform') {
+    drawWaveformSpectrum(context, width, overlayHeight, y, params.sensitivity, data);
+  } else if (params.style === 'circle') {
+    drawCircleSpectrum(context, width, overlayHeight, y, params.sensitivity, data);
+  } else {
+    drawBarSpectrum(context, width, overlayHeight, y, params.sensitivity, data);
+  }
+  context.restore();
+}
+
+function drawBarSpectrum(context: CanvasRenderingContext2D, width: number, height: number, y: number, sensitivity: number, data: Uint8Array): void {
+  const bars = Math.min(96, Math.max(16, Math.floor(width / 12)));
+  const barWidth = width / bars;
+  for (let index = 0; index < bars; index += 1) {
+    const sample = data[Math.min(data.length - 1, Math.floor((index / bars) * data.length))] ?? 0;
+    const level = Math.min(1, (sample / 255) * sensitivity);
+    const barHeight = Math.max(1, level * height);
+    context.fillRect(index * barWidth + 1, y + height - barHeight, Math.max(1, barWidth - 2), barHeight);
+  }
+}
+
+function drawWaveformSpectrum(context: CanvasRenderingContext2D, width: number, height: number, y: number, sensitivity: number, data: Uint8Array): void {
+  const centerY = y + height / 2;
+  context.beginPath();
+  for (let index = 0; index < data.length; index += 1) {
+    const x = (index / Math.max(1, data.length - 1)) * width;
+    const normalized = ((data[index] ?? 128) - 128) / 128;
+    const nextY = centerY + normalized * sensitivity * (height / 2);
+    if (index === 0) {
+      context.moveTo(x, nextY);
+    } else {
+      context.lineTo(x, nextY);
+    }
+  }
+  context.stroke();
+}
+
+function drawCircleSpectrum(context: CanvasRenderingContext2D, width: number, height: number, y: number, sensitivity: number, data: Uint8Array): void {
+  const centerX = width / 2;
+  const centerY = y + height / 2;
+  const radius = Math.max(8, height * 0.28);
+  const bars = 96;
+  context.beginPath();
+  context.arc(centerX, centerY, radius, 0, Math.PI * 2);
+  context.stroke();
+  for (let index = 0; index < bars; index += 1) {
+    const angle = (index / bars) * Math.PI * 2 - Math.PI / 2;
+    const sample = data[Math.min(data.length - 1, Math.floor((index / bars) * data.length))] ?? 0;
+    const level = Math.min(1, (sample / 255) * sensitivity);
+    const inner = radius;
+    const outer = radius + level * height * 0.32;
+    context.beginPath();
+    context.moveTo(centerX + Math.cos(angle) * inner, centerY + Math.sin(angle) * inner);
+    context.lineTo(centerX + Math.cos(angle) * outer, centerY + Math.sin(angle) * outer);
+    context.stroke();
   }
 }
 

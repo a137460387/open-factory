@@ -1,5 +1,6 @@
 import {
   DEFAULT_COLOR_CORRECTION,
+  getEffectNumberParam,
   getTransformScaleX,
   getTransformScaleY,
   normalizeColorCorrection,
@@ -319,15 +320,15 @@ function buildPreviewEffectParams(effects: Effect[] | undefined): { blur: number
       continue;
     }
     if (effect.type === 'blur') {
-      params.blur = Math.max(params.blur, Math.min(12, Math.max(0, effect.params.radius ?? 0)));
+      params.blur = Math.max(params.blur, Math.min(12, Math.max(0, getEffectNumberParam(effect.params, 'radius', 0))));
     } else if (effect.type === 'film-grain') {
-      params.grain = Math.max(params.grain, Math.min(1, Math.max(0, effect.params.strength ?? 0)));
+      params.grain = Math.max(params.grain, Math.min(1, Math.max(0, getEffectNumberParam(effect.params, 'strength', 0))));
     } else if (effect.type === 'vignette') {
-      params.vignette = Math.max(params.vignette, Math.min(1, Math.max(0, effect.params.intensity ?? 0)));
+      params.vignette = Math.max(params.vignette, Math.min(1, Math.max(0, getEffectNumberParam(effect.params, 'intensity', 0))));
     } else if (effect.type === 'chromatic-aberration') {
-      params.chromatic = Math.max(params.chromatic, Math.min(20, Math.max(0, effect.params.strength ?? 0)));
+      params.chromatic = Math.max(params.chromatic, Math.min(20, Math.max(0, getEffectNumberParam(effect.params, 'strength', 0))));
     } else if (effect.type === 'sharpen') {
-      params.sharpen = Math.max(params.sharpen, Math.min(3, Math.max(0, effect.params.strength ?? 0)));
+      params.sharpen = Math.max(params.sharpen, Math.min(3, Math.max(0, getEffectNumberParam(effect.params, 'strength', 0))));
     }
   }
   return params;

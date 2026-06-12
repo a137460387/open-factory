@@ -1238,6 +1238,66 @@ describe('multitrack ffmpeg builder', () => {
     expect(filter).not.toContain('noise=alls=');
   });
 
+  it.each([
+    [
+      'bars',
+      { style: 'bars', color: '#22d3ee', height: 25, position: 'bottom', sensitivity: 1.2 },
+      'showfreqs=s=1280x180:mode=bar:ascale=log:colors=0x22d3ee',
+      "overlay=x=0:y='main_h-overlay_h'"
+    ],
+    [
+      'waveform',
+      { style: 'waveform', color: '#ffaa00', height: 50, position: 'top', sensitivity: 0.8 },
+      'showwaves=s=1280x360:mode=line:colors=0xffaa00',
+      "overlay=x=0:y='0'"
+    ],
+    [
+      'circle',
+      { style: 'circle', color: '#ffffff', height: 30, position: 'bottom', sensitivity: 2 },
+      'showfreqs=s=216x216:mode=line:ascale=log:colors=0xffffff',
+      "overlay=x=0:y='main_h-overlay_h'"
+    ]
+  ])('builds %s audio spectrum export filters over the final mix', (_style, params, expectedFilter, expectedOverlay) => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-spectrum',
+        duration: 2,
+        effects: [{ id: 'effect-spectrum', type: 'audio-spectrum', enabled: true, params }]
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+    const filter = plan.filterComplex;
+
+    expect(filter).toContain('[amixout]asplit=2[aout][spectrum_audio_0]');
+    expect(filter).toContain(expectedFilter);
+    expect(filter).toContain('colorkey=0x000000:0.08:0.12');
+    expect(filter).toContain(expectedOverlay);
+    expect(filter).toContain("enable='between(t,0,2)'");
+    expect(plan.maps).toEqual(['-map', '[vout]', '-map', '[aout]']);
+  });
+
+  it('does not generate audio spectrum filters for disabled or zero-height spectrum effects', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-no-spectrum',
+        duration: 2,
+        effects: [
+          { id: 'effect-spectrum-disabled', type: 'audio-spectrum', enabled: false, params: { height: 25 } },
+          { id: 'effect-spectrum-zero', type: 'audio-spectrum', enabled: true, params: { height: 0 } }
+        ]
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).not.toContain('showfreqs=');
+    expect(plan.filterComplex).not.toContain('showwaves=');
+    expect(plan.filterComplex).not.toContain('spectrum_audio_0');
+  });
+
   it('chains atempo filters for speeds outside ffmpeg single-filter bounds', () => {
     expect(buildAtempoFilters(0.25)).toEqual(['atempo=0.5', 'atempo=0.5']);
     expect(buildAtempoFilters(3)).toEqual(['atempo=2.0', 'atempo=1.5']);

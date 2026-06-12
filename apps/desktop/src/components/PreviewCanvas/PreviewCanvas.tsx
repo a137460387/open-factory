@@ -453,7 +453,7 @@ export function PreviewCanvas() {
 
   return (
     <section className="flex min-h-0 flex-col bg-[#1b2028]">
-      <div className="flex items-center justify-between border-b border-black/30 px-3 py-2 text-white">
+      <div className="relative z-40 flex items-center justify-between border-b border-black/30 px-3 py-2 text-white">
         <div>
           <div className="text-sm font-semibold">{t.title}</div>
           <div className="text-xs text-slate-300">{t.canvasSize}</div>
@@ -543,7 +543,7 @@ export function PreviewCanvas() {
               ref={canvasRef}
               width={1280}
               height={720}
-              className={`absolute inset-0 h-full w-full ${compareShowsDifference ? 'opacity-0' : 'opacity-100'}`}
+              className={`pointer-events-none absolute inset-0 h-full w-full ${compareShowsDifference ? 'opacity-0' : 'opacity-100'}`}
               data-testid="preview-canvas"
             />
             {compareEnabled ? (
@@ -551,13 +551,13 @@ export function PreviewCanvas() {
                 ref={originalCanvasRef}
                 width={1280}
                 height={720}
-                className={`absolute inset-0 h-full w-full ${compareShowsDifference ? 'opacity-0' : 'opacity-100'}`}
+                className={`pointer-events-none absolute inset-0 h-full w-full ${compareShowsDifference ? 'opacity-0' : 'opacity-100'}`}
                 style={buildPreviewCompareOverlayStyle(activeCompareMode, compareSplitRatio)}
                 data-testid="preview-compare-original-canvas"
               />
             ) : null}
             {compareShowsDifference ? (
-              <canvas ref={differenceCanvasRef} width={1280} height={720} className="absolute inset-0 h-full w-full" data-testid="preview-compare-difference-canvas" />
+              <canvas ref={differenceCanvasRef} width={1280} height={720} className="pointer-events-none absolute inset-0 h-full w-full" data-testid="preview-compare-difference-canvas" />
             ) : null}
             {compareEnabled && !compareShowsDifference ? (
               <div

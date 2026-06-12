@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_EFFECT_PARAMS, cloneEffects, normalizeEffect, normalizeEffectParams, normalizeEffects } from '../src';
+import { DEFAULT_EFFECT_PARAMS, cloneEffects, normalizeAudioSpectrumParams, normalizeEffect, normalizeEffectParams, normalizeEffects } from '../src';
 
 describe('effect stack helpers', () => {
   it('normalizes a valid effect with default params', () => {
@@ -23,6 +23,28 @@ describe('effect stack helpers', () => {
     expect(normalizeEffectParams('vignette', { intensity: -1, radius: 2 })).toEqual({ intensity: 0, radius: 1 });
     expect(normalizeEffectParams('film-grain', { strength: 2, size: 9 })).toEqual({ strength: 1, size: 5 });
     expect(normalizeEffectParams('chromatic-aberration', { strength: 99 })).toEqual({ strength: 20 });
+  });
+
+  it('normalizes audio spectrum params with string options and clamped numeric ranges', () => {
+    expect(
+      normalizeEffect({
+        id: 'effect-spectrum',
+        type: 'audio-spectrum',
+        params: { style: 'waveform', color: 'FFAA00', height: 99, position: 'top', sensitivity: 9 }
+      })
+    ).toEqual({
+      id: 'effect-spectrum',
+      type: 'audio-spectrum',
+      enabled: true,
+      params: { style: 'waveform', color: '#ffaa00', height: 50, position: 'top', sensitivity: 4 }
+    });
+    expect(normalizeAudioSpectrumParams({ style: 'bad', color: 'not-a-color', height: -5, position: 'middle', sensitivity: 0 })).toEqual({
+      style: 'bars',
+      color: '#22d3ee',
+      height: 0,
+      position: 'bottom',
+      sensitivity: 0.1
+    });
   });
 
   it('clones normalized effect stacks without sharing normalized objects', () => {

@@ -39,6 +39,7 @@ const zh = {
   },
   toolbar: {
     fileMenu: '文件',
+    editMenu: '编辑',
     toolsMenu: '工具',
     newProject: '新建项目',
     newFromTemplate: '从模板新建',
@@ -73,6 +74,10 @@ const zh = {
     openExportFolder: '打开导出文件夹',
     localExport: '本地多轨导出',
     projectHealthCheck: '项目健康检查'
+  },
+  editMenu: {
+    saveSnapshot: '保存快照',
+    snapshotHistory: '快照历史'
   },
   settings: {
     title: '设置',
@@ -660,6 +665,10 @@ const zh = {
       radius: '半径',
       size: '大小',
       strength: '强度',
+      style: '样式',
+      height: '高度',
+      position: '位置',
+      sensitivity: '灵敏度',
       volume: '音量',
       text: '文本',
       fontSize: '字号',
@@ -709,7 +718,17 @@ const zh = {
       sharpen: '锐化',
       vignette: '暗角',
       'film-grain': '胶片颗粒',
-      'chromatic-aberration': '色散'
+      'chromatic-aberration': '色散',
+      'audio-spectrum': '音频频谱'
+    },
+    audioSpectrumStyles: {
+      bars: '柱状',
+      waveform: '波形',
+      circle: '圆形'
+    },
+    audioSpectrumPositions: {
+      top: '顶部',
+      bottom: '底部'
     },
     missingFile: '文件缺失',
     title: '检查器',
@@ -1013,6 +1032,33 @@ const zh = {
       canceled: '已取消'
     }
   },
+  projectSnapshots: {
+    saveTitle: '保存快照',
+    nameLabel: '快照名称',
+    defaultName: '未命名快照',
+    save: '保存',
+    historyTitle: '快照历史',
+    empty: '没有项目快照。',
+    refresh: '刷新',
+    preview: '预览',
+    restore: '恢复',
+    delete: '删除',
+    restoreCommand: '恢复项目快照',
+    saved: '快照已保存',
+    saveFailed: '快照保存失败',
+    loadFailed: '快照读取失败',
+    deleteFailed: '快照删除失败',
+    restoreFailed: '快照恢复失败',
+    restored: '快照已恢复',
+    deleted: '快照已删除',
+    snapshotCount: (count: number) => `${count} 个快照`,
+    previewSummary: (name: string, tracks: number, media: number, duration: string) => `${name} · ${tracks} 条轨道 · ${media} 个素材 · ${duration}`,
+    columns: {
+      name: '名称',
+      time: '时间',
+      size: '大小'
+    }
+  },
   sharePackage: {
     title: '创建分享包',
     fileDialogFilter: '分享包',
@@ -1170,6 +1216,7 @@ const enOverrides = {
   },
   toolbar: {
     fileMenu: 'File',
+    editMenu: 'Edit',
     toolsMenu: 'Tools',
     newProject: 'New Project',
     newFromTemplate: 'New From Template',
@@ -1204,6 +1251,10 @@ const enOverrides = {
     openExportFolder: 'Open Export Folder',
     localExport: 'Local Multitrack Export',
     projectHealthCheck: 'Project Health Check'
+  },
+  editMenu: {
+    saveSnapshot: 'Save Snapshot',
+    snapshotHistory: 'Snapshot History'
   },
   settings: {
     title: 'Settings',
@@ -1568,11 +1619,41 @@ const enOverrides = {
       scaleY: 'Scale Y',
       rotation: 'Rotation',
       opacity: 'Opacity',
+      addEffect: 'Add Effect',
+      effectType: 'Effect Type',
+      enabled: 'Enabled',
+      removeEffect: 'Remove Effect',
+      moveEffectUp: 'Move Effect Up',
+      moveEffectDown: 'Move Effect Down',
+      radius: 'Radius',
+      size: 'Size',
+      strength: 'Strength',
+      style: 'Style',
+      height: 'Height',
+      position: 'Position',
+      sensitivity: 'Sensitivity',
       volume: 'Volume',
       text: 'Text',
       fontSize: 'Font Size',
       fontFamily: 'Font Family',
       color: 'Color'
+    },
+    effectNames: {
+      blur: 'Gaussian Blur',
+      sharpen: 'Sharpen',
+      vignette: 'Vignette',
+      'film-grain': 'Film Grain',
+      'chromatic-aberration': 'Chromatic Aberration',
+      'audio-spectrum': 'Audio Spectrum'
+    },
+    audioSpectrumStyles: {
+      bars: 'Bars',
+      waveform: 'Waveform',
+      circle: 'Circle'
+    },
+    audioSpectrumPositions: {
+      top: 'Top',
+      bottom: 'Bottom'
     },
     missingFile: 'Missing file'
   },
@@ -1794,6 +1875,33 @@ const enOverrides = {
       completed: 'Completed',
       failed: 'Failed',
       canceled: 'Canceled'
+    }
+  },
+  projectSnapshots: {
+    saveTitle: 'Save Snapshot',
+    nameLabel: 'Snapshot Name',
+    defaultName: 'Untitled Snapshot',
+    save: 'Save',
+    historyTitle: 'Snapshot History',
+    empty: 'No project snapshots.',
+    refresh: 'Refresh',
+    preview: 'Preview',
+    restore: 'Restore',
+    delete: 'Delete',
+    restoreCommand: 'Restore Project Snapshot',
+    saved: 'Snapshot saved',
+    saveFailed: 'Snapshot save failed',
+    loadFailed: 'Snapshot read failed',
+    deleteFailed: 'Snapshot delete failed',
+    restoreFailed: 'Snapshot restore failed',
+    restored: 'Snapshot restored',
+    deleted: 'Snapshot deleted',
+    snapshotCount: (count: number) => `${count} snapshots`,
+    previewSummary: (name: string, tracks: number, media: number, duration: string) => `${name} · ${tracks} tracks · ${media} media · ${duration}`,
+    columns: {
+      name: 'Name',
+      time: 'Time',
+      size: 'Size'
     }
   },
   sharePackage: {

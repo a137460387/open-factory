@@ -15,6 +15,7 @@ import {
   CloseGapCommand,
   DeleteClipCommand,
   DeleteClipsCommand,
+  LoadProjectCommand,
   MoveClipCommand,
   MoveClipsCommand,
   PackNestedSequenceCommand,
@@ -46,6 +47,29 @@ import {
 import { makeAccessor, makeAudioClip, makeProject, makeSubtitleClip, makeTextClip, makeTimeline, makeVideoClip } from './test-utils';
 
 describe('timeline commands', () => {
+  it('loads a project with undo and redo support', () => {
+    let project = makeProject();
+    const beforeId = project.id;
+    const restored = { ...makeProject(), id: 'project-restored', name: 'Restored Snapshot' };
+    const accessor = {
+      getProject: () => project,
+      setProject: (next: typeof project) => {
+        project = next;
+      }
+    };
+    const manager = new CommandManager();
+
+    manager.execute(new LoadProjectCommand(accessor, restored));
+    expect(project.id).toBe('project-restored');
+    expect(project.name).toBe('Restored Snapshot');
+
+    manager.undo();
+    expect(project.id).toBe(beforeId);
+
+    manager.redo();
+    expect(project.id).toBe('project-restored');
+  });
+
   it('adds tracks and clips with undo/redo', () => {
     const accessor = makeAccessor(makeTimeline());
     const manager = new CommandManager();

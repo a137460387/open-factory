@@ -6,6 +6,7 @@ import {
   CreateMulticamSequenceCommand,
   DEFAULT_PROJECT_ANNOTATION_COLOR,
   DeleteClipsCommand,
+  LoadProjectCommand,
   MergeMediaCommand,
   NewProjectCommand,
   RemoveMediaCommand,
@@ -21,6 +22,7 @@ import {
   type MissingMediaIssue,
   type OrphanMediaIssue,
   type ProjectHealthReport,
+  type Project,
   type ProjectTemplateId,
   type ProxyMissingIssue,
   type TitleTemplateId
@@ -46,6 +48,7 @@ import { scanDuplicateMediaGroups } from '../lib/duplicateMedia';
 import { buildSubtitleTrackFromSrt, isSubtitlePath, pickSubtitlePaths, readSubtitleText } from '../lib/subtitles';
 import { createProjectArchivePlan, writeProjectArchive, type ArchiveProgress } from '../lib/projectArchive';
 import { collectProjectArchivePreflight, saveOfflineMediaReport } from '../lib/mediaReport';
+import { saveProjectSnapshot } from '../lib/projectSnapshots';
 import { scanProjectHealth } from '../lib/projectHealth';
 import { createSharePackageFromProject, type SharePackageWorkflowProgress } from '../lib/sharePackage';
 import {
@@ -84,6 +87,8 @@ const ExportDialog = lazy(() => import('../export/ExportDialog').then((module) =
 const SettingsDialog = lazy(() => import('../settings/SettingsDialog').then((module) => ({ default: module.SettingsDialog })));
 const TimelineExportDialog = lazy(() => import('../timeline-export/TimelineExportDialog').then((module) => ({ default: module.TimelineExportDialog })));
 const BatchTranscodeDialog = lazy(() => import('../media/BatchTranscodeDialog').then((module) => ({ default: module.BatchTranscodeDialog })));
+const SnapshotNameDialog = lazy(() => import('../project-snapshots/SnapshotNameDialog').then((module) => ({ default: module.SnapshotNameDialog })));
+const SnapshotHistoryDialog = lazy(() => import('../project-snapshots/SnapshotHistoryDialog').then((module) => ({ default: module.SnapshotHistoryDialog })));
 
 export function EditorShell() {
   const project = useEditorStore((state) => state.project);
@@ -103,6 +108,7 @@ export function EditorShell() {
   const setSelectedClipId = useEditorStore((state) => state.setSelectedClipId);
   const setSelectedClipIds = useEditorStore((state) => state.setSelectedClipIds);
   const clearSelectedClipIds = useEditorStore((state) => state.clearSelectedClipIds);
+  const setPlayheadTime = useEditorStore((state) => state.setPlayheadTime);
   const setIsPlaying = useEditorStore((state) => state.setIsPlaying);
   const setPlaybackRate = useEditorStore((state) => state.setPlaybackRate);
   const setInPoint = useEditorStore((state) => state.setInPoint);
@@ -112,6 +118,8 @@ export function EditorShell() {
   const [timelineExportDialogOpen, setTimelineExportDialogOpen] = useState(false);
   const [batchTranscodeOpen, setBatchTranscodeOpen] = useState(false);
   const [batchTranscodeInitialPaths, setBatchTranscodeInitialPaths] = useState<string[]>([]);
+  const [snapshotNameOpen, setSnapshotNameOpen] = useState(false);
+  const [snapshotHistoryOpen, setSnapshotHistoryOpen] = useState(false);
   const [projectTemplateOpen, setProjectTemplateOpen] = useState(false);
   const [templateExportPreset, setTemplateExportPreset] = useState<ExportPreset>();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -278,6 +286,28 @@ export function EditorShell() {
     setBatchTranscodeInitialPaths(paths);
     setBatchTranscodeOpen(true);
   }, []);
+
+  const saveNamedSnapshot = useCallback(
+    async (name: string) => {
+      try {
+        const snapshot = await saveProjectSnapshot(project, name, projectPath);
+        setSnapshotNameOpen(false);
+        showToast({ kind: 'success', title: zhCN.projectSnapshots.saved, message: snapshot.name });
+      } catch (error) {
+        showToast({ kind: 'error', title: zhCN.projectSnapshots.saveFailed, message: error instanceof Error ? error.message : zhCN.projectSnapshots.saveFailed });
+      }
+    },
+    [project, projectPath]
+  );
+
+  const restoreSnapshotProject = useCallback(
+    (snapshotProject: Project) => {
+      commandManager.execute(new LoadProjectCommand(projectAccessor, snapshotProject, zhCN.projectSnapshots.restoreCommand));
+      clearSelectedClipIds();
+      setPlayheadTime(0);
+    },
+    [clearSelectedClipIds, setPlayheadTime]
+  );
 
   const scanDuplicateMedia = useCallback(async () => {
     try {
@@ -770,6 +800,8 @@ export function EditorShell() {
           onArchiveProject={() => void archiveCurrentProject()}
           onCreateMediaReport={() => void createMediaReport()}
           onCreateSharePackage={() => void createCurrentSharePackage()}
+          onSaveSnapshot={() => setSnapshotNameOpen(true)}
+          onOpenSnapshotHistory={() => setSnapshotHistoryOpen(true)}
           onImportMedia={() => void importMedia()}
           onBatchTranscode={() => openBatchTranscode()}
           onImportSubtitles={() => void importSubtitles()}
@@ -856,6 +888,10 @@ export function EditorShell() {
           ) : null}
           {projectTemplateOpen ? <ProjectTemplateDialog onSelect={(templateId) => void createProjectFromTemplate(templateId)} onClose={() => setProjectTemplateOpen(false)} /> : null}
           {timelineExportDialogOpen ? <TimelineExportDialog project={project} onClose={() => setTimelineExportDialogOpen(false)} /> : null}
+          {snapshotNameOpen ? <SnapshotNameDialog defaultName={project.name} onConfirm={(name) => void saveNamedSnapshot(name)} onClose={() => setSnapshotNameOpen(false)} /> : null}
+          {snapshotHistoryOpen ? (
+            <SnapshotHistoryDialog projectId={project.id} projectPath={projectPath} onRestore={restoreSnapshotProject} onClose={() => setSnapshotHistoryOpen(false)} />
+          ) : null}
           {batchTranscodeOpen ? (
             <BatchTranscodeDialog
               initialPaths={batchTranscodeInitialPaths}

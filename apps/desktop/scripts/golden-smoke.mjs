@@ -87,6 +87,15 @@ const fixtures = [
     validate: validateAudioVolumeFadeFixture
   },
   {
+    name: 'audio-spectrum',
+    description: 'video with embedded audio and a bottom audio spectrum overlay',
+    outputWidth: 1280,
+    outputHeight: 720,
+    expectedDuration: 1.5,
+    create: createAudioSpectrumFixture,
+    validate: validateAudioSpectrumFixture
+  },
+  {
     name: 'subtitle-burn-in',
     description: 'solid background video with two SRT subtitle clips burned in',
     outputWidth: 1280,
@@ -704,6 +713,88 @@ async function validateAudioVolumeFadeFixture(context) {
         passed: context.outputSize > 10_000,
         actual: context.outputSize,
         expected: '> 10000'
+      }
+    ]
+  };
+}
+
+async function createAudioSpectrumFixture(context) {
+  const sourcePath = join(context.fixtureDir, 'audio-spectrum-source.mp4');
+  await createColorVideoFixture(sourcePath, {
+    color: COLORS.darkBlue.ffmpeg,
+    width: context.outputWidth,
+    height: context.outputHeight,
+    duration: context.fixture.expectedDuration,
+    audio: true,
+    frequency: 660
+  });
+  return buildProject({
+    id: 'golden-audio-spectrum',
+    name: 'Golden Audio Spectrum',
+    width: context.outputWidth,
+    height: context.outputHeight,
+    media: [
+      videoAsset({
+        id: 'asset-audio-spectrum-source',
+        name: 'audio-spectrum-source.mp4',
+        path: sourcePath,
+        duration: context.fixture.expectedDuration,
+        width: context.outputWidth,
+        height: context.outputHeight,
+        hasAudio: true,
+        stat: statSync(sourcePath)
+      })
+    ],
+    tracks: [
+      {
+        id: 'track-spectrum-video',
+        type: 'video',
+        name: 'Spectrum Video',
+        clips: [
+          videoClip({
+            id: 'clip-audio-spectrum',
+            name: 'Audio spectrum',
+            mediaId: 'asset-audio-spectrum-source',
+            trackId: 'track-spectrum-video',
+            duration: context.fixture.expectedDuration,
+            effects: [
+              {
+                id: 'effect-audio-spectrum',
+                type: 'audio-spectrum',
+                enabled: true,
+                params: { style: 'bars', color: '#22d3ee', height: 25, position: 'bottom', sensitivity: 1.4 }
+              }
+            ]
+          })
+        ]
+      },
+      emptyAudioTrack(),
+      emptyTextTrack()
+    ]
+  });
+}
+
+async function validateAudioSpectrumFixture(context) {
+  const filter = context.plan.filterComplex;
+  return {
+    checks: [
+      {
+        name: 'spectrum-filter',
+        passed: filter.includes('showfreqs=s=1280x180:mode=bar:ascale=log:colors=0x22d3ee'),
+        actual: filter,
+        expected: 'showfreqs=s=1280x180:mode=bar:ascale=log:colors=0x22d3ee'
+      },
+      {
+        name: 'spectrum-audio-split',
+        passed: filter.includes('[amixout]asplit=2[aout][spectrum_audio_0]'),
+        actual: filter,
+        expected: '[amixout]asplit=2[aout][spectrum_audio_0]'
+      },
+      {
+        name: 'spectrum-overlay',
+        passed: filter.includes("overlay=x=0:y='main_h-overlay_h'"),
+        actual: filter,
+        expected: "overlay=x=0:y='main_h-overlay_h'"
       }
     ]
   };
@@ -2256,6 +2347,7 @@ function videoClip(input) {
     chromaKey: input.chromaKey,
     transform: input.transform ?? { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
     keyframes: input.keyframes,
+    effects: input.effects,
     volume: input.volume ?? 1,
     muted: input.muted,
     fadeInDuration: input.fadeInDuration,

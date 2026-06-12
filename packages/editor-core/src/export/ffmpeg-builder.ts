@@ -33,7 +33,7 @@ import {
   type ThreeWayColor
 } from '../color-grading';
 import { getLogToRec709Lut, isLogInputColorSpace, serializeLogToRec709Cube } from '../color-log-luts';
-import { cloneEffects, type Effect } from '../effects';
+import { cloneEffects, getEffectNumberParam, normalizeAudioSpectrumParams, type AudioSpectrumParams, type Effect } from '../effects';
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
 import { flattenMulticamProjectForExport } from '../multicam';
 import { buildReframeCropFilter, clampReframeOffset, isReframeEnabled, normalizeTargetAspectRatio, resolveReframeDimensions } from '../reframe';
@@ -284,6 +284,7 @@ export function buildFfmpegExportPlan(
     ...clip,
     start: playbackStartByClipId.get(clip.id) ?? clip.start
   }));
+  const audioSpectrumEffects = !audioOnly && !videoFramesOnly ? collectAudioSpectrumEffects(orderedPlaybackClips) : [];
 
   for (const clip of orderedClips) {
     if (!clip.mediaPath || clip.type === 'text' || clip.type === 'subtitle') {
@@ -372,33 +373,63 @@ export function buildFfmpegExportPlan(
     textArtifacts.push(artifact);
   }
 
-  if (!audioOnly) {
-    const outputPixelFormat = pngSequence || animatedImage ? 'rgba' : 'yuv420p';
-    filters.push(`[${currentVideo}]trim=duration=${formatFfmpegSeconds(duration)},setpts=PTS-STARTPTS,fps=${settings.fps},format=${outputPixelFormat}[vout]`);
-  }
-
   let loudnessAnalysisFilterComplex: string | undefined;
   if (!videoFramesOnly) {
     const masterVolume = normalizeMasterVolume(project.masterVolume);
     const audioFilters: string[] = [];
     const audioLabels = buildAudioFilters(orderedPlaybackClips, inputByClipId, settings, audioFilters, capabilities, warnings);
     const loudnessPreset = audioLabels.length > 0 ? getLoudnessNormalizationPreset(settings.loudnessNormalization) : undefined;
-    const audioOutputLabel = loudnessPreset ? 'apremaster' : 'aout';
+    const spectrumSplitLabels = audioSpectrumEffects.map((_, index) => `spectrum_audio_${index}`);
+    const needsSpectrumSplit = spectrumSplitLabels.length > 0;
+    const finalAudioLabel = loudnessPreset ? 'apremaster' : 'aout';
+    const mixedAudioLabel = needsSpectrumSplit ? (loudnessPreset ? 'apremaster_mix' : 'amixout') : finalAudioLabel;
     if (audioLabels.length === 0) {
-      audioFilters.push(`anullsrc=channel_layout=stereo:sample_rate=${settings.sampleRate}:d=${formatFfmpegSeconds(duration)},volume=${formatVolume(masterVolume)}[${audioOutputLabel}]`);
+      audioFilters.push(`anullsrc=channel_layout=stereo:sample_rate=${settings.sampleRate}:d=${formatFfmpegSeconds(duration)},volume=${formatVolume(masterVolume)}[${mixedAudioLabel}]`);
     } else {
       audioFilters.push(
         `${audioLabels.map((label) => `[${label}]`).join('')}amix=inputs=${audioLabels.length}:duration=longest:normalize=0,atrim=duration=${formatFfmpegSeconds(
           duration
-        )},asetpts=PTS-STARTPTS,aresample=${settings.sampleRate},volume=${formatVolume(masterVolume)}[${audioOutputLabel}]`
+        )},asetpts=PTS-STARTPTS,aresample=${settings.sampleRate},volume=${formatVolume(masterVolume)}[${mixedAudioLabel}]`
       );
     }
     if (loudnessPreset) {
-      loudnessAnalysisFilterComplex = [...audioFilters, `[${audioOutputLabel}]${buildLoudnormAnalysisFilter(loudnessPreset)}[aout]`].join(';');
-      filters.push(...audioFilters, `[${audioOutputLabel}]${buildLoudnormRenderFilter(loudnessPreset)}[aout]`);
+      loudnessAnalysisFilterComplex = [...audioFilters, `[${mixedAudioLabel}]${buildLoudnormAnalysisFilter(loudnessPreset)}[aout]`].join(';');
+      if (needsSpectrumSplit) {
+        filters.push(
+          ...audioFilters,
+          `[${mixedAudioLabel}]asplit=${spectrumSplitLabels.length + 1}[${finalAudioLabel}]${spectrumSplitLabels.map((label) => `[${label}]`).join('')}`,
+          `[${finalAudioLabel}]${buildLoudnormRenderFilter(loudnessPreset)}[aout]`
+        );
+      } else {
+        filters.push(...audioFilters, `[${mixedAudioLabel}]${buildLoudnormRenderFilter(loudnessPreset)}[aout]`);
+      }
     } else {
-      filters.push(...audioFilters);
+      if (needsSpectrumSplit) {
+        filters.push(...audioFilters, `[${mixedAudioLabel}]asplit=${spectrumSplitLabels.length + 1}[aout]${spectrumSplitLabels.map((label) => `[${label}]`).join('')}`);
+      } else {
+        filters.push(...audioFilters);
+      }
     }
+  }
+
+  if (!audioOnly && !videoFramesOnly && audioSpectrumEffects.length > 0) {
+    audioSpectrumEffects.forEach((item, index) => {
+      const spectrumLabel = `spectrum${index}`;
+      filters.push(buildAudioSpectrumFilter(`spectrum_audio_${index}`, spectrumLabel, item.params, settings));
+      const nextVideo = `base${videoStep + 1}`;
+      filters.push(
+        `[${currentVideo}][${spectrumLabel}]overlay=x=0:y='${buildAudioSpectrumOverlayYExpression(
+          item.params
+        )}':eval=frame:enable='between(t,${formatFfmpegSeconds(item.start)},${formatFfmpegSeconds(item.start + item.duration)})'[${nextVideo}]`
+      );
+      currentVideo = nextVideo;
+      videoStep += 1;
+    });
+  }
+
+  if (!audioOnly) {
+    const outputPixelFormat = pngSequence || animatedImage ? 'rgba' : 'yuv420p';
+    filters.push(`[${currentVideo}]trim=duration=${formatFfmpegSeconds(duration)},setpts=PTS-STARTPTS,fps=${settings.fps},format=${outputPixelFormat}[vout]`);
   }
 
   const filterComplex = filters.join(';');
@@ -1182,20 +1213,73 @@ function buildEffectFilters(effects: Effect[]): string[] {
       return [];
     }
     if (effect.type === 'blur') {
-      return [`gblur=sigma=${formatFfmpegNumber(effect.params.radius)}`];
+      return [`gblur=sigma=${formatFfmpegNumber(getEffectNumberParam(effect.params, 'radius', 8))}`];
     }
     if (effect.type === 'sharpen') {
-      return [`unsharp=luma_msize_x=5:luma_msize_y=5:luma_amount=${formatFfmpegNumber(effect.params.strength)}`];
+      return [`unsharp=luma_msize_x=5:luma_msize_y=5:luma_amount=${formatFfmpegNumber(getEffectNumberParam(effect.params, 'strength', 1))}`];
     }
     if (effect.type === 'vignette') {
-      const angle = formatFfmpegNumber((Math.PI / 4) * effect.params.intensity);
+      const angle = formatFfmpegNumber((Math.PI / 4) * getEffectNumberParam(effect.params, 'intensity', 0.35));
       return [`vignette=angle=${angle}:x0=w/2:y0=h/2:eval=frame`];
     }
     if (effect.type === 'film-grain') {
-      return [`noise=alls=${formatFfmpegNumber(effect.params.strength * 100)}:allf=t`];
+      return [`noise=alls=${formatFfmpegNumber(getEffectNumberParam(effect.params, 'strength', 0.2) * 100)}:allf=t`];
     }
-    return [`rgbashift=rh=${formatFfmpegNumber(effect.params.strength)}:bh=${formatFfmpegNumber(-effect.params.strength)}`];
+    if (effect.type === 'chromatic-aberration') {
+      const strength = getEffectNumberParam(effect.params, 'strength', 4);
+      return [`rgbashift=rh=${formatFfmpegNumber(strength)}:bh=${formatFfmpegNumber(-strength)}`];
+    }
+    return [];
   });
+}
+
+interface AudioSpectrumExportItem {
+  clipId: string;
+  start: number;
+  duration: number;
+  params: AudioSpectrumParams;
+}
+
+function collectAudioSpectrumEffects(clips: ExportClip[]): AudioSpectrumExportItem[] {
+  return clips.flatMap((clip) =>
+    clip.effects.flatMap((effect) => {
+      if (!effect.enabled || effect.type !== 'audio-spectrum') {
+        return [];
+      }
+      const params = normalizeAudioSpectrumParams(effect.params);
+      if (params.height <= 0 || clip.duration <= 0) {
+        return [];
+      }
+      return [
+        {
+          clipId: clip.id,
+          start: clip.start,
+          duration: clip.duration,
+          params
+        }
+      ];
+    })
+  );
+}
+
+function buildAudioSpectrumFilter(inputLabel: string, outputLabel: string, params: AudioSpectrumParams, settings: ExportSettings): string {
+  const width = Math.max(2, Math.round(settings.width));
+  const height = Math.max(2, Math.round(settings.height * (params.height / 100)));
+  const color = cssColorToFfmpeg(params.color);
+  const audioGain = `volume=${formatFfmpegNumber(params.sensitivity)}`;
+  const alphaFilters = 'format=rgba,colorkey=0x000000:0.08:0.12,colorchannelmixer=aa=0.9';
+  if (params.style === 'waveform') {
+    return `[${inputLabel}]${audioGain},showwaves=s=${width}x${height}:mode=line:colors=${color},${alphaFilters}[${outputLabel}]`;
+  }
+  if (params.style === 'circle') {
+    const size = Math.max(2, Math.min(width, height));
+    return `[${inputLabel}]${audioGain},showfreqs=s=${size}x${size}:mode=line:ascale=log:colors=${color},${alphaFilters}[${outputLabel}]`;
+  }
+  return `[${inputLabel}]${audioGain},showfreqs=s=${width}x${height}:mode=bar:ascale=log:colors=${color},${alphaFilters}[${outputLabel}]`;
+}
+
+function buildAudioSpectrumOverlayYExpression(params: AudioSpectrumParams): string {
+  return params.position === 'top' ? '0' : 'main_h-overlay_h';
 }
 
 function buildInputArgs(clip: ExportClip): string[] {

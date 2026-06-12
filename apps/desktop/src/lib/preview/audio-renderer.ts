@@ -102,6 +102,20 @@ export class PreviewAudioRenderer {
     };
   }
 
+  readAnalysisFrame(kind: 'frequency' | 'waveform'): Uint8Array | undefined {
+    if (!this.masterAnalyser) {
+      return undefined;
+    }
+    this.masterAnalyser.fftSize = 1024;
+    const data = new Uint8Array(this.masterAnalyser.frequencyBinCount);
+    if (kind === 'waveform') {
+      this.masterAnalyser.getByteTimeDomainData(data);
+    } else {
+      this.masterAnalyser.getByteFrequencyData(data);
+    }
+    return data;
+  }
+
   private syncClipAudio(clip: Clip, track: Track | undefined, mediaById: Map<string, MediaAsset>, playheadTime: number, isPlaying: boolean): void {
     if (clip.type !== 'audio' && clip.type !== 'video') {
       return;

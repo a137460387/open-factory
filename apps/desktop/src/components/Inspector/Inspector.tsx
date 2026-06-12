@@ -6,6 +6,8 @@ import {
   AddKeyframeCommand,
   AddEffectCommand,
   AddMaskCommand,
+  AUDIO_SPECTRUM_POSITIONS,
+  AUDIO_SPECTRUM_STYLES,
   DEFAULT_EFFECT_PARAMS,
   DEFAULT_COLOR_CORRECTION,
   DEFAULT_THREE_WAY_COLOR,
@@ -28,6 +30,8 @@ import {
   createKenBurnsKeyframes,
   getClipSpeed,
   getClipKeyframeValue,
+  getEffectNumberParam,
+  getEffectStringParam,
   getTransformScaleX,
   getTransformScaleY,
   normalizeAudioDenoise,
@@ -36,6 +40,7 @@ import {
   normalizeColorCorrection,
   normalizeColorWheelValue,
   normalizeCurvePoints,
+  normalizeAudioSpectrumParams,
   normalizeFrameInterpolation,
   normalizeMasks,
   normalizeSequenceFrameRate,
@@ -1620,19 +1625,23 @@ function EffectsEditor({
               </label>
             </summary>
             <div className="space-y-3 border-t border-line p-2">
-              {getEffectParamConfig(effect.type).map((param) => (
-                <RangeNumberField
-                  key={param.key}
-                  label={param.label}
-                  value={effect.params[param.key] ?? DEFAULT_EFFECT_PARAMS[effect.type][param.key]}
-                  min={param.min}
-                  max={param.max}
-                  step={param.step}
-                  format={(value) => value.toFixed(param.step < 1 ? 2 : 0)}
-                  onCommit={(value) => onUpdate(effect.id, { params: { [param.key]: value } })}
-                  testId={`effect-param-${effect.id}-${param.key}`}
-                />
-              ))}
+              {effect.type === 'audio-spectrum' ? (
+                <AudioSpectrumEffectFields effect={effect} onUpdate={onUpdate} />
+              ) : (
+                getEffectParamConfig(effect.type).map((param) => (
+                  <RangeNumberField
+                    key={param.key}
+                    label={param.label}
+                    value={Number(effect.params[param.key] ?? DEFAULT_EFFECT_PARAMS[effect.type][param.key])}
+                    min={param.min}
+                    max={param.max}
+                    step={param.step}
+                    format={(value) => value.toFixed(param.step < 1 ? 2 : 0)}
+                    onCommit={(value) => onUpdate(effect.id, { params: { [param.key]: value } })}
+                    testId={`effect-param-${effect.id}-${param.key}`}
+                  />
+                ))
+              )}
               <div className="flex justify-end gap-2">
                 <button
                   className="h-8 w-8 rounded-md border border-line bg-white p-1 hover:bg-panel disabled:opacity-40"
@@ -1741,6 +1750,76 @@ function NumberField({
         data-testid={testId}
       />
     </label>
+  );
+}
+
+function AudioSpectrumEffectFields({
+  effect,
+  onUpdate
+}: {
+  effect: Effect;
+  onUpdate(effectId: string, patch: EffectPatch): void;
+}) {
+  const params = normalizeAudioSpectrumParams(effect.params);
+  return (
+    <div className="space-y-3">
+      <label className="block text-xs font-medium text-slate-600">
+        {zhCN.inspector.fields.style}
+        <select
+          className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+          value={getEffectStringParam(effect.params, 'style', params.style)}
+          data-testid={`effect-param-${effect.id}-style`}
+          onChange={(event) => onUpdate(effect.id, { params: { style: event.target.value } })}
+        >
+          {AUDIO_SPECTRUM_STYLES.map((style) => (
+            <option key={style} value={style}>
+              {zhCN.inspector.audioSpectrumStyles[style]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <ColorField
+        label={zhCN.inspector.fields.color}
+        value={getEffectStringParam(effect.params, 'color', params.color)}
+        onCommit={(color) => onUpdate(effect.id, { params: { color } })}
+        testId={`effect-param-${effect.id}-color`}
+      />
+      <RangeNumberField
+        label={zhCN.inspector.fields.height}
+        value={getEffectNumberParam(effect.params, 'height', params.height)}
+        min={0}
+        max={50}
+        step={1}
+        format={(value) => `${Math.round(value)}%`}
+        onCommit={(height) => onUpdate(effect.id, { params: { height } })}
+        testId={`effect-param-${effect.id}-height`}
+      />
+      <label className="block text-xs font-medium text-slate-600">
+        {zhCN.inspector.fields.position}
+        <select
+          className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+          value={getEffectStringParam(effect.params, 'position', params.position)}
+          data-testid={`effect-param-${effect.id}-position`}
+          onChange={(event) => onUpdate(effect.id, { params: { position: event.target.value } })}
+        >
+          {AUDIO_SPECTRUM_POSITIONS.map((position) => (
+            <option key={position} value={position}>
+              {zhCN.inspector.audioSpectrumPositions[position]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <RangeNumberField
+        label={zhCN.inspector.fields.sensitivity}
+        value={getEffectNumberParam(effect.params, 'sensitivity', params.sensitivity)}
+        min={0.1}
+        max={4}
+        step={0.1}
+        format={(value) => value.toFixed(1)}
+        onCommit={(sensitivity) => onUpdate(effect.id, { params: { sensitivity } })}
+        testId={`effect-param-${effect.id}-sensitivity`}
+      />
+    </div>
   );
 }
 

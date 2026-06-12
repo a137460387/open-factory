@@ -52,7 +52,7 @@ import {
 } from '../model';
 import { createKeyframe, removeKeyframeForProperty, setKeyframeForProperty } from '../keyframes';
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
-import { cloneEffects, normalizeEffect, normalizeEffects, type Effect, type EffectType } from '../effects';
+import { cloneEffects, normalizeEffect, normalizeEffects, type Effect, type EffectParams, type EffectType } from '../effects';
 import { createMulticamSequenceProject, setMulticamSwitch } from '../multicam';
 import {
   calculateSpeedCurveSourceDuration,
@@ -91,6 +91,30 @@ export class NewProjectCommand implements Command {
     private readonly accessor: ProjectAccessor,
     private readonly nextProject: Project,
     description = 'New project'
+  ) {
+    this.description = description;
+  }
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    this.accessor.setProject(this.nextProject);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class LoadProjectCommand implements Command {
+  description: string;
+  private before?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly nextProject: Project,
+    description = 'Load project'
   ) {
     this.description = description;
   }
@@ -1670,7 +1694,7 @@ export interface AddEffectInput {
   id?: string;
   type: EffectType;
   enabled?: boolean;
-  params?: Record<string, number>;
+  params?: EffectParams;
 }
 
 export class AddEffectCommand implements Command {
