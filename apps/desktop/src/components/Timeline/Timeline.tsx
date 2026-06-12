@@ -3,6 +3,7 @@ import {
   AddTimelineMarkerCommand,
   AddTrackCommand,
   AddTransitionCommand,
+  CloseGapCommand,
   DeleteClipsCommand,
   PackNestedSequenceCommand,
   UpdateTrackCommand,
@@ -18,6 +19,8 @@ import {
   MoveClipCommand,
   MoveClipsCommand,
   RemoveSilenceCommand,
+  RippleDeleteCommand,
+  RollingTrimCommand,
   UpdateKeyframeCommand,
   rectsIntersect,
   replaceClip,
@@ -59,7 +62,7 @@ import { commandManager, projectAccessor, timelineAccessor } from '../../store/c
 import { useEditorStore } from '../../store/editorStore';
 import { useRenderCacheStore } from '../../store/renderCacheStore';
 import { useWhisperSettingsStore } from '../../store/whisperSettingsStore';
-import { LABEL_WIDTH, Ruler, TrackRow, buildTicks, type ClipMenuRequest, type DragState } from './TimelineParts';
+import { LABEL_WIDTH, Ruler, TrackRow, buildTicks, type ClipMenuRequest, type DragState, type GapMenuRequest } from './TimelineParts';
 
 export function Timeline() {
   const project = useEditorStore((state) => state.project);
@@ -85,10 +88,12 @@ export function Timeline() {
   const [selectionStart, setSelectionStart] = useState<{ x: number; y: number } | undefined>();
   const [transitionMenu, setTransitionMenu] = useState<TransitionMenuState | undefined>();
   const [clipMenu, setClipMenu] = useState<ClipMenuState | undefined>();
+  const [gapMenu, setGapMenu] = useState<GapMenuState | undefined>();
   const [silenceDialog, setSilenceDialog] = useState<SilenceDialogState | undefined>();
   const [sceneDialog, setSceneDialog] = useState<SceneDialogState | undefined>();
   const [whisperDialog, setWhisperDialog] = useState<WhisperDialogState | undefined>();
   const [whisperAvailability, setWhisperAvailability] = useState<WhisperAvailability>({ ready: false, error: zhCN.whisper.notConfigured });
+  const [rollingTrimActive, setRollingTrimActive] = useState(false);
   const whisperExecutablePath = useWhisperSettingsStore((state) => state.executablePath);
   const whisperModelPath = useWhisperSettingsStore((state) => state.modelPath);
   const rootRef = useRef<HTMLElement | null>(null);
@@ -114,6 +119,28 @@ export function Timeline() {
       disposed = true;
     };
   }, [whisperExecutablePath, whisperModelPath]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() === 'r') {
+        setRollingTrimActive(true);
+      }
+    };
+    const onKeyUp = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() === 'r') {
+        setRollingTrimActive(false);
+      }
+    };
+    const onBlur = () => setRollingTrimActive(false);
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', onBlur);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('blur', onBlur);
+    };
+  }, []);
 
   function addTrack(type: Track['type']): void {
     commandManager.execute(
@@ -265,6 +292,10 @@ export function Timeline() {
       setPreviewTimeline(buildMovedPreviewTimeline(previewStartsByClipId));
       return;
     }
+    if (drag.mode === 'rolling-trim') {
+      setDrag({ ...drag, previewRollingDelta: round(delta) });
+      return;
+    }
     if (drag.mode === 'trim-left') {
       const preview = buildTrimPreview(drag.clip, 'left', delta, event.altKey);
       setDrag({
@@ -329,6 +360,13 @@ export function Timeline() {
           }
           commandManager.execute(new MoveClipCommand(timelineAccessor, current.clip.id, current.previewStart));
         }
+      } else if (current.mode === 'rolling-trim') {
+        if (!current.rightClip || Math.abs(current.previewRollingDelta ?? 0) <= 0.000001) {
+          return;
+        }
+        commandManager.execute(
+          new RollingTrimCommand(timelineAccessor, current.clip.id, current.rightClip.id, current.previewRollingDelta ?? 0, minFrameDuration())
+        );
       } else {
         commandManager.execute(
           new TrimClipCommand(timelineAccessor, current.clip.id, current.previewTrimStart, current.previewTrimEnd, undefined, minFrameDuration())
@@ -386,9 +424,35 @@ export function Timeline() {
     }
   }
 
-  function onTrackPointerDown(event: React.PointerEvent<HTMLDivElement>): void {
+  function openGapMenu(request: GapMenuRequest): void {
     setTransitionMenu(undefined);
     setClipMenu(undefined);
+    setGapMenu({
+      ...request,
+      x: Math.min(request.x, Math.max(0, window.innerWidth - 180)),
+      y: Math.min(request.y, Math.max(0, window.innerHeight - 90))
+    });
+  }
+
+  function closeGap(): void {
+    if (!gapMenu) {
+      return;
+    }
+    try {
+      commandManager.execute(new CloseGapCommand(timelineAccessor, gapMenu.trackId, gapMenu.time));
+      setGapMenu(undefined);
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.closeGapFailedTitle, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
+    }
+  }
+
+  function onTrackPointerDown(event: React.PointerEvent<HTMLDivElement>): void {
+    if (event.button === 2) {
+      return;
+    }
+    setTransitionMenu(undefined);
+    setClipMenu(undefined);
+    setGapMenu(undefined);
     if (event.target !== event.currentTarget) {
       return;
     }
@@ -400,6 +464,7 @@ export function Timeline() {
 
   function openClipMenu(request: ClipMenuRequest): void {
     setTransitionMenu(undefined);
+    setGapMenu(undefined);
     setClipMenu({
       ...request,
       x: Math.min(request.x, Math.max(0, window.innerWidth - 240)),
@@ -811,16 +876,22 @@ export function Timeline() {
                 onTrackUpdate={updateTrack}
                 transitions={project.timeline.transitions ?? []}
                 onTransitionMenu={(request) =>
-                  setTransitionMenu({
-                    ...request,
-                    x: Math.min(request.x, Math.max(0, window.innerWidth - 230)),
-                    y: Math.min(request.y, Math.max(0, window.innerHeight - 180)),
-                    type: request.existingType ?? 'dissolve',
-                    duration: request.existingDuration ?? 0.5
-                  })
+                  {
+                    setGapMenu(undefined);
+                    setClipMenu(undefined);
+                    setTransitionMenu({
+                      ...request,
+                      x: Math.min(request.x, Math.max(0, window.innerWidth - 230)),
+                      y: Math.min(request.y, Math.max(0, window.innerHeight - 180)),
+                      type: request.existingType ?? 'dissolve',
+                      duration: request.existingDuration ?? 0.5
+                    });
+                  }
                 }
+                onGapMenu={openGapMenu}
                 onClipMenu={openClipMenu}
                 onClipDoubleClick={openNestedSequence}
+                rollingTrimActive={rollingTrimActive}
               />
             ))}
             {(project.timeline.markers ?? []).map((marker) => (
@@ -841,6 +912,7 @@ export function Timeline() {
                 onClose={() => setTransitionMenu(undefined)}
               />
             ) : null}
+            {gapMenu ? <GapActionMenu menu={gapMenu} onClose={() => setGapMenu(undefined)} onCloseGap={closeGap} /> : null}
             {clipMenu ? (
               <ClipActionMenu
                 menu={clipMenu}
@@ -915,6 +987,13 @@ interface ClipMenuState {
   y: number;
   clipId: string;
   clipType: Clip['type'];
+}
+
+interface GapMenuState {
+  x: number;
+  y: number;
+  trackId: string;
+  time: number;
 }
 
 interface SilenceDialogState {
@@ -1025,6 +1104,32 @@ function TransitionMenu({
           {zhCN.timeline.add}
         </button>
       </div>
+    </div>
+  );
+}
+
+function GapActionMenu({
+  menu,
+  onCloseGap,
+  onClose
+}: {
+  menu: GapMenuState;
+  onCloseGap(): void;
+  onClose(): void;
+}) {
+  return (
+    <div
+      className="fixed z-50 w-[170px] rounded-md border border-line bg-white p-2 text-xs shadow-soft"
+      style={{ left: menu.x, top: menu.y }}
+      data-testid="gap-action-menu"
+      onPointerDown={(event) => event.stopPropagation()}
+    >
+      <button className="block w-full rounded px-2 py-2 text-left hover:bg-panel" type="button" data-testid="gap-action-close" onClick={onCloseGap}>
+        {zhCN.timeline.closeGapAction}
+      </button>
+      <button className="mt-1 block w-full rounded px-2 py-1.5 text-left text-slate-500 hover:bg-panel" type="button" onClick={onClose}>
+        {zhCN.timeline.close}
+      </button>
     </div>
   );
 }

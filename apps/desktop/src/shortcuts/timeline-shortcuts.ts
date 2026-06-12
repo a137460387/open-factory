@@ -9,6 +9,7 @@ export type TimelineShortcutAction =
   | 'set-out-point'
   | 'split-selected'
   | 'delete-selected'
+  | 'ripple-delete'
   | 'select-all'
   | 'clear-selection'
   | 'undo'
@@ -44,6 +45,7 @@ export const TIMELINE_SHORTCUT_DEFINITIONS: TimelineShortcutDefinition[] = [
   { action: 'set-out-point', defaultBindings: ['O'] },
   { action: 'split-selected', defaultBindings: ['S'] },
   { action: 'delete-selected', defaultBindings: ['Delete', 'Backspace'] },
+  { action: 'ripple-delete', defaultBindings: ['Shift+Delete'] },
   { action: 'select-all', defaultBindings: ['Ctrl+A'] },
   { action: 'clear-selection', defaultBindings: ['Escape'] },
   { action: 'undo', defaultBindings: ['Ctrl+Z'] },

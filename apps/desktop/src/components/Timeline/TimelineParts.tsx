@@ -7,11 +7,12 @@ import { getTimelineThumbnailPlaceholders, getTimelineThumbnails, type TimelineT
 import { getWaveform, type WaveformResult } from '../../media/waveform';
 import type { SelectedKeyframeRef } from '../../store/editorStore';
 
-export type DragMode = 'move' | 'trim-left' | 'trim-right' | 'playhead' | 'keyframe';
+export type DragMode = 'move' | 'trim-left' | 'trim-right' | 'rolling-trim' | 'playhead' | 'keyframe';
 
 export interface DragState {
   mode: DragMode;
   clip?: Clip;
+  rightClip?: Clip;
   clipIds?: string[];
   keyframeProperty?: KeyframeProperty;
   keyframeId?: string;
@@ -23,6 +24,7 @@ export interface DragState {
   startByClipId?: Record<string, number>;
   previewStartsByClipId?: Record<string, number>;
   previewKeyframeTime?: number;
+  previewRollingDelta?: number;
 }
 
 export const TRACK_HEIGHT = 54;
@@ -92,8 +94,10 @@ export function TrackRow({
   onTrackUpdate,
   transitions,
   onTransitionMenu,
+  onGapMenu,
   onClipMenu,
-  onClipDoubleClick
+  onClipDoubleClick,
+  rollingTrimActive
 }: {
   track: Track;
   zoom: number;
@@ -109,8 +113,10 @@ export function TrackRow({
   onTrackUpdate(trackId: string, patch: Partial<Pick<Track, 'muted' | 'solo' | 'locked' | 'volume'>>): void;
   transitions: Transition[];
   onTransitionMenu(request: TransitionMenuRequest): void;
+  onGapMenu(request: GapMenuRequest): void;
   onClipMenu(request: ClipMenuRequest): void;
   onClipDoubleClick(clip: Clip): void;
+  rollingTrimActive: boolean;
 }) {
   const mediaById = new Map(media.map((asset) => [asset.id, asset]));
   const locked = Boolean(track.locked);
@@ -147,7 +153,24 @@ export function TrackRow({
           data-testid={`track-volume-${track.id}`}
         />
       </div>
-      <div className="relative bg-white" onPointerDown={onTrackPointerDown}>
+      <div
+        className="relative bg-white"
+        onPointerDown={onTrackPointerDown}
+        onContextMenu={(event) => {
+          if (locked || event.target !== event.currentTarget) {
+            return;
+          }
+          event.preventDefault();
+          event.stopPropagation();
+          const rect = event.currentTarget.getBoundingClientRect();
+          onGapMenu({
+            x: event.clientX,
+            y: event.clientY,
+            trackId: track.id,
+            time: snapTime((event.clientX - rect.left) / zoom)
+          });
+        }}
+      >
         {track.clips.map((clip) => {
           const isSelected = selectedClipIds.includes(clip.id) || selectedClipId === clip.id;
           const trimPreview = drag?.clip?.id === clip.id && (drag.mode === 'trim-left' || drag.mode === 'trim-right') ? drag : undefined;
@@ -177,6 +200,7 @@ export function TrackRow({
               onTransitionMenu={onTransitionMenu}
               onClipMenu={onClipMenu}
               onClipDoubleClick={onClipDoubleClick}
+              rollingTrimActive={rollingTrimActive}
             />
           );
         })}
@@ -200,6 +224,13 @@ export interface ClipMenuRequest {
   y: number;
   clipId: string;
   clipType: Clip['type'];
+}
+
+export interface GapMenuRequest {
+  x: number;
+  y: number;
+  trackId: string;
+  time: number;
 }
 
 function TrackToggle({
@@ -248,7 +279,8 @@ function ClipBlock({
   transition,
   onTransitionMenu,
   onClipMenu,
-  onClipDoubleClick
+  onClipDoubleClick,
+  rollingTrimActive
 }: {
   clip: Clip;
   asset?: MediaAsset;
@@ -270,6 +302,7 @@ function ClipBlock({
   onTransitionMenu(request: TransitionMenuRequest): void;
   onClipMenu(request: ClipMenuRequest): void;
   onClipDoubleClick(clip: Clip): void;
+  rollingTrimActive: boolean;
 }) {
   const waveformColor = getTrackWaveformColor(trackType);
   return (
@@ -418,8 +451,9 @@ function ClipBlock({
             event.currentTarget.setPointerCapture(event.pointerId);
             onSelect(clip.id, event.shiftKey);
             onDragStart({
-              mode: 'trim-right',
+              mode: rollingTrimActive && nextAdjacentClip ? 'rolling-trim' : 'trim-right',
               clip,
+              rightClip: rollingTrimActive ? nextAdjacentClip : undefined,
               startX: event.clientX,
               previewStart: clip.start,
               previewDuration: clip.duration,

@@ -11,6 +11,7 @@ interface ShortcutHandlers {
   setInPoint(): void;
   setOutPoint(): void;
   deleteSelected(): void;
+  rippleDeleteSelected(): void;
   splitSelected(): void;
   selectAll(): void;
   clearSelection(): void;
@@ -76,6 +77,9 @@ export function useShortcuts(handlers: ShortcutHandlers, bindings: TimelineShort
           break;
         case 'delete-selected':
           handlers.deleteSelected();
+          break;
+        case 'ripple-delete':
+          handlers.rippleDeleteSelected();
           break;
         case 'split-selected':
           handlers.splitSelected();

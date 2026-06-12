@@ -4,6 +4,7 @@ import {
   AddTrackCommand,
   CreateMulticamSequenceCommand,
   DeleteClipsCommand,
+  RippleDeleteCommand,
   SplitClipCommand,
   dirname,
   getTimelineDuration,
@@ -339,6 +340,15 @@ export function EditorShell() {
     clearSelectedClipIds();
   }, [clearSelectedClipIds]);
 
+  const rippleDeleteSelected = useCallback(() => {
+    const ids = useEditorStore.getState().selectedClipIds;
+    if (ids.length === 0) {
+      return;
+    }
+    commandManager.execute(new RippleDeleteCommand(timelineAccessor, ids));
+    clearSelectedClipIds();
+  }, [clearSelectedClipIds]);
+
   const cancelCurrentExport = useCallback(async () => {
     const runningTask = useExportQueueStore.getState().tasks.find((task) => task.status === 'running');
     if (runningTask) {
@@ -458,6 +468,7 @@ export function EditorShell() {
       setInPoint: () => setInPoint(useEditorStore.getState().playheadTime),
       setOutPoint: () => setOutPoint(useEditorStore.getState().playheadTime),
       deleteSelected,
+      rippleDeleteSelected,
       splitSelected,
       selectAll: () => setSelectedClipIds(useEditorStore.getState().project.timeline.tracks.flatMap((track) => track.clips.map((clip) => clip.id))),
       clearSelection: clearSelectedClipIds,
@@ -474,6 +485,7 @@ export function EditorShell() {
       pausePlayback,
       redo,
       reversePlayback,
+      rippleDeleteSelected,
       saveProject,
       setInPoint,
       setOutPoint,

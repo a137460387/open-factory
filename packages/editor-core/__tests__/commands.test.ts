@@ -11,6 +11,7 @@ import {
   DEFAULT_COLOR_CORRECTION,
   type Command,
   CommandManager,
+  CloseGapCommand,
   DeleteClipCommand,
   DeleteClipsCommand,
   MoveClipCommand,
@@ -23,6 +24,8 @@ import {
   RemoveTransitionCommand,
   ReorderEffectsCommand,
   RemoveSilenceCommand,
+  RippleDeleteCommand,
+  RollingTrimCommand,
   SplitClipCommand,
   SplitClipAtTimesCommand,
   TrimClipCommand,
@@ -702,6 +705,119 @@ describe('timeline commands', () => {
     manager.redo();
     expect(accessor.current().tracks[0].clips.map((clip) => clip.id)).toEqual(['b']);
     expect(accessor.current().tracks[2].clips).toHaveLength(0);
+  });
+
+  it('ripple deletes clips on their own tracks and preserves undo', () => {
+    const accessor = makeAccessor(
+      makeTimeline([
+        makeVideoClip({ id: 'a', start: 0, duration: 2 }),
+        makeVideoClip({ id: 'b', start: 3, duration: 2 }),
+        makeVideoClip({ id: 'c', start: 7, duration: 1 }),
+        makeTextClip({ id: 'title', start: 7, duration: 1 })
+      ])
+    );
+    const manager = new CommandManager();
+
+    manager.execute(new RippleDeleteCommand(accessor, ['b']));
+    expect(accessor.current().tracks[0].clips.map((clip) => [clip.id, clip.start])).toEqual([
+      ['a', 0],
+      ['c', 5]
+    ]);
+    expect(accessor.current().tracks[2].clips.map((clip) => [clip.id, clip.start])).toEqual([['title', 7]]);
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips.map((clip) => [clip.id, clip.start])).toEqual([
+      ['a', 0],
+      ['b', 3],
+      ['c', 7]
+    ]);
+
+    manager.redo();
+    expect(accessor.current().tracks[0].clips.map((clip) => clip.id)).toEqual(['a', 'c']);
+  });
+
+  it('ripple deletes multiple selected intervals and rejects empty selections', () => {
+    const accessor = makeAccessor(
+      makeTimeline([
+        makeVideoClip({ id: 'a', start: 0, duration: 1 }),
+        makeVideoClip({ id: 'b', start: 1, duration: 1 }),
+        makeVideoClip({ id: 'c', start: 3, duration: 1 }),
+        makeVideoClip({ id: 'd', start: 5, duration: 1 })
+      ])
+    );
+
+    new RippleDeleteCommand(accessor, ['a', 'b', 'd']).execute();
+    expect(accessor.current().tracks[0].clips.map((clip) => [clip.id, clip.start])).toEqual([['c', 1]]);
+
+    expect(() => new RippleDeleteCommand(accessor, []).execute()).toThrow('No clips selected');
+  });
+
+  it('closes a clicked track gap with undo and rejects non-gaps', () => {
+    const accessor = makeAccessor(
+      makeTimeline([
+        makeVideoClip({ id: 'a', start: 0, duration: 2 }),
+        makeVideoClip({ id: 'b', start: 4, duration: 2 }),
+        makeVideoClip({ id: 'c', start: 7, duration: 1 })
+      ])
+    );
+    const manager = new CommandManager();
+
+    manager.execute(new CloseGapCommand(accessor, 'track-video', 3));
+    expect(accessor.current().tracks[0].clips.map((clip) => [clip.id, clip.start])).toEqual([
+      ['a', 0],
+      ['b', 2],
+      ['c', 5]
+    ]);
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips.map((clip) => [clip.id, clip.start])).toEqual([
+      ['a', 0],
+      ['b', 4],
+      ['c', 7]
+    ]);
+
+    expect(() => manager.execute(new CloseGapCommand(accessor, 'track-video', 1))).toThrow('No closeable gap');
+    expect(() => manager.execute(new CloseGapCommand(accessor, 'track-video', 9))).toThrow('No closeable gap');
+  });
+
+  it('rolling trims adjacent clips while preserving their combined duration', () => {
+    const accessor = makeAccessor(
+      makeTimeline([
+        makeVideoClip({ id: 'left', start: 0, duration: 3, trimStart: 0, trimEnd: 2 }),
+        makeVideoClip({ id: 'right', start: 3, duration: 3, trimStart: 1, trimEnd: 0 })
+      ])
+    );
+    const manager = new CommandManager();
+
+    manager.execute(new RollingTrimCommand(accessor, 'left', 'right', 1, 1 / 30));
+    const [left, right] = accessor.current().tracks[0].clips;
+    expect(left.duration + right.duration).toBeCloseTo(6, 6);
+    expect(left).toMatchObject({ id: 'left', start: 0, duration: 4, trimEnd: 1 });
+    expect(right).toMatchObject({ id: 'right', start: 4, duration: 2, trimStart: 2 });
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips.map((clip) => [clip.id, clip.start, clip.duration, clip.trimStart, clip.trimEnd])).toEqual([
+      ['left', 0, 3, 0, 2],
+      ['right', 3, 3, 1, 0]
+    ]);
+  });
+
+  it('rejects rolling trims without adjacent clips or available media', () => {
+    const nonAdjacent = makeAccessor(
+      makeTimeline([
+        makeVideoClip({ id: 'left', start: 0, duration: 2 }),
+        makeVideoClip({ id: 'right', start: 3, duration: 2 })
+      ])
+    );
+    expect(() => new RollingTrimCommand(nonAdjacent, 'left', 'right', 0.5).execute()).toThrow('adjacent');
+
+    const bounded = makeAccessor(
+      makeTimeline([
+        makeVideoClip({ id: 'left', start: 0, duration: 2, trimStart: 0, trimEnd: 0 }),
+        makeVideoClip({ id: 'right', start: 2, duration: 2, trimStart: 0, trimEnd: 0 })
+      ])
+    );
+    expect(() => new RollingTrimCommand(bounded, 'left', 'right', 0.5).execute()).toThrow('no available media');
   });
 
   it('moves multiple selected clips while preserving their relative spacing', () => {

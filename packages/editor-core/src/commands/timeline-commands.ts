@@ -240,6 +240,95 @@ function replaceClipWithSlices(timeline: Timeline, clipId: string, ranges: Local
   };
 }
 
+function rippleDeleteTrackClips(track: Track, selectedIds: Set<string>): Track {
+  const removedIntervals = mergeTimelineIntervals(
+    track.clips
+      .filter((clip) => selectedIds.has(clip.id))
+      .map((clip) => ({ start: clip.start, end: round(clip.start + clip.duration) }))
+  );
+  if (removedIntervals.length === 0) {
+    return track;
+  }
+  return {
+    ...track,
+    clips: track.clips
+      .filter((clip) => !selectedIds.has(clip.id))
+      .map((clip) => {
+        const shift = removedIntervals.reduce((total, interval) => (clip.start >= interval.end - 0.000001 ? total + interval.end - interval.start : total), 0);
+        return shift > 0 ? moveClip(clip, round(clip.start - shift)) : clip;
+      })
+  };
+}
+
+function mergeTimelineIntervals(intervals: LocalTimeRange[]): LocalTimeRange[] {
+  const sorted = intervals
+    .map((interval) => ({ start: round(Math.max(0, Math.min(interval.start, interval.end))), end: round(Math.max(0, Math.max(interval.start, interval.end))) }))
+    .filter((interval) => interval.end - interval.start > 0.000001)
+    .sort((left, right) => left.start - right.start || left.end - right.end);
+  const merged: LocalTimeRange[] = [];
+  for (const interval of sorted) {
+    const previous = merged[merged.length - 1];
+    if (previous && interval.start <= previous.end + 0.000001) {
+      previous.end = round(Math.max(previous.end, interval.end));
+    } else {
+      merged.push({ ...interval });
+    }
+  }
+  return merged;
+}
+
+function findTrackGapAtTime(track: Track, time: number): LocalTimeRange | undefined {
+  const sortedClips = [...track.clips].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id));
+  const target = round(Math.max(0, time));
+  let cursor = 0;
+  for (const clip of sortedClips) {
+    if (clip.start - cursor > 0.000001 && target >= cursor - 0.000001 && target <= clip.start + 0.000001) {
+      return { start: round(cursor), end: round(clip.start) };
+    }
+    cursor = Math.max(cursor, clip.start + clip.duration);
+  }
+  return undefined;
+}
+
+function closeTrackGap(track: Track, gapStart: number, gapEnd: number): Track {
+  const gapDuration = round(gapEnd - gapStart);
+  return {
+    ...track,
+    clips: track.clips.map((clip) => (clip.start >= gapEnd - 0.000001 ? moveClip(clip, round(clip.start - gapDuration)) : clip))
+  };
+}
+
+function buildRollingTrimClips(left: Clip, right: Clip, requestedDelta: number, minDuration: number): { left: Clip; right: Clip } {
+  const minClipDuration = Math.max(0.000001, minDuration);
+  const leftSourceDuration = getClipTotalSourceDuration(left);
+  const rightSourceDuration = getClipTotalSourceDuration(right);
+  const leftMaxDuration = getClipDisplayDuration(Math.max(0, leftSourceDuration - left.trimStart), getClipSpeed(left), left.keyframes);
+  const rightMaxDuration = getClipDisplayDuration(Math.max(0, rightSourceDuration - right.trimEnd), getClipSpeed(right), right.keyframes);
+  const maxPositive = Math.max(0, Math.min(leftMaxDuration - left.duration, right.duration - minClipDuration));
+  const maxNegative = -Math.max(0, Math.min(left.duration - minClipDuration, rightMaxDuration - right.duration));
+  const delta = round(Math.min(maxPositive, Math.max(maxNegative, requestedDelta)));
+  if (Math.abs(delta) <= 0.000001) {
+    throw new Error('Rolling trim has no available media at this boundary');
+  }
+
+  const leftDuration = round(left.duration + delta);
+  const rightDuration = round(right.duration - delta);
+  const leftVisibleSourceDuration = calculateSpeedCurveSourceDuration(leftDuration, left.keyframes, getClipSpeed(left));
+  const rightVisibleSourceDuration = calculateSpeedCurveSourceDuration(rightDuration, right.keyframes, getClipSpeed(right));
+  const leftTrimEnd = round(Math.max(0, leftSourceDuration - left.trimStart - leftVisibleSourceDuration));
+  const rightTrimStart = round(Math.max(0, rightSourceDuration - right.trimEnd - rightVisibleSourceDuration));
+  const leftTrimmed = trimClip(left, left.trimStart, leftTrimEnd);
+  const rightTrimmed = {
+    ...trimClip(right, rightTrimStart, right.trimEnd),
+    start: round(left.start + leftTrimmed.duration)
+  } as Clip;
+  return { left: leftTrimmed, right: rightTrimmed };
+}
+
+function getClipTotalSourceDuration(clip: Clip): number {
+  return round(Math.max(0, clip.trimStart + getClipSourceVisibleDuration(clip) + clip.trimEnd));
+}
+
 export class AddTrackCommand implements Command {
   readonly description: string;
   private index = -1;
@@ -677,6 +766,122 @@ export class DeleteClipsCommand implements Command {
       timeline = insertClip(timeline, item.clip, item.index);
     }
     this.accessor.setTimeline(timeline);
+  }
+}
+
+export class RippleDeleteCommand implements Command {
+  readonly description = 'Ripple delete clips';
+  private before?: Timeline;
+  private after?: Timeline;
+
+  constructor(private readonly accessor: TimelineAccessor, private readonly clipIds: string[]) {}
+
+  execute(): void {
+    const timeline = this.accessor.getTimeline();
+    this.before ??= timeline;
+    if (!this.after) {
+      const uniqueIds = Array.from(new Set(this.clipIds));
+      if (uniqueIds.length === 0) {
+        throw new Error('No clips selected for ripple delete');
+      }
+      const ids = new Set(uniqueIds);
+      const missingIds = uniqueIds.filter((clipId) => !timeline.tracks.some((track) => track.clips.some((clip) => clip.id === clipId)));
+      if (missingIds.length > 0) {
+        throw new Error(`Clip ${missingIds[0]} not found`);
+      }
+      this.after = {
+        ...timeline,
+        tracks: timeline.tracks.map((track) => rippleDeleteTrackClips(track, ids)),
+        transitions: (timeline.transitions ?? []).filter((transition) => !ids.has(transition.fromClipId) && !ids.has(transition.toClipId))
+      };
+    }
+    this.accessor.setTimeline(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setTimeline(this.before);
+    }
+  }
+}
+
+export class CloseGapCommand implements Command {
+  readonly description = 'Close timeline gap';
+  private before?: Timeline;
+  private after?: Timeline;
+
+  constructor(private readonly accessor: TimelineAccessor, private readonly trackId: string, private readonly time: number) {}
+
+  execute(): void {
+    const timeline = this.accessor.getTimeline();
+    this.before ??= timeline;
+    if (!this.after) {
+      const track = findTrack(timeline, this.trackId);
+      const gap = findTrackGapAtTime(track, this.time);
+      if (!gap) {
+        throw new Error('No closeable gap at this time');
+      }
+      this.after = {
+        ...timeline,
+        tracks: timeline.tracks.map((item) => (item.id === this.trackId ? closeTrackGap(item, gap.start, gap.end) : item)),
+        transitions: timeline.transitions ?? []
+      };
+    }
+    this.accessor.setTimeline(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setTimeline(this.before);
+    }
+  }
+}
+
+export class RollingTrimCommand implements Command {
+  readonly description = 'Rolling trim';
+  private before?: Timeline;
+  private after?: Timeline;
+
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly leftClipId: string,
+    private readonly rightClipId: string,
+    private readonly delta: number,
+    private readonly minDuration = 1 / 30
+  ) {}
+
+  execute(): void {
+    const timeline = this.accessor.getTimeline();
+    this.before ??= timeline;
+    if (!this.after) {
+      const pair = findAdjacentTransitionClips(timeline, this.leftClipId, this.rightClipId);
+      if (!pair) {
+        throw new Error('Rolling trim requires adjacent clips on the same track');
+      }
+      const { left, right } = buildRollingTrimClips(pair.fromClip, pair.toClip, this.delta, this.minDuration);
+      this.after = {
+        ...timeline,
+        tracks: timeline.tracks.map((track) =>
+          track.id === pair.track.id
+            ? {
+                ...track,
+                clips: track.clips.map((clip) => (clip.id === left.id ? left : clip.id === right.id ? right : clip))
+              }
+            : track
+        ),
+        transitions: timeline.transitions ?? []
+      };
+      if (timelineHasOverlaps(this.after)) {
+        throw new Error('Clip overlaps another clip on this track');
+      }
+    }
+    this.accessor.setTimeline(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setTimeline(this.before);
+    }
   }
 }
 

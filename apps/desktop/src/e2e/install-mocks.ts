@@ -9,6 +9,7 @@ import {
   createTrack,
   type FfmpegExportPlan,
   type KeyframeProperty,
+  type Clip,
   type MediaAsset,
   type ProjectFileV2
 } from '@open-factory/editor-core';
@@ -326,6 +327,52 @@ window.fetch = (input, init) => {
   return realFetch(input as RequestInfo | URL, init);
 };
 window.__E2E_ACTIONS__ = {
+  setupEfficientEditingFixture: () => {
+    const project = createProject('Efficient Editing E2E');
+    const asset: MediaAsset = {
+      id: 'media-editing-video',
+      type: 'video',
+      name: 'editing-video.mp4',
+      path: tinyVideo,
+      duration: 8,
+      width: 1280,
+      height: 720,
+      size: 4096,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 2,
+      audioSampleRate: 44_100,
+      audioCodec: 'aac'
+    };
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({
+          id: 'track-video',
+          type: 'video',
+          name: 'Video 1',
+          clips: [
+            makeEditingVideoClip('clip-edit-a', 0, 2, 0, 4),
+            makeEditingVideoClip('clip-edit-b', 2, 2, 0, 0),
+            makeEditingVideoClip('clip-edit-c', 4, 2, 0, 0)
+          ]
+        }),
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
+        createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
   setupMulticamFixture: () => {
     const project = createProject('Multicam E2E');
     const media: MediaAsset[] = [
@@ -535,6 +582,24 @@ function makeWhisperVideoClip(): Extract<import('@open-factory/editor-core').Cli
     duration: 4,
     trimStart: 0,
     trimEnd: 0,
+    speed: DEFAULT_CLIP_SPEED,
+    colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+    transform: { ...DEFAULT_TRANSFORM },
+    volume: 1
+  };
+}
+
+function makeEditingVideoClip(id: string, start: number, duration: number, trimStart: number, trimEnd: number): Extract<Clip, { type: 'video' }> {
+  return {
+    id,
+    type: 'video',
+    name: `${id}.mp4`,
+    mediaId: 'media-editing-video',
+    trackId: 'track-video',
+    start,
+    duration,
+    trimStart,
+    trimEnd,
     speed: DEFAULT_CLIP_SPEED,
     colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
     transform: { ...DEFAULT_TRANSFORM },

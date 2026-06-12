@@ -20,6 +20,7 @@ describe('timeline shortcut mapping', () => {
     ['S', { key: 's' }, 'split-selected'],
     ['Delete', { key: 'Delete' }, 'delete-selected'],
     ['Backspace', { key: 'Backspace' }, 'delete-selected'],
+    ['Shift+Delete', { key: 'Delete', shiftKey: true }, 'ripple-delete'],
     ['Ctrl+A', { key: 'a', ctrlKey: true }, 'select-all'],
     ['Escape', { key: 'Escape' }, 'clear-selection'],
     ['Ctrl+Z', { key: 'z', ctrlKey: true }, 'undo'],
