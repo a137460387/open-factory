@@ -23,6 +23,7 @@ describe('timeline shortcut mapping', () => {
     ['Shift+Delete', { key: 'Delete', shiftKey: true }, 'ripple-delete'],
     ['Ctrl+A', { key: 'a', ctrlKey: true }, 'select-all'],
     ['Escape', { key: 'Escape' }, 'clear-selection'],
+    ['N', { key: 'n' }, 'add-annotation'],
     ['Ctrl+Z', { key: 'z', ctrlKey: true }, 'undo'],
     ['Cmd+Shift+Z', { key: 'z', metaKey: true, shiftKey: true }, 'redo'],
     ['Ctrl+S', { key: 's', ctrlKey: true }, 'save'],

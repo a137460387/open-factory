@@ -1,8 +1,10 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AddClipCommand,
+  AddProjectAnnotationCommand,
   AddTrackCommand,
   CreateMulticamSequenceCommand,
+  DEFAULT_PROJECT_ANNOTATION_COLOR,
   DeleteClipsCommand,
   MergeMediaCommand,
   RemoveMediaCommand,
@@ -619,6 +621,21 @@ export function EditorShell() {
     [setIsPlaying, setPlaybackRate]
   );
 
+  const addAnnotationAtPlayhead = useCallback(() => {
+    const state = useEditorStore.getState();
+    try {
+      commandManager.execute(
+        new AddProjectAnnotationCommand(projectAccessor, {
+          time: state.playheadTime,
+          text: zhCN.timeline.annotationLabel((state.project.annotations?.length ?? 0) + 1),
+          color: DEFAULT_PROJECT_ANNOTATION_COLOR
+        })
+      );
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.annotationRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.addAnnotationFailed });
+    }
+  }, []);
+
   const shortcutHandlers = useMemo(
     () => ({
       togglePlayback,
@@ -634,12 +651,14 @@ export function EditorShell() {
       splitSelected,
       selectAll: () => setSelectedClipIds(useEditorStore.getState().project.timeline.tracks.flatMap((track) => track.clips.map((clip) => clip.id))),
       clearSelection: clearSelectedClipIds,
+      addAnnotation: addAnnotationAtPlayhead,
       undo,
       redo,
       save: () => void saveProject(),
       exportCurrentFrame: () => void exportCurrentFrame()
     }),
     [
+      addAnnotationAtPlayhead,
       clearSelectedClipIds,
       deleteSelected,
       exportCurrentFrame,

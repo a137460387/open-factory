@@ -90,6 +90,7 @@ export interface Project {
   settings: ProjectSettings;
   media: MediaAsset[];
   mediaMetadata: Record<string, MediaMetadata>;
+  annotations: ProjectAnnotation[];
   timeline: Timeline;
   sequences: Sequence[];
   activeSequenceId: string;
@@ -141,6 +142,13 @@ export type MediaLabelColor = 'red' | 'orange' | 'yellow' | 'green' | 'blue' | '
 
 export interface MediaMetadata {
   labelColor?: MediaLabelColor;
+}
+
+export interface ProjectAnnotation {
+  id: string;
+  time: number;
+  text: string;
+  color: string;
 }
 
 export interface Timeline {
@@ -427,6 +435,8 @@ export const MAX_NESTED_SEQUENCE_DEPTH = 3;
 export const DEFAULT_TRANSITION_TYPE: TransitionType = 'dissolve';
 export const DEFAULT_TRANSITION_DURATION = 0.5;
 export const DEFAULT_TIMELINE_MARKER_COLOR = '#f97316';
+export const DEFAULT_PROJECT_ANNOTATION_COLOR = '#facc15';
+export const PROJECT_ANNOTATION_COLORS = ['#facc15', '#38bdf8', '#34d399', '#fb7185', '#a78bfa'] as const;
 
 export const MIN_CLIP_SPEED = 0.25;
 export const MAX_CLIP_SPEED = 4;
@@ -495,6 +505,18 @@ export function createTimelineMarker(
   };
 }
 
+export function createProjectAnnotation(
+  annotation: Omit<ProjectAnnotation, 'id' | 'text' | 'color'> & Partial<Pick<ProjectAnnotation, 'id' | 'text' | 'color'>>,
+  maxTime?: number
+): ProjectAnnotation {
+  return {
+    id: annotation.id ?? createId('annotation'),
+    time: normalizeTimelinePointTime(annotation.time, maxTime),
+    text: normalizeProjectAnnotationText(annotation.text),
+    color: normalizeHexColor(annotation.color, DEFAULT_PROJECT_ANNOTATION_COLOR)
+  };
+}
+
 export function createTrack(
   track: Omit<Track, 'muted' | 'solo' | 'locked' | 'volume' | 'pan' | 'eq' | 'compressor'> &
     Partial<Pick<Track, 'muted' | 'solo' | 'locked' | 'volume' | 'pan' | 'eq' | 'compressor'>>
@@ -524,6 +546,7 @@ export function createProject(name = 'Untitled Project'): Project {
     settings: { ...DEFAULT_PROJECT_SETTINGS },
     media: [],
     mediaMetadata: {},
+    annotations: [],
     timeline,
     sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
     activeSequenceId: PRIMARY_SEQUENCE_ID
@@ -724,6 +747,16 @@ export function normalizeTimelineMarker(marker: TimelineMarker, maxTime?: number
 export function normalizeTimelineMarkers(markers: TimelineMarker[] | undefined, maxTime?: number): TimelineMarker[] {
   return [...(markers ?? [])]
     .map((marker) => normalizeTimelineMarker(marker, maxTime))
+    .sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
+}
+
+export function normalizeProjectAnnotation(annotation: ProjectAnnotation, maxTime?: number): ProjectAnnotation {
+  return createProjectAnnotation(annotation, maxTime);
+}
+
+export function normalizeProjectAnnotations(annotations: ProjectAnnotation[] | undefined, maxTime?: number): ProjectAnnotation[] {
+  return [...(annotations ?? [])]
+    .map((annotation) => normalizeProjectAnnotation(annotation, maxTime))
     .sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
 }
 
@@ -946,6 +979,10 @@ export function serializeLegacyProject(project: Project): {
 }
 
 function normalizeTimelineMarkerTime(time: number, maxTime?: number): number {
+  return normalizeTimelinePointTime(time, maxTime);
+}
+
+function normalizeTimelinePointTime(time: number, maxTime?: number): number {
   const finiteTime = typeof time === 'number' && Number.isFinite(time) ? time : 0;
   const upperBound = typeof maxTime === 'number' && Number.isFinite(maxTime) ? Math.max(0, maxTime) : undefined;
   return round(Math.min(upperBound ?? finiteTime, Math.max(0, finiteTime)));
@@ -957,8 +994,17 @@ function normalizeTimelineMarkerLabel(label: string | undefined): string {
 }
 
 function normalizeTimelineMarkerColor(color: string | undefined): string {
+  return normalizeHexColor(color, DEFAULT_TIMELINE_MARKER_COLOR);
+}
+
+function normalizeProjectAnnotationText(text: string | undefined): string {
+  const trimmed = text?.trim();
+  return trimmed ? trimmed.slice(0, 240) : 'Annotation';
+}
+
+function normalizeHexColor(color: string | undefined, fallback: string): string {
   const trimmed = color?.trim();
-  return trimmed && /^#[0-9a-fA-F]{6}$/.test(trimmed) ? trimmed.toLowerCase() : DEFAULT_TIMELINE_MARKER_COLOR;
+  return trimmed && /^#[0-9a-fA-F]{6}$/.test(trimmed) ? trimmed.toLowerCase() : fallback;
 }
 
 function normalizeLutPath(path: string | null | undefined): string | null {

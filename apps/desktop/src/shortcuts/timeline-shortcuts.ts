@@ -12,6 +12,7 @@ export type TimelineShortcutAction =
   | 'ripple-delete'
   | 'select-all'
   | 'clear-selection'
+  | 'add-annotation'
   | 'undo'
   | 'redo'
   | 'save'
@@ -48,6 +49,7 @@ export const TIMELINE_SHORTCUT_DEFINITIONS: TimelineShortcutDefinition[] = [
   { action: 'ripple-delete', defaultBindings: ['Shift+Delete'] },
   { action: 'select-all', defaultBindings: ['Ctrl+A'] },
   { action: 'clear-selection', defaultBindings: ['Escape'] },
+  { action: 'add-annotation', defaultBindings: ['N'] },
   { action: 'undo', defaultBindings: ['Ctrl+Z'] },
   { action: 'redo', defaultBindings: ['Ctrl+Shift+Z', 'Ctrl+Y'] },
   { action: 'save', defaultBindings: ['Ctrl+S'] },

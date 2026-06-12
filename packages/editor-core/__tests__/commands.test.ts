@@ -4,6 +4,7 @@ import {
   AddEffectCommand,
   AddKeyframeCommand,
   AddMaskCommand,
+  AddProjectAnnotationCommand,
   AddSubtitleClipCommand,
   AddTrackCommand,
   AddTimelineMarkerCommand,
@@ -19,6 +20,7 @@ import {
   PackNestedSequenceCommand,
   RemoveEffectCommand,
   RemoveMaskCommand,
+  RemoveProjectAnnotationCommand,
   RemoveKeyframeCommand,
   RemoveTimelineMarkerCommand,
   RemoveTransitionCommand,
@@ -34,6 +36,7 @@ import {
   UpdateKeyframeCommand,
   UpdateClipCommand,
   UpdateEffectCommand,
+  UpdateProjectAnnotationCommand,
   UpdateTimelineMarkerCommand,
   UpdateMaskCommand,
   UpdateProjectAudioCommand,
@@ -203,6 +206,35 @@ describe('timeline commands', () => {
     expect(accessor.current().markers?.map((marker) => marker.id)).toEqual(['marker-a', 'marker-b']);
     manager.undo();
     expect(accessor.current().markers?.find((marker) => marker.id === 'marker-b')?.label).toBe('Outro');
+  });
+
+  it('adds, updates, removes, and restores project annotations', () => {
+    let project = makeProject();
+    const accessor = {
+      getProject: () => project,
+      setProject: (next: typeof project) => {
+        project = next;
+      }
+    };
+    const manager = new CommandManager();
+
+    manager.execute(new AddProjectAnnotationCommand(accessor, { id: 'annotation-a', time: 99, text: '  Needs trim  ', color: '#A78BFA' }));
+    expect(project.annotations).toEqual([{ id: 'annotation-a', time: 10, text: 'Needs trim', color: '#a78bfa' }]);
+
+    manager.execute(new UpdateProjectAnnotationCommand(accessor, 'annotation-a', { time: 2, text: 'Keep this beat', color: 'invalid' }));
+    expect(project.annotations[0]).toEqual({ id: 'annotation-a', time: 2, text: 'Keep this beat', color: '#facc15' });
+
+    manager.execute(new RemoveProjectAnnotationCommand(accessor, 'annotation-a'));
+    expect(project.annotations).toEqual([]);
+
+    manager.undo();
+    expect(project.annotations[0].text).toBe('Keep this beat');
+    manager.undo();
+    expect(project.annotations[0].text).toBe('Needs trim');
+    manager.undo();
+    expect(project.annotations).toEqual([]);
+    manager.redo();
+    expect(project.annotations[0].id).toBe('annotation-a');
   });
 
   it('packs selected clips into a nested sequence with undo and redo', () => {

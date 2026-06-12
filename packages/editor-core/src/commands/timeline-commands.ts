@@ -2,6 +2,7 @@ import {
   createId,
   createMask,
   createNestedSequenceClip,
+  createProjectAnnotation,
   createSequence,
   createTransition,
   createTimelineMarker,
@@ -18,6 +19,7 @@ import {
   normalizeFrameInterpolation,
   normalizeMask,
   normalizeMasks,
+  normalizeProjectAnnotation,
   normalizeSequenceFrameRate,
   normalizeStabilization,
   normalizeTimelineMarker,
@@ -36,6 +38,7 @@ import {
   type ColorCorrection,
   type MediaMetadata,
   type Project,
+  type ProjectAnnotation,
   type SubtitleMode,
   type SubtitleStyle,
   type TextStyle,
@@ -627,6 +630,108 @@ function filterMediaMetadata(metadata: Record<string, MediaMetadata>, removeIds:
 
 function touchProject(project: Project): Project {
   return { ...project, updatedAt: new Date().toISOString() };
+}
+
+export class AddProjectAnnotationCommand implements Command {
+  readonly description = 'Add project annotation';
+  private annotation?: ProjectAnnotation;
+
+  constructor(private readonly accessor: ProjectAccessor, private readonly input: Omit<ProjectAnnotation, 'id'> & Partial<Pick<ProjectAnnotation, 'id'>>) {}
+
+  execute(): void {
+    const project = this.accessor.getProject();
+    this.annotation ??= createProjectAnnotation(this.input, getTimelineDuration(project.timeline));
+    this.annotation = normalizeProjectAnnotation(this.annotation, getTimelineDuration(project.timeline));
+    this.accessor.setProject(
+      touchProject({
+        ...project,
+        annotations: sortAnnotations([...(project.annotations ?? []), this.annotation])
+      })
+    );
+  }
+
+  undo(): void {
+    if (!this.annotation) {
+      return;
+    }
+    const project = this.accessor.getProject();
+    this.accessor.setProject(
+      touchProject({
+        ...project,
+        annotations: (project.annotations ?? []).filter((annotation) => annotation.id !== this.annotation?.id)
+      })
+    );
+  }
+}
+
+export class UpdateProjectAnnotationCommand implements Command {
+  readonly description = 'Update project annotation';
+  private before?: ProjectAnnotation;
+  private after?: ProjectAnnotation;
+
+  constructor(private readonly accessor: ProjectAccessor, private readonly annotationId: string, private readonly patch: Partial<Omit<ProjectAnnotation, 'id'>>) {}
+
+  execute(): void {
+    const project = this.accessor.getProject();
+    const annotation = (project.annotations ?? []).find((item) => item.id === this.annotationId);
+    if (!annotation) {
+      throw new Error(`Project annotation ${this.annotationId} not found`);
+    }
+    this.before ??= annotation;
+    this.after = normalizeProjectAnnotation({ ...annotation, ...this.patch }, getTimelineDuration(project.timeline));
+    this.accessor.setProject(
+      touchProject({
+        ...project,
+        annotations: sortAnnotations((project.annotations ?? []).map((item) => (item.id === this.annotationId ? this.after! : item)))
+      })
+    );
+  }
+
+  undo(): void {
+    if (!this.before) {
+      return;
+    }
+    const project = this.accessor.getProject();
+    this.accessor.setProject(
+      touchProject({
+        ...project,
+        annotations: sortAnnotations((project.annotations ?? []).map((item) => (item.id === this.annotationId ? this.before! : item)))
+      })
+    );
+  }
+}
+
+export class RemoveProjectAnnotationCommand implements Command {
+  readonly description = 'Remove project annotation';
+  private removed?: ProjectAnnotation;
+  private index = -1;
+
+  constructor(private readonly accessor: ProjectAccessor, private readonly annotationId: string) {}
+
+  execute(): void {
+    const project = this.accessor.getProject();
+    this.index = (project.annotations ?? []).findIndex((annotation) => annotation.id === this.annotationId);
+    if (this.index === -1) {
+      throw new Error(`Project annotation ${this.annotationId} not found`);
+    }
+    this.removed ??= (project.annotations ?? [])[this.index];
+    this.accessor.setProject(
+      touchProject({
+        ...project,
+        annotations: (project.annotations ?? []).filter((annotation) => annotation.id !== this.annotationId)
+      })
+    );
+  }
+
+  undo(): void {
+    if (!this.removed) {
+      return;
+    }
+    const project = this.accessor.getProject();
+    const annotations = [...(project.annotations ?? [])];
+    annotations.splice(this.index < 0 ? annotations.length : this.index, 0, this.removed);
+    this.accessor.setProject(touchProject({ ...project, annotations: sortAnnotations(annotations) }));
+  }
 }
 
 export interface TransitionInput {
@@ -1923,4 +2028,8 @@ function cloneClipForNestedSequence<TClip extends Clip>(clip: TClip): TClip {
 
 function sortMarkers(markers: TimelineMarker[]): TimelineMarker[] {
   return [...markers].sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
+}
+
+function sortAnnotations(annotations: ProjectAnnotation[]): ProjectAnnotation[] {
+  return [...annotations].sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
 }

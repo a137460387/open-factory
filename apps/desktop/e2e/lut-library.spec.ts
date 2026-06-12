@@ -11,6 +11,7 @@ test('applies a LUT from the settings library and exports with lut3d', async ({ 
   const clipId = await page.evaluate(() => window.__E2E_ACTIONS__!.getTimelineSnapshot!().tracks[0].clips[0].id);
   await page.getByTestId('toolbar-settings-button').click();
   await expect(page.getByTestId('settings-dialog')).toBeVisible();
+  await page.getByTestId('settings-tab-lut-library').click();
   await expect(page.getByTestId('lut-library-item')).toHaveCount(1);
 
   await page.getByTestId('lut-library-preview-button').first().click();

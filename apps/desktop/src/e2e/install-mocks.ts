@@ -745,6 +745,15 @@ window.__E2E_ACTIONS__ = {
     openFileDialogPaths = [batchMissingProjectPath];
   },
   getFileExists: (path: unknown) => (typeof path === 'string' ? exists.get(path) ?? false : false),
+  setMockFile: (path: unknown, contents: unknown) => {
+    if (typeof path !== 'string' || typeof contents !== 'string') {
+      throw new Error('Invalid setMockFile E2E action input.');
+    }
+    files.set(path, contents);
+    exists.set(path, true);
+    mtimes.set(path, Date.now());
+    persistFiles();
+  },
   clearE2eFiles: () => {
     localStorage.removeItem(PERSISTED_FILES_KEY);
     localStorage.removeItem(PERSISTED_MTIMES_KEY);

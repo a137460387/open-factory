@@ -23,6 +23,7 @@ coverage/
 **/coverage/
 playwright-report/
 test-results/
+stress-test-report.json
 .nyc_output/
 
 # Logs

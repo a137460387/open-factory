@@ -15,6 +15,7 @@ import {
   normalizeMasks,
   normalizeMasterVolume,
   normalizeMulticamSequence,
+  normalizeProjectAnnotations,
   normalizeSequenceFrameRate,
   normalizeSequenceName,
   normalizeStabilization,
@@ -70,6 +71,7 @@ export function serializeProjectFile(project: Project, projectPath?: string): Pr
       settings: { ...DEFAULT_SETTINGS, ...project.settings },
       media,
       mediaMetadata: normalizeMediaMetadata(project.mediaMetadata, media),
+      annotations: normalizeProjectAnnotations(project.annotations, getTimelineDuration(project.timeline)),
       timeline: clonePrimaryTimeline(project),
       sequences: cloneProjectSequences(project),
       activeSequenceId: project.activeSequenceId ?? PRIMARY_SEQUENCE_ID
@@ -95,6 +97,7 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         settings: { ...DEFAULT_SETTINGS, ...file.project.settings },
         media,
         mediaMetadata: normalizeMediaMetadata(file.project.mediaMetadata, media),
+        annotations: normalizeProjectAnnotations(file.project.annotations, getTimelineDuration(primaryTimeline)),
         timeline: sequences.find((sequence) => sequence.id === activeSequenceId)?.timeline ?? primaryTimeline,
         sequences,
         activeSequenceId
@@ -118,6 +121,7 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         settings: { ...DEFAULT_SETTINGS, ...file.project.settings },
         media,
         mediaMetadata: {},
+        annotations: [],
         timeline: primaryTimeline,
         sequences,
         activeSequenceId: PRIMARY_SEQUENCE_ID

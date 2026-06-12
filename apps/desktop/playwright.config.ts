@@ -6,6 +6,7 @@ export default defineConfig({
   expect: { timeout: 5_000 },
   use: {
     baseURL: 'http://localhost:1420',
+    locale: 'zh-CN',
     trace: 'retain-on-failure'
   },
   webServer: {

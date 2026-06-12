@@ -1,14 +1,19 @@
 import {
   AddClipCommand,
+  AddProjectAnnotationCommand,
   AddTimelineMarkerCommand,
   AddTrackCommand,
   AddTransitionCommand,
   CloseGapCommand,
+  DEFAULT_PROJECT_ANNOTATION_COLOR,
   DeleteClipsCommand,
   PackNestedSequenceCommand,
+  PROJECT_ANNOTATION_COLORS,
   UpdateTrackCommand,
+  RemoveProjectAnnotationCommand,
   RemoveTimelineMarkerCommand,
   RemoveTransitionCommand,
+  UpdateProjectAnnotationCommand,
   buildSlideClipEdit,
   buildSlipClip,
   calculateSpeedCurveDisplayDuration,
@@ -46,6 +51,7 @@ import {
   type Clip,
   type KeyframeProperty,
   type MediaAsset,
+  type ProjectAnnotation,
   type SilentRange,
   type SnapEdge,
   type SelectionRect,
@@ -54,7 +60,7 @@ import {
   type Track,
   type TransitionType
 } from '@open-factory/editor-core';
-import { Captions, Flag, Plus, Scissors, Trash2, Type } from 'lucide-react';
+import { Captions, Flag, MessageSquarePlus, MessageSquareText, Plus, Scissors, Trash2, Type } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createTextClip } from '../../lib/clipFactory';
 import { zhCN } from '../../i18n/strings';
@@ -101,6 +107,9 @@ export function Timeline() {
   const [rollingTrimActive, setRollingTrimActive] = useState(false);
   const [slipEditActive, setSlipEditActive] = useState(false);
   const [slideEditActive, setSlideEditActive] = useState(false);
+  const [annotationMode, setAnnotationMode] = useState(false);
+  const [annotationPanelOpen, setAnnotationPanelOpen] = useState(true);
+  const [annotationEditor, setAnnotationEditor] = useState<AnnotationEditorState | undefined>();
   const [scrollViewport, setScrollViewport] = useState({ scrollLeft: 0, viewportWidth: 960 });
   const whisperExecutablePath = useWhisperSettingsStore((state) => state.executablePath);
   const whisperModelPath = useWhisperSettingsStore((state) => state.modelPath);
@@ -267,6 +276,53 @@ export function Timeline() {
       );
     } catch (error) {
       showToast({ kind: 'warning', title: zhCN.timeline.markerRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.addMarkerFailed });
+    }
+  }
+
+  function openAnnotationEditorAt(time: number, annotation?: ProjectAnnotation): void {
+    setAnnotationEditor({
+      id: annotation?.id,
+      time: annotation?.time ?? Math.max(0, snapTime(time)),
+      text: annotation?.text ?? zhCN.timeline.annotationLabel((project.annotations?.length ?? 0) + 1),
+      color: annotation?.color ?? DEFAULT_PROJECT_ANNOTATION_COLOR
+    });
+  }
+
+  function saveAnnotationEditor(next: AnnotationEditorState): void {
+    try {
+      if (next.id) {
+        commandManager.execute(
+          new UpdateProjectAnnotationCommand(projectAccessor, next.id, {
+            time: next.time,
+            text: next.text,
+            color: next.color
+          })
+        );
+      } else {
+        commandManager.execute(
+          new AddProjectAnnotationCommand(projectAccessor, {
+            time: next.time,
+            text: next.text,
+            color: next.color
+          })
+        );
+      }
+      setAnnotationEditor(undefined);
+      setAnnotationPanelOpen(true);
+    } catch (error) {
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.annotationRejectedTitle,
+        message: error instanceof Error ? error.message : next.id ? zhCN.timeline.updateAnnotationFailed : zhCN.timeline.addAnnotationFailed
+      });
+    }
+  }
+
+  function removeProjectAnnotation(annotationId: string): void {
+    try {
+      commandManager.execute(new RemoveProjectAnnotationCommand(projectAccessor, annotationId));
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.annotationRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.removeAnnotationFailed });
     }
   }
 
@@ -533,6 +589,10 @@ export function Timeline() {
     if (event.button === 2) {
       return;
     }
+    if (annotationMode) {
+      event.preventDefault();
+      return;
+    }
     setTransitionMenu(undefined);
     setClipMenu(undefined);
     setGapMenu(undefined);
@@ -543,6 +603,16 @@ export function Timeline() {
     rootRef.current?.focus();
     setSelectionStart({ x: event.clientX, y: event.clientY });
     setSelectionRect({ left: event.clientX, top: event.clientY, right: event.clientX, bottom: event.clientY });
+  }
+
+  function onAnnotationLayerPointerDown(event: React.PointerEvent<HTMLDivElement>): void {
+    if (event.button !== 0) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const rect = event.currentTarget.getBoundingClientRect();
+    openAnnotationEditorAt((event.clientX - rect.left) / zoom);
   }
 
   function openClipMenu(request: ClipMenuRequest): void {
@@ -876,7 +946,7 @@ export function Timeline() {
   return (
     <section
       ref={rootRef}
-      className="flex min-h-0 min-w-0 max-w-full flex-col border-t border-line bg-white focus:outline-none"
+      className="relative flex min-h-0 min-w-0 max-w-full flex-col border-t border-line bg-white focus:outline-none"
       tabIndex={0}
       data-testid="timeline-root"
       data-timeline-shortcuts-root="true"
@@ -922,6 +992,27 @@ export function Timeline() {
         </button>
         <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.addMarker} data-testid="add-timeline-marker-button" onClick={addTimelineMarker}>
           <Flag size={16} />
+        </button>
+        <button
+          className={`rounded-md border p-2 hover:bg-panel ${annotationMode ? 'border-brand bg-brand text-white' : 'border-line'}`}
+          title={zhCN.timeline.annotationMode}
+          aria-pressed={annotationMode}
+          data-testid="toggle-annotation-mode-button"
+          onClick={() => {
+            setAnnotationMode((active) => !active);
+            setAnnotationPanelOpen(true);
+          }}
+        >
+          <MessageSquarePlus size={16} />
+        </button>
+        <button
+          className={`rounded-md border p-2 hover:bg-panel ${annotationPanelOpen ? 'border-brand text-brand' : 'border-line'}`}
+          title={zhCN.timeline.annotationList}
+          aria-pressed={annotationPanelOpen}
+          data-testid="toggle-annotation-panel-button"
+          onClick={() => setAnnotationPanelOpen((open) => !open)}
+        >
+          <MessageSquareText size={16} />
         </button>
         <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.splitSelectedClip} onClick={splitSelected}>
           <Scissors size={16} />
@@ -988,6 +1079,24 @@ export function Timeline() {
                 rollingTrimActive={rollingTrimActive}
                 slipEditActive={slipEditActive}
                 slideEditActive={slideEditActive}
+              />
+            ))}
+            {annotationMode ? (
+              <div
+                className="absolute bottom-0 top-0 z-30 cursor-crosshair bg-transparent"
+                style={{ left: LABEL_WIDTH, width }}
+                data-testid="timeline-annotation-click-layer"
+                onPointerDown={onAnnotationLayerPointerDown}
+              />
+            ) : null}
+            {(project.annotations ?? []).map((annotation, index) => (
+              <AnnotationBubble
+                key={annotation.id}
+                annotation={annotation}
+                index={index}
+                left={LABEL_WIDTH + annotation.time * zoom}
+                onSeek={setPlayheadTime}
+                onEdit={openAnnotationEditorAt}
               />
             ))}
             {(project.timeline.markers ?? []).map((marker) => (
@@ -1062,6 +1171,22 @@ export function Timeline() {
       ) : null}
       {sceneDialog ? <SceneDetectionDialog progress={sceneDialog.progress} /> : null}
       {whisperDialog ? <WhisperGenerationDialog progress={whisperDialog.progress} clipName={whisperDialog.clip.name} /> : null}
+      {annotationPanelOpen && (annotationMode || (project.annotations?.length ?? 0) > 0) ? (
+        <AnnotationListPanel
+          annotations={project.annotations ?? []}
+          onSeek={setPlayheadTime}
+          onEdit={(annotation) => openAnnotationEditorAt(annotation.time, annotation)}
+          onRemove={removeProjectAnnotation}
+        />
+      ) : null}
+      {annotationEditor ? (
+        <AnnotationEditorDialog
+          value={annotationEditor}
+          onChange={setAnnotationEditor}
+          onCancel={() => setAnnotationEditor(undefined)}
+          onSave={saveAnnotationEditor}
+        />
+      ) : null}
     </section>
   );
 }
@@ -1105,6 +1230,158 @@ interface SceneDialogState {
 interface WhisperDialogState {
   clip: Clip;
   progress: number;
+}
+
+interface AnnotationEditorState {
+  id?: string;
+  time: number;
+  text: string;
+  color: string;
+}
+
+function AnnotationBubble({
+  annotation,
+  index,
+  left,
+  onSeek,
+  onEdit
+}: {
+  annotation: ProjectAnnotation;
+  index: number;
+  left: number;
+  onSeek(time: number): void;
+  onEdit(time: number, annotation: ProjectAnnotation): void;
+}) {
+  return (
+    <button
+      className="absolute top-2 z-40 flex max-w-[180px] -translate-x-3 items-center gap-1 rounded-full border border-white bg-white px-2 py-1 text-[11px] font-medium text-slate-700 shadow-soft hover:border-line"
+      style={{ left }}
+      type="button"
+      title={`${annotation.text} (${annotation.time.toFixed(2)}s)`}
+      data-testid={`timeline-annotation-${annotation.id}`}
+      onClick={(event) => {
+        event.stopPropagation();
+        onSeek(annotation.time);
+      }}
+      onDoubleClick={(event) => {
+        event.stopPropagation();
+        onEdit(annotation.time, annotation);
+      }}
+    >
+      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: annotation.color }} />
+      <span className="truncate">{annotation.text || zhCN.timeline.annotationLabel(index + 1)}</span>
+    </button>
+  );
+}
+
+function AnnotationListPanel({
+  annotations,
+  onSeek,
+  onEdit,
+  onRemove
+}: {
+  annotations: ProjectAnnotation[];
+  onSeek(time: number): void;
+  onEdit(annotation: ProjectAnnotation): void;
+  onRemove(annotationId: string): void;
+}) {
+  return (
+    <aside className="absolute bottom-3 right-3 top-16 z-50 flex w-72 flex-col overflow-hidden rounded-md border border-line bg-white shadow-soft" data-testid="annotation-list-panel">
+      <div className="border-b border-line px-3 py-2 text-sm font-semibold text-ink">{zhCN.timeline.annotationList}</div>
+      {annotations.length === 0 ? (
+        <div className="flex flex-1 items-center justify-center px-3 py-6 text-sm text-slate-500" data-testid="annotation-list-empty">
+          {zhCN.timeline.annotationListEmpty}
+        </div>
+      ) : (
+        <div className="min-h-0 flex-1 overflow-auto p-2">
+          {annotations.map((annotation) => (
+            <div key={annotation.id} className="mb-2 rounded-md border border-line bg-panel p-2 text-xs" data-testid={`annotation-list-row-${annotation.id}`}>
+              <button
+                className="flex w-full items-start gap-2 rounded text-left hover:bg-white"
+                type="button"
+                data-testid={`annotation-list-item-${annotation.id}`}
+                onClick={() => onSeek(annotation.time)}
+              >
+                <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: annotation.color }} />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-semibold text-ink">{annotation.text}</span>
+                  <span className="mt-0.5 block tabular-nums text-slate-500">{annotation.time.toFixed(2)}s</span>
+                </span>
+              </button>
+              <div className="mt-2 flex justify-end gap-2">
+                <button className="rounded border border-line bg-white px-2 py-1 hover:bg-panel" type="button" data-testid={`annotation-edit-${annotation.id}`} onClick={() => onEdit(annotation)}>
+                  {zhCN.timeline.annotationEditTitle}
+                </button>
+                <button className="rounded border border-rose-200 bg-white px-2 py-1 text-rose-700 hover:bg-rose-50" type="button" data-testid={`annotation-delete-${annotation.id}`} onClick={() => onRemove(annotation.id)}>
+                  {zhCN.timeline.annotationDelete}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </aside>
+  );
+}
+
+function AnnotationEditorDialog({
+  value,
+  onChange,
+  onCancel,
+  onSave
+}: {
+  value: AnnotationEditorState;
+  onChange(value: AnnotationEditorState): void;
+  onCancel(): void;
+  onSave(value: AnnotationEditorState): void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/35 p-4" data-testid="annotation-editor">
+      <section className="w-full max-w-sm rounded-md border border-line bg-white shadow-soft">
+        <div className="border-b border-line px-4 py-3">
+          <h2 className="text-sm font-semibold">{value.id ? zhCN.timeline.annotationEditTitle : zhCN.timeline.annotationNewTitle}</h2>
+          <div className="mt-1 text-xs tabular-nums text-slate-500">{value.time.toFixed(2)}s</div>
+        </div>
+        <div className="space-y-3 px-4 py-3">
+          <label className="block text-xs font-medium text-slate-600">
+            {zhCN.timeline.annotationText}
+            <textarea
+              className="mt-1 h-20 w-full resize-none rounded-md border border-line px-2 py-1.5 text-sm text-ink"
+              value={value.text}
+              maxLength={240}
+              data-testid="annotation-text-input"
+              onChange={(event) => onChange({ ...value, text: event.target.value })}
+            />
+          </label>
+          <div>
+            <div className="mb-1 text-xs font-medium text-slate-600">{zhCN.timeline.annotationColor}</div>
+            <div className="flex gap-2">
+              {PROJECT_ANNOTATION_COLORS.map((color) => (
+                <button
+                  key={color}
+                  className={`h-7 w-7 rounded-full border ${value.color.toLowerCase() === color ? 'border-ink ring-2 ring-brand/30' : 'border-white'}`}
+                  style={{ backgroundColor: color }}
+                  type="button"
+                  title={color}
+                  aria-label={color}
+                  data-testid={`annotation-color-${color}`}
+                  onClick={() => onChange({ ...value, color })}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 border-t border-line px-4 py-3">
+          <button className="rounded border border-line px-3 py-2 text-sm font-medium hover:bg-panel" type="button" onClick={onCancel}>
+            {zhCN.common.cancel}
+          </button>
+          <button className="rounded bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-[#176858]" type="button" data-testid="annotation-save-button" onClick={() => onSave(value)}>
+            {zhCN.timeline.annotationSave}
+          </button>
+        </div>
+      </section>
+    </div>
+  );
 }
 
 function TimelineMarkerOverlay({

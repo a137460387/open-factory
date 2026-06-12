@@ -55,6 +55,30 @@ describe('project schema migration', () => {
     expect(migrated.project.mediaMetadata).toEqual({ 'asset-1': { labelColor: 'blue' } });
   });
 
+  it('serializes and migrates project annotations with clamped times and colors', () => {
+    const project = makeProject();
+    project.annotations = [
+      { id: 'annotation-late', time: 99, text: '  Check pacing  ', color: '#A78BFA' },
+      { id: 'annotation-early', time: 1, text: '', color: 'not-a-color' }
+    ];
+
+    const file = serializeProject(project);
+    const migrated = migrateProjectFile(file);
+
+    expect(file.project.annotations).toEqual([
+      { id: 'annotation-early', time: 1, text: 'Annotation', color: '#facc15' },
+      { id: 'annotation-late', time: 10, text: 'Check pacing', color: '#a78bfa' }
+    ]);
+    expect(migrated.project.annotations).toEqual(file.project.annotations);
+  });
+
+  it('backfills missing project annotations during migration', () => {
+    const file = serializeProject(makeProject());
+    delete (file.project as Partial<typeof file.project>).annotations;
+
+    expect(migrateProjectFile(file).project.annotations).toEqual([]);
+  });
+
   it('serializes and migrates video codec metadata for proxy decisions', () => {
     const project = makeProject();
     project.media[0].videoCodec = ' hevc ';

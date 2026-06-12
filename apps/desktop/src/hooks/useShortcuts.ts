@@ -15,6 +15,7 @@ interface ShortcutHandlers {
   splitSelected(): void;
   selectAll(): void;
   clearSelection(): void;
+  addAnnotation(): void;
   undo(): void;
   redo(): void;
   save(): void;
@@ -89,6 +90,9 @@ export function useShortcuts(handlers: ShortcutHandlers, bindings: TimelineShort
           break;
         case 'clear-selection':
           handlers.clearSelection();
+          break;
+        case 'add-annotation':
+          handlers.addAnnotation();
           break;
         case 'undo':
           handlers.undo();
