@@ -3,8 +3,11 @@ import {
   cancelExportTask,
   clampExportConcurrency,
   createExportTask,
+  createExportTaskHistoryEntry,
   failExportTask,
   finishExportTask,
+  normalizeExportTaskPriority,
+  setExportTaskLogPath,
   sortExportQueueByPriority,
   startExportTaskSlots,
   startNextExportTask,
@@ -116,5 +119,87 @@ describe('export queue helpers', () => {
     expect(next.find((task) => task.id === 'high-b')?.status).toBe('running');
     expect(next.find((task) => task.id === 'normal')?.status).toBe('pending');
     expect(next.find((task) => task.id === 'low')?.status).toBe('pending');
+  });
+
+  it('keeps running tasks in place when sorting visible pending priorities', () => {
+    const tasks = startExportTaskSlots(
+      [
+        createExportTask({ id: 'running', name: 'Running', outputPath: 'running.mp4', plan, priority: 'low', now: '2026-01-01T00:00:00.000Z' }),
+        createExportTask({ id: 'pending-high', name: 'High', outputPath: 'high.mp4', plan, priority: 'high', now: '2026-01-01T00:00:01.000Z' }),
+        createExportTask({ id: 'pending-low', name: 'Low', outputPath: 'low.mp4', plan, priority: 'low', now: '2026-01-01T00:00:02.000Z' })
+      ],
+      1,
+      'start'
+    );
+
+    expect(sortExportQueueByPriority(tasks).map((task) => task.id)).toEqual(['running', 'pending-high', 'pending-low']);
+  });
+
+  it('normalizes missing priorities and clamps low progress', () => {
+    const task = createExportTask({ id: 'task-normal', name: 'Normal', outputPath: 'normal.mp4', plan, priority: 'unexpected' as never });
+
+    expect(task.priority).toBe('normal');
+    expect(normalizeExportTaskPriority(undefined)).toBe('normal');
+    expect(normalizeExportTaskPriority('high')).toBe('high');
+    expect(normalizeExportTaskPriority('low')).toBe('low');
+    expect(updateExportTaskProgress([task], 'task-normal', -0.5)[0].progress).toBe(0);
+  });
+
+  it('attaches log paths and creates history entries only for completed tasks', () => {
+    const [task] = setExportTaskLogPath(
+      [
+        createExportTask({
+          id: 'task-log',
+          name: 'Logged Export',
+          outputPath: 'out.mp4',
+          plan,
+          priority: 'high',
+          now: 'created'
+        })
+      ],
+      'task-log',
+      'C:/Users/AppData/open-factory/export-logs/task-log.log'
+    );
+
+    expect(task.logPath).toContain('task-log.log');
+    expect(createExportTaskHistoryEntry(task)).toBeUndefined();
+
+    const [finished] = finishExportTask([{ ...task, startedAt: 'started' }], 'task-log', undefined, 'finished');
+    expect(createExportTaskHistoryEntry(finished)).toEqual({
+      id: 'task-log',
+      name: 'Logged Export',
+      outputPath: 'out.mp4',
+      status: 'success',
+      priority: 'high',
+      createdAt: 'created',
+      startedAt: 'started',
+      finishedAt: 'finished',
+      logPath: 'C:/Users/AppData/open-factory/export-logs/task-log.log',
+      error: undefined
+    });
+  });
+
+  it('includes error details in failed task history entries', () => {
+    const [failed] = failExportTask(
+      [
+        {
+          ...createExportTask({ id: 'task-failed', name: 'Failed Export', outputPath: 'bad.mp4', plan, priority: 'low', now: 'created' }),
+          startedAt: 'started',
+          logPath: 'C:/logs/task-failed.log'
+        }
+      ],
+      'task-failed',
+      'ffmpeg failed',
+      'failed'
+    );
+
+    expect(createExportTaskHistoryEntry(failed)).toMatchObject({
+      id: 'task-failed',
+      status: 'error',
+      priority: 'low',
+      finishedAt: 'failed',
+      logPath: 'C:/logs/task-failed.log',
+      error: 'ffmpeg failed'
+    });
   });
 });

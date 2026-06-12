@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { instantiateProjectTemplate, PROJECT_TEMPLATES, type ProjectTemplateId } from '../src';
+import { getProjectTemplate, instantiateProjectTemplate, PROJECT_TEMPLATES, type ProjectTemplateId } from '../src';
 
 describe('project templates', () => {
   it.each([
@@ -25,5 +25,16 @@ describe('project templates', () => {
 
   it('keeps the built-in template ids stable', () => {
     expect(PROJECT_TEMPLATES.map((template) => template.id)).toEqual(['vertical-short', 'youtube-horizontal', 'square-social', 'podcast', 'cinema']);
+  });
+
+  it('uses the template default name when no custom project name is supplied', () => {
+    const instance = instantiateProjectTemplate('vertical-short');
+
+    expect(instance.project.name).toBe('Vertical Short');
+    expect(instance.template).toBe(getProjectTemplate('vertical-short'));
+  });
+
+  it('throws for unknown template ids', () => {
+    expect(() => getProjectTemplate('unknown-template' as ProjectTemplateId)).toThrow('Unknown project template: unknown-template');
   });
 });

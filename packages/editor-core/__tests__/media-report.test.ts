@@ -3,6 +3,7 @@ import {
   buildOfflineMediaReport,
   buildOfflineMediaReportHtml,
   buildProjectArchivePreflight,
+  collectOfflineMediaReportPaths,
   createProject,
   createTrack,
   DEFAULT_COLOR_CORRECTION,
@@ -108,5 +109,125 @@ describe('offline media report', () => {
     expect(html).toContain('class="missing-media"');
     expect(preflight.missingRows).toHaveLength(1);
     expect(preflight.missingPaths).toEqual(['C:/Missing/clip.mp4']);
+  });
+
+  it('collects unique source, image sequence, and proxy paths for filesystem status checks', () => {
+    const project = createProject('Sequence Demo');
+    project.media = [
+      makeAsset({
+        id: 'sequence',
+        type: 'image',
+        name: 'shot_0001.png',
+        path: 'C:/Media/shot_0001.png',
+        proxyPath: 'C:/Cache/sequence-proxy.mp4',
+        imageSequence: {
+          pattern: 'C:/Media/shot_%04d.png',
+          startNumber: 1,
+          frameCount: 3,
+          frameRate: 24,
+          paths: ['C:/Media/shot_0001.png', 'C:/Media/shot_0002.png', 'C:/Media/shot_0003.png']
+        }
+      }),
+      makeAsset({
+        id: 'duplicate',
+        path: 'C:/Media/shot_0002.png',
+        proxyPath: ' '
+      })
+    ];
+
+    expect(collectOfflineMediaReportPaths(project)).toEqual([
+      'C:/Media/shot_0001.png',
+      'C:/Media/shot_0002.png',
+      'C:/Media/shot_0003.png',
+      'C:/Cache/sequence-proxy.mp4'
+    ]);
+  });
+
+  it('reports image sequence frame rows, proxy failures, and escaped HTML safely', () => {
+    const project = createProject('Unsafe <Project>');
+    project.settings = { width: 3840, height: 2160, fps: 60 };
+    project.media = [
+      makeAsset({
+        id: 'sequence',
+        type: 'image',
+        name: 'Frame & "Title"',
+        path: 'C:/Media/frame_0001.png',
+        size: 1.4 * 1024 * 1024,
+        proxyPath: 'C:/Cache/bad-proxy.mp4',
+        proxyStatus: 'error',
+        imageSequence: {
+          pattern: 'C:/Media/frame_%04d.png',
+          startNumber: 1,
+          frameCount: 2,
+          frameRate: 24,
+          paths: ['C:/Media/frame_0001.png', 'C:/Media/frame_0002.png']
+        }
+      }),
+      makeAsset({
+        id: 'huge',
+        name: 'Huge.mov',
+        path: 'C:/Media/huge.mov',
+        size: 2.5 * 1024 * 1024 * 1024
+      })
+    ];
+
+    const report = buildOfflineMediaReport(project, [
+      { path: 'C:/Media/frame_0001.png', exists: true, size: 1.4 * 1024 * 1024 },
+      { path: 'C:/Media/frame_0002.png', exists: true, size: 512 },
+      { path: 'C:/Cache/bad-proxy.mp4', exists: true, size: 1024 },
+      { path: 'C:/Media/huge.mov', exists: true, size: 2.5 * 1024 * 1024 * 1024 }
+    ]);
+    const html = buildOfflineMediaReportHtml(project, [
+      { path: 'C:/Media/frame_0001.png', exists: true, size: 1.4 * 1024 * 1024 },
+      { path: 'C:/Media/frame_0002.png', exists: true, size: 512 },
+      { path: 'C:/Cache/bad-proxy.mp4', exists: true, size: 1024 },
+      { path: 'C:/Media/huge.mov', exists: true, size: 2.5 * 1024 * 1024 * 1024 }
+    ]);
+
+    expect(report.rows.map((row) => row.path)).toEqual(['C:/Media/frame_0001.png', 'C:/Media/frame_0002.png', 'C:/Media/huge.mov']);
+    expect(report.rows.find((row) => row.assetId === 'sequence')?.hasProxy).toBe(false);
+    expect(report.totals.estimatedExportSizeBytes).toBeGreaterThanOrEqual(1024);
+    expect(html).toContain('素材报告：Unsafe &lt;Project&gt;');
+    expect(html).toContain('Frame &amp; &quot;Title&quot;');
+    expect(html).toContain('1.4 MB');
+    expect(html).toContain('2.5 GB');
+    expect(html).toContain('512 B');
+  });
+
+  it('uses a minimum export estimate and formats hour-long project durations', () => {
+    const project = createProject('Long Demo');
+    project.settings = { width: 0, height: 0, fps: 0 };
+    project.timeline = {
+      markers: [],
+      transitions: [],
+      tracks: [
+        createTrack({
+          id: 'track-audio',
+          type: 'audio',
+          name: 'Audio',
+          clips: [
+            {
+              id: 'clip-audio',
+              type: 'audio',
+              name: 'long.wav',
+              mediaId: 'audio',
+              trackId: 'track-audio',
+              start: 3660,
+              duration: 5,
+              trimStart: 0,
+              trimEnd: 0,
+              speed: 1,
+              volume: 1
+            }
+          ]
+        })
+      ]
+    };
+    project.sequences = [{ id: PRIMARY_SEQUENCE_ID, name: 'Main Sequence', timeline: project.timeline }];
+
+    const html = buildOfflineMediaReportHtml(project);
+
+    expect(html).toContain('项目总时长：1:01:05');
+    expect(html).toContain('导出预估大小：');
   });
 });

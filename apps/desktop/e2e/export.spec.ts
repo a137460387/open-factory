@@ -81,12 +81,13 @@ test('starts high priority export before queued low priority work and writes log
   await expect(page.getByTestId('export-queue-list')).toContainText('可用内存低于 2GB');
   await expectExportTaskStatus(page, 0, 'pending');
 
-  await page.evaluate(() => window.__E2E_ACTIONS__!.setAvailableMemoryBytes!(8 * 1024 * 1024 * 1024));
   await page.getByTestId('export-priority-select').selectOption('high');
   await page.getByTestId('export-batch-paths').fill('C:/Exports/priority-high.mp4');
   await page.getByTestId('export-enqueue-button').click();
 
   await expect(page.getByTestId('export-task-priority').nth(0)).toHaveText('高');
+  await expectExportTaskStatus(page, 0, 'pending');
+  await page.evaluate(() => window.__E2E_ACTIONS__!.setAvailableMemoryBytes!(8 * 1024 * 1024 * 1024));
   await expectExportTaskStatus(page, 0, 'running');
   await expectExportTaskStatus(page, 1, 'pending');
 
