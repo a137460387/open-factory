@@ -18,6 +18,7 @@ import {
   normalizeFrameInterpolation,
   normalizeSequenceFrameRate,
   normalizeStabilization,
+  normalizeTransform,
   normalizeMasks,
   type ClipKeyframes,
   type Project,
@@ -166,7 +167,7 @@ function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project[
             speed: getClipSpeed(clip),
             sourceDuration: clip.type === 'nested-sequence' ? clip.duration : getClipSourceVisibleDuration(clip),
             trackIndex,
-            transform: { ...clip.transform },
+            transform: normalizeTransform(clip.transform),
             colorCorrection: normalizeColorCorrection(clip.colorCorrection),
             chromaKey: normalizeChromaKey(clip.chromaKey),
             stabilization: normalizeStabilization(clip.stabilization),
@@ -840,7 +841,7 @@ function buildVisualClipFilter(
   filters.push(...buildColorCorrectionFilters(clip, textArtifacts));
   filters.push(...buildEffectFilters(clip.effects));
   if (Math.abs(clip.transform.rotation) > 0.001) {
-    filters.push(`rotate=${((clip.transform.rotation * Math.PI) / 180).toFixed(6)}:c=none`);
+    filters.push(`rotate=${formatFfmpegNumber(clip.transform.rotation)}*PI/180:c=none`);
   }
   filters.push(...buildOpacityFilters(clip, label));
   return filters.join(',');
@@ -1035,19 +1036,20 @@ function buildScaleFilter(clip: ExportClip): string {
   const scaleX = getAnimatedFrames(clip, 'scaleX');
   const scaleY = getAnimatedFrames(clip, 'scaleY');
   if (scaleX.length >= 2 || scaleY.length >= 2) {
-    const xExpression = buildTimelineExpression(scaleX, clip.start, clip.transform.scale);
-    const yExpression = buildTimelineExpression(scaleY, clip.start, clip.transform.scale);
+    const xExpression = buildTimelineExpression(scaleX, clip.start, clip.transform.scaleX ?? clip.transform.scale);
+    const yExpression = buildTimelineExpression(scaleY, clip.start, clip.transform.scaleY ?? clip.transform.scale);
     return `scale=w='trunc(iw*(${xExpression})/2)*2':h='trunc(ih*(${yExpression})/2)*2':eval=frame`;
   }
-  const staticScale = scaleX.length === 1 && scaleY.length === 1 ? (scaleX[0].value + scaleY[0].value) / 2 : clip.transform.scale;
-  return `scale=trunc(iw*${formatScale(staticScale)}/2)*2:trunc(ih*${formatScale(staticScale)}/2)*2`;
+  const staticScaleX = scaleX.length === 1 ? scaleX[0].value : clip.transform.scaleX ?? clip.transform.scale;
+  const staticScaleY = scaleY.length === 1 ? scaleY[0].value : clip.transform.scaleY ?? clip.transform.scale;
+  return `scale=trunc(iw*${formatScale(staticScaleX)}/2)*2:trunc(ih*${formatScale(staticScaleY)}/2)*2`;
 }
 
 function buildKenBurnsZoompanFilter(clip: ExportClip, settings: ExportSettings): string {
   const scaleX = getAnimatedFrames(clip, 'scaleX');
   const scaleY = getAnimatedFrames(clip, 'scaleY');
   const zoomFrames = scaleX.length >= 2 ? scaleX : scaleY;
-  const zoomExpression = buildTimelineExpression(zoomFrames, 0, clip.transform.scale, 'ot');
+  const zoomExpression = buildTimelineExpression(zoomFrames, 0, clip.transform.scaleX ?? clip.transform.scale, 'ot');
   return `zoompan=z='${zoomExpression}':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=2:s=${settings.width}x${settings.height}:fps=${settings.fps}`;
 }
 
@@ -1082,7 +1084,7 @@ function buildOverlayXExpression(clip: ExportClip): string {
   if (frames.length === 1) {
     return `main_w/2-overlay_w/2+(main_w/2)*${formatFfmpegNumber(frames[0].value)}`;
   }
-  return `(main_w-overlay_w)/2+${formatSigned(clip.transform.x)}`;
+  return `(main_w-overlay_w)/2${formatOffsetExpression(clip.transform.x)}`;
 }
 
 function buildOverlayYExpression(clip: ExportClip): string {
@@ -1093,7 +1095,7 @@ function buildOverlayYExpression(clip: ExportClip): string {
   if (frames.length === 1) {
     return `main_h/2-overlay_h/2+(main_h/2)*${formatFfmpegNumber(frames[0].value)}`;
   }
-  return `(main_h-overlay_h)/2+${formatSigned(clip.transform.y)}`;
+  return `(main_h-overlay_h)/2${formatOffsetExpression(clip.transform.y)}`;
 }
 
 function buildColorCorrectionFilters(clip: ExportClip, textArtifacts: TextArtifact[]): string[] {
@@ -1596,6 +1598,11 @@ function formatCompressorLinear(db: number): string {
 function formatSigned(value: number): string {
   const formatted = formatFfmpegSeconds(Math.abs(value));
   return value < 0 ? `-${formatted}` : formatted;
+}
+
+function formatOffsetExpression(value: number): string {
+  const formatted = formatSigned(value);
+  return value < 0 ? formatted : `+${formatted}`;
 }
 
 function cssColorToAssColor(value: string, opacity?: number): string {

@@ -231,7 +231,7 @@ describe('model factories', () => {
   });
 
   it('exports stable default constants for UI and clip factories', () => {
-    expect(DEFAULT_TRANSFORM).toEqual({ x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 });
+    expect(DEFAULT_TRANSFORM).toEqual({ x: 0, y: 0, scale: 1, scaleX: 1, scaleY: 1, rotation: 0, opacity: 1 });
     expect(DEFAULT_TEXT_STYLE).toMatchObject({ fontSize: 48, color: '#ffffff', bold: false, italic: false });
   });
 

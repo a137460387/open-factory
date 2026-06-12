@@ -355,6 +355,20 @@ describe('timeline commands', () => {
     expect(accessor.current().tracks[0].clips).toHaveLength(1);
   });
 
+  it('updates clip uniform and independent canvas scale values', () => {
+    const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'clip-1', transform: { scale: 1, scaleX: 1, scaleY: 1 } })]));
+    const manager = new CommandManager();
+
+    manager.execute(new UpdateClipCommand(accessor, 'clip-1', { transform: { scale: 0.5 } }));
+    expect(accessor.current().tracks[0].clips[0].transform).toMatchObject({ scale: 0.5, scaleX: 0.5, scaleY: 0.5 });
+
+    manager.execute(new UpdateClipCommand(accessor, 'clip-1', { transform: { scaleX: 1.25, scaleY: 0.75 } }));
+    expect(accessor.current().tracks[0].clips[0].transform).toMatchObject({ scale: 1, scaleX: 1.25, scaleY: 0.75 });
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips[0].transform).toMatchObject({ scale: 0.5, scaleX: 0.5, scaleY: 0.5 });
+  });
+
   it('removes silent ranges as one undoable command', () => {
     const accessor = makeAccessor(makeTimeline([makeAudioClip({ id: 'clip-audio', duration: 2.5 })]));
     const manager = new CommandManager();

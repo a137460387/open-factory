@@ -28,6 +28,8 @@ import {
   createKenBurnsKeyframes,
   getClipSpeed,
   getClipKeyframeValue,
+  getTransformScaleX,
+  getTransformScaleY,
   normalizeAudioDenoise,
   normalizeChromaKey,
   normalizeColorCurves,
@@ -416,18 +418,58 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
 
         <Section title={zhCN.inspector.sections.transform}>
           <AnimatedField label="X" onAddKeyframe={() => addKeyframe('x')}>
-            <NumberField label="X" value={clip.transform.x} step={1} onCommit={(x) => commit({ transform: { x } })} hideLabel />
+            <NumberField label="X" value={clip.transform.x} step={1} onCommit={(x) => commit({ transform: { x } })} hideLabel testId="clip-transform-x-input" />
           </AnimatedField>
           <AnimatedField label="Y" onAddKeyframe={() => addKeyframe('y')}>
-            <NumberField label="Y" value={clip.transform.y} step={1} onCommit={(y) => commit({ transform: { y } })} hideLabel />
+            <NumberField label="Y" value={clip.transform.y} step={1} onCommit={(y) => commit({ transform: { y } })} hideLabel testId="clip-transform-y-input" />
           </AnimatedField>
           <AnimatedField label={zhCN.inspector.fields.scale} onAddKeyframe={() => {
-            addKeyframe('scaleX', clip.transform.scale);
-            addKeyframe('scaleY', clip.transform.scale);
+            addKeyframe('scaleX', getTransformScaleX(clip.transform));
+            addKeyframe('scaleY', getTransformScaleY(clip.transform));
           }} testId="add-scale-keyframe-button">
-            <RangeField label={zhCN.inspector.fields.scale} value={clip.transform.scale} min={0.1} max={4} step={0.05} format={(value) => `${Math.round(value * 100)}%`} onCommit={(scale) => commit({ transform: { scale } })} hideLabel />
+            <RangeField
+              label={zhCN.inspector.fields.scale}
+              value={clip.transform.scale}
+              min={0.1}
+              max={4}
+              step={0.05}
+              format={(value) => `${Math.round(value * 100)}%`}
+              onCommit={(scale) => commit({ transform: { scale } })}
+              hideLabel
+              testId="clip-scale-slider"
+            />
           </AnimatedField>
-          <NumberField label={zhCN.inspector.fields.rotation} value={clip.transform.rotation} step={1} onCommit={(rotation) => commit({ transform: { rotation } })} />
+          <div className="grid grid-cols-2 gap-2">
+            <RangeNumberField
+              label={zhCN.inspector.fields.scaleX}
+              value={getTransformScaleX(clip.transform)}
+              min={0.01}
+              max={4}
+              step={0.01}
+              format={(value) => `${Math.round(value * 100)}%`}
+              onCommit={(scaleX) => commit({ transform: { scaleX } })}
+              testId="clip-scale-x-input"
+            />
+            <RangeNumberField
+              label={zhCN.inspector.fields.scaleY}
+              value={getTransformScaleY(clip.transform)}
+              min={0.01}
+              max={4}
+              step={0.01}
+              format={(value) => `${Math.round(value * 100)}%`}
+              onCommit={(scaleY) => commit({ transform: { scaleY } })}
+              testId="clip-scale-y-input"
+            />
+          </div>
+          <NumberField
+            label={zhCN.inspector.fields.rotation}
+            value={clip.transform.rotation}
+            min={-180}
+            max={180}
+            step={1}
+            onCommit={(rotation) => commit({ transform: { rotation } })}
+            testId="clip-rotation-input"
+          />
           {clip.type !== 'audio' ? (
             <AnimatedField label={zhCN.inspector.fields.opacity} onAddKeyframe={() => addKeyframe('opacity')} testId="add-opacity-keyframe-button">
               <RangeField
@@ -1650,30 +1692,60 @@ function NumberField({
   label,
   value,
   min,
+  max,
   step,
   onCommit,
-  hideLabel = false
+  hideLabel = false,
+  testId
 }: {
   label: string;
   value: number;
   min?: number;
+  max?: number;
   step?: number;
   onCommit(value: number): void;
   hideLabel?: boolean;
+  testId?: string;
 }) {
+  const [draft, setDraft] = useState(formatNumberInputValue(value));
+  useEffect(() => {
+    setDraft(formatNumberInputValue(value));
+  }, [value]);
+  const commitDraft = () => {
+    const parsed = Number(draft);
+    if (!Number.isFinite(parsed)) {
+      setDraft(formatNumberInputValue(value));
+      return;
+    }
+    const clamped = Math.min(max ?? Number.POSITIVE_INFINITY, Math.max(min ?? Number.NEGATIVE_INFINITY, parsed));
+    setDraft(formatNumberInputValue(clamped));
+    onCommit(clamped);
+  };
   return (
     <label className="block text-xs font-medium text-slate-600">
       {hideLabel ? <span className="sr-only">{label}</span> : label}
       <input
         className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink"
         type="number"
-        defaultValue={Number(value.toFixed(3))}
+        value={draft}
         min={min}
+        max={max}
         step={step ?? 1}
-        onBlur={(event) => onCommit(Number(event.target.value))}
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={commitDraft}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            event.currentTarget.blur();
+          }
+        }}
+        data-testid={testId}
       />
     </label>
   );
+}
+
+function formatNumberInputValue(value: number): string {
+  return String(Number(value.toFixed(3)));
 }
 
 function RangeField({

@@ -1,4 +1,4 @@
-import { DEFAULT_COLOR_CORRECTION, normalizeColorCorrection, type ColorCorrection, type Transform } from '@open-factory/editor-core';
+import { DEFAULT_COLOR_CORRECTION, getTransformScaleX, getTransformScaleY, normalizeColorCorrection, type ColorCorrection, type Transform } from '@open-factory/editor-core';
 
 export function drawTransformedSource2d(
   context: CanvasRenderingContext2D,
@@ -15,7 +15,7 @@ export function drawTransformedSource2d(
   context.filter = buildCanvasFilter(correction);
   context.translate(canvas.width / 2 + transform.x, canvas.height / 2 + transform.y);
   context.rotate((transform.rotation * Math.PI) / 180);
-  context.scale(transform.scale, transform.scale);
+  context.scale(getTransformScaleX(transform), getTransformScaleY(transform));
   context.drawImage(source, -dimensions.width / 2, -dimensions.height / 2, dimensions.width, dimensions.height);
   context.filter = previousFilter;
   context.restore();

@@ -1,5 +1,7 @@
 import {
   createId,
+  getTransformScaleX,
+  getTransformScaleY,
   type Clip,
   type ClipKeyframes,
   type Keyframe,
@@ -148,7 +150,7 @@ export function getClipStaticKeyframeValue(clip: Clip, property: KeyframePropert
     return clip.transform.y;
   }
   if (property === 'scaleX' || property === 'scaleY') {
-    return clip.transform.scale;
+    return property === 'scaleX' ? getTransformScaleX(clip.transform) : getTransformScaleY(clip.transform);
   }
   if (property === 'speed') {
     return clip.speed;
@@ -164,6 +166,8 @@ export function resolveAnimatedTransform(clip: Clip, localTime: number): Transfo
     x: getClipKeyframeValue(clip, 'x', localTime),
     y: getClipKeyframeValue(clip, 'y', localTime),
     scale: round((scaleX + scaleY) / 2),
+    scaleX,
+    scaleY,
     opacity: getClipKeyframeValue(clip, 'opacity', localTime)
   };
 }

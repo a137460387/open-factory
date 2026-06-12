@@ -259,6 +259,8 @@ export interface Transform {
   x: number;
   y: number;
   scale: number;
+  scaleX?: number;
+  scaleY?: number;
   rotation: number;
   opacity: number;
 }
@@ -355,6 +357,8 @@ export const DEFAULT_TRANSFORM: Transform = {
   x: 0,
   y: 0,
   scale: 1,
+  scaleX: 1,
+  scaleY: 1,
   rotation: 0,
   opacity: 1
 };
@@ -575,7 +579,7 @@ export function createBaseClip(
     trimEnd: round(Math.max(0, input.trimEnd)),
     speed: clampClipSpeed(input.speed),
     colorCorrection: normalizeColorCorrection(input.colorCorrection),
-    transform: { ...DEFAULT_TRANSFORM, ...input.transform },
+    transform: normalizeTransform(input.transform),
     chromaKey: normalizeChromaKey(input.chromaKey),
     stabilization: normalizeStabilization(input.stabilization),
     frameInterpolation: normalizeFrameInterpolation(input.frameInterpolation),
@@ -742,6 +746,46 @@ export function normalizeSequenceFrameRate(frameRate: number | undefined): numbe
 
 export function normalizeTimelineMarker(marker: TimelineMarker, maxTime?: number): TimelineMarker {
   return createTimelineMarker(marker, maxTime);
+}
+
+export function normalizeTransform(transform: Partial<Transform> | undefined): Transform {
+  const legacyScale = clampTransformScale(transform?.scale, DEFAULT_TRANSFORM.scale);
+  const rawScaleX = typeof transform?.scaleX === 'number' && Number.isFinite(transform.scaleX) ? transform.scaleX : undefined;
+  const rawScaleY = typeof transform?.scaleY === 'number' && Number.isFinite(transform.scaleY) ? transform.scaleY : undefined;
+  const clampedScaleX = clampTransformScale(rawScaleX, legacyScale);
+  const clampedScaleY = clampTransformScale(rawScaleY, legacyScale);
+  const staleUniformAxes =
+    rawScaleX !== undefined &&
+    rawScaleY !== undefined &&
+    Math.abs(clampedScaleX - clampedScaleY) <= 0.000001 &&
+    Math.abs(clampedScaleX - legacyScale) > 0.000001;
+  const scaleX = staleUniformAxes ? legacyScale : clampedScaleX;
+  const scaleY = staleUniformAxes ? legacyScale : clampedScaleY;
+  return {
+    x: round(finiteOrDefault(transform?.x, DEFAULT_TRANSFORM.x)),
+    y: round(finiteOrDefault(transform?.y, DEFAULT_TRANSFORM.y)),
+    scale: round((scaleX + scaleY) / 2),
+    scaleX,
+    scaleY,
+    rotation: normalizeRotation(transform?.rotation),
+    opacity: round(Math.min(1, Math.max(0, finiteOrDefault(transform?.opacity, DEFAULT_TRANSFORM.opacity))))
+  };
+}
+
+export function normalizeRotation(rotation: number | undefined): number {
+  return round(Math.min(180, Math.max(-180, finiteOrDefault(rotation, DEFAULT_TRANSFORM.rotation))));
+}
+
+export function getTransformScaleX(transform: Partial<Transform> | undefined): number {
+  return normalizeTransform(transform).scaleX ?? DEFAULT_TRANSFORM.scaleX ?? DEFAULT_TRANSFORM.scale;
+}
+
+export function getTransformScaleY(transform: Partial<Transform> | undefined): number {
+  return normalizeTransform(transform).scaleY ?? DEFAULT_TRANSFORM.scaleY ?? DEFAULT_TRANSFORM.scale;
+}
+
+function clampTransformScale(scale: number | undefined, fallback: number): number {
+  return round(Math.min(4, Math.max(0.01, finiteOrDefault(scale, fallback))));
 }
 
 export function normalizeTimelineMarkers(markers: TimelineMarker[] | undefined, maxTime?: number): TimelineMarker[] {

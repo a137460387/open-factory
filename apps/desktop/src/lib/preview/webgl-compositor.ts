@@ -1,5 +1,7 @@
 import {
   DEFAULT_COLOR_CORRECTION,
+  getTransformScaleX,
+  getTransformScaleY,
   normalizeColorCorrection,
   normalizeInputColorSpace,
   normalizeThreeWayColor,
@@ -363,8 +365,8 @@ function resolveTextTransform(canvasHeight: number, transform: Transform, style:
 }
 
 function buildTransformedQuad(canvasWidth: number, canvasHeight: number, mediaWidth: number, mediaHeight: number, transform: Transform): number[] {
-  const width = Math.max(1, mediaWidth * transform.scale);
-  const height = Math.max(1, mediaHeight * transform.scale);
+  const width = Math.max(1, mediaWidth * getTransformScaleX(transform));
+  const height = Math.max(1, mediaHeight * getTransformScaleY(transform));
   const centerX = canvasWidth / 2 + transform.x;
   const centerY = canvasHeight / 2 + transform.y;
   const rotation = (transform.rotation * Math.PI) / 180;

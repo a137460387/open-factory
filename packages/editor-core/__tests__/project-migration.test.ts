@@ -123,6 +123,15 @@ describe('project schema migration', () => {
     }
   });
 
+  it('backfills transform axis scale fields during migration', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips[0].transform = { x: 12, y: -8, scale: 0.75, rotation: 15, opacity: 0.8 };
+
+    const migrated = migrateProjectFile(serializeProject(project));
+
+    expect(migrated.project.timeline.tracks[0].clips[0].transform).toEqual({ x: 12, y: -8, scale: 0.75, scaleX: 0.75, scaleY: 0.75, rotation: 15, opacity: 0.8 });
+  });
+
   it('backfills missing subtitle style and mode defaults during migration', () => {
     const project = makeProject();
     const subtitleClip = makeSubtitleClip({ id: 'legacy-subtitle', text: 'Legacy subtitle' });

@@ -69,6 +69,15 @@ const fixtures = [
     validate: validateMultiClipOverlayFixture
   },
   {
+    name: 'rotation-transform',
+    description: 'centered image clip rotated through the FFmpeg rotate filter',
+    outputWidth: 1280,
+    outputHeight: 720,
+    expectedDuration: 1.5,
+    create: createRotationTransformFixture,
+    validate: validateRotationTransformFixture
+  },
+  {
     name: 'audio-volume-fade',
     description: 'video with embedded audio using fade-in and 0.5x volume',
     outputWidth: 1280,
@@ -556,6 +565,70 @@ async function validateMultiClipOverlayFixture(context) {
         passed: Math.abs(context.outputDuration - 2) <= 0.2,
         actual: round(context.outputDuration),
         expected: 2
+      }
+    ]
+  };
+}
+
+async function createRotationTransformFixture(context) {
+  const imagePath = join(context.fixtureDir, 'rotated-yellow.png');
+  await createColorImageFixture(imagePath, {
+    color: COLORS.yellow.ffmpeg,
+    width: 360,
+    height: 180
+  });
+  return buildProject({
+    id: 'golden-rotation-transform',
+    name: 'Golden Rotation Transform',
+    width: context.outputWidth,
+    height: context.outputHeight,
+    media: [
+      imageAsset({
+        id: 'asset-rotated-yellow',
+        name: 'rotated-yellow.png',
+        path: imagePath,
+        width: 360,
+        height: 180,
+        stat: statSync(imagePath)
+      })
+    ],
+    tracks: [
+      {
+        id: 'track-rotation-video',
+        type: 'video',
+        name: 'Rotation',
+        clips: [
+          imageClip({
+            id: 'clip-rotated-yellow',
+            name: 'Rotated yellow',
+            mediaId: 'asset-rotated-yellow',
+            trackId: 'track-rotation-video',
+            start: 0,
+            duration: context.fixture.expectedDuration,
+            transform: { x: 0, y: 0, scale: 1, scaleX: 1, scaleY: 1, rotation: 30, opacity: 1 }
+          })
+        ]
+      },
+      emptyAudioTrack(),
+      emptyTextTrack()
+    ]
+  });
+}
+
+async function validateRotationTransformFixture(context) {
+  return {
+    checks: [
+      {
+        name: 'rotation-filter',
+        passed: context.plan.filterComplex.includes('rotate=30*PI/180:c=none'),
+        actual: context.plan.filterComplex,
+        expected: 'rotate=30*PI/180:c=none'
+      },
+      {
+        name: 'rotated-center-pixel',
+        passed: pixelNear(context.centerPixel, COLORS.yellow.rgb, 18),
+        actual: context.centerPixel,
+        expected: `${COLORS.yellow.rgb.join(',')} +/- 18`
       }
     ]
   };

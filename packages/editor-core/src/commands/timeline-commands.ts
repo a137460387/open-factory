@@ -23,6 +23,7 @@ import {
   normalizeSequenceFrameRate,
   normalizeStabilization,
   normalizeTimelineMarker,
+  normalizeTransform,
   normalizeTrackCompressor,
   normalizeTrackEQ,
   normalizeTrackPan,
@@ -1632,7 +1633,11 @@ export class UpdateClipCommand implements Command {
       audioDenoise: normalizeAudioDenoise({ ...this.before.audioDenoise, ...this.patch.audioDenoise }),
       masks: this.patch.masks === undefined ? normalizeMasks(this.before.masks) : normalizeMasks(this.patch.masks),
       sequenceFrameRate: normalizeSequenceFrameRate(this.patch.sequenceFrameRate ?? this.before.sequenceFrameRate),
-      transform: { ...this.before.transform, ...this.patch.transform }
+      transform: normalizeTransform(
+        this.patch.transform?.scale !== undefined && this.patch.transform.scaleX === undefined && this.patch.transform.scaleY === undefined
+          ? { ...this.before.transform, ...this.patch.transform, scaleX: this.patch.transform.scale, scaleY: this.patch.transform.scale }
+          : { ...this.before.transform, ...this.patch.transform }
+      )
     } as Clip;
     const speedKeyframesChanged = this.patch.keyframes !== undefined && (Boolean(this.before.keyframes?.speed?.length) || Boolean(this.patch.keyframes?.speed?.length));
     if (typeof nextSpeed === 'number' || speedKeyframesChanged) {

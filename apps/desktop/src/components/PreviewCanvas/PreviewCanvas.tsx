@@ -1,16 +1,30 @@
-import { BarChart3, Blend, Columns2, GitCompareArrows, Pause, Play, Rows2 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { BarChart3, Blend, Columns2, GitCompareArrows, MousePointer2, Pause, Play, Rows2 } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 import {
   CutMulticamClipCommand,
+  UpdateClipCommand,
+  buildClipTransformBox,
   buildTimelineRenderFrameKey,
   buildTimelineRenderFrameRequests,
   getActiveMulticamAngle,
+  getRenderableTracks,
   getTimelineRenderInvalidationRanges,
   getTimelinePlaybackDuration,
+  hitTestClipTransformBox,
   isNestedSequenceDepthExceeded,
+  moveTransformByCanvasDelta,
+  normalizeTransform,
+  resizeClipTransform,
+  rotateClipTransform,
+  screenPointToCanvasPoint,
   type Clip,
+  type ClipPatch,
+  type ClipTransformBox,
+  type CanvasPoint,
+  type CanvasTransformHandle,
   type Project,
   type Sequence,
+  type Transform,
   type Timeline
 } from '@open-factory/editor-core';
 import { ColorScopesPanel } from '../ColorScopes/ColorScopesPanel';
@@ -26,12 +40,17 @@ import { PreviewRenderer, type PreviewFrameReadback } from '../../lib/preview/re
 import { getTimelineRenderCacheController } from '../../lib/preview/render-cache-controller';
 import { showToast } from '../../lib/toast';
 import { useAudioMeterStore } from '../../store/audioMeterStore';
-import { commandManager, projectAccessor } from '../../store/commandManager';
+import { commandManager, projectAccessor, timelineAccessor } from '../../store/commandManager';
 import { useEditorStore } from '../../store/editorStore';
+
+const PREVIEW_CANVAS_WIDTH = 1280;
+const PREVIEW_CANVAS_HEIGHT = 720;
+const CANVAS_TRANSFORM_HANDLES: CanvasTransformHandle[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
 
 export function PreviewCanvas() {
   const t = zhCN.preview;
   const compareFrameRef = useRef<HTMLDivElement | null>(null);
+  const transformDragRef = useRef<CanvasTransformDrag | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const originalCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const differenceCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -47,6 +66,7 @@ export function PreviewCanvas() {
   const playbackRate = useEditorStore((state) => state.playbackRate);
   const setPlayheadTime = useEditorStore((state) => state.setPlayheadTime);
   const setIsPlaying = useEditorStore((state) => state.setIsPlaying);
+  const setSelectedClipIds = useEditorStore((state) => state.setSelectedClipIds);
   const setAudioLevels = useAudioMeterStore((state) => state.setLevels);
   const resetAudioLevels = useAudioMeterStore((state) => state.resetLevels);
   const [scopesOpen, setScopesOpen] = useState(false);
@@ -54,6 +74,7 @@ export function PreviewCanvas() {
   const [compareMode, setCompareMode] = useState<PreviewCompareMode | 'off'>('off');
   const [compareSplitRatio, setCompareSplitRatio] = useState(0.5);
   const [compareDividerDragging, setCompareDividerDragging] = useState(false);
+  const [canvasEditMode, setCanvasEditMode] = useState(false);
   const prerenderCenter = Math.round(playheadTime * 2) / 2;
   const fps = project.settings.fps || 30;
   const compareEnabled = compareMode !== 'off';
@@ -67,6 +88,8 @@ export function PreviewCanvas() {
     () => (selectedMulticamClip ? project.sequences.find((sequence) => sequence.id === selectedMulticamClip.sequenceId) : undefined),
     [project.sequences, selectedMulticamClip]
   );
+  const editableCanvasClips = useMemo(() => buildEditableCanvasClips(project, playheadTime), [project, playheadTime]);
+  const selectedEditableClip = useMemo(() => editableCanvasClips.find((item) => item.clip.id === selectedClipId), [editableCanvasClips, selectedClipId]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -261,6 +284,143 @@ export function PreviewCanvas() {
     setCompareSplitRatio(calculatePreviewCompareSplitRatio(compareMode, event, bounds));
   }
 
+  function getCanvasPointFromPointer(event: { clientX: number; clientY: number }): CanvasPoint | undefined {
+    const bounds = compareFrameRef.current?.getBoundingClientRect();
+    const canvas = canvasRef.current;
+    if (!bounds || !canvas) {
+      return undefined;
+    }
+    return screenPointToCanvasPoint(
+      { x: event.clientX, y: event.clientY },
+      {
+        left: bounds.left,
+        top: bounds.top,
+        width: bounds.width,
+        height: bounds.height,
+        canvasWidth: canvas.width,
+        canvasHeight: canvas.height
+      }
+    );
+  }
+
+  function beginCanvasTransformDrag(
+    event: ReactPointerEvent<HTMLElement>,
+    item: EditableCanvasClip,
+    type: CanvasTransformDrag['type'],
+    handle?: CanvasTransformHandle
+  ): void {
+    if (!canvasEditMode) {
+      return;
+    }
+    const point = getCanvasPointFromPointer(event);
+    const canvas = canvasRef.current;
+    if (!point || !canvas) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setIsPlaying(false);
+    setSelectedClipIds([item.clip.id]);
+    transformDragRef.current = {
+      pointerId: event.pointerId,
+      clipId: item.clip.id,
+      type,
+      handle,
+      sourceWidth: item.sourceWidth,
+      sourceHeight: item.sourceHeight,
+      canvasWidth: canvas.width,
+      canvasHeight: canvas.height,
+      startPoint: point,
+      startTransform: normalizeTransform(item.clip.transform)
+    };
+  }
+
+  function beginCanvasHitDrag(event: ReactPointerEvent<HTMLDivElement>): void {
+    if (!canvasEditMode) {
+      return;
+    }
+    const point = getCanvasPointFromPointer(event);
+    if (!point) {
+      return;
+    }
+    const hit = [...editableCanvasClips].reverse().find((item) => hitTestClipTransformBox(point, item.box));
+    if (!hit) {
+      setSelectedClipIds([]);
+      return;
+    }
+    beginCanvasTransformDrag(event, hit, 'move');
+  }
+
+  function updateCanvasTransformDrag(event: ReactPointerEvent<HTMLDivElement>): void {
+    const drag = transformDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+    const point = getCanvasPointFromPointer(event);
+    if (!point) {
+      return;
+    }
+    event.preventDefault();
+    const nextTransform = getDragTransform(drag, point, { keepAspectRatio: event.shiftKey, fromCenter: event.altKey });
+    commitCanvasTransformDrag(drag, nextTransform);
+  }
+
+  function endCanvasTransformDrag(event: ReactPointerEvent<HTMLDivElement>): void {
+    const drag = transformDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    transformDragRef.current = null;
+  }
+
+  function commitCanvasTransformDrag(drag: CanvasTransformDrag, transform: Transform): void {
+    try {
+      const patchTransform = { ...transform };
+      if (!drag.command || !drag.patch) {
+        const patch: ClipPatch = { transform: patchTransform };
+        const command = new UpdateClipCommand(timelineAccessor, drag.clipId, patch);
+        commandManager.execute(command);
+        drag.command = command;
+        drag.patch = patch;
+        return;
+      }
+      drag.patch.transform = patchTransform;
+      drag.command.execute();
+    } catch (error) {
+      transformDragRef.current = null;
+      showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+    }
+  }
+
+  function getDragTransform(drag: CanvasTransformDrag, point: CanvasPoint, modifiers: { keepAspectRatio: boolean; fromCenter: boolean }): Transform {
+    if (drag.type === 'move') {
+      return moveTransformByCanvasDelta(drag.startTransform, { x: point.x - drag.startPoint.x, y: point.y - drag.startPoint.y });
+    }
+    if (drag.type === 'rotate') {
+      return rotateClipTransform({
+        transform: drag.startTransform,
+        canvasWidth: drag.canvasWidth,
+        canvasHeight: drag.canvasHeight,
+        currentPoint: point
+      });
+    }
+    return resizeClipTransform({
+      transform: drag.startTransform,
+      sourceWidth: drag.sourceWidth,
+      sourceHeight: drag.sourceHeight,
+      canvasWidth: drag.canvasWidth,
+      canvasHeight: drag.canvasHeight,
+      handle: drag.handle ?? 'se',
+      currentPoint: point,
+      keepAspectRatio: modifiers.keepAspectRatio,
+      fromCenter: modifiers.fromCenter
+    });
+  }
+
   useEffect(() => {
     if (!isPlaying) {
       rendererRef.current.pauseAllAudio();
@@ -330,6 +490,18 @@ export function PreviewCanvas() {
               </button>
             </div>
           ) : null}
+          <button
+            className={`inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/10 text-white hover:bg-white/20 ${
+              canvasEditMode ? 'bg-emerald-500/25' : 'bg-white/10'
+            }`}
+            title={canvasEditMode ? t.canvasEditModeActive : t.canvasEditMode}
+            aria-label={canvasEditMode ? t.canvasEditModeActive : t.canvasEditMode}
+            data-testid="preview-canvas-edit-toggle"
+            data-active={canvasEditMode ? 'true' : 'false'}
+            onClick={() => setCanvasEditMode((value) => !value)}
+          >
+            <MousePointer2 size={17} />
+          </button>
           <button
             className={`inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/10 text-white hover:bg-white/20 ${
               compareEnabled ? 'bg-emerald-500/25' : 'bg-white/10'
@@ -415,6 +587,23 @@ export function PreviewCanvas() {
                 onPointerCancel={() => setCompareDividerDragging(false)}
               />
             ) : null}
+            {canvasEditMode ? (
+              <div
+                className="absolute inset-0 z-30 cursor-crosshair"
+                data-testid="canvas-transform-overlay"
+                onPointerDown={beginCanvasHitDrag}
+                onPointerMove={updateCanvasTransformDrag}
+                onPointerUp={endCanvasTransformDrag}
+                onPointerCancel={endCanvasTransformDrag}
+              >
+                {selectedEditableClip ? (
+                  <CanvasTransformControls
+                    item={selectedEditableClip}
+                    onBeginDrag={(event, item, type, handle) => beginCanvasTransformDrag(event, item, type, handle)}
+                  />
+                ) : null}
+              </div>
+            ) : null}
             {selectedMulticamClip && selectedMulticamSequence ? (
               <MulticamPreviewGrid
                 clip={selectedMulticamClip}
@@ -442,6 +631,152 @@ export function PreviewCanvas() {
       <div className="border-t border-black/30 px-3 py-2 text-xs tabular-nums text-slate-300">{formatTime(playheadTime)}</div>
     </section>
   );
+}
+
+interface EditableCanvasClip {
+  clip: Clip;
+  box: ClipTransformBox;
+  sourceWidth: number;
+  sourceHeight: number;
+}
+
+interface CanvasTransformDrag {
+  pointerId: number;
+  clipId: string;
+  type: 'move' | 'scale' | 'rotate';
+  handle?: CanvasTransformHandle;
+  sourceWidth: number;
+  sourceHeight: number;
+  canvasWidth: number;
+  canvasHeight: number;
+  startPoint: CanvasPoint;
+  startTransform: Transform;
+  command?: UpdateClipCommand;
+  patch?: ClipPatch;
+}
+
+function CanvasTransformControls({
+  item,
+  onBeginDrag
+}: {
+  item: EditableCanvasClip;
+  onBeginDrag(event: ReactPointerEvent<HTMLElement>, item: EditableCanvasClip, type: CanvasTransformDrag['type'], handle?: CanvasTransformHandle): void;
+}) {
+  const t = zhCN.preview;
+  return (
+    <>
+      <div
+        className="pointer-events-none absolute border border-emerald-300 shadow-[0_0_0_1px_rgba(0,0,0,0.55)]"
+        style={canvasBoxStyle(item.box)}
+        data-testid="canvas-transform-bounds"
+        data-clip-id={item.clip.id}
+      >
+        <span className="absolute left-1/2 top-0 h-10 w-px -translate-x-1/2 -translate-y-full bg-emerald-300/80" />
+      </div>
+      {CANVAS_TRANSFORM_HANDLES.map((handle) => (
+        <button
+          key={handle}
+          type="button"
+          className="absolute h-3 w-3 rounded-sm border border-black/60 bg-emerald-300 shadow-[0_0_0_1px_rgba(255,255,255,0.65)] hover:bg-white"
+          style={{ ...canvasPointStyle(item.box.handles[handle]), cursor: canvasHandleCursor(handle) }}
+          title={handle.toUpperCase()}
+          aria-label={handle.toUpperCase()}
+          data-testid={`canvas-transform-handle-${handle}`}
+          onPointerDown={(event) => onBeginDrag(event, item, 'scale', handle)}
+        />
+      ))}
+      <button
+        type="button"
+        className="absolute h-4 w-4 rounded-full border border-black/60 bg-white shadow-[0_0_0_2px_rgba(16,185,129,0.7)] hover:bg-emerald-100"
+        style={{ ...canvasPointStyle(item.box.rotationHandle), cursor: 'grab' }}
+        title={t.rotateHandle}
+        aria-label={t.rotateHandle}
+        data-testid="canvas-transform-rotate-handle"
+        onPointerDown={(event) => onBeginDrag(event, item, 'rotate')}
+      />
+      <span
+        className="pointer-events-none absolute h-2.5 w-2.5 rounded-full border border-white bg-emerald-400 shadow-[0_0_0_1px_rgba(0,0,0,0.55)]"
+        style={canvasPointStyle(item.box.anchor)}
+        title={t.transformAnchor}
+        data-testid="canvas-transform-anchor"
+      />
+    </>
+  );
+}
+
+function buildEditableCanvasClips(project: Project, playheadTime: number): EditableCanvasClip[] {
+  return getRenderableTracks(project.timeline)
+    .flatMap((track) =>
+      track.clips
+        .filter((clip) => isCanvasEditableClip(clip) && playheadTime >= clip.start && playheadTime < clip.start + clip.duration)
+        .map((clip) => {
+          const dimensions = getCanvasClipSourceDimensions(project, clip);
+          return {
+            clip,
+            sourceWidth: dimensions.width,
+            sourceHeight: dimensions.height,
+            box: buildClipTransformBox({
+              transform: clip.transform,
+              sourceWidth: dimensions.width,
+              sourceHeight: dimensions.height,
+              canvasWidth: PREVIEW_CANVAS_WIDTH,
+              canvasHeight: PREVIEW_CANVAS_HEIGHT
+            })
+          };
+        })
+    );
+}
+
+function isCanvasEditableClip(clip: Clip): boolean {
+  return clip.type === 'video' || clip.type === 'image' || clip.type === 'text' || clip.type === 'nested-sequence';
+}
+
+function getCanvasClipSourceDimensions(project: Project, clip: Clip): { width: number; height: number } {
+  if (clip.type === 'text') {
+    return { width: 1024, height: 256 };
+  }
+  if (clip.type === 'nested-sequence') {
+    return { width: PREVIEW_CANVAS_WIDTH, height: PREVIEW_CANVAS_HEIGHT };
+  }
+  if ('mediaId' in clip) {
+    const asset = project.media.find((item) => item.id === clip.mediaId);
+    return {
+      width: Math.max(1, asset?.width || PREVIEW_CANVAS_WIDTH),
+      height: Math.max(1, asset?.height || PREVIEW_CANVAS_HEIGHT)
+    };
+  }
+  return { width: PREVIEW_CANVAS_WIDTH, height: PREVIEW_CANVAS_HEIGHT };
+}
+
+function canvasPointStyle(point: CanvasPoint): CSSProperties {
+  return {
+    left: `${(point.x / PREVIEW_CANVAS_WIDTH) * 100}%`,
+    top: `${(point.y / PREVIEW_CANVAS_HEIGHT) * 100}%`,
+    transform: 'translate(-50%, -50%)'
+  };
+}
+
+function canvasBoxStyle(box: ClipTransformBox): CSSProperties {
+  return {
+    left: `${(box.center.x / PREVIEW_CANVAS_WIDTH) * 100}%`,
+    top: `${(box.center.y / PREVIEW_CANVAS_HEIGHT) * 100}%`,
+    width: `${(box.width / PREVIEW_CANVAS_WIDTH) * 100}%`,
+    height: `${(box.height / PREVIEW_CANVAS_HEIGHT) * 100}%`,
+    transform: `translate(-50%, -50%) rotate(${box.rotation}deg)`
+  };
+}
+
+function canvasHandleCursor(handle: CanvasTransformHandle): CSSProperties['cursor'] {
+  if (handle === 'n' || handle === 's') {
+    return 'ns-resize';
+  }
+  if (handle === 'e' || handle === 'w') {
+    return 'ew-resize';
+  }
+  if (handle === 'ne' || handle === 'sw') {
+    return 'nesw-resize';
+  }
+  return 'nwse-resize';
 }
 
 interface MulticamPreviewGridProps {

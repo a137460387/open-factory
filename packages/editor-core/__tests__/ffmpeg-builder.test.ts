@@ -355,6 +355,32 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.filterComplex).not.toContain('pad=1080:1920');
   });
 
+  it('exports independent scale axes and rotation filters for transformed clips', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-rotated-scale',
+        duration: 2,
+        transform: { x: 10, y: -20, scale: 1, scaleX: 0.5, scaleY: 0.75, rotation: 30, opacity: 1 }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('scale=trunc(iw*0.5/2)*2:trunc(ih*0.75/2)*2');
+    expect(plan.filterComplex).toContain('rotate=30*PI/180:c=none');
+    expect(plan.filterComplex).toContain("overlay=x='(main_w-overlay_w)/2+10':y='(main_h-overlay_h)/2-20'");
+  });
+
+  it('omits rotation filter for default zero rotation', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-no-rotation', duration: 2, transform: { rotation: 0 } })];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).not.toContain('rotate=');
+  });
+
   it('adds preset video and audio bitrate args', () => {
     const project = makeProject();
     project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-bitrate', duration: 2 })];
@@ -582,7 +608,7 @@ describe('multitrack ffmpeg builder', () => {
     const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
 
     expect(plan.inputs).toEqual([expect.objectContaining({ path: 'D:/Media/overlay.png', args: ['-loop', '1', '-t', '2'] })]);
-    expect(plan.filterComplex).toContain("overlay=x='(main_w-overlay_w)/2+10':y='(main_h-overlay_h)/2+-20'");
+    expect(plan.filterComplex).toContain("overlay=x='(main_w-overlay_w)/2+10':y='(main_h-overlay_h)/2-20'");
     expect(plan.filterComplex).toContain("enable='between(t,0.5,2.5)'");
     expect(plan.filterComplex).toContain('anullsrc=channel_layout=stereo:sample_rate=44100:d=2.5,volume=1[aout]');
     expect(plan.duration).toBe(2.5);
