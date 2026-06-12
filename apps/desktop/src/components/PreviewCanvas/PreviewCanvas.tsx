@@ -1,16 +1,19 @@
 import { BarChart3, Blend, Columns2, GitCompareArrows, MousePointer2, Pause, Play, Rows2 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import {
   CutMulticamClipCommand,
   UpdateClipCommand,
+  UpdateMaskCommand,
   buildClipTransformBox,
   buildTimelineRenderFrameKey,
   buildTimelineRenderFrameRequests,
+  closePathPoints,
   getActiveMulticamAngle,
   getRenderableTracks,
   getTimelineRenderInvalidationRanges,
   getTimelinePlaybackDuration,
   hitTestClipTransformBox,
+  isPathMaskClosed,
   isNestedSequenceDepthExceeded,
   moveTransformByCanvasDelta,
   normalizeTransform,
@@ -18,10 +21,13 @@ import {
   rotateClipTransform,
   screenPointToCanvasPoint,
   type Clip,
+  type ClipMask,
   type ClipPatch,
   type ClipTransformBox,
   type CanvasPoint,
   type CanvasTransformHandle,
+  type PathPoint,
+  type PathPointHandle,
   type Project,
   type Sequence,
   type Transform,
@@ -51,6 +57,7 @@ export function PreviewCanvas() {
   const t = zhCN.preview;
   const compareFrameRef = useRef<HTMLDivElement | null>(null);
   const transformDragRef = useRef<CanvasTransformDrag | null>(null);
+  const pathMaskDragRef = useRef<PathMaskDrag | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const originalCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const differenceCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -90,6 +97,7 @@ export function PreviewCanvas() {
   );
   const editableCanvasClips = useMemo(() => buildEditableCanvasClips(project, playheadTime), [project, playheadTime]);
   const selectedEditableClip = useMemo(() => editableCanvasClips.find((item) => item.clip.id === selectedClipId), [editableCanvasClips, selectedClipId]);
+  const selectedPathMask = useMemo(() => selectedEditableClip?.clip.masks?.find((mask) => mask.type === 'path'), [selectedEditableClip]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -377,6 +385,95 @@ export function PreviewCanvas() {
     transformDragRef.current = null;
   }
 
+  function addPathMaskAnchor(event: ReactMouseEvent<HTMLDivElement>): void {
+    if (!canvasEditMode || !selectedEditableClip || !selectedPathMask || event.detail !== 1) {
+      return;
+    }
+    const point = getCanvasPointFromPointer(event);
+    if (!point) {
+      return;
+    }
+    const pathPoint = canvasPointToPathPoint(point, selectedEditableClip);
+    const currentPath = selectedPathMask.path ?? [];
+    if (isPathMaskClosed(currentPath)) {
+      return;
+    }
+    event.preventDefault();
+    commitPathMaskPatch(selectedEditableClip.clip.id, selectedPathMask.id, { path: [...currentPath, pathPoint] });
+  }
+
+  function closeSelectedPathMask(event: ReactMouseEvent<HTMLDivElement>): void {
+    if (!canvasEditMode || !selectedEditableClip || !selectedPathMask) {
+      return;
+    }
+    const point = getCanvasPointFromPointer(event);
+    const doubleClickPoint = point ? canvasPointToPathPoint(point, selectedEditableClip) : undefined;
+    const rawPath = selectedPathMask.path ?? [];
+    const lastPoint = rawPath.at(-1);
+    const path =
+      doubleClickPoint && lastPoint && rawPath.length > 3 && Math.hypot(lastPoint.x - doubleClickPoint.x, lastPoint.y - doubleClickPoint.y) < 0.02
+        ? rawPath.slice(0, -1)
+        : rawPath;
+    if (path.length < 3 || isPathMaskClosed(path)) {
+      return;
+    }
+    event.preventDefault();
+    commitPathMaskPatch(selectedEditableClip.clip.id, selectedPathMask.id, { path: closePathPoints(path) });
+  }
+
+  function beginPathMaskDrag(
+    event: ReactPointerEvent<HTMLElement>,
+    item: EditableCanvasClip,
+    mask: ClipMask,
+    pointIndex: number,
+    target: PathMaskDrag['target']
+  ): void {
+    if (!canvasEditMode) {
+      return;
+    }
+    const point = getCanvasPointFromPointer(event);
+    if (!point) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    pathMaskDragRef.current = {
+      pointerId: event.pointerId,
+      clipId: item.clip.id,
+      maskId: mask.id,
+      pointIndex,
+      target,
+      startPoint: canvasPointToPathPoint(point, item),
+      startPath: clonePathPoints(mask.path ?? [])
+    };
+  }
+
+  function updatePathMaskDrag(event: ReactPointerEvent<HTMLDivElement>): void {
+    const drag = pathMaskDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId || !selectedEditableClip) {
+      return;
+    }
+    const point = getCanvasPointFromPointer(event);
+    if (!point) {
+      return;
+    }
+    event.preventDefault();
+    const patch = buildPathMaskDragPatch(drag, canvasPointToPathPoint(point, selectedEditableClip));
+    commitPathMaskDrag(drag, patch);
+  }
+
+  function endPathMaskDrag(event: ReactPointerEvent<HTMLDivElement>): void {
+    const drag = pathMaskDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    pathMaskDragRef.current = null;
+  }
+
   function commitCanvasTransformDrag(drag: CanvasTransformDrag, transform: Transform): void {
     try {
       const patchTransform = { ...transform };
@@ -392,6 +489,31 @@ export function PreviewCanvas() {
       drag.command.execute();
     } catch (error) {
       transformDragRef.current = null;
+      showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+    }
+  }
+
+  function commitPathMaskPatch(clipId: string, maskId: string, patch: { path: PathPoint[] }): void {
+    try {
+      commandManager.execute(new UpdateMaskCommand(timelineAccessor, clipId, maskId, patch));
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+    }
+  }
+
+  function commitPathMaskDrag(drag: PathMaskDrag, patch: { path: PathPoint[] }): void {
+    try {
+      if (!drag.command || !drag.patch) {
+        const command = new UpdateMaskCommand(timelineAccessor, drag.clipId, drag.maskId, patch);
+        commandManager.execute(command);
+        drag.command = command;
+        drag.patch = patch;
+        return;
+      }
+      drag.patch.path = patch.path;
+      drag.command.execute();
+    } catch (error) {
+      pathMaskDragRef.current = null;
       showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
     }
   }
@@ -587,7 +709,19 @@ export function PreviewCanvas() {
                 onPointerCancel={() => setCompareDividerDragging(false)}
               />
             ) : null}
-            {canvasEditMode ? (
+            {canvasEditMode && selectedEditableClip && selectedPathMask ? (
+              <div
+                className="absolute inset-0 z-30 cursor-crosshair"
+                data-testid="path-mask-overlay"
+                onClick={addPathMaskAnchor}
+                onDoubleClick={closeSelectedPathMask}
+                onPointerMove={updatePathMaskDrag}
+                onPointerUp={endPathMaskDrag}
+                onPointerCancel={endPathMaskDrag}
+              >
+                <PathMaskControls item={selectedEditableClip} mask={selectedPathMask} onBeginDrag={beginPathMaskDrag} />
+              </div>
+            ) : canvasEditMode ? (
               <div
                 className="absolute inset-0 z-30 cursor-crosshair"
                 data-testid="canvas-transform-overlay"
@@ -655,6 +789,18 @@ interface CanvasTransformDrag {
   patch?: ClipPatch;
 }
 
+interface PathMaskDrag {
+  pointerId: number;
+  clipId: string;
+  maskId: string;
+  pointIndex: number;
+  target: 'anchor' | 'handleIn' | 'handleOut';
+  startPoint: PathPointHandle;
+  startPath: PathPoint[];
+  command?: UpdateMaskCommand;
+  patch?: { path: PathPoint[] };
+}
+
 function CanvasTransformControls({
   item,
   onBeginDrag
@@ -704,6 +850,83 @@ function CanvasTransformControls({
   );
 }
 
+function PathMaskControls({
+  item,
+  mask,
+  onBeginDrag
+}: {
+  item: EditableCanvasClip;
+  mask: ClipMask;
+  onBeginDrag(event: ReactPointerEvent<HTMLElement>, item: EditableCanvasClip, mask: ClipMask, pointIndex: number, target: PathMaskDrag['target']): void;
+}) {
+  const path = mask.path ?? [];
+  const t = zhCN.preview;
+  const closed = isPathMaskClosed(path);
+  const anchors = closed ? path.slice(0, -1) : path;
+  const svgPath = buildCanvasPathMaskSvgPath(path, item);
+  return (
+    <>
+      <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox={`0 0 ${PREVIEW_CANVAS_WIDTH} ${PREVIEW_CANVAS_HEIGHT}`} data-testid="path-mask-svg">
+        {svgPath ? <path d={svgPath} fill={closed ? 'rgba(16,185,129,0.22)' : 'none'} stroke="rgb(110,231,183)" strokeDasharray={closed ? undefined : '6 6'} strokeWidth={2} /> : null}
+        {anchors.map((point, index) => {
+          const handleIn = resolvePathHandle(point, 'handleIn');
+          const handleOut = resolvePathHandle(point, 'handleOut');
+          const anchorCanvas = pathPointToCanvasPoint(point, item);
+          const handleInCanvas = pathPointToCanvasPoint(handleIn, item);
+          const handleOutCanvas = pathPointToCanvasPoint(handleOut, item);
+          return (
+            <g key={`${mask.id}-handles-${index}`}>
+              <line x1={anchorCanvas.x} y1={anchorCanvas.y} x2={handleInCanvas.x} y2={handleInCanvas.y} stroke="rgba(191,219,254,0.75)" strokeWidth={1} />
+              <line x1={anchorCanvas.x} y1={anchorCanvas.y} x2={handleOutCanvas.x} y2={handleOutCanvas.y} stroke="rgba(191,219,254,0.75)" strokeWidth={1} />
+            </g>
+          );
+        })}
+      </svg>
+      {anchors.map((point, index) => {
+        const handleIn = resolvePathHandle(point, 'handleIn');
+        const handleOut = resolvePathHandle(point, 'handleOut');
+        return (
+          <div key={`${mask.id}-controls-${index}`}>
+            <button
+              type="button"
+              className="absolute h-3 w-3 rounded-full border border-black/60 bg-sky-200 shadow-[0_0_0_1px_rgba(255,255,255,0.8)] hover:bg-white"
+              style={canvasPointStyle(pathPointToCanvasPoint(handleIn, item))}
+              title={t.pathHandleIn}
+              aria-label={t.pathHandleIn}
+              data-path-mask-control="true"
+              data-testid={`path-mask-handle-in-${index}`}
+              onClick={(event) => event.stopPropagation()}
+              onPointerDown={(event) => onBeginDrag(event, item, mask, index, 'handleIn')}
+            />
+            <button
+              type="button"
+              className="absolute h-4 w-4 rounded-full border border-black/70 bg-emerald-300 shadow-[0_0_0_2px_rgba(255,255,255,0.7)] hover:bg-white"
+              style={canvasPointStyle(pathPointToCanvasPoint(point, item))}
+              title={t.pathAnchor(index + 1)}
+              aria-label={t.pathAnchor(index + 1)}
+              data-path-mask-control="true"
+              data-testid={`path-mask-anchor-${index}`}
+              onClick={(event) => event.stopPropagation()}
+              onPointerDown={(event) => onBeginDrag(event, item, mask, index, 'anchor')}
+            />
+            <button
+              type="button"
+              className="absolute h-3 w-3 rounded-full border border-black/60 bg-sky-200 shadow-[0_0_0_1px_rgba(255,255,255,0.8)] hover:bg-white"
+              style={canvasPointStyle(pathPointToCanvasPoint(handleOut, item))}
+              title={t.pathHandleOut}
+              aria-label={t.pathHandleOut}
+              data-path-mask-control="true"
+              data-testid={`path-mask-handle-out-${index}`}
+              onClick={(event) => event.stopPropagation()}
+              onPointerDown={(event) => onBeginDrag(event, item, mask, index, 'handleOut')}
+            />
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
 function buildEditableCanvasClips(project: Project, playheadTime: number): EditableCanvasClip[] {
   return getRenderableTracks(project.timeline)
     .flatMap((track) =>
@@ -746,6 +969,137 @@ function getCanvasClipSourceDimensions(project: Project, clip: Clip): { width: n
     };
   }
   return { width: PREVIEW_CANVAS_WIDTH, height: PREVIEW_CANVAS_HEIGHT };
+}
+
+function canvasPointToPathPoint(point: CanvasPoint, item: EditableCanvasClip): PathPoint {
+  const local = canvasPointToClipLocal(point, item.box);
+  return {
+    x: clampPathUnit((local.x + item.box.width / 2) / Math.max(1, item.box.width)),
+    y: clampPathUnit((local.y + item.box.height / 2) / Math.max(1, item.box.height))
+  };
+}
+
+function pathPointToCanvasPoint(point: PathPointHandle, item: EditableCanvasClip): CanvasPoint {
+  return clipLocalToCanvasPoint(
+    {
+      x: point.x * item.box.width - item.box.width / 2,
+      y: point.y * item.box.height - item.box.height / 2
+    },
+    item.box
+  );
+}
+
+function canvasPointToClipLocal(point: CanvasPoint, box: Pick<ClipTransformBox, 'center' | 'rotation'>): CanvasPoint {
+  const radians = (-box.rotation * Math.PI) / 180;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  const x = point.x - box.center.x;
+  const y = point.y - box.center.y;
+  return {
+    x: roundCanvasValue(x * cos - y * sin),
+    y: roundCanvasValue(x * sin + y * cos)
+  };
+}
+
+function clipLocalToCanvasPoint(point: CanvasPoint, box: Pick<ClipTransformBox, 'center' | 'rotation'>): CanvasPoint {
+  const radians = (box.rotation * Math.PI) / 180;
+  const cos = Math.cos(radians);
+  const sin = Math.sin(radians);
+  return {
+    x: roundCanvasValue(box.center.x + point.x * cos - point.y * sin),
+    y: roundCanvasValue(box.center.y + point.x * sin + point.y * cos)
+  };
+}
+
+function buildPathMaskDragPatch(drag: PathMaskDrag, point: PathPointHandle): { path: PathPoint[] } {
+  const path = clonePathPoints(drag.startPath);
+  const current = path[drag.pointIndex];
+  if (!current) {
+    return { path };
+  }
+  if (drag.target === 'anchor') {
+    const delta = { x: point.x - drag.startPoint.x, y: point.y - drag.startPoint.y };
+    path[drag.pointIndex] = movePathAnchor(current, point, delta);
+    const closingIndex = path.length - 1;
+    if (isPathMaskClosed(drag.startPath)) {
+      if (drag.pointIndex === 0 && path[closingIndex]) {
+        path[closingIndex] = movePathAnchor(path[closingIndex], point, delta);
+      } else if (drag.pointIndex === closingIndex && path[0]) {
+        path[0] = movePathAnchor(path[0], point, delta);
+      }
+    }
+    return { path };
+  }
+  path[drag.pointIndex] = {
+    ...current,
+    [drag.target]: { x: clampPathUnit(point.x), y: clampPathUnit(point.y) }
+  };
+  return { path };
+}
+
+function movePathAnchor(point: PathPoint, next: PathPointHandle, delta: PathPointHandle): PathPoint {
+  return {
+    ...point,
+    x: clampPathUnit(next.x),
+    y: clampPathUnit(next.y),
+    handleIn: point.handleIn ? { x: clampPathUnit(point.handleIn.x + delta.x), y: clampPathUnit(point.handleIn.y + delta.y) } : undefined,
+    handleOut: point.handleOut ? { x: clampPathUnit(point.handleOut.x + delta.x), y: clampPathUnit(point.handleOut.y + delta.y) } : undefined
+  };
+}
+
+function clonePathPoints(points: PathPoint[]): PathPoint[] {
+  return points.map((point) => ({
+    x: point.x,
+    y: point.y,
+    ...(point.handleIn ? { handleIn: { ...point.handleIn } } : {}),
+    ...(point.handleOut ? { handleOut: { ...point.handleOut } } : {})
+  }));
+}
+
+function resolvePathHandle(point: PathPoint, key: 'handleIn' | 'handleOut'): PathPointHandle {
+  const fallback = key === 'handleIn' ? -0.08 : 0.08;
+  return point[key] ?? { x: clampPathUnit(point.x + fallback), y: point.y };
+}
+
+function buildCanvasPathMaskSvgPath(points: PathPoint[], item: EditableCanvasClip): string {
+  if (points.length === 0) {
+    return '';
+  }
+  const first = pathPointToCanvasPoint(points[0], item);
+  const commands = [`M ${formatSvgNumber(first.x)} ${formatSvgNumber(first.y)}`];
+  for (let index = 1; index < points.length; index += 1) {
+    const previous = points[index - 1];
+    const point = points[index];
+    const target = pathPointToCanvasPoint(point, item);
+    if (previous.handleOut || point.handleIn) {
+      const control1 = pathPointToCanvasPoint(previous.handleOut ?? previous, item);
+      const control2 = pathPointToCanvasPoint(point.handleIn ?? point, item);
+      commands.push(
+        `C ${formatSvgNumber(control1.x)} ${formatSvgNumber(control1.y)} ${formatSvgNumber(control2.x)} ${formatSvgNumber(control2.y)} ${formatSvgNumber(target.x)} ${formatSvgNumber(target.y)}`
+      );
+    } else {
+      commands.push(`L ${formatSvgNumber(target.x)} ${formatSvgNumber(target.y)}`);
+    }
+  }
+  if (isPathMaskClosed(points)) {
+    commands.push('Z');
+  }
+  return commands.join(' ');
+}
+
+function formatSvgNumber(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(3).replace(/0+$/, '').replace(/\.$/, '');
+}
+
+function clampPathUnit(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  return Math.round(Math.min(1, Math.max(0, value)) * 10000) / 10000;
+}
+
+function roundCanvasValue(value: number): number {
+  return Math.round(value * 10000) / 10000;
 }
 
 function canvasPointStyle(point: CanvasPoint): CSSProperties {

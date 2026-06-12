@@ -55,6 +55,49 @@ describe('project schema migration', () => {
     expect(migrated.project.mediaMetadata).toEqual({ 'asset-1': { labelColor: 'blue' } });
   });
 
+  it('serializes and migrates path masks while keeping older masks compatible', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-path-mask',
+        masks: [
+          { id: 'mask-old', type: 'rect', x: 0.1, y: 0.1, w: 0.5, h: 0.5, inverted: false, feather: 0, enabled: true },
+          {
+            id: 'mask-path',
+            type: 'path',
+            x: 0,
+            y: 0,
+            w: 1,
+            h: 1,
+            path: [
+              { x: -1, y: 0.25 },
+              { x: 0.8, y: 1.2 },
+              { x: 0.2, y: 0.2 }
+            ],
+            inverted: false,
+            feather: 0,
+            enabled: true
+          }
+        ]
+      })
+    ];
+
+    const migrated = migrateProjectFile(serializeProject(project));
+    const masks = migrated.project.timeline.tracks[0].clips[0].masks;
+
+    expect(masks?.[0]).toMatchObject({ id: 'mask-old', type: 'rect' });
+    expect(masks?.[0].path).toBeUndefined();
+    expect(masks?.[1]).toMatchObject({
+      id: 'mask-path',
+      type: 'path',
+      path: [
+        { x: 0, y: 0.25 },
+        { x: 0.8, y: 1 },
+        { x: 0.2, y: 0.2 }
+      ]
+    });
+  });
+
   it('serializes and migrates project annotations with clamped times and colors', () => {
     const project = makeProject();
     project.annotations = [

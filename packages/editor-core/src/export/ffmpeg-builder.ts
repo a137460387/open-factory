@@ -38,6 +38,7 @@ import {
 import { getLogToRec709Lut, isLogInputColorSpace, serializeLogToRec709Cube } from '../color-log-luts';
 import { cloneEffects, getEffectNumberParam, normalizeAudioSpectrumParams, type AudioSpectrumParams, type Effect } from '../effects';
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
+import { triangulatePathMask } from '../masks/path-mask';
 import { flattenMulticamProjectForExport } from '../multicam';
 import { buildReframeCropFilter, clampReframeOffset, isReframeEnabled, normalizeTargetAspectRatio, resolveReframeDimensions } from '../reframe';
 import { calculateSpeedCurveSourceDuration, getClipSourceVisibleDuration, getClipSpeed, getRenderableTracks, getTimelinePlaybackDuration, getTrackPan, getTrackVolume } from '../timeline';
@@ -1138,7 +1139,7 @@ function buildSimpleRectMaskFilter(mask: ExportClip['masks'][number]): string {
 
 function buildGeqMaskFilter(masks: ExportClip['masks']): string {
   const expression = masks.map((mask) => {
-    const inside = mask.type === 'ellipse' ? buildEllipseMaskExpression(mask) : buildRectMaskExpression(mask);
+    const inside = mask.type === 'path' ? buildPathMaskExpression(mask) : mask.type === 'ellipse' ? buildEllipseMaskExpression(mask) : buildRectMaskExpression(mask);
     return mask.inverted ? `(1-(${inside}))` : `(${inside})`;
   });
   return `geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='alpha(X,Y)*(${expression.join('*')})'`;
@@ -1158,6 +1159,49 @@ function buildEllipseMaskExpression(mask: ExportClip['masks'][number]): string {
   const radiusX = formatFfmpegNumber(Math.max(0.001, mask.w / 2));
   const radiusY = formatFfmpegNumber(Math.max(0.001, mask.h / 2));
   return `lte(pow((X-(iw*${centerX}))/max(iw*${radiusX},1),2)+pow((Y-(ih*${centerY}))/max(ih*${radiusY},1),2),1)`;
+}
+
+function buildPathMaskExpression(mask: ExportClip['masks'][number]): string {
+  const mesh = triangulatePathMask(mask.path);
+  if (mesh.indices.length < 3) {
+    return '1';
+  }
+  const triangles: string[] = [];
+  for (let index = 0; index < mesh.indices.length; index += 3) {
+    const a = getPathVertex(mesh.vertices, mesh.indices[index]);
+    const b = getPathVertex(mesh.vertices, mesh.indices[index + 1]);
+    const c = getPathVertex(mesh.vertices, mesh.indices[index + 2]);
+    triangles.push(buildPathTriangleExpression(a, b, c));
+  }
+  return triangles.reduce((expression, triangle) => (expression ? `max(${expression},${triangle})` : triangle), '');
+}
+
+function getPathVertex(vertices: number[], index: number): { x: number; y: number } {
+  return {
+    x: vertices[index * 2] ?? 0,
+    y: vertices[index * 2 + 1] ?? 0
+  };
+}
+
+function buildPathTriangleExpression(a: { x: number; y: number }, b: { x: number; y: number }, c: { x: number; y: number }): string {
+  const area = triangleArea(a, b, c);
+  const edges =
+    area >= 0
+      ? [buildPathEdgeExpression(a, b, 'gte'), buildPathEdgeExpression(b, c, 'gte'), buildPathEdgeExpression(c, a, 'gte')]
+      : [buildPathEdgeExpression(a, b, 'lte'), buildPathEdgeExpression(b, c, 'lte'), buildPathEdgeExpression(c, a, 'lte')];
+  return `(${edges.join('*')})`;
+}
+
+function buildPathEdgeExpression(from: { x: number; y: number }, to: { x: number; y: number }, comparator: 'gte' | 'lte'): string {
+  const dx = formatFfmpegNumber(to.x - from.x);
+  const dy = formatFfmpegNumber(to.y - from.y);
+  const x = formatFfmpegNumber(from.x);
+  const y = formatFfmpegNumber(from.y);
+  return `${comparator}(${dx}*(Y/ih-${y})-${dy}*(X/iw-${x}),0)`;
+}
+
+function triangleArea(a: { x: number; y: number }, b: { x: number; y: number }, c: { x: number; y: number }): number {
+  return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
 }
 
 function buildSetptsFilter(clip: ExportClip, includeStartOffset: boolean, warnings?: string[]): string {

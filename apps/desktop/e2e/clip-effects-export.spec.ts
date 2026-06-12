@@ -83,6 +83,46 @@ test('adds a rect mask and includes mask crop filters in the export plan', async
   expect(plan.filterComplex).toContain("pad=w='iw/0.5':h='ih/0.5':x='ow*0.25':y='oh*0.25':color=black@0");
 });
 
+test('adds a path mask from preview edit mode and includes geq in the export plan', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.getByTestId('import-media-button').click();
+  await addMediaCardToTimeline(page, 0);
+  await page.locator('[data-testid^="timeline-clip-"]').first().click();
+
+  await page.getByTestId('add-mask-button').click();
+  await page.getByTestId(/^mask-type-/).selectOption('path');
+  await page.getByTestId('preview-canvas-edit-toggle').click();
+  const overlay = page.getByTestId('path-mask-overlay');
+  await expect(overlay).toBeVisible();
+  const overlayBox = await overlay.boundingBox();
+  expect(overlayBox).not.toBeNull();
+  const pointA = { x: overlayBox!.width * 0.25, y: overlayBox!.height * 0.25 };
+  const pointB = { x: overlayBox!.width * 0.75, y: overlayBox!.height * 0.25 };
+  const pointC = { x: overlayBox!.width * 0.5, y: overlayBox!.height * 0.75 };
+
+  await overlay.click({ position: pointA });
+  await overlay.click({ position: pointB });
+  await overlay.click({ position: pointC });
+  await overlay.dblclick({ position: pointA });
+  await expect(page.getByTestId('path-mask-anchor-2')).toBeVisible();
+
+  const pathMask = await page.evaluate(() => {
+    const timeline = window.__E2E_ACTIONS__!.getTimelineSnapshot!() as {
+      tracks: Array<{ clips: Array<{ id: string; masks?: Array<{ type: string; path?: unknown[] }> }> }>;
+    };
+    return timeline.tracks.flatMap((track) => track.clips).flatMap((clip) => clip.masks ?? []).find((mask) => mask.type === 'path');
+  });
+  expect(pathMask?.path).toHaveLength(4);
+
+  await openExportDialog(page);
+  await page.getByTestId('export-enqueue-button').click();
+  await expectExportTaskStatus(page, 0, 'success');
+
+  const plan = await page.evaluate(() => window.__E2E_ACTIONS__!.getLastExportPlan!() as { filterComplex: string });
+  expect(plan.filterComplex).toContain("geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='alpha(X,Y)*(");
+});
+
 test('analyzes stabilization and includes vidstabtransform in the export plan', async ({ page }) => {
   await page.goto('/');
   await waitForE2eActions(page);

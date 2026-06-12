@@ -22,6 +22,7 @@ interface ToolbarProps {
   onOpenSnapshotHistory(): void;
   onImportMedia(): void;
   onBatchTranscode(): void;
+  onOpenVideoStitchWizard(): void;
   onImportSubtitles(): void;
   onExportVideo(): void;
   onExportTimeline(): void;
@@ -232,6 +233,17 @@ export function Toolbar(props: ToolbarProps) {
               }}
             >
               <span>{t.batchTranscode}</span>
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-tools-video-stitch-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onOpenVideoStitchWizard();
+              }}
+            >
+              <span>{t.videoStitchWizard}</span>
             </button>
           </div>
         ) : null}

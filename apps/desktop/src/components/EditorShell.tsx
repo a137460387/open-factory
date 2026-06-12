@@ -4,6 +4,7 @@ import {
   AddClipCommand,
   AddProjectAnnotationCommand,
   AddTrackCommand,
+  AddTransitionCommand,
   CreateMulticamSequenceCommand,
   DEFAULT_PROJECT_ANNOTATION_COLOR,
   DeleteClipsCommand,
@@ -16,6 +17,7 @@ import {
   createId,
   createProject,
   createTrack,
+  buildVideoStitchSequence,
   dirname,
   getTimelineDuration,
   instantiateProjectTemplate,
@@ -89,6 +91,7 @@ import { ProjectTemplateDialog } from '../project-templates/ProjectTemplateDialo
 import { commandManager, projectAccessor, timelineAccessor } from '../store/commandManager';
 import { selectClipById, useEditorStore } from '../store/editorStore';
 import { useProxySettingsStore } from '../store/proxySettingsStore';
+import type { VideoStitchWizardSettings } from '../video-stitching/VideoStitchWizardDialog';
 
 const AudioMixer = lazy(() => import('./AudioMixer/AudioMixer').then((module) => ({ default: module.AudioMixer })));
 const Inspector = lazy(() => import('./Inspector/Inspector').then((module) => ({ default: module.Inspector })));
@@ -99,6 +102,7 @@ const ExportDialog = lazy(() => import('../export/ExportDialog').then((module) =
 const SettingsDialog = lazy(() => import('../settings/SettingsDialog').then((module) => ({ default: module.SettingsDialog })));
 const TimelineExportDialog = lazy(() => import('../timeline-export/TimelineExportDialog').then((module) => ({ default: module.TimelineExportDialog })));
 const BatchTranscodeDialog = lazy(() => import('../media/BatchTranscodeDialog').then((module) => ({ default: module.BatchTranscodeDialog })));
+const VideoStitchWizardDialog = lazy(() => import('../video-stitching/VideoStitchWizardDialog').then((module) => ({ default: module.VideoStitchWizardDialog })));
 const SnapshotNameDialog = lazy(() => import('../project-snapshots/SnapshotNameDialog').then((module) => ({ default: module.SnapshotNameDialog })));
 const SnapshotHistoryDialog = lazy(() => import('../project-snapshots/SnapshotHistoryDialog').then((module) => ({ default: module.SnapshotHistoryDialog })));
 
@@ -130,6 +134,7 @@ export function EditorShell() {
   const [timelineExportDialogOpen, setTimelineExportDialogOpen] = useState(false);
   const [batchTranscodeOpen, setBatchTranscodeOpen] = useState(false);
   const [batchTranscodeInitialPaths, setBatchTranscodeInitialPaths] = useState<string[]>([]);
+  const [videoStitchWizardOpen, setVideoStitchWizardOpen] = useState(false);
   const [snapshotNameOpen, setSnapshotNameOpen] = useState(false);
   const [snapshotHistoryOpen, setSnapshotHistoryOpen] = useState(false);
   const [projectTemplateOpen, setProjectTemplateOpen] = useState(false);
@@ -389,6 +394,91 @@ export function EditorShell() {
     setBatchTranscodeInitialPaths(paths);
     setBatchTranscodeOpen(true);
   }, []);
+
+  const importVideosForStitchWizard = useCallback(async (): Promise<string[]> => {
+    try {
+      const paths = await pickMediaPaths();
+      if (paths.length === 0) {
+        return [];
+      }
+      const result = await probeMediaPaths(paths, useEditorStore.getState().project.media);
+      if (result.media.length > 0) {
+        addMedia(result.media);
+        showToast({ kind: 'success', title: zhCN.editorToasts.mediaImported, message: zhCN.editorToasts.mediaImportedMessage(result.media.length) });
+      }
+      if (result.duplicateCount > 0) {
+        showToast({ kind: 'info', title: zhCN.editorToasts.duplicateTitle, message: zhCN.editorToasts.duplicateMessage(result.duplicateCount) });
+      }
+      return result.media.filter((asset) => asset.type === 'video').map((asset) => asset.id);
+    } catch (error) {
+      showToast({ kind: 'error', title: zhCN.videoStitchWizard.importFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.importFailedMessage });
+      return [];
+    }
+  }, [addMedia]);
+
+  const generateVideoStitchTimeline = useCallback(
+    (settings: VideoStitchWizardSettings) => {
+      try {
+        const currentProject = useEditorStore.getState().project;
+        const assets = settings.assetIds.flatMap((assetId) => {
+          const asset = currentProject.media.find((item) => item.id === assetId && item.type === 'video');
+          return asset ? [asset] : [];
+        });
+        if (assets.length < 2) {
+          throw new Error(zhCN.videoStitchWizard.empty);
+        }
+        const track = createTrack({
+          id: createId('track'),
+          type: 'video',
+          name: zhCN.videoStitchWizard.trackName,
+          clips: []
+        });
+        const sequence = buildVideoStitchSequence(
+          assets.map((asset) => ({ mediaId: asset.id, name: asset.name, duration: asset.duration || 5 })),
+          {
+            trackId: track.id,
+            transitionEnabled: settings.transitionEnabled,
+            transitionDuration: settings.transitionDuration
+          }
+        );
+        commandManager.execute(new AddTrackCommand(timelineAccessor, track));
+        for (const clip of sequence.clips) {
+          commandManager.execute(new AddClipCommand(timelineAccessor, clip));
+        }
+        for (const transition of sequence.transitions) {
+          commandManager.execute(new AddTransitionCommand(timelineAccessor, transition));
+        }
+        setSelectedClipIds(sequence.clips.map((clip) => clip.id));
+        setPlayheadTime(0);
+        setTemplateExportPreset({
+          id: 'video-stitch-wizard',
+          name: zhCN.videoStitchWizard.exportPresetName,
+          description: zhCN.videoStitchWizard.exportPresetDescription,
+          builtin: true,
+          settings: {
+            width: settings.width,
+            height: settings.height,
+            fps: settings.fps,
+            videoCodec: 'libx264',
+            audioCodec: 'aac',
+            format: 'mp4',
+            outputMode: 'video',
+            scaleMode: 'fit',
+            targetAspectRatio: 'source',
+            reframeOffsetX: 0,
+            reframeOffsetY: 0,
+            hardwareEncoding: false
+          }
+        });
+        setVideoStitchWizardOpen(false);
+        setExportDialogOpen(true);
+        showToast({ kind: 'success', title: zhCN.videoStitchWizard.createdTitle, message: zhCN.videoStitchWizard.createdMessage(sequence.clips.length) });
+      } catch (error) {
+        showToast({ kind: 'error', title: zhCN.videoStitchWizard.generateFailed, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
+      }
+    },
+    [setPlayheadTime, setSelectedClipIds]
+  );
 
   const saveNamedSnapshot = useCallback(
     async (name: string) => {
@@ -924,6 +1014,7 @@ export function EditorShell() {
           onOpenSnapshotHistory={() => setSnapshotHistoryOpen(true)}
           onImportMedia={() => void importMedia()}
           onBatchTranscode={() => openBatchTranscode()}
+          onOpenVideoStitchWizard={() => setVideoStitchWizardOpen(true)}
           onImportSubtitles={() => void importSubtitles()}
           onExportVideo={() => setExportDialogOpen(true)}
           onExportTimeline={() => setTimelineExportDialogOpen(true)}
@@ -1094,6 +1185,15 @@ export function EditorShell() {
                 setBatchTranscodeOpen(false);
                 setBatchTranscodeInitialPaths([]);
               }}
+            />
+          ) : null}
+          {videoStitchWizardOpen ? (
+            <VideoStitchWizardDialog
+              media={project.media}
+              projectSettings={project.settings}
+              onImportVideos={importVideosForStitchWizard}
+              onGenerate={generateVideoStitchTimeline}
+              onClose={() => setVideoStitchWizardOpen(false)}
             />
           ) : null}
           {settingsOpen ? (

@@ -9,6 +9,7 @@ import {
   normalizeThreeWayColor,
   normalizeChromaKey,
   normalizeMasks,
+  triangulatePathMask,
   sampleColorCurves,
   type ChromaKey,
   type ClipMask,
@@ -41,6 +42,10 @@ interface ProgramInfo {
   maskCount: WebGLUniformLocation;
   maskData: WebGLUniformLocation;
   maskFlags: WebGLUniformLocation;
+  pathTriangleCount: WebGLUniformLocation;
+  pathTrianglesA: WebGLUniformLocation;
+  pathTrianglesB: WebGLUniformLocation;
+  pathMaskInverted: WebGLUniformLocation;
   effectParams: WebGLUniformLocation;
   sharpen: WebGLUniformLocation;
 }
@@ -132,6 +137,10 @@ export class WebGlPreviewCompositor {
     gl.uniform1i(this.program.maskCount, maskUniforms.count);
     gl.uniform4fv(this.program.maskData, maskUniforms.data);
     gl.uniform4fv(this.program.maskFlags, maskUniforms.flags);
+    gl.uniform1i(this.program.pathTriangleCount, maskUniforms.pathTriangleCount);
+    gl.uniform4fv(this.program.pathTrianglesA, maskUniforms.pathTrianglesA);
+    gl.uniform4fv(this.program.pathTrianglesB, maskUniforms.pathTrianglesB);
+    gl.uniform1f(this.program.pathMaskInverted, maskUniforms.pathMaskInverted);
     gl.uniform4f(this.program.effectParams, effectParams.blur, effectParams.grain, effectParams.vignette, effectParams.chromatic);
     gl.uniform1f(this.program.sharpen, effectParams.sharpen);
     gl.activeTexture(gl.TEXTURE0);
@@ -355,13 +364,20 @@ function buildPreviewEffectParams(effects: Effect[] | undefined): { blur: number
   return params;
 }
 
-function buildMaskUniforms(masks: ClipMask[] | undefined): { count: number; data: Float32Array; flags: Float32Array } {
-  const enabledMasks = normalizeMasks(masks)
-    .filter((mask) => mask.enabled)
-    .slice(0, 8);
+function buildMaskUniforms(masks: ClipMask[] | undefined): {
+  count: number;
+  data: Float32Array;
+  flags: Float32Array;
+  pathTriangleCount: number;
+  pathTrianglesA: Float32Array;
+  pathTrianglesB: Float32Array;
+  pathMaskInverted: number;
+} {
+  const enabledMasks = normalizeMasks(masks).filter((mask) => mask.enabled);
+  const shapeMasks = enabledMasks.filter((mask) => mask.type !== 'path').slice(0, 8);
   const data = new Float32Array(8 * 4);
   const flags = new Float32Array(8 * 4);
-  enabledMasks.forEach((mask, index) => {
+  shapeMasks.forEach((mask, index) => {
     const dataOffset = index * 4;
     data[dataOffset] = mask.x;
     data[dataOffset + 1] = mask.y;
@@ -372,7 +388,32 @@ function buildMaskUniforms(masks: ClipMask[] | undefined): { count: number; data
     flags[dataOffset + 2] = mask.feather;
     flags[dataOffset + 3] = 1;
   });
-  return { count: enabledMasks.length, data, flags };
+  const pathTrianglesA = new Float32Array(24 * 4);
+  const pathTrianglesB = new Float32Array(24 * 4);
+  const pathMask = enabledMasks.find((mask) => mask.type === 'path');
+  const mesh = pathMask ? triangulatePathMask(pathMask.path) : { vertices: [], indices: [] };
+  const pathTriangleCount = Math.min(24, Math.floor(mesh.indices.length / 3));
+  for (let triangle = 0; triangle < pathTriangleCount; triangle += 1) {
+    const dataOffset = triangle * 4;
+    const first = mesh.indices[triangle * 3];
+    const second = mesh.indices[triangle * 3 + 1];
+    const third = mesh.indices[triangle * 3 + 2];
+    pathTrianglesA[dataOffset] = mesh.vertices[first * 2] ?? 0;
+    pathTrianglesA[dataOffset + 1] = mesh.vertices[first * 2 + 1] ?? 0;
+    pathTrianglesA[dataOffset + 2] = mesh.vertices[second * 2] ?? 0;
+    pathTrianglesA[dataOffset + 3] = mesh.vertices[second * 2 + 1] ?? 0;
+    pathTrianglesB[dataOffset] = mesh.vertices[third * 2] ?? 0;
+    pathTrianglesB[dataOffset + 1] = mesh.vertices[third * 2 + 1] ?? 0;
+  }
+  return {
+    count: shapeMasks.length,
+    data,
+    flags,
+    pathTriangleCount,
+    pathTrianglesA,
+    pathTrianglesB,
+    pathMaskInverted: pathMask?.inverted ? 1 : 0
+  };
 }
 
 function resolveTextTransform(canvasHeight: number, transform: Transform, style: TextStyle | SubtitleStyle): Transform {
@@ -442,6 +483,10 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
       uniform int u_maskCount;
       uniform vec4 u_maskData[8];
       uniform vec4 u_maskFlags[8];
+      uniform int u_pathTriangleCount;
+      uniform vec4 u_pathTrianglesA[24];
+      uniform vec4 u_pathTrianglesB[24];
+      uniform float u_pathMaskInverted;
       uniform vec4 u_effectParams;
       uniform float u_sharpen;
       varying vec2 v_texCoord;
@@ -598,6 +643,35 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
         return 1.0 - smoothstep(1.0 - edge, 1.0, distanceFromCenter);
       }
 
+      float triangleSide(vec2 point, vec2 a, vec2 b) {
+        return (point.x - b.x) * (a.y - b.y) - (a.x - b.x) * (point.y - b.y);
+      }
+
+      float triangleMask(vec2 coord, vec2 a, vec2 b, vec2 c) {
+        float d1 = triangleSide(coord, a, b);
+        float d2 = triangleSide(coord, b, c);
+        float d3 = triangleSide(coord, c, a);
+        bool hasNegative = d1 < 0.0 || d2 < 0.0 || d3 < 0.0;
+        bool hasPositive = d1 > 0.0 || d2 > 0.0 || d3 > 0.0;
+        return hasNegative && hasPositive ? 0.0 : 1.0;
+      }
+
+      float pathMask(vec2 coord) {
+        if (u_pathTriangleCount <= 0) {
+          return 1.0;
+        }
+        float inside = 0.0;
+        for (int index = 0; index < 24; index++) {
+          if (index >= u_pathTriangleCount) {
+            break;
+          }
+          vec4 firstPair = u_pathTrianglesA[index];
+          vec4 third = u_pathTrianglesB[index];
+          inside = max(inside, triangleMask(coord, firstPair.xy, firstPair.zw, third.xy));
+        }
+        return u_pathMaskInverted > 0.5 ? 1.0 - inside : inside;
+      }
+
       float applyMasks(vec2 coord) {
         float alpha = 1.0;
         for (int index = 0; index < 8; index++) {
@@ -612,7 +686,7 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
           }
           alpha *= shapeAlpha;
         }
-        return alpha;
+        return alpha * pathMask(coord);
       }
 
       void main() {
@@ -652,6 +726,10 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
   const maskCount = gl.getUniformLocation(program, 'u_maskCount');
   const maskData = gl.getUniformLocation(program, 'u_maskData[0]');
   const maskFlags = gl.getUniformLocation(program, 'u_maskFlags[0]');
+  const pathTriangleCount = gl.getUniformLocation(program, 'u_pathTriangleCount');
+  const pathTrianglesA = gl.getUniformLocation(program, 'u_pathTrianglesA[0]');
+  const pathTrianglesB = gl.getUniformLocation(program, 'u_pathTrianglesB[0]');
+  const pathMaskInverted = gl.getUniformLocation(program, 'u_pathMaskInverted');
   const effectParams = gl.getUniformLocation(program, 'u_effectParams');
   const sharpen = gl.getUniformLocation(program, 'u_sharpen');
   if (
@@ -669,6 +747,10 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
     !maskCount ||
     !maskData ||
     !maskFlags ||
+    !pathTriangleCount ||
+    !pathTrianglesA ||
+    !pathTrianglesB ||
+    !pathMaskInverted ||
     !effectParams ||
     !sharpen
   ) {
@@ -692,6 +774,10 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
     maskCount,
     maskData,
     maskFlags,
+    pathTriangleCount,
+    pathTrianglesA,
+    pathTrianglesB,
+    pathMaskInverted,
     effectParams,
     sharpen
   };

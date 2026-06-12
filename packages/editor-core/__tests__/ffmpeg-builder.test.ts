@@ -906,6 +906,42 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.filterComplex).toContain('lte(pow((X-(iw*0.4))/max(iw*0.3,1),2)+pow((Y-(ih*0.45))/max(ih*0.25,1),2),1)');
   });
 
+  it('exports path masks as geq alpha expressions from triangulated polygons', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-path-mask',
+        duration: 2,
+        masks: [
+          {
+            id: 'mask-path',
+            type: 'path',
+            x: 0,
+            y: 0,
+            w: 1,
+            h: 1,
+            path: [
+              { x: 0.2, y: 0.2 },
+              { x: 0.8, y: 0.2 },
+              { x: 0.5, y: 0.8 },
+              { x: 0.2, y: 0.2 }
+            ],
+            inverted: false,
+            feather: 0,
+            enabled: true
+          }
+        ]
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain("geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='alpha(X,Y)*(");
+    expect(plan.filterComplex).toContain('gte(');
+    expect(plan.filterComplex).toContain('X/iw');
+    expect(plan.filterComplex).toContain('Y/ih');
+  });
+
   it('skips stabilization until analysis has produced a trf path', () => {
     const project = makeProject();
     project.timeline.tracks[0].clips = [

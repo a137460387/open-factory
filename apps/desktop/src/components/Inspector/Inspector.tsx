@@ -1563,8 +1563,15 @@ function MasksEditor({
               >
                 <option value="rect">{zhCN.inspector.fields.rectMask}</option>
                 <option value="ellipse">{zhCN.inspector.fields.ellipseMask}</option>
+                <option value="path">{zhCN.inspector.fields.pathMask}</option>
               </select>
             </label>
+            {mask.type === 'path' ? (
+              <div className="rounded-md border border-dashed border-line bg-white px-2 py-1.5 text-xs text-slate-500" data-testid={`path-mask-help-${mask.id}`}>
+                <div>{zhCN.inspector.fields.pathPointCount(Math.max(0, (mask.path?.length ?? 0) - (mask.path && mask.path.length > 1 && mask.path[0].x === mask.path.at(-1)?.x && mask.path[0].y === mask.path.at(-1)?.y ? 1 : 0)))}</div>
+                <div>{zhCN.inspector.fields.editPathInPreview}</div>
+              </div>
+            ) : null}
             <div className="grid grid-cols-2 gap-2">
               <RangeNumberField label="X" value={mask.x} min={0} max={1} step={0.01} format={(value) => value.toFixed(2)} onCommit={(x) => onUpdate(mask.id, { x })} testId={`mask-x-${mask.id}`} />
               <RangeNumberField label="Y" value={mask.y} min={0} max={1} step={0.01} format={(value) => value.toFixed(2)} onCommit={(y) => onUpdate(mask.id, { y })} testId={`mask-y-${mask.id}`} />

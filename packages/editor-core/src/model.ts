@@ -10,6 +10,7 @@ import {
 } from './color-grading';
 import { REC709_INPUT_COLOR_SPACE, normalizeInputColorSpace, type InputColorSpace } from './color-log-luts';
 import { cloneEffects, type Effect } from './effects';
+import { normalizePathPoints } from './masks/path-mask';
 import { migrateProjectFile, serializeProjectFile } from './project/project-migration';
 import type { ProjectFile } from './project/project-types';
 import { round } from './time';
@@ -43,7 +44,7 @@ export interface ClipKeyframes {
 export type KeyframeProperty = keyof ClipKeyframes;
 
 export type ChromaKeyColor = [number, number, number];
-export type MaskType = 'rect' | 'ellipse';
+export type MaskType = 'rect' | 'ellipse' | 'path';
 
 export interface ChromaKey {
   enabled: boolean;
@@ -67,6 +68,18 @@ export interface ClipFrameInterpolation {
   targetFps: FrameInterpolationTargetFps;
 }
 
+export interface PathPointHandle {
+  x: number;
+  y: number;
+}
+
+export interface PathPoint {
+  x: number;
+  y: number;
+  handleIn?: PathPointHandle;
+  handleOut?: PathPointHandle;
+}
+
 export interface ClipMask {
   id: string;
   type: MaskType;
@@ -74,6 +87,7 @@ export interface ClipMask {
   y: number;
   w: number;
   h: number;
+  path?: PathPoint[];
   inverted: boolean;
   feather: number;
   enabled: boolean;
@@ -728,13 +742,16 @@ export function createMask(mask: Partial<ClipMask> = {}): ClipMask {
 export function normalizeMask(mask: Partial<ClipMask> | undefined): ClipMask {
   const w = normalizePositiveUnit(mask?.w, DEFAULT_MASK.w);
   const h = normalizePositiveUnit(mask?.h, DEFAULT_MASK.h);
+  const type = mask?.type === 'ellipse' || mask?.type === 'path' ? mask.type : 'rect';
+  const path = type === 'path' ? normalizePathPoints(mask?.path) : undefined;
   return {
     id: typeof mask?.id === 'string' && mask.id.trim() ? mask.id : createId('mask'),
-    type: mask?.type === 'ellipse' ? 'ellipse' : 'rect',
+    type,
     x: round(Math.min(1 - w, Math.max(0, finiteOrDefault(mask?.x, DEFAULT_MASK.x)))),
     y: round(Math.min(1 - h, Math.max(0, finiteOrDefault(mask?.y, DEFAULT_MASK.y)))),
     w,
     h,
+    ...(path ? { path } : {}),
     inverted: mask?.inverted === true,
     feather: normalizeUnit(mask?.feather, DEFAULT_MASK.feather),
     enabled: mask?.enabled !== false
