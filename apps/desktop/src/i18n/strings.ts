@@ -51,6 +51,7 @@ const zh = {
     createSharePackage: '创建分享包',
     batchTranscode: '批量转码',
     videoStitchWizard: '视频拼接向导',
+    macroHistory: '宏历史',
     importMedia: '导入媒体',
     importSubtitles: '导入字幕',
     exportVideo: '导出视频',
@@ -117,6 +118,19 @@ const zh = {
     jumpFailed: '历史跳转失败',
     jumpFailedMessage: '无法跳转到该历史状态。'
   },
+  macros: {
+    history: {
+      title: '宏历史',
+      subtitle: '最近 20 次宏执行记录',
+      empty: '还没有宏执行记录。',
+      macroName: '宏',
+      triggeredAt: '触发时间',
+      targetClip: '目标片段',
+      status: '结果',
+      success: '成功',
+      failed: '失败'
+    }
+  },
   settings: {
     title: '设置',
     subtitle: '本地配置和素材库',
@@ -124,6 +138,7 @@ const zh = {
       general: '通用',
       lutLibrary: 'LUT库',
       shortcuts: '快捷键',
+      macros: '宏',
       translation: '字幕翻译',
       proxy: '代理媒体',
       backup: '备份',
@@ -190,6 +205,29 @@ const zh = {
         save: '保存项目',
         'export-current-frame': '导出当前帧'
       }
+    },
+    macros: {
+      title: '宏',
+      description: '为片段宏绑定全局快捷键，冲突时仍可覆盖。',
+      bindShortcut: '绑定快捷键',
+      import: '导入',
+      export: '导出',
+      empty: '还没有可用宏。',
+      conflict: (items: string) => `与 ${items} 冲突，可继续覆盖`,
+      unknownMacro: '其他宏',
+      saveFailed: '宏保存失败',
+      saveFailedMessage: '无法写入宏配置。',
+      importFailed: '宏导入失败',
+      importFailedMessage: '无法读取宏文件。',
+      imported: '宏已导入',
+      importedMessage: (count: number) => `已导入 ${count} 个宏。`,
+      exportFailed: '宏导出失败',
+      exportFailedMessage: '无法写入宏文件。',
+      exported: '宏已导出',
+      executeFailed: '宏执行失败',
+      noTargetClip: '没有可执行的片段',
+      noTargetClipMessage: '请选择片段，或把播放头移到片段范围内。',
+      executed: '宏已执行'
     },
     translation: {
       title: '字幕翻译',
@@ -1440,6 +1478,7 @@ const enOverrides = {
     createSharePackage: 'Create Share Package',
     batchTranscode: 'Batch Transcode',
     videoStitchWizard: 'Video Stitch Wizard',
+    macroHistory: 'Macro History',
     importMedia: 'Import Media',
     importSubtitles: 'Import Subtitles',
     exportVideo: 'Export Video',
@@ -1497,6 +1536,19 @@ const enOverrides = {
     saveSnapshot: 'Save Snapshot',
     snapshotHistory: 'Snapshot History'
   },
+  macros: {
+    history: {
+      title: 'Macro History',
+      subtitle: 'The latest 20 macro executions',
+      empty: 'No macro execution records yet.',
+      macroName: 'Macro',
+      triggeredAt: 'Triggered At',
+      targetClip: 'Target Clip',
+      status: 'Result',
+      success: 'Success',
+      failed: 'Failed'
+    }
+  },
   settings: {
     title: 'Settings',
     subtitle: 'Local preferences and libraries',
@@ -1504,6 +1556,7 @@ const enOverrides = {
       general: 'General',
       lutLibrary: 'LUT Library',
       shortcuts: 'Shortcuts',
+      macros: 'Macros',
       translation: 'Subtitle Translation',
       proxy: 'Proxy Media',
       backup: 'Backup',
@@ -1570,6 +1623,29 @@ const enOverrides = {
         save: 'Save Project',
         'export-current-frame': 'Export Current Frame'
       }
+    },
+    macros: {
+      title: 'Macros',
+      description: 'Bind global shortcuts to clip macros. Conflicts can still be overridden.',
+      bindShortcut: 'Bind Shortcut',
+      import: 'Import',
+      export: 'Export',
+      empty: 'No macros available yet.',
+      conflict: (items: string) => `Conflicts with ${items}; override is allowed`,
+      unknownMacro: 'Other macro',
+      saveFailed: 'Macro save failed',
+      saveFailedMessage: 'Unable to write macro configuration.',
+      importFailed: 'Macro import failed',
+      importFailedMessage: 'Unable to read macro file.',
+      imported: 'Macros imported',
+      importedMessage: (count: number) => `Imported ${count} macros.`,
+      exportFailed: 'Macro export failed',
+      exportFailedMessage: 'Unable to write macro file.',
+      exported: 'Macros exported',
+      executeFailed: 'Macro execution failed',
+      noTargetClip: 'No target clip',
+      noTargetClipMessage: 'Select a clip, or move the playhead over a clip.',
+      executed: 'Macro executed'
     },
     translation: {
       title: 'Subtitle Translation',

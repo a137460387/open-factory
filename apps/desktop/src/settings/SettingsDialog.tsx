@@ -6,6 +6,14 @@ import { getLanguage, normalizeLanguage, zhCN, type Language } from '../i18n/str
 import { loadLutLibrary, toggleLutFavorite, type LutLibraryItem } from '../lib/lutLibrary';
 import { openDirectoryDialog, readWebdavPassword, writeWebdavPassword } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
+import {
+  detectMacroShortcutConflicts,
+  exportClipMacrosToDialog,
+  importClipMacrosFromDialog,
+  writeClipMacros,
+  type ClipMacro,
+  type MacroShortcutConflict
+} from '../macros/clip-macros';
 import { getPluginRegistrySnapshot, refreshPluginRegistry, setPluginEnabled, uninstallPlugin, type LoadedPlugin, type PluginRegistry } from '../plugins/plugin-manager';
 import { getLoadedPluginStatus, type PluginPermission } from '../plugins/plugin-loader';
 import { writeCustomKeybindings } from '../shortcuts/keybindings';
@@ -28,13 +36,15 @@ interface SettingsDialogProps {
   project: Project;
   selectedClip?: Clip;
   shortcutBindings: TimelineShortcutBindings;
+  macros: ClipMacro[];
   onShortcutBindingsChange(bindings: TimelineShortcutBindings): void;
+  onMacrosChange(macros: ClipMacro[]): void;
   onClose(): void;
 }
 
-type SettingsTab = 'general' | 'lut-library' | 'shortcuts' | 'translation' | 'proxy' | 'backup' | 'plugins';
+type SettingsTab = 'general' | 'lut-library' | 'shortcuts' | 'macros' | 'translation' | 'proxy' | 'backup' | 'plugins';
 
-export function SettingsDialog({ open, project, selectedClip, shortcutBindings, onShortcutBindingsChange, onClose }: SettingsDialogProps) {
+export function SettingsDialog({ open, project, selectedClip, shortcutBindings, macros, onShortcutBindingsChange, onMacrosChange, onClose }: SettingsDialogProps) {
   const t = zhCN.settings;
   const setPreviewTimeline = useEditorStore((state) => state.setPreviewTimeline);
   const [tab, setTab] = useState<SettingsTab>('general');
@@ -43,6 +53,7 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
   const [capturingAction, setCapturingAction] = useState<TimelineShortcutAction>();
+  const [capturingMacroId, setCapturingMacroId] = useState<string>();
   const [pluginRegistry, setPluginRegistry] = useState<PluginRegistry>();
   const [pluginsLoading, setPluginsLoading] = useState(false);
   const [pluginsError, setPluginsError] = useState<string>();
@@ -66,6 +77,7 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
   const selectedClipCanUseLut = selectedClip?.type === 'video' || selectedClip?.type === 'image';
   const effectiveBindings = useMemo(() => getEffectiveTimelineShortcutBindings(shortcutBindings), [shortcutBindings]);
   const conflicts = useMemo(() => detectTimelineShortcutConflicts(shortcutBindings), [shortcutBindings]);
+  const macroConflicts = useMemo(() => detectMacroShortcutConflicts(macros, shortcutBindings), [macros, shortcutBindings]);
 
   useEffect(() => {
     if (!open) {
@@ -101,6 +113,31 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
   }, [capturingAction, shortcutBindings]);
+
+  useEffect(() => {
+    if (!capturingMacroId) {
+      return undefined;
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      const accelerator = eventToAccelerator({
+        key: event.key,
+        code: event.code,
+        ctrlKey: event.ctrlKey,
+        metaKey: event.metaKey,
+        altKey: event.altKey,
+        shiftKey: event.shiftKey
+      });
+      event.preventDefault();
+      event.stopPropagation();
+      if (!accelerator) {
+        return;
+      }
+      void updateMacroShortcut(capturingMacroId, accelerator);
+      setCapturingMacroId(undefined);
+    };
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
+  }, [capturingMacroId, macros]);
 
   if (!open) {
     return null;
@@ -213,6 +250,53 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
     } catch (shortcutError) {
       showToast({ kind: 'warning', title: t.shortcuts.saveFailed, message: shortcutError instanceof Error ? shortcutError.message : t.shortcuts.saveFailedMessage });
     }
+  }
+
+  async function updateMacros(nextMacros: ClipMacro[]) {
+    try {
+      const saved = await writeClipMacros(nextMacros);
+      onMacrosChange(saved);
+    } catch (macroError) {
+      showToast({ kind: 'warning', title: t.macros.saveFailed, message: macroError instanceof Error ? macroError.message : t.macros.saveFailedMessage });
+    }
+  }
+
+  async function updateMacroShortcut(macroId: string, accelerator: string) {
+    await updateMacros(macros.map((macro) => (macro.id === macroId ? { ...macro, shortcut: accelerator } : macro)));
+  }
+
+  function resetMacroShortcut(macroId: string) {
+    void updateMacros(macros.map((macro) => (macro.id === macroId ? { ...macro, shortcut: undefined } : macro)));
+  }
+
+  async function importMacros() {
+    try {
+      const imported = await importClipMacrosFromDialog();
+      if (imported) {
+        onMacrosChange(imported);
+        showToast({ kind: 'success', title: t.macros.imported, message: t.macros.importedMessage(imported.length) });
+      }
+    } catch (macroError) {
+      showToast({ kind: 'warning', title: t.macros.importFailed, message: macroError instanceof Error ? macroError.message : t.macros.importFailedMessage });
+    }
+  }
+
+  async function exportMacros() {
+    try {
+      const path = await exportClipMacrosToDialog(macros);
+      if (path) {
+        showToast({ kind: 'success', title: t.macros.exported, message: path });
+      }
+    } catch (macroError) {
+      showToast({ kind: 'warning', title: t.macros.exportFailed, message: macroError instanceof Error ? macroError.message : t.macros.exportFailedMessage });
+    }
+  }
+
+  function formatMacroConflict(conflict: MacroShortcutConflict): string {
+    if (conflict.type === 'timeline' && conflict.timelineAction) {
+      return t.shortcuts.actions[conflict.timelineAction];
+    }
+    return conflict.macroName ?? conflict.macroId ?? t.macros.unknownMacro;
   }
 
   async function updateLanguage(value: string) {
@@ -333,6 +417,14 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
               onClick={() => setTab('shortcuts')}
             >
               {t.tabs.shortcuts}
+            </button>
+            <button
+              className={`mt-1 w-full rounded-md px-3 py-2 text-left text-sm font-semibold ${tab === 'macros' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}
+              type="button"
+              data-testid="settings-tab-macros"
+              onClick={() => setTab('macros')}
+            >
+              {t.tabs.macros}
             </button>
             <button
               className={`mt-1 w-full rounded-md px-3 py-2 text-left text-sm font-semibold ${tab === 'translation' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}
@@ -487,7 +579,10 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
                             className="min-w-28 rounded-md border border-line bg-panel px-3 py-1.5 text-sm font-semibold text-slate-700"
                             type="button"
                             data-testid={`shortcut-bind-${definition.action}`}
-                            onClick={() => setCapturingAction(definition.action)}
+                            onClick={() => {
+                              setCapturingMacroId(undefined);
+                              setCapturingAction(definition.action);
+                            }}
                           >
                             {capturingAction === definition.action ? t.shortcuts.pressKeys : effectiveBindings[definition.action].join(' / ')}
                           </button>
@@ -496,6 +591,66 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
                             type="button"
                             data-testid={`shortcut-reset-${definition.action}`}
                             onClick={() => resetShortcut(definition.action)}
+                          >
+                            {zhCN.common.reset}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+            {tab === 'macros' ? (
+              <div>
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-ink">{t.macros.title}</h3>
+                    <p className="text-xs text-slate-500">{t.macros.description}</p>
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    <button className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel" type="button" data-testid="macros-import-button" onClick={() => void importMacros()}>
+                      {t.macros.import}
+                    </button>
+                    <button className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel" type="button" data-testid="macros-export-button" onClick={() => void exportMacros()}>
+                      {t.macros.export}
+                    </button>
+                  </div>
+                </div>
+                {macros.length === 0 ? <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">{t.macros.empty}</div> : null}
+                <div className="space-y-2">
+                  {macros.map((macro) => {
+                    const conflictList = macroConflicts[macro.id] ?? [];
+                    const hasConflict = conflictList.length > 0;
+                    return (
+                      <div
+                        key={macro.id}
+                        className={`rounded-md border p-3 ${hasConflict ? 'border-rose-300 bg-rose-50' : 'border-line bg-white'}`}
+                        data-testid={`macro-row-${macro.id}`}
+                        data-conflict={hasConflict ? 'true' : 'false'}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="text-sm font-semibold text-ink">{macro.name}</div>
+                            {macro.description ? <div className="text-xs text-slate-500">{macro.description}</div> : null}
+                            {hasConflict ? <div className="mt-1 text-xs font-medium text-rose-700">{t.macros.conflict(conflictList.map(formatMacroConflict).join(', '))}</div> : null}
+                          </div>
+                          <button
+                            className="min-w-28 rounded-md border border-line bg-panel px-3 py-1.5 text-sm font-semibold text-slate-700"
+                            type="button"
+                            data-testid={`macro-bind-${macro.id}`}
+                            onClick={() => {
+                              setCapturingAction(undefined);
+                              setCapturingMacroId(macro.id);
+                            }}
+                          >
+                            {capturingMacroId === macro.id ? t.shortcuts.pressKeys : macro.shortcut ?? t.macros.bindShortcut}
+                          </button>
+                          <button
+                            className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
+                            type="button"
+                            data-testid={`macro-reset-${macro.id}`}
+                            onClick={() => resetMacroShortcut(macro.id)}
                           >
                             {zhCN.common.reset}
                           </button>

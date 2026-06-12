@@ -14,6 +14,7 @@ import {
   RemoveMediaCommand,
   RippleDeleteCommand,
   SplitClipCommand,
+  UpdateClipCommand,
   createId,
   createProject,
   createTrack,
@@ -39,6 +40,7 @@ import { MediaBin } from './MediaBin/MediaBin';
 import { Timeline } from './Timeline/Timeline';
 import { useAutosave } from '../hooks/useAutosave';
 import { useCloseGuard } from '../hooks/useCloseGuard';
+import { useMacroShortcuts } from '../hooks/useMacroShortcuts';
 import { useShortcuts } from '../hooks/useShortcuts';
 import { readCustomKeybindings } from '../shortcuts/keybindings';
 import type { TimelineShortcutBindings } from '../shortcuts/timeline-shortcuts';
@@ -79,6 +81,14 @@ import {
 } from '../lib/projectFiles';
 import { bridgeConfirm, copyFile as bridgeCopyFile, openDirectoryDialog, writeFile as bridgeWriteFile } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
+import {
+  appendMacroHistoryEntry,
+  findMacroTargetClip,
+  readClipMacros,
+  readMacroHistory,
+  type ClipMacro,
+  type MacroHistoryEntry
+} from '../macros/clip-macros';
 import { readBackupSettings, readLayoutSettings, saveLayoutSettings } from '../settings/appSettings';
 import { createProxyForAsset } from '../media/proxy';
 import { ensureMediaJobRunner } from '../media/media-job-runner';
@@ -100,6 +110,7 @@ const SmartRoughCutPanel = lazy(() => import('./SmartRoughCut/SmartRoughCutPanel
 const HistoryPanel = lazy(() => import('./History/HistoryPanel').then((module) => ({ default: module.HistoryPanel })));
 const ExportDialog = lazy(() => import('../export/ExportDialog').then((module) => ({ default: module.ExportDialog })));
 const SettingsDialog = lazy(() => import('../settings/SettingsDialog').then((module) => ({ default: module.SettingsDialog })));
+const MacroHistoryDialog = lazy(() => import('../macros/MacroHistoryDialog').then((module) => ({ default: module.MacroHistoryDialog })));
 const TimelineExportDialog = lazy(() => import('../timeline-export/TimelineExportDialog').then((module) => ({ default: module.TimelineExportDialog })));
 const BatchTranscodeDialog = lazy(() => import('../media/BatchTranscodeDialog').then((module) => ({ default: module.BatchTranscodeDialog })));
 const VideoStitchWizardDialog = lazy(() => import('../video-stitching/VideoStitchWizardDialog').then((module) => ({ default: module.VideoStitchWizardDialog })));
@@ -142,12 +153,15 @@ export function EditorShell() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [smartRoughCutOpen, setSmartRoughCutOpen] = useState(false);
   const [historyPanelOpen, setHistoryPanelOpen] = useState(false);
+  const [macroHistoryOpen, setMacroHistoryOpen] = useState(false);
   const [projectHealthOpen, setProjectHealthOpen] = useState(false);
   const [projectHealthReport, setProjectHealthReport] = useState<ProjectHealthReport>();
   const [projectHealthScanning, setProjectHealthScanning] = useState(false);
   const [duplicateMediaGroups, setDuplicateMediaGroups] = useState<DuplicateMediaGroup[]>([]);
   const [duplicateMediaOpen, setDuplicateMediaOpen] = useState(false);
   const [shortcutBindings, setShortcutBindings] = useState<TimelineShortcutBindings>({});
+  const [macros, setMacros] = useState<ClipMacro[]>([]);
+  const [macroHistory, setMacroHistory] = useState<MacroHistoryEntry[]>([]);
   const [autosaveIntervalSeconds, setAutosaveIntervalSeconds] = useState(() => readAutosaveIntervalSeconds());
   const [recoveryCandidate, setRecoveryCandidate] = useState<AutosaveRecoveryCandidate>();
   const [archiveProgress, setArchiveProgress] = useState<ArchiveProgress>();
@@ -326,6 +340,31 @@ export function EditorShell() {
       })
       .catch((error) => {
         console.warn(zhCN.settings.shortcuts.loadFailed, error);
+      });
+    return () => {
+      canceled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let canceled = false;
+    void readClipMacros()
+      .then((entries) => {
+        if (!canceled) {
+          setMacros(entries);
+        }
+      })
+      .catch((error) => {
+        console.warn(zhCN.settings.macros.saveFailed, error);
+      });
+    void readMacroHistory()
+      .then((entries) => {
+        if (!canceled) {
+          setMacroHistory(entries);
+        }
+      })
+      .catch((error) => {
+        console.warn(zhCN.macros.history.title, error);
       });
     return () => {
       canceled = true;
@@ -994,9 +1033,63 @@ export function EditorShell() {
     ]
   );
 
+  const recordMacroHistory = useCallback(async (entry: MacroHistoryEntry) => {
+    try {
+      setMacroHistory(await appendMacroHistoryEntry(entry));
+    } catch (error) {
+      console.warn(zhCN.macros.history.title, error);
+    }
+  }, []);
+
+  const executeMacro = useCallback(
+    async (macro: ClipMacro) => {
+      const state = useEditorStore.getState();
+      const target = findMacroTargetClip(state.project.timeline, state.selectedClipIds, state.playheadTime);
+      const baseEntry = {
+        id: createId('macro-history'),
+        macroId: macro.id,
+        macroName: macro.name,
+        triggeredAt: new Date().toISOString(),
+        shortcut: macro.shortcut
+      };
+      if (!target) {
+        await recordMacroHistory({
+          ...baseEntry,
+          success: false,
+          error: zhCN.settings.macros.noTargetClip
+        });
+        showToast({ kind: 'warning', title: zhCN.settings.macros.noTargetClip, message: zhCN.settings.macros.noTargetClipMessage });
+        return;
+      }
+      try {
+        commandManager.execute(new UpdateClipCommand(timelineAccessor, target.id, macro.patch));
+        setSelectedClipId(target.id);
+        await recordMacroHistory({
+          ...baseEntry,
+          targetClipId: target.id,
+          targetClipName: target.name,
+          success: true
+        });
+        showToast({ kind: 'success', title: zhCN.settings.macros.executed, message: `${macro.name} · ${target.name}` });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : zhCN.settings.macros.executeFailed;
+        await recordMacroHistory({
+          ...baseEntry,
+          targetClipId: target.id,
+          targetClipName: target.name,
+          success: false,
+          error: message
+        });
+        showToast({ kind: 'warning', title: zhCN.settings.macros.executeFailed, message });
+      }
+    },
+    [recordMacroHistory, setSelectedClipId]
+  );
+
   useAutosave(autosaveIntervalSeconds);
   useCloseGuard(saveProject);
   useShortcuts(shortcutHandlers, shortcutBindings);
+  useMacroShortcuts(macros, executeMacro);
   useBackgroundMediaJobs(project.media);
 
   return (
@@ -1015,6 +1108,7 @@ export function EditorShell() {
           onImportMedia={() => void importMedia()}
           onBatchTranscode={() => openBatchTranscode()}
           onOpenVideoStitchWizard={() => setVideoStitchWizardOpen(true)}
+          onOpenMacroHistory={() => setMacroHistoryOpen(true)}
           onImportSubtitles={() => void importSubtitles()}
           onExportVideo={() => setExportDialogOpen(true)}
           onExportTimeline={() => setTimelineExportDialogOpen(true)}
@@ -1202,10 +1296,13 @@ export function EditorShell() {
               project={project}
               selectedClip={selectedClip}
               shortcutBindings={shortcutBindings}
+              macros={macros}
               onShortcutBindingsChange={setShortcutBindings}
+              onMacrosChange={setMacros}
               onClose={() => setSettingsOpen(false)}
             />
           ) : null}
+          {macroHistoryOpen ? <MacroHistoryDialog entries={macroHistory} onClose={() => setMacroHistoryOpen(false)} /> : null}
         </Suspense>
         {projectHealthOpen ? (
           <ProjectHealthDialog

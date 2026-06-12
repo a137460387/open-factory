@@ -23,6 +23,7 @@ interface ToolbarProps {
   onImportMedia(): void;
   onBatchTranscode(): void;
   onOpenVideoStitchWizard(): void;
+  onOpenMacroHistory(): void;
   onImportSubtitles(): void;
   onExportVideo(): void;
   onExportTimeline(): void;
@@ -244,6 +245,17 @@ export function Toolbar(props: ToolbarProps) {
               }}
             >
               <span>{t.videoStitchWizard}</span>
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-tools-macro-history-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onOpenMacroHistory();
+              }}
+            >
+              <span>{t.macroHistory}</span>
             </button>
           </div>
         ) : null}
