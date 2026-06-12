@@ -9,6 +9,8 @@ import {
   UpdateTrackCommand,
   RemoveTimelineMarkerCommand,
   RemoveTransitionCommand,
+  buildSlideClipEdit,
+  buildSlipClip,
   calculateSpeedCurveDisplayDuration,
   calculateSpeedCurveSourceDuration,
   calculateAnchoredScrollLeft,
@@ -21,6 +23,8 @@ import {
   RemoveSilenceCommand,
   RippleDeleteCommand,
   RollingTrimCommand,
+  SlideClipCommand,
+  SlipClipCommand,
   UpdateKeyframeCommand,
   rectsIntersect,
   replaceClip,
@@ -94,6 +98,8 @@ export function Timeline() {
   const [whisperDialog, setWhisperDialog] = useState<WhisperDialogState | undefined>();
   const [whisperAvailability, setWhisperAvailability] = useState<WhisperAvailability>({ ready: false, error: zhCN.whisper.notConfigured });
   const [rollingTrimActive, setRollingTrimActive] = useState(false);
+  const [slipEditActive, setSlipEditActive] = useState(false);
+  const [slideEditActive, setSlideEditActive] = useState(false);
   const whisperExecutablePath = useWhisperSettingsStore((state) => state.executablePath);
   const whisperModelPath = useWhisperSettingsStore((state) => state.modelPath);
   const rootRef = useRef<HTMLElement | null>(null);
@@ -125,13 +131,29 @@ export function Timeline() {
       if (event.key.toLowerCase() === 'r') {
         setRollingTrimActive(true);
       }
+      if (event.key.toLowerCase() === 's') {
+        setSlipEditActive(true);
+      }
+      if (event.key.toLowerCase() === 'd') {
+        setSlideEditActive(true);
+      }
     };
     const onKeyUp = (event: KeyboardEvent) => {
       if (event.key.toLowerCase() === 'r') {
         setRollingTrimActive(false);
       }
+      if (event.key.toLowerCase() === 's') {
+        setSlipEditActive(false);
+      }
+      if (event.key.toLowerCase() === 'd') {
+        setSlideEditActive(false);
+      }
     };
-    const onBlur = () => setRollingTrimActive(false);
+    const onBlur = () => {
+      setRollingTrimActive(false);
+      setSlipEditActive(false);
+      setSlideEditActive(false);
+    };
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
     window.addEventListener('blur', onBlur);
@@ -296,6 +318,38 @@ export function Timeline() {
       setDrag({ ...drag, previewRollingDelta: round(delta) });
       return;
     }
+    if (drag.mode === 'slip') {
+      const preview = buildSlipClip(drag.clip, delta);
+      setDrag({
+        ...drag,
+        previewTrimStart: preview.trimStart,
+        previewTrimEnd: preview.trimEnd,
+        previewSlipDelta: delta,
+        previewClipsById: { [preview.id]: preview }
+      });
+      setPreviewTimeline(replaceClip(project.timeline, preview));
+      return;
+    }
+    if (drag.mode === 'slide') {
+      try {
+        const edit = buildSlideClipEdit(project.timeline, drag.clip.id, delta, minFrameDuration());
+        setDrag({
+          ...drag,
+          previewStart: edit.clip.start,
+          previewSlideDelta: edit.delta,
+          previewClipsById: {
+            [edit.leftClip.id]: edit.leftClip,
+            [edit.clip.id]: edit.clip,
+            [edit.rightClip.id]: edit.rightClip
+          }
+        });
+        setPreviewTimeline(edit.timeline);
+      } catch {
+        setDrag({ ...drag, previewSlideDelta: 0, previewClipsById: undefined });
+        setPreviewTimeline(undefined);
+      }
+      return;
+    }
     if (drag.mode === 'trim-left') {
       const preview = buildTrimPreview(drag.clip, 'left', delta, event.altKey);
       setDrag({
@@ -367,6 +421,16 @@ export function Timeline() {
         commandManager.execute(
           new RollingTrimCommand(timelineAccessor, current.clip.id, current.rightClip.id, current.previewRollingDelta ?? 0, minFrameDuration())
         );
+      } else if (current.mode === 'slip') {
+        if (current.previewTrimStart === current.clip.trimStart && current.previewTrimEnd === current.clip.trimEnd) {
+          return;
+        }
+        commandManager.execute(new SlipClipCommand(timelineAccessor, current.clip.id, current.previewSlipDelta ?? 0));
+      } else if (current.mode === 'slide') {
+        if (Math.abs(current.previewSlideDelta ?? 0) <= 0.000001) {
+          return;
+        }
+        commandManager.execute(new SlideClipCommand(timelineAccessor, current.clip.id, current.previewSlideDelta ?? 0, minFrameDuration()));
       } else {
         commandManager.execute(
           new TrimClipCommand(timelineAccessor, current.clip.id, current.previewTrimStart, current.previewTrimEnd, undefined, minFrameDuration())
@@ -892,6 +956,8 @@ export function Timeline() {
                 onClipMenu={openClipMenu}
                 onClipDoubleClick={openNestedSequence}
                 rollingTrimActive={rollingTrimActive}
+                slipEditActive={slipEditActive}
+                slideEditActive={slideEditActive}
               />
             ))}
             {(project.timeline.markers ?? []).map((marker) => (

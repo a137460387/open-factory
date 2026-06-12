@@ -26,6 +26,8 @@ import {
   RemoveSilenceCommand,
   RippleDeleteCommand,
   RollingTrimCommand,
+  SlideClipCommand,
+  SlipClipCommand,
   SplitClipCommand,
   SplitClipAtTimesCommand,
   TrimClipCommand,
@@ -818,6 +820,63 @@ describe('timeline commands', () => {
       ])
     );
     expect(() => new RollingTrimCommand(bounded, 'left', 'right', 0.5).execute()).toThrow('no available media');
+  });
+
+  it('slips clip source trims without changing timeline position or duration', () => {
+    const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'clip-slip', start: 4, duration: 2, trimStart: 1, trimEnd: 3 })]));
+    const manager = new CommandManager();
+
+    manager.execute(new SlipClipCommand(accessor, 'clip-slip', 10));
+    expect(accessor.current().tracks[0].clips[0]).toMatchObject({ start: 4, duration: 2, trimStart: 4, trimEnd: 0 });
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips[0]).toMatchObject({ start: 4, duration: 2, trimStart: 1, trimEnd: 3 });
+
+    manager.execute(new SlipClipCommand(accessor, 'clip-slip', -10));
+    expect(accessor.current().tracks[0].clips[0]).toMatchObject({ start: 4, duration: 2, trimStart: 0, trimEnd: 4 });
+  });
+
+  it('slides a clip by compensating adjacent trims and preserving total duration', () => {
+    const accessor = makeAccessor(
+      makeTimeline([
+        makeVideoClip({ id: 'left', start: 0, duration: 2, trimStart: 0, trimEnd: 2 }),
+        makeVideoClip({ id: 'middle', start: 2, duration: 2, trimStart: 0, trimEnd: 0 }),
+        makeVideoClip({ id: 'right', start: 4, duration: 2, trimStart: 0, trimEnd: 2 })
+      ])
+    );
+    const manager = new CommandManager();
+    const beforeTotal = accessor.current().tracks[0].clips.reduce((total, clip) => total + clip.duration, 0);
+
+    manager.execute(new SlideClipCommand(accessor, 'middle', 1, 1 / 30));
+    const [left, middle, right] = accessor.current().tracks[0].clips;
+    expect(accessor.current().tracks[0].clips.reduce((total, clip) => total + clip.duration, 0)).toBeCloseTo(beforeTotal, 6);
+    expect(left).toMatchObject({ id: 'left', start: 0, duration: 3, trimEnd: 1 });
+    expect(middle).toMatchObject({ id: 'middle', start: 3, duration: 2, trimStart: 0, trimEnd: 0 });
+    expect(right).toMatchObject({ id: 'right', start: 5, duration: 1, trimStart: 1 });
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips.map((clip) => [clip.id, clip.start, clip.duration, clip.trimStart, clip.trimEnd])).toEqual([
+      ['left', 0, 2, 0, 2],
+      ['middle', 2, 2, 0, 0],
+      ['right', 4, 2, 0, 2]
+    ]);
+  });
+
+  it('clamps slide edits to adjacent media handles and minimum durations', () => {
+    const accessor = makeAccessor(
+      makeTimeline([
+        makeVideoClip({ id: 'left', start: 0, duration: 2, trimStart: 0, trimEnd: 1 }),
+        makeVideoClip({ id: 'middle', start: 2, duration: 2 }),
+        makeVideoClip({ id: 'right', start: 4, duration: 2, trimStart: 0, trimEnd: 0 })
+      ])
+    );
+
+    new SlideClipCommand(accessor, 'middle', 10, 1 / 30).execute();
+    const [left, middle, right] = accessor.current().tracks[0].clips;
+    expect(left.duration).toBeCloseTo(3, 6);
+    expect(middle.start).toBeCloseTo(3, 6);
+    expect(right.start).toBeCloseTo(5, 6);
+    expect(right.duration).toBeCloseTo(1, 6);
   });
 
   it('moves multiple selected clips while preserving their relative spacing', () => {

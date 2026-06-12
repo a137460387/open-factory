@@ -51,6 +51,7 @@ import { createMulticamSequenceProject, setMulticamSwitch } from '../multicam';
 import {
   calculateSpeedCurveSourceDuration,
   clampTransitionDuration,
+  areClipsAdjacent,
   detectOverlap,
   findAdjacentTransitionClips,
   getClipDisplayDuration,
@@ -323,6 +324,74 @@ function buildRollingTrimClips(left: Clip, right: Clip, requestedDelta: number, 
     start: round(left.start + leftTrimmed.duration)
   } as Clip;
   return { left: leftTrimmed, right: rightTrimmed };
+}
+
+export interface SlideClipEditResult {
+  timeline: Timeline;
+  leftClip: Clip;
+  clip: Clip;
+  rightClip: Clip;
+  delta: number;
+}
+
+export function buildSlipClip<TClip extends Clip>(clip: TClip, requestedDelta: number): TClip {
+  const speed = getClipSpeed(clip);
+  const requestedSourceDelta = requestedDelta >= 0
+    ? calculateSpeedCurveSourceDuration(requestedDelta, clip.keyframes, speed)
+    : -calculateSpeedCurveSourceDuration(Math.abs(requestedDelta), clip.keyframes, speed);
+  const sourceDelta = round(Math.min(clip.trimEnd, Math.max(-clip.trimStart, requestedSourceDelta)));
+  const slipped = trimClip(clip, round(clip.trimStart + sourceDelta), round(clip.trimEnd - sourceDelta));
+  return { ...slipped, start: clip.start, duration: clip.duration } as TClip;
+}
+
+export function buildSlideClipEdit(timeline: Timeline, clipId: string, requestedDelta: number, minDuration = 1 / 30): SlideClipEditResult {
+  const location = findClipLocation(timeline, clipId);
+  const track = findTrack(timeline, location.trackId);
+  const sorted = [...track.clips].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id));
+  const index = sorted.findIndex((clip) => clip.id === clipId);
+  const left = sorted[index - 1];
+  const clip = sorted[index];
+  const right = sorted[index + 1];
+  if (!left || !clip || !right || !areClipsAdjacent(left, clip) || !areClipsAdjacent(clip, right)) {
+    throw new Error('Slide edit requires adjacent clips on both sides');
+  }
+
+  const minClipDuration = Math.max(0.000001, minDuration);
+  const leftSourceDuration = getClipTotalSourceDuration(left);
+  const rightSourceDuration = getClipTotalSourceDuration(right);
+  const leftMaxDuration = getClipDisplayDuration(Math.max(0, leftSourceDuration - left.trimStart), getClipSpeed(left), left.keyframes);
+  const rightMaxDuration = getClipDisplayDuration(Math.max(0, rightSourceDuration - right.trimEnd), getClipSpeed(right), right.keyframes);
+  const maxPositive = Math.max(0, Math.min(leftMaxDuration - left.duration, right.duration - minClipDuration));
+  const maxNegative = -Math.max(0, Math.min(left.duration - minClipDuration, rightMaxDuration - right.duration));
+  const delta = round(Math.min(maxPositive, Math.max(maxNegative, requestedDelta)));
+  if (Math.abs(delta) <= 0.000001) {
+    throw new Error('Slide edit has no available media at this position');
+  }
+
+  const nextLeftDuration = round(left.duration + delta);
+  const nextRightDuration = round(right.duration - delta);
+  const leftVisibleSourceDuration = calculateSpeedCurveSourceDuration(nextLeftDuration, left.keyframes, getClipSpeed(left));
+  const rightVisibleSourceDuration = calculateSpeedCurveSourceDuration(nextRightDuration, right.keyframes, getClipSpeed(right));
+  const nextLeft = trimClip(left, left.trimStart, round(Math.max(0, leftSourceDuration - left.trimStart - leftVisibleSourceDuration)));
+  const nextClip = moveClip(clip, round(clip.start + delta));
+  const nextRight = {
+    ...trimClip(right, round(Math.max(0, rightSourceDuration - right.trimEnd - rightVisibleSourceDuration)), right.trimEnd),
+    start: round(right.start + delta)
+  } as Clip;
+  const byId = new Map([
+    [nextLeft.id, nextLeft],
+    [nextClip.id, nextClip],
+    [nextRight.id, nextRight]
+  ]);
+  const nextTimeline = {
+    ...timeline,
+    tracks: timeline.tracks.map((item) => (item.id === track.id ? { ...item, clips: item.clips.map((itemClip) => byId.get(itemClip.id) ?? itemClip) } : item)),
+    transitions: timeline.transitions ?? []
+  };
+  if (timelineHasOverlaps(nextTimeline)) {
+    throw new Error('Clip overlaps another clip on this track');
+  }
+  return { timeline: nextTimeline, leftClip: nextLeft, clip: nextClip, rightClip: nextRight, delta };
 }
 
 function getClipTotalSourceDuration(clip: Clip): number {
@@ -703,6 +772,53 @@ export class MoveClipsCommand implements Command {
         clips: track.clips.map((clip) => beforeById.get(clip.id) ?? clip)
       }))
     });
+  }
+}
+
+export class SlipClipCommand implements Command {
+  readonly description = 'Slip clip';
+  private before?: Clip;
+  private after?: Clip;
+
+  constructor(private readonly accessor: TimelineAccessor, private readonly clipId: string, private readonly delta: number) {}
+
+  execute(): void {
+    const timeline = this.accessor.getTimeline();
+    this.before ??= findClip(timeline, this.clipId);
+    this.after = buildSlipClip(this.before, this.delta);
+    this.accessor.setTimeline(replaceClip(timeline, this.after));
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setTimeline(replaceClip(this.accessor.getTimeline(), this.before));
+    }
+  }
+}
+
+export class SlideClipCommand implements Command {
+  readonly description = 'Slide clip';
+  private before?: Timeline;
+  private after?: Timeline;
+
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clipId: string,
+    private readonly delta: number,
+    private readonly minDuration = 1 / 30
+  ) {}
+
+  execute(): void {
+    const timeline = this.accessor.getTimeline();
+    this.before ??= timeline;
+    this.after ??= buildSlideClipEdit(timeline, this.clipId, this.delta, this.minDuration).timeline;
+    this.accessor.setTimeline(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setTimeline(this.before);
+    }
   }
 }
 

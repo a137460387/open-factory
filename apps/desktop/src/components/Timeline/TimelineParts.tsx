@@ -7,7 +7,7 @@ import { getTimelineThumbnailPlaceholders, getTimelineThumbnails, type TimelineT
 import { getWaveform, type WaveformResult } from '../../media/waveform';
 import type { SelectedKeyframeRef } from '../../store/editorStore';
 
-export type DragMode = 'move' | 'trim-left' | 'trim-right' | 'rolling-trim' | 'playhead' | 'keyframe';
+export type DragMode = 'move' | 'trim-left' | 'trim-right' | 'rolling-trim' | 'slip' | 'slide' | 'playhead' | 'keyframe';
 
 export interface DragState {
   mode: DragMode;
@@ -23,8 +23,11 @@ export interface DragState {
   previewTrimEnd: number;
   startByClipId?: Record<string, number>;
   previewStartsByClipId?: Record<string, number>;
+  previewClipsById?: Record<string, Clip>;
   previewKeyframeTime?: number;
   previewRollingDelta?: number;
+  previewSlipDelta?: number;
+  previewSlideDelta?: number;
 }
 
 export const TRACK_HEIGHT = 54;
@@ -97,7 +100,9 @@ export function TrackRow({
   onGapMenu,
   onClipMenu,
   onClipDoubleClick,
-  rollingTrimActive
+  rollingTrimActive,
+  slipEditActive,
+  slideEditActive
 }: {
   track: Track;
   zoom: number;
@@ -117,6 +122,8 @@ export function TrackRow({
   onClipMenu(request: ClipMenuRequest): void;
   onClipDoubleClick(clip: Clip): void;
   rollingTrimActive: boolean;
+  slipEditActive: boolean;
+  slideEditActive: boolean;
 }) {
   const mediaById = new Map(media.map((asset) => [asset.id, asset]));
   const locked = Boolean(track.locked);
@@ -174,13 +181,15 @@ export function TrackRow({
         {track.clips.map((clip) => {
           const isSelected = selectedClipIds.includes(clip.id) || selectedClipId === clip.id;
           const trimPreview = drag?.clip?.id === clip.id && (drag.mode === 'trim-left' || drag.mode === 'trim-right') ? drag : undefined;
+          const previewClip = drag?.previewClipsById?.[clip.id];
           const movedStart = drag?.mode === 'move' ? drag.previewStartsByClipId?.[clip.id] : undefined;
-          const left = (movedStart ?? trimPreview?.previewStart ?? clip.start) * zoom;
-          const width = Math.max(16, (trimPreview?.previewDuration ?? clip.duration) * zoom);
+          const displayClip = previewClip ?? clip;
+          const left = (previewClip?.start ?? movedStart ?? trimPreview?.previewStart ?? clip.start) * zoom;
+          const width = Math.max(16, (previewClip?.duration ?? trimPreview?.previewDuration ?? clip.duration) * zoom);
           return (
             <ClipBlock
               key={clip.id}
-              clip={clip}
+              clip={displayClip}
               asset={'mediaId' in clip ? mediaById.get(clip.mediaId) : undefined}
               left={left}
               width={width}
@@ -201,6 +210,8 @@ export function TrackRow({
               onClipMenu={onClipMenu}
               onClipDoubleClick={onClipDoubleClick}
               rollingTrimActive={rollingTrimActive}
+              slipEditActive={slipEditActive}
+              slideEditActive={slideEditActive}
             />
           );
         })}
@@ -280,7 +291,9 @@ function ClipBlock({
   onTransitionMenu,
   onClipMenu,
   onClipDoubleClick,
-  rollingTrimActive
+  rollingTrimActive,
+  slipEditActive,
+  slideEditActive
 }: {
   clip: Clip;
   asset?: MediaAsset;
@@ -303,6 +316,8 @@ function ClipBlock({
   onClipMenu(request: ClipMenuRequest): void;
   onClipDoubleClick(clip: Clip): void;
   rollingTrimActive: boolean;
+  slipEditActive: boolean;
+  slideEditActive: boolean;
 }) {
   const waveformColor = getTrackWaveformColor(trackType);
   return (
@@ -324,9 +339,10 @@ function ClipBlock({
         }
         event.currentTarget.setPointerCapture(event.pointerId);
         onSelect(clip.id, event.shiftKey);
-        const clipIds = selectedClipIds.includes(clip.id) ? selectedClipIds : [clip.id];
+        const advancedMode = slideEditActive ? 'slide' : slipEditActive ? 'slip' : undefined;
+        const clipIds = advancedMode ? [clip.id] : selectedClipIds.includes(clip.id) ? selectedClipIds : [clip.id];
         onDragStart({
-          mode: 'move',
+          mode: advancedMode ?? 'move',
           clip,
           clipIds,
           startX: event.clientX,

@@ -45,6 +45,44 @@ test('rolling trim keeps adjacent clip duration sum unchanged', async ({ page })
   expect(after.rightDuration).toBeLessThan(2);
 });
 
+test('slip edit changes source trims while keeping clip position and duration', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.evaluate(() => window.__E2E_ACTIONS__!.setupEfficientEditingFixture!());
+
+  const before = await getClip(page, 'clip-edit-a');
+  await page.keyboard.down('s');
+  await dragHandleBy(page.getByTestId('timeline-clip-clip-edit-a'), page, 80);
+  await page.keyboard.up('s');
+
+  const after = await getClip(page, 'clip-edit-a');
+  expect(after.start).toBe(before.start);
+  expect(after.duration).toBe(before.duration);
+  expect(after.trimStart).toBeGreaterThan(before.trimStart);
+  expect(after.trimEnd).toBeLessThan(before.trimEnd);
+});
+
+test('slide edit keeps the three-clip total duration unchanged', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.evaluate(() => window.__E2E_ACTIONS__!.setupEfficientEditingFixture!());
+
+  const before = await getTrackClips(page);
+  const beforeTotal = before.reduce((total, clip) => total + clip.duration, 0);
+  const beforeEnd = before.at(-1)!.start + before.at(-1)!.duration;
+
+  await page.keyboard.down('d');
+  await dragHandleBy(page.getByTestId('timeline-clip-clip-edit-b'), page, 80);
+  await page.keyboard.up('d');
+
+  const after = await getTrackClips(page);
+  const afterTotal = after.reduce((total, clip) => total + clip.duration, 0);
+  const afterMiddle = after.find((clip) => clip.id === 'clip-edit-b')!;
+  expect(afterMiddle.start).toBeGreaterThan(before.find((clip) => clip.id === 'clip-edit-b')!.start);
+  expect(afterTotal).toBeCloseTo(beforeTotal, 6);
+  expect(after.at(-1)!.start + after.at(-1)!.duration).toBeCloseTo(beforeEnd, 6);
+});
+
 async function dragHandleBy(handle: Locator, page: Page, deltaX: number): Promise<void> {
   const box = await handle.boundingBox();
   expect(box).not.toBeNull();
@@ -55,5 +93,26 @@ async function dragHandleBy(handle: Locator, page: Page, deltaX: number): Promis
 }
 
 interface EditingTimelineSnapshot {
-  tracks: Array<{ clips: Array<{ id: string; start: number; duration: number }> }>;
+  tracks: Array<{ clips: EditingClipSnapshot[] }>;
+}
+
+interface EditingClipSnapshot {
+  id: string;
+  start: number;
+  duration: number;
+  trimStart: number;
+  trimEnd: number;
+}
+
+async function getTrackClips(page: Page): Promise<EditingClipSnapshot[]> {
+  return page.evaluate(() => {
+    const timeline = window.__E2E_ACTIONS__!.getTimelineSnapshot!() as EditingTimelineSnapshot;
+    return timeline.tracks[0].clips.map((clip) => ({ id: clip.id, start: clip.start, duration: clip.duration, trimStart: clip.trimStart, trimEnd: clip.trimEnd }));
+  });
+}
+
+async function getClip(page: Page, clipId: string): Promise<EditingClipSnapshot> {
+  const clip = (await getTrackClips(page)).find((item) => item.id === clipId);
+  expect(clip).toBeTruthy();
+  return clip!;
 }
