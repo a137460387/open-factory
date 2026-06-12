@@ -46,6 +46,7 @@ export const zhCN = {
     undo: '撤销',
     redo: '重做',
     splitSelectedClip: '分割选中片段',
+    smartRoughCut: '智能粗剪',
     createMulticamSequence: '创建多机位序列',
     play: '播放',
     pause: '暂停',
@@ -374,6 +375,37 @@ export const zhCN = {
     sceneDialogTitle: '场景检测',
     sceneScanning: '正在分析视频切点...',
     newTrackName: (type: string, index: number) => `${formatTrackType(type)} ${index}`
+  },
+  smartRoughCut: {
+    title: '智能粗剪',
+    noSelection: '请选择音频或视频片段。',
+    steps: {
+      scene: '场景检测',
+      silence: '静音检测',
+      whisper: 'Whisper 字幕'
+    },
+    statuses: {
+      idle: '未运行',
+      running: '运行中',
+      complete: '完成',
+      error: '错误'
+    },
+    sceneDescription: '检测选中视频片段的切换点，确认后按场景分割。',
+    silenceDescription: '检测选中片段中的静音段，预览后再删除。',
+    whisperDescription: '使用本地 Whisper 配置生成字幕轨。',
+    sceneUnavailable: '请选择视频片段后再检测场景。',
+    silenceUnavailable: '请选择带音频的音频或视频片段。',
+    whisperUnavailable: '请先选择可生成字幕的音频或视频片段，并配置 Whisper 路径。',
+    detectScene: '检测场景',
+    applySceneSplit: '按场景分割',
+    detectSilence: '检测静音',
+    applySilenceRemoval: '确认删除静音',
+    generateSubtitles: '生成字幕',
+    scenePreview: (times: number[]) => (times.length > 0 ? `检测到 ${times.length} 个切点：${times.map((time) => `${time.toFixed(2)}s`).join(', ')}` : '未检测到可用切点。'),
+    silencePreview: (count: number, duration: string) => `将删除 ${count} 段静音，合计 ${duration}s。`,
+    report: (removedSeconds: string, sceneSplits: number, subtitleClips: number) => `删除了 ${removedSeconds}s 静音，分割为 ${sceneSplits > 0 ? sceneSplits + 1 : 0} 段，生成 ${subtitleClips} 条字幕。`,
+    stepComplete: (step: string) => `${step}完成`,
+    stepFailed: (step: string) => `${step}失败`
   },
   inspector: {
     multipleSelected: (count: number) => `多个片段已选中（${count}）`,
@@ -811,6 +843,7 @@ export const zhCN = {
     editor: '编辑器',
     preview: '预览',
     inspector: '检查器',
+    smartRoughCut: '智能粗剪',
     audioMixer: '音频混音器',
     timeline: '时间线'
   },

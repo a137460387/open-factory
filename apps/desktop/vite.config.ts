@@ -13,6 +13,20 @@ export default defineConfig({
   },
   build: {
     target: 'es2022',
-    outDir: 'dist'
+    outDir: 'dist',
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          const normalized = id.replace(/\\/g, '/');
+          if (normalized.includes('/node_modules/@open-factory/editor-core/') || normalized.includes('/packages/editor-core/')) {
+            return 'editor-core';
+          }
+          if (normalized.includes('/node_modules/')) {
+            return 'vendor';
+          }
+          return undefined;
+        }
+      }
+    }
   }
 });

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AddClipCommand,
   AddTrackCommand,
@@ -12,15 +12,9 @@ import {
   type TitleTemplateId
 } from '@open-factory/editor-core';
 import { Toolbar } from './Toolbar';
-import { AudioMixer } from './AudioMixer/AudioMixer';
 import { ErrorBoundary } from './common/ErrorBoundary';
-import { Inspector } from './Inspector/Inspector';
 import { MediaBin } from './MediaBin/MediaBin';
-import { PreviewCanvas } from './PreviewCanvas/PreviewCanvas';
 import { Timeline } from './Timeline/Timeline';
-import { ExportDialog } from '../export/ExportDialog';
-import { SettingsDialog } from '../settings/SettingsDialog';
-import { TimelineExportDialog } from '../timeline-export/TimelineExportDialog';
 import { useAutosave } from '../hooks/useAutosave';
 import { useCloseGuard } from '../hooks/useCloseGuard';
 import { useShortcuts } from '../hooks/useShortcuts';
@@ -58,6 +52,14 @@ import { commandManager, projectAccessor, timelineAccessor } from '../store/comm
 import { selectClipById, useEditorStore } from '../store/editorStore';
 import { useProxySettingsStore } from '../store/proxySettingsStore';
 
+const AudioMixer = lazy(() => import('./AudioMixer/AudioMixer').then((module) => ({ default: module.AudioMixer })));
+const Inspector = lazy(() => import('./Inspector/Inspector').then((module) => ({ default: module.Inspector })));
+const PreviewCanvas = lazy(() => import('./PreviewCanvas/PreviewCanvas').then((module) => ({ default: module.PreviewCanvas })));
+const SmartRoughCutPanel = lazy(() => import('./SmartRoughCut/SmartRoughCutPanel').then((module) => ({ default: module.SmartRoughCutPanel })));
+const ExportDialog = lazy(() => import('../export/ExportDialog').then((module) => ({ default: module.ExportDialog })));
+const SettingsDialog = lazy(() => import('../settings/SettingsDialog').then((module) => ({ default: module.SettingsDialog })));
+const TimelineExportDialog = lazy(() => import('../timeline-export/TimelineExportDialog').then((module) => ({ default: module.TimelineExportDialog })));
+
 export function EditorShell() {
   const project = useEditorStore((state) => state.project);
   const selectedClipId = useEditorStore((state) => state.selectedClipId);
@@ -85,6 +87,7 @@ export function EditorShell() {
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [timelineExportDialogOpen, setTimelineExportDialogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [smartRoughCutOpen, setSmartRoughCutOpen] = useState(false);
   const [shortcutBindings, setShortcutBindings] = useState<TimelineShortcutBindings>({});
   const [autosaveIntervalSeconds, setAutosaveIntervalSeconds] = useState(() => readAutosaveIntervalSeconds());
   const [recoveryCandidate, setRecoveryCandidate] = useState<AutosaveRecoveryCandidate>();
@@ -517,8 +520,10 @@ export function EditorShell() {
           onExportCurrentFrame={() => void exportCurrentFrame()}
           onCancelExport={() => void cancelCurrentExport()}
           onSplitSelected={splitSelected}
+          onToggleSmartRoughCut={() => setSmartRoughCutOpen((open) => !open)}
           onCreateMulticamSequence={createMulticamSequence}
           canCreateMulticamSequence={canCreateMulticamSequence}
+          smartRoughCutOpen={smartRoughCutOpen}
           onUndo={undo}
           onRedo={redo}
           onClearCache={() => void clearCache()}
@@ -544,45 +549,59 @@ export function EditorShell() {
             onAddTitleTemplate={addTitleTemplate}
           />
           <ErrorBoundary name={zhCN.panels.preview}>
-            <PreviewCanvas />
+            <Suspense fallback={<PanelLoading label={zhCN.panels.preview} />}>
+              <PreviewCanvas />
+            </Suspense>
           </ErrorBoundary>
           <aside className="grid min-h-0 grid-rows-[minmax(0,1fr)_220px] gap-px bg-line">
-            <ErrorBoundary name={zhCN.panels.inspector}>
-              <Inspector
-                clip={selectedClip}
-                selectedCount={selectedClipIds.length}
-                selectedClipLocked={selectedClipLocked}
-                selectedKeyframe={selectedKeyframe}
-                media={project.media}
-                playheadTime={playheadTime}
-              />
+            <ErrorBoundary name={smartRoughCutOpen ? zhCN.panels.smartRoughCut : zhCN.panels.inspector}>
+              <Suspense fallback={<PanelLoading label={smartRoughCutOpen ? zhCN.panels.smartRoughCut : zhCN.panels.inspector} />}>
+                {smartRoughCutOpen ? (
+                  <SmartRoughCutPanel selectedClip={selectedClip} media={project.media} />
+                ) : (
+                  <Inspector
+                    clip={selectedClip}
+                    selectedCount={selectedClipIds.length}
+                    selectedClipLocked={selectedClipLocked}
+                    selectedKeyframe={selectedKeyframe}
+                    media={project.media}
+                    playheadTime={playheadTime}
+                  />
+                )}
+              </Suspense>
             </ErrorBoundary>
             <ErrorBoundary name={zhCN.panels.audioMixer}>
-              <AudioMixer />
+              <Suspense fallback={<PanelLoading label={zhCN.panels.audioMixer} compact />}>
+                <AudioMixer />
+              </Suspense>
             </ErrorBoundary>
           </aside>
         </main>
         <ErrorBoundary name={zhCN.panels.timeline}>
           <Timeline />
         </ErrorBoundary>
-        {exportDialogOpen ? (
-          <ExportDialog
-            project={project}
-            onClose={() => setExportDialogOpen(false)}
-            onCompleted={(path) => {
-              setLastExportPath(path);
-            }}
-          />
-        ) : null}
-        {timelineExportDialogOpen ? <TimelineExportDialog project={project} onClose={() => setTimelineExportDialogOpen(false)} /> : null}
-        <SettingsDialog
-          open={settingsOpen}
-          project={project}
-          selectedClip={selectedClip}
-          shortcutBindings={shortcutBindings}
-          onShortcutBindingsChange={setShortcutBindings}
-          onClose={() => setSettingsOpen(false)}
-        />
+        <Suspense fallback={null}>
+          {exportDialogOpen ? (
+            <ExportDialog
+              project={project}
+              onClose={() => setExportDialogOpen(false)}
+              onCompleted={(path) => {
+                setLastExportPath(path);
+              }}
+            />
+          ) : null}
+          {timelineExportDialogOpen ? <TimelineExportDialog project={project} onClose={() => setTimelineExportDialogOpen(false)} /> : null}
+          {settingsOpen ? (
+            <SettingsDialog
+              open={settingsOpen}
+              project={project}
+              selectedClip={selectedClip}
+              shortcutBindings={shortcutBindings}
+              onShortcutBindingsChange={setShortcutBindings}
+              onClose={() => setSettingsOpen(false)}
+            />
+          ) : null}
+        </Suspense>
         {recoveryCandidate ? (
           <AutosaveRecoveryDialog
             onRestore={() => void restoreRecovery()}
@@ -662,6 +681,14 @@ export function EditorShell() {
       showToast({ kind: 'success', title: zhCN.editorToasts.subtitlesImported, message: zhCN.editorToasts.subtitlesImportedMessage(importedCount) });
     }
   }
+}
+
+function PanelLoading({ label, compact = false }: { label: string; compact?: boolean }) {
+  return (
+    <div className={`flex min-h-0 items-center justify-center bg-white text-xs text-slate-500 ${compact ? 'h-full' : 'h-full p-4'}`} data-testid="lazy-panel-loading">
+      {label}
+    </div>
+  );
 }
 
 function AutosaveRecoveryDialog({ onRestore, onDiscard }: { onRestore(): void; onDiscard(): void }) {

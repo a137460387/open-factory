@@ -373,6 +373,45 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setPlayheadTime(0);
     commandManager.clear();
   },
+  setupSmartRoughCutFixture: () => {
+    const project = createProject('Smart Rough Cut E2E');
+    const asset: MediaAsset = {
+      id: 'media-smart-video',
+      type: 'video',
+      name: 'smart-video.mp4',
+      path: silencePatternAudio,
+      duration: 2.5,
+      width: 1280,
+      height: 720,
+      size: silencePatternWav.byteLength,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 1,
+      audioSampleRate: 44_100,
+      audioCodec: 'pcm_s16le',
+      videoCodec: 'h264'
+    };
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({ id: 'track-video', type: 'video', name: 'Video 1', clips: [makeSmartRoughCutVideoClip()] }),
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
+        createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    useEditorStore.getState().setSelectedClipIds(['clip-smart-video']);
+    useEditorStore.getState().setSelectedClipId('clip-smart-video');
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
   setupMulticamFixture: () => {
     const project = createProject('Multicam E2E');
     const media: MediaAsset[] = [
@@ -600,6 +639,24 @@ function makeEditingVideoClip(id: string, start: number, duration: number, trimS
     duration,
     trimStart,
     trimEnd,
+    speed: DEFAULT_CLIP_SPEED,
+    colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+    transform: { ...DEFAULT_TRANSFORM },
+    volume: 1
+  };
+}
+
+function makeSmartRoughCutVideoClip(): Extract<Clip, { type: 'video' }> {
+  return {
+    id: 'clip-smart-video',
+    type: 'video',
+    name: 'smart-video.mp4',
+    mediaId: 'media-smart-video',
+    trackId: 'track-video',
+    start: 0,
+    duration: 2.5,
+    trimStart: 0,
+    trimEnd: 0,
     speed: DEFAULT_CLIP_SPEED,
     colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
     transform: { ...DEFAULT_TRANSFORM },
