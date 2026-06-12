@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import {
   AddAdjustmentLayerCommand,
   AddClipCommand,
@@ -30,6 +30,7 @@ import {
   type ProxyMissingIssue,
   type TitleTemplateId
 } from '@open-factory/editor-core';
+import { ChevronLeft, ChevronRight, GripHorizontal } from 'lucide-react';
 import { Toolbar } from './Toolbar';
 import { ErrorBoundary } from './common/ErrorBoundary';
 import { MediaBin } from './MediaBin/MediaBin';
@@ -45,6 +46,12 @@ import { chooseCurrentFrameExportPath, revealExport, startCurrentFrameExport } f
 import { clearMediaCache } from '../cache/cache-service';
 import { createAdjustmentLayerClip, createClipFromAsset, findPreferredTrack } from '../lib/clipFactory';
 import { zhCN } from '../i18n/strings';
+import {
+  clampTimelineHeight,
+  DEFAULT_EDITOR_LAYOUT_SETTINGS,
+  getEffectivePanelState,
+  type EditorLayoutSettings
+} from '../layout/layoutSettings';
 import type { ExportPreset } from '../export/export-presets';
 import { pickMediaPaths, probeMediaPaths } from '../lib/media';
 import { scanDuplicateMediaGroups } from '../lib/duplicateMedia';
@@ -70,6 +77,7 @@ import {
 } from '../lib/projectFiles';
 import { bridgeConfirm, copyFile as bridgeCopyFile, openDirectoryDialog, writeFile as bridgeWriteFile } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
+import { readLayoutSettings, saveLayoutSettings } from '../settings/appSettings';
 import { createProxyForAsset } from '../media/proxy';
 import { ensureMediaJobRunner } from '../media/media-job-runner';
 import { DuplicateMediaDialog, type DuplicateMediaMergeSelection } from '../media/DuplicateMediaDialog';
@@ -140,6 +148,8 @@ export function EditorShell() {
   const [archiveProgress, setArchiveProgress] = useState<ArchiveProgress>();
   const [sharePackageProgress, setSharePackageProgress] = useState<SharePackageWorkflowProgress>();
   const [sharePackageBusy, setSharePackageBusy] = useState(false);
+  const [layoutSettings, setLayoutSettings] = useState<EditorLayoutSettings>(DEFAULT_EDITOR_LAYOUT_SETTINGS);
+  const [viewportSize, setViewportSize] = useState(() => readViewportSize());
 
   const selectedClip = useMemo(() => selectClipById(project, selectedClipId), [project, selectedClipId]);
   const selectedClipLocked = useMemo(
@@ -158,6 +168,49 @@ export function EditorShell() {
       selected.every((item) => item?.track.type === 'video' && (item.clip.type === 'video' || item.clip.type === 'image'))
     );
   }, [project.timeline.tracks, selectedClipIds]);
+  const timelineHeightPx = clampTimelineHeight(layoutSettings.timelineHeightPx, viewportSize.height);
+  const effectivePanels = useMemo(() => getEffectivePanelState(layoutSettings, viewportSize.width), [layoutSettings, viewportSize.width]);
+  const editorGridRows = `auto minmax(0,1fr) 6px ${timelineHeightPx}px`;
+  const mainGridColumns = `${effectivePanels.leftPanelCollapsed ? 48 : 280}px minmax(0,1fr) ${effectivePanels.rightPanelCollapsed ? 48 : 360}px`;
+
+  const persistLayoutPatch = useCallback((patch: Partial<EditorLayoutSettings>) => {
+    setLayoutSettings((current) => {
+      const next = { ...current, ...patch };
+      void saveLayoutSettings(next).catch((error) => {
+        console.warn('Unable to save layout settings', error);
+      });
+      return next;
+    });
+  }, []);
+
+  const beginTimelineResize = useCallback(
+    (event: ReactPointerEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      const startY = event.clientY;
+      const startHeight = timelineHeightPx;
+      let nextHeight = startHeight;
+      const onPointerMove = (moveEvent: PointerEvent) => {
+        nextHeight = clampTimelineHeight(startHeight + startY - moveEvent.clientY, readViewportSize().height);
+        setLayoutSettings((current) => ({ ...current, timelineHeightPx: nextHeight }));
+      };
+      const finish = () => {
+        window.removeEventListener('pointermove', onPointerMove);
+        window.removeEventListener('pointerup', finish);
+        window.removeEventListener('pointercancel', finish);
+        setLayoutSettings((current) => {
+          const next = { ...current, timelineHeightPx: nextHeight };
+          void saveLayoutSettings(next).catch((error) => {
+            console.warn('Unable to save layout settings', error);
+          });
+          return next;
+        });
+      };
+      window.addEventListener('pointermove', onPointerMove);
+      window.addEventListener('pointerup', finish);
+      window.addEventListener('pointercancel', finish);
+    },
+    [timelineHeightPx]
+  );
 
   const saveProject = useCallback(async () => {
     const nextPath = projectPath ?? (await chooseProjectSavePath(`${project.name}.cutproj.json`));
@@ -266,6 +319,29 @@ export function EditorShell() {
     return () => {
       canceled = true;
     };
+  }, []);
+
+  useEffect(() => {
+    let canceled = false;
+    void readLayoutSettings()
+      .then((settings) => {
+        if (!canceled) {
+          setLayoutSettings(settings);
+        }
+      })
+      .catch((error) => {
+        console.warn('Unable to load layout settings', error);
+      });
+    return () => {
+      canceled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const updateViewport = () => setViewportSize(readViewportSize());
+    updateViewport();
+    window.addEventListener('resize', updateViewport);
+    return () => window.removeEventListener('resize', updateViewport);
   }, []);
 
   const importMedia = useCallback(async () => {
@@ -813,7 +889,7 @@ export function EditorShell() {
 
   return (
     <ErrorBoundary name={zhCN.panels.editor}>
-      <div className="grid h-full min-w-0 grid-rows-[auto_1fr_260px] overflow-hidden bg-[#edeff3] text-ink">
+      <div className="grid h-full min-w-0 overflow-hidden bg-[#edeff3] text-ink" style={{ gridTemplateRows: editorGridRows }} data-testid="editor-shell">
         <Toolbar
           onNewProject={newProject}
           onNewFromTemplate={() => setProjectTemplateOpen(true)}
@@ -857,56 +933,117 @@ export function EditorShell() {
           lastExportPath={lastExportPath}
           onRevealExport={lastExportPath ? () => void revealExport(lastExportPath) : undefined}
         />
-        <main className="grid min-h-0 min-w-0 grid-cols-[280px_minmax(360px,1fr)_360px] gap-px bg-line">
-          <MediaBin
-            media={project.media}
-            mediaMetadata={project.mediaMetadata}
-            onImport={() => void importMedia()}
-            onImportPaths={(paths) => void importDropped(paths)}
-            onBatchTranscode={(paths) => openBatchTranscode(paths)}
-            onScanDuplicates={() => void scanDuplicateMedia()}
-            onAddToTimeline={addAssetToTimeline}
-            onAddAdjustmentLayer={addAdjustmentLayer}
-            onRelink={(assetId) => void relinkMedia(assetId)}
-            onRelinkAll={() => void relinkAllMissing()}
-            onGenerateProxy={(assetId) => void generateProxyForMedia(assetId)}
-            onSetLabel={(assetId, labelColor) => setMediaMetadata(assetId, labelColor ? { labelColor } : undefined)}
-            onAddTitleTemplate={addTitleTemplate}
-          />
+        <main
+          className="grid min-h-0 min-w-0 gap-px bg-line"
+          style={{ gridTemplateColumns: mainGridColumns }}
+          data-testid="editor-main-layout"
+          data-left-collapsed={effectivePanels.leftPanelCollapsed ? 'true' : 'false'}
+          data-right-collapsed={effectivePanels.rightPanelCollapsed ? 'true' : 'false'}
+          data-right-auto-collapsed={effectivePanels.rightPanelAutoCollapsed ? 'true' : 'false'}
+        >
+          {effectivePanels.leftPanelCollapsed ? (
+            <CollapsedPanelRail
+              side="left"
+              label={zhCN.layout.mediaPanelCollapsed}
+              title={zhCN.layout.expandMediaPanel}
+              testId="left-panel-expand-button"
+              onClick={() => persistLayoutPatch({ leftPanelCollapsed: false })}
+            />
+          ) : (
+            <section className="relative h-full min-h-0 min-w-0 overflow-hidden" data-testid="left-panel" data-collapsed="false">
+              <button
+                className="absolute right-2 top-2 z-20 inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-white/95 text-slate-600 shadow-sm hover:bg-panel"
+                type="button"
+                title={zhCN.layout.collapseMediaPanel}
+                aria-label={zhCN.layout.collapseMediaPanel}
+                data-testid="left-panel-collapse-button"
+                onClick={() => persistLayoutPatch({ leftPanelCollapsed: true })}
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <MediaBin
+                media={project.media}
+                mediaMetadata={project.mediaMetadata}
+                onImport={() => void importMedia()}
+                onImportPaths={(paths) => void importDropped(paths)}
+                onBatchTranscode={(paths) => openBatchTranscode(paths)}
+                onScanDuplicates={() => void scanDuplicateMedia()}
+                onAddToTimeline={addAssetToTimeline}
+                onAddAdjustmentLayer={addAdjustmentLayer}
+                onRelink={(assetId) => void relinkMedia(assetId)}
+                onRelinkAll={() => void relinkAllMissing()}
+                onGenerateProxy={(assetId) => void generateProxyForMedia(assetId)}
+                onSetLabel={(assetId, labelColor) => setMediaMetadata(assetId, labelColor ? { labelColor } : undefined)}
+                onAddTitleTemplate={addTitleTemplate}
+              />
+            </section>
+          )}
           <ErrorBoundary name={zhCN.panels.preview}>
             <Suspense fallback={<PanelLoading label={zhCN.panels.preview} />}>
               <PreviewCanvas />
             </Suspense>
           </ErrorBoundary>
-          <aside className="grid min-h-0 grid-rows-[minmax(0,1fr)_220px] gap-px bg-line">
-            <ErrorBoundary name={historyPanelOpen ? zhCN.panels.history : smartRoughCutOpen ? zhCN.panels.smartRoughCut : zhCN.panels.inspector}>
-              <Suspense fallback={<PanelLoading label={historyPanelOpen ? zhCN.panels.history : smartRoughCutOpen ? zhCN.panels.smartRoughCut : zhCN.panels.inspector} />}>
-                {historyPanelOpen ? (
-                  <HistoryPanel />
-                ) : smartRoughCutOpen ? (
-                  <SmartRoughCutPanel selectedClip={selectedClip} media={project.media} />
-                ) : (
-                  <Inspector
-                    clip={selectedClip}
-                    selectedCount={selectedClipIds.length}
-                    selectedClipLocked={selectedClipLocked}
-                    selectedKeyframe={selectedKeyframe}
-                    media={project.media}
-                    playheadTime={playheadTime}
-                  />
-                )}
-              </Suspense>
-            </ErrorBoundary>
-            <ErrorBoundary name={zhCN.panels.audioMixer}>
-              <Suspense fallback={<PanelLoading label={zhCN.panels.audioMixer} compact />}>
-                <AudioMixer />
-              </Suspense>
-            </ErrorBoundary>
-          </aside>
+          {effectivePanels.rightPanelCollapsed ? (
+            <CollapsedPanelRail
+              side="right"
+              label={zhCN.layout.inspectorPanelCollapsed}
+              title={zhCN.layout.expandInspectorPanel}
+              testId="right-panel-expand-button"
+              onClick={() => persistLayoutPatch({ rightPanelCollapsed: false })}
+            />
+          ) : (
+            <aside className="relative grid h-full min-h-0 min-w-0 grid-rows-[minmax(0,1fr)_220px] gap-px bg-line" data-testid="right-panel" data-collapsed="false">
+              <button
+                className="absolute right-2 top-2 z-20 inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-white/95 text-slate-600 shadow-sm hover:bg-panel"
+                type="button"
+                title={zhCN.layout.collapseInspectorPanel}
+                aria-label={zhCN.layout.collapseInspectorPanel}
+                data-testid="right-panel-collapse-button"
+                onClick={() => persistLayoutPatch({ rightPanelCollapsed: true })}
+              >
+                <ChevronRight size={16} />
+              </button>
+              <ErrorBoundary name={historyPanelOpen ? zhCN.panels.history : smartRoughCutOpen ? zhCN.panels.smartRoughCut : zhCN.panels.inspector}>
+                <Suspense fallback={<PanelLoading label={historyPanelOpen ? zhCN.panels.history : smartRoughCutOpen ? zhCN.panels.smartRoughCut : zhCN.panels.inspector} />}>
+                  {historyPanelOpen ? (
+                    <HistoryPanel />
+                  ) : smartRoughCutOpen ? (
+                    <SmartRoughCutPanel selectedClip={selectedClip} media={project.media} />
+                  ) : (
+                    <Inspector
+                      clip={selectedClip}
+                      selectedCount={selectedClipIds.length}
+                      selectedClipLocked={selectedClipLocked}
+                      selectedKeyframe={selectedKeyframe}
+                      media={project.media}
+                      playheadTime={playheadTime}
+                    />
+                  )}
+                </Suspense>
+              </ErrorBoundary>
+              <ErrorBoundary name={zhCN.panels.audioMixer}>
+                <Suspense fallback={<PanelLoading label={zhCN.panels.audioMixer} compact />}>
+                  <AudioMixer />
+                </Suspense>
+              </ErrorBoundary>
+            </aside>
+          )}
         </main>
-        <ErrorBoundary name={zhCN.panels.timeline}>
-          <Timeline />
-        </ErrorBoundary>
+        <div
+          className="flex cursor-row-resize items-center justify-center bg-line text-slate-500 transition hover:bg-brand/20 hover:text-brand"
+          role="separator"
+          aria-orientation="horizontal"
+          aria-label={zhCN.layout.resizeTimeline}
+          data-testid="timeline-resize-handle"
+          onPointerDown={beginTimelineResize}
+        >
+          <GripHorizontal size={18} />
+        </div>
+        <section className="min-h-0 overflow-hidden" data-testid="timeline-panel" style={{ height: timelineHeightPx }}>
+          <ErrorBoundary name={zhCN.panels.timeline}>
+            <Timeline />
+          </ErrorBoundary>
+        </section>
         <Suspense fallback={null}>
           {exportDialogOpen ? (
             <ExportDialog
@@ -1054,6 +1191,46 @@ function PanelLoading({ label, compact = false }: { label: string; compact?: boo
       {label}
     </div>
   );
+}
+
+function CollapsedPanelRail({
+  side,
+  label,
+  title,
+  testId,
+  onClick
+}: {
+  side: 'left' | 'right';
+  label: string;
+  title: string;
+  testId: string;
+  onClick(): void;
+}) {
+  const Icon = side === 'left' ? ChevronRight : ChevronLeft;
+  return (
+    <aside className="flex min-h-0 min-w-0 flex-col items-center gap-3 bg-white px-1.5 py-2" data-testid={`${side}-panel`} data-collapsed="true">
+      <button
+        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-panel text-slate-600 hover:bg-white"
+        type="button"
+        title={title}
+        aria-label={title}
+        data-testid={testId}
+        onClick={onClick}
+      >
+        <Icon size={16} />
+      </button>
+      <div className="text-[11px] font-semibold text-slate-500" style={{ writingMode: 'vertical-rl' }}>
+        {label}
+      </div>
+    </aside>
+  );
+}
+
+function readViewportSize(): { width: number; height: number } {
+  if (typeof window === 'undefined') {
+    return { width: 1440, height: 900 };
+  }
+  return { width: window.innerWidth, height: window.innerHeight };
 }
 
 function AutosaveRecoveryDialog({ onRestore, onDiscard }: { onRestore(): void; onDiscard(): void }) {

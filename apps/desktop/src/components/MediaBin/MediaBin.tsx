@@ -67,7 +67,7 @@ export function MediaBin({ media, mediaMetadata, onImport, onImportPaths, onBatc
 
   return (
     <aside
-      className={clsx('flex min-h-0 flex-col bg-white', dragOver && 'ring-2 ring-inset ring-brand')}
+      className={clsx('flex h-full min-h-0 flex-col bg-white', dragOver && 'ring-2 ring-inset ring-brand')}
       onDragOver={(event) => {
         event.preventDefault();
         setDragOver(true);

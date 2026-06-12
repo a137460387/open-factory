@@ -946,7 +946,7 @@ export function Timeline() {
   return (
     <section
       ref={rootRef}
-      className="relative flex min-h-0 min-w-0 max-w-full flex-col border-t border-line bg-white focus:outline-none"
+      className="relative flex h-full min-h-0 min-w-0 max-w-full flex-col border-t border-line bg-white focus:outline-none"
       tabIndex={0}
       data-testid="timeline-root"
       data-timeline-shortcuts-root="true"

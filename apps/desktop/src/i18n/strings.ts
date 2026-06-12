@@ -1203,6 +1203,15 @@ const zh = {
     audioMixer: '音频混音器',
     timeline: '时间线'
   },
+  layout: {
+    collapseMediaPanel: '收起媒体面板',
+    expandMediaPanel: '展开媒体面板',
+    collapseInspectorPanel: '收起属性面板',
+    expandInspectorPanel: '展开属性面板',
+    resizeTimeline: '调整时间线高度',
+    mediaPanelCollapsed: '媒体',
+    inspectorPanelCollapsed: '属性'
+  },
   autosaveRecovery: {
     title: '检测到未保存的恢复点，是否恢复？',
     discard: '放弃',
@@ -2092,6 +2101,15 @@ const enOverrides = {
     smartRoughCut: 'Smart Rough Cut',
     audioMixer: 'Audio Mixer',
     timeline: 'Timeline'
+  },
+  layout: {
+    collapseMediaPanel: 'Collapse media panel',
+    expandMediaPanel: 'Expand media panel',
+    collapseInspectorPanel: 'Collapse inspector panel',
+    expandInspectorPanel: 'Expand inspector panel',
+    resizeTimeline: 'Resize timeline height',
+    mediaPanelCollapsed: 'Media',
+    inspectorPanelCollapsed: 'Inspector'
   },
   autosaveRecovery: {
     title: 'Unsaved recovery point detected. Restore it?',

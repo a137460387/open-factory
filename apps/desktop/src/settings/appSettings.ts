@@ -1,10 +1,16 @@
 import { getLanguage, languageFromNavigator, normalizeLanguage, setLanguage, type Language } from '../i18n/strings';
 import { fsExists, getAppDataDir, readFile, writeFile } from '../lib/tauri-bridge';
+import {
+  DEFAULT_EDITOR_LAYOUT_SETTINGS,
+  normalizeStoredLayoutSettings,
+  type EditorLayoutSettings
+} from '../layout/layoutSettings';
 
 const BROWSER_SETTINGS_KEY = 'open-factory:settings';
 
 export interface AppSettings {
   language?: Language;
+  layout?: EditorLayoutSettings;
 }
 
 export async function initializeLanguageFromSettings(): Promise<Language> {
@@ -19,6 +25,18 @@ export async function saveLanguageSetting(language: string): Promise<Language> {
   const settings = await readAppSettings();
   await writeAppSettings({ ...settings, language: nextLanguage });
   return getLanguage();
+}
+
+export async function readLayoutSettings(): Promise<EditorLayoutSettings> {
+  const settings = await readAppSettings();
+  return settings.layout ?? { ...DEFAULT_EDITOR_LAYOUT_SETTINGS };
+}
+
+export async function saveLayoutSettings(layout: Partial<EditorLayoutSettings>): Promise<EditorLayoutSettings> {
+  const settings = await readAppSettings();
+  const nextLayout = normalizeStoredLayoutSettings({ ...settings.layout, ...layout }) ?? { ...DEFAULT_EDITOR_LAYOUT_SETTINGS };
+  await writeAppSettings({ ...settings, layout: nextLayout });
+  return nextLayout;
 }
 
 export async function readAppSettings(): Promise<AppSettings> {
@@ -61,9 +79,15 @@ async function readFileSettings(): Promise<AppSettings | undefined> {
 }
 
 function normalizeSettings(settings: Partial<AppSettings>): AppSettings {
-  return {
-    language: settings.language ? normalizeLanguage(settings.language) : undefined
-  };
+  const normalized: AppSettings = {};
+  if (settings.language) {
+    normalized.language = normalizeLanguage(settings.language);
+  }
+  const layout = normalizeStoredLayoutSettings(settings.layout);
+  if (layout) {
+    normalized.layout = layout;
+  }
+  return normalized;
 }
 
 function getBrowserStorage(): Storage | undefined {
