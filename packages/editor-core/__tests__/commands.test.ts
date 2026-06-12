@@ -9,6 +9,7 @@ import {
   AddSubtitleClipCommand,
   AddTrackCommand,
   AddTimelineMarkerCommand,
+  ApplyTextAnimationCommand,
   AddTransitionCommand,
   DEFAULT_COLOR_CORRECTION,
   type Command,
@@ -536,6 +537,22 @@ describe('timeline commands', () => {
 
     manager.undo();
     expect(accessor.current().tracks[0].clips[0].keyframes?.opacity?.map((frame) => frame.id)).toEqual(['kf-a', 'kf-b']);
+  });
+
+  it('applies text animation presets through an undoable command', () => {
+    const accessor = makeAccessor(makeTimeline([makeTextClip({ id: 'text-1', duration: 2, text: 'Title' })]));
+    const manager = new CommandManager();
+
+    manager.execute(new ApplyTextAnimationCommand(accessor, 'text-1', { preset: 'fade', duration: 0.4, direction: 'in' }));
+    expect(accessor.current().tracks[2].clips[0].keyframes?.opacity?.map((frame) => [frame.time, frame.value])).toEqual([
+      [0, 0],
+      [0.4, 1]
+    ]);
+
+    manager.undo();
+    expect(accessor.current().tracks[2].clips[0].keyframes).toBeUndefined();
+    manager.redo();
+    expect(accessor.current().tracks[2].clips[0].keyframes?.opacity).toHaveLength(2);
   });
 
   it('rejects updates and removals for missing keyframes', () => {

@@ -365,7 +365,7 @@ export function buildFfmpegExportPlan(
           continue;
         }
         const nextVideo = `base${videoStep + 1}`;
-        const { filter, artifact } = buildTextFilter(currentVideo, nextVideo, item.clip);
+        const { filter, artifact } = buildTextFilter(currentVideo, nextVideo, item.clip, settings);
         filters.push(filter);
         textArtifacts.push(artifact);
         currentVideo = nextVideo;
@@ -1608,9 +1608,12 @@ function getExportClipSourceDuration(clip: ExportClip): number {
   return clip.type === 'video' || clip.type === 'audio' || clip.type === 'nested-sequence' ? Math.max(0.001, clip.sourceDuration) : Math.max(0.001, clip.duration);
 }
 
-function buildTextFilter(inputLabel: string, outputLabel: string, clip: ExportClip): { filter: string; artifact: TextArtifact } {
+function buildTextFilter(inputLabel: string, outputLabel: string, clip: ExportClip, settings: ExportSettings): { filter: string; artifact: TextArtifact } {
   const safeId = safeLabel(clip.id);
   const placeholder = `__TEXTFILE_${safeId}__`;
+  const textSourceLabel = `textsrc_${safeId}`;
+  const textDrawLabel = `textdraw_${safeId}`;
+  const textLayerLabel = `textlayer_${safeId}`;
   const artifact: TextArtifact = {
     clipId: clip.id,
     text: clip.textStyle?.text ?? '',
@@ -1622,21 +1625,46 @@ function buildTextFilter(inputLabel: string, outputLabel: string, clip: ExportCl
   const fontColor = cssColorToFfmpeg(style?.fontColor ?? 'white');
   const backgroundColor = cssColorToFfmpeg(style?.backgroundColor ?? 'black');
   const backgroundOpacity = formatOpacity(style?.backgroundOpacity ?? 0);
-  const fontSize = Math.max(1, Math.round(style?.fontSize ?? 48));
-  const alpha = formatOpacity(style?.opacity ?? clip.transform.opacity);
+  const fontSize = buildTextFontSizeExpression(clip, Math.max(1, Math.round(style?.fontSize ?? 48)));
+  const x = buildDrawtextPositionExpression(clip, 'x', style?.x ?? clip.transform.x);
+  const y = buildDrawtextPositionExpression(clip, 'y', style?.y ?? clip.transform.y);
+  const layerDuration = Math.max(0.001, clip.start + clip.duration);
+  const opacityFilters = buildOpacityFilters(clip, textLayerLabel);
   return {
     artifact,
-    filter: `[${inputLabel}]drawtext=textfile=${placeholder}${fontPath}:fontsize=${fontSize}:fontcolor=${fontColor}:x=(w-text_w)/2+${formatSigned(
-      style?.x ?? clip.transform.x
-    )}:y=(h-text_h)/2+${formatSigned(
-      style?.y ?? clip.transform.y
-    )}:alpha=${alpha}:box=1:boxcolor=${backgroundColor}@${backgroundOpacity}:boxborderw=${Math.max(
-      0,
-      Math.round(fontSize * 0.25)
-    )}:enable='between(t,${formatFfmpegSeconds(
-      clip.start
-    )},${formatFfmpegSeconds(clip.start + clip.duration)})'[${outputLabel}]`
+    filter: [
+      `color=c=black@0:s=${settings.width}x${settings.height}:r=${settings.fps}:d=${formatFfmpegSeconds(layerDuration)},format=rgba[${textSourceLabel}]`,
+      `[${textSourceLabel}]drawtext=textfile=${placeholder}${fontPath}:fontsize=${fontSize}:fontcolor=${fontColor}:x='${x}':y='${y}':alpha=1:box=1:boxcolor=${backgroundColor}@${backgroundOpacity}:boxborderw=${Math.max(
+        0,
+        Math.round((style?.fontSize ?? 48) * 0.25)
+      )}:enable='between(t,${formatFfmpegSeconds(clip.start)},${formatFfmpegSeconds(clip.start + clip.duration)})'[${textDrawLabel}]`,
+      `[${textDrawLabel}]${opacityFilters.join(',')}`,
+      `[${inputLabel}][${textLayerLabel}]overlay=x=0:y=0:eval=frame:enable='between(t,${formatFfmpegSeconds(clip.start)},${formatFfmpegSeconds(clip.start + clip.duration)})'[${outputLabel}]`
+    ].join(';')
   };
+}
+
+function buildTextFontSizeExpression(clip: ExportClip, baseFontSize: number): string {
+  const frames = getAnimatedFrames(clip, 'scaleX');
+  if (frames.length >= 2) {
+    return `'${baseFontSize}*(${buildTimelineExpression(frames, clip.start, clip.transform.scaleX ?? clip.transform.scale, 'T')})'`;
+  }
+  const scale = frames.length === 1 ? frames[0].value : clip.transform.scaleX ?? clip.transform.scale;
+  return String(Math.max(1, Math.round(baseFontSize * scale)));
+}
+
+function buildDrawtextPositionExpression(clip: ExportClip, axis: 'x' | 'y', staticValue: number): string {
+  const frames = getAnimatedFrames(clip, axis);
+  const dimension = axis === 'x' ? 'w' : 'h';
+  const textDimension = axis === 'x' ? 'text_w' : 'text_h';
+  const fallback = Number.isFinite(staticValue) ? staticValue : 0;
+  if (frames.length >= 2) {
+    return `(${dimension}-${textDimension})/2+(${dimension}/2)*(${buildTimelineExpression(frames, clip.start, fallback, 'T')})`;
+  }
+  if (frames.length === 1) {
+    return `(${dimension}-${textDimension})/2+(${dimension}/2)*${formatFfmpegNumber(frames[0].value)}`;
+  }
+  return `(${dimension}-${textDimension})/2+${formatSigned(fallback)}`;
 }
 
 function buildSubtitleBurnInFilter(inputLabel: string, outputLabel: string, clips: ExportClip[]): { filter: string; artifact: TextArtifact } {

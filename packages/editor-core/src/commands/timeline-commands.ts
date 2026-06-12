@@ -56,6 +56,15 @@ import {
 } from '../model';
 import { createKeyframe, removeKeyframeForProperty, setKeyframeForProperty } from '../keyframes';
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
+import {
+  buildTextAnimationKeyframes,
+  mergeTextAnimationKeyframes,
+  normalizeTextAnimationDirection,
+  normalizeTextAnimationDuration,
+  normalizeTextAnimationPreset,
+  type TextAnimationDirection,
+  type TextAnimationPreset
+} from '../text-animation';
 import { cloneEffects, normalizeEffect, normalizeEffects, type Effect, type EffectParams, type EffectType } from '../effects';
 import { createMulticamSequenceProject, setMulticamSwitch } from '../multicam';
 import {
@@ -1655,6 +1664,50 @@ export class RemoveKeyframeCommand implements Command {
     if (this.property === 'speed' && detectOverlap(findTrack(timeline, this.after.trackId), this.after, this.before.id)) {
       throw new Error('Clip overlaps another clip on this track');
     }
+    this.accessor.setTimeline(replaceClip(timeline, this.after));
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setTimeline(replaceClip(this.accessor.getTimeline(), this.before));
+    }
+  }
+}
+
+export interface ApplyTextAnimationInput {
+  preset: TextAnimationPreset;
+  duration: number;
+  direction: TextAnimationDirection;
+}
+
+export class ApplyTextAnimationCommand implements Command {
+  readonly description = 'Apply text animation';
+  private before?: Clip;
+  private after?: Clip;
+
+  constructor(private readonly accessor: TimelineAccessor, private readonly clipId: string, private readonly input: ApplyTextAnimationInput) {}
+
+  execute(): void {
+    const timeline = this.accessor.getTimeline();
+    this.before ??= findClip(timeline, this.clipId);
+    if (this.before.type !== 'text') {
+      throw new Error('Text animation can only be applied to text clips');
+    }
+    const preset = normalizeTextAnimationPreset(this.input.preset);
+    const direction = normalizeTextAnimationDirection(this.input.direction);
+    const duration = normalizeTextAnimationDuration(this.input.duration);
+    const generated = buildTextAnimationKeyframes({
+      preset,
+      direction,
+      duration,
+      clipDuration: this.before.duration,
+      transform: this.before.transform,
+      text: this.before.text
+    });
+    this.after = {
+      ...this.before,
+      keyframes: mergeTextAnimationKeyframes(this.before.keyframes, generated, this.before.duration)
+    };
     this.accessor.setTimeline(replaceClip(timeline, this.after));
   }
 

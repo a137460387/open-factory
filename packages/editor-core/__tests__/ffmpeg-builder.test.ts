@@ -549,6 +549,30 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.filterComplex).toContain('fade=t=out:st=0:d=1:alpha=1');
   });
 
+  it('turns text opacity animation keyframes into a faded transparent text layer', () => {
+    const project = makeProject();
+    project.timeline.tracks[2].clips = [
+      makeTextClip({
+        id: 'clip-text-fade',
+        duration: 2,
+        text: 'Animated',
+        keyframes: {
+          opacity: [
+            { id: 'text-fade-start', time: 0, value: 0, easing: 'ease-out' },
+            { id: 'text-fade-end', time: 0.5, value: 1, easing: 'ease-out' }
+          ]
+        }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'C:/out.mp4' }));
+
+    expect(plan.filterComplex).toContain('color=c=black@0');
+    expect(plan.filterComplex).toContain('drawtext=textfile=__TEXTFILE_clip_text_fade__');
+    expect(plan.filterComplex).toContain('fade=t=in:st=0:d=0.5:alpha=1');
+    expect(plan.filterComplex).toContain('overlay=x=0:y=0');
+  });
+
   it('turns volume keyframes into a frame-evaluated volume expression', () => {
     const project = makeProject();
     project.timeline.tracks[0].clips = [
@@ -805,7 +829,7 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.filterComplex).toContain('volume=1.5');
     expect(plan.filterComplex).toContain('fontsize=64');
     expect(plan.filterComplex).toContain('fontcolor=0xff4fd8');
-    expect(plan.filterComplex).toContain('alpha=0.8');
+    expect(plan.filterComplex).toContain('colorchannelmixer=aa=0.8');
     expect(plan.filterComplex).toContain('box=1:boxcolor=0x00e5ff@0.45');
   });
 

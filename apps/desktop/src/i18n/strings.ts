@@ -658,7 +658,8 @@ const zh = {
       effects: '特效',
       audio: '音频',
       subtitle: '字幕',
-      text: '文字'
+      text: '文字',
+      textAnimation: '动画'
     },
     colorMatch: {
       apply: '应用',
@@ -755,6 +756,9 @@ const zh = {
       fadeInCurve: '淡入曲线',
       fadeOutCurve: '淡出曲线',
       text: '文本',
+      animationPreset: '动画预设',
+      animationDuration: '动画时长',
+      animationDirection: '方向',
       fontSize: '字号',
       fontFamily: '字体',
       color: '颜色',
@@ -764,6 +768,23 @@ const zh = {
       exportMode: '导出模式',
       bold: '加粗',
       italic: '斜体'
+    },
+    textAnimation: {
+      apply: '应用动画',
+      keyframeCount: (count: number) => `已生成 ${count} 个动画关键帧`,
+      presets: {
+        fade: '淡入/淡出',
+        'fly-up': '从下飞入',
+        'slide-left': '从左划入',
+        typewriter: '打字机',
+        bounce: '弹跳',
+        scale: '缩放出现'
+      },
+      directions: {
+        in: '入场',
+        out: '出场',
+        both: '两者'
+      }
     },
     inputColorSpaces: {
       rec709: 'Rec.709 / 标准',
@@ -1800,7 +1821,8 @@ const enOverrides = {
       effects: 'Effects',
       audio: 'Audio',
       subtitle: 'Subtitle',
-      text: 'Text'
+      text: 'Text',
+      textAnimation: 'Animation'
     },
     fields: {
       name: 'Name',
@@ -1841,9 +1863,29 @@ const enOverrides = {
       fadeInCurve: 'Fade In Curve',
       fadeOutCurve: 'Fade Out Curve',
       text: 'Text',
+      animationPreset: 'Animation Preset',
+      animationDuration: 'Animation Duration',
+      animationDirection: 'Direction',
       fontSize: 'Font Size',
       fontFamily: 'Font Family',
       color: 'Color'
+    },
+    textAnimation: {
+      apply: 'Apply Animation',
+      keyframeCount: (count: number) => `${count} animation keyframes`,
+      presets: {
+        fade: 'Fade',
+        'fly-up': 'Fly Up',
+        'slide-left': 'Slide From Left',
+        typewriter: 'Typewriter',
+        bounce: 'Bounce',
+        scale: 'Scale In'
+      },
+      directions: {
+        in: 'In',
+        out: 'Out',
+        both: 'Both'
+      }
     },
     effectNames: {
       blur: 'Gaussian Blur',

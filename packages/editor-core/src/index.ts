@@ -18,6 +18,7 @@ export * from './masks/path-mask';
 export * from './reframe';
 export * from './title-templates';
 export * from './video-stitching';
+export * from './text-animation';
 export * from './multicam';
 export * from './commands/command';
 export * from './commands/command-manager';

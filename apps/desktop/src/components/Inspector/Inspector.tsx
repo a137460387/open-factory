@@ -6,6 +6,7 @@ import {
   AddKeyframeCommand,
   AddEffectCommand,
   AddMaskCommand,
+  ApplyTextAnimationCommand,
   AUDIO_SPECTRUM_POSITIONS,
   AUDIO_SPECTRUM_STYLES,
   DEFAULT_EFFECT_PARAMS,
@@ -17,6 +18,8 @@ import {
   KEYFRAME_PROPERTY_LIMITS,
   MAX_CLIP_SPEED,
   MIN_CLIP_SPEED,
+  TEXT_ANIMATION_DIRECTIONS,
+  TEXT_ANIMATION_PRESETS,
   RemoveEffectCommand,
   RemoveMaskCommand,
   RemoveKeyframeCommand,
@@ -65,6 +68,8 @@ import {
   type KeyframeProperty,
   type ClipMask,
   type MaskPatch,
+  type TextAnimationDirection,
+  type TextAnimationPreset,
   type ThreeWayColor
 } from '@open-factory/editor-core';
 import { ArrowDown, ArrowUp, GripVertical, Palette, Plus, SlidersHorizontal, Trash2, X } from 'lucide-react';
@@ -121,6 +126,9 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
   const [colorMatchReferenceClipId, setColorMatchReferenceClipId] = useState<string>('');
   const [colorMatchBusy, setColorMatchBusy] = useState(false);
   const [subtitleTranslationProgress, setSubtitleTranslationProgress] = useState<{ completed: number; total: number }>();
+  const [textAnimationPreset, setTextAnimationPreset] = useState<TextAnimationPreset>('fade');
+  const [textAnimationDuration, setTextAnimationDuration] = useState(0.5);
+  const [textAnimationDirection, setTextAnimationDirection] = useState<TextAnimationDirection>('in');
   const commit = (patch: ClipPatch) => {
     try {
       commandManager.execute(new UpdateClipCommand(timelineAccessor, clip.id, patch));
@@ -281,6 +289,22 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
   const addMask = () => runEffectCommand(new AddMaskCommand(timelineAccessor, clip.id));
   const updateMask = (maskId: string, patch: MaskPatch) => runEffectCommand(new UpdateMaskCommand(timelineAccessor, clip.id, maskId, patch));
   const removeMask = (maskId: string) => runEffectCommand(new RemoveMaskCommand(timelineAccessor, clip.id, maskId));
+  const applyTextAnimation = () => {
+    if (clip.type !== 'text') {
+      return;
+    }
+    runEffectCommand(
+      new ApplyTextAnimationCommand(timelineAccessor, clip.id, {
+        preset: textAnimationPreset,
+        duration: textAnimationDuration,
+        direction: textAnimationDirection
+      })
+    );
+  };
+  const textAnimationKeyframeCount = ['opacity', 'x', 'y', 'scaleX', 'scaleY'].reduce(
+    (total, property) => total + (clip.keyframes?.[property as KeyframeProperty]?.length ?? 0),
+    0
+  );
   const applyColorMatch = async () => {
     const referenceClip = colorMatchReferenceClips.find((item) => item.id === colorMatchReferenceClipId);
     if (!referenceClip) {
@@ -992,6 +1016,64 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
                   </select>
                 </label>
               </>
+            ) : null}
+            {clip.type === 'text' ? (
+              <details className="rounded-md border border-line bg-white" data-testid="text-animation-section" open>
+                <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-slate-700">{zhCN.inspector.sections.textAnimation}</summary>
+                <div className="space-y-3 border-t border-line p-2">
+                  <label className="block text-xs font-medium text-slate-600">
+                    {zhCN.inspector.fields.animationPreset}
+                    <select
+                      className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                      value={textAnimationPreset}
+                      data-testid="text-animation-preset-select"
+                      onChange={(event) => setTextAnimationPreset(event.target.value as TextAnimationPreset)}
+                    >
+                      {TEXT_ANIMATION_PRESETS.map((preset) => (
+                        <option key={preset} value={preset}>
+                          {zhCN.inspector.textAnimation.presets[preset]}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <RangeNumberField
+                    label={zhCN.inspector.fields.animationDuration}
+                    value={textAnimationDuration}
+                    min={0.1}
+                    max={2}
+                    step={0.1}
+                    format={(value) => `${value.toFixed(1)}s`}
+                    onCommit={setTextAnimationDuration}
+                    testId="text-animation-duration-input"
+                  />
+                  <label className="block text-xs font-medium text-slate-600">
+                    {zhCN.inspector.fields.animationDirection}
+                    <select
+                      className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                      value={textAnimationDirection}
+                      data-testid="text-animation-direction-select"
+                      onChange={(event) => setTextAnimationDirection(event.target.value as TextAnimationDirection)}
+                    >
+                      {TEXT_ANIMATION_DIRECTIONS.map((direction) => (
+                        <option key={direction} value={direction}>
+                          {zhCN.inspector.textAnimation.directions[direction]}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="rounded-md bg-panel p-2 text-xs text-slate-600" data-testid="text-animation-keyframe-summary">
+                    {zhCN.inspector.textAnimation.keyframeCount(textAnimationKeyframeCount)}
+                  </div>
+                  <button
+                    className="w-full rounded-md border border-line bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-panel"
+                    type="button"
+                    data-testid="apply-text-animation-button"
+                    onClick={applyTextAnimation}
+                  >
+                    {zhCN.inspector.textAnimation.apply}
+                  </button>
+                </div>
+              </details>
             ) : null}
             <ToggleField label={zhCN.inspector.fields.bold} checked={clip.style.bold} onCommit={(bold) => commit({ style: { bold } })} />
             <ToggleField label={zhCN.inspector.fields.italic} checked={clip.style.italic} onCommit={(italic) => commit({ style: { italic } })} />

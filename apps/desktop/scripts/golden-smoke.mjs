@@ -60,6 +60,15 @@ const fixtures = [
     validate: validateTextDrawtextFixture
   },
   {
+    name: 'text-animation',
+    description: 'centered text clip faded in through opacity keyframes',
+    outputWidth: 1280,
+    outputHeight: 720,
+    expectedDuration: 1.5,
+    create: createTextAnimationFixture,
+    validate: validateTextAnimationFixture
+  },
+  {
     name: 'multi-clip-overlay',
     description: 'two sequential video clips with an image overlay over the second segment',
     outputWidth: 1280,
@@ -583,6 +592,114 @@ async function validateMultiClipOverlayFixture(context) {
         passed: Math.abs(context.outputDuration - 2) <= 0.2,
         actual: round(context.outputDuration),
         expected: 2
+      }
+    ]
+  };
+}
+
+async function createTextAnimationFixture(context) {
+  const backgroundPath = join(context.fixtureDir, 'text-animation-background.mp4');
+  await createColorVideoFixture(backgroundPath, {
+    color: COLORS.darkBlue.ffmpeg,
+    width: context.outputWidth,
+    height: context.outputHeight,
+    duration: context.fixture.expectedDuration,
+    audio: false
+  });
+  const backgroundStat = statSync(backgroundPath);
+  return buildProject({
+    id: 'golden-text-animation',
+    name: 'Golden Text Animation',
+    width: context.outputWidth,
+    height: context.outputHeight,
+    media: [
+      videoAsset({
+        id: 'asset-text-animation-background',
+        name: 'text-animation-background.mp4',
+        path: backgroundPath,
+        duration: context.fixture.expectedDuration,
+        width: context.outputWidth,
+        height: context.outputHeight,
+        hasAudio: false,
+        stat: backgroundStat
+      })
+    ],
+    tracks: [
+      {
+        id: 'track-text-animation-background',
+        type: 'video',
+        name: 'Background',
+        clips: [
+          videoClip({
+            id: 'clip-text-animation-background',
+            name: 'Text animation background',
+            mediaId: 'asset-text-animation-background',
+            trackId: 'track-text-animation-background',
+            duration: context.fixture.expectedDuration
+          })
+        ]
+      },
+      emptyAudioTrack(),
+      {
+        id: 'track-text-animation',
+        type: 'text',
+        name: 'Text',
+        clips: [
+          textClip({
+            id: 'clip-text-animation',
+            trackId: 'track-text-animation',
+            text: 'ANIMATED',
+            start: 0,
+            duration: context.fixture.expectedDuration,
+            transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
+            keyframes: {
+              opacity: [
+                { id: 'text-animation-opacity-start', time: 0, value: 0, easing: 'ease-out' },
+                { id: 'text-animation-opacity-end', time: 0.6, value: 1, easing: 'ease-out' }
+              ]
+            },
+            style: {
+              fontSize: 118,
+              color: '#ff4fd8',
+              backgroundColor: '#000000',
+              backgroundOpacity: 0,
+              fontFamily: 'Arial',
+              bold: true,
+              italic: false
+            }
+          })
+        ]
+      }
+    ]
+  });
+}
+
+async function validateTextAnimationFixture(context) {
+  const earlyFrame = await readFrame(context.outputPath, {
+    at: 0.05,
+    width: context.outputWidth,
+    height: context.outputHeight
+  });
+  const lateFrame = await readFrame(context.outputPath, {
+    at: 0.9,
+    width: context.outputWidth,
+    height: context.outputHeight
+  });
+  const earlyPinkPixels = countNearPixels(earlyFrame, COLORS.pink.rgb, 80);
+  const latePinkPixels = countNearPixels(lateFrame, COLORS.pink.rgb, 80);
+  return {
+    checks: [
+      {
+        name: 'text-animation-fade-filter',
+        passed: context.plan.filterComplex.includes('fade=t=in') && context.plan.filterComplex.includes('alpha=1'),
+        actual: context.plan.filterComplex,
+        expected: 'fade=t=in with alpha=1'
+      },
+      {
+        name: 'text-animation-visible-after-fade',
+        passed: latePinkPixels > earlyPinkPixels + 500,
+        actual: { earlyPinkPixels, latePinkPixels },
+        expected: 'late pink text pixels at least 500 above early frame'
       }
     ]
   };
@@ -2529,6 +2646,7 @@ function textClip(input) {
     speed: input.speed ?? 1,
     colorCorrection: input.colorCorrection ?? { brightness: 0, contrast: 1, saturation: 1, hue: 0 },
     transform: input.transform ?? { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
+    keyframes: input.keyframes,
     text: input.text,
     style: input.style
   };
