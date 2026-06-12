@@ -13,12 +13,17 @@ use tauri::{AppHandle, Emitter, Manager};
 
 const DEFAULT_EXPORT_TASK_ID: &str = "__default_export__";
 static EXPORT_CHILDREN: OnceLock<Mutex<HashMap<String, Child>>> = OnceLock::new();
+static MOTION_TRACKING_CHILDREN: OnceLock<Mutex<HashMap<String, Child>>> = OnceLock::new();
 static EXPORT_TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 static HARDWARE_ENCODER_CACHE: OnceLock<Mutex<Option<HardwareEncoderProbe>>> = OnceLock::new();
 pub const EXPORT_MEMORY_PAUSE_THRESHOLD_BYTES: u64 = 2 * 1024 * 1024 * 1024;
 
 fn export_children() -> &'static Mutex<HashMap<String, Child>> {
     EXPORT_CHILDREN.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn motion_tracking_children() -> &'static Mutex<HashMap<String, Child>> {
+    MOTION_TRACKING_CHILDREN.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
 #[derive(Debug, Serialize)]
@@ -142,9 +147,41 @@ pub struct AnalyzeClipResult {
     duration_ms: u128,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AnalyzeMotionTrackRequest {
+    clip_id: String,
+    media_path: String,
+    duration: f64,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct MotionTrackPointDto {
+    time: f64,
+    dx: f64,
+    dy: f64,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AnalyzeMotionTrackResult {
+    clip_id: String,
+    points: Vec<MotionTrackPointDto>,
+    duration_ms: u128,
+}
+
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ClipAnalysisProgressPayload {
+    clip_id: String,
+    progress: f32,
+    progress_pct: f32,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct MotionTrackProgressPayload {
     clip_id: String,
     progress: f32,
     progress_pct: f32,
@@ -256,12 +293,35 @@ pub fn cancel_export(task_id: Option<String>) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command(rename_all = "camelCase")]
+pub fn cancel_motion_tracking(clip_id: String) -> Result<(), String> {
+    if let Some(mut child) = motion_tracking_children()
+        .lock()
+        .map_err(|_| "Unable to lock motion tracking process".to_string())?
+        .remove(&clip_id)
+    {
+        child.kill().map_err(|error| error.to_string())?;
+        let _ = child.wait();
+    }
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn analyze_clip(
     app: AppHandle,
     request: AnalyzeClipRequest,
 ) -> Result<AnalyzeClipResult, String> {
     tauri::async_runtime::spawn_blocking(move || analyze_clip_blocking(app, request))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub async fn analyze_motion_track(
+    app: AppHandle,
+    request: AnalyzeMotionTrackRequest,
+) -> Result<AnalyzeMotionTrackResult, String> {
+    tauri::async_runtime::spawn_blocking(move || analyze_motion_track_blocking(app, request))
         .await
         .map_err(|error| error.to_string())?
 }
@@ -406,6 +466,33 @@ fn analyze_clip_blocking(
     Ok(AnalyzeClipResult {
         clip_id: request.clip_id,
         trf_path: normalize_path(&output_path),
+        duration_ms: started.elapsed().as_millis(),
+    })
+}
+
+fn analyze_motion_track_blocking(
+    app: AppHandle,
+    request: AnalyzeMotionTrackRequest,
+) -> Result<AnalyzeMotionTrackResult, String> {
+    let safe_input = validate_path(&app, Path::new(&request.media_path))?;
+    let args = build_motion_track_args(&safe_input);
+    let started = Instant::now();
+    let slot_clip_id = request.clip_id.clone();
+    let emit_clip_id = request.clip_id.clone();
+    let progress_app = app.clone();
+    let stderr_text = spawn_and_capture_motion_tracking(&slot_clip_id, args, request.duration, move |progress| {
+        let _ = progress_app.emit(
+            "motion-track-progress",
+            MotionTrackProgressPayload {
+                clip_id: emit_clip_id.clone(),
+                progress: progress.progress,
+                progress_pct: progress.progress_pct,
+            },
+        );
+    })?;
+    Ok(AnalyzeMotionTrackResult {
+        clip_id: request.clip_id,
+        points: parse_motion_vectors_from_mestimate_output(&stderr_text),
         duration_ms: started.elapsed().as_millis(),
     })
 }
@@ -883,6 +970,81 @@ fn spawn_and_wait_for_clip_analysis(
     Ok(())
 }
 
+fn spawn_and_capture_motion_tracking(
+    clip_id: &str,
+    args: Vec<String>,
+    duration: f64,
+    emit_progress: impl Fn(ExportProgressPayload) + Send + Sync + 'static,
+) -> Result<String, String> {
+    let mut child = Command::new(ffmpeg_binary())
+        .args(&args)
+        .stderr(Stdio::piped())
+        .stdout(Stdio::null())
+        .spawn()
+        .map_err(|error| format!("Unable to start FFmpeg motion tracking analysis: {}", error))?;
+    let stderr = child
+        .stderr
+        .take()
+        .ok_or_else(|| "Unable to capture FFmpeg motion tracking stderr.".to_string())?;
+    {
+        let mut children = motion_tracking_children()
+            .lock()
+            .map_err(|_| "Unable to lock motion tracking process".to_string())?;
+        children.insert(clip_id.to_string(), child);
+    }
+    let stderr_lines = Arc::new(Mutex::new(Vec::<String>::new()));
+    let stderr_for_thread = Arc::clone(&stderr_lines);
+    let emit_progress = Arc::new(emit_progress);
+    let emit_from_thread = Arc::clone(&emit_progress);
+    let progress_thread = std::thread::spawn(move || {
+        let reader = BufReader::new(stderr);
+        for line in reader.lines().map_while(Result::ok) {
+            if let Ok(mut lines) = stderr_for_thread.lock() {
+                lines.push(line.clone());
+            }
+            if let Some(progress) = parse_progress(&line, duration) {
+                emit_from_thread(progress);
+            }
+        }
+    });
+    let status_result = loop {
+        let maybe_status = {
+            let mut children = motion_tracking_children()
+                .lock()
+                .map_err(|_| "Unable to lock motion tracking process".to_string())?;
+            let Some(child) = children.get_mut(clip_id) else {
+                break Err("Motion tracking canceled.".to_string());
+            };
+            child.try_wait().map_err(|error| error.to_string())?
+        };
+        if let Some(status) = maybe_status {
+            let _ = motion_tracking_children()
+                .lock()
+                .map_err(|_| "Unable to lock motion tracking process".to_string())?
+                .remove(clip_id);
+            break Ok(status);
+        }
+        std::thread::sleep(Duration::from_millis(100));
+    };
+    let _ = progress_thread.join();
+    let stderr_text = stderr_lines
+        .lock()
+        .map(|lines| lines.join("\n"))
+        .unwrap_or_default();
+    match status_result {
+        Ok(status) if status.success() => {
+            emit_progress(ExportProgressPayload::complete(duration));
+            Ok(stderr_text)
+        }
+        Ok(status) => Err(format!(
+            "FFmpeg motion tracking analysis failed with status {}.\n{}",
+            status,
+            stderr_tail(&stderr_text, 20)
+        )),
+        Err(error) => Err(error),
+    }
+}
+
 fn build_vidstabdetect_args(input_path: &Path, output_path: &Path) -> Vec<String> {
     vec![
         "-y".to_string(),
@@ -897,6 +1059,76 @@ fn build_vidstabdetect_args(input_path: &Path, output_path: &Path) -> Vec<String
         "null".to_string(),
         "-".to_string(),
     ]
+}
+
+fn build_motion_track_args(input_path: &Path) -> Vec<String> {
+    vec![
+        "-y".to_string(),
+        "-progress".to_string(),
+        "pipe:2".to_string(),
+        "-nostats".to_string(),
+        "-i".to_string(),
+        normalize_path(input_path),
+        "-vf".to_string(),
+        "cropdetect=round=2,mestimate=method=esa".to_string(),
+        "-an".to_string(),
+        "-f".to_string(),
+        "null".to_string(),
+        "-".to_string(),
+    ]
+}
+
+pub fn parse_motion_vectors_from_mestimate_output(text: &str) -> Vec<MotionTrackPointDto> {
+    text.lines()
+        .filter_map(|line| {
+            let dx = extract_named_number(line, &["dx", "motion_x", "mv_x", "x"])?;
+            let dy = extract_named_number(line, &["dy", "motion_y", "mv_y", "y"])?;
+            let time = extract_named_number(line, &["pts_time"])
+                .or_else(|| extract_timecode_seconds(line, "time"))
+                .or_else(|| extract_named_number(line, &["time"]))
+                .or_else(|| extract_named_number(line, &["frame"]).map(|frame| frame / 30.0))
+                .unwrap_or(0.0);
+            Some(MotionTrackPointDto { time, dx, dy })
+        })
+        .collect()
+}
+
+fn extract_named_number(line: &str, keys: &[&str]) -> Option<f64> {
+    keys.iter().find_map(|key| {
+        let equals = format!("{}=", key);
+        let colon = format!("{}:", key);
+        line.find(&equals)
+            .map(|index| index + equals.len())
+            .or_else(|| line.find(&colon).map(|index| index + colon.len()))
+            .and_then(|start| parse_number_prefix(&line[start..]))
+    })
+}
+
+fn extract_timecode_seconds(line: &str, key: &str) -> Option<f64> {
+    let marker = format!("{}=", key);
+    let start = line.find(&marker)? + marker.len();
+    let value = line[start..].split_whitespace().next()?;
+    parse_timecode(value)
+}
+
+fn parse_number_prefix(value: &str) -> Option<f64> {
+    let token: String = value
+        .trim_start()
+        .chars()
+        .take_while(|ch| ch.is_ascii_digit() || matches!(ch, '-' | '+' | '.'))
+        .collect();
+    if token.is_empty() || token == "-" || token == "+" || token == "." {
+        return None;
+    }
+    token.parse::<f64>().ok().filter(|number| number.is_finite())
+}
+
+fn parse_timecode(value: &str) -> Option<f64> {
+    let mut parts = value.split(':');
+    let hours = parts.next()?.parse::<f64>().ok()?;
+    let minutes = parts.next()?.parse::<f64>().ok()?;
+    let seconds = parts.next()?.parse::<f64>().ok()?;
+    Some(hours * 3600.0 + minutes * 60.0 + seconds)
 }
 
 fn with_temp_export_artifacts<T>(
@@ -1291,6 +1523,48 @@ offset=1.35
         assert!(filter_list_contains(filters, "arnndn"));
         assert!(filter_list_contains(filters, "minterpolate"));
         assert!(!filter_list_contains(filters, "drawtext"));
+    }
+
+    #[test]
+    fn parses_mestimate_motion_vectors_from_ffmpeg_output() {
+        let output = r#"
+[Parsed_mestimate_1 @ 000001] pts_time:0.033 dx=-0.125 dy=0.25
+[Parsed_mestimate_1 @ 000001] time=00:00:00.50 motion_x=0.1 motion_y=-0.2
+[Parsed_mestimate_1 @ 000001] frame=45 mv_x=0.3 mv_y=0.4
+unrelated line
+"#;
+
+        assert_eq!(
+            parse_motion_vectors_from_mestimate_output(output),
+            vec![
+                MotionTrackPointDto {
+                    time: 0.033,
+                    dx: -0.125,
+                    dy: 0.25,
+                },
+                MotionTrackPointDto {
+                    time: 0.5,
+                    dx: 0.1,
+                    dy: -0.2,
+                },
+                MotionTrackPointDto {
+                    time: 1.5,
+                    dx: 0.3,
+                    dy: 0.4,
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn builds_motion_tracking_argument_array_without_shell_strings() {
+        let args = build_motion_track_args(Path::new(r"C:\Media\clip.mp4"));
+
+        assert_eq!(args[0], "-y");
+        assert_eq!(args.iter().filter(|arg| arg.as_str() == "-i").count(), 1);
+        assert!(args.windows(2).any(|pair| pair == ["-progress", "pipe:2"]));
+        assert!(args.windows(2).any(|pair| pair == ["-vf", "cropdetect=round=2,mestimate=method=esa"]));
+        assert!(!args.iter().any(|arg| arg.contains("cmd /C") || arg.contains("&&")));
     }
 
     #[test]

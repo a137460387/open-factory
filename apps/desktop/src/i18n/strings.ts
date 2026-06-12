@@ -648,6 +648,7 @@ const zh = {
       masks: '遮罩',
       frameInterpolation: '补帧',
       stabilization: '稳定化',
+      motionTrack: '运动跟踪',
       colorMatch: '颜色匹配',
       imageSequence: 'PNG 序列',
       keyframe: '关键帧',
@@ -677,6 +678,18 @@ const zh = {
       pickFailedTitle: '取色失败',
       pickFailedMessage: '无法读取预览像素。',
       sampleColor: (index: number) => `采样色 ${index}`
+    },
+    motionTrack: {
+      analyze: '分析',
+      cancel: '取消',
+      bind: '绑定到位置关键帧',
+      notAnalyzed: '未分析',
+      pointCount: (count: number) => `${count} 个跟踪点`,
+      progress: (progress: number) => `分析 ${Math.round(progress * 100)}%`,
+      failed: '运动跟踪失败',
+      failedMessage: '无法完成运动跟踪分析。',
+      noPoints: '未检测到可用运动向量。',
+      cancelFailed: '取消失败'
     },
     fields: {
       name: '名称',
@@ -985,12 +998,14 @@ const zh = {
         'missing-media': '缺失媒体',
         'missing-font': '缺失字体',
         'whisper-path': 'Whisper 路径无效',
-        ffmpeg: 'FFmpeg 不可用'
+        ffmpeg: 'FFmpeg 不可用',
+        'platform-duration': '平台时长建议'
       },
       missingMediaMessage: (count: number) => `时间线引用了 ${count} 个缺失媒体文件。`,
       missingFontMessage: (count: number) => `${count} 个字体未在系统中检测到，文字导出可能回退到默认字体。`,
       whisperMessage: '时间线包含字幕片段，但 Whisper 路径未配置或不可用。',
-      ffmpegMessage: '未在 PATH 中检测到 FFmpeg，无法执行本地导出。'
+      ffmpegMessage: '未在 PATH 中检测到 FFmpeg，无法执行本地导出。',
+      platformDurationMessage: (platform: string, duration: string, limit: string) => `${platform} 建议最长 ${limit}，当前时间线约 ${duration}。`
     },
     exportFilterName: (extension: string) => `${extension.toUpperCase()} 导出`,
     framePngFilterName: 'PNG 图片',
@@ -1037,13 +1052,29 @@ const zh = {
         name: '4K',
         description: '用于高分辨率交付的 UHD MP4 导出。'
       },
+      youtube1080p: {
+        name: 'YouTube 1080p',
+        description: '1920x1080、30fps、8Mbps，使用 yuv420p 的 H.264 MP4。'
+      },
       youtubeShorts: {
         name: 'YouTube Shorts',
-        description: '9:16 竖屏 MP4，使用适配留边缩放。'
+        description: '1080x1920、60fps、8Mbps，9:16 竖屏适配留边。'
+      },
+      tiktok: {
+        name: 'TikTok',
+        description: '1080x1920、60fps、6Mbps，并按 -14 LUFS 做响度标准化。'
+      },
+      instagramReels: {
+        name: 'Instagram Reels',
+        description: '1080x1920、30fps、3.5Mbps，超过 90 秒导出前提醒。'
       },
       twitterX: {
         name: 'Twitter/X',
-        description: '适合社交预览的紧凑 MP4。'
+        description: '1280x720、30fps、5Mbps，超过 140 秒导出前提醒。'
+      },
+      bilibili: {
+        name: 'Bilibili',
+        description: '1920x1080、60fps、10Mbps，H.264 High Profile。'
       },
       gif: {
         name: 'GIF 动图',
@@ -1821,6 +1852,7 @@ const enOverrides = {
       masks: 'Masks',
       frameInterpolation: 'Frame Interpolation',
       stabilization: 'Stabilization',
+      motionTrack: 'Motion Tracking',
       colorMatch: 'Color Match',
       imageSequence: 'PNG Sequence',
       keyframe: 'Keyframe',
@@ -1841,6 +1873,18 @@ const enOverrides = {
       pickFailedTitle: 'Pick Failed',
       pickFailedMessage: 'Unable to read the preview pixel.',
       sampleColor: (index: number) => `Sample Color ${index}`
+    },
+    motionTrack: {
+      analyze: 'Analyze',
+      cancel: 'Cancel',
+      bind: 'Bind to Position Keyframes',
+      notAnalyzed: 'Not analyzed',
+      pointCount: (count: number) => `${count} tracking points`,
+      progress: (progress: number) => `Analyzing ${Math.round(progress * 100)}%`,
+      failed: 'Motion Tracking Failed',
+      failedMessage: 'Unable to complete motion tracking analysis.',
+      noPoints: 'No usable motion vectors were detected.',
+      cancelFailed: 'Cancel Failed'
     },
     fields: {
       name: 'Name',
@@ -2076,13 +2120,29 @@ const enOverrides = {
         name: '4K',
         description: 'UHD MP4 export for high-resolution delivery.'
       },
+      youtube1080p: {
+        name: 'YouTube 1080p',
+        description: '1920x1080, 30fps, 8Mbps H.264 MP4 with yuv420p.'
+      },
       youtubeShorts: {
         name: 'YouTube Shorts',
-        description: '9:16 vertical MP4 with fit padding.'
+        description: '1080x1920, 60fps, 8Mbps vertical MP4 with 9:16 fit padding.'
+      },
+      tiktok: {
+        name: 'TikTok',
+        description: '1080x1920, 60fps, 6Mbps with -14 LUFS loudness normalization.'
+      },
+      instagramReels: {
+        name: 'Instagram Reels',
+        description: '1080x1920, 30fps, 3.5Mbps with a warning above 90 seconds.'
       },
       twitterX: {
         name: 'Twitter/X',
-        description: 'Compact MP4 for social previews.'
+        description: '1280x720, 30fps, 5Mbps with a warning above 140 seconds.'
+      },
+      bilibili: {
+        name: 'Bilibili',
+        description: '1920x1080, 60fps, 10Mbps H.264 High Profile.'
       },
       gif: {
         name: 'GIF',

@@ -232,6 +232,27 @@ describe('project schema migration', () => {
     });
   });
 
+  it('normalizes clip motion tracking points during migration', () => {
+    const project = makeProject();
+    const legacyClip = {
+      ...project.timeline.tracks[0].clips[0],
+      duration: 2,
+      motionTrack: [
+        { time: 1, dx: 0.1, dy: 0.2 },
+        { time: 99, dx: -0.1, dy: -0.2 },
+        { time: Number.NaN, dx: 1, dy: 1 }
+      ]
+    };
+    project.timeline.tracks[0].clips = [legacyClip as never];
+
+    const migrated = migrateProjectFile(serializeProject(project));
+
+    expect(migrated.project.timeline.tracks[0].clips[0].motionTrack).toEqual([
+      { time: 1, dx: 0.1, dy: 0.2 },
+      { time: 2, dx: -0.1, dy: -0.2 }
+    ]);
+  });
+
   it('backfills and clamps advanced audio clip defaults during migration', () => {
     const project = makeProject();
     const legacyClip = { ...project.timeline.tracks[0].clips[0] };

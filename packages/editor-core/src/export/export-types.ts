@@ -5,6 +5,8 @@ import type { AudioFadeCurve, PathPoint, TrackCompressor, TrackEQ } from '../mod
 import type { TargetAspectRatio } from '../reframe';
 
 export type ExportLoudnessNormalization = 'off' | 'youtube' | 'ebu-r128';
+export type ExportPlatformPreset = 'youtube-1080p' | 'youtube-shorts' | 'tiktok' | 'instagram-reels' | 'twitter-x' | 'bilibili';
+export type ExportVideoProfile = 'baseline' | 'main' | 'high';
 export type ExportWatermarkPosition =
   | 'top-left'
   | 'top-center'
@@ -56,6 +58,8 @@ export interface ExportSettings {
   subtitleMode?: ExportSubtitleMode;
   hardwareEncoding?: boolean;
   loudnessNormalization?: ExportLoudnessNormalization;
+  platformPreset?: ExportPlatformPreset;
+  videoProfile?: ExportVideoProfile;
   watermark?: ExportWatermark | null;
 }
 

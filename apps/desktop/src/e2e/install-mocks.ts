@@ -324,6 +324,22 @@ const mocks: TauriMocks = {
     persistFiles();
     return { clipId, trfPath, durationMs: 10 };
   },
+  analyzeMotionTrack: async ({ clipId }) => {
+    emit('motion-track-progress', { clipId, progress: 0.25, progressPct: 25 });
+    await wait(10);
+    emit('motion-track-progress', { clipId, progress: 1, progressPct: 100 });
+    return {
+      clipId,
+      points: [
+        { time: 0, dx: 0, dy: 0 },
+        { time: 0.25, dx: 0.05, dy: 0.02 },
+        { time: 0.5, dx: 0.1, dy: 0.04 },
+        { time: 0.75, dx: 0.15, dy: 0.06 }
+      ],
+      durationMs: 10
+    };
+  },
+  cancelMotionTracking: () => undefined,
   cancelExport: (taskId) => {
     canceledExportTaskIds.add(exportCancelKey(taskId));
     releaseExportGateForTask(taskId);

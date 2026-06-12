@@ -3,7 +3,7 @@ import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { confirm, message as dialogMessage } from '@tauri-apps/plugin-dialog';
 import { open as openShellPath } from '@tauri-apps/plugin-shell';
-import type { ColorMatchFrameSample, ExportReport, FfmpegCapabilities, FfmpegExportPlan, ProxyPlan } from '@open-factory/editor-core';
+import type { ColorMatchFrameSample, ExportReport, FfmpegCapabilities, FfmpegExportPlan, MotionTrackPoint, ProxyPlan } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { isTauriRuntime } from './tauri';
 
@@ -93,7 +93,25 @@ export interface AnalyzeClipResult {
   durationMs: number;
 }
 
+export interface AnalyzeMotionTrackRequest {
+  clipId: string;
+  mediaPath: string;
+  duration: number;
+}
+
+export interface AnalyzeMotionTrackResult {
+  clipId: string;
+  points: MotionTrackPoint[];
+  durationMs: number;
+}
+
 export interface ClipAnalysisProgressEvent {
+  clipId: string;
+  progress: number;
+  progressPct: number;
+}
+
+export interface MotionTrackProgressEvent {
   clipId: string;
   progress: number;
   progressPct: number;
@@ -208,7 +226,9 @@ export type TauriMocks = Partial<{
   readWebdavPassword(): Promise<string | undefined> | string | undefined;
   writeWebdavPassword(password?: string): Promise<void> | void;
   analyzeClip(request: AnalyzeClipRequest): Promise<AnalyzeClipResult> | AnalyzeClipResult;
+  analyzeMotionTrack(request: AnalyzeMotionTrackRequest): Promise<AnalyzeMotionTrackResult> | AnalyzeMotionTrackResult;
   cancelExport(taskId?: string): Promise<void> | void;
+  cancelMotionTracking(clipId: string): Promise<void> | void;
   batchTranscodeMedia(request: BatchTranscodeRequest): Promise<BatchTranscodeResponse> | BatchTranscodeResponse;
   cancelBatchTranscodeTask(taskId: string): Promise<void> | void;
   getCacheDir(): Promise<string> | string;
@@ -541,6 +561,14 @@ export async function analyzeClip(request: AnalyzeClipRequest): Promise<AnalyzeC
   return invoke<AnalyzeClipResult>('analyze_clip', { request });
 }
 
+export async function analyzeMotionTrack(request: AnalyzeMotionTrackRequest): Promise<AnalyzeMotionTrackResult> {
+  const mock = getTauriMocks()?.analyzeMotionTrack;
+  if (mock) {
+    return mock(request);
+  }
+  return invoke<AnalyzeMotionTrackResult>('analyze_motion_track', { request });
+}
+
 export async function cancelExport(taskId?: string): Promise<void> {
   const mock = getTauriMocks()?.cancelExport;
   if (mock) {
@@ -548,6 +576,15 @@ export async function cancelExport(taskId?: string): Promise<void> {
     return;
   }
   await invoke('cancel_export', taskId ? { taskId } : {});
+}
+
+export async function cancelMotionTracking(clipId: string): Promise<void> {
+  const mock = getTauriMocks()?.cancelMotionTracking;
+  if (mock) {
+    await mock(clipId);
+    return;
+  }
+  await invoke('cancel_motion_tracking', { clipId });
 }
 
 export async function batchTranscodeMedia(request: BatchTranscodeRequest): Promise<BatchTranscodeResponse> {

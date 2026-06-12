@@ -250,7 +250,8 @@ export function ExportDialog({ project, initialPreset, onClose, onCompleted, onR
       ffmpegAvailable: nextCapabilities?.available === true,
       whisperReady: whisperAvailability.ready,
       whisperMessage: whisperAvailability.error,
-      isFontFamilyAvailable
+      isFontFamilyAvailable,
+      platformPreset: exportSettings.platformPreset
     });
   }
 
@@ -1112,7 +1113,39 @@ function formatPreflightMessage(issue: PreflightResult): string {
   if (issue.type === 'whisper-path') {
     return issue.items[0] ?? zhCN.exportDialog.preflight.whisperMessage;
   }
+  if (issue.type === 'platform-duration') {
+    return zhCN.exportDialog.preflight.platformDurationMessage(formatPlatformPresetName(issue.platformPreset), formatDuration(issue.durationSeconds), formatDuration(issue.limitSeconds));
+  }
   return zhCN.exportDialog.preflight.ffmpegMessage;
+}
+
+function formatPlatformPresetName(platformPreset: PreflightResult['platformPreset']): string {
+  if (platformPreset === 'youtube-1080p') {
+    return zhCN.exportPresets.builtins.youtube1080p.name;
+  }
+  if (platformPreset === 'youtube-shorts') {
+    return zhCN.exportPresets.builtins.youtubeShorts.name;
+  }
+  if (platformPreset === 'tiktok') {
+    return zhCN.exportPresets.builtins.tiktok.name;
+  }
+  if (platformPreset === 'instagram-reels') {
+    return zhCN.exportPresets.builtins.instagramReels.name;
+  }
+  if (platformPreset === 'twitter-x') {
+    return zhCN.exportPresets.builtins.twitterX.name;
+  }
+  if (platformPreset === 'bilibili') {
+    return zhCN.exportPresets.builtins.bilibili.name;
+  }
+  return zhCN.exportDialog.preset;
+}
+
+function formatDuration(value: number | undefined): string {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return zhCN.common.unavailable;
+  }
+  return `${Math.round(value * 10) / 10}s`;
 }
 
 function formatOptionLabel(value: string): string {

@@ -29,6 +29,7 @@ import {
   UpdateKeyframeCommand,
   UpdateClipCommand,
   UpdateMaskCommand,
+  bindMotionTrackToPositionKeyframes,
   createDefaultColorCurves,
   createId,
   createKenBurnsKeyframes,
@@ -50,6 +51,7 @@ import {
   normalizeAudioSpectrumParams,
   normalizeFrameInterpolation,
   normalizeMasks,
+  normalizeMotionTrack,
   normalizeSequenceFrameRate,
   normalizeStabilization,
   normalizeThreeWayColor,
@@ -77,7 +79,17 @@ import {
 import { ArrowDown, ArrowUp, GripVertical, Palette, Pipette, Plus, SlidersHorizontal, Trash2, X } from 'lucide-react';
 import { zhCN } from '../../i18n/strings';
 import { commandManager, timelineAccessor } from '../../store/commandManager';
-import { analyzeClip, bridgeConfirm, getFfmpegCapabilities, listenBridge, openFileDialog, type ClipAnalysisProgressEvent } from '../../lib/tauri-bridge';
+import {
+  analyzeClip,
+  analyzeMotionTrack,
+  bridgeConfirm,
+  cancelMotionTracking,
+  getFfmpegCapabilities,
+  listenBridge,
+  openFileDialog,
+  type ClipAnalysisProgressEvent,
+  type MotionTrackProgressEvent
+} from '../../lib/tauri-bridge';
 import { buildClipColorMatchCurves } from '../../lib/colorMatch';
 import { acceptTranslationTOS, subtitleClipsToTranslationItems, translateSubtitleItems } from '../../lib/subtitleTranslation';
 import { showToast } from '../../lib/toast';
@@ -125,6 +137,8 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
     [translationApiKey, translationProvider, translationTargetLanguage]
   );
   const [analysisProgress, setAnalysisProgress] = useState<number | undefined>();
+  const [motionTrackProgress, setMotionTrackProgress] = useState<number | undefined>();
+  const [motionTrackingBusy, setMotionTrackingBusy] = useState(false);
   const [frameInterpolationSupported, setFrameInterpolationSupported] = useState<boolean | undefined>();
   const [audioDenoiseSupported, setAudioDenoiseSupported] = useState<boolean | undefined>();
   const [colorMatchReferenceClipId, setColorMatchReferenceClipId] = useState<string>('');
@@ -212,6 +226,7 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
   const fadeInCurve = 'fadeInCurve' in clip ? normalizeAudioFadeCurve(clip.fadeInCurve) : 'linear';
   const fadeOutCurve = 'fadeOutCurve' in clip ? normalizeAudioFadeCurve(clip.fadeOutCurve) : 'linear';
   const masks = normalizeMasks(clip.masks);
+  const motionTrack = normalizeMotionTrack(clip.motionTrack, clip.duration) ?? [];
   const colorCurves = normalizeColorCurves(colorCorrection.colorCurves);
   const threeWayColor = normalizeThreeWayColor(colorCorrection.threeWayColor);
   const commitChromaKeyColors = (colors: ChromaKeyColor[]) => {
@@ -246,7 +261,8 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
   };
   useEffect(() => {
     let disposed = false;
-    let unlisten: (() => void) | undefined;
+    let unlistenAnalysis: (() => void) | undefined;
+    let unlistenMotionTrack: (() => void) | undefined;
     void listenBridge<ClipAnalysisProgressEvent>('clip-analysis-progress', (payload) => {
       if (payload.clipId === clip.id) {
         setAnalysisProgress(payload.progress);
@@ -255,12 +271,24 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
       if (disposed) {
         dispose();
       } else {
-        unlisten = dispose;
+        unlistenAnalysis = dispose;
+      }
+    });
+    void listenBridge<MotionTrackProgressEvent>('motion-track-progress', (payload) => {
+      if (payload.clipId === clip.id) {
+        setMotionTrackProgress(payload.progress);
+      }
+    }).then((dispose) => {
+      if (disposed) {
+        dispose();
+      } else {
+        unlistenMotionTrack = dispose;
       }
     });
     return () => {
       disposed = true;
-      unlisten?.();
+      unlistenAnalysis?.();
+      unlistenMotionTrack?.();
     };
   }, [clip.id]);
   useEffect(() => {
@@ -300,6 +328,44 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
       setAnalysisProgress(undefined);
       showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
     }
+  };
+  const runMotionTrackAnalysis = async () => {
+    if (clip.type !== 'video' || !asset?.path) {
+      return;
+    }
+    try {
+      setMotionTrackingBusy(true);
+      setMotionTrackProgress(0);
+      const result = await analyzeMotionTrack({ clipId: clip.id, mediaPath: asset.path, duration: clip.duration });
+      const points = normalizeMotionTrack(result.points, clip.duration) ?? [];
+      commit({ motionTrack: points });
+      setMotionTrackProgress(1);
+      if (points.length === 0) {
+        showToast({ kind: 'warning', title: zhCN.inspector.motionTrack.failed, message: zhCN.inspector.motionTrack.noPoints });
+      }
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.inspector.motionTrack.failed, message: error instanceof Error ? error.message : zhCN.inspector.motionTrack.failedMessage });
+      setMotionTrackProgress(undefined);
+    } finally {
+      setMotionTrackingBusy(false);
+    }
+  };
+  const cancelMotionTrackAnalysis = async () => {
+    try {
+      await cancelMotionTracking(clip.id);
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.inspector.motionTrack.cancelFailed, message: error instanceof Error ? error.message : zhCN.inspector.motionTrack.failedMessage });
+    } finally {
+      setMotionTrackingBusy(false);
+      setMotionTrackProgress(undefined);
+    }
+  };
+  const bindMotionTrackKeyframes = () => {
+    const keyframes = bindMotionTrackToPositionKeyframes(clip.keyframes, motionTrack, clip.transform, clip.duration);
+    if (!keyframes) {
+      return;
+    }
+    commit({ keyframes });
   };
   const updateSelectedKeyframe = (patch: Partial<Pick<NonNullable<typeof selectedKeyframeFrame>, 'time' | 'value' | 'easing'>>) => {
     if (!selectedKeyframe) {
@@ -742,6 +808,47 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
               onCommit={(zoom) => commit({ stabilization: { ...stabilization, zoom } })}
               testId="stabilization-zoom"
             />
+          </Section>
+        ) : null}
+
+        {clip.type === 'video' ? (
+          <Section title={zhCN.inspector.sections.motionTrack}>
+            <div className="rounded-md border border-line bg-panel p-2 text-xs text-slate-600" data-testid="motion-track-status">
+              {motionTrackProgress !== undefined && motionTrackProgress < 1
+                ? zhCN.inspector.motionTrack.progress(motionTrackProgress)
+                : motionTrack.length > 0
+                  ? zhCN.inspector.motionTrack.pointCount(motionTrack.length)
+                  : zhCN.inspector.motionTrack.notAnalyzed}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                className="rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+                type="button"
+                disabled={motionTrackingBusy}
+                data-testid="analyze-motion-track-button"
+                onClick={() => void runMotionTrackAnalysis()}
+              >
+                {zhCN.inspector.motionTrack.analyze}
+              </button>
+              <button
+                className="rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+                type="button"
+                disabled={!motionTrackingBusy}
+                data-testid="cancel-motion-track-button"
+                onClick={() => void cancelMotionTrackAnalysis()}
+              >
+                {zhCN.inspector.motionTrack.cancel}
+              </button>
+            </div>
+            <button
+              className="w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+              type="button"
+              disabled={motionTrack.length === 0}
+              data-testid="bind-motion-track-button"
+              onClick={bindMotionTrackKeyframes}
+            >
+              {zhCN.inspector.motionTrack.bind}
+            </button>
           </Section>
         ) : null}
 

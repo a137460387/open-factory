@@ -1,5 +1,5 @@
 import type { Clip, ClipKeyframes, KeyframeProperty, Timeline, Track, Transition } from './model';
-import { MIN_CLIP_SPEED, clampClipSpeed, createId, normalizeChromaKey, normalizeFrameInterpolation, normalizeMasks, normalizeSequenceFrameRate, normalizeStabilization, normalizeTrackPan, normalizeTransitionDuration } from './model';
+import { MIN_CLIP_SPEED, clampClipSpeed, createId, normalizeChromaKey, normalizeFrameInterpolation, normalizeMasks, normalizeMotionTrack, normalizeSequenceFrameRate, normalizeStabilization, normalizeTrackPan, normalizeTransitionDuration } from './model';
 import { cloneEffects } from './effects';
 import { cloneClipKeyframes, interpolateKeyframes, normalizeClipKeyframes } from './keyframes';
 import { DEFAULT_SNAP_GRID, round, snap } from './time';
@@ -37,6 +37,7 @@ export function splitClip<TClip extends Clip>(clip: TClip, splitTime: number): [
     stabilization: normalizeStabilization(clip.stabilization),
     frameInterpolation: normalizeFrameInterpolation(clip.frameInterpolation),
     masks: normalizeMasks(clip.masks),
+    motionTrack: normalizeMotionTrack(clip.motionTrack, leftDuration),
     sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
     keyframes: normalizeClipKeyframes(cloneClipKeyframes(clip.keyframes), leftDuration),
     effects: cloneEffects(clip.effects)
@@ -52,6 +53,7 @@ export function splitClip<TClip extends Clip>(clip: TClip, splitTime: number): [
     stabilization: normalizeStabilization(clip.stabilization),
     frameInterpolation: normalizeFrameInterpolation(clip.frameInterpolation),
     masks: normalizeMasks(clip.masks),
+    motionTrack: normalizeMotionTrack(clip.motionTrack, rightDuration),
     sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
     keyframes: shiftClipKeyframes(cloneClipKeyframes(clip.keyframes), leftDuration, rightDuration),
     effects: cloneEffects(clip.effects)
@@ -80,6 +82,7 @@ export function trimClip<TClip extends Clip>(clip: TClip, newTrimStart: number, 
     stabilization: normalizeStabilization(clip.stabilization),
     frameInterpolation: normalizeFrameInterpolation(clip.frameInterpolation),
     masks: normalizeMasks(clip.masks),
+    motionTrack: normalizeMotionTrack(clip.motionTrack, duration),
     sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
     keyframes: normalizeClipKeyframes(cloneClipKeyframes(clip.keyframes), duration),
     effects: cloneEffects(clip.effects)
@@ -95,6 +98,7 @@ export function moveClip<TClip extends Clip>(clip: TClip, newStart: number): TCl
     stabilization: normalizeStabilization(clip.stabilization),
     frameInterpolation: normalizeFrameInterpolation(clip.frameInterpolation),
     masks: normalizeMasks(clip.masks),
+    motionTrack: normalizeMotionTrack(clip.motionTrack, clip.duration),
     sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
     keyframes: cloneClipKeyframes(clip.keyframes),
     effects: cloneEffects(clip.effects)
@@ -286,6 +290,7 @@ export function setClipSpeed<TClip extends Clip>(clip: TClip, speed: number): TC
     stabilization: normalizeStabilization(clip.stabilization),
     frameInterpolation: normalizeFrameInterpolation(clip.frameInterpolation),
     masks: normalizeMasks(clip.masks),
+    motionTrack: normalizeMotionTrack(clip.motionTrack, duration),
     sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
     keyframes: normalizeClipKeyframes(cloneClipKeyframes(clip.keyframes), duration),
     effects: cloneEffects(clip.effects)

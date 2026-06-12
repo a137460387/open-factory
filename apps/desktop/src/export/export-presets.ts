@@ -72,6 +72,29 @@ export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
     }
   },
   {
+    id: 'youtube-1080p',
+    name: zhCN.exportPresets.builtins.youtube1080p.name,
+    description: zhCN.exportPresets.builtins.youtube1080p.description,
+    builtin: true,
+    settings: {
+      width: 1920,
+      height: 1080,
+      fps: 30,
+      videoCodec: 'libx264',
+      audioCodec: 'aac',
+      videoBitrate: '8M',
+      audioBitrate: '192k',
+      format: 'mp4',
+      outputMode: 'video',
+      scaleMode: 'fit',
+      targetAspectRatio: 'source',
+      reframeOffsetX: 0,
+      reframeOffsetY: 0,
+      hardwareEncoding: false,
+      platformPreset: 'youtube-1080p'
+    }
+  },
+  {
     id: 'youtube-shorts',
     name: zhCN.exportPresets.builtins.youtubeShorts.name,
     description: zhCN.exportPresets.builtins.youtubeShorts.description,
@@ -79,18 +102,66 @@ export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
     settings: {
       width: 1080,
       height: 1920,
-      fps: 30,
+      fps: 60,
       videoCodec: 'libx264',
       audioCodec: 'aac',
-      videoBitrate: '10M',
+      videoBitrate: '8M',
       audioBitrate: '192k',
       format: 'mp4',
       outputMode: 'video',
       scaleMode: 'fit',
-      targetAspectRatio: '9:16',
+      targetAspectRatio: 'source',
       reframeOffsetX: 0,
       reframeOffsetY: 0,
-      hardwareEncoding: false
+      hardwareEncoding: false,
+      platformPreset: 'youtube-shorts'
+    }
+  },
+  {
+    id: 'tiktok',
+    name: zhCN.exportPresets.builtins.tiktok.name,
+    description: zhCN.exportPresets.builtins.tiktok.description,
+    builtin: true,
+    settings: {
+      width: 1080,
+      height: 1920,
+      fps: 60,
+      videoCodec: 'libx264',
+      audioCodec: 'aac',
+      videoBitrate: '6M',
+      audioBitrate: '192k',
+      format: 'mp4',
+      outputMode: 'video',
+      scaleMode: 'fit',
+      targetAspectRatio: 'source',
+      reframeOffsetX: 0,
+      reframeOffsetY: 0,
+      hardwareEncoding: false,
+      loudnessNormalization: 'youtube',
+      platformPreset: 'tiktok'
+    }
+  },
+  {
+    id: 'instagram-reels',
+    name: zhCN.exportPresets.builtins.instagramReels.name,
+    description: zhCN.exportPresets.builtins.instagramReels.description,
+    builtin: true,
+    settings: {
+      width: 1080,
+      height: 1920,
+      fps: 30,
+      videoCodec: 'libx264',
+      audioCodec: 'aac',
+      videoBitrate: '3500k',
+      audioBitrate: '128k',
+      format: 'mp4',
+      outputMode: 'video',
+      scaleMode: 'fit',
+      targetAspectRatio: 'source',
+      reframeOffsetX: 0,
+      reframeOffsetY: 0,
+      hardwareEncoding: false,
+      platformPreset: 'instagram-reels'
     }
   },
   {
@@ -112,7 +183,32 @@ export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
       targetAspectRatio: 'source',
       reframeOffsetX: 0,
       reframeOffsetY: 0,
-      hardwareEncoding: false
+      hardwareEncoding: false,
+      platformPreset: 'twitter-x'
+    }
+  },
+  {
+    id: 'bilibili',
+    name: zhCN.exportPresets.builtins.bilibili.name,
+    description: zhCN.exportPresets.builtins.bilibili.description,
+    builtin: true,
+    settings: {
+      width: 1920,
+      height: 1080,
+      fps: 60,
+      videoCodec: 'libx264',
+      audioCodec: 'aac',
+      videoBitrate: '10M',
+      audioBitrate: '192k',
+      format: 'mp4',
+      outputMode: 'video',
+      scaleMode: 'fit',
+      targetAspectRatio: 'source',
+      reframeOffsetX: 0,
+      reframeOffsetY: 0,
+      hardwareEncoding: false,
+      platformPreset: 'bilibili',
+      videoProfile: 'high'
     }
   },
   {
@@ -339,6 +435,19 @@ function sanitizeExportSettings(settings: unknown): ExportPresetSettings {
   }
   if (input.loudnessNormalization === 'off' || input.loudnessNormalization === 'youtube' || input.loudnessNormalization === 'ebu-r128') {
     output.loudnessNormalization = input.loudnessNormalization;
+  }
+  if (
+    input.platformPreset === 'youtube-1080p' ||
+    input.platformPreset === 'youtube-shorts' ||
+    input.platformPreset === 'tiktok' ||
+    input.platformPreset === 'instagram-reels' ||
+    input.platformPreset === 'twitter-x' ||
+    input.platformPreset === 'bilibili'
+  ) {
+    output.platformPreset = input.platformPreset;
+  }
+  if (input.videoProfile === 'baseline' || input.videoProfile === 'main' || input.videoProfile === 'high') {
+    output.videoProfile = input.videoProfile;
   }
   const watermark = sanitizeWatermark(input.watermark);
   if (watermark) {

@@ -20,8 +20,12 @@ describe('export presets', () => {
     expect(presets.map((preset) => preset.name)).toEqual([
       zhCN.exportPresets.builtins.web1080p.name,
       zhCN.exportPresets.builtins.fourK.name,
+      zhCN.exportPresets.builtins.youtube1080p.name,
       zhCN.exportPresets.builtins.youtubeShorts.name,
+      zhCN.exportPresets.builtins.tiktok.name,
+      zhCN.exportPresets.builtins.instagramReels.name,
       zhCN.exportPresets.builtins.twitterX.name,
+      zhCN.exportPresets.builtins.bilibili.name,
       zhCN.exportPresets.builtins.gif.name,
       zhCN.exportPresets.builtins.webp.name,
       zhCN.exportPresets.builtins.apng.name,
@@ -88,6 +92,41 @@ describe('export presets', () => {
     await expect(deleteCustomExportPreset(BUILTIN_EXPORT_PRESETS[0].id, storage)).rejects.toThrow(zhCN.exportPresets.cannotDeleteBuiltin);
   });
 
+  it('defines platform presets with delivery settings and protected built-in ids', () => {
+    expect(BUILTIN_EXPORT_PRESETS.find((preset) => preset.id === 'youtube-1080p')?.settings).toMatchObject({
+      width: 1920,
+      height: 1080,
+      fps: 30,
+      videoBitrate: '8M',
+      platformPreset: 'youtube-1080p'
+    });
+    expect(BUILTIN_EXPORT_PRESETS.find((preset) => preset.id === 'youtube-shorts')?.settings).toMatchObject({
+      width: 1080,
+      height: 1920,
+      fps: 60,
+      videoBitrate: '8M',
+      scaleMode: 'fit',
+      targetAspectRatio: 'source',
+      platformPreset: 'youtube-shorts'
+    });
+    expect(BUILTIN_EXPORT_PRESETS.find((preset) => preset.id === 'tiktok')?.settings).toMatchObject({
+      width: 1080,
+      height: 1920,
+      fps: 60,
+      videoBitrate: '6M',
+      loudnessNormalization: 'youtube',
+      platformPreset: 'tiktok'
+    });
+    expect(BUILTIN_EXPORT_PRESETS.find((preset) => preset.id === 'bilibili')?.settings).toMatchObject({
+      width: 1920,
+      height: 1080,
+      fps: 60,
+      videoBitrate: '10M',
+      videoProfile: 'high',
+      platformPreset: 'bilibili'
+    });
+  });
+
   it('parses only valid custom preset fields', () => {
     const parsed = parseStoredExportPresets(
       JSON.stringify({
@@ -111,6 +150,8 @@ describe('export presets', () => {
               reframeOffsetY: -3,
               hardwareEncoding: true,
               loudnessNormalization: 'ebu-r128',
+              platformPreset: 'bilibili',
+              videoProfile: 'high',
               extra: 'ignored'
             }
           },
@@ -135,7 +176,9 @@ describe('export presets', () => {
           reframeOffsetX: 1,
           reframeOffsetY: -1,
           hardwareEncoding: true,
-          loudnessNormalization: 'ebu-r128'
+          loudnessNormalization: 'ebu-r128',
+          platformPreset: 'bilibili',
+          videoProfile: 'high'
         }
       })
     ]);

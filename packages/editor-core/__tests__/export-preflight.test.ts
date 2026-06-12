@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createTrack, runExportPreflight, parseFontFamilyList, PRIMARY_SEQUENCE_ID, type MediaAsset } from '../src';
+import { createTrack, getPlatformDurationLimitSeconds, runExportPreflight, parseFontFamilyList, PRIMARY_SEQUENCE_ID, type MediaAsset } from '../src';
 import { makeProject, makeSubtitleClip, makeTextClip, makeTimeline, makeVideoClip } from './test-utils';
 
 describe('export preflight', () => {
@@ -124,6 +124,30 @@ describe('export preflight', () => {
         items: ['Whisper path missing']
       })
     );
+  });
+
+  it('warns when a timeline exceeds a platform duration recommendation', () => {
+    const project = makeProject();
+    project.timeline = makeTimeline([makeVideoClip({ id: 'clip-long-reel', duration: 95 })]);
+
+    expect(getPlatformDurationLimitSeconds('instagram-reels')).toBe(90);
+    expect(runExportPreflight(project, { platformPreset: 'instagram-reels' })).toContainEqual(
+      expect.objectContaining({
+        type: 'platform-duration',
+        severity: 'warning',
+        platformPreset: 'instagram-reels',
+        durationSeconds: 95,
+        limitSeconds: 90
+      })
+    );
+  });
+
+  it('does not warn for platform presets without duration limits or under-limit timelines', () => {
+    const project = makeProject();
+    project.timeline = makeTimeline([makeVideoClip({ id: 'clip-short-social', duration: 89 })]);
+
+    expect(runExportPreflight(project, { platformPreset: 'instagram-reels' }).some((issue) => issue.type === 'platform-duration')).toBe(false);
+    expect(runExportPreflight(project, { platformPreset: 'tiktok' }).some((issue) => issue.type === 'platform-duration')).toBe(false);
   });
 
   it('parses CSS font-family lists with quoted names', () => {

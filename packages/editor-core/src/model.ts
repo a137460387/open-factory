@@ -72,6 +72,12 @@ export interface ClipFrameInterpolation {
   targetFps: FrameInterpolationTargetFps;
 }
 
+export interface MotionTrackPoint {
+  time: number;
+  dx: number;
+  dy: number;
+}
+
 export interface PathPointHandle {
   x: number;
   y: number;
@@ -253,6 +259,7 @@ export interface BaseClip {
   frameInterpolation?: ClipFrameInterpolation;
   audioDenoise?: ClipAudioDenoise;
   masks?: ClipMask[];
+  motionTrack?: MotionTrackPoint[];
   keyframes?: ClipKeyframes;
   effects?: Effect[];
   sequenceFrameRate?: number;
@@ -627,6 +634,7 @@ export function createBaseClip(
     frameInterpolation: normalizeFrameInterpolation(input.frameInterpolation),
     audioDenoise: normalizeAudioDenoise(input.audioDenoise),
     masks: normalizeMasks(input.masks),
+    motionTrack: normalizeMotionTrack(input.motionTrack, input.duration),
     keyframes: cloneClipKeyframesLocal(input.keyframes),
     effects: cloneEffects(input.effects),
     sequenceFrameRate: normalizeSequenceFrameRate(input.sequenceFrameRate)
@@ -724,6 +732,27 @@ export function normalizeFrameInterpolation(frameInterpolation: Partial<ClipFram
     enabled: frameInterpolation?.enabled === true,
     targetFps
   };
+}
+
+export function normalizeMotionTrack(points: readonly Partial<MotionTrackPoint>[] | undefined, duration = Number.POSITIVE_INFINITY): MotionTrackPoint[] | undefined {
+  if (!Array.isArray(points)) {
+    return undefined;
+  }
+  const maxTime = typeof duration === 'number' && Number.isFinite(duration) ? Math.max(0, duration) : Number.POSITIVE_INFINITY;
+  const normalized = points.flatMap((point) => {
+    if (!Number.isFinite(point.time) || !Number.isFinite(point.dx) || !Number.isFinite(point.dy)) {
+      return [];
+    }
+    return [
+      {
+        time: round(Math.min(maxTime, Math.max(0, point.time!))),
+        dx: round(Math.min(100_000, Math.max(-100_000, point.dx!))),
+        dy: round(Math.min(100_000, Math.max(-100_000, point.dy!)))
+      }
+    ];
+  });
+  normalized.sort((left, right) => left.time - right.time || left.dx - right.dx || left.dy - right.dy);
+  return normalized.length > 0 ? normalized : undefined;
 }
 
 export function normalizeAudioDenoise(audioDenoise: Partial<ClipAudioDenoise> | undefined): ClipAudioDenoise {
@@ -1095,6 +1124,7 @@ export function serializeLegacyProject(project: Project): {
           stabilization: normalizeStabilization(clip.stabilization),
           audioDenoise: normalizeAudioDenoise(clip.audioDenoise),
           masks: normalizeMasks(clip.masks),
+          motionTrack: normalizeMotionTrack(clip.motionTrack, clip.duration),
           multicam: clip.type === 'nested-sequence' ? normalizeMulticamSequence(clip.multicam, clip.duration) : undefined,
           sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
           keyframes: cloneClipKeyframesLocal(clip.keyframes)

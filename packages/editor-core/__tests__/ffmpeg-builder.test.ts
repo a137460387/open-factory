@@ -109,6 +109,63 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.filterComplex).not.toContain('TP=-1.5');
   });
 
+  it.each([
+    [
+      'YouTube 1080p',
+      { width: 1920, height: 1080, fps: 30, videoBitrate: '8M', scaleMode: 'fit', platformPreset: 'youtube-1080p' },
+      ['-b:v', '8M', '-pix_fmt', 'yuv420p', '-r', '30'],
+      ['scale=1920:1080:force_original_aspect_ratio=decrease', 'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black']
+    ],
+    [
+      'YouTube Shorts',
+      { width: 1080, height: 1920, fps: 60, videoBitrate: '8M', scaleMode: 'fit', platformPreset: 'youtube-shorts' },
+      ['-b:v', '8M', '-pix_fmt', 'yuv420p', '-r', '60'],
+      ['scale=1080:1920:force_original_aspect_ratio=decrease', 'pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=black']
+    ],
+    [
+      'Instagram Reels',
+      { width: 1080, height: 1920, fps: 30, videoBitrate: '3500k', scaleMode: 'fit', platformPreset: 'instagram-reels' },
+      ['-b:v', '3500k', '-pix_fmt', 'yuv420p', '-r', '30'],
+      ['scale=1080:1920:force_original_aspect_ratio=decrease', 'pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=black']
+    ],
+    [
+      'Twitter/X',
+      { width: 1280, height: 720, fps: 30, videoBitrate: '5M', scaleMode: 'fit', platformPreset: 'twitter-x' },
+      ['-b:v', '5M', '-pix_fmt', 'yuv420p', '-r', '30'],
+      ['scale=1280:720:force_original_aspect_ratio=decrease', 'pad=1280:720:(ow-iw)/2:(oh-ih)/2:color=black']
+    ],
+    [
+      'Bilibili',
+      { width: 1920, height: 1080, fps: 60, videoBitrate: '10M', scaleMode: 'fit', platformPreset: 'bilibili', videoProfile: 'high' },
+      ['-b:v', '10M', '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-r', '60'],
+      ['scale=1920:1080:force_original_aspect_ratio=decrease', 'pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black']
+    ]
+  ] as const)('builds %s platform export args', (_name, settings, expectedOutputArgs, expectedFilters) => {
+    const project = makeProject();
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4', settings }));
+
+    expect(plan.outputArgs).toEqual(expect.arrayContaining([...expectedOutputArgs]));
+    for (const expectedFilter of expectedFilters) {
+      expect(plan.filterComplex).toContain(expectedFilter);
+    }
+  });
+
+  it('builds TikTok preset args with -14 LUFS loudness normalization', () => {
+    const project = makeProject();
+    const plan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(project, {
+        outputPath: 'out.mp4',
+        settings: { width: 1080, height: 1920, fps: 60, videoBitrate: '6M', scaleMode: 'fit', loudnessNormalization: 'youtube', platformPreset: 'tiktok' }
+      })
+    );
+
+    expect(plan.outputArgs).toEqual(expect.arrayContaining(['-b:v', '6M', '-pix_fmt', 'yuv420p', '-r', '60']));
+    expect(plan.filterComplex).toContain('scale=1080:1920:force_original_aspect_ratio=decrease');
+    expect(plan.filterComplex).toContain('pad=1080:1920:(ow-iw)/2:(oh-ih)/2:color=black');
+    expect(plan.filterComplex).toContain('loudnorm=I=-14:TP=-1.5:LRA=11');
+    expect(plan.passes?.map((pass) => pass.kind)).toEqual(['loudness-analysis', 'render']);
+  });
+
   it('skips loudness normalization for animated image exports', () => {
     const project = makeProject();
     const plan = buildFfmpegExportPlan(

@@ -1,7 +1,9 @@
 import { getProjectSequences, type Clip, type Project, type Timeline } from '../model';
+import { getTimelinePlaybackDuration } from '../timeline';
+import type { ExportPlatformPreset } from './export-types';
 
 export type PreflightSeverity = 'blocking' | 'warning';
-export type PreflightIssueType = 'missing-media' | 'missing-font' | 'whisper-path' | 'ffmpeg';
+export type PreflightIssueType = 'missing-media' | 'missing-font' | 'whisper-path' | 'ffmpeg' | 'platform-duration';
 
 export interface PreflightResult {
   id: string;
@@ -11,6 +13,9 @@ export interface PreflightResult {
   items: string[];
   clipIds?: string[];
   mediaIds?: string[];
+  platformPreset?: ExportPlatformPreset;
+  durationSeconds?: number;
+  limitSeconds?: number;
 }
 
 export interface ExportPreflightOptions {
@@ -18,9 +23,14 @@ export interface ExportPreflightOptions {
   whisperReady?: boolean;
   whisperMessage?: string;
   isFontFamilyAvailable?: (fontFamily: string) => boolean;
+  platformPreset?: ExportPlatformPreset;
 }
 
 const GENERIC_FONT_FAMILIES = new Set(['serif', 'sans-serif', 'monospace', 'cursive', 'fantasy', 'system-ui', 'ui-serif', 'ui-sans-serif', 'ui-monospace']);
+const PLATFORM_DURATION_LIMIT_SECONDS: Partial<Record<ExportPlatformPreset, number>> = {
+  'instagram-reels': 90,
+  'twitter-x': 140
+};
 
 export function runExportPreflight(project: Project, options: ExportPreflightOptions = {}): PreflightResult[] {
   const clips = collectReachableTimelineClips(project);
@@ -71,7 +81,37 @@ export function runExportPreflight(project: Project, options: ExportPreflightOpt
     });
   }
 
+  const platformDurationWarning = buildPlatformDurationWarning(project, options.platformPreset);
+  if (platformDurationWarning) {
+    results.push(platformDurationWarning);
+  }
+
   return results;
+}
+
+export function getPlatformDurationLimitSeconds(platformPreset: ExportPlatformPreset | undefined): number | undefined {
+  return platformPreset ? PLATFORM_DURATION_LIMIT_SECONDS[platformPreset] : undefined;
+}
+
+function buildPlatformDurationWarning(project: Project, platformPreset: ExportPlatformPreset | undefined): PreflightResult | undefined {
+  const limitSeconds = getPlatformDurationLimitSeconds(platformPreset);
+  if (!platformPreset || limitSeconds === undefined) {
+    return undefined;
+  }
+  const durationSeconds = getTimelinePlaybackDuration(project.timeline);
+  if (durationSeconds <= limitSeconds + 0.001) {
+    return undefined;
+  }
+  return {
+    id: `platform-duration-${platformPreset}`,
+    type: 'platform-duration',
+    severity: 'warning',
+    message: 'Timeline duration exceeds the selected platform recommendation.',
+    items: [],
+    platformPreset,
+    durationSeconds,
+    limitSeconds
+  };
 }
 
 function collectReachableTimelineClips(project: Project): Clip[] {

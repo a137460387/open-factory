@@ -50,6 +50,7 @@ import type {
   ExportClipKeyframes,
   ExportKeyframe,
   ExportLoudnessNormalization,
+  ExportVideoProfile,
   ExportProject,
   ExportSettings,
   ExportWatermarkPosition,
@@ -88,6 +89,8 @@ export const DEFAULT_EXPORT_SETTINGS: Omit<ExportSettings, 'outputPath'> = {
   subtitleMode: undefined,
   hardwareEncoding: false,
   loudnessNormalization: 'off',
+  platformPreset: undefined,
+  videoProfile: undefined,
   watermark: null
 };
 
@@ -545,6 +548,7 @@ function normalizeExportReframeSettings(settings: ExportSettings): ExportSetting
     reframeOffsetX: clampReframeOffset(settings.reframeOffsetX),
     reframeOffsetY: clampReframeOffset(settings.reframeOffsetY),
     loudnessNormalization: normalizeLoudnessNormalization(settings.loudnessNormalization),
+    videoProfile: normalizeVideoProfile(settings.videoProfile),
     watermark: normalizeExportWatermark(settings.watermark)
   };
 }
@@ -1587,7 +1591,12 @@ function buildVideoEncodingArgs(settings: ExportSettings, capabilities: FfmpegCa
     }
     warnings.push('Hardware video encoding was requested but no supported H.264 hardware encoder was detected. Falling back to software encoding.');
   }
-  return ['-c:v', settings.videoCodec, ...buildBitrateArgs('-b:v', settings.videoBitrate), '-pix_fmt', 'yuv420p', '-r', String(settings.fps)];
+  return ['-c:v', settings.videoCodec, ...buildBitrateArgs('-b:v', settings.videoBitrate), ...buildVideoProfileArgs(settings), '-pix_fmt', 'yuv420p', '-r', String(settings.fps)];
+}
+
+function buildVideoProfileArgs(settings: ExportSettings): string[] {
+  const codec = settings.videoCodec.toLowerCase();
+  return settings.videoProfile && (codec.includes('264') || codec === 'h264') ? ['-profile:v', settings.videoProfile] : [];
 }
 
 function buildContainerArgs(settings: ExportSettings): string[] {
@@ -1777,6 +1786,10 @@ function getLoudnessNormalizationPreset(mode: ExportLoudnessNormalization | unde
 
 function normalizeLoudnessNormalization(mode: ExportLoudnessNormalization | undefined): ExportLoudnessNormalization {
   return mode === 'youtube' || mode === 'ebu-r128' ? mode : 'off';
+}
+
+function normalizeVideoProfile(profile: ExportVideoProfile | undefined): ExportVideoProfile | undefined {
+  return profile === 'baseline' || profile === 'main' || profile === 'high' ? profile : undefined;
 }
 
 function buildLoudnormAnalysisFilter(preset: LoudnessNormalizationPreset): string {
