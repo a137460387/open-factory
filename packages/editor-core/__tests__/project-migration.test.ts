@@ -167,6 +167,53 @@ describe('project schema migration', () => {
     expect(clip.audioDenoise).toEqual({ enabled: false, strength: 0.5 });
   });
 
+  it('backfills and clamps advanced audio clip defaults during migration', () => {
+    const project = makeProject();
+    const legacyClip = { ...project.timeline.tracks[0].clips[0] };
+    delete (legacyClip as Partial<typeof legacyClip>).pitchSemitones;
+    delete (legacyClip as Partial<typeof legacyClip>).reverseAudio;
+    delete (legacyClip as Partial<typeof legacyClip>).fadeInDuration;
+    delete (legacyClip as Partial<typeof legacyClip>).fadeOutDuration;
+    delete (legacyClip as Partial<typeof legacyClip>).fadeInCurve;
+    delete (legacyClip as Partial<typeof legacyClip>).fadeOutCurve;
+    project.timeline.tracks[0].clips = [legacyClip as never];
+
+    const migrated = migrateProjectFile(serializeProject(project));
+    const clip = migrated.project.timeline.tracks[0].clips[0];
+
+    expect(clip).toMatchObject({
+      pitchSemitones: 0,
+      reverseAudio: false,
+      fadeInDuration: 0,
+      fadeOutDuration: 0,
+      fadeInCurve: 'linear',
+      fadeOutCurve: 'linear'
+    });
+
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-audio-clamped',
+        duration: 4,
+        pitchSemitones: 99,
+        reverseAudio: true,
+        fadeInDuration: 99,
+        fadeOutDuration: -5,
+        fadeInCurve: 'ease-in',
+        fadeOutCurve: 'ease-in-out' as never
+      })
+    ];
+    const clamped = migrateProjectFile(serializeProject(project)).project.timeline.tracks[0].clips[0];
+
+    expect(clamped).toMatchObject({
+      pitchSemitones: 12,
+      reverseAudio: true,
+      fadeInDuration: 4,
+      fadeOutDuration: 0,
+      fadeInCurve: 'ease-in',
+      fadeOutCurve: 'linear'
+    });
+  });
+
   it('backfills missing input color space during migration', () => {
     const project = makeProject();
     project.timeline.tracks[0].clips[0].colorCorrection = {

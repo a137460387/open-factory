@@ -4,6 +4,10 @@ import {
   DEFAULT_CLIP_SPEED,
   DEFAULT_CHROMA_KEY,
   DEFAULT_COLOR_CORRECTION,
+  DEFAULT_AUDIO_FADE_CURVE,
+  DEFAULT_AUDIO_FADE_DURATION,
+  DEFAULT_AUDIO_PITCH_SEMITONES,
+  DEFAULT_AUDIO_REVERSE,
   type Clip,
   type MediaAsset,
   type Timeline,
@@ -34,12 +38,34 @@ export function createClipFromAsset(asset: MediaAsset, track: Track, timeline: T
   };
 
   if (asset.type === 'audio') {
-    return { ...base, type: 'audio', mediaId: asset.id, volume: 1 };
+    return {
+      ...base,
+      type: 'audio',
+      mediaId: asset.id,
+      volume: 1,
+      pitchSemitones: DEFAULT_AUDIO_PITCH_SEMITONES,
+      reverseAudio: DEFAULT_AUDIO_REVERSE,
+      fadeInDuration: DEFAULT_AUDIO_FADE_DURATION,
+      fadeOutDuration: DEFAULT_AUDIO_FADE_DURATION,
+      fadeInCurve: DEFAULT_AUDIO_FADE_CURVE,
+      fadeOutCurve: DEFAULT_AUDIO_FADE_CURVE
+    };
   }
   if (asset.type === 'image') {
     return { ...base, type: 'image', mediaId: asset.id };
   }
-  return { ...base, type: 'video', mediaId: asset.id, volume: 1 };
+  return {
+    ...base,
+    type: 'video',
+    mediaId: asset.id,
+    volume: 1,
+    pitchSemitones: DEFAULT_AUDIO_PITCH_SEMITONES,
+    reverseAudio: DEFAULT_AUDIO_REVERSE,
+    fadeInDuration: DEFAULT_AUDIO_FADE_DURATION,
+    fadeOutDuration: DEFAULT_AUDIO_FADE_DURATION,
+    fadeInCurve: DEFAULT_AUDIO_FADE_CURVE,
+    fadeOutCurve: DEFAULT_AUDIO_FADE_CURVE
+  };
 }
 
 export function createTextClip(track: Track, timeline: Timeline): Clip {

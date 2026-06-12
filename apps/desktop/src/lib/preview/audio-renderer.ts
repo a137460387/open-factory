@@ -7,6 +7,9 @@ import {
   getClipSpeedAtTime,
   getTrackPan,
   getTrackVolume,
+  getClipSourceVisibleDuration,
+  normalizeAudioFadeCurve,
+  normalizeAudioPitchSemitones,
   normalizeTrackCompressor,
   normalizeTrackEQ,
   readVuMeter,
@@ -127,7 +130,11 @@ export class PreviewAudioRenderer {
     const audio = this.getAudio(clip.id, asset);
     const localTime = Math.max(0, playheadTime - clip.start);
     const speed = getClipSpeedAtTime(clip, localTime);
-    const sourceTime = Math.max(0, calculateSpeedCurveSourceDuration(localTime, clip.keyframes, getClipSpeed(clip)) + clip.trimStart);
+    const sourceOffset = calculateSpeedCurveSourceDuration(localTime, clip.keyframes, getClipSpeed(clip));
+    const visibleSourceDuration = getClipSourceVisibleDuration(clip);
+    const sourceTime = clip.reverseAudio === true
+      ? Math.max(0, clip.trimStart + Math.max(0, visibleSourceDuration - sourceOffset))
+      : Math.max(0, sourceOffset + clip.trimStart);
     const node = this.getAudioNode(clip.id, audio);
     this.applyTrackProcessing(node, track);
     const volume = resolveAnimatedVolume(clip, localTime);
@@ -138,9 +145,9 @@ export class PreviewAudioRenderer {
     }
     recordAudioMix(clip.type, node.gain.gain.value);
     audio.volume = 1;
-    audio.playbackRate = speed;
+    audio.playbackRate = speed * 2 ** (normalizeAudioPitchSemitones(clip.pitchSemitones) / 12);
 
-    const shouldCalibrate = Date.now() - this.lastAudioCalibration > 1000 || !isPlaying;
+    const shouldCalibrate = clip.reverseAudio === true || Date.now() - this.lastAudioCalibration > 1000 || !isPlaying;
     if (Math.abs(audio.currentTime - sourceTime) > 0.15 && shouldCalibrate) {
       audio.currentTime = sourceTime;
       this.lastAudioCalibration = Date.now();
@@ -248,11 +255,22 @@ function getFadeMultiplier(clip: Extract<Clip, { type: 'audio' | 'video' }>, pla
   const localTime = Math.max(0, playheadTime - clip.start);
   let multiplier = 1;
   if ('fadeInDuration' in clip && clip.fadeInDuration && clip.fadeInDuration > 0) {
-    multiplier = Math.min(multiplier, Math.min(1, localTime / clip.fadeInDuration));
+    multiplier = Math.min(multiplier, applyFadeCurve(Math.min(1, localTime / clip.fadeInDuration), normalizeAudioFadeCurve(clip.fadeInCurve)));
   }
   if ('fadeOutDuration' in clip && clip.fadeOutDuration && clip.fadeOutDuration > 0) {
     const remaining = Math.max(0, clip.duration - localTime);
-    multiplier = Math.min(multiplier, Math.min(1, remaining / clip.fadeOutDuration));
+    multiplier = Math.min(multiplier, applyFadeCurve(Math.min(1, remaining / clip.fadeOutDuration), normalizeAudioFadeCurve(clip.fadeOutCurve)));
   }
   return Math.max(0, Math.min(1, multiplier));
+}
+
+function applyFadeCurve(value: number, curve: 'linear' | 'ease-in' | 'ease-out'): number {
+  const clamped = Math.max(0, Math.min(1, value));
+  if (curve === 'ease-in') {
+    return clamped * clamped;
+  }
+  if (curve === 'ease-out') {
+    return 1 - (1 - clamped) * (1 - clamped);
+  }
+  return clamped;
 }

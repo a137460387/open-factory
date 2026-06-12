@@ -986,6 +986,48 @@ describe('multitrack ffmpeg builder', () => {
     expect(unavailablePlan.warnings).toContain('Audio denoise for clip clip-denoise-unavailable was skipped because the current FFmpeg build does not support arnndn.');
   });
 
+  it('builds pitch shift filters from clip semitones', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-pitch-up', duration: 2, pitchSemitones: 12 })];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('asetrate=44100*2,aresample=44100');
+  });
+
+  it('builds reverse audio filters when enabled', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-reverse-audio', duration: 2, reverseAudio: true })];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('asetpts=PTS-STARTPTS,areverse');
+  });
+
+  it('adds non-linear audio fade curves and leaves default audio processing neutral', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-fade-curves',
+        duration: 4,
+        fadeInDuration: 1,
+        fadeOutDuration: 1.5,
+        fadeInCurve: 'ease-in',
+        fadeOutCurve: 'ease-out'
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+    const defaultPlan = buildFfmpegExportPlan(buildExportProjectFromProject(makeProject(), { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('afade=t=in:st=0:d=1:curve=qsin');
+    expect(plan.filterComplex).toContain('afade=t=out:st=2.5:d=1.5:curve=hsin');
+    expect(defaultPlan.filterComplex).not.toContain('asetrate=');
+    expect(defaultPlan.filterComplex).not.toContain('areverse');
+    expect(defaultPlan.filterComplex).not.toContain('curve=qsin');
+    expect(defaultPlan.filterComplex).not.toContain('curve=hsin');
+  });
+
   it('builds image sequence inputs through a local concat artifact', () => {
     const project = makeProject();
     project.media = [

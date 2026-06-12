@@ -34,7 +34,10 @@ import {
   getEffectStringParam,
   getTransformScaleX,
   getTransformScaleY,
+  normalizeAudioFadeCurve,
+  normalizeAudioFadeDuration,
   normalizeAudioDenoise,
+  normalizeAudioPitchSemitones,
   normalizeChromaKey,
   normalizeColorCurves,
   normalizeColorCorrection,
@@ -49,6 +52,7 @@ import {
   sampleCurve,
   setKenBurnsEndScaleKeyframes,
   createTrack,
+  type AudioFadeCurve,
   type ClipPatch,
   type ColorCurves,
   type ColorWheelValue,
@@ -188,6 +192,12 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
   const frameInterpolationUnavailable = frameInterpolationSupported === false;
   const audioDenoise = normalizeAudioDenoise(clip.audioDenoise);
   const audioDenoiseUnavailable = audioDenoiseSupported === false;
+  const audioPitchSemitones = 'pitchSemitones' in clip ? normalizeAudioPitchSemitones(clip.pitchSemitones) : 0;
+  const reverseAudio = 'reverseAudio' in clip ? clip.reverseAudio === true : false;
+  const fadeInDuration = 'fadeInDuration' in clip ? normalizeAudioFadeDuration(clip.fadeInDuration, clip.duration) : 0;
+  const fadeOutDuration = 'fadeOutDuration' in clip ? normalizeAudioFadeDuration(clip.fadeOutDuration, clip.duration) : 0;
+  const fadeInCurve = 'fadeInCurve' in clip ? normalizeAudioFadeCurve(clip.fadeInCurve) : 'linear';
+  const fadeOutCurve = 'fadeOutCurve' in clip ? normalizeAudioFadeCurve(clip.fadeOutCurve) : 'linear';
   const masks = normalizeMasks(clip.masks);
   const colorCurves = normalizeColorCurves(colorCorrection.colorCurves);
   const threeWayColor = normalizeThreeWayColor(colorCorrection.threeWayColor);
@@ -864,8 +874,69 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
         {'volume' in clip ? (
           <Section title={zhCN.inspector.sections.audio}>
             <AnimatedField label={zhCN.inspector.fields.volume} onAddKeyframe={() => addKeyframe('volume')} testId="add-volume-keyframe-button">
-              <RangeField label={zhCN.inspector.fields.volume} value={clip.volume} min={0} max={2} step={0.01} format={(value) => `${Math.round(value * 100)}%`} onCommit={(volume) => commit({ volume })} hideLabel />
+              <RangeField label={zhCN.inspector.fields.volume} value={clip.volume} min={0} max={2} step={0.01} format={(value) => `${Math.round(value * 100)}%`} onCommit={(volume) => commit({ volume })} hideLabel testId="clip-volume-input" />
             </AnimatedField>
+            <RangeNumberField
+              label={zhCN.inspector.fields.pitchShift}
+              value={audioPitchSemitones}
+              min={-12}
+              max={12}
+              step={1}
+              format={(value) => `${value > 0 ? '+' : ''}${Math.round(value)} ${zhCN.inspector.fields.semitones}`}
+              onCommit={(pitchSemitones) => commit({ pitchSemitones })}
+              testId="clip-pitch-input"
+            />
+            <ToggleField label={zhCN.inspector.fields.reverseAudio} checked={reverseAudio} onCommit={(nextReverseAudio) => commit({ reverseAudio: nextReverseAudio })} testId="clip-reverse-audio-toggle" />
+            <div className="grid grid-cols-2 gap-2">
+              <RangeNumberField
+                label={zhCN.inspector.fields.fadeIn}
+                value={fadeInDuration}
+                min={0}
+                max={clip.duration}
+                step={0.1}
+                format={(value) => `${value.toFixed(1)}s`}
+                onCommit={(fadeInDuration) => commit({ fadeInDuration })}
+                testId="clip-fade-in-duration-input"
+              />
+              <RangeNumberField
+                label={zhCN.inspector.fields.fadeOut}
+                value={fadeOutDuration}
+                min={0}
+                max={clip.duration}
+                step={0.1}
+                format={(value) => `${value.toFixed(1)}s`}
+                onCommit={(fadeOutDuration) => commit({ fadeOutDuration })}
+                testId="clip-fade-out-duration-input"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="block text-xs font-medium text-slate-600">
+                {zhCN.inspector.fields.fadeInCurve}
+                <select
+                  className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                  value={fadeInCurve}
+                  onChange={(event) => commit({ fadeInCurve: event.target.value as AudioFadeCurve })}
+                  data-testid="clip-fade-in-curve-select"
+                >
+                  <option value="linear">{zhCN.inspector.easing.linear}</option>
+                  <option value="ease-in">{zhCN.inspector.easing.easeIn}</option>
+                  <option value="ease-out">{zhCN.inspector.easing.easeOut}</option>
+                </select>
+              </label>
+              <label className="block text-xs font-medium text-slate-600">
+                {zhCN.inspector.fields.fadeOutCurve}
+                <select
+                  className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                  value={fadeOutCurve}
+                  onChange={(event) => commit({ fadeOutCurve: event.target.value as AudioFadeCurve })}
+                  data-testid="clip-fade-out-curve-select"
+                >
+                  <option value="linear">{zhCN.inspector.easing.linear}</option>
+                  <option value="ease-in">{zhCN.inspector.easing.easeIn}</option>
+                  <option value="ease-out">{zhCN.inspector.easing.easeOut}</option>
+                </select>
+              </label>
+            </div>
           </Section>
         ) : null}
 

@@ -8,7 +8,10 @@ import {
   createTransition,
   createTrack,
   normalizeTimelineMarkers,
+  normalizeAudioFadeCurve,
+  normalizeAudioFadeDuration,
   normalizeAudioDenoise,
+  normalizeAudioPitchSemitones,
   normalizeChromaKey,
   normalizeColorCorrection,
   normalizeFrameInterpolation,
@@ -288,6 +291,16 @@ function cloneClip<TClip extends Clip>(clip: TClip): TClip {
     effects: cloneEffects(clip.effects),
     multicam: clip.type === 'nested-sequence' ? normalizeMulticamSequence(clip.multicam, clip.duration) : undefined
   };
+  if (clip.type === 'video' || clip.type === 'audio' || clip.type === 'nested-sequence') {
+    Object.assign(cloned, {
+      pitchSemitones: normalizeAudioPitchSemitones(clip.pitchSemitones),
+      reverseAudio: clip.reverseAudio === true,
+      fadeInDuration: normalizeAudioFadeDuration(clip.fadeInDuration, clip.duration),
+      fadeOutDuration: normalizeAudioFadeDuration(clip.fadeOutDuration, clip.duration),
+      fadeInCurve: normalizeAudioFadeCurve(clip.fadeInCurve),
+      fadeOutCurve: normalizeAudioFadeCurve(clip.fadeOutCurve)
+    });
+  }
   if (clip.type === 'text') {
     return { ...cloned, style: { ...DEFAULT_TEXT_STYLE, ...clip.style } } as TClip;
   }

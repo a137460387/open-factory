@@ -647,6 +647,34 @@ describe('timeline commands', () => {
     expect(updated.colorCorrection).toEqual({ ...DEFAULT_COLOR_CORRECTION, brightness: 1, contrast: 2, saturation: 0, hue: 180, lutPath: null });
   });
 
+  it('clamps advanced audio clip patches', () => {
+    const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'clip-video', duration: 3 })]));
+    const manager = new CommandManager();
+
+    manager.execute(
+      new UpdateClipCommand(accessor, 'clip-video', {
+        pitchSemitones: 99,
+        reverseAudio: true,
+        fadeInDuration: 99,
+        fadeOutDuration: -1,
+        fadeInCurve: 'ease-out',
+        fadeOutCurve: 'ease-in-out' as never
+      })
+    );
+
+    expect(accessor.current().tracks[0].clips[0]).toMatchObject({
+      pitchSemitones: 12,
+      reverseAudio: true,
+      fadeInDuration: 3,
+      fadeOutDuration: 0,
+      fadeInCurve: 'ease-out',
+      fadeOutCurve: 'linear'
+    });
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips[0]).toMatchObject({ pitchSemitones: 0, reverseAudio: false, fadeInCurve: 'linear' });
+  });
+
   it('normalizes stabilization and PNG sequence frame rate patches with undo', () => {
     const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'clip-video', duration: 3 })]));
     const manager = new CommandManager();

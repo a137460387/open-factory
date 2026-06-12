@@ -2,6 +2,10 @@ import {
   DEFAULT_TRANSFORM,
   DEFAULT_CLIP_SPEED,
   DEFAULT_COLOR_CORRECTION,
+  DEFAULT_AUDIO_FADE_CURVE,
+  DEFAULT_AUDIO_FADE_DURATION,
+  DEFAULT_AUDIO_PITCH_SEMITONES,
+  DEFAULT_AUDIO_REVERSE,
   DEFAULT_SUBTITLE_MODE,
   DEFAULT_SUBTITLE_STYLE,
   createTrack,
@@ -53,8 +57,12 @@ export function makeVideoClip(overrides: ClipOverrides<Extract<Clip, { type: 'vi
     effects: overrides.effects,
     volume: overrides.volume ?? 1,
     muted: overrides.muted,
-    fadeInDuration: overrides.fadeInDuration,
-    fadeOutDuration: overrides.fadeOutDuration
+    pitchSemitones: overrides.pitchSemitones ?? DEFAULT_AUDIO_PITCH_SEMITONES,
+    reverseAudio: overrides.reverseAudio ?? DEFAULT_AUDIO_REVERSE,
+    fadeInDuration: overrides.fadeInDuration ?? DEFAULT_AUDIO_FADE_DURATION,
+    fadeOutDuration: overrides.fadeOutDuration ?? DEFAULT_AUDIO_FADE_DURATION,
+    fadeInCurve: overrides.fadeInCurve ?? DEFAULT_AUDIO_FADE_CURVE,
+    fadeOutCurve: overrides.fadeOutCurve ?? DEFAULT_AUDIO_FADE_CURVE
   };
 }
 
@@ -82,8 +90,12 @@ export function makeAudioClip(overrides: ClipOverrides<Extract<Clip, { type: 'au
     effects: overrides.effects,
     volume: overrides.volume ?? 1,
     muted: overrides.muted,
-    fadeInDuration: overrides.fadeInDuration,
-    fadeOutDuration: overrides.fadeOutDuration
+    pitchSemitones: overrides.pitchSemitones ?? DEFAULT_AUDIO_PITCH_SEMITONES,
+    reverseAudio: overrides.reverseAudio ?? DEFAULT_AUDIO_REVERSE,
+    fadeInDuration: overrides.fadeInDuration ?? DEFAULT_AUDIO_FADE_DURATION,
+    fadeOutDuration: overrides.fadeOutDuration ?? DEFAULT_AUDIO_FADE_DURATION,
+    fadeInCurve: overrides.fadeInCurve ?? DEFAULT_AUDIO_FADE_CURVE,
+    fadeOutCurve: overrides.fadeOutCurve ?? DEFAULT_AUDIO_FADE_CURVE
   };
 }
 

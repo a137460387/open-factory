@@ -21,6 +21,7 @@ export type ClipType = 'video' | 'audio' | 'image' | 'text' | 'subtitle' | 'nest
 export type TransitionType = 'fade-black' | 'dissolve';
 export type SubtitleMode = 'burn-in' | 'soft-sub';
 export type KeyframeEasing = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out';
+export type AudioFadeCurve = Extract<KeyframeEasing, 'linear' | 'ease-in' | 'ease-out'>;
 
 export interface Keyframe<T> {
   id: string;
@@ -270,8 +271,12 @@ export interface VideoClip extends BaseClip {
   mediaId: string;
   volume: number;
   muted?: boolean;
+  pitchSemitones?: number;
+  reverseAudio?: boolean;
   fadeInDuration?: number;
   fadeOutDuration?: number;
+  fadeInCurve?: AudioFadeCurve;
+  fadeOutCurve?: AudioFadeCurve;
 }
 
 export interface AudioClip extends BaseClip {
@@ -279,8 +284,12 @@ export interface AudioClip extends BaseClip {
   mediaId: string;
   volume: number;
   muted?: boolean;
+  pitchSemitones?: number;
+  reverseAudio?: boolean;
   fadeInDuration?: number;
   fadeOutDuration?: number;
+  fadeInCurve?: AudioFadeCurve;
+  fadeOutCurve?: AudioFadeCurve;
 }
 
 export interface ImageClip extends BaseClip {
@@ -307,8 +316,12 @@ export interface NestedSequenceClip extends BaseClip {
   sequenceId: string;
   volume: number;
   muted?: boolean;
+  pitchSemitones?: number;
+  reverseAudio?: boolean;
   fadeInDuration?: number;
   fadeOutDuration?: number;
+  fadeInCurve?: AudioFadeCurve;
+  fadeOutCurve?: AudioFadeCurve;
   multicam?: MulticamSequence;
 }
 
@@ -404,6 +417,10 @@ export const DEFAULT_AUDIO_DENOISE: ClipAudioDenoise = {
   enabled: false,
   strength: 0.5
 };
+export const DEFAULT_AUDIO_PITCH_SEMITONES = 0;
+export const DEFAULT_AUDIO_REVERSE = false;
+export const DEFAULT_AUDIO_FADE_CURVE: AudioFadeCurve = 'linear';
+export const DEFAULT_AUDIO_FADE_DURATION = 0;
 
 export const DEFAULT_MASK: Omit<ClipMask, 'id'> = {
   type: 'rect',
@@ -605,8 +622,12 @@ export function createNestedSequenceClip(
     sequenceId: input.sequenceId,
     volume: normalizeTrackVolume(input.volume),
     muted: input.muted,
-    fadeInDuration: input.fadeInDuration,
-    fadeOutDuration: input.fadeOutDuration,
+    pitchSemitones: normalizeAudioPitchSemitones(input.pitchSemitones),
+    reverseAudio: input.reverseAudio === true,
+    fadeInDuration: normalizeAudioFadeDuration(input.fadeInDuration, input.duration),
+    fadeOutDuration: normalizeAudioFadeDuration(input.fadeOutDuration, input.duration),
+    fadeInCurve: normalizeAudioFadeCurve(input.fadeInCurve),
+    fadeOutCurve: normalizeAudioFadeCurve(input.fadeOutCurve),
     multicam: normalizeMulticamSequence(input.multicam, input.duration)
   };
 }
@@ -685,6 +706,19 @@ export function normalizeAudioDenoise(audioDenoise: Partial<ClipAudioDenoise> | 
     enabled: audioDenoise?.enabled === true,
     strength: round(Math.min(1, Math.max(0, finiteOrDefault(audioDenoise?.strength, DEFAULT_AUDIO_DENOISE.strength))))
   };
+}
+
+export function normalizeAudioPitchSemitones(semitones: number | undefined): number {
+  return round(Math.min(12, Math.max(-12, finiteOrDefault(semitones, DEFAULT_AUDIO_PITCH_SEMITONES))));
+}
+
+export function normalizeAudioFadeCurve(curve: AudioFadeCurve | undefined): AudioFadeCurve {
+  return curve === 'ease-in' || curve === 'ease-out' || curve === 'linear' ? curve : DEFAULT_AUDIO_FADE_CURVE;
+}
+
+export function normalizeAudioFadeDuration(duration: number | undefined, clipDuration = Number.POSITIVE_INFINITY): number {
+  const maxDuration = typeof clipDuration === 'number' && Number.isFinite(clipDuration) ? Math.max(0, clipDuration) : Number.POSITIVE_INFINITY;
+  return round(Math.min(maxDuration, Math.max(0, finiteOrDefault(duration, DEFAULT_AUDIO_FADE_DURATION))));
 }
 
 export function createMask(mask: Partial<ClipMask> = {}): ClipMask {

@@ -1,7 +1,7 @@
 import type { ColorCurves, ThreeWayColor } from '../color-grading';
 import type { InputColorSpace } from '../color-log-luts';
 import type { Effect } from '../effects';
-import type { TrackCompressor, TrackEQ } from '../model';
+import type { AudioFadeCurve, TrackCompressor, TrackEQ } from '../model';
 import type { TargetAspectRatio } from '../reframe';
 
 export type ExportLoudnessNormalization = 'off' | 'youtube' | 'ebu-r128';
@@ -165,8 +165,12 @@ export interface ExportClip {
   eq: TrackEQ;
   compressor: TrackCompressor;
   muted: boolean;
+  pitchSemitones: number;
+  reverseAudio: boolean;
   fadeInDuration: number;
   fadeOutDuration: number;
+  fadeInCurve: AudioFadeCurve;
+  fadeOutCurve: AudioFadeCurve;
   hasEmbeddedAudio: boolean;
   audioChannels: number;
   audioSampleRate: number;

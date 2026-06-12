@@ -10,12 +10,16 @@ import {
   DEFAULT_NESTED_SEQUENCE_NAME,
   getProjectSequences,
   normalizeMasterVolume,
+  type AudioFadeCurve,
   type Keyframe,
   type KeyframeEasing,
   type KeyframeProperty,
   normalizeColorCorrection,
   normalizeChromaKey,
+  normalizeAudioFadeCurve,
+  normalizeAudioFadeDuration,
   normalizeAudioDenoise,
+  normalizeAudioPitchSemitones,
   normalizeFrameInterpolation,
   normalizeMask,
   normalizeMasks,
@@ -1669,6 +1673,12 @@ export type ClipPatch = Partial<Omit<Clip, 'type' | 'id' | 'transform' | 'colorC
   mediaId?: string;
   subtitleMode?: SubtitleMode;
   speed?: number;
+  pitchSemitones?: number;
+  reverseAudio?: boolean;
+  fadeInDuration?: number;
+  fadeOutDuration?: number;
+  fadeInCurve?: AudioFadeCurve;
+  fadeOutCurve?: AudioFadeCurve;
   chromaKey?: Partial<ChromaKey>;
   stabilization?: Partial<ClipStabilization>;
   frameInterpolation?: Partial<ClipFrameInterpolation>;
@@ -1708,12 +1718,30 @@ export class UpdateClipCommand implements Command {
           : { ...this.before.transform, ...this.patch.transform }
       )
     } as Clip;
+    if (this.after.type === 'video' || this.after.type === 'audio' || this.after.type === 'nested-sequence') {
+      this.after = {
+        ...this.after,
+        pitchSemitones: normalizeAudioPitchSemitones(this.patch.pitchSemitones ?? this.after.pitchSemitones),
+        reverseAudio: (this.patch.reverseAudio ?? this.after.reverseAudio) === true,
+        fadeInDuration: normalizeAudioFadeDuration(this.patch.fadeInDuration ?? this.after.fadeInDuration, this.after.duration),
+        fadeOutDuration: normalizeAudioFadeDuration(this.patch.fadeOutDuration ?? this.after.fadeOutDuration, this.after.duration),
+        fadeInCurve: normalizeAudioFadeCurve(this.patch.fadeInCurve ?? this.after.fadeInCurve),
+        fadeOutCurve: normalizeAudioFadeCurve(this.patch.fadeOutCurve ?? this.after.fadeOutCurve)
+      } as Clip;
+    }
     const speedKeyframesChanged = this.patch.keyframes !== undefined && (Boolean(this.before.keyframes?.speed?.length) || Boolean(this.patch.keyframes?.speed?.length));
     if (typeof nextSpeed === 'number' || speedKeyframesChanged) {
       this.after = {
         ...this.after,
         duration: getClipDisplayDuration(getClipSourceVisibleDuration(this.before), nextSpeed ?? this.after.speed, this.after.keyframes)
       } as Clip;
+      if (this.after.type === 'video' || this.after.type === 'audio' || this.after.type === 'nested-sequence') {
+        this.after = {
+          ...this.after,
+          fadeInDuration: normalizeAudioFadeDuration(this.after.fadeInDuration, this.after.duration),
+          fadeOutDuration: normalizeAudioFadeDuration(this.after.fadeOutDuration, this.after.duration)
+        } as Clip;
+      }
     }
     if ('style' in this.before || this.patch.style) {
       this.after = {

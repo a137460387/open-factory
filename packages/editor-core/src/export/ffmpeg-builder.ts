@@ -14,7 +14,10 @@ import {
   isChromaKeyEnabled,
   isStabilizationExportable,
   normalizeChromaKey,
+  normalizeAudioFadeCurve,
+  normalizeAudioFadeDuration,
   normalizeAudioDenoise,
+  normalizeAudioPitchSemitones,
   normalizeFrameInterpolation,
   normalizeSequenceFrameRate,
   normalizeStabilization,
@@ -191,8 +194,12 @@ function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project[
             eq: trackEQ,
             compressor: trackCompressor,
             muted: 'muted' in clip ? Boolean(clip.muted) : false,
-            fadeInDuration: 'fadeInDuration' in clip ? Math.max(0, clip.fadeInDuration ?? 0) : 0,
-            fadeOutDuration: 'fadeOutDuration' in clip ? Math.max(0, clip.fadeOutDuration ?? 0) : 0,
+            pitchSemitones: 'pitchSemitones' in clip ? normalizeAudioPitchSemitones(clip.pitchSemitones) : 0,
+            reverseAudio: 'reverseAudio' in clip ? clip.reverseAudio === true : false,
+            fadeInDuration: 'fadeInDuration' in clip ? normalizeAudioFadeDuration(clip.fadeInDuration, clip.duration) : 0,
+            fadeOutDuration: 'fadeOutDuration' in clip ? normalizeAudioFadeDuration(clip.fadeOutDuration, clip.duration) : 0,
+            fadeInCurve: 'fadeInCurve' in clip ? normalizeAudioFadeCurve(clip.fadeInCurve) : 'linear',
+            fadeOutCurve: 'fadeOutCurve' in clip ? normalizeAudioFadeCurve(clip.fadeOutCurve) : 'linear',
             hasEmbeddedAudio: clip.type === 'nested-sequence' || (clip.type === 'video' && Boolean(media?.hasAudio)),
             audioChannels: media?.audioChannels ?? 2,
             audioSampleRate: media?.audioSampleRate ?? DEFAULT_EXPORT_SETTINGS.sampleRate,
@@ -1501,19 +1508,31 @@ function buildAudioFilters(
     const label = `${clip.type === 'video' || clip.type === 'nested-sequence' ? 'av' : 'a'}${safeLabel(clip.id)}`;
     const delay = Math.max(0, Math.round(clip.start * 1000));
     const speedFilters = buildAtempoFilters(getAnimatedFrames(clip, 'speed').length > 0 ? getAverageClipSpeed(clip) : clip.speed);
+    const pitchAndReverseFilters = buildPitchAndReverseAudioFilters(clip, settings.sampleRate);
     const fadeFilters = buildAudioFadeFilters(clip);
     const denoiseFilters = buildAudioDenoiseFilters(clip, capabilities, warnings);
     const trackProcessingFilters = buildTrackAudioFilters(clip);
     filters.push(
       `[${inputIndex}:a:0]atrim=start=0:duration=${formatFfmpegSeconds(
         getExportClipSourceDuration(clip)
-      )},asetpts=PTS-STARTPTS${speedFilters.length > 0 ? `,${speedFilters.join(',')}` : ''}${fadeFilters}${denoiseFilters}${trackProcessingFilters},adelay=${delay}:all=1,${buildVolumeFilter(
+      )},asetpts=PTS-STARTPTS${pitchAndReverseFilters.length > 0 ? `,${pitchAndReverseFilters.join(',')}` : ''}${speedFilters.length > 0 ? `,${speedFilters.join(',')}` : ''}${fadeFilters}${denoiseFilters}${trackProcessingFilters},adelay=${delay}:all=1,${buildVolumeFilter(
         clip
       )}${buildPanFilter(clip)},aformat=channel_layouts=stereo,aresample=${settings.sampleRate}[${label}]`
     );
     labels.push(label);
   }
   return labels;
+}
+
+function buildPitchAndReverseAudioFilters(clip: ExportClip, sampleRate: number): string[] {
+  const filters: string[] = [];
+  if (clip.reverseAudio) {
+    filters.push('areverse');
+  }
+  if (Math.abs(clip.pitchSemitones) >= 0.0001) {
+    filters.push(`asetrate=${Math.round(sampleRate)}*${formatPitchRatio(clip.pitchSemitones)}`, `aresample=${Math.round(sampleRate)}`);
+  }
+  return filters;
 }
 
 function getLoudnessNormalizationPreset(mode: ExportLoudnessNormalization | undefined): LoudnessNormalizationPreset | undefined {
@@ -1592,13 +1611,23 @@ function buildTrackAudioFilters(clip: ExportClip): string {
 function buildAudioFadeFilters(clip: ExportClip): string {
   const filters: string[] = [];
   if (clip.fadeInDuration > 0) {
-    filters.push(`afade=t=in:st=0:d=${formatFfmpegSeconds(Math.min(clip.fadeInDuration, clip.duration))}`);
+    filters.push(`afade=t=in:st=0:d=${formatFfmpegSeconds(Math.min(clip.fadeInDuration, clip.duration))}${formatAudioFadeCurve(clip.fadeInCurve)}`);
   }
   if (clip.fadeOutDuration > 0) {
     const duration = Math.min(clip.fadeOutDuration, clip.duration);
-    filters.push(`afade=t=out:st=${formatFfmpegSeconds(Math.max(0, clip.duration - duration))}:d=${formatFfmpegSeconds(duration)}`);
+    filters.push(`afade=t=out:st=${formatFfmpegSeconds(Math.max(0, clip.duration - duration))}:d=${formatFfmpegSeconds(duration)}${formatAudioFadeCurve(clip.fadeOutCurve)}`);
   }
   return filters.length > 0 ? `,${filters.join(',')}` : '';
+}
+
+function formatAudioFadeCurve(curve: ExportClip['fadeInCurve']): string {
+  if (curve === 'ease-in') {
+    return ':curve=qsin';
+  }
+  if (curve === 'ease-out') {
+    return ':curve=hsin';
+  }
+  return '';
 }
 
 function buildVolumeFilter(clip: ExportClip): string {
@@ -1687,6 +1716,10 @@ function buildEasingExpression(progress: string, easing: ExportKeyframe['easing'
 function formatAtempo(value: number): string {
   const fixed = value.toFixed(3).replace(/0+$/, '').replace(/\.$/, '');
   return fixed.includes('.') ? fixed : `${fixed}.0`;
+}
+
+function formatPitchRatio(semitones: number): string {
+  return formatFfmpegNumber(2 ** (semitones / 12));
 }
 
 function formatFfmpegNumber(value: number): string {
