@@ -1,3 +1,4 @@
+pub mod backup;
 pub mod cache;
 pub mod ffmpeg;
 pub mod files;

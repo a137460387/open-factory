@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TauriMocks } from '../lib/tauri-bridge';
-import { readAppSettings, readLayoutSettings, saveLanguageSetting, saveLayoutSettings } from './appSettings';
+import { readAppSettings, readBackupSettings, readLayoutSettings, saveBackupSettings, saveLanguageSetting, saveLayoutSettings } from './appSettings';
 
 describe('app settings storage', () => {
   const appDataDir = 'C:/Users/E2E/AppData/Roaming/open-factory';
@@ -71,6 +71,46 @@ describe('app settings storage', () => {
         timelineHeightPx: 260,
         leftPanelCollapsed: true,
         rightPanelCollapsed: false
+      }
+    });
+  });
+
+  it('persists backup settings without storing a WebDAV password', async () => {
+    await saveBackupSettings({
+      local: { enabled: true, directory: 'C:/Backups' },
+      webdav: { enabled: true, url: 'https://dav.example.test/demo.cutproj.json', username: 'editor' },
+      lastBackupAt: '2026-06-12T14:05:06.789Z'
+    });
+
+    expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({
+      backup: {
+        local: { enabled: true, directory: 'C:/Backups' },
+        webdav: { enabled: true, url: 'https://dav.example.test/demo.cutproj.json', username: 'editor' },
+        lastBackupAt: '2026-06-12T14:05:06.789Z'
+      }
+    });
+    expect(files.get(settingsPath)).not.toContain('password');
+    await expect(readBackupSettings()).resolves.toMatchObject({
+      local: { enabled: true, directory: 'C:/Backups' },
+      webdav: { enabled: true, url: 'https://dav.example.test/demo.cutproj.json', username: 'editor' }
+    });
+  });
+
+  it('preserves language and layout while updating backup settings', async () => {
+    await saveLanguageSetting('en');
+    await saveLayoutSettings({ rightPanelCollapsed: true });
+    await saveBackupSettings({ local: { enabled: true, directory: 'D:/Backups' }, webdav: { enabled: false } });
+
+    expect(await readAppSettings()).toEqual({
+      language: 'en',
+      layout: {
+        timelineHeightPx: 260,
+        leftPanelCollapsed: false,
+        rightPanelCollapsed: true
+      },
+      backup: {
+        local: { enabled: true, directory: 'D:/Backups' },
+        webdav: { enabled: false }
       }
     });
   });

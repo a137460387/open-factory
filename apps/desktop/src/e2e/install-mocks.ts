@@ -15,7 +15,7 @@ import {
 } from '@open-factory/editor-core';
 import { commandManager, timelineAccessor } from '../store/commandManager';
 import { useEditorStore } from '../store/editorStore';
-import type { BatchTranscodeTaskResult, TauriMocks } from '../lib/tauri-bridge';
+import type { BatchTranscodeTaskResult, TauriMocks, WebdavProjectBackupRequest } from '../lib/tauri-bridge';
 import { clearPluginHookLog, getPluginHookLog, refreshPluginRegistry } from '../plugins/plugin-manager';
 
 const PERSISTED_FILES_KEY = 'open-factory:e2e-files';
@@ -36,6 +36,8 @@ const exportGates: Array<{ taskId?: string; release: () => void }> = [];
 let mockSceneTimes = [1];
 let lastConfirmMessage: string | undefined;
 let availableMemoryBytes = 8 * 1024 * 1024 * 1024;
+let webdavPassword: string | undefined;
+let lastWebdavPutRequest: WebdavProjectBackupRequest | undefined;
 
 const sampleProjectPath = 'C:/Projects/sample.cutproj.json';
 const missingProjectPath = 'C:/Projects/missing.cutproj.json';
@@ -221,6 +223,10 @@ const mocks: TauriMocks = {
     if (path.includes('/snapshots/')) {
       return Array.from(files.keys()).filter((candidate) => candidate.startsWith(`${path}/`) && exists.get(candidate) !== false);
     }
+    if (Array.from(files.keys()).some((candidate) => candidate.startsWith(`${path.replace(/[\\/]+$/, '')}/`))) {
+      const root = path.replace(/[\\/]+$/, '');
+      return Array.from(files.keys()).filter((candidate) => candidate.startsWith(`${root}/`) && exists.get(candidate) !== false);
+    }
     if (path === pluginDir) {
       return [pluginPath, permissionDeniedPluginPath, brokenPluginPath].filter((candidate) => exists.get(candidate) !== false);
     }
@@ -298,6 +304,14 @@ const mocks: TauriMocks = {
     persistFiles();
     emit('share-package-progress', { stage: 'finished', progress: 1, progressPct: 100, current: total, total, outputPath: request.outputPath });
     return { outputPath: request.outputPath, fileCount: entries.length, durationMs: 10 };
+  },
+  putWebdavProject: async (request) => {
+    lastWebdavPutRequest = request;
+    return { status: 201 };
+  },
+  readWebdavPassword: () => webdavPassword,
+  writeWebdavPassword: (password) => {
+    webdavPassword = password?.trim() ? password : undefined;
   },
   analyzeClip: async ({ clipId }) => {
     emit('clip-analysis-progress', { clipId, progress: 0.35, progressPct: 35 });
@@ -762,8 +776,16 @@ window.__E2E_ACTIONS__ = {
   },
   getWrittenFile: (path: unknown) => (typeof path === 'string' ? files.get(path) : undefined),
   getWrittenFileSize: (path: unknown) => (typeof path === 'string' ? files.get(path)?.length ?? 0 : 0),
+  getBackupFiles: (path: unknown) => {
+    if (typeof path !== 'string') {
+      return [];
+    }
+    const root = path.replace(/[\\/]+$/, '');
+    return Array.from(files.keys()).filter((candidate) => candidate.startsWith(`${root}/`) && candidate.endsWith('.cutproj.json') && exists.get(candidate) !== false);
+  },
   getLastConfirmMessage: () => lastConfirmMessage,
   getLastExportPlan: () => lastExportPlan,
+  getLastWebdavPutRequest: () => lastWebdavPutRequest,
   addKeyframe: (clipId: unknown, property: unknown, time: unknown, value: unknown) => {
     if (typeof clipId !== 'string' || !isKeyframeProperty(property) || typeof time !== 'number' || typeof value !== 'number') {
       throw new Error('Invalid addKeyframe E2E action input.');
@@ -826,6 +848,13 @@ window.__E2E_ACTIONS__ = {
     files.delete(settingsPath);
     exists.set(settingsPath, false);
     mtimes.delete(settingsPath);
+    for (const path of Array.from(files.keys()).filter((item) => item.includes('/Backups/') || item.startsWith('C:/Backups/'))) {
+      files.delete(path);
+      exists.set(path, false);
+      mtimes.delete(path);
+    }
+    webdavPassword = undefined;
+    lastWebdavPutRequest = undefined;
     localStorage.removeItem('open-factory:proxy-settings');
     localStorage.removeItem('open-factory:plugins');
     localStorage.removeItem('open-factory:settings');

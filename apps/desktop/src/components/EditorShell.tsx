@@ -77,7 +77,7 @@ import {
 } from '../lib/projectFiles';
 import { bridgeConfirm, copyFile as bridgeCopyFile, openDirectoryDialog, writeFile as bridgeWriteFile } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
-import { readLayoutSettings, saveLayoutSettings } from '../settings/appSettings';
+import { readBackupSettings, readLayoutSettings, saveLayoutSettings } from '../settings/appSettings';
 import { createProxyForAsset } from '../media/proxy';
 import { ensureMediaJobRunner } from '../media/media-job-runner';
 import { DuplicateMediaDialog, type DuplicateMediaMergeSelection } from '../media/DuplicateMediaDialog';
@@ -150,6 +150,7 @@ export function EditorShell() {
   const [sharePackageBusy, setSharePackageBusy] = useState(false);
   const [layoutSettings, setLayoutSettings] = useState<EditorLayoutSettings>(DEFAULT_EDITOR_LAYOUT_SETTINGS);
   const [viewportSize, setViewportSize] = useState(() => readViewportSize());
+  const [lastBackupAt, setLastBackupAt] = useState<string>();
 
   const selectedClip = useMemo(() => selectClipById(project, selectedClipId), [project, selectedClipId]);
   const selectedClipLocked = useMemo(
@@ -223,6 +224,11 @@ export function EditorShell() {
     }
     await writeProjectFile(project, targetPath);
     await deleteAutosaveAfterSave(targetPath, projectPath);
+    try {
+      setLastBackupAt((await readBackupSettings()).lastBackupAt);
+    } catch (error) {
+      console.warn(zhCN.settings.backup.statusSaveFailed, error);
+    }
     setProjectPath(targetPath);
     setDirty(false);
     showToast({ kind: 'success', title: zhCN.editorToasts.projectSaved });
@@ -315,6 +321,22 @@ export function EditorShell() {
       })
       .catch((error) => {
         console.warn(zhCN.settings.shortcuts.loadFailed, error);
+      });
+    return () => {
+      canceled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let canceled = false;
+    void readBackupSettings()
+      .then((settings) => {
+        if (!canceled) {
+          setLastBackupAt(settings.lastBackupAt);
+        }
+      })
+      .catch((error) => {
+        console.warn(zhCN.settings.backup.statusSaveFailed, error);
       });
     return () => {
       canceled = true;
@@ -932,6 +954,7 @@ export function EditorShell() {
           }}
           lastExportPath={lastExportPath}
           onRevealExport={lastExportPath ? () => void revealExport(lastExportPath) : undefined}
+          lastBackupAt={lastBackupAt}
         />
         <main
           className="grid min-h-0 min-w-0 gap-px bg-line"

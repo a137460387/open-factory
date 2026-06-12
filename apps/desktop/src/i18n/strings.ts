@@ -75,7 +75,8 @@ const zh = {
     cancelExport: '取消导出',
     openExportFolder: '打开导出文件夹',
     localExport: '本地多轨导出',
-    projectHealthCheck: '项目健康检查'
+    projectHealthCheck: '项目健康检查',
+    lastBackupAt: (time: string) => `上次备份 ${time}`
   },
   editMenu: {
     saveSnapshot: '保存快照',
@@ -99,6 +100,7 @@ const zh = {
       shortcuts: '快捷键',
       translation: '字幕翻译',
       proxy: '代理媒体',
+      backup: '备份',
       plugins: '插件'
     },
     general: {
@@ -179,6 +181,35 @@ const zh = {
       triggerThreshold: '触发阈值',
       thresholdOption: (value: number) => `短边 > ${value}p`,
       reset: '恢复默认'
+    },
+    backup: {
+      title: '备份',
+      description: '保存项目时额外写入用户配置的本地或 WebDAV 备份。',
+      localTitle: '本地备份',
+      localDescription: '保存项目时复制 .cutproj.json 到指定目录，保留最近 10 份。',
+      enableLocal: '启用本地备份',
+      directory: '备份目录',
+      chooseDirectory: '选择目录',
+      webdavTitle: 'WebDAV 备份',
+      webdavDescription: '保存项目时通过 PUT 上传项目文件；失败只记录 warning，不阻断保存。',
+      enableWebdav: '启用 WebDAV 备份',
+      url: 'WebDAV URL',
+      username: '用户名',
+      password: '密码',
+      passwordStorageNote: '密码以 AES 加密形式保存在本机 AppData，不写入 settings.json。',
+      lastBackup: '上次备份',
+      neverBackedUp: '尚未备份',
+      lastWarning: '最近 warning',
+      saveFailed: '备份设置保存失败',
+      saveFailedMessage: '无法写入备份设置。',
+      passwordSaveFailed: '密码保存失败',
+      passwordSaveFailedMessage: '无法写入加密密码文件。',
+      statusSaveFailed: '备份状态保存失败',
+      failedMessage: '项目备份失败。',
+      localDirectoryMissing: '本地备份目录未设置。',
+      localFailedMessage: '本地备份失败。',
+      webdavUrlMissing: 'WebDAV URL 未设置。',
+      webdavFailedMessage: 'WebDAV 备份失败。'
     },
     plugins: {
       title: '插件',
@@ -1317,7 +1348,8 @@ const enOverrides = {
     cancelExport: 'Cancel Export',
     openExportFolder: 'Open Export Folder',
     localExport: 'Local Multitrack Export',
-    projectHealthCheck: 'Project Health Check'
+    projectHealthCheck: 'Project Health Check',
+    lastBackupAt: (time: string) => `Last backup ${time}`
   },
   editMenu: {
     saveSnapshot: 'Save Snapshot',
@@ -1332,6 +1364,7 @@ const enOverrides = {
       shortcuts: 'Shortcuts',
       translation: 'Subtitle Translation',
       proxy: 'Proxy Media',
+      backup: 'Backup',
       plugins: 'Plugins'
     },
     general: {
@@ -1412,6 +1445,35 @@ const enOverrides = {
       triggerThreshold: 'Trigger Threshold',
       thresholdOption: (value: number) => `Short edge > ${value}p`,
       reset: 'Reset Defaults'
+    },
+    backup: {
+      title: 'Backup',
+      description: 'Write an extra local or WebDAV backup when the project is saved.',
+      localTitle: 'Local Backup',
+      localDescription: 'Copy the .cutproj.json file to a selected folder and keep the latest 10 copies.',
+      enableLocal: 'Enable local backup',
+      directory: 'Backup folder',
+      chooseDirectory: 'Choose Folder',
+      webdavTitle: 'WebDAV Backup',
+      webdavDescription: 'Upload the project file with PUT on save; failures warn without blocking save.',
+      enableWebdav: 'Enable WebDAV backup',
+      url: 'WebDAV URL',
+      username: 'Username',
+      password: 'Password',
+      passwordStorageNote: 'The password is AES-encrypted in local AppData and is not written to settings.json.',
+      lastBackup: 'Last backup',
+      neverBackedUp: 'Never backed up',
+      lastWarning: 'Latest warning',
+      saveFailed: 'Backup settings save failed',
+      saveFailedMessage: 'Unable to write backup settings.',
+      passwordSaveFailed: 'Password save failed',
+      passwordSaveFailedMessage: 'Unable to write the encrypted password file.',
+      statusSaveFailed: 'Backup status save failed',
+      failedMessage: 'Project backup failed.',
+      localDirectoryMissing: 'Local backup folder is not set.',
+      localFailedMessage: 'Local backup failed.',
+      webdavUrlMissing: 'WebDAV URL is not set.',
+      webdavFailedMessage: 'WebDAV backup failed.'
     },
     plugins: {
       title: 'Plugins',

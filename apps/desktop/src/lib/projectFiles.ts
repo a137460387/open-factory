@@ -1,4 +1,5 @@
 import { deserializeProject, serializeProject, type CutProjectFile, type Project } from '@open-factory/editor-core';
+import { runProjectBackupAfterSave } from '../backup/projectBackup';
 import { zhCN } from '../i18n/strings';
 import { isTauriRuntime } from './tauri';
 import {
@@ -83,6 +84,7 @@ export async function writeProjectFile(project: Project, path?: string): Promise
     throw new Error(zhCN.projectFiles.projectPathRequired);
   }
   await writeFile(path, serialized);
+  await runProjectBackupAfterSave(project, path, serialized);
   recordRecentProjectPath(path);
   return path;
 }

@@ -2,6 +2,7 @@ import { Archive, Captions, ChevronDown, Download, FileDown, FilePlus2, FolderOp
 import { timelineHasExportableVideo } from '@open-factory/editor-core';
 import { clsx } from 'clsx';
 import { useState } from 'react';
+import { formatBackupDisplayTime } from '../backup/projectBackup';
 import { useExportQueueStore } from '../export/export-queue-store';
 import { zhCN } from '../i18n/strings';
 import { pickWhisperExecutablePath, pickWhisperModelPath } from '../lib/whisper';
@@ -43,6 +44,7 @@ interface ToolbarProps {
   onAutosaveIntervalSecondsChange(seconds: number): void;
   onRevealExport?(): void;
   lastExportPath?: string;
+  lastBackupAt?: string;
 }
 
 export function Toolbar(props: ToolbarProps) {
@@ -64,6 +66,7 @@ export function Toolbar(props: ToolbarProps) {
   const isExporting = Boolean(runningExportTask);
   const exportProgress = runningExportTask?.progress;
   const canExport = timelineHasExportableVideo(project.timeline);
+  const backupDisplayTime = formatBackupDisplayTime(props.lastBackupAt);
   const chooseWhisperExecutable = async () => {
     try {
       const path = await pickWhisperExecutablePath();
@@ -237,7 +240,12 @@ export function Toolbar(props: ToolbarProps) {
         <div className="truncate text-sm font-semibold text-ink" data-testid="toolbar-project-name">
           {project.name}
         </div>
-        <div className="text-xs text-slate-500">{dirty ? zhCN.common.unsavedChanges : zhCN.common.saved}</div>
+        <div className="text-xs text-slate-500" data-testid="toolbar-project-status">
+          {dirty ? zhCN.common.unsavedChanges : zhCN.common.saved}
+          {backupDisplayTime ? (
+            <span data-testid="toolbar-backup-status"> · {t.lastBackupAt(backupDisplayTime)}</span>
+          ) : null}
+        </div>
       </div>
       <ToolButton title={t.newProject} onClick={props.onNewProject} icon={<FilePlus2 size={17} />} testId="toolbar-new-project-button" />
       <ToolButton title={t.openProject} onClick={props.onOpenProject} icon={<FolderOpen size={17} />} testId="toolbar-open-project-button" />

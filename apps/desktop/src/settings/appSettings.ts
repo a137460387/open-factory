@@ -8,9 +8,33 @@ import {
 
 const BROWSER_SETTINGS_KEY = 'open-factory:settings';
 
+export interface LocalBackupSettings {
+  enabled: boolean;
+  directory?: string;
+}
+
+export interface WebdavBackupSettings {
+  enabled: boolean;
+  url?: string;
+  username?: string;
+}
+
+export interface BackupSettings {
+  local: LocalBackupSettings;
+  webdav: WebdavBackupSettings;
+  lastBackupAt?: string;
+  lastBackupWarning?: string;
+}
+
+export const DEFAULT_BACKUP_SETTINGS: BackupSettings = {
+  local: { enabled: false },
+  webdav: { enabled: false }
+};
+
 export interface AppSettings {
   language?: Language;
   layout?: EditorLayoutSettings;
+  backup?: BackupSettings;
 }
 
 export async function initializeLanguageFromSettings(): Promise<Language> {
@@ -37,6 +61,18 @@ export async function saveLayoutSettings(layout: Partial<EditorLayoutSettings>):
   const nextLayout = normalizeStoredLayoutSettings({ ...settings.layout, ...layout }) ?? { ...DEFAULT_EDITOR_LAYOUT_SETTINGS };
   await writeAppSettings({ ...settings, layout: nextLayout });
   return nextLayout;
+}
+
+export async function readBackupSettings(): Promise<BackupSettings> {
+  const settings = await readAppSettings();
+  return settings.backup ?? defaultBackupSettings();
+}
+
+export async function saveBackupSettings(backup: Partial<BackupSettings>): Promise<BackupSettings> {
+  const settings = await readAppSettings();
+  const nextBackup = normalizeBackupSettings({ ...settings.backup, ...backup }) ?? defaultBackupSettings();
+  await writeAppSettings({ ...settings, backup: nextBackup });
+  return nextBackup;
 }
 
 export async function readAppSettings(): Promise<AppSettings> {
@@ -87,7 +123,51 @@ function normalizeSettings(settings: Partial<AppSettings>): AppSettings {
   if (layout) {
     normalized.layout = layout;
   }
+  const backup = normalizeBackupSettings(settings.backup);
+  if (backup) {
+    normalized.backup = backup;
+  }
   return normalized;
+}
+
+export function normalizeBackupSettings(settings: Partial<BackupSettings> | undefined): BackupSettings | undefined {
+  if (!settings || typeof settings !== 'object') {
+    return undefined;
+  }
+  const local: Partial<LocalBackupSettings> = settings.local && typeof settings.local === 'object' ? settings.local : {};
+  const webdav: Partial<WebdavBackupSettings> = settings.webdav && typeof settings.webdav === 'object' ? settings.webdav : {};
+  const normalized: BackupSettings = {
+    local: {
+      enabled: Boolean(local.enabled)
+    },
+    webdav: {
+      enabled: Boolean(webdav.enabled)
+    }
+  };
+  if (typeof local.directory === 'string' && local.directory.trim()) {
+    normalized.local.directory = local.directory.trim();
+  }
+  if (typeof webdav.url === 'string' && webdav.url.trim()) {
+    normalized.webdav.url = webdav.url.trim();
+  }
+  if (typeof webdav.username === 'string' && webdav.username.trim()) {
+    normalized.webdav.username = webdav.username.trim();
+  }
+  if (typeof settings.lastBackupAt === 'string' && settings.lastBackupAt.trim()) {
+    normalized.lastBackupAt = settings.lastBackupAt.trim();
+  }
+  if (typeof settings.lastBackupWarning === 'string' && settings.lastBackupWarning.trim()) {
+    normalized.lastBackupWarning = settings.lastBackupWarning.trim();
+  }
+  return normalized;
+}
+
+function defaultBackupSettings(): BackupSettings {
+  return {
+    ...DEFAULT_BACKUP_SETTINGS,
+    local: { ...DEFAULT_BACKUP_SETTINGS.local },
+    webdav: { ...DEFAULT_BACKUP_SETTINGS.webdav }
+  };
 }
 
 function getBrowserStorage(): Storage | undefined {

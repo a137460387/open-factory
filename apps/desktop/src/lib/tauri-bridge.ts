@@ -46,6 +46,18 @@ export interface SharePackageResult {
   durationMs: number;
 }
 
+export interface WebdavProjectBackupRequest {
+  url: string;
+  username?: string;
+  password?: string;
+  projectPath: string;
+  contents: string;
+}
+
+export interface WebdavProjectBackupResult {
+  status: number;
+}
+
 export interface SharePackageProgressEvent {
   stage: 'readme' | 'project' | 'export' | 'media' | 'finished';
   progress: number;
@@ -192,6 +204,9 @@ export type TauriMocks = Partial<{
   getAvailableMemoryBytes(): Promise<number> | number;
   runExport(plan: FfmpegExportPlan, taskId?: string): Promise<ExportResult> | ExportResult;
   createSharePackage(request: SharePackageRequest): Promise<SharePackageResult> | SharePackageResult;
+  putWebdavProject(request: WebdavProjectBackupRequest): Promise<WebdavProjectBackupResult> | WebdavProjectBackupResult;
+  readWebdavPassword(): Promise<string | undefined> | string | undefined;
+  writeWebdavPassword(password?: string): Promise<void> | void;
   analyzeClip(request: AnalyzeClipRequest): Promise<AnalyzeClipResult> | AnalyzeClipResult;
   cancelExport(taskId?: string): Promise<void> | void;
   batchTranscodeMedia(request: BatchTranscodeRequest): Promise<BatchTranscodeResponse> | BatchTranscodeResponse;
@@ -491,6 +506,31 @@ export async function createSharePackageZip(request: SharePackageRequest): Promi
     return mock(request);
   }
   return invoke<SharePackageResult>('create_share_package', { request });
+}
+
+export async function putWebdavProject(request: WebdavProjectBackupRequest): Promise<WebdavProjectBackupResult> {
+  const mock = getTauriMocks()?.putWebdavProject;
+  if (mock) {
+    return mock(request);
+  }
+  return invoke<WebdavProjectBackupResult>('put_webdav_project', { request });
+}
+
+export async function readWebdavPassword(): Promise<string | undefined> {
+  const mock = getTauriMocks()?.readWebdavPassword;
+  if (mock) {
+    return mock();
+  }
+  return invoke<string | undefined>('read_webdav_password');
+}
+
+export async function writeWebdavPassword(password?: string): Promise<void> {
+  const mock = getTauriMocks()?.writeWebdavPassword;
+  if (mock) {
+    await mock(password);
+    return;
+  }
+  await invoke('write_webdav_password', { password });
 }
 
 export async function analyzeClip(request: AnalyzeClipRequest): Promise<AnalyzeClipResult> {

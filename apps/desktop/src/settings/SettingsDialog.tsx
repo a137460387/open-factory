@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Star, X } from 'lucide-react';
+import { FolderOpen, Star, X } from 'lucide-react';
 import { UpdateClipCommand, type Clip, type Project, type Timeline } from '@open-factory/editor-core';
+import { formatBackupDisplayTime } from '../backup/projectBackup';
 import { getLanguage, normalizeLanguage, zhCN, type Language } from '../i18n/strings';
 import { loadLutLibrary, toggleLutFavorite, type LutLibraryItem } from '../lib/lutLibrary';
+import { openDirectoryDialog, readWebdavPassword, writeWebdavPassword } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
 import { getPluginRegistrySnapshot, refreshPluginRegistry, setPluginEnabled, uninstallPlugin, type LoadedPlugin, type PluginRegistry } from '../plugins/plugin-manager';
 import { getLoadedPluginStatus, type PluginPermission } from '../plugins/plugin-loader';
@@ -19,7 +21,7 @@ import { commandManager, timelineAccessor } from '../store/commandManager';
 import { useEditorStore } from '../store/editorStore';
 import { PROXY_RESOLUTION_PRESETS, PROXY_TRIGGER_THRESHOLDS, useProxySettingsStore, type ProxyResolutionPreset, type ProxyTriggerThreshold } from '../store/proxySettingsStore';
 import { useTranslationSettingsStore, type TranslationProvider } from '../store/translationSettingsStore';
-import { saveLanguageSetting } from './appSettings';
+import { DEFAULT_BACKUP_SETTINGS, readBackupSettings, saveBackupSettings, saveLanguageSetting, type BackupSettings } from './appSettings';
 
 interface SettingsDialogProps {
   open: boolean;
@@ -30,7 +32,7 @@ interface SettingsDialogProps {
   onClose(): void;
 }
 
-type SettingsTab = 'general' | 'lut-library' | 'shortcuts' | 'translation' | 'proxy' | 'plugins';
+type SettingsTab = 'general' | 'lut-library' | 'shortcuts' | 'translation' | 'proxy' | 'backup' | 'plugins';
 
 export function SettingsDialog({ open, project, selectedClip, shortcutBindings, onShortcutBindingsChange, onClose }: SettingsDialogProps) {
   const t = zhCN.settings;
@@ -44,6 +46,12 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
   const [pluginRegistry, setPluginRegistry] = useState<PluginRegistry>();
   const [pluginsLoading, setPluginsLoading] = useState(false);
   const [pluginsError, setPluginsError] = useState<string>();
+  const [backupSettings, setBackupSettings] = useState<BackupSettings>(() => ({
+    ...DEFAULT_BACKUP_SETTINGS,
+    local: { ...DEFAULT_BACKUP_SETTINGS.local },
+    webdav: { ...DEFAULT_BACKUP_SETTINGS.webdav }
+  }));
+  const [webdavPassword, setWebdavPassword] = useState('');
   const translationProvider = useTranslationSettingsStore((state) => state.provider);
   const translationApiKey = useTranslationSettingsStore((state) => state.apiKey);
   const translationTargetLanguage = useTranslationSettingsStore((state) => state.targetLanguage);
@@ -64,6 +72,7 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
       return;
     }
     void refresh();
+    void loadBackupSettings();
     showCurrentPlugins();
     return () => setPreviewTimeline(undefined);
   }, [open, setPreviewTimeline]);
@@ -220,6 +229,63 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
     }
   }
 
+  async function loadBackupSettings() {
+    try {
+      setBackupSettings(await readBackupSettings());
+      setWebdavPassword((await readWebdavPassword()) ?? '');
+    } catch (backupError) {
+      showToast({
+        kind: 'warning',
+        title: t.backup.saveFailed,
+        message: backupError instanceof Error ? backupError.message : t.backup.saveFailedMessage
+      });
+    }
+  }
+
+  async function updateBackupSettings(nextSettings: BackupSettings) {
+    setBackupSettings(nextSettings);
+    try {
+      setBackupSettings(await saveBackupSettings(nextSettings));
+    } catch (backupError) {
+      showToast({
+        kind: 'warning',
+        title: t.backup.saveFailed,
+        message: backupError instanceof Error ? backupError.message : t.backup.saveFailedMessage
+      });
+    }
+  }
+
+  async function chooseBackupDirectory() {
+    try {
+      const directory = await openDirectoryDialog();
+      if (directory) {
+        await updateBackupSettings({
+          ...backupSettings,
+          local: { ...backupSettings.local, directory }
+        });
+      }
+    } catch (backupError) {
+      showToast({
+        kind: 'warning',
+        title: t.backup.saveFailed,
+        message: backupError instanceof Error ? backupError.message : t.backup.saveFailedMessage
+      });
+    }
+  }
+
+  async function updateWebdavPassword(password: string) {
+    setWebdavPassword(password);
+    try {
+      await writeWebdavPassword(password);
+    } catch (passwordError) {
+      showToast({
+        kind: 'warning',
+        title: t.backup.passwordSaveFailed,
+        message: passwordError instanceof Error ? passwordError.message : t.backup.passwordSaveFailedMessage
+      });
+    }
+  }
+
   function resetShortcut(action: TimelineShortcutAction) {
     const next = { ...shortcutBindings };
     delete next[action];
@@ -283,6 +349,14 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
               onClick={() => setTab('proxy')}
             >
               {t.tabs.proxy}
+            </button>
+            <button
+              className={`mt-1 w-full rounded-md px-3 py-2 text-left text-sm font-semibold ${tab === 'backup' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}
+              type="button"
+              data-testid="settings-tab-backup"
+              onClick={() => setTab('backup')}
+            >
+              {t.tabs.backup}
             </button>
             <button
               className={`mt-1 w-full rounded-md px-3 py-2 text-left text-sm font-semibold ${tab === 'plugins' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}
@@ -451,6 +525,15 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
                 onReset={resetProxySettings}
               />
             ) : null}
+            {tab === 'backup' ? (
+              <BackupSettingsPanel
+                settings={backupSettings}
+                password={webdavPassword}
+                onSettingsChange={(settings) => void updateBackupSettings(settings)}
+                onChooseDirectory={() => void chooseBackupDirectory()}
+                onPasswordChange={(password) => void updateWebdavPassword(password)}
+              />
+            ) : null}
             {tab === 'plugins' ? (
               <PluginsSettingsPanel
                 registry={pluginRegistry}
@@ -463,6 +546,134 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
             ) : null}
           </main>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function BackupSettingsPanel({
+  settings,
+  password,
+  onSettingsChange,
+  onChooseDirectory,
+  onPasswordChange
+}: {
+  settings: BackupSettings;
+  password: string;
+  onSettingsChange(settings: BackupSettings): void;
+  onChooseDirectory(): void;
+  onPasswordChange(password: string): void;
+}) {
+  const t = zhCN.settings.backup;
+  const lastBackup = formatBackupDisplayTime(settings.lastBackupAt) ?? t.neverBackedUp;
+  const updateLocal = (patch: Partial<BackupSettings['local']>) => onSettingsChange({ ...settings, local: { ...settings.local, ...patch } });
+  const updateWebdav = (patch: Partial<BackupSettings['webdav']>) => onSettingsChange({ ...settings, webdav: { ...settings.webdav, ...patch } });
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-sm font-semibold text-ink">{t.title}</h3>
+        <p className="text-xs text-slate-500">{t.description}</p>
+      </div>
+      <div className="rounded-md border border-line bg-white p-3">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-sm font-semibold text-ink">{t.localTitle}</div>
+            <p className="text-xs text-slate-500">{t.localDescription}</p>
+          </div>
+          <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-700">
+            <input
+              className="h-4 w-4"
+              type="checkbox"
+              checked={settings.local.enabled}
+              data-testid="backup-local-enabled"
+              onChange={(event) => updateLocal({ enabled: event.target.checked })}
+            />
+            {t.enableLocal}
+          </label>
+        </div>
+        <div className="mt-3">
+          <label className="block text-xs font-medium text-slate-600">
+            {t.directory}
+            <div className="mt-1 flex gap-2">
+              <input
+                className="min-w-0 flex-1 rounded-md border border-line px-2 py-1.5 text-sm text-ink"
+                value={settings.local.directory ?? ''}
+                data-testid="backup-local-directory-input"
+                onChange={(event) => updateLocal({ directory: event.target.value })}
+              />
+              <button
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-line bg-white text-slate-600 hover:bg-panel"
+                type="button"
+                title={t.chooseDirectory}
+                aria-label={t.chooseDirectory}
+                data-testid="backup-local-choose-directory"
+                onClick={onChooseDirectory}
+              >
+                <FolderOpen size={15} />
+              </button>
+            </div>
+          </label>
+        </div>
+      </div>
+      <div className="rounded-md border border-line bg-white p-3">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-sm font-semibold text-ink">{t.webdavTitle}</div>
+            <p className="text-xs text-slate-500">{t.webdavDescription}</p>
+          </div>
+          <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-700">
+            <input
+              className="h-4 w-4"
+              type="checkbox"
+              checked={settings.webdav.enabled}
+              data-testid="backup-webdav-enabled"
+              onChange={(event) => updateWebdav({ enabled: event.target.checked })}
+            />
+            {t.enableWebdav}
+          </label>
+        </div>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <label className="block text-xs font-medium text-slate-600 sm:col-span-2">
+            {t.url}
+            <input
+              className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink"
+              value={settings.webdav.url ?? ''}
+              data-testid="backup-webdav-url-input"
+              onChange={(event) => updateWebdav({ url: event.target.value })}
+            />
+          </label>
+          <label className="block text-xs font-medium text-slate-600">
+            {t.username}
+            <input
+              className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink"
+              value={settings.webdav.username ?? ''}
+              data-testid="backup-webdav-username-input"
+              onChange={(event) => updateWebdav({ username: event.target.value })}
+            />
+          </label>
+          <label className="block text-xs font-medium text-slate-600">
+            {t.password}
+            <input
+              className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink"
+              type="password"
+              value={password}
+              data-testid="backup-webdav-password-input"
+              onChange={(event) => onPasswordChange(event.target.value)}
+            />
+          </label>
+        </div>
+        <div className="mt-2 text-xs text-slate-500">{t.passwordStorageNote}</div>
+      </div>
+      <div className="rounded-md border border-line bg-panel p-3 text-xs text-slate-600" data-testid="backup-status">
+        <div>
+          {t.lastBackup}: <span data-testid="backup-status-last-time">{lastBackup}</span>
+        </div>
+        {settings.lastBackupWarning ? (
+          <div className="mt-1 text-amber-700" data-testid="backup-status-warning">
+            {t.lastWarning}: {settings.lastBackupWarning}
+          </div>
+        ) : null}
       </div>
     </div>
   );
