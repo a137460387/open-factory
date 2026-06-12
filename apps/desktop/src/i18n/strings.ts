@@ -1,4 +1,4 @@
-export const zhCN = {
+const zh = {
   common: {
     saved: '已保存',
     unsavedChanges: '未保存更改',
@@ -60,11 +60,24 @@ export const zhCN = {
     title: '设置',
     subtitle: '本地配置和素材库',
     tabs: {
+      general: '通用',
       lutLibrary: 'LUT库',
       shortcuts: '快捷键',
       translation: '字幕翻译',
       proxy: '代理媒体',
       plugins: '插件'
+    },
+    general: {
+      title: '通用',
+      description: '配置界面语言和本机偏好。',
+      language: '界面语言',
+      languageDescription: '语言会保存到本机设置文件。',
+      saveFailed: '语言保存失败',
+      saveFailedMessage: '无法写入设置文件。',
+      options: {
+        zh: '中文',
+        en: 'English'
+      }
     },
     lutLibrary: {
       title: 'LUT库',
@@ -449,6 +462,12 @@ export const zhCN = {
     startSilenceDetect: '开始检测',
     sceneDialogTitle: '场景检测',
     sceneScanning: '正在分析视频切点...',
+    trackTypes: {
+      video: '视频',
+      audio: '音频',
+      text: '文字',
+      subtitle: '字幕'
+    },
     newTrackName: (type: string, index: number) => `${formatTrackType(type)} ${index}`
   },
   smartRoughCut: {
@@ -965,20 +984,776 @@ export const zhCN = {
   }
 } as const;
 
+type DeepPartial<T> = T extends (...args: any[]) => any
+  ? T
+  : T extends object
+    ? { [K in keyof T]?: DeepPartial<T[K]> }
+    : T;
+
+type WidenLocale<T> = T extends (...args: infer Args) => infer Return
+  ? (...args: Args) => Return
+  : T extends string
+    ? string
+    : T extends number
+      ? number
+      : T extends boolean
+        ? boolean
+        : T extends object
+          ? { readonly [K in keyof T]: WidenLocale<T[K]> }
+          : T;
+
+export type Language = 'zh' | 'en';
+export type LocaleStrings = WidenLocale<typeof zh>;
+
+const enOverrides = {
+  common: {
+    saved: 'Saved',
+    unsavedChanges: 'Unsaved changes',
+    idle: 'Idle',
+    clear: 'Clear',
+    close: 'Close',
+    cancel: 'Cancel',
+    retry: 'Retry',
+    reset: 'Reset',
+    unavailable: 'Unavailable',
+    available: 'Available',
+    missing: 'Missing',
+    auto: 'Auto',
+    none: 'None',
+    secondsShort: 's',
+    noVideo: 'No video',
+    audioOnly: 'Audio only'
+  },
+  project: {
+    defaultName: 'Untitled Project'
+  },
+  clips: {
+    defaultTextName: 'Text',
+    defaultTextContent: 'Title'
+  },
+  toolbar: {
+    fileMenu: 'File',
+    newProject: 'New Project',
+    openProject: 'Open Project',
+    saveProject: 'Save Project',
+    archiveProject: 'Archive Project',
+    importMedia: 'Import Media',
+    importSubtitles: 'Import Subtitles',
+    exportVideo: 'Export Video',
+    exportTimeline: 'Export Timeline',
+    exportCurrentFrame: 'Export Current Frame',
+    exportDisabled: 'Add media to the timeline first',
+    settings: 'Settings',
+    clearMediaCache: 'Clear Media Cache',
+    autosaveInterval: 'Autosave Interval',
+    autosave: 'Autosave',
+    whisperExecutable: 'Whisper Executable',
+    whisperModel: 'Whisper Model',
+    chooseWhisperExecutable: 'Choose Whisper Executable',
+    chooseWhisperModel: 'Choose Whisper Model File',
+    undo: 'Undo',
+    redo: 'Redo',
+    splitSelectedClip: 'Split Selected Clip',
+    smartRoughCut: 'Smart Rough Cut',
+    createMulticamSequence: 'Create Multicam Sequence',
+    play: 'Play',
+    pause: 'Pause',
+    cancelExport: 'Cancel Export',
+    openExportFolder: 'Open Export Folder',
+    localExport: 'Local Multitrack Export',
+    projectHealthCheck: 'Project Health Check'
+  },
+  settings: {
+    title: 'Settings',
+    subtitle: 'Local preferences and libraries',
+    tabs: {
+      general: 'General',
+      lutLibrary: 'LUT Library',
+      shortcuts: 'Shortcuts',
+      translation: 'Subtitle Translation',
+      proxy: 'Proxy Media',
+      plugins: 'Plugins'
+    },
+    general: {
+      title: 'General',
+      description: 'Configure interface language and local preferences.',
+      language: 'Interface Language',
+      languageDescription: 'The language is saved to the local settings file.',
+      saveFailed: 'Language Save Failed',
+      saveFailedMessage: 'Unable to write the settings file.',
+      options: {
+        zh: '中文',
+        en: 'English'
+      }
+    },
+    lutLibrary: {
+      title: 'LUT Library',
+      loading: 'Scanning LUTs...',
+      empty: 'No .cube LUT files found in the configuration directory.',
+      refresh: 'Refresh',
+      preview: 'Preview',
+      apply: 'Apply',
+      favorite: 'Favorite',
+      unfavorite: 'Unfavorite',
+      applied: 'LUT applied',
+      applyFailed: 'LUT apply failed',
+      applyFailedMessage: 'Unable to apply this LUT.',
+      favoriteFailed: 'Favorite failed',
+      favoriteFailedMessage: 'Unable to update LUT favorites.',
+      loadFailed: 'LUT library failed to load',
+      loadFailedMessage: 'Unable to read LUTs from the configuration directory.',
+      noClipSelected: 'No usable clip selected',
+      noClipSelectedMessage: 'Select a video or image clip before previewing or applying a LUT.',
+      readyForClip: (name: string) => `Will apply to ${name}`
+    },
+    shortcuts: {
+      title: 'Shortcuts',
+      description: 'Rebind timeline and export shortcuts.',
+      pressKeys: 'Press keys...',
+      resetAll: 'Reset All',
+      saveFailed: 'Shortcut save failed',
+      saveFailedMessage: 'Unable to write shortcut configuration.',
+      loadFailed: 'Shortcut load failed',
+      conflict: (keys: string) => `Conflict: ${keys}`,
+      actions: {
+        'toggle-playback': 'Play/Pause',
+        'reverse-playback': 'Reverse Playback',
+        'pause-playback': 'Pause',
+        'forward-playback': 'Forward Playback',
+        'step-back': 'Step Back',
+        'step-forward': 'Step Forward',
+        'set-in-point': 'Set In Point',
+        'set-out-point': 'Set Out Point',
+        'split-selected': 'Split Selected Clip',
+        'delete-selected': 'Delete Selected Clip',
+        'ripple-delete': 'Ripple Delete',
+        'select-all': 'Select All Clips',
+        'clear-selection': 'Clear Selection',
+        undo: 'Undo',
+        redo: 'Redo',
+        save: 'Save Project',
+        'export-current-frame': 'Export Current Frame'
+      }
+    },
+    translation: {
+      title: 'Subtitle Translation',
+      description: 'Configure a locally saved translation API for copying subtitles to a new subtitle track.',
+      provider: 'Provider',
+      apiKey: 'API Key',
+      targetLanguage: 'Target Language',
+      keyStorageNote: 'The key is stored only on this device',
+      localOnlyNote: 'Only subtitle text is sent; media files are not uploaded. The key stays in local browser storage.'
+    },
+    proxy: {
+      title: 'Proxy Media',
+      description: 'Automatically generate local H.264 proxy files. Export still uses original media.',
+      resolution: 'Proxy Resolution',
+      triggerThreshold: 'Trigger Threshold',
+      thresholdOption: (value: number) => `Short edge > ${value}p`,
+      reset: 'Reset Defaults'
+    },
+    plugins: {
+      title: 'Plugins',
+      description: 'Load trusted JS plugins from the local plugin directory. Hooks run in a worker.',
+      refresh: 'Refresh',
+      loading: 'Loading plugins...',
+      empty: 'No plugins loaded.',
+      builtin: 'Built-in',
+      user: 'User',
+      hooks: 'Hooks',
+      permissions: 'Permissions',
+      status: 'Status',
+      errors: 'Errors',
+      enable: 'Enable',
+      disable: 'Disable',
+      uninstall: 'Uninstall',
+      noDescription: 'No description',
+      builtinLocked: 'Built-in plugins cannot be uninstalled',
+      enabledTitle: 'Plugin enabled',
+      disabledTitle: 'Plugin disabled',
+      uninstallFailed: 'Uninstall failed',
+      uninstallFailedMessage: 'Unable to delete plugin file.',
+      state: {
+        enabled: 'Enabled',
+        disabled: 'Disabled',
+        error: 'Error'
+      },
+      permissionLabels: {
+        'read-project': 'Read Project',
+        'write-project': 'Write Project',
+        'export-hook': 'Export Hook',
+        'menu-register': 'Register Menu'
+      },
+      loadFailed: 'Plugin load failed',
+      loadFailedMessage: 'Unable to read the plugin directory.'
+    }
+  },
+  timelineExport: {
+    title: 'Export Timeline',
+    description: 'Export the main sequence as an interchange format.',
+    format: 'Format',
+    export: 'Export',
+    exporting: 'Exporting...',
+    success: 'Timeline exported',
+    failed: 'Timeline export failed',
+    failedMessage: 'Unable to export the timeline.',
+    filterName: (format: string) => (format === 'fcp-xml' ? 'Final Cut Pro XML' : 'CMX3600 EDL'),
+    formats: {
+      edl: 'CMX3600 EDL',
+      fcpXml: 'Final Cut Pro 7 XML'
+    }
+  },
+  mediaBin: {
+    title: 'Media',
+    itemCount: (count: number) => `${count} assets`,
+    relinkFolder: 'Relink Folder',
+    import: 'Import',
+    scanDuplicates: 'Scan Duplicates',
+    searchPlaceholder: 'Search media',
+    filters: {
+      all: 'All',
+      video: 'Video',
+      audio: 'Audio',
+      image: 'Image',
+      tagged: 'Tagged',
+      titles: 'Titles'
+    },
+    label: 'Label',
+    clearLabel: 'Clear Label',
+    labelColors: {
+      red: 'Red',
+      orange: 'Orange',
+      yellow: 'Yellow',
+      green: 'Green',
+      blue: 'Blue',
+      purple: 'Purple'
+    },
+    mediaJobs: 'Media Jobs',
+    preparingQueue: 'Preparing queue',
+    pendingCount: (count: number) => `${count} pending`,
+    failedCount: (count: number) => `${count} failed`,
+    emptyDrop: 'Drop media files here, or click import.',
+    addToTimeline: 'Add to Timeline',
+    relink: 'Relink',
+    generateProxy: 'Generate Proxy',
+    sequenceSuffix: 'Sequence',
+    proxyStatus: {
+      ready: 'Proxy ready',
+      pending: 'Proxy queued',
+      error: 'Proxy failed',
+      recommended: 'Proxy recommended',
+      notNeeded: 'Proxy not needed'
+    },
+    jobType: {
+      proxy: 'Proxy',
+      waveform: 'Waveform'
+    },
+    assetType: {
+      video: 'Video',
+      audio: 'Audio',
+      image: 'Image'
+    },
+    titleTemplateCount: (count: number) => `${count} title templates`,
+    addTitleTemplate: 'Add Title Template'
+  },
+  preview: {
+    title: 'Preview',
+    canvasSize: '1280 x 720 Canvas',
+    colorScopes: 'Color Scopes',
+    compareToggle: 'A/B Compare Preview',
+    compareLeftRight: 'Left/Right Split Compare',
+    compareTopBottom: 'Top/Bottom Split Compare',
+    compareDifference: 'Difference Compare',
+    compareDivider: 'Compare Divider',
+    multicamGrid: 'Multicam Preview',
+    multicamCutFailedTitle: 'Multicam cut failed',
+    multicamCutFailedMessage: 'Unable to record this angle switch.',
+    multicamAngle: (name: string) => `Cut to ${name}`,
+    renderFailedTitle: 'Preview render failed',
+    renderFailedMessage: 'Unable to draw preview.',
+    missingMedia: (name: string) => `Missing media: ${name}`
+  },
+  scopes: {
+    histogram: 'Histogram',
+    waveform: 'Waveform',
+    vectorscope: 'Vectorscope'
+  },
+  mixer: {
+    title: 'Audio Mixer',
+    master: 'Master',
+    output: 'Output',
+    muteTrack: 'Mute track',
+    soloTrack: 'Solo track',
+    volume: 'Volume',
+    pan: 'Pan',
+    expandChannel: 'Expand channel processing',
+    collapseChannel: 'Collapse channel processing',
+    eq: 'EQ',
+    eqEnabled: 'Enable EQ',
+    compressor: 'Compressor',
+    compressorEnabled: 'Enable compressor',
+    frequency: 'Frequency',
+    gain: 'Gain',
+    q: 'Q',
+    threshold: 'Threshold',
+    ratio: 'Ratio',
+    attack: 'Attack',
+    release: 'Release',
+    makeupGain: 'Makeup',
+    bandNames: {
+      low: 'Low',
+      lowMid: 'Low Mid',
+      highMid: 'High Mid',
+      high: 'High'
+    }
+  },
+  timeline: {
+    title: 'Timeline',
+    subtitle: 'Drag clips, trim edges, split at the playhead',
+    tracks: 'Tracks',
+    renderCache: 'Cache',
+    addVideoTrack: 'Add Video Track',
+    addAudioTrack: 'Add Audio Track',
+    addSubtitleTrack: 'Add Subtitle Track',
+    addTextClip: 'Add Text Clip',
+    addMarker: 'Add Marker at Playhead',
+    splitSelectedClip: 'Split Selected Clip',
+    deleteSelectedClip: 'Delete Selected Clip',
+    zoom: 'Timeline Zoom',
+    inPoint: 'In Point',
+    outPoint: 'Out Point',
+    muteTrack: 'Mute Track',
+    soloTrack: 'Solo Track',
+    lockTrack: 'Lock Track',
+    trackVolume: 'Track Volume',
+    mediaMissing: 'Media file missing',
+    sampledWaveform: 'Sampled waveform preview',
+    waveform: 'Waveform preview',
+    keyframeTitle: (property: string, time: number) => `${property} keyframe ${time.toFixed(2)}s`,
+    transitionUnavailableTitle: 'Transition unavailable',
+    transitionUnavailableMessage: 'Unable to add this transition.',
+    noTextTrackTitle: 'No text track',
+    noTextTrackMessage: 'Add a text track first.',
+    markerLabel: (index: number) => `Marker ${index}`,
+    markerRejectedTitle: 'Marker rejected',
+    addMarkerFailed: 'Unable to add marker.',
+    removeMarkerFailed: 'Unable to remove marker.',
+    splitUnavailableTitle: 'Cannot split',
+    splitUnavailableMessage: 'Move the playhead inside a clip.',
+    clipOverlapTitle: 'Clip Overlap',
+    clipOverlapMessage: 'This position overlaps another clip.',
+    editRejectedTitle: 'Timeline Edit Rejected',
+    editRejectedMessage: 'Unable to apply this edit.',
+    closeGapAction: 'Close Gap',
+    closeGapFailedTitle: 'Unable to close gap',
+    addTransition: 'Add Transition',
+    transitionType: 'Type',
+    transitionDuration: 'Duration',
+    transitionNames: {
+      dissolve: 'Dissolve',
+      'fade-black': 'Fade to Black'
+    },
+    add: 'Add',
+    remove: 'Remove',
+    close: 'Close',
+    silenceAction: 'Auto-cut Silence',
+    sceneAction: 'Split by Scene',
+    generateSubtitlesAction: 'Generate Subtitles',
+    timelineRejectedMessage: 'The timeline rejected this operation.',
+    trackTypes: {
+      video: 'Video',
+      audio: 'Audio',
+      text: 'Text',
+      subtitle: 'Subtitle'
+    },
+    newTrackName: (type: string, index: number) => `${formatTrackType(type)} ${index}`
+  },
+  inspector: {
+    multipleSelected: (count: number) => `Multiple clips selected (${count})`,
+    empty: 'Select a clip to edit properties.',
+    title: 'Inspector',
+    subtitle: 'Clip properties',
+    locked: 'Locked',
+    sections: {
+      clip: 'Clip',
+      speed: 'Speed',
+      transform: 'Transform',
+      chromaKey: 'Chroma Key',
+      masks: 'Masks',
+      frameInterpolation: 'Frame Interpolation',
+      stabilization: 'Stabilization',
+      colorMatch: 'Color Match',
+      imageSequence: 'PNG Sequence',
+      keyframe: 'Keyframe',
+      kenBurns: 'Ken Burns',
+      audioDenoise: 'Denoise',
+      curves: 'Curves',
+      colorWheels: 'Color Wheels',
+      effects: 'Effects',
+      audio: 'Audio',
+      subtitle: 'Subtitle',
+      text: 'Text'
+    },
+    fields: {
+      name: 'Name',
+      start: 'Start',
+      duration: 'Duration',
+      speed: 'Speed',
+      scale: 'Scale',
+      rotation: 'Rotation',
+      opacity: 'Opacity',
+      volume: 'Volume',
+      text: 'Text',
+      fontSize: 'Font Size',
+      fontFamily: 'Font Family',
+      color: 'Color'
+    },
+    missingFile: 'Missing file'
+  },
+  exportDialog: {
+    title: 'Export Video',
+    subtitle: 'Named presets, local FFmpeg queue, no cloud upload',
+    close: 'Close export dialog',
+    output: 'Output',
+    chooseOutputPath: 'Choose output path',
+    preset: 'Preset',
+    delete: 'Delete',
+    saveAs: 'Save As',
+    customPresetName: 'Custom preset name',
+    save: 'Save',
+    fields: {
+      width: 'Width',
+      height: 'Height',
+      fps: 'Frame Rate',
+      format: 'Format',
+      videoBitrate: 'Video Bitrate',
+      audioBitrate: 'Audio Bitrate',
+      subtitles: 'Subtitles',
+      scale: 'Scale',
+      targetAspectRatio: 'Target Aspect Ratio',
+      reframeOffsetX: 'Horizontal Offset',
+      reframeOffsetY: 'Vertical Offset',
+      hardwareEncoding: 'Hardware Encoding',
+      loudnessNormalization: 'Loudness Normalization'
+    },
+    info: {
+      resolution: 'Resolution',
+      fps: 'FPS',
+      format: 'Format',
+      bitrate: 'Bitrate',
+      videoCodec: 'Video Codec',
+      audioCodec: 'Audio Codec',
+      ffmpeg: 'FFmpeg',
+      drawtext: 'Drawtext',
+      hardwareEncoder: 'Hardware Encoder',
+      estimatedSize: 'Estimated Size'
+    },
+    batchPaths: 'Batch Paths',
+    batchPlaceholder: 'Optional: one output path per line',
+    queueTitle: 'Export Queue',
+    queueRunning: (count: number) => `Up to ${count} concurrent exports`,
+    maxConcurrent: 'Concurrency',
+    noTasks: 'No export tasks.',
+    clearFinished: 'Clear Finished',
+    addToQueue: 'Add to Queue',
+    cancelTask: 'Cancel',
+    openFolder: 'Open Folder',
+    retryTask: 'Retry',
+    queuedTitle: 'Added to export queue',
+    queuedMessage: (count: number, presetName: string) => `${count} tasks using ${presetName}.`,
+    exportFailed: 'Unable to export video.',
+    exportFilterName: (extension: string) => `${extension.toUpperCase()} Export`,
+    framePngFilterName: 'PNG Image',
+    frameJpegFilterName: 'JPEG Image',
+    presetCopySuffix: 'Copy',
+    status: {
+      pending: 'Pending',
+      running: 'Exporting',
+      success: 'Success',
+      error: 'Failed',
+      canceled: 'Canceled'
+    },
+    options: {
+      default: 'Default',
+      burnIn: 'Burn in',
+      softSub: 'Soft subtitles',
+      none: 'No scaling',
+      fit: 'Fit with padding',
+      source: 'Source aspect',
+      pngSequence: 'PNG Sequence',
+      gif: 'GIF',
+      webp: 'WebP',
+      apng: 'APNG'
+    }
+  },
+  exportPresets: {
+    customDescription: 'Custom export preset.',
+    nameRequired: 'Enter a preset name.',
+    cannotDeleteBuiltin: 'Built-in export presets cannot be deleted.',
+    builtins: {
+      web1080p: {
+        name: 'Web 1080p',
+        description: 'Full HD MP4 for local review and web sharing.'
+      },
+      fourK: {
+        name: '4K',
+        description: 'UHD MP4 export for high-resolution delivery.'
+      },
+      youtubeShorts: {
+        name: 'YouTube Shorts',
+        description: '9:16 vertical MP4 with fit padding.'
+      },
+      twitterX: {
+        name: 'Twitter/X',
+        description: 'Compact MP4 for social previews.'
+      },
+      gif: {
+        name: 'GIF',
+        description: 'Looping GIF exported with a two-pass palette.'
+      },
+      webp: {
+        name: 'WebP',
+        description: 'Local animated WebP export using libwebp_anim.'
+      },
+      apng: {
+        name: 'APNG',
+        description: 'Transparency-friendly animated PNG export.'
+      },
+      audioM4a: {
+        name: 'Audio-only m4a',
+        description: 'AAC audio export without a video stream.'
+      }
+    }
+  },
+  editorToasts: {
+    projectSaved: 'Project saved',
+    autosaveCheckFailed: 'Unable to check autosave recovery',
+    duplicateTitle: 'Already exists',
+    duplicateMessage: (count: number) => `Skipped ${count} duplicate files.`,
+    mediaImported: 'Media imported',
+    mediaImportedMessage: (count: number) => `Added ${count} files.`,
+    importFailed: 'Import failed',
+    importFailedMessage: 'Unable to import media.',
+    subtitleImportFailed: 'Subtitle import failed',
+    subtitleImportFailedMessage: 'Unable to import subtitles.',
+    noCompatibleTrack: 'No compatible track',
+    noCompatibleTrackMessage: 'Add a matching track before placing this asset.',
+    addClipFailed: 'Unable to add clip',
+    addClipFailedMessage: 'The timeline rejected this clip.',
+    mediaRelinked: 'Media relinked',
+    relinkFailed: 'Relink failed',
+    relinkFailedMessage: 'Unable to relink media.',
+    projectOpened: 'Project opened',
+    openFailed: 'Open failed',
+    openFailedMessage: 'Unable to open project.',
+    splitUnavailable: 'Cannot split',
+    splitUnavailableMessage: 'Move the playhead inside a clip.',
+    multicamCreated: 'Multicam sequence created',
+    multicamCreateFailed: 'Unable to create multicam sequence',
+    currentFrameExported: 'Current frame exported',
+    currentFrameExportFailed: 'Current frame export failed',
+    currentFrameExportFailedMessage: 'Unable to export current frame.',
+    exportCanceled: 'Export canceled',
+    proxyReady: 'Proxy ready',
+    proxyFailed: 'Proxy generation failed',
+    proxyFailedMessage: 'Unable to generate proxy.',
+    cacheCleared: 'Cache cleared',
+    cacheClearFailed: 'Cache clear failed',
+    cacheClearFailedMessage: 'Unable to clear media cache.',
+    saveFailed: 'Save failed',
+    saveFailedMessage: 'Unable to save project.'
+  },
+  projectFiles: {
+    discardChanges: 'Discard unsaved changes?',
+    unsavedChanges: 'Unsaved Changes',
+    projectFilter: 'open-factory Project',
+    noBrowserAutosave: 'No browser autosave project is available.',
+    projectPathRequired: 'A project path is required to save.',
+    autosaveDeleteFailed: 'Unable to delete autosave file'
+  },
+  projectArchive: {
+    title: 'Archive Project',
+    copying: (copied: number, total: number) => `Copying ${copied}/${total}`,
+    success: 'Project archived',
+    failed: 'Archive failed',
+    failedMessage: 'Unable to archive project.'
+  },
+  closeGuard: {
+    message: 'Save changes before closing?',
+    title: 'Unsaved Changes',
+    save: 'Save',
+    discard: 'Discard',
+    cancel: 'Cancel',
+    browserPrompt: 'Save changes before closing? Enter save, discard, or cancel.'
+  },
+  fileDialogs: {
+    media: 'Media',
+    subtitles: 'SubRip Subtitles',
+    whisperModel: 'Whisper Model'
+  },
+  errors: {
+    panelUnexpected: 'Unexpected panel error.',
+    panelCrashed: (name: string) => `${name} crashed`,
+    panelCouldNotRender: (name: string) => `${name} could not render.`,
+    reloadPanel: 'Reload Panel',
+    unsupportedMediaType: (path: string) => `Unsupported media type: ${path}`,
+    videoMetadata: 'Unable to read video metadata',
+    audioMetadata: 'Unable to read audio metadata',
+    imageMetadata: 'Unable to read image metadata',
+    mediaEventFailed: (eventName: string) => `Media event failed: ${eventName}`,
+    mediaJobFailed: 'Media job failed.',
+    proxyGenerationFailed: 'Proxy generation failed.',
+    proxyNotNeeded: 'This media does not need a proxy file.',
+    exportNeedsVideo: 'Add a video clip to the timeline before exporting.',
+    ffmpegMissing: 'ffmpeg was not found. Install it with winget install ffmpeg, brew install ffmpeg, or apt install ffmpeg.',
+    exportFailed: 'Unable to export video.',
+    silenceNeedsAudio: 'Silence detection requires an audio or video clip.',
+    videoHasNoAudio: 'This video clip has no audio stream.',
+    webAudioUnavailable: 'Web Audio decoding is unavailable.',
+    droppedPathsNotAuthorized: 'Dropped paths were not authorized'
+  },
+  panels: {
+    editor: 'Editor',
+    preview: 'Preview',
+    inspector: 'Inspector',
+    smartRoughCut: 'Smart Rough Cut',
+    audioMixer: 'Audio Mixer',
+    timeline: 'Timeline'
+  },
+  autosaveRecovery: {
+    title: 'Unsaved recovery point detected. Restore it?',
+    discard: 'Discard',
+    restore: 'Restore'
+  }
+} satisfies DeepPartial<LocaleStrings>;
+
+export const locales: Record<Language, LocaleStrings> = {
+  zh,
+  en: mergeLocale<LocaleStrings>(zh, enOverrides)
+};
+
+let currentLanguage: Language = languageFromNavigator(typeof navigator === 'undefined' ? undefined : navigator.language);
+const languageListeners = new Set<() => void>();
+
+export function t<T = string>(key: string): T {
+  const segments = key.split('.').filter(Boolean);
+  const value = resolveLocalePath(currentLanguage, segments) ?? resolveLocalePath('zh', segments);
+  return (value ?? key) as T;
+}
+
+export function getLanguage(): Language {
+  return currentLanguage;
+}
+
+export function setLanguage(language: string): Language {
+  const next = normalizeLanguage(language);
+  if (next === currentLanguage) {
+    return currentLanguage;
+  }
+  currentLanguage = next;
+  for (const listener of languageListeners) {
+    listener();
+  }
+  return currentLanguage;
+}
+
+export function subscribeLanguage(listener: () => void): () => void {
+  languageListeners.add(listener);
+  return () => {
+    languageListeners.delete(listener);
+  };
+}
+
+export function normalizeLanguage(language: string | undefined): Language {
+  const value = language?.trim().toLowerCase();
+  return value === 'en' || value?.startsWith('en-') ? 'en' : 'zh';
+}
+
+export function languageFromNavigator(language: string | undefined): Language {
+  return normalizeLanguage(language);
+}
+
+const localeProxyCache = new Map<string, unknown>();
+export const zhCN = createLocaleProxy([]) as LocaleStrings;
+
 export function formatTrackType(type: string): string {
   if (type === 'video') {
-    return '视频';
+    return t('timeline.trackTypes.video');
   }
   if (type === 'audio') {
-    return '音频';
+    return t('timeline.trackTypes.audio');
   }
   if (type === 'text') {
-    return '文字';
+    return t('timeline.trackTypes.text');
   }
   if (type === 'subtitle') {
-    return '字幕';
+    return t('timeline.trackTypes.subtitle');
   }
   return type;
+}
+
+function mergeLocale<T>(base: T, overrides: DeepPartial<T> | undefined): T {
+  if (!overrides || typeof base !== 'object' || base === null || typeof base === 'function') {
+    return (overrides ?? base) as T;
+  }
+  const output: Record<string, unknown> = { ...(base as Record<string, unknown>) };
+  for (const [key, value] of Object.entries(overrides as Record<string, unknown>)) {
+    const baseValue = (base as Record<string, unknown>)[key];
+    output[key] =
+      value && typeof value === 'object' && typeof value !== 'function' && baseValue && typeof baseValue === 'object' && typeof baseValue !== 'function'
+        ? mergeLocale(baseValue, value as DeepPartial<typeof baseValue>)
+        : value;
+  }
+  return output as T;
+}
+
+function resolveLocalePath(language: Language, path: string[]): unknown {
+  let value: unknown = locales[language];
+  for (const segment of path) {
+    if (!value || typeof value !== 'object') {
+      return undefined;
+    }
+    value = (value as Record<string, unknown>)[segment];
+  }
+  return value;
+}
+
+function createLocaleProxy(path: string[]): unknown {
+  const cacheKey = path.join('.');
+  const cached = localeProxyCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+  const proxy = new Proxy(
+    {},
+    {
+      get(_target, property) {
+        if (typeof property === 'symbol') {
+          return undefined;
+        }
+        const nextPath = [...path, property];
+        const value = resolveLocalePath(currentLanguage, nextPath) ?? resolveLocalePath('zh', nextPath);
+        return isProxyableLocaleValue(value) ? createLocaleProxy(nextPath) : value;
+      },
+      ownKeys() {
+        const value = resolveLocalePath(currentLanguage, path) ?? resolveLocalePath('zh', path);
+        return isProxyableLocaleValue(value) ? Reflect.ownKeys(value) : [];
+      },
+      getOwnPropertyDescriptor(_target, property) {
+        if (typeof property === 'symbol') {
+          return undefined;
+        }
+        const value = resolveLocalePath(currentLanguage, [...path, property]) ?? resolveLocalePath('zh', [...path, property]);
+        return value === undefined ? undefined : { enumerable: true, configurable: true };
+      }
+    }
+  );
+  localeProxyCache.set(cacheKey, proxy);
+  return proxy;
+}
+
+function isProxyableLocaleValue(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
 
 function formatBytes(bytes: number): string {

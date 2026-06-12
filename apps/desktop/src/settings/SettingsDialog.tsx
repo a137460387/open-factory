@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Star, X } from 'lucide-react';
 import { UpdateClipCommand, type Clip, type Project, type Timeline } from '@open-factory/editor-core';
-import { zhCN } from '../i18n/strings';
+import { getLanguage, normalizeLanguage, zhCN, type Language } from '../i18n/strings';
 import { loadLutLibrary, toggleLutFavorite, type LutLibraryItem } from '../lib/lutLibrary';
 import { showToast } from '../lib/toast';
 import { getPluginRegistrySnapshot, refreshPluginRegistry, setPluginEnabled, uninstallPlugin, type LoadedPlugin, type PluginRegistry } from '../plugins/plugin-manager';
@@ -19,6 +19,7 @@ import { commandManager, timelineAccessor } from '../store/commandManager';
 import { useEditorStore } from '../store/editorStore';
 import { PROXY_RESOLUTION_PRESETS, PROXY_TRIGGER_THRESHOLDS, useProxySettingsStore, type ProxyResolutionPreset, type ProxyTriggerThreshold } from '../store/proxySettingsStore';
 import { useTranslationSettingsStore, type TranslationProvider } from '../store/translationSettingsStore';
+import { saveLanguageSetting } from './appSettings';
 
 interface SettingsDialogProps {
   open: boolean;
@@ -29,12 +30,13 @@ interface SettingsDialogProps {
   onClose(): void;
 }
 
-type SettingsTab = 'lut-library' | 'shortcuts' | 'translation' | 'proxy' | 'plugins';
+type SettingsTab = 'general' | 'lut-library' | 'shortcuts' | 'translation' | 'proxy' | 'plugins';
 
 export function SettingsDialog({ open, project, selectedClip, shortcutBindings, onShortcutBindingsChange, onClose }: SettingsDialogProps) {
   const t = zhCN.settings;
   const setPreviewTimeline = useEditorStore((state) => state.setPreviewTimeline);
-  const [tab, setTab] = useState<SettingsTab>('lut-library');
+  const [tab, setTab] = useState<SettingsTab>('general');
+  const [language, setLanguage] = useState<Language>(() => getLanguage());
   const [items, setItems] = useState<LutLibraryItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
@@ -204,6 +206,20 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
     }
   }
 
+  async function updateLanguage(value: string) {
+    const nextLanguage = normalizeLanguage(value);
+    setLanguage(nextLanguage);
+    try {
+      await saveLanguageSetting(nextLanguage);
+    } catch (languageError) {
+      showToast({
+        kind: 'warning',
+        title: t.general.saveFailed,
+        message: languageError instanceof Error ? languageError.message : t.general.saveFailedMessage
+      });
+    }
+  }
+
   function resetShortcut(action: TimelineShortcutAction) {
     const next = { ...shortcutBindings };
     delete next[action];
@@ -229,7 +245,15 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
         <div className="flex min-h-0 flex-1">
           <nav className="w-44 shrink-0 border-r border-line bg-panel p-2">
             <button
-              className={`w-full rounded-md px-3 py-2 text-left text-sm font-semibold ${tab === 'lut-library' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}
+              className={`w-full rounded-md px-3 py-2 text-left text-sm font-semibold ${tab === 'general' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}
+              type="button"
+              data-testid="settings-tab-general"
+              onClick={() => setTab('general')}
+            >
+              {t.tabs.general}
+            </button>
+            <button
+              className={`mt-1 w-full rounded-md px-3 py-2 text-left text-sm font-semibold ${tab === 'lut-library' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}
               type="button"
               data-testid="settings-tab-lut-library"
               onClick={() => setTab('lut-library')}
@@ -270,6 +294,27 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
             </button>
           </nav>
           <main className="min-w-0 flex-1 overflow-y-auto p-4">
+            {tab === 'general' ? (
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-ink">{t.general.title}</h3>
+                  <p className="text-xs text-slate-500">{t.general.description}</p>
+                </div>
+                <label className="block text-xs font-medium text-slate-600">
+                  {t.general.language}
+                  <select
+                    className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                    value={language}
+                    data-testid="settings-language-select"
+                    onChange={(event) => void updateLanguage(event.target.value)}
+                  >
+                    <option value="zh">{t.general.options.zh}</option>
+                    <option value="en">{t.general.options.en}</option>
+                  </select>
+                </label>
+                <div className="rounded-md border border-line bg-panel p-3 text-xs text-slate-600">{t.general.languageDescription}</div>
+              </div>
+            ) : null}
             {tab === 'lut-library' ? (
               <>
                 <div className="mb-3 flex items-center justify-between gap-3">

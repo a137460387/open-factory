@@ -55,6 +55,7 @@ const relinkedVideo = 'C:/Relink/tiny-video.mp4';
 const relinkedAudio = 'C:/Relink/tiny-audio.wav';
 const relinkedImage = 'C:/Relink/test-image.png';
 const appDataDir = 'C:/Users/E2E/AppData/Roaming/open-factory';
+const settingsPath = `${appDataDir}/settings.json`;
 const exportPresetsPath = `${appDataDir}/presets.json`;
 const lutLibraryPath = `${appDataDir}/luts/Warm Contrast.cube`;
 const lutFavoritesPath = `${appDataDir}/lut-favorites.json`;
@@ -743,8 +744,12 @@ window.__E2E_ACTIONS__ = {
     files.delete(keybindingsPath);
     exists.set(keybindingsPath, false);
     mtimes.delete(keybindingsPath);
+    files.delete(settingsPath);
+    exists.set(settingsPath, false);
+    mtimes.delete(settingsPath);
     localStorage.removeItem('open-factory:proxy-settings');
     localStorage.removeItem('open-factory:plugins');
+    localStorage.removeItem('open-factory:settings');
   },
   clearExportPresets: () => {
     files.delete(exportPresetsPath);
