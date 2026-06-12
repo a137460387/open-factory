@@ -642,6 +642,28 @@ export const zhCN = {
     queuedTitle: '已加入导出队列',
     queuedMessage: (count: number, presetName: string) => `${count} 个任务使用 ${presetName}。`,
     exportFailed: '无法导出视频。',
+    preflight: {
+      blockedTitle: '导出预检未通过',
+      blockedMessage: '以下阻断项必须修复后才能加入导出队列。',
+      warningTitle: '导出预检发现警告',
+      warningMessage: '这些警告可能影响导出结果，可忽略后继续。',
+      relink: '跳转重连',
+      continue: '忽略警告继续',
+      severity: {
+        blocking: '阻断',
+        warning: '警告'
+      },
+      issueTitle: {
+        'missing-media': '缺失媒体',
+        'missing-font': '缺失字体',
+        'whisper-path': 'Whisper 路径无效',
+        ffmpeg: 'FFmpeg 不可用'
+      },
+      missingMediaMessage: (count: number) => `时间线引用了 ${count} 个缺失媒体文件。`,
+      missingFontMessage: (count: number) => `${count} 个字体未在系统中检测到，文字导出可能回退到默认字体。`,
+      whisperMessage: '时间线包含字幕片段，但 Whisper 路径未配置或不可用。',
+      ffmpegMessage: '未在 PATH 中检测到 FFmpeg，无法执行本地导出。'
+    },
     exportFilterName: (extension: string) => `${extension.toUpperCase()} 导出`,
     framePngFilterName: 'PNG 图片',
     frameJpegFilterName: 'JPEG 图片',

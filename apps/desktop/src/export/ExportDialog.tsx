@@ -2,19 +2,23 @@ import {
   TARGET_ASPECT_RATIOS,
   clampReframeOffset,
   getTimelinePlaybackDuration,
+  runExportPreflight,
   normalizeTargetAspectRatio,
   resolveReframeDimensions,
   type ExportTaskStatus,
   type FfmpegCapabilities,
+  type PreflightResult,
   type Project,
   type TargetAspectRatio
 } from '@open-factory/editor-core';
-import { FolderOpen, ListPlus, Save, Trash2, X } from 'lucide-react';
+import { AlertTriangle, FolderOpen, ListPlus, Save, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { zhCN } from '../i18n/strings';
 import { chooseExportPath, revealExport } from '../lib/exportVideo';
 import { getFfmpegCapabilities } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
+import { getWhisperAvailability } from '../lib/whisper';
+import { useWhisperSettingsStore } from '../store/whisperSettingsStore';
 import { cancelQueuedExportTask, enqueueExport, retryQueuedExportTask, setExportQueueMaxConcurrent } from './export-queue-runner';
 import { estimateExportFileSizeBytes, formatEstimatedFileSize } from './export-size-estimate';
 import { useExportQueueStore } from './export-queue-store';
@@ -32,13 +36,15 @@ interface ExportDialogProps {
   project: Project;
   onClose(): void;
   onCompleted(path: string): void;
+  onRelinkMissing?(): void;
 }
 
-export function ExportDialog({ project, onClose, onCompleted }: ExportDialogProps) {
+export function ExportDialog({ project, onClose, onCompleted, onRelinkMissing }: ExportDialogProps) {
   const t = zhCN.exportDialog;
   const [outputPath, setOutputPath] = useState('');
   const [capabilities, setCapabilities] = useState<FfmpegCapabilities | undefined>();
   const [error, setError] = useState<string>();
+  const [preflight, setPreflight] = useState<{ issues: PreflightResult[]; selectedPaths: string[] }>();
   const [presets, setPresets] = useState<ExportPreset[]>(BUILTIN_EXPORT_PRESETS);
   const [presetId, setPresetId] = useState(BUILTIN_EXPORT_PRESETS[0].id);
   const [draftSettings, setDraftSettings] = useState<ExportPresetSettings>({ ...BUILTIN_EXPORT_PRESETS[0].settings });
@@ -48,6 +54,8 @@ export function ExportDialog({ project, onClose, onCompleted }: ExportDialogProp
   const runnerActive = useExportQueueStore((state) => state.runnerActive);
   const maxConcurrent = useExportQueueStore((state) => state.maxConcurrent);
   const clearFinishedTasks = useExportQueueStore((state) => state.clearFinishedTasks);
+  const whisperExecutablePath = useWhisperSettingsStore((state) => state.executablePath);
+  const whisperModelPath = useWhisperSettingsStore((state) => state.modelPath);
   const notifiedSuccess = useRef(new Set<string>());
   const selectedPreset = useMemo(() => getExportPreset(presetId, presets), [presetId, presets]);
   const exportSettings = useMemo(() => normalizeDraftSettings(draftSettings), [draftSettings]);
@@ -170,16 +178,61 @@ export function ExportDialog({ project, onClose, onCompleted }: ExportDialogProp
       }
       setOutputPath(selectedPaths[0]);
       setError(undefined);
-      for (const path of selectedPaths) {
-        const task = await enqueueExport(project, path, exportSettings);
-        for (const warning of task.plan.warnings) {
-          showToast({ kind: 'warning', title: t.exportWarningTitle, message: formatExportWarning(warning) });
-        }
+      const issues = await collectPreflightIssues();
+      if (issues.length > 0) {
+        setPreflight({ issues, selectedPaths });
+        return;
       }
-      showToast({ kind: 'info', title: t.queuedTitle, message: t.queuedMessage(selectedPaths.length, selectedPreset.name) });
+      await enqueueSelectedPaths(selectedPaths);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : t.exportFailed);
     }
+  }
+
+  async function enqueueSelectedPaths(selectedPaths: string[]): Promise<void> {
+    for (const path of selectedPaths) {
+      const task = await enqueueExport(project, path, exportSettings);
+      for (const warning of task.plan.warnings) {
+        showToast({ kind: 'warning', title: t.exportWarningTitle, message: formatExportWarning(warning) });
+      }
+    }
+    showToast({ kind: 'info', title: t.queuedTitle, message: t.queuedMessage(selectedPaths.length, selectedPreset.name) });
+  }
+
+  async function collectPreflightIssues(): Promise<PreflightResult[]> {
+    const nextCapabilities = capabilities ?? (await getFfmpegCapabilities().catch(() => undefined));
+    if (nextCapabilities && !capabilities) {
+      setCapabilities(nextCapabilities);
+    }
+    const whisperAvailability = await getWhisperAvailability({
+      executablePath: whisperExecutablePath,
+      modelPath: whisperModelPath
+    });
+    return runExportPreflight(project, {
+      ffmpegAvailable: nextCapabilities?.available === true,
+      whisperReady: whisperAvailability.ready,
+      whisperMessage: whisperAvailability.error,
+      isFontFamilyAvailable
+    });
+  }
+
+  async function continueAfterWarnings(): Promise<void> {
+    if (!preflight || preflight.issues.some((issue) => issue.severity === 'blocking')) {
+      return;
+    }
+    const paths = preflight.selectedPaths;
+    setPreflight(undefined);
+    try {
+      await enqueueSelectedPaths(paths);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : t.exportFailed);
+    }
+  }
+
+  function relinkFromPreflight(): void {
+    setPreflight(undefined);
+    onClose();
+    onRelinkMissing?.();
   }
 
   return (
@@ -297,6 +350,7 @@ export function ExportDialog({ project, onClose, onCompleted }: ExportDialogProp
             />
           </div>
           {capabilities?.drawtextWarning ? <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900">{formatExportWarning(capabilities.drawtextWarning)}</div> : null}
+          {preflight ? <PreflightPanel issues={preflight.issues} onDismiss={() => setPreflight(undefined)} onContinue={() => void continueAfterWarnings()} onRelink={onRelinkMissing ? relinkFromPreflight : undefined} /> : null}
           {hardwareEncodingRequested && capabilities && !capabilities.hardwareEncoderAvailable ? (
             <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900" data-testid="export-hardware-fallback-warning">
               {t.hardwareEncodingFallback}
@@ -634,6 +688,110 @@ function ReframePreviewBox({ aspect, offsetX, offsetY }: { aspect: TargetAspectR
       </div>
     </div>
   );
+}
+
+function PreflightPanel({
+  issues,
+  onDismiss,
+  onContinue,
+  onRelink
+}: {
+  issues: PreflightResult[];
+  onDismiss(): void;
+  onContinue(): void;
+  onRelink?: () => void;
+}) {
+  const hasBlocking = issues.some((issue) => issue.severity === 'blocking');
+  const hasMissingMedia = issues.some((issue) => issue.type === 'missing-media');
+  return (
+    <section className="rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950" data-testid="export-preflight-panel">
+      <div className="flex items-start gap-2">
+        <AlertTriangle size={16} className="mt-0.5 flex-none" />
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold">{hasBlocking ? zhCN.exportDialog.preflight.blockedTitle : zhCN.exportDialog.preflight.warningTitle}</div>
+          <div className="mt-1 text-amber-900">{hasBlocking ? zhCN.exportDialog.preflight.blockedMessage : zhCN.exportDialog.preflight.warningMessage}</div>
+        </div>
+      </div>
+      <div className="mt-3 space-y-2">
+        {issues.map((issue) => (
+          <div key={issue.id} className="rounded border border-amber-200 bg-white/70 p-2" data-testid="export-preflight-issue" data-severity={issue.severity} data-type={issue.type}>
+            <div className="flex items-center gap-2">
+              <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${issue.severity === 'blocking' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'}`}>
+                {zhCN.exportDialog.preflight.severity[issue.severity]}
+              </span>
+              <span className="font-semibold text-slate-800">{formatPreflightTitle(issue)}</span>
+            </div>
+            <div className="mt-1 text-slate-600">{formatPreflightMessage(issue)}</div>
+            {issue.items.length > 0 ? (
+              <ul className="mt-1 list-disc space-y-0.5 pl-5 text-slate-700">
+                {issue.items.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            ) : null}
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 flex flex-wrap justify-end gap-2">
+        {hasMissingMedia && onRelink ? (
+          <button className="rounded-md border border-line bg-white px-2 py-1.5 font-medium text-slate-700 hover:bg-panel" type="button" data-testid="export-preflight-relink-button" onClick={onRelink}>
+            {zhCN.exportDialog.preflight.relink}
+          </button>
+        ) : null}
+        <button className="rounded-md border border-line bg-white px-2 py-1.5 font-medium text-slate-700 hover:bg-panel" type="button" data-testid="export-preflight-dismiss-button" onClick={onDismiss}>
+          {zhCN.common.close}
+        </button>
+        {!hasBlocking ? (
+          <button className="rounded-md bg-brand px-2 py-1.5 font-medium text-white hover:bg-[#176858]" type="button" data-testid="export-preflight-continue-button" onClick={onContinue}>
+            {zhCN.exportDialog.preflight.continue}
+          </button>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function formatPreflightTitle(issue: PreflightResult): string {
+  return zhCN.exportDialog.preflight.issueTitle[issue.type];
+}
+
+function formatPreflightMessage(issue: PreflightResult): string {
+  if (issue.type === 'missing-media') {
+    return zhCN.exportDialog.preflight.missingMediaMessage(issue.items.length);
+  }
+  if (issue.type === 'missing-font') {
+    return zhCN.exportDialog.preflight.missingFontMessage(issue.items.length);
+  }
+  if (issue.type === 'whisper-path') {
+    return issue.items[0] ?? zhCN.exportDialog.preflight.whisperMessage;
+  }
+  return zhCN.exportDialog.preflight.ffmpegMessage;
+}
+
+function isFontFamilyAvailable(fontFamily: string): boolean {
+  const family = fontFamily.trim();
+  if (!family || isGenericFontFamily(family) || typeof document === 'undefined') {
+    return true;
+  }
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+  if (!context) {
+    return true;
+  }
+  const sample = 'mmmmmmmmmmlli';
+  const size = '72px';
+  const baselines = ['monospace', 'serif', 'sans-serif'].map((baseline) => {
+    context.font = `${size} ${baseline}`;
+    return context.measureText(sample).width;
+  });
+  return ['monospace', 'serif', 'sans-serif'].some((baseline, index) => {
+    context.font = `${size} "${family}", ${baseline}`;
+    return Math.abs(context.measureText(sample).width - baselines[index]) > 0.1;
+  });
+}
+
+function isGenericFontFamily(fontFamily: string): boolean {
+  return ['serif', 'sans-serif', 'monospace', 'cursive', 'fantasy', 'system-ui', 'ui-serif', 'ui-sans-serif', 'ui-monospace'].includes(fontFamily.trim().toLowerCase());
 }
 
 function formatOptionLabel(value: string): string {

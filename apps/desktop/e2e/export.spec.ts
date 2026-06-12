@@ -79,3 +79,25 @@ test('uses detected NVENC hardware encoder when hardware encoding is enabled', a
   const plan = await page.evaluate(() => window.__E2E_ACTIONS__!.getLastExportPlan!() as { fullArgs: string[] });
   expect(plan.fullArgs).toEqual(expect.arrayContaining(['-c:v', 'h264_nvenc', '-preset', 'p4', '-cq', '23']));
 });
+
+test('blocks export when preflight finds missing media and allows export after relink', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.evaluate(() => window.__E2E_ACTIONS__!.setMissingProjectNext!());
+  await page.getByTestId('toolbar-open-project-button').click();
+  await expect(page.locator('[data-testid^="media-card-"][data-missing="true"]')).toBeVisible();
+
+  await openExportDialog(page);
+  await page.getByTestId('export-enqueue-button').click();
+  await expect(page.getByTestId('export-preflight-panel')).toBeVisible();
+  await expect(page.getByTestId('export-preflight-issue')).toHaveAttribute('data-type', 'missing-media');
+  await expect(page.getByTestId('export-preflight-panel')).toContainText('tiny-video.mp4');
+  await expect(page.getByTestId('export-task-status')).toHaveCount(0);
+
+  await page.getByTestId('export-preflight-relink-button').click();
+  await expect(page.locator('[data-testid^="media-card-"][data-missing="true"]')).toHaveCount(0);
+
+  await openExportDialog(page);
+  await page.getByTestId('export-enqueue-button').click();
+  await expectExportTaskStatus(page, 0, 'success');
+});

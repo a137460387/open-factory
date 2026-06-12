@@ -588,6 +588,7 @@ export function EditorShell() {
               onCompleted={(path) => {
                 setLastExportPath(path);
               }}
+              onRelinkMissing={() => void relinkAllMissing()}
             />
           ) : null}
           {timelineExportDialogOpen ? <TimelineExportDialog project={project} onClose={() => setTimelineExportDialogOpen(false)} /> : null}
