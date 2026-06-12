@@ -1,5 +1,6 @@
 import {
   DEFAULT_COLOR_CORRECTION,
+  DEFAULT_TRANSFORM,
   getEffectNumberParam,
   getTransformScaleX,
   getTransformScaleY,
@@ -200,6 +201,26 @@ export class WebGlPreviewCompositor {
     const pixels = new Uint8Array(width * height * 4);
     gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
     return { width, height, data: pixels };
+  }
+
+  applyAdjustmentLayer(colorCorrection?: Partial<ColorCorrection>, effects?: Effect[]): void {
+    const frame = this.readFramePixels();
+    const canvas = document.createElement('canvas');
+    canvas.width = frame.width;
+    canvas.height = frame.height;
+    const context = canvas.getContext('2d');
+    if (!context) {
+      return;
+    }
+    const image = context.createImageData(frame.width, frame.height);
+    for (let y = 0; y < frame.height; y += 1) {
+      const sourceStart = (frame.height - y - 1) * frame.width * 4;
+      const targetStart = y * frame.width * 4;
+      image.data.set(frame.data.subarray(sourceStart, sourceStart + frame.width * 4), targetStart);
+    }
+    context.putImageData(image, 0, 0);
+    this.begin(frame.width, frame.height);
+    this.drawSource(canvas, frame.width, frame.height, DEFAULT_TRANSFORM, colorCorrection, effects);
   }
 
   private getTexture(source: TexImageSource): WebGLTexture {

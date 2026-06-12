@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  AddAdjustmentLayerCommand,
   AddClipCommand,
   AddProjectAnnotationCommand,
   AddTrackCommand,
@@ -12,7 +13,9 @@ import {
   RemoveMediaCommand,
   RippleDeleteCommand,
   SplitClipCommand,
+  createId,
   createProject,
+  createTrack,
   dirname,
   getTimelineDuration,
   instantiateProjectTemplate,
@@ -40,7 +43,7 @@ import { cancelQueuedExportTask } from '../export/export-queue-runner';
 import { useExportQueueStore } from '../export/export-queue-store';
 import { chooseCurrentFrameExportPath, revealExport, startCurrentFrameExport } from '../lib/exportVideo';
 import { clearMediaCache } from '../cache/cache-service';
-import { createClipFromAsset, findPreferredTrack } from '../lib/clipFactory';
+import { createAdjustmentLayerClip, createClipFromAsset, findPreferredTrack } from '../lib/clipFactory';
 import { zhCN } from '../i18n/strings';
 import type { ExportPreset } from '../export/export-presets';
 import { pickMediaPaths, probeMediaPaths } from '../lib/media';
@@ -367,6 +370,23 @@ export function EditorShell() {
     },
     [project, setSelectedClipId]
   );
+
+  const addAdjustmentLayer = useCallback(() => {
+    try {
+      const adjustmentTrackCount = project.timeline.tracks.filter((track) => track.type === 'video' && track.clips.some((clip) => clip.type === 'adjustment')).length;
+      const track = createTrack({
+        id: createId('track'),
+        type: 'video',
+        name: zhCN.timeline.adjustmentTrackName(adjustmentTrackCount + 1),
+        clips: []
+      });
+      const clip = createAdjustmentLayerClip(track, project.timeline);
+      commandManager.execute(new AddAdjustmentLayerCommand(timelineAccessor, track, clip));
+      setSelectedClipId(clip.id);
+    } catch (error) {
+      showToast({ kind: 'error', title: zhCN.editorToasts.addClipFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.addClipFailedMessage });
+    }
+  }, [project.timeline, setSelectedClipId]);
 
   const addTitleTemplate = useCallback(
     (templateId: TitleTemplateId) => {
@@ -836,6 +856,7 @@ export function EditorShell() {
             onBatchTranscode={(paths) => openBatchTranscode(paths)}
             onScanDuplicates={() => void scanDuplicateMedia()}
             onAddToTimeline={addAssetToTimeline}
+            onAddAdjustmentLayer={addAdjustmentLayer}
             onRelink={(assetId) => void relinkMedia(assetId)}
             onRelinkAll={() => void relinkAllMissing()}
             onGenerateProxy={(assetId) => void generateProxyForMedia(assetId)}

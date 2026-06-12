@@ -10,7 +10,7 @@ import {
   createTrack,
   type Clip
 } from '../src';
-import { makeProject, makeSubtitleClip, makeTextClip, makeVideoClip } from './test-utils';
+import { makeAdjustmentClip, makeProject, makeSubtitleClip, makeTextClip, makeVideoClip } from './test-utils';
 
 describe('multitrack ffmpeg builder', () => {
   it('builds per-clip overlay, drawtext textfile, and amix filters as argument arrays', () => {
@@ -379,6 +379,52 @@ describe('multitrack ffmpeg builder', () => {
     const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
 
     expect(plan.filterComplex).not.toContain('rotate=');
+  });
+
+  it('chains adjustment layer filters over the composited video output', () => {
+    const project = makeProject();
+    project.timeline.tracks = [
+      createTrack({ id: 'track-video', type: 'video', name: 'Video 1', clips: [makeVideoClip({ id: 'clip-base', duration: 2 })] }),
+      createTrack({
+        id: 'track-adjustment-a',
+        type: 'video',
+        name: 'Adjustment A',
+        clips: [makeAdjustmentClip({ id: 'adjustment-dark', trackId: 'track-adjustment-a', duration: 2, colorCorrection: { brightness: -0.25, contrast: 0.8 } })]
+      }),
+      createTrack({
+        id: 'track-adjustment-b',
+        type: 'video',
+        name: 'Adjustment B',
+        clips: [makeAdjustmentClip({ id: 'adjustment-blur', trackId: 'track-adjustment-b', duration: 2, effects: [{ id: 'effect-blur', type: 'blur', enabled: true, params: { radius: 4 } }] })]
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('[base1]split=2[base2_adjustment_dark_base][base2_adjustment_dark_source]');
+    expect(plan.filterComplex).toContain('[base2_adjustment_dark_source]eq=brightness=-0.25:contrast=0.8:saturation=1[base2_adjustment_dark_processed]');
+    expect(plan.filterComplex).toContain("enable='between(t,0,2)'[base2]");
+    expect(plan.filterComplex).toContain('[base2]split=2[base3_adjustment_blur_base][base3_adjustment_blur_source]');
+    expect(plan.filterComplex).toContain('[base3_adjustment_blur_source]gblur=sigma=4[base3_adjustment_blur_processed]');
+    expect(plan.filterComplex.indexOf('[base1]split=2')).toBeLessThan(plan.filterComplex.indexOf('[base2]split=2'));
+  });
+
+  it('omits neutral adjustment layers from export filters', () => {
+    const project = makeProject();
+    project.timeline.tracks = [
+      createTrack({ id: 'track-video', type: 'video', name: 'Video 1', clips: [makeVideoClip({ id: 'clip-base', duration: 2 })] }),
+      createTrack({
+        id: 'track-adjustment',
+        type: 'video',
+        name: 'Adjustment',
+        clips: [makeAdjustmentClip({ id: 'adjustment-neutral', trackId: 'track-adjustment', duration: 2 })]
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).not.toContain('adjustment_neutral');
+    expect(plan.filterComplex).not.toContain('[base1]split=2');
   });
 
   it('adds preset video and audio bitrate args', () => {

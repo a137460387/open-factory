@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_COLOR_CORRECTION, createMulticamSequenceProject, createTrack, migrateProjectFile, serializeProject, type ProjectFileV1 } from '../src';
-import { makeProject, makeSubtitleClip, makeVideoClip } from './test-utils';
+import { makeAdjustmentClip, makeProject, makeSubtitleClip, makeVideoClip } from './test-utils';
 
 describe('project schema migration', () => {
   it('serializes schemaVersion 2 project files with media and relativePath', () => {
@@ -180,6 +180,26 @@ describe('project schema migration', () => {
     const migrated = migrateProjectFile(serializeProject(project));
 
     expect(migrated.project.timeline.tracks[0].clips[0].colorCorrection.inputColorSpace).toBe('rec709');
+  });
+
+  it('serializes and migrates adjustment clips without media references', () => {
+    const project = makeProject();
+    project.timeline.tracks.push(
+      createTrack({
+        id: 'track-adjustment',
+        type: 'video',
+        name: 'Adjustment',
+        clips: [makeAdjustmentClip({ id: 'adjustment-legacy', trackId: 'track-adjustment', colorCorrection: { brightness: -0.2 }, transform: { opacity: 0.75 } })]
+      })
+    );
+
+    const migrated = migrateProjectFile(serializeProject(project));
+    const clip = migrated.project.timeline.tracks.at(-1)?.clips[0];
+
+    expect(clip?.type).toBe('adjustment');
+    expect('mediaId' in (clip ?? {})).toBe(false);
+    expect(clip?.colorCorrection).toMatchObject({ brightness: -0.2, contrast: 1, saturation: 1, hue: 0 });
+    expect(clip?.transform.opacity).toBe(0.75);
   });
 
   it('serializes and migrates stabilization and PNG sequence metadata', () => {

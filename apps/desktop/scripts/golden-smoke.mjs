@@ -114,6 +114,15 @@ const fixtures = [
     validate: validateColorCorrectionFixture
   },
   {
+    name: 'adjustment-layer',
+    description: 'light gray video darkened by a non-media adjustment layer above it',
+    outputWidth: 1280,
+    outputHeight: 720,
+    expectedDuration: 1.5,
+    create: createAdjustmentLayerFixture,
+    validate: validateAdjustmentLayerFixture
+  },
+  {
     name: 'chroma-key',
     description: 'green video clip keyed transparent over the black export base',
     outputWidth: 1280,
@@ -978,6 +987,98 @@ async function validateColorCorrectionFixture(context) {
         passed: shiftedAwayFromCyan && context.centerPixel[2] > context.centerPixel[1],
         actual: context.centerPixel,
         expected: 'not cyan and blue channel dominant after hue shift'
+      }
+    ]
+  };
+}
+
+async function createAdjustmentLayerFixture(context) {
+  const sourcePath = join(context.fixtureDir, 'adjustment-light-gray-source.mp4');
+  await createColorVideoFixture(sourcePath, {
+    color: COLORS.lightGray.ffmpeg,
+    width: context.outputWidth,
+    height: context.outputHeight,
+    duration: context.fixture.expectedDuration,
+    audio: false
+  });
+  return buildProject({
+    id: 'golden-adjustment-layer',
+    name: 'Golden Adjustment Layer',
+    width: context.outputWidth,
+    height: context.outputHeight,
+    media: [
+      videoAsset({
+        id: 'asset-adjustment-source',
+        name: 'adjustment-light-gray-source.mp4',
+        path: sourcePath,
+        duration: context.fixture.expectedDuration,
+        width: context.outputWidth,
+        height: context.outputHeight,
+        hasAudio: false,
+        stat: statSync(sourcePath)
+      })
+    ],
+    tracks: [
+      {
+        id: 'track-adjustment-base',
+        type: 'video',
+        name: 'Base',
+        clips: [
+          videoClip({
+            id: 'clip-adjustment-base',
+            name: 'Light gray base',
+            mediaId: 'asset-adjustment-source',
+            trackId: 'track-adjustment-base',
+            duration: context.fixture.expectedDuration
+          })
+        ]
+      },
+      {
+        id: 'track-adjustment-layer',
+        type: 'video',
+        name: 'Adjustment',
+        clips: [
+          adjustmentClip({
+            id: 'clip-adjustment-layer',
+            name: 'Darken adjustment',
+            trackId: 'track-adjustment-layer',
+            duration: context.fixture.expectedDuration,
+            colorCorrection: { brightness: -0.35, contrast: 1, saturation: 1, hue: 0 }
+          })
+        ]
+      },
+      emptyAudioTrack(),
+      emptyTextTrack()
+    ]
+  });
+}
+
+async function validateAdjustmentLayerFixture(context) {
+  const sourceBrightness = (COLORS.lightGray.rgb[0] + COLORS.lightGray.rgb[1] + COLORS.lightGray.rgb[2]) / 3;
+  const outputBrightness = (context.centerPixel[0] + context.centerPixel[1] + context.centerPixel[2]) / 3;
+  return {
+    checks: [
+      {
+        name: 'adjustment-layer-filter-chain',
+        passed:
+          context.plan.filterComplex.includes('clip_adjustment_layer') &&
+          context.plan.filterComplex.includes('eq=brightness=-0.35:contrast=1:saturation=1') &&
+          context.plan.filterComplex.includes("enable='between(t,0,1.5)'"),
+        actual: {
+          hasClipLabel: context.plan.filterComplex.includes('clip_adjustment_layer'),
+          hasEq: context.plan.filterComplex.includes('eq=brightness=-0.35:contrast=1:saturation=1')
+        },
+        expected: 'adjustment layer split + eq + enabled overlay'
+      },
+      {
+        name: 'adjustment-layer-darkened-frame',
+        passed: outputBrightness < sourceBrightness - 40,
+        actual: {
+          centerPixel: context.centerPixel,
+          sourceBrightness,
+          outputBrightness
+        },
+        expected: 'center brightness at least 40 below source light gray'
       }
     ]
   };
@@ -2394,6 +2495,24 @@ function audioClip(input) {
     muted: input.muted,
     fadeInDuration: input.fadeInDuration,
     fadeOutDuration: input.fadeOutDuration
+  };
+}
+
+function adjustmentClip(input) {
+  return {
+    id: input.id,
+    type: 'adjustment',
+    name: input.name,
+    trackId: input.trackId,
+    start: input.start ?? 0,
+    duration: input.duration,
+    trimStart: input.trimStart ?? 0,
+    trimEnd: input.trimEnd ?? 0,
+    speed: input.speed ?? 1,
+    colorCorrection: input.colorCorrection ?? { brightness: 0, contrast: 1, saturation: 1, hue: 0 },
+    transform: input.transform ?? { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
+    keyframes: input.keyframes,
+    effects: input.effects
   };
 }
 

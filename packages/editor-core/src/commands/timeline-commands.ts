@@ -982,6 +982,51 @@ export class AddClipCommand implements Command {
   }
 }
 
+export class AddAdjustmentLayerCommand implements Command {
+  readonly description: string;
+  private insertedTrack = false;
+
+  constructor(private readonly accessor: TimelineAccessor, private readonly track: Track, private readonly clip: Extract<Clip, { type: 'adjustment' }>) {
+    this.description = `Add adjustment layer ${clip.name}`;
+  }
+
+  execute(): void {
+    const timeline = this.accessor.getTimeline();
+    const existingTrack = timeline.tracks.find((item) => item.id === this.track.id);
+    if (existingTrack) {
+      if (detectOverlap(existingTrack, this.clip)) {
+        throw new Error('Clip overlaps another clip on this track');
+      }
+      this.accessor.setTimeline(insertClip(timeline, this.clip));
+      return;
+    }
+
+    this.insertedTrack = true;
+    this.accessor.setTimeline({
+      ...timeline,
+      tracks: [
+        ...timeline.tracks,
+        {
+          ...this.track,
+          clips: [this.clip]
+        }
+      ]
+    });
+  }
+
+  undo(): void {
+    const timeline = removeClip(this.accessor.getTimeline(), this.clip.id).timeline;
+    if (!this.insertedTrack) {
+      this.accessor.setTimeline(timeline);
+      return;
+    }
+    this.accessor.setTimeline({
+      ...timeline,
+      tracks: timeline.tracks.filter((track) => track.id !== this.track.id)
+    });
+  }
+}
+
 export class AddSubtitleClipCommand implements Command {
   readonly description: string;
 

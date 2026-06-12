@@ -327,6 +327,16 @@ export function buildFfmpegExportPlan(
     );
 
     for (const item of visualItems) {
+      if (item.kind === 'adjustment') {
+        const nextVideo = `base${videoStep + 1}`;
+        const adjustmentFilters = buildAdjustmentLayerFilters(currentVideo, nextVideo, item.clip, textArtifacts);
+        if (adjustmentFilters.length > 0) {
+          filters.push(...adjustmentFilters);
+          currentVideo = nextVideo;
+          videoStep += 1;
+        }
+        continue;
+      }
       if (item.kind === 'text') {
         if (capabilities && (!capabilities.hasDrawtext || !capabilities.hasLibfreetype)) {
           warnings.push(capabilities.drawtextWarning ?? `Text clip ${item.clip.id} was skipped because FFmpeg drawtext/libfreetype is unavailable.`);
@@ -652,6 +662,13 @@ type VisualItem =
       clip: ExportClip;
     }
   | {
+      kind: 'adjustment';
+      trackIndex: number;
+      start: number;
+      duration: number;
+      clip: ExportClip;
+    }
+  | {
       kind: 'media';
       trackIndex: number;
       start: number;
@@ -723,8 +740,12 @@ function buildVisualItems(
     consumedClipIds.add(pair.toClip.id);
   }
 
-  for (const clip of orderedPlaybackClips.filter((item) => item.type === 'video' || item.type === 'image' || item.type === 'text' || item.type === 'nested-sequence')) {
+  for (const clip of orderedPlaybackClips.filter((item) => item.type === 'video' || item.type === 'image' || item.type === 'text' || item.type === 'nested-sequence' || item.type === 'adjustment')) {
     if (consumedClipIds.has(clip.id)) {
+      continue;
+    }
+    if (clip.type === 'adjustment') {
+      items.push({ kind: 'adjustment', trackIndex: clip.trackIndex, start: clip.start, duration: clip.duration, clip });
       continue;
     }
     if (clip.type === 'text') {
@@ -840,7 +861,26 @@ function mapTransitionType(type: ExportTransition['type']): string {
 }
 
 function visualKindOrder(item: VisualItem): number {
-  return item.kind === 'media' ? 0 : 1;
+  if (item.kind === 'media') {
+    return 0;
+  }
+  return item.kind === 'adjustment' ? 1 : 2;
+}
+
+function buildAdjustmentLayerFilters(inputLabel: string, outputLabel: string, clip: ExportClip, textArtifacts: TextArtifact[]): string[] {
+  const processingFilters = [...buildColorCorrectionFilters(clip, textArtifacts), ...buildEffectFilters(clip.effects)];
+  if (processingFilters.length === 0) {
+    return [];
+  }
+  const safeClipId = safeLabel(clip.id);
+  const baseLabel = `${outputLabel}_${safeClipId}_base`;
+  const sourceLabel = `${outputLabel}_${safeClipId}_source`;
+  const processedLabel = `${outputLabel}_${safeClipId}_processed`;
+  return [
+    `[${inputLabel}]split=2[${baseLabel}][${sourceLabel}]`,
+    `[${sourceLabel}]${processingFilters.join(',')}[${processedLabel}]`,
+    `[${baseLabel}][${processedLabel}]overlay=x=0:y=0:eval=frame:enable='between(t,${formatFfmpegSeconds(clip.start)},${formatFfmpegSeconds(clip.start + clip.duration)})'[${outputLabel}]`
+  ];
 }
 
 function buildVisualClipFilter(
@@ -1241,8 +1281,11 @@ interface AudioSpectrumExportItem {
 }
 
 function collectAudioSpectrumEffects(clips: ExportClip[]): AudioSpectrumExportItem[] {
-  return clips.flatMap((clip) =>
-    clip.effects.flatMap((effect) => {
+  return clips.flatMap((clip) => {
+    if (clip.type === 'adjustment') {
+      return [];
+    }
+    return clip.effects.flatMap((effect) => {
       if (!effect.enabled || effect.type !== 'audio-spectrum') {
         return [];
       }
@@ -1258,8 +1301,8 @@ function collectAudioSpectrumEffects(clips: ExportClip[]): AudioSpectrumExportIt
           params
         }
       ];
-    })
-  );
+    });
+  });
 }
 
 function buildAudioSpectrumFilter(inputLabel: string, outputLabel: string, params: AudioSpectrumParams, settings: ExportSettings): string {

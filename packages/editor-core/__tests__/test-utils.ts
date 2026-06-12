@@ -5,6 +5,7 @@ import {
   DEFAULT_SUBTITLE_MODE,
   DEFAULT_SUBTITLE_STYLE,
   createTrack,
+  createAdjustmentClip,
   normalizeChromaKey,
   normalizeAudioDenoise,
   normalizeFrameInterpolation,
@@ -84,6 +85,29 @@ export function makeAudioClip(overrides: ClipOverrides<Extract<Clip, { type: 'au
     fadeInDuration: overrides.fadeInDuration,
     fadeOutDuration: overrides.fadeOutDuration
   };
+}
+
+export function makeAdjustmentClip(overrides: ClipOverrides<Extract<Clip, { type: 'adjustment' }>> = {}): Extract<Clip, { type: 'adjustment' }> {
+  return createAdjustmentClip({
+    id: overrides.id ?? 'adjustment-1',
+    name: overrides.name ?? 'Adjustment Layer',
+    trackId: overrides.trackId ?? 'track-adjustment',
+    start: overrides.start ?? 0,
+    duration: overrides.duration ?? 10,
+    trimStart: overrides.trimStart ?? 0,
+    trimEnd: overrides.trimEnd ?? 0,
+    speed: overrides.speed ?? DEFAULT_CLIP_SPEED,
+    colorCorrection: { ...DEFAULT_COLOR_CORRECTION, ...overrides.colorCorrection },
+    transform: { ...DEFAULT_TRANSFORM, ...overrides.transform },
+    chromaKey: normalizeChromaKey(overrides.chromaKey),
+    stabilization: normalizeStabilization(overrides.stabilization),
+    frameInterpolation: normalizeFrameInterpolation(overrides.frameInterpolation),
+    audioDenoise: normalizeAudioDenoise(overrides.audioDenoise),
+    masks: normalizeMasks(overrides.masks),
+    sequenceFrameRate: normalizeSequenceFrameRate(overrides.sequenceFrameRate),
+    keyframes: overrides.keyframes,
+    effects: overrides.effects
+  });
 }
 
 export function makeTextClip(overrides: ClipOverrides<Extract<Clip, { type: 'text' }>> = {}): Extract<Clip, { type: 'text' }> {

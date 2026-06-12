@@ -35,7 +35,8 @@ const zh = {
   },
   clips: {
     defaultTextName: '文字',
-    defaultTextContent: '标题'
+    defaultTextContent: '标题',
+    defaultAdjustmentName: '调整层'
   },
   toolbar: {
     fileMenu: '文件',
@@ -225,6 +226,7 @@ const zh = {
     itemCount: (count: number) => `${count} 个素材`,
     relinkFolder: '重连文件夹',
     import: '导入',
+    newAdjustmentLayer: '新建调整层',
     batchTranscode: '批量转码',
     scanDuplicates: '扫描重复',
     searchPlaceholder: '搜索媒体',
@@ -410,6 +412,8 @@ const zh = {
     addAudioTrack: '添加音频轨道',
     addSubtitleTrack: '添加字幕轨道',
     addTextClip: '添加文字片段',
+    addAdjustmentLayer: '新建调整层',
+    adjustmentTrackName: (index: number) => `调整层 ${index}`,
     addMarker: '在播放头添加标记',
     annotationMode: '批注模式',
     annotations: '批注',
@@ -1212,7 +1216,8 @@ const enOverrides = {
   },
   clips: {
     defaultTextName: 'Text',
-    defaultTextContent: 'Title'
+    defaultTextContent: 'Title',
+    defaultAdjustmentName: 'Adjustment Layer'
   },
   toolbar: {
     fileMenu: 'File',
@@ -1402,6 +1407,7 @@ const enOverrides = {
     itemCount: (count: number) => `${count} assets`,
     relinkFolder: 'Relink Folder',
     import: 'Import',
+    newAdjustmentLayer: 'New Adjustment Layer',
     batchTranscode: 'Batch Transcode',
     scanDuplicates: 'Scan Duplicates',
     searchPlaceholder: 'Search media',
@@ -1515,6 +1521,8 @@ const enOverrides = {
     addAudioTrack: 'Add Audio Track',
     addSubtitleTrack: 'Add Subtitle Track',
     addTextClip: 'Add Text Clip',
+    addAdjustmentLayer: 'New Adjustment Layer',
+    adjustmentTrackName: (index: number) => `Adjustment ${index}`,
     addMarker: 'Add Marker at Playhead',
     annotationMode: 'Annotation Mode',
     annotations: 'Annotations',

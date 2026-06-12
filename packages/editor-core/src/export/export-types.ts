@@ -132,7 +132,7 @@ export interface ExportSubtitleStyle extends ExportTextStyle {
   yOffset: number;
 }
 
-export type ExportClipType = 'video' | 'audio' | 'image' | 'text' | 'subtitle' | 'nested-sequence';
+export type ExportClipType = 'video' | 'audio' | 'image' | 'text' | 'subtitle' | 'nested-sequence' | 'adjustment';
 export type ExportTrackType = 'video' | 'audio' | 'text' | 'subtitle';
 export type ExportTransitionType = 'fade-black' | 'dissolve';
 

@@ -8,6 +8,7 @@ import {
   type MediaAsset,
   type Timeline,
   type Track,
+  createAdjustmentClip,
   createId,
   getTimelineDuration
 } from '@open-factory/editor-core';
@@ -59,6 +60,23 @@ export function createTextClip(track: Track, timeline: Timeline): Clip {
     text: zhCN.clips.defaultTextContent,
     style: { ...DEFAULT_TEXT_STYLE }
   };
+}
+
+export function createAdjustmentLayerClip(track: Track, timeline: Timeline): Extract<Clip, { type: 'adjustment' }> {
+  const timelineDuration = getTimelineDuration(timeline);
+  return createAdjustmentClip({
+    id: createId('clip'),
+    name: zhCN.clips.defaultAdjustmentName,
+    trackId: track.id,
+    start: findAppendStart(track, timeline),
+    duration: Math.max(timelineDuration || 5, 1),
+    trimStart: 0,
+    trimEnd: 0,
+    speed: DEFAULT_CLIP_SPEED,
+    colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+    transform: { ...DEFAULT_TRANSFORM },
+    masks: []
+  });
 }
 
 export function findPreferredTrack(timeline: Timeline, asset: MediaAsset): Track | undefined {

@@ -17,7 +17,7 @@ import { round } from './time';
 export type ProjectVersion = '0.2';
 export type AssetType = 'video' | 'audio' | 'image';
 export type TrackType = 'video' | 'audio' | 'text' | 'subtitle';
-export type ClipType = 'video' | 'audio' | 'image' | 'text' | 'subtitle' | 'nested-sequence';
+export type ClipType = 'video' | 'audio' | 'image' | 'text' | 'subtitle' | 'nested-sequence' | 'adjustment';
 export type TransitionType = 'fade-black' | 'dissolve';
 export type SubtitleMode = 'burn-in' | 'soft-sub';
 export type KeyframeEasing = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out';
@@ -201,7 +201,7 @@ export interface TrackCompressor {
   makeupGain: number;
 }
 
-export type Clip = VideoClip | AudioClip | ImageClip | TextClip | SubtitleClip | NestedSequenceClip;
+export type Clip = VideoClip | AudioClip | ImageClip | TextClip | SubtitleClip | NestedSequenceClip | AdjustmentClip;
 
 export interface Transition {
   id: string;
@@ -310,6 +310,10 @@ export interface NestedSequenceClip extends BaseClip {
   fadeInDuration?: number;
   fadeOutDuration?: number;
   multicam?: MulticamSequence;
+}
+
+export interface AdjustmentClip extends BaseClip {
+  type: 'adjustment';
 }
 
 export interface MulticamSequence {
@@ -604,6 +608,16 @@ export function createNestedSequenceClip(
     fadeInDuration: input.fadeInDuration,
     fadeOutDuration: input.fadeOutDuration,
     multicam: normalizeMulticamSequence(input.multicam, input.duration)
+  };
+}
+
+export function createAdjustmentClip(
+  input: Omit<AdjustmentClip, 'id' | 'type' | 'transform' | 'speed' | 'colorCorrection'> &
+    Partial<Pick<AdjustmentClip, 'id' | 'transform' | 'speed' | 'colorCorrection'>>
+): AdjustmentClip {
+  return {
+    ...createBaseClip(input),
+    type: 'adjustment'
   };
 }
 

@@ -1,6 +1,17 @@
-import type { AudioSpectrumParams, Clip, MediaAsset, Sequence, Timeline, Transition } from '@open-factory/editor-core';
-import { applyClipKeyframes, getActiveClipsAtTime, getClipPlaybackStart, getRenderableTracks, getTimelinePlaybackDuration, getTransitionPlaybackWindow, normalizeAudioSpectrumParams } from '@open-factory/editor-core';
-import { DEFAULT_TRANSFORM } from '@open-factory/editor-core';
+import type { AudioSpectrumParams, Clip, Effect, MediaAsset, Sequence, Timeline, Transition } from '@open-factory/editor-core';
+import {
+  DEFAULT_COLOR_CORRECTION,
+  DEFAULT_TRANSFORM,
+  applyClipKeyframes,
+  getActiveClipsAtTime,
+  getClipPlaybackStart,
+  getEffectNumberParam,
+  getRenderableTracks,
+  getTimelinePlaybackDuration,
+  getTransitionPlaybackWindow,
+  normalizeAudioSpectrumParams,
+  normalizeColorCorrection
+} from '@open-factory/editor-core';
 import { PreviewAudioRenderer } from './audio-renderer';
 import { recordPreviewError, recordPreviewMode, recordPreviewReadback } from './debug';
 import { drawImage2d, drawImage2dBypass, drawImageWebGl } from './image-renderer';
@@ -141,6 +152,12 @@ export class PreviewRenderer {
     bypassProcessing: boolean
   ): Promise<void> {
     const renderClip = withCanvasKeyframedPosition(clip, canvasWidth, canvasHeight);
+    if (renderClip.type === 'adjustment') {
+      if (!bypassProcessing) {
+        compositor.applyAdjustmentLayer(renderClip.colorCorrection, renderClip.effects);
+      }
+      return;
+    }
     if (renderClip.type === 'nested-sequence') {
       const nested = await this.renderNestedCanvas(renderClip, sequenceById, media, playheadTime, canvasWidth, canvasHeight, depth, bypassProcessing);
       if (!nested) {
@@ -189,6 +206,12 @@ export class PreviewRenderer {
     bypassProcessing: boolean
   ): Promise<void> {
     const renderClip = withCanvasKeyframedPosition(clip, canvas.width, canvas.height);
+    if (renderClip.type === 'adjustment') {
+      if (!bypassProcessing) {
+        applyAdjustmentLayer2d(context, canvas, renderClip.colorCorrection, renderClip.effects);
+      }
+      return;
+    }
     if (renderClip.type === 'nested-sequence') {
       const nested = await this.renderNestedCanvas(renderClip, sequenceById, media, playheadTime, canvas.width, canvas.height, depth, bypassProcessing);
       if (!nested) {
@@ -420,6 +443,48 @@ function read2dFrameSafely(context: CanvasRenderingContext2D, canvas: HTMLCanvas
   } catch {
     return undefined;
   }
+}
+
+function applyAdjustmentLayer2d(
+  context: CanvasRenderingContext2D,
+  canvas: HTMLCanvasElement,
+  colorCorrection: Clip['colorCorrection'],
+  effects: Effect[] | undefined
+): void {
+  const snapshot = document.createElement('canvas');
+  snapshot.width = canvas.width;
+  snapshot.height = canvas.height;
+  const snapshotContext = snapshot.getContext('2d');
+  if (!snapshotContext) {
+    return;
+  }
+  snapshotContext.drawImage(canvas, 0, 0);
+  const previousFilter = context.filter;
+  context.save();
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.filter = buildAdjustmentCanvasFilter(colorCorrection, effects);
+  context.drawImage(snapshot, 0, 0);
+  context.filter = previousFilter;
+  context.restore();
+}
+
+function buildAdjustmentCanvasFilter(colorCorrection: Clip['colorCorrection'], effects: Effect[] | undefined): string {
+  const correction = normalizeColorCorrection(colorCorrection ?? DEFAULT_COLOR_CORRECTION);
+  const filters = [
+    `brightness(${Math.max(0, 1 + correction.brightness)})`,
+    `contrast(${correction.contrast})`,
+    `saturate(${correction.saturation})`,
+    `hue-rotate(${correction.hue}deg)`
+  ];
+  for (const effect of effects ?? []) {
+    if (!effect.enabled) {
+      continue;
+    }
+    if (effect.type === 'blur') {
+      filters.push(`blur(${getEffectNumberParam(effect.params, 'radius', 8)}px)`);
+    }
+  }
+  return filters.join(' ');
 }
 
 interface ClipRenderInstance {

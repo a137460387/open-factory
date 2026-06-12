@@ -1,5 +1,5 @@
 import { TITLE_TEMPLATE_IDS, filterMediaAssets, shouldGenerateProxy, type MediaAsset, type MediaBinFilter, type MediaLabelColor, type MediaMetadata, type TitleTemplateId } from '@open-factory/editor-core';
-import { AlertCircle, BadgeCheck, FileAudio2, FileImage, FileText, FileVideo2, Gauge, Import, Link2, Loader2, Merge, Plus, Search, Tag } from 'lucide-react';
+import { AlertCircle, BadgeCheck, FileAudio2, FileImage, FileText, FileVideo2, Gauge, Import, Link2, Loader2, Merge, Plus, Search, SlidersHorizontal, Tag } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
 import { zhCN } from '../../i18n/strings';
@@ -17,6 +17,7 @@ interface MediaBinProps {
   onBatchTranscode(paths: string[]): void;
   onScanDuplicates(): void;
   onAddToTimeline(assetId: string): void;
+  onAddAdjustmentLayer(): void;
   onRelink(assetId: string): void;
   onRelinkAll(): void;
   onGenerateProxy(assetId: string): void;
@@ -26,7 +27,7 @@ interface MediaBinProps {
 
 type MediaBinView = MediaBinFilter | 'titles';
 
-export function MediaBin({ media, mediaMetadata, onImport, onImportPaths, onBatchTranscode, onScanDuplicates, onAddToTimeline, onRelink, onRelinkAll, onGenerateProxy, onSetLabel, onAddTitleTemplate }: MediaBinProps) {
+export function MediaBin({ media, mediaMetadata, onImport, onImportPaths, onBatchTranscode, onScanDuplicates, onAddToTimeline, onAddAdjustmentLayer, onRelink, onRelinkAll, onGenerateProxy, onSetLabel, onAddTitleTemplate }: MediaBinProps) {
   const t = zhCN.mediaBin;
   const [dragOver, setDragOver] = useState(false);
   const [search, setSearch] = useState('');
@@ -88,7 +89,7 @@ export function MediaBin({ media, mediaMetadata, onImport, onImportPaths, onBatc
           <div className="text-sm font-semibold">{t.title}</div>
           <div className="text-xs text-slate-500">{t.itemCount(media.length)}</div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           {missingCount > 0 ? (
             <button
               className="inline-flex h-9 items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-2 text-xs font-medium text-amber-900 hover:bg-amber-100"
@@ -106,6 +107,14 @@ export function MediaBin({ media, mediaMetadata, onImport, onImportPaths, onBatc
           >
             <Merge size={15} />
             {t.scanDuplicates}
+          </button>
+          <button
+            className="inline-flex items-center gap-2 rounded-md border border-line bg-panel px-2 py-2 text-sm font-medium text-slate-700 hover:bg-white"
+            onClick={onAddAdjustmentLayer}
+            data-testid="new-adjustment-layer-button"
+          >
+            <SlidersHorizontal size={15} />
+            {t.newAdjustmentLayer}
           </button>
           <button
             className="inline-flex items-center gap-2 rounded-md bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-[#176858]"

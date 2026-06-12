@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  AddAdjustmentLayerCommand,
   AddClipCommand,
   AddEffectCommand,
   AddKeyframeCommand,
@@ -44,7 +45,7 @@ import {
   UpdateTrackCommand,
   createTrack
 } from '../src';
-import { makeAccessor, makeAudioClip, makeProject, makeSubtitleClip, makeTextClip, makeTimeline, makeVideoClip } from './test-utils';
+import { makeAccessor, makeAdjustmentClip, makeAudioClip, makeProject, makeSubtitleClip, makeTextClip, makeTimeline, makeVideoClip } from './test-utils';
 
 describe('timeline commands', () => {
   it('loads a project with undo and redo support', () => {
@@ -88,6 +89,38 @@ describe('timeline commands', () => {
     expect(accessor.current().tracks[0].clips).toHaveLength(0);
     manager.redo();
     expect(accessor.current().tracks[0].clips[0].id).toBe(clip.id);
+  });
+
+  it('adds adjustment layers as one undoable command', () => {
+    const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'clip-base', duration: 4 })]));
+    const manager = new CommandManager();
+    const track = createTrack({ id: 'track-adjustment', type: 'video', name: 'Adjustment', clips: [] });
+    const clip = makeAdjustmentClip({ id: 'adjustment-a', trackId: 'track-adjustment', duration: 4 });
+
+    manager.execute(new AddAdjustmentLayerCommand(accessor, track, clip));
+    expect(accessor.current().tracks.at(-1)?.id).toBe('track-adjustment');
+    expect(accessor.current().tracks.at(-1)?.clips.map((item) => item.id)).toEqual(['adjustment-a']);
+
+    manager.undo();
+    expect(accessor.current().tracks.some((item) => item.id === 'track-adjustment')).toBe(false);
+
+    manager.redo();
+    expect(accessor.current().tracks.at(-1)?.clips[0].type).toBe('adjustment');
+  });
+
+  it('adds adjustment layers to existing tracks and rejects overlaps', () => {
+    const track = createTrack({ id: 'track-adjustment', type: 'video', name: 'Adjustment', clips: [] });
+    const accessor = makeAccessor({ ...makeTimeline(), tracks: [...makeTimeline().tracks, track] });
+    const manager = new CommandManager();
+
+    manager.execute(new AddAdjustmentLayerCommand(accessor, track, makeAdjustmentClip({ id: 'adjustment-a', trackId: 'track-adjustment', start: 0, duration: 2 })));
+    expect(accessor.current().tracks.find((item) => item.id === 'track-adjustment')?.clips).toHaveLength(1);
+    expect(() =>
+      manager.execute(new AddAdjustmentLayerCommand(accessor, track, makeAdjustmentClip({ id: 'adjustment-b', trackId: 'track-adjustment', start: 1, duration: 2 })))
+    ).toThrow('overlaps');
+
+    manager.undo();
+    expect(accessor.current().tracks.find((item) => item.id === 'track-adjustment')?.clips).toHaveLength(0);
   });
 
   it('adds subtitle clips only to subtitle tracks with undo and redo', () => {
