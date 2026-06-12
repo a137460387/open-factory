@@ -26,6 +26,35 @@ export interface ExportResult {
   report?: ExportReport;
 }
 
+export interface SharePackageFileEntry {
+  sourcePath: string;
+  archivePath: string;
+}
+
+export interface SharePackageRequest {
+  outputPath: string;
+  projectFileName: string;
+  projectContents: string;
+  readmeContents: string;
+  exportedVideo: SharePackageFileEntry;
+  mediaFiles: SharePackageFileEntry[];
+}
+
+export interface SharePackageResult {
+  outputPath: string;
+  fileCount: number;
+  durationMs: number;
+}
+
+export interface SharePackageProgressEvent {
+  stage: 'readme' | 'project' | 'export' | 'media' | 'finished';
+  progress: number;
+  progressPct: number;
+  current: number;
+  total: number;
+  outputPath: string;
+}
+
 export interface MediaProbe {
   hasAudio: boolean;
   audioChannels?: number;
@@ -125,6 +154,7 @@ export type TauriMocks = Partial<{
   detectFfmpeg(): Promise<boolean> | boolean;
   getFfmpegCapabilities(): Promise<FfmpegCapabilities> | FfmpegCapabilities;
   runExport(plan: FfmpegExportPlan, taskId?: string): Promise<ExportResult> | ExportResult;
+  createSharePackage(request: SharePackageRequest): Promise<SharePackageResult> | SharePackageResult;
   analyzeClip(request: AnalyzeClipRequest): Promise<AnalyzeClipResult> | AnalyzeClipResult;
   cancelExport(taskId?: string): Promise<void> | void;
   getCacheDir(): Promise<string> | string;
@@ -406,6 +436,14 @@ export async function runExport(plan: FfmpegExportPlan, taskId?: string): Promis
     return mock(plan, taskId);
   }
   return invoke<ExportResult>('run_export', taskId ? { plan, taskId } : { plan });
+}
+
+export async function createSharePackageZip(request: SharePackageRequest): Promise<SharePackageResult> {
+  const mock = getTauriMocks()?.createSharePackage;
+  if (mock) {
+    return mock(request);
+  }
+  return invoke<SharePackageResult>('create_share_package', { request });
 }
 
 export async function analyzeClip(request: AnalyzeClipRequest): Promise<AnalyzeClipResult> {

@@ -30,6 +30,7 @@ const zh = {
     openProject: '打开项目',
     saveProject: '保存项目',
     archiveProject: '归档项目',
+    createSharePackage: '创建分享包',
     importMedia: '导入媒体',
     importSubtitles: '导入字幕',
     exportVideo: '导出视频',
@@ -919,6 +920,34 @@ const zh = {
     failed: '归档失败',
     failedMessage: '无法归档项目。'
   },
+  sharePackage: {
+    title: '创建分享包',
+    fileDialogFilter: '分享包',
+    exporting: '正在导出 MP4',
+    packing: (current: number, total: number) => `正在打包 ${current}/${total}`,
+    success: '分享包已创建',
+    failed: '分享包创建失败',
+    failedMessage: '无法创建分享包。',
+    exportFailed: '分享包导出失败。',
+    exportCanceled: '分享包导出已取消。',
+    cleanupFailed: '无法删除分享包临时导出文件。',
+    readme: (projectName: string, projectFileName: string, exportPath: string) =>
+      [
+        `open-factory 分享包：${projectName}`,
+        '',
+        '内容：',
+        `- ${projectFileName}：项目文件，媒体路径已相对化。`,
+        '- media/：项目使用的本地媒体副本。',
+        `- ${exportPath}：创建分享包时导出的 MP4。`,
+        '',
+        '打开方式：',
+        '1. 解压此 zip 文件。',
+        `2. 在 open-factory 中打开 ${projectFileName}。`,
+        '3. 如需预览成片，可直接播放 export/ 目录中的 MP4。',
+        '',
+        '本包由本机生成，不包含云端同步或账号信息。'
+      ].join('\n')
+  },
   closeGuard: {
     message: '关闭前保存更改？',
     title: '未保存的更改',
@@ -1037,6 +1066,7 @@ const enOverrides = {
     openProject: 'Open Project',
     saveProject: 'Save Project',
     archiveProject: 'Archive Project',
+    createSharePackage: 'Create Share Package',
     importMedia: 'Import Media',
     importSubtitles: 'Import Subtitles',
     exportVideo: 'Export Video',
@@ -1577,6 +1607,34 @@ const enOverrides = {
     success: 'Project archived',
     failed: 'Archive failed',
     failedMessage: 'Unable to archive project.'
+  },
+  sharePackage: {
+    title: 'Create Share Package',
+    fileDialogFilter: 'Share Package',
+    exporting: 'Exporting MP4',
+    packing: (current: number, total: number) => `Packing ${current}/${total}`,
+    success: 'Share package created',
+    failed: 'Share package failed',
+    failedMessage: 'Unable to create the share package.',
+    exportFailed: 'Share package export failed.',
+    exportCanceled: 'Share package export canceled.',
+    cleanupFailed: 'Unable to remove temporary share package export.',
+    readme: (projectName: string, projectFileName: string, exportPath: string) =>
+      [
+        `open-factory share package: ${projectName}`,
+        '',
+        'Contents:',
+        `- ${projectFileName}: project file with relative media paths.`,
+        '- media/: local copies of media used by the project.',
+        `- ${exportPath}: MP4 exported while creating this package.`,
+        '',
+        'How to open:',
+        '1. Extract this zip file.',
+        `2. Open ${projectFileName} in open-factory.`,
+        '3. To preview the rendered video, play the MP4 in export/.',
+        '',
+        'This package is generated locally and does not include cloud sync or account data.'
+      ].join('\n')
   },
   closeGuard: {
     message: 'Save changes before closing?',

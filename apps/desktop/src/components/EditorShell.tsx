@@ -39,6 +39,7 @@ import { scanDuplicateMediaGroups } from '../lib/duplicateMedia';
 import { buildSubtitleTrackFromSrt, isSubtitlePath, pickSubtitlePaths, readSubtitleText } from '../lib/subtitles';
 import { createProjectArchivePlan, writeProjectArchive, type ArchiveProgress } from '../lib/projectArchive';
 import { scanProjectHealth } from '../lib/projectHealth';
+import { createSharePackageFromProject, type SharePackageWorkflowProgress } from '../lib/sharePackage';
 import {
   chooseProjectSavePath,
   chooseProjectToOpen,
@@ -111,6 +112,8 @@ export function EditorShell() {
   const [autosaveIntervalSeconds, setAutosaveIntervalSeconds] = useState(() => readAutosaveIntervalSeconds());
   const [recoveryCandidate, setRecoveryCandidate] = useState<AutosaveRecoveryCandidate>();
   const [archiveProgress, setArchiveProgress] = useState<ArchiveProgress>();
+  const [sharePackageProgress, setSharePackageProgress] = useState<SharePackageWorkflowProgress>();
+  const [sharePackageBusy, setSharePackageBusy] = useState(false);
 
   const selectedClip = useMemo(() => selectClipById(project, selectedClipId), [project, selectedClipId]);
   const selectedClipLocked = useMemo(
@@ -166,6 +169,25 @@ export function EditorShell() {
       setArchiveProgress(undefined);
     }
   }, [project, projectPath, setDirty, setProject, setProjectPath]);
+
+  const createCurrentSharePackage = useCallback(async () => {
+    if (sharePackageBusy) {
+      return;
+    }
+    try {
+      setSharePackageBusy(true);
+      const result = await createSharePackageFromProject(project, { onProgress: setSharePackageProgress });
+      if (result) {
+        showToast({ kind: 'success', title: zhCN.sharePackage.success, message: result.outputPath });
+        setLastExportPath(result.outputPath);
+      }
+    } catch (error) {
+      showToast({ kind: 'error', title: zhCN.sharePackage.failed, message: error instanceof Error ? error.message : zhCN.sharePackage.failedMessage });
+    } finally {
+      setSharePackageProgress(undefined);
+      setSharePackageBusy(false);
+    }
+  }, [project, sharePackageBusy]);
 
   useEffect(() => {
     let canceled = false;
@@ -650,6 +672,7 @@ export function EditorShell() {
           onOpenProject={openProject}
           onSaveProject={() => void saveProject()}
           onArchiveProject={() => void archiveCurrentProject()}
+          onCreateSharePackage={() => void createCurrentSharePackage()}
           onImportMedia={() => void importMedia()}
           onImportSubtitles={() => void importSubtitles()}
           onExportVideo={() => setExportDialogOpen(true)}
@@ -666,6 +689,7 @@ export function EditorShell() {
           onClearCache={() => void clearCache()}
           onOpenSettings={() => setSettingsOpen(true)}
           onOpenProjectHealth={openProjectHealth}
+          sharePackageBusy={sharePackageBusy}
           autosaveIntervalSeconds={autosaveIntervalSeconds}
           onAutosaveIntervalSecondsChange={(seconds) => {
             setAutosaveIntervalSeconds(writeAutosaveIntervalSeconds(seconds));
@@ -768,6 +792,7 @@ export function EditorShell() {
           />
         ) : null}
         {archiveProgress ? <ArchiveProgressDialog progress={archiveProgress} /> : null}
+        {sharePackageProgress ? <SharePackageProgressDialog progress={sharePackageProgress} /> : null}
       </div>
     </ErrorBoundary>
   );
@@ -886,6 +911,29 @@ function ArchiveProgressDialog({ progress }: { progress: ArchiveProgress }) {
               className="h-full bg-brand transition-[width]"
               style={{ width: `${progress.total > 0 ? Math.round((progress.copied / progress.total) * 100) : 100}%` }}
             />
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function SharePackageProgressDialog({ progress }: { progress: SharePackageWorkflowProgress }) {
+  const label = progress.stage === 'exporting' ? zhCN.sharePackage.exporting : zhCN.sharePackage.packing(progress.current, progress.total);
+  const percent = progress.total > 0 ? Math.round(progress.progress * 100) : 0;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" data-testid="share-package-progress-dialog">
+      <section className="w-full max-w-sm rounded-md border border-line bg-white shadow-soft">
+        <div className="border-b border-line px-4 py-3">
+          <h2 className="text-sm font-semibold">{zhCN.sharePackage.title}</h2>
+        </div>
+        <div className="space-y-2 px-4 py-3">
+          <div className="flex items-center justify-between gap-3 text-sm font-medium text-ink">
+            <span data-testid="share-package-progress-message">{label}</span>
+            <span className="tabular-nums text-slate-500">{percent}%</span>
+          </div>
+          <div className="h-2 overflow-hidden rounded bg-panel">
+            <div className="h-full bg-brand transition-[width]" style={{ width: `${percent}%` }} />
           </div>
         </div>
       </section>

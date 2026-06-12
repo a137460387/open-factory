@@ -263,6 +263,24 @@ const mocks: TauriMocks = {
       report: plan.passes?.some((pass) => pass.kind === 'loudness-analysis') ? { loudness: { integratedLoudness: -14.1 } } : undefined
     };
   },
+  createSharePackage: async (request) => {
+    const entries = [
+      'README.txt',
+      request.projectFileName,
+      request.exportedVideo.archivePath,
+      ...request.mediaFiles.map((entry) => entry.archivePath)
+    ];
+    const total = entries.length;
+    emit('share-package-progress', { stage: 'readme', progress: total > 0 ? 1 / total : 1, progressPct: total > 0 ? 100 / total : 100, current: 1, total, outputPath: request.outputPath });
+    await wait(10);
+    const payload = JSON.stringify({ entries, project: request.projectContents, readme: request.readmeContents });
+    files.set(request.outputPath, `mock share package\n${payload}`);
+    exists.set(request.outputPath, true);
+    mtimes.set(request.outputPath, Date.now());
+    persistFiles();
+    emit('share-package-progress', { stage: 'finished', progress: 1, progressPct: 100, current: total, total, outputPath: request.outputPath });
+    return { outputPath: request.outputPath, fileCount: entries.length, durationMs: 10 };
+  },
   analyzeClip: async ({ clipId }) => {
     emit('clip-analysis-progress', { clipId, progress: 0.35, progressPct: 35 });
     await wait(10);

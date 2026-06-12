@@ -4,5 +4,6 @@ pub mod files;
 pub mod media;
 pub mod proxy;
 pub mod scene;
+pub mod share;
 pub mod smoke;
 pub mod whisper;
