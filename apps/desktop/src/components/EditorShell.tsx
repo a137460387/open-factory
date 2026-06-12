@@ -83,6 +83,7 @@ const SmartRoughCutPanel = lazy(() => import('./SmartRoughCut/SmartRoughCutPanel
 const ExportDialog = lazy(() => import('../export/ExportDialog').then((module) => ({ default: module.ExportDialog })));
 const SettingsDialog = lazy(() => import('../settings/SettingsDialog').then((module) => ({ default: module.SettingsDialog })));
 const TimelineExportDialog = lazy(() => import('../timeline-export/TimelineExportDialog').then((module) => ({ default: module.TimelineExportDialog })));
+const BatchTranscodeDialog = lazy(() => import('../media/BatchTranscodeDialog').then((module) => ({ default: module.BatchTranscodeDialog })));
 
 export function EditorShell() {
   const project = useEditorStore((state) => state.project);
@@ -109,6 +110,8 @@ export function EditorShell() {
   const [lastExportPath, setLastExportPath] = useState<string>();
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [timelineExportDialogOpen, setTimelineExportDialogOpen] = useState(false);
+  const [batchTranscodeOpen, setBatchTranscodeOpen] = useState(false);
+  const [batchTranscodeInitialPaths, setBatchTranscodeInitialPaths] = useState<string[]>([]);
   const [projectTemplateOpen, setProjectTemplateOpen] = useState(false);
   const [templateExportPreset, setTemplateExportPreset] = useState<ExportPreset>();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -270,6 +273,11 @@ export function EditorShell() {
       showToast({ kind: 'error', title: zhCN.editorToasts.importFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.importFailedMessage });
     }
   }, [addMedia, project.media]);
+
+  const openBatchTranscode = useCallback((paths: string[] = []) => {
+    setBatchTranscodeInitialPaths(paths);
+    setBatchTranscodeOpen(true);
+  }, []);
 
   const scanDuplicateMedia = useCallback(async () => {
     try {
@@ -763,6 +771,7 @@ export function EditorShell() {
           onCreateMediaReport={() => void createMediaReport()}
           onCreateSharePackage={() => void createCurrentSharePackage()}
           onImportMedia={() => void importMedia()}
+          onBatchTranscode={() => openBatchTranscode()}
           onImportSubtitles={() => void importSubtitles()}
           onExportVideo={() => setExportDialogOpen(true)}
           onExportTimeline={() => setTimelineExportDialogOpen(true)}
@@ -792,6 +801,7 @@ export function EditorShell() {
             mediaMetadata={project.mediaMetadata}
             onImport={() => void importMedia()}
             onImportPaths={(paths) => void importDropped(paths)}
+            onBatchTranscode={(paths) => openBatchTranscode(paths)}
             onScanDuplicates={() => void scanDuplicateMedia()}
             onAddToTimeline={addAssetToTimeline}
             onRelink={(assetId) => void relinkMedia(assetId)}
@@ -846,6 +856,17 @@ export function EditorShell() {
           ) : null}
           {projectTemplateOpen ? <ProjectTemplateDialog onSelect={(templateId) => void createProjectFromTemplate(templateId)} onClose={() => setProjectTemplateOpen(false)} /> : null}
           {timelineExportDialogOpen ? <TimelineExportDialog project={project} onClose={() => setTimelineExportDialogOpen(false)} /> : null}
+          {batchTranscodeOpen ? (
+            <BatchTranscodeDialog
+              initialPaths={batchTranscodeInitialPaths}
+              existingMedia={project.media}
+              onImport={addMedia}
+              onClose={() => {
+                setBatchTranscodeOpen(false);
+                setBatchTranscodeInitialPaths([]);
+              }}
+            />
+          ) : null}
           {settingsOpen ? (
             <SettingsDialog
               open={settingsOpen}

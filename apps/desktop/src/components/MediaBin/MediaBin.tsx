@@ -14,6 +14,7 @@ interface MediaBinProps {
   mediaMetadata: Record<string, MediaMetadata>;
   onImport(): void;
   onImportPaths(paths: string[]): void;
+  onBatchTranscode(paths: string[]): void;
   onScanDuplicates(): void;
   onAddToTimeline(assetId: string): void;
   onRelink(assetId: string): void;
@@ -25,7 +26,7 @@ interface MediaBinProps {
 
 type MediaBinView = MediaBinFilter | 'titles';
 
-export function MediaBin({ media, mediaMetadata, onImport, onImportPaths, onScanDuplicates, onAddToTimeline, onRelink, onRelinkAll, onGenerateProxy, onSetLabel, onAddTitleTemplate }: MediaBinProps) {
+export function MediaBin({ media, mediaMetadata, onImport, onImportPaths, onBatchTranscode, onScanDuplicates, onAddToTimeline, onRelink, onRelinkAll, onGenerateProxy, onSetLabel, onAddTitleTemplate }: MediaBinProps) {
   const t = zhCN.mediaBin;
   const [dragOver, setDragOver] = useState(false);
   const [search, setSearch] = useState('');
@@ -183,6 +184,7 @@ export function MediaBin({ media, mediaMetadata, onImport, onImportPaths, onScan
                 onRelink={() => onRelink(asset.id)}
                 onGenerateProxy={() => onGenerateProxy(asset.id)}
                 onSetLabel={(labelColor) => onSetLabel(asset.id, labelColor)}
+                onBatchTranscode={() => onBatchTranscode([asset.path])}
               />
             ))}
           </div>
@@ -251,7 +253,8 @@ function MediaCard({
   onAdd,
   onRelink,
   onGenerateProxy,
-  onSetLabel
+  onSetLabel,
+  onBatchTranscode
 }: {
   asset: MediaAsset;
   metadata?: MediaMetadata;
@@ -259,6 +262,7 @@ function MediaCard({
   onRelink(): void;
   onGenerateProxy(): void;
   onSetLabel(labelColor?: MediaLabelColor): void;
+  onBatchTranscode(): void;
 }) {
   const proxySettings = useProxySettingsStore((state) => state.settings);
   const proxyStatus = asset.proxyStatus ?? (asset.type === 'video' ? 'none' : undefined);
@@ -283,6 +287,20 @@ function MediaCard({
       </div>
       {labelMenuOpen ? (
         <div className="absolute right-2 top-2 z-10 w-40 rounded-md border border-line bg-white p-2 text-xs shadow-soft" data-testid={`media-label-menu-${asset.id}`}>
+          {asset.type === 'video' ? (
+            <button
+              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid={`media-batch-transcode-${asset.id}`}
+              onClick={() => {
+                onBatchTranscode();
+                setLabelMenuOpen(false);
+              }}
+            >
+              <FileVideo2 size={13} />
+              {zhCN.mediaBin.batchTranscode}
+            </button>
+          ) : null}
           <div className="mb-2 flex items-center gap-1 font-semibold text-slate-700">
             <Tag size={13} />
             {zhCN.mediaBin.label}

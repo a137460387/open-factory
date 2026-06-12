@@ -6,4 +6,5 @@ pub mod proxy;
 pub mod scene;
 pub mod share;
 pub mod smoke;
+pub mod transcode;
 pub mod whisper;

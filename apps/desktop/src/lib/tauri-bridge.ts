@@ -87,6 +87,42 @@ export interface ClipAnalysisProgressEvent {
   progressPct: number;
 }
 
+export type BatchTranscodePreset = 'h264-720p' | 'h264-1080p' | 'prores-proxy';
+
+export interface BatchTranscodeTaskRequest {
+  taskId: string;
+  sourcePath: string;
+}
+
+export interface BatchTranscodeRequest {
+  tasks: BatchTranscodeTaskRequest[];
+  preset: BatchTranscodePreset;
+}
+
+export interface BatchTranscodeProgressEvent {
+  taskId: string;
+  sourcePath: string;
+  outputPath?: string;
+  status: 'running' | 'completed' | 'failed' | 'canceled';
+  progress: number;
+  progressPct: number;
+  current: number;
+  total: number;
+}
+
+export interface BatchTranscodeTaskResult {
+  taskId: string;
+  sourcePath: string;
+  outputPath?: string;
+  status: 'completed' | 'failed' | 'canceled';
+  error?: string;
+  durationMs: number;
+}
+
+export interface BatchTranscodeResponse {
+  results: BatchTranscodeTaskResult[];
+}
+
 export interface SceneDetectRequest {
   path: string;
   threshold?: number;
@@ -158,6 +194,8 @@ export type TauriMocks = Partial<{
   createSharePackage(request: SharePackageRequest): Promise<SharePackageResult> | SharePackageResult;
   analyzeClip(request: AnalyzeClipRequest): Promise<AnalyzeClipResult> | AnalyzeClipResult;
   cancelExport(taskId?: string): Promise<void> | void;
+  batchTranscodeMedia(request: BatchTranscodeRequest): Promise<BatchTranscodeResponse> | BatchTranscodeResponse;
+  cancelBatchTranscodeTask(taskId: string): Promise<void> | void;
   getCacheDir(): Promise<string> | string;
   readCache(path: string): Promise<string | null> | string | null;
   writeCache(path: string, contents: string): Promise<void> | void;
@@ -472,6 +510,23 @@ export async function cancelExport(taskId?: string): Promise<void> {
   await invoke('cancel_export', taskId ? { taskId } : {});
 }
 
+export async function batchTranscodeMedia(request: BatchTranscodeRequest): Promise<BatchTranscodeResponse> {
+  const mock = getTauriMocks()?.batchTranscodeMedia;
+  if (mock) {
+    return mock(request);
+  }
+  return invoke<BatchTranscodeResponse>('batch_transcode_media', { request });
+}
+
+export async function cancelBatchTranscodeTask(taskId: string): Promise<void> {
+  const mock = getTauriMocks()?.cancelBatchTranscodeTask;
+  if (mock) {
+    await mock(taskId);
+    return;
+  }
+  await invoke('cancel_batch_transcode_task', { taskId });
+}
+
 export async function getCacheDir(): Promise<string> {
   const mock = getTauriMocks()?.getCacheDir;
   if (mock) {
@@ -556,6 +611,10 @@ export async function listenBridge<T>(event: string, handler: (payload: T) => vo
     return () => undefined;
   }
   return listen<T>(event, (payload) => handler(payload.payload));
+}
+
+export async function listenBatchTranscodeProgress(handler: (payload: BatchTranscodeProgressEvent) => void): Promise<() => void> {
+  return listenBridge<BatchTranscodeProgressEvent>('batch-transcode-progress', handler);
 }
 
 export async function listenDragDrop(handler: (event: { type: string; paths?: string[] }) => void): Promise<() => void> {

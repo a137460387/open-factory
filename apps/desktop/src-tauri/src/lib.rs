@@ -60,6 +60,8 @@ pub fn run() {
             commands::proxy::generate_proxy,
             commands::scene::detect_scene_changes,
             commands::share::create_share_package,
+            commands::transcode::batch_transcode_media,
+            commands::transcode::cancel_batch_transcode_task,
             commands::whisper::run_whisper,
             commands::smoke::get_preview_smoke_config,
             commands::smoke::get_cancel_smoke_config,

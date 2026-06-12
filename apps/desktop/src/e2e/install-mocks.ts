@@ -15,7 +15,7 @@ import {
 } from '@open-factory/editor-core';
 import { commandManager, timelineAccessor } from '../store/commandManager';
 import { useEditorStore } from '../store/editorStore';
-import type { TauriMocks } from '../lib/tauri-bridge';
+import type { BatchTranscodeTaskResult, TauriMocks } from '../lib/tauri-bridge';
 import { clearPluginHookLog, getPluginHookLog, refreshPluginRegistry } from '../plugins/plugin-manager';
 
 const PERSISTED_FILES_KEY = 'open-factory:e2e-files';
@@ -30,6 +30,7 @@ let savePath = 'C:/Exports/open-factory-test.mp4';
 let openDirectoryPath = 'C:/Relink';
 let lastExportPlan: FfmpegExportPlan | undefined;
 const canceledExportTaskIds = new Set<string>();
+const canceledTranscodeTaskIds = new Set<string>();
 let exportGateHeld = false;
 const exportGates: Array<{ taskId?: string; release: () => void }> = [];
 let mockSceneTimes = [1];
@@ -166,6 +167,9 @@ const mocks: TauriMocks = {
     }
     if (firstFilter?.includes('srt')) {
       return [tinySrt];
+    }
+    if (firstFilter?.includes('mp4') && !firstFilter.includes('wav') && !firstFilter.includes('png')) {
+      return [tinyVideo, fourKHevcVideo];
     }
     return [tinyVideo, tinyAudio, tinyImage];
   },
@@ -306,6 +310,29 @@ const mocks: TauriMocks = {
   cancelExport: (taskId) => {
     canceledExportTaskIds.add(exportCancelKey(taskId));
     releaseExportGateForTask(taskId);
+  },
+  batchTranscodeMedia: async ({ tasks, preset }) => {
+    const results: BatchTranscodeTaskResult[] = [];
+    for (const task of tasks) {
+      emit('batch-transcode-progress', { taskId: task.taskId, sourcePath: task.sourcePath, status: 'running', progress: 0.25, progressPct: 25, current: results.length + 1, total: tasks.length });
+      await wait(10);
+      if (canceledTranscodeTaskIds.has(task.taskId)) {
+        emit('batch-transcode-progress', { taskId: task.taskId, sourcePath: task.sourcePath, status: 'canceled', progress: 0, progressPct: 0, current: results.length + 1, total: tasks.length });
+        results.push({ taskId: task.taskId, sourcePath: task.sourcePath, status: 'canceled', durationMs: 10 });
+        continue;
+      }
+      const outputPath = `${appDataDir}/transcodes/${fileStem(task.sourcePath)}-${preset}.${preset === 'prores-proxy' ? 'mov' : 'mp4'}`;
+      files.set(outputPath, `mock transcode ${preset} from ${task.sourcePath}`);
+      exists.set(outputPath, true);
+      mtimes.set(outputPath, Date.now());
+      persistFiles();
+      emit('batch-transcode-progress', { taskId: task.taskId, sourcePath: task.sourcePath, outputPath, status: 'completed', progress: 1, progressPct: 100, current: results.length + 1, total: tasks.length });
+      results.push({ taskId: task.taskId, sourcePath: task.sourcePath, outputPath, status: 'completed', durationMs: 10 });
+    }
+    return { results };
+  },
+  cancelBatchTranscodeTask: (taskId) => {
+    canceledTranscodeTaskIds.add(taskId);
   },
   getCacheDir: () => 'C:/Cache/open-factory',
   readCache: (path) => cache.get(path) ?? null,
@@ -1001,6 +1028,10 @@ function releaseExportGateForTask(taskId?: string): void {
 
 function exportCancelKey(taskId?: string): string {
   return taskId ?? '__default_export__';
+}
+
+function fileStem(path: string): string {
+  return path.split(/[\\/]/).pop()?.replace(/\.[^.]+$/, '') ?? 'media';
 }
 
 function solidColorSample([r, g, b]: [number, number, number]) {

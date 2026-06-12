@@ -39,6 +39,7 @@ const zh = {
   },
   toolbar: {
     fileMenu: '文件',
+    toolsMenu: '工具',
     newProject: '新建项目',
     newFromTemplate: '从模板新建',
     openProject: '打开项目',
@@ -46,6 +47,7 @@ const zh = {
     archiveProject: '归档项目',
     mediaReport: '素材报告',
     createSharePackage: '创建分享包',
+    batchTranscode: '批量转码',
     importMedia: '导入媒体',
     importSubtitles: '导入字幕',
     exportVideo: '导出视频',
@@ -218,6 +220,7 @@ const zh = {
     itemCount: (count: number) => `${count} 个素材`,
     relinkFolder: '重连文件夹',
     import: '导入',
+    batchTranscode: '批量转码',
     scanDuplicates: '扫描重复',
     searchPlaceholder: '搜索媒体',
     filters: {
@@ -974,6 +977,42 @@ const zh = {
     failed: '素材报告生成失败',
     failedMessage: '无法生成素材报告。'
   },
+  batchTranscode: {
+    title: '批量转码',
+    subtitle: '顺序处理本地视频文件，完成后自动导入转码结果。',
+    chooseFiles: '选择文件',
+    addFiles: '添加文件',
+    sourceFiles: '源文件',
+    noFiles: '选择要转码的视频文件。',
+    format: '目标格式',
+    start: '开始转码',
+    removeFile: '移除',
+    cancelTask: '取消任务',
+    closeWhenDone: '关闭',
+    selectFilesFirst: '请先选择文件。',
+    completedToast: '转码完成',
+    completedToastMessage: (count: number) => `已导入 ${count} 个转码结果。`,
+    failedToast: '转码失败',
+    failedMessage: '没有可导入的转码结果。',
+    importFailed: '转码结果导入失败',
+    presets: {
+      'h264-720p': 'H.264 720p',
+      'h264-1080p': 'H.264 1080p',
+      'prores-proxy': 'ProRes 代理'
+    },
+    presetDescription: {
+      'h264-720p': '最大 1280x720，H.264/AAC MP4。',
+      'h264-1080p': '最大 1920x1080，H.264/AAC MP4。',
+      'prores-proxy': '最大 1920x1080，ProRes Proxy MOV。'
+    },
+    status: {
+      pending: '等待中',
+      running: '转码中',
+      completed: '完成',
+      failed: '失败',
+      canceled: '已取消'
+    }
+  },
   sharePackage: {
     title: '创建分享包',
     fileDialogFilter: '分享包',
@@ -1012,6 +1051,7 @@ const zh = {
   },
   fileDialogs: {
     media: '媒体',
+    videoMedia: '视频媒体',
     htmlReport: 'HTML 报告',
     subtitles: 'SubRip 字幕',
     whisperModel: 'Whisper 模型'
@@ -1130,6 +1170,7 @@ const enOverrides = {
   },
   toolbar: {
     fileMenu: 'File',
+    toolsMenu: 'Tools',
     newProject: 'New Project',
     newFromTemplate: 'New From Template',
     openProject: 'Open Project',
@@ -1137,6 +1178,7 @@ const enOverrides = {
     archiveProject: 'Archive Project',
     mediaReport: 'Media Report',
     createSharePackage: 'Create Share Package',
+    batchTranscode: 'Batch Transcode',
     importMedia: 'Import Media',
     importSubtitles: 'Import Subtitles',
     exportVideo: 'Export Video',
@@ -1309,6 +1351,7 @@ const enOverrides = {
     itemCount: (count: number) => `${count} assets`,
     relinkFolder: 'Relink Folder',
     import: 'Import',
+    batchTranscode: 'Batch Transcode',
     scanDuplicates: 'Scan Duplicates',
     searchPlaceholder: 'Search media',
     filters: {
@@ -1717,6 +1760,42 @@ const enOverrides = {
     failed: 'Media report failed',
     failedMessage: 'Unable to generate the media report.'
   },
+  batchTranscode: {
+    title: 'Batch Transcode',
+    subtitle: 'Process local video files sequentially and import the transcoded results.',
+    chooseFiles: 'Choose Files',
+    addFiles: 'Add Files',
+    sourceFiles: 'Source Files',
+    noFiles: 'Choose video files to transcode.',
+    format: 'Target Format',
+    start: 'Start Transcode',
+    removeFile: 'Remove',
+    cancelTask: 'Cancel Task',
+    closeWhenDone: 'Close',
+    selectFilesFirst: 'Choose files first.',
+    completedToast: 'Transcode complete',
+    completedToastMessage: (count: number) => `Imported ${count} transcoded files.`,
+    failedToast: 'Transcode failed',
+    failedMessage: 'No transcoded results were available to import.',
+    importFailed: 'Transcoded result import failed',
+    presets: {
+      'h264-720p': 'H.264 720p',
+      'h264-1080p': 'H.264 1080p',
+      'prores-proxy': 'ProRes Proxy'
+    },
+    presetDescription: {
+      'h264-720p': 'Maximum 1280x720 H.264/AAC MP4.',
+      'h264-1080p': 'Maximum 1920x1080 H.264/AAC MP4.',
+      'prores-proxy': 'Maximum 1920x1080 ProRes Proxy MOV.'
+    },
+    status: {
+      pending: 'Pending',
+      running: 'Transcoding',
+      completed: 'Completed',
+      failed: 'Failed',
+      canceled: 'Canceled'
+    }
+  },
   sharePackage: {
     title: 'Create Share Package',
     fileDialogFilter: 'Share Package',
@@ -1755,6 +1834,7 @@ const enOverrides = {
   },
   fileDialogs: {
     media: 'Media',
+    videoMedia: 'Video Media',
     htmlReport: 'HTML Report',
     subtitles: 'SubRip Subtitles',
     whisperModel: 'Whisper Model'

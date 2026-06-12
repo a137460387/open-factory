@@ -30,6 +30,13 @@ export async function pickMediaPaths(): Promise<string[]> {
   return openFileDialog(true, [{ name: zhCN.fileDialogs.media, extensions: [...VIDEO_EXTENSIONS, ...AUDIO_EXTENSIONS, ...IMAGE_EXTENSIONS] }]);
 }
 
+export async function pickVideoPaths(): Promise<string[]> {
+  if (!isTauriRuntime() && !window.__TAURI_MOCKS__) {
+    return pickBrowserFiles(VIDEO_EXTENSIONS);
+  }
+  return openFileDialog(true, [{ name: zhCN.fileDialogs.videoMedia, extensions: VIDEO_EXTENSIONS }]);
+}
+
 export async function probeMediaPath(path: string, imageSequence?: ImageSequenceInfo): Promise<MediaAsset> {
   const type = inferAssetType(path);
   if (!type) {
@@ -180,12 +187,12 @@ export function sourceUrl(path: string): string {
   return path;
 }
 
-async function pickBrowserFiles(): Promise<string[]> {
+async function pickBrowserFiles(extensions = [...VIDEO_EXTENSIONS, ...AUDIO_EXTENSIONS, ...IMAGE_EXTENSIONS]): Promise<string[]> {
   return new Promise((resolve) => {
     const input = document.createElement('input');
     input.type = 'file';
     input.multiple = true;
-    input.accept = [...VIDEO_EXTENSIONS, ...AUDIO_EXTENSIONS, ...IMAGE_EXTENSIONS].map((extension) => `.${extension}`).join(',');
+    input.accept = extensions.map((extension) => `.${extension}`).join(',');
     input.onchange = () => {
       const files = Array.from(input.files ?? []);
       resolve(files.map((file) => URL.createObjectURL(file)));
