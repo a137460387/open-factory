@@ -6,22 +6,24 @@ import {
   normalizeTargetAspectRatio,
   resolveReframeDimensions,
   type ExportTaskStatus,
+  type ExportTaskPriority,
   type ExportLoudnessNormalization,
   type FfmpegCapabilities,
   type PreflightResult,
   type Project,
   type TargetAspectRatio
 } from '@open-factory/editor-core';
-import { AlertTriangle, FolderOpen, ListPlus, Save, Trash2, X } from 'lucide-react';
+import { AlertTriangle, FileText, FolderOpen, ListPlus, Save, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { zhCN } from '../i18n/strings';
 import { chooseExportPath, revealExport } from '../lib/exportVideo';
 import { isFontFamilyAvailable } from '../lib/fonts';
-import { getFfmpegCapabilities } from '../lib/tauri-bridge';
+import { getFfmpegCapabilities, openPath } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
 import { getWhisperAvailability } from '../lib/whisper';
 import { useWhisperSettingsStore } from '../store/whisperSettingsStore';
 import { cancelQueuedExportTask, enqueueExport, retryQueuedExportTask, setExportQueueMaxConcurrent } from './export-queue-runner';
+import { loadExportHistoryIntoStore } from './export-history';
 import { estimateExportFileSizeBytes, formatEstimatedFileSize } from './export-size-estimate';
 import { useExportQueueStore } from './export-queue-store';
 import {
@@ -52,8 +54,11 @@ export function ExportDialog({ project, onClose, onCompleted, onRelinkMissing }:
   const [draftSettings, setDraftSettings] = useState<ExportPresetSettings>({ ...BUILTIN_EXPORT_PRESETS[0].settings });
   const [customPresetName, setCustomPresetName] = useState('');
   const [batchOutputPaths, setBatchOutputPaths] = useState('');
+  const [priority, setPriority] = useState<ExportTaskPriority>('normal');
   const tasks = useExportQueueStore((state) => state.tasks);
+  const history = useExportQueueStore((state) => state.history);
   const runnerActive = useExportQueueStore((state) => state.runnerActive);
+  const resourcePaused = useExportQueueStore((state) => state.resourcePaused);
   const maxConcurrent = useExportQueueStore((state) => state.maxConcurrent);
   const clearFinishedTasks = useExportQueueStore((state) => state.clearFinishedTasks);
   const whisperExecutablePath = useWhisperSettingsStore((state) => state.executablePath);
@@ -97,6 +102,10 @@ export function ExportDialog({ project, onClose, onCompleted, onRelinkMissing }:
     return () => {
       canceled = true;
     };
+  }, []);
+
+  useEffect(() => {
+    void loadExportHistoryIntoStore();
   }, []);
 
   useEffect(() => {
@@ -194,7 +203,7 @@ export function ExportDialog({ project, onClose, onCompleted, onRelinkMissing }:
 
   async function enqueueSelectedPaths(selectedPaths: string[]): Promise<void> {
     for (const path of selectedPaths) {
-      const task = await enqueueExport(project, path, exportSettings);
+      const task = await enqueueExport(project, path, exportSettings, priority);
       for (const warning of task.plan.warnings) {
         showToast({ kind: 'warning', title: t.exportWarningTitle, message: formatExportWarning(warning) });
       }
@@ -360,6 +369,16 @@ export function ExportDialog({ project, onClose, onCompleted, onRelinkMissing }:
               data-testid="export-batch-paths"
             />
           </div>
+          <div className="grid grid-cols-[110px_220px] gap-2">
+            <label className="pt-1.5 text-xs font-medium text-slate-600">{t.priority}</label>
+            <select className="rounded-md border border-line px-2 py-1.5 text-sm" value={priority} onChange={(event) => setPriority(event.target.value as ExportTaskPriority)} data-testid="export-priority-select">
+              {(['high', 'normal', 'low'] as const).map((value) => (
+                <option key={value} value={value}>
+                  {t.priorityOptions[value]}
+                </option>
+              ))}
+            </select>
+          </div>
           {capabilities?.drawtextWarning ? <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900">{formatExportWarning(capabilities.drawtextWarning)}</div> : null}
           {preflight ? <PreflightPanel issues={preflight.issues} onDismiss={() => setPreflight(undefined)} onContinue={() => void continueAfterWarnings()} onRelink={onRelinkMissing ? relinkFromPreflight : undefined} /> : null}
           {hardwareEncodingRequested && capabilities && !capabilities.hardwareEncoderAvailable ? (
@@ -372,7 +391,7 @@ export function ExportDialog({ project, onClose, onCompleted, onRelinkMissing }:
             <div className="flex items-center justify-between border-b border-line px-3 py-2">
               <div>
                 <div className="text-xs font-semibold text-slate-700">{t.queueTitle}</div>
-                <div className="text-[11px] text-slate-500">{runnerActive ? t.queueRunning(maxConcurrent) : zhCN.common.idle}</div>
+                <div className="text-[11px] text-slate-500">{resourcePaused ? t.queuePausedForMemory : runnerActive ? t.queueRunning(maxConcurrent) : zhCN.common.idle}</div>
               </div>
               <div className="flex items-center gap-2">
                 <label className="flex items-center gap-1 text-xs font-medium text-slate-600">
@@ -401,6 +420,30 @@ export function ExportDialog({ project, onClose, onCompleted, onRelinkMissing }:
                 <div className="px-3 py-5 text-center text-xs text-slate-500">{t.noTasks}</div>
               ) : (
                 tasks.map((task) => <ExportTaskRow key={task.id} taskId={task.id} />)
+              )}
+            </div>
+          </div>
+          <div className="rounded-md border border-line" data-testid="export-history-list">
+            <div className="border-b border-line px-3 py-2 text-xs font-semibold text-slate-700">{t.historyTitle}</div>
+            <div className="max-h-32 overflow-y-auto">
+              {history.length === 0 ? (
+                <div className="px-3 py-4 text-center text-xs text-slate-500">{t.noHistory}</div>
+              ) : (
+                history.slice(0, 8).map((entry) => (
+                  <div key={entry.id} className="flex items-center gap-2 border-b border-line px-3 py-2 text-xs last:border-b-0" data-testid="export-history-entry" data-status={entry.status}>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-medium text-slate-800">{entry.name}</div>
+                      <div className="truncate text-[11px] text-slate-500">{entry.outputPath}</div>
+                    </div>
+                    <span className="shrink-0 text-[11px] text-slate-500">{priorityLabel(entry.priority)}</span>
+                    <StatusPill status={entry.status} />
+                    {entry.logPath ? (
+                      <button className="rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel" data-testid="export-history-log-button" onClick={() => void openPath(entry.logPath!)}>
+                        {t.viewLog}
+                      </button>
+                    ) : null}
+                  </div>
+                ))
               )}
             </div>
           </div>
@@ -923,7 +966,15 @@ function ExportTaskRow({ taskId }: { taskId: string }) {
           </div>
           <div className="truncate text-[11px] text-slate-500">{task.outputPath}</div>
         </div>
+        <span className="shrink-0 text-[11px] text-slate-500" data-testid="export-task-priority">
+          {priorityLabel(task.priority)}
+        </span>
         <StatusPill status={task.status} />
+        {task.logPath ? (
+          <button className="rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel" data-testid="export-task-log-button" onClick={() => void openPath(task.logPath!)}>
+            <FileText size={13} className="inline-block" /> {zhCN.exportDialog.viewLog}
+          </button>
+        ) : null}
         {canCancel ? (
           <button
             className="rounded-md border border-rose-300 bg-rose-50 px-2 py-1 text-xs font-medium text-rose-800 hover:bg-rose-100"
@@ -960,6 +1011,10 @@ function ExportTaskRow({ taskId }: { taskId: string }) {
 
 function formatLoudness(value: number): string {
   return Number.isFinite(value) ? value.toFixed(1) : zhCN.common.unavailable;
+}
+
+function priorityLabel(priority: ExportTaskPriority): string {
+  return zhCN.exportDialog.priorityOptions[priority];
 }
 
 function StatusPill({ status }: { status: ExportTaskStatus }) {

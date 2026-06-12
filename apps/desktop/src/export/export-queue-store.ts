@@ -2,11 +2,16 @@ import {
   cancelExportTask,
   clampExportConcurrency,
   createExportTask,
+  createExportTaskHistoryEntry,
   failExportTask,
   finishExportTask,
+  setExportTaskLogPath,
+  sortExportQueueByPriority,
   startExportTaskSlots,
   updateExportTaskProgress,
   type ExportTask,
+  type ExportTaskHistoryEntry,
+  type ExportTaskPriority,
   type ExportReport,
   type FfmpegExportPlan
 } from '@open-factory/editor-core';
@@ -14,28 +19,36 @@ import { create } from 'zustand';
 
 export interface ExportQueueState {
   tasks: ExportTask[];
+  history: ExportTaskHistoryEntry[];
   runnerActive: boolean;
+  resourcePaused: boolean;
   maxConcurrent: number;
   lastCompletedPath?: string;
-  addTask: (input: { name: string; outputPath: string; plan: FfmpegExportPlan }) => ExportTask;
+  addTask: (input: { name: string; outputPath: string; plan: FfmpegExportPlan; priority?: ExportTaskPriority }) => ExportTask;
   startNextTasks: () => string[];
   updateTaskProgress: (taskId: string, progress: number) => void;
+  setTaskLogPath: (taskId: string, logPath: string) => void;
   finishTask: (taskId: string, report?: ExportReport) => void;
   failTask: (taskId: string, error: string) => void;
   cancelTask: (taskId: string) => void;
   retryTask: (taskId: string) => void;
   setMaxConcurrent: (maxConcurrent: number) => void;
   setRunnerActive: (runnerActive: boolean) => void;
+  setResourcePaused: (resourcePaused: boolean) => void;
+  setHistory: (history: ExportTaskHistoryEntry[]) => void;
+  appendHistory: (entry: ExportTaskHistoryEntry) => void;
   clearFinishedTasks: () => void;
 }
 
 export const useExportQueueStore = create<ExportQueueState>((set, get) => ({
   tasks: [],
+  history: [],
   runnerActive: false,
+  resourcePaused: false,
   maxConcurrent: 2,
   addTask: (input) => {
     const task = createExportTask(input);
-    set((state) => ({ tasks: [...state.tasks, task] }));
+    set((state) => ({ tasks: sortExportQueueByPriority([...state.tasks, task]) }));
     return task;
   },
   startNextTasks: () => {
@@ -50,6 +63,9 @@ export const useExportQueueStore = create<ExportQueueState>((set, get) => ({
   },
   updateTaskProgress: (taskId, progress) => {
     set((state) => ({ tasks: updateExportTaskProgress(state.tasks, taskId, progress) }));
+  },
+  setTaskLogPath: (taskId, logPath) => {
+    set((state) => ({ tasks: setExportTaskLogPath(state.tasks, taskId, logPath) }));
   },
   finishTask: (taskId, report) => {
     const task = get().tasks.find((item) => item.id === taskId);
@@ -72,14 +88,25 @@ export const useExportQueueStore = create<ExportQueueState>((set, get) => ({
           : task
       )
     }));
+    set((state) => ({ tasks: sortExportQueueByPriority(state.tasks) }));
   },
   setMaxConcurrent: (maxConcurrent) => {
     set({ maxConcurrent: clampExportConcurrency(maxConcurrent) });
   },
   setRunnerActive: (runnerActive) => set({ runnerActive }),
+  setResourcePaused: (resourcePaused) => set({ resourcePaused }),
+  setHistory: (history) => set({ history }),
+  appendHistory: (entry) => {
+    set((state) => ({ history: [entry, ...state.history.filter((item) => item.id !== entry.id)].slice(0, 100) }));
+  },
   clearFinishedTasks: () => {
     set((state) => ({
       tasks: state.tasks.filter((task) => task.status === 'pending' || task.status === 'running')
     }));
   }
 }));
+
+export function createHistoryEntryForTask(taskId: string): ExportTaskHistoryEntry | undefined {
+  const task = useExportQueueStore.getState().tasks.find((item) => item.id === taskId);
+  return task ? createExportTaskHistoryEntry(task) : undefined;
+}

@@ -5,6 +5,7 @@ import {
   createExportTask,
   failExportTask,
   finishExportTask,
+  sortExportQueueByPriority,
   startExportTaskSlots,
   startNextExportTask,
   updateExportTaskProgress,
@@ -97,5 +98,23 @@ describe('export queue helpers', () => {
     expect(clampExportConcurrency(0)).toBe(1);
     expect(clampExportConcurrency(3.6)).toBe(4);
     expect(clampExportConcurrency(8)).toBe(4);
+  });
+
+  it('starts and displays pending tasks by priority while preserving FIFO within a priority', () => {
+    const tasks = [
+      createExportTask({ id: 'low', name: 'Low', outputPath: 'low.mp4', plan, priority: 'low', now: '2026-01-01T00:00:00.000Z' }),
+      createExportTask({ id: 'normal', name: 'Normal', outputPath: 'normal.mp4', plan, priority: 'normal', now: '2026-01-01T00:00:01.000Z' }),
+      createExportTask({ id: 'high-a', name: 'High A', outputPath: 'high-a.mp4', plan, priority: 'high', now: '2026-01-01T00:00:02.000Z' }),
+      createExportTask({ id: 'high-b', name: 'High B', outputPath: 'high-b.mp4', plan, priority: 'high', now: '2026-01-01T00:00:03.000Z' })
+    ];
+
+    expect(sortExportQueueByPriority(tasks).map((task) => task.id)).toEqual(['high-a', 'high-b', 'normal', 'low']);
+
+    const next = startExportTaskSlots(tasks, 2, 'start');
+
+    expect(next.find((task) => task.id === 'high-a')?.status).toBe('running');
+    expect(next.find((task) => task.id === 'high-b')?.status).toBe('running');
+    expect(next.find((task) => task.id === 'normal')?.status).toBe('pending');
+    expect(next.find((task) => task.id === 'low')?.status).toBe('pending');
   });
 });

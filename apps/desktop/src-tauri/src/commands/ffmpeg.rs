@@ -2,8 +2,8 @@ use crate::path_validator::{validate_path, validate_path_for_write};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
-use std::fs;
-use std::io::{BufRead, BufReader};
+use std::fs::{self, OpenOptions};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -15,6 +15,7 @@ const DEFAULT_EXPORT_TASK_ID: &str = "__default_export__";
 static EXPORT_CHILDREN: OnceLock<Mutex<HashMap<String, Child>>> = OnceLock::new();
 static EXPORT_TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 static HARDWARE_ENCODER_CACHE: OnceLock<Mutex<Option<HardwareEncoderProbe>>> = OnceLock::new();
+pub const EXPORT_MEMORY_PAUSE_THRESHOLD_BYTES: u64 = 2 * 1024 * 1024 * 1024;
 
 fn export_children() -> &'static Mutex<HashMap<String, Child>> {
     EXPORT_CHILDREN.get_or_init(|| Mutex::new(HashMap::new()))
@@ -276,13 +277,14 @@ pub async fn run_export(
         return Err("FFmpeg argument list is empty.".to_string());
     }
     let slot_id = export_slot_id(task_id.as_deref());
+    let log_path = initialize_export_log(&app, &slot_id)?;
     let nested_dir = if plan.nested_plans.is_empty() {
         None
     } else {
         Some(create_nested_export_dir()?)
     };
     let nested_result = if let Some(dir) = nested_dir.as_deref() {
-        run_nested_export_plans(&app, &mut plan, dir, &slot_id)
+        run_nested_export_plans(&app, &mut plan, dir, &slot_id, &log_path)
     } else {
         Ok(())
     };
@@ -332,6 +334,7 @@ pub async fn run_export(
             nested_dir.as_deref(),
             _temp_dir,
             &slot_id,
+            Some(&log_path),
             emit_progress,
             emit_started,
         )
@@ -455,10 +458,11 @@ fn run_nested_export_plans(
     plan: &mut FfmpegExportPlanDto,
     nested_dir: &Path,
     slot_id: &str,
+    log_path: &Path,
 ) -> Result<(), String> {
     for nested in &mut plan.nested_plans {
         let output_path = nested_dir.join(safe_file_name(&nested.placeholder));
-        run_nested_export_plans(app, &mut nested.plan, nested_dir, slot_id)?;
+        run_nested_export_plans(app, &mut nested.plan, nested_dir, slot_id, log_path)?;
         replace_placeholder(&mut nested.plan.full_args, &nested.placeholder, &normalize_path(&output_path));
         with_temp_export_artifacts(&nested.plan, |materialized, _temp_dir| {
             run_materialized_export_plan(
@@ -468,6 +472,7 @@ fn run_nested_export_plans(
                 Some(nested_dir),
                 _temp_dir,
                 slot_id,
+                Some(log_path),
                 Arc::new(|_| {}),
                 Arc::new(|| {}),
             )
@@ -495,6 +500,17 @@ struct MaterializedFfmpegExportPass {
     kind: Option<String>,
 }
 
+#[tauri::command]
+pub fn get_available_memory_bytes() -> u64 {
+    let mut system = sysinfo::System::new();
+    system.refresh_memory();
+    system.available_memory()
+}
+
+pub fn should_pause_export_for_memory(available_memory_bytes: u64) -> bool {
+    available_memory_bytes < EXPORT_MEMORY_PAUSE_THRESHOLD_BYTES
+}
+
 fn run_materialized_export_plan(
     app: &AppHandle,
     materialized: MaterializedFfmpegExportPlan,
@@ -502,13 +518,14 @@ fn run_materialized_export_plan(
     nested_dir: Option<&Path>,
     artifact_dir: &Path,
     slot_id: &str,
+    log_path: Option<&Path>,
     emit_progress: ProgressEmitter,
     emit_started: StartedEmitter,
 ) -> Result<ExportReport, String> {
     if materialized.passes.is_empty() {
         let mut args = materialized.full_args;
         validate_export_paths(app, &mut args, nested_dir, Some(artifact_dir), true)?;
-        spawn_and_wait_with_progress(slot_id, args, fallback_duration, emit_progress, emit_started)?;
+        spawn_and_wait_with_progress(slot_id, args, fallback_duration, log_path, emit_progress, emit_started)?;
         return Ok(ExportReport::default());
     }
 
@@ -528,6 +545,7 @@ fn run_materialized_export_plan(
             slot_id,
             args,
             pass.duration,
+            log_path,
             Arc::clone(&emit_progress),
             Arc::clone(&emit_started),
         )
@@ -546,6 +564,7 @@ fn run_materialized_export_plan(
 
 #[derive(Debug, Clone, PartialEq)]
 struct FfmpegRunOutput {
+    stdout: String,
     stderr: String,
 }
 
@@ -672,20 +691,71 @@ fn stderr_tail(stderr: &str, count: usize) -> String {
     lines[start..].join("\n")
 }
 
+fn initialize_export_log(app: &AppHandle, slot_id: &str) -> Result<PathBuf, String> {
+    let log_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| error.to_string())?
+        .join("export-logs");
+    fs::create_dir_all(&log_dir).map_err(|error| error.to_string())?;
+    let log_path = log_dir.join(format!("{}.log", safe_file_name(slot_id)));
+    fs::write(
+        &log_path,
+        format!(
+            "open-factory export log\nstarted_at_ms={}\ntask_id={}\n\n",
+            unix_time_millis(),
+            slot_id
+        ),
+    )
+    .map_err(|error| format!("Unable to write export log {}: {}", normalize_path(&log_path), error))?;
+    Ok(log_path)
+}
+
+fn append_export_log(
+    log_path: &Path,
+    args: &[String],
+    stdout: &str,
+    stderr: &str,
+    status: &str,
+) -> Result<(), String> {
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(log_path)
+        .map_err(|error| format!("Unable to append export log {}: {}", normalize_path(log_path), error))?;
+    writeln!(file, "ffmpeg {}", args.join(" ")).map_err(|error| error.to_string())?;
+    writeln!(file, "status={}", status).map_err(|error| error.to_string())?;
+    writeln!(file, "\n[stdout]\n{}", stdout).map_err(|error| error.to_string())?;
+    writeln!(file, "\n[stderr]\n{}\n", stderr).map_err(|error| error.to_string())?;
+    Ok(())
+}
+
+fn unix_time_millis() -> u128 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_millis())
+        .unwrap_or(0)
+}
+
 fn spawn_and_wait_with_progress(
     slot_id: &str,
     args: Vec<String>,
     duration: f64,
+    log_path: Option<&Path>,
     emit_progress: ProgressEmitter,
     emit_started: StartedEmitter,
 ) -> Result<FfmpegRunOutput, String> {
     let mut child = Command::new(ffmpeg_binary())
         .args(&args)
         .stderr(Stdio::piped())
-        .stdout(Stdio::null())
+        .stdout(Stdio::piped())
         .spawn()
         .map_err(|error| format!("Unable to start FFmpeg: {}", error))?;
 
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| "Unable to capture FFmpeg stdout.".to_string())?;
     let stderr = child
         .stderr
         .take()
@@ -712,6 +782,16 @@ fn spawn_and_wait_with_progress(
             }
         }
     });
+    let stdout_bytes = Arc::new(Mutex::new(Vec::<u8>::new()));
+    let stdout_for_thread = Arc::clone(&stdout_bytes);
+    let stdout_thread = std::thread::spawn(move || {
+        let mut reader = stdout;
+        let mut bytes = Vec::new();
+        let _ = reader.read_to_end(&mut bytes);
+        if let Ok(mut output) = stdout_for_thread.lock() {
+            *output = bytes;
+        }
+    });
 
     let status_result = loop {
         let maybe_status = {
@@ -734,14 +814,23 @@ fn spawn_and_wait_with_progress(
     };
 
     let _ = progress_thread.join();
+    let _ = stdout_thread.join();
+    let stdout_text = stdout_bytes
+        .lock()
+        .map(|bytes| String::from_utf8_lossy(&bytes).to_string())
+        .unwrap_or_default();
     let stderr_text = stderr_lines
         .lock()
         .map(|lines| lines.join("\n"))
         .unwrap_or_default();
+    if let Some(path) = log_path {
+        let _ = append_export_log(path, &args, &stdout_text, &stderr_text, status_result.as_ref().map(|status| status.to_string()).unwrap_or_else(|error| error.clone()).as_str());
+    }
     match status_result {
         Ok(status) if status.success() => {
             emit_progress(ExportProgressPayload::complete(duration));
             Ok(FfmpegRunOutput {
+                stdout: stdout_text,
                 stderr: stderr_text,
             })
         }
@@ -1271,6 +1360,13 @@ offset=1.35
     }
 
     #[test]
+    fn export_memory_threshold_pauses_below_two_gb() {
+        assert!(should_pause_export_for_memory(EXPORT_MEMORY_PAUSE_THRESHOLD_BYTES - 1));
+        assert!(!should_pause_export_for_memory(EXPORT_MEMORY_PAUSE_THRESHOLD_BYTES));
+        assert!(!should_pause_export_for_memory(EXPORT_MEMORY_PAUSE_THRESHOLD_BYTES + 1));
+    }
+
+    #[test]
     fn cancel_export_clears_running_child_slot() {
         let child = spawn_long_running_child();
         export_children()
@@ -1504,6 +1600,7 @@ offset=1.35
             DEFAULT_EXPORT_TASK_ID,
             vec!["-this-option-does-not-exist".to_string()],
             1.0,
+            None,
             Arc::new(move |progress| {
                 progress_values_for_emit
                     .lock()

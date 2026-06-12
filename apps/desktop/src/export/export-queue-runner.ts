@@ -3,20 +3,24 @@ import {
   buildFfmpegExportPlan,
   timelineHasExportableVideo,
   type ExportSettings,
+  type ExportTaskPriority,
   type ExportTask,
   type Project
 } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
-import { cancelExport as bridgeCancelExport, getFfmpegCapabilities, listenBridge, runExport } from '../lib/tauri-bridge';
+import { cancelExport as bridgeCancelExport, getAvailableMemoryBytes, getFfmpegCapabilities, listenBridge, runExport } from '../lib/tauri-bridge';
 import { runExportBeforePlugins } from '../plugins/plugin-manager';
+import { getExportLogPath, persistFinishedTaskToHistory } from './export-history';
 import { normalizeExportProgressPayload, type ExportProgressEvent } from './export-progress';
 import { useExportQueueStore } from './export-queue-store';
 
+export const EXPORT_MEMORY_PAUSE_THRESHOLD_BYTES = 2 * 1024 * 1024 * 1024;
+const RESOURCE_RECHECK_DELAY_MS = 500;
 let runnerPromise: Promise<void> | undefined;
 const activeRuns = new Map<string, Promise<void>>();
 let wakeRunner: (() => void) | undefined;
 
-export async function enqueueExport(project: Project, outputPath: string, settings?: Partial<Omit<ExportSettings, 'outputPath'>>): Promise<ExportTask> {
+export async function enqueueExport(project: Project, outputPath: string, settings?: Partial<Omit<ExportSettings, 'outputPath'>>, priority?: ExportTaskPriority): Promise<ExportTask> {
   if (!timelineHasExportableVideo(project.timeline)) {
     throw new Error(zhCN.errors.exportNeedsVideo);
   }
@@ -30,7 +34,8 @@ export async function enqueueExport(project: Project, outputPath: string, settin
   const task = useExportQueueStore.getState().addTask({
     name: fileNameFromPath(outputPath) || `${project.name} 导出`,
     outputPath,
-    plan
+    plan,
+    priority
   });
   signalRunner();
   ensureExportQueueRunner();
@@ -88,12 +93,14 @@ async function runQueue(): Promise<void> {
 
   try {
     while (true) {
-      startAvailableTasks();
+      await startAvailableTasks();
       const hasPending = useExportQueueStore.getState().tasks.some((task) => task.status === 'pending');
       if (!hasPending && activeRuns.size === 0) {
+        useExportQueueStore.getState().setResourcePaused(false);
         return;
       }
       if (hasPending && activeRuns.size === 0) {
+        await waitForRunnerWake(RESOURCE_RECHECK_DELAY_MS);
         continue;
       }
       await waitForRunnerWake();
@@ -103,7 +110,17 @@ async function runQueue(): Promise<void> {
   }
 }
 
-function startAvailableTasks(): void {
+async function startAvailableTasks(): Promise<void> {
+  const hasPending = useExportQueueStore.getState().tasks.some((task) => task.status === 'pending');
+  if (!hasPending) {
+    useExportQueueStore.getState().setResourcePaused(false);
+    return;
+  }
+  if (await shouldPauseForMemory()) {
+    useExportQueueStore.getState().setResourcePaused(true);
+    return;
+  }
+  useExportQueueStore.getState().setResourcePaused(false);
   for (const taskId of useExportQueueStore.getState().startNextTasks()) {
     const task = useExportQueueStore.getState().tasks.find((item) => item.id === taskId);
     if (!task || activeRuns.has(task.id)) {
@@ -118,18 +135,29 @@ function startAvailableTasks(): void {
 }
 
 async function runSingleTask(task: ExportTask): Promise<void> {
+  const logPath = await getExportLogPath(task.id).catch(() => undefined);
+  if (logPath) {
+    useExportQueueStore.getState().setTaskLogPath(task.id, logPath);
+  }
   try {
     const result = await runExport(task.plan, task.id);
     const latest = useExportQueueStore.getState().tasks.find((item) => item.id === task.id);
     if (latest?.status === 'running') {
       useExportQueueStore.getState().finishTask(task.id, result.report);
+      await persistFinishedTaskToHistory(task.id);
     }
   } catch (error) {
     const latest = useExportQueueStore.getState().tasks.find((item) => item.id === task.id);
     if (latest?.status === 'running') {
       useExportQueueStore.getState().failTask(task.id, error instanceof Error ? error.message : zhCN.errors.exportFailed);
+      await persistFinishedTaskToHistory(task.id);
     }
   }
+}
+
+async function shouldPauseForMemory(): Promise<boolean> {
+  const availableMemoryBytes = await getAvailableMemoryBytes().catch(() => EXPORT_MEMORY_PAUSE_THRESHOLD_BYTES);
+  return availableMemoryBytes < EXPORT_MEMORY_PAUSE_THRESHOLD_BYTES;
 }
 
 function getProgressTaskId(progress: ExportProgressEvent): string | undefined {
@@ -141,9 +169,22 @@ function signalRunner(): void {
   wakeRunner = undefined;
 }
 
-function waitForRunnerWake(): Promise<void> {
+function waitForRunnerWake(timeoutMs?: number): Promise<void> {
   return new Promise((resolve) => {
-    wakeRunner = resolve;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const complete = () => {
+      if (wakeRunner === complete) {
+        wakeRunner = undefined;
+      }
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+      resolve();
+    };
+    wakeRunner = complete;
+    if (timeoutMs !== undefined) {
+      timeout = setTimeout(complete, timeoutMs);
+    }
   });
 }
 

@@ -63,6 +63,48 @@ test('runs export queue with two concurrent tasks and starts the third after a s
   await expectExportTaskStatus(page, 2, 'success');
 });
 
+test('starts high priority export before queued low priority work and writes log history', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.evaluate(() => {
+    window.__E2E_ACTIONS__!.holdExportGate!();
+    window.__E2E_ACTIONS__!.setAvailableMemoryBytes!(1024 * 1024 * 1024);
+  });
+  await page.getByTestId('import-media-button').click();
+  await addMediaCardToTimeline(page, 0);
+
+  await openExportDialog(page);
+  await page.getByTestId('export-max-concurrent-select').selectOption('1');
+  await page.getByTestId('export-priority-select').selectOption('low');
+  await page.getByTestId('export-batch-paths').fill('C:/Exports/priority-low.mp4');
+  await page.getByTestId('export-enqueue-button').click();
+  await expect(page.getByTestId('export-queue-list')).toContainText('可用内存低于 2GB');
+  await expectExportTaskStatus(page, 0, 'pending');
+
+  await page.evaluate(() => window.__E2E_ACTIONS__!.setAvailableMemoryBytes!(8 * 1024 * 1024 * 1024));
+  await page.getByTestId('export-priority-select').selectOption('high');
+  await page.getByTestId('export-batch-paths').fill('C:/Exports/priority-high.mp4');
+  await page.getByTestId('export-enqueue-button').click();
+
+  await expect(page.getByTestId('export-task-priority').nth(0)).toHaveText('高');
+  await expectExportTaskStatus(page, 0, 'running');
+  await expectExportTaskStatus(page, 1, 'pending');
+
+  await page.evaluate(() => window.__E2E_ACTIONS__!.releaseExportGate!());
+  await expectExportTaskStatus(page, 0, 'success');
+
+  const historyPath = 'C:/Users/E2E/AppData/Roaming/open-factory/export-history.json';
+  await expect.poll(() => page.evaluate((path) => window.__E2E_ACTIONS__!.getWrittenFile!(path) as string | undefined, historyPath)).not.toBeUndefined();
+  const history = await page.evaluate((path) => JSON.parse(window.__E2E_ACTIONS__!.getWrittenFile!(path) as string) as Array<{ outputPath: string; logPath?: string }>, historyPath);
+  const high = history.find((entry) => entry.outputPath === 'C:/Exports/priority-high.mp4');
+  expect(high?.logPath).toBeTruthy();
+  await expect.poll(() => page.evaluate((path) => window.__E2E_ACTIONS__!.getWrittenFileSize!(path) as number, high!.logPath!)).toBeGreaterThan(0);
+  await expect(page.getByTestId('export-history-list')).toContainText('priority-high.mp4');
+
+  await page.evaluate(() => window.__E2E_ACTIONS__!.releaseAllExportGates!());
+  await expectExportTaskStatus(page, 1, 'success');
+});
+
 test('uses detected NVENC hardware encoder when hardware encoding is enabled', async ({ page }) => {
   await page.goto('/');
   await waitForE2eActions(page);

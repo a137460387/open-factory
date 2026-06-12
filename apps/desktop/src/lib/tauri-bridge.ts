@@ -153,6 +153,7 @@ export type TauriMocks = Partial<{
   authorizePaths(paths: string[]): Promise<void> | void;
   detectFfmpeg(): Promise<boolean> | boolean;
   getFfmpegCapabilities(): Promise<FfmpegCapabilities> | FfmpegCapabilities;
+  getAvailableMemoryBytes(): Promise<number> | number;
   runExport(plan: FfmpegExportPlan, taskId?: string): Promise<ExportResult> | ExportResult;
   createSharePackage(request: SharePackageRequest): Promise<SharePackageResult> | SharePackageResult;
   analyzeClip(request: AnalyzeClipRequest): Promise<AnalyzeClipResult> | AnalyzeClipResult;
@@ -428,6 +429,14 @@ export async function getFfmpegCapabilities(): Promise<FfmpegCapabilities> {
     return mock();
   }
   return invoke<FfmpegCapabilities>('get_ffmpeg_capabilities');
+}
+
+export async function getAvailableMemoryBytes(): Promise<number> {
+  const mock = getTauriMocks()?.getAvailableMemoryBytes;
+  if (mock) {
+    return mock();
+  }
+  return invoke<number>('get_available_memory_bytes');
 }
 
 export async function runExport(plan: FfmpegExportPlan, taskId?: string): Promise<ExportResult> {

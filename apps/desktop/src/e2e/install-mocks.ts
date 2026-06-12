@@ -34,6 +34,7 @@ let exportGateHeld = false;
 const exportGates: Array<{ taskId?: string; release: () => void }> = [];
 let mockSceneTimes = [1];
 let lastConfirmMessage: string | undefined;
+let availableMemoryBytes = 8 * 1024 * 1024 * 1024;
 
 const sampleProjectPath = 'C:/Projects/sample.cutproj.json';
 const missingProjectPath = 'C:/Projects/missing.cutproj.json';
@@ -235,6 +236,7 @@ const mocks: TauriMocks = {
     hardwareEncoder: 'h264_nvenc',
     drawtextWarning: null
   }),
+  getAvailableMemoryBytes: () => availableMemoryBytes,
   runExport: async (plan, taskId) => {
     lastExportPlan = plan;
     const cancelKey = exportCancelKey(taskId);
@@ -258,6 +260,11 @@ const mocks: TauriMocks = {
       exists.set(outputPath, true);
       mtimes.set(outputPath, Date.now());
     }
+    persistFiles();
+    const logPath = `${appDataDir}/export-logs/${exportCancelKey(taskId)}.log`;
+    files.set(logPath, [`ffmpeg mock log`, `task=${exportCancelKey(taskId)}`, `args=${plan.fullArgs.join(' ')}`, `stderr=mock export completed`].join('\n'));
+    exists.set(logPath, true);
+    mtimes.set(logPath, Date.now());
     persistFiles();
     return {
       success: true,
@@ -717,6 +724,11 @@ window.__E2E_ACTIONS__ = {
   },
   setSceneDetectionTimes: (times: unknown) => {
     mockSceneTimes = Array.isArray(times) ? times.filter((time): time is number => typeof time === 'number' && Number.isFinite(time)) : [1];
+  },
+  setAvailableMemoryBytes: (bytes: unknown) => {
+    if (typeof bytes === 'number' && Number.isFinite(bytes)) {
+      availableMemoryBytes = bytes;
+    }
   },
   getWrittenFile: (path: unknown) => (typeof path === 'string' ? files.get(path) : undefined),
   getWrittenFileSize: (path: unknown) => (typeof path === 'string' ? files.get(path)?.length ?? 0 : 0),

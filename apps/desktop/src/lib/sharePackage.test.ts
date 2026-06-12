@@ -27,6 +27,7 @@ function makeTask(status: ExportTask['status'], progress: number): ExportTask {
     name: 'share.mp4',
     outputPath: 'C:/AppData/open-factory/Share Demo-share-123.mp4',
     plan: makePlan(),
+    priority: 'normal',
     status,
     progress,
     createdAt: '2026-06-12T00:00:00.000Z'
