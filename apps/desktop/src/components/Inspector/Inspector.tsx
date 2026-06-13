@@ -80,6 +80,7 @@ import {
   buildPrivacyMasksFromDetections,
   createTrack,
   type AudioFadeCurve,
+  type AudioChannelRoutingMode,
   type BatchKeyframeEditOperation,
   type ChromaKeyMode,
   type ChromaKeyColor,
@@ -334,6 +335,9 @@ function ClipInspector({
   const fadeOutDuration = 'fadeOutDuration' in clip ? normalizeAudioFadeDuration(clip.fadeOutDuration, clip.duration) : 0;
   const fadeInCurve = 'fadeInCurve' in clip ? normalizeAudioFadeCurve(clip.fadeInCurve) : 'linear';
   const fadeOutCurve = 'fadeOutCurve' in clip ? normalizeAudioFadeCurve(clip.fadeOutCurve) : 'linear';
+  const audioChannelRouting = 'volume' in clip ? clip.audioChannelRouting ?? 'normal' : 'normal';
+  const audioChannelRoutingOptions: AudioChannelRoutingMode[] =
+    asset?.audioChannels === 1 ? ['normal', 'mono-left', 'mono-right', 'mono-both'] : ['normal', 'swap-stereo', 'stereo-left-mono', 'stereo-right-mono', 'stereo-to-mono'];
   const masks = normalizeMasks(clip.masks);
   const updatePanorama = (patch: Partial<typeof panorama>) => {
     commit({ panorama: normalizeClipPanoramaView({ ...panorama, ...patch }) });
@@ -1733,6 +1737,26 @@ function ClipInspector({
               testId="clip-pitch-input"
             />
             <ToggleField label={zhCN.inspector.fields.reverseAudio} checked={reverseAudio} onCommit={(nextReverseAudio) => commit({ reverseAudio: nextReverseAudio })} testId="clip-reverse-audio-toggle" />
+            <details className="rounded-md border border-line bg-white" data-testid="audio-channel-routing-section" open>
+              <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-slate-700">{zhCN.inspector.fields.audioChannelRouting}</summary>
+              <div className="border-t border-line p-2">
+                <label className="block text-xs font-medium text-slate-600">
+                  {zhCN.inspector.fields.audioChannelRoutingMode}
+                  <select
+                    className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                    value={audioChannelRoutingOptions.includes(audioChannelRouting) ? audioChannelRouting : 'normal'}
+                    data-testid="clip-audio-channel-routing-select"
+                    onChange={(event) => commit({ audioChannelRouting: event.target.value as AudioChannelRoutingMode })}
+                  >
+                    {audioChannelRoutingOptions.map((mode) => (
+                      <option key={mode} value={mode}>
+                        {zhCN.inspector.audioChannelRoutingOptions[mode]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </details>
             <div className="grid grid-cols-2 gap-2">
               <RangeNumberField
                 label={zhCN.inspector.fields.fadeIn}

@@ -8,6 +8,7 @@ import {
   createTimelineMarker,
   createTrack,
   type MediaFolder,
+  DEFAULT_CLIP_SPEED,
   DEFAULT_NESTED_SEQUENCE_NAME,
   getProjectSequences,
   normalizeMasterVolume,
@@ -21,6 +22,7 @@ import {
   normalizeClipProjection,
   normalizeAudioFadeCurve,
   normalizeAudioFadeDuration,
+  normalizeAudioChannelRouting,
   normalizeAudioDenoise,
   normalizeAudioPitchSemitones,
   normalizeClipBorder,
@@ -44,6 +46,7 @@ import {
   normalizeVideoRestoration,
   replaceProjectActiveTimeline,
   type Clip,
+  type MediaAsset,
   type ClipAudioDenoise,
   type ClipBorder,
   type ClipKeyframes,
@@ -2322,6 +2325,7 @@ export type ClipPatch = Partial<Omit<Clip, 'type' | 'id' | 'transform' | 'colorC
   subtitleMode?: SubtitleMode;
   speed?: number;
   pitchSemitones?: number;
+  audioChannelRouting?: Clip['audioChannelRouting'];
   reverseAudio?: boolean;
   fadeInDuration?: number;
   fadeOutDuration?: number;
@@ -2343,6 +2347,118 @@ export type ClipPatch = Partial<Omit<Clip, 'type' | 'id' | 'transform' | 'colorC
   style?: Partial<TextStyle> | Partial<SubtitleStyle>;
   pathText?: Partial<TextPathOptions>;
 };
+
+export type ReplaceMediaDurationMode = 'trim-to-original' | 'stretch-to-fit' | 'use-new-duration';
+export type ReplaceMediaCompatibilityWarning = 'media-type-mismatch' | 'missing-audio-for-audio-properties';
+type ReplaceableMediaClip = Extract<Clip, { mediaId: string }>;
+
+export function calculateReplaceMediaPatch(
+  clip: ReplaceableMediaClip,
+  media: Pick<MediaAsset, 'id' | 'duration'>,
+  durationMode: ReplaceMediaDurationMode
+): Pick<ReplaceableMediaClip, 'mediaId' | 'duration' | 'trimStart' | 'trimEnd' | 'speed'> {
+  const minDuration = 1 / 30;
+  const originalDuration = Math.max(minDuration, clip.duration);
+  const mediaDuration = Math.max(minDuration, Number.isFinite(media.duration) ? media.duration : originalDuration);
+  if (durationMode === 'stretch-to-fit') {
+    return {
+      mediaId: media.id,
+      duration: round(originalDuration),
+      trimStart: 0,
+      trimEnd: 0,
+      speed: getClipSpeed({ speed: mediaDuration / originalDuration })
+    };
+  }
+  if (durationMode === 'use-new-duration') {
+    return {
+      mediaId: media.id,
+      duration: round(mediaDuration),
+      trimStart: 0,
+      trimEnd: 0,
+      speed: DEFAULT_CLIP_SPEED
+    };
+  }
+  const duration = Math.min(originalDuration, mediaDuration);
+  return {
+    mediaId: media.id,
+    duration: round(duration),
+    trimStart: 0,
+    trimEnd: round(Math.max(0, mediaDuration - duration)),
+    speed: DEFAULT_CLIP_SPEED
+  };
+}
+
+export function getReplaceMediaCompatibilityWarnings(clip: Clip, media: Pick<MediaAsset, 'type' | 'hasAudio'>): ReplaceMediaCompatibilityWarning[] {
+  if (!isReplaceableMediaClip(clip)) {
+    return ['media-type-mismatch'];
+  }
+  const warnings = new Set<ReplaceMediaCompatibilityWarning>();
+  if (clip.type !== media.type) {
+    warnings.add('media-type-mismatch');
+  }
+  const newMediaHasAudio = media.type === 'audio' || (media.type === 'video' && media.hasAudio !== false);
+  const clipHasAudioProperties =
+    clip.type === 'audio' ||
+    ('volume' in clip && clip.volume !== undefined) ||
+    Boolean(clip.keyframes?.volume?.length) ||
+    ('fadeInDuration' in clip && ((clip.fadeInDuration ?? 0) > 0 || (clip.fadeOutDuration ?? 0) > 0));
+  if (clipHasAudioProperties && !newMediaHasAudio) {
+    warnings.add('missing-audio-for-audio-properties');
+  }
+  return Array.from(warnings);
+}
+
+export class ReplaceMediaCommand implements Command {
+  readonly description = 'Replace media';
+  private before?: ReplaceableMediaClip;
+  private after?: ReplaceableMediaClip;
+
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clipId: string,
+    private readonly media: Pick<MediaAsset, 'id' | 'duration'>,
+    private readonly durationMode: ReplaceMediaDurationMode
+  ) {}
+
+  execute(): void {
+    const timeline = this.accessor.getTimeline();
+    this.before ??= asReplaceableMediaClip(findClip(timeline, this.clipId));
+    const patch = calculateReplaceMediaPatch(this.before, this.media, this.durationMode);
+    this.after = {
+      ...this.before,
+      ...patch
+    } as ReplaceableMediaClip;
+    if (this.after.type === 'video' || this.after.type === 'audio') {
+      this.after = {
+        ...this.after,
+        fadeInDuration: normalizeAudioFadeDuration(this.after.fadeInDuration, this.after.duration),
+        fadeOutDuration: normalizeAudioFadeDuration(this.after.fadeOutDuration, this.after.duration)
+      } as ReplaceableMediaClip;
+    }
+    const track = findTrack(timeline, this.after.trackId);
+    if (detectOverlap(track, this.after, this.before.id)) {
+      throw new Error('Clip overlaps another clip on this track');
+    }
+    this.accessor.setTimeline(replaceClip(timeline, this.after));
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setTimeline(replaceClip(this.accessor.getTimeline(), this.before));
+    }
+  }
+}
+
+function asReplaceableMediaClip(clip: Clip): ReplaceableMediaClip {
+  if (!isReplaceableMediaClip(clip)) {
+    throw new Error('Media replacement requires a media clip');
+  }
+  return clip;
+}
+
+function isReplaceableMediaClip(clip: Clip): clip is ReplaceableMediaClip {
+  return clip.type === 'video' || clip.type === 'audio' || clip.type === 'image';
+}
 
 export interface PiPLayoutCommandOptions {
   position?: PiPLayoutPosition;
@@ -2465,6 +2581,7 @@ export class UpdateClipCommand implements Command {
       frameInterpolation: normalizeFrameInterpolation({ ...this.before.frameInterpolation, ...this.patch.frameInterpolation }),
       slowMotionMode: normalizeSlowMotionMode(this.patch.slowMotionMode ?? this.before.slowMotionMode),
       audioDenoise: normalizeAudioDenoise({ ...this.before.audioDenoise, ...this.patch.audioDenoise }),
+      audioChannelRouting: normalizeAudioChannelRouting(this.patch.audioChannelRouting ?? this.before.audioChannelRouting),
       videoRestoration: normalizeVideoRestoration({ ...this.before.videoRestoration, ...this.patch.videoRestoration }),
       projection: normalizeClipProjection(this.patch.projection ?? this.before.projection),
       panorama: normalizeClipPanoramaView({ ...this.before.panorama, ...this.patch.panorama }),

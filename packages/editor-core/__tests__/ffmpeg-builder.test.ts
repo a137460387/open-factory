@@ -2524,6 +2524,34 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.filterComplex).toContain('adelay=0:all=1,volume=0.4,stereopan=pan=-1,aformat=channel_layouts=stereo');
   });
 
+  it('adds clip audio channel routing filters and skips the normal default', () => {
+    const expectations = [
+      ['mono-left', 'pan=stereo|c0=c0|c1=0*c0'],
+      ['mono-right', 'pan=stereo|c0=0*c0|c1=c0'],
+      ['mono-both', 'pan=stereo|c0=c0|c1=c0'],
+      ['swap-stereo', 'pan=stereo|c0=c1|c1=c0'],
+      ['stereo-left-mono', 'pan=stereo|c0=c0|c1=c0'],
+      ['stereo-right-mono', 'pan=stereo|c0=c1|c1=c1'],
+      ['stereo-to-mono', 'pan=mono|c0=0.5*c0+0.5*c1']
+    ] as const;
+
+    for (const [mode, expectedFilter] of expectations) {
+      const project = makeProject();
+      project.timeline.tracks[0].clips = [makeVideoClip({ id: `clip-${mode}`, duration: 2, audioChannelRouting: mode })];
+
+      const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+      expect(plan.filterComplex).toContain(expectedFilter);
+    }
+
+    const defaultProject = makeProject();
+    defaultProject.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-normal', duration: 2, audioChannelRouting: 'normal' })];
+
+    const defaultPlan = buildFfmpegExportPlan(buildExportProjectFromProject(defaultProject, { outputPath: 'out.mp4' }));
+
+    expect(defaultPlan.filterComplex).not.toContain('pan=');
+  });
+
   it('adds enabled track EQ bands and compressor filters to audio export', () => {
     const project = makeProject();
     project.timeline.tracks[0].eq = {

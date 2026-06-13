@@ -28,6 +28,7 @@ import {
   MoveClipCommand,
   MoveClipsCommand,
   RemoveSilenceCommand,
+  ReplaceMediaCommand,
   RippleDeleteCommand,
   RollingTrimCommand,
   SlideClipCommand,
@@ -46,6 +47,7 @@ import {
   getTimelineDuration,
   getClipSourceVisibleDuration,
   getClipSpeed,
+  getReplaceMediaCompatibilityWarnings,
   isNestedSequenceDepthExceeded,
   instantiateTitleTemplate,
   moveClip,
@@ -63,17 +65,20 @@ import {
   type TimelineMarker,
   type TimelineSnapCandidate,
   type Track,
-  type TransitionType
+  type TransitionType,
+  type ReplaceMediaCompatibilityWarning,
+  type ReplaceMediaDurationMode
 } from '@open-factory/editor-core';
 import { Captions, Flag, MessageSquarePlus, MessageSquareText, Music2, Plus, Scissors, Trash2, Type } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createTextClip } from '../../lib/clipFactory';
+import { probeMediaPath } from '../../lib/media';
 import { zhCN } from '../../i18n/strings';
 import { showToast } from '../../lib/toast';
 import { detectClipSilence } from '../../lib/silenceDetection';
 import { canGenerateSubtitlesForClip, buildWhisperSubtitleTrackForClip, getWhisperAvailability, type WhisperAvailability } from '../../lib/whisper';
 import { TITLE_TEMPLATE_DRAG_MIME, isTitleTemplateId } from '../../lib/titleTemplates';
-import { detectSceneChanges, listenBridge, type WhisperProgressEvent } from '../../lib/tauri-bridge';
+import { detectSceneChanges, listenBridge, openFileDialog, type WhisperProgressEvent } from '../../lib/tauri-bridge';
 import { commandManager, projectAccessor, timelineAccessor } from '../../store/commandManager';
 import { useEditorStore, type SelectedKeyframeRef } from '../../store/editorStore';
 import { useRenderCacheStore } from '../../store/renderCacheStore';
@@ -91,6 +96,7 @@ export function Timeline() {
   const zoom = useEditorStore((state) => state.timelineZoom);
   const setSelectedClipId = useEditorStore((state) => state.setSelectedClipId);
   const setSelectedClipIds = useEditorStore((state) => state.setSelectedClipIds);
+  const addMedia = useEditorStore((state) => state.addMedia);
   const selectedKeyframe = useEditorStore((state) => state.selectedKeyframe);
   const selectedKeyframes = useEditorStore((state) => state.selectedKeyframes);
   const setSelectedKeyframe = useEditorStore((state) => state.setSelectedKeyframe);
@@ -112,6 +118,7 @@ export function Timeline() {
   const [silenceDialog, setSilenceDialog] = useState<SilenceDialogState | undefined>();
   const [sceneDialog, setSceneDialog] = useState<SceneDialogState | undefined>();
   const [whisperDialog, setWhisperDialog] = useState<WhisperDialogState | undefined>();
+  const [replaceMediaDialog, setReplaceMediaDialog] = useState<ReplaceMediaDialogState | undefined>();
   const [whisperAvailability, setWhisperAvailability] = useState<WhisperAvailability>({ ready: false, error: zhCN.whisper.notConfigured });
   const [rollingTrimActive, setRollingTrimActive] = useState(false);
   const [slipEditActive, setSlipEditActive] = useState(false);
@@ -656,6 +663,44 @@ export function Timeline() {
       setClipMenu(undefined);
     } catch (error) {
       showToast({ kind: 'error', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
+    }
+  }
+
+  async function openReplaceMedia(clipId: string): Promise<void> {
+    const clip = findClip(clipId);
+    setClipMenu(undefined);
+    setSelectedClipId(clip.id);
+    try {
+      const [path] = await openFileDialog(false, [
+        { name: zhCN.fileDialogs.media, extensions: ['mp4', 'mov', 'mkv', 'webm', 'm4a', 'mp3', 'wav', 'png', 'jpg', 'jpeg', 'webp'] }
+      ]);
+      if (!path) {
+        return;
+      }
+      const media = await probeMediaPath(path);
+      addMedia([media]);
+      setReplaceMediaDialog({
+        clipId: clip.id,
+        media,
+        durationMode: 'trim-to-original',
+        warnings: getReplaceMediaCompatibilityWarnings(clip, media)
+      });
+    } catch (error) {
+      showToast({ kind: 'error', title: zhCN.timeline.replaceMediaFailedTitle, message: error instanceof Error ? error.message : zhCN.timeline.replaceMediaChooseFailed });
+    }
+  }
+
+  function confirmReplaceMedia(): void {
+    if (!replaceMediaDialog) {
+      return;
+    }
+    try {
+      commandManager.execute(new ReplaceMediaCommand(timelineAccessor, replaceMediaDialog.clipId, replaceMediaDialog.media, replaceMediaDialog.durationMode));
+      setSelectedClipId(replaceMediaDialog.clipId);
+      setReplaceMediaDialog(undefined);
+      showToast({ kind: 'success', title: zhCN.timeline.replaceMediaSuccessTitle, message: zhCN.timeline.replaceMediaSuccessMessage });
+    } catch (error) {
+      showToast({ kind: 'error', title: zhCN.timeline.replaceMediaFailedTitle, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
     }
   }
 
@@ -1256,6 +1301,7 @@ export function Timeline() {
                 onSilence={() => openSilenceDetection(clipMenu.clipId)}
                 onScene={() => void openSceneDetection(clipMenu.clipId)}
                 onGenerateSubtitles={() => void generateSubtitles(clipMenu.clipId)}
+                onReplaceMedia={() => void openReplaceMedia(clipMenu.clipId)}
                 onPack={() => packClipMenuSelection(clipMenu.clipId)}
                 onClose={() => setClipMenu(undefined)}
               />
@@ -1299,6 +1345,14 @@ export function Timeline() {
       ) : null}
       {sceneDialog ? <SceneDetectionDialog progress={sceneDialog.progress} /> : null}
       {whisperDialog ? <WhisperGenerationDialog progress={whisperDialog.progress} clipName={whisperDialog.clip.name} /> : null}
+      {replaceMediaDialog ? (
+        <ReplaceMediaDialog
+          value={replaceMediaDialog}
+          onChange={setReplaceMediaDialog}
+          onCancel={() => setReplaceMediaDialog(undefined)}
+          onConfirm={confirmReplaceMedia}
+        />
+      ) : null}
       {annotationPanelOpen && (annotationMode || (project.annotations?.length ?? 0) > 0) ? (
         <AnnotationListPanel
           annotations={project.annotations ?? []}
@@ -1336,6 +1390,13 @@ interface ClipMenuState {
   y: number;
   clipId: string;
   clipType: Clip['type'];
+}
+
+interface ReplaceMediaDialogState {
+  clipId: string;
+  media: MediaAsset;
+  durationMode: ReplaceMediaDurationMode;
+  warnings: ReplaceMediaCompatibilityWarning[];
 }
 
 interface GapMenuState {
@@ -1679,6 +1740,7 @@ function ClipActionMenu({
   onSilence,
   onScene,
   onGenerateSubtitles,
+  onReplaceMedia,
   onPack,
   onClose
 }: {
@@ -1690,12 +1752,14 @@ function ClipActionMenu({
   onSilence(): void;
   onScene(): void;
   onGenerateSubtitles(): void;
+  onReplaceMedia(): void;
   onPack(): void;
   onClose(): void;
 }) {
   const canDetectSilence = Boolean(clip && (clip.type === 'audio' || (clip.type === 'video' && asset?.hasAudio)));
   const canDetectScene = clip?.type === 'video';
   const canGenerateSubtitles = canGenerateSubtitlesForClip(clip, asset, whisperReady);
+  const canReplaceMedia = Boolean(clip && (clip.type === 'video' || clip.type === 'audio' || clip.type === 'image'));
   return (
     <div
       className="fixed z-50 w-[230px] rounded-md border border-line bg-white p-2 text-xs shadow-soft"
@@ -1734,6 +1798,15 @@ function ClipActionMenu({
       <button
         className="block w-full rounded px-2 py-2 text-left hover:bg-panel disabled:opacity-40"
         type="button"
+        disabled={!canReplaceMedia}
+        data-testid="clip-action-replace-media"
+        onClick={onReplaceMedia}
+      >
+        {zhCN.timeline.replaceMediaAction}
+      </button>
+      <button
+        className="block w-full rounded px-2 py-2 text-left hover:bg-panel disabled:opacity-40"
+        type="button"
         disabled={!clip}
         data-testid="clip-action-pack-nested"
         onClick={onPack}
@@ -1743,6 +1816,62 @@ function ClipActionMenu({
       <button className="mt-1 block w-full rounded px-2 py-1.5 text-left text-slate-500 hover:bg-panel" type="button" onClick={onClose}>
         {zhCN.timeline.close}
       </button>
+    </div>
+  );
+}
+
+function ReplaceMediaDialog({
+  value,
+  onChange,
+  onCancel,
+  onConfirm
+}: {
+  value: ReplaceMediaDialogState;
+  onChange(value: ReplaceMediaDialogState): void;
+  onCancel(): void;
+  onConfirm(): void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 p-4" data-testid="replace-media-dialog">
+      <div className="w-full max-w-sm rounded-md border border-line bg-white p-4 shadow-soft">
+        <div className="mb-3">
+          <div className="text-sm font-semibold text-slate-900">{zhCN.timeline.replaceMediaTitle}</div>
+          <div className="mt-1 truncate text-xs text-slate-500">{value.media.name}</div>
+        </div>
+        <label className="block text-xs font-medium text-slate-600">
+          {zhCN.timeline.replaceMediaDurationMode}
+          <select
+            className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+            value={value.durationMode}
+            data-testid="replace-media-duration-mode"
+            onChange={(event) => onChange({ ...value, durationMode: event.target.value as ReplaceMediaDurationMode })}
+          >
+            {(['trim-to-original', 'stretch-to-fit', 'use-new-duration'] as ReplaceMediaDurationMode[]).map((mode) => (
+              <option key={mode} value={mode}>
+                {zhCN.timeline.replaceMediaModes[mode]}
+              </option>
+            ))}
+          </select>
+        </label>
+        {value.warnings.length > 0 ? (
+          <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800" data-testid="replace-media-warning">
+            <div className="font-semibold">{zhCN.timeline.replaceMediaWarnings.title}</div>
+            {value.warnings.map((warning) => (
+              <div key={warning} className="mt-1">
+                {zhCN.timeline.replaceMediaWarnings[warning]}
+              </div>
+            ))}
+          </div>
+        ) : null}
+        <div className="mt-4 flex justify-end gap-2">
+          <button className="rounded-md border border-line px-3 py-1.5 text-sm font-medium hover:bg-panel" type="button" onClick={onCancel}>
+            {zhCN.timeline.close}
+          </button>
+          <button className="rounded-md bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-[#176858]" type="button" data-testid="replace-media-confirm" onClick={onConfirm}>
+            {zhCN.timeline.replaceMediaConfirm}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

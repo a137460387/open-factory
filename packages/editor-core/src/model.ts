@@ -309,6 +309,15 @@ export interface TrackCompressor {
 }
 
 export type Clip = VideoClip | AudioClip | ImageClip | TextClip | SubtitleClip | NestedSequenceClip | AdjustmentClip;
+export type AudioChannelRoutingMode =
+  | 'normal'
+  | 'mono-left'
+  | 'mono-right'
+  | 'mono-both'
+  | 'swap-stereo'
+  | 'stereo-left-mono'
+  | 'stereo-right-mono'
+  | 'stereo-to-mono';
 
 export interface Transition {
   id: string;
@@ -341,6 +350,7 @@ export interface BaseClip {
   frameInterpolation?: ClipFrameInterpolation;
   slowMotionMode?: ClipSlowMotionMode;
   audioDenoise?: ClipAudioDenoise;
+  audioChannelRouting?: AudioChannelRoutingMode;
   videoRestoration?: ClipVideoRestoration;
   projection?: ClipProjection;
   panorama?: ClipPanoramaView;
@@ -826,6 +836,7 @@ export function createBaseClip(
     frameInterpolation: normalizeFrameInterpolation(input.frameInterpolation),
     slowMotionMode: normalizeSlowMotionMode(input.slowMotionMode),
     audioDenoise: normalizeAudioDenoise(input.audioDenoise),
+    audioChannelRouting: normalizeAudioChannelRouting(input.audioChannelRouting),
     videoRestoration: normalizeVideoRestoration(input.videoRestoration),
     projection: normalizeClipProjection(input.projection),
     panorama: normalizeClipPanoramaView(input.panorama),
@@ -1027,6 +1038,18 @@ export function normalizeAudioDenoise(audioDenoise: Partial<ClipAudioDenoise> | 
     enabled: audioDenoise?.enabled === true,
     strength: round(Math.min(1, Math.max(0, finiteOrDefault(audioDenoise?.strength, DEFAULT_AUDIO_DENOISE.strength))))
   };
+}
+
+export function normalizeAudioChannelRouting(mode: AudioChannelRoutingMode | undefined): AudioChannelRoutingMode {
+  return mode === 'mono-left' ||
+    mode === 'mono-right' ||
+    mode === 'mono-both' ||
+    mode === 'swap-stereo' ||
+    mode === 'stereo-left-mono' ||
+    mode === 'stereo-right-mono' ||
+    mode === 'stereo-to-mono'
+    ? mode
+    : 'normal';
 }
 
 export function normalizeAudioPitchSemitones(semitones: number | undefined): number {

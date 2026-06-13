@@ -28,6 +28,7 @@ import {
   MoveClipsCommand,
   PackNestedSequenceCommand,
   PiPLayoutCommand,
+  ReplaceMediaCommand,
   RemoveEffectCommand,
   DeleteMediaFolderCommand,
   RemoveMaskCommand,
@@ -57,7 +58,9 @@ import {
   UpdateProjectAudioCommand,
   UpdateProjectSettingsCommand,
   UpdateTrackCommand,
-  createTrack
+  calculateReplaceMediaPatch,
+  createTrack,
+  getReplaceMediaCompatibilityWarnings
 } from '../src';
 import { makeAccessor, makeAdjustmentClip, makeAudioClip, makeProject, makeSubtitleClip, makeTextClip, makeTimeline, makeVideoClip } from './test-utils';
 
@@ -672,6 +675,52 @@ describe('timeline commands', () => {
     expect(accessor.current().tracks[0].clips[0].transform).toMatchObject({ x: 40, y: 30, scaleX: 0.7, scaleY: 0.7 });
     expect(accessor.current().tracks[0].clips[1].transform).toMatchObject({ x: 0, y: 0, scaleX: 1, scaleY: 1 });
     expect(accessor.current().tracks[0].clips[1].border).toMatchObject({ enabled: false, color: '#000000', width: 2 });
+  });
+
+  it('calculates media replacement duration modes', () => {
+    const clip = makeVideoClip({ id: 'clip-replace', duration: 4 });
+    const media = { id: 'media-new', duration: 10 };
+
+    expect(calculateReplaceMediaPatch(clip, media, 'trim-to-original')).toMatchObject({ mediaId: 'media-new', duration: 4, trimStart: 0, trimEnd: 6, speed: 1 });
+    expect(calculateReplaceMediaPatch(clip, media, 'stretch-to-fit')).toMatchObject({ mediaId: 'media-new', duration: 4, trimStart: 0, trimEnd: 0, speed: 2.5 });
+    expect(calculateReplaceMediaPatch(clip, media, 'use-new-duration')).toMatchObject({ mediaId: 'media-new', duration: 10, trimStart: 0, trimEnd: 0, speed: 1 });
+  });
+
+  it('replaces media while preserving clip properties and undoing original media', () => {
+    const accessor = makeAccessor(
+      makeTimeline([
+        makeVideoClip({
+          id: 'clip-replace',
+          mediaId: 'media-old',
+          duration: 4,
+          colorCorrection: { ...DEFAULT_COLOR_CORRECTION, brightness: 0.25 },
+          keyframes: { opacity: [{ id: 'kf-opacity', time: 1, value: 0.5, easing: 'linear' }] }
+        })
+      ])
+    );
+    const manager = new CommandManager();
+
+    manager.execute(new ReplaceMediaCommand(accessor, 'clip-replace', { id: 'media-new', duration: 6 }, 'trim-to-original'));
+
+    const replaced = accessor.current().tracks[0].clips[0];
+    expect(replaced).toMatchObject({
+      id: 'clip-replace',
+      mediaId: 'media-new',
+      duration: 4,
+      trimEnd: 2,
+      colorCorrection: { brightness: 0.25 },
+      keyframes: { opacity: [{ id: 'kf-opacity', time: 1, value: 0.5, easing: 'linear' }] }
+    });
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips[0]).toMatchObject({ mediaId: 'media-old', duration: 4, trimEnd: 0 });
+  });
+
+  it('reports media replacement compatibility warnings', () => {
+    const clip = makeVideoClip({ id: 'clip-video', keyframes: { volume: [{ id: 'kf-volume', time: 1, value: 0.2, easing: 'linear' }] } });
+
+    expect(getReplaceMediaCompatibilityWarnings(clip, { type: 'image', hasAudio: false })).toEqual(['media-type-mismatch', 'missing-audio-for-audio-properties']);
+    expect(getReplaceMediaCompatibilityWarnings(clip, { type: 'video', hasAudio: true })).toEqual([]);
   });
 
   it('removes silent ranges as one undoable command', () => {

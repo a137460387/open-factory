@@ -4,6 +4,7 @@ import type { Effect } from '../effects';
 import type { ExportColorManagementSettings } from './color-management';
 import type {
   AudioFadeCurve,
+  AudioChannelRoutingMode,
   ClipBorder,
   ClipMaskKeyframe,
   ClipPanoramaOutputProjection,
@@ -273,6 +274,7 @@ export interface ExportClip {
   keyframes: ExportClipKeyframes | null;
   kenBurns: boolean;
   volume: number;
+  audioChannelRouting: AudioChannelRoutingMode;
   pan: number;
   eq: TrackEQ;
   compressor: TrackCompressor;

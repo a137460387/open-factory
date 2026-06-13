@@ -58,6 +58,18 @@ describe('project schema migration', () => {
     expect(migrateProjectFile(file).project.timeline.tracks[0].clips[0].border).toEqual(DEFAULT_CLIP_BORDER);
   });
 
+  it('serializes and migrates audio channel routing while old clips default to normal', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-routed', audioChannelRouting: 'swap-stereo' })];
+
+    const file = serializeProject(project);
+    expect(file.project.timeline.tracks[0].clips[0].audioChannelRouting).toBe('swap-stereo');
+    expect(migrateProjectFile(file).project.timeline.tracks[0].clips[0].audioChannelRouting).toBe('swap-stereo');
+
+    delete file.project.timeline.tracks[0].clips[0].audioChannelRouting;
+    expect(migrateProjectFile(file).project.timeline.tracks[0].clips[0].audioChannelRouting).toBe('normal');
+  });
+
   it('keeps absolute path and warning when media is on another drive', () => {
     const file = serializeProject(makeProject(), 'D:/Projects/project.cutproj.json');
 

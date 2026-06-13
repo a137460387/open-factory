@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  normalizeAudioChannelRouting,
   BatchUpdateKeyframeCommand,
   UpdateProjectAudioCommand,
   UpdateTrackCommand,
@@ -8,9 +9,11 @@ import {
   normalizeTrackCompressor,
   normalizeTrackEQ,
   peakToDb,
+  type AudioChannelRoutingMode,
   type BatchUpdateKeyframeItem,
   type DuckingRegion,
   type LoudnessSample,
+  type MediaAsset,
   type Project,
   type Track,
   type TrackCompressor,
@@ -18,7 +21,7 @@ import {
   type TrackEQBand,
   type TrackPatch
 } from '@open-factory/editor-core';
-import { ChevronDown, ChevronRight, SlidersHorizontal, Volume2 } from 'lucide-react';
+import { ArrowLeftRight, AudioLines, ChevronDown, ChevronRight, CircleDot, SlidersHorizontal, Volume2 } from 'lucide-react';
 import { formatTrackType, t, zhCN } from '../../i18n/strings';
 import { analyzeWaveform } from '../../lib/tauri-bridge';
 import { commandManager, projectAccessor, timelineAccessor } from '../../store/commandManager';
@@ -42,11 +45,20 @@ interface DuckingPreview {
   keyframeCount: number;
 }
 
+type ChannelRoutingKind = 'stereo' | 'mono' | 'routed' | 'mixed' | 'none';
+
+interface ChannelRoutingSummary {
+  kind: ChannelRoutingKind;
+  title: string;
+  routedClipCount: number;
+}
+
 export function AudioMixer() {
   const project = useEditorStore((state) => state.project);
   const trackLevels = useAudioMeterStore((state) => state.trackLevels);
   const masterLevel = useAudioMeterStore((state) => state.masterLevel);
   const tracks = useMemo(() => project.timeline.tracks.filter((track) => track.type === 'audio' || track.type === 'video'), [project.timeline.tracks]);
+  const mediaById = useMemo(() => new Map(project.media.map((asset) => [asset.id, asset])), [project.media]);
   const defaultDuckingSettings = useMemo(() => makeDefaultDuckingSettings(tracks), [tracks]);
   const [expandedTrackIds, setExpandedTrackIds] = useState<Record<string, boolean>>({});
   const [duckingOpen, setDuckingOpen] = useState(false);
@@ -172,6 +184,7 @@ export function AudioMixer() {
             key={track.id}
             track={track}
             level={trackLevels[track.id] ?? getSilentMeterLevel()}
+            channelRoutingSummary={summarizeTrackChannelRouting(track, mediaById)}
             expanded={Boolean(expandedTrackIds[track.id])}
             onToggle={() => toggleTrack(track.id)}
             onUpdate={(patch) => updateTrack(track.id, patch)}
@@ -355,6 +368,37 @@ function normalizeDuckingSettings(settings: DuckingSettings, tracks: Track[]): D
   };
 }
 
+function summarizeTrackChannelRouting(track: Track, mediaById: Map<string, MediaAsset>): ChannelRoutingSummary {
+  const clipsWithMedia = track.clips.filter((clip) => 'mediaId' in clip);
+  const routedModes = clipsWithMedia.map((clip) => normalizeAudioChannelRouting(clip.audioChannelRouting)).filter((mode) => mode !== 'normal');
+  if (routedModes.length > 0) {
+    const uniqueModes = Array.from(new Set(routedModes));
+    if (uniqueModes.length === 1) {
+      const mode = uniqueModes[0] as AudioChannelRoutingMode;
+      return {
+        kind: 'routed',
+        title: zhCN.mixer.channelRoutingRouted(zhCN.inspector.audioChannelRoutingOptions[mode], routedModes.length),
+        routedClipCount: routedModes.length
+      };
+    }
+    return {
+      kind: 'mixed',
+      title: zhCN.mixer.channelRoutingMixed(routedModes.length),
+      routedClipCount: routedModes.length
+    };
+  }
+  const sourceChannels = clipsWithMedia
+    .map((clip) => mediaById.get(clip.mediaId)?.audioChannels)
+    .filter((channels): channels is number => typeof channels === 'number' && Number.isFinite(channels) && channels > 0);
+  if (sourceChannels.some((channels) => channels === 1)) {
+    return { kind: 'mono', title: zhCN.mixer.channelRoutingMono, routedClipCount: 0 };
+  }
+  if (sourceChannels.some((channels) => channels >= 2)) {
+    return { kind: 'stereo', title: zhCN.mixer.channelRoutingStereo, routedClipCount: 0 };
+  }
+  return { kind: 'none', title: zhCN.mixer.channelRoutingNone, routedClipCount: 0 };
+}
+
 async function collectTrackLoudnessSamples(project: Project, track: Track): Promise<LoudnessSample[]> {
   const samples: LoudnessSample[] = [];
   for (const clip of track.clips) {
@@ -390,12 +434,14 @@ function clampNumber(value: number, min: number, max: number, fallback: number):
 function ChannelStrip({
   track,
   level,
+  channelRoutingSummary,
   expanded,
   onToggle,
   onUpdate
 }: {
   track: Track;
   level: AudioMeterLevel;
+  channelRoutingSummary: ChannelRoutingSummary;
   expanded: boolean;
   onToggle(): void;
   onUpdate(patch: TrackPatch): void;
@@ -416,6 +462,7 @@ function ChannelStrip({
           </div>
           <div className="text-[10px] uppercase text-slate-500">{formatTrackType(track.type)}</div>
         </div>
+        <ChannelRoutingBadge summary={channelRoutingSummary} trackId={track.id} />
         <button
           className="flex h-6 w-6 flex-none items-center justify-center rounded border border-line bg-white text-slate-600 hover:bg-slate-50"
           type="button"
@@ -436,6 +483,22 @@ function ChannelStrip({
         <MixerToggle label="S" title={zhCN.mixer.soloTrack} active={Boolean(track.solo)} testId={`mixer-solo-${track.id}`} onClick={() => onUpdate({ solo: !track.solo })} />
       </div>
       {expanded ? <ChannelProcessingPanel track={track} onUpdate={onUpdate} /> : null}
+    </div>
+  );
+}
+
+function ChannelRoutingBadge({ summary, trackId }: { summary: ChannelRoutingSummary; trackId: string }) {
+  const Icon = summary.kind === 'routed' || summary.kind === 'mixed' ? ArrowLeftRight : summary.kind === 'mono' ? CircleDot : AudioLines;
+  const active = summary.kind === 'routed' || summary.kind === 'mixed';
+  return (
+    <div
+      className={`flex h-6 w-6 flex-none items-center justify-center rounded border ${active ? 'border-brand bg-brand text-white' : 'border-line bg-white text-slate-500'}`}
+      title={summary.title}
+      data-testid={`mixer-channel-routing-${trackId}`}
+      data-routing-kind={summary.kind}
+      data-routed-clip-count={summary.routedClipCount}
+    >
+      <Icon size={14} />
     </div>
   );
 }

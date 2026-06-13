@@ -142,9 +142,29 @@ describe('keyframe interpolation', () => {
     expect(getClipStaticKeyframeValue(text, 'y')).toBe(20);
     expect(getClipStaticKeyframeValue(text, 'volume')).toBe(1);
     expect(getClipStaticKeyframeValue(makeVideoClip({ speed: 1.5 }), 'speed')).toBe(1.5);
+    expect(getClipStaticKeyframeValue(text, 'pathStartOffset')).toBe(0);
     expect(getClipKeyframeValue(text, 'x', 0.5)).toBe(0.5);
     expect(animated).toMatchObject({ transform: { x: 0.5, y: -0.5, opacity: 0.75 } });
     expect('volume' in animated).toBe(false);
+  });
+
+  it('resolves animated panorama keyframes and static panorama fallbacks', () => {
+    const clip = makeVideoClip({
+      panorama: { yaw: 5, pitch: -2, roll: 1, fov: 90, outputProjection: 'flat' },
+      keyframes: {
+        yaw: [
+          { id: 'yaw-a', time: 0, value: 0, easing: 'linear' },
+          { id: 'yaw-b', time: 2, value: 90, easing: 'linear' }
+        ],
+        pitch: [{ id: 'pitch-a', time: 0, value: 10, easing: 'linear' }],
+        roll: [{ id: 'roll-a', time: 0, value: -10, easing: 'linear' }]
+      }
+    });
+
+    expect(getClipStaticKeyframeValue(clip, 'yaw')).toBe(5);
+    expect(getClipStaticKeyframeValue(clip, 'pitch')).toBe(-2);
+    expect(getClipStaticKeyframeValue(clip, 'roll')).toBe(1);
+    expect(applyClipKeyframes(clip, 1).panorama).toMatchObject({ yaw: 45, pitch: 10, roll: -10 });
   });
 
   it('sets, clones, and removes keyframes without sharing nested arrays', () => {
@@ -154,6 +174,9 @@ describe('keyframe interpolation', () => {
     expect(cloned).toEqual(withOpacity);
     cloned!.opacity![0].value = 1;
     expect(withOpacity.opacity?.[0].value).toBe(0.25);
+    expect(setKeyframeForProperty(withOpacity, 'opacity', { id: 'opacity-a', time: 0.75, value: 0.5, easing: 'ease-in' }, 1).opacity).toEqual([
+      { id: 'opacity-a', time: 0.75, value: 0.5, easing: 'ease-in' }
+    ]);
     expect(removeKeyframeForProperty(withOpacity, 'volume', 'missing')).toEqual(withOpacity);
     expect(removeKeyframeForProperty(withOpacity, 'opacity', 'opacity-a')).toBeUndefined();
   });

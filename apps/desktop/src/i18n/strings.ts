@@ -709,6 +709,11 @@ const zh = {
     attack: '启动',
     release: '释放',
     makeupGain: '补偿',
+    channelRoutingStereo: '立体声正常',
+    channelRoutingMono: '单声道源',
+    channelRoutingNone: '无声道信息',
+    channelRoutingMixed: (count: number) => `${count} 个片段使用不同声道路由`,
+    channelRoutingRouted: (mode: string, count: number) => `${count} 个片段：${mode}`,
     duckingButton: '闪避',
     duckingTitle: '音频闪避',
     duckingLeadTrack: '主导轨',
@@ -811,6 +816,24 @@ const zh = {
     silenceAction: '自动剪切静音段',
     sceneAction: '自动按场景分割',
     generateSubtitlesAction: '自动生成字幕',
+    replaceMediaAction: '替换媒体',
+    replaceMediaTitle: '替换媒体',
+    replaceMediaChooseFailed: '无法选择替换媒体。',
+    replaceMediaFailedTitle: '替换媒体失败',
+    replaceMediaSuccessTitle: '媒体已替换',
+    replaceMediaSuccessMessage: '片段属性已保留。',
+    replaceMediaDurationMode: '时长处理',
+    replaceMediaModes: {
+      'trim-to-original': '裁剪到原时长',
+      'stretch-to-fit': '拉伸适配',
+      'use-new-duration': '使用新媒体时长'
+    },
+    replaceMediaWarnings: {
+      title: '兼容性警告',
+      'media-type-mismatch': '新媒体类型与原片段类型不一致，部分预览或导出行为可能受影响。',
+      'missing-audio-for-audio-properties': '原片段包含音频属性或音频关键帧，但新媒体没有可用音频。'
+    },
+    replaceMediaConfirm: '确认替换',
     silenceUnavailableTitle: '无法检测静音',
     silenceUnavailableMessage: '请选择带音频的音频或视频片段。',
     silenceRemovedTitle: '静音段已删除',
@@ -1128,6 +1151,8 @@ const zh = {
       position: '位置',
       sensitivity: '灵敏度',
       volume: '音量',
+      audioChannelRouting: '声道路由',
+      audioChannelRoutingMode: '路由模式',
       pitchShift: '音高',
       semitones: '半音',
       reverseAudio: '音频反转',
@@ -1205,6 +1230,16 @@ const zh = {
       peakUnavailableTitle: '没有可用峰值',
       peakUnavailableMessage: '请先对音频或视频片段执行节拍/峰值检测。',
       peakOutOfRange: '选中字幕起点 ±0.5s 内没有峰值。'
+    },
+    audioChannelRoutingOptions: {
+      normal: '正常',
+      'mono-left': '路由到左声道',
+      'mono-right': '路由到右声道',
+      'mono-both': '双声道',
+      'swap-stereo': '交换 L/R',
+      'stereo-left-mono': '提取左声道为单声道',
+      'stereo-right-mono': '提取右声道为单声道',
+      'stereo-to-mono': '合并为单声道'
     },
     projection: {
       flat: '普通平面',
@@ -2648,6 +2683,11 @@ const enOverrides = {
     attack: 'Attack',
     release: 'Release',
     makeupGain: 'Makeup',
+    channelRoutingStereo: 'Normal stereo',
+    channelRoutingMono: 'Mono source',
+    channelRoutingNone: 'No channel info',
+    channelRoutingMixed: (count: number) => `${count} clips use different channel routes`,
+    channelRoutingRouted: (mode: string, count: number) => `${count} clips: ${mode}`,
     duckingButton: 'Ducking',
     duckingTitle: 'Audio Ducking',
     duckingLeadTrack: 'Lead Track',
@@ -2750,6 +2790,24 @@ const enOverrides = {
     silenceAction: 'Auto-cut Silence',
     sceneAction: 'Split by Scene',
     generateSubtitlesAction: 'Generate Subtitles',
+    replaceMediaAction: 'Replace Media',
+    replaceMediaTitle: 'Replace Media',
+    replaceMediaChooseFailed: 'Unable to choose replacement media.',
+    replaceMediaFailedTitle: 'Replace media failed',
+    replaceMediaSuccessTitle: 'Media replaced',
+    replaceMediaSuccessMessage: 'Clip properties were preserved.',
+    replaceMediaDurationMode: 'Duration handling',
+    replaceMediaModes: {
+      'trim-to-original': 'Trim to original duration',
+      'stretch-to-fit': 'Stretch to fit',
+      'use-new-duration': 'Use new media duration'
+    },
+    replaceMediaWarnings: {
+      title: 'Compatibility warnings',
+      'media-type-mismatch': 'The new media type differs from the original clip type; preview or export behavior may be affected.',
+      'missing-audio-for-audio-properties': 'The original clip has audio properties or audio keyframes, but the new media has no available audio.'
+    },
+    replaceMediaConfirm: 'Replace',
     timelineRejectedMessage: 'The timeline rejected this operation.',
     trackTypes: {
       video: 'Video',
@@ -2932,6 +2990,8 @@ const enOverrides = {
       position: 'Position',
       sensitivity: 'Sensitivity',
       volume: 'Volume',
+      audioChannelRouting: 'Channel Routing',
+      audioChannelRoutingMode: 'Routing Mode',
       pitchShift: 'Pitch Shift',
       semitones: 'semitones',
       reverseAudio: 'Reverse Audio',
@@ -2990,6 +3050,16 @@ const enOverrides = {
       peakUnavailableTitle: 'No available peak',
       peakUnavailableMessage: 'Run beat or peak detection on an audio/video clip first.',
       peakOutOfRange: 'No peak was found within 0.5s of the selected subtitle start.'
+    },
+    audioChannelRoutingOptions: {
+      normal: 'Normal',
+      'mono-left': 'Route to Left',
+      'mono-right': 'Route to Right',
+      'mono-both': 'Dual Mono',
+      'swap-stereo': 'Swap L/R',
+      'stereo-left-mono': 'Extract Left as Mono',
+      'stereo-right-mono': 'Extract Right as Mono',
+      'stereo-to-mono': 'Merge to Mono'
     },
     projection: {
       flat: 'Flat',

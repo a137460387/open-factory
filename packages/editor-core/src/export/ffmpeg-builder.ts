@@ -16,6 +16,7 @@ import {
   normalizeChromaKey,
   normalizeAudioFadeCurve,
   normalizeAudioFadeDuration,
+  normalizeAudioChannelRouting,
   normalizeAudioDenoise,
   normalizeClipBorder,
   normalizeClipPanoramaView,
@@ -242,6 +243,7 @@ function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project[
             keyframes: buildExportClipKeyframes(clip.keyframes, clip.duration, trackVolume),
             kenBurns: clip.type === 'image' ? Boolean(clip.kenBurns) : false,
             volume: ('volume' in clip ? clip.volume : 1) * trackVolume,
+            audioChannelRouting: normalizeAudioChannelRouting(clip.audioChannelRouting),
             pan: trackPan,
             eq: trackEQ,
             compressor: trackCompressor,
@@ -2560,7 +2562,7 @@ function buildAudioFilters(
         getExportClipSourceDuration(clip)
       )},asetpts=PTS-STARTPTS${pitchAndReverseFilters.length > 0 ? `,${pitchAndReverseFilters.join(',')}` : ''}${speedFilters.length > 0 ? `,${speedFilters.join(',')}` : ''}${fadeFilters}${denoiseFilters}${trackProcessingFilters},adelay=${delay}:all=1,${buildVolumeFilter(
         clip
-      )}${buildPanFilter(clip)},aformat=channel_layouts=stereo,aresample=${settings.sampleRate}[${label}]`
+      )}${buildAudioChannelRoutingFilter(clip)}${buildPanFilter(clip)},aformat=channel_layouts=stereo,aresample=${settings.sampleRate}[${label}]`
     );
     labels.push(label);
   }
@@ -2662,6 +2664,27 @@ function buildPanFilter(clip: ExportClip): string {
     return '';
   }
   return `,stereopan=pan=${formatPan(clip.pan)}`;
+}
+
+function buildAudioChannelRoutingFilter(clip: ExportClip): string {
+  switch (clip.audioChannelRouting) {
+    case 'mono-left':
+      return ',pan=stereo|c0=c0|c1=0*c0';
+    case 'mono-right':
+      return ',pan=stereo|c0=0*c0|c1=c0';
+    case 'mono-both':
+      return ',pan=stereo|c0=c0|c1=c0';
+    case 'swap-stereo':
+      return ',pan=stereo|c0=c1|c1=c0';
+    case 'stereo-left-mono':
+      return ',pan=stereo|c0=c0|c1=c0';
+    case 'stereo-right-mono':
+      return ',pan=stereo|c0=c1|c1=c1';
+    case 'stereo-to-mono':
+      return ',pan=mono|c0=0.5*c0+0.5*c1';
+    case 'normal':
+      return '';
+  }
 }
 
 function buildTrackAudioFilters(clip: ExportClip): string {
