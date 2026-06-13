@@ -5,6 +5,7 @@ import {
   normalizeStoredLayoutSettings,
   type EditorLayoutSettings
 } from '../layout/layoutSettings';
+import { DEFAULT_THEME_SETTINGS, normalizeThemeSettings, type ThemeSettings } from '../theme/theme';
 
 const BROWSER_SETTINGS_KEY = 'open-factory:settings';
 
@@ -35,6 +36,7 @@ export interface AppSettings {
   language?: Language;
   layout?: EditorLayoutSettings;
   backup?: BackupSettings;
+  theme?: ThemeSettings;
 }
 
 export async function initializeLanguageFromSettings(): Promise<Language> {
@@ -73,6 +75,18 @@ export async function saveBackupSettings(backup: Partial<BackupSettings>): Promi
   const nextBackup = normalizeBackupSettings({ ...settings.backup, ...backup }) ?? defaultBackupSettings();
   await writeAppSettings({ ...settings, backup: nextBackup });
   return nextBackup;
+}
+
+export async function readThemeSettings(): Promise<ThemeSettings> {
+  const settings = await readAppSettings();
+  return settings.theme ?? normalizeThemeSettings(DEFAULT_THEME_SETTINGS);
+}
+
+export async function saveThemeSettings(theme: Partial<ThemeSettings>): Promise<ThemeSettings> {
+  const settings = await readAppSettings();
+  const nextTheme = normalizeThemeSettings(theme);
+  await writeAppSettings({ ...settings, theme: nextTheme });
+  return nextTheme;
 }
 
 export async function readAppSettings(): Promise<AppSettings> {
@@ -126,6 +140,9 @@ function normalizeSettings(settings: Partial<AppSettings>): AppSettings {
   const backup = normalizeBackupSettings(settings.backup);
   if (backup) {
     normalized.backup = backup;
+  }
+  if (settings.theme) {
+    normalized.theme = normalizeThemeSettings(settings.theme);
   }
   return normalized;
 }

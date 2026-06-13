@@ -136,6 +136,7 @@ const zh = {
     subtitle: '本地配置和素材库',
     tabs: {
       general: '通用',
+      appearance: '外观',
       lutLibrary: 'LUT库',
       shortcuts: '快捷键',
       macros: '宏',
@@ -154,6 +155,30 @@ const zh = {
       options: {
         zh: '中文',
         en: 'English'
+      }
+    },
+    appearance: {
+      title: '外观',
+      description: '切换内置主题，或保存可分享的本机自定义主题。',
+      theme: '主题',
+      customTitle: '自定义主题',
+      customDescription: '调整颜色后可在预览中检查，再保存为当前主题。',
+      customName: '主题名称',
+      defaultCustomName: '自定义主题',
+      primaryColor: '主色调',
+      accentColor: '强调色',
+      backgroundColor: '背景色',
+      textColor: '文字色',
+      saveCustom: '保存自定义主题',
+      deleteCustom: '删除自定义主题',
+      deleteDisabled: '内置主题不能删除',
+      saveFailed: '主题保存失败',
+      saveFailedMessage: '无法写入主题设置。',
+      themeNames: {
+        dark: '深色',
+        light: '浅色',
+        'high-contrast': '高对比度',
+        oled: 'OLED 纯黑'
       }
     },
     lutLibrary: {
@@ -1596,6 +1621,7 @@ const enOverrides = {
     subtitle: 'Local preferences and libraries',
     tabs: {
       general: 'General',
+      appearance: 'Appearance',
       lutLibrary: 'LUT Library',
       shortcuts: 'Shortcuts',
       macros: 'Macros',
@@ -1614,6 +1640,30 @@ const enOverrides = {
       options: {
         zh: '中文',
         en: 'English'
+      }
+    },
+    appearance: {
+      title: 'Appearance',
+      description: 'Switch built-in themes or save a local custom theme.',
+      theme: 'Theme',
+      customTitle: 'Custom Theme',
+      customDescription: 'Adjust colors, check the preview, then save them as the current theme.',
+      customName: 'Theme Name',
+      defaultCustomName: 'Custom Theme',
+      primaryColor: 'Primary Color',
+      accentColor: 'Accent Color',
+      backgroundColor: 'Background Color',
+      textColor: 'Text Color',
+      saveCustom: 'Save Custom Theme',
+      deleteCustom: 'Delete Custom Theme',
+      deleteDisabled: 'Built-in themes cannot be deleted',
+      saveFailed: 'Theme save failed',
+      saveFailedMessage: 'Unable to write theme settings.',
+      themeNames: {
+        dark: 'Dark',
+        light: 'Light',
+        'high-contrast': 'High Contrast',
+        oled: 'OLED Black'
       }
     },
     lutLibrary: {

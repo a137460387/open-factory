@@ -1,15 +1,28 @@
 import type { ColorScopes } from '@open-factory/editor-core';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { zhCN } from '../../i18n/strings';
 import type { PreviewFrameReadback } from '../../lib/preview/renderer';
+import { useTheme } from '../../theme/useTheme';
 import type { ColorScopesWorkerRequest, ColorScopesWorkerResponse } from '../../workers/color-scopes.worker';
 
 type ScopeTab = 'histogram' | 'waveform' | 'vectorscope';
+interface ScopeDrawColors {
+  background: string;
+  guide: string;
+}
 
 export function ColorScopesPanel({ frame, active }: { frame?: PreviewFrameReadback; active: boolean }) {
+  const theme = useTheme();
   const [tab, setTab] = useState<ScopeTab>('histogram');
   const [scopes, setScopes] = useState<ColorScopes>();
   const workerRef = useRef<Worker>();
+  const drawColors = useMemo<ScopeDrawColors>(
+    () => ({
+      background: theme.colors.scopeBackground,
+      guide: theme.colors.scopeGuide
+    }),
+    [theme.colors.scopeBackground, theme.colors.scopeGuide]
+  );
 
   useEffect(() => {
     if (!active || !frame || frame.data.length === 0) {
@@ -45,8 +58,13 @@ export function ColorScopesPanel({ frame, active }: { frame?: PreviewFrameReadba
   );
 
   return (
-    <section className="min-h-0 border-t border-black/30 bg-[#10141b]" data-testid="color-scopes-panel">
-      <div className="flex h-9 items-center justify-between border-b border-white/10 px-3">
+    <section
+      className="min-h-0 border-t"
+      data-testid="color-scopes-panel"
+      data-theme-scope-background={drawColors.background}
+      style={{ backgroundColor: drawColors.background, borderColor: theme.colors.border }}
+    >
+      <div className="flex h-9 items-center justify-between border-b px-3" style={{ borderColor: theme.colors.border }}>
         <div className="flex items-center gap-1">
           <ScopeTabButton id="histogram" label={zhCN.scopes.histogram} active={tab === 'histogram'} onClick={() => setTab('histogram')} />
           <ScopeTabButton id="waveform" label={zhCN.scopes.waveform} active={tab === 'waveform'} onClick={() => setTab('waveform')} />
@@ -54,9 +72,9 @@ export function ColorScopesPanel({ frame, active }: { frame?: PreviewFrameReadba
         </div>
       </div>
       <div className="h-[140px] px-3 py-2">
-        {tab === 'histogram' ? <HistogramCanvas scopes={scopes} /> : null}
-        {tab === 'waveform' ? <WaveformCanvas scopes={scopes} /> : null}
-        {tab === 'vectorscope' ? <VectorscopeCanvas scopes={scopes} /> : null}
+        {tab === 'histogram' ? <HistogramCanvas scopes={scopes} colors={drawColors} /> : null}
+        {tab === 'waveform' ? <WaveformCanvas scopes={scopes} colors={drawColors} /> : null}
+        {tab === 'vectorscope' ? <VectorscopeCanvas scopes={scopes} colors={drawColors} /> : null}
       </div>
     </section>
   );
@@ -77,9 +95,9 @@ function ScopeTabButton({ id, label, active, onClick }: { id: ScopeTab; label: s
   );
 }
 
-function HistogramCanvas({ scopes }: { scopes?: ColorScopes }) {
+function HistogramCanvas({ scopes, colors }: { scopes?: ColorScopes; colors: ScopeDrawColors }) {
   const ref = useCanvas((context, width, height) => {
-    drawScopeBackground(context, width, height);
+    drawScopeBackground(context, width, height, colors);
     if (!scopes) {
       return;
     }
@@ -87,13 +105,13 @@ function HistogramCanvas({ scopes }: { scopes?: ColorScopes }) {
     drawHistogramChannel(context, scopes.histogram.r, max, width, height, 'rgba(239,68,68,0.72)');
     drawHistogramChannel(context, scopes.histogram.g, max, width, height, 'rgba(34,197,94,0.72)');
     drawHistogramChannel(context, scopes.histogram.b, max, width, height, 'rgba(59,130,246,0.72)');
-  }, [scopes]);
+  }, [scopes, colors]);
   return <canvas ref={ref} width={520} height={140} className="h-full w-full" data-testid="color-scope-histogram" />;
 }
 
-function WaveformCanvas({ scopes }: { scopes?: ColorScopes }) {
+function WaveformCanvas({ scopes, colors }: { scopes?: ColorScopes; colors: ScopeDrawColors }) {
   const ref = useCanvas((context, width, height) => {
-    drawScopeBackground(context, width, height);
+    drawScopeBackground(context, width, height, colors);
     drawHorizontalGuide(context, width, height, 0.5);
     if (!scopes) {
       return;
@@ -112,17 +130,17 @@ function WaveformCanvas({ scopes }: { scopes?: ColorScopes }) {
       });
     });
     context.globalAlpha = 1;
-  }, [scopes]);
+  }, [scopes, colors]);
   return <canvas ref={ref} width={520} height={140} className="h-full w-full" data-testid="color-scope-waveform" />;
 }
 
-function VectorscopeCanvas({ scopes }: { scopes?: ColorScopes }) {
+function VectorscopeCanvas({ scopes, colors }: { scopes?: ColorScopes; colors: ScopeDrawColors }) {
   const ref = useCanvas((context, width, height) => {
-    drawScopeBackground(context, width, height);
+    drawScopeBackground(context, width, height, colors);
     const radius = Math.min(width, height) * 0.42;
     const centerX = width / 2;
     const centerY = height / 2;
-    context.strokeStyle = 'rgba(255,255,255,0.24)';
+    context.strokeStyle = colors.guide;
     context.beginPath();
     context.arc(centerX, centerY, radius, 0, Math.PI * 2);
     context.stroke();
@@ -141,7 +159,7 @@ function VectorscopeCanvas({ scopes }: { scopes?: ColorScopes }) {
       context.fillRect(centerX + point.x * radius, centerY - point.y * radius, 2, 2);
     }
     context.globalAlpha = 1;
-  }, [scopes]);
+  }, [scopes, colors]);
   return <canvas ref={ref} width={520} height={140} className="h-full w-full" data-testid="color-scope-vectorscope" />;
 }
 
@@ -158,11 +176,11 @@ function useCanvas(draw: (context: CanvasRenderingContext2D, width: number, heig
   return ref;
 }
 
-function drawScopeBackground(context: CanvasRenderingContext2D, width: number, height: number): void {
+function drawScopeBackground(context: CanvasRenderingContext2D, width: number, height: number, colors: ScopeDrawColors): void {
   context.clearRect(0, 0, width, height);
-  context.fillStyle = '#0b0f14';
+  context.fillStyle = colors.background;
   context.fillRect(0, 0, width, height);
-  context.strokeStyle = 'rgba(255,255,255,0.08)';
+  context.strokeStyle = colors.guide;
   context.lineWidth = 1;
   for (let index = 1; index < 4; index += 1) {
     drawHorizontalGuide(context, width, height, index / 4);

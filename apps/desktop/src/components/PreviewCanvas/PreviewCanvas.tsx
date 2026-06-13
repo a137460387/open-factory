@@ -51,6 +51,7 @@ import { showToast } from '../../lib/toast';
 import { useAudioMeterStore } from '../../store/audioMeterStore';
 import { commandManager, projectAccessor, timelineAccessor } from '../../store/commandManager';
 import { useEditorStore } from '../../store/editorStore';
+import { useTheme } from '../../theme/useTheme';
 
 const PREVIEW_CANVAS_WIDTH = 1280;
 const PREVIEW_CANVAS_HEIGHT = 720;
@@ -58,6 +59,7 @@ const CANVAS_TRANSFORM_HANDLES: CanvasTransformHandle[] = ['nw', 'n', 'ne', 'e',
 
 export function PreviewCanvas() {
   const t = zhCN.preview;
+  const theme = useTheme();
   const compareFrameRef = useRef<HTMLDivElement | null>(null);
   const transformDragRef = useRef<CanvasTransformDrag | null>(null);
   const pathMaskDragRef = useRef<PathMaskDrag | null>(null);
@@ -620,8 +622,12 @@ export function PreviewCanvas() {
   }, [isPlaying, playbackRate, project.timeline, resetAudioLevels, setIsPlaying, setPlayheadTime]);
 
   return (
-    <section className="flex min-h-0 flex-col bg-[#1b2028]">
-      <div className="relative z-40 flex items-center justify-between border-b border-black/30 px-3 py-2 text-white">
+    <section
+      className="flex min-h-0 flex-col"
+      data-theme-canvas-background={theme.colors.canvasBackground}
+      style={{ backgroundColor: theme.colors.canvasBackground, color: theme.colors.textPrimary }}
+    >
+      <div className="relative z-40 flex items-center justify-between border-b px-3 py-2" style={{ borderColor: theme.colors.border }}>
         <div>
           <div className="text-sm font-semibold">{t.title}</div>
           <div className="text-xs text-slate-300">{t.canvasSize}</div>
@@ -706,7 +712,11 @@ export function PreviewCanvas() {
       </div>
       <div className={scopesOpen ? 'grid min-h-0 flex-1 grid-rows-[minmax(0,1fr)_180px]' : 'flex min-h-0 flex-1 items-center justify-center p-5'}>
         <div className={scopesOpen ? 'flex min-h-0 items-center justify-center p-4' : 'contents'}>
-          <div ref={compareFrameRef} className="relative aspect-video w-full max-w-[960px] overflow-hidden rounded-md bg-black shadow-soft">
+          <div
+            ref={compareFrameRef}
+            className="relative aspect-video w-full max-w-[960px] overflow-hidden rounded-md shadow-soft"
+            style={{ backgroundColor: theme.colors.canvasBackground }}
+          >
             <canvas
               ref={canvasRef}
               width={1280}

@@ -1,6 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TauriMocks } from '../lib/tauri-bridge';
-import { readAppSettings, readBackupSettings, readLayoutSettings, saveBackupSettings, saveLanguageSetting, saveLayoutSettings } from './appSettings';
+import {
+  readAppSettings,
+  readBackupSettings,
+  readLayoutSettings,
+  readThemeSettings,
+  saveBackupSettings,
+  saveLanguageSetting,
+  saveLayoutSettings,
+  saveThemeSettings
+} from './appSettings';
 
 describe('app settings storage', () => {
   const appDataDir = 'C:/Users/E2E/AppData/Roaming/open-factory';
@@ -113,5 +122,30 @@ describe('app settings storage', () => {
         webdav: { enabled: false }
       }
     });
+  });
+
+  it('persists theme settings without overwriting existing settings', async () => {
+    await saveLanguageSetting('en');
+    await saveLayoutSettings({ leftPanelCollapsed: true });
+
+    const theme = await saveThemeSettings({
+      activeThemeId: 'light',
+      customThemes: []
+    });
+
+    expect(theme).toEqual({ activeThemeId: 'light', customThemes: [] });
+    expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({
+      language: 'en',
+      layout: {
+        timelineHeightPx: 260,
+        leftPanelCollapsed: true,
+        rightPanelCollapsed: false
+      },
+      theme: {
+        activeThemeId: 'light',
+        customThemes: []
+      }
+    });
+    await expect(readThemeSettings()).resolves.toEqual(theme);
   });
 });

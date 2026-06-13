@@ -4,15 +4,15 @@ export default {
   theme: {
     extend: {
       colors: {
-        ink: '#16181d',
-        panel: '#f5f6f8',
-        line: '#d9dde5',
-        brand: '#1f7a68',
-        coral: '#d9553f',
-        amber: '#c88922'
+        ink: 'var(--color-text-primary)',
+        panel: 'var(--color-bg-secondary)',
+        line: 'var(--color-border)',
+        brand: 'var(--color-accent)',
+        coral: 'var(--color-accent-warm)',
+        amber: 'var(--color-warning)'
       },
       boxShadow: {
-        soft: '0 12px 28px rgba(20, 24, 32, 0.10)'
+        soft: 'var(--shadow-soft)'
       }
     }
   },

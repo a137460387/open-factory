@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { FolderOpen, Star, X } from 'lucide-react';
+import { FolderOpen, Save, Star, Trash2, X } from 'lucide-react';
 import { UpdateClipCommand, type Clip, type Project, type Timeline } from '@open-factory/editor-core';
 import { formatBackupDisplayTime } from '../backup/projectBackup';
 import { getLanguage, normalizeLanguage, zhCN, type Language } from '../i18n/strings';
@@ -30,6 +30,19 @@ import { useEditorStore } from '../store/editorStore';
 import { PROXY_RESOLUTION_PRESETS, PROXY_TRIGGER_THRESHOLDS, useProxySettingsStore, type ProxyResolutionPreset, type ProxyTriggerThreshold } from '../store/proxySettingsStore';
 import { useTranslationSettingsStore, type TranslationProvider } from '../store/translationSettingsStore';
 import { DEFAULT_BACKUP_SETTINGS, readBackupSettings, saveBackupSettings, saveLanguageSetting, type BackupSettings } from './appSettings';
+import {
+  BUILTIN_THEME_IDS,
+  DEFAULT_CUSTOM_THEME_COLORS,
+  deleteCustomTheme,
+  extractCustomThemeColors,
+  isBuiltinThemeId,
+  resolveTheme,
+  upsertCustomTheme,
+  type BuiltinThemeId,
+  type CustomThemeColors,
+  type ThemeSettings
+} from '../theme/theme';
+import { getCurrentThemeSettings, setThemeSettings, useTheme } from '../theme/useTheme';
 
 interface SettingsDialogProps {
   open: boolean;
@@ -42,7 +55,7 @@ interface SettingsDialogProps {
   onClose(): void;
 }
 
-type SettingsTab = 'general' | 'lut-library' | 'shortcuts' | 'macros' | 'translation' | 'proxy' | 'backup' | 'plugins';
+type SettingsTab = 'general' | 'appearance' | 'lut-library' | 'shortcuts' | 'macros' | 'translation' | 'proxy' | 'backup' | 'plugins';
 
 export function SettingsDialog({ open, project, selectedClip, shortcutBindings, macros, onShortcutBindingsChange, onMacrosChange, onClose }: SettingsDialogProps) {
   const t = zhCN.settings;
@@ -78,6 +91,11 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
   const effectiveBindings = useMemo(() => getEffectiveTimelineShortcutBindings(shortcutBindings), [shortcutBindings]);
   const conflicts = useMemo(() => detectTimelineShortcutConflicts(shortcutBindings), [shortcutBindings]);
   const macroConflicts = useMemo(() => detectMacroShortcutConflicts(macros, shortcutBindings), [macros, shortcutBindings]);
+  const currentTheme = useTheme();
+  const [themeSettings, setThemeSettingsState] = useState<ThemeSettings>(() => getCurrentThemeSettings());
+  const [customThemeName, setCustomThemeName] = useState('');
+  const [customThemeColors, setCustomThemeColors] = useState<CustomThemeColors>(() => ({ ...DEFAULT_CUSTOM_THEME_COLORS }));
+  const activeTheme = useMemo(() => resolveTheme(themeSettings), [themeSettings]);
 
   useEffect(() => {
     if (!open) {
@@ -85,6 +103,7 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
     }
     void refresh();
     void loadBackupSettings();
+    hydrateThemeForm(getCurrentThemeSettings());
     showCurrentPlugins();
     return () => setPreviewTimeline(undefined);
   }, [open, setPreviewTimeline]);
@@ -339,6 +358,65 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
     }
   }
 
+  function hydrateThemeForm(settings: ThemeSettings) {
+    const normalized = getCurrentThemeSettings();
+    const nextSettings = settings ?? normalized;
+    const activeCustomTheme = nextSettings.customThemes.find((theme) => theme.id === nextSettings.activeThemeId);
+    const resolved = resolveTheme(nextSettings);
+    setThemeSettingsState(nextSettings);
+    setCustomThemeName(activeCustomTheme?.name ?? t.appearance.defaultCustomName);
+    setCustomThemeColors(activeCustomTheme?.colors ?? extractCustomThemeColors(resolved));
+  }
+
+  async function updateThemeSettings(nextSettings: ThemeSettings) {
+    setThemeSettingsState(nextSettings);
+    try {
+      await setThemeSettings(nextSettings);
+    } catch (themeError) {
+      showToast({
+        kind: 'warning',
+        title: t.appearance.saveFailed,
+        message: themeError instanceof Error ? themeError.message : t.appearance.saveFailedMessage
+      });
+    }
+  }
+
+  async function selectTheme(themeId: string) {
+    const nextSettings: ThemeSettings = {
+      ...themeSettings,
+      activeThemeId: themeId
+    };
+    hydrateThemeForm(nextSettings);
+    await updateThemeSettings(nextSettings);
+  }
+
+  async function saveCustomTheme() {
+    const activeCustomTheme = themeSettings.customThemes.find((theme) => theme.id === themeSettings.activeThemeId);
+    const result = upsertCustomTheme(themeSettings, {
+      id: activeCustomTheme?.id,
+      name: customThemeName,
+      colors: customThemeColors
+    });
+    hydrateThemeForm(result.settings);
+    await updateThemeSettings(result.settings);
+  }
+
+  async function removeCustomTheme() {
+    if (isBuiltinThemeId(themeSettings.activeThemeId)) {
+      return;
+    }
+    const nextSettings = deleteCustomTheme(themeSettings, themeSettings.activeThemeId);
+    hydrateThemeForm(nextSettings);
+    await updateThemeSettings(nextSettings);
+  }
+
+  function updateCustomThemeColor(key: keyof CustomThemeColors, value: string) {
+    setCustomThemeColors((current) => ({
+      ...current,
+      [key]: value
+    }));
+  }
+
   async function chooseBackupDirectory() {
     try {
       const directory = await openDirectoryDialog();
@@ -401,6 +479,14 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
               onClick={() => setTab('general')}
             >
               {t.tabs.general}
+            </button>
+            <button
+              className={`mt-1 w-full rounded-md px-3 py-2 text-left text-sm font-semibold ${tab === 'appearance' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}
+              type="button"
+              data-testid="settings-tab-appearance"
+              onClick={() => setTab('appearance')}
+            >
+              {t.tabs.appearance}
             </button>
             <button
               className={`mt-1 w-full rounded-md px-3 py-2 text-left text-sm font-semibold ${tab === 'lut-library' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}
@@ -481,6 +567,20 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
                 <div className="rounded-md border border-line bg-panel p-3 text-xs text-slate-600">{t.general.languageDescription}</div>
               </div>
             ) : null}
+            {tab === 'appearance' ? (
+              <AppearanceSettingsPanel
+                settings={themeSettings}
+                activeTheme={activeTheme}
+                liveTheme={currentTheme}
+                customName={customThemeName}
+                customColors={customThemeColors}
+                onThemeChange={(themeId) => void selectTheme(themeId)}
+                onCustomNameChange={setCustomThemeName}
+                onCustomColorChange={updateCustomThemeColor}
+                onSaveCustom={() => void saveCustomTheme()}
+                onDeleteCustom={() => void removeCustomTheme()}
+              />
+            ) : null}
             {tab === 'lut-library' ? (
               <>
                 <div className="mb-3 flex items-center justify-between gap-3">
@@ -533,7 +633,7 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
                           {t.lutLibrary.preview}
                         </button>
                         <button
-                          className="flex-1 rounded-md bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#176858] disabled:cursor-not-allowed disabled:opacity-50"
+                          className="flex-1 rounded-md bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
                           type="button"
                           disabled={!selectedClipCanUseLut}
                           data-testid="lut-library-apply-button"
@@ -703,6 +803,155 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
         </div>
       </div>
     </div>
+  );
+}
+
+function AppearanceSettingsPanel({
+  settings,
+  activeTheme,
+  liveTheme,
+  customName,
+  customColors,
+  onThemeChange,
+  onCustomNameChange,
+  onCustomColorChange,
+  onSaveCustom,
+  onDeleteCustom
+}: {
+  settings: ThemeSettings;
+  activeTheme: ReturnType<typeof resolveTheme>;
+  liveTheme: ReturnType<typeof resolveTheme>;
+  customName: string;
+  customColors: CustomThemeColors;
+  onThemeChange(themeId: string): void;
+  onCustomNameChange(name: string): void;
+  onCustomColorChange(key: keyof CustomThemeColors, value: string): void;
+  onSaveCustom(): void;
+  onDeleteCustom(): void;
+}) {
+  const t = zhCN.settings.appearance;
+  const canDeleteCustom = !isBuiltinThemeId(settings.activeThemeId);
+  const previewTheme = resolveTheme({
+    activeThemeId: '__preview-custom-theme',
+    customThemes: [{ id: '__preview-custom-theme', name: customName || t.defaultCustomName, colors: customColors }]
+  });
+  return (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-sm font-semibold text-ink">{t.title}</h3>
+        <p className="text-xs text-slate-500">{t.description}</p>
+      </div>
+      <label className="block text-xs font-medium text-slate-600">
+        {t.theme}
+        <select
+          className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+          value={settings.activeThemeId}
+          data-testid="theme-select"
+          onChange={(event) => onThemeChange(event.target.value)}
+        >
+          {BUILTIN_THEME_IDS.map((themeId: BuiltinThemeId) => (
+            <option key={themeId} value={themeId}>
+              {t.themeNames[themeId]}
+            </option>
+          ))}
+          {settings.customThemes.map((theme) => (
+            <option key={theme.id} value={theme.id}>
+              {theme.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <div
+        className="rounded-md border p-3"
+        data-testid="theme-preview"
+        data-active-theme={activeTheme.id}
+        data-live-theme={liveTheme.id}
+        style={{
+          borderColor: activeTheme.colors.border,
+          backgroundColor: activeTheme.colors.bgPrimary,
+          color: activeTheme.colors.textPrimary
+        }}
+      >
+        <div className="text-xs font-semibold">{activeTheme.name}</div>
+        <div className="mt-2 grid grid-cols-4 gap-2">
+          {[
+            activeTheme.colors.bgSecondary,
+            activeTheme.colors.bgElevated,
+            activeTheme.colors.accent,
+            activeTheme.colors.accentWarm
+          ].map((color) => (
+            <span key={color} className="h-7 rounded border" style={{ borderColor: activeTheme.colors.border, backgroundColor: color }} />
+          ))}
+        </div>
+      </div>
+      <div className="rounded-md border border-line bg-panel p-3">
+        <div className="mb-3">
+          <div className="text-sm font-semibold text-ink">{t.customTitle}</div>
+          <p className="text-xs text-slate-500">{t.customDescription}</p>
+        </div>
+        <label className="block text-xs font-medium text-slate-600">
+          {t.customName}
+          <input
+            className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+            value={customName}
+            data-testid="theme-custom-name-input"
+            onChange={(event) => onCustomNameChange(event.target.value)}
+          />
+        </label>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <ThemeColorInput label={t.primaryColor} value={customColors.primary} testId="theme-primary-color-input" onChange={(value) => onCustomColorChange('primary', value)} />
+          <ThemeColorInput label={t.accentColor} value={customColors.accent} testId="theme-accent-color-input" onChange={(value) => onCustomColorChange('accent', value)} />
+          <ThemeColorInput label={t.backgroundColor} value={customColors.background} testId="theme-background-color-input" onChange={(value) => onCustomColorChange('background', value)} />
+          <ThemeColorInput label={t.textColor} value={customColors.text} testId="theme-text-color-input" onChange={(value) => onCustomColorChange('text', value)} />
+        </div>
+        <div
+          className="mt-3 rounded-md border p-3 text-xs"
+          style={{
+            borderColor: previewTheme.colors.border,
+            backgroundColor: previewTheme.colors.bgPrimary,
+            color: previewTheme.colors.textPrimary
+          }}
+        >
+          <div className="font-semibold">{customName || t.defaultCustomName}</div>
+          <div className="mt-2 flex gap-2">
+            <span className="h-5 w-10 rounded" style={{ backgroundColor: previewTheme.colors.accent }} />
+            <span className="h-5 w-10 rounded" style={{ backgroundColor: previewTheme.colors.accentWarm }} />
+            <span className="h-5 w-10 rounded" style={{ backgroundColor: previewTheme.colors.bgElevated }} />
+          </div>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            className="inline-flex items-center gap-2 rounded-md bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:brightness-95"
+            type="button"
+            data-testid="theme-save-custom-button"
+            onClick={onSaveCustom}
+          >
+            <Save size={14} />
+            {t.saveCustom}
+          </button>
+          <button
+            className="inline-flex items-center gap-2 rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel disabled:opacity-50"
+            type="button"
+            title={canDeleteCustom ? t.deleteCustom : t.deleteDisabled}
+            disabled={!canDeleteCustom}
+            data-testid="theme-delete-custom-button"
+            onClick={onDeleteCustom}
+          >
+            <Trash2 size={14} />
+            {t.deleteCustom}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ThemeColorInput({ label, value, testId, onChange }: { label: string; value: string; testId: string; onChange(value: string): void }) {
+  return (
+    <label className="block text-xs font-medium text-slate-600">
+      {label}
+      <input className="mt-1 h-9 w-full rounded-md border border-line bg-white p-1" type="color" value={value} data-testid={testId} onChange={(event) => onChange(event.target.value)} />
+    </label>
   );
 }
 

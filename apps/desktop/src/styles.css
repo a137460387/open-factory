@@ -3,8 +3,39 @@
 @tailwind utilities;
 
 :root {
-  color: #16181d;
-  background: #edeff3;
+  --color-bg-primary: #10141b;
+  --color-bg-primary-rgb: 16 20 27;
+  --color-bg-secondary: #171d26;
+  --color-bg-secondary-rgb: 23 29 38;
+  --color-bg-elevated: #202733;
+  --color-bg-elevated-rgb: 32 39 51;
+  --color-text-primary: #f4f7fb;
+  --color-text-primary-rgb: 244 247 251;
+  --color-text-secondary: #b8c1cf;
+  --color-text-secondary-rgb: 184 193 207;
+  --color-text-muted: #8190a5;
+  --color-text-muted-rgb: 129 144 165;
+  --color-border: #344053;
+  --color-border-rgb: 52 64 83;
+  --color-accent: #2dd4bf;
+  --color-accent-rgb: 45 212 191;
+  --color-accent-contrast: #061311;
+  --color-accent-contrast-rgb: 6 19 17;
+  --color-accent-warm: #f97316;
+  --color-accent-warm-rgb: 249 115 22;
+  --color-warning: #f59e0b;
+  --color-warning-rgb: 245 158 11;
+  --color-danger: #fb7185;
+  --color-danger-rgb: 251 113 133;
+  --color-canvas-bg: #080c12;
+  --color-canvas-bg-rgb: 8 12 18;
+  --color-scope-bg: #080c12;
+  --color-scope-bg-rgb: 8 12 18;
+  --color-scope-guide: #475569;
+  --color-scope-guide-rgb: 71 85 105;
+  --shadow-soft: 0 14px 32px rgba(0, 0, 0, 0.28);
+  color: var(--color-text-primary);
+  background: var(--color-bg-primary);
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
@@ -21,6 +52,11 @@ body,
   margin: 0;
 }
 
+body {
+  color: var(--color-text-primary);
+  background: var(--color-bg-primary);
+}
+
 button,
 input,
 select,
@@ -33,12 +69,12 @@ button:disabled {
 }
 
 .checkerboard {
-  background-color: #eef1f4;
+  background-color: rgb(var(--color-bg-secondary-rgb));
   background-image:
-    linear-gradient(45deg, #d8dde4 25%, transparent 25%),
-    linear-gradient(-45deg, #d8dde4 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, #d8dde4 75%),
-    linear-gradient(-45deg, transparent 75%, #d8dde4 75%);
+    linear-gradient(45deg, rgba(var(--color-border-rgb), 0.55) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(var(--color-border-rgb), 0.55) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(var(--color-border-rgb), 0.55) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(var(--color-border-rgb), 0.55) 75%);
   background-position:
     0 0,
     0 10px,
@@ -52,11 +88,11 @@ button:disabled {
 }
 
 .timeline-scrollbar::-webkit-scrollbar-track {
-  background: #eef1f4;
+  background: rgb(var(--color-bg-secondary-rgb));
 }
 
 .timeline-scrollbar::-webkit-scrollbar-thumb {
-  background: #aab3c0;
+  background: rgba(var(--color-text-muted-rgb), 0.72);
   border-radius: 999px;
 }
 
@@ -65,10 +101,10 @@ button:disabled {
 }
 
 .mixer-scrollbar::-webkit-scrollbar-track {
-  background: #eef1f4;
+  background: rgb(var(--color-bg-secondary-rgb));
 }
 
 .mixer-scrollbar::-webkit-scrollbar-thumb {
-  background: #aab3c0;
+  background: rgba(var(--color-text-muted-rgb), 0.72);
   border-radius: 999px;
 }
