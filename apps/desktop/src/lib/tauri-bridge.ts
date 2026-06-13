@@ -3,7 +3,7 @@ import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { confirm, message as dialogMessage } from '@tauri-apps/plugin-dialog';
 import { open as openShellPath } from '@tauri-apps/plugin-shell';
-import type { ColorMatchFrameSample, ExportReport, FfmpegCapabilities, FfmpegExportPlan, MotionTrackPoint, ProxyPlan } from '@open-factory/editor-core';
+import type { BeatSensitivity, ColorMatchFrameSample, ExportReport, FfmpegCapabilities, FfmpegExportPlan, MotionTrackPoint, ProxyPlan } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { isTauriRuntime } from './tauri';
 
@@ -295,6 +295,7 @@ export type TauriMocks = Partial<{
   probeMediaPath(path: string): Promise<Partial<import('@open-factory/editor-core').MediaAsset>> | Partial<import('@open-factory/editor-core').MediaAsset>;
   probeMedia(path: string): Promise<MediaProbe> | MediaProbe;
   analyzeWaveform(path: string, samplesPerSec: number): Promise<number[]> | number[];
+  detectBeats(path: string, sensitivity: BeatSensitivity): Promise<number[]> | number[];
   detectSilence(path: string, thresholdDb: number, minGapMs: number): Promise<NativeSilenceRange[]> | NativeSilenceRange[];
   generateProxy(plan: ProxyPlan): Promise<ProxyResult> | ProxyResult;
   detectSceneChanges(request: SceneDetectRequest): Promise<SceneDetectionResult> | SceneDetectionResult;
@@ -511,6 +512,14 @@ export async function analyzeWaveform(path: string, samplesPerSec: number): Prom
     return mock(path, samplesPerSec);
   }
   return invoke<number[]>('analyze_waveform', { path, samplesPerSec });
+}
+
+export async function detectBeats(path: string, sensitivity: BeatSensitivity): Promise<number[]> {
+  const mock = getTauriMocks()?.detectBeats;
+  if (mock) {
+    return mock(path, sensitivity);
+  }
+  return invoke<number[]>('detect_beats', { path, sensitivity });
 }
 
 export async function detectSilence(path: string, thresholdDb: number, minGapMs: number): Promise<NativeSilenceRange[]> {

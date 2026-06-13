@@ -19,13 +19,17 @@ import {
   RippleDeleteCommand,
   RenameMediaFolderCommand,
   SetMediaFolderCollapsedCommand,
+  SnapToBeatsCommand,
   SplitClipCommand,
+  UpdateProjectBeatMarkersCommand,
   UpdateClipCommand,
+  createBeatMarker,
   createId,
   createProject,
   createTrack,
   buildVideoStitchSequence,
   dirname,
+  getClipSpeed,
   getTimelineDuration,
   instantiateProjectTemplate,
   instantiateTitleTemplate,
@@ -36,6 +40,7 @@ import {
   type OrphanMediaIssue,
   type ProjectHealthReport,
   type Project,
+  type BeatSensitivity,
   type ProjectTemplateId,
   type ProxyMissingIssue,
   type TitleTemplateId
@@ -93,6 +98,7 @@ import {
   bridgeConfirm,
   cancelDemucs,
   copyFile as bridgeCopyFile,
+  detectBeats,
   listenBridge,
   openDirectoryDialog,
   sendNotification,
@@ -178,6 +184,7 @@ export function EditorShell() {
   const [projectTemplateOpen, setProjectTemplateOpen] = useState(false);
   const [templateExportPreset, setTemplateExportPreset] = useState<ExportPreset>();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [beatSensitivity, setBeatSensitivity] = useState<BeatSensitivity>('medium');
   const [smartRoughCutOpen, setSmartRoughCutOpen] = useState(false);
   const [historyPanelOpen, setHistoryPanelOpen] = useState(false);
   const [storyboardOpen, setStoryboardOpen] = useState(false);
@@ -229,6 +236,13 @@ export function EditorShell() {
     );
   }, [project.timeline.tracks, selectedClipIds]);
   const canSeparateSelectedAudio = canSeparateAudioForClip(selectedClip, selectedClipMedia, demucsAvailability.ready) && !audioSeparationClipId;
+  const canDetectBeats = Boolean(
+    selectedClip &&
+      selectedClipMedia &&
+      (selectedClip.type === 'audio' || selectedClip.type === 'video') &&
+      (selectedClipMedia.type === 'audio' || selectedClipMedia.hasAudio)
+  );
+  const canSnapToBeats = selectedClipIds.length > 0 && (project.beatMarkers?.length ?? 0) > 0;
   const timelineHeightPx = clampTimelineHeight(layoutSettings.timelineHeightPx, viewportSize.height);
   const effectivePanels = useMemo(() => getEffectivePanelState(layoutSettings, viewportSize.width), [layoutSettings, viewportSize.width]);
   const editorGridRows = `auto minmax(0,1fr) 6px ${timelineHeightPx}px`;
@@ -1121,6 +1135,59 @@ export function EditorShell() {
     }
   }, [playheadTime, selectedClip]);
 
+  const detectSelectedBeats = useCallback(async () => {
+    if (!selectedClip || !selectedClipMedia || (selectedClip.type !== 'audio' && selectedClip.type !== 'video') || (selectedClipMedia.type !== 'audio' && !selectedClipMedia.hasAudio)) {
+      showToast({ kind: 'warning', title: zhCN.editorToasts.beatDetectFailed, message: zhCN.editorToasts.beatDetectNoClip });
+      return;
+    }
+    showToast({ kind: 'info', title: zhCN.editorToasts.beatDetectRunning, message: selectedClip.name });
+    try {
+      const sourceBeatTimes = await detectBeats(selectedClipMedia.path, beatSensitivity);
+      const speed = getClipSpeed(selectedClip);
+      const detected = sourceBeatTimes
+        .map((sourceTime) => {
+          const localTime = (sourceTime - selectedClip.trimStart) / speed;
+          if (!Number.isFinite(localTime) || localTime < -0.000001 || localTime > selectedClip.duration + 0.000001) {
+            return undefined;
+          }
+          return createBeatMarker(selectedClip.start + Math.min(selectedClip.duration, Math.max(0, localTime)));
+        })
+        .filter((marker): marker is ReturnType<typeof createBeatMarker> => Boolean(marker));
+      if (detected.length === 0) {
+        showToast({ kind: 'warning', title: zhCN.editorToasts.beatDetectFailed, message: zhCN.editorToasts.beatDetectNoMarkers });
+        return;
+      }
+      const clipStart = selectedClip.start;
+      const clipEnd = selectedClip.start + selectedClip.duration;
+      const preserved = (project.beatMarkers ?? []).filter((marker) => marker.time < clipStart - 0.000001 || marker.time > clipEnd + 0.000001);
+      commandManager.execute(new UpdateProjectBeatMarkersCommand(projectAccessor, [...preserved, ...detected]));
+      showToast({ kind: 'success', title: zhCN.editorToasts.beatDetectComplete(detected.length) });
+    } catch (error) {
+      showToast({ kind: 'error', title: zhCN.editorToasts.beatDetectFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.beatDetectNoMarkers });
+    }
+  }, [beatSensitivity, project.beatMarkers, selectedClip, selectedClipMedia]);
+
+  const snapSelectedToBeats = useCallback(() => {
+    const ids = selectedClipIds.length > 0 ? selectedClipIds : selectedClipId ? [selectedClipId] : [];
+    if (ids.length === 0) {
+      showToast({ kind: 'warning', title: zhCN.editorToasts.beatSnapUnavailable, message: zhCN.editorToasts.beatSnapNoSelection });
+      return;
+    }
+    const beatTimes = (project.beatMarkers ?? []).map((marker) => marker.time);
+    if (beatTimes.length === 0) {
+      showToast({ kind: 'warning', title: zhCN.editorToasts.beatSnapUnavailable, message: zhCN.editorToasts.beatSnapNoMarkers });
+      return;
+    }
+    try {
+      const command = new SnapToBeatsCommand(timelineAccessor, ids, beatTimes, 0.35);
+      commandManager.execute(command);
+      setSelectedClipIds(ids);
+      showToast({ kind: 'success', title: zhCN.editorToasts.beatSnapComplete(command.appliedUpdates.length) });
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.editorToasts.beatSnapUnavailable, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
+    }
+  }, [project.beatMarkers, selectedClipId, selectedClipIds, setSelectedClipIds]);
+
   const createMulticamSequence = useCallback(() => {
     try {
       const command = new CreateMulticamSequenceCommand(projectAccessor, selectedClipIds, zhCN.timeline.multicamSequenceName(project.sequences.length));
@@ -1410,6 +1477,8 @@ export function EditorShell() {
           onImportMedia={() => void importMedia()}
           onBatchTranscode={() => openBatchTranscode()}
           onOpenVideoStitchWizard={() => setVideoStitchWizardOpen(true)}
+          onDetectBeats={() => void detectSelectedBeats()}
+          onSnapToBeats={snapSelectedToBeats}
           onOpenMacroHistory={() => setMacroHistoryOpen(true)}
           onImportSubtitles={() => void importSubtitles()}
           onStartRecording={(source) => void startEditorRecording(source)}
@@ -1427,6 +1496,10 @@ export function EditorShell() {
           onCancelAudioSeparation={() => void cancelAudioSeparation()}
           onCreateMulticamSequence={createMulticamSequence}
           canCreateMulticamSequence={canCreateMulticamSequence}
+          canDetectBeats={canDetectBeats}
+          canSnapToBeats={canSnapToBeats}
+          beatSensitivity={beatSensitivity}
+          onBeatSensitivityChange={setBeatSensitivity}
           canSeparateAudio={canSeparateSelectedAudio}
           audioSeparationRunning={Boolean(audioSeparationClipId)}
           audioSeparationProgress={audioSeparationProgress}

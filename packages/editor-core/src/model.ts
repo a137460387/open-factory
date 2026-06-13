@@ -10,6 +10,7 @@ import {
 } from './color-grading';
 import { REC709_INPUT_COLOR_SPACE, normalizeInputColorSpace, type InputColorSpace } from './color-log-luts';
 import { cloneEffects, type Effect } from './effects';
+import type { BeatMarker } from './beats';
 import { normalizePathPoints } from './masks/path-mask';
 import { migrateProjectFile, serializeProjectFile } from './project/project-migration';
 import type { ProjectFile } from './project/project-types';
@@ -127,6 +128,7 @@ export interface Project {
   mediaFolders: MediaFolder[];
   mediaMetadata: Record<string, MediaMetadata>;
   annotations: ProjectAnnotation[];
+  beatMarkers: BeatMarker[];
   timeline: Timeline;
   sequences: Sequence[];
   activeSequenceId: string;
@@ -669,6 +671,7 @@ export function createProject(name = 'Untitled Project'): Project {
     mediaFolders: [],
     mediaMetadata: {},
     annotations: [],
+    beatMarkers: [],
     timeline,
     sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
     activeSequenceId: PRIMARY_SEQUENCE_ID

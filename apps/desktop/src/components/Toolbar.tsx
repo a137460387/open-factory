@@ -1,5 +1,5 @@
 import { Archive, Camera, Captions, ChevronDown, Download, FileDown, FilePlus2, FolderOpen, History, ImageDown, LayoutGrid, Mic2, Monitor, PanelsTopLeft, Pause, Play, Redo2, RotateCcw, Save, Scissors, Settings, Square, Trash2, Undo2, WandSparkles, XCircle } from 'lucide-react';
-import { timelineHasExportableVideo } from '@open-factory/editor-core';
+import { timelineHasExportableVideo, type BeatSensitivity } from '@open-factory/editor-core';
 import { clsx } from 'clsx';
 import { useState } from 'react';
 import { formatBackupDisplayTime } from '../backup/projectBackup';
@@ -23,6 +23,8 @@ interface ToolbarProps {
   onImportMedia(): void;
   onBatchTranscode(): void;
   onOpenVideoStitchWizard(): void;
+  onDetectBeats(): void;
+  onSnapToBeats(): void;
   onOpenMacroHistory(): void;
   onImportSubtitles(): void;
   onStartRecording(source: 'screen' | 'camera'): void;
@@ -37,6 +39,10 @@ interface ToolbarProps {
   onCancelAudioSeparation(): void;
   onCreateMulticamSequence(): void;
   canCreateMulticamSequence: boolean;
+  canDetectBeats: boolean;
+  canSnapToBeats: boolean;
+  beatSensitivity: BeatSensitivity;
+  onBeatSensitivityChange(sensitivity: BeatSensitivity): void;
   canSeparateAudio: boolean;
   audioSeparationRunning: boolean;
   audioSeparationProgress?: number;
@@ -295,6 +301,44 @@ export function Toolbar(props: ToolbarProps) {
               }}
             >
               <span>{t.videoStitchWizard}</span>
+            </button>
+            <label className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-xs text-slate-600" data-testid="toolbar-tools-beat-sensitivity-row">
+              <span>{t.beatSensitivity}</span>
+              <select
+                className="rounded border border-line bg-white px-2 py-1 text-xs text-slate-700"
+                value={props.beatSensitivity}
+                data-testid="toolbar-tools-beat-sensitivity-select"
+                onClick={(event) => event.stopPropagation()}
+                onChange={(event) => props.onBeatSensitivityChange(event.target.value as BeatSensitivity)}
+              >
+                <option value="low">{t.beatSensitivityOptions.low}</option>
+                <option value="medium">{t.beatSensitivityOptions.medium}</option>
+                <option value="high">{t.beatSensitivityOptions.high}</option>
+              </select>
+            </label>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+              type="button"
+              disabled={!props.canDetectBeats}
+              data-testid="toolbar-tools-detect-beats-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onDetectBeats();
+              }}
+            >
+              <span>{t.detectBeats}</span>
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+              type="button"
+              disabled={!props.canSnapToBeats}
+              data-testid="toolbar-tools-snap-to-beats-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onSnapToBeats();
+              }}
+            >
+              <span>{t.snapToBeats}</span>
             </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"

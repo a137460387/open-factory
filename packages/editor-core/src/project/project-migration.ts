@@ -40,6 +40,7 @@ import {
 import { normalizeMediaFolderId, normalizeMediaFolders, normalizeMediaImportedAt } from '../media-folders';
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
 import { cloneEffects } from '../effects';
+import { normalizeBeatMarkers } from '../beats';
 import { clampTransitionDuration, findAdjacentTransitionClips, getTimelineDuration } from '../timeline';
 import type { MigrationResult, ProjectFile, ProjectFileV1, ProjectFileV2 } from './project-types';
 import { isAbsolutePath, makeRelativePath, normalizePath, resolveMediaPath } from './relative-paths';
@@ -86,6 +87,7 @@ export function serializeProjectFile(project: Project, projectPath?: string): Pr
       mediaFolders,
       mediaMetadata: normalizeMediaMetadata(project.mediaMetadata, media),
       annotations: normalizeProjectAnnotations(project.annotations, getTimelineDuration(project.timeline)),
+      beatMarkers: normalizeBeatMarkers(project.beatMarkers, getTimelineDuration(project.timeline)),
       timeline: clonePrimaryTimeline(project),
       sequences: cloneProjectSequences(project),
       activeSequenceId: project.activeSequenceId ?? PRIMARY_SEQUENCE_ID
@@ -114,6 +116,7 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         mediaFolders,
         mediaMetadata: normalizeMediaMetadata(file.project.mediaMetadata, media),
         annotations: normalizeProjectAnnotations(file.project.annotations, getTimelineDuration(primaryTimeline)),
+        beatMarkers: normalizeBeatMarkers(file.project.beatMarkers, getTimelineDuration(primaryTimeline)),
         timeline: sequences.find((sequence) => sequence.id === activeSequenceId)?.timeline ?? primaryTimeline,
         sequences,
         activeSequenceId
@@ -139,6 +142,7 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         mediaFolders: [],
         mediaMetadata: {},
         annotations: [],
+        beatMarkers: [],
         timeline: primaryTimeline,
         sequences,
         activeSequenceId: PRIMARY_SEQUENCE_ID

@@ -41,10 +41,12 @@ import {
   SlipClipCommand,
   SplitClipCommand,
   SplitClipAtTimesCommand,
+  SnapToBeatsCommand,
   TrimClipCommand,
   UpdateKeyframeCommand,
   UpdateClipCommand,
   UpdateEffectCommand,
+  UpdateProjectBeatMarkersCommand,
   UpdateProjectAnnotationCommand,
   UpdateTimelineMarkerCommand,
   UpdateMaskCommand,
@@ -388,6 +390,35 @@ describe('timeline commands', () => {
     expect(project.annotations[0].id).toBe('annotation-a');
   });
 
+  it('updates beat markers as one undoable project command', () => {
+    let project = makeProject();
+    project.timeline = makeTimeline([makeVideoClip({ id: 'clip-1', duration: 5 })]);
+    const accessor = {
+      getProject: () => project,
+      setProject: (next: typeof project) => {
+        project = next;
+      }
+    };
+    const manager = new CommandManager();
+
+    manager.execute(
+      new UpdateProjectBeatMarkersCommand(accessor, [
+        { id: 'beat-late', time: 99 },
+        { id: 'beat-a', time: 1.25 }
+      ])
+    );
+
+    expect(project.beatMarkers).toEqual([
+      { id: 'beat-a', time: 1.25 },
+      { id: 'beat-late', time: 5 }
+    ]);
+
+    manager.undo();
+    expect(project.beatMarkers).toEqual([]);
+    manager.redo();
+    expect(project.beatMarkers.map((marker) => marker.id)).toEqual(['beat-a', 'beat-late']);
+  });
+
   it('packs selected clips into a nested sequence with undo and redo', () => {
     let project = makeProject();
     project.timeline = makeTimeline([makeVideoClip({ id: 'clip-a', start: 0, duration: 2 }), makeVideoClip({ id: 'clip-b', start: 2, duration: 2 })]);
@@ -504,6 +535,40 @@ describe('timeline commands', () => {
     expect(accessor.current().tracks[0].clips).toHaveLength(2);
     manager.undo();
     expect(accessor.current().tracks[0].clips).toHaveLength(1);
+  });
+
+  it('snaps selected clip starts to nearby beats with undo and rejects overlaps', () => {
+    const accessor = makeAccessor(
+      makeTimeline([
+        makeVideoClip({ id: 'clip-a', start: 0.9, duration: 0.5 }),
+        makeVideoClip({ id: 'clip-b', start: 2.12, duration: 0.5 }),
+        makeAudioClip({ id: 'audio-a', start: 4.08, duration: 1 })
+      ])
+    );
+    const manager = new CommandManager();
+    const command = new SnapToBeatsCommand(accessor, ['clip-a', 'clip-b', 'audio-a'], [1, 2, 4], 0.2);
+
+    manager.execute(command);
+
+    expect(command.appliedUpdates).toEqual([
+      { clipId: 'clip-a', from: 0.9, to: 1 },
+      { clipId: 'clip-b', from: 2.12, to: 2 },
+      { clipId: 'audio-a', from: 4.08, to: 4 }
+    ]);
+    expect(accessor.current().tracks[0].clips.map((clip) => clip.start)).toEqual([1, 2]);
+    expect(accessor.current().tracks[1].clips[0].start).toBe(4);
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips.map((clip) => clip.start)).toEqual([0.9, 2.12]);
+    expect(accessor.current().tracks[1].clips[0].start).toBe(4.08);
+
+    const overlapping = makeAccessor(
+      makeTimeline([
+        makeVideoClip({ id: 'clip-a', start: 0.9, duration: 1 }),
+        makeVideoClip({ id: 'clip-b', start: 1.2, duration: 1 })
+      ])
+    );
+    expect(() => new SnapToBeatsCommand(overlapping, ['clip-a'], [1.1], 0.3).execute()).toThrow('overlaps');
   });
 
   it('updates clip uniform and independent canvas scale values', () => {

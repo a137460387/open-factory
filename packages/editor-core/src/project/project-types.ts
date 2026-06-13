@@ -1,4 +1,5 @@
 import type { MediaAsset, MediaFolder, MediaMetadata, ProjectAnnotation, ProjectSettings, Sequence, Timeline } from '../model';
+import type { BeatMarker } from '../beats';
 
 export interface ProjectFileV1 {
   version: '0.1';
@@ -26,6 +27,7 @@ export interface ProjectFileV2 {
     mediaFolders?: MediaFolder[];
     mediaMetadata?: Record<string, MediaMetadata>;
     annotations?: ProjectAnnotation[];
+    beatMarkers?: BeatMarker[];
     timeline: Timeline;
     sequences?: Sequence[];
     activeSequenceId?: string;

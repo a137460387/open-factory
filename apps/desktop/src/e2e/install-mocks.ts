@@ -422,6 +422,7 @@ const mocks: TauriMocks = {
       return path === tinyVideo && time >= 1 && time < 2.25 ? 0.8 : 0.01;
     });
   },
+  detectBeats: () => [1, 2, 3, 4],
   generateProxy: async (plan) => {
     await wait(10);
     files.set(plan.outputPath, 'mock proxy');
@@ -564,6 +565,71 @@ window.__E2E_ACTIONS__ = {
       activeSequenceId: PRIMARY_SEQUENCE_ID
     });
     useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupBeatDetectionFixture: () => {
+    const project = createProject('Beat Detection E2E');
+    const media: MediaAsset[] = [
+      {
+        id: 'media-beat-video',
+        type: 'video',
+        name: 'beat-source.mp4',
+        path: tinyVideo,
+        duration: 4,
+        width: 1280,
+        height: 720,
+        size: 4096,
+        mtimeMs: 1_000,
+        hasAudio: true,
+        audioChannels: 2,
+        audioSampleRate: 44_100,
+        audioCodec: 'aac',
+        videoCodec: 'h264'
+      },
+      {
+        id: 'media-beat-audio',
+        type: 'audio',
+        name: 'beat-source.wav',
+        path: tinyAudio,
+        duration: 4,
+        width: 0,
+        height: 0,
+        size: 2048,
+        mtimeMs: 1_000,
+        hasAudio: true,
+        audioChannels: 2,
+        audioSampleRate: 44_100,
+        audioCodec: 'pcm_s16le'
+      }
+    ];
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({
+          id: 'track-video',
+          type: 'video',
+          name: 'Video 1',
+          clips: [
+            makeBeatVideoClip('clip-beat-a', 'Clip Beat A', 0.88),
+            makeBeatVideoClip('clip-beat-b', 'Clip Beat B', 2.12)
+          ]
+        }),
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [makeBeatAudioClip()] }),
+        createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media,
+      beatMarkers: [],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    useEditorStore.getState().setSelectedClipIds(['clip-beat-audio']);
+    useEditorStore.getState().setSelectedClipId('clip-beat-audio');
     useEditorStore.getState().setPlayheadTime(0);
     commandManager.clear();
   },
@@ -1271,6 +1337,42 @@ function makeEditingVideoClip(id: string, start: number, duration: number, trimS
     duration,
     trimStart,
     trimEnd,
+    speed: DEFAULT_CLIP_SPEED,
+    colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+    transform: { ...DEFAULT_TRANSFORM },
+    volume: 1
+  };
+}
+
+function makeBeatVideoClip(id: string, name: string, start: number): Extract<Clip, { type: 'video' }> {
+  return {
+    id,
+    type: 'video',
+    name,
+    mediaId: 'media-beat-video',
+    trackId: 'track-video',
+    start,
+    duration: 0.5,
+    trimStart: 0,
+    trimEnd: 0,
+    speed: DEFAULT_CLIP_SPEED,
+    colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+    transform: { ...DEFAULT_TRANSFORM },
+    volume: 1
+  };
+}
+
+function makeBeatAudioClip(): Extract<Clip, { type: 'audio' }> {
+  return {
+    id: 'clip-beat-audio',
+    type: 'audio',
+    name: 'Beat Source',
+    mediaId: 'media-beat-audio',
+    trackId: 'track-audio',
+    start: 0,
+    duration: 4,
+    trimStart: 0,
+    trimEnd: 0,
     speed: DEFAULT_CLIP_SPEED,
     colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
     transform: { ...DEFAULT_TRANSFORM },

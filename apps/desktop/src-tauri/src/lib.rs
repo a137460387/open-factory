@@ -72,6 +72,7 @@ pub fn run() {
             commands::media::probe_media,
             commands::media::analyze_waveform,
             commands::media::detect_silence,
+            commands::media::detect_beats,
             commands::proxy::generate_proxy,
             commands::scene::detect_scene_changes,
             commands::share::create_share_package,

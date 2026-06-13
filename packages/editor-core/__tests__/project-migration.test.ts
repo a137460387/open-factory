@@ -52,6 +52,7 @@ describe('project schema migration', () => {
     expect(migrated.project.version).toBe('0.2');
     expect(migrated.project.media[0].path).toBe('C:/Videos/sample.mp4');
     expect(migrated.project.mediaMetadata).toEqual({});
+    expect(migrated.project.beatMarkers).toEqual([]);
     expect(migrated.warnings[0]).toContain('legacy');
   });
 
@@ -230,6 +231,26 @@ describe('project schema migration', () => {
       { id: 'annotation-late', time: 10, text: 'Check pacing', color: '#a78bfa' }
     ]);
     expect(migrated.project.annotations).toEqual(file.project.annotations);
+  });
+
+  it('serializes and migrates beat markers with legacy fallback', () => {
+    const project = makeProject();
+    project.beatMarkers = [
+      { id: 'beat-late', time: 99 },
+      { id: 'beat-a', time: 1.5 }
+    ];
+
+    const file = serializeProject(project);
+    const migrated = migrateProjectFile(file);
+
+    expect(file.project.beatMarkers).toEqual([
+      { id: 'beat-a', time: 1.5 },
+      { id: 'beat-late', time: 10 }
+    ]);
+    expect(migrated.project.beatMarkers).toEqual(file.project.beatMarkers);
+
+    delete (file.project as Partial<typeof file.project>).beatMarkers;
+    expect(migrateProjectFile(file).project.beatMarkers).toEqual([]);
   });
 
   it('backfills missing project annotations during migration', () => {

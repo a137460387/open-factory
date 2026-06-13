@@ -37,7 +37,9 @@ import {
   SplitClipCommand,
   SplitClipAtTimesCommand,
   TrimClipCommand,
+  UpdateProjectBeatMarkersCommand,
   createId,
+  createBeatMarker,
   createTrack,
   detectOverlap,
   getTimelineDuration,
@@ -49,6 +51,7 @@ import {
   round,
   snapTime,
   type Clip,
+  type BeatMarker,
   type KeyframeProperty,
   type MediaAsset,
   type ProjectAnnotation,
@@ -60,7 +63,7 @@ import {
   type Track,
   type TransitionType
 } from '@open-factory/editor-core';
-import { Captions, Flag, MessageSquarePlus, MessageSquareText, Plus, Scissors, Trash2, Type } from 'lucide-react';
+import { Captions, Flag, MessageSquarePlus, MessageSquareText, Music2, Plus, Scissors, Trash2, Type } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createTextClip } from '../../lib/clipFactory';
 import { zhCN } from '../../i18n/strings';
@@ -277,6 +280,14 @@ export function Timeline() {
       );
     } catch (error) {
       showToast({ kind: 'warning', title: zhCN.timeline.markerRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.addMarkerFailed });
+    }
+  }
+
+  function addBeatMarker(): void {
+    try {
+      commandManager.execute(new UpdateProjectBeatMarkersCommand(projectAccessor, [...(project.beatMarkers ?? []), createBeatMarker(playheadTime)]));
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.beatMarkerRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.addBeatMarkerFailed });
     }
   }
 
@@ -561,6 +572,14 @@ export function Timeline() {
       setClipMenu(undefined);
     } catch (error) {
       showToast({ kind: 'error', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
+    }
+  }
+
+  function removeBeatMarker(markerId: string): void {
+    try {
+      commandManager.execute(new UpdateProjectBeatMarkersCommand(projectAccessor, (project.beatMarkers ?? []).filter((marker) => marker.id !== markerId)));
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.beatMarkerRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.removeBeatMarkerFailed });
     }
   }
 
@@ -933,6 +952,7 @@ export function Timeline() {
       { time: 0, kind: 'timeline-start' },
       { time: playheadTime, kind: 'playhead' },
       ...(project.timeline.markers ?? []).map((marker) => ({ time: marker.time, kind: 'marker' as const })),
+      ...(project.beatMarkers ?? []).map((marker) => ({ time: marker.time, kind: 'marker' as const })),
       ...project.timeline.tracks.flatMap((track) =>
         track.clips
           .filter((item) => item.id !== clip.id)
@@ -993,6 +1013,9 @@ export function Timeline() {
         </button>
         <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.addMarker} data-testid="add-timeline-marker-button" onClick={addTimelineMarker}>
           <Flag size={16} />
+        </button>
+        <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.addBeatMarker} data-testid="add-beat-marker-button" onClick={addBeatMarker}>
+          <Music2 size={16} />
         </button>
         <button
           className={`rounded-md border p-2 hover:bg-panel ${annotationMode ? 'border-brand bg-brand text-white' : 'border-line'}`}
@@ -1116,6 +1139,15 @@ export function Timeline() {
                 left={LABEL_WIDTH + marker.time * zoom}
                 onSeek={setPlayheadTime}
                 onRemove={removeTimelineMarker}
+              />
+            ))}
+            {(project.beatMarkers ?? []).map((marker) => (
+              <BeatMarkerOverlay
+                key={marker.id}
+                marker={marker}
+                left={LABEL_WIDTH + marker.time * zoom}
+                onSeek={setPlayheadTime}
+                onRemove={removeBeatMarker}
               />
             ))}
             {transitionMenu ? (
@@ -1425,6 +1457,41 @@ function TimelineMarkerOverlay({
       <span className="absolute left-1/2 top-1 z-10 h-4 w-4 -translate-x-1/2 rounded-sm border border-white shadow-sm" style={{ backgroundColor: marker.color }} />
       <span className="absolute bottom-0 top-0 left-1/2 w-0.5 -translate-x-1/2" style={{ backgroundColor: marker.color }} />
       <span className="sr-only">{marker.label}</span>
+    </button>
+  );
+}
+
+function BeatMarkerOverlay({
+  marker,
+  left,
+  onSeek,
+  onRemove
+}: {
+  marker: BeatMarker;
+  left: number;
+  onSeek(time: number): void;
+  onRemove(markerId: string): void;
+}) {
+  return (
+    <button
+      className="absolute bottom-0 top-0 z-10 w-0.5 -translate-x-1/2 bg-transparent"
+      style={{ left }}
+      type="button"
+      title={zhCN.timeline.beatMarkerTitle(marker.time)}
+      data-testid={`timeline-beat-marker-${marker.id}`}
+      onClick={(event) => {
+        event.stopPropagation();
+        onSeek(marker.time);
+      }}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onRemove(marker.id);
+      }}
+    >
+      <span className="absolute left-1/2 top-6 z-10 h-3.5 w-3.5 -translate-x-1/2 rotate-45 rounded-[2px] border border-white bg-orange-500 shadow-sm" />
+      <span className="absolute bottom-0 top-0 left-1/2 w-0.5 -translate-x-1/2 bg-orange-500/75" />
+      <span className="sr-only">{zhCN.timeline.beatMarker}</span>
     </button>
   );
 }

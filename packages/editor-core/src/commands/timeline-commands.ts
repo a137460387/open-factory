@@ -82,6 +82,7 @@ import {
   type TextAnimationPreset
 } from '../text-animation';
 import { cloneEffects, normalizeEffect, normalizeEffects, type Effect, type EffectParams, type EffectType } from '../effects';
+import { calculateBeatSnapUpdates, normalizeBeatMarkers, type BeatMarker, type BeatSnapUpdate } from '../beats';
 import { createMulticamSequenceProject, setMulticamSwitch } from '../multicam';
 import { applyCmx3600EdlImport, buildCmx3600EdlImport, type Cmx3600EdlImportOptions, type Cmx3600EdlImportResult } from '../export/timeline-import';
 import {
@@ -919,6 +920,40 @@ export class AddProjectAnnotationCommand implements Command {
   }
 }
 
+export class UpdateProjectBeatMarkersCommand implements Command {
+  readonly description = 'Update beat markers';
+  private before?: BeatMarker[];
+  private after?: BeatMarker[];
+
+  constructor(private readonly accessor: ProjectAccessor, private readonly markers: BeatMarker[]) {}
+
+  execute(): void {
+    const project = this.accessor.getProject();
+    const duration = getTimelineDuration(project.timeline);
+    this.before ??= normalizeBeatMarkers(project.beatMarkers, duration);
+    this.after ??= normalizeBeatMarkers(this.markers, duration);
+    this.accessor.setProject(
+      touchProject({
+        ...project,
+        beatMarkers: this.after
+      })
+    );
+  }
+
+  undo(): void {
+    if (!this.before) {
+      return;
+    }
+    const project = this.accessor.getProject();
+    this.accessor.setProject(
+      touchProject({
+        ...project,
+        beatMarkers: this.before
+      })
+    );
+  }
+}
+
 export class UpdateProjectAnnotationCommand implements Command {
   readonly description = 'Update project annotation';
   private before?: ProjectAnnotation;
@@ -1321,6 +1356,54 @@ export class MoveClipsCommand implements Command {
         clips: track.clips.map((clip) => beforeById.get(clip.id) ?? clip)
       }))
     });
+  }
+}
+
+export class SnapToBeatsCommand implements Command {
+  readonly description = 'Snap clips to beats';
+  private before?: Timeline;
+  private after?: Timeline;
+  private updates?: BeatSnapUpdate[];
+
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clipIds: string[],
+    private readonly beatTimes: number[],
+    private readonly maxDistance = 0.25
+  ) {}
+
+  get appliedUpdates(): BeatSnapUpdate[] {
+    return this.updates ?? [];
+  }
+
+  execute(): void {
+    const timeline = this.accessor.getTimeline();
+    this.before ??= timeline;
+    if (!this.after) {
+      this.updates = calculateBeatSnapUpdates(timeline, this.clipIds, this.beatTimes, this.maxDistance);
+      if (this.updates.length === 0) {
+        throw new Error('No selected clips are within beat snap range');
+      }
+      const startsByClipId = new Map(this.updates.map((update) => [update.clipId, update.to]));
+      const nextTimeline = {
+        ...timeline,
+        tracks: timeline.tracks.map((track) => ({
+          ...track,
+          clips: track.clips.map((clip) => (startsByClipId.has(clip.id) ? moveClip(clip, startsByClipId.get(clip.id)!) : clip))
+        }))
+      };
+      if (timelineHasOverlaps(nextTimeline)) {
+        throw new Error('Clip overlaps another clip on this track');
+      }
+      this.after = nextTimeline;
+    }
+    this.accessor.setTimeline(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setTimeline(this.before);
+    }
   }
 }
 

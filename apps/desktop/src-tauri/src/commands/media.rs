@@ -7,6 +7,14 @@ use std::process::{Command, Stdio};
 use tauri::AppHandle;
 
 const WAVEFORM_SAMPLE_RATE: u32 = 48_000;
+const BEAT_RMS_SAMPLE_RATE: u32 = 48_000;
+const BEAT_RMS_SAMPLES_PER_SEC: u32 = 40;
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct RmsSample {
+    time: f64,
+    rms: f64,
+}
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -97,6 +105,12 @@ pub fn detect_silence(
 ) -> Result<Vec<[f64; 2]>, String> {
     let safe_path = validate_path(&app, Path::new(&path))?;
     detect_silence_path(&safe_path, threshold_db, min_gap_ms)
+}
+
+#[tauri::command]
+pub fn detect_beats(app: AppHandle, path: String, sensitivity: String) -> Result<Vec<f64>, String> {
+    let safe_path = validate_path(&app, Path::new(&path))?;
+    detect_beats_path(&safe_path, &sensitivity)
 }
 
 pub(crate) fn analyze_waveform_path(path: &Path, samples_per_sec: u32) -> Result<Vec<f32>, String> {
@@ -196,6 +210,11 @@ pub(crate) fn analyze_waveform_path(path: &Path, samples_per_sec: u32) -> Result
     Ok(peaks)
 }
 
+pub(crate) fn detect_beats_path(path: &Path, sensitivity: &str) -> Result<Vec<f64>, String> {
+    let samples = analyze_rms_path(path, BEAT_RMS_SAMPLES_PER_SEC)?;
+    Ok(detect_beat_peaks_from_rms(&samples, sensitivity))
+}
+
 pub(crate) fn detect_silence_path(
     path: &Path,
     threshold_db: f64,
@@ -262,6 +281,145 @@ pub(crate) fn detect_silence_path(
     Ok(ranges)
 }
 
+pub(crate) fn analyze_rms_path(path: &Path, samples_per_sec: u32) -> Result<Vec<RmsSample>, String> {
+    let samples_per_sec = samples_per_sec.clamp(1, 200);
+    let samples_per_bucket =
+        ((BEAT_RMS_SAMPLE_RATE as f64) / (samples_per_sec as f64)).ceil() as usize;
+    let input_path = normalize_path(path);
+    let sample_rate_arg = BEAT_RMS_SAMPLE_RATE.to_string();
+    let mut child = Command::new(ffmpeg_binary())
+        .args([
+            "-v",
+            "error",
+            "-i",
+            &input_path,
+            "-vn",
+            "-ac",
+            "1",
+            "-ar",
+            &sample_rate_arg,
+            "-f",
+            "f32le",
+            "-",
+        ])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|error| format!("Unable to start FFmpeg beat detection: {}", error))?;
+
+    let mut stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| "Unable to capture FFmpeg beat detection output.".to_string())?;
+    let mut samples = Vec::<RmsSample>::new();
+    let mut bytes = [0_u8; 16 * 1024];
+    let mut partial = Vec::<u8>::new();
+    let mut bucket_sum_squares = 0_f64;
+    let mut bucket_samples = 0_usize;
+    let mut bucket_index = 0_usize;
+
+    loop {
+        let read = stdout.read(&mut bytes).map_err(|error| error.to_string())?;
+        if read == 0 {
+            break;
+        }
+        let mut offset = 0_usize;
+        if !partial.is_empty() {
+            while partial.len() < 4 && offset < read {
+                partial.push(bytes[offset]);
+                offset += 1;
+            }
+            if partial.len() == 4 {
+                process_rms_sample(
+                    f32::from_le_bytes([partial[0], partial[1], partial[2], partial[3]]),
+                    samples_per_sec,
+                    samples_per_bucket,
+                    &mut bucket_sum_squares,
+                    &mut bucket_samples,
+                    &mut bucket_index,
+                    &mut samples,
+                );
+                partial.clear();
+            }
+        }
+        while offset + 4 <= read {
+            process_rms_sample(
+                f32::from_le_bytes([
+                    bytes[offset],
+                    bytes[offset + 1],
+                    bytes[offset + 2],
+                    bytes[offset + 3],
+                ]),
+                samples_per_sec,
+                samples_per_bucket,
+                &mut bucket_sum_squares,
+                &mut bucket_samples,
+                &mut bucket_index,
+                &mut samples,
+            );
+            offset += 4;
+        }
+        if offset < read {
+            partial.extend_from_slice(&bytes[offset..read]);
+        }
+    }
+    drop(stdout);
+    if bucket_samples > 0 {
+        push_rms_bucket(
+            samples_per_sec,
+            &mut bucket_sum_squares,
+            &mut bucket_samples,
+            &mut bucket_index,
+            &mut samples,
+        );
+    }
+
+    let status = child.wait().map_err(|error| error.to_string())?;
+    if !status.success() {
+        let mut stderr = String::new();
+        if let Some(mut stream) = child.stderr.take() {
+            let _ = stream.read_to_string(&mut stderr);
+        }
+        return Err(format!("FFmpeg beat detection failed: {}", stderr.trim()));
+    }
+    Ok(samples)
+}
+
+pub(crate) fn detect_beat_peaks_from_rms(samples: &[RmsSample], sensitivity: &str) -> Vec<f64> {
+    let mut ordered = samples
+        .iter()
+        .copied()
+        .filter(|sample| sample.time.is_finite() && sample.rms.is_finite())
+        .map(|sample| RmsSample {
+            time: sample.time.max(0.0),
+            rms: sample.rms.max(0.0),
+        })
+        .collect::<Vec<_>>();
+    ordered.sort_by(|left, right| left.time.total_cmp(&right.time));
+    if ordered.len() < 3 {
+        return Vec::new();
+    }
+    let max_rms = ordered.iter().map(|sample| sample.rms).fold(0.0_f64, f64::max);
+    if max_rms <= 0.0 {
+        return Vec::new();
+    }
+    let (threshold_ratio, min_gap) = beat_sensitivity_params(sensitivity);
+    let threshold = max_rms * threshold_ratio;
+    let mut beats = Vec::<f64>::new();
+    let mut last_beat = f64::NEG_INFINITY;
+    for window in ordered.windows(3) {
+        let previous = window[0];
+        let current = window[1];
+        let next = window[2];
+        let is_local_maximum = current.rms > previous.rms && current.rms >= next.rms;
+        if is_local_maximum && current.rms >= threshold && current.time - last_beat >= min_gap {
+            beats.push(round_seconds(current.time));
+            last_beat = current.time;
+        }
+    }
+    beats
+}
+
 fn process_waveform_sample(
     sample: f32,
     samples_per_bucket: usize,
@@ -277,6 +435,60 @@ fn process_waveform_sample(
         peaks.push(round_peak(*bucket_peak));
         *bucket_peak = 0.0;
         *bucket_samples = 0;
+    }
+}
+
+fn process_rms_sample(
+    sample: f32,
+    samples_per_sec: u32,
+    samples_per_bucket: usize,
+    bucket_sum_squares: &mut f64,
+    bucket_samples: &mut usize,
+    bucket_index: &mut usize,
+    samples: &mut Vec<RmsSample>,
+) {
+    if sample.is_finite() {
+        let clamped = (sample as f64).clamp(-1.0, 1.0);
+        *bucket_sum_squares += clamped * clamped;
+    }
+    *bucket_samples += 1;
+    if *bucket_samples >= samples_per_bucket {
+        push_rms_bucket(
+            samples_per_sec,
+            bucket_sum_squares,
+            bucket_samples,
+            bucket_index,
+            samples,
+        );
+    }
+}
+
+fn push_rms_bucket(
+    samples_per_sec: u32,
+    bucket_sum_squares: &mut f64,
+    bucket_samples: &mut usize,
+    bucket_index: &mut usize,
+    samples: &mut Vec<RmsSample>,
+) {
+    let rms = if *bucket_samples == 0 {
+        0.0
+    } else {
+        (*bucket_sum_squares / *bucket_samples as f64).sqrt()
+    };
+    samples.push(RmsSample {
+        time: round_seconds(*bucket_index as f64 / samples_per_sec as f64),
+        rms: round_peak(rms as f32) as f64,
+    });
+    *bucket_sum_squares = 0.0;
+    *bucket_samples = 0;
+    *bucket_index += 1;
+}
+
+fn beat_sensitivity_params(sensitivity: &str) -> (f64, f64) {
+    match sensitivity {
+        "low" => (0.72, 0.35),
+        "high" => (0.38, 0.18),
+        _ => (0.55, 0.25),
     }
 }
 
@@ -346,6 +558,41 @@ mod tests {
             ),
             Some(2.5)
         );
+    }
+
+    #[test]
+    fn detect_beat_peaks_respects_sensitivity_threshold_and_spacing() {
+        let samples = [
+            RmsSample { time: 0.0, rms: 0.1 },
+            RmsSample { time: 0.25, rms: 0.8 },
+            RmsSample { time: 0.5, rms: 0.2 },
+            RmsSample { time: 0.52, rms: 0.7 },
+            RmsSample { time: 0.9, rms: 0.1 },
+            RmsSample { time: 1.2, rms: 0.6 },
+            RmsSample { time: 1.45, rms: 0.1 },
+        ];
+
+        assert_eq!(detect_beat_peaks_from_rms(&samples, "medium"), vec![0.25, 0.52, 1.2]);
+        assert_eq!(detect_beat_peaks_from_rms(&samples, "low"), vec![0.25, 1.2]);
+        assert_eq!(detect_beat_peaks_from_rms(&samples, "unknown"), vec![0.25, 0.52, 1.2]);
+    }
+
+    #[test]
+    fn process_rms_sample_outputs_bucket_rms_times() {
+        let mut samples = Vec::new();
+        let mut sum = 0.0;
+        let mut count = 0;
+        let mut index = 0;
+
+        for sample in [0.5_f32, -0.5, 1.0, -1.0] {
+            process_rms_sample(sample, 2, 2, &mut sum, &mut count, &mut index, &mut samples);
+        }
+
+        assert_eq!(samples.len(), 2);
+        assert_eq!(samples[0].time, 0.0);
+        assert_eq!(samples[0].rms, 0.5);
+        assert_eq!(samples[1].time, 0.5);
+        assert_eq!(samples[1].rms, 1.0);
     }
 
     fn ffmpeg_available() -> bool {
