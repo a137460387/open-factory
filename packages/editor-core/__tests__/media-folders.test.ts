@@ -92,8 +92,16 @@ describe('media folders and smart albums', () => {
       makeAsset('long', 'video', 'feature.mov', 420, '2026-01-01T00:00:00.000Z')
     ];
 
-    const albums = Object.fromEntries(collectSmartAlbums(media, now).map((album) => [album.id, album.assetIds]));
+    const metadata = {
+      video: { rating: 5, flag: 'green' as const },
+      audio: { rating: 4, flag: 'red' as const },
+      image: { rating: 5 }
+    };
+    const albums = Object.fromEntries(collectSmartAlbums(media, now, metadata).map((album) => [album.id, album.assetIds]));
 
+    expect(albums['rating-five']).toEqual(['video', 'image']);
+    expect(albums['flag-green']).toEqual(['video']);
+    expect(albums['flag-red']).toEqual(['audio']);
     expect(albums['format-video']).toEqual(['video', 'long']);
     expect(albums['format-audio']).toEqual(['audio']);
     expect(albums['format-image']).toEqual(['image']);
@@ -102,8 +110,9 @@ describe('media folders and smart albums', () => {
     expect(albums['duration-medium']).toEqual(['audio']);
     expect(albums['duration-long']).toEqual(['long']);
     expect(albums['recent-imports']).toEqual(['video', 'image', 'svg']);
-    expect(getSmartAlbumAssetIds(media, 'format-svg', now)).toEqual(['svg']);
-    expect(getSmartAlbumAssetIds(media, 'recent-imports', now)).toEqual(['video', 'image', 'svg']);
+    expect(getSmartAlbumAssetIds(media, 'format-svg', now, metadata)).toEqual(['svg']);
+    expect(getSmartAlbumAssetIds(media, 'rating-five', now, metadata)).toEqual(['video', 'image']);
+    expect(getSmartAlbumAssetIds(media, 'recent-imports', now, metadata)).toEqual(['video', 'image', 'svg']);
     expect(normalizeMediaImportedAt('bad-date', '2026-06-13T00:00:00.000Z')).toBe('2026-06-13T00:00:00.000Z');
     expect(normalizeMediaImportedAt('bad-date', 'also-bad')).toBeUndefined();
   });

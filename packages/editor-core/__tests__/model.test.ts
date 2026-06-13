@@ -31,6 +31,9 @@ import {
   normalizeMask,
   normalizeMasks,
   normalizeMasterVolume,
+  normalizeMediaFlag,
+  normalizeMediaMetadataEntry,
+  normalizeMediaRating,
   normalizeSlowMotionMode,
   normalizeSequenceFrameRate,
   normalizeSequenceName,
@@ -110,6 +113,15 @@ describe('model factories', () => {
       release: 9000,
       makeupGain: 24
     });
+  });
+
+  it('normalizes media metadata ratings and flags', () => {
+    expect(normalizeMediaRating(4.6)).toBe(5);
+    expect(normalizeMediaRating(-2)).toBe(0);
+    expect(normalizeMediaFlag('green')).toBe('green');
+    expect(normalizeMediaFlag('blue')).toBeUndefined();
+    expect(normalizeMediaMetadataEntry({ labelColor: 'purple', rating: 5, flag: 'red' })).toEqual({ labelColor: 'purple', rating: 5, flag: 'red' });
+    expect(normalizeMediaMetadataEntry({ rating: 0, flag: undefined })).toBeUndefined();
   });
 
   it('normalizes chroma key and mask defaults with bounded values', () => {

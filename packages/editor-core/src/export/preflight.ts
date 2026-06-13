@@ -3,7 +3,7 @@ import { getTimelinePlaybackDuration } from '../timeline';
 import type { ExportPlatformPreset } from './export-types';
 
 export type PreflightSeverity = 'blocking' | 'warning';
-export type PreflightIssueType = 'missing-media' | 'missing-font' | 'whisper-path' | 'ffmpeg' | 'platform-duration';
+export type PreflightIssueType = 'missing-media' | 'missing-font' | 'whisper-path' | 'ffmpeg' | 'platform-duration' | 'vfr-media';
 
 export interface PreflightResult {
   id: string;
@@ -86,6 +86,19 @@ export function runExportPreflight(project: Project, options: ExportPreflightOpt
     results.push(platformDurationWarning);
   }
 
+  const vfrWarning = collectVfrMedia(project, clips);
+  if (vfrWarning.items.length > 0) {
+    results.push({
+      id: 'vfr-media',
+      type: 'vfr-media',
+      severity: 'warning',
+      message: 'Timeline contains variable frame rate media.',
+      items: vfrWarning.items,
+      clipIds: vfrWarning.clipIds,
+      mediaIds: vfrWarning.mediaIds
+    });
+  }
+
   return results;
 }
 
@@ -150,6 +163,28 @@ function collectMissingMedia(project: Project, clips: Clip[]): { items: string[]
     }
     const mediaId = asset?.id ?? clip.mediaId;
     itemByMediaId.set(mediaId, asset?.name || clip.name || mediaId);
+    clipIds.add(clip.id);
+  }
+  return {
+    items: Array.from(itemByMediaId.values()).sort((left, right) => left.localeCompare(right)),
+    clipIds: Array.from(clipIds),
+    mediaIds: Array.from(itemByMediaId.keys())
+  };
+}
+
+function collectVfrMedia(project: Project, clips: Clip[]): { items: string[]; clipIds: string[]; mediaIds: string[] } {
+  const mediaById = new Map(project.media.map((asset) => [asset.id, asset]));
+  const itemByMediaId = new Map<string, string>();
+  const clipIds = new Set<string>();
+  for (const clip of clips) {
+    if (!('mediaId' in clip)) {
+      continue;
+    }
+    const asset = mediaById.get(clip.mediaId);
+    if (!asset?.variableFrameRate) {
+      continue;
+    }
+    itemByMediaId.set(asset.id, asset.name);
     clipIds.add(clip.id);
   }
   return {

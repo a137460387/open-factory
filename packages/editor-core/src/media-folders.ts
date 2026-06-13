@@ -1,8 +1,11 @@
-import { createId, type MediaAsset, type MediaFolder, type Project } from './model';
+import { createId, type MediaAsset, type MediaFolder, type MediaMetadata, type Project } from './model';
 
 export const MAX_MEDIA_FOLDER_DEPTH = 3;
 
 export type SmartAlbumId =
+  | 'rating-five'
+  | 'flag-green'
+  | 'flag-red'
   | 'format-video'
   | 'format-audio'
   | 'format-image'
@@ -138,8 +141,11 @@ export function moveMediaAssetsToFolder(project: Project, assetIds: string[], fo
   };
 }
 
-export function collectSmartAlbums(media: MediaAsset[], nowMs = Date.now()): SmartAlbum[] {
+export function collectSmartAlbums(media: MediaAsset[], nowMs = Date.now(), metadata: Record<string, MediaMetadata> = {}): SmartAlbum[] {
   const albums: SmartAlbum[] = [
+    { id: 'rating-five', assetIds: [] },
+    { id: 'flag-green', assetIds: [] },
+    { id: 'flag-red', assetIds: [] },
     { id: 'format-video', assetIds: [] },
     { id: 'format-audio', assetIds: [] },
     { id: 'format-image', assetIds: [] },
@@ -151,6 +157,16 @@ export function collectSmartAlbums(media: MediaAsset[], nowMs = Date.now()): Sma
   ];
   const byId = new Map(albums.map((album) => [album.id, album]));
   for (const asset of media) {
+    const assetMetadata = metadata[asset.id];
+    if ((assetMetadata?.rating ?? 0) >= 5) {
+      byId.get('rating-five')?.assetIds.push(asset.id);
+    }
+    if (assetMetadata?.flag === 'green') {
+      byId.get('flag-green')?.assetIds.push(asset.id);
+    }
+    if (assetMetadata?.flag === 'red') {
+      byId.get('flag-red')?.assetIds.push(asset.id);
+    }
     byId.get(formatAlbumId(asset))?.assetIds.push(asset.id);
     byId.get(durationAlbumId(asset.duration))?.assetIds.push(asset.id);
     if (isRecentImport(asset.importedAt, nowMs)) {
@@ -160,8 +176,8 @@ export function collectSmartAlbums(media: MediaAsset[], nowMs = Date.now()): Sma
   return albums;
 }
 
-export function getSmartAlbumAssetIds(media: MediaAsset[], albumId: SmartAlbumId, nowMs = Date.now()): string[] {
-  return collectSmartAlbums(media, nowMs).find((album) => album.id === albumId)?.assetIds ?? [];
+export function getSmartAlbumAssetIds(media: MediaAsset[], albumId: SmartAlbumId, nowMs = Date.now(), metadata: Record<string, MediaMetadata> = {}): string[] {
+  return collectSmartAlbums(media, nowMs, metadata).find((album) => album.id === albumId)?.assetIds ?? [];
 }
 
 export function normalizeMediaImportedAt(value: string | undefined, fallback?: string): string | undefined {

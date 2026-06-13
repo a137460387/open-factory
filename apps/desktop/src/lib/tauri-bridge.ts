@@ -99,6 +99,10 @@ export interface MediaProbe {
   audioSampleRate?: number;
   audioCodec?: string;
   videoCodec?: string;
+  frameRate?: number;
+  avgFrameRate?: string;
+  realFrameRate?: string;
+  variableFrameRate?: boolean;
   fieldOrder?: string;
 }
 

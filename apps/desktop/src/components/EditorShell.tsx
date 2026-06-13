@@ -34,6 +34,7 @@ import {
   buildVideoStitchSequence,
   dirname,
   getClipSpeed,
+  getCfrTargetFrameRate,
   getTimelineDuration,
   findCompleteClipGroup,
   normalizeClipGroups,
@@ -135,7 +136,7 @@ import {
   type MacroHistoryEntry
 } from '../macros/clip-macros';
 import { readBackupSettings, readLayoutSettings, readViewSettings, saveLayoutSettings, saveViewSettings } from '../settings/appSettings';
-import { createProxyForAsset } from '../media/proxy';
+import { createProxyForAsset, type ProxyGenerationOptions } from '../media/proxy';
 import { ensureMediaJobRunner } from '../media/media-job-runner';
 import { DuplicateMediaDialog, type DuplicateMediaMergeSelection } from '../media/DuplicateMediaDialog';
 import { useMediaJobStore } from '../media/media-job-store';
@@ -656,6 +657,26 @@ export function EditorShell() {
     return () => window.removeEventListener('resize', updateViewport);
   }, []);
 
+  const queueAutoCfrForImportedMedia = useCallback(
+    (media: MediaAsset[]) => {
+      if (project.settings.vfrHandling !== 'auto-cfr') {
+        return;
+      }
+      const vfrMedia = media.filter((asset) => asset.type === 'video' && asset.variableFrameRate);
+      if (vfrMedia.length === 0) {
+        return;
+      }
+      for (const asset of vfrMedia) {
+        useMediaJobStore.getState().enqueueProxyJobsForMedia([asset], useProxySettingsStore.getState().settings, {
+          force: true,
+          cfrFrameRate: getCfrTargetFrameRate({ avgFrameRate: asset.avgFrameRate, realFrameRate: asset.realFrameRate }, asset.frameRate ?? project.settings.fps)
+        });
+      }
+      void ensureMediaJobRunner();
+    },
+    [project.settings.fps, project.settings.vfrHandling]
+  );
+
   const importMedia = useCallback(async () => {
     try {
       const paths = await pickMediaPaths();
@@ -668,13 +689,14 @@ export function EditorShell() {
       }
       if (result.media.length > 0) {
         addMedia(result.media);
+        queueAutoCfrForImportedMedia(result.media);
         void runAutomationForMedia('on-import', result.media);
         showToast({ kind: 'success', title: zhCN.editorToasts.mediaImported, message: zhCN.editorToasts.mediaImportedMessage(result.media.length) });
       }
     } catch (error) {
       showToast({ kind: 'error', title: zhCN.editorToasts.importFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.importFailedMessage });
     }
-  }, [addMedia, project.media, runAutomationForMedia]);
+  }, [addMedia, project.media, queueAutoCfrForImportedMedia, runAutomationForMedia]);
 
   const openBatchTranscode = useCallback((paths: string[] = []) => {
     setBatchTranscodeInitialPaths(paths);
@@ -690,6 +712,7 @@ export function EditorShell() {
       const result = await probeMediaPaths(paths, useEditorStore.getState().project.media);
       if (result.media.length > 0) {
         addMedia(result.media);
+        queueAutoCfrForImportedMedia(result.media);
         void runAutomationForMedia('on-import', result.media);
         showToast({ kind: 'success', title: zhCN.editorToasts.mediaImported, message: zhCN.editorToasts.mediaImportedMessage(result.media.length) });
       }
@@ -701,7 +724,7 @@ export function EditorShell() {
       showToast({ kind: 'error', title: zhCN.videoStitchWizard.importFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.importFailedMessage });
       return [];
     }
-  }, [addMedia, runAutomationForMedia]);
+  }, [addMedia, queueAutoCfrForImportedMedia, runAutomationForMedia]);
 
   const generateVideoStitchTimeline = useCallback(
     (settings: VideoStitchWizardSettings) => {
@@ -1375,14 +1398,14 @@ export function EditorShell() {
   }, []);
 
   const generateProxyForMedia = useCallback(
-    async (assetId: string) => {
+    async (assetId: string, options: ProxyGenerationOptions = {}) => {
       const asset = useEditorStore.getState().project.media.find((item) => item.id === assetId);
       if (!asset || asset.type !== 'video') {
         return;
       }
       setMedia(useEditorStore.getState().project.media.map((item) => (item.id === assetId ? { ...item, proxyStatus: 'pending', proxyError: undefined } : item)));
       try {
-        const proxyAsset = await createProxyForAsset({ ...asset, proxyStatus: 'pending', proxyError: undefined }, proxySettings);
+        const proxyAsset = await createProxyForAsset({ ...asset, proxyStatus: 'pending', proxyError: undefined }, proxySettings, options);
         setMedia(useEditorStore.getState().project.media.map((item) => (item.id === assetId ? proxyAsset : item)));
         showToast({ kind: 'success', title: zhCN.editorToasts.proxyReady, message: proxyAsset.name });
       } catch (error) {
@@ -1399,6 +1422,18 @@ export function EditorShell() {
       }
     },
     [proxySettings, setMedia]
+  );
+
+  const convertVfrMediaToCfr = useCallback(
+    (assetId: string) => {
+      const asset = useEditorStore.getState().project.media.find((item) => item.id === assetId);
+      if (!asset || asset.type !== 'video') {
+        return;
+      }
+      const cfrFrameRate = getCfrTargetFrameRate({ avgFrameRate: asset.avgFrameRate, realFrameRate: asset.realFrameRate }, asset.frameRate ?? project.settings.fps);
+      void generateProxyForMedia(assetId, { force: true, cfrFrameRate });
+    },
+    [generateProxyForMedia, project.settings.fps]
   );
 
   const clearCache = useCallback(async () => {
@@ -1818,7 +1853,10 @@ export function EditorShell() {
                 onRelink={(assetId) => void relinkMedia(assetId)}
                 onRelinkAll={() => void relinkAllMissing()}
                 onGenerateProxy={(assetId) => void generateProxyForMedia(assetId)}
-                onSetLabel={(assetId, labelColor) => setMediaMetadata(assetId, labelColor ? { labelColor } : undefined)}
+                onConvertToCfr={convertVfrMediaToCfr}
+                onSetLabel={(assetId, labelColor) => setMediaMetadata(assetId, { ...project.mediaMetadata[assetId], labelColor })}
+                onSetRating={(assetId, rating) => setMediaMetadata(assetId, { ...project.mediaMetadata[assetId], rating })}
+                onSetFlag={(assetId, flag) => setMediaMetadata(assetId, { ...project.mediaMetadata[assetId], flag })}
                 onAddTitleTemplate={addTitleTemplate}
                 onCreateFolder={createMediaFolder}
                 onRenameFolder={renameMediaFolder}
@@ -2027,6 +2065,7 @@ export function EditorShell() {
           showToast({ kind: 'info', title: zhCN.editorToasts.duplicateTitle, message: zhCN.editorToasts.duplicateMessage(result.duplicateCount) });
         }
         addMedia(result.media);
+        queueAutoCfrForImportedMedia(result.media);
         void runAutomationForMedia('on-import', result.media);
       }
       if (subtitlePaths.length > 0) {

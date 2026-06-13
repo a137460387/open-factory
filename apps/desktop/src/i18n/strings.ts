@@ -188,6 +188,12 @@ const zh = {
       timecodeNdf: 'NDF（Non-Drop Frame）',
       timecodeDf: 'DF（Drop Frame）',
       dropFrameUnavailable: 'Drop Frame 仅支持 29.97/59.94 fps。',
+      vfrHandling: 'VFR 处理策略',
+      vfrHandlingOptions: {
+        ignore: '忽略',
+        'auto-cfr': '自动转 CFR',
+        ask: '每次询问'
+      },
       allowExportPowerActions: '允许导出完成后执行关机/休眠',
       allowExportPowerActionsDescription: '默认关闭。开启后，导出完成动作才可以调用系统电源命令。',
       demucsTitle: 'AI 人声背景分离',
@@ -518,6 +524,8 @@ const zh = {
     searchPlaceholder: '搜索媒体',
     filters: {
       all: '全部',
+      selected: '仅选用',
+      'five-star': '仅五星',
       video: '视频',
       audio: '音频',
       image: '图片',
@@ -526,6 +534,9 @@ const zh = {
     },
     smartAlbums: {
       all: '全部素材',
+      'rating-five': '五星精选',
+      'flag-green': '绿旗选用',
+      'flag-red': '红旗拒绝',
       'format-video': '视频',
       'format-audio': '音频',
       'format-image': '图片',
@@ -535,6 +546,14 @@ const zh = {
       'duration-long': '长片',
       'recent-imports': '最近导入'
     },
+    rating: '评分',
+    ratingValue: (value: number) => `${value} 星`,
+    flag: '旗标',
+    flagGreen: '选用',
+    flagRed: '拒绝',
+    flagGreenShortcut: '绿旗选用 (G)',
+    flagRedShortcut: '红旗拒绝 (X)',
+    flagClearShortcut: '清除旗标 (U)',
     label: '标签',
     clearLabel: '清除标签',
     labelColors: {
@@ -553,6 +572,9 @@ const zh = {
     addToTimeline: '添加到时间线',
     relink: '重连',
     generateProxy: '生成代理',
+    vfrBadge: 'VFR',
+    vfrTooltip: '此文件为可变帧率，建议转换为 CFR 以避免音画不同步',
+    convertToCfr: '转换为 CFR',
     sequenceSuffix: '序列',
     proxyStatus: {
       ready: '代理就绪',
@@ -1642,10 +1664,12 @@ const zh = {
         'missing-font': '缺失字体',
         'whisper-path': 'Whisper 路径无效',
         ffmpeg: 'FFmpeg 不可用',
-        'platform-duration': '平台时长建议'
+        'platform-duration': '平台时长建议',
+        'vfr-media': '可变帧率媒体'
       },
       missingMediaMessage: (count: number) => `时间线引用了 ${count} 个缺失媒体文件。`,
       missingFontMessage: (count: number) => `${count} 个字体未在系统中检测到，文字导出可能回退到默认字体。`,
+      vfrMediaMessage: (count: number) => `${count} 个时间线媒体为可变帧率，建议转换为 CFR 以避免音画不同步。`,
       whisperMessage: '时间线包含字幕片段，但 Whisper 路径未配置或不可用。',
       ffmpegMessage: '未在 PATH 中检测到 FFmpeg，无法执行本地导出。',
       platformDurationMessage: (platform: string, duration: string, limit: string) => `${platform} 建议最长 ${limit}，当前时间线约 ${duration}。`
@@ -2263,6 +2287,12 @@ const enOverrides = {
       timecodeNdf: 'NDF (Non-Drop Frame)',
       timecodeDf: 'DF (Drop Frame)',
       dropFrameUnavailable: 'Drop Frame is only available for 29.97/59.94 fps.',
+      vfrHandling: 'VFR Handling',
+      vfrHandlingOptions: {
+        ignore: 'Ignore',
+        'auto-cfr': 'Auto convert to CFR',
+        ask: 'Ask each time'
+      },
       allowExportPowerActions: 'Allow shutdown/hibernate after export',
       allowExportPowerActionsDescription: 'Disabled by default. When enabled, export completion actions may call system power commands.',
       demucsTitle: 'AI Voice and Background Separation',
@@ -2593,6 +2623,8 @@ const enOverrides = {
     searchPlaceholder: 'Search media',
     filters: {
       all: 'All',
+      selected: 'Selected Only',
+      'five-star': 'Five Star Only',
       video: 'Video',
       audio: 'Audio',
       image: 'Image',
@@ -2601,6 +2633,9 @@ const enOverrides = {
     },
     smartAlbums: {
       all: 'All Media',
+      'rating-five': 'Five Star Selects',
+      'flag-green': 'Green Flag Selects',
+      'flag-red': 'Red Flag Rejects',
       'format-video': 'Video',
       'format-audio': 'Audio',
       'format-image': 'Image',
@@ -2610,6 +2645,14 @@ const enOverrides = {
       'duration-long': 'Long',
       'recent-imports': 'Recent Imports'
     },
+    rating: 'Rating',
+    ratingValue: (value: number) => `${value} star`,
+    flag: 'Flag',
+    flagGreen: 'Select',
+    flagRed: 'Reject',
+    flagGreenShortcut: 'Green flag select (G)',
+    flagRedShortcut: 'Red flag reject (X)',
+    flagClearShortcut: 'Clear flag (U)',
     label: 'Label',
     clearLabel: 'Clear Label',
     labelColors: {
@@ -2628,6 +2671,9 @@ const enOverrides = {
     addToTimeline: 'Add to Timeline',
     relink: 'Relink',
     generateProxy: 'Generate Proxy',
+    vfrBadge: 'VFR',
+    vfrTooltip: 'This file uses variable frame rate. Convert it to CFR to avoid audio/video sync issues.',
+    convertToCfr: 'Convert to CFR',
     sequenceSuffix: 'Sequence',
     proxyStatus: {
       ready: 'Proxy ready',

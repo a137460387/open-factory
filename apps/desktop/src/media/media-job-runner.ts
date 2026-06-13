@@ -71,7 +71,8 @@ async function runJob(job: MediaJob): Promise<void> {
   if (job.type === 'proxy') {
     updateMediaAsset(job.assetId, (item) => ({ ...item, proxyStatus: 'pending', proxyError: undefined }));
     const proxyAsset = await createProxyForAsset({ ...asset, proxyStatus: 'pending', proxyError: undefined }, useProxySettingsStore.getState().settings, {
-      force: job.force
+      force: job.force,
+      cfrFrameRate: job.cfrFrameRate
     });
     updateMediaAsset(job.assetId, () => proxyAsset);
     return;

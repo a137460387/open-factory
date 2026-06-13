@@ -23,6 +23,18 @@ describe('media bin filtering', () => {
   it('filters tagged media using project media metadata', () => {
     expect(filterMediaAssets(media, { filter: 'tagged', metadata: { 'image-1': { labelColor: 'purple' } } }).map((asset) => asset.id)).toEqual(['image-1']);
   });
+
+  it('filters by rating and flag metadata while combining type filters', () => {
+    const metadata = {
+      'video-1': { rating: 5, flag: 'green' as const },
+      'audio-1': { rating: 5, flag: 'red' as const },
+      'image-1': { rating: 3 }
+    };
+
+    expect(filterMediaAssets(media, { metadataFilter: 'five-star', metadata }).map((asset) => asset.id)).toEqual(['video-1', 'audio-1']);
+    expect(filterMediaAssets(media, { metadataFilter: 'selected', metadata }).map((asset) => asset.id)).toEqual(['video-1']);
+    expect(filterMediaAssets(media, { filter: 'video', metadataFilter: 'five-star', metadata }).map((asset) => asset.id)).toEqual(['video-1']);
+  });
 });
 
 function makeAsset(id: string, type: MediaAsset['type'], name: string): MediaAsset {

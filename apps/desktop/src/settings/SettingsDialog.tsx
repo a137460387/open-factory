@@ -6,11 +6,13 @@ import {
   UpdateProjectSettingsCommand,
   normalizeProjectFps,
   normalizeTimecodeFormat,
+  normalizeVfrHandlingStrategy,
   supportsDropFrameTimecode,
   type Clip,
   type Project,
   type TimecodeFormat,
-  type Timeline
+  type Timeline,
+  type VfrHandlingStrategy
 } from '@open-factory/editor-core';
 import { formatBackupDisplayTime } from '../backup/projectBackup';
 import { getLanguage, normalizeLanguage, zhCN, type Language } from '../i18n/strings';
@@ -100,6 +102,7 @@ interface SettingsDialogProps {
 }
 
 type SettingsTab = 'general' | 'appearance' | 'lut-library' | 'shortcuts' | 'macros' | 'automation' | 'translation' | 'proxy' | 'backup' | 'plugins';
+const VFR_HANDLING_OPTIONS: VfrHandlingStrategy[] = ['ignore', 'auto-cfr', 'ask'];
 const EXPORT_RULE_COPY_SUCCESS_ID = 'copy-success';
 const EXPORT_RULE_FAILURE_NOTIFICATION_ID = 'failure-notification';
 const EXPORT_RULE_QUEUE_TONE_ID = 'queue-tone';
@@ -745,6 +748,10 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
     commandManager.execute(new UpdateProjectSettingsCommand(projectAccessor, { timecodeFormat }));
   }
 
+  function updateProjectVfrHandling(value: string) {
+    commandManager.execute(new UpdateProjectSettingsCommand(projectAccessor, { vfrHandling: normalizeVfrHandlingStrategy(value) }));
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-testid="settings-dialog">
       <div className="flex max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg bg-white shadow-soft">
@@ -986,6 +993,21 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
                       <option value="df">{t.general.timecodeDf}</option>
                     </select>
                     {!supportsDropFrameTimecode(project.settings.fps) ? <span className="mt-1 block text-[11px] text-slate-500">{t.general.dropFrameUnavailable}</span> : null}
+                  </label>
+                  <label className="block text-xs font-medium text-slate-600">
+                    {t.general.vfrHandling}
+                    <select
+                      className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                      value={normalizeVfrHandlingStrategy(project.settings.vfrHandling)}
+                      data-testid="project-vfr-handling-select"
+                      onChange={(event) => updateProjectVfrHandling(event.target.value)}
+                    >
+                      {VFR_HANDLING_OPTIONS.map((option) => (
+                        <option key={option} value={option}>
+                          {t.general.vfrHandlingOptions[option]}
+                        </option>
+                      ))}
+                    </select>
                   </label>
                 </div>
                 <label className="flex items-start gap-2 rounded-md border border-line bg-panel p-3 text-xs text-slate-600">

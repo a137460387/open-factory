@@ -2271,6 +2271,9 @@ function formatPreflightMessage(issue: PreflightResult): string {
   if (issue.type === 'platform-duration') {
     return zhCN.exportDialog.preflight.platformDurationMessage(formatPlatformPresetName(issue.platformPreset), formatDuration(issue.durationSeconds), formatDuration(issue.limitSeconds));
   }
+  if (issue.type === 'vfr-media') {
+    return zhCN.exportDialog.preflight.vfrMediaMessage(issue.items.length);
+  }
   return zhCN.exportDialog.preflight.ffmpegMessage;
 }
 

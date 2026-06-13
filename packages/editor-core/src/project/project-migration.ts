@@ -21,6 +21,7 @@ import {
   normalizeFrameInterpolation,
   normalizeMasks,
   normalizeMasterVolume,
+  normalizeMediaMetadataEntry,
   normalizeMotionTrack,
   normalizeMulticamSequence,
   normalizeProjectAnnotations,
@@ -48,6 +49,7 @@ import { normalizeMediaFolderId, normalizeMediaFolders, normalizeMediaImportedAt
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
 import { cloneEffects } from '../effects';
 import { normalizeBeatMarkers } from '../beats';
+import { isVariableFrameRateProbe } from '../vfr';
 import { clampTransitionDuration, findAdjacentTransitionClips, getTimelineDuration } from '../timeline';
 import type { MigrationResult, ProjectFile, ProjectFileV1, ProjectFileV2 } from './project-types';
 import { isAbsolutePath, makeRelativePath, normalizePath, resolveMediaPath } from './relative-paths';
@@ -74,6 +76,10 @@ export function serializeProjectFile(project: Project, projectPath?: string): Pr
       relativePath,
       originalAbsolutePath: asset.originalAbsolutePath ?? normalizedPath,
       videoCodec: normalizeOptionalString(asset.videoCodec),
+      frameRate: normalizeSequenceFrameRate(asset.frameRate),
+      avgFrameRate: normalizeOptionalString(asset.avgFrameRate),
+      realFrameRate: normalizeOptionalString(asset.realFrameRate),
+      variableFrameRate: asset.variableFrameRate === true || isVariableFrameRateProbe({ avgFrameRate: asset.avgFrameRate, realFrameRate: asset.realFrameRate }),
       fieldOrder: normalizeOptionalString(asset.fieldOrder),
       imageSequence: asset.imageSequence
         ? {
@@ -177,16 +183,13 @@ function normalizeMediaMetadata(metadata: Record<string, MediaMetadata> | undefi
   const mediaIds = new Set(media.map((asset) => asset.id));
   const output: Record<string, MediaMetadata> = {};
   for (const [assetId, value] of Object.entries(metadata ?? {})) {
-    if (!mediaIds.has(assetId) || !value || !isMediaLabelColor(value.labelColor)) {
+    const normalized = normalizeMediaMetadataEntry(value);
+    if (!mediaIds.has(assetId) || !normalized) {
       continue;
     }
-    output[assetId] = { labelColor: value.labelColor };
+    output[assetId] = normalized;
   }
   return output;
-}
-
-function isMediaLabelColor(value: unknown): value is NonNullable<MediaMetadata['labelColor']> {
-  return value === 'red' || value === 'orange' || value === 'yellow' || value === 'green' || value === 'blue' || value === 'purple';
 }
 
 export function isProjectFileV2(file: ProjectFile | unknown): file is ProjectFileV2 {
@@ -207,6 +210,10 @@ function normalizeMediaAsset(asset: MediaAsset, projectPath?: string, mediaFolde
     originalAbsolutePath: asset.originalAbsolutePath ?? path,
     relativePath: asset.relativePath === undefined ? null : asset.relativePath,
     videoCodec: normalizeOptionalString(asset.videoCodec),
+    frameRate: normalizeSequenceFrameRate(asset.frameRate),
+    avgFrameRate: normalizeOptionalString(asset.avgFrameRate),
+    realFrameRate: normalizeOptionalString(asset.realFrameRate),
+    variableFrameRate: asset.variableFrameRate === true || isVariableFrameRateProbe({ avgFrameRate: asset.avgFrameRate, realFrameRate: asset.realFrameRate }),
     fieldOrder: normalizeOptionalString(asset.fieldOrder),
     imageSequence: normalizeImageSequence(asset.imageSequence, projectPath)
   };

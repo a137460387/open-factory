@@ -26,6 +26,10 @@ pub struct MediaProbe {
     audio_sample_rate: Option<u32>,
     audio_codec: Option<String>,
     video_codec: Option<String>,
+    frame_rate: Option<f64>,
+    avg_frame_rate: Option<String>,
+    real_frame_rate: Option<String>,
+    variable_frame_rate: bool,
     field_order: Option<String>,
 }
 
@@ -179,6 +183,14 @@ pub fn probe_media(app: AppHandle, path: String) -> Result<MediaProbe, String> {
                     .is_some_and(|kind| kind == "video")
             })
         });
+    let avg_frame_rate = video
+        .and_then(|stream| stream.get("avg_frame_rate"))
+        .and_then(Value::as_str)
+        .map(ToOwned::to_owned);
+    let real_frame_rate = video
+        .and_then(|stream| stream.get("r_frame_rate"))
+        .and_then(Value::as_str)
+        .map(ToOwned::to_owned);
 
     Ok(MediaProbe {
         has_audio: audio.is_some(),
@@ -198,6 +210,10 @@ pub fn probe_media(app: AppHandle, path: String) -> Result<MediaProbe, String> {
             .and_then(|stream| stream.get("codec_name"))
             .and_then(Value::as_str)
             .map(ToOwned::to_owned),
+        frame_rate: parse_frame_rate(avg_frame_rate.as_deref()).or_else(|| parse_frame_rate(real_frame_rate.as_deref())),
+        variable_frame_rate: is_variable_frame_rate(avg_frame_rate.as_deref(), real_frame_rate.as_deref()),
+        avg_frame_rate,
+        real_frame_rate,
         field_order: video
             .and_then(|stream| stream.get("field_order"))
             .and_then(Value::as_str)
@@ -429,6 +445,15 @@ fn parse_frame_rate(value: Option<&str>) -> Option<f64> {
         return Some(round_seconds(numerator / denominator));
     }
     parse_f64(Some(raw)).map(round_seconds)
+}
+
+fn is_variable_frame_rate(avg_frame_rate: Option<&str>, real_frame_rate: Option<&str>) -> bool {
+    let avg = parse_frame_rate(avg_frame_rate);
+    let real = parse_frame_rate(real_frame_rate);
+    match (avg, real) {
+        (Some(avg), Some(real)) => (avg - real).abs() > 0.001,
+        _ => false,
+    }
 }
 
 fn system_time_ms(time: SystemTime) -> Option<u64> {
@@ -1096,6 +1121,13 @@ mod tests {
                 "C:/Media/tiny-video.mp4"
             ]
         );
+    }
+
+    #[test]
+    fn detects_variable_frame_rate_from_avg_and_real_rates() {
+        assert!(is_variable_frame_rate(Some("24000/1001"), Some("30000/1001")));
+        assert!(!is_variable_frame_rate(Some("30000/1001"), Some("30000/1001")));
+        assert!(!is_variable_frame_rate(Some("0/0"), Some("30000/1001")));
     }
 
     #[test]

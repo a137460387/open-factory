@@ -1,5 +1,6 @@
 import { buildCachePaths, getMediaCacheKey } from '../cache/cache-key';
 import type { MediaAsset } from '../model';
+import { getCfrTargetFrameRate } from '../vfr';
 import type { ProxyPlan, ProxySettings } from './proxy-types';
 
 export const DEFAULT_PROXY_SETTINGS: ProxySettings = {
@@ -19,18 +20,29 @@ export function shouldGenerateProxy(asset: MediaAsset, settings: ProxySettings =
   return getProxyTriggerReason(asset, settings) !== null;
 }
 
-export function buildProxyPlan(asset: MediaAsset, appDataDir: string, settings: ProxySettings = DEFAULT_PROXY_SETTINGS, options: { force?: boolean } = {}): ProxyPlan | null {
+export function buildProxyPlan(
+  asset: MediaAsset,
+  appDataDir: string,
+  settings: ProxySettings = DEFAULT_PROXY_SETTINGS,
+  options: { force?: boolean; cfrFrameRate?: number } = {}
+): ProxyPlan | null {
   const force = options.force === true;
-  if (asset.type !== 'video' || (asset.proxyPath && asset.proxyStatus === 'ready')) {
+  const cfrFrameRate = options.cfrFrameRate ?? (force && asset.variableFrameRate ? getCfrTargetFrameRate({ avgFrameRate: asset.avgFrameRate, realFrameRate: asset.realFrameRate }, asset.frameRate ?? 30) : undefined);
+  if (asset.type !== 'video' || (!cfrFrameRate && asset.proxyPath && asset.proxyStatus === 'ready')) {
     return null;
   }
-  if ((!force && !shouldGenerateProxy(asset, settings)) || !asset.size || !asset.mtimeMs) {
+  if ((!force && !cfrFrameRate && !shouldGenerateProxy(asset, settings)) || !asset.size || !asset.mtimeMs) {
     return null;
   }
-  const key = getMediaCacheKey({ path: asset.path, size: asset.size, mtimeMs: asset.mtimeMs, formatVersion: `proxy-${settings.maxWidth}x${settings.maxHeight}-${settings.videoBitrate}` });
+  const key = getMediaCacheKey({
+    path: asset.path,
+    size: asset.size,
+    mtimeMs: asset.mtimeMs,
+    formatVersion: `proxy-${settings.maxWidth}x${settings.maxHeight}-${settings.videoBitrate}${cfrFrameRate ? `-cfr-${cfrFrameRate}` : ''}`
+  });
   const paths = buildCachePaths('proxy', key);
   const dimensions = fitWithin(asset.width, asset.height, settings.maxWidth, settings.maxHeight);
-  const reason = getProxyTriggerReason(asset, settings) ?? 'manual';
+  const reason = cfrFrameRate ? 'vfr-cfr' : (getProxyTriggerReason(asset, settings) ?? 'manual');
   return {
     assetId: asset.id,
     inputPath: asset.path,
@@ -38,7 +50,8 @@ export function buildProxyPlan(asset: MediaAsset, appDataDir: string, settings: 
     width: dimensions.width,
     height: dimensions.height,
     videoBitrate: settings.videoBitrate,
-    reason
+    reason,
+    cfrFrameRate
   };
 }
 

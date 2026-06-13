@@ -4,6 +4,7 @@ import { generateProxy, getAppDataDir } from '../lib/tauri-bridge';
 
 export interface ProxyGenerationOptions {
   force?: boolean;
+  cfrFrameRate?: number;
 }
 
 export async function createProxyForAsset(asset: MediaAsset, settings?: ProxySettings, options: ProxyGenerationOptions = {}): Promise<MediaAsset> {

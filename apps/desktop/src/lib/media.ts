@@ -62,6 +62,10 @@ export async function probeMediaPath(path: string, imageSequence?: ImageSequence
     audioSampleRate: mediaProbe.audioSampleRate,
     audioCodec: mediaProbe.audioCodec,
     videoCodec: mediaProbe.videoCodec,
+    frameRate: mediaProbe.frameRate,
+    avgFrameRate: mediaProbe.avgFrameRate,
+    realFrameRate: mediaProbe.realFrameRate,
+    variableFrameRate: mediaProbe.variableFrameRate,
     fieldOrder: mediaProbe.fieldOrder,
     proxyStatus: type === 'video' ? 'none' : undefined,
     imageSequence

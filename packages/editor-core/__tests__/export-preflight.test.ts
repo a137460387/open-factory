@@ -150,6 +150,22 @@ describe('export preflight', () => {
     expect(runExportPreflight(project, { platformPreset: 'tiktok' }).some((issue) => issue.type === 'platform-duration')).toBe(false);
   });
 
+  it('warns when the exported timeline contains VFR media', () => {
+    const project = makeProject();
+    project.media = [{ ...project.media[0], id: 'asset-vfr', name: 'phone-vfr.mp4', variableFrameRate: true }];
+    project.timeline = makeTimeline([makeVideoClip({ id: 'clip-vfr', mediaId: 'asset-vfr' })]);
+
+    expect(runExportPreflight(project)).toContainEqual(
+      expect.objectContaining({
+        type: 'vfr-media',
+        severity: 'warning',
+        items: ['phone-vfr.mp4'],
+        clipIds: ['clip-vfr'],
+        mediaIds: ['asset-vfr']
+      })
+    );
+  });
+
   it('parses CSS font-family lists with quoted names', () => {
     expect(parseFontFamilyList('"Noto Sans CJK", Arial, sans-serif')).toEqual(['Noto Sans CJK', 'Arial', 'sans-serif']);
   });

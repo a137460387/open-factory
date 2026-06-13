@@ -13,6 +13,7 @@ export interface MediaJob {
   type: MediaJobType;
   status: MediaJobStatus;
   force?: boolean;
+  cfrFrameRate?: number;
   createdAt: string;
   startedAt?: string;
   finishedAt?: string;
@@ -21,6 +22,7 @@ export interface MediaJob {
 
 export interface MediaJobOptions {
   force?: boolean;
+  cfrFrameRate?: number;
 }
 
 export interface MediaJobState {
@@ -90,7 +92,7 @@ function buildJobsForAsset(asset: MediaAsset, proxySettings?: ProxySettings, opt
   const jobs: MediaJob[] = [];
   const canQueueProxy = asset.type === 'video' && !(asset.proxyPath && asset.proxyStatus === 'ready');
   if (canQueueProxy && (options.force || shouldGenerateProxy(asset, proxySettings))) {
-    jobs.push(createJob(asset, 'proxy', proxySettings, options.force));
+    jobs.push(createJob(asset, 'proxy', proxySettings, options.force, options.cfrFrameRate));
   }
   if (asset.type === 'audio' || (asset.type === 'video' && asset.hasAudio)) {
     jobs.push(createJob(asset, 'waveform'));
@@ -98,9 +100,10 @@ function buildJobsForAsset(asset: MediaAsset, proxySettings?: ProxySettings, opt
   return jobs;
 }
 
-function createJob(asset: MediaAsset, type: MediaJobType, proxySettings?: ProxySettings, force?: boolean): MediaJob {
+function createJob(asset: MediaAsset, type: MediaJobType, proxySettings?: ProxySettings, force?: boolean, cfrFrameRate?: number): MediaJob {
   const sourceStamp = `${asset.path}|${asset.size ?? 0}|${asset.mtimeMs ?? 0}`;
-  const settingsStamp = type === 'proxy' && proxySettings ? `|${proxySettings.maxWidth}x${proxySettings.maxHeight}|${proxySettings.triggerShortEdge}|${proxySettings.videoBitrate}` : '';
+  const cfrStamp = type === 'proxy' && cfrFrameRate ? `|cfr=${cfrFrameRate}` : '';
+  const settingsStamp = type === 'proxy' && proxySettings ? `|${proxySettings.maxWidth}x${proxySettings.maxHeight}|${proxySettings.triggerShortEdge}|${proxySettings.videoBitrate}${cfrStamp}` : '';
   return {
     id: `${type}-${asset.id}-${Math.random().toString(36).slice(2)}`,
     key: `${type}|${asset.id}|${sourceStamp}${settingsStamp}`,
@@ -109,6 +112,7 @@ function createJob(asset: MediaAsset, type: MediaJobType, proxySettings?: ProxyS
     type,
     status: 'pending',
     force: force || undefined,
+    cfrFrameRate,
     createdAt: new Date().toISOString()
   };
 }

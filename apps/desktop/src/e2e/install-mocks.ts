@@ -53,6 +53,7 @@ const sampleProjectPath = 'C:/Projects/sample.cutproj.json';
 const missingProjectPath = 'C:/Projects/missing.cutproj.json';
 const batchMissingProjectPath = 'C:/Projects/batch-missing.cutproj.json';
 const tinyVideo = 'C:/Media/tiny-video.mp4';
+const vfrVideo = 'C:/Media/vfr-phone.mp4';
 const fourKHevcVideo = 'C:/Media/four-k-hevc.mov';
 const tinyVideoB = 'C:/Media/camera-b.mp4';
 const tinyAudio = 'C:/Media/tiny-audio.wav';
@@ -458,14 +459,21 @@ const mocks: TauriMocks = {
   sendNotification: (title, body) => {
     notifications.push({ title, body });
   },
-  probeMedia: (path) => ({
-    hasAudio: path.endsWith('.mp4') || path.endsWith('.wav'),
-    audioChannels: path.endsWith('.mp4') || path.endsWith('.wav') ? 2 : undefined,
-    audioSampleRate: path.endsWith('.mp4') || path.endsWith('.wav') ? 44_100 : undefined,
-    audioCodec: path.endsWith('.mp4') ? 'aac' : path.endsWith('.wav') ? 'pcm_s16le' : undefined,
-    videoCodec: path === fourKHevcVideo ? 'hevc' : path.endsWith('.mp4') || path.endsWith('.mov') ? 'h264' : undefined,
-    fieldOrder: path.endsWith('.mp4') || path.endsWith('.mov') ? 'tt' : undefined
-  }),
+  probeMedia: (path) => {
+    const isVfr = path === vfrVideo;
+    return {
+      hasAudio: path.endsWith('.mp4') || path.endsWith('.wav'),
+      audioChannels: path.endsWith('.mp4') || path.endsWith('.wav') ? 2 : undefined,
+      audioSampleRate: path.endsWith('.mp4') || path.endsWith('.wav') ? 44_100 : undefined,
+      audioCodec: path.endsWith('.mp4') ? 'aac' : path.endsWith('.wav') ? 'pcm_s16le' : undefined,
+      videoCodec: path === fourKHevcVideo ? 'hevc' : path.endsWith('.mp4') || path.endsWith('.mov') ? 'h264' : undefined,
+      frameRate: isVfr ? 23.976 : path.endsWith('.mp4') || path.endsWith('.mov') ? 30 : undefined,
+      avgFrameRate: isVfr ? '24000/1001' : path.endsWith('.mp4') || path.endsWith('.mov') ? '30/1' : undefined,
+      realFrameRate: isVfr ? '30/1' : path.endsWith('.mp4') || path.endsWith('.mov') ? '30/1' : undefined,
+      variableFrameRate: isVfr,
+      fieldOrder: path.endsWith('.mp4') || path.endsWith('.mov') ? 'tt' : undefined
+    };
+  },
   analyzeMedia: (path) => ({
     path,
     fileSize: path === fourKHevcVideo ? 500 * 1024 * 1024 : 4096,

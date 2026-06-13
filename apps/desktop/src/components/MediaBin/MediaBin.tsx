@@ -6,14 +6,15 @@ import {
   getMediaFolderDepth,
   shouldGenerateProxy,
   type MediaAsset,
-  type MediaBinFilter,
+  type MediaFlag,
   type MediaFolder,
   type MediaLabelColor,
   type MediaMetadata,
+  type MediaMetadataFilter,
   type SmartAlbumId,
   type TitleTemplateId
 } from '@open-factory/editor-core';
-import { AlertCircle, BadgeCheck, ChevronDown, ChevronRight, FileAudio2, FileImage, FileText, FileVideo2, Folder, FolderPlus, Gauge, Import, Info, Link2, Loader2, Merge, Plus, Search, SlidersHorizontal, Tag, Trash2, X } from 'lucide-react';
+import { AlertCircle, BadgeCheck, ChevronDown, ChevronRight, FileAudio2, FileImage, FileText, FileVideo2, Flag, Folder, FolderPlus, Gauge, Import, Info, Link2, Loader2, Merge, Plus, Search, SlidersHorizontal, Star, Tag, Trash2, X } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { clsx } from 'clsx';
 import { zhCN } from '../../i18n/strings';
@@ -36,7 +37,10 @@ interface MediaBinProps {
   onRelink(assetId: string): void;
   onRelinkAll(): void;
   onGenerateProxy(assetId: string): void;
+  onConvertToCfr(assetId: string): void;
   onSetLabel(assetId: string, labelColor?: MediaLabelColor): void;
+  onSetRating(assetId: string, rating: number): void;
+  onSetFlag(assetId: string, flag?: MediaFlag): void;
   onAddTitleTemplate(templateId: TitleTemplateId): void;
   onCreateFolder(parentId?: string | null): void;
   onRenameFolder(folderId: string, name: string): void;
@@ -45,7 +49,8 @@ interface MediaBinProps {
   onMoveMediaToFolder(assetIds: string[], folderId?: string | null): void;
 }
 
-type MediaBinView = MediaBinFilter | 'titles';
+type MediaBinView = 'all' | 'video' | 'audio' | 'image' | 'tagged' | 'titles';
+type QuickMediaFilter = Extract<MediaMetadataFilter, 'all' | 'selected' | 'five-star'>;
 const MEDIA_CARD_DRAG_MIME = 'application/x-open-factory-media-id';
 type MediaInfoState = { asset: MediaAsset; loading: boolean; analysis?: MediaAnalysis; error?: string };
 
@@ -62,7 +67,10 @@ export function MediaBin({
   onRelink,
   onRelinkAll,
   onGenerateProxy,
+  onConvertToCfr,
   onSetLabel,
+  onSetRating,
+  onSetFlag,
   onAddTitleTemplate,
   onCreateFolder,
   onRenameFolder,
@@ -74,12 +82,22 @@ export function MediaBin({
   const [dragOver, setDragOver] = useState(false);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<MediaBinView>('all');
+  const [quickFilter, setQuickFilter] = useState<QuickMediaFilter>('all');
   const [smartAlbumId, setSmartAlbumId] = useState<SmartAlbumId | 'none'>('none');
   const [mediaInfo, setMediaInfo] = useState<MediaInfoState>();
   const missingCount = media.filter((asset) => asset.missing).length;
-  const smartAlbums = collectSmartAlbums(media);
+  const smartAlbums = collectSmartAlbums(media, Date.now(), mediaMetadata);
   const smartAlbumIds = smartAlbumId === 'none' ? undefined : new Set(smartAlbums.find((album) => album.id === smartAlbumId)?.assetIds ?? []);
-  const visibleMedia = filter === 'titles' ? [] : filterMediaAssets(media, { query: search, filter, metadata: mediaMetadata }).filter((asset) => !smartAlbumIds || smartAlbumIds.has(asset.id));
+  const metadataFilter: MediaMetadataFilter = filter === 'tagged' ? 'tagged' : quickFilter;
+  const visibleMedia =
+    filter === 'titles'
+      ? []
+      : filterMediaAssets(media, {
+          query: search,
+          filter: filter === 'tagged' ? 'all' : filter,
+          metadataFilter,
+          metadata: mediaMetadata
+        }).filter((asset) => !smartAlbumIds || smartAlbumIds.has(asset.id));
   const jobs = useMediaJobStore((state) => state.jobs);
   const runnerActive = useMediaJobStore((state) => state.runnerActive);
   const clearFinishedJobs = useMediaJobStore((state) => state.clearFinishedJobs);
@@ -208,7 +226,31 @@ export function MediaBin({
             />
           </label>
           <div className="grid grid-cols-3 gap-1" data-testid="media-filter-bar">
-            {(['all', 'video', 'audio', 'image', 'tagged', 'titles'] as MediaBinView[]).map((item) => (
+            {(['all', 'selected', 'five-star'] as QuickMediaFilter[]).map((item) => (
+              <button
+                key={item}
+                className={clsx(
+                  'rounded-md border px-1.5 py-1 text-xs font-semibold',
+                  quickFilter === item && (item !== 'all' || filter === 'all') ? 'border-brand bg-white text-brand' : 'border-line bg-white text-slate-600 hover:bg-panel'
+                )}
+                type="button"
+                data-testid={`media-filter-${item}`}
+                onClick={() => {
+                  if (item === 'all') {
+                    setFilter('all');
+                  } else if (filter === 'tagged' || filter === 'titles') {
+                    setFilter('all');
+                  }
+                  setQuickFilter(item);
+                  setSmartAlbumId('none');
+                }}
+              >
+                {t.filters[item]}
+              </button>
+            ))}
+          </div>
+          <div className="grid grid-cols-5 gap-1" data-testid="media-type-filter-bar">
+            {(['video', 'audio', 'image', 'tagged', 'titles'] as MediaBinView[]).map((item) => (
               <button
                 key={item}
                 className={clsx(
@@ -219,6 +261,9 @@ export function MediaBin({
                 data-testid={`media-filter-${item}`}
                 onClick={() => {
                   setFilter(item);
+                  if (item === 'tagged' || item === 'titles') {
+                    setQuickFilter('all');
+                  }
                   setSmartAlbumId('none');
                 }}
               >
@@ -257,7 +302,19 @@ export function MediaBin({
             {t.emptyDrop}
           </button>
         ) : smartAlbumId !== 'none' ? (
-          <MediaCardGrid media={visibleMedia} mediaMetadata={mediaMetadata} onAddToTimeline={onAddToTimeline} onRelink={onRelink} onGenerateProxy={onGenerateProxy} onSetLabel={onSetLabel} onBatchTranscode={onBatchTranscode} onShowInfo={(asset) => void openMediaInfo(asset)} />
+          <MediaCardGrid
+            media={visibleMedia}
+            mediaMetadata={mediaMetadata}
+            onAddToTimeline={onAddToTimeline}
+            onRelink={onRelink}
+            onGenerateProxy={onGenerateProxy}
+            onConvertToCfr={onConvertToCfr}
+            onSetLabel={onSetLabel}
+            onSetRating={onSetRating}
+            onSetFlag={onSetFlag}
+            onBatchTranscode={onBatchTranscode}
+            onShowInfo={(asset) => void openMediaInfo(asset)}
+          />
         ) : (
           <div className="space-y-3">
             <MediaFolderTree
@@ -272,7 +329,10 @@ export function MediaBin({
               onAddToTimeline={onAddToTimeline}
               onRelink={onRelink}
               onGenerateProxy={onGenerateProxy}
+              onConvertToCfr={onConvertToCfr}
               onSetLabel={onSetLabel}
+              onSetRating={onSetRating}
+              onSetFlag={onSetFlag}
               onBatchTranscode={onBatchTranscode}
               onShowInfo={(asset) => void openMediaInfo(asset)}
             />
@@ -283,7 +343,10 @@ export function MediaBin({
               onAddToTimeline={onAddToTimeline}
               onRelink={onRelink}
               onGenerateProxy={onGenerateProxy}
+              onConvertToCfr={onConvertToCfr}
               onSetLabel={onSetLabel}
+              onSetRating={onSetRating}
+              onSetFlag={onSetFlag}
               onBatchTranscode={onBatchTranscode}
               onShowInfo={(asset) => void openMediaInfo(asset)}
             />
@@ -333,7 +396,10 @@ function MediaFolderTree(props: {
   onAddToTimeline(assetId: string): void;
   onRelink(assetId: string): void;
   onGenerateProxy(assetId: string): void;
+  onConvertToCfr(assetId: string): void;
   onSetLabel(assetId: string, labelColor?: MediaLabelColor): void;
+  onSetRating(assetId: string, rating: number): void;
+  onSetFlag(assetId: string, flag?: MediaFlag): void;
   onBatchTranscode(paths: string[]): void;
   onShowInfo(asset: MediaAsset): void;
 }) {
@@ -364,7 +430,10 @@ function MediaFolderNode({
   onAddToTimeline,
   onRelink,
   onGenerateProxy,
+  onConvertToCfr,
   onSetLabel,
+  onSetRating,
+  onSetFlag,
   onBatchTranscode,
   onShowInfo
 }: {
@@ -381,7 +450,10 @@ function MediaFolderNode({
   onAddToTimeline(assetId: string): void;
   onRelink(assetId: string): void;
   onGenerateProxy(assetId: string): void;
+  onConvertToCfr(assetId: string): void;
   onSetLabel(assetId: string, labelColor?: MediaLabelColor): void;
+  onSetRating(assetId: string, rating: number): void;
+  onSetFlag(assetId: string, flag?: MediaFlag): void;
   onBatchTranscode(paths: string[]): void;
   onShowInfo(asset: MediaAsset): void;
 }) {
@@ -469,12 +541,27 @@ function MediaFolderNode({
               onAddToTimeline={onAddToTimeline}
               onRelink={onRelink}
               onGenerateProxy={onGenerateProxy}
+              onConvertToCfr={onConvertToCfr}
               onSetLabel={onSetLabel}
+              onSetRating={onSetRating}
+              onSetFlag={onSetFlag}
               onBatchTranscode={onBatchTranscode}
               onShowInfo={onShowInfo}
             />
           ))}
-          <MediaCardGrid media={folderMedia} mediaMetadata={mediaMetadata} onAddToTimeline={onAddToTimeline} onRelink={onRelink} onGenerateProxy={onGenerateProxy} onSetLabel={onSetLabel} onBatchTranscode={onBatchTranscode} onShowInfo={onShowInfo} />
+          <MediaCardGrid
+            media={folderMedia}
+            mediaMetadata={mediaMetadata}
+            onAddToTimeline={onAddToTimeline}
+            onRelink={onRelink}
+            onGenerateProxy={onGenerateProxy}
+            onConvertToCfr={onConvertToCfr}
+            onSetLabel={onSetLabel}
+            onSetRating={onSetRating}
+            onSetFlag={onSetFlag}
+            onBatchTranscode={onBatchTranscode}
+            onShowInfo={onShowInfo}
+          />
         </div>
       ) : null}
     </div>
@@ -506,7 +593,10 @@ function MediaCardGrid({
   onAddToTimeline,
   onRelink,
   onGenerateProxy,
+  onConvertToCfr,
   onSetLabel,
+  onSetRating,
+  onSetFlag,
   onBatchTranscode,
   onShowInfo
 }: {
@@ -515,7 +605,10 @@ function MediaCardGrid({
   onAddToTimeline(assetId: string): void;
   onRelink(assetId: string): void;
   onGenerateProxy(assetId: string): void;
+  onConvertToCfr(assetId: string): void;
   onSetLabel(assetId: string, labelColor?: MediaLabelColor): void;
+  onSetRating(assetId: string, rating: number): void;
+  onSetFlag(assetId: string, flag?: MediaFlag): void;
   onBatchTranscode(paths: string[]): void;
   onShowInfo(asset: MediaAsset): void;
 }) {
@@ -532,7 +625,10 @@ function MediaCardGrid({
           onAdd={() => onAddToTimeline(asset.id)}
           onRelink={() => onRelink(asset.id)}
           onGenerateProxy={() => onGenerateProxy(asset.id)}
+          onConvertToCfr={() => onConvertToCfr(asset.id)}
           onSetLabel={(labelColor) => onSetLabel(asset.id, labelColor)}
+          onSetRating={(rating) => onSetRating(asset.id, rating)}
+          onSetFlag={(flag) => onSetFlag(asset.id, flag)}
           onBatchTranscode={() => onBatchTranscode([asset.path])}
           onShowInfo={() => onShowInfo(asset)}
         />
@@ -736,7 +832,10 @@ function MediaCard({
   onAdd,
   onRelink,
   onGenerateProxy,
+  onConvertToCfr,
   onSetLabel,
+  onSetRating,
+  onSetFlag,
   onBatchTranscode,
   onShowInfo
 }: {
@@ -745,7 +844,10 @@ function MediaCard({
   onAdd(): void;
   onRelink(): void;
   onGenerateProxy(): void;
+  onConvertToCfr(): void;
   onSetLabel(labelColor?: MediaLabelColor): void;
+  onSetRating(rating: number): void;
+  onSetFlag(flag?: MediaFlag): void;
   onBatchTranscode(): void;
   onShowInfo(): void;
 }) {
@@ -754,17 +856,36 @@ function MediaCard({
   const canGenerateProxy = asset.type === 'video' && (shouldGenerateProxy(asset, proxySettings) || proxyStatus === 'error');
   const [labelMenuOpen, setLabelMenuOpen] = useState(false);
   const labelColor = metadata?.labelColor;
+  const rating = metadata?.rating ?? 0;
+  const flag = metadata?.flag;
   return (
     <div
-      className={clsx('relative overflow-hidden rounded-md border bg-white shadow-sm', asset.missing ? 'border-rose-300' : 'border-line')}
+      className={clsx('relative overflow-hidden rounded-md border bg-white shadow-sm outline-none focus:ring-2 focus:ring-brand', asset.missing ? 'border-rose-300' : 'border-line')}
       data-testid={`media-card-${asset.id}`}
       data-missing={asset.missing ? 'true' : 'false'}
       data-folder-id={asset.folderId ?? 'root'}
       data-label-color={labelColor ?? 'none'}
+      data-rating={rating}
+      data-flag={flag ?? 'none'}
+      tabIndex={0}
       draggable
       onDragStart={(event) => {
         event.dataTransfer.effectAllowed = 'move';
         event.dataTransfer.setData(MEDIA_CARD_DRAG_MIME, asset.id);
+      }}
+      onKeyDown={(event) => {
+        if (event.key.toLowerCase() === 'g') {
+          event.preventDefault();
+          onSetFlag('green');
+        }
+        if (event.key.toLowerCase() === 'x') {
+          event.preventDefault();
+          onSetFlag('red');
+        }
+        if (event.key.toLowerCase() === 'u') {
+          event.preventDefault();
+          onSetFlag(undefined);
+        }
       }}
       onContextMenu={(event) => {
         event.preventDefault();
@@ -774,7 +895,28 @@ function MediaCard({
       <div className="checkerboard relative aspect-video">
         {asset.thumbnail ? <img className="h-full w-full object-cover" src={asset.thumbnail} alt="" /> : <IconPreview type={asset.type} />}
         {asset.missing ? <span className="absolute left-2 top-2 rounded bg-rose-600 px-2 py-1 text-xs font-semibold text-white" data-testid={`missing-media-badge-${asset.id}`}>{zhCN.common.missing}</span> : null}
+        {asset.variableFrameRate ? (
+          <span
+            className="absolute left-2 top-2 rounded bg-sky-700 px-2 py-1 text-xs font-semibold text-white shadow"
+            title={zhCN.mediaBin.vfrTooltip}
+            data-testid={`vfr-badge-${asset.id}`}
+          >
+            {zhCN.mediaBin.vfrBadge}
+          </span>
+        ) : null}
         {labelColor ? <span className="absolute right-2 top-2 h-4 w-4 rounded-full border border-white shadow" style={{ backgroundColor: labelColorToHex(labelColor) }} data-testid={`media-label-${asset.id}`} /> : null}
+        {flag ? (
+          <span
+            className={clsx(
+              'absolute left-2 bottom-2 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-semibold text-white shadow',
+              flag === 'green' ? 'bg-emerald-600' : 'bg-rose-600'
+            )}
+            data-testid={`media-flag-badge-${asset.id}`}
+          >
+            <Flag size={11} fill="currentColor" />
+            {flag === 'green' ? zhCN.mediaBin.flagGreen : zhCN.mediaBin.flagRed}
+          </span>
+        ) : null}
       </div>
       {labelMenuOpen ? (
         <div className="absolute right-2 top-2 z-10 w-40 rounded-md border border-line bg-white p-2 text-xs shadow-soft" data-testid={`media-label-menu-${asset.id}`}>
@@ -848,7 +990,69 @@ function MediaCard({
         {asset.type === 'video' ? (
           <ProxyStatus status={proxyStatus} error={asset.proxyError} canGenerate={canGenerateProxy} onGenerateProxy={onGenerateProxy} assetId={asset.id} />
         ) : null}
+        {asset.variableFrameRate ? (
+          <button
+            className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md border border-sky-200 bg-sky-50 px-2 py-1.5 text-xs font-semibold text-sky-800 hover:bg-sky-100"
+            type="button"
+            data-testid={`convert-cfr-${asset.id}`}
+            onClick={onConvertToCfr}
+          >
+            {zhCN.mediaBin.convertToCfr}
+          </button>
+        ) : null}
         {asset.relativePath ? <div className="mt-1 truncate text-[11px] text-slate-400">{asset.relativePath}</div> : null}
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <div className="flex items-center" data-testid={`media-rating-${asset.id}`} aria-label={zhCN.mediaBin.rating}>
+            {[1, 2, 3, 4, 5].map((value) => (
+              <button
+                key={value}
+                type="button"
+                className={clsx('rounded p-0.5', value <= rating ? 'text-amber-400 hover:text-amber-500' : 'text-slate-300 hover:text-amber-300')}
+                title={zhCN.mediaBin.ratingValue(value)}
+                aria-label={zhCN.mediaBin.ratingValue(value)}
+                data-testid={`media-rating-star-${asset.id}-${value}`}
+                data-rating-value={value}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onSetRating(rating === value ? 0 : value);
+                }}
+              >
+                <Star size={14} fill={value <= rating ? 'currentColor' : 'none'} />
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-1" aria-label={zhCN.mediaBin.flag}>
+            <button
+              type="button"
+              className={clsx('rounded border px-1.5 py-0.5 text-[11px] font-semibold', flag === 'green' ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-line text-slate-500 hover:bg-panel')}
+              title={zhCN.mediaBin.flagGreenShortcut}
+              data-testid={`media-flag-green-${asset.id}`}
+              onClick={() => onSetFlag(flag === 'green' ? undefined : 'green')}
+            >
+              G
+            </button>
+            <button
+              type="button"
+              className={clsx('rounded border px-1.5 py-0.5 text-[11px] font-semibold', flag === 'red' ? 'border-rose-300 bg-rose-50 text-rose-700' : 'border-line text-slate-500 hover:bg-panel')}
+              title={zhCN.mediaBin.flagRedShortcut}
+              data-testid={`media-flag-red-${asset.id}`}
+              onClick={() => onSetFlag(flag === 'red' ? undefined : 'red')}
+            >
+              X
+            </button>
+            {flag ? (
+              <button
+                type="button"
+                className="rounded border border-line px-1.5 py-0.5 text-[11px] font-semibold text-slate-500 hover:bg-panel"
+                title={zhCN.mediaBin.flagClearShortcut}
+                data-testid={`media-flag-clear-${asset.id}`}
+                onClick={() => onSetFlag(undefined)}
+              >
+                U
+              </button>
+            ) : null}
+          </div>
+        </div>
         <button
           className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md border border-line bg-panel px-2 py-1.5 text-sm font-medium hover:bg-white"
           onClick={onAdd}

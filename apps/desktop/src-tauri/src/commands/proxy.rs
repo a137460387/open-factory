@@ -16,6 +16,7 @@ pub struct ProxyPlanDto {
     height: u32,
     video_bitrate: String,
     reason: String,
+    cfr_frame_rate: Option<f64>,
 }
 
 #[derive(Debug, Serialize)]
@@ -36,10 +37,7 @@ pub async fn generate_proxy(app: AppHandle, plan: ProxyPlanDto) -> Result<ProxyR
     let started = Instant::now();
     let input_arg = normalize_path(&input_path);
     let output_arg = normalize_path(&output_path);
-    let scale = format!(
-        "scale={}:{}:force_original_aspect_ratio=decrease,pad={}:{}:(ow-iw)/2:(oh-ih)/2",
-        plan.width, plan.height, plan.width, plan.height
-    );
+    let filter = build_proxy_video_filter(plan.width, plan.height, plan.cfr_frame_rate);
     let status = Command::new(if cfg!(windows) {
         "ffmpeg.exe"
     } else {
@@ -50,7 +48,7 @@ pub async fn generate_proxy(app: AppHandle, plan: ProxyPlanDto) -> Result<ProxyR
         "-i",
         &input_arg,
         "-vf",
-        &scale,
+        &filter,
         "-an",
         "-c:v",
         "libx264",
@@ -83,4 +81,44 @@ pub async fn generate_proxy(app: AppHandle, plan: ProxyPlanDto) -> Result<ProxyR
 
 fn normalize_path(path: &Path) -> String {
     path.to_string_lossy().replace('\\', "/")
+}
+
+fn build_proxy_video_filter(width: u32, height: u32, cfr_frame_rate: Option<f64>) -> String {
+    let scale = format!(
+        "scale={}:{}:force_original_aspect_ratio=decrease,pad={}:{}:(ow-iw)/2:(oh-ih)/2",
+        width, height, width, height
+    );
+    match cfr_frame_rate.filter(|value| value.is_finite() && *value > 0.0) {
+        Some(frame_rate) => format!("fps={},{}", trim_float(frame_rate), scale),
+        None => scale,
+    }
+}
+
+fn trim_float(value: f64) -> String {
+    let rounded = (value * 1000.0).round() / 1000.0;
+    let mut text = format!("{rounded:.3}");
+    while text.contains('.') && text.ends_with('0') {
+        text.pop();
+    }
+    if text.ends_with('.') {
+        text.pop();
+    }
+    text
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn builds_proxy_filter_with_optional_cfr_fps() {
+        assert_eq!(
+            build_proxy_video_filter(1280, 720, None),
+            "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2"
+        );
+        assert_eq!(
+            build_proxy_video_filter(1280, 720, Some(29.97003)),
+            "fps=29.97,scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2"
+        );
+    }
 }

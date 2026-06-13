@@ -198,7 +198,10 @@ export interface ProjectSettings {
   timecodeFormat: TimecodeFormat;
   width: number;
   height: number;
+  vfrHandling?: VfrHandlingStrategy;
 }
+
+export type VfrHandlingStrategy = 'ignore' | 'auto-cfr' | 'ask';
 
 export interface MediaAsset {
   id: string;
@@ -224,6 +227,10 @@ export interface MediaAsset {
   audioSampleRate?: number;
   audioCodec?: string;
   videoCodec?: string;
+  frameRate?: number;
+  avgFrameRate?: string;
+  realFrameRate?: string;
+  variableFrameRate?: boolean;
   fieldOrder?: string;
   proxyPath?: string;
   proxyStatus?: 'none' | 'pending' | 'ready' | 'error';
@@ -240,9 +247,45 @@ export interface ImageSequenceInfo {
 }
 
 export type MediaLabelColor = 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple';
+export type MediaFlag = 'green' | 'red';
 
 export interface MediaMetadata {
   labelColor?: MediaLabelColor;
+  rating?: number;
+  flag?: MediaFlag;
+}
+
+export function isMediaLabelColor(value: unknown): value is MediaLabelColor {
+  return value === 'red' || value === 'orange' || value === 'yellow' || value === 'green' || value === 'blue' || value === 'purple';
+}
+
+export function normalizeMediaRating(value: unknown): number {
+  const numeric = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(numeric)) {
+    return 0;
+  }
+  return Math.min(5, Math.max(0, Math.round(numeric)));
+}
+
+export function normalizeMediaFlag(value: unknown): MediaFlag | undefined {
+  return value === 'green' || value === 'red' ? value : undefined;
+}
+
+export function normalizeMediaMetadataEntry(metadata: MediaMetadata | undefined): MediaMetadata | undefined {
+  const labelColor = isMediaLabelColor(metadata?.labelColor) ? metadata.labelColor : undefined;
+  const rating = normalizeMediaRating(metadata?.rating);
+  const flag = normalizeMediaFlag(metadata?.flag);
+  const normalized: MediaMetadata = {};
+  if (labelColor) {
+    normalized.labelColor = labelColor;
+  }
+  if (rating > 0) {
+    normalized.rating = rating;
+  }
+  if (flag) {
+    normalized.flag = flag;
+  }
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
 }
 
 export interface ProjectAnnotation {
@@ -515,7 +558,8 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
   fps: 30,
   timecodeFormat: 'ndf',
   width: 1280,
-  height: 720
+  height: 720,
+  vfrHandling: 'ignore'
 };
 
 export function normalizeProjectSettings(settings: Partial<ProjectSettings> | undefined): ProjectSettings {
@@ -526,8 +570,13 @@ export function normalizeProjectSettings(settings: Partial<ProjectSettings> | un
     fps,
     timecodeFormat: normalizeTimecodeFormat(settings?.timecodeFormat, fps),
     width,
-    height
+    height,
+    vfrHandling: normalizeVfrHandlingStrategy(settings?.vfrHandling)
   };
+}
+
+export function normalizeVfrHandlingStrategy(value: unknown): VfrHandlingStrategy {
+  return value === 'auto-cfr' || value === 'ask' ? value : 'ignore';
 }
 
 export interface MediaFolder {

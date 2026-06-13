@@ -13,17 +13,18 @@ describe('project schema migration', () => {
 
   it('serializes and migrates project timecode settings with legacy fallback', () => {
     const project = makeProject();
-    project.settings = { ...project.settings, fps: 29.97, timecodeFormat: 'df' };
+    project.settings = { ...project.settings, fps: 29.97, timecodeFormat: 'df', vfrHandling: 'auto-cfr' };
     const file = serializeProject(project);
 
-    expect(file.project.settings).toMatchObject({ fps: 29.97, timecodeFormat: 'df' });
+    expect(file.project.settings).toMatchObject({ fps: 29.97, timecodeFormat: 'df', vfrHandling: 'auto-cfr' });
 
     delete (file.project.settings as Partial<typeof file.project.settings>).timecodeFormat;
+    delete (file.project.settings as Partial<typeof file.project.settings>).vfrHandling;
     file.project.settings.fps = 24;
 
     const migrated = migrateProjectFile(file);
 
-    expect(migrated.project.settings).toMatchObject({ fps: 24, timecodeFormat: 'ndf' });
+    expect(migrated.project.settings).toMatchObject({ fps: 24, timecodeFormat: 'ndf', vfrHandling: 'ignore' });
   });
 
   it('serializes and migrates export ranges while old project files default to none', () => {
@@ -119,19 +120,20 @@ describe('project schema migration', () => {
     expect(migrated.warnings[0]).toContain('legacy');
   });
 
-  it('serializes and migrates media metadata labels', () => {
+  it('serializes and migrates media metadata labels ratings and flags', () => {
     const project = makeProject();
     project.mediaMetadata = {
-      'asset-1': { labelColor: 'blue' },
+      'asset-1': { labelColor: 'blue', rating: 5, flag: 'green' },
       'missing-asset': { labelColor: 'red' },
-      invalid: { labelColor: 'cyan' as never }
+      invalid: { labelColor: 'cyan' as never, rating: 9, flag: 'purple' as never }
     };
 
     const file = serializeProject(project);
     const migrated = migrateProjectFile(file);
 
-    expect(file.project.mediaMetadata).toEqual({ 'asset-1': { labelColor: 'blue' } });
-    expect(migrated.project.mediaMetadata).toEqual({ 'asset-1': { labelColor: 'blue' } });
+    expect(file.project.mediaMetadata).toEqual({ 'asset-1': { labelColor: 'blue', rating: 5, flag: 'green' } });
+    expect(migrated.project.mediaMetadata).toEqual({ 'asset-1': { labelColor: 'blue', rating: 5, flag: 'green' } });
+    expect(migrateProjectFile({ ...file, project: { ...file.project, mediaMetadata: undefined } }).project.mediaMetadata).toEqual({});
   });
 
   it('serializes and migrates media folders and media folder assignments', () => {
@@ -344,12 +346,17 @@ describe('project schema migration', () => {
   it('serializes and migrates video codec metadata for proxy decisions', () => {
     const project = makeProject();
     project.media[0].videoCodec = ' hevc ';
+    project.media[0].frameRate = 23.976;
+    project.media[0].avgFrameRate = '24000/1001';
+    project.media[0].realFrameRate = '30/1';
 
     const file = serializeProject(project);
     const migrated = migrateProjectFile(file);
 
     expect(file.project.media[0].videoCodec).toBe('hevc');
+    expect(file.project.media[0].variableFrameRate).toBe(true);
     expect(migrated.project.media[0].videoCodec).toBe('hevc');
+    expect(migrated.project.media[0]).toMatchObject({ frameRate: 23.976, avgFrameRate: '24000/1001', realFrameRate: '30/1', variableFrameRate: true });
   });
 
   it('backfills missing text background style defaults during migration', () => {

@@ -1,5 +1,5 @@
 import type { Clip, HistoryMeta, KeyframeProperty, MediaAsset, MediaMetadata, Project, Timeline, TimelineDiffRange } from '@open-factory/editor-core';
-import { clampTimelineZoom, createProject, getTimelineDuration, replaceProjectActiveTimeline, switchProjectActiveSequence } from '@open-factory/editor-core';
+import { clampTimelineZoom, createProject, getTimelineDuration, normalizeMediaMetadataEntry, replaceProjectActiveTimeline, switchProjectActiveSequence } from '@open-factory/editor-core';
 import { create } from 'zustand';
 import { zhCN } from '../i18n/strings';
 
@@ -149,8 +149,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setMediaMetadata: (assetId, metadata) =>
     set((state) => {
       const mediaMetadata = { ...state.project.mediaMetadata };
-      if (metadata?.labelColor) {
-        mediaMetadata[assetId] = { labelColor: metadata.labelColor };
+      const normalized = normalizeMediaMetadataEntry(metadata);
+      if (normalized) {
+        mediaMetadata[assetId] = normalized;
       } else {
         delete mediaMetadata[assetId];
       }
