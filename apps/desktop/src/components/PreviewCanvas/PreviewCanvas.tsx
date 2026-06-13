@@ -22,6 +22,7 @@ import {
   resizeClipTransform,
   rotateClipTransform,
   screenPointToCanvasPoint,
+  secondsToTimecode,
   type Clip,
   type ClipMask,
   type ClipPatch,
@@ -827,7 +828,7 @@ export function PreviewCanvas() {
         </div>
         {scopesOpen ? <ColorScopesPanel frame={scopeFrame} active={scopesOpen} /> : null}
       </div>
-      <div className="border-t border-black/30 px-3 py-2 text-xs tabular-nums text-slate-300">{formatTime(playheadTime)}</div>
+      <div className="border-t border-black/30 px-3 py-2 text-xs tabular-nums text-slate-300">{secondsToTimecode(playheadTime, fps, project.settings.timecodeFormat ?? 'ndf')}</div>
     </section>
   );
 }
@@ -1320,13 +1321,6 @@ function getAngleRenderer(renderers: Map<string, PreviewRenderer>, angleId: stri
   const renderer = new PreviewRenderer();
   renderers.set(angleId, renderer);
   return renderer;
-}
-
-function formatTime(time: number): string {
-  const minutes = Math.floor(time / 60);
-  const seconds = Math.floor(time % 60);
-  const frames = Math.floor((time % 1) * 30);
-  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}:${frames.toString().padStart(2, '0')}`;
 }
 
 function waitForIdleFrame(): Promise<void> {

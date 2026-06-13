@@ -14,7 +14,7 @@ describe('project templates', () => {
       const instance = instantiateProjectTemplate(templateId, { name: `Template ${templateId}` });
 
       expect(instance.project.name).toBe(`Template ${templateId}`);
-      expect(instance.project.settings).toEqual({ width: expected.width, height: expected.height, fps: expected.fps });
+      expect(instance.project.settings).toEqual({ width: expected.width, height: expected.height, fps: expected.fps, timecodeFormat: 'ndf' });
       expect(instance.project.timeline.tracks.map((track) => track.type)).toEqual(expected.tracks);
       expect(instance.project.timeline.tracks.every((track) => track.clips.length === 0)).toBe(true);
       expect(instance.project.sequences[0].timeline).toBe(instance.project.timeline);

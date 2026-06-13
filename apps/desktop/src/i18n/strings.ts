@@ -150,6 +150,11 @@ const zh = {
       description: '配置界面语言和本机偏好。',
       language: '界面语言',
       languageDescription: '语言会保存到本机设置文件。',
+      projectFrameRate: '项目帧率',
+      timecodeFormat: '时间码格式',
+      timecodeNdf: 'NDF（Non-Drop Frame）',
+      timecodeDf: 'DF（Drop Frame）',
+      dropFrameUnavailable: 'Drop Frame 仅支持 29.97/59.94 fps。',
       saveFailed: '语言保存失败',
       saveFailedMessage: '无法写入设置文件。',
       options: {
@@ -709,6 +714,8 @@ const zh = {
     updateKeyframeFailed: '无法更新关键帧。',
     removeKeyframeFailed: '无法移除关键帧。',
     locked: '已锁定',
+    timecodeSummary: (start: string, duration: string) => `开始 ${start} / 时长 ${duration}`,
+    speedSummary: (speed: string) => `速度 ${speed}x`,
     sections: {
       clip: '片段',
       speed: '速度',
@@ -1635,6 +1642,11 @@ const enOverrides = {
       description: 'Configure interface language and local preferences.',
       language: 'Interface Language',
       languageDescription: 'The language is saved to the local settings file.',
+      projectFrameRate: 'Project Frame Rate',
+      timecodeFormat: 'Timecode Format',
+      timecodeNdf: 'NDF (Non-Drop Frame)',
+      timecodeDf: 'DF (Drop Frame)',
+      dropFrameUnavailable: 'Drop Frame is only available for 29.97/59.94 fps.',
       saveFailed: 'Language Save Failed',
       saveFailedMessage: 'Unable to write the settings file.',
       options: {
@@ -2040,6 +2052,8 @@ const enOverrides = {
     title: 'Inspector',
     subtitle: 'Clip properties',
     locked: 'Locked',
+    timecodeSummary: (start: string, duration: string) => `Start ${start} / Duration ${duration}`,
+    speedSummary: (speed: string) => `Speed ${speed}x`,
     sections: {
       clip: 'Clip',
       speed: 'Speed',

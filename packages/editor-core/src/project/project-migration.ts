@@ -20,6 +20,7 @@ import {
   normalizeMotionTrack,
   normalizeMulticamSequence,
   normalizeProjectAnnotations,
+  normalizeProjectSettings,
   normalizeSequenceFrameRate,
   normalizeSequenceName,
   normalizeSlowMotionMode,
@@ -40,7 +41,7 @@ import { clampTransitionDuration, findAdjacentTransitionClips, getTimelineDurati
 import type { MigrationResult, ProjectFile, ProjectFileV1, ProjectFileV2 } from './project-types';
 import { isAbsolutePath, makeRelativePath, normalizePath, resolveMediaPath } from './relative-paths';
 
-const DEFAULT_SETTINGS = { fps: 30, width: 1280, height: 720 };
+const DEFAULT_SETTINGS = { fps: 30, timecodeFormat: 'ndf' as const, width: 1280, height: 720 };
 
 export function serializeProjectFile(project: Project, projectPath?: string): ProjectFileV2 {
   const warnings: string[] = [];
@@ -74,7 +75,7 @@ export function serializeProjectFile(project: Project, projectPath?: string): Pr
       createdAt: project.createdAt,
       updatedAt: new Date().toISOString(),
       masterVolume: normalizeMasterVolume(project.masterVolume),
-      settings: { ...DEFAULT_SETTINGS, ...project.settings },
+      settings: normalizeProjectSettings({ ...DEFAULT_SETTINGS, ...project.settings }),
       media,
       mediaMetadata: normalizeMediaMetadata(project.mediaMetadata, media),
       annotations: normalizeProjectAnnotations(project.annotations, getTimelineDuration(project.timeline)),
@@ -100,7 +101,7 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         createdAt: file.project.createdAt,
         updatedAt: file.project.updatedAt,
         masterVolume: normalizeMasterVolume(file.project.masterVolume),
-        settings: { ...DEFAULT_SETTINGS, ...file.project.settings },
+        settings: normalizeProjectSettings({ ...DEFAULT_SETTINGS, ...file.project.settings }),
         media,
         mediaMetadata: normalizeMediaMetadata(file.project.mediaMetadata, media),
         annotations: normalizeProjectAnnotations(file.project.annotations, getTimelineDuration(primaryTimeline)),
@@ -124,7 +125,7 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         createdAt: file.project.createdAt,
         updatedAt: file.project.updatedAt,
         masterVolume: 1,
-        settings: { ...DEFAULT_SETTINGS, ...file.project.settings },
+        settings: normalizeProjectSettings({ ...DEFAULT_SETTINGS, ...file.project.settings }),
         media,
         mediaMetadata: {},
         annotations: [],

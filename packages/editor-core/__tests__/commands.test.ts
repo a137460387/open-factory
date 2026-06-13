@@ -44,6 +44,7 @@ import {
   UpdateTimelineMarkerCommand,
   UpdateMaskCommand,
   UpdateProjectAudioCommand,
+  UpdateProjectSettingsCommand,
   UpdateTrackCommand,
   createTrack
 } from '../src';
@@ -71,6 +72,29 @@ describe('timeline commands', () => {
 
     manager.redo();
     expect(project.id).toBe('project-restored');
+  });
+
+  it('updates project frame-rate settings with undo and normalizes invalid drop-frame format', () => {
+    let project = makeProject();
+    const accessor = {
+      getProject: () => project,
+      setProject: (next: typeof project) => {
+        project = next;
+      }
+    };
+    const manager = new CommandManager();
+
+    manager.execute(new UpdateProjectSettingsCommand(accessor, { fps: 24, timecodeFormat: 'df' }));
+    expect(project.settings.fps).toBe(24);
+    expect(project.settings.timecodeFormat).toBe('ndf');
+
+    manager.execute(new UpdateProjectSettingsCommand(accessor, { fps: 29.97, timecodeFormat: 'df' }));
+    expect(project.settings.fps).toBe(29.97);
+    expect(project.settings.timecodeFormat).toBe('df');
+
+    manager.undo();
+    expect(project.settings.fps).toBe(24);
+    expect(project.settings.timecodeFormat).toBe('ndf');
   });
 
   it('imports an EDL as an undoable active sequence with missing media placeholders', () => {

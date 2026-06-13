@@ -13,7 +13,7 @@ import { cloneEffects, type Effect } from './effects';
 import { normalizePathPoints } from './masks/path-mask';
 import { migrateProjectFile, serializeProjectFile } from './project/project-migration';
 import type { ProjectFile } from './project/project-types';
-import { round } from './time';
+import { normalizeProjectFps, normalizeTimecodeFormat, round, type TimecodeFormat } from './time';
 
 export type ProjectVersion = '0.2';
 export type AssetType = 'video' | 'audio' | 'image';
@@ -125,6 +125,7 @@ export interface Project {
 
 export interface ProjectSettings {
   fps: number;
+  timecodeFormat: TimecodeFormat;
   width: number;
   height: number;
 }
@@ -394,9 +395,22 @@ export type CutProjectFile = ProjectFile;
 
 export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
   fps: 30,
+  timecodeFormat: 'ndf',
   width: 1280,
   height: 720
 };
+
+export function normalizeProjectSettings(settings: Partial<ProjectSettings> | undefined): ProjectSettings {
+  const fps = normalizeProjectFps(settings?.fps);
+  const width = Number.isFinite(settings?.width) ? Math.max(1, Math.round(settings!.width!)) : DEFAULT_PROJECT_SETTINGS.width;
+  const height = Number.isFinite(settings?.height) ? Math.max(1, Math.round(settings!.height!)) : DEFAULT_PROJECT_SETTINGS.height;
+  return {
+    fps,
+    timecodeFormat: normalizeTimecodeFormat(settings?.timecodeFormat, fps),
+    width,
+    height
+  };
+}
 
 export const DEFAULT_TRANSFORM: Transform = {
   x: 0,

@@ -1227,7 +1227,7 @@ function makeProjectFile(path: string, missing: boolean): ProjectFileV2 {
       name: 'E2E Project',
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
-      settings: { fps: 30, width: 1280, height: 720 },
+      settings: { fps: 30, timecodeFormat: 'ndf', width: 1280, height: 720 },
       media,
       timeline: {
         tracks: [
@@ -1274,7 +1274,7 @@ function makeBatchMissingProjectFile(): ProjectFileV2 {
       name: 'E2E Batch Missing Project',
       createdAt: '2026-01-01T00:00:00.000Z',
       updatedAt: '2026-01-01T00:00:00.000Z',
-      settings: { fps: 30, width: 1280, height: 720 },
+      settings: { fps: 30, timecodeFormat: 'ndf', width: 1280, height: 720 },
       media,
       timeline: {
         tracks: [

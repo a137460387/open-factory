@@ -1,7 +1,9 @@
 import {
   TARGET_ASPECT_RATIOS,
+  SUPPORTED_PROJECT_FPS,
   clampReframeOffset,
   getTimelinePlaybackDuration,
+  normalizeProjectFps,
   runExportPreflight,
   normalizeTargetAspectRatio,
   resolveReframeDimensions,
@@ -368,7 +370,7 @@ export function ExportDialog({ project, initialPreset, onClose, onCompleted, onR
             />
             <PresetNumberField label={t.fields.width} value={draftSettings.width} disabled={isAudioOnly} onChange={(value) => updateNumberSetting(setDraftSettings, 'width', value)} testId="export-width-input" />
             <PresetNumberField label={t.fields.height} value={draftSettings.height} disabled={isAudioOnly} onChange={(value) => updateNumberSetting(setDraftSettings, 'height', value)} testId="export-height-input" />
-            <PresetNumberField label={t.fields.fps} value={draftSettings.fps} disabled={isAudioOnly} onChange={(value) => updateNumberSetting(setDraftSettings, 'fps', value)} testId="export-fps-input" />
+            <PresetFpsField label={t.fields.fps} value={draftSettings.fps ?? project.settings.fps} disabled={isAudioOnly} onChange={(value) => updateNumberSetting(setDraftSettings, 'fps', value)} testId="export-fps-select" />
             <PresetSelectField label={t.fields.format} value={exportSettings.format ?? 'mp4'} onChange={(value) => updateFormat(setDraftSettings, value)} testId="export-format-select" options={formatOptions} />
             <PresetTextField label={t.fields.videoBitrate} value={draftSettings.videoBitrate ?? ''} disabled={isAudioOnly} onChange={(value) => updateStringSetting(setDraftSettings, 'videoBitrate', value)} testId="export-video-bitrate-input" />
             <PresetTextField label={t.fields.audioBitrate} value={draftSettings.audioBitrate ?? ''} onChange={(value) => updateStringSetting(setDraftSettings, 'audioBitrate', value)} testId="export-audio-bitrate-input" />
@@ -1306,6 +1308,39 @@ function PresetNumberField({
   );
 }
 
+function PresetFpsField({
+  label,
+  value,
+  disabled,
+  onChange,
+  testId
+}: {
+  label: string;
+  value?: number;
+  disabled?: boolean;
+  onChange(value: string): void;
+  testId: string;
+}) {
+  return (
+    <label className="space-y-1 text-xs font-medium text-slate-600">
+      <span>{label}</span>
+      <select
+        className="w-full rounded-md border border-line px-2 py-1.5 disabled:bg-slate-100"
+        value={String(normalizeProjectFps(value))}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value)}
+        data-testid={testId}
+      >
+        {SUPPORTED_PROJECT_FPS.map((fps) => (
+          <option key={fps} value={fps}>
+            {formatFpsOption(fps)}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 function PresetTextField({
   label,
   value,
@@ -1325,6 +1360,10 @@ function PresetTextField({
       <input className="w-full rounded-md border border-line px-2 py-1.5 disabled:bg-slate-100" value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} data-testid={testId} />
     </label>
   );
+}
+
+function formatFpsOption(fps: number): string {
+  return `${Number.isInteger(fps) ? fps.toFixed(0) : fps.toFixed(3)} fps`;
 }
 
 function PresetColorField({

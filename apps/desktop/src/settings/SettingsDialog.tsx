@@ -1,6 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { FolderOpen, Save, Star, Trash2, X } from 'lucide-react';
-import { UpdateClipCommand, type Clip, type Project, type Timeline } from '@open-factory/editor-core';
+import {
+  SUPPORTED_PROJECT_FPS,
+  UpdateClipCommand,
+  UpdateProjectSettingsCommand,
+  normalizeProjectFps,
+  normalizeTimecodeFormat,
+  supportsDropFrameTimecode,
+  type Clip,
+  type Project,
+  type TimecodeFormat,
+  type Timeline
+} from '@open-factory/editor-core';
 import { formatBackupDisplayTime } from '../backup/projectBackup';
 import { getLanguage, normalizeLanguage, zhCN, type Language } from '../i18n/strings';
 import { loadLutLibrary, toggleLutFavorite, type LutLibraryItem } from '../lib/lutLibrary';
@@ -25,7 +36,7 @@ import {
   type TimelineShortcutAction,
   type TimelineShortcutBindings
 } from '../shortcuts/timeline-shortcuts';
-import { commandManager, timelineAccessor } from '../store/commandManager';
+import { commandManager, projectAccessor, timelineAccessor } from '../store/commandManager';
 import { useEditorStore } from '../store/editorStore';
 import { PROXY_RESOLUTION_PRESETS, PROXY_TRIGGER_THRESHOLDS, useProxySettingsStore, type ProxyResolutionPreset, type ProxyTriggerThreshold } from '../store/proxySettingsStore';
 import { useTranslationSettingsStore, type TranslationProvider } from '../store/translationSettingsStore';
@@ -458,6 +469,16 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
     void updateShortcutBinding({});
   }
 
+  function updateProjectFrameRate(value: string) {
+    const fps = normalizeProjectFps(Number(value));
+    commandManager.execute(new UpdateProjectSettingsCommand(projectAccessor, { fps, timecodeFormat: normalizeTimecodeFormat(project.settings.timecodeFormat, fps) }));
+  }
+
+  function updateProjectTimecodeFormat(value: string) {
+    const timecodeFormat: TimecodeFormat = value === 'df' ? 'df' : 'ndf';
+    commandManager.execute(new UpdateProjectSettingsCommand(projectAccessor, { timecodeFormat }));
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-testid="settings-dialog">
       <div className="flex max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg bg-white shadow-soft">
@@ -565,6 +586,37 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
                   </select>
                 </label>
                 <div className="rounded-md border border-line bg-panel p-3 text-xs text-slate-600">{t.general.languageDescription}</div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block text-xs font-medium text-slate-600">
+                    {t.general.projectFrameRate}
+                    <select
+                      className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                      value={String(normalizeProjectFps(project.settings.fps))}
+                      data-testid="project-fps-select"
+                      onChange={(event) => updateProjectFrameRate(event.target.value)}
+                    >
+                      {SUPPORTED_PROJECT_FPS.map((fps) => (
+                        <option key={fps} value={fps}>
+                          {formatProjectFps(fps)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block text-xs font-medium text-slate-600">
+                    {t.general.timecodeFormat}
+                    <select
+                      className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink disabled:bg-slate-100"
+                      value={normalizeTimecodeFormat(project.settings.timecodeFormat, project.settings.fps)}
+                      disabled={!supportsDropFrameTimecode(project.settings.fps)}
+                      data-testid="project-timecode-format-select"
+                      onChange={(event) => updateProjectTimecodeFormat(event.target.value)}
+                    >
+                      <option value="ndf">{t.general.timecodeNdf}</option>
+                      <option value="df">{t.general.timecodeDf}</option>
+                    </select>
+                    {!supportsDropFrameTimecode(project.settings.fps) ? <span className="mt-1 block text-[11px] text-slate-500">{t.general.dropFrameUnavailable}</span> : null}
+                  </label>
+                </div>
               </div>
             ) : null}
             {tab === 'appearance' ? (
@@ -953,6 +1005,10 @@ function ThemeColorInput({ label, value, testId, onChange }: { label: string; va
       <input className="mt-1 h-9 w-full rounded-md border border-line bg-white p-1" type="color" value={value} data-testid={testId} onChange={(event) => onChange(event.target.value)} />
     </label>
   );
+}
+
+function formatProjectFps(fps: number): string {
+  return `${Number.isInteger(fps) ? fps.toFixed(0) : fps.toFixed(3)} fps`;
 }
 
 function BackupSettingsPanel({

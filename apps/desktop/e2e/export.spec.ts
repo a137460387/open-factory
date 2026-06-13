@@ -13,7 +13,7 @@ test('builds a multitrack FFmpeg plan with text artifacts and runs mocked export
   await expect(page.getByTestId('export-dialog')).toBeVisible();
   await page.getByTestId('export-preset-select').selectOption('web-1080p');
   await page.getByTestId('export-max-concurrent-select').selectOption('1');
-  await page.getByTestId('export-fps-input').fill('60');
+  await page.getByTestId('export-fps-select').selectOption('60');
   await page.getByTestId('export-batch-paths').fill('C:/Exports/e2e-output.mp4\nC:/Exports/e2e-output-2.mp4');
   await page.getByTestId('export-enqueue-button').click();
   await expectExportTaskStatus(page, 0, 'running');

@@ -8,7 +8,7 @@ test('exports a speed-adjusted clip with shortened duration', async ({ page }) =
   await addMediaCardToTimeline(page);
 
   await page.getByTestId('clip-speed-input').fill('2');
-  await expect(page.getByText('速度 2.00x / 时长 3.00s')).toBeVisible();
+  await expect(page.getByText('开始 00:00:00:00 / 时长 00:00:03:00 / 速度 2.00x')).toBeVisible();
 
   await openExportDialog(page);
   await page.getByTestId('export-output-path').fill('C:/Exports/speed-output.mp4');
@@ -35,7 +35,7 @@ test('exports a speed-ramped clip with integrated duration', async ({ page }) =>
     window.__E2E_ACTIONS__!.addKeyframe!(id, 'speed', 0, 1);
     window.__E2E_ACTIONS__!.addKeyframe!(id, 'speed', 3, 2);
   }, clipId);
-  await expect(page.getByText('速度 1.00x / 时长 3.75s')).toBeVisible();
+  await expect(page.getByText('开始 00:00:00:00 / 时长 00:00:03:23 / 速度 1.00x')).toBeVisible();
 
   await openExportDialog(page);
   await page.getByTestId('export-output-path').fill('C:/Exports/speed-ramp-output.mp4');

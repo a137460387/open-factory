@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clamp, framesToSeconds, round, secondsToFrames, snap } from '../src';
+import { clamp, framesToSeconds, normalizeProjectFps, round, secondsToFrames, secondsToTicks, secondsToTimecode, snap, ticksToSeconds, ticksToTimecode } from '../src';
 
 describe('time helpers', () => {
   it('clamps values and validates ranges', () => {
@@ -15,5 +15,27 @@ describe('time helpers', () => {
     expect(framesToSeconds(45, 30)).toBe(1.5);
     expect(() => secondsToFrames(1, 0)).toThrow(RangeError);
     expect(() => framesToSeconds(1, 0)).toThrow(RangeError);
+  });
+
+  it('normalizes supported project frame rates', () => {
+    expect(normalizeProjectFps(23.98)).toBe(23.976);
+    expect(normalizeProjectFps(59.9)).toBe(59.94);
+    expect(normalizeProjectFps(undefined)).toBe(30);
+  });
+
+  it('formats non-drop-frame timecode from ticks across supported rates', () => {
+    expect(secondsToTicks(1)).toBe(600);
+    expect(ticksToSeconds(150)).toBe(0.25);
+    expect(ticksToTimecode(600, 24, 'ndf')).toBe('00:00:01:00');
+    expect(secondsToTimecode(10, 25, 'ndf')).toBe('00:00:10:00');
+    expect(secondsToTimecode(1, 23.976, 'ndf')).toBe('00:00:01:00');
+    expect(secondsToTimecode(1, 59.94, 'ndf')).toBe('00:00:01:00');
+  });
+
+  it('formats drop-frame timecode by skipping labels at minute boundaries', () => {
+    expect(secondsToTimecode(framesToSeconds(1800, 29.97), 29.97, 'df')).toBe('00:01:00:02');
+    expect(secondsToTimecode(framesToSeconds(17982, 29.97), 29.97, 'df')).toBe('00:10:00:00');
+    expect(secondsToTimecode(framesToSeconds(3600, 59.94), 59.94, 'df')).toBe('00:01:00:04');
+    expect(secondsToTimecode(60, 24, 'df')).toBe('00:01:00:00');
   });
 });

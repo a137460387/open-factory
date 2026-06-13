@@ -1041,7 +1041,15 @@ export function Timeline() {
         data-testid="timeline-scroll-container"
       >
         <div className="relative" style={{ width: LABEL_WIDTH + width }}>
-          <Ruler ticks={ticks} zoom={zoom} width={width} cachedRanges={renderCacheRanges} onSeek={setPlayheadTime} />
+          <Ruler
+            ticks={ticks}
+            zoom={zoom}
+            width={width}
+            cachedRanges={renderCacheRanges}
+            fps={project.settings.fps || 30}
+            timecodeFormat={project.settings.timecodeFormat ?? 'ndf'}
+            onSeek={setPlayheadTime}
+          />
           <div className="relative">
             {project.timeline.tracks.map((track) => (
               <TrackRow

@@ -11,6 +11,21 @@ describe('project schema migration', () => {
     expect(file.project.media[0].originalAbsolutePath).toBe('C:/Videos/sample.mp4');
   });
 
+  it('serializes and migrates project timecode settings with legacy fallback', () => {
+    const project = makeProject();
+    project.settings = { ...project.settings, fps: 29.97, timecodeFormat: 'df' };
+    const file = serializeProject(project);
+
+    expect(file.project.settings).toMatchObject({ fps: 29.97, timecodeFormat: 'df' });
+
+    delete (file.project.settings as Partial<typeof file.project.settings>).timecodeFormat;
+    file.project.settings.fps = 24;
+
+    const migrated = migrateProjectFile(file);
+
+    expect(migrated.project.settings).toMatchObject({ fps: 24, timecodeFormat: 'ndf' });
+  });
+
   it('keeps absolute path and warning when media is on another drive', () => {
     const file = serializeProject(makeProject(), 'D:/Projects/project.cutproj.json');
 

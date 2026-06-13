@@ -1243,6 +1243,7 @@ export function EditorShell() {
                       selectedKeyframe={selectedKeyframe}
                       media={project.media}
                       playheadTime={playheadTime}
+                      projectSettings={project.settings}
                     />
                   )}
                 </Suspense>

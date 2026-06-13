@@ -284,6 +284,18 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.textArtifacts).toHaveLength(1);
   });
 
+  it('injects target frame-rate conversion filters and output args', () => {
+    const project = makeProject();
+    project.settings.fps = 24;
+    project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-24fps', duration: 2 })];
+
+    const exportProject = buildExportProjectFromProject(project, { outputPath: 'D:\\Exports\\out.mp4', settings: { fps: 24 } });
+    const plan = buildFfmpegExportPlan(exportProject);
+
+    expect(plan.filterComplex).toContain('fps=24');
+    expect(plan.outputArgs).toEqual(expect.arrayContaining(['-r', '24']));
+  });
+
   it('burns subtitle clips in with a temporary SRT artifact and force style', () => {
     const project = makeProject();
     project.timeline.tracks.push(

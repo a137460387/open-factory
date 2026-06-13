@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
-import type { Clip, MediaAsset } from '@open-factory/editor-core';
+import type { Clip, MediaAsset, ProjectSettings } from '@open-factory/editor-core';
 import {
   AddSubtitleClipCommand,
   AddTrackCommand,
@@ -60,6 +60,7 @@ import {
   normalizeStabilization,
   normalizeThreeWayColor,
   sampleCurve,
+  secondsToTimecode,
   setKenBurnsEndScaleKeyframes,
   createTrack,
   type AudioFadeCurve,
@@ -109,9 +110,10 @@ interface InspectorProps {
   selectedKeyframe?: SelectedKeyframeRef;
   media: MediaAsset[];
   playheadTime: number;
+  projectSettings: ProjectSettings;
 }
 
-export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKeyframe, media, playheadTime }: InspectorProps) {
+export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKeyframe, media, playheadTime, projectSettings }: InspectorProps) {
   if (!clip && selectedCount > 1) {
     return (
       <aside className="flex min-h-0 flex-col bg-white">
@@ -131,6 +133,9 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
   }
 
   const asset = 'mediaId' in clip ? media.find((item) => item.id === clip.mediaId) : undefined;
+  const clipStartTimecode = secondsToTimecode(clip.start, projectSettings.fps, projectSettings.timecodeFormat);
+  const clipDurationTimecode = secondsToTimecode(clip.duration, projectSettings.fps, projectSettings.timecodeFormat);
+  const assetDurationTimecode = asset ? secondsToTimecode(asset.duration, projectSettings.fps, projectSettings.timecodeFormat) : undefined;
   const project = useEditorStore((state) => state.project);
   const setSelectedClipIds = useEditorStore((state) => state.setSelectedClipIds);
   const chromaKeyPickClipId = useEditorStore((state) => state.chromaKeyPickClipId);
@@ -510,7 +515,7 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
           {asset ? (
             <div className="rounded-md bg-panel p-2 text-xs text-slate-600">
               <div className="truncate font-medium text-slate-700">{asset.name}</div>
-              <div>{asset.missing ? zhCN.inspector.missingFile : `${asset.width || '-'} x ${asset.height || '-'} | ${asset.duration.toFixed(2)}s`}</div>
+              <div>{asset.missing ? zhCN.inspector.missingFile : `${asset.width || '-'} x ${asset.height || '-'} | ${assetDurationTimecode}`}</div>
             </div>
           ) : null}
         </Section>
@@ -518,7 +523,7 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
         {clip.type === 'video' || clip.type === 'audio' ? (
           <Section title={zhCN.inspector.sections.speed}>
             <div className="rounded-md bg-panel p-2 text-xs text-slate-600">
-              速度 {getClipSpeed(clip).toFixed(2)}x / 时长 {clip.duration.toFixed(2)}s
+              {zhCN.inspector.timecodeSummary(clipStartTimecode, clipDurationTimecode)} / {zhCN.inspector.speedSummary(getClipSpeed(clip).toFixed(2))}
             </div>
             <AnimatedField label={zhCN.inspector.fields.speed} onAddKeyframe={() => addKeyframe('speed')} testId="add-speed-keyframe-button">
               <RangeNumberField

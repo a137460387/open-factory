@@ -25,6 +25,7 @@ import {
   normalizeMasks,
   normalizeMotionTrack,
   normalizeProjectAnnotation,
+  normalizeProjectSettings,
   normalizeSequenceFrameRate,
   normalizeSlowMotionMode,
   normalizeStabilization,
@@ -47,6 +48,7 @@ import {
   type MotionTrackPoint,
   type Project,
   type ProjectAnnotation,
+  type ProjectSettings,
   type SubtitleMode,
   type SubtitleStyle,
   type TextStyle,
@@ -139,6 +141,31 @@ export class LoadProjectCommand implements Command {
   execute(): void {
     this.before ??= this.accessor.getProject();
     this.accessor.setProject(this.nextProject);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class UpdateProjectSettingsCommand implements Command {
+  readonly description = 'Update project settings';
+  private before?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly patch: Partial<ProjectSettings>
+  ) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    const project = this.accessor.getProject();
+    this.accessor.setProject({
+      ...project,
+      settings: normalizeProjectSettings({ ...project.settings, ...this.patch })
+    });
   }
 
   undo(): void {

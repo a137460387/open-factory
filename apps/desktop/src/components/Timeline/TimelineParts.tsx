@@ -1,10 +1,12 @@
 import {
   areClipsAdjacent,
   filterTimelineVirtualClips,
+  secondsToTimecode,
   type Clip,
   type KeyframeProperty,
   type MediaAsset,
   snapTime,
+  type TimecodeFormat,
   type TimelineVirtualRenderWindow,
   type Track,
   type Transition,
@@ -49,12 +51,16 @@ export function Ruler({
   zoom,
   width,
   cachedRanges,
+  fps,
+  timecodeFormat,
   onSeek
 }: {
   ticks: number[];
   zoom: number;
   width: number;
   cachedRanges: TimelineRenderRange[];
+  fps: number;
+  timecodeFormat: TimecodeFormat;
   onSeek(time: number): void;
 }) {
   return (
@@ -84,7 +90,7 @@ export function Ruler({
         >
           {ticks.map((tick) => (
             <div key={tick} className="absolute top-0 h-full border-l border-slate-300 pl-1 text-[11px] text-slate-500" style={{ left: tick * zoom }}>
-              {tick}s
+              {secondsToTimecode(tick, fps, timecodeFormat)}
             </div>
           ))}
         </div>

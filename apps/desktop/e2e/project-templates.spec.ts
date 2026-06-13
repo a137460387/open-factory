@@ -20,7 +20,7 @@ test('creates a project from the vertical short template and prefills export set
 
   await expect(page.getByTestId('export-width-input')).toHaveValue('1080');
   await expect(page.getByTestId('export-height-input')).toHaveValue('1920');
-  await expect(page.getByTestId('export-fps-input')).toHaveValue('30');
+  await expect(page.getByTestId('export-fps-select')).toHaveValue('30');
   await expect(page.getByTestId('export-target-aspect-select')).toHaveValue('9:16');
   await expect(page.getByTestId('export-format-select')).toHaveValue('mp4');
 });

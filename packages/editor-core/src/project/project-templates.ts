@@ -28,7 +28,7 @@ export const PROJECT_TEMPLATES: readonly ProjectTemplateDefinition[] = [
   {
     id: 'vertical-short',
     defaultName: 'Vertical Short',
-    settings: { fps: 30, width: 1080, height: 1920 },
+    settings: { fps: 30, timecodeFormat: 'ndf', width: 1080, height: 1920 },
     tracks: [
       { id: 'track-video-main', type: 'video', name: 'Video 1' },
       { id: 'track-audio-main', type: 'audio', name: 'Audio 1' },
@@ -54,7 +54,7 @@ export const PROJECT_TEMPLATES: readonly ProjectTemplateDefinition[] = [
   {
     id: 'youtube-horizontal',
     defaultName: 'YouTube Horizontal',
-    settings: { fps: 30, width: 1920, height: 1080 },
+    settings: { fps: 30, timecodeFormat: 'ndf', width: 1920, height: 1080 },
     tracks: [
       { id: 'track-video-main', type: 'video', name: 'Video 1' },
       { id: 'track-audio-main', type: 'audio', name: 'Audio 1' },
@@ -78,7 +78,7 @@ export const PROJECT_TEMPLATES: readonly ProjectTemplateDefinition[] = [
   {
     id: 'square-social',
     defaultName: 'Square Social',
-    settings: { fps: 30, width: 1080, height: 1080 },
+    settings: { fps: 30, timecodeFormat: 'ndf', width: 1080, height: 1080 },
     tracks: [
       { id: 'track-video-main', type: 'video', name: 'Video 1' },
       { id: 'track-audio-main', type: 'audio', name: 'Audio 1' },
@@ -104,7 +104,7 @@ export const PROJECT_TEMPLATES: readonly ProjectTemplateDefinition[] = [
   {
     id: 'podcast',
     defaultName: 'Podcast',
-    settings: { fps: 30, width: 1920, height: 1080 },
+    settings: { fps: 30, timecodeFormat: 'ndf', width: 1920, height: 1080 },
     tracks: [
       { id: 'track-host-audio', type: 'audio', name: 'Host Audio' },
       { id: 'track-music-bed', type: 'audio', name: 'Music Bed' }
@@ -120,7 +120,7 @@ export const PROJECT_TEMPLATES: readonly ProjectTemplateDefinition[] = [
   {
     id: 'cinema',
     defaultName: 'Cinema',
-    settings: { fps: 24, width: 3840, height: 2160 },
+    settings: { fps: 24, timecodeFormat: 'ndf', width: 3840, height: 2160 },
     tracks: [
       { id: 'track-video-main', type: 'video', name: 'Video 1' },
       { id: 'track-video-overlay', type: 'video', name: 'Overlay Video' },
