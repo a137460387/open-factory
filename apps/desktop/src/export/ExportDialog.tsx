@@ -6,6 +6,7 @@ import {
   clampReframeOffset,
   getTimelinePlaybackDuration,
   normalizeProjectFps,
+  normalizeVideoRestoration,
   runExportPreflight,
   normalizeTargetAspectRatio,
   resolveReframeDimensions,
@@ -155,6 +156,7 @@ export function ExportDialog({ project, initialPreset, onClose, onCompleted, onR
   const hardwareEncodingEligible = !isAudioOnly && (exportSettings.format === 'mp4' || exportSettings.format === 'mov');
   const hardwareEncodingRequested = hardwareEncodingEligible && exportSettings.hardwareEncoding === true;
   const formatOptions = isAudioVisualization ? AUDIO_VISUALIZATION_FORMATS : VIDEO_EXPORT_FORMATS;
+  const spatialDenoiseClipCount = useMemo(() => countSpatialDenoiseClips(project), [project]);
 
   useEffect(() => {
     let canceled = false;
@@ -666,6 +668,11 @@ function relinkFromPreflight(): void {
             </div>
           </div>
           {capabilities?.drawtextWarning ? <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900">{formatExportWarning(capabilities.drawtextWarning)}</div> : null}
+          {spatialDenoiseClipCount > 0 ? (
+            <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900" data-testid="export-spatial-denoise-warning">
+              {t.spatialDenoiseWarning(spatialDenoiseClipCount)}
+            </div>
+          ) : null}
           {preflight ? <PreflightPanel issues={preflight.issues} onDismiss={() => setPreflight(undefined)} onContinue={() => void continueAfterWarnings()} onRelink={onRelinkMissing ? relinkFromPreflight : undefined} /> : null}
           {hardwareEncodingRequested && capabilities && !capabilities.hardwareEncoderAvailable ? (
             <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900" data-testid="export-hardware-fallback-warning">
@@ -1377,6 +1384,12 @@ function supportsLoudnessNormalization(format: string, outputMode: ExportPresetS
     return true;
   }
   return format !== 'gif' && format !== 'webp' && format !== 'apng' && format !== 'png-sequence';
+}
+
+function countSpatialDenoiseClips(project: Project): number {
+  return project.timeline.tracks
+    .flatMap((track) => track.clips)
+    .filter((clip) => (clip.type === 'video' || clip.type === 'nested-sequence') && normalizeVideoRestoration(clip.videoRestoration).spatialDenoise.enabled).length;
 }
 
 function AudioVisualizationSection({

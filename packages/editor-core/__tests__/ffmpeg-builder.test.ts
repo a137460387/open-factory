@@ -2124,6 +2124,78 @@ describe('multitrack ffmpeg builder', () => {
     expect(filter).not.toContain('noise=alls=');
   });
 
+  it('skips video restoration filters when every repair control is off', () => {
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(makeProject(), { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).not.toContain('yadif=');
+    expect(plan.filterComplex).not.toContain('hqdn3d=');
+    expect(plan.filterComplex).not.toContain('nlmeans=');
+  });
+
+  it('generates hqdn3d args for temporal denoise presets', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-temporal-denoise',
+        videoRestoration: {
+          deinterlace: { enabled: false, mode: 0 },
+          temporalDenoise: { preset: 'high', lumaSpatial: 0, chromaSpatial: 0, lumaTmp: 0 },
+          spatialDenoise: { enabled: false, strength: 1.5, patchSize: 7, researchSize: 15 }
+        }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('hqdn3d=luma_spatial=6:chroma_spatial=4.5:luma_tmp=9');
+  });
+
+  it('generates yadif and nlmeans args for enabled restoration controls', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-spatial-denoise',
+        videoRestoration: {
+          deinterlace: { enabled: true, mode: 1 },
+          temporalDenoise: { preset: 'off', lumaSpatial: 4, chromaSpatial: 3, lumaTmp: 6 },
+          spatialDenoise: { enabled: true, strength: 3.5, patchSize: 5, researchSize: 13 }
+        }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('yadif=mode=1');
+    expect(plan.filterComplex).toContain('nlmeans=s=3.5:p=5:r=13');
+  });
+
+  it('chains deinterlace, denoise, and sharpen in repair order before color correction effects', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-repair-order',
+        colorCorrection: { brightness: 0.1 },
+        videoRestoration: {
+          deinterlace: { enabled: true, mode: 0 },
+          temporalDenoise: { preset: 'custom', lumaSpatial: 5, chromaSpatial: 2.5, lumaTmp: 7 },
+          spatialDenoise: { enabled: true, strength: 2, patchSize: 7, researchSize: 15 }
+        },
+        effects: [{ id: 'effect-sharpen', type: 'sharpen', enabled: true, params: { strength: 1.25 } }]
+      })
+    ];
+
+    const filter = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' })).filterComplex;
+    const yadifIndex = filter.indexOf('yadif=mode=0');
+    const hqdn3dIndex = filter.indexOf('hqdn3d=luma_spatial=5:chroma_spatial=2.5:luma_tmp=7');
+    const nlmeansIndex = filter.indexOf('nlmeans=s=2:p=7:r=15');
+    const sharpenIndex = filter.indexOf('unsharp=luma_msize_x=5:luma_msize_y=5:luma_amount=1.25');
+
+    expect(yadifIndex).toBeGreaterThan(-1);
+    expect(hqdn3dIndex).toBeGreaterThan(yadifIndex);
+    expect(nlmeansIndex).toBeGreaterThan(hqdn3dIndex);
+    expect(sharpenIndex).toBeGreaterThan(nlmeansIndex);
+  });
+
   it.each([
     [
       'bars',

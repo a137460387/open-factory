@@ -88,6 +88,8 @@ export interface ClipFrameInterpolation {
 export type ClipSlowMotionMode = 'none' | 'blend' | 'optical-flow';
 export type ClipProjection = 'flat' | 'equirectangular' | 'cubemap';
 export type ClipPanoramaOutputProjection = 'flat' | 'equirectangular';
+export type VideoDenoisePreset = 'off' | 'low' | 'medium' | 'high' | 'custom';
+export type VideoDeinterlaceMode = 0 | 1;
 
 export interface ClipPanoramaView {
   yaw: number;
@@ -95,6 +97,31 @@ export interface ClipPanoramaView {
   roll: number;
   fov: number;
   outputProjection: ClipPanoramaOutputProjection;
+}
+
+export interface ClipVideoDeinterlace {
+  enabled: boolean;
+  mode: VideoDeinterlaceMode;
+}
+
+export interface ClipVideoTemporalDenoise {
+  preset: VideoDenoisePreset;
+  lumaSpatial: number;
+  chromaSpatial: number;
+  lumaTmp: number;
+}
+
+export interface ClipVideoSpatialDenoise {
+  enabled: boolean;
+  strength: number;
+  patchSize: number;
+  researchSize: number;
+}
+
+export interface ClipVideoRestoration {
+  deinterlace: ClipVideoDeinterlace;
+  temporalDenoise: ClipVideoTemporalDenoise;
+  spatialDenoise: ClipVideoSpatialDenoise;
 }
 
 export interface MotionTrackPoint {
@@ -195,6 +222,7 @@ export interface MediaAsset {
   audioSampleRate?: number;
   audioCodec?: string;
   videoCodec?: string;
+  fieldOrder?: string;
   proxyPath?: string;
   proxyStatus?: 'none' | 'pending' | 'ready' | 'error';
   proxyError?: string;
@@ -305,6 +333,7 @@ export interface BaseClip {
   frameInterpolation?: ClipFrameInterpolation;
   slowMotionMode?: ClipSlowMotionMode;
   audioDenoise?: ClipAudioDenoise;
+  videoRestoration?: ClipVideoRestoration;
   projection?: ClipProjection;
   panorama?: ClipPanoramaView;
   masks?: ClipMask[];
@@ -536,6 +565,16 @@ export const DEFAULT_CLIP_PANORAMA_VIEW: ClipPanoramaView = {
   fov: 90,
   outputProjection: 'flat'
 };
+export const VIDEO_TEMPORAL_DENOISE_PRESETS: Record<Exclude<VideoDenoisePreset, 'off' | 'custom'>, ClipVideoTemporalDenoise> = {
+  low: { preset: 'low', lumaSpatial: 2, chromaSpatial: 1.5, lumaTmp: 3 },
+  medium: { preset: 'medium', lumaSpatial: 4, chromaSpatial: 3, lumaTmp: 6 },
+  high: { preset: 'high', lumaSpatial: 6, chromaSpatial: 4.5, lumaTmp: 9 }
+};
+export const DEFAULT_VIDEO_RESTORATION: ClipVideoRestoration = {
+  deinterlace: { enabled: false, mode: 0 },
+  temporalDenoise: { preset: 'off', lumaSpatial: VIDEO_TEMPORAL_DENOISE_PRESETS.medium.lumaSpatial, chromaSpatial: VIDEO_TEMPORAL_DENOISE_PRESETS.medium.chromaSpatial, lumaTmp: VIDEO_TEMPORAL_DENOISE_PRESETS.medium.lumaTmp },
+  spatialDenoise: { enabled: false, strength: 1.5, patchSize: 7, researchSize: 15 }
+};
 
 export const DEFAULT_AUDIO_DENOISE: ClipAudioDenoise = {
   enabled: false,
@@ -751,6 +790,7 @@ export function createBaseClip(
     frameInterpolation: normalizeFrameInterpolation(input.frameInterpolation),
     slowMotionMode: normalizeSlowMotionMode(input.slowMotionMode),
     audioDenoise: normalizeAudioDenoise(input.audioDenoise),
+    videoRestoration: normalizeVideoRestoration(input.videoRestoration),
     projection: normalizeClipProjection(input.projection),
     panorama: normalizeClipPanoramaView(input.panorama),
     masks: normalizeMasks(input.masks),
@@ -881,6 +921,47 @@ export function normalizeClipPanoramaView(panorama: Partial<ClipPanoramaView> | 
 
 function normalizePanoramaDegrees(value: number | undefined, fallback: number): number {
   return round(Math.min(180, Math.max(-180, finiteOrDefault(value, fallback))));
+}
+
+export function normalizeVideoDenoisePreset(preset: VideoDenoisePreset | string | undefined): VideoDenoisePreset {
+  return preset === 'low' || preset === 'medium' || preset === 'high' || preset === 'custom' || preset === 'off' ? preset : 'off';
+}
+
+export function normalizeVideoRestoration(restoration: Partial<ClipVideoRestoration> | undefined): ClipVideoRestoration {
+  const preset = normalizeVideoDenoisePreset(restoration?.temporalDenoise?.preset);
+  const presetValues = preset === 'low' || preset === 'medium' || preset === 'high' ? VIDEO_TEMPORAL_DENOISE_PRESETS[preset] : DEFAULT_VIDEO_RESTORATION.temporalDenoise;
+  const temporalSource = preset === 'custom' ? restoration?.temporalDenoise : presetValues;
+  return {
+    deinterlace: {
+      enabled: restoration?.deinterlace?.enabled === true,
+      mode: restoration?.deinterlace?.mode === 1 ? 1 : 0
+    },
+    temporalDenoise: {
+      preset,
+      lumaSpatial: round(Math.min(20, Math.max(0, finiteOrDefault(temporalSource?.lumaSpatial, DEFAULT_VIDEO_RESTORATION.temporalDenoise.lumaSpatial)))),
+      chromaSpatial: round(Math.min(20, Math.max(0, finiteOrDefault(temporalSource?.chromaSpatial, DEFAULT_VIDEO_RESTORATION.temporalDenoise.chromaSpatial)))),
+      lumaTmp: round(Math.min(20, Math.max(0, finiteOrDefault(temporalSource?.lumaTmp, DEFAULT_VIDEO_RESTORATION.temporalDenoise.lumaTmp))))
+    },
+    spatialDenoise: {
+      enabled: restoration?.spatialDenoise?.enabled === true,
+      strength: round(Math.min(30, Math.max(0, finiteOrDefault(restoration?.spatialDenoise?.strength, DEFAULT_VIDEO_RESTORATION.spatialDenoise.strength)))),
+      patchSize: normalizeOddKernel(restoration?.spatialDenoise?.patchSize, DEFAULT_VIDEO_RESTORATION.spatialDenoise.patchSize, 1, 99),
+      researchSize: normalizeOddKernel(restoration?.spatialDenoise?.researchSize, DEFAULT_VIDEO_RESTORATION.spatialDenoise.researchSize, 1, 99)
+    }
+  };
+}
+
+export function suggestDeinterlaceMode(fieldOrder: string | null | undefined): VideoDeinterlaceMode | null {
+  const normalized = fieldOrder?.trim().toLowerCase();
+  if (!normalized || normalized === 'unknown' || normalized === 'progressive') {
+    return null;
+  }
+  return normalized === 'tt' || normalized === 'bb' || normalized === 'tb' || normalized === 'bt' || normalized.includes('field') ? 0 : null;
+}
+
+function normalizeOddKernel(value: number | undefined, fallback: number, min: number, max: number): number {
+  const rounded = Math.round(Math.min(max, Math.max(min, finiteOrDefault(value, fallback))));
+  return rounded % 2 === 1 ? rounded : Math.min(max, rounded + 1);
 }
 
 export function normalizeMotionTrack(points: readonly Partial<MotionTrackPoint>[] | undefined, duration = Number.POSITIVE_INFINITY): MotionTrackPoint[] | undefined {
@@ -1339,6 +1420,7 @@ export function serializeLegacyProject(project: Project): {
           chromaKey: normalizeChromaKey(clip.chromaKey),
           stabilization: normalizeStabilization(clip.stabilization),
           audioDenoise: normalizeAudioDenoise(clip.audioDenoise),
+          videoRestoration: normalizeVideoRestoration(clip.videoRestoration),
           projection: normalizeClipProjection(clip.projection),
           panorama: normalizeClipPanoramaView(clip.panorama),
           masks: normalizeMasks(clip.masks),

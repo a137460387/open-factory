@@ -38,7 +38,9 @@ import {
   normalizeTimelineMarkers,
   normalizeTrackCompressor,
   normalizeTrackEQ,
+  normalizeVideoRestoration,
   serializeLegacyProject,
+  suggestDeinterlaceMode,
   switchProjectActiveSequence
 } from '../src';
 import { makeProject, makeVideoClip } from './test-utils';
@@ -171,11 +173,35 @@ describe('model factories', () => {
     expect(normalizeFrameInterpolation({ enabled: true, targetFps: 120 })).toEqual({ enabled: true, targetFps: 120 });
     expect(normalizeFrameInterpolation({ enabled: true, targetFps: 144 as never })).toEqual({ enabled: true, targetFps: 60 });
     expect(normalizeFrameInterpolation(undefined)).toEqual({ enabled: false, targetFps: 60 });
+    expect(normalizeVideoRestoration(undefined)).toEqual({
+      deinterlace: { enabled: false, mode: 0 },
+      temporalDenoise: { preset: 'off', lumaSpatial: 4, chromaSpatial: 3, lumaTmp: 6 },
+      spatialDenoise: { enabled: false, strength: 1.5, patchSize: 7, researchSize: 15 }
+    });
+    expect(
+      normalizeVideoRestoration({
+        deinterlace: { enabled: true, mode: 2 as never },
+        temporalDenoise: { preset: 'custom', lumaSpatial: 99, chromaSpatial: -1, lumaTmp: 2.25 },
+        spatialDenoise: { enabled: true, strength: 40, patchSize: 8, researchSize: 14 }
+      })
+    ).toEqual({
+      deinterlace: { enabled: true, mode: 0 },
+      temporalDenoise: { preset: 'custom', lumaSpatial: 20, chromaSpatial: 0, lumaTmp: 2.25 },
+      spatialDenoise: { enabled: true, strength: 30, patchSize: 9, researchSize: 15 }
+    });
     expect(normalizeSlowMotionMode('optical-flow')).toBe('optical-flow');
     expect(normalizeSlowMotionMode('bad-mode')).toBe(DEFAULT_SLOW_MOTION_MODE);
     expect(normalizeSlowMotionMode(undefined)).toBe(DEFAULT_SLOW_MOTION_MODE);
     expect(normalizeSequenceFrameRate(240)).toBe(120);
     expect(normalizeSequenceFrameRate(Number.NaN)).toBeUndefined();
+  });
+
+  it('suggests deinterlace only for interlaced field orders', () => {
+    expect(suggestDeinterlaceMode('tt')).toBe(0);
+    expect(suggestDeinterlaceMode('bb')).toBe(0);
+    expect(suggestDeinterlaceMode('top coded first (swapped)')).toBeNull();
+    expect(suggestDeinterlaceMode('progressive')).toBeNull();
+    expect(suggestDeinterlaceMode(undefined)).toBeNull();
   });
 
   it('keeps primary sequence fallbacks and active sequence switching stable', () => {

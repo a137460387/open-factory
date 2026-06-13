@@ -39,6 +39,7 @@ import {
   normalizeTrackEQ,
   normalizeTrackPan,
   normalizeTrackVolume,
+  normalizeVideoRestoration,
   replaceProjectActiveTimeline,
   type Clip,
   type ClipAudioDenoise,
@@ -49,6 +50,7 @@ import {
   type ClipFrameInterpolation,
   type ClipStabilization,
   type ClipMask,
+  type ClipVideoRestoration,
   type ColorCorrection,
   type MediaMetadata,
   type MotionTrackPoint,
@@ -2060,6 +2062,7 @@ export type ClipPatch = Partial<Omit<Clip, 'type' | 'id' | 'transform' | 'colorC
   stabilization?: Partial<ClipStabilization>;
   frameInterpolation?: Partial<ClipFrameInterpolation>;
   audioDenoise?: Partial<ClipAudioDenoise>;
+  videoRestoration?: Partial<ClipVideoRestoration>;
   projection?: ClipProjection;
   panorama?: Partial<ClipPanoramaView>;
   masks?: ClipMask[];
@@ -2107,6 +2110,7 @@ export class UpdateClipCommand implements Command {
       frameInterpolation: normalizeFrameInterpolation({ ...this.before.frameInterpolation, ...this.patch.frameInterpolation }),
       slowMotionMode: normalizeSlowMotionMode(this.patch.slowMotionMode ?? this.before.slowMotionMode),
       audioDenoise: normalizeAudioDenoise({ ...this.before.audioDenoise, ...this.patch.audioDenoise }),
+      videoRestoration: normalizeVideoRestoration({ ...this.before.videoRestoration, ...this.patch.videoRestoration }),
       projection: normalizeClipProjection(this.patch.projection ?? this.before.projection),
       panorama: normalizeClipPanoramaView({ ...this.before.panorama, ...this.patch.panorama }),
       masks: this.patch.masks === undefined ? normalizeMasks(this.before.masks) : normalizeMasks(this.patch.masks),

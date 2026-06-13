@@ -79,6 +79,7 @@ const keybindingsPath = `${appDataDir}/keybindings.json`;
 const macrosPath = `${appDataDir}/macros.json`;
 const macroHistoryPath = `${appDataDir}/macro-history.json`;
 const pluginDir = `${appDataDir}/plugins`;
+const pluginCatalogCachePath = `${appDataDir}/plugin-catalog-cache.json`;
 const pluginPath = `${pluginDir}/export-count.js`;
 const permissionDeniedPluginPath = `${pluginDir}/missing-permission.js`;
 const brokenPluginPath = `${pluginDir}/broken.js`;
@@ -447,7 +448,8 @@ const mocks: TauriMocks = {
     audioChannels: path.endsWith('.mp4') || path.endsWith('.wav') ? 2 : undefined,
     audioSampleRate: path.endsWith('.mp4') || path.endsWith('.wav') ? 44_100 : undefined,
     audioCodec: path.endsWith('.mp4') ? 'aac' : path.endsWith('.wav') ? 'pcm_s16le' : undefined,
-    videoCodec: path === fourKHevcVideo ? 'hevc' : path.endsWith('.mp4') || path.endsWith('.mov') ? 'h264' : undefined
+    videoCodec: path === fourKHevcVideo ? 'hevc' : path.endsWith('.mp4') || path.endsWith('.mov') ? 'h264' : undefined,
+    fieldOrder: path.endsWith('.mp4') || path.endsWith('.mov') ? 'tt' : undefined
   }),
   analyzeMedia: (path) => ({
     path,
@@ -475,6 +477,7 @@ const mocks: TauriMocks = {
             colorTransfer: path === fourKHevcVideo ? 'smpte2084' : 'bt709',
             colorPrimaries: path === fourKHevcVideo ? 'bt2020' : 'bt709',
             pixelFormat: path === fourKHevcVideo ? 'yuv420p10le' : 'yuv420p',
+            fieldOrder: 'tt',
             hdrMetadata: path === fourKHevcVideo ? ['Mastering display metadata'] : []
           }
         ],
@@ -1379,6 +1382,9 @@ window.__E2E_ACTIONS__ = {
     files.delete(settingsPath);
     exists.set(settingsPath, false);
     mtimes.delete(settingsPath);
+    files.delete(pluginCatalogCachePath);
+    exists.set(pluginCatalogCachePath, false);
+    mtimes.delete(pluginCatalogCachePath);
     for (const path of Array.from(files.keys()).filter((item) => item.includes('/Backups/') || item.startsWith('C:/Backups/'))) {
       files.delete(path);
       exists.set(path, false);

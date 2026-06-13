@@ -99,6 +99,7 @@ export interface MediaProbe {
   audioSampleRate?: number;
   audioCodec?: string;
   videoCodec?: string;
+  fieldOrder?: string;
 }
 
 export interface MediaFormatInfo {
@@ -121,6 +122,7 @@ export interface MediaVideoStreamInfo {
   colorTransfer?: string;
   colorPrimaries?: string;
   pixelFormat?: string;
+  fieldOrder?: string;
   hdrMetadata: string[];
 }
 

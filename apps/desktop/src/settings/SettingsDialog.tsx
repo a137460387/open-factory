@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { FolderOpen, Save, Star, Trash2, X } from 'lucide-react';
+import { Download, FilePlus, FolderOpen, Save, Star, Trash2, X } from 'lucide-react';
 import {
   SUPPORTED_PROJECT_FPS,
   UpdateClipCommand,
@@ -32,6 +32,14 @@ import {
   type MacroShortcutConflict
 } from '../macros/clip-macros';
 import { getPluginRegistrySnapshot, refreshPluginRegistry, setPluginEnabled, uninstallPlugin, type LoadedPlugin, type PluginRegistry } from '../plugins/plugin-manager';
+import {
+  getCatalogEntryInstallState,
+  installCatalogPlugin,
+  installPluginFromFile,
+  loadPluginCatalog,
+  type PluginCatalogEntry,
+  type PluginCatalogResult
+} from '../plugins/plugin-market';
 import { getLoadedPluginStatus, type PluginPermission } from '../plugins/plugin-loader';
 import { writeCustomKeybindings } from '../shortcuts/keybindings';
 import {
@@ -109,6 +117,10 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
   const [pluginRegistry, setPluginRegistry] = useState<PluginRegistry>();
   const [pluginsLoading, setPluginsLoading] = useState(false);
   const [pluginsError, setPluginsError] = useState<string>();
+  const [pluginCatalog, setPluginCatalog] = useState<PluginCatalogResult>();
+  const [pluginCatalogLoading, setPluginCatalogLoading] = useState(false);
+  const [pluginCatalogError, setPluginCatalogError] = useState<string>();
+  const [installingPluginId, setInstallingPluginId] = useState<string>();
   const [backupSettings, setBackupSettings] = useState<BackupSettings>(() => ({
     ...DEFAULT_BACKUP_SETTINGS,
     local: { ...DEFAULT_BACKUP_SETTINGS.local },
@@ -158,6 +170,7 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
     void loadAutomationRules();
     hydrateThemeForm(getCurrentThemeSettings());
     showCurrentPlugins();
+    void refreshPluginCatalog();
     return () => setPreviewTimeline(undefined);
   }, [open, setPreviewTimeline]);
 
@@ -243,6 +256,19 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
     }
   }
 
+  async function refreshPluginCatalog() {
+    try {
+      setPluginCatalogLoading(true);
+      setPluginCatalogError(undefined);
+      setPluginCatalog(await loadPluginCatalog());
+    } catch (catalogError) {
+      const message = catalogError instanceof Error ? catalogError.message : t.plugins.catalogLoadFailedMessage;
+      setPluginCatalogError(message);
+    } finally {
+      setPluginCatalogLoading(false);
+    }
+  }
+
   function showCurrentPlugins() {
     const snapshot = getPluginRegistrySnapshot();
     if (snapshot) {
@@ -251,6 +277,40 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
       return;
     }
     void refreshPlugins();
+  }
+
+  async function installMarketPlugin(entry: PluginCatalogEntry) {
+    try {
+      setInstallingPluginId(entry.id);
+      setPluginsError(undefined);
+      await installCatalogPlugin(entry);
+      setPluginRegistry(await refreshPluginRegistry());
+      showToast({ kind: 'info', title: t.plugins.installComplete, message: entry.name });
+    } catch (pluginError) {
+      const message = pluginError instanceof Error ? pluginError.message : t.plugins.installFailedMessage;
+      setPluginsError(message);
+      showToast({ kind: 'warning', title: t.plugins.installFailed, message });
+    } finally {
+      setInstallingPluginId(undefined);
+    }
+  }
+
+  async function installPluginFile() {
+    try {
+      const paths = await openFileDialog(false, [{ name: t.plugins.fileInstallFilter, extensions: ['js'] }]);
+      const sourcePath = paths[0];
+      if (!sourcePath) {
+        return;
+      }
+      setPluginsError(undefined);
+      await installPluginFromFile(sourcePath);
+      setPluginRegistry(await refreshPluginRegistry());
+      showToast({ kind: 'info', title: t.plugins.installComplete, message: sourcePath });
+    } catch (pluginError) {
+      const message = pluginError instanceof Error ? pluginError.message : t.plugins.installFailedMessage;
+      setPluginsError(message);
+      showToast({ kind: 'warning', title: t.plugins.installFailed, message });
+    }
   }
 
   async function togglePlugin(entry: LoadedPlugin) {
@@ -1198,7 +1258,14 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
                 registry={pluginRegistry}
                 loading={pluginsLoading}
                 error={pluginsError}
+                catalog={pluginCatalog}
+                catalogLoading={pluginCatalogLoading}
+                catalogError={pluginCatalogError}
+                installingPluginId={installingPluginId}
                 onRefresh={() => void refreshPlugins()}
+                onRefreshCatalog={() => void refreshPluginCatalog()}
+                onInstallCatalogPlugin={(entry) => void installMarketPlugin(entry)}
+                onInstallFromFile={() => void installPluginFile()}
                 onTogglePlugin={(entry) => void togglePlugin(entry)}
                 onUninstallPlugin={(entry) => void removePlugin(entry)}
               />
@@ -1891,21 +1958,92 @@ function PluginsSettingsPanel({
   registry,
   loading,
   error,
+  catalog,
+  catalogLoading,
+  catalogError,
+  installingPluginId,
   onRefresh,
+  onRefreshCatalog,
+  onInstallCatalogPlugin,
+  onInstallFromFile,
   onTogglePlugin,
   onUninstallPlugin
 }: {
   registry?: PluginRegistry;
   loading: boolean;
   error?: string;
+  catalog?: PluginCatalogResult;
+  catalogLoading: boolean;
+  catalogError?: string;
+  installingPluginId?: string;
   onRefresh(): void;
+  onRefreshCatalog(): void;
+  onInstallCatalogPlugin(entry: PluginCatalogEntry): void;
+  onInstallFromFile(): void;
   onTogglePlugin(entry: LoadedPlugin): void;
   onUninstallPlugin(entry: LoadedPlugin): void;
 }) {
   const t = zhCN.settings.plugins;
   const plugins = registry?.plugins ?? [];
+  const catalogEntries = catalog?.entries ?? [];
   return (
     <div className="space-y-4">
+      <section className="rounded-md border border-line bg-panel p-3" data-testid="plugin-market-section">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold text-ink">{t.marketTitle}</h3>
+            <p className="text-xs text-slate-500">{t.marketDescription}</p>
+            {catalog?.source === 'cache' ? <p className="mt-1 text-[11px] font-medium text-amber-700" data-testid="plugin-market-cache-source">{t.catalogCacheSource}</p> : null}
+          </div>
+          <div className="flex flex-wrap justify-end gap-2">
+            <button className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel" type="button" data-testid="plugin-market-refresh-button" onClick={onRefreshCatalog}>
+              <Download size={13} />
+              {t.refreshCatalog}
+            </button>
+            <button className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel" type="button" data-testid="plugin-install-file-button" onClick={onInstallFromFile}>
+              <FilePlus size={13} />
+              {t.installFromFile}
+            </button>
+          </div>
+        </div>
+        {catalogLoading ? <div className="mt-3 rounded-md border border-line bg-white p-3 text-sm text-slate-600">{t.catalogLoading}</div> : null}
+        {catalogError ? <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800" data-testid="plugin-market-error">{catalogError}</div> : null}
+        {!catalogLoading && catalogEntries.length === 0 ? <div className="mt-3 rounded-md border border-line bg-white p-3 text-sm text-slate-600">{t.catalogEmpty}</div> : null}
+        <div className="mt-3 grid gap-2 md:grid-cols-2" data-testid="plugin-market-list">
+          {catalogEntries.map((entry) => {
+            const installState = getCatalogEntryInstallState(entry, registry);
+            const installing = installingPluginId === entry.id;
+            return (
+              <div key={entry.id} className="rounded-md border border-line bg-white p-3" data-testid="plugin-market-card" data-plugin-id={entry.id}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold text-ink">{entry.name}</div>
+                    <div className="truncate text-xs text-slate-500">{entry.author} · {entry.version}</div>
+                    <div className="mt-1 line-clamp-2 text-xs text-slate-500">{entry.description || t.noDescription}</div>
+                  </div>
+                  <span className="shrink-0 rounded bg-panel px-2 py-1 text-[11px] font-semibold text-slate-600" data-testid="plugin-market-install-state">
+                    {t.installState[installState.status]}
+                  </span>
+                </div>
+                <div className="mt-2 text-xs text-slate-500">
+                  {t.permissions}: <span data-testid="plugin-market-permissions">{formatPluginPermissions(entry.permissions)}</span>
+                </div>
+                {installState.installedVersion ? <div className="mt-1 text-xs text-slate-500">{t.installedVersion(installState.installedVersion)}</div> : null}
+                <button
+                  className="mt-3 inline-flex w-full items-center justify-center gap-1 rounded-md border border-line bg-panel px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                  type="button"
+                  disabled={installing || installState.status === 'installed'}
+                  data-testid="plugin-market-install-button"
+                  onClick={() => onInstallCatalogPlugin(entry)}
+                >
+                  <Download size={13} />
+                  {installing ? t.installing : installState.status === 'update-available' ? t.update : installState.status === 'installed' ? t.installed : t.install}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </section>
       <div className="flex items-center justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold text-ink">{t.title}</h3>

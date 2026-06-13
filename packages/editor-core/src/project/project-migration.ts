@@ -29,6 +29,7 @@ import {
   normalizeStabilization,
   normalizeTextPath,
   normalizeTransform,
+  normalizeVideoRestoration,
   type MediaFolder,
   type Clip,
   type ImageSequenceInfo,
@@ -66,6 +67,7 @@ export function serializeProjectFile(project: Project, projectPath?: string): Pr
       relativePath,
       originalAbsolutePath: asset.originalAbsolutePath ?? normalizedPath,
       videoCodec: normalizeOptionalString(asset.videoCodec),
+      fieldOrder: normalizeOptionalString(asset.fieldOrder),
       imageSequence: asset.imageSequence
         ? {
             ...asset.imageSequence,
@@ -190,6 +192,7 @@ function normalizeMediaAsset(asset: MediaAsset, projectPath?: string, mediaFolde
     originalAbsolutePath: asset.originalAbsolutePath ?? path,
     relativePath: asset.relativePath === undefined ? null : asset.relativePath,
     videoCodec: normalizeOptionalString(asset.videoCodec),
+    fieldOrder: normalizeOptionalString(asset.fieldOrder),
     imageSequence: normalizeImageSequence(asset.imageSequence, projectPath)
   };
 }
@@ -307,6 +310,7 @@ function cloneClip<TClip extends Clip>(clip: TClip): TClip {
     frameInterpolation: normalizeFrameInterpolation(clip.frameInterpolation),
     slowMotionMode: normalizeSlowMotionMode(clip.slowMotionMode),
     audioDenoise: normalizeAudioDenoise(clip.audioDenoise),
+    videoRestoration: normalizeVideoRestoration(clip.videoRestoration),
     projection: normalizeClipProjection(clip.projection),
     panorama: normalizeClipPanoramaView(clip.panorama),
     masks: normalizeMasks(clip.masks),

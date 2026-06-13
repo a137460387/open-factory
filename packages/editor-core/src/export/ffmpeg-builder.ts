@@ -27,6 +27,7 @@ import {
   normalizeTextPath,
   normalizeTransform,
   normalizeMasks,
+  normalizeVideoRestoration,
   type ClipKeyframes,
   type Project,
   type Timeline
@@ -217,6 +218,7 @@ function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project[
             stabilization: normalizeStabilization(clip.stabilization),
             frameInterpolation: normalizeFrameInterpolation(clip.frameInterpolation),
             audioDenoise: normalizeAudioDenoise(clip.audioDenoise),
+            videoRestoration: normalizeVideoRestoration(clip.videoRestoration),
             projection: normalizeClipProjection(clip.projection),
             panorama: normalizeClipPanoramaView(clip.panorama),
             masks: normalizeMasks(clip.masks),
@@ -1235,6 +1237,7 @@ function buildTransitionClipFilter(
     `fps=${settings.fps}`,
     ...buildSlowMotionFilters(clip, settings, capabilities, warnings),
     ...buildFrameInterpolationFilters(clip, capabilities, warnings),
+    ...buildVideoRestorationFilters(clip),
     'format=rgba'
   ];
   filters.push(...buildMaskFilters(clip));
@@ -1328,6 +1331,7 @@ function buildVisualPostKeyFilters(
   }
   filters.push(...buildSlowMotionFilters(clip, settings, capabilities, warnings));
   filters.push(...buildFrameInterpolationFilters(clip, capabilities, warnings));
+  filters.push(...buildVideoRestorationFilters(clip));
   filters.push('format=rgba');
   filters.push(...buildMaskFilters(clip));
   filters.push(...buildColorCorrectionFilters(clip, textArtifacts));
@@ -1577,6 +1581,32 @@ function buildFrameInterpolationFilters(clip: ExportClip, capabilities: FfmpegCa
     return [];
   }
   return [`minterpolate=fps=${clip.frameInterpolation.targetFps}:mi_mode=mci:mc_mode=aobmc`];
+}
+
+function buildVideoRestorationFilters(clip: ExportClip): string[] {
+  if (clip.type !== 'video' && clip.type !== 'nested-sequence') {
+    return [];
+  }
+  const restoration = normalizeVideoRestoration(clip.videoRestoration);
+  const filters: string[] = [];
+  if (restoration.deinterlace.enabled) {
+    filters.push(`yadif=mode=${restoration.deinterlace.mode}`);
+  }
+  if (restoration.temporalDenoise.preset !== 'off') {
+    filters.push(
+      `hqdn3d=luma_spatial=${formatFfmpegNumber(restoration.temporalDenoise.lumaSpatial)}:chroma_spatial=${formatFfmpegNumber(
+        restoration.temporalDenoise.chromaSpatial
+      )}:luma_tmp=${formatFfmpegNumber(restoration.temporalDenoise.lumaTmp)}`
+    );
+  }
+  if (restoration.spatialDenoise.enabled) {
+    filters.push(
+      `nlmeans=s=${formatFfmpegNumber(restoration.spatialDenoise.strength)}:p=${Math.round(restoration.spatialDenoise.patchSize)}:r=${Math.round(
+        restoration.spatialDenoise.researchSize
+      )}`
+    );
+  }
+  return filters;
 }
 
 function getMinimumClipSpeed(clip: ExportClip): number {

@@ -26,6 +26,7 @@ pub struct MediaProbe {
     audio_sample_rate: Option<u32>,
     audio_codec: Option<String>,
     video_codec: Option<String>,
+    field_order: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -65,6 +66,7 @@ pub struct VideoStreamInfo {
     color_transfer: Option<String>,
     color_primaries: Option<String>,
     pixel_format: Option<String>,
+    field_order: Option<String>,
     hdr_metadata: Vec<String>,
 }
 
@@ -119,6 +121,7 @@ struct FfprobeStream {
     color_transfer: Option<String>,
     color_primaries: Option<String>,
     pix_fmt: Option<String>,
+    field_order: Option<String>,
     sample_rate: Option<String>,
     channels: Option<u32>,
     channel_layout: Option<String>,
@@ -193,6 +196,10 @@ pub fn probe_media(app: AppHandle, path: String) -> Result<MediaProbe, String> {
             .map(ToOwned::to_owned),
         video_codec: video
             .and_then(|stream| stream.get("codec_name"))
+            .and_then(Value::as_str)
+            .map(ToOwned::to_owned),
+        field_order: video
+            .and_then(|stream| stream.get("field_order"))
             .and_then(Value::as_str)
             .map(ToOwned::to_owned),
     })
@@ -314,6 +321,7 @@ fn parse_video_stream(index: u32, stream: &FfprobeStream) -> VideoStreamInfo {
         color_transfer: stream.color_transfer.clone(),
         color_primaries: stream.color_primaries.clone(),
         pixel_format: stream.pix_fmt.clone(),
+        field_order: stream.field_order.clone(),
         hdr_metadata: stream
             .side_data_list
             .as_deref()
@@ -978,6 +986,7 @@ mod tests {
               "color_transfer": "smpte2084",
               "color_primaries": "bt2020",
               "pix_fmt": "yuv420p10le",
+              "field_order": "tt",
               "side_data_list": [
                 { "side_data_type": "Mastering display metadata" },
                 { "side_data_type": "Content light level metadata" }
@@ -1027,6 +1036,7 @@ mod tests {
             analysis.video_streams[0].pixel_format.as_deref(),
             Some("yuv420p10le")
         );
+        assert_eq!(analysis.video_streams[0].field_order.as_deref(), Some("tt"));
         assert_eq!(analysis.video_streams[0].hdr_metadata.len(), 2);
         assert_eq!(analysis.audio_streams[0].codec_name.as_deref(), Some("aac"));
         assert_eq!(analysis.audio_streams[0].sample_rate, Some(48_000));

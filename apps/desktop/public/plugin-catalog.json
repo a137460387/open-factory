@@ -1,0 +1,13 @@
+{
+  "plugins": [
+    {
+      "id": "open-factory.market.export-note",
+      "name": "Export Note",
+      "author": "Open Factory",
+      "version": "1.0.0",
+      "description": "Adds a small local export hook example for testing plugin installation.",
+      "permissions": ["export-hook"],
+      "downloadUrl": "/plugins/export-note.js"
+    }
+  ]
+}

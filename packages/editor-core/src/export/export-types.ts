@@ -8,6 +8,7 @@ import type {
   ClipPrivacyBlur,
   ClipProjection,
   ClipSlowMotionMode,
+  ClipVideoRestoration,
   PathPoint,
   TrackCompressor,
   TrackEQ
@@ -165,6 +166,8 @@ export interface ExportAudioDenoise {
   strength: number;
 }
 
+export type ExportVideoRestoration = ClipVideoRestoration;
+
 export interface ExportPanoramaView {
   yaw: number;
   pitch: number;
@@ -256,6 +259,7 @@ export interface ExportClip {
   stabilization: ExportStabilization;
   frameInterpolation: ExportFrameInterpolation;
   audioDenoise: ExportAudioDenoise;
+  videoRestoration: ExportVideoRestoration;
   projection: ClipProjection;
   panorama: ExportPanoramaView;
   masks: ExportMask[];

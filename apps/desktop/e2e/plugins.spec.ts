@@ -3,6 +3,37 @@ import { addMediaCardToTimeline, openExportDialog, waitForE2eActions } from './e
 
 type HookSummary = { pluginId: string; hookName: string; ok: boolean };
 
+test('shows discovered plugins from a mocked catalog request', async ({ page }) => {
+  await page.route('**/plugin-catalog.json', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        plugins: [
+          {
+            id: 'e2e.market.denoise-helper',
+            name: 'E2E Denoise Helper',
+            author: 'Open Factory Tests',
+            version: '1.2.0',
+            description: 'Adds local export checks.',
+            permissions: ['export-hook'],
+            downloadUrl: '/plugins/e2e-denoise-helper.js'
+          }
+        ]
+      })
+    });
+  });
+  await page.goto('/');
+  await waitForE2eActions(page);
+
+  await openPluginSettings(page);
+
+  const card = page.locator('[data-testid="plugin-market-card"][data-plugin-id="e2e.market.denoise-helper"]');
+  await expect(card).toBeVisible();
+  await expect(card).toContainText('E2E Denoise Helper');
+  await expect(card).toContainText('Open Factory Tests');
+  await expect(card.getByTestId('plugin-market-permissions')).toContainText('导出 Hook');
+});
+
 test('lists plugin manifests, isolates permission errors, and toggles export hooks', async ({ page }) => {
   test.setTimeout(60_000);
   await page.goto('/');

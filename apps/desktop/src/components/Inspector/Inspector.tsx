@@ -64,9 +64,11 @@ import {
   normalizeStabilization,
   normalizeTextPath,
   normalizeThreeWayColor,
+  normalizeVideoRestoration,
   sampleCurve,
   secondsToTimecode,
   setKenBurnsEndScaleKeyframes,
+  suggestDeinterlaceMode,
   buildPrivacyMasksFromDetections,
   createTrack,
   type AudioFadeCurve,
@@ -90,7 +92,9 @@ import {
   type PrivacyBlurEffect,
   type TextAnimationDirection,
   type TextAnimationPreset,
-  type ThreeWayColor
+  type ThreeWayColor,
+  type VideoDeinterlaceMode,
+  type VideoDenoisePreset
 } from '@open-factory/editor-core';
 import { ArrowDown, ArrowUp, GripVertical, Palette, Pipette, Plus, SlidersHorizontal, Trash2, X } from 'lucide-react';
 import { zhCN } from '../../i18n/strings';
@@ -257,6 +261,8 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
   const audioDenoiseUnavailable = audioDenoiseSupported === false;
   const projection = normalizeClipProjection(clip.projection);
   const panorama = normalizeClipPanoramaView(clip.panorama);
+  const videoRestoration = normalizeVideoRestoration(clip.videoRestoration);
+  const deinterlaceSuggestion = clip.type === 'video' ? suggestDeinterlaceMode(asset?.fieldOrder) : null;
   const audioPitchSemitones = 'pitchSemitones' in clip ? normalizeAudioPitchSemitones(clip.pitchSemitones) : 0;
   const reverseAudio = 'reverseAudio' in clip ? clip.reverseAudio === true : false;
   const fadeInDuration = 'fadeInDuration' in clip ? normalizeAudioFadeDuration(clip.fadeInDuration, clip.duration) : 0;
@@ -266,6 +272,9 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
   const masks = normalizeMasks(clip.masks);
   const updatePanorama = (patch: Partial<typeof panorama>) => {
     commit({ panorama: normalizeClipPanoramaView({ ...panorama, ...patch }) });
+  };
+  const updateVideoRestoration = (patch: Partial<typeof videoRestoration>) => {
+    commit({ videoRestoration: normalizeVideoRestoration({ ...videoRestoration, ...patch }) });
   };
   const motionTrack = normalizeMotionTrack(clip.motionTrack, clip.duration) ?? [];
   const colorCurves = normalizeColorCurves(colorCorrection.colorCurves);
@@ -1225,6 +1234,151 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
               </div>
             ) : null}
           </Section>
+        ) : null}
+
+        {clip.type === 'video' ? (
+          <details className="mb-4" open data-testid="video-restoration-section">
+            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-slate-500">{zhCN.inspector.sections.videoRestoration}</summary>
+            <div className="space-y-3">
+              <div className="rounded-md border border-line bg-panel p-2">
+                <ToggleField
+                  label={zhCN.inspector.fields.deinterlace}
+                  checked={videoRestoration.deinterlace.enabled}
+                  onCommit={(enabled) => updateVideoRestoration({ deinterlace: { ...videoRestoration.deinterlace, enabled } })}
+                  testId="video-restoration-deinterlace-toggle"
+                />
+                <label className="mt-2 block text-xs font-medium text-slate-600">
+                  {zhCN.inspector.fields.deinterlaceMode}
+                  <select
+                    className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                    value={videoRestoration.deinterlace.mode}
+                    data-testid="video-restoration-deinterlace-mode"
+                    onChange={(event) =>
+                      updateVideoRestoration({
+                        deinterlace: { ...videoRestoration.deinterlace, mode: Number(event.target.value) as VideoDeinterlaceMode }
+                      })
+                    }
+                  >
+                    <option value={0}>{zhCN.inspector.videoRestoration.deinterlaceModes.sendFrame}</option>
+                    <option value={1}>{zhCN.inspector.videoRestoration.deinterlaceModes.sendField}</option>
+                  </select>
+                </label>
+                {deinterlaceSuggestion !== null && !videoRestoration.deinterlace.enabled ? (
+                  <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800" data-testid="video-restoration-deinterlace-suggestion">
+                    <div>{zhCN.inspector.videoRestoration.deinterlaceSuggestion(asset?.fieldOrder ?? '')}</div>
+                    <button
+                      className="mt-2 rounded-md border border-amber-300 bg-white px-2 py-1 text-xs font-semibold text-amber-900 hover:bg-amber-100"
+                      type="button"
+                      data-testid="video-restoration-apply-deinterlace-suggestion"
+                      onClick={() => updateVideoRestoration({ deinterlace: { enabled: true, mode: deinterlaceSuggestion } })}
+                    >
+                      {zhCN.inspector.videoRestoration.applySuggestion}
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="rounded-md border border-line bg-panel p-2">
+                <label className="block text-xs font-medium text-slate-600">
+                  {zhCN.inspector.fields.temporalDenoisePreset}
+                  <select
+                    className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                    value={videoRestoration.temporalDenoise.preset}
+                    data-testid="video-restoration-temporal-preset"
+                    onChange={(event) =>
+                      updateVideoRestoration({
+                        temporalDenoise: { ...videoRestoration.temporalDenoise, preset: event.target.value as VideoDenoisePreset }
+                      })
+                    }
+                  >
+                    <option value="off">{zhCN.inspector.videoRestoration.presets.off}</option>
+                    <option value="low">{zhCN.inspector.videoRestoration.presets.low}</option>
+                    <option value="medium">{zhCN.inspector.videoRestoration.presets.medium}</option>
+                    <option value="high">{zhCN.inspector.videoRestoration.presets.high}</option>
+                    <option value="custom">{zhCN.inspector.videoRestoration.presets.custom}</option>
+                  </select>
+                </label>
+                {videoRestoration.temporalDenoise.preset === 'custom' ? (
+                  <div className="mt-3 space-y-2" data-testid="video-restoration-temporal-custom">
+                    <RangeNumberField
+                      label={zhCN.inspector.fields.lumaSpatial}
+                      value={videoRestoration.temporalDenoise.lumaSpatial}
+                      min={0}
+                      max={20}
+                      step={0.1}
+                      format={(value) => value.toFixed(1)}
+                      onCommit={(lumaSpatial) => updateVideoRestoration({ temporalDenoise: { ...videoRestoration.temporalDenoise, lumaSpatial } })}
+                      testId="video-restoration-luma-spatial"
+                    />
+                    <RangeNumberField
+                      label={zhCN.inspector.fields.chromaSpatial}
+                      value={videoRestoration.temporalDenoise.chromaSpatial}
+                      min={0}
+                      max={20}
+                      step={0.1}
+                      format={(value) => value.toFixed(1)}
+                      onCommit={(chromaSpatial) => updateVideoRestoration({ temporalDenoise: { ...videoRestoration.temporalDenoise, chromaSpatial } })}
+                      testId="video-restoration-chroma-spatial"
+                    />
+                    <RangeNumberField
+                      label={zhCN.inspector.fields.lumaTmp}
+                      value={videoRestoration.temporalDenoise.lumaTmp}
+                      min={0}
+                      max={20}
+                      step={0.1}
+                      format={(value) => value.toFixed(1)}
+                      onCommit={(lumaTmp) => updateVideoRestoration({ temporalDenoise: { ...videoRestoration.temporalDenoise, lumaTmp } })}
+                      testId="video-restoration-luma-tmp"
+                    />
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="rounded-md border border-line bg-panel p-2">
+                <ToggleField
+                  label={zhCN.inspector.fields.spatialDenoise}
+                  checked={videoRestoration.spatialDenoise.enabled}
+                  onCommit={(enabled) => updateVideoRestoration({ spatialDenoise: { ...videoRestoration.spatialDenoise, enabled } })}
+                  testId="video-restoration-spatial-toggle"
+                />
+                {videoRestoration.spatialDenoise.enabled ? (
+                  <div className="mt-2 space-y-2" data-testid="video-restoration-spatial-controls">
+                    <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">{zhCN.inspector.videoRestoration.spatialWarning}</div>
+                    <RangeNumberField
+                      label={zhCN.inspector.fields.spatialStrength}
+                      value={videoRestoration.spatialDenoise.strength}
+                      min={0}
+                      max={30}
+                      step={0.1}
+                      format={(value) => value.toFixed(1)}
+                      onCommit={(strength) => updateVideoRestoration({ spatialDenoise: { ...videoRestoration.spatialDenoise, strength } })}
+                      testId="video-restoration-spatial-strength"
+                    />
+                    <RangeNumberField
+                      label={zhCN.inspector.fields.patchSize}
+                      value={videoRestoration.spatialDenoise.patchSize}
+                      min={1}
+                      max={99}
+                      step={2}
+                      format={(value) => value.toFixed(0)}
+                      onCommit={(patchSize) => updateVideoRestoration({ spatialDenoise: { ...videoRestoration.spatialDenoise, patchSize } })}
+                      testId="video-restoration-patch-size"
+                    />
+                    <RangeNumberField
+                      label={zhCN.inspector.fields.researchSize}
+                      value={videoRestoration.spatialDenoise.researchSize}
+                      min={1}
+                      max={99}
+                      step={2}
+                      format={(value) => value.toFixed(0)}
+                      onCommit={(researchSize) => updateVideoRestoration({ spatialDenoise: { ...videoRestoration.spatialDenoise, researchSize } })}
+                      testId="video-restoration-research-size"
+                    />
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </details>
         ) : null}
 
         {clip.type !== 'audio' ? (
