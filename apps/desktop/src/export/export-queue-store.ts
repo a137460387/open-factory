@@ -30,7 +30,7 @@ export interface ExportQueueState {
   queuePaused: boolean;
   maxConcurrent: number;
   lastCompletedPath?: string;
-  addTask: (input: { name: string; outputPath: string; plan: FfmpegExportPlan; priority?: ExportTaskPriority; renderFarm?: RenderFarmTaskConfig; scheduledStartAt?: string }) => ExportTask;
+  addTask: (input: { name: string; projectName?: string; outputPath: string; plan: FfmpegExportPlan; priority?: ExportTaskPriority; renderFarm?: RenderFarmTaskConfig; scheduledStartAt?: string }) => ExportTask;
   activateScheduledTasks: (now?: string) => void;
   startNextTasks: () => string[];
   updateTaskProgress: (taskId: string, progress: number) => void;

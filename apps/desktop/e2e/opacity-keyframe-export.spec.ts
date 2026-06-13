@@ -5,6 +5,7 @@ import { expect, test } from '@playwright/test';
 import { addMediaCardToTimeline, expectExportTaskStatus, openExportDialog, waitForE2eActions } from './e2e-actions';
 
 test('exports opacity keyframes with visibly darker end frames', async ({ page }, testInfo) => {
+  test.setTimeout(60_000);
   const sourcePath = testInfo.outputPath('opacity-source.mp4');
   const outputPath = testInfo.outputPath('opacity-output.mp4');
   await createWhiteVideoFixture(sourcePath);

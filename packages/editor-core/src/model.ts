@@ -39,6 +39,7 @@ export interface ClipKeyframes {
   scaleX?: Keyframe<number>[];
   scaleY?: Keyframe<number>[];
   speed?: Keyframe<number>[];
+  pathStartOffset?: Keyframe<number>[];
 }
 
 export type KeyframeProperty = keyof ClipKeyframes;
@@ -341,6 +342,7 @@ export interface TextClip extends BaseClip {
   type: 'text';
   text: string;
   style: TextStyle;
+  pathText?: TextPathOptions;
 }
 
 export interface SubtitleClip extends BaseClip {
@@ -395,6 +397,14 @@ export interface TextStyle {
   fontFamily: string;
   bold: boolean;
   italic: boolean;
+}
+
+export interface TextPathOptions {
+  enabled: boolean;
+  path: PathPoint[];
+  startOffset: number;
+  letterSpacing: number;
+  rotateCharacters: boolean;
 }
 
 export interface SubtitleStyle extends TextStyle {
@@ -547,6 +557,20 @@ export const DEFAULT_TEXT_STYLE: TextStyle = {
   fontFamily: 'Inter, Arial, sans-serif',
   bold: false,
   italic: false
+};
+
+export const DEFAULT_TEXT_PATH_POINTS: PathPoint[] = [
+  { x: 0.14, y: 0.58, handleOut: { x: 0.28, y: 0.28 } },
+  { x: 0.5, y: 0.36, handleIn: { x: 0.36, y: 0.22 }, handleOut: { x: 0.64, y: 0.22 } },
+  { x: 0.86, y: 0.58, handleIn: { x: 0.72, y: 0.28 } }
+];
+
+export const DEFAULT_TEXT_PATH: TextPathOptions = {
+  enabled: false,
+  path: DEFAULT_TEXT_PATH_POINTS,
+  startOffset: 0,
+  letterSpacing: 4,
+  rotateCharacters: true
 };
 
 export const DEFAULT_SUBTITLE_MODE: SubtitleMode = 'burn-in';
@@ -859,6 +883,17 @@ export function normalizeMasks(masks: ClipMask[] | undefined): ClipMask[] {
   return Array.isArray(masks) ? masks.map((mask) => normalizeMask(mask)) : [];
 }
 
+export function normalizeTextPath(pathText: Partial<TextPathOptions> | undefined): TextPathOptions {
+  const path = normalizePathPoints(pathText?.path);
+  return {
+    enabled: pathText?.enabled === true,
+    path: path.length >= 2 ? path : DEFAULT_TEXT_PATH_POINTS.map((point) => clonePathPoint(point)),
+    startOffset: normalizeUnit(pathText?.startOffset, DEFAULT_TEXT_PATH.startOffset),
+    letterSpacing: round(Math.min(200, Math.max(0, finiteOrDefault(pathText?.letterSpacing, DEFAULT_TEXT_PATH.letterSpacing)))),
+    rotateCharacters: pathText?.rotateCharacters !== false
+  };
+}
+
 export function normalizeMulticamSequence(multicam: Partial<MulticamSequence> | undefined, duration = Number.POSITIVE_INFINITY): MulticamSequence | undefined {
   if (!multicam || !Array.isArray(multicam.angles) || multicam.angles.length < 2) {
     return undefined;
@@ -1092,6 +1127,15 @@ function normalizeChromaKeyMode(mode: ChromaKeyMode | undefined): ChromaKeyMode 
 
 function normalizeRgbChannel(value: number | undefined): number {
   return Math.round(Math.min(255, Math.max(0, finiteOrDefault(value, 0))));
+}
+
+function clonePathPoint(point: PathPoint): PathPoint {
+  return {
+    x: point.x,
+    y: point.y,
+    handleIn: point.handleIn ? { ...point.handleIn } : undefined,
+    handleOut: point.handleOut ? { ...point.handleOut } : undefined
+  };
 }
 
 function normalizeUnit(value: number | undefined, fallback: number): number {

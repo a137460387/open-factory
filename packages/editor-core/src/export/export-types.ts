@@ -49,6 +49,19 @@ export interface ExportTextWatermark {
 
 export type ExportWatermark = ExportImageWatermark | ExportTextWatermark;
 
+export interface ExportTimecodeBurnIn {
+  enabled: boolean;
+  position: ExportWatermarkPosition;
+  fontSize: number;
+  color: string;
+  backgroundColor: string;
+  includeFrameNumber: boolean;
+}
+
+export interface ExportSlate {
+  enabled: boolean;
+}
+
 export interface ExportSettings {
   width: number;
   height: number;
@@ -74,6 +87,8 @@ export interface ExportSettings {
   platformPreset?: ExportPlatformPreset;
   videoProfile?: ExportVideoProfile;
   watermark?: ExportWatermark | null;
+  timecodeBurnIn?: ExportTimecodeBurnIn | null;
+  slate?: ExportSlate | null;
 }
 
 export interface ExportTransform {
@@ -161,6 +176,7 @@ export interface ExportClipKeyframes {
   scaleX?: ExportKeyframe[];
   scaleY?: ExportKeyframe[];
   speed?: ExportKeyframe[];
+  pathStartOffset?: ExportKeyframe[];
 }
 
 export interface ExportTextStyle {
@@ -178,9 +194,17 @@ export interface ExportTextStyle {
   italic: boolean;
 }
 
+export interface ExportTextPathOptions {
+  enabled: boolean;
+  path: PathPoint[];
+  startOffset: number;
+  letterSpacing: number;
+  rotateCharacters: boolean;
+}
+
 export type ExportSubtitleMode = 'burn-in' | 'soft-sub';
 export type ExportSubtitleFormat = 'srt' | 'vtt' | 'ass' | 'ssa';
-export type TextArtifactPathMode = 'filter' | 'argument' | 'shader-sequence' | 'sidecar';
+export type TextArtifactPathMode = 'filter' | 'argument' | 'shader-sequence' | 'path-text-sequence' | 'sidecar';
 
 export interface ExportSubtitleStyle extends ExportTextStyle {
   yOffset: number;
@@ -230,6 +254,7 @@ export interface ExportClip {
   audioChannels: number;
   audioSampleRate: number;
   textStyle: ExportTextStyle | null;
+  textPath: ExportTextPathOptions | null;
   subtitleStyle: ExportSubtitleStyle | null;
   subtitleMode: ExportSubtitleMode | null;
 }
@@ -266,6 +291,7 @@ export interface ExportSequence {
 }
 
 export interface ExportProject {
+  name: string;
   settings: ExportSettings;
   masterVolume: number;
   timeline: ExportTimeline;

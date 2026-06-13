@@ -1,4 +1,4 @@
-import type { Clip } from '@open-factory/editor-core';
+import { layoutTextAlongPath, normalizeTextPath, resolvePathTextStartOffset, type Clip } from '@open-factory/editor-core';
 import { zhCN } from '../../i18n/strings';
 import { recordPreviewDraw } from './debug';
 import { drawTransformedSource2d } from './transform-2d';
@@ -6,7 +6,11 @@ import type { WebGlPreviewCompositor } from './webgl-compositor';
 
 type TextClip = Extract<Clip, { type: 'text' }> | Extract<Clip, { type: 'subtitle' }>;
 
-export function drawText2d(context: CanvasRenderingContext2D, canvas: HTMLCanvasElement, clip: TextClip, bypassProcessing = false): void {
+export function drawText2d(context: CanvasRenderingContext2D, canvas: HTMLCanvasElement, clip: TextClip, bypassProcessing = false, localTime = 0): void {
+  if (clip.type === 'text' && normalizeTextPath(clip.pathText).enabled) {
+    drawPathText2d(context, canvas, clip, bypassProcessing, localTime);
+    return;
+  }
   const previousFilter = context.filter;
   const transform = resolveTextTransform(canvas.height, clip);
   context.save();
@@ -77,6 +81,51 @@ function drawTextBackground(
   context.globalAlpha = Math.min(1, Math.max(0, backgroundOpacity)) * Math.min(1, Math.max(0, transformOpacity));
   context.fillStyle = backgroundColor;
   context.fillRect(-width / 2, -height / 2, width, height);
+}
+
+function drawPathText2d(context: CanvasRenderingContext2D, canvas: HTMLCanvasElement, clip: Extract<Clip, { type: 'text' }>, bypassProcessing: boolean, localTime: number): void {
+  const previousFilter = context.filter;
+  const transform = clip.transform;
+  const correction = clip.colorCorrection;
+  const pathText = normalizeTextPath(clip.pathText);
+  const scale = Math.max(0.01, clip.transform.scaleX ?? clip.transform.scale);
+  const fontSize = Math.max(1, clip.style.fontSize * scale);
+  context.save();
+  context.filter = bypassProcessing
+    ? 'none'
+    : `brightness(${Math.max(0, 1 + correction.brightness)}) contrast(${correction.contrast}) saturate(${correction.saturation}) hue-rotate(${correction.hue}deg)`;
+  context.globalAlpha = transform.opacity;
+  context.font = `${clip.style.italic ? 'italic ' : ''}${clip.style.bold ? '700 ' : '400 '}${fontSize}px ${clip.style.fontFamily}`;
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  const chars = layoutTextAlongPath({
+    text: clip.text,
+    path: pathText.path,
+    width: canvas.width,
+    height: canvas.height,
+    fontSize,
+    startOffset: resolvePathTextStartOffset(pathText, clip.keyframes, localTime),
+    letterSpacing: pathText.letterSpacing,
+    rotateCharacters: pathText.rotateCharacters,
+    offsetX: clip.transform.x,
+    offsetY: clip.transform.y,
+    measureCharacter: (char) => context.measureText(char).width
+  });
+  for (const item of chars) {
+    context.save();
+    context.translate(item.x, item.y);
+    if (pathText.rotateCharacters) {
+      context.rotate((item.angle * Math.PI) / 180);
+    }
+    drawTextBackground(context, item.char, fontSize, clip.style.backgroundColor, clip.style.backgroundOpacity, transform.opacity);
+    context.globalAlpha = transform.opacity;
+    context.fillStyle = clip.style.color;
+    context.fillText(item.char, 0, 0);
+    context.restore();
+  }
+  context.filter = previousFilter;
+  context.restore();
+  recordPreviewDraw(clip.type, 'text');
 }
 
 function resolveTextTransform(canvasHeight: number, clip: TextClip): TextClip['transform'] {

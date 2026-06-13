@@ -4,13 +4,17 @@ import {
   readAppSettings,
   readBackupSettings,
   readExportBackgroundSettings,
+  readExportRules,
   readLayoutSettings,
   readThemeSettings,
+  readViewSettings,
   saveBackupSettings,
   saveExportBackgroundSettings,
+  saveExportRules,
   saveLanguageSetting,
   saveLayoutSettings,
-  saveThemeSettings
+  saveThemeSettings,
+  saveViewSettings
 } from './appSettings';
 
 describe('app settings storage', () => {
@@ -161,6 +165,61 @@ describe('app settings storage', () => {
     expect(await readAppSettings()).toEqual({
       language: 'en',
       exportBackground: { allowPowerActions: true }
+    });
+  });
+
+  it('persists normalized export condition rules in settings.json', async () => {
+    await saveLanguageSetting('en');
+    const rules = await saveExportRules([
+      {
+        id: 'copy-success',
+        enabled: true,
+        trigger: 'export-success',
+        action: 'copy-to-directory',
+        targetDirectory: 'C:/Exports/{date}/{project}'
+      },
+      {
+        id: 'invalid',
+        enabled: true,
+        trigger: 'unknown' as never,
+        action: 'copy-to-directory'
+      }
+    ]);
+
+    expect(rules).toEqual([
+      {
+        id: 'copy-success',
+        enabled: true,
+        trigger: 'export-success',
+        action: 'copy-to-directory',
+        targetDirectory: 'C:/Exports/{date}/{project}'
+      }
+    ]);
+    expect(await readExportRules()).toEqual(rules);
+    expect(await readAppSettings()).toEqual({
+      language: 'en',
+      exportRules: rules
+    });
+  });
+
+  it('persists safe frame guide visibility in view settings', async () => {
+    await expect(readViewSettings()).resolves.toEqual({ safeFrameGuides: false });
+
+    await saveLanguageSetting('en');
+    const view = await saveViewSettings({ safeFrameGuides: true });
+
+    expect(view).toEqual({ safeFrameGuides: true });
+    expect(await readViewSettings()).toEqual({ safeFrameGuides: true });
+    expect(await readAppSettings()).toEqual({
+      language: 'en',
+      view: { safeFrameGuides: true }
+    });
+
+    await saveViewSettings({ safeFrameGuides: false });
+    expect(await readViewSettings()).toEqual({ safeFrameGuides: false });
+    expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({
+      language: 'en',
+      view: { safeFrameGuides: false }
     });
   });
 });

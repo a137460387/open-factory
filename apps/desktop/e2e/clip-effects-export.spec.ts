@@ -78,6 +78,46 @@ test('adds a custom shader effect, keeps preview visible, and exports through ov
   expect(plan.warnings.some((warning) => warning.includes('will render frame-by-frame'))).toBe(true);
 });
 
+test('adds path text and exports through a baked sequence overlay', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.getByTestId('add-text-clip-button').click();
+  await expect(page.getByTestId('path-text-section')).toBeVisible();
+  await page.getByTestId('path-text-toggle').check();
+  await page.getByTestId('path-text-start-offset-input').fill('0.2');
+  await page.getByTestId('path-text-letter-spacing-input').fill('12');
+  await page.getByTestId('path-text-offset-keyframe-button').click();
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const timeline = window.__E2E_ACTIONS__!.getTimelineSnapshot!() as {
+          tracks: Array<{ clips: Array<{ type: string; keyframes?: { pathStartOffset?: unknown[] } }> }>;
+        };
+        return timeline.tracks.flatMap((track) => track.clips).find((clip) => clip.type === 'text')?.keyframes?.pathStartOffset?.length ?? 0;
+      })
+    )
+    .toBe(1);
+
+  await openExportDialog(page);
+  await page.getByTestId('export-enqueue-button').click();
+  await expectExportTaskStatus(page, 0, 'success');
+
+  const plan = await page.evaluate(
+    () =>
+      window.__E2E_ACTIONS__!.getLastExportPlan!() as {
+        filterComplex: string;
+        fullArgs: string[];
+        textArtifacts: Array<{ pathMode?: string; fileName: string }>;
+        warnings: string[];
+      }
+  );
+  expect(plan.filterComplex).toContain('pathtextsrc_');
+  expect(plan.filterComplex).toContain('overlay=x=0:y=0');
+  expect(plan.fullArgs.join(' ')).toContain('__PATH_TEXT_SEQUENCE_');
+  expect(plan.textArtifacts.some((artifact) => artifact.pathMode === 'path-text-sequence' && artifact.fileName.includes('path-text'))).toBe(true);
+  expect(plan.warnings.some((warning) => warning.includes('Path text clip'))).toBe(true);
+});
+
 test('enables chroma key and includes chromakey in the export plan', async ({ page }) => {
   await page.goto('/');
   await waitForE2eActions(page);

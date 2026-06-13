@@ -79,6 +79,37 @@ struct CustomShaderSequenceManifest {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
+struct PathTextSequenceManifest {
+    kind: String,
+    clip_id: String,
+    width: u32,
+    height: u32,
+    fps: f64,
+    frame_count: u32,
+    font_size: f64,
+    font_color: String,
+    font_path: Option<String>,
+    frames: Vec<PathTextFrameManifest>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PathTextFrameManifest {
+    chars: Vec<PathTextCharManifest>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct PathTextCharManifest {
+    char: String,
+    x: f64,
+    y: f64,
+    #[allow(dead_code)]
+    angle: f64,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FfmpegExportPlanDto {
     full_args: Vec<String>,
     warnings: Vec<String>,
@@ -1215,6 +1246,11 @@ fn write_text_artifacts(
             result.push((artifact.placeholder.clone(), sequence_path));
             continue;
         }
+        if artifact.path_mode.as_deref() == Some("path-text-sequence") {
+            let sequence_path = materialize_path_text_sequence(temp_dir, artifact, &safe_name)?;
+            result.push((artifact.placeholder.clone(), sequence_path));
+            continue;
+        }
         let path = temp_dir.join(safe_name);
         fs::write(&path, artifact.text.as_bytes()).map_err(|error| {
             format!(
@@ -1259,6 +1295,38 @@ fn materialize_custom_shader_sequence(
     })?;
     let frame_pattern = sequence_dir.join("frame%04d.png");
     bake_custom_shader_sequence(&manifest, &frame_pattern)?;
+    Ok(normalize_path(&frame_pattern))
+}
+
+fn materialize_path_text_sequence(
+    temp_dir: &Path,
+    artifact: &TextArtifactDto,
+    safe_name: &str,
+) -> Result<String, String> {
+    let manifest: PathTextSequenceManifest =
+        serde_json::from_str(&artifact.text).map_err(|error| {
+            format!(
+                "Unable to parse path text artifact {}: {}",
+                artifact.clip_id, error
+            )
+        })?;
+    if manifest.kind != "path-text-sequence" {
+        return Err(format!(
+            "Unsupported path text artifact kind for {}.",
+            artifact.clip_id
+        ));
+    }
+    let stem = safe_name.trim_end_matches(".json");
+    let sequence_dir = temp_dir.join(stem);
+    fs::create_dir_all(&sequence_dir).map_err(|error| {
+        format!(
+            "Unable to create path text sequence directory {}: {}",
+            normalize_path(&sequence_dir),
+            error
+        )
+    })?;
+    let frame_pattern = sequence_dir.join("frame%04d.png");
+    bake_path_text_sequence(&manifest, &sequence_dir)?;
     Ok(normalize_path(&frame_pattern))
 }
 
@@ -1314,6 +1382,56 @@ fn bake_custom_shader_sequence(
     ))
 }
 
+fn bake_path_text_sequence(
+    manifest: &PathTextSequenceManifest,
+    sequence_dir: &Path,
+) -> Result<(), String> {
+    let frame_count = manifest.frame_count.max(1) as usize;
+    for index in 0..frame_count {
+        let empty = PathTextFrameManifest { chars: Vec::new() };
+        let frame = manifest.frames.get(index).unwrap_or(&empty);
+        let frame_path = sequence_dir.join(format!("frame{:04}.png", index + 1));
+        let frame_duration = 1.0 / manifest.fps.max(1.0);
+        let args = vec![
+            "-hide_banner".to_string(),
+            "-y".to_string(),
+            "-f".to_string(),
+            "lavfi".to_string(),
+            "-i".to_string(),
+            format!(
+                "color=c=black@0:s={}x{}:d={}",
+                manifest.width.max(1),
+                manifest.height.max(1),
+                format_seconds_arg(frame_duration)
+            ),
+            "-vf".to_string(),
+            build_path_text_frame_filter(manifest, frame),
+            "-frames:v".to_string(),
+            "1".to_string(),
+            "-f".to_string(),
+            "image2".to_string(),
+            normalize_path(&frame_path),
+        ];
+        let output = Command::new(ffmpeg_binary())
+            .args(&args)
+            .output()
+            .map_err(|error| {
+                format!(
+                    "Unable to render path text sequence for {}: {}",
+                    manifest.clip_id, error
+                )
+            })?;
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(format!(
+                "Path text sequence render failed for {}: {}",
+                manifest.clip_id, stderr
+            ));
+        }
+    }
+    Ok(())
+}
+
 fn build_custom_shader_bake_filter(manifest: &CustomShaderSequenceManifest) -> String {
     let width = manifest.width.max(1);
     let height = manifest.height.max(1);
@@ -1361,6 +1479,55 @@ fn custom_shader_equivalent_filter(manifest: &CustomShaderSequenceManifest) -> S
         }
         _ => "null".to_string(),
     }
+}
+
+fn build_path_text_frame_filter(
+    manifest: &PathTextSequenceManifest,
+    frame: &PathTextFrameManifest,
+) -> String {
+    let font_size = manifest.font_size.max(1.0);
+    let font_color = css_color_to_ffmpeg(&manifest.font_color);
+    let font_file = manifest
+        .font_path
+        .as_deref()
+        .filter(|path| !path.trim().is_empty())
+        .map(|path| format!(":fontfile={}", escape_drawtext_path(path)))
+        .unwrap_or_default();
+    let mut filters = vec!["format=rgba".to_string()];
+    for item in &frame.chars {
+        if item.char.is_empty() {
+            continue;
+        }
+        filters.push(format!(
+            "drawtext=text='{}'{}:fontsize={}:fontcolor={}:x='{}-text_w/2':y='{}-{}'",
+            escape_drawtext_text(&item.char),
+            font_file,
+            format_seconds_arg(font_size),
+            font_color,
+            format_seconds_arg(item.x),
+            format_seconds_arg(item.y),
+            format_seconds_arg(font_size / 2.0)
+        ));
+    }
+    filters.join(",")
+}
+
+fn css_color_to_ffmpeg(value: &str) -> String {
+    let trimmed = value.trim();
+    if let Some(hex) = trimmed.strip_prefix('#') {
+        if hex.len() == 6 && hex.chars().all(|char| char.is_ascii_hexdigit()) {
+            return format!("0x{}", hex.to_ascii_lowercase());
+        }
+        if hex.len() == 3 && hex.chars().all(|char| char.is_ascii_hexdigit()) {
+            let mut expanded = String::from("0x");
+            for char in hex.chars() {
+                expanded.push(char.to_ascii_lowercase());
+                expanded.push(char.to_ascii_lowercase());
+            }
+            return expanded;
+        }
+    }
+    "white".to_string()
 }
 
 fn artifact_path_for_mode(path: &Path, path_mode: Option<&str>) -> String {
@@ -1546,6 +1713,15 @@ fn escape_drawtext_path(path: &str) -> String {
         .replace(':', "\\\\:")
         .replace('\'', "\\'")
         .replace('%', "\\%")
+}
+
+fn escape_drawtext_text(value: &str) -> String {
+    value
+        .replace('\\', "\\\\")
+        .replace(':', "\\:")
+        .replace('\'', "\\'")
+        .replace('%', "\\%")
+        .replace(',', "\\,")
 }
 
 fn escape_filter_path(path: &Path) -> String {
@@ -1977,6 +2153,37 @@ unrelated line
     }
 
     #[test]
+    fn path_text_frame_filter_builds_escaped_drawtext_layers() {
+        let manifest = PathTextSequenceManifest {
+            kind: "path-text-sequence".to_string(),
+            clip_id: "clip-path-text".to_string(),
+            width: 320,
+            height: 180,
+            fps: 30.0,
+            frame_count: 1,
+            font_size: 42.0,
+            font_color: "#ff4fd8".to_string(),
+            font_path: Some(r"C:\Fonts\A:rial.ttf".to_string()),
+            frames: vec![PathTextFrameManifest {
+                chars: vec![PathTextCharManifest {
+                    char: "A:".to_string(),
+                    x: 120.0,
+                    y: 80.0,
+                    angle: -12.0,
+                }],
+            }],
+        };
+
+        let filter = build_path_text_frame_filter(&manifest, &manifest.frames[0]);
+
+        assert!(filter.starts_with("format=rgba,drawtext="));
+        assert!(filter.contains("text='A\\:'"));
+        assert!(filter.contains(r"fontfile=C\\:/Fonts/A\\:rial.ttf"));
+        assert!(filter.contains("fontcolor=0xff4fd8"));
+        assert!(filter.contains("x='120-text_w/2':y='80-21'"));
+    }
+
+    #[test]
     fn custom_shader_sequence_artifact_materializes_frames_and_replaces_placeholder() {
         if !detect_ffmpeg() {
             return;
@@ -2037,6 +2244,67 @@ unrelated line
         .expect("custom shader artifact should materialize");
 
         fs::remove_dir_all(source_dir).expect("source temp dir should be removed");
+    }
+
+    #[test]
+    fn path_text_sequence_artifact_materializes_frames_and_replaces_placeholder() {
+        if !detect_ffmpeg()
+            || !command_text(&["-hide_banner", "-filters"])
+                .map(|filters| filter_list_contains(&filters, "drawtext"))
+                .unwrap_or(false)
+        {
+            return;
+        }
+        let font_path = if cfg!(windows) {
+            "C:/Windows/Fonts/arial.ttf"
+        } else {
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+        };
+        if !Path::new(font_path).exists() {
+            return;
+        }
+        let artifact_text = serde_json::json!({
+            "kind": "path-text-sequence",
+            "clipId": "clip-path-text",
+            "width": 160,
+            "height": 90,
+            "fps": 10,
+            "frameCount": 1,
+            "fontSize": 24,
+            "fontColor": "#ff4fd8",
+            "fontPath": font_path,
+            "frames": [
+                { "time": 0, "chars": [{ "char": "A", "x": 80, "y": 45, "angle": 0 }] }
+            ]
+        })
+        .to_string();
+        let plan = FfmpegExportPlanDto {
+            full_args: vec![
+                "-i".to_string(),
+                "__PATH_TEXT_SEQUENCE_clip_path_text__".to_string(),
+                "D:/Exports/out.mp4".to_string(),
+            ],
+            warnings: vec![],
+            text_artifacts: vec![TextArtifactDto {
+                clip_id: "clip-path-text:path-text".to_string(),
+                text: artifact_text,
+                file_name: "path-text-clip-path-text.json".to_string(),
+                placeholder: "__PATH_TEXT_SEQUENCE_clip_path_text__".to_string(),
+                path_mode: Some("path-text-sequence".to_string()),
+            }],
+            passes: vec![],
+            nested_plans: vec![],
+            duration: 1.0,
+        };
+
+        with_temp_export_artifacts(&plan, |materialized, _temp_dir| {
+            let pattern = &materialized.full_args[1];
+            assert!(!pattern.contains("__PATH_TEXT_SEQUENCE_clip_path_text__"));
+            assert!(pattern.ends_with("frame%04d.png"));
+            assert!(Path::new(&pattern.replace("%04d", "0001")).exists());
+            Ok(())
+        })
+        .expect("path text artifact should materialize");
     }
 
     #[test]

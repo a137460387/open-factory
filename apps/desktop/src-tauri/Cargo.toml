@@ -25,5 +25,6 @@ sysinfo = "0.30"
 tauri = { version = "2", features = ["protocol-asset", "tray-icon"] }
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
+tauri-plugin-notification = "2"
 tauri-plugin-shell = "2"
 zip = { version = "2", default-features = false, features = ["deflate"] }

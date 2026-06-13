@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildPreviewCompareDividerStyle, buildPreviewCompareOverlayStyle, calculatePreviewCompareSplitRatio } from './compare';
+import { buildPreviewCompareDividerStyle, buildPreviewCompareOverlayStyle, calculatePreviewCompareSplitRatio, clampPreviewCompareSplitRatio } from './compare';
 
 describe('preview compare split calculations', () => {
   const bounds = { left: 100, top: 50, width: 800, height: 400 };
@@ -8,6 +8,13 @@ describe('preview compare split calculations', () => {
     expect(calculatePreviewCompareSplitRatio('left-right', { clientX: 500, clientY: 60 }, bounds)).toBe(0.5);
     expect(calculatePreviewCompareSplitRatio('left-right', { clientX: 0, clientY: 60 }, bounds)).toBe(0.1);
     expect(calculatePreviewCompareSplitRatio('left-right', { clientX: 1000, clientY: 60 }, bounds)).toBe(0.9);
+  });
+
+  it('clamps snapshot compare divider ratios into the draggable preview range', () => {
+    expect(clampPreviewCompareSplitRatio(Number.NaN)).toBe(0.5);
+    expect(clampPreviewCompareSplitRatio(0)).toBe(0.1);
+    expect(clampPreviewCompareSplitRatio(1)).toBe(0.9);
+    expect(clampPreviewCompareSplitRatio(0.42)).toBe(0.42);
   });
 
   it('calculates top-bottom split ratio from pointer y', () => {

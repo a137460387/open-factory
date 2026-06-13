@@ -12,6 +12,7 @@ import {
   AUDIO_SPECTRUM_STYLES,
   DEFAULT_EFFECT_PARAMS,
   DEFAULT_COLOR_CORRECTION,
+  DEFAULT_TEXT_PATH,
   DEFAULT_THREE_WAY_COLOR,
   EFFECT_TYPES,
   FRAME_INTERPOLATION_TARGET_FPS,
@@ -58,6 +59,7 @@ import {
   normalizeSequenceFrameRate,
   normalizeSlowMotionMode,
   normalizeStabilization,
+  normalizeTextPath,
   normalizeThreeWayColor,
   sampleCurve,
   secondsToTimecode,
@@ -185,6 +187,13 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
     }
   };
   const localKeyframeTime = Math.min(clip.duration, Math.max(0, playheadTime - clip.start));
+  const textPath = clip.type === 'text' ? normalizeTextPath(clip.pathText) : undefined;
+  const updateTextPath = (patch: Partial<NonNullable<typeof textPath>>) => {
+    if (clip.type !== 'text' || !textPath) {
+      return;
+    }
+    commit({ pathText: normalizeTextPath({ ...textPath, ...patch }) });
+  };
   const addKeyframe = (property: KeyframeProperty, value = getClipKeyframeValue(clip, property, localKeyframeTime)) => {
     try {
       commandManager.execute(new AddKeyframeCommand(timelineAccessor, clip.id, property, { time: localKeyframeTime, value }));
@@ -1326,6 +1335,46 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
                   </select>
                 </label>
               </>
+            ) : null}
+            {clip.type === 'text' ? (
+              <details className="rounded-md border border-line bg-white" data-testid="path-text-section" open>
+                <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-slate-700">{zhCN.inspector.sections.pathText}</summary>
+                <div className="space-y-3 border-t border-line p-2">
+                  <ToggleField label={zhCN.inspector.fields.pathTextMode} checked={textPath?.enabled ?? false} onCommit={(enabled) => updateTextPath({ enabled })} testId="path-text-toggle" />
+                  <RangeNumberField
+                    label={zhCN.inspector.fields.pathTextStartOffset}
+                    value={textPath?.startOffset ?? DEFAULT_TEXT_PATH.startOffset}
+                    min={0}
+                    max={1}
+                    step={0.01}
+                    format={(value) => `${Math.round(value * 100)}%`}
+                    onCommit={(startOffset) => updateTextPath({ startOffset })}
+                    testId="path-text-start-offset-input"
+                  />
+                  <RangeNumberField
+                    label={zhCN.inspector.fields.pathTextLetterSpacing}
+                    value={textPath?.letterSpacing ?? DEFAULT_TEXT_PATH.letterSpacing}
+                    min={0}
+                    max={80}
+                    step={1}
+                    format={(value) => `${Math.round(value)}px`}
+                    onCommit={(letterSpacing) => updateTextPath({ letterSpacing })}
+                    testId="path-text-letter-spacing-input"
+                  />
+                  <ToggleField label={zhCN.inspector.fields.pathTextRotateCharacters} checked={textPath?.rotateCharacters ?? true} onCommit={(rotateCharacters) => updateTextPath({ rotateCharacters })} testId="path-text-rotate-toggle" />
+                  <div className="rounded-md bg-panel p-2 text-xs text-slate-600" data-testid="path-text-point-summary">
+                    {zhCN.inspector.fields.pathPointCount(textPath?.path.length ?? DEFAULT_TEXT_PATH.path.length)}
+                  </div>
+                  <button
+                    className="w-full rounded-md border border-line bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-panel"
+                    type="button"
+                    data-testid="path-text-offset-keyframe-button"
+                    onClick={() => addKeyframe('pathStartOffset', textPath?.startOffset ?? DEFAULT_TEXT_PATH.startOffset)}
+                  >
+                    {zhCN.inspector.pathText.addOffsetKeyframe}
+                  </button>
+                </div>
+              </details>
             ) : null}
             {clip.type === 'text' ? (
               <details className="rounded-md border border-line bg-white" data-testid="text-animation-section" open>
@@ -2737,7 +2786,7 @@ function formatKeyframeValue(property: KeyframeProperty, value: number): string 
   if (property === 'speed') {
     return `${value.toFixed(2)}x`;
   }
-  if (property === 'opacity' || property === 'volume' || property === 'scaleX' || property === 'scaleY') {
+  if (property === 'opacity' || property === 'volume' || property === 'scaleX' || property === 'scaleY' || property === 'pathStartOffset') {
     return `${Math.round(value * 100)}%`;
   }
   return value.toFixed(2);

@@ -7,6 +7,7 @@ use std::process::Command;
 use std::sync::{Mutex, OnceLock};
 use tauri::{Emitter, Manager};
 use tauri_plugin_dialog::DialogExt;
+use tauri_plugin_notification::NotificationExt;
 
 static CLOSE_ALLOWED: OnceLock<Mutex<bool>> = OnceLock::new();
 
@@ -22,11 +23,22 @@ fn force_close_window(window: tauri::WebviewWindow) -> Result<(), String> {
     window.close().map_err(|error| error.to_string())
 }
 
+#[tauri::command]
+fn send_notification(app: tauri::AppHandle, title: String, body: String) -> Result<(), String> {
+    app.notification()
+        .builder()
+        .title(title)
+        .body(body)
+        .show()
+        .map_err(|error| error.to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
             commands::ffmpeg::detect_ffmpeg,
@@ -75,6 +87,7 @@ pub fn run() {
             commands::whisper::run_whisper,
             commands::smoke::get_preview_smoke_config,
             commands::smoke::get_cancel_smoke_config,
+            send_notification,
             force_close_window
         ])
         .setup(|app| {

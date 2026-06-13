@@ -42,6 +42,7 @@ let lastWebdavPutRequest: WebdavProjectBackupRequest | undefined;
 let minimizedToTray = false;
 let lastTrayProgress: { progress: number; runningCount: number } | undefined;
 let powerActionCalls: Array<{ action: 'shutdown' | 'hibernate'; allowPowerActions: boolean }> = [];
+let notifications: Array<{ title: string; body: string }> = [];
 
 const sampleProjectPath = 'C:/Projects/sample.cutproj.json';
 const missingProjectPath = 'C:/Projects/missing.cutproj.json';
@@ -400,6 +401,9 @@ const mocks: TauriMocks = {
   },
   runExportPowerAction: (action, allowPowerActions) => {
     powerActionCalls.push({ action, allowPowerActions });
+  },
+  sendNotification: (title, body) => {
+    notifications.push({ title, body });
   },
   probeMedia: (path) => ({
     hasAudio: path.endsWith('.mp4') || path.endsWith('.wav'),
@@ -1037,6 +1041,7 @@ window.__E2E_ACTIONS__ = {
   getLastTrayProgress: () => lastTrayProgress,
   wasMinimizedToTray: () => minimizedToTray,
   getPowerActionCalls: () => powerActionCalls,
+  getNotifications: () => notifications,
   getLastWebdavPutRequest: () => lastWebdavPutRequest,
   addKeyframe: (clipId: unknown, property: unknown, time: unknown, value: unknown) => {
     if (typeof clipId !== 'string' || !isKeyframeProperty(property) || typeof time !== 'number' || typeof value !== 'number') {
@@ -1118,6 +1123,7 @@ window.__E2E_ACTIONS__ = {
     minimizedToTray = false;
     lastTrayProgress = undefined;
     powerActionCalls = [];
+    notifications = [];
     localStorage.removeItem('open-factory:proxy-settings');
     localStorage.removeItem('open-factory:plugins');
     localStorage.removeItem('open-factory:settings');
@@ -1336,7 +1342,7 @@ function writeAscii(bytes: Uint8Array, offset: number, value: string): void {
 }
 
 function isKeyframeProperty(value: unknown): value is KeyframeProperty {
-  return value === 'x' || value === 'y' || value === 'scaleX' || value === 'scaleY' || value === 'opacity' || value === 'volume' || value === 'speed';
+  return value === 'x' || value === 'y' || value === 'scaleX' || value === 'scaleY' || value === 'opacity' || value === 'volume' || value === 'speed' || value === 'pathStartOffset';
 }
 
 function emit(event: string, payload: unknown): void {

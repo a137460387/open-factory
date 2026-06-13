@@ -69,6 +69,15 @@ const fixtures = [
     validate: validateTextAnimationFixture
   },
   {
+    name: 'path-text',
+    description: 'text clip baked to a transparent path-text PNG sequence overlay',
+    outputWidth: 1280,
+    outputHeight: 720,
+    expectedDuration: 1.5,
+    create: createPathTextFixture,
+    validate: validatePathTextFixture
+  },
+  {
     name: 'multi-clip-overlay',
     description: 'two sequential video clips with an image overlay over the second segment',
     outputWidth: 1280,
@@ -730,6 +739,132 @@ async function validateTextAnimationFixture(context) {
         passed: latePinkPixels > earlyPinkPixels + 500,
         actual: { earlyPinkPixels, latePinkPixels },
         expected: 'late pink text pixels at least 500 above early frame'
+      }
+    ]
+  };
+}
+
+async function createPathTextFixture(context) {
+  const backgroundPath = join(context.fixtureDir, 'path-text-background.mp4');
+  await createColorVideoFixture(backgroundPath, {
+    color: COLORS.darkBlue.ffmpeg,
+    width: context.outputWidth,
+    height: context.outputHeight,
+    duration: context.fixture.expectedDuration,
+    audio: false
+  });
+  const backgroundStat = statSync(backgroundPath);
+  return buildProject({
+    id: 'golden-path-text',
+    name: 'Golden Path Text',
+    width: context.outputWidth,
+    height: context.outputHeight,
+    media: [
+      videoAsset({
+        id: 'asset-path-text-background',
+        name: 'path-text-background.mp4',
+        path: backgroundPath,
+        duration: context.fixture.expectedDuration,
+        width: context.outputWidth,
+        height: context.outputHeight,
+        hasAudio: false,
+        stat: backgroundStat
+      })
+    ],
+    tracks: [
+      {
+        id: 'track-path-text-background',
+        type: 'video',
+        name: 'Background',
+        clips: [
+          videoClip({
+            id: 'clip-path-text-background',
+            name: 'Path text background',
+            mediaId: 'asset-path-text-background',
+            trackId: 'track-path-text-background',
+            duration: context.fixture.expectedDuration
+          })
+        ]
+      },
+      emptyAudioTrack(),
+      {
+        id: 'track-path-text',
+        type: 'text',
+        name: 'Text',
+        clips: [
+          textClip({
+            id: 'clip-path-text',
+            trackId: 'track-path-text',
+            text: 'PATH TEXT',
+            start: 0,
+            duration: context.fixture.expectedDuration,
+            transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
+            keyframes: {
+              pathStartOffset: [
+                { id: 'path-text-offset-start', time: 0, value: 0, easing: 'linear' },
+                { id: 'path-text-offset-end', time: context.fixture.expectedDuration, value: 0.18, easing: 'linear' }
+              ]
+            },
+            pathText: {
+              enabled: true,
+              path: [
+                { x: 0.16, y: 0.62, handleOut: { x: 0.32, y: 0.28 } },
+                { x: 0.5, y: 0.38, handleIn: { x: 0.36, y: 0.18 }, handleOut: { x: 0.64, y: 0.18 } },
+                { x: 0.84, y: 0.62, handleIn: { x: 0.68, y: 0.28 } }
+              ],
+              startOffset: 0,
+              letterSpacing: 10,
+              rotateCharacters: true
+            },
+            style: {
+              fontSize: 88,
+              color: '#ff4fd8',
+              backgroundColor: '#000000',
+              backgroundOpacity: 0,
+              fontFamily: 'Arial',
+              bold: true,
+              italic: false
+            }
+          })
+        ]
+      }
+    ]
+  });
+}
+
+async function validatePathTextFixture(context) {
+  const frame = await readFrame(context.outputPath, {
+    at: 0.7,
+    width: context.outputWidth,
+    height: context.outputHeight
+  });
+  const nonBackgroundPixelCount = countDifferentPixels(frame, COLORS.darkBlue.rgb, 80);
+  const pinkPixelCount = countNearPixels(frame, COLORS.pink.rgb, 90);
+  return {
+    checks: [
+      {
+        name: 'path-text-sequence-artifact',
+        passed:
+          context.plan.textArtifacts.some((artifact) => artifact.pathMode === 'path-text-sequence') &&
+          context.plan.filterComplex.includes('pathtextsrc_') &&
+          context.plan.filterComplex.includes('overlay=x=0:y=0'),
+        actual: {
+          textArtifacts: context.plan.textArtifacts.map((artifact) => artifact.pathMode),
+          hasPathTextLayer: context.plan.filterComplex.includes('pathtextsrc_')
+        },
+        expected: 'path-text-sequence artifact and overlay layer'
+      },
+      {
+        name: 'path-text-non-background-pixels',
+        passed: nonBackgroundPixelCount > 500,
+        actual: nonBackgroundPixelCount,
+        expected: '> 500'
+      },
+      {
+        name: 'path-text-colored-pixels',
+        passed: pinkPixelCount > 100,
+        actual: pinkPixelCount,
+        expected: '> 100'
       }
     ]
   };
@@ -2895,7 +3030,8 @@ function textClip(input) {
     transform: input.transform ?? { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
     keyframes: input.keyframes,
     text: input.text,
-    style: input.style
+    style: input.style,
+    pathText: input.pathText
   };
 }
 
@@ -2951,6 +3087,8 @@ async function materializeTextArtifacts(plan, textDir) {
     let replacement;
     if (artifact.pathMode === 'shader-sequence') {
       replacement = await materializeCustomShaderSequenceArtifact(artifact, textDir, safeName);
+    } else if (artifact.pathMode === 'path-text-sequence') {
+      replacement = await materializePathTextSequenceArtifact(artifact, textDir, safeName);
     } else {
       writeFileSync(artifactPath, artifact.text);
       replacement = artifact.pathMode === 'argument' ? normalizePath(artifactPath) : escapeDrawtextPath(normalizePath(artifactPath));
@@ -2997,6 +3135,37 @@ async function materializeCustomShaderSequenceArtifact(artifact, textDir, safeNa
   return normalizePath(framePattern);
 }
 
+async function materializePathTextSequenceArtifact(artifact, textDir, safeName) {
+  const manifest = JSON.parse(artifact.text);
+  if (manifest.kind !== 'path-text-sequence') {
+    throw new Error(`Unsupported path text artifact kind: ${manifest.kind}`);
+  }
+  const sequenceDir = join(textDir, safeName.replace(/\.json$/i, ''));
+  mkdirSync(sequenceDir, { recursive: true });
+  const framePattern = join(sequenceDir, 'frame%04d.png');
+  const frameCount = Math.max(1, Math.round(manifest.frameCount ?? 1));
+  for (let index = 0; index < frameCount; index += 1) {
+    const frame = manifest.frames?.[index] ?? { chars: [] };
+    const framePath = join(sequenceDir, `frame${String(index + 1).padStart(4, '0')}.png`);
+    await runChecked('ffmpeg', [
+      '-hide_banner',
+      '-y',
+      '-f',
+      'lavfi',
+      '-i',
+      `color=c=black@0:s=${Math.max(1, Math.round(manifest.width))}x${Math.max(1, Math.round(manifest.height))}:d=${formatSeconds(1 / Math.max(1, manifest.fps ?? 30))}`,
+      '-vf',
+      buildPathTextFrameFilter(manifest, frame),
+      '-frames:v',
+      '1',
+      '-f',
+      'image2',
+      framePath
+    ]);
+  }
+  return normalizePath(framePattern);
+}
+
 function buildCustomShaderBakeFilter(manifest) {
   const width = Math.max(1, Math.round(manifest.width));
   const height = Math.max(1, Math.round(manifest.height));
@@ -3011,6 +3180,40 @@ function buildCustomShaderBakeFilter(manifest) {
   filters.push(customShaderEquivalentFilter(manifest));
   filters.push(`fps=${formatSeconds(manifest.fps ?? 30)}`, 'format=rgba');
   return filters.join(',');
+}
+
+function buildPathTextFrameFilter(manifest, frame) {
+  const fontSize = Math.max(1, Number(manifest.fontSize ?? 48));
+  const fontFile = manifest.fontPath ? `:fontfile=${escapeDrawtextPath(manifest.fontPath)}` : '';
+  const fontColor = cssColorToFfmpeg(manifest.fontColor ?? '#ffffff');
+  const filters = ['format=rgba'];
+  for (const item of frame.chars ?? []) {
+    if (!item.char) {
+      continue;
+    }
+    filters.push(
+      `drawtext=text='${escapeDrawtextText(item.char)}'${fontFile}:fontsize=${formatSeconds(fontSize)}:fontcolor=${fontColor}:x='${formatSeconds(item.x)}-text_w/2':y='${formatSeconds(item.y)}-${formatSeconds(
+        fontSize / 2
+      )}'`
+    );
+  }
+  return filters.join(',');
+}
+
+function cssColorToFfmpeg(value) {
+  const text = String(value ?? '').trim();
+  const hex = text.startsWith('#') ? text.slice(1) : '';
+  if (/^[0-9a-fA-F]{6}$/.test(hex)) {
+    return `0x${hex.toLowerCase()}`;
+  }
+  if (/^[0-9a-fA-F]{3}$/.test(hex)) {
+    return `0x${hex
+      .split('')
+      .map((char) => char + char)
+      .join('')
+      .toLowerCase()}`;
+  }
+  return 'white';
 }
 
 function customShaderEquivalentFilter(manifest) {
@@ -3167,6 +3370,10 @@ function pixelNear(pixel, expectedRgb, tolerance) {
 
 function escapeDrawtextPath(path) {
   return path.replace(/\\/g, '/').replace(/:/g, '\\\\:').replace(/'/g, "\\'").replace(/%/g, '\\%');
+}
+
+function escapeDrawtextText(value) {
+  return String(value).replace(/\\/g, '\\\\').replace(/:/g, '\\:').replace(/'/g, "\\'").replace(/%/g, '\\%').replace(/,/g, '\\,');
 }
 
 function formatSeconds(value) {

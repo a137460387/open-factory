@@ -459,6 +459,13 @@ function sanitizeExportSettings(settings: unknown): ExportPresetSettings {
   if (watermark) {
     output.watermark = watermark;
   }
+  const timecodeBurnIn = sanitizeTimecodeBurnIn(input.timecodeBurnIn);
+  if (timecodeBurnIn) {
+    output.timecodeBurnIn = timecodeBurnIn;
+  }
+  if (sanitizeSlate(input.slate)) {
+    output.slate = { enabled: true };
+  }
   const audioVisualization = sanitizeAudioVisualization(input.audioVisualization);
   if (audioVisualization) {
     output.audioVisualization = audioVisualization;
@@ -537,6 +544,28 @@ function sanitizeWatermark(value: unknown): ExportPresetSettings['watermark'] | 
     };
   }
   return undefined;
+}
+
+function sanitizeTimecodeBurnIn(value: unknown): ExportPresetSettings['timecodeBurnIn'] | undefined {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+  const input = value as Record<string, unknown>;
+  if (input.enabled !== true) {
+    return undefined;
+  }
+  return {
+    enabled: true,
+    position: sanitizeWatermarkPosition(input.position),
+    fontSize: Math.round(clampWatermarkNumber(input.fontSize, 8, 96, 28)),
+    color: sanitizeHexColor(input.color, '#ffffff'),
+    backgroundColor: sanitizeHexColor(input.backgroundColor, '#000000'),
+    includeFrameNumber: input.includeFrameNumber === true
+  };
+}
+
+function sanitizeSlate(value: unknown): boolean {
+  return Boolean(value && typeof value === 'object' && (value as Record<string, unknown>).enabled === true);
 }
 
 function sanitizeWatermarkPosition(value: unknown): NonNullable<ExportPresetSettings['watermark']>['position'] {

@@ -4,6 +4,7 @@ import {
   DEFAULT_CLIP_SPEED,
   DEFAULT_CHROMA_KEY,
   DEFAULT_COLOR_CORRECTION,
+  DEFAULT_TEXT_PATH,
   DEFAULT_AUDIO_FADE_CURVE,
   DEFAULT_AUDIO_FADE_DURATION,
   DEFAULT_AUDIO_PITCH_SEMITONES,
@@ -85,7 +86,8 @@ export function createTextClip(track: Track, timeline: Timeline): Clip {
     chromaKey: normalizeChromaKey(DEFAULT_CHROMA_KEY),
     masks: [],
     text: zhCN.clips.defaultTextContent,
-    style: { ...DEFAULT_TEXT_STYLE }
+    style: { ...DEFAULT_TEXT_STYLE },
+    pathText: { ...DEFAULT_TEXT_PATH, path: DEFAULT_TEXT_PATH.path.map((point) => ({ ...point, handleIn: point.handleIn ? { ...point.handleIn } : undefined, handleOut: point.handleOut ? { ...point.handleOut } : undefined })) }
   };
 }
 

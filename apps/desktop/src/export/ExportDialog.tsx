@@ -74,6 +74,14 @@ const DEFAULT_AUDIO_VISUALIZATION: NonNullable<ExportPresetSettings['audioVisual
   color: '#22d3ee',
   background: { type: 'solid', color: '#050816' }
 };
+const DEFAULT_TIMECODE_BURN_IN: NonNullable<ExportPresetSettings['timecodeBurnIn']> = {
+  enabled: true,
+  position: 'bottom-left',
+  fontSize: 28,
+  color: '#ffffff',
+  backgroundColor: '#000000',
+  includeFrameNumber: false
+};
 
 export function ExportDialog({ project, initialPreset, onClose, onCompleted, onRelinkMissing }: ExportDialogProps) {
   const t = zhCN.exportDialog;
@@ -454,6 +462,7 @@ function relinkFromPreflight(): void {
             </div>
           ) : null}
           {!timelineVisualControlsDisabled ? <WatermarkSection watermark={draftSettings.watermark} setDraftSettings={setDraftSettings} onChooseImage={() => void chooseWatermarkImage()} /> : null}
+          {!timelineVisualControlsDisabled ? <MonitoringSection timecodeBurnIn={draftSettings.timecodeBurnIn} slate={draftSettings.slate} setDraftSettings={setDraftSettings} /> : null}
           <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 md:grid-cols-5">
             <Info label={t.info.resolution} value={isAudioOnly ? zhCN.common.audioOnly : `${exportSettings.width ?? project.settings.width} x ${exportSettings.height ?? project.settings.height}`} />
             <Info label={t.info.fps} value={isAudioOnly ? zhCN.common.audioOnly : String(exportSettings.fps ?? project.settings.fps)} />
@@ -692,7 +701,10 @@ function normalizeDraftSettings(settings: ExportPresetSettings): ExportPresetSet
   const targetAspectRatio = outputMode === 'video' ? normalizeTargetAspectRatio(settings.targetAspectRatio) : 'source';
   const dimensions = resolveReframeDimensions(settings.width ?? 1280, settings.height ?? 720, targetAspectRatio);
   const loudnessNormalization = supportsLoudnessNormalization(format, outputMode) ? normalizeLoudnessNormalization(settings.loudnessNormalization) : 'off';
-  const watermark = outputMode === 'video' && !normalizedAnimatedImage ? (settings.watermark ?? null) : null;
+  const visualExportSettingsEnabled = outputMode === 'video' && !normalizedAnimatedImage;
+  const watermark = visualExportSettingsEnabled ? (settings.watermark ?? null) : null;
+  const timecodeBurnIn = visualExportSettingsEnabled ? normalizeTimecodeBurnInDraft(settings.timecodeBurnIn) : null;
+  const slate = visualExportSettingsEnabled && settings.slate?.enabled === true ? { enabled: true } : null;
   return {
     ...settings,
     width: targetAspectRatio === 'source' ? settings.width : dimensions.width,
@@ -709,6 +721,8 @@ function normalizeDraftSettings(settings: ExportPresetSettings): ExportPresetSet
     reframeOffsetX: clampReframeOffset(settings.reframeOffsetX),
     reframeOffsetY: clampReframeOffset(settings.reframeOffsetY),
     watermark,
+    timecodeBurnIn,
+    slate,
     audioVisualization: normalizeAudioVisualizationDraft(settings.audioVisualization)
   };
 }
@@ -748,6 +762,8 @@ function updateOutputMode(setDraftSettings: Dispatch<SetStateAction<ExportPreset
         audioCodec: 'aac',
         videoBitrate: null,
         watermark: null,
+        timecodeBurnIn: null,
+        slate: null,
         targetAspectRatio: 'source',
         hardwareEncoding: false
       };
@@ -763,7 +779,9 @@ function updateOutputMode(setDraftSettings: Dispatch<SetStateAction<ExportPreset
         audioVisualization: normalizeAudioVisualizationDraft(current.audioVisualization),
         scaleMode: 'none',
         targetAspectRatio: 'source',
-        watermark: null
+        watermark: null,
+        timecodeBurnIn: null,
+        slate: null
       };
     }
     const format = current.format === 'm4a' ? 'mp4' : (current.format ?? 'mp4');
@@ -945,6 +963,20 @@ function normalizeHexColor(value: string | undefined, fallback: string): string 
   return fallback;
 }
 
+function normalizeTimecodeBurnInDraft(value: ExportPresetSettings['timecodeBurnIn']): ExportPresetSettings['timecodeBurnIn'] {
+  if (!value?.enabled) {
+    return null;
+  }
+  return {
+    enabled: true,
+    position: normalizeWatermarkPosition(value.position),
+    fontSize: Math.round(clampUiNumber(String(value.fontSize ?? DEFAULT_TIMECODE_BURN_IN.fontSize), 8, 96, DEFAULT_TIMECODE_BURN_IN.fontSize)),
+    color: normalizeHexColor(value.color, DEFAULT_TIMECODE_BURN_IN.color),
+    backgroundColor: normalizeHexColor(value.backgroundColor, DEFAULT_TIMECODE_BURN_IN.backgroundColor),
+    includeFrameNumber: value.includeFrameNumber === true
+  };
+}
+
 function updateAudioVisualizationStyle(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, value: string): void {
   setDraftSettings((current) => ({
     ...current,
@@ -1076,6 +1108,38 @@ function updateLoudnessNormalization(setDraftSettings: Dispatch<SetStateAction<E
   setDraftSettings((current) => ({ ...current, loudnessNormalization: normalizeLoudnessNormalization(value) }));
 }
 
+function updateTimecodeBurnInEnabled(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, checked: boolean): void {
+  setDraftSettings((current) => ({ ...current, timecodeBurnIn: checked ? timecodeBurnInFrom(current.timecodeBurnIn) : null }));
+}
+
+function updateTimecodeBurnInPosition(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, value: string): void {
+  const position = isWatermarkPosition(value) ? value : DEFAULT_TIMECODE_BURN_IN.position;
+  setDraftSettings((current) => ({ ...current, timecodeBurnIn: { ...timecodeBurnInFrom(current.timecodeBurnIn), position } }));
+}
+
+function updateTimecodeBurnInFontSize(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, value: string): void {
+  setDraftSettings((current) => ({
+    ...current,
+    timecodeBurnIn: { ...timecodeBurnInFrom(current.timecodeBurnIn), fontSize: Math.round(clampUiNumber(value, 8, 96, DEFAULT_TIMECODE_BURN_IN.fontSize)) }
+  }));
+}
+
+function updateTimecodeBurnInColor(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, key: 'color' | 'backgroundColor', value: string): void {
+  const fallback = key === 'color' ? DEFAULT_TIMECODE_BURN_IN.color : DEFAULT_TIMECODE_BURN_IN.backgroundColor;
+  setDraftSettings((current) => ({
+    ...current,
+    timecodeBurnIn: { ...timecodeBurnInFrom(current.timecodeBurnIn), [key]: normalizeHexColor(value, fallback) }
+  }));
+}
+
+function updateTimecodeBurnInFrameNumber(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, checked: boolean): void {
+  setDraftSettings((current) => ({ ...current, timecodeBurnIn: { ...timecodeBurnInFrom(current.timecodeBurnIn), includeFrameNumber: checked } }));
+}
+
+function updateSlateEnabled(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, checked: boolean): void {
+  setDraftSettings((current) => ({ ...current, slate: checked ? { enabled: true } : null }));
+}
+
 function updateWatermarkEnabled(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, checked: boolean): void {
   setDraftSettings((current) => ({ ...current, watermark: checked ? enableWatermark(current.watermark) : null }));
 }
@@ -1185,6 +1249,18 @@ function normalizeLoudnessNormalization(value: unknown): ExportLoudnessNormaliza
   return value === 'youtube' || value === 'ebu-r128' ? value : 'off';
 }
 
+function timecodeBurnInFrom(value: ExportPresetSettings['timecodeBurnIn']): NonNullable<ExportPresetSettings['timecodeBurnIn']> {
+  if (value?.enabled) {
+    const normalized = normalizeTimecodeBurnInDraft(value) ?? DEFAULT_TIMECODE_BURN_IN;
+    return {
+      ...DEFAULT_TIMECODE_BURN_IN,
+      ...normalized,
+      enabled: true
+    };
+  }
+  return { ...DEFAULT_TIMECODE_BURN_IN };
+}
+
 function normalizeSubtitleFormat(value: unknown): ExportSubtitleFormat {
   return value === 'vtt' || value === 'ass' || value === 'ssa' ? value : 'srt';
 }
@@ -1276,6 +1352,82 @@ function AudioVisualizationSection({
         )}
       </div>
     </section>
+  );
+}
+
+function MonitoringSection({
+  timecodeBurnIn,
+  slate,
+  setDraftSettings
+}: {
+  timecodeBurnIn: ExportPresetSettings['timecodeBurnIn'];
+  slate: ExportPresetSettings['slate'];
+  setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>;
+}) {
+  const t = zhCN.exportDialog.monitoring;
+  const positionLabels = zhCN.exportDialog.watermark.positions;
+  const enabled = timecodeBurnIn?.enabled === true;
+  const timecode = enabled ? timecodeBurnInFrom(timecodeBurnIn) : { ...DEFAULT_TIMECODE_BURN_IN };
+  const slateEnabled = slate?.enabled === true;
+
+  return (
+    <details className="rounded-md border border-line p-3" data-testid="export-monitoring-section">
+      <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-semibold text-slate-700" data-testid="export-monitoring-summary">
+        <span>{t.title}</span>
+        <span className="text-[11px] font-normal text-slate-500">{enabled || slateEnabled ? t.on : t.off}</span>
+      </summary>
+      <div className="mt-3 grid gap-3 md:grid-cols-3">
+        <PresetCheckboxField label={t.timecodeEnabled} checked={enabled} onChange={(checked) => updateTimecodeBurnInEnabled(setDraftSettings, checked)} testId="export-timecode-toggle" />
+        <label className="space-y-1 text-xs font-medium text-slate-600">
+          <span>{t.timecodePosition}</span>
+          <select
+            className="w-full rounded-md border border-line px-2 py-1.5 disabled:bg-slate-100"
+            value={timecode.position}
+            disabled={!enabled}
+            onChange={(event) => updateTimecodeBurnInPosition(setDraftSettings, event.target.value)}
+            data-testid="export-timecode-position-select"
+          >
+            {WATERMARK_POSITIONS.map((option) => (
+              <option key={option} value={option}>
+                {positionLabels[option]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <WatermarkNumberField
+          label={t.timecodeFontSize}
+          value={timecode.fontSize}
+          min={8}
+          max={96}
+          step={1}
+          disabled={!enabled}
+          onChange={(value) => updateTimecodeBurnInFontSize(setDraftSettings, value)}
+          testId="export-timecode-font-size"
+        />
+        <PresetColorField
+          label={t.timecodeColor}
+          value={timecode.color}
+          disabled={!enabled}
+          onChange={(value) => updateTimecodeBurnInColor(setDraftSettings, 'color', value)}
+          testId="export-timecode-color"
+        />
+        <PresetColorField
+          label={t.timecodeBackgroundColor}
+          value={timecode.backgroundColor}
+          disabled={!enabled}
+          onChange={(value) => updateTimecodeBurnInColor(setDraftSettings, 'backgroundColor', value)}
+          testId="export-timecode-background-color"
+        />
+        <PresetCheckboxField
+          label={t.includeFrameNumber}
+          checked={timecode.includeFrameNumber}
+          disabled={!enabled}
+          onChange={(checked) => updateTimecodeBurnInFrameNumber(setDraftSettings, checked)}
+          testId="export-timecode-frame-number-toggle"
+        />
+        <PresetCheckboxField label={t.slateEnabled} checked={slateEnabled} onChange={(checked) => updateSlateEnabled(setDraftSettings, checked)} testId="export-slate-toggle" />
+      </div>
+    </details>
   );
 }
 

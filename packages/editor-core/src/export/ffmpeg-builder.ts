@@ -22,6 +22,7 @@ import {
   normalizeSequenceFrameRate,
   normalizeSlowMotionMode,
   normalizeStabilization,
+  normalizeTextPath,
   normalizeTransform,
   normalizeMasks,
   type ClipKeyframes,
@@ -54,6 +55,7 @@ import { buildReframeCropFilter, clampReframeOffset, isReframeEnabled, normalize
 import { calculateSpeedCurveSourceDuration, getClipSourceVisibleDuration, getClipSpeed, getRenderableTracks, getTimelinePlaybackDuration, getTrackPan, getTrackVolume } from '../timeline';
 import { round } from '../time';
 import { serializeSubtitleCueInputsToAss, serializeSubtitleCueInputsToSrt, serializeSubtitleCueInputsToVtt, type SubtitleCueInput } from '../subtitles/srt';
+import { buildPathTextFrameLayouts } from '../text-path';
 import { cssColorToFfmpeg, escapeDrawtextValue, formatFfmpegSeconds, normalizeFfmpegPath, quoteForDisplay } from './ffmpeg-escape';
 import type {
   ExportClip,
@@ -107,6 +109,8 @@ export const DEFAULT_EXPORT_SETTINGS: Omit<ExportSettings, 'outputPath'> = {
   platformPreset: undefined,
   videoProfile: undefined,
   watermark: null,
+  timecodeBurnIn: null,
+  slate: null,
   audioVisualization: {
     style: 'waveform-line',
     color: '#22d3ee',
@@ -122,7 +126,9 @@ const LOUDNORM_MEASURED_LRA_PLACEHOLDER = '__LOUDNORM_MEASURED_LRA__';
 const LOUDNORM_MEASURED_THRESH_PLACEHOLDER = '__LOUDNORM_MEASURED_THRESH__';
 const LOUDNORM_OFFSET_PLACEHOLDER = '__LOUDNORM_OFFSET__';
 const WATERMARK_MARGIN_PX = 24;
+const SLATE_DURATION_SECONDS = 0.5;
 const CUSTOM_SHADER_SEQUENCE_KIND = 'custom-shader-sequence';
+const PATH_TEXT_SEQUENCE_KIND = 'path-text-sequence';
 
 interface LoudnessNormalizationPreset {
   mode: Exclude<ExportLoudnessNormalization, 'off'>;
@@ -148,6 +154,7 @@ export function buildExportProjectFromProject(project: Project, options: BuildEx
     outputPath: normalizeFfmpegPath(options.outputPath)
   });
   return {
+    name: exportSourceProject.name,
     settings,
     masterVolume: normalizeMasterVolume(exportSourceProject.masterVolume),
     timeline: buildExportTimeline(primaryTimeline, mediaById, options),
@@ -249,6 +256,7 @@ function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project[
                     italic: clip.style.italic
                   }
                 : null,
+            textPath: clip.type === 'text' ? normalizeTextPath(clip.pathText) : null,
             subtitleStyle:
               clip.type === 'subtitle'
                 ? {
@@ -306,11 +314,25 @@ export function buildFfmpegExportPlan(
   const frameExportTime = options.frameExport ? Math.min(duration, Math.max(0, options.frameExport.time)) : null;
   const videoFramesOnly = frameExportTime !== null || pngSequence || animatedImage;
   const watermark = !audioOnly && !videoFramesOnly && !audioVisualization ? normalizeExportWatermark(settings.watermark) : null;
+  const drawtextAvailable = !capabilities || (capabilities.hasDrawtext && capabilities.hasLibfreetype);
+  const requestedTimecodeBurnIn = !audioOnly && !videoFramesOnly && !audioVisualization ? normalizeTimecodeBurnIn(settings.timecodeBurnIn) : null;
+  const requestedSlate = !audioOnly && !videoFramesOnly && !audioVisualization ? normalizeExportSlate(settings.slate) : null;
+  const timecodeBurnIn = drawtextAvailable ? requestedTimecodeBurnIn : null;
+  const slate = drawtextAvailable ? requestedSlate : null;
+  const slateDuration = slate?.enabled ? SLATE_DURATION_SECONDS : 0;
+  const outputDuration = duration + slateDuration;
   const warnings: string[] = [];
+  if (requestedTimecodeBurnIn?.enabled && !drawtextAvailable) {
+    warnings.push(capabilities?.drawtextWarning ?? 'Current FFmpeg does not support drawtext/libfreetype. Install an FFmpeg build with libfreetype to export timecode burn-in.');
+  }
+  if (requestedSlate?.enabled && !drawtextAvailable) {
+    warnings.push(capabilities?.drawtextWarning ?? 'Current FFmpeg does not support drawtext/libfreetype. Install an FFmpeg build with libfreetype to export slate overlays.');
+  }
   const inputs: FfmpegInput[] = [];
   const visualInputByClipId = new Map<string, number>();
   const audioInputByClipId = new Map<string, number>();
   const customShaderSequenceClips = new Map<string, ExportClip>();
+  const pathTextSequenceInputByClipId = new Map<string, number>();
   const filters: string[] = [];
   const textArtifacts: TextArtifact[] = [];
   const allClips = project.timeline.tracks.flatMap((track) => track.clips).filter((clip) => clip.duration > 0);
@@ -326,6 +348,23 @@ export function buildFfmpegExportPlan(
     start: playbackStartByClipId.get(clip.id) ?? clip.start
   }));
   const audioSpectrumEffects = !audioOnly && !videoFramesOnly && !audioVisualization ? collectAudioSpectrumEffects(orderedPlaybackClips) : [];
+
+  if (!audioOnly && !videoFramesOnly && !audioVisualization && (!capabilities || (capabilities.hasDrawtext && capabilities.hasLibfreetype))) {
+    for (const clip of orderedClips) {
+      const artifact = buildPathTextSequenceArtifact(clip, settings);
+      if (!artifact) {
+        continue;
+      }
+      textArtifacts.push(artifact);
+      warnings.push(`Path text clip ${clip.id} will render frame-by-frame and may be slow.`);
+      inputs.push({
+        index: inputs.length,
+        path: artifact.placeholder,
+        args: buildCustomShaderSequenceInputArgs(settings)
+      });
+      pathTextSequenceInputByClipId.set(clip.id, inputs[inputs.length - 1].index);
+    }
+  }
 
   for (const clip of orderedClips) {
     if (!clip.mediaPath || clip.type === 'text' || clip.type === 'subtitle') {
@@ -372,7 +411,7 @@ export function buildFfmpegExportPlan(
     inputs.push({
       index: audioVisualizationBackgroundImageInputIndex,
       path: normalizeFfmpegPath(audioVisualizationSettings.background.path),
-      args: ['-loop', '1', '-t', formatFfmpegSeconds(duration)]
+      args: ['-loop', '1', '-t', formatFfmpegSeconds(outputDuration)]
     });
   }
   if (watermark?.enabled && watermark.type === 'image') {
@@ -380,7 +419,7 @@ export function buildFfmpegExportPlan(
     inputs.push({
       index: imageWatermarkInputIndex,
       path: normalizeFfmpegPath(watermark.path),
-      args: ['-loop', '1', '-t', formatFfmpegSeconds(duration)]
+      args: ['-loop', '1', '-t', formatFfmpegSeconds(outputDuration)]
     });
   }
 
@@ -426,9 +465,14 @@ export function buildFfmpegExportPlan(
             continue;
           }
           const nextVideo = `base${videoStep + 1}`;
-          const { filter, artifact } = buildTextFilter(currentVideo, nextVideo, item.clip, settings);
-          filters.push(filter);
-          textArtifacts.push(artifact);
+          const pathTextInputIndex = pathTextSequenceInputByClipId.get(item.clip.id);
+          if (pathTextInputIndex !== undefined) {
+            filters.push(buildPathTextSequenceOverlayFilter(currentVideo, nextVideo, pathTextInputIndex, item.clip));
+          } else {
+            const { filter, artifact } = buildTextFilter(currentVideo, nextVideo, item.clip, settings);
+            filters.push(filter);
+            textArtifacts.push(artifact);
+          }
           currentVideo = nextVideo;
           videoStep += 1;
           continue;
@@ -553,13 +597,37 @@ export function buildFfmpegExportPlan(
     }
   }
 
+  if (slate?.enabled) {
+    const slateVideoLabel = `slate${videoStep}`;
+    const trimmedMainLabel = `main_after_slate${videoStep}`;
+    const nextVideo = `base${videoStep + 1}`;
+    filters.push(...buildSlateVideoFilters(slateVideoLabel, settings, project, duration, slateDuration));
+    filters.push(`[${currentVideo}]trim=duration=${formatFfmpegSeconds(duration)},setpts=PTS-STARTPTS[${trimmedMainLabel}]`);
+    filters.push(`[${slateVideoLabel}][${trimmedMainLabel}]concat=n=2:v=1:a=0[${nextVideo}]`);
+    currentVideo = nextVideo;
+    videoStep += 1;
+  }
+
+  if (timecodeBurnIn?.enabled) {
+    const nextVideo = `base${videoStep + 1}`;
+    filters.push(buildTimecodeBurnInFilter(currentVideo, nextVideo, timecodeBurnIn));
+    currentVideo = nextVideo;
+    videoStep += 1;
+  }
+
   if (!audioOnly) {
     const outputPixelFormat = pngSequence || animatedImage ? 'rgba' : 'yuv420p';
-    filters.push(`[${currentVideo}]trim=duration=${formatFfmpegSeconds(duration)},setpts=PTS-STARTPTS,fps=${settings.fps},format=${outputPixelFormat}[vout]`);
+    filters.push(`[${currentVideo}]trim=duration=${formatFfmpegSeconds(outputDuration)},setpts=PTS-STARTPTS,fps=${settings.fps},format=${outputPixelFormat}[vout]`);
+  }
+
+  const audioOutputLabel = slate?.enabled && !videoFramesOnly ? 'aout_slate' : 'aout';
+  if (slate?.enabled && !videoFramesOnly) {
+    filters.push(`anullsrc=channel_layout=stereo:sample_rate=${settings.sampleRate}:d=${formatFfmpegSeconds(slateDuration)}[slate_audio]`);
+    filters.push(`[slate_audio][aout]concat=n=2:v=0:a=1[${audioOutputLabel}]`);
   }
 
   const filterComplex = filters.join(';');
-  const maps = videoFramesOnly ? ['-map', '[vout]'] : audioOnly ? ['-map', '[aout]'] : ['-map', '[vout]', '-map', '[aout]'];
+  const maps = videoFramesOnly ? ['-map', '[vout]'] : audioOnly ? ['-map', '[aout]'] : ['-map', '[vout]', '-map', `[${audioOutputLabel}]`];
   const subtitleOutputArgs: string[] = [];
   if (softSubtitleInputIndex !== undefined) {
     maps.push('-map', `${softSubtitleInputIndex}:s:0`);
@@ -583,16 +651,16 @@ export function buildFfmpegExportPlan(
           ...buildBitrateArgs('-b:a', settings.audioBitrate),
           ...subtitleOutputArgs,
           '-t',
-          formatFfmpegSeconds(duration),
+          formatFfmpegSeconds(outputDuration),
           ...buildContainerArgs(settings),
           normalizeFfmpegPath(settings.outputPath)
         ]
       : ['-ss', formatFfmpegSeconds(frameExportTime), '-frames:v', '1', '-f', 'image2', normalizeFfmpegPath(settings.outputPath)];
   const fullArgs = buildFfmpegFullArgs(inputs, filterComplex, maps, outputArgs);
-  const gifPlan = gifExport ? buildGifExportPasses(inputs, filterComplex, settings, duration, textArtifacts) : undefined;
+  const gifPlan = gifExport ? buildGifExportPasses(inputs, filterComplex, settings, outputDuration, textArtifacts) : undefined;
   const loudnessPlan = loudnessAnalysisFilterComplex ? buildLoudnessNormalizationPasses(inputs, loudnessAnalysisFilterComplex, fullArgs, duration) : undefined;
   const nestedPlans = buildNestedSequencePlans(project, capabilities, warnings, depth, sequenceStack);
-  const planDuration = frameExportTime === null ? duration : Math.max(1 / Math.max(1, settings.fps), 0.001);
+  const planDuration = frameExportTime === null ? outputDuration : Math.max(1 / Math.max(1, settings.fps), 0.001);
 
   return {
     inputs,
@@ -625,6 +693,8 @@ function normalizeExportReframeSettings(settings: ExportSettings): ExportSetting
     loudnessNormalization: normalizeLoudnessNormalization(settings.loudnessNormalization),
     videoProfile: normalizeVideoProfile(settings.videoProfile),
     watermark: normalizeExportWatermark(settings.watermark),
+    timecodeBurnIn: normalizeTimecodeBurnIn(settings.timecodeBurnIn),
+    slate: normalizeExportSlate(settings.slate),
     audioVisualization: normalizeExportAudioVisualization(settings.audioVisualization)
   };
 }
@@ -717,6 +787,55 @@ function normalizeWatermarkPosition(position: ExportWatermarkPosition | undefine
     position === 'bottom-right'
     ? position
     : 'bottom-right';
+}
+
+function normalizeTimecodeBurnIn(timecode: ExportSettings['timecodeBurnIn'] | undefined): ExportSettings['timecodeBurnIn'] {
+  if (!timecode || timecode.enabled !== true) {
+    return null;
+  }
+  return {
+    enabled: true,
+    position: normalizeWatermarkPosition(timecode.position),
+    fontSize: Math.round(Math.min(96, Math.max(8, finiteNumber(timecode.fontSize, 28)))),
+    color: typeof timecode.color === 'string' && timecode.color.trim() ? timecode.color.trim() : '#ffffff',
+    backgroundColor: typeof timecode.backgroundColor === 'string' && timecode.backgroundColor.trim() ? timecode.backgroundColor.trim() : '#000000',
+    includeFrameNumber: timecode.includeFrameNumber === true
+  };
+}
+
+function normalizeExportSlate(slate: ExportSettings['slate'] | undefined): ExportSettings['slate'] {
+  return slate?.enabled === true ? { enabled: true } : null;
+}
+
+function buildTimecodeBurnInFilter(inputLabel: string, outputLabel: string, timecode: NonNullable<ExportSettings['timecodeBurnIn']>): string {
+  const position = buildWatermarkExpression(timecode.position, 'w', 'h', 'text_w', 'text_h');
+  const textExpression = timecode.includeFrameNumber ? '%{pts\\:hms}:%{n}' : '%{pts\\:hms}';
+  return `[${inputLabel}]drawtext=text='${textExpression}':fontsize=${timecode.fontSize}:fontcolor=${cssColorToFfmpeg(timecode.color)}:box=1:boxcolor=${cssColorToFfmpeg(
+    timecode.backgroundColor
+  )}@0.72:boxborderw=8:x='${position.x}':y='${position.y}'[${outputLabel}]`;
+}
+
+function buildSlateVideoFilters(outputLabel: string, settings: ExportSettings, project: ExportProject, timelineDuration: number, slateDuration: number): string[] {
+  const fontSize = Math.max(20, Math.round(Math.min(settings.width, settings.height) * 0.045));
+  const lineHeight = Math.round(fontSize * 1.55);
+  const startX = Math.max(32, Math.round(settings.width * 0.08));
+  const startY = Math.max(48, Math.round(settings.height * 0.26));
+  const date = new Date().toISOString().slice(0, 10);
+  const lines = [
+    `Project: ${project.name || 'Untitled Project'}`,
+    `Date: ${date}`,
+    `Duration: ${formatFfmpegSeconds(timelineDuration)}s`,
+    `Frame Rate: ${formatFfmpegSeconds(settings.fps)} fps`
+  ];
+  const drawTextFilters = lines.map((line, index) => {
+    const y = startY + lineHeight * index;
+    return `drawtext=text='${escapeDrawtextValue(line)}':fontsize=${fontSize}:fontcolor=white:x=${startX}:y=${y}`;
+  });
+  return [
+    `color=c=black:s=${settings.width}x${settings.height}:r=${settings.fps}:d=${formatFfmpegSeconds(
+      slateDuration
+    )},format=rgba,drawbox=x=0:y=0:w=iw:h=ih:color=black@1:t=fill,${drawTextFilters.join(',')}[${outputLabel}]`
+  ];
 }
 
 function buildWatermarkFilters(
@@ -1830,6 +1949,58 @@ function buildCustomShaderSequenceClip(clip: ExportClip): ExportClip {
   };
 }
 
+function buildPathTextSequenceArtifact(clip: ExportClip, settings: ExportSettings): TextArtifact | undefined {
+  if (clip.type !== 'text' || !clip.textStyle || !clip.textPath?.enabled || !clip.textStyle.text.trim()) {
+    return undefined;
+  }
+  const pathText = normalizeTextPath(clip.textPath);
+  if (!pathText.enabled || pathText.path.length < 2) {
+    return undefined;
+  }
+  const safeId = safeLabel(clip.id);
+  const scale = Math.max(0.01, clip.transform.scaleX ?? clip.transform.scale);
+  const fontSize = Math.max(1, Math.round(clip.textStyle.fontSize * scale));
+  const fps = Math.max(1, settings.fps);
+  const frameCount = Math.max(1, Math.ceil(Math.max(clip.duration, 1 / fps) * fps));
+  const frames = buildPathTextFrameLayouts({
+    text: clip.textStyle.text,
+    path: pathText.path,
+    pathText,
+    keyframes: clip.keyframes,
+    duration: clip.duration,
+    fps,
+    width: settings.width,
+    height: settings.height,
+    fontSize,
+    letterSpacing: pathText.letterSpacing,
+    rotateCharacters: pathText.rotateCharacters,
+    offsetX: clip.transform.x,
+    offsetY: clip.transform.y
+  });
+  return {
+    clipId: `${clip.id}:path-text`,
+    text: JSON.stringify({
+      kind: PATH_TEXT_SEQUENCE_KIND,
+      version: 1,
+      clipId: clip.id,
+      width: Math.max(1, Math.round(settings.width)),
+      height: Math.max(1, Math.round(settings.height)),
+      fps,
+      frameCount,
+      fontSize,
+      fontColor: clip.textStyle.fontColor,
+      fontFamily: clip.textStyle.fontFamily,
+      fontPath: clip.textStyle.fontPath,
+      bold: clip.textStyle.bold,
+      italic: clip.textStyle.italic,
+      frames: frames.slice(0, frameCount)
+    }),
+    fileName: `path-text-${safeId}.json`,
+    placeholder: `__PATH_TEXT_SEQUENCE_${safeId}__`,
+    pathMode: 'path-text-sequence'
+  };
+}
+
 function buildCustomShaderSequenceArtifact(clip: ExportClip, settings: ExportSettings): TextArtifact | undefined {
   if (clip.type !== 'video' && clip.type !== 'image' && clip.type !== 'nested-sequence') {
     return undefined;
@@ -1984,6 +2155,18 @@ function buildTextFilter(inputLabel: string, outputLabel: string, clip: ExportCl
       `[${inputLabel}][${textLayerLabel}]overlay=x=0:y=0:eval=frame:enable='between(t,${formatFfmpegSeconds(clip.start)},${formatFfmpegSeconds(clip.start + clip.duration)})'[${outputLabel}]`
     ].join(';')
   };
+}
+
+function buildPathTextSequenceOverlayFilter(inputLabel: string, outputLabel: string, inputIndex: number, clip: ExportClip): string {
+  const safeId = safeLabel(clip.id);
+  const sourceLabel = `pathtextsrc_${safeId}`;
+  const layerLabel = `pathtextlayer_${safeId}`;
+  const opacityFilters = buildOpacityFilters(clip, layerLabel);
+  return [
+    `[${inputIndex}:v]trim=duration=${formatFfmpegSeconds(clip.duration)},setpts=PTS-STARTPTS+${formatFfmpegSeconds(clip.start)}/TB,format=rgba[${sourceLabel}]`,
+    `[${sourceLabel}]${opacityFilters.join(',')}`,
+    `[${inputLabel}][${layerLabel}]overlay=x=0:y=0:eval=frame:enable='between(t,${formatFfmpegSeconds(clip.start)},${formatFfmpegSeconds(clip.start + clip.duration)})'[${outputLabel}]`
+  ].join(';');
 }
 
 function buildTextFontSizeExpression(clip: ExportClip, baseFontSize: number): string {

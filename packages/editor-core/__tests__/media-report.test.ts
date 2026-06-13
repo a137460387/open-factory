@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   buildOfflineMediaReport,
   buildOfflineMediaReportHtml,
+  buildMediaUsageStats,
   buildProjectArchivePreflight,
+  buildTimelineHeatmapData,
   collectOfflineMediaReportPaths,
   createProject,
   createTrack,
@@ -77,13 +79,17 @@ describe('offline media report', () => {
       { estimatedExportSizeBytes: 8192, generatedAt: '2026-06-12T00:00:00.000Z' }
     );
 
-    expect(html).toContain('素材报告：Report Demo');
+    expect(html).toContain('素材使用分析：Report Demo');
     expect(html).toContain('C:/Media/clip.mp4');
     expect(html).toContain('文件大小');
     expect(html).toContain('是否存在');
     expect(html).toContain('是否有 proxy');
     expect(html).toContain('<td>是</td>');
     expect(html).toContain('<td>1</td>');
+    expect(html).toContain('总使用时长');
+    expect(html).toContain('使用片段列表');
+    expect(html).toContain('使用率热力图');
+    expect(html).toContain('导出时长分布');
     expect(html).toContain('项目总时长：0:06');
     expect(html).toContain('总媒体大小：4.0 KB');
     expect(html).toContain('导出预估大小：8.0 KB');
@@ -187,7 +193,7 @@ describe('offline media report', () => {
     expect(report.rows.map((row) => row.path)).toEqual(['C:/Media/frame_0001.png', 'C:/Media/frame_0002.png', 'C:/Media/huge.mov']);
     expect(report.rows.find((row) => row.assetId === 'sequence')?.hasProxy).toBe(false);
     expect(report.totals.estimatedExportSizeBytes).toBeGreaterThanOrEqual(1024);
-    expect(html).toContain('素材报告：Unsafe &lt;Project&gt;');
+    expect(html).toContain('素材使用分析：Unsafe &lt;Project&gt;');
     expect(html).toContain('Frame &amp; &quot;Title&quot;');
     expect(html).toContain('1.4 MB');
     expect(html).toContain('2.5 GB');
@@ -229,5 +235,192 @@ describe('offline media report', () => {
 
     expect(html).toContain('项目总时长：1:01:05');
     expect(html).toContain('导出预估大小：');
+  });
+
+  it('calculates usage stats with repeated media appearances and unused media rows', () => {
+    const project = createProject('Usage Demo');
+    project.media = [
+      makeAsset({ id: 'shared', name: 'shared.mp4', path: 'C:/Media/shared.mp4', duration: 20 }),
+      makeAsset({ id: 'unused', name: 'unused.mp4', path: 'C:/Media/unused.mp4', duration: 20 })
+    ];
+    project.timeline = {
+      markers: [],
+      transitions: [],
+      tracks: [
+        createTrack({
+          id: 'track-video',
+          type: 'video',
+          name: 'Video 1',
+          clips: [
+            {
+              id: 'clip-a',
+              type: 'video',
+              name: 'First use',
+              mediaId: 'shared',
+              trackId: 'track-video',
+              start: 0,
+              duration: 4,
+              trimStart: 1,
+              trimEnd: 5,
+              speed: 1,
+              colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+              transform: { ...DEFAULT_TRANSFORM },
+              volume: 1
+            },
+            {
+              id: 'clip-b',
+              type: 'video',
+              name: 'Second use',
+              mediaId: 'shared',
+              trackId: 'track-video',
+              start: 8,
+              duration: 2.5,
+              trimStart: 10,
+              trimEnd: 12.5,
+              speed: 1,
+              colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+              transform: { ...DEFAULT_TRANSFORM },
+              volume: 1
+            }
+          ]
+        })
+      ]
+    };
+    project.sequences = [{ id: PRIMARY_SEQUENCE_ID, name: 'Main Sequence', timeline: project.timeline }];
+
+    const stats = buildMediaUsageStats(project);
+    const report = buildOfflineMediaReport(project);
+
+    expect(stats).toHaveLength(1);
+    expect(stats[0]).toMatchObject({ assetId: 'shared', appearanceCount: 2, totalUsedDurationSeconds: 6.5 });
+    expect(stats[0].segments.map((segment) => [segment.clipName, segment.start, segment.end])).toEqual([
+      ['First use', 0, 4],
+      ['Second use', 8, 10.5]
+    ]);
+    expect(report.rows.find((row) => row.assetId === 'shared')).toMatchObject({ timelineAppearances: 2, totalUsedDurationSeconds: 6.5 });
+    expect(report.unusedMedia.map((row) => row.assetId)).toEqual(['unused']);
+  });
+
+  it('renders a multi-slice export duration pie chart for multiple used media assets', () => {
+    const project = createProject('Pie Demo');
+    project.media = [
+      makeAsset({ id: 'a', name: 'a.mp4', path: 'C:/Media/a.mp4' }),
+      makeAsset({ id: 'b', name: 'b.mp4', path: 'C:/Media/b.mp4' })
+    ];
+    project.timeline = {
+      markers: [],
+      transitions: [],
+      tracks: [
+        createTrack({
+          id: 'track-video',
+          type: 'video',
+          name: 'Video 1',
+          clips: [
+            {
+              id: 'clip-a',
+              type: 'video',
+              name: 'A',
+              mediaId: 'a',
+              trackId: 'track-video',
+              start: 0,
+              duration: 2,
+              trimStart: 0,
+              trimEnd: 2,
+              speed: 1,
+              colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+              transform: { ...DEFAULT_TRANSFORM },
+              volume: 1
+            },
+            {
+              id: 'clip-b',
+              type: 'video',
+              name: 'B',
+              mediaId: 'b',
+              trackId: 'track-video',
+              start: 2,
+              duration: 6,
+              trimStart: 0,
+              trimEnd: 6,
+              speed: 1,
+              colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+              transform: { ...DEFAULT_TRANSFORM },
+              volume: 1
+            }
+          ]
+        })
+      ]
+    };
+    project.sequences = [{ id: PRIMARY_SEQUENCE_ID, name: 'Main Sequence', timeline: project.timeline }];
+
+    const html = buildOfflineMediaReportHtml(project);
+
+    expect(html).toContain('导出时长分布');
+    expect(html).toContain('<path d="M 80 80');
+    expect(html).toContain('a.mp4：25.0%');
+    expect(html).toContain('b.mp4：75.0%');
+  });
+
+  it('generates heatmap buckets from overlapping timeline clips', () => {
+    const project = createProject('Heatmap Demo');
+    project.media = [
+      makeAsset({ id: 'a', path: 'C:/Media/a.mp4' }),
+      makeAsset({ id: 'b', path: 'C:/Media/b.mp4' })
+    ];
+    project.timeline = {
+      markers: [],
+      transitions: [],
+      tracks: [
+        createTrack({
+          id: 'track-a',
+          type: 'video',
+          name: 'Video 1',
+          clips: [
+            {
+              id: 'clip-a',
+              type: 'video',
+              name: 'A',
+              mediaId: 'a',
+              trackId: 'track-a',
+              start: 0,
+              duration: 4,
+              trimStart: 0,
+              trimEnd: 4,
+              speed: 1,
+              colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+              transform: { ...DEFAULT_TRANSFORM },
+              volume: 1
+            }
+          ]
+        }),
+        createTrack({
+          id: 'track-b',
+          type: 'video',
+          name: 'Video 2',
+          clips: [
+            {
+              id: 'clip-b',
+              type: 'video',
+              name: 'B',
+              mediaId: 'b',
+              trackId: 'track-b',
+              start: 2,
+              duration: 4,
+              trimStart: 0,
+              trimEnd: 4,
+              speed: 1,
+              colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+              transform: { ...DEFAULT_TRANSFORM },
+              volume: 1
+            }
+          ]
+        })
+      ]
+    };
+
+    expect(buildTimelineHeatmapData(project, 3)).toEqual([
+      { start: 0, end: 2, overlapCount: 1, intensity: 0.5 },
+      { start: 2, end: 4, overlapCount: 2, intensity: 1 },
+      { start: 4, end: 6, overlapCount: 1, intensity: 0.5 }
+    ]);
   });
 });

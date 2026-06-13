@@ -16,6 +16,7 @@ import { runExportBeforePlugins } from '../plugins/plugin-manager';
 import { getExportLogPath, persistFinishedTaskToHistory } from './export-history';
 import { normalizeExportProgressPayload, type ExportProgressEvent } from './export-progress';
 import { useExportQueueStore } from './export-queue-store';
+import { runConfiguredExportRules, type ExportRuleEventContext } from './export-rules';
 import { buildSidecarSubtitlePath } from './export-sidecar';
 
 export const EXPORT_MEMORY_PAUSE_THRESHOLD_BYTES = 2 * 1024 * 1024 * 1024;
@@ -44,6 +45,7 @@ export async function enqueueExport(
   const plan = buildFfmpegExportPlan(exportProject, capabilities);
   const task = useExportQueueStore.getState().addTask({
     name: fileNameFromPath(outputPath) || `${project.name} 导出`,
+    projectName: project.name,
     outputPath,
     plan,
     priority,
@@ -170,8 +172,9 @@ async function startAvailableTasks(): Promise<void> {
     if (!task || activeRuns.has(task.id)) {
       continue;
     }
-    const promise = runSingleTask(task).finally(() => {
+    const promise = runSingleTask(task).finally(async () => {
       activeRuns.delete(task.id);
+      await runQueueCompleteRulesIfIdle(task.projectName);
       signalRunner();
     });
     activeRuns.set(task.id, promise);
@@ -204,13 +207,35 @@ async function runSingleTask(task: ExportTask): Promise<void> {
       await writeSidecarSubtitleArtifacts(task.outputPath, task.plan.textArtifacts);
       useExportQueueStore.getState().finishTask(task.id, result.report);
       await persistFinishedTaskToHistory(task.id);
+      const finishedTask = useExportQueueStore.getState().tasks.find((item) => item.id === task.id) ?? task;
+      await runExportRulesSafely({ type: 'export-success', task: finishedTask, projectName: finishedTask.projectName ?? task.projectName });
     }
   } catch (error) {
     const latest = useExportQueueStore.getState().tasks.find((item) => item.id === task.id);
     if (latest?.status === 'running') {
-      useExportQueueStore.getState().failTask(task.id, error instanceof Error ? error.message : zhCN.errors.exportFailed);
+      const message = error instanceof Error ? error.message : zhCN.errors.exportFailed;
+      useExportQueueStore.getState().failTask(task.id, message);
       await persistFinishedTaskToHistory(task.id);
+      const failedTask = useExportQueueStore.getState().tasks.find((item) => item.id === task.id) ?? { ...task, error: message };
+      await runExportRulesSafely({ type: 'export-failure', task: failedTask, projectName: failedTask.projectName ?? task.projectName });
     }
+  }
+}
+
+async function runQueueCompleteRulesIfIdle(projectName?: string): Promise<void> {
+  const tasks = useExportQueueStore.getState().tasks;
+  const hasOpenTasks = activeRuns.size > 0 || tasks.some((task) => task.status === 'scheduled' || task.status === 'pending' || task.status === 'running');
+  const hasCompletedTasks = tasks.some((task) => task.status === 'success' || task.status === 'error');
+  if (!hasOpenTasks && hasCompletedTasks) {
+    await runExportRulesSafely({ type: 'queue-complete', projectName });
+  }
+}
+
+async function runExportRulesSafely(event: ExportRuleEventContext): Promise<void> {
+  try {
+    await runConfiguredExportRules(event);
+  } catch (error) {
+    console.warn('Export rule execution failed', error);
   }
 }
 

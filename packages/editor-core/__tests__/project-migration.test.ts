@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_COLOR_CORRECTION, createMulticamSequenceProject, createTrack, migrateProjectFile, serializeProject, type ProjectFileV1 } from '../src';
-import { makeAdjustmentClip, makeProject, makeSubtitleClip, makeVideoClip } from './test-utils';
+import { makeAdjustmentClip, makeProject, makeSubtitleClip, makeTextClip, makeVideoClip } from './test-utils';
 
 describe('project schema migration', () => {
   it('serializes schemaVersion 2 project files with media and relativePath', () => {
@@ -123,6 +123,50 @@ describe('project schema migration', () => {
         { x: 0.8, y: 1 },
         { x: 0.2, y: 0.2 }
       ]
+    });
+  });
+
+  it('serializes and migrates path text settings while keeping older text clips compatible', () => {
+    const project = makeProject();
+    project.timeline.tracks[2].clips = [
+      makeTextClip({
+        id: 'clip-path-text',
+        pathText: {
+          enabled: true,
+          path: [
+            { x: 0.2, y: 0.6, handleOut: { x: 0.35, y: 0.3 } },
+            { x: 0.8, y: 0.6, handleIn: { x: 0.65, y: 0.3 } }
+          ],
+          startOffset: 0.25,
+          letterSpacing: 12,
+          rotateCharacters: false
+        }
+      }),
+      makeTextClip({ id: 'clip-legacy-text' })
+    ];
+    delete project.timeline.tracks[2].clips[1].pathText;
+
+    const migrated = migrateProjectFile(serializeProject(project));
+    const clips = migrated.project.timeline.tracks[2].clips;
+
+    expect(clips[0]).toMatchObject({
+      id: 'clip-path-text',
+      pathText: {
+        enabled: true,
+        startOffset: 0.25,
+        letterSpacing: 12,
+        rotateCharacters: false
+      }
+    });
+    expect(clips[0].pathText?.path).toHaveLength(2);
+    expect(clips[1]).toMatchObject({
+      id: 'clip-legacy-text',
+      pathText: {
+        enabled: false,
+        startOffset: 0,
+        letterSpacing: 4,
+        rotateCharacters: true
+      }
     });
   });
 

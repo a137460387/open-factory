@@ -251,6 +251,7 @@ export type TauriMocks = Partial<{
   showMainWindow(): Promise<void> | void;
   updateExportTrayProgress(progress: number, runningCount: number): Promise<void> | void;
   runExportPowerAction(action: 'shutdown' | 'hibernate', allowPowerActions: boolean): Promise<void> | void;
+  sendNotification(title: string, body: string): Promise<void> | void;
   probeMediaPath(path: string): Promise<Partial<import('@open-factory/editor-core').MediaAsset>> | Partial<import('@open-factory/editor-core').MediaAsset>;
   probeMedia(path: string): Promise<MediaProbe> | MediaProbe;
   analyzeWaveform(path: string, samplesPerSec: number): Promise<number[]> | number[];
@@ -377,6 +378,28 @@ export async function copyFile(sourcePath: string, destinationPath: string): Pro
     return;
   }
   await invoke('copy_file', { sourcePath, destinationPath });
+}
+
+export async function sendNotification(title: string, body: string): Promise<void> {
+  const mock = getTauriMocks()?.sendNotification;
+  if (mock) {
+    await mock(title, body);
+    return;
+  }
+  if (isTauriRuntime()) {
+    await invoke('send_notification', { title, body });
+    return;
+  }
+  if (typeof window !== 'undefined' && 'Notification' in window) {
+    if (Notification.permission === 'granted') {
+      new Notification(title, { body });
+    } else if (Notification.permission !== 'denied') {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        new Notification(title, { body });
+      }
+    }
+  }
 }
 
 export async function fsExists(path: string): Promise<boolean> {

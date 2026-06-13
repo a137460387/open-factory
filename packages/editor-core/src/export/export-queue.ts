@@ -8,6 +8,7 @@ export type ExportTaskPriority = 'high' | 'normal' | 'low';
 export interface ExportTask {
   id: string;
   name: string;
+  projectName?: string;
   outputPath: string;
   plan: FfmpegExportPlan;
   priority: ExportTaskPriority;
@@ -37,12 +38,23 @@ export interface ExportTaskHistoryEntry {
   error?: string;
 }
 
-export function createExportTask(input: { name: string; outputPath: string; plan: FfmpegExportPlan; priority?: ExportTaskPriority; renderFarm?: RenderFarmTaskConfig; scheduledStartAt?: string; id?: string; now?: string }): ExportTask {
+export function createExportTask(input: {
+  name: string;
+  projectName?: string;
+  outputPath: string;
+  plan: FfmpegExportPlan;
+  priority?: ExportTaskPriority;
+  renderFarm?: RenderFarmTaskConfig;
+  scheduledStartAt?: string;
+  id?: string;
+  now?: string;
+}): ExportTask {
   const now = input.now ?? new Date().toISOString();
   const scheduledStartAt = normalizeScheduledStartAt(input.scheduledStartAt, now);
   return {
     id: input.id ?? createId('export-task'),
     name: input.name,
+    projectName: typeof input.projectName === 'string' && input.projectName.trim() ? input.projectName.trim() : undefined,
     outputPath: input.outputPath,
     plan: input.plan,
     priority: normalizeExportTaskPriority(input.priority),

@@ -30,6 +30,7 @@ import {
   normalizeSequenceFrameRate,
   normalizeSlowMotionMode,
   normalizeStabilization,
+  normalizeTextPath,
   normalizeTimelineMarker,
   normalizeTransform,
   normalizeTrackCompressor,
@@ -52,6 +53,7 @@ import {
   type ProjectSettings,
   type SubtitleMode,
   type SubtitleStyle,
+  type TextPathOptions,
   type TextStyle,
   type Timeline,
   type TimelineMarker,
@@ -1933,6 +1935,7 @@ export type ClipPatch = Partial<Omit<Clip, 'type' | 'id' | 'transform' | 'colorC
   colorCorrection?: Partial<ColorCorrection>;
   transform?: Partial<Transform>;
   style?: Partial<TextStyle> | Partial<SubtitleStyle>;
+  pathText?: Partial<TextPathOptions>;
 };
 
 function mergeChromaKeyPatch(before: ChromaKey | undefined, patch: Partial<ChromaKey> | undefined): ChromaKey {
@@ -2010,6 +2013,12 @@ export class UpdateClipCommand implements Command {
         ...this.after,
         style: { ...('style' in this.before ? this.before.style : {}), ...this.patch.style }
       } as Clip;
+    }
+    if (this.after.type === 'text') {
+      this.after = {
+        ...this.after,
+        pathText: normalizeTextPath(this.after.pathText)
+      };
     }
     const track = findTrack(timeline, this.after.trackId);
     if (detectOverlap(track, this.after, this.before.id)) {

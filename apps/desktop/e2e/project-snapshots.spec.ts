@@ -32,3 +32,31 @@ test('saves a named snapshot, previews it, and restores the timeline state', asy
   await page.getByTestId('snapshot-restore-button').first().click();
   await expect.poll(() => page.evaluate(() => window.__E2E_ACTIONS__!.getTimelineSnapshot!().tracks[0].clips.length)).toBe(1);
 });
+
+test('compares the current timeline with a saved snapshot and marks diff ranges', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.evaluate(() => {
+    window.__E2E_ACTIONS__!.clearE2eFiles!();
+    window.__E2E_ACTIONS__!.setOpenFileDialogPaths!(['C:/Media/tiny-video.mp4']);
+  });
+
+  await page.getByTestId('import-media-button').click();
+  await addMediaCardToTimeline(page);
+  await page.getByTestId('toolbar-edit-menu-button').click();
+  await page.getByTestId('toolbar-edit-save-snapshot-menu-item').click();
+  await page.getByTestId('snapshot-name-input').fill('Compare base');
+  await page.getByTestId('snapshot-name-save-button').click();
+
+  await addMediaCardToTimeline(page);
+  await expect.poll(() => page.evaluate(() => window.__E2E_ACTIONS__!.getTimelineSnapshot!().tracks[0].clips.length)).toBe(2);
+
+  const selector = page.getByTestId('preview-snapshot-compare-select');
+  await selector.click();
+  await expect.poll(async () => selector.evaluate((element) => (element as HTMLSelectElement).options.length)).toBeGreaterThan(1);
+  await selector.selectOption({ label: 'Compare base' });
+
+  await expect(page.getByTestId('preview-compare-original-canvas')).toBeVisible();
+  await expect(page.getByTestId('preview-compare-divider')).toBeVisible();
+  await expect(page.getByTestId('timeline-snapshot-diff-segment').first()).toBeVisible();
+});

@@ -18,6 +18,7 @@ import {
   normalizeSequenceFrameRate,
   normalizeSlowMotionMode,
   normalizeStabilization,
+  normalizeTextPath,
   type Clip,
   type Project,
   type SubtitleStyle,
@@ -190,7 +191,8 @@ export function makeTextClip(overrides: ClipOverrides<Extract<Clip, { type: 'tex
       fontFamily: overrides.style?.fontFamily ?? 'Inter',
       bold: overrides.style?.bold ?? false,
       italic: overrides.style?.italic ?? false
-    }
+    },
+    pathText: normalizeTextPath(overrides.pathText)
   };
 }
 

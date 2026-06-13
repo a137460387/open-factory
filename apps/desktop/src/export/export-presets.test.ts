@@ -340,6 +340,74 @@ describe('export presets', () => {
       opacity: 0
     });
   });
+
+  it('persists and sanitizes monitoring helper preset settings', async () => {
+    const { storage, files, presetPath } = makeStorage();
+
+    const presets = await saveCustomExportPreset(
+      'Review Burn-in',
+      {
+        format: 'mp4',
+        outputMode: 'video',
+        timecodeBurnIn: {
+          enabled: true,
+          position: 'top-left',
+          fontSize: 120,
+          color: '#fc0',
+          backgroundColor: 'bad',
+          includeFrameNumber: true
+        },
+        slate: { enabled: true }
+      },
+      storage
+    );
+
+    expect(presets.find((preset) => preset.name === 'Review Burn-in')?.settings).toMatchObject({
+      timecodeBurnIn: {
+        enabled: true,
+        position: 'top-left',
+        fontSize: 96,
+        color: '#ffcc00',
+        backgroundColor: '#000000',
+        includeFrameNumber: true
+      },
+      slate: { enabled: true }
+    });
+    expect(JSON.parse(files.get(presetPath) ?? '{}').presets[0].settings.slate).toEqual({ enabled: true });
+
+    const parsed = parseStoredExportPresets(
+      JSON.stringify({
+        schemaVersion: 1,
+        presets: [
+          {
+            id: 'custom-monitoring',
+            name: 'Monitoring',
+            settings: {
+              timecodeBurnIn: {
+                enabled: true,
+                position: 'invalid',
+                fontSize: 2,
+                color: '#fff',
+                backgroundColor: '#123456',
+                includeFrameNumber: false
+              },
+              slate: { enabled: true }
+            }
+          }
+        ]
+      })
+    );
+
+    expect(parsed[0].settings.timecodeBurnIn).toEqual({
+      enabled: true,
+      position: 'bottom-right',
+      fontSize: 8,
+      color: '#ffffff',
+      backgroundColor: '#123456',
+      includeFrameNumber: false
+    });
+    expect(parsed[0].settings.slate).toEqual({ enabled: true });
+  });
 });
 
 function makeStorage() {

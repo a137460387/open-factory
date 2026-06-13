@@ -82,6 +82,7 @@ export function Timeline() {
   const playheadTime = useEditorStore((state) => state.playheadTime);
   const inPoint = useEditorStore((state) => state.inPoint);
   const outPoint = useEditorStore((state) => state.outPoint);
+  const timelineCompareRanges = useEditorStore((state) => state.timelineCompareRanges);
   const zoom = useEditorStore((state) => state.timelineZoom);
   const setSelectedClipId = useEditorStore((state) => state.setSelectedClipId);
   const setSelectedClipIds = useEditorStore((state) => state.setSelectedClipIds);
@@ -1046,6 +1047,7 @@ export function Timeline() {
             zoom={zoom}
             width={width}
             cachedRanges={renderCacheRanges}
+            diffRanges={timelineCompareRanges}
             fps={project.settings.fps || 30}
             timecodeFormat={project.settings.timecodeFormat ?? 'ndf'}
             onSeek={setPlayheadTime}

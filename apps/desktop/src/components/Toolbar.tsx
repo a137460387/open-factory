@@ -36,7 +36,9 @@ interface ToolbarProps {
   smartRoughCutOpen: boolean;
   historyPanelOpen: boolean;
   storyboardOpen: boolean;
+  safeFrameGuides: boolean;
   onToggleStoryboard(): void;
+  onToggleSafeFrameGuides(): void;
   onToggleHistoryPanel(): void;
   onUndo(): void;
   onRedo(): void;
@@ -56,6 +58,7 @@ export function Toolbar(props: ToolbarProps) {
   const edit = zhCN.editMenu;
   const [fileMenuOpen, setFileMenuOpen] = useState(false);
   const [editMenuOpen, setEditMenuOpen] = useState(false);
+  const [viewMenuOpen, setViewMenuOpen] = useState(false);
   const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
   const project = useEditorStore((state) => state.project);
   const isPlaying = useEditorStore((state) => state.isPlaying);
@@ -101,6 +104,7 @@ export function Toolbar(props: ToolbarProps) {
           data-testid="toolbar-file-menu-button"
           onClick={() => {
             setEditMenuOpen(false);
+            setViewMenuOpen(false);
             setToolsMenuOpen(false);
             setFileMenuOpen((open) => !open);
           }}
@@ -176,6 +180,7 @@ export function Toolbar(props: ToolbarProps) {
           data-testid="toolbar-edit-menu-button"
           onClick={() => {
             setFileMenuOpen(false);
+            setViewMenuOpen(false);
             setToolsMenuOpen(false);
             setEditMenuOpen((open) => !open);
           }}
@@ -214,10 +219,43 @@ export function Toolbar(props: ToolbarProps) {
         <button
           className="inline-flex h-9 items-center gap-1 rounded-md border border-transparent px-3 text-sm font-medium text-slate-700 hover:border-line hover:bg-panel hover:text-ink"
           type="button"
+          data-testid="toolbar-view-menu-button"
+          onClick={() => {
+            setFileMenuOpen(false);
+            setEditMenuOpen(false);
+            setToolsMenuOpen(false);
+            setViewMenuOpen((open) => !open);
+          }}
+        >
+          {t.viewMenu}
+          <ChevronDown size={14} />
+        </button>
+        {viewMenuOpen ? (
+          <div className="absolute left-0 top-10 z-20 min-w-44 rounded-md border border-line bg-white py-1 shadow-soft" data-testid="toolbar-view-menu">
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-view-safe-frame-guides-menu-item"
+              aria-pressed={props.safeFrameGuides}
+              onClick={() => {
+                props.onToggleSafeFrameGuides();
+              }}
+            >
+              <span>{t.safeFrameGuides}</span>
+              <span className="text-xs text-slate-500">{props.safeFrameGuides ? t.safeFrameGuidesVisible : t.safeFrameGuidesHidden}</span>
+            </button>
+          </div>
+        ) : null}
+      </div>
+      <div className="relative">
+        <button
+          className="inline-flex h-9 items-center gap-1 rounded-md border border-transparent px-3 text-sm font-medium text-slate-700 hover:border-line hover:bg-panel hover:text-ink"
+          type="button"
           data-testid="toolbar-tools-menu-button"
           onClick={() => {
             setFileMenuOpen(false);
             setEditMenuOpen(false);
+            setViewMenuOpen(false);
             setToolsMenuOpen((open) => !open);
           }}
         >

@@ -31,6 +31,21 @@ export interface ExportBackgroundSettings {
   allowPowerActions: boolean;
 }
 
+export interface ViewSettings {
+  safeFrameGuides: boolean;
+}
+
+export type ExportRuleTrigger = 'export-success' | 'export-failure' | 'queue-complete';
+export type ExportRuleAction = 'copy-to-directory' | 'system-notification' | 'play-tone';
+
+export interface ExportConditionRule {
+  id: string;
+  enabled: boolean;
+  trigger: ExportRuleTrigger;
+  action: ExportRuleAction;
+  targetDirectory?: string;
+}
+
 export const DEFAULT_BACKUP_SETTINGS: BackupSettings = {
   local: { enabled: false },
   webdav: { enabled: false }
@@ -42,6 +57,8 @@ export interface AppSettings {
   backup?: BackupSettings;
   theme?: ThemeSettings;
   exportBackground?: ExportBackgroundSettings;
+  exportRules?: ExportConditionRule[];
+  view?: ViewSettings;
 }
 
 export async function initializeLanguageFromSettings(): Promise<Language> {
@@ -97,6 +114,30 @@ export async function saveExportBackgroundSettings(exportBackground: Partial<Exp
   const nextExportBackground = normalizeExportBackgroundSettings({ ...settings.exportBackground, ...exportBackground }) ?? defaultExportBackgroundSettings();
   await writeAppSettings({ ...settings, exportBackground: nextExportBackground });
   return nextExportBackground;
+}
+
+export async function readExportRules(): Promise<ExportConditionRule[]> {
+  const settings = await readAppSettings();
+  return settings.exportRules ?? [];
+}
+
+export async function saveExportRules(exportRules: ExportConditionRule[]): Promise<ExportConditionRule[]> {
+  const settings = await readAppSettings();
+  const nextExportRules = normalizeExportRules(exportRules);
+  await writeAppSettings({ ...settings, exportRules: nextExportRules });
+  return nextExportRules;
+}
+
+export async function readViewSettings(): Promise<ViewSettings> {
+  const settings = await readAppSettings();
+  return settings.view ?? defaultViewSettings();
+}
+
+export async function saveViewSettings(view: Partial<ViewSettings>): Promise<ViewSettings> {
+  const settings = await readAppSettings();
+  const nextView = normalizeViewSettings({ ...settings.view, ...view }) ?? defaultViewSettings();
+  await writeAppSettings({ ...settings, view: nextView });
+  return nextView;
 }
 
 export async function saveThemeSettings(theme: Partial<ThemeSettings>): Promise<ThemeSettings> {
@@ -165,7 +206,50 @@ function normalizeSettings(settings: Partial<AppSettings>): AppSettings {
   if (exportBackground) {
     normalized.exportBackground = exportBackground;
   }
+  const exportRules = normalizeExportRules(settings.exportRules);
+  if (exportRules.length > 0) {
+    normalized.exportRules = exportRules;
+  }
+  const view = normalizeViewSettings(settings.view);
+  if (view) {
+    normalized.view = view;
+  }
   return normalized;
+}
+
+export function normalizeExportRules(rules: unknown): ExportConditionRule[] {
+  if (!Array.isArray(rules)) {
+    return [];
+  }
+  return rules.flatMap((rule, index) => {
+    if (!rule || typeof rule !== 'object') {
+      return [];
+    }
+    const input = rule as Record<string, unknown>;
+    const trigger = normalizeExportRuleTrigger(input.trigger);
+    const action = normalizeExportRuleAction(input.action);
+    if (!trigger || !action) {
+      return [];
+    }
+    const normalized: ExportConditionRule = {
+      id: typeof input.id === 'string' && input.id.trim() ? input.id.trim() : `export-rule-${index + 1}`,
+      enabled: input.enabled !== false,
+      trigger,
+      action
+    };
+    if (typeof input.targetDirectory === 'string' && input.targetDirectory.trim()) {
+      normalized.targetDirectory = input.targetDirectory.trim();
+    }
+    return [normalized];
+  });
+}
+
+function normalizeExportRuleTrigger(value: unknown): ExportRuleTrigger | undefined {
+  return value === 'export-success' || value === 'export-failure' || value === 'queue-complete' ? value : undefined;
+}
+
+function normalizeExportRuleAction(value: unknown): ExportRuleAction | undefined {
+  return value === 'copy-to-directory' || value === 'system-notification' || value === 'play-tone' ? value : undefined;
 }
 
 export function normalizeExportBackgroundSettings(settings: Partial<ExportBackgroundSettings> | undefined): ExportBackgroundSettings | undefined {
@@ -174,6 +258,15 @@ export function normalizeExportBackgroundSettings(settings: Partial<ExportBackgr
   }
   return {
     allowPowerActions: Boolean(settings.allowPowerActions)
+  };
+}
+
+export function normalizeViewSettings(settings: Partial<ViewSettings> | undefined): ViewSettings | undefined {
+  if (!settings || typeof settings !== 'object') {
+    return undefined;
+  }
+  return {
+    safeFrameGuides: settings.safeFrameGuides === true
   };
 }
 
@@ -220,6 +313,12 @@ function defaultBackupSettings(): BackupSettings {
 function defaultExportBackgroundSettings(): ExportBackgroundSettings {
   return {
     allowPowerActions: false
+  };
+}
+
+function defaultViewSettings(): ViewSettings {
+  return {
+    safeFrameGuides: false
   };
 }
 

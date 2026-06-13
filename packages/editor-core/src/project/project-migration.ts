@@ -25,6 +25,7 @@ import {
   normalizeSequenceName,
   normalizeSlowMotionMode,
   normalizeStabilization,
+  normalizeTextPath,
   normalizeTransform,
   type MediaFolder,
   type Clip,
@@ -318,7 +319,7 @@ function cloneClip<TClip extends Clip>(clip: TClip): TClip {
     });
   }
   if (clip.type === 'text') {
-    return { ...cloned, style: { ...DEFAULT_TEXT_STYLE, ...clip.style } } as TClip;
+    return { ...cloned, style: { ...DEFAULT_TEXT_STYLE, ...clip.style }, pathText: normalizeTextPath(clip.pathText) } as TClip;
   }
   if (clip.type === 'subtitle') {
     return {

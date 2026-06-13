@@ -44,11 +44,14 @@ import {
   DEFAULT_BACKUP_SETTINGS,
   readBackupSettings,
   readExportBackgroundSettings,
+  readExportRules,
   saveBackupSettings,
   saveExportBackgroundSettings,
+  saveExportRules,
   saveLanguageSetting,
   type BackupSettings,
-  type ExportBackgroundSettings
+  type ExportBackgroundSettings,
+  type ExportConditionRule
 } from './appSettings';
 import {
   BUILTIN_THEME_IDS,
@@ -76,6 +79,9 @@ interface SettingsDialogProps {
 }
 
 type SettingsTab = 'general' | 'appearance' | 'lut-library' | 'shortcuts' | 'macros' | 'translation' | 'proxy' | 'backup' | 'plugins';
+const EXPORT_RULE_COPY_SUCCESS_ID = 'copy-success';
+const EXPORT_RULE_FAILURE_NOTIFICATION_ID = 'failure-notification';
+const EXPORT_RULE_QUEUE_TONE_ID = 'queue-tone';
 
 export function SettingsDialog({ open, project, selectedClip, shortcutBindings, macros, onShortcutBindingsChange, onMacrosChange, onClose }: SettingsDialogProps) {
   const t = zhCN.settings;
@@ -96,6 +102,7 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
     webdav: { ...DEFAULT_BACKUP_SETTINGS.webdav }
   }));
   const [exportBackgroundSettings, setExportBackgroundSettings] = useState<ExportBackgroundSettings>(() => ({ allowPowerActions: false }));
+  const [exportRules, setExportRules] = useState<ExportConditionRule[]>([]);
   const [webdavPassword, setWebdavPassword] = useState('');
   const translationProvider = useTranslationSettingsStore((state) => state.provider);
   const translationApiKey = useTranslationSettingsStore((state) => state.apiKey);
@@ -125,6 +132,7 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
     void refresh();
     void loadBackupSettings();
     void loadExportBackgroundSettings();
+    void loadExportRules();
     hydrateThemeForm(getCurrentThemeSettings());
     showCurrentPlugins();
     return () => setPreviewTimeline(undefined);
@@ -379,6 +387,18 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
     }
   }
 
+  async function loadExportRules() {
+    try {
+      setExportRules(await readExportRules());
+    } catch (exportRulesError) {
+      showToast({
+        kind: 'warning',
+        title: t.general.saveFailed,
+        message: exportRulesError instanceof Error ? exportRulesError.message : t.general.saveFailedMessage
+      });
+    }
+  }
+
   async function updateExportBackgroundSettings(nextSettings: ExportBackgroundSettings) {
     setExportBackgroundSettings(nextSettings);
     try {
@@ -388,6 +408,36 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
         kind: 'warning',
         title: t.general.saveFailed,
         message: exportBackgroundError instanceof Error ? exportBackgroundError.message : t.general.saveFailedMessage
+      });
+    }
+  }
+
+  async function updateExportRule(nextRule: ExportConditionRule) {
+    const nextRules = upsertExportRule(exportRules, nextRule);
+    setExportRules(nextRules);
+    try {
+      setExportRules(await saveExportRules(nextRules));
+    } catch (exportRulesError) {
+      showToast({
+        kind: 'warning',
+        title: t.general.saveFailed,
+        message: exportRulesError instanceof Error ? exportRulesError.message : t.general.saveFailedMessage
+      });
+    }
+  }
+
+  async function chooseExportRuleCopyDirectory() {
+    try {
+      const directory = await openDirectoryDialog();
+      if (directory) {
+        const currentRule = getExportRule(exportRules, EXPORT_RULE_COPY_SUCCESS_ID, defaultExportCopyRule());
+        await updateExportRule({ ...currentRule, targetDirectory: directory });
+      }
+    } catch (exportRulesError) {
+      showToast({
+        kind: 'warning',
+        title: t.general.saveFailed,
+        message: exportRulesError instanceof Error ? exportRulesError.message : t.general.saveFailedMessage
       });
     }
   }
@@ -666,6 +716,11 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
                     <span className="mt-1 block">{t.general.allowExportPowerActionsDescription}</span>
                   </span>
                 </label>
+                <ExportRulesSettingsPanel
+                  rules={exportRules}
+                  onRuleChange={(rule) => void updateExportRule(rule)}
+                  onChooseCopyDirectory={() => void chooseExportRuleCopyDirectory()}
+                />
               </div>
             ) : null}
             {tab === 'appearance' ? (
@@ -1060,6 +1115,93 @@ function formatProjectFps(fps: number): string {
   return `${Number.isInteger(fps) ? fps.toFixed(0) : fps.toFixed(3)} fps`;
 }
 
+function ExportRulesSettingsPanel({
+  rules,
+  onRuleChange,
+  onChooseCopyDirectory
+}: {
+  rules: ExportConditionRule[];
+  onRuleChange(rule: ExportConditionRule): void;
+  onChooseCopyDirectory(): void;
+}) {
+  const t = zhCN.settings.exportRules;
+  const copyRule = getExportRule(rules, EXPORT_RULE_COPY_SUCCESS_ID, defaultExportCopyRule());
+  const failureNotificationRule = getExportRule(rules, EXPORT_RULE_FAILURE_NOTIFICATION_ID, defaultExportFailureNotificationRule());
+  const queueToneRule = getExportRule(rules, EXPORT_RULE_QUEUE_TONE_ID, defaultExportQueueToneRule());
+
+  return (
+    <div className="rounded-md border border-line bg-white p-3" data-testid="settings-export-rules-panel">
+      <div>
+        <div className="text-sm font-semibold text-ink">{t.title}</div>
+        <p className="text-xs text-slate-500">{t.description}</p>
+      </div>
+      <div className="mt-3 space-y-3">
+        <label className="flex items-start gap-2 text-xs text-slate-600">
+          <input
+            className="mt-0.5 h-4 w-4 accent-brand"
+            type="checkbox"
+            checked={copyRule.enabled}
+            data-testid="settings-export-rule-copy-success-toggle"
+            onChange={(event) => onRuleChange({ ...copyRule, enabled: event.target.checked })}
+          />
+          <span>
+            <span className="block font-semibold text-slate-700">{t.copyOnSuccess}</span>
+            <span className="mt-1 block">{t.copyOnSuccessDescription}</span>
+          </span>
+        </label>
+        <label className="block text-xs font-medium text-slate-600">
+          {t.copyDirectory}
+          <div className="mt-1 flex gap-2">
+            <input
+              className="min-w-0 flex-1 rounded-md border border-line px-2 py-1.5 text-sm text-ink"
+              value={copyRule.targetDirectory ?? ''}
+              data-testid="settings-export-rule-copy-directory-input"
+              onChange={(event) => onRuleChange({ ...copyRule, targetDirectory: event.target.value })}
+            />
+            <button
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-line bg-white text-slate-600 hover:bg-panel"
+              type="button"
+              title={t.chooseDirectory}
+              aria-label={t.chooseDirectory}
+              data-testid="settings-export-rule-copy-directory-choose"
+              onClick={onChooseCopyDirectory}
+            >
+              <FolderOpen size={15} />
+            </button>
+          </div>
+          <span className="mt-1 block text-[11px] font-normal text-slate-500">{t.variableHelp}</span>
+        </label>
+        <label className="flex items-start gap-2 text-xs text-slate-600">
+          <input
+            className="mt-0.5 h-4 w-4 accent-brand"
+            type="checkbox"
+            checked={failureNotificationRule.enabled}
+            data-testid="settings-export-rule-failure-notification-toggle"
+            onChange={(event) => onRuleChange({ ...failureNotificationRule, enabled: event.target.checked })}
+          />
+          <span>
+            <span className="block font-semibold text-slate-700">{t.notifyOnFailure}</span>
+            <span className="mt-1 block">{t.notifyOnFailureDescription}</span>
+          </span>
+        </label>
+        <label className="flex items-start gap-2 text-xs text-slate-600">
+          <input
+            className="mt-0.5 h-4 w-4 accent-brand"
+            type="checkbox"
+            checked={queueToneRule.enabled}
+            data-testid="settings-export-rule-queue-tone-toggle"
+            onChange={(event) => onRuleChange({ ...queueToneRule, enabled: event.target.checked })}
+          />
+          <span>
+            <span className="block font-semibold text-slate-700">{t.playToneOnQueueComplete}</span>
+            <span className="mt-1 block">{t.playToneOnQueueCompleteDescription}</span>
+          </span>
+        </label>
+      </div>
+    </div>
+  );
+}
+
 function BackupSettingsPanel({
   settings,
   password,
@@ -1317,6 +1459,45 @@ function normalizeProxyResolutionPreset(value: string): ProxyResolutionPreset {
 function normalizeProxyTriggerThreshold(value: string): ProxyTriggerThreshold {
   const numeric = Number(value);
   return PROXY_TRIGGER_THRESHOLDS.includes(numeric as ProxyTriggerThreshold) ? (numeric as ProxyTriggerThreshold) : 1080;
+}
+
+function getExportRule(rules: ExportConditionRule[], id: string, fallback: ExportConditionRule): ExportConditionRule {
+  return rules.find((rule) => rule.id === id) ?? fallback;
+}
+
+function upsertExportRule(rules: ExportConditionRule[], nextRule: ExportConditionRule): ExportConditionRule[] {
+  const existingIndex = rules.findIndex((rule) => rule.id === nextRule.id);
+  if (existingIndex === -1) {
+    return [...rules, nextRule];
+  }
+  return rules.map((rule, index) => (index === existingIndex ? nextRule : rule));
+}
+
+function defaultExportCopyRule(): ExportConditionRule {
+  return {
+    id: EXPORT_RULE_COPY_SUCCESS_ID,
+    enabled: false,
+    trigger: 'export-success',
+    action: 'copy-to-directory'
+  };
+}
+
+function defaultExportFailureNotificationRule(): ExportConditionRule {
+  return {
+    id: EXPORT_RULE_FAILURE_NOTIFICATION_ID,
+    enabled: false,
+    trigger: 'export-failure',
+    action: 'system-notification'
+  };
+}
+
+function defaultExportQueueToneRule(): ExportConditionRule {
+  return {
+    id: EXPORT_RULE_QUEUE_TONE_ID,
+    enabled: false,
+    trigger: 'queue-complete',
+    action: 'play-tone'
+  };
 }
 
 function PluginsSettingsPanel({

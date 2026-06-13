@@ -2,6 +2,7 @@ import {
   createId,
   getTransformScaleX,
   getTransformScaleY,
+  normalizeTextPath,
   type Clip,
   type ClipKeyframes,
   type Keyframe,
@@ -22,7 +23,8 @@ export const KEYFRAME_PROPERTY_LIMITS: Record<KeyframeProperty, { min: number; m
   y: { min: -1, max: 1 },
   scaleX: { min: 0.01, max: 4 },
   scaleY: { min: 0.01, max: 4 },
-  speed: { min: KEYFRAME_MIN_CLIP_SPEED, max: KEYFRAME_MAX_CLIP_SPEED }
+  speed: { min: KEYFRAME_MIN_CLIP_SPEED, max: KEYFRAME_MAX_CLIP_SPEED },
+  pathStartOffset: { min: 0, max: 1 }
 };
 
 export interface KeyframeInput {
@@ -155,6 +157,9 @@ export function getClipStaticKeyframeValue(clip: Clip, property: KeyframePropert
   if (property === 'speed') {
     return clip.speed;
   }
+  if (property === 'pathStartOffset') {
+    return clip.type === 'text' ? normalizeTextPath(clip.pathText).startOffset : 0;
+  }
   return 0;
 }
 
@@ -214,6 +219,9 @@ function getKeyframeFallbackValue(property: KeyframeProperty): number {
   }
   if (property === 'speed') {
     return KEYFRAME_DEFAULT_CLIP_SPEED;
+  }
+  if (property === 'pathStartOffset') {
+    return 0;
   }
   return 0;
 }

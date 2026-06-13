@@ -118,6 +118,54 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.fullArgs.at(-1)).toBe('D:/Exports/loud.mp4');
   });
 
+  it('exports enabled path text clips through a baked image sequence overlay artifact', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-background', duration: 2 })];
+    project.timeline.tracks[2].clips = [
+      makeTextClip({
+        id: 'clip-path-text',
+        text: 'ARC',
+        duration: 2,
+        style: { fontSize: 64, color: '#ff4fd8' },
+        pathText: {
+          enabled: true,
+          path: [
+            { x: 0.2, y: 0.6, handleOut: { x: 0.35, y: 0.3 } },
+            { x: 0.8, y: 0.6, handleIn: { x: 0.65, y: 0.3 } }
+          ],
+          startOffset: 0.1,
+          letterSpacing: 8,
+          rotateCharacters: true
+        },
+        keyframes: {
+          pathStartOffset: [
+            { id: 'path-start', time: 0, value: 0.1, easing: 'linear' },
+            { id: 'path-end', time: 2, value: 0.4, easing: 'linear' }
+          ]
+        }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.inputs.some((input) => input.path.includes('__PATH_TEXT_SEQUENCE_clip_path_text__'))).toBe(true);
+    expect(plan.fullArgs.join(' ')).toContain('__PATH_TEXT_SEQUENCE_clip_path_text__');
+    expect(plan.filterComplex).toContain('pathtextsrc_clip_path_text');
+    expect(plan.filterComplex).toContain('overlay=x=0:y=0');
+    expect(plan.filterComplex).not.toContain('drawtext=textfile=__TEXTFILE_clip_path_text__');
+    expect(plan.textArtifacts).toEqual([
+      expect.objectContaining({
+        clipId: 'clip-path-text:path-text',
+        fileName: 'path-text-clip_path_text.json',
+        pathMode: 'path-text-sequence'
+      })
+    ]);
+    const manifest = JSON.parse(plan.textArtifacts[0].text) as { kind: string; frameCount: number; frames: Array<{ chars: unknown[] }> };
+    expect(manifest.kind).toBe('path-text-sequence');
+    expect(manifest.frameCount).toBe(60);
+    expect(manifest.frames[0].chars.length).toBeGreaterThan(0);
+  });
+
   it('builds EBU R128 loudness normalization with the broadcast target', () => {
     const project = makeProject();
     const plan = buildFfmpegExportPlan(
@@ -632,6 +680,58 @@ describe('multitrack ffmpeg builder', () => {
 
     expect(plan.filterComplex).not.toContain('watermark_');
     expect(plan.filterComplex).not.toContain("drawtext=text='");
+  });
+
+  it('adds timecode burn-in drawtext args with frame numbers', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-timecode-burn-in', duration: 2 })];
+
+    const plan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(project, {
+        outputPath: 'out.mp4',
+        settings: {
+          timecodeBurnIn: {
+            enabled: true,
+            position: 'top-left',
+            fontSize: 32,
+            color: '#ffcc00',
+            backgroundColor: '#000000',
+            includeFrameNumber: true
+          }
+        }
+      })
+    );
+
+    expect(plan.filterComplex).toContain("drawtext=text='%{pts\\:hms}:%{n}'");
+    expect(plan.filterComplex).toContain('fontsize=32');
+    expect(plan.filterComplex).toContain('fontcolor=0xffcc00');
+    expect(plan.filterComplex).toContain('box=1:boxcolor=0x000000@0.72');
+    expect(plan.filterComplex).toContain("x='24':y='24'");
+  });
+
+  it('generates a 0.5s slate frame and prepends matching silent audio', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-slate-main', duration: 2 })];
+
+    const plan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(project, {
+        outputPath: 'out.mp4',
+        settings: {
+          slate: { enabled: true }
+        }
+      })
+    );
+
+    expect(plan.filterComplex).toContain('color=c=black:s=1280x720:r=30:d=0.5');
+    expect(plan.filterComplex).toContain('drawbox=x=0:y=0:w=iw:h=ih:color=black@1:t=fill');
+    expect(plan.filterComplex).toContain("drawtext=text='Project\\\\: Test Project'");
+    expect(plan.filterComplex).toContain("drawtext=text='Duration\\\\: 2s'");
+    expect(plan.filterComplex).toContain('concat=n=2:v=1:a=0');
+    expect(plan.filterComplex).toContain('anullsrc=channel_layout=stereo:sample_rate=44100:d=0.5[slate_audio]');
+    expect(plan.filterComplex).toContain('[slate_audio][aout]concat=n=2:v=0:a=1[aout_slate]');
+    expect(plan.maps).toEqual(['-map', '[vout]', '-map', '[aout_slate]']);
+    expect(plan.duration).toBe(2.5);
+    expect(plan.outputArgs).toEqual(expect.arrayContaining(['-t', '2.5']));
   });
 
   it('adds preset video and audio bitrate args', () => {

@@ -24,7 +24,7 @@ export async function collectOfflineMediaFileStatuses(project: Project): Promise
 }
 
 export async function saveOfflineMediaReport(project: Project): Promise<string | undefined> {
-  const outputPath = await saveFileDialog(`${project.name}-素材报告.html`, [{ name: zhCN.fileDialogs.htmlReport, extensions: ['html', 'htm'] }]);
+  const outputPath = await saveFileDialog(`${project.name}-素材使用分析.html`, [{ name: zhCN.fileDialogs.htmlReport, extensions: ['html', 'htm'] }]);
   if (!outputPath) {
     return undefined;
   }

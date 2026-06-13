@@ -96,7 +96,7 @@ import {
   type ClipMacro,
   type MacroHistoryEntry
 } from '../macros/clip-macros';
-import { readBackupSettings, readLayoutSettings, saveLayoutSettings } from '../settings/appSettings';
+import { readBackupSettings, readLayoutSettings, readViewSettings, saveLayoutSettings, saveViewSettings } from '../settings/appSettings';
 import { createProxyForAsset } from '../media/proxy';
 import { ensureMediaJobRunner } from '../media/media-job-runner';
 import { DuplicateMediaDialog, type DuplicateMediaMergeSelection } from '../media/DuplicateMediaDialog';
@@ -176,6 +176,7 @@ export function EditorShell() {
   const [sharePackageProgress, setSharePackageProgress] = useState<SharePackageWorkflowProgress>();
   const [sharePackageBusy, setSharePackageBusy] = useState(false);
   const [layoutSettings, setLayoutSettings] = useState<EditorLayoutSettings>(DEFAULT_EDITOR_LAYOUT_SETTINGS);
+  const [safeFrameGuides, setSafeFrameGuides] = useState(false);
   const [viewportSize, setViewportSize] = useState(() => readViewportSize());
   const [lastBackupAt, setLastBackupAt] = useState<string>();
   const exportTasks = useExportQueueStore((state) => state.tasks);
@@ -213,6 +214,16 @@ export function EditorShell() {
     });
   }, []);
 
+  const toggleSafeFrameGuides = useCallback(() => {
+    setSafeFrameGuides((current) => {
+      const next = !current;
+      void saveViewSettings({ safeFrameGuides: next }).catch((error) => {
+        console.warn('Unable to save view settings', error);
+      });
+      return next;
+    });
+  }, []);
+
   useEffect(() => {
     const runningTasks = exportTasks.filter((task) => task.status === 'running');
     const runningCount = runningTasks.length;
@@ -245,6 +256,22 @@ export function EditorShell() {
     return () => {
       disposed = true;
       unlisten?.();
+    };
+  }, []);
+
+  useEffect(() => {
+    let canceled = false;
+    void readViewSettings()
+      .then((view) => {
+        if (!canceled) {
+          setSafeFrameGuides(view.safeFrameGuides);
+        }
+      })
+      .catch((error) => {
+        console.warn('Unable to load view settings', error);
+      });
+    return () => {
+      canceled = true;
     };
   }, []);
 
@@ -1220,7 +1247,9 @@ export function EditorShell() {
           smartRoughCutOpen={smartRoughCutOpen}
           historyPanelOpen={historyPanelOpen}
           storyboardOpen={storyboardOpen}
+          safeFrameGuides={safeFrameGuides}
           onToggleStoryboard={() => setStoryboardOpen((open) => !open)}
+          onToggleSafeFrameGuides={toggleSafeFrameGuides}
           onToggleHistoryPanel={() => {
             setSmartRoughCutOpen(false);
             setHistoryPanelOpen((open) => !open);
@@ -1292,7 +1321,7 @@ export function EditorShell() {
           )}
           <ErrorBoundary name={zhCN.panels.preview}>
             <Suspense fallback={<PanelLoading label={zhCN.panels.preview} />}>
-              <PreviewCanvas />
+              <PreviewCanvas safeFrameGuides={safeFrameGuides} />
             </Suspense>
           </ErrorBoundary>
           {effectivePanels.rightPanelCollapsed ? (

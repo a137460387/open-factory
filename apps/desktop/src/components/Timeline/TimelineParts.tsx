@@ -13,6 +13,7 @@ import {
   type TransitionType
 } from '@open-factory/editor-core';
 import type { TimelineRenderRange } from '@open-factory/editor-core';
+import type { TimelineDiffRange } from '@open-factory/editor-core';
 import { clsx } from 'clsx';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatTrackType, zhCN } from '../../i18n/strings';
@@ -51,6 +52,7 @@ export function Ruler({
   zoom,
   width,
   cachedRanges,
+  diffRanges,
   fps,
   timecodeFormat,
   onSeek
@@ -59,6 +61,7 @@ export function Ruler({
   zoom: number;
   width: number;
   cachedRanges: TimelineRenderRange[];
+  diffRanges: TimelineDiffRange[];
   fps: number;
   timecodeFormat: TimecodeFormat;
   onSeek(time: number): void;
@@ -88,6 +91,15 @@ export function Ruler({
             onSeek(snapTime((event.clientX - rect.left) / zoom));
           }}
         >
+          {diffRanges.map((range) => (
+            <span
+              key={`${range.start}-${range.end}`}
+              className="absolute bottom-0 top-0 bg-orange-300/55"
+              style={{ left: range.start * zoom, width: Math.max(2, (range.end - range.start) * zoom) }}
+              title={zhCN.timeline.snapshotDiffRange}
+              data-testid="timeline-snapshot-diff-segment"
+            />
+          ))}
           {ticks.map((tick) => (
             <div key={tick} className="absolute top-0 h-full border-l border-slate-300 pl-1 text-[11px] text-slate-500" style={{ left: tick * zoom }}>
               {secondsToTimecode(tick, fps, timecodeFormat)}

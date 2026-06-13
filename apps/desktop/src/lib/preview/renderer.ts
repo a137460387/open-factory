@@ -246,7 +246,7 @@ export class PreviewRenderer {
     }
 
     if (renderClip.type === 'text' || renderClip.type === 'subtitle') {
-      drawText2d(context, canvas, renderClip, bypassProcessing);
+      drawText2d(context, canvas, renderClip, bypassProcessing, Math.max(0, playheadTime - renderClip.start));
     }
   }
 

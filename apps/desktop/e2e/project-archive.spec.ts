@@ -31,11 +31,14 @@ test('generates an offline media HTML report from the file menu', async ({ page 
   const reportPath = 'C:/Reports/material-report.html';
   await expect.poll(() => page.evaluate((path) => window.__E2E_ACTIONS__!.getWrittenFile!(path) as string | undefined, reportPath)).not.toBeUndefined();
   const html = await page.evaluate((path) => window.__E2E_ACTIONS__!.getWrittenFile!(path) as string, reportPath);
-  expect(html).toContain('素材报告：E2E Project');
+  expect(html).toContain('素材使用分析：E2E Project');
   expect(html).toContain('C:/Media/tiny-video.mp4');
   expect(html).toContain('项目总时长');
   expect(html).toContain('总媒体大小');
   expect(html).toContain('导出预估大小');
+  expect(html).toContain('使用片段列表');
+  expect(html).toContain('使用率热力图');
+  expect(html).toContain('导出时长分布');
 });
 
 test('confirms before archiving when project media is missing', async ({ page }) => {

@@ -11,6 +11,7 @@
     "fs:read-files",
     "fs:write-files",
     "fs:allow-exists",
+    "notification:default",
     {
       "identifier": "fs:scope",
       "allow": [

@@ -9,6 +9,7 @@ import {
   buildTimelineRenderFrameKey,
   buildTimelineRenderFrameRequests,
   closePathPoints,
+  diffTimelineSnapshots,
   getActiveMulticamAngle,
   getRenderableTracks,
   getTimelineRenderInvalidationRanges,
@@ -48,6 +49,7 @@ import {
   drawPreviewDifferenceFrame,
   type PreviewCompareMode
 } from '../../lib/preview/compare';
+import { listProjectSnapshots, readProjectSnapshot, type ProjectSnapshotEntry } from '../../lib/projectSnapshots';
 import { PreviewRenderer, type PreviewFrameReadback } from '../../lib/preview/renderer';
 import { getTimelineRenderCacheController } from '../../lib/preview/render-cache-controller';
 import { showToast } from '../../lib/toast';
@@ -60,7 +62,11 @@ const PREVIEW_CANVAS_WIDTH = 1280;
 const PREVIEW_CANVAS_HEIGHT = 720;
 const CANVAS_TRANSFORM_HANDLES: CanvasTransformHandle[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
 
-export function PreviewCanvas() {
+interface PreviewCanvasProps {
+  safeFrameGuides?: boolean;
+}
+
+export function PreviewCanvas({ safeFrameGuides = false }: PreviewCanvasProps) {
   const t = zhCN.preview;
   const theme = useTheme();
   const compareFrameRef = useRef<HTMLDivElement | null>(null);
@@ -75,6 +81,7 @@ export function PreviewCanvas() {
   const previousTimelineRef = useRef<Timeline | undefined>();
   const scopeFrameCounterRef = useRef(0);
   const project = useEditorStore((state) => state.project);
+  const projectPath = useEditorStore((state) => state.projectPath);
   const previewTimeline = useEditorStore((state) => state.previewTimeline);
   const selectedClipId = useEditorStore((state) => state.selectedClipId);
   const playheadTime = useEditorStore((state) => state.playheadTime);
@@ -83,6 +90,7 @@ export function PreviewCanvas() {
   const setPlayheadTime = useEditorStore((state) => state.setPlayheadTime);
   const setIsPlaying = useEditorStore((state) => state.setIsPlaying);
   const setSelectedClipIds = useEditorStore((state) => state.setSelectedClipIds);
+  const setTimelineCompareRanges = useEditorStore((state) => state.setTimelineCompareRanges);
   const chromaKeyPickClipId = useEditorStore((state) => state.chromaKeyPickClipId);
   const setChromaKeyPickClipId = useEditorStore((state) => state.setChromaKeyPickClipId);
   const setAudioLevels = useAudioMeterStore((state) => state.setLevels);
@@ -92,13 +100,18 @@ export function PreviewCanvas() {
   const [compareMode, setCompareMode] = useState<PreviewCompareMode | 'off'>('off');
   const [compareSplitRatio, setCompareSplitRatio] = useState(0.5);
   const [compareDividerDragging, setCompareDividerDragging] = useState(false);
+  const [snapshotEntries, setSnapshotEntries] = useState<ProjectSnapshotEntry[]>([]);
+  const [snapshotComparePath, setSnapshotComparePath] = useState('');
+  const [snapshotCompareProject, setSnapshotCompareProject] = useState<Project>();
+  const [snapshotCompareLoading, setSnapshotCompareLoading] = useState(false);
   const [canvasEditMode, setCanvasEditMode] = useState(false);
   const [frameSearchQuery, setFrameSearchQuery] = useState('');
   const [frameSearchFocused, setFrameSearchFocused] = useState(false);
   const [frameSearchError, setFrameSearchError] = useState<string>();
   const prerenderCenter = Math.round(playheadTime * 2) / 2;
   const fps = project.settings.fps || 30;
-  const compareEnabled = compareMode !== 'off';
+  const snapshotCompareEnabled = Boolean(snapshotCompareProject);
+  const compareEnabled = compareMode !== 'off' || snapshotCompareEnabled;
   const compareShowsDifference = compareMode === 'difference';
   const activeCompareMode: PreviewCompareMode = compareMode === 'off' ? 'left-right' : compareMode;
   const selectedMulticamClip = useMemo(() => {
@@ -115,6 +128,57 @@ export function PreviewCanvas() {
   const selectedPathMask = useMemo(() => selectedEditableClip?.clip.masks?.find((mask) => mask.type === 'path'), [selectedEditableClip]);
   const frameSearchCandidates = useMemo(() => buildFrameSearchCandidates(project, frameSearchQuery), [frameSearchQuery, project]);
   const showFrameSearchCandidates = frameSearchFocused && frameSearchQuery.trim().length > 0 && !isTimecodeLikeQuery(frameSearchQuery);
+  const snapshotCompareRanges = useMemo(
+    () => (snapshotCompareProject ? diffTimelineSnapshots(project.timeline, snapshotCompareProject.timeline) : []),
+    [project.timeline, snapshotCompareProject]
+  );
+
+  useEffect(() => {
+    setTimelineCompareRanges(snapshotCompareRanges);
+    return () => setTimelineCompareRanges([]);
+  }, [setTimelineCompareRanges, snapshotCompareRanges]);
+
+  useEffect(() => {
+    setSnapshotComparePath('');
+    setSnapshotCompareProject(undefined);
+    setTimelineCompareRanges([]);
+  }, [project.id, setTimelineCompareRanges]);
+
+  const refreshSnapshotEntries = async () => {
+    setSnapshotCompareLoading(true);
+    try {
+      setSnapshotEntries(await listProjectSnapshots(project.id));
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.projectSnapshots.loadFailed, message: error instanceof Error ? error.message : zhCN.projectSnapshots.loadFailed });
+    } finally {
+      setSnapshotCompareLoading(false);
+    }
+  };
+
+  const selectSnapshotCompare = async (path: string) => {
+    setSnapshotComparePath(path);
+    if (!path) {
+      setSnapshotCompareProject(undefined);
+      setTimelineCompareRanges([]);
+      return;
+    }
+    const entry = snapshotEntries.find((item) => item.path === path);
+    if (!entry) {
+      return;
+    }
+    setSnapshotCompareLoading(true);
+    try {
+      const snapshotProject = await readProjectSnapshot(entry, projectPath);
+      setSnapshotCompareProject(snapshotProject);
+      setCompareMode('left-right');
+    } catch (error) {
+      setSnapshotComparePath('');
+      setSnapshotCompareProject(undefined);
+      showToast({ kind: 'warning', title: zhCN.projectSnapshots.loadFailed, message: error instanceof Error ? error.message : zhCN.projectSnapshots.loadFailed });
+    } finally {
+      setSnapshotCompareLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (chromaKeyPickClipId && !chromaKeyPickTarget) {
@@ -185,10 +249,12 @@ export function PreviewCanvas() {
           setScopeFrame(result.frame);
         }
         if (compareEnabled && originalCanvas) {
-          const originalResult = await originalRendererRef.current.render(originalCanvas, timeline, project.media, playheadTime, {
-            bypassProcessing: true,
+          const compareProject = snapshotCompareProject ?? project;
+          const compareTimeline = snapshotCompareProject?.timeline ?? timeline;
+          const originalResult = await originalRendererRef.current.render(originalCanvas, compareTimeline, compareProject.media, playheadTime, {
+            bypassProcessing: !snapshotCompareProject,
             captureFrame: shouldCaptureDifference,
-            sequences: project.sequences
+            sequences: compareProject.sequences
           });
           if (canceled) {
             return;
@@ -232,7 +298,8 @@ export function PreviewCanvas() {
     project.sequences,
     project.timeline,
     scopesOpen,
-    setAudioLevels
+    setAudioLevels,
+    snapshotCompareProject
   ]);
 
   useEffect(() => {
@@ -313,7 +380,14 @@ export function PreviewCanvas() {
   }, [project]);
 
   function toggleCompareMode(): void {
-    setCompareMode((current) => (current === 'off' ? 'left-right' : 'off'));
+    if (compareEnabled) {
+      setCompareMode('off');
+      setSnapshotComparePath('');
+      setSnapshotCompareProject(undefined);
+      setTimelineCompareRanges([]);
+      return;
+    }
+    setCompareMode('left-right');
   }
 
   function jumpToFrameSearchCandidate(candidate: FrameSearchCandidate): void {
@@ -692,6 +766,27 @@ export function PreviewCanvas() {
           <div className="text-xs text-slate-300">{t.canvasSize}</div>
         </div>
         <div className="flex items-center gap-2">
+          <label className="sr-only" htmlFor="preview-snapshot-compare-select">
+            {t.snapshotCompare}
+          </label>
+          <select
+            id="preview-snapshot-compare-select"
+            className="h-9 max-w-[190px] rounded-md border border-white/10 bg-white/10 px-2 text-xs font-medium text-white outline-none hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+            value={snapshotComparePath}
+            disabled={snapshotCompareLoading}
+            title={t.snapshotCompare}
+            data-testid="preview-snapshot-compare-select"
+            onPointerDown={() => void refreshSnapshotEntries()}
+            onFocus={() => void refreshSnapshotEntries()}
+            onChange={(event) => void selectSnapshotCompare(event.target.value)}
+          >
+            <option value="">{snapshotCompareLoading ? t.snapshotCompareLoading : t.snapshotCompareOff}</option>
+            {snapshotEntries.map((entry) => (
+              <option key={entry.path} value={entry.path}>
+                {entry.name}
+              </option>
+            ))}
+          </select>
           {compareEnabled ? (
             <div className="flex items-center gap-1 rounded-md border border-white/10 bg-white/10 p-0.5" data-testid="preview-compare-mode-group">
               <button
@@ -796,6 +891,7 @@ export function PreviewCanvas() {
             {compareShowsDifference ? (
               <canvas ref={differenceCanvasRef} width={1280} height={720} className="pointer-events-none absolute inset-0 h-full w-full" data-testid="preview-compare-difference-canvas" />
             ) : null}
+            {safeFrameGuides ? <SafeFrameGuides /> : null}
             {compareEnabled && !compareShowsDifference ? (
               <div
                 role="separator"
@@ -949,6 +1045,18 @@ export function PreviewCanvas() {
         </div>
       </div>
     </section>
+  );
+}
+
+function SafeFrameGuides() {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-20" data-testid="preview-safe-frame-guides" aria-hidden="true">
+      <div className="absolute border border-white/70 shadow-[0_0_0_1px_rgba(0,0,0,0.45)]" style={{ left: '5%', top: '5%', width: '90%', height: '90%' }} data-testid="preview-safe-frame-action" />
+      <div className="absolute border border-amber-300/80 shadow-[0_0_0_1px_rgba(0,0,0,0.45)]" style={{ left: '10%', top: '10%', width: '80%', height: '80%' }} data-testid="preview-safe-frame-title" />
+      <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/65 shadow-[0_0_0_1px_rgba(0,0,0,0.35)]" data-testid="preview-safe-frame-center-vertical" />
+      <div className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-white/65 shadow-[0_0_0_1px_rgba(0,0,0,0.35)]" data-testid="preview-safe-frame-center-horizontal" />
+      <div className="absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/70 shadow-[0_0_0_1px_rgba(0,0,0,0.45)]" data-testid="preview-safe-frame-center" />
+    </div>
   );
 }
 

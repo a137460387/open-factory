@@ -42,13 +42,14 @@ const zh = {
   toolbar: {
     fileMenu: '文件',
     editMenu: '编辑',
+    viewMenu: '视图',
     toolsMenu: '工具',
     newProject: '新建项目',
     newFromTemplate: '从模板新建',
     openProject: '打开项目',
     saveProject: '保存项目',
     archiveProject: '归档项目',
-    mediaReport: '素材报告',
+    mediaReport: '素材使用分析',
     createSharePackage: '创建分享包',
     batchTranscode: '批量转码',
     videoStitchWizard: '视频拼接向导',
@@ -71,6 +72,9 @@ const zh = {
     redo: '重做',
     history: '历史',
     storyboard: '故事板',
+    safeFrameGuides: '安全框参考线',
+    safeFrameGuidesVisible: '显示',
+    safeFrameGuidesHidden: '隐藏',
     splitSelectedClip: '分割选中片段',
     smartRoughCut: '智能粗剪',
     createMulticamSequence: '创建多机位序列',
@@ -165,6 +169,19 @@ const zh = {
         zh: '中文',
         en: 'English'
       }
+    },
+    exportRules: {
+      title: '条件导出规则',
+      description: '导出队列满足条件后自动执行本机动作。',
+      copyOnSuccess: '导出成功后复制到目录',
+      copyOnSuccessDescription: '任务成功后把输出文件复制到指定目录。',
+      copyDirectory: '复制目标目录',
+      chooseDirectory: '选择目录',
+      variableHelp: '支持变量：{date}、{project}',
+      notifyOnFailure: '导出失败时发送系统通知',
+      notifyOnFailureDescription: '失败消息会通过本机通知显示。',
+      playToneOnQueueComplete: '队列全部完成后播放提示音',
+      playToneOnQueueCompleteDescription: '使用 Web Audio 合成短提示音，不需要音频文件。'
     },
     appearance: {
       title: '外观',
@@ -516,6 +533,9 @@ const zh = {
     compareTopBottom: '上下分割对比',
     compareDifference: '叠加差值对比',
     compareDivider: '对比分割线',
+    snapshotCompare: '快照对比',
+    snapshotCompareOff: '选择快照对比',
+    snapshotCompareLoading: '加载快照...',
     canvasEditMode: '画布编辑模式',
     canvasEditModeActive: '关闭画布编辑模式',
     transformAnchor: '中心锚点',
@@ -579,6 +599,7 @@ const zh = {
     subtitle: '拖拽片段、修剪边缘、在播放头处分割',
     tracks: '轨道',
     renderCache: '缓存',
+    snapshotDiffRange: '与选定快照不同',
     addVideoTrack: '添加视频轨道',
     addAudioTrack: '添加音频轨道',
     addSubtitleTrack: '添加字幕轨道',
@@ -777,6 +798,7 @@ const zh = {
       audio: '音频',
       subtitle: '字幕',
       text: '文字',
+      pathText: '路径文字',
       textAnimation: '动画'
     },
     colorMatch: {
@@ -924,6 +946,10 @@ const zh = {
       animationPreset: '动画预设',
       animationDuration: '动画时长',
       animationDirection: '方向',
+      pathTextMode: '路径文字',
+      pathTextStartOffset: '起始偏移',
+      pathTextLetterSpacing: '字间距',
+      pathTextRotateCharacters: '字符随路径旋转',
       fontSize: '字号',
       fontFamily: '字体',
       color: '颜色',
@@ -950,6 +976,9 @@ const zh = {
         out: '出场',
         both: '两者'
       }
+    },
+    pathText: {
+      addOffsetKeyframe: '添加偏移关键帧'
     },
     inputColorSpaces: {
       rec709: 'Rec.709 / 标准',
@@ -1018,7 +1047,8 @@ const zh = {
       volume: '音量',
       scaleX: '缩放 X',
       scaleY: '缩放 Y',
-      speed: '速度'
+      speed: '速度',
+      pathStartOffset: '路径偏移'
     }
   },
   exportDialog: {
@@ -1122,6 +1152,18 @@ const zh = {
         'bottom-center': '下中',
         'bottom-right': '右下'
       }
+    },
+    monitoring: {
+      title: '监看辅助',
+      on: '已开启',
+      off: '已关闭',
+      timecodeEnabled: '时间码烧录',
+      timecodePosition: '时间码位置',
+      timecodeFontSize: '时间码字号',
+      timecodeColor: '文字颜色',
+      timecodeBackgroundColor: '背景色',
+      includeFrameNumber: '包含帧号',
+      slateEnabled: '开头插入 0.5s 场记板'
     },
     info: {
       resolution: '分辨率',
@@ -1402,9 +1444,16 @@ const zh = {
     failedMessage: '无法归档项目。'
   },
   mediaReport: {
-    success: '素材报告已生成',
-    failed: '素材报告生成失败',
-    failedMessage: '无法生成素材报告。'
+    success: '素材使用分析报告已生成',
+    failed: '素材使用分析报告生成失败',
+    failedMessage: '无法生成素材使用分析报告。'
+  },
+  exportRules: {
+    notificationSuccessTitle: '导出已完成',
+    notificationSuccessBody: '导出任务已成功完成。',
+    notificationFailureTitle: '导出失败',
+    notificationQueueCompleteTitle: '导出队列已完成',
+    notificationQueueCompleteBody: '所有导出任务都已结束。'
   },
   batchTranscode: {
     title: '批量转码',
@@ -1639,13 +1688,14 @@ const enOverrides = {
   toolbar: {
     fileMenu: 'File',
     editMenu: 'Edit',
+    viewMenu: 'View',
     toolsMenu: 'Tools',
     newProject: 'New Project',
     newFromTemplate: 'New From Template',
     openProject: 'Open Project',
     saveProject: 'Save Project',
     archiveProject: 'Archive Project',
-    mediaReport: 'Media Report',
+    mediaReport: 'Media Usage Analysis',
     createSharePackage: 'Create Share Package',
     batchTranscode: 'Batch Transcode',
     videoStitchWizard: 'Video Stitch Wizard',
@@ -1668,6 +1718,9 @@ const enOverrides = {
     redo: 'Redo',
     history: 'History',
     storyboard: 'Storyboard',
+    safeFrameGuides: 'Safe Frame Guides',
+    safeFrameGuidesVisible: 'Visible',
+    safeFrameGuidesHidden: 'Hidden',
     splitSelectedClip: 'Split Selected Clip',
     smartRoughCut: 'Smart Rough Cut',
     createMulticamSequence: 'Create Multicam Sequence',
@@ -1753,6 +1806,19 @@ const enOverrides = {
         zh: '中文',
         en: 'English'
       }
+    },
+    exportRules: {
+      title: 'Conditional Export Rules',
+      description: 'Run local actions when the export queue meets a condition.',
+      copyOnSuccess: 'Copy successful exports to a folder',
+      copyOnSuccessDescription: 'Copy the output file to the target directory after a task succeeds.',
+      copyDirectory: 'Copy Target Directory',
+      chooseDirectory: 'Choose Directory',
+      variableHelp: 'Supports variables: {date}, {project}',
+      notifyOnFailure: 'Send a system notification on export failure',
+      notifyOnFailureDescription: 'The failure message is shown through a native notification.',
+      playToneOnQueueComplete: 'Play a tone when the whole queue completes',
+      playToneOnQueueCompleteDescription: 'Uses Web Audio to synthesize a short tone without an audio file.'
     },
     appearance: {
       title: 'Appearance',
@@ -2032,6 +2098,9 @@ const enOverrides = {
     compareTopBottom: 'Top/Bottom Split Compare',
     compareDifference: 'Difference Compare',
     compareDivider: 'Compare Divider',
+    snapshotCompare: 'Snapshot Compare',
+    snapshotCompareOff: 'Select Snapshot',
+    snapshotCompareLoading: 'Loading Snapshots...',
     canvasEditMode: 'Canvas Edit Mode',
     canvasEditModeActive: 'Turn Off Canvas Edit Mode',
     transformAnchor: 'Center Anchor',
@@ -2095,6 +2164,7 @@ const enOverrides = {
     subtitle: 'Drag clips, trim edges, split at the playhead',
     tracks: 'Tracks',
     renderCache: 'Cache',
+    snapshotDiffRange: 'Different from selected snapshot',
     addVideoTrack: 'Add Video Track',
     addAudioTrack: 'Add Audio Track',
     addSubtitleTrack: 'Add Subtitle Track',
@@ -2211,6 +2281,7 @@ const enOverrides = {
       audio: 'Audio',
       subtitle: 'Subtitle',
       text: 'Text',
+      pathText: 'Path Text',
       textAnimation: 'Animation'
     },
     chromaKey: {
@@ -2305,6 +2376,10 @@ const enOverrides = {
       animationPreset: 'Animation Preset',
       animationDuration: 'Animation Duration',
       animationDirection: 'Direction',
+      pathTextMode: 'Path Text',
+      pathTextStartOffset: 'Start Offset',
+      pathTextLetterSpacing: 'Letter Spacing',
+      pathTextRotateCharacters: 'Rotate Characters Along Path',
       fontSize: 'Font Size',
       fontFamily: 'Font Family',
       color: 'Color'
@@ -2325,6 +2400,9 @@ const enOverrides = {
         out: 'Out',
         both: 'Both'
       }
+    },
+    pathText: {
+      addOffsetKeyframe: 'Add Offset Keyframe'
     },
     effectNames: {
       blur: 'Gaussian Blur',
@@ -2349,7 +2427,19 @@ const enOverrides = {
       blend: 'Blend',
       'optical-flow': 'Optical Flow'
     },
-    missingFile: 'Missing file'
+    missingFile: 'Missing file',
+    removeKeyframe: 'Remove Keyframe',
+    addKeyframeTitle: (label: string) => `Add ${label} keyframe`,
+    keyframeProperty: {
+      x: 'X',
+      y: 'Y',
+      opacity: 'Opacity',
+      volume: 'Volume',
+      scaleX: 'Scale X',
+      scaleY: 'Scale Y',
+      speed: 'Speed',
+      pathStartOffset: 'Path Offset'
+    }
   },
   historyPanel: {
     title: 'Edit History',
@@ -2461,6 +2551,18 @@ const enOverrides = {
         'bottom-center': 'Bottom Center',
         'bottom-right': 'Bottom Right'
       }
+    },
+    monitoring: {
+      title: 'Monitoring Helpers',
+      on: 'On',
+      off: 'Off',
+      timecodeEnabled: 'Burn In Timecode',
+      timecodePosition: 'Timecode Position',
+      timecodeFontSize: 'Timecode Size',
+      timecodeColor: 'Text Color',
+      timecodeBackgroundColor: 'Background Color',
+      includeFrameNumber: 'Include Frame Number',
+      slateEnabled: 'Insert 0.5s Slate'
     },
     info: {
       resolution: 'Resolution',
@@ -2674,9 +2776,16 @@ const enOverrides = {
     failedMessage: 'Unable to archive project.'
   },
   mediaReport: {
-    success: 'Media report generated',
-    failed: 'Media report failed',
-    failedMessage: 'Unable to generate the media report.'
+    success: 'Media usage analysis generated',
+    failed: 'Media usage analysis failed',
+    failedMessage: 'Unable to generate the media usage analysis.'
+  },
+  exportRules: {
+    notificationSuccessTitle: 'Export Complete',
+    notificationSuccessBody: 'The export task completed successfully.',
+    notificationFailureTitle: 'Export Failed',
+    notificationQueueCompleteTitle: 'Export Queue Complete',
+    notificationQueueCompleteBody: 'All export tasks have finished.'
   },
   batchTranscode: {
     title: 'Batch Transcode',

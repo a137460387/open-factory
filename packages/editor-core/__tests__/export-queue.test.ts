@@ -34,6 +34,7 @@ describe('export queue helpers', () => {
   it('creates, starts, updates, and finishes tasks', () => {
     const task = createExportTask({ id: 'task-1', name: 'Export', outputPath: 'out.mp4', plan, now: 't0' });
     expect(task.status).toBe('pending');
+    expect(task.projectName).toBeUndefined();
 
     let tasks = startNextExportTask([task], 't1');
     expect(tasks[0].status).toBe('running');
@@ -46,6 +47,10 @@ describe('export queue helpers', () => {
     expect(tasks[0].status).toBe('success');
     expect(tasks[0].finishedAt).toBe('t2');
     expect(tasks[0].report?.loudness?.integratedLoudness).toBe(-14.1);
+  });
+
+  it('preserves project names on queued tasks when provided', () => {
+    expect(createExportTask({ id: 'task-project', name: 'Export', projectName: 'Launch Cut', outputPath: 'out.mp4', plan }).projectName).toBe('Launch Cut');
   });
 
   it('keeps only one running task and supports cancel/error states', () => {
@@ -139,6 +144,8 @@ describe('export queue helpers', () => {
     });
 
     expect(activateScheduledExportTasks([task], 'not-a-date')[0].status).toBe('scheduled');
+    const pendingTask = createExportTask({ id: 'pending-clock', name: 'Pending', outputPath: 'pending.mp4', plan });
+    expect(activateScheduledExportTasks([pendingTask], '2026-01-01T00:00:10.000Z')[0]).toBe(pendingTask);
   });
 
   it('tracks render farm segment progress and ignores unrelated segment updates', () => {

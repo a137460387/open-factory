@@ -1,4 +1,4 @@
-import type { Clip, HistoryMeta, KeyframeProperty, MediaAsset, MediaMetadata, Project, Timeline } from '@open-factory/editor-core';
+import type { Clip, HistoryMeta, KeyframeProperty, MediaAsset, MediaMetadata, Project, Timeline, TimelineDiffRange } from '@open-factory/editor-core';
 import { clampTimelineZoom, createProject, getTimelineDuration, replaceProjectActiveTimeline, switchProjectActiveSequence } from '@open-factory/editor-core';
 import { create } from 'zustand';
 import { zhCN } from '../i18n/strings';
@@ -26,6 +26,7 @@ export interface EditorState {
   isExporting: boolean;
   historyMeta: HistoryMeta;
   previewTimeline?: Timeline;
+  timelineCompareRanges: TimelineDiffRange[];
   chromaKeyPickClipId?: string;
   replaceProject: (project: Project) => void;
   replaceTimeline: (timeline: Timeline) => void;
@@ -52,6 +53,7 @@ export interface EditorState {
   setExportProgress: (progress?: number) => void;
   setIsExporting: (isExporting: boolean) => void;
   setPreviewTimeline: (timeline?: Timeline) => void;
+  setTimelineCompareRanges: (ranges: TimelineDiffRange[]) => void;
   setChromaKeyPickClipId: (clipId?: string) => void;
 }
 
@@ -65,6 +67,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   dirty: false,
   isExporting: false,
   historyMeta: { canUndo: false, canRedo: false, cursor: -1, entries: [], position: 0, total: 0 },
+  timelineCompareRanges: [],
   replaceProject: (project) =>
     set({
       project: { ...project, updatedAt: new Date().toISOString() },
@@ -84,6 +87,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       playheadTime: 0,
       isPlaying: false,
       previewTimeline: undefined,
+      timelineCompareRanges: [],
       chromaKeyPickClipId: undefined,
       dirty: state.dirty
     })),
@@ -99,6 +103,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       playbackRate: 1,
       inPoint: undefined,
       outPoint: undefined,
+      previewTimeline: undefined,
+      timelineCompareRanges: [],
       chromaKeyPickClipId: undefined,
       dirty: false
     }),
@@ -114,6 +120,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       playbackRate: 1,
       inPoint: undefined,
       outPoint: undefined,
+      previewTimeline: undefined,
+      timelineCompareRanges: [],
       chromaKeyPickClipId: undefined,
       dirty: false
     }),
@@ -177,6 +185,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setExportProgress: (exportProgress) => set({ exportProgress }),
   setIsExporting: (isExporting) => set({ isExporting }),
   setPreviewTimeline: (previewTimeline) => set({ previewTimeline }),
+  setTimelineCompareRanges: (timelineCompareRanges) => set({ timelineCompareRanges }),
   setChromaKeyPickClipId: (chromaKeyPickClipId) => set({ chromaKeyPickClipId })
 }));
 
