@@ -8,6 +8,7 @@ import {
   AddTransitionCommand,
   CreateMulticamSequenceCommand,
   DEFAULT_PROJECT_ANNOTATION_COLOR,
+  DeleteGroupCommand,
   DeleteClipsCommand,
   DeleteMediaFolderCommand,
   ImportEDLCommand,
@@ -34,6 +35,8 @@ import {
   dirname,
   getClipSpeed,
   getTimelineDuration,
+  findCompleteClipGroup,
+  normalizeClipGroups,
   normalizeExportRanges,
   applyTimelineVersionDiffSelection,
   instantiateProjectTemplate,
@@ -1312,8 +1315,16 @@ export function EditorShell() {
   );
 
   const deleteSelected = useCallback(() => {
-    const ids = useEditorStore.getState().selectedClipIds;
+    const state = useEditorStore.getState();
+    const ids = state.selectedClipIds;
     if (ids.length === 0) {
+      return;
+    }
+    const groups = normalizeClipGroups(state.project.clipGroups, state.project.timeline.tracks.flatMap((track) => track.clips.map((clip) => clip.id)));
+    const group = findCompleteClipGroup(groups, ids);
+    if (group) {
+      commandManager.execute(new DeleteGroupCommand(projectAccessor, group.id));
+      clearSelectedClipIds();
       return;
     }
     commandManager.execute(new DeleteClipsCommand(timelineAccessor, ids));

@@ -774,6 +774,23 @@ const zh = {
     removeAnnotationFailed: '无法删除批注。',
     splitSelectedClip: '分割选中片段',
     deleteSelectedClip: '删除选中片段',
+    clipGroupCreate: '创建分组',
+    clipGroupUngroup: '解散分组',
+    clipGroupDelete: '删除分组',
+    clipGroupColor: '分组颜色',
+    clipGroupDefaultName: (index: number) => `分组 ${index}`,
+    clipGroupCreateUnavailableTitle: '无法创建分组',
+    clipGroupCreateUnavailableMessage: '请先选择至少两个片段。',
+    clipGroupUngroupUnavailableTitle: '无法解散分组',
+    clipGroupUngroupUnavailableMessage: '当前选择不属于同一个完整分组。',
+    clipGroupColorNames: {
+      blue: '蓝色',
+      green: '绿色',
+      purple: '紫色',
+      amber: '琥珀色',
+      rose: '玫红色',
+      cyan: '青色'
+    },
     zoom: '时间线缩放',
     inPoint: '入点',
     outPoint: '出点',
@@ -953,6 +970,11 @@ const zh = {
       applyScale: '缩放',
       applyEasing: '应用缓动',
       delete: '删除'
+    },
+    clipGroup: {
+      title: '剪辑分组',
+      summary: (count: number) => `组：${count} 个 clip`,
+      audio: '组音频'
     },
     locked: '已锁定',
     timecodeSummary: (start: string, duration: string) => `开始 ${start} / 时长 ${duration}`,
@@ -2748,6 +2770,23 @@ const enOverrides = {
     removeAnnotationFailed: 'Unable to delete annotation.',
     splitSelectedClip: 'Split Selected Clip',
     deleteSelectedClip: 'Delete Selected Clip',
+    clipGroupCreate: 'Create Group',
+    clipGroupUngroup: 'Ungroup',
+    clipGroupDelete: 'Delete Group',
+    clipGroupColor: 'Group Color',
+    clipGroupDefaultName: (index: number) => `Group ${index}`,
+    clipGroupCreateUnavailableTitle: 'Cannot create group',
+    clipGroupCreateUnavailableMessage: 'Select at least two clips first.',
+    clipGroupUngroupUnavailableTitle: 'Cannot ungroup',
+    clipGroupUngroupUnavailableMessage: 'The current selection is not one complete group.',
+    clipGroupColorNames: {
+      blue: 'Blue',
+      green: 'Green',
+      purple: 'Purple',
+      amber: 'Amber',
+      rose: 'Rose',
+      cyan: 'Cyan'
+    },
     zoom: 'Timeline Zoom',
     inPoint: 'In Point',
     outPoint: 'Out Point',
@@ -2848,6 +2887,11 @@ const enOverrides = {
       applyScale: 'Scale',
       applyEasing: 'Apply Easing',
       delete: 'Delete'
+    },
+    clipGroup: {
+      title: 'Clip Group',
+      summary: (count: number) => `Group: ${count} clips`,
+      audio: 'Group Audio'
     },
     sections: {
       clip: 'Clip',

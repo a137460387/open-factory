@@ -1,8 +1,10 @@
 import {
   areClipsAdjacent,
+  CLIP_GROUP_COLOR_HEX,
   filterTimelineVirtualClips,
   secondsToTimecode,
   type Clip,
+  type ClipGroup,
   type KeyframeProperty,
   type MediaAsset,
   snapTime,
@@ -149,7 +151,8 @@ export function TrackRow({
   virtualWindow,
   rollingTrimActive,
   slipEditActive,
-  slideEditActive
+  slideEditActive,
+  clipGroupByClipId
 }: {
   track: Track;
   zoom: number;
@@ -159,7 +162,7 @@ export function TrackRow({
   selectedKeyframes: SelectedKeyframeRef[];
   drag?: DragState;
   media: MediaAsset[];
-  onSelect(clipId: string, additive: boolean): void;
+  onSelect(clipId: string, additive: boolean, forceSingle?: boolean): void;
   onKeyframeSelect(keyframe: SelectedKeyframeRef, additive: boolean): void;
   onDragStart(drag: DragState): void;
   onTrackPointerDown(event: React.PointerEvent<HTMLDivElement>): void;
@@ -173,6 +176,7 @@ export function TrackRow({
   rollingTrimActive: boolean;
   slipEditActive: boolean;
   slideEditActive: boolean;
+  clipGroupByClipId: Map<string, ClipGroup>;
 }) {
   const mediaById = new Map(media.map((asset) => [asset.id, asset]));
   const locked = Boolean(track.locked);
@@ -263,6 +267,7 @@ export function TrackRow({
               rollingTrimActive={rollingTrimActive}
               slipEditActive={slipEditActive}
               slideEditActive={slideEditActive}
+              clipGroup={clipGroupByClipId.get(clip.id)}
             />
           );
         })}
@@ -345,7 +350,8 @@ function ClipBlock({
   onClipDoubleClick,
   rollingTrimActive,
   slipEditActive,
-  slideEditActive
+  slideEditActive,
+  clipGroup
 }: {
   clip: Clip;
   asset?: MediaAsset;
@@ -355,7 +361,7 @@ function ClipBlock({
   selectedKeyframe?: SelectedKeyframeRef;
   selectedKeyframes: SelectedKeyframeRef[];
   drag?: DragState;
-  onSelect(clipId: string, additive: boolean): void;
+  onSelect(clipId: string, additive: boolean, forceSingle?: boolean): void;
   onKeyframeSelect(keyframe: SelectedKeyframeRef, additive: boolean): void;
   onDragStart(drag: DragState): void;
   selectedClipIds: string[];
@@ -371,6 +377,7 @@ function ClipBlock({
   rollingTrimActive: boolean;
   slipEditActive: boolean;
   slideEditActive: boolean;
+  clipGroup?: ClipGroup;
 }) {
   const waveformColor = getTrackWaveformColor(trackType);
   return (
@@ -391,9 +398,17 @@ function ClipBlock({
           return;
         }
         event.currentTarget.setPointerCapture(event.pointerId);
-        onSelect(clip.id, event.shiftKey);
+        onSelect(clip.id, event.shiftKey, event.altKey);
         const advancedMode = slideEditActive ? 'slide' : slipEditActive ? 'slip' : undefined;
-        const clipIds = advancedMode ? [clip.id] : selectedClipIds.includes(clip.id) ? selectedClipIds : [clip.id];
+        const clipIds = advancedMode
+          ? [clip.id]
+          : event.altKey
+            ? selectedClipIds.includes(clip.id)
+              ? selectedClipIds
+              : [clip.id]
+            : selectedClipIds.includes(clip.id)
+              ? selectedClipIds
+              : clipGroup?.clipIds ?? [clip.id];
         onDragStart({
           mode: advancedMode ?? 'move',
           clip,
@@ -435,7 +450,18 @@ function ClipBlock({
       data-testid={`timeline-clip-${clip.id}`}
       data-clip-type={clip.type}
       data-clip-id={clip.id}
+      data-clip-group-id={clipGroup?.id}
     >
+      {clipGroup ? (
+        <>
+          <span className="absolute left-0 right-0 top-0 z-20 h-1.5" style={{ backgroundColor: CLIP_GROUP_COLOR_HEX[clipGroup.color] }} data-testid={`timeline-clip-group-strip-${clip.id}`} />
+          {width >= 86 ? (
+            <span className="absolute left-1 top-1.5 z-20 max-w-[70%] truncate rounded-sm bg-white/80 px-1 text-[9px] font-semibold text-slate-700" data-testid={`timeline-clip-group-label-${clip.id}`}>
+              {clipGroup.name}
+            </span>
+          ) : null}
+        </>
+      ) : null}
       {clip.type === 'video' && asset ? <VideoThumbnailStrip clip={clip} asset={asset} pixelWidth={clipPixelWidth} /> : null}
       {clip.type === 'video' && asset?.hasAudio ? (
         <WaveformStrip clipId={clip.id} asset={asset} pixelWidth={clipPixelWidth} clipDuration={clip.duration} muted={trackMuted || Boolean(clip.muted)} color={waveformColor} compact />
@@ -452,7 +478,7 @@ function ClipBlock({
           onPointerDown={(event) => {
             event.stopPropagation();
             event.currentTarget.setPointerCapture(event.pointerId);
-            onSelect(clip.id, event.shiftKey);
+            onSelect(clip.id, event.shiftKey, event.altKey);
             onDragStart({
               mode: 'trim-left',
               clip,
@@ -539,7 +565,7 @@ function ClipBlock({
           onPointerDown={(event) => {
             event.stopPropagation();
             event.currentTarget.setPointerCapture(event.pointerId);
-            onSelect(clip.id, event.shiftKey);
+            onSelect(clip.id, event.shiftKey, event.altKey);
             onDragStart({
               mode: rollingTrimActive && nextAdjacentClip ? 'rolling-trim' : 'trim-right',
               clip,

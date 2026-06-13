@@ -46,6 +46,8 @@ import {
   normalizeVideoRestoration,
   replaceProjectActiveTimeline,
   type Clip,
+  type ClipGroup,
+  type ClipGroupColor,
   type MediaAsset,
   type ClipAudioDenoise,
   type ClipBorder,
@@ -75,6 +77,12 @@ import {
   type TransitionType,
   type Transform
 } from '../model';
+import {
+  type ClipGroupBatchPatch,
+  createClipGroup,
+  normalizeClipGroups,
+  removeClipIdsFromGroups
+} from '../clip-groups';
 import { calculatePiPTransform, createFullFrameTransform, type PiPLayoutPosition } from '../pip-layout';
 import { calculateSubtitleShiftUpdates, type SubtitleTimingUpdate } from '../subtitles/retiming';
 import {
@@ -397,6 +405,40 @@ function timelineHasOverlaps(timeline: Timeline): boolean {
   return timeline.tracks.some((track) =>
     track.clips.some((clip, index) => track.clips.slice(index + 1).some((other) => clip.start < other.start + other.duration && other.start < clip.start + clip.duration))
   );
+}
+
+function getProjectActiveClipIds(project: Project): string[] {
+  return project.timeline.tracks.flatMap((track) => track.clips.map((clip) => clip.id));
+}
+
+function removeClipsFromTimeline(timeline: Timeline, ids: Set<string>): Timeline {
+  return {
+    ...timeline,
+    tracks: timeline.tracks.map((track) => ({ ...track, clips: track.clips.filter((clip) => !ids.has(clip.id)) })),
+    transitions: (timeline.transitions ?? []).filter((transition) => !ids.has(transition.fromClipId) && !ids.has(transition.toClipId))
+  };
+}
+
+function applyClipGroupBatchPatch(clip: Clip, patch: ClipGroupBatchPatch): Clip {
+  let next = {
+    ...clip,
+    colorCorrection: patch.colorCorrection ? normalizeColorCorrection({ ...clip.colorCorrection, ...patch.colorCorrection }) : normalizeColorCorrection(clip.colorCorrection)
+  } as Clip;
+  if (typeof patch.volume === 'number' && 'volume' in next) {
+    next = { ...next, volume: normalizeTrackVolume(patch.volume) } as Clip;
+  }
+  if (typeof patch.speed === 'number' && (next.type === 'video' || next.type === 'audio' || next.type === 'nested-sequence')) {
+    const speed = getClipSpeed({ speed: patch.speed });
+    const duration = getClipDisplayDuration(getClipSourceVisibleDuration(clip), speed, next.keyframes);
+    next = {
+      ...next,
+      speed,
+      duration,
+      fadeInDuration: normalizeAudioFadeDuration(next.fadeInDuration, duration),
+      fadeOutDuration: normalizeAudioFadeDuration(next.fadeOutDuration, duration)
+    } as Clip;
+  }
+  return next;
 }
 
 export interface LocalTimeRange {
@@ -1000,6 +1042,172 @@ export class UpdateProjectExportRangesCommand implements Command {
         exportRanges: this.before
       })
     );
+  }
+}
+
+export interface CreateClipGroupOptions {
+  id?: string;
+  name?: string;
+  color?: ClipGroupColor;
+}
+
+export class CreateClipGroupCommand implements Command {
+  readonly description = 'Create clip group';
+  private before?: Project;
+  group?: ClipGroup;
+
+  constructor(private readonly accessor: ProjectAccessor, private readonly clipIds: string[], private readonly options: CreateClipGroupOptions = {}) {}
+
+  execute(): void {
+    const project = this.accessor.getProject();
+    this.before ??= project;
+    const activeClipIds = getProjectActiveClipIds(project);
+    const uniqueClipIds = Array.from(new Set(this.clipIds)).filter((clipId) => activeClipIds.includes(clipId));
+    this.group ??= createClipGroup({ ...this.options, clipIds: uniqueClipIds }, activeClipIds);
+    const withoutGroupedClips = removeClipIdsFromGroups(project.clipGroups, this.group.clipIds);
+    this.accessor.setProject(
+      touchProject({
+        ...project,
+        clipGroups: normalizeClipGroups([...withoutGroupedClips, this.group], activeClipIds)
+      })
+    );
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class UpdateClipGroupCommand implements Command {
+  readonly description = 'Update clip group';
+  private before?: Project;
+
+  constructor(private readonly accessor: ProjectAccessor, private readonly groupId: string, private readonly patch: Partial<Pick<ClipGroup, 'name' | 'color'>>) {}
+
+  execute(): void {
+    const project = this.accessor.getProject();
+    this.before ??= project;
+    const activeClipIds = getProjectActiveClipIds(project);
+    const groups = normalizeClipGroups(project.clipGroups, activeClipIds);
+    if (!groups.some((group) => group.id === this.groupId)) {
+      throw new Error(`Clip group ${this.groupId} not found`);
+    }
+    this.accessor.setProject(
+      touchProject({
+        ...project,
+        clipGroups: normalizeClipGroups(groups.map((group) => (group.id === this.groupId ? { ...group, ...this.patch } : group)), activeClipIds)
+      })
+    );
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class UngroupCommand implements Command {
+  readonly description = 'Ungroup clips';
+  private before?: Project;
+
+  constructor(private readonly accessor: ProjectAccessor, private readonly groupId: string) {}
+
+  execute(): void {
+    const project = this.accessor.getProject();
+    this.before ??= project;
+    const activeClipIds = getProjectActiveClipIds(project);
+    const groups = normalizeClipGroups(project.clipGroups, activeClipIds);
+    if (!groups.some((group) => group.id === this.groupId)) {
+      throw new Error(`Clip group ${this.groupId} not found`);
+    }
+    this.accessor.setProject(
+      touchProject({
+        ...project,
+        clipGroups: groups.filter((group) => group.id !== this.groupId)
+      })
+    );
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class DeleteGroupCommand implements Command {
+  readonly description = 'Delete clip group';
+  private before?: Project;
+
+  constructor(private readonly accessor: ProjectAccessor, private readonly groupId: string) {}
+
+  execute(): void {
+    const project = this.accessor.getProject();
+    this.before ??= project;
+    const activeClipIds = getProjectActiveClipIds(project);
+    const groups = normalizeClipGroups(project.clipGroups, activeClipIds);
+    const group = groups.find((item) => item.id === this.groupId);
+    if (!group) {
+      throw new Error(`Clip group ${this.groupId} not found`);
+    }
+    const ids = new Set(group.clipIds);
+    const timeline = removeClipsFromTimeline(project.timeline, ids);
+    this.accessor.setProject(
+      touchProject({
+        ...replaceProjectActiveTimeline(project, timeline),
+        clipGroups: groups.filter((item) => item.id !== group.id)
+      })
+    );
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class BatchUpdateClipGroupClipsCommand implements Command {
+  readonly description = 'Batch update clip group clips';
+  private before?: Project;
+
+  constructor(private readonly accessor: ProjectAccessor, private readonly groupId: string, private readonly patch: ClipGroupBatchPatch) {}
+
+  execute(): void {
+    const project = this.accessor.getProject();
+    this.before ??= project;
+    const activeClipIds = getProjectActiveClipIds(project);
+    const groups = normalizeClipGroups(project.clipGroups, activeClipIds);
+    const group = groups.find((item) => item.id === this.groupId);
+    if (!group) {
+      throw new Error(`Clip group ${this.groupId} not found`);
+    }
+    const ids = new Set(group.clipIds);
+    const nextTimeline: Timeline = {
+      ...project.timeline,
+      tracks: project.timeline.tracks.map((track) => ({
+        ...track,
+        clips: track.clips.map((clip) => (ids.has(clip.id) ? applyClipGroupBatchPatch(clip, this.patch) : clip))
+      }))
+    };
+    if (timelineHasOverlaps(nextTimeline)) {
+      throw new Error('Clip overlaps another clip on this track');
+    }
+    this.accessor.setProject(
+      touchProject({
+        ...replaceProjectActiveTimeline(project, nextTimeline),
+        clipGroups: groups
+      })
+    );
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
   }
 }
 

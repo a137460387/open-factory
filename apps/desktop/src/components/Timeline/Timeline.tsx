@@ -6,7 +6,11 @@ import {
   AddTrackCommand,
   AddTransitionCommand,
   CloseGapCommand,
+  CLIP_GROUP_COLORS,
+  CLIP_GROUP_COLOR_HEX,
   DEFAULT_PROJECT_ANNOTATION_COLOR,
+  CreateClipGroupCommand,
+  DeleteGroupCommand,
   DeleteClipsCommand,
   PackNestedSequenceCommand,
   PROJECT_ANNOTATION_COLORS,
@@ -15,6 +19,8 @@ import {
   RemoveTimelineMarkerCommand,
   RemoveTransitionCommand,
   UpdateProjectAnnotationCommand,
+  UngroupCommand,
+  UpdateClipGroupCommand,
   buildSlideClipEdit,
   buildSlipClip,
   calculateSpeedCurveDisplayDuration,
@@ -48,13 +54,18 @@ import {
   getClipSourceVisibleDuration,
   getClipSpeed,
   getReplaceMediaCompatibilityWarnings,
+  findClipGroupForClip,
+  findCompleteClipGroup,
   isNestedSequenceDepthExceeded,
   instantiateTitleTemplate,
   moveClip,
+  normalizeClipGroups,
   normalizeExportRanges,
   round,
   snapTime,
   type Clip,
+  type ClipGroup,
+  type ClipGroupColor,
   type BeatMarker,
   type KeyframeProperty,
   type MediaAsset,
@@ -69,7 +80,7 @@ import {
   type ReplaceMediaCompatibilityWarning,
   type ReplaceMediaDurationMode
 } from '@open-factory/editor-core';
-import { Captions, Flag, MessageSquarePlus, MessageSquareText, Music2, Plus, Scissors, Trash2, Type } from 'lucide-react';
+import { Captions, Flag, Group, MessageSquarePlus, MessageSquareText, Music2, Plus, Scissors, Trash2, Type, Ungroup } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createTextClip } from '../../lib/clipFactory';
 import { probeMediaPath } from '../../lib/media';
@@ -149,6 +160,17 @@ export function Timeline() {
     return [{ id: 'current-in-out', start: Math.min(inPoint, outPoint), end: Math.max(inPoint, outPoint) }];
   }, [inPoint, outPoint, project.exportRanges, projectDuration]);
   const allClips = useMemo(() => project.timeline.tracks.flatMap((track) => track.clips), [project.timeline]);
+  const clipGroups = useMemo(() => normalizeClipGroups(project.clipGroups, allClips.map((clip) => clip.id)), [allClips, project.clipGroups]);
+  const clipGroupByClipId = useMemo(() => {
+    const map = new Map<string, ClipGroup>();
+    for (const group of clipGroups) {
+      for (const clipId of group.clipIds) {
+        map.set(clipId, group);
+      }
+    }
+    return map;
+  }, [clipGroups]);
+  const selectedGroup = useMemo(() => findCompleteClipGroup(clipGroups, selectedClipIds), [clipGroups, selectedClipIds]);
   const virtualWindow = useMemo(
     () =>
       getTimelineVirtualRenderWindow({
@@ -380,8 +402,63 @@ export function Timeline() {
     }
   }
 
+  function createGroupFromSelection(): void {
+    if (selectedClipIds.length < 2) {
+      showToast({ kind: 'warning', title: zhCN.timeline.clipGroupCreateUnavailableTitle, message: zhCN.timeline.clipGroupCreateUnavailableMessage });
+      return;
+    }
+    try {
+      const command = new CreateClipGroupCommand(projectAccessor, selectedClipIds, {
+        name: zhCN.timeline.clipGroupDefaultName(clipGroups.length + 1),
+        color: CLIP_GROUP_COLORS[clipGroups.length % CLIP_GROUP_COLORS.length]
+      });
+      commandManager.execute(command);
+      setSelectedClipIds(command.group?.clipIds ?? selectedClipIds);
+      setClipMenu(undefined);
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
+    }
+  }
+
+  function ungroupSelected(group = selectedGroup): void {
+    if (!group) {
+      showToast({ kind: 'warning', title: zhCN.timeline.clipGroupUngroupUnavailableTitle, message: zhCN.timeline.clipGroupUngroupUnavailableMessage });
+      return;
+    }
+    try {
+      commandManager.execute(new UngroupCommand(projectAccessor, group.id));
+      setSelectedClipIds(group.clipIds);
+      setClipMenu(undefined);
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
+    }
+  }
+
+  function deleteGroup(group: ClipGroup): void {
+    try {
+      commandManager.execute(new DeleteGroupCommand(projectAccessor, group.id));
+      clearSelectedClipIds();
+      setClipMenu(undefined);
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
+    }
+  }
+
+  function updateGroupColor(group: ClipGroup, color: ClipGroupColor): void {
+    try {
+      commandManager.execute(new UpdateClipGroupCommand(projectAccessor, group.id, { color }));
+      setClipMenu(undefined);
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
+    }
+  }
+
   function deleteSelected(): void {
     if (selectedClipIds.length === 0) {
+      return;
+    }
+    if (selectedGroup) {
+      deleteGroup(selectedGroup);
       return;
     }
     commandManager.execute(new DeleteClipsCommand(timelineAccessor, selectedClipIds));
@@ -609,7 +686,25 @@ export function Timeline() {
     setDrag({ ...nextDrag, clipIds, startByClipId, previewStartsByClipId: startByClipId });
   }
 
-  function selectClip(clipId: string, additive: boolean): void {
+  function selectClip(clipId: string, additive: boolean, forceSingle = false): void {
+    const group = forceSingle ? undefined : clipGroupByClipId.get(clipId);
+    if (group && additive) {
+      const selected = new Set(selectedClipIds);
+      const groupFullySelected = group.clipIds.every((groupClipId) => selected.has(groupClipId));
+      for (const groupClipId of group.clipIds) {
+        if (groupFullySelected) {
+          selected.delete(groupClipId);
+        } else {
+          selected.add(groupClipId);
+        }
+      }
+      setSelectedClipIds(Array.from(selected));
+      return;
+    }
+    if (group && !additive) {
+      setSelectedClipIds(group.clipIds);
+      return;
+    }
     if (additive) {
       toggleSelectedClipId(clipId);
       return;
@@ -767,10 +862,14 @@ export function Timeline() {
   function openClipMenu(request: ClipMenuRequest): void {
     setTransitionMenu(undefined);
     setGapMenu(undefined);
+    if (!selectedClipIds.includes(request.clipId)) {
+      const group = clipGroupByClipId.get(request.clipId);
+      setSelectedClipIds(group?.clipIds ?? [request.clipId]);
+    }
     setClipMenu({
       ...request,
-      x: Math.min(request.x, Math.max(0, window.innerWidth - 240)),
-      y: Math.min(request.y, Math.max(0, window.innerHeight - 170))
+      x: Math.min(request.x, Math.max(0, window.innerWidth - 260)),
+      y: Math.min(request.y, Math.max(0, window.innerHeight - 360))
     });
   }
 
@@ -929,6 +1028,15 @@ export function Timeline() {
   }
 
   function onKeyDown(event: React.KeyboardEvent<HTMLElement>): void {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'g') {
+      event.preventDefault();
+      if (event.shiftKey) {
+        ungroupSelected();
+      } else {
+        createGroupFromSelection();
+      }
+      return;
+    }
     if (event.shiftKey && event.key === 'Home') {
       event.preventDefault();
       const scroll = scrollRef.current;
@@ -1170,6 +1278,24 @@ export function Timeline() {
         <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.splitSelectedClip} onClick={splitSelected}>
           <Scissors size={16} />
         </button>
+        <button
+          className="rounded-md border border-line p-2 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-40"
+          title={zhCN.timeline.clipGroupCreate}
+          disabled={selectedClipIds.length < 2}
+          data-testid="timeline-create-group-button"
+          onClick={createGroupFromSelection}
+        >
+          <Group size={16} />
+        </button>
+        <button
+          className="rounded-md border border-line p-2 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-40"
+          title={zhCN.timeline.clipGroupUngroup}
+          disabled={!selectedGroup}
+          data-testid="timeline-ungroup-button"
+          onClick={() => ungroupSelected()}
+        >
+          <Ungroup size={16} />
+        </button>
         <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.deleteSelectedClip} onClick={deleteSelected}>
           <Trash2 size={16} />
         </button>
@@ -1243,6 +1369,7 @@ export function Timeline() {
                 rollingTrimActive={rollingTrimActive}
                 slipEditActive={slipEditActive}
                 slideEditActive={slideEditActive}
+                clipGroupByClipId={clipGroupByClipId}
               />
             ))}
             {annotationMode ? (
@@ -1296,6 +1423,8 @@ export function Timeline() {
                 menu={clipMenu}
                 clip={allClips.find((clip) => clip.id === clipMenu.clipId)}
                 asset={allClips.find((clip) => clip.id === clipMenu.clipId) ? getClipMediaAsset(allClips.find((clip) => clip.id === clipMenu.clipId)!) : undefined}
+                group={clipGroupByClipId.get(clipMenu.clipId)}
+                canCreateGroup={selectedClipIds.length >= 2}
                 whisperReady={whisperAvailability.ready}
                 whisperUnavailableMessage={whisperAvailability.error}
                 onSilence={() => openSilenceDetection(clipMenu.clipId)}
@@ -1303,6 +1432,10 @@ export function Timeline() {
                 onGenerateSubtitles={() => void generateSubtitles(clipMenu.clipId)}
                 onReplaceMedia={() => void openReplaceMedia(clipMenu.clipId)}
                 onPack={() => packClipMenuSelection(clipMenu.clipId)}
+                onCreateGroup={createGroupFromSelection}
+                onUngroup={(group) => ungroupSelected(group)}
+                onDeleteGroup={deleteGroup}
+                onGroupColor={updateGroupColor}
                 onClose={() => setClipMenu(undefined)}
               />
             ) : null}
@@ -1735,6 +1868,8 @@ function ClipActionMenu({
   menu,
   clip,
   asset,
+  group,
+  canCreateGroup,
   whisperReady,
   whisperUnavailableMessage,
   onSilence,
@@ -1742,11 +1877,17 @@ function ClipActionMenu({
   onGenerateSubtitles,
   onReplaceMedia,
   onPack,
+  onCreateGroup,
+  onUngroup,
+  onDeleteGroup,
+  onGroupColor,
   onClose
 }: {
   menu: ClipMenuState;
   clip?: Clip;
   asset?: MediaAsset;
+  group?: ClipGroup;
+  canCreateGroup: boolean;
   whisperReady: boolean;
   whisperUnavailableMessage?: string;
   onSilence(): void;
@@ -1754,6 +1895,10 @@ function ClipActionMenu({
   onGenerateSubtitles(): void;
   onReplaceMedia(): void;
   onPack(): void;
+  onCreateGroup(): void;
+  onUngroup(group: ClipGroup): void;
+  onDeleteGroup(group: ClipGroup): void;
+  onGroupColor(group: ClipGroup, color: ClipGroupColor): void;
   onClose(): void;
 }) {
   const canDetectSilence = Boolean(clip && (clip.type === 'audio' || (clip.type === 'video' && asset?.hasAudio)));
@@ -1813,6 +1958,52 @@ function ClipActionMenu({
       >
         {zhCN.timeline.packNestedSequence}
       </button>
+      <div className="my-1 border-t border-line" />
+      <button
+        className="block w-full rounded px-2 py-2 text-left hover:bg-panel disabled:opacity-40"
+        type="button"
+        disabled={!canCreateGroup}
+        data-testid="clip-action-create-group"
+        onClick={onCreateGroup}
+      >
+        {zhCN.timeline.clipGroupCreate}
+      </button>
+      <button
+        className="block w-full rounded px-2 py-2 text-left hover:bg-panel disabled:opacity-40"
+        type="button"
+        disabled={!group}
+        data-testid="clip-action-ungroup"
+        onClick={() => group && onUngroup(group)}
+      >
+        {zhCN.timeline.clipGroupUngroup}
+      </button>
+      <button
+        className="block w-full rounded px-2 py-2 text-left text-rose-700 hover:bg-rose-50 disabled:opacity-40"
+        type="button"
+        disabled={!group}
+        data-testid="clip-action-delete-group"
+        onClick={() => group && onDeleteGroup(group)}
+      >
+        {zhCN.timeline.clipGroupDelete}
+      </button>
+      {group ? (
+        <div className="px-2 pb-1 pt-2" data-testid="clip-group-color-options">
+          <div className="mb-1 text-[11px] font-semibold text-slate-500">{zhCN.timeline.clipGroupColor}</div>
+          <div className="flex gap-1">
+            {CLIP_GROUP_COLORS.map((color) => (
+              <button
+                key={color}
+                className={`h-5 w-5 rounded-full border ${group.color === color ? 'border-slate-900 ring-2 ring-slate-300' : 'border-white'}`}
+                type="button"
+                title={zhCN.timeline.clipGroupColorNames[color]}
+                style={{ backgroundColor: CLIP_GROUP_COLOR_HEX[color] }}
+                data-testid={`clip-group-color-${color}`}
+                onClick={() => onGroupColor(group, color)}
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
       <button className="mt-1 block w-full rounded px-2 py-1.5 text-left text-slate-500 hover:bg-panel" type="button" onClick={onClose}>
         {zhCN.timeline.close}
       </button>

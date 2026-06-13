@@ -46,6 +46,25 @@ describe('project schema migration', () => {
     expect(migrateProjectFile(file).project.exportRanges).toEqual([]);
   });
 
+  it('serializes and migrates clip groups while old project files default to none', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-a', start: 0, duration: 2 }), makeVideoClip({ id: 'clip-b', start: 3, duration: 2 })];
+    project.sequences = [{ ...project.sequences[0], timeline: project.timeline }];
+    project.clipGroups = [
+      { id: 'group-a', name: '  A Roll  ', clipIds: ['clip-a', 'clip-b'], color: 'green' },
+      { id: 'group-invalid', name: 'Invalid', clipIds: ['clip-a', 'missing'], color: 'rose' }
+    ];
+
+    const file = serializeProject(project);
+    const migrated = migrateProjectFile(file);
+
+    expect(file.project.clipGroups).toEqual([{ id: 'group-a', name: 'A Roll', clipIds: ['clip-a', 'clip-b'], color: 'green' }]);
+    expect(migrated.project.clipGroups).toEqual(file.project.clipGroups);
+
+    delete file.project.clipGroups;
+    expect(migrateProjectFile(file).project.clipGroups).toEqual([]);
+  });
+
   it('serializes and migrates clip borders while old clips default to disabled borders', () => {
     const project = makeProject();
     project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-pip', border: { enabled: true, color: '#ABCDEF', width: 999 } })];

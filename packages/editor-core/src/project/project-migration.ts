@@ -43,6 +43,7 @@ import {
   type Timeline,
   type Transition
 } from '../model';
+import { normalizeClipGroups } from '../clip-groups';
 import { normalizeMediaFolderId, normalizeMediaFolders, normalizeMediaImportedAt } from '../media-folders';
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
 import { cloneEffects } from '../effects';
@@ -56,6 +57,9 @@ const DEFAULT_SETTINGS = { fps: 30, timecodeFormat: 'ndf' as const, width: 1280,
 export function serializeProjectFile(project: Project, projectPath?: string): ProjectFileV2 {
   const warnings: string[] = [];
   const mediaFolders = normalizeMediaFolders(project.mediaFolders);
+  const primaryTimeline = clonePrimaryTimeline(project);
+  const sequences = cloneProjectSequences(project);
+  const clipIds = project.timeline.tracks.flatMap((track) => track.clips.map((clip) => clip.id));
   const media = project.media.map((asset) => {
     const normalizedPath = normalizePath(asset.path);
     const relativePath = projectPath ? makeRelativePath(normalizedPath, projectPath) : asset.relativePath ?? null;
@@ -96,8 +100,9 @@ export function serializeProjectFile(project: Project, projectPath?: string): Pr
       annotations: normalizeProjectAnnotations(project.annotations, getTimelineDuration(project.timeline)),
       beatMarkers: normalizeBeatMarkers(project.beatMarkers, getTimelineDuration(project.timeline)),
       exportRanges: normalizeExportRanges(project.exportRanges, getTimelineDuration(project.timeline)),
-      timeline: clonePrimaryTimeline(project),
-      sequences: cloneProjectSequences(project),
+      clipGroups: normalizeClipGroups(project.clipGroups, clipIds),
+      timeline: primaryTimeline,
+      sequences,
       activeSequenceId: project.activeSequenceId ?? PRIMARY_SEQUENCE_ID
     },
     warnings: warnings.length > 0 ? warnings : undefined
@@ -111,6 +116,8 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
     const primaryTimeline = cloneTimeline(file.project.timeline);
     const sequences = cloneFileSequences(file.project.sequences, primaryTimeline);
     const activeSequenceId = normalizeActiveSequenceId(file.project.activeSequenceId, sequences);
+    const activeTimeline = sequences.find((sequence) => sequence.id === activeSequenceId)?.timeline ?? primaryTimeline;
+    const clipIds = activeTimeline.tracks.flatMap((track) => track.clips.map((clip) => clip.id));
     return {
       project: {
         version: '0.2',
@@ -126,7 +133,8 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         annotations: normalizeProjectAnnotations(file.project.annotations, getTimelineDuration(primaryTimeline)),
         beatMarkers: normalizeBeatMarkers(file.project.beatMarkers, getTimelineDuration(primaryTimeline)),
         exportRanges: normalizeExportRanges(file.project.exportRanges, getTimelineDuration(primaryTimeline)),
-        timeline: sequences.find((sequence) => sequence.id === activeSequenceId)?.timeline ?? primaryTimeline,
+        clipGroups: normalizeClipGroups(file.project.clipGroups, clipIds),
+        timeline: activeTimeline,
         sequences,
         activeSequenceId
       },
@@ -153,6 +161,7 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         annotations: [],
         beatMarkers: [],
         exportRanges: [],
+        clipGroups: [],
         timeline: primaryTimeline,
         sequences,
         activeSequenceId: PRIMARY_SEQUENCE_ID

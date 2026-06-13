@@ -187,6 +187,7 @@ export interface Project {
   annotations: ProjectAnnotation[];
   beatMarkers: BeatMarker[];
   exportRanges: ExportRange[];
+  clipGroups: ClipGroup[];
   timeline: Timeline;
   sequences: Sequence[];
   activeSequenceId: string;
@@ -256,6 +257,15 @@ export interface ExportRange {
   label: string;
   start: number;
   end: number;
+}
+
+export type ClipGroupColor = 'blue' | 'green' | 'purple' | 'amber' | 'rose' | 'cyan';
+
+export interface ClipGroup {
+  id: string;
+  name: string;
+  clipIds: string[];
+  color: ClipGroupColor;
 }
 
 export interface Timeline {
@@ -802,6 +812,7 @@ export function createProject(name = 'Untitled Project'): Project {
     annotations: [],
     beatMarkers: [],
     exportRanges: [],
+    clipGroups: [],
     timeline,
     sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
     activeSequenceId: PRIMARY_SEQUENCE_ID

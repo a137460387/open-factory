@@ -12,6 +12,7 @@ import {
   AddMediaFolderCommand,
   ApplyTextAnimationCommand,
   BatchKeyframeEditCommand,
+  BatchUpdateClipGroupClipsCommand,
   AddTransitionCommand,
   BatchShiftSubtitleCommand,
   BatchUpdateKeyframeCommand,
@@ -19,6 +20,8 @@ import {
   type Command,
   CommandManager,
   CloseGapCommand,
+  CreateClipGroupCommand,
+  DeleteGroupCommand,
   DeleteClipCommand,
   DeleteClipsCommand,
   ImportEDLCommand,
@@ -48,6 +51,8 @@ import {
   SnapToBeatsCommand,
   TrimClipCommand,
   UpdateKeyframeCommand,
+  UngroupCommand,
+  UpdateClipGroupCommand,
   UpdateClipCommand,
   UpdateEffectCommand,
   UpdateProjectBeatMarkersCommand,
@@ -59,7 +64,9 @@ import {
   UpdateProjectSettingsCommand,
   UpdateTrackCommand,
   calculateReplaceMediaPatch,
+  calculateClipGroupMoveStarts,
   createTrack,
+  findCompleteClipGroup,
   getReplaceMediaCompatibilityWarnings
 } from '../src';
 import { makeAccessor, makeAdjustmentClip, makeAudioClip, makeProject, makeSubtitleClip, makeTextClip, makeTimeline, makeVideoClip } from './test-utils';
@@ -478,6 +485,101 @@ describe('timeline commands', () => {
     expect(project.exportRanges).toEqual([]);
     manager.redo();
     expect(project.exportRanges.map((range) => range.id)).toEqual(['range-a', 'range-late']);
+  });
+
+  it('creates and ungroups clip groups with undo and redo', () => {
+    let project = makeProject();
+    project.timeline = makeTimeline([makeVideoClip({ id: 'clip-a', start: 0, duration: 2 }), makeVideoClip({ id: 'clip-b', start: 3, duration: 2 })]);
+    project.sequences = [{ ...project.sequences[0], timeline: project.timeline }];
+    const accessor = {
+      getProject: () => project,
+      setProject: (next: typeof project) => {
+        project = next;
+      }
+    };
+    const manager = new CommandManager();
+
+    manager.execute(new CreateClipGroupCommand(accessor, ['clip-b', 'clip-a'], { id: 'group-a', name: '  A Roll  ', color: 'green' }));
+    expect(project.clipGroups).toEqual([{ id: 'group-a', name: 'A Roll', clipIds: ['clip-b', 'clip-a'], color: 'green' }]);
+    expect(findCompleteClipGroup(project.clipGroups, ['clip-a', 'clip-b'])?.id).toBe('group-a');
+
+    manager.execute(new UngroupCommand(accessor, 'group-a'));
+    expect(project.clipGroups).toEqual([]);
+
+    manager.undo();
+    expect(project.clipGroups[0]?.id).toBe('group-a');
+    manager.undo();
+    expect(project.clipGroups).toEqual([]);
+    manager.redo();
+    expect(project.clipGroups[0]?.clipIds).toEqual(['clip-b', 'clip-a']);
+  });
+
+  it('calculates clip group move starts with a shared clamped delta', () => {
+    const starts = calculateClipGroupMoveStarts(
+      [makeVideoClip({ id: 'clip-a', start: 2 }), makeVideoClip({ id: 'clip-b', start: 5 })],
+      ['clip-a', 'clip-b'],
+      'clip-b',
+      6.5
+    );
+    expect(starts).toEqual({ 'clip-a': 3.5, 'clip-b': 6.5 });
+
+    const clamped = calculateClipGroupMoveStarts(
+      [makeVideoClip({ id: 'clip-a', start: 2 }), makeVideoClip({ id: 'clip-b', start: 5 })],
+      ['clip-a', 'clip-b'],
+      'clip-b',
+      -10
+    );
+    expect(clamped).toEqual({ 'clip-a': 0, 'clip-b': 3 });
+  });
+
+  it('batch updates grouped clip volume, speed, and color correction with undo', () => {
+    let project = makeProject();
+    project.timeline = makeTimeline([makeVideoClip({ id: 'clip-a', start: 0, duration: 2 }), makeVideoClip({ id: 'clip-b', start: 3, duration: 2 })]);
+    project.sequences = [{ ...project.sequences[0], timeline: project.timeline }];
+    project.clipGroups = [{ id: 'group-a', name: 'A Roll', clipIds: ['clip-a', 'clip-b'], color: 'blue' }];
+    const accessor = {
+      getProject: () => project,
+      setProject: (next: typeof project) => {
+        project = next;
+      }
+    };
+    const manager = new CommandManager();
+
+    manager.execute(new BatchUpdateClipGroupClipsCommand(accessor, 'group-a', { volume: 0.4, speed: 2, colorCorrection: { brightness: 0.25 } }));
+
+    const clips = project.timeline.tracks[0].clips;
+    expect(clips.map((clip) => ({ id: clip.id, volume: 'volume' in clip ? clip.volume : undefined, speed: clip.speed, duration: clip.duration, brightness: clip.colorCorrection.brightness }))).toEqual([
+      { id: 'clip-a', volume: 0.4, speed: 2, duration: 1, brightness: 0.25 },
+      { id: 'clip-b', volume: 0.4, speed: 2, duration: 1, brightness: 0.25 }
+    ]);
+
+    manager.undo();
+    expect(project.timeline.tracks[0].clips.map((clip) => ({ id: clip.id, volume: 'volume' in clip ? clip.volume : undefined, speed: clip.speed, duration: clip.duration, brightness: clip.colorCorrection.brightness }))).toEqual([
+      { id: 'clip-a', volume: 1, speed: 1, duration: 2, brightness: 0 },
+      { id: 'clip-b', volume: 1, speed: 1, duration: 2, brightness: 0 }
+    ]);
+  });
+
+  it('deletes clip groups as one undoable project command', () => {
+    let project = makeProject();
+    project.timeline = makeTimeline([makeVideoClip({ id: 'clip-a', start: 0, duration: 2 }), makeVideoClip({ id: 'clip-b', start: 3, duration: 2 })]);
+    project.sequences = [{ ...project.sequences[0], timeline: project.timeline }];
+    project.clipGroups = [{ id: 'group-a', name: 'A Roll', clipIds: ['clip-a', 'clip-b'], color: 'blue' }];
+    const accessor = {
+      getProject: () => project,
+      setProject: (next: typeof project) => {
+        project = next;
+      }
+    };
+    const manager = new CommandManager();
+
+    manager.execute(new DeleteGroupCommand(accessor, 'group-a'));
+    expect(project.clipGroups).toEqual([]);
+    expect(project.timeline.tracks[0].clips).toEqual([]);
+
+    manager.undo();
+    expect(project.clipGroups[0]?.id).toBe('group-a');
+    expect(project.timeline.tracks[0].clips.map((clip) => clip.id)).toEqual(['clip-a', 'clip-b']);
   });
 
   it('packs selected clips into a nested sequence with undo and redo', () => {
