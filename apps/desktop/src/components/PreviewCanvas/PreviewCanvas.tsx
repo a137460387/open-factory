@@ -1,8 +1,7 @@
-import { BarChart3, Blend, Columns2, GitCompareArrows, MousePointer2, Pause, Play, Rows2 } from 'lucide-react';
+import { BarChart3, Blend, Columns2, GitCompareArrows, MousePointer2, Pause, Pipette, Play, Rows2 } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from 'react';
 import {
   CutMulticamClipCommand,
-  MAX_CHROMA_KEY_COLORS,
   UpdateClipCommand,
   UpdateMaskCommand,
   buildClipTransformBox,
@@ -18,7 +17,6 @@ import {
   isPathMaskClosed,
   isNestedSequenceDepthExceeded,
   moveTransformByCanvasDelta,
-  normalizeChromaKey,
   normalizeClipPanoramaView,
   normalizeClipProjection,
   normalizeTransform,
@@ -42,6 +40,14 @@ import {
   type Transform,
   type Timeline
 } from '@open-factory/editor-core';
+import {
+  buildChromaKeySamplePatch,
+  calculatePreviewPixelCoordinates,
+  getWheelPreviewZoom,
+  rgbToHex,
+  rgbToHsl,
+  type PreviewPixelCoordinates
+} from '../../lib/preview/frame-inspector';
 import { ColorScopesPanel } from '../ColorScopes/ColorScopesPanel';
 import { zhCN } from '../../i18n/strings';
 import {
@@ -72,9 +78,11 @@ export function PreviewCanvas({ safeFrameGuides = false }: PreviewCanvasProps) {
   const t = zhCN.preview;
   const theme = useTheme();
   const compareFrameRef = useRef<HTMLDivElement | null>(null);
+  const previewSurfaceRef = useRef<HTMLDivElement | null>(null);
   const transformDragRef = useRef<CanvasTransformDrag | null>(null);
   const pathMaskDragRef = useRef<PathMaskDrag | null>(null);
   const panoramaDragRef = useRef<PanoramaPreviewDrag | null>(null);
+  const previewPanDragRef = useRef<PreviewPanDrag | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const originalCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const differenceCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -108,6 +116,10 @@ export function PreviewCanvas({ safeFrameGuides = false }: PreviewCanvasProps) {
   const [snapshotCompareProject, setSnapshotCompareProject] = useState<Project>();
   const [snapshotCompareLoading, setSnapshotCompareLoading] = useState(false);
   const [canvasEditMode, setCanvasEditMode] = useState(false);
+  const [frameInspectMode, setFrameInspectMode] = useState(false);
+  const [previewZoom, setPreviewZoom] = useState(1);
+  const [previewPan, setPreviewPan] = useState({ x: 0, y: 0 });
+  const [frameInspectorSample, setFrameInspectorSample] = useState<FrameInspectorSample>();
   const [frameSearchQuery, setFrameSearchQuery] = useState('');
   const [frameSearchFocused, setFrameSearchFocused] = useState(false);
   const [frameSearchError, setFrameSearchError] = useState<string>();
@@ -127,6 +139,7 @@ export function PreviewCanvas({ safeFrameGuides = false }: PreviewCanvasProps) {
   );
   const editableCanvasClips = useMemo(() => buildEditableCanvasClips(project, playheadTime), [project, playheadTime]);
   const selectedEditableClip = useMemo(() => editableCanvasClips.find((item) => item.clip.id === selectedClipId), [editableCanvasClips, selectedClipId]);
+  const selectedInspectorClip = useMemo(() => selectedEditableClip?.clip, [selectedEditableClip]);
   const selectedPanoramaClip = useMemo(() => {
     const clip = project.timeline.tracks.flatMap((track) => track.clips).find((item) => item.id === selectedClipId);
     return clip?.type === 'video' && normalizeClipProjection(clip.projection) === 'equirectangular' ? clip : undefined;
@@ -139,6 +152,11 @@ export function PreviewCanvas({ safeFrameGuides = false }: PreviewCanvasProps) {
     () => (snapshotCompareProject ? diffTimelineSnapshots(project.timeline, snapshotCompareProject.timeline) : []),
     [project.timeline, snapshotCompareProject]
   );
+  const previewZoomPercent = Math.round(previewZoom * 100);
+  const previewSurfaceStyle: CSSProperties = {
+    transform: `translate(${previewPan.x}px, ${previewPan.y}px) scale(${previewZoom})`,
+    transformOrigin: 'center'
+  };
 
   useEffect(() => {
     setTimelineCompareRanges(snapshotCompareRanges);
@@ -195,6 +213,11 @@ export function PreviewCanvas({ safeFrameGuides = false }: PreviewCanvasProps) {
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent): void {
+      if ((event.ctrlKey || event.metaKey) && event.key === '0') {
+        event.preventDefault();
+        resetPreviewZoom();
+        return;
+      }
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'g') {
         event.preventDefault();
         frameSearchInputRef.current?.focus();
@@ -439,15 +462,129 @@ export function PreviewCanvas({ safeFrameGuides = false }: PreviewCanvasProps) {
     if (compareMode === 'off' || compareMode === 'difference') {
       return;
     }
-    const bounds = compareFrameRef.current?.getBoundingClientRect();
+    const bounds = previewSurfaceRef.current?.getBoundingClientRect();
     if (!bounds) {
       return;
     }
     setCompareSplitRatio(calculatePreviewCompareSplitRatio(compareMode, event, bounds));
   }
 
+  function resetPreviewZoom(): void {
+    setPreviewZoom(1);
+    setPreviewPan({ x: 0, y: 0 });
+  }
+
+  function updatePreviewZoomFromWheel(event: ReactWheelEvent<HTMLDivElement>): void {
+    if (!event.ctrlKey && !event.metaKey) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const nextZoom = getWheelPreviewZoom(previewZoom, event.deltaY);
+    setPreviewZoom(nextZoom);
+    if (nextZoom === 1) {
+      setPreviewPan({ x: 0, y: 0 });
+    }
+  }
+
+  function beginPreviewPan(event: ReactPointerEvent<HTMLDivElement>): void {
+    if (previewZoom <= 1 || canvasEditMode || frameInspectMode || chromaKeyPickTarget || compareEnabled || event.button !== 0) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    previewPanDragRef.current = {
+      pointerId: event.pointerId,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      startPan: previewPan
+    };
+  }
+
+  function updatePreviewPan(event: ReactPointerEvent<HTMLDivElement>): void {
+    const drag = previewPanDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+    event.preventDefault();
+    setPreviewPan({
+      x: drag.startPan.x + event.clientX - drag.startClientX,
+      y: drag.startPan.y + event.clientY - drag.startClientY
+    });
+  }
+
+  function endPreviewPan(event: ReactPointerEvent<HTMLDivElement>): void {
+    const drag = previewPanDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    previewPanDragRef.current = null;
+  }
+
+  function updateFrameInspector(event: ReactPointerEvent<HTMLDivElement>): void {
+    const sample = readFrameInspectorSample(event);
+    setFrameInspectorSample(sample);
+  }
+
+  function clearFrameInspector(): void {
+    setFrameInspectorSample(undefined);
+  }
+
+  async function sampleFrameInspectorColor(event: ReactPointerEvent<HTMLDivElement>): Promise<void> {
+    const sample = readFrameInspectorSample(event);
+    if (!sample) {
+      return;
+    }
+    setFrameInspectorSample({ ...sample, sampled: true });
+    try {
+      await navigator.clipboard?.writeText(sample.hex);
+      showToast({ kind: 'success', title: t.frameInspectorCopied, message: sample.hex });
+    } catch {
+      showToast({ kind: 'info', title: t.frameInspectorSampled, message: sample.hex });
+    }
+  }
+
+  function applyFrameInspectorColor(sample = frameInspectorSample): void {
+    if (!sample || !selectedInspectorClip) {
+      return;
+    }
+    try {
+      commandManager.execute(new UpdateClipCommand(timelineAccessor, selectedInspectorClip.id, buildChromaKeySamplePatch(selectedInspectorClip, sample.rgb)));
+      showToast({ kind: 'success', title: t.frameInspectorApplied, message: sample.hex });
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+    }
+  }
+
+  function readFrameInspectorSample(event: { clientX: number; clientY: number }): FrameInspectorSample | undefined {
+    const canvas = canvasRef.current;
+    const bounds = previewSurfaceRef.current?.getBoundingClientRect();
+    const frameBounds = compareFrameRef.current?.getBoundingClientRect();
+    if (!canvas || !bounds || !frameBounds) {
+      return undefined;
+    }
+    const result = readPreviewCanvasPixel(canvas, bounds, event);
+    if (!result) {
+      return undefined;
+    }
+    const hsl = rgbToHsl(result.rgb);
+    return {
+      ...result,
+      hsl,
+      hex: rgbToHex(result.rgb),
+      position: {
+        x: Math.min(Math.max(12, event.clientX - frameBounds.left + 12), Math.max(12, frameBounds.width - 230)),
+        y: Math.min(Math.max(12, event.clientY - frameBounds.top + 12), Math.max(12, frameBounds.height - 210))
+      }
+    };
+  }
+
   function getCanvasPointFromPointer(event: { clientX: number; clientY: number }): CanvasPoint | undefined {
-    const bounds = compareFrameRef.current?.getBoundingClientRect();
+    const bounds = previewSurfaceRef.current?.getBoundingClientRect();
     const canvas = canvasRef.current;
     if (!bounds || !canvas) {
       return undefined;
@@ -471,26 +608,17 @@ export function PreviewCanvas({ safeFrameGuides = false }: PreviewCanvasProps) {
       return;
     }
     const canvas = canvasRef.current;
-    const bounds = compareFrameRef.current?.getBoundingClientRect();
-    const color = canvas && bounds ? readPreviewCanvasPixel(canvas, bounds, event) : undefined;
-    if (!color) {
+    const bounds = previewSurfaceRef.current?.getBoundingClientRect();
+    const sample = canvas && bounds ? readPreviewCanvasPixel(canvas, bounds, event) : undefined;
+    if (!sample) {
       showToast({ kind: 'warning', title: zhCN.inspector.chromaKey.pickFailedTitle, message: zhCN.inspector.chromaKey.pickFailedMessage });
       setChromaKeyPickClipId(undefined);
       return;
     }
     event.preventDefault();
     event.stopPropagation();
-    const chromaKey = normalizeChromaKey(chromaKeyPickTarget.clip.chromaKey);
-    const colors =
-      chromaKey.colors.length >= MAX_CHROMA_KEY_COLORS
-        ? [...chromaKey.colors.slice(0, MAX_CHROMA_KEY_COLORS - 1), color]
-        : [...chromaKey.colors, color];
     try {
-      commandManager.execute(
-        new UpdateClipCommand(timelineAccessor, chromaKeyPickTarget.clip.id, {
-          chromaKey: { ...chromaKey, enabled: true, color: colors[0], colors }
-        })
-      );
+      commandManager.execute(new UpdateClipCommand(timelineAccessor, chromaKeyPickTarget.clip.id, buildChromaKeySamplePatch(chromaKeyPickTarget.clip, sample.rgb)));
       setSelectedClipIds([chromaKeyPickTarget.clip.id]);
     } catch (error) {
       showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
@@ -912,9 +1040,42 @@ export function PreviewCanvas({ safeFrameGuides = false }: PreviewCanvasProps) {
             aria-label={canvasEditMode ? t.canvasEditModeActive : t.canvasEditMode}
             data-testid="preview-canvas-edit-toggle"
             data-active={canvasEditMode ? 'true' : 'false'}
-            onClick={() => setCanvasEditMode((value) => !value)}
+            onClick={() => {
+              setCanvasEditMode((value) => {
+                const next = !value;
+                if (next) {
+                  setFrameInspectMode(false);
+                  clearFrameInspector();
+                }
+                return next;
+              });
+            }}
           >
             <MousePointer2 size={17} />
+          </button>
+          <button
+            className={`inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/10 text-white hover:bg-white/20 ${
+              frameInspectMode ? 'bg-emerald-500/25' : 'bg-white/10'
+            }`}
+            title={frameInspectMode ? t.frameInspectorActive : t.frameInspector}
+            aria-label={frameInspectMode ? t.frameInspectorActive : t.frameInspector}
+            data-testid="preview-frame-inspector-toggle"
+            data-active={frameInspectMode ? 'true' : 'false'}
+            onClick={() => {
+              setFrameInspectMode((value) => {
+                const next = !value;
+                if (next) {
+                  setCanvasEditMode(false);
+                  setChromaKeyPickClipId(undefined);
+                }
+                if (!next) {
+                  clearFrameInspector();
+                }
+                return next;
+              });
+            }}
+          >
+            <Pipette size={17} />
           </button>
           <button
             className={`inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/10 text-white hover:bg-white/20 ${
@@ -954,129 +1115,173 @@ export function PreviewCanvas({ safeFrameGuides = false }: PreviewCanvasProps) {
         <div className={scopesOpen ? 'flex min-h-0 items-center justify-center p-4' : 'contents'}>
           <div
             ref={compareFrameRef}
-            className="relative aspect-video w-full max-w-[960px] overflow-hidden rounded-md shadow-soft"
+            className={`relative aspect-video w-full max-w-[960px] overflow-hidden rounded-md shadow-soft ${
+              previewZoom > 1 && !canvasEditMode && !frameInspectMode && !chromaKeyPickTarget && !compareEnabled ? 'cursor-grab active:cursor-grabbing' : ''
+            }`}
             style={{ backgroundColor: theme.colors.canvasBackground }}
+            onWheel={updatePreviewZoomFromWheel}
+            onPointerDown={beginPreviewPan}
+            onPointerMove={updatePreviewPan}
+            onPointerUp={endPreviewPan}
+            onPointerCancel={endPreviewPan}
           >
-            <canvas
-              ref={canvasRef}
-              width={1280}
-              height={720}
-              className={`pointer-events-none absolute inset-0 h-full w-full ${compareShowsDifference ? 'opacity-0' : 'opacity-100'}`}
-              data-testid="preview-canvas"
-            />
-            {compareEnabled ? (
+            <div ref={previewSurfaceRef} className="absolute inset-0" style={previewSurfaceStyle} data-testid="preview-surface">
               <canvas
-                ref={originalCanvasRef}
+                ref={canvasRef}
                 width={1280}
                 height={720}
                 className={`pointer-events-none absolute inset-0 h-full w-full ${compareShowsDifference ? 'opacity-0' : 'opacity-100'}`}
-                style={buildPreviewCompareOverlayStyle(activeCompareMode, compareSplitRatio)}
-                data-testid="preview-compare-original-canvas"
+                data-testid="preview-canvas"
               />
-            ) : null}
-            {compareShowsDifference ? (
-              <canvas ref={differenceCanvasRef} width={1280} height={720} className="pointer-events-none absolute inset-0 h-full w-full" data-testid="preview-compare-difference-canvas" />
-            ) : null}
-            {safeFrameGuides ? <SafeFrameGuides /> : null}
-            {compareEnabled && !compareShowsDifference ? (
-              <div
-                role="separator"
-                aria-label={t.compareDivider}
-                data-testid="preview-compare-divider"
-                data-orientation={activeCompareMode === 'top-bottom' ? 'horizontal' : 'vertical'}
-                className={`absolute z-10 bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.55)] ${activeCompareMode === 'top-bottom' ? 'cursor-row-resize' : 'cursor-col-resize'} ${
-                  compareDividerDragging ? 'opacity-100' : 'opacity-80'
-                }`}
-                style={buildPreviewCompareDividerStyle(activeCompareMode, compareSplitRatio)}
-                onPointerDown={(event) => {
-                  event.currentTarget.setPointerCapture(event.pointerId);
-                  setCompareDividerDragging(true);
-                  updateCompareSplitFromPointer(event);
-                }}
-                onPointerMove={(event) => {
-                  if (compareDividerDragging) {
+              {compareEnabled ? (
+                <canvas
+                  ref={originalCanvasRef}
+                  width={1280}
+                  height={720}
+                  className={`pointer-events-none absolute inset-0 h-full w-full ${compareShowsDifference ? 'opacity-0' : 'opacity-100'}`}
+                  style={buildPreviewCompareOverlayStyle(activeCompareMode, compareSplitRatio)}
+                  data-testid="preview-compare-original-canvas"
+                />
+              ) : null}
+              {compareShowsDifference ? (
+                <canvas ref={differenceCanvasRef} width={1280} height={720} className="pointer-events-none absolute inset-0 h-full w-full" data-testid="preview-compare-difference-canvas" />
+              ) : null}
+              {safeFrameGuides ? <SafeFrameGuides /> : null}
+              {compareEnabled && !compareShowsDifference ? (
+                <div
+                  role="separator"
+                  aria-label={t.compareDivider}
+                  data-testid="preview-compare-divider"
+                  data-orientation={activeCompareMode === 'top-bottom' ? 'horizontal' : 'vertical'}
+                  className={`absolute z-10 bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.55)] ${activeCompareMode === 'top-bottom' ? 'cursor-row-resize' : 'cursor-col-resize'} ${
+                    compareDividerDragging ? 'opacity-100' : 'opacity-80'
+                  }`}
+                  style={buildPreviewCompareDividerStyle(activeCompareMode, compareSplitRatio)}
+                  onPointerDown={(event) => {
+                    event.currentTarget.setPointerCapture(event.pointerId);
+                    setCompareDividerDragging(true);
                     updateCompareSplitFromPointer(event);
+                  }}
+                  onPointerMove={(event) => {
+                    if (compareDividerDragging) {
+                      updateCompareSplitFromPointer(event);
+                    }
+                  }}
+                  onPointerUp={(event) => {
+                    event.currentTarget.releasePointerCapture(event.pointerId);
+                    setCompareDividerDragging(false);
+                    updateCompareSplitFromPointer(event);
+                  }}
+                  onPointerCancel={() => setCompareDividerDragging(false)}
+                />
+              ) : null}
+              {selectedPanoramaClip && !canvasEditMode && !frameInspectMode && !compareEnabled && !chromaKeyPickTarget ? (
+                <div
+                  className="absolute inset-0 z-20 cursor-grab active:cursor-grabbing"
+                  title={t.panoramaDrag}
+                  aria-label={t.panoramaDrag}
+                  data-testid="panorama-preview-overlay"
+                  onPointerDown={beginPanoramaPreviewDrag}
+                  onPointerMove={updatePanoramaPreviewDrag}
+                  onPointerUp={endPanoramaPreviewDrag}
+                  onPointerCancel={endPanoramaPreviewDrag}
+                  onWheel={updatePanoramaFov}
+                />
+              ) : null}
+              {chromaKeyPickTarget ? (
+                <div
+                  className="absolute inset-0 z-40 cursor-crosshair"
+                  title={zhCN.inspector.chromaKey.pickFromPreview}
+                  aria-label={zhCN.inspector.chromaKey.pickFromPreview}
+                  data-testid="chroma-key-pick-overlay"
+                  onPointerDown={pickChromaKeyColor}
+                />
+              ) : null}
+              {canvasEditMode && selectedEditableClip && selectedPathMask ? (
+                <div
+                  className="absolute inset-0 z-30 cursor-crosshair"
+                  data-testid="path-mask-overlay"
+                  onClick={addPathMaskAnchor}
+                  onDoubleClick={closeSelectedPathMask}
+                  onPointerMove={updatePathMaskDrag}
+                  onPointerUp={endPathMaskDrag}
+                  onPointerCancel={endPathMaskDrag}
+                >
+                  <PathMaskControls item={selectedEditableClip} mask={selectedPathMask} onBeginDrag={beginPathMaskDrag} />
+                </div>
+              ) : canvasEditMode ? (
+                <div
+                  className="absolute inset-0 z-30 cursor-crosshair"
+                  data-testid="canvas-transform-overlay"
+                  onPointerDown={beginCanvasHitDrag}
+                  onPointerMove={updateCanvasTransformDrag}
+                  onPointerUp={endCanvasTransformDrag}
+                  onPointerCancel={endCanvasTransformDrag}
+                >
+                  {selectedEditableClip ? (
+                    <CanvasTransformControls
+                      item={selectedEditableClip}
+                      onBeginDrag={(event, item, type, handle) => beginCanvasTransformDrag(event, item, type, handle)}
+                    />
+                  ) : null}
+                </div>
+              ) : null}
+              {selectedMulticamClip && selectedMulticamSequence ? (
+                <MulticamPreviewGrid
+                  clip={selectedMulticamClip}
+                  sequence={selectedMulticamSequence}
+                  media={project.media}
+                  sequences={project.sequences}
+                  playheadTime={playheadTime}
+                  onSelectAngle={(angleId) => {
+                    try {
+                      commandManager.execute(new CutMulticamClipCommand(projectAccessor, selectedMulticamClip.id, playheadTime, angleId));
+                    } catch (error) {
+                      showToast({
+                        kind: 'warning',
+                        title: t.multicamCutFailedTitle,
+                        message: error instanceof Error ? error.message : t.multicamCutFailedMessage
+                      });
+                    }
+                  }}
+                />
+              ) : null}
+            </div>
+            {frameInspectMode ? (
+              <div
+                className="absolute inset-0 z-50 cursor-crosshair"
+                data-testid="frame-inspector-overlay"
+                aria-label={t.frameInspectorActive}
+                onPointerMove={(event) => {
+                  if (event.target === event.currentTarget) {
+                    updateFrameInspector(event);
                   }
                 }}
-                onPointerUp={(event) => {
-                  event.currentTarget.releasePointerCapture(event.pointerId);
-                  setCompareDividerDragging(false);
-                  updateCompareSplitFromPointer(event);
+                onPointerLeave={clearFrameInspector}
+                onPointerDown={(event) => {
+                  if (event.target === event.currentTarget) {
+                    void sampleFrameInspectorColor(event);
+                  }
                 }}
-                onPointerCancel={() => setCompareDividerDragging(false)}
-              />
-            ) : null}
-            {selectedPanoramaClip && !canvasEditMode && !compareEnabled && !chromaKeyPickTarget ? (
-              <div
-                className="absolute inset-0 z-20 cursor-grab active:cursor-grabbing"
-                title={t.panoramaDrag}
-                aria-label={t.panoramaDrag}
-                data-testid="panorama-preview-overlay"
-                onPointerDown={beginPanoramaPreviewDrag}
-                onPointerMove={updatePanoramaPreviewDrag}
-                onPointerUp={endPanoramaPreviewDrag}
-                onPointerCancel={endPanoramaPreviewDrag}
-                onWheel={updatePanoramaFov}
-              />
-            ) : null}
-            {chromaKeyPickTarget ? (
-              <div
-                className="absolute inset-0 z-40 cursor-crosshair"
-                title={zhCN.inspector.chromaKey.pickFromPreview}
-                aria-label={zhCN.inspector.chromaKey.pickFromPreview}
-                data-testid="chroma-key-pick-overlay"
-                onPointerDown={pickChromaKeyColor}
-              />
-            ) : null}
-            {canvasEditMode && selectedEditableClip && selectedPathMask ? (
-              <div
-                className="absolute inset-0 z-30 cursor-crosshair"
-                data-testid="path-mask-overlay"
-                onClick={addPathMaskAnchor}
-                onDoubleClick={closeSelectedPathMask}
-                onPointerMove={updatePathMaskDrag}
-                onPointerUp={endPathMaskDrag}
-                onPointerCancel={endPathMaskDrag}
               >
-                <PathMaskControls item={selectedEditableClip} mask={selectedPathMask} onBeginDrag={beginPathMaskDrag} />
-              </div>
-            ) : canvasEditMode ? (
-              <div
-                className="absolute inset-0 z-30 cursor-crosshair"
-                data-testid="canvas-transform-overlay"
-                onPointerDown={beginCanvasHitDrag}
-                onPointerMove={updateCanvasTransformDrag}
-                onPointerUp={endCanvasTransformDrag}
-                onPointerCancel={endCanvasTransformDrag}
-              >
-                {selectedEditableClip ? (
-                  <CanvasTransformControls
-                    item={selectedEditableClip}
-                    onBeginDrag={(event, item, type, handle) => beginCanvasTransformDrag(event, item, type, handle)}
+                {frameInspectorSample ? (
+                  <FrameInspectorPopover
+                    sample={frameInspectorSample}
+                    canApplyChroma={Boolean(selectedInspectorClip)}
+                    onApplyChroma={() => applyFrameInspectorColor(frameInspectorSample)}
                   />
                 ) : null}
               </div>
             ) : null}
-            {selectedMulticamClip && selectedMulticamSequence ? (
-              <MulticamPreviewGrid
-                clip={selectedMulticamClip}
-                sequence={selectedMulticamSequence}
-                media={project.media}
-                sequences={project.sequences}
-                playheadTime={playheadTime}
-                onSelectAngle={(angleId) => {
-                  try {
-                    commandManager.execute(new CutMulticamClipCommand(projectAccessor, selectedMulticamClip.id, playheadTime, angleId));
-                  } catch (error) {
-                    showToast({
-                      kind: 'warning',
-                      title: t.multicamCutFailedTitle,
-                      message: error instanceof Error ? error.message : t.multicamCutFailedMessage
-                    });
-                  }
-                }}
-              />
-            ) : null}
+            <button
+              type="button"
+              className="absolute left-3 top-3 z-50 rounded border border-white/15 bg-black/65 px-2 py-1 text-[11px] font-semibold tabular-nums text-white shadow-soft hover:bg-black/80"
+              title={t.previewZoomReset}
+              data-testid="preview-zoom-label"
+              onClick={resetPreviewZoom}
+            >
+              {previewZoomPercent}%
+            </button>
           </div>
         </div>
         {scopesOpen ? <ColorScopesPanel frame={scopeFrame} active={scopesOpen} /> : null}
@@ -1157,6 +1362,75 @@ function SafeFrameGuides() {
       <div className="absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/70 shadow-[0_0_0_1px_rgba(0,0,0,0.45)]" data-testid="preview-safe-frame-center" />
     </div>
   );
+}
+
+function FrameInspectorPopover({
+  sample,
+  canApplyChroma,
+  onApplyChroma
+}: {
+  sample: FrameInspectorSample;
+  canApplyChroma: boolean;
+  onApplyChroma(): void;
+}) {
+  const t = zhCN.preview;
+  return (
+    <div
+      className="absolute w-[220px] rounded-md border border-white/15 bg-[#050b16]/95 p-2 text-xs text-slate-100 shadow-soft backdrop-blur"
+      style={{ left: sample.position.x, top: sample.position.y }}
+      data-testid="frame-inspector-popover"
+      onPointerDown={(event) => event.stopPropagation()}
+      onPointerMove={(event) => event.stopPropagation()}
+    >
+      <div className="mb-2 flex items-center gap-2">
+        <span className="h-7 w-7 shrink-0 rounded border border-white/20" style={{ backgroundColor: rgbCss(sample.rgb) }} />
+        <div className="min-w-0">
+          <div className="font-mono text-[13px] font-semibold uppercase text-white" data-testid="frame-inspector-hex">
+            {sample.hex}
+          </div>
+          <div className="text-[10px] uppercase tracking-wide text-slate-400">{t.frameInspectorSampled}</div>
+        </div>
+      </div>
+      <div className="grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 font-mono text-[11px]">
+        <span className="text-slate-400">RGB</span>
+        <span data-testid="frame-inspector-rgb">{sample.rgb.join(', ')}</span>
+        <span className="text-slate-400">HSL</span>
+        <span>
+          {sample.hsl.h}, {sample.hsl.s}%, {sample.hsl.l}%
+        </span>
+        <span className="text-slate-400">PX</span>
+        <span>
+          {sample.coordinates.x}, {sample.coordinates.y}
+        </span>
+        <span className="text-slate-400">N</span>
+        <span>
+          {sample.coordinates.normalizedX.toFixed(3)}, {sample.coordinates.normalizedY.toFixed(3)}
+        </span>
+      </div>
+      <div className="mt-2 grid h-20 w-20 grid-cols-5 overflow-hidden rounded border border-white/15" data-testid="frame-inspector-magnifier">
+        {sample.swatches.map((color, index) => (
+          <span
+            key={`${index}-${color.join('-')}`}
+            className={index === 12 ? 'h-4 w-4 outline outline-1 outline-white' : 'h-4 w-4'}
+            style={{ backgroundColor: rgbCss(color) }}
+          />
+        ))}
+      </div>
+      <button
+        type="button"
+        className="mt-2 w-full rounded border border-white/15 bg-white/10 px-2 py-1 text-xs font-medium text-white hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-45"
+        disabled={!canApplyChroma}
+        data-testid="frame-inspector-apply-chroma"
+        onClick={onApplyChroma}
+      >
+        {t.frameInspectorApplyChroma}
+      </button>
+    </div>
+  );
+}
+
+function rgbCss(color: ChromaKeyColor): string {
+  return `rgb(${color[0]}, ${color[1]}, ${color[2]})`;
 }
 
 interface FrameSearchCandidate {
@@ -1252,16 +1526,63 @@ interface PanoramaPreviewDrag {
   patch?: ClipPatch;
 }
 
-function readPreviewCanvasPixel(canvas: HTMLCanvasElement, bounds: DOMRect, event: { clientX: number; clientY: number }): ChromaKeyColor | undefined {
+interface PreviewPanDrag {
+  pointerId: number;
+  startClientX: number;
+  startClientY: number;
+  startPan: { x: number; y: number };
+}
+
+interface FrameInspectorSample {
+  coordinates: PreviewPixelCoordinates;
+  rgb: ChromaKeyColor;
+  hsl: ReturnType<typeof rgbToHsl>;
+  hex: string;
+  position: { x: number; y: number };
+  swatches: ChromaKeyColor[];
+  sampled?: boolean;
+}
+
+interface PreviewPixelRead {
+  coordinates: PreviewPixelCoordinates;
+  rgb: ChromaKeyColor;
+  swatches: ChromaKeyColor[];
+}
+
+function readPreviewCanvasPixel(canvas: HTMLCanvasElement, bounds: DOMRect, event: { clientX: number; clientY: number }): PreviewPixelRead | undefined {
   const gl = canvas.getContext('webgl');
   if (!gl) {
     return undefined;
   }
-  const x = Math.min(canvas.width - 1, Math.max(0, Math.floor(((event.clientX - bounds.left) / Math.max(1, bounds.width)) * canvas.width)));
-  const y = Math.min(canvas.height - 1, Math.max(0, canvas.height - 1 - Math.floor(((event.clientY - bounds.top) / Math.max(1, bounds.height)) * canvas.height)));
+  const coordinates = calculatePreviewPixelCoordinates({
+    canvasWidth: canvas.width,
+    canvasHeight: canvas.height,
+    boundsWidth: bounds.width,
+    boundsHeight: bounds.height,
+    offsetX: event.clientX - bounds.left,
+    offsetY: event.clientY - bounds.top
+  });
   const pixel = new Uint8Array(4);
-  gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
-  return [pixel[0], pixel[1], pixel[2]];
+  gl.readPixels(coordinates.x, coordinates.webglY, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+  return {
+    coordinates,
+    rgb: [pixel[0], pixel[1], pixel[2]],
+    swatches: readPreviewCanvasPixelSwatches(gl, coordinates, canvas.width, canvas.height)
+  };
+}
+
+function readPreviewCanvasPixelSwatches(gl: WebGLRenderingContext, coordinates: PreviewPixelCoordinates, width: number, height: number): ChromaKeyColor[] {
+  const swatches: ChromaKeyColor[] = [];
+  for (let dy = -2; dy <= 2; dy += 1) {
+    for (let dx = -2; dx <= 2; dx += 1) {
+      const x = Math.min(width - 1, Math.max(0, coordinates.x + dx));
+      const y = Math.min(height - 1, Math.max(0, coordinates.y + dy));
+      const pixel = new Uint8Array(4);
+      gl.readPixels(x, height - 1 - y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+      swatches.push([pixel[0], pixel[1], pixel[2]]);
+    }
+  }
+  return swatches;
 }
 
 interface PathMaskDrag {
