@@ -43,6 +43,7 @@ import { ChevronLeft, ChevronRight, GripHorizontal } from 'lucide-react';
 import { Toolbar } from './Toolbar';
 import { ErrorBoundary } from './common/ErrorBoundary';
 import { MediaBin } from './MediaBin/MediaBin';
+import { StoryboardView } from './Storyboard/StoryboardView';
 import { Timeline } from './Timeline/Timeline';
 import { useAutosave } from '../hooks/useAutosave';
 import { useCloseGuard } from '../hooks/useCloseGuard';
@@ -159,6 +160,7 @@ export function EditorShell() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [smartRoughCutOpen, setSmartRoughCutOpen] = useState(false);
   const [historyPanelOpen, setHistoryPanelOpen] = useState(false);
+  const [storyboardOpen, setStoryboardOpen] = useState(false);
   const [macroHistoryOpen, setMacroHistoryOpen] = useState(false);
   const [projectHealthOpen, setProjectHealthOpen] = useState(false);
   const [projectHealthReport, setProjectHealthReport] = useState<ProjectHealthReport>();
@@ -1217,6 +1219,8 @@ export function EditorShell() {
           canCreateMulticamSequence={canCreateMulticamSequence}
           smartRoughCutOpen={smartRoughCutOpen}
           historyPanelOpen={historyPanelOpen}
+          storyboardOpen={storyboardOpen}
+          onToggleStoryboard={() => setStoryboardOpen((open) => !open)}
           onToggleHistoryPanel={() => {
             setSmartRoughCutOpen(false);
             setHistoryPanelOpen((open) => !open);
@@ -1349,8 +1353,8 @@ export function EditorShell() {
           <GripHorizontal size={18} />
         </div>
         <section className="min-h-0 overflow-hidden" data-testid="timeline-panel" style={{ height: timelineHeightPx }}>
-          <ErrorBoundary name={zhCN.panels.timeline}>
-            <Timeline />
+          <ErrorBoundary name={storyboardOpen ? zhCN.storyboard.title : zhCN.panels.timeline}>
+            {storyboardOpen ? <StoryboardView /> : <Timeline />}
           </ErrorBoundary>
         </section>
         <Suspense fallback={null}>

@@ -519,6 +519,85 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setPlayheadTime(0);
     commandManager.clear();
   },
+  setupStoryboardFixture: () => {
+    const project = createProject('Storyboard E2E');
+    const media: MediaAsset[] = [
+      {
+        id: 'media-story-a',
+        type: 'video',
+        name: 'story-a.mp4',
+        path: tinyVideo,
+        duration: 8,
+        width: 1280,
+        height: 720,
+        thumbnail: 'data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AA/vuUAAA=',
+        size: 4096,
+        mtimeMs: 1_000,
+        hasAudio: true,
+        audioChannels: 2,
+        audioSampleRate: 44_100,
+        audioCodec: 'aac',
+        videoCodec: 'h264'
+      },
+      {
+        id: 'media-story-b',
+        type: 'image',
+        name: 'story-b.png',
+        path: tinyImage,
+        duration: 0,
+        width: 1280,
+        height: 720,
+        thumbnail: 'data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AA/vuUAAA=',
+        size: 4096,
+        mtimeMs: 1_000
+      },
+      {
+        id: 'media-story-c',
+        type: 'video',
+        name: 'story-c.mp4',
+        path: tinyVideoB,
+        duration: 8,
+        width: 1280,
+        height: 720,
+        thumbnail: 'data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AA/vuUAAA=',
+        size: 4096,
+        mtimeMs: 1_000,
+        hasAudio: true,
+        audioChannels: 2,
+        audioSampleRate: 44_100,
+        audioCodec: 'aac',
+        videoCodec: 'h264'
+      }
+    ];
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({
+          id: 'track-video',
+          type: 'video',
+          name: 'Video 1',
+          clips: [
+            makeStoryboardClip('clip-story-a', 'video', 'Opening Card', 'media-story-a', 0, 2),
+            makeStoryboardClip('clip-story-b', 'image', 'Insert Card', 'media-story-b', 2, 3),
+            makeStoryboardClip('clip-story-c', 'video', 'Final Card', 'media-story-c', 5, 1)
+          ]
+        }),
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
+        createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media,
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
   setupSmartRoughCutFixture: () => {
     const project = createProject('Smart Rough Cut E2E');
     const asset: MediaAsset = {
@@ -1142,6 +1221,31 @@ function makeEditingVideoClip(id: string, start: number, duration: number, trimS
     transform: { ...DEFAULT_TRANSFORM },
     volume: 1
   };
+}
+
+function makeStoryboardClip(
+  id: string,
+  type: 'video' | 'image',
+  name: string,
+  mediaId: string,
+  start: number,
+  duration: number
+): Extract<Clip, { type: 'video' | 'image' }> {
+  const base = {
+    id,
+    type,
+    name,
+    mediaId,
+    trackId: 'track-video',
+    start,
+    duration,
+    trimStart: 0,
+    trimEnd: 0,
+    speed: DEFAULT_CLIP_SPEED,
+    colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+    transform: { ...DEFAULT_TRANSFORM }
+  };
+  return type === 'video' ? { ...base, type, volume: 1 } : { ...base, type };
 }
 
 function makeSmartRoughCutVideoClip(): Extract<Clip, { type: 'video' }> {

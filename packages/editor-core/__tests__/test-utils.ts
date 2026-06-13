@@ -105,6 +105,34 @@ export function makeAudioClip(overrides: ClipOverrides<Extract<Clip, { type: 'au
   };
 }
 
+export function makeImageClip(overrides: ClipOverrides<Extract<Clip, { type: 'image' }>> = {}): Extract<Clip, { type: 'image' }> {
+  return {
+    id: overrides.id ?? 'image-1',
+    type: 'image',
+    name: overrides.name ?? 'Image',
+    mediaId: overrides.mediaId ?? 'asset-image',
+    trackId: overrides.trackId ?? 'track-video',
+    start: overrides.start ?? 0,
+    duration: overrides.duration ?? 5,
+    trimStart: overrides.trimStart ?? 0,
+    trimEnd: overrides.trimEnd ?? 0,
+    speed: overrides.speed ?? DEFAULT_CLIP_SPEED,
+    colorCorrection: { ...DEFAULT_COLOR_CORRECTION, ...overrides.colorCorrection },
+    transform: { ...DEFAULT_TRANSFORM, ...overrides.transform },
+    chromaKey: normalizeChromaKey(overrides.chromaKey),
+    stabilization: normalizeStabilization(overrides.stabilization),
+    frameInterpolation: normalizeFrameInterpolation(overrides.frameInterpolation),
+    slowMotionMode: normalizeSlowMotionMode(overrides.slowMotionMode),
+    audioDenoise: normalizeAudioDenoise(overrides.audioDenoise),
+    masks: normalizeMasks(overrides.masks),
+    motionTrack: normalizeMotionTrack(overrides.motionTrack, overrides.duration ?? 5),
+    sequenceFrameRate: normalizeSequenceFrameRate(overrides.sequenceFrameRate),
+    keyframes: overrides.keyframes,
+    effects: overrides.effects,
+    kenBurns: overrides.kenBurns
+  };
+}
+
 export function makeAdjustmentClip(overrides: ClipOverrides<Extract<Clip, { type: 'adjustment' }>> = {}): Extract<Clip, { type: 'adjustment' }> {
   return createAdjustmentClip({
     id: overrides.id ?? 'adjustment-1',

@@ -70,6 +70,7 @@ const zh = {
     undo: '撤销',
     redo: '重做',
     history: '历史',
+    storyboard: '故事板',
     splitSelectedClip: '分割选中片段',
     smartRoughCut: '智能粗剪',
     createMulticamSequence: '创建多机位序列',
@@ -688,6 +689,20 @@ const zh = {
       subtitle: '字幕'
     },
     newTrackName: (type: string, index: number) => `${formatTrackType(type)} ${index}`
+  },
+  storyboard: {
+    title: '故事板',
+    empty: '时间线上还没有视频或图片片段。',
+    video: '视频片段',
+    image: '图片片段',
+    duration: (seconds: number) => `${seconds.toFixed(2)}s`,
+    jump: '跳转',
+    copy: '复制',
+    delete: '删除',
+    color: '标记颜色',
+    copySuffix: '副本',
+    copyFailed: '复制失败',
+    reorderFailed: '故事板重排失败'
   },
   smartRoughCut: {
     title: '智能粗剪',
@@ -1640,6 +1655,7 @@ const enOverrides = {
     undo: 'Undo',
     redo: 'Redo',
     history: 'History',
+    storyboard: 'Storyboard',
     splitSelectedClip: 'Split Selected Clip',
     smartRoughCut: 'Smart Rough Cut',
     createMulticamSequence: 'Create Multicam Sequence',
@@ -2140,6 +2156,20 @@ const enOverrides = {
       subtitle: 'Subtitle'
     },
     newTrackName: (type: string, index: number) => `${formatTrackType(type)} ${index}`
+  },
+  storyboard: {
+    title: 'Storyboard',
+    empty: 'No video or image clips on the timeline yet.',
+    video: 'Video Clip',
+    image: 'Image Clip',
+    duration: (seconds: number) => `${seconds.toFixed(2)}s`,
+    jump: 'Jump',
+    copy: 'Copy',
+    delete: 'Delete',
+    color: 'Marker Color',
+    copySuffix: 'Copy',
+    copyFailed: 'Copy failed',
+    reorderFailed: 'Storyboard reorder failed'
   },
   inspector: {
     multipleSelected: (count: number) => `Multiple clips selected (${count})`,
