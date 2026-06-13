@@ -7,6 +7,8 @@ export type TimelineShortcutAction =
   | 'step-forward'
   | 'set-in-point'
   | 'set-out-point'
+  | 'add-export-range-in'
+  | 'add-export-range-out'
   | 'split-selected'
   | 'delete-selected'
   | 'ripple-delete'
@@ -44,6 +46,8 @@ export const TIMELINE_SHORTCUT_DEFINITIONS: TimelineShortcutDefinition[] = [
   { action: 'step-forward', defaultBindings: ['ArrowRight'] },
   { action: 'set-in-point', defaultBindings: ['I'] },
   { action: 'set-out-point', defaultBindings: ['O'] },
+  { action: 'add-export-range-in', defaultBindings: ['Shift+I'] },
+  { action: 'add-export-range-out', defaultBindings: ['Shift+O'] },
   { action: 'split-selected', defaultBindings: ['S'] },
   { action: 'delete-selected', defaultBindings: ['Delete', 'Backspace'] },
   { action: 'ripple-delete', defaultBindings: ['Shift+Delete'] },

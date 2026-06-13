@@ -47,6 +47,7 @@ import {
   UpdateClipCommand,
   UpdateEffectCommand,
   UpdateProjectBeatMarkersCommand,
+  UpdateProjectExportRangesCommand,
   UpdateProjectAnnotationCommand,
   UpdateTimelineMarkerCommand,
   UpdateMaskCommand,
@@ -417,6 +418,34 @@ describe('timeline commands', () => {
     expect(project.beatMarkers).toEqual([]);
     manager.redo();
     expect(project.beatMarkers.map((marker) => marker.id)).toEqual(['beat-a', 'beat-late']);
+  });
+
+  it('updates export ranges as one undoable project command', () => {
+    let project = makeProject();
+    const accessor = {
+      getProject: () => project,
+      setProject: (next: typeof project) => {
+        project = next;
+      }
+    };
+    const manager = new CommandManager();
+
+    manager.execute(
+      new UpdateProjectExportRangesCommand(accessor, [
+        { id: 'range-late', label: 'Late', start: 99, end: 2 },
+        { id: 'range-a', label: '  A roll  ', start: 1, end: 3 }
+      ])
+    );
+
+    expect(project.exportRanges).toEqual([
+      { id: 'range-a', label: 'A roll', start: 1, end: 3 },
+      { id: 'range-late', label: 'Late', start: 2, end: 10 }
+    ]);
+
+    manager.undo();
+    expect(project.exportRanges).toEqual([]);
+    manager.redo();
+    expect(project.exportRanges.map((range) => range.id)).toEqual(['range-a', 'range-late']);
   });
 
   it('packs selected clips into a nested sequence with undo and redo', () => {

@@ -59,6 +59,7 @@ import { calculateSpeedCurveSourceDuration, getClipSourceVisibleDuration, getCli
 import { round } from '../time';
 import { serializeSubtitleCueInputsToAss, serializeSubtitleCueInputsToSrt, serializeSubtitleCueInputsToVtt, type SubtitleCueInput } from '../subtitles/srt';
 import { buildPathTextFrameLayouts } from '../text-path';
+import { normalizeExportRenderRange, type ExportRenderRange, type NormalizedExportRenderRange } from './export-ranges';
 import { cssColorToFfmpeg, escapeDrawtextValue, formatFfmpegSeconds, normalizeFfmpegPath, quoteForDisplay } from './ffmpeg-escape';
 import type {
   ExportClip,
@@ -145,6 +146,7 @@ interface BuildFfmpegExportPlanOptions {
   frameExport?: {
     time: number;
   };
+  exportRange?: ExportRenderRange | null;
 }
 
 export function buildExportProjectFromProject(project: Project, options: BuildExportProjectOptions): ExportProject {
@@ -330,6 +332,8 @@ export function buildFfmpegExportPlan(
   const slate = drawtextAvailable ? requestedSlate : null;
   const slateDuration = slate?.enabled ? SLATE_DURATION_SECONDS : 0;
   const outputDuration = duration + slateDuration;
+  const outputRange = frameExportTime === null ? normalizeExportRenderRange(options.exportRange, duration, settings.fps) : null;
+  const encodedDuration = outputRange ? outputRange.duration + slateDuration : outputDuration;
   const warnings: string[] = [];
   if (requestedTimecodeBurnIn?.enabled && !drawtextAvailable) {
     warnings.push(capabilities?.drawtextWarning ?? 'Current FFmpeg does not support drawtext/libfreetype. Install an FFmpeg build with libfreetype to export timecode burn-in.');
@@ -644,6 +648,7 @@ export function buildFfmpegExportPlan(
     subtitleOutputArgs.push('-c:s', buildSoftSubtitleCodec(subtitleFormat, settings));
   }
   const videoEncodingArgs = buildVideoEncodingArgs(settings, capabilities, warnings, audioOnly || videoFramesOnly);
+  const exportRangeOutputArgs = buildExportRangeOutputArgs(outputRange);
   const outputArgs =
     frameExportTime !== null
       ? ['-ss', formatFfmpegSeconds(frameExportTime), '-frames:v', '1', '-f', 'image2', normalizeFfmpegPath(settings.outputPath)]
@@ -654,6 +659,7 @@ export function buildFfmpegExportPlan(
       : apngExport
       ? ['-plays', '0', '-f', 'apng', normalizeFfmpegPath(settings.outputPath)]
       : [
+          ...exportRangeOutputArgs,
           ...(audioOnly
             ? []
             : videoEncodingArgs),
@@ -663,15 +669,15 @@ export function buildFfmpegExportPlan(
           ...buildBitrateArgs('-b:a', settings.audioBitrate),
           ...subtitleOutputArgs,
           '-t',
-          formatFfmpegSeconds(outputDuration),
+          formatFfmpegSeconds(encodedDuration),
           ...buildContainerArgs(settings),
           normalizeFfmpegPath(settings.outputPath)
         ];
   const fullArgs = buildFfmpegFullArgs(inputs, filterComplex, maps, outputArgs);
-  const gifPlan = gifExport && frameExportTime === null ? buildGifExportPasses(inputs, filterComplex, settings, outputDuration, textArtifacts) : undefined;
-  const loudnessPlan = loudnessAnalysisFilterComplex ? buildLoudnessNormalizationPasses(inputs, loudnessAnalysisFilterComplex, fullArgs, duration) : undefined;
+  const gifPlan = gifExport && frameExportTime === null ? buildGifExportPasses(inputs, filterComplex, settings, encodedDuration, textArtifacts, outputRange) : undefined;
+  const loudnessPlan = loudnessAnalysisFilterComplex ? buildLoudnessNormalizationPasses(inputs, loudnessAnalysisFilterComplex, fullArgs, encodedDuration) : undefined;
   const nestedPlans = buildNestedSequencePlans(project, capabilities, warnings, depth, sequenceStack);
-  const planDuration = frameExportTime === null ? outputDuration : Math.max(1 / Math.max(1, settings.fps), 0.001);
+  const planDuration = frameExportTime === null ? encodedDuration : Math.max(1 / Math.max(1, settings.fps), 0.001);
 
   return {
     inputs,
@@ -953,7 +959,8 @@ function buildGifExportPasses(
   baseFilterComplex: string,
   settings: ExportSettings,
   duration: number,
-  textArtifacts: TextArtifact[]
+  textArtifacts: TextArtifact[],
+  outputRange?: NormalizedExportRenderRange | null
 ): { filterComplex: string; maps: string[]; outputArgs: string[]; fullArgs: string[]; passes: FfmpegExportPass[] } {
   textArtifacts.push({
     clipId: 'gif-palette',
@@ -970,7 +977,7 @@ function buildGifExportPasses(
   const paletteInput: FfmpegInput = { index: inputs.length, path: GIF_PALETTE_PLACEHOLDER, args: [] };
   const gifFilterComplex = `${baseFilterComplex};[vout][${paletteInput.index}:v]paletteuse=dither=sierra2_4a:diff_mode=rectangle[gifout]`;
   const gifMaps = ['-map', '[gifout]'];
-  const gifOutputArgs = ['-loop', '0', '-t', formatFfmpegSeconds(duration), '-f', 'gif', normalizeFfmpegPath(settings.outputPath)];
+  const gifOutputArgs = ['-loop', '0', ...buildExportRangeOutputArgs(outputRange), '-t', formatFfmpegSeconds(duration), '-f', 'gif', normalizeFfmpegPath(settings.outputPath)];
   const gifFullArgs = buildFfmpegFullArgs([...inputs, paletteInput], gifFilterComplex, gifMaps, gifOutputArgs);
   return {
     filterComplex: gifFilterComplex,
@@ -982,6 +989,10 @@ function buildGifExportPasses(
       { name: 'gif-paletteuse', fullArgs: gifFullArgs, duration }
     ]
   };
+}
+
+function buildExportRangeOutputArgs(range: NormalizedExportRenderRange | null | undefined): string[] {
+  return range ? ['-ss', formatFfmpegSeconds(range.start)] : [];
 }
 
 function buildLoudnessNormalizationPasses(

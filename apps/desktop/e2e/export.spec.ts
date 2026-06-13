@@ -36,6 +36,34 @@ test('builds a multitrack FFmpeg plan with text artifacts and runs mocked export
   expect(plan.fullArgs.at(-1)).toBe('C:/Exports/e2e-output-2.mp4');
 });
 
+test('exports the marked in/out range with frame-aligned duration', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.evaluate(() => window.__E2E_ACTIONS__!.setSavePath!('C:/Exports/range-export.mp4'));
+  await page.getByTestId('import-media-button').click();
+  await addMediaCardToTimeline(page, 0);
+
+  await page.getByTestId('timeline-root').click();
+  await page.evaluate(() => window.__E2E_ACTIONS__!.setPlayheadTime!(1));
+  await page.keyboard.press('I');
+  await page.evaluate(() => window.__E2E_ACTIONS__!.setPlayheadTime!(3.033));
+  await page.keyboard.press('O');
+
+  await expect(page.getByTestId('timeline-export-range-highlight')).toBeVisible();
+  await expect
+    .poll(() => page.evaluate(() => window.__E2E_ACTIONS__!.getExportRanges!() as Array<{ start: number; end: number }>))
+    .toEqual([{ id: expect.any(String), label: '导出区间 1', start: 1, end: 3.033 }]);
+
+  await openExportDialog(page);
+  await page.getByTestId('export-range-select').selectOption('in-out');
+  await page.getByTestId('export-enqueue-button').click();
+  await expectExportTaskStatus(page, 0, 'success');
+
+  const plan = await page.evaluate(() => window.__E2E_ACTIONS__!.getLastExportPlan!() as { outputArgs: string[]; duration: number });
+  expect(plan.outputArgs).toEqual(expect.arrayContaining(['-ss', '1', '-t', '2.033']));
+  expect(Math.abs(plan.duration - 61 / 30)).toBeLessThanOrEqual(1 / 30);
+});
+
 test('runs export queue with two concurrent tasks and starts the third after a slot frees', async ({ page }) => {
   await page.goto('/');
   await waitForE2eActions(page);
@@ -73,6 +101,9 @@ test('starts a scheduled export after the selected start time', async ({ page })
   await openExportDialog(page);
   const startValue = await page.evaluate(() => {
     const date = new Date(Date.now() + 4_000);
+    if (date.getSeconds() === 0) {
+      date.setSeconds(1);
+    }
     const pad = (value: number) => String(value).padStart(2, '0');
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
   });

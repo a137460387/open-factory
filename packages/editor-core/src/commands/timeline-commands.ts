@@ -28,6 +28,7 @@ import {
   normalizeMasks,
   normalizeMotionTrack,
   normalizeProjectAnnotation,
+  normalizeExportRanges,
   normalizeProjectSettings,
   normalizeSequenceFrameRate,
   normalizeSlowMotionMode,
@@ -56,6 +57,7 @@ import {
   type MotionTrackPoint,
   type Project,
   type ProjectAnnotation,
+  type ExportRange,
   type ProjectSettings,
   type SubtitleMode,
   type SubtitleStyle,
@@ -955,6 +957,40 @@ export class UpdateProjectBeatMarkersCommand implements Command {
       touchProject({
         ...project,
         beatMarkers: this.before
+      })
+    );
+  }
+}
+
+export class UpdateProjectExportRangesCommand implements Command {
+  readonly description = 'Update export ranges';
+  private before?: ExportRange[];
+  private after?: ExportRange[];
+
+  constructor(private readonly accessor: ProjectAccessor, private readonly ranges: ExportRange[]) {}
+
+  execute(): void {
+    const project = this.accessor.getProject();
+    const duration = getTimelineDuration(project.timeline);
+    this.before ??= normalizeExportRanges(project.exportRanges, duration);
+    this.after ??= normalizeExportRanges(this.ranges, duration);
+    this.accessor.setProject(
+      touchProject({
+        ...project,
+        exportRanges: this.after
+      })
+    );
+  }
+
+  undo(): void {
+    if (!this.before) {
+      return;
+    }
+    const project = this.accessor.getProject();
+    this.accessor.setProject(
+      touchProject({
+        ...project,
+        exportRanges: this.before
       })
     );
   }

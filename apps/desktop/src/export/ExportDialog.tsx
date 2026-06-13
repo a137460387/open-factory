@@ -1,10 +1,14 @@
 import {
   TARGET_ASPECT_RATIOS,
   SUPPORTED_PROJECT_FPS,
+  appendExportRangeSequence,
   buildExportProjectFromProject,
   buildFfmpegPreviewSamplePlans,
   clampReframeOffset,
+  exportRenderRangeFromPoints,
   getTimelinePlaybackDuration,
+  normalizeExportRenderRange,
+  normalizeExportRanges,
   normalizeProjectFps,
   normalizeVideoRestoration,
   runExportPreflight,
@@ -13,6 +17,8 @@ import {
   suggestRenderFarmInstances,
   type ExportAudioVisualizationBackground,
   type ExportAudioVisualizationStyle,
+  type ExportRenderRange,
+  type NormalizedExportRenderRange,
   type ExportSubtitleFormat,
   type ExportTaskStatus,
   type ExportTaskPriority,
@@ -52,9 +58,19 @@ import {
 interface ExportDialogProps {
   project: Project;
   initialPreset?: ExportPreset;
+  selectedClipIds?: string[];
+  inPoint?: number;
+  outPoint?: number;
   onClose(): void;
   onCompleted(path: string): void;
   onRelinkMissing?(): void;
+}
+
+type ExportRangeMode = 'all' | 'in-out' | 'selected-clips';
+
+interface ExportJob {
+  outputPath: string;
+  range?: ExportRenderRange | null;
 }
 
 const WATERMARK_POSITIONS: ExportWatermarkPosition[] = [
@@ -98,15 +114,16 @@ interface ExportPreviewThumbnail {
   durationMs: number;
 }
 
-export function ExportDialog({ project, initialPreset, onClose, onCompleted, onRelinkMissing }: ExportDialogProps) {
+export function ExportDialog({ project, initialPreset, selectedClipIds = [], inPoint, outPoint, onClose, onCompleted, onRelinkMissing }: ExportDialogProps) {
   const t = zhCN.exportDialog;
   const [outputPath, setOutputPath] = useState('');
   const [capabilities, setCapabilities] = useState<FfmpegCapabilities | undefined>();
   const [error, setError] = useState<string>();
-  const [preflight, setPreflight] = useState<{ issues: PreflightResult[]; selectedPaths: string[] }>();
+  const [preflight, setPreflight] = useState<{ issues: PreflightResult[]; selectedJobs: ExportJob[] }>();
   const [presets, setPresets] = useState<ExportPreset[]>(initialPreset ? [initialPreset, ...BUILTIN_EXPORT_PRESETS] : BUILTIN_EXPORT_PRESETS);
   const [presetId, setPresetId] = useState(initialPreset?.id ?? BUILTIN_EXPORT_PRESETS[0].id);
   const [draftSettings, setDraftSettings] = useState<ExportPresetSettings>({ ...(initialPreset?.settings ?? BUILTIN_EXPORT_PRESETS[0].settings) });
+  const [exportRangeMode, setExportRangeMode] = useState<ExportRangeMode>('all');
   const [customPresetName, setCustomPresetName] = useState('');
   const [batchOutputPaths, setBatchOutputPaths] = useState('');
   const [priority, setPriority] = useState<ExportTaskPriority>('normal');
@@ -157,6 +174,17 @@ export function ExportDialog({ project, initialPreset, onClose, onCompleted, onR
   const hardwareEncodingRequested = hardwareEncodingEligible && exportSettings.hardwareEncoding === true;
   const formatOptions = isAudioVisualization ? AUDIO_VISUALIZATION_FORMATS : VIDEO_EXPORT_FORMATS;
   const spatialDenoiseClipCount = useMemo(() => countSpatialDenoiseClips(project), [project]);
+  const inOutExportRanges = useMemo(() => resolveInOutExportRanges(project, inPoint, outPoint), [inPoint, outPoint, project]);
+  const selectedClipExportRange = useMemo(() => resolveSelectedClipExportRange(project, selectedClipIds), [project, selectedClipIds]);
+  const activeExportRanges = useMemo(
+    () => resolveActiveExportRanges(exportRangeMode, inOutExportRanges, selectedClipExportRange),
+    [exportRangeMode, inOutExportRanges, selectedClipExportRange]
+  );
+  const rangeModeAvailable = {
+    all: true,
+    'in-out': inOutExportRanges.length > 0,
+    'selected-clips': Boolean(selectedClipExportRange)
+  } satisfies Record<ExportRangeMode, boolean>;
 
   useEffect(() => {
     let canceled = false;
@@ -175,6 +203,12 @@ export function ExportDialog({ project, initialPreset, onClose, onCompleted, onR
       canceled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!rangeModeAvailable[exportRangeMode]) {
+      setExportRangeMode('all');
+    }
+  }, [exportRangeMode, rangeModeAvailable]);
 
   useEffect(() => {
     void loadExportHistoryIntoStore();
@@ -296,13 +330,14 @@ export function ExportDialog({ project, initialPreset, onClose, onCompleted, onR
         return;
       }
       setOutputPath(selectedPaths[0]);
+      const selectedJobs = buildExportJobs(selectedPaths, activeExportRanges);
       setError(undefined);
       const issues = await collectPreflightIssues();
       if (issues.length > 0) {
-        setPreflight({ issues, selectedPaths });
+        setPreflight({ issues, selectedJobs });
         return;
       }
-      await enqueueSelectedPaths(selectedPaths);
+      await enqueueSelectedJobs(selectedJobs);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : t.exportFailed);
     }
@@ -355,7 +390,7 @@ export function ExportDialog({ project, initialPreset, onClose, onCompleted, onR
     }
   }
 
-  async function enqueueSelectedPaths(selectedPaths: string[]): Promise<void> {
+  async function enqueueSelectedJobs(selectedJobs: ExportJob[]): Promise<void> {
     const scheduledStartAt = scheduleEnabled ? normalizeScheduledExportStart(scheduledStartInput) : undefined;
     if (scheduleEnabled && !scheduledStartAt) {
       setError(t.scheduleInvalid);
@@ -363,13 +398,21 @@ export function ExportDialog({ project, initialPreset, onClose, onCompleted, onR
     }
     pendingCompletionAction.current = completionAction;
     completionActionHandled.current = false;
-    for (const path of selectedPaths) {
-      const task = await enqueueExport(project, path, exportSettings, priority, renderFarmEnabled ? { enabled: true, maxInstances: renderFarmInstances } : undefined, scheduledStartAt);
+    for (const job of selectedJobs) {
+      const task = await enqueueExport(
+        project,
+        job.outputPath,
+        exportSettings,
+        priority,
+        renderFarmEnabled ? { enabled: true, maxInstances: renderFarmInstances } : undefined,
+        scheduledStartAt,
+        job.range
+      );
       for (const warning of task.plan.warnings) {
         showToast({ kind: 'warning', title: t.exportWarningTitle, message: formatExportWarning(warning) });
       }
     }
-    showToast({ kind: 'info', title: scheduleEnabled ? t.scheduledTitle : t.queuedTitle, message: t.queuedMessage(selectedPaths.length, selectedPreset.name) });
+    showToast({ kind: 'info', title: scheduleEnabled ? t.scheduledTitle : t.queuedTitle, message: t.queuedMessage(selectedJobs.length, selectedPreset.name) });
   }
 
   async function collectPreflightIssues(): Promise<PreflightResult[]> {
@@ -394,10 +437,10 @@ export function ExportDialog({ project, initialPreset, onClose, onCompleted, onR
     if (!preflight || preflight.issues.some((issue) => issue.severity === 'blocking')) {
       return;
     }
-    const paths = preflight.selectedPaths;
+    const jobs = preflight.selectedJobs;
     setPreflight(undefined);
     try {
-      await enqueueSelectedPaths(paths);
+      await enqueueSelectedJobs(jobs);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : t.exportFailed);
     }
@@ -428,6 +471,26 @@ function relinkFromPreflight(): void {
             <button className="rounded-md border border-line p-2 hover:bg-panel" title={t.chooseOutputPath} onClick={() => void choosePath()}>
               <FolderOpen size={16} />
             </button>
+          </div>
+          <div className="grid grid-cols-[110px_1fr] items-center gap-2">
+            <label className="text-xs font-medium text-slate-600">{t.range.title}</label>
+            <div className="space-y-1">
+              <select
+                className="w-full rounded-md border border-line px-2 py-1.5"
+                value={exportRangeMode}
+                onChange={(event) => setExportRangeMode(event.target.value as ExportRangeMode)}
+                data-testid="export-range-select"
+              >
+                {(['all', 'in-out', 'selected-clips'] as const).map((mode) => (
+                  <option key={mode} value={mode} disabled={!rangeModeAvailable[mode]}>
+                    {t.range.options[mode]}
+                  </option>
+                ))}
+              </select>
+              <div className="text-[11px] text-slate-500" data-testid="export-range-summary">
+                {formatExportRangeSummary(exportRangeMode, activeExportRanges, selectedClipExportRange)}
+              </div>
+            </div>
           </div>
           <div className="grid grid-cols-[110px_1fr_auto] gap-2">
             <label className="pt-1.5 text-xs font-medium text-slate-600">{t.preset}</label>
@@ -758,6 +821,97 @@ function relinkFromPreflight(): void {
       </section>
     </div>
   );
+}
+
+function resolveInOutExportRanges(project: Project, inPoint: number | undefined, outPoint: number | undefined): NormalizedExportRenderRange[] {
+  const timelineDuration = getTimelinePlaybackDuration(project.timeline);
+  const fps = project.settings.fps || 30;
+  const stored = normalizeExportRanges(project.exportRanges, timelineDuration).flatMap((range) => {
+    const normalized = normalizeExportRenderRange(
+      {
+        id: range.id,
+        label: range.label,
+        start: range.start,
+        duration: range.end - range.start
+      },
+      timelineDuration,
+      fps
+    );
+    return normalized ? [normalized] : [];
+  });
+  if (stored.length > 0) {
+    return stored;
+  }
+  const current = exportRenderRangeFromPoints(inPoint, outPoint, timelineDuration, fps, { id: 'current-in-out', label: zhCN.timeline.exportRangeLabel(1) });
+  return current ? [current] : [];
+}
+
+function resolveSelectedClipExportRange(project: Project, selectedClipIds: string[]): NormalizedExportRenderRange | null {
+  const selected = new Set(selectedClipIds);
+  if (selected.size === 0) {
+    return null;
+  }
+  const clips = project.timeline.tracks.flatMap((track) => track.clips).filter((clip) => selected.has(clip.id));
+  if (clips.length === 0) {
+    return null;
+  }
+  const start = Math.min(...clips.map((clip) => clip.start));
+  const end = Math.max(...clips.map((clip) => clip.start + clip.duration));
+  return exportRenderRangeFromPoints(start, end, getTimelinePlaybackDuration(project.timeline), project.settings.fps || 30, {
+    id: 'selected-clips',
+    label: zhCN.exportDialog.range.options['selected-clips']
+  });
+}
+
+function resolveActiveExportRanges(
+  mode: ExportRangeMode,
+  inOutRanges: NormalizedExportRenderRange[],
+  selectedClipRange: NormalizedExportRenderRange | null
+): NormalizedExportRenderRange[] {
+  if (mode === 'in-out') {
+    return inOutRanges;
+  }
+  if (mode === 'selected-clips') {
+    return selectedClipRange ? [selectedClipRange] : [];
+  }
+  return [];
+}
+
+function buildExportJobs(paths: string[], ranges: NormalizedExportRenderRange[]): ExportJob[] {
+  if (ranges.length === 0) {
+    return paths.map((path) => ({ outputPath: path, range: null }));
+  }
+  if (ranges.length === 1) {
+    return paths.map((path) => ({ outputPath: path, range: ranges[0] }));
+  }
+  if (paths.length >= ranges.length) {
+    return ranges.map((range, index) => ({ outputPath: paths[index], range }));
+  }
+  const basePath = paths[0];
+  return ranges.map((range, index) => ({
+    outputPath: appendExportRangeSequence(basePath, index + 1, ranges.length),
+    range
+  }));
+}
+
+function formatExportRangeSummary(
+  mode: ExportRangeMode,
+  ranges: NormalizedExportRenderRange[],
+  selectedClipRange: NormalizedExportRenderRange | null
+): string {
+  if (mode === 'all') {
+    return zhCN.exportDialog.range.allSummary;
+  }
+  if (mode === 'selected-clips' && !selectedClipRange) {
+    return zhCN.exportDialog.range.unavailable;
+  }
+  if (ranges.length === 0) {
+    return zhCN.exportDialog.range.unavailable;
+  }
+  if (ranges.length === 1) {
+    return zhCN.exportDialog.range.singleSummary(formatDuration(ranges[0].start), formatDuration(ranges[0].duration));
+  }
+  return zhCN.exportDialog.range.multiSummary(ranges.length);
 }
 
 async function runCompletionAction(action: ExportCompletionAction, settings: ExportBackgroundSettings): Promise<void> {

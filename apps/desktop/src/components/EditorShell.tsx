@@ -22,8 +22,10 @@ import {
   SnapToBeatsCommand,
   SplitClipCommand,
   UpdateProjectBeatMarkersCommand,
+  UpdateProjectExportRangesCommand,
   UpdateClipCommand,
   createBeatMarker,
+  createExportRange,
   createId,
   createProject,
   createTrack,
@@ -31,6 +33,7 @@ import {
   dirname,
   getClipSpeed,
   getTimelineDuration,
+  normalizeExportRanges,
   applyTimelineVersionDiffSelection,
   instantiateProjectTemplate,
   instantiateTitleTemplate,
@@ -161,6 +164,8 @@ export function EditorShell() {
   const selectedClipIds = useEditorStore((state) => state.selectedClipIds);
   const selectedKeyframe = useEditorStore((state) => state.selectedKeyframe);
   const playheadTime = useEditorStore((state) => state.playheadTime);
+  const inPoint = useEditorStore((state) => state.inPoint);
+  const outPoint = useEditorStore((state) => state.outPoint);
   const dirty = useEditorStore((state) => state.dirty);
   const projectPath = useEditorStore((state) => state.projectPath);
   const setProject = useEditorStore((state) => state.setProject);
@@ -1399,6 +1404,73 @@ export function EditorShell() {
     }
   }, []);
 
+  const setSingleExportRange = useCallback((start: number, end: number) => {
+    const state = useEditorStore.getState();
+    const duration = getTimelineDuration(state.project.timeline);
+    const range = createExportRange(
+      {
+        id: state.project.exportRanges[0]?.id,
+        label: zhCN.timeline.exportRangeLabel(1),
+        start,
+        end
+      },
+      duration
+    );
+    if (range.end <= range.start) {
+      return;
+    }
+    commandManager.execute(new UpdateProjectExportRangesCommand(projectAccessor, [range]));
+  }, []);
+
+  const appendExportRange = useCallback((start: number, end: number) => {
+    const state = useEditorStore.getState();
+    const duration = getTimelineDuration(state.project.timeline);
+    const existing = normalizeExportRanges(state.project.exportRanges, duration);
+    const range = createExportRange(
+      {
+        label: zhCN.timeline.exportRangeLabel(existing.length + 1),
+        start,
+        end
+      },
+      duration
+    );
+    if (range.end <= range.start) {
+      return;
+    }
+    commandManager.execute(new UpdateProjectExportRangesCommand(projectAccessor, [...existing, range]));
+  }, []);
+
+  const markInPoint = useCallback(() => {
+    const state = useEditorStore.getState();
+    const time = state.playheadTime;
+    setInPoint(time);
+    if (typeof state.outPoint === 'number') {
+      setSingleExportRange(time, state.outPoint);
+    }
+  }, [setInPoint, setSingleExportRange]);
+
+  const markOutPoint = useCallback(() => {
+    const state = useEditorStore.getState();
+    const time = state.playheadTime;
+    setOutPoint(time);
+    if (typeof state.inPoint === 'number') {
+      setSingleExportRange(state.inPoint, time);
+    }
+  }, [setOutPoint, setSingleExportRange]);
+
+  const markMultiRangeInPoint = useCallback(() => {
+    setInPoint(useEditorStore.getState().playheadTime);
+  }, [setInPoint]);
+
+  const markMultiRangeOutPoint = useCallback(() => {
+    const state = useEditorStore.getState();
+    const time = state.playheadTime;
+    setOutPoint(time);
+    if (typeof state.inPoint === 'number') {
+      appendExportRange(state.inPoint, time);
+    }
+  }, [appendExportRange, setOutPoint]);
+
   const shortcutHandlers = useMemo(
     () => ({
       togglePlayback,
@@ -1407,8 +1479,10 @@ export function EditorShell() {
       forwardPlayback,
       stepBackwardFrame: () => stepFrame(-1),
       stepForwardFrame: () => stepFrame(1),
-      setInPoint: () => setInPoint(useEditorStore.getState().playheadTime),
-      setOutPoint: () => setOutPoint(useEditorStore.getState().playheadTime),
+      setInPoint: markInPoint,
+      setOutPoint: markOutPoint,
+      addExportRangeIn: markMultiRangeInPoint,
+      addExportRangeOut: markMultiRangeOutPoint,
       deleteSelected,
       rippleDeleteSelected,
       splitSelected,
@@ -1426,13 +1500,15 @@ export function EditorShell() {
       deleteSelected,
       exportCurrentFrame,
       forwardPlayback,
+      markInPoint,
+      markMultiRangeInPoint,
+      markMultiRangeOutPoint,
+      markOutPoint,
       pausePlayback,
       redo,
       reversePlayback,
       rippleDeleteSelected,
       saveProject,
-      setInPoint,
-      setOutPoint,
       setSelectedClipIds,
       splitSelected,
       stepFrame,
@@ -1749,6 +1825,9 @@ export function EditorShell() {
             <ExportDialog
               project={project}
               initialPreset={templateExportPreset}
+              selectedClipIds={selectedClipIds}
+              inPoint={inPoint}
+              outPoint={outPoint}
               onClose={() => setExportDialogOpen(false)}
               onCompleted={(path) => {
                 setLastExportPath(path);

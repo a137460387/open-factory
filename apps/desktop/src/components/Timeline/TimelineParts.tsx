@@ -53,6 +53,7 @@ export function Ruler({
   width,
   cachedRanges,
   diffRanges,
+  exportRanges,
   fps,
   timecodeFormat,
   onSeek
@@ -62,6 +63,7 @@ export function Ruler({
   width: number;
   cachedRanges: TimelineRenderRange[];
   diffRanges: TimelineDiffRange[];
+  exportRanges: Array<{ id: string; start: number; end: number }>;
   fps: number;
   timecodeFormat: TimecodeFormat;
   onSeek(time: number): void;
@@ -98,6 +100,15 @@ export function Ruler({
               style={{ left: range.start * zoom, width: Math.max(2, (range.end - range.start) * zoom) }}
               title={zhCN.timeline.snapshotDiffRange}
               data-testid="timeline-snapshot-diff-segment"
+            />
+          ))}
+          {exportRanges.map((range) => (
+            <span
+              key={range.id}
+              className="absolute bottom-0 top-0 bg-sky-400/35"
+              style={{ left: range.start * zoom, width: Math.max(2, (range.end - range.start) * zoom) }}
+              title={zhCN.timeline.exportRange}
+              data-testid="timeline-export-range-highlight"
             />
           ))}
           {ticks.map((tick) => (

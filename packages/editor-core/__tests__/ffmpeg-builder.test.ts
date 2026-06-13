@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildAtempoFilters,
+  appendExportRangeSequence,
   buildExportProjectFromProject,
   buildFfmpegCurrentFrameExportPlan,
   buildFfmpegExportPlan,
@@ -39,6 +40,26 @@ function makeAudioVisualizationProject(): Project {
 }
 
 describe('multitrack ffmpeg builder', () => {
+  it('injects frame-aligned range seek and duration args for single range export', () => {
+    const project = makeProject();
+    project.settings.fps = 30;
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4', settings: { fps: 30 } }), undefined, 0, [], {
+      exportRange: { start: 1.011, duration: 2.041 }
+    });
+
+    const ssIndex = plan.outputArgs.indexOf('-ss');
+    const tIndex = plan.outputArgs.indexOf('-t');
+    expect(plan.outputArgs.slice(ssIndex, ssIndex + 2)).toEqual(['-ss', '1']);
+    expect(plan.outputArgs.slice(tIndex, tIndex + 2)).toEqual(['-t', '2.033']);
+    expect(plan.duration).toBeCloseTo(61 / 30, 6);
+  });
+
+  it('adds numeric suffixes before extensions for multi-range export filenames', () => {
+    expect(appendExportRangeSequence('C:/Exports/movie.mp4', 1, 12)).toBe('C:/Exports/movie-01.mp4');
+    expect(appendExportRangeSequence('C:/Exports/movie.mp4', 12, 12)).toBe('C:/Exports/movie-12.mp4');
+    expect(appendExportRangeSequence('C:/Exports/movie', 3, 9)).toBe('C:/Exports/movie-03');
+  });
+
   it('builds per-clip overlay, drawtext textfile, and amix filters as argument arrays', () => {
     const project = makeProject();
     project.media.push({

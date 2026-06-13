@@ -48,6 +48,7 @@ import {
   isNestedSequenceDepthExceeded,
   instantiateTitleTemplate,
   moveClip,
+  normalizeExportRanges,
   round,
   snapTime,
   type Clip,
@@ -123,8 +124,19 @@ export function Timeline() {
     10,
     ...project.timeline.tracks.flatMap((track) => track.clips.map((clip) => clip.start + clip.duration + 2))
   );
+  const projectDuration = getTimelineDuration(project.timeline);
   const width = Math.max(960, timelineDuration * zoom);
   const ticks = useMemo(() => buildTicks(timelineDuration), [timelineDuration]);
+  const exportRangeHighlights = useMemo(() => {
+    const stored = normalizeExportRanges(project.exportRanges, projectDuration).map((range) => ({ id: range.id, start: range.start, end: range.end }));
+    if (stored.length > 0) {
+      return stored;
+    }
+    if (typeof inPoint !== 'number' || typeof outPoint !== 'number' || inPoint === outPoint) {
+      return [];
+    }
+    return [{ id: 'current-in-out', start: Math.min(inPoint, outPoint), end: Math.max(inPoint, outPoint) }];
+  }, [inPoint, outPoint, project.exportRanges, projectDuration]);
   const allClips = useMemo(() => project.timeline.tracks.flatMap((track) => track.clips), [project.timeline]);
   const virtualWindow = useMemo(
     () =>
@@ -1071,6 +1083,7 @@ export function Timeline() {
             width={width}
             cachedRanges={renderCacheRanges}
             diffRanges={timelineCompareRanges}
+            exportRanges={exportRangeHighlights}
             fps={project.settings.fps || 30}
             timecodeFormat={project.settings.timecodeFormat ?? 'ndf'}
             onSeek={setPlayheadTime}

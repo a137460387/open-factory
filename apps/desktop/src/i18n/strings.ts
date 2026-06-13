@@ -293,6 +293,8 @@ const zh = {
         'step-forward': '前进一帧',
         'set-in-point': '设置入点',
         'set-out-point': '设置出点',
+        'add-export-range-in': '多段区间入点',
+        'add-export-range-out': '多段区间出点',
         'split-selected': '分割选中片段',
         'delete-selected': '删除选中片段',
         'ripple-delete': '波纹删除',
@@ -762,6 +764,8 @@ const zh = {
     zoom: '时间线缩放',
     inPoint: '入点',
     outPoint: '出点',
+    exportRange: '导出区间',
+    exportRangeLabel: (index: number) => `导出区间 ${index}`,
     muteTrack: '静音轨道',
     soloTrack: '独奏轨道',
     lockTrack: '锁定轨道',
@@ -1254,6 +1258,18 @@ const zh = {
     subtitle: '命名预设、本地 FFmpeg 队列、无云端上传',
     close: '关闭导出弹窗',
     output: '输出',
+    range: {
+      title: '导出范围',
+      options: {
+        all: '全部',
+        'in-out': '入出点区间',
+        'selected-clips': '选中 clip 范围'
+      },
+      allSummary: '导出完整时间线。',
+      unavailable: '当前没有可用区间。',
+      singleSummary: (start: string, duration: string) => `${start} 起，时长 ${duration}`,
+      multiSummary: (count: number) => `${count} 个区间，将分别导出并自动添加序号。`
+    },
     chooseOutputPath: '选择输出路径',
     preset: '预设',
     delete: '删除',
@@ -2206,6 +2222,8 @@ const enOverrides = {
         'step-forward': 'Step Forward',
         'set-in-point': 'Set In Point',
         'set-out-point': 'Set Out Point',
+        'add-export-range-in': 'Multi-range In Point',
+        'add-export-range-out': 'Multi-range Out Point',
         'split-selected': 'Split Selected Clip',
         'delete-selected': 'Delete Selected Clip',
         'ripple-delete': 'Ripple Delete',
@@ -2603,6 +2621,8 @@ const enOverrides = {
     zoom: 'Timeline Zoom',
     inPoint: 'In Point',
     outPoint: 'Out Point',
+    exportRange: 'Export Range',
+    exportRangeLabel: (index: number) => `Export Range ${index}`,
     muteTrack: 'Mute Track',
     soloTrack: 'Solo Track',
     lockTrack: 'Lock Track',
@@ -2929,6 +2949,18 @@ const enOverrides = {
     subtitle: 'Named presets, local FFmpeg queue, no cloud upload',
     close: 'Close export dialog',
     output: 'Output',
+    range: {
+      title: 'Export Range',
+      options: {
+        all: 'Entire timeline',
+        'in-out': 'In/Out range',
+        'selected-clips': 'Selected clip range'
+      },
+      allSummary: 'Exports the full timeline.',
+      unavailable: 'No available range.',
+      singleSummary: (start: string, duration: string) => `Starts at ${start}, duration ${duration}`,
+      multiSummary: (count: number) => `${count} ranges will export as separate numbered files.`
+    },
     chooseOutputPath: 'Choose output path',
     preset: 'Preset',
     delete: 'Delete',

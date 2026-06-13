@@ -31,6 +31,7 @@ export * from './commands/command';
 export * from './commands/command-manager';
 export * from './commands/timeline-commands';
 export * from './export/ffmpeg';
+export * from './export/export-ranges';
 export * from './export/preflight';
 export * from './export/timeline-export';
 export * from './export/timeline-import';

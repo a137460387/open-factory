@@ -1265,7 +1265,13 @@ window.__E2E_ACTIONS__ = {
   },
   getTimelineSnapshot: () => useEditorStore.getState().project.timeline,
   getPlayheadTime: () => useEditorStore.getState().playheadTime,
+  setPlayheadTime: (time: unknown) => {
+    if (typeof time === 'number' && Number.isFinite(time)) {
+      useEditorStore.getState().setPlayheadTime(time);
+    }
+  },
   getSelectedClipIds: () => useEditorStore.getState().selectedClipIds,
+  getExportRanges: () => useEditorStore.getState().project.exportRanges,
   getProjectSnapshot: () => useEditorStore.getState().project,
   getProjectMedia: () => useEditorStore.getState().project.media,
   setOpenFileDialogPaths: (paths: unknown) => {

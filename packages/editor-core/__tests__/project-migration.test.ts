@@ -26,6 +26,26 @@ describe('project schema migration', () => {
     expect(migrated.project.settings).toMatchObject({ fps: 24, timecodeFormat: 'ndf' });
   });
 
+  it('serializes and migrates export ranges while old project files default to none', () => {
+    const project = makeProject();
+    project.exportRanges = [
+      { id: 'range-b', label: '  Outro  ', start: 8, end: 4 },
+      { id: 'range-a', label: '', start: 1, end: 3 }
+    ];
+
+    const file = serializeProject(project);
+    const migrated = migrateProjectFile(file);
+
+    expect(file.project.exportRanges).toEqual([
+      { id: 'range-a', label: 'Export Range', start: 1, end: 3 },
+      { id: 'range-b', label: 'Outro', start: 4, end: 8 }
+    ]);
+    expect(migrated.project.exportRanges).toEqual(file.project.exportRanges);
+
+    delete file.project.exportRanges;
+    expect(migrateProjectFile(file).project.exportRanges).toEqual([]);
+  });
+
   it('keeps absolute path and warning when media is on another drive', () => {
     const file = serializeProject(makeProject(), 'D:/Projects/project.cutproj.json');
 

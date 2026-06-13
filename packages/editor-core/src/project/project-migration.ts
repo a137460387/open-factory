@@ -22,6 +22,7 @@ import {
   normalizeMotionTrack,
   normalizeMulticamSequence,
   normalizeProjectAnnotations,
+  normalizeExportRanges,
   normalizeProjectSettings,
   normalizeSequenceFrameRate,
   normalizeSequenceName,
@@ -92,6 +93,7 @@ export function serializeProjectFile(project: Project, projectPath?: string): Pr
       mediaMetadata: normalizeMediaMetadata(project.mediaMetadata, media),
       annotations: normalizeProjectAnnotations(project.annotations, getTimelineDuration(project.timeline)),
       beatMarkers: normalizeBeatMarkers(project.beatMarkers, getTimelineDuration(project.timeline)),
+      exportRanges: normalizeExportRanges(project.exportRanges, getTimelineDuration(project.timeline)),
       timeline: clonePrimaryTimeline(project),
       sequences: cloneProjectSequences(project),
       activeSequenceId: project.activeSequenceId ?? PRIMARY_SEQUENCE_ID
@@ -121,6 +123,7 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         mediaMetadata: normalizeMediaMetadata(file.project.mediaMetadata, media),
         annotations: normalizeProjectAnnotations(file.project.annotations, getTimelineDuration(primaryTimeline)),
         beatMarkers: normalizeBeatMarkers(file.project.beatMarkers, getTimelineDuration(primaryTimeline)),
+        exportRanges: normalizeExportRanges(file.project.exportRanges, getTimelineDuration(primaryTimeline)),
         timeline: sequences.find((sequence) => sequence.id === activeSequenceId)?.timeline ?? primaryTimeline,
         sequences,
         activeSequenceId
@@ -147,6 +150,7 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         mediaMetadata: {},
         annotations: [],
         beatMarkers: [],
+        exportRanges: [],
         timeline: primaryTimeline,
         sequences,
         activeSequenceId: PRIMARY_SEQUENCE_ID

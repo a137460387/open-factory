@@ -10,6 +10,8 @@ interface ShortcutHandlers {
   stepForwardFrame(): void;
   setInPoint(): void;
   setOutPoint(): void;
+  addExportRangeIn(): void;
+  addExportRangeOut(): void;
   deleteSelected(): void;
   rippleDeleteSelected(): void;
   splitSelected(): void;
@@ -75,6 +77,12 @@ export function useShortcuts(handlers: ShortcutHandlers, bindings: TimelineShort
           break;
         case 'set-out-point':
           handlers.setOutPoint();
+          break;
+        case 'add-export-range-in':
+          handlers.addExportRangeIn();
+          break;
+        case 'add-export-range-out':
+          handlers.addExportRangeOut();
           break;
         case 'delete-selected':
           handlers.deleteSelected();

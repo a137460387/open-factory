@@ -186,6 +186,7 @@ export interface Project {
   mediaMetadata: Record<string, MediaMetadata>;
   annotations: ProjectAnnotation[];
   beatMarkers: BeatMarker[];
+  exportRanges: ExportRange[];
   timeline: Timeline;
   sequences: Sequence[];
   activeSequenceId: string;
@@ -248,6 +249,13 @@ export interface ProjectAnnotation {
   time: number;
   text: string;
   color: string;
+}
+
+export interface ExportRange {
+  id: string;
+  label: string;
+  start: number;
+  end: number;
 }
 
 export interface Timeline {
@@ -724,6 +732,20 @@ export function createProjectAnnotation(
   };
 }
 
+export function createExportRange(
+  range: Omit<ExportRange, 'id' | 'label'> & Partial<Pick<ExportRange, 'id' | 'label'>>,
+  maxTime?: number
+): ExportRange {
+  const start = normalizeTimelinePointTime(range.start, maxTime);
+  const end = normalizeTimelinePointTime(range.end, maxTime);
+  return {
+    id: range.id ?? createId('export-range'),
+    label: normalizeExportRangeLabel(range.label),
+    start: round(Math.min(start, end)),
+    end: round(Math.max(start, end))
+  };
+}
+
 export function createTrack(
   track: Omit<Track, 'muted' | 'solo' | 'locked' | 'volume' | 'pan' | 'eq' | 'compressor'> &
     Partial<Pick<Track, 'muted' | 'solo' | 'locked' | 'volume' | 'pan' | 'eq' | 'compressor'>>
@@ -756,6 +778,7 @@ export function createProject(name = 'Untitled Project'): Project {
     mediaMetadata: {},
     annotations: [],
     beatMarkers: [],
+    exportRanges: [],
     timeline,
     sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
     activeSequenceId: PRIMARY_SEQUENCE_ID
@@ -1193,6 +1216,20 @@ export function normalizeProjectAnnotations(annotations: ProjectAnnotation[] | u
     .sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
 }
 
+export function normalizeExportRange(range: ExportRange, maxTime?: number): ExportRange | undefined {
+  const normalized = createExportRange(range, maxTime);
+  return normalized.end > normalized.start ? normalized : undefined;
+}
+
+export function normalizeExportRanges(ranges: ExportRange[] | undefined, maxTime?: number): ExportRange[] {
+  return [...(ranges ?? [])]
+    .flatMap((range) => {
+      const normalized = normalizeExportRange(range, maxTime);
+      return normalized ? [normalized] : [];
+    })
+    .sort((left, right) => left.start - right.start || left.end - right.end || left.id.localeCompare(right.id));
+}
+
 export function normalizeTrackVolume(volume: number | undefined): number {
   if (typeof volume !== 'number' || !Number.isFinite(volume)) {
     return DEFAULT_TRACK_VOLUME;
@@ -1456,6 +1493,11 @@ function normalizeTimelineMarkerColor(color: string | undefined): string {
 function normalizeProjectAnnotationText(text: string | undefined): string {
   const trimmed = text?.trim();
   return trimmed ? trimmed.slice(0, 240) : 'Annotation';
+}
+
+function normalizeExportRangeLabel(label: string | undefined): string {
+  const trimmed = label?.trim();
+  return trimmed ? trimmed.slice(0, 80) : 'Export Range';
 }
 
 function normalizeHexColor(color: string | undefined, fallback: string): string {

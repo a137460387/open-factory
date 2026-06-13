@@ -4,6 +4,7 @@ import {
   runRenderFarmWithFallback,
   timelineHasExportableVideo,
   type ExportSettings,
+  type ExportRenderRange,
   type ExportTaskPriority,
   type ExportTask,
   type TextArtifact,
@@ -31,7 +32,8 @@ export async function enqueueExport(
   settings?: Partial<Omit<ExportSettings, 'outputPath'>>,
   priority?: ExportTaskPriority,
   renderFarm?: RenderFarmTaskConfig,
-  scheduledStartAt?: string
+  scheduledStartAt?: string,
+  exportRange?: ExportRenderRange | null
 ): Promise<ExportTask> {
   if (!timelineHasExportableVideo(project.timeline)) {
     throw new Error(zhCN.errors.exportNeedsVideo);
@@ -42,7 +44,7 @@ export async function enqueueExport(
   }
   await runExportBeforePlugins(project, outputPath, settings);
   const exportProject = buildExportProjectFromProject(project, { outputPath, settings });
-  const plan = buildFfmpegExportPlan(exportProject, capabilities);
+  const plan = buildFfmpegExportPlan(exportProject, capabilities, 0, [], { exportRange });
   const task = useExportQueueStore.getState().addTask({
     name: fileNameFromPath(outputPath) || `${project.name} 导出`,
     projectName: project.name,
