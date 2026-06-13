@@ -1786,6 +1786,50 @@ export class AddKeyframeCommand implements Command {
   }
 }
 
+export interface BatchUpdateKeyframeItem {
+  clipId: string;
+  property: KeyframeProperty;
+  keyframes: AddKeyframeInput[];
+  replace?: boolean;
+}
+
+export class BatchUpdateKeyframeCommand implements Command {
+  readonly description: string;
+  private before?: Timeline;
+
+  constructor(private readonly accessor: TimelineAccessor, private readonly updates: BatchUpdateKeyframeItem[], description = 'Batch update keyframes') {
+    this.description = description;
+  }
+
+  execute(): void {
+    let timeline = this.accessor.getTimeline();
+    this.before ??= timeline;
+    for (const update of this.updates) {
+      const beforeClip = findClip(timeline, update.clipId);
+      let keyframes = update.replace ? { ...(beforeClip.keyframes ?? {}), [update.property]: [] } : beforeClip.keyframes;
+      for (const input of update.keyframes) {
+        keyframes = setKeyframeForProperty(keyframes, update.property, createKeyframe(update.property, input, beforeClip.duration), beforeClip.duration);
+      }
+      let after = {
+        ...beforeClip,
+        keyframes: normalizeClipKeyframes(cloneClipKeyframes(keyframes), beforeClip.duration)
+      } as Clip;
+      after = applySpeedKeyframeDuration(beforeClip, after, update.property);
+      if (update.property === 'speed' && detectOverlap(findTrack(timeline, after.trackId), after, beforeClip.id)) {
+        throw new Error('Clip overlaps another clip on this track');
+      }
+      timeline = replaceClip(timeline, after);
+    }
+    this.accessor.setTimeline(timeline);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setTimeline(this.before);
+    }
+  }
+}
+
 export type KeyframePatch = Partial<Pick<Keyframe<number>, 'time' | 'value' | 'easing'>>;
 
 export class UpdateKeyframeCommand implements Command {

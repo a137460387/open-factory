@@ -415,6 +415,13 @@ const mocks: TauriMocks = {
     audioCodec: path.endsWith('.mp4') ? 'aac' : path.endsWith('.wav') ? 'pcm_s16le' : undefined,
     videoCodec: path === fourKHevcVideo ? 'hevc' : path.endsWith('.mp4') || path.endsWith('.mov') ? 'h264' : undefined
   }),
+  analyzeWaveform: (path, samplesPerSec) => {
+    const total = Math.max(1, Math.ceil(6 * Math.max(1, samplesPerSec)));
+    return Array.from({ length: total }, (_, index) => {
+      const time = index / Math.max(1, samplesPerSec);
+      return path === tinyVideo && time >= 1 && time < 2.25 ? 0.8 : 0.01;
+    });
+  },
   generateProxy: async (plan) => {
     await wait(10);
     files.set(plan.outputPath, 'mock proxy');

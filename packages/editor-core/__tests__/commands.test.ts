@@ -12,6 +12,7 @@ import {
   AddMediaFolderCommand,
   ApplyTextAnimationCommand,
   AddTransitionCommand,
+  BatchUpdateKeyframeCommand,
   DEFAULT_COLOR_CORRECTION,
   type Command,
   CommandManager,
@@ -629,6 +630,45 @@ describe('timeline commands', () => {
 
     manager.undo();
     expect(accessor.current().tracks[0].clips[0].keyframes?.opacity?.map((frame) => frame.id)).toEqual(['kf-a', 'kf-b']);
+  });
+
+  it('batch updates volume keyframes and restores every clip with one undo', () => {
+    const accessor = makeAccessor(
+      makeTimeline([
+        makeAudioClip({ id: 'music-a', start: 0, duration: 3 }),
+        makeAudioClip({ id: 'music-b', start: 3, duration: 3 })
+      ])
+    );
+    const manager = new CommandManager();
+
+    manager.execute(
+      new BatchUpdateKeyframeCommand(accessor, [
+        {
+          clipId: 'music-a',
+          property: 'volume',
+          keyframes: [
+            { id: 'duck-a-0', time: 0.5, value: 1 },
+            { id: 'duck-a-1', time: 1, value: 0.35 }
+          ]
+        },
+        {
+          clipId: 'music-b',
+          property: 'volume',
+          keyframes: [
+            { id: 'duck-b-0', time: 0, value: 0.35 },
+            { id: 'duck-b-1', time: 1, value: 1 }
+          ]
+        }
+      ])
+    );
+
+    const clips = accessor.current().tracks[1].clips;
+    expect(clips[0].keyframes?.volume?.map((frame) => frame.id)).toEqual(['duck-a-0', 'duck-a-1']);
+    expect(clips[1].keyframes?.volume?.map((frame) => frame.id)).toEqual(['duck-b-0', 'duck-b-1']);
+
+    manager.undo();
+    expect(accessor.current().tracks[1].clips[0].keyframes).toBeUndefined();
+    expect(accessor.current().tracks[1].clips[1].keyframes).toBeUndefined();
   });
 
   it('applies text animation presets through an undoable command', () => {
