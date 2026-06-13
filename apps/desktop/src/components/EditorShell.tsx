@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import {
   AddAdjustmentLayerCommand,
   AddClipCommand,
@@ -114,10 +114,14 @@ import {
 import { showToast } from '../lib/toast';
 import {
   appendMacroHistoryEntry,
+  buildMacroCommands,
   findMacroTargetClip,
   readClipMacros,
   readMacroHistory,
+  snapshotCommand,
+  writeClipMacros,
   type ClipMacro,
+  type CommandSnapshot,
   type MacroHistoryEntry
 } from '../macros/clip-macros';
 import { readBackupSettings, readLayoutSettings, readViewSettings, saveLayoutSettings, saveViewSettings } from '../settings/appSettings';
@@ -201,6 +205,8 @@ export function EditorShell() {
   const [shortcutBindings, setShortcutBindings] = useState<TimelineShortcutBindings>({});
   const [macros, setMacros] = useState<ClipMacro[]>([]);
   const [macroHistory, setMacroHistory] = useState<MacroHistoryEntry[]>([]);
+  const [macroRecordingActive, setMacroRecordingActive] = useState(false);
+  const [macroRecordingStepCount, setMacroRecordingStepCount] = useState(0);
   const [autosaveIntervalSeconds, setAutosaveIntervalSeconds] = useState(() => readAutosaveIntervalSeconds());
   const [recoveryCandidate, setRecoveryCandidate] = useState<AutosaveRecoveryCandidate>();
   const [archiveProgress, setArchiveProgress] = useState<ArchiveProgress>();
@@ -217,6 +223,7 @@ export function EditorShell() {
   const [recordingElapsedSeconds, setRecordingElapsedSeconds] = useState(0);
   const exportTasks = useExportQueueStore((state) => state.tasks);
   const exportQueuePaused = useExportQueueStore((state) => state.queuePaused);
+  const macroRecorderRef = useRef<{ active: boolean; replaying: boolean; steps: CommandSnapshot[] }>({ active: false, replaying: false, steps: [] });
 
   const selectedClip = useMemo(() => selectClipById(project, selectedClipId), [project, selectedClipId]);
   const selectedClipMedia = useMemo(
@@ -560,6 +567,22 @@ export function EditorShell() {
     return () => {
       canceled = true;
     };
+  }, []);
+
+  useEffect(() => {
+    commandManager.setOnExecute((command) => {
+      const recorder = macroRecorderRef.current;
+      if (!recorder.active || recorder.replaying) {
+        return;
+      }
+      const snapshot = snapshotCommand(command);
+      if (!snapshot) {
+        return;
+      }
+      recorder.steps = [...recorder.steps, snapshot];
+      setMacroRecordingStepCount(recorder.steps.length);
+    });
+    return () => commandManager.setOnExecute(undefined);
   }, []);
 
   useEffect(() => {
@@ -1426,6 +1449,48 @@ export function EditorShell() {
     }
   }, []);
 
+  const startMacroRecording = useCallback(() => {
+    macroRecorderRef.current = { active: true, replaying: false, steps: [] };
+    setMacroRecordingActive(true);
+    setMacroRecordingStepCount(0);
+    showToast({ kind: 'info', title: zhCN.settings.macros.recordingStarted, message: zhCN.settings.macros.recordingStartedMessage });
+  }, []);
+
+  const stopMacroRecording = useCallback(async () => {
+    const recorder = macroRecorderRef.current;
+    if (!recorder.active) {
+      return;
+    }
+    recorder.active = false;
+    setMacroRecordingActive(false);
+    setMacroRecordingStepCount(recorder.steps.length);
+    const steps = recorder.steps;
+    if (steps.length === 0) {
+      showToast({ kind: 'warning', title: zhCN.settings.macros.recordingStopped, message: zhCN.settings.macros.recordingEmpty });
+      return;
+    }
+    const defaultName = zhCN.settings.macros.recordingDefaultName(new Date().toLocaleString('zh-CN', { hour12: false }));
+    const name = window.prompt(zhCN.settings.macros.recordNamePrompt, defaultName)?.trim();
+    if (!name) {
+      return;
+    }
+    try {
+      const saved = await writeClipMacros([
+        ...macros,
+        {
+          id: createId('macro'),
+          name,
+          description: zhCN.settings.macros.savedRecordingMessage(steps.length),
+          steps
+        }
+      ]);
+      setMacros(saved);
+      showToast({ kind: 'success', title: zhCN.settings.macros.savedRecording, message: zhCN.settings.macros.savedRecordingMessage(steps.length) });
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.settings.macros.saveFailed, message: error instanceof Error ? error.message : zhCN.settings.macros.saveFailedMessage });
+    }
+  }, [macros]);
+
   const executeMacro = useCallback(
     async (macro: ClipMacro) => {
       const state = useEditorStore.getState();
@@ -1447,7 +1512,18 @@ export function EditorShell() {
         return;
       }
       try {
-        commandManager.execute(new UpdateClipCommand(timelineAccessor, target.id, macro.patch));
+        const commands = buildMacroCommands(timelineAccessor, macro, target.id);
+        if (commands.length === 0) {
+          throw new Error(zhCN.settings.macros.invalidSteps);
+        }
+        macroRecorderRef.current.replaying = true;
+        try {
+          for (const command of commands) {
+            commandManager.execute(command);
+          }
+        } finally {
+          macroRecorderRef.current.replaying = false;
+        }
         setSelectedClipId(target.id);
         await recordMacroHistory({
           ...baseEntry,
@@ -1497,6 +1573,8 @@ export function EditorShell() {
           onDetectBeats={() => void detectSelectedBeats()}
           onSnapToBeats={snapSelectedToBeats}
           onOpenMacroHistory={() => setMacroHistoryOpen(true)}
+          onStartMacroRecording={startMacroRecording}
+          onStopMacroRecording={() => void stopMacroRecording()}
           onImportSubtitles={() => void importSubtitles()}
           onStartRecording={(source) => void startEditorRecording(source)}
           onStopRecording={() => void stopEditorRecording()}
@@ -1520,6 +1598,8 @@ export function EditorShell() {
           canSeparateAudio={canSeparateSelectedAudio}
           audioSeparationRunning={Boolean(audioSeparationClipId)}
           audioSeparationProgress={audioSeparationProgress}
+          macroRecordingActive={macroRecordingActive}
+          macroRecordingStepCount={macroRecordingStepCount}
           recordingActive={Boolean(recordingTask)}
           recordingElapsedSeconds={recordingElapsedSeconds}
           smartRoughCutOpen={smartRoughCutOpen}
@@ -1715,6 +1795,7 @@ export function EditorShell() {
               macros={macros}
               onShortcutBindingsChange={setShortcutBindings}
               onMacrosChange={setMacros}
+              onExecuteMacro={(macro) => void executeMacro(macro)}
               onClose={() => setSettingsOpen(false)}
             />
           ) : null}

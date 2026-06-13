@@ -27,6 +27,8 @@ interface ToolbarProps {
   onDetectBeats(): void;
   onSnapToBeats(): void;
   onOpenMacroHistory(): void;
+  onStartMacroRecording(): void;
+  onStopMacroRecording(): void;
   onImportSubtitles(): void;
   onStartRecording(source: 'screen' | 'camera'): void;
   onStopRecording(): void;
@@ -47,6 +49,8 @@ interface ToolbarProps {
   canSeparateAudio: boolean;
   audioSeparationRunning: boolean;
   audioSeparationProgress?: number;
+  macroRecordingActive: boolean;
+  macroRecordingStepCount: number;
   recordingActive: boolean;
   recordingElapsedSeconds: number;
   smartRoughCutOpen: boolean;
@@ -379,6 +383,31 @@ export function Toolbar(props: ToolbarProps) {
               }}
             >
               <span>{t.macroHistory}</span>
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+              type="button"
+              disabled={props.macroRecordingActive}
+              data-testid="toolbar-tools-start-macro-recording-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onStartMacroRecording();
+              }}
+            >
+              <span>{t.startMacroRecording}</span>
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+              type="button"
+              disabled={!props.macroRecordingActive}
+              data-testid="toolbar-tools-stop-macro-recording-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onStopMacroRecording();
+              }}
+            >
+              <span>{t.stopMacroRecording}</span>
+              <span className="text-xs text-slate-500">{t.macroRecordingSteps(props.macroRecordingStepCount)}</span>
             </button>
           </div>
         ) : null}

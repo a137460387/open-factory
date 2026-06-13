@@ -22,9 +22,13 @@ import { showToast } from '../lib/toast';
 import {
   detectMacroShortcutConflicts,
   exportClipMacrosToDialog,
+  getMacroSteps,
   importClipMacrosFromDialog,
+  parseCommandSnapshotsJson,
+  serializeCommandSnapshots,
   writeClipMacros,
   type ClipMacro,
+  type CommandSnapshot,
   type MacroShortcutConflict
 } from '../macros/clip-macros';
 import { getPluginRegistrySnapshot, refreshPluginRegistry, setPluginEnabled, uninstallPlugin, type LoadedPlugin, type PluginRegistry } from '../plugins/plugin-manager';
@@ -83,6 +87,7 @@ interface SettingsDialogProps {
   macros: ClipMacro[];
   onShortcutBindingsChange(bindings: TimelineShortcutBindings): void;
   onMacrosChange(macros: ClipMacro[]): void;
+  onExecuteMacro(macro: ClipMacro): void;
   onClose(): void;
 }
 
@@ -91,7 +96,7 @@ const EXPORT_RULE_COPY_SUCCESS_ID = 'copy-success';
 const EXPORT_RULE_FAILURE_NOTIFICATION_ID = 'failure-notification';
 const EXPORT_RULE_QUEUE_TONE_ID = 'queue-tone';
 
-export function SettingsDialog({ open, project, selectedClip, shortcutBindings, macros, onShortcutBindingsChange, onMacrosChange, onClose }: SettingsDialogProps) {
+export function SettingsDialog({ open, project, selectedClip, shortcutBindings, macros, onShortcutBindingsChange, onMacrosChange, onExecuteMacro, onClose }: SettingsDialogProps) {
   const t = zhCN.settings;
   const setPreviewTimeline = useEditorStore((state) => state.setPreviewTimeline);
   const [tab, setTab] = useState<SettingsTab>('general');
@@ -334,6 +339,23 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
 
   function resetMacroShortcut(macroId: string) {
     void updateMacros(macros.map((macro) => (macro.id === macroId ? { ...macro, shortcut: undefined } : macro)));
+  }
+
+  async function updateMacroSteps(macroId: string, steps: CommandSnapshot[]) {
+    if (steps.length === 0) {
+      showToast({ kind: 'warning', title: t.macros.saveFailed, message: t.macros.invalidSteps });
+      return;
+    }
+    await updateMacros(macros.map((macro) => (macro.id === macroId ? { ...macro, patch: undefined, steps } : macro)));
+  }
+
+  async function updateMacroStepsFromJson(macroId: string, raw: string) {
+    const steps = parseCommandSnapshotsJson(raw);
+    if (steps.length === 0) {
+      showToast({ kind: 'warning', title: t.macros.saveFailed, message: t.macros.invalidSteps });
+      return;
+    }
+    await updateMacroSteps(macroId, steps);
   }
 
   async function importMacros() {
@@ -1092,6 +1114,7 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
                           <div className="min-w-0 flex-1">
                             <div className="text-sm font-semibold text-ink">{macro.name}</div>
                             {macro.description ? <div className="text-xs text-slate-500">{macro.description}</div> : null}
+                            <div className="mt-1 text-xs text-slate-500">{t.macros.stepCount(getMacroSteps(macro).length)}</div>
                             {hasConflict ? <div className="mt-1 text-xs font-medium text-rose-700">{t.macros.conflict(conflictList.map(formatMacroConflict).join(', '))}</div> : null}
                           </div>
                           <button
@@ -1108,12 +1131,21 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
                           <button
                             className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
                             type="button"
+                            data-testid={`macro-apply-${macro.id}`}
+                            onClick={() => onExecuteMacro(macro)}
+                          >
+                            {t.macros.apply}
+                          </button>
+                          <button
+                            className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
+                            type="button"
                             data-testid={`macro-reset-${macro.id}`}
                             onClick={() => resetMacroShortcut(macro.id)}
                           >
                             {zhCN.common.reset}
                           </button>
                         </div>
+                        <MacroStepsEditor macro={macro} onSave={(raw) => void updateMacroStepsFromJson(macro.id, raw)} onDeleteStep={(steps) => void updateMacroSteps(macro.id, steps)} />
                       </div>
                     );
                   })}
@@ -1797,6 +1829,62 @@ function defaultExportQueueToneRule(): ExportConditionRule {
     trigger: 'queue-complete',
     action: 'play-tone'
   };
+}
+
+function MacroStepsEditor({
+  macro,
+  onSave,
+  onDeleteStep
+}: {
+  macro: ClipMacro;
+  onSave(raw: string): void;
+  onDeleteStep(steps: CommandSnapshot[]): void;
+}) {
+  const t = zhCN.settings.macros;
+  const steps = useMemo(() => getMacroSteps(macro), [macro]);
+  const [value, setValue] = useState(() => serializeCommandSnapshots(steps));
+
+  useEffect(() => {
+    setValue(serializeCommandSnapshots(steps));
+  }, [steps]);
+
+  return (
+    <details className="mt-3 rounded-md border border-line bg-panel p-2">
+      <summary className="cursor-pointer text-xs font-semibold text-slate-600">{t.editSteps}</summary>
+      <div className="mt-2 space-y-2">
+        <div className="flex flex-wrap gap-2">
+          {steps.map((step, index) => (
+            <button
+              key={`${step.type}-${index}`}
+              className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-2 py-1 text-[11px] font-medium text-slate-600 hover:bg-panel"
+              type="button"
+              data-testid={`macro-delete-step-${macro.id}-${index}`}
+              onClick={() => onDeleteStep(steps.filter((_, stepIndex) => stepIndex !== index))}
+            >
+              <Trash2 size={12} />
+              <span>{t.deleteStep(index + 1, step.type)}</span>
+            </button>
+          ))}
+        </div>
+        <textarea
+          className="h-32 w-full resize-y rounded-md border border-line bg-white p-2 font-mono text-xs text-ink"
+          value={value}
+          data-testid={`macro-steps-json-${macro.id}`}
+          spellCheck={false}
+          onChange={(event) => setValue(event.target.value)}
+        />
+        <button
+          className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
+          type="button"
+          data-testid={`macro-save-steps-${macro.id}`}
+          onClick={() => onSave(value)}
+        >
+          <Save size={13} />
+          <span>{t.saveSteps}</span>
+        </button>
+      </div>
+    </details>
+  );
 }
 
 function PluginsSettingsPanel({

@@ -1339,6 +1339,27 @@ describe('timeline commands', () => {
     expect(undoCount).toBe(0);
   });
 
+  it('notifies execute listeners only after a command succeeds', () => {
+    const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'clip-1' })]));
+    const manager = new CommandManager();
+    const executed: Command[] = [];
+    manager.setOnExecute((command) => executed.push(command));
+    const command = new UpdateClipCommand(accessor, 'clip-1', { transform: { scale: 1.25 } });
+
+    manager.execute(command);
+    expect(executed).toEqual([command]);
+
+    const failing: Command = {
+      description: 'Fail',
+      execute: () => {
+        throw new Error('boom');
+      },
+      undo: () => undefined
+    };
+    expect(() => manager.execute(failing)).toThrow('boom');
+    expect(executed).toEqual([command]);
+  });
+
   it('clears history and prevents redo of previously undone commands', () => {
     const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'clip-1' })]));
     const manager = new CommandManager();

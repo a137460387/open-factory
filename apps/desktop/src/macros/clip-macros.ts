@@ -1,13 +1,42 @@
-import type { Clip, ClipPatch, ColorCorrection, Timeline, Transform } from '@open-factory/editor-core';
+import {
+  AddEffectCommand,
+  RemoveEffectCommand,
+  ReorderEffectsCommand,
+  UpdateClipCommand,
+  UpdateEffectCommand,
+  isEffectType,
+  normalizeEffectParams,
+  type AddEffectInput,
+  type Clip,
+  type ClipPatch,
+  type ColorCorrection,
+  type Command,
+  type EffectPatch,
+  type EffectParams,
+  type EffectType,
+  type Timeline,
+  type TimelineAccessor,
+  type Transform
+} from '@open-factory/editor-core';
 import { eventToAccelerator, getEffectiveTimelineShortcutBindings, normalizeAccelerator, type TimelineShortcutAction, type TimelineShortcutBindings, type TimelineShortcutKey } from '../shortcuts/timeline-shortcuts';
 import { getAppDataDir, openFileDialog, readFile, saveFileDialog, writeFile } from '../lib/tauri-bridge';
+
+export const MACRO_TARGET_CLIP_ID = '__TARGET_CLIP__';
+
+export type CommandSnapshot =
+  | { type: 'update-clip'; clipId: string; patch: ClipPatch }
+  | { type: 'add-effect'; clipId: string; effect: AddEffectInput }
+  | { type: 'remove-effect'; clipId: string; effectId: string }
+  | { type: 'update-effect'; clipId: string; effectId: string; patch: EffectPatch }
+  | { type: 'reorder-effects'; clipId: string; orderedEffectIds: string[] };
 
 export interface ClipMacro {
   id: string;
   name: string;
   description?: string;
   shortcut?: string;
-  patch: ClipPatch;
+  patch?: ClipPatch;
+  steps?: CommandSnapshot[];
 }
 
 export interface MacroHistoryEntry {
@@ -46,7 +75,25 @@ export const DEFAULT_CLIP_MACROS: ClipMacro[] = [
     id: 'macro-scale-150',
     name: '放大 150%',
     description: '将目标片段缩放到 150%。',
-    patch: { transform: { scale: 1.5 } }
+    patch: { transform: { scale: 1.5 } },
+    steps: [{ type: 'update-clip', clipId: MACRO_TARGET_CLIP_ID, patch: { transform: { scale: 1.5 } } }]
+  },
+  {
+    id: 'macro-cinematic-grade',
+    name: '电影感调色',
+    description: '对比度 +0.2、饱和度 0.8，并添加轻微暗角。',
+    steps: [
+      {
+        type: 'update-clip',
+        clipId: MACRO_TARGET_CLIP_ID,
+        patch: { colorCorrection: { contrast: 1.2, saturation: 0.8 } }
+      },
+      {
+        type: 'add-effect',
+        clipId: MACRO_TARGET_CLIP_ID,
+        effect: { type: 'vignette', params: { intensity: 0.25, radius: 0.72 } }
+      }
+    ]
   }
 ];
 
@@ -122,7 +169,9 @@ export function sanitizeClipMacros(input: unknown): ClipMacro[] {
     const id = sanitizeIdentifier(record.id, 'macro');
     const name = typeof record.name === 'string' && record.name.trim() ? record.name.trim() : id;
     const patch = sanitizeClipPatch(record.patch);
-    if (!id || seen.has(id) || Object.keys(patch).length === 0) {
+    const steps = sanitizeCommandSnapshots(record.steps);
+    const effectiveSteps = steps.length > 0 ? steps : Object.keys(patch).length > 0 ? [{ type: 'update-clip' as const, clipId: MACRO_TARGET_CLIP_ID, patch }] : [];
+    if (!id || seen.has(id) || effectiveSteps.length === 0) {
       continue;
     }
     seen.add(id);
@@ -132,10 +181,101 @@ export function sanitizeClipMacros(input: unknown): ClipMacro[] {
       name,
       description: typeof record.description === 'string' && record.description.trim() ? record.description.trim() : undefined,
       shortcut: shortcut || undefined,
-      patch
+      patch: Object.keys(patch).length > 0 ? patch : undefined,
+      steps: effectiveSteps
     });
   }
   return macros;
+}
+
+export function getMacroSteps(macro: ClipMacro): CommandSnapshot[] {
+  const steps = sanitizeCommandSnapshots(macro.steps);
+  if (steps.length > 0) {
+    return cloneCommandSnapshots(steps);
+  }
+  const patch = sanitizeClipPatch(macro.patch);
+  return Object.keys(patch).length > 0 ? [{ type: 'update-clip', clipId: MACRO_TARGET_CLIP_ID, patch }] : [];
+}
+
+export function serializeCommandSnapshots(steps: CommandSnapshot[]): string {
+  return JSON.stringify(sanitizeCommandSnapshots(steps), null, 2);
+}
+
+export function parseCommandSnapshotsJson(raw: string): CommandSnapshot[] {
+  try {
+    return sanitizeCommandSnapshots(JSON.parse(raw));
+  } catch {
+    return [];
+  }
+}
+
+export function snapshotCommand(command: Command): CommandSnapshot | undefined {
+  const record = command as unknown as Record<string, unknown>;
+  if (command instanceof UpdateClipCommand) {
+    const clipId = sanitizeIdentifier(record.clipId, 'clip');
+    const patch = sanitizeClipPatch(record.patch);
+    return clipId && Object.keys(patch).length > 0 ? { type: 'update-clip', clipId, patch } : undefined;
+  }
+  if (command instanceof AddEffectCommand) {
+    const clipId = sanitizeIdentifier(record.clipId, 'clip');
+    const effect = sanitizeAddEffectInput(record.input);
+    return clipId && effect ? { type: 'add-effect', clipId, effect } : undefined;
+  }
+  if (command instanceof RemoveEffectCommand) {
+    const clipId = sanitizeIdentifier(record.clipId, 'clip');
+    const effectId = sanitizeIdentifier(record.effectId, 'effect');
+    return clipId && effectId ? { type: 'remove-effect', clipId, effectId } : undefined;
+  }
+  if (command instanceof UpdateEffectCommand) {
+    const clipId = sanitizeIdentifier(record.clipId, 'clip');
+    const effectId = sanitizeIdentifier(record.effectId, 'effect');
+    const patch = sanitizeEffectPatch(record.patch);
+    return clipId && effectId && Object.keys(patch).length > 0 ? { type: 'update-effect', clipId, effectId, patch } : undefined;
+  }
+  if (command instanceof ReorderEffectsCommand) {
+    const clipId = sanitizeIdentifier(record.clipId, 'clip');
+    const orderedEffectIds = sanitizeIdentifierArray(record.orderedEffectIds, 'effect');
+    return clipId && orderedEffectIds.length > 0 ? { type: 'reorder-effects', clipId, orderedEffectIds } : undefined;
+  }
+  return undefined;
+}
+
+export function replaceMacroTargetClipId(step: CommandSnapshot, targetClipId: string): CommandSnapshot {
+  const clipId = sanitizeIdentifier(targetClipId, 'clip');
+  if (!clipId) {
+    return cloneCommandSnapshot(step);
+  }
+  if ('clipId' in step) {
+    return { ...cloneCommandSnapshot(step), clipId };
+  }
+  return cloneCommandSnapshot(step);
+}
+
+export function buildMacroCommands(accessor: TimelineAccessor, macro: ClipMacro, targetClipId: string): Command[] {
+  const commands: Command[] = [];
+  for (const step of getMacroSteps(macro)) {
+    const nextStep = replaceMacroTargetClipId(step, targetClipId);
+    if (nextStep.type === 'update-clip') {
+      commands.push(new UpdateClipCommand(accessor, nextStep.clipId, nextStep.patch));
+      continue;
+    }
+    if (nextStep.type === 'add-effect') {
+      commands.push(new AddEffectCommand(accessor, nextStep.clipId, nextStep.effect));
+      continue;
+    }
+    if (nextStep.type === 'remove-effect') {
+      commands.push(new RemoveEffectCommand(accessor, nextStep.clipId, nextStep.effectId));
+      continue;
+    }
+    if (nextStep.type === 'update-effect') {
+      commands.push(new UpdateEffectCommand(accessor, nextStep.clipId, nextStep.effectId, nextStep.patch));
+      continue;
+    }
+    if (nextStep.type === 'reorder-effects') {
+      commands.push(new ReorderEffectsCommand(accessor, nextStep.clipId, nextStep.orderedEffectIds));
+    }
+  }
+  return commands;
 }
 
 export function findMacroTargetClip(timeline: Timeline, selectedClipIds: string[], playheadTime: number): Clip | undefined {
@@ -295,7 +435,118 @@ function sanitizeClipPatch(input: unknown): ClipPatch {
   if (typeof record.text === 'string') {
     patch.text = record.text;
   }
+  if (typeof record.name === 'string' && record.name.trim()) {
+    patch.name = record.name.trim();
+  }
   return patch;
+}
+
+function sanitizeCommandSnapshots(input: unknown): CommandSnapshot[] {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+  return input.flatMap((value): CommandSnapshot[] => {
+    if (!value || typeof value !== 'object') {
+      return [];
+    }
+    const record = value as Record<string, unknown>;
+    const type = typeof record.type === 'string' ? record.type : '';
+    const clipId = sanitizeIdentifier(record.clipId, 'clip');
+    if (!clipId) {
+      return [];
+    }
+    if (type === 'update-clip') {
+      const patch = sanitizeClipPatch(record.patch);
+      return Object.keys(patch).length > 0 ? [{ type, clipId, patch }] : [];
+    }
+    if (type === 'add-effect') {
+      const effect = sanitizeAddEffectInput(record.effect);
+      return effect ? [{ type, clipId, effect }] : [];
+    }
+    if (type === 'remove-effect') {
+      const effectId = sanitizeIdentifier(record.effectId, 'effect');
+      return effectId ? [{ type, clipId, effectId }] : [];
+    }
+    if (type === 'update-effect') {
+      const effectId = sanitizeIdentifier(record.effectId, 'effect');
+      const patch = sanitizeEffectPatch(record.patch);
+      return effectId && Object.keys(patch).length > 0 ? [{ type, clipId, effectId, patch }] : [];
+    }
+    if (type === 'reorder-effects') {
+      const orderedEffectIds = sanitizeIdentifierArray(record.orderedEffectIds, 'effect');
+      return orderedEffectIds.length > 0 ? [{ type, clipId, orderedEffectIds }] : [];
+    }
+    return [];
+  });
+}
+
+function sanitizeAddEffectInput(input: unknown): AddEffectInput | undefined {
+  if (!input || typeof input !== 'object') {
+    return undefined;
+  }
+  const record = input as Record<string, unknown>;
+  const type = sanitizeEffectType(record.type);
+  if (!type) {
+    return undefined;
+  }
+  const id = typeof record.id === 'string' && record.id.trim() ? sanitizeIdentifier(record.id, 'effect') : undefined;
+  return {
+    id,
+    type,
+    enabled: typeof record.enabled === 'boolean' ? record.enabled : undefined,
+    params: sanitizeEffectParams(type, record.params)
+  };
+}
+
+function sanitizeEffectPatch(input: unknown): EffectPatch {
+  if (!input || typeof input !== 'object') {
+    return {};
+  }
+  const record = input as Record<string, unknown>;
+  const patch: EffectPatch = {};
+  const type = sanitizeEffectType(record.type);
+  if (type) {
+    patch.type = type;
+  }
+  if (typeof record.enabled === 'boolean') {
+    patch.enabled = record.enabled;
+  }
+  const params = sanitizeLooseEffectParams(record.params);
+  if (Object.keys(params).length > 0) {
+    patch.params = type ? normalizeEffectParams(type, params) : params;
+  }
+  return patch;
+}
+
+function sanitizeEffectType(value: unknown): EffectType | undefined {
+  return typeof value === 'string' && isEffectType(value) ? value : undefined;
+}
+
+function sanitizeEffectParams(type: EffectType, input: unknown): EffectParams {
+  return normalizeEffectParams(type, sanitizeLooseEffectParams(input));
+}
+
+function sanitizeLooseEffectParams(input: unknown): EffectParams {
+  if (!input || typeof input !== 'object') {
+    return {};
+  }
+  const params: EffectParams = {};
+  for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
+    if ((typeof value === 'number' && Number.isFinite(value)) || typeof value === 'string') {
+      params[key] = value;
+    }
+  }
+  return params;
+}
+
+function sanitizeIdentifierArray(input: unknown, fallbackPrefix: string): string[] {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+  return input.flatMap((value) => {
+    const id = sanitizeIdentifier(value, fallbackPrefix);
+    return id ? [id] : [];
+  });
 }
 
 function pickFiniteNumbers<T extends object>(record: Record<string, unknown>, keys: string[]): Partial<T> {
@@ -309,14 +560,27 @@ function pickFiniteNumbers<T extends object>(record: Record<string, unknown>, ke
 }
 
 function cloneDefaultMacros(): ClipMacro[] {
-  return DEFAULT_CLIP_MACROS.map((macro) => ({
+  return DEFAULT_CLIP_MACROS.map(cloneMacro);
+}
+
+function cloneMacro(macro: ClipMacro): ClipMacro {
+  return {
     ...macro,
-    patch: {
-      ...macro.patch,
-      transform: macro.patch.transform ? { ...macro.patch.transform } : undefined,
-      colorCorrection: macro.patch.colorCorrection ? { ...macro.patch.colorCorrection } : undefined
-    }
-  }));
+    patch: macro.patch ? cloneJson(macro.patch) : undefined,
+    steps: macro.steps ? cloneCommandSnapshots(macro.steps) : undefined
+  };
+}
+
+function cloneCommandSnapshots(steps: CommandSnapshot[]): CommandSnapshot[] {
+  return steps.map(cloneCommandSnapshot);
+}
+
+function cloneCommandSnapshot<T extends CommandSnapshot>(step: T): T {
+  return cloneJson(step);
+}
+
+function cloneJson<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
 }
 
 function sanitizeIdentifier(value: unknown, fallbackPrefix: string): string {

@@ -5,10 +5,13 @@ interface CommandHistoryRecord {
   entry: HistoryEntry;
 }
 
+export type CommandExecuteListener = (command: Command) => void;
+
 export class CommandManager {
   private history: CommandHistoryRecord[] = [];
   private cursor = -1;
   private onChange?: (meta: HistoryMeta) => void;
+  private onExecute?: CommandExecuteListener;
   private nextEntryId = 1;
 
   constructor(private readonly maxHistory = 100) {}
@@ -18,11 +21,16 @@ export class CommandManager {
     this.emitChange();
   }
 
+  setOnExecute(onExecute?: CommandExecuteListener): void {
+    this.onExecute = onExecute;
+  }
+
   execute(command: Command): void {
     if (this.cursor < this.history.length - 1) {
       this.history = this.history.slice(0, this.cursor + 1);
     }
     command.execute();
+    this.onExecute?.(command);
     this.history.push({
       command,
       entry: {

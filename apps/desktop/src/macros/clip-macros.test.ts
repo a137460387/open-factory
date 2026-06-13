@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { createTrack, type Timeline } from '@open-factory/editor-core';
+import { AddEffectCommand, UpdateClipCommand, createTrack, type Timeline, type TimelineAccessor } from '@open-factory/editor-core';
 import {
   appendMacroHistoryEntry,
+  buildMacroCommands,
   detectMacroShortcutConflicts,
   findMacroTargetClip,
+  getMacroSteps,
   parseMacroFile,
+  replaceMacroTargetClipId,
   readMacroHistory,
   serializeMacroFile,
+  snapshotCommand,
+  writeClipMacros,
   writeMacroHistory,
   type ClipMacro,
   type MacroStorage
@@ -74,6 +79,17 @@ function makeTimeline(): Timeline {
   };
 }
 
+function makeTimelineAccessor(timeline = makeTimeline()): TimelineAccessor & { current(): Timeline } {
+  let current = timeline;
+  return {
+    getTimeline: () => current,
+    setTimeline: (next) => {
+      current = next;
+    },
+    current: () => current
+  };
+}
+
 describe('clip macros', () => {
   it('detects shortcut conflicts against timeline bindings while allowing the binding', () => {
     const macros: ClipMacro[] = [{ id: 'macro-scale-150', name: 'Scale', shortcut: 'Space', patch: { transform: { scale: 1.5 } } }];
@@ -98,7 +114,11 @@ describe('clip macros', () => {
         name: 'Scale 150',
         description: 'scale selected clip',
         shortcut: 'cmd+shift+m',
-        patch: { transform: { scale: 1.5, opacity: 0.75 }, volume: 0.8 }
+        patch: { transform: { scale: 1.5, opacity: 0.75 }, volume: 0.8 },
+        steps: [
+          { type: 'update-clip', clipId: '__TARGET_CLIP__', patch: { transform: { scale: 1.5, opacity: 0.75 }, volume: 0.8 } },
+          { type: 'add-effect', clipId: '__TARGET_CLIP__', effect: { type: 'vignette', params: { intensity: 0.2 } } }
+        ]
       },
       {
         id: 'macro-invalid',
@@ -113,9 +133,87 @@ describe('clip macros', () => {
         name: 'Scale 150',
         description: 'scale selected clip',
         shortcut: 'Ctrl+Shift+M',
-        patch: { transform: { scale: 1.5, opacity: 0.75 }, volume: 0.8 }
+        patch: { transform: { scale: 1.5, opacity: 0.75 }, volume: 0.8 },
+        steps: [
+          { type: 'update-clip', clipId: '__TARGET_CLIP__', patch: { transform: { scale: 1.5, opacity: 0.75 }, volume: 0.8 } },
+          { type: 'add-effect', clipId: '__TARGET_CLIP__', effect: { type: 'vignette', enabled: undefined, id: undefined, params: { intensity: 0.2, radius: 0.6 } } }
+        ]
       }
     ]);
+  });
+
+  it('records update commands and replays the same command sequence on another clip', () => {
+    const sourceAccessor = makeTimelineAccessor();
+    const recorded = [
+      new UpdateClipCommand(sourceAccessor, 'clip-a', { transform: { scale: 1.25 } }),
+      new UpdateClipCommand(sourceAccessor, 'clip-a', { colorCorrection: { contrast: 1.2, saturation: 0.8 } })
+    ].map((command) => {
+      command.execute();
+      return snapshotCommand(command);
+    });
+    expect(recorded).toEqual([
+      { type: 'update-clip', clipId: 'clip-a', patch: { transform: { scale: 1.25 } } },
+      { type: 'update-clip', clipId: 'clip-a', patch: { colorCorrection: { contrast: 1.2, saturation: 0.8 } } }
+    ]);
+
+    const replayAccessor = makeTimelineAccessor();
+    const macro: ClipMacro = { id: 'macro-recorded', name: 'Recorded', steps: recorded.flatMap((step) => (step ? [step] : [])) };
+    for (const command of buildMacroCommands(replayAccessor, macro, 'clip-b')) {
+      command.execute();
+    }
+
+    const replayedClip = replayAccessor.current().tracks[0].clips.find((clip) => clip.id === 'clip-b');
+    expect(replayedClip?.transform.scale).toBe(1.25);
+    expect(replayedClip?.colorCorrection.contrast).toBe(1.2);
+    expect(replayedClip?.colorCorrection.saturation).toBe(0.8);
+  });
+
+  it('replaces target clip ids during replay without mutating the saved step', () => {
+    const step = { type: 'update-clip' as const, clipId: 'clip-a', patch: { transform: { opacity: 0.5 } } };
+
+    expect(replaceMacroTargetClipId(step, 'clip-b')).toEqual({
+      type: 'update-clip',
+      clipId: 'clip-b',
+      patch: { transform: { opacity: 0.5 } }
+    });
+    expect(step.clipId).toBe('clip-a');
+  });
+
+  it('falls back to legacy patch macros as a single update command step', () => {
+    const steps = getMacroSteps({ id: 'legacy', name: 'Legacy', patch: { volume: 0.4 } });
+
+    expect(steps).toEqual([{ type: 'update-clip', clipId: '__TARGET_CLIP__', patch: { volume: 0.4 } }]);
+  });
+
+  it('persists macros.json with editable command steps', async () => {
+    const files = new Map<string, string>();
+    const storage = makeStorage(files);
+
+    await writeClipMacros(
+      [
+        {
+          id: 'macro-effect',
+          name: 'Effect',
+          steps: [{ type: 'add-effect', clipId: '__TARGET_CLIP__', effect: { type: 'blur', params: { radius: 12 } } }]
+        }
+      ],
+      storage
+    );
+
+    const raw = files.get('C:/Users/E2E/AppData/Roaming/open-factory/macros.json');
+    expect(JSON.parse(raw!).macros[0].steps).toEqual([{ type: 'add-effect', clipId: '__TARGET_CLIP__', effect: { type: 'blur', params: { radius: 12 } } }]);
+  });
+
+  it('records serializable effect commands', () => {
+    const accessor = makeTimelineAccessor();
+    const command = new AddEffectCommand(accessor, 'clip-a', { type: 'blur', params: { radius: 9 } });
+    command.execute();
+
+    expect(snapshotCommand(command)).toEqual({
+      type: 'add-effect',
+      clipId: 'clip-a',
+      effect: { id: undefined, type: 'blur', enabled: undefined, params: { radius: 9 } }
+    });
   });
 
   it('persists only the latest 20 history entries', async () => {
