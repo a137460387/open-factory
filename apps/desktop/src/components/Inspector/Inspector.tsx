@@ -6,7 +6,9 @@ import {
   AddKeyframeCommand,
   AddEffectCommand,
   AddMaskCommand,
+  BatchShiftSubtitleCommand,
   BatchKeyframeEditCommand,
+  BatchSubtitleTimingCommand,
   BatchUpdateKeyframeCommand,
   ApplyTextAnimationCommand,
   CUSTOM_SHADER_EXAMPLES,
@@ -39,6 +41,7 @@ import {
   createKenBurnsKeyframes,
   CLIP_SLOW_MOTION_MODES,
   getClipSpeed,
+  getTimelineDuration,
   getClipKeyframeValue,
   getEffectNumberParam,
   getEffectStringParam,
@@ -71,6 +74,9 @@ import {
   secondsToTimecode,
   setKenBurnsEndScaleKeyframes,
   suggestDeinterlaceMode,
+  calculateSubtitleBatchAdjustUpdates,
+  calculateSubtitlePeakAlignUpdate,
+  calculateSubtitleScaleUpdates,
   buildPrivacyMasksFromDetections,
   createTrack,
   type AudioFadeCurve,
@@ -125,6 +131,7 @@ import { isTranslationConfigured, useTranslationSettingsStore } from '../../stor
 
 interface InspectorProps {
   clip?: Clip;
+  selectedClips?: Clip[];
   selectedCount: number;
   selectedClipLocked: boolean;
   selectedKeyframe?: SelectedKeyframeRef;
@@ -134,8 +141,19 @@ interface InspectorProps {
   projectSettings: ProjectSettings;
 }
 
-export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKeyframe, selectedKeyframes = [], media, playheadTime, projectSettings }: InspectorProps) {
+export function Inspector({ clip, selectedClips = [], selectedCount, selectedClipLocked, selectedKeyframe, selectedKeyframes = [], media, playheadTime, projectSettings }: InspectorProps) {
+  const selectedSubtitleClips = selectedClips.filter((item): item is Extract<Clip, { type: 'subtitle' }> => item.type === 'subtitle');
   if (!clip && selectedCount > 1) {
+    if (selectedSubtitleClips.length === selectedCount) {
+      return (
+        <aside className="flex min-h-0 flex-col bg-white">
+          <PanelTitle />
+          <div className="min-h-0 flex-1 overflow-y-auto p-3">
+            <SubtitleRetimingPanel selectedSubtitleClips={selectedSubtitleClips} projectSettings={projectSettings} />
+          </div>
+        </aside>
+      );
+    }
     return (
       <aside className="flex min-h-0 flex-col bg-white">
         <PanelTitle />
@@ -153,6 +171,31 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
     );
   }
 
+  return (
+    <ClipInspector
+      clip={clip}
+      selectedCount={selectedCount}
+      selectedClipLocked={selectedClipLocked}
+      selectedKeyframe={selectedKeyframe}
+      selectedKeyframes={selectedKeyframes}
+      media={media}
+      playheadTime={playheadTime}
+      projectSettings={projectSettings}
+      selectedSubtitleClips={selectedSubtitleClips}
+    />
+  );
+}
+
+function ClipInspector({
+  clip,
+  selectedClipLocked,
+  selectedKeyframe,
+  selectedKeyframes = [],
+  media,
+  playheadTime,
+  projectSettings,
+  selectedSubtitleClips
+}: InspectorProps & { clip: Clip; selectedSubtitleClips: Array<Extract<Clip, { type: 'subtitle' }>> }) {
   const asset = 'mediaId' in clip ? media.find((item) => item.id === clip.mediaId) : undefined;
   const clipStartTimecode = secondsToTimecode(clip.start, projectSettings.fps, projectSettings.timecodeFormat);
   const clipDurationTimecode = secondsToTimecode(clip.duration, projectSettings.fps, projectSettings.timecodeFormat);
@@ -1794,6 +1837,7 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
                     <option value="soft-sub">{zhCN.inspector.subtitleMode.softSub}</option>
                   </select>
                 </label>
+                <SubtitleRetimingPanel clip={clip} selectedSubtitleClips={selectedSubtitleClips.length > 0 ? selectedSubtitleClips : [clip]} projectSettings={projectSettings} />
               </>
             ) : null}
             {clip.type === 'text' ? (
@@ -1921,6 +1965,106 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
       <h2 className="mb-2 text-xs font-semibold uppercase tracking-normal text-slate-500">{title}</h2>
       <div className="space-y-3">{children}</div>
     </section>
+  );
+}
+
+function SubtitleRetimingPanel({
+  clip,
+  selectedSubtitleClips,
+  projectSettings
+}: {
+  clip?: Extract<Clip, { type: 'subtitle' }>;
+  selectedSubtitleClips: Array<Extract<Clip, { type: 'subtitle' }>>;
+  projectSettings: ProjectSettings;
+}) {
+  const project = useEditorStore((state) => state.project);
+  const [shiftSeconds, setShiftSeconds] = useState(1);
+  const [scaleFactor, setScaleFactor] = useState(1);
+  const [batchStartDelta, setBatchStartDelta] = useState(0);
+  const [batchEndDelta, setBatchEndDelta] = useState(0);
+  const t = zhCN.inspector.subtitleRetiming;
+  const trackSubtitleClips = useMemo(() => {
+    const trackId = clip?.trackId ?? selectedSubtitleClips[0]?.trackId;
+    const track = project.timeline.tracks.find((item) => item.id === trackId && item.type === 'subtitle');
+    return (track?.clips.filter((item): item is Extract<Clip, { type: 'subtitle' }> => item.type === 'subtitle') ?? []).sort(
+      (left, right) => left.start - right.start || left.id.localeCompare(right.id)
+    );
+  }, [clip?.trackId, project.timeline.tracks, selectedSubtitleClips]);
+  const fullTrackTargets = selectedSubtitleClips.length > 1 ? selectedSubtitleClips : trackSubtitleClips;
+  const selectedTargets = selectedSubtitleClips.length > 0 ? selectedSubtitleClips : fullTrackTargets;
+  const projectDuration = Math.max(getTimelineDuration(project.timeline), ...fullTrackTargets.map((item) => item.start + item.duration), 1 / Math.max(1, projectSettings.fps));
+  const peakTimes = (project.beatMarkers ?? []).map((marker) => marker.time);
+
+  const runRetimingCommand = (command: Parameters<typeof commandManager.execute>[0], successMessage: string) => {
+    try {
+      commandManager.execute(command);
+      showToast({ kind: 'success', title: t.title, message: successMessage });
+    } catch (error) {
+      showToast({ kind: 'warning', title: t.failedTitle, message: error instanceof Error ? error.message : t.failedMessage });
+    }
+  };
+
+  const applyShift = () => {
+    runRetimingCommand(new BatchShiftSubtitleCommand(timelineAccessor, fullTrackTargets.map((item) => item.id), shiftSeconds, projectDuration), t.shiftApplied(fullTrackTargets.length));
+  };
+  const applyScale = () => {
+    runRetimingCommand(
+      new BatchSubtitleTimingCommand(timelineAccessor, calculateSubtitleScaleUpdates(fullTrackTargets, scaleFactor, projectDuration, 1 / Math.max(1, projectSettings.fps))),
+      t.scaleApplied(fullTrackTargets.length)
+    );
+  };
+  const applyPeakAlign = () => {
+    if (peakTimes.length === 0) {
+      showToast({ kind: 'warning', title: t.peakUnavailableTitle, message: t.peakUnavailableMessage });
+      return;
+    }
+    const updates = selectedTargets
+      .map((item) => calculateSubtitlePeakAlignUpdate(item, peakTimes, projectDuration, 0.5))
+      .filter((item): item is NonNullable<typeof item> => Boolean(item));
+    if (updates.length === 0) {
+      showToast({ kind: 'warning', title: t.peakUnavailableTitle, message: t.peakOutOfRange });
+      return;
+    }
+    runRetimingCommand(new BatchSubtitleTimingCommand(timelineAccessor, updates), t.peakApplied(updates.length));
+  };
+  const applyBatchAdjust = () => {
+    runRetimingCommand(
+      new BatchSubtitleTimingCommand(timelineAccessor, calculateSubtitleBatchAdjustUpdates(selectedTargets, batchStartDelta, batchEndDelta, projectDuration, 1 / Math.max(1, projectSettings.fps))),
+      t.batchApplied(selectedTargets.length)
+    );
+  };
+
+  return (
+    <details className="rounded-md border border-line bg-white" data-testid="subtitle-retiming-section" open>
+      <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-slate-700">{t.title}</summary>
+      <div className="space-y-3 border-t border-line p-2">
+        <div className="rounded-md bg-panel p-2 text-xs text-slate-600" data-testid="subtitle-retiming-summary">
+          {t.summary(fullTrackTargets.length, selectedTargets.length)}
+        </div>
+        <div className="grid grid-cols-[1fr_auto] items-end gap-2">
+          <NumberField label={t.shiftSeconds} value={shiftSeconds} step={0.1} onCommit={setShiftSeconds} testId="subtitle-shift-input" />
+          <button className="rounded-md border border-line bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-panel" type="button" data-testid="subtitle-shift-apply-button" onClick={applyShift}>
+            {t.apply}
+          </button>
+        </div>
+        <div className="grid grid-cols-[1fr_auto] items-end gap-2">
+          <NumberField label={t.scaleFactor} value={scaleFactor} min={0.01} step={0.01} onCommit={setScaleFactor} testId="subtitle-scale-input" />
+          <button className="rounded-md border border-line bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-panel" type="button" data-testid="subtitle-scale-apply-button" onClick={applyScale}>
+            {t.apply}
+          </button>
+        </div>
+        <button className="w-full rounded-md border border-line bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-panel" type="button" data-testid="subtitle-peak-align-button" onClick={applyPeakAlign}>
+          {t.alignToPeak}
+        </button>
+        <div className="grid grid-cols-2 gap-2">
+          <NumberField label={t.startDelta} value={batchStartDelta} step={0.1} onCommit={setBatchStartDelta} testId="subtitle-batch-start-delta-input" />
+          <NumberField label={t.endDelta} value={batchEndDelta} step={0.1} onCommit={setBatchEndDelta} testId="subtitle-batch-end-delta-input" />
+        </div>
+        <button className="w-full rounded-md border border-line bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-panel" type="button" data-testid="subtitle-batch-adjust-button" onClick={applyBatchAdjust}>
+          {t.batchAdjust}
+        </button>
+      </div>
+    </details>
   );
 }
 

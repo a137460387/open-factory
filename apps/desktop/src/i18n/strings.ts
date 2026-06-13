@@ -1186,6 +1186,26 @@ const zh = {
       burnIn: '烧录字幕',
       softSub: '软字幕'
     },
+    subtitleRetiming: {
+      title: '校时',
+      summary: (total: number, selected: number) => `轨道 ${total} 条；当前操作 ${selected} 条。`,
+      shiftSeconds: '整体时移 秒',
+      scaleFactor: '比例拉伸',
+      alignToPeak: '吸附到最近音频峰值',
+      startDelta: '起点微调 秒',
+      endDelta: '终点微调 秒',
+      batchAdjust: '应用批量微调',
+      apply: '应用',
+      failedTitle: '字幕校时失败',
+      failedMessage: '无法完成字幕校时。',
+      shiftApplied: (count: number) => `已平移 ${count} 条字幕。`,
+      scaleApplied: (count: number) => `已拉伸 ${count} 条字幕。`,
+      batchApplied: (count: number) => `已微调 ${count} 条字幕。`,
+      peakApplied: (count: number) => `已对齐 ${count} 条字幕。`,
+      peakUnavailableTitle: '没有可用峰值',
+      peakUnavailableMessage: '请先对音频或视频片段执行节拍/峰值检测。',
+      peakOutOfRange: '选中字幕起点 ±0.5s 内没有峰值。'
+    },
     projection: {
       flat: '普通平面',
       equirectangular: '360° 等距柱状',
@@ -2924,6 +2944,26 @@ const enOverrides = {
     },
     pathText: {
       addOffsetKeyframe: 'Add Offset Keyframe'
+    },
+    subtitleRetiming: {
+      title: 'Retiming',
+      summary: (total: number, selected: number) => `${total} in track; ${selected} targeted.`,
+      shiftSeconds: 'Global Shift Seconds',
+      scaleFactor: 'Stretch Ratio',
+      alignToPeak: 'Snap to Nearest Audio Peak',
+      startDelta: 'Start Delta Seconds',
+      endDelta: 'End Delta Seconds',
+      batchAdjust: 'Apply Batch Nudge',
+      apply: 'Apply',
+      failedTitle: 'Subtitle retiming failed',
+      failedMessage: 'Unable to retime subtitles.',
+      shiftApplied: (count: number) => `Shifted ${count} subtitle(s).`,
+      scaleApplied: (count: number) => `Stretched ${count} subtitle(s).`,
+      batchApplied: (count: number) => `Adjusted ${count} subtitle(s).`,
+      peakApplied: (count: number) => `Aligned ${count} subtitle(s).`,
+      peakUnavailableTitle: 'No available peak',
+      peakUnavailableMessage: 'Run beat or peak detection on an audio/video clip first.',
+      peakOutOfRange: 'No peak was found within 0.5s of the selected subtitle start.'
     },
     projection: {
       flat: 'Flat',

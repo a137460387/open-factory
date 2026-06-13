@@ -73,6 +73,7 @@ import {
   type Transform
 } from '../model';
 import { calculatePiPTransform, createFullFrameTransform, type PiPLayoutPosition } from '../pip-layout';
+import { calculateSubtitleShiftUpdates, type SubtitleTimingUpdate } from '../subtitles/retiming';
 import {
   addMediaFolderToProject,
   deleteMediaFolder,
@@ -1401,6 +1402,89 @@ export class MoveClipsCommand implements Command {
         clips: track.clips.map((clip) => beforeById.get(clip.id) ?? clip)
       }))
     });
+  }
+}
+
+export class BatchSubtitleTimingCommand implements Command {
+  readonly description = 'Retiming subtitle clips';
+  private before?: Timeline;
+  private after?: Timeline;
+
+  constructor(private readonly accessor: TimelineAccessor, private readonly updates: SubtitleTimingUpdate[]) {}
+
+  execute(): void {
+    const timeline = this.accessor.getTimeline();
+    this.before ??= timeline;
+    if (!this.after) {
+      const updatesByClipId = new Map(this.updates.map((update) => [update.clipId, update]));
+      if (updatesByClipId.size === 0) {
+        throw new Error('No subtitle timing updates');
+      }
+      let changed = 0;
+      const nextTimeline = {
+        ...timeline,
+        tracks: timeline.tracks.map((track) => ({
+          ...track,
+          clips: track.clips.map((clip) => {
+            const update = updatesByClipId.get(clip.id);
+            if (!update) {
+              return clip;
+            }
+            if (clip.type !== 'subtitle') {
+              throw new Error('Subtitle timing updates can only target subtitle clips');
+            }
+            changed += 1;
+            return {
+              ...clip,
+              start: round(Math.max(0, update.start)),
+              duration: round(Math.max(1 / 30, update.duration))
+            };
+          })
+        }))
+      };
+      if (changed === 0) {
+        throw new Error('No subtitle clips found for retiming');
+      }
+      if (timelineHasOverlaps(nextTimeline)) {
+        throw new Error('Clip overlaps another clip on this track');
+      }
+      this.after = nextTimeline;
+    }
+    this.accessor.setTimeline(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setTimeline(this.before);
+    }
+  }
+}
+
+export class BatchShiftSubtitleCommand implements Command {
+  readonly description = 'Shift subtitle clips';
+  private delegate?: BatchSubtitleTimingCommand;
+
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clipIds: string[],
+    private readonly offsetSeconds: number,
+    private readonly projectDuration: number
+  ) {}
+
+  execute(): void {
+    if (!this.delegate) {
+      const timeline = this.accessor.getTimeline();
+      const ids = new Set(this.clipIds);
+      const clips = timeline.tracks
+        .flatMap((track) => track.clips)
+        .filter((clip): clip is Extract<Clip, { type: 'subtitle' }> => clip.type === 'subtitle' && ids.has(clip.id));
+      this.delegate = new BatchSubtitleTimingCommand(this.accessor, calculateSubtitleShiftUpdates(clips, this.offsetSeconds, this.projectDuration));
+    }
+    this.delegate.execute();
+  }
+
+  undo(): void {
+    this.delegate?.undo();
   }
 }
 

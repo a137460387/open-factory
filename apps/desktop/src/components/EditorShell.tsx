@@ -238,6 +238,7 @@ export function EditorShell() {
   const macroRecorderRef = useRef<{ active: boolean; replaying: boolean; steps: CommandSnapshot[] }>({ active: false, replaying: false, steps: [] });
 
   const selectedClip = useMemo(() => selectClipById(project, selectedClipId), [project, selectedClipId]);
+  const selectedClips = useMemo(() => selectedClipIds.map((id) => selectClipById(project, id)).filter((clip): clip is Clip => Boolean(clip)), [project, selectedClipIds]);
   const selectedClipMedia = useMemo(
     () => (selectedClip && 'mediaId' in selectedClip ? project.media.find((asset) => asset.id === selectedClip.mediaId) : undefined),
     [project.media, selectedClip]
@@ -1850,6 +1851,7 @@ export function EditorShell() {
                   ) : (
                     <Inspector
                       clip={selectedClip}
+                      selectedClips={selectedClips}
                       selectedCount={selectedClipIds.length}
                       selectedClipLocked={selectedClipLocked}
                       selectedKeyframe={selectedKeyframe}

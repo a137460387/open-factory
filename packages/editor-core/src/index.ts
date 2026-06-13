@@ -58,3 +58,4 @@ export * from './audio/ducking';
 export * from './scopes/color-scopes';
 export * from './subtitles/srt';
 export * from './subtitles/translation';
+export * from './subtitles/retiming';

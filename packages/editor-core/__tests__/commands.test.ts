@@ -13,6 +13,7 @@ import {
   ApplyTextAnimationCommand,
   BatchKeyframeEditCommand,
   AddTransitionCommand,
+  BatchShiftSubtitleCommand,
   BatchUpdateKeyframeCommand,
   DEFAULT_COLOR_CORRECTION,
   type Command,
@@ -243,6 +244,32 @@ describe('timeline commands', () => {
     expect(accessor.current().tracks.find((track) => track.id === 'track-subtitle')?.clips.map((clip) => clip.id)).toEqual(['subtitle-a']);
     expect(() => manager.execute(new AddSubtitleClipCommand(accessor, makeSubtitleClip({ id: 'subtitle-overlap', trackId: 'track-subtitle', start: 0.5, duration: 1 })))).toThrow('overlaps');
     expect(() => manager.execute(new AddSubtitleClipCommand(accessor, makeSubtitleClip({ id: 'subtitle-wrong-track', trackId: 'track-text' })))).toThrow('subtitle tracks');
+  });
+
+  it('shifts subtitle clips as one undoable command', () => {
+    const timeline = makeTimeline();
+    timeline.tracks.push(
+      createTrack({
+        id: 'track-subtitle',
+        type: 'subtitle',
+        name: 'Subtitles',
+        clips: [makeSubtitleClip({ id: 'sub-a', start: 0.5, duration: 1 }), makeSubtitleClip({ id: 'sub-b', start: 2.5, duration: 1 })]
+      })
+    );
+    const accessor = makeAccessor(timeline);
+    const manager = new CommandManager();
+
+    manager.execute(new BatchShiftSubtitleCommand(accessor, ['sub-a', 'sub-b'], 1, 5));
+    expect(accessor.current().tracks.find((track) => track.id === 'track-subtitle')?.clips.map((clip) => [clip.id, clip.start, clip.duration])).toEqual([
+      ['sub-a', 1.5, 1],
+      ['sub-b', 3.5, 1]
+    ]);
+
+    manager.undo();
+    expect(accessor.current().tracks.find((track) => track.id === 'track-subtitle')?.clips.map((clip) => [clip.id, clip.start, clip.duration])).toEqual([
+      ['sub-a', 0.5, 1],
+      ['sub-b', 2.5, 1]
+    ]);
   });
 
   it('updates track controls with undo and redo', () => {
