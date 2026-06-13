@@ -4,6 +4,8 @@ import {
   buildExportProjectFromProject,
   buildFfmpegCurrentFrameExportPlan,
   buildFfmpegExportPlan,
+  buildFfmpegPreviewSamplePlans,
+  calculateExportPreviewSampleTimes,
   calculateWatermarkOverlayPosition,
   createMulticamSequenceProject,
   createNestedSequenceClip,
@@ -542,6 +544,54 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.fullArgs).not.toContain('-c:a');
     expect(plan.fullArgs.at(-1)).toBe('D:/Exports/frame.jpg');
     expect(plan.duration).toBeCloseTo(1 / 30);
+  });
+
+  it('calculates export preview sample times from the timeline start, middle, and end', () => {
+    expect(calculateExportPreviewSampleTimes(6)).toEqual([
+      { kind: 'start', time: 0 },
+      { kind: 'middle', time: 3 },
+      { kind: 'end', time: 6 }
+    ]);
+    expect(calculateExportPreviewSampleTimes(Number.NaN)).toEqual([
+      { kind: 'start', time: 0 },
+      { kind: 'middle', time: 0 },
+      { kind: 'end', time: 0 }
+    ]);
+  });
+
+  it('builds three export preview sample plans with full filter chains and single-frame args', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-preview', duration: 6, colorCorrection: { brightness: 0.2, contrast: 1.1, saturation: 1.2, hue: 15 } })];
+
+    const samples = buildFfmpegPreviewSamplePlans(buildExportProjectFromProject(project, { outputPath: 'D:\\Exports\\movie.mp4' }), [
+      'D:\\Previews\\start.png',
+      'D:\\Previews\\middle.png',
+      'D:\\Previews\\end.png'
+    ]);
+
+    expect(samples.map((sample) => sample.kind)).toEqual(['start', 'middle', 'end']);
+    expect(samples.map((sample) => sample.time)).toEqual([0, 3, 6]);
+    for (const sample of samples) {
+      expect(sample.plan.fullArgs).toContain('-filter_complex');
+      expect(sample.plan.filterComplex).toContain('eq=brightness=0.2:contrast=1.1:saturation=1.2');
+      expect(sample.plan.outputArgs).toEqual(['-ss', String(sample.time), '-frames:v', '1', '-f', 'image2', sample.outputPath]);
+      expect(sample.plan.fullArgs.at(-1)).toBe(sample.outputPath);
+      expect(sample.plan.fullArgs).not.toContain('-c:a');
+    }
+  });
+
+  it('builds single-frame args for preview plans even when the selected export format is animated', () => {
+    const project = makeProject();
+    const sample = buildFfmpegPreviewSamplePlans(
+      buildExportProjectFromProject(project, {
+        outputPath: 'D:\\Exports\\loop.gif',
+        settings: { format: 'gif', videoCodec: 'gif' }
+      }),
+      ['D:\\Previews\\start.png', 'D:\\Previews\\middle.png', 'D:\\Previews\\end.png']
+    )[0];
+
+    expect(sample.plan.outputArgs).toEqual(['-ss', '0', '-frames:v', '1', '-f', 'image2', 'D:/Previews/start.png']);
+    expect(sample.plan.fullArgs).not.toContain('__GIF_PALETTE_open_factory__');
   });
 
   it('clamps current-frame seek time and omits soft subtitle streams from image exports', () => {

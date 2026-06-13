@@ -1,6 +1,8 @@
 import {
   TARGET_ASPECT_RATIOS,
   SUPPORTED_PROJECT_FPS,
+  buildExportProjectFromProject,
+  buildFfmpegPreviewSamplePlans,
   clampReframeOffset,
   getTimelinePlaybackDuration,
   normalizeProjectFps,
@@ -14,18 +16,19 @@ import {
   type ExportTaskStatus,
   type ExportTaskPriority,
   type ExportLoudnessNormalization,
+  type ExportPreviewSampleKind,
   type ExportWatermarkPosition,
   type FfmpegCapabilities,
   type PreflightResult,
   type Project,
   type TargetAspectRatio
 } from '@open-factory/editor-core';
-import { AlertTriangle, Clock3, FileText, FolderOpen, ListPlus, Minimize2, Save, Trash2, X } from 'lucide-react';
+import { AlertTriangle, Clock3, FileText, FolderOpen, Image as ImageIcon, ListPlus, Minimize2, Save, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { zhCN } from '../i18n/strings';
 import { chooseExportPath, revealExport } from '../lib/exportVideo';
 import { isFontFamilyAvailable } from '../lib/fonts';
-import { getFfmpegCapabilities, minimizeToTray, openFileDialog, openPath, runExportPowerAction } from '../lib/tauri-bridge';
+import { convertLocalFileSrc, getAppDataDir, getFfmpegCapabilities, minimizeToTray, openFileDialog, openPath, runExportPowerAction, runExportPreviewSamples } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
 import { readExportBackgroundSettings, type ExportBackgroundSettings } from '../settings/appSettings';
 import { getWhisperAvailability } from '../lib/whisper';
@@ -82,6 +85,17 @@ const DEFAULT_TIMECODE_BURN_IN: NonNullable<ExportPresetSettings['timecodeBurnIn
   backgroundColor: '#000000',
   includeFrameNumber: false
 };
+const EXPORT_PREVIEW_TIMEOUT_MS = 10_000;
+
+interface ExportPreviewThumbnail {
+  id: string;
+  kind: ExportPreviewSampleKind;
+  label: string;
+  time: number;
+  path: string;
+  src: string;
+  durationMs: number;
+}
 
 export function ExportDialog({ project, initialPreset, onClose, onCompleted, onRelinkMissing }: ExportDialogProps) {
   const t = zhCN.exportDialog;
@@ -99,6 +113,9 @@ export function ExportDialog({ project, initialPreset, onClose, onCompleted, onR
   const [scheduledStartInput, setScheduledStartInput] = useState(() => localDatetimeInputValue(new Date(Date.now() + 60_000)));
   const [completionAction, setCompletionAction] = useState<ExportCompletionAction>('none');
   const [exportBackgroundSettings, setExportBackgroundSettings] = useState<ExportBackgroundSettings>(() => ({ allowPowerActions: false }));
+  const [previewRunning, setPreviewRunning] = useState(false);
+  const [previewError, setPreviewError] = useState<string>();
+  const [previewSamples, setPreviewSamples] = useState<ExportPreviewThumbnail[]>([]);
   const suggestedRenderFarmInstances = useMemo(() => suggestRenderFarmInstances(typeof navigator === 'undefined' ? undefined : navigator.hardwareConcurrency), []);
   const [renderFarmEnabled, setRenderFarmEnabled] = useState(false);
   const [renderFarmInstances, setRenderFarmInstances] = useState(suggestedRenderFarmInstances);
@@ -286,6 +303,53 @@ export function ExportDialog({ project, initialPreset, onClose, onCompleted, onR
       await enqueueSelectedPaths(selectedPaths);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : t.exportFailed);
+    }
+  }
+
+  async function previewExport(): Promise<void> {
+    if (isAudioOnly) {
+      return;
+    }
+    setError(undefined);
+    setPreviewError(undefined);
+    setPreviewRunning(true);
+    try {
+      const nextCapabilities = capabilities ?? (await getFfmpegCapabilities());
+      if (!nextCapabilities.available) {
+        throw new Error(t.preview.ffmpegMissing);
+      }
+      if (!capabilities) {
+        setCapabilities(nextCapabilities);
+      }
+      const appDataDir = await getAppDataDir();
+      const outputPaths = buildExportPreviewOutputPaths(appDataDir);
+      const exportProject = buildExportProjectFromProject(project, {
+        outputPath: outputPath || outputPaths[0].replace(/\.png$/i, '.mp4'),
+        settings: exportSettings
+      });
+      const samples = buildFfmpegPreviewSamplePlans(exportProject, outputPaths, nextCapabilities).map((sample) => ({
+        ...sample,
+        label: t.preview.sampleLabels[sample.kind]
+      }));
+      const result = await runExportPreviewSamples({ samples, timeoutMs: EXPORT_PREVIEW_TIMEOUT_MS });
+      setPreviewSamples(
+        result.samples.map((sample) => ({
+          id: sample.id,
+          kind: sample.kind,
+          label: t.preview.sampleLabels[sample.kind],
+          time: sample.time,
+          path: sample.path,
+          src: convertLocalFileSrc(sample.path),
+          durationMs: sample.durationMs
+        }))
+      );
+      showToast({ kind: 'success', title: t.preview.readyTitle, message: t.preview.readyMessage });
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : t.preview.failed;
+      setPreviewError(message);
+      showToast({ kind: 'error', title: t.preview.failedTitle, message });
+    } finally {
+      setPreviewRunning(false);
     }
   }
 
@@ -479,6 +543,44 @@ function relinkFromPreflight(): void {
               tone={capabilities?.hardwareEncoderAvailable ? 'ok' : 'warn'}
             />
           </div>
+          {!isAudioOnly ? (
+            <div className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3" data-testid="export-preview-panel">
+              <label className="pt-1.5 text-xs font-medium text-slate-600">{t.preview.title}</label>
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-45"
+                    type="button"
+                    disabled={previewRunning || capabilities?.available === false}
+                    data-testid="export-preview-button"
+                    onClick={() => void previewExport()}
+                  >
+                    <ImageIcon size={13} />
+                    {previewRunning ? t.preview.running : t.preview.button}
+                  </button>
+                  <span className="text-xs text-slate-500" data-testid="export-preview-status">
+                    {previewRunning ? t.preview.runningDescription : previewSamples.length === 3 ? t.preview.readyMessage : t.preview.description}
+                  </span>
+                </div>
+                {previewError ? <div className="rounded-md border border-rose-200 bg-rose-50 px-2 py-1.5 text-xs text-rose-800">{previewError}</div> : null}
+                {previewSamples.length > 0 ? (
+                  <div className="grid gap-2 md:grid-cols-3" data-testid="export-preview-thumbnails">
+                    {previewSamples.map((sample) => (
+                      <figure key={sample.id} className="overflow-hidden rounded-md border border-line bg-panel" data-testid="export-preview-thumbnail" data-path={sample.path}>
+                        <div className="aspect-video bg-black">
+                          <img className="h-full w-full object-cover" src={sample.src} alt={sample.label} data-testid="export-preview-image" />
+                        </div>
+                        <figcaption className="flex items-center justify-between gap-2 px-2 py-1.5 text-[11px] text-slate-600">
+                          <span className="font-medium text-slate-700">{sample.label}</span>
+                          <span className="tabular-nums">{formatDuration(sample.time)}</span>
+                        </figcaption>
+                      </figure>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
           <div className="grid grid-cols-[110px_1fr] gap-2">
             <label className="pt-1.5 text-xs font-medium text-slate-600">{t.batchPaths}</label>
             <textarea
@@ -678,6 +780,11 @@ async function runCompletionAction(action: ExportCompletionAction, settings: Exp
       message: error instanceof Error ? error.message : zhCN.exportDialog.completionAction.powerFailedMessage
     });
   }
+}
+
+function buildExportPreviewOutputPaths(appDataDir: string): string[] {
+  const root = `${appDataDir.replace(/[\\/]+$/, '')}/export-previews/${Date.now()}`;
+  return (['start', 'middle', 'end'] satisfies ExportPreviewSampleKind[]).map((kind) => `${root}/${kind}.png`);
 }
 
 function normalizeDraftSettings(settings: ExportPresetSettings): ExportPresetSettings {

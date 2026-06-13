@@ -49,7 +49,7 @@ pub struct HardwareEncoderProbe {
     encoder: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TextArtifactDto {
     clip_id: String,
@@ -108,7 +108,7 @@ struct PathTextCharManifest {
     angle: f64,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FfmpegExportPlanDto {
     full_args: Vec<String>,
@@ -131,7 +131,7 @@ pub struct FfmpegExportPassDto {
     kind: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NestedFfmpegExportPlanDto {
     sequence_id: String,
@@ -147,6 +147,42 @@ pub struct ExportResult {
     duration_ms: u128,
     warnings: Vec<String>,
     report: ExportReport,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportPreviewSampleDto {
+    id: String,
+    kind: String,
+    label: String,
+    time: f64,
+    output_path: String,
+    plan: FfmpegExportPlanDto,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportPreviewSamplesRequest {
+    samples: Vec<ExportPreviewSampleDto>,
+    timeout_ms: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportPreviewSampleResult {
+    id: String,
+    kind: String,
+    label: String,
+    time: f64,
+    path: String,
+    duration_ms: u128,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportPreviewSamplesResult {
+    samples: Vec<ExportPreviewSampleResult>,
+    duration_ms: u128,
 }
 
 #[derive(Debug, Clone, Default, Serialize, PartialEq)]
@@ -393,7 +429,7 @@ pub async fn run_export(
         Some(create_nested_export_dir()?)
     };
     let nested_result = if let Some(dir) = nested_dir.as_deref() {
-        run_nested_export_plans(&app, &mut plan, dir, &slot_id, &log_path)
+        run_nested_export_plans(&app, &mut plan, dir, &slot_id, &log_path, None)
     } else {
         Ok(())
     };
@@ -446,6 +482,7 @@ pub async fn run_export(
             Some(&log_path),
             emit_progress,
             emit_started,
+            None,
         )
     });
 
@@ -476,6 +513,155 @@ pub async fn run_export(
             Err(error)
         }
     }
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub async fn run_export_preview_samples(
+    app: AppHandle,
+    request: ExportPreviewSamplesRequest,
+) -> Result<ExportPreviewSamplesResult, String> {
+    tauri::async_runtime::spawn_blocking(move || run_export_preview_samples_blocking(app, request))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+fn run_export_preview_samples_blocking(
+    app: AppHandle,
+    request: ExportPreviewSamplesRequest,
+) -> Result<ExportPreviewSamplesResult, String> {
+    validate_export_preview_sample_count(&request.samples)?;
+    let timeout = export_preview_timeout(request.timeout_ms);
+    let started = Instant::now();
+    let runner_app = app.clone();
+    let runner: PreviewSampleRunner = Arc::new(move |sample| {
+        run_export_preview_sample_blocking(&runner_app, sample, timeout)
+    });
+    let samples = run_export_preview_samples_parallel(request.samples, runner)?;
+    Ok(ExportPreviewSamplesResult {
+        samples,
+        duration_ms: started.elapsed().as_millis(),
+    })
+}
+
+type PreviewSampleRunner =
+    Arc<dyn Fn(ExportPreviewSampleDto) -> Result<ExportPreviewSampleResult, String> + Send + Sync>;
+
+fn run_export_preview_samples_parallel(
+    samples: Vec<ExportPreviewSampleDto>,
+    runner: PreviewSampleRunner,
+) -> Result<Vec<ExportPreviewSampleResult>, String> {
+    let handles = samples
+        .into_iter()
+        .map(|sample| {
+            let runner = Arc::clone(&runner);
+            std::thread::spawn(move || runner(sample))
+        })
+        .collect::<Vec<_>>();
+    let mut results = Vec::with_capacity(handles.len());
+    for handle in handles {
+        results.push(
+            handle
+                .join()
+                .map_err(|_| "Export preview worker panicked.".to_string())??,
+        );
+    }
+    Ok(results)
+}
+
+fn run_export_preview_sample_blocking(
+    app: &AppHandle,
+    sample: ExportPreviewSampleDto,
+    timeout: Duration,
+) -> Result<ExportPreviewSampleResult, String> {
+    if sample.plan.full_args.is_empty() {
+        return Err(format!("Export preview sample {} has empty FFmpeg args.", sample.id));
+    }
+    let output_path = export_preview_sample_output_path(&sample)?;
+    let mut plan = sample.plan;
+    if let Some(parent) = Path::new(&output_path).parent() {
+        if !parent.as_os_str().is_empty() {
+            fs::create_dir_all(parent).map_err(|error| {
+                format!(
+                    "Unable to create export preview directory {}: {}",
+                    normalize_path(parent),
+                    error
+                )
+            })?;
+        }
+    }
+    let nested_dir = if plan.nested_plans.is_empty() {
+        None
+    } else {
+        Some(create_nested_export_dir()?)
+    };
+    let slot_id = export_slot_id(Some(&format!("export-preview-{}", sample.id)));
+    let started = Instant::now();
+    let nested_log_path = nested_dir.as_ref().map(|dir| dir.join("preview-nested.log"));
+    if let Some(log_path) = nested_log_path.as_deref() {
+        fs::write(log_path, "open-factory export preview nested log\n").map_err(|error| {
+            format!(
+                "Unable to write export preview nested log {}: {}",
+                normalize_path(log_path),
+                error
+            )
+        })?;
+    }
+    if let (Some(dir), Some(log_path)) = (nested_dir.as_deref(), nested_log_path.as_deref()) {
+        run_nested_export_plans(app, &mut plan, dir, &slot_id, log_path, Some(timeout))?;
+    }
+    let result = with_temp_export_artifacts(&plan, |materialized, temp_dir| {
+        run_materialized_export_plan(
+            app,
+            materialized,
+            plan.duration,
+            nested_dir.as_deref(),
+            temp_dir,
+            &slot_id,
+            None,
+            Arc::new(|_| {}),
+            Arc::new(|| {}),
+            Some(timeout),
+        )
+    });
+    if let Some(dir) = nested_dir.as_deref() {
+        let _ = fs::remove_dir_all(dir);
+    }
+    result?;
+    Ok(ExportPreviewSampleResult {
+        id: sample.id,
+        kind: sample.kind,
+        label: sample.label,
+        time: sample.time,
+        path: output_path,
+        duration_ms: started.elapsed().as_millis(),
+    })
+}
+
+fn validate_export_preview_sample_count(samples: &[ExportPreviewSampleDto]) -> Result<(), String> {
+    if samples.len() == 3 {
+        return Ok(());
+    }
+    Err("Export preview requires exactly three sample plans.".to_string())
+}
+
+fn export_preview_timeout(timeout_ms: Option<u64>) -> Duration {
+    Duration::from_millis(timeout_ms.unwrap_or(10_000).clamp(1, 60_000))
+}
+
+fn export_preview_sample_output_path(sample: &ExportPreviewSampleDto) -> Result<String, String> {
+    let output_path = sample
+        .plan
+        .full_args
+        .last()
+        .cloned()
+        .ok_or_else(|| format!("Export preview sample {} is missing output path.", sample.id))?;
+    if sample.output_path != output_path {
+        return Err(format!(
+            "Export preview sample {} output path does not match its plan.",
+            sample.id
+        ));
+    }
+    Ok(output_path)
 }
 
 fn analyze_clip_blocking(
@@ -600,10 +786,11 @@ fn run_nested_export_plans(
     nested_dir: &Path,
     slot_id: &str,
     log_path: &Path,
+    timeout: Option<Duration>,
 ) -> Result<(), String> {
     for nested in &mut plan.nested_plans {
         let output_path = nested_dir.join(safe_file_name(&nested.placeholder));
-        run_nested_export_plans(app, &mut nested.plan, nested_dir, slot_id, log_path)?;
+        run_nested_export_plans(app, &mut nested.plan, nested_dir, slot_id, log_path, timeout)?;
         replace_placeholder(
             &mut nested.plan.full_args,
             &nested.placeholder,
@@ -620,6 +807,7 @@ fn run_nested_export_plans(
                 Some(log_path),
                 Arc::new(|_| {}),
                 Arc::new(|| {}),
+                timeout,
             )
         })
         .map_err(|error| {
@@ -675,6 +863,7 @@ fn run_materialized_export_plan(
     log_path: Option<&Path>,
     emit_progress: ProgressEmitter,
     emit_started: StartedEmitter,
+    timeout: Option<Duration>,
 ) -> Result<ExportReport, String> {
     if materialized.passes.is_empty() {
         let mut args = materialized.full_args;
@@ -686,6 +875,7 @@ fn run_materialized_export_plan(
             log_path,
             emit_progress,
             emit_started,
+            timeout,
         )?;
         return Ok(ExportReport::default());
     }
@@ -715,6 +905,7 @@ fn run_materialized_export_plan(
             log_path,
             Arc::clone(&emit_progress),
             Arc::clone(&emit_started),
+            timeout,
         )
         .map_err(|error| format!("FFmpeg pass {} failed: {}", pass.name, error))?;
         if is_loudness_analysis {
@@ -926,6 +1117,28 @@ fn append_export_log(
     Ok(())
 }
 
+fn maybe_cancel_timed_out_export(
+    slot_id: &str,
+    started_at: Instant,
+    timeout: Option<Duration>,
+) -> Result<bool, String> {
+    let Some(timeout) = timeout else {
+        return Ok(false);
+    };
+    if started_at.elapsed() < timeout {
+        return Ok(false);
+    }
+    if let Some(mut child) = export_children()
+        .lock()
+        .map_err(|_| "Unable to lock export process".to_string())?
+        .remove(slot_id)
+    {
+        child.kill().map_err(|error| error.to_string())?;
+        let _ = child.wait();
+    }
+    Ok(true)
+}
+
 fn unix_time_millis() -> u128 {
     SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -940,6 +1153,7 @@ fn spawn_and_wait_with_progress(
     log_path: Option<&Path>,
     emit_progress: ProgressEmitter,
     emit_started: StartedEmitter,
+    timeout: Option<Duration>,
 ) -> Result<FfmpegRunOutput, String> {
     let mut child = Command::new(ffmpeg_binary())
         .args(&args)
@@ -989,6 +1203,7 @@ fn spawn_and_wait_with_progress(
         }
     });
 
+    let started_at = Instant::now();
     let status_result = loop {
         let maybe_status = {
             let mut children = export_children()
@@ -1005,6 +1220,9 @@ fn spawn_and_wait_with_progress(
                 .map_err(|_| "Unable to lock export process".to_string())?
                 .remove(slot_id);
             break Ok(status);
+        }
+        if maybe_cancel_timed_out_export(slot_id, started_at, timeout)? {
+            break Err("Export preview sample timed out.".to_string());
         }
         std::thread::sleep(Duration::from_millis(100));
     };
@@ -2111,6 +2329,127 @@ unrelated line
     }
 
     #[test]
+    fn export_preview_samples_run_three_frame_args_in_parallel() {
+        let samples = vec![
+            preview_sample("start", "C:/Previews/start.png", "0"),
+            preview_sample("middle", "C:/Previews/middle.png", "3"),
+            preview_sample("end", "C:/Previews/end.png", "6"),
+        ];
+        let active = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let max_active = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let barrier = Arc::new(std::sync::Barrier::new(4));
+        let seen_args = Arc::new(Mutex::new(Vec::<Vec<String>>::new()));
+        let runner: PreviewSampleRunner = {
+            let active = Arc::clone(&active);
+            let max_active = Arc::clone(&max_active);
+            let barrier = Arc::clone(&barrier);
+            let seen_args = Arc::clone(&seen_args);
+            Arc::new(move |sample| {
+                let current = active.fetch_add(1, Ordering::SeqCst) + 1;
+                let mut observed = max_active.load(Ordering::SeqCst);
+                while current > observed
+                    && max_active
+                        .compare_exchange(observed, current, Ordering::SeqCst, Ordering::SeqCst)
+                        .is_err()
+                {
+                    observed = max_active.load(Ordering::SeqCst);
+                }
+                seen_args
+                    .lock()
+                    .expect("seen args lock")
+                    .push(sample.plan.full_args.clone());
+                barrier.wait();
+                active.fetch_sub(1, Ordering::SeqCst);
+                Ok(ExportPreviewSampleResult {
+                    id: sample.id,
+                    kind: sample.kind,
+                    label: sample.label,
+                    time: sample.time,
+                    path: sample.output_path,
+                    duration_ms: 1,
+                })
+            })
+        };
+
+        let handle =
+            std::thread::spawn(move || run_export_preview_samples_parallel(samples, runner));
+        barrier.wait();
+        let result = handle
+            .join()
+            .expect("preview worker should not panic")
+            .expect("preview samples should complete");
+
+        assert_eq!(result.len(), 3);
+        assert_eq!(max_active.load(Ordering::SeqCst), 3);
+        let seen = seen_args.lock().expect("seen args lock");
+        assert_eq!(seen.len(), 3);
+        for args in seen.iter() {
+            assert!(args
+                .windows(2)
+                .any(|pair| pair[0] == "-frames:v" && pair[1] == "1"));
+            assert!(args.iter().any(|arg| arg.ends_with(".png")));
+            assert!(!args.iter().any(|arg| arg.contains("cmd /C")));
+        }
+    }
+
+    #[test]
+    fn timed_out_export_preview_sample_cancels_child_slot() {
+        export_children().lock().expect("export child lock").clear();
+        let slot_id = "preview-timeout";
+        export_children()
+            .lock()
+            .expect("export child lock")
+            .insert(slot_id.to_string(), spawn_long_running_child());
+
+        let canceled = maybe_cancel_timed_out_export(
+            slot_id,
+            Instant::now() - Duration::from_secs(11),
+            Some(Duration::from_secs(10)),
+        )
+        .expect("timeout cancel should not fail");
+
+        assert!(canceled);
+        assert!(!export_children()
+            .lock()
+            .expect("export child lock")
+            .contains_key(slot_id));
+    }
+
+    #[test]
+    fn export_preview_requires_exactly_three_samples() {
+        let one_sample = vec![preview_sample("start", "C:/Previews/start.png", "0")];
+        let three_samples = vec![
+            preview_sample("start", "C:/Previews/start.png", "0"),
+            preview_sample("middle", "C:/Previews/middle.png", "3"),
+            preview_sample("end", "C:/Previews/end.png", "6"),
+        ];
+
+        assert!(validate_export_preview_sample_count(&one_sample).is_err());
+        assert!(validate_export_preview_sample_count(&three_samples).is_ok());
+    }
+
+    #[test]
+    fn export_preview_timeout_defaults_to_ten_seconds_and_clamps_bounds() {
+        assert_eq!(export_preview_timeout(None), Duration::from_millis(10_000));
+        assert_eq!(export_preview_timeout(Some(0)), Duration::from_millis(1));
+        assert_eq!(
+            export_preview_timeout(Some(120_000)),
+            Duration::from_millis(60_000)
+        );
+    }
+
+    #[test]
+    fn export_preview_sample_rejects_output_path_mismatch() {
+        let mut sample = preview_sample("start", "C:/Previews/start.png", "0");
+        sample.output_path = "C:/Previews/other.png".to_string();
+
+        let error = export_preview_sample_output_path(&sample)
+            .expect_err("mismatched output paths should fail");
+
+        assert!(error.contains("does not match its plan"));
+    }
+
+    #[test]
     fn temp_text_artifacts_are_removed_on_failure() {
         let plan = FfmpegExportPlanDto {
             full_args: vec![
@@ -2502,6 +2841,7 @@ unrelated line
                     .push(progress);
             }),
             Arc::new(|| {}),
+            None,
         );
 
         let error = result.expect_err("invalid ffmpeg args should fail");
@@ -2526,5 +2866,34 @@ unrelated line
             .args(["-c", "sleep 30"])
             .spawn()
             .expect("spawn long running child")
+    }
+
+    fn preview_sample(id: &str, output_path: &str, seek: &str) -> ExportPreviewSampleDto {
+        ExportPreviewSampleDto {
+            id: id.to_string(),
+            kind: id.to_string(),
+            label: id.to_string(),
+            time: seek.parse().unwrap_or(0.0),
+            output_path: output_path.to_string(),
+            plan: FfmpegExportPlanDto {
+                full_args: vec![
+                    "-y".to_string(),
+                    "-i".to_string(),
+                    "C:/Media/source.mp4".to_string(),
+                    "-ss".to_string(),
+                    seek.to_string(),
+                    "-frames:v".to_string(),
+                    "1".to_string(),
+                    "-f".to_string(),
+                    "image2".to_string(),
+                    output_path.to_string(),
+                ],
+                warnings: vec![],
+                text_artifacts: vec![],
+                passes: vec![],
+                nested_plans: vec![],
+                duration: 1.0 / 30.0,
+            },
+        }
     }
 }

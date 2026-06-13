@@ -16,7 +16,7 @@ import {
 import { commandManager, timelineAccessor } from '../store/commandManager';
 import { useEditorStore } from '../store/editorStore';
 import { usePrivacyDetectionSettingsStore } from '../store/privacyDetectionSettingsStore';
-import type { BatchTranscodeTaskResult, TauriMocks, WebdavProjectBackupRequest } from '../lib/tauri-bridge';
+import type { BatchTranscodeTaskResult, ExportPreviewSamplesResult, TauriMocks, WebdavProjectBackupRequest } from '../lib/tauri-bridge';
 import { clearPluginHookLog, getPluginHookLog, refreshPluginRegistry } from '../plugins/plugin-manager';
 
 const PERSISTED_FILES_KEY = 'open-factory:e2e-files';
@@ -31,6 +31,8 @@ let savePath = 'C:/Exports/open-factory-test.mp4';
 let openDirectoryPath = 'C:/Relink';
 let lastExportPlan: FfmpegExportPlan | undefined;
 let exportRunCalls: Array<{ taskId?: string; fullArgs: string[]; duration: number }> = [];
+let lastExportPreviewSamplesResult: ExportPreviewSamplesResult | undefined;
+let exportPreviewRunCalls: Array<{ id: string; fullArgs: string[]; time: number; outputPath: string }> = [];
 const canceledExportTaskIds = new Set<string>();
 const canceledTranscodeTaskIds = new Set<string>();
 let exportGateHeld = false;
@@ -301,6 +303,35 @@ const mocks: TauriMocks = {
       warnings: plan.warnings,
       report: plan.passes?.some((pass) => pass.kind === 'loudness-analysis') ? { loudness: { integratedLoudness: -14.1 } } : undefined
     };
+  },
+  runExportPreviewSamples: async ({ samples }) => {
+    exportPreviewRunCalls = samples.map((sample) => ({
+      id: sample.id,
+      fullArgs: [...sample.plan.fullArgs],
+      time: sample.time,
+      outputPath: sample.outputPath
+    }));
+    await Promise.all(
+      samples.map(async (sample, index) => {
+        await wait(10);
+        files.set(sample.outputPath, `mock export preview ${index}`);
+        exists.set(sample.outputPath, true);
+        mtimes.set(sample.outputPath, Date.now());
+      })
+    );
+    persistFiles();
+    lastExportPreviewSamplesResult = {
+      samples: samples.map((sample) => ({
+        id: sample.id,
+        kind: sample.kind,
+        label: sample.label,
+        time: sample.time,
+        path: sample.outputPath,
+        durationMs: 10
+      })),
+      durationMs: 10
+    };
+    return lastExportPreviewSamplesResult;
   },
   createSharePackage: async (request) => {
     const entries = [
@@ -576,7 +607,7 @@ window.fetch = (input, init) => {
   if (url === silencePatternAudio) {
     return Promise.resolve(new Response(silencePatternWav.buffer.slice(0) as ArrayBuffer, { headers: { 'Content-Type': 'audio/wav' } }));
   }
-  if (/^C:\/(Media|Relink)\//.test(url)) {
+  if (/^C:\/(Media|Relink)\//.test(url) || /^C:\/Users\/E2E\//.test(url)) {
     const bytes = new Uint8Array(4096);
     for (let index = 0; index < bytes.length; index += 1) {
       bytes[index] = (index * 17) % 255;
@@ -1080,6 +1111,8 @@ window.__E2E_ACTIONS__ = {
     });
     commandManager.clear();
     exportRunCalls = [];
+    lastExportPreviewSamplesResult = undefined;
+    exportPreviewRunCalls = [];
   },
   setupFrameSearchFixture: () => {
     const project = createProject('Frame Search E2E');
@@ -1265,6 +1298,8 @@ window.__E2E_ACTIONS__ = {
   getLastConfirmMessage: () => lastConfirmMessage,
   getLastExportPlan: () => lastExportPlan,
   getExportRunCalls: () => exportRunCalls,
+  getLastExportPreviewSamplesResult: () => lastExportPreviewSamplesResult,
+  getExportPreviewRunCalls: () => exportPreviewRunCalls,
   getLastTrayProgress: () => lastTrayProgress,
   wasMinimizedToTray: () => minimizedToTray,
   getPowerActionCalls: () => powerActionCalls,
@@ -1353,6 +1388,8 @@ window.__E2E_ACTIONS__ = {
     lastWebdavPutRequest = undefined;
     lastExportPlan = undefined;
     exportRunCalls = [];
+    lastExportPreviewSamplesResult = undefined;
+    exportPreviewRunCalls = [];
     minimizedToTray = false;
     lastTrayProgress = undefined;
     powerActionCalls = [];

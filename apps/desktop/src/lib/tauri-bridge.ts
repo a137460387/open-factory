@@ -3,7 +3,7 @@ import { listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { confirm, message as dialogMessage } from '@tauri-apps/plugin-dialog';
 import { open as openShellPath } from '@tauri-apps/plugin-shell';
-import type { BeatSensitivity, ColorMatchFrameSample, ExportReport, FfmpegCapabilities, FfmpegExportPlan, MotionTrackPoint, ProxyPlan } from '@open-factory/editor-core';
+import type { BeatSensitivity, ColorMatchFrameSample, ExportPreviewSamplePlan, ExportReport, FfmpegCapabilities, FfmpegExportPlan, MotionTrackPoint, ProxyPlan } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { isTauriRuntime } from './tauri';
 
@@ -24,6 +24,25 @@ export interface ExportResult {
   durationMs: number;
   warnings: string[];
   report?: ExportReport;
+}
+
+export interface ExportPreviewSamplesRequest {
+  samples: ExportPreviewSamplePlan[];
+  timeoutMs?: number;
+}
+
+export interface ExportPreviewSampleResult {
+  id: string;
+  kind: ExportPreviewSamplePlan['kind'];
+  label: string;
+  time: number;
+  path: string;
+  durationMs: number;
+}
+
+export interface ExportPreviewSamplesResult {
+  samples: ExportPreviewSampleResult[];
+  durationMs: number;
 }
 
 export interface ExportTrayLabels {
@@ -342,6 +361,7 @@ export type TauriMocks = Partial<{
   getFfmpegCapabilities(): Promise<FfmpegCapabilities> | FfmpegCapabilities;
   getAvailableMemoryBytes(): Promise<number> | number;
   runExport(plan: FfmpegExportPlan, taskId?: string): Promise<ExportResult> | ExportResult;
+  runExportPreviewSamples(request: ExportPreviewSamplesRequest): Promise<ExportPreviewSamplesResult> | ExportPreviewSamplesResult;
   createSharePackage(request: SharePackageRequest): Promise<SharePackageResult> | SharePackageResult;
   putWebdavProject(request: WebdavProjectBackupRequest): Promise<WebdavProjectBackupResult> | WebdavProjectBackupResult;
   readWebdavPassword(): Promise<string | undefined> | string | undefined;
@@ -741,6 +761,14 @@ export async function runExport(plan: FfmpegExportPlan, taskId?: string): Promis
     return mock(plan, taskId);
   }
   return invoke<ExportResult>('run_export', taskId ? { plan, taskId } : { plan });
+}
+
+export async function runExportPreviewSamples(request: ExportPreviewSamplesRequest): Promise<ExportPreviewSamplesResult> {
+  const mock = getTauriMocks()?.runExportPreviewSamples;
+  if (mock) {
+    return mock(request);
+  }
+  return invoke<ExportPreviewSamplesResult>('run_export_preview_samples', { request });
 }
 
 export async function createSharePackageZip(request: SharePackageRequest): Promise<SharePackageResult> {

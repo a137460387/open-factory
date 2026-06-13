@@ -1314,6 +1314,23 @@ const zh = {
       includeFrameNumber: '包含帧号',
       slateEnabled: '开头插入 0.5s 场记板'
     },
+    preview: {
+      title: '导出预览',
+      button: '预览效果',
+      running: '生成中',
+      description: '从起点、中点、终点各采样 1 帧。',
+      runningDescription: '正在并行生成 3 张缩略图。',
+      readyTitle: '预览已生成',
+      readyMessage: '3 张导出预览缩略图已就绪。',
+      failedTitle: '预览失败',
+      failed: '无法生成导出预览。',
+      ffmpegMissing: '未在 PATH 中检测到 FFmpeg，无法生成导出预览。',
+      sampleLabels: {
+        start: '起点',
+        middle: '中点',
+        end: '终点'
+      }
+    },
     info: {
       resolution: '分辨率',
       fps: '帧率',
@@ -2921,6 +2938,23 @@ const enOverrides = {
       timecodeBackgroundColor: 'Background Color',
       includeFrameNumber: 'Include Frame Number',
       slateEnabled: 'Insert 0.5s Slate'
+    },
+    preview: {
+      title: 'Export Preview',
+      button: 'Preview Result',
+      running: 'Generating',
+      description: 'Sample 1 frame from the start, middle, and end.',
+      runningDescription: 'Generating 3 thumbnails in parallel.',
+      readyTitle: 'Preview Ready',
+      readyMessage: '3 export preview thumbnails are ready.',
+      failedTitle: 'Preview Failed',
+      failed: 'Unable to generate export preview.',
+      ffmpegMissing: 'FFmpeg was not found in PATH, so export preview cannot run.',
+      sampleLabels: {
+        start: 'Start',
+        middle: 'Middle',
+        end: 'End'
+      }
     },
     info: {
       resolution: 'Resolution',

@@ -75,6 +75,8 @@ import type {
   ExportTimeline,
   ExportTrack,
   ExportTransition,
+  ExportPreviewSampleKind,
+  ExportPreviewSamplePlan,
   FfmpegCapabilities,
   FfmpegExportPlan,
   FfmpegInput,
@@ -131,6 +133,7 @@ const WATERMARK_MARGIN_PX = 24;
 const SLATE_DURATION_SECONDS = 0.5;
 const CUSTOM_SHADER_SEQUENCE_KIND = 'custom-shader-sequence';
 const PATH_TEXT_SEQUENCE_KIND = 'path-text-sequence';
+const EXPORT_PREVIEW_SAMPLE_KINDS: ExportPreviewSampleKind[] = ['start', 'middle', 'end'];
 
 interface LoudnessNormalizationPreset {
   mode: Exclude<ExportLoudnessNormalization, 'off'>;
@@ -640,14 +643,15 @@ export function buildFfmpegExportPlan(
   }
   const videoEncodingArgs = buildVideoEncodingArgs(settings, capabilities, warnings, audioOnly || videoFramesOnly);
   const outputArgs =
-    pngSequence
+    frameExportTime !== null
+      ? ['-ss', formatFfmpegSeconds(frameExportTime), '-frames:v', '1', '-f', 'image2', normalizeFfmpegPath(settings.outputPath)]
+      : pngSequence
       ? ['-r', String(settings.fps), '-f', 'image2', pngSequenceOutputPath(settings.outputPath)]
       : webpAnimation
       ? ['-c:v', 'libwebp_anim', '-loop', '0', '-r', String(settings.fps), '-f', 'webp', normalizeFfmpegPath(settings.outputPath)]
       : apngExport
       ? ['-plays', '0', '-f', 'apng', normalizeFfmpegPath(settings.outputPath)]
-      : frameExportTime === null
-      ? [
+      : [
           ...(audioOnly
             ? []
             : videoEncodingArgs),
@@ -660,10 +664,9 @@ export function buildFfmpegExportPlan(
           formatFfmpegSeconds(outputDuration),
           ...buildContainerArgs(settings),
           normalizeFfmpegPath(settings.outputPath)
-        ]
-      : ['-ss', formatFfmpegSeconds(frameExportTime), '-frames:v', '1', '-f', 'image2', normalizeFfmpegPath(settings.outputPath)];
+        ];
   const fullArgs = buildFfmpegFullArgs(inputs, filterComplex, maps, outputArgs);
-  const gifPlan = gifExport ? buildGifExportPasses(inputs, filterComplex, settings, outputDuration, textArtifacts) : undefined;
+  const gifPlan = gifExport && frameExportTime === null ? buildGifExportPasses(inputs, filterComplex, settings, outputDuration, textArtifacts) : undefined;
   const loudnessPlan = loudnessAnalysisFilterComplex ? buildLoudnessNormalizationPasses(inputs, loudnessAnalysisFilterComplex, fullArgs, duration) : undefined;
   const nestedPlans = buildNestedSequencePlans(project, capabilities, warnings, depth, sequenceStack);
   const planDuration = frameExportTime === null ? outputDuration : Math.max(1 / Math.max(1, settings.fps), 0.001);
@@ -685,6 +688,43 @@ export function buildFfmpegExportPlan(
 
 export function buildFfmpegCurrentFrameExportPlan(project: ExportProject, time: number, capabilities?: FfmpegCapabilities): FfmpegExportPlan {
   return buildFfmpegExportPlan(project, capabilities, 0, [], { frameExport: { time } });
+}
+
+export function calculateExportPreviewSampleTimes(duration: number): Array<{ kind: ExportPreviewSampleKind; time: number }> {
+  const safeDuration = Number.isFinite(duration) ? Math.max(0, duration) : 0;
+  return EXPORT_PREVIEW_SAMPLE_KINDS.map((kind) => ({
+    kind,
+    time: round(kind === 'start' ? 0 : kind === 'middle' ? safeDuration / 2 : safeDuration)
+  }));
+}
+
+export function buildFfmpegPreviewSamplePlans(project: ExportProject, outputPaths: string[], capabilities?: FfmpegCapabilities): ExportPreviewSamplePlan[] {
+  const times = calculateExportPreviewSampleTimes(project.timeline.duration);
+  if (outputPaths.length < times.length) {
+    throw new Error(`Expected ${times.length} export preview output paths.`);
+  }
+  return times.map((sample, index) => {
+    const outputPath = normalizeFfmpegPath(outputPaths[index]);
+    const plan = buildFfmpegCurrentFrameExportPlan(
+      {
+        ...project,
+        settings: {
+          ...project.settings,
+          outputPath
+        }
+      },
+      sample.time,
+      capabilities
+    );
+    return {
+      id: `export-preview-${sample.kind}`,
+      kind: sample.kind,
+      label: sample.kind,
+      time: sample.time,
+      outputPath,
+      plan
+    };
+  });
 }
 
 function normalizeExportReframeSettings(settings: ExportSettings): ExportSettings {

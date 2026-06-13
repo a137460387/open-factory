@@ -351,6 +351,17 @@ export interface FfmpegExportPlan {
   duration: number;
 }
 
+export type ExportPreviewSampleKind = 'start' | 'middle' | 'end';
+
+export interface ExportPreviewSamplePlan {
+  id: string;
+  kind: ExportPreviewSampleKind;
+  label: string;
+  time: number;
+  outputPath: string;
+  plan: FfmpegExportPlan;
+}
+
 export type FfmpegExportPassKind = 'loudness-analysis' | 'render';
 
 export interface FfmpegExportPass {
