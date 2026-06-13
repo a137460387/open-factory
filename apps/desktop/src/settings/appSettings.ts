@@ -38,6 +38,31 @@ export interface ViewSettings {
 export type ExportRuleTrigger = 'export-success' | 'export-failure' | 'queue-complete';
 export type ExportRuleAction = 'copy-to-directory' | 'system-notification' | 'play-tone';
 
+export type AutomationTrigger = 'on-import' | 'on-export-complete' | 'on-project-open';
+export type AutomationConditionOperator = '>' | '>=' | '<' | '<=' | '==' | '!=' | 'contains';
+export type AutomationConditionField = 'duration' | 'width' | 'height' | 'resolution' | 'fileSize' | 'size' | 'format' | 'type' | 'name';
+export type AutomationActionType = 'generate-proxy' | 'add-tag' | 'add-color-label' | 'move-to-group' | 'send-notification';
+
+export interface AutomationCondition {
+  field: AutomationConditionField;
+  op: AutomationConditionOperator;
+  value: string | number | boolean;
+}
+
+export interface AutomationAction {
+  type: AutomationActionType;
+  value?: string;
+}
+
+export interface AutomationRule {
+  id: string;
+  name?: string;
+  enabled: boolean;
+  trigger: AutomationTrigger;
+  conditions: AutomationCondition[];
+  actions: AutomationAction[];
+}
+
 export interface ExportConditionRule {
   id: string;
   enabled: boolean;
@@ -59,6 +84,7 @@ export interface AppSettings {
   exportBackground?: ExportBackgroundSettings;
   exportRules?: ExportConditionRule[];
   view?: ViewSettings;
+  automationRules?: AutomationRule[];
 }
 
 export async function initializeLanguageFromSettings(): Promise<Language> {
@@ -126,6 +152,18 @@ export async function saveExportRules(exportRules: ExportConditionRule[]): Promi
   const nextExportRules = normalizeExportRules(exportRules);
   await writeAppSettings({ ...settings, exportRules: nextExportRules });
   return nextExportRules;
+}
+
+export async function readAutomationRules(): Promise<AutomationRule[]> {
+  const settings = await readAppSettings();
+  return settings.automationRules ?? [];
+}
+
+export async function saveAutomationRules(automationRules: AutomationRule[]): Promise<AutomationRule[]> {
+  const settings = await readAppSettings();
+  const nextAutomationRules = normalizeAutomationRules(automationRules);
+  await writeAppSettings({ ...settings, automationRules: nextAutomationRules });
+  return nextAutomationRules;
 }
 
 export async function readViewSettings(): Promise<ViewSettings> {
@@ -214,7 +252,118 @@ function normalizeSettings(settings: Partial<AppSettings>): AppSettings {
   if (view) {
     normalized.view = view;
   }
+  const automationRules = normalizeAutomationRules(settings.automationRules);
+  if (automationRules.length > 0) {
+    normalized.automationRules = automationRules;
+  }
   return normalized;
+}
+
+export function normalizeAutomationRules(rules: unknown): AutomationRule[] {
+  if (!Array.isArray(rules)) {
+    return [];
+  }
+  return rules.flatMap((rule, index) => {
+    if (!rule || typeof rule !== 'object') {
+      return [];
+    }
+    const input = rule as Record<string, unknown>;
+    const trigger = normalizeAutomationTrigger(input.trigger);
+    if (!trigger) {
+      return [];
+    }
+    const actions = normalizeAutomationActions(input.actions);
+    if (actions.length === 0) {
+      return [];
+    }
+    const normalized: AutomationRule = {
+      id: typeof input.id === 'string' && input.id.trim() ? input.id.trim() : `automation-rule-${index + 1}`,
+      enabled: input.enabled !== false,
+      trigger,
+      conditions: normalizeAutomationConditions(input.conditions),
+      actions
+    };
+    if (typeof input.name === 'string' && input.name.trim()) {
+      normalized.name = input.name.trim();
+    }
+    return [normalized];
+  });
+}
+
+function normalizeAutomationConditions(value: unknown): AutomationCondition[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.flatMap((condition) => {
+    if (!condition || typeof condition !== 'object') {
+      return [];
+    }
+    const input = condition as Record<string, unknown>;
+    const field = normalizeAutomationConditionField(input.field);
+    const op = normalizeAutomationConditionOperator(input.op);
+    const conditionValue = normalizeAutomationValue(input.value);
+    return field && op && conditionValue !== undefined ? [{ field, op, value: conditionValue }] : [];
+  });
+}
+
+function normalizeAutomationActions(value: unknown): AutomationAction[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value.flatMap((action) => {
+    if (!action || typeof action !== 'object') {
+      return [];
+    }
+    const input = action as Record<string, unknown>;
+    const type = normalizeAutomationActionType(input.type);
+    if (!type) {
+      return [];
+    }
+    const normalized: AutomationAction = { type };
+    if (typeof input.value === 'string' && input.value.trim()) {
+      normalized.value = input.value.trim();
+    }
+    return [normalized];
+  });
+}
+
+function normalizeAutomationTrigger(value: unknown): AutomationTrigger | undefined {
+  return value === 'on-import' || value === 'on-export-complete' || value === 'on-project-open' ? value : undefined;
+}
+
+function normalizeAutomationConditionOperator(value: unknown): AutomationConditionOperator | undefined {
+  return value === '>' || value === '>=' || value === '<' || value === '<=' || value === '==' || value === '!=' || value === 'contains' ? value : undefined;
+}
+
+function normalizeAutomationConditionField(value: unknown): AutomationConditionField | undefined {
+  return value === 'duration' ||
+    value === 'width' ||
+    value === 'height' ||
+    value === 'resolution' ||
+    value === 'fileSize' ||
+    value === 'size' ||
+    value === 'format' ||
+    value === 'type' ||
+    value === 'name'
+    ? value
+    : undefined;
+}
+
+function normalizeAutomationActionType(value: unknown): AutomationActionType | undefined {
+  return value === 'generate-proxy' || value === 'add-tag' || value === 'add-color-label' || value === 'move-to-group' || value === 'send-notification' ? value : undefined;
+}
+
+function normalizeAutomationValue(value: unknown): string | number | boolean | undefined {
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  return undefined;
 }
 
 export function normalizeExportRules(rules: unknown): ExportConditionRule[] {

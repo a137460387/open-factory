@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TauriMocks } from '../lib/tauri-bridge';
 import {
   readAppSettings,
+  readAutomationRules,
   readBackupSettings,
   readExportBackgroundSettings,
   readExportRules,
@@ -9,6 +10,7 @@ import {
   readThemeSettings,
   readViewSettings,
   saveBackupSettings,
+  saveAutomationRules,
   saveExportBackgroundSettings,
   saveExportRules,
   saveLanguageSetting,
@@ -220,6 +222,49 @@ describe('app settings storage', () => {
     expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({
       language: 'en',
       view: { safeFrameGuides: false }
+    });
+  });
+
+  it('persists normalized declarative automation rules in settings.json', async () => {
+    await saveLanguageSetting('en');
+    const rules = await saveAutomationRules([
+      {
+        id: 'long-video-proxy',
+        name: 'Long video proxy',
+        enabled: true,
+        trigger: 'on-import',
+        conditions: [{ field: 'duration', op: '>', value: 300 }],
+        actions: [
+          { type: 'generate-proxy' },
+          { type: 'add-tag', value: 'green' }
+        ]
+      },
+      {
+        id: 'invalid',
+        enabled: true,
+        trigger: 'unknown' as never,
+        conditions: [],
+        actions: [{ type: 'generate-proxy' }]
+      }
+    ]);
+
+    expect(rules).toEqual([
+      {
+        id: 'long-video-proxy',
+        name: 'Long video proxy',
+        enabled: true,
+        trigger: 'on-import',
+        conditions: [{ field: 'duration', op: '>', value: 300 }],
+        actions: [
+          { type: 'generate-proxy' },
+          { type: 'add-tag', value: 'green' }
+        ]
+      }
+    ]);
+    expect(await readAutomationRules()).toEqual(rules);
+    expect(await readAppSettings()).toEqual({
+      language: 'en',
+      automationRules: rules
     });
   });
 });

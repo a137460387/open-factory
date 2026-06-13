@@ -42,6 +42,18 @@ describe('proxy planner', () => {
     expect(shouldGenerateProxy(small)).toBe(false);
   });
 
+  it('can force a manual proxy for ordinary H264 media', () => {
+    const asset = { ...makeProject().media[0], size: 40 * 1024 * 1024, width: 1280, height: 720, mtimeMs: 1234, videoCodec: 'h264' };
+
+    expect(buildProxyPlan(asset, 'C:/Cache/open-factory')).toBeNull();
+
+    const plan = buildProxyPlan(asset, 'C:/Cache/open-factory', undefined, { force: true });
+
+    expect(plan?.reason).toBe('manual');
+    expect(plan?.width).toBe(1280);
+    expect(plan?.height).toBe(720);
+  });
+
   it('proxies HEVC and ProRes media even below the resolution threshold', () => {
     const hevc = { ...makeProject().media[0], size: 10 * 1024 * 1024, width: 1280, height: 720, mtimeMs: 1234, videoCodec: 'hevc' };
     const prores = { ...hevc, videoCodec: 'prores_ks' };

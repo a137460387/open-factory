@@ -146,6 +146,7 @@ const zh = {
       lutLibrary: 'LUT库',
       shortcuts: '快捷键',
       macros: '宏',
+      automation: '自动化',
       translation: '字幕翻译',
       proxy: '代理媒体',
       backup: '备份',
@@ -182,6 +183,20 @@ const zh = {
       notifyOnFailureDescription: '失败消息会通过本机通知显示。',
       playToneOnQueueComplete: '队列全部完成后播放提示音',
       playToneOnQueueCompleteDescription: '使用 Web Audio 合成短提示音，不需要音频文件。'
+    },
+    automation: {
+      title: '自动化',
+      description: '用声明式 JSON 规则处理导入、项目打开和导出完成事件；不会执行 JS。',
+      editorLabel: '规则 JSON',
+      save: '保存规则',
+      saveFailed: '自动化规则保存失败',
+      saveFailedMessage: '请检查 JSON 格式和字段。',
+      saved: '自动化规则已保存',
+      empty: '还没有自动化规则。',
+      enabled: '启用',
+      disabled: '停用',
+      example: '示例',
+      ruleSummary: (trigger: string, actions: number) => `${trigger} · ${actions} 个动作`
     },
     appearance: {
       title: '外观',
@@ -1455,6 +1470,11 @@ const zh = {
     notificationQueueCompleteTitle: '导出队列已完成',
     notificationQueueCompleteBody: '所有导出任务都已结束。'
   },
+  automationRules: {
+    invalidJson: '自动化规则 JSON 格式错误。',
+    notificationTitle: '自动化规则已触发',
+    notificationBody: (name: string) => `已处理 ${name}。`
+  },
   batchTranscode: {
     title: '批量转码',
     subtitle: '顺序处理本地视频文件，完成后自动导入转码结果。',
@@ -1783,6 +1803,7 @@ const enOverrides = {
       lutLibrary: 'LUT Library',
       shortcuts: 'Shortcuts',
       macros: 'Macros',
+      automation: 'Automation',
       translation: 'Subtitle Translation',
       proxy: 'Proxy Media',
       backup: 'Backup',
@@ -1819,6 +1840,20 @@ const enOverrides = {
       notifyOnFailureDescription: 'The failure message is shown through a native notification.',
       playToneOnQueueComplete: 'Play a tone when the whole queue completes',
       playToneOnQueueCompleteDescription: 'Uses Web Audio to synthesize a short tone without an audio file.'
+    },
+    automation: {
+      title: 'Automation',
+      description: 'Use declarative JSON rules for import, project-open, and export-complete events. JavaScript is never executed.',
+      editorLabel: 'Rules JSON',
+      save: 'Save Rules',
+      saveFailed: 'Automation rule save failed',
+      saveFailedMessage: 'Check the JSON format and fields.',
+      saved: 'Automation rules saved',
+      empty: 'No automation rules yet.',
+      enabled: 'Enabled',
+      disabled: 'Disabled',
+      example: 'Example',
+      ruleSummary: (trigger: string, actions: number) => `${trigger} · ${actions} actions`
     },
     appearance: {
       title: 'Appearance',
@@ -2786,6 +2821,11 @@ const enOverrides = {
     notificationFailureTitle: 'Export Failed',
     notificationQueueCompleteTitle: 'Export Queue Complete',
     notificationQueueCompleteBody: 'All export tasks have finished.'
+  },
+  automationRules: {
+    invalidJson: 'Automation rule JSON is invalid.',
+    notificationTitle: 'Automation rule triggered',
+    notificationBody: (name: string) => `Processed ${name}.`
   },
   batchTranscode: {
     title: 'Batch Transcode',

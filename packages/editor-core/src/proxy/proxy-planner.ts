@@ -19,14 +19,18 @@ export function shouldGenerateProxy(asset: MediaAsset, settings: ProxySettings =
   return getProxyTriggerReason(asset, settings) !== null;
 }
 
-export function buildProxyPlan(asset: MediaAsset, appDataDir: string, settings: ProxySettings = DEFAULT_PROXY_SETTINGS): ProxyPlan | null {
-  if (!shouldGenerateProxy(asset, settings) || !asset.size || !asset.mtimeMs) {
+export function buildProxyPlan(asset: MediaAsset, appDataDir: string, settings: ProxySettings = DEFAULT_PROXY_SETTINGS, options: { force?: boolean } = {}): ProxyPlan | null {
+  const force = options.force === true;
+  if (asset.type !== 'video' || (asset.proxyPath && asset.proxyStatus === 'ready')) {
+    return null;
+  }
+  if ((!force && !shouldGenerateProxy(asset, settings)) || !asset.size || !asset.mtimeMs) {
     return null;
   }
   const key = getMediaCacheKey({ path: asset.path, size: asset.size, mtimeMs: asset.mtimeMs, formatVersion: `proxy-${settings.maxWidth}x${settings.maxHeight}-${settings.videoBitrate}` });
   const paths = buildCachePaths('proxy', key);
   const dimensions = fitWithin(asset.width, asset.height, settings.maxWidth, settings.maxHeight);
-  const reason = getProxyTriggerReason(asset, settings) ?? 'large-resolution';
+  const reason = getProxyTriggerReason(asset, settings) ?? 'manual';
   return {
     assetId: asset.id,
     inputPath: asset.path,

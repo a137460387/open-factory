@@ -32,6 +32,7 @@ import {
   type DuplicateMediaGroup,
   type DuplicateMediaIssue,
   type MissingMediaIssue,
+  type MediaAsset,
   type OrphanMediaIssue,
   type ProjectHealthReport,
   type Project,
@@ -41,6 +42,7 @@ import {
 } from '@open-factory/editor-core';
 import { ChevronLeft, ChevronRight, GripHorizontal } from 'lucide-react';
 import { Toolbar } from './Toolbar';
+import { runConfiguredAutomationForMedia, type AutomationActionDependencies } from '../automation/automation-rules';
 import { ErrorBoundary } from './common/ErrorBoundary';
 import { MediaBin } from './MediaBin/MediaBin';
 import { StoryboardView } from './Storyboard/StoryboardView';
@@ -86,7 +88,7 @@ import {
   writeProjectFile,
   type AutosaveRecoveryCandidate
 } from '../lib/projectFiles';
-import { bridgeConfirm, copyFile as bridgeCopyFile, listenBridge, openDirectoryDialog, updateExportTrayProgress, writeFile as bridgeWriteFile } from '../lib/tauri-bridge';
+import { bridgeConfirm, copyFile as bridgeCopyFile, listenBridge, openDirectoryDialog, sendNotification, updateExportTrayProgress, writeFile as bridgeWriteFile } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
 import {
   appendMacroHistoryEntry,
@@ -222,6 +224,30 @@ export function EditorShell() {
       });
       return next;
     });
+  }, []);
+
+  const runAutomationForMedia = useCallback(async (trigger: 'on-import' | 'on-export-complete' | 'on-project-open', media: MediaAsset[]) => {
+    if (media.length === 0) {
+      return;
+    }
+    const dependencies: AutomationActionDependencies = {
+      enqueueProxy: (asset) => {
+        useMediaJobStore.getState().enqueueProxyJobsForMedia([asset], useProxySettingsStore.getState().settings, { force: true });
+        void ensureMediaJobRunner();
+      },
+      setLabel: (assetId, labelColor) => {
+        useEditorStore.getState().setMediaMetadata(assetId, { labelColor });
+      },
+      moveToGroup: (asset, groupName) => {
+        moveAutomationMediaToGroup(asset.id, groupName);
+      },
+      notify: (title, body) => sendNotification(title, body)
+    };
+    try {
+      await runConfiguredAutomationForMedia({ trigger, media, projectName: useEditorStore.getState().project.name }, dependencies);
+    } catch (error) {
+      console.warn('Automation rule execution failed', error);
+    }
   }, []);
 
   useEffect(() => {
@@ -504,12 +530,13 @@ export function EditorShell() {
       }
       if (result.media.length > 0) {
         addMedia(result.media);
+        void runAutomationForMedia('on-import', result.media);
         showToast({ kind: 'success', title: zhCN.editorToasts.mediaImported, message: zhCN.editorToasts.mediaImportedMessage(result.media.length) });
       }
     } catch (error) {
       showToast({ kind: 'error', title: zhCN.editorToasts.importFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.importFailedMessage });
     }
-  }, [addMedia, project.media]);
+  }, [addMedia, project.media, runAutomationForMedia]);
 
   const openBatchTranscode = useCallback((paths: string[] = []) => {
     setBatchTranscodeInitialPaths(paths);
@@ -525,6 +552,7 @@ export function EditorShell() {
       const result = await probeMediaPaths(paths, useEditorStore.getState().project.media);
       if (result.media.length > 0) {
         addMedia(result.media);
+        void runAutomationForMedia('on-import', result.media);
         showToast({ kind: 'success', title: zhCN.editorToasts.mediaImported, message: zhCN.editorToasts.mediaImportedMessage(result.media.length) });
       }
       if (result.duplicateCount > 0) {
@@ -535,7 +563,7 @@ export function EditorShell() {
       showToast({ kind: 'error', title: zhCN.videoStitchWizard.importFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.importFailedMessage });
       return [];
     }
-  }, [addMedia]);
+  }, [addMedia, runAutomationForMedia]);
 
   const generateVideoStitchTimeline = useCallback(
     (settings: VideoStitchWizardSettings) => {
@@ -924,12 +952,13 @@ export function EditorShell() {
       const nextProject = await readProjectFile(path);
       commandManager.clear();
       setProject(nextProject, path);
+      void runAutomationForMedia('on-project-open', nextProject.media);
       setTemplateExportPreset(undefined);
       showToast({ kind: 'success', title: zhCN.editorToasts.projectOpened });
     } catch (error) {
       showToast({ kind: 'error', title: zhCN.editorToasts.openFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.openFailedMessage });
     }
-  }, [dirty, setProject]);
+  }, [dirty, runAutomationForMedia, setProject]);
 
   const splitSelected = useCallback(() => {
     if (!selectedClip) {
@@ -1394,6 +1423,7 @@ export function EditorShell() {
               onClose={() => setExportDialogOpen(false)}
               onCompleted={(path) => {
                 setLastExportPath(path);
+                void runAutomationForMedia('on-export-complete', useEditorStore.getState().project.media);
               }}
               onRelinkMissing={() => void relinkAllMissing()}
             />
@@ -1508,6 +1538,7 @@ export function EditorShell() {
           showToast({ kind: 'info', title: zhCN.editorToasts.duplicateTitle, message: zhCN.editorToasts.duplicateMessage(result.duplicateCount) });
         }
         addMedia(result.media);
+        void runAutomationForMedia('on-import', result.media);
       }
       if (subtitlePaths.length > 0) {
         await importSubtitlePaths(subtitlePaths);
@@ -1585,6 +1616,22 @@ function readViewportSize(): { width: number; height: number } {
     return { width: 1440, height: 900 };
   }
   return { width: window.innerWidth, height: window.innerHeight };
+}
+
+function moveAutomationMediaToGroup(assetId: string, groupName: string): void {
+  const name = groupName.trim();
+  if (!name) {
+    return;
+  }
+  let folder = projectAccessor.getProject().mediaFolders.find((item) => item.name.toLowerCase() === name.toLowerCase());
+  if (!folder) {
+    const command = new AddMediaFolderCommand(projectAccessor, { name });
+    commandManager.execute(command);
+    folder = command.folder;
+  }
+  if (folder) {
+    commandManager.execute(new MoveMediaToFolderCommand(projectAccessor, [assetId], folder.id));
+  }
 }
 
 function AutosaveRecoveryDialog({ onRestore, onDiscard }: { onRestore(): void; onDiscard(): void }) {

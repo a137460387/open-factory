@@ -2,9 +2,13 @@ import { buildProxyPlan, type MediaAsset, type ProxySettings } from '@open-facto
 import { zhCN } from '../i18n/strings';
 import { generateProxy, getAppDataDir } from '../lib/tauri-bridge';
 
-export async function createProxyForAsset(asset: MediaAsset, settings?: ProxySettings): Promise<MediaAsset> {
+export interface ProxyGenerationOptions {
+  force?: boolean;
+}
+
+export async function createProxyForAsset(asset: MediaAsset, settings?: ProxySettings, options: ProxyGenerationOptions = {}): Promise<MediaAsset> {
   const appDataDir = await getAppDataDir();
-  const plan = buildProxyPlan(asset, appDataDir, settings);
+  const plan = buildProxyPlan(asset, appDataDir, settings, options);
   if (!plan) {
     throw new Error(zhCN.errors.proxyNotNeeded);
   }

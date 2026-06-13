@@ -14,6 +14,7 @@ import {
 } from '@open-factory/editor-core';
 import { formatBackupDisplayTime } from '../backup/projectBackup';
 import { getLanguage, normalizeLanguage, zhCN, type Language } from '../i18n/strings';
+import { parseAutomationRulesJson, serializeAutomationRulesJson } from '../automation/automation-rules';
 import { loadLutLibrary, toggleLutFavorite, type LutLibraryItem } from '../lib/lutLibrary';
 import { openDirectoryDialog, readWebdavPassword, writeWebdavPassword } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
@@ -42,13 +43,16 @@ import { PROXY_RESOLUTION_PRESETS, PROXY_TRIGGER_THRESHOLDS, useProxySettingsSto
 import { useTranslationSettingsStore, type TranslationProvider } from '../store/translationSettingsStore';
 import {
   DEFAULT_BACKUP_SETTINGS,
+  readAutomationRules,
   readBackupSettings,
   readExportBackgroundSettings,
   readExportRules,
+  saveAutomationRules,
   saveBackupSettings,
   saveExportBackgroundSettings,
   saveExportRules,
   saveLanguageSetting,
+  type AutomationRule,
   type BackupSettings,
   type ExportBackgroundSettings,
   type ExportConditionRule
@@ -78,7 +82,7 @@ interface SettingsDialogProps {
   onClose(): void;
 }
 
-type SettingsTab = 'general' | 'appearance' | 'lut-library' | 'shortcuts' | 'macros' | 'translation' | 'proxy' | 'backup' | 'plugins';
+type SettingsTab = 'general' | 'appearance' | 'lut-library' | 'shortcuts' | 'macros' | 'automation' | 'translation' | 'proxy' | 'backup' | 'plugins';
 const EXPORT_RULE_COPY_SUCCESS_ID = 'copy-success';
 const EXPORT_RULE_FAILURE_NOTIFICATION_ID = 'failure-notification';
 const EXPORT_RULE_QUEUE_TONE_ID = 'queue-tone';
@@ -103,6 +107,9 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
   }));
   const [exportBackgroundSettings, setExportBackgroundSettings] = useState<ExportBackgroundSettings>(() => ({ allowPowerActions: false }));
   const [exportRules, setExportRules] = useState<ExportConditionRule[]>([]);
+  const [automationRules, setAutomationRules] = useState<AutomationRule[]>([]);
+  const [automationRulesJson, setAutomationRulesJson] = useState('[]');
+  const [automationRulesError, setAutomationRulesError] = useState<string>();
   const [webdavPassword, setWebdavPassword] = useState('');
   const translationProvider = useTranslationSettingsStore((state) => state.provider);
   const translationApiKey = useTranslationSettingsStore((state) => state.apiKey);
@@ -133,6 +140,7 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
     void loadBackupSettings();
     void loadExportBackgroundSettings();
     void loadExportRules();
+    void loadAutomationRules();
     hydrateThemeForm(getCurrentThemeSettings());
     showCurrentPlugins();
     return () => setPreviewTimeline(undefined);
@@ -399,6 +407,56 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
     }
   }
 
+  async function loadAutomationRules() {
+    try {
+      const rules = await readAutomationRules();
+      setAutomationRules(rules);
+      setAutomationRulesJson(serializeAutomationRulesJson(rules));
+      setAutomationRulesError(undefined);
+    } catch (automationError) {
+      showToast({
+        kind: 'warning',
+        title: t.automation.saveFailed,
+        message: automationError instanceof Error ? automationError.message : t.automation.saveFailedMessage
+      });
+    }
+  }
+
+  async function saveAutomationRulesFromJson() {
+    const parsed = parseAutomationRulesJson(automationRulesJson);
+    if (!parsed.ok) {
+      setAutomationRulesError(parsed.error);
+      return;
+    }
+    try {
+      const saved = await saveAutomationRules(parsed.rules);
+      setAutomationRules(saved);
+      setAutomationRulesJson(serializeAutomationRulesJson(saved));
+      setAutomationRulesError(undefined);
+      showToast({ kind: 'success', title: t.automation.saved });
+    } catch (automationError) {
+      const message = automationError instanceof Error ? automationError.message : t.automation.saveFailedMessage;
+      setAutomationRulesError(message);
+      showToast({ kind: 'warning', title: t.automation.saveFailed, message });
+    }
+  }
+
+  async function toggleAutomationRule(ruleId: string, enabled: boolean) {
+    const nextRules = automationRules.map((rule) => (rule.id === ruleId ? { ...rule, enabled } : rule));
+    setAutomationRules(nextRules);
+    setAutomationRulesJson(serializeAutomationRulesJson(nextRules));
+    try {
+      const saved = await saveAutomationRules(nextRules);
+      setAutomationRules(saved);
+      setAutomationRulesJson(serializeAutomationRulesJson(saved));
+      setAutomationRulesError(undefined);
+    } catch (automationError) {
+      const message = automationError instanceof Error ? automationError.message : t.automation.saveFailedMessage;
+      setAutomationRulesError(message);
+      showToast({ kind: 'warning', title: t.automation.saveFailed, message });
+    }
+  }
+
   async function updateExportBackgroundSettings(nextSettings: ExportBackgroundSettings) {
     setExportBackgroundSettings(nextSettings);
     try {
@@ -618,6 +676,14 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
               onClick={() => setTab('macros')}
             >
               {t.tabs.macros}
+            </button>
+            <button
+              className={`mt-1 w-full rounded-md px-3 py-2 text-left text-sm font-semibold ${tab === 'automation' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}
+              type="button"
+              data-testid="settings-tab-automation"
+              onClick={() => setTab('automation')}
+            >
+              {t.tabs.automation}
             </button>
             <button
               className={`mt-1 w-full rounded-md px-3 py-2 text-left text-sm font-semibold ${tab === 'translation' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}
@@ -917,6 +983,19 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
                 </div>
               </div>
             ) : null}
+            {tab === 'automation' ? (
+              <AutomationSettingsPanel
+                rules={automationRules}
+                rulesJson={automationRulesJson}
+                error={automationRulesError}
+                onRulesJsonChange={(value) => {
+                  setAutomationRulesJson(value);
+                  setAutomationRulesError(undefined);
+                }}
+                onSave={() => void saveAutomationRulesFromJson()}
+                onToggleRule={(ruleId, enabled) => void toggleAutomationRule(ruleId, enabled)}
+              />
+            ) : null}
             {tab === 'translation' ? (
               <TranslationSettingsPanel
                 provider={translationProvider}
@@ -1113,6 +1192,89 @@ function ThemeColorInput({ label, value, testId, onChange }: { label: string; va
 
 function formatProjectFps(fps: number): string {
   return `${Number.isInteger(fps) ? fps.toFixed(0) : fps.toFixed(3)} fps`;
+}
+
+const AUTOMATION_RULE_EXAMPLE = [
+  {
+    trigger: 'on-import',
+    conditions: [{ field: 'duration', op: '>', value: 300 }],
+    actions: [{ type: 'generate-proxy' }, { type: 'add-tag', value: 'green' }]
+  }
+];
+
+function AutomationSettingsPanel({
+  rules,
+  rulesJson,
+  error,
+  onRulesJsonChange,
+  onSave,
+  onToggleRule
+}: {
+  rules: AutomationRule[];
+  rulesJson: string;
+  error?: string;
+  onRulesJsonChange(value: string): void;
+  onSave(): void;
+  onToggleRule(ruleId: string, enabled: boolean): void;
+}) {
+  const t = zhCN.settings.automation;
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold text-ink">{t.title}</h3>
+          <p className="text-xs text-slate-500">{t.description}</p>
+        </div>
+        <button
+          className="rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
+          type="button"
+          data-testid="automation-rules-example-button"
+          onClick={() => onRulesJsonChange(serializeAutomationRulesJson(AUTOMATION_RULE_EXAMPLE as AutomationRule[]))}
+        >
+          {t.example}
+        </button>
+      </div>
+      <label className="block text-xs font-medium text-slate-600">
+        {t.editorLabel}
+        <textarea
+          className="mt-1 min-h-56 w-full resize-y rounded-md border border-line bg-white px-3 py-2 font-mono text-xs text-ink"
+          value={rulesJson}
+          spellCheck={false}
+          data-testid="automation-rules-json-editor"
+          onChange={(event) => onRulesJsonChange(event.target.value)}
+        />
+      </label>
+      {error ? (
+        <div className="rounded-md border border-rose-200 bg-rose-50 p-2 text-xs text-rose-800" data-testid="automation-rules-error">
+          {error}
+        </div>
+      ) : null}
+      <button className="rounded-md bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:brightness-95" type="button" data-testid="automation-rules-save-button" onClick={onSave}>
+        {t.save}
+      </button>
+      <div className="rounded-md border border-line bg-white p-3" data-testid="automation-rules-list">
+        {rules.length === 0 ? <div className="text-sm text-slate-500">{t.empty}</div> : null}
+        <div className="space-y-2">
+          {rules.map((rule) => (
+            <label key={rule.id} className="flex items-start gap-2 rounded-md border border-line bg-panel p-2 text-xs text-slate-600" data-testid="automation-rule-row">
+              <input
+                className="mt-0.5 h-4 w-4 accent-brand"
+                type="checkbox"
+                checked={rule.enabled}
+                data-testid={`automation-rule-enabled-${rule.id}`}
+                onChange={(event) => onToggleRule(rule.id, event.target.checked)}
+              />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-semibold text-slate-800">{rule.name ?? rule.id}</span>
+                <span className="mt-1 block text-slate-500">{t.ruleSummary(rule.trigger, rule.actions.length)}</span>
+              </span>
+              <span className="shrink-0 rounded bg-white px-2 py-0.5 text-[11px] font-medium text-slate-500">{rule.enabled ? t.enabled : t.disabled}</span>
+            </label>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function ExportRulesSettingsPanel({
