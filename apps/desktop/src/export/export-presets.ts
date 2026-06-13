@@ -466,11 +466,31 @@ function sanitizeExportSettings(settings: unknown): ExportPresetSettings {
   if (sanitizeSlate(input.slate)) {
     output.slate = { enabled: true };
   }
+  const colorManagement = sanitizeColorManagement(input.colorManagement);
+  if (colorManagement) {
+    output.colorManagement = colorManagement;
+  }
   const audioVisualization = sanitizeAudioVisualization(input.audioVisualization);
   if (audioVisualization) {
     output.audioVisualization = audioVisualization;
   }
   return output;
+}
+
+function sanitizeColorManagement(value: unknown): ExportPresetSettings['colorManagement'] | undefined {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+  const input = value as Record<string, unknown>;
+  return {
+    inputColorSpace: sanitizeExportColorSpace(input.inputColorSpace, 'srgb'),
+    outputColorSpace: sanitizeExportColorSpace(input.outputColorSpace, 'srgb'),
+    embedIccProfile: input.embedIccProfile !== false
+  };
+}
+
+function sanitizeExportColorSpace(value: unknown, fallback: NonNullable<ExportPresetSettings['colorManagement']>['inputColorSpace']): NonNullable<ExportPresetSettings['colorManagement']>['inputColorSpace'] {
+  return value === 'srgb' || value === 'rec709' || value === 'dci-p3' || value === 'rec2020' ? value : fallback;
 }
 
 function sanitizeAudioVisualization(value: unknown): ExportPresetSettings['audioVisualization'] | undefined {

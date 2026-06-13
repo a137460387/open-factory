@@ -921,6 +921,16 @@ const zh = {
     addKeyframeFailed: '无法添加关键帧。',
     updateKeyframeFailed: '无法更新关键帧。',
     removeKeyframeFailed: '无法移除关键帧。',
+    batchKeyframes: {
+      title: '批量关键帧',
+      count: (count: number) => `${count} 个已选`,
+      shiftSeconds: '水平移位（秒）',
+      scaleFactor: '时间缩放',
+      applyShift: '移位',
+      applyScale: '缩放',
+      applyEasing: '应用缓动',
+      delete: '删除'
+    },
     locked: '已锁定',
     timecodeSummary: (start: string, duration: string) => `开始 ${start} / 时长 ${duration}`,
     speedSummary: (speed: string) => `速度 ${speed}x`,
@@ -1010,6 +1020,7 @@ const zh = {
       cancelFailed: '取消失败'
     },
     fields: {
+      property: '属性',
       name: '名称',
       start: '开始',
       duration: '时长',
@@ -1312,6 +1323,20 @@ const zh = {
       video: '视频',
       audio: '纯音频',
       'audio-visualization': '纯音频可视化'
+    },
+    colorManagement: {
+      title: '颜色管理',
+      default: '默认 sRGB',
+      custom: '自定义',
+      inputColorSpace: '输入色彩空间',
+      outputColorSpace: '输出色彩空间',
+      embedIccProfile: '嵌入 ICC 配置文件',
+      colorSpaces: {
+        srgb: 'sRGB',
+        rec709: 'Rec.709',
+        'dci-p3': 'DCI-P3',
+        rec2020: 'Rec.2020'
+      }
     },
     subtitleFormats: {
       srt: 'SRT',
@@ -2710,6 +2735,16 @@ const enOverrides = {
     locked: 'Locked',
     timecodeSummary: (start: string, duration: string) => `Start ${start} / Duration ${duration}`,
     speedSummary: (speed: string) => `Speed ${speed}x`,
+    batchKeyframes: {
+      title: 'Batch Keyframes',
+      count: (count: number) => `${count} selected`,
+      shiftSeconds: 'Horizontal Shift (s)',
+      scaleFactor: 'Time Scale',
+      applyShift: 'Shift',
+      applyScale: 'Scale',
+      applyEasing: 'Apply Easing',
+      delete: 'Delete'
+    },
     sections: {
       clip: 'Clip',
       speed: 'Speed',
@@ -2787,6 +2822,7 @@ const enOverrides = {
       cancelFailed: 'Cancel Failed'
     },
     fields: {
+      property: 'Property',
       name: 'Name',
       start: 'Start',
       duration: 'Duration',
@@ -3014,6 +3050,20 @@ const enOverrides = {
       video: 'Video',
       audio: 'Audio Only',
       'audio-visualization': 'Audio Visualization'
+    },
+    colorManagement: {
+      title: 'Color Management',
+      default: 'Default sRGB',
+      custom: 'Custom',
+      inputColorSpace: 'Input Color Space',
+      outputColorSpace: 'Output Color Space',
+      embedIccProfile: 'Embed ICC Profile',
+      colorSpaces: {
+        srgb: 'sRGB',
+        rec709: 'Rec.709',
+        'dci-p3': 'DCI-P3',
+        rec2020: 'Rec.2020'
+      }
     },
     subtitleFormats: {
       srt: 'SRT',

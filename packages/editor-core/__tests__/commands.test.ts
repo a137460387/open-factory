@@ -11,6 +11,7 @@ import {
   AddTimelineMarkerCommand,
   AddMediaFolderCommand,
   ApplyTextAnimationCommand,
+  BatchKeyframeEditCommand,
   AddTransitionCommand,
   BatchUpdateKeyframeCommand,
   DEFAULT_COLOR_CORRECTION,
@@ -795,6 +796,109 @@ describe('timeline commands', () => {
     manager.undo();
     expect(accessor.current().tracks[1].clips[0].keyframes).toBeUndefined();
     expect(accessor.current().tracks[1].clips[1].keyframes).toBeUndefined();
+  });
+
+  it('batch shifts selected keyframes and clamps times inside clip duration', () => {
+    const accessor = makeAccessor(
+      makeTimeline([
+        makeVideoClip({
+          id: 'clip-batch',
+          duration: 2,
+          keyframes: {
+            x: [{ id: 'kf-x', time: 0.25, value: 0, easing: 'linear' }],
+            opacity: [{ id: 'kf-opacity', time: 1.8, value: 0.5, easing: 'ease-out' }]
+          }
+        })
+      ])
+    );
+    const manager = new CommandManager();
+
+    manager.execute(
+      new BatchKeyframeEditCommand(
+        accessor,
+        [
+          { clipId: 'clip-batch', property: 'x', keyframeId: 'kf-x' },
+          { clipId: 'clip-batch', property: 'opacity', keyframeId: 'kf-opacity' }
+        ],
+        { type: 'shift', delta: 0.5 }
+      )
+    );
+
+    const clip = accessor.current().tracks[0].clips[0];
+    expect(clip.keyframes?.x?.[0].time).toBe(0.75);
+    expect(clip.keyframes?.opacity?.[0].time).toBe(2);
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips[0].keyframes?.x?.[0].time).toBe(0.25);
+    expect(accessor.current().tracks[0].clips[0].keyframes?.opacity?.[0].time).toBe(1.8);
+  });
+
+  it('batch scales selected keyframes around the absolute selection center', () => {
+    const accessor = makeAccessor(
+      makeTimeline([
+        makeVideoClip({
+          id: 'clip-a',
+          start: 0,
+          duration: 4,
+          keyframes: { x: [{ id: 'kf-a', time: 1, value: 0, easing: 'linear' }] }
+        }),
+        makeVideoClip({
+          id: 'clip-b',
+          start: 2,
+          duration: 5,
+          keyframes: { opacity: [{ id: 'kf-b', time: 3, value: 0.5, easing: 'linear' }] }
+        })
+      ])
+    );
+    const manager = new CommandManager();
+
+    manager.execute(
+      new BatchKeyframeEditCommand(
+        accessor,
+        [
+          { clipId: 'clip-a', property: 'x', keyframeId: 'kf-a' },
+          { clipId: 'clip-b', property: 'opacity', keyframeId: 'kf-b' }
+        ],
+        { type: 'scale-time', factor: 0.5 }
+      )
+    );
+
+    const [clipA, clipB] = accessor.current().tracks[0].clips;
+    expect(clipA.keyframes?.x?.[0].time).toBe(2);
+    expect(clipB.keyframes?.opacity?.[0].time).toBe(2);
+  });
+
+  it('batch deletes and unifies easing as undoable keyframe edits', () => {
+    const accessor = makeAccessor(
+      makeTimeline([
+        makeVideoClip({
+          id: 'clip-batch',
+          duration: 3,
+          keyframes: {
+            x: [{ id: 'kf-x', time: 0.5, value: 0, easing: 'linear' }],
+            opacity: [{ id: 'kf-opacity', time: 1, value: 0.5, easing: 'ease-out' }]
+          }
+        })
+      ])
+    );
+    const manager = new CommandManager();
+    const refs = [
+      { clipId: 'clip-batch', property: 'x' as const, keyframeId: 'kf-x' },
+      { clipId: 'clip-batch', property: 'opacity' as const, keyframeId: 'kf-opacity' }
+    ];
+
+    manager.execute(new BatchKeyframeEditCommand(accessor, refs, { type: 'easing', easing: 'ease-in-out' }));
+    expect(accessor.current().tracks[0].clips[0].keyframes?.x?.[0].easing).toBe('ease-in-out');
+    expect(accessor.current().tracks[0].clips[0].keyframes?.opacity?.[0].easing).toBe('ease-in-out');
+
+    manager.execute(new BatchKeyframeEditCommand(accessor, [refs[1]], { type: 'delete' }));
+    expect(accessor.current().tracks[0].clips[0].keyframes?.opacity).toBeUndefined();
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips[0].keyframes?.opacity?.[0].easing).toBe('ease-in-out');
+    manager.undo();
+    expect(accessor.current().tracks[0].clips[0].keyframes?.x?.[0].easing).toBe('linear');
+    expect(accessor.current().tracks[0].clips[0].keyframes?.opacity?.[0].easing).toBe('ease-out');
   });
 
   it('applies text animation presets through an undoable command', () => {

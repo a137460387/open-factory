@@ -199,6 +199,34 @@ describe('export presets', () => {
     });
   });
 
+  it('persists and sanitizes color management preset settings', async () => {
+    const { storage, files, presetPath } = makeStorage();
+
+    const presets = await saveCustomExportPreset(
+      'P3 Delivery',
+      {
+        format: 'mp4',
+        colorManagement: {
+          inputColorSpace: 'srgb',
+          outputColorSpace: 'dci-p3',
+          embedIccProfile: true
+        }
+      },
+      storage
+    );
+
+    expect(presets.find((preset) => preset.name === 'P3 Delivery')?.settings.colorManagement).toEqual({
+      inputColorSpace: 'srgb',
+      outputColorSpace: 'dci-p3',
+      embedIccProfile: true
+    });
+    expect(JSON.parse(files.get(presetPath) ?? '{}').presets[0].settings.colorManagement).toEqual({
+      inputColorSpace: 'srgb',
+      outputColorSpace: 'dci-p3',
+      embedIccProfile: true
+    });
+  });
+
   it('keeps animated image custom preset formats', async () => {
     const { storage } = makeStorage();
 

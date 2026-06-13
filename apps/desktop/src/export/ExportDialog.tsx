@@ -5,8 +5,10 @@ import {
   buildExportProjectFromProject,
   buildFfmpegPreviewSamplePlans,
   clampReframeOffset,
+  EXPORT_COLOR_SPACES,
   exportRenderRangeFromPoints,
   getTimelinePlaybackDuration,
+  normalizeExportColorManagement,
   normalizeExportRenderRange,
   normalizeExportRanges,
   normalizeProjectFps,
@@ -17,6 +19,7 @@ import {
   suggestRenderFarmInstances,
   type ExportAudioVisualizationBackground,
   type ExportAudioVisualizationStyle,
+  type ExportColorSpace,
   type ExportRenderRange,
   type NormalizedExportRenderRange,
   type ExportSubtitleFormat,
@@ -576,6 +579,7 @@ function relinkFromPreflight(): void {
               options={['off', 'youtube', 'ebu-r128']}
             />
           </div>
+          {!timelineVisualControlsDisabled ? <ColorManagementSection colorManagement={exportSettings.colorManagement} setDraftSettings={setDraftSettings} /> : null}
           {isAudioVisualization ? (
             <AudioVisualizationSection
               visualization={exportSettings.audioVisualization ?? DEFAULT_AUDIO_VISUALIZATION}
@@ -973,6 +977,7 @@ function normalizeDraftSettings(settings: ExportPresetSettings): ExportPresetSet
   const watermark = visualExportSettingsEnabled ? (settings.watermark ?? null) : null;
   const timecodeBurnIn = visualExportSettingsEnabled ? normalizeTimecodeBurnInDraft(settings.timecodeBurnIn) : null;
   const slate = visualExportSettingsEnabled && settings.slate?.enabled === true ? { enabled: true } : null;
+  const colorManagement = normalizeExportColorManagement(settings.colorManagement);
   return {
     ...settings,
     width: targetAspectRatio === 'source' ? settings.width : dimensions.width,
@@ -991,6 +996,7 @@ function normalizeDraftSettings(settings: ExportPresetSettings): ExportPresetSet
     watermark,
     timecodeBurnIn,
     slate,
+    colorManagement,
     audioVisualization: normalizeAudioVisualizationDraft(settings.audioVisualization)
   };
 }
@@ -1376,6 +1382,10 @@ function updateLoudnessNormalization(setDraftSettings: Dispatch<SetStateAction<E
   setDraftSettings((current) => ({ ...current, loudnessNormalization: normalizeLoudnessNormalization(value) }));
 }
 
+function updateColorManagement(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, patch: Partial<NonNullable<ExportPresetSettings['colorManagement']>>): void {
+  setDraftSettings((current) => ({ ...current, colorManagement: { ...normalizeExportColorManagement(current.colorManagement), ...patch } }));
+}
+
 function updateTimecodeBurnInEnabled(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, checked: boolean): void {
   setDraftSettings((current) => ({ ...current, timecodeBurnIn: checked ? timecodeBurnInFrom(current.timecodeBurnIn) : null }));
 }
@@ -1544,6 +1554,48 @@ function countSpatialDenoiseClips(project: Project): number {
   return project.timeline.tracks
     .flatMap((track) => track.clips)
     .filter((clip) => (clip.type === 'video' || clip.type === 'nested-sequence') && normalizeVideoRestoration(clip.videoRestoration).spatialDenoise.enabled).length;
+}
+
+function ColorManagementSection({
+  colorManagement,
+  setDraftSettings
+}: {
+  colorManagement: ExportPresetSettings['colorManagement'];
+  setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>;
+}) {
+  const t = zhCN.exportDialog.colorManagement;
+  const normalized = normalizeExportColorManagement(colorManagement);
+  const active = normalized.inputColorSpace !== 'srgb' || normalized.outputColorSpace !== 'srgb' || normalized.embedIccProfile === false;
+  return (
+    <details className="rounded-md border border-line p-3" data-testid="export-color-management-section">
+      <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-semibold text-slate-700" data-testid="export-color-management-summary">
+        <span>{t.title}</span>
+        <span className="text-[11px] font-normal text-slate-500">{active ? t.custom : t.default}</span>
+      </summary>
+      <div className="mt-3 grid gap-3 md:grid-cols-3">
+        <PresetSelectField
+          label={t.inputColorSpace}
+          value={normalized.inputColorSpace}
+          onChange={(value) => updateColorManagement(setDraftSettings, { inputColorSpace: value as ExportColorSpace })}
+          options={[...EXPORT_COLOR_SPACES]}
+          testId="export-input-color-space-select"
+        />
+        <PresetSelectField
+          label={t.outputColorSpace}
+          value={normalized.outputColorSpace}
+          onChange={(value) => updateColorManagement(setDraftSettings, { outputColorSpace: value as ExportColorSpace })}
+          options={[...EXPORT_COLOR_SPACES]}
+          testId="export-output-color-space-select"
+        />
+        <PresetCheckboxField
+          label={t.embedIccProfile}
+          checked={normalized.embedIccProfile}
+          onChange={(checked) => updateColorManagement(setDraftSettings, { embedIccProfile: checked })}
+          testId="export-embed-icc-toggle"
+        />
+      </div>
+    </details>
+  );
 }
 
 function AudioVisualizationSection({
@@ -2168,6 +2220,9 @@ function formatOptionLabel(value: string): string {
   }
   if (value === 'solid' || value === 'gradient' || value === 'image') {
     return zhCN.exportDialog.audioVisualization.backgroundTypes[value];
+  }
+  if (value === 'srgb' || value === 'rec709' || value === 'dci-p3' || value === 'rec2020') {
+    return zhCN.exportDialog.colorManagement.colorSpaces[value];
   }
   if (value === 'default') {
     return zhCN.exportDialog.options.default;

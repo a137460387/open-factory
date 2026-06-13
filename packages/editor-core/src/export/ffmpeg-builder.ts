@@ -60,6 +60,7 @@ import { calculateSpeedCurveSourceDuration, getClipSourceVisibleDuration, getCli
 import { round } from '../time';
 import { serializeSubtitleCueInputsToAss, serializeSubtitleCueInputsToSrt, serializeSubtitleCueInputsToVtt, type SubtitleCueInput } from '../subtitles/srt';
 import { buildPathTextFrameLayouts } from '../text-path';
+import { DEFAULT_EXPORT_COLOR_MANAGEMENT, normalizeExportColorManagement, type ExportColorSpace } from './color-management';
 import { normalizeExportRenderRange, type ExportRenderRange, type NormalizedExportRenderRange } from './export-ranges';
 import { cssColorToFfmpeg, escapeDrawtextValue, formatFfmpegSeconds, normalizeFfmpegPath, quoteForDisplay } from './ffmpeg-escape';
 import type {
@@ -118,6 +119,7 @@ export const DEFAULT_EXPORT_SETTINGS: Omit<ExportSettings, 'outputPath'> = {
   watermark: null,
   timecodeBurnIn: null,
   slate: null,
+  colorManagement: DEFAULT_EXPORT_COLOR_MANAGEMENT,
   audioVisualization: {
     style: 'waveform-line',
     color: '#22d3ee',
@@ -160,7 +162,8 @@ export function buildExportProjectFromProject(project: Project, options: BuildEx
     height: exportSourceProject.settings.height || DEFAULT_EXPORT_SETTINGS.height,
     fps: exportSourceProject.settings.fps || DEFAULT_EXPORT_SETTINGS.fps,
     ...options.settings,
-    outputPath: normalizeFfmpegPath(options.outputPath)
+    outputPath: normalizeFfmpegPath(options.outputPath),
+    colorManagement: normalizeExportColorManagement(options.settings?.colorManagement)
   });
   return {
     name: exportSourceProject.name,
@@ -633,7 +636,10 @@ export function buildFfmpegExportPlan(
 
   if (!audioOnly) {
     const outputPixelFormat = pngSequence || animatedImage ? 'rgba' : 'yuv420p';
-    filters.push(`[${currentVideo}]trim=duration=${formatFfmpegSeconds(outputDuration)},setpts=PTS-STARTPTS,fps=${settings.fps},format=${outputPixelFormat}[vout]`);
+    const colorManagementFilters = buildExportColorManagementFilters(settings);
+    filters.push(
+      `[${currentVideo}]trim=duration=${formatFfmpegSeconds(outputDuration)},setpts=PTS-STARTPTS,fps=${settings.fps}${colorManagementFilters.length > 0 ? `,${colorManagementFilters.join(',')}` : ''},format=${outputPixelFormat}[vout]`
+    );
   }
 
   const audioOutputLabel = slate?.enabled && !videoFramesOnly ? 'aout_slate' : 'aout';
@@ -2304,9 +2310,43 @@ function buildContainerArgs(settings: ExportSettings): string[] {
     return [];
   }
   if (format === 'mp4' || format === 'mov') {
-    return ['-movflags', '+faststart'];
+    return ['-movflags', shouldGenerateIccProfile(settings) ? '+faststart+prefer_icc' : '+faststart'];
   }
   return [];
+}
+
+function buildExportColorManagementFilters(settings: ExportSettings): string[] {
+  const colorManagement = normalizeExportColorManagement(settings.colorManagement);
+  const input = getFfmpegColorSpaceProfile(colorManagement.inputColorSpace);
+  const output = getFfmpegColorSpaceProfile(colorManagement.outputColorSpace);
+  const filters: string[] = [];
+  if (colorManagement.inputColorSpace !== colorManagement.outputColorSpace) {
+    filters.push(
+      `colorspace=ispace=${input.space}:iprimaries=${input.primaries}:itrc=${input.trc}:space=${output.space}:primaries=${output.primaries}:trc=${output.trc}`
+    );
+  }
+  if (shouldGenerateIccProfile(settings)) {
+    filters.push(`iccgen=force=1:color_primaries=${output.primaries}:color_trc=${output.trc}`);
+  }
+  return filters;
+}
+
+function shouldGenerateIccProfile(settings: ExportSettings): boolean {
+  const colorManagement = normalizeExportColorManagement(settings.colorManagement);
+  return colorManagement.embedIccProfile && (colorManagement.inputColorSpace !== colorManagement.outputColorSpace || colorManagement.outputColorSpace !== 'srgb');
+}
+
+function getFfmpegColorSpaceProfile(colorSpace: ExportColorSpace): { space: string; primaries: string; trc: string } {
+  if (colorSpace === 'rec2020') {
+    return { space: 'bt2020nc', primaries: 'bt2020', trc: 'bt2020-10' };
+  }
+  if (colorSpace === 'dci-p3') {
+    return { space: 'bt709', primaries: 'smpte432', trc: 'bt709' };
+  }
+  if (colorSpace === 'rec709') {
+    return { space: 'bt709', primaries: 'bt709', trc: 'bt709' };
+  }
+  return { space: 'bt709', primaries: 'bt709', trc: 'iec61966-2-1' };
 }
 
 function pngSequenceOutputPath(outputPath: string): string {

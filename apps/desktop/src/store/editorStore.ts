@@ -14,6 +14,7 @@ export interface EditorState {
   selectedClipId?: string;
   selectedClipIds: string[];
   selectedKeyframe?: SelectedKeyframeRef;
+  selectedKeyframes: SelectedKeyframeRef[];
   playheadTime: number;
   isPlaying: boolean;
   playbackRate: -1 | 1;
@@ -41,6 +42,8 @@ export interface EditorState {
   toggleSelectedClipId: (clipId: string) => void;
   clearSelectedClipIds: () => void;
   setSelectedKeyframe: (keyframe?: SelectedKeyframeRef) => void;
+  setSelectedKeyframes: (keyframes: SelectedKeyframeRef[]) => void;
+  toggleSelectedKeyframe: (keyframe: SelectedKeyframeRef) => void;
   setPlayheadTime: (time: number) => void;
   setIsPlaying: (isPlaying: boolean) => void;
   setPlaybackRate: (playbackRate: -1 | 1) => void;
@@ -60,6 +63,7 @@ export interface EditorState {
 export const useEditorStore = create<EditorState>((set, get) => ({
   project: createProject(zhCN.project.defaultName),
   selectedClipIds: [],
+  selectedKeyframes: [],
   playheadTime: 0,
   isPlaying: false,
   playbackRate: 1,
@@ -84,6 +88,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       selectedClipId: undefined,
       selectedClipIds: [],
       selectedKeyframe: undefined,
+      selectedKeyframes: [],
       playheadTime: 0,
       isPlaying: false,
       previewTimeline: undefined,
@@ -98,6 +103,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       selectedClipId: undefined,
       selectedClipIds: [],
       selectedKeyframe: undefined,
+      selectedKeyframes: [],
       playheadTime: 0,
       isPlaying: false,
       playbackRate: 1,
@@ -115,6 +121,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       selectedClipId: undefined,
       selectedClipIds: [],
       selectedKeyframe: undefined,
+      selectedKeyframes: [],
       playheadTime: 0,
       isPlaying: false,
       playbackRate: 1,
@@ -152,10 +159,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         dirty: true
       };
     }),
-  setSelectedClipId: (selectedClipId) => set({ selectedClipId, selectedClipIds: selectedClipId ? [selectedClipId] : [], selectedKeyframe: undefined }),
+  setSelectedClipId: (selectedClipId) => set({ selectedClipId, selectedClipIds: selectedClipId ? [selectedClipId] : [], selectedKeyframe: undefined, selectedKeyframes: [] }),
   setSelectedClipIds: (selectedClipIds) => {
     const unique = Array.from(new Set(selectedClipIds));
-    set({ selectedClipIds: unique, selectedClipId: unique.length === 1 ? unique[0] : undefined, selectedKeyframe: undefined });
+    set({ selectedClipIds: unique, selectedClipId: unique.length === 1 ? unique[0] : undefined, selectedKeyframe: undefined, selectedKeyframes: [] });
   },
   toggleSelectedClipId: (clipId) =>
     set((state) => {
@@ -166,10 +173,32 @@ export const useEditorStore = create<EditorState>((set, get) => ({
         selected.add(clipId);
       }
       const selectedClipIds = Array.from(selected);
-      return { selectedClipIds, selectedClipId: selectedClipIds.length === 1 ? selectedClipIds[0] : undefined, selectedKeyframe: undefined };
+      return { selectedClipIds, selectedClipId: selectedClipIds.length === 1 ? selectedClipIds[0] : undefined, selectedKeyframe: undefined, selectedKeyframes: [] };
     }),
-  clearSelectedClipIds: () => set({ selectedClipId: undefined, selectedClipIds: [], selectedKeyframe: undefined }),
-  setSelectedKeyframe: (selectedKeyframe) => set({ selectedKeyframe }),
+  clearSelectedClipIds: () => set({ selectedClipId: undefined, selectedClipIds: [], selectedKeyframe: undefined, selectedKeyframes: [] }),
+  setSelectedKeyframe: (selectedKeyframe) =>
+    set({
+      selectedKeyframe,
+      selectedKeyframes: selectedKeyframe ? [selectedKeyframe] : [],
+      selectedClipIds: selectedKeyframe ? [selectedKeyframe.clipId] : [],
+      selectedClipId: selectedKeyframe?.clipId
+    }),
+  setSelectedKeyframes: (selectedKeyframes) => {
+    const unique = uniqueSelectedKeyframes(selectedKeyframes);
+    const selectedKeyframe = unique.at(-1);
+    const selectedClipIds = uniqueSelectedClipIdsForKeyframes(unique);
+    set({ selectedKeyframes: unique, selectedKeyframe, selectedClipIds, selectedClipId: selectedKeyframe?.clipId });
+  },
+  toggleSelectedKeyframe: (selectedKeyframe) =>
+    set((state) => {
+      const exists = state.selectedKeyframes.some((item) => sameSelectedKeyframe(item, selectedKeyframe));
+      const selectedKeyframes = exists
+        ? state.selectedKeyframes.filter((item) => !sameSelectedKeyframe(item, selectedKeyframe))
+        : [...state.selectedKeyframes, selectedKeyframe];
+      const nextSelectedKeyframe = selectedKeyframes.at(-1);
+      const selectedClipIds = uniqueSelectedClipIdsForKeyframes(selectedKeyframes);
+      return { selectedKeyframes, selectedKeyframe: nextSelectedKeyframe, selectedClipIds, selectedClipId: nextSelectedKeyframe?.clipId };
+    }),
   setPlayheadTime: (time) => {
     const duration = getTimelineDuration(get().project.timeline);
     set({ playheadTime: Math.min(Math.max(0, time), Math.max(duration, 0)) });
@@ -194,4 +223,30 @@ export function selectClipById(project: Project, clipId?: string): Clip | undefi
     return undefined;
   }
   return project.timeline.tracks.flatMap((track) => track.clips).find((clip) => clip.id === clipId);
+}
+
+function uniqueSelectedKeyframes(keyframes: SelectedKeyframeRef[]): SelectedKeyframeRef[] {
+  const seen = new Set<string>();
+  const output: SelectedKeyframeRef[] = [];
+  for (const keyframe of keyframes) {
+    const key = selectedKeyframeKey(keyframe);
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    output.push(keyframe);
+  }
+  return output;
+}
+
+function sameSelectedKeyframe(left: SelectedKeyframeRef, right: SelectedKeyframeRef): boolean {
+  return left.clipId === right.clipId && left.property === right.property && left.keyframeId === right.keyframeId;
+}
+
+function selectedKeyframeKey(keyframe: SelectedKeyframeRef): string {
+  return `${keyframe.clipId}\0${keyframe.property}\0${keyframe.keyframeId}`;
+}
+
+function uniqueSelectedClipIdsForKeyframes(keyframes: SelectedKeyframeRef[]): string[] {
+  return Array.from(new Set(keyframes.map((keyframe) => keyframe.clipId)));
 }

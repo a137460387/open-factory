@@ -13,6 +13,7 @@ import {
   createSequence,
   createTrack,
   DEFAULT_CUSTOM_SHADER_SOURCE,
+  exportRenderRangeFromPoints,
   type Clip,
   type Project
 } from '../src';
@@ -58,6 +59,44 @@ describe('multitrack ffmpeg builder', () => {
     expect(appendExportRangeSequence('C:/Exports/movie.mp4', 1, 12)).toBe('C:/Exports/movie-01.mp4');
     expect(appendExportRangeSequence('C:/Exports/movie.mp4', 12, 12)).toBe('C:/Exports/movie-12.mp4');
     expect(appendExportRangeSequence('C:/Exports/movie', 3, 9)).toBe('C:/Exports/movie-03');
+  });
+
+  it('normalizes in/out export points to a frame-aligned render range', () => {
+    expect(exportRenderRangeFromPoints(undefined, 4, 10, 30)).toBeNull();
+    expect(exportRenderRangeFromPoints(4.019, 1.011, 10, 30, { id: 'range-a', label: 'A roll' })).toEqual({
+      id: 'range-a',
+      label: 'A roll',
+      start: 1,
+      duration: 3
+    });
+  });
+
+  it('skips color management filters for default sRGB export settings', () => {
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(makeProject(), { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).not.toContain('colorspace=');
+    expect(plan.filterComplex).not.toContain('iccgen=');
+    expect(plan.outputArgs).toContain('+faststart');
+    expect(plan.outputArgs).not.toContain('+faststart+prefer_icc');
+  });
+
+  it('adds colorspace conversion and ICC generation for non-default output color spaces', () => {
+    const plan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(makeProject(), {
+        outputPath: 'out.mp4',
+        settings: {
+          colorManagement: {
+            inputColorSpace: 'srgb',
+            outputColorSpace: 'dci-p3',
+            embedIccProfile: true
+          }
+        }
+      })
+    );
+
+    expect(plan.filterComplex).toContain('colorspace=ispace=bt709:iprimaries=bt709:itrc=iec61966-2-1:space=bt709:primaries=smpte432:trc=bt709');
+    expect(plan.filterComplex).toContain('iccgen=force=1:color_primaries=smpte432:color_trc=bt709');
+    expect(plan.outputArgs).toContain('+faststart+prefer_icc');
   });
 
   it('builds per-clip overlay, drawtext textfile, and amix filters as argument arrays', () => {

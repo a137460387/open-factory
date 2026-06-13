@@ -30,6 +30,8 @@ export interface DragState {
   clipIds?: string[];
   keyframeProperty?: KeyframeProperty;
   keyframeId?: string;
+  keyframes?: SelectedKeyframeRef[];
+  keyframeSelectionOnly?: boolean;
   startX: number;
   previewStart: number;
   previewDuration: number;
@@ -39,6 +41,9 @@ export interface DragState {
   previewStartsByClipId?: Record<string, number>;
   previewClipsById?: Record<string, Clip>;
   previewKeyframeTime?: number;
+  previewKeyframeDelta?: number;
+  keyframeStartTimes?: Record<string, number>;
+  previewKeyframeTimes?: Record<string, number>;
   previewRollingDelta?: number;
   previewSlipDelta?: number;
   previewSlideDelta?: number;
@@ -128,6 +133,7 @@ export function TrackRow({
   selectedClipId,
   selectedClipIds,
   selectedKeyframe,
+  selectedKeyframes,
   drag,
   media,
   onSelect,
@@ -150,10 +156,11 @@ export function TrackRow({
   selectedClipId?: string;
   selectedClipIds: string[];
   selectedKeyframe?: SelectedKeyframeRef;
+  selectedKeyframes: SelectedKeyframeRef[];
   drag?: DragState;
   media: MediaAsset[];
   onSelect(clipId: string, additive: boolean): void;
-  onKeyframeSelect(keyframe: SelectedKeyframeRef): void;
+  onKeyframeSelect(keyframe: SelectedKeyframeRef, additive: boolean): void;
   onDragStart(drag: DragState): void;
   onTrackPointerDown(event: React.PointerEvent<HTMLDivElement>): void;
   onTrackUpdate(trackId: string, patch: Partial<Pick<Track, 'muted' | 'solo' | 'locked' | 'volume'>>): void;
@@ -238,6 +245,7 @@ export function TrackRow({
               width={width}
               selected={isSelected}
               selectedKeyframe={selectedKeyframe}
+              selectedKeyframes={selectedKeyframes}
               drag={drag}
               onSelect={onSelect}
               onKeyframeSelect={onKeyframeSelect}
@@ -320,6 +328,7 @@ function ClipBlock({
   width,
   selected,
   selectedKeyframe,
+  selectedKeyframes,
   drag,
   onSelect,
   onKeyframeSelect,
@@ -344,9 +353,10 @@ function ClipBlock({
   width: number;
   selected: boolean;
   selectedKeyframe?: SelectedKeyframeRef;
+  selectedKeyframes: SelectedKeyframeRef[];
   drag?: DragState;
   onSelect(clipId: string, additive: boolean): void;
-  onKeyframeSelect(keyframe: SelectedKeyframeRef): void;
+  onKeyframeSelect(keyframe: SelectedKeyframeRef, additive: boolean): void;
   onDragStart(drag: DragState): void;
   selectedClipIds: string[];
   locked: boolean;
@@ -461,10 +471,15 @@ function ClipBlock({
       <span className="relative z-10 truncate pl-1">{(clip.type === 'text' || clip.type === 'subtitle') && 'text' in clip ? clip.text.slice(0, 28) : clip.name}</span>
       <span className="relative z-10 ml-auto pl-2 tabular-nums">{clip.duration.toFixed(1)}s</span>
       {getClipKeyframeMarkers(clip).map((marker) => {
+        const keyframeRef = { clipId: clip.id, property: marker.property, keyframeId: marker.id };
         const isSelectedKeyframe =
-          selectedKeyframe?.clipId === clip.id && selectedKeyframe.property === marker.property && selectedKeyframe.keyframeId === marker.id;
-        const markerTime =
-          drag?.mode === 'keyframe' && drag.clip?.id === clip.id && drag.keyframeProperty === marker.property && drag.keyframeId === marker.id
+          selectedKeyframes.some((item) => sameSelectedKeyframe(item, keyframeRef)) ||
+          (selectedKeyframe?.clipId === clip.id && selectedKeyframe.property === marker.property && selectedKeyframe.keyframeId === marker.id);
+        const markerKey = selectedKeyframeKey(keyframeRef);
+        const previewMarkerTime = drag?.mode === 'keyframe' ? drag.previewKeyframeTimes?.[markerKey] : undefined;
+        const markerTime = previewMarkerTime !== undefined
+          ? previewMarkerTime
+          : drag?.mode === 'keyframe' && drag.clip?.id === clip.id && drag.keyframeProperty === marker.property && drag.keyframeId === marker.id
             ? drag.previewKeyframeTime ?? marker.time
             : marker.time;
         return (
@@ -483,13 +498,29 @@ function ClipBlock({
               return;
             }
             event.currentTarget.setPointerCapture(event.pointerId);
-            onSelect(clip.id, false);
-            onKeyframeSelect({ clipId: clip.id, property: marker.property, keyframeId: marker.id });
+            const selectedBeforePointerDown = selectedKeyframes.some((item) => sameSelectedKeyframe(item, keyframeRef));
+            if (!event.shiftKey) {
+              onSelect(clip.id, false);
+            }
+            onKeyframeSelect(keyframeRef, event.shiftKey);
+            const dragKeyframes = event.shiftKey
+              ? selectedBeforePointerDown
+                ? selectedKeyframes.filter((item) => !sameSelectedKeyframe(item, keyframeRef))
+                : [...selectedKeyframes, keyframeRef]
+              : selectedBeforePointerDown && selectedKeyframes.length > 1
+                ? selectedKeyframes
+                : [keyframeRef];
+            const keyframeSelectionOnly = event.shiftKey && selectedBeforePointerDown;
             onDragStart({
               mode: 'keyframe',
               clip,
               keyframeProperty: marker.property,
               keyframeId: marker.id,
+              keyframes: keyframeSelectionOnly ? [] : dragKeyframes.length > 0 ? dragKeyframes : [keyframeRef],
+              keyframeSelectionOnly,
+              keyframeStartTimes: Object.fromEntries(
+                (keyframeSelectionOnly ? [] : dragKeyframes.length > 0 ? dragKeyframes : [keyframeRef]).map((ref) => [selectedKeyframeKey(ref), getKeyframeMarkerTime(clip, ref) ?? marker.time])
+              ),
               startX: event.clientX,
               previewStart: marker.time,
               previewDuration: clip.duration,
@@ -534,6 +565,21 @@ function getClipKeyframeMarkers(clip: Clip): Array<{ id: string; property: Keyfr
       time: frame.time
     }))
   );
+}
+
+function getKeyframeMarkerTime(clip: Clip, ref: SelectedKeyframeRef): number | undefined {
+  if (clip.id !== ref.clipId) {
+    return undefined;
+  }
+  return clip.keyframes?.[ref.property]?.find((frame) => frame.id === ref.keyframeId)?.time;
+}
+
+function sameSelectedKeyframe(left: SelectedKeyframeRef, right: SelectedKeyframeRef): boolean {
+  return left.clipId === right.clipId && left.property === right.property && left.keyframeId === right.keyframeId;
+}
+
+function selectedKeyframeKey(keyframe: SelectedKeyframeRef): string {
+  return `${keyframe.clipId}\0${keyframe.property}\0${keyframe.keyframeId}`;
 }
 
 function getClipToneClass(type: Clip['type']): string {

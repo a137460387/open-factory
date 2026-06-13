@@ -2,6 +2,7 @@ import {
   AddClipCommand,
   AddProjectAnnotationCommand,
   AddTimelineMarkerCommand,
+  BatchKeyframeEditCommand,
   AddTrackCommand,
   AddTransitionCommand,
   CloseGapCommand,
@@ -74,7 +75,7 @@ import { canGenerateSubtitlesForClip, buildWhisperSubtitleTrackForClip, getWhisp
 import { TITLE_TEMPLATE_DRAG_MIME, isTitleTemplateId } from '../../lib/titleTemplates';
 import { detectSceneChanges, listenBridge, type WhisperProgressEvent } from '../../lib/tauri-bridge';
 import { commandManager, projectAccessor, timelineAccessor } from '../../store/commandManager';
-import { useEditorStore } from '../../store/editorStore';
+import { useEditorStore, type SelectedKeyframeRef } from '../../store/editorStore';
 import { useRenderCacheStore } from '../../store/renderCacheStore';
 import { useWhisperSettingsStore } from '../../store/whisperSettingsStore';
 import { LABEL_WIDTH, Ruler, TrackRow, buildTicks, type ClipMenuRequest, type DragState, type GapMenuRequest } from './TimelineParts';
@@ -91,7 +92,10 @@ export function Timeline() {
   const setSelectedClipId = useEditorStore((state) => state.setSelectedClipId);
   const setSelectedClipIds = useEditorStore((state) => state.setSelectedClipIds);
   const selectedKeyframe = useEditorStore((state) => state.selectedKeyframe);
+  const selectedKeyframes = useEditorStore((state) => state.selectedKeyframes);
   const setSelectedKeyframe = useEditorStore((state) => state.setSelectedKeyframe);
+  const setSelectedKeyframes = useEditorStore((state) => state.setSelectedKeyframes);
+  const toggleSelectedKeyframe = useEditorStore((state) => state.toggleSelectedKeyframe);
   const toggleSelectedClipId = useEditorStore((state) => state.toggleSelectedClipId);
   const clearSelectedClipIds = useEditorStore((state) => state.clearSelectedClipIds);
   const setPlayheadTime = useEditorStore((state) => state.setPlayheadTime);
@@ -394,8 +398,28 @@ export function Timeline() {
       return;
     }
     if (drag.mode === 'keyframe') {
+      if (drag.keyframeSelectionOnly) {
+        return;
+      }
       const nextTime = snapTime(Math.min(drag.clip.duration, Math.max(0, drag.previewStart + delta)));
-      setDrag({ ...drag, previewKeyframeTime: nextTime });
+      const previewKeyframeDelta = round(nextTime - drag.previewStart);
+      const keyframes = drag.keyframes?.length
+        ? drag.keyframes
+        : drag.keyframeProperty && drag.keyframeId
+          ? [{ clipId: drag.clip.id, property: drag.keyframeProperty, keyframeId: drag.keyframeId }]
+          : [];
+      const keyframeStartTimes = drag.keyframeStartTimes ?? buildKeyframeStartTimes(keyframes);
+      const previewKeyframeTimes = Object.fromEntries(
+        keyframes.flatMap((ref) => {
+          const clip = findClipById(ref.clipId);
+          const startTime = keyframeStartTimes[keyframeRefKey(ref)] ?? getKeyframeTime(ref);
+          if (!clip || startTime === undefined) {
+            return [];
+          }
+          return [[keyframeRefKey(ref), snapTime(Math.min(clip.duration, Math.max(0, startTime + previewKeyframeDelta)))]];
+        })
+      );
+      setDrag({ ...drag, previewKeyframeTime: nextTime, previewKeyframeDelta, keyframeStartTimes, previewKeyframeTimes });
       setPlayheadTime(drag.clip.start + nextTime);
       return;
     }
@@ -493,12 +517,25 @@ export function Timeline() {
         if (!current.keyframeProperty || !current.keyframeId) {
           return;
         }
-        commandManager.execute(
-          new UpdateKeyframeCommand(timelineAccessor, current.clip.id, current.keyframeProperty, current.keyframeId, {
-            time: current.previewKeyframeTime ?? current.previewStart
-          })
-        );
-        setSelectedKeyframe({ clipId: current.clip.id, property: current.keyframeProperty, keyframeId: current.keyframeId });
+        if (current.keyframeSelectionOnly) {
+          return;
+        }
+        const keyframes = current.keyframes?.length
+          ? current.keyframes
+          : [{ clipId: current.clip.id, property: current.keyframeProperty, keyframeId: current.keyframeId }];
+        const delta = current.previewKeyframeDelta ?? round((current.previewKeyframeTime ?? current.previewStart) - current.previewStart);
+        if (Math.abs(delta) > 0.000001) {
+          if (keyframes.length > 1) {
+            commandManager.execute(new BatchKeyframeEditCommand(timelineAccessor, keyframes, { type: 'shift', delta }));
+          } else {
+            commandManager.execute(
+              new UpdateKeyframeCommand(timelineAccessor, current.clip.id, current.keyframeProperty, current.keyframeId, {
+                time: current.previewKeyframeTime ?? current.previewStart
+              })
+            );
+          }
+        }
+        setSelectedKeyframes(keyframes);
       } else if (current.mode === 'move') {
         const starts = current.previewStartsByClipId ?? { [current.clip.id]: current.previewStart };
         const ids = Object.keys(starts);
@@ -541,6 +578,19 @@ export function Timeline() {
   }
 
   function onDragStart(nextDrag: DragState): void {
+    if (nextDrag.mode === 'keyframe') {
+      if (nextDrag.keyframeSelectionOnly) {
+        setDrag(nextDrag);
+        return;
+      }
+      const keyframes = nextDrag.keyframes?.length
+        ? nextDrag.keyframes
+        : nextDrag.clip && nextDrag.keyframeProperty && nextDrag.keyframeId
+          ? [{ clipId: nextDrag.clip.id, property: nextDrag.keyframeProperty, keyframeId: nextDrag.keyframeId }]
+          : [];
+      setDrag({ ...nextDrag, keyframes, keyframeStartTimes: buildKeyframeStartTimes(keyframes) });
+      return;
+    }
     if (nextDrag.mode !== 'move' || !nextDrag.clip) {
       setDrag(nextDrag);
       return;
@@ -563,7 +613,29 @@ export function Timeline() {
     setSelectedClipId(clipId);
   }
 
-  function selectKeyframe(keyframe: { clipId: string; property: KeyframeProperty; keyframeId: string }): void {
+  function findClipById(clipId: string): Clip | undefined {
+    return allClips.find((clip) => clip.id === clipId);
+  }
+
+  function getKeyframeTime(ref: SelectedKeyframeRef): number | undefined {
+    const clip = findClipById(ref.clipId);
+    return clip?.keyframes?.[ref.property]?.find((frame) => frame.id === ref.keyframeId)?.time;
+  }
+
+  function buildKeyframeStartTimes(refs: SelectedKeyframeRef[]): Record<string, number> {
+    return Object.fromEntries(
+      refs.flatMap((ref) => {
+        const time = getKeyframeTime(ref);
+        return time === undefined ? [] : [[keyframeRefKey(ref), time]];
+      })
+    );
+  }
+
+  function selectKeyframe(keyframe: { clipId: string; property: KeyframeProperty; keyframeId: string }, additive: boolean): void {
+    if (additive) {
+      toggleSelectedKeyframe(keyframe);
+      return;
+    }
     setSelectedKeyframe(keyframe);
   }
 
@@ -1097,6 +1169,7 @@ export function Timeline() {
                 selectedClipId={selectedClipId}
                 selectedClipIds={selectedClipIds}
                 selectedKeyframe={selectedKeyframe}
+                selectedKeyframes={selectedKeyframes}
                 drag={drag}
                 media={project.media}
                 onSelect={selectClip}
@@ -1853,4 +1926,8 @@ function SelectionMarquee({ rect }: { rect: SelectionRect }) {
       data-testid="timeline-selection-marquee"
     />
   );
+}
+
+function keyframeRefKey(ref: SelectedKeyframeRef): string {
+  return `${ref.clipId}\0${ref.property}\0${ref.keyframeId}`;
 }

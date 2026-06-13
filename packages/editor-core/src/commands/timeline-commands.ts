@@ -1960,6 +1960,18 @@ export class BatchUpdateKeyframeCommand implements Command {
 
 export type KeyframePatch = Partial<Pick<Keyframe<number>, 'time' | 'value' | 'easing'>>;
 
+export interface KeyframeSelectionRef {
+  clipId: string;
+  property: KeyframeProperty;
+  keyframeId: string;
+}
+
+export type BatchKeyframeEditOperation =
+  | { type: 'shift'; delta: number }
+  | { type: 'scale-time'; factor: number; center?: number }
+  | { type: 'delete' }
+  | { type: 'easing'; easing: KeyframeEasing };
+
 export class UpdateKeyframeCommand implements Command {
   readonly description = 'Update keyframe';
   private before?: Clip;
@@ -2006,6 +2018,140 @@ export class UpdateKeyframeCommand implements Command {
       this.accessor.setTimeline(replaceClip(this.accessor.getTimeline(), this.before));
     }
   }
+}
+
+export class BatchKeyframeEditCommand implements Command {
+  readonly description: string;
+  private before?: Timeline;
+
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly refs: KeyframeSelectionRef[],
+    private readonly operation: BatchKeyframeEditOperation,
+    description = 'Batch edit keyframes'
+  ) {
+    this.description = description;
+  }
+
+  execute(): void {
+    let timeline = this.accessor.getTimeline();
+    this.before ??= timeline;
+    const refs = uniqueKeyframeRefs(this.refs);
+    if (refs.length === 0) {
+      return;
+    }
+    const center = this.operation.type === 'scale-time' ? this.operation.center ?? calculateKeyframeSelectionCenter(timeline, refs) : 0;
+    const refsByClipId = groupKeyframeRefsByClip(refs);
+    for (const [clipId, clipRefs] of refsByClipId) {
+      const beforeClip = findClip(timeline, clipId);
+      let keyframes = cloneClipKeyframes(beforeClip.keyframes);
+      const touchedProperties = new Set<KeyframeProperty>();
+      for (const ref of clipRefs) {
+        const existing = keyframes?.[ref.property]?.find((frame) => frame.id === ref.keyframeId);
+        if (!existing) {
+          throw new Error(`Keyframe ${ref.keyframeId} not found`);
+        }
+        touchedProperties.add(ref.property);
+        if (this.operation.type === 'delete') {
+          keyframes = removeKeyframeForProperty(keyframes, ref.property, ref.keyframeId);
+          continue;
+        }
+        const nextTime = getBatchEditedKeyframeTime(beforeClip, existing, this.operation, center);
+        const nextEasing = this.operation.type === 'easing' ? this.operation.easing : existing.easing;
+        keyframes = setKeyframeForProperty(
+          keyframes,
+          ref.property,
+          createKeyframe(
+            ref.property,
+            {
+              id: existing.id,
+              time: nextTime,
+              value: existing.value,
+              easing: nextEasing
+            },
+            beforeClip.duration
+          ),
+          beforeClip.duration
+        );
+      }
+      let after = {
+        ...beforeClip,
+        keyframes: normalizeClipKeyframes(cloneClipKeyframes(keyframes), beforeClip.duration)
+      } as Clip;
+      if (touchedProperties.has('speed')) {
+        after = applySpeedKeyframeDuration(beforeClip, after, 'speed');
+        if (detectOverlap(findTrack(timeline, after.trackId), after, beforeClip.id)) {
+          throw new Error('Clip overlaps another clip on this track');
+        }
+      }
+      timeline = replaceClip(timeline, after);
+    }
+    this.accessor.setTimeline(timeline);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setTimeline(this.before);
+    }
+  }
+}
+
+function uniqueKeyframeRefs(refs: KeyframeSelectionRef[]): KeyframeSelectionRef[] {
+  const seen = new Set<string>();
+  const output: KeyframeSelectionRef[] = [];
+  for (const ref of refs) {
+    const key = `${ref.clipId}\0${ref.property}\0${ref.keyframeId}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    output.push(ref);
+  }
+  return output;
+}
+
+function groupKeyframeRefsByClip(refs: KeyframeSelectionRef[]): Map<string, KeyframeSelectionRef[]> {
+  const output = new Map<string, KeyframeSelectionRef[]>();
+  for (const ref of refs) {
+    const group = output.get(ref.clipId) ?? [];
+    group.push(ref);
+    output.set(ref.clipId, group);
+  }
+  return output;
+}
+
+function calculateKeyframeSelectionCenter(timeline: Timeline, refs: KeyframeSelectionRef[]): number {
+  const absoluteTimes = refs.flatMap((ref) => {
+    const clip = findClip(timeline, ref.clipId);
+    const frame = clip.keyframes?.[ref.property]?.find((item) => item.id === ref.keyframeId);
+    return frame ? [clip.start + frame.time] : [];
+  });
+  if (absoluteTimes.length === 0) {
+    return 0;
+  }
+  return round((Math.min(...absoluteTimes) + Math.max(...absoluteTimes)) / 2);
+}
+
+function getBatchEditedKeyframeTime(
+  clip: Clip,
+  frame: Keyframe<number>,
+  operation: BatchKeyframeEditOperation,
+  center: number
+): number {
+  if (operation.type === 'shift') {
+    const delta = Number.isFinite(operation.delta) ? operation.delta : 0;
+    return clampKeyframeTime(frame.time + delta, clip.duration);
+  }
+  if (operation.type === 'scale-time') {
+    const factor = Math.max(0.01, Number.isFinite(operation.factor) ? operation.factor : 1);
+    const absoluteTime = clip.start + frame.time;
+    return clampKeyframeTime(center + (absoluteTime - center) * factor - clip.start, clip.duration);
+  }
+  return frame.time;
+}
+
+function clampKeyframeTime(time: number, duration: number): number {
+  return round(Math.min(Math.max(0, time), Math.max(0, duration)));
 }
 
 export class RemoveKeyframeCommand implements Command {

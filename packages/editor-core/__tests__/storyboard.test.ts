@@ -35,6 +35,13 @@ describe('storyboard', () => {
     ]);
   });
 
+  it('keeps storyboard order unchanged for same or missing drag targets', () => {
+    const currentIds = ['clip-a', 'clip-b', 'clip-c'];
+
+    expect(reorderStoryboardClipIds(currentIds, 'clip-b', 'clip-b')).toEqual(currentIds);
+    expect(reorderStoryboardClipIds(currentIds, 'clip-b', 'clip-missing')).toEqual(currentIds);
+  });
+
   it('multi-select delete removes storyboard clips and undo restores them', () => {
     const accessor = makeAccessor(
       makeTimeline([

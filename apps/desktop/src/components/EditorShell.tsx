@@ -48,6 +48,7 @@ import {
   type Project,
   type Clip,
   type BeatSensitivity,
+  type KeyframeProperty,
   type PiPLayoutPosition,
   type ProjectTemplateId,
   type ProxyMissingIssue,
@@ -166,6 +167,7 @@ export function EditorShell() {
   const selectedClipId = useEditorStore((state) => state.selectedClipId);
   const selectedClipIds = useEditorStore((state) => state.selectedClipIds);
   const selectedKeyframe = useEditorStore((state) => state.selectedKeyframe);
+  const selectedKeyframes = useEditorStore((state) => state.selectedKeyframes);
   const playheadTime = useEditorStore((state) => state.playheadTime);
   const inPoint = useEditorStore((state) => state.inPoint);
   const outPoint = useEditorStore((state) => state.outPoint);
@@ -174,6 +176,7 @@ export function EditorShell() {
   const setProject = useEditorStore((state) => state.setProject);
   const setMedia = useEditorStore((state) => state.setMedia);
   const addMedia = useEditorStore((state) => state.addMedia);
+  const setSelectedKeyframes = useEditorStore((state) => state.setSelectedKeyframes);
   const proxySettings = useProxySettingsStore((state) => state.settings);
   const demucsExecutablePath = useDemucsSettingsStore((state) => state.executablePath);
   const recordingSettings = useRecordingSettingsStore((state) => state.settings);
@@ -1515,6 +1518,17 @@ export function EditorShell() {
     }
   }, [appendExportRange, setOutPoint]);
 
+  const selectAllTimelineItems = useCallback(() => {
+    const state = useEditorStore.getState();
+    const clip = selectClipById(state.project, state.selectedClipId);
+    const keyframes = clip ? collectClipKeyframeRefs(clip) : [];
+    if (keyframes.length > 0) {
+      setSelectedKeyframes(keyframes);
+      return;
+    }
+    setSelectedClipIds(state.project.timeline.tracks.flatMap((track) => track.clips.map((item) => item.id)));
+  }, [setSelectedClipIds, setSelectedKeyframes]);
+
   const shortcutHandlers = useMemo(
     () => ({
       togglePlayback,
@@ -1530,7 +1544,7 @@ export function EditorShell() {
       deleteSelected,
       rippleDeleteSelected,
       splitSelected,
-      selectAll: () => setSelectedClipIds(useEditorStore.getState().project.timeline.tracks.flatMap((track) => track.clips.map((clip) => clip.id))),
+      selectAll: selectAllTimelineItems,
       clearSelection: clearSelectedClipIds,
       addAnnotation: addAnnotationAtPlayhead,
       undo,
@@ -1553,6 +1567,7 @@ export function EditorShell() {
       reversePlayback,
       rippleDeleteSelected,
       saveProject,
+      selectAllTimelineItems,
       setSelectedClipIds,
       splitSelected,
       stepFrame,
@@ -1838,6 +1853,7 @@ export function EditorShell() {
                       selectedCount={selectedClipIds.length}
                       selectedClipLocked={selectedClipLocked}
                       selectedKeyframe={selectedKeyframe}
+                      selectedKeyframes={selectedKeyframes}
                       media={project.media}
                       playheadTime={playheadTime}
                       projectSettings={project.settings}
@@ -2094,6 +2110,12 @@ function getPiPClipSourceDimensions(project: Project, clip: Clip): { width: numb
     };
   }
   return { width: project.settings.width, height: project.settings.height };
+}
+
+function collectClipKeyframeRefs(clip: Clip): Array<{ clipId: string; property: KeyframeProperty; keyframeId: string }> {
+  return (Object.keys(clip.keyframes ?? {}) as KeyframeProperty[]).flatMap((property) =>
+    (clip.keyframes?.[property] ?? []).map((frame) => ({ clipId: clip.id, property, keyframeId: frame.id }))
+  );
 }
 
 function moveAutomationMediaToGroup(assetId: string, groupName: string): void {

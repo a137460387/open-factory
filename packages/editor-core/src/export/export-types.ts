@@ -1,6 +1,7 @@
 import type { ColorCurves, ThreeWayColor } from '../color-grading';
 import type { InputColorSpace } from '../color-log-luts';
 import type { Effect } from '../effects';
+import type { ExportColorManagementSettings } from './color-management';
 import type {
   AudioFadeCurve,
   ClipBorder,
@@ -101,6 +102,7 @@ export interface ExportSettings {
   watermark?: ExportWatermark | null;
   timecodeBurnIn?: ExportTimecodeBurnIn | null;
   slate?: ExportSlate | null;
+  colorManagement?: ExportColorManagementSettings;
 }
 
 export interface ExportTransform {
