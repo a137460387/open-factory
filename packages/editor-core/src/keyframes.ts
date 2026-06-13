@@ -24,6 +24,9 @@ export const KEYFRAME_PROPERTY_LIMITS: Record<KeyframeProperty, { min: number; m
   scaleX: { min: 0.01, max: 4 },
   scaleY: { min: 0.01, max: 4 },
   speed: { min: KEYFRAME_MIN_CLIP_SPEED, max: KEYFRAME_MAX_CLIP_SPEED },
+  yaw: { min: -180, max: 180 },
+  pitch: { min: -90, max: 90 },
+  roll: { min: -180, max: 180 },
   pathStartOffset: { min: 0, max: 1 }
 };
 
@@ -157,6 +160,15 @@ export function getClipStaticKeyframeValue(clip: Clip, property: KeyframePropert
   if (property === 'speed') {
     return clip.speed;
   }
+  if (property === 'yaw') {
+    return clip.panorama?.yaw ?? 0;
+  }
+  if (property === 'pitch') {
+    return clip.panorama?.pitch ?? 0;
+  }
+  if (property === 'roll') {
+    return clip.panorama?.roll ?? 0;
+  }
   if (property === 'pathStartOffset') {
     return clip.type === 'text' ? normalizeTextPath(clip.pathText).startOffset : 0;
   }
@@ -183,16 +195,27 @@ export function resolveAnimatedVolume(clip: Clip, localTime: number): number {
 
 export function applyClipKeyframes<TClip extends Clip>(clip: TClip, localTime: number): TClip {
   const transform = resolveAnimatedTransform(clip, localTime);
+  const panorama =
+    clip.panorama && (clip.keyframes?.yaw || clip.keyframes?.pitch || clip.keyframes?.roll)
+      ? {
+          ...clip.panorama,
+          yaw: getClipKeyframeValue(clip, 'yaw', localTime),
+          pitch: getClipKeyframeValue(clip, 'pitch', localTime),
+          roll: getClipKeyframeValue(clip, 'roll', localTime)
+        }
+      : clip.panorama;
   if ('volume' in clip) {
     return {
       ...clip,
       transform,
+      panorama,
       volume: resolveAnimatedVolume(clip, localTime)
     } as TClip;
   }
   return {
     ...clip,
-    transform
+    transform,
+    panorama
   } as TClip;
 }
 

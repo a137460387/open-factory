@@ -1612,7 +1612,19 @@ function writeAscii(bytes: Uint8Array, offset: number, value: string): void {
 }
 
 function isKeyframeProperty(value: unknown): value is KeyframeProperty {
-  return value === 'x' || value === 'y' || value === 'scaleX' || value === 'scaleY' || value === 'opacity' || value === 'volume' || value === 'speed' || value === 'pathStartOffset';
+  return (
+    value === 'x' ||
+    value === 'y' ||
+    value === 'scaleX' ||
+    value === 'scaleY' ||
+    value === 'opacity' ||
+    value === 'volume' ||
+    value === 'speed' ||
+    value === 'yaw' ||
+    value === 'pitch' ||
+    value === 'roll' ||
+    value === 'pathStartOffset'
+  );
 }
 
 function emit(event: string, payload: unknown): void {

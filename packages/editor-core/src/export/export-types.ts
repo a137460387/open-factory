@@ -1,7 +1,17 @@
 import type { ColorCurves, ThreeWayColor } from '../color-grading';
 import type { InputColorSpace } from '../color-log-luts';
 import type { Effect } from '../effects';
-import type { AudioFadeCurve, ClipMaskKeyframe, ClipPrivacyBlur, ClipSlowMotionMode, PathPoint, TrackCompressor, TrackEQ } from '../model';
+import type {
+  AudioFadeCurve,
+  ClipMaskKeyframe,
+  ClipPanoramaOutputProjection,
+  ClipPrivacyBlur,
+  ClipProjection,
+  ClipSlowMotionMode,
+  PathPoint,
+  TrackCompressor,
+  TrackEQ
+} from '../model';
 import type { TargetAspectRatio } from '../reframe';
 
 export type ExportLoudnessNormalization = 'off' | 'youtube' | 'ebu-r128';
@@ -155,6 +165,14 @@ export interface ExportAudioDenoise {
   strength: number;
 }
 
+export interface ExportPanoramaView {
+  yaw: number;
+  pitch: number;
+  roll: number;
+  fov: number;
+  outputProjection: ClipPanoramaOutputProjection;
+}
+
 export interface ExportImageSequence {
   frameRate: number;
   frameCount: number;
@@ -178,6 +196,9 @@ export interface ExportClipKeyframes {
   scaleX?: ExportKeyframe[];
   scaleY?: ExportKeyframe[];
   speed?: ExportKeyframe[];
+  yaw?: ExportKeyframe[];
+  pitch?: ExportKeyframe[];
+  roll?: ExportKeyframe[];
   pathStartOffset?: ExportKeyframe[];
 }
 
@@ -235,6 +256,8 @@ export interface ExportClip {
   stabilization: ExportStabilization;
   frameInterpolation: ExportFrameInterpolation;
   audioDenoise: ExportAudioDenoise;
+  projection: ClipProjection;
+  panorama: ExportPanoramaView;
   masks: ExportMask[];
   imageSequence: ExportImageSequence | null;
   sequenceFrameRate?: number;

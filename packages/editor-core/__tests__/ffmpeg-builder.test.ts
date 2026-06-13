@@ -237,6 +237,64 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.passes?.map((pass) => pass.kind)).toEqual(['loudness-analysis', 'render']);
   });
 
+  it('skips v360 and spherical metadata for default flat clips', () => {
+    const project = makeProject();
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).not.toContain('v360=');
+    expect(plan.outputArgs).not.toContain('-metadata:s:v:0');
+    expect(plan.outputArgs).not.toContain('spherical=true');
+  });
+
+  it('builds v360 extraction args and spherical metadata for equirectangular clips', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-360',
+        projection: 'equirectangular',
+        panorama: { yaw: 32.5, pitch: -12, roll: 4, fov: 80, outputProjection: 'flat' }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('v360=e:flat:yaw=32.5:pitch=-12:roll=4:v_fov=80');
+    expect(plan.outputArgs).toEqual(expect.arrayContaining(['-metadata:s:v:0', 'spherical=true']));
+  });
+
+  it('injects spherical metadata without v360 when keeping equirectangular output', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-360-eq',
+        projection: 'equirectangular',
+        panorama: { yaw: 15, pitch: 5, roll: 0, fov: 90, outputProjection: 'equirectangular' }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).not.toContain('v360=');
+    expect(plan.outputArgs).toEqual(expect.arrayContaining(['-metadata:s:v:0', 'spherical=true']));
+  });
+
+  it('converts cubemap clips to equirectangular output when requested', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-cubemap',
+        projection: 'cubemap',
+        panorama: { yaw: 0, pitch: 0, roll: 0, fov: 100, outputProjection: 'equirectangular' }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('v360=c3x2:e:yaw=0:pitch=0:roll=0:v_fov=100');
+    expect(plan.outputArgs).toEqual(expect.arrayContaining(['-metadata:s:v:0', 'spherical=true']));
+  });
+
   it('skips loudness normalization for animated image exports', () => {
     const project = makeProject();
     const plan = buildFfmpegExportPlan(

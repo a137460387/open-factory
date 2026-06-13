@@ -44,6 +44,13 @@ export async function drawVideoWebGl(
   const sourceTime = getPreviewSourceTime(clip, playheadTime);
   try {
     await seekVideo(video, sourceTime);
+    if (clip.projection === 'equirectangular' && clip.panorama) {
+      const drawn = compositor.drawPanoramaSource(video, asset.width || 1280, asset.height || 720, clip.transform, clip.panorama, { bypassProcessing });
+      if (drawn) {
+        recordPreviewDraw('video', 'video');
+        return;
+      }
+    }
     compositor.drawSource(video, asset.width || 1280, asset.height || 720, clip.transform, clip.colorCorrection, clip.effects, clip.chromaKey, clip.masks, {
       bypassProcessing
     });
@@ -52,6 +59,13 @@ export async function drawVideoWebGl(
     recordPreviewError(error instanceof Error ? error.message : 'WebGL video preview failed.');
     const fallback = await loadThumbnail(asset);
     if (fallback) {
+      if (clip.projection === 'equirectangular' && clip.panorama) {
+        const drawn = compositor.drawPanoramaSource(fallback, asset.width || 1280, asset.height || 720, clip.transform, clip.panorama, { bypassProcessing });
+        if (drawn) {
+          recordPreviewDraw('video', 'thumbnail');
+          return;
+        }
+      }
       compositor.drawSource(fallback, asset.width || 1280, asset.height || 720, clip.transform, clip.colorCorrection, clip.effects, clip.chromaKey, clip.masks, {
         bypassProcessing
       });

@@ -17,6 +17,8 @@ import {
   normalizeAudioFadeCurve,
   normalizeAudioFadeDuration,
   normalizeAudioDenoise,
+  normalizeClipPanoramaView,
+  normalizeClipProjection,
   normalizeAudioPitchSemitones,
   normalizeFrameInterpolation,
   normalizeSequenceFrameRate,
@@ -212,6 +214,8 @@ function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project[
             stabilization: normalizeStabilization(clip.stabilization),
             frameInterpolation: normalizeFrameInterpolation(clip.frameInterpolation),
             audioDenoise: normalizeAudioDenoise(clip.audioDenoise),
+            projection: normalizeClipProjection(clip.projection),
+            panorama: normalizeClipPanoramaView(clip.panorama),
             masks: normalizeMasks(clip.masks),
             imageSequence:
               clip.type === 'image' && media?.imageSequence
@@ -336,6 +340,7 @@ export function buildFfmpegExportPlan(
   const filters: string[] = [];
   const textArtifacts: TextArtifact[] = [];
   const allClips = project.timeline.tracks.flatMap((track) => track.clips).filter((clip) => clip.duration > 0);
+  const sphericalMetadataArgs = hasSphericalVideoClips(allClips) && !audioOnly && !videoFramesOnly ? ['-metadata:s:v:0', 'spherical=true'] : [];
   const renderableTracks = getRenderableTracks({ tracks: project.timeline.tracks });
   const renderableTrackIndexes = new Set(renderableTracks.map((track) => track.index));
   const orderedClips = renderableTracks
@@ -646,6 +651,7 @@ export function buildFfmpegExportPlan(
           ...(audioOnly
             ? []
             : videoEncodingArgs),
+          ...sphericalMetadataArgs,
           '-c:a',
           settings.audioCodec,
           ...buildBitrateArgs('-b:a', settings.audioBitrate),
@@ -1181,6 +1187,7 @@ function buildTransitionClipFilter(
     ...buildChromaKeyFilters(clip),
     buildSetptsFilter(clip, false, warnings),
     ...buildStabilizationFilters(clip),
+    ...buildPanoramaProjectionFilters(clip),
     ...buildReframeFilters(settings),
     ...(isReframeEnabled(settings.targetAspectRatio)
       ? []
@@ -1271,7 +1278,7 @@ function buildVisualPostKeyFilters(
   if (isKenBurnsAnimatedScaleClip(clip)) {
     filters.push(buildSetptsFilter(clip, false, warnings), buildKenBurnsZoompanFilter(clip, settings), 'setsar=1', buildSetptsFilter(clip, true, warnings));
   } else {
-    filters.push(buildSetptsFilter(clip, true, warnings), ...buildStabilizationFilters(clip), ...buildReframeFilters(settings), buildScaleFilter(clip), 'setsar=1');
+    filters.push(buildSetptsFilter(clip, true, warnings), ...buildStabilizationFilters(clip), ...buildPanoramaProjectionFilters(clip), ...buildReframeFilters(settings), buildScaleFilter(clip), 'setsar=1');
   }
   if (settings.scaleMode === 'fit' && !isReframeEnabled(settings.targetAspectRatio)) {
     filters.push(
@@ -1290,6 +1297,31 @@ function buildVisualPostKeyFilters(
   }
   filters.push(...buildOpacityFilters(clip, label));
   return filters;
+}
+
+function buildPanoramaProjectionFilters(clip: ExportClip): string[] {
+  if (clip.projection === 'flat') {
+    return [];
+  }
+  const panorama = normalizeClipPanoramaView(clip.panorama);
+  if (clip.projection === 'equirectangular' && panorama.outputProjection === 'equirectangular') {
+    return [];
+  }
+  const inputProjection = clip.projection === 'cubemap' ? 'c3x2' : 'e';
+  const outputProjection = panorama.outputProjection === 'equirectangular' ? 'e' : 'flat';
+  const args = [
+    inputProjection,
+    outputProjection,
+    `yaw=${formatFfmpegNumber(panorama.yaw)}`,
+    `pitch=${formatFfmpegNumber(panorama.pitch)}`,
+    `roll=${formatFfmpegNumber(panorama.roll)}`,
+    `v_fov=${formatFfmpegNumber(panorama.fov)}`
+  ];
+  return [`v360=${args.join(':')}`];
+}
+
+function hasSphericalVideoClips(clips: ExportClip[]): boolean {
+  return clips.some((clip) => (clip.type === 'video' || clip.type === 'nested-sequence') && clip.projection !== 'flat');
 }
 
 function buildDifferenceMatteClipFilter(

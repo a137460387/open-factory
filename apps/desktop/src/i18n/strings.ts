@@ -627,6 +627,7 @@ const zh = {
     snapshotCompareLoading: '加载快照...',
     canvasEditMode: '画布编辑模式',
     canvasEditModeActive: '关闭画布编辑模式',
+    panoramaDrag: '拖动旋转 360° 视角，滚轮调整 FOV',
     transformAnchor: '中心锚点',
     rotateHandle: '旋转手柄',
     pathAnchor: (index: number) => `路径锚点 ${index}`,
@@ -893,6 +894,7 @@ const zh = {
       clip: '片段',
       speed: '速度',
       transform: '变换',
+      projection: '投影',
       chromaKey: '抠像',
       masks: '遮罩',
       frameInterpolation: '补帧',
@@ -986,6 +988,12 @@ const zh = {
       scaleY: '缩放 Y',
       rotation: '旋转',
       opacity: '不透明度',
+      projection: '投影',
+      panoramaOutput: '全景导出',
+      yaw: 'Yaw',
+      pitch: 'Pitch',
+      roll: 'Roll',
+      fov: 'FOV',
       keyingMode: '抠像类型',
       chromaKeyColor: '目标颜色',
       similarity: '相似度',
@@ -1122,6 +1130,15 @@ const zh = {
       burnIn: '烧录字幕',
       softSub: '软字幕'
     },
+    projection: {
+      flat: '普通平面',
+      equirectangular: '360° 等距柱状',
+      cubemap: '360° Cubemap'
+    },
+    panoramaOutput: {
+      flat: '提取当前视角',
+      equirectangular: '保持等距柱状'
+    },
     translation: {
       button: '翻译字幕轨',
       notConfigured: '请先在设置中配置翻译 API。',
@@ -1177,6 +1194,9 @@ const zh = {
       scaleX: '缩放 X',
       scaleY: '缩放 Y',
       speed: '速度',
+      yaw: 'Yaw',
+      pitch: 'Pitch',
+      roll: 'Roll',
       pathStartOffset: '路径偏移'
     }
   },
@@ -2381,6 +2401,7 @@ const enOverrides = {
     snapshotCompareLoading: 'Loading Snapshots...',
     canvasEditMode: 'Canvas Edit Mode',
     canvasEditModeActive: 'Turn Off Canvas Edit Mode',
+    panoramaDrag: 'Drag to rotate the 360° view; use the wheel to adjust FOV',
     transformAnchor: 'Center Anchor',
     rotateHandle: 'Rotate Handle',
     pathAnchor: (index: number) => `Path Anchor ${index}`,
@@ -2565,6 +2586,7 @@ const enOverrides = {
       clip: 'Clip',
       speed: 'Speed',
       transform: 'Transform',
+      projection: 'Projection',
       chromaKey: 'Chroma Key',
       masks: 'Masks',
       frameInterpolation: 'Frame Interpolation',
@@ -2646,6 +2668,12 @@ const enOverrides = {
       scaleY: 'Scale Y',
       rotation: 'Rotation',
       opacity: 'Opacity',
+      projection: 'Projection',
+      panoramaOutput: 'Panorama Export',
+      yaw: 'Yaw',
+      pitch: 'Pitch',
+      roll: 'Roll',
+      fov: 'FOV',
       keyingMode: 'Keying Mode',
       chromaKeyColor: 'Key Color',
       similarity: 'Similarity',
@@ -2722,6 +2750,15 @@ const enOverrides = {
     pathText: {
       addOffsetKeyframe: 'Add Offset Keyframe'
     },
+    projection: {
+      flat: 'Flat',
+      equirectangular: '360° Equirectangular',
+      cubemap: '360° Cubemap'
+    },
+    panoramaOutput: {
+      flat: 'Extract Current View',
+      equirectangular: 'Keep Equirectangular'
+    },
     effectNames: {
       blur: 'Gaussian Blur',
       sharpen: 'Sharpen',
@@ -2756,6 +2793,9 @@ const enOverrides = {
       scaleX: 'Scale X',
       scaleY: 'Scale Y',
       speed: 'Speed',
+      yaw: 'Yaw',
+      pitch: 'Pitch',
+      roll: 'Roll',
       pathStartOffset: 'Path Offset'
     }
   },

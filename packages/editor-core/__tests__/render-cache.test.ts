@@ -31,6 +31,12 @@ describe('timeline render cache', () => {
         timeline: makeTimeline([makeVideoClip({ transform: { opacity: 0.5 } })])
       })
     ).not.toBe(key);
+    expect(
+      buildTimelineRenderFrameKey({
+        ...base,
+        timeline: makeTimeline([makeVideoClip({ projection: 'equirectangular', panorama: { yaw: 30, pitch: 0, roll: 0, fov: 90, outputProjection: 'flat' } })])
+      })
+    ).not.toBe(key);
   });
 
   it('plans a five-second prerender window on both sides of the playhead', () => {

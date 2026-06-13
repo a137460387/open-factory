@@ -296,6 +296,8 @@ function buildClipRenderSignature(clip: Clip): string {
     colorCorrection: clip.colorCorrection,
     chromaKey: clip.chromaKey,
     stabilization: clip.stabilization,
+    projection: clip.projection,
+    panorama: clip.panorama,
     masks: clip.masks,
     keyframes: clip.keyframes,
     effects: clip.effects,

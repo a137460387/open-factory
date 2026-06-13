@@ -1,5 +1,5 @@
 import { BarChart3, Blend, Columns2, GitCompareArrows, MousePointer2, Pause, Play, Rows2 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from 'react';
 import {
   CutMulticamClipCommand,
   MAX_CHROMA_KEY_COLORS,
@@ -19,6 +19,8 @@ import {
   isNestedSequenceDepthExceeded,
   moveTransformByCanvasDelta,
   normalizeChromaKey,
+  normalizeClipPanoramaView,
+  normalizeClipProjection,
   normalizeTransform,
   parseTimecodeToSeconds,
   resizeClipTransform,
@@ -72,6 +74,7 @@ export function PreviewCanvas({ safeFrameGuides = false }: PreviewCanvasProps) {
   const compareFrameRef = useRef<HTMLDivElement | null>(null);
   const transformDragRef = useRef<CanvasTransformDrag | null>(null);
   const pathMaskDragRef = useRef<PathMaskDrag | null>(null);
+  const panoramaDragRef = useRef<PanoramaPreviewDrag | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const originalCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const differenceCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -124,6 +127,10 @@ export function PreviewCanvas({ safeFrameGuides = false }: PreviewCanvasProps) {
   );
   const editableCanvasClips = useMemo(() => buildEditableCanvasClips(project, playheadTime), [project, playheadTime]);
   const selectedEditableClip = useMemo(() => editableCanvasClips.find((item) => item.clip.id === selectedClipId), [editableCanvasClips, selectedClipId]);
+  const selectedPanoramaClip = useMemo(() => {
+    const clip = project.timeline.tracks.flatMap((track) => track.clips).find((item) => item.id === selectedClipId);
+    return clip?.type === 'video' && normalizeClipProjection(clip.projection) === 'equirectangular' ? clip : undefined;
+  }, [project.timeline.tracks, selectedClipId]);
   const chromaKeyPickTarget = useMemo(() => editableCanvasClips.find((item) => item.clip.id === chromaKeyPickClipId), [chromaKeyPickClipId, editableCanvasClips]);
   const selectedPathMask = useMemo(() => selectedEditableClip?.clip.masks?.find((mask) => mask.type === 'path'), [selectedEditableClip]);
   const frameSearchCandidates = useMemo(() => buildFrameSearchCandidates(project, frameSearchQuery), [frameSearchQuery, project]);
@@ -566,6 +573,67 @@ export function PreviewCanvas({ safeFrameGuides = false }: PreviewCanvasProps) {
     transformDragRef.current = null;
   }
 
+  function beginPanoramaPreviewDrag(event: ReactPointerEvent<HTMLDivElement>): void {
+    if (!selectedPanoramaClip || canvasEditMode || compareEnabled || chromaKeyPickTarget) {
+      return;
+    }
+    const panorama = normalizeClipPanoramaView(selectedPanoramaClip.panorama);
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setIsPlaying(false);
+    panoramaDragRef.current = {
+      pointerId: event.pointerId,
+      clipId: selectedPanoramaClip.id,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      startPanorama: panorama
+    };
+  }
+
+  function updatePanoramaPreviewDrag(event: ReactPointerEvent<HTMLDivElement>): void {
+    const drag = panoramaDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+    event.preventDefault();
+    const next = normalizeClipPanoramaView({
+      ...drag.startPanorama,
+      yaw: drag.startPanorama.yaw + (event.clientX - drag.startClientX) * 0.25,
+      pitch: drag.startPanorama.pitch - (event.clientY - drag.startClientY) * 0.25
+    });
+    commitPanoramaDrag(drag, next);
+  }
+
+  function endPanoramaPreviewDrag(event: ReactPointerEvent<HTMLDivElement>): void {
+    const drag = panoramaDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    panoramaDragRef.current = null;
+  }
+
+  function updatePanoramaFov(event: ReactWheelEvent<HTMLDivElement>): void {
+    if (!selectedPanoramaClip || canvasEditMode || compareEnabled || chromaKeyPickTarget) {
+      return;
+    }
+    event.preventDefault();
+    const panorama = normalizeClipPanoramaView(selectedPanoramaClip.panorama);
+    const delta = event.deltaY > 0 ? 4 : -4;
+    try {
+      commandManager.execute(
+        new UpdateClipCommand(timelineAccessor, selectedPanoramaClip.id, {
+          panorama: normalizeClipPanoramaView({ ...panorama, fov: panorama.fov + delta })
+        })
+      );
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+    }
+  }
+
   function addPathMaskAnchor(event: ReactMouseEvent<HTMLDivElement>): void {
     if (!canvasEditMode || !selectedEditableClip || !selectedPathMask || event.detail !== 1) {
       return;
@@ -695,6 +763,24 @@ export function PreviewCanvas({ safeFrameGuides = false }: PreviewCanvasProps) {
       drag.command.execute();
     } catch (error) {
       pathMaskDragRef.current = null;
+      showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+    }
+  }
+
+  function commitPanoramaDrag(drag: PanoramaPreviewDrag, panorama: ReturnType<typeof normalizeClipPanoramaView>): void {
+    try {
+      if (!drag.command || !drag.patch) {
+        const patch: ClipPatch = { panorama };
+        const command = new UpdateClipCommand(timelineAccessor, drag.clipId, patch);
+        commandManager.execute(command);
+        drag.command = command;
+        drag.patch = patch;
+        return;
+      }
+      drag.patch.panorama = panorama;
+      drag.command.execute();
+    } catch (error) {
+      panoramaDragRef.current = null;
       showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
     }
   }
@@ -920,6 +1006,19 @@ export function PreviewCanvas({ safeFrameGuides = false }: PreviewCanvasProps) {
                 onPointerCancel={() => setCompareDividerDragging(false)}
               />
             ) : null}
+            {selectedPanoramaClip && !canvasEditMode && !compareEnabled && !chromaKeyPickTarget ? (
+              <div
+                className="absolute inset-0 z-20 cursor-grab active:cursor-grabbing"
+                title={t.panoramaDrag}
+                aria-label={t.panoramaDrag}
+                data-testid="panorama-preview-overlay"
+                onPointerDown={beginPanoramaPreviewDrag}
+                onPointerMove={updatePanoramaPreviewDrag}
+                onPointerUp={endPanoramaPreviewDrag}
+                onPointerCancel={endPanoramaPreviewDrag}
+                onWheel={updatePanoramaFov}
+              />
+            ) : null}
             {chromaKeyPickTarget ? (
               <div
                 className="absolute inset-0 z-40 cursor-crosshair"
@@ -1139,6 +1238,16 @@ interface CanvasTransformDrag {
   canvasHeight: number;
   startPoint: CanvasPoint;
   startTransform: Transform;
+  command?: UpdateClipCommand;
+  patch?: ClipPatch;
+}
+
+interface PanoramaPreviewDrag {
+  pointerId: number;
+  clipId: string;
+  startClientX: number;
+  startClientY: number;
+  startPanorama: ReturnType<typeof normalizeClipPanoramaView>;
   command?: UpdateClipCommand;
   patch?: ClipPatch;
 }

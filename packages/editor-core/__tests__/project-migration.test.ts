@@ -356,6 +356,8 @@ describe('project schema migration', () => {
     delete (legacyClip as Partial<typeof legacyClip>).speed;
     delete (legacyClip as Partial<typeof legacyClip>).colorCorrection;
     delete (legacyClip as Partial<typeof legacyClip>).audioDenoise;
+    delete (legacyClip as Partial<typeof legacyClip>).projection;
+    delete (legacyClip as Partial<typeof legacyClip>).panorama;
     project.timeline.tracks[0].clips = [legacyClip as never];
 
     const migrated = migrateProjectFile(serializeProject(project));
@@ -364,6 +366,26 @@ describe('project schema migration', () => {
     expect(clip.speed).toBe(1);
     expect(clip.colorCorrection).toEqual(DEFAULT_COLOR_CORRECTION);
     expect(clip.audioDenoise).toEqual({ enabled: false, strength: 0.5 });
+    expect(clip.projection).toBe('flat');
+    expect(clip.panorama).toEqual({ yaw: 0, pitch: 0, roll: 0, fov: 90, outputProjection: 'flat' });
+  });
+
+  it('serializes and migrates 360 projection settings with clamped view values', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-360',
+        projection: 'equirectangular',
+        panorama: { yaw: 270, pitch: -120, roll: 45, fov: 160, outputProjection: 'equirectangular' }
+      })
+    ];
+
+    const file = serializeProject(project);
+    const migrated = migrateProjectFile(file);
+    const clip = migrated.project.timeline.tracks[0].clips[0];
+
+    expect(clip.projection).toBe('equirectangular');
+    expect(clip.panorama).toEqual({ yaw: 180, pitch: -90, roll: 45, fov: 120, outputProjection: 'equirectangular' });
   });
 
   it('backfills enhanced chroma key fields during migration', () => {

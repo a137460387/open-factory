@@ -47,6 +47,8 @@ import {
   normalizeAudioDenoise,
   normalizeAudioPitchSemitones,
   normalizeChromaKey,
+  normalizeClipPanoramaView,
+  normalizeClipProjection,
   normalizeColorCurves,
   normalizeColorCorrection,
   normalizeColorWheelValue,
@@ -71,6 +73,8 @@ import {
   type ChromaKeyMode,
   type ChromaKeyColor,
   type ClipPatch,
+  type ClipPanoramaOutputProjection,
+  type ClipProjection,
   type ColorCurves,
   type ColorWheelValue,
   type CurvePoint,
@@ -251,6 +255,8 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
   const showSlowMotionMode = clip.type === 'video' && getClipSpeed(clip) < 1;
   const audioDenoise = normalizeAudioDenoise(clip.audioDenoise);
   const audioDenoiseUnavailable = audioDenoiseSupported === false;
+  const projection = normalizeClipProjection(clip.projection);
+  const panorama = normalizeClipPanoramaView(clip.panorama);
   const audioPitchSemitones = 'pitchSemitones' in clip ? normalizeAudioPitchSemitones(clip.pitchSemitones) : 0;
   const reverseAudio = 'reverseAudio' in clip ? clip.reverseAudio === true : false;
   const fadeInDuration = 'fadeInDuration' in clip ? normalizeAudioFadeDuration(clip.fadeInDuration, clip.duration) : 0;
@@ -258,6 +264,9 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
   const fadeInCurve = 'fadeInCurve' in clip ? normalizeAudioFadeCurve(clip.fadeInCurve) : 'linear';
   const fadeOutCurve = 'fadeOutCurve' in clip ? normalizeAudioFadeCurve(clip.fadeOutCurve) : 'linear';
   const masks = normalizeMasks(clip.masks);
+  const updatePanorama = (patch: Partial<typeof panorama>) => {
+    commit({ panorama: normalizeClipPanoramaView({ ...panorama, ...patch }) });
+  };
   const motionTrack = normalizeMotionTrack(clip.motionTrack, clip.duration) ?? [];
   const colorCurves = normalizeColorCurves(colorCorrection.colorCurves);
   const threeWayColor = normalizeThreeWayColor(colorCorrection.threeWayColor);
@@ -705,6 +714,89 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
             </AnimatedField>
           ) : null}
         </Section>
+
+        {clip.type === 'video' ? (
+          <details className="mb-4" open>
+            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-slate-500">{zhCN.inspector.sections.projection}</summary>
+            <div className="space-y-3">
+              <label className="block text-xs font-medium text-slate-600">
+                {zhCN.inspector.fields.projection}
+                <select
+                  className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                  value={projection}
+                  data-testid="clip-projection-select"
+                  onChange={(event) => commit({ projection: event.target.value as ClipProjection, panorama })}
+                >
+                  <option value="flat">{zhCN.inspector.projection.flat}</option>
+                  <option value="equirectangular">{zhCN.inspector.projection.equirectangular}</option>
+                  <option value="cubemap">{zhCN.inspector.projection.cubemap}</option>
+                </select>
+              </label>
+              {projection !== 'flat' ? (
+                <>
+                  <label className="block text-xs font-medium text-slate-600">
+                    {zhCN.inspector.fields.panoramaOutput}
+                    <select
+                      className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                      value={panorama.outputProjection}
+                      data-testid="clip-panorama-output-select"
+                      onChange={(event) => updatePanorama({ outputProjection: event.target.value as ClipPanoramaOutputProjection })}
+                    >
+                      <option value="flat">{zhCN.inspector.panoramaOutput.flat}</option>
+                      <option value="equirectangular">{zhCN.inspector.panoramaOutput.equirectangular}</option>
+                    </select>
+                  </label>
+                  <AnimatedField label={zhCN.inspector.fields.yaw} onAddKeyframe={() => addKeyframe('yaw', panorama.yaw)} testId="add-yaw-keyframe-button">
+                    <RangeNumberField
+                      label={zhCN.inspector.fields.yaw}
+                      value={panorama.yaw}
+                      min={-180}
+                      max={180}
+                      step={1}
+                      format={(value) => `${Math.round(value)}°`}
+                      onCommit={(yaw) => updatePanorama({ yaw })}
+                      testId="clip-panorama-yaw-input"
+                    />
+                  </AnimatedField>
+                  <AnimatedField label={zhCN.inspector.fields.pitch} onAddKeyframe={() => addKeyframe('pitch', panorama.pitch)} testId="add-pitch-keyframe-button">
+                    <RangeNumberField
+                      label={zhCN.inspector.fields.pitch}
+                      value={panorama.pitch}
+                      min={-90}
+                      max={90}
+                      step={1}
+                      format={(value) => `${Math.round(value)}°`}
+                      onCommit={(pitch) => updatePanorama({ pitch })}
+                      testId="clip-panorama-pitch-input"
+                    />
+                  </AnimatedField>
+                  <AnimatedField label={zhCN.inspector.fields.roll} onAddKeyframe={() => addKeyframe('roll', panorama.roll)} testId="add-roll-keyframe-button">
+                    <RangeNumberField
+                      label={zhCN.inspector.fields.roll}
+                      value={panorama.roll}
+                      min={-180}
+                      max={180}
+                      step={1}
+                      format={(value) => `${Math.round(value)}°`}
+                      onCommit={(roll) => updatePanorama({ roll })}
+                      testId="clip-panorama-roll-input"
+                    />
+                  </AnimatedField>
+                  <RangeNumberField
+                    label={zhCN.inspector.fields.fov}
+                    value={panorama.fov}
+                    min={60}
+                    max={120}
+                    step={1}
+                    format={(value) => `${Math.round(value)}°`}
+                    onCommit={(fov) => updatePanorama({ fov })}
+                    testId="clip-panorama-fov-input"
+                  />
+                </>
+              ) : null}
+            </div>
+          </details>
+        ) : null}
 
         {clip.type === 'video' || clip.type === 'image' || clip.type === 'nested-sequence' ? (
           <Section title={zhCN.inspector.sections.chromaKey}>
@@ -2939,6 +3031,9 @@ function formatKeyframeValue(property: KeyframeProperty, value: number): string 
   }
   if (property === 'opacity' || property === 'volume' || property === 'scaleX' || property === 'scaleY' || property === 'pathStartOffset') {
     return `${Math.round(value * 100)}%`;
+  }
+  if (property === 'yaw' || property === 'pitch' || property === 'roll') {
+    return `${Math.round(value)}°`;
   }
   return value.toFixed(2);
 }

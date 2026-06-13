@@ -15,6 +15,7 @@ import {
   triangulatePathMask,
   sampleColorCurves,
   type ChromaKey,
+  type ClipPanoramaView,
   type ClipMask,
   type ColorCorrection,
   type ColorWheelValue,
@@ -63,6 +64,19 @@ interface CustomShaderProgramInfo {
   progress: WebGLUniformLocation | null;
 }
 
+interface PanoramaProgramInfo {
+  program: WebGLProgram;
+  position: number;
+  texCoord: number;
+  texture: WebGLUniformLocation | null;
+  yaw: WebGLUniformLocation | null;
+  pitch: WebGLUniformLocation | null;
+  roll: WebGLUniformLocation | null;
+  fov: WebGLUniformLocation | null;
+  aspect: WebGLUniformLocation | null;
+  opacity: WebGLUniformLocation | null;
+}
+
 export interface WebGlSourceProcessingOptions {
   bypassProcessing?: boolean;
   customShaderTime?: number;
@@ -84,6 +98,7 @@ export class WebGlPreviewCompositor {
   private readonly curveTexture: WebGLTexture;
   private readonly textures = new WeakMap<TexImageSource, WebGLTexture>();
   private readonly customPrograms = new Map<string, CustomShaderProgramInfo | null>();
+  private panoramaProgram?: PanoramaProgramInfo | null;
 
   constructor(canvas: HTMLCanvasElement) {
     const gl = canvas.getContext('webgl', {
@@ -172,6 +187,45 @@ export class WebGlPreviewCompositor {
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
     this.drawQuad(buildTransformedQuad(gl.canvas.width, gl.canvas.height, mediaWidth, mediaHeight, transform), this.program);
+  }
+
+  drawPanoramaSource(source: TexImageSource, mediaWidth: number, mediaHeight: number, transform: Transform, panorama: ClipPanoramaView, options: WebGlSourceProcessingOptions = {}): boolean {
+    if (options.bypassProcessing) {
+      return false;
+    }
+    const gl = this.gl;
+    const program = this.getPanoramaProgram();
+    if (!program) {
+      return false;
+    }
+    const texture = this.getTexture(source);
+    gl.useProgram(program.program);
+    if (program.texture) {
+      gl.uniform1i(program.texture, 0);
+    }
+    if (program.yaw) {
+      gl.uniform1f(program.yaw, (panorama.yaw * Math.PI) / 180);
+    }
+    if (program.pitch) {
+      gl.uniform1f(program.pitch, (panorama.pitch * Math.PI) / 180);
+    }
+    if (program.roll) {
+      gl.uniform1f(program.roll, (panorama.roll * Math.PI) / 180);
+    }
+    if (program.fov) {
+      gl.uniform1f(program.fov, (panorama.fov * Math.PI) / 180);
+    }
+    if (program.aspect) {
+      gl.uniform1f(program.aspect, Math.max(0.001, Number(gl.canvas.width) / Math.max(1, Number(gl.canvas.height))));
+    }
+    if (program.opacity) {
+      gl.uniform1f(program.opacity, Math.max(0, Math.min(1, transform.opacity)));
+    }
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+    this.drawQuad(buildTransformedQuad(gl.canvas.width, gl.canvas.height, Math.max(1, Number(gl.canvas.width)), Math.max(1, Number(gl.canvas.height)), transform), program);
+    return mediaWidth > 0 && mediaHeight > 0;
   }
 
   drawText(
@@ -322,6 +376,20 @@ export class WebGlPreviewCompositor {
     } catch (error) {
       console.warn('Unable to compile custom preview shader', error);
       this.customPrograms.set(sourceCode, null);
+      return null;
+    }
+  }
+
+  private getPanoramaProgram(): PanoramaProgramInfo | null {
+    if (this.panoramaProgram !== undefined) {
+      return this.panoramaProgram;
+    }
+    try {
+      this.panoramaProgram = createPanoramaProgram(this.gl);
+      return this.panoramaProgram;
+    } catch (error) {
+      console.warn('Unable to compile panorama preview shader', error);
+      this.panoramaProgram = null;
       return null;
     }
   }
@@ -925,6 +993,81 @@ function createCustomShaderProgram(gl: WebGLRenderingContext, sourceCode: string
     texture: gl.getUniformLocation(program, 'u_texture'),
     time: gl.getUniformLocation(program, 'u_time'),
     progress: gl.getUniformLocation(program, 'u_progress')
+  };
+}
+
+function createPanoramaProgram(gl: WebGLRenderingContext): PanoramaProgramInfo {
+  const vertexShader = compileShader(gl, gl.VERTEX_SHADER, VERTEX_SHADER_SOURCE);
+  const fragmentShader = compileShader(
+    gl,
+    gl.FRAGMENT_SHADER,
+    `
+      precision mediump float;
+      uniform sampler2D u_texture;
+      uniform float u_yaw;
+      uniform float u_pitch;
+      uniform float u_roll;
+      uniform float u_fov;
+      uniform float u_aspect;
+      uniform float u_opacity;
+      varying vec2 v_texCoord;
+
+      const float PI = 3.141592653589793;
+
+      vec3 rotateX(vec3 value, float angle) {
+        float c = cos(angle);
+        float s = sin(angle);
+        return vec3(value.x, value.y * c - value.z * s, value.y * s + value.z * c);
+      }
+
+      vec3 rotateY(vec3 value, float angle) {
+        float c = cos(angle);
+        float s = sin(angle);
+        return vec3(value.x * c + value.z * s, value.y, -value.x * s + value.z * c);
+      }
+
+      vec3 rotateZ(vec3 value, float angle) {
+        float c = cos(angle);
+        float s = sin(angle);
+        return vec3(value.x * c - value.y * s, value.x * s + value.y * c, value.z);
+      }
+
+      void main() {
+        float scale = tan(u_fov * 0.5);
+        vec2 view = vec2((v_texCoord.x - 0.5) * 2.0 * u_aspect * scale, (0.5 - v_texCoord.y) * 2.0 * scale);
+        vec3 direction = normalize(vec3(view.x, view.y, 1.0));
+        direction = rotateZ(direction, u_roll);
+        direction = rotateX(direction, u_pitch);
+        direction = rotateY(direction, u_yaw);
+        float longitude = atan(direction.x, direction.z);
+        float latitude = asin(clamp(direction.y, -1.0, 1.0));
+        vec2 sampleCoord = vec2(longitude / (2.0 * PI) + 0.5, 0.5 - latitude / PI);
+        vec4 color = texture2D(u_texture, sampleCoord);
+        gl_FragColor = vec4(color.rgb, color.a * u_opacity);
+      }
+    `
+  );
+  const program = gl.createProgram();
+  if (!program) {
+    throw new Error(zhCN.errors.webglProgramCreateFailed);
+  }
+  gl.attachShader(program, vertexShader);
+  gl.attachShader(program, fragmentShader);
+  gl.linkProgram(program);
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    throw new Error(gl.getProgramInfoLog(program) ?? zhCN.errors.webglProgramLinkFailed);
+  }
+  return {
+    program,
+    position: gl.getAttribLocation(program, 'a_position'),
+    texCoord: gl.getAttribLocation(program, 'a_texCoord'),
+    texture: gl.getUniformLocation(program, 'u_texture'),
+    yaw: gl.getUniformLocation(program, 'u_yaw'),
+    pitch: gl.getUniformLocation(program, 'u_pitch'),
+    roll: gl.getUniformLocation(program, 'u_roll'),
+    fov: gl.getUniformLocation(program, 'u_fov'),
+    aspect: gl.getUniformLocation(program, 'u_aspect'),
+    opacity: gl.getUniformLocation(program, 'u_opacity')
   };
 }
 

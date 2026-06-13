@@ -40,6 +40,9 @@ export interface ClipKeyframes {
   scaleX?: Keyframe<number>[];
   scaleY?: Keyframe<number>[];
   speed?: Keyframe<number>[];
+  yaw?: Keyframe<number>[];
+  pitch?: Keyframe<number>[];
+  roll?: Keyframe<number>[];
   pathStartOffset?: Keyframe<number>[];
 }
 
@@ -83,6 +86,16 @@ export interface ClipFrameInterpolation {
 }
 
 export type ClipSlowMotionMode = 'none' | 'blend' | 'optical-flow';
+export type ClipProjection = 'flat' | 'equirectangular' | 'cubemap';
+export type ClipPanoramaOutputProjection = 'flat' | 'equirectangular';
+
+export interface ClipPanoramaView {
+  yaw: number;
+  pitch: number;
+  roll: number;
+  fov: number;
+  outputProjection: ClipPanoramaOutputProjection;
+}
 
 export interface MotionTrackPoint {
   time: number;
@@ -292,6 +305,8 @@ export interface BaseClip {
   frameInterpolation?: ClipFrameInterpolation;
   slowMotionMode?: ClipSlowMotionMode;
   audioDenoise?: ClipAudioDenoise;
+  projection?: ClipProjection;
+  panorama?: ClipPanoramaView;
   masks?: ClipMask[];
   motionTrack?: MotionTrackPoint[];
   keyframes?: ClipKeyframes;
@@ -513,6 +528,14 @@ export const DEFAULT_FRAME_INTERPOLATION: ClipFrameInterpolation = {
 
 export const CLIP_SLOW_MOTION_MODES: readonly ClipSlowMotionMode[] = ['none', 'blend', 'optical-flow'];
 export const DEFAULT_SLOW_MOTION_MODE: ClipSlowMotionMode = 'none';
+export const DEFAULT_CLIP_PROJECTION: ClipProjection = 'flat';
+export const DEFAULT_CLIP_PANORAMA_VIEW: ClipPanoramaView = {
+  yaw: 0,
+  pitch: 0,
+  roll: 0,
+  fov: 90,
+  outputProjection: 'flat'
+};
 
 export const DEFAULT_AUDIO_DENOISE: ClipAudioDenoise = {
   enabled: false,
@@ -728,6 +751,8 @@ export function createBaseClip(
     frameInterpolation: normalizeFrameInterpolation(input.frameInterpolation),
     slowMotionMode: normalizeSlowMotionMode(input.slowMotionMode),
     audioDenoise: normalizeAudioDenoise(input.audioDenoise),
+    projection: normalizeClipProjection(input.projection),
+    panorama: normalizeClipPanoramaView(input.panorama),
     masks: normalizeMasks(input.masks),
     motionTrack: normalizeMotionTrack(input.motionTrack, input.duration),
     keyframes: cloneClipKeyframesLocal(input.keyframes),
@@ -838,6 +863,24 @@ export function normalizeFrameInterpolation(frameInterpolation: Partial<ClipFram
 
 export function normalizeSlowMotionMode(mode: ClipSlowMotionMode | string | undefined): ClipSlowMotionMode {
   return CLIP_SLOW_MOTION_MODES.includes(mode as ClipSlowMotionMode) ? (mode as ClipSlowMotionMode) : DEFAULT_SLOW_MOTION_MODE;
+}
+
+export function normalizeClipProjection(projection: ClipProjection | string | undefined): ClipProjection {
+  return projection === 'equirectangular' || projection === 'cubemap' || projection === 'flat' ? projection : DEFAULT_CLIP_PROJECTION;
+}
+
+export function normalizeClipPanoramaView(panorama: Partial<ClipPanoramaView> | undefined): ClipPanoramaView {
+  return {
+    yaw: normalizePanoramaDegrees(panorama?.yaw, DEFAULT_CLIP_PANORAMA_VIEW.yaw),
+    pitch: round(Math.min(90, Math.max(-90, finiteOrDefault(panorama?.pitch, DEFAULT_CLIP_PANORAMA_VIEW.pitch)))),
+    roll: normalizePanoramaDegrees(panorama?.roll, DEFAULT_CLIP_PANORAMA_VIEW.roll),
+    fov: round(Math.min(120, Math.max(60, finiteOrDefault(panorama?.fov, DEFAULT_CLIP_PANORAMA_VIEW.fov)))),
+    outputProjection: panorama?.outputProjection === 'equirectangular' || panorama?.outputProjection === 'flat' ? panorama.outputProjection : DEFAULT_CLIP_PANORAMA_VIEW.outputProjection
+  };
+}
+
+function normalizePanoramaDegrees(value: number | undefined, fallback: number): number {
+  return round(Math.min(180, Math.max(-180, finiteOrDefault(value, fallback))));
 }
 
 export function normalizeMotionTrack(points: readonly Partial<MotionTrackPoint>[] | undefined, duration = Number.POSITIVE_INFINITY): MotionTrackPoint[] | undefined {
@@ -1296,6 +1339,8 @@ export function serializeLegacyProject(project: Project): {
           chromaKey: normalizeChromaKey(clip.chromaKey),
           stabilization: normalizeStabilization(clip.stabilization),
           audioDenoise: normalizeAudioDenoise(clip.audioDenoise),
+          projection: normalizeClipProjection(clip.projection),
+          panorama: normalizeClipPanoramaView(clip.panorama),
           masks: normalizeMasks(clip.masks),
           motionTrack: normalizeMotionTrack(clip.motionTrack, clip.duration),
           multicam: clip.type === 'nested-sequence' ? normalizeMulticamSequence(clip.multicam, clip.duration) : undefined,

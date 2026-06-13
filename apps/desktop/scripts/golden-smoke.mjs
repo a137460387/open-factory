@@ -153,6 +153,15 @@ const fixtures = [
     validate: validateColorCorrectionFixture
   },
   {
+    name: 'panorama-360',
+    description: 'equirectangular 360 video clip extracted to a flat viewport through v360',
+    outputWidth: 1280,
+    outputHeight: 720,
+    expectedDuration: 1.5,
+    create: createPanorama360Fixture,
+    validate: validatePanorama360Fixture
+  },
+  {
     name: 'adjustment-layer',
     description: 'light gray video darkened by a non-media adjustment layer above it',
     outputWidth: 1280,
@@ -1354,6 +1363,78 @@ async function validateColorCorrectionFixture(context) {
         passed: shiftedAwayFromCyan && context.centerPixel[2] > context.centerPixel[1],
         actual: context.centerPixel,
         expected: 'not cyan and blue channel dominant after hue shift'
+      }
+    ]
+  };
+}
+
+async function createPanorama360Fixture(context) {
+  const sourcePath = join(context.fixtureDir, 'panorama-source.mp4');
+  await createPanoramaVideoFixture(sourcePath, {
+    width: 2048,
+    height: 1024,
+    duration: context.fixture.expectedDuration
+  });
+  return buildProject({
+    id: 'golden-panorama-360',
+    name: 'Golden 360 Panorama',
+    width: context.outputWidth,
+    height: context.outputHeight,
+    media: [
+      videoAsset({
+        id: 'asset-panorama-source',
+        name: 'panorama-source.mp4',
+        path: sourcePath,
+        duration: context.fixture.expectedDuration,
+        width: 2048,
+        height: 1024,
+        hasAudio: false,
+        stat: statSync(sourcePath)
+      })
+    ],
+    tracks: [
+      {
+        id: 'track-panorama-video',
+        type: 'video',
+        name: 'Panorama',
+        clips: [
+          videoClip({
+            id: 'clip-panorama-360',
+            name: '360 source',
+            mediaId: 'asset-panorama-source',
+            trackId: 'track-panorama-video',
+            duration: context.fixture.expectedDuration,
+            projection: 'equirectangular',
+            panorama: { yaw: 0, pitch: 0, roll: 0, fov: 90, outputProjection: 'flat' }
+          })
+        ]
+      },
+      emptyAudioTrack(),
+      emptyTextTrack()
+    ]
+  });
+}
+
+async function validatePanorama360Fixture(context) {
+  return {
+    checks: [
+      {
+        name: 'v360-filter',
+        passed: context.plan.filterComplex.includes('v360=e:flat:yaw=0:pitch=0:roll=0:v_fov=90'),
+        actual: context.plan.filterComplex.includes('v360=e:flat'),
+        expected: 'v360=e:flat with yaw/pitch/roll/fov'
+      },
+      {
+        name: 'spherical-metadata',
+        passed: context.plan.outputArgs?.includes?.('-metadata:s:v:0') && context.plan.outputArgs?.includes?.('spherical=true'),
+        actual: context.plan.outputArgs,
+        expected: '-metadata:s:v:0 spherical=true'
+      },
+      {
+        name: 'projected-center-pixel',
+        passed: pixelNear(context.centerPixel, COLORS.green.rgb, 70),
+        actual: context.centerPixel,
+        expected: COLORS.green.rgb
       }
     ]
   };
@@ -2651,6 +2732,38 @@ async function createColorVideoFixture(targetPath, options) {
   await runChecked('ffmpeg', args);
 }
 
+async function createPanoramaVideoFixture(targetPath, options) {
+  await runChecked('ffmpeg', [
+    '-hide_banner',
+    '-y',
+    '-f',
+    'lavfi',
+    '-i',
+    `color=c=${COLORS.darkBlue.ffmpeg}:s=${options.width}x${options.height}:r=30:d=${formatSeconds(options.duration)}`,
+    '-vf',
+    [
+      `drawbox=x=${Math.round(options.width * 0.44)}:y=${Math.round(options.height * 0.39)}:w=${Math.round(options.width * 0.12)}:h=${Math.round(
+        options.height * 0.22
+      )}:color=${COLORS.green.ffmpeg}:t=fill`,
+      `drawbox=x=${Math.round(options.width * 0.08)}:y=${Math.round(options.height * 0.2)}:w=${Math.round(options.width * 0.08)}:h=${Math.round(
+        options.height * 0.18
+      )}:color=${COLORS.coral.ffmpeg}:t=fill`,
+      `drawbox=x=${Math.round(options.width * 0.78)}:y=${Math.round(options.height * 0.58)}:w=${Math.round(options.width * 0.08)}:h=${Math.round(
+        options.height * 0.18
+      )}:color=${COLORS.blue.ffmpeg}:t=fill`
+    ].join(','),
+    '-t',
+    formatSeconds(options.duration),
+    '-c:v',
+    'libx264',
+    '-pix_fmt',
+    'yuv420p',
+    '-movflags',
+    '+faststart',
+    targetPath
+  ]);
+}
+
 async function createTestPatternVideoFixture(targetPath, options) {
   await runChecked('ffmpeg', [
     '-hide_banner',
@@ -2946,6 +3059,8 @@ function videoClip(input) {
     colorCorrection: input.colorCorrection ?? { brightness: 0, contrast: 1, saturation: 1, hue: 0 },
     chromaKey: input.chromaKey,
     transform: input.transform ?? { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
+    projection: input.projection,
+    panorama: input.panorama,
     keyframes: input.keyframes,
     effects: input.effects,
     volume: input.volume ?? 1,

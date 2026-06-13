@@ -17,6 +17,8 @@ import {
   type KeyframeProperty,
   normalizeColorCorrection,
   normalizeChromaKey,
+  normalizeClipPanoramaView,
+  normalizeClipProjection,
   normalizeAudioFadeCurve,
   normalizeAudioFadeDuration,
   normalizeAudioDenoise,
@@ -41,6 +43,8 @@ import {
   type Clip,
   type ClipAudioDenoise,
   type ClipKeyframes,
+  type ClipPanoramaView,
+  type ClipProjection,
   type ChromaKey,
   type ClipFrameInterpolation,
   type ClipStabilization,
@@ -2056,6 +2060,8 @@ export type ClipPatch = Partial<Omit<Clip, 'type' | 'id' | 'transform' | 'colorC
   stabilization?: Partial<ClipStabilization>;
   frameInterpolation?: Partial<ClipFrameInterpolation>;
   audioDenoise?: Partial<ClipAudioDenoise>;
+  projection?: ClipProjection;
+  panorama?: Partial<ClipPanoramaView>;
   masks?: ClipMask[];
   motionTrack?: MotionTrackPoint[];
   sequenceFrameRate?: number;
@@ -2101,6 +2107,8 @@ export class UpdateClipCommand implements Command {
       frameInterpolation: normalizeFrameInterpolation({ ...this.before.frameInterpolation, ...this.patch.frameInterpolation }),
       slowMotionMode: normalizeSlowMotionMode(this.patch.slowMotionMode ?? this.before.slowMotionMode),
       audioDenoise: normalizeAudioDenoise({ ...this.before.audioDenoise, ...this.patch.audioDenoise }),
+      projection: normalizeClipProjection(this.patch.projection ?? this.before.projection),
+      panorama: normalizeClipPanoramaView({ ...this.before.panorama, ...this.patch.panorama }),
       masks: this.patch.masks === undefined ? normalizeMasks(this.before.masks) : normalizeMasks(this.patch.masks),
       motionTrack: this.patch.motionTrack === undefined ? normalizeMotionTrack(this.before.motionTrack, this.before.duration) : normalizeMotionTrack(this.patch.motionTrack, this.before.duration),
       sequenceFrameRate: normalizeSequenceFrameRate(this.patch.sequenceFrameRate ?? this.before.sequenceFrameRate),
@@ -2540,6 +2548,8 @@ function cloneClipForNestedSequence<TClip extends Clip>(clip: TClip): TClip {
     frameInterpolation: normalizeFrameInterpolation(clip.frameInterpolation),
     slowMotionMode: normalizeSlowMotionMode(clip.slowMotionMode),
     audioDenoise: normalizeAudioDenoise(clip.audioDenoise),
+    projection: normalizeClipProjection(clip.projection),
+    panorama: normalizeClipPanoramaView(clip.panorama),
     masks: normalizeMasks(clip.masks),
     motionTrack: normalizeMotionTrack(clip.motionTrack, clip.duration),
     sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
