@@ -53,13 +53,14 @@ import { flattenMulticamProjectForExport } from '../multicam';
 import { buildReframeCropFilter, clampReframeOffset, isReframeEnabled, normalizeTargetAspectRatio, resolveReframeDimensions } from '../reframe';
 import { calculateSpeedCurveSourceDuration, getClipSourceVisibleDuration, getClipSpeed, getRenderableTracks, getTimelinePlaybackDuration, getTrackPan, getTrackVolume } from '../timeline';
 import { round } from '../time';
-import { serializeSrt } from '../subtitles/srt';
+import { serializeSubtitleCueInputsToAss, serializeSubtitleCueInputsToSrt, serializeSubtitleCueInputsToVtt, type SubtitleCueInput } from '../subtitles/srt';
 import { cssColorToFfmpeg, escapeDrawtextValue, formatFfmpegSeconds, normalizeFfmpegPath, quoteForDisplay } from './ffmpeg-escape';
 import type {
   ExportClip,
   ExportClipKeyframes,
   ExportAudioVisualizationBackground,
   ExportAudioVisualizationSettings,
+  ExportSubtitleFormat,
   ExportKeyframe,
   ExportLoudnessNormalization,
   ExportVideoProfile,
@@ -99,6 +100,8 @@ export const DEFAULT_EXPORT_SETTINGS: Omit<ExportSettings, 'outputPath'> = {
   reframeOffsetX: 0,
   reframeOffsetY: 0,
   subtitleMode: undefined,
+  subtitleFormat: 'srt',
+  exportSidecarSubtitle: false,
   hardwareEncoding: false,
   loudnessNormalization: 'off',
   platformPreset: undefined,
@@ -445,23 +448,27 @@ export function buildFfmpegExportPlan(
 
   const subtitleClips = orderedPlaybackClips.filter((clip) => clip.type === 'subtitle' && clip.subtitleStyle && clip.textStyle === null);
   const subtitleMode = settings.subtitleMode ?? subtitleClips.find((clip) => clip.subtitleMode)?.subtitleMode ?? DEFAULT_SUBTITLE_MODE;
+  const subtitleFormat = normalizeSubtitleFormat(settings.subtitleFormat);
   let softSubtitleInputIndex: number | undefined;
   if (!audioOnly && subtitleClips.length > 0 && subtitleMode === 'burn-in') {
     const nextVideo = `base${videoStep + 1}`;
-    const { filter, artifact } = buildSubtitleBurnInFilter(currentVideo, nextVideo, subtitleClips);
+    const { filter, artifact } = buildSubtitleBurnInFilter(currentVideo, nextVideo, subtitleClips, subtitleFormat);
     filters.push(filter);
     textArtifacts.push(artifact);
     currentVideo = nextVideo;
     videoStep += 1;
   } else if (!audioOnly && !videoFramesOnly && subtitleClips.length > 0 && subtitleMode === 'soft-sub') {
-    const artifact = buildSubtitleArtifact(subtitleClips, 'argument');
+    const artifact = buildSubtitleArtifact(subtitleClips, 'argument', subtitleFormat);
     softSubtitleInputIndex = inputs.length;
     inputs.push({
       index: softSubtitleInputIndex,
       path: artifact.placeholder,
-      args: ['-f', 'srt']
+      args: buildSubtitleInputArgs(subtitleFormat)
     });
     textArtifacts.push(artifact);
+  }
+  if (!videoFramesOnly && subtitleClips.length > 0 && settings.exportSidecarSubtitle) {
+    textArtifacts.push(buildSubtitleArtifact(subtitleClips, 'sidecar', subtitleFormat));
   }
 
   let loudnessAnalysisFilterComplex: string | undefined;
@@ -556,7 +563,7 @@ export function buildFfmpegExportPlan(
   const subtitleOutputArgs: string[] = [];
   if (softSubtitleInputIndex !== undefined) {
     maps.push('-map', `${softSubtitleInputIndex}:s:0`);
-    subtitleOutputArgs.push('-c:s', 'mov_text');
+    subtitleOutputArgs.push('-c:s', buildSoftSubtitleCodec(subtitleFormat, settings));
   }
   const videoEncodingArgs = buildVideoEncodingArgs(settings, capabilities, warnings, audioOnly || videoFramesOnly);
   const outputArgs =
@@ -1933,8 +1940,8 @@ function buildDrawtextPositionExpression(clip: ExportClip, axis: 'x' | 'y', stat
   return `(${dimension}-${textDimension})/2+${formatSigned(fallback)}`;
 }
 
-function buildSubtitleBurnInFilter(inputLabel: string, outputLabel: string, clips: ExportClip[]): { filter: string; artifact: TextArtifact } {
-  const artifact = buildSubtitleArtifact(clips, 'filter');
+function buildSubtitleBurnInFilter(inputLabel: string, outputLabel: string, clips: ExportClip[], format: ExportSubtitleFormat): { filter: string; artifact: TextArtifact } {
+  const artifact = buildSubtitleArtifact(clips, 'filter', format);
   const style = clips.find((clip) => clip.subtitleStyle)?.subtitleStyle;
   const forceStyle = [
     `FontSize=${Math.max(1, Math.round(style?.fontSize ?? 42))}`,
@@ -1952,22 +1959,75 @@ function buildSubtitleBurnInFilter(inputLabel: string, outputLabel: string, clip
   };
 }
 
-function buildSubtitleArtifact(clips: ExportClip[], pathMode: TextArtifact['pathMode']): TextArtifact {
-  const cues = clips
-    .filter((clip) => clip.duration > 0 && (clip.subtitleStyle?.text ?? '').trim().length > 0)
-    .sort((left, right) => left.start - right.start || left.id.localeCompare(right.id))
-    .map((clip) => ({
-      startMs: Math.round(Math.max(0, clip.start) * 1000),
-      endMs: Math.round(Math.max(0, clip.start + clip.duration) * 1000),
-      text: clip.subtitleStyle?.text ?? ''
-    }));
+function buildSubtitleArtifact(clips: ExportClip[], pathMode: TextArtifact['pathMode'], format: ExportSubtitleFormat): TextArtifact {
+  const cues = buildSubtitleCueInputs(clips);
   return {
     clipId: 'subtitles',
-    text: serializeSrt(cues),
-    fileName: 'subtitles.srt',
-    placeholder: '__SUBTITLEFILE_export_subtitles__',
+    text: serializeSubtitleCueInputs(cues, format),
+    fileName: `subtitles.${format}`,
+    placeholder: pathMode === 'sidecar' ? '__SUBTITLEFILE_export_subtitles_sidecar__' : '__SUBTITLEFILE_export_subtitles__',
     pathMode
   };
+}
+
+function buildSubtitleCueInputs(clips: ExportClip[]): SubtitleCueInput[] {
+  return clips.map((clip) => ({
+    id: clip.id,
+    start: clip.start,
+    duration: clip.duration,
+    text: clip.subtitleStyle?.text ?? '',
+    style: clip.subtitleStyle
+      ? {
+          fontFamily: clip.subtitleStyle.fontFamily,
+          fontSize: clip.subtitleStyle.fontSize,
+          color: clip.subtitleStyle.fontColor,
+          backgroundColor: clip.subtitleStyle.backgroundColor,
+          backgroundOpacity: clip.subtitleStyle.backgroundOpacity,
+          bold: clip.subtitleStyle.bold,
+          italic: clip.subtitleStyle.italic,
+          yOffset: clip.subtitleStyle.yOffset,
+          x: clip.subtitleStyle.x,
+          y: clip.subtitleStyle.y
+        }
+      : undefined
+  }));
+}
+
+function serializeSubtitleCueInputs(cues: SubtitleCueInput[], format: ExportSubtitleFormat): string {
+  if (format === 'vtt') {
+    return serializeSubtitleCueInputsToVtt(cues);
+  }
+  if (format === 'ass' || format === 'ssa') {
+    return serializeSubtitleCueInputsToAss(cues, format);
+  }
+  return serializeSubtitleCueInputsToSrt(cues);
+}
+
+function buildSubtitleInputArgs(format: ExportSubtitleFormat): string[] {
+  if (format === 'vtt') {
+    return ['-f', 'webvtt'];
+  }
+  if (format === 'ass') {
+    return ['-f', 'ass'];
+  }
+  if (format === 'ssa') {
+    return ['-f', 'ssa'];
+  }
+  return ['-f', 'srt'];
+}
+
+function buildSoftSubtitleCodec(format: ExportSubtitleFormat, settings: ExportSettings): string {
+  if (format === 'ass' || format === 'ssa') {
+    return 'ass';
+  }
+  if (format === 'vtt' && settings.format === 'webm') {
+    return 'webvtt';
+  }
+  return 'mov_text';
+}
+
+function normalizeSubtitleFormat(format: ExportSettings['subtitleFormat']): ExportSubtitleFormat {
+  return format === 'vtt' || format === 'ass' || format === 'ssa' ? format : 'srt';
 }
 
 function buildAudioFilters(

@@ -356,6 +356,53 @@ describe('multitrack ffmpeg builder', () => {
     );
   });
 
+  it('embeds ASS subtitles as an ass stream and emits a sidecar artifact', () => {
+    const project = makeProject();
+    project.timeline.tracks.push(
+      createTrack({
+        id: 'track-subtitle',
+        type: 'subtitle',
+        name: 'Subtitles 1',
+        clips: [
+          makeSubtitleClip({
+            id: 'subtitle-ass',
+            start: 1,
+            duration: 2,
+            text: 'Styled subtitle',
+            subtitleMode: 'soft-sub',
+            style: { fontSize: 36, color: '#aabbcc', backgroundColor: '#112233', backgroundOpacity: 0.25 }
+          })
+        ]
+      })
+    );
+
+    const plan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(project, {
+        outputPath: 'out.mkv',
+        settings: { subtitleMode: 'soft-sub', subtitleFormat: 'ass', exportSidecarSubtitle: true, format: 'mkv' }
+      })
+    );
+    const subtitleInput = plan.inputs.at(-1);
+
+    expect(subtitleInput).toEqual(expect.objectContaining({ path: '__SUBTITLEFILE_export_subtitles__', args: ['-f', 'ass'] }));
+    expect(plan.maps).toEqual(expect.arrayContaining(['-map', `${subtitleInput?.index}:s:0`]));
+    expect(plan.outputArgs).toEqual(expect.arrayContaining(['-c:s', 'ass']));
+    expect(plan.textArtifacts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          fileName: 'subtitles.ass',
+          pathMode: 'argument',
+          text: expect.stringContaining('[V4+ Styles]')
+        }),
+        expect.objectContaining({
+          fileName: 'subtitles.ass',
+          pathMode: 'sidecar',
+          text: expect.stringContaining('Styled subtitle')
+        })
+      ])
+    );
+  });
+
   it('applies export setting overrides for presets', () => {
     const project = makeProject();
     project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-video', duration: 2 })];

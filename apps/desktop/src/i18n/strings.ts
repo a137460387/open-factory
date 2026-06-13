@@ -1014,6 +1014,8 @@ const zh = {
       videoBitrate: '视频码率',
       audioBitrate: '音频码率',
       subtitles: '字幕',
+      subtitleFormat: '字幕格式',
+      exportSidecarSubtitle: '同时导出独立字幕文件',
       scale: '缩放',
       targetAspectRatio: '目标比例',
       reframeOffsetX: '水平偏移',
@@ -1030,6 +1032,12 @@ const zh = {
       video: '视频',
       audio: '纯音频',
       'audio-visualization': '纯音频可视化'
+    },
+    subtitleFormats: {
+      srt: 'SRT',
+      vtt: 'VTT',
+      ass: 'ASS',
+      ssa: 'SSA'
     },
     audioVisualization: {
       title: '音频可视化',
@@ -2318,6 +2326,8 @@ const enOverrides = {
       videoBitrate: 'Video Bitrate',
       audioBitrate: 'Audio Bitrate',
       subtitles: 'Subtitles',
+      subtitleFormat: 'Subtitle Format',
+      exportSidecarSubtitle: 'Export sidecar subtitle file',
       scale: 'Scale',
       targetAspectRatio: 'Target Aspect Ratio',
       reframeOffsetX: 'Horizontal Offset',
@@ -2334,6 +2344,12 @@ const enOverrides = {
       video: 'Video',
       audio: 'Audio Only',
       'audio-visualization': 'Audio Visualization'
+    },
+    subtitleFormats: {
+      srt: 'SRT',
+      vtt: 'VTT',
+      ass: 'ASS',
+      ssa: 'SSA'
     },
     audioVisualization: {
       title: 'Audio Visualization',

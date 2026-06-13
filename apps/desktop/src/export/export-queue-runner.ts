@@ -6,6 +6,7 @@ import {
   type ExportSettings,
   type ExportTaskPriority,
   type ExportTask,
+  type TextArtifact,
   type Project,
   type RenderFarmTaskConfig
 } from '@open-factory/editor-core';
@@ -15,6 +16,7 @@ import { runExportBeforePlugins } from '../plugins/plugin-manager';
 import { getExportLogPath, persistFinishedTaskToHistory } from './export-history';
 import { normalizeExportProgressPayload, type ExportProgressEvent } from './export-progress';
 import { useExportQueueStore } from './export-queue-store';
+import { buildSidecarSubtitlePath } from './export-sidecar';
 
 export const EXPORT_MEMORY_PAUSE_THRESHOLD_BYTES = 2 * 1024 * 1024 * 1024;
 const RESOURCE_RECHECK_DELAY_MS = 500;
@@ -199,6 +201,7 @@ async function runSingleTask(task: ExportTask): Promise<void> {
       : await runExport(task.plan, task.id);
     const latest = useExportQueueStore.getState().tasks.find((item) => item.id === task.id);
     if (latest?.status === 'running') {
+      await writeSidecarSubtitleArtifacts(task.outputPath, task.plan.textArtifacts);
       useExportQueueStore.getState().finishTask(task.id, result.report);
       await persistFinishedTaskToHistory(task.id);
     }
@@ -271,4 +274,11 @@ function nextRunnerDelayMs(): number {
 
 function fileNameFromPath(path: string): string {
   return path.split(/[\\/]/).pop() ?? path;
+}
+
+async function writeSidecarSubtitleArtifacts(outputPath: string, artifacts: TextArtifact[]): Promise<void> {
+  const sidecars = artifacts.filter((artifact) => artifact.pathMode === 'sidecar');
+  for (const artifact of sidecars) {
+    await writeFile(buildSidecarSubtitlePath(outputPath, artifact.fileName), artifact.text);
+  }
 }

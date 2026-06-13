@@ -430,6 +430,12 @@ function sanitizeExportSettings(settings: unknown): ExportPresetSettings {
   if (input.subtitleMode === 'burn-in' || input.subtitleMode === 'soft-sub') {
     output.subtitleMode = input.subtitleMode;
   }
+  if (input.subtitleFormat === 'srt' || input.subtitleFormat === 'vtt' || input.subtitleFormat === 'ass' || input.subtitleFormat === 'ssa') {
+    output.subtitleFormat = input.subtitleFormat;
+  }
+  if (input.exportSidecarSubtitle === true) {
+    output.exportSidecarSubtitle = true;
+  }
   if (input.hardwareEncoding === true) {
     output.hardwareEncoding = true;
   }

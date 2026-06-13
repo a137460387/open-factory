@@ -10,6 +10,7 @@ import {
   suggestRenderFarmInstances,
   type ExportAudioVisualizationBackground,
   type ExportAudioVisualizationStyle,
+  type ExportSubtitleFormat,
   type ExportTaskStatus,
   type ExportTaskPriority,
   type ExportLoudnessNormalization,
@@ -64,8 +65,10 @@ const WATERMARK_POSITIONS: ExportWatermarkPosition[] = [
   'bottom-right'
 ];
 const AUDIO_VISUALIZATION_FORMATS = ['mp4', 'mov', 'webm'];
+const VIDEO_EXPORT_FORMATS = ['mp4', 'mov', 'mkv', 'webm', 'm4a', 'gif', 'webp', 'apng', 'png-sequence'];
 const AUDIO_VISUALIZATION_STYLES: ExportAudioVisualizationStyle[] = ['waveform-line', 'spectrum-bars', 'circular-spectrum'];
 const AUDIO_VISUALIZATION_BACKGROUND_TYPES: ExportAudioVisualizationBackground['type'][] = ['solid', 'gradient', 'image'];
+const SUBTITLE_FORMATS: ExportSubtitleFormat[] = ['srt', 'vtt', 'ass', 'ssa'];
 const DEFAULT_AUDIO_VISUALIZATION: NonNullable<ExportPresetSettings['audioVisualization']> = {
   style: 'waveform-line',
   color: '#22d3ee',
@@ -126,7 +129,7 @@ export function ExportDialog({ project, initialPreset, onClose, onCompleted, onR
   }, [exportSettings, project.settings.fps, project.settings.height, project.settings.width, project.timeline]);
   const hardwareEncodingEligible = !isAudioOnly && (exportSettings.format === 'mp4' || exportSettings.format === 'mov');
   const hardwareEncodingRequested = hardwareEncodingEligible && exportSettings.hardwareEncoding === true;
-  const formatOptions = isAudioVisualization ? AUDIO_VISUALIZATION_FORMATS : ['mp4', 'mov', 'webm', 'm4a', 'gif', 'webp', 'apng', 'png-sequence'];
+  const formatOptions = isAudioVisualization ? AUDIO_VISUALIZATION_FORMATS : VIDEO_EXPORT_FORMATS;
 
   useEffect(() => {
     let canceled = false;
@@ -403,6 +406,14 @@ function relinkFromPreflight(): void {
             <PresetTextField label={t.fields.videoBitrate} value={draftSettings.videoBitrate ?? ''} disabled={isAudioOnly} onChange={(value) => updateStringSetting(setDraftSettings, 'videoBitrate', value)} testId="export-video-bitrate-input" />
             <PresetTextField label={t.fields.audioBitrate} value={draftSettings.audioBitrate ?? ''} onChange={(value) => updateStringSetting(setDraftSettings, 'audioBitrate', value)} testId="export-audio-bitrate-input" />
             <PresetSelectField label={t.fields.subtitles} value={draftSettings.subtitleMode ?? 'default'} disabled={timelineVisualControlsDisabled} onChange={(value) => updateSubtitleMode(setDraftSettings, value)} testId="export-subtitle-mode-select" options={['default', 'burn-in', 'soft-sub']} />
+            <PresetSelectField label={t.fields.subtitleFormat} value={exportSettings.subtitleFormat ?? 'srt'} disabled={timelineVisualControlsDisabled} onChange={(value) => updateSubtitleFormat(setDraftSettings, value)} testId="export-subtitle-format-select" options={SUBTITLE_FORMATS} />
+            <PresetCheckboxField
+              label={t.fields.exportSidecarSubtitle}
+              checked={exportSettings.exportSidecarSubtitle === true}
+              disabled={timelineVisualControlsDisabled}
+              onChange={(checked) => updateExportSidecarSubtitle(setDraftSettings, checked)}
+              testId="export-subtitle-sidecar-toggle"
+            />
             <PresetSelectField label={t.fields.scale} value={draftSettings.scaleMode ?? 'none'} disabled={timelineVisualControlsDisabled} onChange={(value) => updateScaleMode(setDraftSettings, value)} testId="export-scale-mode-select" options={['none', 'fit']} />
             <PresetSelectField
               label={t.fields.targetAspectRatio}
@@ -692,6 +703,8 @@ function normalizeDraftSettings(settings: ExportPresetSettings): ExportPresetSet
     audioCodec: normalizeAudioCodecForFormat(format, settings.audioCodec),
     hardwareEncoding,
     loudnessNormalization,
+    subtitleFormat: normalizeSubtitleFormat(settings.subtitleFormat),
+    exportSidecarSubtitle: settings.exportSidecarSubtitle === true,
     targetAspectRatio,
     reframeOffsetX: clampReframeOffset(settings.reframeOffsetX),
     reframeOffsetY: clampReframeOffset(settings.reframeOffsetY),
@@ -844,6 +857,9 @@ function updateFormat(setDraftSettings: Dispatch<SetStateAction<ExportPresetSett
     } else {
       next.videoCodec = 'libx264';
       next.audioCodec = 'aac';
+      if (value !== 'mp4' && value !== 'mov') {
+        delete next.hardwareEncoding;
+      }
     }
     if (next.outputMode === 'audio-visualization') {
       next.audioVisualization = normalizeAudioVisualizationDraft(current.audioVisualization);
@@ -1017,6 +1033,14 @@ function updateSubtitleMode(setDraftSettings: Dispatch<SetStateAction<ExportPres
   });
 }
 
+function updateSubtitleFormat(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, value: string): void {
+  setDraftSettings((current) => ({ ...current, subtitleFormat: normalizeSubtitleFormat(value) }));
+}
+
+function updateExportSidecarSubtitle(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, checked: boolean): void {
+  setDraftSettings((current) => ({ ...current, exportSidecarSubtitle: checked }));
+}
+
 function updateScaleMode(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, value: string): void {
   setDraftSettings((current) => ({ ...current, scaleMode: value === 'fit' ? 'fit' : 'none' }));
 }
@@ -1159,6 +1183,10 @@ function clampUiNumber(value: string, min: number, max: number, fallback: number
 
 function normalizeLoudnessNormalization(value: unknown): ExportLoudnessNormalization {
   return value === 'youtube' || value === 'ebu-r128' ? value : 'off';
+}
+
+function normalizeSubtitleFormat(value: unknown): ExportSubtitleFormat {
+  return value === 'vtt' || value === 'ass' || value === 'ssa' ? value : 'srt';
 }
 
 function supportsLoudnessNormalization(format: string, outputMode: ExportPresetSettings['outputMode']): boolean {
@@ -1723,6 +1751,9 @@ function formatOptionLabel(value: string): string {
   }
   if (value === 'soft-sub') {
     return zhCN.exportDialog.options.softSub;
+  }
+  if (value === 'srt' || value === 'vtt' || value === 'ass' || value === 'ssa') {
+    return zhCN.exportDialog.subtitleFormats[value];
   }
   if (value === 'none') {
     return zhCN.exportDialog.options.none;

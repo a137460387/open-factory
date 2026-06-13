@@ -67,6 +67,8 @@ export interface ExportSettings {
   reframeOffsetX?: number;
   reframeOffsetY?: number;
   subtitleMode?: ExportSubtitleMode;
+  subtitleFormat?: ExportSubtitleFormat;
+  exportSidecarSubtitle?: boolean;
   hardwareEncoding?: boolean;
   loudnessNormalization?: ExportLoudnessNormalization;
   platformPreset?: ExportPlatformPreset;
@@ -177,7 +179,8 @@ export interface ExportTextStyle {
 }
 
 export type ExportSubtitleMode = 'burn-in' | 'soft-sub';
-export type TextArtifactPathMode = 'filter' | 'argument' | 'shader-sequence';
+export type ExportSubtitleFormat = 'srt' | 'vtt' | 'ass' | 'ssa';
+export type TextArtifactPathMode = 'filter' | 'argument' | 'shader-sequence' | 'sidecar';
 
 export interface ExportSubtitleStyle extends ExportTextStyle {
   yOffset: number;
