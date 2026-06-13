@@ -796,6 +796,12 @@ const zh = {
       pickFailedMessage: '无法读取预览像素。',
       sampleColor: (index: number) => `采样色 ${index}`
     },
+    keyingModes: {
+      none: '无',
+      'chroma-key': '色度键',
+      'luma-key': '亮度键',
+      'difference-matte': '差值遮罩'
+    },
     customShader: {
       compileFailed: 'Shader 编译失败',
       webglUnavailable: '当前环境无法创建 WebGL 上下文。',
@@ -832,11 +838,17 @@ const zh = {
       scaleY: '缩放 Y',
       rotation: '旋转',
       opacity: '不透明度',
+      keyingMode: '抠像类型',
       chromaKeyColor: '目标颜色',
       similarity: '相似度',
       blend: '混合',
       erosion: '边缘收缩/扩张',
       spillSuppression: '溢色抑制',
+      lumaThreshold: '亮度阈值',
+      lumaTolerance: '亮度容差',
+      lumaSoftness: '柔边',
+      referenceTime: '参考帧时间',
+      differenceThreshold: '差值阈值',
       addMask: '添加遮罩',
       maskType: '形状',
       rectMask: '矩形',
@@ -2209,6 +2221,12 @@ const enOverrides = {
       pickFailedMessage: 'Unable to read the preview pixel.',
       sampleColor: (index: number) => `Sample Color ${index}`
     },
+    keyingModes: {
+      none: 'None',
+      'chroma-key': 'Chroma Key',
+      'luma-key': 'Luma Key',
+      'difference-matte': 'Difference Matte'
+    },
     customShader: {
       compileFailed: 'Shader compile failed',
       webglUnavailable: 'Unable to create a WebGL context in this environment.',
@@ -2242,11 +2260,17 @@ const enOverrides = {
       scaleY: 'Scale Y',
       rotation: 'Rotation',
       opacity: 'Opacity',
+      keyingMode: 'Keying Mode',
       chromaKeyColor: 'Key Color',
       similarity: 'Similarity',
       blend: 'Blend',
       erosion: 'Edge Erosion',
       spillSuppression: 'Spill Suppression',
+      lumaThreshold: 'Luma Threshold',
+      lumaTolerance: 'Luma Tolerance',
+      lumaSoftness: 'Softness',
+      referenceTime: 'Reference Frame Time',
+      differenceThreshold: 'Difference Threshold',
       addMask: 'Add Mask',
       maskType: 'Shape',
       rectMask: 'Rectangle',

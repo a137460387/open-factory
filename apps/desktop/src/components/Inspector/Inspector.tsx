@@ -64,6 +64,7 @@ import {
   setKenBurnsEndScaleKeyframes,
   createTrack,
   type AudioFadeCurve,
+  type ChromaKeyMode,
   type ChromaKeyColor,
   type ClipPatch,
   type ColorCurves,
@@ -224,6 +225,7 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
     selectedKeyframe?.clipId === clip.id ? clip.keyframes?.[selectedKeyframe.property]?.find((frame) => frame.id === selectedKeyframe.keyframeId) : undefined;
   const colorCorrection = normalizeColorCorrection(clip.colorCorrection);
   const chromaKey = normalizeChromaKey(clip.chromaKey);
+  const keyingMode: ChromaKeyMode | 'none' = chromaKey.enabled ? chromaKey.mode : 'none';
   const chromaKeyPickActive = chromaKeyPickClipId === clip.id;
   const stabilization = normalizeStabilization(clip.stabilization);
   const frameInterpolation = normalizeFrameInterpolation(clip.frameInterpolation);
@@ -659,12 +661,25 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
 
         {clip.type === 'video' || clip.type === 'image' || clip.type === 'nested-sequence' ? (
           <Section title={zhCN.inspector.sections.chromaKey}>
-            <ToggleField
-              label={zhCN.inspector.fields.enabled}
-              checked={chromaKey.enabled}
-              onCommit={(enabled) => commit({ chromaKey: { ...chromaKey, enabled } })}
-              testId="chroma-key-toggle"
-            />
+            <label className="block text-xs font-medium text-slate-600">
+              {zhCN.inspector.fields.keyingMode}
+              <select
+                className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                value={keyingMode}
+                data-testid="keying-mode-select"
+                onChange={(event) => {
+                  const mode = event.target.value as ChromaKeyMode | 'none';
+                  commit({ chromaKey: { ...chromaKey, enabled: mode !== 'none', mode: mode === 'none' ? chromaKey.mode : mode } });
+                }}
+              >
+                <option value="none">{zhCN.inspector.keyingModes.none}</option>
+                <option value="chroma-key">{zhCN.inspector.keyingModes['chroma-key']}</option>
+                <option value="luma-key">{zhCN.inspector.keyingModes['luma-key']}</option>
+                <option value="difference-matte">{zhCN.inspector.keyingModes['difference-matte']}</option>
+              </select>
+            </label>
+            {keyingMode === 'chroma-key' ? (
+              <>
             <div className="space-y-2" data-testid="chroma-key-color-list">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-xs font-semibold text-slate-600">{zhCN.inspector.fields.chromaKeyColor}</span>
@@ -755,6 +770,65 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
               onCommit={(spillSuppression) => commit({ chromaKey: { ...chromaKey, spillSuppression } })}
               testId="chroma-key-spill-suppression"
             />
+              </>
+            ) : null}
+            {keyingMode === 'luma-key' ? (
+              <div className="space-y-2" data-testid="luma-key-controls">
+                <RangeNumberField
+                  label={zhCN.inspector.fields.lumaThreshold}
+                  value={chromaKey.lumaThreshold}
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  format={(value) => value.toFixed(2)}
+                  onCommit={(lumaThreshold) => commit({ chromaKey: { ...chromaKey, enabled: true, mode: 'luma-key', lumaThreshold } })}
+                  testId="luma-key-threshold"
+                />
+                <RangeNumberField
+                  label={zhCN.inspector.fields.lumaTolerance}
+                  value={chromaKey.lumaTolerance}
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  format={(value) => value.toFixed(2)}
+                  onCommit={(lumaTolerance) => commit({ chromaKey: { ...chromaKey, enabled: true, mode: 'luma-key', lumaTolerance } })}
+                  testId="luma-key-tolerance"
+                />
+                <RangeNumberField
+                  label={zhCN.inspector.fields.lumaSoftness}
+                  value={chromaKey.lumaSoftness}
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  format={(value) => value.toFixed(2)}
+                  onCommit={(lumaSoftness) => commit({ chromaKey: { ...chromaKey, enabled: true, mode: 'luma-key', lumaSoftness } })}
+                  testId="luma-key-softness"
+                />
+              </div>
+            ) : null}
+            {keyingMode === 'difference-matte' ? (
+              <div className="space-y-2" data-testid="difference-matte-controls">
+                <NumberField
+                  label={zhCN.inspector.fields.referenceTime}
+                  value={chromaKey.differenceReferenceTime}
+                  min={0}
+                  max={clip.duration}
+                  step={1 / Math.max(1, projectSettings.fps)}
+                  onCommit={(differenceReferenceTime) => commit({ chromaKey: { ...chromaKey, enabled: true, mode: 'difference-matte', differenceReferenceTime } })}
+                  testId="difference-matte-reference-time"
+                />
+                <RangeNumberField
+                  label={zhCN.inspector.fields.differenceThreshold}
+                  value={chromaKey.differenceThreshold}
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  format={(value) => value.toFixed(2)}
+                  onCommit={(differenceThreshold) => commit({ chromaKey: { ...chromaKey, enabled: true, mode: 'difference-matte', differenceThreshold } })}
+                  testId="difference-matte-threshold"
+                />
+              </div>
+            ) : null}
           </Section>
         ) : null}
 

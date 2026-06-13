@@ -126,6 +126,51 @@ describe('project schema migration', () => {
     });
   });
 
+  it('serializes and migrates advanced keying settings while keeping older chroma key clips compatible', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-old-key',
+        duration: 2,
+        chromaKey: { enabled: true, color: [0, 255, 0], colors: [[0, 255, 0]], similarity: 0.2, blend: 0.1, spillSuppression: false, erosion: 0 }
+      }),
+      makeVideoClip({
+        id: 'clip-luma-key',
+        start: 2,
+        duration: 2,
+        chromaKey: {
+          enabled: true,
+          mode: 'luma-key',
+          color: [0, 255, 0],
+          colors: [[0, 255, 0]],
+          similarity: 0.2,
+          blend: 0.1,
+          spillSuppression: false,
+          erosion: 0,
+          lumaThreshold: 2,
+          lumaTolerance: 0.25,
+          lumaSoftness: 0.1,
+          differenceReferenceTime: 1.5,
+          differenceThreshold: 0.4
+        }
+      })
+    ];
+
+    const migrated = migrateProjectFile(serializeProject(project));
+    const [oldKey, lumaKey] = migrated.project.timeline.tracks[0].clips;
+
+    expect(oldKey.chromaKey).toMatchObject({ enabled: true, mode: 'chroma-key', lumaThreshold: 0.4 });
+    expect(lumaKey.chromaKey).toMatchObject({
+      enabled: true,
+      mode: 'luma-key',
+      lumaThreshold: 1,
+      lumaTolerance: 0.25,
+      lumaSoftness: 0.1,
+      differenceReferenceTime: 1.5,
+      differenceThreshold: 0.4
+    });
+  });
+
   it('serializes and migrates project annotations with clamped times and colors', () => {
     const project = makeProject();
     project.annotations = [
@@ -251,12 +296,18 @@ describe('project schema migration', () => {
 
     expect(clip.chromaKey).toEqual({
       enabled: true,
+      mode: 'chroma-key',
       color: [0, 128, 255],
       colors: [[0, 128, 255]],
       similarity: 0.24,
       blend: 0.08,
       spillSuppression: false,
-      erosion: 0
+      erosion: 0,
+      lumaThreshold: 0.4,
+      lumaTolerance: 0.1,
+      lumaSoftness: 0.05,
+      differenceReferenceTime: 0,
+      differenceThreshold: 0.2
     });
   });
 

@@ -85,7 +85,7 @@ test('enables chroma key and includes chromakey in the export plan', async ({ pa
   await addMediaCardToTimeline(page, 0);
   await page.locator('[data-testid^="timeline-clip-"]').first().click();
 
-  await page.getByTestId('chroma-key-toggle').check();
+  await page.getByTestId('keying-mode-select').selectOption('chroma-key');
   await page.getByTestId('chroma-key-color').fill('#00ff00');
   await page.getByTestId('chroma-key-add-color').click();
   await page.getByTestId('chroma-key-color-1').fill('#0000ff');
@@ -99,6 +99,26 @@ test('enables chroma key and includes chromakey in the export plan', async ({ pa
   const plan = await page.evaluate(() => window.__E2E_ACTIONS__!.getLastExportPlan!() as { filterComplex: string });
   expect(plan.filterComplex).toContain('chromakey=color=0x00FF00:similarity=0.24:blend=0.08');
   expect(plan.filterComplex).toContain('chromakey=color=0x0000FF:similarity=0.24:blend=0.08');
+});
+
+test('enables luma key and includes lumakey in the export plan', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.getByTestId('import-media-button').click();
+  await addMediaCardToTimeline(page, 0);
+  await page.locator('[data-testid^="timeline-clip-"]').first().click();
+
+  await page.getByTestId('keying-mode-select').selectOption('luma-key');
+  await page.getByTestId('luma-key-threshold').fill('0.42');
+  await page.getByTestId('luma-key-tolerance').fill('0.12');
+  await page.getByTestId('luma-key-softness').fill('0.08');
+
+  await openExportDialog(page);
+  await page.getByTestId('export-enqueue-button').click();
+  await expectExportTaskStatus(page, 0, 'success');
+
+  const plan = await page.evaluate(() => window.__E2E_ACTIONS__!.getLastExportPlan!() as { filterComplex: string });
+  expect(plan.filterComplex).toContain('lumakey=threshold=0.42:tolerance=0.12:softness=0.08');
 });
 
 test('adds a rect mask and includes mask crop filters in the export plan', async ({ page }) => {

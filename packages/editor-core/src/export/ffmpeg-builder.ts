@@ -1128,7 +1128,24 @@ function buildVisualClipFilter(
 ): string {
   const sourceDuration = getExportClipSourceDuration(clip);
   const trim = clip.type === 'video' || clip.type === 'nested-sequence' ? `trim=start=0:duration=${formatFfmpegSeconds(sourceDuration)}` : `trim=duration=${formatFfmpegSeconds(sourceDuration)}`;
+  const key = normalizeChromaKey(clip.chromaKey);
+  if (isDifferenceMatteEnabled(key)) {
+    return buildDifferenceMatteClipFilter(inputIndex, clip, label, settings, textArtifacts, warnings, capabilities, trim, key);
+  }
   const filters = [`[${inputIndex}:v]${trim}`, ...buildChromaKeyFilters(clip)];
+  filters.push(...buildVisualPostKeyFilters(clip, settings, textArtifacts, warnings, capabilities, label));
+  return filters.join(',');
+}
+
+function buildVisualPostKeyFilters(
+  clip: ExportClip,
+  settings: ExportSettings,
+  textArtifacts: TextArtifact[],
+  warnings: string[],
+  capabilities: FfmpegCapabilities | undefined,
+  label: string
+): string[] {
+  const filters: string[] = [];
   if (isKenBurnsAnimatedScaleClip(clip)) {
     filters.push(buildSetptsFilter(clip, false, warnings), buildKenBurnsZoompanFilter(clip, settings), 'setsar=1', buildSetptsFilter(clip, true, warnings));
   } else {
@@ -1150,7 +1167,46 @@ function buildVisualClipFilter(
     filters.push(`rotate=${formatFfmpegNumber(clip.transform.rotation)}*PI/180:c=none`);
   }
   filters.push(...buildOpacityFilters(clip, label));
-  return filters.join(',');
+  return filters;
+}
+
+function buildDifferenceMatteClipFilter(
+  inputIndex: number,
+  clip: ExportClip,
+  label: string,
+  settings: ExportSettings,
+  textArtifacts: TextArtifact[],
+  warnings: string[],
+  capabilities: FfmpegCapabilities | undefined,
+  trim: string,
+  key: ReturnType<typeof normalizeChromaKey>
+): string {
+  const safe = safeLabel(label);
+  const mainSourceLabel = `${safe}_diff_main_src`;
+  const referenceSourceLabel = `${safe}_diff_ref_src`;
+  const mainLabel = `${safe}_diff_main`;
+  const mainBlendLabel = `${safe}_diff_main_blend`;
+  const mainAlphaLabel = `${safe}_diff_main_alpha`;
+  const referenceLabel = `${safe}_diff_ref`;
+  const matteLabel = `${safe}_diff_matte`;
+  const frameDuration = 1 / Math.max(1, settings.fps);
+  const referenceTime = formatFfmpegSeconds(key.differenceReferenceTime);
+  const threshold = Math.round(key.differenceThreshold * 255);
+  return [
+    `[${inputIndex}:v]${trim},split=2[${mainSourceLabel}][${referenceSourceLabel}]`,
+    `[${mainSourceLabel}]${buildVisualPostKeyFilters(clip, settings, textArtifacts, warnings, capabilities, mainLabel).join(',')}`,
+    `[${mainLabel}]split=2[${mainBlendLabel}][${mainAlphaLabel}]`,
+    `[${referenceSourceLabel}]trim=start=${referenceTime}:duration=${formatFfmpegSeconds(frameDuration)},setpts=PTS-STARTPTS,loop=loop=-1:size=1:start=0,${buildVisualPostKeyFilters(
+      clip,
+      settings,
+      textArtifacts,
+      warnings,
+      capabilities,
+      referenceLabel
+    ).join(',')}`,
+    `[${mainBlendLabel}][${referenceLabel}]blend=all_mode=difference,format=gray,lutyuv=y='if(gt(val,${threshold}),255,0)'[${matteLabel}]`,
+    `[${mainAlphaLabel}][${matteLabel}]alphamerge,colorchannelmixer=aa=${formatOpacity(clip.transform.opacity)}[${label}]`
+  ].join(';');
 }
 
 function isKenBurnsAnimatedScaleClip(clip: ExportClip): boolean {
@@ -1166,22 +1222,35 @@ function buildReframeFilters(settings: ExportSettings): string[] {
 }
 
 function buildChromaKeyFilters(clip: ExportClip): string[] {
-  if (!isChromaKeyEnabled(clip.chromaKey)) {
+  const key = normalizeChromaKey(clip.chromaKey);
+  if (!key.enabled) {
     return [];
   }
-  const filters = clip.chromaKey.colors.map(
+  if (key.mode === 'luma-key') {
+    return [
+      `lumakey=threshold=${formatFfmpegNumber(key.lumaThreshold)}:tolerance=${formatFfmpegNumber(key.lumaTolerance)}:softness=${formatFfmpegNumber(key.lumaSoftness)}`
+    ];
+  }
+  if (key.mode === 'difference-matte') {
+    return [];
+  }
+  const filters = key.colors.map(
     (color) =>
-      `chromakey=color=0x${formatChromaKeyColor(color)}:similarity=${formatFfmpegNumber(clip.chromaKey.similarity)}:blend=${formatFfmpegNumber(clip.chromaKey.blend)}`
+      `chromakey=color=0x${formatChromaKeyColor(color)}:similarity=${formatFfmpegNumber(key.similarity)}:blend=${formatFfmpegNumber(key.blend)}`
   );
-  const erosion = Math.round(clip.chromaKey.erosion);
+  const erosion = Math.round(key.erosion);
   const edgeFilter = erosion > 0 ? 'erosion=coordinates=255' : erosion < 0 ? 'dilation=coordinates=255' : undefined;
   if (edgeFilter) {
     filters.push(...Array.from({ length: Math.abs(erosion) }, () => edgeFilter));
   }
-  if (clip.chromaKey.spillSuppression) {
+  if (key.spillSuppression) {
     filters.push('hue=s=0');
   }
   return filters;
+}
+
+function isDifferenceMatteEnabled(key: ReturnType<typeof normalizeChromaKey>): boolean {
+  return key.enabled && key.mode === 'difference-matte';
 }
 
 function formatChromaKeyColor(color: [number, number, number]): string {

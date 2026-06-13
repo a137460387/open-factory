@@ -157,7 +157,8 @@ export class WebGlPreviewCompositor {
     gl.uniform3f(this.program.gamma, wheelValue(threeWayColor.gamma, 'r'), wheelValue(threeWayColor.gamma, 'g'), wheelValue(threeWayColor.gamma, 'b'));
     gl.uniform3f(this.program.gain, wheelValue(threeWayColor.gain, 'r'), wheelValue(threeWayColor.gain, 'g'), wheelValue(threeWayColor.gain, 'b'));
     gl.uniform3fv(this.program.chromaKeyColors, buildChromaKeyColorUniforms(key));
-    gl.uniform4f(this.program.chromaKeyParams, key.enabled ? 1 : 0, key.similarity, key.blend, key.colors.length);
+    const keyParams = buildChromaKeyParamUniforms(key);
+    gl.uniform4f(this.program.chromaKeyParams, keyParams[0], keyParams[1], keyParams[2], keyParams[3]);
     gl.uniform1i(this.program.maskCount, maskUniforms.count);
     gl.uniform4fv(this.program.maskData, maskUniforms.data);
     gl.uniform4fv(this.program.maskFlags, maskUniforms.flags);
@@ -373,6 +374,19 @@ function buildChromaKeyColorUniforms(chromaKey: ChromaKey): Float32Array {
     values[index * 3 + 2] = color[2] / 255;
   }
   return values;
+}
+
+function buildChromaKeyParamUniforms(chromaKey: ChromaKey): [number, number, number, number] {
+  if (!chromaKey.enabled) {
+    return [0, chromaKey.similarity, chromaKey.blend, chromaKey.colors.length];
+  }
+  if (chromaKey.mode === 'luma-key') {
+    return [2, chromaKey.lumaThreshold, chromaKey.lumaTolerance, chromaKey.lumaSoftness];
+  }
+  if (chromaKey.mode === 'difference-matte') {
+    return [3, chromaKey.differenceThreshold, 0, 0];
+  }
+  return [1, chromaKey.similarity, chromaKey.blend, chromaKey.colors.length];
 }
 
 function drawTextBackground(context: CanvasRenderingContext2D, centerX: number, centerY: number, text: string, style: TextStyle | SubtitleStyle): void {
@@ -682,8 +696,21 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
       }
 
       float applyChromaKey(vec3 color) {
-        if (u_chromaKeyParams.x < 0.5) {
+        float mode = u_chromaKeyParams.x;
+        if (mode < 0.5) {
           return 1.0;
+        }
+        if (mode > 1.5 && mode < 2.5) {
+          float luma = dot(color, vec3(0.2126, 0.7152, 0.0722));
+          float threshold = clamp(u_chromaKeyParams.y, 0.0, 1.0);
+          float tolerance = clamp(u_chromaKeyParams.z, 0.0, 1.0);
+          float softness = max(u_chromaKeyParams.w, 0.0001);
+          float keyed = smoothstep(threshold - tolerance - softness, threshold - tolerance, luma);
+          return 1.0 - keyed * (1.0 - smoothstep(threshold + tolerance, threshold + tolerance + softness, luma));
+        }
+        if (mode > 2.5) {
+          float delta = distance(color, vec3(0.5));
+          return smoothstep(clamp(u_chromaKeyParams.y, 0.0, 1.0), clamp(u_chromaKeyParams.y + 0.05, 0.0, 1.0), delta);
         }
         float delta = distance(color, u_chromaKeyColors[0]);
         if (u_chromaKeyParams.w > 1.5) {

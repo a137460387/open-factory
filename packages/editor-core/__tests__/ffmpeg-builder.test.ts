@@ -1016,6 +1016,67 @@ describe('multitrack ffmpeg builder', () => {
     const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
 
     expect(plan.filterComplex).not.toContain('chromakey=');
+    expect(plan.filterComplex).not.toContain('lumakey=');
+  });
+
+  it('builds luma key filter args from clip keying settings', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-luma-key',
+        chromaKey: {
+          enabled: true,
+          mode: 'luma-key',
+          color: [0, 255, 0],
+          colors: [[0, 255, 0]],
+          similarity: 0.1,
+          blend: 0.05,
+          spillSuppression: false,
+          erosion: 0,
+          lumaThreshold: 0.42,
+          lumaTolerance: 0.12,
+          lumaSoftness: 0.08,
+          differenceReferenceTime: 0,
+          differenceThreshold: 0.2
+        }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('lumakey=threshold=0.42:tolerance=0.12:softness=0.08');
+    expect(plan.filterComplex).not.toContain('chromakey=');
+  });
+
+  it('injects difference matte reference frame time and threshold into filter args', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-difference-matte',
+        duration: 4,
+        chromaKey: {
+          enabled: true,
+          mode: 'difference-matte',
+          color: [0, 255, 0],
+          colors: [[0, 255, 0]],
+          similarity: 0.1,
+          blend: 0.05,
+          spillSuppression: false,
+          erosion: 0,
+          lumaThreshold: 0.4,
+          lumaTolerance: 0.1,
+          lumaSoftness: 0.05,
+          differenceReferenceTime: 1.25,
+          differenceThreshold: 0.33
+        }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('trim=start=1.25');
+    expect(plan.filterComplex).toContain('blend=all_mode=difference');
+    expect(plan.filterComplex).toContain("lutyuv=y='if(gt(val,84),255,0)'");
   });
 
   it('places enabled chroma key filters before scaling and color correction', () => {

@@ -45,16 +45,23 @@ export type KeyframeProperty = keyof ClipKeyframes;
 
 export type ChromaKeyColor = [number, number, number];
 export const MAX_CHROMA_KEY_COLORS = 3;
+export type ChromaKeyMode = 'chroma-key' | 'luma-key' | 'difference-matte';
 export type MaskType = 'rect' | 'ellipse' | 'path';
 
 export interface ChromaKey {
   enabled: boolean;
+  mode: ChromaKeyMode;
   color: ChromaKeyColor;
   colors: ChromaKeyColor[];
   similarity: number;
   blend: number;
   spillSuppression: boolean;
   erosion: number;
+  lumaThreshold: number;
+  lumaTolerance: number;
+  lumaSoftness: number;
+  differenceReferenceTime: number;
+  differenceThreshold: number;
 }
 
 export interface ClipStabilization {
@@ -446,12 +453,18 @@ export const DEFAULT_COLOR_CORRECTION: ColorCorrection = {
 
 export const DEFAULT_CHROMA_KEY: ChromaKey = {
   enabled: false,
+  mode: 'chroma-key',
   color: [0, 255, 0],
   colors: [[0, 255, 0]],
   similarity: 0.1,
   blend: 0.05,
   spillSuppression: false,
-  erosion: 0
+  erosion: 0,
+  lumaThreshold: 0.4,
+  lumaTolerance: 0.1,
+  lumaSoftness: 0.05,
+  differenceReferenceTime: 0,
+  differenceThreshold: 0.2
 };
 
 export const DEFAULT_STABILIZATION: ClipStabilization = {
@@ -726,14 +739,21 @@ export function normalizeColorCorrection(colorCorrection: Partial<ColorCorrectio
 
 export function normalizeChromaKey(chromaKey: Partial<ChromaKey> | undefined): ChromaKey {
   const colors = normalizeChromaKeyColors(chromaKey);
+  const mode = normalizeChromaKeyMode(chromaKey?.mode);
   return {
     enabled: chromaKey?.enabled === true,
+    mode,
     color: colors[0] ?? [...DEFAULT_CHROMA_KEY.color],
     colors,
     similarity: round(Math.min(1, Math.max(0, finiteOrDefault(chromaKey?.similarity, DEFAULT_CHROMA_KEY.similarity)))),
     blend: round(Math.min(1, Math.max(0, finiteOrDefault(chromaKey?.blend, DEFAULT_CHROMA_KEY.blend)))),
     spillSuppression: chromaKey?.spillSuppression === true,
-    erosion: round(Math.min(5, Math.max(-5, finiteOrDefault(chromaKey?.erosion, DEFAULT_CHROMA_KEY.erosion))))
+    erosion: round(Math.min(5, Math.max(-5, finiteOrDefault(chromaKey?.erosion, DEFAULT_CHROMA_KEY.erosion)))),
+    lumaThreshold: normalizeUnit(chromaKey?.lumaThreshold, DEFAULT_CHROMA_KEY.lumaThreshold),
+    lumaTolerance: normalizeUnit(chromaKey?.lumaTolerance, DEFAULT_CHROMA_KEY.lumaTolerance),
+    lumaSoftness: normalizeUnit(chromaKey?.lumaSoftness, DEFAULT_CHROMA_KEY.lumaSoftness),
+    differenceReferenceTime: round(Math.max(0, finiteOrDefault(chromaKey?.differenceReferenceTime, DEFAULT_CHROMA_KEY.differenceReferenceTime))),
+    differenceThreshold: normalizeUnit(chromaKey?.differenceThreshold, DEFAULT_CHROMA_KEY.differenceThreshold)
   };
 }
 
@@ -1064,6 +1084,10 @@ function normalizeChromaKeyColors(chromaKey: Partial<ChromaKey> | undefined): Ch
   const candidates = Array.isArray(chromaKey?.colors) && chromaKey.colors.length > 0 ? chromaKey.colors : [chromaKey?.color ?? DEFAULT_CHROMA_KEY.color];
   const colors = candidates.slice(0, MAX_CHROMA_KEY_COLORS).map((color) => normalizeRgbColor(color));
   return colors.length > 0 ? colors : [[...DEFAULT_CHROMA_KEY.color]];
+}
+
+function normalizeChromaKeyMode(mode: ChromaKeyMode | undefined): ChromaKeyMode {
+  return mode === 'luma-key' || mode === 'difference-matte' || mode === 'chroma-key' ? mode : DEFAULT_CHROMA_KEY.mode;
 }
 
 function normalizeRgbChannel(value: number | undefined): number {

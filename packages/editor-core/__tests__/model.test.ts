@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   DEFAULT_PROJECT_SETTINGS,
+  DEFAULT_CHROMA_KEY,
   DEFAULT_SLOW_MOTION_MODE,
   DEFAULT_NESTED_SEQUENCE_NAME,
   DEFAULT_TEXT_STYLE,
@@ -111,13 +112,12 @@ describe('model factories', () => {
 
   it('normalizes chroma key and mask defaults with bounded values', () => {
     expect(normalizeChromaKey({ enabled: true, color: [-10, 128.4, 999], similarity: 4, blend: -2 })).toEqual({
+      ...DEFAULT_CHROMA_KEY,
       enabled: true,
       color: [0, 128, 255],
       colors: [[0, 128, 255]],
       similarity: 1,
-      blend: 0,
-      spillSuppression: false,
-      erosion: 0
+      blend: 0
     });
     expect(
       normalizeChromaKey({
@@ -131,6 +131,7 @@ describe('model factories', () => {
         erosion: 99
       })
     ).toEqual({
+      ...DEFAULT_CHROMA_KEY,
       enabled: false,
       color: [0, 255, 0],
       colors: [
@@ -138,20 +139,10 @@ describe('model factories', () => {
         [0, 0, 255],
         [255, 0, 125]
       ],
-      similarity: 0.1,
-      blend: 0.05,
       spillSuppression: true,
       erosion: 5
     });
-    expect(normalizeChromaKey(undefined)).toEqual({
-      enabled: false,
-      color: [0, 255, 0],
-      colors: [[0, 255, 0]],
-      similarity: 0.1,
-      blend: 0.05,
-      spillSuppression: false,
-      erosion: 0
-    });
+    expect(normalizeChromaKey(undefined)).toEqual(DEFAULT_CHROMA_KEY);
 
     const mask = createMask({ id: 'mask-a', type: 'ellipse', x: 0.9, y: -1, w: 0.4, h: 0, feather: 4, inverted: true });
     expect(mask).toEqual({ id: 'mask-a', type: 'ellipse', x: 0.6, y: 0, w: 0.4, h: 0.001, feather: 1, inverted: true, enabled: true });
