@@ -58,6 +58,8 @@ import { cssColorToFfmpeg, escapeDrawtextValue, formatFfmpegSeconds, normalizeFf
 import type {
   ExportClip,
   ExportClipKeyframes,
+  ExportAudioVisualizationBackground,
+  ExportAudioVisualizationSettings,
   ExportKeyframe,
   ExportLoudnessNormalization,
   ExportVideoProfile,
@@ -101,7 +103,12 @@ export const DEFAULT_EXPORT_SETTINGS: Omit<ExportSettings, 'outputPath'> = {
   loudnessNormalization: 'off',
   platformPreset: undefined,
   videoProfile: undefined,
-  watermark: null
+  watermark: null,
+  audioVisualization: {
+    style: 'waveform-line',
+    color: '#22d3ee',
+    background: { type: 'solid', color: '#050816' }
+  }
 };
 
 export const SETPTS_EXPRESSION_LIMIT = 4096;
@@ -285,7 +292,9 @@ export function buildFfmpegExportPlan(
 ): FfmpegExportPlan {
   const duration = Math.max(project.timeline.duration, 0.001);
   const settings = normalizeSettingsForExportFormat(project.settings);
-  const audioOnly = settings.outputMode === 'audio' || settings.format === 'm4a';
+  const audioVisualization = settings.outputMode === 'audio-visualization';
+  const audioOnly = !audioVisualization && (settings.outputMode === 'audio' || settings.format === 'm4a');
+  const audioVisualizationSettings = audioVisualization ? normalizeExportAudioVisualization(settings.audioVisualization) : undefined;
   const pngSequence = settings.format === 'png-sequence';
   const gifExport = settings.format === 'gif';
   const webpAnimation = settings.format === 'webp';
@@ -293,7 +302,7 @@ export function buildFfmpegExportPlan(
   const animatedImage = gifExport || webpAnimation || apngExport;
   const frameExportTime = options.frameExport ? Math.min(duration, Math.max(0, options.frameExport.time)) : null;
   const videoFramesOnly = frameExportTime !== null || pngSequence || animatedImage;
-  const watermark = !audioOnly && !videoFramesOnly ? normalizeExportWatermark(settings.watermark) : null;
+  const watermark = !audioOnly && !videoFramesOnly && !audioVisualization ? normalizeExportWatermark(settings.watermark) : null;
   const warnings: string[] = [];
   const inputs: FfmpegInput[] = [];
   const visualInputByClipId = new Map<string, number>();
@@ -313,7 +322,7 @@ export function buildFfmpegExportPlan(
     ...clip,
     start: playbackStartByClipId.get(clip.id) ?? clip.start
   }));
-  const audioSpectrumEffects = !audioOnly && !videoFramesOnly ? collectAudioSpectrumEffects(orderedPlaybackClips) : [];
+  const audioSpectrumEffects = !audioOnly && !videoFramesOnly && !audioVisualization ? collectAudioSpectrumEffects(orderedPlaybackClips) : [];
 
   for (const clip of orderedClips) {
     if (!clip.mediaPath || clip.type === 'text' || clip.type === 'subtitle') {
@@ -354,6 +363,15 @@ export function buildFfmpegExportPlan(
   }
 
   let imageWatermarkInputIndex: number | undefined;
+  let audioVisualizationBackgroundImageInputIndex: number | undefined;
+  if (audioVisualizationSettings?.background.type === 'image') {
+    audioVisualizationBackgroundImageInputIndex = inputs.length;
+    inputs.push({
+      index: audioVisualizationBackgroundImageInputIndex,
+      path: normalizeFfmpegPath(audioVisualizationSettings.background.path),
+      args: ['-loop', '1', '-t', formatFfmpegSeconds(duration)]
+    });
+  }
   if (watermark?.enabled && watermark.type === 'image') {
     imageWatermarkInputIndex = inputs.length;
     inputs.push({
@@ -367,55 +385,61 @@ export function buildFfmpegExportPlan(
   let videoStep = 0;
 
   if (!audioOnly) {
-    filters.push(`color=c=black:s=${settings.width}x${settings.height}:r=${settings.fps}:d=${formatFfmpegSeconds(duration)}[base0]`);
+    if (audioVisualizationSettings) {
+      filters.push(...buildAudioVisualizationBackgroundFilters(audioVisualizationSettings.background, settings, duration, audioVisualizationBackgroundImageInputIndex));
+    } else {
+      filters.push(`color=c=black:s=${settings.width}x${settings.height}:r=${settings.fps}:d=${formatFfmpegSeconds(duration)}[base0]`);
+    }
 
-    const visualItems = buildVisualItems(
-      project.timeline,
-      orderedPlaybackClips,
-      playbackStartByClipId,
-      renderableTrackIndexes,
-      visualInputByClipId,
-      customShaderSequenceClips,
-      settings,
-      filters,
-      warnings,
-      textArtifacts,
-      capabilities
-    );
+    if (!audioVisualization) {
+      const visualItems = buildVisualItems(
+        project.timeline,
+        orderedPlaybackClips,
+        playbackStartByClipId,
+        renderableTrackIndexes,
+        visualInputByClipId,
+        customShaderSequenceClips,
+        settings,
+        filters,
+        warnings,
+        textArtifacts,
+        capabilities
+      );
 
-    for (const item of visualItems) {
-      if (item.kind === 'adjustment') {
-        const nextVideo = `base${videoStep + 1}`;
-        const adjustmentFilters = buildAdjustmentLayerFilters(currentVideo, nextVideo, item.clip, textArtifacts);
-        if (adjustmentFilters.length > 0) {
-          filters.push(...adjustmentFilters);
-          currentVideo = nextVideo;
-          videoStep += 1;
-        }
-        continue;
-      }
-      if (item.kind === 'text') {
-        if (capabilities && (!capabilities.hasDrawtext || !capabilities.hasLibfreetype)) {
-          warnings.push(capabilities.drawtextWarning ?? `Text clip ${item.clip.id} was skipped because FFmpeg drawtext/libfreetype is unavailable.`);
+      for (const item of visualItems) {
+        if (item.kind === 'adjustment') {
+          const nextVideo = `base${videoStep + 1}`;
+          const adjustmentFilters = buildAdjustmentLayerFilters(currentVideo, nextVideo, item.clip, textArtifacts);
+          if (adjustmentFilters.length > 0) {
+            filters.push(...adjustmentFilters);
+            currentVideo = nextVideo;
+            videoStep += 1;
+          }
           continue;
         }
+        if (item.kind === 'text') {
+          if (capabilities && (!capabilities.hasDrawtext || !capabilities.hasLibfreetype)) {
+            warnings.push(capabilities.drawtextWarning ?? `Text clip ${item.clip.id} was skipped because FFmpeg drawtext/libfreetype is unavailable.`);
+            continue;
+          }
+          const nextVideo = `base${videoStep + 1}`;
+          const { filter, artifact } = buildTextFilter(currentVideo, nextVideo, item.clip, settings);
+          filters.push(filter);
+          textArtifacts.push(artifact);
+          currentVideo = nextVideo;
+          videoStep += 1;
+          continue;
+        }
+
         const nextVideo = `base${videoStep + 1}`;
-        const { filter, artifact } = buildTextFilter(currentVideo, nextVideo, item.clip, settings);
-        filters.push(filter);
-        textArtifacts.push(artifact);
+        filters.push(
+          `[${currentVideo}][${item.label}]overlay=x='${item.xExpression}':y='${item.yExpression}':eval=frame:enable='between(t,${formatFfmpegSeconds(
+            item.start
+          )},${formatFfmpegSeconds(item.start + item.duration)})'[${nextVideo}]`
+        );
         currentVideo = nextVideo;
         videoStep += 1;
-        continue;
       }
-
-      const nextVideo = `base${videoStep + 1}`;
-      filters.push(
-        `[${currentVideo}][${item.label}]overlay=x='${item.xExpression}':y='${item.yExpression}':eval=frame:enable='between(t,${formatFfmpegSeconds(
-          item.start
-        )},${formatFfmpegSeconds(item.start + item.duration)})'[${nextVideo}]`
-      );
-      currentVideo = nextVideo;
-      videoStep += 1;
     }
   }
 
@@ -441,15 +465,17 @@ export function buildFfmpegExportPlan(
   }
 
   let loudnessAnalysisFilterComplex: string | undefined;
+  const audioVisualizationAudioLabel = audioVisualization ? 'audio_visualization_mix' : undefined;
   if (!videoFramesOnly) {
     const masterVolume = normalizeMasterVolume(project.masterVolume);
     const audioFilters: string[] = [];
     const audioLabels = buildAudioFilters(orderedPlaybackClips, audioInputByClipId, settings, audioFilters, capabilities, warnings);
     const loudnessPreset = audioLabels.length > 0 ? getLoudnessNormalizationPreset(settings.loudnessNormalization) : undefined;
     const spectrumSplitLabels = audioSpectrumEffects.map((_, index) => `spectrum_audio_${index}`);
-    const needsSpectrumSplit = spectrumSplitLabels.length > 0;
+    const audioSplitLabels = [...spectrumSplitLabels, ...(audioVisualizationAudioLabel ? [audioVisualizationAudioLabel] : [])];
+    const needsAudioSplit = audioSplitLabels.length > 0;
     const finalAudioLabel = loudnessPreset ? 'apremaster' : 'aout';
-    const mixedAudioLabel = needsSpectrumSplit ? (loudnessPreset ? 'apremaster_mix' : 'amixout') : finalAudioLabel;
+    const mixedAudioLabel = needsAudioSplit ? (loudnessPreset ? 'apremaster_mix' : 'amixout') : finalAudioLabel;
     if (audioLabels.length === 0) {
       audioFilters.push(`anullsrc=channel_layout=stereo:sample_rate=${settings.sampleRate}:d=${formatFfmpegSeconds(duration)},volume=${formatVolume(masterVolume)}[${mixedAudioLabel}]`);
     } else {
@@ -461,18 +487,18 @@ export function buildFfmpegExportPlan(
     }
     if (loudnessPreset) {
       loudnessAnalysisFilterComplex = [...audioFilters, `[${mixedAudioLabel}]${buildLoudnormAnalysisFilter(loudnessPreset)}[aout]`].join(';');
-      if (needsSpectrumSplit) {
+      if (needsAudioSplit) {
         filters.push(
           ...audioFilters,
-          `[${mixedAudioLabel}]asplit=${spectrumSplitLabels.length + 1}[${finalAudioLabel}]${spectrumSplitLabels.map((label) => `[${label}]`).join('')}`,
+          `[${mixedAudioLabel}]asplit=${audioSplitLabels.length + 1}[${finalAudioLabel}]${audioSplitLabels.map((label) => `[${label}]`).join('')}`,
           `[${finalAudioLabel}]${buildLoudnormRenderFilter(loudnessPreset)}[aout]`
         );
       } else {
         filters.push(...audioFilters, `[${mixedAudioLabel}]${buildLoudnormRenderFilter(loudnessPreset)}[aout]`);
       }
     } else {
-      if (needsSpectrumSplit) {
-        filters.push(...audioFilters, `[${mixedAudioLabel}]asplit=${spectrumSplitLabels.length + 1}[aout]${spectrumSplitLabels.map((label) => `[${label}]`).join('')}`);
+      if (needsAudioSplit) {
+        filters.push(...audioFilters, `[${mixedAudioLabel}]asplit=${audioSplitLabels.length + 1}[aout]${audioSplitLabels.map((label) => `[${label}]`).join('')}`);
       } else {
         filters.push(...audioFilters);
       }
@@ -492,6 +518,16 @@ export function buildFfmpegExportPlan(
       currentVideo = nextVideo;
       videoStep += 1;
     });
+  }
+
+  if (!audioOnly && !videoFramesOnly && audioVisualizationSettings && audioVisualizationAudioLabel) {
+    const visualizationLabel = 'audio_visualization_layer';
+    filters.push(buildAudioVisualizationFilter(audioVisualizationAudioLabel, visualizationLabel, audioVisualizationSettings, settings));
+    const nextVideo = `base${videoStep + 1}`;
+    const position = buildAudioVisualizationOverlayPosition(audioVisualizationSettings.style, settings);
+    filters.push(`[${currentVideo}][${visualizationLabel}]overlay=x='${position.x}':y='${position.y}':eval=frame[${nextVideo}]`);
+    currentVideo = nextVideo;
+    videoStep += 1;
   }
 
   if (watermark?.enabled) {
@@ -581,7 +617,8 @@ function normalizeExportReframeSettings(settings: ExportSettings): ExportSetting
     reframeOffsetY: clampReframeOffset(settings.reframeOffsetY),
     loudnessNormalization: normalizeLoudnessNormalization(settings.loudnessNormalization),
     videoProfile: normalizeVideoProfile(settings.videoProfile),
-    watermark: normalizeExportWatermark(settings.watermark)
+    watermark: normalizeExportWatermark(settings.watermark),
+    audioVisualization: normalizeExportAudioVisualization(settings.audioVisualization)
   };
 }
 
@@ -1604,6 +1641,91 @@ function buildAudioSpectrumOverlayYExpression(params: AudioSpectrumParams): stri
   return params.position === 'top' ? '0' : 'main_h-overlay_h';
 }
 
+function buildAudioVisualizationBackgroundFilters(background: ExportAudioVisualizationBackground, settings: ExportSettings, duration: number, imageInputIndex?: number): string[] {
+  const width = Math.max(2, Math.round(settings.width));
+  const height = Math.max(2, Math.round(settings.height));
+  const fps = Math.max(1, Math.round(settings.fps));
+  if (background.type === 'image' && imageInputIndex !== undefined) {
+    return [
+      `[${imageInputIndex}:v]scale=${width}:${height}:force_original_aspect_ratio=increase,crop=${width}:${height},fps=${fps},format=rgba[base0]`
+    ];
+  }
+  if (background.type === 'gradient') {
+    const start = parseHexColor(background.color, '#050816');
+    const end = parseHexColor(background.color2, '#1d4ed8');
+    return [
+      `color=c=${cssColorToFfmpeg(background.color)}:s=${width}x${height}:r=${fps}:d=${formatFfmpegSeconds(
+        duration
+      )},format=rgba,geq=r='${buildGradientChannelExpression(start.r, end.r)}':g='${buildGradientChannelExpression(
+        start.g,
+        end.g
+      )}':b='${buildGradientChannelExpression(start.b, end.b)}':a='255'[base0]`
+    ];
+  }
+  const solidColor = background.type === 'image' ? '#050816' : background.color;
+  return [`color=c=${cssColorToFfmpeg(solidColor)}:s=${width}x${height}:r=${fps}:d=${formatFfmpegSeconds(duration)},format=rgba[base0]`];
+}
+
+function buildAudioVisualizationFilter(inputLabel: string, outputLabel: string, visualization: ExportAudioVisualizationSettings, settings: ExportSettings): string {
+  const width = Math.max(2, Math.round(settings.width));
+  const height = Math.max(2, Math.round(settings.height));
+  const color = cssColorToFfmpeg(visualization.color);
+  const alphaFilters = 'format=rgba,colorkey=0x000000:0.08:0.12,colorchannelmixer=aa=0.95';
+  if (visualization.style === 'waveform-line') {
+    return `[${inputLabel}]showwaves=s=${width}x${height}:mode=line:colors=${color},${alphaFilters}[${outputLabel}]`;
+  }
+  if (visualization.style === 'circular-spectrum') {
+    const size = Math.max(2, Math.round(Math.min(width, height) * 0.72));
+    return `[${inputLabel}]showfreqs=s=${size}x${size}:mode=line:ascale=log:colors=${color},${alphaFilters}[${outputLabel}]`;
+  }
+  return `[${inputLabel}]showfreqs=s=${width}x${height}:mode=bar:ascale=log:colors=${color},${alphaFilters}[${outputLabel}]`;
+}
+
+function buildAudioVisualizationOverlayPosition(style: ExportAudioVisualizationSettings['style'], _settings: ExportSettings): { x: string; y: string } {
+  if (style === 'circular-spectrum') {
+    return { x: '(main_w-overlay_w)/2', y: '(main_h-overlay_h)/2' };
+  }
+  return { x: '0', y: '0' };
+}
+
+function normalizeHexColor(value: string | undefined, fallback: string): string {
+  const parsed = parseHexColor(value ?? '', fallback);
+  return `#${toHexChannel(parsed.r)}${toHexChannel(parsed.g)}${toHexChannel(parsed.b)}`;
+}
+
+function parseHexColor(value: string, fallback: string): { r: number; g: number; b: number } {
+  const normalized = value.trim().replace(/^#/, '');
+  if (/^[0-9a-fA-F]{6}$/.test(normalized)) {
+    return {
+      r: Number.parseInt(normalized.slice(0, 2), 16),
+      g: Number.parseInt(normalized.slice(2, 4), 16),
+      b: Number.parseInt(normalized.slice(4, 6), 16)
+    };
+  }
+  if (/^[0-9a-fA-F]{3}$/.test(normalized)) {
+    return {
+      r: Number.parseInt(normalized[0] + normalized[0], 16),
+      g: Number.parseInt(normalized[1] + normalized[1], 16),
+      b: Number.parseInt(normalized[2] + normalized[2], 16)
+    };
+  }
+  if (value === fallback) {
+    return { r: 5, g: 8, b: 22 };
+  }
+  return parseHexColor(fallback, '#050816');
+}
+
+function buildGradientChannelExpression(start: number, end: number): string {
+  if (start === end) {
+    return String(start);
+  }
+  return `${start}+(${end - start})*Y/max(H-1,1)`;
+}
+
+function toHexChannel(value: number): string {
+  return Math.round(Math.min(255, Math.max(0, value))).toString(16).padStart(2, '0');
+}
+
 function buildInputArgs(clip: ExportClip): string[] {
   if (clip.imageSequence) {
     return ['-f', 'concat', '-safe', '0'];
@@ -1911,6 +2033,39 @@ function normalizeLoudnessNormalization(mode: ExportLoudnessNormalization | unde
 
 function normalizeVideoProfile(profile: ExportVideoProfile | undefined): ExportVideoProfile | undefined {
   return profile === 'baseline' || profile === 'main' || profile === 'high' ? profile : undefined;
+}
+
+function normalizeExportAudioVisualization(input: ExportAudioVisualizationSettings | undefined): ExportAudioVisualizationSettings {
+  const defaultVisualization = DEFAULT_EXPORT_SETTINGS.audioVisualization!;
+  const style =
+    input?.style === 'spectrum-bars' || input?.style === 'circular-spectrum' || input?.style === 'waveform-line'
+      ? input.style
+      : defaultVisualization.style;
+  return {
+    style,
+    color: normalizeHexColor(input?.color, defaultVisualization.color),
+    background: normalizeAudioVisualizationBackground(input?.background, defaultVisualization.background)
+  };
+}
+
+function normalizeAudioVisualizationBackground(
+  input: ExportAudioVisualizationBackground | undefined,
+  fallback: ExportAudioVisualizationBackground
+): ExportAudioVisualizationBackground {
+  if (input?.type === 'image' && input.path.trim()) {
+    return { type: 'image', path: input.path.trim() };
+  }
+  if (input?.type === 'gradient') {
+    return {
+      type: 'gradient',
+      color: normalizeHexColor(input.color, fallback.type === 'gradient' || fallback.type === 'solid' ? fallback.color : '#050816'),
+      color2: normalizeHexColor(input.color2, fallback.type === 'gradient' ? fallback.color2 : '#1d4ed8')
+    };
+  }
+  if (input?.type === 'solid') {
+    return { type: 'solid', color: normalizeHexColor(input.color, fallback.type === 'solid' || fallback.type === 'gradient' ? fallback.color : '#050816') };
+  }
+  return fallback;
 }
 
 function buildLoudnormAnalysisFilter(preset: LoudnessNormalizationPreset): string {

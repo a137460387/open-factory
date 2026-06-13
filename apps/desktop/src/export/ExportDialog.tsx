@@ -5,6 +5,8 @@ import {
   runExportPreflight,
   normalizeTargetAspectRatio,
   resolveReframeDimensions,
+  type ExportAudioVisualizationBackground,
+  type ExportAudioVisualizationStyle,
   type ExportTaskStatus,
   type ExportTaskPriority,
   type ExportLoudnessNormalization,
@@ -56,6 +58,14 @@ const WATERMARK_POSITIONS: ExportWatermarkPosition[] = [
   'bottom-center',
   'bottom-right'
 ];
+const AUDIO_VISUALIZATION_FORMATS = ['mp4', 'mov', 'webm'];
+const AUDIO_VISUALIZATION_STYLES: ExportAudioVisualizationStyle[] = ['waveform-line', 'spectrum-bars', 'circular-spectrum'];
+const AUDIO_VISUALIZATION_BACKGROUND_TYPES: ExportAudioVisualizationBackground['type'][] = ['solid', 'gradient', 'image'];
+const DEFAULT_AUDIO_VISUALIZATION: NonNullable<ExportPresetSettings['audioVisualization']> = {
+  style: 'waveform-line',
+  color: '#22d3ee',
+  background: { type: 'solid', color: '#050816' }
+};
 
 export function ExportDialog({ project, initialPreset, onClose, onCompleted, onRelinkMissing }: ExportDialogProps) {
   const t = zhCN.exportDialog;
@@ -80,7 +90,9 @@ export function ExportDialog({ project, initialPreset, onClose, onCompleted, onR
   const notifiedSuccess = useRef(new Set<string>());
   const selectedPreset = useMemo(() => getExportPreset(presetId, presets), [presetId, presets]);
   const exportSettings = useMemo(() => normalizeDraftSettings(draftSettings), [draftSettings]);
-  const isAudioOnly = exportSettings.outputMode === 'audio' || exportSettings.format === 'm4a';
+  const isAudioVisualization = exportSettings.outputMode === 'audio-visualization';
+  const isAudioOnly = !isAudioVisualization && (exportSettings.outputMode === 'audio' || exportSettings.format === 'm4a');
+  const timelineVisualControlsDisabled = isAudioOnly || isAudioVisualization;
   const loudnessNormalizationEligible = supportsLoudnessNormalization(exportSettings.format ?? 'mp4', exportSettings.outputMode);
   const estimatedSize = useMemo(() => {
     const dimensions = estimateDimensions(exportSettings.width ?? project.settings.width, exportSettings.height ?? project.settings.height, exportSettings.format ?? 'mp4');
@@ -99,6 +111,7 @@ export function ExportDialog({ project, initialPreset, onClose, onCompleted, onR
   }, [exportSettings, project.settings.fps, project.settings.height, project.settings.width, project.timeline]);
   const hardwareEncodingEligible = !isAudioOnly && (exportSettings.format === 'mp4' || exportSettings.format === 'mov');
   const hardwareEncodingRequested = hardwareEncodingEligible && exportSettings.hardwareEncoding === true;
+  const formatOptions = isAudioVisualization ? AUDIO_VISUALIZATION_FORMATS : ['mp4', 'mov', 'webm', 'm4a', 'gif', 'webp', 'apng', 'png-sequence'];
 
   useEffect(() => {
     let canceled = false;
@@ -173,6 +186,17 @@ export function ExportDialog({ project, initialPreset, onClose, onCompleted, onR
       }
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : t.watermark.chooseImageFailed);
+    }
+  }
+
+  async function chooseAudioVisualizationBackgroundImage(): Promise<void> {
+    try {
+      const [path] = await openFileDialog(false, [{ name: t.audioVisualization.backgroundImageFilter, extensions: ['png', 'jpg', 'jpeg', 'webp'] }]);
+      if (path) {
+        updateAudioVisualizationBackgroundImagePath(setDraftSettings, path);
+      }
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : t.audioVisualization.chooseImageFailed);
     }
   }
 
@@ -331,18 +355,25 @@ export function ExportDialog({ project, initialPreset, onClose, onCompleted, onR
             </button>
           </div>
           <div className="grid grid-cols-2 gap-3 rounded-md border border-line p-3 md:grid-cols-4">
+            <PresetSelectField
+              label={t.fields.outputMode}
+              value={exportSettings.outputMode ?? 'video'}
+              onChange={(value) => updateOutputMode(setDraftSettings, value)}
+              testId="export-output-mode-select"
+              options={['video', 'audio', 'audio-visualization']}
+            />
             <PresetNumberField label={t.fields.width} value={draftSettings.width} disabled={isAudioOnly} onChange={(value) => updateNumberSetting(setDraftSettings, 'width', value)} testId="export-width-input" />
             <PresetNumberField label={t.fields.height} value={draftSettings.height} disabled={isAudioOnly} onChange={(value) => updateNumberSetting(setDraftSettings, 'height', value)} testId="export-height-input" />
             <PresetNumberField label={t.fields.fps} value={draftSettings.fps} disabled={isAudioOnly} onChange={(value) => updateNumberSetting(setDraftSettings, 'fps', value)} testId="export-fps-input" />
-            <PresetSelectField label={t.fields.format} value={exportSettings.format ?? 'mp4'} onChange={(value) => updateFormat(setDraftSettings, value)} testId="export-format-select" options={['mp4', 'mov', 'webm', 'm4a', 'gif', 'webp', 'apng', 'png-sequence']} />
+            <PresetSelectField label={t.fields.format} value={exportSettings.format ?? 'mp4'} onChange={(value) => updateFormat(setDraftSettings, value)} testId="export-format-select" options={formatOptions} />
             <PresetTextField label={t.fields.videoBitrate} value={draftSettings.videoBitrate ?? ''} disabled={isAudioOnly} onChange={(value) => updateStringSetting(setDraftSettings, 'videoBitrate', value)} testId="export-video-bitrate-input" />
             <PresetTextField label={t.fields.audioBitrate} value={draftSettings.audioBitrate ?? ''} onChange={(value) => updateStringSetting(setDraftSettings, 'audioBitrate', value)} testId="export-audio-bitrate-input" />
-            <PresetSelectField label={t.fields.subtitles} value={draftSettings.subtitleMode ?? 'default'} disabled={isAudioOnly} onChange={(value) => updateSubtitleMode(setDraftSettings, value)} testId="export-subtitle-mode-select" options={['default', 'burn-in', 'soft-sub']} />
-            <PresetSelectField label={t.fields.scale} value={draftSettings.scaleMode ?? 'none'} disabled={isAudioOnly} onChange={(value) => updateScaleMode(setDraftSettings, value)} testId="export-scale-mode-select" options={['none', 'fit']} />
+            <PresetSelectField label={t.fields.subtitles} value={draftSettings.subtitleMode ?? 'default'} disabled={timelineVisualControlsDisabled} onChange={(value) => updateSubtitleMode(setDraftSettings, value)} testId="export-subtitle-mode-select" options={['default', 'burn-in', 'soft-sub']} />
+            <PresetSelectField label={t.fields.scale} value={draftSettings.scaleMode ?? 'none'} disabled={timelineVisualControlsDisabled} onChange={(value) => updateScaleMode(setDraftSettings, value)} testId="export-scale-mode-select" options={['none', 'fit']} />
             <PresetSelectField
               label={t.fields.targetAspectRatio}
               value={exportSettings.targetAspectRatio ?? 'source'}
-              disabled={isAudioOnly}
+              disabled={timelineVisualControlsDisabled}
               onChange={(value) => updateTargetAspectRatio(setDraftSettings, value)}
               testId="export-target-aspect-select"
               options={[...TARGET_ASPECT_RATIOS]}
@@ -363,14 +394,21 @@ export function ExportDialog({ project, initialPreset, onClose, onCompleted, onR
               options={['off', 'youtube', 'ebu-r128']}
             />
           </div>
-          {!isAudioOnly && exportSettings.targetAspectRatio && exportSettings.targetAspectRatio !== 'source' ? (
+          {isAudioVisualization ? (
+            <AudioVisualizationSection
+              visualization={exportSettings.audioVisualization ?? DEFAULT_AUDIO_VISUALIZATION}
+              setDraftSettings={setDraftSettings}
+              onChooseImage={() => void chooseAudioVisualizationBackgroundImage()}
+            />
+          ) : null}
+          {!timelineVisualControlsDisabled && exportSettings.targetAspectRatio && exportSettings.targetAspectRatio !== 'source' ? (
             <div className="grid gap-3 rounded-md border border-line p-3 md:grid-cols-[1fr_1fr_160px]">
               <ReframeOffsetField label={t.fields.reframeOffsetX} value={exportSettings.reframeOffsetX ?? 0} axis="x" setDraftSettings={setDraftSettings} />
               <ReframeOffsetField label={t.fields.reframeOffsetY} value={exportSettings.reframeOffsetY ?? 0} axis="y" setDraftSettings={setDraftSettings} />
               <ReframePreviewBox aspect={exportSettings.targetAspectRatio} offsetX={exportSettings.reframeOffsetX ?? 0} offsetY={exportSettings.reframeOffsetY ?? 0} />
             </div>
           ) : null}
-          {!isAudioOnly ? <WatermarkSection watermark={draftSettings.watermark} setDraftSettings={setDraftSettings} onChooseImage={() => void chooseWatermarkImage()} /> : null}
+          {!timelineVisualControlsDisabled ? <WatermarkSection watermark={draftSettings.watermark} setDraftSettings={setDraftSettings} onChooseImage={() => void chooseWatermarkImage()} /> : null}
           <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 md:grid-cols-5">
             <Info label={t.info.resolution} value={isAudioOnly ? zhCN.common.audioOnly : `${exportSettings.width ?? project.settings.width} x ${exportSettings.height ?? project.settings.height}`} />
             <Info label={t.info.fps} value={isAudioOnly ? zhCN.common.audioOnly : String(exportSettings.fps ?? project.settings.fps)} />
@@ -488,26 +526,42 @@ export function ExportDialog({ project, initialPreset, onClose, onCompleted, onR
 }
 
 function normalizeDraftSettings(settings: ExportPresetSettings): ExportPresetSettings {
-  const format = settings.format ?? 'mp4';
+  let format = settings.format ?? 'mp4';
   const animatedImage = format === 'gif' || format === 'webp' || format === 'apng';
-  const outputMode = format === 'm4a' ? 'audio' : animatedImage ? 'video' : settings.outputMode ?? 'video';
-  const hardwareEncoding = outputMode === 'video' && (format === 'mp4' || format === 'mov') && settings.hardwareEncoding === true;
+  let outputMode = settings.outputMode ?? (format === 'm4a' ? 'audio' : 'video');
+  if (outputMode !== 'audio' && outputMode !== 'audio-visualization') {
+    outputMode = 'video';
+  }
+  if (outputMode === 'audio') {
+    format = 'm4a';
+  } else if (outputMode === 'audio-visualization') {
+    format = isAudioVisualizationFormat(format) ? format : 'mp4';
+  } else if (format === 'm4a') {
+    outputMode = 'audio';
+  } else if (animatedImage) {
+    outputMode = 'video';
+  }
+  const normalizedAnimatedImage = format === 'gif' || format === 'webp' || format === 'apng';
+  const hardwareEncoding = outputMode !== 'audio' && (format === 'mp4' || format === 'mov') && settings.hardwareEncoding === true;
   const targetAspectRatio = outputMode === 'video' ? normalizeTargetAspectRatio(settings.targetAspectRatio) : 'source';
   const dimensions = resolveReframeDimensions(settings.width ?? 1280, settings.height ?? 720, targetAspectRatio);
   const loudnessNormalization = supportsLoudnessNormalization(format, outputMode) ? normalizeLoudnessNormalization(settings.loudnessNormalization) : 'off';
-  const watermark = outputMode === 'video' && !animatedImage ? (settings.watermark ?? null) : null;
+  const watermark = outputMode === 'video' && !normalizedAnimatedImage ? (settings.watermark ?? null) : null;
   return {
     ...settings,
     width: targetAspectRatio === 'source' ? settings.width : dimensions.width,
     height: targetAspectRatio === 'source' ? settings.height : dimensions.height,
     format,
     outputMode,
+    videoCodec: outputMode !== 'audio' ? normalizeVideoCodecForFormat(format, settings.videoCodec) : settings.videoCodec,
+    audioCodec: normalizeAudioCodecForFormat(format, settings.audioCodec),
     hardwareEncoding,
     loudnessNormalization,
     targetAspectRatio,
     reframeOffsetX: clampReframeOffset(settings.reframeOffsetX),
     reframeOffsetY: clampReframeOffset(settings.reframeOffsetY),
-    watermark
+    watermark,
+    audioVisualization: normalizeAudioVisualizationDraft(settings.audioVisualization)
   };
 }
 
@@ -536,6 +590,46 @@ function updateStringSetting(
   setDraftSettings((current) => ({ ...current, [key]: value.trim() || null }));
 }
 
+function updateOutputMode(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, value: string): void {
+  setDraftSettings((current) => {
+    if (value === 'audio') {
+      return {
+        ...current,
+        outputMode: 'audio',
+        format: 'm4a',
+        audioCodec: 'aac',
+        videoBitrate: null,
+        watermark: null,
+        targetAspectRatio: 'source',
+        hardwareEncoding: false
+      };
+    }
+    if (value === 'audio-visualization') {
+      const format = isAudioVisualizationFormat(current.format) ? current.format : 'mp4';
+      return {
+        ...current,
+        outputMode: 'audio-visualization',
+        format,
+        videoCodec: normalizeVideoCodecForFormat(format, current.videoCodec),
+        audioCodec: normalizeAudioCodecForFormat(format, current.audioCodec),
+        audioVisualization: normalizeAudioVisualizationDraft(current.audioVisualization),
+        scaleMode: 'none',
+        targetAspectRatio: 'source',
+        watermark: null
+      };
+    }
+    const format = current.format === 'm4a' ? 'mp4' : (current.format ?? 'mp4');
+    return {
+      ...current,
+      outputMode: 'video',
+      format,
+      videoCodec: normalizeVideoCodecForFormat(format, current.videoCodec),
+      audioCodec: normalizeAudioCodecForFormat(format, current.audioCodec),
+      hardwareEncoding: format === 'mp4' || format === 'mov' ? current.hardwareEncoding : false
+    };
+  });
+}
+
 function updateFormat(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, value: string): void {
   setDraftSettings((current) => {
     const next: ExportPresetSettings = { ...current, format: value };
@@ -548,7 +642,14 @@ function updateFormat(setDraftSettings: Dispatch<SetStateAction<ExportPresetSett
       return next;
     }
     if (value === 'png-sequence') {
-      next.outputMode = 'video';
+      next.outputMode = current.outputMode === 'audio-visualization' ? 'audio-visualization' : 'video';
+      if (next.outputMode === 'audio-visualization') {
+        next.format = 'mp4';
+        next.videoCodec = 'libx264';
+        next.audioCodec = 'aac';
+        next.audioVisualization = normalizeAudioVisualizationDraft(current.audioVisualization);
+        return next;
+      }
       next.videoCodec = 'png';
       next.audioCodec = 'aac';
       delete next.videoBitrate;
@@ -557,7 +658,14 @@ function updateFormat(setDraftSettings: Dispatch<SetStateAction<ExportPresetSett
       return next;
     }
     if (value === 'gif') {
-      next.outputMode = 'video';
+      next.outputMode = current.outputMode === 'audio-visualization' ? 'audio-visualization' : 'video';
+      if (next.outputMode === 'audio-visualization') {
+        next.format = 'mp4';
+        next.videoCodec = 'libx264';
+        next.audioCodec = 'aac';
+        next.audioVisualization = normalizeAudioVisualizationDraft(current.audioVisualization);
+        return next;
+      }
       next.videoCodec = 'gif';
       next.audioCodec = 'aac';
       next.fps = Math.min(30, next.fps ?? 30);
@@ -566,20 +674,34 @@ function updateFormat(setDraftSettings: Dispatch<SetStateAction<ExportPresetSett
       return next;
     }
     if (value === 'webp') {
-      next.outputMode = 'video';
+      next.outputMode = current.outputMode === 'audio-visualization' ? 'audio-visualization' : 'video';
+      if (next.outputMode === 'audio-visualization') {
+        next.format = 'mp4';
+        next.videoCodec = 'libx264';
+        next.audioCodec = 'aac';
+        next.audioVisualization = normalizeAudioVisualizationDraft(current.audioVisualization);
+        return next;
+      }
       next.videoCodec = 'libwebp_anim';
       next.audioCodec = 'aac';
       delete next.hardwareEncoding;
       return next;
     }
     if (value === 'apng') {
-      next.outputMode = 'video';
+      next.outputMode = current.outputMode === 'audio-visualization' ? 'audio-visualization' : 'video';
+      if (next.outputMode === 'audio-visualization') {
+        next.format = 'mp4';
+        next.videoCodec = 'libx264';
+        next.audioCodec = 'aac';
+        next.audioVisualization = normalizeAudioVisualizationDraft(current.audioVisualization);
+        return next;
+      }
       next.videoCodec = 'apng';
       next.audioCodec = 'aac';
       delete next.hardwareEncoding;
       return next;
     }
-    next.outputMode = 'video';
+    next.outputMode = current.outputMode === 'audio-visualization' && isAudioVisualizationFormat(value) ? 'audio-visualization' : 'video';
     if (value === 'webm') {
       next.videoCodec = 'libvpx-vp9';
       next.audioCodec = 'libopus';
@@ -588,8 +710,164 @@ function updateFormat(setDraftSettings: Dispatch<SetStateAction<ExportPresetSett
       next.videoCodec = 'libx264';
       next.audioCodec = 'aac';
     }
+    if (next.outputMode === 'audio-visualization') {
+      next.audioVisualization = normalizeAudioVisualizationDraft(current.audioVisualization);
+      next.scaleMode = 'none';
+      next.targetAspectRatio = 'source';
+      next.watermark = null;
+    }
     return next;
   });
+}
+
+function normalizeVideoCodecForFormat(format: string, current?: string): string {
+  if (format === 'webm') {
+    return 'libvpx-vp9';
+  }
+  if (format === 'gif') {
+    return 'gif';
+  }
+  if (format === 'webp') {
+    return 'libwebp_anim';
+  }
+  if (format === 'apng') {
+    return 'apng';
+  }
+  if (format === 'png-sequence') {
+    return 'png';
+  }
+  return current && current !== 'gif' && current !== 'libwebp_anim' && current !== 'apng' && current !== 'png' && current !== 'libvpx-vp9'
+    ? current
+    : 'libx264';
+}
+
+function normalizeAudioCodecForFormat(format: string, current?: string): string {
+  if (format === 'webm') {
+    return 'libopus';
+  }
+  return current && current !== 'libopus' ? current : 'aac';
+}
+
+function isAudioVisualizationFormat(format: string | undefined): format is string {
+  return typeof format === 'string' && AUDIO_VISUALIZATION_FORMATS.includes(format);
+}
+
+function normalizeAudioVisualizationDraft(value: ExportPresetSettings['audioVisualization']): NonNullable<ExportPresetSettings['audioVisualization']> {
+  const style = value?.style === 'spectrum-bars' || value?.style === 'circular-spectrum' || value?.style === 'waveform-line' ? value.style : DEFAULT_AUDIO_VISUALIZATION.style;
+  return {
+    style,
+    color: normalizeHexColor(value?.color, DEFAULT_AUDIO_VISUALIZATION.color),
+    background: normalizeAudioVisualizationBackgroundDraft(value?.background)
+  };
+}
+
+function normalizeAudioVisualizationBackgroundDraft(
+  value: NonNullable<ExportPresetSettings['audioVisualization']>['background'] | undefined
+): ExportAudioVisualizationBackground {
+  if (value?.type === 'image' && value.path.trim()) {
+    return { type: 'image', path: value.path.trim() };
+  }
+  if (value?.type === 'gradient') {
+    return {
+      type: 'gradient',
+      color: normalizeHexColor(value.color, '#050816'),
+      color2: normalizeHexColor(value.color2, '#1d4ed8')
+    };
+  }
+  if (value?.type === 'solid') {
+    return { type: 'solid', color: normalizeHexColor(value.color, '#050816') };
+  }
+  return DEFAULT_AUDIO_VISUALIZATION.background;
+}
+
+function normalizeHexColor(value: string | undefined, fallback: string): string {
+  if (typeof value !== 'string') {
+    return fallback;
+  }
+  const normalized = value.trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(normalized)) {
+    return normalized.toLowerCase();
+  }
+  if (/^#[0-9a-fA-F]{3}$/.test(normalized)) {
+    return `#${normalized[1]}${normalized[1]}${normalized[2]}${normalized[2]}${normalized[3]}${normalized[3]}`.toLowerCase();
+  }
+  return fallback;
+}
+
+function updateAudioVisualizationStyle(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, value: string): void {
+  setDraftSettings((current) => ({
+    ...current,
+    audioVisualization: {
+      ...normalizeAudioVisualizationDraft(current.audioVisualization),
+      style: AUDIO_VISUALIZATION_STYLES.includes(value as ExportAudioVisualizationStyle) ? (value as ExportAudioVisualizationStyle) : 'waveform-line'
+    }
+  }));
+}
+
+function updateAudioVisualizationColor(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, value: string): void {
+  setDraftSettings((current) => ({
+    ...current,
+    audioVisualization: {
+      ...normalizeAudioVisualizationDraft(current.audioVisualization),
+      color: normalizeHexColor(value, DEFAULT_AUDIO_VISUALIZATION.color)
+    }
+  }));
+}
+
+function updateAudioVisualizationBackgroundType(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, value: string): void {
+  setDraftSettings((current) => {
+    const visualization = normalizeAudioVisualizationDraft(current.audioVisualization);
+    const type = AUDIO_VISUALIZATION_BACKGROUND_TYPES.includes(value as ExportAudioVisualizationBackground['type'])
+      ? (value as ExportAudioVisualizationBackground['type'])
+      : 'solid';
+    return {
+      ...current,
+      audioVisualization: {
+        ...visualization,
+        background:
+          type === 'image'
+            ? { type: 'image', path: visualization.background.type === 'image' ? visualization.background.path : '' }
+            : type === 'gradient'
+              ? { type: 'gradient', color: backgroundPrimaryColor(visualization.background), color2: '#1d4ed8' }
+              : { type: 'solid', color: backgroundPrimaryColor(visualization.background) }
+      }
+    };
+  });
+}
+
+function updateAudioVisualizationBackgroundColor(
+  setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>,
+  key: 'color' | 'color2',
+  value: string
+): void {
+  setDraftSettings((current) => {
+    const visualization = normalizeAudioVisualizationDraft(current.audioVisualization);
+    const background = visualization.background;
+    if (background.type === 'gradient') {
+      return {
+        ...current,
+        audioVisualization: { ...visualization, background: { ...background, [key]: normalizeHexColor(value, key === 'color' ? '#050816' : '#1d4ed8') } }
+      };
+    }
+    return {
+      ...current,
+      audioVisualization: { ...visualization, background: { type: 'solid', color: normalizeHexColor(value, '#050816') } }
+    };
+  });
+}
+
+function updateAudioVisualizationBackgroundImagePath(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, path: string): void {
+  setDraftSettings((current) => {
+    const visualization = normalizeAudioVisualizationDraft(current.audioVisualization);
+    return {
+      ...current,
+      audioVisualization: { ...visualization, background: { type: 'image', path } }
+    };
+  });
+}
+
+function backgroundPrimaryColor(background: ExportAudioVisualizationBackground): string {
+  return background.type === 'image' ? '#050816' : background.color;
 }
 
 function updateSubtitleMode(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, value: string): void {
@@ -753,6 +1031,89 @@ function supportsLoudnessNormalization(format: string, outputMode: ExportPresetS
     return true;
   }
   return format !== 'gif' && format !== 'webp' && format !== 'apng' && format !== 'png-sequence';
+}
+
+function AudioVisualizationSection({
+  visualization,
+  setDraftSettings,
+  onChooseImage
+}: {
+  visualization: NonNullable<ExportPresetSettings['audioVisualization']>;
+  setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>;
+  onChooseImage(): void;
+}) {
+  const t = zhCN.exportDialog.audioVisualization;
+  const background = visualization.background;
+  const backgroundType = background.type;
+  const backgroundColor = background.type === 'image' ? '#050816' : background.color;
+  const backgroundColor2 = background.type === 'gradient' ? background.color2 : '#1d4ed8';
+  const backgroundPath = background.type === 'image' ? background.path : '';
+
+  return (
+    <section className="rounded-md border border-line p-3" data-testid="export-audio-viz-section">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h3 className="text-xs font-semibold text-slate-700">{t.title}</h3>
+          <p className="mt-0.5 text-[11px] text-slate-500">{t.description}</p>
+        </div>
+      </div>
+      <div className="mt-3 grid gap-3 md:grid-cols-4">
+        <PresetSelectField
+          label={t.style}
+          value={visualization.style}
+          onChange={(value) => updateAudioVisualizationStyle(setDraftSettings, value)}
+          options={[...AUDIO_VISUALIZATION_STYLES]}
+          testId="export-audio-viz-style-select"
+        />
+        <PresetColorField
+          label={t.color}
+          value={visualization.color}
+          onChange={(value) => updateAudioVisualizationColor(setDraftSettings, value)}
+          testId="export-audio-viz-color-input"
+        />
+        <PresetSelectField
+          label={t.backgroundType}
+          value={backgroundType}
+          onChange={(value) => updateAudioVisualizationBackgroundType(setDraftSettings, value)}
+          options={[...AUDIO_VISUALIZATION_BACKGROUND_TYPES]}
+          testId="export-audio-viz-background-select"
+        />
+        {backgroundType === 'image' ? (
+          <div className="space-y-1 text-xs font-medium text-slate-600 md:col-span-2">
+            <span>{t.backgroundImage}</span>
+            <div className="flex gap-2">
+              <input
+                className="min-w-0 flex-1 rounded-md border border-line px-2 py-1.5"
+                value={backgroundPath}
+                onChange={(event) => updateAudioVisualizationBackgroundImagePath(setDraftSettings, event.target.value)}
+                data-testid="export-audio-viz-background-image-input"
+              />
+              <button className="rounded-md border border-line px-2 py-1.5 text-xs font-medium hover:bg-panel" type="button" data-testid="export-audio-viz-background-image-button" onClick={onChooseImage}>
+                {t.chooseImage}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <PresetColorField
+              label={t.backgroundColor}
+              value={backgroundColor}
+              onChange={(value) => updateAudioVisualizationBackgroundColor(setDraftSettings, 'color', value)}
+              testId="export-audio-viz-background-color-input"
+            />
+            {backgroundType === 'gradient' ? (
+              <PresetColorField
+                label={t.backgroundColor2}
+                value={backgroundColor2}
+                onChange={(value) => updateAudioVisualizationBackgroundColor(setDraftSettings, 'color2', value)}
+                testId="export-audio-viz-background-color2-input"
+              />
+            ) : null}
+          </>
+        )}
+      </div>
+    </section>
+  );
 }
 
 function WatermarkSection({
@@ -935,6 +1296,27 @@ function PresetTextField({
     <label className="space-y-1 text-xs font-medium text-slate-600">
       <span>{label}</span>
       <input className="w-full rounded-md border border-line px-2 py-1.5 disabled:bg-slate-100" value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} data-testid={testId} />
+    </label>
+  );
+}
+
+function PresetColorField({
+  label,
+  value,
+  disabled,
+  onChange,
+  testId
+}: {
+  label: string;
+  value: string;
+  disabled?: boolean;
+  onChange(value: string): void;
+  testId: string;
+}) {
+  return (
+    <label className="space-y-1 text-xs font-medium text-slate-600">
+      <span>{label}</span>
+      <input className="h-[34px] w-full rounded-md border border-line px-1 py-1 disabled:bg-slate-100" type="color" value={value} disabled={disabled} onChange={(event) => onChange(event.target.value)} data-testid={testId} />
     </label>
   );
 }
@@ -1151,6 +1533,15 @@ function formatDuration(value: number | undefined): string {
 function formatOptionLabel(value: string): string {
   if (isLoudnessNormalizationOption(value)) {
     return zhCN.exportDialog.loudnessNormalization[value];
+  }
+  if (value === 'video' || value === 'audio' || value === 'audio-visualization') {
+    return zhCN.exportDialog.outputModes[value];
+  }
+  if (value === 'waveform-line' || value === 'spectrum-bars' || value === 'circular-spectrum') {
+    return zhCN.exportDialog.audioVisualization.styles[value];
+  }
+  if (value === 'solid' || value === 'gradient' || value === 'image') {
+    return zhCN.exportDialog.audioVisualization.backgroundTypes[value];
   }
   if (value === 'default') {
     return zhCN.exportDialog.options.default;

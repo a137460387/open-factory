@@ -7,6 +7,16 @@ import type { TargetAspectRatio } from '../reframe';
 export type ExportLoudnessNormalization = 'off' | 'youtube' | 'ebu-r128';
 export type ExportPlatformPreset = 'youtube-1080p' | 'youtube-shorts' | 'tiktok' | 'instagram-reels' | 'twitter-x' | 'bilibili';
 export type ExportVideoProfile = 'baseline' | 'main' | 'high';
+export type ExportAudioVisualizationStyle = 'waveform-line' | 'spectrum-bars' | 'circular-spectrum';
+export type ExportAudioVisualizationBackground =
+  | { type: 'solid'; color: string }
+  | { type: 'gradient'; color: string; color2: string }
+  | { type: 'image'; path: string };
+export interface ExportAudioVisualizationSettings {
+  style: ExportAudioVisualizationStyle;
+  color: string;
+  background: ExportAudioVisualizationBackground;
+}
 export type ExportWatermarkPosition =
   | 'top-left'
   | 'top-center'
@@ -50,7 +60,8 @@ export interface ExportSettings {
   format: string;
   videoBitrate?: string | null;
   audioBitrate?: string | null;
-  outputMode?: 'video' | 'audio';
+  outputMode?: 'video' | 'audio' | 'audio-visualization';
+  audioVisualization?: ExportAudioVisualizationSettings;
   scaleMode?: 'none' | 'fit';
   targetAspectRatio?: TargetAspectRatio;
   reframeOffsetX?: number;

@@ -945,6 +945,7 @@ const zh = {
       width: '宽度',
       height: '高度',
       fps: '帧率',
+      outputMode: '输出模式',
       format: '格式',
       videoBitrate: '视频码率',
       audioBitrate: '音频码率',
@@ -960,6 +961,34 @@ const zh = {
       off: '关闭',
       youtube: 'YouTube -14 LUFS',
       'ebu-r128': 'EBU R128 广播 -23 LUFS'
+    },
+    outputModes: {
+      video: '视频',
+      audio: '纯音频',
+      'audio-visualization': '纯音频可视化'
+    },
+    audioVisualization: {
+      title: '音频可视化',
+      description: '把音频轨渲染为带波形或频谱动画的视频，并保留原始音频轨。',
+      style: '可视化类型',
+      color: '可视化颜色',
+      backgroundType: '背景',
+      backgroundColor: '背景色',
+      backgroundColor2: '渐变色',
+      backgroundImage: '背景图片',
+      backgroundImageFilter: '背景图片',
+      chooseImage: '选择图片',
+      chooseImageFailed: '无法选择背景图片。',
+      styles: {
+        'waveform-line': '波形线条',
+        'spectrum-bars': '频谱柱状',
+        'circular-spectrum': '圆形频谱'
+      },
+      backgroundTypes: {
+        solid: '纯色',
+        gradient: '渐变',
+        image: '图片'
+      }
     },
     watermark: {
       title: '水印',
@@ -2114,6 +2143,7 @@ const enOverrides = {
       width: 'Width',
       height: 'Height',
       fps: 'Frame Rate',
+      outputMode: 'Output Mode',
       format: 'Format',
       videoBitrate: 'Video Bitrate',
       audioBitrate: 'Audio Bitrate',
@@ -2129,6 +2159,34 @@ const enOverrides = {
       off: 'Off',
       youtube: 'YouTube -14 LUFS',
       'ebu-r128': 'EBU R128 Broadcast -23 LUFS'
+    },
+    outputModes: {
+      video: 'Video',
+      audio: 'Audio Only',
+      'audio-visualization': 'Audio Visualization'
+    },
+    audioVisualization: {
+      title: 'Audio Visualization',
+      description: 'Render audio tracks as a waveform or spectrum video while keeping the original audio track.',
+      style: 'Visualization Type',
+      color: 'Visualization Color',
+      backgroundType: 'Background',
+      backgroundColor: 'Background Color',
+      backgroundColor2: 'Gradient Color',
+      backgroundImage: 'Background Image',
+      backgroundImageFilter: 'Background Image',
+      chooseImage: 'Choose Image',
+      chooseImageFailed: 'Unable to choose background image.',
+      styles: {
+        'waveform-line': 'Waveform Line',
+        'spectrum-bars': 'Spectrum Bars',
+        'circular-spectrum': 'Circular Spectrum'
+      },
+      backgroundTypes: {
+        solid: 'Solid',
+        gradient: 'Gradient',
+        image: 'Image'
+      }
     },
     watermark: {
       title: 'Watermark',

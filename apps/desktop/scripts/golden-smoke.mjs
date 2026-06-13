@@ -105,6 +105,27 @@ const fixtures = [
     validate: validateAudioSpectrumFixture
   },
   {
+    name: 'audio-viz',
+    description: 'audio-only source exported as a waveform visualization video with the original audio stream',
+    outputWidth: 1280,
+    outputHeight: 720,
+    expectedDuration: 1.5,
+    exportSettings: {
+      outputMode: 'audio-visualization',
+      format: 'mp4',
+      width: 1280,
+      height: 720,
+      fps: 30,
+      audioVisualization: {
+        style: 'waveform-line',
+        color: '#22d3ee',
+        background: { type: 'solid', color: '#050816' }
+      }
+    },
+    create: createAudioVisualizationFixture,
+    validate: validateAudioVisualizationFixture
+  },
+  {
     name: 'subtitle-burn-in',
     description: 'solid background video with two SRT subtitle clips burned in',
     outputWidth: 1280,
@@ -930,6 +951,91 @@ async function validateAudioSpectrumFixture(context) {
         passed: filter.includes("overlay=x=0:y='main_h-overlay_h'"),
         actual: filter,
         expected: "overlay=x=0:y='main_h-overlay_h'"
+      }
+    ]
+  };
+}
+
+async function createAudioVisualizationFixture(context) {
+  const sourcePath = join(context.fixtureDir, 'audio-viz-source.wav');
+  await createAudioFixture(sourcePath, { duration: context.fixture.expectedDuration, frequency: 520 });
+  return buildProject({
+    id: 'golden-audio-viz',
+    name: 'Golden Audio Visualization',
+    width: context.outputWidth,
+    height: context.outputHeight,
+    media: [
+      audioAsset({
+        id: 'asset-audio-viz-source',
+        name: 'audio-viz-source.wav',
+        path: sourcePath,
+        duration: context.fixture.expectedDuration,
+        stat: statSync(sourcePath)
+      })
+    ],
+    tracks: [
+      {
+        id: 'track-audio-viz-video',
+        type: 'video',
+        name: 'Video',
+        clips: []
+      },
+      {
+        id: 'track-audio-viz-audio',
+        type: 'audio',
+        name: 'Audio',
+        clips: [
+          audioClip({
+            id: 'clip-audio-viz',
+            name: 'Audio visualization source',
+            mediaId: 'asset-audio-viz-source',
+            trackId: 'track-audio-viz-audio',
+            duration: context.fixture.expectedDuration
+          })
+        ]
+      },
+      emptyTextTrack()
+    ]
+  });
+}
+
+async function validateAudioVisualizationFixture(context) {
+  const filter = context.plan.filterComplex;
+  const videoFrameCount = await readVideoFrameCount(context.outputPath);
+  const audioStreamCount = await readStreamCount(context.outputPath, 'a:0');
+  const frame = await readFrame(context.outputPath, { at: 0.35, width: 160, height: 90 });
+  const waveformPixelCount = countPixels(frame, (r, g, b, a) => a > 200 && Math.abs(r - 5) + Math.abs(g - 8) + Math.abs(b - 22) > 40);
+  return {
+    checks: [
+      {
+        name: 'audio-viz-filter',
+        passed: filter.includes('showwaves=s=1280x720:mode=line:colors=0x22d3ee'),
+        actual: filter,
+        expected: 'showwaves=s=1280x720:mode=line:colors=0x22d3ee'
+      },
+      {
+        name: 'audio-viz-audio-split',
+        passed: filter.includes('[amixout]asplit=2[aout][audio_visualization_mix]'),
+        actual: filter,
+        expected: '[amixout]asplit=2[aout][audio_visualization_mix]'
+      },
+      {
+        name: 'audio-viz-video-frames',
+        passed: videoFrameCount > 0,
+        actual: videoFrameCount,
+        expected: '> 0'
+      },
+      {
+        name: 'audio-viz-audio-stream',
+        passed: audioStreamCount > 0,
+        actual: audioStreamCount,
+        expected: '> 0'
+      },
+      {
+        name: 'audio-viz-visible-waveform',
+        passed: waveformPixelCount > 200,
+        actual: waveformPixelCount,
+        expected: '> 200 non-background pixels'
       }
     ]
   };
@@ -2364,6 +2470,24 @@ async function readVideoFrameCount(videoPath) {
   return frameCount;
 }
 
+async function readStreamCount(videoPath, selector) {
+  const stdout = await runCollectStdout('ffprobe', [
+    '-v',
+    'error',
+    '-select_streams',
+    selector,
+    '-show_entries',
+    'stream=index',
+    '-of',
+    'csv=p=0',
+    videoPath
+  ]);
+  return stdout
+    .toString('utf8')
+    .split(/\r?\n/)
+    .filter((line) => line.trim().length > 0).length;
+}
+
 async function createColorVideoFixture(targetPath, options) {
   const args = [
     '-hide_banner',
@@ -3022,6 +3146,16 @@ function meanRgb(frame) {
     return [0, 0, 0];
   }
   return sums.map((sum) => round(sum / count));
+}
+
+function countPixels(frame, predicate) {
+  let count = 0;
+  for (let offset = 0; offset + 3 < frame.length; offset += 4) {
+    if (predicate(frame[offset], frame[offset + 1], frame[offset + 2], frame[offset + 3])) {
+      count += 1;
+    }
+  }
+  return count;
 }
 
 function pixelNear(pixel, expectedRgb, tolerance) {

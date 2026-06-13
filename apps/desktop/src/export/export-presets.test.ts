@@ -212,6 +212,71 @@ describe('export presets', () => {
     });
   });
 
+  it('persists and sanitizes audio visualization preset settings', async () => {
+    const { storage, files, presetPath } = makeStorage();
+
+    const presets = await saveCustomExportPreset(
+      'Audio Viz',
+      {
+        format: 'mp4',
+        outputMode: 'audio-visualization',
+        audioVisualization: {
+          style: 'circular-spectrum',
+          color: '#ABC',
+          background: {
+            type: 'gradient',
+            color: '#050816',
+            color2: '#bad'
+          }
+        }
+      },
+      storage
+    );
+
+    expect(presets.find((preset) => preset.name === 'Audio Viz')?.settings).toMatchObject({
+      format: 'mp4',
+      outputMode: 'audio-visualization',
+      audioVisualization: {
+        style: 'circular-spectrum',
+        color: '#aabbcc',
+        background: {
+          type: 'gradient',
+          color: '#050816',
+          color2: '#bbaadd'
+        }
+      }
+    });
+    expect(JSON.parse(files.get(presetPath) ?? '{}').presets[0].settings.audioVisualization).toEqual(
+      expect.objectContaining({ style: 'circular-spectrum', color: '#aabbcc' })
+    );
+
+    const parsed = parseStoredExportPresets(
+      JSON.stringify({
+        schemaVersion: 1,
+        presets: [
+          {
+            id: 'custom-audio-viz',
+            name: 'Audio Viz',
+            settings: {
+              outputMode: 'audio-visualization',
+              audioVisualization: {
+                style: 'unknown',
+                color: 'bad',
+                background: { type: 'image', path: ' C:\\Media\\cover.png ' }
+              }
+            }
+          }
+        ]
+      })
+    );
+
+    expect(parsed[0].settings.audioVisualization).toEqual({
+      style: 'waveform-line',
+      color: '#22d3ee',
+      background: { type: 'image', path: 'C:\\Media\\cover.png' }
+    });
+  });
+
   it('persists and sanitizes watermark preset settings', async () => {
     const { storage, files, presetPath } = makeStorage();
 

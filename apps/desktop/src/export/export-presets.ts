@@ -416,7 +416,7 @@ function sanitizeExportSettings(settings: unknown): ExportPresetSettings {
   copyString(input, output, 'format');
   copyOptionalString(input, output, 'videoBitrate');
   copyOptionalString(input, output, 'audioBitrate');
-  if (input.outputMode === 'video' || input.outputMode === 'audio') {
+  if (input.outputMode === 'video' || input.outputMode === 'audio' || input.outputMode === 'audio-visualization') {
     output.outputMode = input.outputMode;
   }
   if (input.scaleMode === 'none' || input.scaleMode === 'fit') {
@@ -453,7 +453,43 @@ function sanitizeExportSettings(settings: unknown): ExportPresetSettings {
   if (watermark) {
     output.watermark = watermark;
   }
+  const audioVisualization = sanitizeAudioVisualization(input.audioVisualization);
+  if (audioVisualization) {
+    output.audioVisualization = audioVisualization;
+  }
   return output;
+}
+
+function sanitizeAudioVisualization(value: unknown): ExportPresetSettings['audioVisualization'] | undefined {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+  const input = value as Record<string, unknown>;
+  const style =
+    input.style === 'spectrum-bars' || input.style === 'circular-spectrum' || input.style === 'waveform-line'
+      ? input.style
+      : 'waveform-line';
+  const color = sanitizeHexColor(input.color, '#22d3ee');
+  const background = sanitizeAudioVisualizationBackground(input.background);
+  return { style, color, background };
+}
+
+function sanitizeAudioVisualizationBackground(value: unknown): NonNullable<ExportPresetSettings['audioVisualization']>['background'] {
+  if (!value || typeof value !== 'object') {
+    return { type: 'solid', color: '#050816' };
+  }
+  const input = value as Record<string, unknown>;
+  if (input.type === 'image' && typeof input.path === 'string' && input.path.trim()) {
+    return { type: 'image', path: input.path.trim() };
+  }
+  if (input.type === 'gradient') {
+    return {
+      type: 'gradient',
+      color: sanitizeHexColor(input.color, '#050816'),
+      color2: sanitizeHexColor(input.color2, '#1d4ed8')
+    };
+  }
+  return { type: 'solid', color: sanitizeHexColor(input.color, '#050816') };
 }
 
 function sanitizeWatermark(value: unknown): ExportPresetSettings['watermark'] | undefined {
@@ -513,6 +549,20 @@ function sanitizeWatermarkPosition(value: unknown): NonNullable<ExportPresetSett
 
 function clampWatermarkNumber(value: unknown, min: number, max: number, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : fallback;
+}
+
+function sanitizeHexColor(value: unknown, fallback: string): string {
+  if (typeof value !== 'string') {
+    return fallback;
+  }
+  const normalized = value.trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(normalized)) {
+    return normalized.toLowerCase();
+  }
+  if (/^#[0-9a-fA-F]{3}$/.test(normalized)) {
+    return `#${normalized[1]}${normalized[1]}${normalized[2]}${normalized[2]}${normalized[3]}${normalized[3]}`.toLowerCase();
+  }
+  return fallback;
 }
 
 function copyNumber(input: Record<string, unknown>, output: ExportPresetSettings, key: 'width' | 'height' | 'fps' | 'sampleRate'): void {

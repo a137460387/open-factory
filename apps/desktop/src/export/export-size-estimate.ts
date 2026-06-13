@@ -4,7 +4,7 @@ export interface ExportSizeEstimateInput {
   fps: number;
   duration: number;
   format: string;
-  outputMode?: 'video' | 'audio';
+  outputMode?: 'video' | 'audio' | 'audio-visualization';
   videoBitrate?: string | null;
   audioBitrate?: string | null;
 }
@@ -12,7 +12,7 @@ export interface ExportSizeEstimateInput {
 export function estimateExportFileSizeBytes(input: ExportSizeEstimateInput): number {
   const duration = Math.max(0.001, input.duration);
   const audioBitsPerSecond = parseBitrate(input.audioBitrate) ?? 128_000;
-  if (input.outputMode === 'audio' || input.format === 'm4a') {
+  if (input.outputMode !== 'audio-visualization' && (input.outputMode === 'audio' || input.format === 'm4a')) {
     return Math.max(1024, Math.round((audioBitsPerSecond * duration) / 8));
   }
 

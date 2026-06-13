@@ -10,9 +10,31 @@ import {
   createSequence,
   createTrack,
   DEFAULT_CUSTOM_SHADER_SOURCE,
-  type Clip
+  type Clip,
+  type Project
 } from '../src';
-import { makeAdjustmentClip, makeProject, makeSubtitleClip, makeTextClip, makeVideoClip } from './test-utils';
+import { makeAdjustmentClip, makeAudioClip, makeProject, makeSubtitleClip, makeTextClip, makeVideoClip } from './test-utils';
+
+function makeAudioVisualizationProject(): Project {
+  const project = makeProject();
+  project.media = [
+    {
+      id: 'asset-audio',
+      type: 'audio',
+      name: 'voice.wav',
+      path: 'D:\\Media\\voice.wav',
+      duration: 2,
+      width: 0,
+      height: 0,
+      audioChannels: 2,
+      audioSampleRate: 44100
+    }
+  ];
+  project.timeline.tracks[0].clips = [];
+  project.timeline.tracks[1].clips = [makeAudioClip({ id: 'clip-audio-viz', mediaId: 'asset-audio', duration: 2 })];
+  project.timeline.tracks[2].clips = [];
+  return project;
+}
 
 describe('multitrack ffmpeg builder', () => {
   it('builds per-clip overlay, drawtext textfile, and amix filters as argument arrays', () => {
@@ -1774,6 +1796,108 @@ describe('multitrack ffmpeg builder', () => {
     expect(filter).toContain(expectedOverlay);
     expect(filter).toContain("enable='between(t,0,2)'");
     expect(plan.maps).toEqual(['-map', '[vout]', '-map', '[aout]']);
+  });
+
+  it.each([
+    ['waveform-line', 'showwaves=s=1280x720:mode=line:colors=0x22d3ee', "overlay=x='0':y='0'"],
+    ['spectrum-bars', 'showfreqs=s=1280x720:mode=bar:ascale=log:colors=0x22d3ee', "overlay=x='0':y='0'"],
+    ['circular-spectrum', 'showfreqs=s=518x518:mode=line:ascale=log:colors=0x22d3ee', "overlay=x='(main_w-overlay_w)/2':y='(main_h-overlay_h)/2'"]
+  ])('builds %s audio visualization export filters and keeps the audio stream', (style, expectedFilter, expectedOverlay) => {
+    const project = makeAudioVisualizationProject();
+    const plan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(project, {
+        outputPath: 'D:\\Exports\\audio-viz.mp4',
+        settings: {
+          outputMode: 'audio-visualization',
+          format: 'mp4',
+          width: 1280,
+          height: 720,
+          audioVisualization: {
+            style: style as 'waveform-line' | 'spectrum-bars' | 'circular-spectrum',
+            color: '#22d3ee',
+            background: { type: 'solid', color: '#050816' }
+          }
+        }
+      })
+    );
+
+    expect(plan.inputs).toEqual([expect.objectContaining({ path: 'D:/Media/voice.wav' })]);
+    expect(plan.filterComplex).toContain('color=c=0x050816:s=1280x720:r=30:d=2,format=rgba[base0]');
+    expect(plan.filterComplex).toContain('[amixout]asplit=2[aout][audio_visualization_mix]');
+    expect(plan.filterComplex).toContain(expectedFilter);
+    expect(plan.filterComplex).toContain('colorkey=0x000000:0.08:0.12');
+    expect(plan.filterComplex).toContain(expectedOverlay);
+    expect(plan.maps).toEqual(['-map', '[vout]', '-map', '[aout]']);
+    expect(plan.outputArgs).toEqual(expect.arrayContaining(['-c:v', 'libx264', '-c:a', 'aac']));
+  });
+
+  it('builds audio visualization over an image background input', () => {
+    const project = makeAudioVisualizationProject();
+    const plan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(project, {
+        outputPath: 'D:\\Exports\\audio-viz.mp4',
+        settings: {
+          outputMode: 'audio-visualization',
+          format: 'mp4',
+          audioVisualization: {
+            style: 'waveform-line',
+            color: '#ffaa00',
+            background: { type: 'image', path: 'D:\\Media\\cover.png' }
+          }
+        }
+      })
+    );
+
+    expect(plan.inputs).toEqual([
+      expect.objectContaining({ path: 'D:/Media/voice.wav' }),
+      expect.objectContaining({ path: 'D:/Media/cover.png', args: ['-loop', '1', '-t', '2'] })
+    ]);
+    expect(plan.filterComplex).toContain('[1:v]scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,fps=30,format=rgba[base0]');
+    expect(plan.filterComplex).toContain('showwaves=s=1280x720:mode=line:colors=0xffaa00');
+    expect(plan.filterComplex).toContain("[base0][audio_visualization_layer]overlay=x='0':y='0':eval=frame[base1]");
+    expect(plan.fullArgs).toEqual(expect.arrayContaining(['-map', '[vout]', '-map', '[aout]']));
+  });
+
+  it('builds audio visualization over a normalized gradient background', () => {
+    const project = makeAudioVisualizationProject();
+    const plan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(project, {
+        outputPath: 'D:\\Exports\\audio-viz.mp4',
+        settings: {
+          outputMode: 'audio-visualization',
+          format: 'mp4',
+          audioVisualization: {
+            style: 'waveform-line',
+            color: '#abc',
+            background: { type: 'gradient', color: '#abc', color2: '#abc' }
+          }
+        }
+      })
+    );
+
+    expect(plan.filterComplex).toContain("color=c=0xaabbcc:s=1280x720:r=30:d=2,format=rgba,geq=r='170':g='187':b='204':a='255'[base0]");
+    expect(plan.filterComplex).toContain('showwaves=s=1280x720:mode=line:colors=0xaabbcc');
+  });
+
+  it('falls back to default audio visualization settings for invalid custom values', () => {
+    const project = makeAudioVisualizationProject();
+    const plan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(project, {
+        outputPath: 'D:\\Exports\\audio-viz.mp4',
+        settings: {
+          outputMode: 'audio-visualization',
+          format: 'mp4',
+          audioVisualization: {
+            style: 'invalid-style' as never,
+            color: 'not-a-color',
+            background: { type: 'solid', color: 'bad-color' }
+          }
+        }
+      })
+    );
+
+    expect(plan.filterComplex).toContain('color=c=0x050816:s=1280x720:r=30:d=2,format=rgba[base0]');
+    expect(plan.filterComplex).toContain('showwaves=s=1280x720:mode=line:colors=0x22d3ee');
   });
 
   it('does not generate audio spectrum filters for disabled or zero-height spectrum effects', () => {
