@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clamp, framesToSeconds, normalizeProjectFps, round, secondsToFrames, secondsToTicks, secondsToTimecode, snap, ticksToSeconds, ticksToTimecode } from '../src';
+import { clamp, framesToSeconds, normalizeProjectFps, parseTimecodeToSeconds, round, secondsToFrames, secondsToTicks, secondsToTimecode, snap, ticksToSeconds, ticksToTimecode } from '../src';
 
 describe('time helpers', () => {
   it('clamps values and validates ranges', () => {
@@ -37,5 +37,18 @@ describe('time helpers', () => {
     expect(secondsToTimecode(framesToSeconds(17982, 29.97), 29.97, 'df')).toBe('00:10:00:00');
     expect(secondsToTimecode(framesToSeconds(3600, 59.94), 59.94, 'df')).toBe('00:01:00:04');
     expect(secondsToTimecode(60, 24, 'df')).toBe('00:01:00:00');
+  });
+
+  it('parses frame-accurate timecode and validates boundaries', () => {
+    expect(parseTimecodeToSeconds('00:00:02:12', { fps: 24 })).toEqual({
+      ok: true,
+      value: { seconds: 2.5, totalFrames: 60, hours: 0, minutes: 0, secondsPart: 2, frames: 12 }
+    });
+    expect(parseTimecodeToSeconds('00:00:01:29', { fps: 29.97 })).toMatchObject({ ok: true, value: { totalFrames: 59 } });
+    expect(parseTimecodeToSeconds('00:00:01:30', { fps: 29.97 })).toEqual({ ok: false, error: 'frames' });
+    expect(parseTimecodeToSeconds('00:00:60:00', { fps: 30 })).toEqual({ ok: false, error: 'seconds' });
+    expect(parseTimecodeToSeconds('00:60:00:00', { fps: 30 })).toEqual({ ok: false, error: 'minutes' });
+    expect(parseTimecodeToSeconds('0:00:00:00', { fps: 30 })).toEqual({ ok: false, error: 'format' });
+    expect(parseTimecodeToSeconds('00:00:04:00', { fps: 30, duration: 3 })).toEqual({ ok: false, error: 'duration' });
   });
 });

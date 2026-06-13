@@ -528,6 +528,15 @@ const zh = {
     multicamAngle: (name: string) => `切换到 ${name}`,
     renderFailedTitle: '预览渲染失败',
     renderFailedMessage: '无法绘制预览。',
+    frameSearchPlaceholder: '搜索时间码 / 标记 / Clip',
+    frameSearchNoMatch: '未找到匹配项',
+    frameSearchFormatError: '请输入 HH:MM:SS:FF',
+    frameSearchMinuteError: '分钟不能超过 59',
+    frameSearchSecondError: '秒不能超过 59',
+    frameSearchFrameError: (maxFrame: number) => `帧号不能超过 ${maxFrame}`,
+    frameSearchDurationError: '时间码超出时间线时长',
+    frameSearchMarkerType: '标记',
+    frameSearchClipType: 'Clip',
     missingMedia: (name: string) => `媒体缺失：${name}`
   },
   scopes: {
@@ -2000,6 +2009,15 @@ const enOverrides = {
     multicamAngle: (name: string) => `Cut to ${name}`,
     renderFailedTitle: 'Preview render failed',
     renderFailedMessage: 'Unable to draw preview.',
+    frameSearchPlaceholder: 'Search timecode / marker / clip',
+    frameSearchNoMatch: 'No match found',
+    frameSearchFormatError: 'Use HH:MM:SS:FF',
+    frameSearchMinuteError: 'Minutes must be 59 or less',
+    frameSearchSecondError: 'Seconds must be 59 or less',
+    frameSearchFrameError: (maxFrame: number) => `Frame must be ${maxFrame} or less`,
+    frameSearchDurationError: 'Timecode is beyond the timeline duration',
+    frameSearchMarkerType: 'Marker',
+    frameSearchClipType: 'Clip',
     missingMedia: (name: string) => `Missing media: ${name}`
   },
   scopes: {

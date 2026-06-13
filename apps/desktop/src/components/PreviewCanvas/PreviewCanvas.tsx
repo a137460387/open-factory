@@ -19,6 +19,7 @@ import {
   moveTransformByCanvasDelta,
   normalizeChromaKey,
   normalizeTransform,
+  parseTimecodeToSeconds,
   resizeClipTransform,
   rotateClipTransform,
   screenPointToCanvasPoint,
@@ -34,6 +35,7 @@ import {
   type PathPointHandle,
   type Project,
   type Sequence,
+  type TimecodeParseError,
   type Transform,
   type Timeline
 } from '@open-factory/editor-core';
@@ -67,6 +69,7 @@ export function PreviewCanvas() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const originalCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const differenceCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const frameSearchInputRef = useRef<HTMLInputElement | null>(null);
   const rendererRef = useRef(new PreviewRenderer());
   const originalRendererRef = useRef(new PreviewRenderer());
   const previousTimelineRef = useRef<Timeline | undefined>();
@@ -90,6 +93,9 @@ export function PreviewCanvas() {
   const [compareSplitRatio, setCompareSplitRatio] = useState(0.5);
   const [compareDividerDragging, setCompareDividerDragging] = useState(false);
   const [canvasEditMode, setCanvasEditMode] = useState(false);
+  const [frameSearchQuery, setFrameSearchQuery] = useState('');
+  const [frameSearchFocused, setFrameSearchFocused] = useState(false);
+  const [frameSearchError, setFrameSearchError] = useState<string>();
   const prerenderCenter = Math.round(playheadTime * 2) / 2;
   const fps = project.settings.fps || 30;
   const compareEnabled = compareMode !== 'off';
@@ -107,12 +113,26 @@ export function PreviewCanvas() {
   const selectedEditableClip = useMemo(() => editableCanvasClips.find((item) => item.clip.id === selectedClipId), [editableCanvasClips, selectedClipId]);
   const chromaKeyPickTarget = useMemo(() => editableCanvasClips.find((item) => item.clip.id === chromaKeyPickClipId), [chromaKeyPickClipId, editableCanvasClips]);
   const selectedPathMask = useMemo(() => selectedEditableClip?.clip.masks?.find((mask) => mask.type === 'path'), [selectedEditableClip]);
+  const frameSearchCandidates = useMemo(() => buildFrameSearchCandidates(project, frameSearchQuery), [frameSearchQuery, project]);
+  const showFrameSearchCandidates = frameSearchFocused && frameSearchQuery.trim().length > 0 && !isTimecodeLikeQuery(frameSearchQuery);
 
   useEffect(() => {
     if (chromaKeyPickClipId && !chromaKeyPickTarget) {
       setChromaKeyPickClipId(undefined);
     }
   }, [chromaKeyPickClipId, chromaKeyPickTarget, setChromaKeyPickClipId]);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent): void {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'g') {
+        event.preventDefault();
+        frameSearchInputRef.current?.focus();
+        frameSearchInputRef.current?.select();
+      }
+    }
+    window.addEventListener('keydown', onKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -294,6 +314,44 @@ export function PreviewCanvas() {
 
   function toggleCompareMode(): void {
     setCompareMode((current) => (current === 'off' ? 'left-right' : 'off'));
+  }
+
+  function jumpToFrameSearchCandidate(candidate: FrameSearchCandidate): void {
+    setIsPlaying(false);
+    setPlayheadTime(candidate.time);
+    if (candidate.type === 'clip') {
+      setSelectedClipIds([candidate.id]);
+    }
+    setFrameSearchError(undefined);
+    setFrameSearchQuery(candidate.label);
+    setFrameSearchFocused(false);
+    frameSearchInputRef.current?.blur();
+  }
+
+  function executeFrameSearch(): void {
+    const query = frameSearchQuery.trim();
+    if (!query) {
+      setFrameSearchError(undefined);
+      return;
+    }
+    if (isTimecodeLikeQuery(query)) {
+      const parsed = parseTimecodeToSeconds(query, { fps, duration: getTimelinePlaybackDuration(project.timeline) });
+      if (!parsed.ok) {
+        setFrameSearchError(frameSearchErrorMessage(parsed.error, fps));
+        return;
+      }
+      setIsPlaying(false);
+      setPlayheadTime(parsed.value.seconds);
+      setFrameSearchError(undefined);
+      frameSearchInputRef.current?.blur();
+      return;
+    }
+    const [candidate] = frameSearchCandidates;
+    if (candidate) {
+      jumpToFrameSearchCandidate(candidate);
+      return;
+    }
+    setFrameSearchError(t.frameSearchNoMatch);
   }
 
   function updateCompareSplitFromPointer(event: { clientX: number; clientY: number }): void {
@@ -828,9 +886,131 @@ export function PreviewCanvas() {
         </div>
         {scopesOpen ? <ColorScopesPanel frame={scopeFrame} active={scopesOpen} /> : null}
       </div>
-      <div className="border-t border-black/30 px-3 py-2 text-xs tabular-nums text-slate-300">{secondsToTimecode(playheadTime, fps, project.settings.timecodeFormat ?? 'ndf')}</div>
+      <div className="flex items-center gap-3 border-t border-black/30 px-3 py-2 text-xs text-slate-300">
+        <div className="min-w-24 tabular-nums" data-testid="preview-timecode">
+          {secondsToTimecode(playheadTime, fps, project.settings.timecodeFormat ?? 'ndf')}
+        </div>
+        <div className="relative min-w-0 flex-1">
+          <input
+            ref={frameSearchInputRef}
+            type="search"
+            value={frameSearchQuery}
+            placeholder={t.frameSearchPlaceholder}
+            className={`h-7 w-full rounded border bg-black/35 px-2 font-mono text-xs text-white outline-none placeholder:text-slate-500 ${
+              frameSearchError ? 'border-red-400 focus:border-red-300' : 'border-white/15 focus:border-brand'
+            }`}
+            data-testid="frame-search-input"
+            aria-invalid={frameSearchError ? 'true' : 'false'}
+            onFocus={() => setFrameSearchFocused(true)}
+            onBlur={() => setFrameSearchFocused(false)}
+            onChange={(event) => {
+              setFrameSearchQuery(event.target.value);
+              setFrameSearchError(undefined);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                executeFrameSearch();
+              }
+              if (event.key === 'Escape') {
+                setFrameSearchError(undefined);
+                setFrameSearchFocused(false);
+                event.currentTarget.blur();
+              }
+            }}
+          />
+          {frameSearchError ? (
+            <div className="absolute left-0 top-8 z-50 rounded border border-red-400/50 bg-red-950 px-2 py-1 text-[11px] text-red-100 shadow-soft" data-testid="frame-search-error">
+              {frameSearchError}
+            </div>
+          ) : null}
+          {showFrameSearchCandidates && frameSearchCandidates.length > 0 ? (
+            <div className="absolute bottom-8 left-0 z-50 max-h-44 w-full overflow-auto rounded-md border border-white/15 bg-[#0b1120] py-1 shadow-soft" data-testid="frame-search-candidates">
+              {frameSearchCandidates.map((candidate) => (
+                <button
+                  key={`${candidate.type}-${candidate.id}`}
+                  type="button"
+                  className="flex w-full items-center justify-between gap-3 px-2 py-1.5 text-left text-xs text-slate-100 hover:bg-white/10"
+                  data-testid={`frame-search-candidate-${candidate.type}-${candidate.id}`}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => jumpToFrameSearchCandidate(candidate)}
+                >
+                  <span className="min-w-0 truncate">
+                    <span className="mr-2 rounded bg-white/10 px-1.5 py-0.5 text-[10px] uppercase text-slate-300">
+                      {candidate.type === 'marker' ? t.frameSearchMarkerType : t.frameSearchClipType}
+                    </span>
+                    {candidate.label}
+                  </span>
+                  <span className="shrink-0 font-mono tabular-nums text-slate-400">{secondsToTimecode(candidate.time, fps, project.settings.timecodeFormat ?? 'ndf')}</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </div>
     </section>
   );
+}
+
+interface FrameSearchCandidate {
+  id: string;
+  type: 'marker' | 'clip';
+  label: string;
+  time: number;
+}
+
+function isTimecodeLikeQuery(query: string): boolean {
+  const trimmed = query.trim();
+  return trimmed.includes(':') && /^[\d:]+$/.test(trimmed);
+}
+
+function frameSearchErrorMessage(error: TimecodeParseError, fps: number): string {
+  const t = zhCN.preview;
+  if (error === 'minutes') {
+    return t.frameSearchMinuteError;
+  }
+  if (error === 'seconds') {
+    return t.frameSearchSecondError;
+  }
+  if (error === 'frames') {
+    return t.frameSearchFrameError(Math.round(fps) - 1);
+  }
+  if (error === 'duration') {
+    return t.frameSearchDurationError;
+  }
+  return t.frameSearchFormatError;
+}
+
+function buildFrameSearchCandidates(project: Project, query: string): FrameSearchCandidate[] {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) {
+    return [];
+  }
+  const markerCandidates = (project.timeline.markers ?? [])
+    .filter((marker) => marker.label.toLowerCase().includes(normalizedQuery))
+    .map((marker): FrameSearchCandidate => ({ id: marker.id, type: 'marker', label: marker.label, time: marker.time }));
+  const clipCandidates = project.timeline.tracks.flatMap((track) =>
+    track.clips
+      .filter((clip) => {
+        const asset = getClipMediaAsset(project, clip);
+        return [clip.name, asset?.name, asset?.path].some((value) => value?.toLowerCase().includes(normalizedQuery));
+      })
+      .map((clip): FrameSearchCandidate => ({ id: clip.id, type: 'clip', label: clip.name, time: clip.start }))
+  );
+  return [...markerCandidates, ...clipCandidates]
+    .sort((left, right) => {
+      const leftStarts = left.label.toLowerCase().startsWith(normalizedQuery) ? 0 : 1;
+      const rightStarts = right.label.toLowerCase().startsWith(normalizedQuery) ? 0 : 1;
+      return leftStarts - rightStarts || left.time - right.time || left.label.localeCompare(right.label);
+    })
+    .slice(0, 8);
+}
+
+function getClipMediaAsset(project: Project, clip: Clip): Project['media'][number] | undefined {
+  if (!('mediaId' in clip)) {
+    return undefined;
+  }
+  return project.media.find((asset) => asset.id === clip.mediaId);
 }
 
 interface EditableCanvasClip {

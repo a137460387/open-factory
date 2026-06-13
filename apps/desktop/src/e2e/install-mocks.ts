@@ -824,7 +824,102 @@ window.__E2E_ACTIONS__ = {
     commandManager.clear();
     exportRunCalls = [];
   },
+  setupFrameSearchFixture: () => {
+    const project = createProject('Frame Search E2E');
+    const media: MediaAsset[] = [
+      {
+        id: 'media-opening',
+        type: 'video',
+        name: 'opening-shot.mov',
+        path: tinyVideo,
+        duration: 6,
+        width: 1280,
+        height: 720,
+        size: 4096,
+        mtimeMs: 1_000,
+        hasAudio: true,
+        audioChannels: 2,
+        audioSampleRate: 44_100,
+        audioCodec: 'aac',
+        videoCodec: 'h264'
+      },
+      {
+        id: 'media-interview',
+        type: 'video',
+        name: 'interview-take.mov',
+        path: tinyVideoB,
+        duration: 6,
+        width: 1280,
+        height: 720,
+        size: 4096,
+        mtimeMs: 1_000,
+        hasAudio: true,
+        audioChannels: 2,
+        audioSampleRate: 44_100,
+        audioCodec: 'aac',
+        videoCodec: 'h264'
+      }
+    ];
+    const timeline = {
+      transitions: [],
+      markers: [{ id: 'marker-action-beat', time: 2.5, label: 'Action Beat', color: '#f97316' }],
+      tracks: [
+        createTrack({
+          id: 'track-video',
+          type: 'video',
+          name: 'Video 1',
+          clips: [
+            {
+              id: 'clip-opening',
+              type: 'video' as const,
+              name: 'Opening Shot',
+              mediaId: 'media-opening',
+              trackId: 'track-video',
+              start: 0,
+              duration: 3,
+              trimStart: 0,
+              trimEnd: 0,
+              speed: DEFAULT_CLIP_SPEED,
+              colorCorrection: DEFAULT_COLOR_CORRECTION,
+              transform: DEFAULT_TRANSFORM,
+              volume: 1
+            },
+            {
+              id: 'clip-interview',
+              type: 'video' as const,
+              name: 'Interview Clip',
+              mediaId: 'media-interview',
+              trackId: 'track-video',
+              start: 3,
+              duration: 3,
+              trimStart: 0,
+              trimEnd: 0,
+              speed: DEFAULT_CLIP_SPEED,
+              colorCorrection: DEFAULT_COLOR_CORRECTION,
+              transform: DEFAULT_TRANSFORM,
+              volume: 1
+            }
+          ]
+        }),
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
+        createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      settings: { fps: 24, timecodeFormat: 'ndf', width: 1280, height: 720 },
+      media,
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
   getTimelineSnapshot: () => useEditorStore.getState().project.timeline,
+  getPlayheadTime: () => useEditorStore.getState().playheadTime,
+  getSelectedClipIds: () => useEditorStore.getState().selectedClipIds,
   getProjectSnapshot: () => useEditorStore.getState().project,
   getProjectMedia: () => useEditorStore.getState().project.media,
   setOpenFileDialogPaths: (paths: unknown) => {

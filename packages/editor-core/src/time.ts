@@ -4,6 +4,18 @@ export const PROJECT_TIMEBASE = 600;
 export const SUPPORTED_PROJECT_FPS = [23.976, 24, 25, 29.97, 30, 50, 59.94, 60] as const;
 export type SupportedProjectFps = (typeof SUPPORTED_PROJECT_FPS)[number];
 export type TimecodeFormat = 'ndf' | 'df';
+export type TimecodeParseError = 'format' | 'minutes' | 'seconds' | 'frames' | 'duration';
+
+export interface ParsedTimecode {
+  seconds: number;
+  totalFrames: number;
+  hours: number;
+  minutes: number;
+  secondsPart: number;
+  frames: number;
+}
+
+export type ParseTimecodeResult = { ok: true; value: ParsedTimecode } | { ok: false; error: TimecodeParseError };
 
 export function clamp(value: number, min: number, max: number): number {
   if (min > max) {
@@ -77,6 +89,49 @@ export function secondsToTimecode(seconds: number, fps = DEFAULT_FPS, format: Ti
   const minutes = Math.floor(totalSeconds / 60) % 60;
   const hours = Math.floor(totalSeconds / 3600);
   return [hours, minutes, displaySeconds, frames].map((part) => String(part).padStart(2, '0')).join(':');
+}
+
+export function parseTimecodeToSeconds(value: string, options: { fps?: number; duration?: number } = {}): ParseTimecodeResult {
+  const match = /^(\d{2}):(\d{2}):(\d{2}):(\d{2})$/.exec(value.trim());
+  if (!match) {
+    return { ok: false, error: 'format' };
+  }
+
+  const [, hoursRaw, minutesRaw, secondsRaw, framesRaw] = match;
+  const hours = Number(hoursRaw);
+  const minutes = Number(minutesRaw);
+  const secondsPart = Number(secondsRaw);
+  const frames = Number(framesRaw);
+  if (minutes > 59) {
+    return { ok: false, error: 'minutes' };
+  }
+  if (secondsPart > 59) {
+    return { ok: false, error: 'seconds' };
+  }
+
+  const normalizedFps = normalizeProjectFps(options.fps ?? DEFAULT_FPS);
+  const nominalFps = Math.round(normalizedFps);
+  if (frames >= nominalFps) {
+    return { ok: false, error: 'frames' };
+  }
+
+  const totalWholeSeconds = hours * 3600 + minutes * 60 + secondsPart;
+  const totalFrames = Math.max(0, Math.round(totalWholeSeconds * normalizedFps) + frames);
+  const seconds = framesToSeconds(totalFrames, normalizedFps);
+  if (typeof options.duration === 'number' && Number.isFinite(options.duration) && seconds > Math.max(0, options.duration) + 1 / Math.max(1, normalizedFps)) {
+    return { ok: false, error: 'duration' };
+  }
+  return {
+    ok: true,
+    value: {
+      seconds,
+      totalFrames,
+      hours,
+      minutes,
+      secondsPart,
+      frames
+    }
+  };
 }
 
 function addDropFrameLabels(totalFrames: number, nominalFps: number): number {
