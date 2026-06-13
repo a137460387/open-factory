@@ -77,7 +77,13 @@ fn run_demucs_blocking(app: AppHandle, request: DemucsRequest) -> Result<DemucsR
     let started = Instant::now();
 
     emit_progress(&app, &request.clip_id, 0.02);
-    run_demucs_process(&app, &request.clip_id, &executable, &source_media, &output_dir)?;
+    run_demucs_process(
+        &app,
+        &request.clip_id,
+        &executable,
+        &source_media,
+        &output_dir,
+    )?;
     let outputs = find_demucs_outputs(&output_dir, &source_media).ok_or_else(|| {
         format!(
             "Demucs did not create vocals.wav and no_vocals.wav in {}",
@@ -247,10 +253,17 @@ fn candidate_demucs_output_paths(output_dir: &Path, source_media: &Path) -> Vec<
 fn scan_demucs_outputs(output_dir: &Path) -> Option<DemucsOutputPaths> {
     let mut wavs = Vec::new();
     collect_wavs(output_dir, &mut wavs);
-    let vocals = wavs.iter().find(|path| file_name_eq(path, "vocals.wav"))?.clone();
+    let vocals = wavs
+        .iter()
+        .find(|path| file_name_eq(path, "vocals.wav"))?
+        .clone();
     let accompaniment = wavs
         .iter()
-        .find(|path| file_name_eq(path, "no_vocals.wav") || file_name_eq(path, "accompaniment.wav") || file_name_eq(path, "instrumental.wav"))?
+        .find(|path| {
+            file_name_eq(path, "no_vocals.wav")
+                || file_name_eq(path, "accompaniment.wav")
+                || file_name_eq(path, "instrumental.wav")
+        })?
         .clone();
     Some(DemucsOutputPaths {
         vocals,
@@ -372,7 +385,9 @@ mod tests {
                 "D:/Media/clip.mp4"
             ]
         );
-        assert!(!args.iter().any(|arg| arg.contains("cmd /C") || arg.contains("&&")));
+        assert!(!args
+            .iter()
+            .any(|arg| arg.contains("cmd /C") || arg.contains("&&")));
     }
 
     #[test]
@@ -393,12 +408,20 @@ mod tests {
             candidates,
             vec![
                 DemucsOutputPaths {
-                    vocals: PathBuf::from("C:/Temp/open-factory/demucs/clip-a/htdemucs/interview/vocals.wav"),
-                    accompaniment: PathBuf::from("C:/Temp/open-factory/demucs/clip-a/htdemucs/interview/no_vocals.wav"),
+                    vocals: PathBuf::from(
+                        "C:/Temp/open-factory/demucs/clip-a/htdemucs/interview/vocals.wav"
+                    ),
+                    accompaniment: PathBuf::from(
+                        "C:/Temp/open-factory/demucs/clip-a/htdemucs/interview/no_vocals.wav"
+                    ),
                 },
                 DemucsOutputPaths {
-                    vocals: PathBuf::from("C:/Temp/open-factory/demucs/clip-a/interview/vocals.wav"),
-                    accompaniment: PathBuf::from("C:/Temp/open-factory/demucs/clip-a/interview/no_vocals.wav"),
+                    vocals: PathBuf::from(
+                        "C:/Temp/open-factory/demucs/clip-a/interview/vocals.wav"
+                    ),
+                    accompaniment: PathBuf::from(
+                        "C:/Temp/open-factory/demucs/clip-a/interview/no_vocals.wav"
+                    ),
                 },
             ]
         );

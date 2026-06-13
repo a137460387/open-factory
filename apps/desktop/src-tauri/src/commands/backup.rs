@@ -84,7 +84,10 @@ pub fn read_webdav_password(app: AppHandle) -> Result<Option<String>, String> {
 #[tauri::command]
 pub fn write_webdav_password(app: AppHandle, password: Option<String>) -> Result<(), String> {
     let secret_path = secret_file_path(&app)?;
-    match password.map(|value| value.trim().to_string()).filter(|value| !value.is_empty()) {
+    match password
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+    {
         Some(password) => {
             let app_dir = app_data_dir(&app)?;
             let secret = encrypt_password(&app_dir, &password)?;
@@ -102,7 +105,9 @@ pub fn write_webdav_password(app: AppHandle, password: Option<String>) -> Result
     }
 }
 
-pub fn build_webdav_put_args(request: &WebdavProjectBackupRequest) -> Result<WebdavPutArgs, String> {
+pub fn build_webdav_put_args(
+    request: &WebdavProjectBackupRequest,
+) -> Result<WebdavPutArgs, String> {
     let url = request.url.trim();
     if url.is_empty() {
         return Err("WebDAV URL is required.".to_string());
@@ -123,7 +128,10 @@ pub fn build_webdav_put_args(request: &WebdavProjectBackupRequest) -> Result<Web
             .as_ref()
             .map(|value| value.trim().to_string())
             .filter(|value| !value.is_empty()),
-        password_present: request.password.as_ref().is_some_and(|value| !value.is_empty()),
+        password_present: request
+            .password
+            .as_ref()
+            .is_some_and(|value| !value.is_empty()),
         content_type: "application/json".to_string(),
         content_len: request.contents.len(),
         project_path: request.project_path.clone(),
@@ -189,7 +197,10 @@ fn secret_file_path(app: &AppHandle) -> Result<PathBuf, String> {
 }
 
 fn app_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
-    let path = app.path().app_data_dir().map_err(|error| error.to_string())?;
+    let path = app
+        .path()
+        .app_data_dir()
+        .map_err(|error| error.to_string())?;
     fs::create_dir_all(&path).map_err(|error| error.to_string())?;
     Ok(path)
 }

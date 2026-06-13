@@ -1,9 +1,11 @@
 use crate::path_validator::validate_path;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::fs;
 use std::io::{BufRead, BufReader, Read};
 use std::path::Path;
 use std::process::{Command, Stdio};
+use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::AppHandle;
 
 const WAVEFORM_SAMPLE_RATE: u32 = 48_000;
@@ -24,6 +26,116 @@ pub struct MediaProbe {
     audio_sample_rate: Option<u32>,
     audio_codec: Option<String>,
     video_codec: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MediaAnalysis {
+    path: String,
+    file_size: Option<u64>,
+    created_time_ms: Option<u64>,
+    format: MediaFormatInfo,
+    video_streams: Vec<VideoStreamInfo>,
+    audio_streams: Vec<AudioStreamInfo>,
+    bitrate_points: Vec<BitratePoint>,
+    loudness_error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct MediaFormatInfo {
+    format_name: Option<String>,
+    format_long_name: Option<String>,
+    duration: Option<f64>,
+    bit_rate: Option<u64>,
+    size: Option<u64>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VideoStreamInfo {
+    index: u32,
+    codec_name: Option<String>,
+    codec_long_name: Option<String>,
+    width: Option<u32>,
+    height: Option<u32>,
+    frame_rate: Option<f64>,
+    bit_rate: Option<u64>,
+    color_space: Option<String>,
+    color_transfer: Option<String>,
+    color_primaries: Option<String>,
+    pixel_format: Option<String>,
+    hdr_metadata: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AudioStreamInfo {
+    index: u32,
+    codec_name: Option<String>,
+    codec_long_name: Option<String>,
+    sample_rate: Option<u32>,
+    channels: Option<u32>,
+    channel_layout: Option<String>,
+    bit_rate: Option<u64>,
+    integrated_lufs: Option<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct BitratePoint {
+    time: f64,
+    bit_rate: u64,
+}
+
+#[derive(Debug, Deserialize)]
+struct FfprobeRoot {
+    streams: Option<Vec<FfprobeStream>>,
+    format: Option<FfprobeFormat>,
+    packets: Option<Vec<FfprobePacket>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct FfprobeFormat {
+    format_name: Option<String>,
+    format_long_name: Option<String>,
+    duration: Option<String>,
+    bit_rate: Option<String>,
+    size: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct FfprobeStream {
+    index: Option<u32>,
+    codec_name: Option<String>,
+    codec_long_name: Option<String>,
+    codec_type: Option<String>,
+    width: Option<u32>,
+    height: Option<u32>,
+    avg_frame_rate: Option<String>,
+    r_frame_rate: Option<String>,
+    bit_rate: Option<String>,
+    color_space: Option<String>,
+    color_transfer: Option<String>,
+    color_primaries: Option<String>,
+    pix_fmt: Option<String>,
+    sample_rate: Option<String>,
+    channels: Option<u32>,
+    channel_layout: Option<String>,
+    side_data_list: Option<Vec<FfprobeSideData>>,
+}
+
+#[derive(Debug, Deserialize)]
+struct FfprobeSideData {
+    side_data_type: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct FfprobePacket {
+    pts_time: Option<String>,
+    dts_time: Option<String>,
+    duration_time: Option<String>,
+    size: Option<String>,
 }
 
 #[tauri::command]
@@ -84,6 +196,237 @@ pub fn probe_media(app: AppHandle, path: String) -> Result<MediaProbe, String> {
             .and_then(Value::as_str)
             .map(ToOwned::to_owned),
     })
+}
+
+#[tauri::command]
+pub fn analyze_media(app: AppHandle, path: String) -> Result<MediaAnalysis, String> {
+    let safe_path = validate_path(&app, Path::new(&path))?;
+    analyze_media_path(&safe_path)
+}
+
+pub(crate) fn analyze_media_path(path: &Path) -> Result<MediaAnalysis, String> {
+    let input_path = normalize_path(path);
+    let metadata = fs::metadata(path).ok();
+    let output = Command::new(ffprobe_binary())
+        .args(build_ffprobe_media_analysis_args(&input_path))
+        .output()
+        .map_err(|error| format!("Unable to run ffprobe: {}", error))?;
+    if !output.status.success() {
+        return Err(String::from_utf8_lossy(&output.stderr).to_string());
+    }
+    let mut analysis = parse_ffprobe_media_analysis(&input_path, &output.stdout)?;
+    analysis.file_size = metadata.as_ref().map(|value| value.len());
+    analysis.created_time_ms = metadata
+        .as_ref()
+        .and_then(|value| value.created().ok())
+        .and_then(system_time_ms);
+    if !analysis.audio_streams.is_empty() {
+        match analyze_loudness_path(path) {
+            Ok(lufs) => {
+                if let Some(stream) = analysis.audio_streams.first_mut() {
+                    stream.integrated_lufs = Some(lufs);
+                }
+            }
+            Err(error) => {
+                analysis.loudness_error = Some(error);
+            }
+        }
+    }
+    Ok(analysis)
+}
+
+pub(crate) fn build_ffprobe_media_analysis_args(input_path: &str) -> [&str; 8] {
+    [
+        "-v",
+        "quiet",
+        "-print_format",
+        "json",
+        "-show_streams",
+        "-show_format",
+        "-show_packets",
+        input_path,
+    ]
+}
+
+pub(crate) fn build_loudnorm_analysis_args(input_path: &str) -> [&str; 9] {
+    [
+        "-hide_banner",
+        "-nostats",
+        "-i",
+        input_path,
+        "-af",
+        "loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json",
+        "-f",
+        "null",
+        "-",
+    ]
+}
+
+pub(crate) fn parse_ffprobe_media_analysis(
+    path: &str,
+    bytes: &[u8],
+) -> Result<MediaAnalysis, String> {
+    let root: FfprobeRoot = serde_json::from_slice(bytes).map_err(|error| error.to_string())?;
+    let format = root.format.map(parse_format).unwrap_or_default();
+    let mut video_streams = Vec::new();
+    let mut audio_streams = Vec::new();
+    for stream in root.streams.unwrap_or_default() {
+        let index = stream.index.unwrap_or(0);
+        match stream.codec_type.as_deref() {
+            Some("video") => video_streams.push(parse_video_stream(index, &stream)),
+            Some("audio") => audio_streams.push(parse_audio_stream(index, &stream)),
+            _ => {}
+        }
+    }
+    Ok(MediaAnalysis {
+        path: path.to_string(),
+        file_size: None,
+        created_time_ms: None,
+        format,
+        video_streams,
+        audio_streams,
+        bitrate_points: build_bitrate_points(&root.packets.unwrap_or_default()),
+        loudness_error: None,
+    })
+}
+
+fn parse_format(format: FfprobeFormat) -> MediaFormatInfo {
+    MediaFormatInfo {
+        format_name: format.format_name,
+        format_long_name: format.format_long_name,
+        duration: parse_f64(format.duration.as_deref()),
+        bit_rate: parse_u64(format.bit_rate.as_deref()),
+        size: parse_u64(format.size.as_deref()),
+    }
+}
+
+fn parse_video_stream(index: u32, stream: &FfprobeStream) -> VideoStreamInfo {
+    VideoStreamInfo {
+        index,
+        codec_name: stream.codec_name.clone(),
+        codec_long_name: stream.codec_long_name.clone(),
+        width: stream.width,
+        height: stream.height,
+        frame_rate: parse_frame_rate(stream.avg_frame_rate.as_deref())
+            .or_else(|| parse_frame_rate(stream.r_frame_rate.as_deref())),
+        bit_rate: parse_u64(stream.bit_rate.as_deref()),
+        color_space: stream.color_space.clone(),
+        color_transfer: stream.color_transfer.clone(),
+        color_primaries: stream.color_primaries.clone(),
+        pixel_format: stream.pix_fmt.clone(),
+        hdr_metadata: stream
+            .side_data_list
+            .as_deref()
+            .unwrap_or_default()
+            .iter()
+            .flat_map(|side_data| side_data.side_data_type.clone())
+            .filter(|value| {
+                value.contains("Mastering display")
+                    || value.contains("Content light")
+                    || value.to_lowercase().contains("hdr")
+            })
+            .collect(),
+    }
+}
+
+fn parse_audio_stream(index: u32, stream: &FfprobeStream) -> AudioStreamInfo {
+    AudioStreamInfo {
+        index,
+        codec_name: stream.codec_name.clone(),
+        codec_long_name: stream.codec_long_name.clone(),
+        sample_rate: parse_u64(stream.sample_rate.as_deref()).map(|value| value as u32),
+        channels: stream.channels,
+        channel_layout: stream.channel_layout.clone(),
+        bit_rate: parse_u64(stream.bit_rate.as_deref()),
+        integrated_lufs: None,
+    }
+}
+
+fn build_bitrate_points(packets: &[FfprobePacket]) -> Vec<BitratePoint> {
+    let mut buckets = std::collections::BTreeMap::<u64, u64>::new();
+    for packet in packets {
+        let time = parse_f64(packet.pts_time.as_deref())
+            .or_else(|| parse_f64(packet.dts_time.as_deref()))
+            .unwrap_or(0.0);
+        if !time.is_finite() || time < 0.0 {
+            continue;
+        }
+        let bucket = time.floor() as u64;
+        let size = parse_u64(packet.size.as_deref()).unwrap_or(0);
+        let duration = parse_f64(packet.duration_time.as_deref()).unwrap_or(0.0);
+        let duration_scale = if duration.is_finite() && duration > 1.0 {
+            duration
+        } else {
+            1.0
+        };
+        let bits = ((size as f64 * 8.0) / duration_scale).round() as u64;
+        *buckets.entry(bucket).or_default() += bits;
+    }
+    buckets
+        .into_iter()
+        .map(|(time, bit_rate)| BitratePoint {
+            time: time as f64,
+            bit_rate,
+        })
+        .collect()
+}
+
+fn analyze_loudness_path(path: &Path) -> Result<f64, String> {
+    let input_path = normalize_path(path);
+    let output = Command::new(ffmpeg_binary())
+        .args(build_loudnorm_analysis_args(&input_path))
+        .output()
+        .map_err(|error| format!("Unable to run FFmpeg loudness analysis: {}", error))?;
+    if !output.status.success() {
+        return Err(String::from_utf8_lossy(&output.stderr).to_string());
+    }
+    parse_loudnorm_integrated_lufs(&output.stderr)
+        .or_else(|| parse_loudnorm_integrated_lufs(&output.stdout))
+        .ok_or_else(|| "Unable to parse loudnorm integrated LUFS.".to_string())
+}
+
+fn parse_loudnorm_integrated_lufs(bytes: &[u8]) -> Option<f64> {
+    let text = String::from_utf8_lossy(bytes);
+    let start = text.find('{')?;
+    let end = text.rfind('}')?;
+    let json: Value = serde_json::from_str(&text[start..=end]).ok()?;
+    json.get("input_i")
+        .and_then(Value::as_str)
+        .and_then(|value| value.parse::<f64>().ok())
+}
+
+fn parse_u64(value: Option<&str>) -> Option<u64> {
+    value?.trim().parse::<u64>().ok()
+}
+
+fn parse_f64(value: Option<&str>) -> Option<f64> {
+    value?
+        .trim()
+        .parse::<f64>()
+        .ok()
+        .filter(|number| number.is_finite())
+}
+
+fn parse_frame_rate(value: Option<&str>) -> Option<f64> {
+    let raw = value?.trim();
+    if raw.is_empty() || raw == "0/0" {
+        return None;
+    }
+    if let Some((numerator, denominator)) = raw.split_once('/') {
+        let numerator = numerator.parse::<f64>().ok()?;
+        let denominator = denominator.parse::<f64>().ok()?;
+        if denominator <= 0.0 {
+            return None;
+        }
+        return Some(round_seconds(numerator / denominator));
+    }
+    parse_f64(Some(raw)).map(round_seconds)
+}
+
+fn system_time_ms(time: SystemTime) -> Option<u64> {
+    time.duration_since(UNIX_EPOCH)
+        .ok()
+        .map(|duration| duration.as_millis() as u64)
 }
 
 #[tauri::command]
@@ -281,7 +624,10 @@ pub(crate) fn detect_silence_path(
     Ok(ranges)
 }
 
-pub(crate) fn analyze_rms_path(path: &Path, samples_per_sec: u32) -> Result<Vec<RmsSample>, String> {
+pub(crate) fn analyze_rms_path(
+    path: &Path,
+    samples_per_sec: u32,
+) -> Result<Vec<RmsSample>, String> {
     let samples_per_sec = samples_per_sec.clamp(1, 200);
     let samples_per_bucket =
         ((BEAT_RMS_SAMPLE_RATE as f64) / (samples_per_sec as f64)).ceil() as usize;
@@ -399,7 +745,10 @@ pub(crate) fn detect_beat_peaks_from_rms(samples: &[RmsSample], sensitivity: &st
     if ordered.len() < 3 {
         return Vec::new();
     }
-    let max_rms = ordered.iter().map(|sample| sample.rms).fold(0.0_f64, f64::max);
+    let max_rms = ordered
+        .iter()
+        .map(|sample| sample.rms)
+        .fold(0.0_f64, f64::max);
     if max_rms <= 0.0 {
         return Vec::new();
     }
@@ -517,6 +866,14 @@ fn ffmpeg_binary() -> &'static str {
     }
 }
 
+fn ffprobe_binary() -> &'static str {
+    if cfg!(windows) {
+        "ffprobe.exe"
+    } else {
+        "ffprobe"
+    }
+}
+
 fn normalize_path(path: &Path) -> String {
     path.to_string_lossy().replace('\\', "/")
 }
@@ -563,18 +920,172 @@ mod tests {
     #[test]
     fn detect_beat_peaks_respects_sensitivity_threshold_and_spacing() {
         let samples = [
-            RmsSample { time: 0.0, rms: 0.1 },
-            RmsSample { time: 0.25, rms: 0.8 },
-            RmsSample { time: 0.5, rms: 0.2 },
-            RmsSample { time: 0.52, rms: 0.7 },
-            RmsSample { time: 0.9, rms: 0.1 },
-            RmsSample { time: 1.2, rms: 0.6 },
-            RmsSample { time: 1.45, rms: 0.1 },
+            RmsSample {
+                time: 0.0,
+                rms: 0.1,
+            },
+            RmsSample {
+                time: 0.25,
+                rms: 0.8,
+            },
+            RmsSample {
+                time: 0.5,
+                rms: 0.2,
+            },
+            RmsSample {
+                time: 0.52,
+                rms: 0.7,
+            },
+            RmsSample {
+                time: 0.9,
+                rms: 0.1,
+            },
+            RmsSample {
+                time: 1.2,
+                rms: 0.6,
+            },
+            RmsSample {
+                time: 1.45,
+                rms: 0.1,
+            },
         ];
 
-        assert_eq!(detect_beat_peaks_from_rms(&samples, "medium"), vec![0.25, 0.52, 1.2]);
+        assert_eq!(
+            detect_beat_peaks_from_rms(&samples, "medium"),
+            vec![0.25, 0.52, 1.2]
+        );
         assert_eq!(detect_beat_peaks_from_rms(&samples, "low"), vec![0.25, 1.2]);
-        assert_eq!(detect_beat_peaks_from_rms(&samples, "unknown"), vec![0.25, 0.52, 1.2]);
+        assert_eq!(
+            detect_beat_peaks_from_rms(&samples, "unknown"),
+            vec![0.25, 0.52, 1.2]
+        );
+    }
+
+    #[test]
+    fn parses_ffprobe_media_analysis_video_audio_and_hdr_fields() {
+        let raw = br#"{
+          "streams": [
+            {
+              "index": 0,
+              "codec_name": "hevc",
+              "codec_long_name": "H.265 / HEVC",
+              "codec_type": "video",
+              "width": 3840,
+              "height": 2160,
+              "avg_frame_rate": "30000/1001",
+              "bit_rate": "45000000",
+              "color_space": "bt2020nc",
+              "color_transfer": "smpte2084",
+              "color_primaries": "bt2020",
+              "pix_fmt": "yuv420p10le",
+              "side_data_list": [
+                { "side_data_type": "Mastering display metadata" },
+                { "side_data_type": "Content light level metadata" }
+              ]
+            },
+            {
+              "index": 1,
+              "codec_name": "aac",
+              "codec_long_name": "AAC",
+              "codec_type": "audio",
+              "sample_rate": "48000",
+              "channels": 2,
+              "channel_layout": "stereo",
+              "bit_rate": "192000"
+            }
+          ],
+          "format": {
+            "format_name": "mov,mp4,m4a,3gp,3g2,mj2",
+            "format_long_name": "QuickTime / MOV",
+            "duration": "12.500000",
+            "size": "72000000",
+            "bit_rate": "46080000"
+          },
+          "packets": [
+            { "pts_time": "0.000000", "duration_time": "0.033000", "size": "1000" },
+            { "pts_time": "0.500000", "duration_time": "0.033000", "size": "1500" },
+            { "pts_time": "1.100000", "duration_time": "0.033000", "size": "2000" }
+          ]
+        }"#;
+
+        let analysis =
+            parse_ffprobe_media_analysis("C:/Media/hdr.mov", raw).expect("parse ffprobe");
+
+        assert_eq!(analysis.format.duration, Some(12.5));
+        assert_eq!(
+            analysis.video_streams[0].codec_name.as_deref(),
+            Some("hevc")
+        );
+        assert_eq!(analysis.video_streams[0].width, Some(3840));
+        assert_eq!(analysis.video_streams[0].height, Some(2160));
+        assert_eq!(analysis.video_streams[0].frame_rate, Some(29.97));
+        assert_eq!(
+            analysis.video_streams[0].color_transfer.as_deref(),
+            Some("smpte2084")
+        );
+        assert_eq!(
+            analysis.video_streams[0].pixel_format.as_deref(),
+            Some("yuv420p10le")
+        );
+        assert_eq!(analysis.video_streams[0].hdr_metadata.len(), 2);
+        assert_eq!(analysis.audio_streams[0].codec_name.as_deref(), Some("aac"));
+        assert_eq!(analysis.audio_streams[0].sample_rate, Some(48_000));
+        assert_eq!(analysis.audio_streams[0].channels, Some(2));
+        assert_eq!(
+            analysis.bitrate_points,
+            vec![
+                BitratePoint {
+                    time: 0.0,
+                    bit_rate: 20_000
+                },
+                BitratePoint {
+                    time: 1.0,
+                    bit_rate: 16_000
+                }
+            ]
+        );
+    }
+
+    #[test]
+    fn builds_loudnorm_analysis_args_and_parses_integrated_lufs() {
+        assert_eq!(
+            build_loudnorm_analysis_args("C:/Media/tiny-video.mp4"),
+            [
+                "-hide_banner",
+                "-nostats",
+                "-i",
+                "C:/Media/tiny-video.mp4",
+                "-af",
+                "loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json",
+                "-f",
+                "null",
+                "-"
+            ]
+        );
+        let stderr = br#"[Parsed_loudnorm_0 @ 000]
+{
+  "input_i" : "-18.42",
+  "input_tp" : "-2.20"
+}"#;
+
+        assert_eq!(parse_loudnorm_integrated_lufs(stderr), Some(-18.42));
+    }
+
+    #[test]
+    fn builds_ffprobe_media_analysis_args_with_packet_output() {
+        assert_eq!(
+            build_ffprobe_media_analysis_args("C:/Media/tiny-video.mp4"),
+            [
+                "-v",
+                "quiet",
+                "-print_format",
+                "json",
+                "-show_streams",
+                "-show_format",
+                "-show_packets",
+                "C:/Media/tiny-video.mp4"
+            ]
+        );
     }
 
     #[test]

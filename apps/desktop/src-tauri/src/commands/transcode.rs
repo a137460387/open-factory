@@ -110,15 +110,7 @@ fn run_batch_transcode(
     for (index, task) in request.tasks.into_iter().enumerate() {
         let current = index + 1;
         if is_task_canceled(&task.task_id) {
-            emit_progress(
-                &app,
-                &task,
-                None,
-                "canceled",
-                0.0,
-                current,
-                total,
-            );
+            emit_progress(&app, &task, None, "canceled", 0.0, current, total);
             remove_cancellation(&task.task_id);
             results.push(BatchTranscodeTaskResult {
                 task_id: task.task_id,
@@ -336,7 +328,9 @@ fn run_transcode_task(
                 task,
                 Some(output_arg),
                 "failed",
-                Some(format!("FFmpeg transcode failed with status {status}.\n{tail}")),
+                Some(format!(
+                    "FFmpeg transcode failed with status {status}.\n{tail}"
+                )),
                 started,
             )
         }
@@ -350,7 +344,13 @@ fn run_transcode_task(
                 current,
                 total,
             );
-            task_result(task, Some(output_arg), "failed", Some(error.to_string()), started)
+            task_result(
+                task,
+                Some(output_arg),
+                "failed",
+                Some(error.to_string()),
+                started,
+            )
         }
     }
 }
@@ -489,8 +489,7 @@ fn progress_from_out_time(out_time_us: u64, expected_duration_us: u64) -> f32 {
     if expected_duration_us == 0 {
         return 0.0;
     }
-    ((out_time_us as f64 / expected_duration_us as f64).clamp(0.0, 0.99) as f32 * 10_000.0)
-        .round()
+    ((out_time_us as f64 / expected_duration_us as f64).clamp(0.0, 0.99) as f32 * 10_000.0).round()
         / 10_000.0
 }
 
@@ -625,7 +624,10 @@ mod tests {
             .windows(2)
             .any(|pair| pair == ["-vf", "scale=w='min(1280,iw)':h='min(720,ih)':force_original_aspect_ratio=decrease,setsar=1"]));
         assert!(args.windows(2).any(|pair| pair == ["-progress", "pipe:1"]));
-        assert_eq!(args.last().map(String::as_str), Some("C:/App/transcodes/source_h264.mp4"));
+        assert_eq!(
+            args.last().map(String::as_str),
+            Some("C:/App/transcodes/source_h264.mp4")
+        );
     }
 
     #[test]
@@ -653,7 +655,10 @@ mod tests {
         assert!(args.windows(2).any(|pair| pair == ["-c:v", "prores_ks"]));
         assert!(args.windows(2).any(|pair| pair == ["-profile:v", "0"]));
         assert!(args.windows(2).any(|pair| pair == ["-c:a", "pcm_s16le"]));
-        assert_eq!(args.last().map(String::as_str), Some("C:/App/transcodes/source_proxy.mov"));
+        assert_eq!(
+            args.last().map(String::as_str),
+            Some("C:/App/transcodes/source_proxy.mov")
+        );
     }
 
     #[test]

@@ -56,7 +56,8 @@ pub fn update_export_tray_progress(
     let label = build_export_tray_progress_label(progress, running_count);
     tray.set_tooltip(Some(label.clone()))
         .map_err(|error| error.to_string())?;
-    tray.set_title(Some(label)).map_err(|error| error.to_string())?;
+    tray.set_title(Some(label))
+        .map_err(|error| error.to_string())?;
     Ok(())
 }
 
@@ -102,7 +103,10 @@ pub fn build_power_action_command(action: ExportPowerAction) -> SystemCommandSpe
         match action {
             ExportPowerAction::Shutdown => SystemCommandSpec {
                 program: "osascript".to_string(),
-                args: vec!["-e".to_string(), "tell app \"System Events\" to shut down".to_string()],
+                args: vec![
+                    "-e".to_string(),
+                    "tell app \"System Events\" to shut down".to_string(),
+                ],
             },
             ExportPowerAction::Hibernate => SystemCommandSpec {
                 program: "pmset".to_string(),
@@ -131,12 +135,30 @@ fn ensure_export_tray(
         return Ok(tray);
     }
     let labels = labels.unwrap_or_else(default_tray_labels);
-    let show = MenuItem::with_id(app, "export-show-window", labels.show_window, true, None::<&str>)
-        .map_err(|error| error.to_string())?;
-    let pause = MenuItem::with_id(app, "export-pause-queue", labels.pause_queue, true, None::<&str>)
-        .map_err(|error| error.to_string())?;
-    let cancel = MenuItem::with_id(app, "export-cancel-all", labels.cancel_all, true, None::<&str>)
-        .map_err(|error| error.to_string())?;
+    let show = MenuItem::with_id(
+        app,
+        "export-show-window",
+        labels.show_window,
+        true,
+        None::<&str>,
+    )
+    .map_err(|error| error.to_string())?;
+    let pause = MenuItem::with_id(
+        app,
+        "export-pause-queue",
+        labels.pause_queue,
+        true,
+        None::<&str>,
+    )
+    .map_err(|error| error.to_string())?;
+    let cancel = MenuItem::with_id(
+        app,
+        "export-cancel-all",
+        labels.cancel_all,
+        true,
+        None::<&str>,
+    )
+    .map_err(|error| error.to_string())?;
     let quit = MenuItem::with_id(app, "export-exit", labels.exit, true, None::<&str>)
         .map_err(|error| error.to_string())?;
     let menu = Menu::with_items(app, &[&show, &pause, &cancel, &quit])
@@ -196,8 +218,14 @@ mod tests {
 
     #[test]
     fn tray_progress_label_clamps_progress() {
-        assert_eq!(build_export_tray_progress_label(0.424, 1), "Open Factory 42%");
-        assert_eq!(build_export_tray_progress_label(3.0, 1), "Open Factory 100%");
+        assert_eq!(
+            build_export_tray_progress_label(0.424, 1),
+            "Open Factory 42%"
+        );
+        assert_eq!(
+            build_export_tray_progress_label(3.0, 1),
+            "Open Factory 100%"
+        );
         assert_eq!(build_export_tray_progress_label(0.5, 0), "Open Factory");
     }
 

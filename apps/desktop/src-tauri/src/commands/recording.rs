@@ -128,7 +128,10 @@ fn validate_recording_request(request: &RecordingRequest) -> Result<(), String> 
     Ok(())
 }
 
-fn build_recording_output_path(app: &AppHandle, request: &RecordingRequest) -> Result<PathBuf, String> {
+fn build_recording_output_path(
+    app: &AppHandle,
+    request: &RecordingRequest,
+) -> Result<PathBuf, String> {
     let millis = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .map_err(|error| error.to_string())?
@@ -138,17 +141,28 @@ fn build_recording_output_path(app: &AppHandle, request: &RecordingRequest) -> R
         .app_cache_dir()
         .map_err(|error| error.to_string())?
         .join("recordings")
-        .join(format!("{}-{}.mp4", safe_file_name(&request.task_id), millis)))
+        .join(format!(
+            "{}-{}.mp4",
+            safe_file_name(&request.task_id),
+            millis
+        )))
 }
 
-fn build_recording_args_for_current_platform(request: &RecordingRequest, output_path: &Path) -> Vec<String> {
+fn build_recording_args_for_current_platform(
+    request: &RecordingRequest,
+    output_path: &Path,
+) -> Vec<String> {
     if cfg!(target_os = "macos") {
         return build_recording_args_for_platform("macos", request, output_path);
     }
     build_recording_args_for_platform("windows", request, output_path)
 }
 
-fn build_recording_args_for_platform(platform: &str, request: &RecordingRequest, output_path: &Path) -> Vec<String> {
+fn build_recording_args_for_platform(
+    platform: &str,
+    request: &RecordingRequest,
+    output_path: &Path,
+) -> Vec<String> {
     let size = format!("{}x{}", request.width, request.height);
     let frame_rate = request.frame_rate.to_string();
     let mut args = vec!["-y".to_string()];
@@ -254,13 +268,22 @@ mod tests {
             frame_rate: 30,
         };
 
-        let args = build_recording_args_for_platform("windows", &request, Path::new("C:/Temp/recording.mp4"));
+        let args = build_recording_args_for_platform(
+            "windows",
+            &request,
+            Path::new("C:/Temp/recording.mp4"),
+        );
 
         assert!(args.windows(2).any(|pair| pair == ["-f", "gdigrab"]));
         assert!(args.windows(2).any(|pair| pair == ["-i", "desktop"]));
-        assert!(args.windows(2).any(|pair| pair == ["-video_size", "1280x720"]));
+        assert!(args
+            .windows(2)
+            .any(|pair| pair == ["-video_size", "1280x720"]));
         assert!(args.windows(2).any(|pair| pair == ["-framerate", "30"]));
-        assert_eq!(args.last().map(String::as_str), Some("C:/Temp/recording.mp4"));
+        assert_eq!(
+            args.last().map(String::as_str),
+            Some("C:/Temp/recording.mp4")
+        );
     }
 
     #[test]
@@ -273,11 +296,14 @@ mod tests {
             frame_rate: 60,
         };
 
-        let args = build_recording_args_for_platform("macos", &request, Path::new("/tmp/recording.mp4"));
+        let args =
+            build_recording_args_for_platform("macos", &request, Path::new("/tmp/recording.mp4"));
 
         assert!(args.windows(2).any(|pair| pair == ["-f", "avfoundation"]));
         assert!(args.windows(2).any(|pair| pair == ["-i", "1:none"]));
-        assert!(args.windows(2).any(|pair| pair == ["-video_size", "1920x1080"]));
+        assert!(args
+            .windows(2)
+            .any(|pair| pair == ["-video_size", "1920x1080"]));
         assert!(args.windows(2).any(|pair| pair == ["-framerate", "60"]));
         assert_eq!(args.last().map(String::as_str), Some("/tmp/recording.mp4"));
     }

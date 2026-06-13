@@ -1,5 +1,5 @@
-pub mod backup;
 pub mod background;
+pub mod backup;
 pub mod cache;
 pub mod demucs;
 pub mod ffmpeg;

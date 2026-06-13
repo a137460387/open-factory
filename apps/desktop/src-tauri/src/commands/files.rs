@@ -125,7 +125,11 @@ pub fn remove_file(app: AppHandle, path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn copy_file(app: AppHandle, source_path: String, destination_path: String) -> Result<(), String> {
+pub fn copy_file(
+    app: AppHandle,
+    source_path: String,
+    destination_path: String,
+) -> Result<(), String> {
     let safe_source = validate_path(&app, Path::new(&source_path))?;
     let safe_destination = validate_path_for_write(&app, Path::new(&destination_path))?;
     if safe_source == safe_destination {
@@ -266,13 +270,19 @@ mod tests {
 
     #[test]
     fn normalize_path_rewrites_windows_separators() {
-        assert_eq!(normalize_path(Path::new(r"C:\Users\E2E\clip.cube")), "C:/Users/E2E/clip.cube");
+        assert_eq!(
+            normalize_path(Path::new(r"C:\Users\E2E\clip.cube")),
+            "C:/Users/E2E/clip.cube"
+        );
     }
 
     #[test]
     fn temp_segments_dir_uses_open_factory_segments_folder() {
         let path = temp_segments_dir_path();
-        assert_eq!(path.file_name().and_then(|value| value.to_str()), Some("segments"));
+        assert_eq!(
+            path.file_name().and_then(|value| value.to_str()),
+            Some("segments")
+        );
         assert_eq!(
             path.parent()
                 .and_then(|parent| parent.file_name())

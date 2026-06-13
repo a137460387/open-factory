@@ -529,16 +529,21 @@ fn analyze_motion_track_blocking(
     let slot_clip_id = request.clip_id.clone();
     let emit_clip_id = request.clip_id.clone();
     let progress_app = app.clone();
-    let stderr_text = spawn_and_capture_motion_tracking(&slot_clip_id, args, request.duration, move |progress| {
-        let _ = progress_app.emit(
-            "motion-track-progress",
-            MotionTrackProgressPayload {
-                clip_id: emit_clip_id.clone(),
-                progress: progress.progress,
-                progress_pct: progress.progress_pct,
-            },
-        );
-    })?;
+    let stderr_text = spawn_and_capture_motion_tracking(
+        &slot_clip_id,
+        args,
+        request.duration,
+        move |progress| {
+            let _ = progress_app.emit(
+                "motion-track-progress",
+                MotionTrackProgressPayload {
+                    clip_id: emit_clip_id.clone(),
+                    progress: progress.progress,
+                    progress_pct: progress.progress_pct,
+                },
+            );
+        },
+    )?;
     Ok(AnalyzeMotionTrackResult {
         clip_id: request.clip_id,
         points: parse_motion_vectors_from_mestimate_output(&stderr_text),
@@ -599,7 +604,11 @@ fn run_nested_export_plans(
     for nested in &mut plan.nested_plans {
         let output_path = nested_dir.join(safe_file_name(&nested.placeholder));
         run_nested_export_plans(app, &mut nested.plan, nested_dir, slot_id, log_path)?;
-        replace_placeholder(&mut nested.plan.full_args, &nested.placeholder, &normalize_path(&output_path));
+        replace_placeholder(
+            &mut nested.plan.full_args,
+            &nested.placeholder,
+            &normalize_path(&output_path),
+        );
         with_temp_export_artifacts(&nested.plan, |materialized, _temp_dir| {
             run_materialized_export_plan(
                 app,
@@ -613,8 +622,17 @@ fn run_nested_export_plans(
                 Arc::new(|| {}),
             )
         })
-        .map_err(|error| format!("Nested sequence {} export failed: {}", nested.sequence_id, error))?;
-        replace_placeholder(&mut plan.full_args, &nested.placeholder, &normalize_path(&output_path));
+        .map_err(|error| {
+            format!(
+                "Nested sequence {} export failed: {}",
+                nested.sequence_id, error
+            )
+        })?;
+        replace_placeholder(
+            &mut plan.full_args,
+            &nested.placeholder,
+            &normalize_path(&output_path),
+        );
     }
     Ok(())
 }
@@ -661,7 +679,14 @@ fn run_materialized_export_plan(
     if materialized.passes.is_empty() {
         let mut args = materialized.full_args;
         validate_export_paths(app, &mut args, nested_dir, Some(artifact_dir), true)?;
-        spawn_and_wait_with_progress(slot_id, args, fallback_duration, log_path, emit_progress, emit_started)?;
+        spawn_and_wait_with_progress(
+            slot_id,
+            args,
+            fallback_duration,
+            log_path,
+            emit_progress,
+            emit_started,
+        )?;
         return Ok(ExportReport::default());
     }
 
@@ -670,13 +695,19 @@ fn run_materialized_export_plan(
     for pass in materialized.passes {
         let mut args = pass.full_args;
         if requires_loudnorm_measurement(&args) {
-            let measurement = loudness_measurement
-                .as_ref()
-                .ok_or_else(|| "Loudness render pass is missing analysis measurements.".to_string())?;
+            let measurement = loudness_measurement.as_ref().ok_or_else(|| {
+                "Loudness render pass is missing analysis measurements.".to_string()
+            })?;
             replace_loudnorm_placeholders(&mut args, measurement);
         }
         let is_loudness_analysis = pass.kind.as_deref() == Some("loudness-analysis");
-        validate_export_paths(app, &mut args, nested_dir, Some(artifact_dir), !is_loudness_analysis)?;
+        validate_export_paths(
+            app,
+            &mut args,
+            nested_dir,
+            Some(artifact_dir),
+            !is_loudness_analysis,
+        )?;
         let output = spawn_and_wait_with_progress(
             slot_id,
             args,
@@ -687,8 +718,12 @@ fn run_materialized_export_plan(
         )
         .map_err(|error| format!("FFmpeg pass {} failed: {}", pass.name, error))?;
         if is_loudness_analysis {
-            let measurement = parse_loudnorm_measurement(&output.stderr)
-                .ok_or_else(|| format!("Unable to parse FFmpeg loudnorm analysis output for pass {}.", pass.name))?;
+            let measurement = parse_loudnorm_measurement(&output.stderr).ok_or_else(|| {
+                format!(
+                    "Unable to parse FFmpeg loudnorm analysis output for pass {}.",
+                    pass.name
+                )
+            })?;
             report.loudness = Some(LoudnessReport {
                 integrated_loudness: measurement.measured_i,
             });
@@ -726,14 +761,26 @@ fn requires_loudnorm_measurement(args: &[String]) -> bool {
 fn replace_loudnorm_placeholders(args: &mut [String], measurement: &LoudnormMeasurement) {
     for arg in args {
         *arg = arg
-            .replace("__LOUDNORM_MEASURED_I__", &format_loudnorm_number(measurement.measured_i))
-            .replace("__LOUDNORM_MEASURED_TP__", &format_loudnorm_number(measurement.measured_tp))
-            .replace("__LOUDNORM_MEASURED_LRA__", &format_loudnorm_number(measurement.measured_lra))
+            .replace(
+                "__LOUDNORM_MEASURED_I__",
+                &format_loudnorm_number(measurement.measured_i),
+            )
+            .replace(
+                "__LOUDNORM_MEASURED_TP__",
+                &format_loudnorm_number(measurement.measured_tp),
+            )
+            .replace(
+                "__LOUDNORM_MEASURED_LRA__",
+                &format_loudnorm_number(measurement.measured_lra),
+            )
             .replace(
                 "__LOUDNORM_MEASURED_THRESH__",
                 &format_loudnorm_number(measurement.measured_thresh),
             )
-            .replace("__LOUDNORM_OFFSET__", &format_loudnorm_number(measurement.offset));
+            .replace(
+                "__LOUDNORM_OFFSET__",
+                &format_loudnorm_number(measurement.offset),
+            );
     }
 }
 
@@ -787,7 +834,8 @@ fn stderr_number(stderr: &str, keys: &[&str]) -> Option<f64> {
         let trimmed = line.trim().trim_matches(',').trim_matches('"');
         for key in keys {
             if let Some(rest) = trimmed.strip_prefix(key) {
-                let value = rest.trim_start_matches(|ch: char| ch == ':' || ch == '=' || ch.is_whitespace());
+                let value = rest
+                    .trim_start_matches(|ch: char| ch == ':' || ch == '=' || ch.is_whitespace());
                 if let Some(number) = parse_loudnorm_number(value) {
                     return Some(number);
                 }
@@ -843,7 +891,13 @@ fn initialize_export_log(app: &AppHandle, slot_id: &str) -> Result<PathBuf, Stri
             slot_id
         ),
     )
-    .map_err(|error| format!("Unable to write export log {}: {}", normalize_path(&log_path), error))?;
+    .map_err(|error| {
+        format!(
+            "Unable to write export log {}: {}",
+            normalize_path(&log_path),
+            error
+        )
+    })?;
     Ok(log_path)
 }
 
@@ -858,7 +912,13 @@ fn append_export_log(
         .create(true)
         .append(true)
         .open(log_path)
-        .map_err(|error| format!("Unable to append export log {}: {}", normalize_path(log_path), error))?;
+        .map_err(|error| {
+            format!(
+                "Unable to append export log {}: {}",
+                normalize_path(log_path),
+                error
+            )
+        })?;
     writeln!(file, "ffmpeg {}", args.join(" ")).map_err(|error| error.to_string())?;
     writeln!(file, "status={}", status).map_err(|error| error.to_string())?;
     writeln!(file, "\n[stdout]\n{}", stdout).map_err(|error| error.to_string())?;
@@ -960,7 +1020,17 @@ fn spawn_and_wait_with_progress(
         .map(|lines| lines.join("\n"))
         .unwrap_or_default();
     if let Some(path) = log_path {
-        let _ = append_export_log(path, &args, &stdout_text, &stderr_text, status_result.as_ref().map(|status| status.to_string()).unwrap_or_else(|error| error.clone()).as_str());
+        let _ = append_export_log(
+            path,
+            &args,
+            &stdout_text,
+            &stderr_text,
+            status_result
+                .as_ref()
+                .map(|status| status.to_string())
+                .unwrap_or_else(|error| error.clone())
+                .as_str(),
+        );
     }
     match status_result {
         Ok(status) if status.success() => {
@@ -970,13 +1040,11 @@ fn spawn_and_wait_with_progress(
                 stderr: stderr_text,
             })
         }
-        Ok(status) => {
-            Err(format!(
-                "FFmpeg exited with status {}.\n{}",
-                status,
-                stderr_tail(&stderr_text, 20)
-            ))
-        }
+        Ok(status) => Err(format!(
+            "FFmpeg exited with status {}.\n{}",
+            status,
+            stderr_tail(&stderr_text, 20)
+        )),
         Err(error) => Err(error),
     }
 }
@@ -1169,7 +1237,10 @@ fn parse_number_prefix(value: &str) -> Option<f64> {
     if token.is_empty() || token == "-" || token == "+" || token == "." {
         return None;
     }
-    token.parse::<f64>().ok().filter(|number| number.is_finite())
+    token
+        .parse::<f64>()
+        .ok()
+        .filter(|number| number.is_finite())
 }
 
 fn parse_timecode(value: &str) -> Option<f64> {
@@ -1441,10 +1512,7 @@ fn build_custom_shader_bake_filter(manifest: &CustomShaderSequenceManifest) -> S
             "scale={}:{}:force_original_aspect_ratio=decrease",
             width, height
         ),
-        format!(
-            "pad={}:{}:(ow-iw)/2:(oh-ih)/2:color=black",
-            width, height
-        ),
+        format!("pad={}:{}:(ow-iw)/2:(oh-ih)/2:color=black", width, height),
         "setsar=1".to_string(),
     ];
     if (manifest.speed - 1.0).abs() > 0.001 && manifest.clip_type != "image" {
@@ -1475,7 +1543,8 @@ fn custom_shader_equivalent_filter(manifest: &CustomShaderSequenceManifest) -> S
             "lutrgb=r='floor(val/52)*52':g='floor(val/52)*52':b='floor(val/52)*52'".to_string()
         }
         Some("old-film") => {
-            "colorchannelmixer=.393:.769:.189:0:.349:.686:.168:0:.272:.534:.131,noise=alls=8:allf=t".to_string()
+            "colorchannelmixer=.393:.769:.189:0:.349:.686:.168:0:.272:.534:.131,noise=alls=8:allf=t"
+                .to_string()
         }
         _ => "null".to_string(),
     }
@@ -1585,7 +1654,11 @@ fn replace_placeholder(args: &mut [String], placeholder: &str, value: &str) {
 fn is_path_inside(path: &Path, parent: &Path) -> bool {
     let path = path.components().collect::<Vec<_>>();
     let parent = parent.components().collect::<Vec<_>>();
-    path.len() >= parent.len() && path.iter().zip(parent.iter()).all(|(left, right)| left == right)
+    path.len() >= parent.len()
+        && path
+            .iter()
+            .zip(parent.iter())
+            .all(|(left, right)| left == right)
 }
 
 fn cleanup_incomplete_output(output_path: &Path, existed_before: bool) -> Result<(), String> {
@@ -1908,8 +1981,12 @@ unrelated line
         assert_eq!(args[0], "-y");
         assert_eq!(args.iter().filter(|arg| arg.as_str() == "-i").count(), 1);
         assert!(args.windows(2).any(|pair| pair == ["-progress", "pipe:2"]));
-        assert!(args.windows(2).any(|pair| pair == ["-vf", "cropdetect=round=2,mestimate=method=esa"]));
-        assert!(!args.iter().any(|arg| arg.contains("cmd /C") || arg.contains("&&")));
+        assert!(args
+            .windows(2)
+            .any(|pair| pair == ["-vf", "cropdetect=round=2,mestimate=method=esa"]));
+        assert!(!args
+            .iter()
+            .any(|arg| arg.contains("cmd /C") || arg.contains("&&")));
     }
 
     #[test]
@@ -1921,20 +1998,25 @@ unrelated line
 
         assert_eq!(args[0], "-y");
         assert_eq!(args.iter().filter(|arg| arg.as_str() == "-i").count(), 1);
-        assert_eq!(args, vec![
-            "-y",
-            "-progress",
-            "pipe:2",
-            "-nostats",
-            "-i",
-            "C:/Media/clip.mp4",
-            "-vf",
-            r"vidstabdetect=result=C\:/Temp/open factory/clip.trf",
-            "-f",
-            "null",
-            "-"
-        ]);
-        assert!(!args.iter().any(|arg| arg.contains("cmd /C") || arg.contains("&&")));
+        assert_eq!(
+            args,
+            vec![
+                "-y",
+                "-progress",
+                "pipe:2",
+                "-nostats",
+                "-i",
+                "C:/Media/clip.mp4",
+                "-vf",
+                r"vidstabdetect=result=C\:/Temp/open factory/clip.trf",
+                "-f",
+                "null",
+                "-"
+            ]
+        );
+        assert!(!args
+            .iter()
+            .any(|arg| arg.contains("cmd /C") || arg.contains("&&")));
     }
 
     #[test]
@@ -1980,9 +2062,15 @@ unrelated line
 
     #[test]
     fn export_memory_threshold_pauses_below_two_gb() {
-        assert!(should_pause_export_for_memory(EXPORT_MEMORY_PAUSE_THRESHOLD_BYTES - 1));
-        assert!(!should_pause_export_for_memory(EXPORT_MEMORY_PAUSE_THRESHOLD_BYTES));
-        assert!(!should_pause_export_for_memory(EXPORT_MEMORY_PAUSE_THRESHOLD_BYTES + 1));
+        assert!(should_pause_export_for_memory(
+            EXPORT_MEMORY_PAUSE_THRESHOLD_BYTES - 1
+        ));
+        assert!(!should_pause_export_for_memory(
+            EXPORT_MEMORY_PAUSE_THRESHOLD_BYTES
+        ));
+        assert!(!should_pause_export_for_memory(
+            EXPORT_MEMORY_PAUSE_THRESHOLD_BYTES + 1
+        ));
     }
 
     #[test]
@@ -1995,7 +2083,10 @@ unrelated line
 
         cancel_export(None).expect("running cancellation should not fail");
 
-        assert!(export_children().lock().expect("export child lock").is_empty());
+        assert!(export_children()
+            .lock()
+            .expect("export child lock")
+            .is_empty());
     }
 
     #[test]
@@ -2113,7 +2204,10 @@ unrelated line
                 .flat_map(|pass| pass.full_args.iter())
                 .any(|arg| arg.contains("__GIF_PALETTE_open_factory__")));
             assert!(materialized.passes[0].full_args[2].ends_with("gif-palette.png"));
-            assert_eq!(materialized.passes[0].full_args[2], materialized.passes[1].full_args[1]);
+            assert_eq!(
+                materialized.passes[0].full_args[2],
+                materialized.passes[1].full_args[1]
+            );
             assert!(Path::new(&materialized.passes[0].full_args[2]).exists());
             Ok(())
         })
@@ -2412,7 +2506,10 @@ unrelated line
 
         let error = result.expect_err("invalid ffmpeg args should fail");
         assert!(error.contains("FFmpeg exited with status"), "{error}");
-        assert!(export_children().lock().expect("export child lock").is_empty());
+        assert!(export_children()
+            .lock()
+            .expect("export child lock")
+            .is_empty());
     }
 
     #[cfg(windows)]

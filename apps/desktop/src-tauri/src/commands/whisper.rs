@@ -50,11 +50,27 @@ fn run_whisper_blocking(app: AppHandle, request: WhisperRequest) -> Result<Whisp
     emit_progress(&app, &request.clip_id, 0.02);
     let audio_path = prepare_whisper_audio(&source_media, &output_dir)?;
     emit_progress(&app, &request.clip_id, 0.2);
-    run_whisper_process(&app, &request.clip_id, &executable, &model, &audio_path, &output_dir)?;
-    let srt_path = find_srt_output(&output_dir, &audio_path)
-        .ok_or_else(|| format!("Whisper did not create an SRT file in {}", normalize_path(&output_dir)))?;
-    let contents = fs::read_to_string(&srt_path)
-        .map_err(|error| format!("Unable to read Whisper SRT {}: {}", normalize_path(&srt_path), error))?;
+    run_whisper_process(
+        &app,
+        &request.clip_id,
+        &executable,
+        &model,
+        &audio_path,
+        &output_dir,
+    )?;
+    let srt_path = find_srt_output(&output_dir, &audio_path).ok_or_else(|| {
+        format!(
+            "Whisper did not create an SRT file in {}",
+            normalize_path(&output_dir)
+        )
+    })?;
+    let contents = fs::read_to_string(&srt_path).map_err(|error| {
+        format!(
+            "Unable to read Whisper SRT {}: {}",
+            normalize_path(&srt_path),
+            error
+        )
+    })?;
     emit_progress(&app, &request.clip_id, 1.0);
     Ok(WhisperResult {
         srt_path: normalize_path(&srt_path),
@@ -155,10 +171,20 @@ fn run_whisper_process(
     let lines = Arc::new(Mutex::new(Vec::<String>::new()));
     let mut readers = Vec::new();
     if let Some(stdout) = child.stdout.take() {
-        readers.push(spawn_whisper_reader(stdout, app.clone(), clip_id.to_string(), Arc::clone(&lines)));
+        readers.push(spawn_whisper_reader(
+            stdout,
+            app.clone(),
+            clip_id.to_string(),
+            Arc::clone(&lines),
+        ));
     }
     if let Some(stderr) = child.stderr.take() {
-        readers.push(spawn_whisper_reader(stderr, app.clone(), clip_id.to_string(), Arc::clone(&lines)));
+        readers.push(spawn_whisper_reader(
+            stderr,
+            app.clone(),
+            clip_id.to_string(),
+            Arc::clone(&lines),
+        ));
     }
     let status = child.wait().map_err(|error| error.to_string())?;
     for reader in readers {
@@ -299,8 +325,20 @@ mod tests {
             Path::new(r"C:\Temp\audio.wav"),
         );
 
-        assert_eq!(args, vec!["-m", "C:/Models/base.bin", "-f", "C:/Temp/audio.wav", "-o", "srt"]);
-        assert!(!args.iter().any(|arg| arg.contains("cmd /C") || arg.contains("&&")));
+        assert_eq!(
+            args,
+            vec![
+                "-m",
+                "C:/Models/base.bin",
+                "-f",
+                "C:/Temp/audio.wav",
+                "-o",
+                "srt"
+            ]
+        );
+        assert!(!args
+            .iter()
+            .any(|arg| arg.contains("cmd /C") || arg.contains("&&")));
     }
 
     #[test]
@@ -332,26 +370,35 @@ mod tests {
             Path::new(r"D:\Temp\audio.wav"),
         );
 
-        assert_eq!(args, vec![
-            "-y",
-            "-i",
-            "D:/Media/clip.mp4",
-            "-vn",
-            "-ac",
-            "1",
-            "-ar",
-            "16000",
-            "D:/Temp/audio.wav"
-        ]);
+        assert_eq!(
+            args,
+            vec![
+                "-y",
+                "-i",
+                "D:/Media/clip.mp4",
+                "-vn",
+                "-ac",
+                "1",
+                "-ar",
+                "16000",
+                "D:/Temp/audio.wav"
+            ]
+        );
     }
 
     #[test]
     fn checks_common_srt_output_names() {
-        let candidates = candidate_srt_paths(Path::new("C:/Temp/whisper"), Path::new("C:/Temp/whisper/audio.wav"));
+        let candidates = candidate_srt_paths(
+            Path::new("C:/Temp/whisper"),
+            Path::new("C:/Temp/whisper/audio.wav"),
+        );
 
-        assert_eq!(candidates, vec![
-            PathBuf::from("C:/Temp/whisper/audio.srt"),
-            PathBuf::from("C:/Temp/whisper/audio.wav.srt")
-        ]);
+        assert_eq!(
+            candidates,
+            vec![
+                PathBuf::from("C:/Temp/whisper/audio.srt"),
+                PathBuf::from("C:/Temp/whisper/audio.wav.srt")
+            ]
+        );
     }
 }

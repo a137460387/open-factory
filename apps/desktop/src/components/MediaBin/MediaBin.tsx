@@ -13,13 +13,13 @@ import {
   type SmartAlbumId,
   type TitleTemplateId
 } from '@open-factory/editor-core';
-import { AlertCircle, BadgeCheck, ChevronDown, ChevronRight, FileAudio2, FileImage, FileText, FileVideo2, Folder, FolderPlus, Gauge, Import, Link2, Loader2, Merge, Plus, Search, SlidersHorizontal, Tag, Trash2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { AlertCircle, BadgeCheck, ChevronDown, ChevronRight, FileAudio2, FileImage, FileText, FileVideo2, Folder, FolderPlus, Gauge, Import, Info, Link2, Loader2, Merge, Plus, Search, SlidersHorizontal, Tag, Trash2, X } from 'lucide-react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { clsx } from 'clsx';
 import { zhCN } from '../../i18n/strings';
 import { isTauriRuntime } from '../../lib/tauri';
 import { TITLE_TEMPLATE_DRAG_MIME } from '../../lib/titleTemplates';
-import { listenDragDrop } from '../../lib/tauri-bridge';
+import { analyzeMedia, listenDragDrop, type MediaAnalysis } from '../../lib/tauri-bridge';
 import { useMediaJobStore } from '../../media/media-job-store';
 import { useProxySettingsStore } from '../../store/proxySettingsStore';
 
@@ -47,6 +47,7 @@ interface MediaBinProps {
 
 type MediaBinView = MediaBinFilter | 'titles';
 const MEDIA_CARD_DRAG_MIME = 'application/x-open-factory-media-id';
+type MediaInfoState = { asset: MediaAsset; loading: boolean; analysis?: MediaAnalysis; error?: string };
 
 export function MediaBin({
   media,
@@ -74,6 +75,7 @@ export function MediaBin({
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<MediaBinView>('all');
   const [smartAlbumId, setSmartAlbumId] = useState<SmartAlbumId | 'none'>('none');
+  const [mediaInfo, setMediaInfo] = useState<MediaInfoState>();
   const missingCount = media.filter((asset) => asset.missing).length;
   const smartAlbums = collectSmartAlbums(media);
   const smartAlbumIds = smartAlbumId === 'none' ? undefined : new Set(smartAlbums.find((album) => album.id === smartAlbumId)?.assetIds ?? []);
@@ -84,6 +86,20 @@ export function MediaBin({
   const runningJob = jobs.find((job) => job.status === 'running');
   const pendingCount = jobs.filter((job) => job.status === 'pending').length;
   const failedCount = jobs.filter((job) => job.status === 'error').length;
+
+  const openMediaInfo = async (asset: MediaAsset) => {
+    setMediaInfo({ asset, loading: true });
+    try {
+      const analysis = await analyzeMedia(asset.path);
+      setMediaInfo({ asset, loading: false, analysis });
+    } catch (error) {
+      setMediaInfo({
+        asset,
+        loading: false,
+        error: error instanceof Error ? error.message : t.mediaInfo.failedMessage
+      });
+    }
+  };
 
   useEffect(() => {
     if (!isTauriRuntime()) {
@@ -241,7 +257,7 @@ export function MediaBin({
             {t.emptyDrop}
           </button>
         ) : smartAlbumId !== 'none' ? (
-          <MediaCardGrid media={visibleMedia} mediaMetadata={mediaMetadata} onAddToTimeline={onAddToTimeline} onRelink={onRelink} onGenerateProxy={onGenerateProxy} onSetLabel={onSetLabel} onBatchTranscode={onBatchTranscode} />
+          <MediaCardGrid media={visibleMedia} mediaMetadata={mediaMetadata} onAddToTimeline={onAddToTimeline} onRelink={onRelink} onGenerateProxy={onGenerateProxy} onSetLabel={onSetLabel} onBatchTranscode={onBatchTranscode} onShowInfo={(asset) => void openMediaInfo(asset)} />
         ) : (
           <div className="space-y-3">
             <MediaFolderTree
@@ -258,6 +274,7 @@ export function MediaBin({
               onGenerateProxy={onGenerateProxy}
               onSetLabel={onSetLabel}
               onBatchTranscode={onBatchTranscode}
+              onShowInfo={(asset) => void openMediaInfo(asset)}
             />
             <RootMediaDropZone onMoveMediaToFolder={onMoveMediaToFolder} />
             <MediaCardGrid
@@ -268,10 +285,12 @@ export function MediaBin({
               onGenerateProxy={onGenerateProxy}
               onSetLabel={onSetLabel}
               onBatchTranscode={onBatchTranscode}
+              onShowInfo={(asset) => void openMediaInfo(asset)}
             />
           </div>
         )}
       </div>
+      {mediaInfo ? <MediaInfoDialog state={mediaInfo} onClose={() => setMediaInfo(undefined)} /> : null}
     </aside>
   );
 }
@@ -316,6 +335,7 @@ function MediaFolderTree(props: {
   onGenerateProxy(assetId: string): void;
   onSetLabel(assetId: string, labelColor?: MediaLabelColor): void;
   onBatchTranscode(paths: string[]): void;
+  onShowInfo(asset: MediaAsset): void;
 }) {
   const roots = props.folders.filter((folder) => !folder.parentId);
   if (roots.length === 0) {
@@ -345,7 +365,8 @@ function MediaFolderNode({
   onRelink,
   onGenerateProxy,
   onSetLabel,
-  onBatchTranscode
+  onBatchTranscode,
+  onShowInfo
 }: {
   folder: MediaFolder;
   depth: number;
@@ -362,6 +383,7 @@ function MediaFolderNode({
   onGenerateProxy(assetId: string): void;
   onSetLabel(assetId: string, labelColor?: MediaLabelColor): void;
   onBatchTranscode(paths: string[]): void;
+  onShowInfo(asset: MediaAsset): void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState(folder.name);
@@ -449,9 +471,10 @@ function MediaFolderNode({
               onGenerateProxy={onGenerateProxy}
               onSetLabel={onSetLabel}
               onBatchTranscode={onBatchTranscode}
+              onShowInfo={onShowInfo}
             />
           ))}
-          <MediaCardGrid media={folderMedia} mediaMetadata={mediaMetadata} onAddToTimeline={onAddToTimeline} onRelink={onRelink} onGenerateProxy={onGenerateProxy} onSetLabel={onSetLabel} onBatchTranscode={onBatchTranscode} />
+          <MediaCardGrid media={folderMedia} mediaMetadata={mediaMetadata} onAddToTimeline={onAddToTimeline} onRelink={onRelink} onGenerateProxy={onGenerateProxy} onSetLabel={onSetLabel} onBatchTranscode={onBatchTranscode} onShowInfo={onShowInfo} />
         </div>
       ) : null}
     </div>
@@ -484,7 +507,8 @@ function MediaCardGrid({
   onRelink,
   onGenerateProxy,
   onSetLabel,
-  onBatchTranscode
+  onBatchTranscode,
+  onShowInfo
 }: {
   media: MediaAsset[];
   mediaMetadata: Record<string, MediaMetadata>;
@@ -493,6 +517,7 @@ function MediaCardGrid({
   onGenerateProxy(assetId: string): void;
   onSetLabel(assetId: string, labelColor?: MediaLabelColor): void;
   onBatchTranscode(paths: string[]): void;
+  onShowInfo(asset: MediaAsset): void;
 }) {
   if (media.length === 0) {
     return null;
@@ -509,6 +534,7 @@ function MediaCardGrid({
           onGenerateProxy={() => onGenerateProxy(asset.id)}
           onSetLabel={(labelColor) => onSetLabel(asset.id, labelColor)}
           onBatchTranscode={() => onBatchTranscode([asset.path])}
+          onShowInfo={() => onShowInfo(asset)}
         />
       ))}
     </div>
@@ -559,6 +585,142 @@ function TitleTemplateGrid({ onAddTitleTemplate }: { onAddTitleTemplate(template
   );
 }
 
+function MediaInfoDialog({ state, onClose }: { state: MediaInfoState; onClose(): void }) {
+  const t = zhCN.mediaBin.mediaInfo;
+  const analysis = state.analysis;
+  const firstVideo = analysis?.videoStreams[0];
+  const firstAudio = analysis?.audioStreams[0];
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-testid="media-info-dialog">
+      <div className="flex max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg bg-white shadow-soft">
+        <div className="flex items-center justify-between border-b border-line px-4 py-3">
+          <div className="min-w-0">
+            <h2 className="truncate text-base font-semibold text-ink">{t.title}</h2>
+            <div className="truncate text-xs text-slate-500">{state.asset.name}</div>
+          </div>
+          <button className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 hover:bg-panel" type="button" title={zhCN.common.close} aria-label={zhCN.common.close} data-testid="media-info-close-button" onClick={onClose}>
+            <X size={16} />
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          {state.loading ? <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">{t.loading}</div> : null}
+          {state.error ? <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{state.error}</div> : null}
+          {analysis ? (
+            <div className="space-y-4">
+              <InfoSection title={t.basic}>
+                <InfoRow label={t.format} value={analysis.format.formatLongName ?? analysis.format.formatName ?? zhCN.common.unavailable} testId="media-info-format" />
+                <InfoRow label={t.duration} value={formatDuration(analysis.format.duration ?? state.asset.duration)} />
+                <InfoRow label={t.fileSize} value={formatBytes(analysis.fileSize ?? analysis.format.size)} />
+                <InfoRow label={t.createdTime} value={formatDateTime(analysis.createdTimeMs)} />
+                <InfoRow label={t.bitRate} value={formatBitRate(analysis.format.bitRate)} />
+              </InfoSection>
+              <InfoSection title={t.video}>
+                {firstVideo ? (
+                  <>
+                    <InfoRow label={t.codec} value={firstVideo.codecLongName ?? firstVideo.codecName ?? zhCN.common.unavailable} testId="media-info-codec" />
+                    <InfoRow label={t.resolution} value={firstVideo.width && firstVideo.height ? `${firstVideo.width} x ${firstVideo.height}` : zhCN.common.unavailable} testId="media-info-resolution" />
+                    <InfoRow label={t.frameRate} value={firstVideo.frameRate ? `${firstVideo.frameRate.toFixed(2)} fps` : zhCN.common.unavailable} />
+                    <InfoRow label={t.bitRate} value={formatBitRate(firstVideo.bitRate)} />
+                    <InfoRow label={t.colorSpace} value={[firstVideo.colorPrimaries, firstVideo.colorTransfer, firstVideo.colorSpace].filter(Boolean).join(' / ') || zhCN.common.unavailable} />
+                    <InfoRow label={t.pixelFormat} value={firstVideo.pixelFormat ?? zhCN.common.unavailable} />
+                    <InfoRow label={t.hdrMetadata} value={firstVideo.hdrMetadata.length > 0 ? firstVideo.hdrMetadata.join(', ') : zhCN.common.none} />
+                  </>
+                ) : (
+                  <div className="text-sm text-slate-500">{t.noVideo}</div>
+                )}
+              </InfoSection>
+              <InfoSection title={t.audio}>
+                {firstAudio ? (
+                  <>
+                    <InfoRow label={t.codec} value={firstAudio.codecLongName ?? firstAudio.codecName ?? zhCN.common.unavailable} />
+                    <InfoRow label={t.sampleRate} value={firstAudio.sampleRate ? `${firstAudio.sampleRate} Hz` : zhCN.common.unavailable} />
+                    <InfoRow label={t.channels} value={firstAudio.channels ? `${firstAudio.channels}${firstAudio.channelLayout ? ` (${firstAudio.channelLayout})` : ''}` : zhCN.common.unavailable} />
+                    <InfoRow label={t.bitRate} value={formatBitRate(firstAudio.bitRate)} />
+                    <InfoRow label={t.loudness} value={firstAudio.integratedLufs !== undefined ? `${firstAudio.integratedLufs.toFixed(1)} LUFS` : (analysis.loudnessError ?? zhCN.common.unavailable)} testId="media-info-loudness" />
+                  </>
+                ) : (
+                  <div className="text-sm text-slate-500">{t.noAudio}</div>
+                )}
+              </InfoSection>
+              <InfoSection title={t.bitrateChart}>
+                <BitrateChart points={analysis.bitratePoints} />
+              </InfoSection>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function InfoSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="rounded-md border border-line bg-panel p-3">
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-normal text-slate-600">{title}</h3>
+      <div className="grid gap-1 text-sm">{children}</div>
+    </section>
+  );
+}
+
+function InfoRow({ label, value, testId }: { label: string; value: string; testId?: string }) {
+  return (
+    <div className="grid grid-cols-[140px_minmax(0,1fr)] gap-3">
+      <div className="text-xs font-medium text-slate-500">{label}</div>
+      <div className="min-w-0 break-words text-sm text-ink" data-testid={testId}>{value}</div>
+    </div>
+  );
+}
+
+function BitrateChart({ points }: { points: MediaAnalysis['bitratePoints'] }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      return;
+    }
+    const context = canvas.getContext('2d');
+    if (!context) {
+      return;
+    }
+    const width = canvas.width;
+    const height = canvas.height;
+    context.clearRect(0, 0, width, height);
+    context.fillStyle = '#f8fafc';
+    context.fillRect(0, 0, width, height);
+    context.strokeStyle = '#cbd5e1';
+    context.lineWidth = 1;
+    for (let y = 24; y < height; y += 24) {
+      context.beginPath();
+      context.moveTo(0, y);
+      context.lineTo(width, y);
+      context.stroke();
+    }
+    if (points.length === 0) {
+      context.fillStyle = '#64748b';
+      context.font = '12px sans-serif';
+      context.fillText(zhCN.mediaBin.mediaInfo.noBitrateData, 12, 26);
+      return;
+    }
+    const maxRate = Math.max(...points.map((point) => point.bitRate), 1);
+    const maxTime = Math.max(...points.map((point) => point.time), 1);
+    context.strokeStyle = '#0f766e';
+    context.lineWidth = 2;
+    context.beginPath();
+    points.forEach((point, index) => {
+      const x = (point.time / maxTime) * (width - 16) + 8;
+      const y = height - 8 - (point.bitRate / maxRate) * (height - 16);
+      if (index === 0) {
+        context.moveTo(x, y);
+      } else {
+        context.lineTo(x, y);
+      }
+    });
+    context.stroke();
+  }, [points]);
+
+  return <canvas ref={canvasRef} className="h-32 w-full rounded-md border border-line bg-white" width={640} height={128} data-testid="media-info-bitrate-chart" />;
+}
+
 const MEDIA_LABEL_COLORS: Array<{ key: MediaLabelColor; value: string }> = [
   { key: 'red', value: '#ef4444' },
   { key: 'orange', value: '#f97316' },
@@ -575,7 +737,8 @@ function MediaCard({
   onRelink,
   onGenerateProxy,
   onSetLabel,
-  onBatchTranscode
+  onBatchTranscode,
+  onShowInfo
 }: {
   asset: MediaAsset;
   metadata?: MediaMetadata;
@@ -584,6 +747,7 @@ function MediaCard({
   onGenerateProxy(): void;
   onSetLabel(labelColor?: MediaLabelColor): void;
   onBatchTranscode(): void;
+  onShowInfo(): void;
 }) {
   const proxySettings = useProxySettingsStore((state) => state.settings);
   const proxyStatus = asset.proxyStatus ?? (asset.type === 'video' ? 'none' : undefined);
@@ -614,6 +778,18 @@ function MediaCard({
       </div>
       {labelMenuOpen ? (
         <div className="absolute right-2 top-2 z-10 w-40 rounded-md border border-line bg-white p-2 text-xs shadow-soft" data-testid={`media-label-menu-${asset.id}`}>
+          <button
+            className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
+            type="button"
+            data-testid={`media-info-${asset.id}`}
+            onClick={() => {
+              onShowInfo();
+              setLabelMenuOpen(false);
+            }}
+          >
+            <Info size={13} />
+            {zhCN.mediaBin.mediaInfo.menuItem}
+          </button>
           {asset.type === 'video' ? (
             <button
               className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
@@ -751,6 +927,40 @@ function IconPreview({ type }: { type: MediaAsset['type'] }) {
       <Icon size={36} />
     </div>
   );
+}
+
+function formatBytes(bytes?: number): string {
+  if (bytes === undefined || !Number.isFinite(bytes)) {
+    return zhCN.common.unavailable;
+  }
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let value = Math.max(0, bytes);
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+  return `${value.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
+}
+
+function formatBitRate(bitRate?: number): string {
+  if (bitRate === undefined || !Number.isFinite(bitRate)) {
+    return zhCN.common.unavailable;
+  }
+  if (bitRate >= 1_000_000) {
+    return `${(bitRate / 1_000_000).toFixed(2)} Mbps`;
+  }
+  if (bitRate >= 1_000) {
+    return `${(bitRate / 1_000).toFixed(1)} kbps`;
+  }
+  return `${Math.round(bitRate)} bps`;
+}
+
+function formatDateTime(timestamp?: number): string {
+  if (timestamp === undefined || !Number.isFinite(timestamp)) {
+    return zhCN.common.unavailable;
+  }
+  return new Date(timestamp).toLocaleString();
 }
 
 function formatDuration(duration: number): string {

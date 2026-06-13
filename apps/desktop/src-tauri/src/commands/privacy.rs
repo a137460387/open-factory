@@ -204,14 +204,20 @@ mod tests {
         assert!(args
             .windows(2)
             .any(|pair| pair[0] == "-i" && pair[1] == "C:/Media/tiny-video.mp4"));
-        assert!(args.windows(2).any(|pair| pair[0] == "-vf" && pair[1].contains("dnn_detect=dnn_backend=opencv:model=C:/Models/face.onnx")));
-        assert!(args.windows(2).any(|pair| pair[0] == "-t" && pair[1] == "1.250"));
+        assert!(args.windows(2).any(|pair| pair[0] == "-vf"
+            && pair[1].contains("dnn_detect=dnn_backend=opencv:model=C:/Models/face.onnx")));
+        assert!(args
+            .windows(2)
+            .any(|pair| pair[0] == "-t" && pair[1] == "1.250"));
         assert_eq!(args.last().map(String::as_str), Some("-"));
     }
 
     #[test]
     fn parses_detection_output_line() {
-        let parsed = parse_privacy_detection_line("frame=1 time=0.5 x=0.2 y=0.3 w=0.4 h=0.5 label=face confidence=0.91").unwrap();
+        let parsed = parse_privacy_detection_line(
+            "frame=1 time=0.5 x=0.2 y=0.3 w=0.4 h=0.5 label=face confidence=0.91",
+        )
+        .unwrap();
 
         assert_eq!(
             parsed,
@@ -229,6 +235,11 @@ mod tests {
 
     fn expect_error_contains(result: Result<(), String>, needle: &str) {
         let error = result.expect_err("expected error");
-        assert!(error.contains(needle), "expected `{}` to contain `{}`", error, needle);
+        assert!(
+            error.contains(needle),
+            "expected `{}` to contain `{}`",
+            error,
+            needle
+        );
     }
 }

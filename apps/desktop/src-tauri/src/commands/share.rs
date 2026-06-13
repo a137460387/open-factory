@@ -122,7 +122,11 @@ where
     F: FnMut(SharePackageProgressPayload),
 {
     let started = Instant::now();
-    if let Some(parent) = package.output_path.parent().filter(|parent| !parent.as_os_str().is_empty()) {
+    if let Some(parent) = package
+        .output_path
+        .parent()
+        .filter(|parent| !parent.as_os_str().is_empty())
+    {
         fs::create_dir_all(parent).map_err(|error| error.to_string())?;
     }
     let file = File::create(&package.output_path).map_err(|error| {
@@ -161,12 +165,7 @@ where
     current += 1;
     emit_share_progress(&mut emit_progress, "project", current, total, &output);
 
-    write_file_entry(
-        &mut zip,
-        options,
-        &package.exported_video,
-        &mut used_paths,
-    )?;
+    write_file_entry(&mut zip, options, &package.exported_video, &mut used_paths)?;
     current += 1;
     emit_share_progress(&mut emit_progress, "export", current, total, &output);
 
@@ -340,10 +339,22 @@ mod tests {
                 "media/clip.mp4"
             ]
         );
-        assert_eq!(read_zip_text(&mut archive, "README.txt"), "Open Demo.cutproj.json");
-        assert_eq!(read_zip_text(&mut archive, "Demo.cutproj.json"), "{\"project\":{\"media\":[]}}");
-        assert_eq!(read_zip_text(&mut archive, "export/Demo.mp4"), "exported-video");
-        assert_eq!(read_zip_text(&mut archive, "media/clip.mp4"), "source-media");
+        assert_eq!(
+            read_zip_text(&mut archive, "README.txt"),
+            "Open Demo.cutproj.json"
+        );
+        assert_eq!(
+            read_zip_text(&mut archive, "Demo.cutproj.json"),
+            "{\"project\":{\"media\":[]}}"
+        );
+        assert_eq!(
+            read_zip_text(&mut archive, "export/Demo.mp4"),
+            "exported-video"
+        );
+        assert_eq!(
+            read_zip_text(&mut archive, "media/clip.mp4"),
+            "source-media"
+        );
         assert_eq!(result.file_count, 4);
         assert_eq!(progress.last().unwrap().stage, "finished");
         assert_eq!(progress.last().unwrap().progress, 1.0);

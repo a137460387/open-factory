@@ -70,6 +70,7 @@ pub fn run() {
             commands::cache::clear_cache,
             commands::cache::get_cache_size,
             commands::media::probe_media,
+            commands::media::analyze_media,
             commands::media::analyze_waveform,
             commands::media::detect_silence,
             commands::media::detect_beats,

@@ -82,6 +82,56 @@ export interface MediaProbe {
   videoCodec?: string;
 }
 
+export interface MediaFormatInfo {
+  formatName?: string;
+  formatLongName?: string;
+  duration?: number;
+  bitRate?: number;
+  size?: number;
+}
+
+export interface MediaVideoStreamInfo {
+  index: number;
+  codecName?: string;
+  codecLongName?: string;
+  width?: number;
+  height?: number;
+  frameRate?: number;
+  bitRate?: number;
+  colorSpace?: string;
+  colorTransfer?: string;
+  colorPrimaries?: string;
+  pixelFormat?: string;
+  hdrMetadata: string[];
+}
+
+export interface MediaAudioStreamInfo {
+  index: number;
+  codecName?: string;
+  codecLongName?: string;
+  sampleRate?: number;
+  channels?: number;
+  channelLayout?: string;
+  bitRate?: number;
+  integratedLufs?: number;
+}
+
+export interface MediaBitratePoint {
+  time: number;
+  bitRate: number;
+}
+
+export interface MediaAnalysis {
+  path: string;
+  fileSize?: number;
+  createdTimeMs?: number;
+  format: MediaFormatInfo;
+  videoStreams: MediaVideoStreamInfo[];
+  audioStreams: MediaAudioStreamInfo[];
+  bitratePoints: MediaBitratePoint[];
+  loudnessError?: string;
+}
+
 export interface ProxyResult {
   assetId: string;
   proxyPath: string;
@@ -317,6 +367,7 @@ export type TauriMocks = Partial<{
   sendNotification(title: string, body: string): Promise<void> | void;
   probeMediaPath(path: string): Promise<Partial<import('@open-factory/editor-core').MediaAsset>> | Partial<import('@open-factory/editor-core').MediaAsset>;
   probeMedia(path: string): Promise<MediaProbe> | MediaProbe;
+  analyzeMedia(path: string): Promise<MediaAnalysis> | MediaAnalysis;
   analyzeWaveform(path: string, samplesPerSec: number): Promise<number[]> | number[];
   detectBeats(path: string, sensitivity: BeatSensitivity): Promise<number[]> | number[];
   detectSilence(path: string, thresholdDb: number, minGapMs: number): Promise<NativeSilenceRange[]> | NativeSilenceRange[];
@@ -528,6 +579,17 @@ export async function probeMedia(path: string): Promise<MediaProbe> {
     return { hasAudio: false };
   }
   return invoke<MediaProbe>('probe_media', { path });
+}
+
+export async function analyzeMedia(path: string): Promise<MediaAnalysis> {
+  const mock = getTauriMocks()?.analyzeMedia;
+  if (mock) {
+    return mock(path);
+  }
+  if (!isTauriRuntime()) {
+    throw new Error('analyzeMedia 需要 Tauri 或 __TAURI_MOCKS__ 实现。');
+  }
+  return invoke<MediaAnalysis>('analyze_media', { path });
 }
 
 export async function analyzeWaveform(path: string, samplesPerSec: number): Promise<number[]> {

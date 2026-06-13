@@ -418,6 +418,56 @@ const mocks: TauriMocks = {
     audioCodec: path.endsWith('.mp4') ? 'aac' : path.endsWith('.wav') ? 'pcm_s16le' : undefined,
     videoCodec: path === fourKHevcVideo ? 'hevc' : path.endsWith('.mp4') || path.endsWith('.mov') ? 'h264' : undefined
   }),
+  analyzeMedia: (path) => ({
+    path,
+    fileSize: path === fourKHevcVideo ? 500 * 1024 * 1024 : 4096,
+    createdTimeMs: 1_700_000_000_000,
+    format: {
+      formatName: path.endsWith('.wav') ? 'wav' : 'mov,mp4,m4a,3gp,3g2,mj2',
+      formatLongName: path.endsWith('.wav') ? 'WAV / WAVE' : 'QuickTime / MOV',
+      duration: 6,
+      bitRate: path === fourKHevcVideo ? 42_000_000 : 2_400_000,
+      size: path === fourKHevcVideo ? 500 * 1024 * 1024 : 4096
+    },
+    videoStreams: path.endsWith('.wav')
+      ? []
+      : [
+          {
+            index: 0,
+            codecName: path === fourKHevcVideo ? 'hevc' : 'h264',
+            codecLongName: path === fourKHevcVideo ? 'H.265 / HEVC' : 'H.264 / AVC',
+            width: path === fourKHevcVideo ? 3840 : 1280,
+            height: path === fourKHevcVideo ? 2160 : 720,
+            frameRate: 30,
+            bitRate: path === fourKHevcVideo ? 42_000_000 : 2_200_000,
+            colorSpace: path === fourKHevcVideo ? 'bt2020nc' : 'bt709',
+            colorTransfer: path === fourKHevcVideo ? 'smpte2084' : 'bt709',
+            colorPrimaries: path === fourKHevcVideo ? 'bt2020' : 'bt709',
+            pixelFormat: path === fourKHevcVideo ? 'yuv420p10le' : 'yuv420p',
+            hdrMetadata: path === fourKHevcVideo ? ['Mastering display metadata'] : []
+          }
+        ],
+    audioStreams: path.endsWith('.png')
+      ? []
+      : [
+          {
+            index: path.endsWith('.wav') ? 0 : 1,
+            codecName: path.endsWith('.wav') ? 'pcm_s16le' : 'aac',
+            codecLongName: path.endsWith('.wav') ? 'PCM signed 16-bit little-endian' : 'AAC',
+            sampleRate: 44_100,
+            channels: 2,
+            channelLayout: 'stereo',
+            bitRate: path.endsWith('.wav') ? 1_411_200 : 192_000,
+            integratedLufs: -18.4
+          }
+        ],
+    bitratePoints: [
+      { time: 0, bitRate: 2_000_000 },
+      { time: 1, bitRate: 2_400_000 },
+      { time: 2, bitRate: 1_900_000 }
+    ],
+    loudnessError: undefined
+  }),
   analyzeWaveform: (path, samplesPerSec) => {
     const total = Math.max(1, Math.ceil(6 * Math.max(1, samplesPerSec)));
     return Array.from({ length: total }, (_, index) => {
