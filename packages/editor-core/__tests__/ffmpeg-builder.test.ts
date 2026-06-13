@@ -734,6 +734,44 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.outputArgs).toEqual(expect.arrayContaining(['-t', '2.5']));
   });
 
+  it.each([
+    ['pixelize', 'pixelize=width=16:height=16'],
+    ['gblur', 'gblur=sigma=18'],
+    ['solid', 'drawbox=x=0:y=0:w=iw:h=ih:color=0x000000:t=fill']
+  ] as const)('generates privacy blur mask filters for %s', (effect, expectedFilter) => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: `clip-privacy-${effect}`,
+        duration: 2,
+        masks: [
+          {
+            id: 'privacy-mask',
+            type: 'rect',
+            x: 0.2,
+            y: 0.3,
+            w: 0.25,
+            h: 0.2,
+            keyframes: [
+              { time: 0, x: 0.2, y: 0.3, w: 0.25, h: 0.2 },
+              { time: 1, x: 0.4, y: 0.35, w: 0.2, h: 0.18 }
+            ],
+            inverted: false,
+            feather: 0,
+            enabled: true,
+            privacyBlur: { enabled: true, effect, color: '#000000' }
+          }
+        ]
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain("crop=w='iw*if(lt(t,0),0.25");
+    expect(plan.filterComplex).toContain(expectedFilter);
+    expect(plan.filterComplex).toContain("overlay=x='main_w*if(lt(t,0),0.2");
+  });
+
   it('adds preset video and audio bitrate args', () => {
     const project = makeProject();
     project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-bitrate', duration: 2 })];

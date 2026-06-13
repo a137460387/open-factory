@@ -1251,6 +1251,9 @@ function buildVisualClipFilter(
   if (isDifferenceMatteEnabled(key)) {
     return buildDifferenceMatteClipFilter(inputIndex, clip, label, settings, textArtifacts, warnings, capabilities, trim, key);
   }
+  if (hasPrivacyBlurMasks(clip)) {
+    return buildPrivacyBlurClipFilter(inputIndex, clip, label, settings, textArtifacts, warnings, capabilities, trim);
+  }
   const filters = [`[${inputIndex}:v]${trim}`, ...buildChromaKeyFilters(clip)];
   filters.push(...buildVisualPostKeyFilters(clip, settings, textArtifacts, warnings, capabilities, label));
   return filters.join(',');
@@ -1326,6 +1329,88 @@ function buildDifferenceMatteClipFilter(
     `[${mainBlendLabel}][${referenceLabel}]blend=all_mode=difference,format=gray,lutyuv=y='if(gt(val,${threshold}),255,0)'[${matteLabel}]`,
     `[${mainAlphaLabel}][${matteLabel}]alphamerge,colorchannelmixer=aa=${formatOpacity(clip.transform.opacity)}[${label}]`
   ].join(';');
+}
+
+function buildPrivacyBlurClipFilter(
+  inputIndex: number,
+  clip: ExportClip,
+  label: string,
+  settings: ExportSettings,
+  textArtifacts: TextArtifact[],
+  warnings: string[],
+  capabilities: FfmpegCapabilities | undefined,
+  trim: string
+): string {
+  const sourceLabel = `${safeLabel(label)}_privacy_src`;
+  const filters = [
+    `[${inputIndex}:v]${trim}`,
+    ...buildChromaKeyFilters(clip),
+    ...buildVisualPostKeyFilters(clip, settings, textArtifacts, warnings, capabilities, sourceLabel)
+  ];
+  const graph = [filters.join(',')];
+  let currentLabel = sourceLabel;
+  getPrivacyBlurMasks(clip).forEach((mask, index) => {
+    const outputLabel = index === getPrivacyBlurMasks(clip).length - 1 ? label : `${safeLabel(label)}_privacy_${index}`;
+    graph.push(...buildPrivacyBlurMaskGraph(currentLabel, outputLabel, mask, index));
+    currentLabel = outputLabel;
+  });
+  return graph.join(';');
+}
+
+function buildPrivacyBlurMaskGraph(inputLabel: string, outputLabel: string, mask: ExportClip['masks'][number], index: number): string[] {
+  const safe = `${safeLabel(inputLabel)}_${safeLabel(mask.id)}_${index}`;
+  const baseLabel = `${safe}_base`;
+  const cropSourceLabel = `${safe}_crop_src`;
+  const regionLabel = `${safe}_region`;
+  const x = buildMaskTimelineExpression(mask, 'x');
+  const y = buildMaskTimelineExpression(mask, 'y');
+  const w = buildMaskTimelineExpression(mask, 'w');
+  const h = buildMaskTimelineExpression(mask, 'h');
+  return [
+    `[${inputLabel}]split=2[${baseLabel}][${cropSourceLabel}]`,
+    `[${cropSourceLabel}]crop=w='iw*${w}':h='ih*${h}':x='iw*${x}':y='ih*${y}':eval=frame,${buildPrivacyBlurEffectFilter(mask)}[${regionLabel}]`,
+    `[${baseLabel}][${regionLabel}]overlay=x='main_w*${x}':y='main_h*${y}':eval=frame[${outputLabel}]`
+  ];
+}
+
+function buildPrivacyBlurEffectFilter(mask: ExportClip['masks'][number]): string {
+  const blur = mask.privacyBlur;
+  if (blur?.effect === 'solid') {
+    return `drawbox=x=0:y=0:w=iw:h=ih:color=${cssColorToFfmpeg(blur.color ?? '#000000')}:t=fill`;
+  }
+  if (blur?.effect === 'gblur') {
+    return 'gblur=sigma=18';
+  }
+  return 'pixelize=width=16:height=16';
+}
+
+function buildMaskTimelineExpression(mask: ExportClip['masks'][number], property: 'x' | 'y' | 'w' | 'h'): string {
+  const frames = mask.keyframes ?? [];
+  if (frames.length === 0) {
+    return formatFfmpegNumber(property === 'w' || property === 'h' ? Math.max(0.001, mask[property]) : mask[property]);
+  }
+  const sorted = [...frames].sort((left, right) => left.time - right.time);
+  let expression = formatFfmpegNumber(sorted.at(-1)?.[property] ?? mask[property]);
+  for (let index = sorted.length - 2; index >= 0; index -= 1) {
+    const left = sorted[index];
+    const right = sorted[index + 1];
+    const leftValue = formatFfmpegNumber(left[property]);
+    const rightValue = formatFfmpegNumber(right[property]);
+    const start = formatFfmpegSeconds(left.time);
+    const duration = formatFfmpegSeconds(Math.max(0.001, right.time - left.time));
+    const interpolated = `${leftValue}+(${rightValue}-${leftValue})*((t-${start})/${duration})`;
+    expression = `if(lte(t,${formatFfmpegSeconds(right.time)}),${interpolated},${expression})`;
+  }
+  const first = sorted[0];
+  return `if(lt(t,${formatFfmpegSeconds(first.time)}),${formatFfmpegNumber(first[property])},${expression})`;
+}
+
+function hasPrivacyBlurMasks(clip: ExportClip): boolean {
+  return getPrivacyBlurMasks(clip).length > 0;
+}
+
+function getPrivacyBlurMasks(clip: ExportClip): ExportClip['masks'] {
+  return clip.masks.filter((mask) => mask.enabled && mask.privacyBlur?.enabled === true);
 }
 
 function isKenBurnsAnimatedScaleClip(clip: ExportClip): boolean {
@@ -1431,7 +1516,7 @@ function getMinimumClipSpeed(clip: ExportClip): number {
 }
 
 function buildMaskFilters(clip: ExportClip): string[] {
-  const masks = clip.masks.filter((mask) => mask.enabled);
+  const masks = clip.masks.filter((mask) => mask.enabled && mask.privacyBlur?.enabled !== true);
   if (masks.length === 0) {
     return [];
   }

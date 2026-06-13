@@ -127,7 +127,8 @@ const zh = {
   },
   editMenu: {
     saveSnapshot: '保存快照',
-    snapshotHistory: '快照历史'
+    snapshotHistory: '快照历史',
+    versionCompare: '版本对比'
   },
   historyPanel: {
     title: '编辑历史',
@@ -183,6 +184,11 @@ const zh = {
       demucsExecutable: 'Demucs 可执行文件',
       chooseDemucsExecutable: '选择 Demucs 可执行文件',
       demucsChooseFailed: '无法选择 Demucs 可执行文件。',
+      privacyDetectionTitle: '内容识别打码',
+      privacyDetectionDescription: '配置本机 OpenCV DNN 模型后，可在遮罩面板检测人脸/车牌并生成动态打码遮罩。',
+      privacyDetectionModel: '检测模型文件',
+      choosePrivacyDetectionModel: '选择检测模型',
+      privacyDetectionChooseFailed: '无法选择检测模型。',
       recordingTitle: '屏幕/摄像头录制',
       recordingDescription: '录制输出为本地 H.264 MP4，停止后自动导入媒体库。',
       recordingWidth: '宽度',
@@ -895,6 +901,21 @@ const zh = {
         'old-film': '老电影噪点'
       }
     },
+    privacyBlur: {
+      title: '智能打码',
+      run: '检测并生成打码遮罩',
+      running: '检测中...',
+      modelRequired: '需要在设置中配置本地检测模型。',
+      noMedia: '当前片段没有可检测的本地媒体。',
+      noDetections: '未检测到人脸或车牌。',
+      applied: (count: number) => `已生成 ${count} 个打码遮罩。`,
+      failed: '智能打码失败',
+      effects: {
+        pixelize: '像素化',
+        gblur: '高斯模糊',
+        solid: '纯色遮挡'
+      }
+    },
     motionTrack: {
       analyze: '分析',
       cancel: '取消',
@@ -942,6 +963,9 @@ const zh = {
       inverted: '反转',
       feather: '羽化',
       removeMask: '删除遮罩',
+      privacyBlurEffect: '打码效果',
+      privacyBlurEnabled: '导出打码',
+      privacyBlurSolidColor: '遮挡颜色',
       smoothing: '平滑',
       zoom: '缩放补偿',
       analyzeStabilization: '分析稳定化',
@@ -1613,6 +1637,25 @@ const zh = {
     restored: '快照已恢复',
     deleted: '快照已删除',
     snapshotCount: (count: number) => `${count} 个快照`,
+    compareTitle: '版本对比',
+    compareSubtitle: '对比当前时间线与快照，或对比两个快照。',
+    compareBase: '基准版本',
+    compareTarget: '目标版本',
+    currentVersion: '当前时间线',
+    diffSummary: (added: number, deleted: number, modified: number, tracks: number) => `${added} 新增 / ${deleted} 删除 / ${modified} 修改 / ${tracks} 轨道变化`,
+    applySelected: '应用选中差异',
+    noDiffs: '没有差异。',
+    noSnapshots: '先保存至少一个快照再进行版本对比。',
+    selectDiffs: '请选择要应用的差异。',
+    appliedDiffs: '已应用选中差异',
+    compareFailed: '版本对比失败',
+    diffTypes: {
+      'track-added': '新增轨道',
+      'track-removed': '删除轨道',
+      'clip-added': '新增片段',
+      'clip-deleted': '删除片段',
+      'clip-modified': '属性修改'
+    },
     previewSummary: (name: string, tracks: number, media: number, duration: string) => `${name} · ${tracks} 条轨道 · ${media} 个素材 · ${duration}`,
     columns: {
       name: '名称',
@@ -1875,7 +1918,8 @@ const enOverrides = {
   },
   editMenu: {
     saveSnapshot: 'Save Snapshot',
-    snapshotHistory: 'Snapshot History'
+    snapshotHistory: 'Snapshot History',
+    versionCompare: 'Version Compare'
   },
   macros: {
     history: {
@@ -1922,6 +1966,11 @@ const enOverrides = {
       demucsExecutable: 'Demucs Executable',
       chooseDemucsExecutable: 'Choose Demucs Executable',
       demucsChooseFailed: 'Unable to choose the Demucs executable.',
+      privacyDetectionTitle: 'Content Detection Blur',
+      privacyDetectionDescription: 'Configure a local OpenCV DNN model, then detect faces/plates from the mask panel and generate animated privacy masks.',
+      privacyDetectionModel: 'Detection Model File',
+      choosePrivacyDetectionModel: 'Choose Detection Model',
+      privacyDetectionChooseFailed: 'Unable to choose the detection model.',
       recordingTitle: 'Screen/Camera Recording',
       recordingDescription: 'Record to a local H.264 MP4 and import it into the media library when stopped.',
       recordingWidth: 'Width',
@@ -2471,6 +2520,21 @@ const enOverrides = {
         'old-film': 'Old Film Noise'
       }
     },
+    privacyBlur: {
+      title: 'Smart Privacy Blur',
+      run: 'Detect and Create Privacy Masks',
+      running: 'Detecting...',
+      modelRequired: 'Configure a local detection model in Settings first.',
+      noMedia: 'The current clip has no local media to analyze.',
+      noDetections: 'No faces or plates were detected.',
+      applied: (count: number) => `Created ${count} privacy masks.`,
+      failed: 'Smart Privacy Blur Failed',
+      effects: {
+        pixelize: 'Pixelize',
+        gblur: 'Gaussian Blur',
+        solid: 'Solid Block'
+      }
+    },
     motionTrack: {
       analyze: 'Analyze',
       cancel: 'Cancel',
@@ -2512,6 +2576,9 @@ const enOverrides = {
       pathMask: 'Pen Path',
       pathPointCount: (count: number) => `${count} anchors`,
       editPathInPreview: 'Click in the preview to add anchors, drag handles to adjust curves, and double-click to close the path.',
+      privacyBlurEffect: 'Privacy Effect',
+      privacyBlurEnabled: 'Export Privacy Blur',
+      privacyBlurSolidColor: 'Block Color',
       addEffect: 'Add Effect',
       effectType: 'Effect Type',
       enabled: 'Enabled',
@@ -3047,6 +3114,25 @@ const enOverrides = {
     restored: 'Snapshot restored',
     deleted: 'Snapshot deleted',
     snapshotCount: (count: number) => `${count} snapshots`,
+    compareTitle: 'Version Compare',
+    compareSubtitle: 'Compare the current timeline with a snapshot, or compare two snapshots.',
+    compareBase: 'Base Version',
+    compareTarget: 'Target Version',
+    currentVersion: 'Current Timeline',
+    diffSummary: (added: number, deleted: number, modified: number, tracks: number) => `${added} added / ${deleted} deleted / ${modified} modified / ${tracks} track changes`,
+    applySelected: 'Apply Selected Diffs',
+    noDiffs: 'No differences.',
+    noSnapshots: 'Save at least one snapshot before comparing versions.',
+    selectDiffs: 'Select diffs to apply.',
+    appliedDiffs: 'Selected diffs applied',
+    compareFailed: 'Version compare failed',
+    diffTypes: {
+      'track-added': 'Track Added',
+      'track-removed': 'Track Removed',
+      'clip-added': 'Clip Added',
+      'clip-deleted': 'Clip Deleted',
+      'clip-modified': 'Property Modified'
+    },
     previewSummary: (name: string, tracks: number, media: number, duration: string) => `${name} · ${tracks} tracks · ${media} media · ${duration}`,
     columns: {
       name: 'Name',

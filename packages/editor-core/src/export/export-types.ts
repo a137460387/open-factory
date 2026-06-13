@@ -1,7 +1,7 @@
 import type { ColorCurves, ThreeWayColor } from '../color-grading';
 import type { InputColorSpace } from '../color-log-luts';
 import type { Effect } from '../effects';
-import type { AudioFadeCurve, ClipSlowMotionMode, PathPoint, TrackCompressor, TrackEQ } from '../model';
+import type { AudioFadeCurve, ClipMaskKeyframe, ClipPrivacyBlur, ClipSlowMotionMode, PathPoint, TrackCompressor, TrackEQ } from '../model';
 import type { TargetAspectRatio } from '../reframe';
 
 export type ExportLoudnessNormalization = 'off' | 'youtube' | 'ebu-r128';
@@ -130,6 +130,8 @@ export interface ExportMask {
   w: number;
   h: number;
   path?: PathPoint[];
+  keyframes?: ClipMaskKeyframe[];
+  privacyBlur?: ClipPrivacyBlur;
   inverted: boolean;
   feather: number;
   enabled: boolean;

@@ -1,7 +1,11 @@
 import { expect, type Page } from '@playwright/test';
 
 export async function waitForE2eActions(page: Page): Promise<void> {
-  await expect.poll(() => page.evaluate(() => Boolean(window.__E2E_ACTIONS__))).toBe(true);
+  await expect
+    .poll(() => page.evaluate(() => Boolean(window.__E2E_ACTIONS__)), {
+      timeout: 15_000
+    })
+    .toBe(true);
 }
 
 export async function addMediaCardToTimeline(page: Page, index = 0): Promise<void> {

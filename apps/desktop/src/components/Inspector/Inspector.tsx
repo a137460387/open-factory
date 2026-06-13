@@ -56,6 +56,7 @@ import {
   normalizeFrameInterpolation,
   normalizeMasks,
   normalizeMotionTrack,
+  normalizePrivacyBlurEffect,
   normalizeSequenceFrameRate,
   normalizeSlowMotionMode,
   normalizeStabilization,
@@ -64,6 +65,7 @@ import {
   sampleCurve,
   secondsToTimecode,
   setKenBurnsEndScaleKeyframes,
+  buildPrivacyMasksFromDetections,
   createTrack,
   type AudioFadeCurve,
   type ChromaKeyMode,
@@ -81,6 +83,7 @@ import {
   type ClipMask,
   type ClipSlowMotionMode,
   type MaskPatch,
+  type PrivacyBlurEffect,
   type TextAnimationDirection,
   type TextAnimationPreset,
   type ThreeWayColor
@@ -93,6 +96,7 @@ import {
   analyzeMotionTrack,
   bridgeConfirm,
   cancelMotionTracking,
+  detectPrivacyRegions,
   getFfmpegCapabilities,
   listenBridge,
   openFileDialog,
@@ -104,6 +108,7 @@ import { acceptTranslationTOS, subtitleClipsToTranslationItems, translateSubtitl
 import { validateCustomShaderSource } from '../../lib/preview/custom-shader';
 import { showToast } from '../../lib/toast';
 import { useEditorStore, type SelectedKeyframeRef } from '../../store/editorStore';
+import { usePrivacyDetectionSettingsStore } from '../../store/privacyDetectionSettingsStore';
 import { isTranslationConfigured, useTranslationSettingsStore } from '../../store/translationSettingsStore';
 
 interface InspectorProps {
@@ -146,6 +151,7 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
   const translationProvider = useTranslationSettingsStore((state) => state.provider);
   const translationApiKey = useTranslationSettingsStore((state) => state.apiKey);
   const translationTargetLanguage = useTranslationSettingsStore((state) => state.targetLanguage);
+  const privacyDetectionModelPath = usePrivacyDetectionSettingsStore((state) => state.modelPath);
   const translationSettings = useMemo(
     () => ({ provider: translationProvider, apiKey: translationApiKey, targetLanguage: translationTargetLanguage }),
     [translationApiKey, translationProvider, translationTargetLanguage]
@@ -153,6 +159,8 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
   const [analysisProgress, setAnalysisProgress] = useState<number | undefined>();
   const [motionTrackProgress, setMotionTrackProgress] = useState<number | undefined>();
   const [motionTrackingBusy, setMotionTrackingBusy] = useState(false);
+  const [privacyBlurBusy, setPrivacyBlurBusy] = useState(false);
+  const [privacyBlurEffect, setPrivacyBlurEffect] = useState<PrivacyBlurEffect>('pixelize');
   const [frameInterpolationSupported, setFrameInterpolationSupported] = useState<boolean | undefined>();
   const [audioDenoiseSupported, setAudioDenoiseSupported] = useState<boolean | undefined>();
   const [colorMatchReferenceClipId, setColorMatchReferenceClipId] = useState<string>('');
@@ -414,6 +422,36 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
   const addMask = () => runEffectCommand(new AddMaskCommand(timelineAccessor, clip.id));
   const updateMask = (maskId: string, patch: MaskPatch) => runEffectCommand(new UpdateMaskCommand(timelineAccessor, clip.id, maskId, patch));
   const removeMask = (maskId: string) => runEffectCommand(new RemoveMaskCommand(timelineAccessor, clip.id, maskId));
+  const runPrivacyBlurDetection = async () => {
+    if (!privacyDetectionModelPath.trim()) {
+      showToast({ kind: 'warning', title: zhCN.inspector.privacyBlur.failed, message: zhCN.inspector.privacyBlur.modelRequired });
+      return;
+    }
+    if (!asset?.path || !('mediaId' in clip)) {
+      showToast({ kind: 'warning', title: zhCN.inspector.privacyBlur.failed, message: zhCN.inspector.privacyBlur.noMedia });
+      return;
+    }
+    try {
+      setPrivacyBlurBusy(true);
+      const result = await detectPrivacyRegions({
+        modelPath: privacyDetectionModelPath.trim(),
+        mediaPath: asset.path,
+        clipId: clip.id,
+        duration: clip.duration
+      });
+      const newMasks = buildPrivacyMasksFromDetections(result.boxes, { effect: privacyBlurEffect });
+      if (newMasks.length === 0) {
+        showToast({ kind: 'info', title: zhCN.inspector.privacyBlur.title, message: zhCN.inspector.privacyBlur.noDetections });
+        return;
+      }
+      commit({ masks: [...masks, ...newMasks] });
+      showToast({ kind: 'success', title: zhCN.inspector.privacyBlur.title, message: zhCN.inspector.privacyBlur.applied(newMasks.length) });
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.inspector.privacyBlur.failed, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+    } finally {
+      setPrivacyBlurBusy(false);
+    }
+  };
   const applyTextAnimation = () => {
     if (clip.type !== 'text') {
       return;
@@ -843,6 +881,14 @@ export function Inspector({ clip, selectedCount, selectedClipLocked, selectedKey
 
         {clip.type === 'video' || clip.type === 'image' || clip.type === 'nested-sequence' ? (
           <Section title={zhCN.inspector.sections.masks}>
+            <PrivacyBlurPanel
+              effect={privacyBlurEffect}
+              modelConfigured={Boolean(privacyDetectionModelPath.trim())}
+              busy={privacyBlurBusy}
+              disabled={clip.type === 'nested-sequence'}
+              onEffectChange={setPrivacyBlurEffect}
+              onRun={() => void runPrivacyBlurDetection()}
+            />
             <MasksEditor masks={masks} onAdd={addMask} onUpdate={updateMask} onRemove={removeMask} />
           </Section>
         ) : null}
@@ -1956,6 +2002,52 @@ function ColorWheelControl({
   );
 }
 
+function PrivacyBlurPanel({
+  effect,
+  modelConfigured,
+  busy,
+  disabled,
+  onEffectChange,
+  onRun
+}: {
+  effect: PrivacyBlurEffect;
+  modelConfigured: boolean;
+  busy: boolean;
+  disabled: boolean;
+  onEffectChange(effect: PrivacyBlurEffect): void;
+  onRun(): void;
+}) {
+  const t = zhCN.inspector.privacyBlur;
+  return (
+    <div className="mb-3 space-y-2 rounded-md border border-line bg-panel p-2" data-testid="privacy-blur-panel">
+      <div className="text-xs font-semibold text-slate-700">{t.title}</div>
+      <label className="block text-xs font-medium text-slate-600">
+        {zhCN.inspector.fields.privacyBlurEffect}
+        <select
+          className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+          value={effect}
+          data-testid="privacy-blur-effect-select"
+          onChange={(event) => onEffectChange(normalizePrivacyBlurEffect(event.target.value as PrivacyBlurEffect))}
+        >
+          <option value="pixelize">{t.effects.pixelize}</option>
+          <option value="gblur">{t.effects.gblur}</option>
+          <option value="solid">{t.effects.solid}</option>
+        </select>
+      </label>
+      {!modelConfigured ? <div className="text-xs font-medium text-amber-700" data-testid="privacy-blur-model-required">{t.modelRequired}</div> : null}
+      <button
+        className="w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+        type="button"
+        disabled={!modelConfigured || busy || disabled}
+        data-testid="privacy-blur-detect-button"
+        onClick={onRun}
+      >
+        {busy ? t.running : t.run}
+      </button>
+    </div>
+  );
+}
+
 function MasksEditor({
   masks,
   onAdd,
@@ -2030,6 +2122,65 @@ function MasksEditor({
               testId={`mask-feather-${mask.id}`}
             />
             <ToggleField label={zhCN.inspector.fields.inverted} checked={mask.inverted} onCommit={(inverted) => onUpdate(mask.id, { inverted })} testId={`mask-inverted-${mask.id}`} />
+            <div className="space-y-2 rounded-md border border-line bg-white p-2" data-testid={`mask-privacy-blur-${mask.id}`}>
+              <ToggleField
+                label={zhCN.inspector.fields.privacyBlurEnabled}
+                checked={mask.privacyBlur?.enabled === true}
+                onCommit={(enabled) =>
+                  onUpdate(mask.id, {
+                    privacyBlur: {
+                      enabled,
+                      effect: normalizePrivacyBlurEffect(mask.privacyBlur?.effect),
+                      color: mask.privacyBlur?.color
+                    }
+                  })
+                }
+                testId={`mask-privacy-blur-enabled-${mask.id}`}
+              />
+              <label className="block text-xs font-medium text-slate-600">
+                {zhCN.inspector.fields.privacyBlurEffect}
+                <select
+                  className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60"
+                  value={normalizePrivacyBlurEffect(mask.privacyBlur?.effect)}
+                  disabled={mask.privacyBlur?.enabled !== true}
+                  data-testid={`mask-privacy-blur-effect-${mask.id}`}
+                  onChange={(event) =>
+                    onUpdate(mask.id, {
+                      privacyBlur: {
+                        enabled: true,
+                        effect: normalizePrivacyBlurEffect(event.target.value as PrivacyBlurEffect),
+                        color: mask.privacyBlur?.color
+                      }
+                    })
+                  }
+                >
+                  <option value="pixelize">{zhCN.inspector.privacyBlur.effects.pixelize}</option>
+                  <option value="gblur">{zhCN.inspector.privacyBlur.effects.gblur}</option>
+                  <option value="solid">{zhCN.inspector.privacyBlur.effects.solid}</option>
+                </select>
+              </label>
+              {normalizePrivacyBlurEffect(mask.privacyBlur?.effect) === 'solid' ? (
+                <label className="block text-xs font-medium text-slate-600">
+                  {zhCN.inspector.fields.privacyBlurSolidColor}
+                  <input
+                    className="mt-1 h-8 w-full rounded-md border border-line bg-white px-2 text-sm text-ink"
+                    type="color"
+                    value={mask.privacyBlur?.color ?? '#000000'}
+                    disabled={mask.privacyBlur?.enabled !== true}
+                    data-testid={`mask-privacy-blur-color-${mask.id}`}
+                    onChange={(event) =>
+                      onUpdate(mask.id, {
+                        privacyBlur: {
+                          enabled: true,
+                          effect: 'solid',
+                          color: event.target.value
+                        }
+                      })
+                    }
+                  />
+                </label>
+              ) : null}
+            </div>
             <button
               className="flex w-full items-center justify-center gap-2 rounded-md border border-rose-300 bg-white px-2 py-1.5 text-sm font-medium text-rose-700 hover:bg-rose-50"
               type="button"

@@ -147,6 +147,17 @@ describe('model factories', () => {
     const mask = createMask({ id: 'mask-a', type: 'ellipse', x: 0.9, y: -1, w: 0.4, h: 0, feather: 4, inverted: true });
     expect(mask).toEqual({ id: 'mask-a', type: 'ellipse', x: 0.6, y: 0, w: 0.4, h: 0.001, feather: 1, inverted: true, enabled: true });
     expect(normalizeMask({ id: 'mask-disabled', enabled: false, type: 'bad' as never })).toMatchObject({ id: 'mask-disabled', type: 'rect', enabled: false });
+    expect(
+      normalizeMask({
+        id: 'mask-privacy',
+        keyframes: [{ time: 2, x: 0.9, y: 0.9, w: 0.4, h: 0.4 }, { time: Number.NaN, x: 0, y: 0, w: 0.2, h: 0.2 }],
+        privacyBlur: { enabled: true, effect: 'bad' as never }
+      })
+    ).toMatchObject({
+      id: 'mask-privacy',
+      keyframes: [{ time: 2, x: 0.6, y: 0.6, w: 0.4, h: 0.4 }],
+      privacyBlur: { enabled: true, effect: 'pixelize', color: '#000000' }
+    });
     expect(normalizeMasks(undefined)).toEqual([]);
     expect(normalizeMasks([mask])).toEqual([mask]);
     expect(normalizeStabilization({ enabled: true, smoothing: 999, zoom: -1, analyzed: true, trfPath: ' C:\\Temp\\clip.trf ' })).toEqual({

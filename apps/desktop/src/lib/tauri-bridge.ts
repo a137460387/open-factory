@@ -208,6 +208,29 @@ export interface DemucsProgressEvent {
   progressPct: number;
 }
 
+export interface PrivacyDetectionRequest {
+  modelPath: string;
+  mediaPath: string;
+  clipId: string;
+  duration?: number;
+}
+
+export interface PrivacyDetectionBox {
+  time: number;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  label?: string;
+  confidence?: number;
+}
+
+export interface PrivacyDetectionResult {
+  clipId: string;
+  boxes: PrivacyDetectionBox[];
+  durationMs: number;
+}
+
 export type RecordingSource = 'screen' | 'camera';
 
 export interface RecordingRequest {
@@ -302,6 +325,7 @@ export type TauriMocks = Partial<{
   runWhisper(request: WhisperRequest): Promise<WhisperResult> | WhisperResult;
   runDemucs(request: DemucsRequest): Promise<DemucsResult> | DemucsResult;
   cancelDemucs(clipId: string): Promise<void> | void;
+  detectPrivacyRegions(request: PrivacyDetectionRequest): Promise<PrivacyDetectionResult> | PrivacyDetectionResult;
   startRecording(request: RecordingRequest): Promise<RecordingStartResult> | RecordingStartResult;
   stopRecording(taskId: string): Promise<RecordingStopResult> | RecordingStopResult;
   getPreviewSmokeConfig(): Promise<PreviewSmokeConfig | undefined> | PreviewSmokeConfig | undefined;
@@ -569,6 +593,14 @@ export async function cancelDemucs(clipId: string): Promise<void> {
     return;
   }
   await invoke('cancel_demucs', { clipId });
+}
+
+export async function detectPrivacyRegions(request: PrivacyDetectionRequest): Promise<PrivacyDetectionResult> {
+  const mock = getTauriMocks()?.detectPrivacyRegions;
+  if (mock) {
+    return mock(request);
+  }
+  return invoke<PrivacyDetectionResult>('detect_privacy_regions', { request });
 }
 
 export async function startRecording(request: RecordingRequest): Promise<RecordingStartResult> {

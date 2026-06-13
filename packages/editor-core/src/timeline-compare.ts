@@ -1,10 +1,39 @@
-import type { Clip, Timeline } from './model';
+import type { Clip, Timeline, Track } from './model';
 import { getTimelineDuration } from './timeline';
 import { round } from './time';
 
 export interface TimelineDiffRange {
   start: number;
   end: number;
+}
+
+export type TimelineVersionDiffType = 'track-added' | 'track-removed' | 'clip-added' | 'clip-deleted' | 'clip-modified';
+
+export interface TimelineVersionDiffField {
+  field: string;
+  before: unknown;
+  after: unknown;
+}
+
+export interface TimelineVersionDiffItem {
+  id: string;
+  type: TimelineVersionDiffType;
+  label: string;
+  trackId?: string;
+  clipId?: string;
+  fields: TimelineVersionDiffField[];
+}
+
+export interface TimelineVersionDiffSummary {
+  added: number;
+  deleted: number;
+  modified: number;
+  trackChanges: number;
+}
+
+export interface TimelineVersionDiff {
+  items: TimelineVersionDiffItem[];
+  summary: TimelineVersionDiffSummary;
 }
 
 export function diffTimelineSnapshots(current: Timeline, snapshot: Timeline): TimelineDiffRange[] {
@@ -23,6 +52,122 @@ export function diffTimelineSnapshots(current: Timeline, snapshot: Timeline): Ti
     }
   }
   return mergeDiffRanges(ranges);
+}
+
+export function diffTimelineVersions(before: Timeline, after: Timeline): TimelineVersionDiff {
+  const beforeTracks = new Map(before.tracks.map((track) => [track.id, track]));
+  const afterTracks = new Map(after.tracks.map((track) => [track.id, track]));
+  const items: TimelineVersionDiffItem[] = [];
+
+  for (const track of after.tracks) {
+    if (!beforeTracks.has(track.id)) {
+      items.push({
+        id: `track-added:${track.id}`,
+        type: 'track-added',
+        label: track.name,
+        trackId: track.id,
+        fields: [{ field: 'track', before: null, after: compactTrack(track) }]
+      });
+    }
+  }
+  for (const track of before.tracks) {
+    if (!afterTracks.has(track.id)) {
+      items.push({
+        id: `track-removed:${track.id}`,
+        type: 'track-removed',
+        label: track.name,
+        trackId: track.id,
+        fields: [{ field: 'track', before: compactTrack(track), after: null }]
+      });
+    }
+  }
+
+  const beforeClips = indexClips(before);
+  const afterClips = indexClips(after);
+  for (const [clipId, afterClip] of afterClips) {
+    const beforeClip = beforeClips.get(clipId);
+    if (!beforeClip) {
+      items.push({
+        id: `clip-added:${clipId}`,
+        type: 'clip-added',
+        label: afterClip.clip.name,
+        trackId: afterClip.trackId,
+        clipId,
+        fields: [{ field: 'clip', before: null, after: compactClip(afterClip.clip) }]
+      });
+      continue;
+    }
+    const fields = diffClipFields(beforeClip.clip, afterClip.clip, beforeClip.trackId, afterClip.trackId);
+    if (fields.length > 0) {
+      items.push({
+        id: `clip-modified:${clipId}`,
+        type: 'clip-modified',
+        label: afterClip.clip.name,
+        trackId: afterClip.trackId,
+        clipId,
+        fields
+      });
+    }
+  }
+  for (const [clipId, beforeClip] of beforeClips) {
+    if (!afterClips.has(clipId)) {
+      items.push({
+        id: `clip-deleted:${clipId}`,
+        type: 'clip-deleted',
+        label: beforeClip.clip.name,
+        trackId: beforeClip.trackId,
+        clipId,
+        fields: [{ field: 'clip', before: compactClip(beforeClip.clip), after: null }]
+      });
+    }
+  }
+
+  const summary = items.reduce<TimelineVersionDiffSummary>(
+    (acc, item) => {
+      if (item.type === 'clip-added') acc.added += 1;
+      if (item.type === 'clip-deleted') acc.deleted += 1;
+      if (item.type === 'clip-modified') acc.modified += 1;
+      if (item.type === 'track-added' || item.type === 'track-removed') acc.trackChanges += 1;
+      return acc;
+    },
+    { added: 0, deleted: 0, modified: 0, trackChanges: 0 }
+  );
+  return { items, summary };
+}
+
+export function applyTimelineVersionDiffSelection(target: Timeline, source: Timeline, selectedItemIds: readonly string[]): Timeline {
+  const selected = new Set(selectedItemIds);
+  if (selected.size === 0) {
+    return target;
+  }
+  const diff = diffTimelineVersions(target, source);
+  let next = cloneTimeline(target);
+  for (const item of diff.items) {
+    if (!selected.has(item.id)) {
+      continue;
+    }
+    if (item.type === 'track-added' && item.trackId) {
+      const sourceTrack = source.tracks.find((track) => track.id === item.trackId);
+      if (sourceTrack && !next.tracks.some((track) => track.id === sourceTrack.id)) {
+        next = { ...next, tracks: [...next.tracks, cloneTrack(sourceTrack)] };
+      }
+    } else if (item.type === 'track-removed' && item.trackId) {
+      next = { ...next, tracks: next.tracks.filter((track) => track.id !== item.trackId) };
+    } else if (item.type === 'clip-added' && item.clipId) {
+      const sourceClip = findClipWithTrack(source, item.clipId);
+      if (sourceClip) {
+        next = upsertClip(next, sourceClip.trackId, sourceClip.clip);
+      }
+    } else if (item.type === 'clip-deleted' && item.clipId) {
+      next = removeClipById(next, item.clipId);
+    } else if (item.type === 'clip-modified' && item.clipId) {
+      const sourceClip = findClipWithTrack(source, item.clipId);
+      if (sourceClip) {
+        next = upsertClip(removeClipById(next, item.clipId), sourceClip.trackId, sourceClip.clip);
+      }
+    }
+  }
+  return next;
 }
 
 function collectTimelineBoundaries(current: Timeline, snapshot: Timeline, duration: number): number[] {
@@ -86,4 +231,146 @@ function mergeDiffRanges(ranges: TimelineDiffRange[]): TimelineDiffRange[] {
     }
   }
   return output.map((range) => ({ start: round(range.start), end: round(range.end) }));
+}
+
+function indexClips(timeline: Timeline): Map<string, { clip: Clip; trackId: string; trackIndex: number }> {
+  const output = new Map<string, { clip: Clip; trackId: string; trackIndex: number }>();
+  timeline.tracks.forEach((track, trackIndex) => {
+    track.clips.forEach((clip) => output.set(clip.id, { clip, trackId: track.id, trackIndex }));
+  });
+  return output;
+}
+
+function diffClipFields(before: Clip, after: Clip, beforeTrackId: string, afterTrackId: string): TimelineVersionDiffField[] {
+  const fields: TimelineVersionDiffField[] = [];
+  if (beforeTrackId !== afterTrackId) {
+    fields.push({ field: 'trackId', before: beforeTrackId, after: afterTrackId });
+  }
+  const beforeRecord = compactClip(before);
+  const afterRecord = compactClip(after);
+  for (const key of Array.from(new Set([...Object.keys(beforeRecord), ...Object.keys(afterRecord)])).sort()) {
+    const beforeValue = beforeRecord[key];
+    const afterValue = afterRecord[key];
+    if (stableStringify(beforeValue) !== stableStringify(afterValue)) {
+      fields.push({ field: key, before: beforeValue, after: afterValue });
+    }
+  }
+  return fields;
+}
+
+function compactClip(clip: Clip): Record<string, unknown> {
+  return {
+    type: clip.type,
+    name: clip.name,
+    start: clip.start,
+    duration: clip.duration,
+    trimStart: clip.trimStart,
+    trimEnd: clip.trimEnd,
+    speed: clip.speed,
+    transform: clip.transform,
+    colorCorrection: clip.colorCorrection,
+    chromaKey: clip.chromaKey,
+    masks: clip.masks,
+    effects: clip.effects,
+    keyframes: clip.keyframes,
+    mediaId: 'mediaId' in clip ? clip.mediaId : undefined,
+    sequenceId: 'sequenceId' in clip ? clip.sequenceId : undefined,
+    text: 'text' in clip ? clip.text : undefined,
+    style: 'style' in clip ? clip.style : undefined,
+    volume: 'volume' in clip ? clip.volume : undefined,
+    muted: 'muted' in clip ? clip.muted : undefined
+  };
+}
+
+function compactTrack(track: Track): Record<string, unknown> {
+  return {
+    type: track.type,
+    name: track.name,
+    muted: track.muted,
+    solo: track.solo,
+    locked: track.locked,
+    clipCount: track.clips.length
+  };
+}
+
+function cloneTimeline(timeline: Timeline): Timeline {
+  return {
+    ...timeline,
+    tracks: timeline.tracks.map(cloneTrack),
+    transitions: timeline.transitions ? timeline.transitions.map((transition) => ({ ...transition })) : undefined,
+    markers: timeline.markers ? timeline.markers.map((marker) => ({ ...marker })) : undefined
+  };
+}
+
+function cloneTrack(track: Track): Track {
+  return {
+    ...track,
+    clips: track.clips.map((clip) => structuredCloneCompat(clip))
+  };
+}
+
+function findClipWithTrack(timeline: Timeline, clipId: string): { clip: Clip; trackId: string } | undefined {
+  for (const track of timeline.tracks) {
+    const clip = track.clips.find((item) => item.id === clipId);
+    if (clip) {
+      return { clip: structuredCloneCompat(clip), trackId: track.id };
+    }
+  }
+  return undefined;
+}
+
+function upsertClip(timeline: Timeline, trackId: string, clip: Clip): Timeline {
+  const sourceClip = structuredCloneCompat(clip);
+  const hasTrack = timeline.tracks.some((track) => track.id === trackId);
+  const tracks = (hasTrack ? timeline.tracks : [...timeline.tracks, { id: trackId, type: clipTypeToTrackType(sourceClip.type), name: trackId, clips: [] } as Track]).map((track) => {
+    if (track.id !== trackId) {
+      return { ...track, clips: track.clips.filter((item) => item.id !== sourceClip.id) };
+    }
+    const clips = track.clips.filter((item) => item.id !== sourceClip.id);
+    return { ...track, clips: [...clips, { ...sourceClip, trackId } as Clip].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id)) };
+  });
+  return { ...timeline, tracks };
+}
+
+function clipTypeToTrackType(type: Clip['type']): Track['type'] {
+  if (type === 'audio') {
+    return 'audio';
+  }
+  if (type === 'text') {
+    return 'text';
+  }
+  if (type === 'subtitle') {
+    return 'subtitle';
+  }
+  return 'video';
+}
+
+function removeClipById(timeline: Timeline, clipId: string): Timeline {
+  return { ...timeline, tracks: timeline.tracks.map((track) => ({ ...track, clips: track.clips.filter((clip) => clip.id !== clipId) })) };
+}
+
+function stableStringify(value: unknown): string {
+  return JSON.stringify(value, Object.keys(value && typeof value === 'object' ? flattenKeys(value) : { value }).sort()) ?? 'undefined';
+}
+
+function flattenKeys(value: unknown): Record<string, true> {
+  const keys: Record<string, true> = {};
+  const visit = (item: unknown) => {
+    if (!item || typeof item !== 'object') {
+      return;
+    }
+    for (const key of Object.keys(item)) {
+      keys[key] = true;
+      visit((item as Record<string, unknown>)[key]);
+    }
+  };
+  visit(value);
+  return keys;
+}
+
+function structuredCloneCompat<T>(value: T): T {
+  if (typeof globalThis.structuredClone === 'function') {
+    return globalThis.structuredClone(value);
+  }
+  return JSON.parse(JSON.stringify(value)) as T;
 }

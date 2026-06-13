@@ -17,7 +17,7 @@ import { getLanguage, normalizeLanguage, zhCN, type Language } from '../i18n/str
 import { parseAutomationRulesJson, serializeAutomationRulesJson } from '../automation/automation-rules';
 import { pickDemucsExecutablePath } from '../lib/demucs';
 import { loadLutLibrary, toggleLutFavorite, type LutLibraryItem } from '../lib/lutLibrary';
-import { openDirectoryDialog, readWebdavPassword, writeWebdavPassword } from '../lib/tauri-bridge';
+import { openDirectoryDialog, openFileDialog, readWebdavPassword, writeWebdavPassword } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
 import {
   detectMacroShortcutConflicts,
@@ -41,6 +41,7 @@ import {
 import { commandManager, projectAccessor, timelineAccessor } from '../store/commandManager';
 import { useDemucsSettingsStore } from '../store/demucsSettingsStore';
 import { useEditorStore } from '../store/editorStore';
+import { usePrivacyDetectionSettingsStore } from '../store/privacyDetectionSettingsStore';
 import { PROXY_RESOLUTION_PRESETS, PROXY_TRIGGER_THRESHOLDS, useProxySettingsStore, type ProxyResolutionPreset, type ProxyTriggerThreshold } from '../store/proxySettingsStore';
 import { useRecordingSettingsStore } from '../store/recordingSettingsStore';
 import { useTranslationSettingsStore, type TranslationProvider } from '../store/translationSettingsStore';
@@ -122,6 +123,8 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
   const setTranslationTargetLanguage = useTranslationSettingsStore((state) => state.setTargetLanguage);
   const demucsExecutablePath = useDemucsSettingsStore((state) => state.executablePath);
   const setDemucsExecutablePath = useDemucsSettingsStore((state) => state.setExecutablePath);
+  const privacyDetectionModelPath = usePrivacyDetectionSettingsStore((state) => state.modelPath);
+  const setPrivacyDetectionModelPath = usePrivacyDetectionSettingsStore((state) => state.setModelPath);
   const recordingSettings = useRecordingSettingsStore((state) => state.settings);
   const setRecordingSettings = useRecordingSettingsStore((state) => state.setSettings);
   const proxyResolutionPreset = useProxySettingsStore((state) => state.resolutionPreset);
@@ -479,6 +482,21 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
     }
   }
 
+  async function choosePrivacyDetectionModel() {
+    try {
+      const [path] = await openFileDialog(false, [{ name: t.general.privacyDetectionModel, extensions: ['onnx', 'pb', 'xml', 'bin'] }]);
+      if (path) {
+        setPrivacyDetectionModelPath(path);
+      }
+    } catch (privacyError) {
+      showToast({
+        kind: 'warning',
+        title: t.general.choosePrivacyDetectionModel,
+        message: privacyError instanceof Error ? privacyError.message : t.general.privacyDetectionChooseFailed
+      });
+    }
+  }
+
   async function updateExportBackgroundSettings(nextSettings: ExportBackgroundSettings) {
     setExportBackgroundSettings(nextSettings);
     try {
@@ -780,6 +798,31 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
                       aria-label={t.general.chooseDemucsExecutable}
                       data-testid="settings-demucs-executable-choose-button"
                       onClick={() => void chooseDemucsExecutable()}
+                    >
+                      <FolderOpen size={15} />
+                    </button>
+                  </div>
+                </div>
+                <div className="rounded-md border border-line bg-panel p-3">
+                  <div className="mb-2">
+                    <h4 className="text-xs font-semibold text-slate-700">{t.general.privacyDetectionTitle}</h4>
+                    <p className="mt-1 text-xs text-slate-500">{t.general.privacyDetectionDescription}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      className="min-w-0 flex-1 rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                      value={privacyDetectionModelPath}
+                      placeholder={t.general.privacyDetectionModel}
+                      data-testid="settings-privacy-model-input"
+                      onChange={(event) => setPrivacyDetectionModelPath(event.target.value)}
+                    />
+                    <button
+                      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-line bg-white text-slate-600 hover:bg-panel"
+                      type="button"
+                      title={t.general.choosePrivacyDetectionModel}
+                      aria-label={t.general.choosePrivacyDetectionModel}
+                      data-testid="settings-privacy-model-choose-button"
+                      onClick={() => void choosePrivacyDetectionModel()}
                     >
                       <FolderOpen size={15} />
                     </button>

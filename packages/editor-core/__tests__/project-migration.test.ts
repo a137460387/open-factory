@@ -106,6 +106,19 @@ describe('project schema migration', () => {
             inverted: false,
             feather: 0,
             enabled: true
+          },
+          {
+            id: 'mask-privacy',
+            type: 'rect',
+            x: 0.2,
+            y: 0.3,
+            w: 0.2,
+            h: 0.2,
+            keyframes: [{ time: 1, x: 0.25, y: 0.35, w: 0.2, h: 0.2 }],
+            privacyBlur: { enabled: true, effect: 'pixelize', color: '#000000' },
+            inverted: false,
+            feather: 0,
+            enabled: true
           }
         ]
       })
@@ -124,6 +137,11 @@ describe('project schema migration', () => {
         { x: 0.8, y: 1 },
         { x: 0.2, y: 0.2 }
       ]
+    });
+    expect(masks?.[2]).toMatchObject({
+      id: 'mask-privacy',
+      keyframes: [{ time: 1, x: 0.25, y: 0.35, w: 0.2, h: 0.2 }],
+      privacyBlur: { enabled: true, effect: 'pixelize', color: '#000000' }
     });
   });
 

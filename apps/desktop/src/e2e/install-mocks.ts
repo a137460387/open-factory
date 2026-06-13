@@ -15,6 +15,7 @@ import {
 } from '@open-factory/editor-core';
 import { commandManager, timelineAccessor } from '../store/commandManager';
 import { useEditorStore } from '../store/editorStore';
+import { usePrivacyDetectionSettingsStore } from '../store/privacyDetectionSettingsStore';
 import type { BatchTranscodeTaskResult, TauriMocks, WebdavProjectBackupRequest } from '../lib/tauri-bridge';
 import { clearPluginHookLog, getPluginHookLog, refreshPluginRegistry } from '../plugins/plugin-manager';
 
@@ -63,6 +64,7 @@ const silencePatternAudio = 'C:/Media/silence-pattern.wav';
 const whisperExecutable = 'C:/Tools/whisper.exe';
 const whisperModel = 'C:/Models/base.bin';
 const demucsExecutable = 'C:/Tools/demucs.exe';
+const privacyDetectionModel = 'C:/Models/face_detection_yunet.onnx';
 const relinkedVideo = 'C:/Relink/tiny-video.mp4';
 const relinkedAudio = 'C:/Relink/tiny-audio.wav';
 const relinkedImage = 'C:/Relink/test-image.png';
@@ -142,6 +144,7 @@ for (const path of [
   whisperExecutable,
   whisperModel,
   demucsExecutable,
+  privacyDetectionModel,
   relinkedVideo,
   relinkedAudio,
   relinkedImage,
@@ -460,6 +463,17 @@ const mocks: TauriMocks = {
     return { vocalsPath, accompanimentPath, outputDir, durationMs: 10 };
   },
   cancelDemucs: () => undefined,
+  detectPrivacyRegions: async ({ clipId }) => {
+    await wait(10);
+    return {
+      clipId,
+      boxes: [
+        { time: 0, x: 0.18, y: 0.22, w: 0.22, h: 0.24, label: 'face', confidence: 0.92 },
+        { time: 0.5, x: 0.24, y: 0.25, w: 0.2, h: 0.22, label: 'face', confidence: 0.9 }
+      ],
+      durationMs: 10
+    };
+  },
   startRecording: ({ taskId, source }) => {
     const outputPath = `${appDataDir}/recordings/${source}-${taskId}.mp4`;
     recordingTasks.set(taskId, { outputPath, startedAt: Date.now() });
@@ -1110,6 +1124,59 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setPlayheadTime(0);
     commandManager.clear();
   },
+  setupPrivacyBlurFixture: () => {
+    const project = createProject('Privacy Blur E2E');
+    const asset: MediaAsset = {
+      id: 'media-privacy-video',
+      type: 'video',
+      name: 'privacy-source.mp4',
+      path: tinyVideo,
+      duration: 3,
+      width: 1280,
+      height: 720,
+      size: 4096,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 2,
+      audioSampleRate: 44_100,
+      audioCodec: 'aac',
+      videoCodec: 'h264'
+    };
+    const clip: Extract<Clip, { type: 'video' }> = {
+      id: 'clip-privacy-video',
+      type: 'video',
+      name: 'Privacy Source',
+      mediaId: asset.id,
+      trackId: 'track-video',
+      start: 0,
+      duration: 3,
+      trimStart: 0,
+      trimEnd: 0,
+      speed: DEFAULT_CLIP_SPEED,
+      colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+      transform: { ...DEFAULT_TRANSFORM },
+      volume: 1
+    };
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({ id: 'track-video', type: 'video', name: 'Video 1', clips: [clip] }),
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
+        createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    useEditorStore.getState().setSelectedClipIds([clip.id]);
+    usePrivacyDetectionSettingsStore.getState().setModelPath(privacyDetectionModel);
+    commandManager.clear();
+  },
   getTimelineSnapshot: () => useEditorStore.getState().project.timeline,
   getPlayheadTime: () => useEditorStore.getState().playheadTime,
   getSelectedClipIds: () => useEditorStore.getState().selectedClipIds,
@@ -1194,6 +1261,8 @@ window.__E2E_ACTIONS__ = {
     localStorage.removeItem(PERSISTED_FILES_KEY);
     localStorage.removeItem(PERSISTED_MTIMES_KEY);
     localStorage.removeItem('open-factory:demucs-executable-path');
+    localStorage.removeItem('open-factory:privacy-detection-model-path');
+    usePrivacyDetectionSettingsStore.getState().setModelPath('');
     localStorage.removeItem('open-factory:recording-width');
     localStorage.removeItem('open-factory:recording-height');
     localStorage.removeItem('open-factory:recording-frame-rate');

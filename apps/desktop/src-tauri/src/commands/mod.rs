@@ -5,6 +5,7 @@ pub mod demucs;
 pub mod ffmpeg;
 pub mod files;
 pub mod media;
+pub mod privacy;
 pub mod proxy;
 pub mod recording;
 pub mod scene;

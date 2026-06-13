@@ -49,6 +49,7 @@ export type ChromaKeyColor = [number, number, number];
 export const MAX_CHROMA_KEY_COLORS = 3;
 export type ChromaKeyMode = 'chroma-key' | 'luma-key' | 'difference-matte';
 export type MaskType = 'rect' | 'ellipse' | 'path';
+export type PrivacyBlurEffect = 'pixelize' | 'gblur' | 'solid';
 
 export interface ChromaKey {
   enabled: boolean;
@@ -101,6 +102,20 @@ export interface PathPoint {
   handleOut?: PathPointHandle;
 }
 
+export interface ClipMaskKeyframe {
+  time: number;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export interface ClipPrivacyBlur {
+  enabled: boolean;
+  effect: PrivacyBlurEffect;
+  color?: string;
+}
+
 export interface ClipMask {
   id: string;
   type: MaskType;
@@ -109,6 +124,8 @@ export interface ClipMask {
   w: number;
   h: number;
   path?: PathPoint[];
+  keyframes?: ClipMaskKeyframe[];
+  privacyBlur?: ClipPrivacyBlur;
   inverted: boolean;
   feather: number;
   enabled: boolean;
@@ -516,6 +533,11 @@ export const DEFAULT_MASK: Omit<ClipMask, 'id'> = {
   feather: 0,
   enabled: true
 };
+export const DEFAULT_PRIVACY_BLUR: ClipPrivacyBlur = {
+  enabled: false,
+  effect: 'pixelize',
+  color: '#000000'
+};
 
 export const DEFAULT_TRACK_VOLUME = 1;
 export const DEFAULT_TRACK_PAN = 0;
@@ -868,6 +890,8 @@ export function normalizeMask(mask: Partial<ClipMask> | undefined): ClipMask {
   const h = normalizePositiveUnit(mask?.h, DEFAULT_MASK.h);
   const type = mask?.type === 'ellipse' || mask?.type === 'path' ? mask.type : 'rect';
   const path = type === 'path' ? normalizePathPoints(mask?.path) : undefined;
+  const keyframes = normalizeMaskKeyframes(mask?.keyframes);
+  const privacyBlur = normalizePrivacyBlur(mask?.privacyBlur);
   return {
     id: typeof mask?.id === 'string' && mask.id.trim() ? mask.id : createId('mask'),
     type,
@@ -876,6 +900,8 @@ export function normalizeMask(mask: Partial<ClipMask> | undefined): ClipMask {
     w,
     h,
     ...(path ? { path } : {}),
+    ...(keyframes ? { keyframes } : {}),
+    ...(privacyBlur ? { privacyBlur } : {}),
     inverted: mask?.inverted === true,
     feather: normalizeUnit(mask?.feather, DEFAULT_MASK.feather),
     enabled: mask?.enabled !== false
@@ -884,6 +910,45 @@ export function normalizeMask(mask: Partial<ClipMask> | undefined): ClipMask {
 
 export function normalizeMasks(masks: ClipMask[] | undefined): ClipMask[] {
   return Array.isArray(masks) ? masks.map((mask) => normalizeMask(mask)) : [];
+}
+
+export function normalizeMaskKeyframes(keyframes: readonly Partial<ClipMaskKeyframe>[] | undefined): ClipMaskKeyframe[] | undefined {
+  if (!Array.isArray(keyframes)) {
+    return undefined;
+  }
+  const normalized = keyframes.flatMap((keyframe) => {
+    if (!Number.isFinite(keyframe.time)) {
+      return [];
+    }
+    const w = normalizePositiveUnit(keyframe.w, DEFAULT_MASK.w);
+    const h = normalizePositiveUnit(keyframe.h, DEFAULT_MASK.h);
+    return [
+      {
+        time: round(Math.max(0, keyframe.time!)),
+        x: round(Math.min(1 - w, Math.max(0, finiteOrDefault(keyframe.x, DEFAULT_MASK.x)))),
+        y: round(Math.min(1 - h, Math.max(0, finiteOrDefault(keyframe.y, DEFAULT_MASK.y)))),
+        w,
+        h
+      }
+    ];
+  });
+  normalized.sort((left, right) => left.time - right.time || left.x - right.x || left.y - right.y);
+  return normalized.length > 0 ? normalized : undefined;
+}
+
+export function normalizePrivacyBlur(privacyBlur: Partial<ClipPrivacyBlur> | undefined): ClipPrivacyBlur | undefined {
+  if (privacyBlur?.enabled !== true) {
+    return undefined;
+  }
+  return {
+    enabled: true,
+    effect: normalizePrivacyBlurEffect(privacyBlur.effect),
+    color: typeof privacyBlur.color === 'string' && privacyBlur.color.trim() ? privacyBlur.color.trim() : DEFAULT_PRIVACY_BLUR.color
+  };
+}
+
+export function normalizePrivacyBlurEffect(effect: PrivacyBlurEffect | undefined): PrivacyBlurEffect {
+  return effect === 'gblur' || effect === 'solid' || effect === 'pixelize' ? effect : DEFAULT_PRIVACY_BLUR.effect;
 }
 
 export function normalizeTextPath(pathText: Partial<TextPathOptions> | undefined): TextPathOptions {

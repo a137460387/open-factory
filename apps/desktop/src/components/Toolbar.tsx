@@ -20,6 +20,7 @@ interface ToolbarProps {
   onCreateSharePackage(): void;
   onSaveSnapshot(): void;
   onOpenSnapshotHistory(): void;
+  onOpenSnapshotCompare(): void;
   onImportMedia(): void;
   onBatchTranscode(): void;
   onOpenVideoStitchWizard(): void;
@@ -227,6 +228,17 @@ export function Toolbar(props: ToolbarProps) {
               }}
             >
               <span>{edit.snapshotHistory}</span>
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-edit-version-compare-menu-item"
+              onClick={() => {
+                setEditMenuOpen(false);
+                props.onOpenSnapshotCompare();
+              }}
+            >
+              <span>{edit.versionCompare}</span>
             </button>
           </div>
         ) : null}

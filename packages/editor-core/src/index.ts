@@ -25,6 +25,7 @@ export * from './video-stitching';
 export * from './text-animation';
 export * from './text-path';
 export * from './motion-tracking';
+export * from './privacy-blur';
 export * from './multicam';
 export * from './commands/command';
 export * from './commands/command-manager';

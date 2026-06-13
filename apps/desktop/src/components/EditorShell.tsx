@@ -31,8 +31,10 @@ import {
   dirname,
   getClipSpeed,
   getTimelineDuration,
+  applyTimelineVersionDiffSelection,
   instantiateProjectTemplate,
   instantiateTitleTemplate,
+  replaceProjectActiveTimeline,
   type DuplicateMediaGroup,
   type DuplicateMediaIssue,
   type MissingMediaIssue,
@@ -147,6 +149,7 @@ const BatchTranscodeDialog = lazy(() => import('../media/BatchTranscodeDialog').
 const VideoStitchWizardDialog = lazy(() => import('../video-stitching/VideoStitchWizardDialog').then((module) => ({ default: module.VideoStitchWizardDialog })));
 const SnapshotNameDialog = lazy(() => import('../project-snapshots/SnapshotNameDialog').then((module) => ({ default: module.SnapshotNameDialog })));
 const SnapshotHistoryDialog = lazy(() => import('../project-snapshots/SnapshotHistoryDialog').then((module) => ({ default: module.SnapshotHistoryDialog })));
+const SnapshotVersionCompareDialog = lazy(() => import('../project-snapshots/SnapshotVersionCompareDialog').then((module) => ({ default: module.SnapshotVersionCompareDialog })));
 
 export function EditorShell() {
   const project = useEditorStore((state) => state.project);
@@ -181,6 +184,7 @@ export function EditorShell() {
   const [videoStitchWizardOpen, setVideoStitchWizardOpen] = useState(false);
   const [snapshotNameOpen, setSnapshotNameOpen] = useState(false);
   const [snapshotHistoryOpen, setSnapshotHistoryOpen] = useState(false);
+  const [snapshotCompareOpen, setSnapshotCompareOpen] = useState(false);
   const [projectTemplateOpen, setProjectTemplateOpen] = useState(false);
   const [templateExportPreset, setTemplateExportPreset] = useState<ExportPreset>();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -724,6 +728,18 @@ export function EditorShell() {
   const restoreSnapshotProject = useCallback(
     (snapshotProject: Project) => {
       commandManager.execute(new LoadProjectCommand(projectAccessor, snapshotProject, zhCN.projectSnapshots.restoreCommand));
+      clearSelectedClipIds();
+      setPlayheadTime(0);
+    },
+    [clearSelectedClipIds, setPlayheadTime]
+  );
+
+  const applySnapshotDiffSelection = useCallback(
+    (sourceProject: Project, itemIds: string[]) => {
+      const currentProject = useEditorStore.getState().project;
+      const nextTimeline = applyTimelineVersionDiffSelection(currentProject.timeline, sourceProject.timeline, itemIds);
+      const nextProject = replaceProjectActiveTimeline(currentProject, nextTimeline);
+      commandManager.execute(new LoadProjectCommand(projectAccessor, nextProject, zhCN.projectSnapshots.appliedDiffs));
       clearSelectedClipIds();
       setPlayheadTime(0);
     },
@@ -1474,6 +1490,7 @@ export function EditorShell() {
           onCreateSharePackage={() => void createCurrentSharePackage()}
           onSaveSnapshot={() => setSnapshotNameOpen(true)}
           onOpenSnapshotHistory={() => setSnapshotHistoryOpen(true)}
+          onOpenSnapshotCompare={() => setSnapshotCompareOpen(true)}
           onImportMedia={() => void importMedia()}
           onBatchTranscode={() => openBatchTranscode()}
           onOpenVideoStitchWizard={() => setVideoStitchWizardOpen(true)}
@@ -1665,6 +1682,9 @@ export function EditorShell() {
           {snapshotNameOpen ? <SnapshotNameDialog defaultName={project.name} onConfirm={(name) => void saveNamedSnapshot(name)} onClose={() => setSnapshotNameOpen(false)} /> : null}
           {snapshotHistoryOpen ? (
             <SnapshotHistoryDialog projectId={project.id} projectPath={projectPath} onRestore={restoreSnapshotProject} onClose={() => setSnapshotHistoryOpen(false)} />
+          ) : null}
+          {snapshotCompareOpen ? (
+            <SnapshotVersionCompareDialog project={project} projectPath={projectPath} onApply={applySnapshotDiffSelection} onClose={() => setSnapshotCompareOpen(false)} />
           ) : null}
           {batchTranscodeOpen ? (
             <BatchTranscodeDialog
