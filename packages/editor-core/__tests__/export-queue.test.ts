@@ -315,4 +315,14 @@ describe('export queue helpers', () => {
       error: 'ffmpeg failed'
     });
   });
+
+  it('keeps the first source media path on completed history entries', () => {
+    const sourcePlan: FfmpegExportPlan = {
+      ...plan,
+      inputs: [{ index: 0, path: 'C:/Media/original.mp4', args: ['-i', 'C:/Media/original.mp4'] }]
+    };
+    const [finished] = finishExportTask([createExportTask({ id: 'task-source', name: 'Source Export', outputPath: 'out.mp4', plan: sourcePlan })], 'task-source');
+
+    expect(createExportTaskHistoryEntry(finished)?.sourcePath).toBe('C:/Media/original.mp4');
+  });
 });

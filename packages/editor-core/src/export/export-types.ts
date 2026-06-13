@@ -394,6 +394,7 @@ export interface FfmpegCapabilities {
   hasLibfreetype: boolean;
   hasMinterpolate?: boolean;
   hasArnndn?: boolean;
+  hasLibvmaf?: boolean;
   hardwareEncoderAvailable: boolean;
   hardwareEncoder: string | null;
   drawtextWarning: string | null;

@@ -14,6 +14,7 @@ use tauri::{AppHandle, Emitter, Manager};
 const DEFAULT_EXPORT_TASK_ID: &str = "__default_export__";
 static EXPORT_CHILDREN: OnceLock<Mutex<HashMap<String, Child>>> = OnceLock::new();
 static MOTION_TRACKING_CHILDREN: OnceLock<Mutex<HashMap<String, Child>>> = OnceLock::new();
+static QUALITY_EVALUATION_CHILDREN: OnceLock<Mutex<HashMap<String, Child>>> = OnceLock::new();
 static EXPORT_TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 static HARDWARE_ENCODER_CACHE: OnceLock<Mutex<Option<HardwareEncoderProbe>>> = OnceLock::new();
 pub const EXPORT_MEMORY_PAUSE_THRESHOLD_BYTES: u64 = 2 * 1024 * 1024 * 1024;
@@ -24,6 +25,10 @@ fn export_children() -> &'static Mutex<HashMap<String, Child>> {
 
 fn motion_tracking_children() -> &'static Mutex<HashMap<String, Child>> {
     MOTION_TRACKING_CHILDREN.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn quality_evaluation_children() -> &'static Mutex<HashMap<String, Child>> {
+    QUALITY_EVALUATION_CHILDREN.get_or_init(|| Mutex::new(HashMap::new()))
 }
 
 #[derive(Debug, Serialize)]
@@ -37,6 +42,7 @@ pub struct FfmpegCapabilities {
     has_libfreetype: bool,
     has_minterpolate: bool,
     has_arnndn: bool,
+    has_libvmaf: bool,
     hardware_encoder_available: bool,
     hardware_encoder: Option<String>,
     drawtext_warning: Option<String>,
@@ -256,6 +262,34 @@ pub struct AnalyzeMotionTrackResult {
     duration_ms: u128,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct QualityEvaluationRequest {
+    task_id: String,
+    source_path: String,
+    output_path: String,
+    duration: Option<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct QualityEvaluationProgressPayload {
+    task_id: String,
+    progress: f32,
+    progress_pct: f32,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct QualityEvaluationResult {
+    task_id: String,
+    ssim: Option<f64>,
+    psnr: Option<f64>,
+    vmaf: Option<f64>,
+    vmaf_available: bool,
+    duration_ms: u128,
+}
+
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ClipAnalysisProgressPayload {
@@ -290,6 +324,7 @@ pub fn get_ffmpeg_capabilities() -> FfmpegCapabilities {
     let has_drawtext = filter_list_contains(&filters, "drawtext");
     let has_minterpolate = filter_list_contains(&filters, "minterpolate");
     let has_arnndn = filter_list_contains(&filters, "arnndn");
+    let has_libvmaf = ffmpeg_supports_libvmaf(&filters);
     let has_libfreetype =
         buildconf.contains("enable-libfreetype") || buildconf.contains("libfreetype");
     let hardware_encoder = detect_hardware_encoder(&encoders);
@@ -306,6 +341,7 @@ pub fn get_ffmpeg_capabilities() -> FfmpegCapabilities {
         has_libfreetype,
         has_minterpolate,
         has_arnndn,
+        has_libvmaf,
         hardware_encoder_available: hardware_encoder.available,
         hardware_encoder: hardware_encoder.encoder,
         drawtext_warning: if available && (!has_drawtext || !has_libfreetype) {
@@ -391,6 +427,19 @@ pub fn cancel_motion_tracking(clip_id: String) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command(rename_all = "camelCase")]
+pub fn cancel_quality_evaluation(task_id: String) -> Result<(), String> {
+    if let Some(mut child) = quality_evaluation_children()
+        .lock()
+        .map_err(|_| "Unable to lock quality evaluation process".to_string())?
+        .remove(&task_id)
+    {
+        child.kill().map_err(|error| error.to_string())?;
+        let _ = child.wait();
+    }
+    Ok(())
+}
+
 #[tauri::command]
 pub async fn analyze_clip(
     app: AppHandle,
@@ -407,6 +456,16 @@ pub async fn analyze_motion_track(
     request: AnalyzeMotionTrackRequest,
 ) -> Result<AnalyzeMotionTrackResult, String> {
     tauri::async_runtime::spawn_blocking(move || analyze_motion_track_blocking(app, request))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub async fn evaluate_export_quality(
+    app: AppHandle,
+    request: QualityEvaluationRequest,
+) -> Result<QualityEvaluationResult, String> {
+    tauri::async_runtime::spawn_blocking(move || evaluate_export_quality_blocking(app, request))
         .await
         .map_err(|error| error.to_string())?
 }
@@ -662,6 +721,47 @@ fn export_preview_sample_output_path(sample: &ExportPreviewSampleDto) -> Result<
         ));
     }
     Ok(output_path)
+}
+
+fn evaluate_export_quality_blocking(
+    app: AppHandle,
+    request: QualityEvaluationRequest,
+) -> Result<QualityEvaluationResult, String> {
+    if request.task_id.trim().is_empty() {
+        return Err("Quality evaluation task id is required.".to_string());
+    }
+    let safe_source = validate_path(&app, Path::new(&request.source_path))?;
+    let safe_output = validate_path(&app, Path::new(&request.output_path))?;
+    let filters = command_text(&["-filters"]).unwrap_or_default();
+    let include_vmaf = ffmpeg_supports_libvmaf(&filters);
+    let args = build_quality_evaluation_args(&safe_source, &safe_output, include_vmaf);
+    let started = Instant::now();
+    let emit_task_id = request.task_id.clone();
+    let progress_app = app.clone();
+    let stderr_text = spawn_and_capture_quality_evaluation(
+        &request.task_id,
+        args,
+        request.duration.unwrap_or(0.0),
+        move |progress| {
+            let _ = progress_app.emit(
+                "quality-evaluation-progress",
+                QualityEvaluationProgressPayload {
+                    task_id: emit_task_id.clone(),
+                    progress: progress.progress,
+                    progress_pct: progress.progress_pct,
+                },
+            );
+        },
+    )?;
+    let metrics = parse_quality_metrics(&stderr_text);
+    Ok(QualityEvaluationResult {
+        task_id: request.task_id,
+        ssim: metrics.ssim,
+        psnr: metrics.psnr,
+        vmaf: metrics.vmaf,
+        vmaf_available: include_vmaf,
+        duration_ms: started.elapsed().as_millis(),
+    })
 }
 
 fn analyze_clip_blocking(
@@ -1380,6 +1480,85 @@ fn spawn_and_capture_motion_tracking(
     }
 }
 
+fn spawn_and_capture_quality_evaluation(
+    task_id: &str,
+    args: Vec<String>,
+    duration: f64,
+    emit_progress: impl Fn(ExportProgressPayload) + Send + Sync + 'static,
+) -> Result<String, String> {
+    let mut child = Command::new(ffmpeg_binary())
+        .args(&args)
+        .stderr(Stdio::piped())
+        .stdout(Stdio::null())
+        .spawn()
+        .map_err(|error| format!("Unable to start FFmpeg quality evaluation: {}", error))?;
+    let stderr = child
+        .stderr
+        .take()
+        .ok_or_else(|| "Unable to capture FFmpeg quality evaluation stderr.".to_string())?;
+    {
+        let mut children = quality_evaluation_children()
+            .lock()
+            .map_err(|_| "Unable to lock quality evaluation process".to_string())?;
+        children.insert(task_id.to_string(), child);
+    }
+    let stderr_lines = Arc::new(Mutex::new(Vec::<String>::new()));
+    let stderr_for_thread = Arc::clone(&stderr_lines);
+    let emit_progress = Arc::new(emit_progress);
+    let emit_from_thread = Arc::clone(&emit_progress);
+    let progress_thread = std::thread::spawn(move || {
+        let reader = BufReader::new(stderr);
+        for line in reader.lines().map_while(Result::ok) {
+            if let Ok(mut lines) = stderr_for_thread.lock() {
+                lines.push(line.clone());
+            }
+            if let Some(progress) = parse_progress(&line, duration) {
+                emit_from_thread(progress);
+            }
+        }
+    });
+    emit_progress(ExportProgressPayload::from_out_time_us(
+        0,
+        expected_duration_us(duration),
+    ));
+    let status_result = loop {
+        let maybe_status = {
+            let mut children = quality_evaluation_children()
+                .lock()
+                .map_err(|_| "Unable to lock quality evaluation process".to_string())?;
+            let Some(child) = children.get_mut(task_id) else {
+                break Err("Quality evaluation canceled.".to_string());
+            };
+            child.try_wait().map_err(|error| error.to_string())?
+        };
+        if let Some(status) = maybe_status {
+            let _ = quality_evaluation_children()
+                .lock()
+                .map_err(|_| "Unable to lock quality evaluation process".to_string())?
+                .remove(task_id);
+            break Ok(status);
+        }
+        std::thread::sleep(Duration::from_millis(100));
+    };
+    let _ = progress_thread.join();
+    let stderr_text = stderr_lines
+        .lock()
+        .map(|lines| lines.join("\n"))
+        .unwrap_or_default();
+    match status_result {
+        Ok(status) if status.success() => {
+            emit_progress(ExportProgressPayload::complete(duration));
+            Ok(stderr_text)
+        }
+        Ok(status) => Err(format!(
+            "FFmpeg quality evaluation failed with status {}.\n{}",
+            status,
+            stderr_tail(&stderr_text, 20)
+        )),
+        Err(error) => Err(error),
+    }
+}
+
 fn build_vidstabdetect_args(input_path: &Path, output_path: &Path) -> Vec<String> {
     vec![
         "-y".to_string(),
@@ -1413,6 +1592,43 @@ fn build_motion_track_args(input_path: &Path) -> Vec<String> {
     ]
 }
 
+fn build_quality_evaluation_args(
+    source_path: &Path,
+    output_path: &Path,
+    include_vmaf: bool,
+) -> Vec<String> {
+    let filter_complex = build_quality_filter_complex(include_vmaf);
+    vec![
+        "-y".to_string(),
+        "-progress".to_string(),
+        "pipe:2".to_string(),
+        "-nostats".to_string(),
+        "-i".to_string(),
+        normalize_path(source_path),
+        "-i".to_string(),
+        normalize_path(output_path),
+        "-filter_complex".to_string(),
+        filter_complex,
+        "-an".to_string(),
+        "-f".to_string(),
+        "null".to_string(),
+        "-".to_string(),
+    ]
+}
+
+fn build_quality_filter_complex(include_vmaf: bool) -> String {
+    let split_count = if include_vmaf { 3 } else { 2 };
+    let mut filter = format!(
+        "[0:v]setpts=PTS-STARTPTS,split={split_count}[ref_ssim][ref_psnr]{};[1:v]setpts=PTS-STARTPTS,split={split_count}[dist_ssim][dist_psnr]{};[ref_ssim][dist_ssim]ssim[ssim_out];[ref_psnr][dist_psnr]psnr[psnr_out];[ssim_out]nullsink;[psnr_out]nullsink",
+        if include_vmaf { "[ref_vmaf]" } else { "" },
+        if include_vmaf { "[dist_vmaf]" } else { "" }
+    );
+    if include_vmaf {
+        filter.push_str(";[ref_vmaf][dist_vmaf]libvmaf[vmaf_out];[vmaf_out]nullsink");
+    }
+    filter
+}
+
 pub fn parse_motion_vectors_from_mestimate_output(text: &str) -> Vec<MotionTrackPointDto> {
     text.lines()
         .filter_map(|line| {
@@ -1426,6 +1642,50 @@ pub fn parse_motion_vectors_from_mestimate_output(text: &str) -> Vec<MotionTrack
             Some(MotionTrackPointDto { time, dx, dy })
         })
         .collect()
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct QualityMetrics {
+    ssim: Option<f64>,
+    psnr: Option<f64>,
+    vmaf: Option<f64>,
+}
+
+fn parse_quality_metrics(text: &str) -> QualityMetrics {
+    let mut metrics = QualityMetrics {
+        ssim: None,
+        psnr: None,
+        vmaf: None,
+    };
+    for line in text.lines() {
+        if line.contains("All:") {
+            metrics.ssim = parse_metric_after(line, "All:").or(metrics.ssim);
+        }
+        if line.contains("average:") {
+            metrics.psnr = parse_metric_after(line, "average:").or(metrics.psnr);
+        }
+        if line.contains("VMAF score:") {
+            metrics.vmaf = parse_metric_after(line, "VMAF score:").or(metrics.vmaf);
+        }
+    }
+    metrics
+}
+
+fn parse_metric_after(line: &str, marker: &str) -> Option<f64> {
+    let (_, rest) = line.split_once(marker)?;
+    let value = rest
+        .trim_start()
+        .split(|ch: char| ch.is_whitespace() || ch == ')' || ch == ',')
+        .next()?;
+    if value.eq_ignore_ascii_case("inf") || value.eq_ignore_ascii_case("infinity") {
+        return Some(100.0);
+    }
+    let parsed = value.parse::<f64>().ok()?;
+    parsed.is_finite().then_some(parsed)
+}
+
+fn ffmpeg_supports_libvmaf(filters: &str) -> bool {
+    filter_list_contains(filters, "libvmaf")
 }
 
 fn extract_named_number(line: &str, keys: &[&str]) -> Option<f64> {
@@ -2153,12 +2413,55 @@ offset=1.35
         let filters = r#"
  TSC arnndn            A->A       Reduce noise from speech using Recurrent Neural Networks.
  ... minterpolate      V->V       Frame rate conversion using Motion Interpolation.
+ ... libvmaf           VV->V      Calculate the VMAF between two video streams.
  ... drawtext_extra    V->V       Not the exact drawtext filter.
 "#;
 
         assert!(filter_list_contains(filters, "arnndn"));
         assert!(filter_list_contains(filters, "minterpolate"));
+        assert!(ffmpeg_supports_libvmaf(filters));
         assert!(!filter_list_contains(filters, "drawtext"));
+    }
+
+    #[test]
+    fn builds_quality_evaluation_argument_array_with_ssim_psnr_and_vmaf() {
+        let args = build_quality_evaluation_args(
+            Path::new(r"C:\Media\original.mp4"),
+            Path::new(r"C:\Exports\render.mp4"),
+            true,
+        );
+
+        assert_eq!(args[0], "-y");
+        assert_eq!(args.iter().filter(|arg| arg.as_str() == "-i").count(), 2);
+        assert!(args.windows(2).any(|pair| pair == ["-progress", "pipe:2"]));
+        let filter = args
+            .windows(2)
+            .find_map(|pair| (pair[0] == "-filter_complex").then_some(pair[1].as_str()))
+            .expect("filter complex");
+        assert!(filter.contains("ssim"));
+        assert!(filter.contains("psnr"));
+        assert!(filter.contains("libvmaf"));
+        assert!(!args
+            .iter()
+            .any(|arg| arg.contains("cmd /C") || arg.contains("&&")));
+    }
+
+    #[test]
+    fn parses_quality_metrics_from_ffmpeg_stderr() {
+        let stderr = r#"
+[Parsed_ssim_2 @ 000001] SSIM Y:0.991 U:0.992 V:0.993 All:0.99123 (20.36)
+[Parsed_psnr_3 @ 000001] PSNR y:39.2 u:40.1 v:41.0 average:40.25 min:35.0 max:45.0
+[Parsed_libvmaf_4 @ 000001] VMAF score: 93.456789
+"#;
+
+        assert_eq!(
+            parse_quality_metrics(stderr),
+            QualityMetrics {
+                ssim: Some(0.99123),
+                psnr: Some(40.25),
+                vmaf: Some(93.456789),
+            }
+        );
     }
 
     #[test]

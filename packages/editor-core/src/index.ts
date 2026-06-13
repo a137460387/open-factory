@@ -34,6 +34,7 @@ export * from './commands/timeline-commands';
 export * from './export/ffmpeg';
 export * from './export/color-management';
 export * from './export/export-ranges';
+export * from './export/quality';
 export * from './export/preflight';
 export * from './export/timeline-export';
 export * from './export/timeline-import';

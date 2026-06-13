@@ -1522,6 +1522,32 @@ const zh = {
     openFolder: '打开文件夹',
     viewLog: '查看日志',
     retryTask: '重试',
+    quality: {
+      button: '质量评估',
+      title: '质量评估',
+      running: (progress: number) => `评估中 ${Math.round(progress)}%`,
+      cancel: '取消评估',
+      sourceMissing: '缺少原始媒体路径，无法评估。',
+      failedTitle: '质量评估失败',
+      failedMessage: '无法计算导出质量指标。',
+      noResult: '暂无质量评估结果。',
+      unavailable: '不可用',
+      labels: {
+        ssim: 'SSIM',
+        psnr: 'PSNR',
+        vmaf: 'VMAF'
+      },
+      descriptions: {
+        ssim: '结构相似度，越接近 1 越好。',
+        psnr: '峰值信噪比，dB 越高越好。',
+        vmaf: '感知质量分数，越接近 100 越好。'
+      },
+      levels: {
+        excellent: '优秀',
+        average: '一般',
+        poor: '较差'
+      }
+    },
     loudnessReport: (value: string) => `实际响度：${value} LUFS`,
     detectFfmpegFailed: '无法检测 FFmpeg。',
     loadPresetsFailed: '无法加载导出预设。',
@@ -3269,6 +3295,32 @@ const enOverrides = {
     openFolder: 'Open Folder',
     viewLog: 'View Log',
     retryTask: 'Retry',
+    quality: {
+      button: 'Quality',
+      title: 'Quality Evaluation',
+      running: (progress: number) => `Evaluating ${Math.round(progress)}%`,
+      cancel: 'Cancel Evaluation',
+      sourceMissing: 'Missing source media path; quality cannot be evaluated.',
+      failedTitle: 'Quality evaluation failed',
+      failedMessage: 'Unable to calculate export quality metrics.',
+      noResult: 'No quality evaluation result yet.',
+      unavailable: 'Unavailable',
+      labels: {
+        ssim: 'SSIM',
+        psnr: 'PSNR',
+        vmaf: 'VMAF'
+      },
+      descriptions: {
+        ssim: 'Structural similarity. Closer to 1 is better.',
+        psnr: 'Peak signal-to-noise ratio. Higher dB is better.',
+        vmaf: 'Perceptual quality score. Closer to 100 is better.'
+      },
+      levels: {
+        excellent: 'Excellent',
+        average: 'Average',
+        poor: 'Poor'
+      }
+    },
     queuedTitle: 'Added to export queue',
     scheduledTitle: 'Export scheduled',
     queuedMessage: (count: number, presetName: string) => `${count} tasks using ${presetName}.`,

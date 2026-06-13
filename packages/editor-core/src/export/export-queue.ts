@@ -29,6 +29,7 @@ export interface ExportTaskHistoryEntry {
   id: string;
   name: string;
   outputPath: string;
+  sourcePath?: string;
   status: Extract<ExportTaskStatus, 'success' | 'error'>;
   priority: ExportTaskPriority;
   createdAt: string;
@@ -168,10 +169,12 @@ export function createExportTaskHistoryEntry(task: ExportTask): ExportTaskHistor
   if (task.status !== 'success' && task.status !== 'error') {
     return undefined;
   }
+  const sourcePath = task.plan.inputs.find((input) => input.path.trim())?.path;
   return {
     id: task.id,
     name: task.name,
     outputPath: task.outputPath,
+    ...(sourcePath ? { sourcePath } : {}),
     status: task.status,
     priority: task.priority,
     createdAt: task.createdAt,

@@ -35,6 +35,7 @@ let lastExportPreviewSamplesResult: ExportPreviewSamplesResult | undefined;
 let exportPreviewRunCalls: Array<{ id: string; fullArgs: string[]; time: number; outputPath: string }> = [];
 const canceledExportTaskIds = new Set<string>();
 const canceledTranscodeTaskIds = new Set<string>();
+const canceledQualityEvaluationTaskIds = new Set<string>();
 let exportGateHeld = false;
 const exportGates: Array<{ taskId?: string; release: () => void }> = [];
 let mockSceneTimes = [1];
@@ -262,6 +263,7 @@ const mocks: TauriMocks = {
     hasLibfreetype: true,
     hasMinterpolate: true,
     hasArnndn: true,
+    hasLibvmaf: true,
     hardwareEncoderAvailable: true,
     hardwareEncoder: 'h264_nvenc',
     drawtextWarning: null
@@ -386,7 +388,20 @@ const mocks: TauriMocks = {
       durationMs: 10
     };
   },
+  evaluateExportQuality: async ({ taskId }) => {
+    canceledQualityEvaluationTaskIds.delete(taskId);
+    emit('quality-evaluation-progress', { taskId, progress: 0.5, progressPct: 50 });
+    await wait(10);
+    if (canceledQualityEvaluationTaskIds.has(taskId)) {
+      throw new Error('Quality evaluation canceled.');
+    }
+    emit('quality-evaluation-progress', { taskId, progress: 1, progressPct: 100 });
+    return { taskId, ssim: 0.9912, psnr: 41.3, vmaf: 92.4, vmafAvailable: true, durationMs: 10 };
+  },
   cancelMotionTracking: () => undefined,
+  cancelQualityEvaluation: (taskId) => {
+    canceledQualityEvaluationTaskIds.add(taskId);
+  },
   cancelExport: (taskId) => {
     canceledExportTaskIds.add(exportCancelKey(taskId));
     releaseExportGateForTask(taskId);
@@ -1352,6 +1367,7 @@ window.__E2E_ACTIONS__ = {
     persistFiles();
   },
   clearE2eFiles: () => {
+    canceledQualityEvaluationTaskIds.clear();
     localStorage.removeItem(PERSISTED_FILES_KEY);
     localStorage.removeItem(PERSISTED_MTIMES_KEY);
     localStorage.removeItem('open-factory:demucs-executable-path');

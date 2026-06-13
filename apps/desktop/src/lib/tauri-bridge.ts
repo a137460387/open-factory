@@ -195,6 +195,28 @@ export interface MotionTrackProgressEvent {
   progressPct: number;
 }
 
+export interface QualityEvaluationRequest {
+  taskId: string;
+  sourcePath: string;
+  outputPath: string;
+  duration?: number;
+}
+
+export interface QualityEvaluationResult {
+  taskId: string;
+  ssim?: number;
+  psnr?: number;
+  vmaf?: number;
+  vmafAvailable: boolean;
+  durationMs: number;
+}
+
+export interface QualityEvaluationProgressEvent {
+  taskId: string;
+  progress: number;
+  progressPct: number;
+}
+
 export type BatchTranscodePreset = 'h264-720p' | 'h264-1080p' | 'prores-proxy';
 
 export interface BatchTranscodeTaskRequest {
@@ -370,8 +392,10 @@ export type TauriMocks = Partial<{
   writeWebdavPassword(password?: string): Promise<void> | void;
   analyzeClip(request: AnalyzeClipRequest): Promise<AnalyzeClipResult> | AnalyzeClipResult;
   analyzeMotionTrack(request: AnalyzeMotionTrackRequest): Promise<AnalyzeMotionTrackResult> | AnalyzeMotionTrackResult;
+  evaluateExportQuality(request: QualityEvaluationRequest): Promise<QualityEvaluationResult> | QualityEvaluationResult;
   cancelExport(taskId?: string): Promise<void> | void;
   cancelMotionTracking(clipId: string): Promise<void> | void;
+  cancelQualityEvaluation(taskId: string): Promise<void> | void;
   batchTranscodeMedia(request: BatchTranscodeRequest): Promise<BatchTranscodeResponse> | BatchTranscodeResponse;
   cancelBatchTranscodeTask(taskId: string): Promise<void> | void;
   getCacheDir(): Promise<string> | string;
@@ -822,6 +846,14 @@ export async function analyzeMotionTrack(request: AnalyzeMotionTrackRequest): Pr
   return invoke<AnalyzeMotionTrackResult>('analyze_motion_track', { request });
 }
 
+export async function evaluateExportQuality(request: QualityEvaluationRequest): Promise<QualityEvaluationResult> {
+  const mock = getTauriMocks()?.evaluateExportQuality;
+  if (mock) {
+    return mock(request);
+  }
+  return invoke<QualityEvaluationResult>('evaluate_export_quality', { request });
+}
+
 export async function cancelExport(taskId?: string): Promise<void> {
   const mock = getTauriMocks()?.cancelExport;
   if (mock) {
@@ -838,6 +870,15 @@ export async function cancelMotionTracking(clipId: string): Promise<void> {
     return;
   }
   await invoke('cancel_motion_tracking', { clipId });
+}
+
+export async function cancelQualityEvaluation(taskId: string): Promise<void> {
+  const mock = getTauriMocks()?.cancelQualityEvaluation;
+  if (mock) {
+    await mock(taskId);
+    return;
+  }
+  await invoke('cancel_quality_evaluation', { taskId });
 }
 
 export async function batchTranscodeMedia(request: BatchTranscodeRequest): Promise<BatchTranscodeResponse> {
