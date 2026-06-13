@@ -70,6 +70,7 @@ import {
 } from '../text-animation';
 import { cloneEffects, normalizeEffect, normalizeEffects, type Effect, type EffectParams, type EffectType } from '../effects';
 import { createMulticamSequenceProject, setMulticamSwitch } from '../multicam';
+import { applyCmx3600EdlImport, buildCmx3600EdlImport, type Cmx3600EdlImportOptions, type Cmx3600EdlImportResult } from '../export/timeline-import';
 import {
   calculateSpeedCurveSourceDuration,
   clampTransitionDuration,
@@ -138,6 +139,38 @@ export class LoadProjectCommand implements Command {
   execute(): void {
     this.before ??= this.accessor.getProject();
     this.accessor.setProject(this.nextProject);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class ImportEDLCommand implements Command {
+  readonly description = 'Import EDL';
+  private before?: Project;
+  private after?: Project;
+  private importResult?: Cmx3600EdlImportResult;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly contents: string,
+    private readonly options: Cmx3600EdlImportOptions = {}
+  ) {}
+
+  get result(): Cmx3600EdlImportResult | undefined {
+    return this.importResult;
+  }
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    if (!this.after) {
+      this.importResult = buildCmx3600EdlImport(this.before, this.contents, this.options);
+      this.after = applyCmx3600EdlImport(this.before, this.importResult);
+    }
+    this.accessor.setProject(this.after);
   }
 
   undo(): void {

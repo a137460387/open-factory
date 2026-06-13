@@ -214,6 +214,7 @@ export type TauriMocks = Partial<{
   fsExists(path: string): Promise<boolean> | boolean;
   readColorMatchFrameSample(path: string): Promise<ColorMatchFrameSample | undefined> | ColorMatchFrameSample | undefined;
   getAppDataDir(): Promise<string> | string;
+  getTempSegmentsDir(): Promise<string> | string;
   getFileStat(path: string): Promise<FileStat> | FileStat;
   scanDirectory(path: string, depth?: number): Promise<string[]> | string[];
   authorizePaths(paths: string[]): Promise<void> | void;
@@ -381,6 +382,14 @@ export async function getAppDataDir(): Promise<string> {
     return mock();
   }
   return invoke<string>('get_app_data_dir');
+}
+
+export async function getTempSegmentsDir(): Promise<string> {
+  const mock = getTauriMocks()?.getTempSegmentsDir;
+  if (mock) {
+    return mock();
+  }
+  return invoke<string>('get_temp_segments_dir');
 }
 
 export async function getFileStat(path: string): Promise<FileStat> {

@@ -29,6 +29,7 @@ let openFileDialogPaths: string[] = [];
 let savePath = 'C:/Exports/open-factory-test.mp4';
 let openDirectoryPath = 'C:/Relink';
 let lastExportPlan: FfmpegExportPlan | undefined;
+let exportRunCalls: Array<{ taskId?: string; fullArgs: string[]; duration: number }> = [];
 const canceledExportTaskIds = new Set<string>();
 const canceledTranscodeTaskIds = new Set<string>();
 let exportGateHeld = false;
@@ -216,6 +217,7 @@ const mocks: TauriMocks = {
     return solidColorSample([128, 128, 128]);
   },
   getAppDataDir: () => appDataDir,
+  getTempSegmentsDir: () => 'C:/Temp/open-factory/segments',
   getFileStat: (path) => ({
     path,
     size: path === silencePatternAudio ? createSilencePatternWav().byteLength : path === fourKHevcVideo ? 500 * 1024 * 1024 : path.endsWith('.wav') ? 2048 : 4096,
@@ -254,6 +256,7 @@ const mocks: TauriMocks = {
   getAvailableMemoryBytes: () => availableMemoryBytes,
   runExport: async (plan, taskId) => {
     lastExportPlan = plan;
+    exportRunCalls.push({ taskId, fullArgs: [...plan.fullArgs], duration: plan.duration });
     const cancelKey = exportCancelKey(taskId);
     canceledExportTaskIds.delete(cancelKey);
     emit('export-progress', taskId ? { taskId, progress: 0.2 } : 0.2);
@@ -769,7 +772,45 @@ window.__E2E_ACTIONS__ = {
     });
     commandManager.clear();
   },
+  setupRenderFarmFixture: () => {
+    const project = createProject('Render Farm E2E');
+    const asset: MediaAsset = {
+      id: 'media-render-farm',
+      type: 'video',
+      name: 'render-farm-long.mp4',
+      path: tinyVideo,
+      duration: 65,
+      width: 1280,
+      height: 720,
+      size: 4096,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 2,
+      audioSampleRate: 44_100,
+      audioCodec: 'aac',
+      videoCodec: 'h264'
+    };
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({ id: 'track-video', type: 'video', name: 'Video 1', clips: [makeRenderFarmVideoClip()] }),
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
+        createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    commandManager.clear();
+    exportRunCalls = [];
+  },
   getTimelineSnapshot: () => useEditorStore.getState().project.timeline,
+  getProjectSnapshot: () => useEditorStore.getState().project,
   getProjectMedia: () => useEditorStore.getState().project.media,
   setOpenFileDialogPaths: (paths: unknown) => {
     openFileDialogPaths = Array.isArray(paths) ? (paths as string[]) : [];
@@ -803,6 +844,7 @@ window.__E2E_ACTIONS__ = {
   },
   getLastConfirmMessage: () => lastConfirmMessage,
   getLastExportPlan: () => lastExportPlan,
+  getExportRunCalls: () => exportRunCalls,
   getLastWebdavPutRequest: () => lastWebdavPutRequest,
   addKeyframe: (clipId: unknown, property: unknown, time: unknown, value: unknown) => {
     if (typeof clipId !== 'string' || !isKeyframeProperty(property) || typeof time !== 'number' || typeof value !== 'number') {
@@ -879,6 +921,8 @@ window.__E2E_ACTIONS__ = {
     }
     webdavPassword = undefined;
     lastWebdavPutRequest = undefined;
+    lastExportPlan = undefined;
+    exportRunCalls = [];
     localStorage.removeItem('open-factory:proxy-settings');
     localStorage.removeItem('open-factory:plugins');
     localStorage.removeItem('open-factory:settings');
@@ -939,6 +983,24 @@ function makeDuplicateVideoClip(): Extract<import('@open-factory/editor-core').C
     trackId: 'track-video',
     start: 0,
     duration: 4,
+    trimStart: 0,
+    trimEnd: 0,
+    speed: DEFAULT_CLIP_SPEED,
+    colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+    transform: { ...DEFAULT_TRANSFORM },
+    volume: 1
+  };
+}
+
+function makeRenderFarmVideoClip(): Extract<import('@open-factory/editor-core').Clip, { type: 'video' }> {
+  return {
+    id: 'clip-render-farm',
+    type: 'video',
+    name: 'Render Farm Long',
+    mediaId: 'media-render-farm',
+    trackId: 'track-video',
+    start: 0,
+    duration: 65,
     trimStart: 0,
     trimEnd: 0,
     speed: DEFAULT_CLIP_SPEED,

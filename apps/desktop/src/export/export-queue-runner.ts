@@ -1,14 +1,16 @@
 import {
   buildExportProjectFromProject,
   buildFfmpegExportPlan,
+  runRenderFarmWithFallback,
   timelineHasExportableVideo,
   type ExportSettings,
   type ExportTaskPriority,
   type ExportTask,
-  type Project
+  type Project,
+  type RenderFarmTaskConfig
 } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
-import { cancelExport as bridgeCancelExport, getAvailableMemoryBytes, getFfmpegCapabilities, listenBridge, runExport } from '../lib/tauri-bridge';
+import { cancelExport as bridgeCancelExport, getAvailableMemoryBytes, getFfmpegCapabilities, getTempSegmentsDir, listenBridge, removeFile, runExport, writeFile } from '../lib/tauri-bridge';
 import { runExportBeforePlugins } from '../plugins/plugin-manager';
 import { getExportLogPath, persistFinishedTaskToHistory } from './export-history';
 import { normalizeExportProgressPayload, type ExportProgressEvent } from './export-progress';
@@ -20,7 +22,13 @@ let runnerPromise: Promise<void> | undefined;
 const activeRuns = new Map<string, Promise<void>>();
 let wakeRunner: (() => void) | undefined;
 
-export async function enqueueExport(project: Project, outputPath: string, settings?: Partial<Omit<ExportSettings, 'outputPath'>>, priority?: ExportTaskPriority): Promise<ExportTask> {
+export async function enqueueExport(
+  project: Project,
+  outputPath: string,
+  settings?: Partial<Omit<ExportSettings, 'outputPath'>>,
+  priority?: ExportTaskPriority,
+  renderFarm?: RenderFarmTaskConfig
+): Promise<ExportTask> {
   if (!timelineHasExportableVideo(project.timeline)) {
     throw new Error(zhCN.errors.exportNeedsVideo);
   }
@@ -35,7 +43,8 @@ export async function enqueueExport(project: Project, outputPath: string, settin
     name: fileNameFromPath(outputPath) || `${project.name} 导出`,
     outputPath,
     plan,
-    priority
+    priority,
+    renderFarm
   });
   signalRunner();
   ensureExportQueueRunner();
@@ -81,7 +90,17 @@ export async function cancelQueuedExportTask(taskId: string): Promise<void> {
 async function runQueue(): Promise<void> {
   const unlisten = await listenBridge<ExportProgressEvent>('export-progress', (progress) => {
     const normalized = normalizeExportProgressPayload(progress);
-    const taskId = getProgressTaskId(progress) ?? (activeRuns.size === 1 ? Array.from(activeRuns.keys())[0] : undefined);
+    const progressTaskId = getProgressTaskId(progress);
+    const childTask = progressTaskId ? parseRenderFarmChildTaskId(progressTaskId) : undefined;
+    if (childTask?.kind === 'segment') {
+      useExportQueueStore.getState().updateTaskSegment(childTask.parentTaskId, childTask.segmentId, { progress: normalized });
+      return;
+    }
+    if (childTask?.kind === 'concat') {
+      useExportQueueStore.getState().updateTaskProgress(childTask.parentTaskId, 0.95 + normalized * 0.05);
+      return;
+    }
+    const taskId = progressTaskId ?? (activeRuns.size === 1 ? Array.from(activeRuns.keys())[0] : undefined);
     if (!taskId) {
       return;
     }
@@ -140,7 +159,21 @@ async function runSingleTask(task: ExportTask): Promise<void> {
     useExportQueueStore.getState().setTaskLogPath(task.id, logPath);
   }
   try {
-    const result = await runExport(task.plan, task.id);
+    const result = task.renderFarm?.enabled
+      ? await runRenderFarmWithFallback({
+          taskId: task.id,
+          outputPath: task.outputPath,
+          plan: task.plan,
+          config: task.renderFarm,
+          tempSegmentsDir: await getTempSegmentsDir(),
+          runPlan: (plan, taskId) => runExport(plan, taskId),
+          writeFile,
+          removeFile,
+          onSegments: (segments) => useExportQueueStore.getState().setTaskSegments(task.id, segments),
+          onSegmentUpdate: (segment) => useExportQueueStore.getState().updateTaskSegment(task.id, segment.id, segment),
+          onProgress: (progress) => useExportQueueStore.getState().updateTaskProgress(task.id, progress)
+        })
+      : await runExport(task.plan, task.id);
     const latest = useExportQueueStore.getState().tasks.find((item) => item.id === task.id);
     if (latest?.status === 'running') {
       useExportQueueStore.getState().finishTask(task.id, result.report);
@@ -162,6 +195,18 @@ async function shouldPauseForMemory(): Promise<boolean> {
 
 function getProgressTaskId(progress: ExportProgressEvent): string | undefined {
   return typeof progress === 'object' && progress !== null && typeof progress.taskId === 'string' ? progress.taskId : undefined;
+}
+
+function parseRenderFarmChildTaskId(taskId: string): { parentTaskId: string; kind: 'segment'; segmentId: string } | { parentTaskId: string; kind: 'concat' } | undefined {
+  const segment = taskId.match(/^(.+):(segment-\d+)$/);
+  if (segment) {
+    return { parentTaskId: segment[1], kind: 'segment', segmentId: segment[2] };
+  }
+  const concat = taskId.match(/^(.+):concat$/);
+  if (concat) {
+    return { parentTaskId: concat[1], kind: 'concat' };
+  }
+  return undefined;
 }
 
 function signalRunner(): void {

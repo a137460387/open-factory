@@ -164,6 +164,14 @@ pub fn get_app_data_dir(app: AppHandle) -> Result<String, String> {
 }
 
 #[tauri::command]
+pub fn get_temp_segments_dir(app: AppHandle) -> Result<String, String> {
+    let path = temp_segments_dir_path();
+    fs::create_dir_all(&path).map_err(|error| error.to_string())?;
+    authorize_path_for_write(&app, &path)?;
+    Ok(normalize_path(&path))
+}
+
+#[tauri::command]
 pub fn get_file_stat(app: AppHandle, path: String) -> Result<FileStatDto, String> {
     let safe_path = validate_path(&app, Path::new(&path))?;
     let metadata = fs::metadata(&safe_path)
@@ -248,6 +256,10 @@ fn normalize_path(path: &Path) -> String {
     path.to_string_lossy().replace('\\', "/")
 }
 
+fn temp_segments_dir_path() -> PathBuf {
+    std::env::temp_dir().join("open-factory").join("segments")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -255,5 +267,17 @@ mod tests {
     #[test]
     fn normalize_path_rewrites_windows_separators() {
         assert_eq!(normalize_path(Path::new(r"C:\Users\E2E\clip.cube")), "C:/Users/E2E/clip.cube");
+    }
+
+    #[test]
+    fn temp_segments_dir_uses_open_factory_segments_folder() {
+        let path = temp_segments_dir_path();
+        assert_eq!(path.file_name().and_then(|value| value.to_str()), Some("segments"));
+        assert_eq!(
+            path.parent()
+                .and_then(|parent| parent.file_name())
+                .and_then(|value| value.to_str()),
+            Some("open-factory")
+        );
     }
 }

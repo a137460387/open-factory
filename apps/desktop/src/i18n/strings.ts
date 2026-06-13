@@ -317,9 +317,15 @@ const zh = {
     format: '格式',
     export: '导出',
     exporting: '正在导出...',
+    importEdl: '导入 EDL',
+    importing: '正在导入...',
     success: '时间线已导出',
     failed: '时间线导出失败',
     failedMessage: '无法导出时间线。',
+    importSuccess: 'EDL 已导入',
+    importFailed: 'EDL 导入失败',
+    importFailedMessage: '无法导入 EDL。',
+    importSummary: (matched: number, missing: number) => `匹配 ${matched} 个片段，缺失 ${missing} 个片段。`,
     filterName: (format: string) => (format === 'fcp-xml' ? 'Final Cut Pro XML' : 'CMX3600 EDL'),
     formats: {
       edl: 'CMX3600 EDL',
@@ -1044,6 +1050,13 @@ const zh = {
       normal: '普通',
       low: '低'
     },
+    renderFarm: {
+      title: '多实例渲染',
+      enabled: '按分段并行渲染长任务',
+      instances: '实例数',
+      suggested: (count: number) => `建议 ${count}`,
+      segmentLabel: (index: number) => `分段 ${index}`
+    },
     queueTitle: '导出队列',
     queueRunning: (count: number) => `最多 ${count} 个任务并行导出`,
     queuePausedForMemory: '可用内存低于 2GB，暂停启动新任务',
@@ -1764,9 +1777,15 @@ const enOverrides = {
     format: 'Format',
     export: 'Export',
     exporting: 'Exporting...',
+    importEdl: 'Import EDL',
+    importing: 'Importing...',
     success: 'Timeline exported',
     failed: 'Timeline export failed',
     failedMessage: 'Unable to export the timeline.',
+    importSuccess: 'EDL imported',
+    importFailed: 'EDL import failed',
+    importFailedMessage: 'Unable to import EDL.',
+    importSummary: (matched: number, missing: number) => `${matched} clips matched, ${missing} clips missing.`,
     filterName: (format: string) => (format === 'fcp-xml' ? 'Final Cut Pro XML' : 'CMX3600 EDL'),
     formats: {
       edl: 'CMX3600 EDL',
@@ -2241,6 +2260,13 @@ const enOverrides = {
       high: 'High',
       normal: 'Normal',
       low: 'Low'
+    },
+    renderFarm: {
+      title: 'Render Farm',
+      enabled: 'Render long tasks as parallel segments',
+      instances: 'Instances',
+      suggested: (count: number) => `Suggested ${count}`,
+      segmentLabel: (index: number) => `Segment ${index}`
     },
     queueTitle: 'Export Queue',
     queueRunning: (count: number) => `Up to ${count} concurrent exports`,

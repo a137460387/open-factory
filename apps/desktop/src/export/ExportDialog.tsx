@@ -5,6 +5,7 @@ import {
   runExportPreflight,
   normalizeTargetAspectRatio,
   resolveReframeDimensions,
+  suggestRenderFarmInstances,
   type ExportAudioVisualizationBackground,
   type ExportAudioVisualizationStyle,
   type ExportTaskStatus,
@@ -79,6 +80,9 @@ export function ExportDialog({ project, initialPreset, onClose, onCompleted, onR
   const [customPresetName, setCustomPresetName] = useState('');
   const [batchOutputPaths, setBatchOutputPaths] = useState('');
   const [priority, setPriority] = useState<ExportTaskPriority>('normal');
+  const suggestedRenderFarmInstances = useMemo(() => suggestRenderFarmInstances(typeof navigator === 'undefined' ? undefined : navigator.hardwareConcurrency), []);
+  const [renderFarmEnabled, setRenderFarmEnabled] = useState(false);
+  const [renderFarmInstances, setRenderFarmInstances] = useState(suggestedRenderFarmInstances);
   const tasks = useExportQueueStore((state) => state.tasks);
   const history = useExportQueueStore((state) => state.history);
   const runnerActive = useExportQueueStore((state) => state.runnerActive);
@@ -253,7 +257,7 @@ export function ExportDialog({ project, initialPreset, onClose, onCompleted, onR
 
   async function enqueueSelectedPaths(selectedPaths: string[]): Promise<void> {
     for (const path of selectedPaths) {
-      const task = await enqueueExport(project, path, exportSettings, priority);
+      const task = await enqueueExport(project, path, exportSettings, priority, renderFarmEnabled ? { enabled: true, maxInstances: renderFarmInstances } : undefined);
       for (const warning of task.plan.warnings) {
         showToast({ kind: 'warning', title: t.exportWarningTitle, message: formatExportWarning(warning) });
       }
@@ -444,6 +448,29 @@ export function ExportDialog({ project, initialPreset, onClose, onCompleted, onR
                 </option>
               ))}
             </select>
+          </div>
+          <div className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3">
+            <label className="pt-1 text-xs font-medium text-slate-600">{t.renderFarm.title}</label>
+            <div className="space-y-2">
+              <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-700">
+                <input className="h-4 w-4 accent-brand" type="checkbox" checked={renderFarmEnabled} onChange={(event) => setRenderFarmEnabled(event.target.checked)} data-testid="export-render-farm-toggle" />
+                <span>{t.renderFarm.enabled}</span>
+              </label>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
+                <span>{t.renderFarm.instances}</span>
+                <input
+                  className="h-8 w-16 rounded-md border border-line px-2 text-right disabled:bg-slate-100"
+                  type="number"
+                  min={1}
+                  max={4}
+                  value={renderFarmInstances}
+                  disabled={!renderFarmEnabled}
+                  onChange={(event) => setRenderFarmInstances(Math.min(4, Math.max(1, Math.round(Number(event.target.value) || 1))))}
+                  data-testid="export-render-farm-instances"
+                />
+                <span>{t.renderFarm.suggested(suggestedRenderFarmInstances)}</span>
+              </div>
+            </div>
           </div>
           {capabilities?.drawtextWarning ? <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900">{formatExportWarning(capabilities.drawtextWarning)}</div> : null}
           {preflight ? <PreflightPanel issues={preflight.issues} onDismiss={() => setPreflight(undefined)} onContinue={() => void continueAfterWarnings()} onRelink={onRelinkMissing ? relinkFromPreflight : undefined} /> : null}
@@ -1711,6 +1738,22 @@ function ExportTaskRow({ taskId }: { taskId: string }) {
         </div>
         <div className="w-9 text-right text-[11px] tabular-nums text-slate-500">{progress}%</div>
       </div>
+      {task.segments?.length ? (
+        <div className="mt-2 grid gap-1" data-testid="export-task-segments">
+          {task.segments.map((segment) => {
+            const segmentProgress = Math.round(segment.progress * 100);
+            return (
+              <div key={segment.id} className="grid grid-cols-[72px_1fr_42px] items-center gap-2 text-[11px] text-slate-500" data-testid="export-task-segment-row" data-status={segment.status}>
+                <span>{zhCN.exportDialog.renderFarm.segmentLabel(segment.index + 1)}</span>
+                <div className="h-1 overflow-hidden rounded-full bg-slate-200">
+                  <div className="h-full bg-sky-500 transition-all" style={{ width: `${segmentProgress}%` }} />
+                </div>
+                <span className="text-right tabular-nums">{segmentProgress}%</span>
+              </div>
+            );
+          })}
+        </div>
+      ) : null}
       {task.error ? <div className="mt-1 whitespace-pre-wrap text-[11px] text-rose-700">{task.error}</div> : null}
       {task.report?.loudness ? (
         <div className="mt-1 text-[11px] text-slate-600" data-testid="export-task-loudness-report">

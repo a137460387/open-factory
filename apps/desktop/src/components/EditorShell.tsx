@@ -8,6 +8,7 @@ import {
   CreateMulticamSequenceCommand,
   DEFAULT_PROJECT_ANNOTATION_COLOR,
   DeleteClipsCommand,
+  ImportEDLCommand,
   LoadProjectCommand,
   MergeMediaCommand,
   NewProjectCommand,
@@ -850,6 +851,23 @@ export function EditorShell() {
     }
   }, [project.sequences.length, selectedClipIds, setSelectedClipId, setSelectedClipIds]);
 
+  const importEdlTimeline = useCallback(
+    (contents: string, path: string) => {
+      const fileName = path.split(/[\\/]/).pop()?.replace(/\.edl$/i, '') || undefined;
+      const command = new ImportEDLCommand(projectAccessor, contents, { sequenceName: fileName });
+      commandManager.execute(command);
+      clearSelectedClipIds();
+      setPlayheadTime(0);
+      const result = command.result;
+      return {
+        title: result?.title ?? fileName ?? zhCN.timelineExport.importEdl,
+        matchedCount: result?.matchedCount ?? 0,
+        missingCount: result?.missingCount ?? 0
+      };
+    },
+    [clearSelectedClipIds, setPlayheadTime]
+  );
+
   const deleteSelected = useCallback(() => {
     const ids = useEditorStore.getState().selectedClipIds;
     if (ids.length === 0) {
@@ -1265,7 +1283,7 @@ export function EditorShell() {
             />
           ) : null}
           {projectTemplateOpen ? <ProjectTemplateDialog onSelect={(templateId) => void createProjectFromTemplate(templateId)} onClose={() => setProjectTemplateOpen(false)} /> : null}
-          {timelineExportDialogOpen ? <TimelineExportDialog project={project} onClose={() => setTimelineExportDialogOpen(false)} /> : null}
+          {timelineExportDialogOpen ? <TimelineExportDialog project={project} onClose={() => setTimelineExportDialogOpen(false)} onImportEdl={importEdlTimeline} /> : null}
           {snapshotNameOpen ? <SnapshotNameDialog defaultName={project.name} onConfirm={(name) => void saveNamedSnapshot(name)} onClose={() => setSnapshotNameOpen(false)} /> : null}
           {snapshotHistoryOpen ? (
             <SnapshotHistoryDialog projectId={project.id} projectPath={projectPath} onRestore={restoreSnapshotProject} onClose={() => setSnapshotHistoryOpen(false)} />

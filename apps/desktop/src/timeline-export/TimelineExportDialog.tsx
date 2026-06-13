@@ -1,16 +1,23 @@
 import { useState } from 'react';
 import { exportTimeline, type Project, type TimelineExportFormat } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
-import { saveFileDialog, writeFile } from '../lib/tauri-bridge';
+import { openFileDialog, readFile, saveFileDialog, writeFile } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
+
+export interface TimelineImportSummary {
+  title: string;
+  matchedCount: number;
+  missingCount: number;
+}
 
 interface TimelineExportDialogProps {
   project: Project;
   onClose(): void;
   onCompleted?(path: string): void;
+  onImportEdl?(contents: string, path: string): TimelineImportSummary | Promise<TimelineImportSummary>;
 }
 
-export function TimelineExportDialog({ project, onClose, onCompleted }: TimelineExportDialogProps) {
+export function TimelineExportDialog({ project, onClose, onCompleted, onImportEdl }: TimelineExportDialogProps) {
   const t = zhCN.timelineExport;
   const [format, setFormat] = useState<TimelineExportFormat>('edl');
   const [busy, setBusy] = useState(false);
@@ -29,6 +36,26 @@ export function TimelineExportDialog({ project, onClose, onCompleted }: Timeline
       onClose();
     } catch (error) {
       showToast({ kind: 'error', title: t.failed, message: error instanceof Error ? error.message : t.failedMessage });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function importEdlFile() {
+    if (!onImportEdl) {
+      return;
+    }
+    try {
+      setBusy(true);
+      const [path] = await openFileDialog(false, [{ name: t.filterName('edl'), extensions: ['edl'] }]);
+      if (!path) {
+        return;
+      }
+      const summary = await onImportEdl(await readFile(path), path);
+      showToast({ kind: 'success', title: t.importSuccess, message: t.importSummary(summary.matchedCount, summary.missingCount) });
+      onClose();
+    } catch (error) {
+      showToast({ kind: 'error', title: t.importFailed, message: error instanceof Error ? error.message : t.importFailedMessage });
     } finally {
       setBusy(false);
     }
@@ -53,13 +80,28 @@ export function TimelineExportDialog({ project, onClose, onCompleted }: Timeline
             <option value="fcp-xml">{t.formats.fcpXml}</option>
           </select>
         </label>
-        <div className="mt-5 flex justify-end gap-2">
+        <div className="mt-5 flex items-center justify-between gap-2">
+          {onImportEdl ? (
+            <button
+              className="rounded-md border border-line px-3 py-2 text-sm font-medium text-slate-700 hover:bg-panel disabled:opacity-50"
+              type="button"
+              onClick={() => void importEdlFile()}
+              disabled={busy}
+              data-testid="timeline-import-edl-button"
+            >
+              {busy ? t.importing : t.importEdl}
+            </button>
+          ) : (
+            <span />
+          )}
+          <div className="flex justify-end gap-2">
           <button className="rounded-md border border-line px-3 py-2 text-sm font-medium text-slate-700 hover:bg-panel" type="button" onClick={onClose} disabled={busy}>
             {zhCN.common.cancel}
           </button>
           <button className="rounded-md bg-brand px-3 py-2 text-sm font-semibold text-white hover:bg-[#176858] disabled:opacity-50" type="button" onClick={() => void exportFile()} disabled={busy} data-testid="timeline-export-save-button">
             {busy ? t.exporting : t.export}
           </button>
+          </div>
         </div>
       </div>
     </div>

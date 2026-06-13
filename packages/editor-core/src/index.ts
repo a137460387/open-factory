@@ -27,6 +27,8 @@ export * from './commands/timeline-commands';
 export * from './export/ffmpeg';
 export * from './export/preflight';
 export * from './export/timeline-export';
+export * from './export/timeline-import';
+export * from './export/render-farm';
 export * from './project/project-types';
 export * from './project/project-migration';
 export * from './project/relative-paths';

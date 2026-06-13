@@ -6,14 +6,18 @@ import {
   failExportTask,
   finishExportTask,
   setExportTaskLogPath,
+  setExportTaskSegments,
   sortExportQueueByPriority,
   startExportTaskSlots,
+  updateExportTaskSegment,
   updateExportTaskProgress,
   type ExportTask,
   type ExportTaskHistoryEntry,
   type ExportTaskPriority,
   type ExportReport,
-  type FfmpegExportPlan
+  type FfmpegExportPlan,
+  type RenderFarmSegmentStatus,
+  type RenderFarmTaskConfig
 } from '@open-factory/editor-core';
 import { create } from 'zustand';
 
@@ -24,9 +28,11 @@ export interface ExportQueueState {
   resourcePaused: boolean;
   maxConcurrent: number;
   lastCompletedPath?: string;
-  addTask: (input: { name: string; outputPath: string; plan: FfmpegExportPlan; priority?: ExportTaskPriority }) => ExportTask;
+  addTask: (input: { name: string; outputPath: string; plan: FfmpegExportPlan; priority?: ExportTaskPriority; renderFarm?: RenderFarmTaskConfig }) => ExportTask;
   startNextTasks: () => string[];
   updateTaskProgress: (taskId: string, progress: number) => void;
+  setTaskSegments: (taskId: string, segments: RenderFarmSegmentStatus[]) => void;
+  updateTaskSegment: (taskId: string, segmentId: string, patch: Partial<RenderFarmSegmentStatus>) => void;
   setTaskLogPath: (taskId: string, logPath: string) => void;
   finishTask: (taskId: string, report?: ExportReport) => void;
   failTask: (taskId: string, error: string) => void;
@@ -64,6 +70,12 @@ export const useExportQueueStore = create<ExportQueueState>((set, get) => ({
   updateTaskProgress: (taskId, progress) => {
     set((state) => ({ tasks: updateExportTaskProgress(state.tasks, taskId, progress) }));
   },
+  setTaskSegments: (taskId, segments) => {
+    set((state) => ({ tasks: setExportTaskSegments(state.tasks, taskId, segments) }));
+  },
+  updateTaskSegment: (taskId, segmentId, patch) => {
+    set((state) => ({ tasks: updateExportTaskSegment(state.tasks, taskId, segmentId, patch) }));
+  },
   setTaskLogPath: (taskId, logPath) => {
     set((state) => ({ tasks: setExportTaskLogPath(state.tasks, taskId, logPath) }));
   },
@@ -84,7 +96,7 @@ export const useExportQueueStore = create<ExportQueueState>((set, get) => ({
     set((state) => ({
       tasks: state.tasks.map((task) =>
         task.id === taskId && (task.status === 'error' || task.status === 'canceled')
-          ? { ...task, status: 'pending', progress: 0, error: undefined, report: undefined, startedAt: undefined, finishedAt: undefined }
+          ? { ...task, status: 'pending', progress: 0, error: undefined, report: undefined, segments: undefined, startedAt: undefined, finishedAt: undefined }
           : task
       )
     }));

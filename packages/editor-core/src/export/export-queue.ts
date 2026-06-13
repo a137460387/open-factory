@@ -1,5 +1,6 @@
 import { createId } from '../model';
 import type { ExportReport, FfmpegExportPlan } from './export-types';
+import { calculateRenderFarmProgress, type RenderFarmSegmentStatus, type RenderFarmTaskConfig } from './render-farm';
 
 export type ExportTaskStatus = 'pending' | 'running' | 'canceled' | 'error' | 'success';
 export type ExportTaskPriority = 'high' | 'normal' | 'low';
@@ -18,6 +19,8 @@ export interface ExportTask {
   logPath?: string;
   error?: string;
   report?: ExportReport;
+  renderFarm?: RenderFarmTaskConfig;
+  segments?: RenderFarmSegmentStatus[];
 }
 
 export interface ExportTaskHistoryEntry {
@@ -33,7 +36,7 @@ export interface ExportTaskHistoryEntry {
   error?: string;
 }
 
-export function createExportTask(input: { name: string; outputPath: string; plan: FfmpegExportPlan; priority?: ExportTaskPriority; id?: string; now?: string }): ExportTask {
+export function createExportTask(input: { name: string; outputPath: string; plan: FfmpegExportPlan; priority?: ExportTaskPriority; renderFarm?: RenderFarmTaskConfig; id?: string; now?: string }): ExportTask {
   const now = input.now ?? new Date().toISOString();
   return {
     id: input.id ?? createId('export-task'),
@@ -41,6 +44,7 @@ export function createExportTask(input: { name: string; outputPath: string; plan
     outputPath: input.outputPath,
     plan: input.plan,
     priority: normalizeExportTaskPriority(input.priority),
+    renderFarm: normalizeRenderFarmTaskConfig(input.renderFarm),
     status: 'pending',
     progress: 0,
     createdAt: now
@@ -83,6 +87,20 @@ export function startExportTaskSlots(tasks: ExportTask[], maxConcurrent = 2, now
 
 export function updateExportTaskProgress(tasks: ExportTask[], taskId: string, progress: number): ExportTask[] {
   return tasks.map((task) => (task.id === taskId ? { ...task, progress: Math.min(1, Math.max(0, progress)) } : task));
+}
+
+export function setExportTaskSegments(tasks: ExportTask[], taskId: string, segments: RenderFarmSegmentStatus[]): ExportTask[] {
+  return tasks.map((task) => (task.id === taskId ? { ...task, segments, progress: calculateRenderFarmProgress(segments) } : task));
+}
+
+export function updateExportTaskSegment(tasks: ExportTask[], taskId: string, segmentId: string, patch: Partial<RenderFarmSegmentStatus>): ExportTask[] {
+  return tasks.map((task) => {
+    if (task.id !== taskId || !task.segments) {
+      return task;
+    }
+    const segments = task.segments.map((segment) => (segment.id === segmentId ? { ...segment, ...patch } : segment));
+    return { ...task, segments, progress: calculateRenderFarmProgress(segments) };
+  });
 }
 
 export function finishExportTask(tasks: ExportTask[], taskId: string, report?: ExportReport, now = new Date().toISOString()): ExportTask[] {
@@ -137,6 +155,16 @@ export function createExportTaskHistoryEntry(task: ExportTask): ExportTaskHistor
 
 export function normalizeExportTaskPriority(priority: ExportTaskPriority | undefined): ExportTaskPriority {
   return priority === 'high' || priority === 'low' ? priority : 'normal';
+}
+
+export function normalizeRenderFarmTaskConfig(config: RenderFarmTaskConfig | undefined): RenderFarmTaskConfig | undefined {
+  if (!config?.enabled) {
+    return undefined;
+  }
+  return {
+    enabled: true,
+    maxInstances: Math.min(4, Math.max(1, Math.round(Number.isFinite(config.maxInstances) ? config.maxInstances : 1)))
+  };
 }
 
 function comparePendingExportTasks(

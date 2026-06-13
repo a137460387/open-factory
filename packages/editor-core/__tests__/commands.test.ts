@@ -17,6 +17,7 @@ import {
   CloseGapCommand,
   DeleteClipCommand,
   DeleteClipsCommand,
+  ImportEDLCommand,
   LoadProjectCommand,
   MoveClipCommand,
   MoveClipsCommand,
@@ -70,6 +71,42 @@ describe('timeline commands', () => {
 
     manager.redo();
     expect(project.id).toBe('project-restored');
+  });
+
+  it('imports an EDL as an undoable active sequence with missing media placeholders', () => {
+    let project = makeProject();
+    const accessor = {
+      getProject: () => project,
+      setProject: (next: typeof project) => {
+        project = next;
+      }
+    };
+    const manager = new CommandManager();
+    const command = new ImportEDLCommand(
+      accessor,
+      [
+        'TITLE: Command Import',
+        '001  AX       V     C        00:00:00:00 00:00:01:00 00:00:00:00 00:00:01:00',
+        '* FROM CLIP NAME: sample.mp4',
+        '002  AX       V     C        00:00:00:00 00:00:01:00 00:00:01:00 00:00:02:00',
+        '* FROM CLIP NAME: Offline.mov'
+      ].join('\n')
+    );
+
+    manager.execute(command);
+
+    expect(command.result).toMatchObject({ matchedCount: 1, missingCount: 1 });
+    expect(project.activeSequenceId).toBe(command.result?.sequence.id);
+    expect(project.timeline.tracks[0].clips).toHaveLength(2);
+    expect(project.media.some((asset) => asset.name === 'Offline.mov' && asset.missing)).toBe(true);
+
+    manager.undo();
+    expect(project.activeSequenceId).not.toBe(command.result?.sequence.id);
+    expect(project.media.some((asset) => asset.name === 'Offline.mov')).toBe(false);
+
+    manager.redo();
+    expect(project.activeSequenceId).toBe(command.result?.sequence.id);
+    expect(project.timeline.tracks[0].clips).toHaveLength(2);
   });
 
   it('adds tracks and clips with undo/redo', () => {

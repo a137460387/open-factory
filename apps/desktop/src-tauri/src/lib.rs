@@ -47,6 +47,7 @@ pub fn run() {
             commands::files::copy_file,
             commands::files::fs_exists,
             commands::files::get_app_data_dir,
+            commands::files::get_temp_segments_dir,
             commands::files::get_file_stat,
             commands::files::scan_directory,
             commands::cache::get_cache_dir,
