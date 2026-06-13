@@ -1,5 +1,19 @@
-import { TITLE_TEMPLATE_IDS, filterMediaAssets, shouldGenerateProxy, type MediaAsset, type MediaBinFilter, type MediaLabelColor, type MediaMetadata, type TitleTemplateId } from '@open-factory/editor-core';
-import { AlertCircle, BadgeCheck, FileAudio2, FileImage, FileText, FileVideo2, Gauge, Import, Link2, Loader2, Merge, Plus, Search, SlidersHorizontal, Tag } from 'lucide-react';
+import {
+  MAX_MEDIA_FOLDER_DEPTH,
+  TITLE_TEMPLATE_IDS,
+  collectSmartAlbums,
+  filterMediaAssets,
+  getMediaFolderDepth,
+  shouldGenerateProxy,
+  type MediaAsset,
+  type MediaBinFilter,
+  type MediaFolder,
+  type MediaLabelColor,
+  type MediaMetadata,
+  type SmartAlbumId,
+  type TitleTemplateId
+} from '@open-factory/editor-core';
+import { AlertCircle, BadgeCheck, ChevronDown, ChevronRight, FileAudio2, FileImage, FileText, FileVideo2, Folder, FolderPlus, Gauge, Import, Link2, Loader2, Merge, Plus, Search, SlidersHorizontal, Tag, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
 import { zhCN } from '../../i18n/strings';
@@ -11,6 +25,7 @@ import { useProxySettingsStore } from '../../store/proxySettingsStore';
 
 interface MediaBinProps {
   media: MediaAsset[];
+  mediaFolders: MediaFolder[];
   mediaMetadata: Record<string, MediaMetadata>;
   onImport(): void;
   onImportPaths(paths: string[]): void;
@@ -23,17 +38,46 @@ interface MediaBinProps {
   onGenerateProxy(assetId: string): void;
   onSetLabel(assetId: string, labelColor?: MediaLabelColor): void;
   onAddTitleTemplate(templateId: TitleTemplateId): void;
+  onCreateFolder(parentId?: string | null): void;
+  onRenameFolder(folderId: string, name: string): void;
+  onDeleteFolder(folderId: string): void;
+  onSetFolderCollapsed(folderId: string, collapsed: boolean): void;
+  onMoveMediaToFolder(assetIds: string[], folderId?: string | null): void;
 }
 
 type MediaBinView = MediaBinFilter | 'titles';
+const MEDIA_CARD_DRAG_MIME = 'application/x-open-factory-media-id';
 
-export function MediaBin({ media, mediaMetadata, onImport, onImportPaths, onBatchTranscode, onScanDuplicates, onAddToTimeline, onAddAdjustmentLayer, onRelink, onRelinkAll, onGenerateProxy, onSetLabel, onAddTitleTemplate }: MediaBinProps) {
+export function MediaBin({
+  media,
+  mediaFolders,
+  mediaMetadata,
+  onImport,
+  onImportPaths,
+  onBatchTranscode,
+  onScanDuplicates,
+  onAddToTimeline,
+  onAddAdjustmentLayer,
+  onRelink,
+  onRelinkAll,
+  onGenerateProxy,
+  onSetLabel,
+  onAddTitleTemplate,
+  onCreateFolder,
+  onRenameFolder,
+  onDeleteFolder,
+  onSetFolderCollapsed,
+  onMoveMediaToFolder
+}: MediaBinProps) {
   const t = zhCN.mediaBin;
   const [dragOver, setDragOver] = useState(false);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<MediaBinView>('all');
+  const [smartAlbumId, setSmartAlbumId] = useState<SmartAlbumId | 'none'>('none');
   const missingCount = media.filter((asset) => asset.missing).length;
-  const visibleMedia = filter === 'titles' ? [] : filterMediaAssets(media, { query: search, filter, metadata: mediaMetadata });
+  const smartAlbums = collectSmartAlbums(media);
+  const smartAlbumIds = smartAlbumId === 'none' ? undefined : new Set(smartAlbums.find((album) => album.id === smartAlbumId)?.assetIds ?? []);
+  const visibleMedia = filter === 'titles' ? [] : filterMediaAssets(media, { query: search, filter, metadata: mediaMetadata }).filter((asset) => !smartAlbumIds || smartAlbumIds.has(asset.id));
   const jobs = useMediaJobStore((state) => state.jobs);
   const runnerActive = useMediaJobStore((state) => state.runnerActive);
   const clearFinishedJobs = useMediaJobStore((state) => state.clearFinishedJobs);
@@ -117,6 +161,14 @@ export function MediaBin({ media, mediaMetadata, onImport, onImportPaths, onBatc
             {t.newAdjustmentLayer}
           </button>
           <button
+            className="inline-flex items-center gap-2 rounded-md border border-line bg-panel px-2 py-2 text-sm font-medium text-slate-700 hover:bg-white"
+            onClick={() => onCreateFolder(null)}
+            data-testid="media-folder-create-button"
+          >
+            <FolderPlus size={15} />
+            {t.newFolder}
+          </button>
+          <button
             className="inline-flex items-center gap-2 rounded-md bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-[#176858]"
             onClick={onImport}
             data-testid="import-media-button"
@@ -149,12 +201,18 @@ export function MediaBin({ media, mediaMetadata, onImport, onImportPaths, onBatc
                 )}
                 type="button"
                 data-testid={`media-filter-${item}`}
-                onClick={() => setFilter(item)}
+                onClick={() => {
+                  setFilter(item);
+                  setSmartAlbumId('none');
+                }}
               >
                 {t.filters[item]}
               </button>
             ))}
           </div>
+          {filter !== 'titles' ? (
+            <SmartAlbumBar albums={smartAlbums} activeId={smartAlbumId} onSelect={setSmartAlbumId} />
+          ) : null}
         </div>
         {filter !== 'titles' && jobs.length > 0 ? (
           <div className="mb-3 rounded-md border border-line bg-panel p-2 text-xs" data-testid="media-job-queue">
@@ -182,24 +240,278 @@ export function MediaBin({ media, mediaMetadata, onImport, onImportPaths, onBatc
             <Import className="mb-3 text-slate-500" size={30} />
             {t.emptyDrop}
           </button>
+        ) : smartAlbumId !== 'none' ? (
+          <MediaCardGrid media={visibleMedia} mediaMetadata={mediaMetadata} onAddToTimeline={onAddToTimeline} onRelink={onRelink} onGenerateProxy={onGenerateProxy} onSetLabel={onSetLabel} onBatchTranscode={onBatchTranscode} />
         ) : (
-          <div className="grid grid-cols-1 gap-3">
-            {visibleMedia.map((asset) => (
-              <MediaCard
-                key={asset.id}
-                asset={asset}
-                metadata={mediaMetadata[asset.id]}
-                onAdd={() => onAddToTimeline(asset.id)}
-                onRelink={() => onRelink(asset.id)}
-                onGenerateProxy={() => onGenerateProxy(asset.id)}
-                onSetLabel={(labelColor) => onSetLabel(asset.id, labelColor)}
-                onBatchTranscode={() => onBatchTranscode([asset.path])}
-              />
-            ))}
+          <div className="space-y-3">
+            <MediaFolderTree
+              folders={mediaFolders}
+              media={visibleMedia}
+              mediaMetadata={mediaMetadata}
+              onCreateFolder={onCreateFolder}
+              onRenameFolder={onRenameFolder}
+              onDeleteFolder={onDeleteFolder}
+              onSetFolderCollapsed={onSetFolderCollapsed}
+              onMoveMediaToFolder={onMoveMediaToFolder}
+              onAddToTimeline={onAddToTimeline}
+              onRelink={onRelink}
+              onGenerateProxy={onGenerateProxy}
+              onSetLabel={onSetLabel}
+              onBatchTranscode={onBatchTranscode}
+            />
+            <RootMediaDropZone onMoveMediaToFolder={onMoveMediaToFolder} />
+            <MediaCardGrid
+              media={visibleMedia.filter((asset) => !asset.folderId)}
+              mediaMetadata={mediaMetadata}
+              onAddToTimeline={onAddToTimeline}
+              onRelink={onRelink}
+              onGenerateProxy={onGenerateProxy}
+              onSetLabel={onSetLabel}
+              onBatchTranscode={onBatchTranscode}
+            />
           </div>
         )}
       </div>
     </aside>
+  );
+}
+
+function SmartAlbumBar({ albums, activeId, onSelect }: { albums: ReturnType<typeof collectSmartAlbums>; activeId: SmartAlbumId | 'none'; onSelect(id: SmartAlbumId | 'none'): void }) {
+  return (
+    <div className="grid grid-cols-2 gap-1" data-testid="smart-album-bar">
+      <button
+        className={clsx('rounded-md border px-1.5 py-1 text-xs font-semibold', activeId === 'none' ? 'border-brand bg-white text-brand' : 'border-line bg-white text-slate-600 hover:bg-panel')}
+        type="button"
+        data-testid="smart-album-none"
+        onClick={() => onSelect('none')}
+      >
+        {zhCN.mediaBin.smartAlbums.all}
+      </button>
+      {albums.map((album) => (
+        <button
+          key={album.id}
+          className={clsx('rounded-md border px-1.5 py-1 text-xs font-semibold', activeId === album.id ? 'border-brand bg-white text-brand' : 'border-line bg-white text-slate-600 hover:bg-panel')}
+          type="button"
+          data-testid={`smart-album-${album.id}`}
+          onClick={() => onSelect(album.id)}
+        >
+          {zhCN.mediaBin.smartAlbums[album.id]} ({album.assetIds.length})
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function MediaFolderTree(props: {
+  folders: MediaFolder[];
+  media: MediaAsset[];
+  mediaMetadata: Record<string, MediaMetadata>;
+  onCreateFolder(parentId?: string | null): void;
+  onRenameFolder(folderId: string, name: string): void;
+  onDeleteFolder(folderId: string): void;
+  onSetFolderCollapsed(folderId: string, collapsed: boolean): void;
+  onMoveMediaToFolder(assetIds: string[], folderId?: string | null): void;
+  onAddToTimeline(assetId: string): void;
+  onRelink(assetId: string): void;
+  onGenerateProxy(assetId: string): void;
+  onSetLabel(assetId: string, labelColor?: MediaLabelColor): void;
+  onBatchTranscode(paths: string[]): void;
+}) {
+  const roots = props.folders.filter((folder) => !folder.parentId);
+  if (roots.length === 0) {
+    return null;
+  }
+  return (
+    <div className="space-y-2" data-testid="media-folder-tree">
+      {roots.map((folder) => (
+        <MediaFolderNode key={folder.id} folder={folder} depth={1} {...props} />
+      ))}
+    </div>
+  );
+}
+
+function MediaFolderNode({
+  folder,
+  depth,
+  folders,
+  media,
+  mediaMetadata,
+  onCreateFolder,
+  onRenameFolder,
+  onDeleteFolder,
+  onSetFolderCollapsed,
+  onMoveMediaToFolder,
+  onAddToTimeline,
+  onRelink,
+  onGenerateProxy,
+  onSetLabel,
+  onBatchTranscode
+}: {
+  folder: MediaFolder;
+  depth: number;
+  folders: MediaFolder[];
+  media: MediaAsset[];
+  mediaMetadata: Record<string, MediaMetadata>;
+  onCreateFolder(parentId?: string | null): void;
+  onRenameFolder(folderId: string, name: string): void;
+  onDeleteFolder(folderId: string): void;
+  onSetFolderCollapsed(folderId: string, collapsed: boolean): void;
+  onMoveMediaToFolder(assetIds: string[], folderId?: string | null): void;
+  onAddToTimeline(assetId: string): void;
+  onRelink(assetId: string): void;
+  onGenerateProxy(assetId: string): void;
+  onSetLabel(assetId: string, labelColor?: MediaLabelColor): void;
+  onBatchTranscode(paths: string[]): void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draftName, setDraftName] = useState(folder.name);
+  const children = folders.filter((item) => item.parentId === folder.id);
+  const folderMedia = media.filter((asset) => asset.folderId === folder.id);
+  const canNest = getMediaFolderDepth(folders, folder.id) < MAX_MEDIA_FOLDER_DEPTH;
+  const commitRename = () => {
+    setEditing(false);
+    if (draftName.trim() && draftName.trim() !== folder.name) {
+      onRenameFolder(folder.id, draftName);
+    } else {
+      setDraftName(folder.name);
+    }
+  };
+  return (
+    <div className="space-y-2" style={{ marginLeft: `${(depth - 1) * 12}px` }}>
+      <div
+        className="flex min-h-10 items-center gap-2 rounded-md border border-line bg-panel px-2 text-xs"
+        data-testid={`media-folder-${folder.id}`}
+        onDragOver={(event) => event.preventDefault()}
+        onDrop={(event) => {
+          event.preventDefault();
+          const assetId = event.dataTransfer.getData(MEDIA_CARD_DRAG_MIME);
+          if (assetId) {
+            onMoveMediaToFolder([assetId], folder.id);
+          }
+        }}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          onDeleteFolder(folder.id);
+        }}
+      >
+        <button className="rounded p-1 hover:bg-white" type="button" data-testid={`media-folder-toggle-${folder.id}`} onClick={() => onSetFolderCollapsed(folder.id, !folder.collapsed)}>
+          {folder.collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+        </button>
+        <Folder size={15} className="text-brand" />
+        {editing ? (
+          <input
+            className="min-w-0 flex-1 rounded border border-line px-1 py-0.5 text-xs"
+            value={draftName}
+            autoFocus
+            data-testid={`media-folder-name-input-${folder.id}`}
+            onChange={(event) => setDraftName(event.target.value)}
+            onBlur={commitRename}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                commitRename();
+              }
+              if (event.key === 'Escape') {
+                setDraftName(folder.name);
+                setEditing(false);
+              }
+            }}
+          />
+        ) : (
+          <button className="min-w-0 flex-1 truncate text-left font-semibold text-slate-700" type="button" data-testid={`media-folder-name-${folder.id}`} onDoubleClick={() => setEditing(true)}>
+            {folder.name}
+          </button>
+        )}
+        <span className="text-slate-500">{folderMedia.length}</span>
+        <button className="rounded p-1 hover:bg-white disabled:opacity-40" type="button" title={zhCN.mediaBin.newSubfolder} data-testid={`media-folder-add-child-${folder.id}`} disabled={!canNest} onClick={() => onCreateFolder(folder.id)}>
+          <FolderPlus size={13} />
+        </button>
+        <button className="rounded p-1 text-rose-600 hover:bg-white" type="button" title={zhCN.common.delete} data-testid={`media-folder-delete-${folder.id}`} onClick={() => onDeleteFolder(folder.id)}>
+          <Trash2 size={13} />
+        </button>
+      </div>
+      {!folder.collapsed ? (
+        <div className="space-y-2">
+          {children.map((child) => (
+            <MediaFolderNode
+              key={child.id}
+              folder={child}
+              depth={depth + 1}
+              folders={folders}
+              media={media}
+              mediaMetadata={mediaMetadata}
+              onCreateFolder={onCreateFolder}
+              onRenameFolder={onRenameFolder}
+              onDeleteFolder={onDeleteFolder}
+              onSetFolderCollapsed={onSetFolderCollapsed}
+              onMoveMediaToFolder={onMoveMediaToFolder}
+              onAddToTimeline={onAddToTimeline}
+              onRelink={onRelink}
+              onGenerateProxy={onGenerateProxy}
+              onSetLabel={onSetLabel}
+              onBatchTranscode={onBatchTranscode}
+            />
+          ))}
+          <MediaCardGrid media={folderMedia} mediaMetadata={mediaMetadata} onAddToTimeline={onAddToTimeline} onRelink={onRelink} onGenerateProxy={onGenerateProxy} onSetLabel={onSetLabel} onBatchTranscode={onBatchTranscode} />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function RootMediaDropZone({ onMoveMediaToFolder }: { onMoveMediaToFolder(assetIds: string[], folderId?: string | null): void }) {
+  return (
+    <div
+      className="rounded-md border border-dashed border-line bg-white px-2 py-1.5 text-xs font-medium text-slate-500"
+      data-testid="media-folder-root-dropzone"
+      onDragOver={(event) => event.preventDefault()}
+      onDrop={(event) => {
+        event.preventDefault();
+        const assetId = event.dataTransfer.getData(MEDIA_CARD_DRAG_MIME);
+        if (assetId) {
+          onMoveMediaToFolder([assetId], null);
+        }
+      }}
+    >
+      {zhCN.mediaBin.rootFolder}
+    </div>
+  );
+}
+
+function MediaCardGrid({
+  media,
+  mediaMetadata,
+  onAddToTimeline,
+  onRelink,
+  onGenerateProxy,
+  onSetLabel,
+  onBatchTranscode
+}: {
+  media: MediaAsset[];
+  mediaMetadata: Record<string, MediaMetadata>;
+  onAddToTimeline(assetId: string): void;
+  onRelink(assetId: string): void;
+  onGenerateProxy(assetId: string): void;
+  onSetLabel(assetId: string, labelColor?: MediaLabelColor): void;
+  onBatchTranscode(paths: string[]): void;
+}) {
+  if (media.length === 0) {
+    return null;
+  }
+  return (
+    <div className="grid grid-cols-1 gap-3">
+      {media.map((asset) => (
+        <MediaCard
+          key={asset.id}
+          asset={asset}
+          metadata={mediaMetadata[asset.id]}
+          onAdd={() => onAddToTimeline(asset.id)}
+          onRelink={() => onRelink(asset.id)}
+          onGenerateProxy={() => onGenerateProxy(asset.id)}
+          onSetLabel={(labelColor) => onSetLabel(asset.id, labelColor)}
+          onBatchTranscode={() => onBatchTranscode([asset.path])}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -283,7 +595,13 @@ function MediaCard({
       className={clsx('relative overflow-hidden rounded-md border bg-white shadow-sm', asset.missing ? 'border-rose-300' : 'border-line')}
       data-testid={`media-card-${asset.id}`}
       data-missing={asset.missing ? 'true' : 'false'}
+      data-folder-id={asset.folderId ?? 'root'}
       data-label-color={labelColor ?? 'none'}
+      draggable
+      onDragStart={(event) => {
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData(MEDIA_CARD_DRAG_MIME, asset.id);
+      }}
       onContextMenu={(event) => {
         event.preventDefault();
         setLabelMenuOpen(true);

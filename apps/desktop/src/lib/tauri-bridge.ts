@@ -26,6 +26,13 @@ export interface ExportResult {
   report?: ExportReport;
 }
 
+export interface ExportTrayLabels {
+  showWindow: string;
+  pauseQueue: string;
+  cancelAll: string;
+  exit: string;
+}
+
 export interface SharePackageFileEntry {
   sourcePath: string;
   archivePath: string;
@@ -240,6 +247,10 @@ export type TauriMocks = Partial<{
   getCacheSize(): Promise<number> | number;
   openPath(path: string): Promise<void> | void;
   forceCloseWindow(): Promise<void> | void;
+  minimizeToTray(labels?: ExportTrayLabels): Promise<void> | void;
+  showMainWindow(): Promise<void> | void;
+  updateExportTrayProgress(progress: number, runningCount: number): Promise<void> | void;
+  runExportPowerAction(action: 'shutdown' | 'hibernate', allowPowerActions: boolean): Promise<void> | void;
   probeMediaPath(path: string): Promise<Partial<import('@open-factory/editor-core').MediaAsset>> | Partial<import('@open-factory/editor-core').MediaAsset>;
   probeMedia(path: string): Promise<MediaProbe> | MediaProbe;
   analyzeWaveform(path: string, samplesPerSec: number): Promise<number[]> | number[];
@@ -685,6 +696,51 @@ export async function forceCloseWindow(): Promise<void> {
     await invoke('force_close_window');
   } else {
     window.close();
+  }
+}
+
+export async function minimizeToTray(): Promise<void> {
+  const mock = getTauriMocks()?.minimizeToTray;
+  const labels = zhCN.exportDialog.trayMenu;
+  if (mock) {
+    await mock(labels);
+    return;
+  }
+  if (isTauriRuntime()) {
+    await invoke('minimize_to_tray', { labels });
+  }
+}
+
+export async function showMainWindow(): Promise<void> {
+  const mock = getTauriMocks()?.showMainWindow;
+  if (mock) {
+    await mock();
+    return;
+  }
+  if (isTauriRuntime()) {
+    await invoke('show_main_window');
+  }
+}
+
+export async function updateExportTrayProgress(progress: number, runningCount: number): Promise<void> {
+  const mock = getTauriMocks()?.updateExportTrayProgress;
+  if (mock) {
+    await mock(progress, runningCount);
+    return;
+  }
+  if (isTauriRuntime()) {
+    await invoke('update_export_tray_progress', { progress, runningCount });
+  }
+}
+
+export async function runExportPowerAction(action: 'shutdown' | 'hibernate', allowPowerActions: boolean): Promise<void> {
+  const mock = getTauriMocks()?.runExportPowerAction;
+  if (mock) {
+    await mock(action, allowPowerActions);
+    return;
+  }
+  if (isTauriRuntime()) {
+    await invoke('run_export_power_action', { action, allowPowerActions });
   }
 }
 

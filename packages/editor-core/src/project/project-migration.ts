@@ -26,6 +26,7 @@ import {
   normalizeSlowMotionMode,
   normalizeStabilization,
   normalizeTransform,
+  type MediaFolder,
   type Clip,
   type ImageSequenceInfo,
   type MediaAsset,
@@ -35,6 +36,7 @@ import {
   type Timeline,
   type Transition
 } from '../model';
+import { normalizeMediaFolderId, normalizeMediaFolders, normalizeMediaImportedAt } from '../media-folders';
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
 import { cloneEffects } from '../effects';
 import { clampTransitionDuration, findAdjacentTransitionClips, getTimelineDuration } from '../timeline';
@@ -45,6 +47,7 @@ const DEFAULT_SETTINGS = { fps: 30, timecodeFormat: 'ndf' as const, width: 1280,
 
 export function serializeProjectFile(project: Project, projectPath?: string): ProjectFileV2 {
   const warnings: string[] = [];
+  const mediaFolders = normalizeMediaFolders(project.mediaFolders);
   const media = project.media.map((asset) => {
     const normalizedPath = normalizePath(asset.path);
     const relativePath = projectPath ? makeRelativePath(normalizedPath, projectPath) : asset.relativePath ?? null;
@@ -54,6 +57,8 @@ export function serializeProjectFile(project: Project, projectPath?: string): Pr
     return {
       ...asset,
       path: normalizedPath,
+      folderId: normalizeMediaFolderId(asset.folderId, mediaFolders),
+      importedAt: normalizeMediaImportedAt(asset.importedAt),
       relativePath,
       originalAbsolutePath: asset.originalAbsolutePath ?? normalizedPath,
       videoCodec: normalizeOptionalString(asset.videoCodec),
@@ -77,6 +82,7 @@ export function serializeProjectFile(project: Project, projectPath?: string): Pr
       masterVolume: normalizeMasterVolume(project.masterVolume),
       settings: normalizeProjectSettings({ ...DEFAULT_SETTINGS, ...project.settings }),
       media,
+      mediaFolders,
       mediaMetadata: normalizeMediaMetadata(project.mediaMetadata, media),
       annotations: normalizeProjectAnnotations(project.annotations, getTimelineDuration(project.timeline)),
       timeline: clonePrimaryTimeline(project),
@@ -89,7 +95,8 @@ export function serializeProjectFile(project: Project, projectPath?: string): Pr
 
 export function migrateProjectFile(file: ProjectFile, projectPath?: string): MigrationResult {
   if (isProjectFileV2(file)) {
-    const media = file.project.media.map((asset) => normalizeMediaAsset(asset, projectPath));
+    const mediaFolders = normalizeMediaFolders(file.project.mediaFolders);
+    const media = file.project.media.map((asset) => normalizeMediaAsset(asset, projectPath, mediaFolders));
     const primaryTimeline = cloneTimeline(file.project.timeline);
     const sequences = cloneFileSequences(file.project.sequences, primaryTimeline);
     const activeSequenceId = normalizeActiveSequenceId(file.project.activeSequenceId, sequences);
@@ -103,6 +110,7 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         masterVolume: normalizeMasterVolume(file.project.masterVolume),
         settings: normalizeProjectSettings({ ...DEFAULT_SETTINGS, ...file.project.settings }),
         media,
+        mediaFolders,
         mediaMetadata: normalizeMediaMetadata(file.project.mediaMetadata, media),
         annotations: normalizeProjectAnnotations(file.project.annotations, getTimelineDuration(primaryTimeline)),
         timeline: sequences.find((sequence) => sequence.id === activeSequenceId)?.timeline ?? primaryTimeline,
@@ -114,7 +122,7 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
   }
 
   if (isProjectFileV1(file)) {
-    const media = file.assets.map((asset) => normalizeMediaAsset(asset, projectPath));
+    const media: MediaAsset[] = file.assets.map((asset) => normalizeMediaAsset(asset, projectPath, []));
     const primaryTimeline = cloneTimeline(file.timeline);
     const sequences = [createSequence({ id: PRIMARY_SEQUENCE_ID, name: 'Main Sequence', timeline: primaryTimeline })];
     return {
@@ -127,6 +135,7 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         masterVolume: 1,
         settings: normalizeProjectSettings({ ...DEFAULT_SETTINGS, ...file.project.settings }),
         media,
+        mediaFolders: [],
         mediaMetadata: {},
         annotations: [],
         timeline: primaryTimeline,
@@ -164,11 +173,13 @@ export function isProjectFileV1(file: ProjectFile | unknown): file is ProjectFil
   return Boolean(file && typeof file === 'object' && (file as ProjectFileV1).version === '0.1' && Array.isArray((file as ProjectFileV1).assets));
 }
 
-function normalizeMediaAsset(asset: MediaAsset, projectPath?: string): MediaAsset {
+function normalizeMediaAsset(asset: MediaAsset, projectPath?: string, mediaFolders: MediaFolder[] = []): MediaAsset {
   const path = normalizePath(resolveMediaPath(asset, projectPath));
   return {
     ...asset,
     path,
+    folderId: normalizeMediaFolderId(asset.folderId, mediaFolders),
+    importedAt: normalizeMediaImportedAt(asset.importedAt),
     originalAbsolutePath: asset.originalAbsolutePath ?? path,
     relativePath: asset.relativePath === undefined ? null : asset.relativePath,
     videoCodec: normalizeOptionalString(asset.videoCodec),

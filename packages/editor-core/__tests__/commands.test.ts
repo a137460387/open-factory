@@ -9,6 +9,7 @@ import {
   AddSubtitleClipCommand,
   AddTrackCommand,
   AddTimelineMarkerCommand,
+  AddMediaFolderCommand,
   ApplyTextAnimationCommand,
   AddTransitionCommand,
   DEFAULT_COLOR_CORRECTION,
@@ -19,11 +20,14 @@ import {
   DeleteClipsCommand,
   ImportEDLCommand,
   LoadProjectCommand,
+  MoveMediaToFolderCommand,
   MoveClipCommand,
   MoveClipsCommand,
   PackNestedSequenceCommand,
   RemoveEffectCommand,
+  DeleteMediaFolderCommand,
   RemoveMaskCommand,
+  RenameMediaFolderCommand,
   RemoveProjectAnnotationCommand,
   RemoveKeyframeCommand,
   RemoveTimelineMarkerCommand,
@@ -95,6 +99,33 @@ describe('timeline commands', () => {
     manager.undo();
     expect(project.settings.fps).toBe(24);
     expect(project.settings.timecodeFormat).toBe('ndf');
+  });
+
+  it('mutates media folders through undoable project commands', () => {
+    let project = makeProject();
+    const accessor = {
+      getProject: () => project,
+      setProject: (next: typeof project) => {
+        project = next;
+      }
+    };
+    const manager = new CommandManager();
+    const addCommand = new AddMediaFolderCommand(accessor, { id: 'folder-selects', name: 'Selects' });
+
+    manager.execute(addCommand);
+    manager.execute(new RenameMediaFolderCommand(accessor, 'folder-selects', 'B-roll'));
+    manager.execute(new MoveMediaToFolderCommand(accessor, ['asset-1'], 'folder-selects'));
+
+    expect(project.mediaFolders[0]).toMatchObject({ id: 'folder-selects', name: 'B-roll' });
+    expect(project.media[0].folderId).toBe('folder-selects');
+
+    manager.execute(new DeleteMediaFolderCommand(accessor, 'folder-selects'));
+    expect(project.mediaFolders).toEqual([]);
+    expect(project.media[0].folderId).toBeNull();
+
+    manager.undo();
+    expect(project.mediaFolders[0].id).toBe('folder-selects');
+    expect(project.media[0].folderId).toBe('folder-selects');
   });
 
   it('imports an EDL as an undoable active sequence with missing media placeholders', () => {

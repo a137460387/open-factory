@@ -2,7 +2,7 @@ import { createId } from '../model';
 import type { ExportReport, FfmpegExportPlan } from './export-types';
 import { calculateRenderFarmProgress, type RenderFarmSegmentStatus, type RenderFarmTaskConfig } from './render-farm';
 
-export type ExportTaskStatus = 'pending' | 'running' | 'canceled' | 'error' | 'success';
+export type ExportTaskStatus = 'scheduled' | 'pending' | 'running' | 'canceled' | 'error' | 'success';
 export type ExportTaskPriority = 'high' | 'normal' | 'low';
 
 export interface ExportTask {
@@ -14,6 +14,7 @@ export interface ExportTask {
   status: ExportTaskStatus;
   progress: number;
   createdAt: string;
+  scheduledStartAt?: string;
   startedAt?: string;
   finishedAt?: string;
   logPath?: string;
@@ -36,8 +37,9 @@ export interface ExportTaskHistoryEntry {
   error?: string;
 }
 
-export function createExportTask(input: { name: string; outputPath: string; plan: FfmpegExportPlan; priority?: ExportTaskPriority; renderFarm?: RenderFarmTaskConfig; id?: string; now?: string }): ExportTask {
+export function createExportTask(input: { name: string; outputPath: string; plan: FfmpegExportPlan; priority?: ExportTaskPriority; renderFarm?: RenderFarmTaskConfig; scheduledStartAt?: string; id?: string; now?: string }): ExportTask {
   const now = input.now ?? new Date().toISOString();
+  const scheduledStartAt = normalizeScheduledStartAt(input.scheduledStartAt, now);
   return {
     id: input.id ?? createId('export-task'),
     name: input.name,
@@ -45,9 +47,10 @@ export function createExportTask(input: { name: string; outputPath: string; plan
     plan: input.plan,
     priority: normalizeExportTaskPriority(input.priority),
     renderFarm: normalizeRenderFarmTaskConfig(input.renderFarm),
-    status: 'pending',
+    status: scheduledStartAt ? 'scheduled' : 'pending',
     progress: 0,
-    createdAt: now
+    createdAt: now,
+    scheduledStartAt
   };
 }
 
@@ -85,6 +88,20 @@ export function startExportTaskSlots(tasks: ExportTask[], maxConcurrent = 2, now
   });
 }
 
+export function activateScheduledExportTasks(tasks: ExportTask[], now = new Date().toISOString()): ExportTask[] {
+  const nowMs = Date.parse(now);
+  if (!Number.isFinite(nowMs)) {
+    return tasks;
+  }
+  return tasks.map((task) => {
+    if (task.status !== 'scheduled' || !task.scheduledStartAt) {
+      return task;
+    }
+    const scheduledMs = Date.parse(task.scheduledStartAt);
+    return Number.isFinite(scheduledMs) && scheduledMs <= nowMs ? { ...task, status: 'pending' } : task;
+  });
+}
+
 export function updateExportTaskProgress(tasks: ExportTask[], taskId: string, progress: number): ExportTask[] {
   return tasks.map((task) => (task.id === taskId ? { ...task, progress: Math.min(1, Math.max(0, progress)) } : task));
 }
@@ -113,7 +130,7 @@ export function failExportTask(tasks: ExportTask[], taskId: string, error: strin
 
 export function cancelExportTask(tasks: ExportTask[], taskId: string, now = new Date().toISOString()): ExportTask[] {
   return tasks.map((task) =>
-    task.id === taskId && (task.status === 'pending' || task.status === 'running')
+    task.id === taskId && (task.status === 'scheduled' || task.status === 'pending' || task.status === 'running')
       ? { ...task, status: 'canceled', finishedAt: now }
       : task
   );
@@ -181,4 +198,16 @@ function comparePendingExportTasks(
 
 function priorityWeight(priority: ExportTaskPriority): number {
   return priority === 'high' ? 2 : priority === 'normal' ? 1 : 0;
+}
+
+function normalizeScheduledStartAt(value: string | undefined, now: string): string | undefined {
+  if (typeof value !== 'string' || !value.trim()) {
+    return undefined;
+  }
+  const scheduledMs = Date.parse(value);
+  const nowMs = Date.parse(now);
+  if (!Number.isFinite(scheduledMs) || !Number.isFinite(nowMs) || scheduledMs <= nowMs) {
+    return undefined;
+  }
+  return new Date(scheduledMs).toISOString();
 }

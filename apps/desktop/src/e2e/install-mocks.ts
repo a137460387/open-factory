@@ -39,6 +39,9 @@ let lastConfirmMessage: string | undefined;
 let availableMemoryBytes = 8 * 1024 * 1024 * 1024;
 let webdavPassword: string | undefined;
 let lastWebdavPutRequest: WebdavProjectBackupRequest | undefined;
+let minimizedToTray = false;
+let lastTrayProgress: { progress: number; runningCount: number } | undefined;
+let powerActionCalls: Array<{ action: 'shutdown' | 'hibernate'; allowPowerActions: boolean }> = [];
 
 const sampleProjectPath = 'C:/Projects/sample.cutproj.json';
 const missingProjectPath = 'C:/Projects/missing.cutproj.json';
@@ -386,6 +389,18 @@ const mocks: TauriMocks = {
   getCacheSize: () => Array.from(cache.values()).reduce((total, value) => total + value.length, 0),
   openPath: () => undefined,
   forceCloseWindow: () => undefined,
+  minimizeToTray: () => {
+    minimizedToTray = true;
+  },
+  showMainWindow: () => {
+    minimizedToTray = false;
+  },
+  updateExportTrayProgress: (progress, runningCount) => {
+    lastTrayProgress = { progress, runningCount };
+  },
+  runExportPowerAction: (action, allowPowerActions) => {
+    powerActionCalls.push({ action, allowPowerActions });
+  },
   probeMedia: (path) => ({
     hasAudio: path.endsWith('.mp4') || path.endsWith('.wav'),
     audioChannels: path.endsWith('.mp4') || path.endsWith('.wav') ? 2 : undefined,
@@ -845,6 +860,9 @@ window.__E2E_ACTIONS__ = {
   getLastConfirmMessage: () => lastConfirmMessage,
   getLastExportPlan: () => lastExportPlan,
   getExportRunCalls: () => exportRunCalls,
+  getLastTrayProgress: () => lastTrayProgress,
+  wasMinimizedToTray: () => minimizedToTray,
+  getPowerActionCalls: () => powerActionCalls,
   getLastWebdavPutRequest: () => lastWebdavPutRequest,
   addKeyframe: (clipId: unknown, property: unknown, time: unknown, value: unknown) => {
     if (typeof clipId !== 'string' || !isKeyframeProperty(property) || typeof time !== 'number' || typeof value !== 'number') {
@@ -923,6 +941,9 @@ window.__E2E_ACTIONS__ = {
     lastWebdavPutRequest = undefined;
     lastExportPlan = undefined;
     exportRunCalls = [];
+    minimizedToTray = false;
+    lastTrayProgress = undefined;
+    powerActionCalls = [];
     localStorage.removeItem('open-factory:proxy-settings');
     localStorage.removeItem('open-factory:plugins');
     localStorage.removeItem('open-factory:settings');

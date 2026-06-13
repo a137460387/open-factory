@@ -51,6 +51,7 @@ export async function probeMediaPath(path: string, imageSequence?: ImageSequence
     type,
     name: imageSequence ? sequenceNameFromPattern(imageSequence) : fileNameFromPath(path),
     path,
+    importedAt: new Date().toISOString(),
     duration: 0,
     width: 0,
     height: 0,

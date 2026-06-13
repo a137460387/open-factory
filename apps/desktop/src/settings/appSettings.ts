@@ -27,6 +27,10 @@ export interface BackupSettings {
   lastBackupWarning?: string;
 }
 
+export interface ExportBackgroundSettings {
+  allowPowerActions: boolean;
+}
+
 export const DEFAULT_BACKUP_SETTINGS: BackupSettings = {
   local: { enabled: false },
   webdav: { enabled: false }
@@ -37,6 +41,7 @@ export interface AppSettings {
   layout?: EditorLayoutSettings;
   backup?: BackupSettings;
   theme?: ThemeSettings;
+  exportBackground?: ExportBackgroundSettings;
 }
 
 export async function initializeLanguageFromSettings(): Promise<Language> {
@@ -80,6 +85,18 @@ export async function saveBackupSettings(backup: Partial<BackupSettings>): Promi
 export async function readThemeSettings(): Promise<ThemeSettings> {
   const settings = await readAppSettings();
   return settings.theme ?? normalizeThemeSettings(DEFAULT_THEME_SETTINGS);
+}
+
+export async function readExportBackgroundSettings(): Promise<ExportBackgroundSettings> {
+  const settings = await readAppSettings();
+  return settings.exportBackground ?? defaultExportBackgroundSettings();
+}
+
+export async function saveExportBackgroundSettings(exportBackground: Partial<ExportBackgroundSettings>): Promise<ExportBackgroundSettings> {
+  const settings = await readAppSettings();
+  const nextExportBackground = normalizeExportBackgroundSettings({ ...settings.exportBackground, ...exportBackground }) ?? defaultExportBackgroundSettings();
+  await writeAppSettings({ ...settings, exportBackground: nextExportBackground });
+  return nextExportBackground;
 }
 
 export async function saveThemeSettings(theme: Partial<ThemeSettings>): Promise<ThemeSettings> {
@@ -144,7 +161,20 @@ function normalizeSettings(settings: Partial<AppSettings>): AppSettings {
   if (settings.theme) {
     normalized.theme = normalizeThemeSettings(settings.theme);
   }
+  const exportBackground = normalizeExportBackgroundSettings(settings.exportBackground);
+  if (exportBackground) {
+    normalized.exportBackground = exportBackground;
+  }
   return normalized;
+}
+
+export function normalizeExportBackgroundSettings(settings: Partial<ExportBackgroundSettings> | undefined): ExportBackgroundSettings | undefined {
+  if (!settings || typeof settings !== 'object') {
+    return undefined;
+  }
+  return {
+    allowPowerActions: Boolean(settings.allowPowerActions)
+  };
 }
 
 export function normalizeBackupSettings(settings: Partial<BackupSettings> | undefined): BackupSettings | undefined {
@@ -184,6 +214,12 @@ function defaultBackupSettings(): BackupSettings {
     ...DEFAULT_BACKUP_SETTINGS,
     local: { ...DEFAULT_BACKUP_SETTINGS.local },
     webdav: { ...DEFAULT_BACKUP_SETTINGS.webdav }
+  };
+}
+
+function defaultExportBackgroundSettings(): ExportBackgroundSettings {
+  return {
+    allowPowerActions: false
   };
 }
 

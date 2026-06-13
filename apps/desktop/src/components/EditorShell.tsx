@@ -2,18 +2,23 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type Pointer
 import {
   AddAdjustmentLayerCommand,
   AddClipCommand,
+  AddMediaFolderCommand,
   AddProjectAnnotationCommand,
   AddTrackCommand,
   AddTransitionCommand,
   CreateMulticamSequenceCommand,
   DEFAULT_PROJECT_ANNOTATION_COLOR,
   DeleteClipsCommand,
+  DeleteMediaFolderCommand,
   ImportEDLCommand,
   LoadProjectCommand,
   MergeMediaCommand,
   NewProjectCommand,
   RemoveMediaCommand,
+  MoveMediaToFolderCommand,
   RippleDeleteCommand,
+  RenameMediaFolderCommand,
+  SetMediaFolderCollapsedCommand,
   SplitClipCommand,
   UpdateClipCommand,
   createId,
@@ -45,7 +50,7 @@ import { useMacroShortcuts } from '../hooks/useMacroShortcuts';
 import { useShortcuts } from '../hooks/useShortcuts';
 import { readCustomKeybindings } from '../shortcuts/keybindings';
 import type { TimelineShortcutBindings } from '../shortcuts/timeline-shortcuts';
-import { cancelQueuedExportTask } from '../export/export-queue-runner';
+import { cancelAllQueuedExportTasks, cancelQueuedExportTask, setExportQueuePaused } from '../export/export-queue-runner';
 import { useExportQueueStore } from '../export/export-queue-store';
 import { chooseCurrentFrameExportPath, revealExport, startCurrentFrameExport } from '../lib/exportVideo';
 import { clearMediaCache } from '../cache/cache-service';
@@ -80,7 +85,7 @@ import {
   writeProjectFile,
   type AutosaveRecoveryCandidate
 } from '../lib/projectFiles';
-import { bridgeConfirm, copyFile as bridgeCopyFile, openDirectoryDialog, writeFile as bridgeWriteFile } from '../lib/tauri-bridge';
+import { bridgeConfirm, copyFile as bridgeCopyFile, listenBridge, openDirectoryDialog, updateExportTrayProgress, writeFile as bridgeWriteFile } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
 import {
   appendMacroHistoryEntry,
@@ -171,6 +176,8 @@ export function EditorShell() {
   const [layoutSettings, setLayoutSettings] = useState<EditorLayoutSettings>(DEFAULT_EDITOR_LAYOUT_SETTINGS);
   const [viewportSize, setViewportSize] = useState(() => readViewportSize());
   const [lastBackupAt, setLastBackupAt] = useState<string>();
+  const exportTasks = useExportQueueStore((state) => state.tasks);
+  const exportQueuePaused = useExportQueueStore((state) => state.queuePaused);
 
   const selectedClip = useMemo(() => selectClipById(project, selectedClipId), [project, selectedClipId]);
   const selectedClipLocked = useMemo(
@@ -203,6 +210,51 @@ export function EditorShell() {
       return next;
     });
   }, []);
+
+  useEffect(() => {
+    const runningTasks = exportTasks.filter((task) => task.status === 'running');
+    const runningCount = runningTasks.length;
+    const progress = runningCount > 0 ? runningTasks.reduce((sum, task) => sum + task.progress, 0) / runningCount : 0;
+    void updateExportTrayProgress(progress, runningCount).catch((error) => {
+      console.warn('Unable to update export tray progress', error);
+    });
+  }, [exportTasks]);
+
+  useEffect(() => {
+    let disposed = false;
+    let unlisten: (() => void) | undefined;
+    void listenBridge<'pause' | 'cancel-all'>('export-tray-command', async (command) => {
+      if (command === 'pause') {
+        const nextPaused = !useExportQueueStore.getState().queuePaused;
+        setExportQueuePaused(nextPaused);
+        showToast({ kind: 'info', title: zhCN.exportDialog.queueTitle, message: nextPaused ? zhCN.exportDialog.queuePausedByUser : zhCN.exportDialog.queueResumedByUser });
+      }
+      if (command === 'cancel-all') {
+        await cancelAllQueuedExportTasks();
+        showToast({ kind: 'info', title: zhCN.exportDialog.queueTitle, message: zhCN.exportDialog.queueCanceledAll });
+      }
+    }).then((dispose) => {
+      if (disposed) {
+        dispose();
+      } else {
+        unlisten = dispose;
+      }
+    });
+    return () => {
+      disposed = true;
+      unlisten?.();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!exportQueuePaused) {
+      return;
+    }
+    const hasWaiting = exportTasks.some((task) => task.status === 'pending' || task.status === 'scheduled');
+    if (!hasWaiting) {
+      setExportQueuePaused(false);
+    }
+  }, [exportQueuePaused, exportTasks]);
 
   const beginTimelineResize = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -639,6 +691,30 @@ export function EditorShell() {
     },
     [project.timeline, setSelectedClipId]
   );
+
+  const createMediaFolder = useCallback((parentId?: string | null) => {
+    try {
+      commandManager.execute(new AddMediaFolderCommand(projectAccessor, { name: zhCN.mediaBin.newFolder, parentId }));
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.mediaBin.newFolder, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
+    }
+  }, []);
+
+  const renameMediaFolder = useCallback((folderId: string, name: string) => {
+    commandManager.execute(new RenameMediaFolderCommand(projectAccessor, folderId, name));
+  }, []);
+
+  const deleteMediaFolder = useCallback((folderId: string) => {
+    commandManager.execute(new DeleteMediaFolderCommand(projectAccessor, folderId));
+  }, []);
+
+  const setMediaFolderCollapsed = useCallback((folderId: string, collapsed: boolean) => {
+    commandManager.execute(new SetMediaFolderCollapsedCommand(projectAccessor, folderId, collapsed));
+  }, []);
+
+  const moveMediaToFolder = useCallback((assetIds: string[], folderId?: string | null) => {
+    commandManager.execute(new MoveMediaToFolderCommand(projectAccessor, assetIds, folderId));
+  }, []);
 
   const relinkMedia = useCallback(
     async (assetId: string) => {
@@ -1189,6 +1265,7 @@ export function EditorShell() {
               </button>
               <MediaBin
                 media={project.media}
+                mediaFolders={project.mediaFolders}
                 mediaMetadata={project.mediaMetadata}
                 onImport={() => void importMedia()}
                 onImportPaths={(paths) => void importDropped(paths)}
@@ -1201,6 +1278,11 @@ export function EditorShell() {
                 onGenerateProxy={(assetId) => void generateProxyForMedia(assetId)}
                 onSetLabel={(assetId, labelColor) => setMediaMetadata(assetId, labelColor ? { labelColor } : undefined)}
                 onAddTitleTemplate={addTitleTemplate}
+                onCreateFolder={createMediaFolder}
+                onRenameFolder={renameMediaFolder}
+                onDeleteFolder={deleteMediaFolder}
+                onSetFolderCollapsed={setMediaFolderCollapsed}
+                onMoveMediaToFolder={moveMediaToFolder}
               />
             </section>
           )}

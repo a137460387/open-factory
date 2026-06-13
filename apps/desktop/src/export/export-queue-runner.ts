@@ -27,7 +27,8 @@ export async function enqueueExport(
   outputPath: string,
   settings?: Partial<Omit<ExportSettings, 'outputPath'>>,
   priority?: ExportTaskPriority,
-  renderFarm?: RenderFarmTaskConfig
+  renderFarm?: RenderFarmTaskConfig,
+  scheduledStartAt?: string
 ): Promise<ExportTask> {
   if (!timelineHasExportableVideo(project.timeline)) {
     throw new Error(zhCN.errors.exportNeedsVideo);
@@ -44,7 +45,8 @@ export async function enqueueExport(
     outputPath,
     plan,
     priority,
-    renderFarm
+    renderFarm,
+    scheduledStartAt
   });
   signalRunner();
   ensureExportQueueRunner();
@@ -61,6 +63,22 @@ export function setExportQueueMaxConcurrent(maxConcurrent: number): void {
   useExportQueueStore.getState().setMaxConcurrent(maxConcurrent);
   signalRunner();
   ensureExportQueueRunner();
+}
+
+export function setExportQueuePaused(paused: boolean): void {
+  useExportQueueStore.getState().setQueuePaused(paused);
+  signalRunner();
+  ensureExportQueueRunner();
+}
+
+export async function cancelAllQueuedExportTasks(): Promise<void> {
+  const runningIds = useExportQueueStore
+    .getState()
+    .tasks.filter((task) => task.status === 'running')
+    .map((task) => task.id);
+  useExportQueueStore.getState().cancelAllTasks();
+  await Promise.allSettled(runningIds.map((taskId) => bridgeCancelExport(taskId)));
+  signalRunner();
 }
 
 export function ensureExportQueueRunner(): Promise<void> {
@@ -113,13 +131,13 @@ async function runQueue(): Promise<void> {
   try {
     while (true) {
       await startAvailableTasks();
-      const hasPending = useExportQueueStore.getState().tasks.some((task) => task.status === 'pending');
-      if (!hasPending && activeRuns.size === 0) {
+      const hasWaiting = useExportQueueStore.getState().tasks.some((task) => task.status === 'pending' || task.status === 'scheduled');
+      if (!hasWaiting && activeRuns.size === 0) {
         useExportQueueStore.getState().setResourcePaused(false);
         return;
       }
-      if (hasPending && activeRuns.size === 0) {
-        await waitForRunnerWake(RESOURCE_RECHECK_DELAY_MS);
+      if (hasWaiting && activeRuns.size === 0) {
+        await waitForRunnerWake(nextRunnerDelayMs());
         continue;
       }
       await waitForRunnerWake();
@@ -130,8 +148,13 @@ async function runQueue(): Promise<void> {
 }
 
 async function startAvailableTasks(): Promise<void> {
+  useExportQueueStore.getState().activateScheduledTasks();
   const hasPending = useExportQueueStore.getState().tasks.some((task) => task.status === 'pending');
   if (!hasPending) {
+    useExportQueueStore.getState().setResourcePaused(false);
+    return;
+  }
+  if (useExportQueueStore.getState().queuePaused) {
     useExportQueueStore.getState().setResourcePaused(false);
     return;
   }
@@ -231,6 +254,19 @@ function waitForRunnerWake(timeoutMs?: number): Promise<void> {
       timeout = setTimeout(complete, timeoutMs);
     }
   });
+}
+
+function nextRunnerDelayMs(): number {
+  const nextScheduledMs = useExportQueueStore
+    .getState()
+    .tasks.filter((task) => task.status === 'scheduled' && task.scheduledStartAt)
+    .map((task) => Date.parse(task.scheduledStartAt!))
+    .filter((value) => Number.isFinite(value))
+    .sort((left, right) => left - right)[0];
+  if (!nextScheduledMs) {
+    return RESOURCE_RECHECK_DELAY_MS;
+  }
+  return Math.max(20, Math.min(RESOURCE_RECHECK_DELAY_MS, nextScheduledMs - Date.now()));
 }
 
 function fileNameFromPath(path: string): string {

@@ -6,6 +6,7 @@ export * from './color-match';
 export * from './effects';
 export * from './timeline';
 export * from './media-filter';
+export * from './media-folders';
 export * from './keyframes';
 export * from './timeline-thumbnails';
 export * from './render-cache';

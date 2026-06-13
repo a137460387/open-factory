@@ -63,6 +63,32 @@ test('runs export queue with two concurrent tasks and starts the third after a s
   await expectExportTaskStatus(page, 2, 'success');
 });
 
+test('starts a scheduled export after the selected start time', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.evaluate(() => window.__E2E_ACTIONS__!.holdExportGate!());
+  await page.getByTestId('import-media-button').click();
+  await addMediaCardToTimeline(page, 0);
+
+  await openExportDialog(page);
+  const startValue = await page.evaluate(() => {
+    const date = new Date(Date.now() + 1_500);
+    const pad = (value: number) => String(value).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+  });
+  await page.getByTestId('export-schedule-toggle').check();
+  await page.getByTestId('export-schedule-start-input').fill(startValue);
+  await page.getByTestId('export-batch-paths').fill('C:/Exports/scheduled.mp4');
+  await page.getByTestId('export-enqueue-button').click();
+
+  await expectExportTaskStatus(page, 0, 'scheduled');
+  await expectExportTaskStatus(page, 0, 'running');
+  const trayProgress = await page.evaluate(() => window.__E2E_ACTIONS__!.getLastTrayProgress!() as { runningCount: number } | undefined);
+  expect(trayProgress?.runningCount).toBe(1);
+  await page.evaluate(() => window.__E2E_ACTIONS__!.releaseAllExportGates!());
+  await expectExportTaskStatus(page, 0, 'success');
+});
+
 test('starts high priority export before queued low priority work and writes log history', async ({ page }) => {
   await page.goto('/');
   await waitForE2eActions(page);

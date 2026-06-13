@@ -40,7 +40,16 @@ import { commandManager, projectAccessor, timelineAccessor } from '../store/comm
 import { useEditorStore } from '../store/editorStore';
 import { PROXY_RESOLUTION_PRESETS, PROXY_TRIGGER_THRESHOLDS, useProxySettingsStore, type ProxyResolutionPreset, type ProxyTriggerThreshold } from '../store/proxySettingsStore';
 import { useTranslationSettingsStore, type TranslationProvider } from '../store/translationSettingsStore';
-import { DEFAULT_BACKUP_SETTINGS, readBackupSettings, saveBackupSettings, saveLanguageSetting, type BackupSettings } from './appSettings';
+import {
+  DEFAULT_BACKUP_SETTINGS,
+  readBackupSettings,
+  readExportBackgroundSettings,
+  saveBackupSettings,
+  saveExportBackgroundSettings,
+  saveLanguageSetting,
+  type BackupSettings,
+  type ExportBackgroundSettings
+} from './appSettings';
 import {
   BUILTIN_THEME_IDS,
   DEFAULT_CUSTOM_THEME_COLORS,
@@ -86,6 +95,7 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
     local: { ...DEFAULT_BACKUP_SETTINGS.local },
     webdav: { ...DEFAULT_BACKUP_SETTINGS.webdav }
   }));
+  const [exportBackgroundSettings, setExportBackgroundSettings] = useState<ExportBackgroundSettings>(() => ({ allowPowerActions: false }));
   const [webdavPassword, setWebdavPassword] = useState('');
   const translationProvider = useTranslationSettingsStore((state) => state.provider);
   const translationApiKey = useTranslationSettingsStore((state) => state.apiKey);
@@ -114,6 +124,7 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
     }
     void refresh();
     void loadBackupSettings();
+    void loadExportBackgroundSettings();
     hydrateThemeForm(getCurrentThemeSettings());
     showCurrentPlugins();
     return () => setPreviewTimeline(undefined);
@@ -352,6 +363,31 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
         kind: 'warning',
         title: t.backup.saveFailed,
         message: backupError instanceof Error ? backupError.message : t.backup.saveFailedMessage
+      });
+    }
+  }
+
+  async function loadExportBackgroundSettings() {
+    try {
+      setExportBackgroundSettings(await readExportBackgroundSettings());
+    } catch (exportBackgroundError) {
+      showToast({
+        kind: 'warning',
+        title: t.general.saveFailed,
+        message: exportBackgroundError instanceof Error ? exportBackgroundError.message : t.general.saveFailedMessage
+      });
+    }
+  }
+
+  async function updateExportBackgroundSettings(nextSettings: ExportBackgroundSettings) {
+    setExportBackgroundSettings(nextSettings);
+    try {
+      setExportBackgroundSettings(await saveExportBackgroundSettings(nextSettings));
+    } catch (exportBackgroundError) {
+      showToast({
+        kind: 'warning',
+        title: t.general.saveFailed,
+        message: exportBackgroundError instanceof Error ? exportBackgroundError.message : t.general.saveFailedMessage
       });
     }
   }
@@ -617,6 +653,19 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
                     {!supportsDropFrameTimecode(project.settings.fps) ? <span className="mt-1 block text-[11px] text-slate-500">{t.general.dropFrameUnavailable}</span> : null}
                   </label>
                 </div>
+                <label className="flex items-start gap-2 rounded-md border border-line bg-panel p-3 text-xs text-slate-600">
+                  <input
+                    className="mt-0.5 h-4 w-4 accent-brand"
+                    type="checkbox"
+                    checked={exportBackgroundSettings.allowPowerActions}
+                    data-testid="settings-export-power-actions-toggle"
+                    onChange={(event) => void updateExportBackgroundSettings({ allowPowerActions: event.target.checked })}
+                  />
+                  <span>
+                    <span className="block font-semibold text-slate-700">{t.general.allowExportPowerActions}</span>
+                    <span className="mt-1 block">{t.general.allowExportPowerActionsDescription}</span>
+                  </span>
+                </label>
               </div>
             ) : null}
             {tab === 'appearance' ? (

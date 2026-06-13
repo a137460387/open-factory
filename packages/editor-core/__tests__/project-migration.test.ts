@@ -70,6 +70,19 @@ describe('project schema migration', () => {
     expect(migrated.project.mediaMetadata).toEqual({ 'asset-1': { labelColor: 'blue' } });
   });
 
+  it('serializes and migrates media folders and media folder assignments', () => {
+    const project = makeProject();
+    project.mediaFolders = [{ id: 'folder-selects', name: 'Selects', parentId: null, collapsed: true, createdAt: '2026-06-13T00:00:00.000Z' }];
+    project.media[0] = { ...project.media[0], folderId: 'folder-selects', importedAt: '2026-06-12T00:00:00.000Z' };
+    const file = serializeProject(project);
+    const migrated = migrateProjectFile(file);
+
+    expect(file.project.mediaFolders).toEqual(project.mediaFolders);
+    expect(file.project.media[0]).toMatchObject({ folderId: 'folder-selects', importedAt: '2026-06-12T00:00:00.000Z' });
+    expect(migrated.project.mediaFolders).toEqual(project.mediaFolders);
+    expect(migrated.project.media[0]).toMatchObject({ folderId: 'folder-selects', importedAt: '2026-06-12T00:00:00.000Z' });
+  });
+
   it('serializes and migrates path masks while keeping older masks compatible', () => {
     const project = makeProject();
     project.timeline.tracks[0].clips = [

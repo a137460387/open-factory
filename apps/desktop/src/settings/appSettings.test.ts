@@ -3,9 +3,11 @@ import type { TauriMocks } from '../lib/tauri-bridge';
 import {
   readAppSettings,
   readBackupSettings,
+  readExportBackgroundSettings,
   readLayoutSettings,
   readThemeSettings,
   saveBackupSettings,
+  saveExportBackgroundSettings,
   saveLanguageSetting,
   saveLayoutSettings,
   saveThemeSettings
@@ -147,5 +149,18 @@ describe('app settings storage', () => {
       }
     });
     await expect(readThemeSettings()).resolves.toEqual(theme);
+  });
+
+  it('defaults export power actions off and persists explicit opt-in', async () => {
+    await expect(readExportBackgroundSettings()).resolves.toEqual({ allowPowerActions: false });
+
+    await saveLanguageSetting('en');
+    const exportBackground = await saveExportBackgroundSettings({ allowPowerActions: true });
+
+    expect(exportBackground).toEqual({ allowPowerActions: true });
+    expect(await readAppSettings()).toEqual({
+      language: 'en',
+      exportBackground: { allowPowerActions: true }
+    });
   });
 });

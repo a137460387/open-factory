@@ -116,6 +116,7 @@ export interface Project {
   masterVolume: number;
   settings: ProjectSettings;
   media: MediaAsset[];
+  mediaFolders: MediaFolder[];
   mediaMetadata: Record<string, MediaMetadata>;
   annotations: ProjectAnnotation[];
   timeline: Timeline;
@@ -139,6 +140,8 @@ export interface MediaAsset {
   width: number;
   height: number;
   missing?: boolean;
+  folderId?: string | null;
+  importedAt?: string;
   thumbnail?: string;
   relativePath?: string | null;
   originalAbsolutePath?: string;
@@ -412,6 +415,14 @@ export function normalizeProjectSettings(settings: Partial<ProjectSettings> | un
   };
 }
 
+export interface MediaFolder {
+  id: string;
+  name: string;
+  parentId?: string | null;
+  collapsed?: boolean;
+  createdAt: string;
+}
+
 export const DEFAULT_TRANSFORM: Transform = {
   x: 0,
   y: 0,
@@ -618,6 +629,7 @@ export function createProject(name = 'Untitled Project'): Project {
     masterVolume: DEFAULT_MASTER_VOLUME,
     settings: { ...DEFAULT_PROJECT_SETTINGS },
     media: [],
+    mediaFolders: [],
     mediaMetadata: {},
     annotations: [],
     timeline,

@@ -9,6 +9,7 @@ import {
   setExportTaskSegments,
   sortExportQueueByPriority,
   startExportTaskSlots,
+  activateScheduledExportTasks,
   updateExportTaskSegment,
   updateExportTaskProgress,
   type ExportTask,
@@ -26,9 +27,11 @@ export interface ExportQueueState {
   history: ExportTaskHistoryEntry[];
   runnerActive: boolean;
   resourcePaused: boolean;
+  queuePaused: boolean;
   maxConcurrent: number;
   lastCompletedPath?: string;
-  addTask: (input: { name: string; outputPath: string; plan: FfmpegExportPlan; priority?: ExportTaskPriority; renderFarm?: RenderFarmTaskConfig }) => ExportTask;
+  addTask: (input: { name: string; outputPath: string; plan: FfmpegExportPlan; priority?: ExportTaskPriority; renderFarm?: RenderFarmTaskConfig; scheduledStartAt?: string }) => ExportTask;
+  activateScheduledTasks: (now?: string) => void;
   startNextTasks: () => string[];
   updateTaskProgress: (taskId: string, progress: number) => void;
   setTaskSegments: (taskId: string, segments: RenderFarmSegmentStatus[]) => void;
@@ -41,9 +44,11 @@ export interface ExportQueueState {
   setMaxConcurrent: (maxConcurrent: number) => void;
   setRunnerActive: (runnerActive: boolean) => void;
   setResourcePaused: (resourcePaused: boolean) => void;
+  setQueuePaused: (queuePaused: boolean) => void;
   setHistory: (history: ExportTaskHistoryEntry[]) => void;
   appendHistory: (entry: ExportTaskHistoryEntry) => void;
   clearFinishedTasks: () => void;
+  cancelAllTasks: () => string[];
 }
 
 export const useExportQueueStore = create<ExportQueueState>((set, get) => ({
@@ -51,11 +56,15 @@ export const useExportQueueStore = create<ExportQueueState>((set, get) => ({
   history: [],
   runnerActive: false,
   resourcePaused: false,
+  queuePaused: false,
   maxConcurrent: 2,
   addTask: (input) => {
     const task = createExportTask(input);
     set((state) => ({ tasks: sortExportQueueByPriority([...state.tasks, task]) }));
     return task;
+  },
+  activateScheduledTasks: (now) => {
+    set((state) => ({ tasks: sortExportQueueByPriority(activateScheduledExportTasks(state.tasks, now)) }));
   },
   startNextTasks: () => {
     const before = get().tasks;
@@ -107,14 +116,24 @@ export const useExportQueueStore = create<ExportQueueState>((set, get) => ({
   },
   setRunnerActive: (runnerActive) => set({ runnerActive }),
   setResourcePaused: (resourcePaused) => set({ resourcePaused }),
+  setQueuePaused: (queuePaused) => set({ queuePaused }),
   setHistory: (history) => set({ history }),
   appendHistory: (entry) => {
     set((state) => ({ history: [entry, ...state.history.filter((item) => item.id !== entry.id)].slice(0, 100) }));
   },
   clearFinishedTasks: () => {
     set((state) => ({
-      tasks: state.tasks.filter((task) => task.status === 'pending' || task.status === 'running')
+      tasks: state.tasks.filter((task) => task.status === 'scheduled' || task.status === 'pending' || task.status === 'running')
     }));
+  },
+  cancelAllTasks: () => {
+    const cancelableIds = get()
+      .tasks.filter((task) => task.status === 'scheduled' || task.status === 'pending' || task.status === 'running')
+      .map((task) => task.id);
+    set((state) => ({
+      tasks: cancelableIds.reduce((tasks, taskId) => cancelExportTask(tasks, taskId), state.tasks)
+    }));
+    return cancelableIds;
   }
 }));
 

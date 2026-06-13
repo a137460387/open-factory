@@ -1,16 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import {
+  activateScheduledExportTasks,
   cancelExportTask,
   clampExportConcurrency,
   createExportTask,
   createExportTaskHistoryEntry,
   failExportTask,
   finishExportTask,
+  normalizeRenderFarmTaskConfig,
   normalizeExportTaskPriority,
   setExportTaskLogPath,
+  setExportTaskSegments,
   sortExportQueueByPriority,
   startExportTaskSlots,
   startNextExportTask,
+  updateExportTaskSegment,
   updateExportTaskProgress,
   type FfmpegExportPlan
 } from '../src';
@@ -59,6 +63,101 @@ describe('export queue helpers', () => {
     next = failExportTask(next, 'a', 'ffmpeg failed', 'error');
     expect(next[0].status).toBe('error');
     expect(next[0].error).toBe('ffmpeg failed');
+  });
+
+  it('keeps scheduled tasks out of the runnable queue until their start time arrives', () => {
+    const task = createExportTask({
+      id: 'scheduled',
+      name: 'Scheduled',
+      outputPath: 'scheduled.mp4',
+      plan,
+      now: '2026-01-01T00:00:00.000Z',
+      scheduledStartAt: '2026-01-01T00:00:10.000Z'
+    });
+
+    expect(task.status).toBe('scheduled');
+    expect(task.scheduledStartAt).toBe('2026-01-01T00:00:10.000Z');
+    expect(startExportTaskSlots([task], 1, '2026-01-01T00:00:05.000Z')[0].status).toBe('scheduled');
+
+    const activated = activateScheduledExportTasks([task], '2026-01-01T00:00:10.000Z');
+    expect(activated[0].status).toBe('pending');
+    expect(startExportTaskSlots(activated, 1, '2026-01-01T00:00:11.000Z')[0].status).toBe('running');
+  });
+
+  it('normalizes past or invalid scheduled start values to regular pending tasks', () => {
+    expect(
+      createExportTask({
+        id: 'past',
+        name: 'Past',
+        outputPath: 'past.mp4',
+        plan,
+        now: '2026-01-01T00:00:10.000Z',
+        scheduledStartAt: '2026-01-01T00:00:01.000Z'
+      }).status
+    ).toBe('pending');
+
+    expect(
+      createExportTask({
+        id: 'invalid',
+        name: 'Invalid',
+        outputPath: 'invalid.mp4',
+        plan,
+        now: '2026-01-01T00:00:10.000Z',
+        scheduledStartAt: 'not-a-date'
+      }).scheduledStartAt
+    ).toBeUndefined();
+  });
+
+  it('allows scheduled tasks to be canceled before they start and keeps them out of history', () => {
+    const [canceled] = cancelExportTask(
+      [
+        createExportTask({
+          id: 'scheduled-cancel',
+          name: 'Scheduled Cancel',
+          outputPath: 'scheduled-cancel.mp4',
+          plan,
+          now: '2026-01-01T00:00:00.000Z',
+          scheduledStartAt: '2026-01-01T00:05:00.000Z'
+        })
+      ],
+      'scheduled-cancel',
+      '2026-01-01T00:00:20.000Z'
+    );
+
+    expect(canceled.status).toBe('canceled');
+    expect(createExportTaskHistoryEntry(canceled)).toBeUndefined();
+  });
+
+  it('leaves scheduled tasks untouched when the runner clock is invalid', () => {
+    const task = createExportTask({
+      id: 'scheduled-invalid-clock',
+      name: 'Scheduled Invalid Clock',
+      outputPath: 'scheduled-invalid-clock.mp4',
+      plan,
+      now: '2026-01-01T00:00:00.000Z',
+      scheduledStartAt: '2026-01-01T00:00:10.000Z'
+    });
+
+    expect(activateScheduledExportTasks([task], 'not-a-date')[0].status).toBe('scheduled');
+  });
+
+  it('tracks render farm segment progress and ignores unrelated segment updates', () => {
+    const task = createExportTask({ id: 'segmented', name: 'Segmented', outputPath: 'segmented.mp4', plan });
+    const withSegments = setExportTaskSegments([task], 'segmented', [
+      { id: 'segment-1', index: 0, start: 0, duration: 1, outputPath: 'segmented-1.mp4', status: 'running', progress: 0.25 },
+      { id: 'segment-2', index: 1, start: 1, duration: 3, outputPath: 'segmented-2.mp4', status: 'pending', progress: 0 }
+    ]);
+
+    expect(withSegments[0].progress).toBeCloseTo(0.0625);
+
+    const untouched = updateExportTaskSegment(withSegments, 'segmented', 'missing', { progress: 1 });
+    expect(untouched[0].progress).toBeCloseTo(0.0625);
+
+    const updated = updateExportTaskSegment(withSegments, 'segmented', 'segment-2', { status: 'success', progress: 1 });
+    expect(updated[0].segments?.[1].status).toBe('success');
+    expect(updated[0].progress).toBeCloseTo(0.8125);
+
+    expect(updateExportTaskSegment([task], 'segmented', 'segment-1', { progress: 1 })[0].segments).toBeUndefined();
   });
 
   it('starts pending tasks until concurrent slots are full', () => {
@@ -143,6 +242,13 @@ describe('export queue helpers', () => {
     expect(normalizeExportTaskPriority('high')).toBe('high');
     expect(normalizeExportTaskPriority('low')).toBe('low');
     expect(updateExportTaskProgress([task], 'task-normal', -0.5)[0].progress).toBe(0);
+  });
+
+  it('normalizes render farm task configs', () => {
+    expect(normalizeRenderFarmTaskConfig(undefined)).toBeUndefined();
+    expect(normalizeRenderFarmTaskConfig({ enabled: false, maxInstances: 4 })).toBeUndefined();
+    expect(normalizeRenderFarmTaskConfig({ enabled: true, maxInstances: Number.NaN })).toEqual({ enabled: true, maxInstances: 1 });
+    expect(normalizeRenderFarmTaskConfig({ enabled: true, maxInstances: 99 })).toEqual({ enabled: true, maxInstances: 4 });
   });
 
   it('attaches log paths and creates history entries only for completed tasks', () => {

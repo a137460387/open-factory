@@ -19,16 +19,18 @@ import {
   type Project,
   type TargetAspectRatio
 } from '@open-factory/editor-core';
-import { AlertTriangle, FileText, FolderOpen, ListPlus, Save, Trash2, X } from 'lucide-react';
+import { AlertTriangle, Clock3, FileText, FolderOpen, ListPlus, Minimize2, Save, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { zhCN } from '../i18n/strings';
 import { chooseExportPath, revealExport } from '../lib/exportVideo';
 import { isFontFamilyAvailable } from '../lib/fonts';
-import { getFfmpegCapabilities, openFileDialog, openPath } from '../lib/tauri-bridge';
+import { getFfmpegCapabilities, minimizeToTray, openFileDialog, openPath, runExportPowerAction } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
+import { readExportBackgroundSettings, type ExportBackgroundSettings } from '../settings/appSettings';
 import { getWhisperAvailability } from '../lib/whisper';
 import { useWhisperSettingsStore } from '../store/whisperSettingsStore';
-import { cancelQueuedExportTask, enqueueExport, retryQueuedExportTask, setExportQueueMaxConcurrent } from './export-queue-runner';
+import { cancelQueuedExportTask, enqueueExport, retryQueuedExportTask, setExportQueueMaxConcurrent, setExportQueuePaused } from './export-queue-runner';
+import { EXPORT_COMPLETION_ACTIONS, localDatetimeInputValue, normalizeExportCompletionAction, normalizeScheduledExportStart, type ExportCompletionAction } from './export-background';
 import { loadExportHistoryIntoStore } from './export-history';
 import { estimateExportFileSizeBytes, formatEstimatedFileSize } from './export-size-estimate';
 import { useExportQueueStore } from './export-queue-store';
@@ -82,6 +84,10 @@ export function ExportDialog({ project, initialPreset, onClose, onCompleted, onR
   const [customPresetName, setCustomPresetName] = useState('');
   const [batchOutputPaths, setBatchOutputPaths] = useState('');
   const [priority, setPriority] = useState<ExportTaskPriority>('normal');
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [scheduledStartInput, setScheduledStartInput] = useState(() => localDatetimeInputValue(new Date(Date.now() + 60_000)));
+  const [completionAction, setCompletionAction] = useState<ExportCompletionAction>('none');
+  const [exportBackgroundSettings, setExportBackgroundSettings] = useState<ExportBackgroundSettings>(() => ({ allowPowerActions: false }));
   const suggestedRenderFarmInstances = useMemo(() => suggestRenderFarmInstances(typeof navigator === 'undefined' ? undefined : navigator.hardwareConcurrency), []);
   const [renderFarmEnabled, setRenderFarmEnabled] = useState(false);
   const [renderFarmInstances, setRenderFarmInstances] = useState(suggestedRenderFarmInstances);
@@ -89,11 +95,14 @@ export function ExportDialog({ project, initialPreset, onClose, onCompleted, onR
   const history = useExportQueueStore((state) => state.history);
   const runnerActive = useExportQueueStore((state) => state.runnerActive);
   const resourcePaused = useExportQueueStore((state) => state.resourcePaused);
+  const queuePaused = useExportQueueStore((state) => state.queuePaused);
   const maxConcurrent = useExportQueueStore((state) => state.maxConcurrent);
   const clearFinishedTasks = useExportQueueStore((state) => state.clearFinishedTasks);
   const whisperExecutablePath = useWhisperSettingsStore((state) => state.executablePath);
   const whisperModelPath = useWhisperSettingsStore((state) => state.modelPath);
   const notifiedSuccess = useRef(new Set<string>());
+  const pendingCompletionAction = useRef<ExportCompletionAction>('none');
+  const completionActionHandled = useRef(false);
   const selectedPreset = useMemo(() => getExportPreset(presetId, presets), [presetId, presets]);
   const exportSettings = useMemo(() => normalizeDraftSettings(draftSettings), [draftSettings]);
   const isAudioVisualization = exportSettings.outputMode === 'audio-visualization';
@@ -139,6 +148,11 @@ export function ExportDialog({ project, initialPreset, onClose, onCompleted, onR
 
   useEffect(() => {
     void loadExportHistoryIntoStore();
+    void readExportBackgroundSettings()
+      .then(setExportBackgroundSettings)
+      .catch((reason) => {
+        console.warn('Unable to load export background settings', reason);
+      });
   }, []);
 
   useEffect(() => {
@@ -168,14 +182,21 @@ export function ExportDialog({ project, initialPreset, onClose, onCompleted, onR
   }, [selectedPreset]);
 
   useEffect(() => {
+    let sawNewSuccess = false;
     for (const task of tasks) {
       if (task.status === 'success' && !notifiedSuccess.current.has(task.id)) {
         notifiedSuccess.current.add(task.id);
+        sawNewSuccess = true;
         onCompleted(task.outputPath);
         showToast({ kind: 'success', title: t.completeTitle, message: task.outputPath });
       }
     }
-  }, [onCompleted, tasks]);
+    const hasActiveTasks = tasks.some((task) => task.status === 'scheduled' || task.status === 'pending' || task.status === 'running');
+    if (sawNewSuccess && !hasActiveTasks && pendingCompletionAction.current !== 'none' && !completionActionHandled.current) {
+      completionActionHandled.current = true;
+      void runCompletionAction(pendingCompletionAction.current, exportBackgroundSettings);
+    }
+  }, [exportBackgroundSettings, onCompleted, tasks]);
 
   async function choosePath(): Promise<void> {
     const path = await chooseExportPath(project, exportSettings.format);
@@ -258,13 +279,20 @@ export function ExportDialog({ project, initialPreset, onClose, onCompleted, onR
   }
 
   async function enqueueSelectedPaths(selectedPaths: string[]): Promise<void> {
+    const scheduledStartAt = scheduleEnabled ? normalizeScheduledExportStart(scheduledStartInput) : undefined;
+    if (scheduleEnabled && !scheduledStartAt) {
+      setError(t.scheduleInvalid);
+      return;
+    }
+    pendingCompletionAction.current = completionAction;
+    completionActionHandled.current = false;
     for (const path of selectedPaths) {
-      const task = await enqueueExport(project, path, exportSettings, priority, renderFarmEnabled ? { enabled: true, maxInstances: renderFarmInstances } : undefined);
+      const task = await enqueueExport(project, path, exportSettings, priority, renderFarmEnabled ? { enabled: true, maxInstances: renderFarmInstances } : undefined, scheduledStartAt);
       for (const warning of task.plan.warnings) {
         showToast({ kind: 'warning', title: t.exportWarningTitle, message: formatExportWarning(warning) });
       }
     }
-    showToast({ kind: 'info', title: t.queuedTitle, message: t.queuedMessage(selectedPaths.length, selectedPreset.name) });
+    showToast({ kind: 'info', title: scheduleEnabled ? t.scheduledTitle : t.queuedTitle, message: t.queuedMessage(selectedPaths.length, selectedPreset.name) });
   }
 
   async function collectPreflightIssues(): Promise<PreflightResult[]> {
@@ -298,7 +326,7 @@ export function ExportDialog({ project, initialPreset, onClose, onCompleted, onR
     }
   }
 
-  function relinkFromPreflight(): void {
+function relinkFromPreflight(): void {
     setPreflight(undefined);
     onClose();
     onRelinkMissing?.();
@@ -452,6 +480,47 @@ export function ExportDialog({ project, initialPreset, onClose, onCompleted, onR
             </select>
           </div>
           <div className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3">
+            <label className="pt-1 text-xs font-medium text-slate-600">{t.schedule.title}</label>
+            <div className="space-y-2">
+              <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-700">
+                <input className="h-4 w-4 accent-brand" type="checkbox" checked={scheduleEnabled} onChange={(event) => setScheduleEnabled(event.target.checked)} data-testid="export-schedule-toggle" />
+                <span>{t.schedule.enabled}</span>
+              </label>
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  className="h-9 min-w-56 rounded-md border border-line px-2 text-sm disabled:bg-slate-100"
+                  type="datetime-local"
+                  step={1}
+                  value={scheduledStartInput}
+                  disabled={!scheduleEnabled}
+                  onChange={(event) => setScheduledStartInput(event.target.value)}
+                  data-testid="export-schedule-start-input"
+                />
+                <span className="text-xs text-slate-500">{t.schedule.description}</span>
+              </div>
+            </div>
+          </div>
+          <div className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3">
+            <label className="pt-1.5 text-xs font-medium text-slate-600">{t.completionAction.title}</label>
+            <div className="space-y-2">
+              <select
+                className="w-full max-w-xs rounded-md border border-line px-2 py-1.5 text-sm"
+                value={completionAction}
+                onChange={(event) => setCompletionAction(normalizeExportCompletionAction(event.target.value))}
+                data-testid="export-completion-action-select"
+              >
+                {EXPORT_COMPLETION_ACTIONS.map((action) => (
+                  <option key={action} value={action}>
+                    {t.completionAction.options[action]}
+                  </option>
+                ))}
+              </select>
+              {(completionAction === 'shutdown' || completionAction === 'hibernate') && !exportBackgroundSettings.allowPowerActions ? (
+                <div className="text-xs text-amber-700" data-testid="export-power-action-disabled-warning">{t.completionAction.powerDisabled}</div>
+              ) : null}
+            </div>
+          </div>
+          <div className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3">
             <label className="pt-1 text-xs font-medium text-slate-600">{t.renderFarm.title}</label>
             <div className="space-y-2">
               <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-700">
@@ -486,7 +555,7 @@ export function ExportDialog({ project, initialPreset, onClose, onCompleted, onR
             <div className="flex items-center justify-between border-b border-line px-3 py-2">
               <div>
                 <div className="text-xs font-semibold text-slate-700">{t.queueTitle}</div>
-                <div className="text-[11px] text-slate-500">{resourcePaused ? t.queuePausedForMemory : runnerActive ? t.queueRunning(maxConcurrent) : zhCN.common.idle}</div>
+                <div className="text-[11px] text-slate-500">{queuePaused ? t.queuePausedByUser : resourcePaused ? t.queuePausedForMemory : runnerActive ? t.queueRunning(maxConcurrent) : zhCN.common.idle}</div>
               </div>
               <div className="flex items-center gap-2">
                 <label className="flex items-center gap-1 text-xs font-medium text-slate-600">
@@ -507,6 +576,14 @@ export function ExportDialog({ project, initialPreset, onClose, onCompleted, onR
                 <button className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel" onClick={clearFinishedTasks}>
                   <Trash2 size={13} />
                   {t.clearFinished}
+                </button>
+                <button className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel" type="button" data-testid="export-queue-pause-button" onClick={() => setExportQueuePaused(!queuePaused)}>
+                  <Clock3 size={13} />
+                  {queuePaused ? t.resumeQueue : t.pauseQueue}
+                </button>
+                <button className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel" type="button" data-testid="export-minimize-to-tray-button" onClick={() => void minimizeToTray()}>
+                  <Minimize2 size={13} />
+                  {t.minimizeToTray}
                 </button>
               </div>
             </div>
@@ -552,6 +629,35 @@ export function ExportDialog({ project, initialPreset, onClose, onCompleted, onR
       </section>
     </div>
   );
+}
+
+async function runCompletionAction(action: ExportCompletionAction, settings: ExportBackgroundSettings): Promise<void> {
+  if (action === 'none') {
+    return;
+  }
+  if (action === 'notification') {
+    showToast({ kind: 'success', title: zhCN.exportDialog.completionAction.notificationTitle, message: zhCN.exportDialog.completionAction.notificationMessage });
+    if (typeof Notification !== 'undefined') {
+      const permission = Notification.permission === 'default' ? await Notification.requestPermission() : Notification.permission;
+      if (permission === 'granted') {
+        new Notification(zhCN.exportDialog.completionAction.notificationTitle, { body: zhCN.exportDialog.completionAction.notificationMessage });
+      }
+    }
+    return;
+  }
+  if (!settings.allowPowerActions) {
+    showToast({ kind: 'warning', title: zhCN.exportDialog.completionAction.powerDisabledTitle, message: zhCN.exportDialog.completionAction.powerDisabled });
+    return;
+  }
+  try {
+    await runExportPowerAction(action, true);
+  } catch (error) {
+    showToast({
+      kind: 'error',
+      title: zhCN.exportDialog.completionAction.powerFailedTitle,
+      message: error instanceof Error ? error.message : zhCN.exportDialog.completionAction.powerFailedMessage
+    });
+  }
 }
 
 function normalizeDraftSettings(settings: ExportPresetSettings): ExportPresetSettings {
@@ -1734,7 +1840,7 @@ function ExportTaskRow({ taskId }: { taskId: string }) {
     return null;
   }
   const progress = Math.round(task.progress * 100);
-  const canCancel = task.status === 'pending' || task.status === 'running';
+  const canCancel = task.status === 'scheduled' || task.status === 'pending' || task.status === 'running';
   return (
     <div className="border-b border-line px-3 py-2 last:border-b-0" data-testid={`export-task-${task.id}`}>
       <div className="flex items-center gap-2">
