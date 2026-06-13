@@ -25,6 +25,7 @@ import {
   MoveClipCommand,
   MoveClipsCommand,
   PackNestedSequenceCommand,
+  PiPLayoutCommand,
   RemoveEffectCommand,
   DeleteMediaFolderCommand,
   RemoveMaskCommand,
@@ -612,6 +613,37 @@ describe('timeline commands', () => {
 
     manager.undo();
     expect(accessor.current().tracks[0].clips[0].transform).toMatchObject({ scale: 0.5, scaleX: 0.5, scaleY: 0.5 });
+  });
+
+  it('applies PiP layout to two visual clips as one undoable command', () => {
+    const accessor = makeAccessor(
+      makeTimeline([
+        makeVideoClip({ id: 'clip-main', transform: { x: 40, y: 30, scaleX: 0.7, scaleY: 0.7 } }),
+        makeVideoClip({ id: 'clip-pip', transform: { x: 0, y: 0, scaleX: 1, scaleY: 1 }, border: { enabled: false, color: '#000000', width: 2 } })
+      ])
+    );
+    const manager = new CommandManager();
+
+    manager.execute(
+      new PiPLayoutCommand(accessor, 'clip-main', 'clip-pip', {
+        position: 'bottom-right',
+        canvasWidth: 1280,
+        canvasHeight: 720,
+        pipSourceWidth: 1280,
+        pipSourceHeight: 720
+      })
+    );
+
+    const [main, pip] = accessor.current().tracks[0].clips;
+    expect(main.transform).toMatchObject({ x: 0, y: 0, scaleX: 1, scaleY: 1 });
+    expect(main.border).toMatchObject({ enabled: false });
+    expect(pip.transform).toMatchObject({ x: 448, y: 238, scaleX: 0.25, scaleY: 0.25 });
+    expect(pip.border).toMatchObject({ enabled: true, color: '#ffffff', width: 6 });
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips[0].transform).toMatchObject({ x: 40, y: 30, scaleX: 0.7, scaleY: 0.7 });
+    expect(accessor.current().tracks[0].clips[1].transform).toMatchObject({ x: 0, y: 0, scaleX: 1, scaleY: 1 });
+    expect(accessor.current().tracks[0].clips[1].border).toMatchObject({ enabled: false, color: '#000000', width: 2 });
   });
 
   it('removes silent ranges as one undoable command', () => {

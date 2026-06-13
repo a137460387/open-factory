@@ -87,6 +87,15 @@ const fixtures = [
     validate: validateMultiClipOverlayFixture
   },
   {
+    name: 'pip-layout',
+    description: 'blue main video with a yellow 25% picture-in-picture overlay in the bottom-right corner',
+    outputWidth: 1280,
+    outputHeight: 720,
+    expectedDuration: 1.5,
+    create: createPiPLayoutFixture,
+    validate: validatePiPLayoutFixture
+  },
+  {
     name: 'rotation-transform',
     description: 'centered image clip rotated through the FFmpeg rotate filter',
     outputWidth: 1280,
@@ -640,6 +649,129 @@ async function validateMultiClipOverlayFixture(context) {
         passed: Math.abs(context.outputDuration - 2) <= 0.2,
         actual: round(context.outputDuration),
         expected: 2
+      }
+    ]
+  };
+}
+
+async function createPiPLayoutFixture(context) {
+  const mainPath = join(context.fixtureDir, 'pip-main-blue.mp4');
+  const pipPath = join(context.fixtureDir, 'pip-overlay-yellow.mp4');
+  await createColorVideoFixture(mainPath, {
+    color: COLORS.blue.ffmpeg,
+    width: context.outputWidth,
+    height: context.outputHeight,
+    duration: context.fixture.expectedDuration,
+    audio: false
+  });
+  await createColorVideoFixture(pipPath, {
+    color: COLORS.yellow.ffmpeg,
+    width: context.outputWidth,
+    height: context.outputHeight,
+    duration: context.fixture.expectedDuration,
+    audio: false
+  });
+  return buildProject({
+    id: 'golden-pip-layout',
+    name: 'Golden PiP Layout',
+    width: context.outputWidth,
+    height: context.outputHeight,
+    media: [
+      videoAsset({
+        id: 'asset-pip-main',
+        name: 'pip-main-blue.mp4',
+        path: mainPath,
+        duration: context.fixture.expectedDuration,
+        width: context.outputWidth,
+        height: context.outputHeight,
+        hasAudio: false,
+        stat: statSync(mainPath)
+      }),
+      videoAsset({
+        id: 'asset-pip-overlay',
+        name: 'pip-overlay-yellow.mp4',
+        path: pipPath,
+        duration: context.fixture.expectedDuration,
+        width: context.outputWidth,
+        height: context.outputHeight,
+        hasAudio: false,
+        stat: statSync(pipPath)
+      })
+    ],
+    tracks: [
+      {
+        id: 'track-pip-main',
+        type: 'video',
+        name: 'PiP Main',
+        clips: [
+          videoClip({
+            id: 'clip-pip-main',
+            name: 'PiP Main',
+            mediaId: 'asset-pip-main',
+            trackId: 'track-pip-main',
+            duration: context.fixture.expectedDuration,
+            transform: { x: 0, y: 0, scale: 1, scaleX: 1, scaleY: 1, rotation: 0, opacity: 1 }
+          })
+        ]
+      },
+      {
+        id: 'track-pip-overlay',
+        type: 'video',
+        name: 'PiP Overlay',
+        clips: [
+          videoClip({
+            id: 'clip-pip-overlay',
+            name: 'PiP Overlay',
+            mediaId: 'asset-pip-overlay',
+            trackId: 'track-pip-overlay',
+            duration: context.fixture.expectedDuration,
+            transform: { x: 448, y: 238, scale: 0.25, scaleX: 0.25, scaleY: 0.25, rotation: 0, opacity: 1 },
+            border: { enabled: true, color: '#00e5ff', width: 6 }
+          })
+        ]
+      },
+      emptyAudioTrack(),
+      emptyTextTrack()
+    ]
+  });
+}
+
+async function validatePiPLayoutFixture(context) {
+  const pipPixel = await readPixel(context.outputPath, {
+    at: 0.45,
+    x: 1100,
+    y: 610
+  });
+  const borderPixel = await readPixel(context.outputPath, {
+    at: 0.45,
+    x: 930,
+    y: 510
+  });
+  return {
+    checks: [
+      {
+        name: 'pip-scale-filter',
+        passed: context.plan.filterComplex.includes('scale=trunc(iw*0.25/2)*2:trunc(ih*0.25/2)*2'),
+        actual: context.plan.filterComplex,
+        expected: 'scale=trunc(iw*0.25/2)*2:trunc(ih*0.25/2)*2'
+      },
+      {
+        name: 'pip-border-drawbox',
+        passed: context.plan.filterComplex.includes('drawbox=x=0:y=0:w=iw:h=ih:color=0x00e5ff:t=6'),
+        actual: context.plan.filterComplex,
+        expected: 'drawbox with cyan border'
+      },
+      {
+        name: 'bottom-right-pip-pixel',
+        passed: pixelNear(pipPixel, COLORS.yellow.rgb, 18) && !pixelNear(pipPixel, COLORS.blue.rgb, 18),
+        actual: pipPixel,
+        expected: `${COLORS.yellow.rgb.join(',')} +/- 18 and not main blue`
+      },
+      {
+        name: 'pip-border-pixel',
+        passed: pixelNear(borderPixel, COLORS.cyan.rgb, 22),
+        actual: borderPixel,
+        expected: `${COLORS.cyan.rgb.join(',')} +/- 22`
       }
     ]
   };
@@ -3061,6 +3193,7 @@ function videoClip(input) {
     transform: input.transform ?? { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
     projection: input.projection,
     panorama: input.panorama,
+    border: input.border,
     keyframes: input.keyframes,
     effects: input.effects,
     volume: input.volume ?? 1,
@@ -3085,6 +3218,7 @@ function imageClip(input) {
     colorCorrection: input.colorCorrection ?? { brightness: 0, contrast: 1, saturation: 1, hue: 0 },
     chromaKey: input.chromaKey,
     transform: input.transform ?? { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
+    border: input.border,
     keyframes: input.keyframes,
     kenBurns: input.kenBurns
   };

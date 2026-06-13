@@ -27,6 +27,7 @@ export * from './text-path';
 export * from './motion-tracking';
 export * from './privacy-blur';
 export * from './multicam';
+export * from './pip-layout';
 export * from './commands/command';
 export * from './commands/command-manager';
 export * from './commands/timeline-commands';

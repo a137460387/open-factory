@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_COLOR_CORRECTION, DEFAULT_VIDEO_RESTORATION, createMulticamSequenceProject, createTrack, migrateProjectFile, serializeProject, type ProjectFileV1 } from '../src';
+import { DEFAULT_CLIP_BORDER, DEFAULT_COLOR_CORRECTION, DEFAULT_VIDEO_RESTORATION, createMulticamSequenceProject, createTrack, migrateProjectFile, serializeProject, type ProjectFileV1 } from '../src';
 import { makeAdjustmentClip, makeProject, makeSubtitleClip, makeTextClip, makeVideoClip } from './test-utils';
 
 describe('project schema migration', () => {
@@ -44,6 +44,18 @@ describe('project schema migration', () => {
 
     delete file.project.exportRanges;
     expect(migrateProjectFile(file).project.exportRanges).toEqual([]);
+  });
+
+  it('serializes and migrates clip borders while old clips default to disabled borders', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-pip', border: { enabled: true, color: '#ABCDEF', width: 999 } })];
+
+    const file = serializeProject(project);
+    expect(file.project.timeline.tracks[0].clips[0].border).toEqual({ enabled: true, color: '#abcdef', width: 80 });
+    expect(migrateProjectFile(file).project.timeline.tracks[0].clips[0].border).toEqual(file.project.timeline.tracks[0].clips[0].border);
+
+    delete file.project.timeline.tracks[0].clips[0].border;
+    expect(migrateProjectFile(file).project.timeline.tracks[0].clips[0].border).toEqual(DEFAULT_CLIP_BORDER);
   });
 
   it('keeps absolute path and warning when media is on another drive', () => {

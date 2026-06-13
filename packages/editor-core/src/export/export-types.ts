@@ -3,6 +3,7 @@ import type { InputColorSpace } from '../color-log-luts';
 import type { Effect } from '../effects';
 import type {
   AudioFadeCurve,
+  ClipBorder,
   ClipMaskKeyframe,
   ClipPanoramaOutputProjection,
   ClipPrivacyBlur,
@@ -254,6 +255,7 @@ export interface ExportClip {
   sourceDuration: number;
   trackIndex: number;
   transform: ExportTransform;
+  border: ClipBorder;
   colorCorrection: ExportColorCorrection;
   chromaKey: ExportChromaKey;
   stabilization: ExportStabilization;

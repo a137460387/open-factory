@@ -18,6 +18,7 @@ import {
   MoveMediaToFolderCommand,
   RippleDeleteCommand,
   RenameMediaFolderCommand,
+  PiPLayoutCommand,
   SetMediaFolderCollapsedCommand,
   SnapToBeatsCommand,
   SplitClipCommand,
@@ -45,7 +46,9 @@ import {
   type OrphanMediaIssue,
   type ProjectHealthReport,
   type Project,
+  type Clip,
   type BeatSensitivity,
+  type PiPLayoutPosition,
   type ProjectTemplateId,
   type ProxyMissingIssue,
   type TitleTemplateId
@@ -219,6 +222,7 @@ export function EditorShell() {
   const [sharePackageBusy, setSharePackageBusy] = useState(false);
   const [layoutSettings, setLayoutSettings] = useState<EditorLayoutSettings>(DEFAULT_EDITOR_LAYOUT_SETTINGS);
   const [safeFrameGuides, setSafeFrameGuides] = useState(false);
+  const [pipLayoutPosition, setPiPLayoutPosition] = useState<PiPLayoutPosition>('bottom-right');
   const [viewportSize, setViewportSize] = useState(() => readViewportSize());
   const [lastBackupAt, setLastBackupAt] = useState<string>();
   const [demucsAvailability, setDemucsAvailability] = useState<DemucsAvailability>({ ready: false, error: zhCN.demucs.notConfigured });
@@ -251,6 +255,22 @@ export function EditorShell() {
       selected.every((item) => item?.track.type === 'video' && (item.clip.type === 'video' || item.clip.type === 'image'))
     );
   }, [project.timeline.tracks, selectedClipIds]);
+  const selectedPiPClips = useMemo(() => {
+    if (selectedClipIds.length !== 2) {
+      return [];
+    }
+    type ClipWithTrack = { clip: Clip; track: Project['timeline']['tracks'][number]; trackIndex: number; selectedIndex: number };
+    const allClips = project.timeline.tracks.flatMap((track, trackIndex) => track.clips.map((clip) => ({ clip, track, trackIndex })));
+    return selectedClipIds
+      .map((id, selectedIndex) => {
+        const item = allClips.find((candidate) => candidate.clip.id === id);
+        return item ? { ...item, selectedIndex } : undefined;
+      })
+      .filter((item): item is ClipWithTrack => item !== undefined)
+      .filter((item) => item.track.type === 'video' && isPiPVisualClip(item.clip))
+      .sort((left, right) => left.trackIndex - right.trackIndex || left.selectedIndex - right.selectedIndex);
+  }, [project.timeline.tracks, selectedClipIds]);
+  const canApplyPiPLayout = selectedPiPClips.length === 2;
   const canSeparateSelectedAudio = canSeparateAudioForClip(selectedClip, selectedClipMedia, demucsAvailability.ready) && !audioSeparationClipId;
   const canDetectBeats = Boolean(
     selectedClip &&
@@ -1246,6 +1266,30 @@ export function EditorShell() {
     }
   }, [project.sequences.length, selectedClipIds, setSelectedClipId, setSelectedClipIds]);
 
+  const applyPiPLayout = useCallback(() => {
+    if (selectedPiPClips.length !== 2) {
+      showToast({ kind: 'warning', title: zhCN.editorToasts.pipApplyFailed, message: zhCN.editorToasts.pipApplyFailedMessage });
+      return;
+    }
+    const [main, pip] = selectedPiPClips;
+    const pipSource = getPiPClipSourceDimensions(project, pip.clip);
+    try {
+      commandManager.execute(
+        new PiPLayoutCommand(timelineAccessor, main.clip.id, pip.clip.id, {
+          position: pipLayoutPosition,
+          canvasWidth: project.settings.width,
+          canvasHeight: project.settings.height,
+          pipSourceWidth: pipSource.width,
+          pipSourceHeight: pipSource.height
+        })
+      );
+      setSelectedClipIds([pip.clip.id]);
+      showToast({ kind: 'success', title: zhCN.editorToasts.pipApplied });
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.editorToasts.pipApplyFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.pipApplyFailedMessage });
+    }
+  }, [pipLayoutPosition, project, selectedPiPClips, setSelectedClipIds]);
+
   const importEdlTimeline = useCallback(
     (contents: string, path: string) => {
       const fileName = path.split(/[\\/]/).pop()?.replace(/\.edl$/i, '') || undefined;
@@ -1666,7 +1710,11 @@ export function EditorShell() {
           onSeparateAudio={() => void separateSelectedAudio()}
           onCancelAudioSeparation={() => void cancelAudioSeparation()}
           onCreateMulticamSequence={createMulticamSequence}
+          onApplyPiPLayout={applyPiPLayout}
           canCreateMulticamSequence={canCreateMulticamSequence}
+          canApplyPiPLayout={canApplyPiPLayout}
+          pipLayoutPosition={pipLayoutPosition}
+          onPiPLayoutPositionChange={setPiPLayoutPosition}
           canDetectBeats={canDetectBeats}
           canSnapToBeats={canSnapToBeats}
           beatSensitivity={beatSensitivity}
@@ -2028,6 +2076,24 @@ function readViewportSize(): { width: number; height: number } {
     return { width: 1440, height: 900 };
   }
   return { width: window.innerWidth, height: window.innerHeight };
+}
+
+function isPiPVisualClip(clip: Clip): boolean {
+  return clip.type === 'video' || clip.type === 'image' || clip.type === 'nested-sequence';
+}
+
+function getPiPClipSourceDimensions(project: Project, clip: Clip): { width: number; height: number } {
+  if (clip.type === 'nested-sequence') {
+    return { width: project.settings.width, height: project.settings.height };
+  }
+  if ('mediaId' in clip) {
+    const asset = project.media.find((item) => item.id === clip.mediaId);
+    return {
+      width: Math.max(1, asset?.width || project.settings.width),
+      height: Math.max(1, asset?.height || project.settings.height)
+    };
+  }
+  return { width: project.settings.width, height: project.settings.height };
 }
 
 function moveAutomationMediaToGroup(assetId: string, groupName: string): void {

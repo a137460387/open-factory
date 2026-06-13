@@ -17,6 +17,7 @@ import {
   normalizeAudioFadeCurve,
   normalizeAudioFadeDuration,
   normalizeAudioDenoise,
+  normalizeClipBorder,
   normalizeClipPanoramaView,
   normalizeClipProjection,
   normalizeAudioPitchSemitones,
@@ -215,6 +216,7 @@ function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project[
             sourceDuration: clip.type === 'nested-sequence' ? clip.duration : getClipSourceVisibleDuration(clip),
             trackIndex,
             transform: normalizeTransform(clip.transform),
+            border: normalizeClipBorder(clip.border),
             colorCorrection: normalizeColorCorrection(clip.colorCorrection),
             chromaKey: normalizeChromaKey(clip.chromaKey),
             stabilization: normalizeStabilization(clip.stabilization),
@@ -1347,6 +1349,7 @@ function buildVisualPostKeyFilters(
   filters.push(...buildMaskFilters(clip));
   filters.push(...buildColorCorrectionFilters(clip, textArtifacts));
   filters.push(...buildEffectFilters(clip.effects));
+  filters.push(...buildClipBorderFilters(clip));
   if (Math.abs(clip.transform.rotation) > 0.001) {
     filters.push(`rotate=${formatFfmpegNumber(clip.transform.rotation)}*PI/180:c=none`);
   }
@@ -1637,6 +1640,14 @@ function buildMaskFilters(clip: ExportClip): string[] {
     return [buildSimpleRectMaskFilter(masks[0])];
   }
   return [buildGeqMaskFilter(masks)];
+}
+
+function buildClipBorderFilters(clip: ExportClip): string[] {
+  const border = normalizeClipBorder(clip.border);
+  if (!border.enabled) {
+    return [];
+  }
+  return [`drawbox=x=0:y=0:w=iw:h=ih:color=${cssColorToFfmpeg(border.color)}:t=${border.width}`];
 }
 
 function isSimpleRectMask(mask: ExportClip['masks'][number]): boolean {

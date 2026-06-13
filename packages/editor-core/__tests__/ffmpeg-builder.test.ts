@@ -689,6 +689,23 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.filterComplex).toContain("overlay=x='(main_w-overlay_w)/2+10':y='(main_h-overlay_h)/2-20'");
   });
 
+  it('exports PiP clip border as a drawbox filter', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-pip-border',
+        duration: 2,
+        transform: { scale: 0.25, scaleX: 0.25, scaleY: 0.25 },
+        border: { enabled: true, color: '#00e5ff', width: 8 }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('scale=trunc(iw*0.25/2)*2:trunc(ih*0.25/2)*2');
+    expect(plan.filterComplex).toContain('drawbox=x=0:y=0:w=iw:h=ih:color=0x00e5ff:t=8');
+  });
+
   it('omits rotation filter for default zero rotation', () => {
     const project = makeProject();
     project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-no-rotation', duration: 2, transform: { rotation: 0 } })];

@@ -1,5 +1,5 @@
-import { Archive, Camera, Captions, ChevronDown, Download, FileDown, FilePlus2, FolderOpen, History, ImageDown, LayoutGrid, Mic2, Monitor, PanelsTopLeft, Pause, Play, Redo2, RotateCcw, Save, Scissors, Settings, Square, Trash2, Undo2, WandSparkles, XCircle } from 'lucide-react';
-import { timelineHasExportableVideo, type BeatSensitivity } from '@open-factory/editor-core';
+import { Archive, Camera, Captions, ChevronDown, Download, FileDown, FilePlus2, FolderOpen, History, ImageDown, LayoutGrid, Mic2, Monitor, PanelsTopLeft, Pause, PictureInPicture2, Play, Redo2, RotateCcw, Save, Scissors, Settings, Square, Trash2, Undo2, WandSparkles, XCircle } from 'lucide-react';
+import { timelineHasExportableVideo, type BeatSensitivity, type PiPLayoutPosition } from '@open-factory/editor-core';
 import { clsx } from 'clsx';
 import { useState } from 'react';
 import { formatBackupDisplayTime } from '../backup/projectBackup';
@@ -41,7 +41,11 @@ interface ToolbarProps {
   onSeparateAudio(): void;
   onCancelAudioSeparation(): void;
   onCreateMulticamSequence(): void;
+  onApplyPiPLayout(): void;
   canCreateMulticamSequence: boolean;
+  canApplyPiPLayout: boolean;
+  pipLayoutPosition: PiPLayoutPosition;
+  onPiPLayoutPositionChange(position: PiPLayoutPosition): void;
   canDetectBeats: boolean;
   canSnapToBeats: boolean;
   beatSensitivity: BeatSensitivity;
@@ -550,6 +554,21 @@ export function Toolbar(props: ToolbarProps) {
       <ToolButton title={t.splitSelectedClip} onClick={props.onSplitSelected} icon={<Scissors size={17} />} testId="toolbar-split-button" />
       <ToolButton title={t.smartRoughCut} onClick={props.onToggleSmartRoughCut} icon={<WandSparkles size={17} />} testId="toolbar-smart-rough-cut-button" active={props.smartRoughCutOpen} />
       <ToolButton title={t.createMulticamSequence} disabled={!props.canCreateMulticamSequence} onClick={props.onCreateMulticamSequence} icon={<PanelsTopLeft size={17} />} testId="toolbar-create-multicam-button" />
+      <ToolButton title={t.applyPiPLayout} disabled={!props.canApplyPiPLayout} onClick={props.onApplyPiPLayout} icon={<PictureInPicture2 size={17} />} testId="toolbar-pip-button" />
+      <select
+        className="h-9 rounded-md border border-line bg-panel px-2 text-xs font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+        title={t.pipPosition}
+        aria-label={t.pipPosition}
+        disabled={!props.canApplyPiPLayout}
+        value={props.pipLayoutPosition}
+        data-testid="toolbar-pip-position-select"
+        onChange={(event) => props.onPiPLayoutPositionChange(event.target.value as PiPLayoutPosition)}
+      >
+        <option value="bottom-right">{t.pipPositions['bottom-right']}</option>
+        <option value="bottom-left">{t.pipPositions['bottom-left']}</option>
+        <option value="top-right">{t.pipPositions['top-right']}</option>
+        <option value="top-left">{t.pipPositions['top-left']}</option>
+      </select>
       <div className="mx-1 h-7 w-px bg-line" />
       <ToolButton title={isPlaying ? t.pause : t.play} onClick={() => setIsPlaying(!isPlaying)} icon={isPlaying ? <Pause size={17} /> : <Play size={17} />} testId="toolbar-playback-button" playbackState={isPlaying ? 'playing' : 'paused'} />
       {typeof exportProgress === 'number' ? (

@@ -346,6 +346,7 @@ export interface BaseClip {
   panorama?: ClipPanoramaView;
   masks?: ClipMask[];
   motionTrack?: MotionTrackPoint[];
+  border?: ClipBorder;
   keyframes?: ClipKeyframes;
   effects?: Effect[];
   sequenceFrameRate?: number;
@@ -375,6 +376,12 @@ export interface Transform {
   scaleY?: number;
   rotation: number;
   opacity: number;
+}
+
+export interface ClipBorder {
+  enabled: boolean;
+  color: string;
+  width: number;
 }
 
 export interface VideoClip extends BaseClip {
@@ -609,6 +616,12 @@ export const DEFAULT_PRIVACY_BLUR: ClipPrivacyBlur = {
   color: '#000000'
 };
 
+export const DEFAULT_CLIP_BORDER: ClipBorder = {
+  enabled: false,
+  color: '#ffffff',
+  width: 6
+};
+
 export const DEFAULT_TRACK_VOLUME = 1;
 export const DEFAULT_TRACK_PAN = 0;
 export const DEFAULT_MASTER_VOLUME = 1;
@@ -818,6 +831,7 @@ export function createBaseClip(
     panorama: normalizeClipPanoramaView(input.panorama),
     masks: normalizeMasks(input.masks),
     motionTrack: normalizeMotionTrack(input.motionTrack, input.duration),
+    border: normalizeClipBorder(input.border),
     keyframes: cloneClipKeyframesLocal(input.keyframes),
     effects: cloneEffects(input.effects),
     sequenceFrameRate: normalizeSequenceFrameRate(input.sequenceFrameRate)
@@ -1096,6 +1110,14 @@ export function normalizePrivacyBlur(privacyBlur: Partial<ClipPrivacyBlur> | und
 
 export function normalizePrivacyBlurEffect(effect: PrivacyBlurEffect | undefined): PrivacyBlurEffect {
   return effect === 'gblur' || effect === 'solid' || effect === 'pixelize' ? effect : DEFAULT_PRIVACY_BLUR.effect;
+}
+
+export function normalizeClipBorder(border: Partial<ClipBorder> | undefined): ClipBorder {
+  return {
+    enabled: border?.enabled === true,
+    color: normalizeHexColor(border?.color, DEFAULT_CLIP_BORDER.color),
+    width: Math.round(Math.min(80, Math.max(1, finiteOrDefault(border?.width, DEFAULT_CLIP_BORDER.width))))
+  };
 }
 
 export function normalizeTextPath(pathText: Partial<TextPathOptions> | undefined): TextPathOptions {
@@ -1462,6 +1484,7 @@ export function serializeLegacyProject(project: Project): {
           panorama: normalizeClipPanoramaView(clip.panorama),
           masks: normalizeMasks(clip.masks),
           motionTrack: normalizeMotionTrack(clip.motionTrack, clip.duration),
+          border: normalizeClipBorder(clip.border),
           multicam: clip.type === 'nested-sequence' ? normalizeMulticamSequence(clip.multicam, clip.duration) : undefined,
           sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
           keyframes: cloneClipKeyframesLocal(clip.keyframes)

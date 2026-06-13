@@ -23,6 +23,7 @@ import {
   normalizeAudioFadeDuration,
   normalizeAudioDenoise,
   normalizeAudioPitchSemitones,
+  normalizeClipBorder,
   normalizeFrameInterpolation,
   normalizeMask,
   normalizeMasks,
@@ -44,6 +45,7 @@ import {
   replaceProjectActiveTimeline,
   type Clip,
   type ClipAudioDenoise,
+  type ClipBorder,
   type ClipKeyframes,
   type ClipPanoramaView,
   type ClipProjection,
@@ -70,6 +72,7 @@ import {
   type TransitionType,
   type Transform
 } from '../model';
+import { calculatePiPTransform, createFullFrameTransform, type PiPLayoutPosition } from '../pip-layout';
 import {
   addMediaFolderToProject,
   deleteMediaFolder,
@@ -2080,7 +2083,7 @@ export class ApplyTextAnimationCommand implements Command {
   }
 }
 
-export type ClipPatch = Partial<Omit<Clip, 'type' | 'id' | 'transform' | 'colorCorrection' | 'chromaKey' | 'stabilization' | 'frameInterpolation'>> & {
+export type ClipPatch = Partial<Omit<Clip, 'type' | 'id' | 'transform' | 'colorCorrection' | 'chromaKey' | 'stabilization' | 'frameInterpolation' | 'border'>> & {
   keyframes?: ClipKeyframes;
   kenBurns?: boolean;
   volume?: number;
@@ -2103,12 +2106,24 @@ export type ClipPatch = Partial<Omit<Clip, 'type' | 'id' | 'transform' | 'colorC
   panorama?: Partial<ClipPanoramaView>;
   masks?: ClipMask[];
   motionTrack?: MotionTrackPoint[];
+  border?: Partial<ClipBorder>;
   sequenceFrameRate?: number;
   colorCorrection?: Partial<ColorCorrection>;
   transform?: Partial<Transform>;
   style?: Partial<TextStyle> | Partial<SubtitleStyle>;
   pathText?: Partial<TextPathOptions>;
 };
+
+export interface PiPLayoutCommandOptions {
+  position?: PiPLayoutPosition;
+  canvasWidth: number;
+  canvasHeight: number;
+  pipSourceWidth: number;
+  pipSourceHeight: number;
+  scale?: number;
+  margin?: number;
+  border?: Partial<ClipBorder>;
+}
 
 function mergeChromaKeyPatch(before: ChromaKey | undefined, patch: Partial<ChromaKey> | undefined): ChromaKey {
   if (!patch) {
@@ -2123,6 +2138,80 @@ function mergeChromaKeyPatch(before: ChromaKey | undefined, patch: Partial<Chrom
     });
   }
   return normalizeChromaKey({ ...before, ...patch });
+}
+
+export class PiPLayoutCommand implements Command {
+  readonly description = 'Apply PiP layout';
+  private before?: Timeline;
+
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly mainClipId: string,
+    private readonly pipClipId: string,
+    private readonly options: PiPLayoutCommandOptions
+  ) {}
+
+  execute(): void {
+    const timeline = this.accessor.getTimeline();
+    if (this.mainClipId === this.pipClipId) {
+      throw new Error('PiP layout requires two different clips');
+    }
+    const mainClip = findClip(timeline, this.mainClipId);
+    const pipClip = findClip(timeline, this.pipClipId);
+    if (!isPiPVisualClip(mainClip) || !isPiPVisualClip(pipClip)) {
+      throw new Error('PiP layout requires two visual clips');
+    }
+    this.before ??= timeline;
+    const pipTransform = calculatePiPTransform({
+      position: this.options.position ?? 'bottom-right',
+      canvasWidth: this.options.canvasWidth,
+      canvasHeight: this.options.canvasHeight,
+      sourceWidth: this.options.pipSourceWidth,
+      sourceHeight: this.options.pipSourceHeight,
+      scale: this.options.scale,
+      margin: this.options.margin
+    });
+    const nextById = new Map<string, Clip>([
+      [
+        mainClip.id,
+        {
+          ...mainClip,
+          transform: normalizeTransform(createFullFrameTransform()),
+          border: normalizeClipBorder({ enabled: false })
+        } as Clip
+      ],
+      [
+        pipClip.id,
+        {
+          ...pipClip,
+          transform: normalizeTransform(pipTransform),
+          border: normalizeClipBorder({
+            enabled: true,
+            color: '#ffffff',
+            width: 6,
+            ...this.options.border
+          })
+        } as Clip
+      ]
+    ]);
+    this.accessor.setTimeline({
+      ...timeline,
+      tracks: timeline.tracks.map((track) => ({
+        ...track,
+        clips: track.clips.map((clip) => nextById.get(clip.id) ?? clip)
+      }))
+    });
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setTimeline(this.before);
+    }
+  }
+}
+
+function isPiPVisualClip(clip: Clip): boolean {
+  return clip.type === 'video' || clip.type === 'image' || clip.type === 'nested-sequence';
 }
 
 export class UpdateClipCommand implements Command {
@@ -2151,6 +2240,7 @@ export class UpdateClipCommand implements Command {
       panorama: normalizeClipPanoramaView({ ...this.before.panorama, ...this.patch.panorama }),
       masks: this.patch.masks === undefined ? normalizeMasks(this.before.masks) : normalizeMasks(this.patch.masks),
       motionTrack: this.patch.motionTrack === undefined ? normalizeMotionTrack(this.before.motionTrack, this.before.duration) : normalizeMotionTrack(this.patch.motionTrack, this.before.duration),
+      border: this.patch.border === undefined ? normalizeClipBorder(this.before.border) : normalizeClipBorder({ ...(this.before.border ?? {}), ...this.patch.border }),
       sequenceFrameRate: normalizeSequenceFrameRate(this.patch.sequenceFrameRate ?? this.before.sequenceFrameRate),
       transform: normalizeTransform(
         this.patch.transform?.scale !== undefined && this.patch.transform.scaleX === undefined && this.patch.transform.scaleY === undefined

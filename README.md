@@ -88,6 +88,7 @@ Golden fixtures:
 
 - `text-drawtext`: solid dark-blue background plus a `drawtext=textfile` text clip with pink text and a cyan text box; the sampled frame must contain more than 1000 non-background pixels, more than 500 pink text pixels, and more than 5000 cyan box pixels.
 - `multi-clip-overlay`: coral first video segment, blue second video segment, and yellow image overlay on the second segment; center pixels must be near `[217, 85, 63, 255]` at `0.45s` and `[247, 216, 74, 255]` at `1.45s`.
+- `pip-layout`: blue main video with a yellow 25% picture-in-picture overlay in the bottom-right corner; export must include the PiP scale filter and cyan `drawbox` border, and the sampled bottom-right pixel must not be the main background color.
 - `audio-volume-fade`: violet video with embedded audio, `fadeInDuration: 0.5`, and `volume: 0.5`; export must be non-empty, duration-correct, and include the fade and volume filters.
 - `subtitle-burn-in`: solid dark-blue background plus two subtitle clips serialized to a temporary SRT artifact; export must include the `subtitles=filename` filter, white `PrimaryColour` force style with `MarginV=72`, and more than 200 white subtitle pixels.
 - `color-correction`: cyan video with `hue: 60`; export must include the `eq` and `hue=h=60` filters and shift the center pixel away from cyan to a blue-dominant `[141, 126, 254, 255]`.
