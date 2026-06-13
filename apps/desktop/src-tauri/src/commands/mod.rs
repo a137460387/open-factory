@@ -1,10 +1,12 @@
 pub mod backup;
 pub mod background;
 pub mod cache;
+pub mod demucs;
 pub mod ffmpeg;
 pub mod files;
 pub mod media;
 pub mod proxy;
+pub mod recording;
 pub mod scene;
 pub mod share;
 pub mod smoke;

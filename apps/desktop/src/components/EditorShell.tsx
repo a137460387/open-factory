@@ -74,6 +74,7 @@ import { collectProjectArchivePreflight, saveOfflineMediaReport } from '../lib/m
 import { saveProjectSnapshot } from '../lib/projectSnapshots';
 import { scanProjectHealth } from '../lib/projectHealth';
 import { createSharePackageFromProject, type SharePackageWorkflowProgress } from '../lib/sharePackage';
+import { canSeparateAudioForClip, getDemucsAvailability, separateAudioForClip, type DemucsAvailability } from '../lib/demucs';
 import {
   chooseProjectSavePath,
   chooseProjectToOpen,
@@ -88,7 +89,20 @@ import {
   writeProjectFile,
   type AutosaveRecoveryCandidate
 } from '../lib/projectFiles';
-import { bridgeConfirm, copyFile as bridgeCopyFile, listenBridge, openDirectoryDialog, sendNotification, updateExportTrayProgress, writeFile as bridgeWriteFile } from '../lib/tauri-bridge';
+import {
+  bridgeConfirm,
+  cancelDemucs,
+  copyFile as bridgeCopyFile,
+  listenBridge,
+  openDirectoryDialog,
+  sendNotification,
+  startRecording,
+  stopRecording,
+  updateExportTrayProgress,
+  writeFile as bridgeWriteFile,
+  type DemucsProgressEvent,
+  type RecordingSource
+} from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
 import {
   appendMacroHistoryEntry,
@@ -108,8 +122,10 @@ import { useBackgroundMediaJobs } from '../media/useBackgroundMediaJobs';
 import { ProjectHealthDialog } from '../project-health/ProjectHealthDialog';
 import { ProjectTemplateDialog } from '../project-templates/ProjectTemplateDialog';
 import { commandManager, projectAccessor, timelineAccessor } from '../store/commandManager';
+import { useDemucsSettingsStore } from '../store/demucsSettingsStore';
 import { selectClipById, useEditorStore } from '../store/editorStore';
 import { useProxySettingsStore } from '../store/proxySettingsStore';
+import { useRecordingSettingsStore } from '../store/recordingSettingsStore';
 import type { VideoStitchWizardSettings } from '../video-stitching/VideoStitchWizardDialog';
 
 const AudioMixer = lazy(() => import('./AudioMixer/AudioMixer').then((module) => ({ default: module.AudioMixer })));
@@ -138,6 +154,8 @@ export function EditorShell() {
   const setMedia = useEditorStore((state) => state.setMedia);
   const addMedia = useEditorStore((state) => state.addMedia);
   const proxySettings = useProxySettingsStore((state) => state.settings);
+  const demucsExecutablePath = useDemucsSettingsStore((state) => state.executablePath);
+  const recordingSettings = useRecordingSettingsStore((state) => state.settings);
   const setMediaMetadata = useEditorStore((state) => state.setMediaMetadata);
   const setDirty = useEditorStore((state) => state.setDirty);
   const setProjectPath = useEditorStore((state) => state.setProjectPath);
@@ -181,10 +199,19 @@ export function EditorShell() {
   const [safeFrameGuides, setSafeFrameGuides] = useState(false);
   const [viewportSize, setViewportSize] = useState(() => readViewportSize());
   const [lastBackupAt, setLastBackupAt] = useState<string>();
+  const [demucsAvailability, setDemucsAvailability] = useState<DemucsAvailability>({ ready: false, error: zhCN.demucs.notConfigured });
+  const [audioSeparationClipId, setAudioSeparationClipId] = useState<string>();
+  const [audioSeparationProgress, setAudioSeparationProgress] = useState<number>();
+  const [recordingTask, setRecordingTask] = useState<{ taskId: string; source: RecordingSource; outputPath: string; startedAt: number }>();
+  const [recordingElapsedSeconds, setRecordingElapsedSeconds] = useState(0);
   const exportTasks = useExportQueueStore((state) => state.tasks);
   const exportQueuePaused = useExportQueueStore((state) => state.queuePaused);
 
   const selectedClip = useMemo(() => selectClipById(project, selectedClipId), [project, selectedClipId]);
+  const selectedClipMedia = useMemo(
+    () => (selectedClip && 'mediaId' in selectedClip ? project.media.find((asset) => asset.id === selectedClip.mediaId) : undefined),
+    [project.media, selectedClip]
+  );
   const selectedClipLocked = useMemo(
     () => Boolean(selectedClip && project.timeline.tracks.find((track) => track.id === selectedClip.trackId)?.locked),
     [project.timeline.tracks, selectedClip]
@@ -201,6 +228,7 @@ export function EditorShell() {
       selected.every((item) => item?.track.type === 'video' && (item.clip.type === 'video' || item.clip.type === 'image'))
     );
   }, [project.timeline.tracks, selectedClipIds]);
+  const canSeparateSelectedAudio = canSeparateAudioForClip(selectedClip, selectedClipMedia, demucsAvailability.ready) && !audioSeparationClipId;
   const timelineHeightPx = clampTimelineHeight(layoutSettings.timelineHeightPx, viewportSize.height);
   const effectivePanels = useMemo(() => getEffectivePanelState(layoutSettings, viewportSize.width), [layoutSettings, viewportSize.width]);
   const editorGridRows = `auto minmax(0,1fr) 6px ${timelineHeightPx}px`;
@@ -258,6 +286,43 @@ export function EditorShell() {
       console.warn('Unable to update export tray progress', error);
     });
   }, [exportTasks]);
+
+  useEffect(() => {
+    let canceled = false;
+    void getDemucsAvailability({ executablePath: demucsExecutablePath }).then((availability) => {
+      if (!canceled) {
+        setDemucsAvailability(availability);
+      }
+    });
+    return () => {
+      canceled = true;
+    };
+  }, [demucsExecutablePath]);
+
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    void listenBridge<DemucsProgressEvent>('demucs-progress', (payload) => {
+      if (payload.clipId === audioSeparationClipId) {
+        setAudioSeparationProgress(payload.progress);
+      }
+    }).then((dispose) => {
+      unlisten = dispose;
+    });
+    return () => {
+      unlisten?.();
+    };
+  }, [audioSeparationClipId]);
+
+  useEffect(() => {
+    if (!recordingTask) {
+      setRecordingElapsedSeconds(0);
+      return undefined;
+    }
+    const update = () => setRecordingElapsedSeconds((Date.now() - recordingTask.startedAt) / 1000);
+    update();
+    const interval = window.setInterval(update, 500);
+    return () => window.clearInterval(interval);
+  }, [recordingTask]);
 
   useEffect(() => {
     let disposed = false;
@@ -894,6 +959,91 @@ export function EditorShell() {
     [refreshProjectHealth]
   );
 
+  const separateSelectedAudio = useCallback(async () => {
+    if (!selectedClip || (selectedClip.type !== 'audio' && selectedClip.type !== 'video') || !selectedClipMedia) {
+      showToast({ kind: 'warning', title: zhCN.demucs.unavailableTitle, message: zhCN.demucs.noClipSelected });
+      return;
+    }
+    if (!demucsAvailability.ready) {
+      showToast({ kind: 'warning', title: zhCN.demucs.unavailableTitle, message: demucsAvailability.error ?? zhCN.demucs.notConfigured });
+      return;
+    }
+    setAudioSeparationClipId(selectedClip.id);
+    setAudioSeparationProgress(0);
+    showToast({ kind: 'info', title: zhCN.demucs.runningTitle, message: zhCN.demucs.runningMessage(0) });
+    try {
+      const separation = await separateAudioForClip(selectedClip, selectedClipMedia, { executablePath: demucsExecutablePath });
+      addMedia(separation.media);
+      for (const track of separation.tracks) {
+        commandManager.execute(new AddTrackCommand(timelineAccessor, track));
+      }
+      const separatedClipIds = separation.tracks.flatMap((track) => track.clips.map((clip) => clip.id));
+      setSelectedClipIds(separatedClipIds);
+      showToast({ kind: 'success', title: zhCN.demucs.completeTitle, message: zhCN.demucs.completeMessage(separation.media.length) });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : zhCN.demucs.failedMessage;
+      const canceled = message.toLowerCase().includes('canceled') || message.includes('取消');
+      showToast({ kind: canceled ? 'warning' : 'error', title: canceled ? zhCN.demucs.canceledTitle : zhCN.demucs.failedTitle, message });
+    } finally {
+      setAudioSeparationClipId(undefined);
+      setAudioSeparationProgress(undefined);
+    }
+  }, [addMedia, demucsAvailability, demucsExecutablePath, selectedClip, selectedClipMedia, setSelectedClipIds]);
+
+  const cancelAudioSeparation = useCallback(async () => {
+    if (!audioSeparationClipId) {
+      return;
+    }
+    try {
+      await cancelDemucs(audioSeparationClipId);
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.demucs.cancelFailedTitle, message: error instanceof Error ? error.message : zhCN.demucs.failedMessage });
+    }
+  }, [audioSeparationClipId]);
+
+  const startEditorRecording = useCallback(
+    async (source: RecordingSource) => {
+      if (recordingTask) {
+        return;
+      }
+      const taskId = createId('recording');
+      try {
+        const result = await startRecording({
+          taskId,
+          source,
+          width: recordingSettings.width,
+          height: recordingSettings.height,
+          frameRate: recordingSettings.frameRate
+        });
+        setRecordingTask({ taskId: result.taskId, source, outputPath: result.outputPath, startedAt: Date.now() });
+        showToast({ kind: 'info', title: zhCN.recording.startedTitle, message: zhCN.recording.startedMessage(source) });
+      } catch (error) {
+        showToast({ kind: 'error', title: zhCN.recording.startFailedTitle, message: error instanceof Error ? error.message : zhCN.recording.failedMessage });
+      }
+    },
+    [recordingSettings, recordingTask]
+  );
+
+  const stopEditorRecording = useCallback(async () => {
+    const task = recordingTask;
+    if (!task) {
+      return;
+    }
+    try {
+      const result = await stopRecording(task.taskId);
+      const imported = await probeMediaPaths([result.outputPath], useEditorStore.getState().project.media);
+      if (imported.media.length > 0) {
+        addMedia(imported.media);
+      }
+      showToast({ kind: 'success', title: zhCN.recording.stoppedTitle, message: zhCN.recording.importedMessage(imported.media.length) });
+    } catch (error) {
+      showToast({ kind: 'error', title: zhCN.recording.stopFailedTitle, message: error instanceof Error ? error.message : zhCN.recording.failedMessage });
+    } finally {
+      setRecordingTask(undefined);
+      setRecordingElapsedSeconds(0);
+    }
+  }, [addMedia, recordingTask]);
+
   const executeNewProject = useCallback(
     (nextProject: ReturnType<typeof createProject>, nextTemplatePreset?: ExportPreset) => {
       commandManager.execute(
@@ -1262,6 +1412,8 @@ export function EditorShell() {
           onOpenVideoStitchWizard={() => setVideoStitchWizardOpen(true)}
           onOpenMacroHistory={() => setMacroHistoryOpen(true)}
           onImportSubtitles={() => void importSubtitles()}
+          onStartRecording={(source) => void startEditorRecording(source)}
+          onStopRecording={() => void stopEditorRecording()}
           onExportVideo={() => setExportDialogOpen(true)}
           onExportTimeline={() => setTimelineExportDialogOpen(true)}
           onExportCurrentFrame={() => void exportCurrentFrame()}
@@ -1271,8 +1423,15 @@ export function EditorShell() {
             setHistoryPanelOpen(false);
             setSmartRoughCutOpen((open) => !open);
           }}
+          onSeparateAudio={() => void separateSelectedAudio()}
+          onCancelAudioSeparation={() => void cancelAudioSeparation()}
           onCreateMulticamSequence={createMulticamSequence}
           canCreateMulticamSequence={canCreateMulticamSequence}
+          canSeparateAudio={canSeparateSelectedAudio}
+          audioSeparationRunning={Boolean(audioSeparationClipId)}
+          audioSeparationProgress={audioSeparationProgress}
+          recordingActive={Boolean(recordingTask)}
+          recordingElapsedSeconds={recordingElapsedSeconds}
           smartRoughCutOpen={smartRoughCutOpen}
           historyPanelOpen={historyPanelOpen}
           storyboardOpen={storyboardOpen}

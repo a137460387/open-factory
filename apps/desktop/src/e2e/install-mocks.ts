@@ -43,6 +43,7 @@ let minimizedToTray = false;
 let lastTrayProgress: { progress: number; runningCount: number } | undefined;
 let powerActionCalls: Array<{ action: 'shutdown' | 'hibernate'; allowPowerActions: boolean }> = [];
 let notifications: Array<{ title: string; body: string }> = [];
+let recordingTasks = new Map<string, { outputPath: string; startedAt: number }>();
 
 const sampleProjectPath = 'C:/Projects/sample.cutproj.json';
 const missingProjectPath = 'C:/Projects/missing.cutproj.json';
@@ -61,6 +62,7 @@ const tinySrt = 'C:/Media/tiny-subtitles.srt';
 const silencePatternAudio = 'C:/Media/silence-pattern.wav';
 const whisperExecutable = 'C:/Tools/whisper.exe';
 const whisperModel = 'C:/Models/base.bin';
+const demucsExecutable = 'C:/Tools/demucs.exe';
 const relinkedVideo = 'C:/Relink/tiny-video.mp4';
 const relinkedAudio = 'C:/Relink/tiny-audio.wav';
 const relinkedImage = 'C:/Relink/test-image.png';
@@ -139,6 +141,7 @@ for (const path of [
   silencePatternAudio,
   whisperExecutable,
   whisperModel,
+  demucsExecutable,
   relinkedVideo,
   relinkedAudio,
   relinkedImage,
@@ -431,6 +434,40 @@ const mocks: TauriMocks = {
     mtimes.set(srtPath, Date.now());
     persistFiles();
     return { srtPath, contents, durationMs: 10 };
+  },
+  runDemucs: async ({ clipId }) => {
+    emit('demucs-progress', { clipId, progress: 0.35, progressPct: 35 });
+    await wait(10);
+    emit('demucs-progress', { clipId, progress: 1, progressPct: 100 });
+    const outputDir = `C:/Users/E2E/AppData/Roaming/open-factory/demucs/${clipId}`;
+    const vocalsPath = `${outputDir}/vocals.wav`;
+    const accompanimentPath = `${outputDir}/no_vocals.wav`;
+    files.set(vocalsPath, 'mock vocals');
+    files.set(accompanimentPath, 'mock accompaniment');
+    exists.set(vocalsPath, true);
+    exists.set(accompanimentPath, true);
+    mtimes.set(vocalsPath, Date.now());
+    mtimes.set(accompanimentPath, Date.now());
+    persistFiles();
+    return { vocalsPath, accompanimentPath, outputDir, durationMs: 10 };
+  },
+  cancelDemucs: () => undefined,
+  startRecording: ({ taskId, source }) => {
+    const outputPath = `${appDataDir}/recordings/${source}-${taskId}.mp4`;
+    recordingTasks.set(taskId, { outputPath, startedAt: Date.now() });
+    return { taskId, outputPath };
+  },
+  stopRecording: (taskId) => {
+    const task = recordingTasks.get(taskId);
+    if (!task) {
+      throw new Error('Recording task not found');
+    }
+    recordingTasks.delete(taskId);
+    files.set(task.outputPath, 'mock recording');
+    exists.set(task.outputPath, true);
+    mtimes.set(task.outputPath, Date.now());
+    persistFiles();
+    return { taskId, outputPath: task.outputPath, durationMs: Date.now() - task.startedAt };
   },
   probeMediaPath: (path) => {
     const base = {
@@ -1083,6 +1120,10 @@ window.__E2E_ACTIONS__ = {
   clearE2eFiles: () => {
     localStorage.removeItem(PERSISTED_FILES_KEY);
     localStorage.removeItem(PERSISTED_MTIMES_KEY);
+    localStorage.removeItem('open-factory:demucs-executable-path');
+    localStorage.removeItem('open-factory:recording-width');
+    localStorage.removeItem('open-factory:recording-height');
+    localStorage.removeItem('open-factory:recording-frame-rate');
     for (const path of Array.from(files.keys()).filter((item) => item.endsWith('.autosave'))) {
       files.delete(path);
       exists.set(path, false);
@@ -1124,6 +1165,7 @@ window.__E2E_ACTIONS__ = {
     lastTrayProgress = undefined;
     powerActionCalls = [];
     notifications = [];
+    recordingTasks = new Map();
     localStorage.removeItem('open-factory:proxy-settings');
     localStorage.removeItem('open-factory:plugins');
     localStorage.removeItem('open-factory:settings');

@@ -189,6 +189,46 @@ export interface WhisperProgressEvent {
   progressPct: number;
 }
 
+export interface DemucsRequest {
+  executablePath: string;
+  mediaPath: string;
+  clipId: string;
+}
+
+export interface DemucsResult {
+  vocalsPath: string;
+  accompanimentPath: string;
+  outputDir: string;
+  durationMs: number;
+}
+
+export interface DemucsProgressEvent {
+  clipId: string;
+  progress: number;
+  progressPct: number;
+}
+
+export type RecordingSource = 'screen' | 'camera';
+
+export interface RecordingRequest {
+  taskId: string;
+  source: RecordingSource;
+  width: number;
+  height: number;
+  frameRate: number;
+}
+
+export interface RecordingStartResult {
+  taskId: string;
+  outputPath: string;
+}
+
+export interface RecordingStopResult {
+  taskId: string;
+  outputPath: string;
+  durationMs: number;
+}
+
 export type NativeSilenceRange = [number, number];
 
 export type UnsavedCloseAction = 'save' | 'discard' | 'cancel';
@@ -259,6 +299,10 @@ export type TauriMocks = Partial<{
   generateProxy(plan: ProxyPlan): Promise<ProxyResult> | ProxyResult;
   detectSceneChanges(request: SceneDetectRequest): Promise<SceneDetectionResult> | SceneDetectionResult;
   runWhisper(request: WhisperRequest): Promise<WhisperResult> | WhisperResult;
+  runDemucs(request: DemucsRequest): Promise<DemucsResult> | DemucsResult;
+  cancelDemucs(clipId: string): Promise<void> | void;
+  startRecording(request: RecordingRequest): Promise<RecordingStartResult> | RecordingStartResult;
+  stopRecording(taskId: string): Promise<RecordingStopResult> | RecordingStopResult;
   getPreviewSmokeConfig(): Promise<PreviewSmokeConfig | undefined> | PreviewSmokeConfig | undefined;
   getCancelSmokeConfig(): Promise<CancelSmokeConfig | undefined> | CancelSmokeConfig | undefined;
   listen<T>(event: string, handler: (payload: T) => void): Promise<() => void> | (() => void);
@@ -499,6 +543,39 @@ export async function runWhisper(request: WhisperRequest): Promise<WhisperResult
     return mock(request);
   }
   return invoke<WhisperResult>('run_whisper', { request });
+}
+
+export async function runDemucs(request: DemucsRequest): Promise<DemucsResult> {
+  const mock = getTauriMocks()?.runDemucs;
+  if (mock) {
+    return mock(request);
+  }
+  return invoke<DemucsResult>('run_demucs', { request });
+}
+
+export async function cancelDemucs(clipId: string): Promise<void> {
+  const mock = getTauriMocks()?.cancelDemucs;
+  if (mock) {
+    await mock(clipId);
+    return;
+  }
+  await invoke('cancel_demucs', { clipId });
+}
+
+export async function startRecording(request: RecordingRequest): Promise<RecordingStartResult> {
+  const mock = getTauriMocks()?.startRecording;
+  if (mock) {
+    return mock(request);
+  }
+  return invoke<RecordingStartResult>('start_recording', { request });
+}
+
+export async function stopRecording(taskId: string): Promise<RecordingStopResult> {
+  const mock = getTauriMocks()?.stopRecording;
+  if (mock) {
+    return mock(taskId);
+  }
+  return invoke<RecordingStopResult>('stop_recording', { taskId });
 }
 
 export async function scanDirectory(path: string, depth = 3): Promise<string[]> {

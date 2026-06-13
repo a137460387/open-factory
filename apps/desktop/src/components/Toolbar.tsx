@@ -1,4 +1,4 @@
-import { Archive, Captions, ChevronDown, Download, FileDown, FilePlus2, FolderOpen, History, ImageDown, LayoutGrid, Mic2, PanelsTopLeft, Pause, Play, Redo2, RotateCcw, Save, Scissors, Settings, Trash2, Undo2, WandSparkles, XCircle } from 'lucide-react';
+import { Archive, Camera, Captions, ChevronDown, Download, FileDown, FilePlus2, FolderOpen, History, ImageDown, LayoutGrid, Mic2, Monitor, PanelsTopLeft, Pause, Play, Redo2, RotateCcw, Save, Scissors, Settings, Square, Trash2, Undo2, WandSparkles, XCircle } from 'lucide-react';
 import { timelineHasExportableVideo } from '@open-factory/editor-core';
 import { clsx } from 'clsx';
 import { useState } from 'react';
@@ -25,14 +25,23 @@ interface ToolbarProps {
   onOpenVideoStitchWizard(): void;
   onOpenMacroHistory(): void;
   onImportSubtitles(): void;
+  onStartRecording(source: 'screen' | 'camera'): void;
+  onStopRecording(): void;
   onExportVideo(): void;
   onExportTimeline(): void;
   onExportCurrentFrame(): void;
   onCancelExport(): void;
   onSplitSelected(): void;
   onToggleSmartRoughCut(): void;
+  onSeparateAudio(): void;
+  onCancelAudioSeparation(): void;
   onCreateMulticamSequence(): void;
   canCreateMulticamSequence: boolean;
+  canSeparateAudio: boolean;
+  audioSeparationRunning: boolean;
+  audioSeparationProgress?: number;
+  recordingActive: boolean;
+  recordingElapsedSeconds: number;
   smartRoughCutOpen: boolean;
   historyPanelOpen: boolean;
   storyboardOpen: boolean;
@@ -60,6 +69,7 @@ export function Toolbar(props: ToolbarProps) {
   const [editMenuOpen, setEditMenuOpen] = useState(false);
   const [viewMenuOpen, setViewMenuOpen] = useState(false);
   const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
+  const [recordMenuOpen, setRecordMenuOpen] = useState(false);
   const project = useEditorStore((state) => state.project);
   const isPlaying = useEditorStore((state) => state.isPlaying);
   const setIsPlaying = useEditorStore((state) => state.setIsPlaying);
@@ -287,6 +297,23 @@ export function Toolbar(props: ToolbarProps) {
               <span>{t.videoStitchWizard}</span>
             </button>
             <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+              type="button"
+              disabled={!props.canSeparateAudio && !props.audioSeparationRunning}
+              data-testid="toolbar-tools-audio-separation-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                if (props.audioSeparationRunning) {
+                  props.onCancelAudioSeparation();
+                } else {
+                  props.onSeparateAudio();
+                }
+              }}
+            >
+              <span>{props.audioSeparationRunning ? t.cancelAudioSeparation : t.audioSeparation}</span>
+              {props.audioSeparationRunning && props.audioSeparationProgress !== undefined ? <span className="text-xs text-slate-500">{Math.round(props.audioSeparationProgress * 100)}%</span> : null}
+            </button>
+            <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
               type="button"
               data-testid="toolbar-tools-macro-history-menu-item"
@@ -318,6 +345,56 @@ export function Toolbar(props: ToolbarProps) {
       <div className="mx-1 h-7 w-px bg-line" />
       <ToolButton title={t.importMedia} onClick={props.onImportMedia} icon={<FileDown size={17} />} testId="toolbar-import-media-button" />
       <ToolButton title={t.importSubtitles} onClick={props.onImportSubtitles} icon={<Captions size={17} />} testId="import-subtitles-button" />
+      <div className="relative">
+        <button
+          className="inline-flex h-9 items-center gap-1 rounded-md border border-line bg-panel px-2 text-sm font-medium text-slate-700 hover:bg-white"
+          type="button"
+          data-testid="toolbar-record-menu-button"
+          onClick={() => {
+            if (props.recordingActive) {
+              props.onStopRecording();
+              return;
+            }
+            setFileMenuOpen(false);
+            setEditMenuOpen(false);
+            setViewMenuOpen(false);
+            setToolsMenuOpen(false);
+            setRecordMenuOpen((open) => !open);
+          }}
+        >
+          {props.recordingActive ? <Square size={15} /> : <Monitor size={15} />}
+          <span>{props.recordingActive ? t.stopRecording : t.record}</span>
+          {props.recordingActive ? <span className="text-xs tabular-nums text-slate-500">{formatRecordingElapsed(props.recordingElapsedSeconds)}</span> : <ChevronDown size={14} />}
+        </button>
+        {recordMenuOpen ? (
+          <div className="absolute left-0 top-10 z-20 min-w-40 rounded-md border border-line bg-white py-1 shadow-soft" data-testid="toolbar-record-menu">
+            <button
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-record-screen-menu-item"
+              onClick={() => {
+                setRecordMenuOpen(false);
+                props.onStartRecording('screen');
+              }}
+            >
+              <Monitor size={14} />
+              <span>{t.recordScreen}</span>
+            </button>
+            <button
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-record-camera-menu-item"
+              onClick={() => {
+                setRecordMenuOpen(false);
+                props.onStartRecording('camera');
+              }}
+            >
+              <Camera size={14} />
+              <span>{t.recordCamera}</span>
+            </button>
+          </div>
+        ) : null}
+      </div>
       <ToolButton title={canExport ? t.exportVideo : t.exportDisabled} disabled={!canExport || isExporting} onClick={props.onExportVideo} icon={<Download size={17} />} testId="toolbar-export-button" />
       <ToolButton title={t.exportTimeline} disabled={isExporting} onClick={props.onExportTimeline} icon={<FileDown size={17} />} testId="toolbar-export-timeline-button" />
       <ToolButton
@@ -438,4 +515,13 @@ function ToolButton({ title, icon, disabled, active, onClick, testId, playbackSt
       {icon}
     </button>
   );
+}
+
+function formatRecordingElapsed(seconds: number): string {
+  const safeSeconds = Math.max(0, Math.floor(seconds));
+  const minutes = Math.floor(safeSeconds / 60)
+    .toString()
+    .padStart(2, '0');
+  const remainingSeconds = (safeSeconds % 60).toString().padStart(2, '0');
+  return `${minutes}:${remainingSeconds}`;
 }

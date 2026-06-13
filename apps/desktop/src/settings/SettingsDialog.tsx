@@ -15,6 +15,7 @@ import {
 import { formatBackupDisplayTime } from '../backup/projectBackup';
 import { getLanguage, normalizeLanguage, zhCN, type Language } from '../i18n/strings';
 import { parseAutomationRulesJson, serializeAutomationRulesJson } from '../automation/automation-rules';
+import { pickDemucsExecutablePath } from '../lib/demucs';
 import { loadLutLibrary, toggleLutFavorite, type LutLibraryItem } from '../lib/lutLibrary';
 import { openDirectoryDialog, readWebdavPassword, writeWebdavPassword } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
@@ -38,8 +39,10 @@ import {
   type TimelineShortcutBindings
 } from '../shortcuts/timeline-shortcuts';
 import { commandManager, projectAccessor, timelineAccessor } from '../store/commandManager';
+import { useDemucsSettingsStore } from '../store/demucsSettingsStore';
 import { useEditorStore } from '../store/editorStore';
 import { PROXY_RESOLUTION_PRESETS, PROXY_TRIGGER_THRESHOLDS, useProxySettingsStore, type ProxyResolutionPreset, type ProxyTriggerThreshold } from '../store/proxySettingsStore';
+import { useRecordingSettingsStore } from '../store/recordingSettingsStore';
 import { useTranslationSettingsStore, type TranslationProvider } from '../store/translationSettingsStore';
 import {
   DEFAULT_BACKUP_SETTINGS,
@@ -117,6 +120,10 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
   const setTranslationProvider = useTranslationSettingsStore((state) => state.setProvider);
   const setTranslationApiKey = useTranslationSettingsStore((state) => state.setApiKey);
   const setTranslationTargetLanguage = useTranslationSettingsStore((state) => state.setTargetLanguage);
+  const demucsExecutablePath = useDemucsSettingsStore((state) => state.executablePath);
+  const setDemucsExecutablePath = useDemucsSettingsStore((state) => state.setExecutablePath);
+  const recordingSettings = useRecordingSettingsStore((state) => state.settings);
+  const setRecordingSettings = useRecordingSettingsStore((state) => state.setSettings);
   const proxyResolutionPreset = useProxySettingsStore((state) => state.resolutionPreset);
   const proxyTriggerShortEdge = useProxySettingsStore((state) => state.triggerShortEdge);
   const setProxyResolutionPreset = useProxySettingsStore((state) => state.setResolutionPreset);
@@ -457,6 +464,21 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
     }
   }
 
+  async function chooseDemucsExecutable() {
+    try {
+      const path = await pickDemucsExecutablePath();
+      if (path) {
+        setDemucsExecutablePath(path);
+      }
+    } catch (demucsError) {
+      showToast({
+        kind: 'warning',
+        title: t.general.chooseDemucsExecutable,
+        message: demucsError instanceof Error ? demucsError.message : t.general.demucsChooseFailed
+      });
+    }
+  }
+
   async function updateExportBackgroundSettings(nextSettings: ExportBackgroundSettings) {
     setExportBackgroundSettings(nextSettings);
     try {
@@ -738,6 +760,78 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
                   </select>
                 </label>
                 <div className="rounded-md border border-line bg-panel p-3 text-xs text-slate-600">{t.general.languageDescription}</div>
+                <div className="rounded-md border border-line bg-panel p-3">
+                  <div className="mb-2">
+                    <h4 className="text-xs font-semibold text-slate-700">{t.general.demucsTitle}</h4>
+                    <p className="mt-1 text-xs text-slate-500">{t.general.demucsDescription}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      className="min-w-0 flex-1 rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                      value={demucsExecutablePath}
+                      placeholder={t.general.demucsExecutable}
+                      data-testid="settings-demucs-executable-input"
+                      onChange={(event) => setDemucsExecutablePath(event.target.value)}
+                    />
+                    <button
+                      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-line bg-white text-slate-600 hover:bg-panel"
+                      type="button"
+                      title={t.general.chooseDemucsExecutable}
+                      aria-label={t.general.chooseDemucsExecutable}
+                      data-testid="settings-demucs-executable-choose-button"
+                      onClick={() => void chooseDemucsExecutable()}
+                    >
+                      <FolderOpen size={15} />
+                    </button>
+                  </div>
+                </div>
+                <div className="rounded-md border border-line bg-panel p-3">
+                  <div className="mb-2">
+                    <h4 className="text-xs font-semibold text-slate-700">{t.general.recordingTitle}</h4>
+                    <p className="mt-1 text-xs text-slate-500">{t.general.recordingDescription}</p>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    <label className="block text-xs font-medium text-slate-600">
+                      {t.general.recordingWidth}
+                      <input
+                        className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                        type="number"
+                        min={320}
+                        max={7680}
+                        step={16}
+                        value={recordingSettings.width}
+                        data-testid="settings-recording-width-input"
+                        onChange={(event) => setRecordingSettings({ width: Number(event.target.value) })}
+                      />
+                    </label>
+                    <label className="block text-xs font-medium text-slate-600">
+                      {t.general.recordingHeight}
+                      <input
+                        className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                        type="number"
+                        min={240}
+                        max={4320}
+                        step={16}
+                        value={recordingSettings.height}
+                        data-testid="settings-recording-height-input"
+                        onChange={(event) => setRecordingSettings({ height: Number(event.target.value) })}
+                      />
+                    </label>
+                    <label className="block text-xs font-medium text-slate-600">
+                      {t.general.recordingFrameRate}
+                      <input
+                        className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                        type="number"
+                        min={1}
+                        max={120}
+                        step={1}
+                        value={recordingSettings.frameRate}
+                        data-testid="settings-recording-framerate-input"
+                        onChange={(event) => setRecordingSettings({ frameRate: Number(event.target.value) })}
+                      />
+                    </label>
+                  </div>
+                </div>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <label className="block text-xs font-medium text-slate-600">
                     {t.general.projectFrameRate}
