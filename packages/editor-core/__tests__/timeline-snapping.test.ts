@@ -74,6 +74,22 @@ describe('timeline snapping', () => {
     expect(target).toMatchObject({ edge: 'start', snappedStart: 2.5, candidate: { time: 2.5, kind: 'marker' } });
   });
 
+  it('keeps beat snap candidates ahead of clip edges when distances match', () => {
+    const target = findTimelineSnapTarget({
+      clipStart: 2.45,
+      clipDuration: 1,
+      candidates: [
+        { time: 2.4, kind: 'clip-end', clipId: 'neighbor' },
+        { time: 2.5, kind: 'beat' }
+      ],
+      pixelsPerSecond: 100,
+      thresholdPx: 8,
+      edges: ['start']
+    });
+
+    expect(target).toMatchObject({ edge: 'start', snappedStart: 2.5, candidate: { time: 2.5, kind: 'beat' } });
+  });
+
   it('respects disabled snapping, matching the Alt-drag behavior', () => {
     expect(
       findTimelineSnapTarget({

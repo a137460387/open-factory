@@ -2,7 +2,7 @@ import { round } from './time';
 
 export type SnapEdge = 'start' | 'end';
 
-export type SnapCandidateKind = 'timeline-start' | 'playhead' | 'marker' | 'clip-start' | 'clip-end';
+export type SnapCandidateKind = 'timeline-start' | 'playhead' | 'marker' | 'beat' | 'clip-start' | 'clip-end';
 
 export interface TimelineSnapCandidate {
   time: number;
@@ -59,7 +59,7 @@ export function findTimelineSnapTarget(input: TimelineSnapInput): TimelineSnapTa
         delta: round(delta),
         distancePx
       };
-      if (!best || target.distancePx < best.distancePx) {
+      if (!best || target.distancePx < best.distancePx - EPSILON_PX || (Math.abs(target.distancePx - best.distancePx) <= EPSILON_PX && snapCandidatePriority(target.candidate) > snapCandidatePriority(best.candidate))) {
         best = target;
       }
     }
@@ -70,4 +70,17 @@ export function findTimelineSnapTarget(input: TimelineSnapInput): TimelineSnapTa
 
 function normalizeCandidate(candidate: number | TimelineSnapCandidate): TimelineSnapCandidate {
   return typeof candidate === 'number' ? { time: candidate } : candidate;
+}
+
+function snapCandidatePriority(candidate: TimelineSnapCandidate): number {
+  if (candidate.kind === 'beat') {
+    return 3;
+  }
+  if (candidate.kind === 'marker') {
+    return 2;
+  }
+  if (candidate.kind === 'playhead' || candidate.kind === 'timeline-start') {
+    return 1;
+  }
+  return 0;
 }

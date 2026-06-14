@@ -16,7 +16,7 @@ import {
 import { commandManager, timelineAccessor } from '../store/commandManager';
 import { useEditorStore } from '../store/editorStore';
 import { usePrivacyDetectionSettingsStore } from '../store/privacyDetectionSettingsStore';
-import type { BatchTranscodeTaskResult, ExportPreviewSamplesResult, TauriMocks, WebdavProjectBackupRequest } from '../lib/tauri-bridge';
+import type { BatchTranscodeTaskResult, ExportPreviewSamplesResult, TauriMocks, WebdavExportUploadRequest, WebdavProjectBackupRequest } from '../lib/tauri-bridge';
 import { clearPluginHookLog, getPluginHookLog, refreshPluginRegistry } from '../plugins/plugin-manager';
 import { useExportQueueStore } from '../export/export-queue-store';
 
@@ -43,7 +43,9 @@ let mockSceneTimes = [1];
 let lastConfirmMessage: string | undefined;
 let availableMemoryBytes = 8 * 1024 * 1024 * 1024;
 let webdavPassword: string | undefined;
+let exportUploadWebdavPassword: string | undefined;
 let lastWebdavPutRequest: WebdavProjectBackupRequest | undefined;
+let lastWebdavExportUploadRequest: WebdavExportUploadRequest | undefined;
 let minimizedToTray = false;
 let lastTrayProgress: { progress: number; runningCount: number } | undefined;
 let powerActionCalls: Array<{ action: 'shutdown' | 'hibernate'; allowPowerActions: boolean }> = [];
@@ -373,9 +375,20 @@ const mocks: TauriMocks = {
     lastWebdavPutRequest = request;
     return { status: 201 };
   },
+  putWebdavExportFile: async (request) => {
+    lastWebdavExportUploadRequest = request;
+    if (!files.has(request.sourcePath)) {
+      throw new Error(`Mock export upload source not found: ${request.sourcePath}`);
+    }
+    return { status: 201, bytes: files.get(request.sourcePath)?.length ?? 0 };
+  },
   readWebdavPassword: () => webdavPassword,
   writeWebdavPassword: (password) => {
     webdavPassword = password?.trim() ? password : undefined;
+  },
+  readExportUploadWebdavPassword: () => exportUploadWebdavPassword,
+  writeExportUploadWebdavPassword: (password) => {
+    exportUploadWebdavPassword = password?.trim() ? password : undefined;
   },
   analyzeClip: async ({ clipId }) => {
     emit('clip-analysis-progress', { clipId, progress: 0.35, progressPct: 35 });
@@ -1352,6 +1365,7 @@ window.__E2E_ACTIONS__ = {
   getPowerActionCalls: () => powerActionCalls,
   getNotifications: () => notifications,
   getLastWebdavPutRequest: () => lastWebdavPutRequest,
+  getLastWebdavExportUploadRequest: () => lastWebdavExportUploadRequest,
   addKeyframe: (clipId: unknown, property: unknown, time: unknown, value: unknown) => {
     if (typeof clipId !== 'string' || !isKeyframeProperty(property) || typeof time !== 'number' || typeof value !== 'number') {
       throw new Error('Invalid addKeyframe E2E action input.');
@@ -1457,7 +1471,9 @@ window.__E2E_ACTIONS__ = {
       mtimes.delete(path);
     }
     webdavPassword = undefined;
+    exportUploadWebdavPassword = undefined;
     lastWebdavPutRequest = undefined;
+    lastWebdavExportUploadRequest = undefined;
     lastExportPlan = undefined;
     exportRunCalls = [];
     lastExportPreviewSamplesResult = undefined;

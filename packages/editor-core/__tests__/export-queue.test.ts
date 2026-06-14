@@ -14,6 +14,7 @@ import {
   sortExportQueueByPriority,
   startExportTaskSlots,
   startNextExportTask,
+  updateExportTaskHistoryUpload,
   updateExportTaskSegment,
   updateExportTaskProgress,
   type FfmpegExportPlan
@@ -342,5 +343,51 @@ describe('export queue helpers', () => {
     const [finished] = finishExportTask([createExportTask({ id: 'task-script', name: 'Script Export', outputPath: 'out.mp4', plan })], 'task-script', report);
 
     expect(createExportTaskHistoryEntry(finished)?.report).toEqual(report);
+  });
+
+  it('tracks export upload status and increments retry attempts only when a new run starts', () => {
+    const [finished] = finishExportTask([createExportTask({ id: 'task-upload', name: 'Upload Export', outputPath: 'out.mp4', plan })], 'task-upload', undefined, 'finished');
+    const entry = createExportTaskHistoryEntry(finished)!;
+
+    let history = updateExportTaskHistoryUpload(
+      [entry],
+      'task-upload',
+      { targetType: 'webdav', status: 'running', destination: 'https://dav.example.test/out.mp4' },
+      'upload-start'
+    );
+
+    expect(history[0].upload).toMatchObject({
+      targetType: 'webdav',
+      status: 'running',
+      progress: 0.25,
+      attempts: 1,
+      destination: 'https://dav.example.test/out.mp4',
+      updatedAt: 'upload-start'
+    });
+
+    history = updateExportTaskHistoryUpload(history, 'task-upload', { targetType: 'webdav', status: 'error', error: 'PUT 500' }, 'upload-error');
+    expect(history[0].upload).toMatchObject({ status: 'error', progress: 1, attempts: 1, error: 'PUT 500', updatedAt: 'upload-error' });
+
+    history = updateExportTaskHistoryUpload(history, 'task-upload', { targetType: 'webdav', status: 'running' }, 'retry-start');
+    history = updateExportTaskHistoryUpload(history, 'task-upload', { targetType: 'webdav', status: 'success' }, 'retry-done');
+    expect(history[0].upload).toMatchObject({ status: 'success', attempts: 2, progress: 1, destination: 'https://dav.example.test/out.mp4', updatedAt: 'retry-done' });
+    expect(history[0].upload?.error).toBeUndefined();
+  });
+
+  it('leaves unrelated history entries untouched and defaults pending upload progress to zero', () => {
+    const [finished] = finishExportTask([createExportTask({ id: 'task-pending-upload', name: 'Pending Upload', outputPath: 'out.mp4', plan })], 'task-pending-upload', undefined, 'finished');
+    const entry = createExportTaskHistoryEntry(finished)!;
+
+    const unchanged = updateExportTaskHistoryUpload([entry], 'missing', { targetType: 'local', status: 'pending', destination: 'D:/Uploads/out.mp4' }, 'pending');
+    expect(unchanged[0]).toBe(entry);
+
+    const [updated] = updateExportTaskHistoryUpload([entry], 'task-pending-upload', { targetType: 'local', status: 'pending', destination: 'D:/Uploads/out.mp4' }, 'pending');
+    expect(updated.upload).toMatchObject({
+      targetType: 'local',
+      status: 'pending',
+      progress: 0,
+      attempts: 0,
+      destination: 'D:/Uploads/out.mp4'
+    });
   });
 });

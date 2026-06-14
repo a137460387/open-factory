@@ -36,3 +36,25 @@ test('detects beat markers and snaps selected clips to nearby beats', async ({ p
   await page.locator('[data-testid^="timeline-beat-marker-"]').nth(1).click({ button: 'right' });
   await expect(page.locator('[data-testid^="timeline-beat-marker-"]')).toHaveCount(4);
 });
+
+test('splits a selected clip at detected beat markers', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.evaluate(() => window.__E2E_ACTIONS__!.setupBeatDetectionFixture!());
+
+  await page.getByTestId('toolbar-tools-menu-button').click();
+  await page.getByTestId('toolbar-tools-detect-beats-menu-item').click();
+  await expect(page.locator('[data-testid^="timeline-beat-marker-"]')).toHaveCount(4);
+
+  await page.getByTestId('timeline-clip-clip-beat-a').click();
+  await page.getByTestId('toolbar-tools-menu-button').click();
+  await page.getByTestId('toolbar-tools-split-to-beats-menu-item').click();
+
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        return window.__E2E_ACTIONS__!.getTimelineSnapshot!().tracks[0].clips.length;
+      })
+    )
+    .toBe(3);
+});

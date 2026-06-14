@@ -9,6 +9,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::{AppHandle, Manager};
 
 const SECRET_FILE_NAME: &str = "backup-secrets.json";
+const EXPORT_UPLOAD_SECRET_FILE_NAME: &str = "export-upload-secrets.json";
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -26,6 +27,22 @@ pub struct WebdavProjectBackupResult {
     status: u16,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WebdavExportUploadRequest {
+    url: String,
+    username: Option<String>,
+    password: Option<String>,
+    source_path: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WebdavExportUploadResult {
+    status: u16,
+    bytes: u64,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct WebdavPutArgs {
     method: &'static str,
@@ -35,6 +52,17 @@ pub struct WebdavPutArgs {
     content_type: String,
     content_len: usize,
     project_path: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct WebdavExportPutArgs {
+    method: &'static str,
+    url: String,
+    username: Option<String>,
+    password_present: bool,
+    content_type: String,
+    content_len: u64,
+    source_path: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -69,8 +97,56 @@ pub async fn put_webdav_project(
 }
 
 #[tauri::command]
+pub async fn put_webdav_export_file(
+    request: WebdavExportUploadRequest,
+) -> Result<WebdavExportUploadResult, String> {
+    let bytes = fs::read(&request.source_path)
+        .map_err(|error| format!("Unable to read export file for upload: {}", error))?;
+    let args = build_webdav_export_put_args(&request, bytes.len() as u64)?;
+    let client = reqwest::Client::new();
+    let mut builder = client
+        .put(&args.url)
+        .header(reqwest::header::CONTENT_TYPE, args.content_type)
+        .body(bytes);
+    if let Some(username) = request.username.filter(|value| !value.trim().is_empty()) {
+        builder = builder.basic_auth(username, request.password);
+    }
+    let response = builder.send().await.map_err(|error| error.to_string())?;
+    let status = response.status();
+    if !status.is_success() {
+        return Err(format!("WebDAV export upload failed with status {}", status.as_u16()));
+    }
+    Ok(WebdavExportUploadResult {
+        status: status.as_u16(),
+        bytes: args.content_len,
+    })
+}
+
+#[tauri::command]
 pub fn read_webdav_password(app: AppHandle) -> Result<Option<String>, String> {
-    let secret_path = secret_file_path(&app)?;
+    read_password_secret(app, SECRET_FILE_NAME)
+}
+
+#[tauri::command]
+pub fn write_webdav_password(app: AppHandle, password: Option<String>) -> Result<(), String> {
+    write_password_secret(app, SECRET_FILE_NAME, password)
+}
+
+#[tauri::command]
+pub fn read_export_upload_webdav_password(app: AppHandle) -> Result<Option<String>, String> {
+    read_password_secret(app, EXPORT_UPLOAD_SECRET_FILE_NAME)
+}
+
+#[tauri::command]
+pub fn write_export_upload_webdav_password(
+    app: AppHandle,
+    password: Option<String>,
+) -> Result<(), String> {
+    write_password_secret(app, EXPORT_UPLOAD_SECRET_FILE_NAME, password)
+}
+
+fn read_password_secret(app: AppHandle, file_name: &str) -> Result<Option<String>, String> {
+    let secret_path = secret_file_path(&app, file_name)?;
     if !secret_path.exists() {
         return Ok(None);
     }
@@ -81,9 +157,8 @@ pub fn read_webdav_password(app: AppHandle) -> Result<Option<String>, String> {
     decrypt_password(&app_data_dir(&app)?, &secret).map(Some)
 }
 
-#[tauri::command]
-pub fn write_webdav_password(app: AppHandle, password: Option<String>) -> Result<(), String> {
-    let secret_path = secret_file_path(&app)?;
+fn write_password_secret(app: AppHandle, file_name: &str, password: Option<String>) -> Result<(), String> {
+    let secret_path = secret_file_path(&app, file_name)?;
     match password
         .map(|value| value.trim().to_string())
         .filter(|value| !value.is_empty())
@@ -135,6 +210,40 @@ pub fn build_webdav_put_args(
         content_type: "application/json".to_string(),
         content_len: request.contents.len(),
         project_path: request.project_path.clone(),
+    })
+}
+
+pub fn build_webdav_export_put_args(
+    request: &WebdavExportUploadRequest,
+    content_len: u64,
+) -> Result<WebdavExportPutArgs, String> {
+    let url = request.url.trim();
+    if url.is_empty() {
+        return Err("WebDAV URL is required.".to_string());
+    }
+    let parsed = reqwest::Url::parse(url).map_err(|error| error.to_string())?;
+    match parsed.scheme() {
+        "http" | "https" => {}
+        _ => return Err("WebDAV URL must use http or https.".to_string()),
+    }
+    if request.source_path.trim().is_empty() {
+        return Err("Export upload source path is required.".to_string());
+    }
+    Ok(WebdavExportPutArgs {
+        method: "PUT",
+        url: parsed.to_string(),
+        username: request
+            .username
+            .as_ref()
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty()),
+        password_present: request
+            .password
+            .as_ref()
+            .is_some_and(|value| !value.is_empty()),
+        content_type: "application/octet-stream".to_string(),
+        content_len,
+        source_path: request.source_path.clone(),
     })
 }
 
@@ -192,8 +301,8 @@ fn derive_nonce(password: &str) -> [u8; 12] {
     nonce
 }
 
-fn secret_file_path(app: &AppHandle) -> Result<PathBuf, String> {
-    Ok(app_data_dir(app)?.join(SECRET_FILE_NAME))
+fn secret_file_path(app: &AppHandle, file_name: &str) -> Result<PathBuf, String> {
+    Ok(app_data_dir(app)?.join(file_name))
 }
 
 fn app_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
@@ -247,6 +356,44 @@ mod tests {
     }
 
     #[test]
+    fn builds_webdav_export_put_args_for_file_upload() {
+        let args = build_webdav_export_put_args(
+            &WebdavExportUploadRequest {
+                url: "https://dav.example.test/exports/render.mp4".to_string(),
+                username: Some("editor".to_string()),
+                password: Some("secret".to_string()),
+                source_path: "C:/Exports/render.mp4".to_string(),
+            },
+            4096,
+        )
+        .unwrap();
+
+        assert_eq!(args.method, "PUT");
+        assert_eq!(args.url, "https://dav.example.test/exports/render.mp4");
+        assert_eq!(args.username, Some("editor".to_string()));
+        assert!(args.password_present);
+        assert_eq!(args.content_type, "application/octet-stream");
+        assert_eq!(args.content_len, 4096);
+        assert_eq!(args.source_path, "C:/Exports/render.mp4");
+    }
+
+    #[test]
+    fn rejects_missing_export_upload_source_path() {
+        let error = build_webdav_export_put_args(
+            &WebdavExportUploadRequest {
+                url: "https://dav.example.test/exports/render.mp4".to_string(),
+                username: None,
+                password: None,
+                source_path: " ".to_string(),
+            },
+            1,
+        )
+        .unwrap_err();
+
+        assert!(error.contains("source path"));
+    }
+
+    #[test]
     fn encrypts_password_without_storing_plaintext() {
         let app_dir = std::env::temp_dir().join("open-factory-backup-secret-test");
         let secret = encrypt_password(&app_dir, "super-secret").unwrap();
@@ -254,6 +401,18 @@ mod tests {
 
         assert!(!serialized.contains("super-secret"));
         assert_eq!(decrypt_password(&app_dir, &secret).unwrap(), "super-secret");
+        let _ = fs::remove_dir_all(app_dir);
+    }
+
+    #[test]
+    fn export_upload_password_uses_same_encrypted_secret_format() {
+        let app_dir = std::env::temp_dir().join("open-factory-export-upload-secret-test");
+        let secret = encrypt_password(&app_dir, "upload-secret").unwrap();
+        let serialized = serde_json::to_string(&secret).unwrap();
+
+        assert!(!serialized.contains("upload-secret"));
+        assert_eq!(secret.version, 1);
+        assert_eq!(decrypt_password(&app_dir, &secret).unwrap(), "upload-secret");
         let _ = fs::remove_dir_all(app_dir);
     }
 }

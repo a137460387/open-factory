@@ -6,6 +6,7 @@ import {
   readBackupSettings,
   readCustomSplitLayouts,
   readExportBackgroundSettings,
+  readExportUploadSettings,
   readExportRules,
   readLayoutSettings,
   readPreviewPerformanceSettings,
@@ -15,6 +16,7 @@ import {
   saveAutomationRules,
   saveCustomSplitLayouts,
   saveExportBackgroundSettings,
+  saveExportUploadSettings,
   saveExportRules,
   saveLanguageSetting,
   saveLayoutSettings,
@@ -171,6 +173,36 @@ describe('app settings storage', () => {
     expect(await readAppSettings()).toEqual({
       language: 'en',
       exportBackground: { allowPowerActions: true, postExportScriptAcknowledged: true }
+    });
+  });
+
+  it('persists export upload settings without storing a WebDAV password', async () => {
+    await expect(readExportUploadSettings()).resolves.toEqual({
+      enabled: false,
+      targetType: 'webdav',
+      webdav: {},
+      local: {}
+    });
+
+    await saveLanguageSetting('en');
+    const upload = await saveExportUploadSettings({
+      enabled: true,
+      targetType: 'webdav',
+      webdav: { url: 'https://dav.example.test/exports/out.mp4', username: 'editor' },
+      local: { directory: 'D:/Uploaded' },
+      password: 'should-not-persist'
+    } as never);
+
+    expect(upload).toEqual({
+      enabled: true,
+      targetType: 'webdav',
+      webdav: { url: 'https://dav.example.test/exports/out.mp4', username: 'editor' },
+      local: { directory: 'D:/Uploaded' }
+    });
+    expect(files.get(settingsPath)).not.toContain('password');
+    expect(await readAppSettings()).toEqual({
+      language: 'en',
+      exportUpload: upload
     });
   });
 

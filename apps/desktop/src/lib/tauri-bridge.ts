@@ -84,6 +84,18 @@ export interface WebdavProjectBackupResult {
   status: number;
 }
 
+export interface WebdavExportUploadRequest {
+  url: string;
+  username?: string;
+  password?: string;
+  sourcePath: string;
+}
+
+export interface WebdavExportUploadResult {
+  status: number;
+  bytes: number;
+}
+
 export interface SharePackageProgressEvent {
   stage: 'readme' | 'project' | 'export' | 'media' | 'finished';
   progress: number;
@@ -392,8 +404,11 @@ export type TauriMocks = Partial<{
   runExportPreviewSamples(request: ExportPreviewSamplesRequest): Promise<ExportPreviewSamplesResult> | ExportPreviewSamplesResult;
   createSharePackage(request: SharePackageRequest): Promise<SharePackageResult> | SharePackageResult;
   putWebdavProject(request: WebdavProjectBackupRequest): Promise<WebdavProjectBackupResult> | WebdavProjectBackupResult;
+  putWebdavExportFile(request: WebdavExportUploadRequest): Promise<WebdavExportUploadResult> | WebdavExportUploadResult;
   readWebdavPassword(): Promise<string | undefined> | string | undefined;
   writeWebdavPassword(password?: string): Promise<void> | void;
+  readExportUploadWebdavPassword(): Promise<string | undefined> | string | undefined;
+  writeExportUploadWebdavPassword(password?: string): Promise<void> | void;
   analyzeClip(request: AnalyzeClipRequest): Promise<AnalyzeClipResult> | AnalyzeClipResult;
   analyzeMotionTrack(request: AnalyzeMotionTrackRequest): Promise<AnalyzeMotionTrackResult> | AnalyzeMotionTrackResult;
   evaluateExportQuality(request: QualityEvaluationRequest): Promise<QualityEvaluationResult> | QualityEvaluationResult;
@@ -817,6 +832,14 @@ export async function putWebdavProject(request: WebdavProjectBackupRequest): Pro
   return invoke<WebdavProjectBackupResult>('put_webdav_project', { request });
 }
 
+export async function putWebdavExportFile(request: WebdavExportUploadRequest): Promise<WebdavExportUploadResult> {
+  const mock = getTauriMocks()?.putWebdavExportFile;
+  if (mock) {
+    return mock(request);
+  }
+  return invoke<WebdavExportUploadResult>('put_webdav_export_file', { request });
+}
+
 export async function readWebdavPassword(): Promise<string | undefined> {
   const mock = getTauriMocks()?.readWebdavPassword;
   if (mock) {
@@ -832,6 +855,23 @@ export async function writeWebdavPassword(password?: string): Promise<void> {
     return;
   }
   await invoke('write_webdav_password', { password });
+}
+
+export async function readExportUploadWebdavPassword(): Promise<string | undefined> {
+  const mock = getTauriMocks()?.readExportUploadWebdavPassword;
+  if (mock) {
+    return mock();
+  }
+  return invoke<string | undefined>('read_export_upload_webdav_password');
+}
+
+export async function writeExportUploadWebdavPassword(password?: string): Promise<void> {
+  const mock = getTauriMocks()?.writeExportUploadWebdavPassword;
+  if (mock) {
+    await mock(password);
+    return;
+  }
+  await invoke('write_export_upload_webdav_password', { password });
 }
 
 export async function analyzeClip(request: AnalyzeClipRequest): Promise<AnalyzeClipResult> {

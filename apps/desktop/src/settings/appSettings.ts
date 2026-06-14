@@ -38,6 +38,20 @@ export interface ExportBackgroundSettings {
   postExportScriptAcknowledged: boolean;
 }
 
+export type ExportUploadTargetType = 'webdav' | 'local';
+
+export interface ExportUploadSettings {
+  enabled: boolean;
+  targetType: ExportUploadTargetType;
+  webdav: {
+    url?: string;
+    username?: string;
+  };
+  local: {
+    directory?: string;
+  };
+}
+
 export interface ViewSettings {
   safeFrameGuides: boolean;
   thumbnailTrackVisible: boolean;
@@ -84,12 +98,20 @@ export const DEFAULT_BACKUP_SETTINGS: BackupSettings = {
   webdav: { enabled: false }
 };
 
+export const DEFAULT_EXPORT_UPLOAD_SETTINGS: ExportUploadSettings = {
+  enabled: false,
+  targetType: 'webdav',
+  webdav: {},
+  local: {}
+};
+
 export interface AppSettings {
   language?: Language;
   layout?: EditorLayoutSettings;
   backup?: BackupSettings;
   theme?: ThemeSettings;
   exportBackground?: ExportBackgroundSettings;
+  exportUpload?: ExportUploadSettings;
   exportRules?: ExportConditionRule[];
   view?: ViewSettings;
   previewPerformance?: PreviewPerformanceSettings;
@@ -150,6 +172,18 @@ export async function saveExportBackgroundSettings(exportBackground: Partial<Exp
   const nextExportBackground = normalizeExportBackgroundSettings({ ...settings.exportBackground, ...exportBackground }) ?? defaultExportBackgroundSettings();
   await writeAppSettings({ ...settings, exportBackground: nextExportBackground });
   return nextExportBackground;
+}
+
+export async function readExportUploadSettings(): Promise<ExportUploadSettings> {
+  const settings = await readAppSettings();
+  return settings.exportUpload ?? defaultExportUploadSettings();
+}
+
+export async function saveExportUploadSettings(exportUpload: Partial<ExportUploadSettings>): Promise<ExportUploadSettings> {
+  const settings = await readAppSettings();
+  const nextExportUpload = normalizeExportUploadSettings({ ...settings.exportUpload, ...exportUpload }) ?? defaultExportUploadSettings();
+  await writeAppSettings({ ...settings, exportUpload: nextExportUpload });
+  return nextExportUpload;
 }
 
 export async function readExportRules(): Promise<ExportConditionRule[]> {
@@ -277,6 +311,10 @@ function normalizeSettings(settings: Partial<AppSettings>): AppSettings {
   const exportBackground = normalizeExportBackgroundSettings(settings.exportBackground);
   if (exportBackground) {
     normalized.exportBackground = exportBackground;
+  }
+  const exportUpload = normalizeExportUploadSettings(settings.exportUpload);
+  if (exportUpload && shouldPersistExportUploadSettings(exportUpload)) {
+    normalized.exportUpload = exportUpload;
   }
   const exportRules = normalizeExportRules(settings.exportRules);
   if (exportRules.length > 0) {
@@ -471,6 +509,31 @@ export function normalizeExportBackgroundSettings(settings: Partial<ExportBackgr
   };
 }
 
+export function normalizeExportUploadSettings(settings: Partial<ExportUploadSettings> | undefined): ExportUploadSettings | undefined {
+  if (!settings || typeof settings !== 'object') {
+    return undefined;
+  }
+  const webdav = settings.webdav && typeof settings.webdav === 'object' ? settings.webdav : {};
+  const local = settings.local && typeof settings.local === 'object' ? settings.local : {};
+  const targetType: ExportUploadTargetType = settings.targetType === 'local' ? 'local' : 'webdav';
+  const normalized: ExportUploadSettings = {
+    enabled: Boolean(settings.enabled),
+    targetType,
+    webdav: {},
+    local: {}
+  };
+  if (typeof webdav.url === 'string' && webdav.url.trim()) {
+    normalized.webdav.url = webdav.url.trim();
+  }
+  if (typeof webdav.username === 'string' && webdav.username.trim()) {
+    normalized.webdav.username = webdav.username.trim();
+  }
+  if (typeof local.directory === 'string' && local.directory.trim()) {
+    normalized.local.directory = local.directory.trim();
+  }
+  return normalized;
+}
+
 export function normalizeViewSettings(settings: Partial<ViewSettings> | undefined): ViewSettings | undefined {
   if (!settings || typeof settings !== 'object') {
     return undefined;
@@ -526,6 +589,19 @@ function defaultExportBackgroundSettings(): ExportBackgroundSettings {
     allowPowerActions: false,
     postExportScriptAcknowledged: false
   };
+}
+
+function defaultExportUploadSettings(): ExportUploadSettings {
+  return {
+    enabled: DEFAULT_EXPORT_UPLOAD_SETTINGS.enabled,
+    targetType: DEFAULT_EXPORT_UPLOAD_SETTINGS.targetType,
+    webdav: { ...DEFAULT_EXPORT_UPLOAD_SETTINGS.webdav },
+    local: { ...DEFAULT_EXPORT_UPLOAD_SETTINGS.local }
+  };
+}
+
+function shouldPersistExportUploadSettings(settings: ExportUploadSettings): boolean {
+  return settings.enabled || Boolean(settings.webdav.url || settings.webdav.username || settings.local.directory) || settings.targetType !== DEFAULT_EXPORT_UPLOAD_SETTINGS.targetType;
 }
 
 function defaultViewSettings(): ViewSettings {

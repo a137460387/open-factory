@@ -97,6 +97,24 @@ export function snapClipStartToBeat(clip: Clip, beatTimes: number[], maxDistance
   return nearest === undefined ? clip.start : nearest;
 }
 
+export function calculateBeatSplitTimesForClip(clip: Clip, beatTimes: number[]): number[] {
+  const start = clip.start;
+  const end = clip.start + clip.duration;
+  const seen = new Set<number>();
+  return [...beatTimes]
+    .filter((time) => Number.isFinite(time) && time > start + 0.000001 && time < end - 0.000001)
+    .map((time) => round(time - start))
+    .filter((time) => {
+      const key = Math.round(time * 1_000_000);
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    })
+    .sort((left, right) => left - right);
+}
+
 function findNearestBeat(time: number, beatTimes: number[], maxDistance: number): number | undefined {
   let best: number | undefined;
   let bestDistance = Math.max(0, maxDistance);

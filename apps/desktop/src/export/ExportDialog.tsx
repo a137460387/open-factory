@@ -35,6 +35,8 @@ import {
   type ExportLoudnessNormalization,
   type ExportPostExportScriptResult,
   type ExportTaskHistoryEntry,
+  type ExportUploadState,
+  type ExportUploadTargetType,
   type ExportPreviewSampleKind,
   type ExportWatermarkPosition,
   type FfmpegCapabilities,
@@ -58,14 +60,25 @@ import {
   listenBridge,
   minimizeToTray,
   openFileDialog,
+  openDirectoryDialog,
   openPath,
+  readExportUploadWebdavPassword,
   runExportPowerAction,
   runExportPreviewSamples,
+  writeExportUploadWebdavPassword,
   type QualityEvaluationProgressEvent,
   type QualityEvaluationResult
 } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
-import { readExportBackgroundSettings, saveExportBackgroundSettings, type ExportBackgroundSettings } from '../settings/appSettings';
+import {
+  DEFAULT_EXPORT_UPLOAD_SETTINGS,
+  readExportBackgroundSettings,
+  readExportUploadSettings,
+  saveExportBackgroundSettings,
+  saveExportUploadSettings,
+  type ExportBackgroundSettings,
+  type ExportUploadSettings
+} from '../settings/appSettings';
 import { getWhisperAvailability } from '../lib/whisper';
 import { useWhisperSettingsStore } from '../store/whisperSettingsStore';
 import { cancelQueuedExportTask, enqueueExport, retryQueuedExportTask, setExportQueueMaxConcurrent, setExportQueuePaused } from './export-queue-runner';
@@ -73,6 +86,7 @@ import { EXPORT_COMPLETION_ACTIONS, localDatetimeInputValue, normalizeExportComp
 import { loadExportHistoryIntoStore } from './export-history';
 import { estimateExportFileSizeBytes, formatEstimatedFileSize } from './export-size-estimate';
 import { useExportQueueStore } from './export-queue-store';
+import { retryExportUploadFromHistory } from './export-upload';
 import {
   BUILTIN_EXPORT_PRESETS,
   deleteCustomExportPreset,
@@ -171,6 +185,12 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
   const [scheduledStartInput, setScheduledStartInput] = useState(() => localDatetimeInputValue(new Date(Date.now() + 60_000)));
   const [completionAction, setCompletionAction] = useState<ExportCompletionAction>('none');
   const [exportBackgroundSettings, setExportBackgroundSettings] = useState<ExportBackgroundSettings>(() => ({ allowPowerActions: false, postExportScriptAcknowledged: false }));
+  const [exportUploadSettings, setExportUploadSettings] = useState<ExportUploadSettings>(() => ({
+    ...DEFAULT_EXPORT_UPLOAD_SETTINGS,
+    webdav: { ...DEFAULT_EXPORT_UPLOAD_SETTINGS.webdav },
+    local: { ...DEFAULT_EXPORT_UPLOAD_SETTINGS.local }
+  }));
+  const [exportUploadPassword, setExportUploadPassword] = useState('');
   const [previewRunning, setPreviewRunning] = useState(false);
   const [previewError, setPreviewError] = useState<string>();
   const [previewSamples, setPreviewSamples] = useState<ExportPreviewThumbnail[]>([]);
@@ -283,6 +303,16 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
       .then(setExportBackgroundSettings)
       .catch((reason) => {
         console.warn('Unable to load export background settings', reason);
+      });
+    void readExportUploadSettings()
+      .then(setExportUploadSettings)
+      .catch((reason) => {
+        console.warn('Unable to load export upload settings', reason);
+      });
+    void readExportUploadWebdavPassword()
+      .then((password) => setExportUploadPassword(password ?? ''))
+      .catch((reason) => {
+        console.warn('Unable to load export upload password', reason);
       });
   }, []);
 
@@ -631,6 +661,43 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
     }
   }
 
+  async function updateExportUploadSettings(next: ExportUploadSettings): Promise<void> {
+    setExportUploadSettings(next);
+    try {
+      setExportUploadSettings(await saveExportUploadSettings(next));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : t.savePresetFailed);
+    }
+  }
+
+  async function updateExportUploadPassword(password: string): Promise<void> {
+    setExportUploadPassword(password);
+    try {
+      await writeExportUploadWebdavPassword(password);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : t.savePresetFailed);
+    }
+  }
+
+  async function chooseExportUploadDirectory(): Promise<void> {
+    try {
+      const directory = await openDirectoryDialog();
+      if (directory) {
+        await updateExportUploadSettings({ ...exportUploadSettings, local: { ...exportUploadSettings.local, directory } });
+      }
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : t.savePresetFailed);
+    }
+  }
+
+  async function retryHistoryUpload(entry: ExportTaskHistoryEntry): Promise<void> {
+    try {
+      await retryExportUploadFromHistory(entry.id);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : t.upload.failedMessage);
+    }
+  }
+
   async function collectPreflightIssues(targetProject: Project, settings: ExportPresetSettings): Promise<PreflightResult[]> {
     const nextCapabilities = capabilities ?? (await getFfmpegCapabilities().catch(() => undefined));
     if (nextCapabilities && !capabilities) {
@@ -845,6 +912,13 @@ function relinkFromPreflight(): void {
             acknowledged={exportBackgroundSettings.postExportScriptAcknowledged}
             setDraftSettings={setDraftSettings}
             onAcknowledgedChange={(checked) => void setPostExportScriptAcknowledged(checked)}
+          />
+          <ExportUploadSection
+            settings={exportUploadSettings}
+            password={exportUploadPassword}
+            onSettingsChange={(nextSettings) => void updateExportUploadSettings(nextSettings)}
+            onPasswordChange={(password) => void updateExportUploadPassword(password)}
+            onChooseDirectory={() => void chooseExportUploadDirectory()}
           />
           <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 md:grid-cols-5">
             <Info label={t.info.resolution} value={isAudioOnly ? zhCN.common.audioOnly : `${exportSettings.width ?? project.settings.width} x ${exportSettings.height ?? project.settings.height}`} />
@@ -1143,6 +1217,7 @@ function relinkFromPreflight(): void {
                       </button>
                     </div>
                     {entry.report?.postExportScript ? <PostExportScriptResultPanel result={entry.report.postExportScript} /> : null}
+                    {entry.upload ? <ExportUploadStatusPanel upload={entry.upload} onRetry={entry.upload.status === 'error' ? () => void retryHistoryUpload(entry) : undefined} /> : null}
                   </div>
                 ))
               )}
@@ -2754,6 +2829,145 @@ function Info({ label, value, tone }: { label: string; value: string; tone?: 'ok
   );
 }
 
+function ExportUploadSection({
+  settings,
+  password,
+  onSettingsChange,
+  onPasswordChange,
+  onChooseDirectory
+}: {
+  settings: ExportUploadSettings;
+  password: string;
+  onSettingsChange(settings: ExportUploadSettings): void;
+  onPasswordChange(password: string): void;
+  onChooseDirectory(): void;
+}) {
+  const t = zhCN.exportDialog.upload;
+  const updateWebdav = (patch: Partial<ExportUploadSettings['webdav']>) => onSettingsChange({ ...settings, webdav: { ...settings.webdav, ...patch } });
+  const updateLocal = (patch: Partial<ExportUploadSettings['local']>) => onSettingsChange({ ...settings, local: { ...settings.local, ...patch } });
+
+  return (
+    <div className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3" data-testid="export-upload-section">
+      <label className="pt-1 text-xs font-medium text-slate-600">{t.title}</label>
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="text-xs text-slate-500">{t.description}</div>
+          <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-700">
+            <input
+              className="h-4 w-4 accent-brand"
+              type="checkbox"
+              checked={settings.enabled}
+              data-testid="export-upload-enabled"
+              onChange={(event) => onSettingsChange({ ...settings, enabled: event.target.checked })}
+            />
+            <span>{t.enabled}</span>
+          </label>
+        </div>
+        <div className="grid gap-2 md:grid-cols-[180px_1fr]">
+          <label className="block text-xs font-medium text-slate-600">
+            {t.targetType}
+            <select
+              className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-xs"
+              value={settings.targetType}
+              data-testid="export-upload-target-select"
+              onChange={(event) => onSettingsChange({ ...settings, targetType: event.target.value as ExportUploadTargetType })}
+            >
+              <option value="webdav">{t.targets.webdav}</option>
+              <option value="local">{t.targets.local}</option>
+            </select>
+          </label>
+          {settings.targetType === 'webdav' ? (
+            <div className="grid gap-2 md:grid-cols-2">
+              <label className="block text-xs font-medium text-slate-600 md:col-span-2">
+                {t.webdavUrl}
+                <input
+                  className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-xs"
+                  value={settings.webdav.url ?? ''}
+                  data-testid="export-upload-webdav-url"
+                  onChange={(event) => updateWebdav({ url: event.target.value })}
+                />
+              </label>
+              <label className="block text-xs font-medium text-slate-600">
+                {t.username}
+                <input
+                  className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-xs"
+                  value={settings.webdav.username ?? ''}
+                  data-testid="export-upload-webdav-username"
+                  onChange={(event) => updateWebdav({ username: event.target.value })}
+                />
+              </label>
+              <label className="block text-xs font-medium text-slate-600">
+                {t.password}
+                <input
+                  className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-xs"
+                  type="password"
+                  value={password}
+                  data-testid="export-upload-webdav-password"
+                  onChange={(event) => onPasswordChange(event.target.value)}
+                />
+              </label>
+              <div className="text-[11px] text-slate-500 md:col-span-2">{t.passwordStorageNote}</div>
+            </div>
+          ) : (
+            <label className="block text-xs font-medium text-slate-600">
+              {t.localDirectory}
+              <div className="mt-1 flex gap-2">
+                <input
+                  className="min-w-0 flex-1 rounded-md border border-line px-2 py-1.5 text-xs"
+                  value={settings.local.directory ?? ''}
+                  data-testid="export-upload-local-directory"
+                  onChange={(event) => updateLocal({ directory: event.target.value })}
+                />
+                <button
+                  className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line bg-white text-slate-600 hover:bg-panel"
+                  type="button"
+                  title={t.chooseDirectory}
+                  aria-label={t.chooseDirectory}
+                  data-testid="export-upload-local-choose"
+                  onClick={onChooseDirectory}
+                >
+                  <FolderOpen size={14} />
+                </button>
+              </div>
+            </label>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ExportUploadStatusPanel({ upload, onRetry }: { upload: ExportUploadState; onRetry?: () => void }) {
+  const t = zhCN.exportDialog.upload;
+  const progress = Math.round(upload.progress * 100);
+  return (
+    <div className={`mt-2 rounded-md border p-2 text-[11px] ${uploadStatusClass(upload.status)}`} data-testid="export-upload-status" data-status={upload.status}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="font-semibold">
+          {t.statusLabel}: {t.status[upload.status]}
+        </div>
+        <div className="tabular-nums" data-testid="export-upload-progress">
+          {progress}%
+        </div>
+      </div>
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/70">
+        <div className="h-full bg-current transition-all" style={{ width: `${progress}%` }} />
+      </div>
+      {upload.destination ? (
+        <div className="mt-1 truncate font-mono" title={upload.destination} data-testid="export-upload-destination">
+          {upload.destination}
+        </div>
+      ) : null}
+      {upload.error ? <div className="mt-1 whitespace-pre-wrap text-rose-800" data-testid="export-upload-error">{upload.error}</div> : null}
+      {onRetry ? (
+        <button className="mt-2 rounded-md border border-line bg-white px-2 py-1 font-medium text-slate-700 hover:bg-panel" type="button" data-testid="export-upload-retry-button" onClick={onRetry}>
+          {t.retry}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 function PostExportScriptResultPanel({ result }: { result: ExportPostExportScriptResult }) {
   const t = zhCN.exportDialog.postExportScript;
   return (
@@ -2859,6 +3073,19 @@ function qualityLevelClass(level: QualityLevel): string {
     case 'poor':
       return 'border-rose-200 bg-rose-50 text-rose-700';
   }
+}
+
+function uploadStatusClass(status: ExportUploadState['status']): string {
+  if (status === 'success') {
+    return 'border-emerald-200 bg-emerald-50 text-emerald-800';
+  }
+  if (status === 'running') {
+    return 'border-sky-200 bg-sky-50 text-sky-800';
+  }
+  if (status === 'error') {
+    return 'border-rose-200 bg-rose-50 text-rose-800';
+  }
+  return 'border-amber-200 bg-amber-50 text-amber-800';
 }
 
 function ExportTaskRow({ taskId }: { taskId: string }) {

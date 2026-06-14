@@ -57,6 +57,7 @@ const zh = {
     videoStitchWizard: '视频拼接向导',
     detectBeats: '节拍检测',
     snapToBeats: '对齐到节拍',
+    splitToBeats: '按节拍分割',
     beatSensitivity: '灵敏度',
     beatSensitivityOptions: {
       low: '低',
@@ -1786,6 +1787,31 @@ const zh = {
       notificationTitle: '导出队列完成',
       notificationMessage: '所有计划内导出任务已完成。'
     },
+    upload: {
+      title: '自动上传',
+      description: '导出成功后把输出文件上传或复制到本机配置的目标。',
+      enabled: '导出成功后自动处理',
+      targetType: '目标类型',
+      targets: {
+        webdav: 'WebDAV 上传',
+        local: '本地复制'
+      },
+      webdavUrl: 'WebDAV URL',
+      username: '用户名',
+      password: '密码',
+      localDirectory: '复制目录',
+      chooseDirectory: '选择目录',
+      passwordStorageNote: '上传密码以 AES 加密形式保存在本机 AppData，不写入 settings.json。',
+      statusLabel: '上传',
+      retry: '重试上传',
+      failedMessage: '导出后上传失败。',
+      status: {
+        pending: '等待上传',
+        running: '上传中',
+        success: '上传完成',
+        error: '上传失败'
+      }
+    },
     trayMenu: {
       showWindow: '显示主窗口',
       pauseQueue: '暂停队列',
@@ -2018,6 +2044,11 @@ const zh = {
     beatSnapUnavailable: '无法对齐到节拍',
     beatSnapNoSelection: '请选择要对齐的片段。',
     beatSnapNoMarkers: '请先检测或手动添加节拍标记。',
+    beatSplitComplete: (count: number) => `已切为 ${count} 段。`,
+    beatSplitCompleteMessage: (count: number) => `使用 ${count} 个节拍切点完成分割。`,
+    beatSplitUnavailable: '无法按节拍分割',
+    beatSplitNoSelection: '请选择要分割的片段。',
+    beatSplitNoMarkers: '选中片段内部没有可用节拍切点。',
     currentFrameExported: '当前帧已导出',
     currentFrameExportFailed: '当前帧导出失败',
     currentFrameExportFailedMessage: '无法导出当前帧。',
@@ -2385,6 +2416,7 @@ const enOverrides = {
     videoStitchWizard: 'Video Stitch Wizard',
     detectBeats: 'Detect Beats',
     snapToBeats: 'Snap to Beats',
+    splitToBeats: 'Split to Beats',
     beatSensitivity: 'Sensitivity',
     beatSensitivityOptions: {
       low: 'Low',
@@ -3873,6 +3905,31 @@ const enOverrides = {
       notificationTitle: 'Export queue complete',
       notificationMessage: 'All scheduled export tasks have finished.'
     },
+    upload: {
+      title: 'Auto Upload',
+      description: 'After a successful export, upload or copy the output file to a local configured target.',
+      enabled: 'Run after successful export',
+      targetType: 'Target Type',
+      targets: {
+        webdav: 'WebDAV Upload',
+        local: 'Local Copy'
+      },
+      webdavUrl: 'WebDAV URL',
+      username: 'Username',
+      password: 'Password',
+      localDirectory: 'Copy Folder',
+      chooseDirectory: 'Choose Folder',
+      passwordStorageNote: 'The upload password is AES-encrypted in local AppData and is not written to settings.json.',
+      statusLabel: 'Upload',
+      retry: 'Retry Upload',
+      failedMessage: 'Post-export upload failed.',
+      status: {
+        pending: 'Waiting',
+        running: 'Uploading',
+        success: 'Uploaded',
+        error: 'Upload Failed'
+      }
+    },
     trayMenu: {
       showWindow: 'Show Main Window',
       pauseQueue: 'Pause Queue',
@@ -4054,6 +4111,11 @@ const enOverrides = {
     beatSnapUnavailable: 'Unable to snap to beats',
     beatSnapNoSelection: 'Select clips to snap.',
     beatSnapNoMarkers: 'Detect or add beat markers first.',
+    beatSplitComplete: (count: number) => `Split into ${count} segments.`,
+    beatSplitCompleteMessage: (count: number) => `Used ${count} beat split points.`,
+    beatSplitUnavailable: 'Unable to split to beats',
+    beatSplitNoSelection: 'Select a clip to split.',
+    beatSplitNoMarkers: 'No beat split points inside the selected clip.',
     currentFrameExported: 'Current frame exported',
     currentFrameExportFailed: 'Current frame export failed',
     currentFrameExportFailedMessage: 'Unable to export current frame.',

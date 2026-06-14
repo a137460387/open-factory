@@ -38,6 +38,7 @@ interface ToolbarProps {
   onOpenVideoStitchWizard(): void;
   onDetectBeats(): void;
   onSnapToBeats(): void;
+  onSplitToBeats(): void;
   onOpenMacroHistory(): void;
   onStartMacroRecording(): void;
   onStopMacroRecording(): void;
@@ -64,6 +65,7 @@ interface ToolbarProps {
   customSplitLayouts: SplitLayoutDefinition[];
   canDetectBeats: boolean;
   canSnapToBeats: boolean;
+  canSplitToBeats: boolean;
   beatSensitivity: BeatSensitivity;
   onBeatSensitivityChange(sensitivity: BeatSensitivity): void;
   canSeparateAudio: boolean;
@@ -424,6 +426,18 @@ export function Toolbar(props: ToolbarProps) {
               }}
             >
               <span>{t.snapToBeats}</span>
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+              type="button"
+              disabled={!props.canSplitToBeats}
+              data-testid="toolbar-tools-split-to-beats-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onSplitToBeats();
+              }}
+            >
+              <span>{t.splitToBeats}</span>
             </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"

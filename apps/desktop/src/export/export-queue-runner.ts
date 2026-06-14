@@ -19,6 +19,7 @@ import { normalizeExportProgressPayload, type ExportProgressEvent } from './expo
 import { useExportQueueStore } from './export-queue-store';
 import { runConfiguredExportRules, type ExportRuleEventContext } from './export-rules';
 import { buildSidecarSubtitlePath } from './export-sidecar';
+import { runConfiguredExportUpload } from './export-upload';
 
 export const EXPORT_MEMORY_PAUSE_THRESHOLD_BYTES = 2 * 1024 * 1024 * 1024;
 const RESOURCE_RECHECK_DELAY_MS = 500;
@@ -209,6 +210,7 @@ async function runSingleTask(task: ExportTask): Promise<void> {
       await writeSidecarSubtitleArtifacts(task.outputPath, task.plan.textArtifacts);
       useExportQueueStore.getState().finishTask(task.id, result.report);
       await persistFinishedTaskToHistory(task.id);
+      await runConfiguredExportUpload(task.id);
       const finishedTask = useExportQueueStore.getState().tasks.find((item) => item.id === task.id) ?? task;
       await runExportRulesSafely({ type: 'export-success', task: finishedTask, projectName: finishedTask.projectName ?? task.projectName });
     }

@@ -136,6 +136,7 @@ export function Timeline({ thumbnailTrackVisible = true, onConvertMediaFrameRate
   const selectedClipId = useEditorStore((state) => state.selectedClipId);
   const selectedClipIds = useEditorStore((state) => state.selectedClipIds);
   const playheadTime = useEditorStore((state) => state.playheadTime);
+  const isPlaying = useEditorStore((state) => state.isPlaying);
   const inPoint = useEditorStore((state) => state.inPoint);
   const outPoint = useEditorStore((state) => state.outPoint);
   const timelineCompareRanges = useEditorStore((state) => state.timelineCompareRanges);
@@ -215,6 +216,13 @@ export function Timeline({ thumbnailTrackVisible = true, onConvertMediaFrameRate
     () => secondsToTimecode(playheadTime, project.settings.fps || 30, project.settings.timecodeFormat ?? 'ndf'),
     [playheadTime, project.settings.fps, project.settings.timecodeFormat]
   );
+  const activeBeatMarkerId = useMemo(() => {
+    if (!isPlaying) {
+      return undefined;
+    }
+    const frameWindow = 1 / Math.max(1, project.settings.fps || 30);
+    return (project.beatMarkers ?? []).find((marker) => Math.abs(marker.time - playheadTime) <= frameWindow * 2)?.id;
+  }, [isPlaying, playheadTime, project.beatMarkers, project.settings.fps]);
   const exportRangeHighlights = useMemo(() => {
     const stored = normalizeExportRanges(project.exportRanges, projectDuration).map((range) => ({ id: range.id, start: range.start, end: range.end }));
     if (stored.length > 0) {
@@ -1442,7 +1450,7 @@ function addProjectBookmark(time = playheadTime): void {
       { time: 0, kind: 'timeline-start' },
       { time: playheadTime, kind: 'playhead' },
       ...(project.timeline.markers ?? []).map((marker) => ({ time: marker.time, kind: 'marker' as const })),
-      ...(project.beatMarkers ?? []).map((marker) => ({ time: marker.time, kind: 'marker' as const })),
+      ...(project.beatMarkers ?? []).map((marker) => ({ time: marker.time, kind: 'beat' as const })),
       ...project.timeline.tracks.flatMap((track) =>
         track.clips
           .filter((item) => item.id !== clip.id)
@@ -1720,6 +1728,7 @@ function addProjectBookmark(time = playheadTime): void {
                 key={marker.id}
                 marker={marker}
                 left={LABEL_WIDTH + marker.time * zoom}
+                active={activeBeatMarkerId === marker.id}
                 onSeek={setPlayheadTime}
                 onRemove={removeBeatMarker}
               />
@@ -2221,21 +2230,24 @@ function TimelineMarkerOverlay({
 function BeatMarkerOverlay({
   marker,
   left,
+  active,
   onSeek,
   onRemove
 }: {
   marker: BeatMarker;
   left: number;
+  active?: boolean;
   onSeek(time: number): void;
   onRemove(markerId: string): void;
 }) {
   return (
     <button
-      className="absolute bottom-0 top-0 z-30 w-0.5 -translate-x-1/2 bg-transparent"
+      className={`absolute bottom-0 top-0 z-30 w-0.5 -translate-x-1/2 bg-transparent ${active ? 'animate-pulse' : ''}`}
       style={{ left }}
       type="button"
       title={zhCN.timeline.beatMarkerTitle(marker.time)}
       data-testid={`timeline-beat-marker-${marker.id}`}
+      data-active={active ? 'true' : 'false'}
       onClick={(event) => {
         event.stopPropagation();
         onSeek(marker.time);
@@ -2246,8 +2258,8 @@ function BeatMarkerOverlay({
         onRemove(marker.id);
       }}
     >
-      <span className="absolute left-1/2 top-6 z-10 h-3.5 w-3.5 -translate-x-1/2 rotate-45 rounded-[2px] border border-white bg-orange-500 shadow-sm" />
-      <span className="absolute bottom-0 top-0 left-1/2 w-0.5 -translate-x-1/2 bg-orange-500/75" />
+      <span className={`absolute left-1/2 top-6 z-10 h-3.5 w-3.5 -translate-x-1/2 rotate-45 rounded-[2px] border border-white shadow-sm ${active ? 'bg-yellow-300 ring-4 ring-yellow-300/40' : 'bg-orange-500'}`} />
+      <span className={`absolute bottom-0 top-0 left-1/2 w-0.5 -translate-x-1/2 ${active ? 'bg-yellow-300' : 'bg-orange-500/75'}`} />
       <span className="sr-only">{zhCN.timeline.beatMarker}</span>
     </button>
   );

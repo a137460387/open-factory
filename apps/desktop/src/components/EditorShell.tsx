@@ -26,11 +26,13 @@ import {
   SetMediaFolderCollapsedCommand,
   SnapToBeatsCommand,
   SplitClipCommand,
+  SplitClipAtTimesCommand,
   UpdateProjectBeatMarkersCommand,
   UpdateProjectBookmarksCommand,
   UpdateProjectExportRangesCommand,
   UpdateClipCommand,
   createBeatMarker,
+  calculateBeatSplitTimesForClip,
   createExportRange,
   createId,
   createProject,
@@ -347,6 +349,7 @@ export function EditorShell() {
       (selectedClipMedia.type === 'audio' || selectedClipMedia.hasAudio)
   );
   const canSnapToBeats = selectedClipIds.length > 0 && (project.beatMarkers?.length ?? 0) > 0;
+  const canSplitToBeats = Boolean(selectedClip && (project.beatMarkers?.length ?? 0) > 0);
   const timelineHeightPx = clampTimelineHeight(layoutSettings.timelineHeightPx, viewportSize.height);
   const effectivePanels = useMemo(() => getEffectivePanelState(layoutSettings, viewportSize.width), [layoutSettings, viewportSize.width]);
   const editorGridRows = `auto minmax(0,1fr) 6px ${timelineHeightPx}px`;
@@ -1421,6 +1424,30 @@ export function EditorShell() {
     }
   }, [project.beatMarkers, selectedClipId, selectedClipIds, setSelectedClipIds]);
 
+  const splitSelectedToBeats = useCallback(() => {
+    if (!selectedClip) {
+      showToast({ kind: 'warning', title: zhCN.editorToasts.beatSplitUnavailable, message: zhCN.editorToasts.beatSplitNoSelection });
+      return;
+    }
+    const beatTimes = (project.beatMarkers ?? []).map((marker) => marker.time);
+    if (beatTimes.length === 0) {
+      showToast({ kind: 'warning', title: zhCN.editorToasts.beatSplitUnavailable, message: zhCN.editorToasts.beatSnapNoMarkers });
+      return;
+    }
+    const splitTimes = calculateBeatSplitTimesForClip(selectedClip, beatTimes);
+    if (splitTimes.length === 0) {
+      showToast({ kind: 'warning', title: zhCN.editorToasts.beatSplitUnavailable, message: zhCN.editorToasts.beatSplitNoMarkers });
+      return;
+    }
+    try {
+      commandManager.execute(new SplitClipAtTimesCommand(timelineAccessor, selectedClip.id, splitTimes));
+      clearSelectedClipIds();
+      showToast({ kind: 'success', title: zhCN.editorToasts.beatSplitComplete(splitTimes.length + 1), message: zhCN.editorToasts.beatSplitCompleteMessage(splitTimes.length) });
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.editorToasts.beatSplitUnavailable, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
+    }
+  }, [clearSelectedClipIds, project.beatMarkers, selectedClip]);
+
   const createMulticamSequence = useCallback(() => {
     try {
       const command = new CreateMulticamSequenceCommand(projectAccessor, selectedClipIds, zhCN.timeline.multicamSequenceName(project.sequences.length));
@@ -2044,6 +2071,7 @@ export function EditorShell() {
           onOpenVideoStitchWizard={() => setVideoStitchWizardOpen(true)}
           onDetectBeats={() => void detectSelectedBeats()}
           onSnapToBeats={snapSelectedToBeats}
+          onSplitToBeats={splitSelectedToBeats}
           onOpenMacroHistory={() => setMacroHistoryOpen(true)}
           onStartMacroRecording={startMacroRecording}
           onStopMacroRecording={() => void stopMacroRecording()}
@@ -2074,6 +2102,7 @@ export function EditorShell() {
           customSplitLayouts={customSplitLayouts}
           canDetectBeats={canDetectBeats}
           canSnapToBeats={canSnapToBeats}
+          canSplitToBeats={canSplitToBeats}
           beatSensitivity={beatSensitivity}
           onBeatSensitivityChange={setBeatSensitivity}
           canSeparateAudio={canSeparateSelectedAudio}

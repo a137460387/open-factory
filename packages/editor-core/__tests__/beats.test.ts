@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculateBeatSnapUpdates, createBeatMarker, detectBeatPeaks, normalizeBeatMarkers, snapClipStartToBeat } from '../src';
+import { calculateBeatSnapUpdates, calculateBeatSplitTimesForClip, createBeatMarker, detectBeatPeaks, normalizeBeatMarkers, snapClipStartToBeat } from '../src';
 import { makeAudioClip, makeTimeline, makeVideoClip } from './test-utils';
 
 describe('beat detection helpers', () => {
@@ -51,5 +51,11 @@ describe('beat detection helpers', () => {
       { clipId: 'audio-a', from: 4.12, to: 4 }
     ]);
     expect(snapClipStartToBeat(timeline.tracks[0].clips[1], [1, 2, 4], 0.2)).toBe(2.4);
+  });
+
+  it('calculates clip-local beat split times inside clip bounds', () => {
+    const clip = makeVideoClip({ id: 'clip-a', start: 1, duration: 3 });
+
+    expect(calculateBeatSplitTimesForClip(clip, [0.5, 1, 1.5, 2.25, 2.25, 4, 4.1])).toEqual([0.5, 1.25]);
   });
 });

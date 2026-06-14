@@ -70,6 +70,7 @@ import {
   UpdateProjectSettingsCommand,
   UpdateTrackCommand,
   calculateReplaceMediaPatch,
+  calculateBeatSplitTimesForClip,
   calculateClipGroupMoveStarts,
   createTrack,
   findCompleteClipGroup,
@@ -1049,6 +1050,20 @@ describe('timeline commands', () => {
 
     manager.undo();
     expect(accessor.current().tracks[0].clips).toEqual([makeVideoClip({ id: 'clip-scene', duration: 3 })]);
+  });
+
+  it('splits a clip at beat times and restores the whole edit with one undo', () => {
+    const original = makeVideoClip({ id: 'clip-beat-split', start: 1, duration: 3 });
+    const accessor = makeAccessor(makeTimeline([original]));
+    const manager = new CommandManager();
+    const splitTimes = calculateBeatSplitTimesForClip(original, [1.5, 2.5, 4]);
+
+    manager.execute(new SplitClipAtTimesCommand(accessor, original.id, splitTimes));
+
+    expect(splitTimes).toEqual([0.5, 1.5]);
+    expect(accessor.current().tracks[0].clips).toHaveLength(3);
+    manager.undo();
+    expect(accessor.current().tracks[0].clips).toEqual([original]);
   });
 
   it('splits clip keyframes with scene split ranges and rejects invalid split points', () => {

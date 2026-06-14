@@ -4,6 +4,18 @@ import { calculateRenderFarmProgress, type RenderFarmSegmentStatus, type RenderF
 
 export type ExportTaskStatus = 'scheduled' | 'pending' | 'running' | 'canceled' | 'error' | 'success';
 export type ExportTaskPriority = 'high' | 'normal' | 'low';
+export type ExportUploadTargetType = 'webdav' | 'local';
+export type ExportUploadStatus = 'pending' | 'running' | 'success' | 'error';
+
+export interface ExportUploadState {
+  targetType: ExportUploadTargetType;
+  status: ExportUploadStatus;
+  progress: number;
+  attempts: number;
+  destination?: string;
+  error?: string;
+  updatedAt: string;
+}
 
 export interface ExportTask {
   id: string;
@@ -38,6 +50,7 @@ export interface ExportTaskHistoryEntry {
   logPath?: string;
   error?: string;
   report?: ExportReport;
+  upload?: ExportUploadState;
 }
 
 export function createExportTask(input: {
@@ -187,6 +200,38 @@ export function createExportTaskHistoryEntry(task: ExportTask): ExportTaskHistor
   };
 }
 
+export function updateExportTaskHistoryUpload(
+  history: ExportTaskHistoryEntry[],
+  entryId: string,
+  patch: {
+    targetType: ExportUploadTargetType;
+    status: ExportUploadStatus;
+    destination?: string;
+    error?: string;
+    progress?: number;
+  },
+  now = new Date().toISOString()
+): ExportTaskHistoryEntry[] {
+  return history.map((entry) => {
+    if (entry.id !== entryId) {
+      return entry;
+    }
+    const previous = entry.upload;
+    const startingAttempt = patch.status === 'running' && previous?.status !== 'running';
+    const progress = patch.progress ?? defaultUploadProgress(patch.status);
+    const nextUpload: ExportUploadState = {
+      targetType: patch.targetType,
+      status: patch.status,
+      progress: Math.min(1, Math.max(0, progress)),
+      attempts: startingAttempt ? (previous?.attempts ?? 0) + 1 : previous?.attempts ?? (patch.status === 'running' ? 1 : 0),
+      updatedAt: now,
+      ...(patch.destination ? { destination: patch.destination } : previous?.destination ? { destination: previous.destination } : {}),
+      ...(patch.error ? { error: patch.error } : {})
+    };
+    return { ...entry, upload: nextUpload };
+  });
+}
+
 export function normalizeExportTaskPriority(priority: ExportTaskPriority | undefined): ExportTaskPriority {
   return priority === 'high' || priority === 'low' ? priority : 'normal';
 }
@@ -215,6 +260,16 @@ function comparePendingExportTasks(
 
 function priorityWeight(priority: ExportTaskPriority): number {
   return priority === 'high' ? 2 : priority === 'normal' ? 1 : 0;
+}
+
+function defaultUploadProgress(status: ExportUploadStatus): number {
+  if (status === 'success' || status === 'error') {
+    return 1;
+  }
+  if (status === 'running') {
+    return 0.25;
+  }
+  return 0;
 }
 
 function normalizeScheduledStartAt(value: string | undefined, now: string): string | undefined {
