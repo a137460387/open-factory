@@ -470,6 +470,10 @@ function sanitizeExportSettings(settings: unknown): ExportPresetSettings {
   if (colorManagement) {
     output.colorManagement = colorManagement;
   }
+  const postExportScript = sanitizePostExportScript(input.postExportScript);
+  if (postExportScript) {
+    output.postExportScript = postExportScript;
+  }
   const audioVisualization = sanitizeAudioVisualization(input.audioVisualization);
   if (audioVisualization) {
     output.audioVisualization = audioVisualization;
@@ -487,6 +491,18 @@ function sanitizeColorManagement(value: unknown): ExportPresetSettings['colorMan
     outputColorSpace: sanitizeExportColorSpace(input.outputColorSpace, 'srgb'),
     embedIccProfile: input.embedIccProfile !== false
   };
+}
+
+function sanitizePostExportScript(value: unknown): ExportPresetSettings['postExportScript'] | undefined {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+  const command = (value as Record<string, unknown>).command;
+  if (typeof command !== 'string') {
+    return undefined;
+  }
+  const trimmed = command.trim();
+  return trimmed ? { command: trimmed } : undefined;
 }
 
 function sanitizeExportColorSpace(value: unknown, fallback: NonNullable<ExportPresetSettings['colorManagement']>['inputColorSpace']): NonNullable<ExportPresetSettings['colorManagement']>['inputColorSpace'] {

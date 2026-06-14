@@ -58,12 +58,18 @@ describe('render farm export helpers', () => {
     };
     const segmentPlan = buildRenderFarmSegmentPlan(basePlan, segment);
     expect(segmentPlan.fullArgs.slice(-5)).toEqual(['-ss', '30', '-t', '30', 'C:/Temp/open-factory/segments/task-segment-01.mp4']);
+    expect(segmentPlan.postExportScript).toBeNull();
 
     const concatList = buildRenderFarmConcatList([segment]);
     expect(concatList).toBe("file 'C:/Temp/open-factory/segments/task-segment-01.mp4'\n");
 
-    const concatPlan = buildRenderFarmConcatPlan([segment], 'C:/Exports/final.mp4', 'C:/Temp/open-factory/segments/task-concat.txt');
+    const concatPlan = buildRenderFarmConcatPlan([segment], 'C:/Exports/final.mp4', 'C:/Temp/open-factory/segments/task-concat.txt', {
+      projectName: 'Review',
+      postExportScript: { command: 'echo {output}' }
+    });
     expect(concatPlan.fullArgs).toEqual(['-y', '-f', 'concat', '-safe', '0', '-i', 'C:/Temp/open-factory/segments/task-concat.txt', '-c', 'copy', 'C:/Exports/final.mp4']);
+    expect(concatPlan.projectName).toBe('Review');
+    expect(concatPlan.postExportScript).toEqual({ command: 'echo {output}' });
   });
 
   it('sanitizes segment paths and handles plans without existing output args', () => {

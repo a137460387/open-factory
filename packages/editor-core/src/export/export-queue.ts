@@ -37,6 +37,7 @@ export interface ExportTaskHistoryEntry {
   finishedAt: string;
   logPath?: string;
   error?: string;
+  report?: ExportReport;
 }
 
 export function createExportTask(input: {
@@ -181,7 +182,8 @@ export function createExportTaskHistoryEntry(task: ExportTask): ExportTaskHistor
     startedAt: task.startedAt,
     finishedAt: task.finishedAt ?? new Date().toISOString(),
     logPath: task.logPath,
-    error: task.error
+    error: task.error,
+    ...(task.report ? { report: task.report } : {})
   };
 }
 

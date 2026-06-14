@@ -2,6 +2,7 @@ import type { Clip, MediaAsset, Project, Timeline } from '../model';
 import { getTimelineDuration } from '../timeline';
 import { buildExportProjectFromProject, buildFfmpegExportPlan } from './ffmpeg-builder';
 export * from './export-types';
+export * from './post-export-script';
 export * from './ffmpeg-builder';
 export * from './ffmpeg-escape';
 export * from './export-queue';

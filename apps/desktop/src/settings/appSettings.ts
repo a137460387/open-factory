@@ -30,6 +30,7 @@ export interface BackupSettings {
 
 export interface ExportBackgroundSettings {
   allowPowerActions: boolean;
+  postExportScriptAcknowledged: boolean;
 }
 
 export interface ViewSettings {
@@ -439,7 +440,8 @@ export function normalizeExportBackgroundSettings(settings: Partial<ExportBackgr
     return undefined;
   }
   return {
-    allowPowerActions: Boolean(settings.allowPowerActions)
+    allowPowerActions: Boolean(settings.allowPowerActions),
+    postExportScriptAcknowledged: Boolean(settings.postExportScriptAcknowledged)
   };
 }
 
@@ -494,7 +496,8 @@ function defaultBackupSettings(): BackupSettings {
 
 function defaultExportBackgroundSettings(): ExportBackgroundSettings {
   return {
-    allowPowerActions: false
+    allowPowerActions: false,
+    postExportScriptAcknowledged: false
   };
 }
 

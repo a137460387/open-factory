@@ -1563,6 +1563,19 @@ const zh = {
       includeFrameNumber: '包含帧号',
       slateEnabled: '开头插入 0.5s 场记板'
     },
+    postExportScript: {
+      title: '导出后执行',
+      enabled: '已配置',
+      disabled: '未配置',
+      command: '命令',
+      placeholder: '例如：echo "{output}"',
+      securityTitle: '我已了解',
+      securityMessage: '脚本将以当前用户权限执行。Open Factory 不通过 shell 解释命令，导出成功后执行失败只记录 warning。',
+      variables: '可用变量：{output} 输出文件路径、{project} 项目名、{duration} 时长秒数、{date} YYYYMMDD。',
+      ackRequired: '请先勾选“我已了解”后再保存或加入导出队列。',
+      resultTitle: '导出后脚本',
+      exitCode: (code: number | null) => `退出码：${code ?? '无'}`
+    },
     preview: {
       title: '导出预览',
       button: '预览效果',
@@ -3479,6 +3492,19 @@ const enOverrides = {
       timecodeBackgroundColor: 'Background Color',
       includeFrameNumber: 'Include Frame Number',
       slateEnabled: 'Insert 0.5s Slate'
+    },
+    postExportScript: {
+      title: 'Run After Export',
+      enabled: 'Configured',
+      disabled: 'Not configured',
+      command: 'Command',
+      placeholder: 'Example: echo "{output}"',
+      securityTitle: 'I understand',
+      securityMessage: 'The script runs with the current user permissions. Open Factory does not interpret it through a shell; failures after a successful export are recorded as warnings only.',
+      variables: 'Variables: {output} output path, {project} project name, {duration} duration in seconds, {date} YYYYMMDD.',
+      ackRequired: 'Acknowledge the script permission warning before saving or adding the export to the queue.',
+      resultTitle: 'Post-export script',
+      exitCode: (code: number | null) => `Exit code: ${code ?? 'none'}`
     },
     preview: {
       title: 'Export Preview',

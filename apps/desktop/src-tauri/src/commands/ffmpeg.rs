@@ -117,6 +117,8 @@ struct PathTextCharManifest {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FfmpegExportPlanDto {
+    #[serde(default)]
+    project_name: Option<String>,
     full_args: Vec<String>,
     warnings: Vec<String>,
     text_artifacts: Vec<TextArtifactDto>,
@@ -125,6 +127,14 @@ pub struct FfmpegExportPlanDto {
     #[serde(default)]
     nested_plans: Vec<NestedFfmpegExportPlanDto>,
     duration: f64,
+    #[serde(default)]
+    post_export_script: Option<PostExportScriptDto>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PostExportScriptDto {
+    command: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -196,12 +206,29 @@ pub struct ExportPreviewSamplesResult {
 pub struct ExportReport {
     #[serde(skip_serializing_if = "Option::is_none")]
     loudness: Option<LoudnessReport>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    post_export_script: Option<PostExportScriptResult>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct LoudnessReport {
     integrated_loudness: f64,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PostExportScriptResult {
+    command: String,
+    resolved_command: String,
+    program: String,
+    args: Vec<String>,
+    stdout: String,
+    stderr: String,
+    exit_code: Option<i32>,
+    success: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    error: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, PartialEq)]
@@ -546,7 +573,7 @@ pub async fn run_export(
     });
 
     match result {
-        Ok(report) => {
+        Ok(mut report) => {
             if let Some(dir) = nested_dir.as_deref() {
                 fs::remove_dir_all(dir).map_err(|error| {
                     format!(
@@ -555,6 +582,18 @@ pub async fn run_export(
                         error
                     )
                 })?;
+            }
+            if let Some(script_result) = run_post_export_script(
+                plan.post_export_script.as_ref(),
+                PostExportScriptContext {
+                    output_path: &output_path,
+                    project_name: plan.project_name.as_deref().unwrap_or_default(),
+                    duration_seconds: plan.duration,
+                    now: SystemTime::now(),
+                },
+            ) {
+                let _ = append_post_export_script_log(&log_path, &script_result);
+                report.post_export_script = Some(script_result);
             }
             Ok(ExportResult {
                 success: true,
@@ -1215,6 +1254,203 @@ fn append_export_log(
     writeln!(file, "\n[stdout]\n{}", stdout).map_err(|error| error.to_string())?;
     writeln!(file, "\n[stderr]\n{}\n", stderr).map_err(|error| error.to_string())?;
     Ok(())
+}
+
+fn append_post_export_script_log(
+    log_path: &Path,
+    result: &PostExportScriptResult,
+) -> Result<(), String> {
+    let mut file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(log_path)
+        .map_err(|error| {
+            format!(
+                "Unable to append export log {}: {}",
+                normalize_path(log_path),
+                error
+            )
+        })?;
+    writeln!(file, "\n[post-export-script]").map_err(|error| error.to_string())?;
+    writeln!(file, "command={}", result.command).map_err(|error| error.to_string())?;
+    writeln!(file, "resolved={}", result.resolved_command)
+        .map_err(|error| error.to_string())?;
+    writeln!(file, "program={}", result.program).map_err(|error| error.to_string())?;
+    writeln!(file, "args={:?}", result.args).map_err(|error| error.to_string())?;
+    writeln!(file, "exitCode={:?}", result.exit_code).map_err(|error| error.to_string())?;
+    writeln!(file, "success={}", result.success).map_err(|error| error.to_string())?;
+    if let Some(error) = result.error.as_deref() {
+        writeln!(file, "error={}", error).map_err(|error| error.to_string())?;
+    }
+    writeln!(file, "\n[post-export-stdout]\n{}", result.stdout)
+        .map_err(|error| error.to_string())?;
+    writeln!(file, "\n[post-export-stderr]\n{}\n", result.stderr)
+        .map_err(|error| error.to_string())?;
+    Ok(())
+}
+
+#[derive(Clone, Copy)]
+struct PostExportScriptContext<'a> {
+    output_path: &'a str,
+    project_name: &'a str,
+    duration_seconds: f64,
+    now: SystemTime,
+}
+
+fn run_post_export_script(
+    script: Option<&PostExportScriptDto>,
+    context: PostExportScriptContext<'_>,
+) -> Option<PostExportScriptResult> {
+    let command = script?.command.trim();
+    if command.is_empty() {
+        return None;
+    }
+    let resolved_command = expand_post_export_script_command(command, &context);
+    let tokens = match split_command_line(&resolved_command) {
+        Ok(tokens) if !tokens.is_empty() => tokens,
+        Ok(_) => return None,
+        Err(error) => {
+            return Some(PostExportScriptResult {
+                command: command.to_string(),
+                resolved_command,
+                program: String::new(),
+                args: vec![],
+                stdout: String::new(),
+                stderr: String::new(),
+                exit_code: None,
+                success: false,
+                error: Some(error),
+            });
+        }
+    };
+    let program = tokens[0].clone();
+    let args = tokens[1..].to_vec();
+    match Command::new(&program).args(&args).output() {
+        Ok(output) => {
+            let success = output.status.success();
+            let exit_code = output.status.code();
+            Some(PostExportScriptResult {
+                command: command.to_string(),
+                resolved_command,
+                program,
+                args,
+                stdout: String::from_utf8_lossy(&output.stdout).to_string(),
+                stderr: String::from_utf8_lossy(&output.stderr).to_string(),
+                exit_code,
+                success,
+                error: if success {
+                    None
+                } else {
+                    Some(format!("Post-export script exited with status {}.", output.status))
+                },
+            })
+        }
+        Err(error) => Some(PostExportScriptResult {
+            command: command.to_string(),
+            resolved_command,
+            program,
+            args,
+            stdout: String::new(),
+            stderr: String::new(),
+            exit_code: None,
+            success: false,
+            error: Some(format!("Unable to start post-export script: {}", error)),
+        }),
+    }
+}
+
+fn expand_post_export_script_command(
+    command: &str,
+    context: &PostExportScriptContext<'_>,
+) -> String {
+    command
+        .replace("{output}", context.output_path)
+        .replace("{project}", context.project_name)
+        .replace(
+            "{duration}",
+            &format_post_export_duration(context.duration_seconds),
+        )
+        .replace("{date}", &format_post_export_date(context.now))
+}
+
+fn split_command_line(command: &str) -> Result<Vec<String>, String> {
+    let mut tokens = Vec::<String>::new();
+    let mut current = String::new();
+    let mut quote: Option<char> = None;
+    let mut chars = command.chars().peekable();
+    while let Some(ch) = chars.next() {
+        if let Some(active_quote) = quote {
+            if ch == active_quote {
+                quote = None;
+            } else if active_quote == '"' && ch == '\\' {
+                match chars.peek().copied() {
+                    Some('"') | Some('\\') => {
+                        if let Some(next) = chars.next() {
+                            current.push(next);
+                        }
+                    }
+                    _ => current.push(ch),
+                }
+            } else {
+                current.push(ch);
+            }
+            continue;
+        }
+        if ch == '"' || ch == '\'' {
+            quote = Some(ch);
+        } else if ch.is_whitespace() {
+            if !current.is_empty() {
+                tokens.push(current);
+                current = String::new();
+            }
+        } else {
+            current.push(ch);
+        }
+    }
+    if let Some(active_quote) = quote {
+        return Err(format!(
+            "Post-export script command has an unclosed {} quote.",
+            active_quote
+        ));
+    }
+    if !current.is_empty() {
+        tokens.push(current);
+    }
+    Ok(tokens)
+}
+
+fn format_post_export_duration(duration_seconds: f64) -> String {
+    if !duration_seconds.is_finite() || duration_seconds <= 0.0 {
+        return "0".to_string();
+    }
+    let rounded = format!("{:.3}", duration_seconds);
+    rounded.trim_end_matches('0').trim_end_matches('.').to_string()
+}
+
+fn format_post_export_date(now: SystemTime) -> String {
+    let seconds = now
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs() as i64)
+        .unwrap_or(0);
+    let days = seconds.div_euclid(86_400);
+    let (year, month, day) = civil_from_days(days);
+    format!("{:04}{:02}{:02}", year, month, day)
+}
+
+fn civil_from_days(days_since_unix_epoch: i64) -> (i32, u32, u32) {
+    let z = days_since_unix_epoch + 719_468;
+    let era = if z >= 0 { z } else { z - 146_096 }.div_euclid(146_097);
+    let doe = z - era * 146_097;
+    let yoe = (doe - doe / 1_460 + doe / 36_524 - doe / 146_096).div_euclid(365);
+    let mut year = yoe + era * 400;
+    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
+    let mp = (5 * doy + 2).div_euclid(153);
+    let day = doy - (153 * mp + 2).div_euclid(5) + 1;
+    let month = mp + if mp < 10 { 3 } else { -9 };
+    if month <= 2 {
+        year += 1;
+    }
+    (year as i32, month as u32, day as u32)
 }
 
 fn maybe_cancel_timed_out_export(
@@ -2576,6 +2812,74 @@ unrelated line
     }
 
     #[test]
+    fn expands_post_export_script_variables() {
+        let context = PostExportScriptContext {
+            output_path: "C:/Exports/final.mp4",
+            project_name: "Launch Cut",
+            duration_seconds: 12.5,
+            now: UNIX_EPOCH + Duration::from_secs(1_781_395_200),
+        };
+
+        assert_eq!(
+            expand_post_export_script_command(
+                "tool --file \"{output}\" --project \"{project}\" --duration {duration} --date {date}",
+                &context
+            ),
+            "tool --file \"C:/Exports/final.mp4\" --project \"Launch Cut\" --duration 12.5 --date 20260614"
+        );
+    }
+
+    #[test]
+    fn skips_empty_post_export_script_command() {
+        let context = PostExportScriptContext {
+            output_path: "C:/Exports/final.mp4",
+            project_name: "Launch Cut",
+            duration_seconds: 12.5,
+            now: UNIX_EPOCH,
+        };
+
+        assert!(run_post_export_script(None, context).is_none());
+        assert!(run_post_export_script(
+            Some(&PostExportScriptDto {
+                command: "   ".to_string()
+            }),
+            context
+        )
+        .is_none());
+    }
+
+    #[test]
+    fn post_export_script_failure_is_returned_as_report_data() {
+        let context = PostExportScriptContext {
+            output_path: "C:/Exports/final.mp4",
+            project_name: "Launch Cut",
+            duration_seconds: 12.5,
+            now: UNIX_EPOCH,
+        };
+
+        let result = run_post_export_script(
+            Some(&PostExportScriptDto {
+                command: "__open_factory_missing_post_export_command__ {output}".to_string(),
+            }),
+            context,
+        )
+        .expect("failed script should still produce a result");
+
+        assert!(!result.success);
+        assert!(result.error.unwrap_or_default().contains("Unable to start post-export script"));
+        assert_eq!(result.exit_code, None);
+    }
+
+    #[test]
+    fn command_line_split_preserves_quoted_paths_without_shell_operators() {
+        assert_eq!(
+            split_command_line("tool \"C:/Exports/final cut.mp4\" --flag 'two words'").unwrap(),
+            vec!["tool", "C:/Exports/final cut.mp4", "--flag", "two words"]
+        );
+        assert!(split_command_line("tool \"unterminated").is_err());
+    }
+
+    #[test]
     fn cancel_export_is_ok_when_idle() {
         export_children().lock().expect("export child lock").clear();
         cancel_export(None).expect("idle cancellation should not fail");
@@ -2755,6 +3059,7 @@ unrelated line
     #[test]
     fn temp_text_artifacts_are_removed_on_failure() {
         let plan = FfmpegExportPlanDto {
+            project_name: None,
             full_args: vec![
                 "-filter_complex".to_string(),
                 "drawtext=textfile=__TEXTFILE_clip_text__".to_string(),
@@ -2771,6 +3076,7 @@ unrelated line
             passes: vec![],
             nested_plans: vec![],
             duration: 1.0,
+            post_export_script: None,
         };
         let mut observed_temp_dir: Option<PathBuf> = None;
 
@@ -2797,6 +3103,7 @@ unrelated line
     #[test]
     fn temp_artifacts_are_materialized_for_multi_pass_exports() {
         let plan = FfmpegExportPlanDto {
+            project_name: None,
             full_args: vec![
                 "-i".to_string(),
                 "__GIF_PALETTE_open_factory__".to_string(),
@@ -2834,6 +3141,7 @@ unrelated line
             ],
             nested_plans: vec![],
             duration: 1.0,
+            post_export_script: None,
         };
         let mut observed_temp_dir: Option<PathBuf> = None;
 
@@ -2952,6 +3260,7 @@ unrelated line
         })
         .to_string();
         let plan = FfmpegExportPlanDto {
+            project_name: None,
             full_args: vec![
                 "-i".to_string(),
                 "__CUSTOM_SHADER_SEQUENCE_clip_shader__".to_string(),
@@ -2968,6 +3277,7 @@ unrelated line
             passes: vec![],
             nested_plans: vec![],
             duration: 1.0,
+            post_export_script: None,
         };
 
         with_temp_export_artifacts(&plan, |materialized, _temp_dir| {
@@ -3015,6 +3325,7 @@ unrelated line
         })
         .to_string();
         let plan = FfmpegExportPlanDto {
+            project_name: None,
             full_args: vec![
                 "-i".to_string(),
                 "__PATH_TEXT_SEQUENCE_clip_path_text__".to_string(),
@@ -3031,6 +3342,7 @@ unrelated line
             passes: vec![],
             nested_plans: vec![],
             duration: 1.0,
+            post_export_script: None,
         };
 
         with_temp_export_artifacts(&plan, |materialized, _temp_dir| {
@@ -3179,6 +3491,7 @@ unrelated line
             time: seek.parse().unwrap_or(0.0),
             output_path: output_path.to_string(),
             plan: FfmpegExportPlanDto {
+                project_name: None,
                 full_args: vec![
                     "-y".to_string(),
                     "-i".to_string(),
@@ -3196,6 +3509,7 @@ unrelated line
                 passes: vec![],
                 nested_plans: vec![],
                 duration: 1.0 / 30.0,
+                post_export_script: None,
             },
         }
     }

@@ -63,6 +63,7 @@ import { serializeSubtitleCueInputsToAss, serializeSubtitleCueInputsToSrt, seria
 import { buildPathTextFrameLayouts } from '../text-path';
 import { DEFAULT_EXPORT_COLOR_MANAGEMENT, normalizeExportColorManagement, type ExportColorSpace } from './color-management';
 import { normalizeExportRenderRange, type ExportRenderRange, type NormalizedExportRenderRange } from './export-ranges';
+import { normalizeExportPostScript } from './post-export-script';
 import { cssColorToFfmpeg, escapeDrawtextValue, formatFfmpegSeconds, normalizeFfmpegPath, quoteForDisplay } from './ffmpeg-escape';
 import type {
   ExportClip,
@@ -690,6 +691,7 @@ export function buildFfmpegExportPlan(
   const planDuration = frameExportTime === null ? encodedDuration : Math.max(1 / Math.max(1, settings.fps), 0.001);
 
   return {
+    projectName: project.name,
     inputs,
     filterComplex: gifPlan?.filterComplex ?? filterComplex,
     maps: gifPlan?.maps ?? maps,
@@ -699,6 +701,7 @@ export function buildFfmpegExportPlan(
     warnings,
     textArtifacts,
     nestedPlans,
+    postExportScript: normalizeExportPostScript(settings.postExportScript),
     displayCommand: ['ffmpeg', ...(gifPlan?.fullArgs ?? fullArgs).map(quoteForDisplay)].join(' '),
     duration: planDuration
   };

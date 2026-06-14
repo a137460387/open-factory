@@ -52,7 +52,8 @@ describe('export presets', () => {
         reframeOffsetX: 0.25,
         reframeOffsetY: -0.5,
         subtitleMode: 'burn-in',
-        loudnessNormalization: 'youtube'
+        loudnessNormalization: 'youtube',
+        postExportScript: { command: ' echo "{output}" ' }
       },
       storage
     );
@@ -71,7 +72,7 @@ describe('export presets', () => {
         expect.objectContaining({
           id: 'custom-mywpiww0-mobile-review',
           name: 'Mobile Review',
-          settings: expect.objectContaining({ videoBitrate: '9M', subtitleMode: 'burn-in', targetAspectRatio: '9:16', loudnessNormalization: 'youtube' })
+          settings: expect.objectContaining({ videoBitrate: '9M', subtitleMode: 'burn-in', targetAspectRatio: '9:16', loudnessNormalization: 'youtube', postExportScript: { command: 'echo "{output}"' } })
         })
       ]
     });

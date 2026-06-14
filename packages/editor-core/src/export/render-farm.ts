@@ -117,6 +117,7 @@ export function buildRenderFarmSegmentPlan(plan: FfmpegExportPlan, segment: Rend
     fullArgs,
     outputArgs: replaceFinalOutputArg(plan.outputArgs, segment.outputPath),
     displayCommand: undefined,
+    postExportScript: null,
     duration: segment.duration
   };
 }
@@ -128,12 +129,14 @@ export function buildRenderFarmConcatList(segments: Pick<RenderFarmSegmentStatus
 export function buildRenderFarmConcatPlan(
   segments: Pick<RenderFarmSegmentStatus, 'outputPath' | 'duration'>[],
   outputPath: string,
-  concatListPath: string
+  concatListPath: string,
+  sourcePlan?: Pick<FfmpegExportPlan, 'projectName' | 'postExportScript'>
 ): FfmpegExportPlan {
   const normalizedOutput = normalizeFfmpegPath(outputPath);
   const normalizedList = normalizeFfmpegPath(concatListPath);
   const fullArgs = ['-y', '-f', 'concat', '-safe', '0', '-i', normalizedList, '-c', 'copy', normalizedOutput];
   return {
+    projectName: sourcePlan?.projectName,
     inputs: [{ index: 0, path: normalizedList, args: ['-f', 'concat', '-safe', '0'] }],
     filterComplex: '',
     maps: [],
@@ -142,6 +145,7 @@ export function buildRenderFarmConcatPlan(
     warnings: [],
     textArtifacts: [],
     nestedPlans: [],
+    postExportScript: sourcePlan?.postExportScript ?? null,
     duration: round(segments.reduce((total, segment) => total + segment.duration, 0))
   };
 }
@@ -170,7 +174,7 @@ export async function runRenderFarmWithFallback(context: RenderFarmRunContext): 
   try {
     await runSegmentsInPool(context, segments);
     await context.writeFile(concatListPath, buildRenderFarmConcatList(segments));
-    const result = await context.runPlan(buildRenderFarmConcatPlan(segments, context.outputPath, concatListPath), `${context.taskId}:concat`);
+    const result = await context.runPlan(buildRenderFarmConcatPlan(segments, context.outputPath, concatListPath, context.plan), `${context.taskId}:concat`);
     return { report: result.report, usedFallback: false };
   } catch {
     segments = segments.map((segment) => (segment.status === 'success' ? segment : { ...segment, status: 'error', progress: 0 }));

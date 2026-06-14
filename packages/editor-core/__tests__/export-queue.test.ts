@@ -325,4 +325,22 @@ describe('export queue helpers', () => {
 
     expect(createExportTaskHistoryEntry(finished)?.sourcePath).toBe('C:/Media/original.mp4');
   });
+
+  it('keeps post-export script report data in completed task history', () => {
+    const report = {
+      postExportScript: {
+        command: 'echo {output}',
+        resolvedCommand: 'echo C:/Exports/out.mp4',
+        program: 'echo',
+        args: ['C:/Exports/out.mp4'],
+        stdout: 'C:/Exports/out.mp4\n',
+        stderr: '',
+        exitCode: 0,
+        success: true
+      }
+    };
+    const [finished] = finishExportTask([createExportTask({ id: 'task-script', name: 'Script Export', outputPath: 'out.mp4', plan })], 'task-script', report);
+
+    expect(createExportTaskHistoryEntry(finished)?.report).toEqual(report);
+  });
 });

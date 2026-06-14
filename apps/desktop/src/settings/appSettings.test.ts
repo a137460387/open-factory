@@ -160,15 +160,15 @@ describe('app settings storage', () => {
   });
 
   it('defaults export power actions off and persists explicit opt-in', async () => {
-    await expect(readExportBackgroundSettings()).resolves.toEqual({ allowPowerActions: false });
+    await expect(readExportBackgroundSettings()).resolves.toEqual({ allowPowerActions: false, postExportScriptAcknowledged: false });
 
     await saveLanguageSetting('en');
-    const exportBackground = await saveExportBackgroundSettings({ allowPowerActions: true });
+    const exportBackground = await saveExportBackgroundSettings({ allowPowerActions: true, postExportScriptAcknowledged: true });
 
-    expect(exportBackground).toEqual({ allowPowerActions: true });
+    expect(exportBackground).toEqual({ allowPowerActions: true, postExportScriptAcknowledged: true });
     expect(await readAppSettings()).toEqual({
       language: 'en',
-      exportBackground: { allowPowerActions: true }
+      exportBackground: { allowPowerActions: true, postExportScriptAcknowledged: true }
     });
   });
 

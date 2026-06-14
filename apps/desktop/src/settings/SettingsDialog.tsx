@@ -147,7 +147,7 @@ export function SettingsDialog({
     local: { ...DEFAULT_BACKUP_SETTINGS.local },
     webdav: { ...DEFAULT_BACKUP_SETTINGS.webdav }
   }));
-  const [exportBackgroundSettings, setExportBackgroundSettings] = useState<ExportBackgroundSettings>(() => ({ allowPowerActions: false }));
+  const [exportBackgroundSettings, setExportBackgroundSettings] = useState<ExportBackgroundSettings>(() => ({ allowPowerActions: false, postExportScriptAcknowledged: false }));
   const [exportRules, setExportRules] = useState<ExportConditionRule[]>([]);
   const [automationRules, setAutomationRules] = useState<AutomationRule[]>([]);
   const [automationRulesJson, setAutomationRulesJson] = useState('[]');
@@ -1034,7 +1034,7 @@ export function SettingsDialog({
                     type="checkbox"
                     checked={exportBackgroundSettings.allowPowerActions}
                     data-testid="settings-export-power-actions-toggle"
-                    onChange={(event) => void updateExportBackgroundSettings({ allowPowerActions: event.target.checked })}
+                    onChange={(event) => void updateExportBackgroundSettings({ ...exportBackgroundSettings, allowPowerActions: event.target.checked })}
                   />
                   <span>
                     <span className="block font-semibold text-slate-700">{t.general.allowExportPowerActions}</span>

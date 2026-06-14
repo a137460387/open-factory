@@ -82,6 +82,19 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.outputArgs).not.toContain('+faststart+prefer_icc');
   });
 
+  it('carries normalized post-export script settings in the export plan', () => {
+    const plan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(makeProject(), {
+        outputPath: 'out.mp4',
+        settings: {
+          postExportScript: { command: ' echo "{output}" ' }
+        }
+      })
+    );
+
+    expect(plan.postExportScript).toEqual({ command: 'echo "{output}"' });
+  });
+
   it('adds colorspace conversion and ICC generation for non-default output color spaces', () => {
     const plan = buildFfmpegExportPlan(
       buildExportProjectFromProject(makeProject(), {

@@ -9,6 +9,7 @@ import {
   exportRenderRangeFromPoints,
   getTimelinePlaybackDuration,
   normalizeExportColorManagement,
+  normalizeExportPostScript,
   normalizeExportRenderRange,
   normalizeExportRanges,
   normalizeProjectFps,
@@ -27,6 +28,7 @@ import {
   type ExportTaskStatus,
   type ExportTaskPriority,
   type ExportLoudnessNormalization,
+  type ExportPostExportScriptResult,
   type ExportTaskHistoryEntry,
   type ExportPreviewSampleKind,
   type ExportWatermarkPosition,
@@ -57,7 +59,7 @@ import {
   type QualityEvaluationResult
 } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
-import { readExportBackgroundSettings, type ExportBackgroundSettings } from '../settings/appSettings';
+import { readExportBackgroundSettings, saveExportBackgroundSettings, type ExportBackgroundSettings } from '../settings/appSettings';
 import { getWhisperAvailability } from '../lib/whisper';
 import { useWhisperSettingsStore } from '../store/whisperSettingsStore';
 import { cancelQueuedExportTask, enqueueExport, retryQueuedExportTask, setExportQueueMaxConcurrent, setExportQueuePaused } from './export-queue-runner';
@@ -150,7 +152,7 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [scheduledStartInput, setScheduledStartInput] = useState(() => localDatetimeInputValue(new Date(Date.now() + 60_000)));
   const [completionAction, setCompletionAction] = useState<ExportCompletionAction>('none');
-  const [exportBackgroundSettings, setExportBackgroundSettings] = useState<ExportBackgroundSettings>(() => ({ allowPowerActions: false }));
+  const [exportBackgroundSettings, setExportBackgroundSettings] = useState<ExportBackgroundSettings>(() => ({ allowPowerActions: false, postExportScriptAcknowledged: false }));
   const [previewRunning, setPreviewRunning] = useState(false);
   const [previewError, setPreviewError] = useState<string>();
   const [previewSamples, setPreviewSamples] = useState<ExportPreviewThumbnail[]>([]);
@@ -336,6 +338,9 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
   async function savePreset(): Promise<void> {
     try {
       setError(undefined);
+      if (!(await ensurePostExportScriptAcknowledged())) {
+        return;
+      }
       const nextPresets = await saveCustomExportPreset(customPresetName || `${selectedPreset.name} ${t.presetCopySuffix}`, exportSettings);
       const createdPreset = nextPresets.filter((preset) => !preset.builtin).at(-1);
       setPresets(nextPresets);
@@ -475,6 +480,9 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
       setError(t.scheduleInvalid);
       return;
     }
+    if (!(await ensurePostExportScriptAcknowledged())) {
+      return;
+    }
     pendingCompletionAction.current = completionAction;
     completionActionHandled.current = false;
     for (const job of selectedJobs) {
@@ -492,6 +500,24 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
       }
     }
     showToast({ kind: 'info', title: scheduleEnabled ? t.scheduledTitle : t.queuedTitle, message: t.queuedMessage(selectedJobs.length, selectedPreset.name) });
+  }
+
+  async function ensurePostExportScriptAcknowledged(): Promise<boolean> {
+    if (!exportSettings.postExportScript?.command || exportBackgroundSettings.postExportScriptAcknowledged) {
+      return true;
+    }
+    setError(t.postExportScript.ackRequired);
+    return false;
+  }
+
+  async function setPostExportScriptAcknowledged(checked: boolean): Promise<void> {
+    const next = { ...exportBackgroundSettings, postExportScriptAcknowledged: checked };
+    setExportBackgroundSettings(next);
+    try {
+      setExportBackgroundSettings(await saveExportBackgroundSettings(next));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : t.savePresetFailed);
+    }
   }
 
   async function collectPreflightIssues(): Promise<PreflightResult[]> {
@@ -672,6 +698,12 @@ function relinkFromPreflight(): void {
           ) : null}
           {!timelineVisualControlsDisabled ? <WatermarkSection watermark={draftSettings.watermark} setDraftSettings={setDraftSettings} onChooseImage={() => void chooseWatermarkImage()} /> : null}
           {!timelineVisualControlsDisabled ? <MonitoringSection timecodeBurnIn={draftSettings.timecodeBurnIn} slate={draftSettings.slate} setDraftSettings={setDraftSettings} /> : null}
+          <PostExportScriptSection
+            script={draftSettings.postExportScript}
+            acknowledged={exportBackgroundSettings.postExportScriptAcknowledged}
+            setDraftSettings={setDraftSettings}
+            onAcknowledgedChange={(checked) => void setPostExportScriptAcknowledged(checked)}
+          />
           <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 md:grid-cols-5">
             <Info label={t.info.resolution} value={isAudioOnly ? zhCN.common.audioOnly : `${exportSettings.width ?? project.settings.width} x ${exportSettings.height ?? project.settings.height}`} />
             <Info label={t.info.fps} value={isAudioOnly ? zhCN.common.audioOnly : String(exportSettings.fps ?? project.settings.fps)} />
@@ -874,28 +906,31 @@ function relinkFromPreflight(): void {
                 <div className="px-3 py-4 text-center text-xs text-slate-500">{t.noHistory}</div>
               ) : (
                 history.slice(0, 8).map((entry) => (
-                  <div key={entry.id} className="flex items-center gap-2 border-b border-line px-3 py-2 text-xs last:border-b-0" data-testid="export-history-entry" data-status={entry.status}>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate font-medium text-slate-800">{entry.name}</div>
-                      <div className="truncate text-[11px] text-slate-500">{entry.outputPath}</div>
-                    </div>
-                    <span className="shrink-0 text-[11px] text-slate-500">{priorityLabel(entry.priority)}</span>
-                    <StatusPill status={entry.status} />
-                    {entry.logPath ? (
-                      <button className="rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel" data-testid="export-history-log-button" onClick={() => void openPath(entry.logPath!)}>
-                        {t.viewLog}
+                  <div key={entry.id} className="border-b border-line px-3 py-2 text-xs last:border-b-0" data-testid="export-history-entry" data-status={entry.status}>
+                    <div className="flex items-center gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate font-medium text-slate-800">{entry.name}</div>
+                        <div className="truncate text-[11px] text-slate-500">{entry.outputPath}</div>
+                      </div>
+                      <span className="shrink-0 text-[11px] text-slate-500">{priorityLabel(entry.priority)}</span>
+                      <StatusPill status={entry.status} />
+                      {entry.logPath ? (
+                        <button className="rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel" data-testid="export-history-log-button" onClick={() => void openPath(entry.logPath!)}>
+                          {t.viewLog}
+                        </button>
+                      ) : null}
+                      <button
+                        className="rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+                        type="button"
+                        data-testid="export-quality-button"
+                        disabled={entry.status !== 'success' || !entry.sourcePath || Boolean(qualityTaskId)}
+                        title={!entry.sourcePath ? t.quality.sourceMissing : undefined}
+                        onClick={() => void evaluateHistoryQuality(entry)}
+                      >
+                        {t.quality.button}
                       </button>
-                    ) : null}
-                    <button
-                      className="rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
-                      type="button"
-                      data-testid="export-quality-button"
-                      disabled={entry.status !== 'success' || !entry.sourcePath || Boolean(qualityTaskId)}
-                      title={!entry.sourcePath ? t.quality.sourceMissing : undefined}
-                      onClick={() => void evaluateHistoryQuality(entry)}
-                    >
-                      {t.quality.button}
-                    </button>
+                    </div>
+                    {entry.report?.postExportScript ? <PostExportScriptResultPanel result={entry.report.postExportScript} /> : null}
                   </div>
                 ))
               )}
@@ -1073,6 +1108,7 @@ function normalizeDraftSettings(settings: ExportPresetSettings): ExportPresetSet
   const timecodeBurnIn = visualExportSettingsEnabled ? normalizeTimecodeBurnInDraft(settings.timecodeBurnIn) : null;
   const slate = visualExportSettingsEnabled && settings.slate?.enabled === true ? { enabled: true } : null;
   const colorManagement = normalizeExportColorManagement(settings.colorManagement);
+  const postExportScript = normalizeExportPostScript(settings.postExportScript);
   return {
     ...settings,
     width: targetAspectRatio === 'source' ? settings.width : dimensions.width,
@@ -1092,6 +1128,7 @@ function normalizeDraftSettings(settings: ExportPresetSettings): ExportPresetSet
     timecodeBurnIn,
     slate,
     colorManagement,
+    postExportScript,
     audioVisualization: normalizeAudioVisualizationDraft(settings.audioVisualization)
   };
 }
@@ -1481,6 +1518,10 @@ function updateColorManagement(setDraftSettings: Dispatch<SetStateAction<ExportP
   setDraftSettings((current) => ({ ...current, colorManagement: { ...normalizeExportColorManagement(current.colorManagement), ...patch } }));
 }
 
+function updatePostExportScriptCommand(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, command: string): void {
+  setDraftSettings((current) => ({ ...current, postExportScript: normalizeExportPostScript({ command }) }));
+}
+
 function updateTimecodeBurnInEnabled(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, checked: boolean): void {
   setDraftSettings((current) => ({ ...current, timecodeBurnIn: checked ? timecodeBurnInFrom(current.timecodeBurnIn) : null }));
 }
@@ -1847,6 +1888,60 @@ function MonitoringSection({
           testId="export-timecode-frame-number-toggle"
         />
         <PresetCheckboxField label={t.slateEnabled} checked={slateEnabled} onChange={(checked) => updateSlateEnabled(setDraftSettings, checked)} testId="export-slate-toggle" />
+      </div>
+    </details>
+  );
+}
+
+function PostExportScriptSection({
+  script,
+  acknowledged,
+  setDraftSettings,
+  onAcknowledgedChange
+}: {
+  script: ExportPresetSettings['postExportScript'];
+  acknowledged: boolean;
+  setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>;
+  onAcknowledgedChange(checked: boolean): void;
+}) {
+  const t = zhCN.exportDialog.postExportScript;
+  const command = script?.command ?? '';
+  const enabled = command.trim().length > 0;
+  return (
+    <details className="rounded-md border border-line p-3" data-testid="export-post-script-section">
+      <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-semibold text-slate-700" data-testid="export-post-script-summary">
+        <span>{t.title}</span>
+        <span className="text-[11px] font-normal text-slate-500">{enabled ? t.enabled : t.disabled}</span>
+      </summary>
+      <div className="mt-3 space-y-3">
+        <label className="block space-y-1 text-xs font-medium text-slate-600">
+          <span>{t.command}</span>
+          <input
+            className="w-full rounded-md border border-line px-2 py-1.5 font-mono text-xs"
+            placeholder={t.placeholder}
+            value={command}
+            onChange={(event) => updatePostExportScriptCommand(setDraftSettings, event.target.value)}
+            data-testid="export-post-script-command-input"
+          />
+        </label>
+        <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900" data-testid="export-post-script-warning">
+          <label className="flex items-start gap-2">
+            <input
+              className="mt-0.5 h-4 w-4 accent-brand"
+              type="checkbox"
+              checked={acknowledged}
+              onChange={(event) => onAcknowledgedChange(event.target.checked)}
+              data-testid="export-post-script-ack-toggle"
+            />
+            <span>
+              <span className="block font-semibold">{t.securityTitle}</span>
+              <span className="mt-1 block">{t.securityMessage}</span>
+            </span>
+          </label>
+        </div>
+        <div className="text-[11px] leading-4 text-slate-500" data-testid="export-post-script-variables">
+          {t.variables}
+        </div>
       </div>
     </details>
   );
@@ -2440,6 +2535,34 @@ function Info({ label, value, tone }: { label: string; value: string; tone?: 'ok
     <div className="rounded-md bg-panel p-2">
       <div className="text-[11px] uppercase tracking-normal text-slate-500">{label}</div>
       <div className={`truncate font-medium ${toneClass}`}>{value}</div>
+    </div>
+  );
+}
+
+function PostExportScriptResultPanel({ result }: { result: ExportPostExportScriptResult }) {
+  const t = zhCN.exportDialog.postExportScript;
+  return (
+    <div
+      className={`mt-2 rounded-md border p-2 text-[11px] ${result.success ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-amber-200 bg-amber-50 text-amber-900'}`}
+      data-testid="export-post-script-result"
+      data-success={String(result.success)}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="font-semibold">{t.resultTitle}</div>
+        <div className="tabular-nums" data-testid="export-post-script-exit-code">
+          {t.exitCode(result.exitCode)}
+        </div>
+      </div>
+      <div className="mt-1 truncate font-mono" title={result.resolvedCommand} data-testid="export-post-script-resolved">
+        {result.resolvedCommand}
+      </div>
+      {result.error ? <div className="mt-1 whitespace-pre-wrap text-amber-800" data-testid="export-post-script-error">{result.error}</div> : null}
+      {result.stdout ? (
+        <pre className="mt-2 max-h-20 overflow-auto rounded bg-white/70 p-2 whitespace-pre-wrap" data-testid="export-post-script-stdout">{result.stdout}</pre>
+      ) : null}
+      {result.stderr ? (
+        <pre className="mt-2 max-h-20 overflow-auto rounded bg-white/70 p-2 whitespace-pre-wrap" data-testid="export-post-script-stderr">{result.stderr}</pre>
+      ) : null}
     </div>
   );
 }

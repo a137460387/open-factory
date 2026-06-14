@@ -76,6 +76,22 @@ export interface ExportSlate {
   enabled: boolean;
 }
 
+export interface ExportPostExportScriptSettings {
+  command: string;
+}
+
+export interface ExportPostExportScriptResult {
+  command: string;
+  resolvedCommand: string;
+  program: string;
+  args: string[];
+  stdout: string;
+  stderr: string;
+  exitCode: number | null;
+  success: boolean;
+  error?: string;
+}
+
 export interface ExportSettings {
   width: number;
   height: number;
@@ -104,6 +120,7 @@ export interface ExportSettings {
   timecodeBurnIn?: ExportTimecodeBurnIn | null;
   slate?: ExportSlate | null;
   colorManagement?: ExportColorManagementSettings;
+  postExportScript?: ExportPostExportScriptSettings | null;
 }
 
 export interface ExportTransform {
@@ -348,6 +365,7 @@ export interface TextArtifact {
 }
 
 export interface FfmpegExportPlan {
+  projectName?: string;
   inputs: FfmpegInput[];
   filterComplex: string;
   maps: string[];
@@ -357,6 +375,7 @@ export interface FfmpegExportPlan {
   warnings: string[];
   textArtifacts: TextArtifact[];
   nestedPlans: NestedFfmpegExportPlan[];
+  postExportScript?: ExportPostExportScriptSettings | null;
   displayCommand?: string;
   duration: number;
 }
@@ -408,4 +427,5 @@ export interface ExportLoudnessReport {
 
 export interface ExportReport {
   loudness?: ExportLoudnessReport;
+  postExportScript?: ExportPostExportScriptResult;
 }

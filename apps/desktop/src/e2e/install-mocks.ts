@@ -305,12 +305,16 @@ const mocks: TauriMocks = {
     exists.set(logPath, true);
     mtimes.set(logPath, Date.now());
     persistFiles();
+    const postExportScript = buildMockPostExportScriptResult(plan);
     return {
       success: true,
       outputPath,
       durationMs: 20,
       warnings: plan.warnings,
-      report: plan.passes?.some((pass) => pass.kind === 'loudness-analysis') ? { loudness: { integratedLoudness: -14.1 } } : undefined
+      report: {
+        ...(plan.passes?.some((pass) => pass.kind === 'loudness-analysis') ? { loudness: { integratedLoudness: -14.1 } } : {}),
+        ...(postExportScript ? { postExportScript } : {})
+      }
     };
   },
   runExportPreviewSamples: async ({ samples }) => {
@@ -1744,6 +1748,31 @@ function releaseExportGateForTask(taskId?: string): void {
 
 function exportCancelKey(taskId?: string): string {
   return taskId ?? '__default_export__';
+}
+
+function buildMockPostExportScriptResult(plan: FfmpegExportPlan) {
+  const command = plan.postExportScript?.command?.trim();
+  if (!command) {
+    return undefined;
+  }
+  const outputPath = plan.fullArgs.at(-1) ?? savePath;
+  const resolvedCommand = command
+    .replaceAll('{output}', outputPath)
+    .replaceAll('{project}', plan.projectName ?? 'Untitled Project')
+    .replaceAll('{duration}', Number.isFinite(plan.duration) ? String(Math.round(plan.duration * 1000) / 1000) : '0')
+    .replaceAll('{date}', '20260614');
+  const echo = resolvedCommand.match(/^echo\s+(.+)$/i);
+  const stdout = echo ? `${echo[1].replace(/^"|"$/g, '')}\n` : '';
+  return {
+    command,
+    resolvedCommand,
+    program: resolvedCommand.split(/\s+/)[0] ?? '',
+    args: resolvedCommand.split(/\s+/).slice(1),
+    stdout,
+    stderr: '',
+    exitCode: 0,
+    success: true
+  };
 }
 
 function fileStem(path: string): string {

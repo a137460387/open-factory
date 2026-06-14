@@ -4,7 +4,9 @@ import {
   BUILT_IN_SPLIT_LAYOUTS,
   calculateSplitLayoutTransforms,
   createMainSideSplitLayout,
+  getSplitLayoutDefinition,
   normalizeSplitLayoutDefinition,
+  normalizeSplitLayoutCells,
   type Timeline
 } from '../src';
 import { makeAudioClip, makeTimeline, makeVideoClip } from './test-utils';
@@ -75,6 +77,22 @@ describe('split-screen layouts', () => {
         { x: 0.5, y: 0, width: 0.5, height: 1 }
       ]
     });
+  });
+
+  it('normalizes custom layout fallbacks and ignores invalid cells', () => {
+    const custom = createMainSideSplitLayout('', '', Number.NaN);
+
+    expect(custom.id).toBe('custom-main-side');
+    expect(custom.name).toBe('Custom split');
+    expect(custom.cells[0].width).toBe(0.666667);
+    expect(getSplitLayoutDefinition('quad')).toBe(BUILT_IN_SPLIT_LAYOUTS.quad);
+    expect(getSplitLayoutDefinition(custom.id, [custom])).toBe(custom);
+    expect(normalizeSplitLayoutDefinition(undefined)).toBeUndefined();
+    expect(normalizeSplitLayoutDefinition({ id: 'one', cells: [{ x: 0, y: 0, width: 1, height: 1 }] })).toBeUndefined();
+    expect(normalizeSplitLayoutCells('bad')).toEqual([]);
+    expect(normalizeSplitLayoutCells([null, { x: -1, y: 0.9, width: Number.NaN, height: 2 }])).toEqual([
+      { x: 0, y: 0.9, width: 0.01, height: 0.1 }
+    ]);
   });
 
   it('applies layout through a command and undoes every transform', () => {
