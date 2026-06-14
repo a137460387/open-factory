@@ -26,6 +26,7 @@ import {
   calculateSpeedCurveDisplayDuration,
   calculateSpeedCurveSourceDuration,
   calculateAnchoredScrollLeft,
+  buildTimelineRulerTicks,
   clampTimelineZoom,
   findTimelineSnapTarget,
   fitTimelineZoomToWindow,
@@ -61,7 +62,9 @@ import {
   moveClip,
   normalizeClipGroups,
   normalizeExportRanges,
+  parseTimecodeToSeconds,
   round,
+  secondsToTimecode,
   snapTime,
   type Clip,
   type ClipGroup,
@@ -94,7 +97,8 @@ import { commandManager, projectAccessor, timelineAccessor } from '../../store/c
 import { useEditorStore, type SelectedKeyframeRef } from '../../store/editorStore';
 import { useRenderCacheStore } from '../../store/renderCacheStore';
 import { useWhisperSettingsStore } from '../../store/whisperSettingsStore';
-import { LABEL_WIDTH, Ruler, TrackRow, buildTicks, type ClipMenuRequest, type DragState, type GapMenuRequest } from './TimelineParts';
+import { LABEL_WIDTH, Ruler, TrackRow, type ClipMenuRequest, type DragState, type GapMenuRequest } from './TimelineParts';
+import { buildRulerContextMenuItems, type RulerContextMenuAction } from './timeline-ruler-menu';
 
 export function Timeline() {
   const project = useEditorStore((state) => state.project);
@@ -116,6 +120,8 @@ export function Timeline() {
   const toggleSelectedClipId = useEditorStore((state) => state.toggleSelectedClipId);
   const clearSelectedClipIds = useEditorStore((state) => state.clearSelectedClipIds);
   const setPlayheadTime = useEditorStore((state) => state.setPlayheadTime);
+  const setInPoint = useEditorStore((state) => state.setInPoint);
+  const setOutPoint = useEditorStore((state) => state.setOutPoint);
   const setTimelineZoom = useEditorStore((state) => state.setTimelineZoom);
   const setPreviewTimeline = useEditorStore((state) => state.setPreviewTimeline);
   const setActiveSequenceId = useEditorStore((state) => state.setActiveSequenceId);
@@ -126,6 +132,7 @@ export function Timeline() {
   const [transitionMenu, setTransitionMenu] = useState<TransitionMenuState | undefined>();
   const [clipMenu, setClipMenu] = useState<ClipMenuState | undefined>();
   const [gapMenu, setGapMenu] = useState<GapMenuState | undefined>();
+  const [rulerMenu, setRulerMenu] = useState<RulerMenuState | undefined>();
   const [silenceDialog, setSilenceDialog] = useState<SilenceDialogState | undefined>();
   const [sceneDialog, setSceneDialog] = useState<SceneDialogState | undefined>();
   const [whisperDialog, setWhisperDialog] = useState<WhisperDialogState | undefined>();
@@ -148,7 +155,25 @@ export function Timeline() {
   );
   const projectDuration = getTimelineDuration(project.timeline);
   const width = Math.max(960, timelineDuration * zoom);
-  const ticks = useMemo(() => buildTicks(timelineDuration), [timelineDuration]);
+  const visibleStart = Math.max(0, (scrollViewport.scrollLeft - LABEL_WIDTH) / Math.max(1, zoom));
+  const visibleEnd = visibleStart + scrollViewport.viewportWidth / Math.max(1, zoom);
+  const ticks = useMemo(
+    () =>
+      buildTimelineRulerTicks({
+        duration: timelineDuration,
+        visibleStart,
+        visibleEnd,
+        zoom,
+        viewportWidth: Math.max(1, scrollViewport.viewportWidth - LABEL_WIDTH),
+        fps: project.settings.fps || 30,
+        timecodeFormat: project.settings.timecodeFormat ?? 'ndf'
+      }),
+    [project.settings.fps, project.settings.timecodeFormat, scrollViewport.viewportWidth, timelineDuration, visibleEnd, visibleStart, zoom]
+  );
+  const playheadTimecode = useMemo(
+    () => secondsToTimecode(playheadTime, project.settings.fps || 30, project.settings.timecodeFormat ?? 'ndf'),
+    [playheadTime, project.settings.fps, project.settings.timecodeFormat]
+  );
   const exportRangeHighlights = useMemo(() => {
     const stored = normalizeExportRanges(project.exportRanges, projectDuration).map((range) => ({ id: range.id, start: range.start, end: range.end }));
     if (stored.length > 0) {
@@ -314,18 +339,63 @@ export function Timeline() {
     }
   }
 
-  function addTimelineMarker(): void {
+  function addTimelineMarker(time = playheadTime): void {
     try {
       commandManager.execute(
         new AddTimelineMarkerCommand(timelineAccessor, {
           id: createId('marker'),
-          time: playheadTime,
+          time,
           label: zhCN.timeline.markerLabel((project.timeline.markers?.length ?? 0) + 1)
         })
       );
     } catch (error) {
       showToast({ kind: 'warning', title: zhCN.timeline.markerRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.addMarkerFailed });
     }
+  }
+
+  function openRulerMenu(request: { time: number; x: number; y: number }): void {
+    setGapMenu(undefined);
+    setClipMenu(undefined);
+    setTransitionMenu(undefined);
+    setRulerMenu({
+      x: Math.min(request.x, Math.max(0, window.innerWidth - 230)),
+      y: Math.min(request.y, Math.max(0, window.innerHeight - 190)),
+      time: request.time,
+      timecode: secondsToTimecode(request.time, project.settings.fps || 30, project.settings.timecodeFormat ?? 'ndf')
+    });
+  }
+
+  function runRulerMenuAction(action: RulerContextMenuAction): void {
+    if (!rulerMenu) {
+      return;
+    }
+    if (action === 'add-marker') {
+      addTimelineMarker(rulerMenu.time);
+      setRulerMenu(undefined);
+      return;
+    }
+    if (action === 'set-in') {
+      setInPoint(rulerMenu.time);
+      setRulerMenu(undefined);
+      return;
+    }
+    if (action === 'set-out') {
+      setOutPoint(rulerMenu.time);
+      setRulerMenu(undefined);
+    }
+  }
+
+  function jumpToRulerTimecode(): void {
+    if (!rulerMenu) {
+      return;
+    }
+    const parsed = parseTimecodeToSeconds(rulerMenu.timecode, { fps: project.settings.fps || 30, duration: projectDuration });
+    if (!parsed.ok) {
+      showToast({ kind: 'warning', title: zhCN.timeline.invalidTimecodeTitle, message: zhCN.timeline.invalidTimecodeMessage });
+      return;
+    }
+    setPlayheadTime(parsed.value.seconds);
+    setRulerMenu(undefined);
   }
 
   function addBeatMarker(): void {
@@ -810,6 +880,7 @@ export function Timeline() {
   function openGapMenu(request: GapMenuRequest): void {
     setTransitionMenu(undefined);
     setClipMenu(undefined);
+    setRulerMenu(undefined);
     setGapMenu({
       ...request,
       x: Math.min(request.x, Math.max(0, window.innerWidth - 180)),
@@ -840,6 +911,7 @@ export function Timeline() {
     setTransitionMenu(undefined);
     setClipMenu(undefined);
     setGapMenu(undefined);
+    setRulerMenu(undefined);
     if (event.target !== event.currentTarget) {
       return;
     }
@@ -862,6 +934,7 @@ export function Timeline() {
   function openClipMenu(request: ClipMenuRequest): void {
     setTransitionMenu(undefined);
     setGapMenu(undefined);
+    setRulerMenu(undefined);
     if (!selectedClipIds.includes(request.clipId)) {
       const group = clipGroupByClipId.get(request.clipId);
       setSelectedClipIds(group?.clipIds ?? [request.clipId]);
@@ -1248,7 +1321,7 @@ export function Timeline() {
         <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.addTextClip} data-testid="add-text-clip-button" onClick={addText}>
           <Type size={16} />
         </button>
-        <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.addMarker} data-testid="add-timeline-marker-button" onClick={addTimelineMarker}>
+        <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.addMarker} data-testid="add-timeline-marker-button" onClick={() => addTimelineMarker()}>
           <Flag size={16} />
         </button>
         <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.addBeatMarker} data-testid="add-beat-marker-button" onClick={addBeatMarker}>
@@ -1324,12 +1397,12 @@ export function Timeline() {
             ticks={ticks}
             zoom={zoom}
             width={width}
+            currentTimecode={playheadTimecode}
             cachedRanges={renderCacheRanges}
             diffRanges={timelineCompareRanges}
             exportRanges={exportRangeHighlights}
-            fps={project.settings.fps || 30}
-            timecodeFormat={project.settings.timecodeFormat ?? 'ndf'}
             onSeek={setPlayheadTime}
+            onContextMenu={openRulerMenu}
           />
           <div className="relative">
             {project.timeline.tracks.map((track) => (
@@ -1353,6 +1426,7 @@ export function Timeline() {
                   {
                     setGapMenu(undefined);
                     setClipMenu(undefined);
+                    setRulerMenu(undefined);
                     setTransitionMenu({
                       ...request,
                       x: Math.min(request.x, Math.max(0, window.innerWidth - 230)),
@@ -1415,6 +1489,15 @@ export function Timeline() {
                 onAdd={addTransition}
                 onRemove={transitionMenu.existingTransitionId ? removeTransition : undefined}
                 onClose={() => setTransitionMenu(undefined)}
+              />
+            ) : null}
+            {rulerMenu ? (
+              <RulerContextMenu
+                menu={rulerMenu}
+                onChange={setRulerMenu}
+                onAction={runRulerMenuAction}
+                onJump={jumpToRulerTimecode}
+                onClose={() => setRulerMenu(undefined)}
               />
             ) : null}
             {gapMenu ? <GapActionMenu menu={gapMenu} onClose={() => setGapMenu(undefined)} onCloseGap={closeGap} /> : null}
@@ -1537,6 +1620,13 @@ interface GapMenuState {
   y: number;
   trackId: string;
   time: number;
+}
+
+interface RulerMenuState {
+  x: number;
+  y: number;
+  time: number;
+  timecode: string;
 }
 
 interface SilenceDialogState {
@@ -1719,7 +1809,7 @@ function TimelineMarkerOverlay({
 }) {
   return (
     <button
-      className="absolute bottom-0 top-0 z-10 w-0.5 -translate-x-1/2 bg-transparent"
+      className="absolute bottom-0 top-0 z-30 w-0.5 -translate-x-1/2 bg-transparent"
       style={{ left }}
       type="button"
       title={`${marker.label} (${marker.time.toFixed(2)}s)`}
@@ -1754,7 +1844,7 @@ function BeatMarkerOverlay({
 }) {
   return (
     <button
-      className="absolute bottom-0 top-0 z-10 w-0.5 -translate-x-1/2 bg-transparent"
+      className="absolute bottom-0 top-0 z-30 w-0.5 -translate-x-1/2 bg-transparent"
       style={{ left }}
       type="button"
       title={zhCN.timeline.beatMarkerTitle(marker.time)}
@@ -1857,6 +1947,62 @@ function GapActionMenu({
       <button className="block w-full rounded px-2 py-2 text-left hover:bg-panel" type="button" data-testid="gap-action-close" onClick={onCloseGap}>
         {zhCN.timeline.closeGapAction}
       </button>
+      <button className="mt-1 block w-full rounded px-2 py-1.5 text-left text-slate-500 hover:bg-panel" type="button" onClick={onClose}>
+        {zhCN.timeline.close}
+      </button>
+    </div>
+  );
+}
+
+function RulerContextMenu({
+  menu,
+  onChange,
+  onAction,
+  onJump,
+  onClose
+}: {
+  menu: RulerMenuState;
+  onChange(menu: RulerMenuState): void;
+  onAction(action: RulerContextMenuAction): void;
+  onJump(): void;
+  onClose(): void;
+}) {
+  const items = buildRulerContextMenuItems();
+  return (
+    <div
+      className="fixed z-50 w-[220px] rounded-md border border-line bg-white p-2 text-xs shadow-soft"
+      style={{ left: menu.x, top: menu.y }}
+      data-testid="ruler-context-menu"
+      onPointerDown={(event) => event.stopPropagation()}
+    >
+      {items
+        .filter((item) => item.action !== 'jump-timecode')
+        .map((item) => (
+          <button key={item.action} className="block w-full rounded px-2 py-2 text-left hover:bg-panel" type="button" data-testid={item.testId} onClick={() => onAction(item.action)}>
+            {item.label}
+          </button>
+        ))}
+      <div className="my-1 border-t border-line" />
+      <div className="px-2 py-1" data-testid="ruler-context-jump-timecode">
+        <label className="block text-[11px] font-semibold text-slate-500">
+          {zhCN.timeline.rulerJumpToTimecode}
+          <input
+            className="mt-1 h-7 w-full rounded border border-line px-2 font-mono text-xs tabular-nums text-ink"
+            value={menu.timecode}
+            placeholder={zhCN.timeline.rulerTimecodePlaceholder}
+            data-testid="ruler-timecode-input"
+            onChange={(event) => onChange({ ...menu, timecode: event.target.value })}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                onJump();
+              }
+            }}
+          />
+        </label>
+        <button className="mt-2 block w-full rounded bg-brand px-2 py-1.5 text-center font-medium text-white" type="button" data-testid="ruler-timecode-jump-button" onClick={onJump}>
+          {zhCN.timeline.rulerJump}
+        </button>
+      </div>
       <button className="mt-1 block w-full rounded px-2 py-1.5 text-left text-slate-500 hover:bg-panel" type="button" onClick={onClose}>
         {zhCN.timeline.close}
       </button>

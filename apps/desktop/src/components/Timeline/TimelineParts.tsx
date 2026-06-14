@@ -2,13 +2,12 @@ import {
   areClipsAdjacent,
   CLIP_GROUP_COLOR_HEX,
   filterTimelineVirtualClips,
-  secondsToTimecode,
   type Clip,
   type ClipGroup,
   type KeyframeProperty,
   type MediaAsset,
   snapTime,
-  type TimecodeFormat,
+  type TimelineRulerTick,
   type TimelineVirtualRenderWindow,
   type Track,
   type Transition,
@@ -58,28 +57,35 @@ export function Ruler({
   ticks,
   zoom,
   width,
+  currentTimecode,
   cachedRanges,
   diffRanges,
   exportRanges,
-  fps,
-  timecodeFormat,
-  onSeek
+  onSeek,
+  onContextMenu
 }: {
-  ticks: number[];
+  ticks: TimelineRulerTick[];
   zoom: number;
   width: number;
+  currentTimecode: string;
   cachedRanges: TimelineRenderRange[];
   diffRanges: TimelineDiffRange[];
   exportRanges: Array<{ id: string; start: number; end: number }>;
-  fps: number;
-  timecodeFormat: TimecodeFormat;
   onSeek(time: number): void;
+  onContextMenu(request: { time: number; x: number; y: number }): void;
 }) {
+  function timeFromEvent(event: React.PointerEvent<HTMLDivElement> | React.MouseEvent<HTMLDivElement>): number {
+    const rect = event.currentTarget.getBoundingClientRect();
+    return snapTime((event.clientX - rect.left) / zoom);
+  }
+
   return (
     <div className="sticky top-0 z-30 grid h-10 grid-cols-[138px_1fr] border-b border-line bg-panel">
       <div className="grid grid-rows-[10px_1fr] border-r border-line">
         <div className="px-3 text-[9px] font-medium leading-[10px] text-emerald-700">{zhCN.timeline.renderCache}</div>
-        <div className="px-3 py-1 text-xs font-medium text-slate-600">{zhCN.timeline.tracks}</div>
+        <div className="px-3 py-1 font-mono text-xs font-semibold tabular-nums text-slate-700" data-testid="timeline-ruler-timecode">
+          {currentTimecode}
+        </div>
       </div>
       <div className="min-w-0" style={{ width }}>
         <div className="relative h-2 bg-emerald-50" data-testid="timeline-render-cache-bar">
@@ -96,14 +102,27 @@ export function Ruler({
           className="relative h-8"
           data-testid="timeline-ruler"
           onPointerDown={(event) => {
-            const rect = event.currentTarget.getBoundingClientRect();
-            onSeek(snapTime((event.clientX - rect.left) / zoom));
+            if (event.button !== 0) {
+              return;
+            }
+            onSeek(timeFromEvent(event));
+          }}
+          onDoubleClick={(event) => {
+            if (event.button !== 0) {
+              return;
+            }
+            onSeek(timeFromEvent(event));
+          }}
+          onContextMenu={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onContextMenu({ time: timeFromEvent(event), x: event.clientX, y: event.clientY });
           }}
         >
           {diffRanges.map((range) => (
             <span
               key={`${range.start}-${range.end}`}
-              className="absolute bottom-0 top-0 bg-orange-300/55"
+              className="absolute bottom-0 top-0 z-0 bg-orange-300/55"
               style={{ left: range.start * zoom, width: Math.max(2, (range.end - range.start) * zoom) }}
               title={zhCN.timeline.snapshotDiffRange}
               data-testid="timeline-snapshot-diff-segment"
@@ -112,15 +131,21 @@ export function Ruler({
           {exportRanges.map((range) => (
             <span
               key={range.id}
-              className="absolute bottom-0 top-0 bg-sky-400/35"
+              className="absolute bottom-0 top-0 z-[1] bg-sky-400/35"
               style={{ left: range.start * zoom, width: Math.max(2, (range.end - range.start) * zoom) }}
               title={zhCN.timeline.exportRange}
               data-testid="timeline-export-range-highlight"
             />
           ))}
           {ticks.map((tick) => (
-            <div key={tick} className="absolute top-0 h-full border-l border-slate-300 pl-1 text-[11px] text-slate-500" style={{ left: tick * zoom }}>
-              {secondsToTimecode(tick, fps, timecodeFormat)}
+            <div
+              key={`${tick.unit}-${tick.time}`}
+              className="absolute top-0 z-10 h-full border-l border-slate-300 pl-1 text-[11px] text-slate-500"
+              style={{ left: tick.time * zoom }}
+              data-testid="timeline-ruler-tick"
+              data-ruler-unit={tick.unit}
+            >
+              {tick.label}
             </div>
           ))}
         </div>
@@ -758,13 +783,4 @@ function getTrackWaveformColor(trackType: Track['type']): string {
 
 function formatTimelineKeyframeProperty(property: KeyframeProperty): string {
   return zhCN.inspector.keyframeProperty[property] ?? property;
-}
-
-export function buildTicks(duration: number): number[] {
-  const ticks: number[] = [];
-  const step = duration > 30 ? 5 : 1;
-  for (let tick = 0; tick <= duration; tick += step) {
-    ticks.push(tick);
-  }
-  return ticks;
 }
