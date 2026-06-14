@@ -66,6 +66,30 @@ describe('project schema migration', () => {
     expect(migrateProjectFile(file).project.clipGroups).toEqual([]);
   });
 
+  it('serializes and migrates timeline color labels while old projects default to null', () => {
+    const project = makeProject();
+    project.timeline.tracks[0] = {
+      ...project.timeline.tracks[0],
+      color: 'purple',
+      clips: [{ ...makeVideoClip({ id: 'clip-color' }), colorLabel: 'cyan' }]
+    };
+    project.sequences = [{ ...project.sequences[0], timeline: project.timeline }];
+
+    const file = serializeProject(project);
+    expect(file.project.timeline.tracks[0].color).toBe('purple');
+    expect(file.project.timeline.tracks[0].clips[0].colorLabel).toBe('cyan');
+
+    const migrated = migrateProjectFile(file);
+    expect(migrated.project.timeline.tracks[0].color).toBe('purple');
+    expect(migrated.project.timeline.tracks[0].clips[0].colorLabel).toBe('cyan');
+
+    delete file.project.timeline.tracks[0].color;
+    delete file.project.timeline.tracks[0].clips[0].colorLabel;
+    const oldProject = migrateProjectFile(file).project;
+    expect(oldProject.timeline.tracks[0].color).toBeNull();
+    expect(oldProject.timeline.tracks[0].clips[0].colorLabel).toBeNull();
+  });
+
   it('serializes and migrates clip borders while old clips default to disabled borders', () => {
     const project = makeProject();
     project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-pip', border: { enabled: true, color: '#ABCDEF', width: 999 } })];

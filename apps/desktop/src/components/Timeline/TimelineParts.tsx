@@ -1,12 +1,17 @@
 import {
   areClipsAdjacent,
   CLIP_GROUP_COLOR_HEX,
+  DEFAULT_TIMELINE_LABEL_COLOR_HEX,
   filterTimelineVirtualClips,
+  getEffectiveClipColorLabel,
+  getTimelineLabelColorHex,
+  TIMELINE_LABEL_COLORS,
   type Clip,
   type ClipGroup,
   type KeyframeProperty,
   type MediaAsset,
   snapTime,
+  type TimelineLabelColor,
   type TimelineRulerTick,
   type TimelineVirtualRenderWindow,
   type Track,
@@ -177,7 +182,8 @@ export function TrackRow({
   rollingTrimActive,
   slipEditActive,
   slideEditActive,
-  clipGroupByClipId
+  clipGroupByClipId,
+  colorFilter
 }: {
   track: Track;
   zoom: number;
@@ -191,7 +197,7 @@ export function TrackRow({
   onKeyframeSelect(keyframe: SelectedKeyframeRef, additive: boolean): void;
   onDragStart(drag: DragState): void;
   onTrackPointerDown(event: React.PointerEvent<HTMLDivElement>): void;
-  onTrackUpdate(trackId: string, patch: Partial<Pick<Track, 'muted' | 'solo' | 'locked' | 'volume'>>): void;
+  onTrackUpdate(trackId: string, patch: Partial<Pick<Track, 'color' | 'muted' | 'solo' | 'locked' | 'volume'>>): void;
   transitions: Transition[];
   onTransitionMenu(request: TransitionMenuRequest): void;
   onGapMenu(request: GapMenuRequest): void;
@@ -202,12 +208,14 @@ export function TrackRow({
   slipEditActive: boolean;
   slideEditActive: boolean;
   clipGroupByClipId: Map<string, ClipGroup>;
+  colorFilter: TimelineLabelColor | null;
 }) {
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const mediaById = new Map(media.map((asset) => [asset.id, asset]));
   const locked = Boolean(track.locked);
   const nextAdjacentByClipId = new Map<string, Clip>();
   const sortedClips = [...track.clips].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id));
-  const virtualClips = filterTimelineVirtualClips(track.clips, virtualWindow);
+  const virtualClips = filterTimelineVirtualClips(track.clips, virtualWindow).filter((clip) => !colorFilter || getEffectiveClipColorLabel(clip, track) === colorFilter);
   for (let index = 0; index < sortedClips.length - 1; index += 1) {
     const current = sortedClips[index];
     const next = sortedClips[index + 1];
@@ -218,6 +226,52 @@ export function TrackRow({
   return (
     <div className="grid border-b border-line" style={{ gridTemplateColumns: `${LABEL_WIDTH}px 1fr`, height: TRACK_HEIGHT }}>
       <div className="flex items-center gap-2 border-r border-line bg-panel px-3">
+        <div className="relative h-full py-2">
+          <button
+            className="block h-full w-1.5 rounded-full border border-white shadow-sm"
+            style={{ backgroundColor: getTimelineLabelColorHex(track.color) }}
+            type="button"
+            title={zhCN.timeline.trackLabelColor}
+            data-testid={`track-color-button-${track.id}`}
+            data-color={track.color ?? 'default'}
+            onClick={(event) => {
+              event.stopPropagation();
+              setColorPickerOpen((open) => !open);
+            }}
+          />
+          {colorPickerOpen ? (
+            <div className="absolute left-0 top-11 z-40 grid w-[116px] grid-cols-4 gap-1 rounded-md border border-line bg-white p-2 shadow-soft" data-testid={`track-color-picker-${track.id}`}>
+              {TIMELINE_LABEL_COLORS.map((color) => (
+                <button
+                  key={color}
+                  className={clsx('h-5 w-5 rounded-full border', track.color === color ? 'border-slate-900 ring-2 ring-slate-300' : 'border-white')}
+                  style={{ backgroundColor: getTimelineLabelColorHex(color) }}
+                  type="button"
+                  title={zhCN.timeline.timelineLabelColorNames[color]}
+                  aria-label={zhCN.timeline.timelineLabelColorNames[color]}
+                  data-testid={`track-color-swatch-${color}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onTrackUpdate(track.id, { color });
+                    setColorPickerOpen(false);
+                  }}
+                />
+              ))}
+              <button
+                className="col-span-4 mt-1 rounded border border-line px-2 py-1 text-[11px] text-slate-600 hover:bg-panel"
+                type="button"
+                data-testid="track-color-clear"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onTrackUpdate(track.id, { color: null });
+                  setColorPickerOpen(false);
+                }}
+              >
+                {zhCN.timeline.defaultLabelColor}
+              </button>
+            </div>
+          ) : null}
+        </div>
         <div className="min-w-0 flex-1">
           <div className="truncate text-xs font-semibold">{track.name}</div>
           <div className="text-[11px] uppercase tracking-normal text-slate-500">{formatTrackType(track.type)}</div>
@@ -293,6 +347,7 @@ export function TrackRow({
               slipEditActive={slipEditActive}
               slideEditActive={slideEditActive}
               clipGroup={clipGroupByClipId.get(clip.id)}
+              trackColor={track.color ?? null}
             />
           );
         })}
@@ -376,7 +431,8 @@ function ClipBlock({
   rollingTrimActive,
   slipEditActive,
   slideEditActive,
-  clipGroup
+  clipGroup,
+  trackColor
 }: {
   clip: Clip;
   asset?: MediaAsset;
@@ -403,8 +459,11 @@ function ClipBlock({
   slipEditActive: boolean;
   slideEditActive: boolean;
   clipGroup?: ClipGroup;
+  trackColor: TimelineLabelColor | null;
 }) {
   const waveformColor = getTrackWaveformColor(trackType);
+  const effectiveColor = getEffectiveClipColorLabel(clip, { color: trackColor });
+  const effectiveColorHex = effectiveColor ? getTimelineLabelColorHex(effectiveColor) : DEFAULT_TIMELINE_LABEL_COLOR_HEX;
   return (
     <div
       className={clsx(
@@ -476,7 +535,14 @@ function ClipBlock({
       data-clip-type={clip.type}
       data-clip-id={clip.id}
       data-clip-group-id={clipGroup?.id}
+      data-color-label={effectiveColor ?? 'default'}
     >
+      <span
+        className="absolute bottom-0 left-0 top-0 z-20 w-1.5"
+        style={{ backgroundColor: effectiveColorHex }}
+        data-testid={`clip-color-strip-${clip.id}`}
+        data-color={effectiveColor ?? 'default'}
+      />
       {clipGroup ? (
         <>
           <span className="absolute left-0 right-0 top-0 z-20 h-1.5" style={{ backgroundColor: CLIP_GROUP_COLOR_HEX[clipGroup.color] }} data-testid={`timeline-clip-group-strip-${clip.id}`} />
@@ -498,7 +564,7 @@ function ClipBlock({
       ) : null}
       {locked ? null : (
         <span
-          className="absolute left-0 top-0 h-full w-[4px] cursor-ew-resize bg-black/20 opacity-0 transition group-hover:opacity-100"
+          className="absolute left-0 top-0 z-30 h-full w-[4px] cursor-ew-resize bg-black/20 opacity-0 transition group-hover:opacity-100"
           data-testid={`timeline-trim-left-${clip.id}`}
           onPointerDown={(event) => {
             event.stopPropagation();
@@ -585,7 +651,7 @@ function ClipBlock({
       })}
       {locked ? null : (
         <span
-          className="absolute right-0 top-0 h-full w-[4px] cursor-ew-resize bg-black/20 opacity-0 transition group-hover:opacity-100"
+          className="absolute right-0 top-0 z-30 h-full w-[4px] cursor-ew-resize bg-black/20 opacity-0 transition group-hover:opacity-100"
           data-testid={`timeline-trim-right-${clip.id}`}
           onPointerDown={(event) => {
             event.stopPropagation();

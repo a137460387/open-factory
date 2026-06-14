@@ -5,6 +5,7 @@ export * from './color-grading';
 export * from './color-match';
 export * from './effects';
 export * from './timeline';
+export * from './timeline-color-labels';
 export * from './clip-groups';
 export * from './timeline-compare';
 export * from './media-filter';

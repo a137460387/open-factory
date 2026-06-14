@@ -14,6 +14,7 @@ import type { BeatMarker } from './beats';
 import { normalizePathPoints } from './masks/path-mask';
 import { migrateProjectFile, serializeProjectFile } from './project/project-migration';
 import type { ProjectFile } from './project/project-types';
+import { normalizeTimelineLabelColor, type TimelineLabelColor } from './timeline-color-labels';
 import { normalizeProjectFps, normalizeTimecodeFormat, round, type TimecodeFormat } from './time';
 
 export type ProjectVersion = '0.2';
@@ -327,6 +328,7 @@ export interface Track {
   id: string;
   type: TrackType;
   name: string;
+  color?: TimelineLabelColor | null;
   muted?: boolean;
   solo?: boolean;
   locked?: boolean;
@@ -391,6 +393,7 @@ export interface BaseClip {
   id: string;
   name: string;
   trackId: string;
+  colorLabel?: TimelineLabelColor | null;
   start: number;
   duration: number;
   trimStart: number;
@@ -829,11 +832,12 @@ export function createExportRange(
 }
 
 export function createTrack(
-  track: Omit<Track, 'muted' | 'solo' | 'locked' | 'volume' | 'pan' | 'eq' | 'compressor'> &
-    Partial<Pick<Track, 'muted' | 'solo' | 'locked' | 'volume' | 'pan' | 'eq' | 'compressor'>>
+  track: Omit<Track, 'color' | 'muted' | 'solo' | 'locked' | 'volume' | 'pan' | 'eq' | 'compressor'> &
+    Partial<Pick<Track, 'color' | 'muted' | 'solo' | 'locked' | 'volume' | 'pan' | 'eq' | 'compressor'>>
 ): Track {
   return {
     ...track,
+    color: normalizeTimelineLabelColor(track.color),
     muted: Boolean(track.muted),
     solo: Boolean(track.solo),
     locked: Boolean(track.locked),
@@ -886,6 +890,7 @@ export function createBaseClip(
     trackId: input.trackId,
     start: round(Math.max(0, input.start)),
     duration: round(Math.max(0, input.duration)),
+    colorLabel: normalizeTimelineLabelColor(input.colorLabel),
     trimStart: round(Math.max(0, input.trimStart)),
     trimEnd: round(Math.max(0, input.trimEnd)),
     speed: clampClipSpeed(input.speed),

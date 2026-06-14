@@ -108,6 +108,7 @@ import {
 } from '../text-animation';
 import { cloneEffects, normalizeEffect, normalizeEffects, type Effect, type EffectParams, type EffectType } from '../effects';
 import { calculateBeatSnapUpdates, normalizeBeatMarkers, type BeatMarker, type BeatSnapUpdate } from '../beats';
+import { normalizeTimelineLabelColor, type TimelineLabelColor } from '../timeline-color-labels';
 import { createMulticamSequenceProject, setMulticamSwitch } from '../multicam';
 import { applyCmx3600EdlImport, buildCmx3600EdlImport, type Cmx3600EdlImportOptions, type Cmx3600EdlImportResult } from '../export/timeline-import';
 import {
@@ -738,7 +739,7 @@ export class AddTrackCommand implements Command {
   }
 }
 
-export type TrackPatch = Partial<Pick<Track, 'name' | 'muted' | 'solo' | 'locked' | 'volume' | 'pan' | 'eq' | 'compressor'>>;
+export type TrackPatch = Partial<Pick<Track, 'name' | 'color' | 'muted' | 'solo' | 'locked' | 'volume' | 'pan' | 'eq' | 'compressor'>>;
 
 export class UpdateTrackCommand implements Command {
   readonly description = 'Update track';
@@ -2599,6 +2600,7 @@ export type ClipPatch = Partial<Omit<Clip, 'type' | 'id' | 'transform' | 'colorC
   kenBurns?: boolean;
   volume?: number;
   text?: string;
+  colorLabel?: TimelineLabelColor | null;
   mediaId?: string;
   subtitleMode?: SubtitleMode;
   speed?: number;
@@ -2915,10 +2917,12 @@ export class UpdateClipCommand implements Command {
     const timeline = this.accessor.getTimeline();
     this.before ??= findClip(timeline, this.clipId);
     const nextSpeed = typeof this.patch.speed === 'number' ? getClipSpeed({ speed: this.patch.speed }) : undefined;
+    const nextColorLabel = this.patch.colorLabel === undefined ? this.before.colorLabel : normalizeTimelineLabelColor(this.patch.colorLabel);
     this.after = {
       ...this.before,
       ...this.patch,
       speed: nextSpeed ?? this.before.speed,
+      ...(nextColorLabel === undefined ? {} : { colorLabel: nextColorLabel }),
       colorCorrection: normalizeColorCorrection({ ...this.before.colorCorrection, ...this.patch.colorCorrection }),
       chromaKey: mergeChromaKeyPatch(this.before.chromaKey, this.patch.chromaKey),
       stabilization: normalizeStabilization({ ...this.before.stabilization, ...this.patch.stabilization }),

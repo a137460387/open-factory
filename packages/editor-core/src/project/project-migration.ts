@@ -45,6 +45,7 @@ import {
   type Transition
 } from '../model';
 import { normalizeClipGroups } from '../clip-groups';
+import { normalizeTimelineLabelColor } from '../timeline-color-labels';
 import { normalizeMediaFolderId, normalizeMediaFolders, normalizeMediaImportedAt } from '../media-folders';
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
 import { cloneEffects } from '../effects';
@@ -325,6 +326,7 @@ function cloneClip<TClip extends Clip>(clip: TClip): TClip {
   const cloned = {
     ...clip,
     speed: clampClipSpeed(clip.speed),
+    colorLabel: normalizeTimelineLabelColor(clip.colorLabel),
     colorCorrection: normalizeColorCorrection(clip.colorCorrection),
     transform: normalizeTransform(clip.transform),
     chromaKey: normalizeChromaKey(clip.chromaKey),

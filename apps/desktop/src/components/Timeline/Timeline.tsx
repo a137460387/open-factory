@@ -18,6 +18,7 @@ import {
   RemoveProjectAnnotationCommand,
   RemoveTimelineMarkerCommand,
   RemoveTransitionCommand,
+  UpdateClipCommand,
   UpdateProjectAnnotationCommand,
   UngroupCommand,
   UpdateClipGroupCommand,
@@ -55,6 +56,7 @@ import {
   getClipSourceVisibleDuration,
   getClipSpeed,
   getReplaceMediaCompatibilityWarnings,
+  getTimelineLabelColorHex,
   findClipGroupForClip,
   findCompleteClipGroup,
   isNestedSequenceDepthExceeded,
@@ -66,6 +68,7 @@ import {
   round,
   secondsToTimecode,
   snapTime,
+  TIMELINE_LABEL_COLORS,
   type Clip,
   type ClipGroup,
   type ClipGroupColor,
@@ -78,6 +81,7 @@ import {
   type SelectionRect,
   type TimelineMarker,
   type TimelineSnapCandidate,
+  type TimelineLabelColor,
   type Track,
   type TransitionType,
   type ReplaceMediaCompatibilityWarning,
@@ -144,6 +148,7 @@ export function Timeline() {
   const [annotationMode, setAnnotationMode] = useState(false);
   const [annotationPanelOpen, setAnnotationPanelOpen] = useState(true);
   const [annotationEditor, setAnnotationEditor] = useState<AnnotationEditorState | undefined>();
+  const [timelineColorFilter, setTimelineColorFilter] = useState<TimelineLabelColor | null>(null);
   const [scrollViewport, setScrollViewport] = useState({ scrollLeft: 0, viewportWidth: 960 });
   const whisperExecutablePath = useWhisperSettingsStore((state) => state.executablePath);
   const whisperModelPath = useWhisperSettingsStore((state) => state.modelPath);
@@ -277,8 +282,12 @@ export function Timeline() {
     );
   }
 
-  function updateTrack(trackId: string, patch: Partial<Pick<Track, 'muted' | 'solo' | 'locked' | 'volume'>>): void {
+  function updateTrack(trackId: string, patch: Partial<Pick<Track, 'color' | 'muted' | 'solo' | 'locked' | 'volume'>>): void {
     commandManager.execute(new UpdateTrackCommand(timelineAccessor, trackId, patch));
+  }
+
+  function updateClipColor(clipId: string, colorLabel: TimelineLabelColor | null): void {
+    commandManager.execute(new UpdateClipCommand(timelineAccessor, clipId, { colorLabel }));
   }
 
   function addTransition(): void {
@@ -1382,6 +1391,29 @@ export function Timeline() {
           onChange={(event) => setTimelineZoom(Number(event.target.value))}
           data-testid="timeline-zoom-slider"
         />
+        <div className="ml-1 flex items-center gap-1 border-l border-line pl-2" data-testid="timeline-color-filter-bar">
+          <span className="text-[11px] font-medium text-slate-500">{zhCN.timeline.timelineColorFilter}</span>
+          <button
+            className={`rounded border px-2 py-1 text-[11px] font-medium ${timelineColorFilter === null ? 'border-brand text-brand' : 'border-line text-slate-600 hover:bg-panel'}`}
+            type="button"
+            data-testid="timeline-color-filter-all"
+            onClick={() => setTimelineColorFilter(null)}
+          >
+            {zhCN.timeline.timelineColorFilterAll}
+          </button>
+          {TIMELINE_LABEL_COLORS.map((color) => (
+            <button
+              key={color}
+              className={`h-5 w-5 rounded-full border ${timelineColorFilter === color ? 'border-slate-900 ring-2 ring-slate-300' : 'border-white'}`}
+              style={{ backgroundColor: getTimelineLabelColorHex(color) }}
+              type="button"
+              title={zhCN.timeline.timelineLabelColorNames[color]}
+              aria-label={zhCN.timeline.timelineLabelColorNames[color]}
+              data-testid={`timeline-color-filter-${color}`}
+              onClick={() => setTimelineColorFilter((current) => (current === color ? null : color))}
+            />
+          ))}
+        </div>
       </div>
       <div
         ref={scrollRef}
@@ -1444,6 +1476,7 @@ export function Timeline() {
                 slipEditActive={slipEditActive}
                 slideEditActive={slideEditActive}
                 clipGroupByClipId={clipGroupByClipId}
+                colorFilter={timelineColorFilter}
               />
             ))}
             {annotationMode ? (
@@ -1519,6 +1552,7 @@ export function Timeline() {
                 onUngroup={(group) => ungroupSelected(group)}
                 onDeleteGroup={deleteGroup}
                 onGroupColor={updateGroupColor}
+                onClipColor={updateClipColor}
                 onClose={() => setClipMenu(undefined)}
               />
             ) : null}
@@ -2027,6 +2061,7 @@ function ClipActionMenu({
   onUngroup,
   onDeleteGroup,
   onGroupColor,
+  onClipColor,
   onClose
 }: {
   menu: ClipMenuState;
@@ -2045,6 +2080,7 @@ function ClipActionMenu({
   onUngroup(group: ClipGroup): void;
   onDeleteGroup(group: ClipGroup): void;
   onGroupColor(group: ClipGroup, color: ClipGroupColor): void;
+  onClipColor(clipId: string, color: TimelineLabelColor | null): void;
   onClose(): void;
 }) {
   const canDetectSilence = Boolean(clip && (clip.type === 'audio' || (clip.type === 'video' && asset?.hasAudio)));
@@ -2132,6 +2168,27 @@ function ClipActionMenu({
       >
         {zhCN.timeline.clipGroupDelete}
       </button>
+      {clip ? (
+        <div className="px-2 pb-1 pt-2" data-testid="clip-label-color-options">
+          <div className="mb-1 text-[11px] font-semibold text-slate-500">{zhCN.timeline.clipLabelColor}</div>
+          <div className="flex flex-wrap gap-1">
+            {TIMELINE_LABEL_COLORS.map((color) => (
+              <button
+                key={color}
+                className={`h-5 w-5 rounded-full border ${clip.colorLabel === color ? 'border-slate-900 ring-2 ring-slate-300' : 'border-white'}`}
+                type="button"
+                title={zhCN.timeline.timelineLabelColorNames[color]}
+                style={{ backgroundColor: getTimelineLabelColorHex(color) }}
+                data-testid={`clip-label-color-${color}`}
+                onClick={() => onClipColor(clip.id, color)}
+              />
+            ))}
+          </div>
+          <button className="mt-1 rounded border border-line px-2 py-1 text-[11px] text-slate-600 hover:bg-panel" type="button" data-testid="clip-label-color-clear" onClick={() => onClipColor(clip.id, null)}>
+            {zhCN.timeline.defaultLabelColor}
+          </button>
+        </div>
+      ) : null}
       {group ? (
         <div className="px-2 pb-1 pt-2" data-testid="clip-group-color-options">
           <div className="mb-1 text-[11px] font-semibold text-slate-500">{zhCN.timeline.clipGroupColor}</div>

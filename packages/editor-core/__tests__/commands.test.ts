@@ -296,6 +296,27 @@ describe('timeline commands', () => {
     expect(accessor.current().tracks[0]).toMatchObject({ muted: true, solo: true, locked: true, volume: 0.5, pan: -0.75 });
   });
 
+  it('updates timeline color labels with undo and redo', () => {
+    const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'clip-color' })]));
+    const manager = new CommandManager();
+
+    manager.execute(new UpdateTrackCommand(accessor, 'track-video', { color: 'teal' }));
+    expect(accessor.current().tracks[0].color).toBe('teal');
+
+    manager.execute(new UpdateClipCommand(accessor, 'clip-color', { colorLabel: 'pink' }));
+    expect(accessor.current().tracks[0].clips[0].colorLabel).toBe('pink');
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips[0].colorLabel).toBeUndefined();
+
+    manager.execute(new UpdateClipCommand(accessor, 'clip-color', { colorLabel: 'invalid' as never }));
+    expect(accessor.current().tracks[0].clips[0].colorLabel).toBeNull();
+
+    manager.undo();
+    manager.undo();
+    expect(accessor.current().tracks[0].color).toBeNull();
+  });
+
   it('updates track EQ and compressor controls with undo and redo', () => {
     const accessor = makeAccessor(makeTimeline());
     const manager = new CommandManager();
