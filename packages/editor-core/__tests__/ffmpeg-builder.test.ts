@@ -2342,6 +2342,41 @@ describe('multitrack ffmpeg builder', () => {
     expect(sharpenIndex).toBeGreaterThan(nlmeansIndex);
   });
 
+  it('generates motion blur temporal blend filters and optional camera jitter', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-motion-blur',
+        effects: [{ id: 'effect-motion-blur', type: 'motion-blur', enabled: true, params: { intensity: 0.7, angle: 45, samples: 16, jitter: 0.35 } }]
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('minterpolate=fps=90:mi_mode=blend');
+    expect(plan.filterComplex).toContain('tblend=all_mode=average:all_opacity=0.7');
+    expect(plan.filterComplex).toContain("crop=w='iw-");
+    expect(plan.filterComplex).toContain('sin(n*12.9898)');
+  });
+
+  it('skips motion blur export filters when intensity is zero or the effect is disabled', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-no-motion-blur',
+        effects: [
+          { id: 'effect-motion-blur-zero', type: 'motion-blur', enabled: true, params: { intensity: 0, angle: 0, samples: 32, jitter: 1 } },
+          { id: 'effect-motion-blur-disabled', type: 'motion-blur', enabled: false, params: { intensity: 1, angle: 0, samples: 32, jitter: 1 } }
+        ]
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).not.toContain('tblend=all_mode=average');
+    expect(plan.filterComplex).not.toContain('sin(n*12.9898)');
+  });
+
   it.each([
     [
       'bars',

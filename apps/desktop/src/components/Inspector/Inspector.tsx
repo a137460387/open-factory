@@ -28,6 +28,7 @@ import {
   MAX_CHROMA_KEY_COLORS,
   MAX_CLIP_SPEED,
   MIN_CLIP_SPEED,
+  MOTION_BLUR_SAMPLE_COUNTS,
   TEXT_ANIMATION_DIRECTIONS,
   TEXT_ANIMATION_PRESETS,
   RemoveEffectCommand,
@@ -65,6 +66,7 @@ import {
   normalizeAudioSpectrumParams,
   normalizeFrameInterpolation,
   normalizeMasks,
+  normalizeMotionBlurParams,
   normalizeMotionTrack,
   normalizePrivacyBlurEffect,
   normalizeSequenceFrameRate,
@@ -3414,6 +3416,8 @@ function EffectsEditor({
                 <AudioSpectrumEffectFields effect={effect} onUpdate={onUpdate} />
               ) : effect.type === 'custom-shader' ? (
                 <CustomShaderEffectFields effect={effect} onUpdate={onUpdate} />
+              ) : effect.type === 'motion-blur' ? (
+                <MotionBlurEffectFields effect={effect} onUpdate={onUpdate} />
               ) : (
                 getEffectParamConfig(effect.type).map((param) => (
                   <RangeNumberField
@@ -3706,6 +3710,65 @@ function AudioSpectrumEffectFields({
         checked={params.mirror}
         onCommit={(mirror) => onUpdate(effect.id, { params: { mirror } })}
         testId={`effect-param-${effect.id}-mirror`}
+      />
+    </div>
+  );
+}
+
+function MotionBlurEffectFields({
+  effect,
+  onUpdate
+}: {
+  effect: Effect;
+  onUpdate(effectId: string, patch: EffectPatch): void;
+}) {
+  const params = normalizeMotionBlurParams(effect.params);
+  return (
+    <div className="space-y-3">
+      <RangeNumberField
+        label={zhCN.inspector.fields.intensity}
+        value={params.intensity}
+        min={0}
+        max={1}
+        step={0.01}
+        format={(value) => value.toFixed(2)}
+        onCommit={(intensity) => onUpdate(effect.id, { params: { intensity } })}
+        testId={`effect-param-${effect.id}-intensity`}
+      />
+      <RangeNumberField
+        label={zhCN.inspector.fields.angle}
+        value={params.angle}
+        min={0}
+        max={360}
+        step={1}
+        format={(value) => `${Math.round(value)}°`}
+        onCommit={(angle) => onUpdate(effect.id, { params: { angle } })}
+        testId={`effect-param-${effect.id}-angle`}
+      />
+      <label className="block text-xs font-medium text-slate-600">
+        {zhCN.inspector.fields.samples}
+        <select
+          className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+          value={params.samples}
+          data-testid={`effect-param-${effect.id}-samples`}
+          onChange={(event) => onUpdate(effect.id, { params: { samples: Number(event.target.value) } })}
+        >
+          {MOTION_BLUR_SAMPLE_COUNTS.map((samples) => (
+            <option key={samples} value={samples}>
+              {samples}
+            </option>
+          ))}
+        </select>
+      </label>
+      <RangeNumberField
+        label={zhCN.inspector.fields.jitter}
+        value={params.jitter}
+        min={0}
+        max={1}
+        step={0.01}
+        format={(value) => value.toFixed(2)}
+        onCommit={(jitter) => onUpdate(effect.id, { params: { jitter } })}
+        testId={`effect-param-${effect.id}-jitter`}
       />
     </div>
   );
@@ -4016,6 +4079,13 @@ function getEffectParamConfig(type: EffectType): Array<{ key: string; label: str
     return [
       { key: 'strength', label: zhCN.inspector.fields.strength, min: 0, max: 1, step: 0.01 },
       { key: 'size', label: zhCN.inspector.fields.size, min: 1, max: 5, step: 1 }
+    ];
+  }
+  if (type === 'motion-blur') {
+    return [
+      { key: 'intensity', label: zhCN.inspector.fields.intensity, min: 0, max: 1, step: 0.01 },
+      { key: 'angle', label: zhCN.inspector.fields.angle, min: 0, max: 360, step: 1 },
+      { key: 'jitter', label: zhCN.inspector.fields.jitter, min: 0, max: 1, step: 0.01 }
     ];
   }
   return [{ key: 'strength', label: zhCN.inspector.fields.strength, min: 0, max: 20, step: 1 }];

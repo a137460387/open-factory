@@ -55,6 +55,7 @@ import {
 } from '../effects';
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
 import { triangulatePathMask } from '../masks/path-mask';
+import { buildMotionBlurExportFilter, normalizeMotionBlurParams } from '../motion-blur';
 import { flattenMulticamProjectForExport } from '../multicam';
 import { buildReframeCropFilter, clampReframeOffset, isReframeEnabled, normalizeTargetAspectRatio, resolveReframeDimensions } from '../reframe';
 import { calculateSpeedCurveSourceDuration, getClipSourceVisibleDuration, getClipSpeed, getRenderableTracks, getTimelinePlaybackDuration, getTrackPan, getTrackVolume } from '../timeline';
@@ -499,7 +500,7 @@ export function buildFfmpegExportPlan(
       for (const item of visualItems) {
         if (item.kind === 'adjustment') {
           const nextVideo = `base${videoStep + 1}`;
-          const adjustmentFilters = buildAdjustmentLayerFilters(currentVideo, nextVideo, item.clip, textArtifacts);
+          const adjustmentFilters = buildAdjustmentLayerFilters(currentVideo, nextVideo, item.clip, textArtifacts, settings);
           if (adjustmentFilters.length > 0) {
             filters.push(...adjustmentFilters);
             currentVideo = nextVideo;
@@ -1307,7 +1308,7 @@ function buildTransitionClipFilter(
   ];
   filters.push(...buildMaskFilters(clip));
   filters.push(...buildColorCorrectionFilters(clip, textArtifacts));
-  filters.push(...buildEffectFilters(clip.effects));
+  filters.push(...buildEffectFilters(clip.effects, settings.fps));
   filters.push(`colorchannelmixer=aa=${formatOpacity(clip.transform.opacity)}[${label}]`);
   return filters.join(',');
 }
@@ -1335,8 +1336,8 @@ function visualKindOrder(item: VisualItem): number {
   return item.kind === 'adjustment' ? 1 : 2;
 }
 
-function buildAdjustmentLayerFilters(inputLabel: string, outputLabel: string, clip: ExportClip, textArtifacts: TextArtifact[]): string[] {
-  const processingFilters = [...buildColorCorrectionFilters(clip, textArtifacts), ...buildEffectFilters(clip.effects)];
+function buildAdjustmentLayerFilters(inputLabel: string, outputLabel: string, clip: ExportClip, textArtifacts: TextArtifact[], settings: ExportSettings): string[] {
+  const processingFilters = [...buildColorCorrectionFilters(clip, textArtifacts), ...buildEffectFilters(clip.effects, settings.fps)];
   if (processingFilters.length === 0) {
     return [];
   }
@@ -1400,7 +1401,7 @@ function buildVisualPostKeyFilters(
   filters.push('format=rgba');
   filters.push(...buildMaskFilters(clip));
   filters.push(...buildColorCorrectionFilters(clip, textArtifacts));
-  filters.push(...buildEffectFilters(clip.effects));
+  filters.push(...buildEffectFilters(clip.effects, settings.fps));
   filters.push(...buildClipBorderFilters(clip));
   if (Math.abs(clip.transform.rotation) > 0.001) {
     filters.push(`rotate=${formatFfmpegNumber(clip.transform.rotation)}*PI/180:c=none`);
@@ -2019,7 +2020,7 @@ function colorBalanceValue(value: ColorWheelValue, channel: 'r' | 'g' | 'b'): nu
   return Math.min(1, Math.max(-1, value[channel] + value.intensity - 1));
 }
 
-function buildEffectFilters(effects: Effect[]): string[] {
+function buildEffectFilters(effects: Effect[], fps = 30): string[] {
   return effects.flatMap((effect) => {
     if (!effect.enabled) {
       return [];
@@ -2040,6 +2041,10 @@ function buildEffectFilters(effects: Effect[]): string[] {
     if (effect.type === 'chromatic-aberration') {
       const strength = getEffectNumberParam(effect.params, 'strength', 4);
       return [`rgbashift=rh=${formatFfmpegNumber(strength)}:bh=${formatFfmpegNumber(-strength)}`];
+    }
+    if (effect.type === 'motion-blur') {
+      const filter = buildMotionBlurExportFilter(normalizeMotionBlurParams(effect.params), fps);
+      return filter ? [filter] : [];
     }
     return [];
   });

@@ -189,6 +189,15 @@ const fixtures = [
     validate: validateColorCorrectionFixture
   },
   {
+    name: 'motion-blur',
+    description: 'high-contrast stripe video softened by the motion-blur convolution effect',
+    outputWidth: 1280,
+    outputHeight: 720,
+    expectedDuration: 1.5,
+    create: createMotionBlurFixture,
+    validate: validateMotionBlurFixture
+  },
+  {
     name: 'panorama-360',
     description: 'equirectangular 360 video clip extracted to a flat viewport through v360',
     outputWidth: 1280,
@@ -1854,6 +1863,102 @@ async function validateColorCorrectionFixture(context) {
   };
 }
 
+async function createMotionBlurFixture(context) {
+  const sourcePath = join(context.fixtureDir, 'motion-blur-source.mp4');
+  await createMotionBlurSourceFixture(sourcePath, {
+    width: context.outputWidth,
+    height: context.outputHeight,
+    duration: context.fixture.expectedDuration
+  });
+  return buildProject({
+    id: 'golden-motion-blur',
+    name: 'Golden Motion Blur',
+    width: context.outputWidth,
+    height: context.outputHeight,
+    media: [
+      videoAsset({
+        id: 'asset-motion-blur-source',
+        name: 'motion-blur-source.mp4',
+        path: sourcePath,
+        duration: context.fixture.expectedDuration,
+        width: context.outputWidth,
+        height: context.outputHeight,
+        hasAudio: false,
+        stat: statSync(sourcePath)
+      })
+    ],
+    tracks: [
+      {
+        id: 'track-motion-blur-video',
+        type: 'video',
+        name: 'Motion Blur Video',
+        clips: [
+          videoClip({
+            id: 'clip-motion-blur',
+            name: 'Motion blur stripe',
+            mediaId: 'asset-motion-blur-source',
+            trackId: 'track-motion-blur-video',
+            duration: context.fixture.expectedDuration,
+            effects: [
+              {
+                id: 'effect-motion-blur',
+                type: 'motion-blur',
+                enabled: true,
+                params: { intensity: 1, angle: 0, samples: 32, jitter: 0 }
+              }
+            ]
+          })
+        ]
+      },
+      emptyAudioTrack(),
+      emptyTextTrack()
+    ]
+  });
+}
+
+async function validateMotionBlurFixture(context) {
+  const frame = await readFrame(context.outputPath, { at: 0.35, width: context.outputWidth, height: context.outputHeight });
+  const centerX = Math.floor(context.outputWidth / 2);
+  const centerY = Math.floor(context.outputHeight / 2);
+  const center = averageRegion(frame, context.outputWidth, context.outputHeight, { centerX: centerX + 2, centerY, width: 4, height: 120 });
+  const blurredTrail = averageRegion(frame, context.outputWidth, context.outputHeight, { centerX: centerX - 6, centerY, width: 8, height: 120 });
+  const background = averageRegion(frame, context.outputWidth, context.outputHeight, { centerX: 24, centerY, width: 20, height: 120 });
+  const trailCenterDelta = rgbDelta(center, blurredTrail);
+  const trailBackgroundDelta = rgbDelta(blurredTrail, background);
+  const trailPixelCount = countPixels(frame, (red, green, blue, alpha) => {
+    const pixel = [red, green, blue];
+    return alpha > 200 && rgbDelta(pixel, background) > 18 && rgbDelta(pixel, COLORS.white.rgb) > 60;
+  });
+  return {
+    checks: [
+      {
+        name: 'motion-blur-temporal-blend-filter',
+        passed: context.plan.filterComplex.includes('minterpolate=fps=120:mi_mode=blend') && context.plan.filterComplex.includes('tblend=all_mode=average'),
+        actual: context.plan.filterComplex,
+        expected: 'minterpolate + tblend filter'
+      },
+      {
+        name: 'motion-blur-trail-region-differs-from-center',
+        passed: trailCenterDelta > 40,
+        actual: { center, blurredTrail, delta: trailCenterDelta },
+        expected: 'blurred trail average differs from bright center by > 40'
+      },
+      {
+        name: 'motion-blur-trail-region-differs-from-background',
+        passed: trailBackgroundDelta > 30,
+        actual: { blurredTrail, background, delta: trailBackgroundDelta },
+        expected: 'blurred trail average differs from background by > 30'
+      },
+      {
+        name: 'motion-blur-trail-pixels',
+        passed: trailPixelCount > 1_000,
+        actual: trailPixelCount,
+        expected: '> 1000 softened non-background pixels'
+      }
+    ]
+  };
+}
+
 async function createPanorama360Fixture(context) {
   const sourcePath = join(context.fixtureDir, 'panorama-source.mp4');
   await createPanoramaVideoFixture(sourcePath, {
@@ -3258,6 +3363,36 @@ async function createTestPatternVideoFixture(targetPath, options) {
     'lavfi',
     '-i',
     `testsrc2=s=${options.width}x${options.height}:r=30:d=${formatSeconds(options.duration)}`,
+    '-c:v',
+    'libx264',
+    '-pix_fmt',
+    'yuv420p',
+    '-movflags',
+    '+faststart',
+    targetPath
+  ]);
+}
+
+async function createMotionBlurSourceFixture(targetPath, options) {
+  const stripeWidth = 6;
+  const centerStart = Math.floor(options.width / 2 - stripeWidth / 2);
+  await runChecked('ffmpeg', [
+    '-hide_banner',
+    '-y',
+    '-f',
+    'lavfi',
+    '-i',
+    `color=c=${COLORS.darkBlue.ffmpeg}:s=${options.width}x${options.height}:r=30:d=${formatSeconds(options.duration)}`,
+    '-f',
+    'lavfi',
+    '-i',
+    `color=c=${COLORS.white.ffmpeg}:s=${stripeWidth}x${options.height}:r=30:d=${formatSeconds(options.duration)}`,
+    '-filter_complex',
+    `[0:v][1:v]overlay=x='${centerStart}+(t-0.35)*240':y=0:eval=frame:shortest=1[v]`,
+    '-map',
+    '[v]',
+    '-t',
+    formatSeconds(options.duration),
     '-c:v',
     'libx264',
     '-pix_fmt',

@@ -41,8 +41,22 @@ describe('WebGL preview compositor bypass processing', () => {
     const result = resolveWebGlSourceProcessing({ brightness: 0.25 }, effects, chromaKey, masks, { bypassProcessing: true });
 
     expect(result.correction).toMatchObject(DEFAULT_COLOR_CORRECTION);
-    expect(result.effectParams).toEqual({ blur: 0, grain: 0, vignette: 0, chromatic: 0, sharpen: 0 });
+    expect(result.effectParams).toEqual({ blur: 0, grain: 0, vignette: 0, chromatic: 0, sharpen: 0, motionX: 0, motionY: 0, motionSamples: 0, motionJitter: 0 });
     expect(result.key.enabled).toBe(false);
     expect(result.maskUniforms.count).toBe(0);
+  });
+
+  it('resolves motion blur preview vector from enabled effects', () => {
+    const result = resolveWebGlSourceProcessing(
+      undefined,
+      [{ id: 'effect-motion-blur', type: 'motion-blur', enabled: true, params: { intensity: 0.5, angle: 90, samples: 16, jitter: 0.25 } }],
+      undefined,
+      undefined
+    );
+
+    expect(result.effectParams.motionX).toBeCloseTo(0, 4);
+    expect(result.effectParams.motionY).toBeCloseTo(12, 4);
+    expect(result.effectParams.motionSamples).toBe(16);
+    expect(result.effectParams.motionJitter).toBe(2);
   });
 });

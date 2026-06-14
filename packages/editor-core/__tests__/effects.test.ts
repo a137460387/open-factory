@@ -23,6 +23,7 @@ describe('effect stack helpers', () => {
     expect(normalizeEffectParams('vignette', { intensity: -1, radius: 2 })).toEqual({ intensity: 0, radius: 1 });
     expect(normalizeEffectParams('film-grain', { strength: 2, size: 9 })).toEqual({ strength: 1, size: 5 });
     expect(normalizeEffectParams('chromatic-aberration', { strength: 99 })).toEqual({ strength: 20 });
+    expect(normalizeEffectParams('motion-blur', { intensity: 2, angle: -30, samples: 12, jitter: -1 })).toEqual({ intensity: 1, angle: 330, samples: 8, jitter: 0 });
   });
 
   it('normalizes audio spectrum params with string options and clamped numeric ranges', () => {

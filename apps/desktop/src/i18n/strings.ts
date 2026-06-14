@@ -1302,6 +1302,9 @@ const zh = {
       radius: '半径',
       size: '大小',
       strength: '强度',
+      angle: '方向角度',
+      samples: '样本数',
+      jitter: '相机抖动',
       shaderExample: 'Shader 示例',
       shaderCode: 'Fragment Shader',
       style: '样式',
@@ -1483,7 +1486,8 @@ const zh = {
       'film-grain': '胶片颗粒',
       'chromatic-aberration': '色散',
       'audio-spectrum': '音频频谱',
-      'custom-shader': '自定义 Shader'
+      'custom-shader': '自定义 Shader',
+      'motion-blur': '动态模糊'
     },
     audioSpectrumStyles: {
       bars: '柱状',
@@ -3387,6 +3391,9 @@ const enOverrides = {
       radius: 'Radius',
       size: 'Size',
       strength: 'Strength',
+      angle: 'Direction Angle',
+      samples: 'Samples',
+      jitter: 'Camera Jitter',
       shaderExample: 'Shader Example',
       shaderCode: 'Fragment Shader',
       style: 'Style',
@@ -3536,7 +3543,8 @@ const enOverrides = {
       'film-grain': 'Film Grain',
       'chromatic-aberration': 'Chromatic Aberration',
       'audio-spectrum': 'Audio Spectrum',
-      'custom-shader': 'Custom Shader'
+      'custom-shader': 'Custom Shader',
+      'motion-blur': 'Motion Blur'
     },
     audioSpectrumStyles: {
       bars: 'Bars',

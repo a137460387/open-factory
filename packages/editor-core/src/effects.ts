@@ -1,11 +1,13 @@
 import { clamp, round } from './time';
+import { DEFAULT_MOTION_BLUR_PARAMS, normalizeMotionBlurParams, type MotionBlurParams } from './motion-blur';
 
-export type EffectType = 'blur' | 'sharpen' | 'vignette' | 'film-grain' | 'chromatic-aberration' | 'audio-spectrum' | 'custom-shader';
+export type EffectType = 'blur' | 'sharpen' | 'vignette' | 'film-grain' | 'chromatic-aberration' | 'audio-spectrum' | 'custom-shader' | 'motion-blur';
 export type EffectParamValue = number | string | boolean;
 export type EffectParams = Record<string, EffectParamValue>;
 export type AudioSpectrumStyle = 'bars' | 'waveform' | 'circular';
 export type AudioSpectrumPosition = 'top' | 'bottom';
 export type CustomShaderExampleId = 'pixelate' | 'posterize' | 'old-film';
+export type { MotionBlurParams };
 
 export interface AudioSpectrumParams extends EffectParams {
   style: AudioSpectrumStyle;
@@ -72,7 +74,7 @@ gl_FragColor = vec4(clamp(sepia * vignette + (grain - 0.5) * 0.08, 0.0, 1.0), co
 export const DEFAULT_CUSTOM_SHADER_SOURCE = CUSTOM_SHADER_EXAMPLES[0].source;
 export const DEFAULT_CUSTOM_SHADER_PRESET: CustomShaderExampleId = CUSTOM_SHADER_EXAMPLES[0].id;
 
-export const EFFECT_TYPES: EffectType[] = ['blur', 'sharpen', 'vignette', 'film-grain', 'chromatic-aberration', 'audio-spectrum', 'custom-shader'];
+export const EFFECT_TYPES: EffectType[] = ['blur', 'sharpen', 'vignette', 'film-grain', 'chromatic-aberration', 'audio-spectrum', 'custom-shader', 'motion-blur'];
 export const AUDIO_SPECTRUM_STYLES: AudioSpectrumStyle[] = ['bars', 'waveform', 'circular'];
 export const AUDIO_SPECTRUM_POSITIONS: AudioSpectrumPosition[] = ['bottom', 'top'];
 
@@ -83,7 +85,8 @@ export const DEFAULT_EFFECT_PARAMS: Record<EffectType, EffectParams> = {
   'film-grain': { strength: 0.2, size: 2 },
   'chromatic-aberration': { strength: 4 },
   'audio-spectrum': { style: 'bars', color: '#22d3ee', colorStart: '#22d3ee', colorEnd: '#22d3ee', height: 25, position: 'bottom', sensitivity: 1, mirror: false },
-  'custom-shader': { source: DEFAULT_CUSTOM_SHADER_SOURCE, preset: DEFAULT_CUSTOM_SHADER_PRESET }
+  'custom-shader': { source: DEFAULT_CUSTOM_SHADER_SOURCE, preset: DEFAULT_CUSTOM_SHADER_PRESET },
+  'motion-blur': DEFAULT_MOTION_BLUR_PARAMS
 };
 
 export function isEffectType(type: string | undefined): type is EffectType {
@@ -139,6 +142,9 @@ export function normalizeEffectParams(type: EffectType, params: EffectParams | u
   }
   if (type === 'audio-spectrum') {
     return normalizeAudioSpectrumParams(params);
+  }
+  if (type === 'motion-blur') {
+    return normalizeMotionBlurParams(params);
   }
   return normalizeCustomShaderParams(params);
 }

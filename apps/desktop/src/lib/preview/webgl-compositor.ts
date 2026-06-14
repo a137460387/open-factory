@@ -12,6 +12,7 @@ import {
   normalizeThreeWayColor,
   normalizeChromaKey,
   normalizeMasks,
+  buildMotionBlurPreviewVector,
   triangulatePathMask,
   sampleColorCurves,
   type ChromaKey,
@@ -53,6 +54,7 @@ interface ProgramInfo {
   pathMaskInverted: WebGLUniformLocation;
   effectParams: WebGLUniformLocation;
   sharpen: WebGLUniformLocation;
+  motionBlur: WebGLUniformLocation;
 }
 
 interface CustomShaderProgramInfo {
@@ -186,6 +188,7 @@ export class WebGlPreviewCompositor {
     gl.uniform1f(this.program.pathMaskInverted, maskUniforms.pathMaskInverted);
     gl.uniform4f(this.program.effectParams, effectParams.blur, effectParams.grain, effectParams.vignette, effectParams.chromatic);
     gl.uniform1f(this.program.sharpen, effectParams.sharpen);
+    gl.uniform4f(this.program.motionBlur, effectParams.motionX, effectParams.motionY, effectParams.motionSamples, effectParams.motionJitter);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
@@ -514,8 +517,8 @@ function inputColorSpaceIndex(value: InputColorSpace | undefined): number {
   }
 }
 
-function buildPreviewEffectParams(effects: Effect[] | undefined, disabledEffectTypes: EffectType[] = []): { blur: number; grain: number; vignette: number; chromatic: number; sharpen: number } {
-  const params = { blur: 0, grain: 0, vignette: 0, chromatic: 0, sharpen: 0 };
+function buildPreviewEffectParams(effects: Effect[] | undefined, disabledEffectTypes: EffectType[] = []): { blur: number; grain: number; vignette: number; chromatic: number; sharpen: number; motionX: number; motionY: number; motionSamples: number; motionJitter: number } {
+  const params = { blur: 0, grain: 0, vignette: 0, chromatic: 0, sharpen: 0, motionX: 0, motionY: 0, motionSamples: 0, motionJitter: 0 };
   const disabled = new Set(disabledEffectTypes);
   for (const effect of effects ?? []) {
     if (!effect.enabled || disabled.has(effect.type)) {
@@ -531,6 +534,14 @@ function buildPreviewEffectParams(effects: Effect[] | undefined, disabledEffectT
       params.chromatic = Math.max(params.chromatic, Math.min(20, Math.max(0, getEffectNumberParam(effect.params, 'strength', 0))));
     } else if (effect.type === 'sharpen') {
       params.sharpen = Math.max(params.sharpen, Math.min(3, Math.max(0, getEffectNumberParam(effect.params, 'strength', 0))));
+    } else if (effect.type === 'motion-blur') {
+      const motion = buildMotionBlurPreviewVector(effect.params);
+      if (motion.samples > params.motionSamples || Math.hypot(motion.x, motion.y) > Math.hypot(params.motionX, params.motionY)) {
+        params.motionX = motion.x;
+        params.motionY = motion.y;
+        params.motionSamples = motion.samples;
+      }
+      params.motionJitter = Math.max(params.motionJitter, motion.jitter);
     }
   }
   return params;
@@ -649,6 +660,7 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
       uniform float u_pathMaskInverted;
       uniform vec4 u_effectParams;
       uniform float u_sharpen;
+      uniform vec4 u_motionBlur;
       varying vec2 v_texCoord;
 
       vec3 applyHue(vec3 color, float degrees) {
@@ -720,11 +732,35 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
       }
 
       vec4 sampleSource(vec2 coord) {
+        float jitter = u_motionBlur.w;
+        if (jitter > 0.001) {
+          vec2 jitterPixels = vec2(
+            random(coord * u_resolution + vec2(17.13, 3.71)) - 0.5,
+            random(coord * u_resolution + vec2(8.41, 29.67)) - 0.5
+          ) * jitter * 2.0;
+          coord += jitterPixels / max(u_resolution, vec2(1.0));
+        }
         float chromatic = u_effectParams.w / max(u_resolution.x, 1.0);
         vec4 center = texture2D(u_texture, coord);
         if (chromatic > 0.0001) {
           center.r = texture2D(u_texture, coord + vec2(chromatic, 0.0)).r;
           center.b = texture2D(u_texture, coord - vec2(chromatic, 0.0)).b;
+        }
+
+        float motionSamples = u_motionBlur.z;
+        if (motionSamples > 1.0) {
+          vec2 motionStep = u_motionBlur.xy / max(u_resolution, vec2(1.0));
+          vec4 motionSum = vec4(0.0);
+          float motionCount = 0.0;
+          for (int index = 0; index < 32; index++) {
+            if (float(index) >= motionSamples) {
+              break;
+            }
+            float offset = motionSamples <= 1.0 ? 0.0 : float(index) / (motionSamples - 1.0) - 0.5;
+            motionSum += texture2D(u_texture, coord + motionStep * offset);
+            motionCount += 1.0;
+          }
+          center = motionSum / max(motionCount, 1.0);
         }
 
         float blur = u_effectParams.x;
@@ -911,6 +947,7 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
   const pathMaskInverted = gl.getUniformLocation(program, 'u_pathMaskInverted');
   const effectParams = gl.getUniformLocation(program, 'u_effectParams');
   const sharpen = gl.getUniformLocation(program, 'u_sharpen');
+  const motionBlur = gl.getUniformLocation(program, 'u_motionBlur');
   if (
     !resolution ||
     !texture ||
@@ -931,7 +968,8 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
     !pathTrianglesB ||
     !pathMaskInverted ||
     !effectParams ||
-    !sharpen
+    !sharpen ||
+    !motionBlur
   ) {
     throw new Error(zhCN.errors.webglProgramUniformsMissing);
   }
@@ -958,7 +996,8 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
     pathTrianglesB,
     pathMaskInverted,
     effectParams,
-    sharpen
+    sharpen,
+    motionBlur
   };
 }
 
