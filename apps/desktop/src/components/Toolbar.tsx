@@ -1,5 +1,5 @@
 import { Archive, Camera, Captions, ChevronDown, Download, FileDown, FilePlus2, FolderOpen, History, ImageDown, LayoutGrid, Mic2, Monitor, PanelsTopLeft, Pause, PictureInPicture2, Play, Redo2, RotateCcw, Save, Scissors, Settings, Square, Trash2, Undo2, WandSparkles, XCircle } from 'lucide-react';
-import { timelineHasExportableVideo, type BeatSensitivity, type PiPLayoutPosition } from '@open-factory/editor-core';
+import { BUILT_IN_SPLIT_LAYOUTS, SPLIT_LAYOUT_PRESET_IDS, timelineHasExportableVideo, type BeatSensitivity, type PiPLayoutPosition, type SplitLayoutDefinition } from '@open-factory/editor-core';
 import { clsx } from 'clsx';
 import { useState } from 'react';
 import { formatBackupDisplayTime } from '../backup/projectBackup';
@@ -42,10 +42,14 @@ interface ToolbarProps {
   onCancelAudioSeparation(): void;
   onCreateMulticamSequence(): void;
   onApplyPiPLayout(): void;
+  onApplySplitLayout(layoutId: string): void;
+  onSaveCustomSplitLayout(mainRatio: number): Promise<string>;
   canCreateMulticamSequence: boolean;
   canApplyPiPLayout: boolean;
+  canApplySplitLayout: boolean;
   pipLayoutPosition: PiPLayoutPosition;
   onPiPLayoutPositionChange(position: PiPLayoutPosition): void;
+  customSplitLayouts: SplitLayoutDefinition[];
   canDetectBeats: boolean;
   canSnapToBeats: boolean;
   beatSensitivity: BeatSensitivity;
@@ -85,6 +89,8 @@ export function Toolbar(props: ToolbarProps) {
   const [viewMenuOpen, setViewMenuOpen] = useState(false);
   const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
   const [recordMenuOpen, setRecordMenuOpen] = useState(false);
+  const [splitLayoutOpen, setSplitLayoutOpen] = useState(false);
+  const [customSplitRatio, setCustomSplitRatio] = useState(0.67);
   const project = useEditorStore((state) => state.project);
   const isPlaying = useEditorStore((state) => state.isPlaying);
   const setIsPlaying = useEditorStore((state) => state.setIsPlaying);
@@ -131,6 +137,7 @@ export function Toolbar(props: ToolbarProps) {
             setEditMenuOpen(false);
             setViewMenuOpen(false);
             setToolsMenuOpen(false);
+            setSplitLayoutOpen(false);
             setFileMenuOpen((open) => !open);
           }}
         >
@@ -207,6 +214,7 @@ export function Toolbar(props: ToolbarProps) {
             setFileMenuOpen(false);
             setViewMenuOpen(false);
             setToolsMenuOpen(false);
+            setSplitLayoutOpen(false);
             setEditMenuOpen((open) => !open);
           }}
         >
@@ -260,6 +268,7 @@ export function Toolbar(props: ToolbarProps) {
             setFileMenuOpen(false);
             setEditMenuOpen(false);
             setToolsMenuOpen(false);
+            setSplitLayoutOpen(false);
             setViewMenuOpen((open) => !open);
           }}
         >
@@ -292,6 +301,7 @@ export function Toolbar(props: ToolbarProps) {
             setFileMenuOpen(false);
             setEditMenuOpen(false);
             setViewMenuOpen(false);
+            setSplitLayoutOpen(false);
             setToolsMenuOpen((open) => !open);
           }}
         >
@@ -448,6 +458,7 @@ export function Toolbar(props: ToolbarProps) {
             setEditMenuOpen(false);
             setViewMenuOpen(false);
             setToolsMenuOpen(false);
+            setSplitLayoutOpen(false);
             setRecordMenuOpen((open) => !open);
           }}
         >
@@ -554,6 +565,46 @@ export function Toolbar(props: ToolbarProps) {
       <ToolButton title={t.splitSelectedClip} onClick={props.onSplitSelected} icon={<Scissors size={17} />} testId="toolbar-split-button" />
       <ToolButton title={t.smartRoughCut} onClick={props.onToggleSmartRoughCut} icon={<WandSparkles size={17} />} testId="toolbar-smart-rough-cut-button" active={props.smartRoughCutOpen} />
       <ToolButton title={t.createMulticamSequence} disabled={!props.canCreateMulticamSequence} onClick={props.onCreateMulticamSequence} icon={<PanelsTopLeft size={17} />} testId="toolbar-create-multicam-button" />
+      <div className="relative">
+        <button
+          className={clsx(
+            'inline-flex h-9 w-9 items-center justify-center rounded-md border border-transparent text-slate-700 transition',
+            splitLayoutOpen ? 'border-brand bg-brand text-white' : undefined,
+            props.canApplySplitLayout ? 'hover:border-line hover:bg-panel hover:text-ink' : 'opacity-40'
+          )}
+          type="button"
+          title={t.applySplitLayout}
+          aria-label={t.applySplitLayout}
+          disabled={!props.canApplySplitLayout}
+          data-testid="toolbar-split-layout-button"
+          onClick={() => {
+            setFileMenuOpen(false);
+            setEditMenuOpen(false);
+            setViewMenuOpen(false);
+            setToolsMenuOpen(false);
+            setRecordMenuOpen(false);
+            setSplitLayoutOpen((open) => !open);
+          }}
+        >
+          <LayoutGrid size={17} />
+        </button>
+        {splitLayoutOpen ? (
+          <SplitLayoutPicker
+            customLayouts={props.customSplitLayouts}
+            customRatio={customSplitRatio}
+            onCustomRatioChange={setCustomSplitRatio}
+            onApply={(layoutId) => {
+              setSplitLayoutOpen(false);
+              props.onApplySplitLayout(layoutId);
+            }}
+            onSaveCustom={async () => {
+              const layoutId = await props.onSaveCustomSplitLayout(customSplitRatio);
+              setSplitLayoutOpen(false);
+              props.onApplySplitLayout(layoutId);
+            }}
+          />
+        ) : null}
+      </div>
       <ToolButton title={t.applyPiPLayout} disabled={!props.canApplyPiPLayout} onClick={props.onApplyPiPLayout} icon={<PictureInPicture2 size={17} />} testId="toolbar-pip-button" />
       <select
         className="h-9 rounded-md border border-line bg-panel px-2 text-xs font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
@@ -599,6 +650,84 @@ interface ToolButtonProps {
   onClick(): void;
   testId?: string;
   playbackState?: 'playing' | 'paused';
+}
+
+function SplitLayoutPicker({
+  customLayouts,
+  customRatio,
+  onCustomRatioChange,
+  onApply,
+  onSaveCustom
+}: {
+  customLayouts: SplitLayoutDefinition[];
+  customRatio: number;
+  onCustomRatioChange(value: number): void;
+  onApply(layoutId: string): void;
+  onSaveCustom(): Promise<void>;
+}) {
+  const t = zhCN.toolbar;
+  const layouts = [...SPLIT_LAYOUT_PRESET_IDS.map((id) => BUILT_IN_SPLIT_LAYOUTS[id]), ...customLayouts];
+  return (
+    <div className="absolute left-0 top-10 z-30 w-80 rounded-md border border-line bg-white p-3 text-xs shadow-soft" data-testid="split-layout-picker">
+      <div className="mb-2 font-semibold text-slate-700">{t.applySplitLayout}</div>
+      <div className="grid grid-cols-2 gap-2">
+        {layouts.map((layout) => (
+          <button
+            key={layout.id}
+            className="rounded-md border border-line bg-panel p-2 text-left hover:border-brand hover:bg-white"
+            type="button"
+            data-testid={`split-layout-option-${layout.id}`}
+            onClick={() => onApply(layout.id)}
+          >
+            <SplitLayoutPreview layout={layout} />
+            <div className="mt-1 truncate font-medium text-slate-700">{t.splitLayouts[layout.id as keyof typeof t.splitLayouts] ?? layout.name}</div>
+          </button>
+        ))}
+      </div>
+      <div className="mt-3 rounded-md border border-line bg-panel p-2">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <span className="font-medium text-slate-700">{t.customSplitLayout}</span>
+          <span className="tabular-nums text-slate-500">{Math.round(customRatio * 100)}%</span>
+        </div>
+        <input
+          className="w-full"
+          type="range"
+          min={20}
+          max={80}
+          step={1}
+          value={Math.round(customRatio * 100)}
+          data-testid="split-layout-custom-ratio-input"
+          onChange={(event) => onCustomRatioChange(Number(event.target.value) / 100)}
+        />
+        <button
+          className="mt-2 inline-flex w-full items-center justify-center rounded-md border border-line bg-white px-2 py-1.5 text-xs font-semibold text-slate-700 hover:bg-panel"
+          type="button"
+          data-testid="split-layout-save-custom"
+          onClick={() => void onSaveCustom()}
+        >
+          {t.saveCustomSplitLayout}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SplitLayoutPreview({ layout }: { layout: SplitLayoutDefinition }) {
+  return (
+    <svg className="h-16 w-full rounded border border-line bg-black" viewBox="0 0 120 68" role="img" aria-hidden="true">
+      {layout.cells.map((cell, index) => (
+        <rect
+          key={`${cell.x}-${cell.y}-${cell.width}-${cell.height}-${index}`}
+          x={cell.x * 120 + 1}
+          y={cell.y * 68 + 1}
+          width={Math.max(1, cell.width * 120 - 2)}
+          height={Math.max(1, cell.height * 68 - 2)}
+          fill={index % 2 === 0 ? '#2dd4bf' : '#60a5fa'}
+          opacity={0.9}
+        />
+      ))}
+    </svg>
+  );
 }
 
 function ToolButton({ title, icon, disabled, active, onClick, testId, playbackState }: ToolButtonProps) {

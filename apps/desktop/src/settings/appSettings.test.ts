@@ -4,6 +4,7 @@ import {
   readAppSettings,
   readAutomationRules,
   readBackupSettings,
+  readCustomSplitLayouts,
   readExportBackgroundSettings,
   readExportRules,
   readLayoutSettings,
@@ -11,6 +12,7 @@ import {
   readViewSettings,
   saveBackupSettings,
   saveAutomationRules,
+  saveCustomSplitLayouts,
   saveExportBackgroundSettings,
   saveExportRules,
   saveLanguageSetting,
@@ -202,6 +204,42 @@ describe('app settings storage', () => {
       language: 'en',
       exportRules: rules
     });
+  });
+
+  it('persists normalized custom split-screen layouts in settings.json', async () => {
+    const saved = await saveCustomSplitLayouts([
+      {
+        id: ' review ',
+        name: ' Review Grid ',
+        cells: [
+          { x: 0, y: 0, width: 0.6, height: 1 },
+          { x: 0.6, y: 0, width: 0.5, height: 0.5 },
+          { x: 0.6, y: 0.5, width: 0.5, height: 0.5 }
+        ]
+      },
+      {
+        id: 'review',
+        name: 'duplicate',
+        cells: [
+          { x: 0, y: 0, width: 0.5, height: 1 },
+          { x: 0.5, y: 0, width: 0.5, height: 1 }
+        ]
+      }
+    ]);
+
+    expect(saved).toEqual([
+      {
+        id: 'review',
+        name: 'Review Grid',
+        cells: [
+          { x: 0, y: 0, width: 0.6, height: 1 },
+          { x: 0.6, y: 0, width: 0.4, height: 0.5 },
+          { x: 0.6, y: 0.5, width: 0.4, height: 0.5 }
+        ]
+      }
+    ]);
+    expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({ customSplitLayouts: saved });
+    await expect(readCustomSplitLayouts()).resolves.toEqual(saved);
   });
 
   it('persists safe frame guide visibility in view settings', async () => {

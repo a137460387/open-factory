@@ -4,6 +4,7 @@ import {
   AddClipCommand,
   AddMediaFolderCommand,
   AddProjectAnnotationCommand,
+  ApplySplitLayoutCommand,
   AddTrackCommand,
   AddTransitionCommand,
   CreateMulticamSequenceCommand,
@@ -32,7 +33,9 @@ import {
   createProject,
   createTrack,
   buildVideoStitchSequence,
+  createMainSideSplitLayout,
   dirname,
+  getSplitLayoutDefinition,
   getClipSpeed,
   getCfrTargetFrameRate,
   getTimelineDuration,
@@ -56,6 +59,7 @@ import {
   type PiPLayoutPosition,
   type ProjectTemplateId,
   type ProxyMissingIssue,
+  type SplitLayoutDefinition,
   type TitleTemplateId
 } from '@open-factory/editor-core';
 import { ChevronLeft, ChevronRight, GripHorizontal } from 'lucide-react';
@@ -135,7 +139,7 @@ import {
   type CommandSnapshot,
   type MacroHistoryEntry
 } from '../macros/clip-macros';
-import { readBackupSettings, readLayoutSettings, readViewSettings, saveLayoutSettings, saveViewSettings } from '../settings/appSettings';
+import { readBackupSettings, readCustomSplitLayouts, readLayoutSettings, readViewSettings, saveCustomSplitLayouts, saveLayoutSettings, saveViewSettings } from '../settings/appSettings';
 import { createProxyForAsset, type ProxyGenerationOptions } from '../media/proxy';
 import { ensureMediaJobRunner } from '../media/media-job-runner';
 import { DuplicateMediaDialog, type DuplicateMediaMergeSelection } from '../media/DuplicateMediaDialog';
@@ -230,6 +234,7 @@ export function EditorShell() {
   const [layoutSettings, setLayoutSettings] = useState<EditorLayoutSettings>(DEFAULT_EDITOR_LAYOUT_SETTINGS);
   const [safeFrameGuides, setSafeFrameGuides] = useState(false);
   const [pipLayoutPosition, setPiPLayoutPosition] = useState<PiPLayoutPosition>('bottom-right');
+  const [customSplitLayouts, setCustomSplitLayouts] = useState<SplitLayoutDefinition[]>([]);
   const [viewportSize, setViewportSize] = useState(() => readViewportSize());
   const [lastBackupAt, setLastBackupAt] = useState<string>();
   const [demucsAvailability, setDemucsAvailability] = useState<DemucsAvailability>({ ready: false, error: zhCN.demucs.notConfigured });
@@ -279,6 +284,22 @@ export function EditorShell() {
       .sort((left, right) => left.trackIndex - right.trackIndex || left.selectedIndex - right.selectedIndex);
   }, [project.timeline.tracks, selectedClipIds]);
   const canApplyPiPLayout = selectedPiPClips.length === 2;
+  const selectedSplitLayoutClips = useMemo(() => {
+    if (selectedClipIds.length < 2 || selectedClipIds.length > 4) {
+      return [];
+    }
+    type ClipWithTrack = { clip: Clip; track: Project['timeline']['tracks'][number]; trackIndex: number; selectedIndex: number };
+    const allClips = project.timeline.tracks.flatMap((track, trackIndex) => track.clips.map((clip) => ({ clip, track, trackIndex })));
+    return selectedClipIds
+      .map((id, selectedIndex) => {
+        const item = allClips.find((candidate) => candidate.clip.id === id);
+        return item ? { ...item, selectedIndex } : undefined;
+      })
+      .filter((item): item is ClipWithTrack => item !== undefined)
+      .filter((item) => item.track.type === 'video' && isPiPVisualClip(item.clip))
+      .sort((left, right) => left.trackIndex - right.trackIndex || left.selectedIndex - right.selectedIndex);
+  }, [project.timeline.tracks, selectedClipIds]);
+  const canApplySplitLayout = selectedSplitLayoutClips.length >= 2 && selectedSplitLayoutClips.length <= 4;
   const canSeparateSelectedAudio = canSeparateAudioForClip(selectedClip, selectedClipMedia, demucsAvailability.ready) && !audioSeparationClipId;
   const canDetectBeats = Boolean(
     selectedClip &&
@@ -644,6 +665,22 @@ export function EditorShell() {
       })
       .catch((error) => {
         console.warn('Unable to load layout settings', error);
+      });
+    return () => {
+      canceled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let canceled = false;
+    void readCustomSplitLayouts()
+      .then((layouts) => {
+        if (!canceled) {
+          setCustomSplitLayouts(layouts);
+        }
+      })
+      .catch((error) => {
+        console.warn('Unable to load custom split layouts', error);
       });
     return () => {
       canceled = true;
@@ -1302,7 +1339,7 @@ export function EditorShell() {
       return;
     }
     const [main, pip] = selectedPiPClips;
-    const pipSource = getPiPClipSourceDimensions(project, pip.clip);
+    const pipSource = getClipSourceDimensions(project, pip.clip);
     try {
       commandManager.execute(
         new PiPLayoutCommand(timelineAccessor, main.clip.id, pip.clip.id, {
@@ -1319,6 +1356,55 @@ export function EditorShell() {
       showToast({ kind: 'warning', title: zhCN.editorToasts.pipApplyFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.pipApplyFailedMessage });
     }
   }, [pipLayoutPosition, project, selectedPiPClips, setSelectedClipIds]);
+
+  const applySplitLayout = useCallback(
+    (layoutId: string) => {
+      if (!canApplySplitLayout) {
+        showToast({ kind: 'warning', title: zhCN.editorToasts.splitLayoutApplyFailed, message: zhCN.editorToasts.splitLayoutApplyFailedMessage });
+        return;
+      }
+      const layout = getSplitLayoutDefinition(layoutId, customSplitLayouts);
+      if (!layout) {
+        showToast({ kind: 'warning', title: zhCN.editorToasts.splitLayoutApplyFailed, message: zhCN.editorToasts.splitLayoutMissingMessage });
+        return;
+      }
+      const sources = Object.fromEntries(
+        selectedSplitLayoutClips.map((item) => {
+          const dimensions = getClipSourceDimensions(project, item.clip);
+          return [item.clip.id, dimensions];
+        })
+      );
+      try {
+        commandManager.execute(
+          new ApplySplitLayoutCommand(
+            timelineAccessor,
+            selectedSplitLayoutClips.map((item) => item.clip.id),
+            {
+              layout,
+              canvasWidth: project.settings.width,
+              canvasHeight: project.settings.height,
+              sources
+            }
+          )
+        );
+        setSelectedClipIds(selectedSplitLayoutClips.map((item) => item.clip.id));
+        showToast({ kind: 'success', title: zhCN.editorToasts.splitLayoutApplied });
+      } catch (error) {
+        showToast({ kind: 'warning', title: zhCN.editorToasts.splitLayoutApplyFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.splitLayoutApplyFailedMessage });
+      }
+    },
+    [canApplySplitLayout, customSplitLayouts, project, selectedSplitLayoutClips, setSelectedClipIds]
+  );
+
+  const saveCustomSplitLayout = useCallback(
+    async (ratio: number) => {
+      const layout = createMainSideSplitLayout(createId('split-layout'), zhCN.toolbar.customSplitLayoutName(customSplitLayouts.length + 1), ratio);
+      const next = await saveCustomSplitLayouts([...customSplitLayouts, layout]);
+      setCustomSplitLayouts(next);
+      return layout.id;
+    },
+    [customSplitLayouts]
+  );
 
   const importEdlTimeline = useCallback(
     (contents: string, path: string) => {
@@ -1773,10 +1859,14 @@ export function EditorShell() {
           onCancelAudioSeparation={() => void cancelAudioSeparation()}
           onCreateMulticamSequence={createMulticamSequence}
           onApplyPiPLayout={applyPiPLayout}
+          onApplySplitLayout={applySplitLayout}
+          onSaveCustomSplitLayout={(ratio) => saveCustomSplitLayout(ratio)}
           canCreateMulticamSequence={canCreateMulticamSequence}
           canApplyPiPLayout={canApplyPiPLayout}
+          canApplySplitLayout={canApplySplitLayout}
           pipLayoutPosition={pipLayoutPosition}
           onPiPLayoutPositionChange={setPiPLayoutPosition}
+          customSplitLayouts={customSplitLayouts}
           canDetectBeats={canDetectBeats}
           canSnapToBeats={canSnapToBeats}
           beatSensitivity={beatSensitivity}
@@ -2150,7 +2240,7 @@ function isPiPVisualClip(clip: Clip): boolean {
   return clip.type === 'video' || clip.type === 'image' || clip.type === 'nested-sequence';
 }
 
-function getPiPClipSourceDimensions(project: Project, clip: Clip): { width: number; height: number } {
+function getClipSourceDimensions(project: Project, clip: Clip): { width: number; height: number } {
   if (clip.type === 'nested-sequence') {
     return { width: project.settings.width, height: project.settings.height };
   }

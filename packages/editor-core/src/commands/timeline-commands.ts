@@ -84,6 +84,7 @@ import {
   removeClipIdsFromGroups
 } from '../clip-groups';
 import { calculatePiPTransform, createFullFrameTransform, type PiPLayoutPosition } from '../pip-layout';
+import { calculateSplitLayoutTransforms, type SplitLayoutDefinition, type SplitLayoutClipSource } from '../split-layout';
 import { calculateSubtitleShiftUpdates, type SubtitleTimingUpdate } from '../subtitles/retiming';
 import {
   addMediaFolderToProject,
@@ -2766,6 +2767,72 @@ export class PiPLayoutCommand implements Command {
 
 function isPiPVisualClip(clip: Clip): boolean {
   return clip.type === 'video' || clip.type === 'image' || clip.type === 'nested-sequence';
+}
+
+export interface ApplySplitLayoutCommandOptions {
+  layout: SplitLayoutDefinition;
+  canvasWidth: number;
+  canvasHeight: number;
+  sources?: Record<string, { width?: number; height?: number }>;
+}
+
+export class ApplySplitLayoutCommand implements Command {
+  readonly description = 'Apply split-screen layout';
+  private before?: Timeline;
+
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clipIds: string[],
+    private readonly options: ApplySplitLayoutCommandOptions
+  ) {}
+
+  execute(): void {
+    const timeline = this.accessor.getTimeline();
+    const uniqueIds = Array.from(new Set(this.clipIds));
+    if (uniqueIds.length < 2 || uniqueIds.length > 4) {
+      throw new Error('Split layout requires 2 to 4 clips');
+    }
+    const clips = uniqueIds.map((clipId) => findClip(timeline, clipId));
+    if (!clips.every(isPiPVisualClip)) {
+      throw new Error('Split layout requires visual clips');
+    }
+    this.before ??= timeline;
+    const sources: SplitLayoutClipSource[] = clips.map((clip) => {
+      const source = this.options.sources?.[clip.id];
+      return {
+        clipId: clip.id,
+        sourceWidth: source?.width,
+        sourceHeight: source?.height
+      };
+    });
+    const transforms = new Map(
+      calculateSplitLayoutTransforms({
+        layout: this.options.layout,
+        clips: sources,
+        canvasWidth: this.options.canvasWidth,
+        canvasHeight: this.options.canvasHeight
+      }).map((item) => [item.clipId, item.transform])
+    );
+    if (transforms.size === 0) {
+      throw new Error('Split layout has no usable cells');
+    }
+    this.accessor.setTimeline({
+      ...timeline,
+      tracks: timeline.tracks.map((track) => ({
+        ...track,
+        clips: track.clips.map((clip) => {
+          const transform = transforms.get(clip.id);
+          return transform ? ({ ...clip, transform: normalizeTransform(transform) } as Clip) : clip;
+        })
+      }))
+    });
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setTimeline(this.before);
+    }
+  }
 }
 
 export class UpdateClipCommand implements Command {

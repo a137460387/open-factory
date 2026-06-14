@@ -1,4 +1,5 @@
 import { getLanguage, languageFromNavigator, normalizeLanguage, setLanguage, type Language } from '../i18n/strings';
+import { normalizeSplitLayoutDefinition, type SplitLayoutDefinition } from '@open-factory/editor-core';
 import { fsExists, getAppDataDir, readFile, writeFile } from '../lib/tauri-bridge';
 import {
   DEFAULT_EDITOR_LAYOUT_SETTINGS,
@@ -85,6 +86,7 @@ export interface AppSettings {
   exportRules?: ExportConditionRule[];
   view?: ViewSettings;
   automationRules?: AutomationRule[];
+  customSplitLayouts?: SplitLayoutDefinition[];
 }
 
 export async function initializeLanguageFromSettings(): Promise<Language> {
@@ -164,6 +166,18 @@ export async function saveAutomationRules(automationRules: AutomationRule[]): Pr
   const nextAutomationRules = normalizeAutomationRules(automationRules);
   await writeAppSettings({ ...settings, automationRules: nextAutomationRules });
   return nextAutomationRules;
+}
+
+export async function readCustomSplitLayouts(): Promise<SplitLayoutDefinition[]> {
+  const settings = await readAppSettings();
+  return settings.customSplitLayouts ?? [];
+}
+
+export async function saveCustomSplitLayouts(customSplitLayouts: SplitLayoutDefinition[]): Promise<SplitLayoutDefinition[]> {
+  const settings = await readAppSettings();
+  const nextLayouts = normalizeCustomSplitLayouts(customSplitLayouts);
+  await writeAppSettings({ ...settings, customSplitLayouts: nextLayouts });
+  return nextLayouts;
 }
 
 export async function readViewSettings(): Promise<ViewSettings> {
@@ -256,7 +270,26 @@ function normalizeSettings(settings: Partial<AppSettings>): AppSettings {
   if (automationRules.length > 0) {
     normalized.automationRules = automationRules;
   }
+  const customSplitLayouts = normalizeCustomSplitLayouts(settings.customSplitLayouts);
+  if (customSplitLayouts.length > 0) {
+    normalized.customSplitLayouts = customSplitLayouts;
+  }
   return normalized;
+}
+
+export function normalizeCustomSplitLayouts(layouts: unknown): SplitLayoutDefinition[] {
+  if (!Array.isArray(layouts)) {
+    return [];
+  }
+  const usedIds = new Set<string>();
+  return layouts.flatMap((layout, index) => {
+    const normalized = normalizeSplitLayoutDefinition(layout, `custom-split-${index + 1}`);
+    if (!normalized || usedIds.has(normalized.id)) {
+      return [];
+    }
+    usedIds.add(normalized.id);
+    return [normalized];
+  });
 }
 
 export function normalizeAutomationRules(rules: unknown): AutomationRule[] {

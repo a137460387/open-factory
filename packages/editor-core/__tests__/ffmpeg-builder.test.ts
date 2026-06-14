@@ -7,7 +7,9 @@ import {
   buildFfmpegExportPlan,
   buildFfmpegPreviewSamplePlans,
   calculateExportPreviewSampleTimes,
+  calculateSplitLayoutTransforms,
   calculateWatermarkOverlayPosition,
+  BUILT_IN_SPLIT_LAYOUTS,
   createMulticamSequenceProject,
   createNestedSequenceClip,
   createSequence,
@@ -97,6 +99,23 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.filterComplex).toContain('colorspace=ispace=bt709:iprimaries=bt709:itrc=iec61966-2-1:space=bt709:primaries=smpte432:trc=bt709');
     expect(plan.filterComplex).toContain('iccgen=force=1:color_primaries=smpte432:color_trc=bt709');
     expect(plan.outputArgs).toContain('+faststart+prefer_icc');
+  });
+
+  it('keeps empty split-screen cells black by compositing over a black base', () => {
+    const project = makeProject();
+    const [layoutTransform] = calculateSplitLayoutTransforms({
+      layout: BUILT_IN_SPLIT_LAYOUTS['side-by-side'],
+      canvasWidth: project.settings.width,
+      canvasHeight: project.settings.height,
+      clips: [{ clipId: 'clip-video', sourceWidth: project.settings.width, sourceHeight: project.settings.height }]
+    });
+    project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-video', duration: 2, transform: layoutTransform.transform })];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('color=c=black');
+    expect(plan.filterComplex).toContain('overlay=');
+    expect(plan.filterComplex).toContain('(main_w-overlay_w)/2-320');
   });
 
   it('builds per-clip overlay, drawtext textfile, and amix filters as argument arrays', () => {

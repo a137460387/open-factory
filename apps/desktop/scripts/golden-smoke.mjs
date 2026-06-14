@@ -96,6 +96,15 @@ const fixtures = [
     validate: validatePiPLayoutFixture
   },
   {
+    name: 'split-screen',
+    description: 'four solid color videos arranged in an equal quad split-screen layout',
+    outputWidth: 1280,
+    outputHeight: 720,
+    expectedDuration: 1.5,
+    create: createSplitScreenFixture,
+    validate: validateSplitScreenFixture
+  },
+  {
     name: 'rotation-transform',
     description: 'centered image clip rotated through the FFmpeg rotate filter',
     outputWidth: 1280,
@@ -772,6 +781,105 @@ async function validatePiPLayoutFixture(context) {
         passed: pixelNear(borderPixel, COLORS.cyan.rgb, 22),
         actual: borderPixel,
         expected: `${COLORS.cyan.rgb.join(',')} +/- 22`
+      }
+    ]
+  };
+}
+
+async function createSplitScreenFixture(context) {
+  const sources = [
+    { id: 'top-left', color: COLORS.coral, transform: { x: -320, y: -180, scale: 0.5, scaleX: 0.5, scaleY: 0.5, rotation: 0, opacity: 1 } },
+    { id: 'top-right', color: COLORS.blue, transform: { x: 320, y: -180, scale: 0.5, scaleX: 0.5, scaleY: 0.5, rotation: 0, opacity: 1 } },
+    { id: 'bottom-left', color: COLORS.yellow, transform: { x: -320, y: 180, scale: 0.5, scaleX: 0.5, scaleY: 0.5, rotation: 0, opacity: 1 } },
+    { id: 'bottom-right', color: COLORS.violet, transform: { x: 320, y: 180, scale: 0.5, scaleX: 0.5, scaleY: 0.5, rotation: 0, opacity: 1 } }
+  ];
+  const media = [];
+  const tracks = [];
+  for (const source of sources) {
+    const sourcePath = join(context.fixtureDir, `split-${source.id}.mp4`);
+    await createColorVideoFixture(sourcePath, {
+      color: source.color.ffmpeg,
+      width: context.outputWidth,
+      height: context.outputHeight,
+      duration: context.fixture.expectedDuration,
+      audio: false
+    });
+    media.push(
+      videoAsset({
+        id: `asset-split-${source.id}`,
+        name: `split-${source.id}.mp4`,
+        path: sourcePath,
+        duration: context.fixture.expectedDuration,
+        width: context.outputWidth,
+        height: context.outputHeight,
+        hasAudio: false,
+        stat: statSync(sourcePath)
+      })
+    );
+    tracks.push({
+      id: `track-split-${source.id}`,
+      type: 'video',
+      name: `Split ${source.id}`,
+      clips: [
+        videoClip({
+          id: `clip-split-${source.id}`,
+          name: `Split ${source.id}`,
+          mediaId: `asset-split-${source.id}`,
+          trackId: `track-split-${source.id}`,
+          duration: context.fixture.expectedDuration,
+          transform: source.transform
+        })
+      ]
+    });
+  }
+  return buildProject({
+    id: 'golden-split-screen',
+    name: 'Golden Split Screen',
+    width: context.outputWidth,
+    height: context.outputHeight,
+    media,
+    tracks: [...tracks, emptyAudioTrack(), emptyTextTrack()]
+  });
+}
+
+async function validateSplitScreenFixture(context) {
+  const [topLeft, topRight, bottomLeft, bottomRight] = await Promise.all([
+    readPixel(context.outputPath, { at: 0.45, x: 320, y: 180 }),
+    readPixel(context.outputPath, { at: 0.45, x: 960, y: 180 }),
+    readPixel(context.outputPath, { at: 0.45, x: 320, y: 540 }),
+    readPixel(context.outputPath, { at: 0.45, x: 960, y: 540 })
+  ]);
+  return {
+    checks: [
+      {
+        name: 'split-scale-filter',
+        passed: context.plan.filterComplex.includes('scale=trunc(iw*0.5/2)*2:trunc(ih*0.5/2)*2'),
+        actual: context.plan.filterComplex,
+        expected: 'scale=trunc(iw*0.5/2)*2:trunc(ih*0.5/2)*2'
+      },
+      {
+        name: 'top-left-coral-pixel',
+        passed: pixelNear(topLeft, COLORS.coral.rgb, 18),
+        actual: topLeft,
+        expected: `${COLORS.coral.rgb.join(',')} +/- 18`
+      },
+      {
+        name: 'top-right-blue-pixel',
+        passed: pixelNear(topRight, COLORS.blue.rgb, 18),
+        actual: topRight,
+        expected: `${COLORS.blue.rgb.join(',')} +/- 18`
+      },
+      {
+        name: 'bottom-left-yellow-pixel',
+        passed: pixelNear(bottomLeft, COLORS.yellow.rgb, 18),
+        actual: bottomLeft,
+        expected: `${COLORS.yellow.rgb.join(',')} +/- 18`
+      },
+      {
+        name: 'bottom-right-violet-pixel',
+        passed: pixelNear(bottomRight, COLORS.violet.rgb, 18),
+        actual: bottomRight,
+        expected: `${COLORS.violet.rgb.join(',')} +/- 18`
       }
     ]
   };
