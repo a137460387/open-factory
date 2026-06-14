@@ -412,6 +412,26 @@ describe('project schema migration', () => {
     expect(migrateProjectFile(file).project.annotations).toEqual([]);
   });
 
+  it('serializes and migrates timeline bookmarks with legacy fallback', () => {
+    const project = makeProject();
+    project.bookmarks = [
+      { id: 'bookmark-late', time: 99, note: '  Review ending  ' },
+      { id: 'bookmark-a', time: 1, note: '' }
+    ];
+
+    const file = serializeProject(project);
+    const migrated = migrateProjectFile(file);
+
+    expect(file.project.bookmarks).toEqual([
+      { id: 'bookmark-a', time: 1, note: 'Bookmark' },
+      { id: 'bookmark-late', time: 10, note: 'Review ending' }
+    ]);
+    expect(migrated.project.bookmarks).toEqual(file.project.bookmarks);
+
+    delete (file.project as Partial<typeof file.project>).bookmarks;
+    expect(migrateProjectFile(file).project.bookmarks).toEqual([]);
+  });
+
   it('serializes and migrates video codec metadata for proxy decisions', () => {
     const project = makeProject();
     project.media[0].videoCodec = ' hevc ';

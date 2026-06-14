@@ -7,6 +7,7 @@ import {
   AddKeyframeCommand,
   AddMaskCommand,
   AddProjectAnnotationCommand,
+  AddProjectBookmarkCommand,
   AddSubtitleClipCommand,
   AddTrackCommand,
   AddTimelineMarkerCommand,
@@ -38,6 +39,7 @@ import {
   RemoveMaskCommand,
   RenameMediaFolderCommand,
   RemoveProjectAnnotationCommand,
+  RemoveProjectBookmarkCommand,
   RemoveKeyframeCommand,
   RemoveTimelineMarkerCommand,
   RemoveTransitionCommand,
@@ -60,6 +62,8 @@ import {
   UpdateProjectExportRangesCommand,
   UpdateProjectProtectedRangesCommand,
   UpdateProjectAnnotationCommand,
+  UpdateProjectBookmarkCommand,
+  UpdateProjectBookmarksCommand,
   UpdateTimelineMarkerCommand,
   UpdateMaskCommand,
   UpdateProjectAudioCommand,
@@ -468,6 +472,85 @@ describe('timeline commands', () => {
     expect(project.annotations).toEqual([]);
     manager.redo();
     expect(project.annotations[0].id).toBe('annotation-a');
+  });
+
+  it('adds, updates, removes, and restores timeline bookmarks', () => {
+    let project = makeProject();
+    const accessor = {
+      getProject: () => project,
+      setProject: (next: typeof project) => {
+        project = next;
+      }
+    };
+    const manager = new CommandManager();
+
+    manager.execute(new AddProjectBookmarkCommand(accessor, { id: 'bookmark-b', time: 99, note: '  Outro  ' }));
+    manager.execute(new AddProjectBookmarkCommand(accessor, { id: 'bookmark-a', time: 1, note: 'Intro' }));
+    expect(project.bookmarks).toEqual([
+      { id: 'bookmark-a', time: 1, note: 'Intro' },
+      { id: 'bookmark-b', time: 10, note: 'Outro' }
+    ]);
+
+    manager.execute(new UpdateProjectBookmarkCommand(accessor, 'bookmark-b', { time: 2, note: '' }));
+    expect(project.bookmarks).toEqual([
+      { id: 'bookmark-a', time: 1, note: 'Intro' },
+      { id: 'bookmark-b', time: 2, note: 'Bookmark' }
+    ]);
+
+    manager.execute(new RemoveProjectBookmarkCommand(accessor, 'bookmark-a'));
+    expect(project.bookmarks.map((bookmark) => bookmark.id)).toEqual(['bookmark-b']);
+
+    manager.undo();
+    expect(project.bookmarks.map((bookmark) => bookmark.id)).toEqual(['bookmark-a', 'bookmark-b']);
+    manager.undo();
+    expect(project.bookmarks.find((bookmark) => bookmark.id === 'bookmark-b')?.note).toBe('Outro');
+    manager.undo();
+    manager.undo();
+    expect(project.bookmarks).toEqual([]);
+    manager.redo();
+    expect(project.bookmarks[0].id).toBe('bookmark-b');
+  });
+
+  it('updates imported bookmarks as one undoable project command', () => {
+    let project = makeProject();
+    const accessor = {
+      getProject: () => project,
+      setProject: (next: typeof project) => {
+        project = next;
+      }
+    };
+    const manager = new CommandManager();
+
+    manager.execute(
+      new UpdateProjectBookmarksCommand(accessor, [
+        { id: 'bookmark-late', time: 99, note: 'Late' },
+        { id: 'bookmark-a', time: 1.25, note: 'A' }
+      ])
+    );
+
+    expect(project.bookmarks).toEqual([
+      { id: 'bookmark-a', time: 1.25, note: 'A' },
+      { id: 'bookmark-late', time: 10, note: 'Late' }
+    ]);
+    manager.undo();
+    expect(project.bookmarks).toEqual([]);
+    manager.redo();
+    expect(project.bookmarks.map((bookmark) => bookmark.id)).toEqual(['bookmark-a', 'bookmark-late']);
+  });
+
+  it('rejects bookmark updates and removals when the bookmark is missing', () => {
+    let project = makeProject();
+    const accessor = {
+      getProject: () => project,
+      setProject: (next: typeof project) => {
+        project = next;
+      }
+    };
+    const manager = new CommandManager();
+
+    expect(() => manager.execute(new UpdateProjectBookmarkCommand(accessor, 'missing-bookmark', { note: 'Missing' }))).toThrow('Timeline bookmark missing-bookmark not found');
+    expect(() => manager.execute(new RemoveProjectBookmarkCommand(accessor, 'missing-bookmark'))).toThrow('Timeline bookmark missing-bookmark not found');
+    expect(project.bookmarks).toEqual([]);
   });
 
   it('updates beat markers as one undoable project command', () => {

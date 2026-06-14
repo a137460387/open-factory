@@ -2,6 +2,7 @@ import {
   AddClipCommand,
   AddCreditsClipCommand,
   AddProjectAnnotationCommand,
+  AddProjectBookmarkCommand,
   AddTimelineMarkerCommand,
   BatchKeyframeEditCommand,
   AddTrackCommand,
@@ -15,12 +16,14 @@ import {
   DeleteClipsCommand,
   PackNestedSequenceCommand,
   PROJECT_ANNOTATION_COLORS,
+  RemoveProjectBookmarkCommand,
   UpdateTrackCommand,
   RemoveProjectAnnotationCommand,
   RemoveTimelineMarkerCommand,
   RemoveTransitionCommand,
   UpdateClipCommand,
   UpdateProjectAnnotationCommand,
+  UpdateProjectBookmarkCommand,
   UngroupCommand,
   UpdateClipGroupCommand,
   buildSlideClipEdit,
@@ -84,6 +87,7 @@ import {
   type KeyframeProperty,
   type MediaAsset,
   type ProjectAnnotation,
+  type TimelineBookmark,
   type ProtectedRange,
   type SilentRange,
   type SnapEdge,
@@ -96,7 +100,7 @@ import {
   type ReplaceMediaCompatibilityWarning,
   type ReplaceMediaDurationMode
 } from '@open-factory/editor-core';
-import { Captions, Flag, Group, MessageSquarePlus, MessageSquareText, Music2, Plus, Scissors, Trash2, Type, Ungroup } from 'lucide-react';
+import { Bookmark, Captions, Flag, Group, MessageSquarePlus, MessageSquareText, Music2, Plus, Scissors, Trash2, Type, Ungroup } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createCreditsClip, createTextClip } from '../../lib/clipFactory';
 import { probeMediaPath } from '../../lib/media';
@@ -171,6 +175,8 @@ export function Timeline({ thumbnailTrackVisible = true, onConvertMediaFrameRate
   const [annotationMode, setAnnotationMode] = useState(false);
   const [annotationPanelOpen, setAnnotationPanelOpen] = useState(true);
   const [annotationEditor, setAnnotationEditor] = useState<AnnotationEditorState | undefined>();
+  const [bookmarkPanelOpen, setBookmarkPanelOpen] = useState(true);
+  const [bookmarkRename, setBookmarkRename] = useState<BookmarkRenameState | undefined>();
   const [timelineColorFilter, setTimelineColorFilter] = useState<TimelineLabelColor | null>(null);
   const [scrollViewport, setScrollViewport] = useState({ scrollLeft: 0, viewportWidth: 960 });
   const whisperExecutablePath = useWhisperSettingsStore((state) => state.executablePath);
@@ -181,6 +187,13 @@ export function Timeline({ thumbnailTrackVisible = true, onConvertMediaFrameRate
     10,
     ...project.timeline.tracks.flatMap((track) => track.clips.map((clip) => clip.start + clip.duration + 2))
   );
+
+  useEffect(() => {
+    if (bookmarkPanelOpen && (project.bookmarks?.length ?? 0) > 0) {
+      setAnnotationPanelOpen(false);
+    }
+  }, [bookmarkPanelOpen, project.bookmarks?.length]);
+
   const projectDuration = getTimelineDuration(project.timeline);
   const width = Math.max(960, timelineDuration * zoom);
   const visibleStart = Math.max(0, (scrollViewport.scrollLeft - LABEL_WIDTH) / Math.max(1, zoom));
@@ -425,6 +438,40 @@ export function Timeline({ thumbnailTrackVisible = true, onConvertMediaFrameRate
       );
     } catch (error) {
       showToast({ kind: 'warning', title: zhCN.timeline.markerRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.addMarkerFailed });
+    }
+  }
+
+function addProjectBookmark(time = playheadTime): void {
+    try {
+      commandManager.execute(
+        new AddProjectBookmarkCommand(projectAccessor, {
+          id: createId('bookmark'),
+          time,
+          note: zhCN.timeline.bookmarkLabel((project.bookmarks?.length ?? 0) + 1)
+        })
+      );
+      setBookmarkPanelOpen(true);
+      setAnnotationPanelOpen(false);
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.bookmarkRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.addBookmarkFailed });
+    }
+  }
+
+  function renameProjectBookmark(bookmarkId: string, note: string): void {
+    try {
+      commandManager.execute(new UpdateProjectBookmarkCommand(projectAccessor, bookmarkId, { note }));
+      setBookmarkRename(undefined);
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.bookmarkRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.updateBookmarkFailed });
+    }
+  }
+
+  function removeProjectBookmark(bookmarkId: string): void {
+    try {
+      commandManager.execute(new RemoveProjectBookmarkCommand(projectAccessor, bookmarkId));
+      setBookmarkRename((current) => (current?.id === bookmarkId ? undefined : current));
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.bookmarkRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.removeBookmarkFailed });
     }
   }
 
@@ -1460,8 +1507,23 @@ export function Timeline({ thumbnailTrackVisible = true, onConvertMediaFrameRate
         <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.addMarker} data-testid="add-timeline-marker-button" onClick={() => addTimelineMarker()}>
           <Flag size={16} />
         </button>
+        <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.addBookmark} data-testid="add-timeline-bookmark-button" onClick={() => addProjectBookmark()}>
+          <Bookmark size={16} />
+        </button>
         <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.addBeatMarker} data-testid="add-beat-marker-button" onClick={addBeatMarker}>
           <Music2 size={16} />
+        </button>
+        <button
+          className={`rounded-md border p-2 hover:bg-panel ${bookmarkPanelOpen ? 'border-brand text-brand' : 'border-line'}`}
+          title={zhCN.timeline.bookmarkList}
+          aria-pressed={bookmarkPanelOpen}
+          data-testid="toggle-bookmark-panel-button"
+          onClick={() => {
+            setBookmarkPanelOpen((open) => !open);
+            setAnnotationPanelOpen(false);
+          }}
+        >
+          <Bookmark size={16} />
         </button>
         <button
           className={`rounded-md border p-2 hover:bg-panel ${annotationMode ? 'border-brand bg-brand text-white' : 'border-line'}`}
@@ -1471,6 +1533,7 @@ export function Timeline({ thumbnailTrackVisible = true, onConvertMediaFrameRate
           onClick={() => {
             setAnnotationMode((active) => !active);
             setAnnotationPanelOpen(true);
+            setBookmarkPanelOpen(false);
           }}
         >
           <MessageSquarePlus size={16} />
@@ -1480,7 +1543,10 @@ export function Timeline({ thumbnailTrackVisible = true, onConvertMediaFrameRate
           title={zhCN.timeline.annotationList}
           aria-pressed={annotationPanelOpen}
           data-testid="toggle-annotation-panel-button"
-          onClick={() => setAnnotationPanelOpen((open) => !open)}
+          onClick={() => {
+            setAnnotationPanelOpen((open) => !open);
+            setBookmarkPanelOpen(false);
+          }}
         >
           <MessageSquareText size={16} />
         </button>
@@ -1646,6 +1712,9 @@ export function Timeline({ thumbnailTrackVisible = true, onConvertMediaFrameRate
                 onRemove={removeTimelineMarker}
               />
             ))}
+            {(project.bookmarks ?? []).map((bookmark) => (
+              <TimelineBookmarkOverlay key={bookmark.id} bookmark={bookmark} left={LABEL_WIDTH + bookmark.time * zoom} onSeek={setPlayheadTime} onRemove={removeProjectBookmark} />
+            ))}
             {(project.beatMarkers ?? []).map((marker) => (
               <BeatMarkerOverlay
                 key={marker.id}
@@ -1753,6 +1822,18 @@ export function Timeline({ thumbnailTrackVisible = true, onConvertMediaFrameRate
           onRemove={removeProjectAnnotation}
         />
       ) : null}
+      {bookmarkPanelOpen && (project.bookmarks?.length ?? 0) > 0 ? (
+        <BookmarkListPanel
+          bookmarks={project.bookmarks ?? []}
+          editing={bookmarkRename}
+          onSeek={setPlayheadTime}
+          onBeginRename={(bookmark) => setBookmarkRename({ id: bookmark.id, note: bookmark.note })}
+          onChangeRename={setBookmarkRename}
+          onSaveRename={renameProjectBookmark}
+          onCancelRename={() => setBookmarkRename(undefined)}
+          onRemove={removeProjectBookmark}
+        />
+      ) : null}
       {annotationEditor ? (
         <AnnotationEditorDialog
           value={annotationEditor}
@@ -1825,6 +1906,11 @@ interface AnnotationEditorState {
   time: number;
   text: string;
   color: string;
+}
+
+interface BookmarkRenameState {
+  id: string;
+  note: string;
 }
 
 function AnnotationBubble({
@@ -1912,6 +1998,96 @@ function AnnotationListPanel({
   );
 }
 
+function BookmarkListPanel({
+  bookmarks,
+  editing,
+  onSeek,
+  onBeginRename,
+  onChangeRename,
+  onSaveRename,
+  onCancelRename,
+  onRemove
+}: {
+  bookmarks: TimelineBookmark[];
+  editing?: BookmarkRenameState;
+  onSeek(time: number): void;
+  onBeginRename(bookmark: TimelineBookmark): void;
+  onChangeRename(value: BookmarkRenameState): void;
+  onSaveRename(bookmarkId: string, note: string): void;
+  onCancelRename(): void;
+  onRemove(bookmarkId: string): void;
+}) {
+  return (
+    <aside className="absolute bottom-3 right-3 top-16 z-50 flex w-72 flex-col overflow-hidden rounded-md border border-line bg-white shadow-soft" data-testid="bookmark-panel">
+      <div className="border-b border-line px-3 py-2 text-sm font-semibold text-ink">{zhCN.timeline.bookmarkList}</div>
+      {bookmarks.length === 0 ? (
+        <div className="flex flex-1 items-center justify-center px-3 py-6 text-sm text-slate-500" data-testid="bookmark-list-empty">
+          {zhCN.timeline.bookmarkListEmpty}
+        </div>
+      ) : (
+        <div className="min-h-0 flex-1 overflow-auto p-2">
+          {bookmarks.map((bookmark) => (
+            <div key={bookmark.id} className="mb-2 rounded-md border border-line bg-panel p-2 text-xs" data-testid={`bookmark-list-row-${bookmark.id}`}>
+              {editing?.id === bookmark.id ? (
+                <div className="space-y-2">
+                  <input
+                    className="h-8 w-full rounded border border-line bg-white px-2 text-xs text-ink"
+                    value={editing.note}
+                    maxLength={120}
+                    autoFocus
+                    data-testid={`bookmark-rename-input-${bookmark.id}`}
+                    onChange={(event) => onChangeRename({ id: bookmark.id, note: event.target.value })}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        onSaveRename(bookmark.id, editing.note);
+                      }
+                      if (event.key === 'Escape') {
+                        onCancelRename();
+                      }
+                    }}
+                  />
+                  <div className="flex justify-end gap-2">
+                    <button className="rounded border border-line bg-white px-2 py-1 hover:bg-panel" type="button" onClick={onCancelRename}>
+                      {zhCN.common.cancel}
+                    </button>
+                    <button className="rounded bg-brand px-2 py-1 font-medium text-white hover:bg-[#176858]" type="button" data-testid={`bookmark-rename-save-${bookmark.id}`} onClick={() => onSaveRename(bookmark.id, editing.note)}>
+                      {zhCN.timeline.bookmarkRename}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <button
+                    className="flex w-full items-start gap-2 rounded text-left hover:bg-white"
+                    type="button"
+                    data-testid={`bookmark-list-item-${bookmark.id}`}
+                    onClick={() => onSeek(bookmark.time)}
+                    onDoubleClick={() => onBeginRename(bookmark)}
+                  >
+                    <span className="mt-1 h-3 w-3 shrink-0 bg-yellow-400" style={{ clipPath: 'polygon(50% 0, 0 100%, 100% 100%)' }} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-semibold text-ink">{bookmark.note}</span>
+                      <span className="mt-0.5 block tabular-nums text-slate-500">{bookmark.time.toFixed(2)}s</span>
+                    </span>
+                  </button>
+                  <div className="mt-2 flex justify-end gap-2">
+                    <button className="rounded border border-line bg-white px-2 py-1 hover:bg-panel" type="button" data-testid={`bookmark-rename-${bookmark.id}`} onClick={() => onBeginRename(bookmark)}>
+                      {zhCN.timeline.bookmarkRename}
+                    </button>
+                    <button className="rounded border border-rose-200 bg-white px-2 py-1 text-rose-700 hover:bg-rose-50" type="button" data-testid={`bookmark-delete-${bookmark.id}`} onClick={() => onRemove(bookmark.id)}>
+                      {zhCN.timeline.bookmarkDelete}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </aside>
+  );
+}
+
 function AnnotationEditorDialog({
   value,
   onChange,
@@ -1969,6 +2145,41 @@ function AnnotationEditorDialog({
         </div>
       </section>
     </div>
+  );
+}
+
+function TimelineBookmarkOverlay({
+  bookmark,
+  left,
+  onSeek,
+  onRemove
+}: {
+  bookmark: TimelineBookmark;
+  left: number;
+  onSeek(time: number): void;
+  onRemove(bookmarkId: string): void;
+}) {
+  return (
+    <button
+      className="absolute bottom-0 top-0 z-[35] w-4 -translate-x-1/2 bg-transparent"
+      style={{ left }}
+      type="button"
+      title={`${bookmark.note} (${bookmark.time.toFixed(2)}s)`}
+      data-testid={`timeline-bookmark-${bookmark.id}`}
+      onClick={(event) => {
+        event.stopPropagation();
+        onSeek(bookmark.time);
+      }}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onRemove(bookmark.id);
+      }}
+    >
+      <span className="absolute left-1/2 top-0 z-10 h-4 w-4 -translate-x-1/2 border border-white bg-yellow-400 shadow-sm" style={{ clipPath: 'polygon(50% 0, 0 100%, 100% 100%)' }} />
+      <span className="absolute bottom-0 left-1/2 top-4 w-px -translate-x-1/2 bg-yellow-400/70" />
+      <span className="sr-only">{bookmark.note}</span>
+    </button>
   );
 }
 

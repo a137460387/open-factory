@@ -19,6 +19,7 @@ export * from './timeline-snapping';
 export * from './timeline-selection';
 export * from './timeline-zoom';
 export * from './timeline-ruler';
+export * from './timeline-bookmarks';
 export * from './timeline-virtualization';
 export * from './vfr';
 export * from './beats';

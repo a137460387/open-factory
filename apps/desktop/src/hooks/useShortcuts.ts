@@ -18,6 +18,9 @@ interface ShortcutHandlers {
   selectAll(): void;
   clearSelection(): void;
   addAnnotation(): void;
+  addBookmark(): void;
+  jumpToPreviousNavigationPoint(): void;
+  jumpToNextNavigationPoint(): void;
   undo(): void;
   redo(): void;
   save(): void;
@@ -101,6 +104,15 @@ export function useShortcuts(handlers: ShortcutHandlers, bindings: TimelineShort
           break;
         case 'add-annotation':
           handlers.addAnnotation();
+          break;
+        case 'add-bookmark':
+          handlers.addBookmark();
+          break;
+        case 'jump-prev-navigation-point':
+          handlers.jumpToPreviousNavigationPoint();
+          break;
+        case 'jump-next-navigation-point':
+          handlers.jumpToNextNavigationPoint();
           break;
         case 'undo':
           handlers.undo();

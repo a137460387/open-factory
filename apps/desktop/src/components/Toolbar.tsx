@@ -27,6 +27,8 @@ interface ToolbarProps {
   onArchiveProject(): void;
   onCreateMediaReport(): void;
   onCreateSharePackage(): void;
+  onImportBookmarks(): void;
+  onExportBookmarks(): void;
   onSaveSnapshot(): void;
   onOpenSnapshotHistory(): void;
   onOpenSnapshotCompare(): void;
@@ -218,6 +220,29 @@ export function Toolbar(props: ToolbarProps) {
               }}
             >
               <span>{t.projectHealthCheck}</span>
+            </button>
+            <div className="my-1 h-px bg-line" />
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-file-import-bookmarks-menu-item"
+              onClick={() => {
+                setFileMenuOpen(false);
+                props.onImportBookmarks();
+              }}
+            >
+              <span>{t.importBookmarks}</span>
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-file-export-bookmarks-menu-item"
+              onClick={() => {
+                setFileMenuOpen(false);
+                props.onExportBookmarks();
+              }}
+            >
+              <span>{t.exportBookmarks}</span>
             </button>
           </div>
         ) : null}

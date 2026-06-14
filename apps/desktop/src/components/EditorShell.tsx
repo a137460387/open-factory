@@ -4,6 +4,7 @@ import {
   AddClipCommand,
   AddMediaFolderCommand,
   AddProjectAnnotationCommand,
+  AddProjectBookmarkCommand,
   ApplySplitLayoutCommand,
   BatchImportSubtitleCommand,
   AddTrackCommand,
@@ -26,6 +27,7 @@ import {
   SnapToBeatsCommand,
   SplitClipCommand,
   UpdateProjectBeatMarkersCommand,
+  UpdateProjectBookmarksCommand,
   UpdateProjectExportRangesCommand,
   UpdateClipCommand,
   createBeatMarker,
@@ -34,6 +36,7 @@ import {
   createProject,
   createTrack,
   buildVideoStitchSequence,
+  buildTimelineNavigationPoints,
   createMainSideSplitLayout,
   detectSubtitleDataOverlaps,
   dirname,
@@ -44,13 +47,17 @@ import {
   getTimelineDuration,
   isFrameRateMismatch,
   findCompleteClipGroup,
+  findTimelineNavigationPoint,
   normalizeClipGroups,
   normalizeExportRanges,
   applyTimelineVersionDiffSelection,
   instantiateProjectTemplate,
   instantiateTitleTemplate,
+  mergeImportedTimelineBookmarks,
+  parseTimelineBookmarksJson,
   mergeOverlappingSubtitleDataCues,
   replaceProjectActiveTimeline,
+  serializeTimelineBookmarks,
   type DuplicateMediaGroup,
   type DuplicateMediaIssue,
   type MissingMediaIssue,
@@ -133,7 +140,10 @@ import {
   detectBeats,
   listenBridge,
   openDirectoryDialog,
+  openFileDialog as bridgeOpenFileDialog,
   removeFile as bridgeRemoveFile,
+  readFile as bridgeReadFile,
+  saveFileDialog as bridgeSaveFileDialog,
   sendNotification,
   startRecording,
   stopRecording,
@@ -1713,6 +1723,64 @@ export function EditorShell() {
     }
   }, []);
 
+  const addBookmarkAtPlayhead = useCallback(() => {
+    const state = useEditorStore.getState();
+    try {
+      commandManager.execute(
+        new AddProjectBookmarkCommand(projectAccessor, {
+          id: createId('bookmark'),
+          time: state.playheadTime,
+          note: zhCN.timeline.bookmarkLabel((state.project.bookmarks?.length ?? 0) + 1)
+        })
+      );
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.bookmarkRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.addBookmarkFailed });
+    }
+  }, []);
+
+  const jumpTimelineNavigationPoint = useCallback(
+    (direction: 'previous' | 'next') => {
+      const state = useEditorStore.getState();
+      const points = buildTimelineNavigationPoints(state.project.bookmarks, state.project.timeline.markers, getTimelineDuration(state.project.timeline));
+      const point = findTimelineNavigationPoint(points, state.playheadTime, direction);
+      if (point) {
+        setPlayheadTime(point.time);
+      }
+    },
+    [setPlayheadTime]
+  );
+
+  const exportBookmarks = useCallback(async () => {
+    try {
+      const state = useEditorStore.getState();
+      const outputPath = await bridgeSaveFileDialog(`${state.project.name}-bookmarks.json`, [{ name: zhCN.fileDialogs.bookmarks, extensions: ['json'] }]);
+      if (!outputPath) {
+        return;
+      }
+      await bridgeWriteFile(outputPath, serializeTimelineBookmarks(state.project.bookmarks ?? [], getTimelineDuration(state.project.timeline)));
+      showToast({ kind: 'success', title: zhCN.timeline.bookmarksExported, message: outputPath });
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.bookmarksExportFailed, message: error instanceof Error ? error.message : zhCN.timeline.bookmarksExportFailedMessage });
+    }
+  }, []);
+
+  const importBookmarks = useCallback(async () => {
+    try {
+      const paths = await bridgeOpenFileDialog(false, [{ name: zhCN.fileDialogs.bookmarks, extensions: ['json'] }]);
+      const inputPath = paths[0];
+      if (!inputPath) {
+        return;
+      }
+      const state = useEditorStore.getState();
+      const imported = parseTimelineBookmarksJson(await bridgeReadFile(inputPath), getTimelineDuration(state.project.timeline));
+      const nextBookmarks = mergeImportedTimelineBookmarks(state.project.bookmarks ?? [], imported, getTimelineDuration(state.project.timeline));
+      commandManager.execute(new UpdateProjectBookmarksCommand(projectAccessor, nextBookmarks));
+      showToast({ kind: 'success', title: zhCN.timeline.bookmarksImported, message: zhCN.timeline.bookmarksImportedMessage(imported.length) });
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.bookmarksImportFailed, message: error instanceof Error ? error.message : zhCN.timeline.bookmarksImportFailedMessage });
+    }
+  }, []);
+
   const setSingleExportRange = useCallback((start: number, end: number) => {
     const state = useEditorStore.getState();
     const duration = getTimelineDuration(state.project.timeline);
@@ -1809,6 +1877,9 @@ export function EditorShell() {
       selectAll: selectAllTimelineItems,
       clearSelection: clearSelectedClipIds,
       addAnnotation: addAnnotationAtPlayhead,
+      addBookmark: addBookmarkAtPlayhead,
+      jumpToPreviousNavigationPoint: () => jumpTimelineNavigationPoint('previous'),
+      jumpToNextNavigationPoint: () => jumpTimelineNavigationPoint('next'),
       undo,
       redo,
       save: () => void saveProject(),
@@ -1816,10 +1887,12 @@ export function EditorShell() {
     }),
     [
       addAnnotationAtPlayhead,
+      addBookmarkAtPlayhead,
       clearSelectedClipIds,
       deleteSelected,
       exportCurrentFrame,
       forwardPlayback,
+      jumpTimelineNavigationPoint,
       markInPoint,
       markMultiRangeInPoint,
       markMultiRangeOutPoint,
@@ -1961,6 +2034,8 @@ export function EditorShell() {
           onArchiveProject={() => void archiveCurrentProject()}
           onCreateMediaReport={() => void createMediaReport()}
           onCreateSharePackage={() => void createCurrentSharePackage()}
+          onImportBookmarks={() => void importBookmarks()}
+          onExportBookmarks={() => void exportBookmarks()}
           onSaveSnapshot={() => setSnapshotNameOpen(true)}
           onOpenSnapshotHistory={() => setSnapshotHistoryOpen(true)}
           onOpenSnapshotCompare={() => setSnapshotCompareOpen(true)}

@@ -19,6 +19,7 @@ import {
   createProject,
   createSequence,
   createTrack,
+  createTimelineBookmark,
   createTimelineMarker,
   createTransition,
   getProjectActiveSequenceId,
@@ -38,6 +39,7 @@ import {
   normalizeSequenceFrameRate,
   normalizeSequenceName,
   normalizeStabilization,
+  normalizeTimelineBookmarks,
   normalizeTimelineMarkers,
   normalizeTrackCompressor,
   normalizeTrackEQ,
@@ -65,6 +67,7 @@ describe('model factories', () => {
     expect(project.masterVolume).toBe(1);
     expect(project.settings).toEqual(DEFAULT_PROJECT_SETTINGS);
     expect(project.media).toEqual([]);
+    expect(project.bookmarks).toEqual([]);
     expect(project.timeline.tracks.map((track) => track.type)).toEqual(['video', 'audio', 'text']);
     expect(project.timeline.tracks.every((track) => track.clips.length === 0)).toBe(true);
     expect(project.timeline.tracks.every((track) => track.pan === 0 && track.volume === 1)).toBe(true);
@@ -79,6 +82,22 @@ describe('model factories', () => {
     expect(new Set(ids).size).toBe(3);
     expect(timeline.tracks.map((track) => track.name)).toEqual(['Video 1', 'Audio 1', 'Text 1']);
     expect(timeline.markers).toEqual([]);
+  });
+
+  it('normalizes timeline bookmarks with clamped time and fallback notes', () => {
+    expect(createTimelineBookmark({ id: 'bookmark-a', time: 99, note: '  Intro cut  ' }, 10)).toEqual({ id: 'bookmark-a', time: 10, note: 'Intro cut' });
+    expect(
+      normalizeTimelineBookmarks(
+        [
+          { id: 'bookmark-b', time: 4, note: '' },
+          { id: 'bookmark-a', time: -2, note: 'Start' }
+        ],
+        10
+      )
+    ).toEqual([
+      { id: 'bookmark-a', time: 0, note: 'Start' },
+      { id: 'bookmark-b', time: 4, note: 'Bookmark' }
+    ]);
   });
 
   it('normalizes track processing, sequence names, transition defaults, and master values', () => {

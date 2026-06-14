@@ -193,6 +193,7 @@ export interface Project {
   mediaFolders: MediaFolder[];
   mediaMetadata: Record<string, MediaMetadata>;
   annotations: ProjectAnnotation[];
+  bookmarks: TimelineBookmark[];
   beatMarkers: BeatMarker[];
   exportRanges: ExportRange[];
   protectedRanges: ProtectedRange[];
@@ -402,6 +403,12 @@ export interface TimelineMarker {
   time: number;
   label: string;
   color: string;
+}
+
+export interface TimelineBookmark {
+  id: string;
+  time: number;
+  note: string;
 }
 
 export interface BaseClip {
@@ -836,6 +843,17 @@ export function createTimelineMarker(
   };
 }
 
+export function createTimelineBookmark(
+  bookmark: Omit<TimelineBookmark, 'id' | 'note'> & Partial<Pick<TimelineBookmark, 'id' | 'note'>>,
+  maxTime?: number
+): TimelineBookmark {
+  return {
+    id: bookmark.id ?? createId('bookmark'),
+    time: normalizeTimelinePointTime(bookmark.time, maxTime),
+    note: normalizeTimelineBookmarkNote(bookmark.note)
+  };
+}
+
 export function createProjectAnnotation(
   annotation: Omit<ProjectAnnotation, 'id' | 'text' | 'color'> & Partial<Pick<ProjectAnnotation, 'id' | 'text' | 'color'>>,
   maxTime?: number
@@ -908,6 +926,7 @@ export function createProject(name = 'Untitled Project'): Project {
     mediaFolders: [],
     mediaMetadata: {},
     annotations: [],
+    bookmarks: [],
     beatMarkers: [],
     exportRanges: [],
     protectedRanges: [],
@@ -1331,6 +1350,10 @@ export function normalizeTimelineMarker(marker: TimelineMarker, maxTime?: number
   return createTimelineMarker(marker, maxTime);
 }
 
+export function normalizeTimelineBookmark(bookmark: TimelineBookmark, maxTime?: number): TimelineBookmark {
+  return createTimelineBookmark(bookmark, maxTime);
+}
+
 export function normalizeTransform(transform: Partial<Transform> | undefined): Transform {
   const legacyScale = clampTransformScale(transform?.scale, DEFAULT_TRANSFORM.scale);
   const rawScaleX = typeof transform?.scaleX === 'number' && Number.isFinite(transform.scaleX) ? transform.scaleX : undefined;
@@ -1374,6 +1397,12 @@ function clampTransformScale(scale: number | undefined, fallback: number): numbe
 export function normalizeTimelineMarkers(markers: TimelineMarker[] | undefined, maxTime?: number): TimelineMarker[] {
   return [...(markers ?? [])]
     .map((marker) => normalizeTimelineMarker(marker, maxTime))
+    .sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
+}
+
+export function normalizeTimelineBookmarks(bookmarks: TimelineBookmark[] | undefined, maxTime?: number): TimelineBookmark[] {
+  return [...(bookmarks ?? [])]
+    .map((bookmark) => normalizeTimelineBookmark(bookmark, maxTime))
     .sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
 }
 
@@ -1670,6 +1699,11 @@ function normalizeTimelinePointTime(time: number, maxTime?: number): number {
 function normalizeTimelineMarkerLabel(label: string | undefined): string {
   const trimmed = label?.trim();
   return trimmed ? trimmed.slice(0, 80) : 'Marker';
+}
+
+function normalizeTimelineBookmarkNote(note: string | undefined): string {
+  const trimmed = note?.trim();
+  return trimmed ? trimmed.slice(0, 120) : 'Bookmark';
 }
 
 function normalizeTimelineMarkerColor(color: string | undefined): string {
