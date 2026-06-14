@@ -1,9 +1,10 @@
 import { getProjectSequences, type Clip, type Project, type Timeline } from '../model';
 import { getTimelinePlaybackDuration } from '../timeline';
+import { isFrameRateMismatch } from '../vfr';
 import type { ExportPlatformPreset } from './export-types';
 
 export type PreflightSeverity = 'blocking' | 'warning';
-export type PreflightIssueType = 'missing-media' | 'missing-font' | 'whisper-path' | 'ffmpeg' | 'platform-duration' | 'vfr-media';
+export type PreflightIssueType = 'missing-media' | 'missing-font' | 'whisper-path' | 'ffmpeg' | 'platform-duration' | 'vfr-media' | 'frame-rate-mismatch';
 
 export interface PreflightResult {
   id: string;
@@ -16,6 +17,7 @@ export interface PreflightResult {
   platformPreset?: ExportPlatformPreset;
   durationSeconds?: number;
   limitSeconds?: number;
+  projectFrameRate?: number;
 }
 
 export interface ExportPreflightOptions {
@@ -96,6 +98,20 @@ export function runExportPreflight(project: Project, options: ExportPreflightOpt
       items: vfrWarning.items,
       clipIds: vfrWarning.clipIds,
       mediaIds: vfrWarning.mediaIds
+    });
+  }
+
+  const frameRateWarning = collectFrameRateMismatchedMedia(project, clips);
+  if (frameRateWarning.items.length > 0) {
+    results.push({
+      id: 'frame-rate-mismatch',
+      type: 'frame-rate-mismatch',
+      severity: 'warning',
+      message: 'Timeline contains media with a frame rate that differs from the project.',
+      items: frameRateWarning.items,
+      clipIds: frameRateWarning.clipIds,
+      mediaIds: frameRateWarning.mediaIds,
+      projectFrameRate: project.settings.fps
     });
   }
 
@@ -182,6 +198,28 @@ function collectVfrMedia(project: Project, clips: Clip[]): { items: string[]; cl
     }
     const asset = mediaById.get(clip.mediaId);
     if (!asset?.variableFrameRate) {
+      continue;
+    }
+    itemByMediaId.set(asset.id, asset.name);
+    clipIds.add(clip.id);
+  }
+  return {
+    items: Array.from(itemByMediaId.values()).sort((left, right) => left.localeCompare(right)),
+    clipIds: Array.from(clipIds),
+    mediaIds: Array.from(itemByMediaId.keys())
+  };
+}
+
+function collectFrameRateMismatchedMedia(project: Project, clips: Clip[]): { items: string[]; clipIds: string[]; mediaIds: string[] } {
+  const mediaById = new Map(project.media.map((asset) => [asset.id, asset]));
+  const itemByMediaId = new Map<string, string>();
+  const clipIds = new Set<string>();
+  for (const clip of clips) {
+    if (!('mediaId' in clip)) {
+      continue;
+    }
+    const asset = mediaById.get(clip.mediaId);
+    if (asset?.type !== 'video' || !isFrameRateMismatch(asset.frameRate, project.settings.fps)) {
       continue;
     }
     itemByMediaId.set(asset.id, asset.name);

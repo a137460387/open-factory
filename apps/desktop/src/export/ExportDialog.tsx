@@ -2369,6 +2369,9 @@ function formatPreflightMessage(issue: PreflightResult): string {
   if (issue.type === 'vfr-media') {
     return zhCN.exportDialog.preflight.vfrMediaMessage(issue.items.length);
   }
+  if (issue.type === 'frame-rate-mismatch') {
+    return zhCN.exportDialog.preflight.frameRateMismatchMessage(issue.items.length, issue.projectFrameRate ?? 30);
+  }
   return zhCN.exportDialog.preflight.ffmpegMessage;
 }
 

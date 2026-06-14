@@ -58,6 +58,7 @@ import {
   getClipSpeed,
   getReplaceMediaCompatibilityWarnings,
   getTimelineLabelColorHex,
+  isFrameRateMismatch,
   findClipGroupForClip,
   findCompleteClipGroup,
   isNestedSequenceDepthExceeded,
@@ -106,7 +107,7 @@ import { useWhisperSettingsStore } from '../../store/whisperSettingsStore';
 import { LABEL_WIDTH, Ruler, ThumbnailTrack, TrackRow, type ClipMenuRequest, type DragState, type GapMenuRequest } from './TimelineParts';
 import { buildRulerContextMenuItems, type RulerContextMenuAction } from './timeline-ruler-menu';
 
-export function Timeline({ thumbnailTrackVisible = true }: { thumbnailTrackVisible?: boolean }) {
+export function Timeline({ thumbnailTrackVisible = true, onConvertMediaFrameRate }: { thumbnailTrackVisible?: boolean; onConvertMediaFrameRate?(assetId: string): void }) {
   const project = useEditorStore((state) => state.project);
   const selectedClipId = useEditorStore((state) => state.selectedClipId);
   const selectedClipIds = useEditorStore((state) => state.selectedClipIds);
@@ -300,6 +301,18 @@ export function Timeline({ thumbnailTrackVisible = true }: { thumbnailTrackVisib
 
   function updateClipColor(clipId: string, colorLabel: TimelineLabelColor | null): void {
     commandManager.execute(new UpdateClipCommand(timelineAccessor, clipId, { colorLabel }));
+  }
+
+  function convertClipFrameRate(clipId: string): void {
+    const clip = findClip(clipId);
+    const asset = getClipMediaAsset(clip);
+    setClipMenu(undefined);
+    setSelectedClipId(clip.id);
+    if (!asset || asset.type !== 'video' || (!asset.variableFrameRate && !isFrameRateMismatch(asset.frameRate, project.settings.fps)) || !onConvertMediaFrameRate) {
+      showToast({ kind: 'warning', title: zhCN.timeline.frameRateConvertUnavailableTitle, message: zhCN.timeline.frameRateConvertUnavailableMessage });
+      return;
+    }
+    onConvertMediaFrameRate(asset.id);
   }
 
   function addTransition(): void {
@@ -1490,6 +1503,7 @@ export function Timeline({ thumbnailTrackVisible = true }: { thumbnailTrackVisib
                 slideEditActive={slideEditActive}
                 clipGroupByClipId={clipGroupByClipId}
                 colorFilter={timelineColorFilter}
+                projectFrameRate={project.settings.fps}
               />
             ))}
             {annotationMode ? (
@@ -1553,6 +1567,7 @@ export function Timeline({ thumbnailTrackVisible = true }: { thumbnailTrackVisib
                 clip={allClips.find((clip) => clip.id === clipMenu.clipId)}
                 asset={allClips.find((clip) => clip.id === clipMenu.clipId) ? getClipMediaAsset(allClips.find((clip) => clip.id === clipMenu.clipId)!) : undefined}
                 group={clipGroupByClipId.get(clipMenu.clipId)}
+                projectFrameRate={project.settings.fps}
                 canCreateGroup={selectedClipIds.length >= 2}
                 whisperReady={whisperAvailability.ready}
                 whisperUnavailableMessage={whisperAvailability.error}
@@ -1560,6 +1575,7 @@ export function Timeline({ thumbnailTrackVisible = true }: { thumbnailTrackVisib
                 onScene={() => void openSceneDetection(clipMenu.clipId)}
                 onGenerateSubtitles={() => void generateSubtitles(clipMenu.clipId)}
                 onReplaceMedia={() => void openReplaceMedia(clipMenu.clipId)}
+                onConvertFrameRate={() => convertClipFrameRate(clipMenu.clipId)}
                 onPack={() => packClipMenuSelection(clipMenu.clipId)}
                 onCreateGroup={createGroupFromSelection}
                 onUngroup={(group) => ungroupSelected(group)}
@@ -2062,6 +2078,7 @@ function ClipActionMenu({
   clip,
   asset,
   group,
+  projectFrameRate,
   canCreateGroup,
   whisperReady,
   whisperUnavailableMessage,
@@ -2069,6 +2086,7 @@ function ClipActionMenu({
   onScene,
   onGenerateSubtitles,
   onReplaceMedia,
+  onConvertFrameRate,
   onPack,
   onCreateGroup,
   onUngroup,
@@ -2081,6 +2099,7 @@ function ClipActionMenu({
   clip?: Clip;
   asset?: MediaAsset;
   group?: ClipGroup;
+  projectFrameRate: number;
   canCreateGroup: boolean;
   whisperReady: boolean;
   whisperUnavailableMessage?: string;
@@ -2088,6 +2107,7 @@ function ClipActionMenu({
   onScene(): void;
   onGenerateSubtitles(): void;
   onReplaceMedia(): void;
+  onConvertFrameRate(): void;
   onPack(): void;
   onCreateGroup(): void;
   onUngroup(group: ClipGroup): void;
@@ -2100,6 +2120,7 @@ function ClipActionMenu({
   const canDetectScene = clip?.type === 'video';
   const canGenerateSubtitles = canGenerateSubtitlesForClip(clip, asset, whisperReady);
   const canReplaceMedia = Boolean(clip && (clip.type === 'video' || clip.type === 'audio' || clip.type === 'image'));
+  const canConvertFrameRate = Boolean(asset?.type === 'video' && (asset.variableFrameRate || isFrameRateMismatch(asset.frameRate, projectFrameRate)));
   return (
     <div
       className="fixed z-50 w-[230px] rounded-md border border-line bg-white p-2 text-xs shadow-soft"
@@ -2143,6 +2164,15 @@ function ClipActionMenu({
         onClick={onReplaceMedia}
       >
         {zhCN.timeline.replaceMediaAction}
+      </button>
+      <button
+        className="block w-full rounded px-2 py-2 text-left hover:bg-panel disabled:opacity-40"
+        type="button"
+        disabled={!canConvertFrameRate}
+        data-testid="clip-action-convert-frame-rate"
+        onClick={onConvertFrameRate}
+      >
+        {zhCN.timeline.convertFrameRateAction}
       </button>
       <button
         className="block w-full rounded px-2 py-2 text-left hover:bg-panel disabled:opacity-40"

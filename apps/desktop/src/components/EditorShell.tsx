@@ -40,7 +40,9 @@ import {
   getSplitLayoutDefinition,
   getClipSpeed,
   getCfrTargetFrameRate,
+  getProjectFrameRateConversionTarget,
   getTimelineDuration,
+  isFrameRateMismatch,
   findCompleteClipGroup,
   normalizeClipGroups,
   normalizeExportRanges,
@@ -720,19 +722,31 @@ export function EditorShell() {
     return () => window.removeEventListener('resize', updateViewport);
   }, []);
 
-  const queueAutoCfrForImportedMedia = useCallback(
-    (media: MediaAsset[]) => {
-      if (project.settings.vfrHandling !== 'auto-cfr') {
+  const queueFrameRateConversionForImportedMedia = useCallback(
+    async (media: MediaAsset[]) => {
+      if (project.settings.vfrHandling === 'ignore') {
         return;
       }
-      const vfrMedia = media.filter((asset) => asset.type === 'video' && asset.variableFrameRate);
-      if (vfrMedia.length === 0) {
+      const frameRateMedia = media.filter((asset) => asset.type === 'video' && (asset.variableFrameRate || isFrameRateMismatch(asset.frameRate, project.settings.fps)));
+      if (frameRateMedia.length === 0) {
         return;
       }
-      for (const asset of vfrMedia) {
+      if (project.settings.vfrHandling === 'ask') {
+        const shouldConvert = await bridgeConfirm(zhCN.editorToasts.frameRateConversionPrompt(frameRateMedia.length, getProjectFrameRateConversionTarget(project.settings.fps)), {
+          title: zhCN.editorToasts.frameRateConversionPromptTitle,
+          kind: 'warning'
+        });
+        if (!shouldConvert) {
+          return;
+        }
+      }
+      for (const asset of frameRateMedia) {
+        const cfrFrameRate = isFrameRateMismatch(asset.frameRate, project.settings.fps)
+          ? getProjectFrameRateConversionTarget(project.settings.fps)
+          : getCfrTargetFrameRate({ avgFrameRate: asset.avgFrameRate, realFrameRate: asset.realFrameRate }, asset.frameRate ?? project.settings.fps);
         useMediaJobStore.getState().enqueueProxyJobsForMedia([asset], useProxySettingsStore.getState().settings, {
           force: true,
-          cfrFrameRate: getCfrTargetFrameRate({ avgFrameRate: asset.avgFrameRate, realFrameRate: asset.realFrameRate }, asset.frameRate ?? project.settings.fps)
+          cfrFrameRate
         });
       }
       void ensureMediaJobRunner();
@@ -752,14 +766,14 @@ export function EditorShell() {
       }
       if (result.media.length > 0) {
         addMedia(result.media);
-        queueAutoCfrForImportedMedia(result.media);
+        await queueFrameRateConversionForImportedMedia(result.media);
         void runAutomationForMedia('on-import', result.media);
         showToast({ kind: 'success', title: zhCN.editorToasts.mediaImported, message: zhCN.editorToasts.mediaImportedMessage(result.media.length) });
       }
     } catch (error) {
       showToast({ kind: 'error', title: zhCN.editorToasts.importFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.importFailedMessage });
     }
-  }, [addMedia, project.media, queueAutoCfrForImportedMedia, runAutomationForMedia]);
+  }, [addMedia, project.media, queueFrameRateConversionForImportedMedia, runAutomationForMedia]);
 
   const openBatchTranscode = useCallback((paths: string[] = []) => {
     setBatchTranscodeInitialPaths(paths);
@@ -775,7 +789,7 @@ export function EditorShell() {
       const result = await probeMediaPaths(paths, useEditorStore.getState().project.media);
       if (result.media.length > 0) {
         addMedia(result.media);
-        queueAutoCfrForImportedMedia(result.media);
+        await queueFrameRateConversionForImportedMedia(result.media);
         void runAutomationForMedia('on-import', result.media);
         showToast({ kind: 'success', title: zhCN.editorToasts.mediaImported, message: zhCN.editorToasts.mediaImportedMessage(result.media.length) });
       }
@@ -787,7 +801,7 @@ export function EditorShell() {
       showToast({ kind: 'error', title: zhCN.videoStitchWizard.importFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.importFailedMessage });
       return [];
     }
-  }, [addMedia, queueAutoCfrForImportedMedia, runAutomationForMedia]);
+  }, [addMedia, queueFrameRateConversionForImportedMedia, runAutomationForMedia]);
 
   const generateVideoStitchTimeline = useCallback(
     (settings: VideoStitchWizardSettings) => {
@@ -1590,7 +1604,7 @@ export function EditorShell() {
       if (!asset || asset.type !== 'video') {
         return;
       }
-      const cfrFrameRate = getCfrTargetFrameRate({ avgFrameRate: asset.avgFrameRate, realFrameRate: asset.realFrameRate }, asset.frameRate ?? project.settings.fps);
+      const cfrFrameRate = getProjectFrameRateConversionTarget(project.settings.fps, getCfrTargetFrameRate({ avgFrameRate: asset.avgFrameRate, realFrameRate: asset.realFrameRate }, asset.frameRate ?? 30));
       void generateProxyForMedia(assetId, { force: true, cfrFrameRate });
     },
     [generateProxyForMedia, project.settings.fps]
@@ -2011,6 +2025,7 @@ export function EditorShell() {
                 media={project.media}
                 mediaFolders={project.mediaFolders}
                 mediaMetadata={project.mediaMetadata}
+                projectFrameRate={project.settings.fps}
                 onImport={() => void importMedia()}
                 onImportPaths={(paths) => void importDropped(paths)}
                 onBatchTranscode={(paths) => openBatchTranscode(paths)}
@@ -2099,7 +2114,7 @@ export function EditorShell() {
         </div>
         <section className="min-h-0 overflow-hidden" data-testid="timeline-panel" style={{ height: timelineHeightPx }}>
           <ErrorBoundary name={storyboardOpen ? zhCN.storyboard.title : zhCN.panels.timeline}>
-            {storyboardOpen ? <StoryboardView /> : <Timeline thumbnailTrackVisible={thumbnailTrackVisible} />}
+            {storyboardOpen ? <StoryboardView /> : <Timeline thumbnailTrackVisible={thumbnailTrackVisible} onConvertMediaFrameRate={convertVfrMediaToCfr} />}
           </ErrorBoundary>
         </section>
         <Suspense fallback={null}>
@@ -2234,7 +2249,7 @@ export function EditorShell() {
           showToast({ kind: 'info', title: zhCN.editorToasts.duplicateTitle, message: zhCN.editorToasts.duplicateMessage(result.duplicateCount) });
         }
         addMedia(result.media);
-        queueAutoCfrForImportedMedia(result.media);
+        await queueFrameRateConversionForImportedMedia(result.media);
         void runAutomationForMedia('on-import', result.media);
       }
       if (subtitlePaths.length > 0) {

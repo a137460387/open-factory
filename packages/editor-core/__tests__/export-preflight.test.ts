@@ -166,6 +166,24 @@ describe('export preflight', () => {
     );
   });
 
+  it('warns when timeline media frame rate differs from the project frame rate', () => {
+    const project = makeProject();
+    project.settings.fps = 30;
+    project.media = [{ ...project.media[0], id: 'asset-25fps', name: 'camera-25fps.mp4', frameRate: 25 }];
+    project.timeline = makeTimeline([makeVideoClip({ id: 'clip-25fps', mediaId: 'asset-25fps' })]);
+
+    expect(runExportPreflight(project)).toContainEqual(
+      expect.objectContaining({
+        type: 'frame-rate-mismatch',
+        severity: 'warning',
+        items: ['camera-25fps.mp4'],
+        clipIds: ['clip-25fps'],
+        mediaIds: ['asset-25fps'],
+        projectFrameRate: 30
+      })
+    );
+  });
+
   it('parses CSS font-family lists with quoted names', () => {
     expect(parseFontFamilyList('"Noto Sans CJK", Arial, sans-serif')).toEqual(['Noto Sans CJK', 'Arial', 'sans-serif']);
   });

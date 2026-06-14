@@ -20,6 +20,9 @@ test('uses project frame rate for timeline timecode and exports at selected targ
   await openExportDialog(page);
   await page.getByTestId('export-fps-select').selectOption('24');
   await page.getByTestId('export-enqueue-button').click();
+  await expect(page.getByTestId('export-preflight-panel')).toBeVisible();
+  await expect(page.getByTestId('export-preflight-issue')).toHaveAttribute('data-type', 'frame-rate-mismatch');
+  await page.getByTestId('export-preflight-continue-button').click();
   await expectExportTaskStatus(page, 0, 'success');
 
   const plan = await page.evaluate(() => window.__E2E_ACTIONS__!.getLastExportPlan!() as { fullArgs: string[]; filterComplex: string });

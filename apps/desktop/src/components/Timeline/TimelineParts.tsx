@@ -5,6 +5,7 @@ import {
   filterTimelineVirtualClips,
   getEffectiveClipColorLabel,
   getTimelineLabelColorHex,
+  isFrameRateMismatch,
   TIMELINE_THUMBNAIL_TRACK_HEIGHT,
   TIMELINE_LABEL_COLORS,
   type Clip,
@@ -20,6 +21,7 @@ import {
   type Transition,
   type TransitionType
 } from '@open-factory/editor-core';
+import { AlertTriangle } from 'lucide-react';
 import type { TimelineRenderRange } from '@open-factory/editor-core';
 import type { TimelineDiffRange } from '@open-factory/editor-core';
 import { clsx } from 'clsx';
@@ -257,7 +259,8 @@ export function TrackRow({
   slipEditActive,
   slideEditActive,
   clipGroupByClipId,
-  colorFilter
+  colorFilter,
+  projectFrameRate
 }: {
   track: Track;
   zoom: number;
@@ -283,6 +286,7 @@ export function TrackRow({
   slideEditActive: boolean;
   clipGroupByClipId: Map<string, ClipGroup>;
   colorFilter: TimelineLabelColor | null;
+  projectFrameRate: number;
 }) {
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const frequencyBands = useAudioMeterStore((state) => state.trackFrequencyBands[track.id] ?? getSilentFrequencyBands());
@@ -424,6 +428,7 @@ export function TrackRow({
               slideEditActive={slideEditActive}
               clipGroup={clipGroupByClipId.get(clip.id)}
               trackColor={track.color ?? null}
+              projectFrameRate={projectFrameRate}
             />
           );
         })}
@@ -519,7 +524,8 @@ function ClipBlock({
   slipEditActive,
   slideEditActive,
   clipGroup,
-  trackColor
+  trackColor,
+  projectFrameRate
 }: {
   clip: Clip;
   asset?: MediaAsset;
@@ -547,10 +553,14 @@ function ClipBlock({
   slideEditActive: boolean;
   clipGroup?: ClipGroup;
   trackColor: TimelineLabelColor | null;
+  projectFrameRate: number;
 }) {
   const waveformColor = getTrackWaveformColor(trackType);
   const effectiveColor = getEffectiveClipColorLabel(clip, { color: trackColor });
   const effectiveColorHex = effectiveColor ? getTimelineLabelColorHex(effectiveColor) : DEFAULT_TIMELINE_LABEL_COLOR_HEX;
+  const frameRateMismatch = asset?.type === 'video' && isFrameRateMismatch(asset.frameRate, projectFrameRate);
+  const frameRateWarningTitle =
+    frameRateMismatch && asset?.frameRate ? zhCN.timeline.frameRateMismatchTooltip(formatFrameRateLabel(asset.frameRate), formatFrameRateLabel(projectFrameRate)) : undefined;
   return (
     <div
       className={clsx(
@@ -617,7 +627,7 @@ function ClipBlock({
         event.stopPropagation();
         onClipDoubleClick(clip);
       }}
-      title={asset?.missing ? zhCN.timeline.mediaMissing : `${clip.name} (${clip.duration.toFixed(2)}s)`}
+      title={asset?.missing ? zhCN.timeline.mediaMissing : frameRateWarningTitle ?? `${clip.name} (${clip.duration.toFixed(2)}s)`}
       data-testid={`timeline-clip-${clip.id}`}
       data-clip-type={clip.type}
       data-clip-id={clip.id}
@@ -647,6 +657,16 @@ function ClipBlock({
       {transition ? (
         <span className="absolute right-1 top-1 z-20 rounded bg-brand px-1 text-[10px] font-semibold text-white" data-testid={`timeline-transition-${transition.id}`}>
           {transition.type === 'fade-black' ? 'FB' : 'DS'}
+        </span>
+      ) : null}
+      {frameRateMismatch ? (
+        <span
+          className="absolute top-1 z-20 inline-flex h-4 w-4 items-center justify-center rounded-full bg-orange-500 text-white shadow"
+          style={{ right: transition ? 28 : 4 }}
+          title={frameRateWarningTitle}
+          data-testid={`timeline-frame-rate-warning-${clip.id}`}
+        >
+          <AlertTriangle size={11} />
         </span>
       ) : null}
       {locked ? null : (
@@ -932,6 +952,11 @@ function getTrackWaveformColor(trackType: Track['type']): string {
     return '#0f766e';
   }
   return '#047857';
+}
+
+function formatFrameRateLabel(frameRate: number): string {
+  const rounded = Math.round(frameRate * 100) / 100;
+  return `${Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2).replace(/0+$/, '').replace(/\.$/, '')}fps`;
 }
 
 function formatTimelineKeyframeProperty(property: KeyframeProperty): string {

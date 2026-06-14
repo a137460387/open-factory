@@ -28,11 +28,28 @@ export function isVariableFrameRateProbe(probe: VfrFrameRateProbe, tolerance = 0
 export function getCfrTargetFrameRate(probe: VfrFrameRateProbe, fallback = 30): number {
   const avg = parseFrameRateRatio(probe.avgFrameRate);
   const real = parseFrameRateRatio(probe.realFrameRate);
-  const target = avg ?? real ?? fallback;
-  return Math.min(120, Math.max(1, Math.round(target * 1000) / 1000));
+  return normalizeFrameRate(avg ?? real ?? fallback);
 }
 
 export function buildCfrFpsFilter(frameRate: number): string {
-  const fps = Math.min(120, Math.max(1, Math.round(frameRate * 1000) / 1000));
-  return `fps=${fps}`;
+  return `fps=${normalizeFrameRate(frameRate)}`;
+}
+
+export function normalizeFrameRate(frameRate: number): number {
+  return Math.min(120, Math.max(1, Math.round(frameRate * 1000) / 1000));
+}
+
+export function isFrameRateMismatch(mediaFrameRate: number | undefined, projectFrameRate: number | undefined, tolerance = 0.01): boolean {
+  if (!isFinitePositiveFrameRate(mediaFrameRate) || !isFinitePositiveFrameRate(projectFrameRate)) {
+    return false;
+  }
+  return Math.abs(normalizeFrameRate(mediaFrameRate) - normalizeFrameRate(projectFrameRate)) > tolerance;
+}
+
+export function getProjectFrameRateConversionTarget(projectFrameRate: number | undefined, fallback = 30): number {
+  return normalizeFrameRate(isFinitePositiveFrameRate(projectFrameRate) ? projectFrameRate : fallback);
+}
+
+function isFinitePositiveFrameRate(value: number | undefined): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0;
 }

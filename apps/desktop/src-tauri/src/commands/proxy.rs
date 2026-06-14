@@ -120,5 +120,9 @@ mod tests {
             build_proxy_video_filter(1280, 720, Some(29.97003)),
             "fps=29.97,scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2"
         );
+        assert_eq!(
+            build_proxy_video_filter(1280, 720, Some(30.0)),
+            "fps=30,scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2"
+        );
     }
 }

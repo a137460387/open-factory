@@ -4,6 +4,7 @@ import {
   collectSmartAlbums,
   filterMediaAssets,
   getMediaFolderDepth,
+  isFrameRateMismatch,
   shouldGenerateProxy,
   type MediaAsset,
   type MediaFlag,
@@ -28,6 +29,7 @@ interface MediaBinProps {
   media: MediaAsset[];
   mediaFolders: MediaFolder[];
   mediaMetadata: Record<string, MediaMetadata>;
+  projectFrameRate: number;
   onImport(): void;
   onImportPaths(paths: string[]): void;
   onBatchTranscode(paths: string[]): void;
@@ -58,6 +60,7 @@ export function MediaBin({
   media,
   mediaFolders,
   mediaMetadata,
+  projectFrameRate,
   onImport,
   onImportPaths,
   onBatchTranscode,
@@ -305,6 +308,7 @@ export function MediaBin({
           <MediaCardGrid
             media={visibleMedia}
             mediaMetadata={mediaMetadata}
+            projectFrameRate={projectFrameRate}
             onAddToTimeline={onAddToTimeline}
             onRelink={onRelink}
             onGenerateProxy={onGenerateProxy}
@@ -321,6 +325,7 @@ export function MediaBin({
               folders={mediaFolders}
               media={visibleMedia}
               mediaMetadata={mediaMetadata}
+              projectFrameRate={projectFrameRate}
               onCreateFolder={onCreateFolder}
               onRenameFolder={onRenameFolder}
               onDeleteFolder={onDeleteFolder}
@@ -340,6 +345,7 @@ export function MediaBin({
             <MediaCardGrid
               media={visibleMedia.filter((asset) => !asset.folderId)}
               mediaMetadata={mediaMetadata}
+              projectFrameRate={projectFrameRate}
               onAddToTimeline={onAddToTimeline}
               onRelink={onRelink}
               onGenerateProxy={onGenerateProxy}
@@ -388,6 +394,7 @@ function MediaFolderTree(props: {
   folders: MediaFolder[];
   media: MediaAsset[];
   mediaMetadata: Record<string, MediaMetadata>;
+  projectFrameRate: number;
   onCreateFolder(parentId?: string | null): void;
   onRenameFolder(folderId: string, name: string): void;
   onDeleteFolder(folderId: string): void;
@@ -422,6 +429,7 @@ function MediaFolderNode({
   folders,
   media,
   mediaMetadata,
+  projectFrameRate,
   onCreateFolder,
   onRenameFolder,
   onDeleteFolder,
@@ -442,6 +450,7 @@ function MediaFolderNode({
   folders: MediaFolder[];
   media: MediaAsset[];
   mediaMetadata: Record<string, MediaMetadata>;
+  projectFrameRate: number;
   onCreateFolder(parentId?: string | null): void;
   onRenameFolder(folderId: string, name: string): void;
   onDeleteFolder(folderId: string): void;
@@ -533,6 +542,7 @@ function MediaFolderNode({
               folders={folders}
               media={media}
               mediaMetadata={mediaMetadata}
+              projectFrameRate={projectFrameRate}
               onCreateFolder={onCreateFolder}
               onRenameFolder={onRenameFolder}
               onDeleteFolder={onDeleteFolder}
@@ -552,6 +562,7 @@ function MediaFolderNode({
           <MediaCardGrid
             media={folderMedia}
             mediaMetadata={mediaMetadata}
+            projectFrameRate={projectFrameRate}
             onAddToTimeline={onAddToTimeline}
             onRelink={onRelink}
             onGenerateProxy={onGenerateProxy}
@@ -590,6 +601,7 @@ function RootMediaDropZone({ onMoveMediaToFolder }: { onMoveMediaToFolder(assetI
 function MediaCardGrid({
   media,
   mediaMetadata,
+  projectFrameRate,
   onAddToTimeline,
   onRelink,
   onGenerateProxy,
@@ -602,6 +614,7 @@ function MediaCardGrid({
 }: {
   media: MediaAsset[];
   mediaMetadata: Record<string, MediaMetadata>;
+  projectFrameRate: number;
   onAddToTimeline(assetId: string): void;
   onRelink(assetId: string): void;
   onGenerateProxy(assetId: string): void;
@@ -622,6 +635,7 @@ function MediaCardGrid({
           key={asset.id}
           asset={asset}
           metadata={mediaMetadata[asset.id]}
+          projectFrameRate={projectFrameRate}
           onAdd={() => onAddToTimeline(asset.id)}
           onRelink={() => onRelink(asset.id)}
           onGenerateProxy={() => onGenerateProxy(asset.id)}
@@ -829,6 +843,7 @@ const MEDIA_LABEL_COLORS: Array<{ key: MediaLabelColor; value: string }> = [
 function MediaCard({
   asset,
   metadata,
+  projectFrameRate,
   onAdd,
   onRelink,
   onGenerateProxy,
@@ -841,6 +856,7 @@ function MediaCard({
 }: {
   asset: MediaAsset;
   metadata?: MediaMetadata;
+  projectFrameRate: number;
   onAdd(): void;
   onRelink(): void;
   onGenerateProxy(): void;
@@ -854,6 +870,8 @@ function MediaCard({
   const proxySettings = useProxySettingsStore((state) => state.settings);
   const proxyStatus = asset.proxyStatus ?? (asset.type === 'video' ? 'none' : undefined);
   const canGenerateProxy = asset.type === 'video' && (shouldGenerateProxy(asset, proxySettings) || proxyStatus === 'error');
+  const frameRateMismatch = asset.type === 'video' && isFrameRateMismatch(asset.frameRate, projectFrameRate);
+  const canConvertFrameRate = asset.type === 'video' && (asset.variableFrameRate || frameRateMismatch);
   const [labelMenuOpen, setLabelMenuOpen] = useState(false);
   const labelColor = metadata?.labelColor;
   const rating = metadata?.rating ?? 0;
@@ -902,6 +920,17 @@ function MediaCard({
             data-testid={`vfr-badge-${asset.id}`}
           >
             {zhCN.mediaBin.vfrBadge}
+          </span>
+        ) : null}
+        {asset.type === 'video' && asset.frameRate ? (
+          <span
+            className={clsx('absolute bottom-2 right-2 rounded px-2 py-0.5 text-[11px] font-semibold shadow', frameRateMismatch ? 'bg-orange-500 text-white' : 'bg-black/70 text-white')}
+            title={zhCN.mediaBin.frameRateTooltip(formatPreciseFrameRate(asset.frameRate))}
+            data-testid={`media-frame-rate-${asset.id}`}
+            data-frame-rate={asset.frameRate}
+            data-frame-rate-mismatch={frameRateMismatch ? 'true' : 'false'}
+          >
+            {formatFrameRateLabel(asset.frameRate)}
           </span>
         ) : null}
         {labelColor ? <span className="absolute right-2 top-2 h-4 w-4 rounded-full border border-white shadow" style={{ backgroundColor: labelColorToHex(labelColor) }} data-testid={`media-label-${asset.id}`} /> : null}
@@ -990,14 +1019,14 @@ function MediaCard({
         {asset.type === 'video' ? (
           <ProxyStatus status={proxyStatus} error={asset.proxyError} canGenerate={canGenerateProxy} onGenerateProxy={onGenerateProxy} assetId={asset.id} />
         ) : null}
-        {asset.variableFrameRate ? (
+        {canConvertFrameRate ? (
           <button
-            className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md border border-sky-200 bg-sky-50 px-2 py-1.5 text-xs font-semibold text-sky-800 hover:bg-sky-100"
+            className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md border border-orange-200 bg-orange-50 px-2 py-1.5 text-xs font-semibold text-orange-800 hover:bg-orange-100"
             type="button"
             data-testid={`convert-cfr-${asset.id}`}
             onClick={onConvertToCfr}
           >
-            {zhCN.mediaBin.convertToCfr}
+            {frameRateMismatch ? zhCN.mediaBin.convertFrameRateToProject(formatFrameRateLabel(projectFrameRate)) : zhCN.mediaBin.convertToCfr}
           </button>
         ) : null}
         {asset.relativePath ? <div className="mt-1 truncate text-[11px] text-slate-400">{asset.relativePath}</div> : null}
@@ -1078,6 +1107,15 @@ function MediaCard({
 
 function labelColorToHex(color: MediaLabelColor): string {
   return MEDIA_LABEL_COLORS.find((item) => item.key === color)?.value ?? '#64748b';
+}
+
+function formatFrameRateLabel(frameRate: number): string {
+  const rounded = Math.round(frameRate * 100) / 100;
+  return `${Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2).replace(/0+$/, '').replace(/\.$/, '')}fps`;
+}
+
+function formatPreciseFrameRate(frameRate: number): string {
+  return `${(Math.round(frameRate * 1000) / 1000).toFixed(3)} fps`;
 }
 
 function ProxyStatus({
