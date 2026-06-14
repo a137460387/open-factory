@@ -188,6 +188,44 @@ const zh = {
     unavailableTitle: '无法打开同步对比',
     unavailableMessage: '请选择两个视频、图片或嵌套序列 clip。'
   },
+  timelineSearch: {
+    placeholder: '搜索时间线',
+    regex: '正则',
+    mediaFilter: '类型',
+    mediaFilters: {
+      all: '全部类型',
+      video: '仅视频',
+      audio: '仅音频',
+      image: '仅图片',
+      subtitle: '仅字幕'
+    },
+    effectFilter: '特效',
+    effectFilters: {
+      all: '全部',
+      hasEffects: '有特效',
+      noEffects: '无特效'
+    },
+    keyframeFilter: '关键帧',
+    keyframeFilters: {
+      all: '全部',
+      hasKeyframes: '有关键帧',
+      noKeyframes: '无关键帧'
+    },
+    invalidRegex: '正则表达式无效',
+    empty: '没有匹配结果',
+    clipThumb: 'Clip',
+    markerThumb: '标记',
+    reasons: {
+      'clip-name': 'clip 名称',
+      'file-name': '文件名',
+      'color-label': '颜色标签',
+      'effect-type': '特效类型',
+      'subtitle-text': '字幕文字',
+      'group-name': '分组名称',
+      'marker-name': '标记名称',
+      filter: '过滤器'
+    }
+  },
   editMenu: {
     saveSnapshot: '保存快照',
     snapshotHistory: '快照历史',
@@ -2566,6 +2604,44 @@ const enOverrides = {
     renderFailedMessage: 'Unable to render the sync compare frame.',
     unavailableTitle: 'Cannot open sync compare',
     unavailableMessage: 'Select two video, image, or nested sequence clips.'
+  },
+  timelineSearch: {
+    placeholder: 'Search timeline',
+    regex: 'Regex',
+    mediaFilter: 'Type',
+    mediaFilters: {
+      all: 'All Types',
+      video: 'Video Only',
+      audio: 'Audio Only',
+      image: 'Image Only',
+      subtitle: 'Subtitles Only'
+    },
+    effectFilter: 'Effects',
+    effectFilters: {
+      all: 'All',
+      hasEffects: 'Has Effects',
+      noEffects: 'No Effects'
+    },
+    keyframeFilter: 'Keyframes',
+    keyframeFilters: {
+      all: 'All',
+      hasKeyframes: 'Has Keyframes',
+      noKeyframes: 'No Keyframes'
+    },
+    invalidRegex: 'Invalid regular expression',
+    empty: 'No matching results',
+    clipThumb: 'Clip',
+    markerThumb: 'Marker',
+    reasons: {
+      'clip-name': 'clip name',
+      'file-name': 'file name',
+      'color-label': 'color label',
+      'effect-type': 'effect type',
+      'subtitle-text': 'subtitle text',
+      'group-name': 'group name',
+      'marker-name': 'marker name',
+      filter: 'filter'
+    }
   },
   editMenu: {
     saveSnapshot: 'Save Snapshot',
