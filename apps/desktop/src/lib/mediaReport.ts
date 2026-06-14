@@ -1,5 +1,6 @@
 import {
   buildOfflineMediaReportHtml,
+  buildClipReportHtml,
   buildProjectArchivePreflight,
   collectOfflineMediaReportPaths,
   type OfflineMediaFileStatus,
@@ -7,7 +8,7 @@ import {
   type ProjectArchivePreflight
 } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
-import { fsExists, getFileStat, saveFileDialog, writeFile } from './tauri-bridge';
+import { fsExists, getFileStat, saveFileDialog, writeClipReport, writeFile } from './tauri-bridge';
 
 export async function collectOfflineMediaFileStatuses(project: Project): Promise<OfflineMediaFileStatus[]> {
   const paths = collectOfflineMediaReportPaths(project);
@@ -30,6 +31,15 @@ export async function saveOfflineMediaReport(project: Project): Promise<string |
   }
   const statuses = await collectOfflineMediaFileStatuses(project);
   await writeFile(outputPath, buildOfflineMediaReportHtml(project, statuses));
+  return outputPath;
+}
+
+export async function saveClipReport(project: Project): Promise<string | undefined> {
+  const outputPath = await saveFileDialog(`${project.name}-剪辑报告.html`, [{ name: zhCN.fileDialogs.htmlReport, extensions: ['html', 'htm'] }]);
+  if (!outputPath) {
+    return undefined;
+  }
+  await writeClipReport(outputPath, buildClipReportHtml(project, { exportPresetName: zhCN.clipReport.defaultExportPreset }));
   return outputPath;
 }
 

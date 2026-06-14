@@ -8,6 +8,7 @@ pub mod media;
 pub mod privacy;
 pub mod proxy;
 pub mod recording;
+pub mod reports;
 pub mod scene;
 pub mod share;
 pub mod smoke;

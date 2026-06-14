@@ -117,7 +117,7 @@ import {
   readSubtitleText
 } from '../lib/subtitles';
 import { createProjectArchivePlan, writeProjectArchive, type ArchiveProgress } from '../lib/projectArchive';
-import { collectProjectArchivePreflight, saveOfflineMediaReport } from '../lib/mediaReport';
+import { collectProjectArchivePreflight, saveClipReport, saveOfflineMediaReport } from '../lib/mediaReport';
 import { saveProjectSnapshot } from '../lib/projectSnapshots';
 import { scanProjectHealth } from '../lib/projectHealth';
 import { createSharePackageFromProject, type SharePackageWorkflowProgress } from '../lib/sharePackage';
@@ -205,6 +205,7 @@ const SettingsDialog = lazy(() => import('../settings/SettingsDialog').then((mod
 const MacroHistoryDialog = lazy(() => import('../macros/MacroHistoryDialog').then((module) => ({ default: module.MacroHistoryDialog })));
 const TimelineExportDialog = lazy(() => import('../timeline-export/TimelineExportDialog').then((module) => ({ default: module.TimelineExportDialog })));
 const BatchTranscodeDialog = lazy(() => import('../media/BatchTranscodeDialog').then((module) => ({ default: module.BatchTranscodeDialog })));
+const MediaPrecheckPanel = lazy(() => import('../media/MediaPrecheckPanel').then((module) => ({ default: module.MediaPrecheckPanel })));
 const VideoStitchWizardDialog = lazy(() => import('../video-stitching/VideoStitchWizardDialog').then((module) => ({ default: module.VideoStitchWizardDialog })));
 const SyncComparePanel = lazy(() => import('../sync-compare/SyncComparePanel').then((module) => ({ default: module.SyncComparePanel })));
 const TimelineSearchPanel = lazy(() => import('../timeline-search/TimelineSearchPanel').then((module) => ({ default: module.TimelineSearchPanel })));
@@ -246,6 +247,7 @@ export function EditorShell() {
   const [timelineExportDialogOpen, setTimelineExportDialogOpen] = useState(false);
   const [batchTranscodeOpen, setBatchTranscodeOpen] = useState(false);
   const [batchTranscodeInitialPaths, setBatchTranscodeInitialPaths] = useState<string[]>([]);
+  const [mediaPrecheckOpen, setMediaPrecheckOpen] = useState(false);
   const [videoStitchWizardOpen, setVideoStitchWizardOpen] = useState(false);
   const [syncCompareOpen, setSyncCompareOpen] = useState(false);
   const [timelineSearchOpen, setTimelineSearchOpen] = useState(false);
@@ -634,6 +636,23 @@ export function EditorShell() {
       showToast({ kind: 'error', title: zhCN.mediaReport.failed, message: error instanceof Error ? error.message : zhCN.mediaReport.failedMessage });
     }
   }, [project]);
+
+  const createClipReport = useCallback(async () => {
+    try {
+      const outputPath = await saveClipReport(project);
+      if (outputPath) {
+        showToast({ kind: 'success', title: zhCN.clipReport.success, message: outputPath });
+      }
+    } catch (error) {
+      showToast({ kind: 'error', title: zhCN.clipReport.failed, message: error instanceof Error ? error.message : zhCN.clipReport.failedMessage });
+    }
+  }, [project]);
+
+  const jumpToMediaAsset = useCallback((assetId: string) => {
+    const element = document.querySelector(`[data-testid="media-card-${assetId}"]`) as HTMLElement | null;
+    element?.scrollIntoView({ block: 'center', inline: 'nearest' });
+    element?.focus();
+  }, []);
 
   const createCurrentSharePackage = useCallback(async () => {
     if (sharePackageBusy) {
@@ -2089,6 +2108,7 @@ export function EditorShell() {
           onSaveProject={() => void saveProject()}
           onArchiveProject={() => void archiveCurrentProject()}
           onCreateMediaReport={() => void createMediaReport()}
+          onCreateClipReport={() => void createClipReport()}
           onCreateSharePackage={() => void createCurrentSharePackage()}
           onImportBookmarks={() => void importBookmarks()}
           onExportBookmarks={() => void exportBookmarks()}
@@ -2097,6 +2117,7 @@ export function EditorShell() {
           onOpenSnapshotCompare={() => setSnapshotCompareOpen(true)}
           onImportMedia={() => void importMedia()}
           onBatchTranscode={() => openBatchTranscode()}
+          onOpenMediaPrecheck={() => setMediaPrecheckOpen(true)}
           onOpenVideoStitchWizard={() => setVideoStitchWizardOpen(true)}
           onOpenSyncCompare={openSyncCompare}
           onDetectBeats={() => void detectSelectedBeats()}
@@ -2331,6 +2352,7 @@ export function EditorShell() {
               }}
             />
           ) : null}
+          {mediaPrecheckOpen ? <MediaPrecheckPanel project={project} onClose={() => setMediaPrecheckOpen(false)} onJumpToMedia={jumpToMediaAsset} /> : null}
           {videoStitchWizardOpen ? (
             <VideoStitchWizardDialog
               media={project.media}

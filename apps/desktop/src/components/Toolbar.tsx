@@ -26,6 +26,7 @@ interface ToolbarProps {
   onSaveProject(): void;
   onArchiveProject(): void;
   onCreateMediaReport(): void;
+  onCreateClipReport(): void;
   onCreateSharePackage(): void;
   onImportBookmarks(): void;
   onExportBookmarks(): void;
@@ -35,6 +36,7 @@ interface ToolbarProps {
   onImportMedia(): void;
   onImportDataSubtitles(mode: SubtitleDataImportMode): void;
   onBatchTranscode(): void;
+  onOpenMediaPrecheck(): void;
   onOpenVideoStitchWizard(): void;
   onOpenSyncCompare(): void;
   onDetectBeats(): void;
@@ -190,6 +192,17 @@ export function Toolbar(props: ToolbarProps) {
               }}
             >
               <span>{t.mediaReport}</span>
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-file-clip-report-menu-item"
+              onClick={() => {
+                setFileMenuOpen(false);
+                props.onCreateClipReport();
+              }}
+            >
+              <span>{t.clipReport}</span>
             </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
@@ -379,6 +392,17 @@ export function Toolbar(props: ToolbarProps) {
               }}
             >
               <span>{t.batchTranscode}</span>
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-tools-media-precheck-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onOpenMediaPrecheck();
+              }}
+            >
+              <span>{t.mediaPrecheck}</span>
             </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"

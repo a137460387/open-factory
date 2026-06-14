@@ -52,8 +52,10 @@ const zh = {
     saveProject: '保存项目',
     archiveProject: '归档项目',
     mediaReport: '素材使用分析',
+    clipReport: '导出剪辑报告',
     createSharePackage: '创建分享包',
     batchTranscode: '批量转码',
+    mediaPrecheck: '素材预检',
     videoStitchWizard: '视频拼接向导',
     syncCompare: '同步对比',
     detectBeats: '节拍检测',
@@ -2193,6 +2195,39 @@ const zh = {
     failed: '素材使用分析报告生成失败',
     failedMessage: '无法生成素材使用分析报告。'
   },
+  clipReport: {
+    success: '剪辑报告已生成',
+    failed: '剪辑报告生成失败',
+    failedMessage: '无法生成剪辑报告。',
+    defaultExportPreset: '未指定'
+  },
+  mediaPrecheck: {
+    title: '素材预检',
+    running: '正在检查素材',
+    summary: (passed: number, warnings: number, errors: number) => `通过 ${passed} · 警告 ${warnings} · 错误 ${errors}`,
+    jumpToMedia: '跳转素材',
+    noIssues: '通过',
+    status: {
+      pass: '通过',
+      warning: '警告',
+      error: '错误'
+    },
+    ffprobeCategories: {
+      'unsupported-codec': '编解码器不支持',
+      'invalid-data': '文件数据无效',
+      'missing-file': '文件缺失',
+      permission: '权限不足',
+      unknown: 'ffprobe 错误'
+    },
+    issues: {
+      ffprobeError: (category: string, details: string) => `${category}${details ? `：${details}` : ''}`,
+      codec: (details: string) => `无法识别${details || '媒体'}编解码器`,
+      avSync: (video: string, audio: string, delta: string) => `可能失同步：视频 ${video}，音频 ${audio}，差值 ${delta}`,
+      integrity: (details: string) => `可能损坏：${details}`,
+      hdrSdr: (details: string) => `HDR 媒体混入 SDR 项目${details ? `：${details}` : ''}`,
+      unknown: '未知问题'
+    }
+  },
   exportRules: {
     notificationSuccessTitle: '导出已完成',
     notificationSuccessBody: '导出任务已成功完成。',
@@ -2469,8 +2504,10 @@ const enOverrides = {
     saveProject: 'Save Project',
     archiveProject: 'Archive Project',
     mediaReport: 'Media Usage Analysis',
+    clipReport: 'Export Clip Report',
     createSharePackage: 'Create Share Package',
     batchTranscode: 'Batch Transcode',
+    mediaPrecheck: 'Media Precheck',
     videoStitchWizard: 'Video Stitch Wizard',
     syncCompare: 'Sync Compare',
     detectBeats: 'Detect Beats',
@@ -4298,6 +4335,39 @@ const enOverrides = {
     success: 'Media usage analysis generated',
     failed: 'Media usage analysis failed',
     failedMessage: 'Unable to generate the media usage analysis.'
+  },
+  clipReport: {
+    success: 'Clip report generated',
+    failed: 'Clip report failed',
+    failedMessage: 'Unable to generate the clip report.',
+    defaultExportPreset: 'Not specified'
+  },
+  mediaPrecheck: {
+    title: 'Media Precheck',
+    running: 'Checking media',
+    summary: (passed: number, warnings: number, errors: number) => `Passed ${passed} · Warnings ${warnings} · Errors ${errors}`,
+    jumpToMedia: 'Jump to Media',
+    noIssues: 'Passed',
+    status: {
+      pass: 'Passed',
+      warning: 'Warning',
+      error: 'Error'
+    },
+    ffprobeCategories: {
+      'unsupported-codec': 'Unsupported codec',
+      'invalid-data': 'Invalid file data',
+      'missing-file': 'Missing file',
+      permission: 'Permission denied',
+      unknown: 'ffprobe error'
+    },
+    issues: {
+      ffprobeError: (category: string, details: string) => `${category}${details ? `: ${details}` : ''}`,
+      codec: (details: string) => `Unrecognized ${details || 'media'} codec`,
+      avSync: (video: string, audio: string, delta: string) => `Possible A/V sync drift: video ${video}, audio ${audio}, delta ${delta}`,
+      integrity: (details: string) => `Possibly damaged: ${details}`,
+      hdrSdr: (details: string) => `HDR media in an SDR project${details ? `: ${details}` : ''}`,
+      unknown: 'Unknown issue'
+    }
   },
   exportRules: {
     notificationSuccessTitle: 'Export Complete',

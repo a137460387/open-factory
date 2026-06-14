@@ -51,6 +51,7 @@ let lastTrayProgress: { progress: number; runningCount: number } | undefined;
 let powerActionCalls: Array<{ action: 'shutdown' | 'hibernate'; allowPowerActions: boolean }> = [];
 let notifications: Array<{ title: string; body: string }> = [];
 let recordingTasks = new Map<string, { outputPath: string; startedAt: number }>();
+const damagedMediaPaths = new Set<string>();
 
 const sampleProjectPath = 'C:/Projects/sample.cutproj.json';
 const missingProjectPath = 'C:/Projects/missing.cutproj.json';
@@ -216,6 +217,12 @@ const mocks: TauriMocks = {
   },
   writeFile: (path, contents) => {
     files.set(path, contents);
+    exists.set(path, true);
+    mtimes.set(path, Date.now());
+    persistFiles();
+  },
+  writeClipReport: (path, html) => {
+    files.set(path, html);
     exists.set(path, true);
     mtimes.set(path, Date.now());
     persistFiles();
@@ -520,6 +527,7 @@ const mocks: TauriMocks = {
             index: 0,
             codecName: path === fourKHevcVideo ? 'hevc' : 'h264',
             codecLongName: path === fourKHevcVideo ? 'H.265 / HEVC' : 'H.264 / AVC',
+            duration: path === tinyVideo ? 6 : 6,
             width: path === fourKHevcVideo ? 3840 : 1280,
             height: path === fourKHevcVideo ? 2160 : 720,
             frameRate: 30,
@@ -539,6 +547,7 @@ const mocks: TauriMocks = {
             index: path.endsWith('.wav') ? 0 : 1,
             codecName: path.endsWith('.wav') ? 'pcm_s16le' : 'aac',
             codecLongName: path.endsWith('.wav') ? 'PCM signed 16-bit little-endian' : 'AAC',
+            duration: path === tinyVideo ? 6 : 6,
             sampleRate: 44_100,
             channels: 2,
             channelLayout: 'stereo',
@@ -553,6 +562,16 @@ const mocks: TauriMocks = {
     ],
     loudnessError: undefined
   }),
+  scanMediaIntegrity: (path) => {
+    if (damagedMediaPaths.has(path)) {
+      return {
+        path,
+        ok: false,
+        errorOutput: 'Invalid data found when processing input'
+      };
+    }
+    return { path, ok: true };
+  },
   analyzeWaveform: (path, samplesPerSec) => {
     const total = Math.max(1, Math.ceil(6 * Math.max(1, samplesPerSec)));
     return Array.from({ length: total }, (_, index) => {
@@ -1331,6 +1350,16 @@ window.__E2E_ACTIONS__ = {
   setSavePath: (path: unknown) => {
     if (typeof path === 'string') {
       savePath = path;
+    }
+  },
+  setDamagedMediaPaths: (paths: unknown) => {
+    damagedMediaPaths.clear();
+    if (Array.isArray(paths)) {
+      for (const path of paths) {
+        if (typeof path === 'string') {
+          damagedMediaPaths.add(path);
+        }
+      }
     }
   },
   setOpenDirectoryPath: (path: unknown) => {

@@ -41,6 +41,23 @@ test('generates an offline media HTML report from the file menu', async ({ page 
   expect(html).toContain('导出时长分布');
 });
 
+test('exports a clip report HTML file from the file menu', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.evaluate(() => window.__E2E_ACTIONS__!.setSavePath!('C:/Reports/clip-report.html'));
+  await page.getByTestId('toolbar-open-project-button').click();
+
+  await page.getByTestId('toolbar-file-menu-button').click();
+  await page.getByTestId('toolbar-file-clip-report-menu-item').click();
+
+  const reportPath = 'C:/Reports/clip-report.html';
+  await expect.poll(() => page.evaluate((path) => window.__E2E_ACTIONS__!.getWrittenFile!(path) as string | undefined, reportPath)).not.toBeUndefined();
+  const html = await page.evaluate((path) => window.__E2E_ACTIONS__!.getWrittenFile!(path) as string, reportPath);
+  expect(html).toContain('剪辑报告：E2E Project');
+  expect(html).toContain('Clip 清单');
+  expect(html).toContain('tiny-video.mp4');
+});
+
 test('confirms before archiving when project media is missing', async ({ page }) => {
   await page.goto('/');
   await waitForE2eActions(page);

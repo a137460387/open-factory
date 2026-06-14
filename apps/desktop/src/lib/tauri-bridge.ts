@@ -130,6 +130,7 @@ export interface MediaVideoStreamInfo {
   index: number;
   codecName?: string;
   codecLongName?: string;
+  duration?: number;
   width?: number;
   height?: number;
   frameRate?: number;
@@ -146,6 +147,7 @@ export interface MediaAudioStreamInfo {
   index: number;
   codecName?: string;
   codecLongName?: string;
+  duration?: number;
   sampleRate?: number;
   channels?: number;
   channelLayout?: string;
@@ -167,6 +169,12 @@ export interface MediaAnalysis {
   audioStreams: MediaAudioStreamInfo[];
   bitratePoints: MediaBitratePoint[];
   loudnessError?: string;
+}
+
+export interface MediaIntegrityScanResult {
+  path: string;
+  ok: boolean;
+  errorOutput?: string;
 }
 
 export interface ProxyResult {
@@ -388,6 +396,7 @@ export type TauriMocks = Partial<{
   openDirectoryDialog(): Promise<string | undefined> | string | undefined;
   readFile(path: string): Promise<string> | string;
   writeFile(path: string, contents: string): Promise<void> | void;
+  writeClipReport(path: string, html: string): Promise<void> | void;
   removeFile(path: string): Promise<void> | void;
   copyFile(sourcePath: string, destinationPath: string): Promise<void> | void;
   fsExists(path: string): Promise<boolean> | boolean;
@@ -433,6 +442,7 @@ export type TauriMocks = Partial<{
   probeMediaPath(path: string): Promise<Partial<import('@open-factory/editor-core').MediaAsset>> | Partial<import('@open-factory/editor-core').MediaAsset>;
   probeMedia(path: string): Promise<MediaProbe> | MediaProbe;
   analyzeMedia(path: string): Promise<MediaAnalysis> | MediaAnalysis;
+  scanMediaIntegrity(path: string): Promise<MediaIntegrityScanResult> | MediaIntegrityScanResult;
   analyzeWaveform(path: string, samplesPerSec: number): Promise<number[]> | number[];
   detectBeats(path: string, sensitivity: BeatSensitivity): Promise<number[]> | number[];
   detectSilence(path: string, thresholdDb: number, minGapMs: number): Promise<NativeSilenceRange[]> | NativeSilenceRange[];
@@ -547,6 +557,15 @@ export async function writeFile(path: string, contents: string): Promise<void> {
   await invoke('write_file', { path, contents });
 }
 
+export async function writeClipReport(path: string, html: string): Promise<void> {
+  const mock = getTauriMocks()?.writeClipReport;
+  if (mock) {
+    await mock(path, html);
+    return;
+  }
+  await invoke('write_clip_report', { path, html });
+}
+
 export async function removeFile(path: string): Promise<void> {
   const mock = getTauriMocks()?.removeFile;
   if (mock) {
@@ -655,6 +674,17 @@ export async function analyzeMedia(path: string): Promise<MediaAnalysis> {
     throw new Error('analyzeMedia 需要 Tauri 或 __TAURI_MOCKS__ 实现。');
   }
   return invoke<MediaAnalysis>('analyze_media', { path });
+}
+
+export async function scanMediaIntegrity(path: string): Promise<MediaIntegrityScanResult> {
+  const mock = getTauriMocks()?.scanMediaIntegrity;
+  if (mock) {
+    return mock(path);
+  }
+  if (!isTauriRuntime()) {
+    throw new Error('scanMediaIntegrity 需要 Tauri 或 __TAURI_MOCKS__ 实现。');
+  }
+  return invoke<MediaIntegrityScanResult>('scan_media_integrity', { path });
 }
 
 export async function analyzeWaveform(path: string, samplesPerSec: number): Promise<number[]> {

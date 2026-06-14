@@ -62,6 +62,7 @@ pub struct VideoStreamInfo {
     index: u32,
     codec_name: Option<String>,
     codec_long_name: Option<String>,
+    duration: Option<f64>,
     width: Option<u32>,
     height: Option<u32>,
     frame_rate: Option<f64>,
@@ -80,6 +81,7 @@ pub struct AudioStreamInfo {
     index: u32,
     codec_name: Option<String>,
     codec_long_name: Option<String>,
+    duration: Option<f64>,
     sample_rate: Option<u32>,
     channels: Option<u32>,
     channel_layout: Option<String>,
@@ -92,6 +94,14 @@ pub struct AudioStreamInfo {
 pub struct BitratePoint {
     time: f64,
     bit_rate: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MediaIntegrityScanResult {
+    path: String,
+    ok: bool,
+    error_output: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -116,6 +126,7 @@ struct FfprobeStream {
     codec_name: Option<String>,
     codec_long_name: Option<String>,
     codec_type: Option<String>,
+    duration: Option<String>,
     width: Option<u32>,
     height: Option<u32>,
     avg_frame_rate: Option<String>,
@@ -227,6 +238,15 @@ pub fn analyze_media(app: AppHandle, path: String) -> Result<MediaAnalysis, Stri
     analyze_media_path(&safe_path)
 }
 
+#[tauri::command]
+pub fn scan_media_integrity(
+    app: AppHandle,
+    path: String,
+) -> Result<MediaIntegrityScanResult, String> {
+    let safe_path = validate_path(&app, Path::new(&path))?;
+    scan_media_integrity_path(&safe_path)
+}
+
 pub(crate) fn analyze_media_path(path: &Path) -> Result<MediaAnalysis, String> {
     let input_path = normalize_path(path);
     let metadata = fs::metadata(path).ok();
@@ -258,6 +278,25 @@ pub(crate) fn analyze_media_path(path: &Path) -> Result<MediaAnalysis, String> {
     Ok(analysis)
 }
 
+pub(crate) fn scan_media_integrity_path(path: &Path) -> Result<MediaIntegrityScanResult, String> {
+    let input_path = normalize_path(path);
+    let output = Command::new(ffmpeg_binary())
+        .args(build_media_integrity_scan_args(&input_path))
+        .output()
+        .map_err(|error| format!("Unable to run FFmpeg media scan: {}", error))?;
+    let error_output = String::from_utf8_lossy(&output.stderr).trim().to_string();
+    let ok = output.status.success() && error_output.is_empty();
+    Ok(MediaIntegrityScanResult {
+        path: input_path,
+        ok,
+        error_output: if error_output.is_empty() {
+            None
+        } else {
+            Some(error_output)
+        },
+    })
+}
+
 pub(crate) fn build_ffprobe_media_analysis_args(input_path: &str) -> [&str; 8] {
     [
         "-v",
@@ -269,6 +308,10 @@ pub(crate) fn build_ffprobe_media_analysis_args(input_path: &str) -> [&str; 8] {
         "-show_packets",
         input_path,
     ]
+}
+
+pub(crate) fn build_media_integrity_scan_args(input_path: &str) -> [&str; 7] {
+    ["-v", "error", "-i", input_path, "-f", "null", "-"]
 }
 
 pub(crate) fn build_loudnorm_analysis_args(input_path: &str) -> [&str; 9] {
@@ -328,6 +371,7 @@ fn parse_video_stream(index: u32, stream: &FfprobeStream) -> VideoStreamInfo {
         index,
         codec_name: stream.codec_name.clone(),
         codec_long_name: stream.codec_long_name.clone(),
+        duration: parse_f64(stream.duration.as_deref()),
         width: stream.width,
         height: stream.height,
         frame_rate: parse_frame_rate(stream.avg_frame_rate.as_deref())
@@ -358,6 +402,7 @@ fn parse_audio_stream(index: u32, stream: &FfprobeStream) -> AudioStreamInfo {
         index,
         codec_name: stream.codec_name.clone(),
         codec_long_name: stream.codec_long_name.clone(),
+        duration: parse_f64(stream.duration.as_deref()),
         sample_rate: parse_u64(stream.sample_rate.as_deref()).map(|value| value as u32),
         channels: stream.channels,
         channel_layout: stream.channel_layout.clone(),
@@ -1003,6 +1048,7 @@ mod tests {
               "codec_name": "hevc",
               "codec_long_name": "H.265 / HEVC",
               "codec_type": "video",
+              "duration": "12.000000",
               "width": 3840,
               "height": 2160,
               "avg_frame_rate": "30000/1001",
@@ -1022,6 +1068,7 @@ mod tests {
               "codec_name": "aac",
               "codec_long_name": "AAC",
               "codec_type": "audio",
+              "duration": "12.750000",
               "sample_rate": "48000",
               "channels": 2,
               "channel_layout": "stereo",
@@ -1052,6 +1099,7 @@ mod tests {
         );
         assert_eq!(analysis.video_streams[0].width, Some(3840));
         assert_eq!(analysis.video_streams[0].height, Some(2160));
+        assert_eq!(analysis.video_streams[0].duration, Some(12.0));
         assert_eq!(analysis.video_streams[0].frame_rate, Some(29.97));
         assert_eq!(
             analysis.video_streams[0].color_transfer.as_deref(),
@@ -1064,6 +1112,7 @@ mod tests {
         assert_eq!(analysis.video_streams[0].field_order.as_deref(), Some("tt"));
         assert_eq!(analysis.video_streams[0].hdr_metadata.len(), 2);
         assert_eq!(analysis.audio_streams[0].codec_name.as_deref(), Some("aac"));
+        assert_eq!(analysis.audio_streams[0].duration, Some(12.75));
         assert_eq!(analysis.audio_streams[0].sample_rate, Some(48_000));
         assert_eq!(analysis.audio_streams[0].channels, Some(2));
         assert_eq!(
@@ -1119,6 +1168,22 @@ mod tests {
                 "-show_format",
                 "-show_packets",
                 "C:/Media/tiny-video.mp4"
+            ]
+        );
+    }
+
+    #[test]
+    fn builds_media_integrity_scan_args() {
+        assert_eq!(
+            build_media_integrity_scan_args("C:/Media/tiny-video.mp4"),
+            [
+                "-v",
+                "error",
+                "-i",
+                "C:/Media/tiny-video.mp4",
+                "-f",
+                "null",
+                "-"
             ]
         );
     }
