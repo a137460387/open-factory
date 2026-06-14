@@ -18,6 +18,7 @@ import { useEditorStore } from '../store/editorStore';
 import { usePrivacyDetectionSettingsStore } from '../store/privacyDetectionSettingsStore';
 import type { BatchTranscodeTaskResult, ExportPreviewSamplesResult, TauriMocks, WebdavProjectBackupRequest } from '../lib/tauri-bridge';
 import { clearPluginHookLog, getPluginHookLog, refreshPluginRegistry } from '../plugins/plugin-manager';
+import { useExportQueueStore } from '../export/export-queue-store';
 
 const PERSISTED_FILES_KEY = 'open-factory:e2e-files';
 const PERSISTED_MTIMES_KEY = 'open-factory:e2e-mtimes';
@@ -1396,7 +1397,18 @@ window.__E2E_ACTIONS__ = {
     persistFiles();
   },
   clearE2eFiles: () => {
+    canceledExportTaskIds.clear();
+    canceledTranscodeTaskIds.clear();
     canceledQualityEvaluationTaskIds.clear();
+    useExportQueueStore.setState({
+      tasks: [],
+      history: [],
+      runnerActive: false,
+      resourcePaused: false,
+      queuePaused: false,
+      maxConcurrent: 2,
+      lastCompletedPath: undefined
+    });
     localStorage.removeItem(PERSISTED_FILES_KEY);
     localStorage.removeItem(PERSISTED_MTIMES_KEY);
     localStorage.removeItem('open-factory:demucs-executable-path');

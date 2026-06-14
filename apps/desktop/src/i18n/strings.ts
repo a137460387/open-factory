@@ -1696,6 +1696,30 @@ const zh = {
       hardwareEncoder: '硬件编码器',
       estimatedSize: '预估大小'
     },
+    mode: {
+      title: '导出模式',
+      options: {
+        single: '单个导出',
+        'sequence-batch': '批量序列渲染'
+      }
+    },
+    sequenceBatch: {
+      title: '批量序列',
+      description: '勾选要渲染的序列，嵌套序列会排在引用它的序列之前加入队列。',
+      outputTemplate: '输出文件名模板',
+      outputTemplatePlaceholder: 'C:/Exports/{sequence}-{date}-{index}.mp4',
+      presetMode: '预设',
+      presetModes: {
+        shared: '统一使用当前预设',
+        individual: '每个序列单独选择'
+      },
+      noSequences: '当前项目没有可导出的序列。',
+      noneSelected: '请至少选择一个序列。',
+      missingSequence: (id: string) => `找不到序列：${id}`,
+      outputRequired: (name: string) => `请为序列“${name}”填写输出路径。`,
+      cycleDetected: (cycle: string) => `检测到序列循环依赖：${cycle}`,
+      queuedMessage: (count: number) => `${count} 个序列任务已加入导出队列。`
+    },
     batchPaths: '批量路径',
     batchPlaceholder: '可选：每行一个输出路径',
     priority: '优先级',
@@ -3726,6 +3750,30 @@ const enOverrides = {
       drawtext: 'Drawtext',
       hardwareEncoder: 'Hardware Encoder',
       estimatedSize: 'Estimated Size'
+    },
+    mode: {
+      title: 'Export Mode',
+      options: {
+        single: 'Single Export',
+        'sequence-batch': 'Batch Sequence Render'
+      }
+    },
+    sequenceBatch: {
+      title: 'Batch Sequences',
+      description: 'Select sequences to render. Nested sequences are queued before the sequences that reference them.',
+      outputTemplate: 'Output filename template',
+      outputTemplatePlaceholder: 'C:/Exports/{sequence}-{date}-{index}.mp4',
+      presetMode: 'Preset',
+      presetModes: {
+        shared: 'Use current preset for all',
+        individual: 'Choose per sequence'
+      },
+      noSequences: 'No exportable sequences in this project.',
+      noneSelected: 'Select at least one sequence.',
+      missingSequence: (id: string) => `Sequence not found: ${id}`,
+      outputRequired: (name: string) => `Enter an output path for "${name}".`,
+      cycleDetected: (cycle: string) => `Sequence dependency cycle detected: ${cycle}`,
+      queuedMessage: (count: number) => `${count} sequence tasks added to the export queue.`
     },
     batchPaths: 'Batch Paths',
     batchPlaceholder: 'Optional: one output path per line',

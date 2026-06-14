@@ -4,9 +4,12 @@ import {
   appendExportRangeSequence,
   buildExportProjectFromProject,
   buildFfmpegPreviewSamplePlans,
+  buildProjectForSequenceExport,
   clampReframeOffset,
   EXPORT_COLOR_SPACES,
   exportRenderRangeFromPoints,
+  expandSequenceBatchOutputPath,
+  getSyncedProjectSequences,
   getTimelinePlaybackDuration,
   normalizeExportColorManagement,
   normalizeExportPostScript,
@@ -18,6 +21,8 @@ import {
   assessQualityMetric,
   normalizeTargetAspectRatio,
   resolveReframeDimensions,
+  SequenceDependencyCycleError,
+  sortBatchSequenceIds,
   suggestRenderFarmInstances,
   type ExportAudioVisualizationBackground,
   type ExportAudioVisualizationStyle,
@@ -36,6 +41,7 @@ import {
   type QualityLevel,
   type PreflightResult,
   type Project,
+  type Sequence,
   type TargetAspectRatio
 } from '@open-factory/editor-core';
 import { AlertTriangle, Clock3, FileText, FolderOpen, Image as ImageIcon, ListPlus, Minimize2, Save, Trash2, X } from 'lucide-react';
@@ -89,10 +95,16 @@ interface ExportDialogProps {
 }
 
 type ExportRangeMode = 'all' | 'in-out' | 'selected-clips';
+type ExportMode = 'single' | 'sequence-batch';
+type SequenceBatchPresetMode = 'shared' | 'individual';
 
 interface ExportJob {
   outputPath: string;
   range?: ExportRenderRange | null;
+  project?: Project;
+  settings?: ExportPresetSettings;
+  presetName?: string;
+  sequenceName?: string;
 }
 
 const WATERMARK_POSITIONS: ExportWatermarkPosition[] = [
@@ -146,8 +158,14 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
   const [presetId, setPresetId] = useState(initialPreset?.id ?? BUILTIN_EXPORT_PRESETS[0].id);
   const [draftSettings, setDraftSettings] = useState<ExportPresetSettings>({ ...(initialPreset?.settings ?? BUILTIN_EXPORT_PRESETS[0].settings) });
   const [exportRangeMode, setExportRangeMode] = useState<ExportRangeMode>('all');
+  const [exportMode, setExportMode] = useState<ExportMode>('single');
   const [customPresetName, setCustomPresetName] = useState('');
   const [batchOutputPaths, setBatchOutputPaths] = useState('');
+  const [sequenceBatchTemplate, setSequenceBatchTemplate] = useState('C:/Exports/{sequence}-{index}.mp4');
+  const [selectedSequenceIds, setSelectedSequenceIds] = useState<string[]>([]);
+  const [sequenceBatchOutputOverrides, setSequenceBatchOutputOverrides] = useState<Record<string, string>>({});
+  const [sequenceBatchPresetMode, setSequenceBatchPresetMode] = useState<SequenceBatchPresetMode>('shared');
+  const [sequenceBatchPresetIds, setSequenceBatchPresetIds] = useState<Record<string, string>>({});
   const [priority, setPriority] = useState<ExportTaskPriority>('normal');
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [scheduledStartInput, setScheduledStartInput] = useState(() => localDatetimeInputValue(new Date(Date.now() + 60_000)));
@@ -175,8 +193,20 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
   const notifiedSuccess = useRef(new Set<string>());
   const pendingCompletionAction = useRef<ExportCompletionAction>('none');
   const completionActionHandled = useRef(false);
+  const enqueueInFlight = useRef(false);
   const selectedPreset = useMemo(() => getExportPreset(presetId, presets), [presetId, presets]);
   const exportSettings = useMemo(() => normalizeDraftSettings(draftSettings), [draftSettings]);
+  const batchSequences = useMemo(() => getSyncedProjectSequences(project), [project]);
+  const sequenceBatchRows = useMemo(
+    () =>
+      batchSequences.map((sequence, index) => ({
+        sequence,
+        selected: selectedSequenceIds.includes(sequence.id),
+        outputPath: sequenceBatchOutputOverrides[sequence.id] ?? expandSequenceBatchOutputPath(sequenceBatchTemplate, sequence, index + 1),
+        presetId: sequenceBatchPresetIds[sequence.id] ?? presetId
+      })),
+    [batchSequences, presetId, selectedSequenceIds, sequenceBatchOutputOverrides, sequenceBatchPresetIds, sequenceBatchTemplate]
+  );
   const isAudioVisualization = exportSettings.outputMode === 'audio-visualization';
   const isAudioOnly = !isAudioVisualization && (exportSettings.outputMode === 'audio' || exportSettings.format === 'm4a');
   const timelineVisualControlsDisabled = isAudioOnly || isAudioVisualization;
@@ -235,6 +265,17 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
       setExportRangeMode('all');
     }
   }, [exportRangeMode, rangeModeAvailable]);
+
+  useEffect(() => {
+    setSelectedSequenceIds((current) => {
+      const available = new Set(batchSequences.map((sequence) => sequence.id));
+      const retained = current.filter((id) => available.has(id));
+      if (retained.length > 0) {
+        return retained;
+      }
+      return batchSequences[0] ? [batchSequences[0].id] : [];
+    });
+  }, [batchSequences]);
 
   useEffect(() => {
     void loadExportHistoryIntoStore();
@@ -366,8 +407,71 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
     }
   }
 
+  function toggleSequenceBatchSelection(sequenceId: string, checked: boolean): void {
+    setSelectedSequenceIds((current) => {
+      const next = new Set(current);
+      if (checked) {
+        next.add(sequenceId);
+      } else {
+        next.delete(sequenceId);
+      }
+      return Array.from(next);
+    });
+  }
+
+  function updateSequenceBatchOutput(sequenceId: string, outputPath: string): void {
+    setSequenceBatchOutputOverrides((current) => ({ ...current, [sequenceId]: outputPath }));
+  }
+
+  function updateSequenceBatchPreset(sequenceId: string, nextPresetId: string): void {
+    setSequenceBatchPresetIds((current) => ({ ...current, [sequenceId]: nextPresetId }));
+  }
+
+  function buildSequenceBatchJobs(): ExportJob[] {
+    const selectedIds = selectedSequenceIds.filter((id) => batchSequences.some((sequence) => sequence.id === id));
+    if (selectedIds.length === 0) {
+      throw new Error(t.sequenceBatch.noneSelected);
+    }
+    const sequenceById = new Map(batchSequences.map((sequence) => [sequence.id, sequence]));
+    return sortBatchSequenceIds(project, selectedIds).map((sequenceId, index) => {
+      const sequence = sequenceById.get(sequenceId);
+      if (!sequence) {
+        throw new Error(t.sequenceBatch.missingSequence(sequenceId));
+      }
+      const rowPreset = getExportPreset(sequenceBatchPresetIds[sequenceId] ?? presetId, presets);
+      const settings = sequenceBatchPresetMode === 'individual' ? normalizeDraftSettings(rowPreset.settings) : exportSettings;
+      const outputPath = (sequenceBatchOutputOverrides[sequenceId] ?? expandSequenceBatchOutputPath(sequenceBatchTemplate, sequence, index + 1)).trim();
+      if (!outputPath) {
+        throw new Error(t.sequenceBatch.outputRequired(sequence.name));
+      }
+      return {
+        outputPath,
+        range: null,
+        project: buildProjectForSequenceExport(project, sequenceId),
+        settings,
+        presetName: sequenceBatchPresetMode === 'individual' ? rowPreset.name : selectedPreset.name,
+        sequenceName: sequence.name
+      };
+    });
+  }
+
   async function addToQueue(): Promise<void> {
+    if (enqueueInFlight.current) {
+      return;
+    }
+    enqueueInFlight.current = true;
     try {
+      if (exportMode === 'sequence-batch') {
+        const selectedJobs = buildSequenceBatchJobs();
+        setError(undefined);
+        const issues = await collectPreflightIssuesForJobs(selectedJobs);
+        if (issues.length > 0) {
+          setPreflight({ issues, selectedJobs });
+          return;
+        }
+        await enqueueSelectedJobs(selectedJobs);
+        return;
+      }
       const paths = batchOutputPaths
         .split(/\r?\n/)
         .map((path) => path.trim())
@@ -379,14 +483,16 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
       setOutputPath(selectedPaths[0]);
       const selectedJobs = buildExportJobs(selectedPaths, activeExportRanges);
       setError(undefined);
-      const issues = await collectPreflightIssues();
+      const issues = await collectPreflightIssues(project, exportSettings);
       if (issues.length > 0) {
         setPreflight({ issues, selectedJobs });
         return;
       }
       await enqueueSelectedJobs(selectedJobs);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : t.exportFailed);
+      setError(reason instanceof SequenceDependencyCycleError ? t.sequenceBatch.cycleDetected(reason.cycleIds.join(' -> ')) : reason instanceof Error ? reason.message : t.exportFailed);
+    } finally {
+      enqueueInFlight.current = false;
     }
   }
 
@@ -487,9 +593,9 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
     completionActionHandled.current = false;
     for (const job of selectedJobs) {
       const task = await enqueueExport(
-        project,
+        job.project ?? project,
         job.outputPath,
-        exportSettings,
+        job.settings ?? exportSettings,
         priority,
         renderFarmEnabled ? { enabled: true, maxInstances: renderFarmInstances } : undefined,
         scheduledStartAt,
@@ -499,7 +605,12 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
         showToast({ kind: 'warning', title: t.exportWarningTitle, message: formatExportWarning(warning) });
       }
     }
-    showToast({ kind: 'info', title: scheduleEnabled ? t.scheduledTitle : t.queuedTitle, message: t.queuedMessage(selectedJobs.length, selectedPreset.name) });
+    const sequenceJobCount = selectedJobs.filter((job) => job.sequenceName).length;
+    showToast({
+      kind: 'info',
+      title: scheduleEnabled ? t.scheduledTitle : t.queuedTitle,
+      message: sequenceJobCount > 0 ? t.sequenceBatch.queuedMessage(sequenceJobCount) : t.queuedMessage(selectedJobs.length, selectedPreset.name)
+    });
   }
 
   async function ensurePostExportScriptAcknowledged(): Promise<boolean> {
@@ -520,7 +631,7 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
     }
   }
 
-  async function collectPreflightIssues(): Promise<PreflightResult[]> {
+  async function collectPreflightIssues(targetProject: Project, settings: ExportPresetSettings): Promise<PreflightResult[]> {
     const nextCapabilities = capabilities ?? (await getFfmpegCapabilities().catch(() => undefined));
     if (nextCapabilities && !capabilities) {
       setCapabilities(nextCapabilities);
@@ -529,13 +640,28 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
       executablePath: whisperExecutablePath,
       modelPath: whisperModelPath
     });
-    return runExportPreflight(project, {
+    return runExportPreflight(targetProject, {
       ffmpegAvailable: nextCapabilities?.available === true,
       whisperReady: whisperAvailability.ready,
       whisperMessage: whisperAvailability.error,
       isFontFamilyAvailable,
-      platformPreset: exportSettings.platformPreset
+      platformPreset: settings.platformPreset
     });
+  }
+
+  async function collectPreflightIssuesForJobs(jobs: ExportJob[]): Promise<PreflightResult[]> {
+    const seen = new Set<string>();
+    const issues: PreflightResult[] = [];
+    for (const job of jobs) {
+      for (const issue of await collectPreflightIssues(job.project ?? project, job.settings ?? exportSettings)) {
+        const key = `${issue.id}:${issue.severity}:${issue.items.join('|')}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          issues.push(issue);
+        }
+      }
+    }
+    return issues;
   }
 
   async function continueAfterWarnings(): Promise<void> {
@@ -576,6 +702,22 @@ function relinkFromPreflight(): void {
             <button className="rounded-md border border-line p-2 hover:bg-panel" title={t.chooseOutputPath} onClick={() => void choosePath()}>
               <FolderOpen size={16} />
             </button>
+          </div>
+          <div className="grid grid-cols-[110px_1fr] items-center gap-2">
+            <label className="text-xs font-medium text-slate-600">{t.mode.title}</label>
+            <div className="inline-flex w-fit rounded-md border border-line bg-panel p-1" data-testid="export-mode-tabs">
+              {(['single', 'sequence-batch'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  className={`rounded px-3 py-1.5 text-xs font-semibold ${exportMode === mode ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}
+                  data-testid={`export-mode-${mode}-tab`}
+                  onClick={() => setExportMode(mode)}
+                >
+                  {t.mode.options[mode]}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="grid grid-cols-[110px_1fr] items-center gap-2">
             <label className="text-xs font-medium text-slate-600">{t.range.title}</label>
@@ -758,16 +900,86 @@ function relinkFromPreflight(): void {
               </div>
             </div>
           ) : null}
-          <div className="grid grid-cols-[110px_1fr] gap-2">
-            <label className="pt-1.5 text-xs font-medium text-slate-600">{t.batchPaths}</label>
-            <textarea
-              className="min-h-16 resize-y rounded-md border border-line px-2 py-1.5 text-xs"
-              placeholder={t.batchPlaceholder}
-              value={batchOutputPaths}
-              onChange={(event) => setBatchOutputPaths(event.target.value)}
-              data-testid="export-batch-paths"
-            />
-          </div>
+          {exportMode === 'sequence-batch' ? (
+            <div className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3" data-testid="export-sequence-batch-tab">
+              <label className="pt-1 text-xs font-medium text-slate-600">{t.sequenceBatch.title}</label>
+              <div className="space-y-3">
+                <p className="text-xs text-slate-500">{t.sequenceBatch.description}</p>
+                <div className="grid gap-2 md:grid-cols-[1fr_220px]">
+                  <label className="block text-xs font-medium text-slate-600">
+                    {t.sequenceBatch.outputTemplate}
+                    <input
+                      className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-xs"
+                      value={sequenceBatchTemplate}
+                      placeholder={t.sequenceBatch.outputTemplatePlaceholder}
+                      onChange={(event) => setSequenceBatchTemplate(event.target.value)}
+                      data-testid="export-sequence-output-template"
+                    />
+                  </label>
+                  <label className="block text-xs font-medium text-slate-600">
+                    {t.sequenceBatch.presetMode}
+                    <select
+                      className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-xs"
+                      value={sequenceBatchPresetMode}
+                      onChange={(event) => setSequenceBatchPresetMode(event.target.value as SequenceBatchPresetMode)}
+                      data-testid="export-sequence-preset-mode"
+                    >
+                      <option value="shared">{t.sequenceBatch.presetModes.shared}</option>
+                      <option value="individual">{t.sequenceBatch.presetModes.individual}</option>
+                    </select>
+                  </label>
+                </div>
+                <div className="overflow-hidden rounded-md border border-line" data-testid="export-sequence-list">
+                  {sequenceBatchRows.length === 0 ? (
+                    <div className="px-3 py-4 text-center text-xs text-slate-500">{t.sequenceBatch.noSequences}</div>
+                  ) : (
+                    sequenceBatchRows.map(({ sequence, selected, outputPath: rowOutputPath, presetId: rowPresetId }) => (
+                      <div key={sequence.id} className="grid gap-2 border-b border-line px-3 py-2 text-xs last:border-b-0 md:grid-cols-[minmax(0,1fr)_minmax(220px,1.4fr)_180px]" data-testid="export-sequence-batch-row" data-sequence-id={sequence.id}>
+                        <label className="flex min-w-0 items-center gap-2 font-medium text-slate-700">
+                          <input
+                            className="h-4 w-4 accent-brand"
+                            type="checkbox"
+                            checked={selected}
+                            onChange={(event) => toggleSequenceBatchSelection(sequence.id, event.target.checked)}
+                            data-testid="export-sequence-checkbox"
+                          />
+                          <span className="truncate">{sequence.name}</span>
+                        </label>
+                        <input
+                          className="min-w-0 rounded-md border border-line px-2 py-1.5 font-mono text-[11px]"
+                          value={rowOutputPath}
+                          onChange={(event) => updateSequenceBatchOutput(sequence.id, event.target.value)}
+                          data-testid="export-sequence-output-path"
+                        />
+                        {sequenceBatchPresetMode === 'individual' ? (
+                          <select className="rounded-md border border-line px-2 py-1.5 text-xs" value={rowPresetId} onChange={(event) => updateSequenceBatchPreset(sequence.id, event.target.value)} data-testid="export-sequence-preset-select">
+                            {presets.map((preset) => (
+                              <option key={preset.id} value={preset.id}>
+                                {preset.name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <div className="rounded-md bg-panel px-2 py-1.5 text-[11px] text-slate-500">{selectedPreset.name}</div>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-[110px_1fr] gap-2">
+              <label className="pt-1.5 text-xs font-medium text-slate-600">{t.batchPaths}</label>
+              <textarea
+                className="min-h-16 resize-y rounded-md border border-line px-2 py-1.5 text-xs"
+                placeholder={t.batchPlaceholder}
+                value={batchOutputPaths}
+                onChange={(event) => setBatchOutputPaths(event.target.value)}
+                data-testid="export-batch-paths"
+              />
+            </div>
+          )}
           <div className="grid grid-cols-[110px_220px] gap-2">
             <label className="pt-1.5 text-xs font-medium text-slate-600">{t.priority}</label>
             <select className="rounded-md border border-line px-2 py-1.5 text-sm" value={priority} onChange={(event) => setPriority(event.target.value as ExportTaskPriority)} data-testid="export-priority-select">

@@ -42,6 +42,7 @@ export * from './export/color-management';
 export * from './export/export-ranges';
 export * from './export/quality';
 export * from './export/preflight';
+export * from './export/sequence-batch';
 export * from './export/timeline-export';
 export * from './export/timeline-import';
 export * from './export/render-farm';
