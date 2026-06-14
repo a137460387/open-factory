@@ -89,6 +89,7 @@ import { calculateSplitLayoutTransforms, type SplitLayoutDefinition, type SplitL
 import type { SubtitleDataImportMode } from '../subtitles/data-import';
 import { calculateSubtitleShiftUpdates, type SubtitleTimingUpdate } from '../subtitles/retiming';
 import { normalizeSubtitleStyleTemplateStyle } from '../subtitles/style-templates';
+import { normalizeCreditsRollSpeed, normalizeCreditsRows, normalizeCreditsStyle, type CreditsRow, type CreditsStyle } from '../credits-roll';
 import {
   addMediaFolderToProject,
   deleteMediaFolder,
@@ -1554,6 +1555,30 @@ export class AddSubtitleClipCommand implements Command {
   }
 }
 
+export class AddCreditsClipCommand implements Command {
+  readonly description: string;
+
+  constructor(private readonly accessor: TimelineAccessor, private readonly clip: Extract<Clip, { type: 'credits' }>) {
+    this.description = `Add credits clip ${clip.name}`;
+  }
+
+  execute(): void {
+    const timeline = this.accessor.getTimeline();
+    const track = findTrack(timeline, this.clip.trackId);
+    if (track.type !== 'text') {
+      throw new Error('Credits clips can only be added to text tracks');
+    }
+    if (detectOverlap(track, this.clip)) {
+      throw new Error('Clip overlaps another clip on this track');
+    }
+    this.accessor.setTimeline(insertClip(timeline, this.clip));
+  }
+
+  undo(): void {
+    this.accessor.setTimeline(removeClip(this.accessor.getTimeline(), this.clip.id).timeline);
+  }
+}
+
 function resolveSubtitleImportTarget(timeline: Timeline, targetTrackId: string | undefined): Track | undefined {
   const track = targetTrackId ? timeline.tracks.find((item) => item.id === targetTrackId) : timeline.tracks.find((item) => item.type === 'subtitle');
   if (track && track.type !== 'subtitle') {
@@ -2626,7 +2651,9 @@ export type ClipPatch = Partial<Omit<Clip, 'type' | 'id' | 'transform' | 'colorC
   sequenceFrameRate?: number;
   colorCorrection?: Partial<ColorCorrection>;
   transform?: Partial<Transform>;
-  style?: Partial<TextStyle> | Partial<SubtitleStyle>;
+  rows?: CreditsRow[];
+  rollSpeed?: number;
+  style?: Partial<TextStyle> | Partial<SubtitleStyle> | Partial<CreditsStyle>;
   pathText?: Partial<TextPathOptions>;
 };
 
@@ -3013,6 +3040,14 @@ export class UpdateClipCommand implements Command {
       this.after = {
         ...this.after,
         pathText: normalizeTextPath(this.after.pathText)
+      };
+    }
+    if (this.after.type === 'credits') {
+      this.after = {
+        ...this.after,
+        rows: normalizeCreditsRows(this.patch.rows ?? (this.patch.text !== undefined ? undefined : this.after.rows), this.after.text),
+        rollSpeed: normalizeCreditsRollSpeed(this.patch.rollSpeed ?? this.after.rollSpeed),
+        style: normalizeCreditsStyle(this.after.style)
       };
     }
     const track = findTrack(timeline, this.after.trackId);
@@ -3416,6 +3451,14 @@ function cloneClipForNestedSequence<TClip extends Clip>(clip: TClip): TClip {
     keyframes: normalizeClipKeyframes(cloneClipKeyframes(clip.keyframes), clip.duration),
     effects: cloneEffects(clip.effects)
   };
+  if (clip.type === 'credits') {
+    return {
+      ...cloned,
+      rows: normalizeCreditsRows(clip.rows, clip.text),
+      rollSpeed: normalizeCreditsRollSpeed(clip.rollSpeed),
+      style: normalizeCreditsStyle(clip.style)
+    } as TClip;
+  }
   if (clip.type === 'text' || clip.type === 'subtitle') {
     return { ...cloned, style: { ...clip.style } } as TClip;
   }

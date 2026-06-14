@@ -61,6 +61,7 @@ import { calculateSpeedCurveSourceDuration, getClipSourceVisibleDuration, getCli
 import { round } from '../time';
 import { serializeSubtitleCueInputsToAss, serializeSubtitleCueInputsToSrt, serializeSubtitleCueInputsToVtt, type SubtitleCueInput } from '../subtitles/srt';
 import { buildPathTextFrameLayouts } from '../text-path';
+import { buildCreditsRollYExpression, formatCreditsRowsForTextfile } from '../credits-roll';
 import { DEFAULT_EXPORT_COLOR_MANAGEMENT, normalizeExportColorManagement, type ExportColorSpace } from './color-management';
 import { normalizeExportRenderRange, type ExportRenderRange, type NormalizedExportRenderRange } from './export-ranges';
 import { normalizeExportPostScript } from './post-export-script';
@@ -298,7 +299,28 @@ function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project[
                     shadowOffset: clip.style.shadowOffset
                   }
                 : null,
-            subtitleMode: clip.type === 'subtitle' ? (clip.subtitleMode ?? DEFAULT_SUBTITLE_MODE) : null
+            subtitleMode: clip.type === 'subtitle' ? (clip.subtitleMode ?? DEFAULT_SUBTITLE_MODE) : null,
+            creditsStyle:
+              clip.type === 'credits'
+                ? {
+                    text: clip.text,
+                    rows: clip.rows,
+                    rollSpeed: clip.rollSpeed,
+                    lineSpacing: clip.style.lineSpacing,
+                    horizontalMargin: clip.style.horizontalMargin,
+                    fontSize: clip.style.fontSize,
+                    fontColor: clip.style.color,
+                    backgroundColor: clip.style.backgroundColor,
+                    backgroundOpacity: clip.style.backgroundOpacity,
+                    fontFamily: clip.style.fontFamily,
+                    fontPath: options.defaultFontPath ?? null,
+                    x: clip.transform.x,
+                    y: clip.transform.y,
+                    opacity: clip.transform.opacity,
+                    bold: clip.style.bold,
+                    italic: clip.style.italic
+                  }
+                : null
           } satisfies ExportClip;
         })
       };
@@ -393,7 +415,7 @@ export function buildFfmpegExportPlan(
   }
 
   for (const clip of orderedClips) {
-    if (!clip.mediaPath || clip.type === 'text' || clip.type === 'subtitle') {
+    if (!clip.mediaPath || clip.type === 'text' || clip.type === 'subtitle' || clip.type === 'credits') {
       continue;
     }
     const customShaderArtifact = !audioOnly && !videoFramesOnly ? buildCustomShaderSequenceArtifact(clip, settings) : undefined;
@@ -485,7 +507,7 @@ export function buildFfmpegExportPlan(
           }
           continue;
         }
-        if (item.kind === 'text') {
+        if (item.kind === 'text' || item.kind === 'credits') {
           if (capabilities && (!capabilities.hasDrawtext || !capabilities.hasLibfreetype)) {
             warnings.push(capabilities.drawtextWarning ?? `Text clip ${item.clip.id} was skipped because FFmpeg drawtext/libfreetype is unavailable.`);
             continue;
@@ -494,6 +516,10 @@ export function buildFfmpegExportPlan(
           const pathTextInputIndex = pathTextSequenceInputByClipId.get(item.clip.id);
           if (pathTextInputIndex !== undefined) {
             filters.push(buildPathTextSequenceOverlayFilter(currentVideo, nextVideo, pathTextInputIndex, item.clip));
+          } else if (item.kind === 'credits') {
+            const { filter, artifact } = buildCreditsRollFilter(currentVideo, nextVideo, item.clip, settings);
+            filters.push(filter);
+            textArtifacts.push(artifact);
           } else {
             const { filter, artifact } = buildTextFilter(currentVideo, nextVideo, item.clip, settings);
             filters.push(filter);
@@ -1089,6 +1115,13 @@ type VisualItem =
       clip: ExportClip;
     }
   | {
+      kind: 'credits';
+      trackIndex: number;
+      start: number;
+      duration: number;
+      clip: ExportClip;
+    }
+  | {
       kind: 'adjustment';
       trackIndex: number;
       start: number;
@@ -1168,7 +1201,7 @@ function buildVisualItems(
     consumedClipIds.add(pair.toClip.id);
   }
 
-  for (const clip of orderedPlaybackClips.filter((item) => item.type === 'video' || item.type === 'image' || item.type === 'text' || item.type === 'nested-sequence' || item.type === 'adjustment')) {
+  for (const clip of orderedPlaybackClips.filter((item) => item.type === 'video' || item.type === 'image' || item.type === 'text' || item.type === 'credits' || item.type === 'nested-sequence' || item.type === 'adjustment')) {
     if (consumedClipIds.has(clip.id)) {
       continue;
     }
@@ -1178,6 +1211,10 @@ function buildVisualItems(
     }
     if (clip.type === 'text') {
       items.push({ kind: 'text', trackIndex: clip.trackIndex, start: clip.start, duration: clip.duration, clip });
+      continue;
+    }
+    if (clip.type === 'credits') {
+      items.push({ kind: 'credits', trackIndex: clip.trackIndex, start: clip.start, duration: clip.duration, clip });
       continue;
     }
 
@@ -2523,6 +2560,43 @@ function buildTextFilter(inputLabel: string, outputLabel: string, clip: ExportCl
         0,
         Math.round((style?.fontSize ?? 48) * 0.25)
       )}:enable='between(t,${formatFfmpegSeconds(clip.start)},${formatFfmpegSeconds(clip.start + clip.duration)})'[${textDrawLabel}]`,
+      `[${textDrawLabel}]${opacityFilters.join(',')}`,
+      `[${inputLabel}][${textLayerLabel}]overlay=x=0:y=0:eval=frame:enable='between(t,${formatFfmpegSeconds(clip.start)},${formatFfmpegSeconds(clip.start + clip.duration)})'[${outputLabel}]`
+    ].join(';')
+  };
+}
+
+function buildCreditsRollFilter(inputLabel: string, outputLabel: string, clip: ExportClip, settings: ExportSettings): { filter: string; artifact: TextArtifact } {
+  const safeId = safeLabel(clip.id);
+  const placeholder = `__CREDITSFILE_${safeId}__`;
+  const textSourceLabel = `creditssrc_${safeId}`;
+  const textDrawLabel = `creditsdraw_${safeId}`;
+  const textLayerLabel = `creditslayer_${safeId}`;
+  const style = clip.creditsStyle;
+  const artifact: TextArtifact = {
+    clipId: clip.id,
+    text: style ? formatCreditsRowsForTextfile(style.rows) : '',
+    fileName: `${safeId}-credits.txt`,
+    placeholder
+  };
+  const fontPath = style?.fontPath ? `:fontfile=${escapeDrawtextValue(style.fontPath)}` : '';
+  const fontColor = cssColorToFfmpeg(style?.fontColor ?? 'white');
+  const backgroundColor = cssColorToFfmpeg(style?.backgroundColor ?? 'black');
+  const backgroundOpacity = formatOpacity(style?.backgroundOpacity ?? 0);
+  const fontSize = buildTextFontSizeExpression(clip, Math.max(1, Math.round(style?.fontSize ?? 42)));
+  const horizontalMargin = Math.max(0, Math.round(style?.horizontalMargin ?? 0));
+  const x = `max(${horizontalMargin},(w-text_w)/2)`;
+  const y = buildCreditsRollYExpression(style?.rollSpeed ?? 80);
+  const lineSpacing = Math.max(0, Math.round(style?.lineSpacing ?? 0));
+  const layerDuration = Math.max(0.001, clip.start + clip.duration);
+  const opacityFilters = buildOpacityFilters(clip, textLayerLabel);
+  return {
+    artifact,
+    filter: [
+      `color=c=${backgroundColor}@${backgroundOpacity}:s=${settings.width}x${settings.height}:r=${settings.fps}:d=${formatFfmpegSeconds(layerDuration)},format=rgba[${textSourceLabel}]`,
+      `[${textSourceLabel}]drawtext=textfile=${placeholder}${fontPath}:fontsize=${fontSize}:fontcolor=${fontColor}:x='${x}':y='${y}':line_spacing=${lineSpacing}:alpha=1:enable='between(t,${formatFfmpegSeconds(
+        clip.start
+      )},${formatFfmpegSeconds(clip.start + clip.duration)})'[${textDrawLabel}]`,
       `[${textDrawLabel}]${opacityFilters.join(',')}`,
       `[${inputLabel}][${textLayerLabel}]overlay=x=0:y=0:eval=frame:enable='between(t,${formatFfmpegSeconds(clip.start)},${formatFfmpegSeconds(clip.start + clip.duration)})'[${outputLabel}]`
     ].join(';')

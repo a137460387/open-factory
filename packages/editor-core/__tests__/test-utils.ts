@@ -6,6 +6,8 @@ import {
   DEFAULT_AUDIO_FADE_DURATION,
   DEFAULT_AUDIO_PITCH_SEMITONES,
   DEFAULT_AUDIO_REVERSE,
+  DEFAULT_CREDITS_ROLL_SPEED,
+  DEFAULT_CREDITS_STYLE,
   DEFAULT_SUBTITLE_MODE,
   DEFAULT_SUBTITLE_STYLE,
   createTrack,
@@ -13,6 +15,9 @@ import {
   normalizeChromaKey,
   normalizeClipPanoramaView,
   normalizeClipProjection,
+  normalizeCreditsRollSpeed,
+  normalizeCreditsRows,
+  normalizeCreditsStyle,
   normalizeAudioChannelRouting,
   normalizeAudioDenoise,
   normalizeFrameInterpolation,
@@ -31,12 +36,13 @@ import {
   type TimelineAccessor,
   type Transform,
   type ColorCorrection,
+  type CreditsStyle,
   createProject
 } from '../src';
 
 type ClipOverrides<TClip extends Clip> = Partial<Omit<TClip, 'transform' | 'style' | 'colorCorrection'>> & {
   transform?: Partial<Transform>;
-  style?: Partial<TextStyle> | Partial<SubtitleStyle>;
+  style?: Partial<TextStyle> | Partial<SubtitleStyle> | Partial<CreditsStyle>;
   colorCorrection?: Partial<ColorCorrection>;
 };
 
@@ -246,6 +252,40 @@ export function makeSubtitleClip(overrides: ClipOverrides<Extract<Clip, { type: 
       ...DEFAULT_SUBTITLE_STYLE,
       ...overrides.style
     }
+  };
+}
+
+export function makeCreditsClip(overrides: ClipOverrides<Extract<Clip, { type: 'credits' }>> = {}): Extract<Clip, { type: 'credits' }> {
+  const text = overrides.text ?? 'Director | Ada\nCast | Lin';
+  return {
+    id: overrides.id ?? 'credits-1',
+    type: 'credits',
+    name: overrides.name ?? 'Credits',
+    trackId: overrides.trackId ?? 'track-text',
+    start: overrides.start ?? 0,
+    duration: overrides.duration ?? 5,
+    trimStart: overrides.trimStart ?? 0,
+    trimEnd: overrides.trimEnd ?? 0,
+    speed: overrides.speed ?? DEFAULT_CLIP_SPEED,
+    colorCorrection: { ...DEFAULT_COLOR_CORRECTION, ...overrides.colorCorrection },
+    transform: { ...DEFAULT_TRANSFORM, ...overrides.transform },
+    chromaKey: normalizeChromaKey(overrides.chromaKey),
+    stabilization: normalizeStabilization(overrides.stabilization),
+    frameInterpolation: normalizeFrameInterpolation(overrides.frameInterpolation),
+    slowMotionMode: normalizeSlowMotionMode(overrides.slowMotionMode),
+    audioDenoise: normalizeAudioDenoise(overrides.audioDenoise),
+    audioChannelRouting: normalizeAudioChannelRouting(overrides.audioChannelRouting),
+    videoRestoration: normalizeVideoRestoration(overrides.videoRestoration),
+    masks: normalizeMasks(overrides.masks),
+    motionTrack: normalizeMotionTrack(overrides.motionTrack, overrides.duration ?? 5),
+    border: overrides.border,
+    sequenceFrameRate: normalizeSequenceFrameRate(overrides.sequenceFrameRate),
+    keyframes: overrides.keyframes,
+    effects: overrides.effects,
+    text,
+    rows: normalizeCreditsRows(overrides.rows, text),
+    rollSpeed: normalizeCreditsRollSpeed(overrides.rollSpeed ?? DEFAULT_CREDITS_ROLL_SPEED),
+    style: normalizeCreditsStyle({ ...DEFAULT_CREDITS_STYLE, ...(overrides.style as Partial<CreditsStyle> | undefined) })
   };
 }
 

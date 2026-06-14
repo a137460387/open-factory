@@ -1972,8 +1972,8 @@ function ClipInspector({
           </Section>
         ) : null}
 
-        {clip.type === 'text' || clip.type === 'subtitle' ? (
-          <Section title={clip.type === 'subtitle' ? zhCN.inspector.sections.subtitle : zhCN.inspector.sections.text}>
+        {clip.type === 'text' || clip.type === 'subtitle' || clip.type === 'credits' ? (
+          <Section title={clip.type === 'subtitle' ? zhCN.inspector.sections.subtitle : clip.type === 'credits' ? zhCN.inspector.sections.credits : zhCN.inspector.sections.text}>
             <TextAreaField label={zhCN.inspector.fields.text} value={clip.text} onCommit={(text) => commit({ text })} testId="clip-text-input" />
             <NumberField label={zhCN.inspector.fields.fontSize} value={clip.style.fontSize} min={8} step={1} onCommit={(fontSize) => commit({ style: { fontSize } })} />
             <TextField label={zhCN.inspector.fields.fontFamily} value={clip.style.fontFamily} onCommit={(fontFamily) => commit({ style: { fontFamily } })} />
@@ -1989,6 +1989,13 @@ function ClipInspector({
               onCommit={(backgroundOpacity) => commit({ style: { backgroundOpacity } })}
               testId="clip-background-opacity-slider"
             />
+            {clip.type === 'credits' ? (
+              <>
+                <NumberField label={zhCN.inspector.fields.rollSpeed} value={clip.rollSpeed} min={1} max={1000} step={1} onCommit={(rollSpeed) => commit({ rollSpeed })} testId="credits-roll-speed-input" />
+                <NumberField label={zhCN.inspector.fields.lineSpacing} value={clip.style.lineSpacing} min={0} max={120} step={1} onCommit={(lineSpacing) => commit({ style: { lineSpacing } })} testId="credits-line-spacing-input" />
+                <NumberField label={zhCN.inspector.fields.horizontalMargin} value={clip.style.horizontalMargin} min={0} max={960} step={1} onCommit={(horizontalMargin) => commit({ style: { horizontalMargin } })} testId="credits-horizontal-margin-input" />
+              </>
+            ) : null}
             {clip.type === 'subtitle' ? (
               <>
                 <SubtitleStyleTemplatesPanel

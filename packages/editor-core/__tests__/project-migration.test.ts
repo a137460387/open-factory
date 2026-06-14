@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_CLIP_BORDER, DEFAULT_COLOR_CORRECTION, DEFAULT_SUBTITLE_STYLE, DEFAULT_VIDEO_RESTORATION, createMulticamSequenceProject, createTrack, migrateProjectFile, serializeProject, type ProjectFileV1 } from '../src';
-import { makeAdjustmentClip, makeProject, makeSubtitleClip, makeTextClip, makeVideoClip } from './test-utils';
+import { DEFAULT_CLIP_BORDER, DEFAULT_COLOR_CORRECTION, DEFAULT_CREDITS_ROLL_SPEED, DEFAULT_CREDITS_STYLE, DEFAULT_SUBTITLE_STYLE, DEFAULT_VIDEO_RESTORATION, createMulticamSequenceProject, createTrack, migrateProjectFile, serializeProject, type ProjectFileV1 } from '../src';
+import { makeAdjustmentClip, makeCreditsClip, makeProject, makeSubtitleClip, makeTextClip, makeVideoClip } from './test-utils';
 
 describe('project schema migration', () => {
   it('serializes schemaVersion 2 project files with media and relativePath', () => {
@@ -466,6 +466,30 @@ describe('project schema migration', () => {
       expect(migratedSubtitle.subtitleMode).toBe('burn-in');
       expect(migratedSubtitle.style.backgroundOpacity).toBe(0.55);
       expect(migratedSubtitle.style.yOffset).toBe(72);
+    }
+  });
+
+  it('backfills missing credits roll defaults during migration', () => {
+    const project = makeProject();
+    const creditsClip = makeCreditsClip({ id: 'legacy-credits', text: '导演 | 林青\n演员 | Ada' });
+    delete (creditsClip as Partial<typeof creditsClip>).rows;
+    delete (creditsClip as Partial<typeof creditsClip>).rollSpeed;
+    delete (creditsClip.style as Partial<typeof creditsClip.style>).lineSpacing;
+    delete (creditsClip.style as Partial<typeof creditsClip.style>).horizontalMargin;
+    project.timeline.tracks[2].clips = [creditsClip];
+
+    const migrated = migrateProjectFile(serializeProject(project));
+    const migratedCredits = migrated.project.timeline.tracks[2].clips[0];
+
+    expect(migratedCredits.type).toBe('credits');
+    if (migratedCredits.type === 'credits') {
+      expect(migratedCredits.rows).toEqual([
+        { role: '导演', name: '林青' },
+        { role: '演员', name: 'Ada' }
+      ]);
+      expect(migratedCredits.rollSpeed).toBe(DEFAULT_CREDITS_ROLL_SPEED);
+      expect(migratedCredits.style.lineSpacing).toBe(DEFAULT_CREDITS_STYLE.lineSpacing);
+      expect(migratedCredits.style.horizontalMargin).toBe(DEFAULT_CREDITS_STYLE.horizontalMargin);
     }
   });
 

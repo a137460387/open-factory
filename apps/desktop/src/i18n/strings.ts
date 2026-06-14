@@ -37,6 +37,8 @@ const zh = {
   clips: {
     defaultTextName: '文字',
     defaultTextContent: '标题',
+    defaultCreditsName: '片尾字幕',
+    defaultCreditsContent: '导演 | 林青\n演员 | Ada\n特别鸣谢 | Open Factory',
     defaultAdjustmentName: '调整层'
   },
   toolbar: {
@@ -826,6 +828,7 @@ const zh = {
     addAudioTrack: '添加音频轨道',
     addSubtitleTrack: '添加字幕轨道',
     addTextClip: '添加文字片段',
+    addCreditsClip: '新建片尾字幕',
     addAdjustmentLayer: '新建调整层',
     adjustmentTrackName: (index: number) => `调整层 ${index}`,
     addMarker: '在播放头添加标记',
@@ -1111,6 +1114,7 @@ const zh = {
       audio: '音频',
       subtitle: '字幕',
       text: '文字',
+      credits: '片尾字幕',
       pathText: '路径文字',
       textAnimation: '动画'
     },
@@ -1308,6 +1312,9 @@ const zh = {
       color: '颜色',
       background: '背景',
       backgroundOpacity: '背景不透明度',
+      rollSpeed: '滚动速度',
+      lineSpacing: '行距',
+      horizontalMargin: '左右边距',
       outlineColor: '描边颜色',
       outlineWidth: '描边宽度',
       shadowColor: '阴影颜色',
@@ -2285,6 +2292,8 @@ const enOverrides = {
   clips: {
     defaultTextName: 'Text',
     defaultTextContent: 'Title',
+    defaultCreditsName: 'Credits',
+    defaultCreditsContent: 'Director | Lin Qing\nCast | Ada\nSpecial Thanks | Open Factory',
     defaultAdjustmentName: 'Adjustment Layer'
   },
   toolbar: {
@@ -2993,6 +3002,7 @@ const enOverrides = {
     addAudioTrack: 'Add Audio Track',
     addSubtitleTrack: 'Add Subtitle Track',
     addTextClip: 'Add Text Clip',
+    addCreditsClip: 'New Credits Roll',
     addAdjustmentLayer: 'New Adjustment Layer',
     adjustmentTrackName: (index: number) => `Adjustment ${index}`,
     addMarker: 'Add Marker at Playhead',
@@ -3196,6 +3206,7 @@ const enOverrides = {
       audio: 'Audio',
       subtitle: 'Subtitle',
       text: 'Text',
+      credits: 'Credits',
       pathText: 'Path Text',
       textAnimation: 'Animation'
     },
@@ -3340,6 +3351,9 @@ const enOverrides = {
       color: 'Color',
       background: 'Background',
       backgroundOpacity: 'Background Opacity',
+      rollSpeed: 'Roll Speed',
+      lineSpacing: 'Line Spacing',
+      horizontalMargin: 'Horizontal Margin',
       outlineColor: 'Outline Color',
       outlineWidth: 'Outline Width',
       shadowColor: 'Shadow Color',

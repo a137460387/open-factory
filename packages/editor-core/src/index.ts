@@ -28,6 +28,7 @@ export * from './title-templates';
 export * from './video-stitching';
 export * from './text-animation';
 export * from './text-path';
+export * from './credits-roll';
 export * from './motion-tracking';
 export * from './privacy-blur';
 export * from './multicam';

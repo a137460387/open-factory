@@ -15,6 +15,7 @@ import {
   type Timeline,
   type Track,
   createAdjustmentClip,
+  createCreditsClip as createCoreCreditsClip,
   createId,
   getTimelineDuration
 } from '@open-factory/editor-core';
@@ -89,6 +90,24 @@ export function createTextClip(track: Track, timeline: Timeline): Clip {
     style: { ...DEFAULT_TEXT_STYLE },
     pathText: { ...DEFAULT_TEXT_PATH, path: DEFAULT_TEXT_PATH.path.map((point) => ({ ...point, handleIn: point.handleIn ? { ...point.handleIn } : undefined, handleOut: point.handleOut ? { ...point.handleOut } : undefined })) }
   };
+}
+
+export function createCreditsClip(track: Track, timeline: Timeline, text = zhCN.clips.defaultCreditsContent, start?: number): Extract<Clip, { type: 'credits' }> {
+  return createCoreCreditsClip({
+    id: createId('clip'),
+    name: zhCN.clips.defaultCreditsName,
+    trackId: track.id,
+    start: start ?? findAppendStart(track, timeline),
+    duration: 8,
+    trimStart: 0,
+    trimEnd: 0,
+    text,
+    transform: { ...DEFAULT_TRANSFORM },
+    speed: DEFAULT_CLIP_SPEED,
+    colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+    chromaKey: normalizeChromaKey(DEFAULT_CHROMA_KEY),
+    masks: []
+  });
 }
 
 export function createAdjustmentLayerClip(track: Track, timeline: Timeline): Extract<Clip, { type: 'adjustment' }> {

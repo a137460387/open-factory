@@ -1747,11 +1747,11 @@ function buildEditableCanvasClips(project: Project, playheadTime: number): Edita
 }
 
 function isCanvasEditableClip(clip: Clip): boolean {
-  return clip.type === 'video' || clip.type === 'image' || clip.type === 'text' || clip.type === 'nested-sequence';
+  return clip.type === 'video' || clip.type === 'image' || clip.type === 'text' || clip.type === 'credits' || clip.type === 'nested-sequence';
 }
 
 function getCanvasClipSourceDimensions(project: Project, clip: Clip): { width: number; height: number } {
-  if (clip.type === 'text') {
+  if (clip.type === 'text' || clip.type === 'credits') {
     return { width: 1024, height: 256 };
   }
   if (clip.type === 'nested-sequence') {

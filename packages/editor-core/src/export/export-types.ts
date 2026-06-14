@@ -16,6 +16,7 @@ import type {
   TrackCompressor,
   TrackEQ
 } from '../model';
+import type { CreditsRow } from '../credits-roll';
 import type { TargetAspectRatio } from '../reframe';
 
 export type ExportLoudnessNormalization = 'off' | 'youtube' | 'ebu-r128';
@@ -261,7 +262,14 @@ export interface ExportSubtitleStyle extends ExportTextStyle {
   shadowOffset: number;
 }
 
-export type ExportClipType = 'video' | 'audio' | 'image' | 'text' | 'subtitle' | 'nested-sequence' | 'adjustment';
+export interface ExportCreditsStyle extends ExportTextStyle {
+  rows: CreditsRow[];
+  rollSpeed: number;
+  lineSpacing: number;
+  horizontalMargin: number;
+}
+
+export type ExportClipType = 'video' | 'audio' | 'image' | 'text' | 'subtitle' | 'credits' | 'nested-sequence' | 'adjustment';
 export type ExportTrackType = 'video' | 'audio' | 'text' | 'subtitle';
 export type ExportTransitionType = 'fade-black' | 'dissolve';
 
@@ -313,6 +321,7 @@ export interface ExportClip {
   textPath: ExportTextPathOptions | null;
   subtitleStyle: ExportSubtitleStyle | null;
   subtitleMode: ExportSubtitleMode | null;
+  creditsStyle: ExportCreditsStyle | null;
 }
 
 export interface ExportTrack {

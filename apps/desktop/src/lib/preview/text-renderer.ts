@@ -1,10 +1,11 @@
-import { layoutTextAlongPath, normalizeTextPath, resolvePathTextStartOffset, type Clip } from '@open-factory/editor-core';
+import { DEFAULT_TRANSFORM, layoutTextAlongPath, normalizeTextPath, resolvePathTextStartOffset, type Clip } from '@open-factory/editor-core';
 import { zhCN } from '../../i18n/strings';
 import { recordPreviewDraw } from './debug';
 import { drawTransformedSource2d } from './transform-2d';
 import type { WebGlPreviewCompositor } from './webgl-compositor';
 
 type TextClip = Extract<Clip, { type: 'text' }> | Extract<Clip, { type: 'subtitle' }>;
+type CreditsClip = Extract<Clip, { type: 'credits' }>;
 
 export function drawText2d(context: CanvasRenderingContext2D, canvas: HTMLCanvasElement, clip: TextClip, bypassProcessing = false, localTime = 0): void {
   if (clip.type === 'text' && normalizeTextPath(clip.pathText).enabled) {
@@ -37,6 +38,68 @@ export function drawText2d(context: CanvasRenderingContext2D, canvas: HTMLCanvas
 export function drawTextWebGl(compositor: WebGlPreviewCompositor, clip: TextClip, bypassProcessing = false): void {
   compositor.drawText(clip.text, clip.transform, clip.style, clip.colorCorrection, clip.effects, { bypassProcessing });
   recordPreviewDraw(clip.type, 'text');
+}
+
+export function drawCreditsRoll2d(context: CanvasRenderingContext2D, canvas: HTMLCanvasElement, clip: CreditsClip, bypassProcessing = false, localTime = 0): void {
+  const previousFilter = context.filter;
+  const transform = clip.transform;
+  const correction = clip.colorCorrection;
+  const scaleX = transform.scaleX ?? transform.scale;
+  const scaleY = transform.scaleY ?? transform.scale;
+  const fontSize = Math.max(1, clip.style.fontSize);
+  const lineHeight = Math.max(1, fontSize + clip.style.lineSpacing);
+  const startY = canvas.height / 2 - Math.max(0, localTime) * clip.rollSpeed;
+  const gap = Math.max(24, clip.style.horizontalMargin * 0.25);
+
+  context.save();
+  context.filter = bypassProcessing
+    ? 'none'
+    : `brightness(${Math.max(0, 1 + correction.brightness)}) contrast(${correction.contrast}) saturate(${correction.saturation}) hue-rotate(${correction.hue}deg)`;
+  if (clip.style.backgroundOpacity > 0) {
+    context.globalAlpha = Math.min(1, Math.max(0, clip.style.backgroundOpacity)) * Math.min(1, Math.max(0, transform.opacity));
+    context.fillStyle = clip.style.backgroundColor;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  context.globalAlpha = transform.opacity;
+  context.translate(canvas.width / 2 + transform.x, canvas.height / 2 + transform.y);
+  context.rotate((transform.rotation * Math.PI) / 180);
+  context.scale(scaleX, scaleY);
+  context.font = `${clip.style.italic ? 'italic ' : ''}${clip.style.bold ? '700 ' : '400 '}${fontSize}px ${clip.style.fontFamily}`;
+  context.textBaseline = 'top';
+  context.fillStyle = clip.style.color;
+
+  clip.rows.forEach((row, index) => {
+    const y = startY + index * lineHeight;
+    if (y < -canvas.height / 2 - lineHeight || y > canvas.height / 2 + lineHeight) {
+      return;
+    }
+    if (row.role && row.name) {
+      context.textAlign = 'right';
+      context.fillText(row.role, -gap, y);
+      context.textAlign = 'left';
+      context.fillText(row.name, gap, y);
+      return;
+    }
+    context.textAlign = 'center';
+    context.fillText(row.role || row.name, 0, y);
+  });
+
+  context.filter = previousFilter;
+  context.restore();
+  recordPreviewDraw(clip.type, 'text');
+}
+
+export function drawCreditsRollWebGl(compositor: WebGlPreviewCompositor, clip: CreditsClip, width: number, height: number, bypassProcessing = false, localTime = 0): void {
+  const layer = document.createElement('canvas');
+  layer.width = width;
+  layer.height = height;
+  const context = layer.getContext('2d');
+  if (!context) {
+    return;
+  }
+  drawCreditsRoll2d(context, layer, clip, bypassProcessing, localTime);
+  compositor.drawSource(layer, width, height, DEFAULT_TRANSFORM, undefined, undefined, undefined, undefined, { bypassProcessing: true });
 }
 
 export function drawMissing2d(context: CanvasRenderingContext2D, canvas: HTMLCanvasElement, name: string, clipType: Clip['type']): void {

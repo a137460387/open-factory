@@ -49,6 +49,7 @@ import { normalizeTimelineLabelColor } from '../timeline-color-labels';
 import { normalizeMediaFolderId, normalizeMediaFolders, normalizeMediaImportedAt } from '../media-folders';
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
 import { cloneEffects } from '../effects';
+import { normalizeCreditsRollSpeed, normalizeCreditsRows, normalizeCreditsStyle } from '../credits-roll';
 import { normalizeBeatMarkers } from '../beats';
 import { isVariableFrameRateProbe } from '../vfr';
 import { clampTransitionDuration, findAdjacentTransitionClips, getTimelineDuration } from '../timeline';
@@ -364,6 +365,15 @@ function cloneClip<TClip extends Clip>(clip: TClip): TClip {
       ...cloned,
       style: { ...DEFAULT_SUBTITLE_STYLE, ...clip.style },
       subtitleMode: clip.subtitleMode ?? DEFAULT_SUBTITLE_MODE
+    } as TClip;
+  }
+  if (clip.type === 'credits') {
+    return {
+      ...cloned,
+      text: typeof clip.text === 'string' ? clip.text : '',
+      rows: normalizeCreditsRows(clip.rows, clip.text),
+      rollSpeed: normalizeCreditsRollSpeed(clip.rollSpeed),
+      style: normalizeCreditsStyle(clip.style)
     } as TClip;
   }
   return cloned as TClip;

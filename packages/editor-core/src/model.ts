@@ -14,13 +14,20 @@ import type { BeatMarker } from './beats';
 import { normalizePathPoints } from './masks/path-mask';
 import { migrateProjectFile, serializeProjectFile } from './project/project-migration';
 import type { ProjectFile } from './project/project-types';
+import {
+  normalizeCreditsRollSpeed,
+  normalizeCreditsRows,
+  normalizeCreditsStyle,
+  type CreditsRow,
+  type CreditsStyle
+} from './credits-roll';
 import { normalizeTimelineLabelColor, type TimelineLabelColor } from './timeline-color-labels';
 import { normalizeProjectFps, normalizeTimecodeFormat, round, type TimecodeFormat } from './time';
 
 export type ProjectVersion = '0.2';
 export type AssetType = 'video' | 'audio' | 'image';
 export type TrackType = 'video' | 'audio' | 'text' | 'subtitle';
-export type ClipType = 'video' | 'audio' | 'image' | 'text' | 'subtitle' | 'nested-sequence' | 'adjustment';
+export type ClipType = 'video' | 'audio' | 'image' | 'text' | 'subtitle' | 'credits' | 'nested-sequence' | 'adjustment';
 export type TransitionType = 'fade-black' | 'dissolve';
 export type SubtitleMode = 'burn-in' | 'soft-sub';
 export type KeyframeEasing = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out';
@@ -363,7 +370,7 @@ export interface TrackCompressor {
   makeupGain: number;
 }
 
-export type Clip = VideoClip | AudioClip | ImageClip | TextClip | SubtitleClip | NestedSequenceClip | AdjustmentClip;
+export type Clip = VideoClip | AudioClip | ImageClip | TextClip | SubtitleClip | CreditsClip | NestedSequenceClip | AdjustmentClip;
 export type AudioChannelRoutingMode =
   | 'normal'
   | 'mono-left'
@@ -494,6 +501,14 @@ export interface SubtitleClip extends BaseClip {
   text: string;
   style: SubtitleStyle;
   subtitleMode: SubtitleMode;
+}
+
+export interface CreditsClip extends BaseClip {
+  type: 'credits';
+  text: string;
+  rows: CreditsRow[];
+  rollSpeed: number;
+  style: CreditsStyle;
 }
 
 export interface NestedSequenceClip extends BaseClip {
@@ -949,6 +964,21 @@ export function createAdjustmentClip(
   return {
     ...createBaseClip(input),
     type: 'adjustment'
+  };
+}
+
+export function createCreditsClip(
+  input: Omit<CreditsClip, 'id' | 'type' | 'transform' | 'speed' | 'colorCorrection' | 'rows' | 'rollSpeed' | 'style'> &
+    Partial<Pick<CreditsClip, 'id' | 'transform' | 'speed' | 'colorCorrection' | 'rows' | 'rollSpeed' | 'style'>>
+): CreditsClip {
+  const text = typeof input.text === 'string' ? input.text : '';
+  return {
+    ...createBaseClip(input),
+    type: 'credits',
+    text,
+    rows: normalizeCreditsRows(input.rows, text),
+    rollSpeed: normalizeCreditsRollSpeed(input.rollSpeed),
+    style: normalizeCreditsStyle(input.style)
   };
 }
 

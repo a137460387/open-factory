@@ -16,7 +16,7 @@ import { PreviewAudioRenderer } from './audio-renderer';
 import { recordPreviewError, recordPreviewMode, recordPreviewReadback } from './debug';
 import { drawImage2d, drawImage2dBypass, drawImageWebGl } from './image-renderer';
 import { createVideoElement, loadImage, loadThumbnail, seekVideo } from './media-elements';
-import { drawMissing2d, drawMissingWebGl, drawText2d, drawTextWebGl } from './text-renderer';
+import { drawCreditsRoll2d, drawCreditsRollWebGl, drawMissing2d, drawMissingWebGl, drawText2d, drawTextWebGl } from './text-renderer';
 import { drawVideo2d, drawVideoWebGl } from './video-renderer';
 import { drawTransformedSource2d } from './transform-2d';
 import { WebGlPreviewCompositor } from './webgl-compositor';
@@ -189,6 +189,11 @@ export class PreviewRenderer {
       return;
     }
 
+    if (renderClip.type === 'credits') {
+      drawCreditsRollWebGl(compositor, renderClip, canvasWidth, canvasHeight, bypassProcessing, Math.max(0, playheadTime - renderClip.start));
+      return;
+    }
+
     if (renderClip.type === 'text' || renderClip.type === 'subtitle') {
       drawTextWebGl(compositor, renderClip, bypassProcessing);
     }
@@ -242,6 +247,11 @@ export class PreviewRenderer {
       } else {
         drawImage2d(context, canvas, renderClip, asset, await loadImage(asset));
       }
+      return;
+    }
+
+    if (renderClip.type === 'credits') {
+      drawCreditsRoll2d(context, canvas, renderClip, bypassProcessing, Math.max(0, playheadTime - renderClip.start));
       return;
     }
 

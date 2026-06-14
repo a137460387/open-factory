@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   AddAdjustmentLayerCommand,
   AddClipCommand,
+  AddCreditsClipCommand,
   AddEffectCommand,
   AddKeyframeCommand,
   AddMaskCommand,
@@ -69,7 +70,7 @@ import {
   findCompleteClipGroup,
   getReplaceMediaCompatibilityWarnings
 } from '../src';
-import { makeAccessor, makeAdjustmentClip, makeAudioClip, makeProject, makeSubtitleClip, makeTextClip, makeTimeline, makeVideoClip } from './test-utils';
+import { makeAccessor, makeAdjustmentClip, makeAudioClip, makeCreditsClip, makeProject, makeSubtitleClip, makeTextClip, makeTimeline, makeVideoClip } from './test-utils';
 
 describe('timeline commands', () => {
   it('loads a project with undo and redo support', () => {
@@ -254,6 +255,23 @@ describe('timeline commands', () => {
     expect(accessor.current().tracks.find((track) => track.id === 'track-subtitle')?.clips.map((clip) => clip.id)).toEqual(['subtitle-a']);
     expect(() => manager.execute(new AddSubtitleClipCommand(accessor, makeSubtitleClip({ id: 'subtitle-overlap', trackId: 'track-subtitle', start: 0.5, duration: 1 })))).toThrow('overlaps');
     expect(() => manager.execute(new AddSubtitleClipCommand(accessor, makeSubtitleClip({ id: 'subtitle-wrong-track', trackId: 'track-text' })))).toThrow('subtitle tracks');
+  });
+
+  it('adds credits clips only to text tracks with undo and redo', () => {
+    const accessor = makeAccessor(makeTimeline());
+    const manager = new CommandManager();
+    const credits = makeCreditsClip({ id: 'credits-a', start: 0, duration: 2 });
+
+    manager.execute(new AddCreditsClipCommand(accessor, credits));
+    expect(accessor.current().tracks.find((track) => track.id === 'track-text')?.clips).toHaveLength(1);
+
+    manager.undo();
+    expect(accessor.current().tracks.find((track) => track.id === 'track-text')?.clips).toHaveLength(0);
+
+    manager.redo();
+    expect(accessor.current().tracks.find((track) => track.id === 'track-text')?.clips.map((clip) => clip.id)).toEqual(['credits-a']);
+    expect(() => manager.execute(new AddCreditsClipCommand(accessor, makeCreditsClip({ id: 'credits-overlap', start: 1, duration: 2 })))).toThrow('overlaps');
+    expect(() => manager.execute(new AddCreditsClipCommand(accessor, makeCreditsClip({ id: 'credits-wrong-track', trackId: 'track-video' })))).toThrow('text tracks');
   });
 
   it('shifts subtitle clips as one undoable command', () => {

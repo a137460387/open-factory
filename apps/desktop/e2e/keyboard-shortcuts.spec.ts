@@ -3,11 +3,15 @@ import { addMediaCardToTimeline, waitForE2eActions } from './e2e-actions';
 
 test('timeline keyboard shortcuts toggle playback, delete a clip, and undo', async ({ page }) => {
   await page.goto('/');
+  await waitForE2eActions(page);
+  await page.evaluate(() => window.__E2E_ACTIONS__!.clearE2eFiles!());
+  await page.reload();
+  await waitForE2eActions(page);
   await page.getByTestId('import-media-button').click();
   await addMediaCardToTimeline(page);
 
   const timeline = page.getByTestId('timeline-root');
-  await timeline.click();
+  await timeline.focus();
   await page.keyboard.press('Space');
   await expect(page.getByTestId('preview-playback-button')).toHaveAttribute('data-playback-state', 'playing');
 
@@ -38,7 +42,7 @@ test('custom keyboard shortcuts persist across reload', async ({ page }) => {
   await page.getByTestId('import-media-button').click();
   await addMediaCardToTimeline(page);
   const timeline = page.getByTestId('timeline-root');
-  await timeline.click();
+  await timeline.focus();
 
   await page.keyboard.press('Space');
   await expect(page.getByTestId('preview-playback-button')).toHaveAttribute('data-playback-state', 'paused');

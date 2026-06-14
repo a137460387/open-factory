@@ -19,7 +19,7 @@ import {
   type Clip,
   type Project
 } from '../src';
-import { makeAdjustmentClip, makeAudioClip, makeProject, makeSubtitleClip, makeTextClip, makeVideoClip } from './test-utils';
+import { makeAdjustmentClip, makeAudioClip, makeCreditsClip, makeProject, makeSubtitleClip, makeTextClip, makeVideoClip } from './test-utils';
 
 function makeAudioVisualizationProject(): Project {
   const project = makeProject();
@@ -482,6 +482,32 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.filterComplex).toContain('color=c=black');
     expect(plan.filterComplex).toContain('anullsrc');
     expect(plan.textArtifacts).toHaveLength(1);
+  });
+
+  it('exports credits roll clips as drawtext textfile overlays', () => {
+    const project = makeProject();
+    project.media = [];
+    project.timeline.tracks[0].clips = [];
+    project.timeline.tracks[2].clips = [
+      makeCreditsClip({
+        id: 'clip-credits',
+        start: 0,
+        duration: 4,
+        text: '导演 | 林青\n演员 | Ada',
+        rollSpeed: 120,
+        style: { fontSize: 36, lineSpacing: 12, horizontalMargin: 72, color: '#ffffff', backgroundColor: '#101820', backgroundOpacity: 1 }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.inputs).toHaveLength(0);
+    expect(plan.filterComplex).toContain('drawtext=textfile=__CREDITSFILE_clip_credits__');
+    expect(plan.filterComplex).toContain("y='h-t*120'");
+    expect(plan.filterComplex).toContain('line_spacing=12');
+    expect(plan.textArtifacts).toEqual([
+      expect.objectContaining({ clipId: 'clip-credits', text: '导演    林青\n演员    Ada', placeholder: '__CREDITSFILE_clip_credits__' })
+    ]);
   });
 
   it('injects target frame-rate conversion filters and output args', () => {

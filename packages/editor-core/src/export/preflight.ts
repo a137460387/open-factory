@@ -241,7 +241,7 @@ function collectMissingFonts(
   }
   const missing = new Map<string, Set<string>>();
   for (const clip of clips) {
-    if ((clip.type !== 'text' && clip.type !== 'subtitle') || !clip.style.fontFamily.trim()) {
+    if ((clip.type !== 'text' && clip.type !== 'subtitle' && clip.type !== 'credits') || !clip.style.fontFamily.trim()) {
       continue;
     }
     const families = parseFontFamilyList(clip.style.fontFamily);

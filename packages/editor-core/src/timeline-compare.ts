@@ -212,6 +212,8 @@ function clipSignature(clip: Clip): string {
     mediaId: 'mediaId' in clip ? clip.mediaId : undefined,
     sequenceId: 'sequenceId' in clip ? clip.sequenceId : undefined,
     text: 'text' in clip ? clip.text : undefined,
+    rows: clip.type === 'credits' ? clip.rows : undefined,
+    rollSpeed: clip.type === 'credits' ? clip.rollSpeed : undefined,
     style: 'style' in clip ? clip.style : undefined,
     pathText: clip.type === 'text' ? clip.pathText : undefined,
     volume: 'volume' in clip ? clip.volume : undefined,
@@ -276,6 +278,8 @@ function compactClip(clip: Clip): Record<string, unknown> {
     mediaId: 'mediaId' in clip ? clip.mediaId : undefined,
     sequenceId: 'sequenceId' in clip ? clip.sequenceId : undefined,
     text: 'text' in clip ? clip.text : undefined,
+    rows: clip.type === 'credits' ? clip.rows : undefined,
+    rollSpeed: clip.type === 'credits' ? clip.rollSpeed : undefined,
     style: 'style' in clip ? clip.style : undefined,
     volume: 'volume' in clip ? clip.volume : undefined,
     muted: 'muted' in clip ? clip.muted : undefined
@@ -336,7 +340,7 @@ function clipTypeToTrackType(type: Clip['type']): Track['type'] {
   if (type === 'audio') {
     return 'audio';
   }
-  if (type === 'text') {
+  if (type === 'text' || type === 'credits') {
     return 'text';
   }
   if (type === 'subtitle') {

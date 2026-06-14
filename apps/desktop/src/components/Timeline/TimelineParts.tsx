@@ -692,7 +692,7 @@ function ClipBlock({
       {clip.type === 'audio' && asset ? (
         <WaveformStrip clipId={clip.id} asset={asset} pixelWidth={clipPixelWidth} clipDuration={clip.duration} muted={trackMuted || Boolean(clip.muted)} color={waveformColor} />
       ) : null}
-      <span className="relative z-10 truncate pl-1">{(clip.type === 'text' || clip.type === 'subtitle') && 'text' in clip ? clip.text.slice(0, 28) : clip.name}</span>
+      <span className="relative z-10 truncate pl-1">{(clip.type === 'text' || clip.type === 'subtitle' || clip.type === 'credits') && 'text' in clip ? clip.text.slice(0, 28) : clip.name}</span>
       <span className="relative z-10 ml-auto pl-2 tabular-nums">{clip.duration.toFixed(1)}s</span>
       {getClipKeyframeMarkers(clip).map((marker) => {
         const keyframeRef = { clipId: clip.id, property: marker.property, keyframeId: marker.id };
@@ -810,7 +810,7 @@ function getClipToneClass(type: Clip['type']): string {
   if (type === 'audio') {
     return 'bg-amber-100 text-amber-950';
   }
-  if (type === 'text') {
+  if (type === 'text' || type === 'credits') {
     return 'bg-emerald-100 text-emerald-950';
   }
   if (type === 'subtitle') {

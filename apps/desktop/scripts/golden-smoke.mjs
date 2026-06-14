@@ -60,6 +60,15 @@ const fixtures = [
     validate: validateTextDrawtextFixture
   },
   {
+    name: 'credits-roll',
+    description: 'solid background video with rolling credits rendered through drawtext=textfile',
+    outputWidth: 1280,
+    outputHeight: 720,
+    expectedDuration: 1.5,
+    create: createCreditsRollFixture,
+    validate: validateCreditsRollFixture
+  },
+  {
     name: 'text-animation',
     description: 'centered text clip faded in through opacity keyframes',
     outputWidth: 1280,
@@ -528,6 +537,124 @@ async function validateTextDrawtextFixture(context) {
         passed: cyanPixelCount > 5_000,
         actual: cyanPixelCount,
         expected: '> 5000'
+      }
+    ]
+  };
+}
+
+async function createCreditsRollFixture(context) {
+  const backgroundPath = join(context.fixtureDir, 'credits-background.mp4');
+  await createColorVideoFixture(backgroundPath, {
+    color: COLORS.darkBlue.ffmpeg,
+    width: context.outputWidth,
+    height: context.outputHeight,
+    duration: context.fixture.expectedDuration,
+    audio: false
+  });
+  const rows = [
+    { role: 'Director', name: 'Lin Qing' },
+    { role: 'Cast', name: 'Ada' },
+    { role: 'Special Thanks', name: 'Open Factory' }
+  ];
+  return buildProject({
+    id: 'golden-credits-roll',
+    name: 'Golden Credits Roll',
+    width: context.outputWidth,
+    height: context.outputHeight,
+    media: [
+      videoAsset({
+        id: 'asset-credits-background',
+        name: 'credits-background.mp4',
+        path: backgroundPath,
+        duration: context.fixture.expectedDuration,
+        width: context.outputWidth,
+        height: context.outputHeight,
+        hasAudio: false,
+        stat: statSync(backgroundPath)
+      })
+    ],
+    tracks: [
+      {
+        id: 'track-credits-background',
+        type: 'video',
+        name: 'Background',
+        clips: [
+          videoClip({
+            id: 'clip-credits-background',
+            name: 'Credits background',
+            mediaId: 'asset-credits-background',
+            trackId: 'track-credits-background',
+            duration: context.fixture.expectedDuration
+          })
+        ]
+      },
+      emptyAudioTrack(),
+      {
+        id: 'track-credits',
+        type: 'text',
+        name: 'Credits',
+        clips: [
+          creditsClip({
+            id: 'clip-credits-roll',
+            trackId: 'track-credits',
+            text: rows.map((row) => `${row.role} | ${row.name}`).join('\n'),
+            rows,
+            rollSpeed: 260,
+            duration: context.fixture.expectedDuration,
+            style: {
+              fontSize: 58,
+              color: '#ffffff',
+              backgroundColor: '#000000',
+              backgroundOpacity: 0,
+              fontFamily: 'Arial',
+              bold: true,
+              italic: false,
+              lineSpacing: 18,
+              horizontalMargin: 96
+            }
+          })
+        ]
+      }
+    ]
+  });
+}
+
+async function validateCreditsRollFixture(context) {
+  const frame = await readFrame(context.outputPath, {
+    at: 0.8,
+    width: context.outputWidth,
+    height: context.outputHeight
+  });
+  const nonBackgroundPixelCount = countDifferentPixels(frame, COLORS.darkBlue.rgb, 80);
+  const whitePixelCount = countNearPixels(frame, COLORS.white.rgb, 90);
+  return {
+    checks: [
+      {
+        name: 'credits-drawtext-textfile-artifact',
+        passed: context.plan.textArtifacts.length === 1 && context.plan.filterComplex.includes('drawtext=textfile=__CREDITSFILE_'),
+        actual: {
+          textArtifacts: context.plan.textArtifacts.length,
+          hasCreditsDrawtext: context.plan.filterComplex.includes('drawtext=textfile=__CREDITSFILE_')
+        },
+        expected: 'one credits drawtext=textfile artifact'
+      },
+      {
+        name: 'credits-roll-y-expression',
+        passed: context.plan.filterComplex.includes("y='h-t*260'"),
+        actual: context.plan.filterComplex.includes("y='h-t*260'"),
+        expected: "y='h-t*260'"
+      },
+      {
+        name: 'credits-roll-non-background-pixels',
+        passed: nonBackgroundPixelCount > 200,
+        actual: nonBackgroundPixelCount,
+        expected: '> 200 non-background pixels'
+      },
+      {
+        name: 'credits-roll-white-pixels',
+        passed: whitePixelCount > 100,
+        actual: whitePixelCount,
+        expected: '> 100 white pixels'
       }
     ]
   };
@@ -3508,6 +3635,27 @@ function textClip(input) {
     text: input.text,
     style: input.style,
     pathText: input.pathText
+  };
+}
+
+function creditsClip(input) {
+  return {
+    id: input.id,
+    type: 'credits',
+    name: input.name ?? 'Credits',
+    trackId: input.trackId,
+    start: input.start ?? 0,
+    duration: input.duration,
+    trimStart: 0,
+    trimEnd: 0,
+    speed: input.speed ?? 1,
+    colorCorrection: input.colorCorrection ?? { brightness: 0, contrast: 1, saturation: 1, hue: 0 },
+    transform: input.transform ?? { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
+    keyframes: input.keyframes,
+    text: input.text,
+    rows: input.rows,
+    rollSpeed: input.rollSpeed,
+    style: input.style
   };
 }
 

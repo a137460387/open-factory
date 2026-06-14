@@ -5,11 +5,15 @@ test('exports the current frame with Shift+E into a non-empty image file', async
   const outputPath = 'C:/Exports/current-frame.png';
   await page.goto('/');
   await waitForE2eActions(page);
+  await page.evaluate(() => window.__E2E_ACTIONS__!.clearE2eFiles!());
+  await page.reload();
+  await waitForE2eActions(page);
   await page.evaluate((path) => window.__E2E_ACTIONS__!.setSavePath!(path), outputPath);
 
   await page.getByTestId('import-media-button').click();
   await addMediaCardToTimeline(page, 0);
-  await page.getByTestId('timeline-root').click();
+  await page.getByTestId('timeline-root').focus();
+  await page.evaluate(() => window.__E2E_ACTIONS__!.setPlayheadTime!(0));
   await page.keyboard.press('Shift+E');
 
   await expect.poll(() => page.evaluate((path) => window.__E2E_ACTIONS__!.getWrittenFileSize!(path) as number, outputPath)).toBeGreaterThan(0);

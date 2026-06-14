@@ -1,5 +1,6 @@
 import {
   AddClipCommand,
+  AddCreditsClipCommand,
   AddProjectAnnotationCommand,
   AddTimelineMarkerCommand,
   BatchKeyframeEditCommand,
@@ -92,7 +93,7 @@ import {
 } from '@open-factory/editor-core';
 import { Captions, Flag, Group, MessageSquarePlus, MessageSquareText, Music2, Plus, Scissors, Trash2, Type, Ungroup } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { createTextClip } from '../../lib/clipFactory';
+import { createCreditsClip, createTextClip } from '../../lib/clipFactory';
 import { probeMediaPath } from '../../lib/media';
 import { zhCN } from '../../i18n/strings';
 import { showToast } from '../../lib/toast';
@@ -106,6 +107,15 @@ import { useRenderCacheStore } from '../../store/renderCacheStore';
 import { useWhisperSettingsStore } from '../../store/whisperSettingsStore';
 import { LABEL_WIDTH, Ruler, ThumbnailTrack, TrackRow, type ClipMenuRequest, type DragState, type GapMenuRequest } from './TimelineParts';
 import { buildRulerContextMenuItems, type RulerContextMenuAction } from './timeline-ruler-menu';
+
+function isCreditsTextFile(file: File): boolean {
+  return /\.(txt|csv)$/i.test(file.name);
+}
+
+function getTimelineDropStart(event: React.DragEvent<HTMLDivElement>, scroll: HTMLDivElement | null, zoom: number): number | undefined {
+  const rect = scroll?.getBoundingClientRect();
+  return rect && scroll ? round(Math.max(0, (event.clientX - rect.left + scroll.scrollLeft - LABEL_WIDTH) / zoom)) : undefined;
+}
 
 export function Timeline({ thumbnailTrackVisible = true, onConvertMediaFrameRate }: { thumbnailTrackVisible?: boolean; onConvertMediaFrameRate?(assetId: string): void }) {
   const project = useEditorStore((state) => state.project);
@@ -351,6 +361,21 @@ export function Timeline({ thumbnailTrackVisible = true, onConvertMediaFrameRate
     const clip = createTextClip(track, project.timeline);
     commandManager.execute(new AddClipCommand(timelineAccessor, clip));
     setSelectedClipId(clip.id);
+  }
+
+  function addCredits(text?: string, start?: number): void {
+    const track = project.timeline.tracks.find((item) => item.type === 'text');
+    if (!track) {
+      showToast({ kind: 'warning', title: zhCN.timeline.noTextTrackTitle, message: zhCN.timeline.noTextTrackMessage });
+      return;
+    }
+    try {
+      const clip = createCreditsClip(track, project.timeline, text, start);
+      commandManager.execute(new AddCreditsClipCommand(timelineAccessor, clip));
+      setSelectedClipId(clip.id);
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage });
+    }
   }
 
   function addTitleTemplate(templateId: Parameters<typeof instantiateTitleTemplate>[0], start?: number): void {
@@ -1115,22 +1140,32 @@ export function Timeline({ thumbnailTrackVisible = true, onConvertMediaFrameRate
     setScrollViewport({ scrollLeft: scroll.scrollLeft, viewportWidth: scroll.clientWidth || 960 });
   }
 
-  function onTitleTemplateDragOver(event: React.DragEvent<HTMLDivElement>): void {
-    if (Array.from(event.dataTransfer.types).includes(TITLE_TEMPLATE_DRAG_MIME)) {
+  function onTimelineDragOver(event: React.DragEvent<HTMLDivElement>): void {
+    const types = Array.from(event.dataTransfer.types);
+    if (types.includes(TITLE_TEMPLATE_DRAG_MIME) || types.includes('Files')) {
       event.preventDefault();
       event.dataTransfer.dropEffect = 'copy';
     }
   }
 
-  function onTitleTemplateDrop(event: React.DragEvent<HTMLDivElement>): void {
+  function onTimelineDrop(event: React.DragEvent<HTMLDivElement>): void {
     const templateId = event.dataTransfer.getData(TITLE_TEMPLATE_DRAG_MIME);
+    const start = getTimelineDropStart(event, scrollRef.current, zoom);
     if (!isTitleTemplateId(templateId)) {
+      const creditsFile = Array.from(event.dataTransfer.files).find(isCreditsTextFile);
+      if (!creditsFile) {
+        return;
+      }
+      event.preventDefault();
+      void creditsFile
+        .text()
+        .then((text) => addCredits(text, start))
+        .catch((error) => {
+          showToast({ kind: 'warning', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage });
+        });
       return;
     }
     event.preventDefault();
-    const scroll = scrollRef.current;
-    const rect = scroll?.getBoundingClientRect();
-    const start = rect && scroll ? round(Math.max(0, (event.clientX - rect.left + scroll.scrollLeft - LABEL_WIDTH) / zoom)) : undefined;
     addTitleTemplate(templateId, start);
   }
 
@@ -1355,6 +1390,9 @@ export function Timeline({ thumbnailTrackVisible = true, onConvertMediaFrameRate
         <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.addTextClip} data-testid="add-text-clip-button" onClick={addText}>
           <Type size={16} />
         </button>
+        <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.addCreditsClip} data-testid="add-credits-clip-button" onClick={() => addCredits()}>
+          <Captions size={16} />
+        </button>
         <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.addMarker} data-testid="add-timeline-marker-button" onClick={() => addTimelineMarker()}>
           <Flag size={16} />
         </button>
@@ -1445,8 +1483,8 @@ export function Timeline({ thumbnailTrackVisible = true, onConvertMediaFrameRate
         className="timeline-scrollbar min-h-0 min-w-0 max-w-full flex-1 overflow-auto"
         onWheel={onWheel}
         onScroll={syncScrollViewport}
-        onDragOver={onTitleTemplateDragOver}
-        onDrop={onTitleTemplateDrop}
+        onDragOver={onTimelineDragOver}
+        onDrop={onTimelineDrop}
         data-testid="timeline-scroll-container"
       >
         <div className="relative" style={{ width: LABEL_WIDTH + width }}>
