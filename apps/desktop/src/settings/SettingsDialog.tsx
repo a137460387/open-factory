@@ -25,6 +25,7 @@ import { pickDemucsExecutablePath } from '../lib/demucs';
 import { loadLutLibrary, toggleLutFavorite, type LutLibraryItem } from '../lib/lutLibrary';
 import { fsExists, getFileStat, openDirectoryDialog, openFileDialog, readWebdavPassword, writeWebdavPassword } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
+import { PREVIEW_SKIP_FRAME_OPTIONS, type PreviewPerformanceSettings, type PreviewSkipFrames } from '../lib/preview/preview-performance';
 import {
   detectMacroShortcutConflicts,
   exportClipMacrosToDialog,
@@ -99,9 +100,11 @@ interface SettingsDialogProps {
   selectedClip?: Clip;
   shortcutBindings: TimelineShortcutBindings;
   macros: ClipMacro[];
+  previewPerformance: PreviewPerformanceSettings;
   onShortcutBindingsChange(bindings: TimelineShortcutBindings): void;
   onMacrosChange(macros: ClipMacro[]): void;
   onExecuteMacro(macro: ClipMacro): void;
+  onPreviewSkipFramesChange(skipFrames: PreviewSkipFrames): void;
   onDeleteProxies(assetIds: string[]): Promise<void> | void;
   onRegenerateProxies(assetIds: string[]): Promise<void> | void;
   onClose(): void;
@@ -119,9 +122,11 @@ export function SettingsDialog({
   selectedClip,
   shortcutBindings,
   macros,
+  previewPerformance,
   onShortcutBindingsChange,
   onMacrosChange,
   onExecuteMacro,
+  onPreviewSkipFramesChange,
   onDeleteProxies,
   onRegenerateProxies,
   onClose
@@ -885,6 +890,27 @@ export function SettingsDialog({
                   </select>
                 </label>
                 <div className="rounded-md border border-line bg-panel p-3 text-xs text-slate-600">{t.general.languageDescription}</div>
+                <div className="rounded-md border border-line bg-panel p-3">
+                  <div className="mb-2">
+                    <h4 className="text-xs font-semibold text-slate-700">{t.general.previewPerformanceTitle}</h4>
+                    <p className="mt-1 text-xs text-slate-500">{t.general.previewPerformanceDescription}</p>
+                  </div>
+                  <label className="block text-xs font-medium text-slate-600">
+                    {t.general.previewSkipFrames}
+                    <select
+                      className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                      value={previewPerformance.skipFrames}
+                      data-testid="settings-preview-skip-frames-select"
+                      onChange={(event) => onPreviewSkipFramesChange(Number(event.target.value) as PreviewSkipFrames)}
+                    >
+                      {PREVIEW_SKIP_FRAME_OPTIONS.map((frames) => (
+                        <option key={frames} value={frames}>
+                          {t.general.previewSkipFrameOptions[frames]}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
                 <div className="rounded-md border border-line bg-panel p-3">
                   <div className="mb-2">
                     <h4 className="text-xs font-semibold text-slate-700">{t.general.demucsTitle}</h4>

@@ -1,4 +1,4 @@
-import type { AudioSpectrumParams, Clip, Effect, MediaAsset, Sequence, Timeline, Transition } from '@open-factory/editor-core';
+import type { AudioSpectrumParams, Clip, Effect, EffectType, MediaAsset, Sequence, Timeline, Transition } from '@open-factory/editor-core';
 import {
   DEFAULT_COLOR_CORRECTION,
   DEFAULT_TRANSFORM,
@@ -24,6 +24,7 @@ import { WebGlPreviewCompositor } from './webgl-compositor';
 export interface PreviewRenderOptions {
   captureFrame?: boolean;
   bypassProcessing?: boolean;
+  disabledEffectTypes?: EffectType[];
   sequences?: Sequence[];
   depth?: number;
 }
@@ -57,6 +58,7 @@ export class PreviewRenderer {
     const sequenceById = new Map((options.sequences ?? []).map((sequence) => [sequence.id, sequence]));
     const depth = options.depth ?? 0;
     const bypassProcessing = options.bypassProcessing === true;
+    const disabledEffectTypes = options.disabledEffectTypes ?? [];
     const visibleClips = getTransitionAwareClipInstances(timeline, playheadTime);
     const webgl = this.getWebGl(canvas);
 
@@ -67,7 +69,7 @@ export class PreviewRenderer {
         if (token !== this.renderToken) {
           return {};
         }
-        await this.drawClipWebGl(webgl, clip, mediaById, sequenceById, media, clipPlayheadTime, canvas.width, canvas.height, depth, bypassProcessing);
+        await this.drawClipWebGl(webgl, clip, mediaById, sequenceById, media, clipPlayheadTime, canvas.width, canvas.height, depth, bypassProcessing, disabledEffectTypes);
       }
       if (!bypassProcessing) {
         this.drawAudioSpectrumWebGl(webgl, timeline, playheadTime, canvas.width, canvas.height);
@@ -90,7 +92,7 @@ export class PreviewRenderer {
       if (token !== this.renderToken) {
         return {};
       }
-      await this.drawClip2d(context, canvas, clip, mediaById, sequenceById, media, clipPlayheadTime, depth, bypassProcessing);
+      await this.drawClip2d(context, canvas, clip, mediaById, sequenceById, media, clipPlayheadTime, depth, bypassProcessing, disabledEffectTypes);
     }
     if (!bypassProcessing) {
       this.drawAudioSpectrum2d(context, timeline, playheadTime, canvas.width, canvas.height);
@@ -149,23 +151,25 @@ export class PreviewRenderer {
     canvasWidth: number,
     canvasHeight: number,
     depth: number,
-    bypassProcessing: boolean
+    bypassProcessing: boolean,
+    disabledEffectTypes: EffectType[]
   ): Promise<void> {
     const renderClip = withCanvasKeyframedPosition(clip, canvasWidth, canvasHeight);
     if (renderClip.type === 'adjustment') {
       if (!bypassProcessing) {
-        compositor.applyAdjustmentLayer(renderClip.colorCorrection, renderClip.effects);
+        compositor.applyAdjustmentLayer(renderClip.colorCorrection, renderClip.effects, { disabledEffectTypes });
       }
       return;
     }
     if (renderClip.type === 'nested-sequence') {
-      const nested = await this.renderNestedCanvas(renderClip, sequenceById, media, playheadTime, canvasWidth, canvasHeight, depth, bypassProcessing);
+      const nested = await this.renderNestedCanvas(renderClip, sequenceById, media, playheadTime, canvasWidth, canvasHeight, depth, bypassProcessing, disabledEffectTypes);
       if (!nested) {
         drawMissingWebGl(compositor, renderClip.name, renderClip.type);
         return;
       }
       compositor.drawSource(nested, canvasWidth, canvasHeight, renderClip.transform, renderClip.colorCorrection, renderClip.effects, renderClip.chromaKey, renderClip.masks, {
-        bypassProcessing
+        bypassProcessing,
+        disabledEffectTypes
       });
       return;
     }
@@ -175,7 +179,7 @@ export class PreviewRenderer {
         drawMissingWebGl(compositor, renderClip.name, renderClip.type);
         return;
       }
-      await drawVideoWebGl(compositor, renderClip, asset, this.getVideo(asset), playheadTime, seekVideo, loadThumbnail, bypassProcessing);
+      await drawVideoWebGl(compositor, renderClip, asset, this.getVideo(asset), playheadTime, seekVideo, loadThumbnail, bypassProcessing, disabledEffectTypes);
       return;
     }
 
@@ -185,7 +189,7 @@ export class PreviewRenderer {
         drawMissingWebGl(compositor, renderClip.name, renderClip.type);
         return;
       }
-      drawImageWebGl(compositor, renderClip, asset, await loadImage(asset), bypassProcessing);
+      drawImageWebGl(compositor, renderClip, asset, await loadImage(asset), bypassProcessing, disabledEffectTypes);
       return;
     }
 
@@ -208,7 +212,8 @@ export class PreviewRenderer {
     media: MediaAsset[],
     playheadTime: number,
     depth: number,
-    bypassProcessing: boolean
+    bypassProcessing: boolean,
+    disabledEffectTypes: EffectType[]
   ): Promise<void> {
     const renderClip = withCanvasKeyframedPosition(clip, canvas.width, canvas.height);
     if (renderClip.type === 'adjustment') {
@@ -218,7 +223,7 @@ export class PreviewRenderer {
       return;
     }
     if (renderClip.type === 'nested-sequence') {
-      const nested = await this.renderNestedCanvas(renderClip, sequenceById, media, playheadTime, canvas.width, canvas.height, depth, bypassProcessing);
+      const nested = await this.renderNestedCanvas(renderClip, sequenceById, media, playheadTime, canvas.width, canvas.height, depth, bypassProcessing, disabledEffectTypes);
       if (!nested) {
         drawMissing2d(context, canvas, renderClip.name, renderClip.type);
         return;
@@ -268,7 +273,8 @@ export class PreviewRenderer {
     width: number,
     height: number,
     depth: number,
-    bypassProcessing: boolean
+    bypassProcessing: boolean,
+    disabledEffectTypes: EffectType[]
   ): Promise<HTMLCanvasElement | undefined> {
     if (depth >= 3) {
       return undefined;
@@ -284,7 +290,8 @@ export class PreviewRenderer {
     await new PreviewRenderer().render(canvas, sequence.timeline, media, localTime, {
       sequences: Array.from(sequenceById.values()),
       depth: depth + 1,
-      bypassProcessing
+      bypassProcessing,
+      disabledEffectTypes
     });
     return canvas;
   }

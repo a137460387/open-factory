@@ -17,6 +17,26 @@ describe('WebGL preview compositor bypass processing', () => {
     expect(result.maskUniforms.count).toBe(1);
   });
 
+  it('keeps cheap effects while disabling expensive low quality passes', () => {
+    const result = resolveWebGlSourceProcessing(
+      { brightness: 0.25 },
+      [
+        ...effects,
+        { id: 'effect-grain', type: 'film-grain', enabled: true, params: { strength: 0.8 } },
+        { id: 'effect-chromatic', type: 'chromatic-aberration', enabled: true, params: { strength: 12 } }
+      ],
+      chromaKey,
+      masks,
+      { disabledEffectTypes: ['film-grain', 'chromatic-aberration', 'custom-shader'] }
+    );
+
+    expect(result.correction.brightness).toBe(0.25);
+    expect(result.effectParams.blur).toBe(6);
+    expect(result.effectParams.grain).toBe(0);
+    expect(result.effectParams.chromatic).toBe(0);
+    expect(result.key.enabled).toBe(true);
+  });
+
   it('resets color, effects, chroma key, and masks for bypass draws', () => {
     const result = resolveWebGlSourceProcessing({ brightness: 0.25 }, effects, chromaKey, masks, { bypassProcessing: true });
 

@@ -1,4 +1,4 @@
-import { calculateSpeedCurveSourceDuration, getClipSpeed, type Clip, type MediaAsset } from '@open-factory/editor-core';
+import { calculateSpeedCurveSourceDuration, getClipSpeed, type Clip, type EffectType, type MediaAsset } from '@open-factory/editor-core';
 import { recordPreviewDraw, recordPreviewError } from './debug';
 import { drawTransformedSource2d } from './transform-2d';
 import type { WebGlPreviewCompositor } from './webgl-compositor';
@@ -14,7 +14,8 @@ export async function drawVideo2d(
   playheadTime: number,
   seekVideo: (video: HTMLVideoElement, time: number) => Promise<void>,
   loadThumbnail: (asset: MediaAsset) => Promise<HTMLImageElement | undefined>,
-  bypassProcessing = false
+  bypassProcessing = false,
+  disabledEffectTypes: EffectType[] = []
 ): Promise<void> {
   const sourceTime = getPreviewSourceTime(clip, playheadTime);
   try {
@@ -39,7 +40,8 @@ export async function drawVideoWebGl(
   playheadTime: number,
   seekVideo: (video: HTMLVideoElement, time: number) => Promise<void>,
   loadThumbnail: (asset: MediaAsset) => Promise<HTMLImageElement | undefined>,
-  bypassProcessing = false
+  bypassProcessing = false,
+  disabledEffectTypes: EffectType[] = []
 ): Promise<void> {
   const sourceTime = getPreviewSourceTime(clip, playheadTime);
   try {
@@ -52,7 +54,8 @@ export async function drawVideoWebGl(
       }
     }
     compositor.drawSource(video, asset.width || 1280, asset.height || 720, clip.transform, clip.colorCorrection, clip.effects, clip.chromaKey, clip.masks, {
-      bypassProcessing
+      bypassProcessing,
+      disabledEffectTypes
     });
     recordPreviewDraw('video', 'video');
   } catch (error) {
@@ -67,7 +70,8 @@ export async function drawVideoWebGl(
         }
       }
       compositor.drawSource(fallback, asset.width || 1280, asset.height || 720, clip.transform, clip.colorCorrection, clip.effects, clip.chromaKey, clip.masks, {
-        bypassProcessing
+        bypassProcessing,
+        disabledEffectTypes
       });
       recordPreviewDraw('video', 'thumbnail');
     }

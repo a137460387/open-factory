@@ -1,4 +1,4 @@
-import type { Clip, MediaAsset } from '@open-factory/editor-core';
+import type { Clip, EffectType, MediaAsset } from '@open-factory/editor-core';
 import { recordPreviewDraw } from './debug';
 import { drawTransformedSource2d } from './transform-2d';
 import type { WebGlPreviewCompositor } from './webgl-compositor';
@@ -15,9 +15,10 @@ export function drawImage2dBypass(context: CanvasRenderingContext2D, canvas: HTM
   recordPreviewDraw('image', 'image');
 }
 
-export function drawImageWebGl(compositor: WebGlPreviewCompositor, clip: ImageClip, asset: MediaAsset, img: HTMLImageElement, bypassProcessing = false): void {
+export function drawImageWebGl(compositor: WebGlPreviewCompositor, clip: ImageClip, asset: MediaAsset, img: HTMLImageElement, bypassProcessing = false, disabledEffectTypes: EffectType[] = []): void {
   compositor.drawSource(img, asset.width || 1280, asset.height || 720, clip.transform, clip.colorCorrection, clip.effects, clip.chromaKey, clip.masks, {
-    bypassProcessing
+    bypassProcessing,
+    disabledEffectTypes
   });
   recordPreviewDraw('image', 'image');
 }

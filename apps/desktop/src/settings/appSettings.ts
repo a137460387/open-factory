@@ -7,6 +7,11 @@ import {
   type EditorLayoutSettings
 } from '../layout/layoutSettings';
 import { DEFAULT_THEME_SETTINGS, normalizeThemeSettings, type ThemeSettings } from '../theme/theme';
+import {
+  DEFAULT_PREVIEW_PERFORMANCE_SETTINGS,
+  normalizePreviewPerformanceSettings,
+  type PreviewPerformanceSettings
+} from '../lib/preview/preview-performance';
 
 const BROWSER_SETTINGS_KEY = 'open-factory:settings';
 
@@ -87,6 +92,7 @@ export interface AppSettings {
   exportBackground?: ExportBackgroundSettings;
   exportRules?: ExportConditionRule[];
   view?: ViewSettings;
+  previewPerformance?: PreviewPerformanceSettings;
   automationRules?: AutomationRule[];
   customSplitLayouts?: SplitLayoutDefinition[];
 }
@@ -194,6 +200,18 @@ export async function saveViewSettings(view: Partial<ViewSettings>): Promise<Vie
   return nextView;
 }
 
+export async function readPreviewPerformanceSettings(): Promise<PreviewPerformanceSettings> {
+  const settings = await readAppSettings();
+  return settings.previewPerformance ?? { ...DEFAULT_PREVIEW_PERFORMANCE_SETTINGS };
+}
+
+export async function savePreviewPerformanceSettings(previewPerformance: Partial<PreviewPerformanceSettings>): Promise<PreviewPerformanceSettings> {
+  const settings = await readAppSettings();
+  const nextPreviewPerformance = normalizePreviewPerformanceSettings({ ...settings.previewPerformance, ...previewPerformance });
+  await writeAppSettings({ ...settings, previewPerformance: nextPreviewPerformance });
+  return nextPreviewPerformance;
+}
+
 export async function saveThemeSettings(theme: Partial<ThemeSettings>): Promise<ThemeSettings> {
   const settings = await readAppSettings();
   const nextTheme = normalizeThemeSettings(theme);
@@ -267,6 +285,13 @@ function normalizeSettings(settings: Partial<AppSettings>): AppSettings {
   const view = normalizeViewSettings(settings.view);
   if (view) {
     normalized.view = view;
+  }
+  const previewPerformance = normalizePreviewPerformanceSettings(settings.previewPerformance);
+  if (
+    previewPerformance.qualityMode !== DEFAULT_PREVIEW_PERFORMANCE_SETTINGS.qualityMode ||
+    previewPerformance.skipFrames !== DEFAULT_PREVIEW_PERFORMANCE_SETTINGS.skipFrames
+  ) {
+    normalized.previewPerformance = previewPerformance;
   }
   const automationRules = normalizeAutomationRules(settings.automationRules);
   if (automationRules.length > 0) {

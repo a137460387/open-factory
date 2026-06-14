@@ -8,6 +8,7 @@ import {
   readExportBackgroundSettings,
   readExportRules,
   readLayoutSettings,
+  readPreviewPerformanceSettings,
   readThemeSettings,
   readViewSettings,
   saveBackupSettings,
@@ -17,6 +18,7 @@ import {
   saveExportRules,
   saveLanguageSetting,
   saveLayoutSettings,
+  savePreviewPerformanceSettings,
   saveThemeSettings,
   saveViewSettings
 } from './appSettings';
@@ -261,6 +263,23 @@ describe('app settings storage', () => {
       language: 'en',
       view: { safeFrameGuides: false, thumbnailTrackVisible: true }
     });
+  });
+
+  it('persists preview performance settings in settings.json', async () => {
+    await expect(readPreviewPerformanceSettings()).resolves.toEqual({ qualityMode: 'full', skipFrames: 1 });
+
+    await saveLanguageSetting('en');
+    const previewPerformance = await savePreviewPerformanceSettings({ qualityMode: 'half', skipFrames: 2 });
+
+    expect(previewPerformance).toEqual({ qualityMode: 'half', skipFrames: 2 });
+    expect(await readPreviewPerformanceSettings()).toEqual({ qualityMode: 'half', skipFrames: 2 });
+    expect(await readAppSettings()).toEqual({
+      language: 'en',
+      previewPerformance: { qualityMode: 'half', skipFrames: 2 }
+    });
+
+    await savePreviewPerformanceSettings({ qualityMode: 'full', skipFrames: 1 });
+    expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({ language: 'en' });
   });
 
   it('persists normalized declarative automation rules in settings.json', async () => {

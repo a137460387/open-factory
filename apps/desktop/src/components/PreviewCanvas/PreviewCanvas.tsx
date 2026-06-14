@@ -59,6 +59,15 @@ import {
 } from '../../lib/preview/compare';
 import { listProjectSnapshots, readProjectSnapshot, type ProjectSnapshotEntry } from '../../lib/projectSnapshots';
 import { PreviewRenderer, type PreviewFrameReadback } from '../../lib/preview/renderer';
+import {
+  DEFAULT_PREVIEW_PERFORMANCE_SETTINGS,
+  calculatePreviewRenderSize,
+  getDisabledPreviewEffectTypes,
+  isPreviewAudioOnly,
+  isPreviewLowQuality,
+  shouldRenderPreviewFrame,
+  type PreviewPerformanceSettings
+} from '../../lib/preview/preview-performance';
 import { getTimelineRenderCacheController } from '../../lib/preview/render-cache-controller';
 import { showToast } from '../../lib/toast';
 import { useAudioMeterStore } from '../../store/audioMeterStore';
@@ -72,9 +81,10 @@ const CANVAS_TRANSFORM_HANDLES: CanvasTransformHandle[] = ['nw', 'n', 'ne', 'e',
 
 interface PreviewCanvasProps {
   safeFrameGuides?: boolean;
+  previewPerformance?: PreviewPerformanceSettings;
 }
 
-export function PreviewCanvas({ safeFrameGuides = false }: PreviewCanvasProps) {
+export function PreviewCanvas({ safeFrameGuides = false, previewPerformance = DEFAULT_PREVIEW_PERFORMANCE_SETTINGS }: PreviewCanvasProps) {
   const t = zhCN.preview;
   const theme = useTheme();
   const compareFrameRef = useRef<HTMLDivElement | null>(null);
@@ -153,6 +163,14 @@ export function PreviewCanvas({ safeFrameGuides = false }: PreviewCanvasProps) {
     [project.timeline, snapshotCompareProject]
   );
   const previewZoomPercent = Math.round(previewZoom * 100);
+  const previewRenderSize = useMemo(
+    () => calculatePreviewRenderSize(PREVIEW_CANVAS_WIDTH, PREVIEW_CANVAS_HEIGHT, previewPerformance.qualityMode),
+    [previewPerformance.qualityMode]
+  );
+  const previewDisabledEffectTypes = useMemo(() => getDisabledPreviewEffectTypes(previewPerformance), [previewPerformance]);
+  const audioOnlyPreview = isPreviewAudioOnly(previewPerformance.qualityMode);
+  const lowQualityPreview = isPreviewLowQuality(previewPerformance);
+  const previewCanvasSizeLabel = t.canvasSize(previewRenderSize.width, previewRenderSize.height);
   const previewSurfaceStyle: CSSProperties = {
     transform: `translate(${previewPan.x}px, ${previewPan.y}px) scale(${previewZoom})`,
     transformOrigin: 'center'
@@ -238,8 +256,9 @@ export function PreviewCanvas({ safeFrameGuides = false }: PreviewCanvasProps) {
     const timeline = previewTimeline ?? project.timeline;
     const shouldCaptureScopes = scopesOpen && (!isPlaying || scopeFrameCounterRef.current % 4 === 0);
     const shouldCaptureDifference = compareShowsDifference && Boolean(differenceCanvas);
-    const canUseRenderCache = !previewTimeline && !shouldCaptureScopes && !compareEnabled;
     const frame = Math.max(0, Math.round(playheadTime * fps));
+    const shouldRenderVideoFrame = !audioOnlyPreview && shouldRenderPreviewFrame(isPlaying, frame, previewPerformance.skipFrames);
+    const canUseRenderCache = shouldRenderVideoFrame && !previewTimeline && !shouldCaptureScopes && !compareEnabled;
     const frameTime = frame / fps;
     const frameKey = buildTimelineRenderFrameKey({
       timeline,
@@ -253,7 +272,16 @@ export function PreviewCanvas({ safeFrameGuides = false }: PreviewCanvasProps) {
     });
     let canceled = false;
     scopeFrameCounterRef.current += 1;
-    void (async () => {
+    if (audioOnlyPreview) {
+      drawAudioOnlyPreview(canvas, t.audioOnlyPreview);
+      if (originalCanvas) {
+        drawAudioOnlyPreview(originalCanvas, t.audioOnlyPreview);
+      }
+      if (differenceCanvas) {
+        drawAudioOnlyPreview(differenceCanvas, t.audioOnlyPreview);
+      }
+    } else if (shouldRenderVideoFrame) {
+      void (async () => {
       try {
         if (canUseRenderCache) {
           const cached = await getTimelineRenderCacheController().getFrame(frameKey);
@@ -270,6 +298,7 @@ export function PreviewCanvas({ safeFrameGuides = false }: PreviewCanvasProps) {
         }
         const result = await rendererRef.current.render(canvas, timeline, project.media, playheadTime, {
           captureFrame: shouldCaptureScopes || shouldCaptureDifference,
+          disabledEffectTypes: previewDisabledEffectTypes,
           sequences: project.sequences
         });
         if (canceled) {
@@ -284,6 +313,7 @@ export function PreviewCanvas({ safeFrameGuides = false }: PreviewCanvasProps) {
           const originalResult = await originalRendererRef.current.render(originalCanvas, compareTimeline, compareProject.media, playheadTime, {
             bypassProcessing: !snapshotCompareProject,
             captureFrame: shouldCaptureDifference,
+            disabledEffectTypes: previewDisabledEffectTypes,
             sequences: compareProject.sequences
           });
           if (canceled) {
@@ -307,7 +337,8 @@ export function PreviewCanvas({ safeFrameGuides = false }: PreviewCanvasProps) {
       } catch (error) {
         showToast({ kind: 'error', title: t.renderFailedTitle, message: error instanceof Error ? error.message : t.renderFailedMessage });
       }
-    })();
+      })();
+    }
     rendererRef.current.syncAudio(timeline, project.media, playheadTime, isPlaying && playbackRate > 0, project.masterVolume);
     const levels = rendererRef.current.getAudioLevels();
     setAudioLevels(levels.trackLevels, levels.masterLevel, levels.trackFrequencyBands);
@@ -329,7 +360,11 @@ export function PreviewCanvas({ safeFrameGuides = false }: PreviewCanvasProps) {
     project.timeline,
     scopesOpen,
     setAudioLevels,
-    snapshotCompareProject
+    snapshotCompareProject,
+    audioOnlyPreview,
+    previewDisabledEffectTypes,
+    previewPerformance.skipFrames,
+    t
   ]);
 
   useEffect(() => {
@@ -977,7 +1012,7 @@ export function PreviewCanvas({ safeFrameGuides = false }: PreviewCanvasProps) {
       <div className="relative z-40 flex items-center justify-between border-b px-3 py-2" style={{ borderColor: theme.colors.border }}>
         <div>
           <div className="text-sm font-semibold">{t.title}</div>
-          <div className="text-xs text-slate-300">{t.canvasSize}</div>
+          <div className="text-xs text-slate-300">{previewCanvasSizeLabel}</div>
         </div>
         <div className="flex items-center gap-2">
           <label className="sr-only" htmlFor="preview-snapshot-compare-select">
@@ -1125,26 +1160,32 @@ export function PreviewCanvas({ safeFrameGuides = false }: PreviewCanvasProps) {
             onPointerUp={endPreviewPan}
             onPointerCancel={endPreviewPan}
           >
+            {lowQualityPreview ? (
+              <div className="pointer-events-none absolute left-3 top-3 z-20 rounded bg-black/60 px-2 py-1 text-xs font-medium text-white" data-testid="preview-simplified-effects-hint">
+                {audioOnlyPreview ? t.audioOnlyPreview : t.simplifiedEffects}
+              </div>
+            ) : null}
             <div ref={previewSurfaceRef} className="absolute inset-0" style={previewSurfaceStyle} data-testid="preview-surface">
               <canvas
                 ref={canvasRef}
-                width={1280}
-                height={720}
+                width={previewRenderSize.width}
+                height={previewRenderSize.height}
                 className={`pointer-events-none absolute inset-0 h-full w-full ${compareShowsDifference ? 'opacity-0' : 'opacity-100'}`}
                 data-testid="preview-canvas"
+                data-preview-quality={previewPerformance.qualityMode}
               />
               {compareEnabled ? (
                 <canvas
                   ref={originalCanvasRef}
-                  width={1280}
-                  height={720}
+                  width={previewRenderSize.width}
+                  height={previewRenderSize.height}
                   className={`pointer-events-none absolute inset-0 h-full w-full ${compareShowsDifference ? 'opacity-0' : 'opacity-100'}`}
                   style={buildPreviewCompareOverlayStyle(activeCompareMode, compareSplitRatio)}
                   data-testid="preview-compare-original-canvas"
                 />
               ) : null}
               {compareShowsDifference ? (
-                <canvas ref={differenceCanvasRef} width={1280} height={720} className="pointer-events-none absolute inset-0 h-full w-full" data-testid="preview-compare-difference-canvas" />
+                <canvas ref={differenceCanvasRef} width={previewRenderSize.width} height={previewRenderSize.height} className="pointer-events-none absolute inset-0 h-full w-full" data-testid="preview-compare-difference-canvas" />
               ) : null}
               {safeFrameGuides ? <SafeFrameGuides /> : null}
               {compareEnabled && !compareShowsDifference ? (
@@ -1583,6 +1624,21 @@ function readPreviewCanvasPixelSwatches(gl: WebGLRenderingContext, coordinates: 
     }
   }
   return swatches;
+}
+
+function drawAudioOnlyPreview(canvas: HTMLCanvasElement, label: string): void {
+  const context = canvas.getContext('2d');
+  if (!context) {
+    return;
+  }
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = '#141820';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = 'rgba(255, 255, 255, 0.72)';
+  context.font = `${Math.max(12, Math.round(canvas.height * 0.035))}px sans-serif`;
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.fillText(label, canvas.width / 2, canvas.height / 2);
 }
 
 interface PathMaskDrag {

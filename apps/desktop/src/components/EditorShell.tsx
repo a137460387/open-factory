@@ -155,7 +155,18 @@ import {
   type CommandSnapshot,
   type MacroHistoryEntry
 } from '../macros/clip-macros';
-import { readBackupSettings, readCustomSplitLayouts, readLayoutSettings, readViewSettings, saveCustomSplitLayouts, saveLayoutSettings, saveViewSettings } from '../settings/appSettings';
+import {
+  readBackupSettings,
+  readCustomSplitLayouts,
+  readLayoutSettings,
+  readPreviewPerformanceSettings,
+  readViewSettings,
+  saveCustomSplitLayouts,
+  saveLayoutSettings,
+  savePreviewPerformanceSettings,
+  saveViewSettings
+} from '../settings/appSettings';
+import { DEFAULT_PREVIEW_PERFORMANCE_SETTINGS, type PreviewPerformanceSettings, type PreviewQualityMode, type PreviewSkipFrames } from '../lib/preview/preview-performance';
 import { createProxyForAsset, type ProxyGenerationOptions } from '../media/proxy';
 import { ensureMediaJobRunner } from '../media/media-job-runner';
 import { DuplicateMediaDialog, type DuplicateMediaMergeSelection } from '../media/DuplicateMediaDialog';
@@ -250,6 +261,7 @@ export function EditorShell() {
   const [layoutSettings, setLayoutSettings] = useState<EditorLayoutSettings>(DEFAULT_EDITOR_LAYOUT_SETTINGS);
   const [safeFrameGuides, setSafeFrameGuides] = useState(false);
   const [thumbnailTrackVisible, setThumbnailTrackVisible] = useState(true);
+  const [previewPerformance, setPreviewPerformance] = useState<PreviewPerformanceSettings>(DEFAULT_PREVIEW_PERFORMANCE_SETTINGS);
   const [pipLayoutPosition, setPiPLayoutPosition] = useState<PiPLayoutPosition>('bottom-right');
   const [customSplitLayouts, setCustomSplitLayouts] = useState<SplitLayoutDefinition[]>([]);
   const [viewportSize, setViewportSize] = useState(() => readViewportSize());
@@ -360,6 +372,18 @@ export function EditorShell() {
     });
   }, []);
 
+  const updatePreviewPerformance = useCallback((patch: Partial<PreviewPerformanceSettings>) => {
+    setPreviewPerformance((current) => {
+      const optimistic = { ...current, ...patch };
+      void savePreviewPerformanceSettings(optimistic)
+        .then((saved) => setPreviewPerformance(saved))
+        .catch((error) => {
+          console.warn('Unable to save preview performance settings', error);
+        });
+      return optimistic;
+    });
+  }, []);
+
   const runAutomationForMedia = useCallback(async (trigger: 'on-import' | 'on-export-complete' | 'on-project-open', media: MediaAsset[]) => {
     if (media.length === 0) {
       return;
@@ -453,6 +477,22 @@ export function EditorShell() {
     return () => {
       disposed = true;
       unlisten?.();
+    };
+  }, []);
+
+  useEffect(() => {
+    let canceled = false;
+    void readPreviewPerformanceSettings()
+      .then((settings) => {
+        if (!canceled) {
+          setPreviewPerformance(settings);
+        }
+      })
+      .catch((error) => {
+        console.warn('Unable to load preview performance settings', error);
+      });
+    return () => {
+      canceled = true;
     };
   }, []);
 
@@ -1972,6 +2012,8 @@ export function EditorShell() {
           storyboardOpen={storyboardOpen}
           safeFrameGuides={safeFrameGuides}
           thumbnailTrackVisible={thumbnailTrackVisible}
+          previewQualityMode={previewPerformance.qualityMode}
+          onPreviewQualityModeChange={(qualityMode: PreviewQualityMode) => updatePreviewPerformance({ qualityMode })}
           onToggleStoryboard={() => setStoryboardOpen((open) => !open)}
           onToggleSafeFrameGuides={toggleSafeFrameGuides}
           onToggleThumbnailTrack={toggleThumbnailTrackVisible}
@@ -2050,7 +2092,7 @@ export function EditorShell() {
           )}
           <ErrorBoundary name={zhCN.panels.preview}>
             <Suspense fallback={<PanelLoading label={zhCN.panels.preview} />}>
-              <PreviewCanvas safeFrameGuides={safeFrameGuides} />
+              <PreviewCanvas safeFrameGuides={safeFrameGuides} previewPerformance={previewPerformance} />
             </Suspense>
           </ErrorBoundary>
           {effectivePanels.rightPanelCollapsed ? (
@@ -2172,6 +2214,8 @@ export function EditorShell() {
               onShortcutBindingsChange={setShortcutBindings}
               onMacrosChange={setMacros}
               onExecuteMacro={(macro) => void executeMacro(macro)}
+              previewPerformance={previewPerformance}
+              onPreviewSkipFramesChange={(skipFrames: PreviewSkipFrames) => updatePreviewPerformance({ skipFrames })}
               onDeleteProxies={(assetIds) => deleteProxiesForMedia(assetIds)}
               onRegenerateProxies={(assetIds) => regenerateProxiesForMedia(assetIds)}
               onClose={() => setSettingsOpen(false)}

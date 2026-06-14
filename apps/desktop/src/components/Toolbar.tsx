@@ -15,6 +15,7 @@ import { useExportQueueStore } from '../export/export-queue-store';
 import { zhCN } from '../i18n/strings';
 import { pickWhisperExecutablePath, pickWhisperModelPath } from '../lib/whisper';
 import { showToast } from '../lib/toast';
+import { PREVIEW_QUALITY_MODES, type PreviewQualityMode } from '../lib/preview/preview-performance';
 import { useEditorStore } from '../store/editorStore';
 import { useWhisperSettingsStore } from '../store/whisperSettingsStore';
 
@@ -75,9 +76,11 @@ interface ToolbarProps {
   storyboardOpen: boolean;
   safeFrameGuides: boolean;
   thumbnailTrackVisible: boolean;
+  previewQualityMode: PreviewQualityMode;
   onToggleStoryboard(): void;
   onToggleSafeFrameGuides(): void;
   onToggleThumbnailTrack(): void;
+  onPreviewQualityModeChange(mode: PreviewQualityMode): void;
   onToggleHistoryPanel(): void;
   onUndo(): void;
   onRedo(): void;
@@ -605,6 +608,21 @@ export function Toolbar(props: ToolbarProps) {
         icon={<ImageDown size={17} />}
         testId="toolbar-export-frame-button"
       />
+      <label className="inline-flex h-9 items-center gap-1 rounded-md border border-line bg-panel px-2 text-[11px] text-slate-600" title={t.previewQuality}>
+        <span>{t.previewQuality}</span>
+        <select
+          className="h-6 rounded border border-line bg-white px-1 text-xs font-medium text-slate-700"
+          value={props.previewQualityMode}
+          data-testid="toolbar-preview-quality-select"
+          onChange={(event) => props.onPreviewQualityModeChange(event.target.value as PreviewQualityMode)}
+        >
+          {PREVIEW_QUALITY_MODES.map((mode) => (
+            <option key={mode} value={mode}>
+              {t.previewQualityOptions[mode]}
+            </option>
+          ))}
+        </select>
+      </label>
       <ToolButton title={t.settings} onClick={props.onOpenSettings} icon={<Settings size={17} />} testId="toolbar-settings-button" />
       <ToolButton title={t.clearMediaCache} onClick={props.onClearCache} icon={<Trash2 size={17} />} testId="settings-clear-cache-button" />
       <label className="ml-1 inline-flex h-9 items-center gap-1 rounded-md border border-line bg-panel px-2 text-[11px] text-slate-600" title={t.autosaveInterval}>

@@ -19,6 +19,7 @@ import {
   type ClipMask,
   type ColorCorrection,
   type ColorWheelValue,
+  type EffectType,
   type Effect,
   type InputColorSpace,
   type SubtitleStyle,
@@ -81,6 +82,7 @@ export interface WebGlSourceProcessingOptions {
   bypassProcessing?: boolean;
   customShaderTime?: number;
   customShaderProgress?: number;
+  disabledEffectTypes?: EffectType[];
 }
 
 export interface WebGlResolvedSourceProcessing {
@@ -152,7 +154,8 @@ export class WebGlPreviewCompositor {
   ): void {
     const gl = this.gl;
     const texture = this.getTexture(source);
-    const customShader = options.bypassProcessing ? undefined : getEnabledCustomShaderEffect(effects);
+    const disabledEffectTypes = new Set(options.disabledEffectTypes ?? []);
+    const customShader = options.bypassProcessing || disabledEffectTypes.has('custom-shader') ? undefined : getEnabledCustomShaderEffect(effects);
     if (customShader) {
       const params = normalizeCustomShaderParams(customShader.params);
       if (this.drawCustomShaderSource(source, texture, mediaWidth, mediaHeight, transform, params.source, options)) {
@@ -291,7 +294,7 @@ export class WebGlPreviewCompositor {
     return { width, height, data: pixels };
   }
 
-  applyAdjustmentLayer(colorCorrection?: Partial<ColorCorrection>, effects?: Effect[]): void {
+  applyAdjustmentLayer(colorCorrection?: Partial<ColorCorrection>, effects?: Effect[], options: WebGlSourceProcessingOptions = {}): void {
     const frame = this.readFramePixels();
     const canvas = document.createElement('canvas');
     canvas.width = frame.width;
@@ -308,7 +311,7 @@ export class WebGlPreviewCompositor {
     }
     context.putImageData(image, 0, 0);
     this.begin(frame.width, frame.height);
-    this.drawSource(canvas, frame.width, frame.height, DEFAULT_TRANSFORM, colorCorrection, effects);
+    this.drawSource(canvas, frame.width, frame.height, DEFAULT_TRANSFORM, colorCorrection, effects, undefined, undefined, options);
   }
 
   private getTexture(source: TexImageSource): WebGLTexture {
@@ -428,7 +431,7 @@ export function resolveWebGlSourceProcessing(
     correction: normalizeColorCorrection(colorCorrection ?? DEFAULT_COLOR_CORRECTION),
     key: normalizeChromaKey(chromaKey),
     maskUniforms: buildMaskUniforms(masks),
-    effectParams: buildPreviewEffectParams(effects)
+    effectParams: buildPreviewEffectParams(effects, options.disabledEffectTypes)
   };
 }
 
@@ -511,10 +514,11 @@ function inputColorSpaceIndex(value: InputColorSpace | undefined): number {
   }
 }
 
-function buildPreviewEffectParams(effects: Effect[] | undefined): { blur: number; grain: number; vignette: number; chromatic: number; sharpen: number } {
+function buildPreviewEffectParams(effects: Effect[] | undefined, disabledEffectTypes: EffectType[] = []): { blur: number; grain: number; vignette: number; chromatic: number; sharpen: number } {
   const params = { blur: 0, grain: 0, vignette: 0, chromatic: 0, sharpen: 0 };
+  const disabled = new Set(disabledEffectTypes);
   for (const effect of effects ?? []) {
-    if (!effect.enabled) {
+    if (!effect.enabled || disabled.has(effect.type)) {
       continue;
     }
     if (effect.type === 'blur') {

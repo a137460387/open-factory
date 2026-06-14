@@ -101,6 +101,13 @@ const zh = {
     storyboard: '故事板',
     safeFrameGuides: '安全框参考线',
     thumbnailTrack: '缩略图轨道',
+    previewQuality: '预览质量',
+    previewQualityOptions: {
+      full: '全质量',
+      half: '半分辨率',
+      quarter: '四分之一分辨率',
+      'audio-only': '仅音频'
+    },
     safeFrameGuidesVisible: '显示',
     safeFrameGuidesHidden: '隐藏',
     splitSelectedClip: '分割选中片段',
@@ -233,6 +240,14 @@ const zh = {
       recordingWidth: '宽度',
       recordingHeight: '高度',
       recordingFrameRate: '帧率',
+      previewPerformanceTitle: '预览性能',
+      previewPerformanceDescription: '播放时可跳过部分视频帧以降低预览负载，不影响导出。',
+      previewSkipFrames: '播放跳帧',
+      previewSkipFrameOptions: {
+        1: '每帧渲染',
+        2: '每 2 帧渲染一次',
+        4: '每 4 帧渲染一次'
+      },
       saveFailed: '语言保存失败',
       saveFailedMessage: '无法写入设置文件。',
       options: {
@@ -718,7 +733,9 @@ const zh = {
   },
   preview: {
     title: '预览',
-    canvasSize: '1280 x 720 画布',
+    canvasSize: (width: number, height: number) => `${width} x ${height} 画布`,
+    simplifiedEffects: '部分特效已简化',
+    audioOnlyPreview: '仅音频预览',
     colorScopes: '颜色示波器',
     compareToggle: 'A/B 对比预览',
     compareLeftRight: '左右分割对比',
@@ -2356,6 +2373,13 @@ const enOverrides = {
     storyboard: 'Storyboard',
     safeFrameGuides: 'Safe Frame Guides',
     thumbnailTrack: 'Thumbnail Track',
+    previewQuality: 'Preview Quality',
+    previewQualityOptions: {
+      full: 'Full Quality',
+      half: 'Half Resolution',
+      quarter: 'Quarter Resolution',
+      'audio-only': 'Audio Only'
+    },
     safeFrameGuidesVisible: 'Visible',
     safeFrameGuidesHidden: 'Hidden',
     splitSelectedClip: 'Split Selected Clip',
@@ -2479,6 +2503,14 @@ const enOverrides = {
       recordingWidth: 'Width',
       recordingHeight: 'Height',
       recordingFrameRate: 'Frame Rate',
+      previewPerformanceTitle: 'Preview Performance',
+      previewPerformanceDescription: 'Skip some video frames during playback to reduce preview load. Export is unchanged.',
+      previewSkipFrames: 'Playback Frame Skipping',
+      previewSkipFrameOptions: {
+        1: 'Render every frame',
+        2: 'Render every 2 frames',
+        4: 'Render every 4 frames'
+      },
       saveFailed: 'Language Save Failed',
       saveFailedMessage: 'Unable to write the settings file.',
       options: {
@@ -2892,7 +2924,9 @@ const enOverrides = {
   },
   preview: {
     title: 'Preview',
-    canvasSize: '1280 x 720 Canvas',
+    canvasSize: (width: number, height: number) => `${width} x ${height} Canvas`,
+    simplifiedEffects: 'Some effects are simplified',
+    audioOnlyPreview: 'Audio-only preview',
     colorScopes: 'Color Scopes',
     compareToggle: 'A/B Compare Preview',
     compareLeftRight: 'Left/Right Split Compare',
