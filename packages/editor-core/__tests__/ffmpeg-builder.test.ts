@@ -504,7 +504,13 @@ describe('multitrack ffmpeg builder', () => {
         type: 'subtitle',
         name: 'Subtitles 1',
         clips: [
-          makeSubtitleClip({ id: 'subtitle-a', start: 0.5, duration: 1.5, text: 'Hello subtitles' }),
+          makeSubtitleClip({
+            id: 'subtitle-a',
+            start: 0.5,
+            duration: 1.5,
+            text: 'Hello subtitles',
+            style: { backgroundOpacity: 0, outlineColor: '#112233', outlineWidth: 3, shadowColor: '#445566', shadowOffset: 2 }
+          }),
           makeSubtitleClip({ id: 'subtitle-b', start: 2.5, duration: 1, text: 'Second line' })
         ]
       })
@@ -514,6 +520,11 @@ describe('multitrack ffmpeg builder', () => {
 
     expect(plan.filterComplex).toContain('subtitles=filename=__SUBTITLEFILE_export_subtitles__');
     expect(plan.filterComplex).toContain("force_style='FontSize=42,PrimaryColour=&Hffffff&");
+    expect(plan.filterComplex).toContain('OutlineColour=&H332211&');
+    expect(plan.filterComplex).toContain('BackColour=&Hff665544&');
+    expect(plan.filterComplex).toContain('BorderStyle=1');
+    expect(plan.filterComplex).toContain('Outline=3');
+    expect(plan.filterComplex).toContain('Shadow=2');
     expect(plan.filterComplex).toContain('MarginV=72');
     expect(plan.textArtifacts).toEqual(
       expect.arrayContaining([

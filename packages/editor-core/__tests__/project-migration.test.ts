@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_CLIP_BORDER, DEFAULT_COLOR_CORRECTION, DEFAULT_VIDEO_RESTORATION, createMulticamSequenceProject, createTrack, migrateProjectFile, serializeProject, type ProjectFileV1 } from '../src';
+import { DEFAULT_CLIP_BORDER, DEFAULT_COLOR_CORRECTION, DEFAULT_SUBTITLE_STYLE, DEFAULT_VIDEO_RESTORATION, createMulticamSequenceProject, createTrack, migrateProjectFile, serializeProject, type ProjectFileV1 } from '../src';
 import { makeAdjustmentClip, makeProject, makeSubtitleClip, makeTextClip, makeVideoClip } from './test-utils';
 
 describe('project schema migration', () => {
@@ -88,6 +88,31 @@ describe('project schema migration', () => {
     const oldProject = migrateProjectFile(file).project;
     expect(oldProject.timeline.tracks[0].color).toBeNull();
     expect(oldProject.timeline.tracks[0].clips[0].colorLabel).toBeNull();
+  });
+
+  it('fills subtitle outline and shadow style defaults for old subtitle clips', () => {
+    const project = makeProject();
+    project.timeline.tracks.push(createTrack({ id: 'track-subtitle', type: 'subtitle', name: 'Subtitles', clips: [makeSubtitleClip({ id: 'subtitle-old' })] }));
+    const file = serializeProject(project);
+    const subtitle = file.project.timeline.tracks.at(-1)?.clips[0];
+    if (subtitle?.type === 'subtitle') {
+      delete (subtitle.style as Partial<typeof subtitle.style>).outlineColor;
+      delete (subtitle.style as Partial<typeof subtitle.style>).outlineWidth;
+      delete (subtitle.style as Partial<typeof subtitle.style>).shadowColor;
+      delete (subtitle.style as Partial<typeof subtitle.style>).shadowOffset;
+    }
+
+    const migrated = migrateProjectFile(file).project.timeline.tracks.at(-1)?.clips[0];
+
+    expect(migrated).toMatchObject({
+      type: 'subtitle',
+      style: {
+        outlineColor: DEFAULT_SUBTITLE_STYLE.outlineColor,
+        outlineWidth: DEFAULT_SUBTITLE_STYLE.outlineWidth,
+        shadowColor: DEFAULT_SUBTITLE_STYLE.shadowColor,
+        shadowOffset: DEFAULT_SUBTITLE_STYLE.shadowOffset
+      }
+    });
   });
 
   it('serializes and migrates clip borders while old clips default to disabled borders', () => {

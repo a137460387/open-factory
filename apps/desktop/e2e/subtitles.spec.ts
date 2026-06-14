@@ -45,3 +45,30 @@ test('imports SRT subtitles and exports them as an ASS soft subtitle stream with
     .poll(() => page.evaluate(() => window.__E2E_ACTIONS__!.getWrittenFile!('C:/Exports/subtitles-soft.ass')))
     .toContain('[V4+ Styles]');
 });
+
+test('applies the cinema white subtitle style template', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+
+  await page.getByTestId('import-subtitles-button').click();
+  const subtitleClips = page.locator('[data-clip-type="subtitle"]');
+  await expect(subtitleClips).toHaveCount(2);
+  await subtitleClips.first().click();
+
+  await page.getByTestId('subtitle-color-input').fill('#ff0000');
+  await expect(page.getByTestId('subtitle-color-input')).toHaveValue('#ff0000');
+  await page.getByTestId('subtitle-style-template-cinema-white').click();
+
+  await expect(page.getByTestId('subtitle-color-input')).toHaveValue('#ffffff');
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const subtitle = window.__E2E_ACTIONS__!
+          .getTimelineSnapshot!()
+          .tracks.flatMap((track) => track.clips)
+          .find((clip) => clip.type === 'subtitle');
+        return subtitle?.style?.color;
+      })
+    )
+    .toBe('#ffffff');
+});

@@ -9,6 +9,7 @@ import {
   createTrack,
   type MediaFolder,
   DEFAULT_CLIP_SPEED,
+  DEFAULT_SUBTITLE_STYLE,
   DEFAULT_NESTED_SEQUENCE_NAME,
   getProjectSequences,
   normalizeMasterVolume,
@@ -87,6 +88,7 @@ import { calculatePiPTransform, createFullFrameTransform, type PiPLayoutPosition
 import { calculateSplitLayoutTransforms, type SplitLayoutDefinition, type SplitLayoutClipSource } from '../split-layout';
 import type { SubtitleDataImportMode } from '../subtitles/data-import';
 import { calculateSubtitleShiftUpdates, type SubtitleTimingUpdate } from '../subtitles/retiming';
+import { normalizeSubtitleStyleTemplateStyle } from '../subtitles/style-templates';
 import {
   addMediaFolderToProject,
   deleteMediaFolder,
@@ -2627,6 +2629,39 @@ export type ClipPatch = Partial<Omit<Clip, 'type' | 'id' | 'transform' | 'colorC
   style?: Partial<TextStyle> | Partial<SubtitleStyle>;
   pathText?: Partial<TextPathOptions>;
 };
+
+export class UpdateSubtitleStyleCommand implements Command {
+  readonly description = 'Update subtitle style';
+  private before?: Extract<Clip, { type: 'subtitle' }>;
+  private after?: Extract<Clip, { type: 'subtitle' }>;
+
+  constructor(private readonly accessor: TimelineAccessor, private readonly clipId: string, private readonly style: Partial<SubtitleStyle>) {}
+
+  execute(): void {
+    const timeline = this.accessor.getTimeline();
+    const clip = findClip(timeline, this.clipId);
+    if (clip.type !== 'subtitle') {
+      throw new Error(`Clip ${this.clipId} is not a subtitle clip`);
+    }
+    this.before ??= cloneCommandValue(clip);
+    const nextStyle = normalizeSubtitleStyleTemplateStyle({ ...DEFAULT_SUBTITLE_STYLE, ...clip.style, ...this.style });
+    this.after = {
+      ...clip,
+      style: nextStyle
+    };
+    this.accessor.setTimeline(replaceClip(timeline, this.after));
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setTimeline(replaceClip(this.accessor.getTimeline(), this.before));
+    }
+  }
+}
+
+function cloneCommandValue<T>(value: T): T {
+  return globalThis.structuredClone ? globalThis.structuredClone(value) : JSON.parse(JSON.stringify(value)) as T;
+}
 
 export type ReplaceMediaDurationMode = 'trim-to-original' | 'stretch-to-fit' | 'use-new-duration';
 export type ReplaceMediaCompatibilityWarning = 'media-type-mismatch' | 'missing-audio-for-audio-properties';

@@ -255,6 +255,10 @@ export type TextArtifactPathMode = 'filter' | 'argument' | 'shader-sequence' | '
 
 export interface ExportSubtitleStyle extends ExportTextStyle {
   yOffset: number;
+  outlineColor: string;
+  outlineWidth: number;
+  shadowColor: string;
+  shadowOffset: number;
 }
 
 export type ExportClipType = 'video' | 'audio' | 'image' | 'text' | 'subtitle' | 'nested-sequence' | 'adjustment';

@@ -553,6 +553,10 @@ export interface TextPathOptions {
 
 export interface SubtitleStyle extends TextStyle {
   yOffset: number;
+  outlineColor: string;
+  outlineWidth: number;
+  shadowColor: string;
+  shadowOffset: number;
 }
 
 export type CutProjectFile = ProjectFile;
@@ -758,7 +762,11 @@ export const DEFAULT_SUBTITLE_STYLE: SubtitleStyle = {
   ...DEFAULT_TEXT_STYLE,
   fontSize: 42,
   backgroundOpacity: 0.55,
-  yOffset: 72
+  yOffset: 72,
+  outlineColor: '#000000',
+  outlineWidth: 0,
+  shadowColor: '#000000',
+  shadowOffset: 0
 };
 
 export function createId(prefix = 'id'): string {

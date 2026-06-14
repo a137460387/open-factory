@@ -12,6 +12,8 @@ import {
   BatchSubtitleTimingCommand,
   BatchUpdateKeyframeCommand,
   ApplyTextAnimationCommand,
+  UpdateSubtitleStyleCommand,
+  BUILTIN_SUBTITLE_STYLE_TEMPLATES,
   CUSTOM_SHADER_EXAMPLES,
   AUDIO_SPECTRUM_POSITIONS,
   AUDIO_SPECTRUM_STYLES,
@@ -82,6 +84,7 @@ import {
   calculateSubtitleScaleUpdates,
   buildPrivacyMasksFromDetections,
   createTrack,
+  renderSubtitleStyleTemplatePreview,
   type AudioFadeCurve,
   type AudioChannelRoutingMode,
   type BatchKeyframeEditOperation,
@@ -108,7 +111,8 @@ import {
   type TextAnimationPreset,
   type ThreeWayColor,
   type VideoDeinterlaceMode,
-  type VideoDenoisePreset
+  type VideoDenoisePreset,
+  type SubtitleStyleTemplate
 } from '@open-factory/editor-core';
 import { ArrowDown, ArrowUp, GripVertical, Palette, Pipette, Plus, SlidersHorizontal, Trash2, X } from 'lucide-react';
 import { zhCN } from '../../i18n/strings';
@@ -127,6 +131,7 @@ import {
 } from '../../lib/tauri-bridge';
 import { buildClipColorMatchCurves } from '../../lib/colorMatch';
 import { acceptTranslationTOS, subtitleClipsToTranslationItems, translateSubtitleItems } from '../../lib/subtitleTranslation';
+import { deleteCustomSubtitleStyleTemplate, loadSubtitleStyleTemplates, saveCustomSubtitleStyleTemplate } from '../../lib/subtitleStyleTemplates';
 import { validateCustomShaderSource } from '../../lib/preview/custom-shader';
 import { showToast } from '../../lib/toast';
 import { useEditorStore, type SelectedKeyframeRef } from '../../store/editorStore';
@@ -324,6 +329,7 @@ function ClipInspector({
   const [colorMatchReferenceClipId, setColorMatchReferenceClipId] = useState<string>('');
   const [colorMatchBusy, setColorMatchBusy] = useState(false);
   const [subtitleTranslationProgress, setSubtitleTranslationProgress] = useState<{ completed: number; total: number }>();
+  const [subtitleStyleTemplates, setSubtitleStyleTemplates] = useState<SubtitleStyleTemplate[]>(BUILTIN_SUBTITLE_STYLE_TEMPLATES);
   const [textAnimationPreset, setTextAnimationPreset] = useState<TextAnimationPreset>('fade');
   const [textAnimationDuration, setTextAnimationDuration] = useState(0.5);
   const [textAnimationDirection, setTextAnimationDirection] = useState<TextAnimationDirection>('in');
@@ -410,6 +416,30 @@ function ClipInspector({
       setCurveProperty(keyframeProperties[0]);
     }
   }, [curveProperty, keyframeProperties]);
+  useEffect(() => {
+    let canceled = false;
+    if (clip.type !== 'subtitle') {
+      setSubtitleStyleTemplates([]);
+      return () => {
+        canceled = true;
+      };
+    }
+    loadSubtitleStyleTemplates()
+      .then((templates) => {
+        if (!canceled) {
+          setSubtitleStyleTemplates(templates);
+        }
+      })
+      .catch((error) => {
+        if (!canceled) {
+          setSubtitleStyleTemplates(BUILTIN_SUBTITLE_STYLE_TEMPLATES);
+          showToast({ kind: 'warning', title: zhCN.inspector.subtitleStyleTemplates.loadFailed, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+        }
+      });
+    return () => {
+      canceled = true;
+    };
+  }, [clip.type]);
   const colorCorrection = normalizeColorCorrection(clip.colorCorrection);
   const chromaKey = normalizeChromaKey(clip.chromaKey);
   const keyingMode: ChromaKeyMode | 'none' = chromaKey.enabled ? chromaKey.mode : 'none';
@@ -770,6 +800,42 @@ function ClipInspector({
       showToast({ kind: 'warning', title: zhCN.inspector.translation.failedTitle, message: error instanceof Error ? error.message : zhCN.inspector.translation.failedMessage });
     } finally {
       setSubtitleTranslationProgress(undefined);
+    }
+  };
+  const applySubtitleStyleTemplate = (template: SubtitleStyleTemplate) => {
+    if (clip.type !== 'subtitle') {
+      return;
+    }
+    try {
+      commandManager.execute(new UpdateSubtitleStyleCommand(timelineAccessor, clip.id, template.style));
+      showToast({ kind: 'success', title: zhCN.inspector.subtitleStyleTemplates.title, message: zhCN.inspector.subtitleStyleTemplates.applied(getSubtitleStyleTemplateLabel(template)) });
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+    }
+  };
+  const saveCurrentSubtitleStyleTemplate = async () => {
+    if (clip.type !== 'subtitle') {
+      return;
+    }
+    const name = window.prompt(zhCN.inspector.subtitleStyleTemplates.savePrompt, clip.name);
+    if (name === null) {
+      return;
+    }
+    try {
+      const templates = await saveCustomSubtitleStyleTemplate(name, clip.style);
+      setSubtitleStyleTemplates(templates);
+      showToast({ kind: 'success', title: zhCN.inspector.subtitleStyleTemplates.title, message: zhCN.inspector.subtitleStyleTemplates.saved(name.trim()) });
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.inspector.subtitleStyleTemplates.saveFailed, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+    }
+  };
+  const deleteSubtitleStyleTemplate = async (templateId: string) => {
+    try {
+      const templates = await deleteCustomSubtitleStyleTemplate(templateId);
+      setSubtitleStyleTemplates(templates);
+      showToast({ kind: 'info', title: zhCN.inspector.subtitleStyleTemplates.title, message: zhCN.inspector.subtitleStyleTemplates.deleted });
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.inspector.subtitleStyleTemplates.deleteFailed, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
     }
   };
 
@@ -1911,7 +1977,7 @@ function ClipInspector({
             <TextAreaField label={zhCN.inspector.fields.text} value={clip.text} onCommit={(text) => commit({ text })} testId="clip-text-input" />
             <NumberField label={zhCN.inspector.fields.fontSize} value={clip.style.fontSize} min={8} step={1} onCommit={(fontSize) => commit({ style: { fontSize } })} />
             <TextField label={zhCN.inspector.fields.fontFamily} value={clip.style.fontFamily} onCommit={(fontFamily) => commit({ style: { fontFamily } })} />
-            <ColorField label={zhCN.inspector.fields.color} value={clip.style.color} onCommit={(color) => commit({ style: { color } })} />
+            <ColorField label={zhCN.inspector.fields.color} value={clip.style.color} onCommit={(color) => commit({ style: { color } })} testId={clip.type === 'subtitle' ? 'subtitle-color-input' : undefined} />
             <ColorField label={zhCN.inspector.fields.background} value={clip.style.backgroundColor} onCommit={(backgroundColor) => commit({ style: { backgroundColor } })} />
             <RangeField
               label={zhCN.inspector.fields.backgroundOpacity}
@@ -1925,6 +1991,16 @@ function ClipInspector({
             />
             {clip.type === 'subtitle' ? (
               <>
+                <SubtitleStyleTemplatesPanel
+                  templates={subtitleStyleTemplates}
+                  onApply={applySubtitleStyleTemplate}
+                  onSave={saveCurrentSubtitleStyleTemplate}
+                  onDelete={deleteSubtitleStyleTemplate}
+                />
+                <ColorField label={zhCN.inspector.fields.outlineColor} value={clip.style.outlineColor} onCommit={(outlineColor) => commit({ style: { outlineColor } })} testId="subtitle-outline-color-input" />
+                <NumberField label={zhCN.inspector.fields.outlineWidth} value={clip.style.outlineWidth} min={0} max={12} step={1} onCommit={(outlineWidth) => commit({ style: { outlineWidth } })} testId="subtitle-outline-width-input" />
+                <ColorField label={zhCN.inspector.fields.shadowColor} value={clip.style.shadowColor} onCommit={(shadowColor) => commit({ style: { shadowColor } })} testId="subtitle-shadow-color-input" />
+                <NumberField label={zhCN.inspector.fields.shadowOffset} value={clip.style.shadowOffset} min={0} max={24} step={1} onCommit={(shadowOffset) => commit({ style: { shadowOffset } })} testId="subtitle-shadow-offset-input" />
                 <button
                   className="w-full rounded-md border border-line bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
                   type="button"
@@ -2086,6 +2162,77 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
       <div className="space-y-3">{children}</div>
     </section>
   );
+}
+
+function SubtitleStyleTemplatesPanel({
+  templates,
+  onApply,
+  onSave,
+  onDelete
+}: {
+  templates: SubtitleStyleTemplate[];
+  onApply(template: SubtitleStyleTemplate): void;
+  onSave(): void;
+  onDelete(templateId: string): void;
+}) {
+  const t = zhCN.inspector.subtitleStyleTemplates;
+  return (
+    <details className="rounded-md border border-line bg-white" data-testid="subtitle-style-template-section" open>
+      <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-slate-700">{t.title}</summary>
+      <div className="space-y-3 border-t border-line p-2">
+        <button
+          className="w-full rounded-md border border-line bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-panel"
+          type="button"
+          data-testid="subtitle-style-template-save-button"
+          onClick={onSave}
+        >
+          {t.saveCurrent}
+        </button>
+        <div className="grid grid-cols-2 gap-2">
+          {templates.map((template) => {
+            const label = getSubtitleStyleTemplateLabel(template);
+            return (
+              <div key={template.id} className="min-w-0 rounded-md border border-line bg-panel p-1.5">
+                <button
+                  className="block w-full overflow-hidden rounded border border-line bg-white text-left text-xs font-semibold text-slate-700 hover:border-brand"
+                  type="button"
+                  data-testid={`subtitle-style-template-${template.id}`}
+                  onClick={() => onApply(template)}
+                >
+                  <img className="block h-12 w-full object-cover" src={makeSvgDataUri(renderSubtitleStyleTemplatePreview(template))} alt={label} />
+                  <span className="flex min-h-8 items-center justify-between gap-1 px-1.5 py-1">
+                    <span className="min-w-0 truncate">{label}</span>
+                    {template.kind === 'custom' ? <span className="shrink-0 rounded-sm bg-white px-1 text-[10px] font-medium text-slate-500">{t.customBadge}</span> : null}
+                  </span>
+                </button>
+                {template.kind === 'custom' ? (
+                  <button
+                    className="mt-1 flex w-full items-center justify-center gap-1 rounded border border-line bg-white px-2 py-1 text-xs font-medium text-slate-600 hover:bg-rose-50 hover:text-rose-700"
+                    type="button"
+                    data-testid={`subtitle-style-template-delete-${template.id}`}
+                    aria-label={`${t.deleteCustom}: ${label}`}
+                    onClick={() => onDelete(template.id)}
+                  >
+                    <Trash2 size={12} />
+                    <span>{t.deleteCustom}</span>
+                  </button>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </details>
+  );
+}
+
+function getSubtitleStyleTemplateLabel(template: SubtitleStyleTemplate): string {
+  const builtins = zhCN.inspector.subtitleStyleTemplates.builtins;
+  return template.kind === 'builtin' ? builtins[template.id as keyof typeof builtins] ?? template.name : template.name;
+}
+
+function makeSvgDataUri(svg: string): string {
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
 function SubtitleRetimingPanel({

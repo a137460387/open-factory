@@ -76,6 +76,7 @@ const relinkedImage = 'C:/Relink/test-image.png';
 const appDataDir = 'C:/Users/E2E/AppData/Roaming/open-factory';
 const settingsPath = `${appDataDir}/settings.json`;
 const exportPresetsPath = `${appDataDir}/presets.json`;
+const subtitleStylesPath = `${appDataDir}/subtitle-styles.json`;
 const lutLibraryPath = `${appDataDir}/luts/Warm Contrast.cube`;
 const lutFavoritesPath = `${appDataDir}/lut-favorites.json`;
 const keybindingsPath = `${appDataDir}/keybindings.json`;
@@ -1413,6 +1414,9 @@ window.__E2E_ACTIONS__ = {
     files.delete(exportPresetsPath);
     exists.set(exportPresetsPath, false);
     mtimes.delete(exportPresetsPath);
+    files.delete(subtitleStylesPath);
+    exists.set(subtitleStylesPath, false);
+    mtimes.delete(subtitleStylesPath);
     files.delete(lutFavoritesPath);
     exists.set(lutFavoritesPath, false);
     mtimes.delete(lutFavoritesPath);

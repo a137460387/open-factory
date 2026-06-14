@@ -15,6 +15,10 @@ export interface SubtitleCueStyle {
   color?: string;
   backgroundColor?: string;
   backgroundOpacity?: number;
+  outlineColor?: string;
+  outlineWidth?: number;
+  shadowColor?: string;
+  shadowOffset?: number;
   bold?: boolean;
   italic?: boolean;
   yOffset?: number;
@@ -230,8 +234,11 @@ function buildAssStyle(name: string, style: SubtitleCueStyle | undefined): strin
     Math.max(1, Math.round(finiteNumber(style?.fontSize, 42))),
     cssColorToAss(style?.color ?? '#ffffff'),
     cssColorToAss(style?.color ?? '#ffffff'),
-    cssColorToAss('#000000'),
-    cssColorToAss(style?.backgroundColor ?? '#000000', finiteNumber(style?.backgroundOpacity, 0)),
+    cssColorToAss(style?.outlineColor ?? '#000000'),
+    cssColorToAss(
+      finiteNumber(style?.backgroundOpacity, 0) > 0 ? style?.backgroundColor ?? '#000000' : style?.shadowColor ?? style?.backgroundColor ?? '#000000',
+      finiteNumber(style?.backgroundOpacity, 0)
+    ),
     style?.bold ? '-1' : '0',
     style?.italic ? '-1' : '0',
     '0',
@@ -240,9 +247,9 @@ function buildAssStyle(name: string, style: SubtitleCueStyle | undefined): strin
     '100',
     '0',
     '0',
-    '3',
-    '0',
-    '0',
+    finiteNumber(style?.backgroundOpacity, 0) > 0 ? '3' : '1',
+    Math.max(0, Math.round(finiteNumber(style?.outlineWidth, 0))),
+    Math.max(0, Math.round(finiteNumber(style?.shadowOffset, 0))),
     '2',
     '24',
     '24',
@@ -258,13 +265,16 @@ function buildSsaStyle(name: string, style: SubtitleCueStyle | undefined): strin
     Math.max(1, Math.round(finiteNumber(style?.fontSize, 42))),
     cssColorToAss(style?.color ?? '#ffffff'),
     cssColorToAss(style?.color ?? '#ffffff'),
-    cssColorToAss(style?.color ?? '#ffffff'),
-    cssColorToAss(style?.backgroundColor ?? '#000000', finiteNumber(style?.backgroundOpacity, 0)),
+    cssColorToAss(style?.outlineColor ?? style?.color ?? '#ffffff'),
+    cssColorToAss(
+      finiteNumber(style?.backgroundOpacity, 0) > 0 ? style?.backgroundColor ?? '#000000' : style?.shadowColor ?? style?.backgroundColor ?? '#000000',
+      finiteNumber(style?.backgroundOpacity, 0)
+    ),
     style?.bold ? '-1' : '0',
     style?.italic ? '-1' : '0',
-    '3',
-    '0',
-    '0',
+    finiteNumber(style?.backgroundOpacity, 0) > 0 ? '3' : '1',
+    Math.max(0, Math.round(finiteNumber(style?.outlineWidth, 0))),
+    Math.max(0, Math.round(finiteNumber(style?.shadowOffset, 0))),
     '2',
     '24',
     '24',

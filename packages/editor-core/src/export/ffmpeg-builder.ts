@@ -291,7 +291,11 @@ function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project[
                     opacity: clip.transform.opacity,
                     bold: clip.style.bold,
                     italic: clip.style.italic,
-                    yOffset: clip.style.yOffset
+                    yOffset: clip.style.yOffset,
+                    outlineColor: clip.style.outlineColor,
+                    outlineWidth: clip.style.outlineWidth,
+                    shadowColor: clip.style.shadowColor,
+                    shadowOffset: clip.style.shadowOffset
                   }
                 : null,
             subtitleMode: clip.type === 'subtitle' ? (clip.subtitleMode ?? DEFAULT_SUBTITLE_MODE) : null
@@ -2566,10 +2570,11 @@ function buildSubtitleBurnInFilter(inputLabel: string, outputLabel: string, clip
   const forceStyle = [
     `FontSize=${Math.max(1, Math.round(style?.fontSize ?? 42))}`,
     `PrimaryColour=${cssColorToAssColor(style?.fontColor ?? '#ffffff')}`,
-    `BackColour=${cssColorToAssColor(style?.backgroundColor ?? '#000000', style?.backgroundOpacity ?? 0)}`,
-    'BorderStyle=3',
-    'Outline=0',
-    'Shadow=0',
+    `OutlineColour=${cssColorToAssColor(style?.outlineColor ?? '#000000')}`,
+    `BackColour=${cssColorToAssColor((style?.backgroundOpacity ?? 0) > 0 ? style?.backgroundColor ?? '#000000' : style?.shadowColor ?? style?.backgroundColor ?? '#000000', style?.backgroundOpacity ?? 0)}`,
+    `BorderStyle=${(style?.backgroundOpacity ?? 0) > 0 ? 3 : 1}`,
+    `Outline=${Math.max(0, Math.round(style?.outlineWidth ?? 0))}`,
+    `Shadow=${Math.max(0, Math.round(style?.shadowOffset ?? 0))}`,
     'Alignment=2',
     `MarginV=${Math.max(0, Math.round(style?.yOffset ?? 72))}`
   ].join(',');
@@ -2603,6 +2608,10 @@ function buildSubtitleCueInputs(clips: ExportClip[]): SubtitleCueInput[] {
           color: clip.subtitleStyle.fontColor,
           backgroundColor: clip.subtitleStyle.backgroundColor,
           backgroundOpacity: clip.subtitleStyle.backgroundOpacity,
+          outlineColor: clip.subtitleStyle.outlineColor,
+          outlineWidth: clip.subtitleStyle.outlineWidth,
+          shadowColor: clip.subtitleStyle.shadowColor,
+          shadowOffset: clip.subtitleStyle.shadowOffset,
           bold: clip.subtitleStyle.bold,
           italic: clip.subtitleStyle.italic,
           yOffset: clip.subtitleStyle.yOffset,

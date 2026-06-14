@@ -1302,6 +1302,10 @@ const zh = {
       color: '颜色',
       background: '背景',
       backgroundOpacity: '背景不透明度',
+      outlineColor: '描边颜色',
+      outlineWidth: '描边宽度',
+      shadowColor: '阴影颜色',
+      shadowOffset: '阴影偏移',
       bottomMargin: '底部边距',
       exportMode: '导出模式',
       bold: '加粗',
@@ -1326,6 +1330,29 @@ const zh = {
     },
     pathText: {
       addOffsetKeyframe: '添加偏移关键帧'
+    },
+    subtitleStyleTemplates: {
+      title: '样式模板',
+      saveCurrent: '另存为模板',
+      deleteCustom: '删除模板',
+      savePrompt: '输入自定义字幕模板名称',
+      loadFailed: '字幕样式模板读取失败',
+      saveFailed: '字幕样式模板保存失败',
+      deleteFailed: '字幕样式模板删除失败',
+      applied: (name: string) => `已应用字幕模板：${name}`,
+      saved: (name: string) => `已保存字幕模板：${name}`,
+      deleted: '已删除自定义字幕模板',
+      customBadge: '自定义',
+      builtins: {
+        'news-lower-third': '新闻下三分之一',
+        'cinema-white': '电影白字',
+        karaoke: '卡拉OK',
+        'variety-bold': '综艺综字',
+        documentary: '纪录片',
+        'social-bold': '社交媒体粗体',
+        'game-hud': '游戏HUD',
+        handwritten: '手写风'
+      }
     },
     inputColorSpaces: {
       rec709: 'Rec.709 / 标准',
@@ -3294,7 +3321,17 @@ const enOverrides = {
       pathTextRotateCharacters: 'Rotate Characters Along Path',
       fontSize: 'Font Size',
       fontFamily: 'Font Family',
-      color: 'Color'
+      color: 'Color',
+      background: 'Background',
+      backgroundOpacity: 'Background Opacity',
+      outlineColor: 'Outline Color',
+      outlineWidth: 'Outline Width',
+      shadowColor: 'Shadow Color',
+      shadowOffset: 'Shadow Offset',
+      bottomMargin: 'Bottom Margin',
+      exportMode: 'Export Mode',
+      bold: 'Bold',
+      italic: 'Italic'
     },
     textAnimation: {
       apply: 'Apply Animation',
@@ -3315,6 +3352,29 @@ const enOverrides = {
     },
     pathText: {
       addOffsetKeyframe: 'Add Offset Keyframe'
+    },
+    subtitleStyleTemplates: {
+      title: 'Style Templates',
+      saveCurrent: 'Save as Template',
+      deleteCustom: 'Delete Template',
+      savePrompt: 'Enter a custom subtitle template name',
+      loadFailed: 'Subtitle style templates load failed',
+      saveFailed: 'Subtitle style templates save failed',
+      deleteFailed: 'Subtitle style templates delete failed',
+      applied: (name: string) => `Applied subtitle template: ${name}`,
+      saved: (name: string) => `Saved subtitle template: ${name}`,
+      deleted: 'Deleted custom subtitle template',
+      customBadge: 'Custom',
+      builtins: {
+        'news-lower-third': 'News Lower Third',
+        'cinema-white': 'Cinema White',
+        karaoke: 'Karaoke',
+        'variety-bold': 'Variety Pop',
+        documentary: 'Documentary',
+        'social-bold': 'Social Bold',
+        'game-hud': 'Game HUD',
+        handwritten: 'Handwritten'
+      }
     },
     subtitleRetiming: {
       title: 'Retiming',
