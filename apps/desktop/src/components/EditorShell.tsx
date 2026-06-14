@@ -1533,11 +1533,12 @@ export function EditorShell() {
   }, [clearSelectedClipIds]);
 
   const rippleDeleteSelected = useCallback(() => {
-    const ids = useEditorStore.getState().selectedClipIds;
+    const state = useEditorStore.getState();
+    const ids = state.selectedClipIds;
     if (ids.length === 0) {
       return;
     }
-    commandManager.execute(new RippleDeleteCommand(timelineAccessor, ids));
+    commandManager.execute(new RippleDeleteCommand(timelineAccessor, ids, state.project.protectedRanges));
     clearSelectedClipIds();
   }, [clearSelectedClipIds]);
 

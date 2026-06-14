@@ -47,6 +47,26 @@ describe('project schema migration', () => {
     expect(migrateProjectFile(file).project.exportRanges).toEqual([]);
   });
 
+  it('serializes and migrates protected ranges while old project files default to none', () => {
+    const project = makeProject();
+    project.protectedRanges = [
+      { id: 'protect-b', label: '  Chorus  ', start: 9, end: 4 },
+      { id: 'protect-a', label: '', start: 1, end: 3 }
+    ];
+
+    const file = serializeProject(project);
+    const migrated = migrateProjectFile(file);
+
+    expect(file.project.protectedRanges).toEqual([
+      { id: 'protect-a', label: 'Protected Range', start: 1, end: 3 },
+      { id: 'protect-b', label: 'Chorus', start: 4, end: 9 }
+    ]);
+    expect(migrated.project.protectedRanges).toEqual(file.project.protectedRanges);
+
+    delete file.project.protectedRanges;
+    expect(migrateProjectFile(file).project.protectedRanges).toEqual([]);
+  });
+
   it('serializes and migrates clip groups while old project files default to none', () => {
     const project = makeProject();
     project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-a', start: 0, duration: 2 }), makeVideoClip({ id: 'clip-b', start: 3, duration: 2 })];

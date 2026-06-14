@@ -33,6 +33,7 @@ import {
   normalizeMotionTrack,
   normalizeProjectAnnotation,
   normalizeExportRanges,
+  normalizeProtectedRanges,
   normalizeProjectSettings,
   normalizeSequenceFrameRate,
   normalizeSlowMotionMode,
@@ -66,6 +67,7 @@ import {
   type Project,
   type ProjectAnnotation,
   type ExportRange,
+  type ProtectedRange,
   type ProjectSettings,
   type SubtitleMode,
   type SubtitleStyle,
@@ -112,6 +114,7 @@ import {
 import { cloneEffects, normalizeEffect, normalizeEffects, type Effect, type EffectParams, type EffectType } from '../effects';
 import { calculateBeatSnapUpdates, normalizeBeatMarkers, type BeatMarker, type BeatSnapUpdate } from '../beats';
 import { normalizeTimelineLabelColor, type TimelineLabelColor } from '../timeline-color-labels';
+import { applyProtectedRippleDeleteToTrack, canMoveClipWithProtectedRanges } from '../timeline-protection';
 import { createMulticamSequenceProject, setMulticamSwitch } from '../multicam';
 import { applyCmx3600EdlImport, buildCmx3600EdlImport, type Cmx3600EdlImportOptions, type Cmx3600EdlImportResult } from '../export/timeline-import';
 import {
@@ -565,7 +568,10 @@ function replaceClipWithSlices(timeline: Timeline, clipId: string, ranges: Local
   };
 }
 
-function rippleDeleteTrackClips(track: Track, selectedIds: Set<string>): Track {
+function rippleDeleteTrackClips(track: Track, selectedIds: Set<string>, protectedRanges: ProtectedRange[] = []): Track {
+  if (protectedRanges.length > 0) {
+    return applyProtectedRippleDeleteToTrack(track, selectedIds, protectedRanges);
+  }
   const removedIntervals = mergeTimelineIntervals(
     track.clips
       .filter((clip) => selectedIds.has(clip.id))
@@ -1046,6 +1052,40 @@ export class UpdateProjectExportRangesCommand implements Command {
       touchProject({
         ...project,
         exportRanges: this.before
+      })
+    );
+  }
+}
+
+export class UpdateProjectProtectedRangesCommand implements Command {
+  readonly description = 'Update protected ranges';
+  private before?: ProtectedRange[];
+  private after?: ProtectedRange[];
+
+  constructor(private readonly accessor: ProjectAccessor, private readonly ranges: ProtectedRange[]) {}
+
+  execute(): void {
+    const project = this.accessor.getProject();
+    const duration = getTimelineDuration(project.timeline);
+    this.before ??= normalizeProtectedRanges(project.protectedRanges, duration);
+    this.after ??= normalizeProtectedRanges(this.ranges, duration);
+    this.accessor.setProject(
+      touchProject({
+        ...project,
+        protectedRanges: this.after
+      })
+    );
+  }
+
+  undo(): void {
+    if (!this.before) {
+      return;
+    }
+    const project = this.accessor.getProject();
+    this.accessor.setProject(
+      touchProject({
+        ...project,
+        protectedRanges: this.before
       })
     );
   }
@@ -1652,11 +1692,19 @@ export class MoveClipCommand implements Command {
   private before?: Clip;
   private after?: Clip;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly clipId: string, private readonly newStart: number) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clipId: string,
+    private readonly newStart: number,
+    private readonly protectedRanges: ProtectedRange[] = []
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
     this.before ??= findClip(timeline, this.clipId);
+    if (!canMoveClipWithProtectedRanges(this.before, this.newStart, this.protectedRanges)) {
+      throw new Error('Clip move is blocked by a protected range');
+    }
     this.after = moveClip(this.before, this.newStart);
     const track = findTrack(timeline, this.after.trackId);
     if (detectOverlap(track, this.after, this.before.id)) {
@@ -1677,12 +1725,20 @@ export class MoveClipsCommand implements Command {
   private before?: Clip[];
   private after?: Clip[];
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly newStartsByClipId: Record<string, number>) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly newStartsByClipId: Record<string, number>,
+    private readonly protectedRanges: ProtectedRange[] = []
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
     const ids = Object.keys(this.newStartsByClipId);
     this.before ??= ids.map((id) => findClip(timeline, id));
+    const blocked = this.before.find((clip) => !canMoveClipWithProtectedRanges(clip, this.newStartsByClipId[clip.id] ?? clip.start, this.protectedRanges));
+    if (blocked) {
+      throw new Error('Clip move is blocked by a protected range');
+    }
     this.after = this.before.map((clip) => moveClip(clip, this.newStartsByClipId[clip.id] ?? clip.start));
     const movedById = new Map(this.after.map((clip) => [clip.id, clip]));
     const nextTimeline = {
@@ -1960,7 +2016,11 @@ export class RippleDeleteCommand implements Command {
   private before?: Timeline;
   private after?: Timeline;
 
-  constructor(private readonly accessor: TimelineAccessor, private readonly clipIds: string[]) {}
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clipIds: string[],
+    private readonly protectedRanges: ProtectedRange[] = []
+  ) {}
 
   execute(): void {
     const timeline = this.accessor.getTimeline();
@@ -1977,7 +2037,7 @@ export class RippleDeleteCommand implements Command {
       }
       this.after = {
         ...timeline,
-        tracks: timeline.tracks.map((track) => rippleDeleteTrackClips(track, ids)),
+        tracks: timeline.tracks.map((track) => rippleDeleteTrackClips(track, ids, this.protectedRanges)),
         transitions: (timeline.transitions ?? []).filter((transition) => !ids.has(transition.fromClipId) && !ids.has(transition.toClipId))
       };
     }

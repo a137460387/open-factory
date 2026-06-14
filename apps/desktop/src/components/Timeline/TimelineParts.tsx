@@ -142,6 +142,7 @@ export function Ruler({
   cachedRanges,
   diffRanges,
   exportRanges,
+  protectedRanges,
   onSeek,
   onContextMenu
 }: {
@@ -152,6 +153,7 @@ export function Ruler({
   cachedRanges: TimelineRenderRange[];
   diffRanges: TimelineDiffRange[];
   exportRanges: Array<{ id: string; start: number; end: number }>;
+  protectedRanges: Array<{ id: string; start: number; end: number }>;
   onSeek(time: number): void;
   onContextMenu(request: { time: number; x: number; y: number }): void;
 }) {
@@ -216,6 +218,15 @@ export function Ruler({
               style={{ left: range.start * zoom, width: Math.max(2, (range.end - range.start) * zoom) }}
               title={zhCN.timeline.exportRange}
               data-testid="timeline-export-range-highlight"
+            />
+          ))}
+          {protectedRanges.map((range) => (
+            <span
+              key={range.id}
+              className="absolute bottom-0 top-0 z-[2] bg-rose-500/30"
+              style={{ left: range.start * zoom, width: Math.max(2, (range.end - range.start) * zoom) }}
+              title={zhCN.timeline.protectedRange}
+              data-testid="timeline-ruler-protected-range"
             />
           ))}
           {ticks.map((tick) => (

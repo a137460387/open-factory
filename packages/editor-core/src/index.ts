@@ -12,6 +12,7 @@ export * from './media-filter';
 export * from './media-folders';
 export * from './keyframes';
 export * from './timeline-thumbnails';
+export * from './timeline-protection';
 export * from './render-cache';
 export * from './timeline-snapping';
 export * from './timeline-selection';

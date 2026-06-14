@@ -58,6 +58,7 @@ import {
   UpdateEffectCommand,
   UpdateProjectBeatMarkersCommand,
   UpdateProjectExportRangesCommand,
+  UpdateProjectProtectedRangesCommand,
   UpdateProjectAnnotationCommand,
   UpdateTimelineMarkerCommand,
   UpdateMaskCommand,
@@ -524,6 +525,49 @@ describe('timeline commands', () => {
     expect(project.exportRanges).toEqual([]);
     manager.redo();
     expect(project.exportRanges.map((range) => range.id)).toEqual(['range-a', 'range-late']);
+  });
+
+  it('updates protected ranges as one undoable project command', () => {
+    let project = makeProject();
+    const accessor = {
+      getProject: () => project,
+      setProject: (next: typeof project) => {
+        project = next;
+      }
+    };
+    const manager = new CommandManager();
+
+    manager.execute(
+      new UpdateProjectProtectedRangesCommand(accessor, [
+        { id: 'protect-late', label: '  Chorus lock  ', start: 99, end: 4 },
+        { id: 'protect-a', label: '', start: 1, end: 3 }
+      ])
+    );
+
+    expect(project.protectedRanges).toEqual([
+      { id: 'protect-a', label: 'Protected Range', start: 1, end: 3 },
+      { id: 'protect-late', label: 'Chorus lock', start: 4, end: 10 }
+    ]);
+
+    manager.undo();
+    expect(project.protectedRanges).toEqual([]);
+    manager.redo();
+    expect(project.protectedRanges.map((range) => range.id)).toEqual(['protect-a', 'protect-late']);
+  });
+
+  it('blocks protected range moves and ripple shifts', () => {
+    const accessor = makeAccessor(
+      makeTimeline([
+        makeVideoClip({ id: 'delete-me', start: 0, duration: 2 }),
+        makeVideoClip({ id: 'protected', start: 4, duration: 2 })
+      ])
+    );
+    const protectedRanges = [{ id: 'protect-a', label: 'Beat', start: 4, end: 6 }];
+
+    expect(() => new MoveClipCommand(accessor, 'protected', 7, protectedRanges).execute()).toThrow('protected range');
+
+    new RippleDeleteCommand(accessor, ['delete-me'], protectedRanges).execute();
+    expect(accessor.current().tracks[0].clips.map((clip) => [clip.id, clip.start])).toEqual([['protected', 4]]);
   });
 
   it('creates and ungroups clip groups with undo and redo', () => {

@@ -44,14 +44,17 @@ import {
   SlideClipCommand,
   SlipClipCommand,
   UpdateKeyframeCommand,
+  UpdateProjectProtectedRangesCommand,
   rectsIntersect,
   replaceClip,
   SplitClipCommand,
   SplitClipAtTimesCommand,
   TrimClipCommand,
   UpdateProjectBeatMarkersCommand,
+  canMoveClipWithProtectedRanges,
   createId,
   createBeatMarker,
+  createProtectedRange,
   createTrack,
   detectOverlap,
   getTimelineDuration,
@@ -67,6 +70,7 @@ import {
   moveClip,
   normalizeClipGroups,
   normalizeExportRanges,
+  normalizeProtectedRanges,
   parseTimecodeToSeconds,
   round,
   secondsToTimecode,
@@ -80,6 +84,7 @@ import {
   type KeyframeProperty,
   type MediaAsset,
   type ProjectAnnotation,
+  type ProtectedRange,
   type SilentRange,
   type SnapEdge,
   type SelectionRect,
@@ -115,6 +120,11 @@ function isCreditsTextFile(file: File): boolean {
 function getTimelineDropStart(event: React.DragEvent<HTMLDivElement>, scroll: HTMLDivElement | null, zoom: number): number | undefined {
   const rect = scroll?.getBoundingClientRect();
   return rect && scroll ? round(Math.max(0, (event.clientX - rect.left + scroll.scrollLeft - LABEL_WIDTH) / zoom)) : undefined;
+}
+
+function isEditableKeyboardTarget(target: EventTarget | null): boolean {
+  const element = target instanceof HTMLElement ? target : null;
+  return Boolean(element?.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(element?.tagName ?? ''));
 }
 
 export function Timeline({ thumbnailTrackVisible = true, onConvertMediaFrameRate }: { thumbnailTrackVisible?: boolean; onConvertMediaFrameRate?(assetId: string): void }) {
@@ -202,6 +212,7 @@ export function Timeline({ thumbnailTrackVisible = true, onConvertMediaFrameRate
     }
     return [{ id: 'current-in-out', start: Math.min(inPoint, outPoint), end: Math.max(inPoint, outPoint) }];
   }, [inPoint, outPoint, project.exportRanges, projectDuration]);
+  const protectedRanges = useMemo(() => normalizeProtectedRanges(project.protectedRanges, projectDuration), [project.protectedRanges, projectDuration]);
   const allClips = useMemo(() => project.timeline.tracks.flatMap((track) => track.clips), [project.timeline]);
   const clipGroups = useMemo(() => normalizeClipGroups(project.clipGroups, allClips.map((clip) => clip.id)), [allClips, project.clipGroups]);
   const clipGroupByClipId = useMemo(() => {
@@ -252,6 +263,11 @@ export function Timeline({ thumbnailTrackVisible = true, onConvertMediaFrameRate
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (event.shiftKey && event.key.toLowerCase() === 'p' && !isEditableKeyboardTarget(event.target)) {
+        event.preventDefault();
+        toggleProtectedRangeAtPlayhead();
+        return;
+      }
       if (event.key.toLowerCase() === 'r') {
         setRollingTrimActive(true);
       }
@@ -286,7 +302,7 @@ export function Timeline({ thumbnailTrackVisible = true, onConvertMediaFrameRate
       window.removeEventListener('keyup', onKeyUp);
       window.removeEventListener('blur', onBlur);
     };
-  }, []);
+  }, [playheadTime, project.protectedRanges, projectDuration, protectedRanges]);
 
   useEffect(() => {
     syncScrollViewport();
@@ -412,6 +428,34 @@ export function Timeline({ thumbnailTrackVisible = true, onConvertMediaFrameRate
     }
   }
 
+  function addProtectedRangeAt(time = playheadTime): void {
+    try {
+      const start = Math.max(0, time);
+      const duration = Math.max(1, Math.min(2, Math.max(projectDuration, start + 2) - start));
+      const nextRange = createProtectedRange(
+        {
+          id: createId('protected-range'),
+          start,
+          end: start + duration,
+          label: zhCN.timeline.protectedRangeLabel((project.protectedRanges?.length ?? 0) + 1)
+        },
+        Math.max(projectDuration, start + duration)
+      );
+      commandManager.execute(new UpdateProjectProtectedRangesCommand(projectAccessor, [...protectedRanges, nextRange]));
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage });
+    }
+  }
+
+  function toggleProtectedRangeAtPlayhead(): void {
+    const existing = protectedRanges.find((range) => playheadTime >= range.start - 0.000001 && playheadTime <= range.end + 0.000001);
+    if (existing) {
+      commandManager.execute(new UpdateProjectProtectedRangesCommand(projectAccessor, protectedRanges.filter((range) => range.id !== existing.id)));
+      return;
+    }
+    addProtectedRangeAt(playheadTime);
+  }
+
   function openRulerMenu(request: { time: number; x: number; y: number }): void {
     setGapMenu(undefined);
     setClipMenu(undefined);
@@ -430,6 +474,11 @@ export function Timeline({ thumbnailTrackVisible = true, onConvertMediaFrameRate
     }
     if (action === 'add-marker') {
       addTimelineMarker(rulerMenu.time);
+      setRulerMenu(undefined);
+      return;
+    }
+    if (action === 'add-protected-range') {
+      addProtectedRangeAt(rulerMenu.time);
       setRulerMenu(undefined);
       return;
     }
@@ -751,9 +800,13 @@ export function Timeline({ thumbnailTrackVisible = true, onConvertMediaFrameRate
         setSelectedKeyframes(keyframes);
       } else if (current.mode === 'move') {
         const starts = current.previewStartsByClipId ?? { [current.clip.id]: current.previewStart };
+        if (!canApplyProtectedMove(starts)) {
+          warnProtectedRangeBlocked();
+          return;
+        }
         const ids = Object.keys(starts);
         if (ids.length > 1) {
-          commandManager.execute(new MoveClipsCommand(timelineAccessor, starts));
+          commandManager.execute(new MoveClipsCommand(timelineAccessor, starts, protectedRanges));
         } else {
           const preview = moveClip(current.clip, current.previewStart);
           const track = project.timeline.tracks.find((item) => item.id === preview.trackId);
@@ -761,7 +814,7 @@ export function Timeline({ thumbnailTrackVisible = true, onConvertMediaFrameRate
             showToast({ kind: 'warning', title: zhCN.timeline.clipOverlapTitle, message: zhCN.timeline.clipOverlapMessage });
             return;
           }
-          commandManager.execute(new MoveClipCommand(timelineAccessor, current.clip.id, current.previewStart));
+          commandManager.execute(new MoveClipCommand(timelineAccessor, current.clip.id, current.previewStart, protectedRanges));
         }
       } else if (current.mode === 'rolling-trim') {
         if (!current.rightClip || Math.abs(current.previewRollingDelta ?? 0) <= 0.000001) {
@@ -846,6 +899,17 @@ export function Timeline({ thumbnailTrackVisible = true, onConvertMediaFrameRate
 
   function findClipById(clipId: string): Clip | undefined {
     return allClips.find((clip) => clip.id === clipId);
+  }
+
+  function canApplyProtectedMove(startsByClipId: Record<string, number>): boolean {
+    return Object.entries(startsByClipId).every(([clipId, start]) => {
+      const clip = findClipById(clipId);
+      return !clip || canMoveClipWithProtectedRanges(clip, start, protectedRanges);
+    });
+  }
+
+  function warnProtectedRangeBlocked(): void {
+    showToast({ kind: 'warning', title: zhCN.timeline.protectedRangeBlockedTitle, message: zhCN.timeline.protectedRangeBlockedMessage });
   }
 
   function getKeyframeTime(ref: SelectedKeyframeRef): number | undefined {
@@ -1496,6 +1560,7 @@ export function Timeline({ thumbnailTrackVisible = true, onConvertMediaFrameRate
             cachedRanges={renderCacheRanges}
             diffRanges={timelineCompareRanges}
             exportRanges={exportRangeHighlights}
+            protectedRanges={protectedRanges}
             onSeek={setPlayheadTime}
             onContextMenu={openRulerMenu}
           />
@@ -1542,6 +1607,16 @@ export function Timeline({ thumbnailTrackVisible = true, onConvertMediaFrameRate
                 clipGroupByClipId={clipGroupByClipId}
                 colorFilter={timelineColorFilter}
                 projectFrameRate={project.settings.fps}
+              />
+            ))}
+            {protectedRanges.map((range) => (
+              <div
+                key={range.id}
+                className="pointer-events-none absolute bottom-0 top-0 z-[8] bg-rose-500/20 outline outline-1 outline-rose-500/50"
+                style={{ left: LABEL_WIDTH + range.start * zoom, width: Math.max(2, (range.end - range.start) * zoom) }}
+                title={range.label}
+                data-testid="timeline-protected-range"
+                data-range-id={range.id}
               />
             ))}
             {annotationMode ? (
