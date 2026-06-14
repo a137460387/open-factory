@@ -5,6 +5,7 @@ import {
   AddMediaFolderCommand,
   AddProjectAnnotationCommand,
   ApplySplitLayoutCommand,
+  BatchImportSubtitleCommand,
   AddTrackCommand,
   AddTransitionCommand,
   CreateMulticamSequenceCommand,
@@ -34,6 +35,7 @@ import {
   createTrack,
   buildVideoStitchSequence,
   createMainSideSplitLayout,
+  detectSubtitleDataOverlaps,
   dirname,
   getSplitLayoutDefinition,
   getClipSpeed,
@@ -45,6 +47,7 @@ import {
   applyTimelineVersionDiffSelection,
   instantiateProjectTemplate,
   instantiateTitleTemplate,
+  mergeOverlappingSubtitleDataCues,
   replaceProjectActiveTimeline,
   type DuplicateMediaGroup,
   type DuplicateMediaIssue,
@@ -60,6 +63,8 @@ import {
   type ProjectTemplateId,
   type ProxyMissingIssue,
   type SplitLayoutDefinition,
+  type SubtitleDataImportMode,
+  type Timeline as CoreTimeline,
   type TitleTemplateId
 } from '@open-factory/editor-core';
 import { ChevronLeft, ChevronRight, GripHorizontal } from 'lucide-react';
@@ -90,7 +95,15 @@ import {
 import type { ExportPreset } from '../export/export-presets';
 import { pickMediaPaths, probeMediaPaths } from '../lib/media';
 import { scanDuplicateMediaGroups } from '../lib/duplicateMedia';
-import { buildSubtitleTrackFromSrt, isSubtitlePath, pickSubtitlePaths, readSubtitleText } from '../lib/subtitles';
+import {
+  buildSubtitleTrackFromDataCues,
+  buildSubtitleTrackFromSrt,
+  isSubtitlePath,
+  parseSubtitleDataFile,
+  pickSubtitleDataPaths,
+  pickSubtitlePaths,
+  readSubtitleText
+} from '../lib/subtitles';
 import { createProjectArchivePlan, writeProjectArchive, type ArchiveProgress } from '../lib/projectArchive';
 import { collectProjectArchivePreflight, saveOfflineMediaReport } from '../lib/mediaReport';
 import { saveProjectSnapshot } from '../lib/projectSnapshots';
@@ -900,6 +913,18 @@ export function EditorShell() {
       showToast({ kind: 'error', title: zhCN.editorToasts.subtitleImportFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.subtitleImportFailedMessage });
     }
   }, [project.timeline]);
+
+  const importDataSubtitles = useCallback(
+    async (mode: SubtitleDataImportMode) => {
+      try {
+        const paths = await pickSubtitleDataPaths();
+        await importSubtitleDataPaths(paths, mode);
+      } catch (error) {
+        showToast({ kind: 'error', title: zhCN.editorToasts.subtitleImportFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.subtitleImportFailedMessage });
+      }
+    },
+    [selectedClipIds]
+  );
 
   const addAssetToTimeline = useCallback(
     (assetId: string) => {
@@ -1844,6 +1869,7 @@ export function EditorShell() {
           onStartMacroRecording={startMacroRecording}
           onStopMacroRecording={() => void stopMacroRecording()}
           onImportSubtitles={() => void importSubtitles()}
+          onImportDataSubtitles={(mode) => void importDataSubtitles(mode)}
           onStartRecording={(source) => void startEditorRecording(source)}
           onStopRecording={() => void stopEditorRecording()}
           onExportVideo={() => setExportDialogOpen(true)}
@@ -2186,6 +2212,51 @@ export function EditorShell() {
       showToast({ kind: 'success', title: zhCN.editorToasts.subtitlesImported, message: zhCN.editorToasts.subtitlesImportedMessage(importedCount) });
     }
   }
+
+  async function importSubtitleDataPaths(paths: string[], mode: SubtitleDataImportMode): Promise<void> {
+    if (paths.length === 0) {
+      return;
+    }
+    let importedCount = 0;
+    for (const path of paths) {
+      const contents = await readSubtitleText(path);
+      let cues = parseSubtitleDataFile(path, contents);
+      const overlaps = detectSubtitleDataOverlaps(cues);
+      if (overlaps.length > 0) {
+        showToast({
+          kind: 'warning',
+          title: zhCN.editorToasts.subtitleDataImportOverlaps,
+          message: zhCN.editorToasts.subtitleDataImportOverlapsMessage(overlaps.length)
+        });
+        const shouldMerge = await bridgeConfirm(zhCN.editorToasts.subtitleDataImportMergePrompt(overlaps.length));
+        if (shouldMerge) {
+          cues = mergeOverlappingSubtitleDataCues(cues);
+        }
+      }
+      const timeline = useEditorStore.getState().project.timeline;
+      const targetTrackId = getSubtitleDataImportTargetTrackId(timeline, mode, selectedClipIds);
+      const track = buildSubtitleTrackFromDataCues(path, cues, timeline, mode === 'new-track' ? undefined : targetTrackId);
+      if (track.clips.length === 0) {
+        showToast({ kind: 'warning', title: zhCN.editorToasts.noSubtitlesFound, message: path });
+        continue;
+      }
+      commandManager.execute(new BatchImportSubtitleCommand(timelineAccessor, track, { mode, targetTrackId }));
+      importedCount += track.clips.length;
+      setSelectedClipIds(track.clips.map((clip) => clip.id));
+    }
+    if (importedCount > 0) {
+      showToast({ kind: 'success', title: zhCN.editorToasts.subtitlesImported, message: zhCN.editorToasts.subtitlesImportedMessage(importedCount) });
+    }
+  }
+}
+
+function getSubtitleDataImportTargetTrackId(timeline: CoreTimeline, mode: SubtitleDataImportMode, selectedClipIds: string[]): string | undefined {
+  if (mode === 'new-track') {
+    return undefined;
+  }
+  const selected = new Set(selectedClipIds);
+  const selectedSubtitleTrack = timeline.tracks.find((track) => track.type === 'subtitle' && track.clips.some((clip) => selected.has(clip.id)));
+  return selectedSubtitleTrack?.id ?? timeline.tracks.find((track) => track.type === 'subtitle')?.id;
 }
 
 function PanelLoading({ label, compact = false }: { label: string; compact?: boolean }) {

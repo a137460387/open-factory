@@ -63,3 +63,4 @@ export * from './scopes/color-scopes';
 export * from './subtitles/srt';
 export * from './subtitles/translation';
 export * from './subtitles/retiming';
+export * from './subtitles/data-import';

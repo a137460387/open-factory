@@ -7,8 +7,11 @@ import {
   createId,
   createTrack,
   getClipSpeed,
+  parseSubtitleDataImport,
   parseSrt,
   round,
+  type SubtitleDataCue,
+  type SubtitleDataImportFormat,
   type Timeline,
   type Track
 } from '@open-factory/editor-core';
@@ -17,9 +20,14 @@ import { fileNameFromPath } from './tauri';
 import { openFileDialog, readFile } from './tauri-bridge';
 
 export const SUBTITLE_EXTENSIONS = ['srt'];
+export const SUBTITLE_DATA_EXTENSIONS = ['csv', 'json'];
 
 export async function pickSubtitlePaths(): Promise<string[]> {
   return openFileDialog(true, [{ name: zhCN.fileDialogs.subtitles, extensions: SUBTITLE_EXTENSIONS }]);
+}
+
+export async function pickSubtitleDataPaths(): Promise<string[]> {
+  return openFileDialog(true, [{ name: zhCN.fileDialogs.subtitleData, extensions: SUBTITLE_DATA_EXTENSIONS }]);
 }
 
 export async function readSubtitleText(path: string): Promise<string> {
@@ -76,6 +84,45 @@ export function buildSubtitleTrackFromSrt(path: string, contents: string, timeli
   });
 }
 
+export function parseSubtitleDataFile(path: string, contents: string): SubtitleDataCue[] {
+  return parseSubtitleDataImport(contents, inferSubtitleDataFormat(path));
+}
+
+export function buildSubtitleTrackFromDataCues(path: string, cues: SubtitleDataCue[], timeline: Timeline, targetTrackId?: string): Track {
+  const trackId = targetTrackId ?? createId('track');
+  const name = fileNameFromPath(path).replace(/\.[^.]+$/, '') || zhCN.inspector.sections.subtitle;
+  const trackNumber = timeline.tracks.filter((track) => track.type === 'subtitle').length + 1;
+  return createTrack({
+    id: trackId,
+    type: 'subtitle',
+    name: `${name} ${trackNumber}`,
+    clips: cues.map((cue, index) => ({
+      id: createId('clip'),
+      type: 'subtitle' as const,
+      name: `${zhCN.inspector.sections.subtitle} ${index + 1}`,
+      trackId,
+      start: round(cue.start),
+      duration: round(cue.end - cue.start),
+      trimStart: 0,
+      trimEnd: 0,
+      speed: DEFAULT_CLIP_SPEED,
+      colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+      transform: { ...DEFAULT_TRANSFORM },
+      text: cue.text,
+      style: { ...DEFAULT_SUBTITLE_STYLE, ...cue.style },
+      subtitleMode: DEFAULT_SUBTITLE_MODE
+    }))
+  });
+}
+
 export function isSubtitlePath(path: string): boolean {
   return SUBTITLE_EXTENSIONS.some((extension) => path.toLowerCase().endsWith(`.${extension}`));
+}
+
+export function isSubtitleDataPath(path: string): boolean {
+  return SUBTITLE_DATA_EXTENSIONS.some((extension) => path.toLowerCase().endsWith(`.${extension}`));
+}
+
+function inferSubtitleDataFormat(path: string): SubtitleDataImportFormat {
+  return path.toLowerCase().endsWith('.json') ? 'json' : 'csv';
 }

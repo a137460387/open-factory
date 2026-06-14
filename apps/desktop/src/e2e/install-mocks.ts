@@ -64,6 +64,7 @@ const pngFrame001 = 'C:/Media/frame001.png';
 const pngFrame002 = 'C:/Media/frame002.png';
 const pngFrame003 = 'C:/Media/frame003.png';
 const tinySrt = 'C:/Media/tiny-subtitles.srt';
+const tinySubtitleCsv = 'C:/Media/tiny-subtitles.csv';
 const silencePatternAudio = 'C:/Media/silence-pattern.wav';
 const whisperExecutable = 'C:/Tools/whisper.exe';
 const whisperModel = 'C:/Models/base.bin';
@@ -93,6 +94,7 @@ files.set(
   tinySrt,
   ['1', '00:00:00,500 --> 00:00:02,000', 'Hello subtitle', '', '2', '00:00:02,500 --> 00:00:04,000', 'Second subtitle', ''].join('\n')
 );
+files.set(tinySubtitleCsv, ['start_time,end_time,text', '0.25,1.25,CSV subtitle A', '00:00:01.500,00:00:02.500,CSV subtitle B', '3,4,CSV subtitle C'].join('\n'));
 files.set(lutLibraryPath, makeWarmContrastCube());
 files.set(
   pluginPath,
@@ -187,6 +189,9 @@ const mocks: TauriMocks = {
     }
     if (firstFilter?.includes('srt')) {
       return [tinySrt];
+    }
+    if (firstFilter?.includes('csv') || firstFilter?.includes('json')) {
+      return [tinySubtitleCsv];
     }
     if (firstFilter?.includes('mp4') && !firstFilter.includes('wav') && !firstFilter.includes('png')) {
       return [tinyVideo, fourKHevcVideo];

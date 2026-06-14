@@ -1,5 +1,13 @@
 import { Archive, Camera, Captions, ChevronDown, Download, FileDown, FilePlus2, FolderOpen, History, ImageDown, LayoutGrid, Mic2, Monitor, PanelsTopLeft, Pause, PictureInPicture2, Play, Redo2, RotateCcw, Save, Scissors, Settings, Square, Trash2, Undo2, WandSparkles, XCircle } from 'lucide-react';
-import { BUILT_IN_SPLIT_LAYOUTS, SPLIT_LAYOUT_PRESET_IDS, timelineHasExportableVideo, type BeatSensitivity, type PiPLayoutPosition, type SplitLayoutDefinition } from '@open-factory/editor-core';
+import {
+  BUILT_IN_SPLIT_LAYOUTS,
+  SPLIT_LAYOUT_PRESET_IDS,
+  timelineHasExportableVideo,
+  type BeatSensitivity,
+  type PiPLayoutPosition,
+  type SplitLayoutDefinition,
+  type SubtitleDataImportMode
+} from '@open-factory/editor-core';
 import { clsx } from 'clsx';
 import { useState } from 'react';
 import { formatBackupDisplayTime } from '../backup/projectBackup';
@@ -22,6 +30,7 @@ interface ToolbarProps {
   onOpenSnapshotHistory(): void;
   onOpenSnapshotCompare(): void;
   onImportMedia(): void;
+  onImportDataSubtitles(mode: SubtitleDataImportMode): void;
   onBatchTranscode(): void;
   onOpenVideoStitchWizard(): void;
   onDetectBeats(): void;
@@ -85,11 +94,13 @@ export function Toolbar(props: ToolbarProps) {
   const t = zhCN.toolbar;
   const edit = zhCN.editMenu;
   const [fileMenuOpen, setFileMenuOpen] = useState(false);
+  const [importMenuOpen, setImportMenuOpen] = useState(false);
   const [editMenuOpen, setEditMenuOpen] = useState(false);
   const [viewMenuOpen, setViewMenuOpen] = useState(false);
   const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
   const [recordMenuOpen, setRecordMenuOpen] = useState(false);
   const [splitLayoutOpen, setSplitLayoutOpen] = useState(false);
+  const [subtitleDataImportMode, setSubtitleDataImportMode] = useState<SubtitleDataImportMode>('append');
   const [customSplitRatio, setCustomSplitRatio] = useState(0.67);
   const project = useEditorStore((state) => state.project);
   const isPlaying = useEditorStore((state) => state.isPlaying);
@@ -134,6 +145,7 @@ export function Toolbar(props: ToolbarProps) {
           type="button"
           data-testid="toolbar-file-menu-button"
           onClick={() => {
+            setImportMenuOpen(false);
             setEditMenuOpen(false);
             setViewMenuOpen(false);
             setToolsMenuOpen(false);
@@ -212,6 +224,7 @@ export function Toolbar(props: ToolbarProps) {
           data-testid="toolbar-edit-menu-button"
           onClick={() => {
             setFileMenuOpen(false);
+            setImportMenuOpen(false);
             setViewMenuOpen(false);
             setToolsMenuOpen(false);
             setSplitLayoutOpen(false);
@@ -442,6 +455,80 @@ export function Toolbar(props: ToolbarProps) {
       <ToolButton title={t.saveProject} onClick={props.onSaveProject} icon={<Save size={17} />} testId="toolbar-save-project-button" />
       <ToolButton title={t.archiveProject} onClick={props.onArchiveProject} icon={<Archive size={17} />} testId="toolbar-archive-project-button" />
       <div className="mx-1 h-7 w-px bg-line" />
+      <div className="relative">
+        <button
+          className="inline-flex h-9 items-center gap-1 rounded-md border border-transparent px-3 text-sm font-medium text-slate-700 hover:border-line hover:bg-panel hover:text-ink"
+          type="button"
+          data-testid="toolbar-import-menu-button"
+          onClick={() => {
+            setFileMenuOpen(false);
+            setEditMenuOpen(false);
+            setViewMenuOpen(false);
+            setToolsMenuOpen(false);
+            setRecordMenuOpen(false);
+            setSplitLayoutOpen(false);
+            setImportMenuOpen((open) => !open);
+          }}
+        >
+          {t.importMenu}
+          <ChevronDown size={14} />
+        </button>
+        {importMenuOpen ? (
+          <div className="absolute left-0 top-10 z-20 w-64 rounded-md border border-line bg-white p-2 shadow-soft" data-testid="toolbar-import-menu">
+            <button
+              className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-import-media-menu-item"
+              onClick={() => {
+                setImportMenuOpen(false);
+                props.onImportMedia();
+              }}
+            >
+              <FileDown size={14} />
+              <span>{t.importMedia}</span>
+            </button>
+            <button
+              className="flex w-full items-center gap-2 rounded px-2 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-import-subtitles-menu-item"
+              onClick={() => {
+                setImportMenuOpen(false);
+                props.onImportSubtitles();
+              }}
+            >
+              <Captions size={14} />
+              <span>{t.importSubtitles}</span>
+            </button>
+            <div className="my-2 h-px bg-line" />
+            <label className="mb-1 block px-2 text-[11px] font-medium uppercase tracking-wide text-slate-500" htmlFor="subtitle-data-import-mode-select">
+              {t.subtitleDataImportMode}
+            </label>
+            <select
+              id="subtitle-data-import-mode-select"
+              className="mb-2 h-8 w-full rounded border border-line bg-white px-2 text-xs text-slate-700"
+              value={subtitleDataImportMode}
+              data-testid="subtitle-data-import-mode-select"
+              onChange={(event) => setSubtitleDataImportMode(event.target.value as SubtitleDataImportMode)}
+            >
+              <option value="append">{t.subtitleDataImportModes.append}</option>
+              <option value="new-track">{t.subtitleDataImportModes['new-track']}</option>
+              <option value="replace-current-track">{t.subtitleDataImportModes['replace-current-track']}</option>
+            </select>
+            <button
+              className="flex w-full items-center gap-2 rounded bg-brand px-2 py-2 text-left text-sm font-medium text-white"
+              type="button"
+              data-testid="import-data-subtitles-button"
+              onClick={() => {
+                setImportMenuOpen(false);
+                props.onImportDataSubtitles(subtitleDataImportMode);
+              }}
+            >
+              <Captions size={14} />
+              <span>{t.importDataSubtitles}</span>
+            </button>
+          </div>
+        ) : null}
+      </div>
       <ToolButton title={t.importMedia} onClick={props.onImportMedia} icon={<FileDown size={17} />} testId="toolbar-import-media-button" />
       <ToolButton title={t.importSubtitles} onClick={props.onImportSubtitles} icon={<Captions size={17} />} testId="import-subtitles-button" />
       <div className="relative">

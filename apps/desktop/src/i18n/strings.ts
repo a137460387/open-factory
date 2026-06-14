@@ -67,8 +67,16 @@ const zh = {
     startMacroRecording: '开始宏录制',
     stopMacroRecording: '停止宏录制',
     macroRecordingSteps: (count: number) => `${count} 步`,
+    importMenu: '导入',
     importMedia: '导入媒体',
     importSubtitles: '导入字幕',
+    importDataSubtitles: '从数据导入字幕',
+    subtitleDataImportMode: '字幕导入方式',
+    subtitleDataImportModes: {
+      append: '追加到现有字幕轨',
+      'new-track': '新建字幕轨',
+      'replace-current-track': '替换当前轨'
+    },
     record: '录制',
     stopRecording: '停止',
     recordScreen: '屏幕录制',
@@ -1787,6 +1795,9 @@ const zh = {
     importFailedMessage: '无法导入媒体。',
     subtitleImportFailed: '字幕导入失败',
     subtitleImportFailedMessage: '无法导入字幕。',
+    subtitleDataImportOverlaps: '字幕时间码重叠',
+    subtitleDataImportOverlapsMessage: (count: number) => `检测到 ${count} 处重叠。可选择自动合并，或保留原始时间码。`,
+    subtitleDataImportMergePrompt: (count: number) => `检测到 ${count} 处重叠字幕，是否自动合并？取消将保留原始时间码。`,
     noCompatibleTrack: '没有兼容轨道',
     noCompatibleTrackMessage: '请先添加匹配轨道，再放置该素材。',
     addClipFailed: '无法添加片段',
@@ -2036,6 +2047,7 @@ const zh = {
     videoMedia: '视频媒体',
     htmlReport: 'HTML 报告',
     subtitles: 'SubRip 字幕',
+    subtitleData: 'CSV/JSON 字幕数据',
     whisperModel: 'Whisper 模型'
   },
   errors: {
@@ -2190,8 +2202,16 @@ const enOverrides = {
     startMacroRecording: 'Start Macro Recording',
     stopMacroRecording: 'Stop Macro Recording',
     macroRecordingSteps: (count: number) => `${count} steps`,
+    importMenu: 'Import',
     importMedia: 'Import Media',
     importSubtitles: 'Import Subtitles',
+    importDataSubtitles: 'Import Subtitles from Data',
+    subtitleDataImportMode: 'Subtitle Import Mode',
+    subtitleDataImportModes: {
+      append: 'Append to existing subtitle track',
+      'new-track': 'Create new subtitle track',
+      'replace-current-track': 'Replace current track'
+    },
     record: 'Record',
     stopRecording: 'Stop',
     recordScreen: 'Screen Recording',
@@ -3617,6 +3637,9 @@ const enOverrides = {
     importFailedMessage: 'Unable to import media.',
     subtitleImportFailed: 'Subtitle import failed',
     subtitleImportFailedMessage: 'Unable to import subtitles.',
+    subtitleDataImportOverlaps: 'Subtitle timecodes overlap',
+    subtitleDataImportOverlapsMessage: (count: number) => `${count} overlap(s) detected. You can merge them automatically or keep the source timecodes.`,
+    subtitleDataImportMergePrompt: (count: number) => `${count} overlapping subtitle cue(s) detected. Merge them automatically? Cancel keeps the source timecodes.`,
     noCompatibleTrack: 'No compatible track',
     noCompatibleTrackMessage: 'Add a matching track before placing this asset.',
     addClipFailed: 'Unable to add clip',
@@ -3844,6 +3867,7 @@ const enOverrides = {
     videoMedia: 'Video Media',
     htmlReport: 'HTML Report',
     subtitles: 'SubRip Subtitles',
+    subtitleData: 'CSV/JSON Subtitle Data',
     whisperModel: 'Whisper Model'
   },
   errors: {

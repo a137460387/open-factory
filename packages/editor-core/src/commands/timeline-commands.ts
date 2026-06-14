@@ -85,6 +85,7 @@ import {
 } from '../clip-groups';
 import { calculatePiPTransform, createFullFrameTransform, type PiPLayoutPosition } from '../pip-layout';
 import { calculateSplitLayoutTransforms, type SplitLayoutDefinition, type SplitLayoutClipSource } from '../split-layout';
+import type { SubtitleDataImportMode } from '../subtitles/data-import';
 import { calculateSubtitleShiftUpdates, type SubtitleTimingUpdate } from '../subtitles/retiming';
 import {
   addMediaFolderToProject,
@@ -1547,6 +1548,74 @@ export class AddSubtitleClipCommand implements Command {
 
   undo(): void {
     this.accessor.setTimeline(removeClip(this.accessor.getTimeline(), this.clip.id).timeline);
+  }
+}
+
+function resolveSubtitleImportTarget(timeline: Timeline, targetTrackId: string | undefined): Track | undefined {
+  const track = targetTrackId ? timeline.tracks.find((item) => item.id === targetTrackId) : timeline.tracks.find((item) => item.type === 'subtitle');
+  if (track && track.type !== 'subtitle') {
+    throw new Error('Subtitle import target must be a subtitle track');
+  }
+  return track;
+}
+
+export interface BatchImportSubtitleCommandOptions {
+  mode: SubtitleDataImportMode;
+  targetTrackId?: string;
+}
+
+export class BatchImportSubtitleCommand implements Command {
+  readonly description = 'Import subtitle clips';
+  private before?: Timeline;
+  private after?: Timeline;
+
+  constructor(private readonly accessor: TimelineAccessor, private readonly track: Track, private readonly options: BatchImportSubtitleCommandOptions) {}
+
+  execute(): void {
+    const timeline = this.accessor.getTimeline();
+    this.before ??= timeline;
+    if (!this.after) {
+      if (this.track.type !== 'subtitle') {
+        throw new Error('Batch subtitle import requires a subtitle track');
+      }
+      const clips = this.track.clips.map((clip) => {
+        if (clip.type !== 'subtitle') {
+          throw new Error('Batch subtitle import can only contain subtitle clips');
+        }
+        return clip;
+      });
+      if (clips.length === 0) {
+        throw new Error('No subtitle clips to import');
+      }
+      const targetTrack = resolveSubtitleImportTarget(timeline, this.options.targetTrackId);
+      const shouldUseExistingTrack = this.options.mode !== 'new-track' && targetTrack;
+      const targetTrackId = shouldUseExistingTrack ? targetTrack.id : this.track.id;
+      const importedClips = clips.map((clip) => ({ ...clip, trackId: targetTrackId }));
+      if (!shouldUseExistingTrack) {
+        this.after = { ...timeline, tracks: [...timeline.tracks, createTrack({ ...this.track, clips: importedClips })] };
+      } else if (this.options.mode === 'replace-current-track') {
+        this.after = {
+          ...timeline,
+          tracks: timeline.tracks.map((track) =>
+            track.id === targetTrack.id ? createTrack({ ...track, name: this.track.name, clips: importedClips }) : track
+          )
+        };
+      } else {
+        this.after = {
+          ...timeline,
+          tracks: timeline.tracks.map((track) =>
+            track.id === targetTrack.id ? createTrack({ ...track, clips: [...track.clips, ...importedClips] }) : track
+          )
+        };
+      }
+    }
+    this.accessor.setTimeline(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setTimeline(this.before);
+    }
   }
 }
 
