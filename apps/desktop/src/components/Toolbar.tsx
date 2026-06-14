@@ -74,8 +74,10 @@ interface ToolbarProps {
   historyPanelOpen: boolean;
   storyboardOpen: boolean;
   safeFrameGuides: boolean;
+  thumbnailTrackVisible: boolean;
   onToggleStoryboard(): void;
   onToggleSafeFrameGuides(): void;
+  onToggleThumbnailTrack(): void;
   onToggleHistoryPanel(): void;
   onUndo(): void;
   onRedo(): void;
@@ -301,6 +303,18 @@ export function Toolbar(props: ToolbarProps) {
             >
               <span>{t.safeFrameGuides}</span>
               <span className="text-xs text-slate-500">{props.safeFrameGuides ? t.safeFrameGuidesVisible : t.safeFrameGuidesHidden}</span>
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-view-thumbnail-track-menu-item"
+              aria-pressed={props.thumbnailTrackVisible}
+              onClick={() => {
+                props.onToggleThumbnailTrack();
+              }}
+            >
+              <span>{t.thumbnailTrack}</span>
+              <span className="text-xs text-slate-500">{props.thumbnailTrackVisible ? t.safeFrameGuidesVisible : t.safeFrameGuidesHidden}</span>
             </button>
           </div>
         ) : null}

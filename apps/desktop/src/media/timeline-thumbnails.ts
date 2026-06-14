@@ -42,12 +42,35 @@ export function getTimelineThumbnailPlaceholders(asset: MediaAsset, clip: VideoC
   });
 }
 
+export function getTimelineThumbnailPlaceholder(asset: MediaAsset, timestamp: number): TimelineThumbnailFrame {
+  const mediaPath = getPreviewMediaPath(asset);
+  const key = buildTimelineThumbnailCacheKey(mediaPath, timestamp);
+  return { key, timestamp, dataUrl: thumbnailCache.get(key) };
+}
+
 export async function getTimelineThumbnails(asset: MediaAsset, clip: VideoClip, pixelWidth: number): Promise<TimelineThumbnailFrame[]> {
   const frames = getTimelineThumbnailPlaceholders(asset, clip, pixelWidth);
   if (frames.every((frame) => thumbnailCache.has(frame.key))) {
     return frames.map((frame) => ({ ...frame, dataUrl: thumbnailCache.get(frame.key) }));
   }
   return runBackgroundMediaTask(() => getTimelineThumbnailsUnthrottled(asset, clip, pixelWidth));
+}
+
+export async function getTimelineThumbnailFrame(asset: MediaAsset, timestamp: number): Promise<TimelineThumbnailFrame> {
+  const frame = getTimelineThumbnailPlaceholder(asset, timestamp);
+  if (thumbnailCache.has(frame.key)) {
+    return { ...frame, dataUrl: thumbnailCache.get(frame.key) };
+  }
+  return runBackgroundMediaTask(async () => {
+    const mediaPath = getPreviewMediaPath(asset);
+    const pending = pendingFrames.get(frame.key) ?? generateTimelineThumbnail(mediaPath, timestamp).finally(() => pendingFrames.delete(frame.key));
+    pendingFrames.set(frame.key, pending);
+    const dataUrl = await pending.catch(() => undefined);
+    if (dataUrl) {
+      thumbnailCache.set(frame.key, dataUrl);
+    }
+    return { ...frame, dataUrl: thumbnailCache.get(frame.key) };
+  });
 }
 
 async function getTimelineThumbnailsUnthrottled(asset: MediaAsset, clip: VideoClip, pixelWidth: number): Promise<TimelineThumbnailFrame[]> {

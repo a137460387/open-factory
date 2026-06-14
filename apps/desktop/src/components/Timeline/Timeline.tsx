@@ -27,6 +27,7 @@ import {
   calculateSpeedCurveDisplayDuration,
   calculateSpeedCurveSourceDuration,
   calculateAnchoredScrollLeft,
+  buildTimelineThumbnailTrackSamples,
   buildTimelineRulerTicks,
   clampTimelineZoom,
   findTimelineSnapTarget,
@@ -68,6 +69,7 @@ import {
   round,
   secondsToTimecode,
   snapTime,
+  sortTimelineThumbnailSamplesByPriority,
   TIMELINE_LABEL_COLORS,
   type Clip,
   type ClipGroup,
@@ -101,10 +103,10 @@ import { commandManager, projectAccessor, timelineAccessor } from '../../store/c
 import { useEditorStore, type SelectedKeyframeRef } from '../../store/editorStore';
 import { useRenderCacheStore } from '../../store/renderCacheStore';
 import { useWhisperSettingsStore } from '../../store/whisperSettingsStore';
-import { LABEL_WIDTH, Ruler, TrackRow, type ClipMenuRequest, type DragState, type GapMenuRequest } from './TimelineParts';
+import { LABEL_WIDTH, Ruler, ThumbnailTrack, TrackRow, type ClipMenuRequest, type DragState, type GapMenuRequest } from './TimelineParts';
 import { buildRulerContextMenuItems, type RulerContextMenuAction } from './timeline-ruler-menu';
 
-export function Timeline() {
+export function Timeline({ thumbnailTrackVisible = true }: { thumbnailTrackVisible?: boolean }) {
   const project = useEditorStore((state) => state.project);
   const selectedClipId = useEditorStore((state) => state.selectedClipId);
   const selectedClipIds = useEditorStore((state) => state.selectedClipIds);
@@ -212,6 +214,16 @@ export function Timeline() {
       }),
     [scrollViewport.scrollLeft, scrollViewport.viewportWidth, zoom]
   );
+  const thumbnailTrackSamples = useMemo(() => {
+    const samples = buildTimelineThumbnailTrackSamples(project.timeline, {
+      zoom,
+      trackWidth: width,
+      duration: timelineDuration,
+      visibleStart,
+      visibleEnd
+    });
+    return sortTimelineThumbnailSamplesByPriority(samples, playheadTime);
+  }, [playheadTime, project.timeline, timelineDuration, visibleEnd, visibleStart, width, zoom]);
   const activeSequence = project.sequences.find((sequence) => sequence.id === project.activeSequenceId);
   const isMainSequence = project.activeSequenceId === 'sequence-main';
 
@@ -1436,6 +1448,7 @@ export function Timeline() {
             onSeek={setPlayheadTime}
             onContextMenu={openRulerMenu}
           />
+          {thumbnailTrackVisible ? <ThumbnailTrack samples={thumbnailTrackSamples} media={project.media} zoom={zoom} width={width} /> : null}
           <div className="relative">
             {project.timeline.tracks.map((track) => (
               <TrackRow

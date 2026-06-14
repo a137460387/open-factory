@@ -35,6 +35,7 @@ export interface ExportBackgroundSettings {
 
 export interface ViewSettings {
   safeFrameGuides: boolean;
+  thumbnailTrackVisible: boolean;
 }
 
 export type ExportRuleTrigger = 'export-success' | 'export-failure' | 'queue-complete';
@@ -450,7 +451,8 @@ export function normalizeViewSettings(settings: Partial<ViewSettings> | undefine
     return undefined;
   }
   return {
-    safeFrameGuides: settings.safeFrameGuides === true
+    safeFrameGuides: settings.safeFrameGuides === true,
+    thumbnailTrackVisible: settings.thumbnailTrackVisible !== false
   };
 }
 
@@ -503,7 +505,8 @@ function defaultExportBackgroundSettings(): ExportBackgroundSettings {
 
 function defaultViewSettings(): ViewSettings {
   return {
-    safeFrameGuides: false
+    safeFrameGuides: false,
+    thumbnailTrackVisible: true
   };
 }
 

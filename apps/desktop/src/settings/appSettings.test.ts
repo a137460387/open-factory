@@ -243,23 +243,23 @@ describe('app settings storage', () => {
   });
 
   it('persists safe frame guide visibility in view settings', async () => {
-    await expect(readViewSettings()).resolves.toEqual({ safeFrameGuides: false });
+    await expect(readViewSettings()).resolves.toEqual({ safeFrameGuides: false, thumbnailTrackVisible: true });
 
     await saveLanguageSetting('en');
-    const view = await saveViewSettings({ safeFrameGuides: true });
+    const view = await saveViewSettings({ safeFrameGuides: true, thumbnailTrackVisible: false });
 
-    expect(view).toEqual({ safeFrameGuides: true });
-    expect(await readViewSettings()).toEqual({ safeFrameGuides: true });
+    expect(view).toEqual({ safeFrameGuides: true, thumbnailTrackVisible: false });
+    expect(await readViewSettings()).toEqual({ safeFrameGuides: true, thumbnailTrackVisible: false });
     expect(await readAppSettings()).toEqual({
       language: 'en',
-      view: { safeFrameGuides: true }
+      view: { safeFrameGuides: true, thumbnailTrackVisible: false }
     });
 
-    await saveViewSettings({ safeFrameGuides: false });
-    expect(await readViewSettings()).toEqual({ safeFrameGuides: false });
+    await saveViewSettings({ safeFrameGuides: false, thumbnailTrackVisible: true });
+    expect(await readViewSettings()).toEqual({ safeFrameGuides: false, thumbnailTrackVisible: true });
     expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({
       language: 'en',
-      view: { safeFrameGuides: false }
+      view: { safeFrameGuides: false, thumbnailTrackVisible: true }
     });
   });
 

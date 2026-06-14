@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { buildTimelineThumbnailCacheKey, calculateTimelineThumbnailTimestamps, planTimelineThumbnailCache } from '../src';
+import {
+  DEFAULT_CLIP_SPEED,
+  DEFAULT_COLOR_CORRECTION,
+  DEFAULT_TRANSFORM,
+  buildTimelineThumbnailCacheKey,
+  buildTimelineThumbnailTrackSamples,
+  calculateTimelineThumbnailTimestamps,
+  calculateTimelineThumbnailTrackInterval,
+  calculateTimelineThumbnailTrackTimestamps,
+  createTrack,
+  planTimelineThumbnailCache,
+  sortTimelineThumbnailSamplesByPriority,
+  type Timeline,
+  type VideoClip
+} from '../src';
 
 describe('timeline thumbnail sampling', () => {
   it('samples one thumbnail per 80px tile at the current zoom width', () => {
@@ -50,4 +64,58 @@ describe('timeline thumbnail sampling', () => {
       ]
     });
   });
+
+  it('samples the thumbnail track at readable zoom-adaptive intervals', () => {
+    expect(calculateTimelineThumbnailTrackInterval({ zoom: 6, trackWidth: 600 })).toBe(10);
+    expect(calculateTimelineThumbnailTrackInterval({ zoom: 96, trackWidth: 600 })).toBe(1);
+    expect(calculateTimelineThumbnailTrackTimestamps({ zoom: 10, trackWidth: 200, duration: 20 })).toEqual([0, 10, 20]);
+    expect(calculateTimelineThumbnailTrackTimestamps({ zoom: 100, trackWidth: 500, duration: 5 })).toEqual([0, 1, 2, 3, 4, 5]);
+  });
+
+  it('normalizes empty thumbnail track sampling inputs and visible windows', () => {
+    expect(calculateTimelineThumbnailTrackTimestamps({ zoom: Number.NaN, trackWidth: 0, duration: 10 })).toEqual([]);
+    expect(calculateTimelineThumbnailTrackTimestamps({ zoom: 20, trackWidth: 400, duration: 20, visibleStart: 8, visibleEnd: 11 })).toEqual([5, 10, 11]);
+  });
+
+  it('maps thumbnail track timestamps to the main video track source media', () => {
+    const clip = makeVideoClip('clip-a', 'media-a', 10, { trimStart: 2, speed: 2 });
+    const timeline: Timeline = {
+      tracks: [
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
+        createTrack({ id: 'track-video', type: 'video', name: 'Video 1', color: 'green', clips: [clip] })
+      ],
+      transitions: [],
+      markers: []
+    };
+
+    expect(buildTimelineThumbnailTrackSamples(timeline, { zoom: 100, trackWidth: 300, duration: 3 }).slice(0, 3)).toEqual([
+      expect.objectContaining({ time: 0, clipId: 'clip-a', mediaId: 'media-a', sourceTimestamp: 2, trackColor: 'green' }),
+      expect.objectContaining({ time: 1, clipId: 'clip-a', mediaId: 'media-a', sourceTimestamp: 4, trackColor: 'green' }),
+      expect.objectContaining({ time: 2, clipId: 'clip-a', mediaId: 'media-a', sourceTimestamp: 6, trackColor: 'green' })
+    ]);
+  });
+
+  it('prioritizes thumbnail work closest to the current playhead', () => {
+    const samples = [0, 10, 20, 30].map((time) => ({ id: String(time), time, intervalSeconds: 10 }));
+
+    expect(sortTimelineThumbnailSamplesByPriority(samples, 18).map((sample) => sample.time)).toEqual([20, 10, 30, 0]);
+  });
 });
+
+function makeVideoClip(id: string, mediaId: string, duration: number, options: { trimStart?: number; speed?: number } = {}): VideoClip {
+  return {
+    id,
+    type: 'video',
+    name: id,
+    trackId: 'track-video',
+    mediaId,
+    start: 0,
+    duration,
+    trimStart: options.trimStart ?? 0,
+    trimEnd: 0,
+    speed: options.speed ?? DEFAULT_CLIP_SPEED,
+    colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+    transform: { ...DEFAULT_TRANSFORM },
+    volume: 1
+  };
+}

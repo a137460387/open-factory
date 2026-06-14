@@ -247,6 +247,7 @@ export function EditorShell() {
   const [sharePackageBusy, setSharePackageBusy] = useState(false);
   const [layoutSettings, setLayoutSettings] = useState<EditorLayoutSettings>(DEFAULT_EDITOR_LAYOUT_SETTINGS);
   const [safeFrameGuides, setSafeFrameGuides] = useState(false);
+  const [thumbnailTrackVisible, setThumbnailTrackVisible] = useState(true);
   const [pipLayoutPosition, setPiPLayoutPosition] = useState<PiPLayoutPosition>('bottom-right');
   const [customSplitLayouts, setCustomSplitLayouts] = useState<SplitLayoutDefinition[]>([]);
   const [viewportSize, setViewportSize] = useState(() => readViewportSize());
@@ -341,6 +342,16 @@ export function EditorShell() {
     setSafeFrameGuides((current) => {
       const next = !current;
       void saveViewSettings({ safeFrameGuides: next }).catch((error) => {
+        console.warn('Unable to save view settings', error);
+      });
+      return next;
+    });
+  }, []);
+
+  const toggleThumbnailTrackVisible = useCallback(() => {
+    setThumbnailTrackVisible((current) => {
+      const next = !current;
+      void saveViewSettings({ thumbnailTrackVisible: next }).catch((error) => {
         console.warn('Unable to save view settings', error);
       });
       return next;
@@ -449,6 +460,7 @@ export function EditorShell() {
       .then((view) => {
         if (!canceled) {
           setSafeFrameGuides(view.safeFrameGuides);
+          setThumbnailTrackVisible(view.thumbnailTrackVisible);
         }
       })
       .catch((error) => {
@@ -1945,8 +1957,10 @@ export function EditorShell() {
           historyPanelOpen={historyPanelOpen}
           storyboardOpen={storyboardOpen}
           safeFrameGuides={safeFrameGuides}
+          thumbnailTrackVisible={thumbnailTrackVisible}
           onToggleStoryboard={() => setStoryboardOpen((open) => !open)}
           onToggleSafeFrameGuides={toggleSafeFrameGuides}
+          onToggleThumbnailTrack={toggleThumbnailTrackVisible}
           onToggleHistoryPanel={() => {
             setSmartRoughCutOpen(false);
             setHistoryPanelOpen((open) => !open);
@@ -2085,7 +2099,7 @@ export function EditorShell() {
         </div>
         <section className="min-h-0 overflow-hidden" data-testid="timeline-panel" style={{ height: timelineHeightPx }}>
           <ErrorBoundary name={storyboardOpen ? zhCN.storyboard.title : zhCN.panels.timeline}>
-            {storyboardOpen ? <StoryboardView /> : <Timeline />}
+            {storyboardOpen ? <StoryboardView /> : <Timeline thumbnailTrackVisible={thumbnailTrackVisible} />}
           </ErrorBoundary>
         </section>
         <Suspense fallback={null}>
