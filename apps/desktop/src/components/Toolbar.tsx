@@ -1,4 +1,4 @@
-import { Archive, Camera, Captions, ChevronDown, Download, FileDown, FilePlus2, FolderOpen, History, ImageDown, LayoutGrid, Mic2, Monitor, PanelsTopLeft, Pause, PictureInPicture2, Play, Redo2, RotateCcw, Save, Scissors, Settings, Square, Trash2, Undo2, WandSparkles, XCircle } from 'lucide-react';
+import { Archive, Camera, Captions, ChevronDown, Download, FileDown, FilePlus2, FolderOpen, GitCompareArrows, History, ImageDown, LayoutGrid, Mic2, Monitor, PanelsTopLeft, Pause, PictureInPicture2, Play, Redo2, RotateCcw, Save, Scissors, Settings, Square, Trash2, Undo2, WandSparkles, XCircle } from 'lucide-react';
 import {
   BUILT_IN_SPLIT_LAYOUTS,
   SPLIT_LAYOUT_PRESET_IDS,
@@ -36,6 +36,7 @@ interface ToolbarProps {
   onImportDataSubtitles(mode: SubtitleDataImportMode): void;
   onBatchTranscode(): void;
   onOpenVideoStitchWizard(): void;
+  onOpenSyncCompare(): void;
   onDetectBeats(): void;
   onSnapToBeats(): void;
   onSplitToBeats(): void;
@@ -60,6 +61,7 @@ interface ToolbarProps {
   canCreateMulticamSequence: boolean;
   canApplyPiPLayout: boolean;
   canApplySplitLayout: boolean;
+  canOpenSyncCompare: boolean;
   pipLayoutPosition: PiPLayoutPosition;
   onPiPLayoutPositionChange(position: PiPLayoutPosition): void;
   customSplitLayouts: SplitLayoutDefinition[];
@@ -388,6 +390,19 @@ export function Toolbar(props: ToolbarProps) {
               }}
             >
               <span>{t.videoStitchWizard}</span>
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+              type="button"
+              disabled={!props.canOpenSyncCompare}
+              data-testid="toolbar-tools-sync-compare-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onOpenSyncCompare();
+              }}
+            >
+              <span>{t.syncCompare}</span>
+              <GitCompareArrows size={14} />
             </button>
             <label className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-xs text-slate-600" data-testid="toolbar-tools-beat-sensitivity-row">
               <span>{t.beatSensitivity}</span>

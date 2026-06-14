@@ -21,6 +21,7 @@ export * from './timeline-zoom';
 export * from './timeline-ruler';
 export * from './timeline-bookmarks';
 export * from './timeline-virtualization';
+export * from './sync-compare';
 export * from './vfr';
 export * from './beats';
 export * from './storyboard';

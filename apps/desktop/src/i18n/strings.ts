@@ -55,6 +55,7 @@ const zh = {
     createSharePackage: '创建分享包',
     batchTranscode: '批量转码',
     videoStitchWizard: '视频拼接向导',
+    syncCompare: '同步对比',
     detectBeats: '节拍检测',
     snapToBeats: '对齐到节拍',
     splitToBeats: '按节拍分割',
@@ -167,6 +168,25 @@ const zh = {
     generateFailed: '拼接生成失败',
     summary: (count: number) => `${count} 段视频将按顺序拼接`,
     assetDuration: (duration: number) => `${duration.toFixed(1)}s`
+  },
+  syncCompare: {
+    title: '同步对比',
+    subtitle: '两个选中 clip 使用同一播放头对齐预览。',
+    alignMode: '对齐',
+    alignModes: {
+      start: '按起始时间',
+      in: '按入点',
+      manual: '手动偏移'
+    },
+    manualOffset: '手动偏移',
+    offsetValue: (seconds: number) => `${seconds.toFixed(2)}s`,
+    differenceOverlay: '差值叠加',
+    pauseSide: '暂停此侧',
+    resumeSide: '恢复此侧',
+    renderFailedTitle: '同步对比渲染失败',
+    renderFailedMessage: '无法渲染同步对比帧。',
+    unavailableTitle: '无法打开同步对比',
+    unavailableMessage: '请选择两个视频、图片或嵌套序列 clip。'
   },
   editMenu: {
     saveSnapshot: '保存快照',
@@ -2414,6 +2434,7 @@ const enOverrides = {
     createSharePackage: 'Create Share Package',
     batchTranscode: 'Batch Transcode',
     videoStitchWizard: 'Video Stitch Wizard',
+    syncCompare: 'Sync Compare',
     detectBeats: 'Detect Beats',
     snapToBeats: 'Snap to Beats',
     splitToBeats: 'Split to Beats',
@@ -2526,6 +2547,25 @@ const enOverrides = {
     generateFailed: 'Stitch generation failed',
     summary: (count: number) => `${count} videos will be stitched in order`,
     assetDuration: (duration: number) => `${duration.toFixed(1)}s`
+  },
+  syncCompare: {
+    title: 'Sync Compare',
+    subtitle: 'Preview two selected clips against the same playhead.',
+    alignMode: 'Align',
+    alignModes: {
+      start: 'By Start Time',
+      in: 'By In Point',
+      manual: 'Manual Offset'
+    },
+    manualOffset: 'Manual Offset',
+    offsetValue: (seconds: number) => `${seconds.toFixed(2)}s`,
+    differenceOverlay: 'Difference Overlay',
+    pauseSide: 'Pause Side',
+    resumeSide: 'Resume Side',
+    renderFailedTitle: 'Sync compare render failed',
+    renderFailedMessage: 'Unable to render the sync compare frame.',
+    unavailableTitle: 'Cannot open sync compare',
+    unavailableMessage: 'Select two video, image, or nested sequence clips.'
   },
   editMenu: {
     saveSnapshot: 'Save Snapshot',

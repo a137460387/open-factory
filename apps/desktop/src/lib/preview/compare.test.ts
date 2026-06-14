@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildPreviewCompareDividerStyle, buildPreviewCompareOverlayStyle, calculatePreviewCompareSplitRatio, clampPreviewCompareSplitRatio } from './compare';
+import { buildPreviewCompareDividerStyle, buildPreviewCompareOverlayStyle, calculatePreviewCompareSplitRatio, clampPreviewCompareSplitRatio, drawPreviewDifferenceFrame } from './compare';
 
 describe('preview compare split calculations', () => {
   const bounds = { left: 100, top: 50, width: 800, height: 400 };
@@ -26,5 +26,27 @@ describe('preview compare split calculations', () => {
     expect(buildPreviewCompareOverlayStyle('top-bottom', 0.25).clipPath).toBe('inset(25% 0 0 0)');
     expect(buildPreviewCompareDividerStyle('left-right', 0.5)).toMatchObject({ left: '50%', width: '2px', height: '100%' });
     expect(buildPreviewCompareDividerStyle('top-bottom', 0.5)).toMatchObject({ top: '50%', width: '100%', height: '2px' });
+  });
+
+  it('draws amplified absolute frame differences', () => {
+    let output: Uint8ClampedArray | undefined;
+    const canvas = {
+      width: 1,
+      height: 1,
+      getContext: () => ({
+        createImageData: (width: number, height: number) => ({ data: new Uint8ClampedArray(width * height * 4) }),
+        putImageData: (image: ImageData) => {
+          output = image.data;
+        }
+      })
+    } as unknown as HTMLCanvasElement;
+
+    drawPreviewDifferenceFrame(
+      canvas,
+      { width: 1, height: 1, origin: 'top-left', data: new Uint8ClampedArray([20, 120, 250, 255]) },
+      { width: 1, height: 1, origin: 'top-left', data: new Uint8ClampedArray([10, 80, 100, 255]) }
+    );
+
+    expect(Array.from(output ?? [])).toEqual([20, 80, 255, 255]);
   });
 });
