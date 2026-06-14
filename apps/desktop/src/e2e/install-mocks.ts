@@ -1379,6 +1379,13 @@ window.__E2E_ACTIONS__ = {
     mtimes.set(path, Date.now());
     persistFiles();
   },
+  setMockMtime: (path: unknown, mtimeMsValue: unknown) => {
+    if (typeof path !== 'string' || typeof mtimeMsValue !== 'number' || !Number.isFinite(mtimeMsValue)) {
+      throw new Error('Invalid setMockMtime E2E action input.');
+    }
+    mtimes.set(path, mtimeMsValue);
+    persistFiles();
+  },
   clearE2eFiles: () => {
     canceledQualityEvaluationTaskIds.clear();
     localStorage.removeItem(PERSISTED_FILES_KEY);

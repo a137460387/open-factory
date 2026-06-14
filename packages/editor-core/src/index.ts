@@ -55,6 +55,7 @@ export * from './cache/cache-types';
 export * from './cache/cache-key';
 export * from './proxy/proxy-types';
 export * from './proxy/proxy-planner';
+export * from './proxy/proxy-management';
 export * from './audio/waveform';
 export * from './audio/vu-meter';
 export * from './audio/silence-detection';

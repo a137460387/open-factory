@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Download, FilePlus, FolderOpen, Save, Star, Trash2, X } from 'lucide-react';
 import {
+  buildProxyInventory,
+  planProxyCleanup,
+  summarizeProxyInventory,
   SUPPORTED_PROJECT_FPS,
   UpdateClipCommand,
   UpdateProjectSettingsCommand,
@@ -10,6 +13,7 @@ import {
   supportsDropFrameTimecode,
   type Clip,
   type Project,
+  type ProxyInventoryItem,
   type TimecodeFormat,
   type Timeline,
   type VfrHandlingStrategy
@@ -19,7 +23,7 @@ import { getLanguage, normalizeLanguage, zhCN, type Language } from '../i18n/str
 import { parseAutomationRulesJson, serializeAutomationRulesJson } from '../automation/automation-rules';
 import { pickDemucsExecutablePath } from '../lib/demucs';
 import { loadLutLibrary, toggleLutFavorite, type LutLibraryItem } from '../lib/lutLibrary';
-import { openDirectoryDialog, openFileDialog, readWebdavPassword, writeWebdavPassword } from '../lib/tauri-bridge';
+import { fsExists, getFileStat, openDirectoryDialog, openFileDialog, readWebdavPassword, writeWebdavPassword } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
 import {
   detectMacroShortcutConflicts,
@@ -98,6 +102,8 @@ interface SettingsDialogProps {
   onShortcutBindingsChange(bindings: TimelineShortcutBindings): void;
   onMacrosChange(macros: ClipMacro[]): void;
   onExecuteMacro(macro: ClipMacro): void;
+  onDeleteProxies(assetIds: string[]): Promise<void> | void;
+  onRegenerateProxies(assetIds: string[]): Promise<void> | void;
   onClose(): void;
 }
 
@@ -107,7 +113,19 @@ const EXPORT_RULE_COPY_SUCCESS_ID = 'copy-success';
 const EXPORT_RULE_FAILURE_NOTIFICATION_ID = 'failure-notification';
 const EXPORT_RULE_QUEUE_TONE_ID = 'queue-tone';
 
-export function SettingsDialog({ open, project, selectedClip, shortcutBindings, macros, onShortcutBindingsChange, onMacrosChange, onExecuteMacro, onClose }: SettingsDialogProps) {
+export function SettingsDialog({
+  open,
+  project,
+  selectedClip,
+  shortcutBindings,
+  macros,
+  onShortcutBindingsChange,
+  onMacrosChange,
+  onExecuteMacro,
+  onDeleteProxies,
+  onRegenerateProxies,
+  onClose
+}: SettingsDialogProps) {
   const t = zhCN.settings;
   const setPreviewTimeline = useEditorStore((state) => state.setPreviewTimeline);
   const [tab, setTab] = useState<SettingsTab>('general');
@@ -1259,10 +1277,13 @@ export function SettingsDialog({ open, project, selectedClip, shortcutBindings, 
             ) : null}
             {tab === 'proxy' ? (
               <ProxySettingsPanel
+                project={project}
                 resolutionPreset={proxyResolutionPreset}
                 triggerShortEdge={proxyTriggerShortEdge}
                 onResolutionPresetChange={setProxyResolutionPreset}
                 onTriggerShortEdgeChange={setProxyTriggerShortEdge}
+                onDeleteProxies={onDeleteProxies}
+                onRegenerateProxies={onRegenerateProxies}
                 onReset={resetProxySettings}
               />
             ) : null}
@@ -1751,19 +1772,95 @@ function BackupSettingsPanel({
 }
 
 function ProxySettingsPanel({
+  project,
   resolutionPreset,
   triggerShortEdge,
   onResolutionPresetChange,
   onTriggerShortEdgeChange,
+  onDeleteProxies,
+  onRegenerateProxies,
   onReset
 }: {
+  project: Project;
   resolutionPreset: ProxyResolutionPreset;
   triggerShortEdge: ProxyTriggerThreshold;
   onResolutionPresetChange(preset: ProxyResolutionPreset): void;
   onTriggerShortEdgeChange(threshold: ProxyTriggerThreshold): void;
+  onDeleteProxies(assetIds: string[]): Promise<void> | void;
+  onRegenerateProxies(assetIds: string[]): Promise<void> | void;
   onReset(): void;
 }) {
   const t = zhCN.settings.proxy;
+  const [items, setItems] = useState<ProxyInventoryItem[]>([]);
+  const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(new Set());
+  const [refreshing, setRefreshing] = useState(false);
+  const stats = summarizeProxyInventory(items);
+
+  const refreshInventory = async () => {
+    setRefreshing(true);
+    try {
+      const proxyStats: Record<string, { size: number; mtimeMs: number } | undefined> = {};
+      const sourceStats: Record<string, { size: number; mtimeMs: number } | undefined> = {};
+      const existingProxyPaths = new Set<string>();
+      const proxiedAssets = project.media.filter((asset) => asset.proxyPath);
+      for (const asset of proxiedAssets) {
+        try {
+          sourceStats[asset.path] = await getFileStat(asset.path);
+        } catch {
+          sourceStats[asset.path] = undefined;
+        }
+        if (!asset.proxyPath) {
+          continue;
+        }
+        const exists = await fsExists(asset.proxyPath).catch(() => false);
+        if (exists) {
+          existingProxyPaths.add(asset.proxyPath);
+          try {
+            proxyStats[asset.proxyPath] = await getFileStat(asset.proxyPath);
+          } catch {
+            proxyStats[asset.proxyPath] = undefined;
+          }
+        }
+      }
+      const nextItems = buildProxyInventory(project.media, { sourceStats, proxyStats, existingProxyPaths, timeline: project.timeline });
+      setItems(nextItems);
+      setSelectedAssetIds((current) => new Set(nextItems.filter((item) => current.has(item.assetId)).map((item) => item.assetId)));
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    void refreshInventory();
+  }, [project.media, project.timeline]);
+
+  const selectedItems = items.filter((item) => selectedAssetIds.has(item.assetId));
+  const allSelected = items.length > 0 && selectedAssetIds.size === items.length;
+  const toggleSelection = (assetId: string) => {
+    setSelectedAssetIds((current) => {
+      const next = new Set(current);
+      if (next.has(assetId)) {
+        next.delete(assetId);
+      } else {
+        next.add(assetId);
+      }
+      return next;
+    });
+  };
+  const deleteSelected = async (assetIds: string[]) => {
+    if (assetIds.length === 0) {
+      return;
+    }
+    await onDeleteProxies(assetIds);
+    setSelectedAssetIds(new Set());
+    await refreshInventory();
+  };
+  const clearUnused = async () => {
+    const cleanup = planProxyCleanup(items);
+    const deleteAssetIds = items.filter((item) => cleanup.deletePaths.includes(item.proxyPath)).map((item) => item.assetId);
+    await deleteSelected(deleteAssetIds);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
@@ -1807,8 +1904,133 @@ function ProxySettingsPanel({
           </select>
         </label>
       </div>
+      <div className="rounded-md border border-line bg-white p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h4 className="text-sm font-semibold text-ink">{t.managementTitle}</h4>
+            <div className="mt-1 text-xs text-slate-500" data-testid="proxy-storage-stats">
+              {t.storageStats(stats.fileCount, formatBytes(stats.totalBytes))}
+              {stats.expiredCount > 0 ? ` · ${t.expiredCount(stats.expiredCount)}` : ''}
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button className="rounded-md border border-line px-2 py-1 text-xs font-medium text-slate-700 hover:bg-panel" type="button" data-testid="proxy-verify-button" disabled={refreshing} onClick={() => void refreshInventory()}>
+              {refreshing ? t.verifying : t.verify}
+            </button>
+            <button
+              className="rounded-md border border-line px-2 py-1 text-xs font-medium text-slate-700 hover:bg-panel disabled:opacity-40"
+              type="button"
+              data-testid="proxy-regenerate-selected-button"
+              disabled={selectedItems.length === 0}
+              onClick={() => void onRegenerateProxies(selectedItems.map((item) => item.assetId))}
+            >
+              {t.regenerateSelected}
+            </button>
+            <button
+              className="rounded-md border border-line px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-40"
+              type="button"
+              data-testid="proxy-delete-selected-button"
+              disabled={selectedItems.length === 0}
+              onClick={() => void deleteSelected(selectedItems.map((item) => item.assetId))}
+            >
+              {t.deleteSelected}
+            </button>
+            <button className="rounded-md border border-line px-2 py-1 text-xs font-medium text-slate-700 hover:bg-panel" type="button" data-testid="proxy-clear-unused-button" onClick={() => void clearUnused()}>
+              {t.clearUnused}
+            </button>
+          </div>
+        </div>
+        <label className="mt-3 flex items-center gap-2 text-xs text-slate-600">
+          <input
+            type="checkbox"
+            checked={allSelected}
+            data-testid="proxy-select-all-checkbox"
+            onChange={(event) => setSelectedAssetIds(event.target.checked ? new Set(items.map((item) => item.assetId)) : new Set())}
+          />
+          {t.selectAll}
+        </label>
+        <div className="mt-3 overflow-x-auto">
+          <table className="min-w-full text-left text-xs">
+            <thead className="text-slate-500">
+              <tr>
+                <th className="w-8 py-1" />
+                <th className="py-1 pr-3">{t.sourceFile}</th>
+                <th className="py-1 pr-3">{t.proxyFile}</th>
+                <th className="py-1 pr-3">{t.size}</th>
+                <th className="py-1 pr-3">{t.generatedAt}</th>
+                <th className="py-1">{t.status}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.length === 0 ? (
+                <tr>
+                  <td className="py-4 text-center text-slate-500" colSpan={6}>
+                    {t.emptyList}
+                  </td>
+                </tr>
+              ) : (
+                items.map((item) => (
+                  <tr key={item.assetId} className="border-t border-line" data-testid="proxy-management-row">
+                    <td className="py-2 pr-2">
+                      <input type="checkbox" checked={selectedAssetIds.has(item.assetId)} data-testid={`proxy-select-${item.assetId}`} onChange={() => toggleSelection(item.assetId)} />
+                    </td>
+                    <td className="max-w-52 py-2 pr-3">
+                      <div className="truncate font-medium text-slate-700">{item.sourceName}</div>
+                      <div className="truncate text-slate-500">{item.sourcePath}</div>
+                    </td>
+                    <td className="max-w-64 py-2 pr-3 text-slate-500">
+                      <div className="truncate">{item.proxyPath}</div>
+                      {item.inUse ? <div className="mt-0.5 text-[11px] text-emerald-700">{t.inUse}</div> : null}
+                    </td>
+                    <td className="py-2 pr-3 text-slate-600">{formatBytes(item.size)}</td>
+                    <td className="py-2 pr-3 text-slate-600">{item.generatedAtMs ? formatDateTime(item.generatedAtMs) : t.unknown}</td>
+                    <td className="py-2">
+                      <ProxyInventoryStatusBadge item={item} />
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
+}
+
+function ProxyInventoryStatusBadge({ item }: { item: ProxyInventoryItem }) {
+  const t = zhCN.settings.proxy.statuses;
+  const tone =
+    item.status === 'ready'
+      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+      : item.status === 'expired' || item.status === 'corrupt' || item.status === 'missing'
+        ? 'border-amber-200 bg-amber-50 text-amber-700'
+        : item.status === 'error'
+          ? 'border-red-200 bg-red-50 text-red-700'
+          : 'border-slate-200 bg-slate-50 text-slate-600';
+  return (
+    <span className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${tone}`} title={item.error} data-testid={`proxy-management-status-${item.assetId}`} data-proxy-status={item.status}>
+      {t[item.status]}
+    </span>
+  );
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes <= 0) {
+    return '0 B';
+  }
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  return `${value >= 10 || unit === 0 ? Math.round(value) : value.toFixed(1)} ${units[unit]}`;
+}
+
+function formatDateTime(value: number): string {
+  return new Date(value).toLocaleString();
 }
 
 function TranslationSettingsPanel({

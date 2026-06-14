@@ -131,6 +131,7 @@ import {
   detectBeats,
   listenBridge,
   openDirectoryDialog,
+  removeFile as bridgeRemoveFile,
   sendNotification,
   startRecording,
   stopRecording,
@@ -1535,6 +1536,42 @@ export function EditorShell() {
     [proxySettings, setMedia]
   );
 
+  const deleteProxiesForMedia = useCallback(
+    async (assetIds: string[]) => {
+      const ids = new Set(assetIds);
+      const media = useEditorStore.getState().project.media;
+      const proxyPaths = media.filter((asset) => ids.has(asset.id) && asset.proxyPath).map((asset) => asset.proxyPath!);
+      try {
+        await Promise.all(proxyPaths.map((path) => bridgeRemoveFile(path).catch(() => undefined)));
+        setMedia(
+          useEditorStore.getState().project.media.map((asset) =>
+            ids.has(asset.id)
+              ? {
+                  ...asset,
+                  proxyPath: undefined,
+                  proxyStatus: asset.type === 'video' ? 'none' : undefined,
+                  proxyError: undefined
+                }
+              : asset
+          )
+        );
+        showToast({ kind: 'success', title: zhCN.editorToasts.proxyDeleted, message: zhCN.editorToasts.proxyDeletedMessage(proxyPaths.length) });
+      } catch (error) {
+        showToast({ kind: 'error', title: zhCN.editorToasts.proxyDeleteFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.proxyDeleteFailedMessage });
+      }
+    },
+    [setMedia]
+  );
+
+  const regenerateProxiesForMedia = useCallback(
+    async (assetIds: string[]) => {
+      for (const assetId of assetIds) {
+        await generateProxyForMedia(assetId, { force: true });
+      }
+    },
+    [generateProxyForMedia]
+  );
+
   const convertVfrMediaToCfr = useCallback(
     (assetId: string) => {
       const asset = useEditorStore.getState().project.media.find((item) => item.id === assetId);
@@ -2106,6 +2143,8 @@ export function EditorShell() {
               onShortcutBindingsChange={setShortcutBindings}
               onMacrosChange={setMacros}
               onExecuteMacro={(macro) => void executeMacro(macro)}
+              onDeleteProxies={(assetIds) => deleteProxiesForMedia(assetIds)}
+              onRegenerateProxies={(assetIds) => regenerateProxiesForMedia(assetIds)}
               onClose={() => setSettingsOpen(false)}
             />
           ) : null}
