@@ -2308,20 +2308,20 @@ describe('multitrack ffmpeg builder', () => {
   it.each([
     [
       'bars',
-      { style: 'bars', color: '#22d3ee', height: 25, position: 'bottom', sensitivity: 1.2 },
-      'showfreqs=s=1280x180:mode=bar:ascale=log:colors=0x22d3ee',
+      { style: 'bars', colorStart: '#22d3ee', colorEnd: '#f97316', height: 25, position: 'bottom', sensitivity: 1.2 },
+      'showfreqs=s=1280x180:mode=bar:ascale=log:colors=0xffffff',
       "overlay=x=0:y='main_h-overlay_h'"
     ],
     [
       'waveform',
-      { style: 'waveform', color: '#ffaa00', height: 50, position: 'top', sensitivity: 0.8 },
-      'showwaves=s=1280x360:mode=line:colors=0xffaa00',
+      { style: 'waveform', colorStart: '#ffaa00', colorEnd: '#00aaff', height: 50, position: 'top', sensitivity: 0.8 },
+      'showwaves=s=1280x360:mode=line:colors=0xffffff',
       "overlay=x=0:y='0'"
     ],
     [
-      'circle',
-      { style: 'circle', color: '#ffffff', height: 30, position: 'bottom', sensitivity: 2 },
-      'showfreqs=s=216x216:mode=line:ascale=log:colors=0xffffff',
+      'circular',
+      { style: 'circular', colorStart: '#ffffff', colorEnd: '#22d3ee', height: 30, position: 'bottom', sensitivity: 2, mirror: true },
+      'showfreqs=s=216x216:mode=bar:ascale=log:colors=0xffffff',
       "overlay=x=0:y='main_h-overlay_h'"
     ]
   ])('builds %s audio spectrum export filters over the final mix', (_style, params, expectedFilter, expectedOverlay) => {
@@ -2339,16 +2339,26 @@ describe('multitrack ffmpeg builder', () => {
 
     expect(filter).toContain('[amixout]asplit=2[aout][spectrum_audio_0]');
     expect(filter).toContain(expectedFilter);
+    expect(filter).toContain('split=2');
+    expect(filter).toContain('colorchannelmixer=rr=');
+    expect(filter).toContain("blend=all_expr='A*(1-Y/H)+B*(Y/H)'");
     expect(filter).toContain('colorkey=0x000000:0.08:0.12');
     expect(filter).toContain(expectedOverlay);
     expect(filter).toContain("enable='between(t,0,2)'");
+    if (_style === 'circular') {
+      expect(filter).toContain('crop=216:216');
+      expect(filter).toContain('vignette=angle=0.35:x0=w/2:y0=h/2:eval=frame');
+      expect(filter).toContain("geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='alpha(X,Y)*if(lte(");
+      expect(filter).toContain('vflip');
+      expect(filter).toContain('overlay=x=0:y=0:format=auto[spectrum0]');
+    }
     expect(plan.maps).toEqual(['-map', '[vout]', '-map', '[aout]']);
   });
 
   it.each([
-    ['waveform-line', 'showwaves=s=1280x720:mode=line:colors=0x22d3ee', "overlay=x='0':y='0'"],
-    ['spectrum-bars', 'showfreqs=s=1280x720:mode=bar:ascale=log:colors=0x22d3ee', "overlay=x='0':y='0'"],
-    ['circular-spectrum', 'showfreqs=s=518x518:mode=line:ascale=log:colors=0x22d3ee', "overlay=x='(main_w-overlay_w)/2':y='(main_h-overlay_h)/2'"]
+    ['waveform-line', 'showwaves=s=1280x720:mode=line:colors=0xffffff', "overlay=x='0':y='0'"],
+    ['spectrum-bars', 'showfreqs=s=1280x720:mode=bar:ascale=log:colors=0xffffff', "overlay=x='0':y='0'"],
+    ['circular-spectrum', 'showfreqs=s=518x518:mode=bar:ascale=log:colors=0xffffff', "overlay=x='(main_w-overlay_w)/2':y='(main_h-overlay_h)/2'"]
   ])('builds %s audio visualization export filters and keeps the audio stream', (style, expectedFilter, expectedOverlay) => {
     const project = makeAudioVisualizationProject();
     const plan = buildFfmpegExportPlan(
@@ -2372,8 +2382,13 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.filterComplex).toContain('color=c=0x050816:s=1280x720:r=30:d=2,format=rgba[base0]');
     expect(plan.filterComplex).toContain('[amixout]asplit=2[aout][audio_visualization_mix]');
     expect(plan.filterComplex).toContain(expectedFilter);
+    expect(plan.filterComplex).toContain("blend=all_expr='A*(1-Y/H)+B*(Y/H)'");
     expect(plan.filterComplex).toContain('colorkey=0x000000:0.08:0.12');
     expect(plan.filterComplex).toContain(expectedOverlay);
+    if (style === 'circular-spectrum') {
+      expect(plan.filterComplex).toContain('crop=518:518');
+      expect(plan.filterComplex).toContain('vignette=angle=0.35:x0=w/2:y0=h/2:eval=frame');
+    }
     expect(plan.maps).toEqual(['-map', '[vout]', '-map', '[aout]']);
     expect(plan.outputArgs).toEqual(expect.arrayContaining(['-c:v', 'libx264', '-c:a', 'aac']));
   });
@@ -2400,7 +2415,8 @@ describe('multitrack ffmpeg builder', () => {
       expect.objectContaining({ path: 'D:/Media/cover.png', args: ['-loop', '1', '-t', '2'] })
     ]);
     expect(plan.filterComplex).toContain('[1:v]scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,fps=30,format=rgba[base0]');
-    expect(plan.filterComplex).toContain('showwaves=s=1280x720:mode=line:colors=0xffaa00');
+    expect(plan.filterComplex).toContain('showwaves=s=1280x720:mode=line:colors=0xffffff');
+    expect(plan.filterComplex).toContain('colorchannelmixer=rr=1:gg=0.667:bb=0');
     expect(plan.filterComplex).toContain("[base0][audio_visualization_layer]overlay=x='0':y='0':eval=frame[base1]");
     expect(plan.fullArgs).toEqual(expect.arrayContaining(['-map', '[vout]', '-map', '[aout]']));
   });
@@ -2423,7 +2439,8 @@ describe('multitrack ffmpeg builder', () => {
     );
 
     expect(plan.filterComplex).toContain("color=c=0xaabbcc:s=1280x720:r=30:d=2,format=rgba,geq=r='170':g='187':b='204':a='255'[base0]");
-    expect(plan.filterComplex).toContain('showwaves=s=1280x720:mode=line:colors=0xaabbcc');
+    expect(plan.filterComplex).toContain('showwaves=s=1280x720:mode=line:colors=0xffffff');
+    expect(plan.filterComplex).toContain('colorchannelmixer=rr=0.667:gg=0.733:bb=0.8');
   });
 
   it('falls back to default audio visualization settings for invalid custom values', () => {
@@ -2444,7 +2461,8 @@ describe('multitrack ffmpeg builder', () => {
     );
 
     expect(plan.filterComplex).toContain('color=c=0x050816:s=1280x720:r=30:d=2,format=rgba[base0]');
-    expect(plan.filterComplex).toContain('showwaves=s=1280x720:mode=line:colors=0x22d3ee');
+    expect(plan.filterComplex).toContain('showwaves=s=1280x720:mode=line:colors=0xffffff');
+    expect(plan.filterComplex).toContain('colorchannelmixer=rr=0.133:gg=0.827:bb=0.933');
   });
 
   it('does not generate audio spectrum filters for disabled or zero-height spectrum effects', () => {

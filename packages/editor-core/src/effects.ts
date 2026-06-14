@@ -1,18 +1,21 @@
 import { clamp, round } from './time';
 
 export type EffectType = 'blur' | 'sharpen' | 'vignette' | 'film-grain' | 'chromatic-aberration' | 'audio-spectrum' | 'custom-shader';
-export type EffectParamValue = number | string;
+export type EffectParamValue = number | string | boolean;
 export type EffectParams = Record<string, EffectParamValue>;
-export type AudioSpectrumStyle = 'bars' | 'waveform' | 'circle';
+export type AudioSpectrumStyle = 'bars' | 'waveform' | 'circular';
 export type AudioSpectrumPosition = 'top' | 'bottom';
 export type CustomShaderExampleId = 'pixelate' | 'posterize' | 'old-film';
 
 export interface AudioSpectrumParams extends EffectParams {
   style: AudioSpectrumStyle;
   color: string;
+  colorStart: string;
+  colorEnd: string;
   height: number;
   position: AudioSpectrumPosition;
   sensitivity: number;
+  mirror: boolean;
 }
 
 export interface CustomShaderParams extends EffectParams {
@@ -70,7 +73,7 @@ export const DEFAULT_CUSTOM_SHADER_SOURCE = CUSTOM_SHADER_EXAMPLES[0].source;
 export const DEFAULT_CUSTOM_SHADER_PRESET: CustomShaderExampleId = CUSTOM_SHADER_EXAMPLES[0].id;
 
 export const EFFECT_TYPES: EffectType[] = ['blur', 'sharpen', 'vignette', 'film-grain', 'chromatic-aberration', 'audio-spectrum', 'custom-shader'];
-export const AUDIO_SPECTRUM_STYLES: AudioSpectrumStyle[] = ['bars', 'waveform', 'circle'];
+export const AUDIO_SPECTRUM_STYLES: AudioSpectrumStyle[] = ['bars', 'waveform', 'circular'];
 export const AUDIO_SPECTRUM_POSITIONS: AudioSpectrumPosition[] = ['bottom', 'top'];
 
 export const DEFAULT_EFFECT_PARAMS: Record<EffectType, EffectParams> = {
@@ -79,7 +82,7 @@ export const DEFAULT_EFFECT_PARAMS: Record<EffectType, EffectParams> = {
   vignette: { intensity: 0.35, radius: 0.6 },
   'film-grain': { strength: 0.2, size: 2 },
   'chromatic-aberration': { strength: 4 },
-  'audio-spectrum': { style: 'bars', color: '#22d3ee', height: 25, position: 'bottom', sensitivity: 1 },
+  'audio-spectrum': { style: 'bars', color: '#22d3ee', colorStart: '#22d3ee', colorEnd: '#22d3ee', height: 25, position: 'bottom', sensitivity: 1, mirror: false },
   'custom-shader': { source: DEFAULT_CUSTOM_SHADER_SOURCE, preset: DEFAULT_CUSTOM_SHADER_PRESET }
 };
 
@@ -142,12 +145,17 @@ export function normalizeEffectParams(type: EffectType, params: EffectParams | u
 
 export function normalizeAudioSpectrumParams(params: EffectParams | undefined): AudioSpectrumParams {
   const defaults = DEFAULT_EFFECT_PARAMS['audio-spectrum'];
+  const colorStart = normalizeHexColor(params?.colorStart ?? params?.color, stringParam(defaults.colorStart, '#22d3ee'));
+  const colorEnd = normalizeHexColor(params?.colorEnd, colorStart);
   return {
     style: normalizeAudioSpectrumStyle(params?.style, stringParam(defaults.style, 'bars')),
-    color: normalizeHexColor(params?.color, stringParam(defaults.color, '#22d3ee')),
+    color: colorStart,
+    colorStart,
+    colorEnd,
     height: normalizeParam(params?.height, numberParam(defaults.height, 25), 0, 50),
     position: normalizeAudioSpectrumPosition(params?.position, stringParam(defaults.position, 'bottom')),
-    sensitivity: normalizeParam(params?.sensitivity, numberParam(defaults.sensitivity, 1), 0.1, 4)
+    sensitivity: normalizeParam(params?.sensitivity, numberParam(defaults.sensitivity, 1), 0.1, 4),
+    mirror: booleanParam(params?.mirror, booleanParam(defaults.mirror, false))
   };
 }
 
@@ -217,11 +225,36 @@ function stringParam(value: EffectParamValue | undefined, fallback: string): str
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : fallback;
 }
 
+function booleanParam(value: EffectParamValue | undefined, fallback: boolean): boolean {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'true' || normalized === '1' || normalized === 'on') {
+      return true;
+    }
+    if (normalized === 'false' || normalized === '0' || normalized === 'off') {
+      return false;
+    }
+  }
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value !== 0;
+  }
+  return fallback;
+}
+
 function normalizeAudioSpectrumStyle(value: EffectParamValue | undefined, fallback: string): AudioSpectrumStyle {
+  if (value === 'circle') {
+    return 'circular';
+  }
   return AUDIO_SPECTRUM_STYLES.includes(value as AudioSpectrumStyle) ? (value as AudioSpectrumStyle) : normalizeFallbackStyle(fallback);
 }
 
 function normalizeFallbackStyle(value: string): AudioSpectrumStyle {
+  if (value === 'circle') {
+    return 'circular';
+  }
   return AUDIO_SPECTRUM_STYLES.includes(value as AudioSpectrumStyle) ? (value as AudioSpectrumStyle) : 'bars';
 }
 

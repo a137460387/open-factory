@@ -30,20 +30,33 @@ describe('effect stack helpers', () => {
       normalizeEffect({
         id: 'effect-spectrum',
         type: 'audio-spectrum',
-        params: { style: 'waveform', color: 'FFAA00', height: 99, position: 'top', sensitivity: 9 }
+        params: { style: 'waveform', color: 'FFAA00', colorEnd: '00AAFF', height: 99, position: 'top', sensitivity: 9, mirror: 'true' }
       })
     ).toEqual({
       id: 'effect-spectrum',
       type: 'audio-spectrum',
       enabled: true,
-      params: { style: 'waveform', color: '#ffaa00', height: 50, position: 'top', sensitivity: 4 }
+      params: { style: 'waveform', color: '#ffaa00', colorStart: '#ffaa00', colorEnd: '#00aaff', height: 50, position: 'top', sensitivity: 4, mirror: true }
     });
     expect(normalizeAudioSpectrumParams({ style: 'bad', color: 'not-a-color', height: -5, position: 'middle', sensitivity: 0 })).toEqual({
       style: 'bars',
       color: '#22d3ee',
+      colorStart: '#22d3ee',
+      colorEnd: '#22d3ee',
       height: 0,
       position: 'bottom',
-      sensitivity: 0.1
+      sensitivity: 0.1,
+      mirror: false
+    });
+    expect(normalizeAudioSpectrumParams({ style: 'circle', colorStart: '#123456', colorEnd: '#abcdef', mirror: 1 })).toEqual({
+      style: 'circular',
+      color: '#123456',
+      colorStart: '#123456',
+      colorEnd: '#abcdef',
+      height: 25,
+      position: 'bottom',
+      sensitivity: 1,
+      mirror: true
     });
   });
 

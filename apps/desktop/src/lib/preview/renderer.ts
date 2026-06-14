@@ -364,46 +364,58 @@ function getActiveAudioSpectrumParams(timeline: Timeline, playheadTime: number):
 function drawAudioSpectrumOverlay(context: CanvasRenderingContext2D, width: number, height: number, params: AudioSpectrumParams, data: Uint8Array): void {
   const overlayHeight = Math.max(2, Math.round(height * (params.height / 100)));
   const y = params.position === 'top' ? 0 : height - overlayHeight;
+  const paint = context.createLinearGradient(0, y, 0, y + overlayHeight);
+  paint.addColorStop(0, params.colorStart);
+  paint.addColorStop(1, params.colorEnd);
   context.save();
   context.globalAlpha = 0.9;
-  context.strokeStyle = params.color;
-  context.fillStyle = params.color;
+  context.strokeStyle = paint;
+  context.fillStyle = paint;
   context.lineWidth = 2;
   if (params.style === 'waveform') {
-    drawWaveformSpectrum(context, width, overlayHeight, y, params.sensitivity, data);
-  } else if (params.style === 'circle') {
+    drawWaveformSpectrum(context, width, overlayHeight, y, params.sensitivity, data, params.mirror);
+  } else if (params.style === 'circular') {
     drawCircleSpectrum(context, width, overlayHeight, y, params.sensitivity, data);
   } else {
-    drawBarSpectrum(context, width, overlayHeight, y, params.sensitivity, data);
+    drawBarSpectrum(context, width, overlayHeight, y, params.sensitivity, data, params.mirror);
   }
   context.restore();
 }
 
-function drawBarSpectrum(context: CanvasRenderingContext2D, width: number, height: number, y: number, sensitivity: number, data: Uint8Array): void {
+function drawBarSpectrum(context: CanvasRenderingContext2D, width: number, height: number, y: number, sensitivity: number, data: Uint8Array, mirror: boolean): void {
   const bars = Math.min(96, Math.max(16, Math.floor(width / 12)));
   const barWidth = width / bars;
+  const centerY = y + height / 2;
   for (let index = 0; index < bars; index += 1) {
     const sample = data[Math.min(data.length - 1, Math.floor((index / bars) * data.length))] ?? 0;
     const level = Math.min(1, (sample / 255) * sensitivity);
-    const barHeight = Math.max(1, level * height);
-    context.fillRect(index * barWidth + 1, y + height - barHeight, Math.max(1, barWidth - 2), barHeight);
+    const barHeight = Math.max(1, level * (mirror ? height / 2 : height));
+    const x = index * barWidth + 1;
+    const drawWidth = Math.max(1, barWidth - 2);
+    if (mirror) {
+      context.fillRect(x, centerY - barHeight, drawWidth, barHeight * 2);
+    } else {
+      context.fillRect(x, y + height - barHeight, drawWidth, barHeight);
+    }
   }
 }
 
-function drawWaveformSpectrum(context: CanvasRenderingContext2D, width: number, height: number, y: number, sensitivity: number, data: Uint8Array): void {
+function drawWaveformSpectrum(context: CanvasRenderingContext2D, width: number, height: number, y: number, sensitivity: number, data: Uint8Array, mirror: boolean): void {
   const centerY = y + height / 2;
-  context.beginPath();
-  for (let index = 0; index < data.length; index += 1) {
-    const x = (index / Math.max(1, data.length - 1)) * width;
-    const normalized = ((data[index] ?? 128) - 128) / 128;
-    const nextY = centerY + normalized * sensitivity * (height / 2);
-    if (index === 0) {
-      context.moveTo(x, nextY);
-    } else {
-      context.lineTo(x, nextY);
+  for (const direction of mirror ? [1, -1] : [1]) {
+    context.beginPath();
+    for (let index = 0; index < data.length; index += 1) {
+      const x = (index / Math.max(1, data.length - 1)) * width;
+      const normalized = ((data[index] ?? 128) - 128) / 128;
+      const nextY = centerY + normalized * direction * sensitivity * (height / 2);
+      if (index === 0) {
+        context.moveTo(x, nextY);
+      } else {
+        context.lineTo(x, nextY);
+      }
     }
+    context.stroke();
   }
-  context.stroke();
 }
 
 function drawCircleSpectrum(context: CanvasRenderingContext2D, width: number, height: number, y: number, sensitivity: number, data: Uint8Array): void {

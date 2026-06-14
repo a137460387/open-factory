@@ -132,6 +132,15 @@ const fixtures = [
     validate: validateAudioSpectrumFixture
   },
   {
+    name: 'spectrum-circular',
+    description: 'video with embedded audio and a circular mirrored spectrum overlay',
+    outputWidth: 1280,
+    outputHeight: 720,
+    expectedDuration: 1.5,
+    create: createCircularSpectrumFixture,
+    validate: validateCircularSpectrumFixture
+  },
+  {
     name: 'audio-viz',
     description: 'audio-only source exported as a waveform visualization video with the original audio stream',
     outputWidth: 1280,
@@ -1320,9 +1329,9 @@ async function validateAudioSpectrumFixture(context) {
     checks: [
       {
         name: 'spectrum-filter',
-        passed: filter.includes('showfreqs=s=1280x180:mode=bar:ascale=log:colors=0x22d3ee'),
+        passed: filter.includes('showfreqs=s=1280x180:mode=bar:ascale=log:colors=0xffffff'),
         actual: filter,
-        expected: 'showfreqs=s=1280x180:mode=bar:ascale=log:colors=0x22d3ee'
+        expected: 'showfreqs=s=1280x180:mode=bar:ascale=log:colors=0xffffff'
       },
       {
         name: 'spectrum-audio-split',
@@ -1335,6 +1344,116 @@ async function validateAudioSpectrumFixture(context) {
         passed: filter.includes("overlay=x=0:y='main_h-overlay_h'"),
         actual: filter,
         expected: "overlay=x=0:y='main_h-overlay_h'"
+      }
+    ]
+  };
+}
+
+async function createCircularSpectrumFixture(context) {
+  const sourcePath = join(context.fixtureDir, 'spectrum-circular-source.mp4');
+  await createColorVideoFixture(sourcePath, {
+    color: COLORS.darkBlue.ffmpeg,
+    width: context.outputWidth,
+    height: context.outputHeight,
+    duration: context.fixture.expectedDuration,
+    audio: true,
+    frequency: 740
+  });
+  return buildProject({
+    id: 'golden-spectrum-circular',
+    name: 'Golden Circular Spectrum',
+    width: context.outputWidth,
+    height: context.outputHeight,
+    media: [
+      videoAsset({
+        id: 'asset-spectrum-circular-source',
+        name: 'spectrum-circular-source.mp4',
+        path: sourcePath,
+        duration: context.fixture.expectedDuration,
+        width: context.outputWidth,
+        height: context.outputHeight,
+        hasAudio: true,
+        stat: statSync(sourcePath)
+      })
+    ],
+    tracks: [
+      {
+        id: 'track-spectrum-circular-video',
+        type: 'video',
+        name: 'Circular Spectrum Video',
+        clips: [
+          videoClip({
+            id: 'clip-spectrum-circular',
+            name: 'Circular spectrum',
+            mediaId: 'asset-spectrum-circular-source',
+            trackId: 'track-spectrum-circular-video',
+            duration: context.fixture.expectedDuration,
+            effects: [
+              {
+                id: 'effect-spectrum-circular',
+                type: 'audio-spectrum',
+                enabled: true,
+                params: {
+                  style: 'circular',
+                  colorStart: '#22d3ee',
+                  colorEnd: '#f97316',
+                  height: 30,
+                  position: 'bottom',
+                  sensitivity: 1.6,
+                  mirror: true
+                }
+              }
+            ]
+          })
+        ]
+      },
+      emptyAudioTrack(),
+      emptyTextTrack()
+    ]
+  });
+}
+
+async function validateCircularSpectrumFixture(context) {
+  const filter = context.plan.filterComplex;
+  const frame = await readFrame(context.outputPath, { at: 0.35, width: 160, height: 90 });
+  const spectrumPixelCount = countPixels(frame, (r, g, b, a) => a > 200 && Math.abs(r - 5) + Math.abs(g - 8) + Math.abs(b - 22) > 40);
+  return {
+    checks: [
+      {
+        name: 'spectrum-circular-filter',
+        passed: filter.includes('showfreqs=s=216x216:mode=bar:ascale=log:colors=0xffffff'),
+        actual: filter,
+        expected: 'showfreqs=s=216x216:mode=bar:ascale=log:colors=0xffffff'
+      },
+      {
+        name: 'spectrum-circular-crop',
+        passed: filter.includes('crop=216:216'),
+        actual: filter,
+        expected: 'crop=216:216'
+      },
+      {
+        name: 'spectrum-circular-mask',
+        passed: filter.includes('vignette=angle=0.35') && filter.includes("geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)'"),
+        actual: filter,
+        expected: 'vignette + circular alpha mask'
+      },
+      {
+        name: 'spectrum-circular-gradient',
+        passed: filter.includes('colorchannelmixer=rr=0.133:gg=0.827:bb=0.933') && filter.includes("blend=all_expr='A*(1-Y/H)+B*(Y/H)'"),
+        actual: filter,
+        expected: 'colorchannelmixer + blend gradient'
+      },
+      {
+        name: 'spectrum-circular-mirror',
+        passed: filter.includes('vflip') && filter.includes('overlay=x=0:y=0:format=auto[spectrum0]'),
+        actual: filter,
+        expected: 'vflip + overlay mirror'
+      },
+      {
+        name: 'spectrum-circular-visible',
+        passed: spectrumPixelCount > 50,
+        actual: spectrumPixelCount,
+        expected: '> 50 non-background pixels'
       }
     ]
   };
@@ -1393,9 +1512,9 @@ async function validateAudioVisualizationFixture(context) {
     checks: [
       {
         name: 'audio-viz-filter',
-        passed: filter.includes('showwaves=s=1280x720:mode=line:colors=0x22d3ee'),
+        passed: filter.includes('showwaves=s=1280x720:mode=line:colors=0xffffff'),
         actual: filter,
-        expected: 'showwaves=s=1280x720:mode=line:colors=0x22d3ee'
+        expected: 'showwaves=s=1280x720:mode=line:colors=0xffffff'
       },
       {
         name: 'audio-viz-audio-split',

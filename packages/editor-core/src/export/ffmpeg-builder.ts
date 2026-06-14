@@ -2039,17 +2039,44 @@ function collectAudioSpectrumEffects(clips: ExportClip[]): AudioSpectrumExportIt
 function buildAudioSpectrumFilter(inputLabel: string, outputLabel: string, params: AudioSpectrumParams, settings: ExportSettings): string {
   const width = Math.max(2, Math.round(settings.width));
   const height = Math.max(2, Math.round(settings.height * (params.height / 100)));
-  const color = cssColorToFfmpeg(params.color);
   const audioGain = `volume=${formatFfmpegNumber(params.sensitivity)}`;
-  const alphaFilters = 'format=rgba,colorkey=0x000000:0.08:0.12,colorchannelmixer=aa=0.9';
   if (params.style === 'waveform') {
-    return `[${inputLabel}]${audioGain},showwaves=s=${width}x${height}:mode=line:colors=${color},${alphaFilters}[${outputLabel}]`;
+    return buildAudioSpectrumVisualFilter({
+      inputLabel,
+      outputLabel,
+      audioGain,
+      visualizerFilter: `showwaves=s=${width}x${height}:mode=line:colors=0xffffff`,
+      colorStart: params.colorStart,
+      colorEnd: params.colorEnd,
+      alpha: 0.9,
+      mirror: params.mirror
+    });
   }
-  if (params.style === 'circle') {
+  if (params.style === 'circular') {
     const size = Math.max(2, Math.min(width, height));
-    return `[${inputLabel}]${audioGain},showfreqs=s=${size}x${size}:mode=line:ascale=log:colors=${color},${alphaFilters}[${outputLabel}]`;
+    return buildAudioSpectrumVisualFilter({
+      inputLabel,
+      outputLabel,
+      audioGain,
+      visualizerFilter: `showfreqs=s=${size}x${size}:mode=bar:ascale=log:colors=0xffffff`,
+      postVisualizerFilters: [`crop=${size}:${size}`, 'vignette=angle=0.35:x0=w/2:y0=h/2:eval=frame'],
+      colorStart: params.colorStart,
+      colorEnd: params.colorEnd,
+      alpha: 0.9,
+      mirror: params.mirror,
+      circularMask: true
+    });
   }
-  return `[${inputLabel}]${audioGain},showfreqs=s=${width}x${height}:mode=bar:ascale=log:colors=${color},${alphaFilters}[${outputLabel}]`;
+  return buildAudioSpectrumVisualFilter({
+    inputLabel,
+    outputLabel,
+    audioGain,
+    visualizerFilter: `showfreqs=s=${width}x${height}:mode=bar:ascale=log:colors=0xffffff`,
+    colorStart: params.colorStart,
+    colorEnd: params.colorEnd,
+    alpha: 0.9,
+    mirror: params.mirror
+  });
 }
 
 function buildAudioSpectrumOverlayYExpression(params: AudioSpectrumParams): string {
@@ -2084,16 +2111,103 @@ function buildAudioVisualizationBackgroundFilters(background: ExportAudioVisuali
 function buildAudioVisualizationFilter(inputLabel: string, outputLabel: string, visualization: ExportAudioVisualizationSettings, settings: ExportSettings): string {
   const width = Math.max(2, Math.round(settings.width));
   const height = Math.max(2, Math.round(settings.height));
-  const color = cssColorToFfmpeg(visualization.color);
-  const alphaFilters = 'format=rgba,colorkey=0x000000:0.08:0.12,colorchannelmixer=aa=0.95';
   if (visualization.style === 'waveform-line') {
-    return `[${inputLabel}]showwaves=s=${width}x${height}:mode=line:colors=${color},${alphaFilters}[${outputLabel}]`;
+    return buildAudioSpectrumVisualFilter({
+      inputLabel,
+      outputLabel,
+      visualizerFilter: `showwaves=s=${width}x${height}:mode=line:colors=0xffffff`,
+      colorStart: visualization.color,
+      colorEnd: visualization.color,
+      alpha: 0.95,
+      mirror: false
+    });
   }
   if (visualization.style === 'circular-spectrum') {
     const size = Math.max(2, Math.round(Math.min(width, height) * 0.72));
-    return `[${inputLabel}]showfreqs=s=${size}x${size}:mode=line:ascale=log:colors=${color},${alphaFilters}[${outputLabel}]`;
+    return buildAudioSpectrumVisualFilter({
+      inputLabel,
+      outputLabel,
+      visualizerFilter: `showfreqs=s=${size}x${size}:mode=bar:ascale=log:colors=0xffffff`,
+      postVisualizerFilters: [`crop=${size}:${size}`, 'vignette=angle=0.35:x0=w/2:y0=h/2:eval=frame'],
+      colorStart: visualization.color,
+      colorEnd: visualization.color,
+      alpha: 0.95,
+      mirror: false,
+      circularMask: true
+    });
   }
-  return `[${inputLabel}]showfreqs=s=${width}x${height}:mode=bar:ascale=log:colors=${color},${alphaFilters}[${outputLabel}]`;
+  return buildAudioSpectrumVisualFilter({
+    inputLabel,
+    outputLabel,
+    visualizerFilter: `showfreqs=s=${width}x${height}:mode=bar:ascale=log:colors=0xffffff`,
+    colorStart: visualization.color,
+    colorEnd: visualization.color,
+    alpha: 0.95,
+    mirror: false
+  });
+}
+
+interface AudioSpectrumVisualFilterInput {
+  inputLabel: string;
+  outputLabel: string;
+  visualizerFilter: string;
+  colorStart: string;
+  colorEnd: string;
+  alpha: number;
+  audioGain?: string;
+  postVisualizerFilters?: string[];
+  mirror: boolean;
+  circularMask?: boolean;
+}
+
+function buildAudioSpectrumVisualFilter(input: AudioSpectrumVisualFilterInput): string {
+  const rawLabel = `${input.outputLabel}_raw`;
+  const gradientLabel = `${input.outputLabel}_gradient`;
+  const alphaLabel = input.mirror ? `${input.outputLabel}_alpha` : input.outputLabel;
+  const visualFilters = [input.audioGain, input.visualizerFilter, ...(input.postVisualizerFilters ?? []), 'format=rgba'].filter(Boolean).join(',');
+  const filters = [
+    `[${input.inputLabel}]${visualFilters}[${rawLabel}]`,
+    ...buildAudioSpectrumGradientFilters(rawLabel, gradientLabel, input.colorStart, input.colorEnd)
+  ];
+  const alphaFilters = [
+    'colorkey=0x000000:0.08:0.12',
+    `colorchannelmixer=aa=${formatOpacity(input.alpha)}`,
+    ...(input.circularMask ? [buildCircularAlphaMaskFilter()] : [])
+  ];
+  filters.push(`[${gradientLabel}]${alphaFilters.join(',')}[${alphaLabel}]`);
+  if (input.mirror) {
+    const normalLabel = `${input.outputLabel}_normal`;
+    const flipSourceLabel = `${input.outputLabel}_flip_src`;
+    const flippedLabel = `${input.outputLabel}_flipped`;
+    filters.push(
+      `[${alphaLabel}]split=2[${normalLabel}][${flipSourceLabel}]`,
+      `[${flipSourceLabel}]vflip[${flippedLabel}]`,
+      `[${normalLabel}][${flippedLabel}]overlay=x=0:y=0:format=auto[${input.outputLabel}]`
+    );
+  }
+  return filters.join(';');
+}
+
+function buildAudioSpectrumGradientFilters(inputLabel: string, outputLabel: string, colorStart: string, colorEnd: string): string[] {
+  const startSourceLabel = `${outputLabel}_start_src`;
+  const endSourceLabel = `${outputLabel}_end_src`;
+  const startLabel = `${outputLabel}_start`;
+  const endLabel = `${outputLabel}_end`;
+  return [
+    `[${inputLabel}]split=2[${startSourceLabel}][${endSourceLabel}]`,
+    `[${startSourceLabel}]colorchannelmixer=${buildColorChannelMixerForHex(colorStart)}[${startLabel}]`,
+    `[${endSourceLabel}]colorchannelmixer=${buildColorChannelMixerForHex(colorEnd)}[${endLabel}]`,
+    `[${startLabel}][${endLabel}]blend=all_expr='A*(1-Y/H)+B*(Y/H)'[${outputLabel}]`
+  ];
+}
+
+function buildColorChannelMixerForHex(color: string): string {
+  const parsed = parseHexColor(color, '#22d3ee');
+  return [`rr=${formatFfmpegNumber(parsed.r / 255)}`, `gg=${formatFfmpegNumber(parsed.g / 255)}`, `bb=${formatFfmpegNumber(parsed.b / 255)}`].join(':');
+}
+
+function buildCircularAlphaMaskFilter(): string {
+  return "geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='alpha(X,Y)*if(lte((X-W/2)*(X-W/2)+(Y-H/2)*(Y-H/2),(min(W,H)/2)*(min(W,H)/2)),1,0)'";
 }
 
 function buildAudioVisualizationOverlayPosition(style: ExportAudioVisualizationSettings['style'], _settings: ExportSettings): { x: string; y: string } {

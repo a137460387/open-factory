@@ -818,6 +818,7 @@ const zh = {
     renderCache: '缓存',
     thumbnailTrack: '缩略图轨道',
     thumbnailTrackSubtitle: '主视频预览',
+    audioFrequencyMeter: '实时 16 频段音频表',
     snapshotDiffRange: '与选定快照不同',
     addVideoTrack: '添加视频轨道',
     addAudioTrack: '添加音频轨道',
@@ -1275,6 +1276,9 @@ const zh = {
       height: '高度',
       position: '位置',
       sensitivity: '灵敏度',
+      colorStart: '起始色',
+      colorEnd: '结束色',
+      mirror: '镜像',
       volume: '音量',
       audioChannelRouting: '声道路由',
       audioChannelRoutingMode: '路由模式',
@@ -1422,7 +1426,7 @@ const zh = {
     audioSpectrumStyles: {
       bars: '柱状',
       waveform: '波形',
-      circle: '圆形'
+      circular: '圆形'
     },
     audioSpectrumPositions: {
       top: '顶部',
@@ -2944,6 +2948,7 @@ const enOverrides = {
     renderCache: 'Cache',
     thumbnailTrack: 'Thumbnail Track',
     thumbnailTrackSubtitle: 'Main video preview',
+    audioFrequencyMeter: 'Live 16-band audio meter',
     snapshotDiffRange: 'Different from selected snapshot',
     addVideoTrack: 'Add Video Track',
     addAudioTrack: 'Add Audio Track',
@@ -3266,6 +3271,9 @@ const enOverrides = {
       height: 'Height',
       position: 'Position',
       sensitivity: 'Sensitivity',
+      colorStart: 'Start Color',
+      colorEnd: 'End Color',
+      mirror: 'Mirror',
       volume: 'Volume',
       audioChannelRouting: 'Channel Routing',
       audioChannelRoutingMode: 'Routing Mode',
@@ -3375,7 +3383,7 @@ const enOverrides = {
     audioSpectrumStyles: {
       bars: 'Bars',
       waveform: 'Waveform',
-      circle: 'Circle'
+      circular: 'Circular'
     },
     audioSpectrumPositions: {
       top: 'Top',

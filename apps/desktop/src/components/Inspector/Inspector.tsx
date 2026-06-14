@@ -3501,10 +3501,16 @@ function AudioSpectrumEffectFields({
         </select>
       </label>
       <ColorField
-        label={zhCN.inspector.fields.color}
-        value={getEffectStringParam(effect.params, 'color', params.color)}
-        onCommit={(color) => onUpdate(effect.id, { params: { color } })}
-        testId={`effect-param-${effect.id}-color`}
+        label={zhCN.inspector.fields.colorStart}
+        value={getEffectStringParam(effect.params, 'colorStart', params.colorStart)}
+        onCommit={(colorStart) => onUpdate(effect.id, { params: { color: colorStart, colorStart } })}
+        testId={`effect-param-${effect.id}-color-start`}
+      />
+      <ColorField
+        label={zhCN.inspector.fields.colorEnd}
+        value={getEffectStringParam(effect.params, 'colorEnd', params.colorEnd)}
+        onCommit={(colorEnd) => onUpdate(effect.id, { params: { colorEnd } })}
+        testId={`effect-param-${effect.id}-color-end`}
       />
       <RangeNumberField
         label={zhCN.inspector.fields.height}
@@ -3540,6 +3546,12 @@ function AudioSpectrumEffectFields({
         format={(value) => value.toFixed(1)}
         onCommit={(sensitivity) => onUpdate(effect.id, { params: { sensitivity } })}
         testId={`effect-param-${effect.id}-sensitivity`}
+      />
+      <ToggleField
+        label={zhCN.inspector.fields.mirror}
+        checked={params.mirror}
+        onCommit={(mirror) => onUpdate(effect.id, { params: { mirror } })}
+        testId={`effect-param-${effect.id}-mirror`}
       />
     </div>
   );

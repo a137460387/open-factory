@@ -27,6 +27,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { formatTrackType, zhCN } from '../../i18n/strings';
 import { getTimelineThumbnailFrame, getTimelineThumbnailPlaceholder, getTimelineThumbnailPlaceholders, getTimelineThumbnails, type TimelineThumbnailFrame } from '../../media/timeline-thumbnails';
 import { getWaveform, type WaveformResult } from '../../media/waveform';
+import { getSilentFrequencyBands, useAudioMeterStore } from '../../store/audioMeterStore';
 import type { SelectedKeyframeRef } from '../../store/editorStore';
 
 export type DragMode = 'move' | 'trim-left' | 'trim-right' | 'rolling-trim' | 'slip' | 'slide' | 'playhead' | 'keyframe';
@@ -284,6 +285,7 @@ export function TrackRow({
   colorFilter: TimelineLabelColor | null;
 }) {
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
+  const frequencyBands = useAudioMeterStore((state) => state.trackFrequencyBands[track.id] ?? getSilentFrequencyBands());
   const mediaById = new Map(media.map((asset) => [asset.id, asset]));
   const locked = Boolean(track.locked);
   const nextAdjacentByClipId = new Map<string, Clip>();
@@ -348,6 +350,7 @@ export function TrackRow({
         <div className="min-w-0 flex-1">
           <div className="truncate text-xs font-semibold">{track.name}</div>
           <div className="text-[11px] uppercase tracking-normal text-slate-500">{formatTrackType(track.type)}</div>
+          {track.type === 'audio' ? <AudioTrackFrequencyBands trackId={track.id} bands={frequencyBands} /> : null}
         </div>
         <div className="flex items-center gap-1">
           <TrackToggle label="M" title={zhCN.timeline.muteTrack} active={Boolean(track.muted)} testId={`track-mute-${track.id}`} onClick={() => onTrackUpdate(track.id, { muted: !track.muted })} />
@@ -425,6 +428,17 @@ export function TrackRow({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function AudioTrackFrequencyBands({ trackId, bands }: { trackId: string; bands: number[] }) {
+  return (
+    <div className="mt-1 flex h-3 w-full max-w-[58px] items-end gap-px overflow-hidden rounded-sm bg-slate-200 px-px" title={zhCN.timeline.audioFrequencyMeter} data-testid={`track-vu-bands-${trackId}`}>
+      {Array.from({ length: 16 }, (_, index) => {
+        const level = Math.min(1, Math.max(0, bands[index] ?? 0));
+        return <span key={index} className="w-0.5 rounded-t bg-emerald-500" style={{ height: `${Math.max(8, level * 100)}%` }} />;
+      })}
     </div>
   );
 }

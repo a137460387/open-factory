@@ -80,8 +80,9 @@ export class PreviewAudioRenderer {
     }
   }
 
-  getLevels(nowMs = performance.now()): { trackLevels: Record<string, AudioMeterLevel>; masterLevel: AudioMeterLevel } {
+  getLevels(nowMs = performance.now()): { trackLevels: Record<string, AudioMeterLevel>; masterLevel: AudioMeterLevel; trackFrequencyBands: Record<string, number[]> } {
     const trackLevels: Record<string, AudioMeterLevel> = {};
+    const trackFrequencyBands: Record<string, number[]> = {};
     for (const clipId of this.activeClipIds) {
       const node = this.audioNodes.get(clipId);
       const trackId = this.activeTrackIdsByClipId.get(clipId);
@@ -95,12 +96,16 @@ export class PreviewAudioRenderer {
         levelDb: Math.max(existing?.levelDb ?? -60, reading.levelDb),
         peakDb: Math.max(existing?.peakDb ?? -60, reading.peakDb)
       };
+      const bands = readAnalyserFrequencyBands(node.analyser);
+      const existingBands = trackFrequencyBands[trackId];
+      trackFrequencyBands[trackId] = existingBands ? existingBands.map((value, index) => Math.max(value, bands[index] ?? 0)) : bands;
     }
 
     const master = this.masterAnalyser ? readVuMeter(this.masterAnalyser, this.masterMeterState, nowMs) : { levelDb: -60, peakDb: -60, peakHeldAtMs: nowMs };
     this.masterMeterState = { peakDb: master.peakDb, peakHeldAtMs: master.peakHeldAtMs };
     return {
       trackLevels,
+      trackFrequencyBands,
       masterLevel: { levelDb: master.levelDb, peakDb: master.peakDb }
     };
   }
@@ -262,6 +267,24 @@ function getFadeMultiplier(clip: Extract<Clip, { type: 'audio' | 'video' }>, pla
     multiplier = Math.min(multiplier, applyFadeCurve(Math.min(1, remaining / clip.fadeOutDuration), normalizeAudioFadeCurve(clip.fadeOutCurve)));
   }
   return Math.max(0, Math.min(1, multiplier));
+}
+
+function readAnalyserFrequencyBands(analyser: AnalyserNode, bandCount = 16): number[] {
+  analyser.fftSize = 1024;
+  const data = new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteFrequencyData(data);
+  const bands: number[] = [];
+  const binsPerBand = Math.max(1, Math.floor(data.length / bandCount));
+  for (let band = 0; band < bandCount; band += 1) {
+    const start = band * binsPerBand;
+    const end = band === bandCount - 1 ? data.length : Math.min(data.length, start + binsPerBand);
+    let total = 0;
+    for (let index = start; index < end; index += 1) {
+      total += data[index] ?? 0;
+    }
+    bands.push(Math.min(1, total / Math.max(1, end - start) / 255));
+  }
+  return bands;
 }
 
 function applyFadeCurve(value: number, curve: 'linear' | 'ease-in' | 'ease-out'): number {
