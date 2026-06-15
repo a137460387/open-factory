@@ -15,14 +15,16 @@ import {
   type SmartAlbumId,
   type TitleTemplateId
 } from '@open-factory/editor-core';
-import { AlertCircle, BadgeCheck, ChevronDown, ChevronRight, FileAudio2, FileImage, FileText, FileVideo2, Flag, Folder, FolderPlus, Gauge, ImageDown, Import, Info, Link2, Loader2, Merge, Plus, Search, SlidersHorizontal, Star, Tag, Trash2, X } from 'lucide-react';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { AlertCircle, BadgeCheck, ChevronDown, ChevronRight, FileAudio2, FileImage, FileText, FileVideo2, Flag, Folder, FolderPlus, GalleryHorizontal, Gauge, Grid2X2, ImageDown, Import, Info, Link2, List, Loader2, Merge, Plus, Search, SlidersHorizontal, Star, Tag, Trash2, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { clsx } from 'clsx';
 import { zhCN } from '../../i18n/strings';
 import { isTauriRuntime } from '../../lib/tauri';
 import { TITLE_TEMPLATE_DRAG_MIME } from '../../lib/titleTemplates';
 import { analyzeMedia, listenDragDrop, type MediaAnalysis } from '../../lib/tauri-bridge';
 import { useMediaJobStore } from '../../media/media-job-store';
+import { DEFAULT_MEDIA_LIBRARY_VIEW_SETTINGS, normalizeMediaLibraryViewSettings, sortMediaLibraryAssets, type MediaLibraryGridSize, type MediaLibrarySortKey, type MediaLibraryViewMode, type MediaLibraryViewSettings } from '../../media/mediaLibraryView';
+import { readViewSettings, saveViewSettings } from '../../settings/appSettings';
 import { useProxySettingsStore } from '../../store/proxySettingsStore';
 
 interface MediaBinProps {
@@ -89,6 +91,7 @@ export function MediaBin({
   const [filter, setFilter] = useState<MediaBinView>('all');
   const [quickFilter, setQuickFilter] = useState<QuickMediaFilter>('all');
   const [smartAlbumId, setSmartAlbumId] = useState<SmartAlbumId | 'none'>('none');
+  const [mediaLibraryView, setMediaLibraryView] = useState<MediaLibraryViewSettings>(DEFAULT_MEDIA_LIBRARY_VIEW_SETTINGS);
   const [mediaInfo, setMediaInfo] = useState<MediaInfoState>();
   const missingCount = media.filter((asset) => asset.missing).length;
   const smartAlbums = collectSmartAlbums(media, Date.now(), mediaMetadata);
@@ -103,12 +106,30 @@ export function MediaBin({
           metadataFilter,
           metadata: mediaMetadata
         }).filter((asset) => !smartAlbumIds || smartAlbumIds.has(asset.id));
+  const sortedVisibleMedia = useMemo(
+    () => sortMediaLibraryAssets(visibleMedia, mediaLibraryView),
+    [visibleMedia, mediaLibraryView]
+  );
+  const importedTimelineMedia = useMemo(
+    () => sortMediaLibraryAssets(visibleMedia, { sortKey: 'importedAt', sortDirection: 'asc' }),
+    [visibleMedia]
+  );
   const jobs = useMediaJobStore((state) => state.jobs);
   const runnerActive = useMediaJobStore((state) => state.runnerActive);
   const clearFinishedJobs = useMediaJobStore((state) => state.clearFinishedJobs);
   const runningJob = jobs.find((job) => job.status === 'running');
   const pendingCount = jobs.filter((job) => job.status === 'pending').length;
   const failedCount = jobs.filter((job) => job.status === 'error').length;
+
+  const updateMediaLibraryView = (patch: Partial<MediaLibraryViewSettings>) => {
+    setMediaLibraryView((current) => {
+      const next = normalizeMediaLibraryViewSettings({ ...current, ...patch });
+      void saveViewSettings({ mediaLibrary: next }).catch((error) => {
+        console.warn('Unable to save media library view settings', error);
+      });
+      return next;
+    });
+  };
 
   const openMediaInfo = async (asset: MediaAsset) => {
     setMediaInfo({ asset, loading: true });
@@ -147,6 +168,38 @@ export function MediaBin({
       unlisten?.();
     };
   }, [onImportPaths]);
+
+  useEffect(() => {
+    let canceled = false;
+    void readViewSettings()
+      .then((view) => {
+        if (!canceled) {
+          setMediaLibraryView(view.mediaLibrary);
+        }
+      })
+      .catch((error) => {
+        console.warn('Unable to load media library view settings', error);
+      });
+    return () => {
+      canceled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.shiftKey || event.altKey || isEditableKeyboardTarget(event.target)) {
+        return;
+      }
+      const mode = event.key === '1' ? 'grid' : event.key === '2' ? 'list' : event.key === '3' ? 'timeline' : undefined;
+      if (!mode) {
+        return;
+      }
+      event.preventDefault();
+      updateMediaLibraryView({ mode });
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   return (
     <aside
@@ -279,6 +332,9 @@ export function MediaBin({
           {filter !== 'titles' ? (
             <SmartAlbumBar albums={smartAlbums} activeId={smartAlbumId} onSelect={setSmartAlbumId} />
           ) : null}
+          {filter !== 'titles' ? (
+            <MediaLibraryViewToolbar settings={mediaLibraryView} onChange={updateMediaLibraryView} />
+          ) : null}
         </div>
         {filter !== 'titles' && jobs.length > 0 ? (
           <div className="mb-3 rounded-md border border-line bg-panel p-2 text-xs" data-testid="media-job-queue">
@@ -306,9 +362,25 @@ export function MediaBin({
             <Import className="mb-3 text-slate-500" size={30} />
             {t.emptyDrop}
           </button>
+        ) : mediaLibraryView.mode === 'list' ? (
+          <MediaLibraryListView
+            media={sortedVisibleMedia}
+            settings={mediaLibraryView}
+            onSort={(sortKey) =>
+              updateMediaLibraryView({
+                sortKey,
+                sortDirection: mediaLibraryView.sortKey === sortKey && mediaLibraryView.sortDirection === 'asc' ? 'desc' : 'asc'
+              })
+            }
+            onAddToTimeline={onAddToTimeline}
+            onExportGif={onExportGif}
+          />
+        ) : mediaLibraryView.mode === 'timeline' ? (
+          <MediaLibraryTimelineView media={importedTimelineMedia} onAddToTimeline={onAddToTimeline} onExportGif={onExportGif} />
         ) : smartAlbumId !== 'none' ? (
           <MediaCardGrid
-            media={visibleMedia}
+            media={sortedVisibleMedia}
+            gridSize={mediaLibraryView.gridSize}
             mediaMetadata={mediaMetadata}
             projectFrameRate={projectFrameRate}
             onAddToTimeline={onAddToTimeline}
@@ -326,8 +398,9 @@ export function MediaBin({
           <div className="space-y-3">
             <MediaFolderTree
               folders={mediaFolders}
-              media={visibleMedia}
+              media={sortedVisibleMedia}
               mediaMetadata={mediaMetadata}
+              gridSize={mediaLibraryView.gridSize}
               projectFrameRate={projectFrameRate}
               onCreateFolder={onCreateFolder}
               onRenameFolder={onRenameFolder}
@@ -347,7 +420,8 @@ export function MediaBin({
             />
             <RootMediaDropZone onMoveMediaToFolder={onMoveMediaToFolder} />
             <MediaCardGrid
-              media={visibleMedia.filter((asset) => !asset.folderId)}
+              media={sortedVisibleMedia.filter((asset) => !asset.folderId)}
+              gridSize={mediaLibraryView.gridSize}
               mediaMetadata={mediaMetadata}
               projectFrameRate={projectFrameRate}
               onAddToTimeline={onAddToTimeline}
@@ -395,10 +469,83 @@ function SmartAlbumBar({ albums, activeId, onSelect }: { albums: ReturnType<type
   );
 }
 
+function MediaLibraryViewToolbar({ settings, onChange }: { settings: MediaLibraryViewSettings; onChange(patch: Partial<MediaLibraryViewSettings>): void }) {
+  const viewModes: Array<{ mode: MediaLibraryViewMode; icon: ReactNode; label: string; testId: string }> = [
+    { mode: 'grid', icon: <Grid2X2 size={14} />, label: zhCN.mediaBin.viewModes.grid, testId: 'media-view-grid' },
+    { mode: 'list', icon: <List size={14} />, label: zhCN.mediaBin.viewModes.list, testId: 'media-view-list' },
+    { mode: 'timeline', icon: <GalleryHorizontal size={14} />, label: zhCN.mediaBin.viewModes.timeline, testId: 'media-view-timeline' }
+  ];
+  return (
+    <div className="space-y-2 rounded-md border border-line bg-panel p-2" data-testid="media-view-toolbar">
+      <div className="grid grid-cols-3 gap-1" role="group" aria-label={zhCN.mediaBin.viewMode}>
+        {viewModes.map((item) => (
+          <button
+            key={item.mode}
+            className={clsx('inline-flex items-center justify-center gap-1 rounded-md border px-1.5 py-1 text-xs font-semibold', settings.mode === item.mode ? 'border-brand bg-white text-brand' : 'border-line bg-white text-slate-600 hover:bg-white/80')}
+            type="button"
+            title={item.label}
+            aria-label={item.label}
+            aria-pressed={settings.mode === item.mode}
+            data-testid={item.testId}
+            onClick={() => onChange({ mode: item.mode })}
+          >
+            {item.icon}
+            <span>{item.label}</span>
+          </button>
+        ))}
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <label className="block text-[11px] font-medium text-slate-600">
+          {zhCN.mediaBin.sortBy}
+          <select
+            className="mt-1 h-8 w-full rounded border border-line bg-white px-2 text-xs text-ink"
+            value={settings.sortKey}
+            data-testid="media-sort-key-select"
+            onChange={(event) => onChange({ sortKey: event.target.value as MediaLibrarySortKey })}
+          >
+            {(['importedAt', 'name', 'duration', 'size'] as MediaLibrarySortKey[]).map((key) => (
+              <option key={key} value={key}>
+                {zhCN.mediaBin.sortKeys[key]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="grid grid-cols-[1fr_auto] gap-1">
+          <label className="block text-[11px] font-medium text-slate-600">
+            {zhCN.mediaBin.gridSize}
+            <select
+              className="mt-1 h-8 w-full rounded border border-line bg-white px-2 text-xs text-ink disabled:opacity-50"
+              value={settings.gridSize}
+              disabled={settings.mode !== 'grid'}
+              data-testid="media-grid-size-select"
+              onChange={(event) => onChange({ gridSize: event.target.value as MediaLibraryGridSize })}
+            >
+              {(['small', 'medium', 'large'] as MediaLibraryGridSize[]).map((size) => (
+                <option key={size} value={size}>
+                  {zhCN.mediaBin.gridSizes[size]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            className="mt-5 h-8 rounded border border-line bg-white px-2 text-xs font-semibold text-slate-600 hover:bg-white/80"
+            type="button"
+            data-testid="media-sort-direction-button"
+            onClick={() => onChange({ sortDirection: settings.sortDirection === 'asc' ? 'desc' : 'asc' })}
+          >
+            {settings.sortDirection === 'asc' ? zhCN.mediaBin.sortAscending : zhCN.mediaBin.sortDescending}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MediaFolderTree(props: {
   folders: MediaFolder[];
   media: MediaAsset[];
   mediaMetadata: Record<string, MediaMetadata>;
+  gridSize: MediaLibraryGridSize;
   projectFrameRate: number;
   onCreateFolder(parentId?: string | null): void;
   onRenameFolder(folderId: string, name: string): void;
@@ -435,6 +582,7 @@ function MediaFolderNode({
   folders,
   media,
   mediaMetadata,
+  gridSize,
   projectFrameRate,
   onCreateFolder,
   onRenameFolder,
@@ -457,6 +605,7 @@ function MediaFolderNode({
   folders: MediaFolder[];
   media: MediaAsset[];
   mediaMetadata: Record<string, MediaMetadata>;
+  gridSize: MediaLibraryGridSize;
   projectFrameRate: number;
   onCreateFolder(parentId?: string | null): void;
   onRenameFolder(folderId: string, name: string): void;
@@ -550,6 +699,7 @@ function MediaFolderNode({
               folders={folders}
               media={media}
               mediaMetadata={mediaMetadata}
+              gridSize={gridSize}
               projectFrameRate={projectFrameRate}
               onCreateFolder={onCreateFolder}
               onRenameFolder={onRenameFolder}
@@ -571,6 +721,7 @@ function MediaFolderNode({
           <MediaCardGrid
             media={folderMedia}
             mediaMetadata={mediaMetadata}
+            gridSize={gridSize}
             projectFrameRate={projectFrameRate}
             onAddToTimeline={onAddToTimeline}
             onRelink={onRelink}
@@ -608,8 +759,128 @@ function RootMediaDropZone({ onMoveMediaToFolder }: { onMoveMediaToFolder(assetI
   );
 }
 
+function MediaLibraryListView({
+  media,
+  settings,
+  onSort,
+  onAddToTimeline,
+  onExportGif
+}: {
+  media: MediaAsset[];
+  settings: MediaLibraryViewSettings;
+  onSort(sortKey: MediaLibrarySortKey): void;
+  onAddToTimeline(assetId: string): void;
+  onExportGif(asset: MediaAsset): void;
+}) {
+  if (media.length === 0) {
+    return null;
+  }
+  const columns: Array<{ key: MediaLibrarySortKey | 'format' | 'resolution'; label: string; sortable: boolean; testId: string }> = [
+    { key: 'name', label: zhCN.mediaBin.listColumns.name, sortable: true, testId: 'media-list-sort-name' },
+    { key: 'format', label: zhCN.mediaBin.listColumns.format, sortable: false, testId: 'media-list-format-header' },
+    { key: 'resolution', label: zhCN.mediaBin.listColumns.resolution, sortable: false, testId: 'media-list-resolution-header' },
+    { key: 'duration', label: zhCN.mediaBin.listColumns.duration, sortable: true, testId: 'media-list-sort-duration' },
+    { key: 'size', label: zhCN.mediaBin.listColumns.fileSize, sortable: true, testId: 'media-list-sort-size' },
+    { key: 'importedAt', label: zhCN.mediaBin.listColumns.importedAt, sortable: true, testId: 'media-list-sort-importedAt' }
+  ];
+  return (
+    <div className="overflow-x-auto rounded-md border border-line bg-white" data-testid="media-list-view">
+      <table className="min-w-[720px] w-full border-collapse text-xs">
+        <thead className="bg-panel text-left text-[11px] uppercase tracking-normal text-slate-500">
+          <tr>
+            {columns.map((column) => (
+              <th key={column.key} className="border-b border-line px-2 py-2 font-semibold">
+                {column.sortable ? (
+                  <button className="inline-flex items-center gap-1 hover:text-brand" type="button" data-testid={column.testId} onClick={() => onSort(column.key as MediaLibrarySortKey)}>
+                    {column.label}
+                    {settings.sortKey === column.key ? <span>{settings.sortDirection === 'asc' ? '↑' : '↓'}</span> : null}
+                  </button>
+                ) : (
+                  <span data-testid={column.testId}>{column.label}</span>
+                )}
+              </th>
+            ))}
+            <th className="border-b border-line px-2 py-2 text-right font-semibold">{zhCN.mediaBin.listColumns.actions}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {media.map((asset) => (
+            <tr key={asset.id} className="border-b border-line last:border-b-0" data-testid={`media-list-row-${asset.id}`}>
+              <td className="max-w-[180px] px-2 py-2">
+                <div className="truncate font-semibold text-ink" title={asset.path}>
+                  {asset.name}
+                </div>
+              </td>
+              <td className="px-2 py-2 text-slate-600">{formatMediaFormat(asset)}</td>
+              <td className="px-2 py-2 text-slate-600">{formatMediaResolution(asset)}</td>
+              <td className="px-2 py-2 tabular-nums text-slate-600">{formatDuration(asset.duration)}</td>
+              <td className="px-2 py-2 tabular-nums text-slate-600" data-testid={`media-list-size-${asset.id}`}>
+                {formatBytes(asset.size)}
+              </td>
+              <td className="px-2 py-2 tabular-nums text-slate-600">{formatImportedAt(asset.importedAt)}</td>
+              <td className="px-2 py-2">
+                <div className="flex justify-end gap-1">
+                  {asset.type === 'video' ? (
+                    <button className="rounded border border-line px-2 py-1 font-medium text-slate-600 hover:bg-panel" type="button" data-testid={`media-list-export-gif-${asset.id}`} onClick={() => onExportGif(asset)}>
+                      GIF
+                    </button>
+                  ) : null}
+                  <button className="rounded border border-line bg-panel px-2 py-1 font-medium text-slate-700 hover:bg-white" type="button" data-testid={`media-list-add-${asset.id}`} onClick={() => onAddToTimeline(asset.id)}>
+                    {zhCN.mediaBin.add}
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function MediaLibraryTimelineView({ media, onAddToTimeline, onExportGif }: { media: MediaAsset[]; onAddToTimeline(assetId: string): void; onExportGif(asset: MediaAsset): void }) {
+  if (media.length === 0) {
+    return null;
+  }
+  const maxDuration = Math.max(1, ...media.map((asset) => asset.duration || 0));
+  return (
+    <div className="overflow-x-auto rounded-md border border-line bg-white p-3" data-testid="media-timeline-view">
+      <div className="flex min-w-max items-stretch gap-2">
+        {media.map((asset) => {
+          const width = Math.max(90, Math.min(240, 80 + (asset.duration / maxDuration) * 160));
+          return (
+            <div key={asset.id} className="flex-none overflow-hidden rounded-md border border-line bg-panel" style={{ width }} data-testid={`media-timeline-item-${asset.id}`}>
+              <div className="checkerboard relative h-20">
+                {asset.thumbnail ? <img className="h-full w-full object-cover" src={asset.thumbnail} alt="" /> : <IconPreview type={asset.type} />}
+                <span className="absolute bottom-1 right-1 rounded bg-black/70 px-1.5 py-0.5 text-[11px] font-semibold text-white">{formatDuration(asset.duration)}</span>
+              </div>
+              <div className="space-y-1 p-2">
+                <div className="truncate text-xs font-semibold text-ink" title={asset.path}>
+                  {asset.name}
+                </div>
+                <div className="truncate text-[11px] text-slate-500">{formatImportedAt(asset.importedAt)}</div>
+                <div className="flex gap-1">
+                  {asset.type === 'video' ? (
+                    <button className="rounded border border-line bg-white px-1.5 py-1 text-[11px] font-medium text-slate-600 hover:bg-panel" type="button" data-testid={`media-timeline-export-gif-${asset.id}`} onClick={() => onExportGif(asset)}>
+                      GIF
+                    </button>
+                  ) : null}
+                  <button className="flex-1 rounded border border-line bg-white px-1.5 py-1 text-[11px] font-medium text-slate-700 hover:bg-panel" type="button" data-testid={`media-timeline-add-${asset.id}`} onClick={() => onAddToTimeline(asset.id)}>
+                    {zhCN.mediaBin.add}
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function MediaCardGrid({
   media,
+  gridSize,
   mediaMetadata,
   projectFrameRate,
   onAddToTimeline,
@@ -624,6 +895,7 @@ function MediaCardGrid({
   onShowInfo
 }: {
   media: MediaAsset[];
+  gridSize: MediaLibraryGridSize;
   mediaMetadata: Record<string, MediaMetadata>;
   projectFrameRate: number;
   onAddToTimeline(assetId: string): void;
@@ -640,8 +912,9 @@ function MediaCardGrid({
   if (media.length === 0) {
     return null;
   }
+  const minWidth = gridSize === 'small' ? 118 : gridSize === 'large' ? 240 : 170;
   return (
-    <div className="grid grid-cols-1 gap-3">
+    <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${minWidth}px, 1fr))` }} data-testid="media-grid-view" data-grid-size={gridSize}>
       {media.map((asset) => (
         <MediaCard
           key={asset.id}
@@ -1143,6 +1416,18 @@ function formatFrameRateLabel(frameRate: number): string {
   return `${Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(2).replace(/0+$/, '').replace(/\.$/, '')}fps`;
 }
 
+function formatMediaFormat(asset: MediaAsset): string {
+  const extension = asset.name.includes('.') ? asset.name.split('.').pop()?.toUpperCase() : undefined;
+  return extension ? `${zhCN.mediaBin.assetType[asset.type]} / ${extension}` : zhCN.mediaBin.assetType[asset.type];
+}
+
+function formatMediaResolution(asset: MediaAsset): string {
+  if (asset.type === 'audio') {
+    return zhCN.common.unavailable;
+  }
+  return asset.width && asset.height ? `${asset.width} x ${asset.height}` : zhCN.common.unavailable;
+}
+
 function formatPreciseFrameRate(frameRate: number): string {
   return `${(Math.round(frameRate * 1000) / 1000).toFixed(3)} fps`;
 }
@@ -1234,10 +1519,30 @@ function formatDateTime(timestamp?: number): string {
   return new Date(timestamp).toLocaleString();
 }
 
+function formatImportedAt(importedAt?: string): string {
+  if (!importedAt) {
+    return zhCN.common.unavailable;
+  }
+  const timestamp = Date.parse(importedAt);
+  if (!Number.isFinite(timestamp)) {
+    return zhCN.common.unavailable;
+  }
+  return new Date(timestamp).toLocaleDateString();
+}
+
 function formatDuration(duration: number): string {
   const minutes = Math.floor(duration / 60);
   const seconds = Math.floor(duration % 60)
     .toString()
     .padStart(2, '0');
   return `${minutes}:${seconds}`;
+}
+
+function isEditableKeyboardTarget(target: EventTarget | null): boolean {
+  const element = target as HTMLElement | null;
+  if (!element) {
+    return false;
+  }
+  const tag = element.tagName.toLowerCase();
+  return tag === 'input' || tag === 'textarea' || tag === 'select' || element.isContentEditable;
 }

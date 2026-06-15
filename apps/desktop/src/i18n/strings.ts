@@ -688,6 +688,36 @@ const zh = {
       noBitrateData: '没有可用码率数据'
     },
     searchPlaceholder: '搜索媒体',
+    viewMode: '视图模式',
+    viewModes: {
+      grid: '网格',
+      list: '列表',
+      timeline: '时间线'
+    },
+    gridSize: '卡片尺寸',
+    gridSizes: {
+      small: '小',
+      medium: '中',
+      large: '大'
+    },
+    sortBy: '排序',
+    sortAscending: '升序',
+    sortDescending: '降序',
+    sortKeys: {
+      name: '名称',
+      duration: '时长',
+      size: '大小',
+      importedAt: '导入时间'
+    },
+    listColumns: {
+      name: '名称',
+      format: '格式',
+      resolution: '分辨率',
+      duration: '时长',
+      fileSize: '文件大小',
+      importedAt: '导入时间',
+      actions: '操作'
+    },
     filters: {
       all: '全部',
       selected: '仅选用',
@@ -735,6 +765,7 @@ const zh = {
     pendingCount: (count: number) => `${count} 个待处理`,
     failedCount: (count: number) => `${count} 个失败`,
     emptyDrop: '将媒体文件拖到这里，或点击导入。',
+    add: '添加',
     addToTimeline: '添加到时间线',
     relink: '重连',
     generateProxy: '生成代理',
@@ -3200,6 +3231,36 @@ const enOverrides = {
       noBitrateData: 'No bitrate data available'
     },
     searchPlaceholder: 'Search media',
+    viewMode: 'View Mode',
+    viewModes: {
+      grid: 'Grid',
+      list: 'List',
+      timeline: 'Timeline'
+    },
+    gridSize: 'Card Size',
+    gridSizes: {
+      small: 'Small',
+      medium: 'Medium',
+      large: 'Large'
+    },
+    sortBy: 'Sort',
+    sortAscending: 'Asc',
+    sortDescending: 'Desc',
+    sortKeys: {
+      name: 'Name',
+      duration: 'Duration',
+      size: 'Size',
+      importedAt: 'Imported'
+    },
+    listColumns: {
+      name: 'Name',
+      format: 'Format',
+      resolution: 'Resolution',
+      duration: 'Duration',
+      fileSize: 'File Size',
+      importedAt: 'Imported',
+      actions: 'Actions'
+    },
     filters: {
       all: 'All',
       selected: 'Selected Only',
@@ -3247,6 +3308,7 @@ const enOverrides = {
     pendingCount: (count: number) => `${count} pending`,
     failedCount: (count: number) => `${count} failed`,
     emptyDrop: 'Drop media files here, or click import.',
+    add: 'Add',
     addToTimeline: 'Add to Timeline',
     relink: 'Relink',
     generateProxy: 'Generate Proxy',

@@ -279,23 +279,43 @@ describe('app settings storage', () => {
   });
 
   it('persists safe frame guide visibility in view settings', async () => {
-    await expect(readViewSettings()).resolves.toEqual({ safeFrameGuides: false, thumbnailTrackVisible: true });
+    const defaultMediaLibrary = { mode: 'grid', gridSize: 'medium', sortKey: 'importedAt', sortDirection: 'desc' };
+    await expect(readViewSettings()).resolves.toEqual({ safeFrameGuides: false, thumbnailTrackVisible: true, mediaLibrary: defaultMediaLibrary });
 
     await saveLanguageSetting('en');
     const view = await saveViewSettings({ safeFrameGuides: true, thumbnailTrackVisible: false });
 
-    expect(view).toEqual({ safeFrameGuides: true, thumbnailTrackVisible: false });
-    expect(await readViewSettings()).toEqual({ safeFrameGuides: true, thumbnailTrackVisible: false });
+    expect(view).toEqual({ safeFrameGuides: true, thumbnailTrackVisible: false, mediaLibrary: defaultMediaLibrary });
+    expect(await readViewSettings()).toEqual({ safeFrameGuides: true, thumbnailTrackVisible: false, mediaLibrary: defaultMediaLibrary });
     expect(await readAppSettings()).toEqual({
       language: 'en',
-      view: { safeFrameGuides: true, thumbnailTrackVisible: false }
+      view: { safeFrameGuides: true, thumbnailTrackVisible: false, mediaLibrary: defaultMediaLibrary }
     });
 
     await saveViewSettings({ safeFrameGuides: false, thumbnailTrackVisible: true });
-    expect(await readViewSettings()).toEqual({ safeFrameGuides: false, thumbnailTrackVisible: true });
+    expect(await readViewSettings()).toEqual({ safeFrameGuides: false, thumbnailTrackVisible: true, mediaLibrary: defaultMediaLibrary });
     expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({
       language: 'en',
-      view: { safeFrameGuides: false, thumbnailTrackVisible: true }
+      view: { safeFrameGuides: false, thumbnailTrackVisible: true, mediaLibrary: defaultMediaLibrary }
+    });
+  });
+
+  it('persists media library view mode and sorting in settings.json', async () => {
+    const mediaLibrary = { mode: 'list' as const, gridSize: 'large' as const, sortKey: 'duration' as const, sortDirection: 'asc' as const };
+
+    await saveViewSettings({ mediaLibrary });
+
+    expect(await readViewSettings()).toEqual({
+      safeFrameGuides: false,
+      thumbnailTrackVisible: true,
+      mediaLibrary
+    });
+    expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({
+      view: {
+        safeFrameGuides: false,
+        thumbnailTrackVisible: true,
+        mediaLibrary
+      }
     });
   });
 

@@ -12,6 +12,11 @@ import {
   normalizePreviewPerformanceSettings,
   type PreviewPerformanceSettings
 } from '../lib/preview/preview-performance';
+import {
+  DEFAULT_MEDIA_LIBRARY_VIEW_SETTINGS,
+  normalizeMediaLibraryViewSettings,
+  type MediaLibraryViewSettings
+} from '../media/mediaLibraryView';
 
 const BROWSER_SETTINGS_KEY = 'open-factory:settings';
 
@@ -55,6 +60,7 @@ export interface ExportUploadSettings {
 export interface ViewSettings {
   safeFrameGuides: boolean;
   thumbnailTrackVisible: boolean;
+  mediaLibrary: MediaLibraryViewSettings;
 }
 
 export type ExportRuleTrigger = 'export-success' | 'export-failure' | 'queue-complete';
@@ -556,7 +562,8 @@ export function normalizeViewSettings(settings: Partial<ViewSettings> | undefine
   }
   return {
     safeFrameGuides: settings.safeFrameGuides === true,
-    thumbnailTrackVisible: settings.thumbnailTrackVisible !== false
+    thumbnailTrackVisible: settings.thumbnailTrackVisible !== false,
+    mediaLibrary: normalizeMediaLibraryViewSettings(settings.mediaLibrary)
   };
 }
 
@@ -623,7 +630,8 @@ function shouldPersistExportUploadSettings(settings: ExportUploadSettings): bool
 function defaultViewSettings(): ViewSettings {
   return {
     safeFrameGuides: false,
-    thumbnailTrackVisible: true
+    thumbnailTrackVisible: true,
+    mediaLibrary: { ...DEFAULT_MEDIA_LIBRARY_VIEW_SETTINGS }
   };
 }
 
