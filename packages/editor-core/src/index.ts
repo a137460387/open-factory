@@ -16,6 +16,7 @@ export * from './timeline-thumbnails';
 export * from './timeline-protection';
 export * from './render-cache';
 export * from './timeline-snapping';
+export * from './timeline-grid';
 export * from './timeline-selection';
 export * from './timeline-zoom';
 export * from './timeline-ruler';

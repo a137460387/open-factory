@@ -1,5 +1,5 @@
 import { getLanguage, languageFromNavigator, normalizeLanguage, setLanguage, type Language } from '../i18n/strings';
-import { normalizeSplitLayoutDefinition, type SplitLayoutDefinition } from '@open-factory/editor-core';
+import { DEFAULT_TIMELINE_GRID_SETTINGS, normalizeSplitLayoutDefinition, normalizeTimelineGridSettings, type SplitLayoutDefinition, type TimelineGridSettings } from '@open-factory/editor-core';
 import { fsExists, getAppDataDir, readFile, writeFile } from '../lib/tauri-bridge';
 import {
   DEFAULT_EDITOR_LAYOUT_SETTINGS,
@@ -117,6 +117,7 @@ export interface AppSettings {
   previewPerformance?: PreviewPerformanceSettings;
   automationRules?: AutomationRule[];
   customSplitLayouts?: SplitLayoutDefinition[];
+  timelineGrid?: TimelineGridSettings;
 }
 
 export async function initializeLanguageFromSettings(): Promise<Language> {
@@ -239,6 +240,18 @@ export async function readPreviewPerformanceSettings(): Promise<PreviewPerforman
   return settings.previewPerformance ?? { ...DEFAULT_PREVIEW_PERFORMANCE_SETTINGS };
 }
 
+export async function readTimelineGridSettings(): Promise<TimelineGridSettings> {
+  const settings = await readAppSettings();
+  return settings.timelineGrid ?? { ...DEFAULT_TIMELINE_GRID_SETTINGS };
+}
+
+export async function saveTimelineGridSettings(timelineGrid: Partial<TimelineGridSettings>): Promise<TimelineGridSettings> {
+  const settings = await readAppSettings();
+  const nextTimelineGrid = normalizeTimelineGridSettings({ ...settings.timelineGrid, ...timelineGrid });
+  await writeAppSettings({ ...settings, timelineGrid: nextTimelineGrid });
+  return nextTimelineGrid;
+}
+
 export async function savePreviewPerformanceSettings(previewPerformance: Partial<PreviewPerformanceSettings>): Promise<PreviewPerformanceSettings> {
   const settings = await readAppSettings();
   const nextPreviewPerformance = normalizePreviewPerformanceSettings({ ...settings.previewPerformance, ...previewPerformance });
@@ -338,6 +351,9 @@ function normalizeSettings(settings: Partial<AppSettings>): AppSettings {
   const customSplitLayouts = normalizeCustomSplitLayouts(settings.customSplitLayouts);
   if (customSplitLayouts.length > 0) {
     normalized.customSplitLayouts = customSplitLayouts;
+  }
+  if (settings.timelineGrid) {
+    normalized.timelineGrid = normalizeTimelineGridSettings(settings.timelineGrid);
   }
   return normalized;
 }

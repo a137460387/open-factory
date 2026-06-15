@@ -19,6 +19,7 @@ interface ShortcutHandlers {
   clearSelection(): void;
   addAnnotation(): void;
   addBookmark(): void;
+  toggleGridSnap(): void;
   jumpToPreviousNavigationPoint(): void;
   jumpToNextNavigationPoint(): void;
   undo(): void;
@@ -107,6 +108,9 @@ export function useShortcuts(handlers: ShortcutHandlers, bindings: TimelineShort
           break;
         case 'add-bookmark':
           handlers.addBookmark();
+          break;
+        case 'toggle-grid-snap':
+          handlers.toggleGridSnap();
           break;
         case 'jump-prev-navigation-point':
           handlers.jumpToPreviousNavigationPoint();

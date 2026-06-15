@@ -11,6 +11,7 @@ import {
   readLayoutSettings,
   readPreviewPerformanceSettings,
   readThemeSettings,
+  readTimelineGridSettings,
   readViewSettings,
   saveBackupSettings,
   saveAutomationRules,
@@ -22,6 +23,7 @@ import {
   saveLayoutSettings,
   savePreviewPerformanceSettings,
   saveThemeSettings,
+  saveTimelineGridSettings,
   saveViewSettings
 } from './appSettings';
 
@@ -312,6 +314,23 @@ describe('app settings storage', () => {
 
     await savePreviewPerformanceSettings({ qualityMode: 'full', skipFrames: 1 });
     expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({ language: 'en' });
+  });
+
+  it('persists timeline grid snap settings in settings.json', async () => {
+    await expect(readTimelineGridSettings()).resolves.toEqual({ enabled: false, unit: 'frame' });
+
+    await saveLanguageSetting('en');
+    const grid = await saveTimelineGridSettings({ enabled: true, unit: '5-frames' });
+
+    expect(grid).toEqual({ enabled: true, unit: '5-frames' });
+    expect(await readTimelineGridSettings()).toEqual(grid);
+    expect(await readAppSettings()).toEqual({
+      language: 'en',
+      timelineGrid: grid
+    });
+
+    const normalized = await saveTimelineGridSettings({ unit: 'unknown' as never });
+    expect(normalized).toEqual({ enabled: true, unit: 'frame' });
   });
 
   it('persists normalized declarative automation rules in settings.json', async () => {

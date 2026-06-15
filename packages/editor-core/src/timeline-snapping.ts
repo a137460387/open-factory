@@ -2,7 +2,7 @@ import { round } from './time';
 
 export type SnapEdge = 'start' | 'end';
 
-export type SnapCandidateKind = 'timeline-start' | 'playhead' | 'marker' | 'beat' | 'clip-start' | 'clip-end';
+export type SnapCandidateKind = 'timeline-start' | 'playhead' | 'marker' | 'beat' | 'clip-start' | 'clip-end' | 'grid';
 
 export interface TimelineSnapCandidate {
   time: number;

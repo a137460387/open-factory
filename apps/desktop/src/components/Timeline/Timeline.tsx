@@ -33,8 +33,10 @@ import {
   calculateAnchoredScrollLeft,
   buildTimelineThumbnailTrackSamples,
   buildTimelineRulerTicks,
+  buildTimelineGridLines,
   clampTimelineZoom,
-  findTimelineSnapTarget,
+  DEFAULT_TIMELINE_GRID_SETTINGS,
+  findTimelineSnapTargetWithGrid,
   fitTimelineZoomToWindow,
   getTimelineVirtualRenderWindow,
   ensurePlayheadVisible,
@@ -78,6 +80,7 @@ import {
   round,
   secondsToTimecode,
   snapTime,
+  snapTimelineTimeToGrid,
   sortTimelineThumbnailSamplesByPriority,
   TIMELINE_LABEL_COLORS,
   type Clip,
@@ -94,6 +97,7 @@ import {
   type SelectionRect,
   type TimelineMarker,
   type TimelineSnapCandidate,
+  type TimelineGridSettings,
   type TimelineLabelColor,
   type Track,
   type TransitionType,
@@ -131,7 +135,15 @@ function isEditableKeyboardTarget(target: EventTarget | null): boolean {
   return Boolean(element?.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(element?.tagName ?? ''));
 }
 
-export function Timeline({ thumbnailTrackVisible = true, onConvertMediaFrameRate }: { thumbnailTrackVisible?: boolean; onConvertMediaFrameRate?(assetId: string): void }) {
+export function Timeline({
+  thumbnailTrackVisible = true,
+  timelineGridSettings = DEFAULT_TIMELINE_GRID_SETTINGS,
+  onConvertMediaFrameRate
+}: {
+  thumbnailTrackVisible?: boolean;
+  timelineGridSettings?: TimelineGridSettings;
+  onConvertMediaFrameRate?(assetId: string): void;
+}) {
   const project = useEditorStore((state) => state.project);
   const selectedClipId = useEditorStore((state) => state.selectedClipId);
   const selectedClipIds = useEditorStore((state) => state.selectedClipIds);
@@ -199,6 +211,7 @@ export function Timeline({ thumbnailTrackVisible = true, onConvertMediaFrameRate
   const width = Math.max(960, timelineDuration * zoom);
   const visibleStart = Math.max(0, (scrollViewport.scrollLeft - LABEL_WIDTH) / Math.max(1, zoom));
   const visibleEnd = visibleStart + scrollViewport.viewportWidth / Math.max(1, zoom);
+  const timelineGridBeatTimes = useMemo(() => (project.beatMarkers ?? []).map((marker) => marker.time), [project.beatMarkers]);
   const ticks = useMemo(
     () =>
       buildTimelineRulerTicks({
@@ -216,6 +229,21 @@ export function Timeline({ thumbnailTrackVisible = true, onConvertMediaFrameRate
     () => secondsToTimecode(playheadTime, project.settings.fps || 30, project.settings.timecodeFormat ?? 'ndf'),
     [playheadTime, project.settings.fps, project.settings.timecodeFormat]
   );
+  const gridLines = useMemo(() => {
+    if (!timelineGridSettings.enabled) {
+      return [];
+    }
+    return buildTimelineGridLines({
+      unit: timelineGridSettings.unit,
+      fps: project.settings.fps || 30,
+      duration: timelineDuration,
+      visibleStart,
+      visibleEnd,
+      zoom,
+      viewportWidth: Math.max(1, scrollViewport.viewportWidth - LABEL_WIDTH),
+      beatTimes: timelineGridBeatTimes
+    });
+  }, [project.settings.fps, scrollViewport.viewportWidth, timelineDuration, timelineGridBeatTimes, timelineGridSettings.enabled, timelineGridSettings.unit, visibleEnd, visibleStart, zoom]);
   const activeBeatMarkerId = useMemo(() => {
     if (!isPlaying) {
       return undefined;
@@ -718,7 +746,7 @@ function addProjectBookmark(time = playheadTime): void {
       if (drag.keyframeSelectionOnly) {
         return;
       }
-      const nextTime = snapTime(Math.min(drag.clip.duration, Math.max(0, drag.previewStart + delta)));
+      const nextTime = snapKeyframeTime(drag.clip, Math.min(drag.clip.duration, Math.max(0, drag.previewStart + delta)), event.altKey);
       const previewKeyframeDelta = round(nextTime - drag.previewStart);
       const keyframes = drag.keyframes?.length
         ? drag.keyframes
@@ -1422,27 +1450,54 @@ function addProjectBookmark(time = playheadTime): void {
   }
 
   function snapClipStart(time: number, duration: number, clip: Clip, disabled: boolean, edges?: SnapEdge[]): number {
-    const target = findTimelineSnapTarget({
+    const target = findTimelineSnapTargetWithGrid({
       clipStart: time,
       clipDuration: duration,
       candidates: buildSnapCandidates(clip),
       pixelsPerSecond: zoom,
       disabled,
-      edges
+      edges,
+      grid: {
+        enabled: timelineGridSettings.enabled,
+        unit: timelineGridSettings.unit,
+        fps: project.settings.fps || 30,
+        beatTimes: timelineGridBeatTimes
+      }
     });
     return target?.snappedStart ?? time;
   }
 
   function snapClipEnd(time: number, clip: Clip, disabled: boolean): number {
-    const target = findTimelineSnapTarget({
+    const target = findTimelineSnapTargetWithGrid({
       clipStart: clip.start,
       clipDuration: Math.max(1 / 30, time - clip.start),
       candidates: buildSnapCandidates(clip),
       pixelsPerSecond: zoom,
       disabled,
-      edges: ['end']
+      edges: ['end'],
+      grid: {
+        enabled: timelineGridSettings.enabled,
+        unit: timelineGridSettings.unit,
+        fps: project.settings.fps || 30,
+        beatTimes: timelineGridBeatTimes
+      }
     });
     return target?.candidate.time ?? time;
+  }
+
+  function snapKeyframeTime(clip: Clip, localTime: number, disabled: boolean): number {
+    const roundedLocalTime = snapTime(localTime);
+    if (!timelineGridSettings.enabled || disabled) {
+      return roundedLocalTime;
+    }
+    const snappedTimelineTime = snapTimelineTimeToGrid({
+      time: clip.start + roundedLocalTime,
+      unit: timelineGridSettings.unit,
+      fps: project.settings.fps || 30,
+      pixelsPerSecond: zoom,
+      beatTimes: timelineGridBeatTimes
+    });
+    return snapTime(Math.min(clip.duration, Math.max(0, snappedTimelineTime - clip.start)));
   }
 
   function buildSnapCandidates(clip: Clip): TimelineSnapCandidate[] {
@@ -1640,6 +1695,15 @@ function addProjectBookmark(time = playheadTime): void {
           />
           {thumbnailTrackVisible ? <ThumbnailTrack samples={thumbnailTrackSamples} media={project.media} zoom={zoom} width={width} /> : null}
           <div className="relative">
+            {gridLines.map((line) => (
+              <div
+                key={`${line.time}-${line.major ? 'major' : 'minor'}`}
+                className={line.major ? 'pointer-events-none absolute bottom-0 top-0 z-[1] border-l border-slate-300/80' : 'pointer-events-none absolute bottom-0 top-0 z-[1] border-l border-slate-200/70'}
+                style={{ left: LABEL_WIDTH + line.time * zoom }}
+                data-testid="timeline-grid-line"
+                data-grid-major={line.major ? 'true' : 'false'}
+              />
+            ))}
             {project.timeline.tracks.map((track) => (
               <TrackRow
                 key={track.id}

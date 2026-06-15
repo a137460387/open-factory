@@ -1,4 +1,4 @@
-import { Archive, Camera, Captions, ChevronDown, Download, FileDown, FilePlus2, FolderOpen, GitCompareArrows, History, ImageDown, LayoutGrid, Mic2, Monitor, PanelsTopLeft, Pause, PictureInPicture2, Play, Redo2, RotateCcw, Save, Scissors, Settings, Square, Trash2, Undo2, WandSparkles, XCircle } from 'lucide-react';
+import { Archive, Camera, Captions, ChevronDown, Download, FileDown, FilePlus2, FolderOpen, GitCompareArrows, Grid2X2, History, ImageDown, LayoutGrid, Mic2, Monitor, PanelsTopLeft, Pause, PictureInPicture2, Play, Redo2, RotateCcw, Save, Scissors, Settings, Square, Trash2, Undo2, WandSparkles, XCircle } from 'lucide-react';
 import {
   BUILT_IN_SPLIT_LAYOUTS,
   SPLIT_LAYOUT_PRESET_IDS,
@@ -6,7 +6,9 @@ import {
   type BeatSensitivity,
   type PiPLayoutPosition,
   type SplitLayoutDefinition,
-  type SubtitleDataImportMode
+  type SubtitleDataImportMode,
+  type TimelineGridSettings,
+  type TimelineGridUnit
 } from '@open-factory/editor-core';
 import { clsx } from 'clsx';
 import { useState } from 'react';
@@ -85,10 +87,13 @@ interface ToolbarProps {
   safeFrameGuides: boolean;
   thumbnailTrackVisible: boolean;
   previewQualityMode: PreviewQualityMode;
+  timelineGridSettings: TimelineGridSettings;
   onToggleStoryboard(): void;
   onToggleSafeFrameGuides(): void;
   onToggleThumbnailTrack(): void;
   onPreviewQualityModeChange(mode: PreviewQualityMode): void;
+  onToggleTimelineGridSnap(): void;
+  onTimelineGridUnitChange(unit: TimelineGridUnit): void;
   onToggleHistoryPanel(): void;
   onUndo(): void;
   onRedo(): void;
@@ -102,6 +107,8 @@ interface ToolbarProps {
   lastExportPath?: string;
   lastBackupAt?: string;
 }
+
+const TIMELINE_GRID_UNITS: TimelineGridUnit[] = ['frame', '5-frames', '10-frames', 'second', '5-seconds', 'measure'];
 
 export function Toolbar(props: ToolbarProps) {
   const t = zhCN.toolbar;
@@ -697,6 +704,22 @@ export function Toolbar(props: ToolbarProps) {
           {PREVIEW_QUALITY_MODES.map((mode) => (
             <option key={mode} value={mode}>
               {t.previewQualityOptions[mode]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <ToolButton title={t.gridSnap} onClick={props.onToggleTimelineGridSnap} icon={<Grid2X2 size={17} />} testId="toolbar-grid-snap-button" active={props.timelineGridSettings.enabled} />
+      <label className="inline-flex h-9 items-center gap-1 rounded-md border border-line bg-panel px-2 text-[11px] text-slate-600" title={t.gridSnapUnit}>
+        <span>{t.gridSnapUnit}</span>
+        <select
+          className="h-6 rounded border border-line bg-white px-1 text-xs font-medium text-slate-700"
+          value={props.timelineGridSettings.unit}
+          data-testid="toolbar-grid-snap-unit-select"
+          onChange={(event) => props.onTimelineGridUnitChange(event.target.value as TimelineGridUnit)}
+        >
+          {TIMELINE_GRID_UNITS.map((unit) => (
+            <option key={unit} value={unit}>
+              {t.gridSnapUnits[unit]}
             </option>
           ))}
         </select>

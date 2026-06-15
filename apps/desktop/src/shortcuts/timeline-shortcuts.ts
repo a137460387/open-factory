@@ -16,6 +16,7 @@ export type TimelineShortcutAction =
   | 'clear-selection'
   | 'add-annotation'
   | 'add-bookmark'
+  | 'toggle-grid-snap'
   | 'jump-prev-navigation-point'
   | 'jump-next-navigation-point'
   | 'undo'
@@ -58,6 +59,7 @@ export const TIMELINE_SHORTCUT_DEFINITIONS: TimelineShortcutDefinition[] = [
   { action: 'clear-selection', defaultBindings: ['Escape'] },
   { action: 'add-annotation', defaultBindings: ['N'] },
   { action: 'add-bookmark', defaultBindings: ['B'] },
+  { action: 'toggle-grid-snap', defaultBindings: ['G'] },
   { action: 'jump-prev-navigation-point', defaultBindings: ['Ctrl+ArrowLeft'] },
   { action: 'jump-next-navigation-point', defaultBindings: ['Ctrl+ArrowRight'] },
   { action: 'undo', defaultBindings: ['Ctrl+Z'] },

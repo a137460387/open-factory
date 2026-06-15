@@ -10,6 +10,7 @@ import {
   AddTrackCommand,
   AddTransitionCommand,
   CreateMulticamSequenceCommand,
+  DEFAULT_TIMELINE_GRID_SETTINGS,
   DEFAULT_PROJECT_ANNOTATION_COLOR,
   DeleteGroupCommand,
   DeleteClipsCommand,
@@ -77,6 +78,8 @@ import {
   type SplitLayoutDefinition,
   type SubtitleDataImportMode,
   type Timeline as CoreTimeline,
+  type TimelineGridSettings,
+  type TimelineGridUnit,
   type TitleTemplateId
 } from '@open-factory/editor-core';
 import { ChevronLeft, ChevronRight, GripHorizontal } from 'lucide-react';
@@ -173,10 +176,12 @@ import {
   readCustomSplitLayouts,
   readLayoutSettings,
   readPreviewPerformanceSettings,
+  readTimelineGridSettings,
   readViewSettings,
   saveCustomSplitLayouts,
   saveLayoutSettings,
   savePreviewPerformanceSettings,
+  saveTimelineGridSettings,
   saveViewSettings
 } from '../settings/appSettings';
 import { DEFAULT_PREVIEW_PERFORMANCE_SETTINGS, type PreviewPerformanceSettings, type PreviewQualityMode, type PreviewSkipFrames } from '../lib/preview/preview-performance';
@@ -281,6 +286,7 @@ export function EditorShell() {
   const [safeFrameGuides, setSafeFrameGuides] = useState(false);
   const [thumbnailTrackVisible, setThumbnailTrackVisible] = useState(true);
   const [previewPerformance, setPreviewPerformance] = useState<PreviewPerformanceSettings>(DEFAULT_PREVIEW_PERFORMANCE_SETTINGS);
+  const [timelineGridSettings, setTimelineGridSettings] = useState<TimelineGridSettings>(DEFAULT_TIMELINE_GRID_SETTINGS);
   const [pipLayoutPosition, setPiPLayoutPosition] = useState<PiPLayoutPosition>('bottom-right');
   const [customSplitLayouts, setCustomSplitLayouts] = useState<SplitLayoutDefinition[]>([]);
   const [viewportSize, setViewportSize] = useState(() => readViewportSize());
@@ -406,6 +412,37 @@ export function EditorShell() {
     });
   }, []);
 
+  const updateTimelineGridSettings = useCallback((patch: Partial<TimelineGridSettings>) => {
+    setTimelineGridSettings((current) => {
+      const optimistic = { ...current, ...patch };
+      void saveTimelineGridSettings(optimistic)
+        .then((saved) => setTimelineGridSettings(saved))
+        .catch((error) => {
+          console.warn('Unable to save timeline grid settings', error);
+        });
+      return optimistic;
+    });
+  }, []);
+
+  const toggleTimelineGridSnap = useCallback(() => {
+    setTimelineGridSettings((current) => {
+      const optimistic = { ...current, enabled: !current.enabled };
+      void saveTimelineGridSettings(optimistic)
+        .then((saved) => setTimelineGridSettings(saved))
+        .catch((error) => {
+          console.warn('Unable to save timeline grid settings', error);
+        });
+      return optimistic;
+    });
+  }, []);
+
+  const changeTimelineGridUnit = useCallback(
+    (unit: TimelineGridUnit) => {
+      updateTimelineGridSettings({ unit });
+    },
+    [updateTimelineGridSettings]
+  );
+
   const runAutomationForMedia = useCallback(async (trigger: 'on-import' | 'on-export-complete' | 'on-project-open', media: MediaAsset[]) => {
     if (media.length === 0) {
       return;
@@ -512,6 +549,22 @@ export function EditorShell() {
       })
       .catch((error) => {
         console.warn('Unable to load preview performance settings', error);
+      });
+    return () => {
+      canceled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let canceled = false;
+    void readTimelineGridSettings()
+      .then((settings) => {
+        if (!canceled) {
+          setTimelineGridSettings(settings);
+        }
+      })
+      .catch((error) => {
+        console.warn('Unable to load timeline grid settings', error);
       });
     return () => {
       canceled = true;
@@ -1953,6 +2006,7 @@ export function EditorShell() {
       clearSelection: clearSelectedClipIds,
       addAnnotation: addAnnotationAtPlayhead,
       addBookmark: addBookmarkAtPlayhead,
+      toggleGridSnap: toggleTimelineGridSnap,
       jumpToPreviousNavigationPoint: () => jumpTimelineNavigationPoint('previous'),
       jumpToNextNavigationPoint: () => jumpTimelineNavigationPoint('next'),
       undo,
@@ -1982,6 +2036,7 @@ export function EditorShell() {
       splitSelected,
       stepFrame,
       togglePlayback,
+      toggleTimelineGridSnap,
       undo
     ]
   );
@@ -2170,7 +2225,10 @@ export function EditorShell() {
           safeFrameGuides={safeFrameGuides}
           thumbnailTrackVisible={thumbnailTrackVisible}
           previewQualityMode={previewPerformance.qualityMode}
+          timelineGridSettings={timelineGridSettings}
           onPreviewQualityModeChange={(qualityMode: PreviewQualityMode) => updatePreviewPerformance({ qualityMode })}
+          onToggleTimelineGridSnap={toggleTimelineGridSnap}
+          onTimelineGridUnitChange={changeTimelineGridUnit}
           onToggleStoryboard={() => setStoryboardOpen((open) => !open)}
           onToggleSafeFrameGuides={toggleSafeFrameGuides}
           onToggleThumbnailTrack={toggleThumbnailTrackVisible}
@@ -2313,7 +2371,7 @@ export function EditorShell() {
         </div>
         <section className="min-h-0 overflow-hidden" data-testid="timeline-panel" style={{ height: timelineHeightPx }}>
           <ErrorBoundary name={storyboardOpen ? zhCN.storyboard.title : zhCN.panels.timeline}>
-            {storyboardOpen ? <StoryboardView /> : <Timeline thumbnailTrackVisible={thumbnailTrackVisible} onConvertMediaFrameRate={convertVfrMediaToCfr} />}
+            {storyboardOpen ? <StoryboardView /> : <Timeline thumbnailTrackVisible={thumbnailTrackVisible} timelineGridSettings={timelineGridSettings} onConvertMediaFrameRate={convertVfrMediaToCfr} />}
           </ErrorBoundary>
         </section>
         <Suspense fallback={null}>

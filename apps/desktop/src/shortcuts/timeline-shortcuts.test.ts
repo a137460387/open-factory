@@ -25,6 +25,7 @@ describe('timeline shortcut mapping', () => {
     ['Escape', { key: 'Escape' }, 'clear-selection'],
     ['N', { key: 'n' }, 'add-annotation'],
     ['B', { key: 'b' }, 'add-bookmark'],
+    ['G', { key: 'g' }, 'toggle-grid-snap'],
     ['Ctrl+ArrowLeft', { key: 'ArrowLeft', ctrlKey: true }, 'jump-prev-navigation-point'],
     ['Ctrl+ArrowRight', { key: 'ArrowRight', ctrlKey: true }, 'jump-next-navigation-point'],
     ['Ctrl+Z', { key: 'z', ctrlKey: true }, 'undo'],

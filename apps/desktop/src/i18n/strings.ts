@@ -112,6 +112,16 @@ const zh = {
       quarter: '四分之一分辨率',
       'audio-only': '仅音频'
     },
+    gridSnap: '网格吸附',
+    gridSnapUnit: '网格单位',
+    gridSnapUnits: {
+      frame: '1帧',
+      '5-frames': '5帧',
+      '10-frames': '10帧',
+      second: '1秒',
+      '5-seconds': '5秒',
+      measure: '小节'
+    },
     safeFrameGuidesVisible: '显示',
     safeFrameGuidesHidden: '隐藏',
     splitSelectedClip: '分割选中片段',
@@ -416,6 +426,7 @@ const zh = {
         'clear-selection': '清除选择',
         'add-annotation': '添加批注',
         'add-bookmark': '添加书签',
+        'toggle-grid-snap': '切换网格吸附',
         'jump-prev-navigation-point': '上一书签/标记',
         'jump-next-navigation-point': '下一书签/标记',
         undo: '撤销',
@@ -2564,6 +2575,16 @@ const enOverrides = {
       quarter: 'Quarter Resolution',
       'audio-only': 'Audio Only'
     },
+    gridSnap: 'Grid Snap',
+    gridSnapUnit: 'Grid Unit',
+    gridSnapUnits: {
+      frame: '1 frame',
+      '5-frames': '5 frames',
+      '10-frames': '10 frames',
+      second: '1 sec',
+      '5-seconds': '5 sec',
+      measure: 'Measure'
+    },
     safeFrameGuidesVisible: 'Visible',
     safeFrameGuidesHidden: 'Hidden',
     splitSelectedClip: 'Split Selected Clip',
@@ -2859,6 +2880,7 @@ const enOverrides = {
         'clear-selection': 'Clear Selection',
         'add-annotation': 'Add Annotation',
         'add-bookmark': 'Add Bookmark',
+        'toggle-grid-snap': 'Toggle Grid Snap',
         'jump-prev-navigation-point': 'Previous Bookmark/Marker',
         'jump-next-navigation-point': 'Next Bookmark/Marker',
         undo: 'Undo',
