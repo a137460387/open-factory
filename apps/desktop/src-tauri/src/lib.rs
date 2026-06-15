@@ -78,6 +78,7 @@ pub fn run() {
             commands::media::probe_media,
             commands::media::analyze_media,
             commands::media::scan_media_integrity,
+            commands::media::analyze_audio_spectrum,
             commands::media::analyze_waveform,
             commands::media::detect_silence,
             commands::media::detect_beats,

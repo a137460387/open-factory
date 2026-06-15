@@ -679,6 +679,7 @@ const zh = {
     newAdjustmentLayer: '新建调整层',
     batchTranscode: '批量转码',
     exportGif: '导出为 GIF',
+    spectrumAnalysis: '频谱分析',
     gifExport: {
       title: '导出为 GIF',
       frameRate: '帧率',
@@ -704,6 +705,22 @@ const zh = {
       completedMessage: (path: string) => `已导出：${path}`,
       failedTitle: 'GIF 导出失败',
       failedMessage: '无法导出 GIF。'
+    },
+    spectrum: {
+      title: '频谱分析',
+      loading: '正在分析频谱...',
+      unavailable: '频谱图不可用',
+      stats: '统计信息',
+      integratedLufs: '响度',
+      dynamicRange: '动态范围',
+      truePeak: '真峰值',
+      peak: '峰值',
+      rms: 'RMS',
+      selection: (start: string, end: string) => `${start} - ${end}`,
+      failedTitle: '频谱分析失败',
+      failedMessage: '无法完成频谱分析。',
+      splitFailedTitle: '无法在此处分割',
+      splitFailedMessage: '请先把该素材加入时间线，或选择对应 Clip。'
     },
     scanDuplicates: '扫描重复',
     mediaInfo: {
@@ -3351,6 +3368,7 @@ const enOverrides = {
     newAdjustmentLayer: 'New Adjustment Layer',
     batchTranscode: 'Batch Transcode',
     exportGif: 'Export as GIF',
+    spectrumAnalysis: 'Spectrum Analysis',
     gifExport: {
       title: 'Export as GIF',
       frameRate: 'Frame Rate',
@@ -3376,6 +3394,22 @@ const enOverrides = {
       completedMessage: (path: string) => `Exported: ${path}`,
       failedTitle: 'GIF export failed',
       failedMessage: 'Unable to export GIF.'
+    },
+    spectrum: {
+      title: 'Spectrum Analysis',
+      loading: 'Analyzing spectrum...',
+      unavailable: 'Spectrum unavailable',
+      stats: 'Statistics',
+      integratedLufs: 'Loudness',
+      dynamicRange: 'Dynamic Range',
+      truePeak: 'True Peak',
+      peak: 'Peak',
+      rms: 'RMS',
+      selection: (start: string, end: string) => `${start} - ${end}`,
+      failedTitle: 'Spectrum analysis failed',
+      failedMessage: 'Unable to analyze spectrum.',
+      splitFailedTitle: 'Unable to split here',
+      splitFailedMessage: 'Add this media to the timeline or select the matching clip first.'
     },
     scanDuplicates: 'Scan Duplicates',
     mediaInfo: {

@@ -226,6 +226,7 @@ const MacroHistoryDialog = lazy(() => import('../macros/MacroHistoryDialog').the
 const TimelineExportDialog = lazy(() => import('../timeline-export/TimelineExportDialog').then((module) => ({ default: module.TimelineExportDialog })));
 const BatchTranscodeDialog = lazy(() => import('../media/BatchTranscodeDialog').then((module) => ({ default: module.BatchTranscodeDialog })));
 const GifExportDialog = lazy(() => import('../media/GifExportDialog'));
+const AudioSpectrumDialog = lazy(() => import('../media/AudioSpectrumDialog'));
 const MediaPrecheckPanel = lazy(() => import('../media/MediaPrecheckPanel').then((module) => ({ default: module.MediaPrecheckPanel })));
 const VideoStitchWizardDialog = lazy(() => import('../video-stitching/VideoStitchWizardDialog').then((module) => ({ default: module.VideoStitchWizardDialog })));
 const SyncComparePanel = lazy(() => import('../sync-compare/SyncComparePanel').then((module) => ({ default: module.SyncComparePanel })));
@@ -270,6 +271,7 @@ export function EditorShell() {
   const [batchTranscodeOpen, setBatchTranscodeOpen] = useState(false);
   const [batchTranscodeInitialPaths, setBatchTranscodeInitialPaths] = useState<string[]>([]);
   const [gifExportAsset, setGifExportAsset] = useState<MediaAsset>();
+  const [spectrumAsset, setSpectrumAsset] = useState<MediaAsset>();
   const [mediaPrecheckOpen, setMediaPrecheckOpen] = useState(false);
   const [videoStitchWizardOpen, setVideoStitchWizardOpen] = useState(false);
   const [syncCompareOpen, setSyncCompareOpen] = useState(false);
@@ -1576,6 +1578,45 @@ export function EditorShell() {
     }
   }, [playheadTime, selectedClip]);
 
+  const seekSpectrumTime = useCallback(
+    (asset: MediaAsset, sourceTime: number) => {
+      const match = findTimelineClipForMediaSourceTime(project.timeline, asset.id, sourceTime, selectedClip);
+      if (match) {
+        setSelectedClipId(match.clip.id);
+        setPlayheadTime(match.timelineTime);
+        return;
+      }
+      setPlayheadTime(sourceTime);
+    },
+    [project.timeline, selectedClip, setPlayheadTime, setSelectedClipId]
+  );
+
+  const setSpectrumSelectionRange = useCallback(
+    (range: { inPoint: number; outPoint: number }) => {
+      setInPoint(range.inPoint);
+      setOutPoint(range.outPoint);
+    },
+    [setInPoint, setOutPoint]
+  );
+
+  const splitSpectrumAtTime = useCallback(
+    (asset: MediaAsset, sourceTime: number) => {
+      const match = findTimelineClipForMediaSourceTime(project.timeline, asset.id, sourceTime, selectedClip);
+      if (!match) {
+        showToast({ kind: 'warning', title: zhCN.mediaBin.spectrum.splitFailedTitle, message: zhCN.mediaBin.spectrum.splitFailedMessage });
+        return;
+      }
+      try {
+        setSelectedClipId(match.clip.id);
+        setPlayheadTime(match.timelineTime);
+        commandManager.execute(new SplitClipCommand(timelineAccessor, match.clip.id, match.timelineTime));
+      } catch (error) {
+        showToast({ kind: 'warning', title: zhCN.editorToasts.splitUnavailable, message: error instanceof Error ? error.message : zhCN.editorToasts.splitUnavailableMessage });
+      }
+    },
+    [project.timeline, selectedClip, setPlayheadTime, setSelectedClipId]
+  );
+
   const detectSelectedBeats = useCallback(async () => {
     if (!selectedClip || !selectedClipMedia || (selectedClip.type !== 'audio' && selectedClip.type !== 'video') || (selectedClipMedia.type !== 'audio' && !selectedClipMedia.hasAudio)) {
       showToast({ kind: 'warning', title: zhCN.editorToasts.beatDetectFailed, message: zhCN.editorToasts.beatDetectNoClip });
@@ -2405,6 +2446,7 @@ export function EditorShell() {
                 onImportPaths={(paths) => void importDropped(paths)}
                 onBatchTranscode={(paths) => openBatchTranscode(paths)}
                 onExportGif={(asset) => setGifExportAsset(asset)}
+                onAnalyzeSpectrum={(asset) => setSpectrumAsset(asset)}
                 onScanDuplicates={() => void scanDuplicateMedia()}
                 onAddToTimeline={addAssetToTimeline}
                 onAddAdjustmentLayer={addAdjustmentLayer}
@@ -2554,6 +2596,15 @@ export function EditorShell() {
             />
           ) : null}
           {gifExportAsset ? <GifExportDialog asset={gifExportAsset} onClose={() => setGifExportAsset(undefined)} /> : null}
+          {spectrumAsset ? (
+            <AudioSpectrumDialog
+              asset={spectrumAsset}
+              onClose={() => setSpectrumAsset(undefined)}
+              onSeek={(time) => seekSpectrumTime(spectrumAsset, time)}
+              onSelection={setSpectrumSelectionRange}
+              onSplitAtTime={(time) => splitSpectrumAtTime(spectrumAsset, time)}
+            />
+          ) : null}
           {mediaPrecheckOpen ? <MediaPrecheckPanel project={project} onClose={() => setMediaPrecheckOpen(false)} onJumpToMedia={jumpToMediaAsset} /> : null}
           {videoStitchWizardOpen ? (
             <VideoStitchWizardDialog
@@ -2824,6 +2875,30 @@ function isEditableKeyboardEventTarget(target: EventTarget | null): boolean {
 
 function getWorkspaceLayoutDisplayName(layout: WorkspaceLayoutDefinition): string {
   return layout.builtIn ? zhCN.toolbar.workspaceLayouts[layout.id as keyof typeof zhCN.toolbar.workspaceLayouts] ?? layout.name : layout.name;
+}
+
+function findTimelineClipForMediaSourceTime(
+  timeline: CoreTimeline,
+  mediaId: string,
+  sourceTime: number,
+  preferredClip?: Clip
+): { clip: Clip; timelineTime: number } | undefined {
+  const candidates = [
+    ...(preferredClip ? [preferredClip] : []),
+    ...timeline.tracks.flatMap((track) => track.clips).filter((clip) => clip.id !== preferredClip?.id)
+  ];
+  for (const clip of candidates) {
+    if (!('mediaId' in clip) || clip.mediaId !== mediaId) {
+      continue;
+    }
+    const speed = Math.max(0.001, getClipSpeed(clip));
+    const localTime = (sourceTime - clip.trimStart) / speed;
+    if (localTime <= 0.000001 || localTime >= clip.duration - 0.000001) {
+      continue;
+    }
+    return { clip, timelineTime: clip.start + localTime };
+  }
+  return undefined;
 }
 
 function isPiPVisualClip(clip: Clip): boolean {

@@ -1,9 +1,10 @@
 use crate::path_validator::validate_path;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use sha2::{Digest, Sha256};
 use std::fs;
 use std::io::{BufRead, BufReader, Read};
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::AppHandle;
@@ -44,6 +45,26 @@ pub struct MediaAnalysis {
     audio_streams: Vec<AudioStreamInfo>,
     bitrate_points: Vec<BitratePoint>,
     loudness_error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct AudioSpectrumStats {
+    integrated_lufs: Option<f64>,
+    dynamic_range_lu: Option<f64>,
+    true_peak_dbfs: Option<f64>,
+    peak_db: Option<f64>,
+    rms_db: Option<f64>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AudioSpectrumAnalysis {
+    path: String,
+    spectrogram_path: Option<String>,
+    spectrogram_error: Option<String>,
+    stats: AudioSpectrumStats,
+    stats_error: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Default)]
@@ -247,6 +268,12 @@ pub fn scan_media_integrity(
     scan_media_integrity_path(&safe_path)
 }
 
+#[tauri::command]
+pub fn analyze_audio_spectrum(app: AppHandle, path: String) -> Result<AudioSpectrumAnalysis, String> {
+    let safe_path = validate_path(&app, Path::new(&path))?;
+    Ok(analyze_audio_spectrum_path(&safe_path))
+}
+
 pub(crate) fn analyze_media_path(path: &Path) -> Result<MediaAnalysis, String> {
     let input_path = normalize_path(path);
     let metadata = fs::metadata(path).ok();
@@ -297,6 +324,21 @@ pub(crate) fn scan_media_integrity_path(path: &Path) -> Result<MediaIntegritySca
     })
 }
 
+pub(crate) fn analyze_audio_spectrum_path(path: &Path) -> AudioSpectrumAnalysis {
+    let input_path = normalize_path(path);
+    let output_path = spectrogram_output_path(path);
+    let output_path_text = normalize_path(&output_path);
+    let spectrogram_result = generate_spectrogram_png(&input_path, &output_path_text);
+    let stats_result = analyze_ebur128_stats(&input_path);
+    AudioSpectrumAnalysis {
+        path: input_path,
+        spectrogram_path: spectrogram_result.as_ref().ok().map(|_| output_path_text),
+        spectrogram_error: spectrogram_result.err(),
+        stats: stats_result.clone().unwrap_or_default(),
+        stats_error: stats_result.err(),
+    }
+}
+
 pub(crate) fn build_ffprobe_media_analysis_args(input_path: &str) -> [&str; 8] {
     [
         "-v",
@@ -325,6 +367,35 @@ pub(crate) fn build_loudnorm_analysis_args(input_path: &str) -> [&str; 9] {
         "-f",
         "null",
         "-",
+    ]
+}
+
+pub(crate) fn build_spectrogram_png_args(input_path: &str, output_path: &str) -> Vec<String> {
+    vec![
+        "-y".to_string(),
+        "-hide_banner".to_string(),
+        "-nostats".to_string(),
+        "-i".to_string(),
+        input_path.to_string(),
+        "-lavfi".to_string(),
+        "showspectrumpic=s=1280x512:mode=combined".to_string(),
+        "-frames:v".to_string(),
+        "1".to_string(),
+        output_path.to_string(),
+    ]
+}
+
+pub(crate) fn build_ebur128_stats_args(input_path: &str) -> Vec<String> {
+    vec![
+        "-hide_banner".to_string(),
+        "-nostats".to_string(),
+        "-i".to_string(),
+        input_path.to_string(),
+        "-af".to_string(),
+        "ebur128=peak=true,astats=metadata=1:reset=0".to_string(),
+        "-f".to_string(),
+        "null".to_string(),
+        "-".to_string(),
     ]
 }
 
@@ -454,6 +525,63 @@ fn analyze_loudness_path(path: &Path) -> Result<f64, String> {
         .ok_or_else(|| "Unable to parse loudnorm integrated LUFS.".to_string())
 }
 
+fn generate_spectrogram_png(input_path: &str, output_path: &str) -> Result<(), String> {
+    if let Some(parent) = Path::new(output_path).parent() {
+        fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+    }
+    let args = build_spectrogram_png_args(input_path, output_path);
+    let output = Command::new(ffmpeg_binary())
+        .args(&args)
+        .output()
+        .map_err(|error| format!("Unable to run FFmpeg spectrum analysis: {}", error))?;
+    if output.status.success() {
+        Ok(())
+    } else {
+        Err(String::from_utf8_lossy(&output.stderr).trim().to_string())
+    }
+}
+
+fn analyze_ebur128_stats(input_path: &str) -> Result<AudioSpectrumStats, String> {
+    let args = build_ebur128_stats_args(input_path);
+    let output = Command::new(ffmpeg_binary())
+        .args(&args)
+        .output()
+        .map_err(|error| format!("Unable to run FFmpeg ebur128 analysis: {}", error))?;
+    if !output.status.success() {
+        return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
+    }
+    Ok(parse_ebur128_stats(&output.stderr).or_else(|| parse_ebur128_stats(&output.stdout)).unwrap_or_default())
+}
+
+pub(crate) fn parse_ebur128_stats(bytes: &[u8]) -> Option<AudioSpectrumStats> {
+    let text = String::from_utf8_lossy(bytes);
+    let mut stats = AudioSpectrumStats::default();
+    for line in text.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("I:") && trimmed.contains("LUFS") {
+            stats.integrated_lufs = parse_first_number(trimmed);
+        } else if trimmed.starts_with("LRA:") && trimmed.contains("LU") {
+            stats.dynamic_range_lu = parse_first_number(trimmed);
+        } else if trimmed.starts_with("Peak:") && trimmed.contains("dBFS") {
+            stats.true_peak_dbfs = parse_first_number(trimmed);
+        } else if let Some(value) = parse_number_after(trimmed, "Peak level dB:") {
+            stats.peak_db = Some(value);
+        } else if let Some(value) = parse_number_after(trimmed, "RMS level dB:") {
+            stats.rms_db = Some(value);
+        }
+    }
+    if stats.integrated_lufs.is_some()
+        || stats.dynamic_range_lu.is_some()
+        || stats.true_peak_dbfs.is_some()
+        || stats.peak_db.is_some()
+        || stats.rms_db.is_some()
+    {
+        Some(stats)
+    } else {
+        None
+    }
+}
+
 fn parse_loudnorm_integrated_lufs(bytes: &[u8]) -> Option<f64> {
     let text = String::from_utf8_lossy(bytes);
     let start = text.find('{')?;
@@ -462,6 +590,28 @@ fn parse_loudnorm_integrated_lufs(bytes: &[u8]) -> Option<f64> {
     json.get("input_i")
         .and_then(Value::as_str)
         .and_then(|value| value.parse::<f64>().ok())
+}
+
+fn parse_number_after(line: &str, key: &str) -> Option<f64> {
+    let (_, value) = line.split_once(key)?;
+    parse_first_number(value)
+}
+
+fn parse_first_number(value: &str) -> Option<f64> {
+    value
+        .split_whitespace()
+        .find_map(|token| token.trim_matches(|c: char| c == ':' || c == ',').parse::<f64>().ok())
+        .filter(|number| number.is_finite())
+        .map(round_seconds)
+}
+
+fn spectrogram_output_path(path: &Path) -> PathBuf {
+    let mut hasher = Sha256::new();
+    hasher.update(normalize_path(path).as_bytes());
+    let hash = format!("{:x}", hasher.finalize());
+    std::env::temp_dir()
+        .join("open-factory-spectrum")
+        .join(format!("{}.png", &hash[..16]))
 }
 
 fn parse_u64(value: Option<&str>) -> Option<u64> {
@@ -1153,6 +1303,48 @@ mod tests {
 }"#;
 
         assert_eq!(parse_loudnorm_integrated_lufs(stderr), Some(-18.42));
+    }
+
+    #[test]
+    fn builds_spectrogram_png_args() {
+        assert_eq!(
+            build_spectrogram_png_args("C:/Media/tiny-video.mp4", "C:/Temp/tiny-spectrum.png"),
+            vec![
+                "-y",
+                "-hide_banner",
+                "-nostats",
+                "-i",
+                "C:/Media/tiny-video.mp4",
+                "-lavfi",
+                "showspectrumpic=s=1280x512:mode=combined",
+                "-frames:v",
+                "1",
+                "C:/Temp/tiny-spectrum.png"
+            ]
+        );
+    }
+
+    #[test]
+    fn parses_ebur128_and_astats_summary() {
+        let stderr = br#"
+[Parsed_ebur128_0 @ 000] Summary:
+  Integrated loudness:
+    I:         -18.4 LUFS
+  Loudness range:
+    LRA:         7.2 LU
+  True peak:
+    Peak:       -1.3 dBFS
+[Parsed_astats_1 @ 000] Peak level dB: -0.9
+[Parsed_astats_1 @ 000] RMS level dB: -20.6
+"#;
+
+        let stats = parse_ebur128_stats(stderr).expect("parse stats");
+
+        assert_eq!(stats.integrated_lufs, Some(-18.4));
+        assert_eq!(stats.dynamic_range_lu, Some(7.2));
+        assert_eq!(stats.true_peak_dbfs, Some(-1.3));
+        assert_eq!(stats.peak_db, Some(-0.9));
+        assert_eq!(stats.rms_db, Some(-20.6));
     }
 
     #[test]

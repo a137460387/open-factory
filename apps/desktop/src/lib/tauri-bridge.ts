@@ -184,6 +184,22 @@ export interface MediaIntegrityScanResult {
   errorOutput?: string;
 }
 
+export interface AudioSpectrumStats {
+  integratedLufs?: number;
+  dynamicRangeLu?: number;
+  truePeakDbfs?: number;
+  peakDb?: number;
+  rmsDb?: number;
+}
+
+export interface AudioSpectrumAnalysis {
+  path: string;
+  spectrogramPath?: string;
+  spectrogramError?: string;
+  stats: AudioSpectrumStats;
+  statsError?: string;
+}
+
 export interface ProxyResult {
   assetId: string;
   proxyPath: string;
@@ -480,6 +496,7 @@ export type TauriMocks = Partial<{
   probeMedia(path: string): Promise<MediaProbe> | MediaProbe;
   analyzeMedia(path: string): Promise<MediaAnalysis> | MediaAnalysis;
   scanMediaIntegrity(path: string): Promise<MediaIntegrityScanResult> | MediaIntegrityScanResult;
+  analyzeAudioSpectrum(path: string): Promise<AudioSpectrumAnalysis> | AudioSpectrumAnalysis;
   analyzeWaveform(path: string, samplesPerSec: number): Promise<number[]> | number[];
   detectBeats(path: string, sensitivity: BeatSensitivity): Promise<number[]> | number[];
   detectSilence(path: string, thresholdDb: number, minGapMs: number): Promise<NativeSilenceRange[]> | NativeSilenceRange[];
@@ -722,6 +739,17 @@ export async function scanMediaIntegrity(path: string): Promise<MediaIntegritySc
     throw new Error('scanMediaIntegrity 需要 Tauri 或 __TAURI_MOCKS__ 实现。');
   }
   return invoke<MediaIntegrityScanResult>('scan_media_integrity', { path });
+}
+
+export async function analyzeAudioSpectrum(path: string): Promise<AudioSpectrumAnalysis> {
+  const mock = getTauriMocks()?.analyzeAudioSpectrum;
+  if (mock) {
+    return mock(path);
+  }
+  if (!isTauriRuntime()) {
+    throw new Error('analyzeAudioSpectrum 需要 Tauri 或 __TAURI_MOCKS__ 实现。');
+  }
+  return invoke<AudioSpectrumAnalysis>('analyze_audio_spectrum', { path });
 }
 
 export async function analyzeWaveform(path: string, samplesPerSec: number): Promise<number[]> {

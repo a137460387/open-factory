@@ -619,6 +619,17 @@ const mocks: TauriMocks = {
     }
     return { path, ok: true };
   },
+  analyzeAudioSpectrum: (path) => ({
+    path,
+    spectrogramPath: 'C:/Users/E2E/AppData/Roaming/open-factory/spectrum/mock-spectrum.png',
+    stats: {
+      integratedLufs: -18.4,
+      dynamicRangeLu: 7.2,
+      truePeakDbfs: -1.3,
+      peakDb: -0.9,
+      rmsDb: -20.6
+    }
+  }),
   analyzeWaveform: (path, samplesPerSec) => {
     const total = Math.max(1, Math.ceil(6 * Math.max(1, samplesPerSec)));
     return Array.from({ length: total }, (_, index) => {

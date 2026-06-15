@@ -36,6 +36,7 @@ interface MediaBinProps {
   onImportPaths(paths: string[]): void;
   onBatchTranscode(paths: string[]): void;
   onExportGif(asset: MediaAsset): void;
+  onAnalyzeSpectrum(asset: MediaAsset): void;
   onScanDuplicates(): void;
   onAddToTimeline(assetId: string): void;
   onAddAdjustmentLayer(): void;
@@ -68,6 +69,7 @@ export function MediaBin({
   onImportPaths,
   onBatchTranscode,
   onExportGif,
+  onAnalyzeSpectrum,
   onScanDuplicates,
   onAddToTimeline,
   onAddAdjustmentLayer,
@@ -392,6 +394,7 @@ export function MediaBin({
             onSetFlag={onSetFlag}
             onBatchTranscode={onBatchTranscode}
             onExportGif={onExportGif}
+            onAnalyzeSpectrum={onAnalyzeSpectrum}
             onShowInfo={(asset) => void openMediaInfo(asset)}
           />
         ) : (
@@ -416,6 +419,7 @@ export function MediaBin({
               onSetFlag={onSetFlag}
               onBatchTranscode={onBatchTranscode}
               onExportGif={onExportGif}
+              onAnalyzeSpectrum={onAnalyzeSpectrum}
               onShowInfo={(asset) => void openMediaInfo(asset)}
             />
             <RootMediaDropZone onMoveMediaToFolder={onMoveMediaToFolder} />
@@ -433,6 +437,7 @@ export function MediaBin({
               onSetFlag={onSetFlag}
               onBatchTranscode={onBatchTranscode}
               onExportGif={onExportGif}
+              onAnalyzeSpectrum={onAnalyzeSpectrum}
               onShowInfo={(asset) => void openMediaInfo(asset)}
             />
           </div>
@@ -561,6 +566,7 @@ function MediaFolderTree(props: {
   onSetFlag(assetId: string, flag?: MediaFlag): void;
   onBatchTranscode(paths: string[]): void;
   onExportGif(asset: MediaAsset): void;
+  onAnalyzeSpectrum(asset: MediaAsset): void;
   onShowInfo(asset: MediaAsset): void;
 }) {
   const roots = props.folders.filter((folder) => !folder.parentId);
@@ -598,6 +604,7 @@ function MediaFolderNode({
   onSetFlag,
   onBatchTranscode,
   onExportGif,
+  onAnalyzeSpectrum,
   onShowInfo
 }: {
   folder: MediaFolder;
@@ -621,6 +628,7 @@ function MediaFolderNode({
   onSetFlag(assetId: string, flag?: MediaFlag): void;
   onBatchTranscode(paths: string[]): void;
   onExportGif(asset: MediaAsset): void;
+  onAnalyzeSpectrum(asset: MediaAsset): void;
   onShowInfo(asset: MediaAsset): void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -715,6 +723,7 @@ function MediaFolderNode({
               onSetFlag={onSetFlag}
               onBatchTranscode={onBatchTranscode}
               onExportGif={onExportGif}
+              onAnalyzeSpectrum={onAnalyzeSpectrum}
               onShowInfo={onShowInfo}
             />
           ))}
@@ -732,6 +741,7 @@ function MediaFolderNode({
             onSetFlag={onSetFlag}
             onBatchTranscode={onBatchTranscode}
             onExportGif={onExportGif}
+            onAnalyzeSpectrum={onAnalyzeSpectrum}
             onShowInfo={onShowInfo}
           />
         </div>
@@ -892,6 +902,7 @@ function MediaCardGrid({
   onSetFlag,
   onBatchTranscode,
   onExportGif,
+  onAnalyzeSpectrum,
   onShowInfo
 }: {
   media: MediaAsset[];
@@ -907,6 +918,7 @@ function MediaCardGrid({
   onSetFlag(assetId: string, flag?: MediaFlag): void;
   onBatchTranscode(paths: string[]): void;
   onExportGif(asset: MediaAsset): void;
+  onAnalyzeSpectrum(asset: MediaAsset): void;
   onShowInfo(asset: MediaAsset): void;
 }) {
   if (media.length === 0) {
@@ -930,6 +942,7 @@ function MediaCardGrid({
           onSetFlag={(flag) => onSetFlag(asset.id, flag)}
           onBatchTranscode={() => onBatchTranscode([asset.path])}
           onExportGif={() => onExportGif(asset)}
+          onAnalyzeSpectrum={() => onAnalyzeSpectrum(asset)}
           onShowInfo={() => onShowInfo(asset)}
         />
       ))}
@@ -1139,6 +1152,7 @@ function MediaCard({
   onSetFlag,
   onBatchTranscode,
   onExportGif,
+  onAnalyzeSpectrum,
   onShowInfo
 }: {
   asset: MediaAsset;
@@ -1153,6 +1167,7 @@ function MediaCard({
   onSetFlag(flag?: MediaFlag): void;
   onBatchTranscode(): void;
   onExportGif(): void;
+  onAnalyzeSpectrum(): void;
   onShowInfo(): void;
 }) {
   const proxySettings = useProxySettingsStore((state) => state.settings);
@@ -1276,6 +1291,20 @@ function MediaCard({
                 {zhCN.mediaBin.exportGif}
               </button>
             </>
+          ) : null}
+          {asset.type === 'video' || asset.type === 'audio' ? (
+            <button
+              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid={`media-spectrum-analysis-${asset.id}`}
+              onClick={() => {
+                onAnalyzeSpectrum();
+                setLabelMenuOpen(false);
+              }}
+            >
+              <Gauge size={13} />
+              {zhCN.mediaBin.spectrumAnalysis}
+            </button>
           ) : null}
           <div className="mb-2 flex items-center gap-1 font-semibold text-slate-700">
             <Tag size={13} />
