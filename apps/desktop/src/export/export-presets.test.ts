@@ -3,15 +3,18 @@ import {
   BUILTIN_EXPORT_PRESETS,
   applyExportPresetPackage,
   deleteCustomExportPreset,
+  detectExportPresetSyncConflicts,
   fetchOfficialExportPresetPackage,
   getExportPresetsPath,
   importExportPresetPackage,
   loadExportPresets,
+  mergeExportPresetPackages,
   parseExportPresetPackage,
   parseStoredExportPresets,
   saveCustomExportPreset,
   serializeCustomExportPresets,
   serializeExportPresetPackage,
+  syncExportPresetsWithWebdav,
   type ExportPresetPackageFile,
   type ExportPresetStorage
 } from './export-presets';
@@ -537,6 +540,89 @@ describe('export presets', () => {
       includeFrameNumber: false
     });
     expect(parsed[0].settings.slate).toEqual({ enabled: true });
+  });
+
+  it('detects export preset sync conflicts by updated timestamp', () => {
+    const localPackage: ExportPresetPackageFile = {
+      version: 1,
+      exportedAt: '2026-06-15T01:00:00.000Z',
+      presets: [{ id: 'custom-review', name: 'Review', settings: { width: 1280 }, updatedAt: '2026-06-15T01:00:00.000Z' }]
+    };
+    const remotePackage: ExportPresetPackageFile = {
+      version: 1,
+      exportedAt: '2026-06-15T02:00:00.000Z',
+      presets: [{ id: 'custom-review-remote', name: 'Review', settings: { width: 1920 }, updatedAt: '2026-06-15T02:00:00.000Z' }]
+    };
+
+    expect(detectExportPresetSyncConflicts(localPackage, remotePackage)).toEqual([
+      {
+        name: 'Review',
+        localUpdatedAt: '2026-06-15T01:00:00.000Z',
+        remoteUpdatedAt: '2026-06-15T02:00:00.000Z',
+        newer: 'remote'
+      }
+    ]);
+  });
+
+  it('merges export preset packages with de-duplication and newer conflict winners', () => {
+    const localPackage: ExportPresetPackageFile = {
+      version: 1,
+      exportedAt: '2026-06-15T01:00:00.000Z',
+      presets: [
+        { id: 'custom-review', name: 'Review', settings: { width: 1280 }, updatedAt: '2026-06-15T01:00:00.000Z' },
+        { id: 'custom-local-only', name: 'Local Only', settings: { width: 640 }, updatedAt: '2026-06-15T01:30:00.000Z' }
+      ]
+    };
+    const remotePackage: ExportPresetPackageFile = {
+      version: 1,
+      exportedAt: '2026-06-15T02:00:00.000Z',
+      presets: [
+        { id: 'custom-review-remote', name: 'Review', settings: { width: 1920 }, updatedAt: '2026-06-15T02:00:00.000Z' },
+        { id: 'custom-remote-only', name: 'Remote Only', settings: { height: 720 }, updatedAt: '2026-06-15T02:00:00.000Z' }
+      ]
+    };
+
+    const merged = mergeExportPresetPackages(localPackage, remotePackage, 'merge', '2026-06-15T03:00:00.000Z');
+
+    expect(merged.exportedAt).toBe('2026-06-15T03:00:00.000Z');
+    expect(merged.presets.map((preset) => preset.name).sort()).toEqual(['Local Only', 'Remote Only', 'Review']);
+    expect(merged.presets.find((preset) => preset.name === 'Review')?.settings?.width).toBe(1920);
+  });
+
+  it('does not overwrite local presets when WebDAV sync upload fails', async () => {
+    const { storage, files, presetPath } = makeStorage();
+    const original = serializeCustomExportPresets([
+      {
+        id: 'custom-local-review',
+        name: 'Local Review',
+        description: 'Local',
+        builtin: false,
+        settings: { width: 1280 },
+        updatedAt: '2026-06-15T01:00:00.000Z'
+      }
+    ]);
+    files.set(presetPath, original);
+    const remotePackage = serializeExportPresetPackage(
+      [{ id: 'custom-remote-review', name: 'Remote Review', description: 'Remote', builtin: false, settings: { width: 1920 } }],
+      { exportedAt: '2026-06-15T02:00:00.000Z' }
+    );
+
+    await expect(
+      syncExportPresetsWithWebdav(
+        { url: 'https://dav.example.test/presets/export.ofpreset.json', conflictResolution: 'merge' },
+        {
+          storage,
+          now: () => new Date('2026-06-15T03:00:00.000Z'),
+          client: {
+            getText: async () => ({ status: 200, contents: remotePackage }),
+            putText: async () => {
+              throw new Error('offline');
+            }
+          }
+        }
+      )
+    ).rejects.toThrow('offline');
+    expect(files.get(presetPath)).toBe(original);
   });
 });
 

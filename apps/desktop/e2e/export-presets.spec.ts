@@ -72,6 +72,60 @@ test('exports and imports a preset package', async ({ page }) => {
   await expect(page.getByTestId('export-video-bitrate-input')).toHaveValue('11M');
 });
 
+test('syncs export presets from mock WebDAV into the preset list', async ({ page }) => {
+  const remoteUrl = 'https://dav.example.test/presets/team.ofpreset.json';
+  const remotePackage = JSON.stringify(
+    {
+      version: 1,
+      exportedAt: '2026-06-15T02:00:00.000Z',
+      presets: [
+        {
+          id: 'custom-webdav-review',
+          name: 'WebDAV Review',
+          description: 'Remote shared preset',
+          settings: { width: 1440, height: 1080, format: 'mp4', videoBitrate: '10M' },
+          updatedAt: '2026-06-15T02:00:00.000Z'
+        }
+      ]
+    },
+    null,
+    2
+  );
+
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.evaluate(
+    ({ url, contents }) => {
+      window.__E2E_ACTIONS__!.clearExportPresets!();
+      window.__E2E_ACTIONS__!.setExportPresetSyncRemotePackage!(url, contents);
+      window.__E2E_ACTIONS__!.setExportPresetSyncSettings!(
+        {
+          enabled: true,
+          url,
+          username: 'editor',
+          syncOnStartup: false,
+          conflictMode: 'merge'
+        },
+        'secret'
+      );
+    },
+    { url: remoteUrl, contents: remotePackage }
+  );
+  await addVideoClip(page);
+  await clickExportButton(page);
+  await expect(page.getByTestId('export-dialog')).toBeVisible();
+
+  await expect(page.getByTestId('export-preset-cloud-sync-button')).toBeEnabled();
+  await page.getByTestId('export-preset-cloud-sync-button').click();
+
+  await expect(page.locator('[data-testid="export-preset-select"] option', { hasText: 'WebDAV Review' })).toHaveCount(1);
+  const syncedValue = await page.locator('[data-testid="export-preset-select"] option', { hasText: 'WebDAV Review' }).first().getAttribute('value');
+  expect(syncedValue).toBeTruthy();
+  await page.getByTestId('export-preset-select').selectOption(syncedValue!);
+  await expect(page.getByTestId('export-video-bitrate-input')).toHaveValue('10M');
+  await expect.poll(() => page.evaluate((url) => window.__E2E_ACTIONS__!.getExportPresetSyncRemotePackage!(url) as string | undefined, remoteUrl)).toContain('WebDAV Review');
+});
+
 async function openExportDialog(page: Page): Promise<void> {
   await page.goto('/');
   await waitForE2eActions(page);

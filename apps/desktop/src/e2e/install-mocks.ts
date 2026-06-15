@@ -18,7 +18,7 @@ import {
 import { commandManager, timelineAccessor } from '../store/commandManager';
 import { useEditorStore } from '../store/editorStore';
 import { usePrivacyDetectionSettingsStore } from '../store/privacyDetectionSettingsStore';
-import type { BatchTranscodeTaskResult, ExportPreviewSamplesResult, GifExportRequest, GifPreviewRequest, TauriMocks, WebdavExportUploadRequest, WebdavProjectBackupRequest } from '../lib/tauri-bridge';
+import type { BatchTranscodeTaskResult, ExportPreviewSamplesResult, GifExportRequest, GifPreviewRequest, TauriMocks, WebdavExportUploadRequest, WebdavProjectBackupRequest, WebdavTextPutRequest } from '../lib/tauri-bridge';
 import { clearPluginHookLog, getPluginHookLog, refreshPluginRegistry } from '../plugins/plugin-manager';
 import { useExportQueueStore } from '../export/export-queue-store';
 import { useMediaJobStore } from '../media/media-job-store';
@@ -50,8 +50,11 @@ let lastConfirmMessage: string | undefined;
 let availableMemoryBytes = 8 * 1024 * 1024 * 1024;
 let webdavPassword: string | undefined;
 let exportUploadWebdavPassword: string | undefined;
+let exportPresetSyncWebdavPassword: string | undefined;
 let lastWebdavPutRequest: WebdavProjectBackupRequest | undefined;
 let lastWebdavExportUploadRequest: WebdavExportUploadRequest | undefined;
+let lastWebdavTextPutRequest: WebdavTextPutRequest | undefined;
+const webdavTextFiles = new Map<string, string>();
 let minimizedToTray = false;
 let lastTrayProgress: { progress: number; runningCount: number } | undefined;
 let powerActionCalls: Array<{ action: 'shutdown' | 'hibernate'; allowPowerActions: boolean }> = [];
@@ -436,6 +439,18 @@ const mocks: TauriMocks = {
     }
     return { status: 201, bytes: files.get(request.sourcePath)?.length ?? 0 };
   },
+  getWebdavText: async (request) => {
+    const contents = webdavTextFiles.get(request.url);
+    if (contents === undefined) {
+      throw new Error(`Mock WebDAV text not found: ${request.url}`);
+    }
+    return { status: 200, contents };
+  },
+  putWebdavText: async (request) => {
+    lastWebdavTextPutRequest = request;
+    webdavTextFiles.set(request.url, request.contents);
+    return { status: 201 };
+  },
   readWebdavPassword: () => webdavPassword,
   writeWebdavPassword: (password) => {
     webdavPassword = password?.trim() ? password : undefined;
@@ -443,6 +458,10 @@ const mocks: TauriMocks = {
   readExportUploadWebdavPassword: () => exportUploadWebdavPassword,
   writeExportUploadWebdavPassword: (password) => {
     exportUploadWebdavPassword = password?.trim() ? password : undefined;
+  },
+  readExportPresetSyncWebdavPassword: () => exportPresetSyncWebdavPassword,
+  writeExportPresetSyncWebdavPassword: (password) => {
+    exportPresetSyncWebdavPassword = password?.trim() ? password : undefined;
   },
   analyzeClip: async ({ clipId }) => {
     emit('clip-analysis-progress', { clipId, progress: 0.35, progressPct: 35 });
@@ -630,6 +649,20 @@ const mocks: TauriMocks = {
       rmsDb: -20.6
     }
   }),
+  generateGapFillMedia: (request) => {
+    const suffix = request.kind === 'freeze-frame' ? 'freeze' : request.color === '#ffffff' ? 'white' : 'black';
+    const path = `${appDataDir}/gap-fill/e2e-${suffix}-${Date.now()}.png`;
+    files.set(path, `mock ${request.kind} gap fill`);
+    exists.set(path, true);
+    mtimes.set(path, Date.now());
+    persistFiles();
+    return {
+      path,
+      name: `e2e-${suffix}.png`,
+      width: request.width,
+      height: request.height
+    };
+  },
   analyzeWaveform: (path, samplesPerSec) => {
     const total = Math.max(1, Math.ceil(6 * Math.max(1, samplesPerSec)));
     return Array.from({ length: total }, (_, index) => {
@@ -777,6 +810,52 @@ window.__E2E_ACTIONS__ = {
             makeEditingVideoClip('clip-edit-a', 0, 2, 0, 4),
             makeEditingVideoClip('clip-edit-b', 2, 2, 0, 0),
             makeEditingVideoClip('clip-edit-c', 4, 2, 0, 0)
+          ]
+        }),
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
+        createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupGapFillFixture: () => {
+    const project = createProject('Gap Fill E2E');
+    const asset: MediaAsset = {
+      id: 'media-gap-video',
+      type: 'video',
+      name: 'gap-source.mp4',
+      path: tinyVideo,
+      duration: 8,
+      width: 1280,
+      height: 720,
+      size: 4096,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 2,
+      audioSampleRate: 44_100,
+      audioCodec: 'aac',
+      videoCodec: 'h264'
+    };
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({
+          id: 'track-video',
+          type: 'video',
+          name: 'Video 1',
+          clips: [
+            { ...makeEditingVideoClip('clip-gap-a', 0, 2, 0, 0), mediaId: asset.id, name: 'Gap A' },
+            { ...makeEditingVideoClip('clip-gap-b', 4, 2, 0, 0), mediaId: asset.id, name: 'Gap B' }
           ]
         }),
         createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
@@ -1673,8 +1752,11 @@ window.__E2E_ACTIONS__ = {
     }
     webdavPassword = undefined;
     exportUploadWebdavPassword = undefined;
+    exportPresetSyncWebdavPassword = undefined;
     lastWebdavPutRequest = undefined;
     lastWebdavExportUploadRequest = undefined;
+    lastWebdavTextPutRequest = undefined;
+    webdavTextFiles.clear();
     lastExportPlan = undefined;
     exportRunCalls = [];
     lastExportPreviewSamplesResult = undefined;
@@ -1693,6 +1775,21 @@ window.__E2E_ACTIONS__ = {
     files.delete(exportPresetsPath);
     exists.set(exportPresetsPath, false);
     mtimes.delete(exportPresetsPath);
+    persistFiles();
+  },
+  setExportPresetSyncRemotePackage: (url: unknown, contents: unknown) => {
+    if (typeof url === 'string' && typeof contents === 'string') {
+      webdavTextFiles.set(url, contents);
+    }
+  },
+  getExportPresetSyncRemotePackage: (url: unknown) => (typeof url === 'string' ? webdavTextFiles.get(url) : undefined),
+  getLastWebdavTextPutRequest: () => lastWebdavTextPutRequest,
+  setExportPresetSyncSettings: (settings: unknown, password: unknown) => {
+    const currentSettings = files.has(settingsPath) ? JSON.parse(files.get(settingsPath) ?? '{}') : {};
+    files.set(settingsPath, JSON.stringify({ ...currentSettings, exportPresetSync: settings }, null, 2));
+    exists.set(settingsPath, true);
+    mtimes.set(settingsPath, Date.now());
+    exportPresetSyncWebdavPassword = typeof password === 'string' && password.trim() ? password : undefined;
     persistFiles();
   },
   refreshPluginRegistry: () => refreshPluginRegistry(),

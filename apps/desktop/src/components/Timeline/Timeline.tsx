@@ -12,6 +12,7 @@ import {
   AddTrackCommand,
   AddTransitionCommand,
   CloseGapCommand,
+  FillGapCommand,
   CLIP_GROUP_COLORS,
   CLIP_GROUP_COLOR_HEX,
   DEFAULT_PROJECT_ANNOTATION_COLOR,
@@ -74,8 +75,11 @@ import {
   detectOverlap,
   getTimelineDuration,
   buildTimelineNoteLayout,
+  buildGapFillCommandOperation,
   getClipSourceVisibleDuration,
   getClipSpeed,
+  createGapFillImageClip,
+  findTimelineGapAtTime,
   getReplaceMediaCompatibilityWarnings,
   getTimelineLabelColorHex,
   isFrameRateMismatch,
@@ -103,6 +107,7 @@ import {
   type ClipGroupColor,
   type BeatMarker,
   type KeyframeProperty,
+  type GapFillStrategy,
   type MediaAsset,
   type ProjectAnnotation,
   type TimelineNote,
@@ -131,7 +136,7 @@ import { showToast } from '../../lib/toast';
 import { detectClipSilence } from '../../lib/silenceDetection';
 import { canGenerateSubtitlesForClip, buildWhisperSubtitleTrackForClip, getWhisperAvailability, type WhisperAvailability } from '../../lib/whisper';
 import { TITLE_TEMPLATE_DRAG_MIME, isTitleTemplateId } from '../../lib/titleTemplates';
-import { detectSceneChanges, listenBridge, openFileDialog, saveFileDialog, writeFile, type WhisperProgressEvent } from '../../lib/tauri-bridge';
+import { detectSceneChanges, generateGapFillMedia, listenBridge, openFileDialog, saveFileDialog, writeFile, type WhisperProgressEvent } from '../../lib/tauri-bridge';
 import { commandManager, projectAccessor, timelineAccessor } from '../../store/commandManager';
 import { useEditorStore, type SelectedKeyframeRef } from '../../store/editorStore';
 import { useRenderCacheStore } from '../../store/renderCacheStore';
@@ -378,7 +383,7 @@ export function Timeline({
         setVolumeEnvelopeMenu(undefined);
         return;
       }
-      if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === 'n' && !isEditableKeyboardTarget(event.target)) {
+      if (!event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'n' && !isEditableKeyboardTarget(event.target)) {
         event.preventDefault();
         quickAddTimelineNote();
         return;
@@ -1330,8 +1335,8 @@ function addProjectBookmark(time = playheadTime): void {
     setRulerMenu(undefined);
     setGapMenu({
       ...request,
-      x: Math.min(request.x, Math.max(0, window.innerWidth - 180)),
-      y: Math.min(request.y, Math.max(0, window.innerHeight - 90))
+      x: Math.min(request.x, Math.max(0, window.innerWidth - 220)),
+      y: Math.min(request.y, Math.max(0, window.innerHeight - 260))
     });
   }
 
@@ -1345,6 +1350,83 @@ function addProjectBookmark(time = playheadTime): void {
     } catch (error) {
       showToast({ kind: 'warning', title: zhCN.timeline.closeGapFailedTitle, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
     }
+  }
+
+  async function fillGap(strategy: GapFillStrategy): Promise<void> {
+    if (!gapMenu) {
+      return;
+    }
+    const menu = gapMenu;
+    try {
+      if (strategy === 'repeat' || strategy === 'crossfade') {
+        commandManager.execute(new FillGapCommand(timelineAccessor, menu.trackId, menu.time, buildGapFillCommandOperation(strategy)));
+        setGapMenu(undefined);
+        return;
+      }
+      const media = await createGapFillMediaAsset(menu, strategy);
+      const gap = findTimelineGapAtTime(project.timeline, menu.trackId, menu.time);
+      if (!gap) {
+        throw new Error(zhCN.timeline.noFillableGapMessage);
+      }
+      addMedia([media]);
+      const clip = createGapFillImageClip({
+        name: media.name,
+        mediaId: media.id,
+        trackId: menu.trackId,
+        start: gap.start,
+        duration: gap.duration
+      });
+      commandManager.execute(new FillGapCommand(timelineAccessor, menu.trackId, menu.time, buildGapFillCommandOperation(strategy, { clip })));
+      setSelectedClipId(clip.id);
+      setGapMenu(undefined);
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.smartGapFillFailedTitle, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
+    }
+  }
+
+  async function createGapFillMediaAsset(menu: GapMenuState, strategy: Extract<GapFillStrategy, 'freeze-frame' | 'black' | 'white'>): Promise<MediaAsset> {
+    if (strategy === 'freeze-frame') {
+      try {
+        const gap = findTimelineGapAtTime(project.timeline, menu.trackId, menu.time);
+        const sourceClip = gap?.previousClip;
+        const sourceAsset = sourceClip ? getClipMediaAsset(sourceClip) : undefined;
+        if (!sourceClip || !sourceAsset || sourceAsset.type === 'audio') {
+          throw new Error(zhCN.timeline.freezeFrameUnavailableMessage);
+        }
+        const frameDuration = 1 / Math.max(1, project.settings.fps || 30);
+        const sourceTime = 'mediaId' in sourceClip ? Math.max(0, sourceClip.trimStart + getClipSourceVisibleDuration(sourceClip) - frameDuration) : 0;
+        const result = await generateGapFillMedia({
+          kind: 'freeze-frame',
+          sourcePath: sourceAsset.path,
+          sourceTime,
+          width: sourceAsset.width || project.settings.width,
+          height: sourceAsset.height || project.settings.height
+        });
+        return buildGapFillAsset(result, zhCN.timeline.gapFillFreezeFrameName);
+      } catch {
+        return createGapFillMediaAsset(menu, 'black');
+      }
+    }
+    const result = await generateGapFillMedia({
+      kind: 'solid-color',
+      color: strategy === 'white' ? '#ffffff' : '#000000',
+      width: project.settings.width,
+      height: project.settings.height
+    });
+    return buildGapFillAsset(result, strategy === 'white' ? zhCN.timeline.gapFillWhiteName : zhCN.timeline.gapFillBlackName);
+  }
+
+  function buildGapFillAsset(result: { path: string; name: string; width: number; height: number }, fallbackName: string): MediaAsset {
+    return {
+      id: createId('media-gap-fill'),
+      type: 'image',
+      name: result.name || `${fallbackName}.png`,
+      path: result.path,
+      duration: 0,
+      width: result.width || project.settings.width,
+      height: result.height || project.settings.height,
+      importedAt: new Date().toISOString()
+    };
   }
 
   function onTrackPointerDown(event: React.PointerEvent<HTMLDivElement>): void {
@@ -1858,10 +1940,10 @@ function addProjectBookmark(time = playheadTime): void {
       onPointerUp={onPointerUp}
       onKeyDown={onKeyDown}
     >
-      <div className="flex items-center gap-2 border-b border-line px-3 py-2">
-        <div className="mr-auto">
+      <div className="flex shrink-0 items-center gap-2 overflow-x-auto border-b border-line px-3 py-2">
+        <div className="mr-auto min-w-[170px] shrink-0">
           <div className="text-sm font-semibold">{zhCN.timeline.title}</div>
-          <div className="text-xs text-slate-500">{zhCN.timeline.subtitle}</div>
+          <div className="whitespace-nowrap text-xs text-slate-500">{zhCN.timeline.subtitle}</div>
           <div className="mt-1 flex items-center gap-1 text-[11px] text-slate-500" data-testid="sequence-breadcrumb">
             {isMainSequence ? (
               <span>{zhCN.timeline.mainSequence}</span>
@@ -2187,7 +2269,7 @@ function addProjectBookmark(time = playheadTime): void {
                 onClose={() => setRulerMenu(undefined)}
               />
             ) : null}
-            {gapMenu ? <GapActionMenu menu={gapMenu} onClose={() => setGapMenu(undefined)} onCloseGap={closeGap} /> : null}
+            {gapMenu ? <GapActionMenu menu={gapMenu} onClose={() => setGapMenu(undefined)} onCloseGap={closeGap} onFillGap={(strategy) => void fillGap(strategy)} /> : null}
             {volumeEnvelopeMenu ? <VolumeEnvelopeMenu menu={volumeEnvelopeMenu} onFade={applyVolumeEnvelopeFade} onReset={resetVolumeEnvelope} onClose={() => setVolumeEnvelopeMenu(undefined)} /> : null}
             {clipMenu ? (
               <ClipActionMenu
@@ -2556,7 +2638,10 @@ function TimelineNoteLayer({
     const start = Math.min(draft.anchor, time);
     const end = Math.max(draft.anchor, time);
     onDraftChange(undefined);
-    onCreateRange(start, end > start ? end : start + 1);
+    if (end <= start) {
+      return;
+    }
+    onCreateRange(start, end);
   }
 
   return (
@@ -3182,21 +3267,39 @@ function TransitionMenu({
 function GapActionMenu({
   menu,
   onCloseGap,
+  onFillGap,
   onClose
 }: {
   menu: GapMenuState;
   onCloseGap(): void;
+  onFillGap(strategy: GapFillStrategy): void;
   onClose(): void;
 }) {
   return (
     <div
-      className="fixed z-50 w-[170px] rounded-md border border-line bg-white p-2 text-xs shadow-soft"
+      className="fixed z-50 w-[210px] rounded-md border border-line bg-white p-2 text-xs shadow-soft"
       style={{ left: menu.x, top: menu.y }}
       data-testid="gap-action-menu"
       onPointerDown={(event) => event.stopPropagation()}
     >
       <button className="block w-full rounded px-2 py-2 text-left hover:bg-panel" type="button" data-testid="gap-action-close" onClick={onCloseGap}>
         {zhCN.timeline.closeGapAction}
+      </button>
+      <div className="my-1 border-t border-line" />
+      <button className="block w-full rounded px-2 py-2 text-left hover:bg-panel" type="button" data-testid="gap-action-freeze-frame" onClick={() => onFillGap('freeze-frame')}>
+        {zhCN.timeline.smartGapFillFreezeFrameAction}
+      </button>
+      <button className="block w-full rounded px-2 py-2 text-left hover:bg-panel" type="button" data-testid="gap-action-black" onClick={() => onFillGap('black')}>
+        {zhCN.timeline.smartGapFillBlackAction}
+      </button>
+      <button className="block w-full rounded px-2 py-2 text-left hover:bg-panel" type="button" data-testid="gap-action-white" onClick={() => onFillGap('white')}>
+        {zhCN.timeline.smartGapFillWhiteAction}
+      </button>
+      <button className="block w-full rounded px-2 py-2 text-left hover:bg-panel" type="button" data-testid="gap-action-repeat" onClick={() => onFillGap('repeat')}>
+        {zhCN.timeline.smartGapFillRepeatAction}
+      </button>
+      <button className="block w-full rounded px-2 py-2 text-left hover:bg-panel" type="button" data-testid="gap-action-crossfade" onClick={() => onFillGap('crossfade')}>
+        {zhCN.timeline.smartGapFillCrossfadeAction}
       </button>
       <button className="mt-1 block w-full rounded px-2 py-1.5 text-left text-slate-500 hover:bg-panel" type="button" onClick={onClose}>
         {zhCN.timeline.close}

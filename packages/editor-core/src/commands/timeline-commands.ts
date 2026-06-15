@@ -126,6 +126,7 @@ import { cloneEffects, normalizeEffect, normalizeEffects, type Effect, type Effe
 import { calculateBeatSnapUpdates, normalizeBeatMarkers, type BeatMarker, type BeatSnapUpdate } from '../beats';
 import { normalizeTimelineLabelColor, type TimelineLabelColor } from '../timeline-color-labels';
 import { applyProtectedRippleDeleteToTrack, canMoveClipWithProtectedRanges } from '../timeline-protection';
+import { buildCrossfadeGapFillTransition, buildRepeatedGapFillClip, findTimelineGapAtTime, type FillGapOperation } from '../timeline-gap-fill';
 import { createMulticamSequenceProject, setMulticamSwitch } from '../multicam';
 import { applyCmx3600EdlImport, buildCmx3600EdlImport, type Cmx3600EdlImportOptions, type Cmx3600EdlImportResult } from '../export/timeline-import';
 import {
@@ -2503,6 +2504,62 @@ export class CloseGapCommand implements Command {
         tracks: timeline.tracks.map((item) => (item.id === this.trackId ? closeTrackGap(item, gap.start, gap.end) : item)),
         transitions: timeline.transitions ?? []
       };
+    }
+    this.accessor.setTimeline(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setTimeline(this.before);
+    }
+  }
+}
+
+export class FillGapCommand implements Command {
+  readonly description = 'Fill timeline gap';
+  private before?: Timeline;
+  private after?: Timeline;
+
+  constructor(private readonly accessor: TimelineAccessor, private readonly trackId: string, private readonly time: number, private readonly operation: FillGapOperation) {}
+
+  execute(): void {
+    const timeline = this.accessor.getTimeline();
+    this.before ??= timeline;
+    if (!this.after) {
+      const track = findTrack(timeline, this.trackId);
+      const gap = findTimelineGapAtTime(timeline, this.trackId, this.time);
+      if (!gap) {
+        throw new Error('No fillable gap at this time');
+      }
+      if (this.operation.type === 'insert-clip') {
+        const clip = {
+          ...this.operation.clip,
+          trackId: this.trackId,
+          start: gap.start,
+          duration: gap.duration
+        } as Clip;
+        if (detectOverlap(track, clip)) {
+          throw new Error('Gap fill clip overlaps another clip on this track');
+        }
+        this.after = insertClip(timeline, clip);
+      } else if (this.operation.type === 'repeat-previous') {
+        const clip = buildRepeatedGapFillClip(gap, { clipId: this.operation.clipId, name: this.operation.name });
+        if (detectOverlap(track, clip)) {
+          throw new Error('Gap fill clip overlaps another clip on this track');
+        }
+        this.after = insertClip(timeline, clip);
+      } else {
+        const transition = buildCrossfadeGapFillTransition(gap, this.operation);
+        const closedTrack = closeTrackGap(track, gap.start, gap.end);
+        this.after = {
+          ...timeline,
+          tracks: timeline.tracks.map((item) => (item.id === this.trackId ? closedTrack : item)),
+          transitions: [
+            ...(timeline.transitions ?? []).filter((item) => item.fromClipId !== transition.fromClipId || item.toClipId !== transition.toClipId),
+            transition
+          ]
+        };
+      }
     }
     this.accessor.setTimeline(this.after);
   }

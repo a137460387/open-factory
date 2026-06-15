@@ -52,7 +52,7 @@ import {
   type Sequence,
   type TargetAspectRatio
 } from '@open-factory/editor-core';
-import { AlertTriangle, CloudDownload, Clock3, Download, FileText, FolderOpen, Image as ImageIcon, ListPlus, Loader2, Minimize2, Save, Trash2, Upload, X } from 'lucide-react';
+import { AlertTriangle, Cloud, CloudDownload, Clock3, Download, FileText, FolderOpen, Image as ImageIcon, ListPlus, Loader2, Minimize2, Save, Trash2, Upload, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { zhCN } from '../i18n/strings';
 import { chooseExportPath, revealExport } from '../lib/exportVideo';
@@ -63,6 +63,7 @@ import {
   evaluateExportQuality,
   getAppDataDir,
   getFfmpegCapabilities,
+  getWebdavText,
   getTempSegmentsDir,
   listenBridge,
   minimizeToTray,
@@ -70,10 +71,12 @@ import {
   openDirectoryDialog,
   openPath,
   readFile,
+  readExportPresetSyncWebdavPassword,
   readExportUploadWebdavPassword,
   runExportPowerAction,
   runExportPreviewSamples,
   saveFileDialog,
+  putWebdavText,
   writeFile,
   writeExportUploadWebdavPassword,
   type QualityEvaluationProgressEvent,
@@ -82,11 +85,15 @@ import {
 import { showToast } from '../lib/toast';
 import {
   DEFAULT_EXPORT_UPLOAD_SETTINGS,
+  DEFAULT_EXPORT_PRESET_SYNC_SETTINGS,
   readExportBackgroundSettings,
+  readExportPresetSyncSettings,
   readExportUploadSettings,
   saveExportBackgroundSettings,
+  saveExportPresetSyncSettings,
   saveExportUploadSettings,
   type ExportBackgroundSettings,
+  type ExportPresetSyncSettings,
   type ExportUploadSettings
 } from '../settings/appSettings';
 import { getWhisperAvailability } from '../lib/whisper';
@@ -111,6 +118,7 @@ import {
   parseExportPresetPackage,
   saveCustomExportPreset,
   serializeExportPresetPackage,
+  syncExportPresetsWithWebdav,
   type ExportPreset,
   type ExportPresetImportConflictMode,
   type ExportPresetSettings
@@ -218,6 +226,9 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
     local: { ...DEFAULT_EXPORT_UPLOAD_SETTINGS.local }
   }));
   const [exportUploadPassword, setExportUploadPassword] = useState('');
+  const [exportPresetSyncSettings, setExportPresetSyncSettings] = useState<ExportPresetSyncSettings>(() => ({ ...DEFAULT_EXPORT_PRESET_SYNC_SETTINGS }));
+  const [exportPresetSyncPassword, setExportPresetSyncPassword] = useState('');
+  const [presetSyncState, setPresetSyncState] = useState<{ status: 'idle' | 'running' | 'success' | 'error'; message?: string }>({ status: 'idle' });
   const [warmupStatus, setWarmupStatus] = useState<ExportWarmupUiStatus>();
   const [previewRunning, setPreviewRunning] = useState(false);
   const [previewError, setPreviewError] = useState<string>();
@@ -342,6 +353,14 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
       .then((password) => setExportUploadPassword(password ?? ''))
       .catch((reason) => {
         console.warn('Unable to load export upload password', reason);
+      });
+    void Promise.all([readExportPresetSyncSettings(), readExportPresetSyncWebdavPassword()])
+      .then(([settings, password]) => {
+        setExportPresetSyncSettings(settings);
+        setExportPresetSyncPassword(password ?? '');
+      })
+      .catch((reason) => {
+        console.warn('Unable to load export preset sync settings', reason);
       });
   }, []);
 
@@ -506,6 +525,54 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
       await importPresetPackageContents(JSON.stringify(packageFile));
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : t.presetPackageFailed);
+    }
+  }
+
+  async function syncPresetPackageFromCloud(settings = exportPresetSyncSettings, password = exportPresetSyncPassword, silent = false): Promise<void> {
+    if (!settings.url?.trim()) {
+      const message = t.presetCloudSyncUrlMissing;
+      setPresetSyncState({ status: 'error', message });
+      if (!silent) {
+        showToast({ kind: 'warning', title: t.presetCloudSyncFailedTitle, message });
+      }
+      return;
+    }
+    try {
+      setError(undefined);
+      setPresetSyncState({ status: 'running' });
+      const result = await syncExportPresetsWithWebdav(
+        {
+          url: settings.url,
+          username: settings.username,
+          password: password || undefined,
+          conflictResolution: settings.conflictMode
+        },
+        {
+          client: {
+            getText: getWebdavText,
+            putText: putWebdavText
+          }
+        }
+      );
+      setPresets(result.presets);
+      const latestCustomPreset = result.presets.filter((preset) => !preset.builtin).at(-1);
+      if (latestCustomPreset) {
+        setPresetId(latestCustomPreset.id);
+      }
+      const savedSettings = await saveExportPresetSyncSettings({ ...settings, lastSyncedAt: result.syncedAt, lastSyncWarning: undefined });
+      setExportPresetSyncSettings(savedSettings);
+      const message = t.presetCloudSyncCompleteMessage(result.uploadedCount, result.conflicts.length);
+      setPresetSyncState({ status: 'success', message });
+      if (!silent) {
+        showToast({ kind: 'success', title: t.presetCloudSyncCompleteTitle, message });
+      }
+    } catch (reason) {
+      const message = reason instanceof Error ? reason.message : t.presetPackageFailed;
+      setPresetSyncState({ status: 'error', message });
+      setExportPresetSyncSettings(await saveExportPresetSyncSettings({ ...settings, lastSyncWarning: message }).catch(() => settings));
+      if (!silent) {
+        showToast({ kind: 'warning', title: t.presetCloudSyncFailedTitle, message });
+      }
     }
   }
 
@@ -943,6 +1010,16 @@ function relinkFromPreflight(): void {
                 ))}
               </select>
               <div className="mt-1 text-[11px] text-slate-500">{selectedPreset.description}</div>
+              {exportPresetSyncSettings.lastSyncedAt ? (
+                <div className="mt-1 text-[11px] text-slate-500" data-testid="export-preset-cloud-sync-last-time">
+                  {t.cloudSyncStatus(exportPresetSyncSettings.lastSyncedAt)}
+                </div>
+              ) : null}
+              {presetSyncState.message ? (
+                <div className={`mt-1 text-[11px] ${presetSyncState.status === 'error' ? 'text-amber-700' : 'text-emerald-700'}`} data-testid="export-preset-cloud-sync-status">
+                  {presetSyncState.message}
+                </div>
+              ) : null}
             </div>
             <div className="flex flex-wrap justify-end gap-2">
               <button
@@ -971,6 +1048,16 @@ function relinkFromPreflight(): void {
               >
                 <CloudDownload size={13} />
                 {t.officialPresetPackage}
+              </button>
+              <button
+                className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-45"
+                data-testid="export-preset-cloud-sync-button"
+                type="button"
+                disabled={presetSyncState.status === 'running' || !exportPresetSyncSettings.url}
+                onClick={() => void syncPresetPackageFromCloud()}
+              >
+                {presetSyncState.status === 'running' ? <Loader2 size={13} className="animate-spin" /> : <Cloud size={13} />}
+                {presetSyncState.status === 'running' ? t.cloudSyncRunning : t.cloudSyncPresetPackage}
               </button>
               <button
                 className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-45"

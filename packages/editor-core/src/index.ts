@@ -17,6 +17,7 @@ export * from './timeline-protection';
 export * from './render-cache';
 export * from './timeline-snapping';
 export * from './timeline-grid';
+export * from './timeline-gap-fill';
 export * from './track-batch';
 export * from './timeline-selection';
 export * from './timeline-zoom';

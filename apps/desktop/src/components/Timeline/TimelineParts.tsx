@@ -469,6 +469,7 @@ export function TrackRow({
       </div>
       <div
         className="relative bg-white"
+        data-testid={`timeline-track-body-${track.id}`}
         onPointerDown={onTrackPointerDown}
         onContextMenu={(event) => {
           if (locked || event.target !== event.currentTarget) {

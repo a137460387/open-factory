@@ -7,7 +7,7 @@ use std::io::{BufRead, BufReader, Read};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::{SystemTime, UNIX_EPOCH};
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 
 const WAVEFORM_SAMPLE_RATE: u32 = 48_000;
 const BEAT_RMS_SAMPLE_RATE: u32 = 48_000;
@@ -65,6 +65,35 @@ pub struct AudioSpectrumAnalysis {
     spectrogram_error: Option<String>,
     stats: AudioSpectrumStats,
     stats_error: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(tag = "kind")]
+pub enum GapFillMediaRequest {
+    #[serde(rename = "freeze-frame")]
+    FreezeFrame {
+        #[serde(rename = "sourcePath")]
+        source_path: String,
+        #[serde(rename = "sourceTime")]
+        source_time: f64,
+        width: u32,
+        height: u32,
+    },
+    #[serde(rename = "solid-color")]
+    SolidColor {
+        color: String,
+        width: u32,
+        height: u32,
+    },
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GapFillMediaResult {
+    path: String,
+    name: String,
+    width: u32,
+    height: u32,
 }
 
 #[derive(Debug, Clone, Serialize, Default)]
@@ -684,6 +713,73 @@ pub fn detect_beats(app: AppHandle, path: String, sensitivity: String) -> Result
     detect_beats_path(&safe_path, &sensitivity)
 }
 
+#[tauri::command]
+pub fn generate_gap_fill_media(
+    app: AppHandle,
+    request: GapFillMediaRequest,
+) -> Result<GapFillMediaResult, String> {
+    let output_dir = app
+        .path()
+        .app_cache_dir()
+        .map_err(|error| error.to_string())?
+        .join("media-cache")
+        .join("gap-fill");
+    fs::create_dir_all(&output_dir)
+        .map_err(|error| format!("Unable to create gap fill cache: {}", error))?;
+    let stamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_millis())
+        .unwrap_or(0);
+
+    match request {
+        GapFillMediaRequest::FreezeFrame {
+            source_path,
+            source_time,
+            width,
+            height,
+        } => {
+            let safe_source = validate_path(&app, Path::new(&source_path))?;
+            let name = format!("gap-freeze-{}.png", stamp);
+            let output = output_dir.join(&name);
+            let args = build_freeze_frame_args(
+                &normalize_path(&safe_source),
+                &normalize_path(&output),
+                source_time,
+            );
+            run_gap_fill_ffmpeg(&args, "freeze frame")?;
+            Ok(GapFillMediaResult {
+                path: normalize_path(&output),
+                name,
+                width: width.max(16),
+                height: height.max(16),
+            })
+        }
+        GapFillMediaRequest::SolidColor {
+            color,
+            width,
+            height,
+        } => {
+            let safe_width = width.max(16);
+            let safe_height = height.max(16);
+            let name = format!("gap-solid-{}.png", stamp);
+            let output = output_dir.join(&name);
+            let args = build_solid_color_frame_args(
+                &normalize_path(&output),
+                &color,
+                safe_width,
+                safe_height,
+            );
+            run_gap_fill_ffmpeg(&args, "solid color frame")?;
+            Ok(GapFillMediaResult {
+                path: normalize_path(&output),
+                name,
+                width: safe_width,
+                height: safe_height,
+            })
+        }
+    }
+}
+
 pub(crate) fn analyze_waveform_path(path: &Path, samples_per_sec: u32) -> Result<Vec<f32>, String> {
     let samples_per_sec = samples_per_sec.clamp(1, 1_000);
     let samples_per_bucket =
@@ -1106,6 +1202,84 @@ fn normalize_path(path: &Path) -> String {
     path.to_string_lossy().replace('\\', "/")
 }
 
+pub(crate) fn build_freeze_frame_args(
+    source_path: &str,
+    output_path: &str,
+    source_time: f64,
+) -> Vec<String> {
+    vec![
+        "-y".to_string(),
+        "-hide_banner".to_string(),
+        "-ss".to_string(),
+        format_gap_fill_seconds(source_time),
+        "-i".to_string(),
+        source_path.to_string(),
+        "-vf".to_string(),
+        "select=eq(n\\,0)".to_string(),
+        "-frames:v".to_string(),
+        "1".to_string(),
+        output_path.to_string(),
+    ]
+}
+
+pub(crate) fn build_solid_color_frame_args(
+    output_path: &str,
+    color: &str,
+    width: u32,
+    height: u32,
+) -> Vec<String> {
+    vec![
+        "-y".to_string(),
+        "-hide_banner".to_string(),
+        "-f".to_string(),
+        "lavfi".to_string(),
+        "-i".to_string(),
+        format!(
+            "color=c={}:s={}x{}:d=0.04",
+            normalize_gap_fill_color(color),
+            width.max(16),
+            height.max(16)
+        ),
+        "-frames:v".to_string(),
+        "1".to_string(),
+        output_path.to_string(),
+    ]
+}
+
+fn run_gap_fill_ffmpeg(args: &[String], label: &str) -> Result<(), String> {
+    let output = Command::new(ffmpeg_binary())
+        .args(args)
+        .output()
+        .map_err(|error| format!("Unable to start FFmpeg {} generation: {}", label, error))?;
+    if output.status.success() {
+        return Ok(());
+    }
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    Err(format!(
+        "FFmpeg {} generation failed: {}",
+        label,
+        stderr.trim()
+    ))
+}
+
+fn normalize_gap_fill_color(color: &str) -> String {
+    let trimmed = color.trim();
+    if trimmed.len() == 7
+        && trimmed.starts_with('#')
+        && trimmed[1..].chars().all(|ch| ch.is_ascii_hexdigit())
+    {
+        return format!("0x{}", &trimmed[1..]);
+    }
+    if !trimmed.is_empty() && trimmed.chars().all(|ch| ch.is_ascii_alphabetic()) {
+        return trimmed.to_ascii_lowercase();
+    }
+    "black".to_string()
+}
+
+fn format_gap_fill_seconds(value: f64) -> String {
+    round_seconds(if value.is_finite() { value.max(0.0) } else { 0.0 }).to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1142,6 +1316,40 @@ mod tests {
                 "silence_end:"
             ),
             Some(2.5)
+        );
+    }
+
+    #[test]
+    fn builds_gap_fill_media_ffmpeg_args() {
+        assert_eq!(
+            build_freeze_frame_args("C:/Media/source.mp4", "C:/Cache/freeze.png", 2.25),
+            str_vec(&[
+                "-y",
+                "-hide_banner",
+                "-ss",
+                "2.25",
+                "-i",
+                "C:/Media/source.mp4",
+                "-vf",
+                "select=eq(n\\,0)",
+                "-frames:v",
+                "1",
+                "C:/Cache/freeze.png"
+            ])
+        );
+        assert_eq!(
+            build_solid_color_frame_args("C:/Cache/black.png", "#000000", 1280, 720),
+            str_vec(&[
+                "-y",
+                "-hide_banner",
+                "-f",
+                "lavfi",
+                "-i",
+                "color=c=0x000000:s=1280x720:d=0.04",
+                "-frames:v",
+                "1",
+                "C:/Cache/black.png"
+            ])
         );
     }
 
@@ -1418,6 +1626,10 @@ mod tests {
             .expect("clock")
             .as_nanos();
         std::env::temp_dir().join(format!("{name}-{id}"))
+    }
+
+    fn str_vec(values: &[&str]) -> Vec<String> {
+        values.iter().map(|value| (*value).to_string()).collect()
     }
 
     fn write_test_wav(path: &Path, duration_secs: f64, sample_rate: u32) -> std::io::Result<()> {

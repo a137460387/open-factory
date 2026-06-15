@@ -57,6 +57,18 @@ export interface ExportUploadSettings {
   };
 }
 
+export type ExportPresetSyncConflictMode = 'merge' | 'keep-local' | 'keep-remote';
+
+export interface ExportPresetSyncSettings {
+  enabled: boolean;
+  url?: string;
+  username?: string;
+  syncOnStartup: boolean;
+  conflictMode: ExportPresetSyncConflictMode;
+  lastSyncedAt?: string;
+  lastSyncWarning?: string;
+}
+
 export interface ViewSettings {
   safeFrameGuides: boolean;
   thumbnailTrackVisible: boolean;
@@ -111,6 +123,12 @@ export const DEFAULT_EXPORT_UPLOAD_SETTINGS: ExportUploadSettings = {
   local: {}
 };
 
+export const DEFAULT_EXPORT_PRESET_SYNC_SETTINGS: ExportPresetSyncSettings = {
+  enabled: false,
+  syncOnStartup: false,
+  conflictMode: 'merge'
+};
+
 export interface AppSettings {
   language?: Language;
   layout?: EditorLayoutSettings;
@@ -118,6 +136,7 @@ export interface AppSettings {
   theme?: ThemeSettings;
   exportBackground?: ExportBackgroundSettings;
   exportUpload?: ExportUploadSettings;
+  exportPresetSync?: ExportPresetSyncSettings;
   exportRules?: ExportConditionRule[];
   view?: ViewSettings;
   previewPerformance?: PreviewPerformanceSettings;
@@ -191,6 +210,18 @@ export async function saveExportUploadSettings(exportUpload: Partial<ExportUploa
   const nextExportUpload = normalizeExportUploadSettings({ ...settings.exportUpload, ...exportUpload }) ?? defaultExportUploadSettings();
   await writeAppSettings({ ...settings, exportUpload: nextExportUpload });
   return nextExportUpload;
+}
+
+export async function readExportPresetSyncSettings(): Promise<ExportPresetSyncSettings> {
+  const settings = await readAppSettings();
+  return settings.exportPresetSync ?? defaultExportPresetSyncSettings();
+}
+
+export async function saveExportPresetSyncSettings(exportPresetSync: Partial<ExportPresetSyncSettings>): Promise<ExportPresetSyncSettings> {
+  const settings = await readAppSettings();
+  const nextExportPresetSync = normalizeExportPresetSyncSettings({ ...settings.exportPresetSync, ...exportPresetSync }) ?? defaultExportPresetSyncSettings();
+  await writeAppSettings({ ...settings, exportPresetSync: nextExportPresetSync });
+  return nextExportPresetSync;
 }
 
 export async function readExportRules(): Promise<ExportConditionRule[]> {
@@ -334,6 +365,10 @@ function normalizeSettings(settings: Partial<AppSettings>): AppSettings {
   const exportUpload = normalizeExportUploadSettings(settings.exportUpload);
   if (exportUpload && shouldPersistExportUploadSettings(exportUpload)) {
     normalized.exportUpload = exportUpload;
+  }
+  const exportPresetSync = normalizeExportPresetSyncSettings(settings.exportPresetSync);
+  if (exportPresetSync && shouldPersistExportPresetSyncSettings(exportPresetSync)) {
+    normalized.exportPresetSync = exportPresetSync;
   }
   const exportRules = normalizeExportRules(settings.exportRules);
   if (exportRules.length > 0) {
@@ -556,6 +591,30 @@ export function normalizeExportUploadSettings(settings: Partial<ExportUploadSett
   return normalized;
 }
 
+export function normalizeExportPresetSyncSettings(settings: Partial<ExportPresetSyncSettings> | undefined): ExportPresetSyncSettings | undefined {
+  if (!settings || typeof settings !== 'object') {
+    return undefined;
+  }
+  const normalized: ExportPresetSyncSettings = {
+    enabled: Boolean(settings.enabled),
+    syncOnStartup: Boolean(settings.syncOnStartup),
+    conflictMode: normalizeExportPresetSyncConflictMode(settings.conflictMode)
+  };
+  if (typeof settings.url === 'string' && settings.url.trim()) {
+    normalized.url = settings.url.trim();
+  }
+  if (typeof settings.username === 'string' && settings.username.trim()) {
+    normalized.username = settings.username.trim();
+  }
+  if (typeof settings.lastSyncedAt === 'string' && settings.lastSyncedAt.trim()) {
+    normalized.lastSyncedAt = settings.lastSyncedAt.trim();
+  }
+  if (typeof settings.lastSyncWarning === 'string' && settings.lastSyncWarning.trim()) {
+    normalized.lastSyncWarning = settings.lastSyncWarning.trim();
+  }
+  return normalized;
+}
+
 export function normalizeViewSettings(settings: Partial<ViewSettings> | undefined): ViewSettings | undefined {
   if (!settings || typeof settings !== 'object') {
     return undefined;
@@ -625,6 +684,23 @@ function defaultExportUploadSettings(): ExportUploadSettings {
 
 function shouldPersistExportUploadSettings(settings: ExportUploadSettings): boolean {
   return settings.enabled || Boolean(settings.webdav.url || settings.webdav.username || settings.local.directory) || settings.targetType !== DEFAULT_EXPORT_UPLOAD_SETTINGS.targetType;
+}
+
+function defaultExportPresetSyncSettings(): ExportPresetSyncSettings {
+  return { ...DEFAULT_EXPORT_PRESET_SYNC_SETTINGS };
+}
+
+function shouldPersistExportPresetSyncSettings(settings: ExportPresetSyncSettings): boolean {
+  return (
+    settings.enabled ||
+    settings.syncOnStartup ||
+    settings.conflictMode !== DEFAULT_EXPORT_PRESET_SYNC_SETTINGS.conflictMode ||
+    Boolean(settings.url || settings.username || settings.lastSyncedAt || settings.lastSyncWarning)
+  );
+}
+
+function normalizeExportPresetSyncConflictMode(value: unknown): ExportPresetSyncConflictMode {
+  return value === 'keep-local' || value === 'keep-remote' ? value : 'merge';
 }
 
 function defaultViewSettings(): ViewSettings {

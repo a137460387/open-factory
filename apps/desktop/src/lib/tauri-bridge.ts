@@ -96,6 +96,22 @@ export interface WebdavExportUploadResult {
   bytes: number;
 }
 
+export interface WebdavTextRequest {
+  url: string;
+  username?: string;
+  password?: string;
+}
+
+export interface WebdavTextResult {
+  status: number;
+  contents: string;
+}
+
+export interface WebdavTextPutRequest extends WebdavTextRequest {
+  contents: string;
+  contentType?: string;
+}
+
 export interface SharePackageProgressEvent {
   stage: 'readme' | 'project' | 'export' | 'media' | 'finished';
   progress: number;
@@ -198,6 +214,17 @@ export interface AudioSpectrumAnalysis {
   spectrogramError?: string;
   stats: AudioSpectrumStats;
   statsError?: string;
+}
+
+export type GapFillMediaRequest =
+  | { kind: 'freeze-frame'; sourcePath: string; sourceTime: number; width: number; height: number }
+  | { kind: 'solid-color'; color: string; width: number; height: number };
+
+export interface GapFillMediaResult {
+  path: string;
+  name: string;
+  width: number;
+  height: number;
 }
 
 export interface ProxyResult {
@@ -465,10 +492,14 @@ export type TauriMocks = Partial<{
   createSharePackage(request: SharePackageRequest): Promise<SharePackageResult> | SharePackageResult;
   putWebdavProject(request: WebdavProjectBackupRequest): Promise<WebdavProjectBackupResult> | WebdavProjectBackupResult;
   putWebdavExportFile(request: WebdavExportUploadRequest): Promise<WebdavExportUploadResult> | WebdavExportUploadResult;
+  getWebdavText(request: WebdavTextRequest): Promise<WebdavTextResult> | WebdavTextResult;
+  putWebdavText(request: WebdavTextPutRequest): Promise<{ status: number }> | { status: number };
   readWebdavPassword(): Promise<string | undefined> | string | undefined;
   writeWebdavPassword(password?: string): Promise<void> | void;
   readExportUploadWebdavPassword(): Promise<string | undefined> | string | undefined;
   writeExportUploadWebdavPassword(password?: string): Promise<void> | void;
+  readExportPresetSyncWebdavPassword(): Promise<string | undefined> | string | undefined;
+  writeExportPresetSyncWebdavPassword(password?: string): Promise<void> | void;
   analyzeClip(request: AnalyzeClipRequest): Promise<AnalyzeClipResult> | AnalyzeClipResult;
   analyzeMotionTrack(request: AnalyzeMotionTrackRequest): Promise<AnalyzeMotionTrackResult> | AnalyzeMotionTrackResult;
   evaluateExportQuality(request: QualityEvaluationRequest): Promise<QualityEvaluationResult> | QualityEvaluationResult;
@@ -497,6 +528,7 @@ export type TauriMocks = Partial<{
   analyzeMedia(path: string): Promise<MediaAnalysis> | MediaAnalysis;
   scanMediaIntegrity(path: string): Promise<MediaIntegrityScanResult> | MediaIntegrityScanResult;
   analyzeAudioSpectrum(path: string): Promise<AudioSpectrumAnalysis> | AudioSpectrumAnalysis;
+  generateGapFillMedia(request: GapFillMediaRequest): Promise<GapFillMediaResult> | GapFillMediaResult;
   analyzeWaveform(path: string, samplesPerSec: number): Promise<number[]> | number[];
   detectBeats(path: string, sensitivity: BeatSensitivity): Promise<number[]> | number[];
   detectSilence(path: string, thresholdDb: number, minGapMs: number): Promise<NativeSilenceRange[]> | NativeSilenceRange[];
@@ -752,6 +784,17 @@ export async function analyzeAudioSpectrum(path: string): Promise<AudioSpectrumA
   return invoke<AudioSpectrumAnalysis>('analyze_audio_spectrum', { path });
 }
 
+export async function generateGapFillMedia(request: GapFillMediaRequest): Promise<GapFillMediaResult> {
+  const mock = getTauriMocks()?.generateGapFillMedia;
+  if (mock) {
+    return mock(request);
+  }
+  if (!isTauriRuntime()) {
+    throw new Error('generateGapFillMedia 需要 Tauri 或 __TAURI_MOCKS__ 实现。');
+  }
+  return invoke<GapFillMediaResult>('generate_gap_fill_media', { request });
+}
+
 export async function analyzeWaveform(path: string, samplesPerSec: number): Promise<number[]> {
   const mock = getTauriMocks()?.analyzeWaveform;
   if (mock) {
@@ -943,6 +986,22 @@ export async function putWebdavExportFile(request: WebdavExportUploadRequest): P
   return invoke<WebdavExportUploadResult>('put_webdav_export_file', { request });
 }
 
+export async function getWebdavText(request: WebdavTextRequest): Promise<WebdavTextResult> {
+  const mock = getTauriMocks()?.getWebdavText;
+  if (mock) {
+    return mock(request);
+  }
+  return invoke<WebdavTextResult>('get_webdav_text', { request });
+}
+
+export async function putWebdavText(request: WebdavTextPutRequest): Promise<{ status: number }> {
+  const mock = getTauriMocks()?.putWebdavText;
+  if (mock) {
+    return mock(request);
+  }
+  return invoke<{ status: number }>('put_webdav_text', { request });
+}
+
 export async function readWebdavPassword(): Promise<string | undefined> {
   const mock = getTauriMocks()?.readWebdavPassword;
   if (mock) {
@@ -975,6 +1034,23 @@ export async function writeExportUploadWebdavPassword(password?: string): Promis
     return;
   }
   await invoke('write_export_upload_webdav_password', { password });
+}
+
+export async function readExportPresetSyncWebdavPassword(): Promise<string | undefined> {
+  const mock = getTauriMocks()?.readExportPresetSyncWebdavPassword;
+  if (mock) {
+    return mock();
+  }
+  return invoke<string | undefined>('read_export_preset_sync_webdav_password');
+}
+
+export async function writeExportPresetSyncWebdavPassword(password?: string): Promise<void> {
+  const mock = getTauriMocks()?.writeExportPresetSyncWebdavPassword;
+  if (mock) {
+    await mock(password);
+    return;
+  }
+  await invoke('write_export_preset_sync_webdav_password', { password });
 }
 
 export async function analyzeClip(request: AnalyzeClipRequest): Promise<AnalyzeClipResult> {

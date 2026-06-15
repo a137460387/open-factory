@@ -7,6 +7,7 @@ import {
   readBackupSettings,
   readCustomSplitLayouts,
   readExportBackgroundSettings,
+  readExportPresetSyncSettings,
   readExportUploadSettings,
   readExportRules,
   readLayoutSettings,
@@ -18,6 +19,7 @@ import {
   saveAutomationRules,
   saveCustomSplitLayouts,
   saveExportBackgroundSettings,
+  saveExportPresetSyncSettings,
   saveExportUploadSettings,
   saveExportRules,
   saveLanguageSetting,
@@ -203,6 +205,39 @@ describe('app settings storage', () => {
     expect(await readAppSettings()).toEqual({
       language: 'en',
       exportUpload: upload
+    });
+  });
+
+  it('persists export preset sync settings without storing a WebDAV password', async () => {
+    await expect(readExportPresetSyncSettings()).resolves.toEqual({
+      enabled: false,
+      syncOnStartup: false,
+      conflictMode: 'merge'
+    });
+
+    await saveLanguageSetting('en');
+    const sync = await saveExportPresetSyncSettings({
+      enabled: true,
+      url: ' https://dav.example.test/presets/export.ofpreset.json ',
+      username: ' editor ',
+      syncOnStartup: true,
+      conflictMode: 'keep-remote',
+      lastSyncedAt: '2026-06-15T02:00:00.000Z',
+      password: 'should-not-persist'
+    } as never);
+
+    expect(sync).toEqual({
+      enabled: true,
+      url: 'https://dav.example.test/presets/export.ofpreset.json',
+      username: 'editor',
+      syncOnStartup: true,
+      conflictMode: 'keep-remote',
+      lastSyncedAt: '2026-06-15T02:00:00.000Z'
+    });
+    expect(files.get(settingsPath)).not.toContain('password');
+    expect(await readAppSettings()).toEqual({
+      language: 'en',
+      exportPresetSync: sync
     });
   });
 

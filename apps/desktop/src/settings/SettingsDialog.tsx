@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Download, FilePlus, FolderOpen, GripVertical, RotateCcw, Save, Star, Trash2, X, XCircle } from 'lucide-react';
+import { Cloud, Download, FilePlus, FolderOpen, GripVertical, RotateCcw, Save, Star, Trash2, X, XCircle } from 'lucide-react';
 import {
   buildProxyInventory,
   planProxyCleanup,
@@ -23,7 +23,7 @@ import { getLanguage, normalizeLanguage, zhCN, type Language } from '../i18n/str
 import { parseAutomationRulesJson, serializeAutomationRulesJson } from '../automation/automation-rules';
 import { pickDemucsExecutablePath } from '../lib/demucs';
 import { loadLutLibrary, toggleLutFavorite, type LutLibraryItem } from '../lib/lutLibrary';
-import { fsExists, getFileStat, getSystemResourceSnapshot, openDirectoryDialog, openFileDialog, readWebdavPassword, writeWebdavPassword, type SystemResourceSnapshot } from '../lib/tauri-bridge';
+import { fsExists, getFileStat, getSystemResourceSnapshot, openDirectoryDialog, openFileDialog, readExportPresetSyncWebdavPassword, readWebdavPassword, writeExportPresetSyncWebdavPassword, writeWebdavPassword, type SystemResourceSnapshot } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
 import { PREVIEW_SKIP_FRAME_OPTIONS, type PreviewPerformanceSettings, type PreviewSkipFrames } from '../lib/preview/preview-performance';
 import {
@@ -69,18 +69,22 @@ import { useRecordingSettingsStore } from '../store/recordingSettingsStore';
 import { useTranslationSettingsStore, type TranslationProvider } from '../store/translationSettingsStore';
 import {
   DEFAULT_BACKUP_SETTINGS,
+  DEFAULT_EXPORT_PRESET_SYNC_SETTINGS,
   readAutomationRules,
   readBackupSettings,
   readExportBackgroundSettings,
+  readExportPresetSyncSettings,
   readExportRules,
   saveAutomationRules,
   saveBackupSettings,
   saveExportBackgroundSettings,
+  saveExportPresetSyncSettings,
   saveExportRules,
   saveLanguageSetting,
   type AutomationRule,
   type BackupSettings,
   type ExportBackgroundSettings,
+  type ExportPresetSyncSettings,
   type ExportConditionRule
 } from './appSettings';
 import {
@@ -113,7 +117,7 @@ interface SettingsDialogProps {
   onClose(): void;
 }
 
-type SettingsTab = 'general' | 'appearance' | 'lut-library' | 'shortcuts' | 'macros' | 'automation' | 'translation' | 'proxy' | 'task-monitor' | 'backup' | 'plugins';
+type SettingsTab = 'general' | 'appearance' | 'lut-library' | 'shortcuts' | 'macros' | 'automation' | 'translation' | 'proxy' | 'task-monitor' | 'export-presets' | 'backup' | 'plugins';
 const VFR_HANDLING_OPTIONS: VfrHandlingStrategy[] = ['ignore', 'auto-cfr', 'ask'];
 const EXPORT_RULE_COPY_SUCCESS_ID = 'copy-success';
 const EXPORT_RULE_FAILURE_NOTIFICATION_ID = 'failure-notification';
@@ -155,12 +159,14 @@ export function SettingsDialog({
     local: { ...DEFAULT_BACKUP_SETTINGS.local },
     webdav: { ...DEFAULT_BACKUP_SETTINGS.webdav }
   }));
+  const [exportPresetSyncSettings, setExportPresetSyncSettings] = useState<ExportPresetSyncSettings>(() => ({ ...DEFAULT_EXPORT_PRESET_SYNC_SETTINGS }));
   const [exportBackgroundSettings, setExportBackgroundSettings] = useState<ExportBackgroundSettings>(() => ({ allowPowerActions: false, postExportScriptAcknowledged: false }));
   const [exportRules, setExportRules] = useState<ExportConditionRule[]>([]);
   const [automationRules, setAutomationRules] = useState<AutomationRule[]>([]);
   const [automationRulesJson, setAutomationRulesJson] = useState('[]');
   const [automationRulesError, setAutomationRulesError] = useState<string>();
   const [webdavPassword, setWebdavPassword] = useState('');
+  const [exportPresetSyncPassword, setExportPresetSyncPassword] = useState('');
   const translationProvider = useTranslationSettingsStore((state) => state.provider);
   const translationApiKey = useTranslationSettingsStore((state) => state.apiKey);
   const translationTargetLanguage = useTranslationSettingsStore((state) => state.targetLanguage);
@@ -194,6 +200,7 @@ export function SettingsDialog({
     }
     void refresh();
     void loadBackupSettings();
+    void loadExportPresetSyncSettings();
     void loadExportBackgroundSettings();
     void loadExportRules();
     void loadAutomationRules();
@@ -504,6 +511,19 @@ export function SettingsDialog({
     }
   }
 
+  async function loadExportPresetSyncSettings() {
+    try {
+      setExportPresetSyncSettings(await readExportPresetSyncSettings());
+      setExportPresetSyncPassword((await readExportPresetSyncWebdavPassword()) ?? '');
+    } catch (settingsError) {
+      showToast({
+        kind: 'warning',
+        title: t.exportPresetSync.saveFailed,
+        message: settingsError instanceof Error ? settingsError.message : t.exportPresetSync.saveFailedMessage
+      });
+    }
+  }
+
   async function loadExportBackgroundSettings() {
     try {
       setExportBackgroundSettings(await readExportBackgroundSettings());
@@ -664,6 +684,19 @@ export function SettingsDialog({
     }
   }
 
+  async function updateExportPresetSyncSettings(nextSettings: ExportPresetSyncSettings) {
+    setExportPresetSyncSettings(nextSettings);
+    try {
+      setExportPresetSyncSettings(await saveExportPresetSyncSettings(nextSettings));
+    } catch (settingsError) {
+      showToast({
+        kind: 'warning',
+        title: t.exportPresetSync.saveFailed,
+        message: settingsError instanceof Error ? settingsError.message : t.exportPresetSync.saveFailedMessage
+      });
+    }
+  }
+
   function hydrateThemeForm(settings: ThemeSettings) {
     const normalized = getCurrentThemeSettings();
     const nextSettings = settings ?? normalized;
@@ -750,6 +783,19 @@ export function SettingsDialog({
         kind: 'warning',
         title: t.backup.passwordSaveFailed,
         message: passwordError instanceof Error ? passwordError.message : t.backup.passwordSaveFailedMessage
+      });
+    }
+  }
+
+  async function updateExportPresetSyncPassword(password: string) {
+    setExportPresetSyncPassword(password);
+    try {
+      await writeExportPresetSyncWebdavPassword(password);
+    } catch (passwordError) {
+      showToast({
+        kind: 'warning',
+        title: t.exportPresetSync.passwordSaveFailed,
+        message: passwordError instanceof Error ? passwordError.message : t.exportPresetSync.passwordSaveFailedMessage
       });
     }
   }
@@ -863,6 +909,14 @@ export function SettingsDialog({
               onClick={() => setTab('task-monitor')}
             >
               {t.tabs.taskMonitor}
+            </button>
+            <button
+              className={`mt-1 w-full rounded-md px-3 py-2 text-left text-sm font-semibold ${tab === 'export-presets' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}
+              type="button"
+              data-testid="settings-tab-export-presets"
+              onClick={() => setTab('export-presets')}
+            >
+              {t.tabs.exportPresets}
             </button>
             <button
               className={`mt-1 w-full rounded-md px-3 py-2 text-left text-sm font-semibold ${tab === 'backup' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}
@@ -1325,6 +1379,14 @@ export function SettingsDialog({
               />
             ) : null}
             {tab === 'task-monitor' ? <TaskMonitorSettingsPanel /> : null}
+            {tab === 'export-presets' ? (
+              <ExportPresetSyncSettingsPanel
+                settings={exportPresetSyncSettings}
+                password={exportPresetSyncPassword}
+                onSettingsChange={(settings) => void updateExportPresetSyncSettings(settings)}
+                onPasswordChange={(password) => void updateExportPresetSyncPassword(password)}
+              />
+            ) : null}
             {tab === 'backup' ? (
               <BackupSettingsPanel
                 settings={backupSettings}
@@ -1973,6 +2035,114 @@ function BackupSettingsPanel({
         {settings.lastBackupWarning ? (
           <div className="mt-1 text-amber-700" data-testid="backup-status-warning">
             {t.lastWarning}: {settings.lastBackupWarning}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function ExportPresetSyncSettingsPanel({
+  settings,
+  password,
+  onSettingsChange,
+  onPasswordChange
+}: {
+  settings: ExportPresetSyncSettings;
+  password: string;
+  onSettingsChange(settings: ExportPresetSyncSettings): void;
+  onPasswordChange(password: string): void;
+}) {
+  const t = zhCN.settings.exportPresetSync;
+  const lastSync = formatBackupDisplayTime(settings.lastSyncedAt) ?? t.neverSynced;
+  const update = (patch: Partial<ExportPresetSyncSettings>) => onSettingsChange({ ...settings, ...patch });
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start gap-3">
+        <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-line bg-panel text-slate-600">
+          <Cloud size={16} />
+        </span>
+        <div>
+          <h3 className="text-sm font-semibold text-ink">{t.title}</h3>
+          <p className="text-xs text-slate-500">{t.description}</p>
+        </div>
+      </div>
+      <div className="rounded-md border border-line bg-white p-3">
+        <label className="flex items-start gap-2 text-xs text-slate-600">
+          <input
+            className="mt-0.5 h-4 w-4"
+            type="checkbox"
+            checked={settings.enabled}
+            data-testid="export-preset-sync-enabled"
+            onChange={(event) => update({ enabled: event.target.checked })}
+          />
+          <span className="font-semibold text-slate-700">{t.enabled}</span>
+        </label>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <label className="block text-xs font-medium text-slate-600 sm:col-span-2">
+            {t.url}
+            <input
+              className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink"
+              value={settings.url ?? ''}
+              data-testid="export-preset-sync-url-input"
+              onChange={(event) => update({ url: event.target.value })}
+            />
+          </label>
+          <label className="block text-xs font-medium text-slate-600">
+            {t.username}
+            <input
+              className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink"
+              value={settings.username ?? ''}
+              data-testid="export-preset-sync-username-input"
+              onChange={(event) => update({ username: event.target.value })}
+            />
+          </label>
+          <label className="block text-xs font-medium text-slate-600">
+            {t.password}
+            <input
+              className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink"
+              type="password"
+              value={password}
+              data-testid="export-preset-sync-password-input"
+              onChange={(event) => onPasswordChange(event.target.value)}
+            />
+          </label>
+          <label className="flex items-start gap-2 text-xs text-slate-600">
+            <input
+              className="mt-0.5 h-4 w-4"
+              type="checkbox"
+              checked={settings.syncOnStartup}
+              data-testid="export-preset-sync-startup-toggle"
+              onChange={(event) => update({ syncOnStartup: event.target.checked })}
+            />
+            <span>{t.syncOnStartup}</span>
+          </label>
+          <label className="block text-xs font-medium text-slate-600">
+            {t.conflictMode}
+            <select
+              className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+              value={settings.conflictMode}
+              data-testid="export-preset-sync-conflict-mode-select"
+              onChange={(event) => update({ conflictMode: event.target.value as ExportPresetSyncSettings['conflictMode'] })}
+            >
+              {(['merge', 'keep-local', 'keep-remote'] as const).map((mode) => (
+                <option key={mode} value={mode}>
+                  {t.conflictModes[mode]}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className="mt-2 text-xs text-slate-500">{t.passwordStorageNote}</div>
+      </div>
+      <div className="rounded-md border border-line bg-panel p-3 text-xs text-slate-600" data-testid="export-preset-sync-status">
+        <div>
+          {t.lastSync}: <span data-testid="export-preset-sync-last-time">{lastSync}</span>
+        </div>
+        {settings.lastSyncWarning ? (
+          <div className="mt-1 text-amber-700" data-testid="export-preset-sync-warning">
+            {t.lastWarning}: {settings.lastSyncWarning}
           </div>
         ) : null}
       </div>
