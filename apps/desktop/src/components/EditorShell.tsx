@@ -109,10 +109,18 @@ import { clearMediaCache } from '../cache/cache-service';
 import { createAdjustmentLayerClip, createClipFromAsset, findPreferredTrack } from '../lib/clipFactory';
 import { zhCN } from '../i18n/strings';
 import {
+  applyWorkspaceLayout,
+  BUILT_IN_WORKSPACE_LAYOUT_IDS,
   clampTimelineHeight,
+  createCustomWorkspaceLayout,
   DEFAULT_EDITOR_LAYOUT_SETTINGS,
   getEffectivePanelState,
-  type EditorLayoutSettings
+  getWorkspaceLayoutById,
+  normalizeStoredLayoutSettings,
+  resolveWorkspaceLayoutShortcut,
+  type EditorLayoutSettings,
+  type WorkspaceLayoutDefinition,
+  type WorkspaceLayoutId
 } from '../layout/layoutSettings';
 import type { ExportPreset } from '../export/export-presets';
 import { pickMediaPaths, probeMediaPaths } from '../lib/media';
@@ -380,18 +388,72 @@ export function EditorShell() {
   const canSplitToBeats = Boolean(selectedClip && (project.beatMarkers?.length ?? 0) > 0);
   const timelineHeightPx = clampTimelineHeight(layoutSettings.timelineHeightPx, viewportSize.height);
   const effectivePanels = useMemo(() => getEffectivePanelState(layoutSettings, viewportSize.width), [layoutSettings, viewportSize.width]);
+  const workspaceLayouts = useMemo<WorkspaceLayoutDefinition[]>(
+    () => [...BUILT_IN_WORKSPACE_LAYOUT_IDS.map((id) => getWorkspaceLayoutById(layoutSettings, id)).filter((layout): layout is WorkspaceLayoutDefinition => Boolean(layout)), ...layoutSettings.customWorkspaceLayouts],
+    [layoutSettings]
+  );
   const editorGridRows = `auto minmax(0,1fr) 6px ${timelineHeightPx}px`;
-  const mainGridColumns = `${effectivePanels.leftPanelCollapsed ? 48 : 280}px minmax(0,1fr) ${effectivePanels.rightPanelCollapsed ? 48 : 360}px`;
+  const mainGridColumns = `${effectivePanels.leftPanelCollapsed ? 48 : layoutSettings.leftPanelWidthPx}px minmax(0,1fr) ${effectivePanels.rightPanelCollapsed ? 48 : layoutSettings.rightPanelWidthPx}px`;
+  const rightPanelRows =
+    effectivePanels.rightPrimaryPanelVisible && effectivePanels.audioMixerVisible
+      ? `minmax(0,1fr) ${layoutSettings.mixerHeightPx}px`
+      : 'minmax(0,1fr)';
 
   const persistLayoutPatch = useCallback((patch: Partial<EditorLayoutSettings>) => {
     setLayoutSettings((current) => {
-      const next = { ...current, ...patch };
+      const next = normalizeStoredLayoutSettings({ ...current, ...patch }) ?? { ...DEFAULT_EDITOR_LAYOUT_SETTINGS };
       void saveLayoutSettings(next).catch((error) => {
         console.warn('Unable to save layout settings', error);
       });
       return next;
     });
   }, []);
+
+  const persistPanelVisibilityPatch = useCallback(
+    (patch: Partial<EditorLayoutSettings['panels']>) => {
+      persistLayoutPatch({ panels: { ...layoutSettings.panels, ...patch } });
+    },
+    [layoutSettings.panels, persistLayoutPatch]
+  );
+
+  const applyWorkspaceLayoutById = useCallback(
+    (layoutId: WorkspaceLayoutId) => {
+      const layout = getWorkspaceLayoutById(layoutSettings, layoutId);
+      if (!layout) {
+        showToast({ kind: 'warning', title: zhCN.layout.workspaceApplyFailed, message: zhCN.layout.workspaceMissing });
+        return;
+      }
+      const next = applyWorkspaceLayout(layoutSettings, layout);
+      setLayoutSettings(next);
+      setHistoryPanelOpen(layout.panels.history);
+      setSmartRoughCutOpen(false);
+      void saveLayoutSettings(next).catch((error) => {
+        console.warn('Unable to save workspace layout', error);
+      });
+      showToast({ kind: 'success', title: zhCN.layout.workspaceApplied, message: getWorkspaceLayoutDisplayName(layout) });
+    },
+    [layoutSettings]
+  );
+
+  const saveCurrentWorkspaceLayout = useCallback(async () => {
+    const name = window.prompt(zhCN.layout.saveWorkspacePrompt, zhCN.layout.customWorkspaceDefaultName)?.trim();
+    if (!name) {
+      return;
+    }
+    const customLayout = createCustomWorkspaceLayout(name, layoutSettings);
+    const next = {
+      ...layoutSettings,
+      activeWorkspaceLayoutId: customLayout.id,
+      customWorkspaceLayouts: [...layoutSettings.customWorkspaceLayouts, customLayout]
+    };
+    setLayoutSettings(next);
+    try {
+      await saveLayoutSettings(next);
+      showToast({ kind: 'success', title: zhCN.layout.workspaceSaved, message: customLayout.shortcutSlot ? zhCN.layout.workspaceShortcut(customLayout.shortcutSlot) : customLayout.name });
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.layout.workspaceSaveFailed, message: error instanceof Error ? error.message : zhCN.layout.workspaceSaveFailedMessage });
+    }
+  }, [layoutSettings]);
 
   const toggleSafeFrameGuides = useCallback(() => {
     setSafeFrameGuides((current) => {
@@ -895,11 +957,17 @@ export function EditorShell() {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'f') {
         event.preventDefault();
         setTimelineSearchOpen(true);
+        return;
+      }
+      const workspaceLayoutId = resolveWorkspaceLayoutShortcut(event, layoutSettings.customWorkspaceLayouts);
+      if (workspaceLayoutId && !isEditableKeyboardEventTarget(event.target)) {
+        event.preventDefault();
+        applyWorkspaceLayoutById(workspaceLayoutId);
       }
     }
     window.addEventListener('keydown', onKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
-  }, []);
+  }, [applyWorkspaceLayoutById, layoutSettings.customWorkspaceLayouts]);
 
   const queueFrameRateConversionForImportedMedia = useCallback(
     async (media: MediaAsset[]) => {
@@ -2194,7 +2262,7 @@ export function EditorShell() {
 
   return (
     <ErrorBoundary name={zhCN.panels.editor}>
-      <div className="grid h-full min-w-0 overflow-hidden bg-[#edeff3] text-ink" style={{ gridTemplateRows: editorGridRows }} data-testid="editor-shell">
+      <div className="grid h-full min-w-0 overflow-hidden bg-[#edeff3] text-ink transition-[grid-template-rows] duration-200 ease-out" style={{ gridTemplateRows: editorGridRows }} data-testid="editor-shell">
         <Toolbar
           onNewProject={newProject}
           onNewFromTemplate={() => setProjectTemplateOpen(true)}
@@ -2263,6 +2331,10 @@ export function EditorShell() {
           smartRoughCutOpen={smartRoughCutOpen}
           historyPanelOpen={historyPanelOpen}
           storyboardOpen={storyboardOpen}
+          workspaceLayouts={workspaceLayouts}
+          activeWorkspaceLayoutId={layoutSettings.activeWorkspaceLayoutId}
+          onApplyWorkspaceLayout={applyWorkspaceLayoutById}
+          onSaveWorkspaceLayout={() => void saveCurrentWorkspaceLayout()}
           safeFrameGuides={safeFrameGuides}
           thumbnailTrackVisible={thumbnailTrackVisible}
           previewQualityMode={previewPerformance.qualityMode}
@@ -2275,7 +2347,11 @@ export function EditorShell() {
           onToggleThumbnailTrack={toggleThumbnailTrackVisible}
           onToggleHistoryPanel={() => {
             setSmartRoughCutOpen(false);
-            setHistoryPanelOpen((open) => !open);
+            setHistoryPanelOpen((open) => {
+              const next = !open;
+              persistPanelVisibilityPatch({ history: next });
+              return next;
+            });
           }}
           onUndo={undo}
           onRedo={redo}
@@ -2292,12 +2368,13 @@ export function EditorShell() {
           lastBackupAt={lastBackupAt}
         />
         <main
-          className="grid min-h-0 min-w-0 gap-px bg-line"
+          className="grid min-h-0 min-w-0 gap-px bg-line transition-[grid-template-columns] duration-200 ease-out"
           style={{ gridTemplateColumns: mainGridColumns }}
           data-testid="editor-main-layout"
           data-left-collapsed={effectivePanels.leftPanelCollapsed ? 'true' : 'false'}
           data-right-collapsed={effectivePanels.rightPanelCollapsed ? 'true' : 'false'}
           data-right-auto-collapsed={effectivePanels.rightPanelAutoCollapsed ? 'true' : 'false'}
+          data-workspace-layout={layoutSettings.activeWorkspaceLayoutId}
         >
           {effectivePanels.leftPanelCollapsed ? (
             <CollapsedPanelRail
@@ -2305,7 +2382,7 @@ export function EditorShell() {
               label={zhCN.layout.mediaPanelCollapsed}
               title={zhCN.layout.expandMediaPanel}
               testId="left-panel-expand-button"
-              onClick={() => persistLayoutPatch({ leftPanelCollapsed: false })}
+              onClick={() => persistLayoutPatch({ leftPanelCollapsed: false, panels: { ...layoutSettings.panels, mediaLibrary: true } })}
             />
           ) : (
             <section className="relative h-full min-h-0 min-w-0 overflow-hidden" data-testid="left-panel" data-collapsed="false">
@@ -2315,7 +2392,7 @@ export function EditorShell() {
                 title={zhCN.layout.collapseMediaPanel}
                 aria-label={zhCN.layout.collapseMediaPanel}
                 data-testid="left-panel-collapse-button"
-                onClick={() => persistLayoutPatch({ leftPanelCollapsed: true })}
+                onClick={() => persistLayoutPatch({ leftPanelCollapsed: true, panels: { ...layoutSettings.panels, mediaLibrary: false } })}
               >
                 <ChevronLeft size={16} />
               </button>
@@ -2349,7 +2426,12 @@ export function EditorShell() {
           )}
           <ErrorBoundary name={zhCN.panels.preview}>
             <Suspense fallback={<PanelLoading label={zhCN.panels.preview} />}>
-              <PreviewCanvas safeFrameGuides={safeFrameGuides} previewPerformance={previewPerformance} />
+              <PreviewCanvas
+                safeFrameGuides={safeFrameGuides}
+                previewPerformance={previewPerformance}
+                colorScopesVisible={layoutSettings.panels.colorScopes}
+                onColorScopesVisibleChange={(colorScopes) => persistPanelVisibilityPatch({ colorScopes })}
+              />
             </Suspense>
           </ErrorBoundary>
           {effectivePanels.rightPanelCollapsed ? (
@@ -2358,46 +2440,55 @@ export function EditorShell() {
               label={zhCN.layout.inspectorPanelCollapsed}
               title={zhCN.layout.expandInspectorPanel}
               testId="right-panel-expand-button"
-              onClick={() => persistLayoutPatch({ rightPanelCollapsed: false })}
+              onClick={() => persistLayoutPatch({ rightPanelCollapsed: false, panels: { ...layoutSettings.panels, inspector: true } })}
             />
           ) : (
-            <aside className="relative grid h-full min-h-0 min-w-0 grid-rows-[minmax(0,1fr)_220px] gap-px bg-line" data-testid="right-panel" data-collapsed="false">
+            <aside
+              className="relative grid h-full min-h-0 min-w-0 gap-px bg-line transition-[grid-template-rows] duration-200 ease-out"
+              style={{ gridTemplateRows: rightPanelRows }}
+              data-testid="right-panel"
+              data-collapsed="false"
+            >
               <button
                 className="absolute right-2 top-2 z-20 inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-white/95 text-slate-600 shadow-sm hover:bg-panel"
                 type="button"
                 title={zhCN.layout.collapseInspectorPanel}
                 aria-label={zhCN.layout.collapseInspectorPanel}
                 data-testid="right-panel-collapse-button"
-                onClick={() => persistLayoutPatch({ rightPanelCollapsed: true })}
+                onClick={() => persistLayoutPatch({ rightPanelCollapsed: true, panels: { ...layoutSettings.panels, inspector: false, audioMixer: false } })}
               >
                 <ChevronRight size={16} />
               </button>
-              <ErrorBoundary name={historyPanelOpen ? zhCN.panels.history : smartRoughCutOpen ? zhCN.panels.smartRoughCut : zhCN.panels.inspector}>
-                <Suspense fallback={<PanelLoading label={historyPanelOpen ? zhCN.panels.history : smartRoughCutOpen ? zhCN.panels.smartRoughCut : zhCN.panels.inspector} />}>
-                  {historyPanelOpen ? (
-                    <HistoryPanel />
-                  ) : smartRoughCutOpen ? (
-                    <SmartRoughCutPanel selectedClip={selectedClip} media={project.media} />
-                  ) : (
-                    <Inspector
-                      clip={selectedClip}
-                      selectedClips={selectedClips}
-                      selectedCount={selectedClipIds.length}
-                      selectedClipLocked={selectedClipLocked}
-                      selectedKeyframe={selectedKeyframe}
-                      selectedKeyframes={selectedKeyframes}
-                      media={project.media}
-                      playheadTime={playheadTime}
-                      projectSettings={project.settings}
-                    />
-                  )}
-                </Suspense>
-              </ErrorBoundary>
-              <ErrorBoundary name={zhCN.panels.audioMixer}>
-                <Suspense fallback={<PanelLoading label={zhCN.panels.audioMixer} compact />}>
-                  <AudioMixer />
-                </Suspense>
-              </ErrorBoundary>
+              {effectivePanels.rightPrimaryPanelVisible ? (
+                <ErrorBoundary name={historyPanelOpen ? zhCN.panels.history : smartRoughCutOpen ? zhCN.panels.smartRoughCut : zhCN.panels.inspector}>
+                  <Suspense fallback={<PanelLoading label={historyPanelOpen ? zhCN.panels.history : smartRoughCutOpen ? zhCN.panels.smartRoughCut : zhCN.panels.inspector} />}>
+                    {historyPanelOpen ? (
+                      <HistoryPanel />
+                    ) : smartRoughCutOpen ? (
+                      <SmartRoughCutPanel selectedClip={selectedClip} media={project.media} />
+                    ) : layoutSettings.panels.inspector ? (
+                      <Inspector
+                        clip={selectedClip}
+                        selectedClips={selectedClips}
+                        selectedCount={selectedClipIds.length}
+                        selectedClipLocked={selectedClipLocked}
+                        selectedKeyframe={selectedKeyframe}
+                        selectedKeyframes={selectedKeyframes}
+                        media={project.media}
+                        playheadTime={playheadTime}
+                        projectSettings={project.settings}
+                      />
+                    ) : null}
+                  </Suspense>
+                </ErrorBoundary>
+              ) : null}
+              {effectivePanels.audioMixerVisible ? (
+                <ErrorBoundary name={zhCN.panels.audioMixer}>
+                  <Suspense fallback={<PanelLoading label={zhCN.panels.audioMixer} compact />}>
+                    <AudioMixer />
+                  </Suspense>
+                </ErrorBoundary>
+              ) : null}
             </aside>
           )}
         </main>
@@ -2411,9 +2502,19 @@ export function EditorShell() {
         >
           <GripHorizontal size={18} />
         </div>
-        <section className="min-h-0 overflow-hidden" data-testid="timeline-panel" style={{ height: timelineHeightPx }}>
+        <section className="min-h-0 overflow-hidden transition-[height] duration-200 ease-out" data-testid="timeline-panel" style={{ height: timelineHeightPx }}>
           <ErrorBoundary name={storyboardOpen ? zhCN.storyboard.title : zhCN.panels.timeline}>
-            {storyboardOpen ? <StoryboardView /> : <Timeline thumbnailTrackVisible={thumbnailTrackVisible} timelineGridSettings={timelineGridSettings} onConvertMediaFrameRate={convertVfrMediaToCfr} />}
+            {storyboardOpen ? (
+              <StoryboardView />
+            ) : (
+              <Timeline
+                thumbnailTrackVisible={thumbnailTrackVisible}
+                timelineGridSettings={timelineGridSettings}
+                bookmarkPanelOpen={layoutSettings.panels.bookmarks}
+                onBookmarkPanelOpenChange={(bookmarks) => persistPanelVisibilityPatch({ bookmarks })}
+                onConvertMediaFrameRate={convertVfrMediaToCfr}
+              />
+            )}
           </ErrorBoundary>
         </section>
         <Suspense fallback={null}>
@@ -2714,6 +2815,15 @@ function readViewportSize(): { width: number; height: number } {
     return { width: 1440, height: 900 };
   }
   return { width: window.innerWidth, height: window.innerHeight };
+}
+
+function isEditableKeyboardEventTarget(target: EventTarget | null): boolean {
+  const element = target instanceof HTMLElement ? target : null;
+  return Boolean(element?.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(element?.tagName ?? ''));
+}
+
+function getWorkspaceLayoutDisplayName(layout: WorkspaceLayoutDefinition): string {
+  return layout.builtIn ? zhCN.toolbar.workspaceLayouts[layout.id as keyof typeof zhCN.toolbar.workspaceLayouts] ?? layout.name : layout.name;
 }
 
 function isPiPVisualClip(clip: Clip): boolean {

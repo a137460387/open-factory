@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TauriMocks } from '../lib/tauri-bridge';
+import { DEFAULT_EDITOR_LAYOUT_SETTINGS, type EditorLayoutSettings } from '../layout/layoutSettings';
 import {
   readAppSettings,
   readAutomationRules,
@@ -32,6 +33,18 @@ describe('app settings storage', () => {
   const settingsPath = `${appDataDir}/settings.json`;
   const files = new Map<string, string>();
   const browserStorage = new Map<string, string>();
+
+  function expectedLayout(patch: Partial<EditorLayoutSettings> = {}): EditorLayoutSettings {
+    return {
+      ...DEFAULT_EDITOR_LAYOUT_SETTINGS,
+      ...patch,
+      panels: {
+        ...DEFAULT_EDITOR_LAYOUT_SETTINGS.panels,
+        ...(patch.panels ?? {})
+      },
+      customWorkspaceLayouts: patch.customWorkspaceLayouts ?? DEFAULT_EDITOR_LAYOUT_SETTINGS.customWorkspaceLayouts
+    };
+  }
 
   beforeEach(() => {
     files.clear();
@@ -71,17 +84,14 @@ describe('app settings storage', () => {
       rightPanelCollapsed: true
     });
 
-    expect(saved).toEqual({
+    const expected = expectedLayout({
       timelineHeightPx: 340,
       leftPanelCollapsed: true,
       rightPanelCollapsed: true
     });
+    expect(saved).toEqual(expected);
     expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({
-      layout: {
-        timelineHeightPx: 340,
-        leftPanelCollapsed: true,
-        rightPanelCollapsed: true
-      }
+      layout: expected
     });
     await expect(readLayoutSettings()).resolves.toEqual(saved);
   });
@@ -92,11 +102,7 @@ describe('app settings storage', () => {
 
     expect(await readAppSettings()).toEqual({
       language: 'en',
-      layout: {
-        timelineHeightPx: 260,
-        leftPanelCollapsed: true,
-        rightPanelCollapsed: false
-      }
+      layout: expectedLayout({ leftPanelCollapsed: true })
     });
   });
 
@@ -128,11 +134,7 @@ describe('app settings storage', () => {
 
     expect(await readAppSettings()).toEqual({
       language: 'en',
-      layout: {
-        timelineHeightPx: 260,
-        leftPanelCollapsed: false,
-        rightPanelCollapsed: true
-      },
+      layout: expectedLayout({ rightPanelCollapsed: true }),
       backup: {
         local: { enabled: true, directory: 'D:/Backups' },
         webdav: { enabled: false }
@@ -152,11 +154,7 @@ describe('app settings storage', () => {
     expect(theme).toEqual({ activeThemeId: 'light', customThemes: [] });
     expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({
       language: 'en',
-      layout: {
-        timelineHeightPx: 260,
-        leftPanelCollapsed: true,
-        rightPanelCollapsed: false
-      },
+      layout: expectedLayout({ leftPanelCollapsed: true }),
       theme: {
         activeThemeId: 'light',
         customThemes: []

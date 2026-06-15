@@ -82,9 +82,11 @@ const CANVAS_TRANSFORM_HANDLES: CanvasTransformHandle[] = ['nw', 'n', 'ne', 'e',
 interface PreviewCanvasProps {
   safeFrameGuides?: boolean;
   previewPerformance?: PreviewPerformanceSettings;
+  colorScopesVisible?: boolean;
+  onColorScopesVisibleChange?(visible: boolean): void;
 }
 
-export function PreviewCanvas({ safeFrameGuides = false, previewPerformance = DEFAULT_PREVIEW_PERFORMANCE_SETTINGS }: PreviewCanvasProps) {
+export function PreviewCanvas({ safeFrameGuides = false, previewPerformance = DEFAULT_PREVIEW_PERFORMANCE_SETTINGS, colorScopesVisible, onColorScopesVisibleChange }: PreviewCanvasProps) {
   const t = zhCN.preview;
   const theme = useTheme();
   const compareFrameRef = useRef<HTMLDivElement | null>(null);
@@ -158,6 +160,12 @@ export function PreviewCanvas({ safeFrameGuides = false, previewPerformance = DE
   const selectedPathMask = useMemo(() => selectedEditableClip?.clip.masks?.find((mask) => mask.type === 'path'), [selectedEditableClip]);
   const frameSearchCandidates = useMemo(() => buildFrameSearchCandidates(project, frameSearchQuery), [frameSearchQuery, project]);
   const showFrameSearchCandidates = frameSearchFocused && frameSearchQuery.trim().length > 0 && !isTimecodeLikeQuery(frameSearchQuery);
+
+  useEffect(() => {
+    if (typeof colorScopesVisible === 'boolean') {
+      setScopesOpen(colorScopesVisible);
+    }
+  }, [colorScopesVisible]);
   const snapshotCompareRanges = useMemo(
     () => (snapshotCompareProject ? diffTimelineSnapshots(project.timeline, snapshotCompareProject.timeline) : []),
     [project.timeline, snapshotCompareProject]
@@ -1130,7 +1138,13 @@ export function PreviewCanvas({ safeFrameGuides = false, previewPerformance = DE
             title={t.colorScopes}
             aria-label={t.colorScopes}
             data-testid="toggle-color-scopes"
-            onClick={() => setScopesOpen((value) => !value)}
+            onClick={() => {
+              setScopesOpen((value) => {
+                const next = !value;
+                onColorScopesVisibleChange?.(next);
+                return next;
+              });
+            }}
           >
             <BarChart3 size={17} />
           </button>

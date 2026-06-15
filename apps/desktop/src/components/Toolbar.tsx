@@ -21,6 +21,7 @@ import { useMediaJobStore } from '../media/media-job-store';
 import { PREVIEW_QUALITY_MODES, type PreviewQualityMode } from '../lib/preview/preview-performance';
 import { useEditorStore } from '../store/editorStore';
 import { useWhisperSettingsStore } from '../store/whisperSettingsStore';
+import type { WorkspaceLayoutDefinition, WorkspaceLayoutId } from '../layout/layoutSettings';
 
 interface ToolbarProps {
   onNewProject(): void;
@@ -87,6 +88,10 @@ interface ToolbarProps {
   smartRoughCutOpen: boolean;
   historyPanelOpen: boolean;
   storyboardOpen: boolean;
+  workspaceLayouts: WorkspaceLayoutDefinition[];
+  activeWorkspaceLayoutId: WorkspaceLayoutId;
+  onApplyWorkspaceLayout(layoutId: WorkspaceLayoutId): void;
+  onSaveWorkspaceLayout(): void;
   safeFrameGuides: boolean;
   thumbnailTrackVisible: boolean;
   previewQualityMode: PreviewQualityMode;
@@ -123,6 +128,7 @@ export function Toolbar(props: ToolbarProps) {
   const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
   const [recordMenuOpen, setRecordMenuOpen] = useState(false);
   const [splitLayoutOpen, setSplitLayoutOpen] = useState(false);
+  const [workspaceLayoutOpen, setWorkspaceLayoutOpen] = useState(false);
   const [subtitleDataImportMode, setSubtitleDataImportMode] = useState<SubtitleDataImportMode>('append');
   const [customSplitRatio, setCustomSplitRatio] = useState(0.67);
   const project = useEditorStore((state) => state.project);
@@ -162,7 +168,7 @@ export function Toolbar(props: ToolbarProps) {
   };
 
   return (
-    <header className="flex min-h-14 min-w-0 items-center gap-2 overflow-x-auto border-b border-line bg-white px-3">
+    <header className="relative z-30 flex min-h-14 min-w-0 items-center gap-2 overflow-x-auto border-b border-line bg-white px-3">
       <div className="relative">
         <button
           className="inline-flex h-9 items-center gap-1 rounded-md border border-transparent px-3 text-sm font-medium text-slate-700 hover:border-line hover:bg-panel hover:text-ink"
@@ -174,6 +180,7 @@ export function Toolbar(props: ToolbarProps) {
             setViewMenuOpen(false);
             setToolsMenuOpen(false);
             setSplitLayoutOpen(false);
+            setWorkspaceLayoutOpen(false);
             setFileMenuOpen((open) => !open);
           }}
         >
@@ -286,6 +293,7 @@ export function Toolbar(props: ToolbarProps) {
             setViewMenuOpen(false);
             setToolsMenuOpen(false);
             setSplitLayoutOpen(false);
+            setWorkspaceLayoutOpen(false);
             setEditMenuOpen((open) => !open);
           }}
         >
@@ -340,6 +348,7 @@ export function Toolbar(props: ToolbarProps) {
             setEditMenuOpen(false);
             setToolsMenuOpen(false);
             setSplitLayoutOpen(false);
+            setWorkspaceLayoutOpen(false);
             setViewMenuOpen((open) => !open);
           }}
         >
@@ -385,6 +394,7 @@ export function Toolbar(props: ToolbarProps) {
             setEditMenuOpen(false);
             setViewMenuOpen(false);
             setSplitLayoutOpen(false);
+            setWorkspaceLayoutOpen(false);
             setToolsMenuOpen((open) => !open);
           }}
         >
@@ -586,6 +596,7 @@ export function Toolbar(props: ToolbarProps) {
             setToolsMenuOpen(false);
             setRecordMenuOpen(false);
             setSplitLayoutOpen(false);
+            setWorkspaceLayoutOpen(false);
             setImportMenuOpen((open) => !open);
           }}
         >
@@ -665,6 +676,7 @@ export function Toolbar(props: ToolbarProps) {
             setViewMenuOpen(false);
             setToolsMenuOpen(false);
             setSplitLayoutOpen(false);
+            setWorkspaceLayoutOpen(false);
             setRecordMenuOpen((open) => !open);
           }}
         >
@@ -741,6 +753,44 @@ export function Toolbar(props: ToolbarProps) {
           ))}
         </select>
       </label>
+      <div className="relative">
+        <button
+          className={clsx(
+            'inline-flex h-9 w-9 items-center justify-center rounded-md border border-transparent text-slate-700 transition hover:border-line hover:bg-panel hover:text-ink',
+            workspaceLayoutOpen ? 'border-brand bg-brand text-white' : undefined
+          )}
+          type="button"
+          title={t.workspaceLayout}
+          aria-label={t.workspaceLayout}
+          data-testid="toolbar-workspace-layout-button"
+          onClick={() => {
+            setFileMenuOpen(false);
+            setImportMenuOpen(false);
+            setEditMenuOpen(false);
+            setViewMenuOpen(false);
+            setToolsMenuOpen(false);
+            setRecordMenuOpen(false);
+            setSplitLayoutOpen(false);
+            setWorkspaceLayoutOpen((open) => !open);
+          }}
+        >
+          <PanelsTopLeft size={17} />
+        </button>
+        {workspaceLayoutOpen ? (
+          <WorkspaceLayoutPicker
+            layouts={props.workspaceLayouts}
+            activeLayoutId={props.activeWorkspaceLayoutId}
+            onApply={(layoutId) => {
+              setWorkspaceLayoutOpen(false);
+              props.onApplyWorkspaceLayout(layoutId);
+            }}
+            onSave={() => {
+              setWorkspaceLayoutOpen(false);
+              props.onSaveWorkspaceLayout();
+            }}
+          />
+        ) : null}
+      </div>
       <ToolButton title={t.settings} onClick={props.onOpenSettings} icon={<Settings size={17} />} testId="toolbar-settings-button" />
       <ToolButton title={t.clearMediaCache} onClick={props.onClearCache} icon={<Trash2 size={17} />} testId="settings-clear-cache-button" />
       <label className="ml-1 inline-flex h-9 items-center gap-1 rounded-md border border-line bg-panel px-2 text-[11px] text-slate-600" title={t.autosaveInterval}>
@@ -820,6 +870,7 @@ export function Toolbar(props: ToolbarProps) {
             setViewMenuOpen(false);
             setToolsMenuOpen(false);
             setRecordMenuOpen(false);
+            setWorkspaceLayoutOpen(false);
             setSplitLayoutOpen((open) => !open);
           }}
         >
@@ -959,6 +1010,100 @@ function SplitLayoutPicker({
         </button>
       </div>
     </div>
+  );
+}
+
+function WorkspaceLayoutPicker({
+  layouts,
+  activeLayoutId,
+  onApply,
+  onSave
+}: {
+  layouts: WorkspaceLayoutDefinition[];
+  activeLayoutId: WorkspaceLayoutId;
+  onApply(layoutId: WorkspaceLayoutId): void;
+  onSave(): void;
+}) {
+  const t = zhCN.toolbar;
+  const builtInLayouts = layouts.filter((layout) => layout.builtIn);
+  const customLayouts = layouts.filter((layout) => !layout.builtIn);
+  return (
+    <div className="absolute left-0 top-10 z-30 w-72 rounded-md border border-line bg-white p-3 text-xs shadow-soft" data-testid="workspace-layout-picker">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="font-semibold text-slate-700">{t.workspaceLayout}</div>
+        <button
+          className="rounded border border-line bg-panel px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-white"
+          type="button"
+          data-testid="workspace-layout-save-button"
+          onClick={onSave}
+        >
+          {t.saveWorkspaceLayout}
+        </button>
+      </div>
+      <WorkspaceLayoutGroup title={t.builtInWorkspaceLayouts} layouts={builtInLayouts} activeLayoutId={activeLayoutId} onApply={onApply} />
+      <div className="mt-3">
+        <div className="mb-1 px-1 text-[11px] font-semibold uppercase text-slate-500">{t.customWorkspaceLayouts}</div>
+        {customLayouts.length > 0 ? (
+          <div className="space-y-1">
+            {customLayouts.map((layout) => (
+              <WorkspaceLayoutOption key={layout.id} layout={layout} active={layout.id === activeLayoutId} onApply={onApply} />
+            ))}
+          </div>
+        ) : (
+          <div className="rounded border border-dashed border-line px-2 py-3 text-center text-slate-500" data-testid="workspace-layout-empty-custom">
+            {t.noCustomWorkspaceLayouts}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function WorkspaceLayoutGroup({
+  title,
+  layouts,
+  activeLayoutId,
+  onApply
+}: {
+  title: string;
+  layouts: WorkspaceLayoutDefinition[];
+  activeLayoutId: WorkspaceLayoutId;
+  onApply(layoutId: WorkspaceLayoutId): void;
+}) {
+  return (
+    <div>
+      <div className="mb-1 px-1 text-[11px] font-semibold uppercase text-slate-500">{title}</div>
+      <div className="space-y-1">
+        {layouts.map((layout) => (
+          <WorkspaceLayoutOption key={layout.id} layout={layout} active={layout.id === activeLayoutId} onApply={onApply} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function WorkspaceLayoutOption({
+  layout,
+  active,
+  onApply
+}: {
+  layout: WorkspaceLayoutDefinition;
+  active: boolean;
+  onApply(layoutId: WorkspaceLayoutId): void;
+}) {
+  const t = zhCN.toolbar;
+  const name = layout.builtIn ? t.workspaceLayouts[layout.id as keyof typeof t.workspaceLayouts] ?? layout.name : layout.name;
+  return (
+    <button
+      className={clsx('flex w-full items-center justify-between gap-2 rounded-md border px-2 py-2 text-left hover:bg-panel', active ? 'border-brand bg-brand/5 text-brand' : 'border-line text-slate-700')}
+      type="button"
+      data-testid={`workspace-layout-option-${layout.id}`}
+      aria-pressed={active}
+      onClick={() => onApply(layout.id)}
+    >
+      <span className="min-w-0 truncate font-medium">{name}</span>
+      <span className="shrink-0 text-[11px] text-slate-500">{active ? t.workspaceLayoutActive : layout.shortcutSlot ? t.workspaceShortcut(layout.shortcutSlot) : ''}</span>
+    </button>
   );
 }
 

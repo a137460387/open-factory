@@ -125,6 +125,18 @@ const zh = {
     },
     safeFrameGuidesVisible: '显示',
     safeFrameGuidesHidden: '隐藏',
+    workspaceLayout: '工作区布局',
+    saveWorkspaceLayout: '另存为布局',
+    builtInWorkspaceLayouts: '内置布局',
+    customWorkspaceLayouts: '自定义布局',
+    noCustomWorkspaceLayouts: '暂无自定义布局',
+    workspaceLayoutActive: '当前',
+    workspaceShortcut: (slot: number) => `Ctrl+Shift+${slot}`,
+    workspaceLayouts: {
+      'standard-editing': '标准剪辑',
+      'color-grading': '调色模式',
+      'audio-editing': '音频模式'
+    },
     splitSelectedClip: '分割选中片段',
     smartRoughCut: '智能粗剪',
     createMulticamSequence: '创建多机位序列',
@@ -2629,7 +2641,16 @@ const zh = {
     expandInspectorPanel: '展开属性面板',
     resizeTimeline: '调整时间线高度',
     mediaPanelCollapsed: '媒体',
-    inspectorPanelCollapsed: '属性'
+    inspectorPanelCollapsed: '属性',
+    workspaceApplied: '工作区布局已切换',
+    workspaceApplyFailed: '无法切换工作区布局',
+    workspaceMissing: '找不到该布局。',
+    workspaceSaved: '工作区布局已保存',
+    workspaceSaveFailed: '无法保存工作区布局',
+    workspaceSaveFailedMessage: '请稍后重试。',
+    saveWorkspacePrompt: '输入自定义布局名称',
+    customWorkspaceDefaultName: '我的工作区布局',
+    workspaceShortcut: (slot: number) => `快捷键 Ctrl+Shift+${slot}`
   },
   autosaveRecovery: {
     title: '检测到未保存的恢复点，是否恢复？',
@@ -2786,6 +2807,18 @@ const enOverrides = {
     },
     safeFrameGuidesVisible: 'Visible',
     safeFrameGuidesHidden: 'Hidden',
+    workspaceLayout: 'Workspace Layout',
+    saveWorkspaceLayout: 'Save Layout As',
+    builtInWorkspaceLayouts: 'Built-in Layouts',
+    customWorkspaceLayouts: 'Custom Layouts',
+    noCustomWorkspaceLayouts: 'No custom layouts',
+    workspaceLayoutActive: 'Active',
+    workspaceShortcut: (slot: number) => `Ctrl+Shift+${slot}`,
+    workspaceLayouts: {
+      'standard-editing': 'Standard Editing',
+      'color-grading': 'Color Grading',
+      'audio-editing': 'Audio Editing'
+    },
     splitSelectedClip: 'Split Selected Clip',
     smartRoughCut: 'Smart Rough Cut',
     createMulticamSequence: 'Create Multicam Sequence',
@@ -4968,7 +5001,16 @@ const enOverrides = {
     expandInspectorPanel: 'Expand inspector panel',
     resizeTimeline: 'Resize timeline height',
     mediaPanelCollapsed: 'Media',
-    inspectorPanelCollapsed: 'Inspector'
+    inspectorPanelCollapsed: 'Inspector',
+    workspaceApplied: 'Workspace layout applied',
+    workspaceApplyFailed: 'Unable to apply workspace layout',
+    workspaceMissing: 'That layout could not be found.',
+    workspaceSaved: 'Workspace layout saved',
+    workspaceSaveFailed: 'Unable to save workspace layout',
+    workspaceSaveFailedMessage: 'Try again later.',
+    saveWorkspacePrompt: 'Enter a custom layout name',
+    customWorkspaceDefaultName: 'My Workspace Layout',
+    workspaceShortcut: (slot: number) => `Shortcut Ctrl+Shift+${slot}`
   },
   autosaveRecovery: {
     title: 'Unsaved recovery point detected. Restore it?',

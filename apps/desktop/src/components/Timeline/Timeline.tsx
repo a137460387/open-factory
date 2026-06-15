@@ -147,10 +147,14 @@ function isEditableKeyboardTarget(target: EventTarget | null): boolean {
 export function Timeline({
   thumbnailTrackVisible = true,
   timelineGridSettings = DEFAULT_TIMELINE_GRID_SETTINGS,
+  bookmarkPanelOpen: controlledBookmarkPanelOpen,
+  onBookmarkPanelOpenChange,
   onConvertMediaFrameRate
 }: {
   thumbnailTrackVisible?: boolean;
   timelineGridSettings?: TimelineGridSettings;
+  bookmarkPanelOpen?: boolean;
+  onBookmarkPanelOpenChange?(open: boolean): void;
   onConvertMediaFrameRate?(assetId: string): void;
 }) {
   const project = useEditorStore((state) => state.project);
@@ -198,7 +202,8 @@ export function Timeline({
   const [annotationMode, setAnnotationMode] = useState(false);
   const [annotationPanelOpen, setAnnotationPanelOpen] = useState(true);
   const [annotationEditor, setAnnotationEditor] = useState<AnnotationEditorState | undefined>();
-  const [bookmarkPanelOpen, setBookmarkPanelOpen] = useState(true);
+  const [localBookmarkPanelOpen, setLocalBookmarkPanelOpen] = useState(true);
+  const bookmarkPanelOpen = controlledBookmarkPanelOpen ?? localBookmarkPanelOpen;
   const [bookmarkRename, setBookmarkRename] = useState<BookmarkRenameState | undefined>();
   const [timelineColorFilter, setTimelineColorFilter] = useState<TimelineLabelColor | null>(null);
   const [envelopeEditMode, setEnvelopeEditMode] = useState(false);
@@ -220,6 +225,12 @@ export function Timeline({
       setAnnotationPanelOpen(false);
     }
   }, [bookmarkPanelOpen, project.bookmarks?.length]);
+
+  function setBookmarkPanelVisible(next: boolean | ((open: boolean) => boolean)): void {
+    const resolved = typeof next === 'function' ? next(bookmarkPanelOpen) : next;
+    setLocalBookmarkPanelOpen(resolved);
+    onBookmarkPanelOpenChange?.(resolved);
+  }
 
   const projectDuration = getTimelineDuration(project.timeline);
   const width = Math.max(960, timelineDuration * zoom);
@@ -605,7 +616,7 @@ function addProjectBookmark(time = playheadTime): void {
           note: zhCN.timeline.bookmarkLabel((project.bookmarks?.length ?? 0) + 1)
         })
       );
-      setBookmarkPanelOpen(true);
+      setBookmarkPanelVisible(true);
       setAnnotationPanelOpen(false);
     } catch (error) {
       showToast({ kind: 'warning', title: zhCN.timeline.bookmarkRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.addBookmarkFailed });
@@ -1786,7 +1797,7 @@ function addProjectBookmark(time = playheadTime): void {
           aria-pressed={bookmarkPanelOpen}
           data-testid="toggle-bookmark-panel-button"
           onClick={() => {
-            setBookmarkPanelOpen((open) => !open);
+            setBookmarkPanelVisible((open) => !open);
             setAnnotationPanelOpen(false);
           }}
         >
@@ -1800,7 +1811,7 @@ function addProjectBookmark(time = playheadTime): void {
           onClick={() => {
             setAnnotationMode((active) => !active);
             setAnnotationPanelOpen(true);
-            setBookmarkPanelOpen(false);
+            setBookmarkPanelVisible(false);
           }}
         >
           <MessageSquarePlus size={16} />
@@ -1812,7 +1823,7 @@ function addProjectBookmark(time = playheadTime): void {
           data-testid="toggle-annotation-panel-button"
           onClick={() => {
             setAnnotationPanelOpen((open) => !open);
-            setBookmarkPanelOpen(false);
+            setBookmarkPanelVisible(false);
           }}
         >
           <MessageSquareText size={16} />
