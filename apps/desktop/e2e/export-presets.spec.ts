@@ -126,6 +126,59 @@ test('syncs export presets from mock WebDAV into the preset list', async ({ page
   await expect.poll(() => page.evaluate((url) => window.__E2E_ACTIONS__!.getExportPresetSyncRemotePackage!(url) as string | undefined, remoteUrl)).toContain('WebDAV Review');
 });
 
+test('shows status after syncing export presets from mock WebDAV', async ({ page }) => {
+  const remoteUrl = 'https://dav.example.test/presets/status.ofpreset.json';
+  const remotePackage = JSON.stringify(
+    {
+      version: 1,
+      exportedAt: '2026-06-15T04:00:00.000Z',
+      presets: [
+        {
+          id: 'custom-status-sync',
+          name: 'Status Sync',
+          description: 'Synced with visible status',
+          settings: { width: 1600, height: 900, format: 'mp4', videoBitrate: '12M' },
+          updatedAt: '2026-06-15T04:00:00.000Z'
+        }
+      ]
+    },
+    null,
+    2
+  );
+
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.evaluate(
+    ({ url, contents }) => {
+      window.__E2E_ACTIONS__!.clearExportPresets!();
+      window.__E2E_ACTIONS__!.setExportPresetSyncRemotePackage!(url, contents);
+      window.__E2E_ACTIONS__!.setExportPresetSyncSettings!(
+        {
+          enabled: true,
+          url,
+          username: 'editor',
+          syncOnStartup: false,
+          conflictMode: 'merge'
+        },
+        'secret'
+      );
+    },
+    { url: remoteUrl, contents: remotePackage }
+  );
+  await addVideoClip(page);
+  await clickExportButton(page);
+
+  await page.getByTestId('export-preset-cloud-sync-button').click();
+
+  await expect(page.locator('[data-testid="export-preset-select"] option', { hasText: 'Status Sync' })).toHaveCount(1);
+  await expect(page.getByTestId('export-preset-cloud-sync-status')).toBeVisible();
+  await expect(page.getByTestId('export-preset-cloud-sync-last-time')).toBeVisible();
+  const syncedValue = await page.locator('[data-testid="export-preset-select"] option', { hasText: 'Status Sync' }).first().getAttribute('value');
+  expect(syncedValue).toBeTruthy();
+  await page.getByTestId('export-preset-select').selectOption(syncedValue!);
+  await expect(page.getByTestId('export-video-bitrate-input')).toHaveValue('12M');
+});
+
 async function openExportDialog(page: Page): Promise<void> {
   await page.goto('/');
   await waitForE2eActions(page);

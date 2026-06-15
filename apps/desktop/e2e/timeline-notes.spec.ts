@@ -33,3 +33,24 @@ test('adds a timeline note and jumps from the review layer panel', async ({ page
   await row.click();
   await expect.poll(() => page.evaluate(() => window.__E2E_ACTIONS__!.getPlayheadTime!())).toBe(2);
 });
+
+test('exports timeline notes as CSV from the note panel', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+
+  await page.getByTestId('import-media-button').click();
+  await addMediaCardToTimeline(page, 0);
+  await page.evaluate(() => window.__E2E_ACTIONS__!.setPlayheadTime!(2));
+  await page.getByTestId('timeline-root').focus();
+  await page.keyboard.press('N');
+  await page.getByTestId('timeline-note-text-input').fill('CSV review beat');
+  await page.getByTestId('timeline-note-save-button').click();
+
+  const csvPath = 'C:/Exports/timeline-notes.csv';
+  await page.evaluate((path) => window.__E2E_ACTIONS__!.setSavePath!(path), csvPath);
+  await page.getByTestId('timeline-note-export-csv').click();
+
+  await expect
+    .poll(() => page.evaluate((path) => window.__E2E_ACTIONS__!.getWrittenFile!(path) as string | undefined, csvPath))
+    .toBe('start_timecode,end_timecode,text,color\n00:00:02:00,00:00:03:00,CSV review beat,#facc15\n');
+});

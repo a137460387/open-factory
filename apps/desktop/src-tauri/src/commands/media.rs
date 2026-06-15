@@ -1354,6 +1354,42 @@ mod tests {
     }
 
     #[test]
+    fn clamps_freeze_frame_time_for_gap_fill_args() {
+        assert_eq!(
+            build_freeze_frame_args("C:/Media/source.mp4", "C:/Cache/freeze.png", -2.5)
+                .windows(2)
+                .find(|pair| pair[0] == "-ss")
+                .map(|pair| pair[1].as_str()),
+            Some("0")
+        );
+        assert_eq!(
+            build_freeze_frame_args("C:/Media/source.mp4", "C:/Cache/freeze.png", f64::NAN)
+                .windows(2)
+                .find(|pair| pair[0] == "-ss")
+                .map(|pair| pair[1].as_str()),
+            Some("0")
+        );
+    }
+
+    #[test]
+    fn normalizes_gap_fill_solid_color_names_and_invalid_values() {
+        assert_eq!(normalize_gap_fill_color(" White "), "white");
+        assert_eq!(normalize_gap_fill_color("#FACC15"), "0xFACC15");
+        assert_eq!(normalize_gap_fill_color("rgb(0,0,0)"), "black");
+    }
+
+    #[test]
+    fn clamps_gap_fill_solid_color_dimensions() {
+        assert_eq!(
+            build_solid_color_frame_args("C:/Cache/tiny.png", "white", 1, 0)
+                .windows(2)
+                .find(|pair| pair[0] == "-i")
+                .map(|pair| pair[1].as_str()),
+            Some("color=c=white:s=16x16:d=0.04")
+        );
+    }
+
+    #[test]
     fn detect_beat_peaks_respects_sensitivity_threshold_and_spacing() {
         let samples = [
             RmsSample {

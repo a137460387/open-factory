@@ -2556,6 +2556,21 @@ fn escape_filter_path(path: &Path) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::MutexGuard;
+
+    static EXPORT_CHILDREN_TEST_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+
+    fn export_children_test_guard() -> MutexGuard<'static, ()> {
+        let guard = EXPORT_CHILDREN_TEST_LOCK
+            .get_or_init(|| Mutex::new(()))
+            .lock()
+            .expect("export children test lock");
+        export_children()
+            .lock()
+            .expect("export child lock")
+            .clear();
+        guard
+    }
 
     #[test]
     fn parses_ffmpeg_progress_lines() {
@@ -2919,7 +2934,7 @@ unrelated line
 
     #[test]
     fn cancel_export_is_ok_when_idle() {
-        export_children().lock().expect("export child lock").clear();
+        let _guard = export_children_test_guard();
         cancel_export(None).expect("idle cancellation should not fail");
     }
 
@@ -2938,6 +2953,7 @@ unrelated line
 
     #[test]
     fn cancel_export_clears_running_child_slot() {
+        let _guard = export_children_test_guard();
         let child = spawn_long_running_child();
         export_children()
             .lock()
@@ -2954,7 +2970,7 @@ unrelated line
 
     #[test]
     fn cancel_export_clears_only_requested_child_slot() {
-        export_children().lock().expect("export child lock").clear();
+        let _guard = export_children_test_guard();
         let child_a = spawn_long_running_child();
         let child_b = spawn_long_running_child();
         {
@@ -3039,7 +3055,7 @@ unrelated line
 
     #[test]
     fn timed_out_export_preview_sample_cancels_child_slot() {
-        export_children().lock().expect("export child lock").clear();
+        let _guard = export_children_test_guard();
         let slot_id = "preview-timeout";
         export_children()
             .lock()
@@ -3479,6 +3495,7 @@ unrelated line
         if !detect_ffmpeg() {
             return;
         }
+        let _guard = export_children_test_guard();
         let progress_values = Arc::new(Mutex::new(Vec::<ExportProgressPayload>::new()));
         let progress_values_for_emit = Arc::clone(&progress_values);
 

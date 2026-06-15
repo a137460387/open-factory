@@ -603,6 +603,42 @@ mod tests {
     }
 
     #[test]
+    fn builds_webdav_text_get_args_without_optional_credentials() {
+        let args = build_webdav_text_get_args(&WebdavTextRequest {
+            url: " https://dav.example.test/presets/export.ofpreset.json ".to_string(),
+            username: Some(" ".to_string()),
+            password: Some("".to_string()),
+        })
+        .unwrap();
+
+        assert_eq!(args.method, "GET");
+        assert_eq!(
+            args.url,
+            "https://dav.example.test/presets/export.ofpreset.json"
+        );
+        assert_eq!(args.username, None);
+        assert!(!args.password_present);
+    }
+
+    #[test]
+    fn builds_webdav_text_put_args_with_default_text_content_type() {
+        let args = build_webdav_text_put_args(&WebdavTextPutRequest {
+            url: "https://dav.example.test/presets/export.ofpreset.json".to_string(),
+            username: Some("editor".to_string()),
+            password: Some("secret".to_string()),
+            contents: "preset package".to_string(),
+            content_type: Some(" ".to_string()),
+        })
+        .unwrap();
+
+        assert_eq!(args.method, "PUT");
+        assert_eq!(args.username, Some("editor".to_string()));
+        assert!(args.password_present);
+        assert_eq!(args.content_type, "text/plain; charset=utf-8");
+        assert_eq!(args.content_len, "preset package".len());
+    }
+
+    #[test]
     fn rejects_non_http_webdav_text_urls() {
         let error = build_webdav_text_get_args(&WebdavTextRequest {
             url: "file:///tmp/export.ofpreset.json".to_string(),

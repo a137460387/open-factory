@@ -564,6 +564,28 @@ describe('export presets', () => {
     ]);
   });
 
+  it('uses package exportedAt timestamps when sync conflict presets omit updatedAt', () => {
+    const localPackage: ExportPresetPackageFile = {
+      version: 1,
+      exportedAt: '2026-06-15T01:00:00.000Z',
+      presets: [{ id: 'custom-review', name: 'Review', settings: { width: 1280 } }]
+    };
+    const remotePackage: ExportPresetPackageFile = {
+      version: 1,
+      exportedAt: '2026-06-15T03:00:00.000Z',
+      presets: [{ id: 'custom-review-remote', name: 'Review', settings: { width: 1920 } }]
+    };
+
+    expect(detectExportPresetSyncConflicts(localPackage, remotePackage)).toEqual([
+      {
+        name: 'Review',
+        localUpdatedAt: '2026-06-15T01:00:00.000Z',
+        remoteUpdatedAt: '2026-06-15T03:00:00.000Z',
+        newer: 'remote'
+      }
+    ]);
+  });
+
   it('merges export preset packages with de-duplication and newer conflict winners', () => {
     const localPackage: ExportPresetPackageFile = {
       version: 1,
@@ -587,6 +609,87 @@ describe('export presets', () => {
     expect(merged.exportedAt).toBe('2026-06-15T03:00:00.000Z');
     expect(merged.presets.map((preset) => preset.name).sort()).toEqual(['Local Only', 'Remote Only', 'Review']);
     expect(merged.presets.find((preset) => preset.name === 'Review')?.settings?.width).toBe(1920);
+  });
+
+  it('keeps local export preset conflicts when requested', () => {
+    const merged = mergeExportPresetPackages(
+      {
+        version: 1,
+        exportedAt: '2026-06-15T01:00:00.000Z',
+        presets: [{ id: 'custom-review', name: 'Review', settings: { width: 1280 }, updatedAt: '2026-06-15T01:00:00.000Z' }]
+      },
+      {
+        version: 1,
+        exportedAt: '2026-06-15T02:00:00.000Z',
+        presets: [{ id: 'custom-review-remote', name: 'Review', settings: { width: 1920 }, updatedAt: '2026-06-15T02:00:00.000Z' }]
+      },
+      'keep-local',
+      '2026-06-15T03:00:00.000Z'
+    );
+
+    expect(merged.presets).toHaveLength(1);
+    expect(merged.presets[0].settings?.width).toBe(1280);
+  });
+
+  it('keeps remote export preset conflicts when requested', () => {
+    const merged = mergeExportPresetPackages(
+      {
+        version: 1,
+        exportedAt: '2026-06-15T01:00:00.000Z',
+        presets: [{ id: 'custom-review', name: 'Review', settings: { width: 1280 }, updatedAt: '2026-06-15T01:00:00.000Z' }]
+      },
+      {
+        version: 1,
+        exportedAt: '2026-06-15T02:00:00.000Z',
+        presets: [{ id: 'custom-review-remote', name: 'Review', settings: { width: 1920 }, updatedAt: '2026-06-15T02:00:00.000Z' }]
+      },
+      'keep-remote',
+      '2026-06-15T03:00:00.000Z'
+    );
+
+    expect(merged.presets).toHaveLength(1);
+    expect(merged.presets[0].settings?.width).toBe(1920);
+  });
+
+  it('uploads local export presets when the remote WebDAV package is missing', async () => {
+    const { storage, files, presetPath } = makeStorage();
+    files.set(
+      presetPath,
+      serializeCustomExportPresets([
+        {
+          id: 'custom-local-review',
+          name: 'Local Review',
+          description: 'Local',
+          builtin: false,
+          settings: { width: 1280 },
+          updatedAt: '2026-06-15T01:00:00.000Z'
+        }
+      ])
+    );
+    let uploadedContents = '';
+
+    const result = await syncExportPresetsWithWebdav(
+      { url: 'https://dav.example.test/presets/export.ofpreset.json', conflictResolution: 'merge' },
+      {
+        storage,
+        now: () => new Date('2026-06-15T03:00:00.000Z'),
+        client: {
+          getText: async () => {
+            throw new Error('404');
+          },
+          putText: async (request) => {
+            uploadedContents = request.contents;
+            return { status: 201 };
+          }
+        }
+      }
+    );
+
+    expect(result.remoteWasMissing).toBe(true);
+    expect(result.uploadedCount).toBe(1);
+    expect(result.importedCount).toBe(0);
+    expect(uploadedContents).toContain('Local Review');
+    expect(files.get(presetPath)).toContain('Local Review');
   });
 
   it('does not overwrite local presets when WebDAV sync upload fails', async () => {

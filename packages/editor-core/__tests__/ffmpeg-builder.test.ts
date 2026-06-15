@@ -269,6 +269,105 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.filterComplex).not.toContain('loudnorm=');
   });
 
+  it('adds limiter args without loudness normalization', () => {
+    const plan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(makeProject(), {
+        outputPath: 'out.mp4',
+        settings: {
+          masterProcessing: {
+            ...DEFAULT_EXPORT_MASTER_PROCESSING,
+            limiter: { enabled: true, levelOutDb: -0.1 }
+          }
+        }
+      })
+    );
+
+    expect(plan.filterComplex).toContain('[amixpremaster]alimiter=level_out=-0.1dB[aout]');
+    expect(plan.filterComplex).not.toContain('loudnorm=');
+  });
+
+  it('ignores master EQ band gains while master EQ is disabled', () => {
+    const plan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(makeProject(), {
+        outputPath: 'out.mp4',
+        settings: {
+          masterProcessing: {
+            ...DEFAULT_EXPORT_MASTER_PROCESSING,
+            eq: {
+              enabled: false,
+              bands: DEFAULT_EXPORT_MASTER_PROCESSING.eq.bands.map((band, index) => ({ ...band, gain: index === 0 ? 6 : 0 }))
+            }
+          }
+        }
+      })
+    );
+
+    expect(plan.filterComplex).not.toContain('equalizer=');
+    expect(plan.filterComplex).not.toContain('g=6');
+  });
+
+  it('builds enabled master EQ bands in band order and skips neutral bands', () => {
+    const plan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(makeProject(), {
+        outputPath: 'out.mp4',
+        settings: {
+          masterProcessing: {
+            ...DEFAULT_EXPORT_MASTER_PROCESSING,
+            eq: {
+              enabled: true,
+              bands: DEFAULT_EXPORT_MASTER_PROCESSING.eq.bands.map((band, index) => ({ ...band, gain: index === 0 ? -3 : index === 2 ? 2.5 : 0 }))
+            }
+          }
+        }
+      })
+    );
+
+    expect(plan.filterComplex).toContain('[amixpremaster]equalizer=f=31:width_type=o:width=0.7:g=-3,equalizer=f=125:width_type=o:width=1:g=2.5[aout]');
+    expect(plan.filterComplex).not.toContain('equalizer=f=63');
+  });
+
+  it('keeps EBU loudness normalization after the master limiter', () => {
+    const plan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(makeProject(), {
+        outputPath: 'out.mp4',
+        settings: {
+          loudnessNormalization: 'ebu-r128',
+          masterProcessing: {
+            ...DEFAULT_EXPORT_MASTER_PROCESSING,
+            limiter: { enabled: true, levelOutDb: -1 }
+          }
+        }
+      })
+    );
+
+    expect(plan.filterComplex).toContain('[amixpremaster]alimiter=level_out=-1dB[apremaster]');
+    expect(plan.filterComplex.indexOf('alimiter=level_out=-1dB')).toBeLessThan(plan.filterComplex.indexOf('[apremaster]loudnorm=I=-23'));
+  });
+
+  it('clamps master processing values before building filters', () => {
+    const plan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(makeProject(), {
+        outputPath: 'out.mp4',
+        settings: {
+          masterProcessing: {
+            eq: {
+              enabled: true,
+              bands: DEFAULT_EXPORT_MASTER_PROCESSING.eq.bands.map((band, index) =>
+                index === 0 ? { ...band, frequency: 1, gain: 99, q: 9 } : band
+              )
+            },
+            stereoEnhancer: { enabled: true, amount: 9 },
+            limiter: { enabled: true, levelOutDb: -99 }
+          }
+        }
+      })
+    );
+
+    expect(plan.filterComplex).toContain('equalizer=f=20:width_type=o:width=4:g=24');
+    expect(plan.filterComplex).toContain('extrastereo=m=2');
+    expect(plan.filterComplex).toContain('alimiter=level_out=-24dB');
+  });
+
   it('exports enabled path text clips through a baked image sequence overlay artifact', () => {
     const project = makeProject();
     project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-background', duration: 2 })];

@@ -25,6 +25,7 @@ import { useMediaJobStore } from '../media/media-job-store';
 
 const PERSISTED_FILES_KEY = 'open-factory:e2e-files';
 const PERSISTED_MTIMES_KEY = 'open-factory:e2e-mtimes';
+const PERSISTED_WEBDAV_TEXT_KEY = 'open-factory:e2e-webdav-text';
 const files = new Map<string, string>();
 const exists = new Map<string, boolean>();
 const mtimes = new Map<string, number>();
@@ -449,6 +450,7 @@ const mocks: TauriMocks = {
   putWebdavText: async (request) => {
     lastWebdavTextPutRequest = request;
     webdavTextFiles.set(request.url, request.contents);
+    persistFiles();
     return { status: 201 };
   },
   readWebdavPassword: () => webdavPassword,
@@ -1700,6 +1702,7 @@ window.__E2E_ACTIONS__ = {
     });
     localStorage.removeItem(PERSISTED_FILES_KEY);
     localStorage.removeItem(PERSISTED_MTIMES_KEY);
+    localStorage.removeItem(PERSISTED_WEBDAV_TEXT_KEY);
     localStorage.removeItem('open-factory:demucs-executable-path');
     localStorage.removeItem('open-factory:privacy-detection-model-path');
     usePrivacyDetectionSettingsStore.getState().setModelPath('');
@@ -1780,6 +1783,7 @@ window.__E2E_ACTIONS__ = {
   setExportPresetSyncRemotePackage: (url: unknown, contents: unknown) => {
     if (typeof url === 'string' && typeof contents === 'string') {
       webdavTextFiles.set(url, contents);
+      persistFiles();
     }
   },
   getExportPresetSyncRemotePackage: (url: unknown) => (typeof url === 'string' ? webdavTextFiles.get(url) : undefined),
@@ -2181,14 +2185,17 @@ function makeWarmContrastCube(): string {
 function persistFiles(): void {
   localStorage.setItem(PERSISTED_FILES_KEY, JSON.stringify(Array.from(files.entries())));
   localStorage.setItem(PERSISTED_MTIMES_KEY, JSON.stringify(Array.from(mtimes.entries())));
+  localStorage.setItem(PERSISTED_WEBDAV_TEXT_KEY, JSON.stringify(Array.from(webdavTextFiles.entries())));
 }
 
 function restorePersistedFiles(): void {
   try {
     const rawFiles = localStorage.getItem(PERSISTED_FILES_KEY);
     const rawMtimes = localStorage.getItem(PERSISTED_MTIMES_KEY);
+    const rawWebdavText = localStorage.getItem(PERSISTED_WEBDAV_TEXT_KEY);
     const fileEntries = rawFiles ? (JSON.parse(rawFiles) as Array<[string, string]>) : [];
     const mtimeEntries = rawMtimes ? (JSON.parse(rawMtimes) as Array<[string, number]>) : [];
+    const webdavTextEntries = rawWebdavText ? (JSON.parse(rawWebdavText) as Array<[string, string]>) : [];
     for (const [path, contents] of fileEntries) {
       files.set(path, contents);
       exists.set(path, true);
@@ -2196,9 +2203,13 @@ function restorePersistedFiles(): void {
     for (const [path, mtime] of mtimeEntries) {
       mtimes.set(path, mtime);
     }
+    for (const [url, contents] of webdavTextEntries) {
+      webdavTextFiles.set(url, contents);
+    }
   } catch {
     localStorage.removeItem(PERSISTED_FILES_KEY);
     localStorage.removeItem(PERSISTED_MTIMES_KEY);
+    localStorage.removeItem(PERSISTED_WEBDAV_TEXT_KEY);
   }
 }
 

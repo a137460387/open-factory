@@ -37,6 +37,12 @@ describe('timeline gap fill', () => {
     expect(findTimelineGapAtTime(timeline, 'missing-track', 1)).toBeUndefined();
   });
 
+  it('does not report a trailing gap after the final clip', () => {
+    const timeline = makeTimeline([makeVideoClip({ id: 'clip-a', start: 0, duration: 2 })]);
+
+    expect(findTimelineGapAtTime(timeline, 'track-video', 4)).toBeUndefined();
+  });
+
   it('builds freeze frame and solid color ffmpeg args', () => {
     expect(buildFreezeFrameFfmpegArgs('C:/Media/source.mp4', 'C:/Cache/freeze.png', 2.25)).toEqual([
       '-y',
@@ -67,11 +73,42 @@ describe('timeline gap fill', () => {
     expect(() => buildGapFillCommandOperation('white')).toThrow('require a clip');
   });
 
+  it('creates gap fill image clips with normalized timing and media defaults', () => {
+    const clip = createGapFillImageClip({ id: 'clip-fill', name: 'White fill', mediaId: 'media-fill', trackId: 'track-video', start: -2, duration: -1 });
+
+    expect(clip).toMatchObject({
+      id: 'clip-fill',
+      type: 'image',
+      name: 'White fill',
+      mediaId: 'media-fill',
+      trackId: 'track-video',
+      start: 0,
+      duration: 0,
+      trimStart: 0,
+      trimEnd: 0
+    });
+    expect(clip.masks).toEqual([]);
+  });
+
   it('rejects repeat and crossfade operations without enough surrounding clips', () => {
     const timeline = makeTimeline([makeVideoClip({ id: 'clip-a', start: 2, duration: 2 })]);
     const leadingGap = findTimelineGapAtTime(timeline, 'track-video', 1)!;
     expect(() => buildRepeatedGapFillClip(leadingGap)).toThrow('previous clip');
     expect(() => buildCrossfadeGapFillTransition(leadingGap, { type: 'crossfade' })).toThrow('adjacent clips');
+  });
+
+  it('repeats image clips without shifting source trims', () => {
+    const timeline = makeTimeline([makeImageClip({ id: 'clip-a', start: 0, duration: 3 }), makeImageClip({ id: 'clip-b', start: 5, duration: 2 })]);
+    const gap = findTimelineGapAtTime(timeline, 'track-video', 4)!;
+
+    expect(buildRepeatedGapFillClip(gap, { clipId: 'clip-repeat' })).toMatchObject({
+      id: 'clip-repeat',
+      type: 'image',
+      start: 3,
+      duration: 2,
+      trimStart: 0,
+      trimEnd: 0
+    });
   });
 
   it('fills a gap with an inserted clip and supports undo', () => {
@@ -88,6 +125,14 @@ describe('timeline gap fill', () => {
     ]);
     manager.undo();
     expect(accessor.current().tracks[0].clips.map((item) => item.id)).toEqual(['clip-a', 'clip-b']);
+  });
+
+  it('rejects fill commands when no gap exists at the requested time', () => {
+    const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'clip-a', start: 0, duration: 2 })]));
+    const clip = createGapFillImageClip({ id: 'clip-gap', name: 'Freeze', mediaId: 'media-gap', trackId: 'track-video', start: 0, duration: 1 });
+
+    expect(() => new FillGapCommand(accessor, 'track-video', 1, { type: 'insert-clip', clip }).execute()).toThrow('No fillable gap');
+    expect(accessor.current().tracks[0].clips.map((item) => item.id)).toEqual(['clip-a']);
   });
 
   it('generates repeat and crossfade gap fill commands', () => {
