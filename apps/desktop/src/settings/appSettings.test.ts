@@ -279,7 +279,7 @@ describe('app settings storage', () => {
   });
 
   it('persists safe frame guide visibility in view settings', async () => {
-    const defaultMediaLibrary = { mode: 'grid', gridSize: 'medium', sortKey: 'importedAt', sortDirection: 'desc' };
+    const defaultMediaLibrary = { mode: 'grid', gridSize: 'medium', sortKey: 'importedAt', sortDirection: 'asc' };
     await expect(readViewSettings()).resolves.toEqual({ safeFrameGuides: false, thumbnailTrackVisible: true, mediaLibrary: defaultMediaLibrary });
 
     await saveLanguageSetting('en');

@@ -46,7 +46,7 @@ import {
   type Sequence,
   type TargetAspectRatio
 } from '@open-factory/editor-core';
-import { AlertTriangle, Clock3, FileText, FolderOpen, Image as ImageIcon, ListPlus, Minimize2, Save, Trash2, X } from 'lucide-react';
+import { AlertTriangle, Clock3, FileText, FolderOpen, Image as ImageIcon, ListPlus, Loader2, Minimize2, Save, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { zhCN } from '../i18n/strings';
 import { chooseExportPath, revealExport } from '../lib/exportVideo';
@@ -57,6 +57,7 @@ import {
   evaluateExportQuality,
   getAppDataDir,
   getFfmpegCapabilities,
+  getTempSegmentsDir,
   listenBridge,
   minimizeToTray,
   openFileDialog,
@@ -87,6 +88,9 @@ import { loadExportHistoryIntoStore } from './export-history';
 import { estimateExportFileSizeBytes, formatEstimatedFileSize } from './export-size-estimate';
 import { useExportQueueStore } from './export-queue-store';
 import { retryExportUploadFromHistory } from './export-upload';
+import { ensureMediaJobRunner } from '../media/media-job-runner';
+import { useMediaJobStore } from '../media/media-job-store';
+import { runExportWarmup, type ExportWarmupStepId } from './export-warmup';
 import {
   BUILTIN_EXPORT_PRESETS,
   deleteCustomExportPreset,
@@ -120,6 +124,8 @@ interface ExportJob {
   presetName?: string;
   sequenceName?: string;
 }
+
+type ExportWarmupUiStatus = { status: 'running' | 'complete' | 'cached'; step?: ExportWarmupStepId };
 
 const WATERMARK_POSITIONS: ExportWatermarkPosition[] = [
   'top-left',
@@ -191,6 +197,7 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
     local: { ...DEFAULT_EXPORT_UPLOAD_SETTINGS.local }
   }));
   const [exportUploadPassword, setExportUploadPassword] = useState('');
+  const [warmupStatus, setWarmupStatus] = useState<ExportWarmupUiStatus>();
   const [previewRunning, setPreviewRunning] = useState(false);
   const [previewError, setPreviewError] = useState<string>();
   const [previewSamples, setPreviewSamples] = useState<ExportPreviewThumbnail[]>([]);
@@ -499,6 +506,7 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
           setPreflight({ issues, selectedJobs });
           return;
         }
+        await warmupSelectedJobs(selectedJobs);
         await enqueueSelectedJobs(selectedJobs);
         return;
       }
@@ -518,6 +526,7 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
         setPreflight({ issues, selectedJobs });
         return;
       }
+      await warmupSelectedJobs(selectedJobs);
       await enqueueSelectedJobs(selectedJobs);
     } catch (reason) {
       setError(reason instanceof SequenceDependencyCycleError ? t.sequenceBatch.cycleDetected(reason.cycleIds.join(' -> ')) : reason instanceof Error ? reason.message : t.exportFailed);
@@ -608,6 +617,36 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
     setQualityTaskId(undefined);
     setQualityProgress(0);
     await cancelQualityEvaluation(taskId);
+  }
+
+  async function warmupSelectedJobs(selectedJobs: ExportJob[]): Promise<void> {
+    let sawColdWarmup = false;
+    for (const job of selectedJobs) {
+      const warmupProject = job.project ?? project;
+      const result = await runExportWarmup(
+        warmupProject,
+        {
+          checkProxyGeneration: runProxyGenerationWarmup,
+          createTempDirectory: getTempSegmentsDir,
+          getFfmpegCapabilities,
+          checkFonts: (targetProject) => {
+            const blockingFontIssue = runExportPreflight(targetProject, {
+              ffmpegAvailable: true,
+              isFontFamilyAvailable
+            }).find((issue) => issue.type === 'missing-font' && issue.severity === 'blocking');
+            if (blockingFontIssue) {
+              throw new Error(blockingFontIssue.message);
+            }
+          }
+        },
+        {
+          ffmpegUnavailableMessage: t.warmup.ffmpegMissing,
+          onStep: (step) => setWarmupStatus({ status: 'running', step })
+        }
+      );
+      sawColdWarmup ||= !result.cached;
+    }
+    setWarmupStatus({ status: sawColdWarmup ? 'complete' : 'cached' });
   }
 
   async function enqueueSelectedJobs(selectedJobs: ExportJob[]): Promise<void> {
@@ -735,12 +774,19 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
     if (!preflight || preflight.issues.some((issue) => issue.severity === 'blocking')) {
       return;
     }
+    if (enqueueInFlight.current) {
+      return;
+    }
+    enqueueInFlight.current = true;
     const jobs = preflight.selectedJobs;
     setPreflight(undefined);
     try {
+      await warmupSelectedJobs(jobs);
       await enqueueSelectedJobs(jobs);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : t.exportFailed);
+    } finally {
+      enqueueInFlight.current = false;
     }
   }
 
@@ -1140,6 +1186,7 @@ function relinkFromPreflight(): void {
               {t.hardwareEncodingFallback}
             </div>
           ) : null}
+          {warmupStatus ? <ExportWarmupStatusPanel status={warmupStatus} /> : null}
           {error ? <pre className="max-h-32 overflow-auto rounded-md bg-rose-50 p-2 text-xs text-rose-800 whitespace-pre-wrap">{error}</pre> : null}
           <div className="rounded-md border border-line" data-testid="export-queue-list">
             <div className="flex items-center justify-between border-b border-line px-3 py-2">
@@ -1234,7 +1281,13 @@ function relinkFromPreflight(): void {
           </div>
         </div>
         <div className="flex justify-end gap-2 border-t border-line px-4 py-3">
-          <button className="inline-flex items-center gap-2 rounded-md bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-[#176858]" onClick={() => void addToQueue()} data-testid="export-enqueue-button">
+          <button
+            className="inline-flex items-center gap-2 rounded-md bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-[#176858] disabled:cursor-wait disabled:opacity-60"
+            type="button"
+            disabled={warmupStatus?.status === 'running'}
+            onClick={() => void addToQueue()}
+            data-testid="export-enqueue-button"
+          >
             <ListPlus size={15} />
             {t.addToQueue}
           </button>
@@ -1242,6 +1295,16 @@ function relinkFromPreflight(): void {
       </section>
     </div>
   );
+}
+
+async function runProxyGenerationWarmup(project: Project): Promise<void> {
+  const mediaIds = new Set(project.media.map((asset) => asset.id));
+  const hasActiveProxyJobs = useMediaJobStore
+    .getState()
+    .jobs.some((job) => job.type === 'proxy' && mediaIds.has(job.assetId) && (job.status === 'pending' || job.status === 'running'));
+  if (hasActiveProxyJobs) {
+    await ensureMediaJobRunner();
+  }
 }
 
 function resolveInOutExportRanges(project: Project, inPoint: number | undefined, outPoint: number | undefined): NormalizedExportRenderRange[] {
@@ -2572,6 +2635,33 @@ function ReframePreviewBox({ aspect, offsetX, offsetY }: { aspect: TargetAspectR
         />
       </div>
     </div>
+  );
+}
+
+function ExportWarmupStatusPanel({ status }: { status: ExportWarmupUiStatus }) {
+  const t = zhCN.exportDialog.warmup;
+  const label = status.step ? t.steps[status.step] : undefined;
+  const message = status.status === 'running' ? t.running(label ?? '') : status.status === 'cached' ? t.cached : t.complete;
+  return (
+    <section
+      className="rounded-md border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900"
+      data-testid="export-warmup-status"
+      data-status={status.status}
+      data-step={status.step ?? ''}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <div className="font-semibold">{t.title}</div>
+          <div className="mt-1">{message}</div>
+        </div>
+        {status.status === 'running' ? <Loader2 className="shrink-0 animate-spin" size={16} /> : null}
+      </div>
+      {status.status === 'running' ? (
+        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/80">
+          <div className="h-full w-2/3 animate-pulse rounded-full bg-sky-500" />
+        </div>
+      ) : null}
+    </section>
   );
 }
 

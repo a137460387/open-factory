@@ -16,7 +16,7 @@ export const DEFAULT_MEDIA_LIBRARY_VIEW_SETTINGS: MediaLibraryViewSettings = {
   mode: 'grid',
   gridSize: 'medium',
   sortKey: 'importedAt',
-  sortDirection: 'desc'
+  sortDirection: 'asc'
 };
 
 export function normalizeMediaLibraryViewSettings(settings: Partial<MediaLibraryViewSettings> | undefined | null): MediaLibraryViewSettings {
@@ -30,13 +30,19 @@ export function normalizeMediaLibraryViewSettings(settings: Partial<MediaLibrary
 
 export function sortMediaLibraryAssets(media: MediaAsset[], settings: Pick<MediaLibraryViewSettings, 'sortKey' | 'sortDirection'>): MediaAsset[] {
   const direction = settings.sortDirection === 'asc' ? 1 : -1;
-  return [...media].sort((left, right) => {
-    const valueCompare = compareBySortKey(left, right, settings.sortKey);
-    if (valueCompare !== 0) {
-      return valueCompare * direction;
-    }
-    return compareText(left.name, right.name) || left.id.localeCompare(right.id);
-  });
+  return media
+    .map((asset, index) => ({ asset, index }))
+    .sort((left, right) => {
+      const valueCompare = compareBySortKey(left.asset, right.asset, settings.sortKey);
+      if (valueCompare !== 0) {
+        return valueCompare * direction;
+      }
+      if (settings.sortKey === 'importedAt') {
+        return left.index - right.index;
+      }
+      return compareText(left.asset.name, right.asset.name) || left.asset.id.localeCompare(right.asset.id);
+    })
+    .map((item) => item.asset);
 }
 
 function compareBySortKey(left: MediaAsset, right: MediaAsset, sortKey: MediaLibrarySortKey): number {

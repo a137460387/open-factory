@@ -29,6 +29,16 @@ describe('media library view helpers', () => {
     ).toEqual(['missing', 'small', 'large']);
   });
 
+  it('keeps import order for media with identical import timestamps', () => {
+    const importedAt = '2026-06-15T00:00:00.000Z';
+    expect(
+      sortMediaLibraryAssets(
+        [asset('video', 'tiny-video.mp4', { importedAt }), asset('audio', 'tiny-audio.wav', { importedAt }), asset('image', 'test-image.png', { importedAt })],
+        { sortKey: 'importedAt', sortDirection: 'asc' }
+      ).map((item) => item.id)
+    ).toEqual(['video', 'audio', 'image']);
+  });
+
   it('normalizes persisted view state with compatible defaults', () => {
     expect(normalizeMediaLibraryViewSettings({ mode: 'list', gridSize: 'large', sortKey: 'duration', sortDirection: 'asc' })).toEqual({
       mode: 'list',
@@ -40,7 +50,7 @@ describe('media library view helpers', () => {
       mode: 'grid',
       gridSize: 'medium',
       sortKey: 'importedAt',
-      sortDirection: 'desc'
+      sortDirection: 'asc'
     });
   });
 });

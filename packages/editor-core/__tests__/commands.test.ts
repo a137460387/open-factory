@@ -1627,6 +1627,146 @@ describe('timeline commands', () => {
     expect(accessor.current().tracks[0].clips[0].start).toBe(3);
   });
 
+  it('creates a history branch when executing after undo without dropping the old branch', () => {
+    const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'clip-1', start: 0 })]));
+    const manager = new CommandManager();
+
+    manager.execute(new MoveClipCommand(accessor, 'clip-1', 1));
+    manager.execute(new MoveClipCommand(accessor, 'clip-1', 2));
+    manager.undo();
+    manager.execute(new MoveClipCommand(accessor, 'clip-1', 3));
+
+    const meta = manager.getHistoryMeta();
+    expect(meta.total).toBe(3);
+    expect(meta.entries.filter((entry) => entry.parentId === meta.entries[0].id)).toHaveLength(2);
+    expect(meta.entries.at(1)?.activePath).toBe(false);
+    expect(meta.entries.at(2)?.isCurrent).toBe(true);
+
+    manager.jumpTo(1);
+    expect(accessor.current().tracks[0].clips[0].start).toBe(2);
+    manager.jumpTo(2);
+    expect(accessor.current().tracks[0].clips[0].start).toBe(3);
+  });
+
+  it('keeps at most three child branches per history node and removes the oldest branch', () => {
+    const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'clip-1', start: 0 })]));
+    const manager = new CommandManager();
+
+    for (const start of [1, 2, 3, 4]) {
+      manager.execute(new MoveClipCommand(accessor, 'clip-1', start));
+      manager.undo();
+    }
+
+    const meta = manager.getHistoryMeta();
+    expect(meta.total).toBe(3);
+    expect(meta.entries.map((entry) => entry.siblingCount)).toEqual([3, 3, 3]);
+    manager.jumpTo(0);
+    expect(accessor.current().tracks[0].clips[0].start).toBe(2);
+    manager.jumpTo(2);
+    expect(accessor.current().tracks[0].clips[0].start).toBe(4);
+  });
+
+  it('switches to the previous branch without mixing undo state across branches', () => {
+    const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'clip-1', start: 0 })]));
+    const manager = new CommandManager();
+
+    manager.execute(new MoveClipCommand(accessor, 'clip-1', 1));
+    manager.execute(new MoveClipCommand(accessor, 'clip-1', 2));
+    manager.undo();
+    manager.execute(new MoveClipCommand(accessor, 'clip-1', 3));
+
+    manager.switchToPreviousBranch();
+    expect(accessor.current().tracks[0].clips[0].start).toBe(2);
+    manager.undo();
+    expect(accessor.current().tracks[0].clips[0].start).toBe(1);
+    manager.redo();
+    expect(accessor.current().tracks[0].clips[0].start).toBe(2);
+  });
+
+  it('jumps by history entry id and leaves missing or current entries unchanged', () => {
+    const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'clip-1', start: 0 })]));
+    const manager = new CommandManager();
+
+    manager.execute(new MoveClipCommand(accessor, 'clip-1', 1));
+    manager.execute(new MoveClipCommand(accessor, 'clip-1', 2));
+    const [firstEntry, secondEntry] = manager.getHistoryMeta().entries;
+
+    manager.jumpToEntry(firstEntry.id);
+    expect(accessor.current().tracks[0].clips[0].start).toBe(1);
+    expect(manager.getHistoryMeta()).toMatchObject({ cursor: 0, position: 1, total: 2 });
+
+    manager.jumpToEntry(firstEntry.id);
+    manager.jumpToEntry('history-missing');
+    expect(accessor.current().tracks[0].clips[0].start).toBe(1);
+    expect(manager.getHistoryMeta()).toMatchObject({ cursor: 0, position: 1, total: 2 });
+
+    manager.jumpToEntry(secondEntry.id);
+    expect(accessor.current().tracks[0].clips[0].start).toBe(2);
+  });
+
+  it('keeps previous branch switching as a no-op when no alternate branch exists', () => {
+    const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'clip-1', start: 0 })]));
+    const manager = new CommandManager();
+
+    manager.execute(new MoveClipCommand(accessor, 'clip-1', 1));
+    manager.execute(new MoveClipCommand(accessor, 'clip-1', 2));
+    manager.switchToPreviousBranch();
+
+    expect(accessor.current().tracks[0].clips[0].start).toBe(2);
+    expect(manager.getHistoryMeta()).toMatchObject({ cursor: 1, position: 2, total: 2 });
+  });
+
+  it('switches from a fork parent to the previous child branch', () => {
+    const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'clip-1', start: 0 })]));
+    const manager = new CommandManager();
+
+    manager.execute(new MoveClipCommand(accessor, 'clip-1', 1));
+    manager.execute(new MoveClipCommand(accessor, 'clip-1', 2));
+    manager.undo();
+    manager.execute(new MoveClipCommand(accessor, 'clip-1', 3));
+    manager.undo();
+
+    expect(accessor.current().tracks[0].clips[0].start).toBe(1);
+    expect(manager.canRedo()).toBe(true);
+
+    manager.switchToPreviousBranch();
+    expect(accessor.current().tracks[0].clips[0].start).toBe(2);
+    expect(manager.getHistoryMeta().entries.find((entry) => entry.isCurrent)?.branchIndex).toBe(0);
+  });
+
+  it('removes an entire oldest branch subtree when the child branch cap is exceeded', () => {
+    const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'clip-1', start: 0 })]));
+    const manager = new CommandManager();
+
+    manager.execute(new MoveClipCommand(accessor, 'clip-1', 1));
+    manager.execute(new MoveClipCommand(accessor, 'clip-1', 1.5));
+    const removedChildId = manager.getHistoryMeta().entries.at(-1)!.id;
+    manager.undo();
+    manager.undo();
+
+    for (const start of [2, 3, 4]) {
+      manager.execute(new MoveClipCommand(accessor, 'clip-1', start));
+      manager.undo();
+    }
+
+    expect(manager.getHistoryMeta().entries.map((entry) => entry.branchIndex)).toEqual([0, 1, 2]);
+    manager.jumpToEntry(removedChildId);
+    expect(accessor.current().tracks[0].clips[0].start).toBe(0);
+  });
+
+  it('prunes the current node when the configured history limit is zero', () => {
+    const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'clip-1', start: 0 })]));
+    const manager = new CommandManager(0);
+
+    manager.execute(new MoveClipCommand(accessor, 'clip-1', 1));
+
+    expect(accessor.current().tracks[0].clips[0].start).toBe(1);
+    expect(manager.getHistoryMeta()).toMatchObject({ canUndo: false, canRedo: false, cursor: -1, position: 0, total: 0, entries: [] });
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips[0].start).toBe(1);
+  });
+
   it('caps command history at 100 entries', () => {
     const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'clip-1' })]));
     const manager = new CommandManager();
@@ -1927,6 +2067,20 @@ describe('timeline commands', () => {
     };
     expect(() => manager.execute(failing)).toThrow('boom');
     expect(executed).toEqual([command]);
+  });
+
+  it('counts affected clips from track-like command payloads', () => {
+    const manager = new CommandManager();
+    const command: Command & { track: { clips: Array<{ id: string }> } } = {
+      description: 'Track payload',
+      track: { clips: [{ id: 'clip-a' }, { id: 'clip-b' }] },
+      execute: () => undefined,
+      undo: () => undefined
+    };
+
+    manager.execute(command);
+
+    expect(manager.getHistoryMeta().entries[0]).toMatchObject({ affectedClipCount: 2 });
   });
 
   it('clears history and prevents redo of previously undone commands', () => {

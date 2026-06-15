@@ -5,14 +5,31 @@ interface CommandHistoryRecord {
   entry: HistoryEntry;
 }
 
+interface CommandHistoryNode extends Partial<CommandHistoryRecord> {
+  id: string;
+  parent?: CommandHistoryNode;
+  children: CommandHistoryNode[];
+  preferredChildId?: string;
+  order: number;
+}
+
+interface FlattenedCommandHistoryNode {
+  node: CommandHistoryNode;
+  depth: number;
+  branchIndex: number;
+  siblingCount: number;
+}
+
 export type CommandExecuteListener = (command: Command) => void;
 
 export class CommandManager {
-  private history: CommandHistoryRecord[] = [];
-  private cursor = -1;
+  private readonly root: CommandHistoryNode = { id: 'history-root', children: [], order: 0 };
+  private current: CommandHistoryNode = this.root;
+  private nodeById = new Map<string, CommandHistoryNode>([[this.root.id, this.root]]);
   private onChange?: (meta: HistoryMeta) => void;
   private onExecute?: CommandExecuteListener;
   private nextEntryId = 1;
+  private nextOrder = 1;
 
   constructor(private readonly maxHistory = 100) {}
 
@@ -26,24 +43,28 @@ export class CommandManager {
   }
 
   execute(command: Command): void {
-    if (this.cursor < this.history.length - 1) {
-      this.history = this.history.slice(0, this.cursor + 1);
-    }
     command.execute();
     this.onExecute?.(command);
-    this.history.push({
+    const entry: HistoryEntry = {
+      id: `history-${this.nextEntryId++}`,
+      description: command.description,
+      timestamp: new Date().toISOString(),
+      affectedClipCount: inferAffectedClipCount(command)
+    };
+    const node: CommandHistoryNode = {
+      id: entry.id,
       command,
-      entry: {
-        id: `history-${this.nextEntryId++}`,
-        description: command.description,
-        timestamp: new Date().toISOString(),
-        affectedClipCount: inferAffectedClipCount(command)
-      }
-    });
-    if (this.history.length > this.maxHistory) {
-      this.history.shift();
-    }
-    this.cursor = this.history.length - 1;
+      entry,
+      parent: this.current,
+      children: [],
+      order: this.nextOrder++
+    };
+    this.current.children.push(node);
+    this.current.preferredChildId = node.id;
+    this.nodeById.set(node.id, node);
+    this.enforceBranchLimit(this.current);
+    this.current = node;
+    this.pruneToMaxHistory();
     this.emitChange();
   }
 
@@ -51,8 +72,11 @@ export class CommandManager {
     if (!this.canUndo()) {
       return;
     }
-    this.history[this.cursor]?.command.undo();
-    this.cursor -= 1;
+    const node = this.current;
+    node.command?.undo();
+    const parent = node.parent ?? this.root;
+    parent.preferredChildId = node.id;
+    this.current = parent;
     this.emitChange();
   }
 
@@ -60,58 +84,200 @@ export class CommandManager {
     if (!this.canRedo()) {
       return;
     }
-    this.cursor += 1;
-    this.history[this.cursor]?.command.execute();
+    const next = this.getPreferredRedoChild(this.current);
+    if (!next) {
+      return;
+    }
+    next.command?.execute();
+    this.current.preferredChildId = next.id;
+    this.current = next;
     this.emitChange();
   }
 
   jumpTo(index: number): void {
-    const target = Math.min(this.history.length - 1, Math.max(-1, Math.floor(index)));
-    if (target === this.cursor) {
+    const flattened = this.flattenHistory();
+    const targetIndex = Math.min(flattened.length - 1, Math.max(-1, Math.floor(index)));
+    const target = targetIndex < 0 ? this.root : flattened[targetIndex]?.node ?? this.root;
+    this.jumpToNode(target);
+  }
+
+  jumpToEntry(entryId: string): void {
+    this.jumpToNode(this.nodeById.get(entryId) ?? this.current);
+  }
+
+  switchToPreviousBranch(): void {
+    const target = this.findPreviousBranchTarget();
+    if (target) {
+      this.jumpToNode(target);
+    }
+  }
+
+  private jumpToNode(target: CommandHistoryNode): void {
+    if (target === this.current) {
       return;
     }
-    while (this.cursor > target) {
-      this.history[this.cursor]?.command.undo();
-      this.cursor -= 1;
+    const currentPath = this.pathFromRoot(this.current);
+    const targetPath = this.pathFromRoot(target);
+    let shared = 0;
+    while (shared < currentPath.length && shared < targetPath.length && currentPath[shared] === targetPath[shared]) {
+      shared += 1;
     }
-    while (this.cursor < target) {
-      this.cursor += 1;
-      this.history[this.cursor]?.command.execute();
+    while (this.current !== (shared === 0 ? this.root : currentPath[shared - 1])) {
+      const node = this.current;
+      node.command?.undo();
+      const parent = node.parent ?? this.root;
+      parent.preferredChildId = node.id;
+      this.current = parent;
+    }
+    for (const node of targetPath.slice(shared)) {
+      node.command?.execute();
+      const parent = node.parent ?? this.root;
+      parent.preferredChildId = node.id;
+      this.current = node;
     }
     this.emitChange();
   }
 
   canUndo(): boolean {
-    return this.cursor >= 0;
+    return this.current !== this.root;
   }
 
   canRedo(): boolean {
-    return this.cursor < this.history.length - 1;
+    return this.current.children.length > 0;
   }
 
   clear(): void {
-    this.history = [];
-    this.cursor = -1;
+    this.root.children = [];
+    this.root.preferredChildId = undefined;
+    this.current = this.root;
+    this.nodeById = new Map([[this.root.id, this.root]]);
     this.emitChange();
   }
 
   getHistoryMeta(): HistoryMeta {
+    const flattened = this.flattenHistory();
+    const activePathIds = new Set(this.pathFromRoot(this.current).map((node) => node.id));
+    const cursor = flattened.findIndex((item) => item.node === this.current);
     return {
       canUndo: this.canUndo(),
       canRedo: this.canRedo(),
-      cursor: this.cursor,
-      entries: this.history.map((record) => ({ ...record.entry })),
-      position: this.cursor + 1,
-      total: this.history.length
+      cursor,
+      entries: flattened.map(({ node, depth, branchIndex, siblingCount }) => ({
+        ...node.entry!,
+        parentId: node.parent?.entry?.id,
+        branchDepth: depth,
+        branchIndex,
+        siblingCount,
+        childCount: node.children.length,
+        isCurrent: node === this.current,
+        activePath: activePathIds.has(node.id)
+      })),
+      position: cursor + 1,
+      total: flattened.length
     };
   }
 
   historySize(): number {
-    return this.history.length;
+    return this.flattenHistory().length;
   }
 
   private emitChange(): void {
     this.onChange?.(this.getHistoryMeta());
+  }
+
+  private flattenHistory(): FlattenedCommandHistoryNode[] {
+    const flattened: FlattenedCommandHistoryNode[] = [];
+    const visit = (node: CommandHistoryNode, depth: number) => {
+      node.children.forEach((child, index) => {
+        flattened.push({ node: child, depth, branchIndex: index, siblingCount: node.children.length });
+        visit(child, depth + 1);
+      });
+    };
+    visit(this.root, 0);
+    return flattened;
+  }
+
+  private pathFromRoot(node: CommandHistoryNode): CommandHistoryNode[] {
+    const path: CommandHistoryNode[] = [];
+    let cursor: CommandHistoryNode | undefined = node;
+    while (cursor && cursor !== this.root) {
+      path.unshift(cursor);
+      cursor = cursor.parent;
+    }
+    return path;
+  }
+
+  private getPreferredRedoChild(node: CommandHistoryNode): CommandHistoryNode | undefined {
+    return node.children.find((child) => child.id === node.preferredChildId) ?? node.children.at(-1);
+  }
+
+  private findPreviousBranchTarget(): CommandHistoryNode | undefined {
+    if (this.current.children.length > 1) {
+      const preferredIndex = this.current.children.findIndex((child) => child.id === this.current.preferredChildId);
+      const startIndex = preferredIndex >= 0 ? preferredIndex : this.current.children.length;
+      return this.current.children[(startIndex - 1 + this.current.children.length) % this.current.children.length];
+    }
+    let node: CommandHistoryNode | undefined = this.current;
+    while (node?.parent) {
+      const siblings = node.parent.children;
+      if (siblings.length > 1) {
+        const index = siblings.indexOf(node);
+        return siblings[(index - 1 + siblings.length) % siblings.length];
+      }
+      node = node.parent;
+    }
+    return undefined;
+  }
+
+  private enforceBranchLimit(parent: CommandHistoryNode): void {
+    while (parent.children.length > 3) {
+      const [removed] = parent.children.splice(0, 1);
+      if (removed) {
+        this.removeSubtree(removed);
+      }
+    }
+  }
+
+  private pruneToMaxHistory(): void {
+    while (this.historySize() > this.maxHistory) {
+      const oldest = this.flattenHistory().sort((left, right) => left.node.order - right.node.order)[0]?.node;
+      if (!oldest) {
+        return;
+      }
+      this.promoteChildrenAndRemove(oldest);
+    }
+  }
+
+  private promoteChildrenAndRemove(node: CommandHistoryNode): void {
+    const parent = node.parent;
+    if (!parent) {
+      return;
+    }
+    const index = parent.children.indexOf(node);
+    if (index < 0) {
+      return;
+    }
+    for (const child of node.children) {
+      child.parent = parent;
+    }
+    parent.children.splice(index, 1, ...node.children);
+    if (parent.preferredChildId === node.id) {
+      parent.preferredChildId = node.children.at(-1)?.id;
+    }
+    this.nodeById.delete(node.id);
+    if (this.current === node) {
+      this.current = parent;
+    }
+  }
+
+  private removeSubtree(node: CommandHistoryNode): void {
+    for (const child of node.children) {
+      this.removeSubtree(child);
+    }
+    this.nodeById.delete(node.id);
+    if (this.current === node) {
+      this.current = node.parent ?? this.root;
+    }
   }
 }
 

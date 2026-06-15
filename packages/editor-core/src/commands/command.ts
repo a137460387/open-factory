@@ -9,6 +9,13 @@ export interface HistoryEntry {
   description: string;
   timestamp: string;
   affectedClipCount: number;
+  parentId?: string;
+  branchDepth?: number;
+  branchIndex?: number;
+  siblingCount?: number;
+  childCount?: number;
+  isCurrent?: boolean;
+  activePath?: boolean;
 }
 
 export interface HistoryMeta {

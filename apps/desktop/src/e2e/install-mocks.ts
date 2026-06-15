@@ -41,6 +41,7 @@ const canceledTranscodeTaskIds = new Set<string>();
 const canceledQualityEvaluationTaskIds = new Set<string>();
 let exportGateHeld = false;
 const exportGates: Array<{ taskId?: string; release: () => void }> = [];
+let exportWarmupDelayMs = 0;
 let mockSceneTimes = [1];
 let lastConfirmMessage: string | undefined;
 let availableMemoryBytes = 8 * 1024 * 1024 * 1024;
@@ -254,7 +255,12 @@ const mocks: TauriMocks = {
     return solidColorSample([128, 128, 128]);
   },
   getAppDataDir: () => appDataDir,
-  getTempSegmentsDir: () => 'C:/Temp/open-factory/segments',
+  getTempSegmentsDir: async () => {
+    if (exportWarmupDelayMs > 0) {
+      await wait(exportWarmupDelayMs);
+    }
+    return 'C:/Temp/open-factory/segments';
+  },
   getFileStat: (path) => ({
     path,
     size: path === silencePatternAudio ? createSilencePatternWav().byteLength : path === fourKHevcVideo ? 500 * 1024 * 1024 : path.endsWith('.wav') ? 2048 : 4096,
@@ -1403,6 +1409,11 @@ window.__E2E_ACTIONS__ = {
       availableMemoryBytes = bytes;
     }
   },
+  setExportWarmupDelay: (delayMs: unknown) => {
+    if (typeof delayMs === 'number' && Number.isFinite(delayMs)) {
+      exportWarmupDelayMs = Math.max(0, delayMs);
+    }
+  },
   getWrittenFile: (path: unknown) => (typeof path === 'string' ? files.get(path) : undefined),
   getWrittenFileSize: (path: unknown) => (typeof path === 'string' ? files.get(path)?.length ?? 0 : 0),
   getBackupFiles: (path: unknown) => {
@@ -1547,6 +1558,7 @@ window.__E2E_ACTIONS__ = {
     powerActionCalls = [];
     notifications = [];
     recordingTasks = new Map();
+    exportWarmupDelayMs = 0;
     localStorage.removeItem('open-factory:proxy-settings');
     localStorage.removeItem('open-factory:plugins');
     localStorage.removeItem('open-factory:settings');

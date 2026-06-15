@@ -248,6 +248,7 @@ const zh = {
     subtitle: '撤销与重做状态',
     empty: '还没有可用历史。',
     affectedClips: (count: number) => `${count} 个片段`,
+    branchLabel: (index: number, total: number) => `分支 ${index}/${total}`,
     position: (position: number, total: number) => `当前位置 ${position}/${total}`,
     jumpFailed: '历史跳转失败',
     jumpFailedMessage: '无法跳转到该历史状态。'
@@ -430,6 +431,7 @@ const zh = {
         'jump-prev-navigation-point': '上一书签/标记',
         'jump-next-navigation-point': '下一书签/标记',
         undo: '撤销',
+        'switch-previous-branch': '切换到上一历史分支',
         redo: '重做',
         save: '保存项目',
         'export-current-frame': '导出当前帧'
@@ -1865,6 +1867,19 @@ const zh = {
         end: '终点'
       }
     },
+    warmup: {
+      title: '导出预热',
+      running: (step: string) => `正在准备导出...${step ? ` ${step}` : ''}`,
+      complete: '导出预热完成，已开始加入队列。',
+      cached: '导出预热缓存仍有效，已跳过重复准备。',
+      ffmpegMissing: '未在 PATH 中检测到 FFmpeg，无法执行本地导出。',
+      steps: {
+        'proxy-check': '检查代理生成',
+        'temp-dir': '创建临时目录',
+        ffmpeg: '验证 FFmpeg',
+        fonts: '检查字体'
+      }
+    },
     info: {
       resolution: '分辨率',
       fps: '帧率',
@@ -2973,6 +2988,7 @@ const enOverrides = {
         'jump-prev-navigation-point': 'Previous Bookmark/Marker',
         'jump-next-navigation-point': 'Next Bookmark/Marker',
         undo: 'Undo',
+        'switch-previous-branch': 'Switch to Previous History Branch',
         redo: 'Redo',
         save: 'Save Project',
         'export-current-frame': 'Export Current Frame'
@@ -4001,6 +4017,7 @@ const enOverrides = {
     subtitle: 'Undo and redo states',
     empty: 'No history yet.',
     affectedClips: (count: number) => `${count} clips`,
+    branchLabel: (index: number, total: number) => `Branch ${index}/${total}`,
     position: (position: number, total: number) => `Position ${position}/${total}`,
     jumpFailed: 'History Jump Failed',
     jumpFailedMessage: 'Unable to jump to that history state.'
@@ -4174,6 +4191,19 @@ const enOverrides = {
         start: 'Start',
         middle: 'Middle',
         end: 'End'
+      }
+    },
+    warmup: {
+      title: 'Export Warmup',
+      running: (step: string) => `Preparing export...${step ? ` ${step}` : ''}`,
+      complete: 'Export warmup complete. Queueing has started.',
+      cached: 'Export warmup cache is still valid; skipped duplicate preparation.',
+      ffmpegMissing: 'FFmpeg was not found in PATH, so local export cannot run.',
+      steps: {
+        'proxy-check': 'Checking proxy generation',
+        'temp-dir': 'Creating temporary directory',
+        ffmpeg: 'Verifying FFmpeg',
+        fonts: 'Checking fonts'
       }
     },
     info: {

@@ -23,6 +23,7 @@ interface ShortcutHandlers {
   jumpToPreviousNavigationPoint(): void;
   jumpToNextNavigationPoint(): void;
   undo(): void;
+  switchToPreviousHistoryBranch(): void;
   redo(): void;
   save(): void;
   exportCurrentFrame(): void;
@@ -120,6 +121,9 @@ export function useShortcuts(handlers: ShortcutHandlers, bindings: TimelineShort
           break;
         case 'undo':
           handlers.undo();
+          break;
+        case 'switch-previous-branch':
+          handlers.switchToPreviousHistoryBranch();
           break;
         case 'redo':
           handlers.redo();

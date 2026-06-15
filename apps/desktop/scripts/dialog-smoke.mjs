@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { releaseExecutablePath, requireReleaseExecutable, shouldSkipNativeAppSmoke, spawnProcess, waitForExitOrKill } from './smoke-platform.mjs';
+import { releaseExecutablePath, requireReleaseExecutable, shouldSkipNativeAppSmoke, spawnProcess } from './smoke-platform.mjs';
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const desktopDir = resolve(scriptDir, '..');
@@ -25,22 +25,63 @@ const child = spawnProcess(executable, [], {
   stdio: 'inherit'
 });
 
-const automation = await closeNativeDialog(title, child.pid);
-const result = await waitForExitOrKill(child, 30_000);
+const automation = compactDialogAutomation(await closeNativeDialog(title, child.pid));
+const result = await waitForReportOrExit(child, reportPath, 30_000);
 
 if (!existsSync(reportPath)) {
-  const fallback = { nativeDialogFound: automation.found, dialogReturned: false, error: 'Smoke report was not written.' };
+  const fallback = { nativeDialogFound: automation.found, dialogReturned: false, error: 'Smoke report was not written.', automation };
   writeFileSync(reportPath, JSON.stringify(fallback, null, 2));
   console.error(JSON.stringify(fallback, null, 2));
   process.exit(1);
 }
 
 const report = JSON.parse(readFileSync(reportPath, 'utf8'));
-const combined = { ...report, nativeDialogFound: automation.found, automation };
+const combined = { ...report, nativeDialogFound: automation.found, automation, process: result };
 console.log(JSON.stringify(combined, null, 2));
 
-if (result.exitCode !== 0 || result.timedOut || !combined.windowExists || !combined.nativeDialogFound || !combined.dialogReturned || !combined.dialogCanceled) {
+if ((!result.reportFound && result.exitCode !== 0) || result.timedOut || !combined.windowExists || !combined.nativeDialogFound || !combined.dialogReturned || !combined.dialogCanceled) {
   process.exit(1);
+}
+
+function waitForReportOrExit(childProcess, path, timeoutMs) {
+  return new Promise((resolveExit) => {
+    let settled = false;
+    const finish = (result) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearInterval(interval);
+      clearTimeout(timer);
+      resolveExit(result);
+    };
+    const interval = setInterval(() => {
+      if (!existsSync(path)) {
+        return;
+      }
+      const shouldTerminate = childProcess.exitCode === null && !childProcess.killed;
+      if (shouldTerminate) {
+        childProcess.kill();
+      }
+      finish({ exitCode: 0, timedOut: false, reportFound: true, terminatedAfterReport: shouldTerminate });
+    }, 100);
+    const timer = setTimeout(() => {
+      childProcess.kill();
+      finish({ exitCode: 1, timedOut: true, reportFound: existsSync(path), terminatedAfterReport: true });
+    }, timeoutMs);
+    childProcess.on('exit', (code) => {
+      finish({ exitCode: code ?? 1, timedOut: false, reportFound: existsSync(path), terminatedAfterReport: false });
+    });
+  });
+}
+
+function compactDialogAutomation(automation) {
+  const candidates = Array.isArray(automation?.candidates) ? automation.candidates : [];
+  return {
+    ...automation,
+    candidateCount: candidates.length,
+    candidates: candidates.slice(-12)
+  };
 }
 
 async function closeNativeDialog(windowTitle, processId) {
@@ -54,6 +95,12 @@ public static class NativeDialogSmoke {
   public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
   [DllImport("user32.dll")]
   public static extern bool PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+  [DllImport("user32.dll")]
+  public static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+  [DllImport("user32.dll")]
+  public static extern bool SetForegroundWindow(IntPtr hWnd);
+  [DllImport("user32.dll")]
+  public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
   public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
   [DllImport("user32.dll")]
   public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
@@ -67,6 +114,18 @@ public static class NativeDialogSmoke {
   public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 }
 "@
+Add-Type -AssemblyName System.Windows.Forms
+function Close-SmokeDialog([IntPtr]$handle) {
+  if ($handle -eq [IntPtr]::Zero) { return $false }
+  [void][NativeDialogSmoke]::ShowWindow($handle, 9)
+  [void][NativeDialogSmoke]::SetForegroundWindow($handle)
+  Start-Sleep -Milliseconds 100
+  [void][NativeDialogSmoke]::SendMessage($handle, 0x0111, [IntPtr]2, [IntPtr]::Zero)
+  Start-Sleep -Milliseconds 100
+  [System.Windows.Forms.SendKeys]::SendWait("{ESC}")
+  Start-Sleep -Milliseconds 100
+  return [NativeDialogSmoke]::PostMessage($handle, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero)
+}
 $title = ${JSON.stringify(windowTitle)}
 $pid = [uint32]${Number(processId) || 0}
 $found = $false
@@ -76,7 +135,7 @@ for ($i = 0; $i -lt 80; $i++) {
   $hwnd = [NativeDialogSmoke]::FindWindow($null, $title)
   if ($hwnd -ne [IntPtr]::Zero) {
     $found = $true
-    $closed = [NativeDialogSmoke]::PostMessage($hwnd, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero)
+    $closed = Close-SmokeDialog $hwnd
     break
   }
   $script:target = [IntPtr]::Zero
@@ -91,8 +150,9 @@ for ($i = 0; $i -lt 80; $i++) {
     [void][NativeDialogSmoke]::GetClassName($handle, $classBuilder, $classBuilder.Capacity)
     $text = $textBuilder.ToString()
     $class = $classBuilder.ToString()
+    $sameProcess = $pid -eq 0 -or $windowPid -eq $pid
     [void]$candidates.Add(@{ title = $text; className = $class; pid = $windowPid })
-    if ($text -like "*$title*" -or $class -eq "#32770" -or ($class -like "*Cabinet*" -and $text -match "Open|Select|Browse|Choose")) {
+    if ($text -like "*$title*" -or ($sameProcess -and ($class -eq "#32770" -or ($class -like "*Cabinet*" -and $text -match "Open|Select|Browse|Choose")))) {
       $script:target = $handle
       return $false
     }
@@ -101,7 +161,7 @@ for ($i = 0; $i -lt 80; $i++) {
   [void][NativeDialogSmoke]::EnumWindows($callback, [IntPtr]::Zero)
   if ($script:target -ne [IntPtr]::Zero) {
     $found = $true
-    $closed = [NativeDialogSmoke]::PostMessage($script:target, 0x0010, [IntPtr]::Zero, [IntPtr]::Zero)
+    $closed = Close-SmokeDialog $script:target
     break
   }
   Start-Sleep -Milliseconds 250

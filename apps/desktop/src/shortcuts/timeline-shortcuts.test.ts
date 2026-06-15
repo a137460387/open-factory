@@ -29,6 +29,7 @@ describe('timeline shortcut mapping', () => {
     ['Ctrl+ArrowLeft', { key: 'ArrowLeft', ctrlKey: true }, 'jump-prev-navigation-point'],
     ['Ctrl+ArrowRight', { key: 'ArrowRight', ctrlKey: true }, 'jump-next-navigation-point'],
     ['Ctrl+Z', { key: 'z', ctrlKey: true }, 'undo'],
+    ['Ctrl+Alt+Z', { key: 'z', ctrlKey: true, altKey: true }, 'switch-previous-branch'],
     ['Cmd+Shift+Z', { key: 'z', metaKey: true, shiftKey: true }, 'redo'],
     ['Ctrl+S', { key: 's', ctrlKey: true }, 'save'],
     ['Shift+E', { key: 'E', shiftKey: true }, 'export-current-frame']

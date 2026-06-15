@@ -1832,6 +1832,7 @@ export function EditorShell() {
   }, []);
 
   const undo = useCallback(() => commandManager.undo(), []);
+  const switchToPreviousHistoryBranch = useCallback(() => commandManager.switchToPreviousBranch(), []);
   const redo = useCallback(() => commandManager.redo(), []);
   const togglePlayback = useCallback(() => {
     if (getTimelineDuration(project.timeline) === 0) {
@@ -2043,6 +2044,7 @@ export function EditorShell() {
       jumpToPreviousNavigationPoint: () => jumpTimelineNavigationPoint('previous'),
       jumpToNextNavigationPoint: () => jumpTimelineNavigationPoint('next'),
       undo,
+      switchToPreviousHistoryBranch,
       redo,
       save: () => void saveProject(),
       exportCurrentFrame: () => void exportCurrentFrame()
@@ -2068,6 +2070,7 @@ export function EditorShell() {
       setSelectedClipIds,
       splitSelected,
       stepFrame,
+      switchToPreviousHistoryBranch,
       togglePlayback,
       toggleTimelineGridSnap,
       undo

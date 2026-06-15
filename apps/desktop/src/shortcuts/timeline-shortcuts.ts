@@ -20,6 +20,7 @@ export type TimelineShortcutAction =
   | 'jump-prev-navigation-point'
   | 'jump-next-navigation-point'
   | 'undo'
+  | 'switch-previous-branch'
   | 'redo'
   | 'save'
   | 'export-current-frame';
@@ -63,6 +64,7 @@ export const TIMELINE_SHORTCUT_DEFINITIONS: TimelineShortcutDefinition[] = [
   { action: 'jump-prev-navigation-point', defaultBindings: ['Ctrl+ArrowLeft'] },
   { action: 'jump-next-navigation-point', defaultBindings: ['Ctrl+ArrowRight'] },
   { action: 'undo', defaultBindings: ['Ctrl+Z'] },
+  { action: 'switch-previous-branch', defaultBindings: ['Ctrl+Alt+Z'] },
   { action: 'redo', defaultBindings: ['Ctrl+Shift+Z', 'Ctrl+Y'] },
   { action: 'save', defaultBindings: ['Ctrl+S'] },
   { action: 'export-current-frame', defaultBindings: ['Shift+E'] }
