@@ -5,6 +5,7 @@ import {
   createProjectAnnotation,
   createReviewAnnotation,
   createSequence,
+  createTimelineNote,
   createTimelineBookmark,
   createTransition,
   createTimelineMarker,
@@ -35,6 +36,8 @@ import {
   normalizeMotionTrack,
   normalizeProjectAnnotation,
   normalizeReviewAnnotation,
+  normalizeTimelineNote,
+  normalizeTimelineNotes,
   normalizeExportRanges,
   normalizeProtectedRanges,
   normalizeProjectSettings,
@@ -72,6 +75,7 @@ import {
   type Project,
   type ProjectAnnotation,
   type ReviewAnnotation,
+  type TimelineNote,
   type ExportRange,
   type ProtectedRange,
   type ProjectSettings,
@@ -1081,6 +1085,42 @@ export class AddReviewAnnotationCommand implements Command {
   }
 }
 
+export class AddTimelineNoteCommand implements Command {
+  readonly description = 'Add timeline note';
+  private note?: TimelineNote;
+
+  constructor(private readonly accessor: ProjectAccessor, private readonly input: Omit<TimelineNote, 'id' | 'createdAt'> & Partial<Pick<TimelineNote, 'id' | 'createdAt'>>) {}
+
+  execute(): void {
+    const project = this.accessor.getProject();
+    this.note ??= createTimelineNote(this.input, getTimelineDuration(project.timeline));
+    const normalized = normalizeTimelineNote(this.note, getTimelineDuration(project.timeline));
+    if (!normalized) {
+      throw new Error('Timeline note duration must be greater than zero');
+    }
+    this.note = normalized;
+    this.accessor.setProject(
+      touchProject({
+        ...project,
+        timelineNotes: sortTimelineNotes([...(project.timelineNotes ?? []), this.note])
+      })
+    );
+  }
+
+  undo(): void {
+    if (!this.note) {
+      return;
+    }
+    const project = this.accessor.getProject();
+    this.accessor.setProject(
+      touchProject({
+        ...project,
+        timelineNotes: (project.timelineNotes ?? []).filter((note) => note.id !== this.note?.id)
+      })
+    );
+  }
+}
+
 export interface AddProjectBookmarkInput {
   id?: string;
   time: number;
@@ -1619,6 +1659,82 @@ export class RemoveReviewAnnotationCommand implements Command {
     const annotations = [...(project.reviewAnnotations ?? [])];
     annotations.splice(this.index < 0 ? annotations.length : this.index, 0, this.removed);
     this.accessor.setProject(touchProject({ ...project, reviewAnnotations: sortReviewAnnotations(annotations) }));
+  }
+}
+
+export type TimelineNotePatch = Partial<Omit<TimelineNote, 'id' | 'createdAt'> & Pick<TimelineNote, 'createdAt'>>;
+
+export class UpdateTimelineNoteCommand implements Command {
+  readonly description = 'Update timeline note';
+  private before?: TimelineNote;
+  private after?: TimelineNote;
+
+  constructor(private readonly accessor: ProjectAccessor, private readonly noteId: string, private readonly patch: TimelineNotePatch) {}
+
+  execute(): void {
+    const project = this.accessor.getProject();
+    const note = (project.timelineNotes ?? []).find((item) => item.id === this.noteId);
+    if (!note) {
+      throw new Error(`Timeline note ${this.noteId} not found`);
+    }
+    this.before ??= note;
+    const normalized = normalizeTimelineNote({ ...note, ...this.patch }, getTimelineDuration(project.timeline));
+    if (!normalized) {
+      throw new Error('Timeline note duration must be greater than zero');
+    }
+    this.after = normalized;
+    this.accessor.setProject(
+      touchProject({
+        ...project,
+        timelineNotes: sortTimelineNotes((project.timelineNotes ?? []).map((item) => (item.id === this.noteId ? this.after! : item)))
+      })
+    );
+  }
+
+  undo(): void {
+    if (!this.before) {
+      return;
+    }
+    const project = this.accessor.getProject();
+    this.accessor.setProject(
+      touchProject({
+        ...project,
+        timelineNotes: sortTimelineNotes((project.timelineNotes ?? []).map((item) => (item.id === this.noteId ? this.before! : item)))
+      })
+    );
+  }
+}
+
+export class RemoveTimelineNoteCommand implements Command {
+  readonly description = 'Remove timeline note';
+  private removed?: TimelineNote;
+  private index = -1;
+
+  constructor(private readonly accessor: ProjectAccessor, private readonly noteId: string) {}
+
+  execute(): void {
+    const project = this.accessor.getProject();
+    this.index = (project.timelineNotes ?? []).findIndex((note) => note.id === this.noteId);
+    if (this.index === -1) {
+      throw new Error(`Timeline note ${this.noteId} not found`);
+    }
+    this.removed ??= (project.timelineNotes ?? [])[this.index];
+    this.accessor.setProject(
+      touchProject({
+        ...project,
+        timelineNotes: (project.timelineNotes ?? []).filter((note) => note.id !== this.noteId)
+      })
+    );
+  }
+
+  undo(): void {
+    if (!this.removed) {
+      return;
+    }
+    const project = this.accessor.getProject();
+    const notes = [...(project.timelineNotes ?? [])];
+    notes.splice(this.index < 0 ? notes.length : this.index, 0, this.removed);
+    this.accessor.setProject(touchProject({ ...project, timelineNotes: sortTimelineNotes(notes) }));
   }
 }
 
@@ -3850,6 +3966,10 @@ function sortAnnotations(annotations: ProjectAnnotation[]): ProjectAnnotation[] 
 
 function sortReviewAnnotations(annotations: ReviewAnnotation[]): ReviewAnnotation[] {
   return [...annotations].sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
+}
+
+function sortTimelineNotes(notes: TimelineNote[]): TimelineNote[] {
+  return normalizeTimelineNotes(notes);
 }
 
 function sortBookmarks(bookmarks: TimelineBookmark[]): TimelineBookmark[] {

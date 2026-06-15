@@ -8,6 +8,7 @@ import {
   AddMaskCommand,
   AddProjectAnnotationCommand,
   AddReviewAnnotationCommand,
+  AddTimelineNoteCommand,
   AddProjectBookmarkCommand,
   AddSubtitleClipCommand,
   AddTrackCommand,
@@ -42,6 +43,7 @@ import {
   RenameMediaFolderCommand,
   RemoveProjectAnnotationCommand,
   RemoveReviewAnnotationCommand,
+  RemoveTimelineNoteCommand,
   RemoveProjectBookmarkCommand,
   RemoveKeyframeCommand,
   RemoveTimelineMarkerCommand,
@@ -66,6 +68,7 @@ import {
   UpdateProjectProtectedRangesCommand,
   UpdateProjectAnnotationCommand,
   UpdateReviewAnnotationCommand,
+  UpdateTimelineNoteCommand,
   UpdateProjectBookmarkCommand,
   UpdateProjectBookmarksCommand,
   UpdateTimelineMarkerCommand,
@@ -565,6 +568,46 @@ describe('timeline commands', () => {
     expect(project.reviewAnnotations).toEqual([]);
     manager.redo();
     expect(project.reviewAnnotations[0].id).toBe('review-a');
+  });
+
+  it('adds, updates, removes, and restores timeline notes', () => {
+    let project = makeProject();
+    const accessor = {
+      getProject: () => project,
+      setProject: (next: typeof project) => {
+        project = next;
+      }
+    };
+    const manager = new CommandManager();
+
+    manager.execute(
+      new AddTimelineNoteCommand(accessor, {
+        id: 'note-a',
+        start: 3,
+        end: 1,
+        text: '  Check alt take  ',
+        color: '#38BDF8',
+        createdAt: '2026-06-15T00:00:01.000Z'
+      })
+    );
+    expect(project.timelineNotes).toEqual([
+      { id: 'note-a', start: 1, end: 3, text: 'Check alt take', color: '#38bdf8', createdAt: '2026-06-15T00:00:01.000Z' }
+    ]);
+
+    manager.execute(new UpdateTimelineNoteCommand(accessor, 'note-a', { start: 2, end: 99, text: '', color: 'invalid' }));
+    expect(project.timelineNotes[0]).toMatchObject({ id: 'note-a', start: 2, end: 10, text: 'Timeline note', color: '#facc15' });
+
+    manager.execute(new RemoveTimelineNoteCommand(accessor, 'note-a'));
+    expect(project.timelineNotes).toEqual([]);
+
+    manager.undo();
+    expect(project.timelineNotes[0].start).toBe(2);
+    manager.undo();
+    expect(project.timelineNotes[0].text).toBe('Check alt take');
+    manager.undo();
+    expect(project.timelineNotes).toEqual([]);
+    manager.redo();
+    expect(project.timelineNotes[0].id).toBe('note-a');
   });
 
   it('adds, updates, removes, and restores timeline bookmarks', () => {

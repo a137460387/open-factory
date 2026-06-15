@@ -4,6 +4,7 @@ import {
   AddCreditsClipCommand,
   AddProjectAnnotationCommand,
   AddProjectBookmarkCommand,
+  AddTimelineNoteCommand,
   AddTimelineMarkerCommand,
   BatchKeyframeEditCommand,
   BatchUpdateKeyframeCommand,
@@ -19,14 +20,17 @@ import {
   DeleteClipsCommand,
   PackNestedSequenceCommand,
   PROJECT_ANNOTATION_COLORS,
+  DEFAULT_TIMELINE_NOTE_COLOR,
   RemoveProjectBookmarkCommand,
   UpdateTrackCommand,
   RemoveProjectAnnotationCommand,
+  RemoveTimelineNoteCommand,
   RemoveTimelineMarkerCommand,
   RemoveTransitionCommand,
   UpdateClipCommand,
   UpdateProjectAnnotationCommand,
   UpdateProjectBookmarkCommand,
+  UpdateTimelineNoteCommand,
   UngroupCommand,
   UpdateClipGroupCommand,
   buildSlideClipEdit,
@@ -69,6 +73,7 @@ import {
   createTrack,
   detectOverlap,
   getTimelineDuration,
+  buildTimelineNoteLayout,
   getClipSourceVisibleDuration,
   getClipSpeed,
   getReplaceMediaCompatibilityWarnings,
@@ -86,11 +91,13 @@ import {
   parseTimecodeToSeconds,
   round,
   secondsToTimecode,
+  serializeTimelineNotesCsv,
   snapTime,
   snapTimelineTimeToGrid,
   sortTimelineThumbnailSamplesByPriority,
   volumeEnvelopeControlPointToKeyframe,
   TIMELINE_LABEL_COLORS,
+  TIMELINE_NOTE_COLORS,
   type Clip,
   type ClipGroup,
   type ClipGroupColor,
@@ -98,6 +105,7 @@ import {
   type KeyframeProperty,
   type MediaAsset,
   type ProjectAnnotation,
+  type TimelineNote,
   type TimelineBookmark,
   type ProtectedRange,
   type SilentRange,
@@ -107,6 +115,7 @@ import {
   type TimelineSnapCandidate,
   type TimelineGridSettings,
   type TimelineLabelColor,
+  type TimecodeFormat,
   type Track,
   type TrackPatch,
   type TransitionType,
@@ -122,7 +131,7 @@ import { showToast } from '../../lib/toast';
 import { detectClipSilence } from '../../lib/silenceDetection';
 import { canGenerateSubtitlesForClip, buildWhisperSubtitleTrackForClip, getWhisperAvailability, type WhisperAvailability } from '../../lib/whisper';
 import { TITLE_TEMPLATE_DRAG_MIME, isTitleTemplateId } from '../../lib/titleTemplates';
-import { detectSceneChanges, listenBridge, openFileDialog, type WhisperProgressEvent } from '../../lib/tauri-bridge';
+import { detectSceneChanges, listenBridge, openFileDialog, saveFileDialog, writeFile, type WhisperProgressEvent } from '../../lib/tauri-bridge';
 import { commandManager, projectAccessor, timelineAccessor } from '../../store/commandManager';
 import { useEditorStore, type SelectedKeyframeRef } from '../../store/editorStore';
 import { useRenderCacheStore } from '../../store/renderCacheStore';
@@ -202,6 +211,10 @@ export function Timeline({
   const [annotationMode, setAnnotationMode] = useState(false);
   const [annotationPanelOpen, setAnnotationPanelOpen] = useState(true);
   const [annotationEditor, setAnnotationEditor] = useState<AnnotationEditorState | undefined>();
+  const [timelineNotePanelOpen, setTimelineNotePanelOpen] = useState(false);
+  const [timelineNoteEditor, setTimelineNoteEditor] = useState<TimelineNoteEditorState | undefined>();
+  const [timelineNoteSearch, setTimelineNoteSearch] = useState('');
+  const [timelineNoteDraft, setTimelineNoteDraft] = useState<TimelineNoteDraftState | undefined>();
   const [localBookmarkPanelOpen, setLocalBookmarkPanelOpen] = useState(true);
   const bookmarkPanelOpen = controlledBookmarkPanelOpen ?? localBookmarkPanelOpen;
   const [bookmarkRename, setBookmarkRename] = useState<BookmarkRenameState | undefined>();
@@ -287,6 +300,15 @@ export function Timeline({
     return [{ id: 'current-in-out', start: Math.min(inPoint, outPoint), end: Math.max(inPoint, outPoint) }];
   }, [inPoint, outPoint, project.exportRanges, projectDuration]);
   const protectedRanges = useMemo(() => normalizeProtectedRanges(project.protectedRanges, projectDuration), [project.protectedRanges, projectDuration]);
+  const timelineNotes = useMemo(() => project.timelineNotes ?? [], [project.timelineNotes]);
+  const timelineNoteLayouts = useMemo(() => buildTimelineNoteLayout(timelineNotes), [timelineNotes]);
+  const filteredTimelineNotes = useMemo(() => {
+    const query = timelineNoteSearch.trim().toLowerCase();
+    if (!query) {
+      return timelineNotes;
+    }
+    return timelineNotes.filter((note) => note.text.toLowerCase().includes(query) || note.color.toLowerCase().includes(query));
+  }, [timelineNoteSearch, timelineNotes]);
   const allClips = useMemo(() => project.timeline.tracks.flatMap((track) => track.clips), [project.timeline]);
   const clipGroups = useMemo(() => normalizeClipGroups(project.clipGroups, allClips.map((clip) => clip.id)), [allClips, project.clipGroups]);
   const clipGroupByClipId = useMemo(() => {
@@ -356,6 +378,11 @@ export function Timeline({
         setVolumeEnvelopeMenu(undefined);
         return;
       }
+      if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === 'n' && !isEditableKeyboardTarget(event.target)) {
+        event.preventDefault();
+        quickAddTimelineNote();
+        return;
+      }
       if (event.shiftKey && event.key.toLowerCase() === 'p' && !isEditableKeyboardTarget(event.target)) {
         event.preventDefault();
         toggleProtectedRangeAtPlayhead();
@@ -395,7 +422,7 @@ export function Timeline({
       window.removeEventListener('keyup', onKeyUp);
       window.removeEventListener('blur', onBlur);
     };
-  }, [orderedTrackIds, playheadTime, project.protectedRanges, projectDuration, protectedRanges]);
+  }, [orderedTrackIds, playheadTime, project.protectedRanges, projectDuration, protectedRanges, timelineNotes.length]);
 
   useEffect(() => {
     syncScrollViewport();
@@ -772,6 +799,88 @@ function addProjectBookmark(time = playheadTime): void {
       commandManager.execute(new RemoveProjectAnnotationCommand(projectAccessor, annotationId));
     } catch (error) {
       showToast({ kind: 'warning', title: zhCN.timeline.annotationRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.removeAnnotationFailed });
+    }
+  }
+
+  function openTimelineNoteEditor(start: number, end?: number, note?: TimelineNote): void {
+    const normalizedStart = Math.max(0, snapTime(Math.min(start, end ?? start)));
+    const normalizedEnd = Math.max(normalizedStart + minFrameDuration(), snapTime(Math.max(end ?? start + 1, start)));
+    setTimelineNoteEditor({
+      id: note?.id,
+      start: note?.start ?? normalizedStart,
+      end: note?.end ?? normalizedEnd,
+      text: note?.text ?? zhCN.timeline.timelineNoteLabel(timelineNotes.length + 1),
+      color: note?.color ?? DEFAULT_TIMELINE_NOTE_COLOR
+    });
+  }
+
+  function quickAddTimelineNote(): void {
+    openTimelineNoteEditor(playheadTime, playheadTime + Math.max(1, minFrameDuration()));
+    setTimelineNotePanelOpen(true);
+    setAnnotationPanelOpen(false);
+    setBookmarkPanelVisible(false);
+  }
+
+  function saveTimelineNoteEditor(next: TimelineNoteEditorState): void {
+    try {
+      if (next.id) {
+        commandManager.execute(
+          new UpdateTimelineNoteCommand(projectAccessor, next.id, {
+            start: next.start,
+            end: next.end,
+            text: next.text,
+            color: next.color
+          })
+        );
+      } else {
+        commandManager.execute(
+          new AddTimelineNoteCommand(projectAccessor, {
+            id: createId('timeline-note'),
+            start: next.start,
+            end: next.end,
+            text: next.text,
+            color: next.color
+          })
+        );
+      }
+      setTimelineNoteEditor(undefined);
+      setTimelineNotePanelOpen(true);
+      setAnnotationPanelOpen(false);
+      setBookmarkPanelVisible(false);
+    } catch (error) {
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.timelineNoteRejectedTitle,
+        message: error instanceof Error ? error.message : next.id ? zhCN.timeline.updateTimelineNoteFailed : zhCN.timeline.addTimelineNoteFailed
+      });
+    }
+  }
+
+  function removeTimelineNote(noteId: string): void {
+    try {
+      commandManager.execute(new RemoveTimelineNoteCommand(projectAccessor, noteId));
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.timelineNoteRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.removeTimelineNoteFailed });
+    }
+  }
+
+  function onTimelineNoteRangeDraft(start: number, end: number): void {
+    openTimelineNoteEditor(start, end);
+    setTimelineNotePanelOpen(true);
+    setAnnotationPanelOpen(false);
+    setBookmarkPanelVisible(false);
+  }
+
+  async function exportTimelineNotesCsv(): Promise<void> {
+    try {
+      const path = await saveFileDialog('timeline-notes.csv', [{ name: zhCN.fileDialogs.csv, extensions: ['csv'] }]);
+      if (!path) {
+        return;
+      }
+      await writeFile(path, serializeTimelineNotesCsv(timelineNotes, project.settings.fps || 30));
+      showToast({ kind: 'success', title: zhCN.timeline.timelineNoteExported, message: path });
+    } catch (error) {
+      showToast({ kind: 'error', title: zhCN.timeline.timelineNoteExportFailed, message: error instanceof Error ? error.message : zhCN.timeline.timelineNoteExportFailedMessage });
     }
   }
 
@@ -1828,6 +1937,22 @@ function addProjectBookmark(time = playheadTime): void {
         >
           <MessageSquareText size={16} />
         </button>
+        <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.timelineNoteQuickAdd} data-testid="add-timeline-note-button" onClick={quickAddTimelineNote}>
+          <MessageSquarePlus size={16} />
+        </button>
+        <button
+          className={`rounded-md border p-2 hover:bg-panel ${timelineNotePanelOpen ? 'border-brand text-brand' : 'border-line'}`}
+          title={zhCN.timeline.timelineNoteList}
+          aria-pressed={timelineNotePanelOpen}
+          data-testid="toggle-timeline-note-panel-button"
+          onClick={() => {
+            setTimelineNotePanelOpen((open) => !open);
+            setAnnotationPanelOpen(false);
+            setBookmarkPanelVisible(false);
+          }}
+        >
+          <MessageSquareText size={16} />
+        </button>
         <button
           className={`rounded-md border p-2 hover:bg-panel ${envelopeEditMode ? 'border-brand bg-brand text-white' : 'border-line'}`}
           title={envelopeEditMode ? zhCN.timeline.envelopeEditModeActive : zhCN.timeline.envelopeEditMode}
@@ -1919,6 +2044,16 @@ function addProjectBookmark(time = playheadTime): void {
             protectedRanges={protectedRanges}
             onSeek={setPlayheadTime}
             onContextMenu={openRulerMenu}
+          />
+          <TimelineNoteLayer
+            width={width}
+            zoom={zoom}
+            notes={timelineNoteLayouts}
+            draft={timelineNoteDraft}
+            onDraftChange={setTimelineNoteDraft}
+            onCreateRange={onTimelineNoteRangeDraft}
+            onSeek={setPlayheadTime}
+            onEdit={(note) => openTimelineNoteEditor(note.start, note.end, note)}
           />
           {thumbnailTrackVisible ? <ThumbnailTrack samples={thumbnailTrackSamples} media={project.media} zoom={zoom} width={width} /> : null}
           <div className="relative">
@@ -2154,12 +2289,33 @@ function addProjectBookmark(time = playheadTime): void {
           onRemove={removeProjectBookmark}
         />
       ) : null}
+      {timelineNotePanelOpen ? (
+        <TimelineNoteListPanel
+          notes={filteredTimelineNotes}
+          search={timelineNoteSearch}
+          fps={project.settings.fps || 30}
+          timecodeFormat={project.settings.timecodeFormat ?? 'ndf'}
+          onSearch={setTimelineNoteSearch}
+          onSeek={setPlayheadTime}
+          onEdit={(note) => openTimelineNoteEditor(note.start, note.end, note)}
+          onRemove={removeTimelineNote}
+          onExportCsv={() => void exportTimelineNotesCsv()}
+        />
+      ) : null}
       {annotationEditor ? (
         <AnnotationEditorDialog
           value={annotationEditor}
           onChange={setAnnotationEditor}
           onCancel={() => setAnnotationEditor(undefined)}
           onSave={saveAnnotationEditor}
+        />
+      ) : null}
+      {timelineNoteEditor ? (
+        <TimelineNoteEditorDialog
+          value={timelineNoteEditor}
+          onChange={setTimelineNoteEditor}
+          onCancel={() => setTimelineNoteEditor(undefined)}
+          onSave={saveTimelineNoteEditor}
         />
       ) : null}
     </section>
@@ -2238,6 +2394,20 @@ interface AnnotationEditorState {
   time: number;
   text: string;
   color: string;
+}
+
+interface TimelineNoteEditorState {
+  id?: string;
+  start: number;
+  end: number;
+  text: string;
+  color: string;
+}
+
+interface TimelineNoteDraftState {
+  start: number;
+  end: number;
+  anchor: number;
 }
 
 interface BookmarkRenameState {
@@ -2322,6 +2492,197 @@ function TrackBatchMenu({
         {zhCN.timeline.close}
       </button>
     </div>
+  );
+}
+
+function TimelineNoteLayer({
+  width,
+  zoom,
+  notes,
+  draft,
+  onDraftChange,
+  onCreateRange,
+  onSeek,
+  onEdit
+}: {
+  width: number;
+  zoom: number;
+  notes: ReturnType<typeof buildTimelineNoteLayout>;
+  draft?: TimelineNoteDraftState;
+  onDraftChange(draft?: TimelineNoteDraftState): void;
+  onCreateRange(start: number, end: number): void;
+  onSeek(time: number): void;
+  onEdit(note: TimelineNote): void;
+}) {
+  const createdOrder = useMemo(
+    () =>
+      new Map(
+        [...notes]
+          .sort((left, right) => left.note.createdAt.localeCompare(right.note.createdAt) || left.note.id.localeCompare(right.note.id))
+          .map((layout, index) => [layout.note.id, index + 1])
+      ),
+    [notes]
+  );
+
+  function timeFromPointer(event: React.PointerEvent<HTMLDivElement>): number {
+    const rect = event.currentTarget.getBoundingClientRect();
+    return Math.max(0, snapTime((event.clientX - rect.left) / zoom));
+  }
+
+  function onPointerDown(event: React.PointerEvent<HTMLDivElement>): void {
+    if (event.button !== 0 || event.target !== event.currentTarget) {
+      return;
+    }
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const start = timeFromPointer(event);
+    onDraftChange({ start, end: start, anchor: start });
+  }
+
+  function onPointerMove(event: React.PointerEvent<HTMLDivElement>): void {
+    if (!draft) {
+      return;
+    }
+    const time = timeFromPointer(event);
+    onDraftChange({ ...draft, start: Math.min(draft.anchor, time), end: Math.max(draft.anchor, time) });
+  }
+
+  function onPointerUp(event: React.PointerEvent<HTMLDivElement>): void {
+    if (!draft) {
+      return;
+    }
+    event.currentTarget.releasePointerCapture(event.pointerId);
+    const time = timeFromPointer(event);
+    const start = Math.min(draft.anchor, time);
+    const end = Math.max(draft.anchor, time);
+    onDraftChange(undefined);
+    onCreateRange(start, end > start ? end : start + 1);
+  }
+
+  return (
+    <div className="flex h-6 border-b border-line bg-slate-50/80" data-testid="timeline-note-row" style={{ width: LABEL_WIDTH + width }}>
+      <div className="flex h-6 shrink-0 items-center border-r border-line px-2 text-[11px] font-semibold text-slate-500" style={{ width: LABEL_WIDTH }}>
+        {zhCN.timeline.timelineNoteLayer}
+      </div>
+      <div
+        className="relative h-6 cursor-crosshair overflow-hidden"
+        style={{ width }}
+        data-testid="timeline-note-layer"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+      >
+        {notes.map((layout) => {
+          const left = layout.note.start * zoom;
+          const noteWidth = Math.max(8, (layout.note.end - layout.note.start) * zoom);
+          return (
+            <button
+              key={layout.note.id}
+              className={`absolute top-[3px] h-[18px] overflow-hidden rounded-[3px] border border-white/80 px-1 text-left text-[10px] font-semibold text-slate-900 shadow-sm ${layout.overlaps ? 'ring-1 ring-slate-900/20' : ''}`}
+              style={{ left, width: noteWidth, backgroundColor: layout.note.color, zIndex: createdOrder.get(layout.note.id) ?? 1 }}
+              type="button"
+              title={`${layout.note.text} (${layout.note.start.toFixed(2)}s - ${layout.note.end.toFixed(2)}s)`}
+              data-testid={`timeline-note-block-${layout.note.id}`}
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation();
+                onSeek(layout.note.start);
+              }}
+              onDoubleClick={(event) => {
+                event.stopPropagation();
+                onEdit(layout.note);
+              }}
+            >
+              <span className="block truncate pointer-events-none">{layout.note.text}</span>
+            </button>
+          );
+        })}
+        {draft ? (
+          <div
+            className="pointer-events-none absolute top-[3px] h-[18px] rounded-[3px] border border-dashed border-slate-700 bg-slate-300/60"
+            style={{ left: draft.start * zoom, width: Math.max(8, (draft.end - draft.start) * zoom) }}
+            data-testid="timeline-note-draft"
+          />
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function TimelineNoteListPanel({
+  notes,
+  search,
+  fps,
+  timecodeFormat,
+  onSearch,
+  onSeek,
+  onEdit,
+  onRemove,
+  onExportCsv
+}: {
+  notes: TimelineNote[];
+  search: string;
+  fps: number;
+  timecodeFormat: TimecodeFormat;
+  onSearch(value: string): void;
+  onSeek(time: number): void;
+  onEdit(note: TimelineNote): void;
+  onRemove(noteId: string): void;
+  onExportCsv(): void;
+}) {
+  return (
+    <aside className="absolute bottom-3 right-3 top-16 z-50 flex w-80 flex-col overflow-hidden rounded-md border border-line bg-white shadow-soft" data-testid="timeline-note-panel">
+      <div className="border-b border-line px-3 py-2">
+        <div className="text-sm font-semibold text-ink">{zhCN.timeline.timelineNoteList}</div>
+        <div className="mt-2 flex gap-2">
+          <input
+            className="h-8 min-w-0 flex-1 rounded border border-line bg-white px-2 text-xs text-ink"
+            value={search}
+            placeholder={zhCN.timeline.timelineNoteSearchPlaceholder}
+            data-testid="timeline-note-search"
+            onChange={(event) => onSearch(event.target.value)}
+          />
+          <button className="rounded border border-line bg-white px-2 text-xs font-medium hover:bg-panel" type="button" data-testid="timeline-note-export-csv" onClick={onExportCsv}>
+            {zhCN.timeline.timelineNoteExportCsv}
+          </button>
+        </div>
+      </div>
+      {notes.length === 0 ? (
+        <div className="flex flex-1 items-center justify-center px-3 py-6 text-sm text-slate-500" data-testid="timeline-note-list-empty">
+          {zhCN.timeline.timelineNoteListEmpty}
+        </div>
+      ) : (
+        <div className="min-h-0 flex-1 overflow-auto p-2">
+          {notes.map((note) => (
+            <div key={note.id} className="mb-2 rounded-md border border-line bg-panel p-2 text-xs" data-testid={`timeline-note-list-row-${note.id}`}>
+              <button
+                className="flex w-full items-start gap-2 rounded text-left hover:bg-white"
+                type="button"
+                data-testid={`timeline-note-list-item-${note.id}`}
+                onClick={() => onSeek(note.start)}
+                onDoubleClick={() => onEdit(note)}
+              >
+                <span className="mt-1 h-3 w-3 shrink-0 rounded-[3px]" style={{ backgroundColor: note.color }} />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-semibold text-ink">{note.text}</span>
+                  <span className="mt-0.5 block tabular-nums text-slate-500">
+                    {secondsToTimecode(note.start, fps, timecodeFormat)} - {secondsToTimecode(note.end, fps, timecodeFormat)}
+                  </span>
+                </span>
+              </button>
+              <div className="mt-2 flex justify-end gap-2">
+                <button className="rounded border border-line bg-white px-2 py-1 hover:bg-panel" type="button" data-testid={`timeline-note-edit-${note.id}`} onClick={() => onEdit(note)}>
+                  {zhCN.timeline.timelineNoteEditTitle}
+                </button>
+                <button className="rounded border border-rose-200 bg-white px-2 py-1 text-rose-700 hover:bg-rose-50" type="button" data-testid={`timeline-note-delete-${note.id}`} onClick={() => onRemove(note.id)}>
+                  {zhCN.timeline.timelineNoteDelete}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </aside>
   );
 }
 
@@ -2553,6 +2914,94 @@ function AnnotationEditorDialog({
           </button>
           <button className="rounded bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-[#176858]" type="button" data-testid="annotation-save-button" onClick={() => onSave(value)}>
             {zhCN.timeline.annotationSave}
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function TimelineNoteEditorDialog({
+  value,
+  onChange,
+  onCancel,
+  onSave
+}: {
+  value: TimelineNoteEditorState;
+  onChange(value: TimelineNoteEditorState): void;
+  onCancel(): void;
+  onSave(value: TimelineNoteEditorState): void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/35 p-4" data-testid="timeline-note-editor">
+      <section className="w-full max-w-sm rounded-md border border-line bg-white shadow-soft">
+        <div className="border-b border-line px-4 py-3">
+          <h2 className="text-sm font-semibold">{value.id ? zhCN.timeline.timelineNoteEditTitle : zhCN.timeline.timelineNoteNewTitle}</h2>
+          <div className="mt-1 text-xs tabular-nums text-slate-500">
+            {value.start.toFixed(2)}s - {value.end.toFixed(2)}s
+          </div>
+        </div>
+        <div className="space-y-3 px-4 py-3">
+          <div className="grid grid-cols-2 gap-2">
+            <label className="block text-xs font-medium text-slate-600">
+              {zhCN.timeline.timelineNoteStart}
+              <input
+                className="mt-1 h-8 w-full rounded-md border border-line px-2 text-sm text-ink"
+                type="number"
+                min={0}
+                step={0.01}
+                value={value.start}
+                data-testid="timeline-note-start-input"
+                onChange={(event) => onChange({ ...value, start: Number(event.target.value) })}
+              />
+            </label>
+            <label className="block text-xs font-medium text-slate-600">
+              {zhCN.timeline.timelineNoteEnd}
+              <input
+                className="mt-1 h-8 w-full rounded-md border border-line px-2 text-sm text-ink"
+                type="number"
+                min={0}
+                step={0.01}
+                value={value.end}
+                data-testid="timeline-note-end-input"
+                onChange={(event) => onChange({ ...value, end: Number(event.target.value) })}
+              />
+            </label>
+          </div>
+          <label className="block text-xs font-medium text-slate-600">
+            {zhCN.timeline.timelineNoteText}
+            <textarea
+              className="mt-1 h-20 w-full resize-none rounded-md border border-line px-2 py-1.5 text-sm text-ink"
+              value={value.text}
+              maxLength={240}
+              data-testid="timeline-note-text-input"
+              onChange={(event) => onChange({ ...value, text: event.target.value })}
+            />
+          </label>
+          <div>
+            <div className="mb-1 text-xs font-medium text-slate-600">{zhCN.timeline.timelineNoteColor}</div>
+            <div className="flex gap-2">
+              {TIMELINE_NOTE_COLORS.map((color) => (
+                <button
+                  key={color}
+                  className={`h-7 w-7 rounded-full border ${value.color.toLowerCase() === color ? 'border-ink ring-2 ring-brand/30' : 'border-white'}`}
+                  style={{ backgroundColor: color }}
+                  type="button"
+                  title={color}
+                  aria-label={color}
+                  data-testid={`timeline-note-color-${color}`}
+                  onClick={() => onChange({ ...value, color })}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 border-t border-line px-4 py-3">
+          <button className="rounded border border-line px-3 py-2 text-sm font-medium hover:bg-panel" type="button" onClick={onCancel}>
+            {zhCN.common.cancel}
+          </button>
+          <button className="rounded bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-[#176858]" type="button" data-testid="timeline-note-save-button" onClick={() => onSave(value)}>
+            {zhCN.timeline.timelineNoteSave}
           </button>
         </div>
       </section>

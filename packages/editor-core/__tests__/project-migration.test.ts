@@ -446,6 +446,27 @@ describe('project schema migration', () => {
     expect(migrateProjectFile(file).project.reviewAnnotations).toEqual([]);
   });
 
+  it('serializes and migrates timeline notes while old project files default to none', () => {
+    const project = makeProject();
+    project.timelineNotes = [
+      { id: 'note-late', start: 6, end: 99, text: '  Check ending  ', color: '#FB923C', createdAt: '2026-06-15T00:00:02.000Z' },
+      { id: 'note-a', start: 3, end: 1, text: '', color: 'invalid', createdAt: '2026-06-15T00:00:01.000Z' },
+      { id: 'note-empty', start: 2, end: 2, text: 'skip', color: '#facc15', createdAt: '2026-06-15T00:00:03.000Z' }
+    ];
+
+    const file = serializeProject(project);
+    const migrated = migrateProjectFile(file);
+
+    expect(file.project.timelineNotes).toEqual([
+      { id: 'note-a', start: 1, end: 3, text: 'Timeline note', color: '#facc15', createdAt: '2026-06-15T00:00:01.000Z' },
+      { id: 'note-late', start: 6, end: 10, text: 'Check ending', color: '#fb923c', createdAt: '2026-06-15T00:00:02.000Z' }
+    ]);
+    expect(migrated.project.timelineNotes).toEqual(file.project.timelineNotes);
+
+    delete (file.project as Partial<typeof file.project>).timelineNotes;
+    expect(migrateProjectFile(file).project.timelineNotes).toEqual([]);
+  });
+
   it('serializes and migrates timeline bookmarks with legacy fallback', () => {
     const project = makeProject();
     project.bookmarks = [

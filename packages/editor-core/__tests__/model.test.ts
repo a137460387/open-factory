@@ -21,6 +21,7 @@ import {
   createTrack,
   createTimelineBookmark,
   createTimelineMarker,
+  createTimelineNote,
   createTransition,
   getProjectActiveSequenceId,
   getProjectPrimaryTimeline,
@@ -41,6 +42,7 @@ import {
   normalizeStabilization,
   normalizeTimelineBookmarks,
   normalizeTimelineMarkers,
+  normalizeTimelineNotes,
   normalizeTrackCompressor,
   normalizeTrackEQ,
   normalizeVideoRestoration,
@@ -97,6 +99,30 @@ describe('model factories', () => {
     ).toEqual([
       { id: 'bookmark-a', time: 0, note: 'Start' },
       { id: 'bookmark-b', time: 4, note: 'Bookmark' }
+    ]);
+  });
+
+  it('normalizes timeline notes with clamped ranges and palette colors', () => {
+    expect(createTimelineNote({ id: 'note-a', start: 5, end: 2, text: '  Check timing  ', color: '#FB923C', createdAt: '2026-06-15T00:00:00.000Z' }, 10)).toEqual({
+      id: 'note-a',
+      start: 2,
+      end: 5,
+      text: 'Check timing',
+      color: '#fb923c',
+      createdAt: '2026-06-15T00:00:00.000Z'
+    });
+    expect(
+      normalizeTimelineNotes(
+        [
+          { id: 'note-zero', start: 2, end: 2, text: 'skip', color: '#facc15', createdAt: '2026-06-15T00:00:02.000Z' },
+          { id: 'note-b', start: 4, end: 99, text: '', color: '#ffffff', createdAt: 'bad-date' },
+          { id: 'note-a', start: -1, end: 1, text: 'Start', color: '#34D399', createdAt: '2026-06-15T00:00:01.000Z' }
+        ],
+        10
+      ).map((note) => ({ ...note, createdAt: note.id === 'note-b' ? 'normalized-now' : note.createdAt }))
+    ).toEqual([
+      { id: 'note-a', start: 0, end: 1, text: 'Start', color: '#34d399', createdAt: '2026-06-15T00:00:01.000Z' },
+      { id: 'note-b', start: 4, end: 10, text: 'Timeline note', color: '#facc15', createdAt: 'normalized-now' }
     ]);
   });
 

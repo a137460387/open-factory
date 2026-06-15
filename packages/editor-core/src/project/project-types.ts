@@ -1,4 +1,4 @@
-import type { ClipGroup, ExportRange, MediaAsset, MediaFolder, MediaMetadata, ProjectAnnotation, ProjectSettings, ProtectedRange, ReviewAnnotation, Sequence, Timeline, TimelineBookmark } from '../model';
+import type { ClipGroup, ExportRange, MediaAsset, MediaFolder, MediaMetadata, ProjectAnnotation, ProjectSettings, ProtectedRange, ReviewAnnotation, Sequence, Timeline, TimelineBookmark, TimelineNote } from '../model';
 import type { BeatMarker } from '../beats';
 
 export interface ProjectFileV1 {
@@ -28,6 +28,7 @@ export interface ProjectFileV2 {
     mediaMetadata?: Record<string, MediaMetadata>;
     annotations?: ProjectAnnotation[];
     reviewAnnotations?: ReviewAnnotation[];
+    timelineNotes?: TimelineNote[];
     bookmarks?: TimelineBookmark[];
     beatMarkers?: BeatMarker[];
     exportRanges?: ExportRange[];

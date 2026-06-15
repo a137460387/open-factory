@@ -195,6 +195,7 @@ export interface Project {
   mediaMetadata: Record<string, MediaMetadata>;
   annotations: ProjectAnnotation[];
   reviewAnnotations: ReviewAnnotation[];
+  timelineNotes: TimelineNote[];
   bookmarks: TimelineBookmark[];
   beatMarkers: BeatMarker[];
   exportRanges: ExportRange[];
@@ -319,6 +320,15 @@ export interface ReviewAnnotation {
   y: number;
   width: number;
   height: number;
+}
+
+export interface TimelineNote {
+  id: string;
+  start: number;
+  end: number;
+  text: string;
+  color: string;
+  createdAt: string;
 }
 
 export interface ExportRange {
@@ -775,6 +785,8 @@ export const DEFAULT_TIMELINE_MARKER_COLOR = '#f97316';
 export const DEFAULT_PROJECT_ANNOTATION_COLOR = '#facc15';
 export const DEFAULT_REVIEW_ANNOTATION_COLOR = '#facc15';
 export const PROJECT_ANNOTATION_COLORS = ['#facc15', '#38bdf8', '#34d399', '#fb7185', '#a78bfa'] as const;
+export const TIMELINE_NOTE_COLORS = ['#facc15', '#38bdf8', '#34d399', '#fb7185', '#a78bfa', '#fb923c'] as const;
+export const DEFAULT_TIMELINE_NOTE_COLOR = TIMELINE_NOTE_COLORS[0];
 
 export const MIN_CLIP_SPEED = 0.25;
 export const MAX_CLIP_SPEED = 4;
@@ -904,6 +916,22 @@ export function createReviewAnnotation(
   };
 }
 
+export function createTimelineNote(
+  note: Omit<TimelineNote, 'id' | 'text' | 'color' | 'createdAt'> & Partial<Pick<TimelineNote, 'id' | 'text' | 'color' | 'createdAt'>>,
+  maxTime?: number
+): TimelineNote {
+  const start = normalizeTimelinePointTime(note.start, maxTime);
+  const end = normalizeTimelinePointTime(note.end, maxTime);
+  return {
+    id: note.id ?? createId('timeline-note'),
+    start: round(Math.min(start, end)),
+    end: round(Math.max(start, end)),
+    text: normalizeTimelineNoteText(note.text),
+    color: normalizeTimelineNoteColor(note.color),
+    createdAt: normalizeIsoDate(note.createdAt)
+  };
+}
+
 export function createExportRange(
   range: Omit<ExportRange, 'id' | 'label'> & Partial<Pick<ExportRange, 'id' | 'label'>>,
   maxTime?: number
@@ -971,6 +999,7 @@ export function createProject(name = 'Untitled Project'): Project {
     mediaMetadata: {},
     annotations: [],
     reviewAnnotations: [],
+    timelineNotes: [],
     bookmarks: [],
     beatMarkers: [],
     exportRanges: [],
@@ -1471,6 +1500,20 @@ export function normalizeReviewAnnotations(annotations: ReviewAnnotation[] | und
     .sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
 }
 
+export function normalizeTimelineNote(note: TimelineNote, maxTime?: number): TimelineNote | undefined {
+  const normalized = createTimelineNote(note, maxTime);
+  return normalized.end > normalized.start ? normalized : undefined;
+}
+
+export function normalizeTimelineNotes(notes: TimelineNote[] | undefined, maxTime?: number): TimelineNote[] {
+  return [...(notes ?? [])]
+    .flatMap((note) => {
+      const normalized = normalizeTimelineNote(note, maxTime);
+      return normalized ? [normalized] : [];
+    })
+    .sort((left, right) => left.start - right.start || left.end - right.end || left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id));
+}
+
 export function normalizeExportRange(range: ExportRange, maxTime?: number): ExportRange | undefined {
   const normalized = createExportRange(range, maxTime);
   return normalized.end > normalized.start ? normalized : undefined;
@@ -1800,6 +1843,11 @@ function normalizeReviewAnnotationText(text: string | undefined): string {
   return trimmed ? trimmed.slice(0, 240) : 'Review annotation';
 }
 
+function normalizeTimelineNoteText(text: string | undefined): string {
+  const trimmed = text?.trim();
+  return trimmed ? trimmed.slice(0, 240) : 'Timeline note';
+}
+
 function normalizeReviewAnnotationType(type: ReviewAnnotationType | undefined): ReviewAnnotationType {
   return type === 'rectangle' || type === 'arrow' || type === 'text' ? type : 'text';
 }
@@ -1815,6 +1863,18 @@ function normalizeReviewAnnotationDimension(value: number | undefined, type: Rev
     return round(Math.min(1, Math.max(-1, finite || fallback)));
   }
   return round(Math.min(1, Math.max(0.01, Math.abs(finite || fallback))));
+}
+
+function normalizeTimelineNoteColor(color: string | undefined): string {
+  const normalized = normalizeHexColor(color, DEFAULT_TIMELINE_NOTE_COLOR);
+  return (TIMELINE_NOTE_COLORS as readonly string[]).includes(normalized) ? normalized : DEFAULT_TIMELINE_NOTE_COLOR;
+}
+
+function normalizeIsoDate(value: string | undefined): string {
+  if (value && Number.isFinite(Date.parse(value))) {
+    return new Date(value).toISOString();
+  }
+  return new Date().toISOString();
 }
 
 function normalizeExportRangeLabel(label: string | undefined): string {
