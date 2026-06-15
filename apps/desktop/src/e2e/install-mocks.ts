@@ -19,6 +19,7 @@ import { usePrivacyDetectionSettingsStore } from '../store/privacyDetectionSetti
 import type { BatchTranscodeTaskResult, ExportPreviewSamplesResult, GifExportRequest, GifPreviewRequest, TauriMocks, WebdavExportUploadRequest, WebdavProjectBackupRequest } from '../lib/tauri-bridge';
 import { clearPluginHookLog, getPluginHookLog, refreshPluginRegistry } from '../plugins/plugin-manager';
 import { useExportQueueStore } from '../export/export-queue-store';
+import { useMediaJobStore } from '../media/media-job-store';
 
 const PERSISTED_FILES_KEY = 'open-factory:e2e-files';
 const PERSISTED_MTIMES_KEY = 'open-factory:e2e-mtimes';
@@ -302,6 +303,12 @@ const mocks: TauriMocks = {
     drawtextWarning: null
   }),
   getAvailableMemoryBytes: () => availableMemoryBytes,
+  getSystemResourceSnapshot: () => ({
+    cpuUsage: 37,
+    totalMemoryBytes: 16 * 1024 * 1024 * 1024,
+    availableMemoryBytes,
+    usedMemoryBytes: 16 * 1024 * 1024 * 1024 - availableMemoryBytes
+  }),
   runExport: async (plan, taskId) => {
     lastExportPlan = plan;
     exportRunCalls.push({ taskId, fullArgs: [...plan.fullArgs], duration: plan.duration });
@@ -1397,6 +1404,18 @@ window.__E2E_ACTIONS__ = {
     }
   },
   getSelectedClipIds: () => useEditorStore.getState().selectedClipIds,
+  enqueueMockMediaJob: (input: unknown) => {
+    const job = input as { id?: string; assetId?: string; assetName?: string; type?: string; status?: string; progress?: number; error?: string };
+    return useMediaJobStore.getState().enqueueMonitorJob({
+      id: job.id,
+      assetId: job.assetId ?? 'mock-asset',
+      assetName: job.assetName ?? 'mock-task.mov',
+      type: job.type === 'gif-preview' || job.type === 'vfr-conversion' || job.type === 'frame-rate-conversion' || job.type === 'stabilization-analysis' || job.type === 'waveform' ? job.type : 'proxy',
+      status: job.status === 'running' || job.status === 'success' || job.status === 'error' || job.status === 'canceled' ? job.status : 'pending',
+      progress: typeof job.progress === 'number' ? job.progress : 0,
+      error: job.error
+    });
+  },
   getExportRanges: () => useEditorStore.getState().project.exportRanges,
   getProjectSnapshot: () => useEditorStore.getState().project,
   getProjectMedia: () => useEditorStore.getState().project.media,

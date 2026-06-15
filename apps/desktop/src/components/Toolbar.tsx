@@ -17,6 +17,7 @@ import { useExportQueueStore } from '../export/export-queue-store';
 import { zhCN } from '../i18n/strings';
 import { pickWhisperExecutablePath, pickWhisperModelPath } from '../lib/whisper';
 import { showToast } from '../lib/toast';
+import { useMediaJobStore } from '../media/media-job-store';
 import { PREVIEW_QUALITY_MODES, type PreviewQualityMode } from '../lib/preview/preview-performance';
 import { useEditorStore } from '../store/editorStore';
 import { useWhisperSettingsStore } from '../store/whisperSettingsStore';
@@ -130,6 +131,7 @@ export function Toolbar(props: ToolbarProps) {
   const historyMeta = useEditorStore((state) => state.historyMeta);
   const dirty = useEditorStore((state) => state.dirty);
   const runningExportTask = useExportQueueStore((state) => state.tasks.find((task) => task.status === 'running'));
+  const activeMediaJobCount = useMediaJobStore((state) => state.jobs.filter((job) => job.status === 'pending' || job.status === 'running').length);
   const whisperExecutablePath = useWhisperSettingsStore((state) => state.executablePath);
   const whisperModelPath = useWhisperSettingsStore((state) => state.modelPath);
   const setWhisperExecutablePath = useWhisperSettingsStore((state) => state.setExecutablePath);
@@ -857,6 +859,19 @@ export function Toolbar(props: ToolbarProps) {
       </select>
       <div className="mx-1 h-7 w-px bg-line" />
       <ToolButton title={isPlaying ? t.pause : t.play} onClick={() => setIsPlaying(!isPlaying)} icon={isPlaying ? <Pause size={17} /> : <Play size={17} />} testId="toolbar-playback-button" playbackState={isPlaying ? 'playing' : 'paused'} />
+      {activeMediaJobCount > 0 ? (
+        <button
+          className="inline-flex h-8 items-center gap-1 rounded-full border border-line bg-panel px-2 text-xs font-semibold text-slate-700 hover:bg-white"
+          type="button"
+          title={zhCN.settings.taskMonitor.title}
+          aria-label={zhCN.settings.taskMonitor.title}
+          data-testid="media-job-monitor-badge"
+          onClick={props.onOpenSettings}
+        >
+          <Monitor size={13} />
+          <span data-testid="media-job-monitor-badge-count">{activeMediaJobCount}</span>
+        </button>
+      ) : null}
       {typeof exportProgress === 'number' ? (
         <div className="ml-auto flex min-w-[220px] items-center gap-2">
           <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-200">

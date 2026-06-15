@@ -48,6 +48,15 @@ pub struct FfmpegCapabilities {
     drawtext_warning: Option<String>,
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SystemResourceSnapshot {
+    cpu_usage: f32,
+    total_memory_bytes: u64,
+    available_memory_bytes: u64,
+    used_memory_bytes: u64,
+}
+
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct HardwareEncoderProbe {
@@ -986,6 +995,21 @@ pub fn get_available_memory_bytes() -> u64 {
     let mut system = sysinfo::System::new();
     system.refresh_memory();
     system.available_memory()
+}
+
+#[tauri::command]
+pub fn get_system_resource_snapshot() -> SystemResourceSnapshot {
+    let mut system = sysinfo::System::new_all();
+    system.refresh_cpu();
+    system.refresh_memory();
+    let total_memory_bytes = system.total_memory();
+    let available_memory_bytes = system.available_memory();
+    SystemResourceSnapshot {
+        cpu_usage: system.global_cpu_info().cpu_usage(),
+        total_memory_bytes,
+        available_memory_bytes,
+        used_memory_bytes: total_memory_bytes.saturating_sub(available_memory_bytes),
+    }
 }
 
 pub fn should_pause_export_for_memory(available_memory_bytes: u64) -> bool {

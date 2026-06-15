@@ -118,6 +118,13 @@ export interface MediaProbe {
   fieldOrder?: string;
 }
 
+export interface SystemResourceSnapshot {
+  cpuUsage: number;
+  totalMemoryBytes: number;
+  availableMemoryBytes: number;
+  usedMemoryBytes: number;
+}
+
 export interface MediaFormatInfo {
   formatName?: string;
   formatLongName?: string;
@@ -436,6 +443,7 @@ export type TauriMocks = Partial<{
   detectFfmpeg(): Promise<boolean> | boolean;
   getFfmpegCapabilities(): Promise<FfmpegCapabilities> | FfmpegCapabilities;
   getAvailableMemoryBytes(): Promise<number> | number;
+  getSystemResourceSnapshot(): Promise<SystemResourceSnapshot> | SystemResourceSnapshot;
   runExport(plan: FfmpegExportPlan, taskId?: string): Promise<ExportResult> | ExportResult;
   runExportPreviewSamples(request: ExportPreviewSamplesRequest): Promise<ExportPreviewSamplesResult> | ExportPreviewSamplesResult;
   createSharePackage(request: SharePackageRequest): Promise<SharePackageResult> | SharePackageResult;
@@ -857,6 +865,14 @@ export async function getAvailableMemoryBytes(): Promise<number> {
     return mock();
   }
   return invoke<number>('get_available_memory_bytes');
+}
+
+export async function getSystemResourceSnapshot(): Promise<SystemResourceSnapshot> {
+  const mock = getTauriMocks()?.getSystemResourceSnapshot;
+  if (mock) {
+    return mock();
+  }
+  return invoke<SystemResourceSnapshot>('get_system_resource_snapshot');
 }
 
 export async function runExport(plan: FfmpegExportPlan, taskId?: string): Promise<ExportResult> {

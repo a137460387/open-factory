@@ -279,6 +279,7 @@ const zh = {
       automation: '自动化',
       translation: '字幕翻译',
       proxy: '代理媒体',
+      taskMonitor: '任务监控',
       backup: '备份',
       plugins: '插件'
     },
@@ -516,6 +517,36 @@ const zh = {
         error: '失败'
       },
       reset: '恢复默认'
+    },
+    taskMonitor: {
+      title: '任务监控',
+      description: '统一查看代理生成、波形解码、GIF 预览和转码分析等本机后台任务。',
+      cancelAll: '全部取消',
+      retryFailed: '重试失败',
+      clearFinished: '清除完成',
+      cancel: '取消任务',
+      retry: '重试任务',
+      cpuUsage: 'CPU 占用',
+      memoryUsage: '内存占用',
+      runningCount: '等待/运行',
+      etaUnknown: '预计 --',
+      etaSeconds: (seconds: number) => `约 ${seconds}s`,
+      empty: '当前没有后台任务。',
+      types: {
+        proxy: '代理生成',
+        waveform: '波形解码',
+        'gif-preview': 'GIF 预览',
+        'vfr-conversion': 'VFR 转换',
+        'frame-rate-conversion': '帧率转换',
+        'stabilization-analysis': '稳定化分析'
+      },
+      statuses: {
+        pending: '等待',
+        running: '运行',
+        success: '完成',
+        error: '失败',
+        canceled: '已取消'
+      }
     },
     backup: {
       title: '备份',
@@ -787,7 +818,11 @@ const zh = {
     },
     jobType: {
       proxy: '代理',
-      waveform: '波形'
+      waveform: '波形',
+      'gif-preview': 'GIF 预览',
+      'vfr-conversion': 'VFR 转换',
+      'frame-rate-conversion': '帧率转换',
+      'stabilization-analysis': '稳定化分析'
     },
     assetType: {
       video: '视频',
@@ -2863,6 +2898,7 @@ const enOverrides = {
       automation: 'Automation',
       translation: 'Subtitle Translation',
       proxy: 'Proxy Media',
+      taskMonitor: 'Task Monitor',
       backup: 'Backup',
       plugins: 'Plugins'
     },
@@ -3100,6 +3136,36 @@ const enOverrides = {
         error: 'Failed'
       },
       reset: 'Reset Defaults'
+    },
+    taskMonitor: {
+      title: 'Task Monitor',
+      description: 'Review local background work for proxy generation, waveform decoding, GIF previews, and transcode analysis.',
+      cancelAll: 'Cancel All',
+      retryFailed: 'Retry Failed',
+      clearFinished: 'Clear Finished',
+      cancel: 'Cancel Task',
+      retry: 'Retry Task',
+      cpuUsage: 'CPU Usage',
+      memoryUsage: 'Memory Usage',
+      runningCount: 'Waiting/Running',
+      etaUnknown: 'ETA --',
+      etaSeconds: (seconds: number) => `~${seconds}s`,
+      empty: 'No background tasks.',
+      types: {
+        proxy: 'Proxy Generation',
+        waveform: 'Waveform Decode',
+        'gif-preview': 'GIF Preview',
+        'vfr-conversion': 'VFR Conversion',
+        'frame-rate-conversion': 'Frame Rate Conversion',
+        'stabilization-analysis': 'Stabilization Analysis'
+      },
+      statuses: {
+        pending: 'Waiting',
+        running: 'Running',
+        success: 'Complete',
+        error: 'Failed',
+        canceled: 'Canceled'
+      }
     },
     backup: {
       title: 'Backup',
@@ -3371,7 +3437,11 @@ const enOverrides = {
     },
     jobType: {
       proxy: 'Proxy',
-      waveform: 'Waveform'
+      waveform: 'Waveform',
+      'gif-preview': 'GIF Preview',
+      'vfr-conversion': 'VFR Conversion',
+      'frame-rate-conversion': 'Frame Rate Conversion',
+      'stabilization-analysis': 'Stabilization Analysis'
     },
     assetType: {
       video: 'Video',

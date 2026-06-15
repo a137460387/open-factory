@@ -44,6 +44,7 @@ pub fn run() {
             commands::ffmpeg::detect_ffmpeg,
             commands::ffmpeg::get_ffmpeg_capabilities,
             commands::ffmpeg::get_available_memory_bytes,
+            commands::ffmpeg::get_system_resource_snapshot,
             commands::ffmpeg::analyze_clip,
             commands::ffmpeg::analyze_motion_track,
             commands::ffmpeg::evaluate_export_quality,

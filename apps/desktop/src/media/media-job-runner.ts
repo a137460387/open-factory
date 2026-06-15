@@ -5,6 +5,7 @@ import { useProxySettingsStore } from '../store/proxySettingsStore';
 import { createProxyForAsset } from './proxy';
 import { getWaveform } from './waveform';
 import { useMediaJobStore, type MediaJob } from './media-job-store';
+import { shouldIgnoreMediaJobCompletion } from './media-job-monitor';
 
 let runnerPromise: Promise<void> | undefined;
 export const MEDIA_JOB_MAX_CONCURRENT = 3;
@@ -50,8 +51,14 @@ async function runJobs(): Promise<void> {
 async function runJobWithStatus(job: MediaJob): Promise<void> {
   try {
     await runJob(job);
+    if (shouldIgnoreMediaJobCompletion(useMediaJobStore.getState().jobs.find((item) => item.id === job.id)?.status ?? job.status)) {
+      return;
+    }
     useMediaJobStore.getState().finishJob(job.id);
   } catch (error) {
+    if (shouldIgnoreMediaJobCompletion(useMediaJobStore.getState().jobs.find((item) => item.id === job.id)?.status ?? job.status)) {
+      return;
+    }
     useMediaJobStore.getState().failJob(job.id, error instanceof Error ? error.message : zhCN.errors.mediaJobFailed);
     if (job.type === 'proxy') {
       updateMediaAsset(job.assetId, (asset) => ({
