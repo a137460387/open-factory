@@ -1,10 +1,12 @@
 import {
+  AddKeyframeCommand,
   AddClipCommand,
   AddCreditsClipCommand,
   AddProjectAnnotationCommand,
   AddProjectBookmarkCommand,
   AddTimelineMarkerCommand,
   BatchKeyframeEditCommand,
+  BatchUpdateKeyframeCommand,
   BatchUpdateTrackCommand,
   AddTrackCommand,
   AddTransitionCommand,
@@ -35,6 +37,7 @@ import {
   buildTimelineThumbnailTrackSamples,
   buildTimelineRulerTicks,
   buildTimelineGridLines,
+  buildVolumeFadeKeyframes,
   clampTimelineZoom,
   DEFAULT_TIMELINE_GRID_SETTINGS,
   findTimelineSnapTargetWithGrid,
@@ -43,6 +46,7 @@ import {
   ensurePlayheadVisible,
   MoveClipCommand,
   MoveClipsCommand,
+  RemoveKeyframeCommand,
   RemoveSilenceCommand,
   ReplaceMediaCommand,
   RippleDeleteCommand,
@@ -85,6 +89,7 @@ import {
   snapTime,
   snapTimelineTimeToGrid,
   sortTimelineThumbnailSamplesByPriority,
+  volumeEnvelopeControlPointToKeyframe,
   TIMELINE_LABEL_COLORS,
   type Clip,
   type ClipGroup,
@@ -108,7 +113,7 @@ import {
   type ReplaceMediaCompatibilityWarning,
   type ReplaceMediaDurationMode
 } from '@open-factory/editor-core';
-import { Bookmark, Captions, Flag, Group, MessageSquarePlus, MessageSquareText, Music2, Plus, Scissors, Trash2, Type, Ungroup } from 'lucide-react';
+import { AudioWaveform, Bookmark, Captions, Flag, Group, MessageSquarePlus, MessageSquareText, Music2, Plus, Scissors, Trash2, Type, Ungroup } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createCreditsClip, createTextClip } from '../../lib/clipFactory';
 import { probeMediaPath } from '../../lib/media';
@@ -122,7 +127,7 @@ import { commandManager, projectAccessor, timelineAccessor } from '../../store/c
 import { useEditorStore, type SelectedKeyframeRef } from '../../store/editorStore';
 import { useRenderCacheStore } from '../../store/renderCacheStore';
 import { useWhisperSettingsStore } from '../../store/whisperSettingsStore';
-import { LABEL_WIDTH, Ruler, ThumbnailTrack, TrackRow, type ClipMenuRequest, type DragState, type GapMenuRequest } from './TimelineParts';
+import { LABEL_WIDTH, Ruler, ThumbnailTrack, TrackRow, type ClipMenuRequest, type DragState, type GapMenuRequest, type VolumeEnvelopeMenuRequest, type VolumeEnvelopePointRequest } from './TimelineParts';
 import { buildRulerContextMenuItems, type RulerContextMenuAction } from './timeline-ruler-menu';
 
 function isCreditsTextFile(file: File): boolean {
@@ -179,6 +184,7 @@ export function Timeline({
   const [selectionStart, setSelectionStart] = useState<{ x: number; y: number } | undefined>();
   const [transitionMenu, setTransitionMenu] = useState<TransitionMenuState | undefined>();
   const [clipMenu, setClipMenu] = useState<ClipMenuState | undefined>();
+  const [volumeEnvelopeMenu, setVolumeEnvelopeMenu] = useState<VolumeEnvelopeMenuState | undefined>();
   const [gapMenu, setGapMenu] = useState<GapMenuState | undefined>();
   const [rulerMenu, setRulerMenu] = useState<RulerMenuState | undefined>();
   const [silenceDialog, setSilenceDialog] = useState<SilenceDialogState | undefined>();
@@ -195,6 +201,7 @@ export function Timeline({
   const [bookmarkPanelOpen, setBookmarkPanelOpen] = useState(true);
   const [bookmarkRename, setBookmarkRename] = useState<BookmarkRenameState | undefined>();
   const [timelineColorFilter, setTimelineColorFilter] = useState<TimelineLabelColor | null>(null);
+  const [envelopeEditMode, setEnvelopeEditMode] = useState(false);
   const [selectedTrackIds, setSelectedTrackIds] = useState<string[]>([]);
   const [trackSelectionAnchorId, setTrackSelectionAnchorId] = useState<string | undefined>();
   const [trackBatchMenu, setTrackBatchMenu] = useState<TrackBatchMenuState | undefined>();
@@ -332,6 +339,12 @@ export function Timeline({
         setTrackSelectionAnchorId(orderedTrackIds[0]);
         return;
       }
+      if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === 'e' && !isEditableKeyboardTarget(event.target)) {
+        event.preventDefault();
+        setEnvelopeEditMode((active) => !active);
+        setVolumeEnvelopeMenu(undefined);
+        return;
+      }
       if (event.shiftKey && event.key.toLowerCase() === 'p' && !isEditableKeyboardTarget(event.target)) {
         event.preventDefault();
         toggleProtectedRangeAtPlayhead();
@@ -414,6 +427,7 @@ export function Timeline({
     }
     setGapMenu(undefined);
     setClipMenu(undefined);
+    setVolumeEnvelopeMenu(undefined);
     setTransitionMenu(undefined);
     setRulerMenu(undefined);
     setTrackBatchMenu({
@@ -647,6 +661,7 @@ function addProjectBookmark(time = playheadTime): void {
   function openRulerMenu(request: { time: number; x: number; y: number }): void {
     setGapMenu(undefined);
     setClipMenu(undefined);
+    setVolumeEnvelopeMenu(undefined);
     setTransitionMenu(undefined);
     setRulerMenu({
       x: Math.min(request.x, Math.max(0, window.innerWidth - 230)),
@@ -1191,6 +1206,7 @@ function addProjectBookmark(time = playheadTime): void {
   function openGapMenu(request: GapMenuRequest): void {
     setTransitionMenu(undefined);
     setClipMenu(undefined);
+    setVolumeEnvelopeMenu(undefined);
     setRulerMenu(undefined);
     setGapMenu({
       ...request,
@@ -1221,6 +1237,7 @@ function addProjectBookmark(time = playheadTime): void {
     }
     setTransitionMenu(undefined);
     setClipMenu(undefined);
+    setVolumeEnvelopeMenu(undefined);
     setGapMenu(undefined);
     setRulerMenu(undefined);
     if (event.target !== event.currentTarget) {
@@ -1245,6 +1262,7 @@ function addProjectBookmark(time = playheadTime): void {
   function openClipMenu(request: ClipMenuRequest): void {
     setTransitionMenu(undefined);
     setGapMenu(undefined);
+    setVolumeEnvelopeMenu(undefined);
     setRulerMenu(undefined);
     if (!selectedClipIds.includes(request.clipId)) {
       const group = clipGroupByClipId.get(request.clipId);
@@ -1255,6 +1273,87 @@ function addProjectBookmark(time = playheadTime): void {
       x: Math.min(request.x, Math.max(0, window.innerWidth - 260)),
       y: Math.min(request.y, Math.max(0, window.innerHeight - 360))
     });
+  }
+
+  function addVolumeEnvelopePoint(request: VolumeEnvelopePointRequest): void {
+    const clip = findClip(request.clipId);
+    if (!('volume' in clip)) {
+      return;
+    }
+    try {
+      const keyframe = volumeEnvelopeControlPointToKeyframe({ time: request.time, value: request.value }, clip.duration);
+      commandManager.execute(new AddKeyframeCommand(timelineAccessor, clip.id, 'volume', keyframe));
+      setSelectedClipId(clip.id);
+      setSelectedKeyframe({ clipId: clip.id, property: 'volume', keyframeId: keyframe.id });
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.volumeEnvelopeRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.volumeEnvelopeRejectedMessage });
+    }
+  }
+
+  function updateVolumeEnvelopePoint(request: Required<VolumeEnvelopePointRequest>): void {
+    try {
+      commandManager.execute(new UpdateKeyframeCommand(timelineAccessor, request.clipId, 'volume', request.keyframeId, { time: request.time, value: request.value }));
+      setSelectedClipId(request.clipId);
+      setSelectedKeyframe({ clipId: request.clipId, property: 'volume', keyframeId: request.keyframeId });
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.volumeEnvelopeRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.volumeEnvelopeRejectedMessage });
+    }
+  }
+
+  function removeVolumeEnvelopePoint(request: Required<Pick<VolumeEnvelopePointRequest, 'clipId' | 'keyframeId'>>): void {
+    try {
+      commandManager.execute(new RemoveKeyframeCommand(timelineAccessor, request.clipId, 'volume', request.keyframeId));
+      setSelectedKeyframes([]);
+      setSelectedClipId(request.clipId);
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.volumeEnvelopeRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.volumeEnvelopeRejectedMessage });
+    }
+  }
+
+  function openVolumeEnvelopeMenu(request: VolumeEnvelopeMenuRequest): void {
+    setTransitionMenu(undefined);
+    setClipMenu(undefined);
+    setGapMenu(undefined);
+    setRulerMenu(undefined);
+    setSelectedClipId(request.clipId);
+    setVolumeEnvelopeMenu({
+      ...request,
+      x: Math.min(request.x, Math.max(0, window.innerWidth - 180)),
+      y: Math.min(request.y, Math.max(0, window.innerHeight - 170))
+    });
+  }
+
+  function applyVolumeEnvelopeFade(kind: 'in' | 'out'): void {
+    if (!volumeEnvelopeMenu) {
+      return;
+    }
+    const clip = findClip(volumeEnvelopeMenu.clipId);
+    if (!('volume' in clip)) {
+      return;
+    }
+    try {
+      const keyframes = buildVolumeFadeKeyframes(kind, clip.duration, clip.volume, Math.min(1, clip.duration));
+      commandManager.execute(new BatchUpdateKeyframeCommand(timelineAccessor, [{ clipId: clip.id, property: 'volume', keyframes }], zhCN.timeline.volumeEnvelopeFadeCommand));
+      setSelectedClipId(clip.id);
+      setSelectedKeyframes(keyframes.map((frame) => ({ clipId: clip.id, property: 'volume', keyframeId: frame.id })));
+      setVolumeEnvelopeMenu(undefined);
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.volumeEnvelopeRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.volumeEnvelopeRejectedMessage });
+    }
+  }
+
+  function resetVolumeEnvelope(): void {
+    if (!volumeEnvelopeMenu) {
+      return;
+    }
+    try {
+      commandManager.execute(new BatchUpdateKeyframeCommand(timelineAccessor, [{ clipId: volumeEnvelopeMenu.clipId, property: 'volume', keyframes: [], replace: true }], zhCN.timeline.volumeEnvelopeResetCommand));
+      setSelectedKeyframes([]);
+      setSelectedClipId(volumeEnvelopeMenu.clipId);
+      setVolumeEnvelopeMenu(undefined);
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.volumeEnvelopeRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.volumeEnvelopeRejectedMessage });
+    }
   }
 
   function openSilenceDetection(clipId: string): void {
@@ -1718,6 +1817,18 @@ function addProjectBookmark(time = playheadTime): void {
         >
           <MessageSquareText size={16} />
         </button>
+        <button
+          className={`rounded-md border p-2 hover:bg-panel ${envelopeEditMode ? 'border-brand bg-brand text-white' : 'border-line'}`}
+          title={envelopeEditMode ? zhCN.timeline.envelopeEditModeActive : zhCN.timeline.envelopeEditMode}
+          aria-pressed={envelopeEditMode}
+          data-testid="toggle-envelope-edit-mode-button"
+          onClick={() => {
+            setEnvelopeEditMode((active) => !active);
+            setVolumeEnvelopeMenu(undefined);
+          }}
+        >
+          <AudioWaveform size={16} />
+        </button>
         <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.splitSelectedClip} onClick={splitSelected}>
           <Scissors size={16} />
         </button>
@@ -1834,6 +1945,7 @@ function addProjectBookmark(time = playheadTime): void {
                   {
                     setGapMenu(undefined);
                     setClipMenu(undefined);
+                    setVolumeEnvelopeMenu(undefined);
                     setRulerMenu(undefined);
                     setTransitionMenu({
                       ...request,
@@ -1846,6 +1958,10 @@ function addProjectBookmark(time = playheadTime): void {
                 }
                 onGapMenu={openGapMenu}
                 onClipMenu={openClipMenu}
+                onVolumeEnvelopeAdd={addVolumeEnvelopePoint}
+                onVolumeEnvelopeUpdate={updateVolumeEnvelopePoint}
+                onVolumeEnvelopeRemove={removeVolumeEnvelopePoint}
+                onVolumeEnvelopeMenu={openVolumeEnvelopeMenu}
                 onClipDoubleClick={openNestedSequence}
                 virtualWindow={virtualWindow}
                 rollingTrimActive={rollingTrimActive}
@@ -1854,6 +1970,7 @@ function addProjectBookmark(time = playheadTime): void {
                 clipGroupByClipId={clipGroupByClipId}
                 colorFilter={timelineColorFilter}
                 projectFrameRate={project.settings.fps}
+                envelopeEditMode={envelopeEditMode}
               />
             ))}
             {protectedRanges.map((range) => (
@@ -1925,6 +2042,7 @@ function addProjectBookmark(time = playheadTime): void {
               />
             ) : null}
             {gapMenu ? <GapActionMenu menu={gapMenu} onClose={() => setGapMenu(undefined)} onCloseGap={closeGap} /> : null}
+            {volumeEnvelopeMenu ? <VolumeEnvelopeMenu menu={volumeEnvelopeMenu} onFade={applyVolumeEnvelopeFade} onReset={resetVolumeEnvelope} onClose={() => setVolumeEnvelopeMenu(undefined)} /> : null}
             {clipMenu ? (
               <ClipActionMenu
                 menu={clipMenu}
@@ -2054,6 +2172,12 @@ interface ClipMenuState {
   y: number;
   clipId: string;
   clipType: Clip['type'];
+}
+
+interface VolumeEnvelopeMenuState {
+  x: number;
+  y: number;
+  clipId: string;
 }
 
 interface ReplaceMediaDialogState {
@@ -2613,6 +2737,40 @@ function GapActionMenu({
     >
       <button className="block w-full rounded px-2 py-2 text-left hover:bg-panel" type="button" data-testid="gap-action-close" onClick={onCloseGap}>
         {zhCN.timeline.closeGapAction}
+      </button>
+      <button className="mt-1 block w-full rounded px-2 py-1.5 text-left text-slate-500 hover:bg-panel" type="button" onClick={onClose}>
+        {zhCN.timeline.close}
+      </button>
+    </div>
+  );
+}
+
+function VolumeEnvelopeMenu({
+  menu,
+  onFade,
+  onReset,
+  onClose
+}: {
+  menu: VolumeEnvelopeMenuState;
+  onFade(kind: 'in' | 'out'): void;
+  onReset(): void;
+  onClose(): void;
+}) {
+  return (
+    <div
+      className="fixed z-50 w-[180px] rounded-md border border-line bg-white p-2 text-xs shadow-soft"
+      style={{ left: menu.x, top: menu.y }}
+      data-testid="volume-envelope-menu"
+      onPointerDown={(event) => event.stopPropagation()}
+    >
+      <button className="block w-full rounded px-2 py-2 text-left hover:bg-panel" type="button" data-testid="volume-envelope-fade-in" onClick={() => onFade('in')}>
+        {zhCN.timeline.volumeEnvelopeFadeIn}
+      </button>
+      <button className="block w-full rounded px-2 py-2 text-left hover:bg-panel" type="button" data-testid="volume-envelope-fade-out" onClick={() => onFade('out')}>
+        {zhCN.timeline.volumeEnvelopeFadeOut}
+      </button>
+      <button className="block w-full rounded px-2 py-2 text-left hover:bg-panel" type="button" data-testid="volume-envelope-reset" onClick={onReset}>
+        {zhCN.timeline.volumeEnvelopeReset}
       </button>
       <button className="mt-1 block w-full rounded px-2 py-1.5 text-left text-slate-500 hover:bg-panel" type="button" onClick={onClose}>
         {zhCN.timeline.close}

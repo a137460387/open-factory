@@ -5,6 +5,7 @@ import {
   filterTimelineVirtualClips,
   getEffectiveClipColorLabel,
   getTimelineLabelColorHex,
+  getVolumeEnvelopePoints,
   isFrameRateMismatch,
   TIMELINE_THUMBNAIL_TRACK_HEIGHT,
   TIMELINE_LABEL_COLORS,
@@ -17,6 +18,7 @@ import {
   type TimelineRulerTick,
   type TimelineThumbnailTrackSample,
   type TimelineVirtualRenderWindow,
+  type VolumeEnvelopePoint,
   type Track,
   type Transition,
   type TransitionType
@@ -63,6 +65,19 @@ export interface DragState {
 export const TRACK_HEIGHT = 54;
 export const LABEL_WIDTH = 138;
 export const TRACK_DRAG_MIME = 'application/x-open-factory-track-id';
+
+export interface VolumeEnvelopePointRequest {
+  clipId: string;
+  time: number;
+  value: number;
+  keyframeId?: string;
+}
+
+export interface VolumeEnvelopeMenuRequest {
+  x: number;
+  y: number;
+  clipId: string;
+}
 
 export function ThumbnailTrack({
   samples,
@@ -269,6 +284,10 @@ export function TrackRow({
   onTransitionMenu,
   onGapMenu,
   onClipMenu,
+  onVolumeEnvelopeAdd,
+  onVolumeEnvelopeUpdate,
+  onVolumeEnvelopeRemove,
+  onVolumeEnvelopeMenu,
   onClipDoubleClick,
   virtualWindow,
   rollingTrimActive,
@@ -276,7 +295,8 @@ export function TrackRow({
   slideEditActive,
   clipGroupByClipId,
   colorFilter,
-  projectFrameRate
+  projectFrameRate,
+  envelopeEditMode
 }: {
   track: Track;
   zoom: number;
@@ -299,6 +319,10 @@ export function TrackRow({
   onTransitionMenu(request: TransitionMenuRequest): void;
   onGapMenu(request: GapMenuRequest): void;
   onClipMenu(request: ClipMenuRequest): void;
+  onVolumeEnvelopeAdd(request: VolumeEnvelopePointRequest): void;
+  onVolumeEnvelopeUpdate(request: Required<VolumeEnvelopePointRequest>): void;
+  onVolumeEnvelopeRemove(request: Required<Pick<VolumeEnvelopePointRequest, 'clipId' | 'keyframeId'>>): void;
+  onVolumeEnvelopeMenu(request: VolumeEnvelopeMenuRequest): void;
   onClipDoubleClick(clip: Clip): void;
   virtualWindow: TimelineVirtualRenderWindow;
   rollingTrimActive: boolean;
@@ -307,6 +331,7 @@ export function TrackRow({
   clipGroupByClipId: Map<string, ClipGroup>;
   colorFilter: TimelineLabelColor | null;
   projectFrameRate: number;
+  envelopeEditMode: boolean;
 }) {
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const frequencyBands = useAudioMeterStore((state) => state.trackFrequencyBands[track.id] ?? getSilentFrequencyBands());
@@ -491,6 +516,10 @@ export function TrackRow({
               transition={transitions.find((transition) => transition.fromClipId === clip.id && transition.toClipId === nextAdjacentByClipId.get(clip.id)?.id)}
               onTransitionMenu={onTransitionMenu}
               onClipMenu={onClipMenu}
+              onVolumeEnvelopeAdd={onVolumeEnvelopeAdd}
+              onVolumeEnvelopeUpdate={onVolumeEnvelopeUpdate}
+              onVolumeEnvelopeRemove={onVolumeEnvelopeRemove}
+              onVolumeEnvelopeMenu={onVolumeEnvelopeMenu}
               onClipDoubleClick={onClipDoubleClick}
               rollingTrimActive={rollingTrimActive}
               slipEditActive={slipEditActive}
@@ -498,6 +527,7 @@ export function TrackRow({
               clipGroup={clipGroupByClipId.get(clip.id)}
               trackColor={track.color ?? null}
               projectFrameRate={projectFrameRate}
+              envelopeEditMode={envelopeEditMode}
             />
           );
         })}
@@ -589,13 +619,18 @@ function ClipBlock({
   transition,
   onTransitionMenu,
   onClipMenu,
+  onVolumeEnvelopeAdd,
+  onVolumeEnvelopeUpdate,
+  onVolumeEnvelopeRemove,
+  onVolumeEnvelopeMenu,
   onClipDoubleClick,
   rollingTrimActive,
   slipEditActive,
   slideEditActive,
   clipGroup,
   trackColor,
-  projectFrameRate
+  projectFrameRate,
+  envelopeEditMode
 }: {
   clip: Clip;
   asset?: MediaAsset;
@@ -617,6 +652,10 @@ function ClipBlock({
   transition?: Transition;
   onTransitionMenu(request: TransitionMenuRequest): void;
   onClipMenu(request: ClipMenuRequest): void;
+  onVolumeEnvelopeAdd(request: VolumeEnvelopePointRequest): void;
+  onVolumeEnvelopeUpdate(request: Required<VolumeEnvelopePointRequest>): void;
+  onVolumeEnvelopeRemove(request: Required<Pick<VolumeEnvelopePointRequest, 'clipId' | 'keyframeId'>>): void;
+  onVolumeEnvelopeMenu(request: VolumeEnvelopeMenuRequest): void;
   onClipDoubleClick(clip: Clip): void;
   rollingTrimActive: boolean;
   slipEditActive: boolean;
@@ -624,6 +663,7 @@ function ClipBlock({
   clipGroup?: ClipGroup;
   trackColor: TimelineLabelColor | null;
   projectFrameRate: number;
+  envelopeEditMode: boolean;
 }) {
   const waveformColor = getTrackWaveformColor(trackType);
   const effectiveColor = getEffectiveClipColorLabel(clip, { color: trackColor });
@@ -762,6 +802,16 @@ function ClipBlock({
       {clip.type === 'audio' && asset ? (
         <WaveformStrip clipId={clip.id} asset={asset} pixelWidth={clipPixelWidth} clipDuration={clip.duration} muted={trackMuted || Boolean(clip.muted)} color={waveformColor} />
       ) : null}
+      {envelopeEditMode && clip.type === 'audio' && 'volume' in clip ? (
+        <VolumeEnvelopeOverlay
+          clip={clip}
+          disabled={locked}
+          onAdd={onVolumeEnvelopeAdd}
+          onUpdate={onVolumeEnvelopeUpdate}
+          onRemove={onVolumeEnvelopeRemove}
+          onMenu={onVolumeEnvelopeMenu}
+        />
+      ) : null}
       <span className="relative z-10 truncate pl-1">{(clip.type === 'text' || clip.type === 'subtitle' || clip.type === 'credits') && 'text' in clip ? clip.text.slice(0, 28) : clip.name}</span>
       <span className="relative z-10 ml-auto pl-2 tabular-nums">{clip.duration.toFixed(1)}s</span>
       {getClipKeyframeMarkers(clip).map((marker) => {
@@ -849,6 +899,132 @@ function ClipBlock({
       )}
     </div>
   );
+}
+
+function VolumeEnvelopeOverlay({
+  clip,
+  disabled,
+  onAdd,
+  onUpdate,
+  onRemove,
+  onMenu
+}: {
+  clip: Extract<Clip, { type: 'audio' }>;
+  disabled: boolean;
+  onAdd(request: VolumeEnvelopePointRequest): void;
+  onUpdate(request: Required<VolumeEnvelopePointRequest>): void;
+  onRemove(request: Required<Pick<VolumeEnvelopePointRequest, 'clipId' | 'keyframeId'>>): void;
+  onMenu(request: VolumeEnvelopeMenuRequest): void;
+}) {
+  const overlayRef = useRef<HTMLSpanElement | null>(null);
+  const [draftPoint, setDraftPoint] = useState<Required<VolumeEnvelopePointRequest> | undefined>();
+  const duration = Math.max(0.001, clip.duration);
+  const basePoints = getVolumeEnvelopePoints(clip);
+  const points = draftPoint
+    ? basePoints.map((point) => (point.id === draftPoint.keyframeId ? { ...point, time: draftPoint.time, value: draftPoint.value } : point))
+    : basePoints;
+  const svgPoints = points.map((point) => `${envelopePointX(point, duration)},${envelopePointY(point)}`).join(' ');
+
+  const eventToRequest = (event: Pick<React.PointerEvent<HTMLElement>, 'clientX' | 'clientY'>): VolumeEnvelopePointRequest | undefined => {
+    const bounds = overlayRef.current?.getBoundingClientRect();
+    if (!bounds) {
+      return undefined;
+    }
+    const x = Math.min(bounds.width, Math.max(0, event.clientX - bounds.left));
+    const y = Math.min(bounds.height, Math.max(0, event.clientY - bounds.top));
+    return {
+      clipId: clip.id,
+      time: snapTime((x / Math.max(1, bounds.width)) * clip.duration),
+      value: Math.round(Math.min(2, Math.max(0, 2 - (y / Math.max(1, bounds.height)) * 2)) * 100) / 100
+    };
+  };
+
+  const persistedPoints = points.filter((point) => point.persisted);
+
+  return (
+    <span
+      ref={overlayRef}
+      className={clsx('absolute inset-0 z-20 cursor-crosshair', disabled ? 'pointer-events-none opacity-50' : 'pointer-events-auto')}
+      data-testid={`timeline-volume-envelope-${clip.id}`}
+      onPointerDown={(event) => {
+        if (event.button !== 0 || disabled) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        const request = eventToRequest(event);
+        if (request) {
+          onAdd(request);
+        }
+      }}
+      onContextMenu={(event) => {
+        if (disabled) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        onMenu({ x: event.clientX, y: event.clientY, clipId: clip.id });
+      }}
+    >
+      <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        <polyline points={svgPoints} fill="none" stroke="rgba(15, 23, 42, 0.45)" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
+        <polyline points={svgPoints} fill="none" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      {persistedPoints.map((point) => (
+        <button
+          key={point.id}
+          className="absolute z-30 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-slate-900 bg-white shadow"
+          style={{ left: `${envelopePointX(point, duration)}%`, top: `${envelopePointY(point)}%` }}
+          type="button"
+          title={zhCN.timeline.volumeEnvelopePointTitle(point.time, point.value)}
+          data-testid={`timeline-volume-envelope-point-${clip.id}-${point.id}`}
+          onPointerDown={(event) => {
+            if (event.button !== 0 || disabled) {
+              return;
+            }
+            event.preventDefault();
+            event.stopPropagation();
+            event.currentTarget.setPointerCapture(event.pointerId);
+            setDraftPoint({ clipId: clip.id, keyframeId: point.id, time: point.time, value: point.value });
+          }}
+          onPointerMove={(event) => {
+            if (!draftPoint || draftPoint.keyframeId !== point.id) {
+              return;
+            }
+            event.preventDefault();
+            event.stopPropagation();
+            const request = eventToRequest(event);
+            if (request) {
+              setDraftPoint({ ...request, keyframeId: point.id });
+            }
+          }}
+          onPointerUp={(event) => {
+            if (!draftPoint || draftPoint.keyframeId !== point.id) {
+              return;
+            }
+            event.preventDefault();
+            event.stopPropagation();
+            onUpdate(draftPoint);
+            setDraftPoint(undefined);
+          }}
+          onDoubleClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            setDraftPoint(undefined);
+            onRemove({ clipId: clip.id, keyframeId: point.id });
+          }}
+        />
+      ))}
+    </span>
+  );
+}
+
+function envelopePointX(point: Pick<VolumeEnvelopePoint, 'time'>, duration: number): number {
+  return Math.min(100, Math.max(0, (point.time / Math.max(0.001, duration)) * 100));
+}
+
+function envelopePointY(point: Pick<VolumeEnvelopePoint, 'value'>): number {
+  return Math.min(100, Math.max(0, 100 - (point.value / 2) * 100));
 }
 
 function getClipKeyframeMarkers(clip: Clip): Array<{ id: string; property: KeyframeProperty; time: number }> {
