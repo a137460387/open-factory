@@ -20,4 +20,8 @@ test('opens spectrum analysis from media library and shows statistics', async ({
   await expect(page.getByTestId('audio-spectrum-stats')).toBeVisible();
   await expect(page.getByTestId('audio-spectrum-stat-lufs')).toContainText('-18.4 LUFS');
   await expect(page.getByTestId('audio-spectrum-stat-rms')).toContainText('-20.6 dB');
+
+  await page.getByTestId('audio-spectrum-canvas').click({ button: 'right', position: { x: 240, y: 120 } });
+  await expect(page.getByTestId('audio-spectrum-context-menu')).toBeVisible();
+  await expect(page.getByTestId('audio-spectrum-split-context-item')).toContainText('在此处分割 clip');
 });

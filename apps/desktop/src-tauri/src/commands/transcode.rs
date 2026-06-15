@@ -1,3 +1,4 @@
+use super::binaries::{ffmpeg_binary, ffprobe_binary};
 use crate::path_validator::{validate_path, validate_path_for_write};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -583,22 +584,6 @@ impl TranscodePreset {
             TranscodePreset::H264720p | TranscodePreset::H2641080p => "mp4",
             TranscodePreset::ProResProxy => "mov",
         }
-    }
-}
-
-fn ffmpeg_binary() -> &'static str {
-    if cfg!(windows) {
-        "ffmpeg.exe"
-    } else {
-        "ffmpeg"
-    }
-}
-
-fn ffprobe_binary() -> &'static str {
-    if cfg!(windows) {
-        "ffprobe.exe"
-    } else {
-        "ffprobe"
     }
 }
 

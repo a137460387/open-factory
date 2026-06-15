@@ -1,5 +1,6 @@
 pub mod background;
 pub mod backup;
+pub(crate) mod binaries;
 pub mod cache;
 pub mod demucs;
 pub mod ffmpeg;

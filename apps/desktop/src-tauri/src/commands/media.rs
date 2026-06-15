@@ -1,3 +1,4 @@
+use super::binaries::{ffmpeg_binary, ffprobe_binary};
 use crate::path_validator::validate_path;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -210,14 +211,10 @@ struct FfprobePacket {
 pub fn probe_media(app: AppHandle, path: String) -> Result<MediaProbe, String> {
     let safe_path = validate_path(&app, Path::new(&path))?;
     let input_path = normalize_path(&safe_path);
-    let output = Command::new(if cfg!(windows) {
-        "ffprobe.exe"
-    } else {
-        "ffprobe"
-    })
-    .args(["-v", "error", "-show_streams", "-of", "json", &input_path])
-    .output()
-    .map_err(|error| format!("Unable to run ffprobe: {}", error))?;
+    let output = Command::new(ffprobe_binary())
+        .args(["-v", "error", "-show_streams", "-of", "json", &input_path])
+        .output()
+        .map_err(|error| format!("Unable to run ffprobe: {}", error))?;
     if !output.status.success() {
         return Err(String::from_utf8_lossy(&output.stderr).to_string());
     }
@@ -271,8 +268,12 @@ pub fn probe_media(app: AppHandle, path: String) -> Result<MediaProbe, String> {
             .and_then(|stream| stream.get("codec_name"))
             .and_then(Value::as_str)
             .map(ToOwned::to_owned),
-        frame_rate: parse_frame_rate(avg_frame_rate.as_deref()).or_else(|| parse_frame_rate(real_frame_rate.as_deref())),
-        variable_frame_rate: is_variable_frame_rate(avg_frame_rate.as_deref(), real_frame_rate.as_deref()),
+        frame_rate: parse_frame_rate(avg_frame_rate.as_deref())
+            .or_else(|| parse_frame_rate(real_frame_rate.as_deref())),
+        variable_frame_rate: is_variable_frame_rate(
+            avg_frame_rate.as_deref(),
+            real_frame_rate.as_deref(),
+        ),
         avg_frame_rate,
         real_frame_rate,
         field_order: video
@@ -298,7 +299,10 @@ pub fn scan_media_integrity(
 }
 
 #[tauri::command]
-pub fn analyze_audio_spectrum(app: AppHandle, path: String) -> Result<AudioSpectrumAnalysis, String> {
+pub fn analyze_audio_spectrum(
+    app: AppHandle,
+    path: String,
+) -> Result<AudioSpectrumAnalysis, String> {
     let safe_path = validate_path(&app, Path::new(&path))?;
     Ok(analyze_audio_spectrum_path(&safe_path))
 }
@@ -579,7 +583,9 @@ fn analyze_ebur128_stats(input_path: &str) -> Result<AudioSpectrumStats, String>
     if !output.status.success() {
         return Err(String::from_utf8_lossy(&output.stderr).trim().to_string());
     }
-    Ok(parse_ebur128_stats(&output.stderr).or_else(|| parse_ebur128_stats(&output.stdout)).unwrap_or_default())
+    Ok(parse_ebur128_stats(&output.stderr)
+        .or_else(|| parse_ebur128_stats(&output.stdout))
+        .unwrap_or_default())
 }
 
 pub(crate) fn parse_ebur128_stats(bytes: &[u8]) -> Option<AudioSpectrumStats> {
@@ -629,7 +635,12 @@ fn parse_number_after(line: &str, key: &str) -> Option<f64> {
 fn parse_first_number(value: &str) -> Option<f64> {
     value
         .split_whitespace()
-        .find_map(|token| token.trim_matches(|c: char| c == ':' || c == ',').parse::<f64>().ok())
+        .find_map(|token| {
+            token
+                .trim_matches(|c: char| c == ':' || c == ',')
+                .parse::<f64>()
+                .ok()
+        })
         .filter(|number| number.is_finite())
         .map(round_seconds)
 }
@@ -1182,22 +1193,6 @@ fn round_seconds(value: f64) -> f64 {
     (value * 1_000.0).round() / 1_000.0
 }
 
-fn ffmpeg_binary() -> &'static str {
-    if cfg!(windows) {
-        "ffmpeg.exe"
-    } else {
-        "ffmpeg"
-    }
-}
-
-fn ffprobe_binary() -> &'static str {
-    if cfg!(windows) {
-        "ffprobe.exe"
-    } else {
-        "ffprobe"
-    }
-}
-
 fn normalize_path(path: &Path) -> String {
     path.to_string_lossy().replace('\\', "/")
 }
@@ -1277,7 +1272,12 @@ fn normalize_gap_fill_color(color: &str) -> String {
 }
 
 fn format_gap_fill_seconds(value: f64) -> String {
-    round_seconds(if value.is_finite() { value.max(0.0) } else { 0.0 }).to_string()
+    round_seconds(if value.is_finite() {
+        value.max(0.0)
+    } else {
+        0.0
+    })
+    .to_string()
 }
 
 #[cfg(test)]
@@ -1590,8 +1590,14 @@ mod tests {
 
     #[test]
     fn detects_variable_frame_rate_from_avg_and_real_rates() {
-        assert!(is_variable_frame_rate(Some("24000/1001"), Some("30000/1001")));
-        assert!(!is_variable_frame_rate(Some("30000/1001"), Some("30000/1001")));
+        assert!(is_variable_frame_rate(
+            Some("24000/1001"),
+            Some("30000/1001")
+        ));
+        assert!(!is_variable_frame_rate(
+            Some("30000/1001"),
+            Some("30000/1001")
+        ));
         assert!(!is_variable_frame_rate(Some("0/0"), Some("30000/1001")));
     }
 

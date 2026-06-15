@@ -16,8 +16,13 @@ pub fn write_clip_report_file(path: &Path, html: &str) -> Result<(), String> {
             fs::create_dir_all(parent).map_err(|error| error.to_string())?;
         }
     }
-    fs::write(path, html)
-        .map_err(|error| format!("Unable to write clip report {}: {}", normalize_path(path), error))
+    fs::write(path, html).map_err(|error| {
+        format!(
+            "Unable to write clip report {}: {}",
+            normalize_path(path),
+            error
+        )
+    })
 }
 
 fn validate_clip_report_path(path: &Path) -> Result<(), String> {
@@ -59,7 +64,8 @@ mod tests {
         let root = unique_temp_dir("clip-report-reject");
         let path = root.join("report.txt");
 
-        let error = write_clip_report_file(&path, "<h1>Clip</h1>").expect_err("txt should be rejected");
+        let error =
+            write_clip_report_file(&path, "<h1>Clip</h1>").expect_err("txt should be rejected");
 
         assert_eq!(error, "clip_report_must_be_html");
         assert!(!path.exists());

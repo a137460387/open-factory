@@ -1,3 +1,4 @@
+use super::binaries::ffmpeg_binary;
 use crate::path_validator::{validate_path, validate_path_for_write};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -17,6 +18,7 @@ static MOTION_TRACKING_CHILDREN: OnceLock<Mutex<HashMap<String, Child>>> = OnceL
 static QUALITY_EVALUATION_CHILDREN: OnceLock<Mutex<HashMap<String, Child>>> = OnceLock::new();
 static EXPORT_TEMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 static HARDWARE_ENCODER_CACHE: OnceLock<Mutex<Option<HardwareEncoderProbe>>> = OnceLock::new();
+#[cfg(test)]
 pub const EXPORT_MEMORY_PAUSE_THRESHOLD_BYTES: u64 = 2 * 1024 * 1024 * 1024;
 
 fn export_children() -> &'static Mutex<HashMap<String, Child>> {
@@ -640,9 +642,8 @@ fn run_export_preview_samples_blocking(
     let timeout = export_preview_timeout(request.timeout_ms);
     let started = Instant::now();
     let runner_app = app.clone();
-    let runner: PreviewSampleRunner = Arc::new(move |sample| {
-        run_export_preview_sample_blocking(&runner_app, sample, timeout)
-    });
+    let runner: PreviewSampleRunner =
+        Arc::new(move |sample| run_export_preview_sample_blocking(&runner_app, sample, timeout));
     let samples = run_export_preview_samples_parallel(request.samples, runner)?;
     Ok(ExportPreviewSamplesResult {
         samples,
@@ -681,7 +682,10 @@ fn run_export_preview_sample_blocking(
     timeout: Duration,
 ) -> Result<ExportPreviewSampleResult, String> {
     if sample.plan.full_args.is_empty() {
-        return Err(format!("Export preview sample {} has empty FFmpeg args.", sample.id));
+        return Err(format!(
+            "Export preview sample {} has empty FFmpeg args.",
+            sample.id
+        ));
     }
     let output_path = export_preview_sample_output_path(&sample)?;
     let mut plan = sample.plan;
@@ -703,7 +707,9 @@ fn run_export_preview_sample_blocking(
     };
     let slot_id = export_slot_id(Some(&format!("export-preview-{}", sample.id)));
     let started = Instant::now();
-    let nested_log_path = nested_dir.as_ref().map(|dir| dir.join("preview-nested.log"));
+    let nested_log_path = nested_dir
+        .as_ref()
+        .map(|dir| dir.join("preview-nested.log"));
     if let Some(log_path) = nested_log_path.as_deref() {
         fs::write(log_path, "open-factory export preview nested log\n").map_err(|error| {
             format!(
@@ -756,12 +762,12 @@ fn export_preview_timeout(timeout_ms: Option<u64>) -> Duration {
 }
 
 fn export_preview_sample_output_path(sample: &ExportPreviewSampleDto) -> Result<String, String> {
-    let output_path = sample
-        .plan
-        .full_args
-        .last()
-        .cloned()
-        .ok_or_else(|| format!("Export preview sample {} is missing output path.", sample.id))?;
+    let output_path = sample.plan.full_args.last().cloned().ok_or_else(|| {
+        format!(
+            "Export preview sample {} is missing output path.",
+            sample.id
+        )
+    })?;
     if sample.output_path != output_path {
         return Err(format!(
             "Export preview sample {} output path does not match its plan.",
@@ -938,7 +944,14 @@ fn run_nested_export_plans(
 ) -> Result<(), String> {
     for nested in &mut plan.nested_plans {
         let output_path = nested_dir.join(safe_file_name(&nested.placeholder));
-        run_nested_export_plans(app, &mut nested.plan, nested_dir, slot_id, log_path, timeout)?;
+        run_nested_export_plans(
+            app,
+            &mut nested.plan,
+            nested_dir,
+            slot_id,
+            log_path,
+            timeout,
+        )?;
         replace_placeholder(
             &mut nested.plan.full_args,
             &nested.placeholder,
@@ -1012,6 +1025,7 @@ pub fn get_system_resource_snapshot() -> SystemResourceSnapshot {
     }
 }
 
+#[cfg(test)]
 pub fn should_pause_export_for_memory(available_memory_bytes: u64) -> bool {
     available_memory_bytes < EXPORT_MEMORY_PAUSE_THRESHOLD_BYTES
 }
@@ -1297,8 +1311,7 @@ fn append_post_export_script_log(
         })?;
     writeln!(file, "\n[post-export-script]").map_err(|error| error.to_string())?;
     writeln!(file, "command={}", result.command).map_err(|error| error.to_string())?;
-    writeln!(file, "resolved={}", result.resolved_command)
-        .map_err(|error| error.to_string())?;
+    writeln!(file, "resolved={}", result.resolved_command).map_err(|error| error.to_string())?;
     writeln!(file, "program={}", result.program).map_err(|error| error.to_string())?;
     writeln!(file, "args={:?}", result.args).map_err(|error| error.to_string())?;
     writeln!(file, "exitCode={:?}", result.exit_code).map_err(|error| error.to_string())?;
@@ -1365,7 +1378,10 @@ fn run_post_export_script(
                 error: if success {
                     None
                 } else {
-                    Some(format!("Post-export script exited with status {}.", output.status))
+                    Some(format!(
+                        "Post-export script exited with status {}.",
+                        output.status
+                    ))
                 },
             })
         }
@@ -1448,7 +1464,10 @@ fn format_post_export_duration(duration_seconds: f64) -> String {
         return "0".to_string();
     }
     let rounded = format!("{:.3}", duration_seconds);
-    rounded.trim_end_matches('0').trim_end_matches('.').to_string()
+    rounded
+        .trim_end_matches('0')
+        .trim_end_matches('.')
+        .to_string()
 }
 
 fn format_post_export_date(now: SystemTime) -> String {
@@ -2419,14 +2438,6 @@ fn command_text(args: &[&str]) -> Option<String> {
     Some(text)
 }
 
-fn ffmpeg_binary() -> &'static str {
-    if cfg!(windows) {
-        "ffmpeg.exe"
-    } else {
-        "ffmpeg"
-    }
-}
-
 fn export_slot_id(task_id: Option<&str>) -> String {
     task_id
         .filter(|value| !value.trim().is_empty())
@@ -2890,7 +2901,10 @@ unrelated line
         .expect("failed script should still produce a result");
 
         assert!(!result.success);
-        assert!(result.error.unwrap_or_default().contains("Unable to start post-export script"));
+        assert!(result
+            .error
+            .unwrap_or_default()
+            .contains("Unable to start post-export script"));
         assert_eq!(result.exit_code, None);
     }
 

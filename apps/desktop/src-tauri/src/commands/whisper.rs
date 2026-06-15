@@ -1,3 +1,4 @@
+use super::binaries::ffmpeg_binary;
 use crate::path_validator::validate_path;
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -287,14 +288,6 @@ fn emit_progress(app: &AppHandle, clip_id: &str, progress: f32) {
             progress_pct: clamped * 100.0,
         },
     );
-}
-
-fn ffmpeg_binary() -> &'static str {
-    if cfg!(windows) {
-        "ffmpeg.exe"
-    } else {
-        "ffmpeg"
-    }
 }
 
 fn safe_file_name(value: &str) -> String {

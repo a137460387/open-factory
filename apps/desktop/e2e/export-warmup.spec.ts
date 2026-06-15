@@ -6,7 +6,7 @@ test('shows export warmup status before queueing export', async ({ page }) => {
   await waitForE2eActions(page);
   await page.evaluate(() => {
     window.__E2E_ACTIONS__!.clearE2eFiles!();
-    window.__E2E_ACTIONS__!.setExportWarmupDelay!(400);
+    window.__E2E_ACTIONS__!.setExportWarmupDelay!(1500);
     window.__E2E_ACTIONS__!.setSavePath!('C:/Exports/warmup-export.mp4');
   });
   await page.getByTestId('import-media-button').click();

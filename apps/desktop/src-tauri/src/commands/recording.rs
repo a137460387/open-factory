@@ -1,3 +1,4 @@
+use super::binaries::ffmpeg_binary;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -227,14 +228,6 @@ fn build_recording_args_for_platform(
         normalize_path(output_path),
     ]);
     args
-}
-
-fn ffmpeg_binary() -> &'static str {
-    if cfg!(windows) {
-        "ffmpeg.exe"
-    } else {
-        "ffmpeg"
-    }
 }
 
 fn safe_file_name(value: &str) -> String {

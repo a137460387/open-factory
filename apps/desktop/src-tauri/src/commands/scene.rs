@@ -1,3 +1,4 @@
+use super::binaries::ffmpeg_binary;
 use crate::path_validator::validate_path;
 use serde::{Deserialize, Serialize};
 use std::io::{BufRead, BufReader};
@@ -121,14 +122,6 @@ fn calculate_progress(pts_time: f64, duration: f64) -> f32 {
         return 0.0;
     }
     ((pts_time / duration) * 100.0).clamp(0.0, 100.0) as f32 / 100.0
-}
-
-fn ffmpeg_binary() -> &'static str {
-    if cfg!(windows) {
-        "ffmpeg.exe"
-    } else {
-        "ffmpeg"
-    }
 }
 
 fn normalize_path(path: &Path) -> String {

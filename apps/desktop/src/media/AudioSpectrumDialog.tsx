@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEven
 import { zhCN } from '../i18n/strings';
 import { analyzeAudioSpectrum, convertLocalFileSrc, type AudioSpectrumAnalysis } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
-import { resolveSpectrumSelection, resolveSpectrumTime, type SpectrumSelectionRange } from './audioSpectrum';
+import { resolveSpectrumContextMenu, resolveSpectrumSelection, resolveSpectrumTime, type SpectrumContextMenuState, type SpectrumSelectionRange } from './audioSpectrum';
 
 interface AudioSpectrumDialogProps {
   asset: MediaAsset;
@@ -20,6 +20,7 @@ export default function AudioSpectrumDialog({ asset, onClose, onSeek, onSelectio
   const [analysis, setAnalysis] = useState<AudioSpectrumAnalysis>();
   const [loading, setLoading] = useState(true);
   const [selection, setSelection] = useState<SpectrumSelectionRange>();
+  const [contextMenu, setContextMenu] = useState<SpectrumContextMenuState>();
   const dragStartRef = useRef<number>();
   const duration = Math.max(0.001, asset.duration || 1);
 
@@ -80,6 +81,7 @@ export default function AudioSpectrumDialog({ asset, onClose, onSeek, onSelectio
   }, [selection, t]);
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLCanvasElement>) => {
+    setContextMenu(undefined);
     dragStartRef.current = event.clientX;
     event.currentTarget.setPointerCapture(event.pointerId);
   };
@@ -109,7 +111,7 @@ export default function AudioSpectrumDialog({ asset, onClose, onSeek, onSelectio
   const handleContextMenu = (event: ReactMouseEvent<HTMLCanvasElement>) => {
     event.preventDefault();
     const rect = event.currentTarget.getBoundingClientRect();
-    onSplitAtTime(resolveSpectrumTime(event.clientX, rect.left, rect.width, duration));
+    setContextMenu(resolveSpectrumContextMenu(event.clientX, event.clientY, rect.left, rect.width, duration));
   };
 
   return (
@@ -166,6 +168,27 @@ export default function AudioSpectrumDialog({ asset, onClose, onSeek, onSelectio
             </button>
           </aside>
         </div>
+        {contextMenu ? (
+          <div
+            className="fixed z-[60] min-w-44 rounded-md border border-line bg-white p-1 text-xs shadow-soft"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+            data-testid="audio-spectrum-context-menu"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <button
+              className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="audio-spectrum-split-context-item"
+              onClick={() => {
+                onSplitAtTime(contextMenu.time);
+                setContextMenu(undefined);
+              }}
+            >
+              <Scissors size={13} />
+              {t.splitHere}
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
   );

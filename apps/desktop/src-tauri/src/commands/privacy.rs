@@ -1,3 +1,4 @@
+use super::binaries::ffmpeg_binary;
 use crate::path_validator::validate_path;
 use serde::{Deserialize, Serialize};
 use std::io::{BufRead, BufReader};
@@ -159,14 +160,6 @@ fn parse_string_after(line: &str, key: &str) -> Option<String> {
         None
     } else {
         Some(value.to_string())
-    }
-}
-
-fn ffmpeg_binary() -> &'static str {
-    if cfg!(windows) {
-        "ffmpeg.exe"
-    } else {
-        "ffmpeg"
     }
 }
 

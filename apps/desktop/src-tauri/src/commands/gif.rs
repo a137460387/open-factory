@@ -1,3 +1,4 @@
+use super::binaries::ffmpeg_binary;
 use crate::path_validator::{validate_path, validate_path_for_write};
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -221,14 +222,6 @@ fn format_seconds_arg(value: f64) -> String {
         .trim_end_matches('0')
         .trim_end_matches('.')
         .to_string()
-}
-
-fn ffmpeg_binary() -> &'static str {
-    if cfg!(windows) {
-        "ffmpeg.exe"
-    } else {
-        "ffmpeg"
-    }
 }
 
 fn normalize_path(path: &Path) -> String {

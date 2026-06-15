@@ -164,7 +164,10 @@ pub async fn put_webdav_export_file(
     let response = builder.send().await.map_err(|error| error.to_string())?;
     let status = response.status();
     if !status.is_success() {
-        return Err(format!("WebDAV export upload failed with status {}", status.as_u16()));
+        return Err(format!(
+            "WebDAV export upload failed with status {}",
+            status.as_u16()
+        ));
     }
     Ok(WebdavExportUploadResult {
         status: status.as_u16(),
@@ -193,9 +196,7 @@ pub async fn get_webdav_text(request: WebdavTextRequest) -> Result<WebdavTextRes
 }
 
 #[tauri::command]
-pub async fn put_webdav_text(
-    request: WebdavTextPutRequest,
-) -> Result<WebdavTextPutResult, String> {
+pub async fn put_webdav_text(request: WebdavTextPutRequest) -> Result<WebdavTextPutResult, String> {
     let args = build_webdav_text_put_args(&request)?;
     let client = reqwest::Client::new();
     let mut builder = client
@@ -208,7 +209,10 @@ pub async fn put_webdav_text(
     let response = builder.send().await.map_err(|error| error.to_string())?;
     let status = response.status();
     if !status.is_success() {
-        return Err(format!("WebDAV PUT text failed with status {}", status.as_u16()));
+        return Err(format!(
+            "WebDAV PUT text failed with status {}",
+            status.as_u16()
+        ));
     }
     Ok(WebdavTextPutResult {
         status: status.as_u16(),
@@ -263,7 +267,11 @@ fn read_password_secret(app: AppHandle, file_name: &str) -> Result<Option<String
     decrypt_password(&app_data_dir(&app)?, &secret).map(Some)
 }
 
-fn write_password_secret(app: AppHandle, file_name: &str, password: Option<String>) -> Result<(), String> {
+fn write_password_secret(
+    app: AppHandle,
+    file_name: &str,
+    password: Option<String>,
+) -> Result<(), String> {
     let secret_path = secret_file_path(&app, file_name)?;
     match password
         .map(|value| value.trim().to_string())
@@ -625,7 +633,10 @@ mod tests {
 
         assert!(!serialized.contains("upload-secret"));
         assert_eq!(secret.version, 1);
-        assert_eq!(decrypt_password(&app_dir, &secret).unwrap(), "upload-secret");
+        assert_eq!(
+            decrypt_password(&app_dir, &secret).unwrap(),
+            "upload-secret"
+        );
         let _ = fs::remove_dir_all(app_dir);
     }
 
@@ -637,7 +648,10 @@ mod tests {
 
         assert!(!serialized.contains("preset-sync-secret"));
         assert_eq!(secret.version, 1);
-        assert_eq!(decrypt_password(&app_dir, &secret).unwrap(), "preset-sync-secret");
+        assert_eq!(
+            decrypt_password(&app_dir, &secret).unwrap(),
+            "preset-sync-secret"
+        );
         let _ = fs::remove_dir_all(app_dir);
     }
 }

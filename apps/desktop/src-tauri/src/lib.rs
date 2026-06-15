@@ -40,6 +40,22 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_shell::init())
+        .on_page_load(|_window, payload| {
+            write_frontend_smoke_page_load_marker(
+                "OPEN_FACTORY_PREVIEW_SMOKE",
+                "OPEN_FACTORY_PREVIEW_SMOKE_REPORT",
+                "preview",
+                payload.url().as_str(),
+                format!("{:?}", payload.event()),
+            );
+            write_frontend_smoke_page_load_marker(
+                "OPEN_FACTORY_CANCEL_SMOKE",
+                "OPEN_FACTORY_CANCEL_SMOKE_REPORT",
+                "cancel",
+                payload.url().as_str(),
+                format!("{:?}", payload.event()),
+            );
+        })
         .invoke_handler(tauri::generate_handler![
             commands::ffmpeg::detect_ffmpeg,
             commands::ffmpeg::get_ffmpeg_capabilities,
@@ -133,13 +149,9 @@ pub fn run() {
                     .unwrap_or_else(|_| "open-factory-smoke-report.json".to_string());
                 let handle = app.handle().clone();
                 std::thread::spawn(move || {
-                    let output = Command::new(if cfg!(windows) {
-                        "ffmpeg.exe"
-                    } else {
-                        "ffmpeg"
-                    })
-                    .arg("-version")
-                    .output();
+                    let output = Command::new(commands::binaries::ffmpeg_binary())
+                        .arg("-version")
+                        .output();
                     let ffmpeg_available =
                         output.as_ref().is_ok_and(|result| result.status.success());
                     let ffmpeg_version = output
@@ -162,6 +174,22 @@ pub fn run() {
                     });
                 });
             }
+            let main_window_url = app
+                .get_webview_window("main")
+                .and_then(|window| window.url().ok())
+                .map(|url| url.to_string());
+            write_frontend_smoke_startup_marker(
+                "OPEN_FACTORY_PREVIEW_SMOKE",
+                "OPEN_FACTORY_PREVIEW_SMOKE_REPORT",
+                "preview",
+                main_window_url.as_deref(),
+            );
+            write_frontend_smoke_startup_marker(
+                "OPEN_FACTORY_CANCEL_SMOKE",
+                "OPEN_FACTORY_CANCEL_SMOKE_REPORT",
+                "cancel",
+                main_window_url.as_deref(),
+            );
             if std::env::var("OPEN_FACTORY_DIALOG_SMOKE").ok().as_deref() == Some("1") {
                 let report_path = std::env::var("OPEN_FACTORY_DIALOG_SMOKE_REPORT")
                     .unwrap_or_else(|_| "open-factory-dialog-smoke-report.json".to_string());
@@ -196,4 +224,62 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+fn write_frontend_smoke_startup_marker(
+    enabled_env: &str,
+    report_env: &str,
+    smoke_name: &str,
+    window_url: Option<&str>,
+) {
+    if std::env::var(enabled_env).ok().as_deref() != Some("1") {
+        return;
+    }
+    let Ok(report_path) = std::env::var(report_env) else {
+        return;
+    };
+    let report = json!({
+        "success": false,
+        "smokeName": smoke_name,
+        "stage": "native-startup",
+        "windowUrl": window_url,
+        "error": "Frontend smoke runner did not overwrite the native startup marker."
+    });
+    if let Some(parent) = std::path::Path::new(&report_path).parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    let _ = fs::write(
+        report_path,
+        serde_json::to_string_pretty(&report).unwrap_or_default(),
+    );
+}
+
+fn write_frontend_smoke_page_load_marker(
+    enabled_env: &str,
+    report_env: &str,
+    smoke_name: &str,
+    url: &str,
+    event: String,
+) {
+    if std::env::var(enabled_env).ok().as_deref() != Some("1") {
+        return;
+    }
+    let Ok(report_path) = std::env::var(report_env) else {
+        return;
+    };
+    let report = json!({
+        "success": false,
+        "smokeName": smoke_name,
+        "stage": "page-load",
+        "pageLoadEvent": event,
+        "url": url,
+        "error": "Frontend smoke runner did not overwrite the page-load marker."
+    });
+    if let Some(parent) = std::path::Path::new(&report_path).parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    let _ = fs::write(
+        report_path,
+        serde_json::to_string_pretty(&report).unwrap_or_default(),
+    );
 }

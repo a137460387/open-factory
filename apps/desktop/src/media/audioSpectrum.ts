@@ -3,6 +3,12 @@ export interface SpectrumSelectionRange {
   outPoint: number;
 }
 
+export interface SpectrumContextMenuState {
+  x: number;
+  y: number;
+  time: number;
+}
+
 export function resolveSpectrumTime(clientX: number, rectLeft: number, rectWidth: number, duration: number): number {
   if (!Number.isFinite(clientX) || !Number.isFinite(rectLeft) || !Number.isFinite(rectWidth) || !Number.isFinite(duration) || rectWidth <= 0 || duration <= 0) {
     return 0;
@@ -17,6 +23,14 @@ export function resolveSpectrumSelection(startX: number, endX: number, rectLeft:
   return {
     inPoint: Math.min(start, end),
     outPoint: Math.max(start, end)
+  };
+}
+
+export function resolveSpectrumContextMenu(clientX: number, clientY: number, rectLeft: number, rectWidth: number, duration: number): SpectrumContextMenuState {
+  return {
+    x: Number.isFinite(clientX) ? Math.round(clientX) : 0,
+    y: Number.isFinite(clientY) ? Math.round(clientY) : 0,
+    time: resolveSpectrumTime(clientX, rectLeft, rectWidth, duration)
   };
 }
 
