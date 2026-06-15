@@ -40,6 +40,7 @@ interface ToolbarProps {
   onImportMedia(): void;
   onImportDataSubtitles(mode: SubtitleDataImportMode): void;
   onBatchTranscode(): void;
+  onOpenBatchWatermark(): void;
   onOpenMediaPrecheck(): void;
   onOpenVideoStitchWizard(): void;
   onOpenSyncCompare(): void;
@@ -97,6 +98,9 @@ interface ToolbarProps {
   previewQualityMode: PreviewQualityMode;
   timelineGridSettings: TimelineGridSettings;
   onToggleStoryboard(): void;
+  reviewMode: boolean;
+  onToggleReviewMode(): void;
+  onCreateReviewReport(): void;
   onToggleSafeFrameGuides(): void;
   onToggleThumbnailTrack(): void;
   onPreviewQualityModeChange(mode: PreviewQualityMode): void;
@@ -166,6 +170,57 @@ export function Toolbar(props: ToolbarProps) {
       showToast({ kind: 'warning', title: t.chooseWhisperModel, message: error instanceof Error ? error.message : zhCN.common.unavailable });
     }
   };
+
+  if (props.reviewMode) {
+    return (
+      <header className="relative z-30 flex min-h-14 min-w-0 items-center gap-2 overflow-x-auto border-b border-line bg-white px-3" data-testid="review-toolbar">
+        <div className="mr-2 text-sm font-semibold text-ink">{t.reviewMode}</div>
+        <div className="relative">
+          <button
+            className="inline-flex h-9 items-center gap-1 rounded-md border border-transparent px-3 text-sm font-medium text-slate-700 hover:border-line hover:bg-panel hover:text-ink"
+            type="button"
+            data-testid="toolbar-view-menu-button"
+            onClick={() => {
+              setViewMenuOpen((open) => !open);
+            }}
+          >
+            {t.viewMenu}
+            <ChevronDown size={14} />
+          </button>
+          {viewMenuOpen ? (
+            <div className="absolute left-0 top-10 z-20 min-w-44 rounded-md border border-line bg-white py-1 shadow-soft" data-testid="toolbar-view-menu">
+              <button
+                className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+                type="button"
+                data-testid="toolbar-view-review-mode-menu-item"
+                onClick={() => {
+                  setViewMenuOpen(false);
+                  props.onToggleReviewMode();
+                }}
+              >
+                <span>{t.exitReviewMode}</span>
+              </button>
+              <button
+                className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+                type="button"
+                data-testid="toolbar-view-export-review-report-menu-item"
+                onClick={() => {
+                  setViewMenuOpen(false);
+                  props.onCreateReviewReport();
+                }}
+              >
+                <span>{t.exportReviewReport}</span>
+                <FileDown size={14} />
+              </button>
+            </div>
+          ) : null}
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <ToolButton title={isPlaying ? t.pause : t.play} onClick={() => setIsPlaying(!isPlaying)} icon={isPlaying ? <Pause size={17} /> : <Play size={17} />} testId="toolbar-playback-button" playbackState={isPlaying ? 'playing' : 'paused'} />
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="relative z-30 flex min-h-14 min-w-0 items-center gap-2 overflow-x-auto border-b border-line bg-white px-3">
@@ -381,6 +436,19 @@ export function Toolbar(props: ToolbarProps) {
               <span>{t.thumbnailTrack}</span>
               <span className="text-xs text-slate-500">{props.thumbnailTrackVisible ? t.safeFrameGuidesVisible : t.safeFrameGuidesHidden}</span>
             </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-view-review-mode-menu-item"
+              aria-pressed={props.reviewMode}
+              onClick={() => {
+                setViewMenuOpen(false);
+                props.onToggleReviewMode();
+              }}
+            >
+              <span>{t.reviewMode}</span>
+              <span className="text-xs text-slate-500">#review</span>
+            </button>
           </div>
         ) : null}
       </div>
@@ -413,6 +481,18 @@ export function Toolbar(props: ToolbarProps) {
               }}
             >
               <span>{t.batchTranscode}</span>
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-tools-batch-watermark-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onOpenBatchWatermark();
+              }}
+            >
+              <span>{t.batchWatermark}</span>
+              <ImageDown size={14} />
             </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"

@@ -194,6 +194,7 @@ export interface Project {
   mediaFolders: MediaFolder[];
   mediaMetadata: Record<string, MediaMetadata>;
   annotations: ProjectAnnotation[];
+  reviewAnnotations: ReviewAnnotation[];
   bookmarks: TimelineBookmark[];
   beatMarkers: BeatMarker[];
   exportRanges: ExportRange[];
@@ -304,6 +305,20 @@ export interface ProjectAnnotation {
   time: number;
   text: string;
   color: string;
+}
+
+export type ReviewAnnotationType = 'rectangle' | 'arrow' | 'text';
+
+export interface ReviewAnnotation {
+  id: string;
+  time: number;
+  type: ReviewAnnotationType;
+  text: string;
+  color: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
 export interface ExportRange {
@@ -758,6 +773,7 @@ export const DEFAULT_TRANSITION_TYPE: TransitionType = 'dissolve';
 export const DEFAULT_TRANSITION_DURATION = 0.5;
 export const DEFAULT_TIMELINE_MARKER_COLOR = '#f97316';
 export const DEFAULT_PROJECT_ANNOTATION_COLOR = '#facc15';
+export const DEFAULT_REVIEW_ANNOTATION_COLOR = '#facc15';
 export const PROJECT_ANNOTATION_COLORS = ['#facc15', '#38bdf8', '#34d399', '#fb7185', '#a78bfa'] as const;
 
 export const MIN_CLIP_SPEED = 0.25;
@@ -869,6 +885,25 @@ export function createProjectAnnotation(
   };
 }
 
+export function createReviewAnnotation(
+  annotation: Omit<ReviewAnnotation, 'id' | 'type' | 'text' | 'color' | 'x' | 'y' | 'width' | 'height'> &
+    Partial<Pick<ReviewAnnotation, 'id' | 'type' | 'text' | 'color' | 'x' | 'y' | 'width' | 'height'>>,
+  maxTime?: number
+): ReviewAnnotation {
+  const type = normalizeReviewAnnotationType(annotation.type);
+  return {
+    id: annotation.id ?? createId('review-annotation'),
+    time: normalizeTimelinePointTime(annotation.time, maxTime),
+    type,
+    text: normalizeReviewAnnotationText(annotation.text),
+    color: normalizeHexColor(annotation.color, DEFAULT_REVIEW_ANNOTATION_COLOR),
+    x: normalizeReviewAnnotationUnit(annotation.x, 0.5),
+    y: normalizeReviewAnnotationUnit(annotation.y, 0.5),
+    width: normalizeReviewAnnotationDimension(annotation.width, type, 'width'),
+    height: normalizeReviewAnnotationDimension(annotation.height, type, 'height')
+  };
+}
+
 export function createExportRange(
   range: Omit<ExportRange, 'id' | 'label'> & Partial<Pick<ExportRange, 'id' | 'label'>>,
   maxTime?: number
@@ -935,6 +970,7 @@ export function createProject(name = 'Untitled Project'): Project {
     mediaFolders: [],
     mediaMetadata: {},
     annotations: [],
+    reviewAnnotations: [],
     bookmarks: [],
     beatMarkers: [],
     exportRanges: [],
@@ -1425,6 +1461,16 @@ export function normalizeProjectAnnotations(annotations: ProjectAnnotation[] | u
     .sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
 }
 
+export function normalizeReviewAnnotation(annotation: ReviewAnnotation, maxTime?: number): ReviewAnnotation {
+  return createReviewAnnotation(annotation, maxTime);
+}
+
+export function normalizeReviewAnnotations(annotations: ReviewAnnotation[] | undefined, maxTime?: number): ReviewAnnotation[] {
+  return [...(annotations ?? [])]
+    .map((annotation) => normalizeReviewAnnotation(annotation, maxTime))
+    .sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
+}
+
 export function normalizeExportRange(range: ExportRange, maxTime?: number): ExportRange | undefined {
   const normalized = createExportRange(range, maxTime);
   return normalized.end > normalized.start ? normalized : undefined;
@@ -1747,6 +1793,28 @@ function normalizeTimelineMarkerColor(color: string | undefined): string {
 function normalizeProjectAnnotationText(text: string | undefined): string {
   const trimmed = text?.trim();
   return trimmed ? trimmed.slice(0, 240) : 'Annotation';
+}
+
+function normalizeReviewAnnotationText(text: string | undefined): string {
+  const trimmed = text?.trim();
+  return trimmed ? trimmed.slice(0, 240) : 'Review annotation';
+}
+
+function normalizeReviewAnnotationType(type: ReviewAnnotationType | undefined): ReviewAnnotationType {
+  return type === 'rectangle' || type === 'arrow' || type === 'text' ? type : 'text';
+}
+
+function normalizeReviewAnnotationUnit(value: number | undefined, fallback: number): number {
+  return round(Math.min(1, Math.max(0, finiteOrDefault(value, fallback))));
+}
+
+function normalizeReviewAnnotationDimension(value: number | undefined, type: ReviewAnnotationType, axis: 'width' | 'height'): number {
+  const fallback = type === 'text' ? (axis === 'width' ? 0.22 : 0.08) : type === 'arrow' ? 0.12 : 0.18;
+  const finite = finiteOrDefault(value, fallback);
+  if (type === 'arrow') {
+    return round(Math.min(1, Math.max(-1, finite || fallback)));
+  }
+  return round(Math.min(1, Math.max(0.01, Math.abs(finite || fallback))));
 }
 
 function normalizeExportRangeLabel(label: string | undefined): string {

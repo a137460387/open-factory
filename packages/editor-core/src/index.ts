@@ -63,6 +63,7 @@ export * from './project/project-health-check';
 export * from './project/duplicate-media';
 export * from './project/media-report';
 export * from './project/clip-report';
+export * from './project/review-report';
 export * from './project/media-precheck';
 export * from './project/project-templates';
 export * from './cache/cache-types';

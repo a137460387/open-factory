@@ -7,6 +7,7 @@ import {
   AddKeyframeCommand,
   AddMaskCommand,
   AddProjectAnnotationCommand,
+  AddReviewAnnotationCommand,
   AddProjectBookmarkCommand,
   AddSubtitleClipCommand,
   AddTrackCommand,
@@ -40,6 +41,7 @@ import {
   RemoveMaskCommand,
   RenameMediaFolderCommand,
   RemoveProjectAnnotationCommand,
+  RemoveReviewAnnotationCommand,
   RemoveProjectBookmarkCommand,
   RemoveKeyframeCommand,
   RemoveTimelineMarkerCommand,
@@ -63,6 +65,7 @@ import {
   UpdateProjectExportRangesCommand,
   UpdateProjectProtectedRangesCommand,
   UpdateProjectAnnotationCommand,
+  UpdateReviewAnnotationCommand,
   UpdateProjectBookmarkCommand,
   UpdateProjectBookmarksCommand,
   UpdateTimelineMarkerCommand,
@@ -518,6 +521,50 @@ describe('timeline commands', () => {
     expect(project.annotations).toEqual([]);
     manager.redo();
     expect(project.annotations[0].id).toBe('annotation-a');
+  });
+
+  it('adds review annotations at the playhead time without touching project annotations', () => {
+    let project = makeProject();
+    const accessor = {
+      getProject: () => project,
+      setProject: (next: typeof project) => {
+        project = next;
+      }
+    };
+    const manager = new CommandManager();
+
+    manager.execute(
+      new AddReviewAnnotationCommand(accessor, {
+        id: 'review-a',
+        time: 99,
+        type: 'rectangle',
+        text: '  Reframe this area  ',
+        color: '#38BDF8',
+        x: 0.2,
+        y: 0.3,
+        width: 0.4,
+        height: 0.2
+      })
+    );
+    expect(project.annotations).toEqual([]);
+    expect(project.reviewAnnotations).toEqual([
+      { id: 'review-a', time: 10, type: 'rectangle', text: 'Reframe this area', color: '#38bdf8', x: 0.2, y: 0.3, width: 0.4, height: 0.2 }
+    ]);
+
+    manager.execute(new UpdateReviewAnnotationCommand(accessor, 'review-a', { time: 2, type: 'text', text: '', width: 0, height: 0 }));
+    expect(project.reviewAnnotations[0]).toMatchObject({ id: 'review-a', time: 2, type: 'text', text: 'Review annotation', width: 0.22, height: 0.08 });
+
+    manager.execute(new RemoveReviewAnnotationCommand(accessor, 'review-a'));
+    expect(project.reviewAnnotations).toEqual([]);
+
+    manager.undo();
+    expect(project.reviewAnnotations[0].time).toBe(2);
+    manager.undo();
+    expect(project.reviewAnnotations[0].text).toBe('Reframe this area');
+    manager.undo();
+    expect(project.reviewAnnotations).toEqual([]);
+    manager.redo();
+    expect(project.reviewAnnotations[0].id).toBe('review-a');
   });
 
   it('adds, updates, removes, and restores timeline bookmarks', () => {

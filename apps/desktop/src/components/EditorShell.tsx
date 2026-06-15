@@ -4,6 +4,7 @@ import {
   AddClipCommand,
   AddMediaFolderCommand,
   AddProjectAnnotationCommand,
+  AddReviewAnnotationCommand,
   AddProjectBookmarkCommand,
   ApplySplitLayoutCommand,
   BatchImportSubtitleCommand,
@@ -12,6 +13,7 @@ import {
   CreateMulticamSequenceCommand,
   DEFAULT_TIMELINE_GRID_SETTINGS,
   DEFAULT_PROJECT_ANNOTATION_COLOR,
+  DEFAULT_REVIEW_ANNOTATION_COLOR,
   DeleteGroupCommand,
   DeleteClipsCommand,
   DeleteMediaFolderCommand,
@@ -69,6 +71,7 @@ import {
   type OrphanMediaIssue,
   type ProjectHealthReport,
   type Project,
+  type ReviewAnnotation,
   type Clip,
   type BeatSensitivity,
   type KeyframeProperty,
@@ -138,6 +141,8 @@ import { createProjectArchivePlan, writeProjectArchive, type ArchiveProgress } f
 import { collectProjectArchivePreflight, saveClipReport, saveOfflineMediaReport } from '../lib/mediaReport';
 import { saveProjectSnapshot } from '../lib/projectSnapshots';
 import { scanProjectHealth } from '../lib/projectHealth';
+import { getReviewModeShellVisibility } from '../review/reviewMode';
+import { saveReviewReport } from '../review/reviewReport';
 import { createSharePackageFromProject, type SharePackageWorkflowProgress } from '../lib/sharePackage';
 import { canSeparateAudioForClip, getDemucsAvailability, separateAudioForClip, type DemucsAvailability } from '../lib/demucs';
 import {
@@ -225,6 +230,7 @@ const SettingsDialog = lazy(() => import('../settings/SettingsDialog').then((mod
 const MacroHistoryDialog = lazy(() => import('../macros/MacroHistoryDialog').then((module) => ({ default: module.MacroHistoryDialog })));
 const TimelineExportDialog = lazy(() => import('../timeline-export/TimelineExportDialog').then((module) => ({ default: module.TimelineExportDialog })));
 const BatchTranscodeDialog = lazy(() => import('../media/BatchTranscodeDialog').then((module) => ({ default: module.BatchTranscodeDialog })));
+const BatchWatermarkDialog = lazy(() => import('../media/BatchWatermarkDialog').then((module) => ({ default: module.BatchWatermarkDialog })));
 const GifExportDialog = lazy(() => import('../media/GifExportDialog'));
 const AudioSpectrumDialog = lazy(() => import('../media/AudioSpectrumDialog'));
 const MediaPrecheckPanel = lazy(() => import('../media/MediaPrecheckPanel').then((module) => ({ default: module.MediaPrecheckPanel })));
@@ -269,6 +275,7 @@ export function EditorShell() {
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [timelineExportDialogOpen, setTimelineExportDialogOpen] = useState(false);
   const [batchTranscodeOpen, setBatchTranscodeOpen] = useState(false);
+  const [batchWatermarkOpen, setBatchWatermarkOpen] = useState(false);
   const [batchTranscodeInitialPaths, setBatchTranscodeInitialPaths] = useState<string[]>([]);
   const [gifExportAsset, setGifExportAsset] = useState<MediaAsset>();
   const [spectrumAsset, setSpectrumAsset] = useState<MediaAsset>();
@@ -289,6 +296,7 @@ export function EditorShell() {
   const [storyboardOpen, setStoryboardOpen] = useState(false);
   const [macroHistoryOpen, setMacroHistoryOpen] = useState(false);
   const [projectHealthOpen, setProjectHealthOpen] = useState(false);
+  const [reviewMode, setReviewMode] = useState(() => (typeof window === 'undefined' ? false : window.location.hash === '#review'));
   const [projectHealthReport, setProjectHealthReport] = useState<ProjectHealthReport>();
   const [projectHealthScanning, setProjectHealthScanning] = useState(false);
   const [duplicateMediaGroups, setDuplicateMediaGroups] = useState<DuplicateMediaGroup[]>([]);
@@ -390,12 +398,13 @@ export function EditorShell() {
   const canSplitToBeats = Boolean(selectedClip && (project.beatMarkers?.length ?? 0) > 0);
   const timelineHeightPx = clampTimelineHeight(layoutSettings.timelineHeightPx, viewportSize.height);
   const effectivePanels = useMemo(() => getEffectivePanelState(layoutSettings, viewportSize.width), [layoutSettings, viewportSize.width]);
+  const reviewVisibility = useMemo(() => getReviewModeShellVisibility(reviewMode), [reviewMode]);
   const workspaceLayouts = useMemo<WorkspaceLayoutDefinition[]>(
     () => [...BUILT_IN_WORKSPACE_LAYOUT_IDS.map((id) => getWorkspaceLayoutById(layoutSettings, id)).filter((layout): layout is WorkspaceLayoutDefinition => Boolean(layout)), ...layoutSettings.customWorkspaceLayouts],
     [layoutSettings]
   );
-  const editorGridRows = `auto minmax(0,1fr) 6px ${timelineHeightPx}px`;
-  const mainGridColumns = `${effectivePanels.leftPanelCollapsed ? 48 : layoutSettings.leftPanelWidthPx}px minmax(0,1fr) ${effectivePanels.rightPanelCollapsed ? 48 : layoutSettings.rightPanelWidthPx}px`;
+  const editorGridRows = reviewMode ? 'auto minmax(0,1fr)' : `auto minmax(0,1fr) 6px ${timelineHeightPx}px`;
+  const mainGridColumns = reviewMode ? 'minmax(0,1fr)' : `${effectivePanels.leftPanelCollapsed ? 48 : layoutSettings.leftPanelWidthPx}px minmax(0,1fr) ${effectivePanels.rightPanelCollapsed ? 48 : layoutSettings.rightPanelWidthPx}px`;
   const rightPanelRows =
     effectivePanels.rightPrimaryPanelVisible && effectivePanels.audioMixerVisible
       ? `minmax(0,1fr) ${layoutSettings.mixerHeightPx}px`
@@ -970,6 +979,21 @@ export function EditorShell() {
     window.addEventListener('keydown', onKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
   }, [applyWorkspaceLayoutById, layoutSettings.customWorkspaceLayouts]);
+
+  useEffect(() => {
+    const onHashChange = () => setReviewMode(window.location.hash === '#review');
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  useEffect(() => {
+    const targetHash = reviewMode ? '#review' : '';
+    if (window.location.hash === targetHash) {
+      return;
+    }
+    const nextUrl = `${window.location.pathname}${window.location.search}${targetHash}`;
+    window.history.replaceState(null, '', nextUrl);
+  }, [reviewMode]);
 
   const queueFrameRateConversionForImportedMedia = useCallback(
     async (media: MediaAsset[]) => {
@@ -1997,6 +2021,31 @@ export function EditorShell() {
     }
   }, []);
 
+  const addReviewAnnotationAtPlayhead = useCallback((annotation: Omit<ReviewAnnotation, 'id'> & Partial<Pick<ReviewAnnotation, 'id'>>) => {
+    try {
+      commandManager.execute(
+        new AddReviewAnnotationCommand(projectAccessor, {
+          ...annotation,
+          color: annotation.color ?? DEFAULT_REVIEW_ANNOTATION_COLOR
+        })
+      );
+      showToast({ kind: 'success', title: zhCN.preview.reviewAnnotationAdded, message: annotation.text });
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.preview.reviewAnnotationFailedTitle, message: error instanceof Error ? error.message : zhCN.preview.reviewAnnotationFailedMessage });
+    }
+  }, []);
+
+  const createReviewReport = useCallback(async () => {
+    try {
+      const outputPath = await saveReviewReport(useEditorStore.getState().project);
+      if (outputPath) {
+        showToast({ kind: 'success', title: zhCN.preview.reviewReportSaved, message: outputPath });
+      }
+    } catch (error) {
+      showToast({ kind: 'error', title: zhCN.preview.reviewReportFailedTitle, message: error instanceof Error ? error.message : zhCN.preview.reviewReportFailedMessage });
+    }
+  }, []);
+
   const addBookmarkAtPlayhead = useCallback(() => {
     const state = useEditorStore.getState();
     try {
@@ -2320,6 +2369,7 @@ export function EditorShell() {
           onOpenSnapshotCompare={() => setSnapshotCompareOpen(true)}
           onImportMedia={() => void importMedia()}
           onBatchTranscode={() => openBatchTranscode()}
+          onOpenBatchWatermark={() => setBatchWatermarkOpen(true)}
           onOpenMediaPrecheck={() => setMediaPrecheckOpen(true)}
           onOpenVideoStitchWizard={() => setVideoStitchWizardOpen(true)}
           onOpenSyncCompare={openSyncCompare}
@@ -2380,6 +2430,9 @@ export function EditorShell() {
           thumbnailTrackVisible={thumbnailTrackVisible}
           previewQualityMode={previewPerformance.qualityMode}
           timelineGridSettings={timelineGridSettings}
+          reviewMode={reviewMode}
+          onToggleReviewMode={() => setReviewMode((mode) => !mode)}
+          onCreateReviewReport={() => void createReviewReport()}
           onPreviewQualityModeChange={(qualityMode: PreviewQualityMode) => updatePreviewPerformance({ qualityMode })}
           onToggleTimelineGridSnap={toggleTimelineGridSnap}
           onTimelineGridUnitChange={changeTimelineGridUnit}
@@ -2416,56 +2469,59 @@ export function EditorShell() {
           data-right-collapsed={effectivePanels.rightPanelCollapsed ? 'true' : 'false'}
           data-right-auto-collapsed={effectivePanels.rightPanelAutoCollapsed ? 'true' : 'false'}
           data-workspace-layout={layoutSettings.activeWorkspaceLayoutId}
+          data-review-mode={reviewMode ? 'true' : 'false'}
         >
-          {effectivePanels.leftPanelCollapsed ? (
-            <CollapsedPanelRail
-              side="left"
-              label={zhCN.layout.mediaPanelCollapsed}
-              title={zhCN.layout.expandMediaPanel}
-              testId="left-panel-expand-button"
-              onClick={() => persistLayoutPatch({ leftPanelCollapsed: false, panels: { ...layoutSettings.panels, mediaLibrary: true } })}
-            />
-          ) : (
-            <section className="relative h-full min-h-0 min-w-0 overflow-hidden" data-testid="left-panel" data-collapsed="false">
-              <button
-                className="absolute right-2 top-2 z-20 inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-white/95 text-slate-600 shadow-sm hover:bg-panel"
-                type="button"
-                title={zhCN.layout.collapseMediaPanel}
-                aria-label={zhCN.layout.collapseMediaPanel}
-                data-testid="left-panel-collapse-button"
-                onClick={() => persistLayoutPatch({ leftPanelCollapsed: true, panels: { ...layoutSettings.panels, mediaLibrary: false } })}
-              >
-                <ChevronLeft size={16} />
-              </button>
-              <MediaBin
-                media={project.media}
-                mediaFolders={project.mediaFolders}
-                mediaMetadata={project.mediaMetadata}
-                projectFrameRate={project.settings.fps}
-                onImport={() => void importMedia()}
-                onImportPaths={(paths) => void importDropped(paths)}
-                onBatchTranscode={(paths) => openBatchTranscode(paths)}
-                onExportGif={(asset) => setGifExportAsset(asset)}
-                onAnalyzeSpectrum={(asset) => setSpectrumAsset(asset)}
-                onScanDuplicates={() => void scanDuplicateMedia()}
-                onAddToTimeline={addAssetToTimeline}
-                onAddAdjustmentLayer={addAdjustmentLayer}
-                onRelink={(assetId) => void relinkMedia(assetId)}
-                onRelinkAll={() => void relinkAllMissing()}
-                onGenerateProxy={(assetId) => void generateProxyForMedia(assetId)}
-                onConvertToCfr={convertVfrMediaToCfr}
-                onSetLabel={(assetId, labelColor) => setMediaMetadata(assetId, { ...project.mediaMetadata[assetId], labelColor })}
-                onSetRating={(assetId, rating) => setMediaMetadata(assetId, { ...project.mediaMetadata[assetId], rating })}
-                onSetFlag={(assetId, flag) => setMediaMetadata(assetId, { ...project.mediaMetadata[assetId], flag })}
-                onAddTitleTemplate={addTitleTemplate}
-                onCreateFolder={createMediaFolder}
-                onRenameFolder={renameMediaFolder}
-                onDeleteFolder={deleteMediaFolder}
-                onSetFolderCollapsed={setMediaFolderCollapsed}
-                onMoveMediaToFolder={moveMediaToFolder}
+          {reviewVisibility.showLeftPanel ? (
+            effectivePanels.leftPanelCollapsed ? (
+              <CollapsedPanelRail
+                side="left"
+                label={zhCN.layout.mediaPanelCollapsed}
+                title={zhCN.layout.expandMediaPanel}
+                testId="left-panel-expand-button"
+                onClick={() => persistLayoutPatch({ leftPanelCollapsed: false, panels: { ...layoutSettings.panels, mediaLibrary: true } })}
               />
-            </section>
-          )}
+            ) : (
+              <section className="relative h-full min-h-0 min-w-0 overflow-hidden" data-testid="left-panel" data-collapsed="false">
+                <button
+                  className="absolute right-2 top-2 z-20 inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-white/95 text-slate-600 shadow-sm hover:bg-panel"
+                  type="button"
+                  title={zhCN.layout.collapseMediaPanel}
+                  aria-label={zhCN.layout.collapseMediaPanel}
+                  data-testid="left-panel-collapse-button"
+                  onClick={() => persistLayoutPatch({ leftPanelCollapsed: true, panels: { ...layoutSettings.panels, mediaLibrary: false } })}
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                <MediaBin
+                  media={project.media}
+                  mediaFolders={project.mediaFolders}
+                  mediaMetadata={project.mediaMetadata}
+                  projectFrameRate={project.settings.fps}
+                  onImport={() => void importMedia()}
+                  onImportPaths={(paths) => void importDropped(paths)}
+                  onBatchTranscode={(paths) => openBatchTranscode(paths)}
+                  onExportGif={(asset) => setGifExportAsset(asset)}
+                  onAnalyzeSpectrum={(asset) => setSpectrumAsset(asset)}
+                  onScanDuplicates={() => void scanDuplicateMedia()}
+                  onAddToTimeline={addAssetToTimeline}
+                  onAddAdjustmentLayer={addAdjustmentLayer}
+                  onRelink={(assetId) => void relinkMedia(assetId)}
+                  onRelinkAll={() => void relinkAllMissing()}
+                  onGenerateProxy={(assetId) => void generateProxyForMedia(assetId)}
+                  onConvertToCfr={convertVfrMediaToCfr}
+                  onSetLabel={(assetId, labelColor) => setMediaMetadata(assetId, { ...project.mediaMetadata[assetId], labelColor })}
+                  onSetRating={(assetId, rating) => setMediaMetadata(assetId, { ...project.mediaMetadata[assetId], rating })}
+                  onSetFlag={(assetId, flag) => setMediaMetadata(assetId, { ...project.mediaMetadata[assetId], flag })}
+                  onAddTitleTemplate={addTitleTemplate}
+                  onCreateFolder={createMediaFolder}
+                  onRenameFolder={renameMediaFolder}
+                  onDeleteFolder={deleteMediaFolder}
+                  onSetFolderCollapsed={setMediaFolderCollapsed}
+                  onMoveMediaToFolder={moveMediaToFolder}
+                />
+              </section>
+            )
+          ) : null}
           <ErrorBoundary name={zhCN.panels.preview}>
             <Suspense fallback={<PanelLoading label={zhCN.panels.preview} />}>
               <PreviewCanvas
@@ -2473,24 +2529,28 @@ export function EditorShell() {
                 previewPerformance={previewPerformance}
                 colorScopesVisible={layoutSettings.panels.colorScopes}
                 onColorScopesVisibleChange={(colorScopes) => persistPanelVisibilityPatch({ colorScopes })}
+                reviewMode={reviewMode}
+                onAddReviewAnnotation={addReviewAnnotationAtPlayhead}
+                onExportReviewReport={() => void createReviewReport()}
               />
             </Suspense>
           </ErrorBoundary>
-          {effectivePanels.rightPanelCollapsed ? (
-            <CollapsedPanelRail
-              side="right"
-              label={zhCN.layout.inspectorPanelCollapsed}
-              title={zhCN.layout.expandInspectorPanel}
-              testId="right-panel-expand-button"
-              onClick={() => persistLayoutPatch({ rightPanelCollapsed: false, panels: { ...layoutSettings.panels, inspector: true } })}
-            />
-          ) : (
-            <aside
-              className="relative grid h-full min-h-0 min-w-0 gap-px bg-line transition-[grid-template-rows] duration-200 ease-out"
-              style={{ gridTemplateRows: rightPanelRows }}
-              data-testid="right-panel"
-              data-collapsed="false"
-            >
+          {reviewVisibility.showRightPanel ? (
+            effectivePanels.rightPanelCollapsed ? (
+              <CollapsedPanelRail
+                side="right"
+                label={zhCN.layout.inspectorPanelCollapsed}
+                title={zhCN.layout.expandInspectorPanel}
+                testId="right-panel-expand-button"
+                onClick={() => persistLayoutPatch({ rightPanelCollapsed: false, panels: { ...layoutSettings.panels, inspector: true } })}
+              />
+            ) : (
+              <aside
+                className="relative grid h-full min-h-0 min-w-0 gap-px bg-line transition-[grid-template-rows] duration-200 ease-out"
+                style={{ gridTemplateRows: rightPanelRows }}
+                data-testid="right-panel"
+                data-collapsed="false"
+              >
               <button
                 className="absolute right-2 top-2 z-20 inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-white/95 text-slate-600 shadow-sm hover:bg-panel"
                 type="button"
@@ -2531,34 +2591,39 @@ export function EditorShell() {
                   </Suspense>
                 </ErrorBoundary>
               ) : null}
-            </aside>
-          )}
+              </aside>
+            )
+          ) : null}
         </main>
-        <div
-          className="flex cursor-row-resize items-center justify-center bg-line text-slate-500 transition hover:bg-brand/20 hover:text-brand"
-          role="separator"
-          aria-orientation="horizontal"
-          aria-label={zhCN.layout.resizeTimeline}
-          data-testid="timeline-resize-handle"
-          onPointerDown={beginTimelineResize}
-        >
-          <GripHorizontal size={18} />
-        </div>
-        <section className="min-h-0 overflow-hidden transition-[height] duration-200 ease-out" data-testid="timeline-panel" style={{ height: timelineHeightPx }}>
-          <ErrorBoundary name={storyboardOpen ? zhCN.storyboard.title : zhCN.panels.timeline}>
-            {storyboardOpen ? (
-              <StoryboardView />
-            ) : (
-              <Timeline
-                thumbnailTrackVisible={thumbnailTrackVisible}
-                timelineGridSettings={timelineGridSettings}
-                bookmarkPanelOpen={layoutSettings.panels.bookmarks}
-                onBookmarkPanelOpenChange={(bookmarks) => persistPanelVisibilityPatch({ bookmarks })}
-                onConvertMediaFrameRate={convertVfrMediaToCfr}
-              />
-            )}
-          </ErrorBoundary>
-        </section>
+        {reviewVisibility.showTimelineResizeHandle ? (
+          <div
+            className="flex cursor-row-resize items-center justify-center bg-line text-slate-500 transition hover:bg-brand/20 hover:text-brand"
+            role="separator"
+            aria-orientation="horizontal"
+            aria-label={zhCN.layout.resizeTimeline}
+            data-testid="timeline-resize-handle"
+            onPointerDown={beginTimelineResize}
+          >
+            <GripHorizontal size={18} />
+          </div>
+        ) : null}
+        {reviewVisibility.showTimeline ? (
+          <section className="min-h-0 overflow-hidden transition-[height] duration-200 ease-out" data-testid="timeline-panel" style={{ height: timelineHeightPx }}>
+            <ErrorBoundary name={storyboardOpen ? zhCN.storyboard.title : zhCN.panels.timeline}>
+              {storyboardOpen ? (
+                <StoryboardView />
+              ) : (
+                <Timeline
+                  thumbnailTrackVisible={thumbnailTrackVisible}
+                  timelineGridSettings={timelineGridSettings}
+                  bookmarkPanelOpen={layoutSettings.panels.bookmarks}
+                  onBookmarkPanelOpenChange={(bookmarks) => persistPanelVisibilityPatch({ bookmarks })}
+                  onConvertMediaFrameRate={convertVfrMediaToCfr}
+                />
+              )}
+            </ErrorBoundary>
+          </section>
+        ) : null}
         <Suspense fallback={null}>
           {exportDialogOpen ? (
             <ExportDialog
@@ -2595,6 +2660,7 @@ export function EditorShell() {
               }}
             />
           ) : null}
+          {batchWatermarkOpen ? <BatchWatermarkDialog project={project} onClose={() => setBatchWatermarkOpen(false)} /> : null}
           {gifExportAsset ? <GifExportDialog asset={gifExportAsset} onClose={() => setGifExportAsset(undefined)} /> : null}
           {spectrumAsset ? (
             <AudioSpectrumDialog

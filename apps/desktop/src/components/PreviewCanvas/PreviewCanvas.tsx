@@ -1,5 +1,5 @@
-import { BarChart3, Blend, Columns2, GitCompareArrows, MousePointer2, Pause, Pipette, Play, Rows2 } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type WheelEvent as ReactWheelEvent } from 'react';
+import { ArrowUpRight, BarChart3, Blend, Columns2, FileDown, GitCompareArrows, MousePointer2, Pause, Pipette, Play, RectangleHorizontal, Rows2, Type as TypeIcon } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode, type WheelEvent as ReactWheelEvent } from 'react';
 import {
   CutMulticamClipCommand,
   UpdateClipCommand,
@@ -35,6 +35,8 @@ import {
   type PathPoint,
   type PathPointHandle,
   type Project,
+  type ReviewAnnotation,
+  type ReviewAnnotationType,
   type Sequence,
   type TimecodeParseError,
   type Transform,
@@ -84,9 +86,20 @@ interface PreviewCanvasProps {
   previewPerformance?: PreviewPerformanceSettings;
   colorScopesVisible?: boolean;
   onColorScopesVisibleChange?(visible: boolean): void;
+  reviewMode?: boolean;
+  onAddReviewAnnotation?(annotation: Omit<ReviewAnnotation, 'id'> & Partial<Pick<ReviewAnnotation, 'id'>>): void;
+  onExportReviewReport?(): void;
 }
 
-export function PreviewCanvas({ safeFrameGuides = false, previewPerformance = DEFAULT_PREVIEW_PERFORMANCE_SETTINGS, colorScopesVisible, onColorScopesVisibleChange }: PreviewCanvasProps) {
+export function PreviewCanvas({
+  safeFrameGuides = false,
+  previewPerformance = DEFAULT_PREVIEW_PERFORMANCE_SETTINGS,
+  colorScopesVisible,
+  onColorScopesVisibleChange,
+  reviewMode = false,
+  onAddReviewAnnotation,
+  onExportReviewReport
+}: PreviewCanvasProps) {
   const t = zhCN.preview;
   const theme = useTheme();
   const compareFrameRef = useRef<HTMLDivElement | null>(null);
@@ -95,6 +108,7 @@ export function PreviewCanvas({ safeFrameGuides = false, previewPerformance = DE
   const pathMaskDragRef = useRef<PathMaskDrag | null>(null);
   const panoramaDragRef = useRef<PanoramaPreviewDrag | null>(null);
   const previewPanDragRef = useRef<PreviewPanDrag | null>(null);
+  const reviewDragRef = useRef<ReviewAnnotationDrag | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const originalCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const differenceCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -132,6 +146,8 @@ export function PreviewCanvas({ safeFrameGuides = false, previewPerformance = DE
   const [previewZoom, setPreviewZoom] = useState(1);
   const [previewPan, setPreviewPan] = useState({ x: 0, y: 0 });
   const [frameInspectorSample, setFrameInspectorSample] = useState<FrameInspectorSample>();
+  const [reviewTool, setReviewTool] = useState<ReviewAnnotationType>('rectangle');
+  const [reviewText, setReviewText] = useState('');
   const [frameSearchQuery, setFrameSearchQuery] = useState('');
   const [frameSearchFocused, setFrameSearchFocused] = useState(false);
   const [frameSearchError, setFrameSearchError] = useState<string>();
@@ -166,6 +182,16 @@ export function PreviewCanvas({ safeFrameGuides = false, previewPerformance = DE
       setScopesOpen(colorScopesVisible);
     }
   }, [colorScopesVisible]);
+
+  useEffect(() => {
+    if (!reviewMode) {
+      return;
+    }
+    setCanvasEditMode(false);
+    setFrameInspectMode(false);
+    clearFrameInspector();
+    setChromaKeyPickClipId(undefined);
+  }, [reviewMode, setChromaKeyPickClipId]);
   const snapshotCompareRanges = useMemo(
     () => (snapshotCompareProject ? diffTimelineSnapshots(project.timeline, snapshotCompareProject.timeline) : []),
     [project.timeline, snapshotCompareProject]
@@ -645,6 +671,65 @@ export function PreviewCanvas({ safeFrameGuides = false, previewPerformance = DE
     );
   }
 
+  function getReviewAnnotationText(): string {
+    return reviewText.trim() || t.reviewDefaultText((project.reviewAnnotations?.length ?? 0) + 1);
+  }
+
+  function addReviewAnnotation(type: ReviewAnnotationType, geometry: Pick<ReviewAnnotation, 'x' | 'y' | 'width' | 'height'>): void {
+    onAddReviewAnnotation?.({
+      time: playheadTime,
+      type,
+      text: getReviewAnnotationText(),
+      color: '#facc15',
+      ...geometry
+    });
+  }
+
+  function beginReviewAnnotation(event: ReactPointerEvent<HTMLDivElement>): void {
+    if (!reviewMode || event.button !== 0) {
+      return;
+    }
+    const point = getCanvasPointFromPointer(event);
+    const canvas = canvasRef.current;
+    if (!point || !canvas) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    if (reviewTool === 'text') {
+      addReviewAnnotation('text', {
+        x: point.x / canvas.width,
+        y: point.y / canvas.height,
+        width: 0.22,
+        height: 0.08
+      });
+      return;
+    }
+    event.currentTarget.setPointerCapture(event.pointerId);
+    reviewDragRef.current = {
+      pointerId: event.pointerId,
+      type: reviewTool,
+      startPoint: point,
+      canvasWidth: canvas.width,
+      canvasHeight: canvas.height
+    };
+  }
+
+  function endReviewAnnotation(event: ReactPointerEvent<HTMLDivElement>): void {
+    const drag = reviewDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) {
+      return;
+    }
+    const point = getCanvasPointFromPointer(event) ?? drag.startPoint;
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    reviewDragRef.current = null;
+    addReviewAnnotation(drag.type, buildReviewAnnotationGeometry(drag, point));
+  }
+
   function pickChromaKeyColor(event: ReactPointerEvent<HTMLDivElement>): void {
     if (!chromaKeyPickTarget) {
       setChromaKeyPickClipId(undefined);
@@ -1023,131 +1108,143 @@ export function PreviewCanvas({ safeFrameGuides = false, previewPerformance = DE
           <div className="text-xs text-slate-300">{previewCanvasSizeLabel}</div>
         </div>
         <div className="flex items-center gap-2">
-          <label className="sr-only" htmlFor="preview-snapshot-compare-select">
-            {t.snapshotCompare}
-          </label>
-          <select
-            id="preview-snapshot-compare-select"
-            className="h-9 max-w-[190px] rounded-md border border-white/10 bg-white/10 px-2 text-xs font-medium text-white outline-none hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
-            value={snapshotComparePath}
-            disabled={snapshotCompareLoading}
-            title={t.snapshotCompare}
-            data-testid="preview-snapshot-compare-select"
-            onPointerDown={() => void refreshSnapshotEntries()}
-            onFocus={() => void refreshSnapshotEntries()}
-            onChange={(event) => void selectSnapshotCompare(event.target.value)}
-          >
-            <option value="">{snapshotCompareLoading ? t.snapshotCompareLoading : t.snapshotCompareOff}</option>
-            {snapshotEntries.map((entry) => (
-              <option key={entry.path} value={entry.path}>
-                {entry.name}
-              </option>
-            ))}
-          </select>
-          {compareEnabled ? (
-            <div className="flex items-center gap-1 rounded-md border border-white/10 bg-white/10 p-0.5" data-testid="preview-compare-mode-group">
-              <button
-                className={`inline-flex h-8 w-8 items-center justify-center rounded text-white hover:bg-white/20 ${compareMode === 'left-right' ? 'bg-emerald-500/30' : ''}`}
-                title={t.compareLeftRight}
-                aria-label={t.compareLeftRight}
-                data-testid="preview-compare-mode-left-right"
-                onClick={() => setCompareMode('left-right')}
+          {reviewMode ? (
+            <ReviewAnnotationToolbar
+              tool={reviewTool}
+              text={reviewText}
+              onToolChange={setReviewTool}
+              onTextChange={setReviewText}
+              onExportReport={onExportReviewReport}
+            />
+          ) : (
+            <>
+              <label className="sr-only" htmlFor="preview-snapshot-compare-select">
+                {t.snapshotCompare}
+              </label>
+              <select
+                id="preview-snapshot-compare-select"
+                className="h-9 max-w-[190px] rounded-md border border-white/10 bg-white/10 px-2 text-xs font-medium text-white outline-none hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60"
+                value={snapshotComparePath}
+                disabled={snapshotCompareLoading}
+                title={t.snapshotCompare}
+                data-testid="preview-snapshot-compare-select"
+                onPointerDown={() => void refreshSnapshotEntries()}
+                onFocus={() => void refreshSnapshotEntries()}
+                onChange={(event) => void selectSnapshotCompare(event.target.value)}
               >
-                <Columns2 size={16} />
+                <option value="">{snapshotCompareLoading ? t.snapshotCompareLoading : t.snapshotCompareOff}</option>
+                {snapshotEntries.map((entry) => (
+                  <option key={entry.path} value={entry.path}>
+                    {entry.name}
+                  </option>
+                ))}
+              </select>
+              {compareEnabled ? (
+                <div className="flex items-center gap-1 rounded-md border border-white/10 bg-white/10 p-0.5" data-testid="preview-compare-mode-group">
+                  <button
+                    className={`inline-flex h-8 w-8 items-center justify-center rounded text-white hover:bg-white/20 ${compareMode === 'left-right' ? 'bg-emerald-500/30' : ''}`}
+                    title={t.compareLeftRight}
+                    aria-label={t.compareLeftRight}
+                    data-testid="preview-compare-mode-left-right"
+                    onClick={() => setCompareMode('left-right')}
+                  >
+                    <Columns2 size={16} />
+                  </button>
+                  <button
+                    className={`inline-flex h-8 w-8 items-center justify-center rounded text-white hover:bg-white/20 ${compareMode === 'top-bottom' ? 'bg-emerald-500/30' : ''}`}
+                    title={t.compareTopBottom}
+                    aria-label={t.compareTopBottom}
+                    data-testid="preview-compare-mode-top-bottom"
+                    onClick={() => setCompareMode('top-bottom')}
+                  >
+                    <Rows2 size={16} />
+                  </button>
+                  <button
+                    className={`inline-flex h-8 w-8 items-center justify-center rounded text-white hover:bg-white/20 ${compareMode === 'difference' ? 'bg-emerald-500/30' : ''}`}
+                    title={t.compareDifference}
+                    aria-label={t.compareDifference}
+                    data-testid="preview-compare-mode-difference"
+                    onClick={() => setCompareMode('difference')}
+                  >
+                    <Blend size={16} />
+                  </button>
+                </div>
+              ) : null}
+              <button
+                className={`inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/10 text-white hover:bg-white/20 ${
+                  canvasEditMode ? 'bg-emerald-500/25' : 'bg-white/10'
+                }`}
+                title={canvasEditMode ? t.canvasEditModeActive : t.canvasEditMode}
+                aria-label={canvasEditMode ? t.canvasEditModeActive : t.canvasEditMode}
+                data-testid="preview-canvas-edit-toggle"
+                data-active={canvasEditMode ? 'true' : 'false'}
+                onClick={() => {
+                  setCanvasEditMode((value) => {
+                    const next = !value;
+                    if (next) {
+                      setFrameInspectMode(false);
+                      clearFrameInspector();
+                    }
+                    return next;
+                  });
+                }}
+              >
+                <MousePointer2 size={17} />
               </button>
               <button
-                className={`inline-flex h-8 w-8 items-center justify-center rounded text-white hover:bg-white/20 ${compareMode === 'top-bottom' ? 'bg-emerald-500/30' : ''}`}
-                title={t.compareTopBottom}
-                aria-label={t.compareTopBottom}
-                data-testid="preview-compare-mode-top-bottom"
-                onClick={() => setCompareMode('top-bottom')}
+                className={`inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/10 text-white hover:bg-white/20 ${
+                  frameInspectMode ? 'bg-emerald-500/25' : 'bg-white/10'
+                }`}
+                title={frameInspectMode ? t.frameInspectorActive : t.frameInspector}
+                aria-label={frameInspectMode ? t.frameInspectorActive : t.frameInspector}
+                data-testid="preview-frame-inspector-toggle"
+                data-active={frameInspectMode ? 'true' : 'false'}
+                onClick={() => {
+                  setFrameInspectMode((value) => {
+                    const next = !value;
+                    if (next) {
+                      setCanvasEditMode(false);
+                      setChromaKeyPickClipId(undefined);
+                    }
+                    if (!next) {
+                      clearFrameInspector();
+                    }
+                    return next;
+                  });
+                }}
               >
-                <Rows2 size={16} />
+                <Pipette size={17} />
               </button>
               <button
-                className={`inline-flex h-8 w-8 items-center justify-center rounded text-white hover:bg-white/20 ${compareMode === 'difference' ? 'bg-emerald-500/30' : ''}`}
-                title={t.compareDifference}
-                aria-label={t.compareDifference}
-                data-testid="preview-compare-mode-difference"
-                onClick={() => setCompareMode('difference')}
+                className={`inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/10 text-white hover:bg-white/20 ${
+                  compareEnabled ? 'bg-emerald-500/25' : 'bg-white/10'
+                }`}
+                title={t.compareToggle}
+                aria-label={t.compareToggle}
+                data-testid="preview-compare-toggle"
+                onClick={toggleCompareMode}
               >
-                <Blend size={16} />
+                <GitCompareArrows size={17} />
               </button>
-            </div>
-          ) : null}
-          <button
-            className={`inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/10 text-white hover:bg-white/20 ${
-              canvasEditMode ? 'bg-emerald-500/25' : 'bg-white/10'
-            }`}
-            title={canvasEditMode ? t.canvasEditModeActive : t.canvasEditMode}
-            aria-label={canvasEditMode ? t.canvasEditModeActive : t.canvasEditMode}
-            data-testid="preview-canvas-edit-toggle"
-            data-active={canvasEditMode ? 'true' : 'false'}
-            onClick={() => {
-              setCanvasEditMode((value) => {
-                const next = !value;
-                if (next) {
-                  setFrameInspectMode(false);
-                  clearFrameInspector();
-                }
-                return next;
-              });
-            }}
-          >
-            <MousePointer2 size={17} />
-          </button>
-          <button
-            className={`inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/10 text-white hover:bg-white/20 ${
-              frameInspectMode ? 'bg-emerald-500/25' : 'bg-white/10'
-            }`}
-            title={frameInspectMode ? t.frameInspectorActive : t.frameInspector}
-            aria-label={frameInspectMode ? t.frameInspectorActive : t.frameInspector}
-            data-testid="preview-frame-inspector-toggle"
-            data-active={frameInspectMode ? 'true' : 'false'}
-            onClick={() => {
-              setFrameInspectMode((value) => {
-                const next = !value;
-                if (next) {
-                  setCanvasEditMode(false);
-                  setChromaKeyPickClipId(undefined);
-                }
-                if (!next) {
-                  clearFrameInspector();
-                }
-                return next;
-              });
-            }}
-          >
-            <Pipette size={17} />
-          </button>
-          <button
-            className={`inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/10 text-white hover:bg-white/20 ${
-              compareEnabled ? 'bg-emerald-500/25' : 'bg-white/10'
-            }`}
-            title={t.compareToggle}
-            aria-label={t.compareToggle}
-            data-testid="preview-compare-toggle"
-            onClick={toggleCompareMode}
-          >
-            <GitCompareArrows size={17} />
-          </button>
-          <button
-            className={`inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/10 text-white hover:bg-white/20 ${
-              scopesOpen ? 'bg-emerald-500/25' : 'bg-white/10'
-            }`}
-            title={t.colorScopes}
-            aria-label={t.colorScopes}
-            data-testid="toggle-color-scopes"
-            onClick={() => {
-              setScopesOpen((value) => {
-                const next = !value;
-                onColorScopesVisibleChange?.(next);
-                return next;
-              });
-            }}
-          >
-            <BarChart3 size={17} />
-          </button>
+              <button
+                className={`inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/10 text-white hover:bg-white/20 ${
+                  scopesOpen ? 'bg-emerald-500/25' : 'bg-white/10'
+                }`}
+                title={t.colorScopes}
+                aria-label={t.colorScopes}
+                data-testid="toggle-color-scopes"
+                onClick={() => {
+                  setScopesOpen((value) => {
+                    const next = !value;
+                    onColorScopesVisibleChange?.(next);
+                    return next;
+                  });
+                }}
+              >
+                <BarChart3 size={17} />
+              </button>
+            </>
+          )}
           <button
             className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/10 bg-white/10 text-white hover:bg-white/20"
             title={isPlaying ? zhCN.toolbar.pause : zhCN.toolbar.play}
@@ -1230,7 +1327,7 @@ export function PreviewCanvas({ safeFrameGuides = false, previewPerformance = DE
                   onPointerCancel={() => setCompareDividerDragging(false)}
                 />
               ) : null}
-              {selectedPanoramaClip && !canvasEditMode && !frameInspectMode && !compareEnabled && !chromaKeyPickTarget ? (
+              {selectedPanoramaClip && !reviewMode && !canvasEditMode && !frameInspectMode && !compareEnabled && !chromaKeyPickTarget ? (
                 <div
                   className="absolute inset-0 z-20 cursor-grab active:cursor-grabbing"
                   title={t.panoramaDrag}
@@ -1243,7 +1340,7 @@ export function PreviewCanvas({ safeFrameGuides = false, previewPerformance = DE
                   onWheel={updatePanoramaFov}
                 />
               ) : null}
-              {chromaKeyPickTarget ? (
+              {!reviewMode && chromaKeyPickTarget ? (
                 <div
                   className="absolute inset-0 z-40 cursor-crosshair"
                   title={zhCN.inspector.chromaKey.pickFromPreview}
@@ -1252,7 +1349,16 @@ export function PreviewCanvas({ safeFrameGuides = false, previewPerformance = DE
                   onPointerDown={pickChromaKeyColor}
                 />
               ) : null}
-              {canvasEditMode && selectedEditableClip && selectedPathMask ? (
+              {reviewMode ? (
+                <ReviewAnnotationOverlay
+                  annotations={project.reviewAnnotations ?? []}
+                  playheadTime={playheadTime}
+                  onPointerDown={beginReviewAnnotation}
+                  onPointerUp={endReviewAnnotation}
+                  onPointerCancel={endReviewAnnotation}
+                />
+              ) : null}
+              {!reviewMode && canvasEditMode && selectedEditableClip && selectedPathMask ? (
                 <div
                   className="absolute inset-0 z-30 cursor-crosshair"
                   data-testid="path-mask-overlay"
@@ -1264,7 +1370,7 @@ export function PreviewCanvas({ safeFrameGuides = false, previewPerformance = DE
                 >
                   <PathMaskControls item={selectedEditableClip} mask={selectedPathMask} onBeginDrag={beginPathMaskDrag} />
                 </div>
-              ) : canvasEditMode ? (
+              ) : !reviewMode && canvasEditMode ? (
                 <div
                   className="absolute inset-0 z-30 cursor-crosshair"
                   data-testid="canvas-transform-overlay"
@@ -1281,7 +1387,7 @@ export function PreviewCanvas({ safeFrameGuides = false, previewPerformance = DE
                   ) : null}
                 </div>
               ) : null}
-              {selectedMulticamClip && selectedMulticamSequence ? (
+              {!reviewMode && selectedMulticamClip && selectedMulticamSequence ? (
                 <MulticamPreviewGrid
                   clip={selectedMulticamClip}
                   sequence={selectedMulticamSequence}
@@ -1302,7 +1408,7 @@ export function PreviewCanvas({ safeFrameGuides = false, previewPerformance = DE
                 />
               ) : null}
             </div>
-            {frameInspectMode ? (
+            {!reviewMode && frameInspectMode ? (
               <div
                 className="absolute inset-0 z-50 cursor-crosshair"
                 data-testid="frame-inspector-overlay"
@@ -1653,6 +1759,207 @@ function drawAudioOnlyPreview(canvas: HTMLCanvasElement, label: string): void {
   context.textAlign = 'center';
   context.textBaseline = 'middle';
   context.fillText(label, canvas.width / 2, canvas.height / 2);
+}
+
+function ReviewAnnotationToolbar({
+  tool,
+  text,
+  onToolChange,
+  onTextChange,
+  onExportReport
+}: {
+  tool: ReviewAnnotationType;
+  text: string;
+  onToolChange(tool: ReviewAnnotationType): void;
+  onTextChange(text: string): void;
+  onExportReport?: () => void;
+}) {
+  const t = zhCN.preview;
+  return (
+    <div className="flex items-center gap-2" data-testid="review-annotation-tools" aria-label={t.reviewAnnotationMode}>
+      <div className="flex items-center gap-1 rounded-md border border-white/10 bg-white/10 p-0.5">
+        <ReviewToolButton tool="rectangle" activeTool={tool} title={t.reviewToolRectangle} onToolChange={onToolChange} icon={<RectangleHorizontal size={16} />} />
+        <ReviewToolButton tool="arrow" activeTool={tool} title={t.reviewToolArrow} onToolChange={onToolChange} icon={<ArrowUpRight size={16} />} />
+        <ReviewToolButton tool="text" activeTool={tool} title={t.reviewToolText} onToolChange={onToolChange} icon={<TypeIcon size={16} />} />
+      </div>
+      <label className="sr-only" htmlFor="review-annotation-text-input">
+        {t.reviewAnnotationText}
+      </label>
+      <input
+        id="review-annotation-text-input"
+        className="h-9 w-52 rounded-md border border-white/10 bg-white/10 px-2 text-xs font-medium text-white outline-none placeholder:text-slate-400 focus:border-brand"
+        value={text}
+        placeholder={t.reviewAnnotationText}
+        data-testid="review-annotation-text-input"
+        onChange={(event) => onTextChange(event.target.value)}
+      />
+      <button
+        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-white/10 bg-white/10 text-white hover:bg-white/20 disabled:opacity-45"
+        type="button"
+        title={zhCN.toolbar.exportReviewReport}
+        aria-label={zhCN.toolbar.exportReviewReport}
+        data-testid="review-export-report-button"
+        disabled={!onExportReport}
+        onClick={onExportReport}
+      >
+        <FileDown size={17} />
+      </button>
+    </div>
+  );
+}
+
+function ReviewToolButton({
+  tool,
+  activeTool,
+  title,
+  icon,
+  onToolChange
+}: {
+  tool: ReviewAnnotationType;
+  activeTool: ReviewAnnotationType;
+  title: string;
+  icon: ReactNode;
+  onToolChange(tool: ReviewAnnotationType): void;
+}) {
+  return (
+    <button
+      className={`inline-flex h-8 w-8 items-center justify-center rounded text-white hover:bg-white/20 ${activeTool === tool ? 'bg-emerald-500/30' : ''}`}
+      type="button"
+      title={title}
+      aria-label={title}
+      data-testid={`review-tool-${tool}`}
+      data-active={activeTool === tool ? 'true' : 'false'}
+      onClick={() => onToolChange(tool)}
+    >
+      {icon}
+    </button>
+  );
+}
+
+function ReviewAnnotationOverlay({
+  annotations,
+  playheadTime,
+  onPointerDown,
+  onPointerUp,
+  onPointerCancel
+}: {
+  annotations: ReviewAnnotation[];
+  playheadTime: number;
+  onPointerDown(event: ReactPointerEvent<HTMLDivElement>): void;
+  onPointerUp(event: ReactPointerEvent<HTMLDivElement>): void;
+  onPointerCancel(event: ReactPointerEvent<HTMLDivElement>): void;
+}) {
+  const visible = annotations.filter((annotation) => Math.abs(annotation.time - playheadTime) <= 0.5);
+  return (
+    <div
+      className="absolute inset-0 z-40 cursor-crosshair"
+      data-testid="review-annotation-overlay"
+      onPointerDown={onPointerDown}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
+    >
+      <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <marker id="review-arrowhead" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto" markerUnits="strokeWidth">
+            <path d="M0,0 L0,6 L7,3 z" fill="#facc15" />
+          </marker>
+        </defs>
+        {visible.map((annotation) => {
+          if (annotation.type === 'arrow') {
+            return (
+              <line
+                key={annotation.id}
+                x1={annotation.x}
+                y1={annotation.y}
+                x2={annotation.x + annotation.width}
+                y2={annotation.y + annotation.height}
+                stroke={annotation.color}
+                strokeWidth={0.006}
+                markerEnd="url(#review-arrowhead)"
+                vectorEffect="non-scaling-stroke"
+              />
+            );
+          }
+          if (annotation.type === 'rectangle') {
+            return (
+              <rect
+                key={annotation.id}
+                x={annotation.x}
+                y={annotation.y}
+                width={annotation.width}
+                height={annotation.height}
+                fill={annotation.color}
+                fillOpacity={0.14}
+                stroke={annotation.color}
+                strokeWidth={0.006}
+                vectorEffect="non-scaling-stroke"
+              />
+            );
+          }
+          return null;
+        })}
+      </svg>
+      {visible.map((annotation) =>
+        annotation.type === 'text' ? (
+          <div
+            key={annotation.id}
+            className="pointer-events-none absolute rounded border border-yellow-300 bg-black/65 px-2 py-1 text-xs font-semibold text-white shadow-soft"
+            style={{
+              left: `${annotation.x * 100}%`,
+              top: `${annotation.y * 100}%`,
+              width: `${Math.max(8, annotation.width * 100)}%`,
+              minHeight: `${Math.max(5, annotation.height * 100)}%`
+            }}
+            data-testid={`review-annotation-${annotation.id}`}
+          >
+            {annotation.text}
+          </div>
+        ) : (
+          <div
+            key={annotation.id}
+            className="pointer-events-none absolute rounded bg-black/70 px-2 py-1 text-[11px] font-semibold text-white shadow-soft"
+            style={{ left: `${annotation.x * 100}%`, top: `${annotation.y * 100}%` }}
+            data-testid={`review-annotation-${annotation.id}`}
+          >
+            {annotation.text}
+          </div>
+        )
+      )}
+    </div>
+  );
+}
+
+function buildReviewAnnotationGeometry(drag: ReviewAnnotationDrag, point: CanvasPoint): Pick<ReviewAnnotation, 'x' | 'y' | 'width' | 'height'> {
+  if (drag.type === 'arrow') {
+    const width = (point.x - drag.startPoint.x) / drag.canvasWidth;
+    const height = (point.y - drag.startPoint.y) / drag.canvasHeight;
+    return {
+      x: drag.startPoint.x / drag.canvasWidth,
+      y: drag.startPoint.y / drag.canvasHeight,
+      width: Math.abs(width) < 0.01 ? 0.12 : width,
+      height: Math.abs(height) < 0.01 ? 0.12 : height
+    };
+  }
+  const startX = drag.startPoint.x / drag.canvasWidth;
+  const startY = drag.startPoint.y / drag.canvasHeight;
+  const endX = point.x / drag.canvasWidth;
+  const endY = point.y / drag.canvasHeight;
+  const width = Math.abs(endX - startX);
+  const height = Math.abs(endY - startY);
+  return {
+    x: Math.min(startX, endX),
+    y: Math.min(startY, endY),
+    width: width < 0.01 ? 0.18 : width,
+    height: height < 0.01 ? 0.12 : height
+  };
+}
+
+interface ReviewAnnotationDrag {
+  pointerId: number;
+  type: Exclude<ReviewAnnotationType, 'text'>;
+  startPoint: CanvasPoint;
+  canvasWidth: number;
+  canvasHeight: number;
 }
 
 interface PathMaskDrag {

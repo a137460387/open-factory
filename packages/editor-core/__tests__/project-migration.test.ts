@@ -426,6 +426,26 @@ describe('project schema migration', () => {
     expect(migrateProjectFile(file).project.annotations).toEqual([]);
   });
 
+  it('serializes and migrates review annotations while old project files default to none', () => {
+    const project = makeProject();
+    project.reviewAnnotations = [
+      { id: 'review-late', time: 99, type: 'arrow', text: '  Follow motion  ', color: '#38BDF8', x: 1.2, y: -1, width: -0.25, height: 0.4 },
+      { id: 'review-text', time: 1, type: 'text', text: '', color: 'invalid', x: 0.25, y: 0.5, width: 0, height: 0 }
+    ];
+
+    const file = serializeProject(project);
+    const migrated = migrateProjectFile(file);
+
+    expect(file.project.reviewAnnotations).toEqual([
+      { id: 'review-text', time: 1, type: 'text', text: 'Review annotation', color: '#facc15', x: 0.25, y: 0.5, width: 0.22, height: 0.08 },
+      { id: 'review-late', time: 10, type: 'arrow', text: 'Follow motion', color: '#38bdf8', x: 1, y: 0, width: -0.25, height: 0.4 }
+    ]);
+    expect(migrated.project.reviewAnnotations).toEqual(file.project.reviewAnnotations);
+
+    delete (file.project as Partial<typeof file.project>).reviewAnnotations;
+    expect(migrateProjectFile(file).project.reviewAnnotations).toEqual([]);
+  });
+
   it('serializes and migrates timeline bookmarks with legacy fallback', () => {
     const project = makeProject();
     project.bookmarks = [

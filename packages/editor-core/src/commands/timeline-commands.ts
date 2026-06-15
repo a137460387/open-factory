@@ -3,6 +3,7 @@ import {
   createMask,
   createNestedSequenceClip,
   createProjectAnnotation,
+  createReviewAnnotation,
   createSequence,
   createTimelineBookmark,
   createTransition,
@@ -33,6 +34,7 @@ import {
   normalizeMasks,
   normalizeMotionTrack,
   normalizeProjectAnnotation,
+  normalizeReviewAnnotation,
   normalizeExportRanges,
   normalizeProtectedRanges,
   normalizeProjectSettings,
@@ -69,6 +71,7 @@ import {
   type MotionTrackPoint,
   type Project,
   type ProjectAnnotation,
+  type ReviewAnnotation,
   type ExportRange,
   type ProtectedRange,
   type ProjectSettings,
@@ -1046,6 +1049,38 @@ export class AddProjectAnnotationCommand implements Command {
   }
 }
 
+export class AddReviewAnnotationCommand implements Command {
+  readonly description = 'Add review annotation';
+  private annotation?: ReviewAnnotation;
+
+  constructor(private readonly accessor: ProjectAccessor, private readonly input: Omit<ReviewAnnotation, 'id'> & Partial<Pick<ReviewAnnotation, 'id'>>) {}
+
+  execute(): void {
+    const project = this.accessor.getProject();
+    this.annotation ??= createReviewAnnotation(this.input, getTimelineDuration(project.timeline));
+    this.annotation = normalizeReviewAnnotation(this.annotation, getTimelineDuration(project.timeline));
+    this.accessor.setProject(
+      touchProject({
+        ...project,
+        reviewAnnotations: sortReviewAnnotations([...(project.reviewAnnotations ?? []), this.annotation])
+      })
+    );
+  }
+
+  undo(): void {
+    if (!this.annotation) {
+      return;
+    }
+    const project = this.accessor.getProject();
+    this.accessor.setProject(
+      touchProject({
+        ...project,
+        reviewAnnotations: (project.reviewAnnotations ?? []).filter((annotation) => annotation.id !== this.annotation?.id)
+      })
+    );
+  }
+}
+
 export interface AddProjectBookmarkInput {
   id?: string;
   time: number;
@@ -1514,6 +1549,76 @@ export class RemoveProjectAnnotationCommand implements Command {
     const annotations = [...(project.annotations ?? [])];
     annotations.splice(this.index < 0 ? annotations.length : this.index, 0, this.removed);
     this.accessor.setProject(touchProject({ ...project, annotations: sortAnnotations(annotations) }));
+  }
+}
+
+export class UpdateReviewAnnotationCommand implements Command {
+  readonly description = 'Update review annotation';
+  private before?: ReviewAnnotation;
+  private after?: ReviewAnnotation;
+
+  constructor(private readonly accessor: ProjectAccessor, private readonly annotationId: string, private readonly patch: Partial<Omit<ReviewAnnotation, 'id'>>) {}
+
+  execute(): void {
+    const project = this.accessor.getProject();
+    const annotation = (project.reviewAnnotations ?? []).find((item) => item.id === this.annotationId);
+    if (!annotation) {
+      throw new Error(`Review annotation ${this.annotationId} not found`);
+    }
+    this.before ??= annotation;
+    this.after = normalizeReviewAnnotation({ ...annotation, ...this.patch }, getTimelineDuration(project.timeline));
+    this.accessor.setProject(
+      touchProject({
+        ...project,
+        reviewAnnotations: sortReviewAnnotations((project.reviewAnnotations ?? []).map((item) => (item.id === this.annotationId ? this.after! : item)))
+      })
+    );
+  }
+
+  undo(): void {
+    if (!this.before) {
+      return;
+    }
+    const project = this.accessor.getProject();
+    this.accessor.setProject(
+      touchProject({
+        ...project,
+        reviewAnnotations: sortReviewAnnotations((project.reviewAnnotations ?? []).map((item) => (item.id === this.annotationId ? this.before! : item)))
+      })
+    );
+  }
+}
+
+export class RemoveReviewAnnotationCommand implements Command {
+  readonly description = 'Remove review annotation';
+  private removed?: ReviewAnnotation;
+  private index = -1;
+
+  constructor(private readonly accessor: ProjectAccessor, private readonly annotationId: string) {}
+
+  execute(): void {
+    const project = this.accessor.getProject();
+    this.index = (project.reviewAnnotations ?? []).findIndex((annotation) => annotation.id === this.annotationId);
+    if (this.index === -1) {
+      throw new Error(`Review annotation ${this.annotationId} not found`);
+    }
+    this.removed ??= (project.reviewAnnotations ?? [])[this.index];
+    this.accessor.setProject(
+      touchProject({
+        ...project,
+        reviewAnnotations: (project.reviewAnnotations ?? []).filter((annotation) => annotation.id !== this.annotationId)
+      })
+    );
+  }
+
+  undo(): void {
+    if (!this.removed) {
+      return;
+    }
+    const project = this.accessor.getProject();
+    const annotations = [...(project.reviewAnnotations ?? [])];
+    annotations.splice(this.index < 0 ? annotations.length : this.index, 0, this.removed);
+    this.accessor.setProject(touchProject({ ...project, reviewAnnotations: sortReviewAnnotations(annotations) }));
   }
 }
 
@@ -3740,6 +3845,10 @@ function sortMarkers(markers: TimelineMarker[]): TimelineMarker[] {
 }
 
 function sortAnnotations(annotations: ProjectAnnotation[]): ProjectAnnotation[] {
+  return [...annotations].sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
+}
+
+function sortReviewAnnotations(annotations: ReviewAnnotation[]): ReviewAnnotation[] {
   return [...annotations].sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
 }
 
