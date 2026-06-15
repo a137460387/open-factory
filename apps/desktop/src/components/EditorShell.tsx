@@ -210,6 +210,7 @@ const SettingsDialog = lazy(() => import('../settings/SettingsDialog').then((mod
 const MacroHistoryDialog = lazy(() => import('../macros/MacroHistoryDialog').then((module) => ({ default: module.MacroHistoryDialog })));
 const TimelineExportDialog = lazy(() => import('../timeline-export/TimelineExportDialog').then((module) => ({ default: module.TimelineExportDialog })));
 const BatchTranscodeDialog = lazy(() => import('../media/BatchTranscodeDialog').then((module) => ({ default: module.BatchTranscodeDialog })));
+const GifExportDialog = lazy(() => import('../media/GifExportDialog'));
 const MediaPrecheckPanel = lazy(() => import('../media/MediaPrecheckPanel').then((module) => ({ default: module.MediaPrecheckPanel })));
 const VideoStitchWizardDialog = lazy(() => import('../video-stitching/VideoStitchWizardDialog').then((module) => ({ default: module.VideoStitchWizardDialog })));
 const SyncComparePanel = lazy(() => import('../sync-compare/SyncComparePanel').then((module) => ({ default: module.SyncComparePanel })));
@@ -252,6 +253,7 @@ export function EditorShell() {
   const [timelineExportDialogOpen, setTimelineExportDialogOpen] = useState(false);
   const [batchTranscodeOpen, setBatchTranscodeOpen] = useState(false);
   const [batchTranscodeInitialPaths, setBatchTranscodeInitialPaths] = useState<string[]>([]);
+  const [gifExportAsset, setGifExportAsset] = useState<MediaAsset>();
   const [mediaPrecheckOpen, setMediaPrecheckOpen] = useState(false);
   const [videoStitchWizardOpen, setVideoStitchWizardOpen] = useState(false);
   const [syncCompareOpen, setSyncCompareOpen] = useState(false);
@@ -2286,6 +2288,7 @@ export function EditorShell() {
                 onImport={() => void importMedia()}
                 onImportPaths={(paths) => void importDropped(paths)}
                 onBatchTranscode={(paths) => openBatchTranscode(paths)}
+                onExportGif={(asset) => setGifExportAsset(asset)}
                 onScanDuplicates={() => void scanDuplicateMedia()}
                 onAddToTimeline={addAssetToTimeline}
                 onAddAdjustmentLayer={addAdjustmentLayer}
@@ -2410,6 +2413,7 @@ export function EditorShell() {
               }}
             />
           ) : null}
+          {gifExportAsset ? <GifExportDialog asset={gifExportAsset} onClose={() => setGifExportAsset(undefined)} /> : null}
           {mediaPrecheckOpen ? <MediaPrecheckPanel project={project} onClose={() => setMediaPrecheckOpen(false)} onJumpToMedia={jumpToMediaAsset} /> : null}
           {videoStitchWizardOpen ? (
             <VideoStitchWizardDialog

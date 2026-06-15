@@ -15,7 +15,7 @@ import {
   type SmartAlbumId,
   type TitleTemplateId
 } from '@open-factory/editor-core';
-import { AlertCircle, BadgeCheck, ChevronDown, ChevronRight, FileAudio2, FileImage, FileText, FileVideo2, Flag, Folder, FolderPlus, Gauge, Import, Info, Link2, Loader2, Merge, Plus, Search, SlidersHorizontal, Star, Tag, Trash2, X } from 'lucide-react';
+import { AlertCircle, BadgeCheck, ChevronDown, ChevronRight, FileAudio2, FileImage, FileText, FileVideo2, Flag, Folder, FolderPlus, Gauge, ImageDown, Import, Info, Link2, Loader2, Merge, Plus, Search, SlidersHorizontal, Star, Tag, Trash2, X } from 'lucide-react';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { clsx } from 'clsx';
 import { zhCN } from '../../i18n/strings';
@@ -33,6 +33,7 @@ interface MediaBinProps {
   onImport(): void;
   onImportPaths(paths: string[]): void;
   onBatchTranscode(paths: string[]): void;
+  onExportGif(asset: MediaAsset): void;
   onScanDuplicates(): void;
   onAddToTimeline(assetId: string): void;
   onAddAdjustmentLayer(): void;
@@ -64,6 +65,7 @@ export function MediaBin({
   onImport,
   onImportPaths,
   onBatchTranscode,
+  onExportGif,
   onScanDuplicates,
   onAddToTimeline,
   onAddAdjustmentLayer,
@@ -317,6 +319,7 @@ export function MediaBin({
             onSetRating={onSetRating}
             onSetFlag={onSetFlag}
             onBatchTranscode={onBatchTranscode}
+            onExportGif={onExportGif}
             onShowInfo={(asset) => void openMediaInfo(asset)}
           />
         ) : (
@@ -339,6 +342,7 @@ export function MediaBin({
               onSetRating={onSetRating}
               onSetFlag={onSetFlag}
               onBatchTranscode={onBatchTranscode}
+              onExportGif={onExportGif}
               onShowInfo={(asset) => void openMediaInfo(asset)}
             />
             <RootMediaDropZone onMoveMediaToFolder={onMoveMediaToFolder} />
@@ -354,6 +358,7 @@ export function MediaBin({
               onSetRating={onSetRating}
               onSetFlag={onSetFlag}
               onBatchTranscode={onBatchTranscode}
+              onExportGif={onExportGif}
               onShowInfo={(asset) => void openMediaInfo(asset)}
             />
           </div>
@@ -408,6 +413,7 @@ function MediaFolderTree(props: {
   onSetRating(assetId: string, rating: number): void;
   onSetFlag(assetId: string, flag?: MediaFlag): void;
   onBatchTranscode(paths: string[]): void;
+  onExportGif(asset: MediaAsset): void;
   onShowInfo(asset: MediaAsset): void;
 }) {
   const roots = props.folders.filter((folder) => !folder.parentId);
@@ -443,6 +449,7 @@ function MediaFolderNode({
   onSetRating,
   onSetFlag,
   onBatchTranscode,
+  onExportGif,
   onShowInfo
 }: {
   folder: MediaFolder;
@@ -464,6 +471,7 @@ function MediaFolderNode({
   onSetRating(assetId: string, rating: number): void;
   onSetFlag(assetId: string, flag?: MediaFlag): void;
   onBatchTranscode(paths: string[]): void;
+  onExportGif(asset: MediaAsset): void;
   onShowInfo(asset: MediaAsset): void;
 }) {
   const [editing, setEditing] = useState(false);
@@ -556,6 +564,7 @@ function MediaFolderNode({
               onSetRating={onSetRating}
               onSetFlag={onSetFlag}
               onBatchTranscode={onBatchTranscode}
+              onExportGif={onExportGif}
               onShowInfo={onShowInfo}
             />
           ))}
@@ -571,6 +580,7 @@ function MediaFolderNode({
             onSetRating={onSetRating}
             onSetFlag={onSetFlag}
             onBatchTranscode={onBatchTranscode}
+            onExportGif={onExportGif}
             onShowInfo={onShowInfo}
           />
         </div>
@@ -610,6 +620,7 @@ function MediaCardGrid({
   onSetRating,
   onSetFlag,
   onBatchTranscode,
+  onExportGif,
   onShowInfo
 }: {
   media: MediaAsset[];
@@ -623,6 +634,7 @@ function MediaCardGrid({
   onSetRating(assetId: string, rating: number): void;
   onSetFlag(assetId: string, flag?: MediaFlag): void;
   onBatchTranscode(paths: string[]): void;
+  onExportGif(asset: MediaAsset): void;
   onShowInfo(asset: MediaAsset): void;
 }) {
   if (media.length === 0) {
@@ -644,6 +656,7 @@ function MediaCardGrid({
           onSetRating={(rating) => onSetRating(asset.id, rating)}
           onSetFlag={(flag) => onSetFlag(asset.id, flag)}
           onBatchTranscode={() => onBatchTranscode([asset.path])}
+          onExportGif={() => onExportGif(asset)}
           onShowInfo={() => onShowInfo(asset)}
         />
       ))}
@@ -852,6 +865,7 @@ function MediaCard({
   onSetRating,
   onSetFlag,
   onBatchTranscode,
+  onExportGif,
   onShowInfo
 }: {
   asset: MediaAsset;
@@ -865,6 +879,7 @@ function MediaCard({
   onSetRating(rating: number): void;
   onSetFlag(flag?: MediaFlag): void;
   onBatchTranscode(): void;
+  onExportGif(): void;
   onShowInfo(): void;
 }) {
   const proxySettings = useProxySettingsStore((state) => state.settings);
@@ -962,18 +977,32 @@ function MediaCard({
             {zhCN.mediaBin.mediaInfo.menuItem}
           </button>
           {asset.type === 'video' ? (
-            <button
-              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
-              type="button"
-              data-testid={`media-batch-transcode-${asset.id}`}
-              onClick={() => {
-                onBatchTranscode();
-                setLabelMenuOpen(false);
-              }}
-            >
-              <FileVideo2 size={13} />
-              {zhCN.mediaBin.batchTranscode}
-            </button>
+            <>
+              <button
+                className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
+                type="button"
+                data-testid={`media-batch-transcode-${asset.id}`}
+                onClick={() => {
+                  onBatchTranscode();
+                  setLabelMenuOpen(false);
+                }}
+              >
+                <FileVideo2 size={13} />
+                {zhCN.mediaBin.batchTranscode}
+              </button>
+              <button
+                className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
+                type="button"
+                data-testid={`media-export-gif-${asset.id}`}
+                onClick={() => {
+                  onExportGif();
+                  setLabelMenuOpen(false);
+                }}
+              >
+                <ImageDown size={13} />
+                {zhCN.mediaBin.exportGif}
+              </button>
+            </>
           ) : null}
           <div className="mb-2 flex items-center gap-1 font-semibold text-slate-700">
             <Tag size={13} />

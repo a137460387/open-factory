@@ -4,6 +4,7 @@ pub mod cache;
 pub mod demucs;
 pub mod ffmpeg;
 pub mod files;
+pub mod gif;
 pub mod media;
 pub mod privacy;
 pub mod proxy;

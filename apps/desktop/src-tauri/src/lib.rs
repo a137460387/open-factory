@@ -52,6 +52,8 @@ pub fn run() {
             commands::ffmpeg::cancel_export,
             commands::ffmpeg::cancel_motion_tracking,
             commands::ffmpeg::cancel_quality_evaluation,
+            commands::gif::export_media_gif,
+            commands::gif::generate_gif_preview,
             commands::files::open_file_dialog,
             commands::files::save_file_dialog,
             commands::files::open_directory_dialog,

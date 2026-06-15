@@ -16,7 +16,7 @@ import {
 import { commandManager, timelineAccessor } from '../store/commandManager';
 import { useEditorStore } from '../store/editorStore';
 import { usePrivacyDetectionSettingsStore } from '../store/privacyDetectionSettingsStore';
-import type { BatchTranscodeTaskResult, ExportPreviewSamplesResult, TauriMocks, WebdavExportUploadRequest, WebdavProjectBackupRequest } from '../lib/tauri-bridge';
+import type { BatchTranscodeTaskResult, ExportPreviewSamplesResult, GifExportRequest, GifPreviewRequest, TauriMocks, WebdavExportUploadRequest, WebdavProjectBackupRequest } from '../lib/tauri-bridge';
 import { clearPluginHookLog, getPluginHookLog, refreshPluginRegistry } from '../plugins/plugin-manager';
 import { useExportQueueStore } from '../export/export-queue-store';
 
@@ -34,6 +34,8 @@ let lastExportPlan: FfmpegExportPlan | undefined;
 let exportRunCalls: Array<{ taskId?: string; fullArgs: string[]; duration: number }> = [];
 let lastExportPreviewSamplesResult: ExportPreviewSamplesResult | undefined;
 let exportPreviewRunCalls: Array<{ id: string; fullArgs: string[]; time: number; outputPath: string }> = [];
+let lastGifExportRequest: GifExportRequest | undefined;
+let lastGifPreviewRequest: GifPreviewRequest | undefined;
 const canceledExportTaskIds = new Set<string>();
 const canceledTranscodeTaskIds = new Set<string>();
 const canceledQualityEvaluationTaskIds = new Set<string>();
@@ -359,6 +361,31 @@ const mocks: TauriMocks = {
       durationMs: 10
     };
     return lastExportPreviewSamplesResult;
+  },
+  generateGifPreview: async (request) => {
+    lastGifPreviewRequest = request;
+    const outputPath = `${appDataDir}/gif-previews/e2e-preview.gif`;
+    files.set(outputPath, 'mock gif preview');
+    exists.set(outputPath, true);
+    mtimes.set(outputPath, Date.now());
+    persistFiles();
+    return {
+      outputPath,
+      fullArgs: buildMockGifArgs(request, outputPath, 128, 0),
+      durationMs: 10
+    };
+  },
+  exportMediaGif: async (request) => {
+    lastGifExportRequest = request;
+    files.set(request.outputPath, 'mock dedicated gif export');
+    exists.set(request.outputPath, true);
+    mtimes.set(request.outputPath, Date.now());
+    persistFiles();
+    return {
+      outputPath: request.outputPath,
+      fullArgs: buildMockGifArgs(request, request.outputPath, request.scaleWidth, request.loopCount),
+      durationMs: 12
+    };
   },
   createSharePackage: async (request) => {
     const entries = [
@@ -1389,6 +1416,8 @@ window.__E2E_ACTIONS__ = {
   getExportRunCalls: () => exportRunCalls,
   getLastExportPreviewSamplesResult: () => lastExportPreviewSamplesResult,
   getExportPreviewRunCalls: () => exportPreviewRunCalls,
+  getLastGifExportRequest: () => lastGifExportRequest,
+  getLastGifPreviewRequest: () => lastGifPreviewRequest,
   getLastTrayProgress: () => lastTrayProgress,
   wasMinimizedToTray: () => minimizedToTray,
   getPowerActionCalls: () => powerActionCalls,
@@ -1491,6 +1520,8 @@ window.__E2E_ACTIONS__ = {
     files.delete(settingsPath);
     exists.set(settingsPath, false);
     mtimes.delete(settingsPath);
+    lastGifExportRequest = undefined;
+    lastGifPreviewRequest = undefined;
     files.delete(pluginCatalogCachePath);
     exists.set(pluginCatalogCachePath, false);
     mtimes.delete(pluginCatalogCachePath);
@@ -1838,6 +1869,29 @@ function buildMockPostExportScriptResult(plan: FfmpegExportPlan) {
     exitCode: 0,
     success: true
   };
+}
+
+function buildMockGifArgs(request: GifPreviewRequest | GifExportRequest, outputPath: string, scaleWidth: number, loopCount: number): string[] {
+  return [
+    '-y',
+    '-hide_banner',
+    '-ss',
+    String(request.startTime),
+    '-t',
+    String(request.duration),
+    '-i',
+    request.sourcePath,
+    '-filter_complex',
+    `[0:v]fps=${request.frameRate},scale=w='min(${scaleWidth},iw)':h=-2:flags=lanczos,split[gifsrc][gifpal];[gifpal]palettegen=stats_mode=diff[gifpalette];[gifsrc][gifpalette]paletteuse=dither=${request.dither}:diff_mode=rectangle[gifout]`,
+    '-map',
+    '[gifout]',
+    '-an',
+    '-loop',
+    String(loopCount),
+    '-f',
+    'gif',
+    outputPath
+  ];
 }
 
 function fileStem(path: string): string {

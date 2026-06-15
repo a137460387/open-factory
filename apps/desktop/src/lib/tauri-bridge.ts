@@ -241,6 +241,33 @@ export interface QualityEvaluationProgressEvent {
   progressPct: number;
 }
 
+export type GifDitherAlgorithm = 'bayer' | 'floyd_steinberg';
+
+export interface GifExportRequest {
+  sourcePath: string;
+  outputPath: string;
+  frameRate: number;
+  scaleWidth: number;
+  startTime: number;
+  duration: number;
+  loopCount: number;
+  dither: GifDitherAlgorithm;
+}
+
+export interface GifPreviewRequest {
+  sourcePath: string;
+  frameRate: number;
+  startTime: number;
+  duration: number;
+  dither: GifDitherAlgorithm;
+}
+
+export interface GifWorkflowResult {
+  outputPath: string;
+  fullArgs: string[];
+  durationMs: number;
+}
+
 export type BatchTranscodePreset = 'h264-720p' | 'h264-1080p' | 'prores-proxy';
 
 export interface BatchTranscodeTaskRequest {
@@ -421,6 +448,8 @@ export type TauriMocks = Partial<{
   analyzeClip(request: AnalyzeClipRequest): Promise<AnalyzeClipResult> | AnalyzeClipResult;
   analyzeMotionTrack(request: AnalyzeMotionTrackRequest): Promise<AnalyzeMotionTrackResult> | AnalyzeMotionTrackResult;
   evaluateExportQuality(request: QualityEvaluationRequest): Promise<QualityEvaluationResult> | QualityEvaluationResult;
+  exportMediaGif(request: GifExportRequest): Promise<GifWorkflowResult> | GifWorkflowResult;
+  generateGifPreview(request: GifPreviewRequest): Promise<GifWorkflowResult> | GifWorkflowResult;
   cancelExport(taskId?: string): Promise<void> | void;
   cancelMotionTracking(clipId: string): Promise<void> | void;
   cancelQualityEvaluation(taskId: string): Promise<void> | void;
@@ -926,6 +955,22 @@ export async function evaluateExportQuality(request: QualityEvaluationRequest): 
     return mock(request);
   }
   return invoke<QualityEvaluationResult>('evaluate_export_quality', { request });
+}
+
+export async function exportMediaGif(request: GifExportRequest): Promise<GifWorkflowResult> {
+  const mock = getTauriMocks()?.exportMediaGif;
+  if (mock) {
+    return mock(request);
+  }
+  return invoke<GifWorkflowResult>('export_media_gif', { request });
+}
+
+export async function generateGifPreview(request: GifPreviewRequest): Promise<GifWorkflowResult> {
+  const mock = getTauriMocks()?.generateGifPreview;
+  if (mock) {
+    return mock(request);
+  }
+  return invoke<GifWorkflowResult>('generate_gif_preview', { request });
 }
 
 export async function cancelExport(taskId?: string): Promise<void> {
