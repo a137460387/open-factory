@@ -752,7 +752,7 @@ export class AddTrackCommand implements Command {
   }
 }
 
-export type TrackPatch = Partial<Pick<Track, 'name' | 'color' | 'muted' | 'solo' | 'locked' | 'volume' | 'pan' | 'eq' | 'compressor'>>;
+export type TrackPatch = Partial<Pick<Track, 'name' | 'language' | 'color' | 'muted' | 'solo' | 'locked' | 'volume' | 'pan' | 'eq' | 'compressor'>>;
 
 function applyTrackPatch(track: Track, patch?: TrackPatch): Track {
   if (!patch) {

@@ -774,6 +774,7 @@ function ClipInspector({
       const track = createTrack({
         id: createId('track'),
         type: 'subtitle',
+        language: translationSettings.targetLanguage,
         name: zhCN.inspector.translation.trackName(sourceTrack.name, translationSettings.targetLanguage),
         clips: []
       });

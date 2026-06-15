@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_CLIP_BORDER, DEFAULT_COLOR_CORRECTION, DEFAULT_CREDITS_ROLL_SPEED, DEFAULT_CREDITS_STYLE, DEFAULT_SUBTITLE_STYLE, DEFAULT_VIDEO_RESTORATION, createMulticamSequenceProject, createTrack, migrateProjectFile, serializeProject, type ProjectFileV1 } from '../src';
+import { DEFAULT_CLIP_BORDER, DEFAULT_COLOR_CORRECTION, DEFAULT_CREDITS_ROLL_SPEED, DEFAULT_CREDITS_STYLE, DEFAULT_SUBTITLE_LANGUAGE, DEFAULT_SUBTITLE_STYLE, DEFAULT_VIDEO_RESTORATION, createMulticamSequenceProject, createTrack, migrateProjectFile, serializeProject, type ProjectFileV1 } from '../src';
 import { makeAdjustmentClip, makeCreditsClip, makeProject, makeSubtitleClip, makeTextClip, makeVideoClip } from './test-utils';
 
 describe('project schema migration', () => {
@@ -132,6 +132,20 @@ describe('project schema migration', () => {
         shadowColor: DEFAULT_SUBTITLE_STYLE.shadowColor,
         shadowOffset: DEFAULT_SUBTITLE_STYLE.shadowOffset
       }
+    });
+  });
+
+  it('fills subtitle track language defaults for old subtitle tracks', () => {
+    const project = makeProject();
+    project.timeline.tracks.push(createTrack({ id: 'track-subtitle', type: 'subtitle', name: 'Subtitles', clips: [makeSubtitleClip({ id: 'subtitle-old' })] }));
+    const file = serializeProject(project);
+    delete file.project.timeline.tracks[file.project.timeline.tracks.length - 1].language;
+
+    const migrated = migrateProjectFile(file).project.timeline.tracks.at(-1);
+
+    expect(migrated).toMatchObject({
+      type: 'subtitle',
+      language: DEFAULT_SUBTITLE_LANGUAGE
     });
   });
 

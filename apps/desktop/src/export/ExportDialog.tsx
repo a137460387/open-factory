@@ -16,6 +16,8 @@ import {
   normalizeExportRenderRange,
   normalizeExportRanges,
   normalizeProjectFps,
+  normalizeSubtitleLanguage,
+  normalizeSubtitleLanguageList,
   normalizeVideoRestoration,
   runExportPreflight,
   assessQualityMetric,
@@ -46,7 +48,7 @@ import {
   type Sequence,
   type TargetAspectRatio
 } from '@open-factory/editor-core';
-import { AlertTriangle, Clock3, FileText, FolderOpen, Image as ImageIcon, ListPlus, Loader2, Minimize2, Save, Trash2, X } from 'lucide-react';
+import { AlertTriangle, CloudDownload, Clock3, Download, FileText, FolderOpen, Image as ImageIcon, ListPlus, Loader2, Minimize2, Save, Trash2, Upload, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { zhCN } from '../i18n/strings';
 import { chooseExportPath, revealExport } from '../lib/exportVideo';
@@ -63,9 +65,12 @@ import {
   openFileDialog,
   openDirectoryDialog,
   openPath,
+  readFile,
   readExportUploadWebdavPassword,
   runExportPowerAction,
   runExportPreviewSamples,
+  saveFileDialog,
+  writeFile,
   writeExportUploadWebdavPassword,
   type QualityEvaluationProgressEvent,
   type QualityEvaluationResult
@@ -94,10 +99,16 @@ import { runExportWarmup, type ExportWarmupStepId } from './export-warmup';
 import {
   BUILTIN_EXPORT_PRESETS,
   deleteCustomExportPreset,
+  EXPORT_PRESET_PACKAGE_EXTENSION,
+  fetchOfficialExportPresetPackage,
   getExportPreset,
+  importExportPresetPackage,
   loadExportPresets,
+  parseExportPresetPackage,
   saveCustomExportPreset,
+  serializeExportPresetPackage,
   type ExportPreset,
+  type ExportPresetImportConflictMode,
   type ExportPresetSettings
 } from './export-presets';
 
@@ -166,6 +177,12 @@ interface ExportPreviewThumbnail {
   path: string;
   src: string;
   durationMs: number;
+}
+
+interface SubtitleLanguageOption {
+  language: string;
+  label: string;
+  trackCount: number;
 }
 
 export function ExportDialog({ project, initialPreset, selectedClipIds = [], inPoint, outPoint, onClose, onCompleted, onRelinkMissing }: ExportDialogProps) {
@@ -237,6 +254,7 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
   const isAudioVisualization = exportSettings.outputMode === 'audio-visualization';
   const isAudioOnly = !isAudioVisualization && (exportSettings.outputMode === 'audio' || exportSettings.format === 'm4a');
   const timelineVisualControlsDisabled = isAudioOnly || isAudioVisualization;
+  const subtitleLanguageOptions = useMemo(() => collectSubtitleLanguageOptions(project), [project]);
   const loudnessNormalizationEligible = supportsLoudnessNormalization(exportSettings.format ?? 'mp4', exportSettings.outputMode);
   const estimatedSize = useMemo(() => {
     const dimensions = estimateDimensions(exportSettings.width ?? project.settings.width, exportSettings.height ?? project.settings.height, exportSettings.format ?? 'mp4');
@@ -442,6 +460,64 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : t.deletePresetFailed);
     }
+  }
+
+  async function exportSelectedPresetPackage(): Promise<void> {
+    try {
+      setError(undefined);
+      const path = await saveFileDialog(`${safePresetPackageFileName(selectedPreset.name)}.${EXPORT_PRESET_PACKAGE_EXTENSION}`, [
+        { name: t.exportPresetPackage, extensions: [EXPORT_PRESET_PACKAGE_EXTENSION, 'json'] }
+      ]);
+      if (!path) {
+        return;
+      }
+      await writeFile(path, serializeExportPresetPackage([selectedPreset]));
+      showToast({ kind: 'success', title: t.presetPackageExportedTitle, message: path });
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : t.presetPackageFailed);
+    }
+  }
+
+  async function importPresetPackageFromFile(): Promise<void> {
+    try {
+      setError(undefined);
+      const [path] = await openFileDialog(false, [{ name: t.importPresetPackage, extensions: [EXPORT_PRESET_PACKAGE_EXTENSION, 'json'] }]);
+      if (!path) {
+        return;
+      }
+      await importPresetPackageContents(await readFile(path));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : t.presetPackageFailed);
+    }
+  }
+
+  async function importOfficialPresetPackage(): Promise<void> {
+    try {
+      setError(undefined);
+      const packageFile = await fetchOfficialExportPresetPackage();
+      if (!packageFile) {
+        showToast({ kind: 'warning', title: t.officialPresetPackage, message: t.presetPackageNoOfficial });
+        return;
+      }
+      await importPresetPackageContents(JSON.stringify(packageFile));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : t.presetPackageFailed);
+    }
+  }
+
+  async function importPresetPackageContents(contents: string): Promise<void> {
+    const packageFile = parseExportPresetPackage(contents);
+    const conflictMode = choosePresetPackageConflictMode(packageFile.presets.map((preset) => preset.name), presets);
+    if (!conflictMode) {
+      return;
+    }
+    const result = await importExportPresetPackage(contents, conflictMode);
+    setPresets(result.presets);
+    const importedPreset = result.presets.filter((preset) => !preset.builtin).at(-1);
+    if (importedPreset) {
+      setPresetId(importedPreset.id);
+    }
+    showToast({ kind: 'success', title: t.presetPackageImportedTitle, message: t.presetPackageImportMessage(result.imported, result.skipped) });
   }
 
   function toggleSequenceBatchSelection(sequenceId: string, checked: boolean): void {
@@ -864,15 +940,45 @@ function relinkFromPreflight(): void {
               </select>
               <div className="mt-1 text-[11px] text-slate-500">{selectedPreset.description}</div>
             </div>
-            <button
-              className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-45"
-              disabled={selectedPreset.builtin}
-              data-testid="export-delete-preset-button"
-              onClick={() => void deletePreset()}
-            >
-              <Trash2 size={13} />
-              {t.delete}
-            </button>
+            <div className="flex flex-wrap justify-end gap-2">
+              <button
+                className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
+                data-testid="export-preset-package-export-button"
+                type="button"
+                onClick={() => void exportSelectedPresetPackage()}
+              >
+                <Download size={13} />
+                {t.exportPresetPackage}
+              </button>
+              <button
+                className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
+                data-testid="export-preset-package-import-button"
+                type="button"
+                onClick={() => void importPresetPackageFromFile()}
+              >
+                <Upload size={13} />
+                {t.importPresetPackage}
+              </button>
+              <button
+                className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
+                data-testid="export-preset-package-official-button"
+                type="button"
+                onClick={() => void importOfficialPresetPackage()}
+              >
+                <CloudDownload size={13} />
+                {t.officialPresetPackage}
+              </button>
+              <button
+                className="inline-flex items-center gap-1 rounded-md border border-line px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-45"
+                disabled={selectedPreset.builtin}
+                data-testid="export-delete-preset-button"
+                type="button"
+                onClick={() => void deletePreset()}
+              >
+                <Trash2 size={13} />
+                {t.delete}
+              </button>
+            </div>
           </div>
           <div className="grid grid-cols-[110px_1fr_auto] items-center gap-2">
             <label className="text-xs font-medium text-slate-600">{t.saveAs}</label>
@@ -936,6 +1042,14 @@ function relinkFromPreflight(): void {
               options={['off', 'youtube', 'ebu-r128']}
             />
           </div>
+          {!timelineVisualControlsDisabled && subtitleLanguageOptions.length > 0 ? (
+            <SubtitleLanguageSection
+              options={subtitleLanguageOptions}
+              selectedLanguages={draftSettings.subtitleLanguages}
+              burnInLanguage={draftSettings.subtitleBurnInLanguage}
+              setDraftSettings={setDraftSettings}
+            />
+          ) : null}
           {!timelineVisualControlsDisabled ? <ColorManagementSection colorManagement={exportSettings.colorManagement} setDraftSettings={setDraftSettings} /> : null}
           {isAudioVisualization ? (
             <AudioVisualizationSection
@@ -1471,6 +1585,8 @@ function normalizeDraftSettings(settings: ExportPresetSettings): ExportPresetSet
     loudnessNormalization,
     subtitleFormat: normalizeSubtitleFormat(settings.subtitleFormat),
     exportSidecarSubtitle: settings.exportSidecarSubtitle === true,
+    subtitleLanguages: normalizeSubtitleLanguageList(settings.subtitleLanguages),
+    subtitleBurnInLanguage: settings.subtitleBurnInLanguage ? normalizeSubtitleLanguage(settings.subtitleBurnInLanguage) : undefined,
     targetAspectRatio,
     reframeOffsetX: clampReframeOffset(settings.reframeOffsetX),
     reframeOffsetY: clampReframeOffset(settings.reframeOffsetY),
@@ -1829,6 +1945,28 @@ function updateExportSidecarSubtitle(setDraftSettings: Dispatch<SetStateAction<E
   setDraftSettings((current) => ({ ...current, exportSidecarSubtitle: checked }));
 }
 
+function updateSubtitleLanguageSelection(
+  setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>,
+  language: string,
+  checked: boolean,
+  options: SubtitleLanguageOption[]
+): void {
+  const normalized = normalizeSubtitleLanguage(language);
+  setDraftSettings((current) => {
+    const selected = normalizeSubtitleLanguageList(current.subtitleLanguages) ?? options.map((option) => option.language);
+    const next = checked ? Array.from(new Set([...selected, normalized])) : selected.filter((item) => item !== normalized);
+    const available = new Set(options.map((option) => option.language));
+    return {
+      ...current,
+      subtitleLanguages: next.filter((item) => available.has(item))
+    };
+  });
+}
+
+function updateSubtitleBurnInLanguage(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, language: string): void {
+  setDraftSettings((current) => ({ ...current, subtitleBurnInLanguage: normalizeSubtitleLanguage(language) }));
+}
+
 function updateScaleMode(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, value: string): void {
   setDraftSettings((current) => ({ ...current, scaleMode: value === 'fit' ? 'fit' : 'none' }));
 }
@@ -2040,6 +2178,109 @@ function countSpatialDenoiseClips(project: Project): number {
   return project.timeline.tracks
     .flatMap((track) => track.clips)
     .filter((clip) => (clip.type === 'video' || clip.type === 'nested-sequence') && normalizeVideoRestoration(clip.videoRestoration).spatialDenoise.enabled).length;
+}
+
+function safePresetPackageFileName(name: string): string {
+  const normalized = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48);
+  return normalized || 'open-factory-presets';
+}
+
+function choosePresetPackageConflictMode(packageNames: string[], existingPresets: ExportPreset[]): ExportPresetImportConflictMode | undefined {
+  const existing = new Set(existingPresets.map((preset) => preset.name.toLowerCase()));
+  const conflictName = packageNames.find((name) => existing.has(name.toLowerCase()));
+  if (!conflictName) {
+    return 'rename';
+  }
+  const response = window.prompt(zhCN.exportDialog.presetPackageConflictPrompt(conflictName), 'rename')?.trim().toLowerCase();
+  if (!response) {
+    return undefined;
+  }
+  return response === 'overwrite' || response === 'skip' || response === 'rename' ? response : 'rename';
+}
+
+function collectSubtitleLanguageOptions(project: Project): SubtitleLanguageOption[] {
+  const counts = new Map<string, number>();
+  for (const track of project.timeline.tracks) {
+    if (track.type !== 'subtitle' || track.clips.length === 0) {
+      continue;
+    }
+    const language = normalizeSubtitleLanguage(track.language);
+    counts.set(language, (counts.get(language) ?? 0) + 1);
+  }
+  return Array.from(counts.entries())
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([language, trackCount]) => ({
+      language,
+      label: formatSubtitleLanguageLabel(language),
+      trackCount
+    }));
+}
+
+function SubtitleLanguageSection({
+  options,
+  selectedLanguages,
+  burnInLanguage,
+  setDraftSettings
+}: {
+  options: SubtitleLanguageOption[];
+  selectedLanguages?: string[];
+  burnInLanguage?: string | null;
+  setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>;
+}) {
+  const selected = normalizeSubtitleLanguageList(selectedLanguages);
+  const enabledLanguages = selected ? new Set(selected) : new Set(options.map((option) => option.language));
+  const activeBurnInLanguage = burnInLanguage ? normalizeSubtitleLanguage(burnInLanguage) : options[0]?.language ?? 'zh';
+  const t = zhCN.exportDialog.subtitleLanguages;
+  return (
+    <section className="rounded-md border border-line p-3 text-xs" data-testid="export-subtitle-language-section">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="font-semibold text-slate-700">{t.title}</div>
+          <div className="mt-0.5 text-slate-500">{t.description}</div>
+        </div>
+        <label className="flex items-center gap-2 text-slate-600">
+          <span>{t.burnInLanguage}</span>
+          <select
+            className="rounded-md border border-line px-2 py-1"
+            value={activeBurnInLanguage}
+            data-testid="export-subtitle-burn-language-select"
+            onChange={(event) => updateSubtitleBurnInLanguage(setDraftSettings, event.target.value)}
+          >
+            {options.map((option) => (
+              <option key={option.language} value={option.language}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {options.map((option) => (
+          <label key={option.language} className="inline-flex items-center gap-2 rounded-md border border-line px-2 py-1.5 text-slate-700">
+            <input
+              type="checkbox"
+              checked={enabledLanguages.has(option.language)}
+              onChange={(event) => updateSubtitleLanguageSelection(setDraftSettings, option.language, event.currentTarget.checked, options)}
+              data-testid={`export-subtitle-language-${option.language}`}
+            />
+            <span>{option.label}</span>
+            <span className="text-slate-500">{t.trackCount(option.trackCount)}</span>
+          </label>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function formatSubtitleLanguageLabel(language: string): string {
+  const normalized = normalizeSubtitleLanguage(language);
+  const labels = zhCN.exportDialog.subtitleLanguages.labels as Record<string, string>;
+  return labels[normalized] ?? normalized.toUpperCase();
 }
 
 function ColorManagementSection({

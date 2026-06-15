@@ -5,6 +5,8 @@ import {
   isDefaultColorCorrection,
   normalizeColorCorrection,
   normalizeMasterVolume,
+  normalizeSubtitleLanguage,
+  normalizeSubtitleLanguageList,
   normalizeTrackCompressor,
   normalizeTrackEQ,
   normalizeTransitionDuration,
@@ -116,6 +118,8 @@ export const DEFAULT_EXPORT_SETTINGS: Omit<ExportSettings, 'outputPath'> = {
   subtitleMode: undefined,
   subtitleFormat: 'srt',
   exportSidecarSubtitle: false,
+  subtitleLanguages: undefined,
+  subtitleBurnInLanguage: undefined,
   hardwareEncoding: false,
   loudnessNormalization: 'off',
   platformPreset: undefined,
@@ -154,6 +158,11 @@ interface BuildFfmpegExportPlanOptions {
     time: number;
   };
   exportRange?: ExportRenderRange | null;
+}
+
+interface SubtitleLanguageGroup {
+  language: string;
+  clips: ExportClip[];
 }
 
 export function buildExportProjectFromProject(project: Project, options: BuildExportProjectOptions): ExportProject {
@@ -201,6 +210,7 @@ function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project[
       return {
         index: trackIndex,
         type: track.type,
+        language: track.type === 'subtitle' ? normalizeSubtitleLanguage(track.language) : undefined,
         muted: Boolean(track.muted),
         solo: Boolean(track.solo),
         locked: Boolean(track.locked),
@@ -546,26 +556,48 @@ export function buildFfmpegExportPlan(
   const subtitleClips = orderedPlaybackClips.filter((clip) => clip.type === 'subtitle' && clip.subtitleStyle && clip.textStyle === null);
   const subtitleMode = settings.subtitleMode ?? subtitleClips.find((clip) => clip.subtitleMode)?.subtitleMode ?? DEFAULT_SUBTITLE_MODE;
   const subtitleFormat = normalizeSubtitleFormat(settings.subtitleFormat);
-  let softSubtitleInputIndex: number | undefined;
+  const allSubtitleGroups = buildSubtitleLanguageGroups(project.timeline, subtitleClips, undefined);
+  const selectedSubtitleGroups = buildSubtitleLanguageGroups(project.timeline, subtitleClips, settings.subtitleLanguages);
+  const multipleSubtitleLanguages = allSubtitleGroups.length > 1;
+  const softSubtitleInputs: Array<{ inputIndex: number; language: string }> = [];
   if (!audioOnly && subtitleClips.length > 0 && subtitleMode === 'burn-in') {
-    const nextVideo = `base${videoStep + 1}`;
-    const { filter, artifact } = buildSubtitleBurnInFilter(currentVideo, nextVideo, subtitleClips, subtitleFormat);
-    filters.push(filter);
-    textArtifacts.push(artifact);
-    currentVideo = nextVideo;
-    videoStep += 1;
+    const selectedGroup = selectSubtitleBurnInGroup(allSubtitleGroups, settings.subtitleBurnInLanguage);
+    if (selectedGroup) {
+      const nextVideo = `base${videoStep + 1}`;
+      const { filter, artifact } = buildSubtitleBurnInFilter(currentVideo, nextVideo, selectedGroup.clips, subtitleFormat, {
+        language: selectedGroup.language,
+        includeLanguageInFileName: multipleSubtitleLanguages
+      });
+      filters.push(filter);
+      textArtifacts.push(artifact);
+      currentVideo = nextVideo;
+      videoStep += 1;
+    }
   } else if (!audioOnly && !videoFramesOnly && subtitleClips.length > 0 && subtitleMode === 'soft-sub') {
-    const artifact = buildSubtitleArtifact(subtitleClips, 'argument', subtitleFormat);
-    softSubtitleInputIndex = inputs.length;
-    inputs.push({
-      index: softSubtitleInputIndex,
-      path: artifact.placeholder,
-      args: buildSubtitleInputArgs(subtitleFormat)
-    });
-    textArtifacts.push(artifact);
+    for (const group of selectedSubtitleGroups) {
+      const artifact = buildSubtitleArtifact(group.clips, 'argument', subtitleFormat, {
+        language: group.language,
+        includeLanguageInFileName: multipleSubtitleLanguages
+      });
+      const inputIndex = inputs.length;
+      inputs.push({
+        index: inputIndex,
+        path: artifact.placeholder,
+        args: buildSubtitleInputArgs(subtitleFormat)
+      });
+      softSubtitleInputs.push({ inputIndex, language: group.language });
+      textArtifacts.push(artifact);
+    }
   }
   if (!videoFramesOnly && subtitleClips.length > 0 && settings.exportSidecarSubtitle) {
-    textArtifacts.push(buildSubtitleArtifact(subtitleClips, 'sidecar', subtitleFormat));
+    for (const group of selectedSubtitleGroups) {
+      textArtifacts.push(
+        buildSubtitleArtifact(group.clips, 'sidecar', subtitleFormat, {
+          language: group.language,
+          includeLanguageInFileName: multipleSubtitleLanguages
+        })
+      );
+    }
   }
 
   let loudnessAnalysisFilterComplex: string | undefined;
@@ -685,9 +717,14 @@ export function buildFfmpegExportPlan(
   const filterComplex = filters.join(';');
   const maps = videoFramesOnly ? ['-map', '[vout]'] : audioOnly ? ['-map', '[aout]'] : ['-map', '[vout]', '-map', `[${audioOutputLabel}]`];
   const subtitleOutputArgs: string[] = [];
-  if (softSubtitleInputIndex !== undefined) {
-    maps.push('-map', `${softSubtitleInputIndex}:s:0`);
+  if (softSubtitleInputs.length > 0) {
+    for (const input of softSubtitleInputs) {
+      maps.push('-map', `${input.inputIndex}:s:0`);
+    }
     subtitleOutputArgs.push('-c:s', buildSoftSubtitleCodec(subtitleFormat, settings));
+    softSubtitleInputs.forEach((input, index) => {
+      subtitleOutputArgs.push(`-metadata:s:s:${index}`, `language=${subtitleLanguageToFfmpegMetadata(input.language)}`);
+    });
   }
   const videoEncodingArgs = buildVideoEncodingArgs(settings, capabilities, warnings, audioOnly || videoFramesOnly);
   const exportRangeOutputArgs = buildExportRangeOutputArgs(outputRange);
@@ -790,6 +827,8 @@ function normalizeExportReframeSettings(settings: ExportSettings): ExportSetting
     reframeOffsetY: clampReframeOffset(settings.reframeOffsetY),
     loudnessNormalization: normalizeLoudnessNormalization(settings.loudnessNormalization),
     videoProfile: normalizeVideoProfile(settings.videoProfile),
+    subtitleLanguages: normalizeSubtitleLanguageList(settings.subtitleLanguages),
+    subtitleBurnInLanguage: settings.subtitleBurnInLanguage ? normalizeSubtitleLanguage(settings.subtitleBurnInLanguage) : undefined,
     watermark: normalizeExportWatermark(settings.watermark),
     timecodeBurnIn: normalizeTimecodeBurnIn(settings.timecodeBurnIn),
     slate: normalizeExportSlate(settings.slate),
@@ -2643,8 +2682,14 @@ function buildDrawtextPositionExpression(clip: ExportClip, axis: 'x' | 'y', stat
   return `(${dimension}-${textDimension})/2+${formatSigned(fallback)}`;
 }
 
-function buildSubtitleBurnInFilter(inputLabel: string, outputLabel: string, clips: ExportClip[], format: ExportSubtitleFormat): { filter: string; artifact: TextArtifact } {
-  const artifact = buildSubtitleArtifact(clips, 'filter', format);
+function buildSubtitleBurnInFilter(
+  inputLabel: string,
+  outputLabel: string,
+  clips: ExportClip[],
+  format: ExportSubtitleFormat,
+  options: SubtitleArtifactOptions = {}
+): { filter: string; artifact: TextArtifact } {
+  const artifact = buildSubtitleArtifact(clips, 'filter', format, options);
   const style = clips.find((clip) => clip.subtitleStyle)?.subtitleStyle;
   const forceStyle = [
     `FontSize=${Math.max(1, Math.round(style?.fontSize ?? 42))}`,
@@ -2663,15 +2708,74 @@ function buildSubtitleBurnInFilter(inputLabel: string, outputLabel: string, clip
   };
 }
 
-function buildSubtitleArtifact(clips: ExportClip[], pathMode: TextArtifact['pathMode'], format: ExportSubtitleFormat): TextArtifact {
+interface SubtitleArtifactOptions {
+  language?: string;
+  includeLanguageInFileName?: boolean;
+}
+
+function buildSubtitleArtifact(clips: ExportClip[], pathMode: TextArtifact['pathMode'], format: ExportSubtitleFormat, options: SubtitleArtifactOptions = {}): TextArtifact {
   const cues = buildSubtitleCueInputs(clips);
+  const language = options.language ? normalizeSubtitleLanguage(options.language) : undefined;
+  const suffix = language && options.includeLanguageInFileName ? `.${language}` : '';
+  const placeholderSuffix = language && options.includeLanguageInFileName ? `_${language}` : '';
+  const sidecarSuffix = pathMode === 'sidecar' ? '_sidecar' : '';
   return {
-    clipId: 'subtitles',
+    clipId: language && options.includeLanguageInFileName ? `subtitles-${language}` : 'subtitles',
     text: serializeSubtitleCueInputs(cues, format),
-    fileName: `subtitles.${format}`,
-    placeholder: pathMode === 'sidecar' ? '__SUBTITLEFILE_export_subtitles_sidecar__' : '__SUBTITLEFILE_export_subtitles__',
+    fileName: `subtitles${suffix}.${format}`,
+    placeholder: `__SUBTITLEFILE_export_subtitles${placeholderSuffix}${sidecarSuffix}__`,
     pathMode
   };
+}
+
+function buildSubtitleLanguageGroups(timeline: ExportTimeline, clips: ExportClip[], selectedLanguages: string[] | undefined): SubtitleLanguageGroup[] {
+  if (clips.length === 0) {
+    return [];
+  }
+  const selected = selectedLanguages ? new Set(selectedLanguages.map(normalizeSubtitleLanguage)) : undefined;
+  const groups = new Map<string, ExportClip[]>();
+  for (const clip of clips) {
+    const language = normalizeSubtitleLanguage(timeline.tracks[clip.trackIndex]?.language);
+    if (selected && !selected.has(language)) {
+      continue;
+    }
+    const current = groups.get(language) ?? [];
+    current.push(clip);
+    groups.set(language, current);
+  }
+  return Array.from(groups.entries()).map(([language, groupClips]) => ({
+    language,
+    clips: groupClips.sort((left, right) => left.start - right.start || left.id.localeCompare(right.id))
+  }));
+}
+
+function selectSubtitleBurnInGroup(groups: SubtitleLanguageGroup[], language: string | null | undefined): SubtitleLanguageGroup | undefined {
+  if (groups.length === 0) {
+    return undefined;
+  }
+  if (!language) {
+    return groups[0];
+  }
+  const normalized = normalizeSubtitleLanguage(language);
+  return groups.find((group) => group.language === normalized) ?? groups[0];
+}
+
+function subtitleLanguageToFfmpegMetadata(language: string): string {
+  const normalized = normalizeSubtitleLanguage(language);
+  const map: Record<string, string> = {
+    ar: 'ara',
+    de: 'deu',
+    en: 'eng',
+    es: 'spa',
+    fr: 'fra',
+    it: 'ita',
+    ja: 'jpn',
+    ko: 'kor',
+    pt: 'por',
+    ru: 'rus',
+    zh: 'zho'
+  };
+  return map[normalized] ?? normalized;
 }
 
 function buildSubtitleCueInputs(clips: ExportClip[]): SubtitleCueInput[] {

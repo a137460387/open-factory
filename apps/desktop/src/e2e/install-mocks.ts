@@ -2,6 +2,8 @@ import {
   AddKeyframeCommand,
   DEFAULT_CLIP_SPEED,
   DEFAULT_COLOR_CORRECTION,
+  DEFAULT_SUBTITLE_MODE,
+  DEFAULT_SUBTITLE_STYLE,
   DEFAULT_TRANSFORM,
   DEFAULT_PRIMARY_SEQUENCE_NAME,
   PRIMARY_SEQUENCE_ID,
@@ -768,6 +770,78 @@ window.__E2E_ACTIONS__ = {
         }),
         createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
         createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupMultilingualSubtitleFixture: () => {
+    const project = createProject('Multilingual Subtitle E2E');
+    const asset: MediaAsset = {
+      id: 'media-subtitle-video',
+      type: 'video',
+      name: 'subtitle-source.mp4',
+      path: tinyVideo,
+      duration: 4,
+      width: 1280,
+      height: 720,
+      size: 4096,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 2,
+      audioSampleRate: 44_100,
+      audioCodec: 'aac'
+    };
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({
+          id: 'track-video',
+          type: 'video',
+          name: 'Video 1',
+          clips: [
+            {
+              id: 'clip-subtitle-video',
+              type: 'video',
+              name: 'subtitle-source.mp4',
+              mediaId: asset.id,
+              trackId: 'track-video',
+              start: 0,
+              duration: 4,
+              trimStart: 0,
+              trimEnd: 0,
+              speed: DEFAULT_CLIP_SPEED,
+              colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+              transform: { ...DEFAULT_TRANSFORM },
+              volume: 1
+            }
+          ]
+        }),
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
+        createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] }),
+        createTrack({
+          id: 'track-subtitle-zh',
+          type: 'subtitle',
+          name: '中文字幕',
+          language: 'zh',
+          clips: [makeMockSubtitleClip('subtitle-zh-e2e', 'track-subtitle-zh', '你好，字幕', 0.2)]
+        }),
+        createTrack({
+          id: 'track-subtitle-en',
+          type: 'subtitle',
+          name: 'English Subtitles',
+          language: 'en',
+          clips: [makeMockSubtitleClip('subtitle-en-e2e', 'track-subtitle-en', 'Hello subtitle', 0.2)]
+        })
       ]
     };
     useEditorStore.getState().setProject({
@@ -1702,6 +1776,25 @@ function makeEditingVideoClip(id: string, start: number, duration: number, trimS
     colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
     transform: { ...DEFAULT_TRANSFORM },
     volume: 1
+  };
+}
+
+function makeMockSubtitleClip(id: string, trackId: string, text: string, start: number): Extract<Clip, { type: 'subtitle' }> {
+  return {
+    id,
+    type: 'subtitle',
+    name: text,
+    trackId,
+    start,
+    duration: 1.8,
+    trimStart: 0,
+    trimEnd: 0,
+    speed: DEFAULT_CLIP_SPEED,
+    colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+    transform: { ...DEFAULT_TRANSFORM },
+    text,
+    style: { ...DEFAULT_SUBTITLE_STYLE },
+    subtitleMode: DEFAULT_SUBTITLE_MODE
   };
 }
 

@@ -7,6 +7,11 @@ describe('export queue sidecar subtitles', () => {
     expect(buildSidecarSubtitlePath('D:\\Exports\\review.cut.mov', 'subtitles.vtt')).toBe('D:\\Exports\\review.cut.vtt');
   });
 
+  it('keeps subtitle language suffixes when writing multilingual sidecars', () => {
+    expect(buildSidecarSubtitlePath('C:/Exports/video.mp4', 'subtitles.zh.srt')).toBe('C:/Exports/video.zh.srt');
+    expect(buildSidecarSubtitlePath('D:\\Exports\\review.cut.mov', 'subtitles.en.srt')).toBe('D:\\Exports\\review.cut.en.srt');
+  });
+
   it('falls back to srt when the artifact file has no extension', () => {
     expect(buildSidecarSubtitlePath('C:/Exports/video', 'subtitles')).toBe('C:/Exports/video.srt');
   });

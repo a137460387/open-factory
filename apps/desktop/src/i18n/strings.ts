@@ -1778,6 +1778,9 @@ const zh = {
     chooseOutputPath: '选择输出路径',
     preset: '预设',
     delete: '删除',
+    exportPresetPackage: '导出预设包',
+    importPresetPackage: '导入预设包',
+    officialPresetPackage: '官方预设',
     saveAs: '另存为',
     customPresetName: '自定义预设名称',
     save: '保存',
@@ -1829,6 +1832,25 @@ const zh = {
       vtt: 'VTT',
       ass: 'ASS',
       ssa: 'SSA'
+    },
+    subtitleLanguages: {
+      title: '字幕语言轨',
+      description: '软字幕和独立字幕按勾选语言导出；硬字幕只烧录一种语言。',
+      burnInLanguage: '硬字幕语言',
+      trackCount: (count: number) => `${count} 条轨道`,
+      labels: {
+        zh: '中文',
+        en: '英语',
+        ja: '日语',
+        ko: '韩语',
+        fr: '法语',
+        de: '德语',
+        es: '西班牙语',
+        pt: '葡萄牙语',
+        ru: '俄语',
+        it: '意大利语',
+        ar: '阿拉伯语'
+      }
     },
     audioVisualization: {
       title: '音频可视化',
@@ -2105,6 +2127,13 @@ const zh = {
     completeTitle: '导出完成',
     presetSavedTitle: '预设已保存',
     savePresetFailed: '无法保存预设。',
+    presetPackageExportedTitle: '预设包已导出',
+    presetPackageImportedTitle: '预设包已导入',
+    presetPackageImportMessage: (count: number, skipped: number) => `已导入 ${count} 个预设，跳过 ${skipped} 个。`,
+    presetPackageNoOfficial: '当前无法获取官方预设包，已跳过。',
+    presetPackageConflictPrompt: (name: string) => `预设“${name}”已存在。输入 overwrite 覆盖、rename 重命名、skip 跳过。`,
+    presetPackageCreatorPrompt: '预设包创建者（可留空）',
+    presetPackageFailed: '预设包处理失败。',
     presetDeletedTitle: '预设已删除',
     deletePresetFailed: '无法删除预设。',
     exportWarningTitle: '导出警告',
@@ -2182,6 +2211,9 @@ const zh = {
     customDescription: '自定义导出预设。',
     nameRequired: '请输入预设名称。',
     cannotDeleteBuiltin: '内置导出预设不能删除。',
+    packageInvalid: '预设包格式无效。',
+    packageUnsupportedVersion: '不支持的预设包版本。',
+    importedCopySuffix: '导入副本',
     builtins: {
       web1080p: {
         name: 'Web 1080p',
@@ -4166,6 +4198,9 @@ const enOverrides = {
     chooseOutputPath: 'Choose output path',
     preset: 'Preset',
     delete: 'Delete',
+    exportPresetPackage: 'Export Package',
+    importPresetPackage: 'Import Package',
+    officialPresetPackage: 'Official Presets',
     saveAs: 'Save As',
     customPresetName: 'Custom preset name',
     save: 'Save',
@@ -4217,6 +4252,25 @@ const enOverrides = {
       vtt: 'VTT',
       ass: 'ASS',
       ssa: 'SSA'
+    },
+    subtitleLanguages: {
+      title: 'Subtitle Languages',
+      description: 'Soft subtitles and sidecars export checked languages; burn-in can use one language only.',
+      burnInLanguage: 'Burn-in Language',
+      trackCount: (count: number) => `${count} track(s)`,
+      labels: {
+        zh: 'Chinese',
+        en: 'English',
+        ja: 'Japanese',
+        ko: 'Korean',
+        fr: 'French',
+        de: 'German',
+        es: 'Spanish',
+        pt: 'Portuguese',
+        ru: 'Russian',
+        it: 'Italian',
+        ar: 'Arabic'
+      }
     },
     audioVisualization: {
       title: 'Audio Visualization',
@@ -4487,6 +4541,18 @@ const enOverrides = {
         poor: 'Poor'
       }
     },
+    presetSavedTitle: 'Preset saved',
+    savePresetFailed: 'Unable to save preset.',
+    presetPackageExportedTitle: 'Preset package exported',
+    presetPackageImportedTitle: 'Preset package imported',
+    presetPackageImportMessage: (count: number, skipped: number) => `Imported ${count} preset(s), skipped ${skipped}.`,
+    presetPackageNoOfficial: 'Official preset package is unavailable, so it was skipped.',
+    presetPackageConflictPrompt: (name: string) => `Preset "${name}" already exists. Type overwrite, rename, or skip.`,
+    presetPackageCreatorPrompt: 'Preset package creator (optional)',
+    presetPackageFailed: 'Preset package failed.',
+    presetDeletedTitle: 'Preset deleted',
+    deletePresetFailed: 'Unable to delete preset.',
+    exportWarningTitle: 'Export warning',
     queuedTitle: 'Added to export queue',
     scheduledTitle: 'Export scheduled',
     queuedMessage: (count: number, presetName: string) => `${count} tasks using ${presetName}.`,
@@ -4522,6 +4588,9 @@ const enOverrides = {
     customDescription: 'Custom export preset.',
     nameRequired: 'Enter a preset name.',
     cannotDeleteBuiltin: 'Built-in export presets cannot be deleted.',
+    packageInvalid: 'Invalid preset package.',
+    packageUnsupportedVersion: 'Unsupported preset package version.',
+    importedCopySuffix: 'Imported Copy',
     builtins: {
       web1080p: {
         name: 'Web 1080p',

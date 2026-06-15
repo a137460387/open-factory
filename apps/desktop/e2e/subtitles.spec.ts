@@ -46,6 +46,40 @@ test('imports SRT subtitles and exports them as an ASS soft subtitle stream with
     .toContain('[V4+ Styles]');
 });
 
+test('exports two subtitle languages as separate soft subtitle streams', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.evaluate(() => window.__E2E_ACTIONS__!.setupMultilingualSubtitleFixture!());
+
+  await page.evaluate(() => window.__E2E_ACTIONS__!.setSavePath!('C:/Exports/subtitles-multilingual.mp4'));
+  await openExportDialog(page);
+  await expect(page.getByTestId('export-subtitle-language-section')).toBeVisible();
+  await expect(page.getByTestId('export-subtitle-language-zh')).toBeChecked();
+  await expect(page.getByTestId('export-subtitle-language-en')).toBeChecked();
+  await page.getByTestId('export-subtitle-mode-select').selectOption('soft-sub');
+  await page.getByTestId('export-subtitle-format-select').selectOption('srt');
+  await page.getByTestId('export-enqueue-button').click();
+  if (await page.getByTestId('export-preflight-panel').isVisible({ timeout: 1000 }).catch(() => false)) {
+    await page.getByTestId('export-preflight-continue-button').click();
+  }
+
+  await expect.poll(() => page.evaluate(() => window.__E2E_ACTIONS__!.getLastExportPlan!())).toBeTruthy();
+  const plan = (await page.evaluate(() => window.__E2E_ACTIONS__!.getLastExportPlan!())) as {
+    inputs: Array<{ path: string; args: string[]; index: number }>;
+    maps: string[];
+    outputArgs: string[];
+    fullArgs: string[];
+    textArtifacts: Array<{ fileName: string; pathMode?: string; text: string }>;
+  };
+  const subtitleInputs = plan.inputs.filter((input) => input.path.includes('__SUBTITLEFILE_export_subtitles_'));
+
+  expect(subtitleInputs).toHaveLength(2);
+  expect(plan.maps.filter((value) => value.endsWith(':s:0'))).toHaveLength(2);
+  expect(plan.fullArgs).toEqual(expect.arrayContaining(['-metadata:s:s:0', 'language=zho', '-metadata:s:s:1', 'language=eng']));
+  expect(plan.textArtifacts.some((artifact) => artifact.fileName === 'subtitles.zh.srt' && artifact.text.includes('你好'))).toBe(true);
+  expect(plan.textArtifacts.some((artifact) => artifact.fileName === 'subtitles.en.srt' && artifact.text.includes('Hello subtitle'))).toBe(true);
+});
+
 test('applies the cinema white subtitle style template', async ({ page }) => {
   await page.goto('/');
   await waitForE2eActions(page);

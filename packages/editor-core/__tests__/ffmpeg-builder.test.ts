@@ -593,6 +593,83 @@ describe('multitrack ffmpeg builder', () => {
     );
   });
 
+  it('embeds multilingual soft subtitles as separate streams with language metadata', () => {
+    const project = makeProject();
+    project.timeline.tracks.push(
+      createTrack({
+        id: 'track-subtitle-zh',
+        type: 'subtitle',
+        name: '中文字幕',
+        language: 'zh',
+        clips: [makeSubtitleClip({ id: 'subtitle-zh', trackId: 'track-subtitle-zh', start: 0, duration: 2, text: '你好', subtitleMode: 'soft-sub' })]
+      }),
+      createTrack({
+        id: 'track-subtitle-en',
+        type: 'subtitle',
+        name: 'English Subtitles',
+        language: 'en',
+        clips: [makeSubtitleClip({ id: 'subtitle-en', trackId: 'track-subtitle-en', start: 0, duration: 2, text: 'Hello', subtitleMode: 'soft-sub' })]
+      })
+    );
+
+    const plan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(project, {
+        outputPath: 'out.mp4',
+        settings: { subtitleMode: 'soft-sub', subtitleFormat: 'srt', subtitleLanguages: ['zh', 'en'] }
+      })
+    );
+
+    const subtitleInputs = plan.inputs.filter((input) => input.path.startsWith('__SUBTITLEFILE_export_subtitles_'));
+    expect(subtitleInputs).toHaveLength(2);
+    expect(plan.maps).toEqual(expect.arrayContaining(['-map', `${subtitleInputs[0].index}:s:0`, '-map', `${subtitleInputs[1].index}:s:0`]));
+    expect(plan.outputArgs).toEqual(expect.arrayContaining(['-c:s', 'mov_text', '-metadata:s:s:0', 'language=zho', '-metadata:s:s:1', 'language=eng']));
+    expect(plan.textArtifacts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ fileName: 'subtitles.zh.srt', pathMode: 'argument', text: expect.stringContaining('你好') }),
+        expect.objectContaining({ fileName: 'subtitles.en.srt', pathMode: 'argument', text: expect.stringContaining('Hello') })
+      ])
+    );
+  });
+
+  it('burns only the selected subtitle language into the video', () => {
+    const project = makeProject();
+    project.timeline.tracks.push(
+      createTrack({
+        id: 'track-subtitle-zh',
+        type: 'subtitle',
+        name: '中文字幕',
+        language: 'zh',
+        clips: [makeSubtitleClip({ id: 'subtitle-zh-burn', trackId: 'track-subtitle-zh', start: 0, duration: 2, text: '中文硬字幕' })]
+      }),
+      createTrack({
+        id: 'track-subtitle-en',
+        type: 'subtitle',
+        name: 'English Subtitles',
+        language: 'en',
+        clips: [makeSubtitleClip({ id: 'subtitle-en-burn', trackId: 'track-subtitle-en', start: 0, duration: 2, text: 'English burn-in' })]
+      })
+    );
+
+    const plan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(project, {
+        outputPath: 'out.mp4',
+        settings: { subtitleMode: 'burn-in', subtitleBurnInLanguage: 'en' }
+      })
+    );
+
+    expect(plan.filterComplex).toContain('subtitles=filename=__SUBTITLEFILE_export_subtitles_en__');
+    expect(plan.textArtifacts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          fileName: 'subtitles.en.srt',
+          pathMode: 'filter',
+          text: expect.stringContaining('English burn-in')
+        })
+      ])
+    );
+    expect(plan.textArtifacts.some((artifact) => artifact.text.includes('中文硬字幕'))).toBe(false);
+  });
+
   it('embeds ASS subtitles as an ass stream and emits a sidecar artifact', () => {
     const project = makeProject();
     project.timeline.tracks.push(

@@ -1,12 +1,18 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   BUILTIN_EXPORT_PRESETS,
+  applyExportPresetPackage,
   deleteCustomExportPreset,
+  fetchOfficialExportPresetPackage,
   getExportPresetsPath,
+  importExportPresetPackage,
   loadExportPresets,
+  parseExportPresetPackage,
   parseStoredExportPresets,
   saveCustomExportPreset,
   serializeCustomExportPresets,
+  serializeExportPresetPackage,
+  type ExportPresetPackageFile,
   type ExportPresetStorage
 } from './export-presets';
 import { zhCN } from '../i18n/strings';
@@ -185,6 +191,86 @@ describe('export presets', () => {
     ]);
     expect(parseStoredExportPresets('{broken')).toEqual([]);
     expect(serializeCustomExportPresets([...BUILTIN_EXPORT_PRESETS, ...parsed])).toContain('"schemaVersion": 1');
+  });
+
+  it('serializes and parses export preset packages with optional metadata templates', () => {
+    const contents = serializeExportPresetPackage(
+      [
+        {
+          id: 'custom-team-review',
+          name: 'Team Review',
+          description: 'Shared',
+          builtin: false,
+          settings: { width: 1280, height: 720, format: 'mp4', subtitleLanguages: ['ZH', 'en', 'en'], subtitleBurnInLanguage: 'EN' }
+        }
+      ],
+      { exportedAt: '2026-06-15T00:00:00.000Z', creator: 'Editor Team', ffmpegMetadataArgsTemplate: [' -metadata ', 'title={project}', ''] }
+    );
+
+    const parsed = parseExportPresetPackage(contents);
+
+    expect(parsed).toEqual({
+      version: 1,
+      exportedAt: '2026-06-15T00:00:00.000Z',
+      creator: 'Editor Team',
+      ffmpegMetadataArgsTemplate: ['-metadata', 'title={project}'],
+      presets: [
+        {
+          id: 'custom-team-review',
+          name: 'Team Review',
+          description: 'Shared',
+          settings: { width: 1280, height: 720, format: 'mp4', subtitleLanguages: ['zh', 'en'], subtitleBurnInLanguage: 'en' }
+        }
+      ]
+    });
+  });
+
+  it('handles preset package name conflicts with overwrite, rename, and skip modes', () => {
+    const existing = [
+      ...BUILTIN_EXPORT_PRESETS,
+      { id: 'custom-existing', name: 'Team Review', description: 'Old', builtin: false, settings: { width: 640 } }
+    ];
+    const packageFile: ExportPresetPackageFile = {
+      version: 1,
+      exportedAt: '2026-06-15T00:00:00.000Z',
+      presets: [{ id: 'custom-imported', name: 'Team Review', description: 'New', settings: { width: 1920 } }]
+    };
+
+    const overwritten = applyExportPresetPackage(existing, packageFile, 'overwrite');
+    const renamed = applyExportPresetPackage(existing, packageFile, 'rename');
+    const skipped = applyExportPresetPackage(existing, packageFile, 'skip');
+
+    expect(overwritten.overwritten).toBe(1);
+    expect(overwritten.presets.find((preset) => preset.id === 'custom-existing')?.settings.width).toBe(1920);
+    expect(renamed.renamed).toBe(1);
+    expect(renamed.presets.some((preset) => preset.name === `Team Review ${zhCN.exportPresets.importedCopySuffix}`)).toBe(true);
+    expect(skipped.imported).toBe(0);
+    expect(skipped.skipped).toBe(1);
+  });
+
+  it('rejects unsupported preset package versions', () => {
+    expect(() => parseExportPresetPackage(JSON.stringify({ version: 99, presets: [] }))).toThrow(zhCN.exportPresets.packageUnsupportedVersion);
+    expect(() => parseExportPresetPackage(JSON.stringify({ version: 1, presets: [] }))).toThrow(zhCN.exportPresets.packageInvalid);
+  });
+
+  it('imports preset packages into custom storage', async () => {
+    const { storage, files, presetPath } = makeStorage();
+    const contents = serializeExportPresetPackage([
+      { id: 'custom-shared-review', name: 'Shared Review', description: 'Shared', builtin: false, settings: { width: 1280, height: 720, format: 'mp4' } }
+    ]);
+
+    const result = await importExportPresetPackage(contents, 'rename', storage);
+
+    expect(result.imported).toBe(1);
+    expect(result.presets.some((preset) => preset.name === 'Shared Review')).toBe(true);
+    expect(JSON.parse(files.get(presetPath) ?? '{}').presets[0]).toEqual(expect.objectContaining({ name: 'Shared Review' }));
+  });
+
+  it('skips the official preset package when the network request fails', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockRejectedValue(new Error('offline'));
+
+    await expect(fetchOfficialExportPresetPackage(fetcher)).resolves.toBeUndefined();
+    expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
   it('persists PNG sequence custom preset settings', async () => {

@@ -1,4 +1,4 @@
-import type { ExportSettings } from '@open-factory/editor-core';
+import { normalizeSubtitleLanguage, normalizeSubtitleLanguageList, type ExportSettings } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { fsExists, getAppDataDir, readFile, writeFile } from '../lib/tauri-bridge';
 
@@ -12,9 +12,34 @@ export interface ExportPreset {
   settings: ExportPresetSettings;
 }
 
+export type ExportPresetImportConflictMode = 'overwrite' | 'rename' | 'skip';
+
 export interface StoredExportPresetsFile {
   schemaVersion: 1;
   presets: Array<Omit<ExportPreset, 'builtin'>>;
+}
+
+export interface ExportPresetPackagePreset {
+  id?: string;
+  name: string;
+  description?: string;
+  settings?: ExportPresetSettings;
+}
+
+export interface ExportPresetPackageFile {
+  version: 1;
+  presets: ExportPresetPackagePreset[];
+  exportedAt: string;
+  creator?: string;
+  ffmpegMetadataArgsTemplate?: string[];
+}
+
+export interface ExportPresetImportResult {
+  presets: ExportPreset[];
+  imported: number;
+  skipped: number;
+  renamed: number;
+  overwritten: number;
 }
 
 export interface ExportPresetStorage {
@@ -25,6 +50,8 @@ export interface ExportPresetStorage {
 }
 
 const PRESETS_FILE_NAME = 'presets.json';
+export const EXPORT_PRESET_PACKAGE_EXTENSION = 'ofpreset.json';
+export const OFFICIAL_EXPORT_PRESET_PACKAGE_URL = 'https://github.com/open-factory/open-factory/releases/latest/download/export-presets.ofpreset.json';
 
 export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
   {
@@ -388,6 +415,141 @@ export function serializeCustomExportPresets(presets: ExportPreset[]): string {
   return `${JSON.stringify(payload, null, 2)}\n`;
 }
 
+export function serializeExportPresetPackage(
+  presets: ExportPreset[],
+  options: { exportedAt?: string; creator?: string; ffmpegMetadataArgsTemplate?: string[] } = {}
+): string {
+  const payload: ExportPresetPackageFile = {
+    version: 1,
+    presets: presets.map((preset) => ({
+      id: preset.id,
+      name: preset.name,
+      description: preset.description,
+      settings: sanitizeExportSettings(preset.settings)
+    })),
+    exportedAt: options.exportedAt ?? new Date().toISOString()
+  };
+  if (options.creator?.trim()) {
+    payload.creator = options.creator.trim();
+  }
+  const metadataTemplate = sanitizeFfmpegMetadataArgsTemplate(options.ffmpegMetadataArgsTemplate);
+  if (metadataTemplate) {
+    payload.ffmpegMetadataArgsTemplate = metadataTemplate;
+  }
+  return `${JSON.stringify(payload, null, 2)}\n`;
+}
+
+export function parseExportPresetPackage(contents: string): ExportPresetPackageFile {
+  const parsed = JSON.parse(contents) as Partial<ExportPresetPackageFile>;
+  if (parsed.version !== 1) {
+    throw new Error(zhCN.exportPresets.packageUnsupportedVersion);
+  }
+  if (!Array.isArray(parsed.presets)) {
+    throw new Error(zhCN.exportPresets.packageInvalid);
+  }
+  const presets = parsed.presets.flatMap((preset): ExportPresetPackagePreset[] => {
+    if (!preset || typeof preset.name !== 'string' || !preset.name.trim()) {
+      return [];
+    }
+    return [
+      {
+        id: typeof preset.id === 'string' && preset.id.trim() ? preset.id.trim() : undefined,
+        name: preset.name.trim(),
+        description: typeof preset.description === 'string' && preset.description.trim() ? preset.description.trim() : zhCN.exportPresets.customDescription,
+        settings: sanitizeExportSettings(preset.settings)
+      }
+    ];
+  });
+  if (presets.length === 0) {
+    throw new Error(zhCN.exportPresets.packageInvalid);
+  }
+  return {
+    version: 1,
+    presets,
+    exportedAt: typeof parsed.exportedAt === 'string' && parsed.exportedAt.trim() ? parsed.exportedAt.trim() : new Date(0).toISOString(),
+    creator: typeof parsed.creator === 'string' && parsed.creator.trim() ? parsed.creator.trim() : undefined,
+    ffmpegMetadataArgsTemplate: sanitizeFfmpegMetadataArgsTemplate(parsed.ffmpegMetadataArgsTemplate)
+  };
+}
+
+export function applyExportPresetPackage(
+  existingPresets: ExportPreset[],
+  packageFile: ExportPresetPackageFile,
+  conflictMode: ExportPresetImportConflictMode
+): ExportPresetImportResult {
+  let customPresets = existingPresets.filter((preset) => !preset.builtin).map((preset) => ({ ...preset, builtin: false as const, settings: sanitizeExportSettings(preset.settings) }));
+  const builtinNames = new Set(BUILTIN_EXPORT_PRESETS.map((preset) => preset.name.toLowerCase()));
+  const result = { imported: 0, skipped: 0, renamed: 0, overwritten: 0 };
+
+  for (const preset of packageFile.presets) {
+    const normalizedName = preset.name.trim();
+    const existingCustomIndex = customPresets.findIndex((item) => item.name.toLowerCase() === normalizedName.toLowerCase());
+    const conflictsWithBuiltin = builtinNames.has(normalizedName.toLowerCase());
+    if (existingCustomIndex >= 0 || conflictsWithBuiltin) {
+      if (conflictMode === 'skip') {
+        result.skipped += 1;
+        continue;
+      }
+      if (conflictMode === 'overwrite' && existingCustomIndex >= 0) {
+        customPresets[existingCustomIndex] = {
+          id: customPresets[existingCustomIndex].id,
+          name: normalizedName,
+          description: preset.description ?? zhCN.exportPresets.customDescription,
+          builtin: false,
+          settings: sanitizeExportSettings(preset.settings)
+        };
+        result.imported += 1;
+        result.overwritten += 1;
+        continue;
+      }
+    }
+    const name = existingCustomIndex >= 0 || conflictsWithBuiltin ? nextImportedPresetName(normalizedName, [...BUILTIN_EXPORT_PRESETS, ...customPresets]) : normalizedName;
+    if (name !== normalizedName) {
+      result.renamed += 1;
+    }
+    customPresets = [
+      ...customPresets,
+      {
+        id: uniqueImportedPresetId(preset.id, name, [...BUILTIN_EXPORT_PRESETS, ...customPresets]),
+        name,
+        description: preset.description ?? zhCN.exportPresets.customDescription,
+        builtin: false,
+        settings: sanitizeExportSettings(preset.settings)
+      }
+    ];
+    result.imported += 1;
+  }
+
+  return {
+    presets: mergeExportPresets(customPresets),
+    ...result
+  };
+}
+
+export async function importExportPresetPackage(
+  contents: string,
+  conflictMode: ExportPresetImportConflictMode,
+  storage: ExportPresetStorage = bridgePresetStorage
+): Promise<ExportPresetImportResult> {
+  const packageFile = parseExportPresetPackage(contents);
+  const existing = mergeExportPresets(await loadCustomExportPresets(storage));
+  const result = applyExportPresetPackage(existing, packageFile, conflictMode);
+  await writeCustomExportPresets(result.presets.filter((preset) => !preset.builtin), storage);
+  return result;
+}
+
+export async function fetchOfficialExportPresetPackage(fetcher: typeof fetch = fetch): Promise<ExportPresetPackageFile | undefined> {
+  try {
+    const response = await fetcher(OFFICIAL_EXPORT_PRESET_PACKAGE_URL, { cache: 'no-store' });
+    if (!response.ok) {
+      return undefined;
+    }
+    return parseExportPresetPackage(await response.text());
+  } catch {
+    return undefined;
+  }
+}
+
 async function loadCustomExportPresets(storage: ExportPresetStorage): Promise<ExportPreset[]> {
   const path = getExportPresetsPath(await storage.getAppDataDir());
   if (!(await storage.fsExists(path))) {
@@ -435,6 +597,13 @@ function sanitizeExportSettings(settings: unknown): ExportPresetSettings {
   }
   if (input.exportSidecarSubtitle === true) {
     output.exportSidecarSubtitle = true;
+  }
+  const subtitleLanguages = normalizeSubtitleLanguageList(input.subtitleLanguages);
+  if (subtitleLanguages) {
+    output.subtitleLanguages = subtitleLanguages;
+  }
+  if (typeof input.subtitleBurnInLanguage === 'string') {
+    output.subtitleBurnInLanguage = normalizeSubtitleLanguage(input.subtitleBurnInLanguage);
   }
   if (input.hardwareEncoding === true) {
     output.hardwareEncoding = true;
@@ -664,6 +833,41 @@ function copyOptionalString(input: Record<string, unknown>, output: ExportPreset
   } else if (value === null) {
     output[key] = null;
   }
+}
+
+function sanitizeFfmpegMetadataArgsTemplate(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  const args = value
+    .filter((item): item is string => typeof item === 'string')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 32);
+  return args.length > 0 ? args : undefined;
+}
+
+function nextImportedPresetName(name: string, presets: ExportPreset[]): string {
+  const used = new Set(presets.map((preset) => preset.name.toLowerCase()));
+  let index = 2;
+  let candidate = `${name} ${zhCN.exportPresets.importedCopySuffix}`;
+  while (used.has(candidate.toLowerCase())) {
+    candidate = `${name} ${zhCN.exportPresets.importedCopySuffix} ${index}`;
+    index += 1;
+  }
+  return candidate;
+}
+
+function uniqueImportedPresetId(id: string | undefined, name: string, presets: ExportPreset[]): string {
+  const used = new Set(presets.map((preset) => preset.id));
+  if (id && id.trim() && !used.has(id.trim()) && !isBuiltinExportPreset(id.trim())) {
+    return id.trim();
+  }
+  let candidate = createCustomPresetId(name);
+  while (used.has(candidate)) {
+    candidate = createCustomPresetId(`${name}-${Math.random().toString(36).slice(2, 6)}`);
+  }
+  return candidate;
 }
 
 function createCustomPresetId(name: string): string {

@@ -23,11 +23,12 @@ test('translates subtitle clips through a mocked API into a new subtitle track',
     .poll(() =>
       page.evaluate(() => {
         const timeline = window.__E2E_ACTIONS__!.getTimelineSnapshot!() as {
-          tracks: Array<{ type: string; clips: Array<{ text: string }> }>;
+          tracks: Array<{ type: string; language?: string; clips: Array<{ text: string }> }>;
         };
         const subtitleTracks = timeline.tracks.filter((track) => track.type === 'subtitle');
         return {
           trackCount: subtitleTracks.length,
+          translatedLanguage: subtitleTracks.at(-1)?.language,
           translatedClipCount: subtitleTracks.at(-1)?.clips.length ?? 0,
           translatedTexts: subtitleTracks.at(-1)?.clips.map((clip: { text: string }) => clip.text) ?? []
         };
@@ -35,6 +36,7 @@ test('translates subtitle clips through a mocked API into a new subtitle track',
     )
     .toEqual({
       trackCount: 2,
+      translatedLanguage: 'zh',
       translatedClipCount: 2,
       translatedTexts: ['Hello subtitle 翻译', 'Second subtitle 翻译']
     });

@@ -113,6 +113,8 @@ export interface ExportSettings {
   subtitleMode?: ExportSubtitleMode;
   subtitleFormat?: ExportSubtitleFormat;
   exportSidecarSubtitle?: boolean;
+  subtitleLanguages?: string[];
+  subtitleBurnInLanguage?: string | null;
   hardwareEncoding?: boolean;
   loudnessNormalization?: ExportLoudnessNormalization;
   platformPreset?: ExportPlatformPreset;
@@ -327,6 +329,7 @@ export interface ExportClip {
 export interface ExportTrack {
   index: number;
   type: ExportTrackType;
+  language?: string;
   muted: boolean;
   solo: boolean;
   locked: boolean;

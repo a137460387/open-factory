@@ -30,6 +30,7 @@ export type TrackType = 'video' | 'audio' | 'text' | 'subtitle';
 export type ClipType = 'video' | 'audio' | 'image' | 'text' | 'subtitle' | 'credits' | 'nested-sequence' | 'adjustment';
 export type TransitionType = 'fade-black' | 'dissolve';
 export type SubtitleMode = 'burn-in' | 'soft-sub';
+export type SubtitleLanguage = string;
 export type KeyframeEasing = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out';
 export type AudioFadeCurve = Extract<KeyframeEasing, 'linear' | 'ease-in' | 'ease-out'>;
 
@@ -344,6 +345,7 @@ export interface Track {
   id: string;
   type: TrackType;
   name: string;
+  language?: SubtitleLanguage;
   color?: TimelineLabelColor | null;
   muted?: boolean;
   solo?: boolean;
@@ -787,6 +789,7 @@ export const DEFAULT_TEXT_PATH: TextPathOptions = {
 };
 
 export const DEFAULT_SUBTITLE_MODE: SubtitleMode = 'burn-in';
+export const DEFAULT_SUBTITLE_LANGUAGE = 'zh';
 
 export const DEFAULT_SUBTITLE_STYLE: SubtitleStyle = {
   ...DEFAULT_TEXT_STYLE,
@@ -895,10 +898,10 @@ export function createProtectedRange(
 }
 
 export function createTrack(
-  track: Omit<Track, 'color' | 'muted' | 'solo' | 'locked' | 'volume' | 'pan' | 'eq' | 'compressor'> &
-    Partial<Pick<Track, 'color' | 'muted' | 'solo' | 'locked' | 'volume' | 'pan' | 'eq' | 'compressor'>>
+  track: Omit<Track, 'language' | 'color' | 'muted' | 'solo' | 'locked' | 'volume' | 'pan' | 'eq' | 'compressor'> &
+    Partial<Pick<Track, 'language' | 'color' | 'muted' | 'solo' | 'locked' | 'volume' | 'pan' | 'eq' | 'compressor'>>
 ): Track {
-  return {
+  const next: Track = {
     ...track,
     color: normalizeTimelineLabelColor(track.color),
     muted: Boolean(track.muted),
@@ -909,6 +912,12 @@ export function createTrack(
     eq: normalizeTrackEQ(track.eq),
     compressor: normalizeTrackCompressor(track.compressor)
   };
+  if (track.type === 'subtitle') {
+    next.language = normalizeSubtitleLanguage(track.language);
+  } else {
+    delete next.language;
+  }
+  return next;
 }
 
 export function createProject(name = 'Untitled Project'): Project {
@@ -1456,6 +1465,31 @@ export function normalizeTrackPan(pan: number | undefined): number {
     return DEFAULT_TRACK_PAN;
   }
   return round(Math.min(1, Math.max(-1, pan)));
+}
+
+export function normalizeSubtitleLanguage(language: unknown): SubtitleLanguage {
+  if (typeof language !== 'string') {
+    return DEFAULT_SUBTITLE_LANGUAGE;
+  }
+  const primary = language.trim().toLowerCase().replace(/_/g, '-').split('-')[0];
+  return /^[a-z]{2}$/.test(primary) ? primary : DEFAULT_SUBTITLE_LANGUAGE;
+}
+
+export function normalizeSubtitleLanguageList(languages: unknown): SubtitleLanguage[] | undefined {
+  if (!Array.isArray(languages)) {
+    return undefined;
+  }
+  const output: SubtitleLanguage[] = [];
+  const seen = new Set<string>();
+  for (const language of languages) {
+    const normalized = normalizeSubtitleLanguage(language);
+    if (seen.has(normalized)) {
+      continue;
+    }
+    seen.add(normalized);
+    output.push(normalized);
+  }
+  return output;
 }
 
 export function normalizeTrackEQ(eq: Partial<TrackEQ> | undefined): TrackEQ {
