@@ -21,7 +21,7 @@ import {
   type Transition,
   type TransitionType
 } from '@open-factory/editor-core';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, MoreHorizontal } from 'lucide-react';
 import type { TimelineRenderRange } from '@open-factory/editor-core';
 import type { TimelineDiffRange } from '@open-factory/editor-core';
 import { clsx } from 'clsx';
@@ -62,6 +62,7 @@ export interface DragState {
 
 export const TRACK_HEIGHT = 54;
 export const LABEL_WIDTH = 138;
+export const TRACK_DRAG_MIME = 'application/x-open-factory-track-id';
 
 export function ThumbnailTrack({
   samples,
@@ -253,6 +254,7 @@ export function TrackRow({
   selectedClipIds,
   selectedKeyframe,
   selectedKeyframes,
+  selectedTrackIds,
   drag,
   media,
   onSelect,
@@ -260,6 +262,9 @@ export function TrackRow({
   onDragStart,
   onTrackPointerDown,
   onTrackUpdate,
+  onTrackHeaderClick,
+  onTrackBatchMenu,
+  onTrackReorder,
   transitions,
   onTransitionMenu,
   onGapMenu,
@@ -279,6 +284,7 @@ export function TrackRow({
   selectedClipIds: string[];
   selectedKeyframe?: SelectedKeyframeRef;
   selectedKeyframes: SelectedKeyframeRef[];
+  selectedTrackIds: string[];
   drag?: DragState;
   media: MediaAsset[];
   onSelect(clipId: string, additive: boolean, forceSingle?: boolean): void;
@@ -286,6 +292,9 @@ export function TrackRow({
   onDragStart(drag: DragState): void;
   onTrackPointerDown(event: React.PointerEvent<HTMLDivElement>): void;
   onTrackUpdate(trackId: string, patch: Partial<Pick<Track, 'color' | 'muted' | 'solo' | 'locked' | 'volume'>>): void;
+  onTrackHeaderClick(trackId: string, event: React.MouseEvent<HTMLDivElement>): void;
+  onTrackBatchMenu(trackId: string, x: number, y: number): void;
+  onTrackReorder(draggedTrackId: string, targetTrackId: string): void;
   transitions: Transition[];
   onTransitionMenu(request: TransitionMenuRequest): void;
   onGapMenu(request: GapMenuRequest): void;
@@ -303,6 +312,7 @@ export function TrackRow({
   const frequencyBands = useAudioMeterStore((state) => state.trackFrequencyBands[track.id] ?? getSilentFrequencyBands());
   const mediaById = new Map(media.map((asset) => [asset.id, asset]));
   const locked = Boolean(track.locked);
+  const selectedTrack = selectedTrackIds.includes(track.id);
   const nextAdjacentByClipId = new Map<string, Clip>();
   const sortedClips = [...track.clips].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id));
   const virtualClips = filterTimelineVirtualClips(track.clips, virtualWindow).filter((clip) => !colorFilter || getEffectiveClipColorLabel(clip, track) === colorFilter);
@@ -315,7 +325,39 @@ export function TrackRow({
   }
   return (
     <div className="grid border-b border-line" style={{ gridTemplateColumns: `${LABEL_WIDTH}px 1fr`, height: TRACK_HEIGHT }}>
-      <div className="flex items-center gap-2 border-r border-line bg-panel px-3">
+      <div
+        className={clsx('flex items-center gap-2 border-r px-3 outline-none', selectedTrack ? 'border-brand/60 bg-brand/10' : 'border-line bg-panel')}
+        role="option"
+        aria-selected={selectedTrack}
+        data-testid={`track-header-${track.id}`}
+        data-track-selected={selectedTrack ? 'true' : 'false'}
+        draggable
+        onClick={(event) => {
+          const target = event.target as HTMLElement | null;
+          if (target?.closest('button,input,textarea,select')) {
+            return;
+          }
+          onTrackHeaderClick(track.id, event);
+        }}
+        onDragStart={(event) => {
+          event.dataTransfer.setData(TRACK_DRAG_MIME, track.id);
+          event.dataTransfer.effectAllowed = 'move';
+        }}
+        onDragOver={(event) => {
+          if (Array.from(event.dataTransfer.types).includes(TRACK_DRAG_MIME)) {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+          }
+        }}
+        onDrop={(event) => {
+          const draggedTrackId = event.dataTransfer.getData(TRACK_DRAG_MIME);
+          if (!draggedTrackId || draggedTrackId === track.id) {
+            return;
+          }
+          event.preventDefault();
+          onTrackReorder(draggedTrackId, track.id);
+        }}
+      >
         <div className="relative h-full py-2">
           <button
             className="block h-full w-1.5 rounded-full border border-white shadow-sm"
@@ -371,6 +413,22 @@ export function TrackRow({
           <TrackToggle label="M" title={zhCN.timeline.muteTrack} active={Boolean(track.muted)} testId={`track-mute-${track.id}`} onClick={() => onTrackUpdate(track.id, { muted: !track.muted })} />
           <TrackToggle label="S" title={zhCN.timeline.soloTrack} active={Boolean(track.solo)} testId={`track-solo-${track.id}`} onClick={() => onTrackUpdate(track.id, { solo: !track.solo })} />
           <TrackToggle label="L" title={zhCN.timeline.lockTrack} active={locked} testId={`track-lock-${track.id}`} onClick={() => onTrackUpdate(track.id, { locked: !track.locked })} />
+          {selectedTrack ? (
+            <button
+              className="h-6 w-6 rounded border border-line bg-white text-slate-600 hover:bg-panel"
+              title={zhCN.timeline.trackBatchMenu}
+              aria-label={zhCN.timeline.trackBatchMenu}
+              type="button"
+              data-testid={`track-batch-menu-button-${track.id}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                const rect = event.currentTarget.getBoundingClientRect();
+                onTrackBatchMenu(track.id, rect.left, rect.bottom + 4);
+              }}
+            >
+              <MoreHorizontal size={14} aria-hidden="true" />
+            </button>
+          ) : null}
         </div>
         <input
           className="w-14 accent-brand"
@@ -502,6 +560,7 @@ function TrackToggle({
       title={title}
       type="button"
       data-testid={testId}
+      aria-pressed={active}
       onClick={onClick}
     >
       {label}

@@ -754,6 +754,26 @@ export class AddTrackCommand implements Command {
 
 export type TrackPatch = Partial<Pick<Track, 'name' | 'color' | 'muted' | 'solo' | 'locked' | 'volume' | 'pan' | 'eq' | 'compressor'>>;
 
+function applyTrackPatch(track: Track, patch?: TrackPatch): Track {
+  if (!patch) {
+    return track;
+  }
+  return createTrack({
+    ...track,
+    ...patch,
+    volume: patch.volume === undefined ? track.volume : normalizeTrackVolume(patch.volume),
+    pan: patch.pan === undefined ? track.pan : normalizeTrackPan(patch.pan),
+    eq: patch.eq === undefined ? track.eq : normalizeTrackEQ(patch.eq),
+    compressor: patch.compressor === undefined ? track.compressor : normalizeTrackCompressor(patch.compressor)
+  });
+}
+
+export interface BatchUpdateTrackCommandOptions {
+  patches?: Record<string, TrackPatch>;
+  order?: string[];
+  deleteEmptyTrackIds?: string[];
+}
+
 export class UpdateTrackCommand implements Command {
   readonly description = 'Update track';
   private before?: Track;
@@ -764,14 +784,7 @@ export class UpdateTrackCommand implements Command {
   execute(): void {
     const timeline = this.accessor.getTimeline();
     this.before ??= findTrack(timeline, this.trackId);
-    this.after = createTrack({
-      ...this.before,
-      ...this.patch,
-      volume: this.patch.volume === undefined ? this.before.volume : normalizeTrackVolume(this.patch.volume),
-      pan: this.patch.pan === undefined ? this.before.pan : normalizeTrackPan(this.patch.pan),
-      eq: this.patch.eq === undefined ? this.before.eq : normalizeTrackEQ(this.patch.eq),
-      compressor: this.patch.compressor === undefined ? this.before.compressor : normalizeTrackCompressor(this.patch.compressor)
-    });
+    this.after = applyTrackPatch(this.before, this.patch);
     this.accessor.setTimeline({
       ...timeline,
       tracks: timeline.tracks.map((track) => (track.id === this.trackId ? this.after! : track))
@@ -787,6 +800,46 @@ export class UpdateTrackCommand implements Command {
       ...timeline,
       tracks: timeline.tracks.map((track) => (track.id === this.trackId ? this.before! : track))
     });
+  }
+}
+
+export class BatchUpdateTrackCommand implements Command {
+  readonly description = 'Batch update tracks';
+  private before?: Timeline;
+  private after?: Timeline;
+
+  constructor(private readonly accessor: TimelineAccessor, private readonly options: BatchUpdateTrackCommandOptions) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getTimeline();
+    const patchByTrackId = this.options.patches ?? {};
+    const deleteEmptyIds = new Set(this.options.deleteEmptyTrackIds ?? []);
+    let tracks = this.before.tracks
+      .map((track) => applyTrackPatch(track, patchByTrackId[track.id]))
+      .filter((track) => !(deleteEmptyIds.has(track.id) && track.clips.length === 0));
+
+    if (this.options.order) {
+      const byId = new Map(tracks.map((track) => [track.id, track]));
+      const ordered = this.options.order.flatMap((trackId) => {
+        const track = byId.get(trackId);
+        if (!track) {
+          return [];
+        }
+        byId.delete(trackId);
+        return [track];
+      });
+      tracks = [...ordered, ...tracks.filter((track) => byId.has(track.id))];
+    }
+
+    this.after = { ...this.before, tracks };
+    this.accessor.setTimeline(this.after);
+  }
+
+  undo(): void {
+    if (!this.before) {
+      return;
+    }
+    this.accessor.setTimeline(this.before);
   }
 }
 

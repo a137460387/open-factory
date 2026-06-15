@@ -82,6 +82,7 @@ const relinkedAudio = 'C:/Relink/tiny-audio.wav';
 const relinkedImage = 'C:/Relink/test-image.png';
 const appDataDir = 'C:/Users/E2E/AppData/Roaming/open-factory';
 const settingsPath = `${appDataDir}/settings.json`;
+const exportQueueStatePath = `${appDataDir}/export-queue-state.json`;
 const exportPresetsPath = `${appDataDir}/presets.json`;
 const subtitleStylesPath = `${appDataDir}/subtitle-styles.json`;
 const lutLibraryPath = `${appDataDir}/luts/Warm Contrast.cube`;
@@ -1520,6 +1521,9 @@ window.__E2E_ACTIONS__ = {
     files.delete(settingsPath);
     exists.set(settingsPath, false);
     mtimes.delete(settingsPath);
+    files.delete(exportQueueStatePath);
+    exists.set(exportQueueStatePath, false);
+    mtimes.delete(exportQueueStatePath);
     lastGifExportRequest = undefined;
     lastGifPreviewRequest = undefined;
     files.delete(pluginCatalogCachePath);

@@ -5,6 +5,7 @@ import {
   AddProjectBookmarkCommand,
   AddTimelineMarkerCommand,
   BatchKeyframeEditCommand,
+  BatchUpdateTrackCommand,
   AddTrackCommand,
   AddTransitionCommand,
   CloseGapCommand,
@@ -52,6 +53,7 @@ import {
   UpdateProjectProtectedRangesCommand,
   rectsIntersect,
   replaceClip,
+  resolveTrackHeaderSelection,
   SplitClipCommand,
   SplitClipAtTimesCommand,
   TrimClipCommand,
@@ -72,6 +74,7 @@ import {
   findCompleteClipGroup,
   isNestedSequenceDepthExceeded,
   instantiateTitleTemplate,
+  moveSelectedTrackIds,
   moveClip,
   normalizeClipGroups,
   normalizeExportRanges,
@@ -100,6 +103,7 @@ import {
   type TimelineGridSettings,
   type TimelineLabelColor,
   type Track,
+  type TrackPatch,
   type TransitionType,
   type ReplaceMediaCompatibilityWarning,
   type ReplaceMediaDurationMode
@@ -191,6 +195,9 @@ export function Timeline({
   const [bookmarkPanelOpen, setBookmarkPanelOpen] = useState(true);
   const [bookmarkRename, setBookmarkRename] = useState<BookmarkRenameState | undefined>();
   const [timelineColorFilter, setTimelineColorFilter] = useState<TimelineLabelColor | null>(null);
+  const [selectedTrackIds, setSelectedTrackIds] = useState<string[]>([]);
+  const [trackSelectionAnchorId, setTrackSelectionAnchorId] = useState<string | undefined>();
+  const [trackBatchMenu, setTrackBatchMenu] = useState<TrackBatchMenuState | undefined>();
   const [scrollViewport, setScrollViewport] = useState({ scrollLeft: 0, viewportWidth: 960 });
   const whisperExecutablePath = useWhisperSettingsStore((state) => state.executablePath);
   const whisperModelPath = useWhisperSettingsStore((state) => state.modelPath);
@@ -274,6 +281,7 @@ export function Timeline({
     return map;
   }, [clipGroups]);
   const selectedGroup = useMemo(() => findCompleteClipGroup(clipGroups, selectedClipIds), [clipGroups, selectedClipIds]);
+  const orderedTrackIds = useMemo(() => project.timeline.tracks.map((track) => track.id), [project.timeline.tracks]);
   const virtualWindow = useMemo(
     () =>
       getTimelineVirtualRenderWindow({
@@ -299,6 +307,12 @@ export function Timeline({
   const isMainSequence = project.activeSequenceId === 'sequence-main';
 
   useEffect(() => {
+    const liveTrackIds = new Set(orderedTrackIds);
+    setSelectedTrackIds((current) => current.filter((trackId) => liveTrackIds.has(trackId)));
+    setTrackSelectionAnchorId((current) => (current && liveTrackIds.has(current) ? current : undefined));
+  }, [orderedTrackIds]);
+
+  useEffect(() => {
     let disposed = false;
     void getWhisperAvailability({ executablePath: whisperExecutablePath, modelPath: whisperModelPath }).then((availability) => {
       if (!disposed) {
@@ -312,6 +326,12 @@ export function Timeline({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'a' && !isEditableKeyboardTarget(event.target)) {
+        event.preventDefault();
+        setSelectedTrackIds(orderedTrackIds);
+        setTrackSelectionAnchorId(orderedTrackIds[0]);
+        return;
+      }
       if (event.shiftKey && event.key.toLowerCase() === 'p' && !isEditableKeyboardTarget(event.target)) {
         event.preventDefault();
         toggleProtectedRangeAtPlayhead();
@@ -351,7 +371,7 @@ export function Timeline({
       window.removeEventListener('keyup', onKeyUp);
       window.removeEventListener('blur', onBlur);
     };
-  }, [playheadTime, project.protectedRanges, projectDuration, protectedRanges]);
+  }, [orderedTrackIds, playheadTime, project.protectedRanges, projectDuration, protectedRanges]);
 
   useEffect(() => {
     syncScrollViewport();
@@ -372,6 +392,91 @@ export function Timeline({
 
   function updateTrack(trackId: string, patch: Partial<Pick<Track, 'color' | 'muted' | 'solo' | 'locked' | 'volume'>>): void {
     commandManager.execute(new UpdateTrackCommand(timelineAccessor, trackId, patch));
+  }
+
+  function selectTrackHeader(trackId: string, event: React.MouseEvent<HTMLDivElement>): void {
+    const result = resolveTrackHeaderSelection({
+      orderedTrackIds,
+      currentSelection: selectedTrackIds,
+      clickedTrackId: trackId,
+      anchorTrackId: trackSelectionAnchorId,
+      shiftKey: event.shiftKey
+    });
+    setSelectedTrackIds(result.selectedTrackIds);
+    setTrackSelectionAnchorId(result.anchorTrackId);
+    setTrackBatchMenu(undefined);
+  }
+
+  function openTrackBatchMenu(trackId: string, x: number, y: number): void {
+    if (!selectedTrackIds.includes(trackId)) {
+      setSelectedTrackIds([trackId]);
+      setTrackSelectionAnchorId(trackId);
+    }
+    setGapMenu(undefined);
+    setClipMenu(undefined);
+    setTransitionMenu(undefined);
+    setRulerMenu(undefined);
+    setTrackBatchMenu({
+      trackId,
+      x: Math.min(x, Math.max(0, window.innerWidth - 230)),
+      y: Math.min(y, Math.max(0, window.innerHeight - 260))
+    });
+  }
+
+  function selectedTracksForBatch(): Track[] {
+    const selected = new Set(selectedTrackIds);
+    return project.timeline.tracks.filter((track) => selected.has(track.id));
+  }
+
+  function applyBatchTrackPatch(patchForTrack: (track: Track) => TrackPatch): void {
+    const tracks = selectedTracksForBatch();
+    if (tracks.length === 0) {
+      return;
+    }
+    try {
+      commandManager.execute(
+        new BatchUpdateTrackCommand(timelineAccessor, {
+          patches: Object.fromEntries(tracks.map((track) => [track.id, patchForTrack(track)]))
+        })
+      );
+      setTrackBatchMenu(undefined);
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage });
+    }
+  }
+
+  function deleteSelectedEmptyTracks(): void {
+    const tracks = selectedTracksForBatch();
+    if (tracks.length === 0) {
+      return;
+    }
+    try {
+      commandManager.execute(
+        new BatchUpdateTrackCommand(timelineAccessor, {
+          deleteEmptyTrackIds: tracks.map((track) => track.id)
+        })
+      );
+      setSelectedTrackIds((current) => current.filter((trackId) => project.timeline.tracks.some((track) => track.id === trackId && track.clips.length > 0)));
+      setTrackBatchMenu(undefined);
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage });
+    }
+  }
+
+  function reorderTracks(draggedTrackId: string, targetTrackId: string): void {
+    const nextOrder = moveSelectedTrackIds(orderedTrackIds, selectedTrackIds, draggedTrackId, targetTrackId);
+    if (nextOrder.join('\0') === orderedTrackIds.join('\0')) {
+      return;
+    }
+    const nextSelectedTrackIds = selectedTrackIds.includes(draggedTrackId) ? selectedTrackIds : [draggedTrackId];
+    try {
+      commandManager.execute(new BatchUpdateTrackCommand(timelineAccessor, { order: nextOrder }));
+      setSelectedTrackIds(nextSelectedTrackIds);
+      setTrackSelectionAnchorId(nextSelectedTrackIds[0]);
+      setTrackBatchMenu(undefined);
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage });
+    }
   }
 
   function updateClipColor(clipId: string, colorLabel: TimelineLabelColor | null): void {
@@ -1713,6 +1818,7 @@ function addProjectBookmark(time = playheadTime): void {
                 selectedClipIds={selectedClipIds}
                 selectedKeyframe={selectedKeyframe}
                 selectedKeyframes={selectedKeyframes}
+                selectedTrackIds={selectedTrackIds}
                 drag={drag}
                 media={project.media}
                 onSelect={selectClip}
@@ -1720,6 +1826,9 @@ function addProjectBookmark(time = playheadTime): void {
                 onDragStart={onDragStart}
                 onTrackPointerDown={onTrackPointerDown}
                 onTrackUpdate={updateTrack}
+                onTrackHeaderClick={selectTrackHeader}
+                onTrackBatchMenu={openTrackBatchMenu}
+                onTrackReorder={reorderTracks}
                 transitions={project.timeline.transitions ?? []}
                 onTransitionMenu={(request) =>
                   {
@@ -1838,6 +1947,15 @@ function addProjectBookmark(time = playheadTime): void {
                 onGroupColor={updateGroupColor}
                 onClipColor={updateClipColor}
                 onClose={() => setClipMenu(undefined)}
+              />
+            ) : null}
+            {trackBatchMenu ? (
+              <TrackBatchMenu
+                menu={trackBatchMenu}
+                selectedTracks={selectedTracksForBatch()}
+                onPatch={applyBatchTrackPatch}
+                onDeleteEmpty={deleteSelectedEmptyTracks}
+                onClose={() => setTrackBatchMenu(undefined)}
               />
             ) : null}
             {selectionRect ? <SelectionMarquee rect={selectionRect} /> : null}
@@ -1959,6 +2077,12 @@ interface RulerMenuState {
   timecode: string;
 }
 
+interface TrackBatchMenuState {
+  x: number;
+  y: number;
+  trackId: string;
+}
+
 interface SilenceDialogState {
   clip: Clip;
   asset: MediaAsset;
@@ -1984,6 +2108,86 @@ interface AnnotationEditorState {
 interface BookmarkRenameState {
   id: string;
   note: string;
+}
+
+function TrackBatchMenu({
+  menu,
+  selectedTracks,
+  onPatch,
+  onDeleteEmpty,
+  onClose
+}: {
+  menu: TrackBatchMenuState;
+  selectedTracks: Track[];
+  onPatch(patchForTrack: (track: Track) => TrackPatch): void;
+  onDeleteEmpty(): void;
+  onClose(): void;
+}) {
+  const disabled = selectedTracks.length === 0;
+  const hasEmptyTrack = selectedTracks.some((track) => track.clips.length === 0);
+  return (
+    <div
+      className="fixed z-50 w-[220px] rounded-md border border-line bg-white p-2 text-xs shadow-soft"
+      style={{ left: menu.x, top: menu.y }}
+      data-testid="track-batch-menu"
+      onPointerDown={(event) => event.stopPropagation()}
+    >
+      <div className="mb-2 px-2 text-[11px] font-semibold text-slate-500">{zhCN.timeline.trackBatchSelectedCount(selectedTracks.length)}</div>
+      <div className="grid grid-cols-2 gap-1">
+        <button className="rounded px-2 py-1.5 text-left hover:bg-panel disabled:opacity-40" type="button" data-testid="track-batch-mute" disabled={disabled} onClick={() => onPatch(() => ({ muted: true }))}>
+          {zhCN.timeline.trackBatchMute}
+        </button>
+        <button className="rounded px-2 py-1.5 text-left hover:bg-panel disabled:opacity-40" type="button" data-testid="track-batch-unmute" disabled={disabled} onClick={() => onPatch(() => ({ muted: false }))}>
+          {zhCN.timeline.trackBatchUnmute}
+        </button>
+        <button className="rounded px-2 py-1.5 text-left hover:bg-panel disabled:opacity-40" type="button" data-testid="track-batch-solo" disabled={disabled} onClick={() => onPatch(() => ({ solo: true }))}>
+          {zhCN.timeline.trackBatchSolo}
+        </button>
+        <button className="rounded px-2 py-1.5 text-left hover:bg-panel disabled:opacity-40" type="button" data-testid="track-batch-unsolo" disabled={disabled} onClick={() => onPatch(() => ({ solo: false }))}>
+          {zhCN.timeline.trackBatchUnsolo}
+        </button>
+        <button className="rounded px-2 py-1.5 text-left hover:bg-panel disabled:opacity-40" type="button" data-testid="track-batch-lock" disabled={disabled} onClick={() => onPatch(() => ({ locked: true }))}>
+          {zhCN.timeline.trackBatchLock}
+        </button>
+        <button className="rounded px-2 py-1.5 text-left hover:bg-panel disabled:opacity-40" type="button" data-testid="track-batch-unlock" disabled={disabled} onClick={() => onPatch(() => ({ locked: false }))}>
+          {zhCN.timeline.trackBatchUnlock}
+        </button>
+      </div>
+      <button
+        className="mt-1 block w-full rounded px-2 py-1.5 text-left hover:bg-panel disabled:opacity-40"
+        type="button"
+        data-testid="track-batch-delete-empty"
+        disabled={disabled || !hasEmptyTrack}
+        onClick={onDeleteEmpty}
+      >
+        {zhCN.timeline.trackBatchDeleteEmpty}
+      </button>
+      <div className="mt-2 border-t border-line pt-2">
+        <div className="mb-1 px-2 text-[11px] font-semibold text-slate-500">{zhCN.timeline.trackBatchSetColor}</div>
+        <div className="grid grid-cols-6 gap-1 px-2">
+          {TIMELINE_LABEL_COLORS.map((color) => (
+            <button
+              key={color}
+              className="h-5 w-5 rounded-full border border-white ring-1 ring-slate-200 hover:ring-slate-500 disabled:opacity-40"
+              style={{ backgroundColor: getTimelineLabelColorHex(color) }}
+              type="button"
+              title={zhCN.timeline.timelineLabelColorNames[color]}
+              aria-label={zhCN.timeline.timelineLabelColorNames[color]}
+              data-testid={`track-batch-color-${color}`}
+              disabled={disabled}
+              onClick={() => onPatch(() => ({ color }))}
+            />
+          ))}
+        </div>
+        <button className="mt-2 block w-full rounded px-2 py-1.5 text-left text-slate-500 hover:bg-panel disabled:opacity-40" type="button" data-testid="track-batch-color-default" disabled={disabled} onClick={() => onPatch(() => ({ color: null }))}>
+          {zhCN.timeline.defaultLabelColor}
+        </button>
+      </div>
+      <button className="mt-1 block w-full rounded px-2 py-1.5 text-left text-slate-500 hover:bg-panel" type="button" onClick={onClose}>
+        {zhCN.timeline.close}
+      </button>
+    </div>
+  );
 }
 
 function AnnotationBubble({

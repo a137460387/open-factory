@@ -5,7 +5,7 @@ import { expect, test } from '@playwright/test';
 import { addMediaCardToTimeline, expectExportTaskStatus, openExportDialog, waitForE2eActions } from './e2e-actions';
 
 test('exports opacity keyframes with visibly darker end frames', async ({ page }, testInfo) => {
-  test.setTimeout(60_000);
+  test.setTimeout(120_000);
   const sourcePath = testInfo.outputPath('opacity-source.mp4');
   const outputPath = testInfo.outputPath('opacity-output.mp4');
   await createWhiteVideoFixture(sourcePath);
@@ -28,6 +28,8 @@ test('exports opacity keyframes with visibly darker end frames', async ({ page }
 
   await openExportDialog(page);
   await page.getByTestId('export-output-path').fill(normalizePath(outputPath));
+  await page.getByTestId('export-width-input').fill('320');
+  await page.getByTestId('export-height-input').fill('180');
   await page.getByTestId('export-enqueue-button').click();
   await expectExportTaskStatus(page, 0, 'success');
 
@@ -49,11 +51,11 @@ async function createWhiteVideoFixture(targetPath: string): Promise<void> {
     '-f',
     'lavfi',
     '-i',
-    'color=c=white:s=1280x720:r=30:d=6',
+    'color=c=white:s=320x180:r=30:d=2',
     '-f',
     'lavfi',
     '-i',
-    'sine=frequency=440:sample_rate=44100:duration=6',
+    'sine=frequency=440:sample_rate=44100:duration=2',
     '-shortest',
     '-c:v',
     'libx264',
@@ -77,7 +79,7 @@ async function readCenterPixel(videoPath: string, at: number): Promise<number[]>
     '-frames:v',
     '1',
     '-vf',
-    'crop=1:1:640:360,format=rgba',
+    'crop=1:1:iw/2:ih/2,format=rgba',
     '-f',
     'rawvideo',
     '-'

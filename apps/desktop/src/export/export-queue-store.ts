@@ -41,6 +41,7 @@ export interface ExportQueueState {
   failTask: (taskId: string, error: string) => void;
   cancelTask: (taskId: string) => void;
   retryTask: (taskId: string) => void;
+  restoreTasks: (tasks: ExportTask[]) => void;
   setMaxConcurrent: (maxConcurrent: number) => void;
   setRunnerActive: (runnerActive: boolean) => void;
   setResourcePaused: (resourcePaused: boolean) => void;
@@ -104,12 +105,19 @@ export const useExportQueueStore = create<ExportQueueState>((set, get) => ({
   retryTask: (taskId) => {
     set((state) => ({
       tasks: state.tasks.map((task) =>
-        task.id === taskId && (task.status === 'error' || task.status === 'canceled')
+        task.id === taskId && (task.status === 'error' || task.status === 'canceled' || task.status === 'interrupted')
           ? { ...task, status: 'pending', progress: 0, error: undefined, report: undefined, segments: undefined, startedAt: undefined, finishedAt: undefined }
           : task
       )
     }));
     set((state) => ({ tasks: sortExportQueueByPriority(state.tasks) }));
+  },
+  restoreTasks: (tasks) => {
+    set((state) => {
+      const restoredById = new Map(tasks.map((task) => [task.id, task]));
+      const kept = state.tasks.filter((task) => !restoredById.has(task.id));
+      return { tasks: sortExportQueueByPriority([...kept, ...restoredById.values()]) };
+    });
   },
   setMaxConcurrent: (maxConcurrent) => {
     set({ maxConcurrent: clampExportConcurrency(maxConcurrent) });
@@ -123,12 +131,12 @@ export const useExportQueueStore = create<ExportQueueState>((set, get) => ({
   },
   clearFinishedTasks: () => {
     set((state) => ({
-      tasks: state.tasks.filter((task) => task.status === 'scheduled' || task.status === 'pending' || task.status === 'running')
+      tasks: state.tasks.filter((task) => task.status === 'scheduled' || task.status === 'pending' || task.status === 'running' || task.status === 'interrupted')
     }));
   },
   cancelAllTasks: () => {
     const cancelableIds = get()
-      .tasks.filter((task) => task.status === 'scheduled' || task.status === 'pending' || task.status === 'running')
+      .tasks.filter((task) => task.status === 'scheduled' || task.status === 'pending' || task.status === 'running' || task.status === 'interrupted')
       .map((task) => task.id);
     set((state) => ({
       tasks: cancelableIds.reduce((tasks, taskId) => cancelExportTask(tasks, taskId), state.tasks)

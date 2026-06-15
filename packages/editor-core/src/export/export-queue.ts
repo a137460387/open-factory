@@ -2,7 +2,7 @@ import { createId } from '../model';
 import type { ExportReport, FfmpegExportPlan } from './export-types';
 import { calculateRenderFarmProgress, type RenderFarmSegmentStatus, type RenderFarmTaskConfig } from './render-farm';
 
-export type ExportTaskStatus = 'scheduled' | 'pending' | 'running' | 'canceled' | 'error' | 'success';
+export type ExportTaskStatus = 'scheduled' | 'pending' | 'running' | 'interrupted' | 'canceled' | 'error' | 'success';
 export type ExportTaskPriority = 'high' | 'normal' | 'low';
 export type ExportUploadTargetType = 'webdav' | 'local';
 export type ExportUploadStatus = 'pending' | 'running' | 'success' | 'error';
@@ -157,7 +157,7 @@ export function failExportTask(tasks: ExportTask[], taskId: string, error: strin
 
 export function cancelExportTask(tasks: ExportTask[], taskId: string, now = new Date().toISOString()): ExportTask[] {
   return tasks.map((task) =>
-    task.id === taskId && (task.status === 'scheduled' || task.status === 'pending' || task.status === 'running')
+    task.id === taskId && (task.status === 'scheduled' || task.status === 'pending' || task.status === 'running' || task.status === 'interrupted')
       ? { ...task, status: 'canceled', finishedAt: now }
       : task
   );

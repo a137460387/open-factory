@@ -3125,7 +3125,7 @@ function ExportTaskRow({ taskId }: { taskId: string }) {
           <button className="rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel" onClick={() => void revealExport(task.outputPath)}>
             {zhCN.exportDialog.openFolder}
           </button>
-        ) : task.status === 'error' || task.status === 'canceled' ? (
+        ) : task.status === 'error' || task.status === 'canceled' || task.status === 'interrupted' ? (
           <button className="rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel" data-testid="export-task-retry-button" onClick={() => retryQueuedExportTask(task.id)}>
             {zhCN.exportDialog.retryTask}
           </button>
@@ -3181,7 +3181,9 @@ function StatusPill({ status }: { status: ExportTaskStatus }) {
           ? 'bg-rose-50 text-rose-700 border-rose-200'
           : status === 'canceled'
             ? 'bg-slate-100 text-slate-600 border-slate-200'
-            : 'bg-amber-50 text-amber-700 border-amber-200';
+            : status === 'interrupted'
+              ? 'bg-orange-50 text-orange-700 border-orange-200'
+              : 'bg-amber-50 text-amber-700 border-amber-200';
   return (
     <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${className}`} data-testid="export-task-status" data-status={status}>
       {zhCN.exportDialog.status[status]}

@@ -15,6 +15,7 @@ import {
   ApplyTextAnimationCommand,
   BatchKeyframeEditCommand,
   BatchUpdateClipGroupClipsCommand,
+  BatchUpdateTrackCommand,
   AddTransitionCommand,
   BatchShiftSubtitleCommand,
   BatchUpdateKeyframeCommand,
@@ -318,6 +319,50 @@ describe('timeline commands', () => {
 
     manager.redo();
     expect(accessor.current().tracks[0]).toMatchObject({ muted: true, solo: true, locked: true, volume: 0.5, pan: -0.75 });
+  });
+
+  it('batch updates track controls with undo and redo', () => {
+    const timeline = makeTimeline();
+    timeline.tracks.push(createTrack({ id: 'track-empty', type: 'audio', name: 'Audio 2', clips: [] }));
+    const accessor = makeAccessor(timeline);
+    const manager = new CommandManager();
+
+    manager.execute(
+      new BatchUpdateTrackCommand(accessor, {
+        patches: {
+          'track-video': { muted: true },
+          'track-audio': { muted: true }
+        }
+      })
+    );
+    expect(accessor.current().tracks.find((track) => track.id === 'track-video')).toMatchObject({ muted: true });
+    expect(accessor.current().tracks.find((track) => track.id === 'track-audio')).toMatchObject({ muted: true });
+
+    manager.undo();
+    expect(accessor.current().tracks.find((track) => track.id === 'track-video')).toMatchObject({ muted: false });
+    expect(accessor.current().tracks.find((track) => track.id === 'track-audio')).toMatchObject({ muted: false });
+
+    manager.redo();
+    expect(accessor.current().tracks.find((track) => track.id === 'track-video')).toMatchObject({ muted: true });
+    expect(accessor.current().tracks.find((track) => track.id === 'track-audio')).toMatchObject({ muted: true });
+  });
+
+  it('batch moves track order and deletes selected empty tracks', () => {
+    const timeline = makeTimeline([makeVideoClip({ id: 'clip-non-empty' })]);
+    timeline.tracks.push(createTrack({ id: 'track-empty', type: 'audio', name: 'Audio 2', clips: [] }));
+    const accessor = makeAccessor(timeline);
+    const manager = new CommandManager();
+
+    manager.execute(
+      new BatchUpdateTrackCommand(accessor, {
+        order: ['track-audio', 'track-video', 'track-text', 'track-empty'],
+        deleteEmptyTrackIds: ['track-empty', 'track-video']
+      })
+    );
+    expect(accessor.current().tracks.map((track) => track.id)).toEqual(['track-audio', 'track-video', 'track-text']);
+
+    manager.undo();
+    expect(accessor.current().tracks.map((track) => track.id)).toEqual(['track-video', 'track-audio', 'track-text', 'track-empty']);
   });
 
   it('updates timeline color labels with undo and redo', () => {
