@@ -1960,6 +1960,26 @@ export class MoveClipsCommand implements Command {
   }
 }
 
+export class BatchReorderClipsCommand implements Command {
+  readonly description = 'Batch reorder clips';
+  private delegate?: MoveClipsCommand;
+
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly startsByClipId: Record<string, number>,
+    private readonly protectedRanges: ProtectedRange[] = []
+  ) {}
+
+  execute(): void {
+    this.delegate ??= new MoveClipsCommand(this.accessor, this.startsByClipId, this.protectedRanges);
+    this.delegate.execute();
+  }
+
+  undo(): void {
+    this.delegate?.undo();
+  }
+}
+
 export class BatchSubtitleTimingCommand implements Command {
   readonly description = 'Retiming subtitle clips';
   private before?: Timeline;

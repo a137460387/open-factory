@@ -41,6 +41,7 @@ interface ToolbarProps {
   onOpenMediaPrecheck(): void;
   onOpenVideoStitchWizard(): void;
   onOpenSyncCompare(): void;
+  onOpenSceneReorder(): void;
   onDetectBeats(): void;
   onSnapToBeats(): void;
   onSplitToBeats(): void;
@@ -66,6 +67,7 @@ interface ToolbarProps {
   canApplyPiPLayout: boolean;
   canApplySplitLayout: boolean;
   canOpenSyncCompare: boolean;
+  canOpenSceneReorder: boolean;
   pipLayoutPosition: PiPLayoutPosition;
   onPiPLayoutPositionChange(position: PiPLayoutPosition): void;
   customSplitLayouts: SplitLayoutDefinition[];
@@ -434,6 +436,19 @@ export function Toolbar(props: ToolbarProps) {
             >
               <span>{t.syncCompare}</span>
               <GitCompareArrows size={14} />
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+              type="button"
+              disabled={!props.canOpenSceneReorder}
+              data-testid="toolbar-tools-scene-reorder-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onOpenSceneReorder();
+              }}
+            >
+              <span>{t.sceneReorder}</span>
+              <WandSparkles size={14} />
             </button>
             <label className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-xs text-slate-600" data-testid="toolbar-tools-beat-sensitivity-row">
               <span>{t.beatSensitivity}</span>

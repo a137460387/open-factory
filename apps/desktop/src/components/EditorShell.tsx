@@ -221,6 +221,7 @@ const GifExportDialog = lazy(() => import('../media/GifExportDialog'));
 const MediaPrecheckPanel = lazy(() => import('../media/MediaPrecheckPanel').then((module) => ({ default: module.MediaPrecheckPanel })));
 const VideoStitchWizardDialog = lazy(() => import('../video-stitching/VideoStitchWizardDialog').then((module) => ({ default: module.VideoStitchWizardDialog })));
 const SyncComparePanel = lazy(() => import('../sync-compare/SyncComparePanel').then((module) => ({ default: module.SyncComparePanel })));
+const SceneReorderDialog = lazy(() => import('../scene-reorder/SceneReorderDialog').then((module) => ({ default: module.SceneReorderDialog })));
 const TimelineSearchPanel = lazy(() => import('../timeline-search/TimelineSearchPanel').then((module) => ({ default: module.TimelineSearchPanel })));
 const SnapshotNameDialog = lazy(() => import('../project-snapshots/SnapshotNameDialog').then((module) => ({ default: module.SnapshotNameDialog })));
 const SnapshotHistoryDialog = lazy(() => import('../project-snapshots/SnapshotHistoryDialog').then((module) => ({ default: module.SnapshotHistoryDialog })));
@@ -264,6 +265,7 @@ export function EditorShell() {
   const [mediaPrecheckOpen, setMediaPrecheckOpen] = useState(false);
   const [videoStitchWizardOpen, setVideoStitchWizardOpen] = useState(false);
   const [syncCompareOpen, setSyncCompareOpen] = useState(false);
+  const [sceneReorderOpen, setSceneReorderOpen] = useState(false);
   const [timelineSearchOpen, setTimelineSearchOpen] = useState(false);
   const [snapshotNameOpen, setSnapshotNameOpen] = useState(false);
   const [snapshotHistoryOpen, setSnapshotHistoryOpen] = useState(false);
@@ -366,6 +368,7 @@ export function EditorShell() {
   const canApplySplitLayout = selectedSplitLayoutClips.length >= 2 && selectedSplitLayoutClips.length <= 4;
   const syncCompareClipRefs = useMemo(() => findSyncCompareClipRefs(project.timeline, selectedClipIds), [project.timeline, selectedClipIds]);
   const canOpenSyncCompare = syncCompareClipRefs.length === 2;
+  const canOpenSceneReorder = useMemo(() => selectedClips.filter(isSceneReorderClip).length >= 2, [selectedClips]);
   const canSeparateSelectedAudio = canSeparateAudioForClip(selectedClip, selectedClipMedia, demucsAvailability.ready) && !audioSeparationClipId;
   const canDetectBeats = Boolean(
     selectedClip &&
@@ -2211,6 +2214,7 @@ export function EditorShell() {
           onOpenMediaPrecheck={() => setMediaPrecheckOpen(true)}
           onOpenVideoStitchWizard={() => setVideoStitchWizardOpen(true)}
           onOpenSyncCompare={openSyncCompare}
+          onOpenSceneReorder={() => setSceneReorderOpen(true)}
           onDetectBeats={() => void detectSelectedBeats()}
           onSnapToBeats={snapSelectedToBeats}
           onSplitToBeats={splitSelectedToBeats}
@@ -2240,6 +2244,7 @@ export function EditorShell() {
           canApplyPiPLayout={canApplyPiPLayout}
           canApplySplitLayout={canApplySplitLayout}
           canOpenSyncCompare={canOpenSyncCompare}
+          canOpenSceneReorder={canOpenSceneReorder}
           pipLayoutPosition={pipLayoutPosition}
           onPiPLayoutPositionChange={setPiPLayoutPosition}
           customSplitLayouts={customSplitLayouts}
@@ -2461,6 +2466,7 @@ export function EditorShell() {
           {syncCompareOpen && syncCompareClipRefs.length === 2 ? (
             <SyncComparePanel clips={[syncCompareClipRefs[0], syncCompareClipRefs[1]]} project={project} onClose={() => setSyncCompareOpen(false)} />
           ) : null}
+          {sceneReorderOpen ? <SceneReorderDialog project={project} selectedClipIds={selectedClipIds} onClose={() => setSceneReorderOpen(false)} /> : null}
           {timelineSearchOpen ? <TimelineSearchPanel project={project} onClose={() => setTimelineSearchOpen(false)} /> : null}
           {settingsOpen ? (
             <SettingsDialog
@@ -2712,6 +2718,10 @@ function readViewportSize(): { width: number; height: number } {
 
 function isPiPVisualClip(clip: Clip): boolean {
   return clip.type === 'video' || clip.type === 'image' || clip.type === 'nested-sequence';
+}
+
+function isSceneReorderClip(clip: Clip): boolean {
+  return clip.type === 'video' || clip.type === 'image';
 }
 
 function getClipSourceDimensions(project: Project, clip: Clip): { width: number; height: number } {

@@ -58,6 +58,7 @@ const zh = {
     mediaPrecheck: '素材预检',
     videoStitchWizard: '视频拼接向导',
     syncCompare: '同步对比',
+    sceneReorder: '场景重组',
     detectBeats: '节拍检测',
     snapToBeats: '对齐到节拍',
     splitToBeats: '按节拍分割',
@@ -1219,6 +1220,32 @@ const zh = {
     copySuffix: '副本',
     copyFailed: '复制失败',
     reorderFailed: '故事板重排失败'
+  },
+  sceneReorder: {
+    title: '场景重组',
+    subtitle: '根据画面特征为已分割片段生成故事板顺序建议。',
+    strategy: '排序策略',
+    strategies: {
+      'brightness-asc': '亮度渐进：暗到亮',
+      'brightness-desc': '亮度渐进：亮到暗',
+      'color-similar': '颜色相似',
+      'motion-rhythm': '运动节奏',
+      'duration-balance': '时长平衡'
+    },
+    selectedCount: (count: number) => `${count} 个片段`,
+    analyzing: '正在分析画面特征',
+    analysisSummary: (analyzed: number, total: number) => `已分析 ${analyzed}/${total} 个缩略图`,
+    empty: '请选择至少两个视频或图片片段。',
+    orderChanged: '预览顺序已更新',
+    orderUnchanged: '当前策略保持原顺序',
+    apply: '确认重组',
+    appliedTitle: '场景重组完成',
+    appliedMessage: (count: number) => `已重排 ${count} 个片段。`,
+    failedTitle: '场景重组失败',
+    failedMessage: '无法重排选中片段。',
+    unavailableTitle: '无法重组场景',
+    unavailableMessage: '请选择至少两个视频或图片片段。',
+    featureSummary: (brightness: number, motion: number) => `亮 ${Math.round(brightness * 100)} / 动 ${Math.round(motion * 100)}`
   },
   smartRoughCut: {
     title: '智能粗剪',
@@ -2625,6 +2652,7 @@ const enOverrides = {
     mediaPrecheck: 'Media Precheck',
     videoStitchWizard: 'Video Stitch Wizard',
     syncCompare: 'Sync Compare',
+    sceneReorder: 'Scene Reorder',
     detectBeats: 'Detect Beats',
     snapToBeats: 'Snap to Beats',
     splitToBeats: 'Split to Beats',
@@ -3667,6 +3695,32 @@ const enOverrides = {
     copySuffix: 'Copy',
     copyFailed: 'Copy failed',
     reorderFailed: 'Storyboard reorder failed'
+  },
+  sceneReorder: {
+    title: 'Scene Reorder',
+    subtitle: 'Generate a storyboard order suggestion from visual clip features.',
+    strategy: 'Strategy',
+    strategies: {
+      'brightness-asc': 'Brightness: dark to bright',
+      'brightness-desc': 'Brightness: bright to dark',
+      'color-similar': 'Color similarity',
+      'motion-rhythm': 'Motion rhythm',
+      'duration-balance': 'Duration balance'
+    },
+    selectedCount: (count: number) => `${count} clips`,
+    analyzing: 'Analyzing visual features',
+    analysisSummary: (analyzed: number, total: number) => `Analyzed ${analyzed}/${total} thumbnails`,
+    empty: 'Select at least two video or image clips.',
+    orderChanged: 'Preview order updated',
+    orderUnchanged: 'This strategy keeps the current order',
+    apply: 'Apply Reorder',
+    appliedTitle: 'Scene reorder complete',
+    appliedMessage: (count: number) => `Reordered ${count} clips.`,
+    failedTitle: 'Scene reorder failed',
+    failedMessage: 'Unable to reorder the selected clips.',
+    unavailableTitle: 'Scene reorder unavailable',
+    unavailableMessage: 'Select at least two video or image clips.',
+    featureSummary: (brightness: number, motion: number) => `B ${Math.round(brightness * 100)} / M ${Math.round(motion * 100)}`
   },
   inspector: {
     multipleSelected: (count: number) => `Multiple clips selected (${count})`,

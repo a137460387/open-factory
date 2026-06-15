@@ -78,6 +78,10 @@ const whisperExecutable = 'C:/Tools/whisper.exe';
 const whisperModel = 'C:/Models/base.bin';
 const demucsExecutable = 'C:/Tools/demucs.exe';
 const privacyDetectionModel = 'C:/Models/face_detection_yunet.onnx';
+
+function makeSceneThumb(fill: string): string {
+  return `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="9"><rect width="16" height="9" fill="${encodeURIComponent(fill)}"/></svg>`;
+}
 const relinkedVideo = 'C:/Relink/tiny-video.mp4';
 const relinkedAudio = 'C:/Relink/tiny-audio.wav';
 const relinkedImage = 'C:/Relink/test-image.png';
@@ -846,7 +850,7 @@ window.__E2E_ACTIONS__ = {
         duration: 8,
         width: 1280,
         height: 720,
-        thumbnail: 'data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AA/vuUAAA=',
+        thumbnail: makeSceneThumb('#f8fafc'),
         size: 4096,
         mtimeMs: 1_000,
         hasAudio: true,
@@ -863,7 +867,7 @@ window.__E2E_ACTIONS__ = {
         duration: 0,
         width: 1280,
         height: 720,
-        thumbnail: 'data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AA/vuUAAA=',
+        thumbnail: makeSceneThumb('#111827'),
         size: 4096,
         mtimeMs: 1_000
       },
@@ -875,7 +879,24 @@ window.__E2E_ACTIONS__ = {
         duration: 8,
         width: 1280,
         height: 720,
-        thumbnail: 'data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AA/vuUAAA=',
+        thumbnail: makeSceneThumb('#64748b'),
+        size: 4096,
+        mtimeMs: 1_000,
+        hasAudio: true,
+        audioChannels: 2,
+        audioSampleRate: 44_100,
+        audioCodec: 'aac',
+        videoCodec: 'h264'
+      },
+      {
+        id: 'media-story-d',
+        type: 'video',
+        name: 'story-d.mp4',
+        path: tinyVideoB,
+        duration: 8,
+        width: 1280,
+        height: 720,
+        thumbnail: makeSceneThumb('#cbd5e1'),
         size: 4096,
         mtimeMs: 1_000,
         hasAudio: true,
@@ -896,7 +917,8 @@ window.__E2E_ACTIONS__ = {
           clips: [
             makeStoryboardClip('clip-story-a', 'video', 'Opening Card', 'media-story-a', 0, 2),
             makeStoryboardClip('clip-story-b', 'image', 'Insert Card', 'media-story-b', 2, 3),
-            makeStoryboardClip('clip-story-c', 'video', 'Final Card', 'media-story-c', 5, 1)
+            makeStoryboardClip('clip-story-c', 'video', 'Middle Card', 'media-story-c', 5, 1),
+            makeStoryboardClip('clip-story-d', 'video', 'Final Card', 'media-story-d', 6, 2)
           ]
         }),
         createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
