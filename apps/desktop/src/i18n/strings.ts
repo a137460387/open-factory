@@ -1875,6 +1875,22 @@ const zh = {
       youtube: 'YouTube -14 LUFS',
       'ebu-r128': 'EBU R128 广播 -23 LUFS'
     },
+    masterProcessing: {
+      title: '母带处理',
+      on: '已启用',
+      off: '关闭',
+      eqEnabled: '8 段 EQ',
+      stereoEnabled: '立体声增强',
+      limiterEnabled: '限制器',
+      loudnessNormalization: '响度标准化',
+      stereoAmount: '增强量',
+      limiterLevel: '输出上限 dB',
+      band: '频段',
+      gain: '增益',
+      frequency: '频率',
+      q: 'Q',
+      bandName: (index: number, frequency: number) => `${index + 1} · ${frequency}Hz`
+    },
     outputModes: {
       video: '视频',
       audio: '纯音频',
@@ -4401,6 +4417,22 @@ const enOverrides = {
       off: 'Off',
       youtube: 'YouTube -14 LUFS',
       'ebu-r128': 'EBU R128 Broadcast -23 LUFS'
+    },
+    masterProcessing: {
+      title: 'Master Processing',
+      on: 'Enabled',
+      off: 'Off',
+      eqEnabled: '8-band EQ',
+      stereoEnabled: 'Stereo Enhancer',
+      limiterEnabled: 'Limiter',
+      loudnessNormalization: 'Loudness Normalization',
+      stereoAmount: 'Amount',
+      limiterLevel: 'Output Ceiling dB',
+      band: 'Band',
+      gain: 'Gain',
+      frequency: 'Frequency',
+      q: 'Q',
+      bandName: (index: number, frequency: number) => `${index + 1} · ${frequency}Hz`
     },
     outputModes: {
       video: 'Video',

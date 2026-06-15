@@ -1,4 +1,4 @@
-import { normalizeSubtitleLanguage, normalizeSubtitleLanguageList, type ExportSettings } from '@open-factory/editor-core';
+import { hasExportMasterProcessing, normalizeExportMasterProcessing, normalizeSubtitleLanguage, normalizeSubtitleLanguageList, type ExportSettings } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { fsExists, getAppDataDir, readFile, writeFile } from '../lib/tauri-bridge';
 
@@ -647,7 +647,18 @@ function sanitizeExportSettings(settings: unknown): ExportPresetSettings {
   if (audioVisualization) {
     output.audioVisualization = audioVisualization;
   }
+  const masterProcessing = sanitizeMasterProcessing(input.masterProcessing);
+  if (masterProcessing && hasExportMasterProcessing(masterProcessing)) {
+    output.masterProcessing = masterProcessing;
+  }
   return output;
+}
+
+function sanitizeMasterProcessing(value: unknown): ExportPresetSettings['masterProcessing'] | undefined {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+  return normalizeExportMasterProcessing(value as ExportPresetSettings['masterProcessing']);
 }
 
 function sanitizeColorManagement(value: unknown): ExportPresetSettings['colorManagement'] | undefined {

@@ -59,6 +59,14 @@ describe('export presets', () => {
         reframeOffsetY: -0.5,
         subtitleMode: 'burn-in',
         loudnessNormalization: 'youtube',
+        masterProcessing: {
+          eq: {
+            enabled: false,
+            bands: []
+          },
+          stereoEnhancer: { enabled: false, amount: 1 },
+          limiter: { enabled: true, levelOutDb: -0.1 }
+        },
         postExportScript: { command: ' echo "{output}" ' }
       },
       storage
@@ -78,7 +86,14 @@ describe('export presets', () => {
         expect.objectContaining({
           id: 'custom-mywpiww0-mobile-review',
           name: 'Mobile Review',
-          settings: expect.objectContaining({ videoBitrate: '9M', subtitleMode: 'burn-in', targetAspectRatio: '9:16', loudnessNormalization: 'youtube', postExportScript: { command: 'echo "{output}"' } })
+          settings: expect.objectContaining({
+            videoBitrate: '9M',
+            subtitleMode: 'burn-in',
+            targetAspectRatio: '9:16',
+            loudnessNormalization: 'youtube',
+            masterProcessing: expect.objectContaining({ limiter: { enabled: true, levelOutDb: -0.1 } }),
+            postExportScript: { command: 'echo "{output}"' }
+          })
         })
       ]
     });

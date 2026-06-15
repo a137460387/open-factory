@@ -14,7 +14,8 @@ import type {
   ClipVideoRestoration,
   PathPoint,
   TrackCompressor,
-  TrackEQ
+  TrackEQ,
+  TrackEQBandType
 } from '../model';
 import type { CreditsRow } from '../credits-roll';
 import type { TargetAspectRatio } from '../reframe';
@@ -93,6 +94,35 @@ export interface ExportPostExportScriptResult {
   error?: string;
 }
 
+export interface ExportMasterEqBand {
+  id: string;
+  type: TrackEQBandType;
+  frequency: number;
+  gain: number;
+  q: number;
+}
+
+export interface ExportMasterEq {
+  enabled: boolean;
+  bands: ExportMasterEqBand[];
+}
+
+export interface ExportMasterStereoEnhancer {
+  enabled: boolean;
+  amount: number;
+}
+
+export interface ExportMasterLimiter {
+  enabled: boolean;
+  levelOutDb: number;
+}
+
+export interface ExportMasterProcessingSettings {
+  eq: ExportMasterEq;
+  stereoEnhancer: ExportMasterStereoEnhancer;
+  limiter: ExportMasterLimiter;
+}
+
 export interface ExportSettings {
   width: number;
   height: number;
@@ -124,6 +154,7 @@ export interface ExportSettings {
   slate?: ExportSlate | null;
   colorManagement?: ExportColorManagementSettings;
   postExportScript?: ExportPostExportScriptSettings | null;
+  masterProcessing?: ExportMasterProcessingSettings | null;
 }
 
 export interface ExportTransform {

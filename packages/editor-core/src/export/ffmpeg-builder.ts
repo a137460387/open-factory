@@ -85,6 +85,9 @@ import type {
   ExportTimeline,
   ExportTrack,
   ExportTransition,
+  ExportMasterEq,
+  ExportMasterEqBand,
+  ExportMasterProcessingSettings,
   ExportPreviewSampleKind,
   ExportPreviewSamplePlan,
   FfmpegCapabilities,
@@ -128,6 +131,7 @@ export const DEFAULT_EXPORT_SETTINGS: Omit<ExportSettings, 'outputPath'> = {
   timecodeBurnIn: null,
   slate: null,
   colorManagement: DEFAULT_EXPORT_COLOR_MANAGEMENT,
+  masterProcessing: null,
   audioVisualization: {
     style: 'waveform-line',
     color: '#22d3ee',
@@ -164,6 +168,32 @@ interface SubtitleLanguageGroup {
   language: string;
   clips: ExportClip[];
 }
+
+export const DEFAULT_EXPORT_MASTER_EQ_BANDS: ExportMasterEqBand[] = [
+  { id: 'master-eq-31', type: 'lowshelf', frequency: 31, gain: 0, q: 0.7 },
+  { id: 'master-eq-63', type: 'peaking', frequency: 63, gain: 0, q: 1 },
+  { id: 'master-eq-125', type: 'peaking', frequency: 125, gain: 0, q: 1 },
+  { id: 'master-eq-250', type: 'peaking', frequency: 250, gain: 0, q: 1 },
+  { id: 'master-eq-500', type: 'peaking', frequency: 500, gain: 0, q: 1 },
+  { id: 'master-eq-1000', type: 'peaking', frequency: 1000, gain: 0, q: 1 },
+  { id: 'master-eq-4000', type: 'peaking', frequency: 4000, gain: 0, q: 1 },
+  { id: 'master-eq-12000', type: 'highshelf', frequency: 12000, gain: 0, q: 0.7 }
+];
+
+export const DEFAULT_EXPORT_MASTER_PROCESSING: ExportMasterProcessingSettings = {
+  eq: {
+    enabled: false,
+    bands: DEFAULT_EXPORT_MASTER_EQ_BANDS.map((band) => ({ ...band }))
+  },
+  stereoEnhancer: {
+    enabled: false,
+    amount: 1
+  },
+  limiter: {
+    enabled: false,
+    levelOutDb: -0.1
+  }
+};
 
 export function buildExportProjectFromProject(project: Project, options: BuildExportProjectOptions): ExportProject {
   const exportSourceProject = flattenMulticamProjectForExport(project);
@@ -610,8 +640,10 @@ export function buildFfmpegExportPlan(
     const spectrumSplitLabels = audioSpectrumEffects.map((_, index) => `spectrum_audio_${index}`);
     const audioSplitLabels = [...spectrumSplitLabels, ...(audioVisualizationAudioLabel ? [audioVisualizationAudioLabel] : [])];
     const needsAudioSplit = audioSplitLabels.length > 0;
+    const masterFilters = buildMasterAudioFilters(settings.masterProcessing);
     const finalAudioLabel = loudnessPreset ? 'apremaster' : 'aout';
-    const mixedAudioLabel = needsAudioSplit ? (loudnessPreset ? 'apremaster_mix' : 'amixout') : finalAudioLabel;
+    const masterOutputLabel = needsAudioSplit ? (loudnessPreset ? 'apremaster_mix' : 'amixout') : finalAudioLabel;
+    const mixedAudioLabel = masterFilters.length > 0 ? 'amixpremaster' : masterOutputLabel;
     if (audioLabels.length === 0) {
       audioFilters.push(`anullsrc=channel_layout=stereo:sample_rate=${settings.sampleRate}:d=${formatFfmpegSeconds(duration)},volume=${formatVolume(masterVolume)}[${mixedAudioLabel}]`);
     } else {
@@ -621,20 +653,23 @@ export function buildFfmpegExportPlan(
         )},asetpts=PTS-STARTPTS,aresample=${settings.sampleRate},volume=${formatVolume(masterVolume)}[${mixedAudioLabel}]`
       );
     }
+    if (masterFilters.length > 0) {
+      audioFilters.push(`[${mixedAudioLabel}]${masterFilters.join(',')}[${masterOutputLabel}]`);
+    }
     if (loudnessPreset) {
-      loudnessAnalysisFilterComplex = [...audioFilters, `[${mixedAudioLabel}]${buildLoudnormAnalysisFilter(loudnessPreset)}[aout]`].join(';');
+      loudnessAnalysisFilterComplex = [...audioFilters, `[${masterOutputLabel}]${buildLoudnormAnalysisFilter(loudnessPreset)}[aout]`].join(';');
       if (needsAudioSplit) {
         filters.push(
           ...audioFilters,
-          `[${mixedAudioLabel}]asplit=${audioSplitLabels.length + 1}[${finalAudioLabel}]${audioSplitLabels.map((label) => `[${label}]`).join('')}`,
+          `[${masterOutputLabel}]asplit=${audioSplitLabels.length + 1}[${finalAudioLabel}]${audioSplitLabels.map((label) => `[${label}]`).join('')}`,
           `[${finalAudioLabel}]${buildLoudnormRenderFilter(loudnessPreset)}[aout]`
         );
       } else {
-        filters.push(...audioFilters, `[${mixedAudioLabel}]${buildLoudnormRenderFilter(loudnessPreset)}[aout]`);
+        filters.push(...audioFilters, `[${masterOutputLabel}]${buildLoudnormRenderFilter(loudnessPreset)}[aout]`);
       }
     } else {
       if (needsAudioSplit) {
-        filters.push(...audioFilters, `[${mixedAudioLabel}]asplit=${audioSplitLabels.length + 1}[aout]${audioSplitLabels.map((label) => `[${label}]`).join('')}`);
+        filters.push(...audioFilters, `[${masterOutputLabel}]asplit=${audioSplitLabels.length + 1}[aout]${audioSplitLabels.map((label) => `[${label}]`).join('')}`);
       } else {
         filters.push(...audioFilters);
       }
@@ -832,7 +867,46 @@ function normalizeExportReframeSettings(settings: ExportSettings): ExportSetting
     watermark: normalizeExportWatermark(settings.watermark),
     timecodeBurnIn: normalizeTimecodeBurnIn(settings.timecodeBurnIn),
     slate: normalizeExportSlate(settings.slate),
-    audioVisualization: normalizeExportAudioVisualization(settings.audioVisualization)
+    audioVisualization: normalizeExportAudioVisualization(settings.audioVisualization),
+    masterProcessing: normalizeExportMasterProcessing(settings.masterProcessing)
+  };
+}
+
+export function normalizeExportMasterProcessing(input: ExportSettings['masterProcessing'] | undefined): ExportMasterProcessingSettings {
+  const source = input ?? DEFAULT_EXPORT_MASTER_PROCESSING;
+  return {
+    eq: normalizeExportMasterEq(source.eq),
+    stereoEnhancer: {
+      enabled: source.stereoEnhancer?.enabled === true,
+      amount: round(Math.min(2, Math.max(0, finiteNumber(source.stereoEnhancer?.amount, DEFAULT_EXPORT_MASTER_PROCESSING.stereoEnhancer.amount))))
+    },
+    limiter: {
+      enabled: source.limiter?.enabled === true,
+      levelOutDb: round(Math.min(0, Math.max(-24, finiteNumber(source.limiter?.levelOutDb, DEFAULT_EXPORT_MASTER_PROCESSING.limiter.levelOutDb))))
+    }
+  };
+}
+
+export function hasExportMasterProcessing(input: ExportSettings['masterProcessing'] | undefined): boolean {
+  return buildMasterAudioFilters(normalizeExportMasterProcessing(input)).length > 0;
+}
+
+function normalizeExportMasterEq(input: Partial<ExportMasterEq> | undefined): ExportMasterEq {
+  const bands = Array.isArray(input?.bands) ? input.bands : [];
+  return {
+    enabled: input?.enabled === true,
+    bands: DEFAULT_EXPORT_MASTER_EQ_BANDS.map((fallback, index) => normalizeExportMasterEqBand(bands[index], fallback))
+  };
+}
+
+function normalizeExportMasterEqBand(input: Partial<ExportMasterEqBand> | undefined, fallback: ExportMasterEqBand): ExportMasterEqBand {
+  const type = input?.type === 'lowshelf' || input?.type === 'highshelf' || input?.type === 'peaking' ? input.type : fallback.type;
+  return {
+    id: typeof input?.id === 'string' && input.id.trim() ? input.id : fallback.id,
+    type,
+    frequency: round(Math.min(20_000, Math.max(20, finiteNumber(input?.frequency, fallback.frequency)))),
+    gain: round(Math.min(24, Math.max(-24, finiteNumber(input?.gain, fallback.gain)))),
+    q: round(Math.min(4, Math.max(0.1, finiteNumber(input?.q, fallback.q))))
   };
 }
 
@@ -2999,14 +3073,7 @@ function buildAudioChannelRoutingFilter(clip: ExportClip): string {
 function buildTrackAudioFilters(clip: ExportClip): string {
   const filters: string[] = [];
   if (clip.eq.enabled) {
-    for (const band of clip.eq.bands) {
-      if (Math.abs(band.gain) < 0.001) {
-        continue;
-      }
-      filters.push(
-        `equalizer=f=${formatFfmpegNumber(band.frequency)}:width_type=o:width=${formatFfmpegNumber(band.q)}:g=${formatFfmpegNumber(band.gain)}`
-      );
-    }
+    filters.push(...buildEqualizerFilters(clip.eq));
   }
   if (clip.compressor.enabled) {
     filters.push(
@@ -3018,6 +3085,32 @@ function buildTrackAudioFilters(clip: ExportClip): string {
     );
   }
   return filters.length > 0 ? `,${filters.join(',')}` : '';
+}
+
+function buildMasterAudioFilters(masterProcessing: ExportSettings['masterProcessing'] | undefined): string[] {
+  const master = normalizeExportMasterProcessing(masterProcessing);
+  const filters: string[] = [];
+  if (master.eq.enabled) {
+    filters.push(...buildEqualizerFilters(master.eq));
+  }
+  if (master.stereoEnhancer.enabled) {
+    filters.push(`extrastereo=m=${formatFfmpegNumber(master.stereoEnhancer.amount)}`);
+  }
+  if (master.limiter.enabled) {
+    filters.push(`alimiter=level_out=${formatFfmpegNumber(master.limiter.levelOutDb)}dB`);
+  }
+  return filters;
+}
+
+function buildEqualizerFilters(eq: Pick<ExportMasterEq, 'bands'>): string[] {
+  const filters: string[] = [];
+  for (const band of eq.bands) {
+    if (Math.abs(band.gain) < 0.001) {
+      continue;
+    }
+    filters.push(`equalizer=f=${formatFfmpegNumber(band.frequency)}:width_type=o:width=${formatFfmpegNumber(band.q)}:g=${formatFfmpegNumber(band.gain)}`);
+  }
+  return filters;
 }
 
 function buildAudioFadeFilters(clip: ExportClip): string {

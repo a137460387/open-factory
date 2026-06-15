@@ -14,6 +14,7 @@ import {
   createNestedSequenceClip,
   createSequence,
   createTrack,
+  DEFAULT_EXPORT_MASTER_PROCESSING,
   DEFAULT_CUSTOM_SHADER_SOURCE,
   exportRenderRangeFromPoints,
   type Clip,
@@ -210,6 +211,62 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.filterComplex).toContain('measured_I=__LOUDNORM_MEASURED_I__');
     expect(plan.filterComplex).toContain('linear=true');
     expect(plan.fullArgs.at(-1)).toBe('D:/Exports/loud.mp4');
+  });
+
+  it('does not generate master processing filters when all master modules are off', () => {
+    const plan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(makeProject(), {
+        outputPath: 'out.mp4',
+        settings: { masterProcessing: DEFAULT_EXPORT_MASTER_PROCESSING }
+      })
+    );
+
+    expect(plan.filterComplex).not.toContain('extrastereo=');
+    expect(plan.filterComplex).not.toContain('alimiter=');
+    expect(plan.filterComplex).not.toContain('equalizer=f=31');
+  });
+
+  it('chains master EQ, stereo enhancer, limiter, and loudness normalization in order', () => {
+    const plan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(makeProject(), {
+        outputPath: 'out.mp4',
+        settings: {
+          loudnessNormalization: 'youtube',
+          masterProcessing: {
+            ...DEFAULT_EXPORT_MASTER_PROCESSING,
+            eq: {
+              enabled: true,
+              bands: DEFAULT_EXPORT_MASTER_PROCESSING.eq.bands.map((band, index) => ({ ...band, gain: index === 0 ? 3 : 0 }))
+            },
+            stereoEnhancer: { enabled: true, amount: 1.4 },
+            limiter: { enabled: true, levelOutDb: -0.1 }
+          }
+        }
+      })
+    );
+
+    const masterChain = '[amixpremaster]equalizer=f=31:width_type=o:width=0.7:g=3,extrastereo=m=1.4,alimiter=level_out=-0.1dB[apremaster]';
+    expect(plan.filterComplex).toContain(masterChain);
+    expect(plan.filterComplex.indexOf(masterChain)).toBeLessThan(plan.filterComplex.indexOf('[apremaster]loudnorm=I=-14'));
+    expect(plan.passes?.[0].fullArgs.join(' ')).toContain(masterChain);
+    expect(plan.passes?.[0].fullArgs.join(' ')).toContain('[apremaster]loudnorm=I=-14:TP=-1.5:LRA=11:print_format=json[aout]');
+  });
+
+  it('adds stereo enhancer args without loudness normalization', () => {
+    const plan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(makeProject(), {
+        outputPath: 'out.mp4',
+        settings: {
+          masterProcessing: {
+            ...DEFAULT_EXPORT_MASTER_PROCESSING,
+            stereoEnhancer: { enabled: true, amount: 0.75 }
+          }
+        }
+      })
+    );
+
+    expect(plan.filterComplex).toContain('[amixpremaster]extrastereo=m=0.75[aout]');
+    expect(plan.filterComplex).not.toContain('loudnorm=');
   });
 
   it('exports enabled path text clips through a baked image sequence overlay artifact', () => {
