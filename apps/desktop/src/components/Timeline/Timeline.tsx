@@ -6,6 +6,7 @@ import {
   AddProjectBookmarkCommand,
   AddTimelineNoteCommand,
   AddTimelineMarkerCommand,
+  BatchAlignSubtitleCommand,
   BatchKeyframeEditCommand,
   BatchImportSubtitleCommand,
   BatchUpdateKeyframeCommand,
@@ -164,6 +165,7 @@ import { detectClipSilence } from '../../lib/silenceDetection';
 import { canGenerateSubtitlesForClip, buildWhisperSubtitleTrackForClip, getWhisperAvailability, type WhisperAvailability } from '../../lib/whisper';
 import { TITLE_TEMPLATE_DRAG_MIME, isTitleTemplateId } from '../../lib/titleTemplates';
 import {
+  analyzeWaveform,
   convertLocalFileSrc,
   detectSceneChanges,
   extractCoverFrames,
@@ -203,6 +205,45 @@ function isEditableKeyboardTarget(target: EventTarget | null): boolean {
 interface HeatmapWorkerResponse {
   id: number;
   segments: TimelineHeatmapSegment[];
+}
+
+type SubtitleClip = Extract<Clip, { type: 'subtitle' }>;
+type SubtitleAlignmentMediaClip = Extract<Clip, { type: 'audio' | 'video' }>;
+
+const SUBTITLE_ALIGNMENT_SAMPLES_PER_SECOND = 20;
+const SUBTITLE_ALIGNMENT_MAX_DISTANCE = 0.3;
+
+function buildSubtitleAlignmentPeaks(samples: number[], samplesPerSec: number, sourceClip: SubtitleAlignmentMediaClip): number[] {
+  const sampleRate = Math.max(1, samplesPerSec);
+  const peakLevel = samples.reduce((max, value) => (Number.isFinite(value) ? Math.max(max, value) : max), 0);
+  const threshold = Math.max(0.05, peakLevel * 0.6);
+  const trimStart = Math.max(0, sourceClip.trimStart ?? 0);
+  const sourceEnd = trimStart + getClipSourceVisibleDuration(sourceClip);
+  const speed = Math.max(0.01, getClipSpeed(sourceClip));
+  const peaks: number[] = [];
+  for (let index = 0; index < samples.length; index += 1) {
+    const value = Number.isFinite(samples[index]) ? samples[index] : 0;
+    if (value < threshold || value < (samples[index - 1] ?? 0) || value < (samples[index + 1] ?? 0)) {
+      continue;
+    }
+    const sourceTime = index / sampleRate;
+    if (sourceTime < trimStart || sourceTime > sourceEnd) {
+      continue;
+    }
+    const timelineTime = sourceClip.start + (sourceTime - trimStart) / speed;
+    if (!peaks.some((peak) => Math.abs(peak - timelineTime) < 1 / sampleRate)) {
+      peaks.push(round(timelineTime));
+    }
+  }
+  return peaks;
+}
+
+function isSubtitleAlignmentMediaClip(clip: Clip): clip is SubtitleAlignmentMediaClip {
+  return clip.type === 'audio' || clip.type === 'video';
+}
+
+function timelineRangesOverlap(leftStart: number, leftEnd: number, rightStart: number, rightEnd: number): boolean {
+  return leftStart < rightEnd && rightStart < leftEnd;
 }
 
 export function Timeline({
@@ -264,6 +305,7 @@ export function Timeline({
   const [sceneDialog, setSceneDialog] = useState<SceneDialogState | undefined>();
   const [coverFrameDialog, setCoverFrameDialog] = useState<CoverFrameDialogState | undefined>();
   const [whisperDialog, setWhisperDialog] = useState<WhisperDialogState | undefined>();
+  const [subtitleAlignReport, setSubtitleAlignReport] = useState<{ correctedCount: number; averageOffsetMs: number } | undefined>();
   const [dialoguePanelOpen, setDialoguePanelOpen] = useState(false);
   const [dialogueMarkers, setDialogueMarkers] = useState<DialogueInterval[]>([]);
   const [dialogueMisses, setDialogueMisses] = useState<DialogueWhisperMiss[]>([]);
@@ -1932,6 +1974,64 @@ function addProjectBookmark(time = playheadTime): void {
     }
   }
 
+  function findSubtitleAlignmentSource(subtitleClips: SubtitleClip[]): { clip: SubtitleAlignmentMediaClip; asset: MediaAsset } | undefined {
+    const rangeStart = Math.max(0, Math.min(...subtitleClips.map((clip) => clip.start)) - SUBTITLE_ALIGNMENT_MAX_DISTANCE);
+    const rangeEnd = Math.max(...subtitleClips.map((clip) => clip.start + clip.duration)) + SUBTITLE_ALIGNMENT_MAX_DISTANCE;
+    for (const clip of allClips) {
+      if (!isSubtitleAlignmentMediaClip(clip) || !timelineRangesOverlap(rangeStart, rangeEnd, clip.start, clip.start + clip.duration)) {
+        continue;
+      }
+      const asset = getClipMediaAsset(clip);
+      if (asset && !asset.missing && (clip.type === 'audio' || asset.hasAudio)) {
+        return { clip, asset };
+      }
+    }
+    return undefined;
+  }
+
+  async function alignSubtitlesToWaveform(clipId: string): Promise<void> {
+    const clip = findClip(clipId);
+    setClipMenu(undefined);
+    if (clip.type !== 'subtitle') {
+      showToast({ kind: 'warning', title: zhCN.timeline.subtitleAlignmentFailedTitle, message: zhCN.timeline.subtitleAlignmentRequiresSubtitle });
+      return;
+    }
+    const track = project.timeline.tracks.find((item) => item.id === clip.trackId && item.type === 'subtitle');
+    const subtitleClips = (track?.clips.filter((item): item is SubtitleClip => item.type === 'subtitle') ?? []).sort((left, right) => left.start - right.start || left.id.localeCompare(right.id));
+    if (subtitleClips.length === 0) {
+      showToast({ kind: 'warning', title: zhCN.timeline.subtitleAlignmentFailedTitle, message: zhCN.timeline.subtitleAlignmentNoSubtitles });
+      return;
+    }
+    const source = findSubtitleAlignmentSource(subtitleClips);
+    if (!source) {
+      showToast({ kind: 'warning', title: zhCN.timeline.subtitleAlignmentFailedTitle, message: zhCN.timeline.subtitleAlignmentNoAudioSource });
+      return;
+    }
+
+    try {
+      const samples = await analyzeWaveform(source.asset.path, SUBTITLE_ALIGNMENT_SAMPLES_PER_SECOND);
+      const peaks = buildSubtitleAlignmentPeaks(samples, SUBTITLE_ALIGNMENT_SAMPLES_PER_SECOND, source.clip);
+      const projectDuration = Math.max(getTimelineDuration(project.timeline), ...subtitleClips.map((item) => item.start + item.duration), 1 / Math.max(1, project.settings.fps));
+      const command = new BatchAlignSubtitleCommand(
+        timelineAccessor,
+        subtitleClips.map((item) => item.id),
+        peaks,
+        projectDuration,
+        { maxDistance: SUBTITLE_ALIGNMENT_MAX_DISTANCE, minDuration: 1 / Math.max(1, project.settings.fps) }
+      );
+      commandManager.execute(command);
+      setSelectedClipIds(command.report.updates.map((update) => update.clipId));
+      setSubtitleAlignReport({ correctedCount: command.report.correctedCount, averageOffsetMs: command.report.averageOffsetMs });
+      showToast({ kind: 'success', title: zhCN.timeline.subtitleAlignmentTitle, message: zhCN.timeline.subtitleAlignmentReport(command.report.correctedCount, command.report.averageOffsetMs) });
+    } catch (error) {
+      showToast({
+        kind: 'warning',
+        title: zhCN.timeline.subtitleAlignmentFailedTitle,
+        message: error instanceof Error && error.message !== 'No subtitle alignment updates' ? error.message : zhCN.timeline.subtitleAlignmentNoPeaks
+      });
+    }
+  }
+
   function onWheel(event: React.WheelEvent<HTMLDivElement>): void {
     if (event.ctrlKey || event.metaKey) {
       event.preventDefault();
@@ -2709,6 +2809,7 @@ function addProjectBookmark(time = playheadTime): void {
                 onScene={() => void openSceneDetection(clipMenu.clipId)}
                 onGenerateCover={() => void openCoverFrameGeneration(clipMenu.clipId)}
                 onGenerateSubtitles={() => void generateSubtitles(clipMenu.clipId)}
+                onAlignSubtitles={() => void alignSubtitlesToWaveform(clipMenu.clipId)}
                 onReplaceMedia={() => void openReplaceMedia(clipMenu.clipId)}
                 onSwitchVersion={(mediaId) => switchClipMediaVersion(clipMenu.clipId, mediaId)}
                 onConvertFrameRate={() => convertClipFrameRate(clipMenu.clipId)}
@@ -2785,6 +2886,11 @@ function addProjectBookmark(time = playheadTime): void {
         />
       ) : null}
       {whisperDialog ? <WhisperGenerationDialog progress={whisperDialog.progress} clipName={whisperDialog.clip.name} /> : null}
+      {subtitleAlignReport ? (
+        <div className="fixed bottom-4 right-4 z-40 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 shadow-soft" data-testid="subtitle-align-report">
+          {zhCN.timeline.subtitleAlignmentReport(subtitleAlignReport.correctedCount, subtitleAlignReport.averageOffsetMs)}
+        </div>
+      ) : null}
       {dialoguePanelOpen ? (
         <DialogueDetectionPanel
           markers={dialogueMarkers}
@@ -3881,6 +3987,7 @@ function ClipActionMenu({
   onScene,
   onGenerateCover,
   onGenerateSubtitles,
+  onAlignSubtitles,
   onReplaceMedia,
   onSwitchVersion,
   onConvertFrameRate,
@@ -3905,6 +4012,7 @@ function ClipActionMenu({
   onScene(): void;
   onGenerateCover(): void;
   onGenerateSubtitles(): void;
+  onAlignSubtitles(): void;
   onReplaceMedia(): void;
   onSwitchVersion(mediaId: string): void;
   onConvertFrameRate(): void;
@@ -3920,6 +4028,7 @@ function ClipActionMenu({
   const canDetectScene = clip?.type === 'video';
   const canGenerateCover = clip?.type === 'video' && asset?.type === 'video';
   const canGenerateSubtitles = canGenerateSubtitlesForClip(clip, asset, whisperReady);
+  const canAlignSubtitles = clip?.type === 'subtitle';
   const canReplaceMedia = Boolean(clip && (clip.type === 'video' || clip.type === 'audio' || clip.type === 'image'));
   const canConvertFrameRate = Boolean(asset?.type === 'video' && (asset.variableFrameRate || isFrameRateMismatch(asset.frameRate, projectFrameRate)));
   const currentMediaId = clip && 'mediaId' in clip ? clip.mediaId : undefined;
@@ -3966,6 +4075,15 @@ function ClipActionMenu({
         onClick={onGenerateSubtitles}
       >
         {zhCN.timeline.generateSubtitlesAction}
+      </button>
+      <button
+        className="block w-full rounded px-2 py-2 text-left hover:bg-panel disabled:opacity-40"
+        type="button"
+        disabled={!canAlignSubtitles}
+        data-testid="clip-action-align-subtitles"
+        onClick={onAlignSubtitles}
+      >
+        {zhCN.timeline.alignSubtitlesAction}
       </button>
       <button
         className="block w-full rounded px-2 py-2 text-left hover:bg-panel disabled:opacity-40"

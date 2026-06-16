@@ -17,4 +17,30 @@ test('generates subtitle clips from a local Whisper run', async ({ page }) => {
   await expect(subtitleClips).toHaveCount(2);
   await expect(subtitleClips.first()).toContainText('First generated caption');
   await expect(subtitleClips.nth(1)).toContainText('Second generated caption');
+
+  const beforeStarts = await page.evaluate(() =>
+    window
+      .__E2E_ACTIONS__!.getTimelineSnapshot!()
+      .tracks.flatMap((track) => track.clips)
+      .filter((clip) => clip.type === 'subtitle')
+      .map((clip) => clip.start)
+  );
+  expect(beforeStarts).toEqual([0, 1.4]);
+
+  await subtitleClips.first().click({ button: 'right' });
+  await expect(page.getByTestId('clip-action-align-subtitles')).toBeEnabled();
+  await page.getByTestId('clip-action-align-subtitles').click();
+
+  await expect(page.getByTestId('subtitle-align-report')).toContainText('校正了 2 条');
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        window
+          .__E2E_ACTIONS__!.getTimelineSnapshot!()
+          .tracks.flatMap((track) => track.clips)
+          .filter((clip) => clip.type === 'subtitle')
+          .map((clip) => clip.start)
+      )
+    )
+    .toEqual([0.2, 1.55]);
 });

@@ -90,6 +90,7 @@ const sampleProjectPath = 'C:/Projects/sample.cutproj.json';
 const missingProjectPath = 'C:/Projects/missing.cutproj.json';
 const batchMissingProjectPath = 'C:/Projects/batch-missing.cutproj.json';
 const tinyVideo = 'C:/Media/tiny-video.mp4';
+const whisperVideo = 'C:/Media/whisper-video.mp4';
 const vfrVideo = 'C:/Media/vfr-phone.mp4';
 const twentyFiveFpsVideo = 'C:/Media/clip-25fps.mp4';
 const fourKHevcVideo = 'C:/Media/four-k-hevc.mov';
@@ -183,6 +184,7 @@ files.set(
 files.set(brokenPluginPath, 'throw new Error("broken plugin");');
 for (const path of [
   tinyVideo,
+  whisperVideo,
   vfrVideo,
   twentyFiveFpsVideo,
   fourKHevcVideo,
@@ -829,6 +831,9 @@ const mocks: TauriMocks = {
     const total = Math.max(1, Math.ceil(6 * Math.max(1, samplesPerSec)));
     return Array.from({ length: total }, (_, index) => {
       const time = index / Math.max(1, samplesPerSec);
+      if (path === whisperVideo) {
+        return Math.abs(time - 0.2) <= 0.025 || Math.abs(time - 1.55) <= 0.025 ? 0.9 : 0.01;
+      }
       return path === tinyVideo && time >= 1 && time < 2.25 ? 0.8 : 0.01;
     });
   },
@@ -1538,7 +1543,7 @@ window.__E2E_ACTIONS__ = {
       id: 'media-whisper-video',
       type: 'video',
       name: 'whisper-video.mp4',
-      path: tinyVideo,
+      path: whisperVideo,
       duration: 4,
       width: 1280,
       height: 720,

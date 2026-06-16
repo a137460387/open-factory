@@ -22,6 +22,7 @@ import {
   BatchUpdateTrackCommand,
   AddTransitionCommand,
   ApplyStyleCommand,
+  BatchAlignSubtitleCommand,
   BatchShiftSubtitleCommand,
   BatchUpdateKeyframeCommand,
   DEFAULT_COLOR_CORRECTION,
@@ -320,6 +321,35 @@ describe('timeline commands', () => {
     expect(accessor.current().tracks.find((track) => track.id === 'track-subtitle')?.clips.map((clip) => [clip.id, clip.start, clip.duration])).toEqual([
       ['sub-a', 0.5, 1],
       ['sub-b', 2.5, 1]
+    ]);
+  });
+
+  it('aligns subtitle clips to waveform peaks as one undoable command', () => {
+    const timeline = makeTimeline();
+    timeline.tracks.push(
+      createTrack({
+        id: 'track-subtitle',
+        type: 'subtitle',
+        name: 'Subtitles',
+        clips: [makeSubtitleClip({ id: 'sub-a', start: 0, duration: 1 }), makeSubtitleClip({ id: 'sub-b', start: 1.4, duration: 1 })]
+      })
+    );
+    const accessor = makeAccessor(timeline);
+    const manager = new CommandManager();
+    const command = new BatchAlignSubtitleCommand(accessor, ['sub-a', 'sub-b'], [0.2, 1.55], 4, { maxDistance: 0.3 });
+
+    manager.execute(command);
+
+    expect(command.report).toMatchObject({ correctedCount: 2, averageOffsetMs: 175 });
+    expect(accessor.current().tracks.find((track) => track.id === 'track-subtitle')?.clips.map((clip) => [clip.id, clip.start, clip.duration])).toEqual([
+      ['sub-a', 0.2, 1],
+      ['sub-b', 1.55, 1]
+    ]);
+
+    manager.undo();
+    expect(accessor.current().tracks.find((track) => track.id === 'track-subtitle')?.clips.map((clip) => [clip.id, clip.start, clip.duration])).toEqual([
+      ['sub-a', 0, 1],
+      ['sub-b', 1.4, 1]
     ]);
   });
 

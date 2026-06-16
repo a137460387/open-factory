@@ -114,7 +114,7 @@ import { calculatePiPTransform, createFullFrameTransform, type PiPLayoutPosition
 import { calculateSplitLayoutTransforms, type SplitLayoutDefinition, type SplitLayoutClipSource } from '../split-layout';
 import type { SubtitleDataImportMode } from '../subtitles/data-import';
 import type { SubtitleProofreadingFix } from '../subtitles/proofreading';
-import { calculateSubtitleShiftUpdates, type SubtitleTimingUpdate } from '../subtitles/retiming';
+import { calculateSubtitleAlignmentUpdates, calculateSubtitleShiftUpdates, type SubtitleAlignmentOptions, type SubtitleAlignmentReport, type SubtitleTimingUpdate } from '../subtitles/retiming';
 import { normalizeSubtitleStyleTemplateStyle } from '../subtitles/style-templates';
 import { normalizeCreditsRollSpeed, normalizeCreditsRows, normalizeCreditsStyle, type CreditsRow, type CreditsStyle } from '../credits-roll';
 import { normalizeClipBlendMode } from '../blend-modes';
@@ -2531,6 +2531,40 @@ export class BatchShiftSubtitleCommand implements Command {
         .flatMap((track) => track.clips)
         .filter((clip): clip is Extract<Clip, { type: 'subtitle' }> => clip.type === 'subtitle' && ids.has(clip.id));
       this.delegate = new BatchSubtitleTimingCommand(this.accessor, calculateSubtitleShiftUpdates(clips, this.offsetSeconds, this.projectDuration));
+    }
+    this.delegate.execute();
+  }
+
+  undo(): void {
+    this.delegate?.undo();
+  }
+}
+
+export class BatchAlignSubtitleCommand implements Command {
+  readonly description = 'Align subtitle clips to audio peaks';
+  private delegate?: BatchSubtitleTimingCommand;
+  report: SubtitleAlignmentReport = { correctedCount: 0, averageOffsetMs: 0, updates: [] };
+
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clipIds: string[],
+    private readonly peakTimes: number[],
+    private readonly projectDuration: number,
+    private readonly options: SubtitleAlignmentOptions = {}
+  ) {}
+
+  execute(): void {
+    if (!this.delegate) {
+      const timeline = this.accessor.getTimeline();
+      const ids = new Set(this.clipIds);
+      const clips = timeline.tracks
+        .flatMap((track) => track.clips)
+        .filter((clip): clip is Extract<Clip, { type: 'subtitle' }> => clip.type === 'subtitle' && ids.has(clip.id));
+      this.report = calculateSubtitleAlignmentUpdates(clips, this.peakTimes, this.projectDuration, this.options);
+      if (this.report.updates.length === 0) {
+        throw new Error('No subtitle alignment updates');
+      }
+      this.delegate = new BatchSubtitleTimingCommand(this.accessor, this.report.updates);
     }
     this.delegate.execute();
   }
