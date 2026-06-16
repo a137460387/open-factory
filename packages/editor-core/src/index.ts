@@ -12,6 +12,7 @@ export * from './motion-blur';
 export * from './timeline';
 export * from './timeline-heatmap';
 export * from './timeline-minimap';
+export * from './audio-pitch';
 export * from './rhythm-analysis';
 export * from './spatial-audio';
 export * from './timeline-color-labels';

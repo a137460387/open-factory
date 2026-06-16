@@ -285,7 +285,7 @@ const mocks: TauriMocks = {
   },
   getFileStat: (path) => ({
     path,
-    size: path === silencePatternAudio ? createSilencePatternWav().byteLength : path === fourKHevcVideo ? 500 * 1024 * 1024 : path.endsWith('.wav') ? 2048 : 4096,
+    size: path === silencePatternAudio ? createSilencePatternWav().byteLength : path === tinyAudio || path === relinkedAudio ? createToneWav().byteLength : path === fourKHevcVideo ? 500 * 1024 * 1024 : path.endsWith('.wav') ? 2048 : 4096,
     mtimeMs: mtimes.get(path) ?? (path.includes('Relink') ? 2_000 : 1_000)
   }),
   scanDirectory: (path) => {
@@ -821,6 +821,7 @@ const mocks: TauriMocks = {
 
 window.__TAURI_MOCKS__ = mocks;
 const silencePatternWav = createSilencePatternWav();
+const tinyAudioWav = createToneWav();
 const realFetch = window.fetch.bind(window);
 window.fetch = (input, init) => {
   const url = typeof input === 'string' ? input : input instanceof Request ? input.url : String(input);
@@ -836,6 +837,9 @@ window.fetch = (input, init) => {
   }
   if (url === silencePatternAudio) {
     return Promise.resolve(new Response(silencePatternWav.buffer.slice(0) as ArrayBuffer, { headers: { 'Content-Type': 'audio/wav' } }));
+  }
+  if (url === tinyAudio || url === relinkedAudio) {
+    return Promise.resolve(new Response(tinyAudioWav.buffer.slice(0) as ArrayBuffer, { headers: { 'Content-Type': 'audio/wav' } }));
   }
   if (/^C:\/(Media|Relink)\//.test(url) || /^C:\/Users\/E2E\//.test(url)) {
     const bytes = new Uint8Array(4096);
@@ -2095,10 +2099,34 @@ function makeSilencePatternClip(): Extract<import('@open-factory/editor-core').C
   };
 }
 
+function createToneWav(duration = 6, hz = 440): Uint8Array {
+  const sampleRate = 44_100;
+  const totalSamples = Math.floor(sampleRate * duration);
+  const bytes = createWavContainer(totalSamples, sampleRate);
+  const view = new DataView(bytes.buffer);
+  for (let index = 0; index < totalSamples; index += 1) {
+    const time = index / sampleRate;
+    const amplitude = Math.sin(2 * Math.PI * hz * time) * 0.5;
+    view.setInt16(44 + index * 2, Math.round(amplitude * 32767), true);
+  }
+  return bytes;
+}
+
 function createSilencePatternWav(): Uint8Array {
   const sampleRate = 44_100;
   const duration = 2.5;
   const totalSamples = Math.floor(sampleRate * duration);
+  const bytes = createWavContainer(totalSamples, sampleRate);
+  const view = new DataView(bytes.buffer);
+  for (let index = 0; index < totalSamples; index += 1) {
+    const time = index / sampleRate;
+    const amplitude = time >= 1 && time < 1.5 ? 0 : Math.sin(2 * Math.PI * 440 * time) * 0.5;
+    view.setInt16(44 + index * 2, Math.round(amplitude * 32767), true);
+  }
+  return bytes;
+}
+
+function createWavContainer(totalSamples: number, sampleRate: number): Uint8Array {
   const bytes = new Uint8Array(44 + totalSamples * 2);
   const view = new DataView(bytes.buffer);
   writeAscii(bytes, 0, 'RIFF');
@@ -2114,11 +2142,6 @@ function createSilencePatternWav(): Uint8Array {
   view.setUint16(34, 16, true);
   writeAscii(bytes, 36, 'data');
   view.setUint32(40, totalSamples * 2, true);
-  for (let index = 0; index < totalSamples; index += 1) {
-    const time = index / sampleRate;
-    const amplitude = time >= 1 && time < 1.5 ? 0 : Math.sin(2 * Math.PI * 440 * time) * 0.5;
-    view.setInt16(44 + index * 2, Math.round(amplitude * 32767), true);
-  }
   return bytes;
 }
 

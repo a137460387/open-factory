@@ -11,6 +11,7 @@ import { REC709_INPUT_COLOR_SPACE, normalizeInputColorSpace } from './color-log-
 import { normalizeClipContentAnalysis } from './content-analysis';
 import { DEFAULT_PROJECT_COLOR_PIPELINE, normalizeProjectColorPipeline } from './color-pipeline';
 import { normalizeSpatialAudio } from './spatial-audio';
+import { normalizeClipPitchData } from './audio-pitch';
 import { cloneEffects } from './effects';
 import { normalizePathPoints } from './masks/path-mask';
 import type { ProjectFile } from './project/project-types';
@@ -37,6 +38,7 @@ import type {
   ClipMask,
   ClipMaskKeyframe,
   ClipPanoramaOutputProjection,
+  ClipPitchDataPoint,
   ClipPanoramaView,
   ClipPrivacyBlur,
   ClipProjection,
@@ -128,6 +130,7 @@ export type {
   ClipMask,
   ClipMaskKeyframe,
   ClipPanoramaOutputProjection,
+  ClipPitchDataPoint,
   ClipPanoramaView,
   ClipPrivacyBlur,
   ClipProjection,
@@ -668,7 +671,8 @@ export function createBaseClip(
     effects: cloneEffects(input.effects),
     sequenceFrameRate: normalizeSequenceFrameRate(input.sequenceFrameRate),
     blendMode: normalizeClipBlendMode(input.blendMode),
-    contentAnalysis: normalizeClipContentAnalysis(input.contentAnalysis)
+    contentAnalysis: normalizeClipContentAnalysis(input.contentAnalysis),
+    pitchData: normalizeClipPitchData(input.pitchData)
   };
 }
 
@@ -1463,7 +1467,8 @@ export function serializeLegacyProject(project: Project): {
           border: normalizeClipBorder(clip.border),
           multicam: clip.type === 'nested-sequence' ? normalizeMulticamSequence(clip.multicam, clip.duration) : undefined,
           sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
-          keyframes: cloneClipKeyframesLocal(clip.keyframes)
+          keyframes: cloneClipKeyframesLocal(clip.keyframes),
+          pitchData: normalizeClipPitchData(clip.pitchData)
         }))
       }))
     }

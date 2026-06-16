@@ -112,6 +112,7 @@ import { normalizeSubtitleStyleTemplateStyle } from '../subtitles/style-template
 import { normalizeCreditsRollSpeed, normalizeCreditsRows, normalizeCreditsStyle, type CreditsRow, type CreditsStyle } from '../credits-roll';
 import { normalizeClipBlendMode } from '../blend-modes';
 import { normalizeClipContentAnalysis } from '../content-analysis';
+import { normalizeClipPitchData } from '../audio-pitch';
 import { normalizeSpatialAudio, type ClipSpatialAudio } from '../spatial-audio';
 import {
   addMediaFolderToProject,
@@ -3280,6 +3281,7 @@ export type ClipPatch = Partial<Omit<Clip, 'type' | 'id' | 'transform' | 'colorC
   speed?: number;
   pitchSemitones?: number;
   audioChannelRouting?: Clip['audioChannelRouting'];
+  pitchData?: Clip['pitchData'];
   reverseAudio?: boolean;
   fadeInDuration?: number;
   fadeOutDuration?: number;
@@ -3649,6 +3651,7 @@ export class UpdateClipCommand implements Command {
       sequenceFrameRate: normalizeSequenceFrameRate(this.patch.sequenceFrameRate ?? this.before.sequenceFrameRate),
       blendMode: normalizeClipBlendMode(this.patch.blendMode ?? this.before.blendMode),
       contentAnalysis: this.patch.contentAnalysis === undefined ? normalizeClipContentAnalysis(this.before.contentAnalysis) : normalizeClipContentAnalysis(this.patch.contentAnalysis),
+      pitchData: this.patch.pitchData === undefined ? normalizeClipPitchData(this.before.pitchData) : normalizeClipPitchData(this.patch.pitchData),
       transform: normalizeTransform(
         this.patch.transform?.scale !== undefined && this.patch.transform.scaleX === undefined && this.patch.transform.scaleY === undefined
           ? { ...this.before.transform, ...this.patch.transform, scaleX: this.patch.transform.scale, scaleY: this.patch.transform.scale }

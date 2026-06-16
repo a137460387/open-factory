@@ -437,6 +437,12 @@ export interface TimelineBookmark {
   note: string;
 }
 
+export interface ClipPitchDataPoint {
+  time: number;
+  hz: number;
+  note: string;
+}
+
 export interface BaseClip {
   id: string;
   name: string;
@@ -467,6 +473,7 @@ export interface BaseClip {
   blendMode?: ClipBlendMode;
   contentAnalysis?: ClipContentAnalysis;
   spatialAudio?: ClipSpatialAudio;
+  pitchData?: ClipPitchDataPoint[];
 }
 
 export interface ClipAudioDenoise {

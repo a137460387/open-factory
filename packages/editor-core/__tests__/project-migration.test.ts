@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CLIP_BORDER, DEFAULT_COLOR_CORRECTION, DEFAULT_CREDITS_ROLL_SPEED, DEFAULT_CREDITS_STYLE, DEFAULT_SPATIAL_AUDIO, DEFAULT_SUBTITLE_LANGUAGE, DEFAULT_SUBTITLE_STYLE, DEFAULT_VIDEO_RESTORATION, createMulticamSequenceProject, createTrack, migrateProjectFile, serializeProject, type ProjectFileV1 } from '../src';
-import { makeAdjustmentClip, makeCreditsClip, makeProject, makeSubtitleClip, makeTextClip, makeVideoClip } from './test-utils';
+import { makeAdjustmentClip, makeAudioClip, makeCreditsClip, makeProject, makeSubtitleClip, makeTextClip, makeVideoClip } from './test-utils';
 
 describe('project schema migration', () => {
   it('serializes schemaVersion 2 project files with media and relativePath', () => {
@@ -157,6 +157,44 @@ describe('project schema migration', () => {
     const legacy = migrateProjectFile(file);
     expect(legacy.project.timeline.tracks[0].clips[0].spatialAudio).toEqual(DEFAULT_SPATIAL_AUDIO);
     expect(legacy.project.timeline.tracks[0].clips[0].keyframes).toBeUndefined();
+  });
+
+  it('serializes and migrates clip pitch analysis data while old clips remain unset', () => {
+    const project = makeProject();
+    project.timeline.tracks.push(
+      createTrack({
+        id: 'track-audio',
+        type: 'audio',
+        name: 'Audio',
+        clips: [
+          makeAudioClip({
+            id: 'clip-pitch',
+            trackId: 'track-audio',
+            pitchData: [
+              { time: 0, hz: 440, note: 'A4' },
+              { time: 0.1234, hz: 261.625, note: '' },
+              { time: -1, hz: 0, note: 'bad' }
+            ] as never
+          })
+        ]
+      })
+    );
+    project.sequences = [{ ...project.sequences[0], timeline: project.timeline }];
+
+    const file = serializeProject(project);
+    expect(file.project.timeline.tracks.at(-1)?.clips[0].pitchData).toEqual([
+      { time: 0, hz: 440, note: 'A4' },
+      { time: 0.123, hz: 261.63, note: 'C4' }
+    ]);
+
+    const migrated = migrateProjectFile(file);
+    expect(migrated.project.timeline.tracks.at(-1)?.clips[0].pitchData).toEqual(file.project.timeline.tracks.at(-1)?.clips[0].pitchData);
+
+    delete file.project.timeline.tracks.at(-1)!.clips[0].pitchData;
+    expect(migrateProjectFile(file).project.timeline.tracks.at(-1)?.clips[0].pitchData).toBeUndefined();
+
+    file.project.timeline.tracks.at(-1)!.clips[0].pitchData = [] as never;
+    expect(migrateProjectFile(file).project.timeline.tracks.at(-1)?.clips[0].pitchData).toBeUndefined();
   });
 
   it('serializes and migrates export ranges while old project files default to none', () => {

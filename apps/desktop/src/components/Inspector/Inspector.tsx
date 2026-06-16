@@ -87,6 +87,7 @@ import {
   sampleCurve,
   secondsToTimecode,
   setKenBurnsEndScaleKeyframes,
+  summarizePitchData,
   suggestDeinterlaceMode,
   calculateSubtitleBatchAdjustUpdates,
   calculateSubtitlePeakAlignUpdate,
@@ -149,6 +150,7 @@ import { useEditorStore, type SelectedKeyframeRef } from '../../store/editorStor
 import { usePrivacyDetectionSettingsStore } from '../../store/privacyDetectionSettingsStore';
 import { isTranslationConfigured, useTranslationSettingsStore } from '../../store/translationSettingsStore';
 import { resolveSliderKeyboardValue } from '../../accessibility/keyboard-navigation';
+import { analyzeClipPitch, exportClipPitchCsv } from '../../media/pitchAnalysis';
 
 interface InspectorProps {
   clip?: Clip;
@@ -345,6 +347,7 @@ function ClipInspector({
   const [subtitleTranslationProgress, setSubtitleTranslationProgress] = useState<{ completed: number; total: number }>();
   const [subtitleStyleTemplates, setSubtitleStyleTemplates] = useState<SubtitleStyleTemplate[]>(BUILTIN_SUBTITLE_STYLE_TEMPLATES);
   const [customSoundDescOpen, setCustomSoundDescOpen] = useState(false);
+  const [pitchAnalyzing, setPitchAnalyzing] = useState(false);
   const [textAnimationPreset, setTextAnimationPreset] = useState<TextAnimationPreset>('fade');
   const [textAnimationDuration, setTextAnimationDuration] = useState(0.5);
   const [textAnimationDirection, setTextAnimationDirection] = useState<TextAnimationDirection>('in');
@@ -551,6 +554,7 @@ function ClipInspector({
   const fadeInCurve = 'fadeInCurve' in clip ? normalizeAudioFadeCurve(clip.fadeInCurve) : 'linear';
   const fadeOutCurve = 'fadeOutCurve' in clip ? normalizeAudioFadeCurve(clip.fadeOutCurve) : 'linear';
   const spatialAudio = 'volume' in clip ? normalizeSpatialAudio(clip.spatialAudio) : DEFAULT_SPATIAL_AUDIO;
+  const pitchSummary = useMemo(() => summarizePitchData(clip.pitchData), [clip.pitchData]);
   const spatialDistanceOptions: SpatialAudioDistance[] = ['near', 'medium', 'far'];
   const audioChannelRouting = 'volume' in clip ? clip.audioChannelRouting ?? 'normal' : 'normal';
   const audioChannelRoutingOptions: AudioChannelRoutingMode[] =
@@ -702,6 +706,35 @@ function ClipInspector({
       return;
     }
     commit({ keyframes });
+  };
+  const runPitchAnalysis = async () => {
+    if (!asset || !('volume' in clip)) {
+      return;
+    }
+    try {
+      setPitchAnalyzing(true);
+      const pitchData = await analyzeClipPitch(asset);
+      commit({ pitchData });
+      if (pitchData.length === 0) {
+        showToast({ kind: 'warning', title: zhCN.inspector.pitchAnalysis.noDataTitle, message: zhCN.inspector.pitchAnalysis.noDataMessage });
+      } else {
+        showToast({ kind: 'success', title: zhCN.inspector.pitchAnalysis.completed, message: zhCN.inspector.pitchAnalysis.pointCount(pitchData.length) });
+      }
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.inspector.pitchAnalysis.failed, message: error instanceof Error ? error.message : zhCN.inspector.pitchAnalysis.failedMessage });
+    } finally {
+      setPitchAnalyzing(false);
+    }
+  };
+  const exportPitchCsv = async () => {
+    try {
+      const exported = await exportClipPitchCsv(clip);
+      if (exported) {
+        showToast({ kind: 'success', title: zhCN.inspector.pitchAnalysis.exported, message: zhCN.inspector.pitchAnalysis.exportedMessage });
+      }
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.inspector.pitchAnalysis.exportFailed, message: error instanceof Error ? error.message : zhCN.inspector.pitchAnalysis.failedMessage });
+    }
   };
   const updateSelectedKeyframe = (patch: Partial<Pick<NonNullable<typeof selectedKeyframeFrame>, 'time' | 'value' | 'easing'>>) => {
     if (!selectedKeyframe) {
@@ -2045,6 +2078,47 @@ function ClipInspector({
                     ))}
                   </select>
                 </label>
+              </div>
+            </details>
+            <details className="rounded-md border border-line bg-white" data-testid="pitch-analysis-section" open>
+              <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-slate-700">{zhCN.inspector.sections.pitchAnalysis}</summary>
+              <div className="space-y-2 border-t border-line p-2">
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div className="rounded bg-panel p-2">
+                    <div className="text-slate-500">{zhCN.inspector.fields.primaryPitchNote}</div>
+                    <div className="font-semibold text-ink" data-testid="clip-pitch-primary-note">{pitchSummary.primaryNote ?? zhCN.inspector.pitchAnalysis.noData}</div>
+                  </div>
+                  <div className="rounded bg-panel p-2">
+                    <div className="text-slate-500">{zhCN.inspector.fields.pitchRange}</div>
+                    <div className="font-semibold text-ink" data-testid="clip-pitch-range">
+                      {pitchSummary.minHz !== undefined && pitchSummary.maxHz !== undefined ? `${Math.round(pitchSummary.minHz)}-${Math.round(pitchSummary.maxHz)} Hz` : zhCN.inspector.pitchAnalysis.noData}
+                    </div>
+                  </div>
+                  <div className="rounded bg-panel p-2">
+                    <div className="text-slate-500">{zhCN.inspector.fields.pitchStability}</div>
+                    <div className="font-semibold text-ink" data-testid="clip-pitch-stability">{`${Math.round(pitchSummary.stability * 100)}%`}</div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    className="rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+                    type="button"
+                    disabled={selectedClipLocked || pitchAnalyzing || !asset}
+                    onClick={runPitchAnalysis}
+                    data-testid="clip-pitch-analyze-button"
+                  >
+                    {pitchAnalyzing ? zhCN.inspector.pitchAnalysis.analyzing : zhCN.inspector.pitchAnalysis.analyze}
+                  </button>
+                  <button
+                    className="rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+                    type="button"
+                    disabled={!clip.pitchData || clip.pitchData.length === 0}
+                    onClick={exportPitchCsv}
+                    data-testid="clip-pitch-export-csv-button"
+                  >
+                    {zhCN.inspector.pitchAnalysis.exportCsv}
+                  </button>
+                </div>
               </div>
             </details>
             <details className="rounded-md border border-line bg-white" data-testid="spatial-audio-section" open>
