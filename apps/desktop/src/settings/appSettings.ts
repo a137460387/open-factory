@@ -533,7 +533,8 @@ function normalizeSettings(settings: Partial<AppSettings>): AppSettings {
   const previewPerformance = normalizePreviewPerformanceSettings(settings.previewPerformance);
   if (
     previewPerformance.qualityMode !== DEFAULT_PREVIEW_PERFORMANCE_SETTINGS.qualityMode ||
-    previewPerformance.skipFrames !== DEFAULT_PREVIEW_PERFORMANCE_SETTINGS.skipFrames
+    previewPerformance.skipFrames !== DEFAULT_PREVIEW_PERFORMANCE_SETTINGS.skipFrames ||
+    previewPerformance.adaptiveEnabled !== DEFAULT_PREVIEW_PERFORMANCE_SETTINGS.adaptiveEnabled
   ) {
     normalized.previewPerformance = previewPerformance;
   }

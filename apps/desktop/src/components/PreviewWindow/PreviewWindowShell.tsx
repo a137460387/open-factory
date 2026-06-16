@@ -48,7 +48,8 @@ export function PreviewWindowShell() {
   const previewPerformance = useMemo<PreviewPerformanceSettings>(
     () => ({
       ...basePreviewPerformance,
-      qualityMode: scaleToPreviewQualityMode(resolutionScale)
+      qualityMode: scaleToPreviewQualityMode(resolutionScale),
+      adaptiveEnabled: false
     }),
     [basePreviewPerformance, resolutionScale]
   );

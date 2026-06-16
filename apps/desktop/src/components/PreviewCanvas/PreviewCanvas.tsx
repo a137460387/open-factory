@@ -64,12 +64,19 @@ import { listProjectSnapshots, readProjectSnapshot, type ProjectSnapshotEntry } 
 import { appendFrameSearchHistory, readFrameSearchHistory } from '../../lib/frameSearchHistory';
 import { PreviewRenderer, type PreviewFrameReadback } from '../../lib/preview/renderer';
 import {
+  DEFAULT_PREVIEW_ADAPTIVE_QUALITY_STATE,
   DEFAULT_PREVIEW_PERFORMANCE_SETTINGS,
+  appendPreviewFpsSample,
   calculatePreviewRenderSize,
+  calculatePreviewFpsAverage,
   getDisabledPreviewEffectTypes,
+  getPreviewAdaptiveQualityStatus,
   isPreviewAudioOnly,
   isPreviewLowQuality,
+  resolveAdaptivePreviewPerformance,
+  resolveEffectivePreviewPerformance,
   shouldRenderPreviewFrame,
+  type PreviewFpsSample,
   type PreviewPerformanceSettings
 } from '../../lib/preview/preview-performance';
 import { getTimelineRenderCacheController } from '../../lib/preview/render-cache-controller';
@@ -154,6 +161,7 @@ export function PreviewCanvas({
   const [frameSearchFocused, setFrameSearchFocused] = useState(false);
   const [frameSearchError, setFrameSearchError] = useState<string>();
   const [frameSearchHistory, setFrameSearchHistory] = useState<FrameSearchHistoryEntry[]>([]);
+  const [adaptivePreviewState, setAdaptivePreviewState] = useState(DEFAULT_PREVIEW_ADAPTIVE_QUALITY_STATE);
   const prerenderCenter = Math.round(playheadTime * 2) / 2;
   const fps = project.settings.fps || 30;
   const snapshotCompareEnabled = Boolean(snapshotCompareProject);
@@ -192,6 +200,40 @@ export function PreviewCanvas({
   }, [colorScopesVisible]);
 
   useEffect(() => {
+    if (previewPerformance.adaptiveEnabled === false) {
+      return undefined;
+    }
+    setAdaptivePreviewState(DEFAULT_PREVIEW_ADAPTIVE_QUALITY_STATE);
+    let frame = 0;
+    let lastSampleAt = performance.now();
+    let samples: PreviewFpsSample[] = [];
+    let animationFrame = 0;
+    const tick = (now: number) => {
+      frame += 1;
+      const elapsedMs = now - lastSampleAt;
+      if (elapsedMs >= 1000) {
+        const overrideFps = typeof window.__OPEN_FACTORY_PREVIEW_FPS_OVERRIDE__ === 'number' ? window.__OPEN_FACTORY_PREVIEW_FPS_OVERRIDE__ : undefined;
+        const measuredFps = overrideFps ?? (frame * 1000) / elapsedMs;
+        samples = appendPreviewFpsSample(samples, { timestampMs: now, fps: measuredFps });
+        const averageFps = calculatePreviewFpsAverage(samples);
+        setAdaptivePreviewState((current) =>
+          resolveAdaptivePreviewPerformance({
+            averageFps,
+            current,
+            elapsedMs,
+            adaptiveEnabled: previewPerformance.adaptiveEnabled !== false
+          })
+        );
+        frame = 0;
+        lastSampleAt = now;
+      }
+      animationFrame = requestAnimationFrame(tick);
+    };
+    animationFrame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(animationFrame);
+  }, [previewPerformance.adaptiveEnabled]);
+
+  useEffect(() => {
     if (!reviewMode) {
       return;
     }
@@ -205,13 +247,19 @@ export function PreviewCanvas({
     [project.timeline, snapshotCompareProject]
   );
   const previewZoomPercent = Math.round(previewZoom * 100);
+  const effectivePreviewPerformance = useMemo<PreviewPerformanceSettings>(() => resolveEffectivePreviewPerformance(previewPerformance, adaptivePreviewState), [adaptivePreviewState, previewPerformance]);
   const previewRenderSize = useMemo(
-    () => calculatePreviewRenderSize(PREVIEW_CANVAS_WIDTH, PREVIEW_CANVAS_HEIGHT, previewPerformance.qualityMode),
-    [previewPerformance.qualityMode]
+    () => calculatePreviewRenderSize(PREVIEW_CANVAS_WIDTH, PREVIEW_CANVAS_HEIGHT, effectivePreviewPerformance.qualityMode),
+    [effectivePreviewPerformance.qualityMode]
   );
-  const previewDisabledEffectTypes = useMemo(() => getDisabledPreviewEffectTypes(previewPerformance), [previewPerformance]);
-  const audioOnlyPreview = isPreviewAudioOnly(previewPerformance.qualityMode);
-  const lowQualityPreview = isPreviewLowQuality(previewPerformance);
+  const previewDisabledEffectTypes = useMemo(() => getDisabledPreviewEffectTypes(effectivePreviewPerformance), [effectivePreviewPerformance]);
+  const audioOnlyPreview = isPreviewAudioOnly(effectivePreviewPerformance.qualityMode);
+  const lowQualityPreview = isPreviewLowQuality(effectivePreviewPerformance);
+  const adaptiveIndicatorStatus = getPreviewAdaptiveQualityStatus(effectivePreviewPerformance.qualityMode);
+  const adaptiveIndicatorTitle =
+    previewPerformance.adaptiveEnabled === false
+      ? t.adaptiveQualityLocked(t.qualityLabels[effectivePreviewPerformance.qualityMode])
+      : t.adaptiveQualityTooltip(adaptivePreviewState.averageFps, t.qualityLabels[effectivePreviewPerformance.qualityMode]);
   const previewCanvasSizeLabel = t.canvasSize(previewRenderSize.width, previewRenderSize.height);
   const previewSurfaceStyle: CSSProperties = {
     transform: `translate(${previewPan.x}px, ${previewPan.y}px) scale(${previewZoom})`,
@@ -299,7 +347,7 @@ export function PreviewCanvas({
     const shouldCaptureScopes = scopesOpen && (!isPlaying || scopeFrameCounterRef.current % 4 === 0);
     const shouldCaptureDifference = compareShowsDifference && Boolean(differenceCanvas);
     const frame = Math.max(0, Math.round(playheadTime * fps));
-    const shouldRenderVideoFrame = !audioOnlyPreview && shouldRenderPreviewFrame(isPlaying, frame, previewPerformance.skipFrames);
+    const shouldRenderVideoFrame = !audioOnlyPreview && shouldRenderPreviewFrame(isPlaying, frame, effectivePreviewPerformance.skipFrames);
     const canUseRenderCache = shouldRenderVideoFrame && !previewTimeline && !shouldCaptureScopes && !compareEnabled;
     const frameTime = frame / fps;
     const frameKey = buildTimelineRenderFrameKey({
@@ -409,7 +457,7 @@ export function PreviewCanvas({
     snapshotCompareProject,
     audioOnlyPreview,
     previewDisabledEffectTypes,
-    previewPerformance.skipFrames,
+    effectivePreviewPerformance.skipFrames,
     t
   ]);
 
@@ -1314,6 +1362,15 @@ export function PreviewCanvas({
             onPointerUp={endPreviewPan}
             onPointerCancel={endPreviewPan}
           >
+            <div
+              className={`absolute right-3 top-3 z-30 h-3 w-3 rounded-full border border-white/70 shadow ${getAdaptiveQualityIndicatorClass(adaptiveIndicatorStatus)}`}
+              title={adaptiveIndicatorTitle}
+              data-testid="preview-adaptive-quality-indicator"
+              data-status={adaptiveIndicatorStatus}
+              data-quality={effectivePreviewPerformance.qualityMode}
+              data-fps={adaptivePreviewState.averageFps.toFixed(1)}
+              data-adaptive={previewPerformance.adaptiveEnabled === false ? 'false' : 'true'}
+            />
             {lowQualityPreview ? (
               <div className="pointer-events-none absolute left-3 top-3 z-20 rounded bg-black/60 px-2 py-1 text-xs font-medium text-white" data-testid="preview-simplified-effects-hint">
                 {audioOnlyPreview ? t.audioOnlyPreview : t.simplifiedEffects}
@@ -1326,7 +1383,7 @@ export function PreviewCanvas({
                 height={previewRenderSize.height}
                 className={`pointer-events-none absolute inset-0 h-full w-full ${compareShowsDifference ? 'opacity-0' : 'opacity-100'}`}
                 data-testid="preview-canvas"
-                data-preview-quality={previewPerformance.qualityMode}
+                data-preview-quality={effectivePreviewPerformance.qualityMode}
               />
               {compareEnabled ? (
                 <canvas
@@ -2498,6 +2555,16 @@ function getAngleRenderer(renderers: Map<string, PreviewRenderer>, angleId: stri
   const renderer = new PreviewRenderer();
   renderers.set(angleId, renderer);
   return renderer;
+}
+
+function getAdaptiveQualityIndicatorClass(status: ReturnType<typeof getPreviewAdaptiveQualityStatus>): string {
+  if (status === 'degraded') {
+    return 'bg-amber-400';
+  }
+  if (status === 'low') {
+    return 'bg-rose-500';
+  }
+  return 'bg-emerald-400';
 }
 
 function waitForIdleFrame(): Promise<void> {

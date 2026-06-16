@@ -450,19 +450,19 @@ describe('app settings storage', () => {
   });
 
   it('persists preview performance settings in settings.json', async () => {
-    await expect(readPreviewPerformanceSettings()).resolves.toEqual({ qualityMode: 'full', skipFrames: 1 });
+    await expect(readPreviewPerformanceSettings()).resolves.toEqual({ qualityMode: 'full', skipFrames: 1, adaptiveEnabled: true });
 
     await saveLanguageSetting('en');
-    const previewPerformance = await savePreviewPerformanceSettings({ qualityMode: 'half', skipFrames: 2 });
+    const previewPerformance = await savePreviewPerformanceSettings({ qualityMode: 'half', skipFrames: 2, adaptiveEnabled: false });
 
-    expect(previewPerformance).toEqual({ qualityMode: 'half', skipFrames: 2 });
-    expect(await readPreviewPerformanceSettings()).toEqual({ qualityMode: 'half', skipFrames: 2 });
+    expect(previewPerformance).toEqual({ qualityMode: 'half', skipFrames: 2, adaptiveEnabled: false });
+    expect(await readPreviewPerformanceSettings()).toEqual({ qualityMode: 'half', skipFrames: 2, adaptiveEnabled: false });
     expect(await readAppSettings()).toEqual({
       language: 'en',
-      previewPerformance: { qualityMode: 'half', skipFrames: 2 }
+      previewPerformance: { qualityMode: 'half', skipFrames: 2, adaptiveEnabled: false }
     });
 
-    await savePreviewPerformanceSettings({ qualityMode: 'full', skipFrames: 1 });
+    await savePreviewPerformanceSettings({ qualityMode: 'full', skipFrames: 1, adaptiveEnabled: true });
     expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({ language: 'en' });
   });
 

@@ -490,7 +490,10 @@ const zh = {
       recordingHeight: '高度',
       recordingFrameRate: '帧率',
       previewPerformanceTitle: '预览性能',
-      previewPerformanceDescription: '播放时可跳过部分视频帧以降低预览负载，不影响导出。',
+      previewPerformanceDescription: '播放时根据实际渲染帧率自动降低或恢复预览质量，不影响导出。',
+      previewAdaptiveQuality: '启用自适应预览质量',
+      previewAdaptiveQualityDescription: '关闭后使用固定预览质量和跳帧设置。',
+      previewFixedQuality: '固定质量',
       previewSkipFrames: '播放跳帧',
       previewSkipFrameOptions: {
         1: '每帧渲染',
@@ -1206,6 +1209,14 @@ const zh = {
     canvasSize: (width: number, height: number) => `${width} x ${height} 画布`,
     simplifiedEffects: '部分特效已简化',
     audioOnlyPreview: '仅音频预览',
+    qualityLabels: {
+      full: '全质量',
+      half: '半分辨率',
+      quarter: '四分之一分辨率',
+      'audio-only': '仅音频'
+    },
+    adaptiveQualityTooltip: (fps: number, quality: string) => `当前约 ${fps.toFixed(1)} fps，${quality}`,
+    adaptiveQualityLocked: (quality: string) => `固定预览质量：${quality}`,
     colorScopes: '颜色示波器',
     compareToggle: 'A/B 对比预览',
     compareLeftRight: '左右分割对比',
@@ -4031,7 +4042,10 @@ const enOverrides = {
       recordingHeight: 'Height',
       recordingFrameRate: 'Frame Rate',
       previewPerformanceTitle: 'Preview Performance',
-      previewPerformanceDescription: 'Skip some video frames during playback to reduce preview load. Export is unchanged.',
+      previewPerformanceDescription: 'Automatically lowers or restores preview quality from measured render FPS. Export is unchanged.',
+      previewAdaptiveQuality: 'Enable Adaptive Preview Quality',
+      previewAdaptiveQualityDescription: 'Turn this off to use fixed preview quality and frame skipping.',
+      previewFixedQuality: 'Fixed Quality',
       previewSkipFrames: 'Playback Frame Skipping',
       previewSkipFrameOptions: {
         1: 'Render every frame',
@@ -4675,6 +4689,14 @@ const enOverrides = {
     canvasSize: (width: number, height: number) => `${width} x ${height} Canvas`,
     simplifiedEffects: 'Some effects are simplified',
     audioOnlyPreview: 'Audio-only preview',
+    qualityLabels: {
+      full: 'Full quality',
+      half: 'Half resolution',
+      quarter: 'Quarter resolution',
+      'audio-only': 'Audio only'
+    },
+    adaptiveQualityTooltip: (fps: number, quality: string) => `About ${fps.toFixed(1)} fps, ${quality}`,
+    adaptiveQualityLocked: (quality: string) => `Fixed preview quality: ${quality}`,
     colorScopes: 'Color Scopes',
     compareToggle: 'A/B Compare Preview',
     compareLeftRight: 'Left/Right Split Compare',

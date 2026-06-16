@@ -5,6 +5,7 @@ interface Window {
   __TAURI_MOCKS__?: import('./lib/tauri-bridge').TauriMocks;
   __E2E_ACTIONS__?: Record<string, (...args: unknown[]) => unknown>;
   __OPEN_FACTORY_NATIVE_PREVIEW_SMOKE_ACTIVE__?: boolean;
+  __OPEN_FACTORY_PREVIEW_FPS_OVERRIDE__?: number;
   __OPEN_FACTORY_PREVIEW_DEBUG__?: {
     mode?: 'webgl' | '2d';
     renderCount: number;

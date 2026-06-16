@@ -30,7 +30,7 @@ import { pickDemucsExecutablePath } from '../lib/demucs';
 import { loadLutLibrary, toggleLutFavorite, type LutLibraryItem } from '../lib/lutLibrary';
 import { fsExists, getFileStat, getSystemResourceSnapshot, openDirectoryDialog, openFileDialog, openPath, readExportPresetSyncWebdavPassword, readWebdavPassword, writeExportPresetSyncWebdavPassword, writeWebdavPassword, type SystemResourceSnapshot } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
-import { PREVIEW_SKIP_FRAME_OPTIONS, type PreviewPerformanceSettings, type PreviewSkipFrames } from '../lib/preview/preview-performance';
+import { PREVIEW_QUALITY_MODES, PREVIEW_SKIP_FRAME_OPTIONS, type PreviewPerformanceSettings, type PreviewQualityMode, type PreviewSkipFrames } from '../lib/preview/preview-performance';
 import {
   detectMacroShortcutConflicts,
   exportClipMacrosToDialog,
@@ -136,6 +136,7 @@ interface SettingsDialogProps {
   onShortcutBindingsChange(bindings: TimelineShortcutBindings): void;
   onMacrosChange(macros: ClipMacro[]): void;
   onExecuteMacro(macro: ClipMacro): void;
+  onPreviewPerformanceChange(settings: Partial<PreviewPerformanceSettings>): void;
   onPreviewSkipFramesChange(skipFrames: PreviewSkipFrames): void;
   onTimelineInteractionSettingsChange(settings: Partial<TimelineInteractionSettings>): void;
   onDeleteProxies(assetIds: string[]): Promise<void> | void;
@@ -160,6 +161,7 @@ export function SettingsDialog({
   onShortcutBindingsChange,
   onMacrosChange,
   onExecuteMacro,
+  onPreviewPerformanceChange,
   onPreviewSkipFramesChange,
   onTimelineInteractionSettingsChange,
   onDeleteProxies,
@@ -1150,11 +1152,41 @@ export function SettingsDialog({
                     <h4 className="text-xs font-semibold text-slate-700">{t.general.previewPerformanceTitle}</h4>
                     <p className="mt-1 text-xs text-slate-500">{t.general.previewPerformanceDescription}</p>
                   </div>
+                  <label className="mb-3 flex items-start gap-2 text-xs text-slate-600">
+                    <input
+                      className="mt-0.5 h-4 w-4 accent-brand"
+                      type="checkbox"
+                      checked={previewPerformance.adaptiveEnabled !== false}
+                      data-testid="settings-preview-adaptive-toggle"
+                      onChange={(event) => onPreviewPerformanceChange({ adaptiveEnabled: event.target.checked })}
+                    />
+                    <span>
+                      <span className="block font-semibold text-slate-700">{t.general.previewAdaptiveQuality}</span>
+                      <span className="mt-1 block">{t.general.previewAdaptiveQualityDescription}</span>
+                    </span>
+                  </label>
+                  <label className="mb-3 block text-xs font-medium text-slate-600">
+                    {t.general.previewFixedQuality}
+                    <select
+                      className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60"
+                      value={previewPerformance.qualityMode}
+                      disabled={previewPerformance.adaptiveEnabled !== false}
+                      data-testid="settings-preview-fixed-quality-select"
+                      onChange={(event) => onPreviewPerformanceChange({ qualityMode: event.target.value as PreviewQualityMode, adaptiveEnabled: false })}
+                    >
+                      {PREVIEW_QUALITY_MODES.map((mode) => (
+                        <option key={mode} value={mode}>
+                          {zhCN.toolbar.previewQualityOptions[mode]}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                   <label className="block text-xs font-medium text-slate-600">
                     {t.general.previewSkipFrames}
                     <select
-                      className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                      className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60"
                       value={previewPerformance.skipFrames}
+                      disabled={previewPerformance.adaptiveEnabled !== false}
                       data-testid="settings-preview-skip-frames-select"
                       onChange={(event) => onPreviewSkipFramesChange(Number(event.target.value) as PreviewSkipFrames)}
                     >

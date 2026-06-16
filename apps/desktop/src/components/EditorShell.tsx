@@ -2805,7 +2805,7 @@ export function EditorShell() {
           reviewMode={reviewMode}
           onToggleReviewMode={() => setReviewMode((mode) => !mode)}
           onCreateReviewReport={() => void createReviewReport()}
-          onPreviewQualityModeChange={(qualityMode: PreviewQualityMode) => updatePreviewPerformance({ qualityMode })}
+          onPreviewQualityModeChange={(qualityMode: PreviewQualityMode) => updatePreviewPerformance({ qualityMode, adaptiveEnabled: false })}
           onPopoutPreview={() => void openDetachedPreview()}
           onToggleTimelineGridSnap={toggleTimelineGridSnap}
           onTimelineGridUnitChange={changeTimelineGridUnit}
@@ -3134,6 +3134,7 @@ export function EditorShell() {
               onExecuteMacro={(macro) => void executeMacro(macro)}
               previewPerformance={previewPerformance}
               timelineInteractionSettings={timelineInteractionSettings}
+              onPreviewPerformanceChange={updatePreviewPerformance}
               onPreviewSkipFramesChange={(skipFrames: PreviewSkipFrames) => updatePreviewPerformance({ skipFrames })}
               onTimelineInteractionSettingsChange={updateTimelineInteractionSettings}
               onDeleteProxies={(assetIds) => deleteProxiesForMedia(assetIds)}
