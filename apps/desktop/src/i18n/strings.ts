@@ -129,6 +129,7 @@ const zh = {
     exportReviewReport: '导出评审报告',
     safeFrameGuides: '安全框参考线',
     thumbnailTrack: '缩略图轨道',
+    timelineMinimap: '时间线鸟瞰图',
     timelineHeatmap: '编辑热力图',
     heatmapTypes: {
       'edit-density': '编辑密度',
@@ -3180,6 +3181,7 @@ const enOverrides = {
     exportReviewReport: 'Export Review Report',
     safeFrameGuides: 'Safe Frame Guides',
     thumbnailTrack: 'Thumbnail Track',
+    timelineMinimap: 'Timeline Minimap',
     timelineHeatmap: 'Edit Heatmap',
     heatmapTypes: {
       'edit-density': 'Edit Density',

@@ -314,23 +314,23 @@ describe('app settings storage', () => {
   it('persists safe frame guide visibility in view settings', async () => {
     const defaultMediaLibrary = { mode: 'grid', gridSize: 'medium', sortKey: 'importedAt', sortDirection: 'asc' };
     const defaultTimelineHeatmap = { enabled: false, type: 'edit-density', opacity: 0.45, colorScheme: 'warm' };
-    await expect(readViewSettings()).resolves.toEqual({ safeFrameGuides: false, thumbnailTrackVisible: true, timelineHeatmap: defaultTimelineHeatmap, mediaLibrary: defaultMediaLibrary });
+    await expect(readViewSettings()).resolves.toEqual({ safeFrameGuides: false, thumbnailTrackVisible: true, timelineMinimapVisible: true, timelineHeatmap: defaultTimelineHeatmap, mediaLibrary: defaultMediaLibrary });
 
     await saveLanguageSetting('en');
-    const view = await saveViewSettings({ safeFrameGuides: true, thumbnailTrackVisible: false });
+    const view = await saveViewSettings({ safeFrameGuides: true, thumbnailTrackVisible: false, timelineMinimapVisible: false });
 
-    expect(view).toEqual({ safeFrameGuides: true, thumbnailTrackVisible: false, timelineHeatmap: defaultTimelineHeatmap, mediaLibrary: defaultMediaLibrary });
-    expect(await readViewSettings()).toEqual({ safeFrameGuides: true, thumbnailTrackVisible: false, timelineHeatmap: defaultTimelineHeatmap, mediaLibrary: defaultMediaLibrary });
+    expect(view).toEqual({ safeFrameGuides: true, thumbnailTrackVisible: false, timelineMinimapVisible: false, timelineHeatmap: defaultTimelineHeatmap, mediaLibrary: defaultMediaLibrary });
+    expect(await readViewSettings()).toEqual({ safeFrameGuides: true, thumbnailTrackVisible: false, timelineMinimapVisible: false, timelineHeatmap: defaultTimelineHeatmap, mediaLibrary: defaultMediaLibrary });
     expect(await readAppSettings()).toEqual({
       language: 'en',
-      view: { safeFrameGuides: true, thumbnailTrackVisible: false, timelineHeatmap: defaultTimelineHeatmap, mediaLibrary: defaultMediaLibrary }
+      view: { safeFrameGuides: true, thumbnailTrackVisible: false, timelineMinimapVisible: false, timelineHeatmap: defaultTimelineHeatmap, mediaLibrary: defaultMediaLibrary }
     });
 
-    await saveViewSettings({ safeFrameGuides: false, thumbnailTrackVisible: true });
-    expect(await readViewSettings()).toEqual({ safeFrameGuides: false, thumbnailTrackVisible: true, timelineHeatmap: defaultTimelineHeatmap, mediaLibrary: defaultMediaLibrary });
+    await saveViewSettings({ safeFrameGuides: false, thumbnailTrackVisible: true, timelineMinimapVisible: true });
+    expect(await readViewSettings()).toEqual({ safeFrameGuides: false, thumbnailTrackVisible: true, timelineMinimapVisible: true, timelineHeatmap: defaultTimelineHeatmap, mediaLibrary: defaultMediaLibrary });
     expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({
       language: 'en',
-      view: { safeFrameGuides: false, thumbnailTrackVisible: true, timelineHeatmap: defaultTimelineHeatmap, mediaLibrary: defaultMediaLibrary }
+      view: { safeFrameGuides: false, thumbnailTrackVisible: true, timelineMinimapVisible: true, timelineHeatmap: defaultTimelineHeatmap, mediaLibrary: defaultMediaLibrary }
     });
   });
 
@@ -343,6 +343,7 @@ describe('app settings storage', () => {
     expect(await readViewSettings()).toEqual({
       safeFrameGuides: false,
       thumbnailTrackVisible: true,
+      timelineMinimapVisible: true,
       timelineHeatmap: defaultTimelineHeatmap,
       mediaLibrary
     });
@@ -350,6 +351,7 @@ describe('app settings storage', () => {
       view: {
         safeFrameGuides: false,
         thumbnailTrackVisible: true,
+        timelineMinimapVisible: true,
         timelineHeatmap: defaultTimelineHeatmap,
         mediaLibrary
       }
@@ -364,6 +366,7 @@ describe('app settings storage', () => {
     expect(await readViewSettings()).toEqual({
       safeFrameGuides: false,
       thumbnailTrackVisible: true,
+      timelineMinimapVisible: true,
       timelineHeatmap: { enabled: true, type: 'volume', opacity: 0.8, colorScheme: 'cool' },
       mediaLibrary
     });
@@ -371,6 +374,7 @@ describe('app settings storage', () => {
       view: {
         safeFrameGuides: false,
         thumbnailTrackVisible: true,
+        timelineMinimapVisible: true,
         timelineHeatmap: { enabled: true, type: 'volume', opacity: 0.8, colorScheme: 'cool' },
         mediaLibrary
       }

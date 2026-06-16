@@ -41,6 +41,9 @@ import {
   calculateSpeedCurveSourceDuration,
   calculateAnchoredScrollLeft,
   calculateTimelineHeatmap,
+  calculateTimelineMinimapViewportRect,
+  calculateTimelineScrollLeftFromMinimapY,
+  buildTimelineMinimapLayout,
   buildTimelineThumbnailTrackSamples,
   buildTimelineRulerTicks,
   buildTimelineGridLines,
@@ -125,6 +128,8 @@ import {
   type TimelineSnapCandidate,
   type TimelineGridSettings,
   type TimelineHeatmapSegment,
+  type TimelineMinimapLayout,
+  type TimelineMinimapViewportRect,
   type TimelineLabelColor,
   type TimecodeFormat,
   type Track,
@@ -186,6 +191,7 @@ interface HeatmapWorkerResponse {
 
 export function Timeline({
   thumbnailTrackVisible = true,
+  minimapVisible = true,
   heatmap,
   timelineGridSettings = DEFAULT_TIMELINE_GRID_SETTINGS,
   bookmarkPanelOpen: controlledBookmarkPanelOpen,
@@ -193,6 +199,7 @@ export function Timeline({
   onConvertMediaFrameRate
 }: {
   thumbnailTrackVisible?: boolean;
+  minimapVisible?: boolean;
   heatmap?: TimelineHeatmapViewSettings;
   timelineGridSettings?: TimelineGridSettings;
   bookmarkPanelOpen?: boolean;
@@ -259,6 +266,7 @@ export function Timeline({
   const [trackSelectionAnchorId, setTrackSelectionAnchorId] = useState<string | undefined>();
   const [trackBatchMenu, setTrackBatchMenu] = useState<TrackBatchMenuState | undefined>();
   const [scrollViewport, setScrollViewport] = useState({ scrollLeft: 0, viewportWidth: 960 });
+  const [timelineViewportHeight, setTimelineViewportHeight] = useState(240);
   const whisperExecutablePath = useWhisperSettingsStore((state) => state.executablePath);
   const whisperModelPath = useWhisperSettingsStore((state) => state.modelPath);
   const rootRef = useRef<HTMLElement | null>(null);
@@ -337,6 +345,31 @@ export function Timeline({
     }
     return [{ id: 'current-in-out', start: Math.min(inPoint, outPoint), end: Math.max(inPoint, outPoint) }];
   }, [inPoint, outPoint, project.exportRanges, projectDuration]);
+  const minimapHeight = Math.max(160, timelineViewportHeight);
+  const minimapLayout = useMemo(
+    () =>
+      buildTimelineMinimapLayout(project.timeline, {
+        duration: timelineDuration,
+        width: 120,
+        height: minimapHeight,
+        markers: project.timeline.markers ?? [],
+        bookmarks: project.bookmarks ?? [],
+        exportRanges: exportRangeHighlights
+      }),
+    [exportRangeHighlights, minimapHeight, project.bookmarks, project.timeline, timelineDuration]
+  );
+  const minimapViewport = useMemo(
+    () =>
+      calculateTimelineMinimapViewportRect({
+        scrollLeft: scrollViewport.scrollLeft,
+        viewportWidth: scrollViewport.viewportWidth,
+        labelWidth: LABEL_WIDTH,
+        zoom,
+        duration: timelineDuration,
+        minimapHeight
+      }),
+    [minimapHeight, scrollViewport.scrollLeft, scrollViewport.viewportWidth, timelineDuration, zoom]
+  );
   const protectedRanges = useMemo(() => normalizeProtectedRanges(project.protectedRanges, projectDuration), [project.protectedRanges, projectDuration]);
   const timelineNotes = useMemo(() => project.timelineNotes ?? [], [project.timelineNotes]);
   const timelineNoteLayouts = useMemo(() => buildTimelineNoteLayout(timelineNotes), [timelineNotes]);
@@ -1819,6 +1852,24 @@ function addProjectBookmark(time = playheadTime): void {
       return;
     }
     setScrollViewport({ scrollLeft: scroll.scrollLeft, viewportWidth: scroll.clientWidth || 960 });
+    setTimelineViewportHeight(scroll.clientHeight || 240);
+  }
+
+  function scrollTimelineFromMinimap(y: number, mode: 'top' | 'center'): void {
+    const scroll = scrollRef.current;
+    if (!scroll) {
+      return;
+    }
+    scroll.scrollLeft = calculateTimelineScrollLeftFromMinimapY({
+      y,
+      viewportWidth: scroll.clientWidth || scrollViewport.viewportWidth,
+      labelWidth: LABEL_WIDTH,
+      zoom,
+      duration: timelineDuration,
+      minimapHeight,
+      mode
+    });
+    syncScrollViewport();
   }
 
   function onTimelineDragOver(event: React.DragEvent<HTMLDivElement>): void {
@@ -2295,15 +2346,16 @@ function addProjectBookmark(time = playheadTime): void {
           ))}
         </div>
       </div>
-      <div
-        ref={scrollRef}
-        className="timeline-scrollbar min-h-0 min-w-0 max-w-full flex-1 overflow-auto"
-        onWheel={onWheel}
-        onScroll={syncScrollViewport}
-        onDragOver={onTimelineDragOver}
-        onDrop={onTimelineDrop}
-        data-testid="timeline-scroll-container"
-      >
+      <div className="flex min-h-0 min-w-0 flex-1">
+        <div
+          ref={scrollRef}
+          className="timeline-scrollbar min-h-0 min-w-0 max-w-full flex-1 overflow-auto"
+          onWheel={onWheel}
+          onScroll={syncScrollViewport}
+          onDragOver={onTimelineDragOver}
+          onDrop={onTimelineDrop}
+          data-testid="timeline-scroll-container"
+        >
         <div className="relative" style={{ width: LABEL_WIDTH + width }}>
           <Ruler
             ticks={ticks}
@@ -2533,6 +2585,15 @@ function addProjectBookmark(time = playheadTime): void {
             />
           </div>
         </div>
+        </div>
+        {minimapVisible ? (
+          <TimelineMinimap
+            layout={minimapLayout}
+            viewport={minimapViewport}
+            height={minimapHeight}
+            onNavigate={scrollTimelineFromMinimap}
+          />
+        ) : null}
       </div>
       {silenceDialog ? (
         <SilenceDetectionDialog
@@ -4115,6 +4176,101 @@ function SelectionMarquee({ rect }: { rect: SelectionRect }) {
       style={{ left, top, width, height }}
       data-testid="timeline-selection-marquee"
     />
+  );
+}
+
+function TimelineMinimap({
+  layout,
+  viewport,
+  height,
+  onNavigate
+}: {
+  layout: TimelineMinimapLayout;
+  viewport: TimelineMinimapViewportRect;
+  height: number;
+  onNavigate(y: number, mode: 'top' | 'center'): void;
+}) {
+  const [dragging, setDragging] = useState(false);
+
+  function yFromEvent(event: React.PointerEvent<HTMLElement>): number {
+    const rect = event.currentTarget.getBoundingClientRect();
+    return Math.min(rect.height, Math.max(0, event.clientY - rect.top));
+  }
+
+  function beginDrag(event: React.PointerEvent<HTMLElement>): void {
+    if (event.button !== 0) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setDragging(true);
+    onNavigate(yFromEvent(event), 'center');
+  }
+
+  function updateDrag(event: React.PointerEvent<HTMLElement>): void {
+    if (!dragging) {
+      return;
+    }
+    event.preventDefault();
+    onNavigate(yFromEvent(event), 'center');
+  }
+
+  function endDrag(event: React.PointerEvent<HTMLElement>): void {
+    if (!dragging) {
+      return;
+    }
+    event.preventDefault();
+    setDragging(false);
+    event.currentTarget.releasePointerCapture(event.pointerId);
+  }
+
+  return (
+    <aside
+      className="relative shrink-0 overflow-hidden border-l border-line bg-slate-50"
+      style={{ width: 120, height }}
+      aria-label={zhCN.toolbar.timelineMinimap}
+      data-testid="timeline-minimap"
+      onPointerDown={beginDrag}
+      onPointerMove={updateDrag}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
+    >
+      {layout.tracks.map((track) => (
+        <span
+          key={track.id}
+          className="absolute bottom-1 top-1 rounded-sm opacity-20"
+          style={{ left: track.x, width: track.width, backgroundColor: track.color }}
+          data-testid="timeline-minimap-track"
+          data-track-id={track.id}
+        />
+      ))}
+      {layout.clips.map((clip) => (
+        <span
+          key={clip.id}
+          className="absolute rounded-sm border border-white/60 shadow-sm"
+          style={{ left: clip.x, top: clip.y, width: clip.width, height: clip.height, backgroundColor: clip.color }}
+          data-testid="timeline-minimap-clip"
+          data-clip-id={clip.id}
+        />
+      ))}
+      {layout.markers.map((marker) => (
+        <span
+          key={marker.id}
+          className="absolute left-1 right-1 h-0.5 rounded-full"
+          style={{ top: marker.y, backgroundColor: marker.color }}
+          data-testid="timeline-minimap-marker"
+          data-marker-kind={marker.kind}
+        />
+      ))}
+      <span
+        className="absolute left-1 right-1 rounded-sm border-2 border-brand bg-brand/15 shadow-sm"
+        style={{ top: viewport.y, height: viewport.height }}
+        data-testid="timeline-minimap-viewport"
+        data-visible-start={viewport.start}
+        data-visible-end={viewport.end}
+      />
+    </aside>
   );
 }
 

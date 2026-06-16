@@ -324,6 +324,7 @@ export function EditorShell() {
   const [layoutSettings, setLayoutSettings] = useState<EditorLayoutSettings>(DEFAULT_EDITOR_LAYOUT_SETTINGS);
   const [safeFrameGuides, setSafeFrameGuides] = useState(false);
   const [thumbnailTrackVisible, setThumbnailTrackVisible] = useState(true);
+  const [timelineMinimapVisible, setTimelineMinimapVisible] = useState(true);
   const [timelineHeatmap, setTimelineHeatmap] = useState<TimelineHeatmapViewSettings>(() => normalizeTimelineHeatmapViewSettings(undefined));
   const [previewPerformance, setPreviewPerformance] = useState<PreviewPerformanceSettings>(DEFAULT_PREVIEW_PERFORMANCE_SETTINGS);
   const [timelineGridSettings, setTimelineGridSettings] = useState<TimelineGridSettings>(DEFAULT_TIMELINE_GRID_SETTINGS);
@@ -512,6 +513,16 @@ export function EditorShell() {
     });
   }, []);
 
+  const toggleTimelineMinimapVisible = useCallback(() => {
+    setTimelineMinimapVisible((current) => {
+      const next = !current;
+      void saveViewSettings({ timelineMinimapVisible: next }).catch((error) => {
+        console.warn('Unable to save view settings', error);
+      });
+      return next;
+    });
+  }, []);
+
   const updateTimelineHeatmap = useCallback((patch: Partial<TimelineHeatmapViewSettings>) => {
     setTimelineHeatmap((current) => {
       const optimistic = normalizeTimelineHeatmapViewSettings({ ...current, ...patch });
@@ -682,6 +693,7 @@ export function EditorShell() {
         if (!canceled) {
           setSafeFrameGuides(view.safeFrameGuides);
           setThumbnailTrackVisible(view.thumbnailTrackVisible);
+          setTimelineMinimapVisible(view.timelineMinimapVisible);
           setTimelineHeatmap(view.timelineHeatmap);
         }
       })
@@ -2484,6 +2496,7 @@ export function EditorShell() {
           onSaveWorkspaceLayout={() => void saveCurrentWorkspaceLayout()}
           safeFrameGuides={safeFrameGuides}
           thumbnailTrackVisible={thumbnailTrackVisible}
+          timelineMinimapVisible={timelineMinimapVisible}
           timelineHeatmap={timelineHeatmap}
           previewQualityMode={previewPerformance.qualityMode}
           timelineGridSettings={timelineGridSettings}
@@ -2496,6 +2509,7 @@ export function EditorShell() {
           onToggleStoryboard={() => setStoryboardOpen((open) => !open)}
           onToggleSafeFrameGuides={toggleSafeFrameGuides}
           onToggleThumbnailTrack={toggleThumbnailTrackVisible}
+          onToggleTimelineMinimap={toggleTimelineMinimapVisible}
           onTimelineHeatmapChange={updateTimelineHeatmap}
           onToggleHistoryPanel={() => {
             setSmartRoughCutOpen(false);
@@ -2679,6 +2693,7 @@ export function EditorShell() {
               ) : (
                 <Timeline
                   thumbnailTrackVisible={thumbnailTrackVisible}
+                  minimapVisible={timelineMinimapVisible}
                   heatmap={timelineHeatmap}
                   timelineGridSettings={timelineGridSettings}
                   bookmarkPanelOpen={layoutSettings.panels.bookmarks}

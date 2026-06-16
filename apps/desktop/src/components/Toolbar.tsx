@@ -99,6 +99,7 @@ interface ToolbarProps {
   onSaveWorkspaceLayout(): void;
   safeFrameGuides: boolean;
   thumbnailTrackVisible: boolean;
+  timelineMinimapVisible: boolean;
   timelineHeatmap: TimelineHeatmapViewSettings;
   previewQualityMode: PreviewQualityMode;
   timelineGridSettings: TimelineGridSettings;
@@ -108,6 +109,7 @@ interface ToolbarProps {
   onCreateReviewReport(): void;
   onToggleSafeFrameGuides(): void;
   onToggleThumbnailTrack(): void;
+  onToggleTimelineMinimap(): void;
   onTimelineHeatmapChange(patch: Partial<TimelineHeatmapViewSettings>): void;
   onPreviewQualityModeChange(mode: PreviewQualityMode): void;
   onToggleTimelineGridSnap(): void;
@@ -442,6 +444,18 @@ export function Toolbar(props: ToolbarProps) {
             >
               <span>{t.thumbnailTrack}</span>
               <span className="text-xs text-slate-500">{props.thumbnailTrackVisible ? t.safeFrameGuidesVisible : t.safeFrameGuidesHidden}</span>
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-view-minimap-menu-item"
+              aria-pressed={props.timelineMinimapVisible}
+              onClick={() => {
+                props.onToggleTimelineMinimap();
+              }}
+            >
+              <span>{t.timelineMinimap}</span>
+              <span className="text-xs text-slate-500">{props.timelineMinimapVisible ? t.safeFrameGuidesVisible : t.safeFrameGuidesHidden}</span>
             </button>
             <div className="my-1 border-t border-line" />
             <button

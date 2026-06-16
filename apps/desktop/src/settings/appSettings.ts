@@ -80,6 +80,7 @@ export interface ExportPresetSyncSettings {
 export interface ViewSettings {
   safeFrameGuides: boolean;
   thumbnailTrackVisible: boolean;
+  timelineMinimapVisible: boolean;
   timelineHeatmap: TimelineHeatmapViewSettings;
   mediaLibrary: MediaLibraryViewSettings;
 }
@@ -638,6 +639,7 @@ export function normalizeViewSettings(settings: Partial<ViewSettings> | undefine
   return {
     safeFrameGuides: settings.safeFrameGuides === true,
     thumbnailTrackVisible: settings.thumbnailTrackVisible !== false,
+    timelineMinimapVisible: settings.timelineMinimapVisible !== false,
     timelineHeatmap: normalizeTimelineHeatmapViewSettings(settings.timelineHeatmap),
     mediaLibrary: normalizeMediaLibraryViewSettings(settings.mediaLibrary)
   };
@@ -736,6 +738,7 @@ function defaultViewSettings(): ViewSettings {
   return {
     safeFrameGuides: false,
     thumbnailTrackVisible: true,
+    timelineMinimapVisible: true,
     timelineHeatmap: normalizeTimelineHeatmapViewSettings(undefined),
     mediaLibrary: { ...DEFAULT_MEDIA_LIBRARY_VIEW_SETTINGS }
   };
