@@ -555,6 +555,7 @@ export interface SubtitleClip extends BaseClip {
   soundDesc?: string;
   style: SubtitleStyle;
   subtitleMode: SubtitleMode;
+  dataSubtitle?: DataSubtitleSource;
 }
 
 export interface CreditsClip extends BaseClip {
@@ -627,6 +628,23 @@ export interface SubtitleStyle extends TextStyle {
   shadowColor: string;
   shadowOffset: number;
 }
+
+export type DataSubtitleSourceType = 'csv' | 'json' | 'template';
+
+export interface DataSubtitleRow {
+  time: number;
+  text?: string;
+  values: Record<string, string>;
+}
+
+export interface DataSubtitleSource {
+  sourceType: DataSubtitleSourceType;
+  template: string;
+  rows: DataSubtitleRow[];
+  filePath?: string;
+}
+
+export type DataSubtitleClip = SubtitleClip & { dataSubtitle: DataSubtitleSource };
 
 export interface MediaFolder {
   id: string;

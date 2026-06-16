@@ -113,6 +113,7 @@ import { normalizeCreditsRollSpeed, normalizeCreditsRows, normalizeCreditsStyle,
 import { normalizeClipBlendMode } from '../blend-modes';
 import { normalizeClipContentAnalysis } from '../content-analysis';
 import { normalizeClipPitchData } from '../audio-pitch';
+import { normalizeDataSubtitleSource } from '../subtitles/data-subtitle';
 import { normalizeSpatialAudio, type ClipSpatialAudio } from '../spatial-audio';
 import {
   addMediaFolderToProject,
@@ -3278,6 +3279,7 @@ export type ClipPatch = Partial<Omit<Clip, 'type' | 'id' | 'transform' | 'colorC
   speaker?: string;
   soundDesc?: string;
   subtitleMode?: SubtitleMode;
+  dataSubtitle?: Extract<Clip, { type: 'subtitle' }>['dataSubtitle'];
   speed?: number;
   pitchSemitones?: number;
   audioChannelRouting?: Clip['audioChannelRouting'];
@@ -3702,7 +3704,8 @@ export class UpdateClipCommand implements Command {
         ...this.after,
         subtitleType,
         speaker: subtitleType === 'cc' ? normalizeSubtitleSpeaker(this.after.speaker) : undefined,
-        soundDesc: subtitleType === 'cc' ? normalizeSubtitleSoundDesc(this.after.soundDesc) : undefined
+        soundDesc: subtitleType === 'cc' ? normalizeSubtitleSoundDesc(this.after.soundDesc) : undefined,
+        dataSubtitle: normalizeDataSubtitleSource(this.after.dataSubtitle)
       };
     }
     if (this.after.type === 'credits') {

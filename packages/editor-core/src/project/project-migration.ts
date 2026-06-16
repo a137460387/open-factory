@@ -49,6 +49,7 @@ import { normalizeClipBlendMode } from '../blend-modes';
 import { normalizeClipContentAnalysis } from '../content-analysis';
 import { normalizeSpatialAudio } from '../spatial-audio';
 import { normalizeClipPitchData } from '../audio-pitch';
+import { normalizeDataSubtitleSource } from '../subtitles/data-subtitle';
 import { normalizeTimelineLabelColor } from '../timeline-color-labels';
 import { normalizeMediaFolderId, normalizeMediaFolders, normalizeMediaImportedAt } from '../media-folders';
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
@@ -410,7 +411,8 @@ function cloneClip<TClip extends Clip>(clip: TClip): TClip {
       speaker: subtitleType === 'cc' ? normalizeSubtitleSpeaker(clip.speaker) : undefined,
       soundDesc: subtitleType === 'cc' ? normalizeSubtitleSoundDesc(clip.soundDesc) : undefined,
       style: { ...DEFAULT_SUBTITLE_STYLE, ...clip.style },
-      subtitleMode: clip.subtitleMode ?? DEFAULT_SUBTITLE_MODE
+      subtitleMode: clip.subtitleMode ?? DEFAULT_SUBTITLE_MODE,
+      dataSubtitle: normalizeDataSubtitleSource(clip.dataSubtitle)
     } as TClip;
   }
   if (clip.type === 'credits') {

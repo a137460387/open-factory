@@ -36,6 +36,22 @@ test('builds a multitrack FFmpeg plan with text artifacts and runs mocked export
   expect(plan.fullArgs.at(-1)).toBe('C:/Exports/e2e-output-2.mp4');
 });
 
+test('updates export cost estimate when switching presets', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.getByTestId('import-media-button').click();
+  await addMediaCardToTimeline(page, 0);
+
+  await openExportDialog(page);
+  await expect(page.getByTestId('export-cost-estimate-panel')).toBeVisible();
+  await page.getByTestId('export-preset-select').selectOption('web-1080p');
+  const initialDuration = (await page.getByTestId('export-cost-duration').textContent())?.trim();
+  await page.getByTestId('export-preset-select').selectOption('4k');
+
+  await expect.poll(async () => (await page.getByTestId('export-cost-duration').textContent())?.trim()).not.toBe(initialDuration);
+  await expect(page.getByTestId('export-cost-size')).toContainText('MB');
+});
+
 test('exports the marked in/out range with frame-aligned duration', async ({ page }) => {
   await page.goto('/');
   await waitForE2eActions(page);

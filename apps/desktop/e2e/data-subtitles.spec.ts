@@ -27,3 +27,34 @@ test('imports three subtitle clips from CSV data with correct timecodes', async 
     { start: 3, duration: 1, text: 'CSV subtitle C' }
   ]);
 });
+
+test('binds CSV data to a live data subtitle and previews the current row', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+
+  await page.getByTestId('import-subtitles-button').click();
+  const subtitleClip = page.locator('[data-clip-type="subtitle"]').first();
+  await expect(subtitleClip).toBeVisible();
+  await subtitleClip.click();
+
+  await expect(page.getByTestId('data-subtitle-section')).toBeVisible();
+  await page.getByTestId('data-subtitle-template-input').fill('{row.name}: {row.score}');
+  await page.getByTestId('data-subtitle-template-input').blur();
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const clip = window.__E2E_ACTIONS__!.getTimelineSnapshot!().tracks.flatMap((track) => track.clips).find((item) => item.type === 'subtitle');
+        return clip?.text;
+      })
+    )
+    .toBe('{row.name}: {row.score}');
+
+  await page.evaluate(() => window.__E2E_ACTIONS__!.setOpenFileDialogPaths!(['C:/Media/live-score.csv']));
+  await page.getByTestId('data-subtitle-bind-button').click();
+  await expect(page.getByTestId('data-subtitle-source-summary')).toContainText('CSV');
+
+  await page.evaluate(() => window.__E2E_ACTIONS__!.setPlayheadTime!(1.5));
+  await expect
+    .poll(() => page.evaluate(() => window.__OPEN_FACTORY_PREVIEW_DEBUG__?.lastText), { timeout: 10_000 })
+    .toBe('Lin: 18');
+});

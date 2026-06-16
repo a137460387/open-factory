@@ -1597,6 +1597,7 @@ const zh = {
       effects: '特效',
       audio: '音频',
       subtitle: '字幕',
+      dataSubtitle: '动态数据字幕',
       text: '文字',
       credits: '片尾字幕',
       pathText: '路径文字',
@@ -1814,6 +1815,7 @@ const zh = {
       primaryPitchNote: '主调',
       pitchRange: '音域',
       pitchStability: '稳定性',
+      dataSubtitleTemplate: '数据模板',
       semitones: '半音',
       reverseAudio: '音频反转',
       fadeIn: '淡入',
@@ -1844,6 +1846,16 @@ const zh = {
       exportMode: '导出模式',
       bold: '加粗',
       italic: '斜体'
+    },
+    dataSubtitle: {
+      bind: '绑定 CSV/JSON',
+      clear: '清除绑定',
+      bound: '动态数据已绑定',
+      failed: '动态数据绑定失败',
+      failedMessage: '无法读取或解析动态字幕数据。',
+      rowCount: (count: number) => `${count} 行数据可用`,
+      summary: (type: string, count: number) => `${type.toUpperCase()} · ${count} 行`,
+      notBound: '未绑定数据源。模板模式仍可使用 {frame_count}、{timecode}、{date}。'
     },
     textAnimation: {
       apply: '应用动画',
@@ -2283,6 +2295,26 @@ const zh = {
       drawtext: 'Drawtext',
       hardwareEncoder: '硬件编码器',
       estimatedSize: '预估大小'
+    },
+    costEstimate: {
+      title: '成本预估',
+      description: '基于当前预设、时间线复杂度和本地历史导出耗时估算。',
+      duration: '导出时长',
+      diskUsage: '磁盘占用',
+      cpuLoad: 'CPU 占用',
+      completion: '预计完成',
+      historyError: '历史准确率',
+      historyUnavailable: '暂无历史',
+      complexityValue: (factor: number) => `复杂度 x${factor.toFixed(2)}`,
+      sizeValue: (mb: number) => `${mb.toFixed(mb >= 10 ? 0 : 1)} MB`,
+      durationSeconds: (seconds: number) => `${seconds} 秒`,
+      durationMinutes: (minutes: number, seconds: number) => `${minutes} 分 ${seconds} 秒`,
+      historyErrorValue: (percent: number) => `上次误差 ±${percent.toFixed(1)}%`,
+      cpuLoadValues: {
+        light: '轻',
+        medium: '中',
+        heavy: '重'
+      }
     },
     mode: {
       title: '导出模式',
@@ -4493,6 +4525,7 @@ const enOverrides = {
       effects: 'Effects',
       audio: 'Audio',
       subtitle: 'Subtitle',
+      dataSubtitle: 'Live Data Subtitle',
       text: 'Text',
       credits: 'Credits',
       pathText: 'Path Text',
@@ -4657,6 +4690,7 @@ const enOverrides = {
       primaryPitchNote: 'Primary Note',
       pitchRange: 'Range',
       pitchStability: 'Stability',
+      dataSubtitleTemplate: 'Data Template',
       semitones: 'semitones',
       reverseAudio: 'Reverse Audio',
       fadeIn: 'Fade In',
@@ -4687,6 +4721,16 @@ const enOverrides = {
       exportMode: 'Export Mode',
       bold: 'Bold',
       italic: 'Italic'
+    },
+    dataSubtitle: {
+      bind: 'Bind CSV/JSON',
+      clear: 'Clear Binding',
+      bound: 'Live data bound',
+      failed: 'Live data binding failed',
+      failedMessage: 'Unable to read or parse live subtitle data.',
+      rowCount: (count: number) => `${count} row(s) available`,
+      summary: (type: string, count: number) => `${type.toUpperCase()} · ${count} rows`,
+      notBound: 'No data source bound. Template mode can still use {frame_count}, {timecode}, and {date}.'
     },
     textAnimation: {
       apply: 'Apply Animation',
@@ -5080,6 +5124,26 @@ const enOverrides = {
       drawtext: 'Drawtext',
       hardwareEncoder: 'Hardware Encoder',
       estimatedSize: 'Estimated Size'
+    },
+    costEstimate: {
+      title: 'Cost Estimate',
+      description: 'Estimated from the current preset, timeline complexity, and local export history.',
+      duration: 'Export Time',
+      diskUsage: 'Disk Usage',
+      cpuLoad: 'CPU Load',
+      completion: 'Finish By',
+      historyError: 'History Accuracy',
+      historyUnavailable: 'No history',
+      complexityValue: (factor: number) => `Complexity x${factor.toFixed(2)}`,
+      sizeValue: (mb: number) => `${mb.toFixed(mb >= 10 ? 0 : 1)} MB`,
+      durationSeconds: (seconds: number) => `${seconds}s`,
+      durationMinutes: (minutes: number, seconds: number) => `${minutes}m ${seconds}s`,
+      historyErrorValue: (percent: number) => `Last error ±${percent.toFixed(1)}%`,
+      cpuLoadValues: {
+        light: 'Light',
+        medium: 'Medium',
+        heavy: 'Heavy'
+      }
     },
     mode: {
       title: 'Export Mode',

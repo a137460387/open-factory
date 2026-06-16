@@ -11,6 +11,7 @@ interface Window {
     drawCount?: number;
     drawnClipTypes?: string[];
     sourceKinds?: string[];
+    lastText?: string;
     readback?: {
       pixel?: number[];
       hasNonBackgroundPixels: boolean;

@@ -66,6 +66,7 @@ import { calculateSpatialDistanceGain, isDefaultSpatialAudio, mapSpatialXToPanGa
 import { calculateSpeedCurveSourceDuration, getClipSourceVisibleDuration, getClipSpeed, getRenderableTracks, getTimelinePlaybackDuration, getTrackPan, getTrackVolume } from '../timeline';
 import { round } from '../time';
 import { serializeSubtitleCueInputsToAss, serializeSubtitleCueInputsToSrt, serializeSubtitleCueInputsToVtt, type SubtitleCueInput } from '../subtitles/srt';
+import { normalizeDataSubtitleSource, resolveDataSubtitleText } from '../subtitles/data-subtitle';
 import { buildPathTextFrameLayouts } from '../text-path';
 import { buildCreditsRollYExpression, formatCreditsRowsForTextfile } from '../credits-roll';
 import { DEFAULT_EXPORT_COLOR_MANAGEMENT, isDefaultExportColorManagement, normalizeExportColorManagement, type ExportColorSpace } from './color-management';
@@ -355,6 +356,7 @@ function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project[
             speaker: clip.type === 'subtitle' ? clip.speaker ?? null : null,
             soundDesc: clip.type === 'subtitle' ? clip.soundDesc ?? null : null,
             subtitleMode: clip.type === 'subtitle' ? (clip.subtitleMode ?? DEFAULT_SUBTITLE_MODE) : null,
+            dataSubtitle: clip.type === 'subtitle' ? normalizeDataSubtitleSource(clip.dataSubtitle) ?? null : null,
             creditsStyle:
               clip.type === 'credits'
                 ? {
@@ -2896,11 +2898,27 @@ function subtitleLanguageToFfmpegMetadata(language: string): string {
 }
 
 function buildSubtitleCueInputs(clips: ExportClip[]): SubtitleCueInput[] {
-  return clips.map((clip) => ({
-    id: clip.id,
-    start: clip.start,
-    duration: clip.duration,
-    text: clip.subtitleStyle?.text ?? '',
+  return clips.flatMap((clip) => {
+    const source = normalizeDataSubtitleSource(clip.dataSubtitle);
+    if (!source) {
+      return [buildSubtitleCueInput(clip, clip.start, clip.duration, clip.subtitleStyle?.text ?? '', clip.id)];
+    }
+    const clipEnd = round(clip.start + clip.duration);
+    const cueStarts = [clip.start, ...source.rows.map((row) => row.time).filter((time) => time > clip.start && time < clipEnd)].sort((left, right) => left - right);
+    return cueStarts.flatMap((start, index) => {
+      const end = cueStarts[index + 1] ?? clipEnd;
+      const text = resolveDataSubtitleText(source, start, { fps: projectFrameRateFromClip(clip) });
+      return text && end > start ? [buildSubtitleCueInput(clip, start, round(end - start), text, `${clip.id}-data-${index + 1}`)] : [];
+    });
+  });
+}
+
+function buildSubtitleCueInput(clip: ExportClip, start: number, duration: number, text: string, id: string): SubtitleCueInput {
+  return {
+    id,
+    start,
+    duration,
+    text,
     subtitleType: clip.subtitleType ?? undefined,
     speaker: clip.speaker ?? undefined,
     soundDesc: clip.soundDesc ?? undefined,
@@ -2922,7 +2940,11 @@ function buildSubtitleCueInputs(clips: ExportClip[]): SubtitleCueInput[] {
           y: clip.subtitleStyle.y
         }
       : undefined
-  }));
+  };
+}
+
+function projectFrameRateFromClip(clip: ExportClip): number {
+  return clip.sequenceFrameRate ?? 30;
 }
 
 function serializeSubtitleCueInputs(cues: SubtitleCueInput[], format: ExportSubtitleFormat): string {

@@ -11,7 +11,7 @@ export function recordPreviewMode(mode: 'webgl' | '2d'): void {
   };
 }
 
-export function recordPreviewDraw(clipType: string, sourceKind: PreviewSourceKind): void {
+export function recordPreviewDraw(clipType: string, sourceKind: PreviewSourceKind, text?: string): void {
   if (!shouldRecordPreviewDebug()) {
     return;
   }
@@ -20,7 +20,8 @@ export function recordPreviewDraw(clipType: string, sourceKind: PreviewSourceKin
     ...current,
     drawCount: (current.drawCount ?? 0) + 1,
     drawnClipTypes: [...(current.drawnClipTypes ?? []), clipType].slice(-20),
-    sourceKinds: [...(current.sourceKinds ?? []), sourceKind].slice(-20)
+    sourceKinds: [...(current.sourceKinds ?? []), sourceKind].slice(-20),
+    lastText: text ?? current.lastText
   };
 }
 

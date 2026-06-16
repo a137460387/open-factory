@@ -1,4 +1,4 @@
-import { DEFAULT_TRANSFORM, layoutTextAlongPath, normalizeTextPath, resolvePathTextStartOffset, type Clip, type ProjectColorPipeline } from '@open-factory/editor-core';
+import { DEFAULT_TRANSFORM, layoutTextAlongPath, normalizeTextPath, resolveDataSubtitleText, resolvePathTextStartOffset, type Clip, type ProjectColorPipeline } from '@open-factory/editor-core';
 import { zhCN } from '../../i18n/strings';
 import { recordPreviewDraw } from './debug';
 import { drawTransformedSource2d } from './transform-2d';
@@ -10,6 +10,10 @@ type CreditsClip = Extract<Clip, { type: 'credits' }>;
 export function drawText2d(context: CanvasRenderingContext2D, canvas: HTMLCanvasElement, clip: TextClip, bypassProcessing = false, localTime = 0): void {
   if (clip.type === 'text' && normalizeTextPath(clip.pathText).enabled) {
     drawPathText2d(context, canvas, clip, bypassProcessing, localTime);
+    return;
+  }
+  const text = resolveTextContent(clip, localTime);
+  if (clip.type === 'subtitle' && !text) {
     return;
   }
   const previousFilter = context.filter;
@@ -26,18 +30,22 @@ export function drawText2d(context: CanvasRenderingContext2D, canvas: HTMLCanvas
   context.font = `${clip.style.italic ? 'italic ' : ''}${clip.style.bold ? '700 ' : '400 '}${clip.style.fontSize}px ${clip.style.fontFamily}`;
   context.textAlign = 'center';
   context.textBaseline = 'middle';
-  drawTextBackground(context, clip.text, clip.style.fontSize, clip.style.backgroundColor, clip.style.backgroundOpacity, transform.opacity);
+  drawTextBackground(context, text, clip.style.fontSize, clip.style.backgroundColor, clip.style.backgroundOpacity, transform.opacity);
   context.globalAlpha = transform.opacity;
   context.fillStyle = clip.style.color;
-  context.fillText(clip.text, 0, 0);
+  context.fillText(text, 0, 0);
   context.filter = previousFilter;
   context.restore();
-  recordPreviewDraw(clip.type, 'text');
+  recordPreviewDraw(clip.type, 'text', text);
 }
 
-export function drawTextWebGl(compositor: WebGlPreviewCompositor, clip: TextClip, bypassProcessing = false, colorPipeline?: ProjectColorPipeline): void {
-  compositor.drawText(clip.text, clip.transform, clip.style, clip.colorCorrection, clip.effects, { bypassProcessing, colorPipeline });
-  recordPreviewDraw(clip.type, 'text');
+export function drawTextWebGl(compositor: WebGlPreviewCompositor, clip: TextClip, bypassProcessing = false, colorPipeline?: ProjectColorPipeline, localTime = 0): void {
+  const text = resolveTextContent(clip, localTime);
+  if (clip.type === 'subtitle' && !text) {
+    return;
+  }
+  compositor.drawText(text, clip.transform, clip.style, clip.colorCorrection, clip.effects, { bypassProcessing, colorPipeline });
+  recordPreviewDraw(clip.type, 'text', text);
 }
 
 export function drawCreditsRoll2d(context: CanvasRenderingContext2D, canvas: HTMLCanvasElement, clip: CreditsClip, bypassProcessing = false, localTime = 0): void {
@@ -208,4 +216,11 @@ function resolveTextTransform(canvasHeight: number, clip: TextClip): TextClip['t
     x: 0,
     y: canvasHeight / 2 - clip.style.yOffset - clip.style.fontSize / 2
   };
+}
+
+function resolveTextContent(clip: TextClip, localTime: number): string {
+  if (clip.type !== 'subtitle') {
+    return clip.text;
+  }
+  return clip.dataSubtitle ? resolveDataSubtitleText(clip.dataSubtitle, clip.start + Math.max(0, localTime)) : clip.text;
 }

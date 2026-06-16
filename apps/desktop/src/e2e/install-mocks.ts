@@ -91,6 +91,7 @@ const pngFrame002 = 'C:/Media/frame002.png';
 const pngFrame003 = 'C:/Media/frame003.png';
 const tinySrt = 'C:/Media/tiny-subtitles.srt';
 const tinySubtitleCsv = 'C:/Media/tiny-subtitles.csv';
+const liveSubtitleCsv = 'C:/Media/live-score.csv';
 const silencePatternAudio = 'C:/Media/silence-pattern.wav';
 const whisperExecutable = 'C:/Tools/whisper.exe';
 const whisperModel = 'C:/Models/base.bin';
@@ -127,6 +128,7 @@ files.set(
   ['1', '00:00:00,500 --> 00:00:02,000', 'Hello subtitle', '', '2', '00:00:02,500 --> 00:00:04,000', 'Second subtitle', ''].join('\n')
 );
 files.set(tinySubtitleCsv, ['start_time,end_time,text', '0.25,1.25,CSV subtitle A', '00:00:01.500,00:00:02.500,CSV subtitle B', '3,4,CSV subtitle C'].join('\n'));
+files.set(liveSubtitleCsv, ['time,name,score,text', '0.5,Ada,12,Ada 12', '1.5,Lin,18,Lin 18'].join('\n'));
 files.set(lutLibraryPath, makeWarmContrastCube());
 files.set(
   pluginPath,
@@ -181,6 +183,7 @@ for (const path of [
   pngFrame002,
   pngFrame003,
   tinySrt,
+  liveSubtitleCsv,
   silencePatternAudio,
   whisperExecutable,
   whisperModel,

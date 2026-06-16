@@ -12,6 +12,7 @@ import { normalizeClipContentAnalysis } from './content-analysis';
 import { DEFAULT_PROJECT_COLOR_PIPELINE, normalizeProjectColorPipeline } from './color-pipeline';
 import { normalizeSpatialAudio } from './spatial-audio';
 import { normalizeClipPitchData } from './audio-pitch';
+import { normalizeDataSubtitleSource } from './subtitles/data-subtitle';
 import { cloneEffects } from './effects';
 import { normalizePathPoints } from './masks/path-mask';
 import type { ProjectFile } from './project/project-types';
@@ -51,6 +52,10 @@ import type {
   ClipVideoTemporalDenoise,
   ColorCorrection,
   CreditsClip,
+  DataSubtitleClip,
+  DataSubtitleRow,
+  DataSubtitleSource,
+  DataSubtitleSourceType,
   ExportRange,
   FrameInterpolationTargetFps,
   ImageClip,
@@ -143,6 +148,10 @@ export type {
   ClipVideoTemporalDenoise,
   ColorCorrection,
   CreditsClip,
+  DataSubtitleClip,
+  DataSubtitleRow,
+  DataSubtitleSource,
+  DataSubtitleSourceType,
   ExportRange,
   FrameInterpolationTargetFps,
   ImageClip,
@@ -1468,7 +1477,8 @@ export function serializeLegacyProject(project: Project): {
           multicam: clip.type === 'nested-sequence' ? normalizeMulticamSequence(clip.multicam, clip.duration) : undefined,
           sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
           keyframes: cloneClipKeyframesLocal(clip.keyframes),
-          pitchData: normalizeClipPitchData(clip.pitchData)
+          pitchData: normalizeClipPitchData(clip.pitchData),
+          dataSubtitle: clip.type === 'subtitle' ? normalizeDataSubtitleSource(clip.dataSubtitle) : undefined
         }))
       }))
     }

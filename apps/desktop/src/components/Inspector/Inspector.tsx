@@ -84,6 +84,7 @@ import {
   findCompleteClipGroup,
   normalizeClipGroups,
   normalizeProjectSpeakers,
+  parseDataSubtitleRows,
   sampleCurve,
   secondsToTimecode,
   setKenBurnsEndScaleKeyframes,
@@ -107,6 +108,8 @@ import {
   type ColorCurves,
   type ColorWheelValue,
   type CurvePoint,
+  type DataSubtitleSource,
+  type DataSubtitleSourceType,
   type Effect,
   type EffectType,
   type EffectPatch,
@@ -138,6 +141,7 @@ import {
   getFfmpegCapabilities,
   listenBridge,
   openFileDialog,
+  readFile,
   type ClipAnalysisProgressEvent,
   type MotionTrackProgressEvent
 } from '../../lib/tauri-bridge';
@@ -706,6 +710,42 @@ function ClipInspector({
       return;
     }
     commit({ keyframes });
+  };
+  const bindDataSubtitleSource = async () => {
+    if (clip.type !== 'subtitle') {
+      return;
+    }
+    try {
+      const [path] = await openFileDialog(false, [{ name: zhCN.fileDialogs.subtitleData, extensions: ['csv', 'json'] }]);
+      if (!path) {
+        return;
+      }
+      const sourceType: Exclude<DataSubtitleSourceType, 'template'> = path.toLowerCase().endsWith('.json') ? 'json' : 'csv';
+      const rows = parseDataSubtitleRows(await readFile(path), sourceType);
+      const template = clip.dataSubtitle?.template ?? (clip.text.trim() || '{row.text}');
+      const dataSubtitle: DataSubtitleSource = { sourceType, template, rows, filePath: path };
+      commit({ dataSubtitle, text: template });
+      showToast({ kind: 'success', title: zhCN.inspector.dataSubtitle.bound, message: zhCN.inspector.dataSubtitle.rowCount(rows.length) });
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.inspector.dataSubtitle.failed, message: error instanceof Error ? error.message : zhCN.inspector.dataSubtitle.failedMessage });
+    }
+  };
+  const updateDataSubtitleTemplate = (template: string) => {
+    if (clip.type !== 'subtitle') {
+      return;
+    }
+    const dataSubtitle: DataSubtitleSource = {
+      sourceType: clip.dataSubtitle?.sourceType ?? 'template',
+      template: template.trim() || '{row.text}',
+      rows: clip.dataSubtitle?.rows ?? [],
+      filePath: clip.dataSubtitle?.filePath
+    };
+    commit({ dataSubtitle, text: dataSubtitle.template });
+  };
+  const clearDataSubtitleSource = () => {
+    if (clip.type === 'subtitle') {
+      commit({ dataSubtitle: undefined });
+    }
   };
   const runPitchAnalysis = async () => {
     if (!asset || !('volume' in clip)) {
@@ -2376,6 +2416,40 @@ function ClipInspector({
                     </>
                   ) : null}
                 </div>
+                <details className="rounded-md border border-line bg-white" data-testid="data-subtitle-section" open>
+                  <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-slate-700">{zhCN.inspector.sections.dataSubtitle}</summary>
+                  <div className="space-y-2 border-t border-line p-2">
+                    <TextAreaField
+                      label={zhCN.inspector.fields.dataSubtitleTemplate}
+                      value={clip.dataSubtitle?.template ?? clip.text}
+                      testId="data-subtitle-template-input"
+                      onCommit={updateDataSubtitleTemplate}
+                    />
+                    <div className="rounded bg-panel p-2 text-xs text-slate-600" data-testid="data-subtitle-source-summary">
+                      {clip.dataSubtitle ? zhCN.inspector.dataSubtitle.summary(clip.dataSubtitle.sourceType, clip.dataSubtitle.rows.length) : zhCN.inspector.dataSubtitle.notBound}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        className="rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+                        type="button"
+                        disabled={selectedClipLocked}
+                        onClick={() => void bindDataSubtitleSource()}
+                        data-testid="data-subtitle-bind-button"
+                      >
+                        {zhCN.inspector.dataSubtitle.bind}
+                      </button>
+                      <button
+                        className="rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+                        type="button"
+                        disabled={selectedClipLocked || !clip.dataSubtitle}
+                        onClick={clearDataSubtitleSource}
+                        data-testid="data-subtitle-clear-button"
+                      >
+                        {zhCN.inspector.dataSubtitle.clear}
+                      </button>
+                    </div>
+                  </div>
+                </details>
                 <SubtitleStyleTemplatesPanel
                   templates={subtitleStyleTemplates}
                   onApply={applySubtitleStyleTemplate}

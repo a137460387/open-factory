@@ -8,6 +8,7 @@ import type {
   AudioFadeCurve,
   AudioChannelRoutingMode,
   ClipBorder,
+  DataSubtitleSource,
   ClipMaskKeyframe,
   ClipPanoramaOutputProjection,
   ClipPrivacyBlur,
@@ -366,6 +367,7 @@ export interface ExportClip {
   speaker: string | null;
   soundDesc: string | null;
   subtitleMode: ExportSubtitleMode | null;
+  dataSubtitle: DataSubtitleSource | null;
   creditsStyle: ExportCreditsStyle | null;
 }
 

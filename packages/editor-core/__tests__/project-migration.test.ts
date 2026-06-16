@@ -83,6 +83,40 @@ describe('project schema migration', () => {
     expect(legacy.project.timeline.tracks.at(-1)?.clips[0]).toMatchObject({ subtitleType: 'subtitle' });
   });
 
+  it('serializes and migrates live data subtitle source while old subtitles remain static', () => {
+    const project = makeProject();
+    project.timeline.tracks.push(
+      createTrack({
+        id: 'track-data-subtitle',
+        type: 'subtitle',
+        name: 'Live Data',
+        clips: [
+          makeSubtitleClip({
+            id: 'data-subtitle',
+            trackId: 'track-data-subtitle',
+            text: '{row.name}: {row.score}',
+            dataSubtitle: {
+              sourceType: 'csv',
+              template: '{row.name}: {row.score}',
+              rows: [{ time: 1, values: { name: 'Ada', score: '12' } }],
+              filePath: 'C:/Media/live-score.csv'
+            }
+          })
+        ]
+      })
+    );
+    project.sequences = [{ ...project.sequences[0], timeline: project.timeline }];
+
+    const file = serializeProject(project);
+    expect(file.project.timeline.tracks.at(-1)?.clips[0].dataSubtitle?.rows[0].values.name).toBe('Ada');
+
+    const migrated = migrateProjectFile(file);
+    expect(migrated.project.timeline.tracks.at(-1)?.clips[0].dataSubtitle?.template).toBe('{row.name}: {row.score}');
+
+    delete file.project.timeline.tracks.at(-1)!.clips[0].dataSubtitle;
+    expect(migrateProjectFile(file).project.timeline.tracks.at(-1)?.clips[0].dataSubtitle).toBeUndefined();
+  });
+
   it('serializes and migrates local clip content analysis while old clips remain unset', () => {
     const project = makeProject();
     project.timeline.tracks[0].clips = [

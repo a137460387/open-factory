@@ -204,7 +204,7 @@ export class PreviewRenderer {
     }
 
     if (renderClip.type === 'text' || renderClip.type === 'subtitle') {
-      drawTextWebGl(compositor, renderClip, bypassProcessing, colorPipeline);
+      drawTextWebGl(compositor, renderClip, bypassProcessing, colorPipeline, Math.max(0, playheadTime - renderClip.start));
     }
   }
 

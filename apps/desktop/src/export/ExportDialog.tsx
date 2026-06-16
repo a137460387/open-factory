@@ -24,6 +24,8 @@ import {
   normalizeVideoRestoration,
   runExportPreflight,
   assessQualityMetric,
+  calculateHistoricalEstimateErrorPercent,
+  estimateExportCost,
   normalizeTargetAspectRatio,
   resolveReframeDimensions,
   SequenceDependencyCycleError,
@@ -38,6 +40,7 @@ import {
   type ExportTaskStatus,
   type ExportTaskPriority,
   type ExportTask,
+  type ExportCostCpuLoad,
   type ExportLoudnessNormalization,
   type ExportPostExportScriptResult,
   type ExportTaskHistoryEntry,
@@ -311,6 +314,12 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
       })
     );
   }, [exportSettings, project.settings.fps, project.settings.height, project.settings.width, project.timeline]);
+  const exportCostEstimate = useMemo(() => estimateExportCost({ project, settings: exportSettings }), [exportSettings, project]);
+  const lastExportDurationSeconds = useMemo(() => getLastExportDurationSeconds(history), [history]);
+  const exportCostHistoryError = useMemo(
+    () => calculateHistoricalEstimateErrorPercent(exportCostEstimate.estimatedDurationSeconds, lastExportDurationSeconds),
+    [exportCostEstimate.estimatedDurationSeconds, lastExportDurationSeconds]
+  );
   const hardwareEncodingEligible = !isAudioOnly && (exportSettings.format === 'mp4' || exportSettings.format === 'mov');
   const hardwareEncodingRequested = hardwareEncodingEligible && exportSettings.hardwareEncoding === true;
   const formatOptions = isAudioVisualization ? AUDIO_VISUALIZATION_FORMATS : VIDEO_EXPORT_FORMATS;
@@ -1305,6 +1314,7 @@ function relinkFromPreflight(): void {
               tone={capabilities?.hardwareEncoderAvailable ? 'ok' : 'warn'}
             />
           </div>
+          <ExportCostEstimatePanel estimate={exportCostEstimate} historyErrorPercent={exportCostHistoryError} />
           {!isAudioOnly ? (
             <div className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3" data-testid="export-preview-panel">
               <label className="pt-1.5 text-xs font-medium text-slate-600">{t.preview.title}</label>
@@ -3331,6 +3341,40 @@ function ReframePreviewBox({ aspect, offsetX, offsetY }: { aspect: TargetAspectR
   );
 }
 
+function ExportCostEstimatePanel({ estimate, historyErrorPercent }: { estimate: ReturnType<typeof estimateExportCost>; historyErrorPercent?: number }) {
+  const t = zhCN.exportDialog.costEstimate;
+  return (
+    <section className="rounded-md border border-line bg-panel/60 p-3 text-xs text-slate-600" data-testid="export-cost-estimate-panel">
+      <div className="mb-2 flex items-start justify-between gap-3">
+        <div>
+          <div className="font-semibold text-slate-800">{t.title}</div>
+          <div className="mt-0.5 text-[11px] text-slate-500">{t.description}</div>
+        </div>
+        <div className="rounded-full bg-white px-2 py-1 font-semibold text-slate-700" data-testid="export-cost-complexity">
+          {t.complexityValue(estimate.complexityFactor)}
+        </div>
+      </div>
+      <div className="grid gap-2 md:grid-cols-5">
+        <CostMetric label={t.duration} value={formatCostDuration(estimate.estimatedDurationSeconds)} testId="export-cost-duration" />
+        <CostMetric label={t.diskUsage} value={t.sizeValue(estimate.estimatedFileSizeMb)} testId="export-cost-size" />
+        <CostMetric label={t.cpuLoad} value={formatCostCpuLoad(estimate.cpuLoad)} testId="export-cost-cpu" tone={estimate.cpuLoad === 'heavy' ? 'bad' : estimate.cpuLoad === 'medium' ? 'warn' : 'ok'} />
+        <CostMetric label={t.completion} value={formatCostCompletion(estimate.estimatedCompletionIso)} testId="export-cost-completion" />
+        <CostMetric label={t.historyError} value={formatCostHistoryError(historyErrorPercent)} testId="export-cost-history-error" />
+      </div>
+    </section>
+  );
+}
+
+function CostMetric({ label, value, testId, tone }: { label: string; value: string; testId: string; tone?: 'ok' | 'warn' | 'bad' }) {
+  const toneClass = tone === 'bad' ? 'text-rose-700' : tone === 'warn' ? 'text-amber-700' : tone === 'ok' ? 'text-emerald-700' : 'text-slate-800';
+  return (
+    <div className="rounded-md bg-white px-2 py-2" data-testid={testId}>
+      <div className="text-[11px] text-slate-500">{label}</div>
+      <div className={`mt-1 font-semibold tabular-nums ${toneClass}`}>{value}</div>
+    </div>
+  );
+}
+
 function ExportWarmupStatusPanel({ status }: { status: ExportWarmupUiStatus }) {
   const t = zhCN.exportDialog.warmup;
   const label = status.step ? t.steps[status.step] : undefined;
@@ -3472,6 +3516,45 @@ function formatDuration(value: number | undefined): string {
     return zhCN.common.unavailable;
   }
   return `${Math.round(value * 10) / 10}s`;
+}
+
+function formatCostDuration(value: number | undefined): string {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return zhCN.common.unavailable;
+  }
+  if (value < 60) {
+    return zhCN.exportDialog.costEstimate.durationSeconds(Math.max(1, Math.round(value)));
+  }
+  return zhCN.exportDialog.costEstimate.durationMinutes(Math.floor(value / 60), Math.round(value % 60));
+}
+
+function formatCostCompletion(value: string): string {
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) {
+    return zhCN.common.unavailable;
+  }
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatCostCpuLoad(value: ExportCostCpuLoad): string {
+  return zhCN.exportDialog.costEstimate.cpuLoadValues[value];
+}
+
+function formatCostHistoryError(value: number | undefined): string {
+  return typeof value === 'number' && Number.isFinite(value) ? zhCN.exportDialog.costEstimate.historyErrorValue(value) : zhCN.exportDialog.costEstimate.historyUnavailable;
+}
+
+function getLastExportDurationSeconds(history: ExportTaskHistoryEntry[]): number | undefined {
+  const entry = history.find((item) => item.startedAt && item.finishedAt);
+  if (!entry?.startedAt || !entry.finishedAt) {
+    return undefined;
+  }
+  const started = Date.parse(entry.startedAt);
+  const finished = Date.parse(entry.finishedAt);
+  if (!Number.isFinite(started) || !Number.isFinite(finished) || finished < started) {
+    return undefined;
+  }
+  return (finished - started) / 1000;
 }
 
 function formatOptionLabel(value: string): string {
