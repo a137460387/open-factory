@@ -20,7 +20,7 @@ import {
   normalizeClipPanoramaView,
   normalizeClipProjection,
   normalizeTransform,
-  parseTimecodeToSeconds,
+  parseFrameJumpQuery,
   resizeClipTransform,
   rotateClipTransform,
   screenPointToCanvasPoint,
@@ -38,7 +38,8 @@ import {
   type ReviewAnnotation,
   type ReviewAnnotationType,
   type Sequence,
-  type TimecodeParseError,
+  type FrameJumpParseError,
+  type FrameSearchHistoryEntry,
   type Transform,
   type Timeline
 } from '@open-factory/editor-core';
@@ -60,6 +61,7 @@ import {
   type PreviewCompareMode
 } from '../../lib/preview/compare';
 import { listProjectSnapshots, readProjectSnapshot, type ProjectSnapshotEntry } from '../../lib/projectSnapshots';
+import { appendFrameSearchHistory, readFrameSearchHistory } from '../../lib/frameSearchHistory';
 import { PreviewRenderer, type PreviewFrameReadback } from '../../lib/preview/renderer';
 import {
   DEFAULT_PREVIEW_PERFORMANCE_SETTINGS,
@@ -151,6 +153,7 @@ export function PreviewCanvas({
   const [frameSearchQuery, setFrameSearchQuery] = useState('');
   const [frameSearchFocused, setFrameSearchFocused] = useState(false);
   const [frameSearchError, setFrameSearchError] = useState<string>();
+  const [frameSearchHistory, setFrameSearchHistory] = useState<FrameSearchHistoryEntry[]>([]);
   const prerenderCenter = Math.round(playheadTime * 2) / 2;
   const fps = project.settings.fps || 30;
   const snapshotCompareEnabled = Boolean(snapshotCompareProject);
@@ -175,7 +178,12 @@ export function PreviewCanvas({
   const chromaKeyPickTarget = useMemo(() => editableCanvasClips.find((item) => item.clip.id === chromaKeyPickClipId), [chromaKeyPickClipId, editableCanvasClips]);
   const selectedPathMask = useMemo(() => selectedEditableClip?.clip.masks?.find((mask) => mask.type === 'path'), [selectedEditableClip]);
   const frameSearchCandidates = useMemo(() => buildFrameSearchCandidates(project, frameSearchQuery), [frameSearchQuery, project]);
-  const showFrameSearchCandidates = frameSearchFocused && frameSearchQuery.trim().length > 0 && !isTimecodeLikeQuery(frameSearchQuery);
+  const showFrameSearchCandidates = frameSearchFocused && frameSearchQuery.trim().length > 0 && !isFrameJumpLikeQuery(frameSearchQuery);
+  const showFrameSearchHistory = frameSearchFocused && frameSearchQuery.trim().length === 0 && frameSearchHistory.length > 0;
+
+  useEffect(() => {
+    setFrameSearchHistory(readFrameSearchHistory());
+  }, []);
 
   useEffect(() => {
     if (typeof colorScopesVisible === 'boolean') {
@@ -500,10 +508,34 @@ export function PreviewCanvas({
     if (candidate.type === 'clip') {
       setSelectedClipIds([candidate.id]);
     }
+    recordFrameSearchHistory({
+      type: candidate.type,
+      query: candidate.label,
+      label: candidate.label,
+      time: candidate.time,
+      ...(candidate.type === 'clip' ? { selectedClipIds: [candidate.id] } : {})
+    });
     setFrameSearchError(undefined);
     setFrameSearchQuery(candidate.label);
     setFrameSearchFocused(false);
     frameSearchInputRef.current?.blur();
+  }
+
+  function jumpToFrameSearchHistoryEntry(entry: FrameSearchHistoryEntry): void {
+    setIsPlaying(false);
+    setPlayheadTime(entry.time);
+    if (entry.selectedClipIds) {
+      setSelectedClipIds(entry.selectedClipIds);
+    }
+    recordFrameSearchHistory(entry);
+    setFrameSearchError(undefined);
+    setFrameSearchQuery(entry.query);
+    setFrameSearchFocused(false);
+    frameSearchInputRef.current?.blur();
+  }
+
+  function recordFrameSearchHistory(entry: FrameSearchHistoryEntry): void {
+    setFrameSearchHistory(appendFrameSearchHistory({ ...entry, createdAt: new Date().toISOString() }));
   }
 
   function executeFrameSearch(): void {
@@ -512,14 +544,20 @@ export function PreviewCanvas({
       setFrameSearchError(undefined);
       return;
     }
-    if (isTimecodeLikeQuery(query)) {
-      const parsed = parseTimecodeToSeconds(query, { fps, duration: getTimelinePlaybackDuration(project.timeline) });
+    if (isFrameJumpLikeQuery(query)) {
+      const parsed = parseFrameJumpQuery(query, { fps, duration: getTimelinePlaybackDuration(project.timeline), timecodeFormat: project.settings.timecodeFormat ?? 'ndf' });
       if (!parsed.ok) {
         setFrameSearchError(frameSearchErrorMessage(parsed.error, fps));
         return;
       }
       setIsPlaying(false);
       setPlayheadTime(parsed.value.seconds);
+      recordFrameSearchHistory({
+        type: parsed.value.kind,
+        query,
+        label: parsed.value.kind === 'frame' ? t.frameSearchFrameLabel(parsed.value.frameNumber ?? parsed.value.totalFrames) : parsed.value.timecode,
+        time: parsed.value.seconds
+      });
       setFrameSearchError(undefined);
       frameSearchInputRef.current?.blur();
       return;
@@ -1513,6 +1551,26 @@ export function PreviewCanvas({
               ))}
             </div>
           ) : null}
+          {showFrameSearchHistory ? (
+            <div className="absolute bottom-8 left-0 z-50 max-h-44 w-full overflow-auto rounded-md border border-white/15 bg-[#0b1120] py-1 shadow-soft" data-testid="frame-search-history">
+              {frameSearchHistory.map((entry, index) => (
+                <button
+                  key={`${entry.type}-${entry.query}-${entry.time}`}
+                  type="button"
+                  className="flex w-full items-center justify-between gap-3 px-2 py-1.5 text-left text-xs text-slate-100 hover:bg-white/10"
+                  data-testid={`frame-search-history-${entry.type}-${index}`}
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => jumpToFrameSearchHistoryEntry(entry)}
+                >
+                  <span className="min-w-0 truncate">
+                    <span className="mr-2 rounded bg-white/10 px-1.5 py-0.5 text-[10px] uppercase text-slate-300">{frameSearchHistoryTypeLabel(entry.type)}</span>
+                    {entry.label}
+                  </span>
+                  <span className="shrink-0 font-mono tabular-nums text-slate-400">{secondsToTimecode(entry.time, fps, project.settings.timecodeFormat ?? 'ndf')}</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
         </div>
       </div>
     </section>
@@ -1607,12 +1665,12 @@ interface FrameSearchCandidate {
   time: number;
 }
 
-function isTimecodeLikeQuery(query: string): boolean {
+function isFrameJumpLikeQuery(query: string): boolean {
   const trimmed = query.trim();
-  return trimmed.includes(':') && /^[\d:]+$/.test(trimmed);
+  return (trimmed.includes(':') && /^[\d:]+$/.test(trimmed)) || /^f/i.test(trimmed);
 }
 
-function frameSearchErrorMessage(error: TimecodeParseError, fps: number): string {
+function frameSearchErrorMessage(error: FrameJumpParseError, fps: number): string {
   const t = zhCN.preview;
   if (error === 'minutes') {
     return t.frameSearchMinuteError;
@@ -1626,7 +1684,24 @@ function frameSearchErrorMessage(error: TimecodeParseError, fps: number): string
   if (error === 'duration') {
     return t.frameSearchDurationError;
   }
+  if (error === 'frame-number') {
+    return t.frameSearchFrameNumberFormatError;
+  }
   return t.frameSearchFormatError;
+}
+
+function frameSearchHistoryTypeLabel(type: FrameSearchHistoryEntry['type']): string {
+  const t = zhCN.preview;
+  if (type === 'timecode') {
+    return t.frameSearchTimecodeType;
+  }
+  if (type === 'frame') {
+    return t.frameSearchFrameType;
+  }
+  if (type === 'marker') {
+    return t.frameSearchMarkerType;
+  }
+  return t.frameSearchClipType;
 }
 
 function buildFrameSearchCandidates(project: Project, query: string): FrameSearchCandidate[] {

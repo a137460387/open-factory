@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { clamp, framesToSeconds, normalizeProjectFps, parseTimecodeToSeconds, round, secondsToFrames, secondsToTicks, secondsToTimecode, snap, ticksToSeconds, ticksToTimecode } from '../src';
+import {
+  clamp,
+  frameNumberToTimecode,
+  framesToSeconds,
+  normalizeProjectFps,
+  parseFrameJumpQuery,
+  parseTimecodeToSeconds,
+  round,
+  secondsToFrames,
+  secondsToTicks,
+  secondsToTimecode,
+  snap,
+  ticksToSeconds,
+  ticksToTimecode
+} from '../src';
 
 describe('time helpers', () => {
   it('clamps values and validates ranges', () => {
@@ -50,5 +64,20 @@ describe('time helpers', () => {
     expect(parseTimecodeToSeconds('00:60:00:00', { fps: 30 })).toEqual({ ok: false, error: 'minutes' });
     expect(parseTimecodeToSeconds('0:00:00:00', { fps: 30 })).toEqual({ ok: false, error: 'format' });
     expect(parseTimecodeToSeconds('00:00:04:00', { fps: 30, duration: 3 })).toEqual({ ok: false, error: 'duration' });
+  });
+
+  it('parses direct frame jump queries and rejects out-of-range frames', () => {
+    expect(parseFrameJumpQuery('f36', { fps: 24, duration: 3 })).toEqual({
+      ok: true,
+      value: { kind: 'frame', seconds: 1.5, totalFrames: 36, timecode: '00:00:01:12', frameNumber: 36 }
+    });
+    expect(parseFrameJumpQuery('F0000', { fps: 30 })).toMatchObject({ ok: true, value: { seconds: 0, totalFrames: 0 } });
+    expect(parseFrameJumpQuery('f999', { fps: 30, duration: 1 })).toEqual({ ok: false, error: 'duration' });
+  });
+
+  it('converts frame numbers to timecode', () => {
+    expect(frameNumberToTimecode(1234, 24)).toBe('00:00:51:10');
+    expect(frameNumberToTimecode(60, 29.97)).toBe('00:00:02:00');
+    expect(() => frameNumberToTimecode(-1, 30)).toThrow(RangeError);
   });
 });

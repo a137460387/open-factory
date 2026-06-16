@@ -36,6 +36,7 @@ export * from './timeline-notes';
 export * from './timeline-virtualization';
 export * from './sync-compare';
 export * from './timeline-search';
+export * from './frame-search';
 export * from './scene-reorder';
 export * from './vfr';
 export * from './beats';

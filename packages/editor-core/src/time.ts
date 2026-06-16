@@ -5,6 +5,7 @@ export const SUPPORTED_PROJECT_FPS = [23.976, 24, 25, 29.97, 30, 50, 59.94, 60] 
 export type SupportedProjectFps = (typeof SUPPORTED_PROJECT_FPS)[number];
 export type TimecodeFormat = 'ndf' | 'df';
 export type TimecodeParseError = 'format' | 'minutes' | 'seconds' | 'frames' | 'duration';
+export type FrameJumpParseError = TimecodeParseError | 'frame-number';
 
 export interface ParsedTimecode {
   seconds: number;
@@ -16,6 +17,16 @@ export interface ParsedTimecode {
 }
 
 export type ParseTimecodeResult = { ok: true; value: ParsedTimecode } | { ok: false; error: TimecodeParseError };
+
+export interface ParsedFrameJump {
+  kind: 'timecode' | 'frame';
+  seconds: number;
+  totalFrames: number;
+  timecode: string;
+  frameNumber?: number;
+}
+
+export type ParseFrameJumpResult = { ok: true; value: ParsedFrameJump } | { ok: false; error: FrameJumpParseError };
 
 export function clamp(value: number, min: number, max: number): number {
   if (min > max) {
@@ -48,6 +59,13 @@ export function framesToSeconds(frames: number, fps = DEFAULT_FPS): number {
     throw new RangeError('fps must be greater than 0');
   }
   return round(frames / fps);
+}
+
+export function frameNumberToTimecode(frameNumber: number, fps = DEFAULT_FPS, format: TimecodeFormat = 'ndf'): string {
+  if (!Number.isFinite(frameNumber) || frameNumber < 0) {
+    throw new RangeError('frameNumber must be zero or greater');
+  }
+  return secondsToTimecode(framesToSeconds(Math.floor(frameNumber), fps), fps, format);
 }
 
 export function normalizeProjectFps(value: number | undefined): SupportedProjectFps {
@@ -130,6 +148,50 @@ export function parseTimecodeToSeconds(value: string, options: { fps?: number; d
       minutes,
       secondsPart,
       frames
+    }
+  };
+}
+
+export function parseFrameJumpQuery(value: string, options: { fps?: number; duration?: number; timecodeFormat?: TimecodeFormat } = {}): ParseFrameJumpResult {
+  const trimmed = value.trim();
+  const frameMatch = /^f(\d+)$/i.exec(trimmed);
+  const fps = normalizeProjectFps(options.fps ?? DEFAULT_FPS);
+  const timecodeFormat = options.timecodeFormat ?? 'ndf';
+  if (/^f/i.test(trimmed) && !frameMatch) {
+    return { ok: false, error: 'frame-number' };
+  }
+  if (frameMatch) {
+    const frameNumber = Number(frameMatch[1]);
+    if (!Number.isSafeInteger(frameNumber) || frameNumber < 0) {
+      return { ok: false, error: 'frame-number' };
+    }
+    const seconds = framesToSeconds(frameNumber, fps);
+    if (typeof options.duration === 'number' && Number.isFinite(options.duration) && seconds > Math.max(0, options.duration) + 1 / Math.max(1, fps)) {
+      return { ok: false, error: 'duration' };
+    }
+    return {
+      ok: true,
+      value: {
+        kind: 'frame',
+        seconds,
+        totalFrames: frameNumber,
+        timecode: frameNumberToTimecode(frameNumber, fps, timecodeFormat),
+        frameNumber
+      }
+    };
+  }
+
+  const parsed = parseTimecodeToSeconds(trimmed, { fps, duration: options.duration });
+  if (!parsed.ok) {
+    return parsed;
+  }
+  return {
+    ok: true,
+    value: {
+      kind: 'timecode',
+      seconds: parsed.value.seconds,
+      totalFrames: parsed.value.totalFrames,
+      timecode: secondsToTimecode(parsed.value.seconds, fps, timecodeFormat)
     }
   };
 }
