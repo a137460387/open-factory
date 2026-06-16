@@ -12,8 +12,17 @@ test('translates subtitle clips through a mocked API into a new subtitle track',
 
   await page.getByTestId('toolbar-settings-button').click();
   await page.getByTestId('settings-tab-translation').click();
+  await expect(page.getByTestId('translation-third-party-warning')).toContainText('第三方服务');
   await page.getByTestId('translation-api-key-input').fill('deepl-test-key');
   await page.getByTestId('translation-target-language-input').fill('ZH');
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const raw = localStorage.getItem('open-factory:translation-settings');
+        return raw ? (JSON.parse(raw) as { apiKey?: string }).apiKey ?? null : null;
+      })
+    )
+    .toBeNull();
   await page.getByTestId('settings-close-button').click();
 
   await expect(page.getByTestId('subtitle-translate-button')).toBeEnabled();

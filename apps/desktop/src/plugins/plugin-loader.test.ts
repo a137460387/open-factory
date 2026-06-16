@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createProject } from '@open-factory/editor-core';
-import { createBuiltinExamplePlugin, loadPluginFiles, normalizePluginMetadata, type PluginRuntime, type PluginSourceFile } from './plugin-loader';
+import { createBuiltinExamplePlugin, extractManifestPermissions, loadPluginFiles, normalizePluginMetadata, type PluginRuntime, type PluginSourceFile } from './plugin-loader';
 
 describe('plugin loader', () => {
   it('loads valid plugins and isolates load errors', async () => {
@@ -75,6 +75,27 @@ describe('plugin loader', () => {
         outputPath: 'C:/Exports/out.mp4'
       })
     ).rejects.toThrow('export-hook permission');
+  });
+
+  it('extracts manifest permissions from plugin source without executing it', () => {
+    const source = [
+      'module.exports = {',
+      '  manifest: {',
+      '    id: "static-plugin",',
+      '    permissions: ["export-hook", "menu-register", "network"]',
+      '  },',
+      '  hooks: {',
+      '    onExportBefore() { throw new Error("should not run"); }',
+      '  }',
+      '};'
+    ].join('\n');
+
+    expect(extractManifestPermissions(source)).toEqual(['export-hook', 'menu-register']);
+  });
+
+  it('returns undefined when source has no static manifest permissions', () => {
+    expect(extractManifestPermissions('module.exports = { hooks: {} };')).toBeUndefined();
+    expect(extractManifestPermissions('module.exports = { manifest: { permissions: makePermissions() } };')).toBeUndefined();
   });
 });
 

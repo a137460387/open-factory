@@ -65,6 +65,7 @@ async function translateWithDeepL(texts: string[], settings: TranslationSettings
   if (!hasAcceptedTranslationTOS()) {
     throw new Error('TRANSLATION_TOS_NOT_ACCEPTED');
   }
+  const apiKey = requireTranslationApiKey(settings);
   const body = new URLSearchParams();
   for (const text of texts) {
     body.append('text', text);
@@ -73,7 +74,7 @@ async function translateWithDeepL(texts: string[], settings: TranslationSettings
   const response = await fetchImpl('https://api-free.deepl.com/v2/translate', {
     method: 'POST',
     headers: {
-      Authorization: `DeepL-Auth-Key ${settings.apiKey}`,
+      Authorization: `DeepL-Auth-Key ${apiKey}`,
       'Content-Type': 'application/x-www-form-urlencoded'
     },
     body
@@ -89,7 +90,8 @@ async function translateWithGoogle(texts: string[], settings: TranslationSetting
   if (!hasAcceptedTranslationTOS()) {
     throw new Error('TRANSLATION_TOS_NOT_ACCEPTED');
   }
-  const response = await fetchImpl(`https://translation.googleapis.com/language/translate/v2?key=${encodeURIComponent(settings.apiKey)}`, {
+  const apiKey = requireTranslationApiKey(settings);
+  const response = await fetchImpl(`https://translation.googleapis.com/language/translate/v2?key=${encodeURIComponent(apiKey)}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
@@ -105,4 +107,12 @@ async function translateWithGoogle(texts: string[], settings: TranslationSetting
   }
   const payload = (await response.json()) as { data?: { translations?: Array<{ translatedText?: unknown }> } };
   return (payload.data?.translations ?? []).map((item) => String(item.translatedText ?? ''));
+}
+
+function requireTranslationApiKey(settings: TranslationSettings): string {
+  const apiKey = settings.apiKey.trim();
+  if (!apiKey) {
+    throw new Error('TRANSLATION_API_KEY_REQUIRED');
+  }
+  return apiKey;
 }

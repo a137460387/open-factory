@@ -1,12 +1,9 @@
-import { createId, type Clip, type Timeline } from './model';
+import { createId } from './model';
+import type { BeatMarker, Clip, Timeline } from './model-types';
 import { round } from './time';
 
 export type BeatSensitivity = 'low' | 'medium' | 'high';
-
-export interface BeatMarker {
-  id: string;
-  time: number;
-}
+export type { BeatMarker } from './model-types';
 
 export interface RmsSample {
   time: number;

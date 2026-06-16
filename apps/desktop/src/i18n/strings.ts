@@ -499,8 +499,9 @@ const zh = {
       provider: '服务',
       apiKey: 'API Key',
       targetLanguage: '目标语言',
-      keyStorageNote: 'Key 仅存储在您的设备上',
-      localOnlyNote: '只发送字幕文本，不上传媒体文件；密钥保存在本机浏览器存储。'
+      thirdPartyWarning: '启用翻译功能将向第三方服务（DeepL/Google）发送字幕文本内容',
+      keyStorageNote: 'Key 存储在系统 Keychain/凭据管理器，不写入浏览器存储。',
+      localOnlyNote: '只发送字幕文本，不上传媒体文件；请确认字幕内容可交由第三方翻译服务处理。'
     },
     proxy: {
       title: '代理媒体',
@@ -577,6 +578,7 @@ const zh = {
       webdavDescription: '保存项目时通过 PUT 上传项目文件；失败只记录 warning，不阻断保存。',
       enableWebdav: '启用 WebDAV 备份',
       url: 'WebDAV URL',
+      httpsRequiredNote: 'WebDAV 连接需要使用 HTTPS（仅 localhost 允许 HTTP）。',
       username: '用户名',
       password: '密码',
       passwordStorageNote: '密码以 AES 加密形式保存在本机 AppData，不写入 settings.json。',
@@ -599,6 +601,7 @@ const zh = {
       description: '通过 WebDAV 同步 .ofpreset.json 预设包，密码只保存在本机加密文件中。',
       enabled: '启用云同步',
       url: 'WebDAV 预设包 URL',
+      httpsRequiredNote: 'WebDAV 连接需要使用 HTTPS（仅 localhost 允许 HTTP）。',
       username: '用户名',
       password: '密码',
       syncOnStartup: '应用启动时自动同步',
@@ -2167,6 +2170,7 @@ const zh = {
         local: '本地复制'
       },
       webdavUrl: 'WebDAV URL',
+      httpsRequiredNote: 'WebDAV 连接需要使用 HTTPS（仅 localhost 允许 HTTP）。',
       username: '用户名',
       password: '密码',
       localDirectory: '复制目录',
@@ -3317,8 +3321,9 @@ const enOverrides = {
       provider: 'Provider',
       apiKey: 'API Key',
       targetLanguage: 'Target Language',
-      keyStorageNote: 'The key is stored only on this device',
-      localOnlyNote: 'Only subtitle text is sent; media files are not uploaded. The key stays in local browser storage.'
+      thirdPartyWarning: 'Enabling translation sends subtitle text to third-party services (DeepL/Google).',
+      keyStorageNote: 'The key is stored in the system Keychain/Credential Manager and is not written to browser storage.',
+      localOnlyNote: 'Only subtitle text is sent; media files are not uploaded. Confirm the subtitles can be processed by a third-party translation service.'
     },
     proxy: {
       title: 'Proxy Media',
@@ -3395,6 +3400,7 @@ const enOverrides = {
       webdavDescription: 'Upload the project file with PUT on save; failures warn without blocking save.',
       enableWebdav: 'Enable WebDAV backup',
       url: 'WebDAV URL',
+      httpsRequiredNote: 'WebDAV connections require HTTPS; HTTP is allowed only for localhost.',
       username: 'Username',
       password: 'Password',
       passwordStorageNote: 'The password is AES-encrypted in local AppData and is not written to settings.json.',
@@ -3417,6 +3423,7 @@ const enOverrides = {
       description: 'Sync .ofpreset.json preset packages through WebDAV. The password stays in a local encrypted file.',
       enabled: 'Enable cloud sync',
       url: 'WebDAV preset package URL',
+      httpsRequiredNote: 'WebDAV connections require HTTPS; HTTP is allowed only for localhost.',
       username: 'Username',
       password: 'Password',
       syncOnStartup: 'Auto-sync on app startup',
@@ -4754,6 +4761,7 @@ const enOverrides = {
         local: 'Local Copy'
       },
       webdavUrl: 'WebDAV URL',
+      httpsRequiredNote: 'WebDAV connections require HTTPS; HTTP is allowed only for localhost.',
       username: 'Username',
       password: 'Password',
       localDirectory: 'Copy Folder',

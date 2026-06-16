@@ -37,17 +37,9 @@ import {
   normalizeStabilization,
   normalizeTextPath,
   normalizeTransform,
-  normalizeVideoRestoration,
-  type MediaFolder,
-  type Clip,
-  type ImageSequenceInfo,
-  type MediaAsset,
-  type MediaMetadata,
-  type Project,
-  type Sequence,
-  type Timeline,
-  type Transition
+  normalizeVideoRestoration
 } from '../model';
+import type { Clip, ImageSequenceInfo, MediaAsset, MediaFolder, MediaMetadata, Project, Sequence, Timeline, Transition } from '../model-types';
 import { normalizeClipGroups } from '../clip-groups';
 import { normalizeTimelineLabelColor } from '../timeline-color-labels';
 import { normalizeMediaFolderId, normalizeMediaFolders, normalizeMediaImportedAt } from '../media-folders';
@@ -123,6 +115,14 @@ export function serializeProjectFile(project: Project, projectPath?: string): Pr
     },
     warnings: warnings.length > 0 ? warnings : undefined
   };
+}
+
+export function serializeProject(project: Project, projectPath?: string): ProjectFileV2 {
+  return serializeProjectFile(project, projectPath);
+}
+
+export function deserializeProject(file: ProjectFile, projectPath?: string): Project {
+  return migrateProjectFile(file, projectPath).project;
 }
 
 export function migrateProjectFile(file: ProjectFile, projectPath?: string): MigrationResult {

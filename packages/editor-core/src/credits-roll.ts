@@ -1,15 +1,6 @@
 import { round } from './time';
-import type { TextStyle } from './model';
-
-export interface CreditsRow {
-  role: string;
-  name: string;
-}
-
-export interface CreditsStyle extends TextStyle {
-  lineSpacing: number;
-  horizontalMargin: number;
-}
+import type { CreditsRow, CreditsStyle } from './model-types';
+export type { CreditsRow, CreditsStyle } from './model-types';
 
 export const DEFAULT_CREDITS_ROLL_SPEED = 80;
 

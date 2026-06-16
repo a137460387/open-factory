@@ -1,7 +1,7 @@
-import type { Clip, Timeline, Track } from './model';
+import type { Clip, Timeline, TimelineLabelColor, Track } from './model-types';
+export type { TimelineLabelColor } from './model-types';
 
 export const TIMELINE_LABEL_COLORS = ['red', 'orange', 'amber', 'yellow', 'lime', 'green', 'teal', 'cyan', 'blue', 'indigo', 'purple', 'pink'] as const;
-export type TimelineLabelColor = (typeof TIMELINE_LABEL_COLORS)[number];
 
 export const TIMELINE_LABEL_COLOR_HEX: Record<TimelineLabelColor, string> = {
   red: '#ef4444',

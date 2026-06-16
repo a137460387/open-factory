@@ -1,3 +1,4 @@
+use crate::path_validator::validate_path;
 use aes_gcm::aead::{Aead, KeyInit};
 use aes_gcm::{Aes256Gcm, Nonce};
 use base64::{engine::general_purpose, Engine as _};
@@ -11,6 +12,8 @@ use tauri::{AppHandle, Manager};
 const SECRET_FILE_NAME: &str = "backup-secrets.json";
 const EXPORT_UPLOAD_SECRET_FILE_NAME: &str = "export-upload-secrets.json";
 const EXPORT_PRESET_SYNC_SECRET_FILE_NAME: &str = "export-preset-sync-secrets.json";
+const EXPORT_HISTORY_FILE_NAME: &str = "export-history.json";
+const WEBDAV_HTTPS_REQUIRED_ERROR: &str = "WebDAV 连接需要使用 HTTPS（仅 localhost 允许 HTTP）";
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -123,6 +126,13 @@ struct BackupSecretFile {
     ciphertext: String,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ExportHistoryWhitelistEntry {
+    output_path: String,
+    status: String,
+}
+
 #[tauri::command]
 pub async fn put_webdav_project(
     request: WebdavProjectBackupRequest,
@@ -148,9 +158,11 @@ pub async fn put_webdav_project(
 
 #[tauri::command]
 pub async fn put_webdav_export_file(
+    app: AppHandle,
     request: WebdavExportUploadRequest,
 ) -> Result<WebdavExportUploadResult, String> {
-    let bytes = fs::read(&request.source_path)
+    let source_path = validate_webdav_export_upload_source(&app, &request.source_path)?;
+    let bytes = fs::read(&source_path)
         .map_err(|error| format!("Unable to read export file for upload: {}", error))?;
     let args = build_webdav_export_put_args(&request, bytes.len() as u64)?;
     let client = reqwest::Client::new();
@@ -173,6 +185,54 @@ pub async fn put_webdav_export_file(
         status: status.as_u16(),
         bytes: args.content_len,
     })
+}
+
+fn validate_webdav_export_upload_source(
+    app: &AppHandle,
+    source_path: &str,
+) -> Result<PathBuf, String> {
+    let history_path = export_history_path(app)?;
+    validate_webdav_export_upload_source_with_history(source_path, &history_path, |path| {
+        validate_path(app, path)
+    })
+}
+
+fn validate_webdav_export_upload_source_with_history(
+    source_path: &str,
+    history_path: &Path,
+    validate_source_path: impl FnOnce(&Path) -> Result<PathBuf, String>,
+) -> Result<PathBuf, String> {
+    if source_path.trim().is_empty() {
+        return Err("Export upload source path is required.".to_string());
+    }
+    let safe_path = validate_source_path(Path::new(source_path))?;
+    ensure_completed_export_history_output_path(history_path, &safe_path)?;
+    Ok(safe_path)
+}
+
+fn ensure_completed_export_history_output_path(
+    history_path: &Path,
+    source_path: &Path,
+) -> Result<(), String> {
+    let raw = fs::read_to_string(history_path).map_err(|error| {
+        if error.kind() == std::io::ErrorKind::NotFound {
+            "Export upload source path is not a completed export history output.".to_string()
+        } else {
+            format!("Unable to read export history: {}", error)
+        }
+    })?;
+    let entries: Vec<ExportHistoryWhitelistEntry> = serde_json::from_str(&raw)
+        .map_err(|error| format!("Unable to parse export history: {}", error))?;
+    let is_completed_export = entries.iter().any(|entry| {
+        entry.status == "success"
+            && fs::canonicalize(Path::new(&entry.output_path))
+                .is_ok_and(|output_path| output_path == source_path)
+    });
+    if is_completed_export {
+        Ok(())
+    } else {
+        Err("Export upload source path is not a completed export history output.".to_string())
+    }
 }
 
 #[tauri::command]
@@ -297,15 +357,7 @@ fn write_password_secret(
 pub fn build_webdav_put_args(
     request: &WebdavProjectBackupRequest,
 ) -> Result<WebdavPutArgs, String> {
-    let url = request.url.trim();
-    if url.is_empty() {
-        return Err("WebDAV URL is required.".to_string());
-    }
-    let parsed = reqwest::Url::parse(url).map_err(|error| error.to_string())?;
-    match parsed.scheme() {
-        "http" | "https" => {}
-        _ => return Err("WebDAV URL must use http or https.".to_string()),
-    }
+    let parsed = parse_webdav_http_url(&request.url)?;
     if request.contents.is_empty() {
         return Err("Project backup contents are empty.".to_string());
     }
@@ -331,15 +383,7 @@ pub fn build_webdav_export_put_args(
     request: &WebdavExportUploadRequest,
     content_len: u64,
 ) -> Result<WebdavExportPutArgs, String> {
-    let url = request.url.trim();
-    if url.is_empty() {
-        return Err("WebDAV URL is required.".to_string());
-    }
-    let parsed = reqwest::Url::parse(url).map_err(|error| error.to_string())?;
-    match parsed.scheme() {
-        "http" | "https" => {}
-        _ => return Err("WebDAV URL must use http or https.".to_string()),
-    }
+    let parsed = parse_webdav_http_url(&request.url)?;
     if request.source_path.trim().is_empty() {
         return Err("Export upload source path is required.".to_string());
     }
@@ -416,9 +460,16 @@ fn parse_webdav_http_url(url: &str) -> Result<reqwest::Url, String> {
     }
     let parsed = reqwest::Url::parse(url).map_err(|error| error.to_string())?;
     match parsed.scheme() {
-        "http" | "https" => Ok(parsed),
+        "https" => Ok(parsed),
+        "http" if is_local_http_webdav_url(&parsed) => Ok(parsed),
+        "http" => Err(WEBDAV_HTTPS_REQUIRED_ERROR.to_string()),
         _ => Err("WebDAV URL must use http or https.".to_string()),
     }
+}
+
+fn is_local_http_webdav_url(url: &reqwest::Url) -> bool {
+    url.host_str()
+        .is_some_and(|host| host.eq_ignore_ascii_case("localhost") || host == "127.0.0.1")
 }
 
 fn encrypt_password(app_dir: &Path, password: &str) -> Result<BackupSecretFile, String> {
@@ -475,6 +526,10 @@ fn derive_nonce(password: &str) -> [u8; 12] {
     nonce
 }
 
+fn export_history_path(app: &AppHandle) -> Result<PathBuf, String> {
+    Ok(app_data_dir(app)?.join(EXPORT_HISTORY_FILE_NAME))
+}
+
 fn secret_file_path(app: &AppHandle, file_name: &str) -> Result<PathBuf, String> {
     Ok(app_data_dir(app)?.join(file_name))
 }
@@ -491,6 +546,7 @@ fn app_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::path_validator::{PathValidator, PATH_NOT_ALLOWED};
 
     #[test]
     fn builds_webdav_put_args_for_basic_auth_json_upload() {
@@ -530,6 +586,35 @@ mod tests {
     }
 
     #[test]
+    fn allows_https_webdav_urls() {
+        let parsed = parse_webdav_http_url("https://dav.example.test/backups/demo.cutproj.json")
+            .expect("https should be accepted");
+
+        assert_eq!(parsed.scheme(), "https");
+        assert_eq!(parsed.host_str(), Some("dav.example.test"));
+    }
+
+    #[test]
+    fn allows_local_http_webdav_urls_for_debugging() {
+        for url in [
+            "http://localhost:8080/backups/demo.cutproj.json",
+            "http://127.0.0.1:8080/backups/demo.cutproj.json",
+        ] {
+            let parsed = parse_webdav_http_url(url).expect("local http should be accepted");
+
+            assert_eq!(parsed.scheme(), "http");
+        }
+    }
+
+    #[test]
+    fn rejects_remote_http_webdav_urls() {
+        let error =
+            parse_webdav_http_url("http://dav.example.test/backups/demo.cutproj.json").unwrap_err();
+
+        assert_eq!(error, WEBDAV_HTTPS_REQUIRED_ERROR);
+    }
+
+    #[test]
     fn builds_webdav_export_put_args_for_file_upload() {
         let args = build_webdav_export_put_args(
             &WebdavExportUploadRequest {
@@ -565,6 +650,79 @@ mod tests {
         .unwrap_err();
 
         assert!(error.contains("source path"));
+    }
+
+    #[test]
+    fn rejects_export_upload_source_outside_path_allowlist() {
+        let root = test_root("rejects-unauthorized-upload-source");
+        fs::create_dir_all(&root).expect("create test root");
+        let history_path = root.join("export-history.json");
+        let unauthorized_path = platform_unauthorized_path();
+        write_export_history(&history_path, &[(&unauthorized_path, "success")]);
+        let validator = PathValidator::default();
+
+        let error = validate_webdav_export_upload_source_with_history(
+            &path_to_string(&unauthorized_path),
+            &history_path,
+            |path| validator.validate_path(path),
+        )
+        .unwrap_err();
+
+        assert_eq!(error, PATH_NOT_ALLOWED);
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn rejects_authorized_export_upload_source_without_completed_history() {
+        let root = test_root("rejects-upload-source-missing-success-history");
+        let export_dir = root.join("exports");
+        fs::create_dir_all(&export_dir).expect("create export dir");
+        let output_path = export_dir.join("render.mp4");
+        fs::write(&output_path, b"render").expect("write export");
+        let mut validator = PathValidator::default();
+        validator
+            .allow_existing_path(&output_path)
+            .expect("authorize export");
+        let history_path = root.join("export-history.json");
+        write_export_history(&history_path, &[(&output_path, "error")]);
+
+        let error = validate_webdav_export_upload_source_with_history(
+            &path_to_string(&output_path),
+            &history_path,
+            |path| validator.validate_path(path),
+        )
+        .unwrap_err();
+
+        assert!(error.contains("completed export history"));
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn allows_authorized_completed_export_history_output_source() {
+        let root = test_root("allows-completed-upload-source");
+        let export_dir = root.join("exports");
+        fs::create_dir_all(&export_dir).expect("create export dir");
+        let output_path = export_dir.join("render.mp4");
+        fs::write(&output_path, b"render").expect("write export");
+        let mut validator = PathValidator::default();
+        validator
+            .allow_existing_path(&output_path)
+            .expect("authorize export");
+        let history_path = root.join("export-history.json");
+        write_export_history(&history_path, &[(&output_path, "success")]);
+
+        let validated = validate_webdav_export_upload_source_with_history(
+            &path_to_string(&output_path),
+            &history_path,
+            |path| validator.validate_path(path),
+        )
+        .expect("validate completed export");
+
+        assert_eq!(
+            validated,
+            output_path.canonicalize().expect("canonical export")
+        );
+        let _ = fs::remove_dir_all(root);
     }
 
     #[test]
@@ -689,5 +847,48 @@ mod tests {
             "preset-sync-secret"
         );
         let _ = fs::remove_dir_all(app_dir);
+    }
+
+    fn test_root(name: &str) -> PathBuf {
+        let id = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock")
+            .as_nanos();
+        std::env::temp_dir().join(format!("open-factory-backup-{name}-{id}"))
+    }
+
+    fn platform_unauthorized_path() -> PathBuf {
+        if cfg!(windows) {
+            PathBuf::from(r"C:\Windows\System32")
+        } else {
+            PathBuf::from("/etc/passwd")
+        }
+    }
+
+    fn path_to_string(path: &Path) -> String {
+        path.to_string_lossy().into_owned()
+    }
+
+    fn write_export_history(history_path: &Path, entries: &[(&Path, &str)]) {
+        let payload: Vec<serde_json::Value> = entries
+            .iter()
+            .enumerate()
+            .map(|(index, (output_path, status))| {
+                serde_json::json!({
+                    "id": format!("history-{index}"),
+                    "name": "Render",
+                    "outputPath": path_to_string(output_path),
+                    "status": status,
+                    "priority": "normal",
+                    "createdAt": "2026-06-16T00:00:00.000Z",
+                    "finishedAt": "2026-06-16T00:00:01.000Z"
+                })
+            })
+            .collect();
+        fs::write(
+            history_path,
+            serde_json::to_string_pretty(&payload).expect("serialize history"),
+        )
+        .expect("write export history");
     }
 }

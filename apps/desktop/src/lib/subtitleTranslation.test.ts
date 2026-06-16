@@ -34,6 +34,16 @@ describe('subtitle translation API client', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('requires an API key before contacting translation providers', async () => {
+    const fetchMock = vi.fn();
+
+    await expect(translateSubtitleItems([{ id: 'cue-a', text: 'Hello' }], { provider: 'deepl', apiKey: ' ', targetLanguage: 'ZH' }, fetchMock as typeof fetch)).rejects.toThrow(
+      'TRANSLATION_API_KEY_REQUIRED'
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('sends DeepL requests in batches of at most 50', async () => {
     const items = Array.from({ length: 51 }, (_, index) => ({ id: `cue-${index}`, text: `Line ${index}` }));
     const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {

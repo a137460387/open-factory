@@ -169,7 +169,9 @@ export function SettingsDialog({
   const [exportPresetSyncPassword, setExportPresetSyncPassword] = useState('');
   const translationProvider = useTranslationSettingsStore((state) => state.provider);
   const translationApiKey = useTranslationSettingsStore((state) => state.apiKey);
+  const translationApiKeyError = useTranslationSettingsStore((state) => state.apiKeyError);
   const translationTargetLanguage = useTranslationSettingsStore((state) => state.targetLanguage);
+  const loadTranslationApiKey = useTranslationSettingsStore((state) => state.loadApiKey);
   const setTranslationProvider = useTranslationSettingsStore((state) => state.setProvider);
   const setTranslationApiKey = useTranslationSettingsStore((state) => state.setApiKey);
   const setTranslationTargetLanguage = useTranslationSettingsStore((state) => state.setTargetLanguage);
@@ -204,11 +206,12 @@ export function SettingsDialog({
     void loadExportBackgroundSettings();
     void loadExportRules();
     void loadAutomationRules();
+    void loadTranslationApiKey();
     hydrateThemeForm(getCurrentThemeSettings());
     showCurrentPlugins();
     void refreshPluginCatalog();
     return () => setPreviewTimeline(undefined);
-  }, [open, setPreviewTimeline]);
+  }, [loadTranslationApiKey, open, setPreviewTimeline]);
 
   useEffect(() => {
     if (!capturingAction) {
@@ -1360,6 +1363,7 @@ export function SettingsDialog({
               <TranslationSettingsPanel
                 provider={translationProvider}
                 apiKey={translationApiKey}
+                apiKeyError={translationApiKeyError}
                 targetLanguage={translationTargetLanguage}
                 onProviderChange={setTranslationProvider}
                 onApiKeyChange={setTranslationApiKey}
@@ -2005,6 +2009,9 @@ function BackupSettingsPanel({
               data-testid="backup-webdav-url-input"
               onChange={(event) => updateWebdav({ url: event.target.value })}
             />
+            <span className="mt-1 block text-[11px] font-normal text-amber-700" data-testid="backup-webdav-https-warning">
+              {t.httpsRequiredNote}
+            </span>
           </label>
           <label className="block text-xs font-medium text-slate-600">
             {t.username}
@@ -2088,6 +2095,9 @@ function ExportPresetSyncSettingsPanel({
               data-testid="export-preset-sync-url-input"
               onChange={(event) => update({ url: event.target.value })}
             />
+            <span className="mt-1 block text-[11px] font-normal text-amber-700" data-testid="export-preset-sync-https-warning">
+              {t.httpsRequiredNote}
+            </span>
           </label>
           <label className="block text-xs font-medium text-slate-600">
             {t.username}
@@ -2415,6 +2425,7 @@ function formatDateTime(value: number): string {
 function TranslationSettingsPanel({
   provider,
   apiKey,
+  apiKeyError,
   targetLanguage,
   onProviderChange,
   onApiKeyChange,
@@ -2422,9 +2433,10 @@ function TranslationSettingsPanel({
 }: {
   provider: TranslationProvider;
   apiKey: string;
+  apiKeyError?: string;
   targetLanguage: string;
   onProviderChange(provider: TranslationProvider): void;
-  onApiKeyChange(apiKey: string): void;
+  onApiKeyChange(apiKey: string): void | Promise<void>;
   onTargetLanguageChange(targetLanguage: string): void;
 }) {
   const t = zhCN.settings.translation;
@@ -2433,6 +2445,9 @@ function TranslationSettingsPanel({
       <div>
         <h3 className="text-sm font-semibold text-ink">{t.title}</h3>
         <p className="text-xs text-slate-500">{t.description}</p>
+      </div>
+      <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs font-medium text-amber-800" data-testid="translation-third-party-warning">
+        {t.thirdPartyWarning}
       </div>
       <label className="block text-xs font-medium text-slate-600">
         {t.provider}
@@ -2454,10 +2469,15 @@ function TranslationSettingsPanel({
             type="password"
             value={apiKey}
             data-testid="translation-api-key-input"
-            onChange={(event) => onApiKeyChange(event.target.value)}
+            onChange={(event) => void onApiKeyChange(event.target.value)}
           />
         </label>
         <p className="mt-1 text-xs text-slate-500">{t.keyStorageNote}</p>
+        {apiKeyError ? (
+          <p className="mt-1 text-xs font-medium text-amber-700" data-testid="translation-api-key-error">
+            {apiKeyError}
+          </p>
+        ) : null}
       </div>
       <label className="block text-xs font-medium text-slate-600">
         {t.targetLanguage}

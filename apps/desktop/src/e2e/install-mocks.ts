@@ -18,7 +18,17 @@ import {
 import { commandManager, timelineAccessor } from '../store/commandManager';
 import { useEditorStore } from '../store/editorStore';
 import { usePrivacyDetectionSettingsStore } from '../store/privacyDetectionSettingsStore';
-import type { BatchTranscodeTaskResult, ExportPreviewSamplesResult, GifExportRequest, GifPreviewRequest, TauriMocks, WebdavExportUploadRequest, WebdavProjectBackupRequest, WebdavTextPutRequest } from '../lib/tauri-bridge';
+import type {
+  BatchTranscodeTaskResult,
+  ExportPreviewSamplesResult,
+  GifExportRequest,
+  GifPreviewRequest,
+  TauriMocks,
+  TranslationApiProvider,
+  WebdavExportUploadRequest,
+  WebdavProjectBackupRequest,
+  WebdavTextPutRequest
+} from '../lib/tauri-bridge';
 import { clearPluginHookLog, getPluginHookLog, refreshPluginRegistry } from '../plugins/plugin-manager';
 import { useExportQueueStore } from '../export/export-queue-store';
 import { useMediaJobStore } from '../media/media-job-store';
@@ -52,6 +62,7 @@ let availableMemoryBytes = 8 * 1024 * 1024 * 1024;
 let webdavPassword: string | undefined;
 let exportUploadWebdavPassword: string | undefined;
 let exportPresetSyncWebdavPassword: string | undefined;
+const translationApiKeys = new Map<TranslationApiProvider, string>();
 let lastWebdavPutRequest: WebdavProjectBackupRequest | undefined;
 let lastWebdavExportUploadRequest: WebdavExportUploadRequest | undefined;
 let lastWebdavTextPutRequest: WebdavTextPutRequest | undefined;
@@ -464,6 +475,15 @@ const mocks: TauriMocks = {
   readExportPresetSyncWebdavPassword: () => exportPresetSyncWebdavPassword,
   writeExportPresetSyncWebdavPassword: (password) => {
     exportPresetSyncWebdavPassword = password?.trim() ? password : undefined;
+  },
+  readTranslationApiKey: (provider) => translationApiKeys.get(provider),
+  writeTranslationApiKey: (provider, apiKey) => {
+    const normalized = apiKey?.trim();
+    if (normalized) {
+      translationApiKeys.set(provider, normalized);
+    } else {
+      translationApiKeys.delete(provider);
+    }
   },
   analyzeClip: async ({ clipId }) => {
     emit('clip-analysis-progress', { clipId, progress: 0.35, progressPct: 35 });
@@ -1756,6 +1776,7 @@ window.__E2E_ACTIONS__ = {
     webdavPassword = undefined;
     exportUploadWebdavPassword = undefined;
     exportPresetSyncWebdavPassword = undefined;
+    translationApiKeys.clear();
     lastWebdavPutRequest = undefined;
     lastWebdavExportUploadRequest = undefined;
     lastWebdavTextPutRequest = undefined;

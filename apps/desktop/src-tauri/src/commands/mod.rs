@@ -12,6 +12,7 @@ pub mod proxy;
 pub mod recording;
 pub mod reports;
 pub mod scene;
+pub mod secrets;
 pub mod share;
 pub mod smoke;
 pub mod transcode;

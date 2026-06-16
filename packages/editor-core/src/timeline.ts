@@ -1,4 +1,3 @@
-import type { Clip, ClipKeyframes, KeyframeProperty, Timeline, Track, Transition } from './model';
 import {
   MIN_CLIP_SPEED,
   clampClipSpeed,
@@ -13,6 +12,7 @@ import {
   normalizeTrackPan,
   normalizeTransitionDuration
 } from './model';
+import type { Clip, ClipKeyframes, KeyframeProperty, Timeline, Track, Transition } from './model-types';
 import { cloneEffects } from './effects';
 import { cloneClipKeyframes, interpolateKeyframes, normalizeClipKeyframes } from './keyframes';
 import { DEFAULT_SNAP_GRID, round, snap } from './time';

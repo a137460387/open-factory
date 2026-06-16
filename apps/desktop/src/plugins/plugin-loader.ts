@@ -133,6 +133,19 @@ export function normalizePluginMetadata(input: unknown): OpenFactoryPlugin {
   return { id, name, version, description, permissions: normalizePluginPermissions(manifest.permissions), hooks: normalizedHooks };
 }
 
+export function extractManifestPermissions(source: string): PluginPermission[] | undefined {
+  const manifestRange = findStaticPropertyValueRange(source, 'manifest', '{', '}');
+  if (!manifestRange) {
+    return undefined;
+  }
+  const manifestSource = source.slice(manifestRange.start, manifestRange.end + 1);
+  const permissionsRange = findStaticPropertyValueRange(manifestSource, 'permissions', '[', ']');
+  if (!permissionsRange) {
+    return undefined;
+  }
+  return normalizePluginPermissions(readStaticStringArray(manifestSource.slice(permissionsRange.start, permissionsRange.end + 1)));
+}
+
 async function createWorkerPluginRuntime(source: PluginSourceFile): Promise<PluginRuntime> {
   if (typeof Worker === 'undefined' || typeof URL === 'undefined' || typeof Blob === 'undefined') {
     throw new Error('Plugin workers are unavailable in this environment');
@@ -258,6 +271,168 @@ function isPluginPermission(value: unknown): value is PluginPermission {
 
 function isPluginHookName(value: unknown): value is PluginHookName {
   return value === 'onClipSelected' || value === 'onExportBefore' || value === 'onMenuRegister';
+}
+
+function findStaticPropertyValueRange(source: string, propertyName: string, open: '{' | '[', close: '}' | ']'): { start: number; end: number } | undefined {
+  let index = 0;
+  while (index < source.length) {
+    index = skipIgnorable(source, index);
+    if (index >= source.length) {
+      break;
+    }
+    const property = readStaticPropertyName(source, index);
+    if (!property) {
+      index += 1;
+      continue;
+    }
+    const colonIndex = skipIgnorable(source, property.end);
+    if (source[colonIndex] !== ':') {
+      index = property.end;
+      continue;
+    }
+    const valueStart = skipIgnorable(source, colonIndex + 1);
+    if (property.name === propertyName) {
+      if (source[valueStart] !== open) {
+        return undefined;
+      }
+      const end = findMatchingDelimiter(source, valueStart, open, close);
+      return typeof end === 'number' ? { start: valueStart, end } : undefined;
+    }
+    index = skipStaticValue(source, valueStart);
+  }
+  return undefined;
+}
+
+function readStaticPropertyName(source: string, index: number): { name: string; end: number } | undefined {
+  const quote = source[index];
+  if (quote === '"' || quote === "'") {
+    const literal = readStringLiteral(source, index);
+    return literal ? { name: literal.value, end: literal.end } : undefined;
+  }
+  if (!isIdentifierStart(source[index])) {
+    return undefined;
+  }
+  let end = index + 1;
+  while (end < source.length && isIdentifierPart(source[end])) {
+    end += 1;
+  }
+  return { name: source.slice(index, end), end };
+}
+
+function readStaticStringArray(source: string): string[] {
+  const values: string[] = [];
+  let index = 1;
+  while (index < source.length - 1) {
+    index = skipIgnorable(source, index);
+    if (source[index] === '"' || source[index] === "'") {
+      const literal = readStringLiteral(source, index);
+      if (!literal) {
+        break;
+      }
+      values.push(literal.value);
+      index = literal.end;
+      continue;
+    }
+    index += 1;
+  }
+  return values;
+}
+
+function findMatchingDelimiter(source: string, start: number, open: string, close: string): number | undefined {
+  let depth = 0;
+  let index = start;
+  while (index < source.length) {
+    index = skipIgnorable(source, index);
+    const char = source[index];
+    if (char === '"' || char === "'") {
+      const literal = readStringLiteral(source, index);
+      index = literal?.end ?? index + 1;
+      continue;
+    }
+    if (char === open) {
+      depth += 1;
+    }
+    if (char === close) {
+      depth -= 1;
+      if (depth === 0) {
+        return index;
+      }
+    }
+    index += 1;
+  }
+  return undefined;
+}
+
+function skipStaticValue(source: string, start: number): number {
+  const char = source[start];
+  if (char === '"' || char === "'") {
+    return readStringLiteral(source, start)?.end ?? start + 1;
+  }
+  if (char === '{') {
+    const end = findMatchingDelimiter(source, start, '{', '}');
+    return typeof end === 'number' ? end + 1 : start + 1;
+  }
+  if (char === '[') {
+    const end = findMatchingDelimiter(source, start, '[', ']');
+    return typeof end === 'number' ? end + 1 : start + 1;
+  }
+  return start + 1;
+}
+
+function skipIgnorable(source: string, index: number): number {
+  let current = index;
+  while (current < source.length) {
+    if (/\s/.test(source[current])) {
+      current += 1;
+      continue;
+    }
+    if (source[current] === '/' && source[current + 1] === '/') {
+      current += 2;
+      while (current < source.length && source[current] !== '\n') {
+        current += 1;
+      }
+      continue;
+    }
+    if (source[current] === '/' && source[current + 1] === '*') {
+      current += 2;
+      while (current < source.length && !(source[current] === '*' && source[current + 1] === '/')) {
+        current += 1;
+      }
+      current = Math.min(source.length, current + 2);
+      continue;
+    }
+    break;
+  }
+  return current;
+}
+
+function readStringLiteral(source: string, start: number): { value: string; end: number } | undefined {
+  const quote = source[start];
+  let value = '';
+  for (let index = start + 1; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === '\\') {
+      const next = source[index + 1];
+      if (typeof next === 'string') {
+        value += next;
+        index += 1;
+      }
+      continue;
+    }
+    if (char === quote) {
+      return { value, end: index + 1 };
+    }
+    value += char;
+  }
+  return undefined;
+}
+
+function isIdentifierStart(value: string | undefined): boolean {
+  return typeof value === 'string' && /[A-Za-z_$]/.test(value);
+}
+
+function isIdentifierPart(value: string | undefined): boolean {
+  return typeof value === 'string' && /[A-Za-z0-9_$]/.test(value);
 }
 
 function stableHash(input: string): string {

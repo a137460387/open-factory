@@ -4,269 +4,191 @@ import {
   isDefaultColorCurves,
   isNeutralThreeWayColor,
   normalizeColorCurves,
-  normalizeThreeWayColor,
-  type ColorCurves,
-  type ThreeWayColor
+  normalizeThreeWayColor
 } from './color-grading';
-import { REC709_INPUT_COLOR_SPACE, normalizeInputColorSpace, type InputColorSpace } from './color-log-luts';
-import { cloneEffects, type Effect } from './effects';
-import type { BeatMarker } from './beats';
+import { REC709_INPUT_COLOR_SPACE, normalizeInputColorSpace } from './color-log-luts';
+import { cloneEffects } from './effects';
 import { normalizePathPoints } from './masks/path-mask';
-import { migrateProjectFile, serializeProjectFile } from './project/project-migration';
 import type { ProjectFile } from './project/project-types';
-import {
-  normalizeCreditsRollSpeed,
-  normalizeCreditsRows,
-  normalizeCreditsStyle,
-  type CreditsRow,
-  type CreditsStyle
-} from './credits-roll';
-import { normalizeTimelineLabelColor, type TimelineLabelColor } from './timeline-color-labels';
-import { normalizeProjectFps, normalizeTimecodeFormat, round, type TimecodeFormat } from './time';
-
-export type ProjectVersion = '0.2';
-export type AssetType = 'video' | 'audio' | 'image';
-export type TrackType = 'video' | 'audio' | 'text' | 'subtitle';
-export type ClipType = 'video' | 'audio' | 'image' | 'text' | 'subtitle' | 'credits' | 'nested-sequence' | 'adjustment';
-export type TransitionType = 'fade-black' | 'dissolve';
-export type SubtitleMode = 'burn-in' | 'soft-sub';
-export type SubtitleLanguage = string;
-export type KeyframeEasing = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out';
-export type AudioFadeCurve = Extract<KeyframeEasing, 'linear' | 'ease-in' | 'ease-out'>;
-
-export interface Keyframe<T> {
-  id: string;
-  time: number;
-  value: T;
-  easing: KeyframeEasing;
-}
-
-export interface ClipKeyframes {
-  opacity?: Keyframe<number>[];
-  volume?: Keyframe<number>[];
-  x?: Keyframe<number>[];
-  y?: Keyframe<number>[];
-  scaleX?: Keyframe<number>[];
-  scaleY?: Keyframe<number>[];
-  speed?: Keyframe<number>[];
-  yaw?: Keyframe<number>[];
-  pitch?: Keyframe<number>[];
-  roll?: Keyframe<number>[];
-  pathStartOffset?: Keyframe<number>[];
-}
-
-export type KeyframeProperty = keyof ClipKeyframes;
-
-export type ChromaKeyColor = [number, number, number];
+import { normalizeCreditsRollSpeed, normalizeCreditsRows, normalizeCreditsStyle } from './credits-roll';
+import { normalizeTimelineLabelColor } from './timeline-color-labels';
+import { normalizeProjectFps, normalizeTimecodeFormat, round } from './time';
+import type {
+  AdjustmentClip,
+  AssetType,
+  AudioChannelRoutingMode,
+  AudioClip,
+  AudioFadeCurve,
+  BaseClip,
+  ChromaKey,
+  ChromaKeyColor,
+  ChromaKeyMode,
+  Clip,
+  ClipAudioDenoise,
+  ClipBorder,
+  ClipFrameInterpolation,
+  ClipGroup,
+  ClipGroupColor,
+  ClipKeyframes,
+  ClipMask,
+  ClipMaskKeyframe,
+  ClipPanoramaOutputProjection,
+  ClipPanoramaView,
+  ClipPrivacyBlur,
+  ClipProjection,
+  ClipSlowMotionMode,
+  ClipStabilization,
+  ClipType,
+  ClipVideoDeinterlace,
+  ClipVideoRestoration,
+  ClipVideoSpatialDenoise,
+  ClipVideoTemporalDenoise,
+  ColorCorrection,
+  CreditsClip,
+  ExportRange,
+  FrameInterpolationTargetFps,
+  ImageClip,
+  ImageSequenceInfo,
+  Keyframe,
+  KeyframeEasing,
+  KeyframeProperty,
+  Mask,
+  MaskType,
+  MediaAsset,
+  MediaFlag,
+  MediaFolder,
+  MediaLabelColor,
+  MediaMetadata,
+  MotionTrackPoint,
+  MulticamAngle,
+  MulticamSequence,
+  MulticamSwitch,
+  NestedSequenceClip,
+  PathPoint,
+  PathPointHandle,
+  PrivacyBlurEffect,
+  Project,
+  ProjectAnnotation,
+  ProjectSettings,
+  ProjectVersion,
+  ProtectedRange,
+  ReviewAnnotation,
+  ReviewAnnotationType,
+  Sequence,
+  SubtitleClip,
+  SubtitleLanguage,
+  SubtitleMode,
+  SubtitleStyle,
+  TextClip,
+  TextPathOptions,
+  TextStyle,
+  Timeline,
+  TimelineBookmark,
+  TimelineLabelColor,
+  TimelineMarker,
+  TimelineNote,
+  Track,
+  TrackCompressor,
+  TrackEQ,
+  TrackEQBand,
+  TrackEQBandType,
+  TrackType,
+  Transform,
+  Transition,
+  TransitionType,
+  VfrHandlingStrategy,
+  VideoClip,
+  VideoDeinterlaceMode,
+  VideoDenoisePreset
+} from './model-types';
+export type {
+  AdjustmentClip,
+  AssetType,
+  AudioChannelRoutingMode,
+  AudioClip,
+  AudioFadeCurve,
+  BaseClip,
+  ChromaKey,
+  ChromaKeyColor,
+  ChromaKeyMode,
+  Clip,
+  ClipAudioDenoise,
+  ClipBorder,
+  ClipFrameInterpolation,
+  ClipGroup,
+  ClipGroupColor,
+  ClipKeyframes,
+  ClipMask,
+  ClipMaskKeyframe,
+  ClipPanoramaOutputProjection,
+  ClipPanoramaView,
+  ClipPrivacyBlur,
+  ClipProjection,
+  ClipSlowMotionMode,
+  ClipStabilization,
+  ClipType,
+  ClipVideoDeinterlace,
+  ClipVideoRestoration,
+  ClipVideoSpatialDenoise,
+  ClipVideoTemporalDenoise,
+  ColorCorrection,
+  CreditsClip,
+  ExportRange,
+  FrameInterpolationTargetFps,
+  ImageClip,
+  ImageSequenceInfo,
+  Keyframe,
+  KeyframeEasing,
+  KeyframeProperty,
+  Mask,
+  MaskType,
+  MediaAsset,
+  MediaFlag,
+  MediaFolder,
+  MediaLabelColor,
+  MediaMetadata,
+  MotionTrackPoint,
+  MulticamAngle,
+  MulticamSequence,
+  MulticamSwitch,
+  NestedSequenceClip,
+  PathPoint,
+  PathPointHandle,
+  PrivacyBlurEffect,
+  Project,
+  ProjectAnnotation,
+  ProjectSettings,
+  ProjectVersion,
+  ProtectedRange,
+  ReviewAnnotation,
+  ReviewAnnotationType,
+  Sequence,
+  SubtitleClip,
+  SubtitleLanguage,
+  SubtitleMode,
+  SubtitleStyle,
+  TextClip,
+  TextPathOptions,
+  TextStyle,
+  Timeline,
+  TimelineBookmark,
+  TimelineMarker,
+  TimelineNote,
+  Track,
+  TrackCompressor,
+  TrackEQ,
+  TrackEQBand,
+  TrackEQBandType,
+  TrackType,
+  Transform,
+  Transition,
+  TransitionType,
+  VfrHandlingStrategy,
+  VideoClip,
+  VideoDeinterlaceMode,
+  VideoDenoisePreset
+} from './model-types';
 export const MAX_CHROMA_KEY_COLORS = 3;
-export type ChromaKeyMode = 'chroma-key' | 'luma-key' | 'difference-matte';
-export type MaskType = 'rect' | 'ellipse' | 'path';
-export type PrivacyBlurEffect = 'pixelize' | 'gblur' | 'solid';
-
-export interface ChromaKey {
-  enabled: boolean;
-  mode: ChromaKeyMode;
-  color: ChromaKeyColor;
-  colors: ChromaKeyColor[];
-  similarity: number;
-  blend: number;
-  spillSuppression: boolean;
-  erosion: number;
-  lumaThreshold: number;
-  lumaTolerance: number;
-  lumaSoftness: number;
-  differenceReferenceTime: number;
-  differenceThreshold: number;
-}
-
-export interface ClipStabilization {
-  enabled: boolean;
-  smoothing: number;
-  zoom: number;
-  analyzed: boolean;
-  trfPath?: string | null;
-}
-
-export type FrameInterpolationTargetFps = 24 | 30 | 48 | 60 | 120;
-
-export interface ClipFrameInterpolation {
-  enabled: boolean;
-  targetFps: FrameInterpolationTargetFps;
-}
-
-export type ClipSlowMotionMode = 'none' | 'blend' | 'optical-flow';
-export type ClipProjection = 'flat' | 'equirectangular' | 'cubemap';
-export type ClipPanoramaOutputProjection = 'flat' | 'equirectangular';
-export type VideoDenoisePreset = 'off' | 'low' | 'medium' | 'high' | 'custom';
-export type VideoDeinterlaceMode = 0 | 1;
-
-export interface ClipPanoramaView {
-  yaw: number;
-  pitch: number;
-  roll: number;
-  fov: number;
-  outputProjection: ClipPanoramaOutputProjection;
-}
-
-export interface ClipVideoDeinterlace {
-  enabled: boolean;
-  mode: VideoDeinterlaceMode;
-}
-
-export interface ClipVideoTemporalDenoise {
-  preset: VideoDenoisePreset;
-  lumaSpatial: number;
-  chromaSpatial: number;
-  lumaTmp: number;
-}
-
-export interface ClipVideoSpatialDenoise {
-  enabled: boolean;
-  strength: number;
-  patchSize: number;
-  researchSize: number;
-}
-
-export interface ClipVideoRestoration {
-  deinterlace: ClipVideoDeinterlace;
-  temporalDenoise: ClipVideoTemporalDenoise;
-  spatialDenoise: ClipVideoSpatialDenoise;
-}
-
-export interface MotionTrackPoint {
-  time: number;
-  dx: number;
-  dy: number;
-}
-
-export interface PathPointHandle {
-  x: number;
-  y: number;
-}
-
-export interface PathPoint {
-  x: number;
-  y: number;
-  handleIn?: PathPointHandle;
-  handleOut?: PathPointHandle;
-}
-
-export interface ClipMaskKeyframe {
-  time: number;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-}
-
-export interface ClipPrivacyBlur {
-  enabled: boolean;
-  effect: PrivacyBlurEffect;
-  color?: string;
-}
-
-export interface ClipMask {
-  id: string;
-  type: MaskType;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  path?: PathPoint[];
-  keyframes?: ClipMaskKeyframe[];
-  privacyBlur?: ClipPrivacyBlur;
-  inverted: boolean;
-  feather: number;
-  enabled: boolean;
-}
-
-export type Mask = ClipMask;
-
-export interface Project {
-  version: ProjectVersion;
-  id: string;
-  name: string;
-  createdAt: string;
-  updatedAt: string;
-  masterVolume: number;
-  settings: ProjectSettings;
-  media: MediaAsset[];
-  mediaFolders: MediaFolder[];
-  mediaMetadata: Record<string, MediaMetadata>;
-  annotations: ProjectAnnotation[];
-  reviewAnnotations: ReviewAnnotation[];
-  timelineNotes: TimelineNote[];
-  bookmarks: TimelineBookmark[];
-  beatMarkers: BeatMarker[];
-  exportRanges: ExportRange[];
-  protectedRanges: ProtectedRange[];
-  clipGroups: ClipGroup[];
-  timeline: Timeline;
-  sequences: Sequence[];
-  activeSequenceId: string;
-}
-
-export interface ProjectSettings {
-  fps: number;
-  timecodeFormat: TimecodeFormat;
-  width: number;
-  height: number;
-  vfrHandling?: VfrHandlingStrategy;
-}
-
-export type VfrHandlingStrategy = 'ignore' | 'auto-cfr' | 'ask';
-
-export interface MediaAsset {
-  id: string;
-  type: AssetType;
-  name: string;
-  path: string;
-  duration: number;
-  width: number;
-  height: number;
-  missing?: boolean;
-  folderId?: string | null;
-  importedAt?: string;
-  thumbnail?: string;
-  relativePath?: string | null;
-  originalAbsolutePath?: string;
-  size?: number;
-  mtimeMs?: number;
-  cacheKey?: string;
-  thumbnailCachePath?: string;
-  waveformCachePath?: string;
-  hasAudio?: boolean;
-  audioChannels?: number;
-  audioSampleRate?: number;
-  audioCodec?: string;
-  videoCodec?: string;
-  frameRate?: number;
-  avgFrameRate?: string;
-  realFrameRate?: string;
-  variableFrameRate?: boolean;
-  fieldOrder?: string;
-  proxyPath?: string;
-  proxyStatus?: 'none' | 'pending' | 'ready' | 'error';
-  proxyError?: string;
-  imageSequence?: ImageSequenceInfo;
-}
-
-export interface ImageSequenceInfo {
-  pattern: string;
-  startNumber: number;
-  frameCount: number;
-  frameRate: number;
-  paths: string[];
-}
-
-export type MediaLabelColor = 'red' | 'orange' | 'yellow' | 'green' | 'blue' | 'purple';
-export type MediaFlag = 'green' | 'red';
-
-export interface MediaMetadata {
-  labelColor?: MediaLabelColor;
-  rating?: number;
-  flag?: MediaFlag;
-}
 
 export function isMediaLabelColor(value: unknown): value is MediaLabelColor {
   return value === 'red' || value === 'orange' || value === 'yellow' || value === 'green' || value === 'blue' || value === 'purple';
@@ -301,321 +223,6 @@ export function normalizeMediaMetadataEntry(metadata: MediaMetadata | undefined)
   return Object.keys(normalized).length > 0 ? normalized : undefined;
 }
 
-export interface ProjectAnnotation {
-  id: string;
-  time: number;
-  text: string;
-  color: string;
-}
-
-export type ReviewAnnotationType = 'rectangle' | 'arrow' | 'text';
-
-export interface ReviewAnnotation {
-  id: string;
-  time: number;
-  type: ReviewAnnotationType;
-  text: string;
-  color: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
-
-export interface TimelineNote {
-  id: string;
-  start: number;
-  end: number;
-  text: string;
-  color: string;
-  createdAt: string;
-}
-
-export interface ExportRange {
-  id: string;
-  label: string;
-  start: number;
-  end: number;
-}
-
-export interface ProtectedRange {
-  id: string;
-  label: string;
-  start: number;
-  end: number;
-}
-
-export type ClipGroupColor = 'blue' | 'green' | 'purple' | 'amber' | 'rose' | 'cyan';
-
-export interface ClipGroup {
-  id: string;
-  name: string;
-  clipIds: string[];
-  color: ClipGroupColor;
-}
-
-export interface Timeline {
-  tracks: Track[];
-  transitions?: Transition[];
-  markers?: TimelineMarker[];
-}
-
-export interface Sequence {
-  id: string;
-  name: string;
-  timeline: Timeline;
-}
-
-export interface Track {
-  id: string;
-  type: TrackType;
-  name: string;
-  language?: SubtitleLanguage;
-  color?: TimelineLabelColor | null;
-  muted?: boolean;
-  solo?: boolean;
-  locked?: boolean;
-  volume?: number;
-  pan?: number;
-  eq?: TrackEQ;
-  compressor?: TrackCompressor;
-  clips: Clip[];
-}
-
-export type TrackEQBandType = 'lowshelf' | 'peaking' | 'highshelf';
-
-export interface TrackEQBand {
-  id: string;
-  type: TrackEQBandType;
-  frequency: number;
-  gain: number;
-  q: number;
-}
-
-export interface TrackEQ {
-  enabled: boolean;
-  bands: TrackEQBand[];
-}
-
-export interface TrackCompressor {
-  enabled: boolean;
-  threshold: number;
-  ratio: number;
-  attack: number;
-  release: number;
-  makeupGain: number;
-}
-
-export type Clip = VideoClip | AudioClip | ImageClip | TextClip | SubtitleClip | CreditsClip | NestedSequenceClip | AdjustmentClip;
-export type AudioChannelRoutingMode =
-  | 'normal'
-  | 'mono-left'
-  | 'mono-right'
-  | 'mono-both'
-  | 'swap-stereo'
-  | 'stereo-left-mono'
-  | 'stereo-right-mono'
-  | 'stereo-to-mono';
-
-export interface Transition {
-  id: string;
-  type: TransitionType;
-  duration: number;
-  fromClipId: string;
-  toClipId: string;
-}
-
-export interface TimelineMarker {
-  id: string;
-  time: number;
-  label: string;
-  color: string;
-}
-
-export interface TimelineBookmark {
-  id: string;
-  time: number;
-  note: string;
-}
-
-export interface BaseClip {
-  id: string;
-  name: string;
-  trackId: string;
-  colorLabel?: TimelineLabelColor | null;
-  start: number;
-  duration: number;
-  trimStart: number;
-  trimEnd: number;
-  speed: number;
-  colorCorrection: ColorCorrection;
-  transform: Transform;
-  chromaKey?: ChromaKey;
-  stabilization?: ClipStabilization;
-  frameInterpolation?: ClipFrameInterpolation;
-  slowMotionMode?: ClipSlowMotionMode;
-  audioDenoise?: ClipAudioDenoise;
-  audioChannelRouting?: AudioChannelRoutingMode;
-  videoRestoration?: ClipVideoRestoration;
-  projection?: ClipProjection;
-  panorama?: ClipPanoramaView;
-  masks?: ClipMask[];
-  motionTrack?: MotionTrackPoint[];
-  border?: ClipBorder;
-  keyframes?: ClipKeyframes;
-  effects?: Effect[];
-  sequenceFrameRate?: number;
-}
-
-export interface ClipAudioDenoise {
-  enabled: boolean;
-  strength: number;
-}
-
-export interface ColorCorrection {
-  inputColorSpace?: InputColorSpace;
-  brightness: number;
-  contrast: number;
-  saturation: number;
-  hue: number;
-  lutPath?: string | null;
-  colorCurves?: ColorCurves;
-  threeWayColor?: ThreeWayColor;
-}
-
-export interface Transform {
-  x: number;
-  y: number;
-  scale: number;
-  scaleX?: number;
-  scaleY?: number;
-  rotation: number;
-  opacity: number;
-}
-
-export interface ClipBorder {
-  enabled: boolean;
-  color: string;
-  width: number;
-}
-
-export interface VideoClip extends BaseClip {
-  type: 'video';
-  mediaId: string;
-  volume: number;
-  muted?: boolean;
-  pitchSemitones?: number;
-  reverseAudio?: boolean;
-  fadeInDuration?: number;
-  fadeOutDuration?: number;
-  fadeInCurve?: AudioFadeCurve;
-  fadeOutCurve?: AudioFadeCurve;
-}
-
-export interface AudioClip extends BaseClip {
-  type: 'audio';
-  mediaId: string;
-  volume: number;
-  muted?: boolean;
-  pitchSemitones?: number;
-  reverseAudio?: boolean;
-  fadeInDuration?: number;
-  fadeOutDuration?: number;
-  fadeInCurve?: AudioFadeCurve;
-  fadeOutCurve?: AudioFadeCurve;
-}
-
-export interface ImageClip extends BaseClip {
-  type: 'image';
-  mediaId: string;
-  kenBurns?: boolean;
-}
-
-export interface TextClip extends BaseClip {
-  type: 'text';
-  text: string;
-  style: TextStyle;
-  pathText?: TextPathOptions;
-}
-
-export interface SubtitleClip extends BaseClip {
-  type: 'subtitle';
-  text: string;
-  style: SubtitleStyle;
-  subtitleMode: SubtitleMode;
-}
-
-export interface CreditsClip extends BaseClip {
-  type: 'credits';
-  text: string;
-  rows: CreditsRow[];
-  rollSpeed: number;
-  style: CreditsStyle;
-}
-
-export interface NestedSequenceClip extends BaseClip {
-  type: 'nested-sequence';
-  sequenceId: string;
-  volume: number;
-  muted?: boolean;
-  pitchSemitones?: number;
-  reverseAudio?: boolean;
-  fadeInDuration?: number;
-  fadeOutDuration?: number;
-  fadeInCurve?: AudioFadeCurve;
-  fadeOutCurve?: AudioFadeCurve;
-  multicam?: MulticamSequence;
-}
-
-export interface AdjustmentClip extends BaseClip {
-  type: 'adjustment';
-}
-
-export interface MulticamSequence {
-  angles: MulticamAngle[];
-  switches: MulticamSwitch[];
-}
-
-export interface MulticamAngle {
-  id: string;
-  clipId: string;
-  trackId: string;
-  name: string;
-  offset: number;
-}
-
-export interface MulticamSwitch {
-  id: string;
-  time: number;
-  angleId: string;
-}
-
-export interface TextStyle {
-  fontSize: number;
-  color: string;
-  backgroundColor: string;
-  backgroundOpacity: number;
-  fontFamily: string;
-  bold: boolean;
-  italic: boolean;
-}
-
-export interface TextPathOptions {
-  enabled: boolean;
-  path: PathPoint[];
-  startOffset: number;
-  letterSpacing: number;
-  rotateCharacters: boolean;
-}
-
-export interface SubtitleStyle extends TextStyle {
-  yOffset: number;
-  outlineColor: string;
-  outlineWidth: number;
-  shadowColor: string;
-  shadowOffset: number;
-}
-
 export type CutProjectFile = ProjectFile;
 
 export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
@@ -641,14 +248,6 @@ export function normalizeProjectSettings(settings: Partial<ProjectSettings> | un
 
 export function normalizeVfrHandlingStrategy(value: unknown): VfrHandlingStrategy {
   return value === 'auto-cfr' || value === 'ask' ? value : 'ignore';
-}
-
-export interface MediaFolder {
-  id: string;
-  name: string;
-  parentId?: string | null;
-  collapsed?: boolean;
-  createdAt: string;
 }
 
 export const DEFAULT_TRANSFORM: Transform = {
@@ -1757,10 +1356,6 @@ export function isDefaultColorCorrection(colorCorrection: Partial<ColorCorrectio
   );
 }
 
-export function serializeProject(project: Project, projectPath?: string): CutProjectFile {
-  return serializeProjectFile(project, projectPath);
-}
-
 export function serializeLegacyProject(project: Project): {
   version: '0.1';
   project: {
@@ -1909,8 +1504,4 @@ function cloneClipKeyframesLocal(keyframes: ClipKeyframes | undefined): ClipKeyf
     }
   }
   return Object.keys(output).length > 0 ? output : undefined;
-}
-
-export function deserializeProject(file: CutProjectFile, projectPath?: string): Project {
-  return migrateProjectFile(file, projectPath).project;
 }

@@ -95,19 +95,13 @@ import { StoryboardView } from './Storyboard/StoryboardView';
 import { Timeline } from './Timeline/Timeline';
 import { useAutosave } from '../hooks/useAutosave';
 import { useCloseGuard } from '../hooks/useCloseGuard';
+import { useExportQueue } from '../hooks/useExportQueue';
 import { useMacroShortcuts } from '../hooks/useMacroShortcuts';
 import { useShortcuts } from '../hooks/useShortcuts';
 import { readCustomKeybindings } from '../shortcuts/keybindings';
 import type { TimelineShortcutBindings } from '../shortcuts/timeline-shortcuts';
-import { cancelAllQueuedExportTasks, cancelQueuedExportTask, ensureExportQueueRunner, setExportQueuePaused } from '../export/export-queue-runner';
-import { useExportQueueStore } from '../export/export-queue-store';
-import {
-  installExportQueuePersistence,
-  loadExportQueueRecoveryCandidate,
-  persistExportQueueState,
-  type ExportQueueRecoveryCandidate
-} from '../export/export-queue-persistence';
-import { chooseCurrentFrameExportPath, revealExport, startCurrentFrameExport } from '../lib/exportVideo';
+import type { ExportQueueRecoveryCandidate } from '../export/export-queue-persistence';
+import { revealExport } from '../lib/exportVideo';
 import { clearMediaCache } from '../cache/cache-service';
 import { createAdjustmentLayerClip, createClipFromAsset, findPreferredTrack } from '../lib/clipFactory';
 import { zhCN } from '../i18n/strings';
@@ -143,7 +137,7 @@ import { saveProjectSnapshot } from '../lib/projectSnapshots';
 import { scanProjectHealth } from '../lib/projectHealth';
 import { getReviewModeShellVisibility } from '../review/reviewMode';
 import { saveReviewReport } from '../review/reviewReport';
-import { createSharePackageFromProject, type SharePackageWorkflowProgress } from '../lib/sharePackage';
+import type { SharePackageWorkflowProgress } from '../lib/sharePackage';
 import { canSeparateAudioForClip, getDemucsAvailability, separateAudioForClip, type DemucsAvailability } from '../lib/demucs';
 import {
   chooseProjectSavePath,
@@ -173,7 +167,6 @@ import {
   sendNotification,
   startRecording,
   stopRecording,
-  updateExportTrayProgress,
   writeFile as bridgeWriteFile,
   type DemucsProgressEvent,
   type RecordingSource
@@ -271,9 +264,6 @@ export function EditorShell() {
   const setPlaybackRate = useEditorStore((state) => state.setPlaybackRate);
   const setInPoint = useEditorStore((state) => state.setInPoint);
   const setOutPoint = useEditorStore((state) => state.setOutPoint);
-  const [lastExportPath, setLastExportPath] = useState<string>();
-  const [exportDialogOpen, setExportDialogOpen] = useState(false);
-  const [timelineExportDialogOpen, setTimelineExportDialogOpen] = useState(false);
   const [batchTranscodeOpen, setBatchTranscodeOpen] = useState(false);
   const [batchWatermarkOpen, setBatchWatermarkOpen] = useState(false);
   const [batchTranscodeInitialPaths, setBatchTranscodeInitialPaths] = useState<string[]>([]);
@@ -308,10 +298,7 @@ export function EditorShell() {
   const [macroRecordingStepCount, setMacroRecordingStepCount] = useState(0);
   const [autosaveIntervalSeconds, setAutosaveIntervalSeconds] = useState(() => readAutosaveIntervalSeconds());
   const [recoveryCandidate, setRecoveryCandidate] = useState<AutosaveRecoveryCandidate>();
-  const [exportQueueRecovery, setExportQueueRecovery] = useState<ExportQueueRecoveryCandidate>();
   const [archiveProgress, setArchiveProgress] = useState<ArchiveProgress>();
-  const [sharePackageProgress, setSharePackageProgress] = useState<SharePackageWorkflowProgress>();
-  const [sharePackageBusy, setSharePackageBusy] = useState(false);
   const [layoutSettings, setLayoutSettings] = useState<EditorLayoutSettings>(DEFAULT_EDITOR_LAYOUT_SETTINGS);
   const [safeFrameGuides, setSafeFrameGuides] = useState(false);
   const [thumbnailTrackVisible, setThumbnailTrackVisible] = useState(true);
@@ -326,8 +313,22 @@ export function EditorShell() {
   const [audioSeparationProgress, setAudioSeparationProgress] = useState<number>();
   const [recordingTask, setRecordingTask] = useState<{ taskId: string; source: RecordingSource; outputPath: string; startedAt: number }>();
   const [recordingElapsedSeconds, setRecordingElapsedSeconds] = useState(0);
-  const exportTasks = useExportQueueStore((state) => state.tasks);
-  const exportQueuePaused = useExportQueueStore((state) => state.queuePaused);
+  const {
+    lastExportPath,
+    setLastExportPath,
+    exportDialogOpen,
+    setExportDialogOpen,
+    timelineExportDialogOpen,
+    setTimelineExportDialogOpen,
+    exportQueueRecovery,
+    sharePackageProgress,
+    sharePackageBusy,
+    cancelCurrentExport,
+    createCurrentSharePackage,
+    exportCurrentFrame,
+    restoreExportQueueRecovery,
+    discardExportQueueRecovery
+  } = useExportQueue(project);
   const macroRecorderRef = useRef<{ active: boolean; replaying: boolean; steps: CommandSnapshot[] }>({ active: false, replaying: false, steps: [] });
 
   const selectedClip = useMemo(() => selectClipById(project, selectedClipId), [project, selectedClipId]);
@@ -554,15 +555,6 @@ export function EditorShell() {
   }, []);
 
   useEffect(() => {
-    const runningTasks = exportTasks.filter((task) => task.status === 'running');
-    const runningCount = runningTasks.length;
-    const progress = runningCount > 0 ? runningTasks.reduce((sum, task) => sum + task.progress, 0) / runningCount : 0;
-    void updateExportTrayProgress(progress, runningCount).catch((error) => {
-      console.warn('Unable to update export tray progress', error);
-    });
-  }, [exportTasks]);
-
-  useEffect(() => {
     let canceled = false;
     void getDemucsAvailability({ executablePath: demucsExecutablePath }).then((availability) => {
       if (!canceled) {
@@ -598,55 +590,6 @@ export function EditorShell() {
     const interval = window.setInterval(update, 500);
     return () => window.clearInterval(interval);
   }, [recordingTask]);
-
-  useEffect(() => {
-    let disposed = false;
-    let unlisten: (() => void) | undefined;
-    void listenBridge<'pause' | 'cancel-all'>('export-tray-command', async (command) => {
-      if (command === 'pause') {
-        const nextPaused = !useExportQueueStore.getState().queuePaused;
-        setExportQueuePaused(nextPaused);
-        showToast({ kind: 'info', title: zhCN.exportDialog.queueTitle, message: nextPaused ? zhCN.exportDialog.queuePausedByUser : zhCN.exportDialog.queueResumedByUser });
-      }
-      if (command === 'cancel-all') {
-        await cancelAllQueuedExportTasks();
-        showToast({ kind: 'info', title: zhCN.exportDialog.queueTitle, message: zhCN.exportDialog.queueCanceledAll });
-      }
-    }).then((dispose) => {
-      if (disposed) {
-        dispose();
-      } else {
-        unlisten = dispose;
-      }
-    });
-    return () => {
-      disposed = true;
-      unlisten?.();
-    };
-  }, []);
-
-  useEffect(() => {
-    let disposed = false;
-    let uninstallPersistence: (() => void) | undefined;
-    void loadExportQueueRecoveryCandidate(zhCN.exportDialog.recovery.interruptedMessage)
-      .then((candidate) => {
-        if (!disposed && candidate) {
-          setExportQueueRecovery(candidate);
-        }
-      })
-      .catch((error) => {
-        console.warn('Unable to load export queue recovery state', error);
-      })
-      .finally(() => {
-        if (!disposed) {
-          uninstallPersistence = installExportQueuePersistence();
-        }
-      });
-    return () => {
-      disposed = true;
-      uninstallPersistence?.();
-    };
-  }, []);
 
   useEffect(() => {
     let canceled = false;
@@ -696,16 +639,6 @@ export function EditorShell() {
       canceled = true;
     };
   }, []);
-
-  useEffect(() => {
-    if (!exportQueuePaused) {
-      return;
-    }
-    const hasWaiting = exportTasks.some((task) => task.status === 'pending' || task.status === 'scheduled');
-    if (!hasWaiting) {
-      setExportQueuePaused(false);
-    }
-  }, [exportQueuePaused, exportTasks]);
 
   const beginTimelineResize = useCallback(
     (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -815,25 +748,6 @@ export function EditorShell() {
     element?.scrollIntoView({ block: 'center', inline: 'nearest' });
     element?.focus();
   }, []);
-
-  const createCurrentSharePackage = useCallback(async () => {
-    if (sharePackageBusy) {
-      return;
-    }
-    try {
-      setSharePackageBusy(true);
-      const result = await createSharePackageFromProject(project, { onProgress: setSharePackageProgress });
-      if (result) {
-        showToast({ kind: 'success', title: zhCN.sharePackage.success, message: result.outputPath });
-        setLastExportPath(result.outputPath);
-      }
-    } catch (error) {
-      showToast({ kind: 'error', title: zhCN.sharePackage.failed, message: error instanceof Error ? error.message : zhCN.sharePackage.failedMessage });
-    } finally {
-      setSharePackageProgress(undefined);
-      setSharePackageBusy(false);
-    }
-  }, [project, sharePackageBusy]);
 
   useEffect(() => {
     let canceled = false;
@@ -1849,40 +1763,6 @@ export function EditorShell() {
     clearSelectedClipIds();
   }, [clearSelectedClipIds]);
 
-  const cancelCurrentExport = useCallback(async () => {
-    const runningTask = useExportQueueStore.getState().tasks.find((task) => task.status === 'running');
-    if (runningTask) {
-      await cancelQueuedExportTask(runningTask.id);
-      showToast({ kind: 'info', title: zhCN.editorToasts.exportCanceled, message: runningTask.name });
-    }
-  }, []);
-
-  const exportCurrentFrame = useCallback(async () => {
-    const state = useEditorStore.getState();
-    try {
-      const outputPath = await chooseCurrentFrameExportPath(state.project, state.playheadTime);
-      if (!outputPath) {
-        return;
-      }
-      await startCurrentFrameExport(state.project, outputPath, state.playheadTime, {
-        onProgress: () => undefined,
-        onWarnings: (warnings) => {
-          if (warnings.length > 0) {
-            showToast({ kind: 'warning', title: zhCN.exportDialog.exportWarningTitle, message: warnings.join('\n') });
-          }
-        }
-      });
-      setLastExportPath(outputPath);
-      showToast({ kind: 'success', title: zhCN.editorToasts.currentFrameExported, message: outputPath });
-    } catch (error) {
-      showToast({
-        kind: 'error',
-        title: zhCN.editorToasts.currentFrameExportFailed,
-        message: error instanceof Error ? error.message : zhCN.editorToasts.currentFrameExportFailedMessage
-      });
-    }
-  }, []);
-
   const generateProxyForMedia = useCallback(
     async (assetId: string, options: ProxyGenerationOptions = {}) => {
       const asset = useEditorStore.getState().project.media.find((item) => item.id === assetId);
@@ -2770,31 +2650,6 @@ export function EditorShell() {
       showToast({ kind: 'info', title: zhCN.editorToasts.recoveryDiscarded });
     } catch (error) {
       showToast({ kind: 'error', title: zhCN.editorToasts.discardFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.discardFailedMessage });
-    }
-  }
-
-  async function restoreExportQueueRecovery(taskIds: string[]): Promise<void> {
-    if (!exportQueueRecovery) {
-      return;
-    }
-    const selected = new Set(taskIds);
-    const tasks = exportQueueRecovery.tasks.filter((task) => selected.has(task.id));
-    if (tasks.length === 0) {
-      return;
-    }
-    useExportQueueStore.getState().restoreTasks(tasks);
-    setExportQueueRecovery(undefined);
-    if (tasks.some((task) => task.status === 'pending')) {
-      void ensureExportQueueRunner();
-    }
-  }
-
-  async function discardExportQueueRecovery(): Promise<void> {
-    setExportQueueRecovery(undefined);
-    try {
-      await persistExportQueueState([]);
-    } catch (error) {
-      console.warn('Unable to discard export queue recovery state', error);
     }
   }
 

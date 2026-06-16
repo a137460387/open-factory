@@ -1,6 +1,6 @@
-import { copyFile, getAppDataDir, readFile, writeFile } from '../lib/tauri-bridge';
+import { bridgeConfirm, copyFile, getAppDataDir, readFile, writeFile } from '../lib/tauri-bridge';
 import { refreshPluginRegistry, type PluginRegistry } from './plugin-manager';
-import type { PluginPermission } from './plugin-loader';
+import { extractManifestPermissions, type PluginPermission } from './plugin-loader';
 
 export const PLUGIN_CATALOG_URL = '/plugin-catalog.json';
 export const PLUGIN_CATALOG_CACHE_FILE = 'plugin-catalog-cache.json';
@@ -13,6 +13,7 @@ export interface PluginCatalogEntry {
   description: string;
   permissions: PluginPermission[];
   downloadUrl: string;
+  sha256: string;
 }
 
 export interface PluginCatalogResult {
@@ -33,8 +34,17 @@ export interface PluginCatalogResponseLike {
 }
 
 export type PluginCatalogFetcher = (url: string) => Promise<PluginCatalogResponseLike>;
+export type PluginInstallConfirmer = (entry: PluginCatalogEntry, permissions: PluginPermission[]) => Promise<boolean> | boolean;
+export type PluginHashProvider = (contents: string) => Promise<string> | string;
+
+export interface PluginInstallOptions {
+  fetcher?: PluginCatalogFetcher;
+  confirmInstall?: PluginInstallConfirmer;
+  hashProvider?: PluginHashProvider;
+}
 
 const VALID_PLUGIN_PERMISSIONS: PluginPermission[] = ['read-project', 'write-project', 'export-hook', 'menu-register'];
+const SHA256_HEX_PATTERN = /^[a-f0-9]{64}$/i;
 
 export async function loadPluginCatalog({
   url = PLUGIN_CATALOG_URL,
@@ -96,7 +106,13 @@ export function getCatalogEntryInstallState(entry: PluginCatalogEntry, registry:
     : { status: 'installed', installedVersion: installed.plugin.version };
 }
 
-export async function installCatalogPlugin(entry: PluginCatalogEntry, fetcher: PluginCatalogFetcher = defaultFetcher): Promise<string> {
+export async function installCatalogPlugin(entry: PluginCatalogEntry, optionsOrFetcher: PluginCatalogFetcher | PluginInstallOptions = defaultFetcher): Promise<string> {
+  const options = typeof optionsOrFetcher === 'function' ? { fetcher: optionsOrFetcher } : optionsOrFetcher;
+  const fetcher = options.fetcher ?? defaultFetcher;
+  const declaredHash = normalizeSha256(entry.sha256);
+  if (!declaredHash) {
+    throw new Error('Plugin catalog entry is missing a valid SHA-256 hash.');
+  }
   const response = await fetcher(entry.downloadUrl);
   if (!response.ok) {
     throw new Error(`Plugin download failed: ${entry.downloadUrl}`);
@@ -105,10 +121,35 @@ export async function installCatalogPlugin(entry: PluginCatalogEntry, fetcher: P
   if (!code.trim()) {
     throw new Error('Downloaded plugin was empty.');
   }
+  const actualHash = normalizeSha256(await (options.hashProvider ?? computeSha256Hex)(code));
+  if (!actualHash || actualHash !== declaredHash) {
+    throw new Error('Plugin integrity check failed: SHA-256 mismatch.');
+  }
+  const manifestPermissions = extractManifestPermissions(code);
+  if (!manifestPermissions) {
+    throw new Error('Plugin manifest permissions could not be verified.');
+  }
+  if (!samePermissionSet(entry.permissions, manifestPermissions)) {
+    throw new Error('Plugin manifest permissions do not match the catalog entry.');
+  }
+  const accepted = await (options.confirmInstall ?? confirmCatalogPluginInstall)(entry, manifestPermissions);
+  if (!accepted) {
+    throw new Error('Plugin installation canceled.');
+  }
   const path = await pluginDestinationPath(`${entry.id}.js`);
   await writeFile(path, code);
   await refreshPluginRegistry();
   return path;
+}
+
+export async function computeSha256Hex(contents: string): Promise<string> {
+  if (!globalThis.crypto?.subtle) {
+    throw new Error('Web Crypto API is unavailable for plugin verification.');
+  }
+  const digest = await globalThis.crypto.subtle.digest('SHA-256', new TextEncoder().encode(contents));
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
 }
 
 export async function installPluginFromFile(sourcePath: string): Promise<string> {
@@ -145,7 +186,8 @@ function normalizeCatalogEntry(input: unknown): PluginCatalogEntry | undefined {
   const author = stringValue(record.author);
   const version = stringValue(record.version);
   const downloadUrl = stringValue(record.downloadUrl);
-  if (!id || !name || !author || !version || !downloadUrl) {
+  const sha256 = normalizeSha256(stringValue(record.sha256));
+  if (!id || !name || !author || !version || !downloadUrl || !sha256) {
     return undefined;
   }
   return {
@@ -155,7 +197,8 @@ function normalizeCatalogEntry(input: unknown): PluginCatalogEntry | undefined {
     version,
     description: stringValue(record.description),
     permissions: normalizePermissions(record.permissions),
-    downloadUrl
+    downloadUrl,
+    sha256
   };
 }
 
@@ -174,6 +217,28 @@ function parseSemver(value: string): [number, number, number] {
 
 function stringValue(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
+}
+
+function normalizeSha256(value: unknown): string | undefined {
+  const hash = stringValue(value).toLowerCase();
+  return SHA256_HEX_PATTERN.test(hash) ? hash : undefined;
+}
+
+function samePermissionSet(left: PluginPermission[], right: PluginPermission[]): boolean {
+  const leftSet = new Set(left);
+  const rightSet = new Set(right);
+  return leftSet.size === rightSet.size && Array.from(leftSet).every((permission) => rightSet.has(permission));
+}
+
+function confirmCatalogPluginInstall(entry: PluginCatalogEntry, permissions: PluginPermission[]): Promise<boolean> {
+  const permissionList = permissions.length > 0 ? permissions.join(', ') : 'none';
+  return bridgeConfirm(
+    [`插件名称：${entry.name}`, `来源 URL：${entry.downloadUrl}`, `所需权限：${permissionList}`, '此插件来自第三方，请确认来源可信'].join('\n'),
+    {
+      title: '安装第三方插件',
+      kind: 'warning'
+    }
+  );
 }
 
 function sanitizePluginFileName(fileName: string): string {

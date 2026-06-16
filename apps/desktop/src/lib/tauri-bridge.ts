@@ -112,6 +112,8 @@ export interface WebdavTextPutRequest extends WebdavTextRequest {
   contentType?: string;
 }
 
+export type TranslationApiProvider = 'deepl' | 'google';
+
 export interface SharePackageProgressEvent {
   stage: 'readme' | 'project' | 'export' | 'media' | 'finished';
   progress: number;
@@ -500,6 +502,8 @@ export type TauriMocks = Partial<{
   writeExportUploadWebdavPassword(password?: string): Promise<void> | void;
   readExportPresetSyncWebdavPassword(): Promise<string | undefined> | string | undefined;
   writeExportPresetSyncWebdavPassword(password?: string): Promise<void> | void;
+  readTranslationApiKey(provider: TranslationApiProvider): Promise<string | undefined> | string | undefined;
+  writeTranslationApiKey(provider: TranslationApiProvider, apiKey?: string): Promise<void> | void;
   analyzeClip(request: AnalyzeClipRequest): Promise<AnalyzeClipResult> | AnalyzeClipResult;
   analyzeMotionTrack(request: AnalyzeMotionTrackRequest): Promise<AnalyzeMotionTrackResult> | AnalyzeMotionTrackResult;
   evaluateExportQuality(request: QualityEvaluationRequest): Promise<QualityEvaluationResult> | QualityEvaluationResult;
@@ -1051,6 +1055,29 @@ export async function writeExportPresetSyncWebdavPassword(password?: string): Pr
     return;
   }
   await invoke('write_export_preset_sync_webdav_password', { password });
+}
+
+export async function readTranslationApiKey(provider: TranslationApiProvider): Promise<string | undefined> {
+  const mock = getTauriMocks()?.readTranslationApiKey;
+  if (mock) {
+    return mock(provider);
+  }
+  if (!isTauriRuntime()) {
+    return undefined;
+  }
+  return invoke<string | undefined>('read_translation_api_key', { provider });
+}
+
+export async function writeTranslationApiKey(provider: TranslationApiProvider, apiKey?: string): Promise<void> {
+  const mock = getTauriMocks()?.writeTranslationApiKey;
+  if (mock) {
+    await mock(provider, apiKey);
+    return;
+  }
+  if (!isTauriRuntime()) {
+    throw new Error('Translation API Key storage requires the Tauri runtime.');
+  }
+  await invoke('write_translation_api_key', { provider, key: apiKey });
 }
 
 export async function analyzeClip(request: AnalyzeClipRequest): Promise<AnalyzeClipResult> {

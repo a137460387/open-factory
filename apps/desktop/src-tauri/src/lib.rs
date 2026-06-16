@@ -102,6 +102,8 @@ pub fn run() {
             commands::privacy::detect_privacy_regions,
             commands::proxy::generate_proxy,
             commands::scene::detect_scene_changes,
+            commands::secrets::read_translation_api_key,
+            commands::secrets::write_translation_api_key,
             commands::share::create_share_package,
             commands::backup::put_webdav_project,
             commands::backup::put_webdav_export_file,

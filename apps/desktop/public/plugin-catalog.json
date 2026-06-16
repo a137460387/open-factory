@@ -7,7 +7,8 @@
       "version": "1.0.0",
       "description": "Adds a small local export hook example for testing plugin installation.",
       "permissions": ["export-hook"],
-      "downloadUrl": "/plugins/export-note.js"
+      "downloadUrl": "/plugins/export-note.js",
+      "sha256": "515cde43da428773b99859149b9a26c0ad596d57aaac4689ac076029e83caf39"
     }
   ]
 }

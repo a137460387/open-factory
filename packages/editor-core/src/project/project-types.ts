@@ -1,5 +1,20 @@
-import type { ClipGroup, ExportRange, MediaAsset, MediaFolder, MediaMetadata, ProjectAnnotation, ProjectSettings, ProtectedRange, ReviewAnnotation, Sequence, Timeline, TimelineBookmark, TimelineNote } from '../model';
-import type { BeatMarker } from '../beats';
+import type {
+  BeatMarker,
+  ClipGroup,
+  ExportRange,
+  MediaAsset,
+  MediaFolder,
+  MediaMetadata,
+  Project,
+  ProjectAnnotation,
+  ProjectSettings,
+  ProtectedRange,
+  ReviewAnnotation,
+  Sequence,
+  Timeline,
+  TimelineBookmark,
+  TimelineNote
+} from '../model-types';
 
 export interface ProjectFileV1 {
   version: '0.1';
@@ -44,7 +59,7 @@ export interface ProjectFileV2 {
 export type ProjectFile = ProjectFileV1 | ProjectFileV2;
 
 export interface MigrationResult {
-  project: import('../model').Project;
+  project: Project;
   warnings: string[];
 }
 

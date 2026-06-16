@@ -3457,6 +3457,9 @@ function ExportUploadSection({
                   data-testid="export-upload-webdav-url"
                   onChange={(event) => updateWebdav({ url: event.target.value })}
                 />
+                <span className="mt-1 block text-[11px] font-normal text-amber-700" data-testid="export-upload-webdav-https-warning">
+                  {t.httpsRequiredNote}
+                </span>
               </label>
               <label className="block text-xs font-medium text-slate-600">
                 {t.username}

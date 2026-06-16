@@ -311,7 +311,9 @@ function ClipInspector({
   const setChromaKeyPickClipId = useEditorStore((state) => state.setChromaKeyPickClipId);
   const translationProvider = useTranslationSettingsStore((state) => state.provider);
   const translationApiKey = useTranslationSettingsStore((state) => state.apiKey);
+  const translationApiKeyError = useTranslationSettingsStore((state) => state.apiKeyError);
   const translationTargetLanguage = useTranslationSettingsStore((state) => state.targetLanguage);
+  const loadTranslationApiKey = useTranslationSettingsStore((state) => state.loadApiKey);
   const privacyDetectionModelPath = usePrivacyDetectionSettingsStore((state) => state.modelPath);
   const translationSettings = useMemo(
     () => ({ provider: translationProvider, apiKey: translationApiKey, targetLanguage: translationTargetLanguage }),
@@ -335,6 +337,11 @@ function ClipInspector({
   const [textAnimationPreset, setTextAnimationPreset] = useState<TextAnimationPreset>('fade');
   const [textAnimationDuration, setTextAnimationDuration] = useState(0.5);
   const [textAnimationDirection, setTextAnimationDirection] = useState<TextAnimationDirection>('in');
+
+  useEffect(() => {
+    void loadTranslationApiKey();
+  }, [loadTranslationApiKey, translationProvider]);
+
   const commit = (patch: ClipPatch) => {
     try {
       commandManager.execute(new UpdateClipCommand(timelineAccessor, clip.id, patch));
@@ -2022,7 +2029,7 @@ function ClipInspector({
                 </button>
                 {!isTranslationConfigured(translationSettings) ? (
                   <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs font-medium text-amber-800" data-testid="subtitle-translation-not-configured">
-                    {zhCN.inspector.translation.notConfigured}
+                    {translationApiKeyError || zhCN.inspector.translation.notConfigured}
                   </div>
                 ) : null}
                 {subtitleTranslationProgress ? (
