@@ -296,7 +296,12 @@ const mocks: TauriMocks = {
     mtimes.set(destinationPath, Date.now());
     persistFiles();
   },
-  fsExists: (path) => exists.get(path) ?? !path.endsWith('.autosave'),
+  fsExists: (path) => {
+    if (path.includes('/shared-library/index.json')) {
+      return files.has(path);
+    }
+    return exists.get(path) ?? !path.endsWith('.autosave');
+  },
   readColorMatchFrameSample: (path) => {
     if (path === tinyImage) {
       return solidColorSample([217, 85, 63]);
@@ -475,6 +480,20 @@ const mocks: TauriMocks = {
     persistFiles();
     emit('share-package-progress', { stage: 'finished', progress: 1, progressPct: 100, current: total, total, outputPath: request.outputPath });
     return { outputPath: request.outputPath, fileCount: entries.length, durationMs: 10 };
+  },
+  createSharedLibraryArchive: async (request) => {
+    const payload = JSON.stringify({ manifest: request.manifestContents, files: request.files.map((entry) => entry.archivePath) });
+    files.set(request.outputPath, `mock shared library archive\n${payload}`);
+    exists.set(request.outputPath, true);
+    mtimes.set(request.outputPath, Date.now());
+    persistFiles();
+    return { outputPath: request.outputPath, fileCount: request.files.length + 1, durationMs: 10 };
+  },
+  importSharedLibraryArchive: async (request) => {
+    const raw = files.get(request.archivePath) ?? '';
+    const payload = raw.startsWith('mock shared library archive\n') ? JSON.parse(raw.slice('mock shared library archive\n'.length)) : { manifest: '{"schemaVersion":1,"resources":[]}', files: [] };
+    persistFiles();
+    return { destinationDir: request.destinationDir, fileCount: 1 + (payload.files?.length ?? 0), manifestContents: String(payload.manifest ?? '{"schemaVersion":1,"resources":[]}') };
   },
   putWebdavProject: async (request) => {
     lastWebdavPutRequest = request;
@@ -1940,6 +1959,11 @@ window.__E2E_ACTIONS__ = {
     exists.set(pluginCatalogCachePath, false);
     mtimes.delete(pluginCatalogCachePath);
     for (const path of Array.from(files.keys()).filter((item) => item.includes('/Backups/') || item.startsWith('C:/Backups/'))) {
+      files.delete(path);
+      exists.set(path, false);
+      mtimes.delete(path);
+    }
+    for (const path of Array.from(files.keys()).filter((item) => item.includes('/shared-library/') || item.includes('/timeline-templates/'))) {
       files.delete(path);
       exists.set(path, false);
       mtimes.delete(path);

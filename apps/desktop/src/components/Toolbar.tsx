@@ -27,6 +27,8 @@ import type { TimelineHeatmapViewSettings } from '../settings/appSettings';
 interface ToolbarProps {
   onNewProject(): void;
   onNewFromTemplate(): void;
+  onSaveTimelineTemplate(): void;
+  onNewFromTimelineTemplate(): void;
   onOpenProject(): void;
   onSaveProject(): void;
   onSaveEncryptedProject(): void;
@@ -267,6 +269,28 @@ export function Toolbar(props: ToolbarProps) {
               }}
             >
               <span>{t.newFromTemplate}</span>
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-file-save-timeline-template-menu-item"
+              onClick={() => {
+                setFileMenuOpen(false);
+                props.onSaveTimelineTemplate();
+              }}
+            >
+              <span>{t.saveTimelineTemplate}</span>
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-file-new-timeline-template-menu-item"
+              onClick={() => {
+                setFileMenuOpen(false);
+                props.onNewFromTimelineTemplate();
+              }}
+            >
+              <span>{t.newFromTimelineTemplate}</span>
             </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"

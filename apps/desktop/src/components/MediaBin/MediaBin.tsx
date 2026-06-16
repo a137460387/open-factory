@@ -29,6 +29,7 @@ import { analyzeMedia, listenDragDrop, type MediaAnalysis } from '../../lib/taur
 import { useMediaJobStore } from '../../media/media-job-store';
 import { DEFAULT_MEDIA_LIBRARY_VIEW_SETTINGS, normalizeMediaLibraryViewSettings, sortMediaLibraryAssets, type MediaLibraryGridSize, type MediaLibrarySortKey, type MediaLibraryViewMode, type MediaLibraryViewSettings } from '../../media/mediaLibraryView';
 import { readViewSettings, saveViewSettings } from '../../settings/appSettings';
+import type { SharedLibraryResource } from '../../shared-library/sharedLibrary';
 import { useProxySettingsStore } from '../../store/proxySettingsStore';
 import { getMediaKeyboardNavigationIndex, inferMediaKeyboardColumnCount } from './media-keyboard';
 
@@ -37,6 +38,7 @@ interface MediaBinProps {
   mediaFolders: MediaFolder[];
   mediaMetadata: Record<string, MediaMetadata>;
   mediaContentAnalysis: Record<string, ClipContentAnalysis>;
+  sharedLibraryResources?: SharedLibraryResource[];
   projectFrameRate: number;
   onImport(): void;
   onImportPaths(paths: string[]): void;
@@ -64,7 +66,7 @@ interface MediaBinProps {
   onMoveMediaToFolder(assetIds: string[], folderId?: string | null): void;
 }
 
-type MediaBinView = 'all' | 'video' | 'audio' | 'image' | 'tagged' | 'titles';
+type MediaBinView = 'all' | 'video' | 'audio' | 'image' | 'tagged' | 'titles' | 'shared';
 type QuickMediaFilter = Extract<MediaMetadataFilter, 'all' | 'selected' | 'five-star'>;
 const MEDIA_CARD_DRAG_MIME = 'application/x-open-factory-media-id';
 type MediaInfoState = { asset: MediaAsset; loading: boolean; analysis?: MediaAnalysis; error?: string };
@@ -74,6 +76,7 @@ export function MediaBin({
   mediaFolders,
   mediaMetadata,
   mediaContentAnalysis,
+  sharedLibraryResources = [],
   projectFrameRate,
   onImport,
   onImportPaths,
@@ -114,7 +117,7 @@ export function MediaBin({
   const smartAlbumIds = smartAlbumId === 'none' ? undefined : new Set(smartAlbums.find((album) => album.id === smartAlbumId)?.assetIds ?? []);
   const metadataFilter: MediaMetadataFilter = filter === 'tagged' ? 'tagged' : quickFilter;
   const visibleMedia =
-    filter === 'titles'
+    filter === 'titles' || filter === 'shared'
       ? []
       : filterMediaAssets(media, {
           query: search,
@@ -322,7 +325,7 @@ export function MediaBin({
                 onClick={() => {
                   if (item === 'all') {
                     setFilter('all');
-                  } else if (filter === 'tagged' || filter === 'titles') {
+                  } else if (filter === 'tagged' || filter === 'titles' || filter === 'shared') {
                     setFilter('all');
                   }
                   setQuickFilter(item);
@@ -333,8 +336,8 @@ export function MediaBin({
               </button>
             ))}
           </div>
-          <div className="grid grid-cols-5 gap-1" data-testid="media-type-filter-bar">
-            {(['video', 'audio', 'image', 'tagged', 'titles'] as MediaBinView[]).map((item) => (
+          <div className="grid grid-cols-6 gap-1" data-testid="media-type-filter-bar">
+            {(['video', 'audio', 'image', 'tagged', 'titles', 'shared'] as MediaBinView[]).map((item) => (
               <button
                 key={item}
                 className={clsx(
@@ -345,7 +348,7 @@ export function MediaBin({
                 data-testid={`media-filter-${item}`}
                 onClick={() => {
                   setFilter(item);
-                  if (item === 'tagged' || item === 'titles') {
+                  if (item === 'tagged' || item === 'titles' || item === 'shared') {
                     setQuickFilter('all');
                   }
                   setSmartAlbumId('none');
@@ -371,14 +374,14 @@ export function MediaBin({
               ))}
             </select>
           </label>
-          {filter !== 'titles' ? (
+          {filter !== 'titles' && filter !== 'shared' ? (
             <SmartAlbumBar albums={smartAlbums} activeId={smartAlbumId} onSelect={setSmartAlbumId} />
           ) : null}
-          {filter !== 'titles' ? (
+          {filter !== 'titles' && filter !== 'shared' ? (
             <MediaLibraryViewToolbar settings={mediaLibraryView} onChange={updateMediaLibraryView} />
           ) : null}
         </div>
-        {filter !== 'titles' && jobs.length > 0 ? (
+        {filter !== 'titles' && filter !== 'shared' && jobs.length > 0 ? (
           <div className="mb-3 rounded-md border border-line bg-panel p-2 text-xs" data-testid="media-job-queue">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
@@ -394,7 +397,9 @@ export function MediaBin({
             </div>
           </div>
         ) : null}
-        {filter === 'titles' ? (
+        {filter === 'shared' ? (
+          <SharedLibraryGrid resources={sharedLibraryResources} />
+        ) : filter === 'titles' ? (
           <TitleTemplateGrid onAddTitleTemplate={onAddTitleTemplate} />
         ) : media.length === 0 ? (
           <button
@@ -519,6 +524,30 @@ function SmartAlbumBar({ albums, activeId, onSelect }: { albums: ReturnType<type
           {zhCN.mediaBin.smartAlbums[album.id]} ({album.assetIds.length})
         </button>
       ))}
+    </div>
+  );
+}
+
+function SharedLibraryGrid({ resources }: { resources: SharedLibraryResource[] }) {
+  if (resources.length === 0) {
+    return <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600" data-testid="shared-library-empty">{zhCN.mediaBin.sharedEmpty}</div>;
+  }
+  return (
+    <div className="space-y-2" data-testid="shared-library-resource-list">
+      <div className="text-xs font-medium text-slate-500">{zhCN.mediaBin.sharedResourceCount(resources.length)}</div>
+      <div className="grid gap-2">
+        {resources.map((resource) => (
+          <div key={resource.id} className="rounded-md border border-line bg-white p-3 shadow-sm" data-testid="shared-library-resource-card">
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <div className="truncate text-sm font-semibold text-ink">{resource.name}</div>
+                <div className="mt-1 text-xs text-slate-500">{zhCN.mediaBin.sharedResourceTypes[resource.type]}</div>
+              </div>
+              <span className="shrink-0 rounded bg-panel px-1.5 py-0.5 text-[11px] font-semibold text-slate-600">{zhCN.mediaBin.sharedVersion(resource.version)}</span>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

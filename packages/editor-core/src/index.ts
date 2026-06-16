@@ -38,6 +38,7 @@ export * from './timeline-virtualization';
 export * from './sync-compare';
 export * from './timeline-search';
 export * from './timeline-feedback';
+export * from './timeline-templates';
 export * from './frame-search';
 export * from './scene-reorder';
 export * from './vfr';

@@ -96,6 +96,34 @@ export interface SharePackageResult {
   durationMs: number;
 }
 
+export interface SharedLibraryArchiveFileEntry {
+  sourcePath: string;
+  archivePath: string;
+}
+
+export interface SharedLibraryArchiveRequest {
+  outputPath: string;
+  manifestContents: string;
+  files: SharedLibraryArchiveFileEntry[];
+}
+
+export interface SharedLibraryArchiveResult {
+  outputPath: string;
+  fileCount: number;
+  durationMs: number;
+}
+
+export interface SharedLibraryImportRequest {
+  archivePath: string;
+  destinationDir: string;
+}
+
+export interface SharedLibraryImportResult {
+  destinationDir: string;
+  fileCount: number;
+  manifestContents: string;
+}
+
 export interface WebdavProjectBackupRequest {
   url: string;
   username?: string;
@@ -595,6 +623,8 @@ export type TauriMocks = Partial<{
   runExport(plan: FfmpegExportPlan, taskId?: string): Promise<ExportResult> | ExportResult;
   runExportPreviewSamples(request: ExportPreviewSamplesRequest): Promise<ExportPreviewSamplesResult> | ExportPreviewSamplesResult;
   createSharePackage(request: SharePackageRequest): Promise<SharePackageResult> | SharePackageResult;
+  createSharedLibraryArchive(request: SharedLibraryArchiveRequest): Promise<SharedLibraryArchiveResult> | SharedLibraryArchiveResult;
+  importSharedLibraryArchive(request: SharedLibraryImportRequest): Promise<SharedLibraryImportResult> | SharedLibraryImportResult;
   putWebdavProject(request: WebdavProjectBackupRequest): Promise<WebdavProjectBackupResult> | WebdavProjectBackupResult;
   putWebdavExportFile(request: WebdavExportUploadRequest): Promise<WebdavExportUploadResult> | WebdavExportUploadResult;
   getWebdavText(request: WebdavTextRequest): Promise<WebdavTextResult> | WebdavTextResult;
@@ -1132,6 +1162,22 @@ export async function createSharePackageZip(request: SharePackageRequest): Promi
     return mock(request);
   }
   return invoke<SharePackageResult>('create_share_package', { request });
+}
+
+export async function createSharedLibraryArchive(request: SharedLibraryArchiveRequest): Promise<SharedLibraryArchiveResult> {
+  const mock = getTauriMocks()?.createSharedLibraryArchive;
+  if (mock) {
+    return mock(request);
+  }
+  return invoke<SharedLibraryArchiveResult>('create_shared_library_archive', { request });
+}
+
+export async function importSharedLibraryArchive(request: SharedLibraryImportRequest): Promise<SharedLibraryImportResult> {
+  const mock = getTauriMocks()?.importSharedLibraryArchive;
+  if (mock) {
+    return mock(request);
+  }
+  return invoke<SharedLibraryImportResult>('import_shared_library_archive', { request });
 }
 
 export async function putWebdavProject(request: WebdavProjectBackupRequest): Promise<WebdavProjectBackupResult> {

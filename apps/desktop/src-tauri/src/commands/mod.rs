@@ -16,6 +16,7 @@ pub mod reports;
 pub mod scene;
 pub mod secrets;
 pub mod share;
+pub mod shared_library;
 pub mod smoke;
 pub mod transcode;
 pub mod whisper;

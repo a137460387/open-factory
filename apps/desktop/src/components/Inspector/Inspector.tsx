@@ -164,6 +164,7 @@ import { buildFrameInterpolationComparePreviewPlan, FRAME_INTERPOLATION_COMPARE_
 import { buildClipColorMatchCurves } from '../../lib/colorMatch';
 import { acceptTranslationTOS, subtitleClipsToTranslationItems, translateSubtitleItems } from '../../lib/subtitleTranslation';
 import { deleteCustomSubtitleStyleTemplate, loadSubtitleStyleTemplates, saveCustomSubtitleStyleTemplate } from '../../lib/subtitleStyleTemplates';
+import { addSharedLibraryResource, loadSharedSubtitleStyleTemplates, subtitleStyleTemplateToSharedResource } from '../../shared-library/sharedLibrary';
 import { validateCustomShaderSource } from '../../lib/preview/custom-shader';
 import { showToast } from '../../lib/toast';
 import { markLocalAiModelUsed } from '../../settings/appSettings';
@@ -582,10 +583,10 @@ function ClipInspector({
         canceled = true;
       };
     }
-    loadSubtitleStyleTemplates()
-      .then((templates) => {
+    Promise.all([loadSubtitleStyleTemplates(), loadSharedSubtitleStyleTemplates()])
+      .then(([templates, sharedTemplates]) => {
         if (!canceled) {
-          setSubtitleStyleTemplates(templates);
+          setSubtitleStyleTemplates(mergeSubtitleStyleTemplateViews(templates, sharedTemplates));
         }
       })
       .catch((error) => {
@@ -1072,6 +1073,15 @@ function ClipInspector({
       showToast({ kind: 'info', title: zhCN.inspector.subtitleStyleTemplates.title, message: zhCN.inspector.subtitleStyleTemplates.deleted });
     } catch (error) {
       showToast({ kind: 'warning', title: zhCN.inspector.subtitleStyleTemplates.deleteFailed, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+    }
+  };
+  const addSubtitleStyleTemplateToSharedLibrary = async (template: SubtitleStyleTemplate) => {
+    try {
+      await addSharedLibraryResource(subtitleStyleTemplateToSharedResource(template), 'overwrite');
+      window.dispatchEvent(new CustomEvent('open-factory:shared-library-updated'));
+      showToast({ kind: 'success', title: zhCN.inspector.subtitleStyleTemplates.title, message: zhCN.inspector.subtitleStyleTemplates.addedToShared(getSubtitleStyleTemplateLabel(template)) });
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.inspector.subtitleStyleTemplates.addToSharedFailed, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
     }
   };
 
@@ -2638,6 +2648,7 @@ function ClipInspector({
                   onApply={applySubtitleStyleTemplate}
                   onSave={saveCurrentSubtitleStyleTemplate}
                   onDelete={deleteSubtitleStyleTemplate}
+                  onAddToSharedLibrary={(template) => void addSubtitleStyleTemplateToSharedLibrary(template)}
                 />
                 <ColorField label={zhCN.inspector.fields.outlineColor} value={clip.style.outlineColor} onCommit={(outlineColor) => commit({ style: { outlineColor } })} testId="subtitle-outline-color-input" />
                 <NumberField label={zhCN.inspector.fields.outlineWidth} value={clip.style.outlineWidth} min={0} max={12} step={1} onCommit={(outlineWidth) => commit({ style: { outlineWidth } })} testId="subtitle-outline-width-input" />
@@ -2811,12 +2822,14 @@ function SubtitleStyleTemplatesPanel({
   templates,
   onApply,
   onSave,
-  onDelete
+  onDelete,
+  onAddToSharedLibrary
 }: {
   templates: SubtitleStyleTemplate[];
   onApply(template: SubtitleStyleTemplate): void;
   onSave(): void;
   onDelete(templateId: string): void;
+  onAddToSharedLibrary(template: SubtitleStyleTemplate): void;
 }) {
   const t = zhCN.inspector.subtitleStyleTemplates;
   return (
@@ -2845,8 +2858,17 @@ function SubtitleStyleTemplatesPanel({
                   <img className="block h-12 w-full object-cover" src={makeSvgDataUri(renderSubtitleStyleTemplatePreview(template))} alt={label} />
                   <span className="flex min-h-8 items-center justify-between gap-1 px-1.5 py-1">
                     <span className="min-w-0 truncate">{label}</span>
-                    {template.kind === 'custom' ? <span className="shrink-0 rounded-sm bg-white px-1 text-[10px] font-medium text-slate-500">{t.customBadge}</span> : null}
+                    {template.kind === 'custom' ? <span className="shrink-0 rounded-sm bg-white px-1 text-[10px] font-medium text-slate-500">{template.id.startsWith('shared-') ? t.sharedBadge : t.customBadge}</span> : null}
                   </span>
+                </button>
+                <button
+                  className="mt-1 flex w-full items-center justify-center gap-1 rounded border border-line bg-white px-2 py-1 text-xs font-medium text-slate-600 hover:bg-panel"
+                  type="button"
+                  data-testid={`subtitle-style-template-share-${template.id}`}
+                  aria-label={`${t.addToShared}: ${label}`}
+                  onClick={() => onAddToSharedLibrary(template)}
+                >
+                  <span>{t.addToShared}</span>
                 </button>
                 {template.kind === 'custom' ? (
                   <button
@@ -2872,6 +2894,20 @@ function SubtitleStyleTemplatesPanel({
 function getSubtitleStyleTemplateLabel(template: SubtitleStyleTemplate): string {
   const builtins = zhCN.inspector.subtitleStyleTemplates.builtins;
   return template.kind === 'builtin' ? builtins[template.id as keyof typeof builtins] ?? template.name : template.name;
+}
+
+function mergeSubtitleStyleTemplateViews(templates: SubtitleStyleTemplate[], sharedTemplates: SubtitleStyleTemplate[]): SubtitleStyleTemplate[] {
+  const seen = new Set<string>();
+  const merged: SubtitleStyleTemplate[] = [];
+  for (const template of [...templates, ...sharedTemplates]) {
+    const key = template.id;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    merged.push(template);
+  }
+  return merged;
 }
 
 function makeSvgDataUri(svg: string): string {

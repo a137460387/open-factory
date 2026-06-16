@@ -50,6 +50,30 @@ const zh = {
       cinema: { name: '电影', description: '16:9, 24fps, 4K, LUT 预设' }
     }
   },
+  timelineTemplates: {
+    saveTitle: '保存为时间线模板',
+    saveSubtitle: '把当前时间线或选中片段保存为可复用结构。',
+    newTitle: '从时间线模板新建',
+    newSubtitle: '选择模板并为媒体占位符指定文件。',
+    name: '模板名称',
+    defaultName: '时间线模板',
+    save: '保存模板',
+    savedTitle: '时间线模板已保存',
+    savedMessage: (name: string) => `已保存：${name}`,
+    saveFailed: '时间线模板保存失败',
+    saveFailedMessage: '无法写入模板文件。',
+    loadFailed: '时间线模板读取失败',
+    loadFailedMessage: '无法读取模板目录。',
+    close: '关闭',
+    wholeTimelineSummary: '将保存当前时间线的全部轨道和 clip。',
+    selectedClipSummary: (count: number) => `将保存 ${count} 个选中 clip。`,
+    customTemplate: '自定义时间线模板',
+    trackCount: (count: number) => `${count} 条轨道`,
+    chooseFile: '选择文件',
+    notSelected: '未选择文件',
+    create: '创建项目',
+    createWithMissing: (count: number) => `创建项目（${count} 个占位符缺失）`
+  },
   clips: {
     defaultTextName: '文字',
     defaultTextContent: '标题',
@@ -64,6 +88,8 @@ const zh = {
     toolsMenu: '工具',
     newProject: '新建项目',
     newFromTemplate: '从模板新建',
+    saveTimelineTemplate: '保存为时间线模板',
+    newFromTimelineTemplate: '从时间线模板新建',
     openProject: '打开项目',
     saveProject: '保存项目',
     saveEncryptedProject: '加密保存',
@@ -886,6 +912,20 @@ const zh = {
     versionCompareTitle: '对比版本',
     versionCompareTime: (time: string) => `时间点 ${time}s`,
     versionMediaMissing: '版本媒体缺失',
+    sharedLibrary: '共享库',
+    sharedResourceCount: (count: number) => `${count} 个共享资源`,
+    sharedEmpty: '共享库暂无资源。',
+    sharedVersion: (version: number) => `v${version}`,
+    sharedResourceTypes: {
+      'export-preset': '导出预设',
+      'subtitle-style': '字幕样式',
+      macro: '宏',
+      'title-template': '标题模板',
+      'timeline-template': '时间线模板',
+      lut: 'LUT',
+      'workspace-layout': '工作区布局',
+      'custom-layout': '自定义布局'
+    },
     gifExport: {
       title: '导出为 GIF',
       frameRate: '帧率',
@@ -996,7 +1036,8 @@ const zh = {
       audio: '音频',
       image: '图片',
       tagged: '已标记',
-      titles: '标题'
+      titles: '标题',
+      shared: '共享库'
     },
     smartAlbums: {
       all: '全部素材',
@@ -2031,6 +2072,10 @@ const zh = {
       loadFailed: '字幕样式模板读取失败',
       saveFailed: '字幕样式模板保存失败',
       deleteFailed: '字幕样式模板删除失败',
+      addToShared: '加入共享库',
+      sharedBadge: '共享',
+      addedToShared: (name: string) => `已加入共享库：${name}`,
+      addToSharedFailed: '加入共享库失败',
       applied: (name: string) => `已应用字幕模板：${name}`,
       saved: (name: string) => `已保存字幕模板：${name}`,
       deleted: '已删除自定义字幕模板',
@@ -3433,6 +3478,30 @@ const enOverrides = {
       cinema: { name: 'Cinema', description: '16:9, 24fps, 4K, LUT preset' }
     }
   },
+  timelineTemplates: {
+    saveTitle: 'Save Timeline Template',
+    saveSubtitle: 'Save the current timeline or selected clips as reusable structure.',
+    newTitle: 'New From Timeline Template',
+    newSubtitle: 'Choose a template and assign files for media placeholders.',
+    name: 'Template Name',
+    defaultName: 'Timeline Template',
+    save: 'Save Template',
+    savedTitle: 'Timeline template saved',
+    savedMessage: (name: string) => `Saved: ${name}`,
+    saveFailed: 'Timeline template save failed',
+    saveFailedMessage: 'Unable to write the template file.',
+    loadFailed: 'Timeline template load failed',
+    loadFailedMessage: 'Unable to read the template directory.',
+    close: 'Close',
+    wholeTimelineSummary: 'The full current timeline will be saved.',
+    selectedClipSummary: (count: number) => `${count} selected clips will be saved.`,
+    customTemplate: 'Custom timeline template',
+    trackCount: (count: number) => `${count} tracks`,
+    chooseFile: 'Choose File',
+    notSelected: 'No file selected',
+    create: 'Create Project',
+    createWithMissing: (count: number) => `Create Project (${count} missing placeholders)`
+  },
   clips: {
     defaultTextName: 'Text',
     defaultTextContent: 'Title',
@@ -3447,6 +3516,8 @@ const enOverrides = {
     toolsMenu: 'Tools',
     newProject: 'New Project',
     newFromTemplate: 'New From Template',
+    saveTimelineTemplate: 'Save Timeline Template',
+    newFromTimelineTemplate: 'New From Timeline Template',
     openProject: 'Open Project',
     saveProject: 'Save Project',
     saveEncryptedProject: 'Encrypted Save',
@@ -4259,6 +4330,20 @@ const enOverrides = {
     versionCompareTitle: 'Compare Versions',
     versionCompareTime: (time: string) => `Time ${time}s`,
     versionMediaMissing: 'Version media missing',
+    sharedLibrary: 'Shared Library',
+    sharedResourceCount: (count: number) => `${count} shared resources`,
+    sharedEmpty: 'No shared resources yet.',
+    sharedVersion: (version: number) => `v${version}`,
+    sharedResourceTypes: {
+      'export-preset': 'Export Preset',
+      'subtitle-style': 'Subtitle Style',
+      macro: 'Macro',
+      'title-template': 'Title Template',
+      'timeline-template': 'Timeline Template',
+      lut: 'LUT',
+      'workspace-layout': 'Workspace Layout',
+      'custom-layout': 'Custom Layout'
+    },
     gifExport: {
       title: 'Export as GIF',
       frameRate: 'Frame Rate',
@@ -4369,7 +4454,8 @@ const enOverrides = {
       audio: 'Audio',
       image: 'Image',
       tagged: 'Tagged',
-      titles: 'Titles'
+      titles: 'Titles',
+      shared: 'Shared'
     },
     smartAlbums: {
       all: 'All Media',
@@ -5186,6 +5272,10 @@ const enOverrides = {
       loadFailed: 'Subtitle style templates load failed',
       saveFailed: 'Subtitle style templates save failed',
       deleteFailed: 'Subtitle style templates delete failed',
+      addToShared: 'Add to Shared Library',
+      sharedBadge: 'Shared',
+      addedToShared: (name: string) => `Added to shared library: ${name}`,
+      addToSharedFailed: 'Add to shared library failed',
       applied: (name: string) => `Applied subtitle template: ${name}`,
       saved: (name: string) => `Saved subtitle template: ${name}`,
       deleted: 'Deleted custom subtitle template',

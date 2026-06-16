@@ -117,6 +117,8 @@ pub fn run() {
             commands::secrets::read_translation_api_key,
             commands::secrets::write_translation_api_key,
             commands::share::create_share_package,
+            commands::shared_library::create_shared_library_archive,
+            commands::shared_library::import_shared_library_archive,
             commands::backup::put_webdav_project,
             commands::backup::put_webdav_export_file,
             commands::backup::get_webdav_text,

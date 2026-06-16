@@ -243,12 +243,14 @@ import { analyzeClipContentLocally, exportClipContentAnalysisJson } from '../med
 import type { ContentAnalysisTarget } from '../media/ContentAnalysisDialog';
 import { ProjectHealthDialog } from '../project-health/ProjectHealthDialog';
 import { ProjectTemplateDialog } from '../project-templates/ProjectTemplateDialog';
+import { loadSharedLibrary, type SharedLibraryResource } from '../shared-library/sharedLibrary';
 import { commandManager, projectAccessor, timelineAccessor } from '../store/commandManager';
 import { useDemucsSettingsStore } from '../store/demucsSettingsStore';
 import { selectClipById, useEditorStore } from '../store/editorStore';
 import { useProxySettingsStore } from '../store/proxySettingsStore';
 import { useRecordingSettingsStore } from '../store/recordingSettingsStore';
 import type { VideoStitchWizardSettings } from '../video-stitching/VideoStitchWizardDialog';
+import { TimelineTemplateDialog } from '../timeline-templates/TimelineTemplateDialog';
 
 const AudioMixer = lazy(() => import('./AudioMixer/AudioMixer').then((module) => ({ default: module.AudioMixer })));
 const Inspector = lazy(() => import('./Inspector/Inspector').then((module) => ({ default: module.Inspector })));
@@ -333,6 +335,7 @@ export function EditorShell() {
   const [projectEncryptionSaveOpen, setProjectEncryptionSaveOpen] = useState(false);
   const [projectPasswordRequest, setProjectPasswordRequest] = useState<ProjectPasswordRequest | undefined>();
   const [projectTemplateOpen, setProjectTemplateOpen] = useState(false);
+  const [timelineTemplateMode, setTimelineTemplateMode] = useState<'save' | 'new'>();
   const [templateExportPreset, setTemplateExportPreset] = useState<ExportPreset>();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [beatSensitivity, setBeatSensitivity] = useState<BeatSensitivity>('medium');
@@ -351,6 +354,7 @@ export function EditorShell() {
   const [shortcutCheatsheetOpen, setShortcutCheatsheetOpen] = useState(false);
   const [macros, setMacros] = useState<ClipMacro[]>([]);
   const [macroHistory, setMacroHistory] = useState<MacroHistoryEntry[]>([]);
+  const [sharedLibraryResources, setSharedLibraryResources] = useState<SharedLibraryResource[]>([]);
   const [macroRecordingActive, setMacroRecordingActive] = useState(false);
   const [macroRecordingStepCount, setMacroRecordingStepCount] = useState(0);
   const [autosaveIntervalSeconds, setAutosaveIntervalSeconds] = useState(() => readAutosaveIntervalSeconds());
@@ -491,6 +495,24 @@ export function EditorShell() {
     },
     [layoutSettings.panels, persistLayoutPatch]
   );
+
+  const refreshSharedLibraryResources = useCallback(async () => {
+    try {
+      setSharedLibraryResources(await loadSharedLibrary());
+    } catch (error) {
+      console.warn('Unable to load shared library', error);
+      setSharedLibraryResources([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshSharedLibraryResources();
+    const onSharedLibraryUpdated = () => {
+      void refreshSharedLibraryResources();
+    };
+    window.addEventListener('open-factory:shared-library-updated', onSharedLibraryUpdated);
+    return () => window.removeEventListener('open-factory:shared-library-updated', onSharedLibraryUpdated);
+  }, [refreshSharedLibraryResources]);
 
   const applyWorkspaceLayoutById = useCallback(
     (layoutId: WorkspaceLayoutId) => {
@@ -1887,6 +1909,17 @@ export function EditorShell() {
     [dirty, executeNewProject]
   );
 
+  const createProjectFromTimelineTemplate = useCallback(
+    async (nextProject: Project) => {
+      if (dirty && !(await confirmDiscardChanges())) {
+        return;
+      }
+      executeNewProject(nextProject);
+      setTimelineTemplateMode(undefined);
+    },
+    [dirty, executeNewProject]
+  );
+
   const openProject = useCallback(async () => {
     try {
       if (dirty && !(await confirmDiscardChanges())) {
@@ -2675,6 +2708,8 @@ export function EditorShell() {
         <Toolbar
           onNewProject={newProject}
           onNewFromTemplate={() => setProjectTemplateOpen(true)}
+          onSaveTimelineTemplate={() => setTimelineTemplateMode('save')}
+          onNewFromTimelineTemplate={() => setTimelineTemplateMode('new')}
           onOpenProject={openProject}
           onSaveProject={() => void saveProject()}
           onSaveEncryptedProject={saveEncryptedProject}
@@ -2830,6 +2865,7 @@ export function EditorShell() {
                   mediaFolders={project.mediaFolders}
                   mediaMetadata={project.mediaMetadata}
                   mediaContentAnalysis={mediaContentAnalysis}
+                  sharedLibraryResources={sharedLibraryResources}
                   projectFrameRate={project.settings.fps}
                   onImport={() => void importMedia()}
                   onImportPaths={(paths) => void importDropped(paths)}
@@ -3000,6 +3036,16 @@ export function EditorShell() {
             />
           ) : null}
           {projectTemplateOpen ? <ProjectTemplateDialog onSelect={(templateId) => void createProjectFromTemplate(templateId)} onClose={() => setProjectTemplateOpen(false)} /> : null}
+          {timelineTemplateMode ? (
+            <TimelineTemplateDialog
+              mode={timelineTemplateMode}
+              project={project}
+              selectedClipIds={selectedClipIds}
+              onCreate={(nextProject) => void createProjectFromTimelineTemplate(nextProject)}
+              onSaved={() => setTimelineTemplateMode(undefined)}
+              onClose={() => setTimelineTemplateMode(undefined)}
+            />
+          ) : null}
           {timelineExportDialogOpen ? <TimelineExportDialog project={project} onClose={() => setTimelineExportDialogOpen(false)} onImportEdl={importEdlTimeline} /> : null}
           {snapshotNameOpen ? <SnapshotNameDialog defaultName={project.name} onConfirm={(name) => void saveNamedSnapshot(name)} onClose={() => setSnapshotNameOpen(false)} /> : null}
           {snapshotHistoryOpen ? (
