@@ -63,6 +63,8 @@ import {
   instantiateProjectTemplate,
   instantiateTitleTemplate,
   mergeImportedTimelineBookmarks,
+  addMediaVersion as appendMediaVersion,
+  buildMediaVersionCompareRequest,
   parseTimelineBookmarksJson,
   mergeOverlappingSubtitleDataCues,
   replaceProjectActiveTimeline,
@@ -89,7 +91,8 @@ import {
   type TimelineGridSettings,
   type TimelineGridUnit,
   type TitleTemplateId,
-  type ExportTask
+  type ExportTask,
+  type MediaVersionCompareRequest
 } from '@open-factory/editor-core';
 import { ChevronLeft, ChevronRight, GripHorizontal } from 'lucide-react';
 import { Toolbar } from './Toolbar';
@@ -168,6 +171,7 @@ import {
   batchExtractCoverFrames,
   cancelDemucs,
   closePreviewWindow,
+  convertLocalFileSrc,
   copyFile as bridgeCopyFile,
   detectBeats,
   emitBridge,
@@ -314,6 +318,7 @@ export function EditorShell() {
   const [batchTranscodeInitialPaths, setBatchTranscodeInitialPaths] = useState<string[]>([]);
   const [gifExportAsset, setGifExportAsset] = useState<MediaAsset>();
   const [spectrumAsset, setSpectrumAsset] = useState<MediaAsset>();
+  const [mediaVersionCompare, setMediaVersionCompare] = useState<MediaVersionCompareRequest>();
   const [mediaPrecheckOpen, setMediaPrecheckOpen] = useState(false);
   const [videoStitchWizardOpen, setVideoStitchWizardOpen] = useState(false);
   const [syncCompareOpen, setSyncCompareOpen] = useState(false);
@@ -1212,6 +1217,63 @@ export function EditorShell() {
       showToast({ kind: 'error', title: zhCN.editorToasts.importFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.importFailedMessage });
     }
   }, [addMedia, project.media, queueFrameRateConversionForImportedMedia, runAutomationForMedia]);
+
+  const addVersionForMedia = useCallback(
+    async (assetId: string) => {
+      const currentProject = useEditorStore.getState().project;
+      const asset = currentProject.media.find((item) => item.id === assetId);
+      if (!asset) {
+        showToast({ kind: 'error', title: zhCN.editorToasts.mediaVersionAddFailed, message: zhCN.editorToasts.mediaVersionMissingAsset });
+        return;
+      }
+      try {
+        const paths = await pickMediaPaths();
+        const path = paths[0];
+        if (!path) {
+          return;
+        }
+        if (path === asset.path) {
+          showToast({ kind: 'warning', title: zhCN.editorToasts.mediaVersionAddFailed, message: zhCN.editorToasts.mediaVersionSameFile });
+          return;
+        }
+        const latestProject = useEditorStore.getState().project;
+        const existing = latestProject.media.find((item) => item.path === path);
+        const result = existing ? { media: [] as MediaAsset[], duplicateCount: 1 } : await probeMediaPaths([path], latestProject.media);
+        const versionAsset = existing ?? result.media[0];
+        if (!versionAsset) {
+          showToast({ kind: 'error', title: zhCN.editorToasts.mediaVersionAddFailed, message: zhCN.editorToasts.importFailedMessage });
+          return;
+        }
+        if (versionAsset.type !== asset.type) {
+          showToast({ kind: 'error', title: zhCN.editorToasts.mediaVersionAddFailed, message: zhCN.editorToasts.mediaVersionTypeMismatch });
+          return;
+        }
+        if (result.media.length > 0) {
+          addMedia(result.media);
+          await queueFrameRateConversionForImportedMedia(result.media);
+          void runAutomationForMedia('on-import', result.media);
+        }
+        const metadata = useEditorStore.getState().project.mediaMetadata[assetId];
+        setMediaMetadata(assetId, appendMediaVersion(metadata, versionAsset));
+        showToast({ kind: 'success', title: zhCN.editorToasts.mediaVersionAdded, message: zhCN.editorToasts.mediaVersionAddedMessage(versionAsset.name) });
+      } catch (error) {
+        showToast({ kind: 'error', title: zhCN.editorToasts.mediaVersionAddFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.importFailedMessage });
+      }
+    },
+    [addMedia, queueFrameRateConversionForImportedMedia, runAutomationForMedia, setMediaMetadata]
+  );
+
+  const openMediaVersionCompare = useCallback(
+    (assetId: string) => {
+      const request = buildMediaVersionCompareRequest(useEditorStore.getState().project, assetId, undefined, undefined, playheadTime);
+      if (!request) {
+        showToast({ kind: 'warning', title: zhCN.editorToasts.mediaVersionCompareUnavailable, message: zhCN.editorToasts.mediaVersionCompareUnavailableMessage });
+        return;
+      }
+      setMediaVersionCompare(request);
+    },
+    [playheadTime]
+  );
 
   const openBatchTranscode = useCallback((paths: string[] = []) => {
     setBatchTranscodeInitialPaths(paths);
@@ -2777,6 +2839,8 @@ export function EditorShell() {
                   onAnalyzeSpectrum={(asset) => setSpectrumAsset(asset)}
                   onScanDuplicates={() => void scanDuplicateMedia()}
                   onAddToTimeline={addAssetToTimeline}
+                  onAddVersion={(assetId) => void addVersionForMedia(assetId)}
+                  onCompareVersions={openMediaVersionCompare}
                   onAddAdjustmentLayer={addAdjustmentLayer}
                   onRelink={(assetId) => void relinkMedia(assetId)}
                   onRelinkAll={() => void relinkAllMissing()}
@@ -2966,6 +3030,9 @@ export function EditorShell() {
               onSelection={setSpectrumSelectionRange}
               onSplitAtTime={(time) => splitSpectrumAtTime(spectrumAsset, time)}
             />
+          ) : null}
+          {mediaVersionCompare ? (
+            <MediaVersionComparePanel request={mediaVersionCompare} media={project.media} onClose={() => setMediaVersionCompare(undefined)} />
           ) : null}
           {mediaPrecheckOpen ? <MediaPrecheckPanel project={project} onClose={() => setMediaPrecheckOpen(false)} onJumpToMedia={jumpToMediaAsset} /> : null}
           {videoStitchWizardOpen ? (
@@ -3219,6 +3286,53 @@ function PanelLoading({ label, compact = false }: { label: string; compact?: boo
   return (
     <div className={`flex min-h-0 items-center justify-center bg-white text-xs text-slate-500 ${compact ? 'h-full' : 'h-full p-4'}`} data-testid="lazy-panel-loading">
       {label}
+    </div>
+  );
+}
+
+function MediaVersionComparePanel({ request, media, onClose }: { request: MediaVersionCompareRequest; media: MediaAsset[]; onClose(): void }) {
+  const leftAsset = media.find((asset) => asset.id === request.left.assetId);
+  const rightAsset = media.find((asset) => asset.id === request.right.assetId);
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4" data-testid="media-version-compare-panel">
+      <section className="flex max-h-[88vh] w-full max-w-5xl flex-col overflow-hidden rounded-md border border-line bg-white shadow-soft">
+        <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold text-ink">{zhCN.mediaBin.versionCompareTitle}</h2>
+            <div className="truncate text-xs text-slate-500">{zhCN.mediaBin.versionCompareTime(request.time.toFixed(2))}</div>
+          </div>
+          <button className="rounded-md border border-line px-3 py-1.5 text-sm font-medium text-slate-600 hover:bg-panel" type="button" data-testid="media-version-compare-close" onClick={onClose}>
+            {zhCN.common.close}
+          </button>
+        </div>
+        <div className="grid min-h-0 flex-1 gap-3 overflow-y-auto p-4 md:grid-cols-2">
+          <MediaVersionPreviewCard entry={request.left} asset={leftAsset} time={request.time} testId="media-version-compare-left" />
+          <MediaVersionPreviewCard entry={request.right} asset={rightAsset} time={request.time} testId="media-version-compare-right" />
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function MediaVersionPreviewCard({ entry, asset, time, testId }: { entry: MediaVersionCompareRequest['left']; asset?: MediaAsset; time: number; testId: string }) {
+  const src = asset ? `${convertLocalFileSrc(asset.path)}#t=${Math.max(0, time).toFixed(3)}` : undefined;
+  return (
+    <div className="min-w-0 rounded-md border border-line bg-panel p-3" data-testid={testId} data-media-id={entry.assetId}>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <div className="truncate text-sm font-semibold text-ink">{entry.label}</div>
+          <div className="truncate text-xs text-slate-500" title={entry.path}>
+            {entry.name}
+          </div>
+        </div>
+        <span className="rounded bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-600">{entry.isOriginal ? zhCN.mediaBin.versionOriginal : zhCN.mediaBin.versionVariant}</span>
+      </div>
+      <div className="checkerboard grid aspect-video place-items-center overflow-hidden rounded-md border border-line bg-white">
+        {asset?.type === 'image' && src ? <img className="h-full w-full object-contain" src={src} alt="" /> : null}
+        {asset?.type === 'video' && src ? <video className="h-full w-full bg-black object-contain" src={src} controls muted preload="metadata" /> : null}
+        {asset?.type === 'audio' && src ? <audio className="w-full px-3" src={src} controls preload="metadata" /> : null}
+        {!asset ? <div className="px-3 text-center text-xs text-slate-500">{zhCN.mediaBin.versionMediaMissing}</div> : null}
+      </div>
     </div>
   );
 }

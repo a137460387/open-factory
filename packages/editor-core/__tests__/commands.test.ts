@@ -58,6 +58,7 @@ import {
   SplitClipCommand,
   SplitClipAtTimesCommand,
   SnapToBeatsCommand,
+  SwitchMediaVersionCommand,
   TrimClipCommand,
   UpdateKeyframeCommand,
   UngroupCommand,
@@ -1237,6 +1238,24 @@ describe('timeline commands', () => {
 
     manager.undo();
     expect(accessor.current().tracks[0].clips[0]).toMatchObject({ mediaId: 'media-old', duration: 4, trimEnd: 0 });
+  });
+
+  it('switches media versions as an undoable media clip command', () => {
+    const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'clip-version', mediaId: 'media-v1', duration: 8 })]));
+    const manager = new CommandManager();
+
+    manager.execute(new SwitchMediaVersionCommand(accessor, 'clip-version', { id: 'media-v2', duration: 5 }));
+
+    expect(accessor.current().tracks[0].clips[0]).toMatchObject({
+      id: 'clip-version',
+      mediaId: 'media-v2',
+      duration: 5,
+      trimStart: 0,
+      trimEnd: 0
+    });
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips[0]).toMatchObject({ mediaId: 'media-v1', duration: 8 });
   });
 
   it('reports media replacement compatibility warnings', () => {

@@ -19,6 +19,7 @@ import type { ProjectFile } from './project/project-types';
 import { normalizeCreditsRollSpeed, normalizeCreditsRows, normalizeCreditsStyle } from './credits-roll';
 import { normalizeTimelineLabelColor } from './timeline-color-labels';
 import { normalizeProjectFps, normalizeTimecodeFormat, round } from './time';
+import { normalizeMediaVersions } from './media-versions';
 import type {
   AdjustmentClip,
   AssetType,
@@ -234,6 +235,7 @@ export function normalizeMediaMetadataEntry(metadata: MediaMetadata | undefined)
   const labelColor = isMediaLabelColor(metadata?.labelColor) ? metadata.labelColor : undefined;
   const rating = normalizeMediaRating(metadata?.rating);
   const flag = normalizeMediaFlag(metadata?.flag);
+  const versions = normalizeMediaVersions(metadata?.versions);
   const normalized: MediaMetadata = {};
   if (labelColor) {
     normalized.labelColor = labelColor;
@@ -243,6 +245,9 @@ export function normalizeMediaMetadataEntry(metadata: MediaMetadata | undefined)
   }
   if (flag) {
     normalized.flag = flag;
+  }
+  if (versions) {
+    normalized.versions = versions;
   }
   return Object.keys(normalized).length > 0 ? normalized : undefined;
 }

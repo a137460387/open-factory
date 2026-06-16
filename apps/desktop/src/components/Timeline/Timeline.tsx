@@ -65,6 +65,7 @@ import {
   RollingTrimCommand,
   SlideClipCommand,
   SlipClipCommand,
+  SwitchMediaVersionCommand,
   UpdateKeyframeCommand,
   UpdateProjectProtectedRangesCommand,
   rectsIntersect,
@@ -95,8 +96,10 @@ import {
   isFrameRateMismatch,
   findClipGroupForClip,
   findCompleteClipGroup,
+  findMediaVersionOwner,
   isNestedSequenceDepthExceeded,
   instantiateTitleTemplate,
+  listMediaVersionEntries,
   moveSelectedTrackIds,
   moveClip,
   normalizeClipGroups,
@@ -138,6 +141,7 @@ import {
   type TimelineMinimapViewportRect,
   type TimelineSnapHighlight,
   type TimelineLabelColor,
+  type MediaVersionEntry,
   type DialogueInterval,
   type DialogueSensitivity,
   type DialogueWhisperMiss,
@@ -2184,6 +2188,34 @@ function addProjectBookmark(time = playheadTime): void {
     return project.media.find((asset) => asset.id === clip.mediaId);
   }
 
+  function getClipMediaVersionEntries(clip?: Clip): MediaVersionEntry[] {
+    if (!clip || !('mediaId' in clip)) {
+      return [];
+    }
+    const owner = findMediaVersionOwner(project, clip.mediaId);
+    if (!owner) {
+      return [];
+    }
+    const entries = listMediaVersionEntries(owner, project.mediaMetadata[owner.id], project.media);
+    return entries.length > 1 ? entries : [];
+  }
+
+  function switchClipMediaVersion(clipId: string, mediaId: string): void {
+    const media = project.media.find((asset) => asset.id === mediaId);
+    if (!media) {
+      showToast({ kind: 'error', title: zhCN.timeline.switchMediaVersionFailedTitle, message: zhCN.timeline.switchMediaVersionMissingMedia });
+      return;
+    }
+    try {
+      commandManager.execute(new SwitchMediaVersionCommand(timelineAccessor, clipId, media));
+      setSelectedClipId(clipId);
+      setClipMenu(undefined);
+      showToast({ kind: 'success', title: zhCN.timeline.switchMediaVersionSuccessTitle, message: zhCN.timeline.switchMediaVersionSuccessMessage });
+    } catch (error) {
+      showToast({ kind: 'error', title: zhCN.timeline.switchMediaVersionFailedTitle, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
+    }
+  }
+
   function minFrameDuration(): number {
     return 1 / Math.max(1, project.settings.fps || 30);
   }
@@ -2667,6 +2699,7 @@ function addProjectBookmark(time = playheadTime): void {
                 menu={clipMenu}
                 clip={allClips.find((clip) => clip.id === clipMenu.clipId)}
                 asset={allClips.find((clip) => clip.id === clipMenu.clipId) ? getClipMediaAsset(allClips.find((clip) => clip.id === clipMenu.clipId)!) : undefined}
+                versionEntries={getClipMediaVersionEntries(allClips.find((clip) => clip.id === clipMenu.clipId))}
                 group={clipGroupByClipId.get(clipMenu.clipId)}
                 projectFrameRate={project.settings.fps}
                 canCreateGroup={selectedClipIds.length >= 2}
@@ -2677,6 +2710,7 @@ function addProjectBookmark(time = playheadTime): void {
                 onGenerateCover={() => void openCoverFrameGeneration(clipMenu.clipId)}
                 onGenerateSubtitles={() => void generateSubtitles(clipMenu.clipId)}
                 onReplaceMedia={() => void openReplaceMedia(clipMenu.clipId)}
+                onSwitchVersion={(mediaId) => switchClipMediaVersion(clipMenu.clipId, mediaId)}
                 onConvertFrameRate={() => convertClipFrameRate(clipMenu.clipId)}
                 onPack={() => packClipMenuSelection(clipMenu.clipId)}
                 onCreateGroup={createGroupFromSelection}
@@ -3837,6 +3871,7 @@ function ClipActionMenu({
   menu,
   clip,
   asset,
+  versionEntries,
   group,
   projectFrameRate,
   canCreateGroup,
@@ -3847,6 +3882,7 @@ function ClipActionMenu({
   onGenerateCover,
   onGenerateSubtitles,
   onReplaceMedia,
+  onSwitchVersion,
   onConvertFrameRate,
   onPack,
   onCreateGroup,
@@ -3859,6 +3895,7 @@ function ClipActionMenu({
   menu: ClipMenuState;
   clip?: Clip;
   asset?: MediaAsset;
+  versionEntries: MediaVersionEntry[];
   group?: ClipGroup;
   projectFrameRate: number;
   canCreateGroup: boolean;
@@ -3869,6 +3906,7 @@ function ClipActionMenu({
   onGenerateCover(): void;
   onGenerateSubtitles(): void;
   onReplaceMedia(): void;
+  onSwitchVersion(mediaId: string): void;
   onConvertFrameRate(): void;
   onPack(): void;
   onCreateGroup(): void;
@@ -3884,6 +3922,7 @@ function ClipActionMenu({
   const canGenerateSubtitles = canGenerateSubtitlesForClip(clip, asset, whisperReady);
   const canReplaceMedia = Boolean(clip && (clip.type === 'video' || clip.type === 'audio' || clip.type === 'image'));
   const canConvertFrameRate = Boolean(asset?.type === 'video' && (asset.variableFrameRate || isFrameRateMismatch(asset.frameRate, projectFrameRate)));
+  const currentMediaId = clip && 'mediaId' in clip ? clip.mediaId : undefined;
   return (
     <div
       className="fixed z-50 w-[230px] rounded-md border border-line bg-white p-2 text-xs shadow-soft"
@@ -3937,6 +3976,29 @@ function ClipActionMenu({
       >
         {zhCN.timeline.replaceMediaAction}
       </button>
+      {versionEntries.length > 1 ? (
+        <div className="rounded-md border border-line bg-panel px-2 py-2" data-testid="clip-media-version-menu">
+          <div className="mb-1 text-[11px] font-semibold text-slate-500">{zhCN.timeline.switchMediaVersionAction}</div>
+          <div className="grid gap-1">
+            {versionEntries.map((entry) => (
+              <button
+                key={entry.id}
+                className={clsx(
+                  'flex min-w-0 items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-[11px] hover:bg-white disabled:opacity-60',
+                  currentMediaId === entry.assetId ? 'bg-white font-semibold text-brand' : 'text-slate-700'
+                )}
+                type="button"
+                disabled={currentMediaId === entry.assetId}
+                data-testid={`clip-switch-version-${entry.assetId}`}
+                onClick={() => onSwitchVersion(entry.assetId)}
+              >
+                <span>{entry.label}</span>
+                <span className="min-w-0 flex-1 truncate">{entry.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
       <button
         className="block w-full rounded px-2 py-2 text-left hover:bg-panel disabled:opacity-40"
         type="button"

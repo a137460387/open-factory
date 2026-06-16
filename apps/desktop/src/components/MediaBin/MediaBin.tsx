@@ -6,6 +6,7 @@ import {
   filterMediaAssets,
   getMediaFolderDepth,
   isFrameRateMismatch,
+  getMediaVersionLabel,
   shouldGenerateProxy,
   type MediaAsset,
   type ClipContentAnalysis,
@@ -45,6 +46,8 @@ interface MediaBinProps {
   onAnalyzeSpectrum(asset: MediaAsset): void;
   onScanDuplicates(): void;
   onAddToTimeline(assetId: string): void;
+  onAddVersion(assetId: string): void;
+  onCompareVersions(assetId: string): void;
   onAddAdjustmentLayer(): void;
   onRelink(assetId: string): void;
   onRelinkAll(): void;
@@ -80,6 +83,8 @@ export function MediaBin({
   onAnalyzeSpectrum,
   onScanDuplicates,
   onAddToTimeline,
+  onAddVersion,
+  onCompareVersions,
   onAddAdjustmentLayer,
   onRelink,
   onRelinkAll,
@@ -422,6 +427,8 @@ export function MediaBin({
             mediaContentAnalysis={mediaContentAnalysis}
             projectFrameRate={projectFrameRate}
             onAddToTimeline={onAddToTimeline}
+            onAddVersion={onAddVersion}
+            onCompareVersions={onCompareVersions}
             onRelink={onRelink}
             onGenerateProxy={onGenerateProxy}
             onConvertToCfr={onConvertToCfr}
@@ -448,6 +455,8 @@ export function MediaBin({
               onSetFolderCollapsed={onSetFolderCollapsed}
               onMoveMediaToFolder={onMoveMediaToFolder}
               onAddToTimeline={onAddToTimeline}
+              onAddVersion={onAddVersion}
+              onCompareVersions={onCompareVersions}
               onRelink={onRelink}
               onGenerateProxy={onGenerateProxy}
               onConvertToCfr={onConvertToCfr}
@@ -467,6 +476,8 @@ export function MediaBin({
               mediaContentAnalysis={mediaContentAnalysis}
               projectFrameRate={projectFrameRate}
               onAddToTimeline={onAddToTimeline}
+              onAddVersion={onAddVersion}
+              onCompareVersions={onCompareVersions}
               onRelink={onRelink}
               onGenerateProxy={onGenerateProxy}
               onConvertToCfr={onConvertToCfr}
@@ -597,6 +608,8 @@ function MediaFolderTree(props: {
   onSetFolderCollapsed(folderId: string, collapsed: boolean): void;
   onMoveMediaToFolder(assetIds: string[], folderId?: string | null): void;
   onAddToTimeline(assetId: string): void;
+  onAddVersion(assetId: string): void;
+  onCompareVersions(assetId: string): void;
   onRelink(assetId: string): void;
   onGenerateProxy(assetId: string): void;
   onConvertToCfr(assetId: string): void;
@@ -636,6 +649,8 @@ function MediaFolderNode({
   onSetFolderCollapsed,
   onMoveMediaToFolder,
   onAddToTimeline,
+  onAddVersion,
+  onCompareVersions,
   onRelink,
   onGenerateProxy,
   onConvertToCfr,
@@ -661,6 +676,8 @@ function MediaFolderNode({
   onSetFolderCollapsed(folderId: string, collapsed: boolean): void;
   onMoveMediaToFolder(assetIds: string[], folderId?: string | null): void;
   onAddToTimeline(assetId: string): void;
+  onAddVersion(assetId: string): void;
+  onCompareVersions(assetId: string): void;
   onRelink(assetId: string): void;
   onGenerateProxy(assetId: string): void;
   onConvertToCfr(assetId: string): void;
@@ -757,6 +774,8 @@ function MediaFolderNode({
               onSetFolderCollapsed={onSetFolderCollapsed}
               onMoveMediaToFolder={onMoveMediaToFolder}
               onAddToTimeline={onAddToTimeline}
+              onAddVersion={onAddVersion}
+              onCompareVersions={onCompareVersions}
               onRelink={onRelink}
               onGenerateProxy={onGenerateProxy}
               onConvertToCfr={onConvertToCfr}
@@ -776,6 +795,8 @@ function MediaFolderNode({
             gridSize={gridSize}
             projectFrameRate={projectFrameRate}
             onAddToTimeline={onAddToTimeline}
+            onAddVersion={onAddVersion}
+            onCompareVersions={onCompareVersions}
             onRelink={onRelink}
             onGenerateProxy={onGenerateProxy}
             onConvertToCfr={onConvertToCfr}
@@ -938,6 +959,8 @@ function MediaCardGrid({
   mediaContentAnalysis,
   projectFrameRate,
   onAddToTimeline,
+  onAddVersion,
+  onCompareVersions,
   onRelink,
   onGenerateProxy,
   onConvertToCfr,
@@ -955,6 +978,8 @@ function MediaCardGrid({
   mediaContentAnalysis: Record<string, ClipContentAnalysis>;
   projectFrameRate: number;
   onAddToTimeline(assetId: string): void;
+  onAddVersion(assetId: string): void;
+  onCompareVersions(assetId: string): void;
   onRelink(assetId: string): void;
   onGenerateProxy(assetId: string): void;
   onConvertToCfr(assetId: string): void;
@@ -980,6 +1005,8 @@ function MediaCardGrid({
           contentAnalysis={mediaContentAnalysis[asset.id]}
           projectFrameRate={projectFrameRate}
           onAdd={() => onAddToTimeline(asset.id)}
+          onAddVersion={() => onAddVersion(asset.id)}
+          onCompareVersions={() => onCompareVersions(asset.id)}
           onRelink={() => onRelink(asset.id)}
           onGenerateProxy={() => onGenerateProxy(asset.id)}
           onConvertToCfr={() => onConvertToCfr(asset.id)}
@@ -1191,6 +1218,8 @@ function MediaCard({
   contentAnalysis,
   projectFrameRate,
   onAdd,
+  onAddVersion,
+  onCompareVersions,
   onRelink,
   onGenerateProxy,
   onConvertToCfr,
@@ -1207,6 +1236,8 @@ function MediaCard({
   contentAnalysis?: ClipContentAnalysis;
   projectFrameRate: number;
   onAdd(): void;
+  onAddVersion(): void;
+  onCompareVersions(): void;
   onRelink(): void;
   onGenerateProxy(): void;
   onConvertToCfr(): void;
@@ -1224,9 +1255,12 @@ function MediaCard({
   const frameRateMismatch = asset.type === 'video' && isFrameRateMismatch(asset.frameRate, projectFrameRate);
   const canConvertFrameRate = asset.type === 'video' && (asset.variableFrameRate || frameRateMismatch);
   const [labelMenuOpen, setLabelMenuOpen] = useState(false);
+  const [versionsOpen, setVersionsOpen] = useState(false);
   const labelColor = metadata?.labelColor;
   const rating = metadata?.rating ?? 0;
   const flag = metadata?.flag;
+  const mediaVersions = metadata?.versions ?? [];
+  const versionCount = 1 + mediaVersions.length;
   return (
     <div
       className={clsx('relative overflow-hidden rounded-md border bg-white shadow-sm outline-none focus:ring-2 focus:ring-brand', asset.missing ? 'border-rose-300' : 'border-line')}
@@ -1305,7 +1339,21 @@ function MediaCard({
             {formatFrameRateLabel(asset.frameRate)}
           </span>
         ) : null}
-        {labelColor ? <span className="absolute right-2 top-2 h-4 w-4 rounded-full border border-white shadow" style={{ backgroundColor: labelColorToHex(labelColor) }} data-testid={`media-label-${asset.id}`} /> : null}
+        {versionCount > 1 ? (
+          <button
+            className="absolute right-2 top-2 rounded bg-brand px-2 py-0.5 text-[11px] font-semibold text-white shadow"
+            type="button"
+            title={zhCN.mediaBin.versionBadgeTitle(versionCount)}
+            data-testid={`media-version-badge-${asset.id}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              setVersionsOpen((open) => !open);
+            }}
+          >
+            {zhCN.mediaBin.versionBadge(versionCount)}
+          </button>
+        ) : null}
+        {labelColor ? <span className={clsx('absolute right-2 h-4 w-4 rounded-full border border-white shadow', versionCount > 1 ? 'top-8' : 'top-2')} style={{ backgroundColor: labelColorToHex(labelColor) }} data-testid={`media-label-${asset.id}`} /> : null}
         {flag ? (
           <span
             className={clsx(
@@ -1320,7 +1368,7 @@ function MediaCard({
         ) : null}
       </div>
       {labelMenuOpen ? (
-        <div className="absolute right-2 top-2 z-10 w-40 rounded-md border border-line bg-white p-2 text-xs shadow-soft" data-testid={`media-label-menu-${asset.id}`}>
+        <div className="absolute right-2 top-2 z-10 w-48 rounded-md border border-line bg-white p-2 text-xs shadow-soft" data-testid={`media-label-menu-${asset.id}`}>
           <button
             className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
             type="button"
@@ -1332,6 +1380,31 @@ function MediaCard({
           >
             <Info size={13} />
             {zhCN.mediaBin.mediaInfo.menuItem}
+          </button>
+          <button
+            className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
+            type="button"
+            data-testid={`media-add-version-${asset.id}`}
+            onClick={() => {
+              onAddVersion();
+              setLabelMenuOpen(false);
+            }}
+          >
+            <Plus size={13} />
+            {zhCN.mediaBin.addVersion}
+          </button>
+          <button
+            className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel disabled:opacity-40"
+            type="button"
+            disabled={versionCount < 2}
+            data-testid={`media-compare-versions-${asset.id}`}
+            onClick={() => {
+              onCompareVersions();
+              setLabelMenuOpen(false);
+            }}
+          >
+            <GalleryHorizontal size={13} />
+            {zhCN.mediaBin.compareVersions}
           </button>
           {asset.type === 'video' ? (
             <>
@@ -1431,6 +1504,22 @@ function MediaCard({
           </button>
         ) : null}
         {asset.relativePath ? <div className="mt-1 truncate text-[11px] text-slate-400">{asset.relativePath}</div> : null}
+        {versionsOpen && versionCount > 1 ? (
+          <div className="mt-2 space-y-1 rounded-md border border-line bg-panel p-2 text-[11px]" data-testid={`media-version-list-${asset.id}`}>
+            <div className="flex items-center justify-between gap-2 rounded bg-white px-2 py-1" data-testid={`media-version-row-${asset.id}-${asset.id}`}>
+              <span className="font-semibold text-slate-700">{getMediaVersionLabel(0)}</span>
+              <span className="min-w-0 flex-1 truncate text-slate-500">{asset.name}</span>
+              <span className="text-slate-400">{zhCN.mediaBin.versionOriginal}</span>
+            </div>
+            {mediaVersions.map((version, index) => (
+              <div key={version.id} className="flex items-center justify-between gap-2 rounded bg-white px-2 py-1" data-testid={`media-version-row-${asset.id}-${version.id}`}>
+                <span className="font-semibold text-slate-700">{version.label || getMediaVersionLabel(index + 1)}</span>
+                <span className="min-w-0 flex-1 truncate text-slate-500" title={version.path}>{version.name}</span>
+                <span className="text-slate-400">{formatDuration(version.duration ?? 0)}</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
         <div className="mt-2 flex items-center justify-between gap-2">
           <div className="flex items-center" data-testid={`media-rating-${asset.id}`} aria-label={zhCN.mediaBin.rating}>
             {[1, 2, 3, 4, 5].map((value) => (

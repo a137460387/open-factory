@@ -20,6 +20,7 @@ export * from './clip-groups';
 export * from './timeline-compare';
 export * from './media-filter';
 export * from './media-folders';
+export * from './media-versions';
 export * from './keyframes';
 export * from './timeline-thumbnails';
 export * from './timeline-protection';

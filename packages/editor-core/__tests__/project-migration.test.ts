@@ -409,8 +409,17 @@ describe('project schema migration', () => {
 
   it('serializes and migrates media metadata labels ratings and flags', () => {
     const project = makeProject();
+    project.media.push({ ...project.media[0], id: 'asset-2', name: 'sample-v2.mp4', path: 'C:/Videos/sample-v2.mp4', duration: 18 });
     project.mediaMetadata = {
-      'asset-1': { labelColor: 'blue', rating: 5, flag: 'green' },
+      'asset-1': {
+        labelColor: 'blue',
+        rating: 5,
+        flag: 'green',
+        versions: [
+          { id: 'version-2', label: 'v2', assetId: 'asset-2', path: 'C:/Videos/sample-v2.mp4', name: 'sample-v2.mp4', createdAt: '2026-06-16T00:00:00.000Z', duration: 18 },
+          { id: 'invalid-version', label: 'bad', assetId: '', path: '', name: '', createdAt: '' }
+        ]
+      },
       'missing-asset': { labelColor: 'red' },
       invalid: { labelColor: 'cyan' as never, rating: 9, flag: 'purple' as never }
     };
@@ -418,8 +427,15 @@ describe('project schema migration', () => {
     const file = serializeProject(project);
     const migrated = migrateProjectFile(file);
 
-    expect(file.project.mediaMetadata).toEqual({ 'asset-1': { labelColor: 'blue', rating: 5, flag: 'green' } });
-    expect(migrated.project.mediaMetadata).toEqual({ 'asset-1': { labelColor: 'blue', rating: 5, flag: 'green' } });
+    expect(file.project.mediaMetadata).toEqual({
+      'asset-1': {
+        labelColor: 'blue',
+        rating: 5,
+        flag: 'green',
+        versions: [{ id: 'version-2', label: 'v2', assetId: 'asset-2', path: 'C:/Videos/sample-v2.mp4', name: 'sample-v2.mp4', createdAt: '2026-06-16T00:00:00.000Z', duration: 18 }]
+      }
+    });
+    expect(migrated.project.mediaMetadata).toEqual(file.project.mediaMetadata);
     expect(migrateProjectFile({ ...file, project: { ...file.project, mediaMetadata: undefined } }).project.mediaMetadata).toEqual({});
   });
 

@@ -299,10 +299,24 @@ export type MediaLabelColor = 'red' | 'orange' | 'yellow' | 'green' | 'blue' | '
 
 export type MediaFlag = 'green' | 'red';
 
+export interface MediaVersion {
+  id: string;
+  label: string;
+  assetId: string;
+  path: string;
+  name: string;
+  createdAt: string;
+  duration?: number;
+  width?: number;
+  height?: number;
+  size?: number;
+}
+
 export interface MediaMetadata {
   labelColor?: MediaLabelColor;
   rating?: number;
   flag?: MediaFlag;
+  versions?: MediaVersion[];
 }
 
 export interface ProjectAnnotation {

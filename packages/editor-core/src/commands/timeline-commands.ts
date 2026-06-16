@@ -3506,6 +3506,46 @@ export class ReplaceMediaCommand implements Command {
   }
 }
 
+export class SwitchMediaVersionCommand implements Command {
+  readonly description = 'Switch media version';
+  private before?: ReplaceableMediaClip;
+  private after?: ReplaceableMediaClip;
+
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clipId: string,
+    private readonly media: Pick<MediaAsset, 'id' | 'duration'>
+  ) {}
+
+  execute(): void {
+    const timeline = this.accessor.getTimeline();
+    this.before ??= asReplaceableMediaClip(findClip(timeline, this.clipId));
+    const patch = calculateReplaceMediaPatch(this.before, this.media, 'trim-to-original');
+    this.after = {
+      ...this.before,
+      ...patch
+    } as ReplaceableMediaClip;
+    if (this.after.type === 'video' || this.after.type === 'audio') {
+      this.after = {
+        ...this.after,
+        fadeInDuration: normalizeAudioFadeDuration(this.after.fadeInDuration, this.after.duration),
+        fadeOutDuration: normalizeAudioFadeDuration(this.after.fadeOutDuration, this.after.duration)
+      } as ReplaceableMediaClip;
+    }
+    const track = findTrack(timeline, this.after.trackId);
+    if (detectOverlap(track, this.after, this.before.id)) {
+      throw new Error('Clip overlaps another clip on this track');
+    }
+    this.accessor.setTimeline(replaceClip(timeline, this.after));
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setTimeline(replaceClip(this.accessor.getTimeline(), this.before));
+    }
+  }
+}
+
 function asReplaceableMediaClip(clip: Clip): ReplaceableMediaClip {
   if (!isReplaceableMediaClip(clip)) {
     throw new Error('Media replacement requires a media clip');
