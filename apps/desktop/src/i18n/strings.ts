@@ -449,6 +449,8 @@ const zh = {
         2: '每 2 帧渲染一次',
         4: '每 4 帧渲染一次'
       },
+      reduceMotion: '减少动态效果',
+      reduceMotionDescription: '关闭时间线拖动、吸附提示和片段滑动过渡，适合需要降低运动反馈的工作环境。',
       saveFailed: '语言保存失败',
       saveFailedMessage: '无法写入设置文件。',
       options: {
@@ -3689,6 +3691,8 @@ const enOverrides = {
         2: 'Render every 2 frames',
         4: 'Render every 4 frames'
       },
+      reduceMotion: 'Reduce Motion',
+      reduceMotionDescription: 'Disable timeline drag, snap, and clip slide transitions for workspaces that need less motion feedback.',
       saveFailed: 'Language Save Failed',
       saveFailedMessage: 'Unable to write the settings file.',
       options: {

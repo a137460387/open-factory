@@ -10,6 +10,7 @@ import {
   pitchNoteColor,
   TIMELINE_THUMBNAIL_TRACK_HEIGHT,
   TIMELINE_LABEL_COLORS,
+  buildTrimDurationBubble,
   type Clip,
   type ClipGroup,
   type ClipPitchDataPoint,
@@ -298,7 +299,8 @@ export function TrackRow({
   clipGroupByClipId,
   colorFilter,
   projectFrameRate,
-  envelopeEditMode
+  envelopeEditMode,
+  reduceMotion
 }: {
   track: Track;
   zoom: number;
@@ -334,6 +336,7 @@ export function TrackRow({
   colorFilter: TimelineLabelColor | null;
   projectFrameRate: number;
   envelopeEditMode: boolean;
+  reduceMotion: boolean;
 }) {
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const frequencyBands = useAudioMeterStore((state) => state.trackFrequencyBands[track.id] ?? getSilentFrequencyBands());
@@ -495,6 +498,23 @@ export function TrackRow({
           });
         }}
       >
+        {drag?.mode === 'move'
+          ? track.clips.flatMap((clip) => {
+              const previewStart = drag.previewStartsByClipId?.[clip.id];
+              if (previewStart === undefined) {
+                return [];
+              }
+              return [
+                <div
+                  key={`drop-preview-${clip.id}`}
+                  className="pointer-events-none absolute top-2 z-[9] h-10 rounded-md border-2 border-dashed border-brand bg-brand/10"
+                  style={{ left: previewStart * zoom, width: Math.max(16, clip.duration * zoom) }}
+                  data-testid={`timeline-drop-preview-${clip.id}`}
+                  data-preview-clip-id={clip.id}
+                />
+              ];
+            })
+          : null}
         {virtualClips.map((clip) => {
           const isSelected = selectedClipIds.includes(clip.id) || selectedClipId === clip.id;
           const trimPreview = drag?.clip?.id === clip.id && (drag.mode === 'trim-left' || drag.mode === 'trim-right') ? drag : undefined;
@@ -538,6 +558,7 @@ export function TrackRow({
               trackColor={track.color ?? null}
               projectFrameRate={projectFrameRate}
               envelopeEditMode={envelopeEditMode}
+              reduceMotion={reduceMotion}
             />
           );
         })}
@@ -640,7 +661,8 @@ function ClipBlock({
   clipGroup,
   trackColor,
   projectFrameRate,
-  envelopeEditMode
+  envelopeEditMode,
+  reduceMotion
 }: {
   clip: Clip;
   asset?: MediaAsset;
@@ -674,10 +696,16 @@ function ClipBlock({
   trackColor: TimelineLabelColor | null;
   projectFrameRate: number;
   envelopeEditMode: boolean;
+  reduceMotion: boolean;
 }) {
   const waveformColor = getTrackWaveformColor(trackType);
   const effectiveColor = getEffectiveClipColorLabel(clip, { color: trackColor });
   const effectiveColorHex = effectiveColor ? getTimelineLabelColorHex(effectiveColor) : DEFAULT_TIMELINE_LABEL_COLOR_HEX;
+  const isMoveDragging = drag?.mode === 'move' && (drag.clipIds?.includes(clip.id) || drag.clip?.id === clip.id);
+  const trimBubble =
+    drag?.clip?.id === clip.id && (drag.mode === 'trim-left' || drag.mode === 'trim-right')
+      ? buildTrimDurationBubble(drag.clip.duration, drag.previewDuration ?? clip.duration)
+      : undefined;
   const frameRateMismatch = asset?.type === 'video' && isFrameRateMismatch(asset.frameRate, projectFrameRate);
   const frameRateWarningTitle =
     frameRateMismatch && asset?.frameRate ? zhCN.timeline.frameRateMismatchTooltip(formatFrameRateLabel(asset.frameRate), formatFrameRateLabel(projectFrameRate)) : undefined;
@@ -687,7 +715,9 @@ function ClipBlock({
         'group absolute top-2 flex h-10 select-none items-center overflow-hidden rounded-md border px-2 text-xs font-medium shadow-sm',
         getClipToneClass(clip.type),
         asset?.missing ? 'border-rose-500 bg-[repeating-linear-gradient(135deg,rgba(244,63,94,0.18)_0,rgba(244,63,94,0.18)_6px,transparent_6px,transparent_12px)]' : selected ? 'border-coral ring-2 ring-coral/30' : 'border-white/80',
-        locked ? 'cursor-not-allowed opacity-70' : 'cursor-grab'
+        locked ? 'cursor-not-allowed opacity-70' : 'cursor-grab',
+        isMoveDragging && 'opacity-80 shadow-[0_12px_22px_rgba(15,23,42,0.24)] ring-2 ring-brand/30',
+        !reduceMotion && 'transition-all duration-150 ease-out'
       )}
       style={{ left, width }}
       onPointerDown={(event) => {
@@ -753,7 +783,17 @@ function ClipBlock({
       data-clip-id={clip.id}
       data-clip-group-id={clipGroup?.id}
       data-color-label={effectiveColor ?? 'default'}
+      data-dragging={isMoveDragging ? 'true' : 'false'}
+      data-reduce-motion={reduceMotion ? 'true' : 'false'}
     >
+      {trimBubble ? (
+        <span
+          className="pointer-events-none absolute left-1/2 top-1 z-40 -translate-x-1/2 rounded-full bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-white shadow"
+          data-testid={`timeline-trim-duration-bubble-${clip.id}`}
+        >
+          {trimBubble}
+        </span>
+      ) : null}
       <span
         className="absolute bottom-0 left-0 top-0 z-20 w-1.5"
         style={{ backgroundColor: effectiveColorHex }}

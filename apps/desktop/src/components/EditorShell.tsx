@@ -212,16 +212,20 @@ import {
   readLayoutSettings,
   readPreviewPerformanceSettings,
   readPreviewWindowSettings,
+  readTimelineInteractionSettings,
   readTimelineGridSettings,
   readViewSettings,
+  DEFAULT_TIMELINE_INTERACTION_SETTINGS,
   normalizeTimelineHeatmapViewSettings,
   saveCustomSplitLayouts,
   saveLayoutSettings,
   savePreviewPerformanceSettings,
   savePreviewWindowSettings,
+  saveTimelineInteractionSettings,
   saveTimelineGridSettings,
   saveViewSettings,
   type PreviewWindowSettings,
+  type TimelineInteractionSettings,
   type TimelineHeatmapViewSettings
 } from '../settings/appSettings';
 import { DEFAULT_PREVIEW_PERFORMANCE_SETTINGS, type PreviewPerformanceSettings, type PreviewQualityMode, type PreviewSkipFrames } from '../lib/preview/preview-performance';
@@ -356,6 +360,7 @@ export function EditorShell() {
   const [previewWindowOpen, setPreviewWindowOpen] = useState(false);
   const [previewWindowResolutionScale, setPreviewWindowResolutionScale] = useState<PreviewWindowSettings['resolutionScale']>(1);
   const [timelineGridSettings, setTimelineGridSettings] = useState<TimelineGridSettings>(DEFAULT_TIMELINE_GRID_SETTINGS);
+  const [timelineInteractionSettings, setTimelineInteractionSettings] = useState<TimelineInteractionSettings>(DEFAULT_TIMELINE_INTERACTION_SETTINGS);
   const [pipLayoutPosition, setPiPLayoutPosition] = useState<PiPLayoutPosition>('bottom-right');
   const [customSplitLayouts, setCustomSplitLayouts] = useState<SplitLayoutDefinition[]>([]);
   const [viewportSize, setViewportSize] = useState(() => readViewportSize());
@@ -570,6 +575,18 @@ export function EditorShell() {
         .then((saved) => setPreviewPerformance(saved))
         .catch((error) => {
           console.warn('Unable to save preview performance settings', error);
+        });
+      return optimistic;
+    });
+  }, []);
+
+  const updateTimelineInteractionSettings = useCallback((patch: Partial<TimelineInteractionSettings>) => {
+    setTimelineInteractionSettings((current) => {
+      const optimistic = { ...current, ...patch };
+      void saveTimelineInteractionSettings(optimistic)
+        .then((saved) => setTimelineInteractionSettings(saved))
+        .catch((error) => {
+          console.warn('Unable to save timeline interaction settings', error);
         });
       return optimistic;
     });
@@ -811,6 +828,22 @@ export function EditorShell() {
       })
       .catch((error) => {
         console.warn('Unable to load timeline grid settings', error);
+      });
+    return () => {
+      canceled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let canceled = false;
+    void readTimelineInteractionSettings()
+      .then((settings) => {
+        if (!canceled) {
+          setTimelineInteractionSettings(settings);
+        }
+      })
+      .catch((error) => {
+        console.warn('Unable to load timeline interaction settings', error);
       });
     return () => {
       canceled = true;
@@ -2877,6 +2910,7 @@ export function EditorShell() {
                   minimapVisible={timelineMinimapVisible}
                   heatmap={timelineHeatmap}
                   timelineGridSettings={timelineGridSettings}
+                  reduceMotion={timelineInteractionSettings.reduceMotion}
                   bookmarkPanelOpen={layoutSettings.panels.bookmarks}
                   onBookmarkPanelOpenChange={(bookmarks) => persistPanelVisibilityPatch({ bookmarks })}
                   onConvertMediaFrameRate={convertVfrMediaToCfr}
@@ -2972,7 +3006,9 @@ export function EditorShell() {
               onMacrosChange={setMacros}
               onExecuteMacro={(macro) => void executeMacro(macro)}
               previewPerformance={previewPerformance}
+              timelineInteractionSettings={timelineInteractionSettings}
               onPreviewSkipFramesChange={(skipFrames: PreviewSkipFrames) => updatePreviewPerformance({ skipFrames })}
+              onTimelineInteractionSettingsChange={updateTimelineInteractionSettings}
               onDeleteProxies={(assetIds) => deleteProxiesForMedia(assetIds)}
               onRegenerateProxies={(assetIds) => regenerateProxiesForMedia(assetIds)}
               onClose={() => setSettingsOpen(false)}

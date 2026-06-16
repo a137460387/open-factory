@@ -88,7 +88,8 @@ import {
   type BackupSettings,
   type ExportBackgroundSettings,
   type ExportPresetSyncSettings,
-  type ExportConditionRule
+  type ExportConditionRule,
+  type TimelineInteractionSettings
 } from './appSettings';
 import {
   BUILTIN_THEME_IDS,
@@ -111,10 +112,12 @@ interface SettingsDialogProps {
   shortcutBindings: TimelineShortcutBindings;
   macros: ClipMacro[];
   previewPerformance: PreviewPerformanceSettings;
+  timelineInteractionSettings: TimelineInteractionSettings;
   onShortcutBindingsChange(bindings: TimelineShortcutBindings): void;
   onMacrosChange(macros: ClipMacro[]): void;
   onExecuteMacro(macro: ClipMacro): void;
   onPreviewSkipFramesChange(skipFrames: PreviewSkipFrames): void;
+  onTimelineInteractionSettingsChange(settings: Partial<TimelineInteractionSettings>): void;
   onDeleteProxies(assetIds: string[]): Promise<void> | void;
   onRegenerateProxies(assetIds: string[]): Promise<void> | void;
   onClose(): void;
@@ -133,10 +136,12 @@ export function SettingsDialog({
   shortcutBindings,
   macros,
   previewPerformance,
+  timelineInteractionSettings,
   onShortcutBindingsChange,
   onMacrosChange,
   onExecuteMacro,
   onPreviewSkipFramesChange,
+  onTimelineInteractionSettingsChange,
   onDeleteProxies,
   onRegenerateProxies,
   onClose
@@ -990,6 +995,19 @@ export function SettingsDialog({
                     </select>
                   </label>
                 </div>
+                <label className="flex items-start gap-2 rounded-md border border-line bg-panel p-3 text-xs text-slate-600">
+                  <input
+                    className="mt-0.5 h-4 w-4 accent-brand"
+                    type="checkbox"
+                    checked={timelineInteractionSettings.reduceMotion}
+                    data-testid="settings-reduce-motion-toggle"
+                    onChange={(event) => onTimelineInteractionSettingsChange({ reduceMotion: event.target.checked })}
+                  />
+                  <span>
+                    <span className="block font-semibold text-slate-700">{t.general.reduceMotion}</span>
+                    <span className="mt-1 block">{t.general.reduceMotionDescription}</span>
+                  </span>
+                </label>
                 <div className="rounded-md border border-line bg-panel p-3">
                   <div className="mb-2">
                     <h4 className="text-xs font-semibold text-slate-700">{t.general.demucsTitle}</h4>

@@ -66,6 +66,10 @@ export interface PreviewWindowSettings {
   resolutionScale: PreviewWindowResolutionScale;
 }
 
+export interface TimelineInteractionSettings {
+  reduceMotion: boolean;
+}
+
 export type ExportUploadTargetType = 'webdav' | 'local';
 
 export interface ExportUploadSettings {
@@ -170,6 +174,10 @@ export const DEFAULT_PREVIEW_WINDOW_SETTINGS: PreviewWindowSettings = {
   resolutionScale: 1
 };
 
+export const DEFAULT_TIMELINE_INTERACTION_SETTINGS: TimelineInteractionSettings = {
+  reduceMotion: false
+};
+
 export interface AppSettings {
   language?: Language;
   layout?: EditorLayoutSettings;
@@ -182,6 +190,7 @@ export interface AppSettings {
   view?: ViewSettings;
   previewPerformance?: PreviewPerformanceSettings;
   previewWindow?: PreviewWindowSettings;
+  timelineInteraction?: TimelineInteractionSettings;
   automationRules?: AutomationRule[];
   customSplitLayouts?: SplitLayoutDefinition[];
   timelineGrid?: TimelineGridSettings;
@@ -338,6 +347,18 @@ export async function savePreviewPerformanceSettings(previewPerformance: Partial
   return nextPreviewPerformance;
 }
 
+export async function readTimelineInteractionSettings(): Promise<TimelineInteractionSettings> {
+  const settings = await readAppSettings();
+  return settings.timelineInteraction ?? defaultTimelineInteractionSettings();
+}
+
+export async function saveTimelineInteractionSettings(timelineInteraction: Partial<TimelineInteractionSettings>): Promise<TimelineInteractionSettings> {
+  const settings = await readAppSettings();
+  const nextTimelineInteraction = normalizeTimelineInteractionSettings({ ...settings.timelineInteraction, ...timelineInteraction }) ?? defaultTimelineInteractionSettings();
+  await writeAppSettings({ ...settings, timelineInteraction: nextTimelineInteraction });
+  return nextTimelineInteraction;
+}
+
 export async function readPreviewWindowSettings(): Promise<PreviewWindowSettings> {
   const settings = await readAppSettings();
   return settings.previewWindow ?? defaultPreviewWindowSettings();
@@ -442,6 +463,10 @@ function normalizeSettings(settings: Partial<AppSettings>): AppSettings {
   const previewWindow = normalizePreviewWindowSettings(settings.previewWindow);
   if (previewWindow) {
     normalized.previewWindow = previewWindow;
+  }
+  const timelineInteraction = normalizeTimelineInteractionSettings(settings.timelineInteraction);
+  if (timelineInteraction && shouldPersistTimelineInteractionSettings(timelineInteraction)) {
+    normalized.timelineInteraction = timelineInteraction;
   }
   const automationRules = normalizeAutomationRules(settings.automationRules);
   if (automationRules.length > 0) {
@@ -648,6 +673,15 @@ export function normalizePreviewWindowSettings(settings: Partial<PreviewWindowSe
   };
 }
 
+export function normalizeTimelineInteractionSettings(settings: Partial<TimelineInteractionSettings> | undefined): TimelineInteractionSettings | undefined {
+  if (!settings || typeof settings !== 'object') {
+    return undefined;
+  }
+  return {
+    reduceMotion: settings.reduceMotion === true
+  };
+}
+
 function normalizePreviewWindowResolutionScale(value: unknown): PreviewWindowResolutionScale {
   return value === 0.5 || value === 0.25 ? value : 1;
 }
@@ -796,6 +830,14 @@ function defaultPreviewWindowSettings(): PreviewWindowSettings {
     alwaysOnTop: DEFAULT_PREVIEW_WINDOW_SETTINGS.alwaysOnTop,
     resolutionScale: DEFAULT_PREVIEW_WINDOW_SETTINGS.resolutionScale
   };
+}
+
+function defaultTimelineInteractionSettings(): TimelineInteractionSettings {
+  return { ...DEFAULT_TIMELINE_INTERACTION_SETTINGS };
+}
+
+function shouldPersistTimelineInteractionSettings(settings: TimelineInteractionSettings): boolean {
+  return settings.reduceMotion !== DEFAULT_TIMELINE_INTERACTION_SETTINGS.reduceMotion;
 }
 
 function shouldPersistExportPresetSyncSettings(settings: ExportPresetSyncSettings): boolean {

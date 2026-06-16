@@ -14,6 +14,7 @@ import {
   readPreviewPerformanceSettings,
   readPreviewWindowSettings,
   readThemeSettings,
+  readTimelineInteractionSettings,
   readTimelineGridSettings,
   readViewSettings,
   saveBackupSettings,
@@ -28,6 +29,7 @@ import {
   savePreviewPerformanceSettings,
   savePreviewWindowSettings,
   saveThemeSettings,
+  saveTimelineInteractionSettings,
   saveTimelineGridSettings,
   saveViewSettings
 } from './appSettings';
@@ -397,6 +399,23 @@ describe('app settings storage', () => {
     });
 
     await savePreviewPerformanceSettings({ qualityMode: 'full', skipFrames: 1 });
+    expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({ language: 'en' });
+  });
+
+  it('persists reduced motion timeline interaction settings only when enabled', async () => {
+    await expect(readTimelineInteractionSettings()).resolves.toEqual({ reduceMotion: false });
+
+    await saveLanguageSetting('en');
+    const interaction = await saveTimelineInteractionSettings({ reduceMotion: true });
+
+    expect(interaction).toEqual({ reduceMotion: true });
+    expect(await readTimelineInteractionSettings()).toEqual({ reduceMotion: true });
+    expect(await readAppSettings()).toEqual({
+      language: 'en',
+      timelineInteraction: { reduceMotion: true }
+    });
+
+    await saveTimelineInteractionSettings({ reduceMotion: false });
     expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({ language: 'en' });
   });
 

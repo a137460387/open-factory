@@ -110,6 +110,9 @@ import {
   TIMELINE_LABEL_COLORS,
   TIMELINE_NOTE_COLORS,
   sanitizeCoverFileStem,
+  buildSelectionMarqueeRect,
+  createSnapHighlight,
+  getSelectionMarqueeBox,
   type Clip,
   type ClipGroup,
   type ClipGroupColor,
@@ -130,6 +133,7 @@ import {
   type TimelineHeatmapSegment,
   type TimelineMinimapLayout,
   type TimelineMinimapViewportRect,
+  type TimelineSnapHighlight,
   type TimelineLabelColor,
   type TimecodeFormat,
   type Track,
@@ -138,6 +142,7 @@ import {
   type ReplaceMediaCompatibilityWarning,
   type ReplaceMediaDurationMode
 } from '@open-factory/editor-core';
+import { clsx } from 'clsx';
 import { AudioWaveform, Bookmark, Captions, Flag, Group, MessageSquarePlus, MessageSquareText, Music2, Plus, Scissors, Trash2, Type, Ungroup } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createCreditsClip, createTextClip } from '../../lib/clipFactory';
@@ -194,6 +199,7 @@ export function Timeline({
   minimapVisible = true,
   heatmap,
   timelineGridSettings = DEFAULT_TIMELINE_GRID_SETTINGS,
+  reduceMotion = false,
   bookmarkPanelOpen: controlledBookmarkPanelOpen,
   onBookmarkPanelOpenChange,
   onConvertMediaFrameRate
@@ -202,6 +208,7 @@ export function Timeline({
   minimapVisible?: boolean;
   heatmap?: TimelineHeatmapViewSettings;
   timelineGridSettings?: TimelineGridSettings;
+  reduceMotion?: boolean;
   bookmarkPanelOpen?: boolean;
   onBookmarkPanelOpenChange?(open: boolean): void;
   onConvertMediaFrameRate?(assetId: string): void;
@@ -234,6 +241,7 @@ export function Timeline({
   const setActiveSequenceId = useEditorStore((state) => state.setActiveSequenceId);
   const renderCacheRanges = useRenderCacheStore((state) => state.ranges);
   const [drag, setDrag] = useState<DragState | undefined>();
+  const [snapHighlight, setSnapHighlight] = useState<TimelineSnapHighlight | undefined>();
   const [selectionRect, setSelectionRect] = useState<SelectionRect | undefined>();
   const [selectionStart, setSelectionStart] = useState<{ x: number; y: number } | undefined>();
   const [transitionMenu, setTransitionMenu] = useState<TransitionMenuState | undefined>();
@@ -434,6 +442,18 @@ export function Timeline({
       disposed = true;
     };
   }, [whisperExecutablePath, whisperModelPath]);
+
+  useEffect(() => {
+    if (!snapHighlight || reduceMotion) {
+      if (reduceMotion && snapHighlight) {
+        setSnapHighlight(undefined);
+      }
+      return undefined;
+    }
+    const delay = Math.max(0, snapHighlight.expiresAtMs - Date.now());
+    const timeout = window.setTimeout(() => setSnapHighlight(undefined), delay);
+    return () => window.clearTimeout(timeout);
+  }, [reduceMotion, snapHighlight]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -1084,7 +1104,7 @@ function addProjectBookmark(time = playheadTime): void {
 
   function onPointerMove(event: React.PointerEvent<HTMLDivElement>): void {
     if (selectionStart) {
-      setSelectionRect({ left: selectionStart.x, top: selectionStart.y, right: event.clientX, bottom: event.clientY });
+      setSelectionRect(buildSelectionMarqueeRect(selectionStart, { x: event.clientX, y: event.clientY }));
       return;
     }
     if (!drag) {
@@ -1559,7 +1579,7 @@ function addProjectBookmark(time = playheadTime): void {
     event.currentTarget.setPointerCapture(event.pointerId);
     rootRef.current?.focus();
     setSelectionStart({ x: event.clientX, y: event.clientY });
-    setSelectionRect({ left: event.clientX, top: event.clientY, right: event.clientX, bottom: event.clientY });
+    setSelectionRect(buildSelectionMarqueeRect({ x: event.clientX, y: event.clientY }, { x: event.clientX, y: event.clientY }));
   }
 
   function onAnnotationLayerPointerDown(event: React.PointerEvent<HTMLDivElement>): void {
@@ -2096,6 +2116,16 @@ function addProjectBookmark(time = playheadTime): void {
       .filter((clipId): clipId is string => Boolean(clipId));
   }
 
+  function flashSnapHighlight(time: number): void {
+    if (reduceMotion) {
+      return;
+    }
+    const highlight = createSnapHighlight(time, Date.now());
+    if (highlight) {
+      setSnapHighlight(highlight);
+    }
+  }
+
   function snapClipStart(time: number, duration: number, clip: Clip, disabled: boolean, edges?: SnapEdge[]): number {
     const target = findTimelineSnapTargetWithGrid({
       clipStart: time,
@@ -2111,6 +2141,9 @@ function addProjectBookmark(time = playheadTime): void {
         beatTimes: timelineGridBeatTimes
       }
     });
+    if (target && !disabled) {
+      flashSnapHighlight(target.candidate.time);
+    }
     return target?.snappedStart ?? time;
   }
 
@@ -2129,6 +2162,9 @@ function addProjectBookmark(time = playheadTime): void {
         beatTimes: timelineGridBeatTimes
       }
     });
+    if (target && !disabled) {
+      flashSnapHighlight(target.candidate.time);
+    }
     return target?.candidate.time ?? time;
   }
 
@@ -2167,9 +2203,10 @@ function addProjectBookmark(time = playheadTime): void {
   return (
     <section
       ref={rootRef}
-      className="relative flex h-full min-h-0 min-w-0 max-w-full flex-col border-t border-line bg-white focus:outline-none"
+      className={clsx('relative flex h-full min-h-0 min-w-0 max-w-full flex-col border-t border-line bg-white focus:outline-none', reduceMotion && 'timeline-reduce-motion')}
       tabIndex={0}
       data-testid="timeline-root"
+      data-reduce-motion={reduceMotion ? 'true' : 'false'}
       data-timeline-shortcuts-root="true"
       onPointerDown={(event) => {
         const target = event.target as HTMLElement | null;
@@ -2390,6 +2427,14 @@ function addProjectBookmark(time = playheadTime): void {
                 data-grid-major={line.major ? 'true' : 'false'}
               />
             ))}
+            {snapHighlight && !reduceMotion ? (
+              <div
+                className="pointer-events-none absolute bottom-0 top-0 z-[24] border-l-2 border-yellow-300 bg-yellow-200/20 shadow-[0_0_12px_rgba(250,204,21,0.7)]"
+                style={{ left: LABEL_WIDTH + snapHighlight.time * zoom }}
+                data-testid="timeline-snap-highlight"
+                data-time={snapHighlight.time}
+              />
+            ) : null}
             {heatmap?.enabled ? (
               <TimelineHeatmapCanvas
                 segments={heatmapSegments}
@@ -2451,6 +2496,7 @@ function addProjectBookmark(time = playheadTime): void {
                 colorFilter={timelineColorFilter}
                 projectFrameRate={project.settings.fps}
                 envelopeEditMode={envelopeEditMode}
+                reduceMotion={reduceMotion}
               />
             ))}
             {protectedRanges.map((range) => (
@@ -4166,15 +4212,16 @@ function WhisperGenerationDialog({ progress, clipName }: { progress: number; cli
 }
 
 function SelectionMarquee({ rect }: { rect: SelectionRect }) {
-  const left = Math.min(rect.left, rect.right);
-  const top = Math.min(rect.top, rect.bottom);
-  const width = Math.abs(rect.right - rect.left);
-  const height = Math.abs(rect.bottom - rect.top);
+  const { left, top, width, height } = getSelectionMarqueeBox(rect);
   return (
     <div
-      className="fixed z-50 border border-brand bg-brand/10 pointer-events-none"
+      className="pointer-events-none fixed z-50 border border-blue-500 bg-blue-500/20"
       style={{ left, top, width, height }}
       data-testid="timeline-selection-marquee"
+      data-left={left}
+      data-top={top}
+      data-width={width}
+      data-height={height}
     />
   );
 }
