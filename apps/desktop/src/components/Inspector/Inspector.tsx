@@ -95,6 +95,7 @@ import {
   suggestDeinterlaceMode,
   analyzeSubtitleProofreading,
   buildSubtitleProofreadingFixes,
+  frameInterpolationCompareModeToSlowMotionMode,
   calculateSubtitleBatchAdjustUpdates,
   calculateSubtitlePeakAlignUpdate,
   calculateSubtitleScaleUpdates,
@@ -135,7 +136,8 @@ import {
   type VideoDenoisePreset,
   type SubtitleStyleTemplate,
   type SubtitleProofreadingIssue,
-  type SubtitleProofreadingIssueType
+  type SubtitleProofreadingIssueType,
+  type FrameInterpolationCompareMode
 } from '@open-factory/editor-core';
 import { ArrowDown, ArrowUp, GripVertical, Palette, Pipette, Plus, SlidersHorizontal, Trash2, X } from 'lucide-react';
 import { t, zhCN } from '../../i18n/strings';
@@ -146,15 +148,19 @@ import {
   bridgeConfirm,
   cancelMotionTracking,
   detectPrivacyRegions,
+  convertLocalFileSrc,
+  getAppDataDir,
   getFfmpegCapabilities,
   listenBridge,
   openFileDialog,
   readFile,
+  runExportPreviewSamples,
   saveFileDialog,
   writeFile,
   type ClipAnalysisProgressEvent,
   type MotionTrackProgressEvent
 } from '../../lib/tauri-bridge';
+import { buildFrameInterpolationComparePreviewPlan, FRAME_INTERPOLATION_COMPARE_TIMEOUT_MS } from '../../lib/frameInterpolationComparePreview';
 import { buildClipColorMatchCurves } from '../../lib/colorMatch';
 import { acceptTranslationTOS, subtitleClipsToTranslationItems, translateSubtitleItems } from '../../lib/subtitleTranslation';
 import { deleteCustomSubtitleStyleTemplate, loadSubtitleStyleTemplates, saveCustomSubtitleStyleTemplate } from '../../lib/subtitleStyleTemplates';
@@ -356,6 +362,10 @@ function ClipInspector({
   const [curveProperty, setCurveProperty] = useState<KeyframeProperty>('opacity');
   const [privacyBlurEffect, setPrivacyBlurEffect] = useState<PrivacyBlurEffect>('pixelize');
   const [frameInterpolationSupported, setFrameInterpolationSupported] = useState<boolean | undefined>();
+  const [frameInterpolationCompareRunning, setFrameInterpolationCompareRunning] = useState(false);
+  const [frameInterpolationCompareItems, setFrameInterpolationCompareItems] = useState<FrameInterpolationComparePreviewViewItem[]>([]);
+  const [frameInterpolationCompareError, setFrameInterpolationCompareError] = useState<string>();
+  const [frameInterpolationExpandedMode, setFrameInterpolationExpandedMode] = useState<FrameInterpolationCompareMode>();
   const [audioDenoiseSupported, setAudioDenoiseSupported] = useState<boolean | undefined>();
   const [colorMatchReferenceClipId, setColorMatchReferenceClipId] = useState<string>('');
   const [colorMatchBusy, setColorMatchBusy] = useState(false);
@@ -383,6 +393,47 @@ function ClipInspector({
       commandManager.execute(new UpdateClipCommand(timelineAccessor, clip.id, patch));
     } catch (error) {
       showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+    }
+  };
+  useEffect(() => {
+    setFrameInterpolationCompareItems([]);
+    setFrameInterpolationCompareError(undefined);
+    setFrameInterpolationExpandedMode(undefined);
+  }, [clip.id]);
+
+  const runFrameInterpolationComparePreview = async () => {
+    if (clip.type !== 'video' || !asset) {
+      setFrameInterpolationCompareError(zhCN.inspector.frameInterpolationCompare.missingMedia);
+      return;
+    }
+    setFrameInterpolationCompareRunning(true);
+    setFrameInterpolationCompareError(undefined);
+    setFrameInterpolationExpandedMode(undefined);
+    try {
+      const outputDir = joinLocalPath(await getAppDataDir(), 'frame-interpolation-preview');
+      const plan = buildFrameInterpolationComparePreviewPlan(project, clip, asset, playheadTime, outputDir, zhCN.inspector.frameInterpolationCompare.modes);
+      const result = await runExportPreviewSamples({ samples: plan.samples, timeoutMs: FRAME_INTERPOLATION_COMPARE_TIMEOUT_MS });
+      const resultById = new Map(result.samples.map((sample) => [sample.id, sample]));
+      setFrameInterpolationCompareItems(
+        plan.items.map((item) => {
+          const sample = resultById.get(`frame-interpolation-${item.mode}`);
+          const outputPath = sample?.path ?? item.outputPath;
+          return {
+            mode: item.mode,
+            label: item.label,
+            outputPath,
+            src: convertLocalFileSrc(outputPath),
+            estimatedMs: item.estimatedMs,
+            slowMotionMode: item.slowMotionMode
+          };
+        })
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : zhCN.inspector.frameInterpolationCompare.failedMessage;
+      setFrameInterpolationCompareError(message);
+      showToast({ kind: 'warning', title: zhCN.inspector.frameInterpolationCompare.failedTitle, message });
+    } finally {
+      setFrameInterpolationCompareRunning(false);
     }
   };
   const commitSubtitleType = (nextType: 'subtitle' | 'cc') => {
@@ -554,6 +605,7 @@ function ClipInspector({
   const frameInterpolation = normalizeFrameInterpolation(clip.frameInterpolation);
   const frameInterpolationUnavailable = frameInterpolationSupported === false;
   const slowMotionMode = normalizeSlowMotionMode(clip.slowMotionMode);
+  const frameInterpolationExpandedItem = frameInterpolationCompareItems.find((item) => item.mode === frameInterpolationExpandedMode);
   const showSlowMotionMode = clip.type === 'video' && getClipSpeed(clip) < 1;
   const audioDenoise = normalizeAudioDenoise(clip.audioDenoise);
   const audioDenoiseUnavailable = audioDenoiseSupported === false;
@@ -1505,6 +1557,86 @@ function ClipInspector({
             {frameInterpolationUnavailable ? (
               <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs font-medium text-amber-800" data-testid="frame-interpolation-unavailable">
                 {zhCN.inspector.fields.frameInterpolationUnsupported}
+              </div>
+            ) : null}
+            <button
+              className="w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium text-ink hover:bg-panel disabled:cursor-not-allowed disabled:opacity-60"
+              type="button"
+              data-testid="frame-interpolation-compare-button"
+              disabled={frameInterpolationCompareRunning || frameInterpolationUnavailable || !asset}
+              onClick={() => void runFrameInterpolationComparePreview()}
+            >
+              {frameInterpolationCompareRunning ? zhCN.inspector.frameInterpolationCompare.running : zhCN.inspector.frameInterpolationCompare.button}
+            </button>
+            {frameInterpolationCompareError ? (
+              <div className="rounded-md border border-red-200 bg-red-50 p-2 text-xs font-medium text-red-700" data-testid="frame-interpolation-compare-error">
+                {frameInterpolationCompareError}
+              </div>
+            ) : null}
+            {frameInterpolationCompareItems.length > 0 ? (
+              <div className="grid grid-cols-2 gap-2" data-testid="frame-interpolation-compare-grid">
+                {frameInterpolationCompareItems.map((item) => (
+                  <div
+                    key={item.mode}
+                    className="overflow-hidden rounded-md border border-line bg-white"
+                    data-testid={`frame-interpolation-compare-tile-${item.mode}`}
+                  >
+                    <button
+                      type="button"
+                      className="block aspect-video w-full bg-black"
+                      onClick={() => setFrameInterpolationExpandedMode(item.mode)}
+                      aria-label={zhCN.inspector.frameInterpolationCompare.zoom(item.label)}
+                    >
+                      <img
+                        className="h-full w-full object-contain"
+                        src={item.src}
+                        alt={item.label}
+                        data-testid="frame-interpolation-compare-image"
+                      />
+                    </button>
+                    <div className="space-y-1 p-2">
+                      <div className="flex items-center justify-between gap-2 text-xs font-semibold text-ink">
+                        <span>{item.label}</span>
+                        <span className="text-slate-500">{formatEstimatedDuration(item.estimatedMs)}</span>
+                      </div>
+                      <button
+                        type="button"
+                        className="w-full rounded-md border border-line bg-panel px-2 py-1 text-xs font-medium text-ink hover:bg-white"
+                        data-testid={`frame-interpolation-select-${item.mode}`}
+                        onClick={() => commit({ slowMotionMode: frameInterpolationCompareModeToSlowMotionMode(item.mode) })}
+                      >
+                        {slowMotionMode === item.slowMotionMode ? zhCN.inspector.frameInterpolationCompare.selected : zhCN.inspector.frameInterpolationCompare.selectMode}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            {frameInterpolationExpandedItem ? (
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6"
+                data-testid="frame-interpolation-compare-expanded"
+                role="dialog"
+                aria-modal="true"
+              >
+                <div className="max-h-full max-w-5xl rounded-md bg-white p-3 shadow-xl">
+                  <div className="mb-2 flex items-center justify-between gap-3 text-sm font-semibold text-ink">
+                    <span>{frameInterpolationExpandedItem.label}</span>
+                    <button
+                      type="button"
+                      className="rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel"
+                      onClick={() => setFrameInterpolationExpandedMode(undefined)}
+                    >
+                      {zhCN.common.close}
+                    </button>
+                  </div>
+                  <img
+                    className="max-h-[70vh] max-w-full object-contain"
+                    src={frameInterpolationExpandedItem.src}
+                    alt={frameInterpolationExpandedItem.label}
+                    data-testid="frame-interpolation-compare-expanded-image"
+                  />
+                </div>
               </div>
             ) : null}
           </Section>
@@ -2740,6 +2872,15 @@ function getSubtitleStyleTemplateLabel(template: SubtitleStyleTemplate): string 
 
 function makeSvgDataUri(svg: string): string {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+interface FrameInterpolationComparePreviewViewItem {
+  mode: FrameInterpolationCompareMode;
+  label: string;
+  outputPath: string;
+  src: string;
+  estimatedMs: number;
+  slowMotionMode: ClipSlowMotionMode;
 }
 
 function SubtitleProofreadingPanel({
@@ -4705,6 +4846,19 @@ function clampUnit(value: number): number {
 
 function clampSigned(value: number): number {
   return Math.min(1, Math.max(-1, Number.isFinite(value) ? value : 0));
+}
+
+function joinLocalPath(basePath: string, childPath: string): string {
+  const separator = basePath.includes('\\') ? '\\' : '/';
+  return `${basePath.replace(/[\\/]+$/, '')}${separator}${childPath.replace(/^[\\/]+/, '')}`;
+}
+
+function formatEstimatedDuration(durationMs: number): string {
+  const safeMs = Math.max(0, Math.round(Number.isFinite(durationMs) ? durationMs : 0));
+  if (safeMs < 1000) {
+    return zhCN.inspector.frameInterpolationCompare.estimatedMs(safeMs);
+  }
+  return zhCN.inspector.frameInterpolationCompare.estimatedSeconds((safeMs / 1000).toFixed(1));
 }
 
 function rgbToHex(color: readonly number[]): string {

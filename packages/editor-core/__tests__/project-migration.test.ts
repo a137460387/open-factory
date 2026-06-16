@@ -1053,6 +1053,17 @@ describe('project schema migration', () => {
     expect(clip.sequenceFrameRate).toBe(120);
   });
 
+  it('preserves mci slow motion mode during project migration', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips[0] = {
+      ...project.timeline.tracks[0].clips[0],
+      slowMotionMode: 'mci'
+    } as never;
+
+    const migrated = migrateProjectFile(serializeProject(project));
+    expect(migrated.project.timeline.tracks[0].clips[0].slowMotionMode).toBe('mci');
+  });
+
   it('serializes and migrates multicam metadata on nested sequence clips', () => {
     const project = makeProject();
     project.media.push({

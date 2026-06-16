@@ -107,7 +107,7 @@ export interface ClipFrameInterpolation {
   targetFps: FrameInterpolationTargetFps;
 }
 
-export type ClipSlowMotionMode = 'none' | 'blend' | 'optical-flow';
+export type ClipSlowMotionMode = 'none' | 'blend' | 'mci' | 'optical-flow';
 
 export type ClipProjection = 'flat' | 'equirectangular' | 'cubemap';
 

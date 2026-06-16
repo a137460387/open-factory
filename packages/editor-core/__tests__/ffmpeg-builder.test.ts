@@ -2121,6 +2121,23 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.filterComplex).toContain('minterpolate=fps=30:mi_mode=mci:mc_mode=aobmc:vsbmc=1');
   });
 
+  it('inserts mci slow motion interpolation for slowed clips', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-mci-slow',
+        duration: 4,
+        speed: 0.5,
+        slowMotionMode: 'mci'
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('minterpolate=fps=30:mi_mode=mci:mc_mode=aobmc');
+    expect(plan.filterComplex).not.toContain('minterpolate=fps=30:mi_mode=mci:mc_mode=aobmc:vsbmc=1');
+  });
+
   it('does not insert slow motion interpolation for realtime or faster clips', () => {
     const project = makeProject();
     project.timeline.tracks[0].clips = [

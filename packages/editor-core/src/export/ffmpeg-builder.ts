@@ -1797,6 +1797,9 @@ function buildSlowMotionFilters(clip: ExportClip, settings: ExportSettings, capa
   if (mode === 'blend') {
     return [`minterpolate=fps=${fps}:mi_mode=blend`];
   }
+  if (mode === 'mci') {
+    return [`minterpolate=fps=${fps}:mi_mode=mci:mc_mode=aobmc`];
+  }
   return [`minterpolate=fps=${fps}:mi_mode=mci:mc_mode=aobmc:vsbmc=1`];
 }
 

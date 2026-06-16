@@ -328,7 +328,7 @@ export const DEFAULT_FRAME_INTERPOLATION: ClipFrameInterpolation = {
   targetFps: 60
 };
 
-export const CLIP_SLOW_MOTION_MODES: readonly ClipSlowMotionMode[] = ['none', 'blend', 'optical-flow'];
+export const CLIP_SLOW_MOTION_MODES: readonly ClipSlowMotionMode[] = ['none', 'blend', 'mci', 'optical-flow'];
 export const DEFAULT_SLOW_MOTION_MODE: ClipSlowMotionMode = 'none';
 export const DEFAULT_CLIP_PROJECTION: ClipProjection = 'flat';
 export const DEFAULT_CLIP_PANORAMA_VIEW: ClipPanoramaView = {

@@ -1710,6 +1710,24 @@ const zh = {
       failed: '音调分析失败',
       failedMessage: '无法完成音调分析。'
     },
+    frameInterpolationCompare: {
+      button: '对比预览',
+      running: '生成对比预览...',
+      failedTitle: '对比预览失败',
+      failedMessage: '无法生成补帧对比预览。',
+      missingMedia: '找不到当前片段的源媒体。',
+      selectMode: '选择模式',
+      selected: '已选择',
+      estimatedMs: (ms: number) => `预估 ${ms}ms`,
+      estimatedSeconds: (seconds: string) => `预估 ${seconds}s`,
+      zoom: (label: string) => `放大 ${label}`,
+      modes: {
+        original: '原始',
+        blend: 'Blend',
+        mci: 'MCI',
+        'optical-flow': 'Optical Flow'
+      }
+    },
     fields: {
       property: '属性',
       name: '名称',
@@ -2092,6 +2110,7 @@ const zh = {
     slowMotionModes: {
       none: '无',
       blend: '混合插帧',
+      mci: '运动补偿',
       'optical-flow': '光流插帧'
     },
     missingFile: '文件缺失',
@@ -4695,6 +4714,24 @@ const enOverrides = {
       failed: 'Pitch Analysis Failed',
       failedMessage: 'Unable to complete pitch analysis.'
     },
+    frameInterpolationCompare: {
+      button: 'Compare Preview',
+      running: 'Generating preview...',
+      failedTitle: 'Compare Preview Failed',
+      failedMessage: 'Unable to generate the frame interpolation preview.',
+      missingMedia: 'The selected clip source media is missing.',
+      selectMode: 'Select Mode',
+      selected: 'Selected',
+      estimatedMs: (ms: number) => `Est. ${ms}ms`,
+      estimatedSeconds: (seconds: string) => `Est. ${seconds}s`,
+      zoom: (label: string) => `Zoom ${label}`,
+      modes: {
+        original: 'Original',
+        blend: 'Blend',
+        mci: 'MCI',
+        'optical-flow': 'Optical Flow'
+      }
+    },
     fields: {
       property: 'Property',
       name: 'Name',
@@ -4979,6 +5016,7 @@ const enOverrides = {
     slowMotionModes: {
       none: 'None',
       blend: 'Blend',
+      mci: 'MCI',
       'optical-flow': 'Optical Flow'
     },
     missingFile: 'Missing file',
