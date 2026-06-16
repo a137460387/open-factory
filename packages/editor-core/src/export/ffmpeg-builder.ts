@@ -45,6 +45,7 @@ import {
   type ThreeWayColor
 } from '../color-grading';
 import { getLogToRec709Lut, isLogInputColorSpace, serializeLogToRec709Cube } from '../color-log-luts';
+import { buildAcesOdtFilterChain, buildProjectColorPipelineExportDefaults, normalizeProjectColorPipeline } from '../color-pipeline';
 import {
   buildCustomShaderFragmentSource,
   cloneEffects,
@@ -65,7 +66,7 @@ import { round } from '../time';
 import { serializeSubtitleCueInputsToAss, serializeSubtitleCueInputsToSrt, serializeSubtitleCueInputsToVtt, type SubtitleCueInput } from '../subtitles/srt';
 import { buildPathTextFrameLayouts } from '../text-path';
 import { buildCreditsRollYExpression, formatCreditsRowsForTextfile } from '../credits-roll';
-import { DEFAULT_EXPORT_COLOR_MANAGEMENT, normalizeExportColorManagement, type ExportColorSpace } from './color-management';
+import { DEFAULT_EXPORT_COLOR_MANAGEMENT, isDefaultExportColorManagement, normalizeExportColorManagement, type ExportColorSpace } from './color-management';
 import { normalizeExportRenderRange, type ExportRenderRange, type NormalizedExportRenderRange } from './export-ranges';
 import { normalizeExportPostScript } from './post-export-script';
 import { cssColorToFfmpeg, escapeDrawtextValue, formatFfmpegSeconds, normalizeFfmpegPath, quoteForDisplay } from './ffmpeg-escape';
@@ -131,6 +132,7 @@ export const DEFAULT_EXPORT_SETTINGS: Omit<ExportSettings, 'outputPath'> = {
   timecodeBurnIn: null,
   slate: null,
   colorManagement: DEFAULT_EXPORT_COLOR_MANAGEMENT,
+  colorPipeline: 'sdr-srgb',
   masterProcessing: null,
   audioVisualization: {
     style: 'waveform-line',
@@ -199,6 +201,10 @@ export function buildExportProjectFromProject(project: Project, options: BuildEx
   const exportSourceProject = flattenMulticamProjectForExport(project);
   const mediaById = new Map(exportSourceProject.media.map((asset) => [asset.id, asset]));
   const primaryTimeline = getProjectPrimaryTimeline(exportSourceProject);
+  const colorPipeline = normalizeProjectColorPipeline(options.settings?.colorPipeline ?? exportSourceProject.settings.colorPipeline);
+  const colorManagementDefaults = buildProjectColorPipelineExportDefaults(colorPipeline);
+  const requestedColorManagement = normalizeExportColorManagement(options.settings?.colorManagement);
+  const colorManagement = options.settings?.colorManagement && !isDefaultExportColorManagement(options.settings.colorManagement) ? requestedColorManagement : normalizeExportColorManagement(colorManagementDefaults);
   const settings = normalizeExportReframeSettings({
     ...DEFAULT_EXPORT_SETTINGS,
     width: exportSourceProject.settings.width || DEFAULT_EXPORT_SETTINGS.width,
@@ -206,7 +212,8 @@ export function buildExportProjectFromProject(project: Project, options: BuildEx
     fps: exportSourceProject.settings.fps || DEFAULT_EXPORT_SETTINGS.fps,
     ...options.settings,
     outputPath: normalizeFfmpegPath(options.outputPath),
-    colorManagement: normalizeExportColorManagement(options.settings?.colorManagement)
+    colorPipeline,
+    colorManagement
   });
   return {
     name: exportSourceProject.name,
@@ -2595,9 +2602,10 @@ function buildContainerArgs(settings: ExportSettings): string[] {
 
 function buildExportColorManagementFilters(settings: ExportSettings): string[] {
   const colorManagement = normalizeExportColorManagement(settings.colorManagement);
+  const colorPipeline = normalizeProjectColorPipeline(settings.colorPipeline);
   const input = getFfmpegColorSpaceProfile(colorManagement.inputColorSpace);
   const output = getFfmpegColorSpaceProfile(colorManagement.outputColorSpace);
-  const filters: string[] = [];
+  const filters: string[] = [...buildAcesOdtFilterChain(colorPipeline, colorManagement.outputColorSpace)];
   if (colorManagement.inputColorSpace !== colorManagement.outputColorSpace) {
     filters.push(
       `colorspace=ispace=${input.space}:iprimaries=${input.primaries}:itrc=${input.trc}:space=${output.space}:primaries=${output.primaries}:trc=${output.trc}`

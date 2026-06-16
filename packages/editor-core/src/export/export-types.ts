@@ -1,5 +1,6 @@
 import type { ColorCurves, ThreeWayColor } from '../color-grading';
 import type { InputColorSpace } from '../color-log-luts';
+import type { ProjectColorPipeline } from '../color-pipeline';
 import type { Effect } from '../effects';
 import type { ExportColorManagementSettings } from './color-management';
 import type {
@@ -152,6 +153,7 @@ export interface ExportSettings {
   watermark?: ExportWatermark | null;
   timecodeBurnIn?: ExportTimecodeBurnIn | null;
   slate?: ExportSlate | null;
+  colorPipeline?: ProjectColorPipeline;
   colorManagement?: ExportColorManagementSettings;
   postExportScript?: ExportPostExportScriptSettings | null;
   masterProcessing?: ExportMasterProcessingSettings | null;

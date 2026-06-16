@@ -4,15 +4,18 @@ import {
   buildProxyInventory,
   planProxyCleanup,
   summarizeProxyInventory,
+  PROJECT_COLOR_PIPELINES,
   SUPPORTED_PROJECT_FPS,
   UpdateClipCommand,
   UpdateProjectSettingsCommand,
+  normalizeProjectColorPipeline,
   normalizeProjectFps,
   normalizeTimecodeFormat,
   normalizeVfrHandlingStrategy,
   supportsDropFrameTimecode,
   type Clip,
   type Project,
+  type ProjectColorPipeline,
   type ProxyInventoryItem,
   type TimecodeFormat,
   type Timeline,
@@ -827,6 +830,14 @@ export function SettingsDialog({
     commandManager.execute(new UpdateProjectSettingsCommand(projectAccessor, { vfrHandling: normalizeVfrHandlingStrategy(value) }));
   }
 
+  function updateProjectColorPipeline(value: string) {
+    const colorPipeline = normalizeProjectColorPipeline(value);
+    if (colorPipeline !== normalizeProjectColorPipeline(project.settings.colorPipeline)) {
+      showToast({ kind: 'warning', title: t.general.colorPipelineChanged, message: t.general.colorPipelineWarning });
+    }
+    commandManager.execute(new UpdateProjectSettingsCommand(projectAccessor, { colorPipeline }));
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-testid="settings-dialog">
       <div className="flex max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg bg-white shadow-soft">
@@ -1117,6 +1128,21 @@ export function SettingsDialog({
                       {VFR_HANDLING_OPTIONS.map((option) => (
                         <option key={option} value={option}>
                           {t.general.vfrHandlingOptions[option]}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block text-xs font-medium text-slate-600">
+                    {t.general.colorPipeline}
+                    <select
+                      className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                      value={normalizeProjectColorPipeline(project.settings.colorPipeline)}
+                      data-testid="project-color-pipeline-select"
+                      onChange={(event) => updateProjectColorPipeline(event.target.value)}
+                    >
+                      {PROJECT_COLOR_PIPELINES.map((pipeline) => (
+                        <option key={pipeline} value={pipeline}>
+                          {t.general.colorPipelineOptions[pipeline as ProjectColorPipeline]}
                         </option>
                       ))}
                     </select>

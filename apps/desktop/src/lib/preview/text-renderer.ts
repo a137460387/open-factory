@@ -1,4 +1,4 @@
-import { DEFAULT_TRANSFORM, layoutTextAlongPath, normalizeTextPath, resolvePathTextStartOffset, type Clip } from '@open-factory/editor-core';
+import { DEFAULT_TRANSFORM, layoutTextAlongPath, normalizeTextPath, resolvePathTextStartOffset, type Clip, type ProjectColorPipeline } from '@open-factory/editor-core';
 import { zhCN } from '../../i18n/strings';
 import { recordPreviewDraw } from './debug';
 import { drawTransformedSource2d } from './transform-2d';
@@ -35,8 +35,8 @@ export function drawText2d(context: CanvasRenderingContext2D, canvas: HTMLCanvas
   recordPreviewDraw(clip.type, 'text');
 }
 
-export function drawTextWebGl(compositor: WebGlPreviewCompositor, clip: TextClip, bypassProcessing = false): void {
-  compositor.drawText(clip.text, clip.transform, clip.style, clip.colorCorrection, clip.effects, { bypassProcessing });
+export function drawTextWebGl(compositor: WebGlPreviewCompositor, clip: TextClip, bypassProcessing = false, colorPipeline?: ProjectColorPipeline): void {
+  compositor.drawText(clip.text, clip.transform, clip.style, clip.colorCorrection, clip.effects, { bypassProcessing, colorPipeline });
   recordPreviewDraw(clip.type, 'text');
 }
 
@@ -90,7 +90,15 @@ export function drawCreditsRoll2d(context: CanvasRenderingContext2D, canvas: HTM
   recordPreviewDraw(clip.type, 'text');
 }
 
-export function drawCreditsRollWebGl(compositor: WebGlPreviewCompositor, clip: CreditsClip, width: number, height: number, bypassProcessing = false, localTime = 0): void {
+export function drawCreditsRollWebGl(
+  compositor: WebGlPreviewCompositor,
+  clip: CreditsClip,
+  width: number,
+  height: number,
+  bypassProcessing = false,
+  localTime = 0,
+  colorPipeline?: ProjectColorPipeline
+): void {
   const layer = document.createElement('canvas');
   layer.width = width;
   layer.height = height;
@@ -99,7 +107,7 @@ export function drawCreditsRollWebGl(compositor: WebGlPreviewCompositor, clip: C
     return;
   }
   drawCreditsRoll2d(context, layer, clip, bypassProcessing, localTime);
-  compositor.drawSource(layer, width, height, DEFAULT_TRANSFORM, undefined, undefined, undefined, undefined, { bypassProcessing: true });
+  compositor.drawSource(layer, width, height, DEFAULT_TRANSFORM, undefined, undefined, undefined, undefined, { bypassProcessing: true, colorPipeline });
 }
 
 export function drawMissing2d(context: CanvasRenderingContext2D, canvas: HTMLCanvasElement, name: string, clipType: Clip['type']): void {

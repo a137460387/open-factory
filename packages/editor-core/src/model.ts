@@ -7,6 +7,7 @@ import {
   normalizeThreeWayColor
 } from './color-grading';
 import { REC709_INPUT_COLOR_SPACE, normalizeInputColorSpace } from './color-log-luts';
+import { DEFAULT_PROJECT_COLOR_PIPELINE, normalizeProjectColorPipeline } from './color-pipeline';
 import { cloneEffects } from './effects';
 import { normalizePathPoints } from './masks/path-mask';
 import type { ProjectFile } from './project/project-types';
@@ -230,7 +231,8 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
   timecodeFormat: 'ndf',
   width: 1280,
   height: 720,
-  vfrHandling: 'ignore'
+  vfrHandling: 'ignore',
+  colorPipeline: DEFAULT_PROJECT_COLOR_PIPELINE
 };
 
 export function normalizeProjectSettings(settings: Partial<ProjectSettings> | undefined): ProjectSettings {
@@ -242,7 +244,8 @@ export function normalizeProjectSettings(settings: Partial<ProjectSettings> | un
     timecodeFormat: normalizeTimecodeFormat(settings?.timecodeFormat, fps),
     width,
     height,
-    vfrHandling: normalizeVfrHandlingStrategy(settings?.vfrHandling)
+    vfrHandling: normalizeVfrHandlingStrategy(settings?.vfrHandling),
+    colorPipeline: normalizeProjectColorPipeline(settings?.colorPipeline)
   };
 }
 

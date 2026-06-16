@@ -39,6 +39,20 @@ describe('timeline render cache', () => {
     ).not.toBe(key);
   });
 
+  it('changes frame keys when the project color pipeline changes', () => {
+    const project = makeProject();
+    const base = {
+      timeline: project.timeline,
+      media: project.media,
+      frame: 12,
+      fps: 30,
+      width: 1280,
+      height: 720
+    };
+
+    expect(buildTimelineRenderFrameKey({ ...base, colorPipeline: 'aces' })).not.toBe(buildTimelineRenderFrameKey({ ...base, colorPipeline: 'sdr-srgb' }));
+  });
+
   it('plans a five-second prerender window on both sides of the playhead', () => {
     const project = makeProject();
     const requests = buildTimelineRenderFrameRequests({

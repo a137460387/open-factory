@@ -1,5 +1,6 @@
 import type { ColorCurves, ThreeWayColor } from './color-grading';
 import type { InputColorSpace } from './color-log-luts';
+import type { ProjectColorPipeline } from './color-pipeline';
 import type { Effect } from './effects';
 import type { TimecodeFormat } from './time';
 
@@ -221,6 +222,7 @@ export interface ProjectSettings {
   width: number;
   height: number;
   vfrHandling?: VfrHandlingStrategy;
+  colorPipeline?: ProjectColorPipeline;
 }
 
 export type VfrHandlingStrategy = 'ignore' | 'auto-cfr' | 'ask';

@@ -316,6 +316,14 @@ const zh = {
         'auto-cfr': '自动转换',
         ask: '每次询问'
       },
+      colorPipeline: '色彩流程',
+      colorPipelineChanged: '色彩流程已更新',
+      colorPipelineWarning: '此操作将影响所有 clip 的预览色彩',
+      colorPipelineOptions: {
+        'sdr-srgb': 'SDR sRGB（默认）',
+        'hdr-rec2020': 'HDR Rec.2020',
+        aces: 'ACES'
+      },
       allowExportPowerActions: '允许导出完成后执行关机/休眠',
       allowExportPowerActionsDescription: '默认关闭。开启后，导出完成动作才可以调用系统电源命令。',
       demucsTitle: 'AI 人声背景分离',
@@ -3137,6 +3145,14 @@ const enOverrides = {
         ignore: 'Ignore',
         'auto-cfr': 'Auto Convert',
         ask: 'Ask each time'
+      },
+      colorPipeline: 'Color Pipeline',
+      colorPipelineChanged: 'Color Pipeline Updated',
+      colorPipelineWarning: 'This will affect preview color for every clip.',
+      colorPipelineOptions: {
+        'sdr-srgb': 'SDR sRGB (Default)',
+        'hdr-rec2020': 'HDR Rec.2020',
+        aces: 'ACES'
       },
       allowExportPowerActions: 'Allow shutdown/hibernate after export',
       allowExportPowerActionsDescription: 'Disabled by default. When enabled, export completion actions may call system power commands.',

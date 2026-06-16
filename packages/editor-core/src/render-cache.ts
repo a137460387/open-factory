@@ -1,3 +1,4 @@
+import { normalizeProjectColorPipeline, type ProjectColorPipeline } from './color-pipeline';
 import type { Clip, MediaAsset, Sequence, Timeline } from './model';
 import { round } from './time';
 
@@ -14,6 +15,7 @@ export interface TimelineRenderFrameKeyInput {
   height: number;
   sequences?: Sequence[];
   activeSequenceId?: string;
+  colorPipeline?: ProjectColorPipeline;
 }
 
 export interface TimelineRenderFrameRequest {
@@ -162,7 +164,8 @@ export function buildTimelineRenderFrameKey(input: TimelineRenderFrameKeyInput):
   const width = normalizePositiveInteger(input.width, 1280);
   const height = normalizePositiveInteger(input.height, 720);
   const signature = buildTimelineRenderSignature(input.timeline, input.media, input.sequences, input.activeSequenceId);
-  return `timeline-render:${hashString(signature)}:${width}x${height}:${fps}:${frame}`;
+  const colorPipeline = normalizeProjectColorPipeline(input.colorPipeline);
+  return `timeline-render:${hashString(`${signature}|colorPipeline=${colorPipeline}`)}:${width}x${height}:${fps}:${frame}`;
 }
 
 export function buildTimelineRenderFrameRequests(input: {
@@ -175,6 +178,7 @@ export function buildTimelineRenderFrameRequests(input: {
   height: number;
   sequences?: Sequence[];
   activeSequenceId?: string;
+  colorPipeline?: ProjectColorPipeline;
   beforeSeconds?: number;
   afterSeconds?: number;
 }): TimelineRenderFrameRequest[] {

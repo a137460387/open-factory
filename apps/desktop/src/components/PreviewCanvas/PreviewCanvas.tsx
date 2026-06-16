@@ -302,7 +302,8 @@ export function PreviewCanvas({
       frame,
       fps,
       width: canvas.width,
-      height: canvas.height
+      height: canvas.height,
+      colorPipeline: project.settings.colorPipeline
     });
     let canceled = false;
     scopeFrameCounterRef.current += 1;
@@ -333,7 +334,8 @@ export function PreviewCanvas({
         const result = await rendererRef.current.render(canvas, timeline, project.media, playheadTime, {
           captureFrame: shouldCaptureScopes || shouldCaptureDifference,
           disabledEffectTypes: previewDisabledEffectTypes,
-          sequences: project.sequences
+          sequences: project.sequences,
+          colorPipeline: project.settings.colorPipeline
         });
         if (canceled) {
           return;
@@ -348,7 +350,8 @@ export function PreviewCanvas({
             bypassProcessing: !snapshotCompareProject,
             captureFrame: shouldCaptureDifference,
             disabledEffectTypes: previewDisabledEffectTypes,
-            sequences: compareProject.sequences
+            sequences: compareProject.sequences,
+            colorPipeline: compareProject.settings.colorPipeline
           });
           if (canceled) {
             return;
@@ -391,6 +394,7 @@ export function PreviewCanvas({
     project.masterVolume,
     project.media,
     project.sequences,
+    project.settings.colorPipeline,
     project.timeline,
     scopesOpen,
     setAudioLevels,
@@ -425,6 +429,7 @@ export function PreviewCanvas({
         media: project.media,
         sequences: project.sequences,
         activeSequenceId: project.activeSequenceId,
+        colorPipeline: project.settings.colorPipeline,
         playheadTime: prerenderCenter,
         duration,
         fps,
@@ -442,7 +447,7 @@ export function PreviewCanvas({
             cached.close();
             continue;
           }
-          await renderer.render(canvas, project.timeline, project.media, request.time, { sequences: project.sequences });
+          await renderer.render(canvas, project.timeline, project.media, request.time, { sequences: project.sequences, colorPipeline: project.settings.colorPipeline });
           if (canceled) {
             break;
           }
@@ -466,7 +471,7 @@ export function PreviewCanvas({
       canceled = true;
       window.clearTimeout(timer);
     };
-  }, [fps, prerenderCenter, previewTimeline, project.activeSequenceId, project.media, project.sequences, project.timeline]);
+  }, [fps, prerenderCenter, previewTimeline, project.activeSequenceId, project.media, project.sequences, project.settings.colorPipeline, project.timeline]);
 
   useEffect(() => {
     getTimelineRenderCacheController().retainAround(playheadTime);
@@ -1393,6 +1398,7 @@ export function PreviewCanvas({
                   sequence={selectedMulticamSequence}
                   media={project.media}
                   sequences={project.sequences}
+                  colorPipeline={project.settings.colorPipeline}
                   playheadTime={playheadTime}
                   onSelectAngle={(angleId) => {
                     try {
@@ -2311,11 +2317,12 @@ interface MulticamPreviewGridProps {
   sequence: Sequence;
   media: Project['media'];
   sequences: Sequence[];
+  colorPipeline?: Project['settings']['colorPipeline'];
   playheadTime: number;
   onSelectAngle(angleId: string): void;
 }
 
-function MulticamPreviewGrid({ clip, sequence, media, sequences, playheadTime, onSelectAngle }: MulticamPreviewGridProps) {
+function MulticamPreviewGrid({ clip, sequence, media, sequences, colorPipeline, playheadTime, onSelectAngle }: MulticamPreviewGridProps) {
   const t = zhCN.preview;
   const canvasRefs = useRef(new Map<string, HTMLCanvasElement>());
   const renderersRef = useRef(new Map<string, PreviewRenderer>());
@@ -2345,7 +2352,7 @@ function MulticamPreviewGrid({ clip, sequence, media, sequences, playheadTime, o
           markers: []
         };
         try {
-          await renderer.render(canvas, angleTimeline, media, localTime, { sequences });
+          await renderer.render(canvas, angleTimeline, media, localTime, { sequences, colorPipeline });
         } catch {
           if (!canceled) {
             const context = canvas.getContext('2d');
@@ -2360,7 +2367,7 @@ function MulticamPreviewGrid({ clip, sequence, media, sequences, playheadTime, o
     return () => {
       canceled = true;
     };
-  }, [clip.multicam, localTime, media, sequence.timeline.tracks, sequences]);
+  }, [clip.multicam, colorPipeline, localTime, media, sequence.timeline.tracks, sequences]);
 
   if (!clip.multicam) {
     return null;

@@ -115,6 +115,18 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.outputArgs).toContain('+faststart+prefer_icc');
   });
 
+  it('chains ACES ODT zscale filters with colorspace and ICC generation from project settings', () => {
+    const project = makeProject();
+    project.settings = { ...project.settings, colorPipeline: 'aces' };
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('zscale=matrixin=bt709:transferin=linear:primariesin=bt709');
+    expect(plan.filterComplex).toContain('zscale=matrix=bt709:transfer=bt709:primaries=bt709');
+    expect(plan.filterComplex).toContain('colorspace=ispace=bt2020nc:iprimaries=bt2020:itrc=bt2020-10:space=bt709:primaries=bt709:trc=bt709');
+    expect(plan.filterComplex).toContain('iccgen=force=1:color_primaries=bt709:color_trc=bt709');
+  });
+
   it('keeps empty split-screen cells black by compositing over a black base', () => {
     const project = makeProject();
     const [layoutTransform] = calculateSplitLayoutTransforms({

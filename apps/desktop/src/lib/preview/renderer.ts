@@ -1,4 +1,4 @@
-import type { AudioSpectrumParams, Clip, Effect, EffectType, MediaAsset, Sequence, Timeline, Transition } from '@open-factory/editor-core';
+import type { AudioSpectrumParams, Clip, Effect, EffectType, MediaAsset, ProjectColorPipeline, Sequence, Timeline, Transition } from '@open-factory/editor-core';
 import {
   DEFAULT_COLOR_CORRECTION,
   DEFAULT_TRANSFORM,
@@ -25,6 +25,7 @@ export interface PreviewRenderOptions {
   captureFrame?: boolean;
   bypassProcessing?: boolean;
   disabledEffectTypes?: EffectType[];
+  colorPipeline?: ProjectColorPipeline;
   sequences?: Sequence[];
   depth?: number;
 }
@@ -59,6 +60,7 @@ export class PreviewRenderer {
     const depth = options.depth ?? 0;
     const bypassProcessing = options.bypassProcessing === true;
     const disabledEffectTypes = options.disabledEffectTypes ?? [];
+    const colorPipeline = options.colorPipeline;
     const visibleClips = getTransitionAwareClipInstances(timeline, playheadTime);
     const webgl = this.getWebGl(canvas);
 
@@ -69,7 +71,7 @@ export class PreviewRenderer {
         if (token !== this.renderToken) {
           return {};
         }
-        await this.drawClipWebGl(webgl, clip, mediaById, sequenceById, media, clipPlayheadTime, canvas.width, canvas.height, depth, bypassProcessing, disabledEffectTypes);
+        await this.drawClipWebGl(webgl, clip, mediaById, sequenceById, media, clipPlayheadTime, canvas.width, canvas.height, depth, bypassProcessing, disabledEffectTypes, colorPipeline);
       }
       if (!bypassProcessing) {
         this.drawAudioSpectrumWebGl(webgl, timeline, playheadTime, canvas.width, canvas.height);
@@ -152,24 +154,26 @@ export class PreviewRenderer {
     canvasHeight: number,
     depth: number,
     bypassProcessing: boolean,
-    disabledEffectTypes: EffectType[]
+    disabledEffectTypes: EffectType[],
+    colorPipeline?: ProjectColorPipeline
   ): Promise<void> {
     const renderClip = withCanvasKeyframedPosition(clip, canvasWidth, canvasHeight);
     if (renderClip.type === 'adjustment') {
       if (!bypassProcessing) {
-        compositor.applyAdjustmentLayer(renderClip.colorCorrection, renderClip.effects, { disabledEffectTypes });
+        compositor.applyAdjustmentLayer(renderClip.colorCorrection, renderClip.effects, { disabledEffectTypes, colorPipeline });
       }
       return;
     }
     if (renderClip.type === 'nested-sequence') {
-      const nested = await this.renderNestedCanvas(renderClip, sequenceById, media, playheadTime, canvasWidth, canvasHeight, depth, bypassProcessing, disabledEffectTypes);
+      const nested = await this.renderNestedCanvas(renderClip, sequenceById, media, playheadTime, canvasWidth, canvasHeight, depth, bypassProcessing, disabledEffectTypes, colorPipeline);
       if (!nested) {
         drawMissingWebGl(compositor, renderClip.name, renderClip.type);
         return;
       }
       compositor.drawSource(nested, canvasWidth, canvasHeight, renderClip.transform, renderClip.colorCorrection, renderClip.effects, renderClip.chromaKey, renderClip.masks, {
         bypassProcessing,
-        disabledEffectTypes
+        disabledEffectTypes,
+        colorPipeline
       });
       return;
     }
@@ -179,7 +183,7 @@ export class PreviewRenderer {
         drawMissingWebGl(compositor, renderClip.name, renderClip.type);
         return;
       }
-      await drawVideoWebGl(compositor, renderClip, asset, this.getVideo(asset), playheadTime, seekVideo, loadThumbnail, bypassProcessing, disabledEffectTypes);
+      await drawVideoWebGl(compositor, renderClip, asset, this.getVideo(asset), playheadTime, seekVideo, loadThumbnail, bypassProcessing, disabledEffectTypes, colorPipeline);
       return;
     }
 
@@ -189,17 +193,17 @@ export class PreviewRenderer {
         drawMissingWebGl(compositor, renderClip.name, renderClip.type);
         return;
       }
-      drawImageWebGl(compositor, renderClip, asset, await loadImage(asset), bypassProcessing, disabledEffectTypes);
+      drawImageWebGl(compositor, renderClip, asset, await loadImage(asset), bypassProcessing, disabledEffectTypes, colorPipeline);
       return;
     }
 
     if (renderClip.type === 'credits') {
-      drawCreditsRollWebGl(compositor, renderClip, canvasWidth, canvasHeight, bypassProcessing, Math.max(0, playheadTime - renderClip.start));
+      drawCreditsRollWebGl(compositor, renderClip, canvasWidth, canvasHeight, bypassProcessing, Math.max(0, playheadTime - renderClip.start), colorPipeline);
       return;
     }
 
     if (renderClip.type === 'text' || renderClip.type === 'subtitle') {
-      drawTextWebGl(compositor, renderClip, bypassProcessing);
+      drawTextWebGl(compositor, renderClip, bypassProcessing, colorPipeline);
     }
   }
 
@@ -274,7 +278,8 @@ export class PreviewRenderer {
     height: number,
     depth: number,
     bypassProcessing: boolean,
-    disabledEffectTypes: EffectType[]
+    disabledEffectTypes: EffectType[],
+    colorPipeline?: ProjectColorPipeline
   ): Promise<HTMLCanvasElement | undefined> {
     if (depth >= 3) {
       return undefined;
@@ -291,7 +296,8 @@ export class PreviewRenderer {
       sequences: Array.from(sequenceById.values()),
       depth: depth + 1,
       bypassProcessing,
-      disabledEffectTypes
+      disabledEffectTypes,
+      colorPipeline
     });
     return canvas;
   }

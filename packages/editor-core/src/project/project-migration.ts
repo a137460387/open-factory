@@ -52,7 +52,7 @@ import { clampTransitionDuration, findAdjacentTransitionClips, getTimelineDurati
 import type { MigrationResult, ProjectFile, ProjectFileV1, ProjectFileV2 } from './project-types';
 import { isAbsolutePath, makeRelativePath, normalizePath, resolveMediaPath } from './relative-paths';
 
-const DEFAULT_SETTINGS = { fps: 30, timecodeFormat: 'ndf' as const, width: 1280, height: 720 };
+const DEFAULT_SETTINGS = { fps: 30, timecodeFormat: 'ndf' as const, width: 1280, height: 720, colorPipeline: 'sdr-srgb' as const };
 
 export function serializeProjectFile(project: Project, projectPath?: string): ProjectFileV2 {
   const warnings: string[] = [];

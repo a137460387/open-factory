@@ -27,6 +27,21 @@ describe('project schema migration', () => {
     expect(migrated.project.settings).toMatchObject({ fps: 24, timecodeFormat: 'ndf', vfrHandling: 'ignore' });
   });
 
+  it('serializes and migrates project color pipeline with SDR fallback', () => {
+    const project = makeProject();
+    project.settings = { ...project.settings, colorPipeline: 'aces' };
+    const file = serializeProject(project);
+
+    expect(file.project.settings.colorPipeline).toBe('aces');
+    expect(migrateProjectFile(file).project.settings.colorPipeline).toBe('aces');
+
+    delete (file.project.settings as Partial<typeof file.project.settings>).colorPipeline;
+    expect(migrateProjectFile(file).project.settings.colorPipeline).toBe('sdr-srgb');
+
+    file.project.settings.colorPipeline = 'invalid' as never;
+    expect(migrateProjectFile(file).project.settings.colorPipeline).toBe('sdr-srgb');
+  });
+
   it('serializes and migrates export ranges while old project files default to none', () => {
     const project = makeProject();
     project.exportRanges = [

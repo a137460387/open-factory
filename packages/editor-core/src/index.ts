@@ -1,6 +1,7 @@
 export * from './time';
 export * from './model';
 export * from './color-log-luts';
+export * from './color-pipeline';
 export * from './color-grading';
 export * from './color-match';
 export * from './effects';

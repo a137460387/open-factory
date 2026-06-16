@@ -1,4 +1,4 @@
-import { calculateSpeedCurveSourceDuration, getClipSpeed, type Clip, type EffectType, type MediaAsset } from '@open-factory/editor-core';
+import { calculateSpeedCurveSourceDuration, getClipSpeed, type Clip, type EffectType, type MediaAsset, type ProjectColorPipeline } from '@open-factory/editor-core';
 import { recordPreviewDraw, recordPreviewError } from './debug';
 import { drawTransformedSource2d } from './transform-2d';
 import type { WebGlPreviewCompositor } from './webgl-compositor';
@@ -41,7 +41,8 @@ export async function drawVideoWebGl(
   seekVideo: (video: HTMLVideoElement, time: number) => Promise<void>,
   loadThumbnail: (asset: MediaAsset) => Promise<HTMLImageElement | undefined>,
   bypassProcessing = false,
-  disabledEffectTypes: EffectType[] = []
+  disabledEffectTypes: EffectType[] = [],
+  colorPipeline?: ProjectColorPipeline
 ): Promise<void> {
   const sourceTime = getPreviewSourceTime(clip, playheadTime);
   try {
@@ -55,7 +56,8 @@ export async function drawVideoWebGl(
     }
     compositor.drawSource(video, asset.width || 1280, asset.height || 720, clip.transform, clip.colorCorrection, clip.effects, clip.chromaKey, clip.masks, {
       bypassProcessing,
-      disabledEffectTypes
+      disabledEffectTypes,
+      colorPipeline
     });
     recordPreviewDraw('video', 'video');
   } catch (error) {
@@ -71,7 +73,8 @@ export async function drawVideoWebGl(
       }
       compositor.drawSource(fallback, asset.width || 1280, asset.height || 720, clip.transform, clip.colorCorrection, clip.effects, clip.chromaKey, clip.masks, {
         bypassProcessing,
-        disabledEffectTypes
+        disabledEffectTypes,
+        colorPipeline
       });
       recordPreviewDraw('video', 'thumbnail');
     }

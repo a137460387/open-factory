@@ -32,6 +32,15 @@ export function normalizeExportColorManagement(value: Partial<ExportColorManagem
   };
 }
 
+export function isDefaultExportColorManagement(value: Partial<ExportColorManagementSettings> | undefined): boolean {
+  const normalized = normalizeExportColorManagement(value);
+  return (
+    normalized.inputColorSpace === DEFAULT_EXPORT_COLOR_MANAGEMENT.inputColorSpace &&
+    normalized.outputColorSpace === DEFAULT_EXPORT_COLOR_MANAGEMENT.outputColorSpace &&
+    normalized.embedIccProfile === DEFAULT_EXPORT_COLOR_MANAGEMENT.embedIccProfile
+  );
+}
+
 export function getExportIccProfileBase64(colorSpace: ExportColorSpace): string {
   if (colorSpace === 'dci-p3' || colorSpace === 'rec2020') {
     return EXPORT_ICC_PROFILE_BASE64[colorSpace];

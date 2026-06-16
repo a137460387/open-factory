@@ -9,6 +9,7 @@ import {
   normalizeCustomShaderParams,
   normalizeColorCorrection,
   normalizeInputColorSpace,
+  normalizeProjectColorPipeline,
   normalizeThreeWayColor,
   normalizeChromaKey,
   normalizeMasks,
@@ -23,6 +24,7 @@ import {
   type EffectType,
   type Effect,
   type InputColorSpace,
+  type ProjectColorPipeline,
   type SubtitleStyle,
   type TextStyle,
   type Transform
@@ -39,6 +41,7 @@ interface ProgramInfo {
   curveLut: WebGLUniformLocation;
   opacity: WebGLUniformLocation;
   inputColorSpace: WebGLUniformLocation;
+  colorPipeline: WebGLUniformLocation;
   colorCorrection: WebGLUniformLocation;
   lift: WebGLUniformLocation;
   gamma: WebGLUniformLocation;
@@ -85,10 +88,12 @@ export interface WebGlSourceProcessingOptions {
   customShaderTime?: number;
   customShaderProgress?: number;
   disabledEffectTypes?: EffectType[];
+  colorPipeline?: ProjectColorPipeline;
 }
 
 export interface WebGlResolvedSourceProcessing {
   correction: ColorCorrection;
+  colorPipeline: ProjectColorPipeline;
   key: ChromaKey;
   maskUniforms: ReturnType<typeof buildMaskUniforms>;
   effectParams: ReturnType<typeof buildPreviewEffectParams>;
@@ -165,13 +170,14 @@ export class WebGlPreviewCompositor {
       }
     }
     gl.useProgram(this.program.program);
-    const { correction, key, maskUniforms, effectParams } = resolveWebGlSourceProcessing(colorCorrection, effects, chromaKey, masks, options);
+    const { correction, colorPipeline, key, maskUniforms, effectParams } = resolveWebGlSourceProcessing(colorCorrection, effects, chromaKey, masks, options);
     const threeWayColor = normalizeThreeWayColor(correction.threeWayColor);
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, this.curveTexture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 256, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, buildCurveTextureData(correction.colorCurves));
     gl.uniform1f(this.program.opacity, Math.max(0, Math.min(1, transform.opacity)));
     gl.uniform1f(this.program.inputColorSpace, inputColorSpaceIndex(correction.inputColorSpace));
+    gl.uniform1f(this.program.colorPipeline, colorPipelineIndex(colorPipeline));
     gl.uniform4f(this.program.colorCorrection, correction.brightness, correction.contrast, correction.saturation, correction.hue);
     gl.uniform3f(this.program.lift, wheelOffset(threeWayColor.lift, 'r'), wheelOffset(threeWayColor.lift, 'g'), wheelOffset(threeWayColor.lift, 'b'));
     gl.uniform3f(this.program.gamma, wheelValue(threeWayColor.gamma, 'r'), wheelValue(threeWayColor.gamma, 'g'), wheelValue(threeWayColor.gamma, 'b'));
@@ -425,6 +431,7 @@ export function resolveWebGlSourceProcessing(
   if (options.bypassProcessing) {
     return {
       correction: normalizeColorCorrection(DEFAULT_COLOR_CORRECTION),
+      colorPipeline: normalizeProjectColorPipeline(undefined),
       key: normalizeChromaKey(undefined),
       maskUniforms: buildMaskUniforms(undefined),
       effectParams: buildPreviewEffectParams(undefined)
@@ -432,6 +439,7 @@ export function resolveWebGlSourceProcessing(
   }
   return {
     correction: normalizeColorCorrection(colorCorrection ?? DEFAULT_COLOR_CORRECTION),
+    colorPipeline: normalizeProjectColorPipeline(options.colorPipeline),
     key: normalizeChromaKey(chromaKey),
     maskUniforms: buildMaskUniforms(masks),
     effectParams: buildPreviewEffectParams(effects, options.disabledEffectTypes)
@@ -512,6 +520,17 @@ function inputColorSpaceIndex(value: InputColorSpace | undefined): number {
       return 5;
     case 'vlog':
       return 6;
+    default:
+      return 0;
+  }
+}
+
+function colorPipelineIndex(value: ProjectColorPipeline | undefined): number {
+  switch (normalizeProjectColorPipeline(value)) {
+    case 'hdr-rec2020':
+      return 1;
+    case 'aces':
+      return 2;
     default:
       return 0;
   }
@@ -629,6 +648,20 @@ function buildTransformedQuad(canvasWidth: number, canvasHeight: number, mediaWi
   return corners.flatMap(([x, y]) => [centerX + x * cos - y * sin, centerY + x * sin + y * cos]);
 }
 
+export function buildAcesToneMappingShaderInjection(colorPipeline: ProjectColorPipeline): string {
+  if (normalizeProjectColorPipeline(colorPipeline) !== 'aces') {
+    return '';
+  }
+  return `
+      vec3 hillAcesToneMap(vec3 color) {
+        color = max(color, vec3(0.0));
+        vec3 numerator = color * (color + vec3(0.0245786)) - vec3(0.000090537);
+        vec3 denominator = color * (vec3(0.983729) * color + vec3(0.4329510)) + vec3(0.238081);
+        return clamp(numerator / max(denominator, vec3(0.000001)), 0.0, 1.0);
+      }
+  `;
+}
+
 function createProgram(gl: WebGLRenderingContext): ProgramInfo {
   const vertexShader = compileShader(
     gl,
@@ -645,6 +678,7 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
       uniform vec2 u_resolution;
       uniform float u_opacity;
       uniform float u_inputColorSpace;
+      uniform float u_colorPipeline;
       uniform vec4 u_colorCorrection;
       uniform vec3 u_lift;
       uniform vec3 u_gamma;
@@ -704,6 +738,15 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
           return expandLogChannel(color, 0.032, 1.46, 1.09, vec3(1.0, 1.01, 1.02), vec3(1.01, 1.0, 1.0), 1.07);
         }
         return expandLogChannel(color, 0.038, 1.52, 1.11, vec3(0.99, 1.0, 1.02), vec3(1.02, 1.01, 1.0), 1.09);
+      }
+
+      ${buildAcesToneMappingShaderInjection('aces')}
+
+      vec3 applyProjectColorPipeline(vec3 color) {
+        if (u_colorPipeline > 1.5) {
+          return hillAcesToneMap(color);
+        }
+        return color;
       }
 
       vec3 applyColorCorrection(vec3 color) {
@@ -913,6 +956,7 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
         corrected = applyThreeWay(corrected);
         corrected = applyCurveLut(corrected);
         corrected = applyPreviewEffects(corrected, v_texCoord);
+        corrected = applyProjectColorPipeline(corrected);
         gl_FragColor = vec4(corrected, color.a * keyedAlpha * maskAlpha * u_opacity);
       }
     `
@@ -932,6 +976,7 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
   const curveLut = gl.getUniformLocation(program, 'u_curveLut');
   const opacity = gl.getUniformLocation(program, 'u_opacity');
   const inputColorSpace = gl.getUniformLocation(program, 'u_inputColorSpace');
+  const colorPipeline = gl.getUniformLocation(program, 'u_colorPipeline');
   const colorCorrection = gl.getUniformLocation(program, 'u_colorCorrection');
   const lift = gl.getUniformLocation(program, 'u_lift');
   const gamma = gl.getUniformLocation(program, 'u_gamma');
@@ -954,6 +999,7 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
     !curveLut ||
     !opacity ||
     !inputColorSpace ||
+    !colorPipeline ||
     !colorCorrection ||
     !lift ||
     !gamma ||
@@ -982,6 +1028,7 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
     curveLut,
     opacity,
     inputColorSpace,
+    colorPipeline,
     colorCorrection,
     lift,
     gamma,
