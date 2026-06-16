@@ -88,6 +88,7 @@ const zh = {
     editMenu: '编辑',
     viewMenu: '视图',
     toolsMenu: '工具',
+    helpMenu: '帮助',
     newProject: '新建项目',
     newFromTemplate: '从模板新建',
     saveTimelineTemplate: '保存为时间线模板',
@@ -240,6 +241,47 @@ const zh = {
     importBookmarks: '导入书签',
     exportBookmarks: '导出书签',
     lastBackupAt: (time: string) => `上次备份 ${time}`
+  },
+  tutorial: {
+    start: '新手教程',
+    skip: '跳过教程',
+    waitingForAction: '完成当前高亮操作后会自动进入下一步。',
+    progress: (step: number, total: number) => `${step} / ${total}`,
+    completedTitle: '🎉 你已掌握基础操作！',
+    steps: {
+      'import-media': {
+        title: '导入媒体',
+        body: '把本机视频、音频或图片加入媒体库。'
+      },
+      'add-clip': {
+        title: '加入时间线',
+        body: '把媒体库素材加入时间线，形成可编辑 clip。'
+      },
+      'play-preview': {
+        title: '播放预览',
+        body: '用播放按钮检查当前时间线画面和声音。'
+      },
+      'trim-clip': {
+        title: '裁剪片段',
+        body: '拖动 clip 两端的裁剪把手调整入点或出点。'
+      },
+      'adjust-volume': {
+        title: '调整音量',
+        body: '选中有声音的 clip，在属性面板调整音量。'
+      },
+      'add-text': {
+        title: '添加文字',
+        body: '添加文字 clip，用来制作标题、字幕或说明。'
+      },
+      'export-video': {
+        title: '导出视频',
+        body: '打开导出对话框并完成一次本地导出。'
+      },
+      'save-project': {
+        title: '保存项目',
+        body: '把项目文件保存到本机，便于之后继续编辑。'
+      }
+    }
   },
   videoStitchWizard: {
     title: '视频拼接向导',

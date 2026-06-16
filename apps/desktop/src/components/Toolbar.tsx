@@ -1,4 +1,4 @@
-import { Activity, Archive, Camera, Captions, ChevronDown, ClipboardList, Download, FileDown, FilePlus2, FileText, FolderOpen, GitCompareArrows, Grid2X2, History, ImageDown, LayoutGrid, LockKeyhole, MessageSquareText, Mic2, Monitor, PanelsTopLeft, Pause, PictureInPicture2, Play, Redo2, RotateCcw, Save, Scissors, Settings, Square, Trash2, Undo2, WandSparkles, XCircle } from 'lucide-react';
+import { Activity, Archive, Camera, Captions, ChevronDown, CircleHelp, ClipboardList, Download, FileDown, FilePlus2, FileText, FolderOpen, GitCompareArrows, Grid2X2, History, ImageDown, LayoutGrid, LockKeyhole, MessageSquareText, Mic2, Monitor, PanelsTopLeft, Pause, PictureInPicture2, Play, Redo2, RotateCcw, Save, Scissors, Settings, Square, Trash2, Undo2, WandSparkles, XCircle } from 'lucide-react';
 import {
   BUILT_IN_SPLIT_LAYOUTS,
   SPLIT_LAYOUT_PRESET_IDS,
@@ -129,6 +129,7 @@ interface ToolbarProps {
   onRedo(): void;
   onClearCache(): void;
   onOpenSettings(): void;
+  onStartTutorial(): void;
   onOpenProjectHealth(): void;
   sharePackageBusy?: boolean;
   autosaveIntervalSeconds: number;
@@ -148,6 +149,7 @@ export function Toolbar(props: ToolbarProps) {
   const [editMenuOpen, setEditMenuOpen] = useState(false);
   const [viewMenuOpen, setViewMenuOpen] = useState(false);
   const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
+  const [helpMenuOpen, setHelpMenuOpen] = useState(false);
   const [recordMenuOpen, setRecordMenuOpen] = useState(false);
   const [splitLayoutOpen, setSplitLayoutOpen] = useState(false);
   const [workspaceLayoutOpen, setWorkspaceLayoutOpen] = useState(false);
@@ -829,6 +831,42 @@ export function Toolbar(props: ToolbarProps) {
             >
               <span>{t.stopMacroRecording}</span>
               <span className="text-xs text-slate-500">{t.macroRecordingSteps(props.macroRecordingStepCount)}</span>
+            </button>
+          </div>
+        ) : null}
+      </div>
+      <div className="relative">
+        <button
+          className="inline-flex h-9 items-center gap-1 rounded-md border border-transparent px-3 text-sm font-medium text-slate-700 hover:border-line hover:bg-panel hover:text-ink"
+          type="button"
+          data-testid="toolbar-help-menu-button"
+          onClick={() => {
+            setFileMenuOpen(false);
+            setImportMenuOpen(false);
+            setEditMenuOpen(false);
+            setViewMenuOpen(false);
+            setToolsMenuOpen(false);
+            setSplitLayoutOpen(false);
+            setWorkspaceLayoutOpen(false);
+            setHelpMenuOpen((open) => !open);
+          }}
+        >
+          {t.helpMenu}
+          <ChevronDown size={14} />
+        </button>
+        {helpMenuOpen ? (
+          <div className="absolute left-0 top-10 z-20 min-w-44 rounded-md border border-line bg-white py-1 shadow-soft" data-testid="toolbar-help-menu">
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-help-tutorial-menu-item"
+              onClick={() => {
+                setHelpMenuOpen(false);
+                props.onStartTutorial();
+              }}
+            >
+              <span>{zhCN.tutorial.start}</span>
+              <CircleHelp size={14} />
             </button>
           </div>
         ) : null}

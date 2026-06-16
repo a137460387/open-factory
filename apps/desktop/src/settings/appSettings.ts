@@ -36,6 +36,7 @@ import {
   type LocalAiModelId,
   type LocalAiModelsSettings
 } from './localModels';
+import { normalizeTutorialProgressSettings, type TutorialProgressSettings } from '../tutorial/tutorialState';
 
 const BROWSER_SETTINGS_KEY = 'open-factory:settings';
 
@@ -201,6 +202,9 @@ export const DEFAULT_COLLABORATION_IDENTITY_SETTINGS: CollaborationIdentitySetti
 
 export interface AppSettings {
   language?: Language;
+  tutorialStep?: number;
+  tutorialSkipped?: boolean;
+  tutorialCompleted?: boolean;
   layout?: EditorLayoutSettings;
   backup?: BackupSettings;
   theme?: ThemeSettings;
@@ -273,6 +277,23 @@ export async function saveExportBackgroundSettings(exportBackground: Partial<Exp
   const nextExportBackground = normalizeExportBackgroundSettings({ ...settings.exportBackground, ...exportBackground }) ?? defaultExportBackgroundSettings();
   await writeAppSettings({ ...settings, exportBackground: nextExportBackground });
   return nextExportBackground;
+}
+
+export async function readTutorialProgressSettings(): Promise<TutorialProgressSettings> {
+  const settings = await readAppSettings();
+  return normalizeTutorialProgressSettings(settings);
+}
+
+export async function saveTutorialProgressSettings(progress: Partial<TutorialProgressSettings>): Promise<TutorialProgressSettings> {
+  const settings = await readAppSettings();
+  const nextProgress = normalizeTutorialProgressSettings(progress);
+  await writeAppSettings({
+    ...settings,
+    tutorialStep: nextProgress.tutorialStep,
+    tutorialSkipped: nextProgress.tutorialSkipped,
+    tutorialCompleted: nextProgress.tutorialCompleted
+  });
+  return nextProgress;
 }
 
 export async function readExportUploadSettings(): Promise<ExportUploadSettings> {
@@ -494,6 +515,12 @@ function normalizeSettings(settings: Partial<AppSettings>): AppSettings {
   const normalized: AppSettings = {};
   if (settings.language) {
     normalized.language = normalizeLanguage(settings.language);
+  }
+  const tutorialProgress = normalizeTutorialProgressSettings(settings);
+  if (shouldPersistTutorialProgressSettings(tutorialProgress)) {
+    normalized.tutorialStep = tutorialProgress.tutorialStep;
+    normalized.tutorialSkipped = tutorialProgress.tutorialSkipped;
+    normalized.tutorialCompleted = tutorialProgress.tutorialCompleted;
   }
   const layout = normalizeStoredLayoutSettings(settings.layout);
   if (layout) {
@@ -936,6 +963,10 @@ function shouldPersistTimelineInteractionSettings(settings: TimelineInteractionS
 
 function shouldPersistCollaborationIdentitySettings(settings: CollaborationIdentitySettings): boolean {
   return settings.name !== DEFAULT_COLLABORATION_IDENTITY_SETTINGS.name || settings.color !== DEFAULT_COLLABORATION_IDENTITY_SETTINGS.color;
+}
+
+function shouldPersistTutorialProgressSettings(settings: TutorialProgressSettings): boolean {
+  return settings.tutorialStep > 0 || settings.tutorialSkipped || settings.tutorialCompleted;
 }
 
 function shouldPersistExportPresetSyncSettings(settings: ExportPresetSyncSettings): boolean {

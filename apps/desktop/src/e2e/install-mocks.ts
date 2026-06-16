@@ -224,6 +224,7 @@ exists.set('C:/Missing/tiny-video.mp4', false);
 exists.set('C:/Missing/tiny-audio.wav', false);
 exists.set('C:/Missing/test-image.png', false);
 restorePersistedFiles();
+ensureTutorialSkippedByDefault(false);
 
 const mocks: TauriMocks = {
   confirm: (message) => {
@@ -2050,6 +2051,17 @@ window.__E2E_ACTIONS__ = {
     mtimes.set(path, mtimeMsValue);
     persistFiles();
   },
+  setTutorialProgress: (settings: unknown) => {
+    const input = settings && typeof settings === 'object' ? (settings as Record<string, unknown>) : {};
+    writeTutorialProgressSettings(
+      {
+        tutorialStep: typeof input.tutorialStep === 'number' && Number.isFinite(input.tutorialStep) ? Math.round(input.tutorialStep) : 0,
+        tutorialSkipped: input.tutorialSkipped === true,
+        tutorialCompleted: input.tutorialCompleted === true
+      },
+      true
+    );
+  },
   clearE2eFiles: () => {
     canceledExportTaskIds.clear();
     canceledTranscodeTaskIds.clear();
@@ -2103,6 +2115,7 @@ window.__E2E_ACTIONS__ = {
     files.delete(settingsPath);
     exists.set(settingsPath, false);
     mtimes.delete(settingsPath);
+    ensureTutorialSkippedByDefault(false);
     files.delete(exportQueueStatePath);
     exists.set(exportQueueStatePath, false);
     mtimes.delete(exportQueueStatePath);
@@ -2152,6 +2165,7 @@ window.__E2E_ACTIONS__ = {
     localStorage.removeItem('open-factory:proxy-settings');
     localStorage.removeItem('open-factory:plugins');
     localStorage.removeItem('open-factory:settings');
+    ensureTutorialSkippedByDefault(true);
   },
   clearExportPresets: () => {
     files.delete(exportPresetsPath);
@@ -2608,6 +2622,40 @@ function restorePersistedFiles(): void {
     localStorage.removeItem(PERSISTED_FILES_KEY);
     localStorage.removeItem(PERSISTED_MTIMES_KEY);
     localStorage.removeItem(PERSISTED_WEBDAV_TEXT_KEY);
+  }
+}
+
+function ensureTutorialSkippedByDefault(persist: boolean): void {
+  if (exists.get(settingsPath) !== true) {
+    writeTutorialProgressSettings({ tutorialStep: 0, tutorialSkipped: true, tutorialCompleted: false }, persist);
+  }
+}
+
+function writeTutorialProgressSettings(
+  progress: { tutorialStep: number; tutorialSkipped: boolean; tutorialCompleted: boolean },
+  persist: boolean
+): void {
+  const current = parseMockJsonFile(settingsPath);
+  const next = {
+    ...current,
+    tutorialStep: Math.min(8, Math.max(0, Math.round(progress.tutorialStep))),
+    tutorialSkipped: progress.tutorialSkipped,
+    tutorialCompleted: progress.tutorialCompleted
+  };
+  files.set(settingsPath, JSON.stringify(next, null, 2));
+  exists.set(settingsPath, true);
+  mtimes.set(settingsPath, Date.now());
+  if (persist) {
+    persistFiles();
+  }
+}
+
+function parseMockJsonFile(path: string): Record<string, unknown> {
+  try {
+    const raw = files.get(path);
+    return raw ? (JSON.parse(raw) as Record<string, unknown>) : {};
+  } catch {
+    return {};
   }
 }
 

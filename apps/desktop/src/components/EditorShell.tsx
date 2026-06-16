@@ -215,6 +215,7 @@ import {
   readCustomSplitLayouts,
   readLayoutSettings,
   readPreviewPerformanceSettings,
+  readTutorialProgressSettings,
   readPreviewWindowSettings,
   readTimelineInteractionSettings,
   readTimelineGridSettings,
@@ -224,6 +225,7 @@ import {
   saveCustomSplitLayouts,
   saveLayoutSettings,
   savePreviewPerformanceSettings,
+  saveTutorialProgressSettings,
   savePreviewWindowSettings,
   saveTimelineInteractionSettings,
   saveTimelineGridSettings,
@@ -232,6 +234,16 @@ import {
   type TimelineInteractionSettings,
   type TimelineHeatmapViewSettings
 } from '../settings/appSettings';
+import { TutorialOverlay } from '../tutorial/TutorialOverlay';
+import {
+  DEFAULT_TUTORIAL_SIGNALS,
+  advanceTutorialProgress,
+  normalizeTutorialProgressSettings,
+  shouldShowTutorial,
+  skipTutorialProgress,
+  type TutorialProgressSettings,
+  type TutorialSignals
+} from '../tutorial/tutorialState';
 import { DEFAULT_PREVIEW_PERFORMANCE_SETTINGS, type PreviewPerformanceSettings, type PreviewQualityMode, type PreviewSkipFrames } from '../lib/preview/preview-performance';
 import { createProxyForAsset, type ProxyGenerationOptions } from '../media/proxy';
 import { ensureMediaJobRunner } from '../media/media-job-runner';
@@ -376,6 +388,9 @@ export function EditorShell() {
   const [previewWindowResolutionScale, setPreviewWindowResolutionScale] = useState<PreviewWindowSettings['resolutionScale']>(1);
   const [timelineGridSettings, setTimelineGridSettings] = useState<TimelineGridSettings>(DEFAULT_TIMELINE_GRID_SETTINGS);
   const [timelineInteractionSettings, setTimelineInteractionSettings] = useState<TimelineInteractionSettings>(DEFAULT_TIMELINE_INTERACTION_SETTINGS);
+  const [tutorialProgress, setTutorialProgress] = useState<TutorialProgressSettings | undefined>();
+  const [tutorialCelebrationVisible, setTutorialCelebrationVisible] = useState(false);
+  const [tutorialSignals, setTutorialSignals] = useState<TutorialSignals>(DEFAULT_TUTORIAL_SIGNALS);
   const [pipLayoutPosition, setPiPLayoutPosition] = useState<PiPLayoutPosition>('bottom-right');
   const [customSplitLayouts, setCustomSplitLayouts] = useState<SplitLayoutDefinition[]>([]);
   const [viewportSize, setViewportSize] = useState(() => readViewportSize());
@@ -409,6 +424,7 @@ export function EditorShell() {
     () => (selectedClip && 'mediaId' in selectedClip ? project.media.find((asset) => asset.id === selectedClip.mediaId) : undefined),
     [project.media, selectedClip]
   );
+  const allTimelineClips = useMemo(() => project.timeline.tracks.flatMap((track) => track.clips), [project.timeline.tracks]);
   const selectedClipLocked = useMemo(
     () => Boolean(selectedClip && project.timeline.tracks.find((track) => track.id === selectedClip.trackId)?.locked),
     [project.timeline.tracks, selectedClip]
@@ -885,6 +901,63 @@ export function EditorShell() {
 
   useEffect(() => {
     let canceled = false;
+    void readTutorialProgressSettings()
+      .then((progress) => {
+        if (!canceled) {
+          setTutorialProgress(progress);
+        }
+      })
+      .catch((error) => {
+        console.warn('Unable to load tutorial progress settings', error);
+        if (!canceled) {
+          setTutorialProgress(normalizeTutorialProgressSettings(undefined));
+        }
+      });
+    return () => {
+      canceled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    setTutorialSignals((current) => ({
+      ...current,
+      mediaImported: current.mediaImported || project.media.length > 0,
+      clipOnTimeline: current.clipOnTimeline || allTimelineClips.length > 0,
+      clipTrimmed: current.clipTrimmed || allTimelineClips.some((clip) => clip.trimStart > 0.000001 || clip.trimEnd > 0.000001),
+      volumeAdjusted: current.volumeAdjusted || allTimelineClips.some((clip) => 'volume' in clip && Math.abs(clip.volume - 1) > 0.000001),
+      textAdded: current.textAdded || allTimelineClips.some((clip) => clip.type === 'text' || clip.type === 'credits')
+    }));
+  }, [allTimelineClips, project.media.length]);
+
+  useEffect(() => {
+    if (isPlaying) {
+      setTutorialSignals((current) => ({ ...current, previewPlayed: true }));
+    }
+  }, [isPlaying]);
+
+  useEffect(() => {
+    if (!tutorialProgress || !shouldShowTutorial(tutorialProgress)) {
+      return;
+    }
+    const nextProgress = advanceTutorialProgress(tutorialProgress, tutorialSignals);
+    if (
+      nextProgress.tutorialStep === tutorialProgress.tutorialStep &&
+      nextProgress.tutorialSkipped === tutorialProgress.tutorialSkipped &&
+      nextProgress.tutorialCompleted === tutorialProgress.tutorialCompleted
+    ) {
+      return;
+    }
+    setTutorialProgress(nextProgress);
+    if (nextProgress.tutorialCompleted) {
+      setTutorialCelebrationVisible(true);
+    }
+    void saveTutorialProgressSettings(nextProgress).catch((error) => {
+      console.warn('Unable to save tutorial progress settings', error);
+    });
+  }, [tutorialProgress, tutorialSignals]);
+
+  useEffect(() => {
+    let canceled = false;
     void readViewSettings()
       .then((view) => {
         if (!canceled) {
@@ -959,11 +1032,37 @@ export function EditorShell() {
     }
     setProjectPath(targetPath);
     setDirty(false);
+    setTutorialSignals((current) => ({ ...current, projectSaved: true }));
     showToast({ kind: 'success', title: zhCN.editorToasts.projectSaved });
   }, [project, projectPath, setDirty, setProjectPath]);
 
   const saveEncryptedProject = useCallback(() => {
     setProjectEncryptionSaveOpen(true);
+  }, []);
+
+  const startTutorial = useCallback(() => {
+    const nextProgress = normalizeTutorialProgressSettings({ tutorialStep: 0, tutorialSkipped: false, tutorialCompleted: false });
+    setTutorialCelebrationVisible(false);
+    setTutorialSignals(DEFAULT_TUTORIAL_SIGNALS);
+    setTutorialProgress(nextProgress);
+    void saveTutorialProgressSettings(nextProgress).catch((error) => {
+      console.warn('Unable to save tutorial progress settings', error);
+    });
+  }, []);
+
+  const skipTutorial = useCallback(() => {
+    setTutorialCelebrationVisible(false);
+    setTutorialProgress((current) => {
+      const nextProgress = skipTutorialProgress(current ?? normalizeTutorialProgressSettings(undefined));
+      void saveTutorialProgressSettings(nextProgress).catch((error) => {
+        console.warn('Unable to save tutorial progress settings', error);
+      });
+      return nextProgress;
+    });
+  }, []);
+
+  const closeTutorialCelebration = useCallback(() => {
+    setTutorialCelebrationVisible(false);
   }, []);
 
   const confirmProjectEncryptionSave = useCallback(
@@ -2847,6 +2946,7 @@ export function EditorShell() {
           onRedo={redo}
           onClearCache={() => void clearCache()}
           onOpenSettings={() => setSettingsOpen(true)}
+          onStartTutorial={startTutorial}
           onOpenProjectHealth={openProjectHealth}
           sharePackageBusy={sharePackageBusy}
           autosaveIntervalSeconds={autosaveIntervalSeconds}
@@ -3058,6 +3158,7 @@ export function EditorShell() {
               onClose={() => setExportDialogOpen(false)}
               onCompleted={(path) => {
                 setLastExportPath(path);
+                setTutorialSignals((current) => ({ ...current, videoExported: true }));
                 void runAutomationForMedia('on-export-complete', useEditorStore.getState().project.media);
               }}
               onRelinkMissing={() => void relinkAllMissing()}
@@ -3217,6 +3318,13 @@ export function EditorShell() {
         ) : null}
         {archiveProgress ? <ArchiveProgressDialog progress={archiveProgress} /> : null}
         {sharePackageProgress ? <SharePackageProgressDialog progress={sharePackageProgress} /> : null}
+        {tutorialProgress && (shouldShowTutorial(tutorialProgress) || tutorialCelebrationVisible) ? (
+          <TutorialOverlay
+            progress={tutorialCelebrationVisible ? { ...tutorialProgress, tutorialCompleted: true } : tutorialProgress}
+            onSkip={skipTutorial}
+            onCloseCelebration={closeTutorialCelebration}
+          />
+        ) : null}
       </div>
     </ErrorBoundary>
   );

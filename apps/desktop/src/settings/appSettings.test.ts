@@ -18,6 +18,7 @@ import {
   readPreviewPerformanceSettings,
   readPreviewWindowSettings,
   readThemeSettings,
+  readTutorialProgressSettings,
   readTimelineInteractionSettings,
   readTimelineGridSettings,
   readViewSettings,
@@ -36,6 +37,7 @@ import {
   savePreviewPerformanceSettings,
   savePreviewWindowSettings,
   saveThemeSettings,
+  saveTutorialProgressSettings,
   saveTimelineInteractionSettings,
   saveTimelineGridSettings,
   saveViewSettings
@@ -186,6 +188,33 @@ describe('app settings storage', () => {
     expect(await readAppSettings()).toEqual({
       language: 'en',
       exportBackground: { allowPowerActions: true, postExportScriptAcknowledged: true }
+    });
+  });
+
+  it('persists tutorial progress in settings.json', async () => {
+    await expect(readTutorialProgressSettings()).resolves.toEqual({ tutorialStep: 0, tutorialSkipped: false, tutorialCompleted: false });
+
+    await saveLanguageSetting('en');
+    const progress = await saveTutorialProgressSettings({ tutorialStep: 3 });
+
+    expect(progress).toEqual({ tutorialStep: 3, tutorialSkipped: false, tutorialCompleted: false });
+    expect(await readAppSettings()).toEqual({
+      language: 'en',
+      tutorialStep: 3,
+      tutorialSkipped: false,
+      tutorialCompleted: false
+    });
+    expect(await readTutorialProgressSettings()).toEqual(progress);
+  });
+
+  it('persists skipped tutorial state so it no longer auto-opens', async () => {
+    const progress = await saveTutorialProgressSettings({ tutorialStep: 1, tutorialSkipped: true });
+
+    expect(progress).toEqual({ tutorialStep: 1, tutorialSkipped: true, tutorialCompleted: false });
+    expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({
+      tutorialStep: 1,
+      tutorialSkipped: true,
+      tutorialCompleted: false
     });
   });
 
