@@ -47,6 +47,7 @@ import type { Clip, ImageSequenceInfo, MediaAsset, MediaFolder, MediaMetadata, P
 import { normalizeClipGroups } from '../clip-groups';
 import { normalizeClipBlendMode } from '../blend-modes';
 import { normalizeClipContentAnalysis } from '../content-analysis';
+import { normalizeSpatialAudio } from '../spatial-audio';
 import { normalizeTimelineLabelColor } from '../timeline-color-labels';
 import { normalizeMediaFolderId, normalizeMediaFolders, normalizeMediaImportedAt } from '../media-folders';
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
@@ -392,7 +393,8 @@ function cloneClip<TClip extends Clip>(clip: TClip): TClip {
       fadeInDuration: normalizeAudioFadeDuration(clip.fadeInDuration, clip.duration),
       fadeOutDuration: normalizeAudioFadeDuration(clip.fadeOutDuration, clip.duration),
       fadeInCurve: normalizeAudioFadeCurve(clip.fadeInCurve),
-      fadeOutCurve: normalizeAudioFadeCurve(clip.fadeOutCurve)
+      fadeOutCurve: normalizeAudioFadeCurve(clip.fadeOutCurve),
+      spatialAudio: normalizeSpatialAudio(clip.spatialAudio)
     });
   }
   if (clip.type === 'text') {

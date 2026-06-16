@@ -9,6 +9,7 @@ import {
   DEFAULT_AUDIO_FADE_DURATION,
   DEFAULT_AUDIO_PITCH_SEMITONES,
   DEFAULT_AUDIO_REVERSE,
+  DEFAULT_SPATIAL_AUDIO,
   normalizeChromaKey,
   type Clip,
   type MediaAsset,
@@ -51,7 +52,8 @@ export function createClipFromAsset(asset: MediaAsset, track: Track, timeline: T
       fadeInDuration: DEFAULT_AUDIO_FADE_DURATION,
       fadeOutDuration: DEFAULT_AUDIO_FADE_DURATION,
       fadeInCurve: DEFAULT_AUDIO_FADE_CURVE,
-      fadeOutCurve: DEFAULT_AUDIO_FADE_CURVE
+      fadeOutCurve: DEFAULT_AUDIO_FADE_CURVE,
+      spatialAudio: { ...DEFAULT_SPATIAL_AUDIO }
     };
   }
   if (asset.type === 'image') {
@@ -67,7 +69,8 @@ export function createClipFromAsset(asset: MediaAsset, track: Track, timeline: T
     fadeInDuration: DEFAULT_AUDIO_FADE_DURATION,
     fadeOutDuration: DEFAULT_AUDIO_FADE_DURATION,
     fadeInCurve: DEFAULT_AUDIO_FADE_CURVE,
-    fadeOutCurve: DEFAULT_AUDIO_FADE_CURVE
+    fadeOutCurve: DEFAULT_AUDIO_FADE_CURVE,
+    spatialAudio: { ...DEFAULT_SPATIAL_AUDIO }
   };
 }
 

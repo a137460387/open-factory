@@ -1559,6 +1559,7 @@ const zh = {
       kenBurns: 'Ken Burns',
       videoRestoration: '画面修复',
       audioDenoise: '降噪',
+      spatialAudio: '空间音频',
       curves: '曲线',
       colorWheels: '色轮',
       effects: '特效',
@@ -1758,6 +1759,10 @@ const zh = {
       volume: '音量',
       audioChannelRouting: '声道路由',
       audioChannelRoutingMode: '路由模式',
+      spatialX: '左右位置 X',
+      spatialY: '前后位置 Y',
+      spatialZ: '上下位置 Z',
+      spatialDistance: '距离衰减',
       pitchShift: '音高',
       semitones: '半音',
       reverseAudio: '音频反转',
@@ -1898,6 +1903,11 @@ const zh = {
       'stereo-right-mono': '提取右声道为单声道',
       'stereo-to-mono': '合并为单声道'
     },
+    spatialDistanceOptions: {
+      near: '近',
+      medium: '中',
+      far: '远'
+    },
     projection: {
       flat: '普通平面',
       equirectangular: '360° 等距柱状',
@@ -1982,6 +1992,8 @@ const zh = {
       yaw: 'Yaw',
       pitch: 'Pitch',
       roll: 'Roll',
+      spatialX: '空间 X',
+      spatialY: '空间 Y',
       pathStartOffset: '路径偏移'
     }
   },
@@ -4393,6 +4405,7 @@ const enOverrides = {
       kenBurns: 'Ken Burns',
       videoRestoration: 'Video Restoration',
       audioDenoise: 'Denoise',
+      spatialAudio: 'Spatial Audio',
       curves: 'Curves',
       colorWheels: 'Color Wheels',
       effects: 'Effects',
@@ -4539,6 +4552,10 @@ const enOverrides = {
       volume: 'Volume',
       audioChannelRouting: 'Channel Routing',
       audioChannelRoutingMode: 'Routing Mode',
+      spatialX: 'Left/Right X',
+      spatialY: 'Front/Back Y',
+      spatialZ: 'Up/Down Z',
+      spatialDistance: 'Distance Falloff',
       pitchShift: 'Pitch Shift',
       semitones: 'semitones',
       reverseAudio: 'Reverse Audio',
@@ -4644,6 +4661,11 @@ const enOverrides = {
       'stereo-right-mono': 'Extract Right as Mono',
       'stereo-to-mono': 'Merge to Mono'
     },
+    spatialDistanceOptions: {
+      near: 'Near',
+      medium: 'Medium',
+      far: 'Far'
+    },
     projection: {
       flat: 'Flat',
       equirectangular: '360° Equirectangular',
@@ -4707,6 +4729,8 @@ const enOverrides = {
       yaw: 'Yaw',
       pitch: 'Pitch',
       roll: 'Roll',
+      spatialX: 'Spatial X',
+      spatialY: 'Spatial Y',
       pathStartOffset: 'Path Offset'
     }
   },

@@ -112,6 +112,7 @@ import { normalizeSubtitleStyleTemplateStyle } from '../subtitles/style-template
 import { normalizeCreditsRollSpeed, normalizeCreditsRows, normalizeCreditsStyle, type CreditsRow, type CreditsStyle } from '../credits-roll';
 import { normalizeClipBlendMode } from '../blend-modes';
 import { normalizeClipContentAnalysis } from '../content-analysis';
+import { normalizeSpatialAudio, type ClipSpatialAudio } from '../spatial-audio';
 import {
   addMediaFolderToProject,
   deleteMediaFolder,
@@ -3288,6 +3289,7 @@ export type ClipPatch = Partial<Omit<Clip, 'type' | 'id' | 'transform' | 'colorC
   stabilization?: Partial<ClipStabilization>;
   frameInterpolation?: Partial<ClipFrameInterpolation>;
   audioDenoise?: Partial<ClipAudioDenoise>;
+  spatialAudio?: Partial<ClipSpatialAudio>;
   videoRestoration?: Partial<ClipVideoRestoration>;
   projection?: ClipProjection;
   panorama?: Partial<ClipPanoramaView>;
@@ -3661,7 +3663,8 @@ export class UpdateClipCommand implements Command {
         fadeInDuration: normalizeAudioFadeDuration(this.patch.fadeInDuration ?? this.after.fadeInDuration, this.after.duration),
         fadeOutDuration: normalizeAudioFadeDuration(this.patch.fadeOutDuration ?? this.after.fadeOutDuration, this.after.duration),
         fadeInCurve: normalizeAudioFadeCurve(this.patch.fadeInCurve ?? this.after.fadeInCurve),
-        fadeOutCurve: normalizeAudioFadeCurve(this.patch.fadeOutCurve ?? this.after.fadeOutCurve)
+        fadeOutCurve: normalizeAudioFadeCurve(this.patch.fadeOutCurve ?? this.after.fadeOutCurve),
+        spatialAudio: normalizeSpatialAudio({ ...this.after.spatialAudio, ...this.patch.spatialAudio })
       } as Clip;
     }
     const speedKeyframesChanged = this.patch.keyframes !== undefined && (Boolean(this.before.keyframes?.speed?.length) || Boolean(this.patch.keyframes?.speed?.length));

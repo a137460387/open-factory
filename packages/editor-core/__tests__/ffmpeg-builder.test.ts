@@ -241,6 +241,55 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.outputArgs).toContain('5');
   });
 
+  it('skips spatial audio filters for default clip position', () => {
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(makeProject(), { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).not.toContain('pan=stereo|c0=');
+    expect(plan.filterComplex).not.toContain("volume='if(");
+  });
+
+  it('maps spatial audio x position to an FFmpeg pan filter', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-spatial-left',
+        duration: 2,
+        spatialAudio: { x: -1, y: 0, z: 0, distance: 'medium' }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('pan=stereo|c0=1*c0|c1=0*c1');
+  });
+
+  it('builds spatial audio keyframe filter expressions for moving sources', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-spatial-motion',
+        duration: 2,
+        spatialAudio: { x: 0, y: 0, z: 0, distance: 'far' },
+        keyframes: {
+          spatialX: [
+            { id: 'spatial-x-a', time: 0, value: -1, easing: 'linear' },
+            { id: 'spatial-x-b', time: 2, value: 1, easing: 'linear' }
+          ],
+          spatialY: [
+            { id: 'spatial-y-a', time: 0, value: 0, easing: 'linear' },
+            { id: 'spatial-y-b', time: 2, value: 1, easing: 'linear' }
+          ]
+        }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain("pan=stereo|c0='if(");
+    expect(plan.filterComplex).toContain("volume='if(");
+    expect(plan.filterComplex).toContain(':eval=frame');
+  });
+
   it('builds YouTube loudness normalization as a two-pass loudnorm plan', () => {
     const project = makeProject();
     const plan = buildFfmpegExportPlan(

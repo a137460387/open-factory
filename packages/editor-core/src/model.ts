@@ -10,6 +10,7 @@ import { normalizeClipBlendMode } from './blend-modes';
 import { REC709_INPUT_COLOR_SPACE, normalizeInputColorSpace } from './color-log-luts';
 import { normalizeClipContentAnalysis } from './content-analysis';
 import { DEFAULT_PROJECT_COLOR_PIPELINE, normalizeProjectColorPipeline } from './color-pipeline';
+import { normalizeSpatialAudio } from './spatial-audio';
 import { cloneEffects } from './effects';
 import { normalizePathPoints } from './masks/path-mask';
 import type { ProjectFile } from './project/project-types';
@@ -687,6 +688,7 @@ export function createNestedSequenceClip(
     fadeOutDuration: normalizeAudioFadeDuration(input.fadeOutDuration, input.duration),
     fadeInCurve: normalizeAudioFadeCurve(input.fadeInCurve),
     fadeOutCurve: normalizeAudioFadeCurve(input.fadeOutCurve),
+    spatialAudio: normalizeSpatialAudio(input.spatialAudio),
     multicam: normalizeMulticamSequence(input.multicam, input.duration)
   };
 }

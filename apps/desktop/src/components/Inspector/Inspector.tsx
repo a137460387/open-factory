@@ -21,6 +21,7 @@ import {
   AUDIO_SPECTRUM_STYLES,
   CLIP_BLEND_MODES,
   DEFAULT_EFFECT_PARAMS,
+  DEFAULT_SPATIAL_AUDIO,
   DEFAULT_COLOR_CORRECTION,
   DEFAULT_TEXT_PATH,
   DEFAULT_THREE_WAY_COLOR,
@@ -58,6 +59,7 @@ import {
   normalizeAudioFadeDuration,
   normalizeAudioDenoise,
   normalizeAudioPitchSemitones,
+  normalizeSpatialAudio,
   normalizeChromaKey,
   normalizeClipBlendMode,
   normalizeClipPanoramaView,
@@ -115,6 +117,7 @@ import {
   type ClipSlowMotionMode,
   type MaskPatch,
   type PrivacyBlurEffect,
+  type SpatialAudioDistance,
   type TextAnimationDirection,
   type TextAnimationPreset,
   type ThreeWayColor,
@@ -547,6 +550,8 @@ function ClipInspector({
   const fadeOutDuration = 'fadeOutDuration' in clip ? normalizeAudioFadeDuration(clip.fadeOutDuration, clip.duration) : 0;
   const fadeInCurve = 'fadeInCurve' in clip ? normalizeAudioFadeCurve(clip.fadeInCurve) : 'linear';
   const fadeOutCurve = 'fadeOutCurve' in clip ? normalizeAudioFadeCurve(clip.fadeOutCurve) : 'linear';
+  const spatialAudio = 'volume' in clip ? normalizeSpatialAudio(clip.spatialAudio) : DEFAULT_SPATIAL_AUDIO;
+  const spatialDistanceOptions: SpatialAudioDistance[] = ['near', 'medium', 'far'];
   const audioChannelRouting = 'volume' in clip ? clip.audioChannelRouting ?? 'normal' : 'normal';
   const audioChannelRoutingOptions: AudioChannelRoutingMode[] =
     asset?.audioChannels === 1 ? ['normal', 'mono-left', 'mono-right', 'mono-both'] : ['normal', 'swap-stereo', 'stereo-left-mono', 'stereo-right-mono', 'stereo-to-mono'];
@@ -2036,6 +2041,62 @@ function ClipInspector({
                     {audioChannelRoutingOptions.map((mode) => (
                       <option key={mode} value={mode}>
                         {zhCN.inspector.audioChannelRoutingOptions[mode]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </details>
+            <details className="rounded-md border border-line bg-white" data-testid="spatial-audio-section" open>
+              <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-slate-700">{t('inspector.sections.spatialAudio')}</summary>
+              <div className="space-y-3 border-t border-line p-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <AnimatedField label={t('inspector.fields.spatialX')} onAddKeyframe={() => addKeyframe('spatialX', spatialAudio.x)} testId="add-spatial-x-keyframe-button">
+                    <RangeNumberField
+                      label={t('inspector.fields.spatialX')}
+                      value={spatialAudio.x}
+                      min={-1}
+                      max={1}
+                      step={0.01}
+                      format={(value) => value.toFixed(2)}
+                      onCommit={(x) => commit({ spatialAudio: { ...spatialAudio, x } })}
+                      testId="clip-spatial-x-input"
+                    />
+                  </AnimatedField>
+                  <AnimatedField label={t('inspector.fields.spatialY')} onAddKeyframe={() => addKeyframe('spatialY', spatialAudio.y)} testId="add-spatial-y-keyframe-button">
+                    <RangeNumberField
+                      label={t('inspector.fields.spatialY')}
+                      value={spatialAudio.y}
+                      min={-1}
+                      max={1}
+                      step={0.01}
+                      format={(value) => value.toFixed(2)}
+                      onCommit={(y) => commit({ spatialAudio: { ...spatialAudio, y } })}
+                      testId="clip-spatial-y-input"
+                    />
+                  </AnimatedField>
+                </div>
+                <RangeNumberField
+                  label={t('inspector.fields.spatialZ')}
+                  value={spatialAudio.z}
+                  min={-1}
+                  max={1}
+                  step={0.01}
+                  format={(value) => value.toFixed(2)}
+                  onCommit={(z) => commit({ spatialAudio: { ...spatialAudio, z } })}
+                  testId="clip-spatial-z-input"
+                />
+                <label className="block text-xs font-medium text-slate-600">
+                  {t('inspector.fields.spatialDistance')}
+                  <select
+                    className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                    value={spatialAudio.distance}
+                    data-testid="clip-spatial-distance-select"
+                    onChange={(event) => commit({ spatialAudio: { ...spatialAudio, distance: event.target.value as SpatialAudioDistance } })}
+                  >
+                    {spatialDistanceOptions.map((distance) => (
+                      <option key={distance} value={distance}>
+                        {t(`inspector.spatialDistanceOptions.${distance}`)}
                       </option>
                     ))}
                   </select>

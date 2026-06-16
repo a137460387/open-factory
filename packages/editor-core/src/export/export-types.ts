@@ -22,6 +22,7 @@ import type {
 } from '../model';
 import type { CreditsRow } from '../credits-roll';
 import type { TargetAspectRatio } from '../reframe';
+import type { ClipSpatialAudio } from '../spatial-audio';
 
 export type ExportLoudnessNormalization = 'off' | 'youtube' | 'ebu-r128';
 export type ExportPlatformPreset = 'youtube-1080p' | 'youtube-shorts' | 'tiktok' | 'instagram-reels' | 'twitter-x' | 'bilibili';
@@ -261,6 +262,8 @@ export interface ExportClipKeyframes {
   yaw?: ExportKeyframe[];
   pitch?: ExportKeyframe[];
   roll?: ExportKeyframe[];
+  spatialX?: ExportKeyframe[];
+  spatialY?: ExportKeyframe[];
   pathStartOffset?: ExportKeyframe[];
 }
 
@@ -330,6 +333,7 @@ export interface ExportClip {
   stabilization: ExportStabilization;
   frameInterpolation: ExportFrameInterpolation;
   audioDenoise: ExportAudioDenoise;
+  spatialAudio: ClipSpatialAudio;
   videoRestoration: ExportVideoRestoration;
   projection: ClipProjection;
   panorama: ExportPanoramaView;

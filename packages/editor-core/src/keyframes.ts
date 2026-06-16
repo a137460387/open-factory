@@ -27,6 +27,8 @@ export const KEYFRAME_PROPERTY_LIMITS: Record<KeyframeProperty, { min: number; m
   yaw: { min: -180, max: 180 },
   pitch: { min: -90, max: 90 },
   roll: { min: -180, max: 180 },
+  spatialX: { min: -1, max: 1 },
+  spatialY: { min: -1, max: 1 },
   pathStartOffset: { min: 0, max: 1 }
 };
 
@@ -168,6 +170,12 @@ export function getClipStaticKeyframeValue(clip: Clip, property: KeyframePropert
   }
   if (property === 'roll') {
     return clip.panorama?.roll ?? 0;
+  }
+  if (property === 'spatialX') {
+    return 'volume' in clip ? clip.spatialAudio?.x ?? 0 : 0;
+  }
+  if (property === 'spatialY') {
+    return 'volume' in clip ? clip.spatialAudio?.y ?? 0 : 0;
   }
   if (property === 'pathStartOffset') {
     return clip.type === 'text' ? normalizeTextPath(clip.pathText).startOffset : 0;

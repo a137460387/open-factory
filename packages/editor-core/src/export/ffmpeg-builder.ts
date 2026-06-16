@@ -62,6 +62,7 @@ import { triangulatePathMask } from '../masks/path-mask';
 import { buildMotionBlurExportFilter, normalizeMotionBlurParams } from '../motion-blur';
 import { flattenMulticamProjectForExport } from '../multicam';
 import { buildReframeCropFilter, clampReframeOffset, isReframeEnabled, normalizeTargetAspectRatio, resolveReframeDimensions } from '../reframe';
+import { calculateSpatialDistanceGain, isDefaultSpatialAudio, mapSpatialXToPanGains, normalizeSpatialAudio } from '../spatial-audio';
 import { calculateSpeedCurveSourceDuration, getClipSourceVisibleDuration, getClipSpeed, getRenderableTracks, getTimelinePlaybackDuration, getTrackPan, getTrackVolume } from '../timeline';
 import { round } from '../time';
 import { serializeSubtitleCueInputsToAss, serializeSubtitleCueInputsToSrt, serializeSubtitleCueInputsToVtt, type SubtitleCueInput } from '../subtitles/srt';
@@ -277,6 +278,7 @@ function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project[
             stabilization: normalizeStabilization(clip.stabilization),
             frameInterpolation: normalizeFrameInterpolation(clip.frameInterpolation),
             audioDenoise: normalizeAudioDenoise(clip.audioDenoise),
+            spatialAudio: normalizeSpatialAudio(clip.spatialAudio),
             videoRestoration: normalizeVideoRestoration(clip.videoRestoration),
             projection: normalizeClipProjection(clip.projection),
             panorama: normalizeClipPanoramaView(clip.panorama),
@@ -2989,7 +2991,7 @@ function buildAudioFilters(
         getExportClipSourceDuration(clip)
       )},asetpts=PTS-STARTPTS${pitchAndReverseFilters.length > 0 ? `,${pitchAndReverseFilters.join(',')}` : ''}${speedFilters.length > 0 ? `,${speedFilters.join(',')}` : ''}${fadeFilters}${denoiseFilters}${trackProcessingFilters},adelay=${delay}:all=1,${buildVolumeFilter(
         clip
-      )}${buildAudioChannelRoutingFilter(clip)}${buildPanFilter(clip)},aformat=channel_layouts=stereo,aresample=${settings.sampleRate}[${label}]`
+      )}${buildAudioChannelRoutingFilter(clip)}${buildPanFilter(clip)}${buildSpatialAudioFilter(clip)},aformat=channel_layouts=stereo,aresample=${settings.sampleRate}[${label}]`
     );
     labels.push(label);
   }
@@ -3091,6 +3093,53 @@ function buildPanFilter(clip: ExportClip): string {
     return '';
   }
   return `,stereopan=pan=${formatPan(clip.pan)}`;
+}
+
+function buildSpatialAudioFilter(clip: ExportClip): string {
+  const spatial = normalizeSpatialAudio(clip.spatialAudio);
+  const xFrames = getAnimatedFrames(clip, 'spatialX');
+  const yFrames = getAnimatedFrames(clip, 'spatialY');
+  if (isDefaultSpatialAudio(spatial) && xFrames.length === 0 && yFrames.length === 0) {
+    return '';
+  }
+  const parts: string[] = [];
+  if (xFrames.length >= 2) {
+    parts.push(
+      `pan=stereo|c0='${buildSpatialPanGainExpression(xFrames, spatial.x, 'left')}'*c0|c1='${buildSpatialPanGainExpression(xFrames, spatial.x, 'right')}'*c1`
+    );
+  } else {
+    const x = xFrames[0]?.value ?? spatial.x;
+    const gains = mapSpatialXToPanGains(x);
+    if (Math.abs(gains.left - 1) >= 0.001 || Math.abs(gains.right - 1) >= 0.001) {
+      parts.push(`pan=stereo|c0=${formatFfmpegNumber(gains.left)}*c0|c1=${formatFfmpegNumber(gains.right)}*c1`);
+    }
+  }
+  if (yFrames.length >= 2) {
+    parts.push(`volume='${buildSpatialVolumeExpression(yFrames, spatial)}':eval=frame`);
+  } else {
+    const gain = calculateSpatialDistanceGain(spatial);
+    if (Math.abs(gain - 1) >= 0.001) {
+      parts.push(`volume=${formatVolume(gain)}`);
+    }
+  }
+  return parts.length > 0 ? `,${parts.join(',')}` : '';
+}
+
+function buildSpatialPanGainExpression(frames: Array<{ time: number; value: number; easing?: ExportKeyframe['easing'] }>, fallbackX: number, channel: 'left' | 'right'): string {
+  const mapped = frames.map((frame) => ({
+    ...frame,
+    value: channel === 'left' ? mapSpatialXToPanGains(frame.value).left : mapSpatialXToPanGains(frame.value).right
+  }));
+  const fallback = channel === 'left' ? mapSpatialXToPanGains(fallbackX).left : mapSpatialXToPanGains(fallbackX).right;
+  return buildLocalExpression(mapped, fallback);
+}
+
+function buildSpatialVolumeExpression(frames: Array<{ time: number; value: number; easing?: ExportKeyframe['easing'] }>, spatial: ExportClip['spatialAudio']): string {
+  const mapped = frames.map((frame) => ({
+    ...frame,
+    value: calculateSpatialDistanceGain({ ...spatial, y: frame.value })
+  }));
+  return buildLocalExpression(mapped, calculateSpatialDistanceGain(spatial));
 }
 
 function buildAudioChannelRoutingFilter(clip: ExportClip): string {

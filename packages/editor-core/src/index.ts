@@ -11,6 +11,7 @@ export * from './effects';
 export * from './motion-blur';
 export * from './timeline';
 export * from './timeline-heatmap';
+export * from './spatial-audio';
 export * from './timeline-color-labels';
 export * from './clip-groups';
 export * from './timeline-compare';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_CLIP_BORDER, DEFAULT_COLOR_CORRECTION, DEFAULT_CREDITS_ROLL_SPEED, DEFAULT_CREDITS_STYLE, DEFAULT_SUBTITLE_LANGUAGE, DEFAULT_SUBTITLE_STYLE, DEFAULT_VIDEO_RESTORATION, createMulticamSequenceProject, createTrack, migrateProjectFile, serializeProject, type ProjectFileV1 } from '../src';
+import { DEFAULT_CLIP_BORDER, DEFAULT_COLOR_CORRECTION, DEFAULT_CREDITS_ROLL_SPEED, DEFAULT_CREDITS_STYLE, DEFAULT_SPATIAL_AUDIO, DEFAULT_SUBTITLE_LANGUAGE, DEFAULT_SUBTITLE_STYLE, DEFAULT_VIDEO_RESTORATION, createMulticamSequenceProject, createTrack, migrateProjectFile, serializeProject, type ProjectFileV1 } from '../src';
 import { makeAdjustmentClip, makeCreditsClip, makeProject, makeSubtitleClip, makeTextClip, makeVideoClip } from './test-utils';
 
 describe('project schema migration', () => {
@@ -126,6 +126,37 @@ describe('project schema migration', () => {
 
     file.project.timeline.tracks[0].clips[0].blendMode = 'invalid' as never;
     expect(migrateProjectFile(file).project.timeline.tracks[0].clips[0].blendMode).toBe('normal');
+  });
+
+  it('serializes and migrates spatial audio settings and position keyframes', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-spatial',
+        spatialAudio: { x: -1, y: 0.25, z: 0.5, distance: 'far' },
+        keyframes: {
+          spatialX: [
+            { id: 'spatial-x-a', time: 0, value: -1, easing: 'linear' },
+            { id: 'spatial-x-b', time: 2, value: 1, easing: 'linear' }
+          ]
+        }
+      })
+    ];
+    project.sequences = [{ ...project.sequences[0], timeline: project.timeline }];
+
+    const file = serializeProject(project);
+    expect(file.project.timeline.tracks[0].clips[0].spatialAudio).toEqual({ x: -1, y: 0.25, z: 0.5, distance: 'far' });
+    expect(file.project.timeline.tracks[0].clips[0].keyframes?.spatialX).toHaveLength(2);
+
+    const migrated = migrateProjectFile(file);
+    expect(migrated.project.timeline.tracks[0].clips[0].spatialAudio).toEqual({ x: -1, y: 0.25, z: 0.5, distance: 'far' });
+    expect(migrated.project.timeline.tracks[0].clips[0].keyframes?.spatialX?.at(-1)).toMatchObject({ time: 2, value: 1 });
+
+    delete file.project.timeline.tracks[0].clips[0].spatialAudio;
+    delete file.project.timeline.tracks[0].clips[0].keyframes;
+    const legacy = migrateProjectFile(file);
+    expect(legacy.project.timeline.tracks[0].clips[0].spatialAudio).toEqual(DEFAULT_SPATIAL_AUDIO);
+    expect(legacy.project.timeline.tracks[0].clips[0].keyframes).toBeUndefined();
   });
 
   it('serializes and migrates export ranges while old project files default to none', () => {

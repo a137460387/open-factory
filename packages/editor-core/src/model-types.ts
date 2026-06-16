@@ -3,6 +3,7 @@ import type { InputColorSpace } from './color-log-luts';
 import type { ClipBlendMode } from './blend-modes';
 import type { ClipContentAnalysis } from './content-analysis';
 import type { ProjectColorPipeline } from './color-pipeline';
+import type { ClipSpatialAudio } from './spatial-audio';
 import type { Effect } from './effects';
 import type { TimecodeFormat } from './time';
 
@@ -60,6 +61,8 @@ export interface ClipKeyframes {
   yaw?: Keyframe<number>[];
   pitch?: Keyframe<number>[];
   roll?: Keyframe<number>[];
+  spatialX?: Keyframe<number>[];
+  spatialY?: Keyframe<number>[];
   pathStartOffset?: Keyframe<number>[];
 }
 
@@ -463,6 +466,7 @@ export interface BaseClip {
   sequenceFrameRate?: number;
   blendMode?: ClipBlendMode;
   contentAnalysis?: ClipContentAnalysis;
+  spatialAudio?: ClipSpatialAudio;
 }
 
 export interface ClipAudioDenoise {

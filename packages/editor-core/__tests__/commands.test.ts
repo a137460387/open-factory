@@ -1119,6 +1119,18 @@ describe('timeline commands', () => {
     expect(accessor.current().tracks[0].clips[0].transform).toMatchObject({ scale: 0.5, scaleX: 0.5, scaleY: 0.5 });
   });
 
+  it('updates and normalizes spatial audio through clip commands', () => {
+    const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'clip-1' })]));
+    const manager = new CommandManager();
+
+    manager.execute(new UpdateClipCommand(accessor, 'clip-1', { spatialAudio: { x: -2, y: 0.25, z: 4, distance: 'far' } }));
+
+    expect(accessor.current().tracks[0].clips[0].spatialAudio).toEqual({ x: -1, y: 0.25, z: 1, distance: 'far' });
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips[0].spatialAudio).toMatchObject({ x: 0, y: 0, z: 0, distance: 'medium' });
+  });
+
   it('applies PiP layout to two visual clips as one undoable command', () => {
     const accessor = makeAccessor(
       makeTimeline([

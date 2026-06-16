@@ -10,6 +10,7 @@ import {
   DEFAULT_CREDITS_STYLE,
   DEFAULT_SUBTITLE_MODE,
   DEFAULT_SUBTITLE_STYLE,
+  DEFAULT_SPATIAL_AUDIO,
   createTrack,
   createAdjustmentClip,
   normalizeChromaKey,
@@ -85,7 +86,8 @@ export function makeVideoClip(overrides: ClipOverrides<Extract<Clip, { type: 'vi
     fadeInDuration: overrides.fadeInDuration ?? DEFAULT_AUDIO_FADE_DURATION,
     fadeOutDuration: overrides.fadeOutDuration ?? DEFAULT_AUDIO_FADE_DURATION,
     fadeInCurve: overrides.fadeInCurve ?? DEFAULT_AUDIO_FADE_CURVE,
-    fadeOutCurve: overrides.fadeOutCurve ?? DEFAULT_AUDIO_FADE_CURVE
+    fadeOutCurve: overrides.fadeOutCurve ?? DEFAULT_AUDIO_FADE_CURVE,
+    spatialAudio: overrides.spatialAudio ?? { ...DEFAULT_SPATIAL_AUDIO }
   };
 }
 
@@ -124,7 +126,8 @@ export function makeAudioClip(overrides: ClipOverrides<Extract<Clip, { type: 'au
     fadeInDuration: overrides.fadeInDuration ?? DEFAULT_AUDIO_FADE_DURATION,
     fadeOutDuration: overrides.fadeOutDuration ?? DEFAULT_AUDIO_FADE_DURATION,
     fadeInCurve: overrides.fadeInCurve ?? DEFAULT_AUDIO_FADE_CURVE,
-    fadeOutCurve: overrides.fadeOutCurve ?? DEFAULT_AUDIO_FADE_CURVE
+    fadeOutCurve: overrides.fadeOutCurve ?? DEFAULT_AUDIO_FADE_CURVE,
+    spatialAudio: overrides.spatialAudio ?? { ...DEFAULT_SPATIAL_AUDIO }
   };
 }
 

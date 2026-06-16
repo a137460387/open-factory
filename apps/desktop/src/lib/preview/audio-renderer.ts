@@ -8,8 +8,11 @@ import {
   getTrackPan,
   getTrackVolume,
   getClipSourceVisibleDuration,
+  getClipKeyframeValue,
   normalizeAudioFadeCurve,
   normalizeAudioPitchSemitones,
+  calculateSpatialDistanceGain,
+  normalizeSpatialAudio,
   normalizeTrackCompressor,
   normalizeTrackEQ,
   readVuMeter,
@@ -28,6 +31,7 @@ interface AudioNodeSet {
   compressorMakeup?: GainNode;
   gain: GainNode;
   panner?: StereoPannerNode;
+  spatialPanner?: PannerNode;
   analyser?: AnalyserNode;
   meterState: VuMeterState;
 }
@@ -144,9 +148,21 @@ export class PreviewAudioRenderer {
     this.applyTrackProcessing(node, track);
     const volume = resolveAnimatedVolume(clip, localTime);
     const muted = 'muted' in clip ? Boolean(clip.muted) : false;
-    node.gain.gain.value = muted ? 0 : volume * (track ? getTrackVolume(track) : 1) * getFadeMultiplier(clip, playheadTime);
+    const spatial = normalizeSpatialAudio({
+      ...clip.spatialAudio,
+      x: getClipKeyframeValue(clip, 'spatialX', localTime),
+      y: getClipKeyframeValue(clip, 'spatialY', localTime)
+    });
+    node.gain.gain.value = muted ? 0 : volume * (track ? getTrackVolume(track) : 1) * getFadeMultiplier(clip, playheadTime) * calculateSpatialDistanceGain(spatial);
+    if (node.spatialPanner) {
+      node.spatialPanner.panningModel = 'HRTF';
+      node.spatialPanner.distanceModel = spatial.distance === 'near' ? 'linear' : 'inverse';
+      node.spatialPanner.refDistance = spatial.distance === 'near' ? 0.5 : spatial.distance === 'far' ? 2 : 1;
+      node.spatialPanner.maxDistance = spatial.distance === 'far' ? 10 : 6;
+      setPannerPosition(node.spatialPanner, spatial.x, spatial.y, spatial.z);
+    }
     if (node.panner) {
-      node.panner.pan.value = track ? getTrackPan(track) : 0;
+      node.panner.pan.value = node.spatialPanner ? (track ? getTrackPan(track) : 0) : Math.min(1, Math.max(-1, spatial.x + (track ? getTrackPan(track) : 0)));
     }
     recordAudioMix(clip.type, node.gain.gain.value);
     audio.volume = 1;
@@ -195,6 +211,7 @@ export class PreviewAudioRenderer {
     const gain = this.audioContext.createGain();
     const analyser = this.audioContext.createAnalyser();
     analyser.fftSize = 1024;
+    const spatialPanner = typeof this.audioContext.createPanner === 'function' ? this.audioContext.createPanner() : undefined;
     const panner = typeof this.audioContext.createStereoPanner === 'function' ? this.audioContext.createStereoPanner() : undefined;
     let current: AudioNode = source;
     for (const eqNode of eqNodes) {
@@ -206,14 +223,18 @@ export class PreviewAudioRenderer {
       current = compressorMakeup;
     }
     current.connect(gain);
-    if (panner) {
+    if (spatialPanner && panner) {
+      gain.connect(spatialPanner).connect(panner).connect(analyser);
+    } else if (spatialPanner) {
+      gain.connect(spatialPanner).connect(analyser);
+    } else if (panner) {
       gain.connect(panner).connect(analyser);
     } else {
       gain.connect(analyser);
     }
     const master = this.getMasterNodes();
     analyser.connect(master?.gain ?? this.audioContext.destination);
-    const nodes = { source, eqNodes, compressor, compressorMakeup, gain, panner, analyser, meterState: createVuMeterState() };
+    const nodes = { source, eqNodes, compressor, compressorMakeup, gain, panner, spatialPanner, analyser, meterState: createVuMeterState() };
     this.audioNodes.set(clipId, nodes);
     return nodes;
   }
@@ -285,6 +306,16 @@ function readAnalyserFrequencyBands(analyser: AnalyserNode, bandCount = 16): num
     bands.push(Math.min(1, total / Math.max(1, end - start) / 255));
   }
   return bands;
+}
+
+function setPannerPosition(panner: PannerNode, x: number, y: number, z: number): void {
+  if ('positionX' in panner) {
+    panner.positionX.value = x;
+    panner.positionY.value = y;
+    panner.positionZ.value = z;
+    return;
+  }
+  (panner as PannerNode & { setPosition?: (x: number, y: number, z: number) => void }).setPosition?.(x, y, z);
 }
 
 function applyFadeCurve(value: number, curve: 'linear' | 'ease-in' | 'ease-out'): number {
