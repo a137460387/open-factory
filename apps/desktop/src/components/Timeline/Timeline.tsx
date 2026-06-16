@@ -143,6 +143,7 @@ import { useRenderCacheStore } from '../../store/renderCacheStore';
 import { useWhisperSettingsStore } from '../../store/whisperSettingsStore';
 import { LABEL_WIDTH, Ruler, ThumbnailTrack, TrackRow, type ClipMenuRequest, type DragState, type GapMenuRequest, type VolumeEnvelopeMenuRequest, type VolumeEnvelopePointRequest } from './TimelineParts';
 import { buildRulerContextMenuItems, type RulerContextMenuAction } from './timeline-ruler-menu';
+import { buildKeyboardClipMoveStarts, buildKeyboardClipTrim, getKeyboardSelectedClipIds } from './timeline-keyboard';
 
 function isCreditsTextFile(file: File): boolean {
   return /\.(txt|csv)$/i.test(file.name);
@@ -1723,6 +1724,24 @@ function addProjectBookmark(time = playheadTime): void {
   }
 
   function onKeyDown(event: React.KeyboardEvent<HTMLElement>): void {
+    if (event.defaultPrevented || isEditableKeyboardTarget(event.target)) {
+      return;
+    }
+    if (!event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && selectedClipIds.length > 0 && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
+      event.preventDefault();
+      moveSelectedClipsByKeyboardFrame(event.key === 'ArrowLeft' ? -1 : 1);
+      return;
+    }
+    if (!event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && (event.key === '[' || event.key === ']')) {
+      event.preventDefault();
+      trimSelectedClipByKeyboardFrame(event.key === '[' ? 'in' : 'out');
+      return;
+    }
+    if (!event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 't') {
+      event.preventDefault();
+      splitSelected();
+      return;
+    }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'g') {
       event.preventDefault();
       if (event.shiftKey) {
@@ -1753,6 +1772,50 @@ function addProjectBookmark(time = playheadTime): void {
     if (event.key === '-' || event.key === '_') {
       event.preventDefault();
       applyZoom(clampTimelineZoom(zoom / 1.2), (scrollRef.current?.clientWidth ?? 960) / 2);
+    }
+  }
+
+  function moveSelectedClipsByKeyboardFrame(direction: -1 | 1): void {
+    const starts = buildKeyboardClipMoveStarts({
+      clips: allClips,
+      selectedClipIds,
+      selectedClipId,
+      direction,
+      fps: project.settings.fps || 30
+    });
+    const ids = Object.keys(starts);
+    if (ids.length === 0) {
+      return;
+    }
+    try {
+      if (!canApplyProtectedMove(starts)) {
+        warnProtectedRangeBlocked();
+        return;
+      }
+      if (ids.length > 1) {
+        commandManager.execute(new MoveClipsCommand(timelineAccessor, starts, protectedRanges));
+        setSelectedClipIds(ids);
+      } else {
+        commandManager.execute(new MoveClipCommand(timelineAccessor, ids[0], starts[ids[0]], protectedRanges));
+        setSelectedClipId(ids[0]);
+      }
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage });
+    }
+  }
+
+  function trimSelectedClipByKeyboardFrame(edge: 'in' | 'out'): void {
+    const clipId = selectedClipId ?? getKeyboardSelectedClipIds(selectedClipIds, selectedClipId)[0];
+    const clip = clipId ? findClipById(clipId) : undefined;
+    if (!clip) {
+      return;
+    }
+    const nextTrim = buildKeyboardClipTrim({ clip, edge, fps: project.settings.fps || 30 });
+    try {
+      commandManager.execute(new TrimClipCommand(timelineAccessor, clip.id, nextTrim.trimStart, nextTrim.trimEnd, undefined, minFrameDuration()));
+      setSelectedClipId(clip.id);
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage });
     }
   }
 

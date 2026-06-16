@@ -139,6 +139,7 @@ import { showToast } from '../../lib/toast';
 import { useEditorStore, type SelectedKeyframeRef } from '../../store/editorStore';
 import { usePrivacyDetectionSettingsStore } from '../../store/privacyDetectionSettingsStore';
 import { isTranslationConfigured, useTranslationSettingsStore } from '../../store/translationSettingsStore';
+import { resolveSliderKeyboardValue } from '../../accessibility/keyboard-navigation';
 
 interface InspectorProps {
   clip?: Clip;
@@ -3813,7 +3814,24 @@ function RangeField({
         <span className={hideLabel ? 'sr-only' : undefined}>{label}</span>
         <span className="tabular-nums">{format(value)}</span>
       </span>
-      <input className="mt-1 w-full accent-brand" type="range" min={min} max={max} step={step} value={value} onChange={(event) => onCommit(Number(event.target.value))} data-testid={testId} />
+      <input
+        className="mt-1 w-full accent-brand"
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(event) => onCommit(Number(event.target.value))}
+        onKeyDown={(event) => {
+          const next = resolveSliderKeyboardValue({ key: event.key, value, min, max, step, shiftKey: event.shiftKey });
+          if (next === undefined) {
+            return;
+          }
+          event.preventDefault();
+          onCommit(next);
+        }}
+        data-testid={testId}
+      />
     </label>
   );
 }
@@ -3863,7 +3881,24 @@ function RangeNumberField({
         />
       </span>
       <span className="mt-1 flex items-center gap-2">
-        <input className="min-w-0 flex-1 accent-brand disabled:cursor-not-allowed disabled:opacity-60" type="range" min={min} max={max} step={step} value={value} disabled={disabled} onChange={(event) => commitClamped(Number(event.target.value))} />
+        <input
+          className="min-w-0 flex-1 accent-brand disabled:cursor-not-allowed disabled:opacity-60"
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          disabled={disabled}
+          onChange={(event) => commitClamped(Number(event.target.value))}
+          onKeyDown={(event) => {
+            const next = resolveSliderKeyboardValue({ key: event.key, value, min, max, step, shiftKey: event.shiftKey });
+            if (next === undefined) {
+              return;
+            }
+            event.preventDefault();
+            commitClamped(next);
+          }}
+        />
         <span className="w-14 text-right text-xs tabular-nums text-slate-500">{format(value)}</span>
       </span>
     </label>

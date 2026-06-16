@@ -91,6 +91,7 @@ import { Toolbar } from './Toolbar';
 import { runConfiguredAutomationForMedia, type AutomationActionDependencies } from '../automation/automation-rules';
 import { ErrorBoundary } from './common/ErrorBoundary';
 import { MediaBin } from './MediaBin/MediaBin';
+import { ShortcutCheatsheetPanel } from './ShortcutCheatsheetPanel';
 import { StoryboardView } from './Storyboard/StoryboardView';
 import { Timeline } from './Timeline/Timeline';
 import { useAutosave } from '../hooks/useAutosave';
@@ -100,6 +101,7 @@ import { useMacroShortcuts } from '../hooks/useMacroShortcuts';
 import { useShortcuts } from '../hooks/useShortcuts';
 import { readCustomKeybindings } from '../shortcuts/keybindings';
 import type { TimelineShortcutBindings } from '../shortcuts/timeline-shortcuts';
+import { isEditableKeyboardTarget, isShortcutCheatsheetKey } from '../accessibility/keyboard-navigation';
 import type { ExportQueueRecoveryCandidate } from '../export/export-queue-persistence';
 import { revealExport } from '../lib/exportVideo';
 import { clearMediaCache } from '../cache/cache-service';
@@ -292,6 +294,7 @@ export function EditorShell() {
   const [duplicateMediaGroups, setDuplicateMediaGroups] = useState<DuplicateMediaGroup[]>([]);
   const [duplicateMediaOpen, setDuplicateMediaOpen] = useState(false);
   const [shortcutBindings, setShortcutBindings] = useState<TimelineShortcutBindings>({});
+  const [shortcutCheatsheetOpen, setShortcutCheatsheetOpen] = useState(false);
   const [macros, setMacros] = useState<ClipMacro[]>([]);
   const [macroHistory, setMacroHistory] = useState<MacroHistoryEntry[]>([]);
   const [macroRecordingActive, setMacroRecordingActive] = useState(false);
@@ -2226,6 +2229,22 @@ export function EditorShell() {
 
   useAutosave(autosaveIntervalSeconds);
   useCloseGuard(saveProject);
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && shortcutCheatsheetOpen) {
+        event.preventDefault();
+        setShortcutCheatsheetOpen(false);
+        return;
+      }
+      if (event.defaultPrevented || isEditableKeyboardTarget(event.target) || !isShortcutCheatsheetKey(event)) {
+        return;
+      }
+      event.preventDefault();
+      setShortcutCheatsheetOpen(true);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [shortcutCheatsheetOpen]);
   useShortcuts(shortcutHandlers, shortcutBindings);
   useMacroShortcuts(macros, executeMacro);
   useBackgroundMediaJobs(project.media);
@@ -2566,6 +2585,7 @@ export function EditorShell() {
           ) : null}
           {sceneReorderOpen ? <SceneReorderDialog project={project} selectedClipIds={selectedClipIds} onClose={() => setSceneReorderOpen(false)} /> : null}
           {timelineSearchOpen ? <TimelineSearchPanel project={project} onClose={() => setTimelineSearchOpen(false)} /> : null}
+          {shortcutCheatsheetOpen ? <ShortcutCheatsheetPanel bindings={shortcutBindings} onClose={() => setShortcutCheatsheetOpen(false)} /> : null}
           {settingsOpen ? (
             <SettingsDialog
               open={settingsOpen}

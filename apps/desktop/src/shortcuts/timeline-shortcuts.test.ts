@@ -17,6 +17,7 @@ describe('timeline shortcut mapping', () => {
     ['ArrowRight', { key: 'ArrowRight' }, 'step-forward'],
     ['I', { key: 'i' }, 'set-in-point'],
     ['O', { key: 'o' }, 'set-out-point'],
+    ['T', { key: 't' }, 'split-selected'],
     ['S', { key: 's' }, 'split-selected'],
     ['Delete', { key: 'Delete' }, 'delete-selected'],
     ['Backspace', { key: 'Backspace' }, 'delete-selected'],

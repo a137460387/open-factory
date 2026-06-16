@@ -2814,6 +2814,31 @@ const zh = {
     title: '检测到未保存的恢复点，是否恢复？',
     discard: '放弃',
     restore: '恢复'
+  },
+  keyboardAccessibility: {
+    cheatsheet: {
+      title: '快捷键速查',
+      subtitle: '按 Esc 或关闭按钮返回编辑。',
+      timeline: '时间线快捷键',
+      timelineEditing: '时间线键盘编辑',
+      mediaBin: '媒体库',
+      inspector: '属性面板',
+      timelineEditingRows: [
+        { label: '移动选中片段一帧', keys: '← / →' },
+        { label: '调整选中片段入点', keys: '[' },
+        { label: '调整选中片段出点', keys: ']' },
+        { label: '分割选中片段', keys: 'T' }
+      ],
+      mediaBinRows: [
+        { label: '移动媒体卡焦点', keys: '← / → / ↑ / ↓' },
+        { label: '添加到时间线', keys: 'Enter' },
+        { label: '预览媒体信息', keys: 'Space' }
+      ],
+      inspectorRows: [
+        { label: '滑轨微调', keys: '← / → / ↑ / ↓' },
+        { label: '滑轨大步长', keys: 'Shift + ← / → / ↑ / ↓' }
+      ]
+    }
   }
 } as const;
 
@@ -5332,6 +5357,31 @@ const enOverrides = {
     title: 'Unsaved recovery point detected. Restore it?',
     discard: 'Discard',
     restore: 'Restore'
+  },
+  keyboardAccessibility: {
+    cheatsheet: {
+      title: 'Shortcut Cheatsheet',
+      subtitle: 'Press Esc or the close button to return to editing.',
+      timeline: 'Timeline Shortcuts',
+      timelineEditing: 'Timeline Keyboard Editing',
+      mediaBin: 'Media Library',
+      inspector: 'Inspector',
+      timelineEditingRows: [
+        { label: 'Move selected clip by one frame', keys: '← / →' },
+        { label: 'Trim selected clip in point', keys: '[' },
+        { label: 'Trim selected clip out point', keys: ']' },
+        { label: 'Split selected clip', keys: 'T' }
+      ],
+      mediaBinRows: [
+        { label: 'Move media card focus', keys: '← / → / ↑ / ↓' },
+        { label: 'Add to timeline', keys: 'Enter' },
+        { label: 'Preview media info', keys: 'Space' }
+      ],
+      inspectorRows: [
+        { label: 'Slider fine step', keys: '← / → / ↑ / ↓' },
+        { label: 'Slider large step', keys: 'Shift + ← / → / ↑ / ↓' }
+      ]
+    }
   }
 } satisfies DeepPartial<LocaleStrings>;
 

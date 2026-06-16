@@ -16,7 +16,7 @@ import {
   type TitleTemplateId
 } from '@open-factory/editor-core';
 import { AlertCircle, BadgeCheck, ChevronDown, ChevronRight, FileAudio2, FileImage, FileText, FileVideo2, Flag, Folder, FolderPlus, GalleryHorizontal, Gauge, Grid2X2, ImageDown, Import, Info, Link2, List, Loader2, Merge, Plus, Search, SlidersHorizontal, Star, Tag, Trash2, X } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { clsx } from 'clsx';
 import { zhCN } from '../../i18n/strings';
 import { isTauriRuntime } from '../../lib/tauri';
@@ -26,6 +26,7 @@ import { useMediaJobStore } from '../../media/media-job-store';
 import { DEFAULT_MEDIA_LIBRARY_VIEW_SETTINGS, normalizeMediaLibraryViewSettings, sortMediaLibraryAssets, type MediaLibraryGridSize, type MediaLibrarySortKey, type MediaLibraryViewMode, type MediaLibraryViewSettings } from '../../media/mediaLibraryView';
 import { readViewSettings, saveViewSettings } from '../../settings/appSettings';
 import { useProxySettingsStore } from '../../store/proxySettingsStore';
+import { getMediaKeyboardNavigationIndex, inferMediaKeyboardColumnCount } from './media-keyboard';
 
 interface MediaBinProps {
   media: MediaAsset[];
@@ -926,7 +927,7 @@ function MediaCardGrid({
   }
   const minWidth = gridSize === 'small' ? 118 : gridSize === 'large' ? 240 : 170;
   return (
-    <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${minWidth}px, 1fr))` }} data-testid="media-grid-view" data-grid-size={gridSize}>
+    <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${minWidth}px, 1fr))` }} data-testid="media-grid-view" data-grid-size={gridSize} data-media-card-grid="true">
       {media.map((asset) => (
         <MediaCard
           key={asset.id}
@@ -1183,11 +1184,14 @@ function MediaCard({
     <div
       className={clsx('relative overflow-hidden rounded-md border bg-white shadow-sm outline-none focus:ring-2 focus:ring-brand', asset.missing ? 'border-rose-300' : 'border-line')}
       data-testid={`media-card-${asset.id}`}
+      data-media-card="true"
       data-missing={asset.missing ? 'true' : 'false'}
       data-folder-id={asset.folderId ?? 'root'}
       data-label-color={labelColor ?? 'none'}
       data-rating={rating}
       data-flag={flag ?? 'none'}
+      role="group"
+      aria-label={`${asset.name} ${zhCN.mediaBin.assetType[asset.type]}`}
       tabIndex={0}
       draggable
       onDragStart={(event) => {
@@ -1195,6 +1199,24 @@ function MediaCard({
         event.dataTransfer.setData(MEDIA_CARD_DRAG_MIME, asset.id);
       }}
       onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) {
+          return;
+        }
+        if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) {
+          event.preventDefault();
+          focusMediaCardByKeyboard(event);
+          return;
+        }
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          onAdd();
+          return;
+        }
+        if (event.key === ' ' || event.code === 'Space') {
+          event.preventDefault();
+          onShowInfo();
+          return;
+        }
         if (event.key.toLowerCase() === 'g') {
           event.preventDefault();
           onSetFlag('green');
@@ -1415,6 +1437,7 @@ function MediaCard({
         </div>
         <button
           className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md border border-line bg-panel px-2 py-1.5 text-sm font-medium hover:bg-white"
+          type="button"
           onClick={onAdd}
           data-testid={`add-to-timeline-${asset.id}`}
         >
@@ -1424,6 +1447,7 @@ function MediaCard({
         {asset.missing ? (
           <button
             className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-2 py-1.5 text-sm font-medium text-amber-900 hover:bg-amber-100"
+            type="button"
             onClick={onRelink}
             data-testid={`relink-media-${asset.id}`}
           >
@@ -1512,6 +1536,23 @@ function IconPreview({ type }: { type: MediaAsset['type'] }) {
       <Icon size={36} />
     </div>
   );
+}
+
+function focusMediaCardByKeyboard(event: ReactKeyboardEvent<HTMLElement>): void {
+  const grid = event.currentTarget.closest('[data-media-card-grid="true"]');
+  const cards = Array.from(grid?.querySelectorAll<HTMLElement>('[data-media-card="true"]') ?? []);
+  const currentIndex = cards.findIndex((card) => card === event.currentTarget);
+  const columnCount = inferMediaKeyboardColumnCount(cards.map((card) => card.getBoundingClientRect().top));
+  const nextIndex = getMediaKeyboardNavigationIndex({
+    currentIndex,
+    itemCount: cards.length,
+    columnCount,
+    key: event.key
+  });
+  if (nextIndex === undefined) {
+    return;
+  }
+  cards[nextIndex]?.focus();
 }
 
 function formatBytes(bytes?: number): string {

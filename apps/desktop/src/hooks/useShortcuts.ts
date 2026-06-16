@@ -32,6 +32,9 @@ interface ShortcutHandlers {
 export function useShortcuts(handlers: ShortcutHandlers, bindings: TimelineShortcutBindings = {}): void {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) {
+        return;
+      }
       const target = event.target as HTMLElement | null;
       const isTyping =
         target?.tagName === 'INPUT' ||
