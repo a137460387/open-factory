@@ -75,6 +75,7 @@ import {
   UpdateMaskCommand,
   UpdateProjectAudioCommand,
   UpdateProjectCoverCommand,
+  UpdateProjectSpeakersCommand,
   UpdateProjectSettingsCommand,
   UpdateTrackCommand,
   calculateReplaceMediaPatch,
@@ -994,6 +995,32 @@ describe('timeline commands', () => {
 
     manager.redo();
     expect(project.coverPath).toBe('C:/Projects/cover.png');
+  });
+
+  it('manages project speaker library with undo and redo', () => {
+    let project = makeProject();
+    const accessor = {
+      getProject: () => project,
+      setProject: (next: typeof project) => {
+        project = next;
+      }
+    };
+    const manager = new CommandManager();
+
+    manager.execute(new UpdateProjectSpeakersCommand(accessor, [{ id: 'speaker-a', name: 'Alice', color: '#FF0000' }]));
+    expect(project.speakers).toEqual([{ id: 'speaker-a', name: 'Alice', color: '#ff0000' }]);
+
+    manager.execute(new UpdateProjectSpeakersCommand(accessor, [{ id: 'speaker-a', name: 'Alice Cooper', color: '#00ff00' }]));
+    expect(project.speakers).toEqual([{ id: 'speaker-a', name: 'Alice Cooper', color: '#00ff00' }]);
+
+    manager.execute(new UpdateProjectSpeakersCommand(accessor, []));
+    expect(project.speakers).toEqual([]);
+
+    manager.undo();
+    expect(project.speakers).toEqual([{ id: 'speaker-a', name: 'Alice Cooper', color: '#00ff00' }]);
+
+    manager.undo();
+    expect(project.speakers).toEqual([{ id: 'speaker-a', name: 'Alice', color: '#ff0000' }]);
   });
 
   it('moves, trims, splits, deletes, and updates clips', () => {

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
-import type { Clip, ClipGroup, MediaAsset, Project, ProjectSettings } from '@open-factory/editor-core';
+import type { Clip, ClipGroup, MediaAsset, Project, ProjectSettings, ProjectSpeaker } from '@open-factory/editor-core';
 import {
   AddSubtitleClipCommand,
   AddTrackCommand,
@@ -13,6 +13,8 @@ import {
   BatchUpdateKeyframeCommand,
   ApplyTextAnimationCommand,
   UpdateSubtitleStyleCommand,
+  UpdateProjectSpeakersCommand,
+  UpdateTrackCommand,
   BUILTIN_SUBTITLE_STYLE_TEMPLATES,
   CUSTOM_SHADER_EXAMPLES,
   AUDIO_SPECTRUM_POSITIONS,
@@ -79,6 +81,7 @@ import {
   normalizeVideoRestoration,
   findCompleteClipGroup,
   normalizeClipGroups,
+  normalizeProjectSpeakers,
   sampleCurve,
   secondsToTimecode,
   setKenBurnsEndScaleKeyframes,
@@ -338,9 +341,17 @@ function ClipInspector({
   const [colorMatchBusy, setColorMatchBusy] = useState(false);
   const [subtitleTranslationProgress, setSubtitleTranslationProgress] = useState<{ completed: number; total: number }>();
   const [subtitleStyleTemplates, setSubtitleStyleTemplates] = useState<SubtitleStyleTemplate[]>(BUILTIN_SUBTITLE_STYLE_TEMPLATES);
+  const [customSoundDescOpen, setCustomSoundDescOpen] = useState(false);
   const [textAnimationPreset, setTextAnimationPreset] = useState<TextAnimationPreset>('fade');
   const [textAnimationDuration, setTextAnimationDuration] = useState(0.5);
   const [textAnimationDirection, setTextAnimationDirection] = useState<TextAnimationDirection>('in');
+  const projectSpeakers = useMemo(() => normalizeProjectSpeakers(project.speakers), [project.speakers]);
+  const subtitleTrack = clip.type === 'subtitle' ? project.timeline.tracks.find((track) => track.id === clip.trackId && track.type === 'subtitle') : undefined;
+  const subtitleType = clip.type === 'subtitle' ? clip.subtitleType ?? subtitleTrack?.subtitleType ?? 'subtitle' : 'subtitle';
+  const activeSpeaker = clip.type === 'subtitle' ? clip.speaker?.trim() ?? '' : '';
+  const activeSpeakerEntry = activeSpeaker ? projectSpeakers.find((speaker) => speaker.name.toLocaleLowerCase() === activeSpeaker.toLocaleLowerCase()) : undefined;
+  const soundDescriptionOptions = useMemo(() => Object.values(zhCN.inspector.closedCaptions.soundDescriptions), []);
+  const soundDescSelectValue = clip.type === 'subtitle' ? (clip.soundDesc ? (soundDescriptionOptions.includes(clip.soundDesc) ? clip.soundDesc : 'custom') : '') : '';
 
   useEffect(() => {
     void loadTranslationApiKey();
@@ -352,6 +363,67 @@ function ClipInspector({
     } catch (error) {
       showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
     }
+  };
+  const commitSubtitleType = (nextType: 'subtitle' | 'cc') => {
+    if (clip.type !== 'subtitle') {
+      return;
+    }
+    try {
+      commandManager.execute(new UpdateClipCommand(timelineAccessor, clip.id, {
+        subtitleType: nextType,
+        speaker: nextType === 'cc' ? clip.speaker : undefined,
+        soundDesc: nextType === 'cc' ? clip.soundDesc : undefined
+      }));
+      commandManager.execute(new UpdateTrackCommand(timelineAccessor, clip.trackId, { subtitleType: nextType }));
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+    }
+  };
+  const commitCcSpeaker = (speaker: string) => {
+    try {
+      commandManager.execute(new UpdateClipCommand(timelineAccessor, clip.id, { subtitleType: 'cc', speaker }));
+      if (subtitleTrack?.subtitleType !== 'cc') {
+        commandManager.execute(new UpdateTrackCommand(timelineAccessor, clip.trackId, { subtitleType: 'cc' }));
+      }
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+    }
+  };
+  const commitCcSoundDesc = (soundDesc?: string) => {
+    try {
+      commandManager.execute(new UpdateClipCommand(timelineAccessor, clip.id, { subtitleType: 'cc', soundDesc }));
+      if (subtitleTrack?.subtitleType !== 'cc') {
+        commandManager.execute(new UpdateTrackCommand(timelineAccessor, clip.trackId, { subtitleType: 'cc' }));
+      }
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+    }
+  };
+  const updateProjectSpeakers = (speakers: ProjectSpeaker[]) => {
+    try {
+      commandManager.execute(new UpdateProjectSpeakersCommand(projectAccessor, speakers));
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+    }
+  };
+  const addActiveSpeakerToLibrary = () => {
+    if (!activeSpeaker) {
+      return;
+    }
+    const next = normalizeProjectSpeakers([...projectSpeakers, { id: createId('speaker'), name: activeSpeaker }]);
+    updateProjectSpeakers(next);
+  };
+  const removeActiveSpeakerFromLibrary = () => {
+    if (!activeSpeakerEntry) {
+      return;
+    }
+    updateProjectSpeakers(projectSpeakers.filter((speaker) => speaker.id !== activeSpeakerEntry.id));
+  };
+  const updateActiveSpeakerColor = (color: string) => {
+    if (!activeSpeakerEntry) {
+      return;
+    }
+    updateProjectSpeakers(projectSpeakers.map((speaker) => (speaker.id === activeSpeakerEntry.id ? { ...speaker, color } : speaker)));
   };
   const runEffectCommand = (command: Parameters<typeof commandManager.execute>[0]) => {
     try {
@@ -2049,6 +2121,126 @@ function ClipInspector({
             ) : null}
             {clip.type === 'subtitle' ? (
               <>
+                <div className="space-y-3 rounded-md border border-line bg-white p-2" data-testid="subtitle-cc-panel">
+                  <label className="block text-xs font-medium text-slate-600">
+                    {zhCN.inspector.closedCaptions.kind}
+                    <select
+                      className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink"
+                      value={subtitleType}
+                      data-testid="subtitle-type-select"
+                      onChange={(event) => commitSubtitleType(event.target.value === 'cc' ? 'cc' : 'subtitle')}
+                    >
+                      <option value="subtitle">{zhCN.inspector.closedCaptions.standard}</option>
+                      <option value="cc">{zhCN.inspector.closedCaptions.cc}</option>
+                    </select>
+                  </label>
+                  {subtitleType === 'cc' ? (
+                    <>
+                      <label className="block text-xs font-medium text-slate-600">
+                        {zhCN.inspector.closedCaptions.speaker}
+                        <input
+                          className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink"
+                          defaultValue={activeSpeaker}
+                          list={`subtitle-speakers-${clip.id}`}
+                          placeholder={zhCN.inspector.closedCaptions.speakerPlaceholder}
+                          data-testid="subtitle-speaker-input"
+                          onBlur={(event) => commitCcSpeaker(event.target.value)}
+                        />
+                        <datalist id={`subtitle-speakers-${clip.id}`}>
+                          {projectSpeakers.map((speaker) => (
+                            <option key={speaker.id} value={speaker.name} />
+                          ))}
+                        </datalist>
+                      </label>
+                      {projectSpeakers.length > 0 ? (
+                        <div className="space-y-1" data-testid="subtitle-speaker-library">
+                          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{zhCN.inspector.closedCaptions.speakerLibrary}</div>
+                          <div className="flex flex-wrap gap-1">
+                            {projectSpeakers.map((speaker) => (
+                              <button
+                                key={speaker.id}
+                                className="rounded border border-line px-2 py-1 text-xs hover:bg-panel"
+                                type="button"
+                                data-testid="subtitle-speaker-chip"
+                                onClick={() => commitCcSpeaker(speaker.name)}
+                              >
+                                {speaker.name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          className="rounded-md border border-line bg-white px-2 py-1.5 text-xs font-semibold text-slate-700 hover:bg-panel disabled:opacity-40"
+                          type="button"
+                          disabled={!activeSpeaker || Boolean(activeSpeakerEntry)}
+                          data-testid="subtitle-add-speaker-button"
+                          onClick={addActiveSpeakerToLibrary}
+                        >
+                          {zhCN.inspector.closedCaptions.addSpeaker}
+                        </button>
+                        <button
+                          className="rounded-md border border-line bg-white px-2 py-1.5 text-xs font-semibold text-slate-700 hover:bg-panel disabled:opacity-40"
+                          type="button"
+                          disabled={!activeSpeakerEntry}
+                          data-testid="subtitle-remove-speaker-button"
+                          onClick={removeActiveSpeakerFromLibrary}
+                        >
+                          {zhCN.inspector.closedCaptions.removeSpeaker}
+                        </button>
+                      </div>
+                      {activeSpeakerEntry ? (
+                        <label className="block text-xs font-medium text-slate-600">
+                          {zhCN.inspector.closedCaptions.speakerColor}
+                          <input
+                            className="mt-1 h-9 w-full rounded-md border border-line px-2 py-1"
+                            type="color"
+                            value={activeSpeakerEntry.color ?? '#2563eb'}
+                            data-testid="subtitle-speaker-color-input"
+                            onChange={(event) => updateActiveSpeakerColor(event.target.value)}
+                          />
+                        </label>
+                      ) : null}
+                      <label className="block text-xs font-medium text-slate-600">
+                        {zhCN.inspector.closedCaptions.soundDesc}
+                        <select
+                          className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink"
+                          value={soundDescSelectValue}
+                          data-testid="subtitle-sound-desc-select"
+                          onChange={(event) => {
+                            const value = event.target.value;
+                            if (value === 'custom') {
+                              setCustomSoundDescOpen(true);
+                              return;
+                            }
+                            setCustomSoundDescOpen(false);
+                            commitCcSoundDesc(value || undefined);
+                          }}
+                        >
+                          <option value="">{zhCN.inspector.closedCaptions.soundDescNone}</option>
+                          {soundDescriptionOptions.map((item) => (
+                            <option key={item} value={item}>
+                              {item}
+                            </option>
+                          ))}
+                          <option value="custom">{zhCN.inspector.closedCaptions.soundDescCustom}</option>
+                        </select>
+                      </label>
+                      {soundDescSelectValue === 'custom' || customSoundDescOpen ? (
+                        <TextField
+                          label={zhCN.inspector.closedCaptions.customSoundDesc}
+                          value={clip.soundDesc ?? ''}
+                          testId="subtitle-custom-sound-desc-input"
+                          onCommit={(soundDesc) => {
+                            setCustomSoundDescOpen(false);
+                            commitCcSoundDesc(soundDesc);
+                          }}
+                        />
+                      ) : null}
+                    </>
+                  ) : null}
+                </div>
                 <SubtitleStyleTemplatesPanel
                   templates={subtitleStyleTemplates}
                   onApply={applySubtitleStyleTemplate}
@@ -3519,11 +3711,11 @@ function EffectsEditor({
   );
 }
 
-function TextField({ label, value, onCommit }: { label: string; value: string; onCommit(value: string): void }) {
+function TextField({ label, value, onCommit, testId }: { label: string; value: string; onCommit(value: string): void; testId?: string }) {
   return (
     <label className="block text-xs font-medium text-slate-600">
       {label}
-      <input className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink" defaultValue={value} onBlur={(event) => onCommit(event.target.value)} />
+      <input className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink" defaultValue={value} data-testid={testId} onBlur={(event) => onCommit(event.target.value)} />
     </label>
   );
 }

@@ -36,6 +36,8 @@ export type SubtitleMode = 'burn-in' | 'soft-sub';
 
 export type SubtitleLanguage = string;
 
+export type SubtitleTrackType = 'subtitle' | 'cc';
+
 export type KeyframeEasing = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out';
 
 export type AudioFadeCurve = Extract<KeyframeEasing, 'linear' | 'ease-in' | 'ease-out'>;
@@ -214,9 +216,16 @@ export interface Project {
   protectedRanges: ProtectedRange[];
   clipGroups: ClipGroup[];
   coverPath?: string;
+  speakers: ProjectSpeaker[];
   timeline: Timeline;
   sequences: Sequence[];
   activeSequenceId: string;
+}
+
+export interface ProjectSpeaker {
+  id: string;
+  name: string;
+  color?: string;
 }
 
 export interface ProjectSettings {
@@ -353,6 +362,7 @@ export interface Track {
   type: TrackType;
   name: string;
   language?: SubtitleLanguage;
+  subtitleType?: SubtitleTrackType;
   color?: TimelineLabelColor | null;
   muted?: boolean;
   solo?: boolean;
@@ -525,7 +535,10 @@ export interface TextClip extends BaseClip {
 
 export interface SubtitleClip extends BaseClip {
   type: 'subtitle';
+  subtitleType?: SubtitleTrackType;
   text: string;
+  speaker?: string;
+  soundDesc?: string;
   style: SubtitleStyle;
   subtitleMode: SubtitleMode;
 }

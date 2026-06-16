@@ -8,6 +8,7 @@ import type {
   Project,
   ProjectAnnotation,
   ProjectSettings,
+  ProjectSpeaker,
   ProtectedRange,
   ReviewAnnotation,
   Sequence,
@@ -50,6 +51,7 @@ export interface ProjectFileV2 {
     protectedRanges?: ProtectedRange[];
     clipGroups?: ClipGroup[];
     coverPath?: string;
+    speakers?: ProjectSpeaker[];
     timeline: Timeline;
     sequences?: Sequence[];
     activeSequenceId?: string;

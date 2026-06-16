@@ -106,3 +106,41 @@ test('applies the cinema white subtitle style template', async ({ page }) => {
     )
     .toBe('#ffffff');
 });
+
+test('exports CC subtitles to WebVTT with voice tags', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+
+  await page.getByTestId('import-subtitles-button').click();
+  const subtitleClips = page.locator('[data-clip-type="subtitle"]');
+  await expect(subtitleClips).toHaveCount(2);
+  await subtitleClips.first().click();
+
+  await page.getByTestId('subtitle-type-select').selectOption('cc');
+  await expect(page.locator('[data-testid^="track-cc-badge-"]').first()).toBeVisible();
+  await page.getByTestId('subtitle-speaker-input').fill('Alice');
+  await page.getByTestId('subtitle-speaker-input').blur();
+  await page.getByTestId('subtitle-sound-desc-select').selectOption('[音乐]');
+  await page.getByTestId('subtitle-mode-select').selectOption('soft-sub');
+
+  await page.evaluate(() => window.__E2E_ACTIONS__!.setSavePath!('C:/Exports/subtitles-cc.mp4'));
+  await openExportDialog(page);
+  await page.getByTestId('export-subtitle-format-select').selectOption('vtt');
+  await page.getByTestId('export-subtitle-sidecar-toggle').check();
+  await page.getByTestId('export-enqueue-button').click();
+  if (await page.getByTestId('export-preflight-panel').isVisible({ timeout: 1000 }).catch(() => false)) {
+    await page.getByTestId('export-preflight-continue-button').click();
+  }
+
+  await expect.poll(() => page.evaluate(() => window.__E2E_ACTIONS__!.getLastExportPlan!())).toBeTruthy();
+  const plan = (await page.evaluate(() => window.__E2E_ACTIONS__!.getLastExportPlan!())) as {
+    inputs: Array<{ path: string; args: string[] }>;
+    textArtifacts: Array<{ fileName: string; pathMode?: string; text: string }>;
+  };
+
+  expect(plan.inputs.some((input) => input.path === '__SUBTITLEFILE_export_subtitles__' && input.args.join(' ') === '-f webvtt')).toBe(true);
+  expect(plan.textArtifacts.some((artifact) => artifact.fileName === 'subtitles.vtt' && artifact.text.includes('<v Alice>[音乐] Hello subtitle</v>'))).toBe(true);
+  await expect
+    .poll(() => page.evaluate(() => window.__E2E_ACTIONS__!.getWrittenFile!('C:/Exports/subtitles-cc.vtt')))
+    .toContain('<v Alice>');
+});

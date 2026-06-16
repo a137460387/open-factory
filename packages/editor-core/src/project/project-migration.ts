@@ -31,10 +31,14 @@ import {
   normalizeExportRanges,
   normalizeProtectedRanges,
   normalizeProjectSettings,
+  normalizeProjectSpeakers,
   normalizeSequenceFrameRate,
   normalizeSequenceName,
   normalizeSlowMotionMode,
   normalizeStabilization,
+  normalizeSubtitleSoundDesc,
+  normalizeSubtitleSpeaker,
+  normalizeSubtitleTrackType,
   normalizeTextPath,
   normalizeTransform,
   normalizeVideoRestoration
@@ -112,6 +116,7 @@ export function serializeProjectFile(project: Project, projectPath?: string): Pr
       protectedRanges: normalizeProtectedRanges(project.protectedRanges, getTimelineDuration(project.timeline)),
       clipGroups: normalizeClipGroups(project.clipGroups, clipIds),
       coverPath: normalizeProjectCoverPath(project.coverPath),
+      speakers: normalizeProjectSpeakers(project.speakers),
       timeline: primaryTimeline,
       sequences,
       activeSequenceId: project.activeSequenceId ?? PRIMARY_SEQUENCE_ID
@@ -158,6 +163,7 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         protectedRanges: normalizeProtectedRanges(file.project.protectedRanges, getTimelineDuration(primaryTimeline)),
         clipGroups: normalizeClipGroups(file.project.clipGroups, clipIds),
         coverPath: normalizeProjectCoverPath(file.project.coverPath),
+        speakers: normalizeProjectSpeakers(file.project.speakers),
         timeline: activeTimeline,
         sequences,
         activeSequenceId
@@ -191,6 +197,7 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         protectedRanges: [],
         clipGroups: [],
         coverPath: undefined,
+        speakers: [],
         timeline: primaryTimeline,
         sequences,
         activeSequenceId: PRIMARY_SEQUENCE_ID
@@ -388,8 +395,12 @@ function cloneClip<TClip extends Clip>(clip: TClip): TClip {
     return { ...cloned, style: { ...DEFAULT_TEXT_STYLE, ...clip.style }, pathText: normalizeTextPath(clip.pathText) } as TClip;
   }
   if (clip.type === 'subtitle') {
+    const subtitleType = normalizeSubtitleTrackType(clip.subtitleType);
     return {
       ...cloned,
+      subtitleType,
+      speaker: subtitleType === 'cc' ? normalizeSubtitleSpeaker(clip.speaker) : undefined,
+      soundDesc: subtitleType === 'cc' ? normalizeSubtitleSoundDesc(clip.soundDesc) : undefined,
       style: { ...DEFAULT_SUBTITLE_STYLE, ...clip.style },
       subtitleMode: clip.subtitleMode ?? DEFAULT_SUBTITLE_MODE
     } as TClip;

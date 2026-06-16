@@ -259,6 +259,9 @@ export function makeSubtitleClip(overrides: ClipOverrides<Extract<Clip, { type: 
     contentAnalysis: overrides.contentAnalysis,
     keyframes: overrides.keyframes,
     effects: overrides.effects,
+    subtitleType: overrides.subtitleType ?? 'subtitle',
+    speaker: overrides.speaker,
+    soundDesc: overrides.soundDesc,
     text: overrides.text ?? 'Subtitle line',
     subtitleMode: overrides.subtitleMode ?? DEFAULT_SUBTITLE_MODE,
     style: {

@@ -73,6 +73,7 @@ import type {
   Project,
   ProjectAnnotation,
   ProjectSettings,
+  ProjectSpeaker,
   ProjectVersion,
   ProtectedRange,
   ReviewAnnotation,
@@ -82,6 +83,7 @@ import type {
   SubtitleLanguage,
   SubtitleMode,
   SubtitleStyle,
+  SubtitleTrackType,
   TextClip,
   TextPathOptions,
   TextStyle,
@@ -161,6 +163,7 @@ export type {
   Project,
   ProjectAnnotation,
   ProjectSettings,
+  ProjectSpeaker,
   ProjectVersion,
   ProtectedRange,
   ReviewAnnotation,
@@ -170,6 +173,7 @@ export type {
   SubtitleLanguage,
   SubtitleMode,
   SubtitleStyle,
+  SubtitleTrackType,
   TextClip,
   TextPathOptions,
   TextStyle,
@@ -422,6 +426,7 @@ export const DEFAULT_TEXT_PATH: TextPathOptions = {
 
 export const DEFAULT_SUBTITLE_MODE: SubtitleMode = 'burn-in';
 export const DEFAULT_SUBTITLE_LANGUAGE = 'zh';
+export const DEFAULT_SUBTITLE_TRACK_TYPE: SubtitleTrackType = 'subtitle';
 
 export const DEFAULT_SUBTITLE_STYLE: SubtitleStyle = {
   ...DEFAULT_TEXT_STYLE,
@@ -565,8 +570,8 @@ export function createProtectedRange(
 }
 
 export function createTrack(
-  track: Omit<Track, 'language' | 'color' | 'muted' | 'solo' | 'locked' | 'volume' | 'pan' | 'eq' | 'compressor'> &
-    Partial<Pick<Track, 'language' | 'color' | 'muted' | 'solo' | 'locked' | 'volume' | 'pan' | 'eq' | 'compressor'>>
+  track: Omit<Track, 'language' | 'subtitleType' | 'color' | 'muted' | 'solo' | 'locked' | 'volume' | 'pan' | 'eq' | 'compressor'> &
+    Partial<Pick<Track, 'language' | 'subtitleType' | 'color' | 'muted' | 'solo' | 'locked' | 'volume' | 'pan' | 'eq' | 'compressor'>>
 ): Track {
   const next: Track = {
     ...track,
@@ -581,8 +586,10 @@ export function createTrack(
   };
   if (track.type === 'subtitle') {
     next.language = normalizeSubtitleLanguage(track.language);
+    next.subtitleType = normalizeSubtitleTrackType(track.subtitleType);
   } else {
     delete next.language;
+    delete next.subtitleType;
   }
   return next;
 }
@@ -610,6 +617,7 @@ export function createProject(name = 'Untitled Project'): Project {
     protectedRanges: [],
     clipGroups: [],
     coverPath: undefined,
+    speakers: [],
     timeline,
     sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
     activeSequenceId: PRIMARY_SEQUENCE_ID
@@ -1171,6 +1179,51 @@ export function normalizeSubtitleLanguage(language: unknown): SubtitleLanguage {
   return /^[a-z]{2}$/.test(primary) ? primary : DEFAULT_SUBTITLE_LANGUAGE;
 }
 
+export function normalizeSubtitleTrackType(value: unknown): SubtitleTrackType {
+  return value === 'cc' ? 'cc' : DEFAULT_SUBTITLE_TRACK_TYPE;
+}
+
+export function normalizeSubtitleSpeaker(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+export function normalizeSubtitleSoundDesc(value: unknown): string | undefined {
+  if (typeof value !== 'string') {
+    return undefined;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  return /^\[[^\]]+\]$/.test(trimmed) ? trimmed : `[${trimmed.replace(/^\[|\]$/g, '').trim()}]`;
+}
+
+export function normalizeProjectSpeakers(speakers: unknown): ProjectSpeaker[] {
+  if (!Array.isArray(speakers)) {
+    return [];
+  }
+  const output: ProjectSpeaker[] = [];
+  const seen = new Set<string>();
+  for (const speaker of speakers) {
+    if (!speaker || typeof speaker !== 'object') {
+      continue;
+    }
+    const name = normalizeSubtitleSpeaker((speaker as ProjectSpeaker).name);
+    if (!name) {
+      continue;
+    }
+    const key = name.toLocaleLowerCase();
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    const id = normalizeSubtitleSpeaker((speaker as ProjectSpeaker).id) ?? createId('speaker');
+    const color = normalizeOptionalHexColor((speaker as ProjectSpeaker).color);
+    output.push(color ? { id, name, color } : { id, name });
+  }
+  return output;
+}
+
 export function normalizeSubtitleLanguageList(languages: unknown): SubtitleLanguage[] | undefined {
   if (!Array.isArray(languages)) {
     return undefined;
@@ -1493,6 +1546,11 @@ function normalizeProtectedRangeLabel(label: string | undefined): string {
 function normalizeHexColor(color: string | undefined, fallback: string): string {
   const trimmed = color?.trim();
   return trimmed && /^#[0-9a-fA-F]{6}$/.test(trimmed) ? trimmed.toLowerCase() : fallback;
+}
+
+function normalizeOptionalHexColor(color: string | undefined): string | undefined {
+  const trimmed = color?.trim();
+  return trimmed && /^#[0-9a-fA-F]{6}$/.test(trimmed) ? trimmed.toLowerCase() : undefined;
 }
 
 function normalizeLutPath(path: string | null | undefined): string | null {

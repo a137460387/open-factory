@@ -10,6 +10,7 @@ import {
   parseSubtitleDataImport,
   parseSrt,
   round,
+  type ProjectSpeaker,
   type SubtitleDataCue,
   type SubtitleDataImportFormat,
   type Timeline,
@@ -19,7 +20,7 @@ import { zhCN } from '../i18n/strings';
 import { fileNameFromPath } from './tauri';
 import { openFileDialog, readFile } from './tauri-bridge';
 
-export const SUBTITLE_EXTENSIONS = ['srt'];
+export const SUBTITLE_EXTENSIONS = ['srt', 'vtt'];
 export const SUBTITLE_DATA_EXTENSIONS = ['csv', 'json'];
 
 export async function pickSubtitlePaths(): Promise<string[]> {
@@ -50,9 +51,11 @@ export function buildSubtitleTrackFromSrt(path: string, contents: string, timeli
   const sourceStart = round(Math.max(0, timing.sourceStart ?? 0));
   const sourceEnd = typeof timing.sourceDuration === 'number' ? round(sourceStart + Math.max(0, timing.sourceDuration)) : undefined;
   const speed = getClipSpeed({ speed: timing.speed });
+  const subtitleType = cues.some((cue) => cue.subtitleType === 'cc') ? 'cc' : 'subtitle';
   return createTrack({
     id: trackId,
     type: 'subtitle',
+    subtitleType,
     name: `${name} ${trackNumber}`,
     clips: cues
       .map((cue) => {
@@ -76,12 +79,33 @@ export function buildSubtitleTrackFromSrt(path: string, contents: string, timeli
           colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
           transform: { ...DEFAULT_TRANSFORM },
           text: cue.text,
+          subtitleType: cue.subtitleType ?? subtitleType,
+          speaker: cue.speaker,
+          soundDesc: cue.soundDesc,
           style: { ...DEFAULT_SUBTITLE_STYLE },
           subtitleMode: DEFAULT_SUBTITLE_MODE
         };
       })
       .filter((clip): clip is NonNullable<typeof clip> => Boolean(clip))
   });
+}
+
+export function collectSubtitleSpeakersFromTrack(track: Track): ProjectSpeaker[] {
+  const seen = new Set<string>();
+  const speakers: ProjectSpeaker[] = [];
+  for (const clip of track.clips) {
+    if (clip.type !== 'subtitle' || !clip.speaker?.trim()) {
+      continue;
+    }
+    const name = clip.speaker.trim();
+    const key = name.toLocaleLowerCase();
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    speakers.push({ id: createId('speaker'), name });
+  }
+  return speakers;
 }
 
 export function parseSubtitleDataFile(path: string, contents: string): SubtitleDataCue[] {

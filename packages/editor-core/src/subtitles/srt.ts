@@ -1,10 +1,13 @@
-import type { SubtitleClip } from '../model';
+import type { SubtitleClip, SubtitleTrackType } from '../model';
 
 export interface SrtCue {
   index: number;
   startMs: number;
   endMs: number;
   text: string;
+  subtitleType?: SubtitleTrackType;
+  speaker?: string;
+  soundDesc?: string;
 }
 
 export type SubtitleTextFormat = 'srt' | 'vtt' | 'ass' | 'ssa';
@@ -31,6 +34,9 @@ export interface SubtitleCueInput {
   start: number;
   duration: number;
   text: string;
+  subtitleType?: SubtitleTrackType;
+  speaker?: string;
+  soundDesc?: string;
   style?: SubtitleCueStyle;
 }
 
@@ -41,10 +47,14 @@ export function parseSrt(contents: string): SrtCue[] {
   if (!normalized) {
     return [];
   }
-  return normalized
-    .split(/\n{2,}/)
-    .map((block, blockIndex) => parseSrtBlock(block, blockIndex))
-    .filter((cue): cue is SrtCue => Boolean(cue));
+  const cues: SrtCue[] = [];
+  for (const block of normalized.split(/\n{2,}/)) {
+    const cue = parseSrtBlock(block, cues.length);
+    if (cue) {
+      cues.push(cue);
+    }
+  }
+  return cues;
 }
 
 export function parseSrtTimecodeMs(value: string): number {
@@ -78,7 +88,7 @@ export function serializeSubtitleClipsToSrt(clips: SubtitleClip[]): string {
   const cues = toSortedSubtitleCueInputs(clips.map(subtitleClipToCueInput)).map((clip) => ({
     startMs: secondsToMs(clip.start),
     endMs: secondsToMs(clip.start + clip.duration),
-    text: clip.text
+    text: formatSrtCueText(clip)
   }));
   return serializeSrt(cues);
 }
@@ -88,7 +98,7 @@ export function serializeSubtitleCueInputsToSrt(clips: SubtitleCueInput[]): stri
     toSortedSubtitleCueInputs(clips).map((clip) => ({
       startMs: secondsToMs(clip.start),
       endMs: secondsToMs(clip.start + clip.duration),
-      text: clip.text
+      text: formatSrtCueText(clip)
     }))
   );
 }
@@ -104,7 +114,7 @@ export function serializeSubtitleCueInputsToVtt(clips: SubtitleCueInput[]): stri
   }
   return ['WEBVTT', '', cues
     .map((clip) =>
-      [`${formatVttTimecode(secondsToMs(clip.start))} --> ${formatVttTimecode(secondsToMs(clip.start + clip.duration))} ${buildVttCueSettings(clip.style)}`, clip.text.trimEnd()].join('\n')
+      [`${formatVttTimecode(secondsToMs(clip.start))} --> ${formatVttTimecode(secondsToMs(clip.start + clip.duration))} ${buildVttCueSettings(clip.style)}`, formatVttCueText(clip).trimEnd()].join('\n')
     )
     .join('\n\n')].join('\n').concat('\n');
 }
@@ -191,7 +201,7 @@ function parseSrtBlock(block: string, blockIndex: number): SrtCue | undefined {
     index: Number.isFinite(explicitIndex) && explicitIndex > 0 ? explicitIndex : blockIndex + 1,
     startMs,
     endMs,
-    text: lines.slice(timingIndex + 1).join('\n').trim()
+    ...parseCaptionCueText(lines.slice(timingIndex + 1).join('\n').trim())
   };
 }
 
@@ -205,6 +215,9 @@ function subtitleClipToCueInput(clip: SubtitleClip): SubtitleCueInput {
     start: clip.start,
     duration: clip.duration,
     text: clip.text,
+    subtitleType: clip.subtitleType,
+    speaker: clip.speaker,
+    soundDesc: clip.soundDesc,
     style: {
       ...clip.style,
       x: clip.transform.x,
@@ -215,8 +228,85 @@ function subtitleClipToCueInput(clip: SubtitleClip): SubtitleCueInput {
 
 function toSortedSubtitleCueInputs(clips: SubtitleCueInput[]): SubtitleCueInput[] {
   return clips
-    .filter((clip) => clip.duration > 0 && clip.text.trim().length > 0)
+    .filter((clip) => clip.duration > 0 && formatPlainCueText(clip).trim().length > 0)
     .sort((left, right) => left.start - right.start || left.id.localeCompare(right.id));
+}
+
+function isCcCue(clip: SubtitleCueInput): boolean {
+  return clip.subtitleType === 'cc' || Boolean(clip.speaker?.trim()) || Boolean(clip.soundDesc?.trim());
+}
+
+function formatPlainCueText(clip: SubtitleCueInput): string {
+  const soundDesc = normalizeSoundDescText(clip.soundDesc);
+  const text = clip.text.trimEnd();
+  return [soundDesc, text].filter(Boolean).join(soundDesc && text ? ' ' : '');
+}
+
+function formatSrtCueText(clip: SubtitleCueInput): string {
+  const body = formatPlainCueText(clip);
+  if (!isCcCue(clip)) {
+    return body;
+  }
+  const speaker = normalizeSpeakerText(clip.speaker);
+  return speaker ? `[${speaker}]: ${body}`.trimEnd() : body;
+}
+
+function formatVttCueText(clip: SubtitleCueInput): string {
+  const body = formatPlainCueText(clip);
+  if (!isCcCue(clip)) {
+    return body;
+  }
+  const speaker = normalizeSpeakerText(clip.speaker);
+  return speaker ? `<v ${escapeVttVoice(speaker)}>${body}</v>` : body;
+}
+
+function parseCaptionCueText(rawText: string): Pick<SrtCue, 'text' | 'subtitleType' | 'speaker' | 'soundDesc'> {
+  let text = rawText.trim();
+  let speaker: string | undefined;
+  let subtitleType: SubtitleTrackType | undefined;
+  const voiceMatch = /^<v(?:\s+([^>]+))?>([\s\S]*?)(?:<\/v>)?$/i.exec(text);
+  if (voiceMatch) {
+    speaker = normalizeSpeakerText(voiceMatch[1]);
+    text = voiceMatch[2].trim();
+    subtitleType = 'cc';
+  } else {
+    const speakerPrefixMatch = /^\[([^\]]+)\]:\s*([\s\S]*)$/.exec(text);
+    if (speakerPrefixMatch) {
+      speaker = normalizeSpeakerText(speakerPrefixMatch[1]);
+      text = speakerPrefixMatch[2].trim();
+      subtitleType = 'cc';
+    }
+  }
+  const soundMatch = /^(\[[^\]]+\])\s*([\s\S]*)$/.exec(text);
+  const soundDesc = soundMatch ? normalizeSoundDescText(soundMatch[1]) : undefined;
+  if (soundDesc) {
+    text = soundMatch?.[2]?.trim() ?? text;
+    subtitleType = 'cc';
+  }
+  return {
+    text,
+    ...(subtitleType ? { subtitleType } : {}),
+    ...(speaker ? { speaker } : {}),
+    ...(soundDesc ? { soundDesc } : {})
+  };
+}
+
+function normalizeSpeakerText(value: string | undefined): string | undefined {
+  const trimmed = value?.replace(/<[^>]+>/g, '').trim();
+  return trimmed || undefined;
+}
+
+function normalizeSoundDescText(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  const inner = trimmed.replace(/^\[|\]$/g, '').trim();
+  return inner ? `[${inner}]` : undefined;
+}
+
+function escapeVttVoice(value: string): string {
+  return value.replace(/[<>\r\n]/g, '').trim();
 }
 
 function buildVttCueSettings(style: SubtitleCueStyle | undefined): string {
@@ -285,11 +375,11 @@ function buildSsaStyle(name: string, style: SubtitleCueStyle | undefined): strin
 }
 
 function buildAssDialogue(cue: SubtitleCueInput, styleName: string): string {
-  return ['Dialogue: 0', formatAssTimecode(cue.start), formatAssTimecode(cue.start + cue.duration), styleName, '', '0000', '0000', '0000', '', escapeAssText(cue.text)].join(',');
+  return ['Dialogue: 0', formatAssTimecode(cue.start), formatAssTimecode(cue.start + cue.duration), styleName, '', '0000', '0000', '0000', '', escapeAssText(formatSrtCueText(cue))].join(',');
 }
 
 function buildSsaDialogue(cue: SubtitleCueInput, styleName: string): string {
-  return ['Dialogue: Marked=0', formatAssTimecode(cue.start), formatAssTimecode(cue.start + cue.duration), styleName, '', '0000', '0000', '0000', '', escapeAssText(cue.text)].join(',');
+  return ['Dialogue: Marked=0', formatAssTimecode(cue.start), formatAssTimecode(cue.start + cue.duration), styleName, '', '0000', '0000', '0000', '', escapeAssText(formatSrtCueText(cue))].join(',');
 }
 
 function cssColorToAss(value: string, opacity = 1): string {

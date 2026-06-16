@@ -349,6 +349,9 @@ function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project[
                     shadowOffset: clip.style.shadowOffset
                   }
                 : null,
+            subtitleType: clip.type === 'subtitle' ? (clip.subtitleType ?? 'subtitle') : null,
+            speaker: clip.type === 'subtitle' ? clip.speaker ?? null : null,
+            soundDesc: clip.type === 'subtitle' ? clip.soundDesc ?? null : null,
             subtitleMode: clip.type === 'subtitle' ? (clip.subtitleMode ?? DEFAULT_SUBTITLE_MODE) : null,
             creditsStyle:
               clip.type === 'credits'
@@ -2896,6 +2899,9 @@ function buildSubtitleCueInputs(clips: ExportClip[]): SubtitleCueInput[] {
     start: clip.start,
     duration: clip.duration,
     text: clip.subtitleStyle?.text ?? '',
+    subtitleType: clip.subtitleType ?? undefined,
+    speaker: clip.speaker ?? undefined,
+    soundDesc: clip.soundDesc ?? undefined,
     style: clip.subtitleStyle
       ? {
           fontFamily: clip.subtitleStyle.fontFamily,

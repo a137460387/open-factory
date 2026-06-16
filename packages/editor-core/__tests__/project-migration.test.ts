@@ -54,6 +54,35 @@ describe('project schema migration', () => {
     expect(migrateProjectFile(file).project.coverPath).toBeUndefined();
   });
 
+  it('serializes and migrates CC subtitle tracks and speaker library while old files stay compatible', () => {
+    const project = makeProject();
+    const ccClip = makeSubtitleClip({ id: 'cc-clip', trackId: 'track-cc', subtitleType: 'cc', speaker: 'Alice', soundDesc: '音乐', text: 'Welcome' });
+    project.speakers = [{ id: 'speaker-a', name: 'Alice', color: '#FF00AA' }];
+    project.timeline.tracks.push(createTrack({ id: 'track-cc', type: 'subtitle', subtitleType: 'cc', name: 'CC', clips: [ccClip] }));
+    project.sequences = [{ ...project.sequences[0], timeline: project.timeline }];
+
+    const file = serializeProject(project);
+    expect(file.project.speakers).toEqual([{ id: 'speaker-a', name: 'Alice', color: '#ff00aa' }]);
+    expect(file.project.timeline.tracks.at(-1)?.subtitleType).toBe('cc');
+    expect(file.project.timeline.tracks.at(-1)?.clips[0]).toMatchObject({ subtitleType: 'cc', speaker: 'Alice', soundDesc: '[音乐]' });
+
+    const migrated = migrateProjectFile(file);
+    expect(migrated.project.speakers).toEqual([{ id: 'speaker-a', name: 'Alice', color: '#ff00aa' }]);
+    expect(migrated.project.timeline.tracks.at(-1)?.subtitleType).toBe('cc');
+    expect(migrated.project.timeline.tracks.at(-1)?.clips[0]).toMatchObject({ subtitleType: 'cc', speaker: 'Alice', soundDesc: '[音乐]' });
+
+    delete file.project.speakers;
+    delete file.project.timeline.tracks.at(-1)!.subtitleType;
+    delete file.project.timeline.tracks.at(-1)!.clips[0].subtitleType;
+    delete file.project.timeline.tracks.at(-1)!.clips[0].speaker;
+    delete file.project.timeline.tracks.at(-1)!.clips[0].soundDesc;
+
+    const legacy = migrateProjectFile(file);
+    expect(legacy.project.speakers).toEqual([]);
+    expect(legacy.project.timeline.tracks.at(-1)?.subtitleType).toBe('subtitle');
+    expect(legacy.project.timeline.tracks.at(-1)?.clips[0]).toMatchObject({ subtitleType: 'subtitle' });
+  });
+
   it('serializes and migrates local clip content analysis while old clips remain unset', () => {
     const project = makeProject();
     project.timeline.tracks[0].clips = [

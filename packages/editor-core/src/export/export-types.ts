@@ -15,6 +15,7 @@ import type {
   ClipSlowMotionMode,
   ClipVideoRestoration,
   PathPoint,
+  SubtitleTrackType,
   TrackCompressor,
   TrackEQ,
   TrackEQBandType
@@ -357,6 +358,9 @@ export interface ExportClip {
   textStyle: ExportTextStyle | null;
   textPath: ExportTextPathOptions | null;
   subtitleStyle: ExportSubtitleStyle | null;
+  subtitleType: SubtitleTrackType | null;
+  speaker: string | null;
+  soundDesc: string | null;
   subtitleMode: ExportSubtitleMode | null;
   creditsStyle: ExportCreditsStyle | null;
 }

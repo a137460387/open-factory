@@ -33,6 +33,7 @@ import {
   UpdateProjectBeatMarkersCommand,
   UpdateProjectBookmarksCommand,
   UpdateProjectExportRangesCommand,
+  UpdateProjectSpeakersCommand,
   UpdateClipCommand,
   createBeatMarker,
   calculateBeatSplitTimesForClip,
@@ -56,6 +57,7 @@ import {
   findSyncCompareClipRefs,
   findTimelineNavigationPoint,
   normalizeClipGroups,
+  normalizeProjectSpeakers,
   normalizeExportRanges,
   applyTimelineVersionDiffSelection,
   instantiateProjectTemplate,
@@ -72,6 +74,7 @@ import {
   type OrphanMediaIssue,
   type ProjectHealthReport,
   type Project,
+  type ProjectSpeaker,
   type ReviewAnnotation,
   type Clip,
   type ClipContentAnalysis,
@@ -129,6 +132,7 @@ import { scanDuplicateMediaGroups } from '../lib/duplicateMedia';
 import {
   buildSubtitleTrackFromDataCues,
   buildSubtitleTrackFromSrt,
+  collectSubtitleSpeakersFromTrack,
   isSubtitlePath,
   parseSubtitleDataFile,
   pickSubtitleDataPaths,
@@ -2820,6 +2824,10 @@ export function EditorShell() {
         continue;
       }
       commandManager.execute(new AddTrackCommand(timelineAccessor, track));
+      const importedSpeakers = collectSubtitleSpeakersFromTrack(track);
+      if (importedSpeakers.length > 0) {
+        commandManager.execute(new UpdateProjectSpeakersCommand(projectAccessor, mergeProjectSpeakers(useEditorStore.getState().project.speakers, importedSpeakers)));
+      }
       importedCount += track.clips.length;
       setSelectedClipId(track.clips[0]?.id);
     }
@@ -2863,6 +2871,20 @@ export function EditorShell() {
       showToast({ kind: 'success', title: zhCN.editorToasts.subtitlesImported, message: zhCN.editorToasts.subtitlesImportedMessage(importedCount) });
     }
   }
+}
+
+function mergeProjectSpeakers(existing: ProjectSpeaker[] | undefined, imported: ProjectSpeaker[]): ProjectSpeaker[] {
+  const next = normalizeProjectSpeakers(existing);
+  const seen = new Set(next.map((speaker) => speaker.name.toLocaleLowerCase()));
+  for (const speaker of imported) {
+    const key = speaker.name.toLocaleLowerCase();
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    next.push(speaker);
+  }
+  return next;
 }
 
 function getSubtitleDataImportTargetTrackId(timeline: CoreTimeline, mode: SubtitleDataImportMode, selectedClipIds: string[]): string | undefined {

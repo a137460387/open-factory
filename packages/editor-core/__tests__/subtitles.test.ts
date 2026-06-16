@@ -137,6 +137,51 @@ Another caption
     expect(vtt).toContain('Cue text');
   });
 
+  it('serializes CC WebVTT cues with voice tags and sound descriptions', () => {
+    const vtt = serializeSubtitleClipsToVtt([
+      makeSubtitleClip({
+        id: 'cc-vtt',
+        start: 0,
+        duration: 1,
+        subtitleType: 'cc',
+        speaker: 'Alice',
+        soundDesc: '[音乐]',
+        text: '欢迎'
+      })
+    ]);
+
+    expect(vtt).toContain('<v Alice>[音乐] 欢迎</v>');
+  });
+
+  it('serializes CC SRT cues with speaker prefixes', () => {
+    expect(
+      serializeSubtitleClipsToSrt([
+        makeSubtitleClip({
+          id: 'cc-srt',
+          start: 0,
+          duration: 1,
+          subtitleType: 'cc',
+          speaker: 'Alice',
+          text: '欢迎'
+        })
+      ])
+    ).toBe('1\n00:00:00,000 --> 00:00:01,000\n[Alice]: 欢迎\n');
+  });
+
+  it('parses WebVTT voice tags as CC speaker cues', () => {
+    expect(parseSrt('WEBVTT\n\n00:00:00.000 --> 00:00:01.000\n<v Alice>[掌声] Welcome</v>')).toEqual([
+      {
+        index: 1,
+        startMs: 0,
+        endMs: 1000,
+        subtitleType: 'cc',
+        speaker: 'Alice',
+        soundDesc: '[掌声]',
+        text: 'Welcome'
+      }
+    ]);
+  });
+
   it('serializes generic cue inputs to SRT while sorting and skipping blank cues', () => {
     expect(
       serializeSubtitleCueInputsToSrt([

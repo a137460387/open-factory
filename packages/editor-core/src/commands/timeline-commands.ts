@@ -41,9 +41,13 @@ import {
   normalizeExportRanges,
   normalizeProtectedRanges,
   normalizeProjectSettings,
+  normalizeProjectSpeakers,
   normalizeSequenceFrameRate,
   normalizeSlowMotionMode,
   normalizeStabilization,
+  normalizeSubtitleSoundDesc,
+  normalizeSubtitleSpeaker,
+  normalizeSubtitleTrackType,
   normalizeTextPath,
   normalizeTimelineBookmark,
   normalizeTimelineBookmarks,
@@ -74,12 +78,14 @@ import {
   type MotionTrackPoint,
   type Project,
   type ProjectAnnotation,
+  type ProjectSpeaker,
   type ReviewAnnotation,
   type TimelineNote,
   type ExportRange,
   type ProtectedRange,
   type ProjectSettings,
   type SubtitleMode,
+  type SubtitleTrackType,
   type SubtitleStyle,
   type TextPathOptions,
   type TextStyle,
@@ -250,6 +256,34 @@ export class UpdateProjectCoverCommand implements Command {
     this.after = {
       ...this.before,
       coverPath: normalized,
+      updatedAt: new Date().toISOString()
+    };
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class UpdateProjectSpeakersCommand implements Command {
+  readonly description = 'Update project speakers';
+  private before?: Project;
+  private after?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly speakers: ProjectSpeaker[]
+  ) {}
+
+  execute(): void {
+    const project = this.accessor.getProject();
+    this.before ??= project;
+    this.after = {
+      ...project,
+      speakers: normalizeProjectSpeakers(this.speakers),
       updatedAt: new Date().toISOString()
     };
     this.accessor.setProject(this.after);
@@ -791,7 +825,7 @@ export class AddTrackCommand implements Command {
   }
 }
 
-export type TrackPatch = Partial<Pick<Track, 'name' | 'language' | 'color' | 'muted' | 'solo' | 'locked' | 'volume' | 'pan' | 'eq' | 'compressor'>>;
+export type TrackPatch = Partial<Pick<Track, 'name' | 'language' | 'subtitleType' | 'color' | 'muted' | 'solo' | 'locked' | 'volume' | 'pan' | 'eq' | 'compressor'>>;
 
 function applyTrackPatch(track: Track, patch?: TrackPatch): Track {
   if (!patch) {
@@ -3208,6 +3242,9 @@ export type ClipPatch = Partial<Omit<Clip, 'type' | 'id' | 'transform' | 'colorC
   text?: string;
   colorLabel?: TimelineLabelColor | null;
   mediaId?: string;
+  subtitleType?: SubtitleTrackType;
+  speaker?: string;
+  soundDesc?: string;
   subtitleMode?: SubtitleMode;
   speed?: number;
   pitchSemitones?: number;
@@ -3621,6 +3658,15 @@ export class UpdateClipCommand implements Command {
       this.after = {
         ...this.after,
         pathText: normalizeTextPath(this.after.pathText)
+      };
+    }
+    if (this.after.type === 'subtitle') {
+      const subtitleType = normalizeSubtitleTrackType(this.after.subtitleType);
+      this.after = {
+        ...this.after,
+        subtitleType,
+        speaker: subtitleType === 'cc' ? normalizeSubtitleSpeaker(this.after.speaker) : undefined,
+        soundDesc: subtitleType === 'cc' ? normalizeSubtitleSoundDesc(this.after.soundDesc) : undefined
       };
     }
     if (this.after.type === 'credits') {

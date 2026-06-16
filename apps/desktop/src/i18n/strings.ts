@@ -1399,7 +1399,8 @@ const zh = {
       video: '视频',
       audio: '音频',
       text: '文字',
-      subtitle: '字幕'
+      subtitle: '字幕',
+      cc: 'CC'
     },
     newTrackName: (type: string, index: number) => `${formatTrackType(type)} ${index}`
   },
@@ -1814,6 +1815,28 @@ const zh = {
     subtitleMode: {
       burnIn: '烧录字幕',
       softSub: '软字幕'
+    },
+    closedCaptions: {
+      kind: '字幕类型',
+      standard: '普通字幕',
+      cc: 'CC 无障碍字幕',
+      speaker: '说话人',
+      speakerPlaceholder: '输入或复用说话人',
+      speakerLibrary: '说话人库',
+      addSpeaker: '加入说话人库',
+      removeSpeaker: '移除说话人',
+      speakerColor: '说话人颜色',
+      soundDesc: '声音描述',
+      soundDescNone: '无',
+      soundDescCustom: '自定义',
+      customSoundDesc: '自定义声音描述',
+      soundDescriptions: {
+        music: '[音乐]',
+        applause: '[掌声]',
+        laughter: '[笑声]',
+        noise: '[噪声]',
+        silence: '[静音]'
+      }
     },
     subtitleRetiming: {
       title: '校时',
@@ -4200,7 +4223,8 @@ const enOverrides = {
       video: 'Video',
       audio: 'Audio',
       text: 'Text',
-      subtitle: 'Subtitle'
+      subtitle: 'Subtitle',
+      cc: 'CC'
     },
     newTrackName: (type: string, index: number) => `${formatTrackType(type)} ${index}`
   },

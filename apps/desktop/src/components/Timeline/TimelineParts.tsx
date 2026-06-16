@@ -430,8 +430,15 @@ export function TrackRow({
           ) : null}
         </div>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-xs font-semibold">{track.name}</div>
-          <div className="text-[11px] uppercase tracking-normal text-slate-500">{formatTrackType(track.type)}</div>
+          <div className="flex min-w-0 items-center gap-1">
+            <div className="truncate text-xs font-semibold">{track.name}</div>
+            {track.type === 'subtitle' && track.subtitleType === 'cc' ? (
+              <span className="rounded border border-brand/30 bg-brand/10 px-1 text-[10px] font-bold text-brand" data-testid={`track-cc-badge-${track.id}`}>
+                {zhCN.timeline.trackTypes.cc}
+              </span>
+            ) : null}
+          </div>
+          <div className="text-[11px] uppercase tracking-normal text-slate-500">{formatTimelineTrackType(track)}</div>
           {track.type === 'audio' ? <AudioTrackFrequencyBands trackId={track.id} bands={frequencyBands} /> : null}
         </div>
         <div className="flex items-center gap-1">
@@ -1199,6 +1206,13 @@ function getTrackWaveformColor(trackType: Track['type']): string {
     return '#0f766e';
   }
   return '#047857';
+}
+
+function formatTimelineTrackType(track: Track): string {
+  if (track.type === 'subtitle' && track.subtitleType === 'cc') {
+    return zhCN.timeline.trackTypes.cc;
+  }
+  return formatTrackType(track.type);
 }
 
 function formatFrameRateLabel(frameRate: number): string {
