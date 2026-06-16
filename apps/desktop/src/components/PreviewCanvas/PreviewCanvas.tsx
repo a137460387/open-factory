@@ -386,7 +386,7 @@ export function PreviewCanvas({
     }
     rendererRef.current.syncAudio(timeline, project.media, playheadTime, isPlaying && playbackRate > 0, project.masterVolume);
     const levels = rendererRef.current.getAudioLevels();
-    setAudioLevels(levels.trackLevels, levels.masterLevel, levels.trackFrequencyBands);
+    setAudioLevels(levels.trackLevels, levels.masterLevel, levels.trackFrequencyBands, levels.trackAnalysisFrames);
     return () => {
       canceled = true;
     };

@@ -254,6 +254,7 @@ const MacroHistoryDialog = lazy(() => import('../macros/MacroHistoryDialog').the
 const TimelineExportDialog = lazy(() => import('../timeline-export/TimelineExportDialog').then((module) => ({ default: module.TimelineExportDialog })));
 const BatchTranscodeDialog = lazy(() => import('../media/BatchTranscodeDialog').then((module) => ({ default: module.BatchTranscodeDialog })));
 const BatchWatermarkDialog = lazy(() => import('../media/BatchWatermarkDialog').then((module) => ({ default: module.BatchWatermarkDialog })));
+const BatchProjectProcessingDialog = lazy(() => import('../projectBatch/BatchProjectProcessingDialog').then((module) => ({ default: module.BatchProjectProcessingDialog })));
 const GifExportDialog = lazy(() => import('../media/GifExportDialog'));
 const AudioSpectrumDialog = lazy(() => import('../media/AudioSpectrumDialog'));
 const MediaPrecheckPanel = lazy(() => import('../media/MediaPrecheckPanel').then((module) => ({ default: module.MediaPrecheckPanel })));
@@ -305,6 +306,7 @@ export function EditorShell() {
   const setOutPoint = useEditorStore((state) => state.setOutPoint);
   const [batchTranscodeOpen, setBatchTranscodeOpen] = useState(false);
   const [batchWatermarkOpen, setBatchWatermarkOpen] = useState(false);
+  const [batchProjectProcessingOpen, setBatchProjectProcessingOpen] = useState(false);
   const [batchTranscodeInitialPaths, setBatchTranscodeInitialPaths] = useState<string[]>([]);
   const [gifExportAsset, setGifExportAsset] = useState<MediaAsset>();
   const [spectrumAsset, setSpectrumAsset] = useState<MediaAsset>();
@@ -2593,6 +2595,7 @@ export function EditorShell() {
           onImportMedia={() => void importMedia()}
           onBatchTranscode={() => openBatchTranscode()}
           onOpenBatchWatermark={() => setBatchWatermarkOpen(true)}
+          onOpenBatchProjectProcessing={() => setBatchProjectProcessingOpen(true)}
           onOpenMediaPrecheck={() => setMediaPrecheckOpen(true)}
           onOpenVideoStitchWizard={() => setVideoStitchWizardOpen(true)}
           onOpenSyncCompare={openSyncCompare}
@@ -2919,6 +2922,7 @@ export function EditorShell() {
             />
           ) : null}
           {batchWatermarkOpen ? <BatchWatermarkDialog project={project} onClose={() => setBatchWatermarkOpen(false)} /> : null}
+          {batchProjectProcessingOpen ? <BatchProjectProcessingDialog onClose={() => setBatchProjectProcessingOpen(false)} /> : null}
           {gifExportAsset ? <GifExportDialog asset={gifExportAsset} onClose={() => setGifExportAsset(undefined)} /> : null}
           {spectrumAsset ? (
             <AudioSpectrumDialog

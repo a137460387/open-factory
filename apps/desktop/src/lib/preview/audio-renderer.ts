@@ -23,6 +23,7 @@ import {
 import { createAudioElement } from './media-elements';
 import { recordAudioMix } from './debug';
 import type { AudioMeterLevel } from '../../store/audioMeterStore';
+import type { ChannelAnalysisFrame } from '../../media/channelAnalysis';
 
 interface AudioNodeSet {
   source: MediaElementAudioSourceNode;
@@ -84,9 +85,15 @@ export class PreviewAudioRenderer {
     }
   }
 
-  getLevels(nowMs = performance.now()): { trackLevels: Record<string, AudioMeterLevel>; masterLevel: AudioMeterLevel; trackFrequencyBands: Record<string, number[]> } {
+  getLevels(nowMs = performance.now()): {
+    trackLevels: Record<string, AudioMeterLevel>;
+    masterLevel: AudioMeterLevel;
+    trackFrequencyBands: Record<string, number[]>;
+    trackAnalysisFrames: Record<string, ChannelAnalysisFrame>;
+  } {
     const trackLevels: Record<string, AudioMeterLevel> = {};
     const trackFrequencyBands: Record<string, number[]> = {};
+    const trackAnalysisFrames: Record<string, ChannelAnalysisFrame> = {};
     for (const clipId of this.activeClipIds) {
       const node = this.audioNodes.get(clipId);
       const trackId = this.activeTrackIdsByClipId.get(clipId);
@@ -103,6 +110,8 @@ export class PreviewAudioRenderer {
       const bands = readAnalyserFrequencyBands(node.analyser);
       const existingBands = trackFrequencyBands[trackId];
       trackFrequencyBands[trackId] = existingBands ? existingBands.map((value, index) => Math.max(value, bands[index] ?? 0)) : bands;
+      const analysisFrame = readAnalyserAnalysisFrame(node.analyser, this.audioContext?.sampleRate ?? 48_000, nowMs);
+      trackAnalysisFrames[trackId] = mergeAnalysisFrames(trackAnalysisFrames[trackId], analysisFrame);
     }
 
     const master = this.masterAnalyser ? readVuMeter(this.masterAnalyser, this.masterMeterState, nowMs) : { levelDb: -60, peakDb: -60, peakHeldAtMs: nowMs };
@@ -110,6 +119,7 @@ export class PreviewAudioRenderer {
     return {
       trackLevels,
       trackFrequencyBands,
+      trackAnalysisFrames,
       masterLevel: { levelDb: master.levelDb, peakDb: master.peakDb }
     };
   }
@@ -306,6 +316,35 @@ function readAnalyserFrequencyBands(analyser: AnalyserNode, bandCount = 16): num
     bands.push(Math.min(1, total / Math.max(1, end - start) / 255));
   }
   return bands;
+}
+
+function readAnalyserAnalysisFrame(analyser: AnalyserNode, sampleRate: number, recordedAtMs: number): ChannelAnalysisFrame {
+  analyser.fftSize = 2048;
+  const frequency = new Uint8Array(analyser.frequencyBinCount);
+  const waveform = new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteFrequencyData(frequency);
+  analyser.getByteTimeDomainData(waveform);
+  return {
+    sampleRate,
+    frequencyData: Array.from(frequency, (value) => value / 255),
+    leftTimeDomain: Array.from(waveform, (value) => (value - 128) / 128),
+    rightTimeDomain: Array.from(waveform, (value) => (value - 128) / 128),
+    recordedAtMs
+  };
+}
+
+function mergeAnalysisFrames(current: ChannelAnalysisFrame | undefined, next: ChannelAnalysisFrame): ChannelAnalysisFrame {
+  if (!current) {
+    return next;
+  }
+  const length = Math.min(current.frequencyData.length, next.frequencyData.length);
+  return {
+    sampleRate: next.sampleRate,
+    recordedAtMs: next.recordedAtMs,
+    frequencyData: Array.from({ length }, (_, index) => Math.max(Number(current.frequencyData[index] ?? 0), Number(next.frequencyData[index] ?? 0))),
+    leftTimeDomain: next.leftTimeDomain,
+    rightTimeDomain: next.rightTimeDomain
+  };
 }
 
 function setPannerPosition(panner: PannerNode, x: number, y: number, z: number): void {
