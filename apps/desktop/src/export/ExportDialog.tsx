@@ -49,6 +49,7 @@ import {
   type ExportCostCpuLoad,
   type ExportLoudnessNormalization,
   type ExportPostExportScriptResult,
+  type ExportRecoveryReport,
   type ExportPipeline,
   type ExportPipelineNode,
   type ExportPipelineNodeStatus,
@@ -1888,6 +1889,7 @@ function relinkFromPreflight(): void {
                         {t.quality.button}
                       </button>
                     </div>
+                    {entry.report?.recovery ? <ExportRecoveryPanel report={entry.report.recovery} /> : null}
                     {entry.report?.qualityAssurance ? <PostExportQualityAssurancePanel result={entry.report.qualityAssurance} /> : null}
                     {entry.report?.postExportScript ? <PostExportScriptResultPanel result={entry.report.postExportScript} /> : null}
                     {entry.upload ? <ExportUploadStatusPanel upload={entry.upload} onRetry={entry.upload.status === 'error' ? () => void retryHistoryUpload(entry) : undefined} /> : null}
@@ -4106,6 +4108,48 @@ function PostExportScriptResultPanel({ result }: { result: ExportPostExportScrip
       {result.stderr ? (
         <pre className="mt-2 max-h-20 overflow-auto rounded bg-white/70 p-2 whitespace-pre-wrap" data-testid="export-post-script-stderr">{result.stderr}</pre>
       ) : null}
+    </div>
+  );
+}
+
+function ExportRecoveryPanel({ report }: { report: ExportRecoveryReport }) {
+  const t = zhCN.exportDialog.recoveryLog;
+  return (
+    <div
+      className={`mt-2 rounded-md border p-2 text-[11px] ${report.healed ? 'border-emerald-200 bg-emerald-50 text-emerald-900' : 'border-rose-200 bg-rose-50 text-rose-900'}`}
+      data-testid="export-recovery-report"
+      data-healed={String(report.healed)}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="font-semibold">{t.title}</div>
+        <div className="flex items-center gap-2">
+          <span className="rounded-full border border-current px-2 py-0.5 font-semibold">{report.healed ? t.healed : t.failed}</span>
+          <span className="tabular-nums">{t.attempts(report.attempts)}</span>
+        </div>
+      </div>
+      <div className="mt-2 grid gap-1">
+        {report.entries.map((entry) => (
+          <div
+            key={entry.attempt}
+            className="rounded-md bg-white/70 p-2"
+            data-testid="export-recovery-entry"
+            data-kind={entry.errorKind}
+            data-action={entry.action}
+            data-result={entry.result}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="font-semibold text-slate-700">
+                {t.attemptLabel(entry.attempt)} · {t.errorKind[entry.errorKind]}
+              </div>
+              <span className="rounded-full border px-1.5 py-0.5 text-[10px] font-semibold">{t.result[entry.result]}</span>
+            </div>
+            <div className="mt-1 text-slate-600">{t.action[entry.action]}</div>
+            <div className="mt-1 truncate font-mono text-[10px] text-slate-500" title={entry.originalError}>
+              {entry.originalError}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

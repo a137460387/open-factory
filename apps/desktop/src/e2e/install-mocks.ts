@@ -9,6 +9,7 @@ import {
   PRIMARY_SEQUENCE_ID,
   createProject,
   createTrack,
+  createVideoFingerprint,
   type FfmpegExportPlan,
   type KeyframeProperty,
   type Clip,
@@ -60,6 +61,7 @@ let postExportQualityStatus: 'pass' | 'warning' | 'fail' = 'pass';
 let exportGateHeld = false;
 const exportGates: Array<{ taskId?: string; release: () => void }> = [];
 let exportWarmupDelayMs = 0;
+let nextExportError: string | undefined;
 let mockSceneTimes = [1];
 let lastConfirmMessage: string | undefined;
 let availableMemoryBytes = 8 * 1024 * 1024 * 1024;
@@ -379,6 +381,11 @@ const mocks: TauriMocks = {
     await waitForExportGate(taskId);
     if (canceledExportTaskIds.has(cancelKey)) {
       throw new Error('Export canceled.');
+    }
+    if (nextExportError) {
+      const message = nextExportError;
+      nextExportError = undefined;
+      throw new Error(message);
     }
     emit('export-progress', taskId ? { taskId, progress: 1 } : 1);
     if (outputPath.includes('%')) {
@@ -1659,6 +1666,7 @@ window.__E2E_ACTIONS__ = {
   },
   setupDuplicateMediaFixture: () => {
     const project = createProject('Duplicate Media E2E');
+    const fingerprint = createVideoFingerprint(['ffff0000ffff0000', '0000ffff0000ffff', 'f0f0f0f00f0f0f0f']);
     const media: MediaAsset[] = [
       {
         id: 'media-duplicate-a',
@@ -1705,6 +1713,10 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setProject({
       ...project,
       media,
+      mediaMetadata: {
+        'media-duplicate-a': { fingerprint },
+        'media-duplicate-b': { fingerprint }
+      },
       timeline,
       sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
       activeSequenceId: PRIMARY_SEQUENCE_ID
@@ -1969,6 +1981,9 @@ window.__E2E_ACTIONS__ = {
   setPostExportQualityStatus: (status: unknown) => {
     postExportQualityStatus = status === 'warning' || status === 'fail' ? status : 'pass';
   },
+  setNextExportError: (message: unknown) => {
+    nextExportError = typeof message === 'string' && message.trim() ? message : undefined;
+  },
   getWrittenFile: (path: unknown) => (typeof path === 'string' ? files.get(path) : undefined),
   getWrittenFileSize: (path: unknown) => (typeof path === 'string' ? files.get(path)?.length ?? 0 : 0),
   getBackupFiles: (path: unknown) => {
@@ -2132,6 +2147,7 @@ window.__E2E_ACTIONS__ = {
     notifications = [];
     recordingTasks = new Map();
     exportWarmupDelayMs = 0;
+    nextExportError = undefined;
     postExportQualityStatus = 'pass';
     localStorage.removeItem('open-factory:proxy-settings');
     localStorage.removeItem('open-factory:plugins');

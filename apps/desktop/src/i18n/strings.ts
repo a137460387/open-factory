@@ -916,6 +916,9 @@ const zh = {
     spectrumAnalysis: '频谱分析',
     addVersion: '添加版本',
     compareVersions: '对比版本',
+    findSourceFiles: '查找同源文件',
+    sourcePathsTitle: '同源文件',
+    sourcePathsEmpty: '没有找到同源文件，或该素材尚未生成指纹。',
     versionBadge: (count: number) => `${count} 版`,
     versionBadgeTitle: (count: number) => `共 ${count} 个版本`,
     versionOriginal: '原始',
@@ -2862,6 +2865,34 @@ const zh = {
         resolution: '分辨率'
       }
     },
+    recoveryLog: {
+      title: '导出自愈',
+      healed: '已自愈',
+      failed: '自愈失败',
+      attempts: (count: number) => `尝试 ${count} 次`,
+      attemptLabel: (attempt: number) => `第 ${attempt} 次`,
+      result: {
+        pending: '待重试',
+        success: '成功',
+        failed: '失败'
+      },
+      errorKind: {
+        'ffmpeg-crash': 'FFmpeg 崩溃',
+        'unsupported-codec': '编解码器不支持',
+        'out-of-memory': '内存不足',
+        'disk-space': '磁盘空间不足',
+        'missing-font': '字体缺失',
+        unknown: '未知错误'
+      },
+      action: {
+        'retry-same': '使用原参数重试',
+        'fallback-codec': '切换到软件编码器',
+        'reduce-concurrency': '降低导出并发并清理代理缓存',
+        'prompt-disk-cleanup': '提示清理磁盘后重试',
+        'skip-drawtext': '跳过文字渲染滤镜后重试',
+        none: '无可用自动修复方案'
+      }
+    },
     quality: {
       button: '质量评估',
       title: '质量评估',
@@ -4476,6 +4507,9 @@ const enOverrides = {
     spectrumAnalysis: 'Spectrum Analysis',
     addVersion: 'Add Version',
     compareVersions: 'Compare Versions',
+    findSourceFiles: 'Find Source Files',
+    sourcePathsTitle: 'Source Files',
+    sourcePathsEmpty: 'No source files found, or this asset has no fingerprint yet.',
     versionBadge: (count: number) => `${count} versions`,
     versionBadgeTitle: (count: number) => `${count} versions`,
     versionOriginal: 'Original',
@@ -6157,6 +6191,34 @@ const enOverrides = {
         silence: 'Silence',
         fileSize: 'File Size',
         resolution: 'Resolution'
+      }
+    },
+    recoveryLog: {
+      title: 'Export Recovery',
+      healed: 'Recovered',
+      failed: 'Recovery Failed',
+      attempts: (count: number) => `${count} attempt(s)`,
+      attemptLabel: (attempt: number) => `Attempt ${attempt}`,
+      result: {
+        pending: 'Pending',
+        success: 'Success',
+        failed: 'Failed'
+      },
+      errorKind: {
+        'ffmpeg-crash': 'FFmpeg Crash',
+        'unsupported-codec': 'Unsupported Codec',
+        'out-of-memory': 'Out of Memory',
+        'disk-space': 'Disk Space',
+        'missing-font': 'Missing Font',
+        unknown: 'Unknown Error'
+      },
+      action: {
+        'retry-same': 'Retry with the same arguments',
+        'fallback-codec': 'Switch to a software encoder',
+        'reduce-concurrency': 'Reduce export concurrency and clear proxy cache',
+        'prompt-disk-cleanup': 'Ask the user to clean disk space before retrying',
+        'skip-drawtext': 'Skip drawtext filters and retry',
+        none: 'No automatic recovery is available'
       }
     },
     quality: {

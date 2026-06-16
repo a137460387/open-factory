@@ -42,7 +42,7 @@ export interface ExportQueueState {
   updateTaskSegment: (taskId: string, segmentId: string, patch: Partial<RenderFarmSegmentStatus>) => void;
   setTaskLogPath: (taskId: string, logPath: string) => void;
   finishTask: (taskId: string, report?: ExportReport) => void;
-  failTask: (taskId: string, error: string) => void;
+  failTask: (taskId: string, error: string, report?: ExportReport) => void;
   cancelTask: (taskId: string) => void;
   interruptTask: (taskId: string, error?: string) => void;
   retryTask: (taskId: string) => void;
@@ -104,8 +104,8 @@ export const useExportQueueStore = create<ExportQueueState>((set, get) => ({
       lastCompletedPath: task?.outputPath ?? state.lastCompletedPath
     }));
   },
-  failTask: (taskId, error) => {
-    set((state) => ({ tasks: failExportTask(state.tasks, taskId, error) }));
+  failTask: (taskId, error, report) => {
+    set((state) => ({ tasks: failExportTask(state.tasks, taskId, error, undefined, report) }));
   },
   cancelTask: (taskId) => {
     set((state) => ({ tasks: cancelExportTask(state.tasks, taskId) }));

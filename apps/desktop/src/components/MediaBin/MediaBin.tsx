@@ -3,9 +3,11 @@ import {
   TITLE_TEMPLATE_IDS,
   CONTENT_SCENE_TYPES,
   collectSmartAlbums,
+  collectFingerprintReferences,
   filterMediaAssets,
   getMediaFolderDepth,
   isFrameRateMismatch,
+  listFingerprintSourcePaths,
   getMediaVersionLabel,
   shouldGenerateProxy,
   type MediaAsset,
@@ -70,6 +72,7 @@ type MediaBinView = 'all' | 'video' | 'audio' | 'image' | 'tagged' | 'titles' | 
 type QuickMediaFilter = Extract<MediaMetadataFilter, 'all' | 'selected' | 'five-star'>;
 const MEDIA_CARD_DRAG_MIME = 'application/x-open-factory-media-id';
 type MediaInfoState = { asset: MediaAsset; loading: boolean; analysis?: MediaAnalysis; error?: string };
+type MediaSourcePathsState = { asset: MediaAsset; paths: string[] };
 
 export function MediaBin({
   media,
@@ -112,6 +115,7 @@ export function MediaBin({
   const [smartAlbumId, setSmartAlbumId] = useState<SmartAlbumId | 'none'>('none');
   const [mediaLibraryView, setMediaLibraryView] = useState<MediaLibraryViewSettings>(DEFAULT_MEDIA_LIBRARY_VIEW_SETTINGS);
   const [mediaInfo, setMediaInfo] = useState<MediaInfoState>();
+  const [sourcePaths, setSourcePaths] = useState<MediaSourcePathsState>();
   const missingCount = media.filter((asset) => asset.missing).length;
   const smartAlbums = collectSmartAlbums(media, Date.now(), mediaMetadata);
   const smartAlbumIds = smartAlbumId === 'none' ? undefined : new Set(smartAlbums.find((album) => album.id === smartAlbumId)?.assetIds ?? []);
@@ -164,6 +168,12 @@ export function MediaBin({
         error: error instanceof Error ? error.message : t.mediaInfo.failedMessage
       });
     }
+  };
+
+  const findSourcePaths = (asset: MediaAsset) => {
+    const references = collectFingerprintReferences(media, mediaMetadata);
+    const paths = listFingerprintSourcePaths(mediaMetadata[asset.id]?.fingerprint, references);
+    setSourcePaths({ asset, paths });
   };
 
   useEffect(() => {
@@ -444,6 +454,7 @@ export function MediaBin({
             onExportGif={onExportGif}
             onAnalyzeSpectrum={onAnalyzeSpectrum}
             onShowInfo={(asset) => void openMediaInfo(asset)}
+            onFindSources={findSourcePaths}
           />
         ) : (
           <div className="space-y-3">
@@ -472,6 +483,7 @@ export function MediaBin({
               onExportGif={onExportGif}
               onAnalyzeSpectrum={onAnalyzeSpectrum}
               onShowInfo={(asset) => void openMediaInfo(asset)}
+              onFindSources={findSourcePaths}
             />
             <RootMediaDropZone onMoveMediaToFolder={onMoveMediaToFolder} />
             <MediaCardGrid
@@ -493,11 +505,13 @@ export function MediaBin({
               onExportGif={onExportGif}
               onAnalyzeSpectrum={onAnalyzeSpectrum}
               onShowInfo={(asset) => void openMediaInfo(asset)}
+              onFindSources={findSourcePaths}
             />
           </div>
         )}
       </div>
       {mediaInfo ? <MediaInfoDialog state={mediaInfo} onClose={() => setMediaInfo(undefined)} /> : null}
+      {sourcePaths ? <MediaSourcePathsDialog state={sourcePaths} onClose={() => setSourcePaths(undefined)} /> : null}
     </aside>
   );
 }
@@ -649,6 +663,7 @@ function MediaFolderTree(props: {
   onExportGif(asset: MediaAsset): void;
   onAnalyzeSpectrum(asset: MediaAsset): void;
   onShowInfo(asset: MediaAsset): void;
+  onFindSources(asset: MediaAsset): void;
 }) {
   const roots = props.folders.filter((folder) => !folder.parentId);
   if (roots.length === 0) {
@@ -689,7 +704,8 @@ function MediaFolderNode({
   onBatchTranscode,
   onExportGif,
   onAnalyzeSpectrum,
-  onShowInfo
+  onShowInfo,
+  onFindSources
 }: {
   folder: MediaFolder;
   depth: number;
@@ -717,6 +733,7 @@ function MediaFolderNode({
   onExportGif(asset: MediaAsset): void;
   onAnalyzeSpectrum(asset: MediaAsset): void;
   onShowInfo(asset: MediaAsset): void;
+  onFindSources(asset: MediaAsset): void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState(folder.name);
@@ -815,6 +832,7 @@ function MediaFolderNode({
               onExportGif={onExportGif}
               onAnalyzeSpectrum={onAnalyzeSpectrum}
               onShowInfo={onShowInfo}
+              onFindSources={onFindSources}
             />
           ))}
           <MediaCardGrid
@@ -836,6 +854,7 @@ function MediaFolderNode({
             onExportGif={onExportGif}
             onAnalyzeSpectrum={onAnalyzeSpectrum}
             onShowInfo={onShowInfo}
+            onFindSources={onFindSources}
           />
         </div>
       ) : null}
@@ -999,7 +1018,8 @@ function MediaCardGrid({
   onBatchTranscode,
   onExportGif,
   onAnalyzeSpectrum,
-  onShowInfo
+  onShowInfo,
+  onFindSources
 }: {
   media: MediaAsset[];
   gridSize: MediaLibraryGridSize;
@@ -1019,6 +1039,7 @@ function MediaCardGrid({
   onExportGif(asset: MediaAsset): void;
   onAnalyzeSpectrum(asset: MediaAsset): void;
   onShowInfo(asset: MediaAsset): void;
+  onFindSources(asset: MediaAsset): void;
 }) {
   if (media.length === 0) {
     return null;
@@ -1046,6 +1067,7 @@ function MediaCardGrid({
           onExportGif={() => onExportGif(asset)}
           onAnalyzeSpectrum={() => onAnalyzeSpectrum(asset)}
           onShowInfo={() => onShowInfo(asset)}
+          onFindSources={() => onFindSources(asset)}
         />
       ))}
     </div>
@@ -1092,6 +1114,38 @@ function TitleTemplateGrid({ onAddTitleTemplate }: { onAddTitleTemplate(template
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function MediaSourcePathsDialog({ state, onClose }: { state: MediaSourcePathsState; onClose(): void }) {
+  const paths = state.paths;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-testid="media-source-paths-dialog">
+      <div className="w-full max-w-xl overflow-hidden rounded-lg bg-white shadow-soft">
+        <div className="flex items-center justify-between border-b border-line px-4 py-3">
+          <div className="min-w-0">
+            <h2 className="truncate text-base font-semibold text-ink">{zhCN.mediaBin.sourcePathsTitle}</h2>
+            <div className="truncate text-xs text-slate-500">{state.asset.name}</div>
+          </div>
+          <button className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 hover:bg-panel" type="button" aria-label={zhCN.common.close} onClick={onClose}>
+            <X size={17} />
+          </button>
+        </div>
+        <div className="max-h-[50vh] overflow-y-auto p-4 text-xs">
+          {paths.length > 0 ? (
+            <ul className="space-y-2">
+              {paths.map((path) => (
+                <li key={path} className="rounded-md border border-line bg-panel px-2 py-1.5 font-mono text-slate-700" data-testid="media-source-path">
+                  {path}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <div className="rounded-md border border-line bg-panel p-3 text-slate-600" data-testid="media-source-path-empty">{zhCN.mediaBin.sourcePathsEmpty}</div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -1258,7 +1312,8 @@ function MediaCard({
   onBatchTranscode,
   onExportGif,
   onAnalyzeSpectrum,
-  onShowInfo
+  onShowInfo,
+  onFindSources
 }: {
   asset: MediaAsset;
   metadata?: MediaMetadata;
@@ -1277,6 +1332,7 @@ function MediaCard({
   onExportGif(): void;
   onAnalyzeSpectrum(): void;
   onShowInfo(): void;
+  onFindSources(): void;
 }) {
   const proxySettings = useProxySettingsStore((state) => state.settings);
   const proxyStatus = asset.proxyStatus ?? (asset.type === 'video' ? 'none' : undefined);
@@ -1421,6 +1477,18 @@ function MediaCard({
           >
             <Plus size={13} />
             {zhCN.mediaBin.addVersion}
+          </button>
+          <button
+            className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
+            type="button"
+            data-testid={`media-find-source-${asset.id}`}
+            onClick={() => {
+              onFindSources();
+              setLabelMenuOpen(false);
+            }}
+          >
+            <Search size={13} />
+            {zhCN.mediaBin.findSourceFiles}
           </button>
           <button
             className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel disabled:opacity-40"

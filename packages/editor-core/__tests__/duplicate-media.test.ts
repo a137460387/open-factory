@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { detectDuplicateMediaGroups } from '../src';
+import { createVideoFingerprint, detectDuplicateMediaGroups } from '../src';
 
 describe('duplicate media detection', () => {
   it('groups different paths with the same size and first-chunk hash', () => {
@@ -28,6 +28,42 @@ describe('duplicate media detection', () => {
       detectDuplicateMediaGroups([
         signature('asset-a', 'C:/Media/a.mp4', 4096, 'hash-a'),
         signature('asset-b', 'D:/Media/b.mp4', 4096, 'hash-b')
+      ])
+    ).toEqual([]);
+  });
+
+  it('ignores invalid size or empty hash signatures', () => {
+    expect(
+      detectDuplicateMediaGroups([
+        signature('asset-a', 'C:/Media/a.mp4', 0, 'hash-a'),
+        signature('asset-b', 'D:/Media/b.mp4', 4096, '   ')
+      ])
+    ).toEqual([]);
+  });
+
+  it('groups different paths with the same media fingerprint even when head hashes differ', () => {
+    const fingerprint = createVideoFingerprint(['ffff0000ffff0000', '0000ffff0000ffff', 'f0f0f0f00f0f0f0f']);
+    const groups = detectDuplicateMediaGroups([
+      { ...signature('asset-a', 'C:/Media/a.mp4', 4096, 'hash-a'), fingerprint },
+      { ...signature('asset-b', 'D:/Media/b.mp4', 8192, 'hash-b'), fingerprint }
+    ]);
+
+    expect(groups[0]).toMatchObject({
+      fingerprintHash: fingerprint.hash,
+      keepAssetId: 'asset-a',
+      assets: [
+        { assetId: 'asset-a', name: 'a.mp4', path: 'C:/Media/a.mp4' },
+        { assetId: 'asset-b', name: 'b.mp4', path: 'D:/Media/b.mp4' }
+      ]
+    });
+  });
+
+  it('does not group fingerprint matches when they resolve to the same path', () => {
+    const fingerprint = createVideoFingerprint(['ffff0000ffff0000']);
+    expect(
+      detectDuplicateMediaGroups([
+        { ...signature('asset-a', 'C:/Media/a.mp4', 4096, 'hash-a'), fingerprint },
+        { ...signature('asset-b', 'c:/media/a.mp4', 8192, 'hash-b'), fingerprint }
       ])
     ).toEqual([]);
   });

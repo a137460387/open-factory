@@ -4,6 +4,10 @@ import {
   buildFfmpegExportPlan,
   createProgressiveExportState,
   estimateProgressiveCompletedDuration,
+  appendExportRecoveryLog,
+  buildExportRecoveryDecision,
+  buildExportRecoveryReport,
+  finalizeExportRecoveryLog,
   hasEnabledPostExportQualityChecks,
   runRenderFarmWithFallback,
   shouldRetryPostExportQuality,
@@ -15,6 +19,8 @@ import {
   type ExportTask,
   type TextArtifact,
   type Project,
+  type FfmpegExportPlan,
+  type ExportRecoveryLogEntry,
   type RenderFarmTaskConfig
 } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
@@ -27,6 +33,7 @@ import { useExportQueueStore } from './export-queue-store';
 import { runConfiguredExportRules, type ExportRuleEventContext } from './export-rules';
 import { buildSidecarSubtitlePath } from './export-sidecar';
 import { runConfiguredExportUpload } from './export-upload';
+import { clearMediaCache } from '../cache/cache-service';
 
 export const EXPORT_MEMORY_PAUSE_THRESHOLD_BYTES = 2 * 1024 * 1024 * 1024;
 const RESOURCE_RECHECK_DELAY_MS = 500;
@@ -215,6 +222,7 @@ async function runSingleTask(task: ExportTask): Promise<void> {
     useExportQueueStore.getState().setTaskLogPath(task.id, logPath);
   }
   try {
+    let recoveryEntries: ExportRecoveryLogEntry[] = [];
     let result = task.renderFarm?.enabled
       ? await runRenderFarmWithFallback({
           taskId: task.id,
@@ -229,8 +237,14 @@ async function runSingleTask(task: ExportTask): Promise<void> {
           onSegmentUpdate: (segment) => useExportQueueStore.getState().updateTaskSegment(task.id, segment.id, segment),
           onProgress: (progress) => useExportQueueStore.getState().updateTaskProgress(task.id, progress)
         })
-      : await runLocalExportTask(task);
-    let report: ExportReport = result.report ?? {};
+      : await runRecoverableLocalExportTask(task, (entries) => {
+          recoveryEntries = entries;
+        });
+    let report: ExportReport = { ...(result.report ?? {}) };
+    const recoveryReport = buildExportRecoveryReport(recoveryEntries, recoveryEntries.length > 0);
+    if (recoveryReport) {
+      report.recovery = recoveryReport;
+    }
     const qualitySettings = await readExportQualityAssuranceSettings().catch(() => undefined);
     if (qualitySettings && hasEnabledPostExportQualityChecks(qualitySettings)) {
       let retryAttempt = 0;
@@ -260,8 +274,14 @@ async function runSingleTask(task: ExportTask): Promise<void> {
         }
         retryAttempt += 1;
         useExportQueueStore.getState().updateTaskProgress(task.id, 0);
-        result = task.renderFarm?.enabled ? result : await runLocalExportTask(task);
+        result = task.renderFarm?.enabled ? result : await runRecoverableLocalExportTask(task, (entries) => {
+          recoveryEntries = entries;
+        });
         report = { ...(result.report ?? {}) };
+        const retryRecoveryReport = buildExportRecoveryReport(recoveryEntries, recoveryEntries.length > 0);
+        if (retryRecoveryReport) {
+          report.recovery = retryRecoveryReport;
+        }
       }
     }
     const latest = useExportQueueStore.getState().tasks.find((item) => item.id === task.id);
@@ -277,7 +297,9 @@ async function runSingleTask(task: ExportTask): Promise<void> {
     const latest = useExportQueueStore.getState().tasks.find((item) => item.id === task.id);
     if (latest?.status === 'running') {
       const message = error instanceof Error ? error.message : zhCN.errors.exportFailed;
-      useExportQueueStore.getState().failTask(task.id, message);
+      const recoveryEntries = isExportRecoveryFailure(error) ? finalizeExportRecoveryLog(error.recoveryEntries, 'failed') : [];
+      const recoveryReport = buildExportRecoveryReport(recoveryEntries, false);
+      useExportQueueStore.getState().failTask(task.id, message, recoveryReport ? { recovery: recoveryReport } : undefined);
       await persistFinishedTaskToHistory(task.id);
       const failedTask = useExportQueueStore.getState().tasks.find((item) => item.id === task.id) ?? { ...task, error: message };
       await runExportRulesSafely({ type: 'export-failure', task: failedTask, projectName: failedTask.projectName ?? task.projectName });
@@ -285,20 +307,61 @@ async function runSingleTask(task: ExportTask): Promise<void> {
   }
 }
 
-async function runLocalExportTask(task: ExportTask): Promise<Awaited<ReturnType<typeof runExport>>> {
+class ExportRecoveryFailure extends Error {
+  constructor(message: string, readonly recoveryEntries: ExportRecoveryLogEntry[]) {
+    super(message);
+    this.name = 'ExportRecoveryFailure';
+  }
+}
+
+function isExportRecoveryFailure(error: unknown): error is ExportRecoveryFailure {
+  return error instanceof ExportRecoveryFailure;
+}
+
+async function runRecoverableLocalExportTask(task: ExportTask, onRecoveryEntries: (entries: ExportRecoveryLogEntry[]) => void): Promise<Awaited<ReturnType<typeof runExport>>> {
+  let currentPlan: FfmpegExportPlan = task.plan;
+  let recoveryEntries: ExportRecoveryLogEntry[] = [];
+  while (true) {
+    try {
+      const result = await runLocalExportTask(task, currentPlan);
+      recoveryEntries = finalizeExportRecoveryLog(recoveryEntries, 'success');
+      onRecoveryEntries(recoveryEntries);
+      return result;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : zhCN.errors.exportFailed;
+      const decision = buildExportRecoveryDecision(currentPlan, message, recoveryEntries.length);
+      if (!decision.canRetry || !decision.plan) {
+        const failedEntries = recoveryEntries.length > 0
+          ? finalizeExportRecoveryLog(recoveryEntries, 'failed')
+          : appendExportRecoveryLog(recoveryEntries, decision, message, 'failed');
+        throw new ExportRecoveryFailure(message, failedEntries);
+      }
+      recoveryEntries = appendExportRecoveryLog(recoveryEntries, decision, message);
+      onRecoveryEntries(recoveryEntries);
+      currentPlan = decision.plan;
+      if (decision.action === 'reduce-concurrency') {
+        useExportQueueStore.getState().setMaxConcurrent(1);
+        await clearMediaCache().catch(() => undefined);
+      }
+      useExportQueueStore.getState().updateTaskProgress(task.id, 0);
+    }
+  }
+}
+
+async function runLocalExportTask(task: ExportTask, plan: FfmpegExportPlan = task.plan): Promise<Awaited<ReturnType<typeof runExport>>> {
   if (!task.progressive) {
-    return runExport(task.plan, task.id);
+    return runExport(plan, task.id);
   }
   const latest = useExportQueueStore.getState().tasks.find((item) => item.id === task.id) ?? task;
   const progressive = latest.progressive ?? task.progressive;
-  const progressivePlan = buildProgressiveExportPlan(task.plan, progressive.partialPath, progressive.completedDuration);
+  const progressivePlan = buildProgressiveExportPlan(plan, progressive.partialPath, progressive.completedDuration);
   try {
     const result = await runExport(progressivePlan, task.id);
     const afterRun = useExportQueueStore.getState().tasks.find((item) => item.id === task.id);
     if (afterRun?.status === 'running') {
       await copyFile(progressive.partialPath, task.outputPath);
       await removeFile(progressive.partialPath).catch(() => undefined);
-      useExportQueueStore.getState().updateTaskProgressive(task.id, { completedDuration: task.plan.duration });
+      useExportQueueStore.getState().updateTaskProgressive(task.id, { completedDuration: plan.duration });
       return { ...result, outputPath: task.outputPath };
     }
     return result;
@@ -308,7 +371,7 @@ async function runLocalExportTask(task: ExportTask): Promise<Awaited<ReturnType<
       throw error;
     }
     await removeFile(progressive.partialPath).catch(() => undefined);
-    return runExport(task.plan, task.id);
+    return runExport(plan, task.id);
   }
 }
 

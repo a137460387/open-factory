@@ -313,11 +313,24 @@ export interface MediaVersion {
   size?: number;
 }
 
+export type MediaFingerprintKind = 'video' | 'audio' | 'image';
+export type MediaFingerprintAlgorithm = 'phash' | 'rms' | 'bytes';
+
+export interface MediaFingerprint {
+  version: 1;
+  kind: MediaFingerprintKind;
+  hash: string;
+  algorithm: MediaFingerprintAlgorithm;
+  frameHashes?: string[];
+  rmsVector?: number[];
+}
+
 export interface MediaMetadata {
   labelColor?: MediaLabelColor;
   rating?: number;
   flag?: MediaFlag;
   versions?: MediaVersion[];
+  fingerprint?: MediaFingerprint;
 }
 
 export interface ProjectAnnotation {

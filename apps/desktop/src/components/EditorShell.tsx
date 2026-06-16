@@ -131,7 +131,7 @@ import {
 } from '../layout/layoutSettings';
 import type { ExportPreset } from '../export/export-presets';
 import { pickMediaPaths, probeMediaPaths } from '../lib/media';
-import { scanDuplicateMediaGroups } from '../lib/duplicateMedia';
+import { generateMediaFingerprint, scanDuplicateMediaGroups } from '../lib/duplicateMedia';
 import {
   buildSubtitleTrackFromDataCues,
   buildSubtitleTrackFromSrt,
@@ -1225,6 +1225,20 @@ export function EditorShell() {
     [project.settings.fps, project.settings.vfrHandling]
   );
 
+  const persistMediaFingerprints = useCallback(async (media: MediaAsset[]) => {
+    for (const asset of media) {
+      try {
+        const fingerprint = await generateMediaFingerprint(asset);
+        if (fingerprint) {
+          const metadata = useEditorStore.getState().project.mediaMetadata[asset.id];
+          useEditorStore.getState().setMediaMetadata(asset.id, { ...metadata, fingerprint });
+        }
+      } catch {
+        // Fingerprints improve duplicate detection but must not block local import.
+      }
+    }
+  }, []);
+
   const importMedia = useCallback(async () => {
     try {
       const paths = await pickMediaPaths();
@@ -1237,6 +1251,7 @@ export function EditorShell() {
       }
       if (result.media.length > 0) {
         addMedia(result.media);
+        await persistMediaFingerprints(result.media);
         await queueFrameRateConversionForImportedMedia(result.media);
         void runAutomationForMedia('on-import', result.media);
         showToast({ kind: 'success', title: zhCN.editorToasts.mediaImported, message: zhCN.editorToasts.mediaImportedMessage(result.media.length) });
@@ -1244,7 +1259,7 @@ export function EditorShell() {
     } catch (error) {
       showToast({ kind: 'error', title: zhCN.editorToasts.importFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.importFailedMessage });
     }
-  }, [addMedia, project.media, queueFrameRateConversionForImportedMedia, runAutomationForMedia]);
+  }, [addMedia, persistMediaFingerprints, project.media, queueFrameRateConversionForImportedMedia, runAutomationForMedia]);
 
   const addVersionForMedia = useCallback(
     async (assetId: string) => {
@@ -1278,6 +1293,7 @@ export function EditorShell() {
         }
         if (result.media.length > 0) {
           addMedia(result.media);
+          await persistMediaFingerprints(result.media);
           await queueFrameRateConversionForImportedMedia(result.media);
           void runAutomationForMedia('on-import', result.media);
         }
@@ -1288,7 +1304,7 @@ export function EditorShell() {
         showToast({ kind: 'error', title: zhCN.editorToasts.mediaVersionAddFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.importFailedMessage });
       }
     },
-    [addMedia, queueFrameRateConversionForImportedMedia, runAutomationForMedia, setMediaMetadata]
+    [addMedia, persistMediaFingerprints, queueFrameRateConversionForImportedMedia, runAutomationForMedia, setMediaMetadata]
   );
 
   const openMediaVersionCompare = useCallback(
@@ -1340,6 +1356,7 @@ export function EditorShell() {
       const result = await probeMediaPaths(paths, useEditorStore.getState().project.media);
       if (result.media.length > 0) {
         addMedia(result.media);
+        await persistMediaFingerprints(result.media);
         await queueFrameRateConversionForImportedMedia(result.media);
         void runAutomationForMedia('on-import', result.media);
         showToast({ kind: 'success', title: zhCN.editorToasts.mediaImported, message: zhCN.editorToasts.mediaImportedMessage(result.media.length) });
@@ -1352,7 +1369,7 @@ export function EditorShell() {
       showToast({ kind: 'error', title: zhCN.videoStitchWizard.importFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.importFailedMessage });
       return [];
     }
-  }, [addMedia, queueFrameRateConversionForImportedMedia, runAutomationForMedia]);
+  }, [addMedia, persistMediaFingerprints, queueFrameRateConversionForImportedMedia, runAutomationForMedia]);
 
   const generateVideoStitchTimeline = useCallback(
     (settings: VideoStitchWizardSettings) => {
@@ -1454,7 +1471,8 @@ export function EditorShell() {
 
   const scanDuplicateMedia = useCallback(async () => {
     try {
-      const groups = await scanDuplicateMediaGroups(useEditorStore.getState().project.media);
+      const currentProject = useEditorStore.getState().project;
+      const groups = await scanDuplicateMediaGroups(currentProject.media, currentProject.mediaMetadata);
       if (groups.length === 0) {
         showToast({ kind: 'info', title: zhCN.duplicateMedia.empty });
         return;
@@ -1858,6 +1876,7 @@ export function EditorShell() {
       const imported = await probeMediaPaths([result.outputPath], useEditorStore.getState().project.media);
       if (imported.media.length > 0) {
         addMedia(imported.media);
+        await persistMediaFingerprints(imported.media);
       }
       showToast({ kind: 'success', title: zhCN.recording.stoppedTitle, message: zhCN.recording.importedMessage(imported.media.length) });
     } catch (error) {
@@ -1866,7 +1885,7 @@ export function EditorShell() {
       setRecordingTask(undefined);
       setRecordingElapsedSeconds(0);
     }
-  }, [addMedia, recordingTask]);
+  }, [addMedia, persistMediaFingerprints, recordingTask]);
 
   const executeNewProject = useCallback(
     (nextProject: ReturnType<typeof createProject>, nextTemplatePreset?: ExportPreset) => {
@@ -3247,6 +3266,7 @@ export function EditorShell() {
           showToast({ kind: 'info', title: zhCN.editorToasts.duplicateTitle, message: zhCN.editorToasts.duplicateMessage(result.duplicateCount) });
         }
         addMedia(result.media);
+        await persistMediaFingerprints(result.media);
         await queueFrameRateConversionForImportedMedia(result.media);
         void runAutomationForMedia('on-import', result.media);
       }

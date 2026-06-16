@@ -70,6 +70,7 @@ import type {
   Mask,
   MaskType,
   MediaAsset,
+  MediaFingerprint,
   MediaFlag,
   MediaFolder,
   MediaLabelColor,
@@ -169,6 +170,9 @@ export type {
   Mask,
   MaskType,
   MediaAsset,
+  MediaFingerprint,
+  MediaFingerprintAlgorithm,
+  MediaFingerprintKind,
   MediaFlag,
   MediaFolder,
   MediaLabelColor,
@@ -235,11 +239,44 @@ export function normalizeMediaFlag(value: unknown): MediaFlag | undefined {
   return value === 'green' || value === 'red' ? value : undefined;
 }
 
+export function normalizeMediaFingerprint(value: unknown): MediaFingerprint | undefined {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+  const input = value as Partial<MediaFingerprint>;
+  const kind = input.kind === 'video' || input.kind === 'audio' || input.kind === 'image' ? input.kind : undefined;
+  const algorithm = input.algorithm === 'phash' || input.algorithm === 'rms' || input.algorithm === 'bytes' ? input.algorithm : undefined;
+  const hash = typeof input.hash === 'string' ? input.hash.trim() : '';
+  if (!kind || !algorithm || !hash) {
+    return undefined;
+  }
+  const fingerprint: MediaFingerprint = {
+    version: 1,
+    kind,
+    algorithm,
+    hash
+  };
+  if (Array.isArray(input.frameHashes)) {
+    const frameHashes = input.frameHashes.map((item) => (typeof item === 'string' ? item.trim() : '')).filter(Boolean);
+    if (frameHashes.length > 0) {
+      fingerprint.frameHashes = frameHashes;
+    }
+  }
+  if (Array.isArray(input.rmsVector)) {
+    const rmsVector = input.rmsVector.map((item) => Number(item)).filter((item) => Number.isFinite(item)).map((item) => Math.max(0, Math.min(1, item)));
+    if (rmsVector.length > 0) {
+      fingerprint.rmsVector = rmsVector;
+    }
+  }
+  return fingerprint;
+}
+
 export function normalizeMediaMetadataEntry(metadata: MediaMetadata | undefined): MediaMetadata | undefined {
   const labelColor = isMediaLabelColor(metadata?.labelColor) ? metadata.labelColor : undefined;
   const rating = normalizeMediaRating(metadata?.rating);
   const flag = normalizeMediaFlag(metadata?.flag);
   const versions = normalizeMediaVersions(metadata?.versions);
+  const fingerprint = normalizeMediaFingerprint(metadata?.fingerprint);
   const normalized: MediaMetadata = {};
   if (labelColor) {
     normalized.labelColor = labelColor;
@@ -252,6 +289,9 @@ export function normalizeMediaMetadataEntry(metadata: MediaMetadata | undefined)
   }
   if (versions) {
     normalized.versions = versions;
+  }
+  if (fingerprint) {
+    normalized.fingerprint = fingerprint;
   }
   return Object.keys(normalized).length > 0 ? normalized : undefined;
 }

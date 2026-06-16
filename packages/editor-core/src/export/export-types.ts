@@ -491,8 +491,27 @@ export interface ExportLoudnessReport {
   integratedLoudness: number;
 }
 
+export type ExportRecoveryErrorKind = 'ffmpeg-crash' | 'unsupported-codec' | 'out-of-memory' | 'disk-space' | 'missing-font' | 'unknown';
+export type ExportRecoveryAction = 'retry-same' | 'fallback-codec' | 'reduce-concurrency' | 'prompt-disk-cleanup' | 'skip-drawtext' | 'none';
+
+export interface ExportRecoveryLogEntry {
+  attempt: number;
+  errorKind: ExportRecoveryErrorKind;
+  action: ExportRecoveryAction;
+  originalError: string;
+  result: 'pending' | 'success' | 'failed';
+  message: string;
+}
+
+export interface ExportRecoveryReport {
+  healed: boolean;
+  attempts: number;
+  entries: ExportRecoveryLogEntry[];
+}
+
 export interface ExportReport {
   loudness?: ExportLoudnessReport;
   postExportScript?: ExportPostExportScriptResult;
   qualityAssurance?: PostExportQualityAssuranceResult;
+  recovery?: ExportRecoveryReport;
 }

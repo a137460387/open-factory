@@ -167,8 +167,8 @@ export function finishExportTask(tasks: ExportTask[], taskId: string, report?: E
   return tasks.map((task) => (task.id === taskId ? { ...task, status: 'success', progress: 1, report, finishedAt: now } : task));
 }
 
-export function failExportTask(tasks: ExportTask[], taskId: string, error: string, now = new Date().toISOString()): ExportTask[] {
-  return tasks.map((task) => (task.id === taskId ? { ...task, status: 'error', error, finishedAt: now } : task));
+export function failExportTask(tasks: ExportTask[], taskId: string, error: string, now = new Date().toISOString(), report?: ExportReport): ExportTask[] {
+  return tasks.map((task) => (task.id === taskId ? { ...task, status: 'error', error, report, finishedAt: now } : task));
 }
 
 export function cancelExportTask(tasks: ExportTask[], taskId: string, now = new Date().toISOString()): ExportTask[] {
