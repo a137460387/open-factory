@@ -1,6 +1,7 @@
 import { getProjectSequences, type Clip, type MediaAsset, type Project } from '../model';
 import { getTimelineDuration } from '../timeline';
 import { normalizePath } from './relative-paths';
+import { formatReportDuration, normalizeReportLocale, reportHtmlLang, reportLanguageLabel, type ReportLocale } from './report-i18n';
 
 export interface OfflineMediaFileStatus {
   path: string;
@@ -11,6 +12,7 @@ export interface OfflineMediaFileStatus {
 export interface OfflineMediaReportOptions {
   estimatedExportSizeBytes?: number;
   generatedAt?: string;
+  locale?: ReportLocale;
 }
 
 export interface OfflineMediaReportRow {
@@ -67,6 +69,7 @@ export interface TimelineHeatmapBucket {
 export interface OfflineMediaReport {
   projectName: string;
   generatedAt: string;
+  locale: ReportLocale;
   rows: OfflineMediaReportRow[];
   totals: OfflineMediaReportTotals;
   usageStats: MediaUsageStat[];
@@ -92,6 +95,7 @@ export function collectOfflineMediaReportPaths(project: Project): string[] {
 }
 
 export function buildOfflineMediaReport(project: Project, fileStatuses: OfflineMediaFileStatus[] = [], options: OfflineMediaReportOptions = {}): OfflineMediaReport {
+  const locale = normalizeReportLocale(options.locale);
   const statusByPath = new Map(fileStatuses.map((status) => [pathKey(status.path), status]));
   const usageStats = buildMediaUsageStats(project);
   const usageStatsByMediaId = new Map(usageStats.map((stat) => [stat.assetId, stat]));
@@ -121,6 +125,7 @@ export function buildOfflineMediaReport(project: Project, fileStatuses: OfflineM
   return {
     projectName: project.name,
     generatedAt: options.generatedAt ?? new Date().toISOString(),
+    locale,
     rows,
     usageStats,
     heatmap: buildTimelineHeatmapData(project),
@@ -211,6 +216,7 @@ export function buildProjectArchivePreflight(project: Project, fileStatuses: Off
 }
 
 export function renderOfflineMediaReportHtml(report: OfflineMediaReport): string {
+  const labels = mediaReportLabels[report.locale];
   const rows = report.rows
     .map(
       (row) => `
@@ -218,23 +224,23 @@ export function renderOfflineMediaReportHtml(report: OfflineMediaReport): string
           <td>${escapeHtml(row.assetName)}</td>
           <td>${escapeHtml(row.assetType)}</td>
           <td><code>${escapeHtml(row.path)}</code></td>
-          <td>${row.exists ? '存在' : '缺失'}</td>
+          <td>${row.exists ? labels.exists : labels.missing}</td>
           <td>${formatBytes(row.sizeBytes)}</td>
-          <td>${row.hasProxy ? '是' : '否'}</td>
+          <td>${row.hasProxy ? labels.yes : labels.no}</td>
           <td>${row.timelineAppearances}</td>
-          <td>${formatDuration(row.totalUsedDurationSeconds)}</td>
-          <td>${renderUsageSegmentList(row.usageSegments)}</td>
+          <td>${formatReportDuration(row.totalUsedDurationSeconds, report.locale)}</td>
+          <td>${renderUsageSegmentList(row.usageSegments, report.locale)}</td>
         </tr>`
     )
     .join('');
-  const heatmap = renderHeatmap(report.heatmap);
-  const unusedMedia = renderUnusedMediaList(report.unusedMedia);
-  const durationPie = renderDurationPieChart(report.usageStats);
+  const heatmap = renderHeatmap(report.heatmap, report.locale);
+  const unusedMedia = renderUnusedMediaList(report.unusedMedia, report.locale);
+  const durationPie = renderDurationPieChart(report.usageStats, report.locale);
   return `<!doctype html>
-<html lang="zh-CN">
+<html lang="${reportHtmlLang(report.locale)}">
 <head>
   <meta charset="utf-8" />
-  <title>素材使用分析 - ${escapeHtml(report.projectName)}</title>
+  <title>${labels.title} - ${escapeHtml(report.projectName)}</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 24px; color: #172033; }
     h1 { font-size: 24px; margin: 0 0 8px; }
@@ -259,37 +265,37 @@ export function renderOfflineMediaReportHtml(report: OfflineMediaReport): string
   </style>
 </head>
 <body>
-  <h1>素材使用分析：${escapeHtml(report.projectName)}</h1>
-  <div class="meta">生成时间：${escapeHtml(report.generatedAt)}</div>
-  <h2>素材使用明细</h2>
+  <h1>${labels.title}：${escapeHtml(report.projectName)}</h1>
+  <div class="meta">${labels.generatedAt}：${escapeHtml(report.generatedAt)} · ${labels.language}：${reportLanguageLabel(report.locale)}</div>
+  <h2>${labels.details}</h2>
   <table>
     <thead>
       <tr>
-        <th>素材名称</th>
-        <th>类型</th>
-        <th>媒体路径</th>
-        <th>是否存在</th>
-        <th>文件大小</th>
-        <th>是否有 proxy</th>
-        <th>时间线出现次数</th>
-        <th>总使用时长</th>
-        <th>使用片段列表</th>
+        <th>${labels.assetName}</th>
+        <th>${labels.type}</th>
+        <th>${labels.path}</th>
+        <th>${labels.existsColumn}</th>
+        <th>${labels.fileSize}</th>
+        <th>${labels.proxy}</th>
+        <th>${labels.appearances}</th>
+        <th>${labels.usedDuration}</th>
+        <th>${labels.segments}</th>
       </tr>
     </thead>
     <tbody>${rows}</tbody>
   </table>
-  <h2>使用率热力图</h2>
+  <h2>${labels.heatmap}</h2>
   ${heatmap}
-  <h2>未使用媒体</h2>
+  <h2>${labels.unused}</h2>
   ${unusedMedia}
-  <h2>导出时长分布</h2>
+  <h2>${labels.durationDistribution}</h2>
   ${durationPie}
   <div class="totals">
-    <div>项目总时长：${formatDuration(report.totals.durationSeconds)}</div>
-    <div>总媒体大小：${formatBytes(report.totals.mediaSizeBytes)}</div>
-    <div>导出预估大小：${formatBytes(report.totals.estimatedExportSizeBytes)}</div>
-    <div>素材累计使用时长：${formatDuration(report.totals.totalUsedDurationSeconds)}</div>
-    <div>缺失媒体数量：${report.totals.missingCount}</div>
+    <div>${labels.projectDuration}：${formatReportDuration(report.totals.durationSeconds, report.locale)}</div>
+    <div>${labels.mediaSize}：${formatBytes(report.totals.mediaSizeBytes)}</div>
+    <div>${labels.estimatedExportSize}：${formatBytes(report.totals.estimatedExportSizeBytes)}</div>
+    <div>${labels.totalUsedDuration}：${formatReportDuration(report.totals.totalUsedDurationSeconds, report.locale)}</div>
+    <div>${labels.missingCount}：${report.totals.missingCount}</div>
   </div>
 </body>
 </html>`;
@@ -355,48 +361,52 @@ function escapeHtml(value: string): string {
     .replace(/'/g, '&#39;');
 }
 
-function renderUsageSegmentList(segments: MediaUsageSegment[]): string {
+function renderUsageSegmentList(segments: MediaUsageSegment[], locale: ReportLocale): string {
+  const labels = mediaReportLabels[locale];
   if (segments.length === 0) {
-    return '未使用';
+    return labels.notUsed;
   }
   return `<ul class="usage-list">${segments
     .map(
       (segment) =>
-        `<li>${escapeHtml(segment.sequenceName)} / ${escapeHtml(segment.trackName)} / ${escapeHtml(segment.clipName)}：${formatDuration(segment.start)} - ${formatDuration(segment.end)}（${formatDuration(segment.duration)}）</li>`
+        `<li>${escapeHtml(segment.sequenceName)} / ${escapeHtml(segment.trackName)} / ${escapeHtml(segment.clipName)}：${formatReportDuration(segment.start, locale)} - ${formatReportDuration(segment.end, locale)}（${formatReportDuration(segment.duration, locale)}）</li>`
     )
     .join('')}</ul>`;
 }
 
-function renderHeatmap(buckets: TimelineHeatmapBucket[]): string {
+function renderHeatmap(buckets: TimelineHeatmapBucket[], locale: ReportLocale): string {
+  const labels = mediaReportLabels[locale];
   if (buckets.length === 0) {
-    return '<div class="meta">暂无时间线使用数据。</div>';
+    return `<div class="meta">${labels.emptyHeatmap}</div>`;
   }
   return `<div class="heatmap">${buckets
     .map((bucket) => {
       const alpha = 0.1 + bucket.intensity * 0.78;
-      const title = `${formatDuration(bucket.start)} - ${formatDuration(bucket.end)}：${bucket.overlapCount} 个叠加片段`;
+      const title = `${formatReportDuration(bucket.start, locale)} - ${formatReportDuration(bucket.end, locale)}：${bucket.overlapCount} ${labels.overlapClips}`;
       return `<div class="heatmap-cell" title="${escapeHtml(title)}" style="background: rgba(37, 99, 235, ${alpha.toFixed(2)})"><span>${bucket.overlapCount}</span></div>`;
     })
     .join('')}</div>`;
 }
 
-function renderUnusedMediaList(rows: OfflineMediaReportRow[]): string {
+function renderUnusedMediaList(rows: OfflineMediaReportRow[], locale: ReportLocale): string {
+  const labels = mediaReportLabels[locale];
   if (rows.length === 0) {
-    return '<div class="meta">无未使用媒体。</div>';
+    return `<div class="meta">${labels.emptyUnused}</div>`;
   }
   return `<ul class="unused-list">${rows
     .map(
       (row) =>
-        `<li data-media-id="${escapeHtml(row.assetId)}"><span>${escapeHtml(row.assetName)} <code>${escapeHtml(row.path)}</code></span><button type="button" onclick="this.closest('li').remove()">从媒体库移除</button></li>`
+        `<li data-media-id="${escapeHtml(row.assetId)}"><span>${escapeHtml(row.assetName)} <code>${escapeHtml(row.path)}</code></span><button type="button" onclick="this.closest('li').remove()">${labels.removeFromBin}</button></li>`
     )
     .join('')}</ul>`;
 }
 
-function renderDurationPieChart(stats: MediaUsageStat[]): string {
+function renderDurationPieChart(stats: MediaUsageStat[], locale: ReportLocale): string {
+  const labels = mediaReportLabels[locale];
   const used = stats.filter((stat) => stat.totalUsedDurationSeconds > 0);
   const total = used.reduce((sum, stat) => sum + stat.totalUsedDurationSeconds, 0);
   if (total <= 0) {
-    return '<svg width="260" height="120" role="img" aria-label="导出时长分布"><text x="12" y="60" fill="#64748b">暂无使用时长</text></svg>';
+    return `<svg width="260" height="120" role="img" aria-label="${labels.durationDistribution}"><text x="12" y="60" fill="#64748b">${labels.emptyDuration}</text></svg>`;
   }
   const colors = ['#2563eb', '#16a34a', '#f97316', '#db2777', '#7c3aed', '#0891b2', '#ca8a04', '#475569'];
   let cursor = -Math.PI / 2;
@@ -419,10 +429,10 @@ function renderDurationPieChart(stats: MediaUsageStat[]): string {
     .map((stat, index) => {
       const color = colors[index % colors.length];
       const percent = ((stat.totalUsedDurationSeconds / total) * 100).toFixed(1);
-      return `<li><span class="swatch" style="background:${color}"></span>${escapeHtml(stat.assetName)}：${percent}%（${formatDuration(stat.totalUsedDurationSeconds)}）</li>`;
+      return `<li><span class="swatch" style="background:${color}"></span>${escapeHtml(stat.assetName)}：${percent}%（${formatReportDuration(stat.totalUsedDurationSeconds, locale)}）</li>`;
     })
     .join('');
-  return `<div class="chart-wrap"><svg width="180" height="160" viewBox="0 0 180 160" role="img" aria-label="导出时长分布">${slices}</svg><ul class="legend">${legend}</ul></div>`;
+  return `<div class="chart-wrap"><svg width="180" height="160" viewBox="0 0 180 160" role="img" aria-label="${labels.durationDistribution}">${slices}</svg><ul class="legend">${legend}</ul></div>`;
 }
 
 function describePieSlice(cx: number, cy: number, radius: number, startAngle: number, endAngle: number): string {
@@ -455,12 +465,71 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
-function formatDuration(seconds: number): string {
-  const safeSeconds = Math.max(0, Math.round(seconds));
-  const hours = Math.floor(safeSeconds / 3600);
-  const minutes = Math.floor((safeSeconds % 3600) / 60);
-  const remainingSeconds = safeSeconds % 60;
-  return hours > 0
-    ? `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`
-    : `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-}
+const mediaReportLabels: Record<ReportLocale, Record<string, string>> = {
+  zh: {
+    title: '素材使用分析',
+    generatedAt: '生成时间',
+    language: '语言',
+    details: '素材使用明细',
+    assetName: '素材名称',
+    type: '类型',
+    path: '媒体路径',
+    existsColumn: '是否存在',
+    fileSize: '文件大小',
+    proxy: '是否有 proxy',
+    appearances: '时间线出现次数',
+    usedDuration: '总使用时长',
+    segments: '使用片段列表',
+    heatmap: '使用率热力图',
+    unused: '未使用媒体',
+    durationDistribution: '导出时长分布',
+    projectDuration: '项目总时长',
+    mediaSize: '总媒体大小',
+    estimatedExportSize: '导出预估大小',
+    totalUsedDuration: '素材累计使用时长',
+    missingCount: '缺失媒体数量',
+    exists: '存在',
+    missing: '缺失',
+    yes: '是',
+    no: '否',
+    notUsed: '未使用',
+    emptyHeatmap: '暂无时间线使用数据。',
+    emptyUnused: '无未使用媒体。',
+    emptyDuration: '暂无使用时长',
+    overlapClips: '个叠加片段',
+    removeFromBin: '从媒体库移除'
+  },
+  en: {
+    title: 'Media Usage Analysis',
+    generatedAt: 'Generated At',
+    language: 'Language',
+    details: 'Media Usage Details',
+    assetName: 'Asset Name',
+    type: 'Type',
+    path: 'Media Path',
+    existsColumn: 'Exists',
+    fileSize: 'File Size',
+    proxy: 'Has Proxy',
+    appearances: 'Timeline Appearances',
+    usedDuration: 'Total Used Duration',
+    segments: 'Used Segments',
+    heatmap: 'Usage Heatmap',
+    unused: 'Unused Media',
+    durationDistribution: 'Export Duration Distribution',
+    projectDuration: 'Project Duration',
+    mediaSize: 'Total Media Size',
+    estimatedExportSize: 'Estimated Export Size',
+    totalUsedDuration: 'Cumulative Used Duration',
+    missingCount: 'Missing Media Count',
+    exists: 'Present',
+    missing: 'Missing',
+    yes: 'Yes',
+    no: 'No',
+    notUsed: 'Not used',
+    emptyHeatmap: 'No timeline usage data.',
+    emptyUnused: 'No unused media.',
+    emptyDuration: 'No used duration',
+    overlapClips: 'overlapping clips',
+    removeFromBin: 'Remove from media bin'
+  }
+};

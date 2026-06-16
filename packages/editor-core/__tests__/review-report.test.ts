@@ -29,4 +29,18 @@ describe('review report', () => {
     expect(html).toContain('Look here');
     expect(html).toContain('批注截图示意');
   });
+
+  it('renders English review report labels when locale is en', () => {
+    const project = makeProject();
+    project.name = 'Client Cut';
+    project.reviewAnnotations = [{ id: 'review-a', time: 1, type: 'rectangle', text: 'Crop edge', color: '#38bdf8', x: 0.1, y: 0.1, width: 0.3, height: 0.2 }];
+
+    const html = buildReviewReportHtml(project, { generatedAt: '2026-06-16T00:00:00.000Z', locale: 'en' });
+
+    expect(html).toContain('<html lang="en">');
+    expect(html).toContain('Review Report：Client Cut');
+    expect(html).toContain('Annotation List');
+    expect(html).toContain('Review annotation preview');
+    expect(html).toContain('Generated At');
+  });
 });

@@ -90,7 +90,7 @@ describe('offline media report', () => {
     expect(html).toContain('使用片段列表');
     expect(html).toContain('使用率热力图');
     expect(html).toContain('导出时长分布');
-    expect(html).toContain('项目总时长：0:06');
+    expect(html).toContain('项目总时长：0分钟6秒');
     expect(html).toContain('总媒体大小：4.0 KB');
     expect(html).toContain('导出预估大小：8.0 KB');
   });
@@ -233,8 +233,56 @@ describe('offline media report', () => {
 
     const html = buildOfflineMediaReportHtml(project);
 
-    expect(html).toContain('项目总时长：1:01:05');
+    expect(html).toContain('项目总时长：61分钟5秒');
     expect(html).toContain('导出预估大小：');
+  });
+
+  it('renders English labels and mm:ss durations when locale is en', () => {
+    const project = createProject('English Report Demo');
+    const media = makeAsset({ id: 'media-video', path: 'C:/Media/clip.mp4', size: 4096 });
+    const timeline = {
+      markers: [],
+      transitions: [],
+      tracks: [
+        createTrack({
+          id: 'track-video',
+          type: 'video',
+          name: 'Video 1',
+          clips: [
+            {
+              id: 'clip-video',
+              type: 'video',
+              name: 'clip.mp4',
+              mediaId: 'media-video',
+              trackId: 'track-video',
+              start: 0,
+              duration: 6,
+              trimStart: 0,
+              trimEnd: 0,
+              speed: 1,
+              colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+              transform: { ...DEFAULT_TRANSFORM },
+              volume: 1
+            }
+          ]
+        })
+      ]
+    };
+    project.media = [media];
+    project.timeline = timeline;
+    project.sequences = [{ id: PRIMARY_SEQUENCE_ID, name: 'Main Sequence', timeline }];
+
+    const html = buildOfflineMediaReportHtml(project, [{ path: 'C:/Media/clip.mp4', exists: true, size: 4096 }], {
+      generatedAt: '2026-06-16T00:00:00.000Z',
+      locale: 'en'
+    });
+
+    expect(html).toContain('<html lang="en">');
+    expect(html).toContain('Media Usage Analysis：English Report Demo');
+    expect(html).toContain('Generated At');
+    expect(html).toContain('File Size');
+    expect(html).toContain('Exists');
+    expect(html).toContain('Project Duration：00:06');
   });
 
   it('calculates usage stats with repeated media appearances and unused media rows', () => {

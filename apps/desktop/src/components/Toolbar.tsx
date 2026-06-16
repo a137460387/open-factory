@@ -47,6 +47,7 @@ interface ToolbarProps {
   onOpenSyncCompare(): void;
   onOpenSceneReorder(): void;
   onOpenContentAnalysis(): void;
+  onOpenRhythmAnalysis(): void;
   onDetectBeats(): void;
   onSnapToBeats(): void;
   onSplitToBeats(): void;
@@ -619,6 +620,18 @@ export function Toolbar(props: ToolbarProps) {
               }}
             >
               <span>{t.contentAnalysis}</span>
+              <Activity size={14} />
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-tools-rhythm-analysis-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onOpenRhythmAnalysis();
+              }}
+            >
+              <span>{t.rhythmAnalysis}</span>
               <Activity size={14} />
             </button>
             <label className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-xs text-slate-600" data-testid="toolbar-tools-beat-sensitivity-row">

@@ -246,6 +246,7 @@ const VideoStitchWizardDialog = lazy(() => import('../video-stitching/VideoStitc
 const SyncComparePanel = lazy(() => import('../sync-compare/SyncComparePanel').then((module) => ({ default: module.SyncComparePanel })));
 const SceneReorderDialog = lazy(() => import('../scene-reorder/SceneReorderDialog').then((module) => ({ default: module.SceneReorderDialog })));
 const ContentAnalysisDialog = lazy(() => import('../media/ContentAnalysisDialog').then((module) => ({ default: module.ContentAnalysisDialog })));
+const RhythmAnalysisDialog = lazy(() => import('../analysis/RhythmAnalysisDialog').then((module) => ({ default: module.RhythmAnalysisDialog })));
 const TimelineSearchPanel = lazy(() => import('../timeline-search/TimelineSearchPanel').then((module) => ({ default: module.TimelineSearchPanel })));
 const SnapshotNameDialog = lazy(() => import('../project-snapshots/SnapshotNameDialog').then((module) => ({ default: module.SnapshotNameDialog })));
 const SnapshotHistoryDialog = lazy(() => import('../project-snapshots/SnapshotHistoryDialog').then((module) => ({ default: module.SnapshotHistoryDialog })));
@@ -290,6 +291,7 @@ export function EditorShell() {
   const [syncCompareOpen, setSyncCompareOpen] = useState(false);
   const [sceneReorderOpen, setSceneReorderOpen] = useState(false);
   const [contentAnalysisOpen, setContentAnalysisOpen] = useState(false);
+  const [rhythmAnalysisOpen, setRhythmAnalysisOpen] = useState(false);
   const [contentAnalysisRunningClipId, setContentAnalysisRunningClipId] = useState<string>();
   const [timelineSearchOpen, setTimelineSearchOpen] = useState(false);
   const [snapshotNameOpen, setSnapshotNameOpen] = useState(false);
@@ -2425,6 +2427,7 @@ export function EditorShell() {
           onOpenSyncCompare={openSyncCompare}
           onOpenSceneReorder={() => setSceneReorderOpen(true)}
           onOpenContentAnalysis={() => setContentAnalysisOpen(true)}
+          onOpenRhythmAnalysis={() => setRhythmAnalysisOpen(true)}
           onDetectBeats={() => void detectSelectedBeats()}
           onSnapToBeats={snapSelectedToBeats}
           onSplitToBeats={splitSelectedToBeats}
@@ -2758,6 +2761,7 @@ export function EditorShell() {
               onClose={() => setContentAnalysisOpen(false)}
             />
           ) : null}
+          {rhythmAnalysisOpen ? <RhythmAnalysisDialog project={project} onClose={() => setRhythmAnalysisOpen(false)} /> : null}
           {timelineSearchOpen ? <TimelineSearchPanel project={project} onClose={() => setTimelineSearchOpen(false)} /> : null}
           {shortcutCheatsheetOpen ? <ShortcutCheatsheetPanel bindings={shortcutBindings} onClose={() => setShortcutCheatsheetOpen(false)} /> : null}
           {settingsOpen ? (

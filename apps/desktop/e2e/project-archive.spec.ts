@@ -58,6 +58,31 @@ test('exports a clip report HTML file from the file menu', async ({ page }) => {
   expect(html).toContain('tiny-video.mp4');
 });
 
+test('exports report HTML in English when interface language is English', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.evaluate(() => window.__E2E_ACTIONS__!.clearE2eFiles!());
+  await page.reload();
+  await waitForE2eActions(page);
+  await page.evaluate(() => window.__E2E_ACTIONS__!.setSavePath!('C:/Reports/clip-report-en.html'));
+  await page.getByTestId('toolbar-open-project-button').click();
+
+  await page.getByTestId('toolbar-settings-button').click();
+  await page.getByTestId('settings-language-select').selectOption('en');
+  await page.getByTestId('settings-close-button').click();
+
+  await page.getByTestId('toolbar-file-menu-button').click();
+  await page.getByTestId('toolbar-file-clip-report-menu-item').click();
+
+  const reportPath = 'C:/Reports/clip-report-en.html';
+  await expect.poll(() => page.evaluate((path) => window.__E2E_ACTIONS__!.getWrittenFile!(path) as string | undefined, reportPath)).not.toBeUndefined();
+  const html = await page.evaluate((path) => window.__E2E_ACTIONS__!.getWrittenFile!(path) as string, reportPath);
+  expect(html).toContain('Clip Report');
+  expect(html).toContain('Generated At');
+  expect(html).toContain('Project');
+  expect(html).toContain('Duration');
+});
+
 test('confirms before archiving when project media is missing', async ({ page }) => {
   await page.goto('/');
   await waitForE2eActions(page);

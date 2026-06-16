@@ -77,6 +77,7 @@ const zh = {
     syncCompare: '同步对比',
     sceneReorder: '场景重组',
     contentAnalysis: '内容分析',
+    rhythmAnalysis: '节奏分析',
     detectBeats: '节拍检测',
     snapToBeats: '对齐到节拍',
     splitToBeats: '按节拍分割',
@@ -280,6 +281,35 @@ const zh = {
       action: '运动',
       dialogue: '对话',
       'close-up': '特写'
+    }
+  },
+  rhythmAnalysis: {
+    title: '剪辑节奏分析',
+    subtitle: '分析镜头时长、切换频率、变化点和重复节奏段。',
+    shotCount: '镜头数',
+    averageShot: '平均镜头时长',
+    shortestShot: '最短镜头',
+    longestShot: '最长镜头',
+    changePointCount: '变化点',
+    cutCurve: '切换频率曲线',
+    references: '同类型参考',
+    changePoints: '节奏变化点',
+    suggestions: '建议',
+    noSuggestions: '暂无节奏建议。',
+    noCurveData: '暂无切换频率数据。',
+    noChangePoints: '未检测到明显节奏变化点。',
+    time: '时间',
+    previousShot: '前一镜头',
+    nextShot: '后一镜头',
+    ratio: '差异',
+    exportJson: '导出 JSON',
+    exportHtml: '导出 HTML',
+    exported: '节奏分析已导出',
+    referenceTypes: {
+      advertising: '广告',
+      documentary: '纪录片',
+      variety: '综艺',
+      'short-video': '短视频'
     }
   },
   timelineSearch: {
@@ -3098,6 +3128,7 @@ const enOverrides = {
     syncCompare: 'Sync Compare',
     sceneReorder: 'Scene Reorder',
     contentAnalysis: 'Content Analysis',
+    rhythmAnalysis: 'Rhythm Analysis',
     detectBeats: 'Detect Beats',
     snapToBeats: 'Snap to Beats',
     splitToBeats: 'Split to Beats',
@@ -3301,6 +3332,35 @@ const enOverrides = {
       action: 'Action',
       dialogue: 'Dialogue',
       'close-up': 'Close-up'
+    }
+  },
+  rhythmAnalysis: {
+    title: 'Edit Rhythm Analysis',
+    subtitle: 'Analyze shot duration, cut frequency, rhythm changes, and repeated pacing.',
+    shotCount: 'Shot Count',
+    averageShot: 'Average Shot Duration',
+    shortestShot: 'Shortest Shot',
+    longestShot: 'Longest Shot',
+    changePointCount: 'Change Points',
+    cutCurve: 'Cut Frequency Curve',
+    references: 'Reference Types',
+    changePoints: 'Rhythm Change Points',
+    suggestions: 'Suggestions',
+    noSuggestions: 'No rhythm suggestions.',
+    noCurveData: 'No cut frequency data.',
+    noChangePoints: 'No obvious rhythm changes detected.',
+    time: 'Time',
+    previousShot: 'Previous Shot',
+    nextShot: 'Next Shot',
+    ratio: 'Ratio',
+    exportJson: 'Export JSON',
+    exportHtml: 'Export HTML',
+    exported: 'Rhythm analysis exported',
+    referenceTypes: {
+      advertising: 'Advertising',
+      documentary: 'Documentary',
+      variety: 'Variety',
+      'short-video': 'Short Video'
     }
   },
   timelineSearch: {

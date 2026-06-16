@@ -7,7 +7,7 @@ import {
   type Project,
   type ProjectArchivePreflight
 } from '@open-factory/editor-core';
-import { zhCN } from '../i18n/strings';
+import { getLanguage, zhCN } from '../i18n/strings';
 import { fsExists, getFileStat, saveFileDialog, writeClipReport, writeFile } from './tauri-bridge';
 
 export async function collectOfflineMediaFileStatuses(project: Project): Promise<OfflineMediaFileStatus[]> {
@@ -30,7 +30,7 @@ export async function saveOfflineMediaReport(project: Project): Promise<string |
     return undefined;
   }
   const statuses = await collectOfflineMediaFileStatuses(project);
-  await writeFile(outputPath, buildOfflineMediaReportHtml(project, statuses));
+  await writeFile(outputPath, buildOfflineMediaReportHtml(project, statuses, { locale: getLanguage() }));
   return outputPath;
 }
 
@@ -39,7 +39,7 @@ export async function saveClipReport(project: Project): Promise<string | undefin
   if (!outputPath) {
     return undefined;
   }
-  await writeClipReport(outputPath, buildClipReportHtml(project, { exportPresetName: zhCN.clipReport.defaultExportPreset }));
+  await writeClipReport(outputPath, buildClipReportHtml(project, { exportPresetName: zhCN.clipReport.defaultExportPreset, locale: getLanguage() }));
   return outputPath;
 }
 

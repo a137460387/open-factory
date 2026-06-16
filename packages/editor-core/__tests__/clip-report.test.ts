@@ -55,6 +55,23 @@ describe('clip report', () => {
     expect(html).toContain('无字幕。');
     expect(html).toContain('无标记点。');
   });
+
+  it('renders English labels and localized durations when locale is en', () => {
+    const project = makeClipReportProject();
+
+    const html = buildClipReportHtml(project, {
+      exportPresetName: 'Web 1080p',
+      generatedAt: '2026-06-16T00:00:00.000Z',
+      locale: 'en'
+    });
+
+    expect(html).toContain('<html lang="en">');
+    expect(html).toContain('Clip Report：Clip Report Demo');
+    expect(html).toContain('Generated At');
+    expect(html).toContain('Project');
+    expect(html).toContain('Duration');
+    expect(html).toContain('00:06');
+  });
 });
 
 function makeClipReportProject() {
