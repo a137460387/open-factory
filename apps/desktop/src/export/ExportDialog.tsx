@@ -49,6 +49,8 @@ import {
   type ExportUploadTargetType,
   type ExportPreviewSampleKind,
   type ExportMasterProcessingSettings,
+  type PostExportQualityAssuranceResult,
+  type PostExportQualityCheckResult,
   type ExportWatermarkPosition,
   type FfmpegCapabilities,
   type QualityLevel,
@@ -1730,6 +1732,7 @@ function relinkFromPreflight(): void {
                         {t.quality.button}
                       </button>
                     </div>
+                    {entry.report?.qualityAssurance ? <PostExportQualityAssurancePanel result={entry.report.qualityAssurance} /> : null}
                     {entry.report?.postExportScript ? <PostExportScriptResultPanel result={entry.report.postExportScript} /> : null}
                     {entry.upload ? <ExportUploadStatusPanel upload={entry.upload} onRetry={entry.upload.status === 'error' ? () => void retryHistoryUpload(entry) : undefined} /> : null}
                   </div>
@@ -3907,6 +3910,46 @@ function PostExportScriptResultPanel({ result }: { result: ExportPostExportScrip
   );
 }
 
+function PostExportQualityAssurancePanel({ result }: { result: PostExportQualityAssuranceResult }) {
+  const t = zhCN.exportDialog.postExportQuality;
+  return (
+    <div className={`mt-2 rounded-md border p-2 text-[11px] ${postExportQualityStatusClass(result.status)}`} data-testid="post-export-quality-result" data-status={result.status}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="font-semibold">{t.title}</div>
+        <div className="rounded-full border border-current px-2 py-0.5 font-semibold" data-testid="post-export-quality-status">
+          {t.status[result.status]}
+        </div>
+      </div>
+      {result.retryRecommended ? <div className="mt-1 font-medium text-rose-800">{t.retryRecommended}</div> : null}
+      <div className="mt-2 grid gap-1">
+        {result.checks.map((check) => (
+          <PostExportQualityCheckRow key={check.id} check={check} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PostExportQualityCheckRow({ check }: { check: PostExportQualityCheckResult }) {
+  const t = zhCN.exportDialog.postExportQuality;
+  return (
+    <div className="rounded-md bg-white/70 p-2" data-testid={`post-export-quality-check-${check.id}`} data-status={check.status}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="font-semibold text-slate-700">{t.checks[check.id]}</div>
+        <span className={`rounded-full border px-1.5 py-0.5 text-[10px] font-semibold ${postExportQualityStatusClass(check.status)}`}>{t.status[check.status]}</span>
+      </div>
+      <div className="mt-1 text-slate-600">{check.message}</div>
+      {check.expected !== undefined || check.actual !== undefined ? (
+        <div className="mt-1 grid gap-1 text-[10px] text-slate-500 sm:grid-cols-2">
+          {check.expected !== undefined ? <div>{t.expected}: {formatPostExportQualityValue(check, check.expected)}</div> : null}
+          {check.actual !== undefined ? <div>{t.actual}: {formatPostExportQualityValue(check, check.actual)}</div> : null}
+        </div>
+      ) : null}
+      {check.ranges?.length ? <div className="mt-1 text-[10px] text-slate-500">{t.ranges(check.ranges.length)}</div> : null}
+    </div>
+  );
+}
+
 function QualityResultPanel({
   result,
   running,
@@ -3975,6 +4018,19 @@ function formatQualityMetricValue(value: number | undefined, suffix: string): st
   return `${(value as number).toFixed(suffix ? 1 : 3)}${suffix}`;
 }
 
+function formatPostExportQualityValue(check: PostExportQualityCheckResult, value: string | number): string {
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (check.id === 'fileSize') {
+    return formatBytes(value);
+  }
+  if (check.id === 'duration') {
+    return `${value.toFixed(3)}s`;
+  }
+  return Number.isInteger(value) ? String(value) : value.toFixed(3);
+}
+
 function formatOptionalNumber(value: number | undefined, decimals: number): string {
   return Number.isFinite(value) ? (value as number).toFixed(decimals) : zhCN.exportDialog.quality.unavailable;
 }
@@ -4013,6 +4069,16 @@ function qualityLevelClass(level: QualityLevel): string {
     case 'poor':
       return 'border-rose-200 bg-rose-50 text-rose-700';
   }
+}
+
+function postExportQualityStatusClass(status: 'pass' | 'warning' | 'fail'): string {
+  if (status === 'pass') {
+    return 'border-emerald-200 bg-emerald-50 text-emerald-800';
+  }
+  if (status === 'warning') {
+    return 'border-amber-200 bg-amber-50 text-amber-800';
+  }
+  return 'border-rose-200 bg-rose-50 text-rose-800';
 }
 
 function uploadStatusClass(status: ExportUploadState['status']): string {

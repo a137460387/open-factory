@@ -809,6 +809,7 @@ export function buildFfmpegExportPlan(
 
   return {
     projectName: project.name,
+    settings,
     inputs,
     filterComplex: gifPlan?.filterComplex ?? filterComplex,
     maps: gifPlan?.maps ?? maps,

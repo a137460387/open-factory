@@ -1,9 +1,13 @@
 import { getLanguage, languageFromNavigator, normalizeLanguage, setLanguage, type Language } from '../i18n/strings';
 import {
   DEFAULT_TIMELINE_GRID_SETTINGS,
+  DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS,
   normalizeSplitLayoutDefinition,
+  normalizePostExportQualityAssuranceSettings,
   normalizeTimelineGridSettings,
+  hasEnabledPostExportQualityChecks,
   type SplitLayoutDefinition,
+  type PostExportQualityAssuranceSettings,
   type TimelineGridSettings,
   type TimelineHeatmapColorScheme,
   type TimelineHeatmapType
@@ -193,6 +197,7 @@ export interface AppSettings {
   exportBackground?: ExportBackgroundSettings;
   exportUpload?: ExportUploadSettings;
   exportPresetSync?: ExportPresetSyncSettings;
+  exportQualityAssurance?: PostExportQualityAssuranceSettings;
   exportRules?: ExportConditionRule[];
   view?: ViewSettings;
   previewPerformance?: PreviewPerformanceSettings;
@@ -281,6 +286,18 @@ export async function saveExportPresetSyncSettings(exportPresetSync: Partial<Exp
   const nextExportPresetSync = normalizeExportPresetSyncSettings({ ...settings.exportPresetSync, ...exportPresetSync }) ?? defaultExportPresetSyncSettings();
   await writeAppSettings({ ...settings, exportPresetSync: nextExportPresetSync });
   return nextExportPresetSync;
+}
+
+export async function readExportQualityAssuranceSettings(): Promise<PostExportQualityAssuranceSettings> {
+  const settings = await readAppSettings();
+  return settings.exportQualityAssurance ?? { ...DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS };
+}
+
+export async function saveExportQualityAssuranceSettings(exportQualityAssurance: Partial<PostExportQualityAssuranceSettings>): Promise<PostExportQualityAssuranceSettings> {
+  const settings = await readAppSettings();
+  const nextExportQualityAssurance = normalizePostExportQualityAssuranceSettings({ ...settings.exportQualityAssurance, ...exportQualityAssurance });
+  await writeAppSettings({ ...settings, exportQualityAssurance: nextExportQualityAssurance });
+  return nextExportQualityAssurance;
 }
 
 export async function readExportRules(): Promise<ExportConditionRule[]> {
@@ -477,6 +494,10 @@ function normalizeSettings(settings: Partial<AppSettings>): AppSettings {
   const exportPresetSync = normalizeExportPresetSyncSettings(settings.exportPresetSync);
   if (exportPresetSync && shouldPersistExportPresetSyncSettings(exportPresetSync)) {
     normalized.exportPresetSync = exportPresetSync;
+  }
+  const exportQualityAssurance = normalizePostExportQualityAssuranceSettings(settings.exportQualityAssurance);
+  if (shouldPersistExportQualityAssuranceSettings(exportQualityAssurance)) {
+    normalized.exportQualityAssurance = exportQualityAssurance;
   }
   const exportRules = normalizeExportRules(settings.exportRules);
   if (exportRules.length > 0) {
@@ -883,6 +904,23 @@ function shouldPersistExportPresetSyncSettings(settings: ExportPresetSyncSetting
     settings.syncOnStartup ||
     settings.conflictMode !== DEFAULT_EXPORT_PRESET_SYNC_SETTINGS.conflictMode ||
     Boolean(settings.url || settings.username || settings.lastSyncedAt || settings.lastSyncWarning)
+  );
+}
+
+function shouldPersistExportQualityAssuranceSettings(settings: PostExportQualityAssuranceSettings): boolean {
+  return (
+    hasEnabledPostExportQualityChecks(settings) ||
+    settings.duration ||
+    settings.blackFrames ||
+    settings.silence ||
+    settings.fileSize ||
+    settings.resolution ||
+    settings.autoRetry ||
+    settings.minFileSizeBytes !== undefined ||
+    settings.maxFileSizeBytes !== undefined ||
+    settings.blackFrameDurationSeconds !== DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS.blackFrameDurationSeconds ||
+    settings.silenceThresholdDb !== DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS.silenceThresholdDb ||
+    settings.silenceDurationSeconds !== DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS.silenceDurationSeconds
   );
 }
 

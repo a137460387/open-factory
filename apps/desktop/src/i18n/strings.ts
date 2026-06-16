@@ -427,6 +427,22 @@ const zh = {
       },
       allowExportPowerActions: '允许导出完成后执行关机/休眠',
       allowExportPowerActionsDescription: '默认关闭。开启后，导出完成动作才可以调用系统电源命令。',
+      postExportQuality: {
+        title: '导出后质检',
+        description: '导出完成后按本机 FFmpeg/FFprobe 自动检查输出文件。默认关闭。',
+        enabled: '启用质检流程',
+        duration: '时长验证',
+        blackFrames: '黑帧检测',
+        silence: '静音检测',
+        fileSize: '文件大小范围',
+        resolution: '分辨率验证',
+        minFileSizeBytes: '最小字节',
+        maxFileSizeBytes: '最大字节',
+        blackFrameDurationSeconds: '黑帧阈值秒',
+        silenceThresholdDb: '静音阈值 dB',
+        silenceDurationSeconds: '静音阈值秒',
+        autoRetry: '失败时自动重导一次'
+      },
       demucsTitle: 'AI 人声背景分离',
       demucsDescription: '配置本机 demucs 可执行文件后，可在工具菜单对选中音频/视频片段分离人声和背景音。',
       demucsExecutable: 'Demucs 可执行文件',
@@ -2638,6 +2654,25 @@ const zh = {
     openFolder: '打开文件夹',
     viewLog: '查看日志',
     retryTask: '重试',
+    postExportQuality: {
+      title: '导出后质检',
+      retryRecommended: '失败项已触发一次自动重导条件。',
+      expected: '期望',
+      actual: '实际',
+      ranges: (count: number) => `${count} 段异常区间`,
+      status: {
+        pass: '通过',
+        warning: '警告',
+        fail: '失败'
+      },
+      checks: {
+        duration: '时长',
+        blackFrames: '黑帧',
+        silence: '静音',
+        fileSize: '文件大小',
+        resolution: '分辨率'
+      }
+    },
     quality: {
       button: '质量评估',
       title: '质量评估',
@@ -3765,6 +3800,22 @@ const enOverrides = {
       },
       allowExportPowerActions: 'Allow shutdown/hibernate after export',
       allowExportPowerActionsDescription: 'Disabled by default. When enabled, export completion actions may call system power commands.',
+      postExportQuality: {
+        title: 'Post-export QA',
+        description: 'Run local FFmpeg/FFprobe checks after export completes. Disabled by default.',
+        enabled: 'Enable QA workflow',
+        duration: 'Duration check',
+        blackFrames: 'Black frame detection',
+        silence: 'Silence detection',
+        fileSize: 'File size range',
+        resolution: 'Resolution check',
+        minFileSizeBytes: 'Min bytes',
+        maxFileSizeBytes: 'Max bytes',
+        blackFrameDurationSeconds: 'Black frame seconds',
+        silenceThresholdDb: 'Silence threshold dB',
+        silenceDurationSeconds: 'Silence seconds',
+        autoRetry: 'Retry once on failure'
+      },
       demucsTitle: 'AI Voice and Background Separation',
       demucsDescription: 'Configure the local demucs executable, then separate vocals and background audio for the selected audio/video clip from the Tools menu.',
       demucsExecutable: 'Demucs Executable',
@@ -5712,6 +5763,25 @@ const enOverrides = {
     openFolder: 'Open Folder',
     viewLog: 'View Log',
     retryTask: 'Retry',
+    postExportQuality: {
+      title: 'Post-export QA',
+      retryRecommended: 'A failed check met the automatic retry condition.',
+      expected: 'Expected',
+      actual: 'Actual',
+      ranges: (count: number) => `${count} anomalous range(s)`,
+      status: {
+        pass: 'Pass',
+        warning: 'Warning',
+        fail: 'Fail'
+      },
+      checks: {
+        duration: 'Duration',
+        blackFrames: 'Black Frames',
+        silence: 'Silence',
+        fileSize: 'File Size',
+        resolution: 'Resolution'
+      }
+    },
     quality: {
       button: 'Quality',
       title: 'Quality Evaluation',

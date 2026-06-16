@@ -3,7 +3,7 @@ import { emit, listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { confirm, message as dialogMessage } from '@tauri-apps/plugin-dialog';
 import { open as openShellPath } from '@tauri-apps/plugin-shell';
-import type { BeatSensitivity, ColorMatchFrameSample, ExportPreviewSamplePlan, ExportReport, FfmpegCapabilities, FfmpegExportPlan, MotionTrackPoint, ProxyPlan } from '@open-factory/editor-core';
+import type { BeatSensitivity, ColorMatchFrameSample, ExportPreviewSamplePlan, ExportReport, FfmpegCapabilities, FfmpegExportPlan, MotionTrackPoint, PostExportQualityAssuranceResult, ProxyPlan } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { isTauriRuntime } from './tauri';
 
@@ -373,6 +373,26 @@ export interface QualityEvaluationProgressEvent {
   progressPct: number;
 }
 
+export interface PostExportQualityAssuranceRequest {
+  taskId: string;
+  outputPath: string;
+  expectedDuration?: number;
+  fps?: number;
+  expectedWidth?: number;
+  expectedHeight?: number;
+  duration: boolean;
+  blackFrames: boolean;
+  silence: boolean;
+  fileSize: boolean;
+  resolution: boolean;
+  minFileSizeBytes?: number;
+  maxFileSizeBytes?: number;
+  blackFrameDurationSeconds: number;
+  silenceThresholdDb: number;
+  silenceDurationSeconds: number;
+  autoRetry: boolean;
+}
+
 export type GifDitherAlgorithm = 'bayer' | 'floyd_steinberg';
 
 export interface GifExportRequest {
@@ -590,6 +610,7 @@ export type TauriMocks = Partial<{
   analyzeClip(request: AnalyzeClipRequest): Promise<AnalyzeClipResult> | AnalyzeClipResult;
   analyzeMotionTrack(request: AnalyzeMotionTrackRequest): Promise<AnalyzeMotionTrackResult> | AnalyzeMotionTrackResult;
   evaluateExportQuality(request: QualityEvaluationRequest): Promise<QualityEvaluationResult> | QualityEvaluationResult;
+  runPostExportQualityAssurance(request: PostExportQualityAssuranceRequest): Promise<PostExportQualityAssuranceResult> | PostExportQualityAssuranceResult;
   exportMediaGif(request: GifExportRequest): Promise<GifWorkflowResult> | GifWorkflowResult;
   generateGifPreview(request: GifPreviewRequest): Promise<GifWorkflowResult> | GifWorkflowResult;
   cancelExport(taskId?: string): Promise<void> | void;
@@ -1241,6 +1262,14 @@ export async function evaluateExportQuality(request: QualityEvaluationRequest): 
     return mock(request);
   }
   return invoke<QualityEvaluationResult>('evaluate_export_quality', { request });
+}
+
+export async function runPostExportQualityAssurance(request: PostExportQualityAssuranceRequest): Promise<PostExportQualityAssuranceResult> {
+  const mock = getTauriMocks()?.runPostExportQualityAssurance;
+  if (mock) {
+    return mock(request);
+  }
+  return invoke<PostExportQualityAssuranceResult>('run_post_export_quality_assurance', { request });
 }
 
 export async function exportMediaGif(request: GifExportRequest): Promise<GifWorkflowResult> {

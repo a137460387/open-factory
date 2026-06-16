@@ -4,8 +4,11 @@ import {
   buildFfmpegExportPlan,
   createProgressiveExportState,
   estimateProgressiveCompletedDuration,
+  hasEnabledPostExportQualityChecks,
   runRenderFarmWithFallback,
+  shouldRetryPostExportQuality,
   timelineHasExportableVideo,
+  type ExportReport,
   type ExportSettings,
   type ExportRenderRange,
   type ExportTaskPriority,
@@ -15,7 +18,8 @@ import {
   type RenderFarmTaskConfig
 } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
-import { cancelExport as bridgeCancelExport, copyFile, getAvailableMemoryBytes, getFfmpegCapabilities, getTempSegmentsDir, listenBridge, removeFile, runExport, writeFile } from '../lib/tauri-bridge';
+import { cancelExport as bridgeCancelExport, copyFile, getAvailableMemoryBytes, getFfmpegCapabilities, getTempSegmentsDir, listenBridge, removeFile, runExport, runPostExportQualityAssurance, writeFile } from '../lib/tauri-bridge';
+import { readExportQualityAssuranceSettings } from '../settings/appSettings';
 import { runExportBeforePlugins } from '../plugins/plugin-manager';
 import { getExportLogPath, persistFinishedTaskToHistory } from './export-history';
 import { normalizeExportProgressPayload, type ExportProgressEvent } from './export-progress';
@@ -211,7 +215,7 @@ async function runSingleTask(task: ExportTask): Promise<void> {
     useExportQueueStore.getState().setTaskLogPath(task.id, logPath);
   }
   try {
-    const result = task.renderFarm?.enabled
+    let result = task.renderFarm?.enabled
       ? await runRenderFarmWithFallback({
           taskId: task.id,
           outputPath: task.outputPath,
@@ -226,10 +230,44 @@ async function runSingleTask(task: ExportTask): Promise<void> {
           onProgress: (progress) => useExportQueueStore.getState().updateTaskProgress(task.id, progress)
         })
       : await runLocalExportTask(task);
+    let report: ExportReport = result.report ?? {};
+    const qualitySettings = await readExportQualityAssuranceSettings().catch(() => undefined);
+    if (qualitySettings && hasEnabledPostExportQualityChecks(qualitySettings)) {
+      let retryAttempt = 0;
+      while (true) {
+        const qualityAssurance = await runPostExportQualityAssurance({
+          taskId: task.id,
+          outputPath: task.outputPath,
+          expectedDuration: task.plan.duration,
+          fps: task.plan.settings?.fps,
+          expectedWidth: task.plan.settings?.width,
+          expectedHeight: task.plan.settings?.height,
+          duration: qualitySettings.duration,
+          blackFrames: qualitySettings.blackFrames,
+          silence: qualitySettings.silence,
+          fileSize: qualitySettings.fileSize,
+          resolution: qualitySettings.resolution,
+          minFileSizeBytes: qualitySettings.minFileSizeBytes,
+          maxFileSizeBytes: qualitySettings.maxFileSizeBytes,
+          blackFrameDurationSeconds: qualitySettings.blackFrameDurationSeconds,
+          silenceThresholdDb: qualitySettings.silenceThresholdDb,
+          silenceDurationSeconds: qualitySettings.silenceDurationSeconds,
+          autoRetry: qualitySettings.autoRetry
+        });
+        report = { ...report, qualityAssurance };
+        if (!shouldRetryPostExportQuality(qualityAssurance, qualitySettings, retryAttempt)) {
+          break;
+        }
+        retryAttempt += 1;
+        useExportQueueStore.getState().updateTaskProgress(task.id, 0);
+        result = task.renderFarm?.enabled ? result : await runLocalExportTask(task);
+        report = { ...(result.report ?? {}) };
+      }
+    }
     const latest = useExportQueueStore.getState().tasks.find((item) => item.id === task.id);
     if (latest?.status === 'running') {
       await writeSidecarSubtitleArtifacts(task.outputPath, task.plan.textArtifacts);
-      useExportQueueStore.getState().finishTask(task.id, result.report);
+      useExportQueueStore.getState().finishTask(task.id, report);
       await persistFinishedTaskToHistory(task.id);
       await runConfiguredExportUpload(task.id);
       const finishedTask = useExportQueueStore.getState().tasks.find((item) => item.id === task.id) ?? task;

@@ -64,6 +64,7 @@ pub fn run() {
             commands::ffmpeg::analyze_clip,
             commands::ffmpeg::analyze_motion_track,
             commands::ffmpeg::evaluate_export_quality,
+            commands::ffmpeg::run_post_export_quality_assurance,
             commands::ffmpeg::run_export,
             commands::ffmpeg::run_export_preview_samples,
             commands::ffmpeg::cancel_export,

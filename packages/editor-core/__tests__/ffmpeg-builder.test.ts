@@ -96,6 +96,21 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.postExportScript).toEqual({ command: 'echo "{output}"' });
   });
 
+  it('carries normalized export settings for post-export quality checks', () => {
+    const plan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(makeProject(), {
+        outputPath: 'out.mp4',
+        settings: {
+          width: 1280,
+          height: 720,
+          fps: 60
+        }
+      })
+    );
+
+    expect(plan.settings).toMatchObject({ width: 1280, height: 720, fps: 60 });
+  });
+
   it('adds colorspace conversion and ICC generation for non-default output color spaces', () => {
     const plan = buildFfmpegExportPlan(
       buildExportProjectFromProject(makeProject(), {

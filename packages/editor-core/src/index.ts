@@ -71,6 +71,7 @@ export * from './export/timeline-import';
 export * from './export/render-farm';
 export * from './export/cost-estimate';
 export * from './export/progressive';
+export * from './export/post-export-quality';
 export * from './project/project-types';
 export * from './project/project-migration';
 export * from './project/documentation';

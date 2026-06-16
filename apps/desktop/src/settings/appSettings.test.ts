@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS } from '@open-factory/editor-core';
 import type { TauriMocks } from '../lib/tauri-bridge';
 import { DEFAULT_EDITOR_LAYOUT_SETTINGS, type EditorLayoutSettings } from '../layout/layoutSettings';
 import {
@@ -7,6 +8,7 @@ import {
   readBackupSettings,
   readCustomSplitLayouts,
   readExportBackgroundSettings,
+  readExportQualityAssuranceSettings,
   readExportPresetSyncSettings,
   readExportUploadSettings,
   readExportRules,
@@ -22,6 +24,7 @@ import {
   saveAutomationRules,
   saveCustomSplitLayouts,
   saveExportBackgroundSettings,
+  saveExportQualityAssuranceSettings,
   saveExportPresetSyncSettings,
   saveExportUploadSettings,
   saveExportRules,
@@ -244,6 +247,44 @@ describe('app settings storage', () => {
     expect(await readAppSettings()).toEqual({
       language: 'en',
       exportPresetSync: sync
+    });
+  });
+
+  it('keeps post-export quality assurance disabled by default without persisting it', async () => {
+    await expect(readExportQualityAssuranceSettings()).resolves.toEqual(DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS);
+
+    await saveLanguageSetting('en');
+    const qualityAssurance = await saveExportQualityAssuranceSettings({});
+
+    expect(qualityAssurance).toEqual(DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS);
+    expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({ language: 'en' });
+  });
+
+  it('persists enabled post-export quality assurance settings in settings.json', async () => {
+    await saveLanguageSetting('en');
+    const qualityAssurance = await saveExportQualityAssuranceSettings({
+      enabled: true,
+      duration: true,
+      blackFrames: true,
+      fileSize: true,
+      minFileSizeBytes: 1024,
+      maxFileSizeBytes: 4096,
+      autoRetry: true
+    });
+
+    expect(qualityAssurance).toEqual({
+      ...DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS,
+      enabled: true,
+      duration: true,
+      blackFrames: true,
+      fileSize: true,
+      minFileSizeBytes: 1024,
+      maxFileSizeBytes: 4096,
+      autoRetry: true
+    });
+    expect(await readAppSettings()).toEqual({
+      language: 'en',
+      exportQualityAssurance: qualityAssurance
     });
   });
 

@@ -1,4 +1,4 @@
-use super::binaries::ffmpeg_binary;
+use super::binaries::{ffmpeg_binary, ffprobe_binary};
 use crate::path_validator::{validate_path, validate_path_for_write};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -328,6 +328,86 @@ pub struct QualityEvaluationResult {
     duration_ms: u128,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PostExportQualityAssuranceRequest {
+    task_id: String,
+    output_path: String,
+    #[serde(default)]
+    expected_duration: Option<f64>,
+    #[serde(default)]
+    fps: Option<f64>,
+    #[serde(default)]
+    expected_width: Option<u32>,
+    #[serde(default)]
+    expected_height: Option<u32>,
+    duration: bool,
+    black_frames: bool,
+    silence: bool,
+    file_size: bool,
+    resolution: bool,
+    #[serde(default)]
+    min_file_size_bytes: Option<u64>,
+    #[serde(default)]
+    max_file_size_bytes: Option<u64>,
+    black_frame_duration_seconds: f64,
+    silence_threshold_db: f64,
+    silence_duration_seconds: f64,
+    auto_retry: bool,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct DetectedMediaRangeDto {
+    start: f64,
+    end: f64,
+    duration: f64,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PostExportQualityCheckResult {
+    id: String,
+    status: String,
+    message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    expected: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    actual: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    ranges: Option<Vec<DetectedMediaRangeDto>>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PostExportQualityAssuranceResult {
+    status: String,
+    checks: Vec<PostExportQualityCheckResult>,
+    retry_recommended: bool,
+    completed_at: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq)]
+struct PostExportMediaProbe {
+    duration: Option<f64>,
+    width: Option<u32>,
+    height: Option<u32>,
+}
+
+#[derive(Debug, Clone, Default)]
+struct PostExportQualityMeasurements {
+    expected_duration: Option<f64>,
+    actual_duration: Option<f64>,
+    fps: Option<f64>,
+    expected_width: Option<u32>,
+    expected_height: Option<u32>,
+    actual_width: Option<u32>,
+    actual_height: Option<u32>,
+    file_size_bytes: Option<u64>,
+    black_frames: Vec<DetectedMediaRangeDto>,
+    silence: Vec<DetectedMediaRangeDto>,
+}
+
 #[derive(Debug, Clone, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ClipAnalysisProgressPayload {
@@ -506,6 +586,18 @@ pub async fn evaluate_export_quality(
     tauri::async_runtime::spawn_blocking(move || evaluate_export_quality_blocking(app, request))
         .await
         .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub async fn run_post_export_quality_assurance(
+    app: AppHandle,
+    request: PostExportQualityAssuranceRequest,
+) -> Result<PostExportQualityAssuranceResult, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        run_post_export_quality_assurance_blocking(app, request)
+    })
+    .await
+    .map_err(|error| error.to_string())?
 }
 
 #[tauri::command(rename_all = "camelCase")]
@@ -816,6 +908,62 @@ fn evaluate_export_quality_blocking(
         vmaf_available: include_vmaf,
         duration_ms: started.elapsed().as_millis(),
     })
+}
+
+fn run_post_export_quality_assurance_blocking(
+    app: AppHandle,
+    request: PostExportQualityAssuranceRequest,
+) -> Result<PostExportQualityAssuranceResult, String> {
+    if request.task_id.trim().is_empty() {
+        return Err("Post-export quality task id is required.".to_string());
+    }
+    let safe_output = validate_path(&app, Path::new(&request.output_path))?;
+    let mut measurements = PostExportQualityMeasurements {
+        expected_duration: request.expected_duration,
+        fps: request.fps,
+        expected_width: request.expected_width,
+        expected_height: request.expected_height,
+        ..PostExportQualityMeasurements::default()
+    };
+    if request.duration || request.resolution {
+        let probe = probe_post_export_media(&safe_output)?;
+        measurements.actual_duration = probe.duration;
+        measurements.actual_width = probe.width;
+        measurements.actual_height = probe.height;
+    }
+    if request.file_size {
+        measurements.file_size_bytes = Some(
+            fs::metadata(&safe_output)
+                .map_err(|error| {
+                    format!(
+                        "Unable to read export file size {}: {}",
+                        normalize_path(&safe_output),
+                        error
+                    )
+                })?
+                .len(),
+        );
+    }
+    if request.black_frames {
+        let stderr = run_ffmpeg_capture(build_post_export_black_detect_args(
+            &safe_output,
+            request.black_frame_duration_seconds,
+        ))?;
+        measurements.black_frames = parse_blackdetect_output(&stderr);
+    }
+    if request.silence {
+        let stderr = run_ffmpeg_capture(build_post_export_silence_detect_args(
+            &safe_output,
+            request.silence_threshold_db,
+            request.silence_duration_seconds,
+        ))?;
+        measurements.silence = parse_silencedetect_output(&stderr);
+    }
+    Ok(build_post_export_quality_result(
+        &request,
+        measurements,
+        format!("unix-ms:{}", unix_time_millis()),
+    ))
 }
 
 fn analyze_clip_blocking(
@@ -1908,6 +2056,413 @@ fn build_quality_filter_complex(include_vmaf: bool) -> String {
     filter
 }
 
+fn build_post_export_ffprobe_args(output_path: &Path) -> Vec<String> {
+    vec![
+        "-v".to_string(),
+        "error".to_string(),
+        "-select_streams".to_string(),
+        "v:0".to_string(),
+        "-show_entries".to_string(),
+        "stream=width,height:format=duration".to_string(),
+        "-of".to_string(),
+        "json".to_string(),
+        normalize_path(output_path),
+    ]
+}
+
+fn build_post_export_black_detect_args(
+    output_path: &Path,
+    min_duration_seconds: f64,
+) -> Vec<String> {
+    vec![
+        "-hide_banner".to_string(),
+        "-i".to_string(),
+        normalize_path(output_path),
+        "-vf".to_string(),
+        format!(
+            "blackdetect=d={}",
+            format_filter_number(normalize_positive_f64(min_duration_seconds, 0.5))
+        ),
+        "-an".to_string(),
+        "-f".to_string(),
+        "null".to_string(),
+        "-".to_string(),
+    ]
+}
+
+fn build_post_export_silence_detect_args(
+    output_path: &Path,
+    threshold_db: f64,
+    min_duration_seconds: f64,
+) -> Vec<String> {
+    vec![
+        "-hide_banner".to_string(),
+        "-i".to_string(),
+        normalize_path(output_path),
+        "-af".to_string(),
+        format!(
+            "silencedetect=n={}dB:d={}",
+            format_filter_number(normalize_finite_f64(threshold_db, -50.0)),
+            format_filter_number(normalize_positive_f64(min_duration_seconds, 2.0))
+        ),
+        "-vn".to_string(),
+        "-f".to_string(),
+        "null".to_string(),
+        "-".to_string(),
+    ]
+}
+
+fn probe_post_export_media(output_path: &Path) -> Result<PostExportMediaProbe, String> {
+    let args = build_post_export_ffprobe_args(output_path);
+    let output = Command::new(ffprobe_binary())
+        .args(&args)
+        .output()
+        .map_err(|error| format!("Unable to start ffprobe: {}", error))?;
+    if !output.status.success() {
+        return Err(format!(
+            "FFprobe failed with status {}.\n{}",
+            output.status,
+            String::from_utf8_lossy(&output.stderr)
+        ));
+    }
+    parse_post_export_ffprobe_json(&String::from_utf8_lossy(&output.stdout))
+}
+
+fn parse_post_export_ffprobe_json(text: &str) -> Result<PostExportMediaProbe, String> {
+    let value: Value = serde_json::from_str(text)
+        .map_err(|error| format!("Unable to parse ffprobe output: {}", error))?;
+    let stream = value
+        .get("streams")
+        .and_then(Value::as_array)
+        .and_then(|streams| streams.first());
+    let format = value.get("format");
+    Ok(PostExportMediaProbe {
+        duration: format
+            .and_then(|item| item.get("duration"))
+            .and_then(json_number_or_string),
+        width: stream
+            .and_then(|item| item.get("width"))
+            .and_then(json_u32_or_string),
+        height: stream
+            .and_then(|item| item.get("height"))
+            .and_then(json_u32_or_string),
+    })
+}
+
+fn run_ffmpeg_capture(args: Vec<String>) -> Result<String, String> {
+    let output = Command::new(ffmpeg_binary())
+        .args(&args)
+        .output()
+        .map_err(|error| format!("Unable to start ffmpeg: {}", error))?;
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    if !output.status.success() {
+        return Err(format!(
+            "FFmpeg post-export quality check failed with status {}.\n{}",
+            output.status, stderr
+        ));
+    }
+    Ok(format!("{}\n{}", stdout, stderr))
+}
+
+fn parse_blackdetect_output(text: &str) -> Vec<DetectedMediaRangeDto> {
+    text.lines()
+        .filter_map(|line| {
+            let start = extract_named_number(line, &["black_start"])?;
+            let end = extract_named_number(line, &["black_end"])?;
+            let duration =
+                extract_named_number(line, &["black_duration"]).unwrap_or_else(|| end - start);
+            Some(DetectedMediaRangeDto {
+                start,
+                end,
+                duration,
+            })
+        })
+        .collect()
+}
+
+fn parse_silencedetect_output(text: &str) -> Vec<DetectedMediaRangeDto> {
+    let mut ranges = Vec::new();
+    let mut current_start: Option<f64> = None;
+    for line in text.lines() {
+        if let Some(start) = extract_named_number(line, &["silence_start"]) {
+            current_start = Some(start);
+        }
+        if let Some(end) = extract_named_number(line, &["silence_end"]) {
+            let duration = extract_named_number(line, &["silence_duration"])
+                .unwrap_or_else(|| current_start.map(|start| end - start).unwrap_or(0.0));
+            ranges.push(DetectedMediaRangeDto {
+                start: current_start.unwrap_or_else(|| (end - duration).max(0.0)),
+                end,
+                duration,
+            });
+            current_start = None;
+        }
+    }
+    ranges
+}
+
+fn build_post_export_quality_result(
+    request: &PostExportQualityAssuranceRequest,
+    measurements: PostExportQualityMeasurements,
+    completed_at: String,
+) -> PostExportQualityAssuranceResult {
+    let mut checks = Vec::new();
+    if request.duration {
+        checks.push(check_post_export_duration(&measurements));
+    }
+    if request.black_frames {
+        checks.push(check_post_export_ranges(
+            "blackFrames",
+            &measurements.black_frames,
+            normalize_positive_f64(request.black_frame_duration_seconds, 0.5),
+            "检测到意外黑帧",
+            "未检测到意外黑帧",
+        ));
+    }
+    if request.silence {
+        checks.push(check_post_export_ranges(
+            "silence",
+            &measurements.silence,
+            normalize_positive_f64(request.silence_duration_seconds, 2.0),
+            "检测到意外静音",
+            "未检测到意外静音",
+        ));
+    }
+    if request.file_size {
+        checks.push(check_post_export_file_size(request, measurements.file_size_bytes));
+    }
+    if request.resolution {
+        checks.push(check_post_export_resolution(&measurements));
+    }
+    let status = summarize_post_export_quality_status(&checks);
+    PostExportQualityAssuranceResult {
+        retry_recommended: status == "fail" && request.auto_retry,
+        status,
+        checks,
+        completed_at,
+    }
+}
+
+fn check_post_export_duration(
+    measurements: &PostExportQualityMeasurements,
+) -> PostExportQualityCheckResult {
+    let expected = measurements.expected_duration;
+    let actual = measurements.actual_duration;
+    let fps = measurements.fps.unwrap_or(30.0).max(1.0);
+    match (expected, actual) {
+        (Some(expected), Some(actual)) if expected.is_finite() && actual.is_finite() => {
+            let tolerance = 1.0 / fps;
+            let delta = (actual - expected).abs();
+            if delta < tolerance {
+                PostExportQualityCheckResult {
+                    id: "duration".to_string(),
+                    status: "pass".to_string(),
+                    message: "导出时长在 1 帧误差内".to_string(),
+                    expected: Some(Value::from(expected)),
+                    actual: Some(Value::from(actual)),
+                    ranges: None,
+                }
+            } else {
+                PostExportQualityCheckResult {
+                    id: "duration".to_string(),
+                    status: "fail".to_string(),
+                    message: format!("导出时长误差超过 1 帧 ({:.3}s)", delta),
+                    expected: Some(Value::from(expected)),
+                    actual: Some(Value::from(actual)),
+                    ranges: None,
+                }
+            }
+        }
+        _ => PostExportQualityCheckResult {
+            id: "duration".to_string(),
+            status: "fail".to_string(),
+            message: "无法读取导出时长".to_string(),
+            expected: expected.map(Value::from),
+            actual: actual.map(Value::from),
+            ranges: None,
+        },
+    }
+}
+
+fn check_post_export_ranges(
+    id: &str,
+    ranges: &[DetectedMediaRangeDto],
+    min_duration: f64,
+    warning_message: &str,
+    pass_message: &str,
+) -> PostExportQualityCheckResult {
+    let unexpected = ranges
+        .iter()
+        .filter(|range| range.duration >= min_duration)
+        .cloned()
+        .collect::<Vec<_>>();
+    if unexpected.is_empty() {
+        PostExportQualityCheckResult {
+            id: id.to_string(),
+            status: "pass".to_string(),
+            message: pass_message.to_string(),
+            expected: None,
+            actual: Some(Value::from(0)),
+            ranges: Some(Vec::new()),
+        }
+    } else {
+        PostExportQualityCheckResult {
+            id: id.to_string(),
+            status: "warning".to_string(),
+            message: format!("{} {} 段", warning_message, unexpected.len()),
+            expected: None,
+            actual: Some(Value::from(unexpected.len() as u64)),
+            ranges: Some(unexpected),
+        }
+    }
+}
+
+fn check_post_export_file_size(
+    request: &PostExportQualityAssuranceRequest,
+    actual: Option<u64>,
+) -> PostExportQualityCheckResult {
+    let Some(actual) = actual else {
+        return PostExportQualityCheckResult {
+            id: "fileSize".to_string(),
+            status: "warning".to_string(),
+            message: "无法读取导出文件大小".to_string(),
+            expected: None,
+            actual: None,
+            ranges: None,
+        };
+    };
+    if let Some(min) = request.min_file_size_bytes {
+        if actual < min {
+            return PostExportQualityCheckResult {
+                id: "fileSize".to_string(),
+                status: "warning".to_string(),
+                message: "导出文件小于预期最小值".to_string(),
+                expected: Some(Value::from(min)),
+                actual: Some(Value::from(actual)),
+                ranges: None,
+            };
+        }
+    }
+    if let Some(max) = request.max_file_size_bytes {
+        if actual > max {
+            return PostExportQualityCheckResult {
+                id: "fileSize".to_string(),
+                status: "warning".to_string(),
+                message: "导出文件大于预期最大值".to_string(),
+                expected: Some(Value::from(max)),
+                actual: Some(Value::from(actual)),
+                ranges: None,
+            };
+        }
+    }
+    PostExportQualityCheckResult {
+        id: "fileSize".to_string(),
+        status: "pass".to_string(),
+        message: "导出文件大小在预期范围内".to_string(),
+        expected: None,
+        actual: Some(Value::from(actual)),
+        ranges: None,
+    }
+}
+
+fn check_post_export_resolution(
+    measurements: &PostExportQualityMeasurements,
+) -> PostExportQualityCheckResult {
+    let expected_width = measurements.expected_width;
+    let expected_height = measurements.expected_height;
+    let actual_width = measurements.actual_width;
+    let actual_height = measurements.actual_height;
+    match (expected_width, expected_height, actual_width, actual_height) {
+        (Some(expected_width), Some(expected_height), Some(actual_width), Some(actual_height)) => {
+            let expected = format!("{}x{}", expected_width, expected_height);
+            let actual = format!("{}x{}", actual_width, actual_height);
+            if expected == actual {
+                PostExportQualityCheckResult {
+                    id: "resolution".to_string(),
+                    status: "pass".to_string(),
+                    message: "输出分辨率与预设一致".to_string(),
+                    expected: Some(Value::String(expected)),
+                    actual: Some(Value::String(actual)),
+                    ranges: None,
+                }
+            } else {
+                PostExportQualityCheckResult {
+                    id: "resolution".to_string(),
+                    status: "fail".to_string(),
+                    message: "输出分辨率与预设不一致".to_string(),
+                    expected: Some(Value::String(expected)),
+                    actual: Some(Value::String(actual)),
+                    ranges: None,
+                }
+            }
+        }
+        _ => PostExportQualityCheckResult {
+            id: "resolution".to_string(),
+            status: "fail".to_string(),
+            message: "无法读取导出分辨率".to_string(),
+            expected: expected_width
+                .zip(expected_height)
+                .map(|(width, height)| Value::String(format!("{}x{}", width, height))),
+            actual: actual_width
+                .zip(actual_height)
+                .map(|(width, height)| Value::String(format!("{}x{}", width, height))),
+            ranges: None,
+        },
+    }
+}
+
+fn summarize_post_export_quality_status(checks: &[PostExportQualityCheckResult]) -> String {
+    if checks.iter().any(|check| check.status == "fail") {
+        "fail".to_string()
+    } else if checks.iter().any(|check| check.status == "warning") {
+        "warning".to_string()
+    } else {
+        "pass".to_string()
+    }
+}
+
+fn json_number_or_string(value: &Value) -> Option<f64> {
+    value
+        .as_f64()
+        .or_else(|| value.as_str().and_then(|text| text.parse::<f64>().ok()))
+        .filter(|number| number.is_finite())
+}
+
+fn json_u32_or_string(value: &Value) -> Option<u32> {
+    value
+        .as_u64()
+        .or_else(|| value.as_str().and_then(|text| text.parse::<u64>().ok()))
+        .and_then(|number| u32::try_from(number).ok())
+}
+
+fn normalize_positive_f64(value: f64, fallback: f64) -> f64 {
+    if value.is_finite() && value > 0.0 {
+        value
+    } else {
+        fallback
+    }
+}
+
+fn normalize_finite_f64(value: f64, fallback: f64) -> f64 {
+    if value.is_finite() {
+        value
+    } else {
+        fallback
+    }
+}
+
+fn format_filter_number(value: f64) -> String {
+    let mut formatted = format!("{:.3}", value);
+    while formatted.contains('.') && formatted.ends_with('0') {
+        formatted.pop();
+    }
+    if formatted.ends_with('.') {
+        formatted.pop();
+    }
+    formatted
+}
+
 pub fn parse_motion_vectors_from_mestimate_output(text: &str) -> Vec<MotionTrackPointDto> {
     text.lines()
         .filter_map(|line| {
@@ -2744,6 +3299,146 @@ offset=1.35
                 psnr: Some(40.25),
                 vmaf: Some(93.456789),
             }
+        );
+    }
+
+    #[test]
+    fn builds_post_export_quality_argument_arrays() {
+        assert_eq!(
+            build_post_export_ffprobe_args(Path::new(r"C:\Exports\final.mp4")),
+            vec![
+                "-v",
+                "error",
+                "-select_streams",
+                "v:0",
+                "-show_entries",
+                "stream=width,height:format=duration",
+                "-of",
+                "json",
+                "C:/Exports/final.mp4"
+            ]
+        );
+        assert_eq!(
+            build_post_export_black_detect_args(Path::new(r"C:\Exports\final.mp4"), 0.5),
+            vec![
+                "-hide_banner",
+                "-i",
+                "C:/Exports/final.mp4",
+                "-vf",
+                "blackdetect=d=0.5",
+                "-an",
+                "-f",
+                "null",
+                "-"
+            ]
+        );
+        assert_eq!(
+            build_post_export_silence_detect_args(Path::new(r"C:\Exports\final.mp4"), -50.0, 2.0),
+            vec![
+                "-hide_banner",
+                "-i",
+                "C:/Exports/final.mp4",
+                "-af",
+                "silencedetect=n=-50dB:d=2",
+                "-vn",
+                "-f",
+                "null",
+                "-"
+            ]
+        );
+    }
+
+    #[test]
+    fn parses_post_export_quality_probe_and_detect_output() {
+        let probe = parse_post_export_ffprobe_json(
+            r#"{"streams":[{"width":1920,"height":1080}],"format":{"duration":"12.345"}}"#,
+        )
+        .expect("ffprobe json should parse");
+        assert_eq!(
+            probe,
+            PostExportMediaProbe {
+                duration: Some(12.345),
+                width: Some(1920),
+                height: Some(1080)
+            }
+        );
+        assert_eq!(
+            parse_blackdetect_output("[blackdetect @ 0] black_start:1 black_end:1.75 black_duration:0.75"),
+            vec![DetectedMediaRangeDto {
+                start: 1.0,
+                end: 1.75,
+                duration: 0.75
+            }]
+        );
+        assert_eq!(
+            parse_silencedetect_output(
+                "[silencedetect @ 0] silence_start: 2\n[silencedetect @ 0] silence_end: 4.25 | silence_duration: 2.25"
+            ),
+            vec![DetectedMediaRangeDto {
+                start: 2.0,
+                end: 4.25,
+                duration: 2.25
+            }]
+        );
+    }
+
+    #[test]
+    fn summarizes_post_export_quality_result_and_retry_condition() {
+        let request = PostExportQualityAssuranceRequest {
+            task_id: "task-qa".to_string(),
+            output_path: "C:/Exports/final.mp4".to_string(),
+            expected_duration: Some(10.0),
+            fps: Some(30.0),
+            expected_width: Some(1920),
+            expected_height: Some(1080),
+            duration: true,
+            black_frames: true,
+            silence: true,
+            file_size: true,
+            resolution: true,
+            min_file_size_bytes: Some(1_000),
+            max_file_size_bytes: Some(10_000),
+            black_frame_duration_seconds: 0.5,
+            silence_threshold_db: -50.0,
+            silence_duration_seconds: 2.0,
+            auto_retry: true,
+        };
+        let result = build_post_export_quality_result(
+            &request,
+            PostExportQualityMeasurements {
+                expected_duration: Some(10.0),
+                actual_duration: Some(10.2),
+                fps: Some(30.0),
+                expected_width: Some(1920),
+                expected_height: Some(1080),
+                actual_width: Some(1280),
+                actual_height: Some(720),
+                file_size_bytes: Some(12_000),
+                black_frames: vec![DetectedMediaRangeDto {
+                    start: 1.0,
+                    end: 1.75,
+                    duration: 0.75,
+                }],
+                silence: vec![],
+            },
+            "test-time".to_string(),
+        );
+
+        assert_eq!(result.status, "fail");
+        assert!(result.retry_recommended);
+        assert_eq!(
+            result
+                .checks
+                .iter()
+                .map(|check| (check.id.as_str(), check.status.as_str()))
+                .collect::<Vec<_>>(),
+            vec![
+                ("duration", "fail"),
+                ("blackFrames", "warning"),
+                ("silence", "pass"),
+                ("fileSize", "warning"),
+                ("resolution", "fail")
+            ]
         );
     }
 

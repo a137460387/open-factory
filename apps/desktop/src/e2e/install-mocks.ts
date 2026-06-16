@@ -56,6 +56,7 @@ let lastGifPreviewRequest: GifPreviewRequest | undefined;
 const canceledExportTaskIds = new Set<string>();
 const canceledTranscodeTaskIds = new Set<string>();
 const canceledQualityEvaluationTaskIds = new Set<string>();
+let postExportQualityStatus: 'pass' | 'warning' | 'fail' = 'pass';
 let exportGateHeld = false;
 const exportGates: Array<{ taskId?: string; release: () => void }> = [];
 let exportWarmupDelayMs = 0;
@@ -556,6 +557,18 @@ const mocks: TauriMocks = {
     emit('quality-evaluation-progress', { taskId, progress: 1, progressPct: 100 });
     return { taskId, ssim: 0.9912, psnr: 41.3, vmaf: 92.4, vmafAvailable: true, durationMs: 10 };
   },
+  runPostExportQualityAssurance: async (request) => ({
+    status: postExportQualityStatus,
+    completedAt: new Date().toISOString(),
+    retryRecommended: postExportQualityStatus === 'fail' && request.autoRetry,
+    checks: [
+      ...(request.duration ? [{ id: 'duration' as const, status: postExportQualityStatus === 'fail' ? 'fail' as const : 'pass' as const, message: postExportQualityStatus === 'fail' ? '导出时长误差超过 1 帧' : '导出时长在 1 帧误差内', expected: request.expectedDuration, actual: request.expectedDuration }] : []),
+      ...(request.blackFrames ? [{ id: 'blackFrames' as const, status: postExportQualityStatus === 'warning' ? 'warning' as const : 'pass' as const, message: postExportQualityStatus === 'warning' ? '检测到意外黑帧 1 段' : '未检测到意外黑帧', actual: postExportQualityStatus === 'warning' ? 1 : 0 }] : []),
+      ...(request.silence ? [{ id: 'silence' as const, status: 'pass' as const, message: '未检测到意外静音', actual: 0 }] : []),
+      ...(request.fileSize ? [{ id: 'fileSize' as const, status: 'pass' as const, message: '导出文件大小在预期范围内', actual: files.get(request.outputPath)?.length ?? 4096 }] : []),
+      ...(request.resolution ? [{ id: 'resolution' as const, status: 'pass' as const, message: '输出分辨率与预设一致', expected: `${request.expectedWidth}x${request.expectedHeight}`, actual: `${request.expectedWidth}x${request.expectedHeight}` }] : [])
+    ]
+  }),
   cancelMotionTracking: () => undefined,
   cancelQualityEvaluation: (taskId) => {
     canceledQualityEvaluationTaskIds.add(taskId);
@@ -1796,6 +1809,9 @@ window.__E2E_ACTIONS__ = {
       exportWarmupDelayMs = Math.max(0, delayMs);
     }
   },
+  setPostExportQualityStatus: (status: unknown) => {
+    postExportQualityStatus = status === 'warning' || status === 'fail' ? status : 'pass';
+  },
   getWrittenFile: (path: unknown) => (typeof path === 'string' ? files.get(path) : undefined),
   getWrittenFileSize: (path: unknown) => (typeof path === 'string' ? files.get(path)?.length ?? 0 : 0),
   getBackupFiles: (path: unknown) => {
@@ -1954,6 +1970,7 @@ window.__E2E_ACTIONS__ = {
     notifications = [];
     recordingTasks = new Map();
     exportWarmupDelayMs = 0;
+    postExportQualityStatus = 'pass';
     localStorage.removeItem('open-factory:proxy-settings');
     localStorage.removeItem('open-factory:plugins');
     localStorage.removeItem('open-factory:settings');

@@ -4,6 +4,7 @@ import type { ClipBlendMode } from '../blend-modes';
 import type { ProjectColorPipeline } from '../color-pipeline';
 import type { Effect } from '../effects';
 import type { ExportColorManagementSettings } from './color-management';
+import type { PostExportQualityAssuranceResult } from './post-export-quality';
 import type {
   AudioFadeCurve,
   AudioChannelRoutingMode,
@@ -430,6 +431,7 @@ export interface TextArtifact {
 
 export interface FfmpegExportPlan {
   projectName?: string;
+  settings?: ExportSettings;
   inputs: FfmpegInput[];
   filterComplex: string;
   maps: string[];
@@ -492,4 +494,5 @@ export interface ExportLoudnessReport {
 export interface ExportReport {
   loudness?: ExportLoudnessReport;
   postExportScript?: ExportPostExportScriptResult;
+  qualityAssurance?: PostExportQualityAssuranceResult;
 }
