@@ -2,6 +2,7 @@ import {
   TARGET_ASPECT_RATIOS,
   SUPPORTED_PROJECT_FPS,
   appendExportRangeSequence,
+  BUILTIN_AUDIO_VISUALIZATION_THEMES,
   buildExportProjectFromProject,
   buildFfmpegPreviewSamplePlans,
   buildProjectForSequenceExport,
@@ -12,9 +13,11 @@ import {
   expandSequenceBatchOutputPath,
   getSyncedProjectSequences,
   hasExportMasterProcessing,
+  expandAudioVisualizationTheme,
   getTimelinePlaybackDuration,
   isProgressiveExportSupported,
   normalizeExportMasterProcessing,
+  normalizeAudioVisualizationTheme,
   normalizeExportColorManagement,
   normalizeExportPostScript,
   normalizeExportRenderRange,
@@ -37,6 +40,11 @@ import {
   sortBatchSequenceIds,
   suggestRenderFarmInstances,
   topologicallySortExportPipeline,
+  upsertCustomAudioVisualizationTheme,
+  removeCustomAudioVisualizationTheme,
+  MANUAL_AUDIO_VISUALIZATION_THEME_ID,
+  type AudioVisualizationThemeDefinition,
+  type CustomAudioVisualizationTheme,
   type ExportAudioVisualizationBackground,
   type ExportAudioVisualizationStyle,
   type ExportColorSpace,
@@ -69,7 +77,7 @@ import {
   type TargetAspectRatio
 } from '@open-factory/editor-core';
 import { AlertTriangle, Cloud, CloudDownload, Clock3, Download, FileText, FolderOpen, Image as ImageIcon, ListPlus, Loader2, Minimize2, Save, Trash2, Upload, X } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { zhCN } from '../i18n/strings';
 import { chooseExportPath, revealExport } from '../lib/exportVideo';
 import { isFontFamilyAvailable } from '../lib/fonts';
@@ -103,16 +111,19 @@ import { showToast } from '../lib/toast';
 import {
   DEFAULT_EXPORT_UPLOAD_SETTINGS,
   DEFAULT_EXPORT_PRESET_SYNC_SETTINGS,
+  readAudioVisualizationThemeSettings,
   readExportBackgroundSettings,
   readExportPresetSyncSettings,
   readExportUploadSettings,
   saveExportBackgroundSettings,
+  saveAudioVisualizationThemeSettings,
   saveExportPresetSyncSettings,
   saveExportUploadSettings,
   type ExportBackgroundSettings,
   type ExportPresetSyncSettings,
   type ExportUploadSettings
 } from '../settings/appSettings';
+import { drawAudioVisualizationThemePreviewFrame } from '../media/audioVisualizationThemePreview';
 import { getWhisperAvailability } from '../lib/whisper';
 import { useWhisperSettingsStore } from '../store/whisperSettingsStore';
 import { cancelQueuedExportTask, enqueueExport, pauseQueuedExportTask, retryQueuedExportTask, setExportQueueMaxConcurrent, setExportQueuePaused } from './export-queue-runner';
@@ -2355,11 +2366,18 @@ function isAudioVisualizationFormat(format: string | undefined): format is strin
 
 function normalizeAudioVisualizationDraft(value: ExportPresetSettings['audioVisualization']): NonNullable<ExportPresetSettings['audioVisualization']> {
   const style = value?.style === 'spectrum-bars' || value?.style === 'circular-spectrum' || value?.style === 'waveform-line' ? value.style : DEFAULT_AUDIO_VISUALIZATION.style;
-  return {
+  const normalized: NonNullable<ExportPresetSettings['audioVisualization']> = {
     style,
     color: normalizeHexColor(value?.color, DEFAULT_AUDIO_VISUALIZATION.color),
     background: normalizeAudioVisualizationBackgroundDraft(value?.background)
   };
+  if (typeof value?.themeId === 'string' && value.themeId.trim()) {
+    normalized.themeId = value.themeId.trim();
+  }
+  if (value?.theme && typeof value.theme === 'object') {
+    normalized.theme = normalizeAudioVisualizationTheme(value.theme);
+  }
+  return normalized;
 }
 
 function normalizeAudioVisualizationBackgroundDraft(
@@ -2419,14 +2437,51 @@ function updateAudioVisualizationStyle(setDraftSettings: Dispatch<SetStateAction
   }));
 }
 
-function updateAudioVisualizationColor(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, value: string): void {
-  setDraftSettings((current) => ({
-    ...current,
-    audioVisualization: {
-      ...normalizeAudioVisualizationDraft(current.audioVisualization),
-      color: normalizeHexColor(value, DEFAULT_AUDIO_VISUALIZATION.color)
+function updateAudioVisualizationTheme(
+  setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>,
+  theme: AudioVisualizationThemeDefinition | undefined,
+  customThemes: readonly CustomAudioVisualizationTheme[]
+): void {
+  setDraftSettings((current) => {
+    const visualization = normalizeAudioVisualizationDraft(current.audioVisualization);
+    if (!theme) {
+      const nextVisualization = {
+        ...visualization,
+        themeId: MANUAL_AUDIO_VISUALIZATION_THEME_ID
+      };
+      delete nextVisualization.theme;
+      return { ...current, audioVisualization: nextVisualization };
     }
-  }));
+    const isCustom = customThemes.some((item) => item.id === theme.id);
+    const expanded = expandAudioVisualizationTheme({ themeId: theme.id, theme: isCustom ? theme : undefined });
+    const nextVisualization: NonNullable<ExportPresetSettings['audioVisualization']> = {
+      ...visualization,
+      themeId: theme.id,
+      color: expanded.colorStart,
+      background: audioVisualizationBackgroundFromTheme(expanded.background)
+    };
+    if (isCustom) {
+      nextVisualization.theme = theme;
+    } else {
+      delete nextVisualization.theme;
+    }
+    return {
+      ...current,
+      audioVisualization: nextVisualization
+    };
+  });
+}
+
+function updateAudioVisualizationColor(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, value: string): void {
+  setDraftSettings((current) => {
+    const nextVisualization = {
+      ...normalizeAudioVisualizationDraft(current.audioVisualization),
+      color: normalizeHexColor(value, DEFAULT_AUDIO_VISUALIZATION.color),
+      themeId: MANUAL_AUDIO_VISUALIZATION_THEME_ID
+    };
+    delete nextVisualization.theme;
+    return { ...current, audioVisualization: nextVisualization };
+  });
 }
 
 function updateAudioVisualizationBackgroundType(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, value: string): void {
@@ -2435,17 +2490,20 @@ function updateAudioVisualizationBackgroundType(setDraftSettings: Dispatch<SetSt
     const type = AUDIO_VISUALIZATION_BACKGROUND_TYPES.includes(value as ExportAudioVisualizationBackground['type'])
       ? (value as ExportAudioVisualizationBackground['type'])
       : 'solid';
+    const nextVisualization = {
+      ...visualization,
+      themeId: MANUAL_AUDIO_VISUALIZATION_THEME_ID,
+      background:
+        type === 'image'
+          ? { type: 'image' as const, path: visualization.background.type === 'image' ? visualization.background.path : '' }
+          : type === 'gradient'
+            ? { type: 'gradient' as const, color: backgroundPrimaryColor(visualization.background), color2: '#1d4ed8' }
+            : { type: 'solid' as const, color: backgroundPrimaryColor(visualization.background) }
+    };
+    delete nextVisualization.theme;
     return {
       ...current,
-      audioVisualization: {
-        ...visualization,
-        background:
-          type === 'image'
-            ? { type: 'image', path: visualization.background.type === 'image' ? visualization.background.path : '' }
-            : type === 'gradient'
-              ? { type: 'gradient', color: backgroundPrimaryColor(visualization.background), color2: '#1d4ed8' }
-              : { type: 'solid', color: backgroundPrimaryColor(visualization.background) }
-      }
+      audioVisualization: nextVisualization
     };
   });
 }
@@ -2459,14 +2517,26 @@ function updateAudioVisualizationBackgroundColor(
     const visualization = normalizeAudioVisualizationDraft(current.audioVisualization);
     const background = visualization.background;
     if (background.type === 'gradient') {
+      const nextVisualization: NonNullable<ExportPresetSettings['audioVisualization']> = {
+        ...visualization,
+        themeId: MANUAL_AUDIO_VISUALIZATION_THEME_ID,
+        background: { ...background, [key]: normalizeHexColor(value, key === 'color' ? '#050816' : '#1d4ed8') }
+      };
+      delete nextVisualization.theme;
       return {
         ...current,
-        audioVisualization: { ...visualization, background: { ...background, [key]: normalizeHexColor(value, key === 'color' ? '#050816' : '#1d4ed8') } }
+        audioVisualization: nextVisualization
       };
     }
+    const nextVisualization: NonNullable<ExportPresetSettings['audioVisualization']> = {
+      ...visualization,
+      themeId: MANUAL_AUDIO_VISUALIZATION_THEME_ID,
+      background: { type: 'solid' as const, color: normalizeHexColor(value, '#050816') }
+    };
+    delete nextVisualization.theme;
     return {
       ...current,
-      audioVisualization: { ...visualization, background: { type: 'solid', color: normalizeHexColor(value, '#050816') } }
+      audioVisualization: nextVisualization
     };
   });
 }
@@ -2474,11 +2544,19 @@ function updateAudioVisualizationBackgroundColor(
 function updateAudioVisualizationBackgroundImagePath(setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>, path: string): void {
   setDraftSettings((current) => {
     const visualization = normalizeAudioVisualizationDraft(current.audioVisualization);
+    const nextVisualization = { ...visualization, themeId: MANUAL_AUDIO_VISUALIZATION_THEME_ID, background: { type: 'image' as const, path } };
+    delete nextVisualization.theme;
     return {
       ...current,
-      audioVisualization: { ...visualization, background: { type: 'image', path } }
+      audioVisualization: nextVisualization
     };
   });
+}
+
+function audioVisualizationBackgroundFromTheme(background: ReturnType<typeof expandAudioVisualizationTheme>['background']): ExportAudioVisualizationBackground {
+  return background.type === 'gradient'
+    ? { type: 'gradient', color: background.color, color2: background.color2 }
+    : { type: 'solid', color: background.color };
 }
 
 function backgroundPrimaryColor(background: ExportAudioVisualizationBackground): string {
@@ -3044,11 +3122,78 @@ function AudioVisualizationSection({
   onChooseImage(): void;
 }) {
   const t = zhCN.exportDialog.audioVisualization;
+  const [customThemes, setCustomThemes] = useState<CustomAudioVisualizationTheme[]>([]);
+  const [customThemeName, setCustomThemeName] = useState('');
   const background = visualization.background;
   const backgroundType = background.type;
   const backgroundColor = background.type === 'image' ? '#050816' : background.color;
   const backgroundColor2 = background.type === 'gradient' ? background.color2 : '#1d4ed8';
   const backgroundPath = background.type === 'image' ? background.path : '';
+  const selectedThemeId = visualization.themeId ?? MANUAL_AUDIO_VISUALIZATION_THEME_ID;
+  const themeOptions = useMemo(() => [...BUILTIN_AUDIO_VISUALIZATION_THEMES, ...customThemes], [customThemes]);
+
+  useEffect(() => {
+    let canceled = false;
+    void readAudioVisualizationThemeSettings()
+      .then((settings) => {
+        if (!canceled) {
+          setCustomThemes(settings.customThemes);
+        }
+      })
+      .catch(() => {
+        if (!canceled) {
+          setCustomThemes([]);
+        }
+      });
+    return () => {
+      canceled = true;
+    };
+  }, []);
+
+  const saveCurrentTheme = async () => {
+    try {
+      const name = customThemeName.trim() || `${t.customThemes} ${customThemes.length + 1}`;
+      const expanded = expandAudioVisualizationTheme({
+        themeId: visualization.themeId,
+        theme: visualization.theme,
+        color: visualization.color,
+        background: visualization.background.type === 'image' ? undefined : visualization.background
+      });
+      const nextThemes = upsertCustomAudioVisualizationTheme(customThemes, {
+        id: name,
+        name,
+        colorStart: expanded.colorStart,
+        colorEnd: expanded.colorEnd,
+        background: expanded.background,
+        glow: expanded.glow,
+        glowColor: expanded.glowColor,
+        glowStrength: expanded.glowStrength,
+        particles: expanded.particles,
+        particleColor: expanded.particleColor,
+        border: expanded.border,
+        borderColor: expanded.borderColor,
+        borderWidth: expanded.borderWidth
+      });
+      const saved = await saveAudioVisualizationThemeSettings({ customThemes: nextThemes });
+      setCustomThemes(saved.customThemes);
+      const savedTheme = saved.customThemes.find((theme) => theme.id === nextThemes.at(-1)?.id);
+      if (savedTheme) {
+        updateAudioVisualizationTheme(setDraftSettings, savedTheme, saved.customThemes);
+      }
+      setCustomThemeName('');
+    } catch (error) {
+      showToast({ kind: 'warning', title: t.saveThemeFailed, message: error instanceof Error ? error.message : t.saveThemeFailed });
+    }
+  };
+
+  const deleteCustomTheme = async (themeId: string) => {
+    const nextThemes = removeCustomAudioVisualizationTheme(customThemes, themeId);
+    const saved = await saveAudioVisualizationThemeSettings({ customThemes: nextThemes });
+    setCustomThemes(saved.customThemes);
+    if (selectedThemeId === themeId) {
+      updateAudioVisualizationTheme(setDraftSettings, undefined, saved.customThemes);
+    }
+  };
 
   return (
     <section className="rounded-md border border-line p-3" data-testid="export-audio-viz-section">
@@ -3056,6 +3201,65 @@ function AudioVisualizationSection({
         <div>
           <h3 className="text-xs font-semibold text-slate-700">{t.title}</h3>
           <p className="mt-0.5 text-[11px] text-slate-500">{t.description}</p>
+        </div>
+      </div>
+      <div className="mt-3 space-y-2">
+        <div className="text-xs font-semibold text-slate-700">{t.theme}</div>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3" data-testid="export-audio-viz-theme-grid">
+          <ThemePreviewButton
+            label={t.manualTheme}
+            selected={selectedThemeId === MANUAL_AUDIO_VISUALIZATION_THEME_ID}
+            source={{ color: visualization.color, background: backgroundType === 'image' ? undefined : background }}
+            style={visualization.style}
+            testId="export-audio-viz-theme-manual"
+            onSelect={() => updateAudioVisualizationTheme(setDraftSettings, undefined, customThemes)}
+          />
+          {themeOptions.map((theme) => (
+            <ThemePreviewButton
+              key={theme.id}
+              label={theme.name}
+              selected={selectedThemeId === theme.id}
+              source={{ themeId: theme.id, theme: customThemes.some((item) => item.id === theme.id) ? theme : undefined }}
+              style={visualization.style}
+              testId={`export-audio-viz-theme-${theme.id}`}
+              onSelect={() => updateAudioVisualizationTheme(setDraftSettings, theme, customThemes)}
+              action={
+                customThemes.some((item) => item.id === theme.id) ? (
+                  <button
+                    className="rounded p-1 text-slate-400 hover:bg-white/10 hover:text-white"
+                    type="button"
+                    title={t.deleteTheme}
+                    aria-label={t.deleteTheme}
+                    data-testid={`export-audio-viz-theme-delete-${theme.id}`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void deleteCustomTheme(theme.id);
+                    }}
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                ) : undefined
+              }
+            />
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <input
+            className="min-w-48 flex-1 rounded-md border border-line px-2 py-1.5 text-xs"
+            value={customThemeName}
+            placeholder={t.customThemeName}
+            data-testid="export-audio-viz-custom-theme-name"
+            onChange={(event) => setCustomThemeName(event.target.value)}
+          />
+          <button
+            className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-panel"
+            type="button"
+            data-testid="export-audio-viz-save-theme"
+            onClick={() => void saveCurrentTheme()}
+          >
+            <Save size={13} />
+            {t.saveCustomTheme}
+          </button>
         </div>
       </div>
       <div className="mt-3 grid gap-3 md:grid-cols-4">
@@ -3114,6 +3318,50 @@ function AudioVisualizationSection({
         )}
       </div>
     </section>
+  );
+}
+
+function ThemePreviewButton({
+  label,
+  selected,
+  source,
+  style,
+  testId,
+  action,
+  onSelect
+}: {
+  label: string;
+  selected: boolean;
+  source: Parameters<typeof drawAudioVisualizationThemePreviewFrame>[1];
+  style: ExportAudioVisualizationStyle;
+  testId: string;
+  action?: ReactNode;
+  onSelect(): void;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const context = canvas?.getContext('2d');
+    if (!canvas || !context) {
+      return;
+    }
+    drawAudioVisualizationThemePreviewFrame(context, source, style, canvas.width, canvas.height);
+  }, [source, style]);
+
+  return (
+    <div className="relative">
+      <button
+        className={`w-full overflow-hidden rounded-md border text-left transition ${selected ? 'border-brand ring-2 ring-brand/30' : 'border-line hover:border-slate-400'}`}
+        type="button"
+        data-testid={testId}
+        onClick={onSelect}
+      >
+        <canvas ref={canvasRef} className="block aspect-[16/9] w-full bg-slate-950" width={192} height={108} aria-hidden="true" />
+        <span className="block truncate bg-white px-2 py-1.5 text-xs font-semibold text-slate-700">{label}</span>
+      </button>
+      {action ? <div className="absolute right-1 top-1">{action}</div> : null}
+    </div>
   );
 }
 

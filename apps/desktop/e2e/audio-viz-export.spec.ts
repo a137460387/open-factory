@@ -16,9 +16,7 @@ test('exports an audio clip as an audio visualization video with the original au
   await page.getByTestId('export-output-mode-select').selectOption('audio-visualization');
   await expect(page.getByTestId('export-audio-viz-section')).toBeVisible();
   await page.getByTestId('export-audio-viz-style-select').selectOption('spectrum-bars');
-  await page.getByTestId('export-audio-viz-background-select').selectOption('gradient');
-  await page.getByTestId('export-audio-viz-background-color-input').fill('#050816');
-  await page.getByTestId('export-audio-viz-background-color2-input').fill('#1d4ed8');
+  await page.getByTestId('export-audio-viz-theme-retro-vu').click();
   await page.getByTestId('export-enqueue-button').click();
   await expectExportTaskStatus(page, 0, 'success');
 
@@ -35,5 +33,8 @@ test('exports an audio clip as an audio visualization video with the original au
   expect(plan.fullArgs).toEqual(expect.arrayContaining(['-map', '[vout]', '-map', '[aout]', '-c:a', 'aac']));
   expect(plan.filterComplex).toContain('showfreqs=s=');
   expect(plan.filterComplex).toContain('mode=bar:ascale=log');
+  expect(plan.filterComplex).toContain('color=c=0x02130a');
+  expect(plan.filterComplex).toContain('colorchannelmixer=rr=0.251:gg=0.839:bb=0.314');
+  expect(plan.filterComplex).toContain('drawbox=x=0:y=0:w=iw:h=ih:color=0x7ddc63@0.85:t=3');
   expect(plan.filterComplex).toContain('[amixout]asplit=2[aout][audio_visualization_mix]');
 });

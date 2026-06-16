@@ -1,5 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_EFFECT_PARAMS, cloneEffects, normalizeAudioSpectrumParams, normalizeEffect, normalizeEffectParams, normalizeEffects } from '../src';
+import {
+  DEFAULT_CUSTOM_SHADER_SOURCE,
+  DEFAULT_EFFECT_PARAMS,
+  MANUAL_AUDIO_VISUALIZATION_THEME_ID,
+  buildCustomShaderFragmentSource,
+  cloneEffects,
+  getCustomShaderExample,
+  getCustomShaderSource,
+  getEffectNumberParam,
+  getEffectStringParam,
+  normalizeAudioSpectrumParams,
+  normalizeCustomShaderParams,
+  normalizeEffect,
+  normalizeEffectParams,
+  normalizeEffects
+} from '../src';
 
 describe('effect stack helpers', () => {
   it('normalizes a valid effect with default params', () => {
@@ -37,13 +52,24 @@ describe('effect stack helpers', () => {
       id: 'effect-spectrum',
       type: 'audio-spectrum',
       enabled: true,
-      params: { style: 'waveform', color: '#ffaa00', colorStart: '#ffaa00', colorEnd: '#00aaff', height: 50, position: 'top', sensitivity: 4, mirror: true }
+      params: {
+        style: 'waveform',
+        color: '#ffaa00',
+        colorStart: '#ffaa00',
+        colorEnd: '#00aaff',
+        themeId: MANUAL_AUDIO_VISUALIZATION_THEME_ID,
+        height: 50,
+        position: 'top',
+        sensitivity: 4,
+        mirror: true
+      }
     });
     expect(normalizeAudioSpectrumParams({ style: 'bad', color: 'not-a-color', height: -5, position: 'middle', sensitivity: 0 })).toEqual({
       style: 'bars',
       color: '#22d3ee',
       colorStart: '#22d3ee',
       colorEnd: '#22d3ee',
+      themeId: MANUAL_AUDIO_VISUALIZATION_THEME_ID,
       height: 0,
       position: 'bottom',
       sensitivity: 0.1,
@@ -54,10 +80,59 @@ describe('effect stack helpers', () => {
       color: '#123456',
       colorStart: '#123456',
       colorEnd: '#abcdef',
+      themeId: MANUAL_AUDIO_VISUALIZATION_THEME_ID,
       height: 25,
       position: 'bottom',
       sensitivity: 1,
       mirror: true
+    });
+    expect(normalizeAudioSpectrumParams({ themeId: 'retro-vu', colorStart: '#ffffff' })).toMatchObject({
+      themeId: 'retro-vu',
+      color: '#40d650',
+      colorStart: '#40d650',
+      colorEnd: '#facc15'
+    });
+  });
+
+  it('normalizes effect helper params and shader lookups', () => {
+    expect(getEffectNumberParam({ strength: Number.NaN }, 'strength', 1.5)).toBe(1.5);
+    expect(getEffectStringParam({ label: '  clean  ' }, 'label', 'fallback')).toBe('clean');
+    expect(getEffectStringParam({ label: '' }, 'label', 'fallback')).toBe('fallback');
+    expect(getCustomShaderSource({ type: 'blur', params: {} })).toBeUndefined();
+    expect(getCustomShaderSource({ type: 'custom-shader', params: { source: '  gl_FragColor = vec4(1.0);  ' } })).toBe('gl_FragColor = vec4(1.0);');
+    expect(normalizeCustomShaderParams({ source: '', preset: '' })).toEqual({
+      source: DEFAULT_CUSTOM_SHADER_SOURCE,
+      preset: 'pixelate'
+    });
+    expect(normalizeCustomShaderParams({ source: 'void main() {}', preset: 'unknown' })).toEqual({
+      source: 'void main() {}',
+      preset: 'custom'
+    });
+    expect(getCustomShaderExample('missing')).toEqual(getCustomShaderExample(undefined));
+    expect(buildCustomShaderFragmentSource('uniform sampler2D u_texture;\n gl_FragColor = texture2D(u_texture, v_texCoord);')).toContain('void main()');
+  });
+
+  it('normalizes audio spectrum fallback aliases and false-like mirror values', () => {
+    const defaults = DEFAULT_EFFECT_PARAMS['audio-spectrum'];
+    const originalStyle = defaults.style;
+    const originalPosition = defaults.position;
+    defaults.style = 'circle';
+    defaults.position = 'top';
+    try {
+      expect(normalizeAudioSpectrumParams({ style: 'bad', mirror: 'off' })).toMatchObject({
+        style: 'circular',
+        position: 'top',
+        mirror: false
+      });
+    } finally {
+      defaults.style = originalStyle;
+      defaults.position = originalPosition;
+    }
+    expect(normalizeAudioSpectrumParams({ color: '#ABCDEF', colorEnd: 'not-a-color', themeId: '  ' })).toMatchObject({
+      color: '#abcdef',
+      colorStart: '#abcdef',
+      colorEnd: '#abcdef',
+      themeId: MANUAL_AUDIO_VISUALIZATION_THEME_ID
     });
   });
 

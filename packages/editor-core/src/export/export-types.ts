@@ -3,6 +3,7 @@ import type { InputColorSpace } from '../color-log-luts';
 import type { ClipBlendMode } from '../blend-modes';
 import type { ProjectColorPipeline } from '../color-pipeline';
 import type { Effect } from '../effects';
+import type { AudioVisualizationThemeDefinition } from '../audio-visualization-themes';
 import type { ExportColorManagementSettings } from './color-management';
 import type { PostExportQualityAssuranceResult } from './post-export-quality';
 import type {
@@ -39,6 +40,8 @@ export interface ExportAudioVisualizationSettings {
   style: ExportAudioVisualizationStyle;
   color: string;
   background: ExportAudioVisualizationBackground;
+  themeId?: string;
+  theme?: AudioVisualizationThemeDefinition;
 }
 export type ExportWatermarkPosition =
   | 'top-left'

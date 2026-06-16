@@ -2979,6 +2979,31 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.filterComplex).toContain('colorchannelmixer=rr=0.667:gg=0.733:bb=0.8');
   });
 
+  it('expands audio visualization themes into export filter arguments', () => {
+    const project = makeAudioVisualizationProject();
+    const plan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(project, {
+        outputPath: 'D:\\Exports\\audio-viz.mp4',
+        settings: {
+          outputMode: 'audio-visualization',
+          format: 'mp4',
+          audioVisualization: {
+            style: 'spectrum-bars',
+            color: '#22d3ee',
+            themeId: 'retro-vu',
+            background: { type: 'solid', color: '#050816' }
+          }
+        }
+      })
+    );
+
+    expect(plan.filterComplex).toContain('color=c=0x02130a:s=1280x720:r=30:d=2,format=rgba[base0]');
+    expect(plan.filterComplex).toContain('showfreqs=s=1280x720:mode=bar:ascale=log:colors=0xffffff');
+    expect(plan.filterComplex).toContain('colorchannelmixer=rr=0.251:gg=0.839:bb=0.314');
+    expect(plan.filterComplex).toContain('colorchannelmixer=rr=0.98:gg=0.8:bb=0.082');
+    expect(plan.filterComplex).toContain('drawbox=x=0:y=0:w=iw:h=ih:color=0x7ddc63@0.85:t=3');
+  });
+
   it('falls back to default audio visualization settings for invalid custom values', () => {
     const project = makeAudioVisualizationProject();
     const plan = buildFfmpegExportPlan(

@@ -356,10 +356,26 @@ describe('export presets', () => {
         audioVisualization: {
           style: 'circular-spectrum',
           color: '#ABC',
+          themeId: 'retro-vu',
           background: {
             type: 'gradient',
             color: '#050816',
             color2: '#bad'
+          },
+          theme: {
+            id: 'custom glow',
+            name: 'Custom Glow',
+            colorStart: '#abc',
+            colorEnd: '#def',
+            background: { type: 'solid', color: '#010203' },
+            glow: true,
+            glowColor: '#f0f',
+            glowStrength: 0.5,
+            particles: false,
+            particleColor: '#fff',
+            border: true,
+            borderColor: '#123456',
+            borderWidth: 2
           }
         }
       },
@@ -372,15 +388,22 @@ describe('export presets', () => {
       audioVisualization: {
         style: 'circular-spectrum',
         color: '#aabbcc',
+        themeId: 'retro-vu',
         background: {
           type: 'gradient',
           color: '#050816',
           color2: '#bbaadd'
-        }
+        },
+        theme: expect.objectContaining({
+          id: 'custom-glow',
+          name: 'Custom Glow',
+          colorStart: '#aabbcc',
+          colorEnd: '#ddeeff'
+        })
       }
     });
     expect(JSON.parse(files.get(presetPath) ?? '{}').presets[0].settings.audioVisualization).toEqual(
-      expect.objectContaining({ style: 'circular-spectrum', color: '#aabbcc' })
+      expect.objectContaining({ style: 'circular-spectrum', color: '#aabbcc', themeId: 'retro-vu' })
     );
 
     const parsed = parseStoredExportPresets(
@@ -395,6 +418,7 @@ describe('export presets', () => {
               audioVisualization: {
                 style: 'unknown',
                 color: 'bad',
+                themeId: 'retro-vu',
                 background: { type: 'image', path: ' C:\\Media\\cover.png ' }
               }
             }
@@ -406,6 +430,7 @@ describe('export presets', () => {
     expect(parsed[0].settings.audioVisualization).toEqual({
       style: 'waveform-line',
       color: '#22d3ee',
+      themeId: 'retro-vu',
       background: { type: 'image', path: 'C:\\Media\\cover.png' }
     });
   });

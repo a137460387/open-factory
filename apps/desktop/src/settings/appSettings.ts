@@ -6,7 +6,9 @@ import {
   normalizePostExportQualityAssuranceSettings,
   normalizeTimelineGridSettings,
   hasEnabledPostExportQualityChecks,
+  normalizeCustomAudioVisualizationThemes,
   type SplitLayoutDefinition,
+  type CustomAudioVisualizationTheme,
   type PostExportQualityAssuranceSettings,
   type TimelineGridSettings,
   type TimelineHeatmapColorScheme,
@@ -85,6 +87,10 @@ export interface TimelineInteractionSettings {
 export interface CollaborationIdentitySettings {
   name: string;
   color: string;
+}
+
+export interface AudioVisualizationThemeSettings {
+  customThemes: CustomAudioVisualizationTheme[];
 }
 
 export type ExportUploadTargetType = 'webdav' | 'local';
@@ -200,6 +206,10 @@ export const DEFAULT_COLLABORATION_IDENTITY_SETTINGS: CollaborationIdentitySetti
   color: '#38bdf8'
 };
 
+export const DEFAULT_AUDIO_VISUALIZATION_THEME_SETTINGS: AudioVisualizationThemeSettings = {
+  customThemes: []
+};
+
 export interface AppSettings {
   language?: Language;
   tutorialStep?: number;
@@ -218,6 +228,7 @@ export interface AppSettings {
   previewWindow?: PreviewWindowSettings;
   timelineInteraction?: TimelineInteractionSettings;
   collaborationIdentity?: CollaborationIdentitySettings;
+  audioVisualizationThemes?: AudioVisualizationThemeSettings;
   localModels?: LocalAiModelsSettings;
   automationRules?: AutomationRule[];
   customSplitLayouts?: SplitLayoutDefinition[];
@@ -428,6 +439,18 @@ export async function saveCollaborationIdentitySettings(identity: Partial<Collab
   return nextIdentity;
 }
 
+export async function readAudioVisualizationThemeSettings(): Promise<AudioVisualizationThemeSettings> {
+  const settings = await readAppSettings();
+  return settings.audioVisualizationThemes ?? { ...DEFAULT_AUDIO_VISUALIZATION_THEME_SETTINGS };
+}
+
+export async function saveAudioVisualizationThemeSettings(audioVisualizationThemes: Partial<AudioVisualizationThemeSettings>): Promise<AudioVisualizationThemeSettings> {
+  const settings = await readAppSettings();
+  const nextThemes = normalizeAudioVisualizationThemeSettings({ ...settings.audioVisualizationThemes, ...audioVisualizationThemes });
+  await writeAppSettings({ ...settings, audioVisualizationThemes: nextThemes });
+  return nextThemes;
+}
+
 export async function readPreviewWindowSettings(): Promise<PreviewWindowSettings> {
   const settings = await readAppSettings();
   return settings.previewWindow ?? defaultPreviewWindowSettings();
@@ -576,6 +599,10 @@ function normalizeSettings(settings: Partial<AppSettings>): AppSettings {
   const collaborationIdentity = normalizeCollaborationIdentitySettings(settings.collaborationIdentity);
   if (shouldPersistCollaborationIdentitySettings(collaborationIdentity)) {
     normalized.collaborationIdentity = collaborationIdentity;
+  }
+  const audioVisualizationThemes = normalizeAudioVisualizationThemeSettings(settings.audioVisualizationThemes);
+  if (shouldPersistAudioVisualizationThemeSettings(audioVisualizationThemes)) {
+    normalized.audioVisualizationThemes = audioVisualizationThemes;
   }
   const localModels = normalizeLocalAiModelsSettings(settings.localModels);
   if (hasLocalAiModelsSettings(localModels)) {
@@ -803,6 +830,12 @@ export function normalizeCollaborationIdentitySettings(settings: Partial<Collabo
   };
 }
 
+export function normalizeAudioVisualizationThemeSettings(settings: Partial<AudioVisualizationThemeSettings> | undefined): AudioVisualizationThemeSettings {
+  return {
+    customThemes: normalizeCustomAudioVisualizationThemes(settings?.customThemes)
+  };
+}
+
 function normalizePreviewWindowResolutionScale(value: unknown): PreviewWindowResolutionScale {
   return value === 0.5 || value === 0.25 ? value : 1;
 }
@@ -963,6 +996,10 @@ function shouldPersistTimelineInteractionSettings(settings: TimelineInteractionS
 
 function shouldPersistCollaborationIdentitySettings(settings: CollaborationIdentitySettings): boolean {
   return settings.name !== DEFAULT_COLLABORATION_IDENTITY_SETTINGS.name || settings.color !== DEFAULT_COLLABORATION_IDENTITY_SETTINGS.color;
+}
+
+function shouldPersistAudioVisualizationThemeSettings(settings: AudioVisualizationThemeSettings): boolean {
+  return settings.customThemes.length > 0;
 }
 
 function shouldPersistTutorialProgressSettings(settings: TutorialProgressSettings): boolean {

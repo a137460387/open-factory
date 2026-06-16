@@ -17,6 +17,7 @@ import {
   UpdateProjectSpeakersCommand,
   UpdateTrackCommand,
   BUILTIN_SUBTITLE_STYLE_TEMPLATES,
+  BUILTIN_AUDIO_VISUALIZATION_THEMES,
   CUSTOM_SHADER_EXAMPLES,
   AUDIO_SPECTRUM_POSITIONS,
   AUDIO_SPECTRUM_STYLES,
@@ -28,6 +29,7 @@ import {
   DEFAULT_TEXT_PATH,
   DEFAULT_THREE_WAY_COLOR,
   EFFECT_TYPES,
+  MANUAL_AUDIO_VISUALIZATION_THEME_ID,
   FRAME_INTERPOLATION_TARGET_FPS,
   INPUT_COLOR_SPACES,
   KEYFRAME_PROPERTY_LIMITS,
@@ -4456,6 +4458,22 @@ function AudioSpectrumEffectFields({
           {AUDIO_SPECTRUM_STYLES.map((style) => (
             <option key={style} value={style}>
               {zhCN.inspector.audioSpectrumStyles[style]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="block text-xs font-medium text-slate-600">
+        {zhCN.exportDialog.audioVisualization.theme}
+        <select
+          className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+          value={getEffectStringParam(effect.params, 'themeId', params.themeId)}
+          data-testid={`effect-param-${effect.id}-theme`}
+          onChange={(event) => onUpdate(effect.id, { params: { themeId: event.target.value } })}
+        >
+          <option value={MANUAL_AUDIO_VISUALIZATION_THEME_ID}>{zhCN.exportDialog.audioVisualization.manualTheme}</option>
+          {BUILTIN_AUDIO_VISUALIZATION_THEMES.map((theme) => (
+            <option key={theme.id} value={theme.id}>
+              {theme.name}
             </option>
           ))}
         </select>

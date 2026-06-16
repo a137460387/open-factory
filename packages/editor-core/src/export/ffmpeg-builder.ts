@@ -57,6 +57,12 @@ import {
   type AudioSpectrumParams,
   type Effect
 } from '../effects';
+import {
+  MANUAL_AUDIO_VISUALIZATION_THEME_ID,
+  expandAudioVisualizationTheme,
+  normalizeAudioVisualizationTheme,
+  type ExpandedAudioVisualizationTheme
+} from '../audio-visualization-themes';
 import { getFfmpegBlendMode, normalizeClipBlendMode, type ClipBlendMode } from '../blend-modes';
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
 import { triangulatePathMask } from '../masks/path-mask';
@@ -535,7 +541,7 @@ export function buildFfmpegExportPlan(
 
   if (!audioOnly) {
     if (audioVisualizationSettings) {
-      filters.push(...buildAudioVisualizationBackgroundFilters(audioVisualizationSettings.background, settings, duration, audioVisualizationBackgroundImageInputIndex));
+      filters.push(...buildAudioVisualizationBackgroundFilters(resolveAudioVisualizationBackground(audioVisualizationSettings), settings, duration, audioVisualizationBackgroundImageInputIndex));
     } else {
       filters.push(`color=c=black:s=${settings.width}x${settings.height}:r=${settings.fps}:d=${formatFfmpegSeconds(duration)}[base0]`);
     }
@@ -2272,16 +2278,26 @@ function buildAudioSpectrumFilter(inputLabel: string, outputLabel: string, param
   const width = Math.max(2, Math.round(settings.width));
   const height = Math.max(2, Math.round(settings.height * (params.height / 100)));
   const audioGain = `volume=${formatFfmpegNumber(params.sensitivity)}`;
+  const theme = expandAudioVisualizationTheme({
+    themeId: params.themeId,
+    color: params.color,
+    colorStart: params.colorStart,
+    colorEnd: params.colorEnd
+  });
+  const colorStart = theme.colorStart;
+  const colorEnd = theme.colorEnd;
+  const decorationTheme = params.themeId && params.themeId !== MANUAL_AUDIO_VISUALIZATION_THEME_ID ? theme : undefined;
   if (params.style === 'waveform') {
     return buildAudioSpectrumVisualFilter({
       inputLabel,
       outputLabel,
       audioGain,
       visualizerFilter: `showwaves=s=${width}x${height}:mode=line:colors=0xffffff`,
-      colorStart: params.colorStart,
-      colorEnd: params.colorEnd,
+      colorStart,
+      colorEnd,
       alpha: 0.9,
-      mirror: params.mirror
+      mirror: params.mirror,
+      theme: decorationTheme
     });
   }
   if (params.style === 'circular') {
@@ -2292,11 +2308,12 @@ function buildAudioSpectrumFilter(inputLabel: string, outputLabel: string, param
       audioGain,
       visualizerFilter: `showfreqs=s=${size}x${size}:mode=bar:ascale=log:colors=0xffffff`,
       postVisualizerFilters: [`crop=${size}:${size}`, 'vignette=angle=0.35:x0=w/2:y0=h/2:eval=frame'],
-      colorStart: params.colorStart,
-      colorEnd: params.colorEnd,
+      colorStart,
+      colorEnd,
       alpha: 0.9,
       mirror: params.mirror,
-      circularMask: true
+      circularMask: true,
+      theme: decorationTheme
     });
   }
   return buildAudioSpectrumVisualFilter({
@@ -2304,10 +2321,11 @@ function buildAudioSpectrumFilter(inputLabel: string, outputLabel: string, param
     outputLabel,
     audioGain,
     visualizerFilter: `showfreqs=s=${width}x${height}:mode=bar:ascale=log:colors=0xffffff`,
-    colorStart: params.colorStart,
-    colorEnd: params.colorEnd,
+    colorStart,
+    colorEnd,
     alpha: 0.9,
-    mirror: params.mirror
+    mirror: params.mirror,
+    theme: decorationTheme
   });
 }
 
@@ -2343,15 +2361,19 @@ function buildAudioVisualizationBackgroundFilters(background: ExportAudioVisuali
 function buildAudioVisualizationFilter(inputLabel: string, outputLabel: string, visualization: ExportAudioVisualizationSettings, settings: ExportSettings): string {
   const width = Math.max(2, Math.round(settings.width));
   const height = Math.max(2, Math.round(settings.height));
+  const theme = resolveExportAudioVisualizationTheme(visualization);
+  const colorStart = theme?.colorStart ?? visualization.color;
+  const colorEnd = theme?.colorEnd ?? colorStart;
   if (visualization.style === 'waveform-line') {
     return buildAudioSpectrumVisualFilter({
       inputLabel,
       outputLabel,
       visualizerFilter: `showwaves=s=${width}x${height}:mode=line:colors=0xffffff`,
-      colorStart: visualization.color,
-      colorEnd: visualization.color,
+      colorStart,
+      colorEnd,
       alpha: 0.95,
-      mirror: false
+      mirror: false,
+      theme
     });
   }
   if (visualization.style === 'circular-spectrum') {
@@ -2361,21 +2383,23 @@ function buildAudioVisualizationFilter(inputLabel: string, outputLabel: string, 
       outputLabel,
       visualizerFilter: `showfreqs=s=${size}x${size}:mode=bar:ascale=log:colors=0xffffff`,
       postVisualizerFilters: [`crop=${size}:${size}`, 'vignette=angle=0.35:x0=w/2:y0=h/2:eval=frame'],
-      colorStart: visualization.color,
-      colorEnd: visualization.color,
+      colorStart,
+      colorEnd,
       alpha: 0.95,
       mirror: false,
-      circularMask: true
+      circularMask: true,
+      theme
     });
   }
   return buildAudioSpectrumVisualFilter({
     inputLabel,
     outputLabel,
     visualizerFilter: `showfreqs=s=${width}x${height}:mode=bar:ascale=log:colors=0xffffff`,
-    colorStart: visualization.color,
-    colorEnd: visualization.color,
+    colorStart,
+    colorEnd,
     alpha: 0.95,
-    mirror: false
+    mirror: false,
+    theme
   });
 }
 
@@ -2390,12 +2414,14 @@ interface AudioSpectrumVisualFilterInput {
   postVisualizerFilters?: string[];
   mirror: boolean;
   circularMask?: boolean;
+  theme?: ExpandedAudioVisualizationTheme;
 }
 
 function buildAudioSpectrumVisualFilter(input: AudioSpectrumVisualFilterInput): string {
   const rawLabel = `${input.outputLabel}_raw`;
   const gradientLabel = `${input.outputLabel}_gradient`;
-  const alphaLabel = input.mirror ? `${input.outputLabel}_alpha` : input.outputLabel;
+  const needsDecoration = hasAudioVisualizationThemeDecorations(input.theme);
+  const alphaLabel = input.mirror || needsDecoration ? `${input.outputLabel}_alpha` : input.outputLabel;
   const visualFilters = [input.audioGain, input.visualizerFilter, ...(input.postVisualizerFilters ?? []), 'format=rgba'].filter(Boolean).join(',');
   const filters = [
     `[${input.inputLabel}]${visualFilters}[${rawLabel}]`,
@@ -2407,17 +2433,65 @@ function buildAudioSpectrumVisualFilter(input: AudioSpectrumVisualFilterInput): 
     ...(input.circularMask ? [buildCircularAlphaMaskFilter()] : [])
   ];
   filters.push(`[${gradientLabel}]${alphaFilters.join(',')}[${alphaLabel}]`);
+  let decoratedLabel = alphaLabel;
+  if (needsDecoration && input.theme) {
+    decoratedLabel = appendAudioVisualizationThemeDecorationFilters(filters, alphaLabel, input.outputLabel, input.theme);
+  }
   if (input.mirror) {
     const normalLabel = `${input.outputLabel}_normal`;
     const flipSourceLabel = `${input.outputLabel}_flip_src`;
     const flippedLabel = `${input.outputLabel}_flipped`;
     filters.push(
-      `[${alphaLabel}]split=2[${normalLabel}][${flipSourceLabel}]`,
+      `[${decoratedLabel}]split=2[${normalLabel}][${flipSourceLabel}]`,
       `[${flipSourceLabel}]vflip[${flippedLabel}]`,
       `[${normalLabel}][${flippedLabel}]overlay=x=0:y=0:format=auto[${input.outputLabel}]`
     );
+  } else if (decoratedLabel !== input.outputLabel) {
+    filters.push(`[${decoratedLabel}]copy[${input.outputLabel}]`);
   }
   return filters.join(';');
+}
+
+function hasAudioVisualizationThemeDecorations(theme: ExpandedAudioVisualizationTheme | undefined): boolean {
+  return Boolean(theme && ((theme.glow && theme.glowStrength > 0) || theme.particles || (theme.border && theme.borderWidth > 0)));
+}
+
+function appendAudioVisualizationThemeDecorationFilters(
+  filters: string[],
+  inputLabel: string,
+  outputLabel: string,
+  theme: ExpandedAudioVisualizationTheme
+): string {
+  let currentLabel = inputLabel;
+  if (theme.glow && theme.glowStrength > 0) {
+    const baseLabel = `${outputLabel}_glow_base`;
+    const glowSourceLabel = `${outputLabel}_glow_src`;
+    const glowLabel = `${outputLabel}_glow`;
+    const combinedLabel = `${outputLabel}_with_glow`;
+    filters.push(
+      `[${currentLabel}]split=2[${baseLabel}][${glowSourceLabel}]`,
+      `[${glowSourceLabel}]gblur=sigma=${formatFfmpegNumber(2 + theme.glowStrength * 8)},colorchannelmixer=${buildColorChannelMixerForHex(
+        theme.glowColor
+      )}:aa=${formatOpacity(Math.min(0.9, 0.25 + theme.glowStrength * 0.65))}[${glowLabel}]`,
+      `[${glowLabel}][${baseLabel}]overlay=format=auto[${combinedLabel}]`
+    );
+    currentLabel = combinedLabel;
+  }
+  if (theme.particles) {
+    const particleLabel = `${outputLabel}_particles`;
+    filters.push(
+      `[${currentLabel}]noise=alls=8:allf=t+u,colorchannelmixer=${buildColorChannelMixerForHex(theme.particleColor)}[${particleLabel}]`
+    );
+    currentLabel = particleLabel;
+  }
+  if (theme.border && theme.borderWidth > 0) {
+    const borderLabel = `${outputLabel}_border`;
+    filters.push(
+      `[${currentLabel}]drawbox=x=0:y=0:w=iw:h=ih:color=${cssColorToFfmpeg(theme.borderColor)}@0.85:t=${Math.max(1, Math.round(theme.borderWidth))}[${borderLabel}]`
+    );
+    currentLabel = borderLabel;
+  }
+  return currentLabel;
 }
 
 function buildAudioSpectrumGradientFilters(inputLabel: string, outputLabel: string, colorStart: string, colorEnd: string): string[] {
@@ -2758,6 +2832,28 @@ function buildTextFilter(inputLabel: string, outputLabel: string, clip: ExportCl
   };
 }
 
+function resolveExportAudioVisualizationTheme(visualization: ExportAudioVisualizationSettings): ExpandedAudioVisualizationTheme | undefined {
+  if (!visualization.themeId && !visualization.theme) {
+    return undefined;
+  }
+  return expandAudioVisualizationTheme({
+    themeId: visualization.themeId,
+    theme: visualization.theme,
+    color: visualization.color
+  });
+}
+
+function resolveAudioVisualizationBackground(visualization: ExportAudioVisualizationSettings): ExportAudioVisualizationBackground {
+  const theme = resolveExportAudioVisualizationTheme(visualization);
+  if (!theme) {
+    return visualization.background;
+  }
+  if (theme.background.type === 'gradient') {
+    return { type: 'gradient', color: theme.background.color, color2: theme.background.color2 };
+  }
+  return { type: 'solid', color: theme.background.color };
+}
+
 function buildCreditsRollFilter(inputLabel: string, outputLabel: string, clip: ExportClip, settings: ExportSettings): { filter: string; artifact: TextArtifact } {
   const safeId = safeLabel(clip.id);
   const placeholder = `__CREDITSFILE_${safeId}__`;
@@ -3084,11 +3180,18 @@ function normalizeExportAudioVisualization(input: ExportAudioVisualizationSettin
     input?.style === 'spectrum-bars' || input?.style === 'circular-spectrum' || input?.style === 'waveform-line'
       ? input.style
       : defaultVisualization.style;
-  return {
+  const normalized: ExportAudioVisualizationSettings = {
     style,
     color: normalizeHexColor(input?.color, defaultVisualization.color),
     background: normalizeAudioVisualizationBackground(input?.background, defaultVisualization.background)
   };
+  if (typeof input?.themeId === 'string' && input.themeId.trim()) {
+    normalized.themeId = input.themeId.trim();
+  }
+  if (input?.theme && typeof input.theme === 'object') {
+    normalized.theme = normalizeAudioVisualizationTheme(input.theme);
+  }
+  return normalized;
 }
 
 function normalizeAudioVisualizationBackground(

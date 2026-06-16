@@ -10,6 +10,8 @@ import {
   getTimelinePlaybackDuration,
   getTransitionPlaybackWindow,
   normalizeAudioSpectrumParams,
+  expandAudioVisualizationTheme,
+  MANUAL_AUDIO_VISUALIZATION_THEME_ID,
   normalizeColorCorrection
 } from '@open-factory/editor-core';
 import { PreviewAudioRenderer } from './audio-renderer';
@@ -388,11 +390,32 @@ function getActiveAudioSpectrumParams(timeline: Timeline, playheadTime: number):
 function drawAudioSpectrumOverlay(context: CanvasRenderingContext2D, width: number, height: number, params: AudioSpectrumParams, data: Uint8Array): void {
   const overlayHeight = Math.max(2, Math.round(height * (params.height / 100)));
   const y = params.position === 'top' ? 0 : height - overlayHeight;
+  const theme = params.themeId && params.themeId !== MANUAL_AUDIO_VISUALIZATION_THEME_ID
+    ? expandAudioVisualizationTheme({ themeId: params.themeId, color: params.color, colorStart: params.colorStart, colorEnd: params.colorEnd })
+    : undefined;
   const paint = context.createLinearGradient(0, y, 0, y + overlayHeight);
   paint.addColorStop(0, params.colorStart);
   paint.addColorStop(1, params.colorEnd);
   context.save();
   context.globalAlpha = 0.9;
+  if (theme?.background.type === 'solid') {
+    context.fillStyle = theme.background.color;
+    context.globalAlpha = 0.28;
+    context.fillRect(0, y, width, overlayHeight);
+    context.globalAlpha = 0.9;
+  } else if (theme?.background.type === 'gradient') {
+    const background = context.createLinearGradient(0, y, 0, y + overlayHeight);
+    background.addColorStop(0, theme.background.color);
+    background.addColorStop(1, theme.background.color2);
+    context.fillStyle = background;
+    context.globalAlpha = 0.28;
+    context.fillRect(0, y, width, overlayHeight);
+    context.globalAlpha = 0.9;
+  }
+  if (theme?.glow && theme.glowStrength > 0) {
+    context.shadowColor = theme.glowColor;
+    context.shadowBlur = 4 + theme.glowStrength * 16;
+  }
   context.strokeStyle = paint;
   context.fillStyle = paint;
   context.lineWidth = 2;
@@ -402,6 +425,13 @@ function drawAudioSpectrumOverlay(context: CanvasRenderingContext2D, width: numb
     drawCircleSpectrum(context, width, overlayHeight, y, params.sensitivity, data);
   } else {
     drawBarSpectrum(context, width, overlayHeight, y, params.sensitivity, data, params.mirror);
+  }
+  if (theme?.border && theme.borderWidth > 0) {
+    context.shadowBlur = 0;
+    context.globalAlpha = 0.85;
+    context.strokeStyle = theme.borderColor;
+    context.lineWidth = theme.borderWidth;
+    context.strokeRect(theme.borderWidth / 2, y + theme.borderWidth / 2, width - theme.borderWidth, overlayHeight - theme.borderWidth);
   }
   context.restore();
 }

@@ -1,5 +1,6 @@
 import { clamp, round } from './time';
 import { DEFAULT_MOTION_BLUR_PARAMS, normalizeMotionBlurParams, type MotionBlurParams } from './motion-blur';
+import { MANUAL_AUDIO_VISUALIZATION_THEME_ID, expandAudioVisualizationTheme } from './audio-visualization-themes';
 
 export type EffectType = 'blur' | 'sharpen' | 'vignette' | 'film-grain' | 'chromatic-aberration' | 'audio-spectrum' | 'custom-shader' | 'motion-blur';
 export type EffectParamValue = number | string | boolean;
@@ -14,6 +15,7 @@ export interface AudioSpectrumParams extends EffectParams {
   color: string;
   colorStart: string;
   colorEnd: string;
+  themeId: string;
   height: number;
   position: AudioSpectrumPosition;
   sensitivity: number;
@@ -84,7 +86,17 @@ export const DEFAULT_EFFECT_PARAMS: Record<EffectType, EffectParams> = {
   vignette: { intensity: 0.35, radius: 0.6 },
   'film-grain': { strength: 0.2, size: 2 },
   'chromatic-aberration': { strength: 4 },
-  'audio-spectrum': { style: 'bars', color: '#22d3ee', colorStart: '#22d3ee', colorEnd: '#22d3ee', height: 25, position: 'bottom', sensitivity: 1, mirror: false },
+  'audio-spectrum': {
+    style: 'bars',
+    color: '#22d3ee',
+    colorStart: '#22d3ee',
+    colorEnd: '#22d3ee',
+    themeId: MANUAL_AUDIO_VISUALIZATION_THEME_ID,
+    height: 25,
+    position: 'bottom',
+    sensitivity: 1,
+    mirror: false
+  },
   'custom-shader': { source: DEFAULT_CUSTOM_SHADER_SOURCE, preset: DEFAULT_CUSTOM_SHADER_PRESET },
   'motion-blur': DEFAULT_MOTION_BLUR_PARAMS
 };
@@ -151,13 +163,21 @@ export function normalizeEffectParams(type: EffectType, params: EffectParams | u
 
 export function normalizeAudioSpectrumParams(params: EffectParams | undefined): AudioSpectrumParams {
   const defaults = DEFAULT_EFFECT_PARAMS['audio-spectrum'];
-  const colorStart = normalizeHexColor(params?.colorStart ?? params?.color, stringParam(defaults.colorStart, '#22d3ee'));
-  const colorEnd = normalizeHexColor(params?.colorEnd, colorStart);
+  const themeId = stringParam(params?.themeId, stringParam(defaults.themeId, MANUAL_AUDIO_VISUALIZATION_THEME_ID));
+  const theme = expandAudioVisualizationTheme({
+    themeId,
+    color: stringParam(params?.color, stringParam(defaults.color, '#22d3ee')),
+    colorStart: stringParam(params?.colorStart ?? params?.color, stringParam(defaults.colorStart, '#22d3ee')),
+    colorEnd: typeof params?.colorEnd === 'string' ? params.colorEnd : undefined
+  });
+  const colorStart = theme.colorStart;
+  const colorEnd = theme.colorEnd;
   return {
     style: normalizeAudioSpectrumStyle(params?.style, stringParam(defaults.style, 'bars')),
     color: colorStart,
     colorStart,
     colorEnd,
+    themeId,
     height: normalizeParam(params?.height, numberParam(defaults.height, 25), 0, 50),
     position: normalizeAudioSpectrumPosition(params?.position, stringParam(defaults.position, 'bottom')),
     sensitivity: normalizeParam(params?.sensitivity, numberParam(defaults.sensitivity, 1), 0.1, 4),

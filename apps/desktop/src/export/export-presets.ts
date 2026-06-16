@@ -1,4 +1,4 @@
-import { hasExportMasterProcessing, normalizeExportMasterProcessing, normalizeSubtitleLanguage, normalizeSubtitleLanguageList, type ExportSettings } from '@open-factory/editor-core';
+import { hasExportMasterProcessing, normalizeAudioVisualizationTheme, normalizeExportMasterProcessing, normalizeSubtitleLanguage, normalizeSubtitleLanguageList, type ExportSettings } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { fsExists, getAppDataDir, getWebdavText, putWebdavText, readFile, writeFile, type WebdavTextPutRequest, type WebdavTextRequest, type WebdavTextResult } from '../lib/tauri-bridge';
 
@@ -970,7 +970,14 @@ function sanitizeAudioVisualization(value: unknown): ExportPresetSettings['audio
       : 'waveform-line';
   const color = sanitizeHexColor(input.color, '#22d3ee');
   const background = sanitizeAudioVisualizationBackground(input.background);
-  return { style, color, background };
+  const output: NonNullable<ExportPresetSettings['audioVisualization']> = { style, color, background };
+  if (typeof input.themeId === 'string' && input.themeId.trim()) {
+    output.themeId = input.themeId.trim();
+  }
+  if (input.theme && typeof input.theme === 'object') {
+    output.theme = normalizeAudioVisualizationTheme(input.theme);
+  }
+  return output;
 }
 
 function sanitizeAudioVisualizationBackground(value: unknown): NonNullable<ExportPresetSettings['audioVisualization']>['background'] {

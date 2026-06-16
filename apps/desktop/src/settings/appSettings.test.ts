@@ -4,6 +4,7 @@ import type { TauriMocks } from '../lib/tauri-bridge';
 import { DEFAULT_EDITOR_LAYOUT_SETTINGS, type EditorLayoutSettings } from '../layout/layoutSettings';
 import {
   readAppSettings,
+  readAudioVisualizationThemeSettings,
   readAutomationRules,
   readBackupSettings,
   readCollaborationIdentitySettings,
@@ -23,6 +24,7 @@ import {
   readTimelineGridSettings,
   readViewSettings,
   saveBackupSettings,
+  saveAudioVisualizationThemeSettings,
   saveAutomationRules,
   saveCollaborationIdentitySettings,
   saveCustomSplitLayouts,
@@ -216,6 +218,47 @@ describe('app settings storage', () => {
       tutorialSkipped: true,
       tutorialCompleted: false
     });
+  });
+
+  it('persists custom audio visualization themes in settings.json', async () => {
+    await expect(readAudioVisualizationThemeSettings()).resolves.toEqual({ customThemes: [] });
+
+    const themes = await saveAudioVisualizationThemeSettings({
+      customThemes: [
+        {
+          id: 'Studio Glow',
+          name: 'Studio Glow',
+          colorStart: '#abc',
+          colorEnd: '#def',
+          background: { type: 'solid', color: '#010203' },
+          glow: true,
+          glowColor: '#f0f',
+          glowStrength: 0.6,
+          particles: false,
+          particleColor: '#ffffff',
+          border: true,
+          borderColor: '#123456',
+          borderWidth: 2
+        },
+        { id: 'retro-vu', name: 'built-in collision' } as never
+      ]
+    });
+
+    expect(themes.customThemes).toEqual([
+      expect.objectContaining({
+        id: 'studio-glow',
+        name: 'Studio Glow',
+        colorStart: '#aabbcc',
+        colorEnd: '#ddeeff',
+        background: { type: 'solid', color: '#010203' },
+        glow: true,
+        glowColor: '#ff00ff',
+        border: true,
+        borderColor: '#123456',
+        borderWidth: 2
+      })
+    ]);
+    expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({ audioVisualizationThemes: themes });
   });
 
   it('persists export upload settings without storing a WebDAV password', async () => {
