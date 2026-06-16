@@ -271,6 +271,7 @@ const MediaPrecheckPanel = lazy(() => import('../media/MediaPrecheckPanel').then
 const VideoStitchWizardDialog = lazy(() => import('../video-stitching/VideoStitchWizardDialog').then((module) => ({ default: module.VideoStitchWizardDialog })));
 const SyncComparePanel = lazy(() => import('../sync-compare/SyncComparePanel').then((module) => ({ default: module.SyncComparePanel })));
 const SceneReorderDialog = lazy(() => import('../scene-reorder/SceneReorderDialog').then((module) => ({ default: module.SceneReorderDialog })));
+const StyleTransferDialog = lazy(() => import('../style-transfer/StyleTransferDialog'));
 const ContentAnalysisDialog = lazy(() => import('../media/ContentAnalysisDialog').then((module) => ({ default: module.ContentAnalysisDialog })));
 const RhythmAnalysisDialog = lazy(() => import('../analysis/RhythmAnalysisDialog').then((module) => ({ default: module.RhythmAnalysisDialog })));
 const TimelineSearchPanel = lazy(() => import('../timeline-search/TimelineSearchPanel').then((module) => ({ default: module.TimelineSearchPanel })));
@@ -325,6 +326,7 @@ export function EditorShell() {
   const [videoStitchWizardOpen, setVideoStitchWizardOpen] = useState(false);
   const [syncCompareOpen, setSyncCompareOpen] = useState(false);
   const [sceneReorderOpen, setSceneReorderOpen] = useState(false);
+  const [styleTransferOpen, setStyleTransferOpen] = useState(false);
   const [contentAnalysisOpen, setContentAnalysisOpen] = useState(false);
   const [rhythmAnalysisOpen, setRhythmAnalysisOpen] = useState(false);
   const [contentAnalysisRunningClipId, setContentAnalysisRunningClipId] = useState<string>();
@@ -2730,6 +2732,7 @@ export function EditorShell() {
           onOpenVideoStitchWizard={() => setVideoStitchWizardOpen(true)}
           onOpenSyncCompare={openSyncCompare}
           onOpenSceneReorder={() => setSceneReorderOpen(true)}
+          onOpenStyleTransfer={() => setStyleTransferOpen(true)}
           onOpenContentAnalysis={() => setContentAnalysisOpen(true)}
           onOpenRhythmAnalysis={() => setRhythmAnalysisOpen(true)}
           onDetectBeats={() => void detectSelectedBeats()}
@@ -3094,6 +3097,9 @@ export function EditorShell() {
             <SyncComparePanel clips={[syncCompareClipRefs[0], syncCompareClipRefs[1]]} project={project} onClose={() => setSyncCompareOpen(false)} />
           ) : null}
           {sceneReorderOpen ? <SceneReorderDialog project={project} selectedClipIds={selectedClipIds} onClose={() => setSceneReorderOpen(false)} /> : null}
+          {styleTransferOpen ? (
+            <StyleTransferDialog project={project} selectedClipId={selectedClipId} selectedClipIds={selectedClipIds} onClose={() => setStyleTransferOpen(false)} />
+          ) : null}
           {contentAnalysisOpen ? (
             <ContentAnalysisDialog
               targets={contentAnalysisTargets}

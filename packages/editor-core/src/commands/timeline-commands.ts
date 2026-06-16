@@ -139,6 +139,7 @@ import {
   type TextAnimationPreset
 } from '../text-animation';
 import { cloneEffects, normalizeEffect, normalizeEffects, type Effect, type EffectParams, type EffectType } from '../effects';
+import { applyStyleToClip, type ApplyStyleTransferOptions, type StyleSummary } from '../style-transfer';
 import { calculateBeatSnapUpdates, normalizeBeatMarkers, type BeatMarker, type BeatSnapUpdate } from '../beats';
 import { normalizeTimelineLabelColor, type TimelineLabelColor } from '../timeline-color-labels';
 import { applyProtectedRippleDeleteToTrack, canMoveClipWithProtectedRanges } from '../timeline-protection';
@@ -1620,6 +1621,51 @@ export class BatchUpdateClipGroupClipsCommand implements Command {
   undo(): void {
     if (this.before) {
       this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export interface ApplyStyleCommandOptions extends ApplyStyleTransferOptions {
+  clipIds?: string[];
+}
+
+export class ApplyStyleCommand implements Command {
+  readonly description = 'Apply style transfer';
+  private before?: Timeline;
+
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly summary: StyleSummary,
+    private readonly options: ApplyStyleCommandOptions
+  ) {}
+
+  execute(): void {
+    const timeline = this.accessor.getTimeline();
+    this.before ??= timeline;
+    const targetIds = this.options.clipIds?.length ? new Set(this.options.clipIds) : undefined;
+    let applied = 0;
+    const nextTimeline: Timeline = {
+      ...timeline,
+      tracks: timeline.tracks.map((track) => ({
+        ...track,
+        clips: track.clips.map((clip) => {
+          if (targetIds && !targetIds.has(clip.id)) {
+            return clip;
+          }
+          applied += 1;
+          return applyStyleToClip(clip, this.summary, this.options);
+        })
+      }))
+    };
+    if (targetIds && applied === 0) {
+      throw new Error('No clips match style transfer target');
+    }
+    this.accessor.setTimeline(nextTimeline);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setTimeline(this.before);
     }
   }
 }

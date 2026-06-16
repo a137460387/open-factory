@@ -20,6 +20,7 @@ import {
   BatchUpdateClipGroupClipsCommand,
   BatchUpdateTrackCommand,
   AddTransitionCommand,
+  ApplyStyleCommand,
   BatchShiftSubtitleCommand,
   BatchUpdateKeyframeCommand,
   DEFAULT_COLOR_CORRECTION,
@@ -85,6 +86,7 @@ import {
   calculateBeatSplitTimesForClip,
   calculateClipGroupMoveStarts,
   createTrack,
+  calculateStyleSummary,
   findCompleteClipGroup,
   getReplaceMediaCompatibilityWarnings
 } from '../src';
@@ -1256,6 +1258,25 @@ describe('timeline commands', () => {
 
     manager.undo();
     expect(accessor.current().tracks[0].clips[0]).toMatchObject({ mediaId: 'media-v1', duration: 8 });
+  });
+
+  it('applies style transfer as one undoable timeline command', () => {
+    const accessor = makeAccessor(
+      makeTimeline([
+        makeVideoClip({ id: 'source-style', start: 0, colorCorrection: { brightness: 0.6, saturation: 1.6 } }),
+        makeVideoClip({ id: 'target-style', start: 12, colorCorrection: { brightness: 0, saturation: 1 } })
+      ])
+    );
+    const manager = new CommandManager();
+    const summary = calculateStyleSummary([accessor.current().tracks[0].clips[0]]);
+
+    manager.execute(new ApplyStyleCommand(accessor, summary, { strength: 50, clipIds: ['target-style'] }));
+
+    expect(accessor.current().tracks[0].clips[0].colorCorrection.brightness).toBe(0.6);
+    expect(accessor.current().tracks[0].clips[1].colorCorrection).toMatchObject({ brightness: 0.3, saturation: 1.3 });
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips[1].colorCorrection).toMatchObject({ brightness: 0, saturation: 1 });
   });
 
   it('reports media replacement compatibility warnings', () => {

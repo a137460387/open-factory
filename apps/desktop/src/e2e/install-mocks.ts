@@ -1040,6 +1040,58 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setPlayheadTime(0);
     commandManager.clear();
   },
+  setupStyleTransferFixture: () => {
+    const project = createProject('Style Transfer E2E');
+    const asset: MediaAsset = {
+      id: 'media-style-video',
+      type: 'video',
+      name: 'style-source.mp4',
+      path: tinyVideo,
+      duration: 8,
+      width: 1280,
+      height: 720,
+      size: 4096,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 2,
+      audioSampleRate: 44_100,
+      audioCodec: 'aac',
+      videoCodec: 'h264'
+    };
+    const source = {
+      ...makeEditingVideoClip('clip-style-source', 0, 2, 0, 0),
+      mediaId: asset.id,
+      name: 'Style Source',
+      colorCorrection: { ...DEFAULT_COLOR_CORRECTION, brightness: 0.6, saturation: 1.6, lutPath: 'C:/Looks/warm.cube' },
+      effects: [{ id: 'style-sharpen', type: 'sharpen' as const, enabled: true, params: { strength: 2 } }]
+    };
+    const target = {
+      ...makeEditingVideoClip('clip-style-target', 3, 2, 0, 0),
+      mediaId: asset.id,
+      name: 'Style Target',
+      colorCorrection: { ...DEFAULT_COLOR_CORRECTION, brightness: 0, saturation: 1, lutPath: null },
+      effects: []
+    };
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({ id: 'track-video', type: 'video', name: 'Video 1', clips: [source, target] }),
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
+        createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    useEditorStore.getState().setSelectedClipIds(['clip-style-target']);
+    useEditorStore.getState().setPlayheadTime(3);
+    commandManager.clear();
+  },
   setupMultilingualSubtitleFixture: () => {
     const project = createProject('Multilingual Subtitle E2E');
     const asset: MediaAsset = {
