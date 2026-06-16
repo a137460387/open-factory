@@ -108,6 +108,7 @@ const zh = {
     sceneReorder: '场景重组',
     styleTransfer: '风格迁移',
     collaborationNotes: '协同标注',
+    smartRecommendations: '智能推荐',
     contentAnalysis: '内容分析',
     rhythmAnalysis: '节奏分析',
     detectBeats: '节拍检测',
@@ -1737,6 +1738,35 @@ const zh = {
     exportFailedTitle: '导出标注报告失败',
     exportFailedMessage: '无法写入 HTML 报告。'
   },
+  smartRecommendations: {
+    title: '智能片段推荐',
+    subtitle: '基于当前时间线和本地媒体库推荐未使用素材。',
+    gaps: '空隙',
+    usedTypes: '已用类型',
+    rhythm: '节奏',
+    averageClipDuration: '平均片段',
+    none: '无',
+    score: '匹配分',
+    empty: '没有可推荐的未使用视频或图片素材。',
+    noPreview: '选择一个推荐项预览。',
+    addToTimeline: '添加到时间线',
+    gapTitle: '推荐填充空隙',
+    cutsPerMinute: (value: number) => `${value.toFixed(1)} 切/分钟`,
+    seconds: (value: number) => `${value.toFixed(1)}s`,
+    assetSummary: (type: string, duration: number) => `${type} · ${duration.toFixed(1)}s`,
+    matchSummary: (color: number, duration: number) => `颜色相似 ${color}% / 时长匹配 ${duration}%`,
+    assetTypes: {
+      video: '视频',
+      image: '图片',
+      audio: '音频'
+    },
+    reasons: {
+      'color-similar': '颜色相近',
+      'duration-fit': '时长匹配',
+      'type-match': '类型匹配',
+      unused: '未使用'
+    }
+  },
   smartRoughCut: {
     title: '智能粗剪',
     noSelection: '请选择音频或视频片段。',
@@ -2613,7 +2643,8 @@ const zh = {
       options: {
         single: '单个导出',
         'sequence-batch': '批量序列渲染',
-        'codec-compare': '对比导出'
+        'codec-compare': '对比导出',
+        pipeline: '流水线'
       }
     },
     codecCompare: {
@@ -2655,6 +2686,35 @@ const zh = {
       outputRequired: (name: string) => `请为序列“${name}”填写输出路径。`,
       cycleDetected: (cycle: string) => `检测到序列循环依赖：${cycle}`,
       queuedMessage: (count: number) => `${count} 个序列任务已加入导出队列。`
+    },
+    pipeline: {
+      title: '导出流水线',
+      description: '把导出、脚本钩子、质检、上传和通知节点串联成可复用流程。',
+      defaultName: '两步导出流水线',
+      createTwoNode: '创建导出→脚本',
+      summary: (nodes: number, edges: number) => `${nodes} 个节点 / ${edges} 条连接`,
+      empty: '先创建或导入一个流水线。',
+      completedTitle: '流水线执行完成',
+      cycleDetected: (cycle: string) => `检测到流水线循环依赖：${cycle}`,
+      timeout: '等待导出任务完成超时。',
+      outputRequired: '请选择流水线导出输出路径。',
+      downstream: (names: string) => `下游：${names}`,
+      nodeTypes: {
+        'export-mp4': '导出 MP4',
+        'generate-gif': '生成 GIF',
+        'extract-cover': '提取封面帧',
+        'quality-check': '运行质检',
+        'script-hook': '执行脚本钩子',
+        'webdav-upload': '上传 WebDAV',
+        notification: '发送通知'
+      },
+      status: {
+        waiting: '等待',
+        running: '运行',
+        complete: '完成',
+        failed: '失败',
+        skipped: '跳过'
+      }
     },
     batchPaths: '批量路径',
     batchPlaceholder: '可选：每行一个输出路径',
@@ -3599,6 +3659,7 @@ const enOverrides = {
     sceneReorder: 'Scene Reorder',
     styleTransfer: 'Style Transfer',
     collaborationNotes: 'Collaboration Notes',
+    smartRecommendations: 'Smart Recommendations',
     contentAnalysis: 'Content Analysis',
     rhythmAnalysis: 'Rhythm Analysis',
     detectBeats: 'Detect Beats',
@@ -5098,6 +5159,35 @@ const enOverrides = {
     exportFailedTitle: 'Notes report export failed',
     exportFailedMessage: 'Unable to write the HTML report.'
   },
+  smartRecommendations: {
+    title: 'Smart Segment Recommendations',
+    subtitle: 'Recommend unused local media from the current timeline context.',
+    gaps: 'Gaps',
+    usedTypes: 'Used Types',
+    rhythm: 'Rhythm',
+    averageClipDuration: 'Average Clip',
+    none: 'None',
+    score: 'Score',
+    empty: 'No unused video or image media can be recommended.',
+    noPreview: 'Select a recommendation to preview.',
+    addToTimeline: 'Add to Timeline',
+    gapTitle: 'Recommended Gap Fill',
+    cutsPerMinute: (value: number) => `${value.toFixed(1)} cuts/min`,
+    seconds: (value: number) => `${value.toFixed(1)}s`,
+    assetSummary: (type: string, duration: number) => `${type} · ${duration.toFixed(1)}s`,
+    matchSummary: (color: number, duration: number) => `Color ${color}% / Duration ${duration}%`,
+    assetTypes: {
+      video: 'Video',
+      image: 'Image',
+      audio: 'Audio'
+    },
+    reasons: {
+      'color-similar': 'Color similar',
+      'duration-fit': 'Duration fit',
+      'type-match': 'Type match',
+      unused: 'Unused'
+    }
+  },
   inspector: {
     multipleSelected: (count: number) => `Multiple clips selected (${count})`,
     empty: 'Select a clip to edit properties.',
@@ -5830,7 +5920,8 @@ const enOverrides = {
       options: {
         single: 'Single Export',
         'sequence-batch': 'Batch Sequence Render',
-        'codec-compare': 'Compare Export'
+        'codec-compare': 'Compare Export',
+        pipeline: 'Pipeline'
       }
     },
     codecCompare: {
@@ -5872,6 +5963,35 @@ const enOverrides = {
       outputRequired: (name: string) => `Enter an output path for "${name}".`,
       cycleDetected: (cycle: string) => `Sequence dependency cycle detected: ${cycle}`,
       queuedMessage: (count: number) => `${count} sequence tasks added to the export queue.`
+    },
+    pipeline: {
+      title: 'Export Pipeline',
+      description: 'Chain export, script hooks, quality checks, uploads, and notifications into a reusable flow.',
+      defaultName: 'Two-step Export Pipeline',
+      createTwoNode: 'Create Export -> Script',
+      summary: (nodes: number, edges: number) => `${nodes} node(s) / ${edges} edge(s)`,
+      empty: 'Create or import a pipeline first.',
+      completedTitle: 'Pipeline complete',
+      cycleDetected: (cycle: string) => `Pipeline dependency cycle detected: ${cycle}`,
+      timeout: 'Timed out waiting for export tasks to finish.',
+      outputRequired: 'Choose a pipeline export output path.',
+      downstream: (names: string) => `Downstream: ${names}`,
+      nodeTypes: {
+        'export-mp4': 'Export MP4',
+        'generate-gif': 'Generate GIF',
+        'extract-cover': 'Extract Cover Frame',
+        'quality-check': 'Run Quality Check',
+        'script-hook': 'Run Script Hook',
+        'webdav-upload': 'Upload WebDAV',
+        notification: 'Send Notification'
+      },
+      status: {
+        waiting: 'Waiting',
+        running: 'Running',
+        complete: 'Complete',
+        failed: 'Failed',
+        skipped: 'Skipped'
+      }
     },
     batchPaths: 'Batch Paths',
     batchPlaceholder: 'Optional: one output path per line',

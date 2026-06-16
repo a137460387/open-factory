@@ -1040,6 +1040,87 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setPlayheadTime(0);
     commandManager.clear();
   },
+  setupSmartRecommendationsFixture: () => {
+    const project = createProject('Smart Recommendations E2E');
+    const usedAsset: MediaAsset = {
+      id: 'media-smart-used',
+      type: 'video',
+      name: 'used-cool-open.mp4',
+      path: tinyVideo,
+      duration: 8,
+      width: 1280,
+      height: 720,
+      thumbnail: makeSceneThumb('#64748b'),
+      size: 4096,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 2,
+      audioSampleRate: 44_100,
+      audioCodec: 'aac',
+      videoCodec: 'h264'
+    };
+    const recommendedAsset: MediaAsset = {
+      id: 'media-smart-recommended',
+      type: 'video',
+      name: 'recommended-fill.mp4',
+      path: tinyVideoB,
+      duration: 2.1,
+      width: 1280,
+      height: 720,
+      thumbnail: makeSceneThumb('#64748b'),
+      size: 4096,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 2,
+      audioSampleRate: 44_100,
+      audioCodec: 'aac',
+      videoCodec: 'h264'
+    };
+    const distantAsset: MediaAsset = {
+      id: 'media-smart-distant',
+      type: 'video',
+      name: 'distant-warm-long.mp4',
+      path: fourKHevcVideo,
+      duration: 7,
+      width: 1920,
+      height: 1080,
+      thumbnail: makeSceneThumb('#f97316'),
+      size: 4096,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 2,
+      audioSampleRate: 44_100,
+      audioCodec: 'aac',
+      videoCodec: 'h264'
+    };
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({
+          id: 'track-video',
+          type: 'video',
+          name: 'Video 1',
+          clips: [
+            { ...makeEditingVideoClip('clip-smart-a', 0, 2, 0, 0), mediaId: usedAsset.id, name: 'Smart A' },
+            { ...makeEditingVideoClip('clip-smart-b', 4, 2, 0, 0), mediaId: usedAsset.id, name: 'Smart B' }
+          ]
+        }),
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
+        createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [usedAsset, recommendedAsset, distantAsset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
   setupStyleTransferFixture: () => {
     const project = createProject('Style Transfer E2E');
     const asset: MediaAsset = {

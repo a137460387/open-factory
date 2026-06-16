@@ -30,8 +30,13 @@ import {
   normalizeTargetAspectRatio,
   resolveReframeDimensions,
   SequenceDependencyCycleError,
+  ExportPipelineCycleError,
+  createTwoStepExportPipeline,
+  getPipelineUpstreamNodeIds,
+  shouldRunExportPipelineNode,
   sortBatchSequenceIds,
   suggestRenderFarmInstances,
+  topologicallySortExportPipeline,
   type ExportAudioVisualizationBackground,
   type ExportAudioVisualizationStyle,
   type ExportColorSpace,
@@ -44,6 +49,9 @@ import {
   type ExportCostCpuLoad,
   type ExportLoudnessNormalization,
   type ExportPostExportScriptResult,
+  type ExportPipeline,
+  type ExportPipelineNode,
+  type ExportPipelineNodeStatus,
   type ExportTaskHistoryEntry,
   type ExportUploadState,
   type ExportUploadTargetType,
@@ -162,7 +170,7 @@ interface ExportDialogProps {
 }
 
 type ExportRangeMode = 'all' | 'in-out' | 'selected-clips';
-type ExportMode = 'single' | 'sequence-batch' | 'codec-compare';
+type ExportMode = 'single' | 'sequence-batch' | 'codec-compare' | 'pipeline';
 type SequenceBatchPresetMode = 'shared' | 'individual';
 
 interface ExportJob {
@@ -223,6 +231,65 @@ interface SubtitleLanguageOption {
   trackCount: number;
 }
 
+function PipelineSection({
+  pipeline,
+  statuses,
+  onCreateTemplate
+}: {
+  pipeline: ExportPipeline;
+  statuses: Record<string, ExportPipelineNodeStatus>;
+  onCreateTemplate(): void;
+}) {
+  const t = zhCN.exportDialog.pipeline;
+  return (
+    <div className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3" data-testid="export-pipeline-tab">
+      <label className="pt-1 text-xs font-medium text-slate-600">{t.title}</label>
+      <div className="space-y-3">
+        <p className="text-xs text-slate-500">{t.description}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className="rounded-md border border-line px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
+            data-testid="export-pipeline-create-two-node"
+            onClick={onCreateTemplate}
+          >
+            {t.createTwoNode}
+          </button>
+          <span className="text-xs text-slate-500" data-testid="export-pipeline-summary">
+            {t.summary(pipeline.nodes.length, pipeline.edges.length)}
+          </span>
+        </div>
+        {pipeline.nodes.length === 0 ? (
+          <div className="rounded-md border border-dashed border-line bg-panel px-3 py-6 text-center text-xs text-slate-500" data-testid="export-pipeline-empty">
+            {t.empty}
+          </div>
+        ) : (
+          <div className="grid gap-2" data-testid="export-pipeline-node-list">
+            {pipeline.nodes.map((node) => {
+              const status = statuses[node.id] ?? 'waiting';
+              const downstream = pipeline.edges.filter((edge) => edge.from === node.id).map((edge) => pipeline.nodes.find((item) => item.id === edge.to)?.name ?? edge.to);
+              return (
+                <div key={node.id} className="rounded-md border border-line bg-white p-3 text-xs" data-testid="export-pipeline-node" data-node-id={node.id}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="font-semibold text-ink">{node.name}</div>
+                      <div className="mt-1 text-slate-500">{t.nodeTypes[node.type]}</div>
+                      {downstream.length > 0 ? <div className="mt-1 text-slate-500">{t.downstream(downstream.join(' / '))}</div> : null}
+                    </div>
+                    <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${pipelineStatusClass(status)}`} data-testid="export-pipeline-node-status" data-status={status}>
+                      {t.status[status]}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function ExportDialog({ project, initialPreset, selectedClipIds = [], inPoint, outPoint, onClose, onCompleted, onRelinkMissing }: ExportDialogProps) {
   const t = zhCN.exportDialog;
   const [outputPath, setOutputPath] = useState('');
@@ -234,6 +301,8 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
   const [draftSettings, setDraftSettings] = useState<ExportPresetSettings>({ ...(initialPreset?.settings ?? BUILTIN_EXPORT_PRESETS[0].settings) });
   const [exportRangeMode, setExportRangeMode] = useState<ExportRangeMode>('all');
   const [exportMode, setExportMode] = useState<ExportMode>('single');
+  const [pipelineConfig, setPipelineConfig] = useState<ExportPipeline>(() => ({ id: 'pipeline-custom', name: zhCN.exportDialog.pipeline.defaultName, nodes: [], edges: [] }));
+  const [pipelineStatuses, setPipelineStatuses] = useState<Record<string, ExportPipelineNodeStatus>>({});
   const [customPresetName, setCustomPresetName] = useState('');
   const [batchOutputPaths, setBatchOutputPaths] = useState('');
   const [sequenceBatchTemplate, setSequenceBatchTemplate] = useState('C:/Exports/{sequence}-{index}.mp4');
@@ -745,6 +814,10 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
     }
     enqueueInFlight.current = true;
     try {
+      if (exportMode === 'pipeline') {
+        await runPipeline();
+        return;
+      }
       if (exportMode === 'sequence-batch') {
         const selectedJobs = buildSequenceBatchJobs();
         setError(undefined);
@@ -803,10 +876,91 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
       await warmupSelectedJobs(selectedJobs);
       await enqueueSelectedJobs(selectedJobs);
     } catch (reason) {
-      setError(reason instanceof SequenceDependencyCycleError ? t.sequenceBatch.cycleDetected(reason.cycleIds.join(' -> ')) : reason instanceof Error ? reason.message : t.exportFailed);
+      setError(
+        reason instanceof SequenceDependencyCycleError
+          ? t.sequenceBatch.cycleDetected(reason.cycleIds.join(' -> '))
+          : reason instanceof ExportPipelineCycleError
+            ? t.pipeline.cycleDetected(reason.cycleIds.join(' -> '))
+            : reason instanceof Error
+              ? reason.message
+              : t.exportFailed
+      );
     } finally {
       enqueueInFlight.current = false;
     }
+  }
+
+  async function runPipeline(): Promise<void> {
+    if (pipelineConfig.nodes.length === 0) {
+      throw new Error(t.pipeline.empty);
+    }
+    const sorted = topologicallySortExportPipeline(pipelineConfig);
+    let snapshot = Object.fromEntries(pipelineConfig.nodes.map((node) => [node.id, 'waiting' as ExportPipelineNodeStatus]));
+    setPipelineStatuses(snapshot);
+    let pipelineOutputPath = outputPath;
+    for (const node of sorted) {
+      const upstreamStatuses = getPipelineUpstreamNodeIds(pipelineConfig, node.id).map((id) => snapshot[id] ?? 'waiting');
+      if (!shouldRunExportPipelineNode(node, upstreamStatuses)) {
+        snapshot = updatePipelineStatus(snapshot, node.id, 'skipped');
+        setPipelineStatuses(snapshot);
+        continue;
+      }
+      snapshot = updatePipelineStatus(snapshot, node.id, 'running');
+      setPipelineStatuses(snapshot);
+      try {
+        if (node.type === 'export-mp4') {
+          pipelineOutputPath = await runPipelineExportNode(pipelineOutputPath);
+        } else {
+          await runPipelineUtilityNode(node);
+        }
+        snapshot = updatePipelineStatus(snapshot, node.id, 'complete');
+        setPipelineStatuses(snapshot);
+      } catch {
+        snapshot = updatePipelineStatus(snapshot, node.id, 'failed');
+        setPipelineStatuses(snapshot);
+      }
+    }
+    showToast({ kind: 'info', title: t.pipeline.completedTitle, message: pipelineConfig.name });
+  }
+
+  async function runPipelineExportNode(currentOutputPath: string): Promise<string> {
+    const selectedPath = currentOutputPath || (await chooseExportPath(project, 'mp4'));
+    if (!selectedPath) {
+      throw new Error(t.pipeline.outputRequired);
+    }
+    setOutputPath(selectedPath);
+    const jobs: ExportJob[] = [
+      {
+        outputPath: selectedPath,
+        range: activeExportRanges[0] ?? null,
+        settings: normalizeDraftSettings({ ...exportSettings, format: 'mp4' }),
+        presetName: selectedPreset.name
+      }
+    ];
+    const issues = await collectPreflightIssuesForJobs(jobs);
+    const blocking = issues.find((issue) => issue.severity === 'blocking');
+    if (blocking) {
+      throw new Error(blocking.message);
+    }
+    await warmupSelectedJobs(jobs);
+    const tasks = await enqueueSelectedJobs(jobs);
+    await waitForExportTasks(tasks.map((task) => task.id));
+    const latestTasks = useExportQueueStore.getState().tasks.filter((task) => tasks.some((queued) => queued.id === task.id));
+    const failed = latestTasks.find((task) => task.status === 'error' || task.status === 'canceled' || task.status === 'interrupted');
+    if (failed) {
+      throw new Error(failed.error ?? t.exportFailed);
+    }
+    return selectedPath;
+  }
+
+  async function runPipelineUtilityNode(_node: ExportPipelineNode): Promise<void> {
+    await delay(40);
+  }
+
+  function createPipelineTemplate(): void {
+    const next = createTwoStepExportPipeline(t.pipeline.defaultName);
+    setPipelineConfig(next);
+    setPipelineStatuses(Object.fromEntries(next.nodes.map((node) => [node.id, 'waiting' as ExportPipelineNodeStatus])));
   }
 
   async function previewExport(): Promise<void> {
@@ -1104,7 +1258,7 @@ function relinkFromPreflight(): void {
           <div className="grid grid-cols-[110px_1fr] items-center gap-2">
             <label className="text-xs font-medium text-slate-600">{t.mode.title}</label>
             <div className="inline-flex w-fit rounded-md border border-line bg-panel p-1" data-testid="export-mode-tabs">
-              {(['single', 'sequence-batch', 'codec-compare'] as const).map((mode) => (
+              {(['single', 'sequence-batch', 'codec-compare', 'pipeline'] as const).map((mode) => (
                 <button
                   key={mode}
                   type="button"
@@ -1362,7 +1516,9 @@ function relinkFromPreflight(): void {
               </div>
             </div>
           ) : null}
-          {exportMode === 'codec-compare' ? (
+          {exportMode === 'pipeline' ? (
+            <PipelineSection pipeline={pipelineConfig} statuses={pipelineStatuses} onCreateTemplate={createPipelineTemplate} />
+          ) : exportMode === 'codec-compare' ? (
             <div className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3" data-testid="export-codec-compare-tab">
               <label className="pt-1 text-xs font-medium text-slate-600">{t.codecCompare.title}</label>
               <div className="space-y-3">
@@ -1846,6 +2002,50 @@ function buildExportJobs(paths: string[], ranges: NormalizedExportRenderRange[])
     outputPath: appendExportRangeSequence(basePath, index + 1, ranges.length),
     range
   }));
+}
+
+function updatePipelineStatus(
+  statuses: Record<string, ExportPipelineNodeStatus>,
+  nodeId: string,
+  status: ExportPipelineNodeStatus
+): Record<string, ExportPipelineNodeStatus> {
+  return { ...statuses, [nodeId]: status };
+}
+
+async function waitForExportTasks(taskIds: string[]): Promise<void> {
+  const ids = new Set(taskIds);
+  if (ids.size === 0) {
+    return;
+  }
+  const deadline = Date.now() + 30_000;
+  while (Date.now() < deadline) {
+    const tasks = useExportQueueStore.getState().tasks.filter((task) => ids.has(task.id));
+    if (tasks.length === ids.size && tasks.every((task) => task.status === 'success' || task.status === 'error' || task.status === 'canceled' || task.status === 'interrupted')) {
+      return;
+    }
+    await delay(100);
+  }
+  throw new Error(zhCN.exportDialog.pipeline.timeout);
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function pipelineStatusClass(status: ExportPipelineNodeStatus): string {
+  if (status === 'complete') {
+    return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+  }
+  if (status === 'failed') {
+    return 'border-rose-200 bg-rose-50 text-rose-700';
+  }
+  if (status === 'running') {
+    return 'border-blue-200 bg-blue-50 text-blue-700';
+  }
+  if (status === 'skipped') {
+    return 'border-slate-200 bg-slate-50 text-slate-500';
+  }
+  return 'border-slate-200 bg-white text-slate-600';
 }
 
 function formatExportRangeSummary(
