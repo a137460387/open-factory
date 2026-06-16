@@ -78,6 +78,7 @@ import {
   type MotionTrackPoint,
   type Project,
   type ProjectAnnotation,
+  type ProjectDocumentation,
   type ProjectSpeaker,
   type ReviewAnnotation,
   type TimelineNote,
@@ -121,6 +122,7 @@ import {
 } from '../media-folders';
 import { createKeyframe, removeKeyframeForProperty, setKeyframeForProperty } from '../keyframes';
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
+import { normalizeProjectDocumentation } from '../project/documentation';
 import {
   buildTextAnimationKeyframes,
   mergeTextAnimationKeyframes,
@@ -284,6 +286,34 @@ export class UpdateProjectSpeakersCommand implements Command {
     this.after = {
       ...project,
       speakers: normalizeProjectSpeakers(this.speakers),
+      updatedAt: new Date().toISOString()
+    };
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class UpdateProjectDocumentationCommand implements Command {
+  readonly description = 'Update project documentation';
+  private before?: Project;
+  private after?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly documentation: ProjectDocumentation
+  ) {}
+
+  execute(): void {
+    const project = this.accessor.getProject();
+    this.before ??= project;
+    this.after = {
+      ...project,
+      documentation: normalizeProjectDocumentation(this.documentation),
       updatedAt: new Date().toISOString()
     };
     this.accessor.setProject(this.after);

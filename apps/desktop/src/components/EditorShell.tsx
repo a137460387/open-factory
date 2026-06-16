@@ -230,6 +230,7 @@ const Inspector = lazy(() => import('./Inspector/Inspector').then((module) => ({
 const PreviewCanvas = lazy(() => import('./PreviewCanvas/PreviewCanvas').then((module) => ({ default: module.PreviewCanvas })));
 const SmartRoughCutPanel = lazy(() => import('./SmartRoughCut/SmartRoughCutPanel').then((module) => ({ default: module.SmartRoughCutPanel })));
 const HistoryPanel = lazy(() => import('./History/HistoryPanel').then((module) => ({ default: module.HistoryPanel })));
+const ProjectDocumentationPanel = lazy(() => import('./ProjectDocumentationPanel').then((module) => ({ default: module.ProjectDocumentationPanel })));
 const ExportDialog = lazy(() => import('../export/ExportDialog').then((module) => ({ default: module.ExportDialog })));
 const SettingsDialog = lazy(() => import('../settings/SettingsDialog').then((module) => ({ default: module.SettingsDialog })));
 const MacroHistoryDialog = lazy(() => import('../macros/MacroHistoryDialog').then((module) => ({ default: module.MacroHistoryDialog })));
@@ -298,6 +299,7 @@ export function EditorShell() {
   const [beatSensitivity, setBeatSensitivity] = useState<BeatSensitivity>('medium');
   const [smartRoughCutOpen, setSmartRoughCutOpen] = useState(false);
   const [historyPanelOpen, setHistoryPanelOpen] = useState(false);
+  const [projectDocumentationOpen, setProjectDocumentationOpen] = useState(false);
   const [storyboardOpen, setStoryboardOpen] = useState(false);
   const [macroHistoryOpen, setMacroHistoryOpen] = useState(false);
   const [projectHealthOpen, setProjectHealthOpen] = useState(false);
@@ -547,6 +549,21 @@ export function EditorShell() {
     },
     [updateTimelineGridSettings]
   );
+
+  const toggleProjectDocumentation = useCallback(() => {
+    setProjectDocumentationOpen((open) => {
+      const next = !open;
+      if (next) {
+        setHistoryPanelOpen(false);
+        setSmartRoughCutOpen(false);
+        persistLayoutPatch({
+          rightPanelCollapsed: false,
+          panels: { ...layoutSettings.panels, inspector: true, history: false }
+        });
+      }
+      return next;
+    });
+  }, [layoutSettings.panels, persistLayoutPatch]);
 
   const runAutomationForMedia = useCallback(async (trigger: 'on-import' | 'on-export-complete' | 'on-project-open', media: MediaAsset[]) => {
     if (media.length === 0) {
@@ -2334,6 +2351,20 @@ export function EditorShell() {
   useCloseGuard(saveProject);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || !event.shiftKey || event.key.toLowerCase() !== 'd') {
+        return;
+      }
+      if (isEditableKeyboardTarget(event.target)) {
+        return;
+      }
+      event.preventDefault();
+      toggleProjectDocumentation();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [toggleProjectDocumentation]);
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && shortcutCheatsheetOpen) {
         event.preventDefault();
         setShortcutCheatsheetOpen(false);
@@ -2351,6 +2382,7 @@ export function EditorShell() {
   useShortcuts(shortcutHandlers, shortcutBindings);
   useMacroShortcuts(macros, executeMacro);
   useBackgroundMediaJobs(project.media);
+  const rightPrimaryPanelLabel = projectDocumentationOpen ? zhCN.panels.projectDocumentation : historyPanelOpen ? zhCN.panels.history : smartRoughCutOpen ? zhCN.panels.smartRoughCut : zhCN.panels.inspector;
 
   return (
     <ErrorBoundary name={zhCN.panels.editor}>
@@ -2394,6 +2426,7 @@ export function EditorShell() {
           onSplitSelected={splitSelected}
           onToggleSmartRoughCut={() => {
             setHistoryPanelOpen(false);
+            setProjectDocumentationOpen(false);
             setSmartRoughCutOpen((open) => !open);
           }}
           onSeparateAudio={() => void separateSelectedAudio()}
@@ -2424,6 +2457,7 @@ export function EditorShell() {
           recordingElapsedSeconds={recordingElapsedSeconds}
           smartRoughCutOpen={smartRoughCutOpen}
           historyPanelOpen={historyPanelOpen}
+          projectDocumentationOpen={projectDocumentationOpen}
           storyboardOpen={storyboardOpen}
           workspaceLayouts={workspaceLayouts}
           activeWorkspaceLayoutId={layoutSettings.activeWorkspaceLayoutId}
@@ -2444,12 +2478,14 @@ export function EditorShell() {
           onToggleThumbnailTrack={toggleThumbnailTrackVisible}
           onToggleHistoryPanel={() => {
             setSmartRoughCutOpen(false);
+            setProjectDocumentationOpen(false);
             setHistoryPanelOpen((open) => {
               const next = !open;
               persistPanelVisibilityPatch({ history: next });
               return next;
             });
           }}
+          onToggleProjectDocumentation={toggleProjectDocumentation}
           onUndo={undo}
           onRedo={redo}
           onClearCache={() => void clearCache()}
@@ -2567,9 +2603,11 @@ export function EditorShell() {
                 <ChevronRight size={16} />
               </button>
               {effectivePanels.rightPrimaryPanelVisible ? (
-                <ErrorBoundary name={historyPanelOpen ? zhCN.panels.history : smartRoughCutOpen ? zhCN.panels.smartRoughCut : zhCN.panels.inspector}>
-                  <Suspense fallback={<PanelLoading label={historyPanelOpen ? zhCN.panels.history : smartRoughCutOpen ? zhCN.panels.smartRoughCut : zhCN.panels.inspector} />}>
-                    {historyPanelOpen ? (
+                <ErrorBoundary name={rightPrimaryPanelLabel}>
+                  <Suspense fallback={<PanelLoading label={rightPrimaryPanelLabel} />}>
+                    {projectDocumentationOpen ? (
+                      <ProjectDocumentationPanel project={project} />
+                    ) : historyPanelOpen ? (
                       <HistoryPanel />
                     ) : smartRoughCutOpen ? (
                       <SmartRoughCutPanel selectedClip={selectedClip} media={project.media} />

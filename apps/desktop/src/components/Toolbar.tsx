@@ -1,4 +1,4 @@
-import { Activity, Archive, Camera, Captions, ChevronDown, Download, FileDown, FilePlus2, FolderOpen, GitCompareArrows, Grid2X2, History, ImageDown, LayoutGrid, Mic2, Monitor, PanelsTopLeft, Pause, PictureInPicture2, Play, Redo2, RotateCcw, Save, Scissors, Settings, Square, Trash2, Undo2, WandSparkles, XCircle } from 'lucide-react';
+import { Activity, Archive, Camera, Captions, ChevronDown, Download, FileDown, FilePlus2, FileText, FolderOpen, GitCompareArrows, Grid2X2, History, ImageDown, LayoutGrid, Mic2, Monitor, PanelsTopLeft, Pause, PictureInPicture2, Play, Redo2, RotateCcw, Save, Scissors, Settings, Square, Trash2, Undo2, WandSparkles, XCircle } from 'lucide-react';
 import {
   BUILT_IN_SPLIT_LAYOUTS,
   SPLIT_LAYOUT_PRESET_IDS,
@@ -89,6 +89,7 @@ interface ToolbarProps {
   recordingElapsedSeconds: number;
   smartRoughCutOpen: boolean;
   historyPanelOpen: boolean;
+  projectDocumentationOpen: boolean;
   storyboardOpen: boolean;
   workspaceLayouts: WorkspaceLayoutDefinition[];
   activeWorkspaceLayoutId: WorkspaceLayoutId;
@@ -108,6 +109,7 @@ interface ToolbarProps {
   onToggleTimelineGridSnap(): void;
   onTimelineGridUnitChange(unit: TimelineGridUnit): void;
   onToggleHistoryPanel(): void;
+  onToggleProjectDocumentation(): void;
   onUndo(): void;
   onRedo(): void;
   onClearCache(): void;
@@ -941,6 +943,7 @@ export function Toolbar(props: ToolbarProps) {
       <ToolButton title={t.undo} disabled={!historyMeta.canUndo} onClick={props.onUndo} icon={<Undo2 size={17} />} testId="toolbar-undo-button" />
       <ToolButton title={t.redo} disabled={!historyMeta.canRedo} onClick={props.onRedo} icon={<Redo2 size={17} />} testId="toolbar-redo-button" />
       <ToolButton title={t.history} onClick={props.onToggleHistoryPanel} icon={<History size={17} />} testId="toolbar-history-button" active={props.historyPanelOpen} />
+      <ToolButton title={t.projectDocumentation} onClick={props.onToggleProjectDocumentation} icon={<FileText size={17} />} testId="toolbar-project-documentation-button" active={props.projectDocumentationOpen} />
       <ToolButton title={t.storyboard} onClick={props.onToggleStoryboard} icon={<LayoutGrid size={17} />} testId="storyboard-toggle-button" active={props.storyboardOpen} />
       <ToolButton title={t.splitSelectedClip} onClick={props.onSplitSelected} icon={<Scissors size={17} />} testId="toolbar-split-button" />
       <ToolButton title={t.smartRoughCut} onClick={props.onToggleSmartRoughCut} icon={<WandSparkles size={17} />} testId="toolbar-smart-rough-cut-button" active={props.smartRoughCutOpen} />

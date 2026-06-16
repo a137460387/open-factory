@@ -57,6 +57,7 @@ import { isVariableFrameRateProbe } from '../vfr';
 import { clampTransitionDuration, findAdjacentTransitionClips, getTimelineDuration } from '../timeline';
 import type { MigrationResult, ProjectFile, ProjectFileV1, ProjectFileV2 } from './project-types';
 import { isAbsolutePath, makeRelativePath, normalizePath, resolveMediaPath } from './relative-paths';
+import { normalizeProjectDocumentation } from './documentation';
 
 const DEFAULT_SETTINGS = { fps: 30, timecodeFormat: 'ndf' as const, width: 1280, height: 720, colorPipeline: 'sdr-srgb' as const };
 
@@ -117,6 +118,7 @@ export function serializeProjectFile(project: Project, projectPath?: string): Pr
       clipGroups: normalizeClipGroups(project.clipGroups, clipIds),
       coverPath: normalizeProjectCoverPath(project.coverPath),
       speakers: normalizeProjectSpeakers(project.speakers),
+      documentation: normalizeProjectDocumentation(project.documentation),
       timeline: primaryTimeline,
       sequences,
       activeSequenceId: project.activeSequenceId ?? PRIMARY_SEQUENCE_ID
@@ -164,6 +166,7 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         clipGroups: normalizeClipGroups(file.project.clipGroups, clipIds),
         coverPath: normalizeProjectCoverPath(file.project.coverPath),
         speakers: normalizeProjectSpeakers(file.project.speakers),
+        documentation: normalizeProjectDocumentation(file.project.documentation),
         timeline: activeTimeline,
         sequences,
         activeSequenceId
@@ -198,6 +201,7 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         clipGroups: [],
         coverPath: undefined,
         speakers: [],
+        documentation: {},
         timeline: primaryTimeline,
         sequences,
         activeSequenceId: PRIMARY_SEQUENCE_ID

@@ -72,6 +72,7 @@ import type {
   PrivacyBlurEffect,
   Project,
   ProjectAnnotation,
+  ProjectDocumentation,
   ProjectSettings,
   ProjectSpeaker,
   ProjectVersion,
@@ -162,6 +163,7 @@ export type {
   PrivacyBlurEffect,
   Project,
   ProjectAnnotation,
+  ProjectDocumentation,
   ProjectSettings,
   ProjectSpeaker,
   ProjectVersion,
@@ -618,6 +620,7 @@ export function createProject(name = 'Untitled Project'): Project {
     clipGroups: [],
     coverPath: undefined,
     speakers: [],
+    documentation: {},
     timeline,
     sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
     activeSequenceId: PRIMARY_SEQUENCE_ID

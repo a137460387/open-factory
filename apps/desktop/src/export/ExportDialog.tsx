@@ -37,6 +37,7 @@ import {
   type ExportSubtitleFormat,
   type ExportTaskStatus,
   type ExportTaskPriority,
+  type ExportTask,
   type ExportLoudnessNormalization,
   type ExportPostExportScriptResult,
   type ExportTaskHistoryEntry,
@@ -62,6 +63,7 @@ import {
   convertLocalFileSrc,
   evaluateExportQuality,
   getAppDataDir,
+  getFileStat,
   getFfmpegCapabilities,
   getWebdavText,
   getTempSegmentsDir,
@@ -123,6 +125,24 @@ import {
   type ExportPresetImportConflictMode,
   type ExportPresetSettings
 } from './export-presets';
+import {
+  MAX_CODEC_COMPARE_PRESETS,
+  applyCodecCompareQualityError,
+  applyCodecCompareQualityResult,
+  areCodecCompareResultsEqual,
+  buildCodecCompareJobs,
+  collectPendingCodecCompareEvaluations,
+  createInitialCodecCompareResults,
+  markCodecCompareQualityRunning,
+  recommendCodecCompareResult,
+  sortCodecCompareResults,
+  syncCodecCompareResultsWithTasks,
+  type CodecCompareRecommendationMode,
+  type CodecCompareJob,
+  type CodecCompareResult,
+  type CodecCompareSortDirection,
+  type CodecCompareSortKey
+} from './codec-compare';
 
 interface ExportDialogProps {
   project: Project;
@@ -136,7 +156,7 @@ interface ExportDialogProps {
 }
 
 type ExportRangeMode = 'all' | 'in-out' | 'selected-clips';
-type ExportMode = 'single' | 'sequence-batch';
+type ExportMode = 'single' | 'sequence-batch' | 'codec-compare';
 type SequenceBatchPresetMode = 'shared' | 'individual';
 
 interface ExportJob {
@@ -202,7 +222,7 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
   const [outputPath, setOutputPath] = useState('');
   const [capabilities, setCapabilities] = useState<FfmpegCapabilities | undefined>();
   const [error, setError] = useState<string>();
-  const [preflight, setPreflight] = useState<{ issues: PreflightResult[]; selectedJobs: ExportJob[] }>();
+  const [preflight, setPreflight] = useState<{ issues: PreflightResult[]; selectedJobs: ExportJob[]; codecCompareJobs?: CodecCompareJob[] }>();
   const [presets, setPresets] = useState<ExportPreset[]>(initialPreset ? [initialPreset, ...BUILTIN_EXPORT_PRESETS] : BUILTIN_EXPORT_PRESETS);
   const [presetId, setPresetId] = useState(initialPreset?.id ?? BUILTIN_EXPORT_PRESETS[0].id);
   const [draftSettings, setDraftSettings] = useState<ExportPresetSettings>({ ...(initialPreset?.settings ?? BUILTIN_EXPORT_PRESETS[0].settings) });
@@ -215,6 +235,11 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
   const [sequenceBatchOutputOverrides, setSequenceBatchOutputOverrides] = useState<Record<string, string>>({});
   const [sequenceBatchPresetMode, setSequenceBatchPresetMode] = useState<SequenceBatchPresetMode>('shared');
   const [sequenceBatchPresetIds, setSequenceBatchPresetIds] = useState<Record<string, string>>({});
+  const [codecComparePresetIds, setCodecComparePresetIds] = useState<string[]>(() => BUILTIN_EXPORT_PRESETS.slice(0, 2).map((preset) => preset.id));
+  const [codecCompareResults, setCodecCompareResults] = useState<CodecCompareResult[]>([]);
+  const [codecCompareSort, setCodecCompareSort] = useState<{ key: CodecCompareSortKey; direction: CodecCompareSortDirection }>({ key: 'presetName', direction: 'asc' });
+  const [codecCompareRecommendationMode, setCodecCompareRecommendationMode] = useState<CodecCompareRecommendationMode>('quality');
+  const [codecCompareEvaluatingTaskId, setCodecCompareEvaluatingTaskId] = useState<string>();
   const [priority, setPriority] = useState<ExportTaskPriority>('normal');
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [scheduledStartInput, setScheduledStartInput] = useState(() => localDatetimeInputValue(new Date(Date.now() + 60_000)));
@@ -301,6 +326,8 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
     'in-out': inOutExportRanges.length > 0,
     'selected-clips': Boolean(selectedClipExportRange)
   } satisfies Record<ExportRangeMode, boolean>;
+  const sortedCodecCompareResults = useMemo(() => sortCodecCompareResults(codecCompareResults, codecCompareSort.key, codecCompareSort.direction), [codecCompareResults, codecCompareSort]);
+  const codecCompareRecommendation = useMemo(() => recommendCodecCompareResult(codecCompareResults, codecCompareRecommendationMode), [codecCompareRecommendationMode, codecCompareResults]);
 
   useEffect(() => {
     let canceled = false;
@@ -424,6 +451,46 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
       void runCompletionAction(pendingCompletionAction.current, exportBackgroundSettings);
     }
   }, [exportBackgroundSettings, onCompleted, tasks]);
+
+  useEffect(() => {
+    setCodecCompareResults((current) => {
+      if (current.length === 0) {
+        return current;
+      }
+      const next = syncCodecCompareResultsWithTasks(current, tasks);
+      return areCodecCompareResultsEqual(current, next) ? current : next;
+    });
+  }, [tasks]);
+
+  useEffect(() => {
+    if (codecCompareEvaluatingTaskId) {
+      return;
+    }
+    const [request] = collectPendingCodecCompareEvaluations(codecCompareResults);
+    if (!request) {
+      return;
+    }
+    setCodecCompareEvaluatingTaskId(request.taskId);
+    setCodecCompareResults((current) => markCodecCompareQualityRunning(current, request.taskId));
+    void Promise.all([
+      evaluateExportQuality({
+        taskId: `codec-compare-quality-${request.taskId}`,
+        sourcePath: request.sourcePath,
+        outputPath: request.outputPath,
+        duration: getTimelinePlaybackDuration(project.timeline)
+      }),
+      getFileStat(request.outputPath).catch(() => undefined)
+    ])
+      .then(([quality, stat]) => {
+        setCodecCompareResults((current) => applyCodecCompareQualityResult(current, request.taskId, quality, stat?.size));
+      })
+      .catch((reason) => {
+        setCodecCompareResults((current) => applyCodecCompareQualityError(current, request.taskId, reason instanceof Error ? reason.message : t.quality.failedMessage));
+      })
+      .finally(() => {
+        setCodecCompareEvaluatingTaskId(undefined);
+      });
+  }, [codecCompareEvaluatingTaskId, project.timeline, t.quality.failedMessage, tasks]);
 
   async function choosePath(): Promise<void> {
     const path = await chooseExportPath(project, exportSettings.format);
@@ -611,6 +678,25 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
     setSequenceBatchPresetIds((current) => ({ ...current, [sequenceId]: nextPresetId }));
   }
 
+  function toggleCodecComparePreset(presetId: string, checked: boolean): void {
+    setCodecComparePresetIds((current) => {
+      if (!checked) {
+        return current.filter((id) => id !== presetId);
+      }
+      if (current.includes(presetId) || current.length >= MAX_CODEC_COMPARE_PRESETS) {
+        return current;
+      }
+      return [...current, presetId];
+    });
+  }
+
+  function toggleCodecCompareSort(key: CodecCompareSortKey): void {
+    setCodecCompareSort((current) => ({
+      key,
+      direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  }
+
   function buildSequenceBatchJobs(): ExportJob[] {
     const selectedIds = selectedSequenceIds.filter((id) => batchSequences.some((sequence) => sequence.id === id));
     if (selectedIds.length === 0) {
@@ -655,6 +741,33 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
         }
         await warmupSelectedJobs(selectedJobs);
         await enqueueSelectedJobs(selectedJobs);
+        return;
+      }
+      if (exportMode === 'codec-compare') {
+        const baseOutputPath = outputPath || (await chooseExportPath(project, exportSettings.format));
+        if (!baseOutputPath) {
+          return;
+        }
+        if (codecComparePresetIds.length < 2) {
+          throw new Error(t.codecCompare.selectAtLeastTwo);
+        }
+        setOutputPath(baseOutputPath);
+        const compareJobs = buildCodecCompareJobs({ baseOutputPath, presets, selectedPresetIds: codecComparePresetIds });
+        const selectedJobs = compareJobs.map((job) => ({
+          outputPath: job.outputPath,
+          range: activeExportRanges[0] ?? null,
+          settings: job.settings,
+          presetName: job.presetName
+        }));
+        setError(undefined);
+        const issues = await collectPreflightIssuesForJobs(selectedJobs);
+        if (issues.length > 0) {
+          setPreflight({ issues, selectedJobs, codecCompareJobs: compareJobs });
+          return;
+        }
+        await warmupSelectedJobs(selectedJobs);
+        const queuedTasks = await enqueueSelectedJobs(selectedJobs);
+        setCodecCompareResults(createInitialCodecCompareResults(compareJobs, queuedTasks));
         return;
       }
       const paths = batchOutputPaths
@@ -796,15 +909,16 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
     setWarmupStatus({ status: sawColdWarmup ? 'complete' : 'cached' });
   }
 
-  async function enqueueSelectedJobs(selectedJobs: ExportJob[]): Promise<void> {
+  async function enqueueSelectedJobs(selectedJobs: ExportJob[]): Promise<ExportTask[]> {
     const scheduledStartAt = scheduleEnabled ? normalizeScheduledExportStart(scheduledStartInput) : undefined;
     if (scheduleEnabled && !scheduledStartAt) {
       setError(t.scheduleInvalid);
-      return;
+      return [];
     }
     if (!(await ensurePostExportScriptAcknowledged())) {
-      return;
+      return [];
     }
+    const queuedTasks: ExportTask[] = [];
     pendingCompletionAction.current = completionAction;
     completionActionHandled.current = false;
     for (const job of selectedJobs) {
@@ -817,6 +931,7 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
         scheduledStartAt,
         job.range
       );
+      queuedTasks.push(task);
       for (const warning of task.plan.warnings) {
         showToast({ kind: 'warning', title: t.exportWarningTitle, message: formatExportWarning(warning) });
       }
@@ -825,8 +940,9 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
     showToast({
       kind: 'info',
       title: scheduleEnabled ? t.scheduledTitle : t.queuedTitle,
-      message: sequenceJobCount > 0 ? t.sequenceBatch.queuedMessage(sequenceJobCount) : t.queuedMessage(selectedJobs.length, selectedPreset.name)
+      message: exportMode === 'codec-compare' ? t.codecCompare.queuedMessage(selectedJobs.length) : sequenceJobCount > 0 ? t.sequenceBatch.queuedMessage(sequenceJobCount) : t.queuedMessage(selectedJobs.length, selectedPreset.name)
     });
+    return queuedTasks;
   }
 
   async function ensurePostExportScriptAcknowledged(): Promise<boolean> {
@@ -926,10 +1042,14 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
     }
     enqueueInFlight.current = true;
     const jobs = preflight.selectedJobs;
+    const compareJobs = preflight.codecCompareJobs;
     setPreflight(undefined);
     try {
       await warmupSelectedJobs(jobs);
-      await enqueueSelectedJobs(jobs);
+      const queuedTasks = await enqueueSelectedJobs(jobs);
+      if (compareJobs) {
+        setCodecCompareResults(createInitialCodecCompareResults(compareJobs, queuedTasks));
+      }
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : t.exportFailed);
     } finally {
@@ -966,7 +1086,7 @@ function relinkFromPreflight(): void {
           <div className="grid grid-cols-[110px_1fr] items-center gap-2">
             <label className="text-xs font-medium text-slate-600">{t.mode.title}</label>
             <div className="inline-flex w-fit rounded-md border border-line bg-panel p-1" data-testid="export-mode-tabs">
-              {(['single', 'sequence-batch'] as const).map((mode) => (
+              {(['single', 'sequence-batch', 'codec-compare'] as const).map((mode) => (
                 <button
                   key={mode}
                   type="button"
@@ -1223,7 +1343,99 @@ function relinkFromPreflight(): void {
               </div>
             </div>
           ) : null}
-          {exportMode === 'sequence-batch' ? (
+          {exportMode === 'codec-compare' ? (
+            <div className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3" data-testid="export-codec-compare-tab">
+              <label className="pt-1 text-xs font-medium text-slate-600">{t.codecCompare.title}</label>
+              <div className="space-y-3">
+                <p className="text-xs text-slate-500">{t.codecCompare.description(MAX_CODEC_COMPARE_PRESETS)}</p>
+                <div className="grid gap-2 md:grid-cols-2" data-testid="export-codec-compare-preset-list">
+                  {presets.map((preset) => {
+                    const checked = codecComparePresetIds.includes(preset.id);
+                    const disabled = !checked && codecComparePresetIds.length >= MAX_CODEC_COMPARE_PRESETS;
+                    return (
+                      <label key={preset.id} className={`flex items-start gap-2 rounded-md border border-line p-2 text-xs ${disabled ? 'opacity-50' : ''}`} data-testid="export-codec-compare-preset-row">
+                        <input
+                          className="mt-0.5 h-4 w-4 accent-brand"
+                          type="checkbox"
+                          checked={checked}
+                          disabled={disabled}
+                          onChange={(event) => toggleCodecComparePreset(preset.id, event.target.checked)}
+                          data-testid={`export-codec-compare-preset-${preset.id}`}
+                        />
+                        <span className="min-w-0">
+                          <span className="block font-semibold text-slate-700">{preset.name}</span>
+                          <span className="block text-[11px] text-slate-500">{preset.settings.videoCodec ?? zhCN.common.auto} · {preset.settings.videoBitrate ?? zhCN.common.auto} · {preset.settings.format ?? 'mp4'}</span>
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+                {codecComparePresetIds.length < 2 ? <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">{t.codecCompare.selectAtLeastTwo}</div> : null}
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                  <label className="inline-flex items-center gap-2 font-medium text-slate-600">
+                    <span>{t.codecCompare.recommendationMode}</span>
+                    <select
+                      className="rounded-md border border-line px-2 py-1.5"
+                      value={codecCompareRecommendationMode}
+                      onChange={(event) => setCodecCompareRecommendationMode(event.target.value as CodecCompareRecommendationMode)}
+                      data-testid="export-codec-compare-recommendation-mode"
+                    >
+                      <option value="quality">{t.codecCompare.recommendationModes.quality}</option>
+                      <option value="size">{t.codecCompare.recommendationModes.size}</option>
+                    </select>
+                  </label>
+                  <button
+                    className="rounded-md border border-line px-2 py-1.5 font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+                    type="button"
+                    disabled={!codecCompareRecommendation}
+                    data-testid="export-codec-compare-recommend-button"
+                    onClick={() => {
+                      if (codecCompareRecommendation) {
+                        setPresetId(codecCompareRecommendation.presetId);
+                        showToast({ kind: 'info', title: t.codecCompare.recommendedTitle, message: codecCompareRecommendation.presetName });
+                      }
+                    }}
+                  >
+                    {codecCompareRecommendation ? t.codecCompare.chooseRecommended(codecCompareRecommendation.presetName) : t.codecCompare.chooseBest}
+                  </button>
+                  {codecCompareEvaluatingTaskId ? <span className="text-slate-500" data-testid="export-codec-compare-quality-running">{t.codecCompare.evaluating}</span> : null}
+                </div>
+                {codecCompareResults.length > 0 ? (
+                  <div className="overflow-hidden rounded-md border border-line" data-testid="export-codec-compare-results">
+                    <table className="w-full border-collapse text-xs">
+                      <thead className="bg-panel text-slate-600">
+                        <tr>
+                          {(['presetName', 'fileSizeBytes', 'durationMs', 'ssim', 'psnr'] as CodecCompareSortKey[]).map((key) => (
+                            <th key={key} className="px-2 py-2 text-left font-semibold">
+                              <button className="inline-flex items-center gap-1 hover:text-ink" type="button" data-testid={`export-codec-compare-sort-${key}`} onClick={() => toggleCodecCompareSort(key)}>
+                                {t.codecCompare.columns[key]}
+                                {codecCompareSort.key === key ? <span>{codecCompareSort.direction === 'asc' ? '↑' : '↓'}</span> : null}
+                              </button>
+                            </th>
+                          ))}
+                          <th className="px-2 py-2 text-left font-semibold">{t.codecCompare.columns.status}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {sortedCodecCompareResults.map((result) => (
+                          <tr key={`${result.presetId}-${result.outputPath}`} className={codecCompareRecommendation?.taskId === result.taskId ? 'bg-emerald-50' : undefined} data-testid="export-codec-compare-result-row" data-preset-id={result.presetId}>
+                            <td className="px-2 py-2 font-medium text-slate-800">{result.presetName}</td>
+                            <td className="px-2 py-2 tabular-nums text-slate-600">{formatBytes(result.fileSizeBytes)}</td>
+                            <td className="px-2 py-2 tabular-nums text-slate-600">{formatMilliseconds(result.durationMs)}</td>
+                            <td className="px-2 py-2 tabular-nums text-slate-600" data-testid="export-codec-compare-ssim">{formatOptionalNumber(result.ssim, 3)}</td>
+                            <td className="px-2 py-2 tabular-nums text-slate-600" data-testid="export-codec-compare-psnr">{formatOptionalNumber(result.psnr, 1)}</td>
+                            <td className="px-2 py-2 text-slate-600">
+                              {result.qualityStatus === 'running' ? t.codecCompare.evaluating : result.qualityStatus === 'error' ? result.qualityError ?? t.quality.failedMessage : t.status[result.status as ExportTaskStatus] ?? result.status}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          ) : exportMode === 'sequence-batch' ? (
             <div className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3" data-testid="export-sequence-batch-tab">
               <label className="pt-1 text-xs font-medium text-slate-600">{t.sequenceBatch.title}</label>
               <div className="space-y-3">
@@ -3636,6 +3848,35 @@ function formatQualityMetricValue(value: number | undefined, suffix: string): st
     return zhCN.exportDialog.quality.unavailable;
   }
   return `${(value as number).toFixed(suffix ? 1 : 3)}${suffix}`;
+}
+
+function formatOptionalNumber(value: number | undefined, decimals: number): string {
+  return Number.isFinite(value) ? (value as number).toFixed(decimals) : zhCN.exportDialog.quality.unavailable;
+}
+
+function formatBytes(value: number | undefined): string {
+  if (!Number.isFinite(value)) {
+    return zhCN.exportDialog.quality.unavailable;
+  }
+  const bytes = value as number;
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+  if (bytes < 1024 * 1024 * 1024) {
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  }
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+}
+
+function formatMilliseconds(value: number | undefined): string {
+  if (!Number.isFinite(value)) {
+    return zhCN.exportDialog.quality.unavailable;
+  }
+  const seconds = (value as number) / 1000;
+  return `${seconds.toFixed(seconds >= 10 ? 0 : 1)}s`;
 }
 
 function qualityLevelClass(level: QualityLevel): string {

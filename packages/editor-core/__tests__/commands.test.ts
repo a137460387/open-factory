@@ -75,6 +75,7 @@ import {
   UpdateMaskCommand,
   UpdateProjectAudioCommand,
   UpdateProjectCoverCommand,
+  UpdateProjectDocumentationCommand,
   UpdateProjectSpeakersCommand,
   UpdateProjectSettingsCommand,
   UpdateTrackCommand,
@@ -1021,6 +1022,26 @@ describe('timeline commands', () => {
 
     manager.undo();
     expect(project.speakers).toEqual([{ id: 'speaker-a', name: 'Alice', color: '#ff0000' }]);
+  });
+
+  it('updates project documentation with undo and redo', () => {
+    let project = makeProject();
+    const accessor = {
+      getProject: () => project,
+      setProject: (next: typeof project) => {
+        project = next;
+      }
+    };
+    const manager = new CommandManager();
+
+    manager.execute(new UpdateProjectDocumentationCommand(accessor, { description: '# Brief', notes: 'Cut v1' }));
+    expect(project.documentation).toEqual({ description: '# Brief', notes: 'Cut v1' });
+
+    manager.undo();
+    expect(project.documentation).toEqual({});
+
+    manager.redo();
+    expect(project.documentation).toEqual({ description: '# Brief', notes: 'Cut v1' });
   });
 
   it('moves, trims, splits, deletes, and updates clips', () => {

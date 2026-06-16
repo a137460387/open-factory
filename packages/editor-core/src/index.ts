@@ -62,6 +62,7 @@ export * from './export/timeline-import';
 export * from './export/render-farm';
 export * from './project/project-types';
 export * from './project/project-migration';
+export * from './project/documentation';
 export * from './project/relative-paths';
 export * from './project/relink-score';
 export * from './project/batch-relink';

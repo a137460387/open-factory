@@ -217,10 +217,13 @@ export interface Project {
   clipGroups: ClipGroup[];
   coverPath?: string;
   speakers: ProjectSpeaker[];
+  documentation: ProjectDocumentation;
   timeline: Timeline;
   sequences: Sequence[];
   activeSequenceId: string;
 }
+
+export type ProjectDocumentation = Record<string, string>;
 
 export interface ProjectSpeaker {
   id: string;

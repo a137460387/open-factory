@@ -21,6 +21,22 @@ const zh = {
   project: {
     defaultName: '未命名项目'
   },
+  projectDocumentation: {
+    title: '项目文档',
+    subtitle: '记录项目说明、制作备注、版权信息和审批记录。',
+    exportHtml: '导出 HTML',
+    exported: '项目文档已导出',
+    exportFailed: '项目文档导出失败',
+    exportFailedMessage: '请检查目标路径后重试。',
+    placeholder: (section: string) => `填写${section}`,
+    emptyPreview: '暂无预览内容。',
+    sections: {
+      description: '项目说明',
+      notes: '制作备注',
+      copyright: '版权信息',
+      approvals: '审批记录'
+    }
+  },
   projectTemplates: {
     title: '从模板新建',
     subtitle: '选择一个项目起点',
@@ -105,6 +121,7 @@ const zh = {
     undo: '撤销',
     redo: '重做',
     history: '历史',
+    projectDocumentation: '项目文档',
     storyboard: '故事板',
     reviewMode: '评审模式',
     exitReviewMode: '退出评审模式',
@@ -2196,7 +2213,31 @@ const zh = {
       title: '导出模式',
       options: {
         single: '单个导出',
-        'sequence-batch': '批量序列渲染'
+        'sequence-batch': '批量序列渲染',
+        'codec-compare': '对比导出'
+      }
+    },
+    codecCompare: {
+      title: '对比导出',
+      description: (max: number) => `勾选 2-${max} 个预设，用同一时间线分别导出并自动评估 SSIM/PSNR。`,
+      selectAtLeastTwo: '请至少选择 2 个导出预设。',
+      recommendationMode: '推荐权重',
+      recommendationModes: {
+        quality: '质量优先',
+        size: '体积优先'
+      },
+      chooseBest: '选择最优',
+      chooseRecommended: (name: string) => `选择最优：${name}`,
+      recommendedTitle: '已选择推荐预设',
+      evaluating: '自动评估中',
+      queuedMessage: (count: number) => `${count} 个对比导出任务已加入队列。`,
+      columns: {
+        presetName: '预设名',
+        fileSizeBytes: '文件大小',
+        durationMs: '导出耗时',
+        ssim: 'SSIM',
+        psnr: 'PSNR',
+        status: '状态'
       }
     },
     sequenceBatch: {
@@ -2877,6 +2918,7 @@ const zh = {
     preview: '预览',
     inspector: '检查器',
     history: '历史',
+    projectDocumentation: '项目文档',
     smartRoughCut: '智能粗剪',
     audioMixer: '音频混音器',
     timeline: '时间线'
@@ -2975,6 +3017,22 @@ const enOverrides = {
   project: {
     defaultName: 'Untitled Project'
   },
+  projectDocumentation: {
+    title: 'Project Documentation',
+    subtitle: 'Capture the brief, production notes, copyright details, and approvals.',
+    exportHtml: 'Export HTML',
+    exported: 'Project documentation exported',
+    exportFailed: 'Unable to export project documentation',
+    exportFailedMessage: 'Check the destination path and try again.',
+    placeholder: (section: string) => `Write ${section}`,
+    emptyPreview: 'No preview content yet.',
+    sections: {
+      description: 'Project Brief',
+      notes: 'Production Notes',
+      copyright: 'Copyright',
+      approvals: 'Approvals'
+    }
+  },
   projectTemplates: {
     title: 'New From Template',
     subtitle: 'Choose a project starting point',
@@ -3059,6 +3117,7 @@ const enOverrides = {
     undo: 'Undo',
     redo: 'Redo',
     history: 'History',
+    projectDocumentation: 'Project Documentation',
     storyboard: 'Storyboard',
     reviewMode: 'Review Mode',
     exitReviewMode: 'Exit Review Mode',
@@ -4876,7 +4935,31 @@ const enOverrides = {
       title: 'Export Mode',
       options: {
         single: 'Single Export',
-        'sequence-batch': 'Batch Sequence Render'
+        'sequence-batch': 'Batch Sequence Render',
+        'codec-compare': 'Compare Export'
+      }
+    },
+    codecCompare: {
+      title: 'Compare Export',
+      description: (max: number) => `Select 2-${max} presets to export the same timeline and automatically evaluate SSIM/PSNR.`,
+      selectAtLeastTwo: 'Select at least 2 export presets.',
+      recommendationMode: 'Recommendation Weight',
+      recommendationModes: {
+        quality: 'Quality First',
+        size: 'Size First'
+      },
+      chooseBest: 'Choose Best',
+      chooseRecommended: (name: string) => `Choose Best: ${name}`,
+      recommendedTitle: 'Recommended Preset Selected',
+      evaluating: 'Auto evaluating',
+      queuedMessage: (count: number) => `${count} comparison export tasks added to the queue.`,
+      columns: {
+        presetName: 'Preset',
+        fileSizeBytes: 'File Size',
+        durationMs: 'Export Time',
+        ssim: 'SSIM',
+        psnr: 'PSNR',
+        status: 'Status'
       }
     },
     sequenceBatch: {
@@ -5471,6 +5554,7 @@ const enOverrides = {
     preview: 'Preview',
     inspector: 'Inspector',
     history: 'History',
+    projectDocumentation: 'Project Documentation',
     smartRoughCut: 'Smart Rough Cut',
     audioMixer: 'Audio Mixer',
     timeline: 'Timeline'

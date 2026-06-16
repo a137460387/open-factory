@@ -7,6 +7,7 @@ import type {
   MediaMetadata,
   Project,
   ProjectAnnotation,
+  ProjectDocumentation,
   ProjectSettings,
   ProjectSpeaker,
   ProtectedRange,
@@ -52,6 +53,7 @@ export interface ProjectFileV2 {
     clipGroups?: ClipGroup[];
     coverPath?: string;
     speakers?: ProjectSpeaker[];
+    documentation?: ProjectDocumentation;
     timeline: Timeline;
     sequences?: Sequence[];
     activeSequenceId?: string;
