@@ -103,6 +103,7 @@ interface ToolbarProps {
   timelineMinimapVisible: boolean;
   timelineHeatmap: TimelineHeatmapViewSettings;
   previewQualityMode: PreviewQualityMode;
+  previewWindowOpen: boolean;
   timelineGridSettings: TimelineGridSettings;
   onToggleStoryboard(): void;
   reviewMode: boolean;
@@ -113,6 +114,7 @@ interface ToolbarProps {
   onToggleTimelineMinimap(): void;
   onTimelineHeatmapChange(patch: Partial<TimelineHeatmapViewSettings>): void;
   onPreviewQualityModeChange(mode: PreviewQualityMode): void;
+  onPopoutPreview(): void;
   onToggleTimelineGridSnap(): void;
   onTimelineGridUnitChange(unit: TimelineGridUnit): void;
   onToggleHistoryPanel(): void;
@@ -925,6 +927,13 @@ export function Toolbar(props: ToolbarProps) {
           ))}
         </select>
       </label>
+      <ToolButton
+        title={props.previewWindowOpen ? t.previewWindowOpen : t.popoutPreview}
+        onClick={props.onPopoutPreview}
+        icon={<Monitor size={17} />}
+        testId="toolbar-popout-preview-button"
+        active={props.previewWindowOpen}
+      />
       <ToolButton title={t.gridSnap} onClick={props.onToggleTimelineGridSnap} icon={<Grid2X2 size={17} />} testId="toolbar-grid-snap-button" active={props.timelineGridSettings.enabled} />
       <label className="inline-flex h-9 items-center gap-1 rounded-md border border-line bg-panel px-2 text-[11px] text-slate-600" title={t.gridSnapUnit}>
         <span>{t.gridSnapUnit}</span>

@@ -145,6 +145,8 @@ const zh = {
       mono: '单色'
     },
     previewQuality: '预览质量',
+    popoutPreview: '弹出预览',
+    previewWindowOpen: '预览已弹出',
     previewQualityOptions: {
       full: '全质量',
       half: '半分辨率',
@@ -1073,6 +1075,18 @@ const zh = {
   },
   preview: {
     title: '预览',
+    detachedTitle: '独立预览',
+    detachedFullscreen: '全屏预览',
+    detachedAlwaysOnTop: '窗口置顶',
+    detachedResolution: '预览分辨率',
+    detachedResolutionOptions: {
+      1: '全分辨率',
+      0.5: '1/2 分辨率',
+      0.25: '1/4 分辨率'
+    },
+    detachedPlaceholderTitle: '预览已在独立窗口中打开',
+    detachedPlaceholderMessage: '关闭独立窗口后会自动恢复内嵌预览。',
+    detachedReembed: '收回预览',
     canvasSize: (width: number, height: number) => `${width} x ${height} 画布`,
     simplifiedEffects: '部分特效已简化',
     audioOnlyPreview: '仅音频预览',
@@ -3300,6 +3314,8 @@ const enOverrides = {
       mono: 'Mono'
     },
     previewQuality: 'Preview Quality',
+    popoutPreview: 'Pop Out Preview',
+    previewWindowOpen: 'Preview Popped Out',
     previewQualityOptions: {
       full: 'Full Quality',
       half: 'Half Resolution',
@@ -4146,6 +4162,18 @@ const enOverrides = {
   },
   preview: {
     title: 'Preview',
+    detachedTitle: 'Detached Preview',
+    detachedFullscreen: 'Fullscreen Preview',
+    detachedAlwaysOnTop: 'Always on Top',
+    detachedResolution: 'Preview Resolution',
+    detachedResolutionOptions: {
+      1: 'Full Resolution',
+      0.5: '1/2 Resolution',
+      0.25: '1/4 Resolution'
+    },
+    detachedPlaceholderTitle: 'Preview is open in a detached window',
+    detachedPlaceholderMessage: 'Closing the detached window restores the embedded preview automatically.',
+    detachedReembed: 'Re-embed Preview',
     canvasSize: (width: number, height: number) => `${width} x ${height} Canvas`,
     simplifiedEffects: 'Some effects are simplified',
     audioOnlyPreview: 'Audio-only preview',

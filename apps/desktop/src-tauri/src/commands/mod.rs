@@ -8,6 +8,7 @@ pub mod files;
 pub mod gif;
 pub mod media;
 pub mod privacy;
+pub mod preview_window;
 pub mod proxy;
 pub mod project_crypto;
 pub mod recording;

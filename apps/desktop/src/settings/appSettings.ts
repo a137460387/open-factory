@@ -51,6 +51,21 @@ export interface ExportBackgroundSettings {
   postExportScriptAcknowledged: boolean;
 }
 
+export interface PreviewWindowBounds {
+  x?: number;
+  y?: number;
+  width: number;
+  height: number;
+}
+
+export type PreviewWindowResolutionScale = 1 | 0.5 | 0.25;
+
+export interface PreviewWindowSettings {
+  bounds: PreviewWindowBounds;
+  alwaysOnTop: boolean;
+  resolutionScale: PreviewWindowResolutionScale;
+}
+
 export type ExportUploadTargetType = 'webdav' | 'local';
 
 export interface ExportUploadSettings {
@@ -146,6 +161,15 @@ export const DEFAULT_EXPORT_PRESET_SYNC_SETTINGS: ExportPresetSyncSettings = {
   conflictMode: 'merge'
 };
 
+export const DEFAULT_PREVIEW_WINDOW_SETTINGS: PreviewWindowSettings = {
+  bounds: {
+    width: 960,
+    height: 540
+  },
+  alwaysOnTop: false,
+  resolutionScale: 1
+};
+
 export interface AppSettings {
   language?: Language;
   layout?: EditorLayoutSettings;
@@ -157,6 +181,7 @@ export interface AppSettings {
   exportRules?: ExportConditionRule[];
   view?: ViewSettings;
   previewPerformance?: PreviewPerformanceSettings;
+  previewWindow?: PreviewWindowSettings;
   automationRules?: AutomationRule[];
   customSplitLayouts?: SplitLayoutDefinition[];
   timelineGrid?: TimelineGridSettings;
@@ -313,6 +338,18 @@ export async function savePreviewPerformanceSettings(previewPerformance: Partial
   return nextPreviewPerformance;
 }
 
+export async function readPreviewWindowSettings(): Promise<PreviewWindowSettings> {
+  const settings = await readAppSettings();
+  return settings.previewWindow ?? defaultPreviewWindowSettings();
+}
+
+export async function savePreviewWindowSettings(previewWindow: Partial<PreviewWindowSettings>): Promise<PreviewWindowSettings> {
+  const settings = await readAppSettings();
+  const nextPreviewWindow = normalizePreviewWindowSettings({ ...settings.previewWindow, ...previewWindow }) ?? defaultPreviewWindowSettings();
+  await writeAppSettings({ ...settings, previewWindow: nextPreviewWindow });
+  return nextPreviewWindow;
+}
+
 export async function saveThemeSettings(theme: Partial<ThemeSettings>): Promise<ThemeSettings> {
   const settings = await readAppSettings();
   const nextTheme = normalizeThemeSettings(theme);
@@ -401,6 +438,10 @@ function normalizeSettings(settings: Partial<AppSettings>): AppSettings {
     previewPerformance.skipFrames !== DEFAULT_PREVIEW_PERFORMANCE_SETTINGS.skipFrames
   ) {
     normalized.previewPerformance = previewPerformance;
+  }
+  const previewWindow = normalizePreviewWindowSettings(settings.previewWindow);
+  if (previewWindow) {
+    normalized.previewWindow = previewWindow;
   }
   const automationRules = normalizeAutomationRules(settings.automationRules);
   if (automationRules.length > 0) {
@@ -583,6 +624,34 @@ export function normalizeExportBackgroundSettings(settings: Partial<ExportBackgr
   };
 }
 
+export function normalizePreviewWindowSettings(settings: Partial<PreviewWindowSettings> | undefined): PreviewWindowSettings | undefined {
+  if (!settings || typeof settings !== 'object') {
+    return undefined;
+  }
+  const fallback = DEFAULT_PREVIEW_WINDOW_SETTINGS.bounds;
+  const boundsInput = settings.bounds && typeof settings.bounds === 'object' ? (settings.bounds as Partial<PreviewWindowBounds>) : {};
+  const x = normalizeOptionalInteger(boundsInput.x, -32768, 32767);
+  const y = normalizeOptionalInteger(boundsInput.y, -32768, 32767);
+  const width = normalizeInteger(boundsInput.width, 320, 7680, fallback.width);
+  const height = normalizeInteger(boundsInput.height, 240, 4320, fallback.height);
+  const bounds: PreviewWindowBounds = { width, height };
+  if (x !== undefined) {
+    bounds.x = x;
+  }
+  if (y !== undefined) {
+    bounds.y = y;
+  }
+  return {
+    bounds,
+    alwaysOnTop: settings.alwaysOnTop === true,
+    resolutionScale: normalizePreviewWindowResolutionScale(settings.resolutionScale)
+  };
+}
+
+function normalizePreviewWindowResolutionScale(value: unknown): PreviewWindowResolutionScale {
+  return value === 0.5 || value === 0.25 ? value : 1;
+}
+
 export function normalizeExportUploadSettings(settings: Partial<ExportUploadSettings> | undefined): ExportUploadSettings | undefined {
   if (!settings || typeof settings !== 'object') {
     return undefined;
@@ -721,6 +790,14 @@ function defaultExportPresetSyncSettings(): ExportPresetSyncSettings {
   return { ...DEFAULT_EXPORT_PRESET_SYNC_SETTINGS };
 }
 
+function defaultPreviewWindowSettings(): PreviewWindowSettings {
+  return {
+    bounds: { ...DEFAULT_PREVIEW_WINDOW_SETTINGS.bounds },
+    alwaysOnTop: DEFAULT_PREVIEW_WINDOW_SETTINGS.alwaysOnTop,
+    resolutionScale: DEFAULT_PREVIEW_WINDOW_SETTINGS.resolutionScale
+  };
+}
+
 function shouldPersistExportPresetSyncSettings(settings: ExportPresetSyncSettings): boolean {
   return (
     settings.enabled ||
@@ -746,4 +823,18 @@ function defaultViewSettings(): ViewSettings {
 
 function getBrowserStorage(): Storage | undefined {
   return typeof window === 'undefined' ? undefined : window.localStorage;
+}
+
+function normalizeInteger(value: unknown, min: number, max: number, fallback: number): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return fallback;
+  }
+  return Math.round(Math.min(max, Math.max(min, value)));
+}
+
+function normalizeOptionalInteger(value: unknown, min: number, max: number): number | undefined {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return undefined;
+  }
+  return Math.round(Math.min(max, Math.max(min, value)));
 }

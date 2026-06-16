@@ -23,6 +23,9 @@ import type {
   ExportPreviewSamplesResult,
   GifExportRequest,
   GifPreviewRequest,
+  PreviewWindowRequest,
+  PreviewWindowResolutionScale,
+  PreviewWindowState,
   TauriMocks,
   TranslationApiProvider,
   WebdavExportUploadRequest,
@@ -68,6 +71,14 @@ let lastWebdavExportUploadRequest: WebdavExportUploadRequest | undefined;
 let lastWebdavTextPutRequest: WebdavTextPutRequest | undefined;
 const webdavTextFiles = new Map<string, string>();
 let minimizedToTray = false;
+let previewWindowState: PreviewWindowState = {
+  open: false,
+  label: 'preview',
+  bounds: { width: 960, height: 540 },
+  alwaysOnTop: false,
+  fullscreen: false,
+  resolutionScale: 1
+};
 let lastTrayProgress: { progress: number; runningCount: number } | undefined;
 let powerActionCalls: Array<{ action: 'shutdown' | 'hibernate'; allowPowerActions: boolean }> = [];
 let notifications: Array<{ title: string; body: string }> = [];
@@ -584,6 +595,35 @@ const mocks: TauriMocks = {
   getCacheSize: () => Array.from(cache.values()).reduce((total, value) => total + value.length, 0),
   openPath: () => undefined,
   forceCloseWindow: () => undefined,
+  openPreviewWindow: (request: PreviewWindowRequest) => {
+    previewWindowState = {
+      open: true,
+      label: 'preview',
+      bounds: request.bounds,
+      alwaysOnTop: request.alwaysOnTop,
+      fullscreen: false,
+      resolutionScale: request.resolutionScale
+    };
+    return previewWindowState;
+  },
+  closePreviewWindow: () => {
+    previewWindowState = { ...previewWindowState, open: false };
+    emit('preview-window-closed', previewWindowState);
+    return previewWindowState;
+  },
+  getPreviewWindowState: () => previewWindowState,
+  setPreviewWindowAlwaysOnTop: (alwaysOnTop: boolean) => {
+    previewWindowState = { ...previewWindowState, alwaysOnTop };
+    return previewWindowState;
+  },
+  setPreviewWindowFullscreen: (fullscreen: boolean) => {
+    previewWindowState = { ...previewWindowState, fullscreen };
+    return previewWindowState;
+  },
+  setPreviewWindowResolutionScale: (resolutionScale: PreviewWindowResolutionScale) => {
+    previewWindowState = { ...previewWindowState, resolutionScale };
+    return previewWindowState;
+  },
   minimizeToTray: () => {
     minimizedToTray = true;
   },
@@ -834,7 +874,8 @@ const mocks: TauriMocks = {
     set.add(handler as (payload: unknown) => void);
     listeners.set(event, set);
     return () => set.delete(handler as (payload: unknown) => void);
-  }
+  },
+  emit: (event, payload) => emit(event, payload)
 };
 
 window.__TAURI_MOCKS__ = mocks;
@@ -1681,6 +1722,12 @@ window.__E2E_ACTIONS__ = {
   },
   getTimelineSnapshot: () => useEditorStore.getState().project.timeline,
   getPlayheadTime: () => useEditorStore.getState().playheadTime,
+  isPreviewWindowOpen: () => previewWindowState.open,
+  closePreviewWindow: () => {
+    previewWindowState = { ...previewWindowState, open: false };
+    emit('preview-window-closed', previewWindowState);
+  },
+  getPreviewWindowState: () => previewWindowState,
   setPlayheadTime: (time: unknown) => {
     if (typeof time === 'number' && Number.isFinite(time)) {
       useEditorStore.getState().setPlayheadTime(time);
@@ -1888,6 +1935,14 @@ window.__E2E_ACTIONS__ = {
     lastExportPreviewSamplesResult = undefined;
     exportPreviewRunCalls = [];
     minimizedToTray = false;
+    previewWindowState = {
+      open: false,
+      label: 'preview',
+      bounds: { width: 960, height: 540 },
+      alwaysOnTop: false,
+      fullscreen: false,
+      resolutionScale: 1
+    };
     lastTrayProgress = undefined;
     powerActionCalls = [];
     notifications = [];

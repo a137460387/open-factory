@@ -12,6 +12,7 @@ import {
   readExportRules,
   readLayoutSettings,
   readPreviewPerformanceSettings,
+  readPreviewWindowSettings,
   readThemeSettings,
   readTimelineGridSettings,
   readViewSettings,
@@ -25,6 +26,7 @@ import {
   saveLanguageSetting,
   saveLayoutSettings,
   savePreviewPerformanceSettings,
+  savePreviewWindowSettings,
   saveThemeSettings,
   saveTimelineGridSettings,
   saveViewSettings
@@ -396,6 +398,46 @@ describe('app settings storage', () => {
 
     await savePreviewPerformanceSettings({ qualityMode: 'full', skipFrames: 1 });
     expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({ language: 'en' });
+  });
+
+  it('persists normalized detached preview window bounds in settings.json', async () => {
+    await expect(readPreviewWindowSettings()).resolves.toEqual({
+      bounds: { width: 960, height: 540 },
+      alwaysOnTop: false,
+      resolutionScale: 1
+    });
+
+    await saveLanguageSetting('en');
+    const previewWindow = await savePreviewWindowSettings({
+      bounds: { x: 52.4, y: -20.2, width: 1920.8, height: 1080.2 },
+      alwaysOnTop: true,
+      resolutionScale: 0.5
+    });
+
+    expect(previewWindow).toEqual({
+      bounds: { x: 52, y: -20, width: 1921, height: 1080 },
+      alwaysOnTop: true,
+      resolutionScale: 0.5
+    });
+    expect(await readPreviewWindowSettings()).toEqual(previewWindow);
+    expect(await readAppSettings()).toEqual({
+      language: 'en',
+      previewWindow
+    });
+  });
+
+  it('clamps invalid detached preview window settings to safe defaults', async () => {
+    const previewWindow = await savePreviewWindowSettings({
+      bounds: { x: Number.NaN, y: 99, width: 12, height: 99 },
+      resolutionScale: 0.75
+    } as never);
+
+    expect(previewWindow).toEqual({
+      bounds: { y: 99, width: 320, height: 240 },
+      alwaysOnTop: false,
+      resolutionScale: 1
+    });
+    expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({ previewWindow });
   });
 
   it('persists timeline grid snap settings in settings.json', async () => {

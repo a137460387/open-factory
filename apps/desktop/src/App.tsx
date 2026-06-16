@@ -1,5 +1,6 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import { EditorShell } from './components/EditorShell';
+import { PreviewWindowShell } from './components/PreviewWindow/PreviewWindowShell';
 import { ToastViewport } from './components/common/Toast';
 import { syncExportPresetsWithWebdav } from './export/export-presets';
 import { getLanguage, subscribeLanguage } from './i18n/strings';
@@ -11,6 +12,7 @@ import { initializeThemeFromSettings } from './theme/useTheme';
 
 export function App() {
   useSyncExternalStore(subscribeLanguage, getLanguage, getLanguage);
+  const previewWindowMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('previewWindow') === '1';
   useEffect(() => {
     void initializeLanguageFromSettings().catch((error) => {
       console.warn('Unable to initialize interface language', error);
@@ -23,10 +25,10 @@ export function App() {
 
   return (
     <>
-      <EditorShell />
+      {previewWindowMode ? <PreviewWindowShell /> : <EditorShell />}
       <ToastViewport />
-      <NativePreviewSmokeRunner />
-      <NativeCancelSmokeRunner />
+      {previewWindowMode ? null : <NativePreviewSmokeRunner />}
+      {previewWindowMode ? null : <NativeCancelSmokeRunner />}
     </>
   );
 }

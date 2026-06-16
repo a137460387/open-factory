@@ -1,5 +1,5 @@
 import { convertFileSrc, invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
+import { emit, listen } from '@tauri-apps/api/event';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { confirm, message as dialogMessage } from '@tauri-apps/plugin-dialog';
 import { open as openShellPath } from '@tauri-apps/plugin-shell';
@@ -43,6 +43,30 @@ export interface ExportPreviewSampleResult {
 export interface ExportPreviewSamplesResult {
   samples: ExportPreviewSampleResult[];
   durationMs: number;
+}
+
+export interface PreviewWindowBounds {
+  x?: number;
+  y?: number;
+  width: number;
+  height: number;
+}
+
+export type PreviewWindowResolutionScale = 1 | 0.5 | 0.25;
+
+export interface PreviewWindowRequest {
+  bounds: PreviewWindowBounds;
+  alwaysOnTop: boolean;
+  resolutionScale: PreviewWindowResolutionScale;
+}
+
+export interface PreviewWindowState {
+  open: boolean;
+  label: string;
+  bounds?: PreviewWindowBounds;
+  alwaysOnTop: boolean;
+  fullscreen: boolean;
+  resolutionScale: PreviewWindowResolutionScale;
 }
 
 export interface ExportTrayLabels {
@@ -581,6 +605,12 @@ export type TauriMocks = Partial<{
   getCacheSize(): Promise<number> | number;
   openPath(path: string): Promise<void> | void;
   forceCloseWindow(): Promise<void> | void;
+  openPreviewWindow(request: PreviewWindowRequest): Promise<PreviewWindowState> | PreviewWindowState;
+  closePreviewWindow(): Promise<PreviewWindowState> | PreviewWindowState;
+  getPreviewWindowState(): Promise<PreviewWindowState> | PreviewWindowState;
+  setPreviewWindowAlwaysOnTop(alwaysOnTop: boolean): Promise<PreviewWindowState> | PreviewWindowState;
+  setPreviewWindowFullscreen(fullscreen: boolean): Promise<PreviewWindowState> | PreviewWindowState;
+  setPreviewWindowResolutionScale(resolutionScale: PreviewWindowResolutionScale): Promise<PreviewWindowState> | PreviewWindowState;
   minimizeToTray(labels?: ExportTrayLabels): Promise<void> | void;
   showMainWindow(): Promise<void> | void;
   updateExportTrayProgress(progress: number, runningCount: number): Promise<void> | void;
@@ -608,6 +638,7 @@ export type TauriMocks = Partial<{
   getPreviewSmokeConfig(): Promise<PreviewSmokeConfig | undefined> | PreviewSmokeConfig | undefined;
   getCancelSmokeConfig(): Promise<CancelSmokeConfig | undefined> | CancelSmokeConfig | undefined;
   listen<T>(event: string, handler: (payload: T) => void): Promise<() => void> | (() => void);
+  emit<T>(event: string, payload: T): Promise<void> | void;
 }>;
 
 export function getTauriMocks(): TauriMocks | undefined {
@@ -1347,6 +1378,72 @@ export async function forceCloseWindow(): Promise<void> {
   }
 }
 
+export async function openPreviewWindow(request: PreviewWindowRequest): Promise<PreviewWindowState> {
+  const mock = getTauriMocks()?.openPreviewWindow;
+  if (mock) {
+    return mock(request);
+  }
+  if (!isTauriRuntime()) {
+    return { open: true, label: 'preview', bounds: request.bounds, alwaysOnTop: request.alwaysOnTop, fullscreen: false, resolutionScale: request.resolutionScale };
+  }
+  return invoke<PreviewWindowState>('open_preview_window', { request });
+}
+
+export async function closePreviewWindow(): Promise<PreviewWindowState> {
+  const mock = getTauriMocks()?.closePreviewWindow;
+  if (mock) {
+    return mock();
+  }
+  if (!isTauriRuntime()) {
+    return { open: false, label: 'preview', alwaysOnTop: false, fullscreen: false, resolutionScale: 1 };
+  }
+  return invoke<PreviewWindowState>('close_preview_window');
+}
+
+export async function getPreviewWindowState(): Promise<PreviewWindowState> {
+  const mock = getTauriMocks()?.getPreviewWindowState;
+  if (mock) {
+    return mock();
+  }
+  if (!isTauriRuntime()) {
+    return { open: false, label: 'preview', alwaysOnTop: false, fullscreen: false, resolutionScale: 1 };
+  }
+  return invoke<PreviewWindowState>('get_preview_window_state');
+}
+
+export async function setPreviewWindowAlwaysOnTop(alwaysOnTop: boolean): Promise<PreviewWindowState> {
+  const mock = getTauriMocks()?.setPreviewWindowAlwaysOnTop;
+  if (mock) {
+    return mock(alwaysOnTop);
+  }
+  if (!isTauriRuntime()) {
+    return { open: true, label: 'preview', alwaysOnTop, fullscreen: false, resolutionScale: 1 };
+  }
+  return invoke<PreviewWindowState>('set_preview_window_always_on_top', { alwaysOnTop });
+}
+
+export async function setPreviewWindowFullscreen(fullscreen: boolean): Promise<PreviewWindowState> {
+  const mock = getTauriMocks()?.setPreviewWindowFullscreen;
+  if (mock) {
+    return mock(fullscreen);
+  }
+  if (!isTauriRuntime()) {
+    return { open: true, label: 'preview', alwaysOnTop: false, fullscreen, resolutionScale: 1 };
+  }
+  return invoke<PreviewWindowState>('set_preview_window_fullscreen', { fullscreen });
+}
+
+export async function setPreviewWindowResolutionScale(resolutionScale: PreviewWindowResolutionScale): Promise<PreviewWindowState> {
+  const mock = getTauriMocks()?.setPreviewWindowResolutionScale;
+  if (mock) {
+    return mock(resolutionScale);
+  }
+  if (!isTauriRuntime()) {
+    return { open: true, label: 'preview', alwaysOnTop: false, fullscreen: false, resolutionScale };
+  }
+  return invoke<PreviewWindowState>('set_preview_window_resolution_scale', { resolutionScale });
+}
+
 export async function minimizeToTray(): Promise<void> {
   const mock = getTauriMocks()?.minimizeToTray;
   const labels = zhCN.exportDialog.trayMenu;
@@ -1401,6 +1498,17 @@ export async function listenBridge<T>(event: string, handler: (payload: T) => vo
     return () => undefined;
   }
   return listen<T>(event, (payload) => handler(payload.payload));
+}
+
+export async function emitBridge<T>(event: string, payload: T): Promise<void> {
+  const mock = getTauriMocks()?.emit;
+  if (mock) {
+    await mock(event, payload);
+    return;
+  }
+  if (isTauriRuntime()) {
+    await emit(event, payload);
+  }
 }
 
 export async function listenBatchTranscodeProgress(handler: (payload: BatchTranscodeProgressEvent) => void): Promise<() => void> {

@@ -167,10 +167,14 @@ import {
   bridgeConfirm,
   batchExtractCoverFrames,
   cancelDemucs,
+  closePreviewWindow,
   copyFile as bridgeCopyFile,
   detectBeats,
+  emitBridge,
   getAppDataDir,
+  getPreviewWindowState,
   listenBridge,
+  openPreviewWindow,
   openDirectoryDialog,
   openFileDialog as bridgeOpenFileDialog,
   removeFile as bridgeRemoveFile,
@@ -181,9 +185,15 @@ import {
   stopRecording,
   writeFile as bridgeWriteFile,
   type DemucsProgressEvent,
+  type PreviewWindowState,
   type RecordingSource
 } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
+import {
+  createPreviewWindowPlaybackState,
+  normalizePreviewWindowPlaybackState,
+  shouldApplyPreviewWindowPlaybackState
+} from '../lib/previewWindowSync';
 import {
   appendMacroHistoryEntry,
   buildMacroCommands,
@@ -201,14 +211,17 @@ import {
   readCustomSplitLayouts,
   readLayoutSettings,
   readPreviewPerformanceSettings,
+  readPreviewWindowSettings,
   readTimelineGridSettings,
   readViewSettings,
   normalizeTimelineHeatmapViewSettings,
   saveCustomSplitLayouts,
   saveLayoutSettings,
   savePreviewPerformanceSettings,
+  savePreviewWindowSettings,
   saveTimelineGridSettings,
   saveViewSettings,
+  type PreviewWindowSettings,
   type TimelineHeatmapViewSettings
 } from '../settings/appSettings';
 import { DEFAULT_PREVIEW_PERFORMANCE_SETTINGS, type PreviewPerformanceSettings, type PreviewQualityMode, type PreviewSkipFrames } from '../lib/preview/preview-performance';
@@ -267,6 +280,7 @@ export function EditorShell() {
   const selectedKeyframe = useEditorStore((state) => state.selectedKeyframe);
   const selectedKeyframes = useEditorStore((state) => state.selectedKeyframes);
   const playheadTime = useEditorStore((state) => state.playheadTime);
+  const isPlaying = useEditorStore((state) => state.isPlaying);
   const inPoint = useEditorStore((state) => state.inPoint);
   const outPoint = useEditorStore((state) => state.outPoint);
   const dirty = useEditorStore((state) => state.dirty);
@@ -337,6 +351,8 @@ export function EditorShell() {
   const [timelineMinimapVisible, setTimelineMinimapVisible] = useState(true);
   const [timelineHeatmap, setTimelineHeatmap] = useState<TimelineHeatmapViewSettings>(() => normalizeTimelineHeatmapViewSettings(undefined));
   const [previewPerformance, setPreviewPerformance] = useState<PreviewPerformanceSettings>(DEFAULT_PREVIEW_PERFORMANCE_SETTINGS);
+  const [previewWindowOpen, setPreviewWindowOpen] = useState(false);
+  const [previewWindowResolutionScale, setPreviewWindowResolutionScale] = useState<PreviewWindowSettings['resolutionScale']>(1);
   const [timelineGridSettings, setTimelineGridSettings] = useState<TimelineGridSettings>(DEFAULT_TIMELINE_GRID_SETTINGS);
   const [pipLayoutPosition, setPiPLayoutPosition] = useState<PiPLayoutPosition>('bottom-right');
   const [customSplitLayouts, setCustomSplitLayouts] = useState<SplitLayoutDefinition[]>([]);
@@ -557,6 +573,51 @@ export function EditorShell() {
     });
   }, []);
 
+  const persistPreviewWindowState = useCallback((state: PreviewWindowState) => {
+    if (!state.bounds) {
+      return;
+    }
+    setPreviewWindowResolutionScale(state.resolutionScale);
+    void savePreviewWindowSettings({
+      bounds: state.bounds,
+      alwaysOnTop: state.alwaysOnTop,
+      resolutionScale: state.resolutionScale
+    }).catch((error) => {
+      console.warn('Unable to save preview window settings', error);
+    });
+  }, []);
+
+  const openDetachedPreview = useCallback(async () => {
+    try {
+      const settings = await readPreviewWindowSettings();
+      const state = await openPreviewWindow(settings);
+      setPreviewWindowOpen(state.open);
+      setPreviewWindowResolutionScale(state.resolutionScale);
+      if (state.bounds) {
+        persistPreviewWindowState(state);
+      }
+      await emitBridge('preview-window-project-state', {
+        source: 'main',
+        project,
+        playheadTime,
+        isPlaying,
+        previewPerformance,
+        resolutionScale: state.resolutionScale
+      });
+      await emitBridge('preview-window-sync', createPreviewWindowPlaybackState('main', playheadTime, isPlaying));
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.toolbar.popoutPreview, message: error instanceof Error ? error.message : zhCN.common.unavailable });
+    }
+  }, [isPlaying, persistPreviewWindowState, playheadTime, previewPerformance, project]);
+
+  const reembedPreviewWindow = useCallback(async () => {
+    const state = await closePreviewWindow().catch(() => undefined);
+    if (state) {
+      persistPreviewWindowState(state);
+    }
+    setPreviewWindowOpen(false);
+  }, [persistPreviewWindowState]);
+
   const updateTimelineGridSettings = useCallback((patch: Partial<TimelineGridSettings>) => {
     setTimelineGridSettings((current) => {
       const optimistic = { ...current, ...patch };
@@ -679,6 +740,64 @@ export function EditorShell() {
       canceled = true;
     };
   }, []);
+
+  useEffect(() => {
+    let canceled = false;
+    void getPreviewWindowState()
+      .then((state) => {
+        if (!canceled) {
+          setPreviewWindowOpen(state.open);
+          setPreviewWindowResolutionScale(state.resolutionScale);
+        }
+      })
+      .catch(() => undefined);
+    return () => {
+      canceled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const disposers: Array<() => void> = [];
+    void listenBridge<PreviewWindowState>('preview-window-closed', (state) => {
+      setPreviewWindowOpen(false);
+      persistPreviewWindowState(state);
+    }).then((dispose) => disposers.push(dispose));
+    void listenBridge('preview-window-sync', (payload) => {
+      const incoming = normalizePreviewWindowPlaybackState(payload);
+      const current = useEditorStore.getState();
+      if (incoming && shouldApplyPreviewWindowPlaybackState({ playheadTime: current.playheadTime, isPlaying: current.isPlaying }, incoming, 'main', 1 / (current.project.settings.fps || 30))) {
+        setPlayheadTime(incoming.playheadTime);
+        setIsPlaying(incoming.isPlaying);
+      }
+    }).then((dispose) => disposers.push(dispose));
+    return () => {
+      for (const dispose of disposers) {
+        dispose();
+      }
+    };
+  }, [persistPreviewWindowState, setIsPlaying, setPlayheadTime]);
+
+  useEffect(() => {
+    if (!previewWindowOpen) {
+      return;
+    }
+    const state = useEditorStore.getState();
+    void emitBridge('preview-window-project-state', {
+      source: 'main',
+      project,
+      playheadTime: state.playheadTime,
+      isPlaying: state.isPlaying,
+      previewPerformance,
+      resolutionScale: previewWindowResolutionScale
+    });
+  }, [previewPerformance, previewWindowOpen, previewWindowResolutionScale, project]);
+
+  useEffect(() => {
+    if (!previewWindowOpen) {
+      return;
+    }
+    void emitBridge('preview-window-sync', createPreviewWindowPlaybackState('main', playheadTime, isPlaying));
+  }, [isPlaying, playheadTime, previewWindowOpen]);
 
   useEffect(() => {
     let canceled = false;
@@ -2539,11 +2658,13 @@ export function EditorShell() {
           timelineMinimapVisible={timelineMinimapVisible}
           timelineHeatmap={timelineHeatmap}
           previewQualityMode={previewPerformance.qualityMode}
+          previewWindowOpen={previewWindowOpen}
           timelineGridSettings={timelineGridSettings}
           reviewMode={reviewMode}
           onToggleReviewMode={() => setReviewMode((mode) => !mode)}
           onCreateReviewReport={() => void createReviewReport()}
           onPreviewQualityModeChange={(qualityMode: PreviewQualityMode) => updatePreviewPerformance({ qualityMode })}
+          onPopoutPreview={() => void openDetachedPreview()}
           onToggleTimelineGridSnap={toggleTimelineGridSnap}
           onTimelineGridUnitChange={changeTimelineGridUnit}
           onToggleStoryboard={() => setStoryboardOpen((open) => !open)}
@@ -2640,15 +2761,32 @@ export function EditorShell() {
           ) : null}
           <ErrorBoundary name={zhCN.panels.preview}>
             <Suspense fallback={<PanelLoading label={zhCN.panels.preview} />}>
-              <PreviewCanvas
-                safeFrameGuides={safeFrameGuides}
-                previewPerformance={previewPerformance}
-                colorScopesVisible={layoutSettings.panels.colorScopes}
-                onColorScopesVisibleChange={(colorScopes) => persistPanelVisibilityPatch({ colorScopes })}
-                reviewMode={reviewMode}
-                onAddReviewAnnotation={addReviewAnnotationAtPlayhead}
-                onExportReviewReport={() => void createReviewReport()}
-              />
+              {previewWindowOpen ? (
+                <section className="grid min-h-0 place-items-center bg-[#111827] p-6 text-center text-white" data-testid="preview-window-placeholder">
+                  <div className="max-w-sm">
+                    <div className="text-sm font-semibold">{zhCN.preview.detachedPlaceholderTitle}</div>
+                    <div className="mt-2 text-xs leading-5 text-slate-300">{zhCN.preview.detachedPlaceholderMessage}</div>
+                    <button
+                      className="mt-4 inline-flex h-9 items-center justify-center rounded-md border border-white/15 bg-white/10 px-3 text-sm font-medium text-white hover:bg-white/20"
+                      type="button"
+                      data-testid="preview-window-reembed-button"
+                      onClick={() => void reembedPreviewWindow()}
+                    >
+                      {zhCN.preview.detachedReembed}
+                    </button>
+                  </div>
+                </section>
+              ) : (
+                <PreviewCanvas
+                  safeFrameGuides={safeFrameGuides}
+                  previewPerformance={previewPerformance}
+                  colorScopesVisible={layoutSettings.panels.colorScopes}
+                  onColorScopesVisibleChange={(colorScopes) => persistPanelVisibilityPatch({ colorScopes })}
+                  reviewMode={reviewMode}
+                  onAddReviewAnnotation={addReviewAnnotationAtPlayhead}
+                  onExportReviewReport={() => void createReviewReport()}
+                />
+              )}
             </Suspense>
           </ErrorBoundary>
           {reviewVisibility.showRightPanel ? (
