@@ -219,6 +219,7 @@ export interface Project {
   mediaMetadata: Record<string, MediaMetadata>;
   annotations: ProjectAnnotation[];
   reviewAnnotations: ReviewAnnotation[];
+  collaborationNotes: CollaborationNote[];
   timelineNotes: TimelineNote[];
   bookmarks: TimelineBookmark[];
   beatMarkers: BeatMarker[];
@@ -338,6 +339,22 @@ export interface ReviewAnnotation {
   y: number;
   width: number;
   height: number;
+}
+
+export type CollaborationNoteType = 'comment' | 'highlight' | 'replacement';
+
+export interface CollaborationNote {
+  id: string;
+  type: CollaborationNoteType;
+  authorName: string;
+  authorColor: string;
+  start: number;
+  end?: number;
+  text: string;
+  mediaPath?: string;
+  resolved: boolean;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface TimelineNote {

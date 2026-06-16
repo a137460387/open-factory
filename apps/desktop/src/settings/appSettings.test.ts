@@ -6,6 +6,7 @@ import {
   readAppSettings,
   readAutomationRules,
   readBackupSettings,
+  readCollaborationIdentitySettings,
   readCustomSplitLayouts,
   readExportBackgroundSettings,
   readExportQualityAssuranceSettings,
@@ -22,6 +23,7 @@ import {
   readViewSettings,
   saveBackupSettings,
   saveAutomationRules,
+  saveCollaborationIdentitySettings,
   saveCustomSplitLayouts,
   saveExportBackgroundSettings,
   saveExportQualityAssuranceSettings,
@@ -478,6 +480,30 @@ describe('app settings storage', () => {
     });
 
     await saveTimelineInteractionSettings({ reduceMotion: false });
+    expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({ language: 'en' });
+  });
+
+  it('persists normalized collaboration identity settings when changed', async () => {
+    await expect(readCollaborationIdentitySettings()).resolves.toEqual({ name: '我', color: '#38bdf8' });
+
+    await saveLanguageSetting('en');
+    const identity = await saveCollaborationIdentitySettings({ name: '  Alice  ', color: '#38BDF8' });
+
+    expect(identity).toEqual({ name: 'Alice', color: '#38bdf8' });
+    expect(await readCollaborationIdentitySettings()).toEqual(identity);
+    expect(await readAppSettings()).toEqual({
+      language: 'en',
+      collaborationIdentity: identity
+    });
+
+    const fallbackColor = await saveCollaborationIdentitySettings({ color: 'not-a-color' });
+    expect(fallbackColor).toEqual({ name: 'Alice', color: '#38bdf8' });
+    expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({
+      language: 'en',
+      collaborationIdentity: { name: 'Alice', color: '#38bdf8' }
+    });
+
+    await saveCollaborationIdentitySettings({ name: '我' });
     expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({ language: 'en' });
   });
 

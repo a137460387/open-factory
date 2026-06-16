@@ -61,6 +61,7 @@ function makeProject(): Project {
     mediaMetadata: {},
     annotations: [],
     reviewAnnotations: [],
+    collaborationNotes: [],
     timelineNotes: [],
     bookmarks: [],
     beatMarkers: [],

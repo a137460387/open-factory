@@ -1,6 +1,7 @@
 import type {
   BeatMarker,
   ClipGroup,
+  CollaborationNote,
   ExportRange,
   MediaAsset,
   MediaFolder,
@@ -45,6 +46,7 @@ export interface ProjectFileV2 {
     mediaMetadata?: Record<string, MediaMetadata>;
     annotations?: ProjectAnnotation[];
     reviewAnnotations?: ReviewAnnotation[];
+    collaborationNotes?: CollaborationNote[];
     timelineNotes?: TimelineNote[];
     bookmarks?: TimelineBookmark[];
     beatMarkers?: BeatMarker[];

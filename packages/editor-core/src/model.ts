@@ -52,6 +52,8 @@ import type {
   ClipVideoRestoration,
   ClipVideoSpatialDenoise,
   ClipVideoTemporalDenoise,
+  CollaborationNote,
+  CollaborationNoteType,
   ColorCorrection,
   CreditsClip,
   DataSubtitleClip,
@@ -149,6 +151,8 @@ export type {
   ClipVideoRestoration,
   ClipVideoSpatialDenoise,
   ClipVideoTemporalDenoise,
+  CollaborationNote,
+  CollaborationNoteType,
   ColorCorrection,
   CreditsClip,
   DataSubtitleClip,
@@ -421,6 +425,8 @@ export const DEFAULT_TRANSITION_DURATION = 0.5;
 export const DEFAULT_TIMELINE_MARKER_COLOR = '#f97316';
 export const DEFAULT_PROJECT_ANNOTATION_COLOR = '#facc15';
 export const DEFAULT_REVIEW_ANNOTATION_COLOR = '#facc15';
+export const DEFAULT_COLLABORATION_NOTE_AUTHOR = 'Collaborator';
+export const DEFAULT_COLLABORATION_NOTE_COLOR = '#38bdf8';
 export const PROJECT_ANNOTATION_COLORS = ['#facc15', '#38bdf8', '#34d399', '#fb7185', '#a78bfa'] as const;
 export const TIMELINE_NOTE_COLORS = ['#facc15', '#38bdf8', '#34d399', '#fb7185', '#a78bfa', '#fb923c'] as const;
 export const DEFAULT_TIMELINE_NOTE_COLOR = TIMELINE_NOTE_COLORS[0];
@@ -554,6 +560,30 @@ export function createReviewAnnotation(
   };
 }
 
+export function createCollaborationNote(
+  note: Omit<CollaborationNote, 'id' | 'type' | 'authorName' | 'authorColor' | 'text' | 'resolved' | 'createdAt'> &
+    Partial<Pick<CollaborationNote, 'id' | 'type' | 'authorName' | 'authorColor' | 'text' | 'mediaPath' | 'resolved' | 'createdAt' | 'updatedAt'>>,
+  maxTime?: number
+): CollaborationNote {
+  const type = normalizeCollaborationNoteType(note.type);
+  const start = normalizeTimelinePointTime(note.start, maxTime);
+  const rawEnd = normalizeTimelinePointTime(note.end ?? start, maxTime);
+  const end = type === 'comment' ? undefined : round(Math.max(start, rawEnd));
+  return {
+    id: note.id ?? createId('collaboration-note'),
+    type,
+    authorName: normalizeCollaborationAuthorName(note.authorName),
+    authorColor: normalizeHexColor(note.authorColor, DEFAULT_COLLABORATION_NOTE_COLOR),
+    start,
+    ...(end !== undefined ? { end } : {}),
+    text: normalizeCollaborationNoteText(note.text),
+    ...(typeof note.mediaPath === 'string' && note.mediaPath.trim() ? { mediaPath: note.mediaPath.trim() } : {}),
+    resolved: note.resolved === true,
+    createdAt: normalizeIsoDate(note.createdAt),
+    ...(note.updatedAt ? { updatedAt: normalizeIsoDate(note.updatedAt) } : {})
+  };
+}
+
 export function createTimelineNote(
   note: Omit<TimelineNote, 'id' | 'text' | 'color' | 'createdAt'> & Partial<Pick<TimelineNote, 'id' | 'text' | 'color' | 'createdAt'>>,
   maxTime?: number
@@ -639,6 +669,7 @@ export function createProject(name = 'Untitled Project'): Project {
     mediaMetadata: {},
     annotations: [],
     reviewAnnotations: [],
+    collaborationNotes: [],
     timelineNotes: [],
     bookmarks: [],
     beatMarkers: [],
@@ -1157,6 +1188,16 @@ export function normalizeReviewAnnotations(annotations: ReviewAnnotation[] | und
     .sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
 }
 
+export function normalizeCollaborationNote(note: CollaborationNote, maxTime?: number): CollaborationNote {
+  return createCollaborationNote(note, maxTime);
+}
+
+export function normalizeCollaborationNotes(notes: CollaborationNote[] | undefined, maxTime?: number): CollaborationNote[] {
+  return [...(notes ?? [])]
+    .map((note) => normalizeCollaborationNote(note, maxTime))
+    .sort((left, right) => left.start - right.start || (left.end ?? left.start) - (right.end ?? right.start) || left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id));
+}
+
 export function normalizeTimelineNote(note: TimelineNote, maxTime?: number): TimelineNote | undefined {
   const normalized = createTimelineNote(note, maxTime);
   return normalized.end > normalized.start ? normalized : undefined;
@@ -1544,9 +1585,23 @@ function normalizeReviewAnnotationText(text: string | undefined): string {
   return trimmed ? trimmed.slice(0, 240) : 'Review annotation';
 }
 
+function normalizeCollaborationNoteText(text: string | undefined): string {
+  const trimmed = text?.trim();
+  return trimmed ? trimmed.slice(0, 2000) : 'Collaboration note';
+}
+
+function normalizeCollaborationAuthorName(name: string | undefined): string {
+  const trimmed = name?.trim();
+  return trimmed ? trimmed.slice(0, 80) : DEFAULT_COLLABORATION_NOTE_AUTHOR;
+}
+
 function normalizeTimelineNoteText(text: string | undefined): string {
   const trimmed = text?.trim();
   return trimmed ? trimmed.slice(0, 240) : 'Timeline note';
+}
+
+function normalizeCollaborationNoteType(type: CollaborationNoteType | undefined): CollaborationNoteType {
+  return type === 'highlight' || type === 'replacement' || type === 'comment' ? type : 'comment';
 }
 
 function normalizeReviewAnnotationType(type: ReviewAnnotationType | undefined): ReviewAnnotationType {

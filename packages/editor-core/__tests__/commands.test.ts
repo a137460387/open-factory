@@ -8,6 +8,7 @@ import {
   AddMaskCommand,
   AddProjectAnnotationCommand,
   AddReviewAnnotationCommand,
+  AddCollaborationNoteCommand,
   AddTimelineNoteCommand,
   AddProjectBookmarkCommand,
   AddSubtitleClipCommand,
@@ -45,6 +46,7 @@ import {
   RenameMediaFolderCommand,
   RemoveProjectAnnotationCommand,
   RemoveReviewAnnotationCommand,
+  RemoveCollaborationNoteCommand,
   RemoveTimelineNoteCommand,
   RemoveProjectBookmarkCommand,
   RemoveKeyframeCommand,
@@ -71,6 +73,7 @@ import {
   UpdateProjectProtectedRangesCommand,
   UpdateProjectAnnotationCommand,
   UpdateReviewAnnotationCommand,
+  UpdateCollaborationNoteCommand,
   UpdateTimelineNoteCommand,
   UpdateProjectBookmarkCommand,
   UpdateProjectBookmarksCommand,
@@ -612,6 +615,58 @@ describe('timeline commands', () => {
     expect(project.reviewAnnotations).toEqual([]);
     manager.redo();
     expect(project.reviewAnnotations[0].id).toBe('review-a');
+  });
+
+  it('adds, updates, removes, and restores collaboration notes', () => {
+    let project = makeProject();
+    const accessor = {
+      getProject: () => project,
+      setProject: (next: typeof project) => {
+        project = next;
+      }
+    };
+    const manager = new CommandManager();
+
+    manager.execute(
+      new AddCollaborationNoteCommand(accessor, {
+        id: 'collab-a',
+        type: 'highlight',
+        authorName: 'Alice',
+        authorColor: '#38BDF8',
+        start: 2,
+        end: 4,
+        text: '  Check this range  ',
+        resolved: false
+      })
+    );
+    expect(project.collaborationNotes).toEqual([
+      {
+        id: 'collab-a',
+        type: 'highlight',
+        authorName: 'Alice',
+        authorColor: '#38bdf8',
+        start: 2,
+        end: 4,
+        text: 'Check this range',
+        resolved: false,
+        createdAt: project.collaborationNotes[0].createdAt
+      }
+    ]);
+
+    manager.execute(new UpdateCollaborationNoteCommand(accessor, 'collab-a', { resolved: true, text: 'Resolved range' }));
+    expect(project.collaborationNotes[0]).toMatchObject({ id: 'collab-a', resolved: true, text: 'Resolved range' });
+
+    manager.execute(new RemoveCollaborationNoteCommand(accessor, 'collab-a'));
+    expect(project.collaborationNotes).toEqual([]);
+
+    manager.undo();
+    expect(project.collaborationNotes[0]).toMatchObject({ id: 'collab-a', resolved: true });
+    manager.undo();
+    expect(project.collaborationNotes[0]).toMatchObject({ id: 'collab-a', resolved: false, text: 'Check this range' });
+    manager.undo();
+    expect(project.collaborationNotes).toEqual([]);
+    manager.redo();
+    expect(project.collaborationNotes[0].id).toBe('collab-a');
   });
 
   it('adds, updates, removes, and restores timeline notes', () => {

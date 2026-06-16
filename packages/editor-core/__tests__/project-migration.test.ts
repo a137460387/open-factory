@@ -666,6 +666,66 @@ describe('project schema migration', () => {
     expect(migrateProjectFile(file).project.reviewAnnotations).toEqual([]);
   });
 
+  it('serializes and migrates collaboration notes while old project files default to none', () => {
+    const project = makeProject();
+    project.collaborationNotes = [
+      {
+        id: 'collab-late',
+        type: 'replacement',
+        authorName: '  Alice  ',
+        authorColor: '#38BDF8',
+        start: 6,
+        end: 99,
+        text: '  Use alt take  ',
+        mediaPath: '  C:/Media/alt.mp4  ',
+        resolved: true,
+        createdAt: '2026-06-16T00:00:02.000Z'
+      },
+      {
+        id: 'collab-a',
+        type: 'comment',
+        authorName: '',
+        authorColor: 'invalid',
+        start: 1,
+        text: '',
+        resolved: false,
+        createdAt: '2026-06-16T00:00:01.000Z'
+      }
+    ];
+
+    const file = serializeProject(project);
+    const migrated = migrateProjectFile(file);
+
+    expect(file.project.collaborationNotes).toEqual([
+      {
+        id: 'collab-a',
+        type: 'comment',
+        authorName: 'Collaborator',
+        authorColor: '#38bdf8',
+        start: 1,
+        text: 'Collaboration note',
+        resolved: false,
+        createdAt: '2026-06-16T00:00:01.000Z'
+      },
+      {
+        id: 'collab-late',
+        type: 'replacement',
+        authorName: 'Alice',
+        authorColor: '#38bdf8',
+        start: 6,
+        end: 10,
+        text: 'Use alt take',
+        mediaPath: 'C:/Media/alt.mp4',
+        resolved: true,
+        createdAt: '2026-06-16T00:00:02.000Z'
+      }
+    ]);
+    expect(migrated.project.collaborationNotes).toEqual(file.project.collaborationNotes);
+
+    delete (file.project as Partial<typeof file.project>).collaborationNotes;
+    expect(migrateProjectFile(file).project.collaborationNotes).toEqual([]);
+  });
+
   it('serializes and migrates timeline notes while old project files default to none', () => {
     const project = makeProject();
     project.timelineNotes = [

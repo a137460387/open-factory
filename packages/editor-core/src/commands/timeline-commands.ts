@@ -1,6 +1,7 @@
 import {
   createId,
   createMask,
+  createCollaborationNote,
   createNestedSequenceClip,
   createProjectAnnotation,
   createReviewAnnotation,
@@ -30,6 +31,8 @@ import {
   normalizeAudioDenoise,
   normalizeAudioPitchSemitones,
   normalizeClipBorder,
+  normalizeCollaborationNote,
+  normalizeCollaborationNotes,
   normalizeFrameInterpolation,
   normalizeMask,
   normalizeMasks,
@@ -75,6 +78,7 @@ import {
   type ClipStabilization,
   type ClipMask,
   type ClipVideoRestoration,
+  type CollaborationNote,
   type ColorCorrection,
   type MediaMetadata,
   type MotionTrackPoint,
@@ -1188,6 +1192,38 @@ export class AddReviewAnnotationCommand implements Command {
   }
 }
 
+export class AddCollaborationNoteCommand implements Command {
+  readonly description = 'Add collaboration note';
+  private note?: CollaborationNote;
+
+  constructor(private readonly accessor: ProjectAccessor, private readonly input: Omit<CollaborationNote, 'id' | 'createdAt'> & Partial<Pick<CollaborationNote, 'id' | 'createdAt'>>) {}
+
+  execute(): void {
+    const project = this.accessor.getProject();
+    this.note ??= createCollaborationNote(this.input, getTimelineDuration(project.timeline));
+    this.note = normalizeCollaborationNote(this.note, getTimelineDuration(project.timeline));
+    this.accessor.setProject(
+      touchProject({
+        ...project,
+        collaborationNotes: sortCollaborationNotes([...(project.collaborationNotes ?? []), this.note])
+      })
+    );
+  }
+
+  undo(): void {
+    if (!this.note) {
+      return;
+    }
+    const project = this.accessor.getProject();
+    this.accessor.setProject(
+      touchProject({
+        ...project,
+        collaborationNotes: (project.collaborationNotes ?? []).filter((note) => note.id !== this.note?.id)
+      })
+    );
+  }
+}
+
 export class AddTimelineNoteCommand implements Command {
   readonly description = 'Add timeline note';
   private note?: TimelineNote;
@@ -1807,6 +1843,78 @@ export class RemoveReviewAnnotationCommand implements Command {
     const annotations = [...(project.reviewAnnotations ?? [])];
     annotations.splice(this.index < 0 ? annotations.length : this.index, 0, this.removed);
     this.accessor.setProject(touchProject({ ...project, reviewAnnotations: sortReviewAnnotations(annotations) }));
+  }
+}
+
+export type CollaborationNotePatch = Partial<Omit<CollaborationNote, 'id' | 'createdAt'> & Pick<CollaborationNote, 'createdAt'>>;
+
+export class UpdateCollaborationNoteCommand implements Command {
+  readonly description = 'Update collaboration note';
+  private before?: CollaborationNote;
+  private after?: CollaborationNote;
+
+  constructor(private readonly accessor: ProjectAccessor, private readonly noteId: string, private readonly patch: CollaborationNotePatch) {}
+
+  execute(): void {
+    const project = this.accessor.getProject();
+    const note = (project.collaborationNotes ?? []).find((item) => item.id === this.noteId);
+    if (!note) {
+      throw new Error(`Collaboration note ${this.noteId} not found`);
+    }
+    this.before ??= note;
+    this.after = normalizeCollaborationNote({ ...note, ...this.patch, updatedAt: this.patch.updatedAt ?? new Date().toISOString() }, getTimelineDuration(project.timeline));
+    this.accessor.setProject(
+      touchProject({
+        ...project,
+        collaborationNotes: sortCollaborationNotes((project.collaborationNotes ?? []).map((item) => (item.id === this.noteId ? this.after! : item)))
+      })
+    );
+  }
+
+  undo(): void {
+    if (!this.before) {
+      return;
+    }
+    const project = this.accessor.getProject();
+    this.accessor.setProject(
+      touchProject({
+        ...project,
+        collaborationNotes: sortCollaborationNotes((project.collaborationNotes ?? []).map((item) => (item.id === this.noteId ? this.before! : item)))
+      })
+    );
+  }
+}
+
+export class RemoveCollaborationNoteCommand implements Command {
+  readonly description = 'Remove collaboration note';
+  private removed?: CollaborationNote;
+  private index = -1;
+
+  constructor(private readonly accessor: ProjectAccessor, private readonly noteId: string) {}
+
+  execute(): void {
+    const project = this.accessor.getProject();
+    this.index = (project.collaborationNotes ?? []).findIndex((note) => note.id === this.noteId);
+    if (this.index === -1) {
+      throw new Error(`Collaboration note ${this.noteId} not found`);
+    }
+    this.removed ??= (project.collaborationNotes ?? [])[this.index];
+    this.accessor.setProject(
+      touchProject({
+        ...project,
+        collaborationNotes: (project.collaborationNotes ?? []).filter((note) => note.id !== this.noteId)
+      })
+    );
+  }
+
+  undo(): void {
+    if (!this.removed) {
+      return;
+    }
+    const project = this.accessor.getProject();
+    const notes = [...(project.collaborationNotes ?? [])];
+    notes.splice(this.index < 0 ? notes.length : this.index, 0, this.removed);
+    this.accessor.setProject(touchProject({ ...project, collaborationNotes: sortCollaborationNotes(notes) }));
   }
 }
 
@@ -4293,6 +4401,10 @@ function sortAnnotations(annotations: ProjectAnnotation[]): ProjectAnnotation[] 
 
 function sortReviewAnnotations(annotations: ReviewAnnotation[]): ReviewAnnotation[] {
   return [...annotations].sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
+}
+
+function sortCollaborationNotes(notes: CollaborationNote[]): CollaborationNote[] {
+  return normalizeCollaborationNotes(notes);
 }
 
 function sortTimelineNotes(notes: TimelineNote[]): TimelineNote[] {

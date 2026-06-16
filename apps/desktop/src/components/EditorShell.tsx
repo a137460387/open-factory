@@ -272,6 +272,7 @@ const VideoStitchWizardDialog = lazy(() => import('../video-stitching/VideoStitc
 const SyncComparePanel = lazy(() => import('../sync-compare/SyncComparePanel').then((module) => ({ default: module.SyncComparePanel })));
 const SceneReorderDialog = lazy(() => import('../scene-reorder/SceneReorderDialog').then((module) => ({ default: module.SceneReorderDialog })));
 const StyleTransferDialog = lazy(() => import('../style-transfer/StyleTransferDialog'));
+const CollaborationNotesPanel = lazy(() => import('../collaboration/CollaborationNotesPanel'));
 const ContentAnalysisDialog = lazy(() => import('../media/ContentAnalysisDialog').then((module) => ({ default: module.ContentAnalysisDialog })));
 const RhythmAnalysisDialog = lazy(() => import('../analysis/RhythmAnalysisDialog').then((module) => ({ default: module.RhythmAnalysisDialog })));
 const TimelineSearchPanel = lazy(() => import('../timeline-search/TimelineSearchPanel').then((module) => ({ default: module.TimelineSearchPanel })));
@@ -327,6 +328,7 @@ export function EditorShell() {
   const [syncCompareOpen, setSyncCompareOpen] = useState(false);
   const [sceneReorderOpen, setSceneReorderOpen] = useState(false);
   const [styleTransferOpen, setStyleTransferOpen] = useState(false);
+  const [collaborationNotesOpen, setCollaborationNotesOpen] = useState(false);
   const [contentAnalysisOpen, setContentAnalysisOpen] = useState(false);
   const [rhythmAnalysisOpen, setRhythmAnalysisOpen] = useState(false);
   const [contentAnalysisRunningClipId, setContentAnalysisRunningClipId] = useState<string>();
@@ -2733,6 +2735,7 @@ export function EditorShell() {
           onOpenSyncCompare={openSyncCompare}
           onOpenSceneReorder={() => setSceneReorderOpen(true)}
           onOpenStyleTransfer={() => setStyleTransferOpen(true)}
+          onOpenCollaborationNotes={() => setCollaborationNotesOpen(true)}
           onOpenContentAnalysis={() => setContentAnalysisOpen(true)}
           onOpenRhythmAnalysis={() => setRhythmAnalysisOpen(true)}
           onDetectBeats={() => void detectSelectedBeats()}
@@ -3100,6 +3103,7 @@ export function EditorShell() {
           {styleTransferOpen ? (
             <StyleTransferDialog project={project} selectedClipId={selectedClipId} selectedClipIds={selectedClipIds} onClose={() => setStyleTransferOpen(false)} />
           ) : null}
+          {collaborationNotesOpen ? <CollaborationNotesPanel project={project} playheadTime={playheadTime} onClose={() => setCollaborationNotesOpen(false)} /> : null}
           {contentAnalysisOpen ? (
             <ContentAnalysisDialog
               targets={contentAnalysisTargets}

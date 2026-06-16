@@ -1,4 +1,4 @@
-import { Activity, Archive, Camera, Captions, ChevronDown, ClipboardList, Download, FileDown, FilePlus2, FileText, FolderOpen, GitCompareArrows, Grid2X2, History, ImageDown, LayoutGrid, LockKeyhole, Mic2, Monitor, PanelsTopLeft, Pause, PictureInPicture2, Play, Redo2, RotateCcw, Save, Scissors, Settings, Square, Trash2, Undo2, WandSparkles, XCircle } from 'lucide-react';
+import { Activity, Archive, Camera, Captions, ChevronDown, ClipboardList, Download, FileDown, FilePlus2, FileText, FolderOpen, GitCompareArrows, Grid2X2, History, ImageDown, LayoutGrid, LockKeyhole, MessageSquareText, Mic2, Monitor, PanelsTopLeft, Pause, PictureInPicture2, Play, Redo2, RotateCcw, Save, Scissors, Settings, Square, Trash2, Undo2, WandSparkles, XCircle } from 'lucide-react';
 import {
   BUILT_IN_SPLIT_LAYOUTS,
   SPLIT_LAYOUT_PRESET_IDS,
@@ -51,6 +51,7 @@ interface ToolbarProps {
   onOpenSyncCompare(): void;
   onOpenSceneReorder(): void;
   onOpenStyleTransfer(): void;
+  onOpenCollaborationNotes(): void;
   onOpenContentAnalysis(): void;
   onOpenRhythmAnalysis(): void;
   onDetectBeats(): void;
@@ -676,6 +677,18 @@ export function Toolbar(props: ToolbarProps) {
             >
               <span>{t.styleTransfer}</span>
               <WandSparkles size={14} />
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-tools-collaboration-notes-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onOpenCollaborationNotes();
+              }}
+            >
+              <span>{t.collaborationNotes}</span>
+              <MessageSquareText size={14} />
             </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"

@@ -81,6 +81,11 @@ export interface TimelineInteractionSettings {
   reduceMotion: boolean;
 }
 
+export interface CollaborationIdentitySettings {
+  name: string;
+  color: string;
+}
+
 export type ExportUploadTargetType = 'webdav' | 'local';
 
 export interface ExportUploadSettings {
@@ -189,6 +194,11 @@ export const DEFAULT_TIMELINE_INTERACTION_SETTINGS: TimelineInteractionSettings 
   reduceMotion: false
 };
 
+export const DEFAULT_COLLABORATION_IDENTITY_SETTINGS: CollaborationIdentitySettings = {
+  name: '我',
+  color: '#38bdf8'
+};
+
 export interface AppSettings {
   language?: Language;
   layout?: EditorLayoutSettings;
@@ -203,6 +213,7 @@ export interface AppSettings {
   previewPerformance?: PreviewPerformanceSettings;
   previewWindow?: PreviewWindowSettings;
   timelineInteraction?: TimelineInteractionSettings;
+  collaborationIdentity?: CollaborationIdentitySettings;
   localModels?: LocalAiModelsSettings;
   automationRules?: AutomationRule[];
   customSplitLayouts?: SplitLayoutDefinition[];
@@ -384,6 +395,18 @@ export async function saveTimelineInteractionSettings(timelineInteraction: Parti
   return nextTimelineInteraction;
 }
 
+export async function readCollaborationIdentitySettings(): Promise<CollaborationIdentitySettings> {
+  const settings = await readAppSettings();
+  return settings.collaborationIdentity ?? { ...DEFAULT_COLLABORATION_IDENTITY_SETTINGS };
+}
+
+export async function saveCollaborationIdentitySettings(identity: Partial<CollaborationIdentitySettings>): Promise<CollaborationIdentitySettings> {
+  const settings = await readAppSettings();
+  const nextIdentity = normalizeCollaborationIdentitySettings({ ...settings.collaborationIdentity, ...identity });
+  await writeAppSettings({ ...settings, collaborationIdentity: nextIdentity });
+  return nextIdentity;
+}
+
 export async function readPreviewWindowSettings(): Promise<PreviewWindowSettings> {
   const settings = await readAppSettings();
   return settings.previewWindow ?? defaultPreviewWindowSettings();
@@ -521,6 +544,10 @@ function normalizeSettings(settings: Partial<AppSettings>): AppSettings {
   const timelineInteraction = normalizeTimelineInteractionSettings(settings.timelineInteraction);
   if (timelineInteraction && shouldPersistTimelineInteractionSettings(timelineInteraction)) {
     normalized.timelineInteraction = timelineInteraction;
+  }
+  const collaborationIdentity = normalizeCollaborationIdentitySettings(settings.collaborationIdentity);
+  if (shouldPersistCollaborationIdentitySettings(collaborationIdentity)) {
+    normalized.collaborationIdentity = collaborationIdentity;
   }
   const localModels = normalizeLocalAiModelsSettings(settings.localModels);
   if (hasLocalAiModelsSettings(localModels)) {
@@ -740,6 +767,14 @@ export function normalizeTimelineInteractionSettings(settings: Partial<TimelineI
   };
 }
 
+export function normalizeCollaborationIdentitySettings(settings: Partial<CollaborationIdentitySettings> | undefined): CollaborationIdentitySettings {
+  const name = typeof settings?.name === 'string' && settings.name.trim() ? settings.name.trim().slice(0, 80) : DEFAULT_COLLABORATION_IDENTITY_SETTINGS.name;
+  return {
+    name,
+    color: normalizeHexColor(settings?.color, DEFAULT_COLLABORATION_IDENTITY_SETTINGS.color)
+  };
+}
+
 function normalizePreviewWindowResolutionScale(value: unknown): PreviewWindowResolutionScale {
   return value === 0.5 || value === 0.25 ? value : 1;
 }
@@ -898,6 +933,10 @@ function shouldPersistTimelineInteractionSettings(settings: TimelineInteractionS
   return settings.reduceMotion !== DEFAULT_TIMELINE_INTERACTION_SETTINGS.reduceMotion;
 }
 
+function shouldPersistCollaborationIdentitySettings(settings: CollaborationIdentitySettings): boolean {
+  return settings.name !== DEFAULT_COLLABORATION_IDENTITY_SETTINGS.name || settings.color !== DEFAULT_COLLABORATION_IDENTITY_SETTINGS.color;
+}
+
 function shouldPersistExportPresetSyncSettings(settings: ExportPresetSyncSettings): boolean {
   return (
     settings.enabled ||
@@ -922,6 +961,12 @@ function shouldPersistExportQualityAssuranceSettings(settings: PostExportQuality
     settings.silenceThresholdDb !== DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS.silenceThresholdDb ||
     settings.silenceDurationSeconds !== DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS.silenceDurationSeconds
   );
+}
+
+function normalizeHexColor(color: string | undefined, fallback: string): string {
+  const candidate = typeof color === 'string' ? color.trim() : '';
+  const match = /^#?([0-9a-fA-F]{6})$/.exec(candidate);
+  return match ? `#${match[1].toLowerCase()}` : fallback;
 }
 
 function normalizeExportPresetSyncConflictMode(value: unknown): ExportPresetSyncConflictMode {

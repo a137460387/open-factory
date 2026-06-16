@@ -75,9 +75,11 @@ import { useTranslationSettingsStore, type TranslationProvider } from '../store/
 import { useWhisperSettingsStore } from '../store/whisperSettingsStore';
 import {
   DEFAULT_BACKUP_SETTINGS,
+  DEFAULT_COLLABORATION_IDENTITY_SETTINGS,
   DEFAULT_EXPORT_PRESET_SYNC_SETTINGS,
   readAutomationRules,
   readBackupSettings,
+  readCollaborationIdentitySettings,
   readExportBackgroundSettings,
   readExportQualityAssuranceSettings,
   readExportPresetSyncSettings,
@@ -85,6 +87,7 @@ import {
   readLocalAiModelsSettings,
   saveAutomationRules,
   saveBackupSettings,
+  saveCollaborationIdentitySettings,
   saveExportBackgroundSettings,
   saveExportQualityAssuranceSettings,
   saveExportPresetSyncSettings,
@@ -93,6 +96,7 @@ import {
   saveLocalAiModelsSettings,
   type AutomationRule,
   type BackupSettings,
+  type CollaborationIdentitySettings,
   type ExportBackgroundSettings,
   type ExportPresetSyncSettings,
   type ExportConditionRule,
@@ -190,6 +194,7 @@ export function SettingsDialog({
   const [automationRules, setAutomationRules] = useState<AutomationRule[]>([]);
   const [automationRulesJson, setAutomationRulesJson] = useState('[]');
   const [automationRulesError, setAutomationRulesError] = useState<string>();
+  const [collaborationIdentity, setCollaborationIdentity] = useState<CollaborationIdentitySettings>(() => ({ ...DEFAULT_COLLABORATION_IDENTITY_SETTINGS }));
   const [localModelsSettings, setLocalModelsSettings] = useState<LocalAiModelsSettings>({});
   const [localModelStatuses, setLocalModelStatuses] = useState<Partial<Record<LocalAiModelId, LocalAiModelResolvedStatus>>>({});
   const [webdavPassword, setWebdavPassword] = useState('');
@@ -235,6 +240,7 @@ export function SettingsDialog({
     void loadExportQualityAssuranceSettings();
     void loadExportRules();
     void loadAutomationRules();
+    void loadCollaborationIdentity();
     void loadLocalModelsSettings();
     void loadTranslationApiKey();
     hydrateThemeForm(getCurrentThemeSettings());
@@ -608,6 +614,18 @@ export function SettingsDialog({
     }
   }
 
+  async function loadCollaborationIdentity() {
+    try {
+      setCollaborationIdentity(await readCollaborationIdentitySettings());
+    } catch (identityError) {
+      showToast({
+        kind: 'warning',
+        title: t.general.saveFailed,
+        message: identityError instanceof Error ? identityError.message : t.general.saveFailedMessage
+      });
+    }
+  }
+
   async function loadLocalModelsSettings() {
     try {
       const settings = await readLocalAiModelsSettings();
@@ -765,6 +783,20 @@ export function SettingsDialog({
         kind: 'warning',
         title: t.general.saveFailed,
         message: exportBackgroundError instanceof Error ? exportBackgroundError.message : t.general.saveFailedMessage
+      });
+    }
+  }
+
+  async function updateCollaborationIdentity(patch: Partial<CollaborationIdentitySettings>) {
+    const optimistic = { ...collaborationIdentity, ...patch };
+    setCollaborationIdentity(optimistic);
+    try {
+      setCollaborationIdentity(await saveCollaborationIdentitySettings(optimistic));
+    } catch (identityError) {
+      showToast({
+        kind: 'warning',
+        title: t.general.saveFailed,
+        message: identityError instanceof Error ? identityError.message : t.general.saveFailedMessage
       });
     }
   }
@@ -1147,6 +1179,32 @@ export function SettingsDialog({
                     <span className="mt-1 block">{t.general.reduceMotionDescription}</span>
                   </span>
                 </label>
+                <div className="rounded-md border border-line bg-panel p-3">
+                  <div className="mb-2">
+                    <h4 className="text-xs font-semibold text-slate-700">{t.general.collaborationIdentityTitle}</h4>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_120px]">
+                    <label className="block text-xs font-medium text-slate-600">
+                      {t.general.collaborationName}
+                      <input
+                        className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                        value={collaborationIdentity.name}
+                        data-testid="settings-collaboration-name-input"
+                        onChange={(event) => void updateCollaborationIdentity({ name: event.target.value })}
+                      />
+                    </label>
+                    <label className="block text-xs font-medium text-slate-600">
+                      {t.general.collaborationColor}
+                      <input
+                        className="mt-1 h-9 w-full rounded-md border border-line bg-white px-1"
+                        type="color"
+                        value={collaborationIdentity.color}
+                        data-testid="settings-collaboration-color-input"
+                        onChange={(event) => void updateCollaborationIdentity({ color: event.target.value })}
+                      />
+                    </label>
+                  </div>
+                </div>
                 <div className="rounded-md border border-line bg-panel p-3">
                   <div className="mb-2">
                     <h4 className="text-xs font-semibold text-slate-700">{t.general.demucsTitle}</h4>
