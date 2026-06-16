@@ -1,9 +1,11 @@
 import { deserializeProject, serializeProject, type CutProjectFile, type Project } from '@open-factory/editor-core';
 import { fileNameFromPath } from './tauri';
-import { fsExists, getAppDataDir, getFileStat, readFile, removeFile, scanDirectory, writeFile } from './tauri-bridge';
+import { fsExists, getAppDataDir, getFileStat, readFile, removeFile, scanDirectory } from './tauri-bridge';
+import { getActiveProjectEncryptionPassword, isEncryptedProjectPath, readProjectFile, writeSerializedProjectFile } from './projectFiles';
 
 const SNAPSHOT_LIMIT = 20;
 const SNAPSHOT_SUFFIX = '.cutproj.json';
+const ENCRYPTED_SNAPSHOT_SUFFIX = '.cutproj.enc';
 
 export interface ProjectSnapshotEntry {
   projectId: string;
@@ -16,10 +18,11 @@ export interface ProjectSnapshotEntry {
 export async function saveProjectSnapshot(project: Project, name: string, projectPath?: string, limit = SNAPSHOT_LIMIT): Promise<ProjectSnapshotEntry> {
   const snapshotName = normalizeSnapshotName(name);
   const dir = await getSnapshotDir(project.id);
-  const fileName = createSnapshotFileName(snapshotName);
+  const encryptedPassword = getActiveProjectEncryptionPassword();
+  const fileName = createSnapshotFileName(snapshotName, new Date(), Boolean(encryptedPassword));
   const path = joinPath(dir, fileName);
   const contents = JSON.stringify(serializeProject(project, projectPath), null, 2);
-  await writeFile(path, contents);
+  await writeSerializedProjectFile(path, contents, { password: encryptedPassword });
   await pruneProjectSnapshots(project.id, limit);
   const stat = await getFileStat(path).catch(() => ({ path, size: contents.length, mtimeMs: Date.now() }));
   return {
@@ -39,7 +42,7 @@ export async function listProjectSnapshots(projectId: string): Promise<ProjectSn
   const paths = await scanDirectory(dir, 1).catch(() => []);
   const entries = await Promise.all(
     paths
-      .filter((path) => path.endsWith(SNAPSHOT_SUFFIX))
+      .filter((path) => path.endsWith(SNAPSHOT_SUFFIX) || path.endsWith(ENCRYPTED_SNAPSHOT_SUFFIX))
       .map(async (path) => {
         const fileName = fileNameFromPath(path);
         const parsed = parseSnapshotFileName(fileName);
@@ -62,6 +65,9 @@ export async function listProjectSnapshots(projectId: string): Promise<ProjectSn
 }
 
 export async function readProjectSnapshot(snapshot: Pick<ProjectSnapshotEntry, 'path'>, projectPathForMedia?: string): Promise<Project> {
+  if (isEncryptedProjectPath(snapshot.path)) {
+    return readProjectFile(snapshot.path, projectPathForMedia ?? snapshot.path, { password: getActiveProjectEncryptionPassword() });
+  }
   const raw = await readFile(snapshot.path);
   return deserializeProject(JSON.parse(raw) as CutProjectFile, projectPathForMedia);
 }
@@ -84,9 +90,9 @@ export async function getSnapshotDir(projectId: string): Promise<string> {
   return joinPath(appDataDir, 'snapshots', encodeURIComponent(projectId || 'project'));
 }
 
-export function createSnapshotFileName(name: string, date = new Date()): string {
+export function createSnapshotFileName(name: string, date = new Date(), encrypted = false): string {
   const timestamp = date.toISOString().replace(/[:.]/g, '-');
-  return `${timestamp}_${encodeURIComponent(normalizeSnapshotName(name))}${SNAPSHOT_SUFFIX}`;
+  return `${timestamp}_${encodeURIComponent(normalizeSnapshotName(name))}${encrypted ? ENCRYPTED_SNAPSHOT_SUFFIX : SNAPSHOT_SUFFIX}`;
 }
 
 export function normalizeSnapshotName(name: string): string {
@@ -105,10 +111,11 @@ export function formatSnapshotSize(bytes: number): string {
 }
 
 function parseSnapshotFileName(fileName: string): { name: string; createdAt: Date } | undefined {
-  if (!fileName.endsWith(SNAPSHOT_SUFFIX)) {
+  const suffix = fileName.endsWith(ENCRYPTED_SNAPSHOT_SUFFIX) ? ENCRYPTED_SNAPSHOT_SUFFIX : fileName.endsWith(SNAPSHOT_SUFFIX) ? SNAPSHOT_SUFFIX : undefined;
+  if (!suffix) {
     return undefined;
   }
-  const body = fileName.slice(0, -SNAPSHOT_SUFFIX.length);
+  const body = fileName.slice(0, -suffix.length);
   const separator = body.indexOf('_');
   if (separator <= 0) {
     return undefined;

@@ -5,6 +5,8 @@ import { isTauriRuntime } from './tauri';
 import {
   bridgeConfirm,
   chooseUnsavedCloseAction,
+  decryptProjectFile,
+  encryptProjectFile,
   forceCloseWindow as bridgeForceCloseWindow,
   fsExists,
   getAppDataDir,
@@ -22,6 +24,14 @@ export const AUTOSAVE_KEY = 'open-factory:autosave';
 export const AUTOSAVE_INTERVAL_KEY = 'open-factory:autosave-interval-seconds';
 export const RECENT_PROJECT_PATH_KEY = 'open-factory:recent-project-path';
 export const DEFAULT_AUTOSAVE_INTERVAL_SECONDS = 60;
+export const ENCRYPTED_PROJECT_EXTENSION = '.cutproj.enc';
+
+export interface ProjectFileEncryptionOptions {
+  encrypted?: boolean;
+  password?: string;
+}
+
+let activeProjectEncryptionPassword: string | undefined;
 
 export interface AutosaveRecoveryCandidate {
   kind: 'saved-project' | 'unsaved-project';
@@ -46,17 +56,17 @@ export async function chooseProjectToOpen(): Promise<string | undefined> {
   if (!isTauriRuntime() && !window.__TAURI_MOCKS__) {
     return undefined;
   }
-  return (await openFileDialog(false, [{ name: zhCN.projectFiles.projectFilter, extensions: ['cutproj.json', 'json'] }]))[0];
+  return (await openFileDialog(false, [{ name: zhCN.projectFiles.projectFilter, extensions: ['cutproj.json', 'cutproj.enc', 'json'] }]))[0];
 }
 
-export async function chooseProjectSavePath(defaultPath = 'open-factory.cutproj.json'): Promise<string | undefined> {
+export async function chooseProjectSavePath(defaultPath = 'open-factory.cutproj.json', encrypted = false): Promise<string | undefined> {
   if (!isTauriRuntime() && !window.__TAURI_MOCKS__) {
     return undefined;
   }
-  return saveFileDialog(defaultPath, [{ name: zhCN.projectFiles.projectFilter, extensions: ['cutproj.json', 'json'] }]);
+  return saveFileDialog(defaultPath, [{ name: zhCN.projectFiles.projectFilter, extensions: encrypted ? ['cutproj.enc'] : ['cutproj.json', 'json'] }]);
 }
 
-export async function readProjectFile(path: string, projectPathForMedia = path): Promise<Project> {
+export async function readProjectFile(path: string, projectPathForMedia = path, options: ProjectFileEncryptionOptions = {}): Promise<Project> {
   if (!hasNativeFileRuntime()) {
     const raw = getBrowserStorage()?.getItem(AUTOSAVE_KEY);
     if (!raw) {
@@ -64,16 +74,18 @@ export async function readProjectFile(path: string, projectPathForMedia = path):
     }
     return deserializeProject(JSON.parse(raw) as CutProjectFile);
   }
-  const raw = await readFile(path);
+  const encrypted = isEncryptedProjectPath(path);
+  const raw = encrypted ? await readEncryptedProjectFile(path, options.password ?? activeProjectEncryptionPassword) : await readFile(path);
   const project = deserializeProject(JSON.parse(raw) as CutProjectFile, projectPathForMedia);
   const media = await Promise.all(project.media.map(async (asset) => ({ ...asset, missing: !(await fsExists(asset.path)) })));
   if (projectPathForMedia === path) {
     recordRecentProjectPath(path);
+    setActiveProjectEncryptionPassword(encrypted ? options.password : undefined);
   }
   return { ...project, media };
 }
 
-export async function writeProjectFile(project: Project, path?: string): Promise<string | undefined> {
+export async function writeProjectFile(project: Project, path?: string, options: ProjectFileEncryptionOptions = {}): Promise<string | undefined> {
   const serialized = JSON.stringify(serializeProject(project, path), null, 2);
   if (!hasNativeFileRuntime()) {
     getBrowserStorage()?.setItem(AUTOSAVE_KEY, serialized);
@@ -83,8 +95,10 @@ export async function writeProjectFile(project: Project, path?: string): Promise
   if (!path) {
     throw new Error(zhCN.projectFiles.projectPathRequired);
   }
-  await writeFile(path, serialized);
-  await runProjectBackupAfterSave(project, path, serialized);
+  const encrypted = await writeSerializedProjectFile(path, serialized, options);
+  if (!encrypted) {
+    await runProjectBackupAfterSave(project, path, serialized);
+  }
   recordRecentProjectPath(path);
   return path;
 }
@@ -115,7 +129,7 @@ export async function writeAutosaveProject(project: Project, projectPath?: strin
     return undefined;
   }
   const serialized = JSON.stringify(serializeProject(project, projectPath), null, 2);
-  await writeFile(autosavePath, serialized);
+  await writeSerializedProjectFile(autosavePath, serialized, { password: activeProjectEncryptionPassword });
   return autosavePath;
 }
 
@@ -182,6 +196,35 @@ export function getSavedProjectAutosavePath(projectPath: string): string {
   return `${projectPath}.autosave`;
 }
 
+export function setActiveProjectEncryptionPassword(password?: string): void {
+  const trimmed = password?.trim();
+  activeProjectEncryptionPassword = trimmed ? trimmed : undefined;
+}
+
+export function getActiveProjectEncryptionPassword(): string | undefined {
+  return activeProjectEncryptionPassword;
+}
+
+export function isEncryptedProjectPath(path: string | undefined): boolean {
+  return Boolean(path && /\.cutproj\.enc(?:\.autosave)?$/i.test(path));
+}
+
+export async function writeSerializedProjectFile(path: string, serialized: string, options: ProjectFileEncryptionOptions = {}): Promise<boolean> {
+  const password = normalizeProjectPassword(options.password ?? (isEncryptedProjectPath(path) ? activeProjectEncryptionPassword : undefined));
+  const encrypted = options.encrypted === true || Boolean(password) || isEncryptedProjectPath(path);
+  if (!encrypted) {
+    await writeFile(path, serialized);
+    setActiveProjectEncryptionPassword(undefined);
+    return false;
+  }
+  if (!password) {
+    throw new Error(zhCN.projectFiles.encryptedPasswordRequired);
+  }
+  await encryptProjectFile(path, serialized, password);
+  setActiveProjectEncryptionPassword(password);
+  return true;
+}
+
 export async function forceCloseWindow(): Promise<void> {
   await bridgeForceCloseWindow();
 }
@@ -227,6 +270,28 @@ async function getUnsavedAutosavePath(): Promise<string | undefined> {
 
 function recordRecentProjectPath(path: string): void {
   getBrowserStorage()?.setItem(RECENT_PROJECT_PATH_KEY, path);
+}
+
+async function readEncryptedProjectFile(path: string, password: string | undefined): Promise<string> {
+  const normalized = normalizeProjectPassword(password);
+  if (!normalized) {
+    throw new Error(zhCN.projectFiles.encryptedPasswordRequired);
+  }
+  try {
+    const raw = await decryptProjectFile(path, normalized);
+    setActiveProjectEncryptionPassword(normalized);
+    return raw;
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('密码错误')) {
+      throw new Error(zhCN.projectFiles.encryptedWrongPassword);
+    }
+    throw error;
+  }
+}
+
+function normalizeProjectPassword(password: string | undefined): string | undefined {
+  const trimmed = password?.trim();
+  return trimmed ? trimmed : undefined;
 }
 
 function hasNativeFileRuntime(): boolean {

@@ -96,5 +96,6 @@ export * from './subtitles/srt';
 export * from './subtitles/data-subtitle';
 export * from './subtitles/translation';
 export * from './subtitles/retiming';
+export * from './subtitles/proofreading';
 export * from './subtitles/data-import';
 export * from './subtitles/style-templates';

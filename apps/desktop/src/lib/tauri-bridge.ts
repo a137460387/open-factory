@@ -531,6 +531,9 @@ export type TauriMocks = Partial<{
   openDirectoryDialog(): Promise<string | undefined> | string | undefined;
   readFile(path: string): Promise<string> | string;
   writeFile(path: string, contents: string): Promise<void> | void;
+  encryptProjectFile(path: string, contents: string, password: string): Promise<void> | void;
+  decryptProjectFile(path: string, password: string): Promise<string> | string;
+  isEncryptedProjectFile(path: string): Promise<boolean> | boolean;
   writeClipReport(path: string, html: string): Promise<void> | void;
   removeFile(path: string): Promise<void> | void;
   copyFile(sourcePath: string, destinationPath: string): Promise<void> | void;
@@ -703,6 +706,31 @@ export async function writeFile(path: string, contents: string): Promise<void> {
     return;
   }
   await invoke('write_file', { path, contents });
+}
+
+export async function encryptProjectFile(path: string, contents: string, password: string): Promise<void> {
+  const mock = getTauriMocks()?.encryptProjectFile;
+  if (mock) {
+    await mock(path, contents, password);
+    return;
+  }
+  await invoke('encrypt_project_file', { path, contents, password });
+}
+
+export async function decryptProjectFile(path: string, password: string): Promise<string> {
+  const mock = getTauriMocks()?.decryptProjectFile;
+  if (mock) {
+    return mock(path, password);
+  }
+  return invoke<string>('decrypt_project_file', { path, password });
+}
+
+export async function isEncryptedProjectFile(path: string): Promise<boolean> {
+  const mock = getTauriMocks()?.isEncryptedProjectFile;
+  if (mock) {
+    return mock(path);
+  }
+  return invoke<boolean>('is_encrypted_project_file', { path });
 }
 
 export async function writeClipReport(path: string, html: string): Promise<void> {

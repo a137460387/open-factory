@@ -9,6 +9,7 @@ import {
   readProjectSnapshot,
   saveProjectSnapshot
 } from './projectSnapshots';
+import { setActiveProjectEncryptionPassword } from './projectFiles';
 import type { TauriMocks } from './tauri-bridge';
 
 describe('project snapshots', () => {
@@ -21,12 +22,25 @@ describe('project snapshots', () => {
     files.clear();
     mtimes.clear();
     removed.length = 0;
+    setActiveProjectEncryptionPassword(undefined);
     vi.stubGlobal('window', {
       __TAURI_MOCKS__: {
         getAppDataDir: () => appDataDir,
         writeFile: (path, contents) => {
           files.set(path, contents);
           mtimes.set(path, 2_000);
+        },
+        encryptProjectFile: (path, contents, password) => {
+          files.set(path, `enc:${password}:${contents}`);
+          mtimes.set(path, 2_000);
+        },
+        decryptProjectFile: (path, password) => {
+          const prefix = `enc:${password}:`;
+          const value = files.get(path) ?? '';
+          if (!value.startsWith(prefix)) {
+            throw new Error('密码错误');
+          }
+          return value.slice(prefix.length);
         },
         readFile: (path) => {
           const value = files.get(path);
@@ -47,6 +61,7 @@ describe('project snapshots', () => {
   });
 
   afterEach(() => {
+    setActiveProjectEncryptionPassword(undefined);
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
   });
@@ -86,5 +101,18 @@ describe('project snapshots', () => {
     expect(pruned.map((snapshot) => snapshot.name)).toEqual(['Snap 1', 'Snap 0']);
     expect(removed).toHaveLength(2);
     await expect(listProjectSnapshots('project-1')).resolves.toHaveLength(20);
+  });
+
+  it('saves encrypted snapshots with the active project password', async () => {
+    const project = { ...createProject('Encrypted Snapshot'), id: 'project-1' };
+    setActiveProjectEncryptionPassword('secret');
+
+    const snapshot = await saveProjectSnapshot(project, 'Locked', 'C:/Projects/demo.cutproj.enc');
+    expect(snapshot.path).toContain('Locked.cutproj.enc');
+    expect(files.get(snapshot.path)).toContain('enc:secret:');
+    await expect(listProjectSnapshots('project-1')).resolves.toHaveLength(1);
+
+    const restored = await readProjectSnapshot(snapshot, 'C:/Projects/demo.cutproj.enc');
+    expect(restored.name).toBe('Encrypted Snapshot');
   });
 });

@@ -1,4 +1,4 @@
-import { Activity, Archive, Camera, Captions, ChevronDown, Download, FileDown, FilePlus2, FileText, FolderOpen, GitCompareArrows, Grid2X2, History, ImageDown, LayoutGrid, Mic2, Monitor, PanelsTopLeft, Pause, PictureInPicture2, Play, Redo2, RotateCcw, Save, Scissors, Settings, Square, Trash2, Undo2, WandSparkles, XCircle } from 'lucide-react';
+import { Activity, Archive, Camera, Captions, ChevronDown, Download, FileDown, FilePlus2, FileText, FolderOpen, GitCompareArrows, Grid2X2, History, ImageDown, LayoutGrid, LockKeyhole, Mic2, Monitor, PanelsTopLeft, Pause, PictureInPicture2, Play, Redo2, RotateCcw, Save, Scissors, Settings, Square, Trash2, Undo2, WandSparkles, XCircle } from 'lucide-react';
 import {
   BUILT_IN_SPLIT_LAYOUTS,
   SPLIT_LAYOUT_PRESET_IDS,
@@ -29,6 +29,7 @@ interface ToolbarProps {
   onNewFromTemplate(): void;
   onOpenProject(): void;
   onSaveProject(): void;
+  onSaveEncryptedProject(): void;
   onArchiveProject(): void;
   onCreateMediaReport(): void;
   onCreateClipReport(): void;
@@ -768,6 +769,7 @@ export function Toolbar(props: ToolbarProps) {
       <ToolButton title={t.newProject} onClick={props.onNewProject} icon={<FilePlus2 size={17} />} testId="toolbar-new-project-button" />
       <ToolButton title={t.openProject} onClick={props.onOpenProject} icon={<FolderOpen size={17} />} testId="toolbar-open-project-button" />
       <ToolButton title={t.saveProject} onClick={props.onSaveProject} icon={<Save size={17} />} testId="toolbar-save-project-button" />
+      <ToolButton title={t.saveEncryptedProject} onClick={props.onSaveEncryptedProject} icon={<LockKeyhole size={17} />} testId="toolbar-save-encrypted-project-button" />
       <ToolButton title={t.archiveProject} onClick={props.onArchiveProject} icon={<Archive size={17} />} testId="toolbar-archive-project-button" />
       <div className="mx-1 h-7 w-px bg-line" />
       <div className="relative">

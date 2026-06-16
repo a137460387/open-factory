@@ -16,6 +16,7 @@ import {
   AddMediaFolderCommand,
   ApplyTextAnimationCommand,
   BatchKeyframeEditCommand,
+  BatchProofreadSubtitleCommand,
   BatchUpdateClipGroupClipsCommand,
   BatchUpdateTrackCommand,
   AddTransitionCommand,
@@ -313,6 +314,43 @@ describe('timeline commands', () => {
     expect(accessor.current().tracks.find((track) => track.id === 'track-subtitle')?.clips.map((clip) => [clip.id, clip.start, clip.duration])).toEqual([
       ['sub-a', 0.5, 1],
       ['sub-b', 2.5, 1]
+    ]);
+  });
+
+  it('fixes subtitle proofreading issues as one undoable command', () => {
+    const timeline = makeTimeline();
+    timeline.tracks.push(
+      createTrack({
+        id: 'track-subtitle',
+        type: 'subtitle',
+        name: 'Subtitles',
+        clips: [
+          makeSubtitleClip({ id: 'short', start: 0, duration: 0.4, text: '短' }),
+          makeSubtitleClip({ id: 'long', start: 2, duration: 9, text: 'Long subtitle' }),
+          makeSubtitleClip({ id: 'blank', start: 12, duration: 2, text: '   ' })
+        ]
+      })
+    );
+    const accessor = makeAccessor(timeline);
+    const manager = new CommandManager();
+
+    manager.execute(
+      new BatchProofreadSubtitleCommand(accessor, [
+        { clipId: 'short', duration: 1 },
+        { clipId: 'long', duration: 7 },
+        { clipId: 'blank', delete: true }
+      ])
+    );
+    expect(accessor.current().tracks.find((track) => track.id === 'track-subtitle')?.clips.map((clip) => [clip.id, clip.duration])).toEqual([
+      ['short', 1],
+      ['long', 7]
+    ]);
+
+    manager.undo();
+    expect(accessor.current().tracks.find((track) => track.id === 'track-subtitle')?.clips.map((clip) => [clip.id, clip.duration])).toEqual([
+      ['short', 0.4],
+      ['long', 9],
+      ['blank', 2]
     ]);
   });
 

@@ -6,6 +6,7 @@ import {
   AddKeyframeCommand,
   AddEffectCommand,
   AddMaskCommand,
+  BatchProofreadSubtitleCommand,
   BatchShiftSubtitleCommand,
   BatchUpdateClipGroupClipsCommand,
   BatchKeyframeEditCommand,
@@ -21,6 +22,7 @@ import {
   AUDIO_SPECTRUM_STYLES,
   CLIP_BLEND_MODES,
   DEFAULT_EFFECT_PARAMS,
+  DEFAULT_SUBTITLE_PROOFREADING_SETTINGS,
   DEFAULT_SPATIAL_AUDIO,
   DEFAULT_COLOR_CORRECTION,
   DEFAULT_TEXT_PATH,
@@ -91,9 +93,12 @@ import {
   setKenBurnsEndScaleKeyframes,
   summarizePitchData,
   suggestDeinterlaceMode,
+  analyzeSubtitleProofreading,
+  buildSubtitleProofreadingFixes,
   calculateSubtitleBatchAdjustUpdates,
   calculateSubtitlePeakAlignUpdate,
   calculateSubtitleScaleUpdates,
+  serializeSubtitleProofreadingCsv,
   buildPrivacyMasksFromDetections,
   createTrack,
   renderSubtitleStyleTemplatePreview,
@@ -128,7 +133,9 @@ import {
   type ThreeWayColor,
   type VideoDeinterlaceMode,
   type VideoDenoisePreset,
-  type SubtitleStyleTemplate
+  type SubtitleStyleTemplate,
+  type SubtitleProofreadingIssue,
+  type SubtitleProofreadingIssueType
 } from '@open-factory/editor-core';
 import { ArrowDown, ArrowUp, GripVertical, Palette, Pipette, Plus, SlidersHorizontal, Trash2, X } from 'lucide-react';
 import { t, zhCN } from '../../i18n/strings';
@@ -143,6 +150,8 @@ import {
   listenBridge,
   openFileDialog,
   readFile,
+  saveFileDialog,
+  writeFile,
   type ClipAnalysisProgressEvent,
   type MotionTrackProgressEvent
 } from '../../lib/tauri-bridge';
@@ -185,6 +194,7 @@ export function Inspector({ clip, selectedClips = [], selectedCount, selectedCli
         <aside className="flex min-h-0 flex-col bg-white">
           <PanelTitle />
           <div className="min-h-0 flex-1 overflow-y-auto p-3">
+            <SubtitleProofreadingPanel selectedSubtitleClips={selectedSubtitleClips} selectedClipLocked={selectedClipLocked} projectSettings={projectSettings} />
             <SubtitleRetimingPanel selectedSubtitleClips={selectedSubtitleClips} projectSettings={projectSettings} />
           </div>
         </aside>
@@ -2529,6 +2539,7 @@ function ClipInspector({
                     <option value="soft-sub">{zhCN.inspector.subtitleMode.softSub}</option>
                   </select>
                 </label>
+                <SubtitleProofreadingPanel clip={clip} selectedSubtitleClips={selectedSubtitleClips.length > 0 ? selectedSubtitleClips : [clip]} selectedClipLocked={selectedClipLocked} projectSettings={projectSettings} />
                 <SubtitleRetimingPanel clip={clip} selectedSubtitleClips={selectedSubtitleClips.length > 0 ? selectedSubtitleClips : [clip]} projectSettings={projectSettings} />
               </>
             ) : null}
@@ -2729,6 +2740,129 @@ function getSubtitleStyleTemplateLabel(template: SubtitleStyleTemplate): string 
 
 function makeSvgDataUri(svg: string): string {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+function SubtitleProofreadingPanel({
+  clip,
+  selectedSubtitleClips,
+  selectedClipLocked,
+  projectSettings
+}: {
+  clip?: Extract<Clip, { type: 'subtitle' }>;
+  selectedSubtitleClips: Array<Extract<Clip, { type: 'subtitle' }>>;
+  selectedClipLocked: boolean;
+  projectSettings: ProjectSettings;
+}) {
+  const project = useEditorStore((state) => state.project);
+  const [minDuration, setMinDuration] = useState<number>(DEFAULT_SUBTITLE_PROOFREADING_SETTINGS.minDuration);
+  const [maxDuration, setMaxDuration] = useState<number>(DEFAULT_SUBTITLE_PROOFREADING_SETTINGS.maxDuration);
+  const t = zhCN.inspector.subtitleProofreading;
+  const trackSubtitleClips = useMemo(() => {
+    const trackId = clip?.trackId ?? selectedSubtitleClips[0]?.trackId;
+    const track = project.timeline.tracks.find((item) => item.id === trackId && item.type === 'subtitle');
+    return (track?.clips.filter((item): item is Extract<Clip, { type: 'subtitle' }> => item.type === 'subtitle') ?? []).sort(
+      (left, right) => left.start - right.start || left.id.localeCompare(right.id)
+    );
+  }, [clip?.trackId, project.timeline.tracks, selectedSubtitleClips]);
+  const settings = useMemo(() => ({ minDuration, maxDuration }), [maxDuration, minDuration]);
+  const issues = useMemo(() => analyzeSubtitleProofreading(trackSubtitleClips, settings), [settings, trackSubtitleClips]);
+  const fixes = useMemo(() => buildSubtitleProofreadingFixes(trackSubtitleClips, issues, settings), [issues, settings, trackSubtitleClips]);
+
+  const applyFixes = () => {
+    try {
+      commandManager.execute(new BatchProofreadSubtitleCommand(timelineAccessor, fixes));
+      showToast({ kind: 'success', title: t.fixedTitle, message: t.fixedMessage(fixes.length) });
+    } catch (error) {
+      showToast({ kind: 'warning', title: t.failedTitle, message: error instanceof Error ? error.message : t.failedMessage });
+    }
+  };
+
+  const exportCsv = async () => {
+    try {
+      const path = await saveFileDialog('subtitle-proofreading.csv', [{ name: zhCN.fileDialogs.csv, extensions: ['csv'] }]);
+      if (!path) {
+        return;
+      }
+      await writeFile(path, serializeSubtitleProofreadingCsv(issues, { fps: projectSettings.fps, timecodeFormat: projectSettings.timecodeFormat }));
+      showToast({ kind: 'success', title: t.exportedTitle, message: t.exportedMessage(path) });
+    } catch (error) {
+      showToast({ kind: 'warning', title: t.exportFailedTitle, message: error instanceof Error ? error.message : t.exportFailedMessage });
+    }
+  };
+
+  return (
+    <details className="rounded-md border border-line bg-white" data-testid="subtitle-proofreading-section" open>
+      <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-slate-700">{t.title}</summary>
+      <div className="space-y-3 border-t border-line p-2">
+        <div className="rounded-md bg-panel p-2 text-xs text-slate-600" data-testid="subtitle-proofreading-summary">
+          {t.summary(trackSubtitleClips.length, issues.length)}
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <NumberField label={t.minDuration} value={minDuration} min={0.1} step={0.1} onCommit={setMinDuration} testId="subtitle-proofreading-min-duration-input" />
+          <NumberField label={t.maxDuration} value={maxDuration} min={0.1} step={0.1} onCommit={setMaxDuration} testId="subtitle-proofreading-max-duration-input" />
+        </div>
+        {issues.length === 0 ? (
+          <div className="rounded-md border border-emerald-200 bg-emerald-50 p-2 text-xs font-medium text-emerald-800" data-testid="subtitle-proofreading-no-issues">
+            {t.noIssues}
+          </div>
+        ) : (
+          <div className="space-y-2" data-testid="subtitle-proofreading-issue-list">
+            {issues.slice(0, 10).map((issue) => (
+              <div
+                key={issue.id}
+                className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900"
+                data-testid={`subtitle-proofreading-issue-${issue.type}-${issue.clipId}`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-semibold">{getSubtitleProofreadingIssueLabel(issue)}</span>
+                  <span className="shrink-0 font-mono text-[11px]">{secondsToTimecode(issue.start, projectSettings.fps, projectSettings.timecodeFormat)}</span>
+                </div>
+                <div className="mt-1 truncate" title={issue.text.trim() || t.blankContent}>
+                  {issue.text.trim() || t.blankContent}
+                </div>
+              </div>
+            ))}
+            {issues.length > 10 ? <div className="text-xs text-slate-500">{t.moreIssues(issues.length - 10)}</div> : null}
+          </div>
+        )}
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            className="rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+            type="button"
+            disabled={selectedClipLocked || fixes.length === 0}
+            onClick={applyFixes}
+            data-testid="subtitle-proofreading-fix-button"
+          >
+            {t.fix}
+          </button>
+          <button
+            className="rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+            type="button"
+            disabled={issues.length === 0}
+            onClick={() => void exportCsv()}
+            data-testid="subtitle-proofreading-export-csv-button"
+          >
+            {t.exportCsv}
+          </button>
+        </div>
+      </div>
+    </details>
+  );
+}
+
+function getSubtitleProofreadingIssueLabel(issue: SubtitleProofreadingIssue): string {
+  const labels: Record<SubtitleProofreadingIssueType, string> = zhCN.inspector.subtitleProofreading.issueLabels;
+  const label = labels[issue.type];
+  if (issue.type === 'reading-speed' && issue.value !== undefined && issue.limit !== undefined) {
+    return zhCN.inspector.subtitleProofreading.readingSpeedDetail(label, issue.value, issue.limit);
+  }
+  if (issue.type === 'overlap' && issue.relatedClipId) {
+    return zhCN.inspector.subtitleProofreading.overlapDetail(label, issue.relatedClipId);
+  }
+  if ((issue.type === 'too-short' || issue.type === 'too-long') && issue.limit !== undefined) {
+    return zhCN.inspector.subtitleProofreading.durationDetail(label, issue.limit);
+  }
+  return label;
 }
 
 function SubtitleRetimingPanel({

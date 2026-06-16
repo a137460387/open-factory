@@ -154,12 +154,14 @@ import {
   deleteAutosaveAfterSave,
   discardAutosaveRecovery,
   findStartupAutosaveRecovery,
+  isEncryptedProjectPath,
   readAutosaveIntervalSeconds,
   readProjectFile,
-  restoreAutosaveRecovery,
+  setActiveProjectEncryptionPassword,
   writeAutosaveIntervalSeconds,
   writeProjectFile,
-  type AutosaveRecoveryCandidate
+  type AutosaveRecoveryCandidate,
+  type ProjectFileEncryptionOptions
 } from '../lib/projectFiles';
 import {
   bridgeConfirm,
@@ -252,6 +254,12 @@ const SnapshotNameDialog = lazy(() => import('../project-snapshots/SnapshotNameD
 const SnapshotHistoryDialog = lazy(() => import('../project-snapshots/SnapshotHistoryDialog').then((module) => ({ default: module.SnapshotHistoryDialog })));
 const SnapshotVersionCompareDialog = lazy(() => import('../project-snapshots/SnapshotVersionCompareDialog').then((module) => ({ default: module.SnapshotVersionCompareDialog })));
 
+interface ProjectPasswordRequest {
+  title: string;
+  description: string;
+  resolve(password?: string): void;
+}
+
 export function EditorShell() {
   const project = useEditorStore((state) => state.project);
   const selectedClipId = useEditorStore((state) => state.selectedClipId);
@@ -297,6 +305,8 @@ export function EditorShell() {
   const [snapshotNameOpen, setSnapshotNameOpen] = useState(false);
   const [snapshotHistoryOpen, setSnapshotHistoryOpen] = useState(false);
   const [snapshotCompareOpen, setSnapshotCompareOpen] = useState(false);
+  const [projectEncryptionSaveOpen, setProjectEncryptionSaveOpen] = useState(false);
+  const [projectPasswordRequest, setProjectPasswordRequest] = useState<ProjectPasswordRequest | undefined>();
   const [projectTemplateOpen, setProjectTemplateOpen] = useState(false);
   const [templateExportPreset, setTemplateExportPreset] = useState<ExportPreset>();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -734,8 +744,18 @@ export function EditorShell() {
     [timelineHeightPx]
   );
 
-  const saveProject = useCallback(async () => {
-    const nextPath = projectPath ?? (await chooseProjectSavePath(`${project.name}.cutproj.json`));
+  const requestProjectPassword = useCallback((title: string, description: string) => {
+    return new Promise<string | undefined>((resolve) => {
+      setProjectPasswordRequest({ title, description, resolve });
+    });
+  }, []);
+
+  const saveProject = useCallback(async (options: ProjectFileEncryptionOptions = {}) => {
+    const encryptedSave = options.encrypted === true;
+    const nextPath =
+      projectPath && !encryptedSave
+        ? projectPath
+        : await chooseProjectSavePath(`${project.name}${encryptedSave ? '.cutproj.enc' : '.cutproj.json'}`, encryptedSave);
     if (!nextPath && !projectPath) {
       return;
     }
@@ -743,7 +763,7 @@ export function EditorShell() {
     if (!targetPath) {
       return;
     }
-    await writeProjectFile(project, targetPath);
+    await writeProjectFile(project, targetPath, { ...options, encrypted: encryptedSave || isEncryptedProjectPath(targetPath) });
     await deleteAutosaveAfterSave(targetPath, projectPath);
     try {
       setLastBackupAt((await readBackupSettings()).lastBackupAt);
@@ -754,6 +774,18 @@ export function EditorShell() {
     setDirty(false);
     showToast({ kind: 'success', title: zhCN.editorToasts.projectSaved });
   }, [project, projectPath, setDirty, setProjectPath]);
+
+  const saveEncryptedProject = useCallback(() => {
+    setProjectEncryptionSaveOpen(true);
+  }, []);
+
+  const confirmProjectEncryptionSave = useCallback(
+    async (options: ProjectFileEncryptionOptions) => {
+      setProjectEncryptionSaveOpen(false);
+      await saveProject(options);
+    },
+    [saveProject]
+  );
 
   const archiveCurrentProject = useCallback(async () => {
     try {
@@ -1605,6 +1637,7 @@ export function EditorShell() {
         )
       );
       commandManager.clear();
+      setActiveProjectEncryptionPassword(undefined);
       setProjectPath(undefined);
       setDirty(false);
       setTemplateExportPreset(nextTemplatePreset);
@@ -1647,7 +1680,13 @@ export function EditorShell() {
       if (!path) {
         return;
       }
-      const nextProject = await readProjectFile(path);
+      const password = isEncryptedProjectPath(path)
+        ? await requestProjectPassword(zhCN.projectFiles.encryptedOpenTitle, zhCN.projectFiles.encryptedOpenDescription)
+        : undefined;
+      if (isEncryptedProjectPath(path) && !password) {
+        return;
+      }
+      const nextProject = await readProjectFile(path, path, { password });
       commandManager.clear();
       setProject(nextProject, path);
       void runAutomationForMedia('on-project-open', nextProject.media);
@@ -1656,7 +1695,7 @@ export function EditorShell() {
     } catch (error) {
       showToast({ kind: 'error', title: zhCN.editorToasts.openFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.openFailedMessage });
     }
-  }, [dirty, runAutomationForMedia, setProject]);
+  }, [dirty, requestProjectPassword, runAutomationForMedia, setProject]);
 
   const splitSelected = useCallback(() => {
     if (!selectedClip) {
@@ -2422,6 +2461,7 @@ export function EditorShell() {
           onNewFromTemplate={() => setProjectTemplateOpen(true)}
           onOpenProject={openProject}
           onSaveProject={() => void saveProject()}
+          onSaveEncryptedProject={saveEncryptedProject}
           onArchiveProject={() => void archiveCurrentProject()}
           onCreateMediaReport={() => void createMediaReport()}
           onCreateClipReport={() => void createClipReport()}
@@ -2798,6 +2838,25 @@ export function EditorShell() {
           ) : null}
           {macroHistoryOpen ? <MacroHistoryDialog entries={macroHistory} onClose={() => setMacroHistoryOpen(false)} /> : null}
         </Suspense>
+        {projectEncryptionSaveOpen ? (
+          <ProjectEncryptionSaveDialog
+            onConfirm={(options) => void confirmProjectEncryptionSave(options)}
+            onClose={() => setProjectEncryptionSaveOpen(false)}
+          />
+        ) : null}
+        {projectPasswordRequest ? (
+          <ProjectPasswordDialog
+            request={projectPasswordRequest}
+            onClose={() => {
+              projectPasswordRequest.resolve(undefined);
+              setProjectPasswordRequest(undefined);
+            }}
+            onConfirm={(password) => {
+              projectPasswordRequest.resolve(password);
+              setProjectPasswordRequest(undefined);
+            }}
+          />
+        ) : null}
         {projectHealthOpen ? (
           <ProjectHealthDialog
             report={projectHealthReport}
@@ -2842,7 +2901,13 @@ export function EditorShell() {
       return;
     }
     try {
-      const restored = await restoreAutosaveRecovery(recoveryCandidate);
+      const password = isEncryptedProjectPath(recoveryCandidate.autosavePath)
+        ? await requestProjectPassword(zhCN.projectFiles.encryptedOpenTitle, zhCN.projectFiles.encryptedOpenDescription)
+        : undefined;
+      if (isEncryptedProjectPath(recoveryCandidate.autosavePath) && !password) {
+        return;
+      }
+      const restored = await readProjectFile(recoveryCandidate.autosavePath, recoveryCandidate.projectPath ?? recoveryCandidate.autosavePath, { password });
       commandManager.clear();
       setProject(restored, recoveryCandidate.projectPath);
       setDirty(true);
@@ -3132,6 +3197,127 @@ function moveAutomationMediaToGroup(assetId: string, groupName: string): void {
   if (folder) {
     commandManager.execute(new MoveMediaToFolderCommand(projectAccessor, [assetId], folder.id));
   }
+}
+
+function ProjectEncryptionSaveDialog({
+  onConfirm,
+  onClose
+}: {
+  onConfirm(options: ProjectFileEncryptionOptions): void;
+  onClose(): void;
+}) {
+  const [encrypted, setEncrypted] = useState(true);
+  const [password, setPassword] = useState('');
+  const t = zhCN.projectFiles;
+  const passwordRequired = encrypted && password.trim().length === 0;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" data-testid="project-encryption-dialog">
+      <form
+        className="w-full max-w-sm rounded-md border border-line bg-white shadow-soft"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (passwordRequired) {
+            return;
+          }
+          onConfirm(encrypted ? { encrypted: true, password } : {});
+        }}
+      >
+        <div className="border-b border-line px-4 py-3">
+          <h2 className="text-sm font-semibold">{t.encryptedSaveTitle}</h2>
+          <p className="mt-1 text-xs text-slate-500">{t.encryptedSaveDescription}</p>
+        </div>
+        <div className="space-y-3 px-4 py-3">
+          <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+            <input
+              className="h-4 w-4 accent-brand"
+              type="checkbox"
+              checked={encrypted}
+              onChange={(event) => setEncrypted(event.target.checked)}
+              data-testid="project-encryption-toggle"
+            />
+            {t.encryptedSaveToggle}
+          </label>
+          {encrypted ? (
+            <label className="block text-xs font-medium text-slate-600">
+              {t.encryptedPasswordLabel}
+              <input
+                className="mt-1 h-9 w-full rounded-md border border-line px-2 py-1 text-sm text-ink"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                data-testid="project-encryption-password-input"
+                autoFocus
+              />
+            </label>
+          ) : null}
+          <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs font-medium text-amber-800">{t.encryptedForgetWarning}</div>
+        </div>
+        <div className="flex justify-end gap-2 border-t border-line px-4 py-3">
+          <button className="rounded-md border border-line px-3 py-2 text-sm font-medium hover:bg-panel" type="button" onClick={onClose} data-testid="project-encryption-cancel-button">
+            {zhCN.common.cancel}
+          </button>
+          <button className="rounded-md bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-[#176858] disabled:cursor-not-allowed disabled:opacity-50" type="submit" disabled={passwordRequired} data-testid="project-encryption-confirm-button">
+            {t.encryptedConfirm}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function ProjectPasswordDialog({
+  request,
+  onClose,
+  onConfirm
+}: {
+  request: ProjectPasswordRequest;
+  onClose(): void;
+  onConfirm(password: string): void;
+}) {
+  const [password, setPassword] = useState('');
+  const disabled = password.trim().length === 0;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" data-testid="project-password-dialog">
+      <form
+        className="w-full max-w-sm rounded-md border border-line bg-white shadow-soft"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (!disabled) {
+            onConfirm(password);
+          }
+        }}
+      >
+        <div className="border-b border-line px-4 py-3">
+          <h2 className="text-sm font-semibold">{request.title}</h2>
+          <p className="mt-1 text-xs text-slate-500">{request.description}</p>
+        </div>
+        <div className="space-y-3 px-4 py-3">
+          <label className="block text-xs font-medium text-slate-600">
+            {zhCN.projectFiles.encryptedPasswordLabel}
+            <input
+              className="mt-1 h-9 w-full rounded-md border border-line px-2 py-1 text-sm text-ink"
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              data-testid="project-password-input"
+              autoFocus
+            />
+          </label>
+          <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs font-medium text-amber-800">{zhCN.projectFiles.encryptedForgetWarning}</div>
+        </div>
+        <div className="flex justify-end gap-2 border-t border-line px-4 py-3">
+          <button className="rounded-md border border-line px-3 py-2 text-sm font-medium hover:bg-panel" type="button" onClick={onClose} data-testid="project-password-cancel-button">
+            {zhCN.common.cancel}
+          </button>
+          <button className="rounded-md bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-[#176858] disabled:cursor-not-allowed disabled:opacity-50" type="submit" disabled={disabled} data-testid="project-password-confirm-button">
+            {zhCN.projectFiles.encryptedConfirm}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
 }
 
 function AutosaveRecoveryDialog({ onRestore, onDiscard }: { onRestore(): void; onDiscard(): void }) {

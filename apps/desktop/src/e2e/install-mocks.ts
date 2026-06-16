@@ -250,6 +250,21 @@ const mocks: TauriMocks = {
     mtimes.set(path, Date.now());
     persistFiles();
   },
+  encryptProjectFile: (path, contents, password) => {
+    files.set(path, `OFCUTENC1\n${password}\n${contents}`);
+    exists.set(path, true);
+    mtimes.set(path, Date.now());
+    persistFiles();
+  },
+  decryptProjectFile: (path, password) => {
+    const contents = files.get(path) ?? '';
+    const prefix = `OFCUTENC1\n${password}\n`;
+    if (!contents.startsWith(prefix)) {
+      throw new Error('密码错误');
+    }
+    return contents.slice(prefix.length);
+  },
+  isEncryptedProjectFile: (path) => (files.get(path) ?? '').startsWith('OFCUTENC1\n'),
   writeClipReport: (path, html) => {
     files.set(path, html);
     exists.set(path, true);
@@ -1015,6 +1030,37 @@ window.__E2E_ACTIONS__ = {
       activeSequenceId: PRIMARY_SEQUENCE_ID
     });
     useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupSubtitleProofreadingFixture: () => {
+    const project = createProject('Subtitle Proofreading E2E');
+    const shortSubtitle = { ...makeMockSubtitleClip('sub-proof-short', 'track-subtitle-proof', '太短', 0), duration: 0.4 };
+    const okSubtitle = { ...makeMockSubtitleClip('sub-proof-ok', 'track-subtitle-proof', '正常字幕', 2), duration: 2 };
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({ id: 'track-video', type: 'video', name: 'Video 1', clips: [] }),
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
+        createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] }),
+        createTrack({
+          id: 'track-subtitle-proof',
+          type: 'subtitle',
+          name: 'Proofreading Subtitles',
+          language: 'zh',
+          clips: [shortSubtitle, okSubtitle]
+        })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    useEditorStore.getState().setSelectedClipIds([shortSubtitle.id]);
     useEditorStore.getState().setPlayheadTime(0);
     commandManager.clear();
   },

@@ -109,6 +109,7 @@ import {
 import { calculatePiPTransform, createFullFrameTransform, type PiPLayoutPosition } from '../pip-layout';
 import { calculateSplitLayoutTransforms, type SplitLayoutDefinition, type SplitLayoutClipSource } from '../split-layout';
 import type { SubtitleDataImportMode } from '../subtitles/data-import';
+import type { SubtitleProofreadingFix } from '../subtitles/proofreading';
 import { calculateSubtitleShiftUpdates, type SubtitleTimingUpdate } from '../subtitles/retiming';
 import { normalizeSubtitleStyleTemplateStyle } from '../subtitles/style-templates';
 import { normalizeCreditsRollSpeed, normalizeCreditsRows, normalizeCreditsStyle, type CreditsRow, type CreditsStyle } from '../credits-roll';
@@ -2382,6 +2383,65 @@ export class BatchShiftSubtitleCommand implements Command {
 
   undo(): void {
     this.delegate?.undo();
+  }
+}
+
+export class BatchProofreadSubtitleCommand implements Command {
+  readonly description = 'Fix subtitle proofreading issues';
+  private before?: Timeline;
+  private after?: Timeline;
+
+  constructor(private readonly accessor: TimelineAccessor, private readonly fixes: SubtitleProofreadingFix[]) {}
+
+  execute(): void {
+    const timeline = this.accessor.getTimeline();
+    this.before ??= timeline;
+    if (!this.after) {
+      const fixesByClipId = new Map(this.fixes.map((fix) => [fix.clipId, fix]));
+      if (fixesByClipId.size === 0) {
+        throw new Error('No subtitle proofreading fixes');
+      }
+      let changed = 0;
+      const nextTimeline = {
+        ...timeline,
+        tracks: timeline.tracks.map((track) => ({
+          ...track,
+          clips: track.clips.flatMap((clip) => {
+            const fix = fixesByClipId.get(clip.id);
+            if (!fix) {
+              return [clip];
+            }
+            if (clip.type !== 'subtitle') {
+              throw new Error('Subtitle proofreading fixes can only target subtitle clips');
+            }
+            if (fix.delete) {
+              changed += 1;
+              return [];
+            }
+            const nextDuration = round(Math.max(1 / 30, fix.duration ?? clip.duration));
+            if (Math.abs(nextDuration - clip.duration) <= 0.000001) {
+              return [clip];
+            }
+            changed += 1;
+            return [{ ...clip, duration: nextDuration }];
+          })
+        }))
+      };
+      if (changed === 0) {
+        throw new Error('No subtitle clips found for proofreading fixes');
+      }
+      if (timelineHasOverlaps(nextTimeline)) {
+        throw new Error('Clip overlaps another clip on this track');
+      }
+      this.after = nextTimeline;
+    }
+    this.accessor.setTimeline(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setTimeline(this.before);
+    }
   }
 }
 

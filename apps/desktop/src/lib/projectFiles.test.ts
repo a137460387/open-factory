@@ -6,6 +6,8 @@ import {
   findStartupAutosaveRecovery,
   getSavedProjectAutosavePath,
   RECENT_PROJECT_PATH_KEY,
+  readProjectFile,
+  writeProjectFile,
   writeAutosaveProjectSafely
 } from './projectFiles';
 import type { TauriMocks } from './tauri-bridge';
@@ -34,6 +36,7 @@ describe('project autosave files', () => {
   let storage: MemoryStorage;
   let writes: Array<{ path: string; contents: string }>;
   let removes: string[];
+  let files: Map<string, string>;
   let exists: Map<string, boolean>;
   let mtimes: Map<string, number>;
 
@@ -41,14 +44,37 @@ describe('project autosave files', () => {
     storage = new MemoryStorage();
     writes = [];
     removes = [];
+    files = new Map();
     exists = new Map();
     mtimes = new Map();
     const mocks: TauriMocks = {
       getAppDataDir: () => 'C:/Users/E2E/AppData/Roaming/open-factory',
+      readFile: (path) => {
+        const value = files.get(path);
+        if (value === undefined) {
+          throw new Error(`missing ${path}`);
+        }
+        return value;
+      },
       writeFile: (path, contents) => {
         writes.push({ path, contents });
+        files.set(path, contents);
         exists.set(path, true);
         mtimes.set(path, 2_000);
+      },
+      encryptProjectFile: (path, contents, password) => {
+        writes.push({ path, contents: `enc:${password}:${contents}` });
+        files.set(path, `enc:${password}:${contents}`);
+        exists.set(path, true);
+        mtimes.set(path, 2_000);
+      },
+      decryptProjectFile: (path, password) => {
+        const prefix = `enc:${password}:`;
+        const value = files.get(path) ?? '';
+        if (!value.startsWith(prefix)) {
+          throw new Error('密码错误');
+        }
+        return value.slice(prefix.length);
       },
       removeFile: (path) => {
         removes.push(path);
@@ -123,5 +149,19 @@ describe('project autosave files', () => {
 
     await expect(writeAutosaveProjectSafely(createProject('Failing'), 'C:/Projects/edit.cutproj.json')).resolves.toBeUndefined();
     expect(warn).toHaveBeenCalled();
+  });
+
+  it('writes and reads encrypted project files through the encryption bridge', async () => {
+    const project = createProject('Encrypted');
+    const path = 'C:/Projects/encrypted.cutproj.enc';
+
+    await writeProjectFile(project, path, { encrypted: true, password: 'secret' });
+    expect(writes[0].path).toBe(path);
+    expect(writes[0].contents).toContain('enc:secret:');
+    expect(writes[0].contents).toContain('"schemaVersion": 2');
+
+    const restored = await readProjectFile(path, path, { password: 'secret' });
+    expect(restored.name).toBe('Encrypted');
+    await expect(readProjectFile(path, path, { password: 'wrong' })).rejects.toThrow('密码错误');
   });
 });
