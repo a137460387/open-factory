@@ -14,6 +14,7 @@ import {
   type Clip,
   type ClipGroup,
   type ClipPitchDataPoint,
+  type DialogueInterval,
   type KeyframeProperty,
   type MediaAsset,
   snapTime,
@@ -162,6 +163,7 @@ export function Ruler({
   diffRanges,
   exportRanges,
   protectedRanges,
+  dialogueMarkers,
   onSeek,
   onContextMenu
 }: {
@@ -173,6 +175,7 @@ export function Ruler({
   diffRanges: TimelineDiffRange[];
   exportRanges: Array<{ id: string; start: number; end: number }>;
   protectedRanges: Array<{ id: string; start: number; end: number }>;
+  dialogueMarkers: DialogueInterval[];
   onSeek(time: number): void;
   onContextMenu(request: { time: number; x: number; y: number }): void;
 }) {
@@ -246,6 +249,16 @@ export function Ruler({
               style={{ left: range.start * zoom, width: Math.max(2, (range.end - range.start) * zoom) }}
               title={zhCN.timeline.protectedRange}
               data-testid="timeline-ruler-protected-range"
+            />
+          ))}
+          {dialogueMarkers.map((marker) => (
+            <span
+              key={marker.id}
+              className="absolute bottom-0 top-0 z-[3] rounded-sm bg-emerald-500/45 outline outline-1 outline-emerald-600/70"
+              style={{ left: marker.start * zoom, width: Math.max(2, (marker.end - marker.start) * zoom) }}
+              title={zhCN.timeline.dialogueMarkerTitle(marker.confidence)}
+              data-testid="timeline-dialogue-marker"
+              data-confidence={marker.confidence}
             />
           ))}
           {ticks.map((tick) => (

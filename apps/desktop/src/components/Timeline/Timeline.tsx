@@ -7,6 +7,7 @@ import {
   AddTimelineNoteCommand,
   AddTimelineMarkerCommand,
   BatchKeyframeEditCommand,
+  BatchImportSubtitleCommand,
   BatchUpdateKeyframeCommand,
   BatchUpdateTrackCommand,
   AddTrackCommand,
@@ -76,6 +77,8 @@ import {
   canMoveClipWithProtectedRanges,
   createId,
   createBeatMarker,
+  compareDialogueWithWhisper,
+  createSubtitleClipsFromDialogues,
   createProtectedRange,
   createTrack,
   detectOverlap,
@@ -135,6 +138,9 @@ import {
   type TimelineMinimapViewportRect,
   type TimelineSnapHighlight,
   type TimelineLabelColor,
+  type DialogueInterval,
+  type DialogueSensitivity,
+  type DialogueWhisperMiss,
   type TimecodeFormat,
   type Track,
   type TrackPatch,
@@ -143,12 +149,13 @@ import {
   type ReplaceMediaDurationMode
 } from '@open-factory/editor-core';
 import { clsx } from 'clsx';
-import { AudioWaveform, Bookmark, Captions, Flag, Group, MessageSquarePlus, MessageSquareText, Music2, Plus, Scissors, Trash2, Type, Ungroup } from 'lucide-react';
+import { AudioWaveform, Bookmark, Captions, Flag, Group, MessageSquarePlus, MessageSquareText, Mic2, Music2, Plus, Scissors, Trash2, Type, Ungroup } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createCreditsClip, createTextClip } from '../../lib/clipFactory';
 import { probeMediaPath } from '../../lib/media';
 import { zhCN } from '../../i18n/strings';
 import { showToast } from '../../lib/toast';
+import { detectClipDialogue } from '../../lib/dialogueDetection';
 import { detectClipSilence } from '../../lib/silenceDetection';
 import { canGenerateSubtitlesForClip, buildWhisperSubtitleTrackForClip, getWhisperAvailability, type WhisperAvailability } from '../../lib/whisper';
 import { TITLE_TEMPLATE_DRAG_MIME, isTitleTemplateId } from '../../lib/titleTemplates';
@@ -253,6 +260,9 @@ export function Timeline({
   const [sceneDialog, setSceneDialog] = useState<SceneDialogState | undefined>();
   const [coverFrameDialog, setCoverFrameDialog] = useState<CoverFrameDialogState | undefined>();
   const [whisperDialog, setWhisperDialog] = useState<WhisperDialogState | undefined>();
+  const [dialoguePanelOpen, setDialoguePanelOpen] = useState(false);
+  const [dialogueMarkers, setDialogueMarkers] = useState<DialogueInterval[]>([]);
+  const [dialogueMisses, setDialogueMisses] = useState<DialogueWhisperMiss[]>([]);
   const [replaceMediaDialog, setReplaceMediaDialog] = useState<ReplaceMediaDialogState | undefined>();
   const [whisperAvailability, setWhisperAvailability] = useState<WhisperAvailability>({ ready: false, error: zhCN.whisper.notConfigured });
   const [rollingTrimActive, setRollingTrimActive] = useState(false);
@@ -1701,6 +1711,79 @@ function addProjectBookmark(time = playheadTime): void {
     setSilenceDialog({ clip, asset });
   }
 
+  function getDialogueDetectionTarget(): { clip: Clip; asset: MediaAsset } | undefined {
+    const selected = new Set(selectedClipIds.length > 0 ? selectedClipIds : selectedClipId ? [selectedClipId] : []);
+    const candidates = [
+      ...allClips.filter((clip) => selected.has(clip.id)),
+      ...allClips
+    ];
+    for (const clip of candidates) {
+      const asset = getClipMediaAsset(clip);
+      if (!asset || (clip.type !== 'audio' && clip.type !== 'video') || (clip.type === 'video' && !asset.hasAudio)) {
+        continue;
+      }
+      return { clip, asset };
+    }
+    return undefined;
+  }
+
+  async function runDialogueDetection(sensitivity: DialogueSensitivity): Promise<void> {
+    const target = getDialogueDetectionTarget();
+    if (!target) {
+      showToast({ kind: 'warning', title: zhCN.timeline.dialogueDetectionUnavailableTitle, message: zhCN.timeline.dialogueDetectionUnavailableMessage });
+      setDialogueMarkers([]);
+      setDialogueMisses([]);
+      return;
+    }
+    setSelectedClipId(target.clip.id);
+    try {
+      const relativeDialogues = await detectClipDialogue(target.clip, target.asset, sensitivity);
+      const absoluteDialogues = relativeDialogues.map((dialogue, index) => ({
+        ...dialogue,
+        id: `dialogue-${target.clip.id}-${index + 1}`,
+        start: round(target.clip.start + dialogue.start),
+        end: round(target.clip.start + dialogue.end),
+        duration: round(dialogue.end - dialogue.start)
+      }));
+      const whisperSegments = project.timeline.tracks
+        .filter((track) => track.type === 'subtitle')
+        .flatMap((track) =>
+          track.clips
+            .filter((clip): clip is Extract<Clip, { type: 'subtitle' }> => clip.type === 'subtitle' && clip.text.trim().length > 0)
+            .map((clip) => ({ start: clip.start, end: round(clip.start + clip.duration), text: clip.text }))
+        );
+      setDialogueMarkers(absoluteDialogues);
+      setDialogueMisses(compareDialogueWithWhisper(absoluteDialogues, whisperSegments));
+      if (absoluteDialogues.length === 0) {
+        showToast({ kind: 'warning', title: zhCN.timeline.dialogueDetectionTitle, message: zhCN.timeline.dialogueDetectionNoResults });
+      }
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.dialogueDetectionFailedTitle, message: error instanceof Error ? error.message : zhCN.timeline.dialogueDetectionFailedMessage });
+    }
+  }
+
+  function generateDialogueSubtitles(): void {
+    if (dialogueMarkers.length === 0) {
+      return;
+    }
+    const existingTrack = project.timeline.tracks.find((track) => track.type === 'subtitle');
+    const targetTrack = existingTrack ?? createTrack({ id: createId('track'), type: 'subtitle', name: zhCN.timeline.dialogueSubtitleTrackName, clips: [] });
+    const clips = createSubtitleClipsFromDialogues(dialogueMarkers, {
+      trackId: targetTrack.id,
+      baseId: createId('dialogue-subtitle'),
+      namePrefix: zhCN.timeline.dialogueSubtitleNamePrefix
+    });
+    try {
+      commandManager.execute(
+        new BatchImportSubtitleCommand(timelineAccessor, { ...targetTrack, clips }, { mode: existingTrack ? 'append' : 'new-track', targetTrackId: existingTrack?.id })
+      );
+      setSelectedClipIds(clips.map((clip) => clip.id));
+      showToast({ kind: 'success', title: zhCN.timeline.dialogueSubtitlesCreatedTitle, message: zhCN.editorToasts.subtitlesGenerated(clips.length) });
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.editRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.editRejectedMessage });
+    }
+  }
+
   function applySilenceRemoval(clipId: string, ranges: SilentRange[]): void {
     try {
       commandManager.execute(new RemoveSilenceCommand(timelineAccessor, clipId, ranges));
@@ -2261,6 +2344,15 @@ function addProjectBookmark(time = playheadTime): void {
           <Music2 size={16} />
         </button>
         <button
+          className={`rounded-md border p-2 hover:bg-panel ${dialoguePanelOpen ? 'border-brand text-brand' : 'border-line'}`}
+          title={zhCN.timeline.dialogueDetectionAction}
+          aria-pressed={dialoguePanelOpen}
+          data-testid="dialogue-detection-toggle"
+          onClick={() => setDialoguePanelOpen((open) => !open)}
+        >
+          <Mic2 size={16} />
+        </button>
+        <button
           className={`rounded-md border p-2 hover:bg-panel ${bookmarkPanelOpen ? 'border-brand text-brand' : 'border-line'}`}
           title={zhCN.timeline.bookmarkList}
           aria-pressed={bookmarkPanelOpen}
@@ -2403,6 +2495,7 @@ function addProjectBookmark(time = playheadTime): void {
             diffRanges={timelineCompareRanges}
             exportRanges={exportRangeHighlights}
             protectedRanges={protectedRanges}
+            dialogueMarkers={dialogueMarkers}
             onSeek={setPlayheadTime}
             onContextMenu={openRulerMenu}
           />
@@ -2658,6 +2751,15 @@ function addProjectBookmark(time = playheadTime): void {
         />
       ) : null}
       {whisperDialog ? <WhisperGenerationDialog progress={whisperDialog.progress} clipName={whisperDialog.clip.name} /> : null}
+      {dialoguePanelOpen ? (
+        <DialogueDetectionPanel
+          markers={dialogueMarkers}
+          misses={dialogueMisses}
+          onRun={(sensitivity) => void runDialogueDetection(sensitivity)}
+          onGenerateSubtitles={generateDialogueSubtitles}
+          onClose={() => setDialoguePanelOpen(false)}
+        />
+      ) : null}
       {replaceMediaDialog ? (
         <ReplaceMediaDialog
           value={replaceMediaDialog}
@@ -4208,6 +4310,118 @@ function WhisperGenerationDialog({ progress, clipName }: { progress: number; cli
         </div>
       </section>
     </div>
+  );
+}
+
+function DialogueDetectionPanel({
+  markers,
+  misses,
+  onRun,
+  onGenerateSubtitles,
+  onClose
+}: {
+  markers: DialogueInterval[];
+  misses: DialogueWhisperMiss[];
+  onRun(sensitivity: DialogueSensitivity): void | Promise<void>;
+  onGenerateSubtitles(): void;
+  onClose(): void;
+}) {
+  const [sensitivity, setSensitivity] = useState<DialogueSensitivity>('medium');
+  const [running, setRunning] = useState(false);
+
+  async function runDetection(): Promise<void> {
+    setRunning(true);
+    try {
+      await onRun(sensitivity);
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  return (
+    <aside className="absolute bottom-3 right-3 top-16 z-50 flex w-80 flex-col overflow-hidden rounded-md border border-line bg-white shadow-soft" data-testid="dialogue-detection-panel">
+      <div className="flex items-center justify-between gap-2 border-b border-line px-3 py-2">
+        <div>
+          <div className="text-sm font-semibold">{zhCN.timeline.dialogueDetectionTitle}</div>
+          <div className="text-[11px] text-slate-500">{zhCN.timeline.dialogueDetectionSubtitle}</div>
+        </div>
+        <button className="rounded border border-line px-2 py-1 text-xs hover:bg-panel" type="button" onClick={onClose} data-testid="dialogue-detection-close">
+          {zhCN.timeline.close}
+        </button>
+      </div>
+      <div className="space-y-3 border-b border-line px-3 py-3 text-xs">
+        <label className="block font-medium text-slate-600">
+          {zhCN.timeline.dialogueDetectionSensitivity}
+          <select
+            className="mt-1 w-full rounded border border-line bg-white px-2 py-1.5 text-sm"
+            value={sensitivity}
+            data-testid="dialogue-detection-sensitivity"
+            onChange={(event) => setSensitivity(event.target.value as DialogueSensitivity)}
+          >
+            <option value="low">{zhCN.timeline.dialogueDetectionSensitivityLow}</option>
+            <option value="medium">{zhCN.timeline.dialogueDetectionSensitivityMedium}</option>
+            <option value="high">{zhCN.timeline.dialogueDetectionSensitivityHigh}</option>
+          </select>
+        </label>
+        <button
+          className="w-full rounded bg-brand px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+          type="button"
+          disabled={running}
+          data-testid="dialogue-detection-run"
+          onClick={() => void runDetection()}
+        >
+          {running ? zhCN.timeline.dialogueDetectionRunning : zhCN.timeline.dialogueDetectionRun}
+        </button>
+      </div>
+      <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 text-xs">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="font-semibold text-slate-700">{zhCN.timeline.dialogueDetectionResults}</span>
+          <span className="tabular-nums text-slate-500">{markers.length}</span>
+        </div>
+        {markers.length === 0 ? (
+          <div className="rounded border border-dashed border-line px-3 py-6 text-center text-slate-500" data-testid="dialogue-detection-empty">
+            {zhCN.timeline.dialogueDetectionNoResults}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {markers.map((marker, index) => (
+              <div key={marker.id} className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1.5" data-testid="dialogue-detection-result">
+                <div className="flex items-center justify-between gap-2 font-medium text-emerald-800">
+                  <span>{zhCN.timeline.dialogueDetectionRangeLabel(index + 1)}</span>
+                  <span>{zhCN.timeline.dialogueDetectionConfidence(marker.confidence)}</span>
+                </div>
+                <div className="mt-1 font-mono tabular-nums text-slate-700">
+                  {marker.start.toFixed(2)}s - {marker.end.toFixed(2)}s
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {misses.length > 0 ? (
+          <div className="mt-3 rounded border border-amber-200 bg-amber-50 px-2 py-2 text-amber-800" data-testid="dialogue-detection-whisper-misses">
+            <div className="font-semibold">{zhCN.timeline.dialogueDetectionWhisperMissing(misses.length)}</div>
+            <div className="mt-1 space-y-1 font-mono tabular-nums">
+              {misses.slice(0, 4).map((miss) => (
+                <div key={miss.id}>
+                  {miss.start.toFixed(2)}s - {miss.end.toFixed(2)}s
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </div>
+      <div className="border-t border-line p-3">
+        <button
+          className="w-full rounded border border-line px-3 py-2 text-sm font-medium hover:bg-panel disabled:opacity-50"
+          type="button"
+          disabled={markers.length === 0}
+          data-testid="dialogue-detection-generate-subtitles"
+          onClick={onGenerateSubtitles}
+        >
+          {zhCN.timeline.dialogueDetectionGenerateSubtitles}
+        </button>
+      </div>
+    </aside>
   );
 }
 
