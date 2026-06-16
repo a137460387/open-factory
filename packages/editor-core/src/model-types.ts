@@ -150,6 +150,13 @@ export interface ClipVideoRestoration {
   spatialDenoise: ClipVideoSpatialDenoise;
 }
 
+export interface ClipQualityEnhancement {
+  superResolution: boolean;
+  deblock: boolean;
+  colorBoost: boolean;
+  frameCompensation: boolean;
+}
+
 export interface MotionTrackPoint {
   time: number;
   dx: number;
@@ -462,6 +469,7 @@ export interface BaseClip {
   audioDenoise?: ClipAudioDenoise;
   audioChannelRouting?: AudioChannelRoutingMode;
   videoRestoration?: ClipVideoRestoration;
+  qualityEnhancement?: ClipQualityEnhancement;
   projection?: ClipProjection;
   panorama?: ClipPanoramaView;
   masks?: ClipMask[];

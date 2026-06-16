@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   DEFAULT_PROJECT_SETTINGS,
   DEFAULT_CHROMA_KEY,
+  DEFAULT_QUALITY_ENHANCEMENT,
   DEFAULT_SLOW_MOTION_MODE,
   DEFAULT_NESTED_SEQUENCE_NAME,
   DEFAULT_TEXT_STYLE,
@@ -36,6 +37,7 @@ import {
   normalizeMediaFlag,
   normalizeMediaMetadataEntry,
   normalizeMediaRating,
+  normalizeQualityEnhancement,
   normalizeSlowMotionMode,
   normalizeSequenceFrameRate,
   normalizeSequenceName,
@@ -234,6 +236,20 @@ describe('model factories', () => {
       deinterlace: { enabled: false, mode: 0 },
       temporalDenoise: { preset: 'off', lumaSpatial: 4, chromaSpatial: 3, lumaTmp: 6 },
       spatialDenoise: { enabled: false, strength: 1.5, patchSize: 7, researchSize: 15 }
+    });
+    expect(normalizeQualityEnhancement(undefined)).toEqual(DEFAULT_QUALITY_ENHANCEMENT);
+    expect(
+      normalizeQualityEnhancement({
+        superResolution: true,
+        deblock: 1 as never,
+        colorBoost: true,
+        frameCompensation: false
+      })
+    ).toEqual({
+      superResolution: true,
+      deblock: false,
+      colorBoost: true,
+      frameCompensation: false
     });
     expect(
       normalizeVideoRestoration({

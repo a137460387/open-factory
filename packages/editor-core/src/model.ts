@@ -43,6 +43,7 @@ import type {
   ClipPanoramaView,
   ClipPrivacyBlur,
   ClipProjection,
+  ClipQualityEnhancement,
   ClipSlowMotionMode,
   ClipStabilization,
   ClipType,
@@ -139,6 +140,7 @@ export type {
   ClipPanoramaView,
   ClipPrivacyBlur,
   ClipProjection,
+  ClipQualityEnhancement,
   ClipSlowMotionMode,
   ClipStabilization,
   ClipType,
@@ -345,6 +347,13 @@ export const DEFAULT_VIDEO_RESTORATION: ClipVideoRestoration = {
   deinterlace: { enabled: false, mode: 0 },
   temporalDenoise: { preset: 'off', lumaSpatial: VIDEO_TEMPORAL_DENOISE_PRESETS.medium.lumaSpatial, chromaSpatial: VIDEO_TEMPORAL_DENOISE_PRESETS.medium.chromaSpatial, lumaTmp: VIDEO_TEMPORAL_DENOISE_PRESETS.medium.lumaTmp },
   spatialDenoise: { enabled: false, strength: 1.5, patchSize: 7, researchSize: 15 }
+};
+
+export const DEFAULT_QUALITY_ENHANCEMENT: ClipQualityEnhancement = {
+  superResolution: false,
+  deblock: false,
+  colorBoost: false,
+  frameCompensation: false
 };
 
 export const DEFAULT_AUDIO_DENOISE: ClipAudioDenoise = {
@@ -671,6 +680,7 @@ export function createBaseClip(
     audioDenoise: normalizeAudioDenoise(input.audioDenoise),
     audioChannelRouting: normalizeAudioChannelRouting(input.audioChannelRouting),
     videoRestoration: normalizeVideoRestoration(input.videoRestoration),
+    qualityEnhancement: normalizeQualityEnhancement(input.qualityEnhancement),
     projection: normalizeClipProjection(input.projection),
     panorama: normalizeClipPanoramaView(input.panorama),
     masks: normalizeMasks(input.masks),
@@ -1055,6 +1065,15 @@ export function normalizeSequenceFrameRate(frameRate: number | undefined): numbe
 
 export function normalizeTimelineMarker(marker: TimelineMarker, maxTime?: number): TimelineMarker {
   return createTimelineMarker(marker, maxTime);
+}
+
+export function normalizeQualityEnhancement(enhancement: Partial<ClipQualityEnhancement> | undefined): ClipQualityEnhancement {
+  return {
+    superResolution: enhancement?.superResolution === true,
+    deblock: enhancement?.deblock === true,
+    colorBoost: enhancement?.colorBoost === true,
+    frameCompensation: enhancement?.frameCompensation === true
+  };
 }
 
 export function normalizeTimelineBookmark(bookmark: TimelineBookmark, maxTime?: number): TimelineBookmark {
@@ -1469,6 +1488,7 @@ export function serializeLegacyProject(project: Project): {
           stabilization: normalizeStabilization(clip.stabilization),
           audioDenoise: normalizeAudioDenoise(clip.audioDenoise),
           videoRestoration: normalizeVideoRestoration(clip.videoRestoration),
+          qualityEnhancement: normalizeQualityEnhancement(clip.qualityEnhancement),
           projection: normalizeClipProjection(clip.projection),
           panorama: normalizeClipPanoramaView(clip.panorama),
           masks: normalizeMasks(clip.masks),

@@ -13,6 +13,7 @@ import type {
   ClipPanoramaOutputProjection,
   ClipPrivacyBlur,
   ClipProjection,
+  ClipQualityEnhancement,
   ClipSlowMotionMode,
   ClipVideoRestoration,
   PathPoint,
@@ -228,6 +229,7 @@ export interface ExportAudioDenoise {
 }
 
 export type ExportVideoRestoration = ClipVideoRestoration;
+export type ExportQualityEnhancement = ClipQualityEnhancement;
 
 export interface ExportPanoramaView {
   yaw: number;
@@ -336,6 +338,7 @@ export interface ExportClip {
   audioDenoise: ExportAudioDenoise;
   spatialAudio: ClipSpatialAudio;
   videoRestoration: ExportVideoRestoration;
+  qualityEnhancement: ExportQualityEnhancement;
   projection: ClipProjection;
   panorama: ExportPanoramaView;
   masks: ExportMask[];

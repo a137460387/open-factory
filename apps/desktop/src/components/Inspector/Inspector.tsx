@@ -84,6 +84,7 @@ import {
   findCompleteClipGroup,
   normalizeClipGroups,
   normalizeProjectSpeakers,
+  normalizeQualityEnhancement,
   parseDataSubtitleRows,
   sampleCurve,
   secondsToTimecode,
@@ -550,6 +551,7 @@ function ClipInspector({
   const projection = normalizeClipProjection(clip.projection);
   const panorama = normalizeClipPanoramaView(clip.panorama);
   const videoRestoration = normalizeVideoRestoration(clip.videoRestoration);
+  const qualityEnhancement = normalizeQualityEnhancement(clip.qualityEnhancement);
   const deinterlaceSuggestion = clip.type === 'video' ? suggestDeinterlaceMode(asset?.fieldOrder) : null;
   const audioPitchSemitones = 'pitchSemitones' in clip ? normalizeAudioPitchSemitones(clip.pitchSemitones) : 0;
   const reverseAudio = 'reverseAudio' in clip ? clip.reverseAudio === true : false;
@@ -569,6 +571,9 @@ function ClipInspector({
   };
   const updateVideoRestoration = (patch: Partial<typeof videoRestoration>) => {
     commit({ videoRestoration: normalizeVideoRestoration({ ...videoRestoration, ...patch }) });
+  };
+  const updateQualityEnhancement = (patch: Partial<typeof qualityEnhancement>) => {
+    commit({ qualityEnhancement: normalizeQualityEnhancement({ ...qualityEnhancement, ...patch }) });
   };
   const motionTrack = normalizeMotionTrack(clip.motionTrack, clip.duration) ?? [];
   const colorCurves = normalizeColorCurves(colorCorrection.colorCurves);
@@ -1955,6 +1960,38 @@ function ClipInspector({
                   </div>
                 ) : null}
               </div>
+            </div>
+          </details>
+        ) : null}
+
+        {clip.type === 'video' ? (
+          <details className="mb-4" open data-testid="quality-enhancement-section">
+            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-slate-500">{zhCN.inspector.sections.qualityEnhancement}</summary>
+            <div className="space-y-3 rounded-md border border-line bg-panel p-2">
+              <ToggleField
+                label={zhCN.inspector.qualityEnhancement.superResolution}
+                checked={qualityEnhancement.superResolution}
+                onCommit={(superResolution) => updateQualityEnhancement({ superResolution })}
+                testId="quality-enhancement-super-resolution-toggle"
+              />
+              <ToggleField
+                label={zhCN.inspector.qualityEnhancement.deblock}
+                checked={qualityEnhancement.deblock}
+                onCommit={(deblock) => updateQualityEnhancement({ deblock })}
+                testId="quality-enhancement-deblock-toggle"
+              />
+              <ToggleField
+                label={zhCN.inspector.qualityEnhancement.colorBoost}
+                checked={qualityEnhancement.colorBoost}
+                onCommit={(colorBoost) => updateQualityEnhancement({ colorBoost })}
+                testId="quality-enhancement-color-boost-toggle"
+              />
+              <ToggleField
+                label={zhCN.inspector.qualityEnhancement.frameCompensation}
+                checked={qualityEnhancement.frameCompensation}
+                onCommit={(frameCompensation) => updateQualityEnhancement({ frameCompensation })}
+                testId="quality-enhancement-frame-compensation-toggle"
+              />
             </div>
           </details>
         ) : null}

@@ -1668,13 +1668,14 @@ describe('timeline commands', () => {
     expect(accessor.current().tracks[0].clips[0]).toMatchObject({ pitchSemitones: 0, reverseAudio: false, fadeInCurve: 'linear' });
   });
 
-  it('normalizes stabilization and PNG sequence frame rate patches with undo', () => {
+  it('normalizes stabilization, quality enhancement, and PNG sequence frame rate patches with undo', () => {
     const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'clip-video', duration: 3 })]));
     const manager = new CommandManager();
 
     manager.execute(
       new UpdateClipCommand(accessor, 'clip-video', {
         stabilization: { enabled: true, smoothing: 999, zoom: -1, analyzed: true, trfPath: ' C:\\Temp\\clip.trf ' },
+        qualityEnhancement: { superResolution: true, deblock: 1 as never, colorBoost: true, frameCompensation: true },
         frameInterpolation: { enabled: true, targetFps: 144 as never },
         slowMotionMode: 'optical-flow',
         sequenceFrameRate: 240
@@ -1683,6 +1684,7 @@ describe('timeline commands', () => {
 
     expect(accessor.current().tracks[0].clips[0]).toMatchObject({
       stabilization: { enabled: true, smoothing: 100, zoom: 0, analyzed: true, trfPath: 'C:\\Temp\\clip.trf' },
+      qualityEnhancement: { superResolution: true, deblock: false, colorBoost: true, frameCompensation: true },
       frameInterpolation: { enabled: true, targetFps: 60 },
       slowMotionMode: 'optical-flow',
       sequenceFrameRate: 120
@@ -1701,6 +1703,7 @@ describe('timeline commands', () => {
     manager.undo();
     expect(accessor.current().tracks[0].clips[0]).toMatchObject({
       stabilization: { enabled: false, smoothing: 30, zoom: 0, analyzed: false, trfPath: null },
+      qualityEnhancement: { superResolution: false, deblock: false, colorBoost: false, frameCompensation: false },
       frameInterpolation: { enabled: false, targetFps: 60 },
       slowMotionMode: 'none',
       sequenceFrameRate: undefined

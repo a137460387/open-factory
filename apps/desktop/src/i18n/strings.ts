@@ -1593,6 +1593,7 @@ const zh = {
       keyframe: '关键帧',
       kenBurns: 'Ken Burns',
       videoRestoration: '画面修复',
+      qualityEnhancement: '质量增强',
       audioDenoise: '降噪',
       pitchAnalysis: '音调分析',
       spatialAudio: '空间音频',
@@ -1998,6 +1999,12 @@ const zh = {
         high: '高',
         custom: '自定义'
       }
+    },
+    qualityEnhancement: {
+      superResolution: '超分辨率近似',
+      deblock: '去压缩块效应',
+      colorBoost: '颜色增强',
+      frameCompensation: '帧率补偿'
     },
     translation: {
       button: '翻译字幕轨',
@@ -4525,6 +4532,7 @@ const enOverrides = {
       keyframe: 'Keyframe',
       kenBurns: 'Ken Burns',
       videoRestoration: 'Video Restoration',
+      qualityEnhancement: 'Quality Enhancement',
       audioDenoise: 'Denoise',
       pitchAnalysis: 'Pitch Analysis',
       spatialAudio: 'Spatial Audio',
@@ -4842,6 +4850,12 @@ const enOverrides = {
         high: 'High',
         custom: 'Custom'
       }
+    },
+    qualityEnhancement: {
+      superResolution: 'Approximate Super Resolution',
+      deblock: 'Compression Deblocking',
+      colorBoost: 'Color Enhancement',
+      frameCompensation: 'Frame Rate Compensation'
     },
     effectNames: {
       blur: 'Gaussian Blur',

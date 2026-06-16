@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_CLIP_BORDER, DEFAULT_COLOR_CORRECTION, DEFAULT_CREDITS_ROLL_SPEED, DEFAULT_CREDITS_STYLE, DEFAULT_SPATIAL_AUDIO, DEFAULT_SUBTITLE_LANGUAGE, DEFAULT_SUBTITLE_STYLE, DEFAULT_VIDEO_RESTORATION, createMulticamSequenceProject, createTrack, migrateProjectFile, serializeProject, type ProjectFileV1 } from '../src';
+import { DEFAULT_CLIP_BORDER, DEFAULT_COLOR_CORRECTION, DEFAULT_CREDITS_ROLL_SPEED, DEFAULT_CREDITS_STYLE, DEFAULT_QUALITY_ENHANCEMENT, DEFAULT_SPATIAL_AUDIO, DEFAULT_SUBTITLE_LANGUAGE, DEFAULT_SUBTITLE_STYLE, DEFAULT_VIDEO_RESTORATION, createMulticamSequenceProject, createTrack, migrateProjectFile, serializeProject, type ProjectFileV1 } from '../src';
 import { makeAdjustmentClip, makeAudioClip, makeCreditsClip, makeProject, makeSubtitleClip, makeTextClip, makeVideoClip } from './test-utils';
 
 describe('project schema migration', () => {
@@ -799,6 +799,7 @@ describe('project schema migration', () => {
     delete (legacyClip as Partial<typeof legacyClip>).colorCorrection;
     delete (legacyClip as Partial<typeof legacyClip>).audioDenoise;
     delete (legacyClip as Partial<typeof legacyClip>).videoRestoration;
+    delete (legacyClip as Partial<typeof legacyClip>).qualityEnhancement;
     delete (legacyClip as Partial<typeof legacyClip>).projection;
     delete (legacyClip as Partial<typeof legacyClip>).panorama;
     project.timeline.tracks[0].clips = [legacyClip as never];
@@ -810,6 +811,7 @@ describe('project schema migration', () => {
     expect(clip.colorCorrection).toEqual(DEFAULT_COLOR_CORRECTION);
     expect(clip.audioDenoise).toEqual({ enabled: false, strength: 0.5 });
     expect(clip.videoRestoration).toEqual(DEFAULT_VIDEO_RESTORATION);
+    expect(clip.qualityEnhancement).toEqual(DEFAULT_QUALITY_ENHANCEMENT);
     expect(clip.projection).toBe('flat');
     expect(clip.panorama).toEqual({ yaw: 0, pitch: 0, roll: 0, fov: 90, outputProjection: 'flat' });
   });
@@ -834,6 +836,31 @@ describe('project schema migration', () => {
       deinterlace: { enabled: true, mode: 1 },
       temporalDenoise: { preset: 'custom', lumaSpatial: 5, chromaSpatial: 2.5, lumaTmp: 8 },
       spatialDenoise: { enabled: true, strength: 4, patchSize: 7, researchSize: 11 }
+    });
+  });
+
+  it('serializes and migrates quality enhancement settings with compatible defaults', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-enhance',
+        qualityEnhancement: {
+          superResolution: true,
+          deblock: true,
+          colorBoost: true,
+          frameCompensation: false
+        }
+      })
+    ];
+
+    const migrated = migrateProjectFile(serializeProject(project));
+    const clip = migrated.project.timeline.tracks[0].clips[0];
+
+    expect(clip.qualityEnhancement).toEqual({
+      superResolution: true,
+      deblock: true,
+      colorBoost: true,
+      frameCompensation: false
     });
   });
 

@@ -42,6 +42,7 @@ import {
   normalizeProtectedRanges,
   normalizeProjectSettings,
   normalizeProjectSpeakers,
+  normalizeQualityEnhancement,
   normalizeSequenceFrameRate,
   normalizeSlowMotionMode,
   normalizeStabilization,
@@ -68,6 +69,7 @@ import {
   type ClipKeyframes,
   type ClipPanoramaView,
   type ClipProjection,
+  type ClipQualityEnhancement,
   type ChromaKey,
   type ClipFrameInterpolation,
   type ClipStabilization,
@@ -3295,6 +3297,7 @@ export type ClipPatch = Partial<Omit<Clip, 'type' | 'id' | 'transform' | 'colorC
   audioDenoise?: Partial<ClipAudioDenoise>;
   spatialAudio?: Partial<ClipSpatialAudio>;
   videoRestoration?: Partial<ClipVideoRestoration>;
+  qualityEnhancement?: Partial<ClipQualityEnhancement>;
   projection?: ClipProjection;
   panorama?: Partial<ClipPanoramaView>;
   masks?: ClipMask[];
@@ -3645,6 +3648,7 @@ export class UpdateClipCommand implements Command {
       audioDenoise: normalizeAudioDenoise({ ...this.before.audioDenoise, ...this.patch.audioDenoise }),
       audioChannelRouting: normalizeAudioChannelRouting(this.patch.audioChannelRouting ?? this.before.audioChannelRouting),
       videoRestoration: normalizeVideoRestoration({ ...this.before.videoRestoration, ...this.patch.videoRestoration }),
+      qualityEnhancement: normalizeQualityEnhancement({ ...this.before.qualityEnhancement, ...this.patch.qualityEnhancement }),
       projection: normalizeClipProjection(this.patch.projection ?? this.before.projection),
       panorama: normalizeClipPanoramaView({ ...this.before.panorama, ...this.patch.panorama }),
       masks: this.patch.masks === undefined ? normalizeMasks(this.before.masks) : normalizeMasks(this.patch.masks),
@@ -4109,6 +4113,8 @@ function cloneClipForNestedSequence<TClip extends Clip>(clip: TClip): TClip {
     frameInterpolation: normalizeFrameInterpolation(clip.frameInterpolation),
     slowMotionMode: normalizeSlowMotionMode(clip.slowMotionMode),
     audioDenoise: normalizeAudioDenoise(clip.audioDenoise),
+    videoRestoration: normalizeVideoRestoration(clip.videoRestoration),
+    qualityEnhancement: normalizeQualityEnhancement(clip.qualityEnhancement),
     projection: normalizeClipProjection(clip.projection),
     panorama: normalizeClipPanoramaView(clip.panorama),
     masks: normalizeMasks(clip.masks),

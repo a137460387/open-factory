@@ -25,6 +25,7 @@ import {
   normalizeClipProjection,
   normalizeAudioPitchSemitones,
   normalizeFrameInterpolation,
+  normalizeQualityEnhancement,
   normalizeSequenceFrameRate,
   normalizeSlowMotionMode,
   normalizeStabilization,
@@ -281,6 +282,7 @@ function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project[
             audioDenoise: normalizeAudioDenoise(clip.audioDenoise),
             spatialAudio: normalizeSpatialAudio(clip.spatialAudio),
             videoRestoration: normalizeVideoRestoration(clip.videoRestoration),
+            qualityEnhancement: normalizeQualityEnhancement(clip.qualityEnhancement),
             projection: normalizeClipProjection(clip.projection),
             panorama: normalizeClipPanoramaView(clip.panorama),
             masks: normalizeMasks(clip.masks),
@@ -1432,6 +1434,7 @@ function buildTransitionClipFilter(
     ...buildSlowMotionFilters(clip, settings, capabilities, warnings),
     ...buildFrameInterpolationFilters(clip, capabilities, warnings),
     ...buildVideoRestorationFilters(clip),
+    ...buildQualityEnhancementFilters(clip),
     'format=rgba'
   ];
   filters.push(...buildMaskFilters(clip));
@@ -1555,6 +1558,7 @@ function buildVisualPostKeyFilters(
   filters.push(...buildSlowMotionFilters(clip, settings, capabilities, warnings));
   filters.push(...buildFrameInterpolationFilters(clip, capabilities, warnings));
   filters.push(...buildVideoRestorationFilters(clip));
+  filters.push(...buildQualityEnhancementFilters(clip));
   filters.push('format=rgba');
   filters.push(...buildMaskFilters(clip));
   filters.push(...buildColorCorrectionFilters(clip, textArtifacts));
@@ -1829,6 +1833,27 @@ function buildVideoRestorationFilters(clip: ExportClip): string[] {
         restoration.spatialDenoise.researchSize
       )}`
     );
+  }
+  return filters;
+}
+
+function buildQualityEnhancementFilters(clip: ExportClip): string[] {
+  if (clip.type !== 'video' && clip.type !== 'nested-sequence') {
+    return [];
+  }
+  const enhancement = normalizeQualityEnhancement(clip.qualityEnhancement);
+  const filters: string[] = [];
+  if (enhancement.superResolution) {
+    filters.push('scale=iw*2:ih*2:flags=lanczos', 'unsharp=luma_msize_x=3:luma_amount=0.5');
+  }
+  if (enhancement.deblock) {
+    filters.push('deblock=filter=strong:block=4');
+  }
+  if (enhancement.colorBoost) {
+    filters.push('hue=s=1.2', 'colorlevels');
+  }
+  if (enhancement.frameCompensation) {
+    filters.push('minterpolate=fps=60:mi_mode=blend');
   }
   return filters;
 }

@@ -2608,6 +2608,15 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.filterComplex).not.toContain('nlmeans=');
   });
 
+  it('skips quality enhancement filters when every enhancement control is off', () => {
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(makeProject(), { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).not.toContain('scale=iw*2:ih*2:flags=lanczos');
+    expect(plan.filterComplex).not.toContain('deblock=filter=strong:block=4');
+    expect(plan.filterComplex).not.toContain('hue=s=1.2');
+    expect(plan.filterComplex).not.toContain('minterpolate=fps=60:mi_mode=blend');
+  });
+
   it('generates hqdn3d args for temporal denoise presets', () => {
     const project = makeProject();
     project.timeline.tracks[0].clips = [
@@ -2645,6 +2654,64 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.filterComplex).toContain('nlmeans=s=3.5:p=5:r=13');
   });
 
+  it('generates super resolution quality enhancement args', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-super-resolution',
+        qualityEnhancement: { superResolution: true, deblock: false, colorBoost: false, frameCompensation: false }
+      })
+    ];
+
+    const filter = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' })).filterComplex;
+
+    expect(filter).toContain('scale=iw*2:ih*2:flags=lanczos');
+    expect(filter).toContain('unsharp=luma_msize_x=3:luma_amount=0.5');
+  });
+
+  it('generates deblock quality enhancement args', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-deblock',
+        qualityEnhancement: { superResolution: false, deblock: true, colorBoost: false, frameCompensation: false }
+      })
+    ];
+
+    const filter = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' })).filterComplex;
+
+    expect(filter).toContain('deblock=filter=strong:block=4');
+  });
+
+  it('generates color boost quality enhancement args', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-color-boost',
+        qualityEnhancement: { superResolution: false, deblock: false, colorBoost: true, frameCompensation: false }
+      })
+    ];
+
+    const filter = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' })).filterComplex;
+
+    expect(filter).toContain('hue=s=1.2');
+    expect(filter).toContain('colorlevels');
+  });
+
+  it('generates frame compensation quality enhancement args', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-frame-compensation',
+        qualityEnhancement: { superResolution: false, deblock: false, colorBoost: false, frameCompensation: true }
+      })
+    ];
+
+    const filter = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' })).filterComplex;
+
+    expect(filter).toContain('minterpolate=fps=60:mi_mode=blend');
+  });
+
   it('chains deinterlace, denoise, and sharpen in repair order before color correction effects', () => {
     const project = makeProject();
     project.timeline.tracks[0].clips = [
@@ -2670,6 +2737,41 @@ describe('multitrack ffmpeg builder', () => {
     expect(hqdn3dIndex).toBeGreaterThan(yadifIndex);
     expect(nlmeansIndex).toBeGreaterThan(hqdn3dIndex);
     expect(sharpenIndex).toBeGreaterThan(nlmeansIndex);
+  });
+
+  it('chains quality enhancement controls in fixed order after restoration and before color correction', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-quality-order',
+        colorCorrection: { brightness: 0.2 },
+        videoRestoration: {
+          deinterlace: { enabled: false, mode: 0 },
+          temporalDenoise: { preset: 'medium', lumaSpatial: 4, chromaSpatial: 3, lumaTmp: 6 },
+          spatialDenoise: { enabled: false, strength: 1.5, patchSize: 7, researchSize: 15 }
+        },
+        qualityEnhancement: { superResolution: true, deblock: true, colorBoost: true, frameCompensation: true }
+      })
+    ];
+
+    const filter = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' })).filterComplex;
+    const hqdn3dIndex = filter.indexOf('hqdn3d=luma_spatial=4:chroma_spatial=3:luma_tmp=6');
+    const scaleIndex = filter.indexOf('scale=iw*2:ih*2:flags=lanczos');
+    const unsharpIndex = filter.indexOf('unsharp=luma_msize_x=3:luma_amount=0.5');
+    const deblockIndex = filter.indexOf('deblock=filter=strong:block=4');
+    const hueIndex = filter.indexOf('hue=s=1.2');
+    const colorlevelsIndex = filter.indexOf('colorlevels');
+    const minterpolateIndex = filter.indexOf('minterpolate=fps=60:mi_mode=blend');
+    const colorIndex = filter.indexOf('eq=brightness=0.2');
+
+    expect(hqdn3dIndex).toBeGreaterThan(-1);
+    expect(scaleIndex).toBeGreaterThan(hqdn3dIndex);
+    expect(unsharpIndex).toBeGreaterThan(scaleIndex);
+    expect(deblockIndex).toBeGreaterThan(unsharpIndex);
+    expect(hueIndex).toBeGreaterThan(deblockIndex);
+    expect(colorlevelsIndex).toBeGreaterThan(hueIndex);
+    expect(minterpolateIndex).toBeGreaterThan(colorlevelsIndex);
+    expect(colorIndex).toBeGreaterThan(minterpolateIndex);
   });
 
   it('generates motion blur temporal blend filters and optional camera jitter', () => {
