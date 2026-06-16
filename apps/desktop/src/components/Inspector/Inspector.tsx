@@ -17,6 +17,7 @@ import {
   CUSTOM_SHADER_EXAMPLES,
   AUDIO_SPECTRUM_POSITIONS,
   AUDIO_SPECTRUM_STYLES,
+  CLIP_BLEND_MODES,
   DEFAULT_EFFECT_PARAMS,
   DEFAULT_COLOR_CORRECTION,
   DEFAULT_TEXT_PATH,
@@ -56,6 +57,7 @@ import {
   normalizeAudioDenoise,
   normalizeAudioPitchSemitones,
   normalizeChromaKey,
+  normalizeClipBlendMode,
   normalizeClipPanoramaView,
   normalizeClipProjection,
   normalizeColorCurves,
@@ -93,6 +95,7 @@ import {
   type ChromaKeyMode,
   type ChromaKeyColor,
   type ClipPatch,
+  type ClipBlendMode,
   type ClipPanoramaOutputProjection,
   type ClipProjection,
   type ColorCurves,
@@ -117,7 +120,7 @@ import {
   type SubtitleStyleTemplate
 } from '@open-factory/editor-core';
 import { ArrowDown, ArrowUp, GripVertical, Palette, Pipette, Plus, SlidersHorizontal, Trash2, X } from 'lucide-react';
-import { zhCN } from '../../i18n/strings';
+import { t, zhCN } from '../../i18n/strings';
 import { commandManager, projectAccessor, timelineAccessor } from '../../store/commandManager';
 import {
   analyzeClip,
@@ -461,6 +464,7 @@ function ClipInspector({
   const showSlowMotionMode = clip.type === 'video' && getClipSpeed(clip) < 1;
   const audioDenoise = normalizeAudioDenoise(clip.audioDenoise);
   const audioDenoiseUnavailable = audioDenoiseSupported === false;
+  const blendMode = normalizeClipBlendMode(clip.blendMode);
   const projection = normalizeClipProjection(clip.projection);
   const panorama = normalizeClipPanoramaView(clip.panorama);
   const videoRestoration = normalizeVideoRestoration(clip.videoRestoration);
@@ -987,7 +991,7 @@ function ClipInspector({
             onCommit={(rotation) => commit({ transform: { rotation } })}
             testId="clip-rotation-input"
           />
-          {clip.type !== 'audio' ? (
+          {clip.type !== 'audio' && clip.type !== 'video' && clip.type !== 'image' ? (
             <AnimatedField label={zhCN.inspector.fields.opacity} onAddKeyframe={() => addKeyframe('opacity')} testId="add-opacity-keyframe-button">
               <RangeField
                 label={zhCN.inspector.fields.opacity}
@@ -1003,6 +1007,42 @@ function ClipInspector({
             </AnimatedField>
           ) : null}
         </Section>
+
+        {clip.type === 'video' || clip.type === 'image' ? (
+          <details className="mb-4" open data-testid="clip-blend-section">
+            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-slate-500">{t('inspector.sections.blend')}</summary>
+            <div className="space-y-3">
+              <label className="block text-xs font-medium text-slate-600">
+                {t('inspector.fields.blendMode')}
+                <select
+                  className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                  value={blendMode}
+                  data-testid="clip-blend-mode-select"
+                  onChange={(event) => commit({ blendMode: event.target.value as ClipBlendMode })}
+                >
+                  {CLIP_BLEND_MODES.map((mode) => (
+                    <option key={mode} value={mode}>
+                      {t(`inspector.blendModes.${mode}`)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <AnimatedField label={zhCN.inspector.fields.opacity} onAddKeyframe={() => addKeyframe('opacity')} testId="add-opacity-keyframe-button">
+                <RangeField
+                  label={zhCN.inspector.fields.opacity}
+                  value={clip.transform.opacity}
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  format={(value) => `${Math.round(value * 100)}%`}
+                  onCommit={(opacity) => commit({ transform: { opacity } })}
+                  hideLabel
+                  testId="clip-opacity-slider"
+                />
+              </AnimatedField>
+            </div>
+          </details>
+        ) : null}
 
         {clip.type === 'video' ? (
           <details className="mb-4" open>

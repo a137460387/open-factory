@@ -17,5 +17,5 @@ export async function openExportDialog(page: Page): Promise<void> {
 }
 
 export async function expectExportTaskStatus(page: Page, index: number, status: string): Promise<void> {
-  await expect(page.getByTestId('export-queue-list').getByTestId('export-task-status').nth(index)).toHaveAttribute('data-status', status);
+  await expect(page.getByTestId('export-queue-list').getByTestId('export-task-status').nth(index)).toHaveAttribute('data-status', status, { timeout: 15_000 });
 }

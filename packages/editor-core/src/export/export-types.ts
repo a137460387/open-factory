@@ -1,5 +1,6 @@
 import type { ColorCurves, ThreeWayColor } from '../color-grading';
 import type { InputColorSpace } from '../color-log-luts';
+import type { ClipBlendMode } from '../blend-modes';
 import type { ProjectColorPipeline } from '../color-pipeline';
 import type { Effect } from '../effects';
 import type { ExportColorManagementSettings } from './color-management';
@@ -335,6 +336,7 @@ export interface ExportClip {
   imageSequence: ExportImageSequence | null;
   sequenceFrameRate?: number;
   effects: Effect[];
+  blendMode: ClipBlendMode;
   keyframes: ExportClipKeyframes | null;
   kenBurns: boolean;
   volume: number;

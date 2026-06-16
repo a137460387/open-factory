@@ -144,6 +144,42 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.filterComplex).toContain('(main_w-overlay_w)/2-320');
   });
 
+  it('skips blend filters for normal clip compositing', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-normal', duration: 2, blendMode: 'normal' })];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('overlay=');
+    expect(plan.filterComplex).not.toContain('blend=all_mode');
+  });
+
+  it('builds an alpha-aware FFmpeg blend graph for non-normal clip compositing', () => {
+    const project = makeProject();
+    project.timeline.tracks = [
+      createTrack({ id: 'track-base', type: 'video', name: 'Base', clips: [makeVideoClip({ id: 'clip-base', trackId: 'track-base', duration: 2 })] }),
+      createTrack({
+        id: 'track-top',
+        type: 'video',
+        name: 'Top',
+        clips: [makeVideoClip({ id: 'clip-top', trackId: 'track-top', start: 0, duration: 2, blendMode: 'overlay', transform: { x: 16, y: -8, opacity: 0.6 } })]
+      }),
+      createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
+      createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('color=c=black@0.0');
+    expect(plan.filterComplex).toContain("overlay=x='(main_w-overlay_w)/2+16'");
+    expect(plan.filterComplex).toContain("eval=frame:enable='between(t,0,2)',format=rgba");
+    expect(plan.filterComplex).toContain('split=2');
+    expect(plan.filterComplex).toContain('alphaextract');
+    expect(plan.filterComplex).toContain('format=rgba[');
+    expect(plan.filterComplex).toContain('blend=all_mode=overlay:all_opacity=1,format=rgba');
+    expect(plan.filterComplex).toContain('alphamerge,format=rgba');
+  });
+
   it('builds per-clip overlay, drawtext textfile, and amix filters as argument arrays', () => {
     const project = makeProject();
     project.media.push({

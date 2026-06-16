@@ -8,6 +8,7 @@ import {
   getTransformScaleY,
   normalizeCustomShaderParams,
   normalizeColorCorrection,
+  normalizeClipBlendMode,
   normalizeInputColorSpace,
   normalizeProjectColorPipeline,
   normalizeThreeWayColor,
@@ -16,7 +17,9 @@ import {
   buildMotionBlurPreviewVector,
   triangulatePathMask,
   sampleColorCurves,
+  clipBlendModeToShaderIndex,
   type ChromaKey,
+  type ClipBlendMode,
   type ClipPanoramaView,
   type ClipMask,
   type ColorCorrection,
@@ -38,8 +41,10 @@ interface ProgramInfo {
   texCoord: number;
   resolution: WebGLUniformLocation;
   texture: WebGLUniformLocation;
+  baseTexture: WebGLUniformLocation;
   curveLut: WebGLUniformLocation;
   opacity: WebGLUniformLocation;
+  blendMode: WebGLUniformLocation;
   inputColorSpace: WebGLUniformLocation;
   colorPipeline: WebGLUniformLocation;
   colorCorrection: WebGLUniformLocation;
@@ -89,6 +94,7 @@ export interface WebGlSourceProcessingOptions {
   customShaderProgress?: number;
   disabledEffectTypes?: EffectType[];
   colorPipeline?: ProjectColorPipeline;
+  blendMode?: ClipBlendMode;
 }
 
 export interface WebGlResolvedSourceProcessing {
@@ -105,6 +111,7 @@ export class WebGlPreviewCompositor {
   private readonly positionBuffer: WebGLBuffer;
   private readonly texCoordBuffer: WebGLBuffer;
   private readonly curveTexture: WebGLTexture;
+  private readonly blendBaseTexture: WebGLTexture;
   private readonly textures = new WeakMap<TexImageSource, WebGLTexture>();
   private readonly customPrograms = new Map<string, CustomShaderProgramInfo | null>();
   private panoramaProgram?: PanoramaProgramInfo | null;
@@ -122,13 +129,20 @@ export class WebGlPreviewCompositor {
     const positionBuffer = gl.createBuffer();
     const texCoordBuffer = gl.createBuffer();
     const curveTexture = gl.createTexture();
-    if (!positionBuffer || !texCoordBuffer || !curveTexture) {
+    const blendBaseTexture = gl.createTexture();
+    if (!positionBuffer || !texCoordBuffer || !curveTexture || !blendBaseTexture) {
       throw new Error(zhCN.errors.webglBufferAllocationFailed);
     }
     this.positionBuffer = positionBuffer;
     this.texCoordBuffer = texCoordBuffer;
     this.curveTexture = curveTexture;
+    this.blendBaseTexture = blendBaseTexture;
     gl.bindTexture(gl.TEXTURE_2D, this.curveTexture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.bindTexture(gl.TEXTURE_2D, this.blendBaseTexture);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
@@ -146,6 +160,8 @@ export class WebGlPreviewCompositor {
     gl.uniform2f(this.program.resolution, width, height);
     gl.uniform1i(this.program.texture, 0);
     gl.uniform1i(this.program.curveLut, 1);
+    gl.uniform1i(this.program.baseTexture, 2);
+    gl.uniform1f(this.program.blendMode, 0);
   }
 
   drawSource(
@@ -162,12 +178,18 @@ export class WebGlPreviewCompositor {
     const gl = this.gl;
     const texture = this.getTexture(source);
     const disabledEffectTypes = new Set(options.disabledEffectTypes ?? []);
+    const blendMode = normalizeClipBlendMode(options.blendMode);
     const customShader = options.bypassProcessing || disabledEffectTypes.has('custom-shader') ? undefined : getEnabledCustomShaderEffect(effects);
-    if (customShader) {
+    if (customShader && blendMode === 'normal') {
       const params = normalizeCustomShaderParams(customShader.params);
       if (this.drawCustomShaderSource(source, texture, mediaWidth, mediaHeight, transform, params.source, options)) {
         return;
       }
+    }
+    if (blendMode !== 'normal') {
+      this.prepareBlendPass();
+    } else {
+      this.finishBlendPass();
     }
     gl.useProgram(this.program.program);
     const { correction, colorPipeline, key, maskUniforms, effectParams } = resolveWebGlSourceProcessing(colorCorrection, effects, chromaKey, masks, options);
@@ -176,6 +198,7 @@ export class WebGlPreviewCompositor {
     gl.bindTexture(gl.TEXTURE_2D, this.curveTexture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 256, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, buildCurveTextureData(correction.colorCurves));
     gl.uniform1f(this.program.opacity, Math.max(0, Math.min(1, transform.opacity)));
+    gl.uniform1f(this.program.blendMode, clipBlendModeToShaderIndex(blendMode));
     gl.uniform1f(this.program.inputColorSpace, inputColorSpaceIndex(correction.inputColorSpace));
     gl.uniform1f(this.program.colorPipeline, colorPipelineIndex(colorPipeline));
     gl.uniform4f(this.program.colorCorrection, correction.brightness, correction.contrast, correction.saturation, correction.hue);
@@ -199,10 +222,11 @@ export class WebGlPreviewCompositor {
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
     this.drawQuad(buildTransformedQuad(gl.canvas.width, gl.canvas.height, mediaWidth, mediaHeight, transform), this.program);
+    this.finishBlendPass();
   }
 
   drawPanoramaSource(source: TexImageSource, mediaWidth: number, mediaHeight: number, transform: Transform, panorama: ClipPanoramaView, options: WebGlSourceProcessingOptions = {}): boolean {
-    if (options.bypassProcessing) {
+    if (options.bypassProcessing || normalizeClipBlendMode(options.blendMode) !== 'normal') {
       return false;
     }
     const gl = this.gl;
@@ -340,6 +364,21 @@ export class WebGlPreviewCompositor {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     this.textures.set(source, texture);
     return texture;
+  }
+
+  private prepareBlendPass(): void {
+    const gl = this.gl;
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, this.blendBaseTexture);
+    gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 0, 0, Math.max(1, Number(gl.canvas.width)), Math.max(1, Number(gl.canvas.height)), 0);
+    gl.disable(gl.BLEND);
+    gl.activeTexture(gl.TEXTURE0);
+  }
+
+  private finishBlendPass(): void {
+    const gl = this.gl;
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   }
 
   private drawCustomShaderSource(
@@ -662,6 +701,70 @@ export function buildAcesToneMappingShaderInjection(colorPipeline: ProjectColorP
   `;
 }
 
+export function buildBlendModeShaderInjection(): string {
+  return `
+      float blendOverlayChannel(float base, float top) {
+        return base < 0.5 ? 2.0 * base * top : 1.0 - 2.0 * (1.0 - base) * (1.0 - top);
+      }
+
+      float blendSoftLightChannel(float base, float top) {
+        if (top <= 0.5) {
+          return base - (1.0 - 2.0 * top) * base * (1.0 - base);
+        }
+        float d = base <= 0.25 ? ((16.0 * base - 12.0) * base + 4.0) * base : sqrt(base);
+        return base + (2.0 * top - 1.0) * (d - base);
+      }
+
+      vec3 applyBlendMode(vec3 base, vec3 top, float mode) {
+        if (mode < 0.5) {
+          return top;
+        }
+        if (mode < 1.5) {
+          return vec3(
+            blendOverlayChannel(base.r, top.r),
+            blendOverlayChannel(base.g, top.g),
+            blendOverlayChannel(base.b, top.b)
+          );
+        }
+        if (mode < 2.5) {
+          return 1.0 - (1.0 - base) * (1.0 - top);
+        }
+        if (mode < 3.5) {
+          return base * top;
+        }
+        if (mode < 4.5) {
+          return abs(base - top);
+        }
+        if (mode < 5.5) {
+          return vec3(
+            top.r <= 0.0 ? 0.0 : 1.0 - min(1.0, (1.0 - base.r) / top.r),
+            top.g <= 0.0 ? 0.0 : 1.0 - min(1.0, (1.0 - base.g) / top.g),
+            top.b <= 0.0 ? 0.0 : 1.0 - min(1.0, (1.0 - base.b) / top.b)
+          );
+        }
+        if (mode < 6.5) {
+          return vec3(
+            top.r >= 1.0 ? 1.0 : min(1.0, base.r / (1.0 - top.r)),
+            top.g >= 1.0 ? 1.0 : min(1.0, base.g / (1.0 - top.g)),
+            top.b >= 1.0 ? 1.0 : min(1.0, base.b / (1.0 - top.b))
+          );
+        }
+        if (mode < 7.5) {
+          return vec3(
+            top.r < 0.5 ? 2.0 * base.r * top.r : 1.0 - 2.0 * (1.0 - base.r) * (1.0 - top.r),
+            top.g < 0.5 ? 2.0 * base.g * top.g : 1.0 - 2.0 * (1.0 - base.g) * (1.0 - top.g),
+            top.b < 0.5 ? 2.0 * base.b * top.b : 1.0 - 2.0 * (1.0 - base.b) * (1.0 - top.b)
+          );
+        }
+        return vec3(
+          blendSoftLightChannel(base.r, top.r),
+          blendSoftLightChannel(base.g, top.g),
+          blendSoftLightChannel(base.b, top.b)
+        );
+      }
+  `;
+}
+
 function createProgram(gl: WebGLRenderingContext): ProgramInfo {
   const vertexShader = compileShader(
     gl,
@@ -674,9 +777,11 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
     `
       precision mediump float;
       uniform sampler2D u_texture;
+      uniform sampler2D u_baseTexture;
       uniform sampler2D u_curveLut;
       uniform vec2 u_resolution;
       uniform float u_opacity;
+      uniform float u_blendMode;
       uniform float u_inputColorSpace;
       uniform float u_colorPipeline;
       uniform vec4 u_colorCorrection;
@@ -741,6 +846,7 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
       }
 
       ${buildAcesToneMappingShaderInjection('aces')}
+      ${buildBlendModeShaderInjection()}
 
       vec3 applyProjectColorPipeline(vec3 color) {
         if (u_colorPipeline > 1.5) {
@@ -957,7 +1063,16 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
         corrected = applyCurveLut(corrected);
         corrected = applyPreviewEffects(corrected, v_texCoord);
         corrected = applyProjectColorPipeline(corrected);
-        gl_FragColor = vec4(corrected, color.a * keyedAlpha * maskAlpha * u_opacity);
+        vec4 source = vec4(corrected, color.a * keyedAlpha * maskAlpha * u_opacity);
+        if (u_blendMode > 0.5) {
+          vec2 baseCoord = gl_FragCoord.xy / max(u_resolution, vec2(1.0));
+          vec4 base = texture2D(u_baseTexture, baseCoord);
+          vec3 blended = applyBlendMode(base.rgb, source.rgb, u_blendMode);
+          float alpha = source.a + base.a * (1.0 - source.a);
+          gl_FragColor = vec4(mix(base.rgb, blended, source.a), alpha);
+          return;
+        }
+        gl_FragColor = source;
       }
     `
   );
@@ -973,8 +1088,10 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
   }
   const resolution = gl.getUniformLocation(program, 'u_resolution');
   const texture = gl.getUniformLocation(program, 'u_texture');
+  const baseTexture = gl.getUniformLocation(program, 'u_baseTexture');
   const curveLut = gl.getUniformLocation(program, 'u_curveLut');
   const opacity = gl.getUniformLocation(program, 'u_opacity');
+  const blendMode = gl.getUniformLocation(program, 'u_blendMode');
   const inputColorSpace = gl.getUniformLocation(program, 'u_inputColorSpace');
   const colorPipeline = gl.getUniformLocation(program, 'u_colorPipeline');
   const colorCorrection = gl.getUniformLocation(program, 'u_colorCorrection');
@@ -996,8 +1113,10 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
   if (
     !resolution ||
     !texture ||
+    !baseTexture ||
     !curveLut ||
     !opacity ||
+    !blendMode ||
     !inputColorSpace ||
     !colorPipeline ||
     !colorCorrection ||
@@ -1025,8 +1144,10 @@ function createProgram(gl: WebGLRenderingContext): ProgramInfo {
     texCoord: gl.getAttribLocation(program, 'a_texCoord'),
     resolution,
     texture,
+    baseTexture,
     curveLut,
     opacity,
+    blendMode,
     inputColorSpace,
     colorPipeline,
     colorCorrection,

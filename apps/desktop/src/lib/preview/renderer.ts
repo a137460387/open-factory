@@ -173,7 +173,8 @@ export class PreviewRenderer {
       compositor.drawSource(nested, canvasWidth, canvasHeight, renderClip.transform, renderClip.colorCorrection, renderClip.effects, renderClip.chromaKey, renderClip.masks, {
         bypassProcessing,
         disabledEffectTypes,
-        colorPipeline
+        colorPipeline,
+        blendMode: renderClip.blendMode
       });
       return;
     }

@@ -27,7 +27,8 @@ export function drawImageWebGl(
   compositor.drawSource(img, asset.width || 1280, asset.height || 720, clip.transform, clip.colorCorrection, clip.effects, clip.chromaKey, clip.masks, {
     bypassProcessing,
     disabledEffectTypes,
-    colorPipeline
+    colorPipeline,
+    blendMode: clip.blendMode
   });
   recordPreviewDraw('image', 'image');
 }

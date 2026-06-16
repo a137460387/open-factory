@@ -48,7 +48,7 @@ export async function drawVideoWebGl(
   try {
     await seekVideo(video, sourceTime);
     if (clip.projection === 'equirectangular' && clip.panorama) {
-      const drawn = compositor.drawPanoramaSource(video, asset.width || 1280, asset.height || 720, clip.transform, clip.panorama, { bypassProcessing });
+      const drawn = compositor.drawPanoramaSource(video, asset.width || 1280, asset.height || 720, clip.transform, clip.panorama, { bypassProcessing, blendMode: clip.blendMode });
       if (drawn) {
         recordPreviewDraw('video', 'video');
         return;
@@ -57,7 +57,8 @@ export async function drawVideoWebGl(
     compositor.drawSource(video, asset.width || 1280, asset.height || 720, clip.transform, clip.colorCorrection, clip.effects, clip.chromaKey, clip.masks, {
       bypassProcessing,
       disabledEffectTypes,
-      colorPipeline
+      colorPipeline,
+      blendMode: clip.blendMode
     });
     recordPreviewDraw('video', 'video');
   } catch (error) {
@@ -65,7 +66,7 @@ export async function drawVideoWebGl(
     const fallback = await loadThumbnail(asset);
     if (fallback) {
       if (clip.projection === 'equirectangular' && clip.panorama) {
-        const drawn = compositor.drawPanoramaSource(fallback, asset.width || 1280, asset.height || 720, clip.transform, clip.panorama, { bypassProcessing });
+        const drawn = compositor.drawPanoramaSource(fallback, asset.width || 1280, asset.height || 720, clip.transform, clip.panorama, { bypassProcessing, blendMode: clip.blendMode });
         if (drawn) {
           recordPreviewDraw('video', 'thumbnail');
           return;
@@ -74,7 +75,8 @@ export async function drawVideoWebGl(
       compositor.drawSource(fallback, asset.width || 1280, asset.height || 720, clip.transform, clip.colorCorrection, clip.effects, clip.chromaKey, clip.masks, {
         bypassProcessing,
         disabledEffectTypes,
-        colorPipeline
+        colorPipeline,
+        blendMode: clip.blendMode
       });
       recordPreviewDraw('video', 'thumbnail');
     }

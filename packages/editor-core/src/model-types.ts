@@ -1,5 +1,7 @@
 import type { ColorCurves, ThreeWayColor } from './color-grading';
 import type { InputColorSpace } from './color-log-luts';
+import type { ClipBlendMode } from './blend-modes';
+import type { ClipContentAnalysis } from './content-analysis';
 import type { ProjectColorPipeline } from './color-pipeline';
 import type { Effect } from './effects';
 import type { TimecodeFormat } from './time';
@@ -445,6 +447,8 @@ export interface BaseClip {
   keyframes?: ClipKeyframes;
   effects?: Effect[];
   sequenceFrameRate?: number;
+  blendMode?: ClipBlendMode;
+  contentAnalysis?: ClipContentAnalysis;
 }
 
 export interface ClipAudioDenoise {

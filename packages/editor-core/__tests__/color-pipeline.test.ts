@@ -3,7 +3,10 @@ import {
   CAMERA_IDT_MATRICES,
   applyHillAcesToneMap,
   buildAcesOdtFilterChain,
+  buildProjectColorPipelineExportDefaults,
+  isAcesColorPipeline,
   normalizeProjectColorPipeline,
+  toneMapHillAcesChannel,
   type CameraIdtMatrixId
 } from '../src';
 
@@ -54,5 +57,36 @@ describe('project color pipeline', () => {
     expect(normalizeProjectColorPipeline('aces')).toBe('aces');
     expect(normalizeProjectColorPipeline('unknown')).toBe('sdr-srgb');
     expect(normalizeProjectColorPipeline(undefined)).toBe('sdr-srgb');
+    expect(isAcesColorPipeline('aces')).toBe(true);
+    expect(isAcesColorPipeline('hdr-rec2020')).toBe(false);
+  });
+
+  it('returns export defaults for every color pipeline', () => {
+    expect(buildProjectColorPipelineExportDefaults('sdr-srgb')).toEqual({
+      inputColorSpace: 'srgb',
+      outputColorSpace: 'srgb',
+      embedIccProfile: true
+    });
+    expect(buildProjectColorPipelineExportDefaults('hdr-rec2020')).toEqual({
+      inputColorSpace: 'srgb',
+      outputColorSpace: 'rec2020',
+      embedIccProfile: true
+    });
+    expect(buildProjectColorPipelineExportDefaults('aces')).toEqual({
+      inputColorSpace: 'rec2020',
+      outputColorSpace: 'rec709',
+      embedIccProfile: true
+    });
+  });
+
+  it('maps ACES ODT filters to supported output color spaces', () => {
+    expect(buildAcesOdtFilterChain('aces', 'rec2020')[1]).toContain('matrix=bt2020nc:transfer=bt2020-10:primaries=bt2020');
+    expect(buildAcesOdtFilterChain('aces', 'dci-p3')[1]).toContain('matrix=bt709:transfer=bt709:primaries=smpte432');
+    expect(buildAcesOdtFilterChain('aces', 'srgb')[1]).toContain('matrix=bt709:transfer=iec61966-2-1:primaries=bt709');
+  });
+
+  it('clamps non-finite and high Hill ACES channel values', () => {
+    expect(toneMapHillAcesChannel(Number.NaN)).toBe(0);
+    expect(toneMapHillAcesChannel(1000)).toBe(1);
   });
 });

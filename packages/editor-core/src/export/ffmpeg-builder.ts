@@ -56,6 +56,7 @@ import {
   type AudioSpectrumParams,
   type Effect
 } from '../effects';
+import { getFfmpegBlendMode, normalizeClipBlendMode, type ClipBlendMode } from '../blend-modes';
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
 import { triangulatePathMask } from '../masks/path-mask';
 import { buildMotionBlurExportFilter, normalizeMotionBlurParams } from '../motion-blur';
@@ -290,6 +291,7 @@ function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project[
                 : null,
             sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
             effects: cloneEffects(clip.effects) ?? [],
+            blendMode: normalizeClipBlendMode(clip.blendMode),
             keyframes: buildExportClipKeyframes(clip.keyframes, clip.duration, trackVolume),
             kenBurns: clip.type === 'image' ? Boolean(clip.kenBurns) : false,
             volume: ('volume' in clip ? clip.volume : 1) * trackVolume,
@@ -579,11 +581,7 @@ export function buildFfmpegExportPlan(
         }
 
         const nextVideo = `base${videoStep + 1}`;
-        filters.push(
-          `[${currentVideo}][${item.label}]overlay=x='${item.xExpression}':y='${item.yExpression}':eval=frame:enable='between(t,${formatFfmpegSeconds(
-            item.start
-          )},${formatFfmpegSeconds(item.start + item.duration)})'[${nextVideo}]`
-        );
+        filters.push(buildMediaCompositeFilter(currentVideo, nextVideo, item, settings, duration));
         currentVideo = nextVideo;
         videoStep += 1;
       }
@@ -1257,6 +1255,7 @@ type VisualItem =
       label: string;
       xExpression: string;
       yExpression: string;
+      blendMode: ClipBlendMode;
     };
 
 function buildVisualItems(
@@ -1316,7 +1315,8 @@ function buildVisualItems(
       duration: pairDuration,
       label,
       xExpression: '(main_w-overlay_w)/2+0',
-      yExpression: '(main_h-overlay_h)/2+0'
+      yExpression: '(main_h-overlay_h)/2+0',
+      blendMode: normalizeClipBlendMode(pair.toClip.blendMode)
     });
     consumedClipIds.add(pair.fromClip.id);
     consumedClipIds.add(pair.toClip.id);
@@ -1353,7 +1353,8 @@ function buildVisualItems(
       duration: clip.duration,
       label: clipLabel,
       xExpression: buildOverlayXExpression(clip),
-      yExpression: buildOverlayYExpression(clip)
+      yExpression: buildOverlayYExpression(clip),
+      blendMode: normalizeClipBlendMode(clip.blendMode)
     });
   }
 
@@ -1454,6 +1455,35 @@ function visualKindOrder(item: VisualItem): number {
     return 0;
   }
   return item.kind === 'adjustment' ? 1 : 2;
+}
+
+function buildMediaCompositeFilter(currentVideo: string, nextVideo: string, item: Extract<VisualItem, { kind: 'media' }>, settings: ExportSettings, duration: number): string {
+  const start = formatFfmpegSeconds(item.start);
+  const end = formatFfmpegSeconds(item.start + item.duration);
+  const enable = `between(t,${start},${end})`;
+  if (normalizeClipBlendMode(item.blendMode) === 'normal') {
+    return `[${currentVideo}][${item.label}]overlay=x='${item.xExpression}':y='${item.yExpression}':eval=frame:enable='${enable}'[${nextVideo}]`;
+  }
+  const safe = safeLabel(`${nextVideo}_${item.label}`);
+  const blankLabel = `${safe}_blend_blank`;
+  const layerLabel = `${safe}_blend_layer`;
+  const layerRgbLabel = `${safe}_blend_layer_rgb`;
+  const layerAlphaSourceLabel = `${safe}_blend_layer_alpha_source`;
+  const baseBlendLabel = `${safe}_blend_base`;
+  const alphaLabel = `${safe}_blend_alpha`;
+  const blendedLabel = `${safe}_blend_rgb`;
+  const blendedRgbaLabel = `${safe}_blend_rgba`;
+  const ffmpegMode = getFfmpegBlendMode(item.blendMode);
+  return [
+    `color=c=black@0.0:s=${settings.width}x${settings.height}:r=${settings.fps}:d=${formatFfmpegSeconds(duration)},format=rgba[${blankLabel}]`,
+    `[${blankLabel}][${item.label}]overlay=x='${item.xExpression}':y='${item.yExpression}':eval=frame:enable='${enable}',format=rgba[${layerLabel}]`,
+    `[${layerLabel}]split=2[${layerRgbLabel}][${layerAlphaSourceLabel}]`,
+    `[${layerAlphaSourceLabel}]alphaextract[${alphaLabel}]`,
+    `[${currentVideo}]format=rgba[${baseBlendLabel}]`,
+    `[${layerRgbLabel}][${baseBlendLabel}]blend=all_mode=${ffmpegMode}:all_opacity=1,format=rgba[${blendedLabel}]`,
+    `[${blendedLabel}][${alphaLabel}]alphamerge,format=rgba[${blendedRgbaLabel}]`,
+    `[${currentVideo}][${blendedRgbaLabel}]overlay=x=0:y=0:eval=frame:enable='${enable}'[${nextVideo}]`
+  ].join(';');
 }
 
 function buildAdjustmentLayerFilters(inputLabel: string, outputLabel: string, clip: ExportClip, textArtifacts: TextArtifact[], settings: ExportSettings): string[] {

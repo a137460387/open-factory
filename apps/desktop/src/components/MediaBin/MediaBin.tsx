@@ -1,12 +1,15 @@
 import {
   MAX_MEDIA_FOLDER_DEPTH,
   TITLE_TEMPLATE_IDS,
+  CONTENT_SCENE_TYPES,
   collectSmartAlbums,
   filterMediaAssets,
   getMediaFolderDepth,
   isFrameRateMismatch,
   shouldGenerateProxy,
   type MediaAsset,
+  type ClipContentAnalysis,
+  type ContentSceneType,
   type MediaFlag,
   type MediaFolder,
   type MediaLabelColor,
@@ -32,6 +35,7 @@ interface MediaBinProps {
   media: MediaAsset[];
   mediaFolders: MediaFolder[];
   mediaMetadata: Record<string, MediaMetadata>;
+  mediaContentAnalysis: Record<string, ClipContentAnalysis>;
   projectFrameRate: number;
   onImport(): void;
   onImportPaths(paths: string[]): void;
@@ -65,6 +69,7 @@ export function MediaBin({
   media,
   mediaFolders,
   mediaMetadata,
+  mediaContentAnalysis,
   projectFrameRate,
   onImport,
   onImportPaths,
@@ -93,6 +98,7 @@ export function MediaBin({
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<MediaBinView>('all');
   const [quickFilter, setQuickFilter] = useState<QuickMediaFilter>('all');
+  const [sceneFilter, setSceneFilter] = useState<ContentSceneType | 'all'>('all');
   const [smartAlbumId, setSmartAlbumId] = useState<SmartAlbumId | 'none'>('none');
   const [mediaLibraryView, setMediaLibraryView] = useState<MediaLibraryViewSettings>(DEFAULT_MEDIA_LIBRARY_VIEW_SETTINGS);
   const [mediaInfo, setMediaInfo] = useState<MediaInfoState>();
@@ -108,7 +114,9 @@ export function MediaBin({
           filter: filter === 'tagged' ? 'all' : filter,
           metadataFilter,
           metadata: mediaMetadata
-        }).filter((asset) => !smartAlbumIds || smartAlbumIds.has(asset.id));
+        })
+          .filter((asset) => sceneFilter === 'all' || mediaContentAnalysis[asset.id]?.sceneTypes.includes(sceneFilter))
+          .filter((asset) => !smartAlbumIds || smartAlbumIds.has(asset.id));
   const sortedVisibleMedia = useMemo(
     () => sortMediaLibraryAssets(visibleMedia, mediaLibraryView),
     [visibleMedia, mediaLibraryView]
@@ -332,6 +340,22 @@ export function MediaBin({
               </button>
             ))}
           </div>
+          <label className="block text-[11px] font-medium text-slate-600">
+            {zhCN.contentAnalysis.sceneFilter}
+            <select
+              className="mt-1 h-8 w-full rounded border border-line bg-white px-2 text-xs text-ink"
+              value={sceneFilter}
+              data-testid="media-scene-filter-select"
+              onChange={(event) => setSceneFilter(event.target.value as ContentSceneType | 'all')}
+            >
+              <option value="all">{zhCN.contentAnalysis.sceneFilterAll}</option>
+              {CONTENT_SCENE_TYPES.map((sceneType) => (
+                <option key={sceneType} value={sceneType}>
+                  {zhCN.contentAnalysis.sceneTypeLabels[sceneType]}
+                </option>
+              ))}
+            </select>
+          </label>
           {filter !== 'titles' ? (
             <SmartAlbumBar albums={smartAlbums} activeId={smartAlbumId} onSelect={setSmartAlbumId} />
           ) : null}
@@ -385,6 +409,7 @@ export function MediaBin({
             media={sortedVisibleMedia}
             gridSize={mediaLibraryView.gridSize}
             mediaMetadata={mediaMetadata}
+            mediaContentAnalysis={mediaContentAnalysis}
             projectFrameRate={projectFrameRate}
             onAddToTimeline={onAddToTimeline}
             onRelink={onRelink}
@@ -404,6 +429,7 @@ export function MediaBin({
               folders={mediaFolders}
               media={sortedVisibleMedia}
               mediaMetadata={mediaMetadata}
+              mediaContentAnalysis={mediaContentAnalysis}
               gridSize={mediaLibraryView.gridSize}
               projectFrameRate={projectFrameRate}
               onCreateFolder={onCreateFolder}
@@ -428,6 +454,7 @@ export function MediaBin({
               media={sortedVisibleMedia.filter((asset) => !asset.folderId)}
               gridSize={mediaLibraryView.gridSize}
               mediaMetadata={mediaMetadata}
+              mediaContentAnalysis={mediaContentAnalysis}
               projectFrameRate={projectFrameRate}
               onAddToTimeline={onAddToTimeline}
               onRelink={onRelink}
@@ -551,6 +578,7 @@ function MediaFolderTree(props: {
   folders: MediaFolder[];
   media: MediaAsset[];
   mediaMetadata: Record<string, MediaMetadata>;
+  mediaContentAnalysis: Record<string, ClipContentAnalysis>;
   gridSize: MediaLibraryGridSize;
   projectFrameRate: number;
   onCreateFolder(parentId?: string | null): void;
@@ -589,6 +617,7 @@ function MediaFolderNode({
   folders,
   media,
   mediaMetadata,
+  mediaContentAnalysis,
   gridSize,
   projectFrameRate,
   onCreateFolder,
@@ -613,6 +642,7 @@ function MediaFolderNode({
   folders: MediaFolder[];
   media: MediaAsset[];
   mediaMetadata: Record<string, MediaMetadata>;
+  mediaContentAnalysis: Record<string, ClipContentAnalysis>;
   gridSize: MediaLibraryGridSize;
   projectFrameRate: number;
   onCreateFolder(parentId?: string | null): void;
@@ -708,6 +738,7 @@ function MediaFolderNode({
               folders={folders}
               media={media}
               mediaMetadata={mediaMetadata}
+              mediaContentAnalysis={mediaContentAnalysis}
               gridSize={gridSize}
               projectFrameRate={projectFrameRate}
               onCreateFolder={onCreateFolder}
@@ -731,6 +762,7 @@ function MediaFolderNode({
           <MediaCardGrid
             media={folderMedia}
             mediaMetadata={mediaMetadata}
+            mediaContentAnalysis={mediaContentAnalysis}
             gridSize={gridSize}
             projectFrameRate={projectFrameRate}
             onAddToTimeline={onAddToTimeline}
@@ -893,6 +925,7 @@ function MediaCardGrid({
   media,
   gridSize,
   mediaMetadata,
+  mediaContentAnalysis,
   projectFrameRate,
   onAddToTimeline,
   onRelink,
@@ -909,6 +942,7 @@ function MediaCardGrid({
   media: MediaAsset[];
   gridSize: MediaLibraryGridSize;
   mediaMetadata: Record<string, MediaMetadata>;
+  mediaContentAnalysis: Record<string, ClipContentAnalysis>;
   projectFrameRate: number;
   onAddToTimeline(assetId: string): void;
   onRelink(assetId: string): void;
@@ -933,6 +967,7 @@ function MediaCardGrid({
           key={asset.id}
           asset={asset}
           metadata={mediaMetadata[asset.id]}
+          contentAnalysis={mediaContentAnalysis[asset.id]}
           projectFrameRate={projectFrameRate}
           onAdd={() => onAddToTimeline(asset.id)}
           onRelink={() => onRelink(asset.id)}
@@ -1143,6 +1178,7 @@ const MEDIA_LABEL_COLORS: Array<{ key: MediaLabelColor; value: string }> = [
 function MediaCard({
   asset,
   metadata,
+  contentAnalysis,
   projectFrameRate,
   onAdd,
   onRelink,
@@ -1158,6 +1194,7 @@ function MediaCard({
 }: {
   asset: MediaAsset;
   metadata?: MediaMetadata;
+  contentAnalysis?: ClipContentAnalysis;
   projectFrameRate: number;
   onAdd(): void;
   onRelink(): void;
@@ -1369,6 +1406,7 @@ function MediaCard({
           <span>{zhCN.mediaBin.assetType[asset.type]}</span>
           <span>{asset.type === 'audio' ? formatDuration(asset.duration) : `${asset.width || '-'}x${asset.height || '-'}`}</span>
         </div>
+        {contentAnalysis ? <MediaSceneTagList assetId={asset.id} analysis={contentAnalysis} /> : null}
         {asset.type === 'video' ? (
           <ProxyStatus status={proxyStatus} error={asset.proxyError} canGenerate={canGenerateProxy} onGenerateProxy={onGenerateProxy} assetId={asset.id} />
         ) : null}
@@ -1462,6 +1500,18 @@ function MediaCard({
 
 function labelColorToHex(color: MediaLabelColor): string {
   return MEDIA_LABEL_COLORS.find((item) => item.key === color)?.value ?? '#64748b';
+}
+
+function MediaSceneTagList({ assetId, analysis }: { assetId: string; analysis: ClipContentAnalysis }) {
+  return (
+    <div className="mt-2 flex flex-wrap gap-1" data-testid={`media-scene-tags-${assetId}`}>
+      {analysis.sceneTypes.slice(0, 3).map((sceneType) => (
+        <span key={sceneType} className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-800" data-testid={`media-scene-tag-${sceneType}-${assetId}`}>
+          {zhCN.contentAnalysis.sceneTypeLabels[sceneType]}
+        </span>
+      ))}
+    </div>
+  );
 }
 
 function formatFrameRateLabel(frameRate: number): string {

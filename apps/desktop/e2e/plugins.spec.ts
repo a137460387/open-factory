@@ -16,7 +16,8 @@ test('shows discovered plugins from a mocked catalog request', async ({ page }) 
             version: '1.2.0',
             description: 'Adds local export checks.',
             permissions: ['export-hook'],
-            downloadUrl: '/plugins/e2e-denoise-helper.js'
+            downloadUrl: '/plugins/e2e-denoise-helper.js',
+            sha256: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
           }
         ]
       })

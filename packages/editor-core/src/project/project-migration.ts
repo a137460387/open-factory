@@ -41,6 +41,8 @@ import {
 } from '../model';
 import type { Clip, ImageSequenceInfo, MediaAsset, MediaFolder, MediaMetadata, Project, Sequence, Timeline, Transition } from '../model-types';
 import { normalizeClipGroups } from '../clip-groups';
+import { normalizeClipBlendMode } from '../blend-modes';
+import { normalizeClipContentAnalysis } from '../content-analysis';
 import { normalizeTimelineLabelColor } from '../timeline-color-labels';
 import { normalizeMediaFolderId, normalizeMediaFolders, normalizeMediaImportedAt } from '../media-folders';
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
@@ -359,8 +361,10 @@ function cloneClip<TClip extends Clip>(clip: TClip): TClip {
     motionTrack: normalizeMotionTrack(clip.motionTrack, clip.duration),
     border: normalizeClipBorder(clip.border),
     sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
+    contentAnalysis: normalizeClipContentAnalysis(clip.contentAnalysis),
     keyframes: normalizeClipKeyframes(cloneClipKeyframes(clip.keyframes), clip.duration),
     effects: cloneEffects(clip.effects),
+    blendMode: normalizeClipBlendMode(clip.blendMode),
     multicam: clip.type === 'nested-sequence' ? normalizeMulticamSequence(clip.multicam, clip.duration) : undefined
   };
   if (clip.type === 'video' || clip.type === 'audio' || clip.type === 'nested-sequence') {

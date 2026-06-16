@@ -6,7 +6,9 @@ import {
   normalizeColorCurves,
   normalizeThreeWayColor
 } from './color-grading';
+import { normalizeClipBlendMode } from './blend-modes';
 import { REC709_INPUT_COLOR_SPACE, normalizeInputColorSpace } from './color-log-luts';
+import { normalizeClipContentAnalysis } from './content-analysis';
 import { DEFAULT_PROJECT_COLOR_PIPELINE, normalizeProjectColorPipeline } from './color-pipeline';
 import { cloneEffects } from './effects';
 import { normalizePathPoints } from './masks/path-mask';
@@ -651,7 +653,9 @@ export function createBaseClip(
     border: normalizeClipBorder(input.border),
     keyframes: cloneClipKeyframesLocal(input.keyframes),
     effects: cloneEffects(input.effects),
-    sequenceFrameRate: normalizeSequenceFrameRate(input.sequenceFrameRate)
+    sequenceFrameRate: normalizeSequenceFrameRate(input.sequenceFrameRate),
+    blendMode: normalizeClipBlendMode(input.blendMode),
+    contentAnalysis: normalizeClipContentAnalysis(input.contentAnalysis)
   };
 }
 

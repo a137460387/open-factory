@@ -1590,6 +1590,11 @@ window.__E2E_ACTIONS__ = {
     }
   },
   getSelectedClipIds: () => useEditorStore.getState().selectedClipIds,
+  selectClip: (clipId: unknown) => {
+    if (typeof clipId === 'string') {
+      useEditorStore.getState().setSelectedClipId(clipId);
+    }
+  },
   enqueueMockMediaJob: (input: unknown) => {
     const job = input as { id?: string; assetId?: string; assetName?: string; type?: string; status?: string; progress?: number; error?: string };
     return useMediaJobStore.getState().enqueueMonitorJob({

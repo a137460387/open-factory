@@ -378,7 +378,7 @@ export function Timeline({
         setTrackSelectionAnchorId(orderedTrackIds[0]);
         return;
       }
-      if (!event.ctrlKey && !event.metaKey && !event.altKey && event.key.toLowerCase() === 'e' && !isEditableKeyboardTarget(event.target)) {
+      if (!event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'e' && !isEditableKeyboardTarget(event.target)) {
         event.preventDefault();
         setEnvelopeEditMode((active) => !active);
         setVolumeEnvelopeMenu(undefined);

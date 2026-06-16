@@ -1,4 +1,4 @@
-import { Archive, Camera, Captions, ChevronDown, Download, FileDown, FilePlus2, FolderOpen, GitCompareArrows, Grid2X2, History, ImageDown, LayoutGrid, Mic2, Monitor, PanelsTopLeft, Pause, PictureInPicture2, Play, Redo2, RotateCcw, Save, Scissors, Settings, Square, Trash2, Undo2, WandSparkles, XCircle } from 'lucide-react';
+import { Activity, Archive, Camera, Captions, ChevronDown, Download, FileDown, FilePlus2, FolderOpen, GitCompareArrows, Grid2X2, History, ImageDown, LayoutGrid, Mic2, Monitor, PanelsTopLeft, Pause, PictureInPicture2, Play, Redo2, RotateCcw, Save, Scissors, Settings, Square, Trash2, Undo2, WandSparkles, XCircle } from 'lucide-react';
 import {
   BUILT_IN_SPLIT_LAYOUTS,
   SPLIT_LAYOUT_PRESET_IDS,
@@ -45,6 +45,7 @@ interface ToolbarProps {
   onOpenVideoStitchWizard(): void;
   onOpenSyncCompare(): void;
   onOpenSceneReorder(): void;
+  onOpenContentAnalysis(): void;
   onDetectBeats(): void;
   onSnapToBeats(): void;
   onSplitToBeats(): void;
@@ -541,6 +542,18 @@ export function Toolbar(props: ToolbarProps) {
             >
               <span>{t.sceneReorder}</span>
               <WandSparkles size={14} />
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-tools-content-analysis-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onOpenContentAnalysis();
+              }}
+            >
+              <span>{t.contentAnalysis}</span>
+              <Activity size={14} />
             </button>
             <label className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-xs text-slate-600" data-testid="toolbar-tools-beat-sensitivity-row">
               <span>{t.beatSensitivity}</span>

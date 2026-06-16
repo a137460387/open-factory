@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CHROMA_KEY, DEFAULT_COLOR_CORRECTION, type ChromaKey, type ClipMask, type Effect } from '@open-factory/editor-core';
-import { buildAcesToneMappingShaderInjection, resolveWebGlSourceProcessing } from './webgl-compositor';
+import { buildAcesToneMappingShaderInjection, buildBlendModeShaderInjection, resolveWebGlSourceProcessing } from './webgl-compositor';
 
 describe('WebGL preview compositor bypass processing', () => {
   const effects: Effect[] = [{ id: 'effect-blur', type: 'blur', enabled: true, params: { radius: 6 } }];
@@ -66,5 +66,15 @@ describe('WebGL preview compositor bypass processing', () => {
     expect(buildAcesToneMappingShaderInjection('aces')).toContain('hillAcesToneMap');
     expect(buildAcesToneMappingShaderInjection('aces')).toContain('0.0245786');
     expect(buildAcesToneMappingShaderInjection('sdr-srgb')).toBe('');
+  });
+
+  it('injects blend mode shader functions for WebGL blend passes', () => {
+    const source = buildBlendModeShaderInjection();
+
+    expect(source).toContain('applyBlendMode');
+    expect(source).toContain('blendOverlayChannel');
+    expect(source).toContain('blendSoftLightChannel');
+    expect(source).toContain('abs(base - top)');
+    expect(source).toContain('base * top');
   });
 });

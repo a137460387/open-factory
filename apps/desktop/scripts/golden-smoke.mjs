@@ -123,6 +123,15 @@ const fixtures = [
     validate: validateRotationTransformFixture
   },
   {
+    name: 'blend-mode',
+    description: 'two full-frame video layers composited through FFmpeg blend=all_mode=multiply',
+    outputWidth: 1280,
+    outputHeight: 720,
+    expectedDuration: 1.5,
+    create: createBlendModeFixture,
+    validate: validateBlendModeFixture
+  },
+  {
     name: 'audio-volume-fade',
     description: 'video with embedded audio using fade-in and 0.5x volume',
     outputWidth: 1280,
@@ -1323,6 +1332,106 @@ async function validateRotationTransformFixture(context) {
         passed: pixelNear(context.centerPixel, COLORS.yellow.rgb, 18),
         actual: context.centerPixel,
         expected: `${COLORS.yellow.rgb.join(',')} +/- 18`
+      }
+    ]
+  };
+}
+
+async function createBlendModeFixture(context) {
+  const basePath = join(context.fixtureDir, 'blend-base-blue.mp4');
+  const topPath = join(context.fixtureDir, 'blend-top-yellow.mp4');
+  await createColorVideoFixture(basePath, {
+    color: COLORS.blue.ffmpeg,
+    width: context.outputWidth,
+    height: context.outputHeight,
+    duration: context.fixture.expectedDuration,
+    audio: false
+  });
+  await createColorVideoFixture(topPath, {
+    color: COLORS.yellow.ffmpeg,
+    width: context.outputWidth,
+    height: context.outputHeight,
+    duration: context.fixture.expectedDuration,
+    audio: false
+  });
+  return buildProject({
+    id: 'golden-blend-mode',
+    name: 'Golden Blend Mode',
+    width: context.outputWidth,
+    height: context.outputHeight,
+    media: [
+      videoAsset({
+        id: 'asset-blend-base',
+        name: 'blend-base-blue.mp4',
+        path: basePath,
+        duration: context.fixture.expectedDuration,
+        width: context.outputWidth,
+        height: context.outputHeight,
+        hasAudio: false,
+        stat: statSync(basePath)
+      }),
+      videoAsset({
+        id: 'asset-blend-top',
+        name: 'blend-top-yellow.mp4',
+        path: topPath,
+        duration: context.fixture.expectedDuration,
+        width: context.outputWidth,
+        height: context.outputHeight,
+        hasAudio: false,
+        stat: statSync(topPath)
+      })
+    ],
+    tracks: [
+      {
+        id: 'track-blend-base',
+        type: 'video',
+        name: 'Blend Base',
+        clips: [
+          videoClip({
+            id: 'clip-blend-base',
+            name: 'Blend base',
+            mediaId: 'asset-blend-base',
+            trackId: 'track-blend-base',
+            duration: context.fixture.expectedDuration
+          })
+        ]
+      },
+      {
+        id: 'track-blend-top',
+        type: 'video',
+        name: 'Blend Top',
+        clips: [
+          videoClip({
+            id: 'clip-blend-top',
+            name: 'Blend top',
+            mediaId: 'asset-blend-top',
+            trackId: 'track-blend-top',
+            duration: context.fixture.expectedDuration,
+            blendMode: 'multiply'
+          })
+        ]
+      },
+      emptyAudioTrack(),
+      emptyTextTrack()
+    ]
+  });
+}
+
+async function validateBlendModeFixture(context) {
+  const expected = COLORS.blue.rgb.map((channel, index) => Math.round((channel * COLORS.yellow.rgb[index]) / 255));
+  return {
+    checks: [
+      {
+        name: 'blend-mode-filter',
+        passed: context.plan.filterComplex.includes('blend=all_mode=multiply') && !context.plan.filterComplex.includes('blend=all_mode=normal'),
+        actual: context.plan.filterComplex,
+        expected: 'blend=all_mode=multiply and no normal blend filter'
+      },
+      {
+        name: 'multiply-blended-center-pixel',
+        passed: pixelNear(context.centerPixel, expected, 24),
+        actual: context.centerPixel,
+        expected: `${expected.join(',')} +/- 24`
       }
     ]
   };
@@ -3683,6 +3792,7 @@ function videoClip(input) {
     projection: input.projection,
     panorama: input.panorama,
     border: input.border,
+    blendMode: input.blendMode,
     keyframes: input.keyframes,
     effects: input.effects,
     volume: input.volume ?? 1,
@@ -3708,6 +3818,7 @@ function imageClip(input) {
     chromaKey: input.chromaKey,
     transform: input.transform ?? { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
     border: input.border,
+    blendMode: input.blendMode,
     keyframes: input.keyframes,
     kenBurns: input.kenBurns
   };

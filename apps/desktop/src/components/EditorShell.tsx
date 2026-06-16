@@ -73,6 +73,7 @@ import {
   type Project,
   type ReviewAnnotation,
   type Clip,
+  type ClipContentAnalysis,
   type BeatSensitivity,
   type KeyframeProperty,
   type PiPLayoutPosition,
@@ -206,6 +207,8 @@ import { DuplicateMediaDialog, type DuplicateMediaMergeSelection } from '../medi
 import { useMediaJobStore } from '../media/media-job-store';
 import { relinkMissingMediaInDirectory, relinkSingleMedia } from '../media/relink';
 import { useBackgroundMediaJobs } from '../media/useBackgroundMediaJobs';
+import { analyzeClipContentLocally, exportClipContentAnalysisJson } from '../media/contentAnalysis';
+import type { ContentAnalysisTarget } from '../media/ContentAnalysisDialog';
 import { ProjectHealthDialog } from '../project-health/ProjectHealthDialog';
 import { ProjectTemplateDialog } from '../project-templates/ProjectTemplateDialog';
 import { commandManager, projectAccessor, timelineAccessor } from '../store/commandManager';
@@ -232,6 +235,7 @@ const MediaPrecheckPanel = lazy(() => import('../media/MediaPrecheckPanel').then
 const VideoStitchWizardDialog = lazy(() => import('../video-stitching/VideoStitchWizardDialog').then((module) => ({ default: module.VideoStitchWizardDialog })));
 const SyncComparePanel = lazy(() => import('../sync-compare/SyncComparePanel').then((module) => ({ default: module.SyncComparePanel })));
 const SceneReorderDialog = lazy(() => import('../scene-reorder/SceneReorderDialog').then((module) => ({ default: module.SceneReorderDialog })));
+const ContentAnalysisDialog = lazy(() => import('../media/ContentAnalysisDialog').then((module) => ({ default: module.ContentAnalysisDialog })));
 const TimelineSearchPanel = lazy(() => import('../timeline-search/TimelineSearchPanel').then((module) => ({ default: module.TimelineSearchPanel })));
 const SnapshotNameDialog = lazy(() => import('../project-snapshots/SnapshotNameDialog').then((module) => ({ default: module.SnapshotNameDialog })));
 const SnapshotHistoryDialog = lazy(() => import('../project-snapshots/SnapshotHistoryDialog').then((module) => ({ default: module.SnapshotHistoryDialog })));
@@ -275,6 +279,8 @@ export function EditorShell() {
   const [videoStitchWizardOpen, setVideoStitchWizardOpen] = useState(false);
   const [syncCompareOpen, setSyncCompareOpen] = useState(false);
   const [sceneReorderOpen, setSceneReorderOpen] = useState(false);
+  const [contentAnalysisOpen, setContentAnalysisOpen] = useState(false);
+  const [contentAnalysisRunningClipId, setContentAnalysisRunningClipId] = useState<string>();
   const [timelineSearchOpen, setTimelineSearchOpen] = useState(false);
   const [snapshotNameOpen, setSnapshotNameOpen] = useState(false);
   const [snapshotHistoryOpen, setSnapshotHistoryOpen] = useState(false);
@@ -391,6 +397,8 @@ export function EditorShell() {
   const syncCompareClipRefs = useMemo(() => findSyncCompareClipRefs(project.timeline, selectedClipIds), [project.timeline, selectedClipIds]);
   const canOpenSyncCompare = syncCompareClipRefs.length === 2;
   const canOpenSceneReorder = useMemo(() => selectedClips.filter(isSceneReorderClip).length >= 2, [selectedClips]);
+  const contentAnalysisTargets = useMemo(() => collectContentAnalysisTargets(project), [project]);
+  const mediaContentAnalysis = useMemo(() => summarizeContentAnalysisByMedia(contentAnalysisTargets), [contentAnalysisTargets]);
   const canSeparateSelectedAudio = canSeparateAudioForClip(selectedClip, selectedClipMedia, demucsAvailability.ready) && !audioSeparationClipId;
   const canDetectBeats = Boolean(
     selectedClip &&
@@ -1153,6 +1161,71 @@ export function EditorShell() {
     setPlayheadTime(Math.min(refs[0].clip.start, refs[1].clip.start));
     setSyncCompareOpen(true);
   }, [setPlayheadTime]);
+
+  const runSingleContentAnalysis = useCallback(async (target: ContentAnalysisTarget): Promise<boolean> => {
+    setContentAnalysisRunningClipId(target.clip.id);
+    try {
+      const analysis = await analyzeClipContentLocally(target.clip, target.asset);
+      commandManager.execute(new UpdateClipCommand(timelineAccessor, target.clip.id, { contentAnalysis: analysis }));
+      return true;
+    } catch (error) {
+      showToast({ kind: 'error', title: zhCN.contentAnalysis.failedTitle, message: error instanceof Error ? error.message : zhCN.contentAnalysis.failedMessage });
+      return false;
+    } finally {
+      setContentAnalysisRunningClipId(undefined);
+    }
+  }, []);
+
+  const analyzeContentClip = useCallback(
+    async (clipId: string) => {
+      const target = findContentAnalysisTarget(useEditorStore.getState().project, clipId);
+      if (!target) {
+        showToast({ kind: 'warning', title: zhCN.contentAnalysis.failedTitle, message: zhCN.contentAnalysis.noTargets });
+        return;
+      }
+      const completed = await runSingleContentAnalysis(target);
+      if (completed) {
+        showToast({ kind: 'success', title: zhCN.contentAnalysis.completedTitle, message: zhCN.contentAnalysis.completedMessage(1) });
+      }
+    },
+    [runSingleContentAnalysis]
+  );
+
+  const analyzePreferredContentTargets = useCallback(async () => {
+    const state = useEditorStore.getState();
+    const targets = collectContentAnalysisTargets(state.project);
+    const selected = targets.filter((target) => state.selectedClipIds.includes(target.clip.id));
+    const runTargets = selected.length > 0 ? selected : targets;
+    if (runTargets.length === 0) {
+      showToast({ kind: 'warning', title: zhCN.contentAnalysis.failedTitle, message: zhCN.contentAnalysis.noTargets });
+      return;
+    }
+    let completed = 0;
+    for (const target of runTargets) {
+      if (await runSingleContentAnalysis(target)) {
+        completed += 1;
+      }
+    }
+    if (completed > 0) {
+      showToast({ kind: 'success', title: zhCN.contentAnalysis.completedTitle, message: zhCN.contentAnalysis.completedMessage(completed) });
+    }
+  }, [runSingleContentAnalysis]);
+
+  const exportContentAnalysis = useCallback(async (clipId: string) => {
+    const target = findContentAnalysisTarget(useEditorStore.getState().project, clipId);
+    if (!target?.clip.contentAnalysis) {
+      showToast({ kind: 'warning', title: zhCN.contentAnalysis.failedTitle, message: zhCN.contentAnalysis.notAnalyzed });
+      return;
+    }
+    try {
+      const outputPath = await exportClipContentAnalysisJson(target.clip);
+      if (outputPath) {
+        showToast({ kind: 'success', title: zhCN.contentAnalysis.exportedTitle, message: outputPath });
+      }
+    } catch (error) {
+      showToast({ kind: 'error', title: zhCN.contentAnalysis.failedTitle, message: error instanceof Error ? error.message : zhCN.contentAnalysis.failedMessage });
+    }
+  }, []);
 
   const addAssetToTimeline = useCallback(
     (assetId: string) => {
@@ -2273,6 +2346,7 @@ export function EditorShell() {
           onOpenVideoStitchWizard={() => setVideoStitchWizardOpen(true)}
           onOpenSyncCompare={openSyncCompare}
           onOpenSceneReorder={() => setSceneReorderOpen(true)}
+          onOpenContentAnalysis={() => setContentAnalysisOpen(true)}
           onDetectBeats={() => void detectSelectedBeats()}
           onSnapToBeats={snapSelectedToBeats}
           onSplitToBeats={splitSelectedToBeats}
@@ -2395,6 +2469,7 @@ export function EditorShell() {
                   media={project.media}
                   mediaFolders={project.mediaFolders}
                   mediaMetadata={project.mediaMetadata}
+                  mediaContentAnalysis={mediaContentAnalysis}
                   projectFrameRate={project.settings.fps}
                   onImport={() => void importMedia()}
                   onImportPaths={(paths) => void importDropped(paths)}
@@ -2584,6 +2659,17 @@ export function EditorShell() {
             <SyncComparePanel clips={[syncCompareClipRefs[0], syncCompareClipRefs[1]]} project={project} onClose={() => setSyncCompareOpen(false)} />
           ) : null}
           {sceneReorderOpen ? <SceneReorderDialog project={project} selectedClipIds={selectedClipIds} onClose={() => setSceneReorderOpen(false)} /> : null}
+          {contentAnalysisOpen ? (
+            <ContentAnalysisDialog
+              targets={contentAnalysisTargets}
+              selectedClipIds={selectedClipIds}
+              analyzingClipId={contentAnalysisRunningClipId}
+              onAnalyze={(clipId) => void analyzeContentClip(clipId)}
+              onAnalyzePreferred={() => void analyzePreferredContentTargets()}
+              onExport={(clipId) => void exportContentAnalysis(clipId)}
+              onClose={() => setContentAnalysisOpen(false)}
+            />
+          ) : null}
           {timelineSearchOpen ? <TimelineSearchPanel project={project} onClose={() => setTimelineSearchOpen(false)} /> : null}
           {shortcutCheatsheetOpen ? <ShortcutCheatsheetPanel bindings={shortcutBindings} onClose={() => setShortcutCheatsheetOpen(false)} /> : null}
           {settingsOpen ? (
@@ -2848,6 +2934,39 @@ function isPiPVisualClip(clip: Clip): boolean {
 
 function isSceneReorderClip(clip: Clip): boolean {
   return clip.type === 'video' || clip.type === 'image';
+}
+
+function isContentAnalysisClip(clip: Clip): clip is Extract<Clip, { type: 'video' | 'audio' | 'image' }> {
+  return clip.type === 'video' || clip.type === 'audio' || clip.type === 'image';
+}
+
+function collectContentAnalysisTargets(project: Project): ContentAnalysisTarget[] {
+  const mediaById = new Map(project.media.map((asset) => [asset.id, asset]));
+  const targets: ContentAnalysisTarget[] = [];
+  for (const clip of project.timeline.tracks.flatMap((track) => track.clips)) {
+    if (!isContentAnalysisClip(clip)) {
+      continue;
+    }
+    const asset = mediaById.get(clip.mediaId);
+    if (asset && !asset.missing) {
+      targets.push({ clip, asset });
+    }
+  }
+  return targets;
+}
+
+function findContentAnalysisTarget(project: Project, clipId: string): ContentAnalysisTarget | undefined {
+  return collectContentAnalysisTargets(project).find((target) => target.clip.id === clipId);
+}
+
+function summarizeContentAnalysisByMedia(targets: ContentAnalysisTarget[]): Record<string, ClipContentAnalysis> {
+  const output: Record<string, ClipContentAnalysis> = {};
+  for (const target of targets) {
+    if (target.clip.contentAnalysis) {
+      output[target.asset.id] = target.clip.contentAnalysis;
+    }
+  }
+  return output;
 }
 
 function getClipSourceDimensions(project: Project, clip: Clip): { width: number; height: number } {

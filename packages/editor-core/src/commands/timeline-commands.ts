@@ -103,6 +103,8 @@ import type { SubtitleDataImportMode } from '../subtitles/data-import';
 import { calculateSubtitleShiftUpdates, type SubtitleTimingUpdate } from '../subtitles/retiming';
 import { normalizeSubtitleStyleTemplateStyle } from '../subtitles/style-templates';
 import { normalizeCreditsRollSpeed, normalizeCreditsRows, normalizeCreditsStyle, type CreditsRow, type CreditsStyle } from '../credits-roll';
+import { normalizeClipBlendMode } from '../blend-modes';
+import { normalizeClipContentAnalysis } from '../content-analysis';
 import {
   addMediaFolderToProject,
   deleteMediaFolder,
@@ -3547,6 +3549,8 @@ export class UpdateClipCommand implements Command {
       motionTrack: this.patch.motionTrack === undefined ? normalizeMotionTrack(this.before.motionTrack, this.before.duration) : normalizeMotionTrack(this.patch.motionTrack, this.before.duration),
       border: this.patch.border === undefined ? normalizeClipBorder(this.before.border) : normalizeClipBorder({ ...(this.before.border ?? {}), ...this.patch.border }),
       sequenceFrameRate: normalizeSequenceFrameRate(this.patch.sequenceFrameRate ?? this.before.sequenceFrameRate),
+      blendMode: normalizeClipBlendMode(this.patch.blendMode ?? this.before.blendMode),
+      contentAnalysis: this.patch.contentAnalysis === undefined ? normalizeClipContentAnalysis(this.before.contentAnalysis) : normalizeClipContentAnalysis(this.patch.contentAnalysis),
       transform: normalizeTransform(
         this.patch.transform?.scale !== undefined && this.patch.transform.scaleX === undefined && this.patch.transform.scaleY === undefined
           ? { ...this.before.transform, ...this.patch.transform, scaleX: this.patch.transform.scale, scaleY: this.patch.transform.scale }

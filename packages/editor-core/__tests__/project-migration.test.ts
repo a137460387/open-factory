@@ -42,6 +42,51 @@ describe('project schema migration', () => {
     expect(migrateProjectFile(file).project.settings.colorPipeline).toBe('sdr-srgb');
   });
 
+  it('serializes and migrates local clip content analysis while old clips remain unset', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-content',
+        contentAnalysis: {
+          version: 1,
+          analyzedAt: '2026-06-16T00:00:00.000Z',
+          sceneTypes: ['dialogue'],
+          primarySceneType: 'dialogue',
+          segments: [{ start: 0, end: 2, sceneTypes: ['dialogue'], brightness: 0.48, motion: 0.12, loudness: 0.4 }],
+          emotionCurve: [{ time: 0, value: 0.3, brightness: 0.48 }],
+          dialogueTurns: [{ start: 0.1, end: 1.6, loudness: 0.4 }]
+        }
+      })
+    ];
+    project.sequences = [{ ...project.sequences[0], timeline: project.timeline }];
+
+    const file = serializeProject(project);
+    expect(file.project.timeline.tracks[0].clips[0].contentAnalysis?.primarySceneType).toBe('dialogue');
+    expect(migrateProjectFile(file).project.timeline.tracks[0].clips[0].contentAnalysis?.sceneTypes).toEqual(['dialogue']);
+
+    delete file.project.timeline.tracks[0].clips[0].contentAnalysis;
+    expect(migrateProjectFile(file).project.timeline.tracks[0].clips[0].contentAnalysis).toBeUndefined();
+
+    file.project.timeline.tracks[0].clips[0].contentAnalysis = { sceneTypes: ['invalid'] } as never;
+    expect(migrateProjectFile(file).project.timeline.tracks[0].clips[0].contentAnalysis?.sceneTypes).toEqual(['indoor']);
+  });
+
+  it('serializes and migrates clip blend mode with normal fallback for old projects', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-blend', blendMode: 'overlay' })];
+    project.sequences = [{ ...project.sequences[0], timeline: project.timeline }];
+
+    const file = serializeProject(project);
+    expect(file.project.timeline.tracks[0].clips[0].blendMode).toBe('overlay');
+    expect(migrateProjectFile(file).project.timeline.tracks[0].clips[0].blendMode).toBe('overlay');
+
+    delete file.project.timeline.tracks[0].clips[0].blendMode;
+    expect(migrateProjectFile(file).project.timeline.tracks[0].clips[0].blendMode).toBe('normal');
+
+    file.project.timeline.tracks[0].clips[0].blendMode = 'invalid' as never;
+    expect(migrateProjectFile(file).project.timeline.tracks[0].clips[0].blendMode).toBe('normal');
+  });
+
   it('serializes and migrates export ranges while old project files default to none', () => {
     const project = makeProject();
     project.exportRanges = [
