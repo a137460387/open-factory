@@ -394,6 +394,7 @@ const zh = {
       macros: '宏',
       automation: '自动化',
       translation: '字幕翻译',
+      localModels: '本地模型',
       proxy: '代理媒体',
       taskMonitor: '任务监控',
       exportPresets: '导出预设',
@@ -456,6 +457,44 @@ const zh = {
       options: {
         zh: '中文',
         en: 'English'
+      }
+    },
+    localModels: {
+      title: '本地模型',
+      description: '统一管理本机 AI 模型路径。下载会打开官方页面，Open Factory 不在应用内分发模型文件。',
+      version: '版本',
+      fileSize: '文件大小',
+      storagePath: '存储路径',
+      lastUsedAt: '最后使用',
+      download: '下载',
+      chooseFile: '选择文件',
+      chooseFailed: '模型文件选择失败',
+      chooseFailedMessage: '无法选择模型文件。',
+      invalidFileTitle: '模型文件无效',
+      invalidFileSize: (min: string, max: string) => `文件大小需要在 ${min} 到 ${max} 之间。`,
+      invalidStatus: '文件大小超出合理范围，请重新选择。',
+      notConfigured: '未配置',
+      savedTitle: '模型路径已保存',
+      saveFailed: '模型设置保存失败',
+      saveFailedMessage: '无法写入模型设置。',
+      status: {
+        installed: '已安装',
+        missing: '未安装',
+        invalid: '文件异常'
+      },
+      models: {
+        whisper: {
+          name: 'Whisper',
+          description: '语音识别模型，用于本地字幕生成。'
+        },
+        demucs: {
+          name: 'demucs',
+          description: '音频分离模型或可执行文件，用于人声/伴奏分离。'
+        },
+        yunet: {
+          name: 'YuNet',
+          description: 'OpenCV YuNet 人脸检测模型，用于内容识别打码。'
+        }
       }
     },
     exportRules: {
@@ -2492,6 +2531,18 @@ const zh = {
       suggested: (count: number) => `建议 ${count}`,
       segmentLabel: (index: number) => `分段 ${index}`
     },
+    progressive: {
+      title: '渐进式导出',
+      enabled: '边导出边生成 partial 预览',
+      description: '仅支持 H.264/H.265 的 MP4 视频；失败时会自动降级为普通导出。',
+      unsupportedWarning: '当前格式或编码不支持渐进式导出，本次任务将按普通导出执行。',
+      renderFarmDisabled: '渐进式导出会顺序写入 partial 文件，因此暂不与多实例渲染同时启用。',
+      partialPath: 'Partial 文件',
+      completed: (duration: string) => `已完成 ${duration}`,
+      preview: '预览已完成部分',
+      pause: '暂停',
+      pausedMessage: '渐进式导出已暂停，可点击重试从已完成位置恢复。'
+    },
     schedule: {
       title: '计划导出',
       enabled: '到指定时间后自动开始',
@@ -3659,6 +3710,7 @@ const enOverrides = {
       macros: 'Macros',
       automation: 'Automation',
       translation: 'Subtitle Translation',
+      localModels: 'Local Models',
       proxy: 'Proxy Media',
       taskMonitor: 'Task Monitor',
       exportPresets: 'Export Presets',
@@ -3721,6 +3773,44 @@ const enOverrides = {
       options: {
         zh: '中文',
         en: 'English'
+      }
+    },
+    localModels: {
+      title: 'Local Models',
+      description: 'Manage local AI model paths in one place. Download opens the official page; Open Factory does not distribute model files in app.',
+      version: 'Version',
+      fileSize: 'File Size',
+      storagePath: 'Storage Path',
+      lastUsedAt: 'Last Used',
+      download: 'Download',
+      chooseFile: 'Choose File',
+      chooseFailed: 'Model file selection failed',
+      chooseFailedMessage: 'Unable to choose the model file.',
+      invalidFileTitle: 'Invalid model file',
+      invalidFileSize: (min: string, max: string) => `File size must be between ${min} and ${max}.`,
+      invalidStatus: 'The file size is outside the expected range. Choose another file.',
+      notConfigured: 'Not configured',
+      savedTitle: 'Model path saved',
+      saveFailed: 'Model settings save failed',
+      saveFailedMessage: 'Unable to write model settings.',
+      status: {
+        installed: 'Installed',
+        missing: 'Not Installed',
+        invalid: 'Invalid File'
+      },
+      models: {
+        whisper: {
+          name: 'Whisper',
+          description: 'Speech recognition model for local subtitle generation.'
+        },
+        demucs: {
+          name: 'demucs',
+          description: 'Audio separation model or executable for vocal/accompaniment separation.'
+        },
+        yunet: {
+          name: 'YuNet',
+          description: 'OpenCV YuNet face detection model for privacy blur detection.'
+        }
       }
     },
     exportRules: {
@@ -5492,6 +5582,18 @@ const enOverrides = {
       instances: 'Instances',
       suggested: (count: number) => `Suggested ${count}`,
       segmentLabel: (index: number) => `Segment ${index}`
+    },
+    progressive: {
+      title: 'Progressive Export',
+      enabled: 'Write a playable partial preview while exporting',
+      description: 'Supported for H.264/H.265 MP4 video only; failures automatically fall back to regular export.',
+      unsupportedWarning: 'The current format or codec does not support progressive export, so this task will use regular export.',
+      renderFarmDisabled: 'Progressive export writes one partial file sequentially, so it is not combined with render farm mode.',
+      partialPath: 'Partial file',
+      completed: (duration: string) => `Completed ${duration}`,
+      preview: 'Preview completed part',
+      pause: 'Pause',
+      pausedMessage: 'Progressive export was paused. Retry to resume from the completed position.'
     },
     schedule: {
       title: 'Schedule Export',

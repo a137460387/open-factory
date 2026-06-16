@@ -13,6 +13,7 @@ import {
   getSyncedProjectSequences,
   hasExportMasterProcessing,
   getTimelinePlaybackDuration,
+  isProgressiveExportSupported,
   normalizeExportMasterProcessing,
   normalizeExportColorManagement,
   normalizeExportPostScript,
@@ -103,7 +104,7 @@ import {
 } from '../settings/appSettings';
 import { getWhisperAvailability } from '../lib/whisper';
 import { useWhisperSettingsStore } from '../store/whisperSettingsStore';
-import { cancelQueuedExportTask, enqueueExport, retryQueuedExportTask, setExportQueueMaxConcurrent, setExportQueuePaused } from './export-queue-runner';
+import { cancelQueuedExportTask, enqueueExport, pauseQueuedExportTask, retryQueuedExportTask, setExportQueueMaxConcurrent, setExportQueuePaused } from './export-queue-runner';
 import { EXPORT_COMPLETION_ACTIONS, localDatetimeInputValue, normalizeExportCompletionAction, normalizeScheduledExportStart, type ExportCompletionAction } from './export-background';
 import { loadExportHistoryIntoStore } from './export-history';
 import { estimateExportFileSizeBytes, formatEstimatedFileSize } from './export-size-estimate';
@@ -268,6 +269,7 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
   const suggestedRenderFarmInstances = useMemo(() => suggestRenderFarmInstances(typeof navigator === 'undefined' ? undefined : navigator.hardwareConcurrency), []);
   const [renderFarmEnabled, setRenderFarmEnabled] = useState(false);
   const [renderFarmInstances, setRenderFarmInstances] = useState(suggestedRenderFarmInstances);
+  const [progressiveExportEnabled, setProgressiveExportEnabled] = useState(false);
   const tasks = useExportQueueStore((state) => state.tasks);
   const history = useExportQueueStore((state) => state.history);
   const runnerActive = useExportQueueStore((state) => state.runnerActive);
@@ -322,6 +324,7 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
   );
   const hardwareEncodingEligible = !isAudioOnly && (exportSettings.format === 'mp4' || exportSettings.format === 'mov');
   const hardwareEncodingRequested = hardwareEncodingEligible && exportSettings.hardwareEncoding === true;
+  const progressiveExportSupported = useMemo(() => isProgressiveExportSupported(exportSettings), [exportSettings]);
   const formatOptions = isAudioVisualization ? AUDIO_VISUALIZATION_FORMATS : VIDEO_EXPORT_FORMATS;
   const spatialDenoiseClipCount = useMemo(() => countSpatialDenoiseClips(project), [project]);
   const inOutExportRanges = useMemo(() => resolveInOutExportRanges(project, inPoint, outPoint), [inPoint, outPoint, project]);
@@ -930,6 +933,9 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
     const queuedTasks: ExportTask[] = [];
     pendingCompletionAction.current = completionAction;
     completionActionHandled.current = false;
+    if (progressiveExportEnabled && !progressiveExportSupported) {
+      showToast({ kind: 'warning', title: t.progressive.title, message: t.progressive.unsupportedWarning });
+    }
     for (const job of selectedJobs) {
       const task = await enqueueExport(
         job.project ?? project,
@@ -938,7 +944,8 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
         priority,
         renderFarmEnabled ? { enabled: true, maxInstances: renderFarmInstances } : undefined,
         scheduledStartAt,
-        job.range
+        job.range,
+        progressiveExportEnabled
       );
       queuedTasks.push(task);
       for (const warning of task.plan.warnings) {
@@ -1577,10 +1584,44 @@ function relinkFromPreflight(): void {
             </div>
           </div>
           <div className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3">
+            <label className="pt-1 text-xs font-medium text-slate-600">{t.progressive.title}</label>
+            <div className="space-y-2">
+              <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-700">
+                <input
+                  className="h-4 w-4 accent-brand"
+                  type="checkbox"
+                  checked={progressiveExportEnabled}
+                  data-testid="export-progressive-toggle"
+                  onChange={(event) => {
+                    const checked = event.target.checked;
+                    setProgressiveExportEnabled(checked);
+                    if (checked) {
+                      setRenderFarmEnabled(false);
+                    }
+                  }}
+                />
+                <span>{t.progressive.enabled}</span>
+              </label>
+              <div className="text-xs text-slate-500">{t.progressive.description}</div>
+              {progressiveExportEnabled && !progressiveExportSupported ? (
+                <div className="text-xs text-amber-700" data-testid="export-progressive-unsupported">
+                  {t.progressive.unsupportedWarning}
+                </div>
+              ) : null}
+            </div>
+          </div>
+          <div className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3">
             <label className="pt-1 text-xs font-medium text-slate-600">{t.renderFarm.title}</label>
             <div className="space-y-2">
               <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-700">
-                <input className="h-4 w-4 accent-brand" type="checkbox" checked={renderFarmEnabled} onChange={(event) => setRenderFarmEnabled(event.target.checked)} data-testid="export-render-farm-toggle" />
+                <input
+                  className="h-4 w-4 accent-brand"
+                  type="checkbox"
+                  checked={renderFarmEnabled}
+                  disabled={progressiveExportEnabled}
+                  onChange={(event) => setRenderFarmEnabled(event.target.checked)}
+                  data-testid="export-render-farm-toggle"
+                />
                 <span>{t.renderFarm.enabled}</span>
               </label>
               <div className="flex flex-wrap items-center gap-2 text-xs text-slate-600">
@@ -1591,12 +1632,13 @@ function relinkFromPreflight(): void {
                   min={1}
                   max={4}
                   value={renderFarmInstances}
-                  disabled={!renderFarmEnabled}
+                  disabled={!renderFarmEnabled || progressiveExportEnabled}
                   onChange={(event) => setRenderFarmInstances(Math.min(4, Math.max(1, Math.round(Number(event.target.value) || 1))))}
                   data-testid="export-render-farm-instances"
                 />
                 <span>{t.renderFarm.suggested(suggestedRenderFarmInstances)}</span>
               </div>
+              {progressiveExportEnabled ? <div className="text-xs text-slate-500">{t.progressive.renderFarmDisabled}</div> : null}
             </div>
           </div>
           {capabilities?.drawtextWarning ? <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900">{formatExportWarning(capabilities.drawtextWarning)}</div> : null}
@@ -3993,6 +4035,7 @@ function ExportTaskRow({ taskId }: { taskId: string }) {
   }
   const progress = Math.round(task.progress * 100);
   const canCancel = task.status === 'scheduled' || task.status === 'pending' || task.status === 'running';
+  const progressivePreviewSrc = task.progressive ? convertLocalFileSrc(task.progressive.partialPath) : undefined;
   return (
     <div className="border-b border-line px-3 py-2 last:border-b-0" data-testid={`export-task-${task.id}`}>
       <div className="flex items-center gap-2">
@@ -4009,6 +4052,15 @@ function ExportTaskRow({ taskId }: { taskId: string }) {
         {task.logPath ? (
           <button className="rounded-md border border-line px-2 py-1 text-xs font-medium hover:bg-panel" data-testid="export-task-log-button" onClick={() => void openPath(task.logPath!)}>
             <FileText size={13} className="inline-block" /> {zhCN.exportDialog.viewLog}
+          </button>
+        ) : null}
+        {task.progressive && task.status === 'running' ? (
+          <button
+            className="rounded-md border border-amber-300 bg-amber-50 px-2 py-1 text-xs font-medium text-amber-800 hover:bg-amber-100"
+            data-testid="export-task-progressive-pause-button"
+            onClick={() => void pauseQueuedExportTask(task.id)}
+          >
+            {zhCN.exportDialog.progressive.pause}
           </button>
         ) : null}
         {canCancel ? (
@@ -4035,6 +4087,29 @@ function ExportTaskRow({ taskId }: { taskId: string }) {
         </div>
         <div className="w-9 text-right text-[11px] tabular-nums text-slate-500">{progress}%</div>
       </div>
+      {task.progressive ? (
+        <div className="mt-2 grid gap-2 rounded-md border border-emerald-200 bg-emerald-50 p-2 text-[11px] text-emerald-900" data-testid="export-progressive-state">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="min-w-0">
+              <div className="font-semibold">{zhCN.exportDialog.progressive.partialPath}</div>
+              <div className="truncate font-mono" title={task.progressive.partialPath} data-testid="export-progressive-partial-path">
+                {task.progressive.partialPath}
+              </div>
+            </div>
+            <div className="tabular-nums" data-testid="export-progressive-completed">
+              {zhCN.exportDialog.progressive.completed(formatDuration(task.progressive.completedDuration))}
+            </div>
+          </div>
+          {progressivePreviewSrc ? (
+            <div className="grid gap-2 sm:grid-cols-[160px_auto] sm:items-center">
+              <video className="h-20 w-40 rounded border border-emerald-200 bg-black object-contain" src={progressivePreviewSrc} controls preload="metadata" data-testid="export-progressive-preview" />
+              <button className="justify-self-start rounded-md border border-emerald-300 bg-white px-2 py-1 font-medium hover:bg-emerald-100" type="button" data-testid="export-progressive-open-partial" onClick={() => void openPath(task.progressive!.partialPath)}>
+                {zhCN.exportDialog.progressive.preview}
+              </button>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       {task.segments?.length ? (
         <div className="mt-2 grid gap-1" data-testid="export-task-segments">
           {task.segments.map((segment) => {

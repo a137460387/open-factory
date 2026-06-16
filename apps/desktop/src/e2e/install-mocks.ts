@@ -361,12 +361,18 @@ const mocks: TauriMocks = {
     const cancelKey = exportCancelKey(taskId);
     canceledExportTaskIds.delete(cancelKey);
     emit('export-progress', taskId ? { taskId, progress: 0.2 } : 0.2);
+    const outputPath = plan.fullArgs.at(-1) ?? savePath;
+    if (outputPath.endsWith('.partial.mp4')) {
+      files.set(outputPath, 'mock partial mp4');
+      exists.set(outputPath, true);
+      mtimes.set(outputPath, Date.now());
+      persistFiles();
+    }
     await waitForExportGate(taskId);
     if (canceledExportTaskIds.has(cancelKey)) {
       throw new Error('Export canceled.');
     }
     emit('export-progress', taskId ? { taskId, progress: 1 } : 1);
-    const outputPath = plan.fullArgs.at(-1) ?? savePath;
     if (outputPath.includes('%')) {
       for (const frame of ['0001', '0002', '0003']) {
         const framePath = outputPath.replace(/%0?\d*d/, frame);

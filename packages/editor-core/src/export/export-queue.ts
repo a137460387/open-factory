@@ -1,5 +1,6 @@
 import { createId } from '../model';
 import type { ExportReport, FfmpegExportPlan } from './export-types';
+import type { ProgressiveExportState } from './progressive';
 import { calculateRenderFarmProgress, type RenderFarmSegmentStatus, type RenderFarmTaskConfig } from './render-farm';
 
 export type ExportTaskStatus = 'scheduled' | 'pending' | 'running' | 'interrupted' | 'canceled' | 'error' | 'success';
@@ -35,6 +36,7 @@ export interface ExportTask {
   report?: ExportReport;
   renderFarm?: RenderFarmTaskConfig;
   segments?: RenderFarmSegmentStatus[];
+  progressive?: ProgressiveExportState;
 }
 
 export interface ExportTaskHistoryEntry {
@@ -60,6 +62,7 @@ export function createExportTask(input: {
   plan: FfmpegExportPlan;
   priority?: ExportTaskPriority;
   renderFarm?: RenderFarmTaskConfig;
+  progressive?: ProgressiveExportState;
   scheduledStartAt?: string;
   id?: string;
   now?: string;
@@ -74,6 +77,7 @@ export function createExportTask(input: {
     plan: input.plan,
     priority: normalizeExportTaskPriority(input.priority),
     renderFarm: normalizeRenderFarmTaskConfig(input.renderFarm),
+    progressive: normalizeProgressiveExportState(input.progressive),
     status: scheduledStartAt ? 'scheduled' : 'pending',
     progress: 0,
     createdAt: now,
@@ -133,6 +137,18 @@ export function updateExportTaskProgress(tasks: ExportTask[], taskId: string, pr
   return tasks.map((task) => (task.id === taskId ? { ...task, progress: Math.min(1, Math.max(0, progress)) } : task));
 }
 
+export function updateExportTaskProgressive(tasks: ExportTask[], taskId: string, patch: Partial<ProgressiveExportState>): ExportTask[] {
+  return tasks.map((task) => {
+    if (task.id !== taskId || !task.progressive) {
+      return task;
+    }
+    return {
+      ...task,
+      progressive: normalizeProgressiveExportState({ ...task.progressive, ...patch })
+    };
+  });
+}
+
 export function setExportTaskSegments(tasks: ExportTask[], taskId: string, segments: RenderFarmSegmentStatus[]): ExportTask[] {
   return tasks.map((task) => (task.id === taskId ? { ...task, segments, progress: calculateRenderFarmProgress(segments) } : task));
 }
@@ -159,6 +175,19 @@ export function cancelExportTask(tasks: ExportTask[], taskId: string, now = new 
   return tasks.map((task) =>
     task.id === taskId && (task.status === 'scheduled' || task.status === 'pending' || task.status === 'running' || task.status === 'interrupted')
       ? { ...task, status: 'canceled', finishedAt: now }
+      : task
+  );
+}
+
+export function interruptExportTask(tasks: ExportTask[], taskId: string, error?: string, now = new Date().toISOString()): ExportTask[] {
+  return tasks.map((task) =>
+    task.id === taskId && task.status === 'running'
+      ? {
+          ...task,
+          status: 'interrupted',
+          error,
+          finishedAt: now
+        }
       : task
   );
 }
@@ -243,6 +272,19 @@ export function normalizeRenderFarmTaskConfig(config: RenderFarmTaskConfig | und
   return {
     enabled: true,
     maxInstances: Math.min(4, Math.max(1, Math.round(Number.isFinite(config.maxInstances) ? config.maxInstances : 1)))
+  };
+}
+
+export function normalizeProgressiveExportState(state: ProgressiveExportState | undefined): ProgressiveExportState | undefined {
+  if (!state?.enabled || !state.supported || !state.partialPath.trim()) {
+    return undefined;
+  }
+  return {
+    enabled: true,
+    supported: true,
+    partialPath: state.partialPath,
+    completedDuration: Math.max(0, Number.isFinite(state.completedDuration) ? Math.round(state.completedDuration * 1000) / 1000 : 0),
+    ...(state.fallbackReason ? { fallbackReason: state.fallbackReason } : {})
   };
 }
 

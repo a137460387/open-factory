@@ -1,6 +1,9 @@
 import {
   buildExportProjectFromProject,
+  buildProgressiveExportPlan,
   buildFfmpegExportPlan,
+  createProgressiveExportState,
+  estimateProgressiveCompletedDuration,
   runRenderFarmWithFallback,
   timelineHasExportableVideo,
   type ExportSettings,
@@ -12,7 +15,7 @@ import {
   type RenderFarmTaskConfig
 } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
-import { cancelExport as bridgeCancelExport, getAvailableMemoryBytes, getFfmpegCapabilities, getTempSegmentsDir, listenBridge, removeFile, runExport, writeFile } from '../lib/tauri-bridge';
+import { cancelExport as bridgeCancelExport, copyFile, getAvailableMemoryBytes, getFfmpegCapabilities, getTempSegmentsDir, listenBridge, removeFile, runExport, writeFile } from '../lib/tauri-bridge';
 import { runExportBeforePlugins } from '../plugins/plugin-manager';
 import { getExportLogPath, persistFinishedTaskToHistory } from './export-history';
 import { normalizeExportProgressPayload, type ExportProgressEvent } from './export-progress';
@@ -34,7 +37,8 @@ export async function enqueueExport(
   priority?: ExportTaskPriority,
   renderFarm?: RenderFarmTaskConfig,
   scheduledStartAt?: string,
-  exportRange?: ExportRenderRange | null
+  exportRange?: ExportRenderRange | null,
+  progressive = false
 ): Promise<ExportTask> {
   if (!timelineHasExportableVideo(project.timeline)) {
     throw new Error(zhCN.errors.exportNeedsVideo);
@@ -46,6 +50,7 @@ export async function enqueueExport(
   await runExportBeforePlugins(project, outputPath, settings);
   const exportProject = buildExportProjectFromProject(project, { outputPath, settings });
   const plan = buildFfmpegExportPlan(exportProject, capabilities, 0, [], { exportRange });
+  const progressiveState = progressive ? createProgressiveExportState({ outputPath, settings: exportProject.settings }) : undefined;
   const task = useExportQueueStore.getState().addTask({
     name: fileNameFromPath(outputPath) || `${project.name} 导出`,
     projectName: project.name,
@@ -53,6 +58,7 @@ export async function enqueueExport(
     plan,
     priority,
     renderFarm,
+    progressive: progressiveState?.supported && !renderFarm?.enabled ? progressiveState : undefined,
     scheduledStartAt
   });
   signalRunner();
@@ -112,6 +118,16 @@ export async function cancelQueuedExportTask(taskId: string): Promise<void> {
   signalRunner();
 }
 
+export async function pauseQueuedExportTask(taskId: string): Promise<void> {
+  const task = useExportQueueStore.getState().tasks.find((item) => item.id === taskId);
+  if (!task?.progressive || task.status !== 'running') {
+    return;
+  }
+  useExportQueueStore.getState().interruptTask(taskId, zhCN.exportDialog.progressive.pausedMessage);
+  await bridgeCancelExport(taskId);
+  signalRunner();
+}
+
 async function runQueue(): Promise<void> {
   const unlisten = await listenBridge<ExportProgressEvent>('export-progress', (progress) => {
     const normalized = normalizeExportProgressPayload(progress);
@@ -132,6 +148,11 @@ async function runQueue(): Promise<void> {
     const latest = useExportQueueStore.getState().tasks.find((task) => task.id === taskId);
     if (latest?.status === 'running') {
       useExportQueueStore.getState().updateTaskProgress(taskId, normalized);
+      if (latest.progressive) {
+        useExportQueueStore
+          .getState()
+          .updateTaskProgressive(taskId, { completedDuration: estimateProgressiveCompletedDuration(latest.plan.duration, normalized) });
+      }
     }
   });
 
@@ -204,7 +225,7 @@ async function runSingleTask(task: ExportTask): Promise<void> {
           onSegmentUpdate: (segment) => useExportQueueStore.getState().updateTaskSegment(task.id, segment.id, segment),
           onProgress: (progress) => useExportQueueStore.getState().updateTaskProgress(task.id, progress)
         })
-      : await runExport(task.plan, task.id);
+      : await runLocalExportTask(task);
     const latest = useExportQueueStore.getState().tasks.find((item) => item.id === task.id);
     if (latest?.status === 'running') {
       await writeSidecarSubtitleArtifacts(task.outputPath, task.plan.textArtifacts);
@@ -223,6 +244,33 @@ async function runSingleTask(task: ExportTask): Promise<void> {
       const failedTask = useExportQueueStore.getState().tasks.find((item) => item.id === task.id) ?? { ...task, error: message };
       await runExportRulesSafely({ type: 'export-failure', task: failedTask, projectName: failedTask.projectName ?? task.projectName });
     }
+  }
+}
+
+async function runLocalExportTask(task: ExportTask): Promise<Awaited<ReturnType<typeof runExport>>> {
+  if (!task.progressive) {
+    return runExport(task.plan, task.id);
+  }
+  const latest = useExportQueueStore.getState().tasks.find((item) => item.id === task.id) ?? task;
+  const progressive = latest.progressive ?? task.progressive;
+  const progressivePlan = buildProgressiveExportPlan(task.plan, progressive.partialPath, progressive.completedDuration);
+  try {
+    const result = await runExport(progressivePlan, task.id);
+    const afterRun = useExportQueueStore.getState().tasks.find((item) => item.id === task.id);
+    if (afterRun?.status === 'running') {
+      await copyFile(progressive.partialPath, task.outputPath);
+      await removeFile(progressive.partialPath).catch(() => undefined);
+      useExportQueueStore.getState().updateTaskProgressive(task.id, { completedDuration: task.plan.duration });
+      return { ...result, outputPath: task.outputPath };
+    }
+    return result;
+  } catch (error) {
+    const afterError = useExportQueueStore.getState().tasks.find((item) => item.id === task.id);
+    if (afterError?.status !== 'running') {
+      throw error;
+    }
+    await removeFile(progressive.partialPath).catch(() => undefined);
+    return runExport(task.plan, task.id);
   }
 }
 

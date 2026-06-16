@@ -166,6 +166,7 @@ import { acceptTranslationTOS, subtitleClipsToTranslationItems, translateSubtitl
 import { deleteCustomSubtitleStyleTemplate, loadSubtitleStyleTemplates, saveCustomSubtitleStyleTemplate } from '../../lib/subtitleStyleTemplates';
 import { validateCustomShaderSource } from '../../lib/preview/custom-shader';
 import { showToast } from '../../lib/toast';
+import { markLocalAiModelUsed } from '../../settings/appSettings';
 import { useEditorStore, type SelectedKeyframeRef } from '../../store/editorStore';
 import { usePrivacyDetectionSettingsStore } from '../../store/privacyDetectionSettingsStore';
 import { isTranslationConfigured, useTranslationSettingsStore } from '../../store/translationSettingsStore';
@@ -915,6 +916,9 @@ function ClipInspector({
     }
     try {
       setPrivacyBlurBusy(true);
+      await markLocalAiModelUsed('yunet', privacyDetectionModelPath.trim()).catch((error) => {
+        console.warn('Unable to update YuNet model last-used time', error);
+      });
       const result = await detectPrivacyRegions({
         modelPath: privacyDetectionModelPath.trim(),
         mediaPath: asset.path,

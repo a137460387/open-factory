@@ -26,7 +26,7 @@ import { getLanguage, normalizeLanguage, zhCN, type Language } from '../i18n/str
 import { parseAutomationRulesJson, serializeAutomationRulesJson } from '../automation/automation-rules';
 import { pickDemucsExecutablePath } from '../lib/demucs';
 import { loadLutLibrary, toggleLutFavorite, type LutLibraryItem } from '../lib/lutLibrary';
-import { fsExists, getFileStat, getSystemResourceSnapshot, openDirectoryDialog, openFileDialog, readExportPresetSyncWebdavPassword, readWebdavPassword, writeExportPresetSyncWebdavPassword, writeWebdavPassword, type SystemResourceSnapshot } from '../lib/tauri-bridge';
+import { fsExists, getFileStat, getSystemResourceSnapshot, openDirectoryDialog, openFileDialog, openPath, readExportPresetSyncWebdavPassword, readWebdavPassword, writeExportPresetSyncWebdavPassword, writeWebdavPassword, type SystemResourceSnapshot } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
 import { PREVIEW_SKIP_FRAME_OPTIONS, type PreviewPerformanceSettings, type PreviewSkipFrames } from '../lib/preview/preview-performance';
 import {
@@ -70,6 +70,7 @@ import { usePrivacyDetectionSettingsStore } from '../store/privacyDetectionSetti
 import { PROXY_RESOLUTION_PRESETS, PROXY_TRIGGER_THRESHOLDS, useProxySettingsStore, type ProxyResolutionPreset, type ProxyTriggerThreshold } from '../store/proxySettingsStore';
 import { useRecordingSettingsStore } from '../store/recordingSettingsStore';
 import { useTranslationSettingsStore, type TranslationProvider } from '../store/translationSettingsStore';
+import { useWhisperSettingsStore } from '../store/whisperSettingsStore';
 import {
   DEFAULT_BACKUP_SETTINGS,
   DEFAULT_EXPORT_PRESET_SYNC_SETTINGS,
@@ -78,12 +79,14 @@ import {
   readExportBackgroundSettings,
   readExportPresetSyncSettings,
   readExportRules,
+  readLocalAiModelsSettings,
   saveAutomationRules,
   saveBackupSettings,
   saveExportBackgroundSettings,
   saveExportPresetSyncSettings,
   saveExportRules,
   saveLanguageSetting,
+  saveLocalAiModelsSettings,
   type AutomationRule,
   type BackupSettings,
   type ExportBackgroundSettings,
@@ -91,6 +94,15 @@ import {
   type ExportConditionRule,
   type TimelineInteractionSettings
 } from './appSettings';
+import {
+  LOCAL_AI_MODEL_DEFINITIONS,
+  LOCAL_AI_MODEL_IDS,
+  isLocalModelFileSizeValid,
+  resolveLocalModelStatus,
+  type LocalAiModelId,
+  type LocalAiModelResolvedStatus,
+  type LocalAiModelsSettings
+} from './localModels';
 import {
   BUILTIN_THEME_IDS,
   DEFAULT_CUSTOM_THEME_COLORS,
@@ -123,7 +135,7 @@ interface SettingsDialogProps {
   onClose(): void;
 }
 
-type SettingsTab = 'general' | 'appearance' | 'lut-library' | 'shortcuts' | 'macros' | 'automation' | 'translation' | 'proxy' | 'task-monitor' | 'export-presets' | 'backup' | 'plugins';
+type SettingsTab = 'general' | 'appearance' | 'lut-library' | 'shortcuts' | 'macros' | 'automation' | 'translation' | 'local-models' | 'proxy' | 'task-monitor' | 'export-presets' | 'backup' | 'plugins';
 const VFR_HANDLING_OPTIONS: VfrHandlingStrategy[] = ['ignore', 'auto-cfr', 'ask'];
 const EXPORT_RULE_COPY_SUCCESS_ID = 'copy-success';
 const EXPORT_RULE_FAILURE_NOTIFICATION_ID = 'failure-notification';
@@ -173,6 +185,8 @@ export function SettingsDialog({
   const [automationRules, setAutomationRules] = useState<AutomationRule[]>([]);
   const [automationRulesJson, setAutomationRulesJson] = useState('[]');
   const [automationRulesError, setAutomationRulesError] = useState<string>();
+  const [localModelsSettings, setLocalModelsSettings] = useState<LocalAiModelsSettings>({});
+  const [localModelStatuses, setLocalModelStatuses] = useState<Partial<Record<LocalAiModelId, LocalAiModelResolvedStatus>>>({});
   const [webdavPassword, setWebdavPassword] = useState('');
   const [exportPresetSyncPassword, setExportPresetSyncPassword] = useState('');
   const translationProvider = useTranslationSettingsStore((state) => state.provider);
@@ -183,6 +197,7 @@ export function SettingsDialog({
   const setTranslationProvider = useTranslationSettingsStore((state) => state.setProvider);
   const setTranslationApiKey = useTranslationSettingsStore((state) => state.setApiKey);
   const setTranslationTargetLanguage = useTranslationSettingsStore((state) => state.setTargetLanguage);
+  const setWhisperModelPath = useWhisperSettingsStore((state) => state.setModelPath);
   const demucsExecutablePath = useDemucsSettingsStore((state) => state.executablePath);
   const setDemucsExecutablePath = useDemucsSettingsStore((state) => state.setExecutablePath);
   const privacyDetectionModelPath = usePrivacyDetectionSettingsStore((state) => state.modelPath);
@@ -214,6 +229,7 @@ export function SettingsDialog({
     void loadExportBackgroundSettings();
     void loadExportRules();
     void loadAutomationRules();
+    void loadLocalModelsSettings();
     void loadTranslationApiKey();
     hydrateThemeForm(getCurrentThemeSettings());
     showCurrentPlugins();
@@ -574,6 +590,89 @@ export function SettingsDialog({
     }
   }
 
+  async function loadLocalModelsSettings() {
+    try {
+      const settings = await readLocalAiModelsSettings();
+      setLocalModelsSettings(settings);
+      syncLocalModelStores(settings);
+      await refreshLocalModelStatuses(settings);
+    } catch (modelError) {
+      showToast({
+        kind: 'warning',
+        title: t.localModels.saveFailed,
+        message: modelError instanceof Error ? modelError.message : t.localModels.saveFailedMessage
+      });
+    }
+  }
+
+  async function refreshLocalModelStatuses(settings = localModelsSettings) {
+    const entries = await Promise.all(
+      LOCAL_AI_MODEL_IDS.map(async (id) => [
+        id,
+        await resolveLocalModelStatus(id, settings[id], {
+          exists: fsExists,
+          stat: getFileStat
+        }).catch((): LocalAiModelResolvedStatus => ({
+          id,
+          status: 'invalid',
+          path: settings[id]?.path,
+          reason: 'size'
+        }))
+      ] as const)
+    );
+    setLocalModelStatuses(Object.fromEntries(entries) as Partial<Record<LocalAiModelId, LocalAiModelResolvedStatus>>);
+  }
+
+  async function chooseLocalModelFile(id: LocalAiModelId) {
+    const definition = LOCAL_AI_MODEL_DEFINITIONS[id];
+    try {
+      const [path] = await openFileDialog(false, [{ name: t.localModels.models[id].name, extensions: definition.extensions }]);
+      if (!path) {
+        return;
+      }
+      const stat = await getFileStat(path);
+      if (!isLocalModelFileSizeValid(id, stat.size)) {
+        showToast({ kind: 'warning', title: t.localModels.invalidFileTitle, message: t.localModels.invalidFileSize(formatBytes(definition.minBytes), formatBytes(definition.maxBytes)) });
+        return;
+      }
+      const nextSettings: LocalAiModelsSettings = {
+        ...localModelsSettings,
+        [id]: {
+          ...(localModelsSettings[id] ?? {}),
+          path,
+          version: definition.version
+        }
+      };
+      const saved = await saveLocalAiModelsSettings(nextSettings);
+      setLocalModelsSettings(saved);
+      syncLocalModelStores(saved);
+      await refreshLocalModelStatuses(saved);
+      showToast({ kind: 'success', title: t.localModels.savedTitle, message: t.localModels.models[id].name });
+    } catch (modelError) {
+      showToast({
+        kind: 'warning',
+        title: t.localModels.chooseFailed,
+        message: modelError instanceof Error ? modelError.message : t.localModels.chooseFailedMessage
+      });
+    }
+  }
+
+  function syncLocalModelStores(settings: LocalAiModelsSettings) {
+    if (settings.whisper?.path) {
+      setWhisperModelPath(settings.whisper.path);
+    }
+    if (settings.demucs?.path && settings.demucs.path !== demucsExecutablePath) {
+      setDemucsExecutablePath(settings.demucs.path);
+    }
+    if (settings.yunet?.path && settings.yunet.path !== privacyDetectionModelPath) {
+      setPrivacyDetectionModelPath(settings.yunet.path);
+    }
+  }
+
+  function openLocalModelDownload(id: LocalAiModelId) {
+    void openPath(LOCAL_AI_MODEL_DEFINITIONS[id].downloadUrl);
+  }
+
   async function saveAutomationRulesFromJson() {
     const parsed = parseAutomationRulesJson(automationRulesJson);
     if (!parsed.ok) {
@@ -912,6 +1011,14 @@ export function SettingsDialog({
               onClick={() => setTab('translation')}
             >
               {t.tabs.translation}
+            </button>
+            <button
+              className={`mt-1 w-full rounded-md px-3 py-2 text-left text-sm font-semibold ${tab === 'local-models' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}
+              type="button"
+              data-testid="settings-tab-local-models"
+              onClick={() => setTab('local-models')}
+            >
+              {t.tabs.localModels}
             </button>
             <button
               className={`mt-1 w-full rounded-md px-3 py-2 text-left text-sm font-semibold ${tab === 'proxy' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}
@@ -1412,6 +1519,14 @@ export function SettingsDialog({
                 onProviderChange={setTranslationProvider}
                 onApiKeyChange={setTranslationApiKey}
                 onTargetLanguageChange={setTranslationTargetLanguage}
+              />
+            ) : null}
+            {tab === 'local-models' ? (
+              <LocalModelsSettingsPanel
+                settings={localModelsSettings}
+                statuses={localModelStatuses}
+                onChoose={(id) => void chooseLocalModelFile(id)}
+                onDownload={openLocalModelDownload}
               />
             ) : null}
             {tab === 'proxy' ? (
@@ -2535,6 +2650,96 @@ function TranslationSettingsPanel({
       <div className="rounded-md border border-line bg-panel p-3 text-xs text-slate-600">{t.localOnlyNote}</div>
     </div>
   );
+}
+
+function LocalModelsSettingsPanel({
+  settings,
+  statuses,
+  onChoose,
+  onDownload
+}: {
+  settings: LocalAiModelsSettings;
+  statuses: Partial<Record<LocalAiModelId, LocalAiModelResolvedStatus>>;
+  onChoose(id: LocalAiModelId): void;
+  onDownload(id: LocalAiModelId): void;
+}) {
+  const t = zhCN.settings.localModels;
+  return (
+    <div className="space-y-4" data-testid="local-models-panel">
+      <div>
+        <h3 className="text-sm font-semibold text-ink">{t.title}</h3>
+        <p className="text-xs text-slate-500">{t.description}</p>
+      </div>
+      <div className="grid gap-3">
+        {LOCAL_AI_MODEL_IDS.map((id) => {
+          const definition = LOCAL_AI_MODEL_DEFINITIONS[id];
+          const modelText = t.models[id];
+          const config = settings[id];
+          const status = statuses[id] ?? { id, status: 'missing' as const, reason: 'not-configured' as const };
+          const path = config?.path ?? status.path ?? '';
+          return (
+            <div key={id} className="rounded-md border border-line bg-panel p-3" data-testid={`local-model-row-${id}`} data-status={status.status}>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h4 className="text-xs font-semibold text-slate-800">{modelText.name}</h4>
+                    <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${localModelStatusClass(status.status)}`} data-testid={`local-model-status-${id}`}>
+                      {t.status[status.status]}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-500">{modelText.description}</p>
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <button className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-white text-slate-600 hover:bg-white/80" type="button" title={t.download} aria-label={t.download} data-testid={`local-model-download-${id}`} onClick={() => onDownload(id)}>
+                    <Download size={14} />
+                  </button>
+                  <button className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-white text-slate-600 hover:bg-white/80" type="button" title={t.chooseFile} aria-label={t.chooseFile} data-testid={`local-model-choose-${id}`} onClick={() => onChoose(id)}>
+                    <FolderOpen size={14} />
+                  </button>
+                </div>
+              </div>
+              <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
+                <ModelInfo label={t.version} value={config?.version ?? definition.version} />
+                <ModelInfo label={t.fileSize} value={status.size !== undefined ? formatBytes(status.size) : zhCN.common.unavailable} />
+                <ModelInfo label={t.storagePath} value={path || t.notConfigured} mono />
+                <ModelInfo label={t.lastUsedAt} value={formatOptionalIsoDateTime(config?.lastUsedAt)} />
+              </div>
+              {status.status === 'invalid' ? <div className="mt-2 text-xs font-medium text-rose-700">{t.invalidStatus}</div> : null}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ModelInfo({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="min-w-0 rounded-md bg-white/80 p-2">
+      <div className="text-[11px] uppercase tracking-normal text-slate-500">{label}</div>
+      <div className={`mt-0.5 truncate font-medium text-slate-700 ${mono ? 'font-mono' : ''}`} title={value}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function localModelStatusClass(status: LocalAiModelResolvedStatus['status']): string {
+  if (status === 'installed') {
+    return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+  }
+  if (status === 'invalid') {
+    return 'border-rose-200 bg-rose-50 text-rose-700';
+  }
+  return 'border-slate-200 bg-slate-100 text-slate-600';
+}
+
+function formatOptionalIsoDateTime(value: string | undefined): string {
+  if (!value) {
+    return zhCN.common.unavailable;
+  }
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) ? formatDateTime(timestamp) : zhCN.common.unavailable;
 }
 
 function normalizeProxyResolutionPreset(value: string): ProxyResolutionPreset {

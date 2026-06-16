@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { saveLocalAiModelsSettings } from '../settings/appSettings';
 
 const PRIVACY_MODEL_KEY = 'open-factory:privacy-detection-model-path';
 
@@ -11,6 +12,9 @@ export const usePrivacyDetectionSettingsStore = create<PrivacyDetectionSettingsS
   modelPath: readStoredPath(PRIVACY_MODEL_KEY),
   setModelPath: (modelPath) => {
     writeStoredPath(PRIVACY_MODEL_KEY, modelPath);
+    void saveLocalAiModelsSettings({ yunet: { path: modelPath, version: 'YuNet ONNX' } }).catch((error) => {
+      console.warn('Unable to save YuNet model path', error);
+    });
     set({ modelPath });
   }
 }));

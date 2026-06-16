@@ -8,6 +8,7 @@ import {
   type Track
 } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
+import { markLocalAiModelUsed } from '../settings/appSettings';
 import { createClipFromAsset } from './clipFactory';
 import { fsExists, getFileStat, openFileDialog, runDemucs, type DemucsRequest, type DemucsResult, type FileStat } from './tauri-bridge';
 
@@ -67,6 +68,9 @@ export async function separateAudioForClip(
   dependencies: DemucsDependencies = {}
 ): Promise<DemucsSeparationResult> {
   await assertDemucsSettingsReady(settings, dependencies.exists ?? fsExists);
+  await markLocalAiModelUsed('demucs', settings.executablePath).catch((error) => {
+    console.warn('Unable to update Demucs model last-used time', error);
+  });
   const execute = dependencies.run ?? runDemucs;
   const result = await execute({
     executablePath: settings.executablePath.trim(),

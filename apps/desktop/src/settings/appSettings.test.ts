@@ -11,6 +11,7 @@ import {
   readExportUploadSettings,
   readExportRules,
   readLayoutSettings,
+  readLocalAiModelsSettings,
   readPreviewPerformanceSettings,
   readPreviewWindowSettings,
   readThemeSettings,
@@ -26,6 +27,7 @@ import {
   saveExportRules,
   saveLanguageSetting,
   saveLayoutSettings,
+  saveLocalAiModelsSettings,
   savePreviewPerformanceSettings,
   savePreviewWindowSettings,
   saveThemeSettings,
@@ -382,6 +384,25 @@ describe('app settings storage', () => {
         timelineHeatmap: { enabled: true, type: 'volume', opacity: 0.8, colorScheme: 'cool' },
         mediaLibrary
       }
+    });
+  });
+
+  it('persists local AI model paths in settings.json', async () => {
+    await saveLanguageSetting('en');
+    const localModels = await saveLocalAiModelsSettings({
+      whisper: { path: ' C:/Models/base.bin ', version: ' whisper.cpp ' },
+      demucs: { path: 'C:/Tools/demucs.exe', version: 'demucs' },
+      yunet: { path: '', version: '' }
+    });
+
+    expect(localModels).toEqual({
+      whisper: { path: 'C:/Models/base.bin', version: 'whisper.cpp' },
+      demucs: { path: 'C:/Tools/demucs.exe', version: 'demucs' }
+    });
+    expect(await readLocalAiModelsSettings()).toEqual(localModels);
+    expect(await readAppSettings()).toEqual({
+      language: 'en',
+      localModels
     });
   });
 

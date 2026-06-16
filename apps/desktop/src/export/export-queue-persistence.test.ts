@@ -33,7 +33,8 @@ function task(overrides: Partial<ExportTask> = {}): ExportTask {
     startedAt: overrides.startedAt,
     finishedAt: overrides.finishedAt,
     error: overrides.error,
-    report: overrides.report
+    report: overrides.report,
+    progressive: overrides.progressive
   };
 }
 
@@ -62,6 +63,33 @@ describe('export queue persistence', () => {
       ['pending', 'pending', 0, undefined],
       ['running', 'interrupted', 0.35, '导出被中断。']
     ]);
+  });
+
+  it('preserves progressive export resume state during recovery', () => {
+    const serialized = serializeExportQueueState([
+      task({
+        id: 'running-progressive',
+        status: 'running',
+        progress: 0.5,
+        progressive: {
+          enabled: true,
+          supported: true,
+          partialPath: 'C:/Exports/output.partial.mp4',
+          completedDuration: 3
+        }
+      })
+    ]);
+
+    const recovery = parseExportQueueState(serialized, '导出被中断。');
+
+    expect(recovery?.tasks[0]).toMatchObject({
+      id: 'running-progressive',
+      status: 'interrupted',
+      progressive: {
+        partialPath: 'C:/Exports/output.partial.mp4',
+        completedDuration: 3
+      }
+    });
   });
 
   it('triggers recovery dialog only for pending or interrupted tasks', () => {

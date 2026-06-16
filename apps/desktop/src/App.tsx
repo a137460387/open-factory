@@ -5,9 +5,12 @@ import { ToastViewport } from './components/common/Toast';
 import { syncExportPresetsWithWebdav } from './export/export-presets';
 import { getLanguage, subscribeLanguage } from './i18n/strings';
 import { getWebdavText, putWebdavText, readExportPresetSyncWebdavPassword } from './lib/tauri-bridge';
-import { initializeLanguageFromSettings, readExportPresetSyncSettings, saveExportPresetSyncSettings } from './settings/appSettings';
+import { initializeLanguageFromSettings, readExportPresetSyncSettings, readLocalAiModelsSettings, saveExportPresetSyncSettings } from './settings/appSettings';
 import { NativeCancelSmokeRunner } from './smoke/NativeCancelSmokeRunner';
 import { NativePreviewSmokeRunner } from './smoke/NativePreviewSmokeRunner';
+import { useDemucsSettingsStore } from './store/demucsSettingsStore';
+import { usePrivacyDetectionSettingsStore } from './store/privacyDetectionSettingsStore';
+import { useWhisperSettingsStore } from './store/whisperSettingsStore';
 import { initializeThemeFromSettings } from './theme/useTheme';
 
 export function App() {
@@ -20,6 +23,7 @@ export function App() {
     void initializeThemeFromSettings().catch((error) => {
       console.warn('Unable to initialize interface theme', error);
     });
+    void initializeLocalModelStoresFromSettings();
     void runStartupExportPresetSync();
   }, []);
 
@@ -31,6 +35,23 @@ export function App() {
       {previewWindowMode ? null : <NativeCancelSmokeRunner />}
     </>
   );
+}
+
+async function initializeLocalModelStoresFromSettings(): Promise<void> {
+  try {
+    const settings = await readLocalAiModelsSettings();
+    if (settings.whisper?.path) {
+      useWhisperSettingsStore.getState().setModelPath(settings.whisper.path);
+    }
+    if (settings.demucs?.path) {
+      useDemucsSettingsStore.getState().setExecutablePath(settings.demucs.path);
+    }
+    if (settings.yunet?.path) {
+      usePrivacyDetectionSettingsStore.getState().setModelPath(settings.yunet.path);
+    }
+  } catch (error) {
+    console.warn('Unable to initialize local model settings', error);
+  }
 }
 
 async function runStartupExportPresetSync(): Promise<void> {

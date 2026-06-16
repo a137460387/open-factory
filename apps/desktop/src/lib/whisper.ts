@@ -1,5 +1,6 @@
 import { getClipSourceVisibleDuration, getClipSpeed, type Clip, type MediaAsset, type Timeline, type Track } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
+import { markLocalAiModelUsed } from '../settings/appSettings';
 import { buildSubtitleTrackFromSrt } from './subtitles';
 import { fsExists, openFileDialog, runWhisper, type WhisperRequest, type WhisperResult } from './tauri-bridge';
 
@@ -64,6 +65,9 @@ export async function buildWhisperSubtitleTrackForClip(
   dependencies: WhisperDependencies = {}
 ): Promise<Track> {
   await assertWhisperSettingsReady(settings, dependencies.exists ?? fsExists);
+  await markLocalAiModelUsed('whisper', settings.modelPath).catch((error) => {
+    console.warn('Unable to update Whisper model last-used time', error);
+  });
   const executeWhisper = dependencies.run ?? runWhisper;
   const result = await executeWhisper({
     executablePath: settings.executablePath.trim(),

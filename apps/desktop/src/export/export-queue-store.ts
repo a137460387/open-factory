@@ -5,6 +5,7 @@ import {
   createExportTaskHistoryEntry,
   failExportTask,
   finishExportTask,
+  interruptExportTask,
   setExportTaskLogPath,
   setExportTaskSegments,
   sortExportQueueByPriority,
@@ -12,11 +13,13 @@ import {
   activateScheduledExportTasks,
   updateExportTaskSegment,
   updateExportTaskProgress,
+  updateExportTaskProgressive,
   type ExportTask,
   type ExportTaskHistoryEntry,
   type ExportTaskPriority,
   type ExportReport,
   type FfmpegExportPlan,
+  type ProgressiveExportState,
   type RenderFarmSegmentStatus,
   type RenderFarmTaskConfig
 } from '@open-factory/editor-core';
@@ -30,16 +33,18 @@ export interface ExportQueueState {
   queuePaused: boolean;
   maxConcurrent: number;
   lastCompletedPath?: string;
-  addTask: (input: { name: string; projectName?: string; outputPath: string; plan: FfmpegExportPlan; priority?: ExportTaskPriority; renderFarm?: RenderFarmTaskConfig; scheduledStartAt?: string }) => ExportTask;
+  addTask: (input: { name: string; projectName?: string; outputPath: string; plan: FfmpegExportPlan; priority?: ExportTaskPriority; renderFarm?: RenderFarmTaskConfig; progressive?: ProgressiveExportState; scheduledStartAt?: string }) => ExportTask;
   activateScheduledTasks: (now?: string) => void;
   startNextTasks: () => string[];
   updateTaskProgress: (taskId: string, progress: number) => void;
+  updateTaskProgressive: (taskId: string, patch: Partial<ProgressiveExportState>) => void;
   setTaskSegments: (taskId: string, segments: RenderFarmSegmentStatus[]) => void;
   updateTaskSegment: (taskId: string, segmentId: string, patch: Partial<RenderFarmSegmentStatus>) => void;
   setTaskLogPath: (taskId: string, logPath: string) => void;
   finishTask: (taskId: string, report?: ExportReport) => void;
   failTask: (taskId: string, error: string) => void;
   cancelTask: (taskId: string) => void;
+  interruptTask: (taskId: string, error?: string) => void;
   retryTask: (taskId: string) => void;
   restoreTasks: (tasks: ExportTask[]) => void;
   setMaxConcurrent: (maxConcurrent: number) => void;
@@ -80,6 +85,9 @@ export const useExportQueueStore = create<ExportQueueState>((set, get) => ({
   updateTaskProgress: (taskId, progress) => {
     set((state) => ({ tasks: updateExportTaskProgress(state.tasks, taskId, progress) }));
   },
+  updateTaskProgressive: (taskId, patch) => {
+    set((state) => ({ tasks: updateExportTaskProgressive(state.tasks, taskId, patch) }));
+  },
   setTaskSegments: (taskId, segments) => {
     set((state) => ({ tasks: setExportTaskSegments(state.tasks, taskId, segments) }));
   },
@@ -102,11 +110,23 @@ export const useExportQueueStore = create<ExportQueueState>((set, get) => ({
   cancelTask: (taskId) => {
     set((state) => ({ tasks: cancelExportTask(state.tasks, taskId) }));
   },
+  interruptTask: (taskId, error) => {
+    set((state) => ({ tasks: interruptExportTask(state.tasks, taskId, error) }));
+  },
   retryTask: (taskId) => {
     set((state) => ({
       tasks: state.tasks.map((task) =>
         task.id === taskId && (task.status === 'error' || task.status === 'canceled' || task.status === 'interrupted')
-          ? { ...task, status: 'pending', progress: 0, error: undefined, report: undefined, segments: undefined, startedAt: undefined, finishedAt: undefined }
+          ? {
+              ...task,
+              status: 'pending',
+              progress: task.progressive ? Math.min(0.999, Math.max(0, task.progressive.completedDuration / Math.max(0.001, task.plan.duration))) : 0,
+              error: undefined,
+              report: undefined,
+              segments: undefined,
+              startedAt: undefined,
+              finishedAt: undefined
+            }
           : task
       )
     }));

@@ -25,6 +25,13 @@ import {
   normalizeMediaLibraryViewSettings,
   type MediaLibraryViewSettings
 } from '../media/mediaLibraryView';
+import {
+  LOCAL_AI_MODEL_DEFINITIONS,
+  hasLocalAiModelsSettings,
+  normalizeLocalAiModelsSettings,
+  type LocalAiModelId,
+  type LocalAiModelsSettings
+} from './localModels';
 
 const BROWSER_SETTINGS_KEY = 'open-factory:settings';
 
@@ -191,6 +198,7 @@ export interface AppSettings {
   previewPerformance?: PreviewPerformanceSettings;
   previewWindow?: PreviewWindowSettings;
   timelineInteraction?: TimelineInteractionSettings;
+  localModels?: LocalAiModelsSettings;
   automationRules?: AutomationRule[];
   customSplitLayouts?: SplitLayoutDefinition[];
   timelineGrid?: TimelineGridSettings;
@@ -371,6 +379,31 @@ export async function savePreviewWindowSettings(previewWindow: Partial<PreviewWi
   return nextPreviewWindow;
 }
 
+export async function readLocalAiModelsSettings(): Promise<LocalAiModelsSettings> {
+  const settings = await readAppSettings();
+  return settings.localModels ?? {};
+}
+
+export async function saveLocalAiModelsSettings(localModels: LocalAiModelsSettings): Promise<LocalAiModelsSettings> {
+  const settings = await readAppSettings();
+  const nextLocalModels = normalizeLocalAiModelsSettings({ ...settings.localModels, ...localModels });
+  await writeAppSettings({ ...settings, localModels: nextLocalModels });
+  return nextLocalModels;
+}
+
+export async function markLocalAiModelUsed(id: LocalAiModelId, path?: string, now = new Date().toISOString()): Promise<LocalAiModelsSettings> {
+  const settings = await readAppSettings();
+  const current = settings.localModels ?? {};
+  return saveLocalAiModelsSettings({
+    [id]: {
+      ...(current[id] ?? {}),
+      ...(path?.trim() ? { path: path.trim() } : {}),
+      version: current[id]?.version ?? LOCAL_AI_MODEL_DEFINITIONS[id].version,
+      lastUsedAt: now
+    }
+  });
+}
+
 export async function saveThemeSettings(theme: Partial<ThemeSettings>): Promise<ThemeSettings> {
   const settings = await readAppSettings();
   const nextTheme = normalizeThemeSettings(theme);
@@ -467,6 +500,10 @@ function normalizeSettings(settings: Partial<AppSettings>): AppSettings {
   const timelineInteraction = normalizeTimelineInteractionSettings(settings.timelineInteraction);
   if (timelineInteraction && shouldPersistTimelineInteractionSettings(timelineInteraction)) {
     normalized.timelineInteraction = timelineInteraction;
+  }
+  const localModels = normalizeLocalAiModelsSettings(settings.localModels);
+  if (hasLocalAiModelsSettings(localModels)) {
+    normalized.localModels = localModels;
   }
   const automationRules = normalizeAutomationRules(settings.automationRules);
   if (automationRules.length > 0) {
