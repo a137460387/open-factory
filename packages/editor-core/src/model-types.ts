@@ -213,6 +213,7 @@ export interface Project {
   exportRanges: ExportRange[];
   protectedRanges: ProtectedRange[];
   clipGroups: ClipGroup[];
+  coverPath?: string;
   timeline: Timeline;
   sequences: Sequence[];
   activeSequenceId: string;

@@ -111,6 +111,7 @@ export function serializeProjectFile(project: Project, projectPath?: string): Pr
       exportRanges: normalizeExportRanges(project.exportRanges, getTimelineDuration(project.timeline)),
       protectedRanges: normalizeProtectedRanges(project.protectedRanges, getTimelineDuration(project.timeline)),
       clipGroups: normalizeClipGroups(project.clipGroups, clipIds),
+      coverPath: normalizeProjectCoverPath(project.coverPath),
       timeline: primaryTimeline,
       sequences,
       activeSequenceId: project.activeSequenceId ?? PRIMARY_SEQUENCE_ID
@@ -156,6 +157,7 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         exportRanges: normalizeExportRanges(file.project.exportRanges, getTimelineDuration(primaryTimeline)),
         protectedRanges: normalizeProtectedRanges(file.project.protectedRanges, getTimelineDuration(primaryTimeline)),
         clipGroups: normalizeClipGroups(file.project.clipGroups, clipIds),
+        coverPath: normalizeProjectCoverPath(file.project.coverPath),
         timeline: activeTimeline,
         sequences,
         activeSequenceId
@@ -188,6 +190,7 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         exportRanges: [],
         protectedRanges: [],
         clipGroups: [],
+        coverPath: undefined,
         timeline: primaryTimeline,
         sequences,
         activeSequenceId: PRIMARY_SEQUENCE_ID
@@ -241,6 +244,10 @@ function normalizeMediaAsset(asset: MediaAsset, projectPath?: string, mediaFolde
 
 function normalizeOptionalString(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
+}
+
+function normalizeProjectCoverPath(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? normalizePath(value) : undefined;
 }
 
 function normalizeImageSequence(sequence: ImageSequenceInfo | undefined, projectPath?: string): ImageSequenceInfo | undefined {

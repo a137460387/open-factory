@@ -42,6 +42,18 @@ describe('project schema migration', () => {
     expect(migrateProjectFile(file).project.settings.colorPipeline).toBe('sdr-srgb');
   });
 
+  it('serializes and migrates project cover path while old files remain compatible', () => {
+    const project = makeProject();
+    project.coverPath = 'C:\\Projects\\covers\\hero.png';
+    const file = serializeProject(project);
+
+    expect(file.project.coverPath).toBe('C:/Projects/covers/hero.png');
+    expect(migrateProjectFile(file).project.coverPath).toBe('C:/Projects/covers/hero.png');
+
+    delete file.project.coverPath;
+    expect(migrateProjectFile(file).project.coverPath).toBeUndefined();
+  });
+
   it('serializes and migrates local clip content analysis while old clips remain unset', () => {
     const project = makeProject();
     project.timeline.tracks[0].clips = [

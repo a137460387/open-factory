@@ -29,6 +29,7 @@ import {
   RemoveTimelineMarkerCommand,
   RemoveTransitionCommand,
   UpdateClipCommand,
+  UpdateProjectCoverCommand,
   UpdateProjectAnnotationCommand,
   UpdateProjectBookmarkCommand,
   UpdateTimelineNoteCommand,
@@ -43,6 +44,7 @@ import {
   buildTimelineRulerTicks,
   buildTimelineGridLines,
   buildVolumeFadeKeyframes,
+  buildEvenCoverFrameTimestamps,
   clampTimelineZoom,
   DEFAULT_TIMELINE_GRID_SETTINGS,
   findTimelineSnapTargetWithGrid,
@@ -80,6 +82,7 @@ import {
   getClipSpeed,
   createGapFillImageClip,
   findTimelineGapAtTime,
+  dirname,
   getReplaceMediaCompatibilityWarnings,
   getTimelineLabelColorHex,
   isFrameRateMismatch,
@@ -102,6 +105,7 @@ import {
   volumeEnvelopeControlPointToKeyframe,
   TIMELINE_LABEL_COLORS,
   TIMELINE_NOTE_COLORS,
+  sanitizeCoverFileStem,
   type Clip,
   type ClipGroup,
   type ClipGroupColor,
@@ -136,7 +140,20 @@ import { showToast } from '../../lib/toast';
 import { detectClipSilence } from '../../lib/silenceDetection';
 import { canGenerateSubtitlesForClip, buildWhisperSubtitleTrackForClip, getWhisperAvailability, type WhisperAvailability } from '../../lib/whisper';
 import { TITLE_TEMPLATE_DRAG_MIME, isTitleTemplateId } from '../../lib/titleTemplates';
-import { detectSceneChanges, generateGapFillMedia, listenBridge, openFileDialog, saveFileDialog, writeFile, type WhisperProgressEvent } from '../../lib/tauri-bridge';
+import {
+  convertLocalFileSrc,
+  detectSceneChanges,
+  extractCoverFrames,
+  generateGapFillMedia,
+  getAppDataDir,
+  listenBridge,
+  listenCoverFrameProgress,
+  openFileDialog,
+  saveFileDialog,
+  writeFile,
+  type CoverFrameResult,
+  type WhisperProgressEvent
+} from '../../lib/tauri-bridge';
 import { commandManager, projectAccessor, timelineAccessor } from '../../store/commandManager';
 import { useEditorStore, type SelectedKeyframeRef } from '../../store/editorStore';
 import { useRenderCacheStore } from '../../store/renderCacheStore';
@@ -179,6 +196,7 @@ export function Timeline({
   const isPlaying = useEditorStore((state) => state.isPlaying);
   const inPoint = useEditorStore((state) => state.inPoint);
   const outPoint = useEditorStore((state) => state.outPoint);
+  const projectPath = useEditorStore((state) => state.projectPath);
   const timelineCompareRanges = useEditorStore((state) => state.timelineCompareRanges);
   const zoom = useEditorStore((state) => state.timelineZoom);
   const setSelectedClipId = useEditorStore((state) => state.setSelectedClipId);
@@ -208,6 +226,7 @@ export function Timeline({
   const [rulerMenu, setRulerMenu] = useState<RulerMenuState | undefined>();
   const [silenceDialog, setSilenceDialog] = useState<SilenceDialogState | undefined>();
   const [sceneDialog, setSceneDialog] = useState<SceneDialogState | undefined>();
+  const [coverFrameDialog, setCoverFrameDialog] = useState<CoverFrameDialogState | undefined>();
   const [whisperDialog, setWhisperDialog] = useState<WhisperDialogState | undefined>();
   const [replaceMediaDialog, setReplaceMediaDialog] = useState<ReplaceMediaDialogState | undefined>();
   const [whisperAvailability, setWhisperAvailability] = useState<WhisperAvailability>({ ready: false, error: zhCN.whisper.notConfigured });
@@ -1626,6 +1645,56 @@ function addProjectBookmark(time = playheadTime): void {
     }
   }
 
+  async function openCoverFrameGeneration(clipId: string): Promise<void> {
+    const clip = findClip(clipId);
+    const asset = getClipMediaAsset(clip);
+    setClipMenu(undefined);
+    setSelectedClipId(clip.id);
+    if (clip.type !== 'video' || !asset) {
+      showToast({ kind: 'warning', title: zhCN.timeline.coverFrameUnavailableTitle, message: zhCN.timeline.coverFrameUnavailableMessage });
+      return;
+    }
+    setCoverFrameDialog({ clip, frames: [], progress: 0, loading: true });
+    let unlisten: (() => void) | undefined;
+    try {
+      unlisten = await listenCoverFrameProgress((payload) => {
+        setCoverFrameDialog((current) => (current?.clip.id === clip.id ? { ...current, progress: payload.progress } : current));
+      });
+      const outputDir = await getCoverFrameOutputDir(projectPath);
+      const timestamps = buildEvenCoverFrameTimestamps(asset.duration || clip.duration, 6);
+      const result = await extractCoverFrames({
+        clipId: clip.id,
+        sourcePath: asset.path,
+        outputDir,
+        outputStem: sanitizeCoverFileStem(`${project.name}-${clip.name}-${clip.id}`),
+        mode: 'interval',
+        count: 6,
+        timestamps
+      });
+      if (result.frames.length === 0) {
+        setCoverFrameDialog({ clip, frames: [], progress: 1, loading: false, error: zhCN.timeline.coverFrameEmpty });
+        return;
+      }
+      setCoverFrameDialog({ clip, frames: result.frames, progress: 1, loading: false });
+    } catch (error) {
+      setCoverFrameDialog({
+        clip,
+        frames: [],
+        progress: 1,
+        loading: false,
+        error: error instanceof Error ? error.message : zhCN.timeline.coverFrameFailedMessage
+      });
+    } finally {
+      unlisten?.();
+    }
+  }
+
+  function applyProjectCoverFrame(frame: CoverFrameResult): void {
+    commandManager.execute(new UpdateProjectCoverCommand(projectAccessor, frame.path));
+    setCoverFrameDialog((current) => (current ? { ...current, selectedPath: frame.path } : current));
+    showToast({ kind: 'success', title: zhCN.timeline.coverFrameSelectedTitle, message: zhCN.timeline.coverFrameSelectedMessage });
+  }
+
   async function generateSubtitles(clipId: string): Promise<void> {
     const clip = findClip(clipId);
     const asset = getClipMediaAsset(clip);
@@ -2346,6 +2415,7 @@ function addProjectBookmark(time = playheadTime): void {
                 whisperUnavailableMessage={whisperAvailability.error}
                 onSilence={() => openSilenceDetection(clipMenu.clipId)}
                 onScene={() => void openSceneDetection(clipMenu.clipId)}
+                onGenerateCover={() => void openCoverFrameGeneration(clipMenu.clipId)}
                 onGenerateSubtitles={() => void generateSubtitles(clipMenu.clipId)}
                 onReplaceMedia={() => void openReplaceMedia(clipMenu.clipId)}
                 onConvertFrameRate={() => convertClipFrameRate(clipMenu.clipId)}
@@ -2405,6 +2475,13 @@ function addProjectBookmark(time = playheadTime): void {
         />
       ) : null}
       {sceneDialog ? <SceneDetectionDialog progress={sceneDialog.progress} /> : null}
+      {coverFrameDialog ? (
+        <CoverFramePickerDialog
+          state={coverFrameDialog}
+          onSelect={applyProjectCoverFrame}
+          onClose={() => setCoverFrameDialog(undefined)}
+        />
+      ) : null}
       {whisperDialog ? <WhisperGenerationDialog progress={whisperDialog.progress} clipName={whisperDialog.clip.name} /> : null}
       {replaceMediaDialog ? (
         <ReplaceMediaDialog
@@ -2534,6 +2611,15 @@ interface WhisperDialogState {
   progress: number;
 }
 
+interface CoverFrameDialogState {
+  clip: Clip;
+  frames: CoverFrameResult[];
+  progress: number;
+  loading: boolean;
+  error?: string;
+  selectedPath?: string;
+}
+
 interface AnnotationEditorState {
   id?: string;
   time: number;
@@ -2558,6 +2644,15 @@ interface TimelineNoteDraftState {
 interface BookmarkRenameState {
   id: string;
   note: string;
+}
+
+async function getCoverFrameOutputDir(projectPath: string | undefined): Promise<string> {
+  const baseDir = projectPath ? dirname(projectPath) : await getAppDataDir();
+  return joinLocalPath(baseDir, 'covers');
+}
+
+function joinLocalPath(baseDir: string, child: string): string {
+  return `${baseDir.replace(/\\/g, '/').replace(/\/+$/g, '')}/${child}`;
 }
 
 function TrackBatchMenu({
@@ -3472,6 +3567,7 @@ function ClipActionMenu({
   whisperUnavailableMessage,
   onSilence,
   onScene,
+  onGenerateCover,
   onGenerateSubtitles,
   onReplaceMedia,
   onConvertFrameRate,
@@ -3493,6 +3589,7 @@ function ClipActionMenu({
   whisperUnavailableMessage?: string;
   onSilence(): void;
   onScene(): void;
+  onGenerateCover(): void;
   onGenerateSubtitles(): void;
   onReplaceMedia(): void;
   onConvertFrameRate(): void;
@@ -3506,6 +3603,7 @@ function ClipActionMenu({
 }) {
   const canDetectSilence = Boolean(clip && (clip.type === 'audio' || (clip.type === 'video' && asset?.hasAudio)));
   const canDetectScene = clip?.type === 'video';
+  const canGenerateCover = clip?.type === 'video' && asset?.type === 'video';
   const canGenerateSubtitles = canGenerateSubtitlesForClip(clip, asset, whisperReady);
   const canReplaceMedia = Boolean(clip && (clip.type === 'video' || clip.type === 'audio' || clip.type === 'image'));
   const canConvertFrameRate = Boolean(asset?.type === 'video' && (asset.variableFrameRate || isFrameRateMismatch(asset.frameRate, projectFrameRate)));
@@ -3533,6 +3631,15 @@ function ClipActionMenu({
         onClick={onScene}
       >
         {zhCN.timeline.sceneAction}
+      </button>
+      <button
+        className="block w-full rounded px-2 py-2 text-left hover:bg-panel disabled:opacity-40"
+        type="button"
+        disabled={!canGenerateCover}
+        data-testid="clip-action-generate-cover"
+        onClick={onGenerateCover}
+      >
+        {zhCN.timeline.generateCoverFramesAction}
       </button>
       <button
         className="block w-full rounded px-2 py-2 text-left hover:bg-panel disabled:opacity-40"
@@ -3844,6 +3951,67 @@ function SceneDetectionDialog({ progress }: { progress: number }) {
             <div className="h-full bg-brand transition-all" style={{ width: `${Math.round(Math.max(0, Math.min(1, progress)) * 100)}%` }} />
           </div>
         </div>
+      </section>
+    </div>
+  );
+}
+
+function CoverFramePickerDialog({
+  state,
+  onSelect,
+  onClose
+}: {
+  state: CoverFrameDialogState;
+  onSelect(frame: CoverFrameResult): void;
+  onClose(): void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" data-testid="cover-frame-picker">
+      <section className="flex max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-md border border-line bg-white shadow-soft">
+        <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold">{zhCN.timeline.coverFrameDialogTitle}</h2>
+            <div className="mt-1 truncate text-xs text-slate-500">{state.clip.name}</div>
+          </div>
+          <button className="rounded-md border border-line px-3 py-1.5 text-xs font-medium hover:bg-panel" type="button" onClick={onClose} data-testid="cover-frame-close">
+            {zhCN.timeline.close}
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          {state.loading ? (
+            <div className="rounded-md border border-line bg-panel p-4 text-sm text-slate-600" data-testid="cover-frame-loading">
+              <div className="mb-2">{zhCN.timeline.coverFrameGenerating}</div>
+              <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+                <div className="h-full bg-brand transition-all" style={{ width: `${Math.round(Math.max(0, Math.min(1, state.progress)) * 100)}%` }} />
+              </div>
+            </div>
+          ) : state.error ? (
+            <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800" data-testid="cover-frame-error">{state.error}</div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+              {state.frames.map((frame, index) => (
+                <button
+                  key={frame.path}
+                  className={`overflow-hidden rounded-md border bg-panel text-left shadow-sm hover:border-brand focus:outline-none focus:ring-2 focus:ring-brand ${state.selectedPath === frame.path ? 'border-brand ring-2 ring-brand/25' : 'border-line'}`}
+                  type="button"
+                  data-testid={`cover-frame-option-${index}`}
+                  onClick={() => onSelect(frame)}
+                >
+                  <img className="aspect-video w-full object-cover" src={convertLocalFileSrc(frame.path)} alt="" />
+                  <div className="flex items-center justify-between gap-2 px-2 py-1.5 text-xs text-slate-600">
+                    <span>{zhCN.timeline.coverFrameCandidate(index + 1)}</span>
+                    <span className="tabular-nums">{frame.timestamp === undefined ? '' : `${frame.timestamp.toFixed(2)}s`}</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        {state.selectedPath ? (
+          <div className="border-t border-line px-4 py-2 text-xs text-emerald-700" data-testid="cover-frame-selected">
+            {zhCN.timeline.coverFrameSelectedPath(state.selectedPath)}
+          </div>
+        ) : null}
       </section>
     </div>
   );

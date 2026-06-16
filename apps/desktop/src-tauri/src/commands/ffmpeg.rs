@@ -2565,10 +2565,7 @@ mod tests {
             .get_or_init(|| Mutex::new(()))
             .lock()
             .expect("export children test lock");
-        export_children()
-            .lock()
-            .expect("export child lock")
-            .clear();
+        export_children().lock().expect("export child lock").clear();
         guard
     }
 

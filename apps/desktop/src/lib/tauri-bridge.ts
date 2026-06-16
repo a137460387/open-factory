@@ -229,6 +229,62 @@ export interface GapFillMediaResult {
   height: number;
 }
 
+export type CoverFrameExtractionMode = 'i-frame' | 'interval';
+
+export interface CoverFrameExtractionRequest {
+  clipId: string;
+  sourcePath: string;
+  outputDir: string;
+  outputStem: string;
+  mode: CoverFrameExtractionMode;
+  count?: number;
+  timestamps?: number[];
+}
+
+export interface CoverFrameResult {
+  index: number;
+  path: string;
+  timestamp?: number;
+}
+
+export interface CoverFrameExtractionResult {
+  clipId: string;
+  frames: CoverFrameResult[];
+}
+
+export interface CoverFrameBatchTaskRequest {
+  assetId: string;
+  sourcePath: string;
+  outputFileName: string;
+}
+
+export interface CoverFrameBatchRequest {
+  outputDir: string;
+  tasks: CoverFrameBatchTaskRequest[];
+}
+
+export interface CoverFrameBatchTaskResult {
+  assetId: string;
+  sourcePath: string;
+  outputPath?: string;
+  status: 'completed' | 'failed';
+  error?: string;
+}
+
+export interface CoverFrameBatchResult {
+  results: CoverFrameBatchTaskResult[];
+}
+
+export interface CoverFrameProgressEvent {
+  taskId: string;
+  status: 'running' | 'completed' | 'failed';
+  current: number;
+  total: number;
+  progress: number;
+  progressPct: number;
+  outputPath?: string;
+}
+
 export interface ProxyResult {
   assetId: string;
   proxyPath: string;
@@ -533,6 +589,8 @@ export type TauriMocks = Partial<{
   scanMediaIntegrity(path: string): Promise<MediaIntegrityScanResult> | MediaIntegrityScanResult;
   analyzeAudioSpectrum(path: string): Promise<AudioSpectrumAnalysis> | AudioSpectrumAnalysis;
   generateGapFillMedia(request: GapFillMediaRequest): Promise<GapFillMediaResult> | GapFillMediaResult;
+  extractCoverFrames(request: CoverFrameExtractionRequest): Promise<CoverFrameExtractionResult> | CoverFrameExtractionResult;
+  batchExtractCoverFrames(request: CoverFrameBatchRequest): Promise<CoverFrameBatchResult> | CoverFrameBatchResult;
   analyzeWaveform(path: string, samplesPerSec: number): Promise<number[]> | number[];
   detectBeats(path: string, sensitivity: BeatSensitivity): Promise<number[]> | number[];
   detectSilence(path: string, thresholdDb: number, minGapMs: number): Promise<NativeSilenceRange[]> | NativeSilenceRange[];
@@ -797,6 +855,28 @@ export async function generateGapFillMedia(request: GapFillMediaRequest): Promis
     throw new Error('generateGapFillMedia 需要 Tauri 或 __TAURI_MOCKS__ 实现。');
   }
   return invoke<GapFillMediaResult>('generate_gap_fill_media', { request });
+}
+
+export async function extractCoverFrames(request: CoverFrameExtractionRequest): Promise<CoverFrameExtractionResult> {
+  const mock = getTauriMocks()?.extractCoverFrames;
+  if (mock) {
+    return mock(request);
+  }
+  if (!isTauriRuntime()) {
+    throw new Error('extractCoverFrames 需要 Tauri 或 __TAURI_MOCKS__ 实现。');
+  }
+  return invoke<CoverFrameExtractionResult>('extract_cover_frames', { request });
+}
+
+export async function batchExtractCoverFrames(request: CoverFrameBatchRequest): Promise<CoverFrameBatchResult> {
+  const mock = getTauriMocks()?.batchExtractCoverFrames;
+  if (mock) {
+    return mock(request);
+  }
+  if (!isTauriRuntime()) {
+    throw new Error('batchExtractCoverFrames 需要 Tauri 或 __TAURI_MOCKS__ 实现。');
+  }
+  return invoke<CoverFrameBatchResult>('batch_extract_cover_frames', { request });
 }
 
 export async function analyzeWaveform(path: string, samplesPerSec: number): Promise<number[]> {
@@ -1297,6 +1377,10 @@ export async function listenBridge<T>(event: string, handler: (payload: T) => vo
 
 export async function listenBatchTranscodeProgress(handler: (payload: BatchTranscodeProgressEvent) => void): Promise<() => void> {
   return listenBridge<BatchTranscodeProgressEvent>('batch-transcode-progress', handler);
+}
+
+export async function listenCoverFrameProgress(handler: (payload: CoverFrameProgressEvent) => void): Promise<() => void> {
+  return listenBridge<CoverFrameProgressEvent>('cover-frame-progress', handler);
 }
 
 export async function listenDragDrop(handler: (event: { type: string; paths?: string[] }) => void): Promise<() => void> {

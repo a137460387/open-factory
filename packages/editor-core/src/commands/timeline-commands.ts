@@ -233,6 +233,35 @@ export class UpdateProjectSettingsCommand implements Command {
   }
 }
 
+export class UpdateProjectCoverCommand implements Command {
+  readonly description = 'Update project cover';
+  private before?: Project;
+  private after?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly coverPath?: string
+  ) {}
+
+  execute(): void {
+    const project = this.accessor.getProject();
+    this.before ??= project;
+    const normalized = typeof this.coverPath === 'string' && this.coverPath.trim() ? this.coverPath.trim().replace(/\\/g, '/') : undefined;
+    this.after = {
+      ...this.before,
+      coverPath: normalized,
+      updatedAt: new Date().toISOString()
+    };
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
 export class ImportEDLCommand implements Command {
   readonly description = 'Import EDL';
   private before?: Project;

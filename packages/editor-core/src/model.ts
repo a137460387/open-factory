@@ -609,6 +609,7 @@ export function createProject(name = 'Untitled Project'): Project {
     exportRanges: [],
     protectedRanges: [],
     clipGroups: [],
+    coverPath: undefined,
     timeline,
     sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
     activeSequenceId: PRIMARY_SEQUENCE_ID

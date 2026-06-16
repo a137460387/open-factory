@@ -685,6 +685,50 @@ const mocks: TauriMocks = {
       height: request.height
     };
   },
+  extractCoverFrames: (request) => {
+    const frames = Array.from({ length: request.count ?? 6 }, (_item, index) => {
+      const path = `${request.outputDir}/${request.outputStem}-${String(index + 1).padStart(3, '0')}.png`;
+      files.set(path, `mock cover frame ${index + 1}`);
+      exists.set(path, true);
+      mtimes.set(path, Date.now());
+      emit('cover-frame-progress', {
+        taskId: request.clipId,
+        status: index + 1 === (request.count ?? 6) ? 'completed' : 'running',
+        current: index + 1,
+        total: request.count ?? 6,
+        progress: (index + 1) / (request.count ?? 6),
+        progressPct: Math.round(((index + 1) / (request.count ?? 6)) * 100),
+        outputPath: path
+      });
+      return {
+        index,
+        path,
+        timestamp: request.timestamps?.[index]
+      };
+    });
+    persistFiles();
+    return { clipId: request.clipId, frames };
+  },
+  batchExtractCoverFrames: (request) => {
+    const results = request.tasks.map((task, index) => {
+      const path = `${request.outputDir}/${task.outputFileName}`;
+      files.set(path, `mock batch cover ${task.assetId}`);
+      exists.set(path, true);
+      mtimes.set(path, Date.now());
+      emit('cover-frame-progress', {
+        taskId: task.assetId,
+        status: 'completed',
+        current: index + 1,
+        total: request.tasks.length,
+        progress: (index + 1) / Math.max(1, request.tasks.length),
+        progressPct: Math.round(((index + 1) / Math.max(1, request.tasks.length)) * 100),
+        outputPath: path
+      });
+      return { assetId: task.assetId, sourcePath: task.sourcePath, outputPath: path, status: 'completed' as const };
+    });
+    persistFiles();
+    return { results };
+  },
   analyzeWaveform: (path, samplesPerSec) => {
     const total = Math.max(1, Math.ceil(6 * Math.max(1, samplesPerSec)));
     return Array.from({ length: total }, (_, index) => {

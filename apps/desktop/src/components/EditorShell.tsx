@@ -41,6 +41,7 @@ import {
   createProject,
   createTrack,
   buildVideoStitchSequence,
+  buildCoverFrameBatchTasks,
   buildTimelineNavigationPoints,
   createMainSideSplitLayout,
   detectSubtitleDataOverlaps,
@@ -158,9 +159,11 @@ import {
 } from '../lib/projectFiles';
 import {
   bridgeConfirm,
+  batchExtractCoverFrames,
   cancelDemucs,
   copyFile as bridgeCopyFile,
   detectBeats,
+  getAppDataDir,
   listenBridge,
   openDirectoryDialog,
   openFileDialog as bridgeOpenFileDialog,
@@ -977,6 +980,29 @@ export function EditorShell() {
     setBatchTranscodeInitialPaths(paths);
     setBatchTranscodeOpen(true);
   }, []);
+
+  const batchGenerateCovers = useCallback(async () => {
+    const tasks = buildCoverFrameBatchTasks(useEditorStore.getState().project.media);
+    if (tasks.length === 0) {
+      showToast({ kind: 'warning', title: zhCN.editorToasts.coverBatchFailed, message: zhCN.editorToasts.coverBatchNoVideo });
+      return;
+    }
+    try {
+      const baseDir = projectPath ? dirname(projectPath) : await getAppDataDir();
+      const result = await batchExtractCoverFrames({
+        outputDir: joinLocalPath(baseDir, 'covers'),
+        tasks
+      });
+      const completed = result.results.filter((item) => item.status === 'completed').length;
+      if (completed === 0) {
+        showToast({ kind: 'error', title: zhCN.editorToasts.coverBatchFailed, message: result.results.find((item) => item.error)?.error ?? zhCN.editorToasts.coverBatchFailedMessage });
+        return;
+      }
+      showToast({ kind: 'success', title: zhCN.editorToasts.coverBatchCompleted, message: zhCN.editorToasts.coverBatchCompletedMessage(completed) });
+    } catch (error) {
+      showToast({ kind: 'error', title: zhCN.editorToasts.coverBatchFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.coverBatchFailedMessage });
+    }
+  }, [projectPath]);
 
   const importVideosForStitchWizard = useCallback(async (): Promise<string[]> => {
     try {
@@ -2474,6 +2500,7 @@ export function EditorShell() {
                   onImport={() => void importMedia()}
                   onImportPaths={(paths) => void importDropped(paths)}
                   onBatchTranscode={(paths) => openBatchTranscode(paths)}
+                  onBatchGenerateCovers={() => void batchGenerateCovers()}
                   onExportGif={(asset) => setGifExportAsset(asset)}
                   onAnalyzeSpectrum={(asset) => setSpectrumAsset(asset)}
                   onScanDuplicates={() => void scanDuplicateMedia()}
@@ -2898,6 +2925,10 @@ function readViewportSize(): { width: number; height: number } {
 function isEditableKeyboardEventTarget(target: EventTarget | null): boolean {
   const element = target instanceof HTMLElement ? target : null;
   return Boolean(element?.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(element?.tagName ?? ''));
+}
+
+function joinLocalPath(baseDir: string, child: string): string {
+  return `${baseDir.replace(/\\/g, '/').replace(/\/+$/g, '')}/${child}`;
 }
 
 function getWorkspaceLayoutDisplayName(layout: WorkspaceLayoutDefinition): string {

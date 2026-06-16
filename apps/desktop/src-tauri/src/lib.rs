@@ -99,6 +99,8 @@ pub fn run() {
             commands::media::detect_silence,
             commands::media::detect_beats,
             commands::media::generate_gap_fill_media,
+            commands::media::extract_cover_frames,
+            commands::media::batch_extract_cover_frames,
             commands::privacy::detect_privacy_regions,
             commands::proxy::generate_proxy,
             commands::scene::detect_scene_changes,

@@ -1,5 +1,5 @@
 use super::binaries::{ffmpeg_binary, ffprobe_binary};
-use crate::path_validator::validate_path;
+use crate::path_validator::{validate_path, validate_path_for_write};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
@@ -8,7 +8,7 @@ use std::io::{BufRead, BufReader, Read};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::{SystemTime, UNIX_EPOCH};
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 
 const WAVEFORM_SAMPLE_RATE: u32 = 48_000;
 const BEAT_RMS_SAMPLE_RATE: u32 = 48_000;
@@ -95,6 +95,83 @@ pub struct GapFillMediaResult {
     name: String,
     width: u32,
     height: u32,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum CoverFrameExtractionMode {
+    IFrame,
+    Interval,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CoverFrameExtractionRequest {
+    clip_id: String,
+    source_path: String,
+    output_dir: String,
+    output_stem: String,
+    mode: CoverFrameExtractionMode,
+    count: Option<u32>,
+    timestamps: Option<Vec<f64>>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CoverFrameBatchTaskRequest {
+    asset_id: String,
+    source_path: String,
+    output_file_name: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CoverFrameBatchRequest {
+    output_dir: String,
+    tasks: Vec<CoverFrameBatchTaskRequest>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct CoverFrameResult {
+    index: u32,
+    path: String,
+    timestamp: Option<f64>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct CoverFrameExtractionResult {
+    clip_id: String,
+    frames: Vec<CoverFrameResult>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct CoverFrameBatchTaskResult {
+    asset_id: String,
+    source_path: String,
+    output_path: Option<String>,
+    status: String,
+    error: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct CoverFrameBatchResult {
+    results: Vec<CoverFrameBatchTaskResult>,
+}
+
+#[derive(Debug, Clone, Serialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct CoverFrameProgressPayload {
+    task_id: String,
+    status: String,
+    current: u32,
+    total: u32,
+    progress: f32,
+    progress_pct: u32,
+    output_path: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Default)]
@@ -791,6 +868,158 @@ pub fn generate_gap_fill_media(
     }
 }
 
+#[tauri::command]
+pub async fn extract_cover_frames(
+    app: AppHandle,
+    request: CoverFrameExtractionRequest,
+) -> Result<CoverFrameExtractionResult, String> {
+    tauri::async_runtime::spawn_blocking(move || extract_cover_frames_blocking(app, request))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+#[tauri::command]
+pub async fn batch_extract_cover_frames(
+    app: AppHandle,
+    request: CoverFrameBatchRequest,
+) -> Result<CoverFrameBatchResult, String> {
+    tauri::async_runtime::spawn_blocking(move || batch_extract_cover_frames_blocking(app, request))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+fn extract_cover_frames_blocking(
+    app: AppHandle,
+    request: CoverFrameExtractionRequest,
+) -> Result<CoverFrameExtractionResult, String> {
+    let safe_source = validate_path(&app, Path::new(&request.source_path))?;
+    let safe_output_dir = validate_path_for_write(&app, Path::new(&request.output_dir))?;
+    fs::create_dir_all(&safe_output_dir)
+        .map_err(|error| format!("Unable to create cover frame directory: {}", error))?;
+    emit_cover_frame_progress(&app, &request.clip_id, "running", 0, 1, None);
+    let source_path = normalize_path(&safe_source);
+    let stem = normalize_cover_file_stem(&request.output_stem);
+    let frames = match request.mode {
+        CoverFrameExtractionMode::IFrame => {
+            let count = request.count.unwrap_or(6).clamp(1, 24);
+            let output_pattern = safe_output_dir.join(format!("{}-i-%03d.png", stem));
+            let args = build_i_frame_cover_args(
+                &source_path,
+                &normalize_path(&output_pattern),
+                Some(count),
+            );
+            run_cover_ffmpeg(&args, "I-frame cover extraction")?;
+            collect_generated_cover_frames(&safe_output_dir, &format!("{}-i-", stem), None)?
+        }
+        CoverFrameExtractionMode::Interval => {
+            let timestamps =
+                normalize_cover_timestamps(request.timestamps, request.count.unwrap_or(6));
+            let mut frames = Vec::new();
+            for (index, timestamp) in timestamps.iter().enumerate() {
+                let output =
+                    safe_output_dir.join(format!("{}-interval-{:03}.png", stem, index + 1));
+                let args =
+                    build_interval_cover_args(&source_path, &normalize_path(&output), *timestamp);
+                run_cover_ffmpeg(&args, "interval cover extraction")?;
+                frames.push(CoverFrameResult {
+                    index: index as u32,
+                    path: normalize_path(&output),
+                    timestamp: Some(round_seconds(*timestamp)),
+                });
+                emit_cover_frame_progress(
+                    &app,
+                    &request.clip_id,
+                    "running",
+                    (index + 1) as u32,
+                    timestamps.len() as u32,
+                    Some(normalize_path(&output)),
+                );
+            }
+            frames
+        }
+    };
+    emit_cover_frame_progress(
+        &app,
+        &request.clip_id,
+        "completed",
+        1,
+        1,
+        frames.first().map(|frame| frame.path.clone()),
+    );
+    Ok(CoverFrameExtractionResult {
+        clip_id: request.clip_id,
+        frames,
+    })
+}
+
+fn batch_extract_cover_frames_blocking(
+    app: AppHandle,
+    request: CoverFrameBatchRequest,
+) -> Result<CoverFrameBatchResult, String> {
+    let safe_output_dir = validate_path_for_write(&app, Path::new(&request.output_dir))?;
+    fs::create_dir_all(&safe_output_dir)
+        .map_err(|error| format!("Unable to create cover frame directory: {}", error))?;
+    let total = build_cover_frame_batch_task_count(&request.tasks) as u32;
+    let mut current = 0_u32;
+    let mut results = Vec::new();
+    for task in request.tasks {
+        if task.source_path.trim().is_empty() {
+            continue;
+        }
+        current += 1;
+        emit_cover_frame_progress(
+            &app,
+            &task.asset_id,
+            "running",
+            current.saturating_sub(1),
+            total,
+            None,
+        );
+        let output = safe_output_dir.join(normalize_cover_file_name(&task.output_file_name));
+        let result = match validate_path(&app, Path::new(&task.source_path)) {
+            Ok(source) => {
+                let args = build_first_i_frame_cover_args(
+                    &normalize_path(&source),
+                    &normalize_path(&output),
+                );
+                match run_cover_ffmpeg(&args, "batch cover extraction") {
+                    Ok(()) => CoverFrameBatchTaskResult {
+                        asset_id: task.asset_id.clone(),
+                        source_path: normalize_path(&source),
+                        output_path: Some(normalize_path(&output)),
+                        status: "completed".to_string(),
+                        error: None,
+                    },
+                    Err(error) => CoverFrameBatchTaskResult {
+                        asset_id: task.asset_id.clone(),
+                        source_path: task.source_path.clone(),
+                        output_path: None,
+                        status: "failed".to_string(),
+                        error: Some(error),
+                    },
+                }
+            }
+            Err(error) => CoverFrameBatchTaskResult {
+                asset_id: task.asset_id.clone(),
+                source_path: task.source_path.clone(),
+                output_path: None,
+                status: "failed".to_string(),
+                error: Some(error),
+            },
+        };
+        emit_cover_frame_progress(
+            &app,
+            &task.asset_id,
+            &result.status,
+            current,
+            total,
+            result.output_path.clone(),
+        );
+        results.push(result);
+    }
+    Ok(CoverFrameBatchResult { results })
+}
+
 pub(crate) fn analyze_waveform_path(path: &Path, samples_per_sec: u32) -> Result<Vec<f32>, String> {
     let samples_per_sec = samples_per_sec.clamp(1, 1_000);
     let samples_per_bucket =
@@ -1241,6 +1470,140 @@ pub(crate) fn build_solid_color_frame_args(
     ]
 }
 
+pub(crate) fn build_i_frame_cover_args(
+    source_path: &str,
+    output_pattern: &str,
+    frame_limit: Option<u32>,
+) -> Vec<String> {
+    let mut args = vec![
+        "-y".to_string(),
+        "-hide_banner".to_string(),
+        "-i".to_string(),
+        source_path.to_string(),
+        "-vf".to_string(),
+        "select='eq(pict_type\\,I)'".to_string(),
+        "-vsync".to_string(),
+        "vfr".to_string(),
+    ];
+    if let Some(limit) = frame_limit {
+        args.push("-frames:v".to_string());
+        args.push(limit.clamp(1, 24).to_string());
+    }
+    args.push(output_pattern.to_string());
+    args
+}
+
+pub(crate) fn build_first_i_frame_cover_args(source_path: &str, output_path: &str) -> Vec<String> {
+    build_i_frame_cover_args(source_path, output_path, Some(1))
+}
+
+pub(crate) fn build_interval_cover_args(
+    source_path: &str,
+    output_path: &str,
+    timestamp: f64,
+) -> Vec<String> {
+    vec![
+        "-y".to_string(),
+        "-hide_banner".to_string(),
+        "-ss".to_string(),
+        format_cover_seconds(timestamp),
+        "-i".to_string(),
+        source_path.to_string(),
+        "-frames:v".to_string(),
+        "1".to_string(),
+        output_path.to_string(),
+    ]
+}
+
+pub(crate) fn build_cover_frame_batch_task_count(tasks: &[CoverFrameBatchTaskRequest]) -> usize {
+    tasks
+        .iter()
+        .filter(|task| !task.source_path.trim().is_empty())
+        .count()
+}
+
+fn run_cover_ffmpeg(args: &[String], label: &str) -> Result<(), String> {
+    let output = Command::new(ffmpeg_binary())
+        .args(args)
+        .output()
+        .map_err(|error| format!("Unable to start FFmpeg {}: {}", label, error))?;
+    if output.status.success() {
+        return Ok(());
+    }
+    Err(format!(
+        "FFmpeg {} failed: {}",
+        label,
+        String::from_utf8_lossy(&output.stderr).trim()
+    ))
+}
+
+fn collect_generated_cover_frames(
+    output_dir: &Path,
+    prefix: &str,
+    timestamps: Option<&[f64]>,
+) -> Result<Vec<CoverFrameResult>, String> {
+    let mut paths = fs::read_dir(output_dir)
+        .map_err(|error| error.to_string())?
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .filter(|path| {
+            path.file_name()
+                .and_then(|name| name.to_str())
+                .is_some_and(|name| name.starts_with(prefix) && name.ends_with(".png"))
+        })
+        .collect::<Vec<_>>();
+    paths.sort();
+    Ok(paths
+        .into_iter()
+        .enumerate()
+        .map(|(index, path)| CoverFrameResult {
+            index: index as u32,
+            path: normalize_path(&path),
+            timestamp: timestamps
+                .and_then(|items| items.get(index).copied())
+                .map(round_seconds),
+        })
+        .collect())
+}
+
+fn normalize_cover_timestamps(timestamps: Option<Vec<f64>>, count: u32) -> Vec<f64> {
+    let provided = timestamps
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|value| value.is_finite() && *value >= 0.0)
+        .map(round_seconds)
+        .take(24)
+        .collect::<Vec<_>>();
+    if !provided.is_empty() {
+        return provided;
+    }
+    (0..count.clamp(1, 24)).map(|index| index as f64).collect()
+}
+
+fn emit_cover_frame_progress(
+    app: &AppHandle,
+    task_id: &str,
+    status: &str,
+    current: u32,
+    total: u32,
+    output_path: Option<String>,
+) {
+    let total = total.max(1);
+    let progress = (current as f32 / total as f32).clamp(0.0, 1.0);
+    let _ = app.emit(
+        "cover-frame-progress",
+        CoverFrameProgressPayload {
+            task_id: task_id.to_string(),
+            status: status.to_string(),
+            current,
+            total,
+            progress,
+            progress_pct: (progress * 100.0).round() as u32,
+            output_path,
+        },
+    );
+}
+
 fn run_gap_fill_ffmpeg(args: &[String], label: &str) -> Result<(), String> {
     let output = Command::new(ffmpeg_binary())
         .args(args)
@@ -1278,6 +1641,46 @@ fn format_gap_fill_seconds(value: f64) -> String {
         0.0
     })
     .to_string()
+}
+
+fn format_cover_seconds(value: f64) -> String {
+    round_seconds(if value.is_finite() {
+        value.max(0.0)
+    } else {
+        0.0
+    })
+    .to_string()
+}
+
+fn normalize_cover_file_stem(value: &str) -> String {
+    let stem = value
+        .trim()
+        .trim_end_matches(".png")
+        .chars()
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' || ch == '.' {
+                ch
+            } else {
+                '-'
+            }
+        })
+        .collect::<String>()
+        .trim_matches('-')
+        .to_string();
+    if stem.is_empty() {
+        "cover-frame".to_string()
+    } else {
+        stem
+    }
+}
+
+fn normalize_cover_file_name(value: &str) -> String {
+    let stem = normalize_cover_file_stem(value);
+    if stem.to_ascii_lowercase().ends_with(".png") {
+        stem
+    } else {
+        format!("{}.png", stem)
+    }
 }
 
 #[cfg(test)]
@@ -1351,6 +1754,73 @@ mod tests {
                 "C:/Cache/black.png"
             ])
         );
+    }
+
+    #[test]
+    fn builds_i_frame_cover_ffmpeg_args() {
+        assert_eq!(
+            build_i_frame_cover_args("C:/Media/source.mp4", "C:/Project/cover-%03d.png", Some(6)),
+            str_vec(&[
+                "-y",
+                "-hide_banner",
+                "-i",
+                "C:/Media/source.mp4",
+                "-vf",
+                "select='eq(pict_type\\,I)'",
+                "-vsync",
+                "vfr",
+                "-frames:v",
+                "6",
+                "C:/Project/cover-%03d.png"
+            ])
+        );
+        assert_eq!(
+            build_first_i_frame_cover_args("C:/Media/source.mp4", "C:/Project/cover.png"),
+            str_vec(&[
+                "-y",
+                "-hide_banner",
+                "-i",
+                "C:/Media/source.mp4",
+                "-vf",
+                "select='eq(pict_type\\,I)'",
+                "-vsync",
+                "vfr",
+                "-frames:v",
+                "1",
+                "C:/Project/cover.png"
+            ])
+        );
+    }
+
+    #[test]
+    fn builds_interval_cover_args_and_counts_batch_tasks() {
+        assert_eq!(
+            build_interval_cover_args("C:/Media/source.mp4", "C:/Project/cover.png", 2.3456),
+            str_vec(&[
+                "-y",
+                "-hide_banner",
+                "-ss",
+                "2.346",
+                "-i",
+                "C:/Media/source.mp4",
+                "-frames:v",
+                "1",
+                "C:/Project/cover.png"
+            ])
+        );
+        let tasks = vec![
+            CoverFrameBatchTaskRequest {
+                asset_id: "asset-a".to_string(),
+                source_path: "C:/Media/a.mp4".to_string(),
+                output_file_name: "a.png".to_string(),
+            },
+            CoverFrameBatchTaskRequest {
+                asset_id: "asset-empty".to_string(),
+                source_path: "  ".to_string(),
+                output_file_name: "empty.png".to_string(),
+            },
+        ];
+        assert_eq!(build_cover_frame_batch_task_count(&tasks), 1);
     }
 
     #[test]

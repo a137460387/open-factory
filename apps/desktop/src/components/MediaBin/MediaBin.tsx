@@ -40,6 +40,7 @@ interface MediaBinProps {
   onImport(): void;
   onImportPaths(paths: string[]): void;
   onBatchTranscode(paths: string[]): void;
+  onBatchGenerateCovers(): void;
   onExportGif(asset: MediaAsset): void;
   onAnalyzeSpectrum(asset: MediaAsset): void;
   onScanDuplicates(): void;
@@ -74,6 +75,7 @@ export function MediaBin({
   onImport,
   onImportPaths,
   onBatchTranscode,
+  onBatchGenerateCovers,
   onExportGif,
   onAnalyzeSpectrum,
   onScanDuplicates,
@@ -254,6 +256,14 @@ export function MediaBin({
           >
             <Merge size={15} />
             {t.scanDuplicates}
+          </button>
+          <button
+            className="inline-flex items-center gap-2 rounded-md border border-line bg-panel px-2 py-2 text-sm font-medium text-slate-700 hover:bg-white"
+            onClick={onBatchGenerateCovers}
+            data-testid="batch-generate-covers-button"
+          >
+            <ImageDown size={15} />
+            {t.batchGenerateCovers}
           </button>
           <button
             className="inline-flex items-center gap-2 rounded-md border border-line bg-panel px-2 py-2 text-sm font-medium text-slate-700 hover:bg-white"

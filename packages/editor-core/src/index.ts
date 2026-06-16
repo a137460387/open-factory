@@ -3,6 +3,7 @@ export * from './model';
 export * from './blend-modes';
 export * from './color-log-luts';
 export * from './content-analysis';
+export * from './cover-frames';
 export * from './color-pipeline';
 export * from './color-grading';
 export * from './color-match';

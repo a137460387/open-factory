@@ -74,6 +74,7 @@ import {
   UpdateTimelineMarkerCommand,
   UpdateMaskCommand,
   UpdateProjectAudioCommand,
+  UpdateProjectCoverCommand,
   UpdateProjectSettingsCommand,
   UpdateTrackCommand,
   calculateReplaceMediaPatch,
@@ -973,6 +974,26 @@ describe('timeline commands', () => {
 
     manager.redo();
     expect(project.masterVolume).toBe(2);
+  });
+
+  it('updates project cover path with undo and redo', () => {
+    let project = makeProject();
+    const accessor = {
+      getProject: () => project,
+      setProject: (next: typeof project) => {
+        project = next;
+      }
+    };
+    const manager = new CommandManager();
+
+    manager.execute(new UpdateProjectCoverCommand(accessor, 'C:\\Projects\\cover.png'));
+    expect(project.coverPath).toBe('C:/Projects/cover.png');
+
+    manager.undo();
+    expect(project.coverPath).toBeUndefined();
+
+    manager.redo();
+    expect(project.coverPath).toBe('C:/Projects/cover.png');
   });
 
   it('moves, trims, splits, deletes, and updates clips', () => {
