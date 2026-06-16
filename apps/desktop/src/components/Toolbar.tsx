@@ -22,6 +22,7 @@ import { PREVIEW_QUALITY_MODES, type PreviewQualityMode } from '../lib/preview/p
 import { useEditorStore } from '../store/editorStore';
 import { useWhisperSettingsStore } from '../store/whisperSettingsStore';
 import type { WorkspaceLayoutDefinition, WorkspaceLayoutId } from '../layout/layoutSettings';
+import type { TimelineHeatmapViewSettings } from '../settings/appSettings';
 
 interface ToolbarProps {
   onNewProject(): void;
@@ -97,6 +98,7 @@ interface ToolbarProps {
   onSaveWorkspaceLayout(): void;
   safeFrameGuides: boolean;
   thumbnailTrackVisible: boolean;
+  timelineHeatmap: TimelineHeatmapViewSettings;
   previewQualityMode: PreviewQualityMode;
   timelineGridSettings: TimelineGridSettings;
   onToggleStoryboard(): void;
@@ -105,6 +107,7 @@ interface ToolbarProps {
   onCreateReviewReport(): void;
   onToggleSafeFrameGuides(): void;
   onToggleThumbnailTrack(): void;
+  onTimelineHeatmapChange(patch: Partial<TimelineHeatmapViewSettings>): void;
   onPreviewQualityModeChange(mode: PreviewQualityMode): void;
   onToggleTimelineGridSnap(): void;
   onTimelineGridUnitChange(unit: TimelineGridUnit): void;
@@ -439,6 +442,67 @@ export function Toolbar(props: ToolbarProps) {
               <span>{t.thumbnailTrack}</span>
               <span className="text-xs text-slate-500">{props.thumbnailTrackVisible ? t.safeFrameGuidesVisible : t.safeFrameGuidesHidden}</span>
             </button>
+            <div className="my-1 border-t border-line" />
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-view-heatmap-menu-item"
+              aria-pressed={props.timelineHeatmap.enabled}
+              onClick={() => props.onTimelineHeatmapChange({ enabled: !props.timelineHeatmap.enabled })}
+            >
+              <span>{t.timelineHeatmap}</span>
+              <span className="text-xs text-slate-500">{props.timelineHeatmap.enabled ? t.safeFrameGuidesVisible : t.safeFrameGuidesHidden}</span>
+            </button>
+            {props.timelineHeatmap.enabled ? (
+              <div className="space-y-2 px-3 pb-2 text-xs text-slate-600" data-testid="toolbar-view-heatmap-controls">
+                <label className="block">
+                  <span className="sr-only">{t.timelineHeatmap}</span>
+                  <select
+                    className="mt-1 w-full rounded border border-line bg-white px-2 py-1 text-xs"
+                    value={props.timelineHeatmap.type}
+                    data-testid="toolbar-view-heatmap-type-select"
+                    onChange={(event) => props.onTimelineHeatmapChange({ type: event.target.value as TimelineHeatmapViewSettings['type'] })}
+                  >
+                    {(['edit-density', 'volume', 'cut-frequency'] as const).map((type) => (
+                      <option key={type} value={type}>
+                        {t.heatmapTypes[type]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="flex items-center justify-between">
+                    <span>{t.heatmapOpacity}</span>
+                    <span className="tabular-nums">{Math.round(props.timelineHeatmap.opacity * 100)}%</span>
+                  </span>
+                  <input
+                    className="mt-1 w-full accent-brand"
+                    type="range"
+                    min={0}
+                    max={80}
+                    step={5}
+                    value={Math.round(props.timelineHeatmap.opacity * 100)}
+                    data-testid="toolbar-view-heatmap-opacity-input"
+                    onChange={(event) => props.onTimelineHeatmapChange({ opacity: Number(event.target.value) / 100 })}
+                  />
+                </label>
+                <label className="block">
+                  <span>{t.heatmapColorScheme}</span>
+                  <select
+                    className="mt-1 w-full rounded border border-line bg-white px-2 py-1 text-xs"
+                    value={props.timelineHeatmap.colorScheme}
+                    data-testid="toolbar-view-heatmap-color-select"
+                    onChange={(event) => props.onTimelineHeatmapChange({ colorScheme: event.target.value as TimelineHeatmapViewSettings['colorScheme'] })}
+                  >
+                    {(['warm', 'cool', 'mono'] as const).map((scheme) => (
+                      <option key={scheme} value={scheme}>
+                        {t.heatmapColorSchemes[scheme]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            ) : null}
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
               type="button"

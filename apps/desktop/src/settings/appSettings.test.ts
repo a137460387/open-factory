@@ -313,40 +313,65 @@ describe('app settings storage', () => {
 
   it('persists safe frame guide visibility in view settings', async () => {
     const defaultMediaLibrary = { mode: 'grid', gridSize: 'medium', sortKey: 'importedAt', sortDirection: 'asc' };
-    await expect(readViewSettings()).resolves.toEqual({ safeFrameGuides: false, thumbnailTrackVisible: true, mediaLibrary: defaultMediaLibrary });
+    const defaultTimelineHeatmap = { enabled: false, type: 'edit-density', opacity: 0.45, colorScheme: 'warm' };
+    await expect(readViewSettings()).resolves.toEqual({ safeFrameGuides: false, thumbnailTrackVisible: true, timelineHeatmap: defaultTimelineHeatmap, mediaLibrary: defaultMediaLibrary });
 
     await saveLanguageSetting('en');
     const view = await saveViewSettings({ safeFrameGuides: true, thumbnailTrackVisible: false });
 
-    expect(view).toEqual({ safeFrameGuides: true, thumbnailTrackVisible: false, mediaLibrary: defaultMediaLibrary });
-    expect(await readViewSettings()).toEqual({ safeFrameGuides: true, thumbnailTrackVisible: false, mediaLibrary: defaultMediaLibrary });
+    expect(view).toEqual({ safeFrameGuides: true, thumbnailTrackVisible: false, timelineHeatmap: defaultTimelineHeatmap, mediaLibrary: defaultMediaLibrary });
+    expect(await readViewSettings()).toEqual({ safeFrameGuides: true, thumbnailTrackVisible: false, timelineHeatmap: defaultTimelineHeatmap, mediaLibrary: defaultMediaLibrary });
     expect(await readAppSettings()).toEqual({
       language: 'en',
-      view: { safeFrameGuides: true, thumbnailTrackVisible: false, mediaLibrary: defaultMediaLibrary }
+      view: { safeFrameGuides: true, thumbnailTrackVisible: false, timelineHeatmap: defaultTimelineHeatmap, mediaLibrary: defaultMediaLibrary }
     });
 
     await saveViewSettings({ safeFrameGuides: false, thumbnailTrackVisible: true });
-    expect(await readViewSettings()).toEqual({ safeFrameGuides: false, thumbnailTrackVisible: true, mediaLibrary: defaultMediaLibrary });
+    expect(await readViewSettings()).toEqual({ safeFrameGuides: false, thumbnailTrackVisible: true, timelineHeatmap: defaultTimelineHeatmap, mediaLibrary: defaultMediaLibrary });
     expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({
       language: 'en',
-      view: { safeFrameGuides: false, thumbnailTrackVisible: true, mediaLibrary: defaultMediaLibrary }
+      view: { safeFrameGuides: false, thumbnailTrackVisible: true, timelineHeatmap: defaultTimelineHeatmap, mediaLibrary: defaultMediaLibrary }
     });
   });
 
   it('persists media library view mode and sorting in settings.json', async () => {
     const mediaLibrary = { mode: 'list' as const, gridSize: 'large' as const, sortKey: 'duration' as const, sortDirection: 'asc' as const };
+    const defaultTimelineHeatmap = { enabled: false, type: 'edit-density', opacity: 0.45, colorScheme: 'warm' };
 
     await saveViewSettings({ mediaLibrary });
 
     expect(await readViewSettings()).toEqual({
       safeFrameGuides: false,
       thumbnailTrackVisible: true,
+      timelineHeatmap: defaultTimelineHeatmap,
       mediaLibrary
     });
     expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({
       view: {
         safeFrameGuides: false,
         thumbnailTrackVisible: true,
+        timelineHeatmap: defaultTimelineHeatmap,
+        mediaLibrary
+      }
+    });
+  });
+
+  it('persists normalized timeline heatmap opacity in view settings', async () => {
+    const mediaLibrary = { mode: 'grid', gridSize: 'medium', sortKey: 'importedAt', sortDirection: 'asc' };
+
+    await saveViewSettings({ timelineHeatmap: { enabled: true, type: 'volume', opacity: 1.4, colorScheme: 'cool' } });
+
+    expect(await readViewSettings()).toEqual({
+      safeFrameGuides: false,
+      thumbnailTrackVisible: true,
+      timelineHeatmap: { enabled: true, type: 'volume', opacity: 0.8, colorScheme: 'cool' },
+      mediaLibrary
+    });
+    expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({
+      view: {
+        safeFrameGuides: false,
+        thumbnailTrackVisible: true,
+        timelineHeatmap: { enabled: true, type: 'volume', opacity: 0.8, colorScheme: 'cool' },
         mediaLibrary
       }
     });

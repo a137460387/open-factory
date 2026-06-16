@@ -1,5 +1,13 @@
 import { getLanguage, languageFromNavigator, normalizeLanguage, setLanguage, type Language } from '../i18n/strings';
-import { DEFAULT_TIMELINE_GRID_SETTINGS, normalizeSplitLayoutDefinition, normalizeTimelineGridSettings, type SplitLayoutDefinition, type TimelineGridSettings } from '@open-factory/editor-core';
+import {
+  DEFAULT_TIMELINE_GRID_SETTINGS,
+  normalizeSplitLayoutDefinition,
+  normalizeTimelineGridSettings,
+  type SplitLayoutDefinition,
+  type TimelineGridSettings,
+  type TimelineHeatmapColorScheme,
+  type TimelineHeatmapType
+} from '@open-factory/editor-core';
 import { fsExists, getAppDataDir, readFile, writeFile } from '../lib/tauri-bridge';
 import {
   DEFAULT_EDITOR_LAYOUT_SETTINGS,
@@ -72,7 +80,15 @@ export interface ExportPresetSyncSettings {
 export interface ViewSettings {
   safeFrameGuides: boolean;
   thumbnailTrackVisible: boolean;
+  timelineHeatmap: TimelineHeatmapViewSettings;
   mediaLibrary: MediaLibraryViewSettings;
+}
+
+export interface TimelineHeatmapViewSettings {
+  enabled: boolean;
+  type: TimelineHeatmapType;
+  opacity: number;
+  colorScheme: TimelineHeatmapColorScheme;
 }
 
 export type ExportRuleTrigger = 'export-success' | 'export-failure' | 'queue-complete';
@@ -622,7 +638,20 @@ export function normalizeViewSettings(settings: Partial<ViewSettings> | undefine
   return {
     safeFrameGuides: settings.safeFrameGuides === true,
     thumbnailTrackVisible: settings.thumbnailTrackVisible !== false,
+    timelineHeatmap: normalizeTimelineHeatmapViewSettings(settings.timelineHeatmap),
     mediaLibrary: normalizeMediaLibraryViewSettings(settings.mediaLibrary)
+  };
+}
+
+export function normalizeTimelineHeatmapViewSettings(settings: Partial<TimelineHeatmapViewSettings> | undefined): TimelineHeatmapViewSettings {
+  const type = settings?.type === 'volume' || settings?.type === 'cut-frequency' ? settings.type : 'edit-density';
+  const colorScheme = settings?.colorScheme === 'cool' || settings?.colorScheme === 'mono' ? settings.colorScheme : 'warm';
+  const rawOpacity = typeof settings?.opacity === 'number' && Number.isFinite(settings.opacity) ? settings.opacity : 0.45;
+  return {
+    enabled: settings?.enabled === true,
+    type,
+    opacity: Math.round(Math.min(0.8, Math.max(0, rawOpacity)) * 100) / 100,
+    colorScheme
   };
 }
 
@@ -707,6 +736,7 @@ function defaultViewSettings(): ViewSettings {
   return {
     safeFrameGuides: false,
     thumbnailTrackVisible: true,
+    timelineHeatmap: normalizeTimelineHeatmapViewSettings(undefined),
     mediaLibrary: { ...DEFAULT_MEDIA_LIBRARY_VIEW_SETTINGS }
   };
 }

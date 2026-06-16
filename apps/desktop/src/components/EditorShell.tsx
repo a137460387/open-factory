@@ -201,11 +201,13 @@ import {
   readPreviewPerformanceSettings,
   readTimelineGridSettings,
   readViewSettings,
+  normalizeTimelineHeatmapViewSettings,
   saveCustomSplitLayouts,
   saveLayoutSettings,
   savePreviewPerformanceSettings,
   saveTimelineGridSettings,
-  saveViewSettings
+  saveViewSettings,
+  type TimelineHeatmapViewSettings
 } from '../settings/appSettings';
 import { DEFAULT_PREVIEW_PERFORMANCE_SETTINGS, type PreviewPerformanceSettings, type PreviewQualityMode, type PreviewSkipFrames } from '../lib/preview/preview-performance';
 import { createProxyForAsset, type ProxyGenerationOptions } from '../media/proxy';
@@ -320,6 +322,7 @@ export function EditorShell() {
   const [layoutSettings, setLayoutSettings] = useState<EditorLayoutSettings>(DEFAULT_EDITOR_LAYOUT_SETTINGS);
   const [safeFrameGuides, setSafeFrameGuides] = useState(false);
   const [thumbnailTrackVisible, setThumbnailTrackVisible] = useState(true);
+  const [timelineHeatmap, setTimelineHeatmap] = useState<TimelineHeatmapViewSettings>(() => normalizeTimelineHeatmapViewSettings(undefined));
   const [previewPerformance, setPreviewPerformance] = useState<PreviewPerformanceSettings>(DEFAULT_PREVIEW_PERFORMANCE_SETTINGS);
   const [timelineGridSettings, setTimelineGridSettings] = useState<TimelineGridSettings>(DEFAULT_TIMELINE_GRID_SETTINGS);
   const [pipLayoutPosition, setPiPLayoutPosition] = useState<PiPLayoutPosition>('bottom-right');
@@ -507,6 +510,18 @@ export function EditorShell() {
     });
   }, []);
 
+  const updateTimelineHeatmap = useCallback((patch: Partial<TimelineHeatmapViewSettings>) => {
+    setTimelineHeatmap((current) => {
+      const optimistic = normalizeTimelineHeatmapViewSettings({ ...current, ...patch });
+      void saveViewSettings({ timelineHeatmap: optimistic })
+        .then((view) => setTimelineHeatmap(view.timelineHeatmap))
+        .catch((error) => {
+          console.warn('Unable to save timeline heatmap settings', error);
+        });
+      return optimistic;
+    });
+  }, []);
+
   const updatePreviewPerformance = useCallback((patch: Partial<PreviewPerformanceSettings>) => {
     setPreviewPerformance((current) => {
       const optimistic = { ...current, ...patch };
@@ -665,6 +680,7 @@ export function EditorShell() {
         if (!canceled) {
           setSafeFrameGuides(view.safeFrameGuides);
           setThumbnailTrackVisible(view.thumbnailTrackVisible);
+          setTimelineHeatmap(view.timelineHeatmap);
         }
       })
       .catch((error) => {
@@ -2465,6 +2481,7 @@ export function EditorShell() {
           onSaveWorkspaceLayout={() => void saveCurrentWorkspaceLayout()}
           safeFrameGuides={safeFrameGuides}
           thumbnailTrackVisible={thumbnailTrackVisible}
+          timelineHeatmap={timelineHeatmap}
           previewQualityMode={previewPerformance.qualityMode}
           timelineGridSettings={timelineGridSettings}
           reviewMode={reviewMode}
@@ -2476,6 +2493,7 @@ export function EditorShell() {
           onToggleStoryboard={() => setStoryboardOpen((open) => !open)}
           onToggleSafeFrameGuides={toggleSafeFrameGuides}
           onToggleThumbnailTrack={toggleThumbnailTrackVisible}
+          onTimelineHeatmapChange={updateTimelineHeatmap}
           onToggleHistoryPanel={() => {
             setSmartRoughCutOpen(false);
             setProjectDocumentationOpen(false);
@@ -2658,6 +2676,7 @@ export function EditorShell() {
               ) : (
                 <Timeline
                   thumbnailTrackVisible={thumbnailTrackVisible}
+                  heatmap={timelineHeatmap}
                   timelineGridSettings={timelineGridSettings}
                   bookmarkPanelOpen={layoutSettings.panels.bookmarks}
                   onBookmarkPanelOpenChange={(bookmarks) => persistPanelVisibilityPatch({ bookmarks })}

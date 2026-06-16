@@ -10,6 +10,7 @@ export * from './color-match';
 export * from './effects';
 export * from './motion-blur';
 export * from './timeline';
+export * from './timeline-heatmap';
 export * from './timeline-color-labels';
 export * from './clip-groups';
 export * from './timeline-compare';

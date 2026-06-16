@@ -40,6 +40,7 @@ import {
   calculateSpeedCurveDisplayDuration,
   calculateSpeedCurveSourceDuration,
   calculateAnchoredScrollLeft,
+  calculateTimelineHeatmap,
   buildTimelineThumbnailTrackSamples,
   buildTimelineRulerTicks,
   buildTimelineGridLines,
@@ -123,6 +124,7 @@ import {
   type TimelineMarker,
   type TimelineSnapCandidate,
   type TimelineGridSettings,
+  type TimelineHeatmapSegment,
   type TimelineLabelColor,
   type TimecodeFormat,
   type Track,
@@ -158,9 +160,10 @@ import { commandManager, projectAccessor, timelineAccessor } from '../../store/c
 import { useEditorStore, type SelectedKeyframeRef } from '../../store/editorStore';
 import { useRenderCacheStore } from '../../store/renderCacheStore';
 import { useWhisperSettingsStore } from '../../store/whisperSettingsStore';
-import { LABEL_WIDTH, Ruler, ThumbnailTrack, TrackRow, type ClipMenuRequest, type DragState, type GapMenuRequest, type VolumeEnvelopeMenuRequest, type VolumeEnvelopePointRequest } from './TimelineParts';
+import { LABEL_WIDTH, Ruler, ThumbnailTrack, TrackRow, TRACK_HEIGHT, type ClipMenuRequest, type DragState, type GapMenuRequest, type VolumeEnvelopeMenuRequest, type VolumeEnvelopePointRequest } from './TimelineParts';
 import { buildRulerContextMenuItems, type RulerContextMenuAction } from './timeline-ruler-menu';
 import { buildKeyboardClipMoveStarts, buildKeyboardClipTrim, getKeyboardSelectedClipIds } from './timeline-keyboard';
+import type { TimelineHeatmapViewSettings } from '../../settings/appSettings';
 
 function isCreditsTextFile(file: File): boolean {
   return /\.(txt|csv)$/i.test(file.name);
@@ -176,14 +179,21 @@ function isEditableKeyboardTarget(target: EventTarget | null): boolean {
   return Boolean(element?.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(element?.tagName ?? ''));
 }
 
+interface HeatmapWorkerResponse {
+  id: number;
+  segments: TimelineHeatmapSegment[];
+}
+
 export function Timeline({
   thumbnailTrackVisible = true,
+  heatmap,
   timelineGridSettings = DEFAULT_TIMELINE_GRID_SETTINGS,
   bookmarkPanelOpen: controlledBookmarkPanelOpen,
   onBookmarkPanelOpenChange,
   onConvertMediaFrameRate
 }: {
   thumbnailTrackVisible?: boolean;
+  heatmap?: TimelineHeatmapViewSettings;
   timelineGridSettings?: TimelineGridSettings;
   bookmarkPanelOpen?: boolean;
   onBookmarkPanelOpenChange?(open: boolean): void;
@@ -253,6 +263,9 @@ export function Timeline({
   const whisperModelPath = useWhisperSettingsStore((state) => state.modelPath);
   const rootRef = useRef<HTMLElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const heatmapWorkerRef = useRef<Worker | null>(null);
+  const heatmapRequestIdRef = useRef(0);
+  const [heatmapSegments, setHeatmapSegments] = useState<TimelineHeatmapSegment[]>([]);
   const timelineDuration = Math.max(
     10,
     ...project.timeline.tracks.flatMap((track) => track.clips.map((clip) => clip.start + clip.duration + 2))
@@ -454,6 +467,51 @@ export function Timeline({
     window.addEventListener('resize', syncScrollViewport);
     return () => window.removeEventListener('resize', syncScrollViewport);
   }, []);
+
+  useEffect(() => {
+    if (!heatmap?.enabled) {
+      setHeatmapSegments([]);
+      return undefined;
+    }
+    const requestId = heatmapRequestIdRef.current + 1;
+    heatmapRequestIdRef.current = requestId;
+    const bucketSeconds = Math.max(0.25, Math.min(2, Math.ceil(timelineDuration / 180)));
+    if (typeof Worker !== 'undefined') {
+      try {
+        const worker =
+          heatmapWorkerRef.current ??
+          new Worker(new URL('../../workers/timeline-heatmap.worker.ts', import.meta.url), {
+            type: 'module'
+          });
+        heatmapWorkerRef.current = worker;
+        worker.onmessage = (event: MessageEvent<HeatmapWorkerResponse>) => {
+          if (event.data.id === heatmapRequestIdRef.current) {
+            setHeatmapSegments(event.data.segments);
+          }
+        };
+        worker.postMessage({
+          id: requestId,
+          type: heatmap.type,
+          timeline: project.timeline,
+          duration: timelineDuration,
+          bucketSeconds
+        });
+        return undefined;
+      } catch {
+        heatmapWorkerRef.current?.terminate();
+        heatmapWorkerRef.current = null;
+      }
+    }
+    const timer = window.setTimeout(() => {
+      const segments = calculateTimelineHeatmap(heatmap.type, project.timeline, { duration: timelineDuration, bucketSeconds });
+      if (requestId === heatmapRequestIdRef.current) {
+        setHeatmapSegments(segments);
+      }
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [heatmap?.enabled, heatmap?.type, project.timeline, timelineDuration]);
+
+  useEffect(() => () => heatmapWorkerRef.current?.terminate(), []);
 
   function addTrack(type: Track['type']): void {
     commandManager.execute(
@@ -2280,6 +2338,16 @@ function addProjectBookmark(time = playheadTime): void {
                 data-grid-major={line.major ? 'true' : 'false'}
               />
             ))}
+            {heatmap?.enabled ? (
+              <TimelineHeatmapCanvas
+                segments={heatmapSegments}
+                zoom={zoom}
+                width={width}
+                height={Math.max(TRACK_HEIGHT, project.timeline.tracks.length * TRACK_HEIGHT)}
+                opacity={heatmap.opacity}
+                colorScheme={heatmap.colorScheme}
+              />
+            ) : null}
             {project.timeline.tracks.map((track) => (
               <TrackRow
                 key={track.id}
@@ -4048,6 +4116,78 @@ function SelectionMarquee({ rect }: { rect: SelectionRect }) {
       data-testid="timeline-selection-marquee"
     />
   );
+}
+
+function TimelineHeatmapCanvas({
+  segments,
+  zoom,
+  width,
+  height,
+  opacity,
+  colorScheme
+}: {
+  segments: TimelineHeatmapSegment[];
+  zoom: number;
+  width: number;
+  height: number;
+  opacity: number;
+  colorScheme: TimelineHeatmapViewSettings['colorScheme'];
+}) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const canvasWidth = Math.max(1, Math.round(width));
+  const canvasHeight = Math.max(1, Math.round(height));
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const context = canvas?.getContext('2d');
+    if (!canvas || !context) {
+      return;
+    }
+    context.clearRect(0, 0, canvasWidth, canvasHeight);
+    if (segments.length === 0) {
+      return;
+    }
+    const gradient = context.createLinearGradient(0, 0, 0, canvasHeight);
+    gradient.addColorStop(0, 'rgba(255,255,255,0.18)');
+    gradient.addColorStop(1, 'rgba(255,255,255,0)');
+    for (const segment of segments) {
+      const left = Math.max(0, Math.round(segment.start * zoom));
+      const segmentWidth = Math.max(1, Math.round((segment.end - segment.start) * zoom));
+      context.fillStyle = heatmapColor(segment.normalized, colorScheme);
+      context.fillRect(left, 0, segmentWidth, canvasHeight);
+      context.fillStyle = gradient;
+      context.fillRect(left, 0, segmentWidth, canvasHeight);
+    }
+  }, [canvasHeight, canvasWidth, colorScheme, segments, zoom]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={canvasWidth}
+      height={canvasHeight}
+      className="pointer-events-none absolute top-0 z-[6]"
+      style={{ left: LABEL_WIDTH, width, height, opacity }}
+      data-testid="timeline-heatmap-canvas"
+    />
+  );
+}
+
+function heatmapColor(value: number, colorScheme: TimelineHeatmapViewSettings['colorScheme']): string {
+  const normalized = Math.min(1, Math.max(0, value));
+  if (colorScheme === 'cool') {
+    const red = Math.round(37 + normalized * 20);
+    const green = Math.round(99 + normalized * 140);
+    const blue = Math.round(235 - normalized * 50);
+    return `rgba(${red},${green},${blue},0.85)`;
+  }
+  if (colorScheme === 'mono') {
+    const channel = Math.round(38 + normalized * 205);
+    return `rgba(${channel},${channel},${channel},0.78)`;
+  }
+  const red = Math.round(251);
+  const green = Math.round(191 - normalized * 110);
+  const blue = Math.round(36 - normalized * 18);
+  return `rgba(${red},${green},${blue},0.85)`;
 }
 
 function keyframeRefKey(ref: SelectedKeyframeRef): string {

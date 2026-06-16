@@ -128,6 +128,19 @@ const zh = {
     exportReviewReport: '导出评审报告',
     safeFrameGuides: '安全框参考线',
     thumbnailTrack: '缩略图轨道',
+    timelineHeatmap: '编辑热力图',
+    heatmapTypes: {
+      'edit-density': '编辑密度',
+      volume: '音量热力',
+      'cut-frequency': '变化频率'
+    },
+    heatmapOpacity: '透明度',
+    heatmapColorScheme: '颜色方案',
+    heatmapColorSchemes: {
+      warm: '暖色',
+      cool: '冷色',
+      mono: '单色'
+    },
     previewQuality: '预览质量',
     previewQualityOptions: {
       full: '全质量',
@@ -3124,6 +3137,19 @@ const enOverrides = {
     exportReviewReport: 'Export Review Report',
     safeFrameGuides: 'Safe Frame Guides',
     thumbnailTrack: 'Thumbnail Track',
+    timelineHeatmap: 'Edit Heatmap',
+    heatmapTypes: {
+      'edit-density': 'Edit Density',
+      volume: 'Volume Heat',
+      'cut-frequency': 'Cut Frequency'
+    },
+    heatmapOpacity: 'Opacity',
+    heatmapColorScheme: 'Color Scheme',
+    heatmapColorSchemes: {
+      warm: 'Warm',
+      cool: 'Cool',
+      mono: 'Mono'
+    },
     previewQuality: 'Preview Quality',
     previewQualityOptions: {
       full: 'Full Quality',
