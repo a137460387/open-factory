@@ -18,6 +18,17 @@ interface Window {
       hasNonBackgroundPixels: boolean;
       error?: string;
     };
+    gpu?: {
+      gpuFrameMs: number;
+      textureBytes: number;
+      textureCount: number;
+      drawCalls: number;
+      instancedDrawCalls: number;
+      offscreenWorkerSupported: boolean;
+      offscreenWorkerActive: boolean;
+      timerQuerySupported: boolean;
+      fallbackReason?: string;
+    };
     errors?: string[];
   };
   __OPEN_FACTORY_AUDIO_MIX_DEBUG__?: { clipTypes: string[]; gainValues: number[] };

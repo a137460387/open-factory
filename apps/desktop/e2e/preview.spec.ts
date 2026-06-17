@@ -47,3 +47,25 @@ test('automatically degrades preview quality when measured fps is low', async ({
   await expect(indicator).toHaveAttribute('data-quality', 'half');
   await expect(page.getByTestId('preview-canvas')).toHaveAttribute('data-preview-quality', 'half');
 });
+
+test('shows GPU preview metrics while keeping animation frames responsive', async ({ page }) => {
+  await page.goto('/');
+  await page.getByTestId('import-media-button').click();
+  await addMediaCardToTimeline(page);
+  await page.getByTestId('preview-playback-button').click();
+
+  const panel = page.getByTestId('preview-gpu-metrics-panel');
+  await expect(panel).toBeVisible();
+  await expect.poll(() => page.evaluate(() => window.__OPEN_FACTORY_PREVIEW_DEBUG__?.gpu?.gpuFrameMs ?? -1)).toBeGreaterThanOrEqual(0);
+  await expect.poll(() => page.evaluate(() => window.__OPEN_FACTORY_PREVIEW_DEBUG__?.gpu?.drawCalls ?? 0)).toBeGreaterThan(0);
+
+  const frameDelay = await page.evaluate(
+    () =>
+      new Promise<number>((resolve) => {
+        const start = performance.now();
+        requestAnimationFrame(() => resolve(performance.now() - start));
+      })
+  );
+  expect(frameDelay).toBeLessThan(1000);
+  await expect(panel).toHaveAttribute('data-draw-calls', /\d+/);
+});

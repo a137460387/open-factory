@@ -12,6 +12,7 @@ import {
   TIMELINE_LABEL_COLORS,
   buildTrimDurationBubble,
   type Clip,
+  type CollaborationClipLock,
   type ClipGroup,
   type ClipPitchDataPoint,
   type DialogueInterval,
@@ -313,7 +314,8 @@ export function TrackRow({
   colorFilter,
   projectFrameRate,
   envelopeEditMode,
-  reduceMotion
+  reduceMotion,
+  collaborationLocksByClipId
 }: {
   track: Track;
   zoom: number;
@@ -350,6 +352,7 @@ export function TrackRow({
   projectFrameRate: number;
   envelopeEditMode: boolean;
   reduceMotion: boolean;
+  collaborationLocksByClipId: Map<string, CollaborationClipLock>;
 }) {
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const frequencyBands = useAudioMeterStore((state) => state.trackFrequencyBands[track.id] ?? getSilentFrequencyBands());
@@ -572,6 +575,7 @@ export function TrackRow({
               projectFrameRate={projectFrameRate}
               envelopeEditMode={envelopeEditMode}
               reduceMotion={reduceMotion}
+              collaborationLock={collaborationLocksByClipId.get(clip.id)}
             />
           );
         })}
@@ -675,7 +679,8 @@ function ClipBlock({
   trackColor,
   projectFrameRate,
   envelopeEditMode,
-  reduceMotion
+  reduceMotion,
+  collaborationLock
 }: {
   clip: Clip;
   asset?: MediaAsset;
@@ -710,6 +715,7 @@ function ClipBlock({
   projectFrameRate: number;
   envelopeEditMode: boolean;
   reduceMotion: boolean;
+  collaborationLock?: CollaborationClipLock;
 }) {
   const waveformColor = getTrackWaveformColor(trackType);
   const effectiveColor = getEffectiveClipColorLabel(clip, { color: trackColor });
@@ -798,6 +804,7 @@ function ClipBlock({
       data-color-label={effectiveColor ?? 'default'}
       data-dragging={isMoveDragging ? 'true' : 'false'}
       data-reduce-motion={reduceMotion ? 'true' : 'false'}
+      data-collaboration-locked={collaborationLock ? 'true' : 'false'}
     >
       {trimBubble ? (
         <span
@@ -822,6 +829,15 @@ function ClipBlock({
             </span>
           ) : null}
         </>
+      ) : null}
+      {collaborationLock ? (
+        <span
+          className="absolute right-1 top-1 z-30 max-w-[72%] truncate rounded-sm bg-slate-900/85 px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-sm"
+          title={zhCN.timeline.lockedByUser(collaborationLock.userName)}
+          data-testid={`timeline-clip-remote-lock-${clip.id}`}
+        >
+          {zhCN.timeline.lockedByUser(collaborationLock.userName)}
+        </span>
       ) : null}
       {clip.type === 'video' && asset ? <VideoThumbnailStrip clip={clip} asset={asset} pixelWidth={clipPixelWidth} /> : null}
       {clip.type === 'video' && asset?.hasAudio ? (

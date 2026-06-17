@@ -1,4 +1,4 @@
-import { ArrowUpRight, BarChart3, Blend, Columns2, FileDown, GitCompareArrows, MousePointer2, Pause, Pipette, Play, RectangleHorizontal, Rows2, Type as TypeIcon } from 'lucide-react';
+import { ArrowUpRight, BarChart3, Blend, Columns2, FileDown, Gauge, GitCompareArrows, MousePointer2, Pause, Pipette, Play, RectangleHorizontal, Rows2, Type as TypeIcon } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode, type WheelEvent as ReactWheelEvent } from 'react';
 import {
   RecordAngleCutCommand,
@@ -84,6 +84,14 @@ import {
   type PreviewFpsSample,
   type PreviewPerformanceSettings
 } from '../../lib/preview/preview-performance';
+import {
+  DEFAULT_GPU_PREVIEW_METRICS,
+  GPU_TEXTURE_POOL_MAX_BYTES,
+  buildGpuPrefetchFrameRequests,
+  detectGpuPreviewCapabilities,
+  formatTextureMemoryMiB,
+  type GpuPreviewMetrics
+} from '../../lib/preview/gpu-acceleration';
 import { getTimelineRenderCacheController } from '../../lib/preview/render-cache-controller';
 import { showToast } from '../../lib/toast';
 import { useAudioMeterStore } from '../../store/audioMeterStore';
@@ -169,6 +177,8 @@ export function PreviewCanvas({
   const [frameSearchHistory, setFrameSearchHistory] = useState<FrameSearchHistoryEntry[]>([]);
   const [adaptivePreviewState, setAdaptivePreviewState] = useState(DEFAULT_PREVIEW_ADAPTIVE_QUALITY_STATE);
   const [multicamLiveMode, setMulticamLiveMode] = useState(false);
+  const [gpuCapabilities, setGpuCapabilities] = useState(() => detectGpuPreviewCapabilities());
+  const [gpuPreviewMetrics, setGpuPreviewMetrics] = useState<GpuPreviewMetrics>(DEFAULT_GPU_PREVIEW_METRICS);
   const prerenderCenter = Math.round(playheadTime * 2) / 2;
   const fps = project.settings.fps || 30;
   const snapshotCompareEnabled = Boolean(snapshotCompareProject);
@@ -234,6 +244,17 @@ export function PreviewCanvas({
 
   useEffect(() => {
     setFrameSearchHistory(readFrameSearchHistory());
+  }, []);
+
+  useEffect(() => {
+    const capabilities = detectGpuPreviewCapabilities(canvasRef.current ?? undefined);
+    setGpuCapabilities(capabilities);
+    setGpuPreviewMetrics((current) => ({
+      ...current,
+      offscreenWorkerSupported: capabilities.offscreenCanvasWorkerSupported,
+      timerQuerySupported: capabilities.timerQuerySupported,
+      fallbackReason: capabilities.fallbackReason
+    }));
   }, []);
 
   useEffect(() => {
@@ -330,11 +351,22 @@ export function PreviewCanvas({
     previewPerformance.adaptiveEnabled === false
       ? t.adaptiveQualityLocked(t.qualityLabels[effectivePreviewPerformance.qualityMode])
       : t.adaptiveQualityTooltip(adaptivePreviewState.averageFps, t.qualityLabels[effectivePreviewPerformance.qualityMode]);
+  const showGpuMetricsPanel = import.meta.env.DEV || import.meta.env.VITE_E2E === 'true' || window.__OPEN_FACTORY_NATIVE_PREVIEW_SMOKE_ACTIVE__ === true;
+  const gpuTextureMemoryLabel = t.gpuTextureMemory(formatTextureMemoryMiB(gpuPreviewMetrics.textureBytes), formatTextureMemoryMiB(GPU_TEXTURE_POOL_MAX_BYTES));
   const previewCanvasSizeLabel = t.canvasSize(previewRenderSize.width, previewRenderSize.height);
   const previewSurfaceStyle: CSSProperties = {
     transform: `translate(${previewPan.x}px, ${previewPan.y}px) scale(${previewZoom})`,
     transformOrigin: 'center'
   };
+
+  const resolveGpuMetrics = (metrics?: GpuPreviewMetrics): GpuPreviewMetrics => ({
+    ...DEFAULT_GPU_PREVIEW_METRICS,
+    ...metrics,
+    offscreenWorkerSupported: gpuCapabilities.offscreenCanvasWorkerSupported,
+    offscreenWorkerActive: false,
+    timerQuerySupported: metrics?.timerQuerySupported ?? gpuCapabilities.timerQuerySupported,
+    fallbackReason: metrics?.fallbackReason ?? gpuCapabilities.fallbackReason
+  });
 
   useEffect(() => {
     setTimelineCompareRanges(snapshotCompareRanges);
@@ -450,6 +482,7 @@ export function PreviewCanvas({
             try {
               if (!canceled) {
                 rendererRef.current.drawCachedFrame(canvas, cached);
+                setGpuPreviewMetrics(resolveGpuMetrics(rendererRef.current.getGpuMetrics()));
               }
             } finally {
               cached.close();
@@ -466,6 +499,7 @@ export function PreviewCanvas({
         if (canceled) {
           return;
         }
+        setGpuPreviewMetrics(resolveGpuMetrics(result.gpuMetrics));
         if (result.frame && shouldCaptureScopes) {
           setScopeFrame(result.frame);
         }
@@ -540,6 +574,32 @@ export function PreviewCanvas({
   }, [project.timeline]);
 
   useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || audioOnlyPreview) {
+      return undefined;
+    }
+    let canceled = false;
+    const media = project.media.filter((asset) => !asset.missing && (asset.type === 'video' || asset.type === 'image'));
+    void (async () => {
+      for (const asset of media) {
+        if (canceled) {
+          break;
+        }
+        await rendererRef.current.preloadMediaTexture(canvas, asset);
+        await waitForIdleFrame();
+      }
+      if (!canceled) {
+        setGpuPreviewMetrics(resolveGpuMetrics(rendererRef.current.getGpuMetrics()));
+      }
+    })().catch(() => {
+      // GPU texture preload is best-effort; live rendering remains the source of truth.
+    });
+    return () => {
+      canceled = true;
+    };
+  }, [audioOnlyPreview, project.media, previewRenderSize.height, previewRenderSize.width]);
+
+  useEffect(() => {
     if (previewTimeline) {
       return undefined;
     }
@@ -550,7 +610,7 @@ export function PreviewCanvas({
       canvas.width = 1280;
       canvas.height = 720;
       const renderer = new PreviewRenderer();
-      const requests = buildTimelineRenderFrameRequests({
+      const requestInput = {
         timeline: project.timeline,
         media: project.media,
         sequences: project.sequences,
@@ -561,7 +621,8 @@ export function PreviewCanvas({
         fps,
         width: canvas.width,
         height: canvas.height
-      });
+      };
+      const requests = isPlaying ? buildGpuPrefetchFrameRequests(requestInput) : buildTimelineRenderFrameRequests(requestInput);
 
       void (async () => {
         for (const request of requests) {
@@ -597,7 +658,7 @@ export function PreviewCanvas({
       canceled = true;
       window.clearTimeout(timer);
     };
-  }, [fps, prerenderCenter, previewTimeline, project.activeSequenceId, project.media, project.sequences, project.settings.colorPipeline, project.timeline]);
+  }, [fps, isPlaying, prerenderCenter, previewTimeline, project.activeSequenceId, project.media, project.sequences, project.settings.colorPipeline, project.timeline]);
 
   useEffect(() => {
     getTimelineRenderCacheController().retainAround(playheadTime);
@@ -1444,6 +1505,38 @@ export function PreviewCanvas({
             {lowQualityPreview ? (
               <div className="pointer-events-none absolute left-3 top-3 z-20 rounded bg-black/60 px-2 py-1 text-xs font-medium text-white" data-testid="preview-simplified-effects-hint">
                 {audioOnlyPreview ? t.audioOnlyPreview : t.simplifiedEffects}
+              </div>
+            ) : null}
+            {showGpuMetricsPanel ? (
+              <div
+                className="pointer-events-none absolute bottom-3 right-3 z-30 grid min-w-[196px] gap-1 rounded-md border border-white/15 bg-black/70 px-3 py-2 text-[11px] text-white shadow-soft backdrop-blur"
+                data-testid="preview-gpu-metrics-panel"
+                data-offscreen-supported={gpuPreviewMetrics.offscreenWorkerSupported ? 'true' : 'false'}
+                data-offscreen-active={gpuPreviewMetrics.offscreenWorkerActive ? 'true' : 'false'}
+                data-draw-calls={gpuPreviewMetrics.drawCalls}
+              >
+                <div className="flex items-center gap-2 text-xs font-semibold">
+                  <Gauge size={14} />
+                  <span>{t.gpuMetricsTitle}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-white/60">{t.gpuFrameTime}</span>
+                  <span className="font-mono tabular-nums">{gpuPreviewMetrics.gpuFrameMs.toFixed(1)} ms</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-white/60">{t.gpuTexturePool}</span>
+                  <span className="font-mono tabular-nums">{gpuTextureMemoryLabel}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-white/60">{t.gpuDrawCalls}</span>
+                  <span className="font-mono tabular-nums">
+                    {gpuPreviewMetrics.instancedDrawCalls}/{gpuPreviewMetrics.drawCalls}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-white/60">{t.gpuOffscreenWorker}</span>
+                  <span className="font-mono tabular-nums">{gpuPreviewMetrics.offscreenWorkerSupported ? t.gpuOffscreenReady : t.gpuOffscreenFallback}</span>
+                </div>
               </div>
             ) : null}
             <div ref={previewSurfaceRef} className="absolute inset-0" style={previewSurfaceStyle} data-testid="preview-surface">

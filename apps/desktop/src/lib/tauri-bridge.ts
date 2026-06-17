@@ -609,6 +609,15 @@ export interface CancelSmokeConfig {
   reportPath: string;
 }
 
+export interface CollaborationHostRequest {
+  port: number;
+}
+
+export interface CollaborationHostState {
+  active: boolean;
+  port: number;
+}
+
 export type TauriMocks = Partial<{
   confirm(message: string, options?: unknown): Promise<boolean> | boolean;
   chooseUnsavedCloseAction(): Promise<UnsavedCloseAction> | UnsavedCloseAction;
@@ -683,6 +692,9 @@ export type TauriMocks = Partial<{
   updateExportTrayProgress(progress: number, runningCount: number): Promise<void> | void;
   runExportPowerAction(action: 'shutdown' | 'hibernate', allowPowerActions: boolean): Promise<void> | void;
   sendNotification(title: string, body: string): Promise<void> | void;
+  startCollaborationHost(request: CollaborationHostRequest): Promise<CollaborationHostState> | CollaborationHostState;
+  stopCollaborationHost(): Promise<void> | void;
+  broadcastCollaborationMessage(message: string): Promise<void> | void;
   probeMediaPath(path: string): Promise<Partial<import('@open-factory/editor-core').MediaAsset>> | Partial<import('@open-factory/editor-core').MediaAsset>;
   probeMedia(path: string): Promise<MediaProbe> | MediaProbe;
   analyzeMedia(path: string): Promise<MediaAnalysis> | MediaAnalysis;
@@ -1496,6 +1508,39 @@ export async function forceCloseWindow(): Promise<void> {
   }
 }
 
+export async function startCollaborationHost(request: CollaborationHostRequest): Promise<CollaborationHostState> {
+  const mock = getTauriMocks()?.startCollaborationHost;
+  if (mock) {
+    return mock(request);
+  }
+  if (!isTauriRuntime()) {
+    return { active: true, port: request.port };
+  }
+  return invoke<CollaborationHostState>('start_collaboration_host', { request });
+}
+
+export async function stopCollaborationHost(): Promise<void> {
+  const mock = getTauriMocks()?.stopCollaborationHost;
+  if (mock) {
+    await mock();
+    return;
+  }
+  if (isTauriRuntime()) {
+    await invoke('stop_collaboration_host');
+  }
+}
+
+export async function broadcastCollaborationMessage(message: string): Promise<void> {
+  const mock = getTauriMocks()?.broadcastCollaborationMessage;
+  if (mock) {
+    await mock(message);
+    return;
+  }
+  if (isTauriRuntime()) {
+    await invoke('broadcast_collaboration_message', { message });
+  }
+}
+
 export async function openPreviewWindow(request: PreviewWindowRequest): Promise<PreviewWindowState> {
   const mock = getTauriMocks()?.openPreviewWindow;
   if (mock) {
@@ -1627,6 +1672,10 @@ export async function emitBridge<T>(event: string, payload: T): Promise<void> {
   if (isTauriRuntime()) {
     await emit(event, payload);
   }
+}
+
+export async function listenCollaborationMessage(handler: (message: string) => void): Promise<() => void> {
+  return listenBridge<string>('collaboration-message', handler);
 }
 
 export async function listenBatchTranscodeProgress(handler: (payload: BatchTranscodeProgressEvent) => void): Promise<() => void> {

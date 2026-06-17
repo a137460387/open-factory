@@ -28,7 +28,8 @@ export function drawImageWebGl(
     bypassProcessing,
     disabledEffectTypes,
     colorPipeline,
-    blendMode: clip.blendMode
+    blendMode: clip.blendMode,
+    textureCacheKey: asset.path
   });
   recordPreviewDraw('image', 'image');
 }

@@ -17,6 +17,8 @@ import {
   type ProjectFileV2
 } from '@open-factory/editor-core';
 import { commandManager, timelineAccessor } from '../store/commandManager';
+import { collaborationController } from '../collaboration/local-network';
+import { useCollaborationStore } from '../store/collaborationStore';
 import { useEditorStore } from '../store/editorStore';
 import { usePrivacyDetectionSettingsStore } from '../store/privacyDetectionSettingsStore';
 import type {
@@ -87,6 +89,9 @@ let powerActionCalls: Array<{ action: 'shutdown' | 'hibernate'; allowPowerAction
 let notifications: Array<{ title: string; body: string }> = [];
 let recordingTasks = new Map<string, { outputPath: string; startedAt: number }>();
 const damagedMediaPaths = new Set<string>();
+let collaborationHostActive = false;
+let collaborationHostPort = 37822;
+let collaborationBroadcastMessages: string[] = [];
 
 const sampleProjectPath = 'C:/Projects/sample.cutproj.json';
 const missingProjectPath = 'C:/Projects/missing.cutproj.json';
@@ -940,6 +945,18 @@ const mocks: TauriMocks = {
     mtimes.set(task.outputPath, Date.now());
     persistFiles();
     return { taskId, outputPath: task.outputPath, durationMs: Date.now() - task.startedAt };
+  },
+  startCollaborationHost: ({ port }) => {
+    collaborationHostActive = true;
+    collaborationHostPort = port || 37822;
+    return { active: true, port: collaborationHostPort };
+  },
+  stopCollaborationHost: () => {
+    collaborationHostActive = false;
+  },
+  broadcastCollaborationMessage: (message) => {
+    collaborationBroadcastMessages.push(message);
+    emit('collaboration-message', message);
   },
   probeMediaPath: (path) => {
     const base = {
@@ -2137,6 +2154,33 @@ window.__E2E_ACTIONS__ = {
       useEditorStore.getState().setPlayheadTime(time);
     }
   },
+  enableMockCollaboration: async (input: unknown) => {
+    const options = (input && typeof input === 'object' ? input : {}) as {
+      mode?: 'host' | 'client';
+      permission?: 'read-only' | 'edit';
+      port?: number;
+      userId?: string;
+      name?: string;
+      color?: string;
+    };
+    if (options.mode === 'host') {
+      await collaborationController.enableHost({ port: options.port ?? 37822, userId: options.userId ?? 'local-e2e' });
+    } else {
+      await collaborationController.enableClient({ permission: options.permission ?? 'edit', userId: options.userId ?? 'local-e2e' });
+    }
+    collaborationController.updatePresence(useEditorStore.getState().playheadTime, options.name ?? 'E2E Local', options.color ?? '#38bdf8');
+    return collaborationController.getState();
+  },
+  disableMockCollaboration: async () => {
+    await collaborationController.disable();
+    useCollaborationStore.getState().reset();
+  },
+  emitMockCollaborationMessage: (message: unknown) => {
+    emit('collaboration-message', typeof message === 'string' ? message : JSON.stringify(message));
+  },
+  getCollaborationState: () => collaborationController.getState(),
+  getCollaborationBroadcastMessages: () => [...collaborationBroadcastMessages],
+  getCollaborationHostState: () => ({ active: collaborationHostActive, port: collaborationHostPort }),
   getSelectedClipIds: () => useEditorStore.getState().selectedClipIds,
   selectClip: (clipId: unknown) => {
     if (typeof clipId === 'string') {
@@ -2374,6 +2418,11 @@ window.__E2E_ACTIONS__ = {
     powerActionCalls = [];
     notifications = [];
     recordingTasks = new Map();
+    collaborationHostActive = false;
+    collaborationHostPort = 37822;
+    collaborationBroadcastMessages = [];
+    void collaborationController.disable();
+    useCollaborationStore.getState().reset();
     exportWarmupDelayMs = 0;
     nextExportError = undefined;
     postExportQualityStatus = 'pass';

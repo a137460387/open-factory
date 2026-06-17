@@ -76,10 +76,12 @@ import { PROXY_RESOLUTION_PRESETS, PROXY_TRIGGER_THRESHOLDS, useProxySettingsSto
 import { useRecordingSettingsStore } from '../store/recordingSettingsStore';
 import { useTranslationSettingsStore, type TranslationProvider } from '../store/translationSettingsStore';
 import { useWhisperSettingsStore } from '../store/whisperSettingsStore';
+import { applyLocalCoeditingSettings } from '../collaboration/settings';
 import {
   DEFAULT_BACKUP_SETTINGS,
   DEFAULT_COLLABORATION_IDENTITY_SETTINGS,
   DEFAULT_EXPORT_PRESET_SYNC_SETTINGS,
+  DEFAULT_LOCAL_COEDITING_SETTINGS,
   readAutomationRules,
   readBackupSettings,
   readCollaborationIdentitySettings,
@@ -88,6 +90,7 @@ import {
   readExportQualityAssuranceSettings,
   readExportPresetSyncSettings,
   readExportRules,
+  readLocalCoeditingSettings,
   readLocalAiModelsSettings,
   saveAutomationRules,
   saveBackupSettings,
@@ -98,6 +101,7 @@ import {
   saveExportPresetSyncSettings,
   saveExportRules,
   saveLanguageSetting,
+  saveLocalCoeditingSettings,
   saveLocalAiModelsSettings,
   type AutomationRule,
   type BackupSettings,
@@ -106,6 +110,7 @@ import {
   type ExportBackgroundSettings,
   type ExportPresetSyncSettings,
   type ExportConditionRule,
+  type LocalCoeditingSettings,
   type TimelineInteractionSettings
 } from './appSettings';
 import {
@@ -203,6 +208,7 @@ export function SettingsDialog({
   const [automationRulesJson, setAutomationRulesJson] = useState('[]');
   const [automationRulesError, setAutomationRulesError] = useState<string>();
   const [collaborationIdentity, setCollaborationIdentity] = useState<CollaborationIdentitySettings>(() => ({ ...DEFAULT_COLLABORATION_IDENTITY_SETTINGS }));
+  const [localCoediting, setLocalCoediting] = useState<LocalCoeditingSettings>(() => ({ ...DEFAULT_LOCAL_COEDITING_SETTINGS }));
   const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(() => ({ colorGamut: 'srgb' }));
   const [localModelsSettings, setLocalModelsSettings] = useState<LocalAiModelsSettings>({});
   const [localModelStatuses, setLocalModelStatuses] = useState<Partial<Record<LocalAiModelId, LocalAiModelResolvedStatus>>>({});
@@ -250,6 +256,7 @@ export function SettingsDialog({
     void loadExportRules();
     void loadAutomationRules();
     void loadCollaborationIdentity();
+    void loadLocalCoediting();
     void loadDisplaySettings();
     void loadLocalModelsSettings();
     void loadTranslationApiKey();
@@ -636,6 +643,18 @@ export function SettingsDialog({
     }
   }
 
+  async function loadLocalCoediting() {
+    try {
+      setLocalCoediting(await readLocalCoeditingSettings());
+    } catch (coeditingError) {
+      showToast({
+        kind: 'warning',
+        title: t.general.saveFailed,
+        message: coeditingError instanceof Error ? coeditingError.message : t.general.saveFailedMessage
+      });
+    }
+  }
+
   async function loadDisplaySettings() {
     try {
       setDisplaySettings(await readDisplaySettings());
@@ -813,12 +832,32 @@ export function SettingsDialog({
     const optimistic = { ...collaborationIdentity, ...patch };
     setCollaborationIdentity(optimistic);
     try {
-      setCollaborationIdentity(await saveCollaborationIdentitySettings(optimistic));
+      const saved = await saveCollaborationIdentitySettings(optimistic);
+      setCollaborationIdentity(saved);
+      if (localCoediting.enabled) {
+        await applyLocalCoeditingSettings(localCoediting, saved);
+      }
     } catch (identityError) {
       showToast({
         kind: 'warning',
         title: t.general.saveFailed,
         message: identityError instanceof Error ? identityError.message : t.general.saveFailedMessage
+      });
+    }
+  }
+
+  async function updateLocalCoediting(patch: Partial<LocalCoeditingSettings>) {
+    const optimistic = { ...localCoediting, ...patch };
+    setLocalCoediting(optimistic);
+    try {
+      const saved = await saveLocalCoeditingSettings(optimistic);
+      setLocalCoediting(saved);
+      await applyLocalCoeditingSettings(saved, collaborationIdentity);
+    } catch (coeditingError) {
+      showToast({
+        kind: 'warning',
+        title: t.general.saveFailed,
+        message: coeditingError instanceof Error ? coeditingError.message : t.general.saveFailedMessage
       });
     }
   }
@@ -1279,6 +1318,69 @@ export function SettingsDialog({
                         value={collaborationIdentity.color}
                         data-testid="settings-collaboration-color-input"
                         onChange={(event) => void updateCollaborationIdentity({ color: event.target.value })}
+                      />
+                    </label>
+                  </div>
+                </div>
+                <div className="rounded-md border border-line bg-panel p-3" data-testid="settings-local-coediting-section">
+                  <label className="flex items-start gap-2 text-xs text-slate-600">
+                    <input
+                      className="mt-0.5 h-4 w-4 accent-brand"
+                      type="checkbox"
+                      checked={localCoediting.enabled}
+                      data-testid="settings-local-coediting-enabled"
+                      onChange={(event) => void updateLocalCoediting({ enabled: event.target.checked })}
+                    />
+                    <span>
+                      <span className="block font-semibold text-slate-700">{t.general.localCoeditingTitle}</span>
+                      <span className="mt-1 block">{t.general.localCoeditingDescription}</span>
+                    </span>
+                  </label>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <label className="block text-xs font-medium text-slate-600">
+                      {t.general.localCoeditingMode}
+                      <select
+                        className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                        value={localCoediting.mode}
+                        data-testid="settings-local-coediting-mode"
+                        onChange={(event) => void updateLocalCoediting({ mode: event.target.value === 'client' ? 'client' : 'host' })}
+                      >
+                        <option value="host">{t.general.localCoeditingHost}</option>
+                        <option value="client">{t.general.localCoeditingClient}</option>
+                      </select>
+                    </label>
+                    <label className="block text-xs font-medium text-slate-600">
+                      {t.general.localCoeditingPermission}
+                      <select
+                        className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                        value={localCoediting.permission}
+                        data-testid="settings-local-coediting-permission"
+                        onChange={(event) => void updateLocalCoediting({ permission: event.target.value === 'read-only' ? 'read-only' : 'edit' })}
+                      >
+                        <option value="edit">{t.general.localCoeditingEdit}</option>
+                        <option value="read-only">{t.general.localCoeditingReadOnly}</option>
+                      </select>
+                    </label>
+                    <label className="block text-xs font-medium text-slate-600">
+                      {t.general.localCoeditingPort}
+                      <input
+                        className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                        type="number"
+                        min={1}
+                        max={65535}
+                        value={localCoediting.port}
+                        data-testid="settings-local-coediting-port"
+                        onChange={(event) => void updateLocalCoediting({ port: Number(event.target.value) })}
+                      />
+                    </label>
+                    <label className="block text-xs font-medium text-slate-600">
+                      {t.general.localCoeditingHostUrl}
+                      <input
+                        className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                        value={localCoediting.hostUrl ?? ''}
+                        placeholder="ws://192.168.1.10:37822"
+                        data-testid="settings-local-coediting-host-url"
+                        onChange={(event) => void updateLocalCoediting({ hostUrl: event.target.value })}
                       />
                     </label>
                   </div>

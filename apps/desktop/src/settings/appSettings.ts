@@ -99,6 +99,17 @@ export interface CollaborationIdentitySettings {
   color: string;
 }
 
+export type LocalCoeditingMode = 'host' | 'client';
+export type LocalCoeditingPermission = 'read-only' | 'edit';
+
+export interface LocalCoeditingSettings {
+  enabled: boolean;
+  mode: LocalCoeditingMode;
+  permission: LocalCoeditingPermission;
+  port: number;
+  hostUrl?: string;
+}
+
 export interface AudioVisualizationThemeSettings {
   customThemes: CustomAudioVisualizationTheme[];
 }
@@ -220,6 +231,13 @@ export const DEFAULT_COLLABORATION_IDENTITY_SETTINGS: CollaborationIdentitySetti
   color: '#38bdf8'
 };
 
+export const DEFAULT_LOCAL_COEDITING_SETTINGS: LocalCoeditingSettings = {
+  enabled: false,
+  mode: 'host',
+  permission: 'edit',
+  port: 37822
+};
+
 export const DEFAULT_AUDIO_VISUALIZATION_THEME_SETTINGS: AudioVisualizationThemeSettings = {
   customThemes: []
 };
@@ -244,6 +262,7 @@ export interface AppSettings {
   timelineInteraction?: TimelineInteractionSettings;
   display?: DisplaySettings;
   collaborationIdentity?: CollaborationIdentitySettings;
+  localCoediting?: LocalCoeditingSettings;
   audioVisualizationThemes?: AudioVisualizationThemeSettings;
   localModels?: LocalAiModelsSettings;
   automationRules?: AutomationRule[];
@@ -479,6 +498,18 @@ export async function saveCollaborationIdentitySettings(identity: Partial<Collab
   return nextIdentity;
 }
 
+export async function readLocalCoeditingSettings(): Promise<LocalCoeditingSettings> {
+  const settings = await readAppSettings();
+  return normalizeLocalCoeditingSettings(settings.localCoediting);
+}
+
+export async function saveLocalCoeditingSettings(localCoediting: Partial<LocalCoeditingSettings>): Promise<LocalCoeditingSettings> {
+  const settings = await readAppSettings();
+  const nextLocalCoediting = normalizeLocalCoeditingSettings({ ...settings.localCoediting, ...localCoediting });
+  await writeAppSettings({ ...settings, localCoediting: nextLocalCoediting });
+  return nextLocalCoediting;
+}
+
 export async function readAudioVisualizationThemeSettings(): Promise<AudioVisualizationThemeSettings> {
   const settings = await readAppSettings();
   return settings.audioVisualizationThemes ?? { ...DEFAULT_AUDIO_VISUALIZATION_THEME_SETTINGS };
@@ -647,6 +678,10 @@ function normalizeSettings(settings: Partial<AppSettings>): AppSettings {
   const collaborationIdentity = normalizeCollaborationIdentitySettings(settings.collaborationIdentity);
   if (shouldPersistCollaborationIdentitySettings(collaborationIdentity)) {
     normalized.collaborationIdentity = collaborationIdentity;
+  }
+  const localCoediting = normalizeLocalCoeditingSettings(settings.localCoediting);
+  if (shouldPersistLocalCoeditingSettings(localCoediting)) {
+    normalized.localCoediting = localCoediting;
   }
   const audioVisualizationThemes = normalizeAudioVisualizationThemeSettings(settings.audioVisualizationThemes);
   if (shouldPersistAudioVisualizationThemeSettings(audioVisualizationThemes)) {
@@ -888,6 +923,16 @@ export function normalizeCollaborationIdentitySettings(settings: Partial<Collabo
   };
 }
 
+export function normalizeLocalCoeditingSettings(settings: Partial<LocalCoeditingSettings> | undefined): LocalCoeditingSettings {
+  return {
+    enabled: settings?.enabled === true,
+    mode: settings?.mode === 'client' ? 'client' : 'host',
+    permission: settings?.permission === 'read-only' ? 'read-only' : 'edit',
+    port: normalizeInteger(settings?.port, 1, 65535, DEFAULT_LOCAL_COEDITING_SETTINGS.port),
+    hostUrl: typeof settings?.hostUrl === 'string' && settings.hostUrl.trim() ? settings.hostUrl.trim().slice(0, 300) : undefined
+  };
+}
+
 export function normalizeAudioVisualizationThemeSettings(settings: Partial<AudioVisualizationThemeSettings> | undefined): AudioVisualizationThemeSettings {
   return {
     customThemes: normalizeCustomAudioVisualizationThemes(settings?.customThemes)
@@ -1067,6 +1112,16 @@ function shouldPersistDisplaySettings(settings: DisplaySettings): boolean {
 
 function shouldPersistCollaborationIdentitySettings(settings: CollaborationIdentitySettings): boolean {
   return settings.name !== DEFAULT_COLLABORATION_IDENTITY_SETTINGS.name || settings.color !== DEFAULT_COLLABORATION_IDENTITY_SETTINGS.color;
+}
+
+function shouldPersistLocalCoeditingSettings(settings: LocalCoeditingSettings): boolean {
+  return (
+    settings.enabled !== DEFAULT_LOCAL_COEDITING_SETTINGS.enabled ||
+    settings.mode !== DEFAULT_LOCAL_COEDITING_SETTINGS.mode ||
+    settings.permission !== DEFAULT_LOCAL_COEDITING_SETTINGS.permission ||
+    settings.port !== DEFAULT_LOCAL_COEDITING_SETTINGS.port ||
+    Boolean(settings.hostUrl)
+  );
 }
 
 function shouldPersistAudioVisualizationThemeSettings(settings: AudioVisualizationThemeSettings): boolean {

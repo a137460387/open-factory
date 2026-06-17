@@ -1,5 +1,17 @@
 export type PreviewSourceKind = 'video' | 'image' | 'thumbnail' | 'text' | 'subtitle' | 'missing';
 
+export interface PreviewGpuDebugMetrics {
+  gpuFrameMs: number;
+  textureBytes: number;
+  textureCount: number;
+  drawCalls: number;
+  instancedDrawCalls: number;
+  offscreenWorkerSupported: boolean;
+  offscreenWorkerActive: boolean;
+  timerQuerySupported: boolean;
+  fallbackReason?: string;
+}
+
 export function recordPreviewMode(mode: 'webgl' | '2d'): void {
   if (!shouldRecordPreviewDebug()) {
     return;
@@ -47,6 +59,27 @@ export function recordPreviewReadback(pixel: number[] | undefined, error?: strin
       pixel,
       hasNonBackgroundPixels: pixel ? isNonBackgroundPixel(pixel) : false,
       error
+    }
+  };
+}
+
+export function recordPreviewGpuMetrics(metrics: PreviewGpuDebugMetrics): void {
+  if (!shouldRecordPreviewDebug()) {
+    return;
+  }
+  const current = window.__OPEN_FACTORY_PREVIEW_DEBUG__ ?? { renderCount: 0 };
+  window.__OPEN_FACTORY_PREVIEW_DEBUG__ = {
+    ...current,
+    gpu: {
+      gpuFrameMs: Number(metrics.gpuFrameMs.toFixed(2)),
+      textureBytes: metrics.textureBytes,
+      textureCount: metrics.textureCount,
+      drawCalls: metrics.drawCalls,
+      instancedDrawCalls: metrics.instancedDrawCalls,
+      offscreenWorkerSupported: metrics.offscreenWorkerSupported,
+      offscreenWorkerActive: metrics.offscreenWorkerActive,
+      timerQuerySupported: metrics.timerQuerySupported,
+      fallbackReason: metrics.fallbackReason
     }
   };
 }

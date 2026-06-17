@@ -42,6 +42,7 @@ export * from './timeline-ruler';
 export * from './timeline-bookmarks';
 export * from './timeline-notes';
 export * from './collaboration-notes';
+export * from './collaboration';
 export * from './timeline-virtualization';
 export * from './sync-compare';
 export * from './timeline-search';

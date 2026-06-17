@@ -240,14 +240,17 @@ import {
 } from '../macros/clip-macros';
 import {
   readBackupSettings,
+  readCollaborationIdentitySettings,
   readCustomSplitLayouts,
   readLayoutSettings,
+  readLocalCoeditingSettings,
   readPreviewPerformanceSettings,
   readTutorialProgressSettings,
   readPreviewWindowSettings,
   readTimelineInteractionSettings,
   readTimelineGridSettings,
   readViewSettings,
+  DEFAULT_COLLABORATION_IDENTITY_SETTINGS,
   DEFAULT_TIMELINE_INTERACTION_SETTINGS,
   normalizeTimelineHeatmapViewSettings,
   saveCustomSplitLayouts,
@@ -259,9 +262,12 @@ import {
   saveTimelineGridSettings,
   saveViewSettings,
   type PreviewWindowSettings,
+  type CollaborationIdentitySettings,
   type TimelineInteractionSettings,
   type TimelineHeatmapViewSettings
 } from '../settings/appSettings';
+import { collaborationController } from '../collaboration/local-network';
+import { applyLocalCoeditingSettings } from '../collaboration/settings';
 import { TutorialOverlay } from '../tutorial/TutorialOverlay';
 import {
   DEFAULT_TUTORIAL_SIGNALS,
@@ -286,6 +292,7 @@ import { ProjectHealthDialog } from '../project-health/ProjectHealthDialog';
 import { ProjectTemplateDialog } from '../project-templates/ProjectTemplateDialog';
 import { loadSharedLibrary, type SharedLibraryResource } from '../shared-library/sharedLibrary';
 import { commandManager, projectAccessor, timelineAccessor } from '../store/commandManager';
+import { useCollaborationStore } from '../store/collaborationStore';
 import { useDemucsSettingsStore } from '../store/demucsSettingsStore';
 import { selectClipById, useEditorStore } from '../store/editorStore';
 import { useProxySettingsStore } from '../store/proxySettingsStore';
@@ -365,6 +372,7 @@ export function EditorShell() {
   const setPlaybackRate = useEditorStore((state) => state.setPlaybackRate);
   const setInPoint = useEditorStore((state) => state.setInPoint);
   const setOutPoint = useEditorStore((state) => state.setOutPoint);
+  const collaborationEnabled = useCollaborationStore((state) => state.enabled);
   const [batchTranscodeOpen, setBatchTranscodeOpen] = useState(false);
   const [batchWatermarkOpen, setBatchWatermarkOpen] = useState(false);
   const [batchProjectProcessingOpen, setBatchProjectProcessingOpen] = useState(false);
@@ -444,6 +452,7 @@ export function EditorShell() {
   const [previewWindowResolutionScale, setPreviewWindowResolutionScale] = useState<PreviewWindowSettings['resolutionScale']>(1);
   const [timelineGridSettings, setTimelineGridSettings] = useState<TimelineGridSettings>(DEFAULT_TIMELINE_GRID_SETTINGS);
   const [timelineInteractionSettings, setTimelineInteractionSettings] = useState<TimelineInteractionSettings>(DEFAULT_TIMELINE_INTERACTION_SETTINGS);
+  const [collaborationIdentity, setCollaborationIdentity] = useState<CollaborationIdentitySettings>(() => ({ ...DEFAULT_COLLABORATION_IDENTITY_SETTINGS }));
   const [tutorialProgress, setTutorialProgress] = useState<TutorialProgressSettings | undefined>();
   const [tutorialCelebrationVisible, setTutorialCelebrationVisible] = useState(false);
   const [tutorialSignals, setTutorialSignals] = useState<TutorialSignals>(DEFAULT_TUTORIAL_SIGNALS);
@@ -886,6 +895,30 @@ export function EditorShell() {
       canceled = true;
     };
   }, []);
+
+  useEffect(() => {
+    let canceled = false;
+    void Promise.all([readLocalCoeditingSettings(), readCollaborationIdentitySettings()])
+      .then(([settings, identity]) => {
+        if (!canceled) {
+          setCollaborationIdentity(identity);
+          void applyLocalCoeditingSettings(settings, identity);
+        }
+      })
+      .catch((error) => {
+        console.warn('Unable to load local co-editing settings', error);
+      });
+    return () => {
+      canceled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!collaborationEnabled) {
+      return;
+    }
+    collaborationController.updatePresence(playheadTime, collaborationIdentity.name, collaborationIdentity.color);
+  }, [collaborationEnabled, collaborationIdentity.color, collaborationIdentity.name, playheadTime]);
 
   useEffect(() => {
     let canceled = false;

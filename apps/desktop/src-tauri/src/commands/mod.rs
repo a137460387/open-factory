@@ -2,6 +2,7 @@ pub mod background;
 pub mod backup;
 pub(crate) mod binaries;
 pub mod cache;
+pub mod collaboration;
 pub mod demucs;
 pub mod ffmpeg;
 pub mod files;

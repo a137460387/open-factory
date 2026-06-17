@@ -15,7 +15,8 @@ import {
   normalizeColorCorrection
 } from '@open-factory/editor-core';
 import { PreviewAudioRenderer } from './audio-renderer';
-import { recordPreviewError, recordPreviewMode, recordPreviewReadback } from './debug';
+import { recordPreviewError, recordPreviewGpuMetrics, recordPreviewMode, recordPreviewReadback } from './debug';
+import type { GpuPreviewMetrics } from './gpu-acceleration';
 import { drawImage2d, drawImage2dBypass, drawImageWebGl } from './image-renderer';
 import { createVideoElement, loadImage, loadThumbnail, seekVideo } from './media-elements';
 import { drawCreditsRoll2d, drawCreditsRollWebGl, drawMissing2d, drawMissingWebGl, drawText2d, drawTextWebGl } from './text-renderer';
@@ -41,6 +42,7 @@ export interface PreviewFrameReadback {
 
 export interface PreviewRenderResult {
   frame?: PreviewFrameReadback;
+  gpuMetrics?: GpuPreviewMetrics;
 }
 
 export class PreviewRenderer {
@@ -79,8 +81,10 @@ export class PreviewRenderer {
         this.drawAudioSpectrumWebGl(webgl, timeline, playheadTime, canvas.width, canvas.height);
       }
       webgl.finish();
+      const gpuMetrics = webgl.getMetrics();
+      recordPreviewGpuMetrics(gpuMetrics);
       recordPreviewReadback(webgl.readCenterPixel());
-      return { frame: options.captureFrame ? readWebGlFrameSafely(webgl) : undefined };
+      return { frame: options.captureFrame ? readWebGlFrameSafely(webgl) : undefined, gpuMetrics };
     }
 
     const context = canvas.getContext('2d');
@@ -124,6 +128,7 @@ export class PreviewRenderer {
       webgl.begin(canvas.width, canvas.height);
       webgl.drawSource(bitmap, bitmap.width, bitmap.height, DEFAULT_TRANSFORM);
       webgl.finish();
+      recordPreviewGpuMetrics(webgl.getMetrics());
       return;
     }
     const context = canvas.getContext('2d');
@@ -139,6 +144,35 @@ export class PreviewRenderer {
 
   pauseAllAudio(): void {
     this.audioRenderer.pauseAllAudio();
+  }
+
+  async preloadMediaTexture(canvas: HTMLCanvasElement, asset: MediaAsset): Promise<boolean> {
+    if (asset.missing || (asset.type !== 'video' && asset.type !== 'image')) {
+      return false;
+    }
+    const webgl = this.getWebGl(canvas);
+    if (!webgl) {
+      return false;
+    }
+    const width = asset.width || 1280;
+    const height = asset.height || 720;
+    try {
+      if (asset.type === 'image') {
+        const image = await loadImage(asset);
+        return webgl.preloadSourceTexture(image, width, height, asset.path);
+      }
+      const video = this.getVideo(asset);
+      await seekVideo(video, 0);
+      return webgl.preloadSourceTexture(video, width, height, asset.path);
+    } catch (error) {
+      recordPreviewError(error instanceof Error ? error.message : 'GPU texture preload failed.');
+      const fallback = await loadThumbnail(asset);
+      return fallback ? webgl.preloadSourceTexture(fallback, width, height, `${asset.path}:thumbnail`) : false;
+    }
+  }
+
+  getGpuMetrics(): GpuPreviewMetrics | undefined {
+    return this.webgl?.getMetrics() ?? undefined;
   }
 
   getDuration(timeline: Timeline): number {

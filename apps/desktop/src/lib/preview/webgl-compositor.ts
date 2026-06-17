@@ -38,6 +38,14 @@ import {
 } from '@open-factory/editor-core';
 
 import { zhCN } from '../../i18n/strings';
+import {
+  DEFAULT_GPU_PREVIEW_METRICS,
+  GPU_TEXTURE_POOL_MAX_BYTES,
+  GpuTexturePool,
+  calculateInstancedDrawCallCount,
+  estimateTextureBytes,
+  type GpuPreviewMetrics
+} from './gpu-acceleration';
 
 interface ProgramInfo {
   program: WebGLProgram;
@@ -99,6 +107,8 @@ export interface WebGlSourceProcessingOptions {
   disabledEffectTypes?: EffectType[];
   colorPipeline?: ProjectColorPipeline;
   blendMode?: ClipBlendMode;
+  textureCacheKey?: string;
+  textureBytes?: number;
 }
 
 export interface WebGlResolvedSourceProcessing {
@@ -123,8 +133,13 @@ export class WebGlPreviewCompositor {
   private readonly curveTexture: WebGLTexture;
   private readonly blendBaseTexture: WebGLTexture;
   private readonly textures = new WeakMap<TexImageSource, WebGLTexture>();
+  private readonly texturePool: GpuTexturePool<WebGLTexture>;
   private readonly customPrograms = new Map<string, CustomShaderProgramInfo | null>();
   private panoramaProgram?: PanoramaProgramInfo | null;
+  private frameStartedAt = 0;
+  private drawCalls = 0;
+  private readonly timerQuerySupported: boolean;
+  private lastMetrics: GpuPreviewMetrics = DEFAULT_GPU_PREVIEW_METRICS;
 
   constructor(canvas: HTMLCanvasElement) {
     const gl = canvas.getContext('webgl', {
@@ -147,6 +162,11 @@ export class WebGlPreviewCompositor {
     this.texCoordBuffer = texCoordBuffer;
     this.curveTexture = curveTexture;
     this.blendBaseTexture = blendBaseTexture;
+    this.texturePool = new GpuTexturePool<WebGLTexture>({
+      maxBytes: GPU_TEXTURE_POOL_MAX_BYTES,
+      disposeTexture: (texture) => gl.deleteTexture(texture)
+    });
+    this.timerQuerySupported = Boolean(gl.getExtension('EXT_disjoint_timer_query'));
     gl.bindTexture(gl.TEXTURE_2D, this.curveTexture);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
@@ -161,6 +181,8 @@ export class WebGlPreviewCompositor {
 
   begin(width: number, height: number, clearColor: [number, number, number, number] = [0.078, 0.094, 0.125, 1]): void {
     const gl = this.gl;
+    this.frameStartedAt = performance.now();
+    this.drawCalls = 0;
     gl.viewport(0, 0, width, height);
     gl.clearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
     gl.clear(gl.COLOR_BUFFER_BIT);
@@ -186,7 +208,7 @@ export class WebGlPreviewCompositor {
     options: WebGlSourceProcessingOptions = {}
   ): void {
     const gl = this.gl;
-    const texture = this.getTexture(source);
+    const texture = this.getTexture(source, options.textureCacheKey, options.textureBytes ?? estimateTextureBytes(mediaWidth, mediaHeight));
     const disabledEffectTypes = new Set(options.disabledEffectTypes ?? []);
     const blendMode = normalizeClipBlendMode(options.blendMode);
     const customShader = options.bypassProcessing || disabledEffectTypes.has('custom-shader') ? undefined : getEnabledCustomShaderEffect(effects);
@@ -306,7 +328,7 @@ export class WebGlPreviewCompositor {
     if (!program) {
       return false;
     }
-    const texture = this.getTexture(source);
+    const texture = this.getTexture(source, options.textureCacheKey, options.textureBytes ?? estimateTextureBytes(mediaWidth, mediaHeight));
     gl.useProgram(program.program);
     if (program.texture) {
       gl.uniform1i(program.texture, 0);
@@ -393,6 +415,37 @@ export class WebGlPreviewCompositor {
 
   finish(): void {
     this.gl.flush();
+    this.lastMetrics = {
+      gpuFrameMs: Math.max(0, performance.now() - this.frameStartedAt),
+      textureBytes: this.texturePool.sizeBytes,
+      textureCount: this.texturePool.size,
+      drawCalls: this.drawCalls,
+      instancedDrawCalls: calculateInstancedDrawCallCount(this.drawCalls, true),
+      offscreenWorkerSupported: false,
+      offscreenWorkerActive: false,
+      timerQuerySupported: this.timerQuerySupported
+    };
+  }
+
+  getMetrics(): GpuPreviewMetrics {
+    return this.lastMetrics;
+  }
+
+  preloadSourceTexture(source: TexImageSource, mediaWidth: number, mediaHeight: number, cacheKey: string): boolean {
+    if (!cacheKey.trim()) {
+      return false;
+    }
+    try {
+      const gl = this.gl;
+      const texture = this.getTexture(source, cacheKey, estimateTextureBytes(mediaWidth, mediaHeight));
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
+      return true;
+    } catch (error) {
+      console.warn('Unable to preload GPU preview texture', error);
+      return false;
+    }
   }
 
   readCenterPixel(): number[] {
@@ -455,9 +508,19 @@ export class WebGlPreviewCompositor {
     return true;
   }
 
-  private getTexture(source: TexImageSource): WebGLTexture {
+  private getTexture(source: TexImageSource, cacheKey?: string, bytes?: number): WebGLTexture {
+    const key = cacheKey?.trim();
+    if (key) {
+      const pooled = this.texturePool.get(key);
+      if (pooled) {
+        return pooled;
+      }
+    }
     const cached = this.textures.get(source);
     if (cached) {
+      if (key) {
+        this.texturePool.put({ key, texture: cached, bytes: bytes ?? 1 });
+      }
       return cached;
     }
     const gl = this.gl;
@@ -470,7 +533,9 @@ export class WebGlPreviewCompositor {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    this.textures.set(source, texture);
+    if (!key || !this.texturePool.put({ key, texture, bytes: bytes ?? 1 })) {
+      this.textures.set(source, texture);
+    }
     return texture;
   }
 
@@ -565,6 +630,7 @@ export class WebGlPreviewCompositor {
     gl.enableVertexAttribArray(program.texCoord);
     gl.vertexAttribPointer(program.texCoord, 2, gl.FLOAT, false, 0, 0);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
+    this.drawCalls += 1;
   }
 }
 

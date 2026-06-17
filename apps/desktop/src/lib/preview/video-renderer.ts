@@ -48,7 +48,7 @@ export async function drawVideoWebGl(
   try {
     await seekVideo(video, sourceTime);
     if (clip.projection === 'equirectangular' && clip.panorama) {
-      const drawn = compositor.drawPanoramaSource(video, asset.width || 1280, asset.height || 720, clip.transform, clip.panorama, { bypassProcessing, blendMode: clip.blendMode });
+      const drawn = compositor.drawPanoramaSource(video, asset.width || 1280, asset.height || 720, clip.transform, clip.panorama, { bypassProcessing, blendMode: clip.blendMode, textureCacheKey: asset.path });
       if (drawn) {
         recordPreviewDraw('video', 'video');
         return;
@@ -58,7 +58,8 @@ export async function drawVideoWebGl(
       bypassProcessing,
       disabledEffectTypes,
       colorPipeline,
-      blendMode: clip.blendMode
+      blendMode: clip.blendMode,
+      textureCacheKey: asset.path
     });
     recordPreviewDraw('video', 'video');
   } catch (error) {
@@ -66,7 +67,7 @@ export async function drawVideoWebGl(
     const fallback = await loadThumbnail(asset);
     if (fallback) {
       if (clip.projection === 'equirectangular' && clip.panorama) {
-        const drawn = compositor.drawPanoramaSource(fallback, asset.width || 1280, asset.height || 720, clip.transform, clip.panorama, { bypassProcessing, blendMode: clip.blendMode });
+        const drawn = compositor.drawPanoramaSource(fallback, asset.width || 1280, asset.height || 720, clip.transform, clip.panorama, { bypassProcessing, blendMode: clip.blendMode, textureCacheKey: `${asset.path}:thumbnail` });
         if (drawn) {
           recordPreviewDraw('video', 'thumbnail');
           return;
@@ -76,7 +77,8 @@ export async function drawVideoWebGl(
         bypassProcessing,
         disabledEffectTypes,
         colorPipeline,
-        blendMode: clip.blendMode
+        blendMode: clip.blendMode,
+        textureCacheKey: `${asset.path}:thumbnail`
       });
       recordPreviewDraw('video', 'thumbnail');
     }

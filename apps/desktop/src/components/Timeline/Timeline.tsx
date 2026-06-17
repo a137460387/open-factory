@@ -189,6 +189,7 @@ import {
   type WhisperProgressEvent
 } from '../../lib/tauri-bridge';
 import { commandManager, projectAccessor, timelineAccessor } from '../../store/commandManager';
+import { useCollaborationStore } from '../../store/collaborationStore';
 import { useEditorStore, type SelectedKeyframeRef } from '../../store/editorStore';
 import { useRenderCacheStore } from '../../store/renderCacheStore';
 import { useWhisperSettingsStore } from '../../store/whisperSettingsStore';
@@ -286,6 +287,10 @@ export function Timeline({
   const projectPath = useEditorStore((state) => state.projectPath);
   const timelineCompareRanges = useEditorStore((state) => state.timelineCompareRanges);
   const zoom = useEditorStore((state) => state.timelineZoom);
+  const collaborationEnabled = useCollaborationStore((state) => state.enabled);
+  const collaborationUserId = useCollaborationStore((state) => state.userId);
+  const collaborationUsers = useCollaborationStore((state) => state.users);
+  const collaborationLocks = useCollaborationStore((state) => state.locks);
   const setSelectedClipId = useEditorStore((state) => state.setSelectedClipId);
   const setSelectedClipIds = useEditorStore((state) => state.setSelectedClipIds);
   const addMedia = useEditorStore((state) => state.addMedia);
@@ -404,6 +409,14 @@ export function Timeline({
       beatTimes: timelineGridBeatTimes
     });
   }, [project.settings.fps, scrollViewport.viewportWidth, timelineDuration, timelineGridBeatTimes, timelineGridSettings.enabled, timelineGridSettings.unit, visibleEnd, visibleStart, zoom]);
+  const remoteCollaborationUsers = useMemo(
+    () => (collaborationEnabled ? collaborationUsers.filter((user) => user.userId !== collaborationUserId) : []),
+    [collaborationEnabled, collaborationUserId, collaborationUsers]
+  );
+  const collaborationLocksByClipId = useMemo(
+    () => new Map(collaborationLocks.filter((lock) => lock.userId !== collaborationUserId).map((lock) => [lock.clipId, lock])),
+    [collaborationLocks, collaborationUserId]
+  );
   const activeBeatMarkerId = useMemo(() => {
     if (!isPlaying) {
       return undefined;
@@ -2882,6 +2895,7 @@ function addProjectBookmark(time = playheadTime): void {
                 projectFrameRate={project.settings.fps}
                 envelopeEditMode={envelopeEditMode}
                 reduceMotion={reduceMotion}
+                collaborationLocksByClipId={collaborationLocksByClipId}
               />
             ))}
             {protectedRanges.map((range) => (
@@ -3016,6 +3030,25 @@ function addProjectBookmark(time = playheadTime): void {
                 data-testid="timeline-out-point-marker"
               />
             ) : null}
+            {remoteCollaborationUsers.map((user) => (
+              <div
+                key={user.userId}
+                className="pointer-events-none absolute bottom-0 top-0 z-[18] w-0.5"
+                style={{ left: LABEL_WIDTH + Math.max(0, user.playheadTime) * zoom, backgroundColor: user.color ?? '#38bdf8' }}
+                title={zhCN.timeline.remotePlayhead(user.name)}
+                data-testid={`timeline-remote-playhead-${user.userId}`}
+                data-user-id={user.userId}
+                data-playhead-time={user.playheadTime}
+              >
+                <span
+                  className="absolute left-1 top-1 max-w-[120px] truncate rounded-sm px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-sm"
+                  style={{ backgroundColor: user.color ?? '#38bdf8' }}
+                  data-testid={`timeline-remote-playhead-label-${user.userId}`}
+                >
+                  {user.name}
+                </span>
+              </div>
+            ))}
             <div
               className="absolute bottom-0 top-0 z-20 w-0.5 bg-coral"
               style={{ left: LABEL_WIDTH + playheadTime * zoom }}
