@@ -92,7 +92,17 @@ import {
   type TimelineGridUnit,
   type TitleTemplateId,
   type ExportTask,
-  type MediaVersionCompareRequest
+  type MediaVersionCompareRequest,
+  createOperationRecording,
+  recordOperationCommand,
+  serializeOperationRecording,
+  parseOperationRecording,
+  buildOperationReplaySchedule,
+  getOperationProjectAtStep,
+  generateOperationRecordingSlidesHtml,
+  normalizeOperationReplaySpeed,
+  type OperationRecordingFile,
+  type OperationReplaySpeed
 } from '@open-factory/editor-core';
 import { ChevronLeft, ChevronRight, GripHorizontal } from 'lucide-react';
 import { Toolbar } from './Toolbar';
@@ -285,6 +295,7 @@ const SyncComparePanel = lazy(() => import('../sync-compare/SyncComparePanel').t
 const SceneReorderDialog = lazy(() => import('../scene-reorder/SceneReorderDialog').then((module) => ({ default: module.SceneReorderDialog })));
 const StyleTransferDialog = lazy(() => import('../style-transfer/StyleTransferDialog'));
 const CollaborationNotesPanel = lazy(() => import('../collaboration/CollaborationNotesPanel'));
+const OperationReplayDialog = lazy(() => import('../operation-recording/OperationReplayDialog'));
 const SmartRecommendationsDialog = lazy(() => import('../smart-recommendations/SmartRecommendationsDialog'));
 const ContentAnalysisDialog = lazy(() => import('../media/ContentAnalysisDialog').then((module) => ({ default: module.ContentAnalysisDialog })));
 const RhythmAnalysisDialog = lazy(() => import('../analysis/RhythmAnalysisDialog').then((module) => ({ default: module.RhythmAnalysisDialog })));
@@ -342,6 +353,12 @@ export function EditorShell() {
   const [sceneReorderOpen, setSceneReorderOpen] = useState(false);
   const [styleTransferOpen, setStyleTransferOpen] = useState(false);
   const [collaborationNotesOpen, setCollaborationNotesOpen] = useState(false);
+  const [operationRecordingOpen, setOperationRecordingOpen] = useState(false);
+  const [operationRecording, setOperationRecording] = useState<OperationRecordingFile>();
+  const [operationRecordingActive, setOperationRecordingActive] = useState(false);
+  const [operationRecordingStep, setOperationRecordingStep] = useState(-1);
+  const [operationReplaySpeed, setOperationReplaySpeed] = useState<OperationReplaySpeed>(1);
+  const [operationReplayRunning, setOperationReplayRunning] = useState(false);
   const [smartRecommendationsOpen, setSmartRecommendationsOpen] = useState(false);
   const [contentAnalysisOpen, setContentAnalysisOpen] = useState(false);
   const [rhythmAnalysisOpen, setRhythmAnalysisOpen] = useState(false);
@@ -417,6 +434,8 @@ export function EditorShell() {
     discardExportQueueRecovery
   } = useExportQueue(project);
   const macroRecorderRef = useRef<{ active: boolean; replaying: boolean; steps: CommandSnapshot[] }>({ active: false, replaying: false, steps: [] });
+  const operationRecorderRef = useRef<{ active: boolean; replaying: boolean; recording?: OperationRecordingFile }>({ active: false, replaying: false });
+  const operationReplayTimersRef = useRef<number[]>([]);
 
   const selectedClip = useMemo(() => selectClipById(project, selectedClipId), [project, selectedClipId]);
   const selectedClips = useMemo(() => selectedClipIds.map((id) => selectClipById(project, id)).filter((clip): clip is Clip => Boolean(clip)), [project, selectedClipIds]);
@@ -1192,17 +1211,31 @@ export function EditorShell() {
   useEffect(() => {
     commandManager.setOnExecute((command) => {
       const recorder = macroRecorderRef.current;
-      if (!recorder.active || recorder.replaying) {
-        return;
+      if (recorder.active && !recorder.replaying) {
+        const snapshot = snapshotCommand(command);
+        if (snapshot) {
+          recorder.steps = [...recorder.steps, snapshot];
+          setMacroRecordingStepCount(recorder.steps.length);
+        }
       }
-      const snapshot = snapshotCommand(command);
-      if (!snapshot) {
-        return;
+      const operationRecorder = operationRecorderRef.current;
+      if (operationRecorder.active && !operationRecorder.replaying && operationRecorder.recording) {
+        const nextRecording = recordOperationCommand(operationRecorder.recording, command, useEditorStore.getState().project);
+        operationRecorder.recording = nextRecording;
+        setOperationRecording(nextRecording);
+        setOperationRecordingStep(nextRecording.commands.length - 1);
       }
-      recorder.steps = [...recorder.steps, snapshot];
-      setMacroRecordingStepCount(recorder.steps.length);
     });
     return () => commandManager.setOnExecute(undefined);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      for (const timer of operationReplayTimersRef.current) {
+        window.clearTimeout(timer);
+      }
+      operationReplayTimersRef.current = [];
+    };
   }, []);
 
   useEffect(() => {
@@ -2789,6 +2822,147 @@ export function EditorShell() {
     [recordMacroHistory, setSelectedClipId]
   );
 
+  const clearOperationReplayTimers = useCallback(() => {
+    for (const timer of operationReplayTimersRef.current) {
+      window.clearTimeout(timer);
+    }
+    operationReplayTimersRef.current = [];
+  }, []);
+
+  const applyOperationRecordingStep = useCallback((recording: OperationRecordingFile, stepIndex: number) => {
+    const projectAtStep = getOperationProjectAtStep(recording, stepIndex);
+    operationRecorderRef.current.replaying = true;
+    try {
+      commandManager.execute(new LoadProjectCommand(projectAccessor, projectAtStep, zhCN.operationRecording.replayCommand));
+    } finally {
+      operationRecorderRef.current.replaying = false;
+    }
+    setOperationRecordingStep(stepIndex);
+    setSelectedClipIds([]);
+    setSelectedClipId(undefined);
+  }, [setSelectedClipId, setSelectedClipIds]);
+
+  const startOperationRecording = useCallback(() => {
+    clearOperationReplayTimers();
+    const nextRecording = createOperationRecording(useEditorStore.getState().project);
+    operationRecorderRef.current = { active: true, replaying: false, recording: nextRecording };
+    setOperationRecording(nextRecording);
+    setOperationRecordingActive(true);
+    setOperationRecordingStep(-1);
+    setOperationReplayRunning(false);
+    showToast({ kind: 'info', title: zhCN.operationRecording.recordingStarted, message: zhCN.operationRecording.recordingStartedMessage });
+  }, [clearOperationReplayTimers]);
+
+  const stopOperationRecording = useCallback(() => {
+    operationRecorderRef.current.active = false;
+    setOperationRecordingActive(false);
+    showToast({
+      kind: operationRecorderRef.current.recording?.commands.length ? 'success' : 'warning',
+      title: zhCN.operationRecording.recordingStopped,
+      message: zhCN.operationRecording.summary(operationRecorderRef.current.recording?.commands.length ?? 0)
+    });
+  }, []);
+
+  const saveOperationRecording = useCallback(async () => {
+    const recording = operationRecorderRef.current.recording ?? operationRecording;
+    if (!recording || recording.commands.length === 0) {
+      return;
+    }
+    try {
+      const path = await bridgeSaveFileDialog('timeline-demo.ofrecording.json', [
+        { name: zhCN.operationRecording.fileDialogName, extensions: ['ofrecording.json', 'json'] }
+      ]);
+      if (!path) {
+        return;
+      }
+      await bridgeWriteFile(path, serializeOperationRecording(recording));
+      showToast({ kind: 'success', title: zhCN.operationRecording.savedTitle, message: zhCN.operationRecording.savedMessage(path) });
+    } catch (error) {
+      showToast({ kind: 'error', title: zhCN.operationRecording.saveFailed, message: error instanceof Error ? error.message : zhCN.operationRecording.saveFailedMessage });
+    }
+  }, [operationRecording]);
+
+  const loadOperationRecording = useCallback(async () => {
+    try {
+      const [path] = await bridgeOpenFileDialog(false, [{ name: zhCN.operationRecording.fileDialogName, extensions: ['ofrecording.json', 'json'] }]);
+      if (!path) {
+        return;
+      }
+      const parsed = parseOperationRecording(await bridgeReadFile(path));
+      if (!parsed) {
+        throw new Error(zhCN.operationRecording.invalidFile);
+      }
+      clearOperationReplayTimers();
+      operationRecorderRef.current = { active: false, replaying: false, recording: parsed };
+      setOperationRecording(parsed);
+      setOperationRecordingActive(false);
+      setOperationReplayRunning(false);
+      setOperationRecordingStep(-1);
+      applyOperationRecordingStep(parsed, -1);
+      showToast({ kind: 'success', title: zhCN.operationRecording.loadedTitle, message: zhCN.operationRecording.summary(parsed.commands.length) });
+    } catch (error) {
+      showToast({ kind: 'error', title: zhCN.operationRecording.loadFailed, message: error instanceof Error ? error.message : zhCN.operationRecording.loadFailedMessage });
+    }
+  }, [applyOperationRecordingStep, clearOperationReplayTimers]);
+
+  const pauseOperationReplay = useCallback(() => {
+    clearOperationReplayTimers();
+    setOperationReplayRunning(false);
+  }, [clearOperationReplayTimers]);
+
+  const replayOperationRecording = useCallback(() => {
+    const recording = operationRecorderRef.current.recording ?? operationRecording;
+    if (!recording || recording.commands.length === 0) {
+      return;
+    }
+    clearOperationReplayTimers();
+    setOperationReplayRunning(true);
+    applyOperationRecordingStep(recording, -1);
+    let elapsedMs = 0;
+    for (const step of buildOperationReplaySchedule(recording, operationReplaySpeed)) {
+      elapsedMs += step.delayMs;
+      const timer = window.setTimeout(() => {
+        applyOperationRecordingStep(recording, step.index);
+        if (step.index === recording.commands.length - 1) {
+          operationReplayTimersRef.current = [];
+          setOperationReplayRunning(false);
+          showToast({ kind: 'success', title: zhCN.operationRecording.replayFinished });
+        }
+      }, elapsedMs);
+      operationReplayTimersRef.current.push(timer);
+    }
+  }, [applyOperationRecordingStep, clearOperationReplayTimers, operationRecording, operationReplaySpeed]);
+
+  const jumpOperationRecording = useCallback(
+    (stepIndex: number) => {
+      const recording = operationRecorderRef.current.recording ?? operationRecording;
+      if (!recording) {
+        return;
+      }
+      clearOperationReplayTimers();
+      setOperationReplayRunning(false);
+      applyOperationRecordingStep(recording, stepIndex);
+    },
+    [applyOperationRecordingStep, clearOperationReplayTimers, operationRecording]
+  );
+
+  const exportOperationRecordingSlides = useCallback(async () => {
+    const recording = operationRecorderRef.current.recording ?? operationRecording;
+    if (!recording || recording.commands.length === 0) {
+      return;
+    }
+    try {
+      const path = await bridgeSaveFileDialog('timeline-demo-slides.html', [{ name: zhCN.operationRecording.slidesFileDialogName, extensions: ['html'] }]);
+      if (!path) {
+        return;
+      }
+      await bridgeWriteFile(path, generateOperationRecordingSlidesHtml(recording, 2));
+      showToast({ kind: 'success', title: zhCN.operationRecording.exportedTitle, message: path });
+    } catch (error) {
+      showToast({ kind: 'error', title: zhCN.operationRecording.exportFailed, message: error instanceof Error ? error.message : zhCN.operationRecording.exportFailedMessage });
+    }
+  }, [operationRecording]);
+
   useAutosave(autosaveIntervalSeconds);
   useCloseGuard(saveProject);
   useEffect(() => {
@@ -2856,6 +3030,7 @@ export function EditorShell() {
           onOpenSceneReorder={() => setSceneReorderOpen(true)}
           onOpenStyleTransfer={() => setStyleTransferOpen(true)}
           onOpenCollaborationNotes={() => setCollaborationNotesOpen(true)}
+          onOpenOperationRecording={() => setOperationRecordingOpen(true)}
           onOpenSmartRecommendations={() => setSmartRecommendationsOpen(true)}
           onOpenContentAnalysis={() => setContentAnalysisOpen(true)}
           onOpenRhythmAnalysis={() => setRhythmAnalysisOpen(true)}
@@ -3227,6 +3402,25 @@ export function EditorShell() {
             <StyleTransferDialog project={project} selectedClipId={selectedClipId} selectedClipIds={selectedClipIds} onClose={() => setStyleTransferOpen(false)} />
           ) : null}
           {collaborationNotesOpen ? <CollaborationNotesPanel project={project} playheadTime={playheadTime} onClose={() => setCollaborationNotesOpen(false)} /> : null}
+          {operationRecordingOpen ? (
+            <OperationReplayDialog
+              recording={operationRecording}
+              recordingActive={operationRecordingActive}
+              replaying={operationReplayRunning}
+              currentStep={operationRecordingStep}
+              speed={operationReplaySpeed}
+              onStartRecording={startOperationRecording}
+              onStopRecording={stopOperationRecording}
+              onSaveRecording={() => void saveOperationRecording()}
+              onLoadRecording={() => void loadOperationRecording()}
+              onReplay={replayOperationRecording}
+              onPauseReplay={pauseOperationReplay}
+              onJump={jumpOperationRecording}
+              onSpeedChange={(speed) => setOperationReplaySpeed(normalizeOperationReplaySpeed(speed))}
+              onExportSlides={() => void exportOperationRecordingSlides()}
+              onClose={() => setOperationRecordingOpen(false)}
+            />
+          ) : null}
           {smartRecommendationsOpen ? <SmartRecommendationsDialog project={project} onAddToTimeline={addAssetToTimeline} onClose={() => setSmartRecommendationsOpen(false)} /> : null}
           {contentAnalysisOpen ? (
             <ContentAnalysisDialog

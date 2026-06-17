@@ -44,6 +44,7 @@ export * from './timeline-feedback';
 export * from './timeline-templates';
 export * from './style-transfer';
 export * from './smart-recommendations';
+export * from './operation-recording';
 export * from './frame-search';
 export * from './scene-reorder';
 export * from './vfr';

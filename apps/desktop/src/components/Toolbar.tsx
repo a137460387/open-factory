@@ -52,6 +52,7 @@ interface ToolbarProps {
   onOpenSceneReorder(): void;
   onOpenStyleTransfer(): void;
   onOpenCollaborationNotes(): void;
+  onOpenOperationRecording(): void;
   onOpenSmartRecommendations(): void;
   onOpenContentAnalysis(): void;
   onOpenRhythmAnalysis(): void;
@@ -692,6 +693,18 @@ export function Toolbar(props: ToolbarProps) {
             >
               <span>{t.collaborationNotes}</span>
               <MessageSquareText size={14} />
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-tools-operation-recording-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onOpenOperationRecording();
+              }}
+            >
+              <span>{t.operationRecording}</span>
+              <History size={14} />
             </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
