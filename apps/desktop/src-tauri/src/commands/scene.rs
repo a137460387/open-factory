@@ -75,7 +75,9 @@ pub async fn detect_scene_changes(
         .arg("-i")
         .arg(normalize_path(&safe_path));
     if analyzed_duration > 0.0 {
-        command.arg("-t").arg(format_duration_arg(analyzed_duration));
+        command
+            .arg("-t")
+            .arg(format_duration_arg(analyzed_duration));
     }
     command
         .arg("-vf")
@@ -180,11 +182,17 @@ pub async fn cancel_scene_detection(task_id: String) -> Result<(), String> {
 }
 
 pub(crate) fn build_scdet_filter_arg(threshold: f64) -> String {
-    format!("scdet=threshold={}", format_filter_number(normalize_scdet_threshold(Some(threshold))))
+    format!(
+        "scdet=threshold={}",
+        format_filter_number(normalize_scdet_threshold(Some(threshold)))
+    )
 }
 
 pub(crate) fn build_scene_detection_filter(threshold: f64) -> String {
-    format!("{},metadata=print:key=lavfi.scd.time:file=-", build_scdet_filter_arg(threshold))
+    format!(
+        "{},metadata=print:key=lavfi.scd.time:file=-",
+        build_scdet_filter_arg(threshold)
+    )
 }
 
 pub(crate) fn normalize_scdet_threshold(threshold: Option<f64>) -> f64 {
@@ -196,18 +204,19 @@ pub(crate) fn normalize_scdet_threshold(threshold: Option<f64>) -> f64 {
 
 pub(crate) fn normalize_analysis_duration(duration: Option<f64>) -> (f64, bool) {
     let value = normalize_duration(duration).unwrap_or(0.0);
-    (value.min(SCENE_DETECTION_MAX_SECONDS), value > SCENE_DETECTION_MAX_SECONDS)
+    (
+        value.min(SCENE_DETECTION_MAX_SECONDS),
+        value > SCENE_DETECTION_MAX_SECONDS,
+    )
 }
 
 pub(crate) fn parse_scdet_scene_times(text: &str) -> Vec<f64> {
     let mut scene_times = Vec::new();
-    for time in text.lines()
-        .flat_map(|line| {
-            parse_marker_value(line, "lavfi.scd.time=")
-                .or_else(|| parse_marker_value(line, "lavfi.scd.time:"))
-                .or_else(|| parse_marker_value(line, "pts_time:"))
-        })
-    {
+    for time in text.lines().flat_map(|line| {
+        parse_marker_value(line, "lavfi.scd.time=")
+            .or_else(|| parse_marker_value(line, "lavfi.scd.time:"))
+            .or_else(|| parse_marker_value(line, "pts_time:"))
+    }) {
         push_unique_scene_time(&mut scene_times, time);
     }
     scene_times
@@ -251,14 +260,23 @@ fn parse_ffmpeg_status_time(line: &str) -> Option<f64> {
 fn parse_progress_out_time_ms(line: &str) -> Option<f64> {
     let marker = "out_time_ms=";
     let start = line.find(marker)? + marker.len();
-    let raw = line[start..].split_whitespace().next()?.parse::<f64>().ok()?;
+    let raw = line[start..]
+        .split_whitespace()
+        .next()?
+        .parse::<f64>()
+        .ok()?;
     Some((raw / 1_000_000.0).max(0.0))
 }
 
 fn parse_progress_frame(line: &str) -> Option<u64> {
     let marker = "frame=";
     let start = line.find(marker)? + marker.len();
-    line[start..].trim_start().split_whitespace().next()?.parse::<u64>().ok()
+    line[start..]
+        .trim_start()
+        .split_whitespace()
+        .next()?
+        .parse::<u64>()
+        .ok()
 }
 
 fn progress_payload(
@@ -270,7 +288,11 @@ fn progress_payload(
     let total_frames = estimate_total_frames(duration, frame_rate);
     let analyzed_frames = frame.or_else(|| {
         pts_time.map(|time| {
-            let bounded = if duration > 0.0 { time.min(duration) } else { time };
+            let bounded = if duration > 0.0 {
+                time.min(duration)
+            } else {
+                time
+            };
             (bounded.max(0.0) * frame_rate).round() as u64
         })
     });
@@ -327,7 +349,10 @@ fn format_filter_number(value: f64) -> String {
         format!("{}", value.round() as i64)
     } else {
         let formatted = format!("{:.6}", value);
-        formatted.trim_end_matches('0').trim_end_matches('.').to_string()
+        formatted
+            .trim_end_matches('0')
+            .trim_end_matches('.')
+            .to_string()
     }
 }
 
@@ -398,10 +423,15 @@ lavfi.scd.time: 2.5\n\
     #[test]
     fn parses_ffmpeg_progress_status() {
         assert_eq!(
-            parse_progress_line("frame=  120 fps=0.0 q=-0.0 size=N/A time=00:00:04.00 bitrate=N/A speed=8x"),
+            parse_progress_line(
+                "frame=  120 fps=0.0 q=-0.0 size=N/A time=00:00:04.00 bitrate=N/A speed=8x"
+            ),
             Some((Some(4.0), Some(120)))
         );
-        assert_eq!(parse_progress_line("out_time_ms=2500000"), Some((Some(2.5), None)));
+        assert_eq!(
+            parse_progress_line("out_time_ms=2500000"),
+            Some((Some(2.5), None))
+        );
     }
 
     #[test]

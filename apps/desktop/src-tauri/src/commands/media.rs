@@ -33,6 +33,9 @@ pub struct MediaProbe {
     real_frame_rate: Option<String>,
     variable_frame_rate: bool,
     field_order: Option<String>,
+    color_space: Option<String>,
+    color_transfer: Option<String>,
+    color_primaries: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -355,6 +358,18 @@ pub fn probe_media(app: AppHandle, path: String) -> Result<MediaProbe, String> {
         real_frame_rate,
         field_order: video
             .and_then(|stream| stream.get("field_order"))
+            .and_then(Value::as_str)
+            .map(ToOwned::to_owned),
+        color_space: video
+            .and_then(|stream| stream.get("color_space"))
+            .and_then(Value::as_str)
+            .map(ToOwned::to_owned),
+        color_transfer: video
+            .and_then(|stream| stream.get("color_transfer"))
+            .and_then(Value::as_str)
+            .map(ToOwned::to_owned),
+        color_primaries: video
+            .and_then(|stream| stream.get("color_primaries"))
             .and_then(Value::as_str)
             .map(ToOwned::to_owned),
     })

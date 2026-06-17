@@ -42,6 +42,21 @@ describe('project schema migration', () => {
     expect(migrateProjectFile(file).project.settings.colorPipeline).toBe('sdr-srgb');
   });
 
+  it('serializes and migrates project working color space with sRGB fallback', () => {
+    const project = makeProject();
+    project.settings = { ...project.settings, workingColorSpace: 'display-p3' };
+    const file = serializeProject(project);
+
+    expect(file.project.settings.workingColorSpace).toBe('display-p3');
+    expect(migrateProjectFile(file).project.settings.workingColorSpace).toBe('display-p3');
+
+    delete (file.project.settings as Partial<typeof file.project.settings>).workingColorSpace;
+    expect(migrateProjectFile(file).project.settings.workingColorSpace).toBe('srgb');
+
+    file.project.settings.workingColorSpace = 'invalid' as never;
+    expect(migrateProjectFile(file).project.settings.workingColorSpace).toBe('srgb');
+  });
+
   it('serializes and migrates project cover path while old files remain compatible', () => {
     const project = makeProject();
     project.coverPath = 'C:\\Projects\\covers\\hero.png';

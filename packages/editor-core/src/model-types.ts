@@ -3,6 +3,7 @@ import type { InputColorSpace } from './color-log-luts';
 import type { ClipBlendMode } from './blend-modes';
 import type { ClipContentAnalysis } from './content-analysis';
 import type { ProjectColorPipeline } from './color-pipeline';
+import type { MediaColorProfile, ProjectWorkingColorSpace } from './export/color-management';
 import type { ClipSpatialAudio } from './spatial-audio';
 import type { Effect } from './effects';
 import type { TimecodeFormat } from './time';
@@ -249,6 +250,7 @@ export interface ProjectSettings {
   height: number;
   vfrHandling?: VfrHandlingStrategy;
   colorPipeline?: ProjectColorPipeline;
+  workingColorSpace?: ProjectWorkingColorSpace;
 }
 
 export type VfrHandlingStrategy = 'ignore' | 'auto-cfr' | 'ask';
@@ -282,6 +284,7 @@ export interface MediaAsset {
   realFrameRate?: string;
   variableFrameRate?: boolean;
   fieldOrder?: string;
+  colorProfile?: MediaColorProfile;
   proxyPath?: string;
   proxyStatus?: 'none' | 'pending' | 'ready' | 'error';
   proxyError?: string;

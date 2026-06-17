@@ -4,7 +4,7 @@ import type { ClipBlendMode } from '../blend-modes';
 import type { ProjectColorPipeline } from '../color-pipeline';
 import type { Effect } from '../effects';
 import type { AudioVisualizationThemeDefinition } from '../audio-visualization-themes';
-import type { ExportColorManagementSettings } from './color-management';
+import type { ExportColorManagementSettings, MediaColorProfile, ProjectWorkingColorSpace } from './color-management';
 import type { PostExportQualityAssuranceResult } from './post-export-quality';
 import type {
   AudioFadeCurve,
@@ -163,6 +163,7 @@ export interface ExportSettings {
   timecodeBurnIn?: ExportTimecodeBurnIn | null;
   slate?: ExportSlate | null;
   colorPipeline?: ProjectColorPipeline;
+  workingColorSpace?: ProjectWorkingColorSpace;
   colorManagement?: ExportColorManagementSettings;
   postExportScript?: ExportPostExportScriptSettings | null;
   masterProcessing?: ExportMasterProcessingSettings | null;
@@ -324,6 +325,7 @@ export interface ExportClip {
   id: string;
   type: ExportClipType;
   mediaPath: string | null;
+  sourceColorProfile: MediaColorProfile | null;
   nestedSequenceId: string | null;
   start: number;
   duration: number;

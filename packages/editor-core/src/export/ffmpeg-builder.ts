@@ -33,6 +33,7 @@ import {
   normalizeTransform,
   normalizeMasks,
   normalizeVideoRestoration,
+  normalizeMediaColorProfile,
   type ClipKeyframes,
   type Project,
   type Timeline
@@ -76,7 +77,16 @@ import { serializeSubtitleCueInputsToAss, serializeSubtitleCueInputsToSrt, seria
 import { normalizeDataSubtitleSource, resolveDataSubtitleText } from '../subtitles/data-subtitle';
 import { buildPathTextFrameLayouts } from '../text-path';
 import { buildCreditsRollYExpression, formatCreditsRowsForTextfile } from '../credits-roll';
-import { DEFAULT_EXPORT_COLOR_MANAGEMENT, isDefaultExportColorManagement, normalizeExportColorManagement, type ExportColorSpace } from './color-management';
+import {
+  DEFAULT_EXPORT_COLOR_MANAGEMENT,
+  buildExportColorTagArgs,
+  buildIccMetadataArgs,
+  buildZscaleColorConversionFilter,
+  getFfmpegColorSpaceProfile,
+  isDefaultExportColorManagement,
+  normalizeExportColorManagement,
+  normalizeProjectWorkingColorSpace
+} from './color-management';
 import { normalizeExportRenderRange, type ExportRenderRange, type NormalizedExportRenderRange } from './export-ranges';
 import { normalizeExportPostScript } from './post-export-script';
 import { cssColorToFfmpeg, escapeDrawtextValue, formatFfmpegSeconds, normalizeFfmpegPath, quoteForDisplay } from './ffmpeg-escape';
@@ -148,7 +158,8 @@ export const DEFAULT_EXPORT_SETTINGS: Omit<ExportSettings, 'outputPath'> = {
     style: 'waveform-line',
     color: '#22d3ee',
     background: { type: 'solid', color: '#050816' }
-  }
+  },
+  workingColorSpace: 'srgb'
 };
 
 export const SETPTS_EXPRESSION_LIMIT = 4096;
@@ -212,9 +223,14 @@ export function buildExportProjectFromProject(project: Project, options: BuildEx
   const mediaById = new Map(exportSourceProject.media.map((asset) => [asset.id, asset]));
   const primaryTimeline = getProjectPrimaryTimeline(exportSourceProject);
   const colorPipeline = normalizeProjectColorPipeline(options.settings?.colorPipeline ?? exportSourceProject.settings.colorPipeline);
+  const workingColorSpace = normalizeProjectWorkingColorSpace(options.settings?.workingColorSpace ?? exportSourceProject.settings.workingColorSpace);
   const colorManagementDefaults = buildProjectColorPipelineExportDefaults(colorPipeline);
   const requestedColorManagement = normalizeExportColorManagement(options.settings?.colorManagement);
-  const colorManagement = options.settings?.colorManagement && !isDefaultExportColorManagement(options.settings.colorManagement) ? requestedColorManagement : normalizeExportColorManagement(colorManagementDefaults);
+  const defaultColorManagement =
+    colorPipeline === 'sdr-srgb'
+      ? normalizeExportColorManagement({ inputColorSpace: workingColorSpace, outputColorSpace: workingColorSpace, embedIccProfile: true })
+      : normalizeExportColorManagement(colorManagementDefaults);
+  const colorManagement = options.settings?.colorManagement && !isDefaultExportColorManagement(options.settings.colorManagement) ? requestedColorManagement : defaultColorManagement;
   const settings = normalizeExportReframeSettings({
     ...DEFAULT_EXPORT_SETTINGS,
     width: exportSourceProject.settings.width || DEFAULT_EXPORT_SETTINGS.width,
@@ -223,6 +239,7 @@ export function buildExportProjectFromProject(project: Project, options: BuildEx
     ...options.settings,
     outputPath: normalizeFfmpegPath(options.outputPath),
     colorPipeline,
+    workingColorSpace,
     colorManagement
   });
   return {
@@ -270,6 +287,7 @@ function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project[
             id: clip.id,
             type: clip.type,
             mediaPath: nestedSequenceId ? nestedInputPlaceholder(nestedSequenceId) : media ? normalizeFfmpegPath(media.path) : null,
+            sourceColorProfile: normalizeMediaColorProfile(media?.colorProfile) ?? null,
             nestedSequenceId,
             start: clip.start,
             duration: clip.duration,
@@ -797,6 +815,7 @@ export function buildFfmpegExportPlan(
           ...(audioOnly
             ? []
             : videoEncodingArgs),
+          ...(audioOnly ? [] : buildExportColorMetadataArgs(settings)),
           ...sphericalMetadataArgs,
           '-c:a',
           settings.audioCodec,
@@ -1566,6 +1585,7 @@ function buildVisualPostKeyFilters(
   filters.push(...buildFrameInterpolationFilters(clip, capabilities, warnings));
   filters.push(...buildVideoRestorationFilters(clip));
   filters.push(...buildQualityEnhancementFilters(clip));
+  filters.push(...buildSourceColorSpaceConversionFilters(clip, settings));
   filters.push('format=rgba');
   filters.push(...buildMaskFilters(clip));
   filters.push(...buildColorCorrectionFilters(clip, textArtifacts));
@@ -2740,6 +2760,16 @@ function buildContainerArgs(settings: ExportSettings): string[] {
   return [];
 }
 
+function buildExportColorMetadataArgs(settings: ExportSettings): string[] {
+  const colorManagement = normalizeExportColorManagement(settings.colorManagement);
+  const args = buildExportColorTagArgs(colorManagement.outputColorSpace);
+  const format = settings.format.toLowerCase();
+  if ((format === 'mp4' || format === 'mov') && shouldGenerateIccProfile(settings)) {
+    args.push(...buildIccMetadataArgs(colorManagement.outputColorSpace));
+  }
+  return args;
+}
+
 function buildExportColorManagementFilters(settings: ExportSettings): string[] {
   const colorManagement = normalizeExportColorManagement(settings.colorManagement);
   const colorPipeline = normalizeProjectColorPipeline(settings.colorPipeline);
@@ -2762,17 +2792,14 @@ function shouldGenerateIccProfile(settings: ExportSettings): boolean {
   return colorManagement.embedIccProfile && (colorManagement.inputColorSpace !== colorManagement.outputColorSpace || colorManagement.outputColorSpace !== 'srgb');
 }
 
-function getFfmpegColorSpaceProfile(colorSpace: ExportColorSpace): { space: string; primaries: string; trc: string } {
-  if (colorSpace === 'rec2020') {
-    return { space: 'bt2020nc', primaries: 'bt2020', trc: 'bt2020-10' };
+function buildSourceColorSpaceConversionFilters(clip: ExportClip, settings: ExportSettings): string[] {
+  const source = clip.sourceColorProfile;
+  if (!source?.autoConvertToWorkingSpace) {
+    return [];
   }
-  if (colorSpace === 'dci-p3') {
-    return { space: 'bt709', primaries: 'smpte432', trc: 'bt709' };
-  }
-  if (colorSpace === 'rec709') {
-    return { space: 'bt709', primaries: 'bt709', trc: 'bt709' };
-  }
-  return { space: 'bt709', primaries: 'bt709', trc: 'iec61966-2-1' };
+  const target = normalizeProjectWorkingColorSpace(settings.workingColorSpace);
+  const filter = buildZscaleColorConversionFilter(source.sourceColorSpace, target);
+  return filter ? [filter] : [];
 }
 
 function pngSequenceOutputPath(outputPath: string): string {

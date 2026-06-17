@@ -96,6 +96,7 @@ const whisperVideo = 'C:/Media/whisper-video.mp4';
 const vfrVideo = 'C:/Media/vfr-phone.mp4';
 const twentyFiveFpsVideo = 'C:/Media/clip-25fps.mp4';
 const fourKHevcVideo = 'C:/Media/four-k-hevc.mov';
+const displayP3Video = 'C:/Media/display-p3.mov';
 const tinyVideoB = 'C:/Media/camera-b.mp4';
 const tinyAudio = 'C:/Media/tiny-audio.wav';
 const tinyImage = 'C:/Media/test-image.png';
@@ -190,6 +191,7 @@ for (const path of [
   vfrVideo,
   twentyFiveFpsVideo,
   fourKHevcVideo,
+  displayP3Video,
   tinyVideoB,
   tinyAudio,
   tinyImage,
@@ -294,10 +296,26 @@ const mocks: TauriMocks = {
     mtimes.delete(path);
     persistFiles();
   },
+  trashFile: (path) => {
+    files.delete(path);
+    exists.set(path, false);
+    mtimes.delete(path);
+    persistFiles();
+  },
   copyFile: (sourcePath, destinationPath) => {
     const value = files.get(sourcePath) ?? `mock copy of ${sourcePath}`;
     files.set(destinationPath, value);
     exists.set(destinationPath, true);
+    mtimes.set(destinationPath, Date.now());
+    persistFiles();
+  },
+  moveFile: (sourcePath, destinationPath) => {
+    const value = files.get(sourcePath) ?? `mock move of ${sourcePath}`;
+    files.delete(sourcePath);
+    files.set(destinationPath, value);
+    exists.set(sourcePath, false);
+    exists.set(destinationPath, true);
+    mtimes.delete(sourcePath);
     mtimes.set(destinationPath, Date.now());
     persistFiles();
   },
@@ -690,6 +708,7 @@ const mocks: TauriMocks = {
   probeMedia: (path) => {
     const isVfr = path === vfrVideo;
     const is25Fps = path === twentyFiveFpsVideo;
+    const isDisplayP3 = path === displayP3Video;
     return {
       hasAudio: path.endsWith('.mp4') || path.endsWith('.wav'),
       audioChannels: path.endsWith('.mp4') || path.endsWith('.wav') ? 2 : undefined,
@@ -700,7 +719,10 @@ const mocks: TauriMocks = {
       avgFrameRate: isVfr ? '24000/1001' : is25Fps ? '25/1' : path.endsWith('.mp4') || path.endsWith('.mov') ? '30/1' : undefined,
       realFrameRate: isVfr ? '30/1' : is25Fps ? '25/1' : path.endsWith('.mp4') || path.endsWith('.mov') ? '30/1' : undefined,
       variableFrameRate: isVfr,
-      fieldOrder: path.endsWith('.mp4') || path.endsWith('.mov') ? 'tt' : undefined
+      fieldOrder: path.endsWith('.mp4') || path.endsWith('.mov') ? 'tt' : undefined,
+      colorSpace: path === fourKHevcVideo ? 'bt2020nc' : path.endsWith('.mp4') || path.endsWith('.mov') ? 'bt709' : undefined,
+      colorTransfer: path === fourKHevcVideo ? 'smpte2084' : isDisplayP3 ? 'iec61966-2-1' : path.endsWith('.mp4') || path.endsWith('.mov') ? 'bt709' : undefined,
+      colorPrimaries: path === fourKHevcVideo ? 'bt2020' : isDisplayP3 ? 'smpte432' : path.endsWith('.mp4') || path.endsWith('.mov') ? 'bt709' : undefined
     };
   },
   analyzeMedia: (path) => ({
@@ -1836,6 +1858,81 @@ window.__E2E_ACTIONS__ = {
         'media-duplicate-a': { fingerprint },
         'media-duplicate-b': { fingerprint }
       },
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    commandManager.clear();
+  },
+  setupMediaOrganizerFixture: () => {
+    const project = createProject('Media Organizer E2E');
+    const fingerprint = createVideoFingerprint(['ffff0000ffff0000', '0000ffff0000ffff', 'f0f0f0f00f0f0f0f']);
+    const media: MediaAsset[] = [
+      {
+        id: 'media-organizer-a',
+        type: 'video',
+        name: 'duplicate-a.mp4',
+        path: duplicateVideoA,
+        duration: 6,
+        width: 1280,
+        height: 720,
+        size: 4096,
+        mtimeMs: 1_000,
+        hasAudio: true,
+        audioChannels: 2,
+        audioSampleRate: 44_100,
+        audioCodec: 'aac',
+        videoCodec: 'h264',
+        importedAt: '2026-06-17T12:00:00.000Z'
+      },
+      {
+        id: 'media-organizer-b',
+        type: 'video',
+        name: 'duplicate-b.mp4',
+        path: duplicateVideoB,
+        duration: 6,
+        width: 1280,
+        height: 720,
+        size: 4096,
+        mtimeMs: 1_000,
+        hasAudio: true,
+        audioChannels: 2,
+        audioSampleRate: 44_100,
+        audioCodec: 'aac',
+        videoCodec: 'h264',
+        importedAt: '2026-06-17T12:00:00.000Z'
+      },
+      {
+        id: 'media-organizer-keep',
+        type: 'video',
+        name: 'duplicate-master.mp4',
+        path: tinyVideo,
+        duration: 6,
+        width: 1920,
+        height: 1080,
+        size: 4096,
+        mtimeMs: 1_000,
+        hasAudio: true,
+        audioChannels: 2,
+        audioSampleRate: 44_100,
+        audioCodec: 'aac',
+        videoCodec: 'h264',
+        importedAt: '2026-06-17T12:00:00.000Z'
+      }
+    ];
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({ id: 'track-video', type: 'video', name: 'Video 1', clips: [] }),
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
+        createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media,
+      mediaMetadata: Object.fromEntries(media.map((asset) => [asset.id, { fingerprint }])),
       timeline,
       sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
       activeSequenceId: PRIMARY_SEQUENCE_ID

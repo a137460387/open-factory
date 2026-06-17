@@ -25,6 +25,7 @@ import {
   normalizeMasks,
   normalizeMasterVolume,
   normalizeMediaMetadataEntry,
+  normalizeMediaColorProfile,
   normalizeMotionTrack,
   normalizeMulticamSequence,
   normalizeProjectAnnotations,
@@ -67,7 +68,7 @@ import type { MigrationResult, ProjectFile, ProjectFileV1, ProjectFileV2 } from 
 import { isAbsolutePath, makeRelativePath, normalizePath, resolveMediaPath } from './relative-paths';
 import { normalizeProjectDocumentation } from './documentation';
 
-const DEFAULT_SETTINGS = { fps: 30, timecodeFormat: 'ndf' as const, width: 1280, height: 720, colorPipeline: 'sdr-srgb' as const };
+const DEFAULT_SETTINGS = { fps: 30, timecodeFormat: 'ndf' as const, width: 1280, height: 720, colorPipeline: 'sdr-srgb' as const, workingColorSpace: 'srgb' as const };
 
 export function serializeProjectFile(project: Project, projectPath?: string): ProjectFileV2 {
   const warnings: string[] = [];
@@ -94,6 +95,7 @@ export function serializeProjectFile(project: Project, projectPath?: string): Pr
       realFrameRate: normalizeOptionalString(asset.realFrameRate),
       variableFrameRate: asset.variableFrameRate === true || isVariableFrameRateProbe({ avgFrameRate: asset.avgFrameRate, realFrameRate: asset.realFrameRate }),
       fieldOrder: normalizeOptionalString(asset.fieldOrder),
+      colorProfile: normalizeMediaColorProfile(asset.colorProfile),
       imageSequence: asset.imageSequence
         ? {
             ...asset.imageSequence,
@@ -260,6 +262,7 @@ function normalizeMediaAsset(asset: MediaAsset, projectPath?: string, mediaFolde
     realFrameRate: normalizeOptionalString(asset.realFrameRate),
     variableFrameRate: asset.variableFrameRate === true || isVariableFrameRateProbe({ avgFrameRate: asset.avgFrameRate, realFrameRate: asset.realFrameRate }),
     fieldOrder: normalizeOptionalString(asset.fieldOrder),
+    colorProfile: normalizeMediaColorProfile(asset.colorProfile),
     imageSequence: normalizeImageSequence(asset.imageSequence, projectPath)
   };
 }

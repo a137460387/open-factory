@@ -10,6 +10,7 @@ import { normalizeClipBlendMode } from './blend-modes';
 import { REC709_INPUT_COLOR_SPACE, normalizeInputColorSpace } from './color-log-luts';
 import { normalizeClipContentAnalysis } from './content-analysis';
 import { DEFAULT_PROJECT_COLOR_PIPELINE, normalizeProjectColorPipeline } from './color-pipeline';
+import { getColorSpaceDisplayName, normalizeExportColorSpace, normalizeProjectWorkingColorSpace, type MediaColorProfile } from './export/color-management';
 import { normalizeSpatialAudio } from './spatial-audio';
 import { normalizeClipPitchData } from './audio-pitch';
 import { normalizeDataSubtitleSource } from './subtitles/data-subtitle';
@@ -298,6 +299,31 @@ export function normalizeMediaMetadataEntry(metadata: MediaMetadata | undefined)
   return Object.keys(normalized).length > 0 ? normalized : undefined;
 }
 
+export function normalizeMediaColorProfile(profile: Partial<MediaColorProfile> | undefined): MediaColorProfile | undefined {
+  if (!profile || typeof profile !== 'object') {
+    return undefined;
+  }
+  const sourceColorSpace = normalizeExportColorSpace(profile.sourceColorSpace);
+  const label = typeof profile.label === 'string' && profile.label.trim() ? profile.label.trim().slice(0, 40) : getColorSpaceDisplayName(sourceColorSpace);
+  const normalized: MediaColorProfile = {
+    sourceColorSpace,
+    label
+  };
+  if (typeof profile.colorSpace === 'string' && profile.colorSpace.trim()) {
+    normalized.colorSpace = profile.colorSpace.trim().toLowerCase();
+  }
+  if (typeof profile.colorPrimaries === 'string' && profile.colorPrimaries.trim()) {
+    normalized.colorPrimaries = profile.colorPrimaries.trim().toLowerCase();
+  }
+  if (typeof profile.colorTransfer === 'string' && profile.colorTransfer.trim()) {
+    normalized.colorTransfer = profile.colorTransfer.trim().toLowerCase();
+  }
+  if (profile.autoConvertToWorkingSpace === true) {
+    normalized.autoConvertToWorkingSpace = true;
+  }
+  return normalized;
+}
+
 export type CutProjectFile = ProjectFile;
 
 export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
@@ -306,7 +332,8 @@ export const DEFAULT_PROJECT_SETTINGS: ProjectSettings = {
   width: 1280,
   height: 720,
   vfrHandling: 'ignore',
-  colorPipeline: DEFAULT_PROJECT_COLOR_PIPELINE
+  colorPipeline: DEFAULT_PROJECT_COLOR_PIPELINE,
+  workingColorSpace: 'srgb'
 };
 
 export function normalizeProjectSettings(settings: Partial<ProjectSettings> | undefined): ProjectSettings {
@@ -319,7 +346,8 @@ export function normalizeProjectSettings(settings: Partial<ProjectSettings> | un
     width,
     height,
     vfrHandling: normalizeVfrHandlingStrategy(settings?.vfrHandling),
-    colorPipeline: normalizeProjectColorPipeline(settings?.colorPipeline)
+    colorPipeline: normalizeProjectColorPipeline(settings?.colorPipeline),
+    workingColorSpace: normalizeProjectWorkingColorSpace(settings?.workingColorSpace)
   };
 }
 

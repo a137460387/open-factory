@@ -8,7 +8,7 @@ export type CameraIdtMatrix = readonly [
   readonly [number, number, number]
 ];
 
-export type ColorPipelineExportColorSpace = 'srgb' | 'rec709' | 'dci-p3' | 'rec2020';
+export type ColorPipelineExportColorSpace = 'srgb' | 'rec709' | 'dci-p3' | 'display-p3' | 'rec2020';
 
 export const DEFAULT_PROJECT_COLOR_PIPELINE: ProjectColorPipeline = 'sdr-srgb';
 
@@ -87,6 +87,9 @@ function getZscaleOutputProfile(colorSpace: ColorPipelineExportColorSpace): { ma
   }
   if (colorSpace === 'dci-p3') {
     return { matrix: 'bt709', transfer: 'bt709', primaries: 'smpte432' };
+  }
+  if (colorSpace === 'display-p3') {
+    return { matrix: 'bt709', transfer: 'iec61966-2-1', primaries: 'smpte432' };
   }
   if (colorSpace === 'rec709') {
     return { matrix: 'bt709', transfer: 'bt709', primaries: 'bt709' };

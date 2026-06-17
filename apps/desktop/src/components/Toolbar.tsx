@@ -47,6 +47,7 @@ interface ToolbarProps {
   onOpenBatchWatermark(): void;
   onOpenBatchProjectProcessing(): void;
   onOpenMediaPrecheck(): void;
+  onOpenMediaOrganizer(): void;
   onOpenVideoStitchWizard(): void;
   onOpenSyncCompare(): void;
   onOpenSceneDetection(): void;
@@ -639,6 +640,18 @@ export function Toolbar(props: ToolbarProps) {
               }}
             >
               <span>{t.mediaPrecheck}</span>
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-tools-media-organizer-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onOpenMediaOrganizer();
+              }}
+            >
+              <span>{t.mediaOrganizer}</span>
+              <Archive size={14} />
             </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"

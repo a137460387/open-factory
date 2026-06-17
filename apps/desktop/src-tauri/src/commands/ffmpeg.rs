@@ -2230,7 +2230,10 @@ fn build_post_export_quality_result(
         ));
     }
     if request.file_size {
-        checks.push(check_post_export_file_size(request, measurements.file_size_bytes));
+        checks.push(check_post_export_file_size(
+            request,
+            measurements.file_size_bytes,
+        ));
     }
     if request.resolution {
         checks.push(check_post_export_resolution(&measurements));
@@ -3363,7 +3366,9 @@ offset=1.35
             }
         );
         assert_eq!(
-            parse_blackdetect_output("[blackdetect @ 0] black_start:1 black_end:1.75 black_duration:0.75"),
+            parse_blackdetect_output(
+                "[blackdetect @ 0] black_start:1 black_end:1.75 black_duration:0.75"
+            ),
             vec![DetectedMediaRangeDto {
                 start: 1.0,
                 end: 1.75,

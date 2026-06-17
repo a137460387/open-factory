@@ -128,7 +128,30 @@ describe('multitrack ffmpeg builder', () => {
 
     expect(plan.filterComplex).toContain('colorspace=ispace=bt709:iprimaries=bt709:itrc=iec61966-2-1:space=bt709:primaries=smpte432:trc=bt709');
     expect(plan.filterComplex).toContain('iccgen=force=1:color_primaries=smpte432:color_trc=bt709');
+    expect(plan.outputArgs).toEqual(expect.arrayContaining(['-color_primaries', 'smpte432', '-color_trc', 'bt709', '-colorspace', 'bt709']));
+    expect(plan.outputArgs).toContain('-metadata:s:v:0');
+    expect(plan.outputArgs.some((arg) => arg.startsWith('icc_profile='))).toBe(true);
     expect(plan.outputArgs).toContain('+faststart+prefer_icc');
+  });
+
+  it('inserts source zscale conversion when imported media is marked for working-space conversion', () => {
+    const project = makeProject();
+    project.settings = { ...project.settings, workingColorSpace: 'rec709' };
+    project.media[0] = {
+      ...project.media[0],
+      colorProfile: {
+        sourceColorSpace: 'display-p3',
+        label: 'Display P3',
+        colorSpace: 'bt709',
+        colorPrimaries: 'smpte432',
+        colorTransfer: 'iec61966-2-1',
+        autoConvertToWorkingSpace: true
+      }
+    };
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('zscale=matrixin=bt709:transferin=iec61966-2-1:primariesin=smpte432:matrix=bt709:transfer=bt709:primaries=bt709:range=tv');
   });
 
   it('chains ACES ODT zscale filters with colorspace and ICC generation from project settings', () => {

@@ -169,6 +169,7 @@ const zh = {
     batchWatermark: '批量水印',
     batchProjectProcessing: '批量处理项目',
     mediaPrecheck: '素材预检',
+    mediaOrganizer: '媒体整理',
     videoStitchWizard: '视频拼接向导',
     syncCompare: '同步对比',
     sceneReorder: '场景重组',
@@ -541,6 +542,7 @@ const zh = {
     subtitle: '本地配置和素材库',
     tabs: {
       general: '通用',
+      display: '显示',
       appearance: '外观',
       lutLibrary: 'LUT库',
       shortcuts: '快捷键',
@@ -578,6 +580,7 @@ const zh = {
         'hdr-rec2020': 'HDR Rec.2020',
         aces: 'ACES'
       },
+      workingColorSpace: '工作色彩空间',
       allowExportPowerActions: '允许导出完成后执行关机/休眠',
       allowExportPowerActionsDescription: '默认关闭。开启后，导出完成动作才可以调用系统电源命令。',
       lowPowerExportMode: '后台低功耗导出',
@@ -724,6 +727,23 @@ const zh = {
         'high-contrast': '高对比度',
         oled: 'OLED 纯黑'
       }
+    },
+    display: {
+      title: '显示',
+      description: '配置本机预览和软打样的显示色域。',
+      colorGamut: '当前显示器色域',
+      colorGamutOptions: {
+        srgb: 'sRGB',
+        p3: 'P3',
+        rec2020: 'Rec.2020'
+      },
+      cssGamut: {
+        srgb: 'CSS 检测：当前窗口按 sRGB 色域处理。',
+        p3: 'CSS 检测：当前窗口支持 P3 色域。',
+        rec2020: 'CSS 检测：当前窗口支持 Rec.2020 色域。'
+      },
+      saveFailed: '显示设置保存失败',
+      saveFailedMessage: '无法写入显示设置。'
     },
     lutLibrary: {
       title: 'LUT库',
@@ -1161,6 +1181,7 @@ const zh = {
       name: '名称',
       format: '格式',
       resolution: '分辨率',
+      colorProfile: '色彩配置',
       duration: '时长',
       fileSize: '文件大小',
       importedAt: '导入时间',
@@ -1259,6 +1280,39 @@ const zh = {
     scanFailedMessage: '无法扫描媒体文件。',
     mergedTitle: '重复素材已合并',
     mergedMessage: (count: number) => `已合并 ${count} 组重复素材。`
+  },
+  mediaOrganizer: {
+    title: '媒体整理',
+    subtitle: '查找重复素材、孤立引用和未使用媒体。文件只在用户确认后移动或移除引用。',
+    scanning: '扫描中...',
+    rescan: '重新扫描',
+    duplicatesTitle: '疑似重复',
+    cleanupTitle: '清理报告',
+    renameTitle: '批量重命名预览',
+    renameTemplate: '模板',
+    confirmGroup: '确认处理本组',
+    keep: '保留',
+    unknown: '未知',
+    noDuplicates: '没有发现疑似重复素材。',
+    orphaned: '孤立',
+    unused: '未使用',
+    removeOrphans: '移除孤立引用',
+    removeUnused: '移除未使用引用',
+    archiveUnused: '归档未使用',
+    applyRename: '应用重命名',
+    moveFilesToTrash: '同时移至系统回收站',
+    removeSelected: '移除已确认重复引用',
+    cancel: '取消',
+    groupCount: (count: number) => `${count} 组`,
+    similarity: (value: number) => `相似度 ${Math.round(value * 100)}%`,
+    scanFailed: '媒体整理扫描失败',
+    scanFailedMessage: '无法完成媒体整理扫描。',
+    removedTitle: '媒体引用已移除',
+    removedMessage: (count: number) => `已处理 ${count} 个媒体引用。`,
+    archivedTitle: '媒体已归档',
+    archivedMessage: (count: number) => `已移动 ${count} 个未使用媒体并更新路径。`,
+    archiveCanceled: '已取消归档',
+    archiveFailed: '媒体归档失败'
   },
   projectHealth: {
     title: '项目健康检查',
@@ -2662,6 +2716,7 @@ const zh = {
         srgb: 'sRGB',
         rec709: 'Rec.709',
         'dci-p3': 'DCI-P3',
+        'display-p3': 'Display P3',
         rec2020: 'Rec.2020'
       }
     },
@@ -3287,6 +3342,7 @@ const zh = {
     duplicateMessage: (count: number) => `已跳过 ${count} 个重复文件。`,
     mediaImported: '媒体已导入',
     mediaImportedMessage: (count: number) => `已添加 ${count} 个文件。`,
+    colorConversionPrompt: (count: number, colorSpace: string) => `检测到 ${count} 个素材的色彩配置与项目工作空间不一致。是否在导出时自动转换到 ${colorSpace}？`,
     mediaVersionAdded: '素材版本已添加',
     mediaVersionAddedMessage: (name: string) => `已添加版本：${name}`,
     mediaVersionAddFailed: '无法添加素材版本',
@@ -3984,6 +4040,7 @@ const enOverrides = {
     batchWatermark: 'Batch Watermark',
     batchProjectProcessing: 'Batch Project Processing',
     mediaPrecheck: 'Media Precheck',
+    mediaOrganizer: 'Media Organizer',
     videoStitchWizard: 'Video Stitch Wizard',
     syncCompare: 'Sync Compare',
     sceneReorder: 'Scene Reorder',
@@ -4305,6 +4362,7 @@ const enOverrides = {
     subtitle: 'Local preferences and libraries',
     tabs: {
       general: 'General',
+      display: 'Display',
       appearance: 'Appearance',
       lutLibrary: 'LUT Library',
       shortcuts: 'Shortcuts',
@@ -4342,6 +4400,7 @@ const enOverrides = {
         'hdr-rec2020': 'HDR Rec.2020',
         aces: 'ACES'
       },
+      workingColorSpace: 'Working Color Space',
       allowExportPowerActions: 'Allow shutdown/hibernate after export',
       allowExportPowerActionsDescription: 'Disabled by default. When enabled, export completion actions may call system power commands.',
       lowPowerExportMode: 'Low-power background export',
@@ -4488,6 +4547,23 @@ const enOverrides = {
         'high-contrast': 'High Contrast',
         oled: 'OLED Black'
       }
+    },
+    display: {
+      title: 'Display',
+      description: 'Configure the local display gamut for preview soft proofing.',
+      colorGamut: 'Current Display Gamut',
+      colorGamutOptions: {
+        srgb: 'sRGB',
+        p3: 'P3',
+        rec2020: 'Rec.2020'
+      },
+      cssGamut: {
+        srgb: 'CSS detection: this window is treated as sRGB.',
+        p3: 'CSS detection: this window supports P3.',
+        rec2020: 'CSS detection: this window supports Rec.2020.'
+      },
+      saveFailed: 'Display settings save failed',
+      saveFailedMessage: 'Unable to write display settings.'
     },
     lutLibrary: {
       title: 'LUT Library',
@@ -4925,6 +5001,7 @@ const enOverrides = {
       name: 'Name',
       format: 'Format',
       resolution: 'Resolution',
+      colorProfile: 'Color Profile',
       duration: 'Duration',
       fileSize: 'File Size',
       importedAt: 'Imported',
@@ -6135,6 +6212,7 @@ const enOverrides = {
         srgb: 'sRGB',
         rec709: 'Rec.709',
         'dci-p3': 'DCI-P3',
+        'display-p3': 'Display P3',
         rec2020: 'Rec.2020'
       }
     },
@@ -6717,6 +6795,7 @@ const enOverrides = {
     duplicateMessage: (count: number) => `Skipped ${count} duplicate files.`,
     mediaImported: 'Media imported',
     mediaImportedMessage: (count: number) => `Added ${count} files.`,
+    colorConversionPrompt: (count: number, colorSpace: string) => `${count} imported asset(s) use a different color profile than the project working space. Convert them to ${colorSpace} during export?`,
     mediaVersionAdded: 'Media version added',
     mediaVersionAddedMessage: (name: string) => `Added version: ${name}`,
     mediaVersionAddFailed: 'Unable to add media version',

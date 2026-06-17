@@ -5,12 +5,15 @@ import {
   planProxyCleanup,
   summarizeProxyInventory,
   DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS,
+  EXPORT_COLOR_SPACES,
   PROJECT_COLOR_PIPELINES,
   SUPPORTED_PROJECT_FPS,
   UpdateClipCommand,
   UpdateProjectSettingsCommand,
+  getColorSpaceDisplayName,
   normalizeProjectColorPipeline,
   normalizeProjectFps,
+  normalizeProjectWorkingColorSpace,
   normalizeTimecodeFormat,
   normalizeVfrHandlingStrategy,
   supportsDropFrameTimecode,
@@ -80,6 +83,7 @@ import {
   readAutomationRules,
   readBackupSettings,
   readCollaborationIdentitySettings,
+  readDisplaySettings,
   readExportBackgroundSettings,
   readExportQualityAssuranceSettings,
   readExportPresetSyncSettings,
@@ -88,6 +92,7 @@ import {
   saveAutomationRules,
   saveBackupSettings,
   saveCollaborationIdentitySettings,
+  saveDisplaySettings,
   saveExportBackgroundSettings,
   saveExportQualityAssuranceSettings,
   saveExportPresetSyncSettings,
@@ -97,6 +102,7 @@ import {
   type AutomationRule,
   type BackupSettings,
   type CollaborationIdentitySettings,
+  type DisplaySettings,
   type ExportBackgroundSettings,
   type ExportPresetSyncSettings,
   type ExportConditionRule,
@@ -144,7 +150,7 @@ interface SettingsDialogProps {
   onClose(): void;
 }
 
-type SettingsTab = 'general' | 'appearance' | 'lut-library' | 'shortcuts' | 'macros' | 'automation' | 'translation' | 'local-models' | 'proxy' | 'task-monitor' | 'export-presets' | 'backup' | 'plugins';
+type SettingsTab = 'general' | 'display' | 'appearance' | 'lut-library' | 'shortcuts' | 'macros' | 'automation' | 'translation' | 'local-models' | 'proxy' | 'task-monitor' | 'export-presets' | 'backup' | 'plugins';
 const VFR_HANDLING_OPTIONS: VfrHandlingStrategy[] = ['ignore', 'auto-cfr', 'ask'];
 const EXPORT_RULE_COPY_SUCCESS_ID = 'copy-success';
 const EXPORT_RULE_FAILURE_NOTIFICATION_ID = 'failure-notification';
@@ -197,6 +203,7 @@ export function SettingsDialog({
   const [automationRulesJson, setAutomationRulesJson] = useState('[]');
   const [automationRulesError, setAutomationRulesError] = useState<string>();
   const [collaborationIdentity, setCollaborationIdentity] = useState<CollaborationIdentitySettings>(() => ({ ...DEFAULT_COLLABORATION_IDENTITY_SETTINGS }));
+  const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(() => ({ colorGamut: 'srgb' }));
   const [localModelsSettings, setLocalModelsSettings] = useState<LocalAiModelsSettings>({});
   const [localModelStatuses, setLocalModelStatuses] = useState<Partial<Record<LocalAiModelId, LocalAiModelResolvedStatus>>>({});
   const [webdavPassword, setWebdavPassword] = useState('');
@@ -243,6 +250,7 @@ export function SettingsDialog({
     void loadExportRules();
     void loadAutomationRules();
     void loadCollaborationIdentity();
+    void loadDisplaySettings();
     void loadLocalModelsSettings();
     void loadTranslationApiKey();
     hydrateThemeForm(getCurrentThemeSettings());
@@ -628,6 +636,18 @@ export function SettingsDialog({
     }
   }
 
+  async function loadDisplaySettings() {
+    try {
+      setDisplaySettings(await readDisplaySettings());
+    } catch (displayError) {
+      showToast({
+        kind: 'warning',
+        title: t.display.saveFailed,
+        message: displayError instanceof Error ? displayError.message : t.display.saveFailedMessage
+      });
+    }
+  }
+
   async function loadLocalModelsSettings() {
     try {
       const settings = await readLocalAiModelsSettings();
@@ -1008,6 +1028,24 @@ export function SettingsDialog({
     commandManager.execute(new UpdateProjectSettingsCommand(projectAccessor, { colorPipeline }));
   }
 
+  function updateProjectWorkingColorSpace(value: string) {
+    commandManager.execute(new UpdateProjectSettingsCommand(projectAccessor, { workingColorSpace: normalizeProjectWorkingColorSpace(value) }));
+  }
+
+  async function updateDisplaySettings(patch: Partial<DisplaySettings>) {
+    const nextSettings = { ...displaySettings, ...patch };
+    setDisplaySettings(nextSettings);
+    try {
+      setDisplaySettings(await saveDisplaySettings(nextSettings));
+    } catch (displayError) {
+      showToast({
+        kind: 'warning',
+        title: t.display.saveFailed,
+        message: displayError instanceof Error ? displayError.message : t.display.saveFailedMessage
+      });
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-testid="settings-dialog">
       <div className="flex max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg bg-white shadow-soft">
@@ -1029,6 +1067,14 @@ export function SettingsDialog({
               onClick={() => setTab('general')}
             >
               {t.tabs.general}
+            </button>
+            <button
+              className={`mt-1 w-full rounded-md px-3 py-2 text-left text-sm font-semibold ${tab === 'display' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}
+              type="button"
+              data-testid="settings-tab-display"
+              onClick={() => setTab('display')}
+            >
+              {t.tabs.display}
             </button>
             <button
               className={`mt-1 w-full rounded-md px-3 py-2 text-left text-sm font-semibold ${tab === 'appearance' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}
@@ -1394,6 +1440,21 @@ export function SettingsDialog({
                       ))}
                     </select>
                   </label>
+                  <label className="block text-xs font-medium text-slate-600">
+                    {t.general.workingColorSpace}
+                    <select
+                      className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                      value={normalizeProjectWorkingColorSpace(project.settings.workingColorSpace)}
+                      data-testid="project-working-color-space-select"
+                      onChange={(event) => updateProjectWorkingColorSpace(event.target.value)}
+                    >
+                      {EXPORT_COLOR_SPACES.map((colorSpace) => (
+                        <option key={colorSpace} value={colorSpace}>
+                          {getColorSpaceDisplayName(colorSpace)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                 </div>
                 <label className="flex items-start gap-2 rounded-md border border-line bg-panel p-3 text-xs text-slate-600">
                   <input
@@ -1427,6 +1488,32 @@ export function SettingsDialog({
                   onRuleChange={(rule) => void updateExportRule(rule)}
                   onChooseCopyDirectory={() => void chooseExportRuleCopyDirectory()}
                 />
+              </div>
+            ) : null}
+            {tab === 'display' ? (
+              <div className="space-y-4" data-testid="settings-display-panel">
+                <div>
+                  <h3 className="text-sm font-semibold text-ink">{t.display.title}</h3>
+                  <p className="text-xs text-slate-500">{t.display.description}</p>
+                </div>
+                <label className="block text-xs font-medium text-slate-600">
+                  {t.display.colorGamut}
+                  <select
+                    className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                    value={displaySettings.colorGamut}
+                    data-testid="display-color-gamut-select"
+                    onChange={(event) => void updateDisplaySettings({ colorGamut: event.target.value as DisplaySettings['colorGamut'] })}
+                  >
+                    <option value="srgb">{t.display.colorGamutOptions.srgb}</option>
+                    <option value="p3">{t.display.colorGamutOptions.p3}</option>
+                    <option value="rec2020">{t.display.colorGamutOptions.rec2020}</option>
+                  </select>
+                </label>
+                <div className="rounded-md border border-line bg-panel p-3 text-xs text-slate-600" data-testid="display-color-gamut-css-hint">
+                  <span className="display-gamut-indicator display-gamut-indicator-srgb">{t.display.cssGamut.srgb}</span>
+                  <span className="display-gamut-indicator display-gamut-indicator-p3">{t.display.cssGamut.p3}</span>
+                  <span className="display-gamut-indicator display-gamut-indicator-rec2020">{t.display.cssGamut.rec2020}</span>
+                </div>
               </div>
             ) : null}
             {tab === 'appearance' ? (

@@ -897,17 +897,18 @@ function MediaLibraryListView({
   if (media.length === 0) {
     return null;
   }
-  const columns: Array<{ key: MediaLibrarySortKey | 'format' | 'resolution'; label: string; sortable: boolean; testId: string }> = [
+  const columns: Array<{ key: MediaLibrarySortKey | 'format' | 'resolution' | 'colorProfile'; label: string; sortable: boolean; testId: string }> = [
     { key: 'name', label: zhCN.mediaBin.listColumns.name, sortable: true, testId: 'media-list-sort-name' },
     { key: 'format', label: zhCN.mediaBin.listColumns.format, sortable: false, testId: 'media-list-format-header' },
     { key: 'resolution', label: zhCN.mediaBin.listColumns.resolution, sortable: false, testId: 'media-list-resolution-header' },
+    { key: 'colorProfile', label: zhCN.mediaBin.listColumns.colorProfile, sortable: false, testId: 'media-list-color-profile-header' },
     { key: 'duration', label: zhCN.mediaBin.listColumns.duration, sortable: true, testId: 'media-list-sort-duration' },
     { key: 'size', label: zhCN.mediaBin.listColumns.fileSize, sortable: true, testId: 'media-list-sort-size' },
     { key: 'importedAt', label: zhCN.mediaBin.listColumns.importedAt, sortable: true, testId: 'media-list-sort-importedAt' }
   ];
   return (
     <div className="overflow-x-auto rounded-md border border-line bg-white" data-testid="media-list-view">
-      <table className="min-w-[720px] w-full border-collapse text-xs">
+      <table className="min-w-[820px] w-full border-collapse text-xs">
         <thead className="bg-panel text-left text-[11px] uppercase tracking-normal text-slate-500">
           <tr>
             {columns.map((column) => (
@@ -935,6 +936,7 @@ function MediaLibraryListView({
               </td>
               <td className="px-2 py-2 text-slate-600">{formatMediaFormat(asset)}</td>
               <td className="px-2 py-2 text-slate-600">{formatMediaResolution(asset)}</td>
+              <td className="px-2 py-2 text-slate-600" data-testid={`media-list-color-profile-${asset.id}`}>{formatMediaColorProfile(asset)}</td>
               <td className="px-2 py-2 tabular-nums text-slate-600">{formatDuration(asset.duration)}</td>
               <td className="px-2 py-2 tabular-nums text-slate-600" data-testid={`media-list-size-${asset.id}`}>
                 {formatBytes(asset.size)}
@@ -1586,6 +1588,7 @@ function MediaCard({
           <span>{zhCN.mediaBin.assetType[asset.type]}</span>
           <span>{asset.type === 'audio' ? formatDuration(asset.duration) : `${asset.width || '-'}x${asset.height || '-'}`}</span>
         </div>
+        <div className="mt-1 truncate text-[11px] text-slate-500" data-testid={`media-color-profile-${asset.id}`}>{formatMediaColorProfile(asset)}</div>
         {contentAnalysis ? <MediaSceneTagList assetId={asset.id} analysis={contentAnalysis} /> : null}
         {asset.type === 'video' ? (
           <ProxyStatus status={proxyStatus} error={asset.proxyError} canGenerate={canGenerateProxy} onGenerateProxy={onGenerateProxy} assetId={asset.id} />
@@ -1725,6 +1728,10 @@ function formatMediaResolution(asset: MediaAsset): string {
     return zhCN.common.unavailable;
   }
   return asset.width && asset.height ? `${asset.width} x ${asset.height}` : zhCN.common.unavailable;
+}
+
+function formatMediaColorProfile(asset: MediaAsset): string {
+  return asset.colorProfile?.label ?? zhCN.common.unavailable;
 }
 
 function formatPreciseFrameRate(frameRate: number): string {

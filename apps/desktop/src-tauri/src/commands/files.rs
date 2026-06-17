@@ -4,6 +4,7 @@ use crate::path_validator::{
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::time::UNIX_EPOCH;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_dialog::DialogExt;
@@ -125,6 +126,47 @@ pub fn remove_file(app: AppHandle, path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub fn trash_file(app: AppHandle, path: String) -> Result<(), String> {
+    let safe_path = validate_path_for_write(&app, Path::new(&path))?;
+    if !safe_path.exists() {
+        return Ok(());
+    }
+    trash_file_inner(&safe_path)
+}
+
+#[cfg(target_os = "windows")]
+fn trash_file_inner(path: &Path) -> Result<(), String> {
+    let script = "$path=$args[0]; Add-Type -AssemblyName Microsoft.VisualBasic; [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile($path, 'OnlyErrorDialogs', 'SendToRecycleBin')";
+    let status = Command::new("powershell.exe")
+        .args(["-NoProfile", "-NonInteractive", "-Command", script])
+        .arg(path)
+        .status()
+        .map_err(|error| {
+            format!(
+                "Unable to send {} to recycle bin: {}",
+                normalize_path(path),
+                error
+            )
+        })?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!(
+            "Unable to send {} to recycle bin",
+            normalize_path(path)
+        ))
+    }
+}
+
+#[cfg(not(target_os = "windows"))]
+fn trash_file_inner(path: &Path) -> Result<(), String> {
+    Err(format!(
+        "System trash is not supported for {}",
+        normalize_path(path)
+    ))
+}
+
+#[tauri::command]
 pub fn copy_file(
     app: AppHandle,
     source_path: String,
@@ -149,6 +191,46 @@ pub fn copy_file(
         )
     })?;
     Ok(())
+}
+
+#[tauri::command]
+pub fn move_file(
+    app: AppHandle,
+    source_path: String,
+    destination_path: String,
+) -> Result<(), String> {
+    let safe_source = validate_path(&app, Path::new(&source_path))?;
+    let safe_destination = validate_path_for_write(&app, Path::new(&destination_path))?;
+    if safe_source == safe_destination {
+        return Ok(());
+    }
+    if let Some(parent) = safe_destination.parent() {
+        if !parent.as_os_str().is_empty() {
+            fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+        }
+    }
+    match fs::rename(&safe_source, &safe_destination) {
+        Ok(()) => Ok(()),
+        Err(rename_error) => {
+            fs::copy(&safe_source, &safe_destination).map_err(|copy_error| {
+                format!(
+                    "Unable to move {} to {}: {}; copy fallback failed: {}",
+                    normalize_path(&safe_source),
+                    normalize_path(&safe_destination),
+                    rename_error,
+                    copy_error
+                )
+            })?;
+            fs::remove_file(&safe_source).map_err(|remove_error| {
+                format!(
+                    "Unable to finish move {} to {}: {}",
+                    normalize_path(&safe_source),
+                    normalize_path(&safe_destination),
+                    remove_error
+                )
+            })
+        }
+    }
 }
 
 #[tauri::command]

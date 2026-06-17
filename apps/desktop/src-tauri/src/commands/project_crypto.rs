@@ -1,6 +1,6 @@
 use crate::path_validator::{validate_path, validate_path_for_write};
-use aes_gcm::aead::{Aead, OsRng};
 use aes_gcm::aead::rand_core::RngCore;
+use aes_gcm::aead::{Aead, OsRng};
 use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
 use sha2::{Digest, Sha256};
 use std::fs;
@@ -31,7 +31,11 @@ pub fn encrypt_project_file(
 }
 
 #[tauri::command]
-pub fn decrypt_project_file(app: AppHandle, path: String, password: String) -> Result<String, String> {
+pub fn decrypt_project_file(
+    app: AppHandle,
+    path: String,
+    password: String,
+) -> Result<String, String> {
     let safe_path = validate_path(&app, Path::new(&path))?;
     let bytes = fs::read(&safe_path).map_err(|error| error.to_string())?;
     let plaintext = decrypt_project_contents(&bytes, &password)?;
@@ -118,7 +122,8 @@ mod tests {
 
     #[test]
     fn encrypts_and_decrypts_project_contents_with_aes_gcm() {
-        let encrypted = encrypt_project_contents(br#"{"schemaVersion":2}"#, "correct horse").unwrap();
+        let encrypted =
+            encrypt_project_contents(br#"{"schemaVersion":2}"#, "correct horse").unwrap();
         let decrypted = decrypt_project_contents(&encrypted, "correct horse").unwrap();
         assert_eq!(decrypted, br#"{"schemaVersion":2}"#);
     }

@@ -9,6 +9,7 @@ import {
   readBackupSettings,
   readCollaborationIdentitySettings,
   readCustomSplitLayouts,
+  readDisplaySettings,
   readExportBackgroundSettings,
   readExportOptimizationSettings,
   readExportQualityAssuranceSettings,
@@ -29,6 +30,7 @@ import {
   saveAutomationRules,
   saveCollaborationIdentitySettings,
   saveCustomSplitLayouts,
+  saveDisplaySettings,
   saveExportBackgroundSettings,
   saveExportOptimizationSettings,
   saveExportQualityAssuranceSettings,
@@ -565,6 +567,23 @@ describe('app settings storage', () => {
     });
 
     await saveTimelineInteractionSettings({ reduceMotion: false });
+    expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({ language: 'en' });
+  });
+
+  it('persists display gamut settings only when they differ from sRGB', async () => {
+    await expect(readDisplaySettings()).resolves.toEqual({ colorGamut: 'srgb' });
+
+    await saveLanguageSetting('en');
+    const display = await saveDisplaySettings({ colorGamut: 'p3' });
+
+    expect(display).toEqual({ colorGamut: 'p3' });
+    expect(await readDisplaySettings()).toEqual(display);
+    expect(await readAppSettings()).toEqual({
+      language: 'en',
+      display
+    });
+
+    await saveDisplaySettings({ colorGamut: 'srgb' });
     expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({ language: 'en' });
   });
 

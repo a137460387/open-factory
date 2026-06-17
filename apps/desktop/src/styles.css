@@ -118,3 +118,32 @@ textarea:focus-visible,
   background: rgba(var(--color-text-muted-rgb), 0.72);
   border-radius: 999px;
 }
+
+.display-gamut-indicator {
+  display: none;
+}
+
+.display-gamut-indicator-srgb {
+  display: inline;
+}
+
+@media (color-gamut: p3) {
+  .display-gamut-indicator-srgb {
+    display: none;
+  }
+
+  .display-gamut-indicator-p3 {
+    display: inline;
+  }
+}
+
+@media (color-gamut: rec2020) {
+  .display-gamut-indicator-srgb,
+  .display-gamut-indicator-p3 {
+    display: none;
+  }
+
+  .display-gamut-indicator-rec2020 {
+    display: inline;
+  }
+}

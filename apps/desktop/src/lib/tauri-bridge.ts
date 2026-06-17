@@ -186,6 +186,9 @@ export interface MediaProbe {
   realFrameRate?: string;
   variableFrameRate?: boolean;
   fieldOrder?: string;
+  colorSpace?: string;
+  colorTransfer?: string;
+  colorPrimaries?: string;
 }
 
 export interface SystemResourceSnapshot {
@@ -619,7 +622,9 @@ export type TauriMocks = Partial<{
   isEncryptedProjectFile(path: string): Promise<boolean> | boolean;
   writeClipReport(path: string, html: string): Promise<void> | void;
   removeFile(path: string): Promise<void> | void;
+  trashFile(path: string): Promise<void> | void;
   copyFile(sourcePath: string, destinationPath: string): Promise<void> | void;
+  moveFile(sourcePath: string, destinationPath: string): Promise<void> | void;
   fsExists(path: string): Promise<boolean> | boolean;
   readColorMatchFrameSample(path: string): Promise<ColorMatchFrameSample | undefined> | ColorMatchFrameSample | undefined;
   getAppDataDir(): Promise<string> | string;
@@ -845,6 +850,15 @@ export async function removeFile(path: string): Promise<void> {
   await invoke('remove_file', { path });
 }
 
+export async function trashFile(path: string): Promise<void> {
+  const mock = getTauriMocks()?.trashFile;
+  if (mock) {
+    await mock(path);
+    return;
+  }
+  await invoke('trash_file', { path });
+}
+
 export async function copyFile(sourcePath: string, destinationPath: string): Promise<void> {
   const mock = getTauriMocks()?.copyFile;
   if (mock) {
@@ -852,6 +866,15 @@ export async function copyFile(sourcePath: string, destinationPath: string): Pro
     return;
   }
   await invoke('copy_file', { sourcePath, destinationPath });
+}
+
+export async function moveFile(sourcePath: string, destinationPath: string): Promise<void> {
+  const mock = getTauriMocks()?.moveFile;
+  if (mock) {
+    await mock(sourcePath, destinationPath);
+    return;
+  }
+  await invoke('move_file', { sourcePath, destinationPath });
 }
 
 export async function sendNotification(title: string, body: string): Promise<void> {

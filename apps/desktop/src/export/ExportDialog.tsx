@@ -4188,7 +4188,7 @@ function formatOptionLabel(value: string): string {
   if (value === 'solid' || value === 'gradient' || value === 'image') {
     return zhCN.exportDialog.audioVisualization.backgroundTypes[value];
   }
-  if (value === 'srgb' || value === 'rec709' || value === 'dci-p3' || value === 'rec2020') {
+  if (value === 'srgb' || value === 'rec709' || value === 'dci-p3' || value === 'display-p3' || value === 'rec2020') {
     return zhCN.exportDialog.colorManagement.colorSpaces[value];
   }
   if (value === 'default') {

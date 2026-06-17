@@ -54,6 +54,7 @@ import {
   getSplitLayoutDefinition,
   getClipSpeed,
   getCfrTargetFrameRate,
+  getColorSpaceDisplayName,
   getProjectFrameRateConversionTarget,
   getTimelineDuration,
   isFrameRateMismatch,
@@ -61,6 +62,7 @@ import {
   findSyncCompareClipRefs,
   findTimelineNavigationPoint,
   normalizeClipGroups,
+  normalizeProjectWorkingColorSpace,
   normalizeProjectSpeakers,
   normalizeExportRanges,
   applyTimelineVersionDiffSelection,
@@ -73,8 +75,10 @@ import {
   mergeOverlappingSubtitleDataCues,
   replaceProjectActiveTimeline,
   serializeTimelineBookmarks,
+  applyArchiveRelinkPlan,
   type DuplicateMediaGroup,
   type DuplicateMediaIssue,
+  type MediaCleanupReport,
   type MissingMediaIssue,
   type MediaAsset,
   type OrphanMediaIssue,
@@ -98,6 +102,7 @@ import {
   type TitleTemplateId,
   type ExportTask,
   type MediaVersionCompareRequest,
+  type SmartDuplicateGroup,
   createOperationRecording,
   recordOperationCommand,
   serializeOperationRecording,
@@ -150,6 +155,7 @@ import {
 import type { ExportPreset } from '../export/export-presets';
 import { pickMediaPaths, probeMediaPaths } from '../lib/media';
 import { generateMediaFingerprint, scanDuplicateMediaGroups } from '../lib/duplicateMedia';
+import { buildArchiveDestinationPath, buildRenameDestinationPath, scanMediaCleanupReport, scanSmartDuplicateMediaGroups } from '../lib/mediaOrganizer';
 import {
   buildSubtitleTrackFromDataCues,
   buildSubtitleTrackFromSrt,
@@ -200,7 +206,9 @@ import {
   openPreviewWindow,
   openDirectoryDialog,
   openFileDialog as bridgeOpenFileDialog,
+  moveFile as bridgeMoveFile,
   removeFile as bridgeRemoveFile,
+  trashFile as bridgeTrashFile,
   readFile as bridgeReadFile,
   saveFileDialog as bridgeSaveFileDialog,
   sendNotification,
@@ -267,6 +275,7 @@ import { DEFAULT_PREVIEW_PERFORMANCE_SETTINGS, type PreviewPerformanceSettings, 
 import { createProxyForAsset, type ProxyGenerationOptions } from '../media/proxy';
 import { ensureMediaJobRunner } from '../media/media-job-runner';
 import { DuplicateMediaDialog, type DuplicateMediaMergeSelection } from '../media/DuplicateMediaDialog';
+import { MediaOrganizerDialog, type MediaOrganizerDuplicateSelection } from '../media/MediaOrganizerDialog';
 import { useMediaJobStore } from '../media/media-job-store';
 import { relinkMissingMediaInDirectory, relinkSingleMedia } from '../media/relink';
 import { useBackgroundMediaJobs } from '../media/useBackgroundMediaJobs';
@@ -402,6 +411,10 @@ export function EditorShell() {
   const [projectHealthScanning, setProjectHealthScanning] = useState(false);
   const [duplicateMediaGroups, setDuplicateMediaGroups] = useState<DuplicateMediaGroup[]>([]);
   const [duplicateMediaOpen, setDuplicateMediaOpen] = useState(false);
+  const [mediaOrganizerOpen, setMediaOrganizerOpen] = useState(false);
+  const [mediaOrganizerGroups, setMediaOrganizerGroups] = useState<SmartDuplicateGroup[]>([]);
+  const [mediaOrganizerCleanup, setMediaOrganizerCleanup] = useState<MediaCleanupReport>();
+  const [mediaOrganizerScanning, setMediaOrganizerScanning] = useState(false);
   const [shortcutBindings, setShortcutBindings] = useState<TimelineShortcutBindings>({});
   const [shortcutCheatsheetOpen, setShortcutCheatsheetOpen] = useState(false);
   const [macros, setMacros] = useState<ClipMacro[]>([]);
@@ -1408,6 +1421,25 @@ export function EditorShell() {
     }
   }, []);
 
+  const applyImportedMediaColorConversionChoice = useCallback(async (media: MediaAsset[]): Promise<MediaAsset[]> => {
+    const workingColorSpace = normalizeProjectWorkingColorSpace(useEditorStore.getState().project.settings.workingColorSpace);
+    const mismatched = media.filter((asset) => asset.colorProfile && asset.colorProfile.sourceColorSpace !== workingColorSpace);
+    if (mismatched.length === 0) {
+      return media;
+    }
+    const confirmed = await bridgeConfirm(zhCN.editorToasts.colorConversionPrompt(mismatched.length, getColorSpaceDisplayName(workingColorSpace)), {
+      title: zhCN.settings.general.workingColorSpace
+    });
+    if (!confirmed) {
+      return media;
+    }
+    return media.map((asset) =>
+      asset.colorProfile && asset.colorProfile.sourceColorSpace !== workingColorSpace
+        ? { ...asset, colorProfile: { ...asset.colorProfile, autoConvertToWorkingSpace: true } }
+        : asset
+    );
+  }, []);
+
   const importMedia = useCallback(async () => {
     try {
       const paths = await pickMediaPaths();
@@ -1419,16 +1451,17 @@ export function EditorShell() {
         showToast({ kind: 'info', title: zhCN.editorToasts.duplicateTitle, message: zhCN.editorToasts.duplicateMessage(result.duplicateCount) });
       }
       if (result.media.length > 0) {
-        addMedia(result.media);
-        await persistMediaFingerprints(result.media);
-        await queueFrameRateConversionForImportedMedia(result.media);
-        void runAutomationForMedia('on-import', result.media);
+        const importedMedia = await applyImportedMediaColorConversionChoice(result.media);
+        addMedia(importedMedia);
+        await persistMediaFingerprints(importedMedia);
+        await queueFrameRateConversionForImportedMedia(importedMedia);
+        void runAutomationForMedia('on-import', importedMedia);
         showToast({ kind: 'success', title: zhCN.editorToasts.mediaImported, message: zhCN.editorToasts.mediaImportedMessage(result.media.length) });
       }
     } catch (error) {
       showToast({ kind: 'error', title: zhCN.editorToasts.importFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.importFailedMessage });
     }
-  }, [addMedia, persistMediaFingerprints, project.media, queueFrameRateConversionForImportedMedia, runAutomationForMedia]);
+  }, [addMedia, applyImportedMediaColorConversionChoice, persistMediaFingerprints, project.media, queueFrameRateConversionForImportedMedia, runAutomationForMedia]);
 
   const addVersionForMedia = useCallback(
     async (assetId: string) => {
@@ -1451,7 +1484,8 @@ export function EditorShell() {
         const latestProject = useEditorStore.getState().project;
         const existing = latestProject.media.find((item) => item.path === path);
         const result = existing ? { media: [] as MediaAsset[], duplicateCount: 1 } : await probeMediaPaths([path], latestProject.media);
-        const versionAsset = existing ?? result.media[0];
+        const importedMedia = result.media.length > 0 ? await applyImportedMediaColorConversionChoice(result.media) : result.media;
+        const versionAsset = existing ?? importedMedia[0];
         if (!versionAsset) {
           showToast({ kind: 'error', title: zhCN.editorToasts.mediaVersionAddFailed, message: zhCN.editorToasts.importFailedMessage });
           return;
@@ -1460,11 +1494,11 @@ export function EditorShell() {
           showToast({ kind: 'error', title: zhCN.editorToasts.mediaVersionAddFailed, message: zhCN.editorToasts.mediaVersionTypeMismatch });
           return;
         }
-        if (result.media.length > 0) {
-          addMedia(result.media);
-          await persistMediaFingerprints(result.media);
-          await queueFrameRateConversionForImportedMedia(result.media);
-          void runAutomationForMedia('on-import', result.media);
+        if (importedMedia.length > 0) {
+          addMedia(importedMedia);
+          await persistMediaFingerprints(importedMedia);
+          await queueFrameRateConversionForImportedMedia(importedMedia);
+          void runAutomationForMedia('on-import', importedMedia);
         }
         const metadata = useEditorStore.getState().project.mediaMetadata[assetId];
         setMediaMetadata(assetId, appendMediaVersion(metadata, versionAsset));
@@ -1473,7 +1507,7 @@ export function EditorShell() {
         showToast({ kind: 'error', title: zhCN.editorToasts.mediaVersionAddFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.importFailedMessage });
       }
     },
-    [addMedia, persistMediaFingerprints, queueFrameRateConversionForImportedMedia, runAutomationForMedia, setMediaMetadata]
+    [addMedia, applyImportedMediaColorConversionChoice, persistMediaFingerprints, queueFrameRateConversionForImportedMedia, runAutomationForMedia, setMediaMetadata]
   );
 
   const openMediaVersionCompare = useCallback(
@@ -1669,6 +1703,123 @@ export function EditorShell() {
       showToast({ kind: 'error', title: zhCN.projectHealth.toasts.fixFailed, message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage });
     }
   }, []);
+
+  const refreshMediaOrganizer = useCallback(async () => {
+    setMediaOrganizerScanning(true);
+    try {
+      const currentProject = useEditorStore.getState().project;
+      const [groups, cleanup] = await Promise.all([
+        scanSmartDuplicateMediaGroups(currentProject.media, currentProject.mediaMetadata),
+        scanMediaCleanupReport(currentProject)
+      ]);
+      setMediaOrganizerGroups(groups);
+      setMediaOrganizerCleanup(cleanup);
+    } catch (error) {
+      showToast({
+        kind: 'error',
+        title: zhCN.mediaOrganizer.scanFailed,
+        message: error instanceof Error ? error.message : zhCN.mediaOrganizer.scanFailedMessage
+      });
+    } finally {
+      setMediaOrganizerScanning(false);
+    }
+  }, []);
+
+  const openMediaOrganizer = useCallback(() => {
+    setMediaOrganizerOpen(true);
+    void refreshMediaOrganizer();
+  }, [refreshMediaOrganizer]);
+
+  const confirmMediaOrganizerDuplicateGroups = useCallback(
+    async (selections: MediaOrganizerDuplicateSelection[], moveFilesToTrash: boolean) => {
+      try {
+        const assetById = new Map(useEditorStore.getState().project.media.map((asset) => [asset.id, asset]));
+        if (moveFilesToTrash) {
+          for (const assetId of selections.flatMap((selection) => selection.removeAssetIds)) {
+            const asset = assetById.get(assetId);
+            if (asset) {
+              await bridgeTrashFile(asset.path);
+            }
+          }
+        }
+        let removedCount = 0;
+        for (const selection of selections) {
+          commandManager.execute(new MergeMediaCommand(projectAccessor, selection.keepAssetId, [selection.keepAssetId, ...selection.removeAssetIds]));
+          removedCount += selection.removeAssetIds.length;
+        }
+        showToast({ kind: 'success', title: zhCN.mediaOrganizer.removedTitle, message: zhCN.mediaOrganizer.removedMessage(removedCount) });
+        void refreshMediaOrganizer();
+      } catch (error) {
+        showToast({ kind: 'error', title: zhCN.projectHealth.toasts.fixFailed, message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage });
+      }
+    },
+    [refreshMediaOrganizer]
+  );
+
+  const removeMediaOrganizerReferences = useCallback(
+    (assetIds: string[]) => {
+      try {
+        commandManager.execute(new RemoveMediaCommand(projectAccessor, assetIds));
+        showToast({ kind: 'success', title: zhCN.mediaOrganizer.removedTitle, message: zhCN.mediaOrganizer.removedMessage(assetIds.length) });
+        void refreshMediaOrganizer();
+      } catch (error) {
+        showToast({ kind: 'error', title: zhCN.projectHealth.toasts.fixFailed, message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage });
+      }
+    },
+    [refreshMediaOrganizer]
+  );
+
+  const archiveUnusedMedia = useCallback(async () => {
+    const unused = mediaOrganizerCleanup?.unused ?? [];
+    if (unused.length === 0) {
+      return;
+    }
+    try {
+      const archiveDir = await openDirectoryDialog();
+      if (!archiveDir) {
+        showToast({ kind: 'info', title: zhCN.mediaOrganizer.archiveCanceled });
+        return;
+      }
+      const relinkEntries = [];
+      for (let index = 0; index < unused.length; index += 1) {
+        const asset = unused[index];
+        const destination = buildArchiveDestinationPath(archiveDir, asset, index);
+        await bridgeMoveFile(asset.path, destination);
+        relinkEntries.push({ assetId: asset.id, newPath: destination });
+      }
+      const nextProject = applyArchiveRelinkPlan(useEditorStore.getState().project, relinkEntries);
+      commandManager.execute(new LoadProjectCommand(projectAccessor, nextProject, zhCN.mediaOrganizer.archivedTitle));
+      showToast({ kind: 'success', title: zhCN.mediaOrganizer.archivedTitle, message: zhCN.mediaOrganizer.archivedMessage(relinkEntries.length) });
+      void refreshMediaOrganizer();
+    } catch (error) {
+      showToast({ kind: 'error', title: zhCN.mediaOrganizer.archiveFailed, message: error instanceof Error ? error.message : zhCN.mediaOrganizer.archiveFailed });
+    }
+  }, [mediaOrganizerCleanup, refreshMediaOrganizer]);
+
+  const renameUnusedMedia = useCallback(
+    async (template: string) => {
+      const unused = mediaOrganizerCleanup?.unused ?? [];
+      if (unused.length === 0) {
+        return;
+      }
+      try {
+        const relinkEntries = [];
+        for (let index = 0; index < unused.length; index += 1) {
+          const asset = unused[index];
+          const destination = buildRenameDestinationPath(asset, template, index);
+          await bridgeMoveFile(asset.path, destination);
+          relinkEntries.push({ assetId: asset.id, newPath: destination });
+        }
+        const nextProject = applyArchiveRelinkPlan(useEditorStore.getState().project, relinkEntries);
+        commandManager.execute(new LoadProjectCommand(projectAccessor, nextProject, zhCN.mediaOrganizer.renameTitle));
+        showToast({ kind: 'success', title: zhCN.mediaOrganizer.renameTitle, message: zhCN.mediaOrganizer.archivedMessage(relinkEntries.length) });
+        void refreshMediaOrganizer();
+      } catch (error) {
+        showToast({ kind: 'error', title: zhCN.projectHealth.toasts.fixFailed, message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage });
+      }
+    },
+    [mediaOrganizerCleanup, refreshMediaOrganizer]
+  );
 
   const importSubtitles = useCallback(async () => {
     try {
@@ -3196,6 +3347,7 @@ export function EditorShell() {
           onOpenBatchWatermark={() => setBatchWatermarkOpen(true)}
           onOpenBatchProjectProcessing={() => setBatchProjectProcessingOpen(true)}
           onOpenMediaPrecheck={() => setMediaPrecheckOpen(true)}
+          onOpenMediaOrganizer={openMediaOrganizer}
           onOpenVideoStitchWizard={() => setVideoStitchWizardOpen(true)}
           onOpenSyncCompare={openSyncCompare}
           onOpenSceneDetection={() => setSceneDetectionRequestId((id) => id + 1)}
@@ -3740,6 +3892,19 @@ export function EditorShell() {
             onClose={() => setDuplicateMediaOpen(false)}
           />
         ) : null}
+        {mediaOrganizerOpen ? (
+          <MediaOrganizerDialog
+            groups={mediaOrganizerGroups}
+            cleanup={mediaOrganizerCleanup}
+            scanning={mediaOrganizerScanning}
+            onRescan={() => void refreshMediaOrganizer()}
+            onConfirmDuplicateGroups={confirmMediaOrganizerDuplicateGroups}
+            onRemoveMediaReferences={removeMediaOrganizerReferences}
+            onArchiveUnused={() => void archiveUnusedMedia()}
+            onApplyRenameTemplate={(template) => void renameUnusedMedia(template)}
+            onClose={() => setMediaOrganizerOpen(false)}
+          />
+        ) : null}
         {recoveryCandidate ? (
           <AutosaveRecoveryDialog
             onRestore={() => void restoreRecovery()}
@@ -3811,10 +3976,11 @@ export function EditorShell() {
         if (result.duplicateCount > 0) {
           showToast({ kind: 'info', title: zhCN.editorToasts.duplicateTitle, message: zhCN.editorToasts.duplicateMessage(result.duplicateCount) });
         }
-        addMedia(result.media);
-        await persistMediaFingerprints(result.media);
-        await queueFrameRateConversionForImportedMedia(result.media);
-        void runAutomationForMedia('on-import', result.media);
+        const importedMedia = await applyImportedMediaColorConversionChoice(result.media);
+        addMedia(importedMedia);
+        await persistMediaFingerprints(importedMedia);
+        await queueFrameRateConversionForImportedMedia(importedMedia);
+        void runAutomationForMedia('on-import', importedMedia);
       }
       if (subtitlePaths.length > 0) {
         await importSubtitlePaths(subtitlePaths);

@@ -88,6 +88,12 @@ export interface TimelineInteractionSettings {
   reduceMotion: boolean;
 }
 
+export type DisplayColorGamut = 'srgb' | 'p3' | 'rec2020';
+
+export interface DisplaySettings {
+  colorGamut: DisplayColorGamut;
+}
+
 export interface CollaborationIdentitySettings {
   name: string;
   color: string;
@@ -205,6 +211,10 @@ export const DEFAULT_TIMELINE_INTERACTION_SETTINGS: TimelineInteractionSettings 
   reduceMotion: false
 };
 
+export const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = {
+  colorGamut: 'srgb'
+};
+
 export const DEFAULT_COLLABORATION_IDENTITY_SETTINGS: CollaborationIdentitySettings = {
   name: '我',
   color: '#38bdf8'
@@ -232,6 +242,7 @@ export interface AppSettings {
   previewPerformance?: PreviewPerformanceSettings;
   previewWindow?: PreviewWindowSettings;
   timelineInteraction?: TimelineInteractionSettings;
+  display?: DisplaySettings;
   collaborationIdentity?: CollaborationIdentitySettings;
   audioVisualizationThemes?: AudioVisualizationThemeSettings;
   localModels?: LocalAiModelsSettings;
@@ -444,6 +455,18 @@ export async function saveTimelineInteractionSettings(timelineInteraction: Parti
   return nextTimelineInteraction;
 }
 
+export async function readDisplaySettings(): Promise<DisplaySettings> {
+  const settings = await readAppSettings();
+  return normalizeDisplaySettings(settings.display) ?? defaultDisplaySettings();
+}
+
+export async function saveDisplaySettings(display: Partial<DisplaySettings>): Promise<DisplaySettings> {
+  const settings = await readAppSettings();
+  const nextDisplay = normalizeDisplaySettings({ ...settings.display, ...display }) ?? defaultDisplaySettings();
+  await writeAppSettings({ ...settings, display: nextDisplay });
+  return nextDisplay;
+}
+
 export async function readCollaborationIdentitySettings(): Promise<CollaborationIdentitySettings> {
   const settings = await readAppSettings();
   return settings.collaborationIdentity ?? { ...DEFAULT_COLLABORATION_IDENTITY_SETTINGS };
@@ -616,6 +639,10 @@ function normalizeSettings(settings: Partial<AppSettings>): AppSettings {
   const timelineInteraction = normalizeTimelineInteractionSettings(settings.timelineInteraction);
   if (timelineInteraction && shouldPersistTimelineInteractionSettings(timelineInteraction)) {
     normalized.timelineInteraction = timelineInteraction;
+  }
+  const display = normalizeDisplaySettings(settings.display);
+  if (display && shouldPersistDisplaySettings(display)) {
+    normalized.display = display;
   }
   const collaborationIdentity = normalizeCollaborationIdentitySettings(settings.collaborationIdentity);
   if (shouldPersistCollaborationIdentitySettings(collaborationIdentity)) {
@@ -844,6 +871,15 @@ export function normalizeTimelineInteractionSettings(settings: Partial<TimelineI
   };
 }
 
+export function normalizeDisplaySettings(settings: Partial<DisplaySettings> | undefined): DisplaySettings | undefined {
+  if (!settings || typeof settings !== 'object') {
+    return undefined;
+  }
+  return {
+    colorGamut: normalizeDisplayColorGamut(settings.colorGamut)
+  };
+}
+
 export function normalizeCollaborationIdentitySettings(settings: Partial<CollaborationIdentitySettings> | undefined): CollaborationIdentitySettings {
   const name = typeof settings?.name === 'string' && settings.name.trim() ? settings.name.trim().slice(0, 80) : DEFAULT_COLLABORATION_IDENTITY_SETTINGS.name;
   return {
@@ -860,6 +896,10 @@ export function normalizeAudioVisualizationThemeSettings(settings: Partial<Audio
 
 function normalizePreviewWindowResolutionScale(value: unknown): PreviewWindowResolutionScale {
   return value === 0.5 || value === 0.25 ? value : 1;
+}
+
+function normalizeDisplayColorGamut(value: unknown): DisplayColorGamut {
+  return value === 'p3' || value === 'rec2020' ? value : 'srgb';
 }
 
 export function normalizeExportUploadSettings(settings: Partial<ExportUploadSettings> | undefined): ExportUploadSettings | undefined {
@@ -1013,8 +1053,16 @@ function defaultTimelineInteractionSettings(): TimelineInteractionSettings {
   return { ...DEFAULT_TIMELINE_INTERACTION_SETTINGS };
 }
 
+function defaultDisplaySettings(): DisplaySettings {
+  return { ...DEFAULT_DISPLAY_SETTINGS };
+}
+
 function shouldPersistTimelineInteractionSettings(settings: TimelineInteractionSettings): boolean {
   return settings.reduceMotion !== DEFAULT_TIMELINE_INTERACTION_SETTINGS.reduceMotion;
+}
+
+function shouldPersistDisplaySettings(settings: DisplaySettings): boolean {
+  return settings.colorGamut !== DEFAULT_DISPLAY_SETTINGS.colorGamut;
 }
 
 function shouldPersistCollaborationIdentitySettings(settings: CollaborationIdentitySettings): boolean {

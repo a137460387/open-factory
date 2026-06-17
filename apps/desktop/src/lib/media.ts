@@ -1,5 +1,5 @@
 import type { AssetType, ImageSequenceInfo, MediaAsset } from '@open-factory/editor-core';
-import { createId } from '@open-factory/editor-core';
+import { createId, parseFfprobeColorProfile } from '@open-factory/editor-core';
 import { readThumbnailFromCache, writeThumbnailToCache } from '../cache/cache-service';
 import { zhCN } from '../i18n/strings';
 import { extensionFromPath, fileNameFromPath, isTauriRuntime } from './tauri';
@@ -67,6 +67,7 @@ export async function probeMediaPath(path: string, imageSequence?: ImageSequence
     realFrameRate: mediaProbe.realFrameRate,
     variableFrameRate: mediaProbe.variableFrameRate,
     fieldOrder: mediaProbe.fieldOrder,
+    colorProfile: parseFfprobeColorProfile(mediaProbe),
     proxyStatus: type === 'video' ? 'none' : undefined,
     imageSequence
   };

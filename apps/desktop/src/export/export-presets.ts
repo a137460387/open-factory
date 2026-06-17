@@ -956,7 +956,7 @@ function sanitizePostExportScript(value: unknown): ExportPresetSettings['postExp
 }
 
 function sanitizeExportColorSpace(value: unknown, fallback: NonNullable<ExportPresetSettings['colorManagement']>['inputColorSpace']): NonNullable<ExportPresetSettings['colorManagement']>['inputColorSpace'] {
-  return value === 'srgb' || value === 'rec709' || value === 'dci-p3' || value === 'rec2020' ? value : fallback;
+  return value === 'srgb' || value === 'rec709' || value === 'dci-p3' || value === 'display-p3' || value === 'rec2020' ? value : fallback;
 }
 
 function sanitizeAudioVisualization(value: unknown): ExportPresetSettings['audioVisualization'] | undefined {
