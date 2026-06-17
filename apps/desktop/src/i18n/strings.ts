@@ -174,7 +174,11 @@ const zh = {
     sceneReorder: '场景重组',
     styleTransfer: '风格迁移',
     collaborationNotes: '协同标注',
+<<<<<<< Updated upstream
     operationRecording: '操作回放',
+=======
+    complexityScore: '复杂度评分',
+>>>>>>> Stashed changes
     smartRecommendations: '智能推荐',
     contentAnalysis: '内容分析',
     rhythmAnalysis: '节奏分析',
@@ -1882,6 +1886,26 @@ const zh = {
     exportFailedTitle: '导出标注报告失败',
     exportFailedMessage: '无法写入 HTML 报告。'
   },
+  complexity: {
+    title: '复杂度评分',
+    subtitle: '按时间线密度、特效、调色、音频和关键帧量化项目复杂度。',
+    totalScore: '总分',
+    exportJson: '导出 JSON 报告',
+    references: '参考项目',
+    dimensions: {
+      timelineDensity: '时间线密度',
+      effectComplexity: '特效复杂度',
+      colorDepth: '调色深度',
+      audioComplexity: '音频复杂度',
+      keyframeDensity: '关键帧密度'
+    },
+    levels: {
+      beginner: '入门',
+      intermediate: '进阶',
+      professional: '专业',
+      master: '大师'
+    }
+  },
   smartRecommendations: {
     title: '智能片段推荐',
     subtitle: '基于当前时间线和本地媒体库推荐未使用素材。',
@@ -2787,6 +2811,37 @@ const zh = {
         light: '轻',
         medium: '中',
         heavy: '重'
+      }
+    },
+    optimization: {
+      title: '优化建议',
+      description: '导出前检查项目素材和当前预设，给出可一键应用的本地优化。',
+      empty: '当前设置没有需要提示的优化项。',
+      apply: '一键应用',
+      dismiss: '不再提示',
+      appliedTitle: '优化建议已应用',
+      dismissedTitle: '建议已关闭',
+      suggestions: {
+        'proxy-for-4k-downscale': {
+          title: '4K 素材降采样',
+          message: (count: number) => `检测到 ${count} 个 4K 素材但导出为 1080p，建议启用硬件编码并使用代理预览节省检查时间。导出仍使用原始素材。`
+        },
+        'unify-frame-rate': {
+          title: '统一帧率',
+          message: (source: number, target: number) => `项目含 ${target.toFixed(0)}fps 素材但当前预设为 ${source.toFixed(0)}fps，建议统一帧率避免卡顿。`
+        },
+        'normalize-loudness': {
+          title: '响度标准化',
+          message: (lufs: number) => `音频轨道响度约 ${lufs.toFixed(1)} LUFS，建议启用 YouTube -14 LUFS 标准化。`
+        },
+        'convert-vfr-to-cfr': {
+          title: 'VFR 转 CFR',
+          message: (count: number) => `检测到 ${count} 个可变帧率素材，建议先按目标帧率转换为恒定帧率。`
+        },
+        'parallel-long-export': {
+          title: '长项目并行导出',
+          message: (minutes: number) => `项目时长约 ${minutes.toFixed(1)} 分钟，建议开启并行导出缩短等待时间。`
+        }
       }
     },
     mode: {
@@ -3903,7 +3958,11 @@ const enOverrides = {
     sceneReorder: 'Scene Reorder',
     styleTransfer: 'Style Transfer',
     collaborationNotes: 'Collaboration Notes',
+<<<<<<< Updated upstream
     operationRecording: 'Operation Replay',
+=======
+    complexityScore: 'Complexity Score',
+>>>>>>> Stashed changes
     smartRecommendations: 'Smart Recommendations',
     contentAnalysis: 'Content Analysis',
     rhythmAnalysis: 'Rhythm Analysis',
@@ -5430,6 +5489,26 @@ const enOverrides = {
     exportFailedTitle: 'Notes report export failed',
     exportFailedMessage: 'Unable to write the HTML report.'
   },
+  complexity: {
+    title: 'Complexity Score',
+    subtitle: 'Quantifies project complexity from density, effects, color, audio, and keyframes.',
+    totalScore: 'Total Score',
+    exportJson: 'Export JSON Report',
+    references: 'References',
+    dimensions: {
+      timelineDensity: 'Timeline Density',
+      effectComplexity: 'Effect Complexity',
+      colorDepth: 'Color Depth',
+      audioComplexity: 'Audio Complexity',
+      keyframeDensity: 'Keyframe Density'
+    },
+    levels: {
+      beginner: 'Beginner',
+      intermediate: 'Intermediate',
+      professional: 'Professional',
+      master: 'Master'
+    }
+  },
   smartRecommendations: {
     title: 'Smart Segment Recommendations',
     subtitle: 'Recommend unused local media from the current timeline context.',
@@ -6191,6 +6270,37 @@ const enOverrides = {
         light: 'Light',
         medium: 'Medium',
         heavy: 'Heavy'
+      }
+    },
+    optimization: {
+      title: 'Optimization Suggestions',
+      description: 'Checks local media and the current preset before export, then offers one-click adjustments.',
+      empty: 'No export optimization suggestions for the current settings.',
+      apply: 'Apply',
+      dismiss: 'Dismiss',
+      appliedTitle: 'Optimization applied',
+      dismissedTitle: 'Suggestion dismissed',
+      suggestions: {
+        'proxy-for-4k-downscale': {
+          title: '4K downscale',
+          message: (count: number) => `${count} 4K media item(s) are exporting to 1080p. Enable hardware encoding and use proxy preview to check faster; export still uses original media.`
+        },
+        'unify-frame-rate': {
+          title: 'Unify frame rate',
+          message: (source: number, target: number) => `The project contains ${target.toFixed(0)}fps media while the preset is ${source.toFixed(0)}fps. Unify frame rate to avoid stutter.`
+        },
+        'normalize-loudness': {
+          title: 'Loudness normalization',
+          message: (lufs: number) => `Audio loudness is about ${lufs.toFixed(1)} LUFS. Enable YouTube -14 LUFS normalization.`
+        },
+        'convert-vfr-to-cfr': {
+          title: 'Convert VFR to CFR',
+          message: (count: number) => `${count} variable-frame-rate media item(s) detected. Convert to constant frame rate first.`
+        },
+        'parallel-long-export': {
+          title: 'Parallel long export',
+          message: (minutes: number) => `Project duration is about ${minutes.toFixed(1)} minutes. Enable parallel export to reduce waiting time.`
+        }
       }
     },
     mode: {

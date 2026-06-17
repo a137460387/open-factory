@@ -1134,6 +1134,116 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setPlayheadTime(0);
     commandManager.clear();
   },
+  setupComplexityScoreFixture: () => {
+    const project = createProject('Complexity Score E2E');
+    const asset: MediaAsset = {
+      id: 'media-complex-video',
+      type: 'video',
+      name: 'complexity-source.mp4',
+      path: tinyVideo,
+      duration: 12,
+      width: 1920,
+      height: 1080,
+      size: 4096,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 2,
+      audioSampleRate: 44_100,
+      audioCodec: 'aac',
+      videoCodec: 'h264',
+      frameRate: 30
+    };
+    const clipA = {
+      ...makeEditingVideoClip('clip-complex-a', 0, 3, 0, 0),
+      mediaId: asset.id,
+      name: 'Complex A',
+      colorCorrection: { ...DEFAULT_COLOR_CORRECTION, brightness: 0.25, saturation: 1.4 },
+      effects: [{ id: 'fx-complex-blur', type: 'blur' as const, enabled: true, params: { radius: 8 } }],
+      keyframes: {
+        opacity: [
+          { id: 'kf-complex-1', time: 0, value: 1, easing: 'linear' as const },
+          { id: 'kf-complex-2', time: 1, value: 0.6, easing: 'ease-in' as const }
+        ]
+      }
+    };
+    const clipB = {
+      ...makeEditingVideoClip('clip-complex-b', 3, 3, 0, 0),
+      mediaId: asset.id,
+      name: 'Complex B',
+      effects: [{ id: 'fx-complex-shader', type: 'custom-shader' as const, enabled: true, params: {} }]
+    };
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({ id: 'track-video', type: 'video', name: 'Video 1', clips: [clipA, clipB] }),
+        createTrack({
+          id: 'track-audio',
+          type: 'audio',
+          name: 'Audio 1',
+          volume: 0.8,
+          pan: 0.25,
+          compressor: { enabled: true, threshold: -18, ratio: 3, attack: 5, release: 120, makeupGain: 1 },
+          clips: []
+        }),
+        createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupExportOptimizationFixture: () => {
+    const project = createProject('Export Optimization E2E');
+    const asset: MediaAsset = {
+      id: 'media-optimization-4k',
+      type: 'video',
+      name: 'four-k-optimization.mov',
+      path: fourKHevcVideo,
+      duration: 8,
+      width: 3840,
+      height: 2160,
+      size: 8192,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 2,
+      audioSampleRate: 48_000,
+      audioCodec: 'aac',
+      videoCodec: 'hevc',
+      frameRate: 60
+    };
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({
+          id: 'track-video',
+          type: 'video',
+          name: 'Video 1',
+          clips: [{ ...makeEditingVideoClip('clip-optimization-4k', 0, 8, 0, 0), mediaId: asset.id, name: '4K Optimization' }]
+        }),
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
+        createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
   setupStyleTransferFixture: () => {
     const project = createProject('Style Transfer E2E');
     const asset: MediaAsset = {

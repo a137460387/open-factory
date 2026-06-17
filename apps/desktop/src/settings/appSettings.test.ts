@@ -10,6 +10,7 @@ import {
   readCollaborationIdentitySettings,
   readCustomSplitLayouts,
   readExportBackgroundSettings,
+  readExportOptimizationSettings,
   readExportQualityAssuranceSettings,
   readExportPresetSyncSettings,
   readExportUploadSettings,
@@ -29,6 +30,7 @@ import {
   saveCollaborationIdentitySettings,
   saveCustomSplitLayouts,
   saveExportBackgroundSettings,
+  saveExportOptimizationSettings,
   saveExportQualityAssuranceSettings,
   saveExportPresetSyncSettings,
   saveExportUploadSettings,
@@ -360,6 +362,17 @@ describe('app settings storage', () => {
       language: 'en',
       exportQualityAssurance: qualityAssurance
     });
+  });
+
+  it('persists dismissed export optimization suggestions in settings.json', async () => {
+    await expect(readExportOptimizationSettings()).resolves.toEqual({ dismissedSuggestionIds: [] });
+
+    const optimization = await saveExportOptimizationSettings({
+      dismissedSuggestionIds: ['normalize-loudness', 'normalize-loudness', 'invalid'] as never
+    });
+
+    expect(optimization).toEqual({ dismissedSuggestionIds: ['normalize-loudness'] });
+    expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({ exportOptimization: optimization });
   });
 
   it('persists normalized export condition rules in settings.json', async () => {

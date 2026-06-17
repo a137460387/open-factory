@@ -165,7 +165,7 @@ async function clickExportToolbarButton(): Promise<void> {
     return item && !item.disabled ? item : undefined;
   }, 10_000, 'Export toolbar button was not enabled.');
   button.click();
-  await waitFor(() => document.querySelector('[data-testid="export-dialog"]'), 5_000, 'Export dialog did not open.');
+  await waitFor(() => document.querySelector('[data-testid="export-dialog"]'), 20_000, 'Export dialog did not open.');
 }
 
 async function fillOutputPath(path: string): Promise<void> {

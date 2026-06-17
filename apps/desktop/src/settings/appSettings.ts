@@ -2,13 +2,16 @@ import { getLanguage, languageFromNavigator, normalizeLanguage, setLanguage, typ
 import {
   DEFAULT_TIMELINE_GRID_SETTINGS,
   DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS,
+  DEFAULT_EXPORT_OPTIMIZATION_SETTINGS,
   normalizeSplitLayoutDefinition,
   normalizePostExportQualityAssuranceSettings,
+  normalizeExportOptimizationSettings,
   normalizeTimelineGridSettings,
   hasEnabledPostExportQualityChecks,
   normalizeCustomAudioVisualizationThemes,
   type SplitLayoutDefinition,
   type CustomAudioVisualizationTheme,
+  type ExportOptimizationSettings,
   type PostExportQualityAssuranceSettings,
   type TimelineGridSettings,
   type TimelineHeatmapColorScheme,
@@ -223,6 +226,7 @@ export interface AppSettings {
   exportUpload?: ExportUploadSettings;
   exportPresetSync?: ExportPresetSyncSettings;
   exportQualityAssurance?: PostExportQualityAssuranceSettings;
+  exportOptimization?: ExportOptimizationSettings;
   exportRules?: ExportConditionRule[];
   view?: ViewSettings;
   previewPerformance?: PreviewPerformanceSettings;
@@ -342,6 +346,18 @@ export async function saveExportQualityAssuranceSettings(exportQualityAssurance:
   const nextExportQualityAssurance = normalizePostExportQualityAssuranceSettings({ ...settings.exportQualityAssurance, ...exportQualityAssurance });
   await writeAppSettings({ ...settings, exportQualityAssurance: nextExportQualityAssurance });
   return nextExportQualityAssurance;
+}
+
+export async function readExportOptimizationSettings(): Promise<ExportOptimizationSettings> {
+  const settings = await readAppSettings();
+  return settings.exportOptimization ?? { ...DEFAULT_EXPORT_OPTIMIZATION_SETTINGS };
+}
+
+export async function saveExportOptimizationSettings(exportOptimization: Partial<ExportOptimizationSettings>): Promise<ExportOptimizationSettings> {
+  const settings = await readAppSettings();
+  const nextExportOptimization = normalizeExportOptimizationSettings({ ...settings.exportOptimization, ...exportOptimization });
+  await writeAppSettings({ ...settings, exportOptimization: nextExportOptimization });
+  return nextExportOptimization;
 }
 
 export async function readExportRules(): Promise<ExportConditionRule[]> {
@@ -572,6 +588,10 @@ function normalizeSettings(settings: Partial<AppSettings>): AppSettings {
   const exportQualityAssurance = normalizePostExportQualityAssuranceSettings(settings.exportQualityAssurance);
   if (shouldPersistExportQualityAssuranceSettings(exportQualityAssurance)) {
     normalized.exportQualityAssurance = exportQualityAssurance;
+  }
+  const exportOptimization = normalizeExportOptimizationSettings(settings.exportOptimization);
+  if (shouldPersistExportOptimizationSettings(exportOptimization)) {
+    normalized.exportOptimization = exportOptimization;
   }
   const exportRules = normalizeExportRules(settings.exportRules);
   if (exportRules.length > 0) {
@@ -1033,6 +1053,10 @@ function shouldPersistExportQualityAssuranceSettings(settings: PostExportQuality
     settings.silenceThresholdDb !== DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS.silenceThresholdDb ||
     settings.silenceDurationSeconds !== DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS.silenceDurationSeconds
   );
+}
+
+function shouldPersistExportOptimizationSettings(settings: ExportOptimizationSettings): boolean {
+  return settings.dismissedSuggestionIds.length > 0;
 }
 
 function normalizeHexColor(color: string | undefined, fallback: string): string {

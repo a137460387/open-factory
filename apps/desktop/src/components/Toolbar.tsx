@@ -52,7 +52,11 @@ interface ToolbarProps {
   onOpenSceneReorder(): void;
   onOpenStyleTransfer(): void;
   onOpenCollaborationNotes(): void;
+<<<<<<< Updated upstream
   onOpenOperationRecording(): void;
+=======
+  onOpenComplexityScore(): void;
+>>>>>>> Stashed changes
   onOpenSmartRecommendations(): void;
   onOpenContentAnalysis(): void;
   onOpenRhythmAnalysis(): void;
@@ -700,6 +704,7 @@ export function Toolbar(props: ToolbarProps) {
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
               type="button"
+<<<<<<< Updated upstream
               data-testid="toolbar-tools-operation-recording-menu-item"
               onClick={() => {
                 setToolsMenuOpen(false);
@@ -708,6 +713,16 @@ export function Toolbar(props: ToolbarProps) {
             >
               <span>{t.operationRecording}</span>
               <History size={14} />
+=======
+              data-testid="toolbar-tools-complexity-score-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onOpenComplexityScore();
+              }}
+            >
+              <span>{t.complexityScore}</span>
+              <Activity size={14} />
+>>>>>>> Stashed changes
             </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
