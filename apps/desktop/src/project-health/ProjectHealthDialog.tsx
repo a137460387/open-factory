@@ -5,6 +5,7 @@ import {
   type OrphanMediaIssue,
   type ProjectHealthClipReference,
   type ProjectHealthReport,
+  type ProjectHealthRepairReport,
   type ProxyMissingIssue
 } from '@open-factory/editor-core';
 import { CheckCircle2, Gauge, Link2, Merge, RefreshCw, Trash2, X } from 'lucide-react';
@@ -13,9 +14,11 @@ import { zhCN } from '../i18n/strings';
 
 interface ProjectHealthDialogProps {
   report?: ProjectHealthReport;
+  repairReport?: ProjectHealthRepairReport;
   scanning: boolean;
   onClose(): void;
   onRescan(): void;
+  onAutoRepair(): void;
   onRelink(issue: MissingMediaIssue): void;
   onRemoveOrphan(issue: OrphanMediaIssue): void;
   onMergeDuplicate(issue: DuplicateMediaIssue): void;
@@ -24,9 +27,11 @@ interface ProjectHealthDialogProps {
 
 export function ProjectHealthDialog({
   report,
+  repairReport,
   scanning,
   onClose,
   onRescan,
+  onAutoRepair,
   onRelink,
   onRemoveOrphan,
   onMergeDuplicate,
@@ -43,6 +48,10 @@ export function ProjectHealthDialog({
             <div className="text-xs text-slate-500">{scanning ? t.scanning : t.total(issueCount)}</div>
           </div>
           <div className="flex items-center gap-2">
+            <button className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50" type="button" data-testid="project-health-auto-repair-button" onClick={onAutoRepair} disabled={scanning || issueCount === 0}>
+              <RefreshCw size={14} />
+              {t.actions.autoRepair}
+            </button>
             <button className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel" type="button" data-testid="project-health-rescan-button" onClick={onRescan} disabled={scanning}>
               <RefreshCw size={14} />
               {t.rescan}
@@ -53,6 +62,7 @@ export function ProjectHealthDialog({
           </div>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
+          {repairReport ? <RepairReportPanel report={repairReport} /> : null}
           {scanning && !report ? <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">{t.scanning}</div> : null}
           {report && issueCount === 0 ? (
             <div className="flex min-h-[220px] flex-col items-center justify-center rounded-md border border-line bg-panel p-6 text-center text-sm font-medium text-slate-600" data-testid="project-health-empty">
@@ -115,6 +125,27 @@ export function ProjectHealthDialog({
           ) : null}
         </div>
       </section>
+    </div>
+  );
+}
+
+function RepairReportPanel({ report }: { report: ProjectHealthRepairReport }) {
+  const t = zhCN.projectHealth;
+  return (
+    <div className="mb-4 rounded-md border border-line bg-panel p-3" data-testid="project-health-repair-report">
+      <div className="text-sm font-semibold text-ink">{t.repairReportTitle}</div>
+      <div className="mt-1 text-xs text-slate-600" data-testid="project-health-repair-summary">
+        {t.repairReportSummary(report.successCount, report.skippedCount, report.manualCount)}
+      </div>
+      {report.entries.length > 0 ? (
+        <div className="mt-2 grid gap-1 text-xs text-slate-600">
+          {report.entries.slice(0, 6).map((entry, index) => (
+            <div key={`${entry.type}-${entry.assetId ?? index}-${entry.status}`} data-testid="project-health-repair-entry" data-status={entry.status}>
+              {t.repairEntryStatus[entry.status]} · {entry.message}
+            </div>
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

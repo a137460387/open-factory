@@ -12,6 +12,7 @@ import {
   runRenderFarmWithFallback,
   shouldRetryPostExportQuality,
   timelineHasExportableVideo,
+  applyLowPowerThreads,
   type ExportReport,
   type ExportSettings,
   type ExportRenderRange,
@@ -25,7 +26,7 @@ import {
 } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { cancelExport as bridgeCancelExport, copyFile, getAvailableMemoryBytes, getFfmpegCapabilities, getTempSegmentsDir, listenBridge, removeFile, runExport, runPostExportQualityAssurance, writeFile } from '../lib/tauri-bridge';
-import { readExportQualityAssuranceSettings } from '../settings/appSettings';
+import { readExportBackgroundSettings, readExportQualityAssuranceSettings } from '../settings/appSettings';
 import { runExportBeforePlugins } from '../plugins/plugin-manager';
 import { getExportLogPath, persistFinishedTaskToHistory } from './export-history';
 import { normalizeExportProgressPayload, type ExportProgressEvent } from './export-progress';
@@ -34,6 +35,7 @@ import { runConfiguredExportRules, type ExportRuleEventContext } from './export-
 import { buildSidecarSubtitlePath } from './export-sidecar';
 import { runConfiguredExportUpload } from './export-upload';
 import { clearMediaCache } from '../cache/cache-service';
+import { appendExportSpeedSample } from './export-speed-history';
 
 export const EXPORT_MEMORY_PAUSE_THRESHOLD_BYTES = 2 * 1024 * 1024 * 1024;
 const RESOURCE_RECHECK_DELAY_MS = 500;
@@ -60,7 +62,9 @@ export async function enqueueExport(
   }
   await runExportBeforePlugins(project, outputPath, settings);
   const exportProject = buildExportProjectFromProject(project, { outputPath, settings });
-  const plan = buildFfmpegExportPlan(exportProject, capabilities, 0, [], { exportRange });
+  const backgroundSettings = await readExportBackgroundSettings().catch(() => undefined);
+  const rawPlan = buildFfmpegExportPlan(exportProject, capabilities, 0, [], { exportRange });
+  const plan = applyLowPowerThreads(rawPlan, backgroundSettings?.lowPowerMode === true, getHardwareConcurrency());
   const progressiveState = progressive ? createProgressiveExportState({ outputPath, settings: exportProject.settings }) : undefined;
   const task = useExportQueueStore.getState().addTask({
     name: fileNameFromPath(outputPath) || `${project.name} 导出`,
@@ -286,6 +290,10 @@ async function runSingleTask(task: ExportTask): Promise<void> {
     }
     const latest = useExportQueueStore.getState().tasks.find((item) => item.id === task.id);
     if (latest?.status === 'running') {
+      const durationMs = 'durationMs' in result ? result.durationMs : undefined;
+      if (durationMs !== undefined) {
+        await recordExportSpeedSample(task, durationMs).catch(() => undefined);
+      }
       await writeSidecarSubtitleArtifacts(task.outputPath, task.plan.textArtifacts);
       useExportQueueStore.getState().finishTask(task.id, report);
       await persistFinishedTaskToHistory(task.id);
@@ -305,6 +313,22 @@ async function runSingleTask(task: ExportTask): Promise<void> {
       await runExportRulesSafely({ type: 'export-failure', task: failedTask, projectName: failedTask.projectName ?? task.projectName });
     }
   }
+}
+
+async function recordExportSpeedSample(task: ExportTask, durationMs: number): Promise<void> {
+  if (!Number.isFinite(durationMs) || durationMs <= 0 || !Number.isFinite(task.plan.duration) || task.plan.duration <= 0) {
+    return;
+  }
+  await appendExportSpeedSample({
+    id: task.id,
+    projectName: task.projectName,
+    outputPath: task.outputPath,
+    durationSeconds: task.plan.duration,
+    elapsedMs: durationMs,
+    width: task.plan.settings?.width,
+    height: task.plan.settings?.height,
+    codec: task.plan.settings?.videoCodec
+  });
 }
 
 class ExportRecoveryFailure extends Error {
@@ -452,6 +476,10 @@ function nextRunnerDelayMs(): number {
 
 function fileNameFromPath(path: string): string {
   return path.split(/[\\/]/).pop() ?? path;
+}
+
+function getHardwareConcurrency(): number | undefined {
+  return typeof navigator === 'undefined' ? undefined : navigator.hardwareConcurrency;
 }
 
 async function writeSidecarSubtitleArtifacts(outputPath: string, artifacts: TextArtifact[]): Promise<void> {

@@ -2,6 +2,7 @@ import { createId } from '../model';
 import type { ExportReport, FfmpegExportPlan } from './export-types';
 import type { ProgressiveExportState } from './progressive';
 import { calculateRenderFarmProgress, type RenderFarmSegmentStatus, type RenderFarmTaskConfig } from './render-farm';
+import { startResourceAwareExportTaskSlots } from './scheduling';
 
 export type ExportTaskStatus = 'scheduled' | 'pending' | 'running' | 'interrupted' | 'canceled' | 'error' | 'success';
 export type ExportTaskPriority = 'high' | 'normal' | 'low';
@@ -97,26 +98,7 @@ export function clampExportConcurrency(value: number): number {
 }
 
 export function startExportTaskSlots(tasks: ExportTask[], maxConcurrent = 2, now = new Date().toISOString()): ExportTask[] {
-  const limit = clampExportConcurrency(maxConcurrent);
-  let availableSlots = Math.max(0, limit - tasks.filter((task) => task.status === 'running').length);
-  if (availableSlots === 0) {
-    return tasks;
-  }
-  const startIds = new Set(
-    tasks
-      .map((task, index) => ({ task, index }))
-      .filter(({ task }) => task.status === 'pending')
-      .sort(comparePendingExportTasks)
-      .slice(0, availableSlots)
-      .map(({ task }) => task.id)
-  );
-  return tasks.map((task) => {
-    if (availableSlots > 0 && startIds.has(task.id)) {
-      availableSlots -= 1;
-      return { ...task, status: 'running', startedAt: now };
-    }
-    return task;
-  });
+  return startResourceAwareExportTaskSlots(tasks, clampExportConcurrency(maxConcurrent), now);
 }
 
 export function activateScheduledExportTasks(tasks: ExportTask[], now = new Date().toISOString()): ExportTask[] {

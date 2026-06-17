@@ -133,6 +133,7 @@ import {
 import { createKeyframe, removeKeyframeForProperty, setKeyframeForProperty } from '../keyframes';
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
 import { normalizeProjectDocumentation } from '../project/documentation';
+import { applyProjectHealthAutoRepair, type ProjectHealthAutoRepairInput, type ProjectHealthRepairReport } from '../project/project-health-repair';
 import {
   buildTextAnimationKeyframes,
   mergeTextAnimationKeyframes,
@@ -1057,6 +1058,38 @@ export class MergeMediaCommand implements Command {
       }
       assertMediaAssetsExist(this.before, new Set([this.keepAssetId, ...removeIds]));
       this.after = mergeMediaReferences(this.before, this.keepAssetId, removeIds);
+    }
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class AutoRepairProjectHealthCommand implements Command {
+  readonly description = 'Auto repair project health';
+  private before?: Project;
+  private after?: Project;
+  private repairReport?: ProjectHealthRepairReport;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly input: ProjectHealthAutoRepairInput
+  ) {}
+
+  get report(): ProjectHealthRepairReport | undefined {
+    return this.repairReport;
+  }
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    if (!this.after) {
+      const result = applyProjectHealthAutoRepair(this.before, this.input);
+      this.after = result.project;
+      this.repairReport = result.report;
     }
     this.accessor.setProject(this.after);
   }

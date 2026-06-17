@@ -63,6 +63,7 @@ export interface BackupSettings {
 export interface ExportBackgroundSettings {
   allowPowerActions: boolean;
   postExportScriptAcknowledged: boolean;
+  lowPowerMode: boolean;
 }
 
 export interface PreviewWindowBounds {
@@ -785,7 +786,8 @@ export function normalizeExportBackgroundSettings(settings: Partial<ExportBackgr
   }
   return {
     allowPowerActions: Boolean(settings.allowPowerActions),
-    postExportScriptAcknowledged: Boolean(settings.postExportScriptAcknowledged)
+    postExportScriptAcknowledged: Boolean(settings.postExportScriptAcknowledged),
+    lowPowerMode: Boolean(settings.lowPowerMode)
   };
 }
 
@@ -957,7 +959,8 @@ function defaultBackupSettings(): BackupSettings {
 function defaultExportBackgroundSettings(): ExportBackgroundSettings {
   return {
     allowPowerActions: false,
-    postExportScriptAcknowledged: false
+    postExportScriptAcknowledged: false,
+    lowPowerMode: false
   };
 }
 

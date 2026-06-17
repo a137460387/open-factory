@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createTrack, getProjectHealthIssueCount, PRIMARY_SEQUENCE_ID, runProjectHealthCheck, type MediaAsset } from '../src';
+import { addMediaFolderToProject, createTrack, getProjectHealthIssueCount, moveMediaAssetsToFolder, PRIMARY_SEQUENCE_ID, runProjectHealthCheck, type MediaAsset } from '../src';
 import { makeProject, makeSubtitleClip, makeTimeline, makeVideoClip } from './test-utils';
 
 describe('project health check', () => {
@@ -53,6 +53,22 @@ describe('project health check', () => {
     expect(runProjectHealthCheck(project).orphanMedia).toEqual([
       expect.objectContaining({ assetId: 'asset-orphan', fileName: 'orphan.wav' })
     ]);
+  });
+
+  it('ignores orphan media already moved into unused folders', () => {
+    let project = makeProject();
+    project.media = [
+      makeAsset({ id: 'asset-used', path: 'C:/Media/used.mp4' }),
+      makeAsset({ id: 'asset-unused-en', path: 'C:/Media/unused-a.wav', name: 'unused-a.wav', type: 'audio', width: 0, height: 0 }),
+      makeAsset({ id: 'asset-unused-zh', path: 'C:/Media/unused-b.wav', name: 'unused-b.wav', type: 'audio', width: 0, height: 0 })
+    ];
+    project.timeline = makeTimeline([makeVideoClip({ mediaId: 'asset-used' })]);
+    const englishFolder = addMediaFolderToProject(project, { name: 'Unused' }, '2026-01-01T00:00:00.000Z');
+    project = moveMediaAssetsToFolder(englishFolder.project, ['asset-unused-en'], englishFolder.folder.id, '2026-01-01T00:00:01.000Z');
+    const chineseFolder = addMediaFolderToProject(project, { name: '未使用' }, '2026-01-01T00:00:02.000Z');
+    project = moveMediaAssetsToFolder(chineseFolder.project, ['asset-unused-zh'], chineseFolder.folder.id, '2026-01-01T00:00:03.000Z');
+
+    expect(runProjectHealthCheck(project).orphanMedia).toEqual([]);
   });
 
   it('reports large video files that need a proxy but have no ready proxy', () => {

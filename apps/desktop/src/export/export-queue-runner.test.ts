@@ -141,6 +141,7 @@ describe('export queue sidecar subtitles', () => {
     vi.stubGlobal('window', {
       __TAURI_MOCKS__: {
         getAppDataDir: () => appDataDir,
+        fsExists: (path) => files.has(path),
         readFile: (path) => {
           const value = files.get(path);
           if (value === undefined) {

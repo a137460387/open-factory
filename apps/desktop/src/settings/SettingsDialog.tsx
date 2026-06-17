@@ -190,7 +190,7 @@ export function SettingsDialog({
     webdav: { ...DEFAULT_BACKUP_SETTINGS.webdav }
   }));
   const [exportPresetSyncSettings, setExportPresetSyncSettings] = useState<ExportPresetSyncSettings>(() => ({ ...DEFAULT_EXPORT_PRESET_SYNC_SETTINGS }));
-  const [exportBackgroundSettings, setExportBackgroundSettings] = useState<ExportBackgroundSettings>(() => ({ allowPowerActions: false, postExportScriptAcknowledged: false }));
+  const [exportBackgroundSettings, setExportBackgroundSettings] = useState<ExportBackgroundSettings>(() => ({ allowPowerActions: false, postExportScriptAcknowledged: false, lowPowerMode: false }));
   const [exportQualityAssuranceSettings, setExportQualityAssuranceSettings] = useState<PostExportQualityAssuranceSettings>(() => ({ ...DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS }));
   const [exportRules, setExportRules] = useState<ExportConditionRule[]>([]);
   const [automationRules, setAutomationRules] = useState<AutomationRule[]>([]);
@@ -1406,6 +1406,19 @@ export function SettingsDialog({
                   <span>
                     <span className="block font-semibold text-slate-700">{t.general.allowExportPowerActions}</span>
                     <span className="mt-1 block">{t.general.allowExportPowerActionsDescription}</span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-2 rounded-md border border-line bg-panel p-3 text-xs text-slate-600">
+                  <input
+                    className="mt-0.5 h-4 w-4 accent-brand"
+                    type="checkbox"
+                    checked={exportBackgroundSettings.lowPowerMode}
+                    data-testid="settings-export-low-power-toggle"
+                    onChange={(event) => void updateExportBackgroundSettings({ ...exportBackgroundSettings, lowPowerMode: event.target.checked })}
+                  />
+                  <span>
+                    <span className="block font-semibold text-slate-700">{t.general.lowPowerExportMode}</span>
+                    <span className="mt-1 block">{t.general.lowPowerExportModeDescription}</span>
                   </span>
                 </label>
                 <ExportQualityAssuranceSettingsPanel settings={exportQualityAssuranceSettings} onChange={(patch) => void updateExportQualityAssuranceSettings(patch)} />

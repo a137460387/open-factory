@@ -196,6 +196,31 @@ test('uses detected NVENC hardware encoder when hardware encoding is enabled', a
   expect(plan.fullArgs).toEqual(expect.arrayContaining(['-c:v', 'h264_nvenc', '-preset', 'p4', '-cq', '23']));
 });
 
+test('limits FFmpeg threads when low-power export mode is enabled', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.evaluate(() => window.__E2E_ACTIONS__!.clearE2eFiles!());
+  await page.getByTestId('toolbar-settings-button').click();
+  await expect(page.getByTestId('settings-dialog')).toBeVisible();
+  await page.getByTestId('settings-export-low-power-toggle').check();
+  await expect
+    .poll(() => page.evaluate(() => window.__E2E_ACTIONS__!.getWrittenFile!('C:/Users/E2E/AppData/Roaming/open-factory/settings.json') as string | undefined))
+    .toContain('"lowPowerMode": true');
+  await page.getByTestId('settings-close-button').click();
+
+  await page.getByTestId('import-media-button').click();
+  await addMediaCardToTimeline(page, 0);
+  await openExportDialog(page);
+  await page.getByTestId('export-preset-select').selectOption('web-1080p');
+  await page.getByTestId('export-enqueue-button').click();
+  await expectExportTaskStatus(page, 0, 'success');
+
+  const plan = await page.evaluate(() => window.__E2E_ACTIONS__!.getLastExportPlan!() as { fullArgs: string[] });
+  const threadsIndex = plan.fullArgs.lastIndexOf('-threads');
+  expect(threadsIndex).toBeGreaterThan(-1);
+  expect(Number(plan.fullArgs[threadsIndex + 1])).toBeGreaterThanOrEqual(1);
+});
+
 test('blocks export when preflight finds missing media and allows export after relink', async ({ page }) => {
   await page.goto('/');
   await waitForE2eActions(page);

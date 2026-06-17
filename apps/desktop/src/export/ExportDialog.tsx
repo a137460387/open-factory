@@ -331,7 +331,7 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [scheduledStartInput, setScheduledStartInput] = useState(() => localDatetimeInputValue(new Date(Date.now() + 60_000)));
   const [completionAction, setCompletionAction] = useState<ExportCompletionAction>('none');
-  const [exportBackgroundSettings, setExportBackgroundSettings] = useState<ExportBackgroundSettings>(() => ({ allowPowerActions: false, postExportScriptAcknowledged: false }));
+  const [exportBackgroundSettings, setExportBackgroundSettings] = useState<ExportBackgroundSettings>(() => ({ allowPowerActions: false, postExportScriptAcknowledged: false, lowPowerMode: false }));
   const [exportUploadSettings, setExportUploadSettings] = useState<ExportUploadSettings>(() => ({
     ...DEFAULT_EXPORT_UPLOAD_SETTINGS,
     webdav: { ...DEFAULT_EXPORT_UPLOAD_SETTINGS.webdav },

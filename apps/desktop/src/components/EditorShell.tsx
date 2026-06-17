@@ -1,6 +1,7 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import {
   AddAdjustmentLayerCommand,
+  AutoRepairProjectHealthCommand,
   AddClipCommand,
   AddMediaFolderCommand,
   AddProjectAnnotationCommand,
@@ -87,6 +88,7 @@ import {
   type PiPLayoutPosition,
   type ProjectTemplateId,
   type ProxyMissingIssue,
+  type ProjectHealthRepairReport,
   type SplitLayoutDefinition,
   type SubtitleDataImportMode,
   type Timeline as CoreTimeline,
@@ -160,7 +162,7 @@ import {
 import { createProjectArchivePlan, writeProjectArchive, type ArchiveProgress } from '../lib/projectArchive';
 import { collectProjectArchivePreflight, saveClipReport, saveOfflineMediaReport } from '../lib/mediaReport';
 import { saveProjectSnapshot } from '../lib/projectSnapshots';
-import { scanProjectHealth } from '../lib/projectHealth';
+import { buildProjectHealthAutoRepairInput, scanProjectHealth } from '../lib/projectHealth';
 import { getReviewModeShellVisibility } from '../review/reviewMode';
 import { saveReviewReport } from '../review/reviewReport';
 import type { SharePackageWorkflowProgress } from '../lib/sharePackage';
@@ -389,6 +391,7 @@ export function EditorShell() {
   const [projectHealthOpen, setProjectHealthOpen] = useState(false);
   const [reviewMode, setReviewMode] = useState(() => (typeof window === 'undefined' ? false : window.location.hash === '#review'));
   const [projectHealthReport, setProjectHealthReport] = useState<ProjectHealthReport>();
+  const [projectHealthRepairReport, setProjectHealthRepairReport] = useState<ProjectHealthRepairReport>();
   const [projectHealthScanning, setProjectHealthScanning] = useState(false);
   const [duplicateMediaGroups, setDuplicateMediaGroups] = useState<DuplicateMediaGroup[]>([]);
   const [duplicateMediaOpen, setDuplicateMediaOpen] = useState(false);
@@ -1878,6 +1881,7 @@ export function EditorShell() {
   }, []);
 
   const openProjectHealth = useCallback(() => {
+    setProjectHealthRepairReport(undefined);
     setProjectHealthOpen(true);
     void refreshProjectHealth();
   }, [refreshProjectHealth]);
@@ -1947,6 +1951,65 @@ export function EditorShell() {
     },
     [refreshProjectHealth]
   );
+
+  const autoRepairProjectHealth = useCallback(async () => {
+    try {
+      const state = useEditorStore.getState();
+      const report = projectHealthReport ?? (await scanProjectHealth(state.project, useProxySettingsStore.getState().settings));
+      const input = await buildProjectHealthAutoRepairInput(state.project, report);
+      let duplicateIssues = input.duplicateIssues ?? [];
+      const manualEntries = [...(input.manualEntries ?? [])];
+      if (duplicateIssues.length > 0) {
+        const confirmed = await bridgeConfirm(zhCN.projectHealth.autoRepairDuplicateConfirm(duplicateIssues.length), {
+          title: zhCN.projectHealth.actions.autoRepair
+        });
+        if (!confirmed) {
+          manualEntries.push(
+            ...duplicateIssues.map((issue) => ({
+              type: 'duplicate-media' as const,
+              status: 'manual' as const,
+              assetId: issue.keepAssetId,
+              message: `${issue.id}: ${zhCN.common.cancel}`
+            }))
+          );
+          duplicateIssues = [];
+        }
+      }
+
+      const current = useEditorStore.getState();
+      const proxyAssets = current.project.media.filter((asset) => (input.proxyAssetIds ?? []).includes(asset.id));
+      if (proxyAssets.length > 0) {
+        useMediaJobStore.getState().enqueueProxyJobsForMedia(proxyAssets, useProxySettingsStore.getState().settings, { force: true });
+      }
+      const frameRateAssets = current.project.media.filter((asset) => asset.type === 'video' && (asset.variableFrameRate || isFrameRateMismatch(asset.frameRate, current.project.settings.fps)));
+      for (const asset of frameRateAssets) {
+        const cfrFrameRate = getProjectFrameRateConversionTarget(current.project.settings.fps, getCfrTargetFrameRate({ avgFrameRate: asset.avgFrameRate, realFrameRate: asset.realFrameRate }, asset.frameRate ?? 30));
+        useMediaJobStore.getState().enqueueProxyJobsForMedia([asset], useProxySettingsStore.getState().settings, { force: true, cfrFrameRate });
+      }
+      if (proxyAssets.length > 0 || frameRateAssets.length > 0) {
+        void ensureMediaJobRunner();
+      }
+
+      const command = new AutoRepairProjectHealthCommand(projectAccessor, {
+        ...input,
+        duplicateIssues,
+        manualEntries,
+        proxyAssetIds: proxyAssets.map((asset) => asset.id),
+        frameRateProxyAssetIds: frameRateAssets.map((asset) => asset.id),
+        unusedFolderName: zhCN.projectHealth.unusedFolder
+      });
+      commandManager.execute(command);
+      setProjectHealthRepairReport(command.report);
+      showToast({
+        kind: command.report?.successCount ? 'success' : 'warning',
+        title: zhCN.projectHealth.toasts.autoRepairComplete,
+        message: command.report ? zhCN.projectHealth.repairReportSummary(command.report.successCount, command.report.skippedCount, command.report.manualCount) : undefined
+      });
+      await refreshProjectHealth();
+    } catch (error) {
+      showToast({ kind: 'error', title: zhCN.projectHealth.toasts.fixFailed, message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage });
+    }
+  }, [projectHealthReport, refreshProjectHealth]);
 
   const separateSelectedAudio = useCallback(async () => {
     if (!selectedClip || (selectedClip.type !== 'audio' && selectedClip.type !== 'video') || !selectedClipMedia) {
@@ -3564,9 +3627,11 @@ export function EditorShell() {
         {projectHealthOpen ? (
           <ProjectHealthDialog
             report={projectHealthReport}
+            repairReport={projectHealthRepairReport}
             scanning={projectHealthScanning}
             onClose={() => setProjectHealthOpen(false)}
             onRescan={() => void refreshProjectHealth()}
+            onAutoRepair={() => void autoRepairProjectHealth()}
             onRelink={(issue) => void relinkMissingFromHealth(issue)}
             onRemoveOrphan={(issue) => void removeOrphanFromHealth(issue)}
             onMergeDuplicate={(issue) => void mergeDuplicateFromHealth(issue)}

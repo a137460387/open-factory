@@ -567,6 +567,8 @@ const zh = {
       },
       allowExportPowerActions: '允许导出完成后执行关机/休眠',
       allowExportPowerActionsDescription: '默认关闭。开启后，导出完成动作才可以调用系统电源命令。',
+      lowPowerExportMode: '后台低功耗导出',
+      lowPowerExportModeDescription: '开启后导出任务会限制 FFmpeg 线程数，降低后台 CPU 占用。',
       postExportQuality: {
         title: '导出后质检',
         description: '导出完成后按本机 FFmpeg/FFprobe 自动检查输出文件。默认关闭。',
@@ -1252,6 +1254,9 @@ const zh = {
     empty: '未发现项目健康问题。',
     total: (count: number) => `发现 ${count} 项`,
     rescan: '重新检查',
+    unusedFolder: '未使用',
+    repairReportTitle: '自动修复报告',
+    repairReportSummary: (success: number, skipped: number, manual: number) => `成功 ${success} 项 / 跳过 ${skipped} 项 / 需人工处理 ${manual} 项`,
     sections: {
       missingMedia: '缺失媒体',
       duplicateMedia: '重复素材',
@@ -1264,7 +1269,13 @@ const zh = {
       relink: '跳转重连',
       removeOrphan: '从媒体库移除',
       mergeDuplicate: '合并引用',
-      enqueueProxy: '加入生成队列'
+      enqueueProxy: '加入生成队列',
+      autoRepair: '一键自动修复'
+    },
+    repairEntryStatus: {
+      success: '成功',
+      skipped: '跳过',
+      manual: '人工处理'
     },
     detail: {
       clipRef: (clipName: string, trackName: string) => `${clipName} / ${trackName}`,
@@ -1278,9 +1289,11 @@ const zh = {
       orphanRemoved: '孤立素材已移除',
       duplicateMerged: '重复素材引用已合并',
       proxyQueued: '代理任务已加入队列',
+      autoRepairComplete: '自动修复完成',
       fixFailed: '修复失败',
       fixFailedMessage: '无法应用该修复。'
-    }
+    },
+    autoRepairDuplicateConfirm: (count: number) => `检测到 ${count} 组重复素材。自动修复将合并引用并保留其中一个素材，是否继续？`
   },
   titleTemplates: {
     'lower-third': {
@@ -4232,6 +4245,8 @@ const enOverrides = {
       },
       allowExportPowerActions: 'Allow shutdown/hibernate after export',
       allowExportPowerActionsDescription: 'Disabled by default. When enabled, export completion actions may call system power commands.',
+      lowPowerExportMode: 'Low-power background export',
+      lowPowerExportModeDescription: 'Limits FFmpeg thread count during export to reduce background CPU usage.',
       postExportQuality: {
         title: 'Post-export QA',
         description: 'Run local FFmpeg/FFprobe checks after export completes. Disabled by default.',

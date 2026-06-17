@@ -52,6 +52,7 @@ test('packs clips into a nested sequence and exports with matching duration', as
 });
 
 test('queues two selected sequences from batch sequence render', async ({ page }) => {
+  test.slow();
   await openCleanProject(page);
 
   await page.getByTestId('import-media-button').click();

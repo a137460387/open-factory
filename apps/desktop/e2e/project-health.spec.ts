@@ -25,3 +25,19 @@ test('checks project health and fixes missing and orphan media', async ({ page }
   await page.getByTestId('project-health-rescan-button').click();
   await expect(page.getByTestId('project-health-empty')).toBeVisible();
 });
+
+test('auto repairs missing media and shows a repair report', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.evaluate(() => window.__E2E_ACTIONS__!.setupProjectHealthFixture!());
+
+  await page.getByTestId('toolbar-file-menu-button').click();
+  await page.getByTestId('toolbar-file-project-health-menu-item').click();
+
+  await expect(page.getByTestId('project-health-section-missing-media')).toHaveAttribute('data-count', '1');
+  await page.getByTestId('project-health-auto-repair-button').click();
+
+  await expect(page.getByTestId('project-health-repair-report')).toBeVisible();
+  await expect(page.getByTestId('project-health-repair-summary')).toContainText('成功');
+  await expect(page.getByTestId('project-health-section-missing-media')).toHaveCount(0);
+});

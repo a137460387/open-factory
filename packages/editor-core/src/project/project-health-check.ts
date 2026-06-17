@@ -100,7 +100,7 @@ export function runProjectHealthCheck(project: Project, options: ProjectHealthCh
   return {
     missingMedia: collectMissingMedia(mediaById, referencesByMediaId, isMissing),
     duplicateMedia: collectDuplicateMedia(syncedProject.media, referencesByMediaId),
-    orphanMedia: collectOrphanMedia(syncedProject.media, usedMediaIds),
+    orphanMedia: collectOrphanMedia(syncedProject.media, usedMediaIds, syncedProject.mediaFolders),
     proxyMissing: collectProxyMissingMedia(syncedProject.media, isMissing, options.proxySettings),
     missingFonts: collectMissingFonts(syncedProject, options.isFontFamilyAvailable)
   };
@@ -185,10 +185,18 @@ function collectDuplicateMedia(media: MediaAsset[], referencesByMediaId: Map<str
   return issues;
 }
 
-function collectOrphanMedia(media: MediaAsset[], usedMediaIds: Set<string>): OrphanMediaIssue[] {
+function collectOrphanMedia(media: MediaAsset[], usedMediaIds: Set<string>, folders: Project['mediaFolders']): OrphanMediaIssue[] {
+  const unusedFolderIds = new Set(
+    folders
+      .filter((folder) => {
+        const name = folder.name.trim().toLowerCase();
+        return name === 'unused' || name === '\u672a\u4f7f\u7528';
+      })
+      .map((folder) => folder.id)
+  );
   return sortIssuesByName(
     media
-      .filter((asset) => !usedMediaIds.has(asset.id))
+      .filter((asset) => !usedMediaIds.has(asset.id) && !(asset.folderId && unusedFolderIds.has(asset.folderId)))
       .map((asset) => ({
         type: 'orphan-media' as const,
         id: `orphan-media-${asset.id}`,
