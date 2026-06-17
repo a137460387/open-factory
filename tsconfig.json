@@ -2,6 +2,7 @@
   "files": [],
   "references": [
     { "path": "./packages/editor-core" },
+    { "path": "./packages/plugin-sdk" },
     { "path": "./apps/desktop" }
   ],
   "compilerOptions": {

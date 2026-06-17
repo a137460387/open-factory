@@ -99,6 +99,8 @@ describe('plugin market', () => {
       plugins: [
         {
           sourcePath: 'C:/Plugins/e2e.js',
+          rootPath: 'C:/Plugins',
+          dev: false,
           plugin: { id: 'market.plugin', name: 'Market Plugin', version: '1.0.0', description: '', permissions: ['export-hook'], hooks: {} },
           runtime: { plugin: { id: 'market.plugin', name: 'Market Plugin', version: '1.0.0', description: '', permissions: ['export-hook'], hooks: {} }, invokeHook: async () => undefined, dispose: () => undefined },
           errors: [],

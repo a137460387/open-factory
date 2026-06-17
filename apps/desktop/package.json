@@ -22,6 +22,7 @@
   },
   "dependencies": {
     "@open-factory/editor-core": "0.6.0",
+    "@open-factory/plugin-sdk": "0.6.0",
     "@tauri-apps/api": "^2.6.0",
     "@tauri-apps/plugin-dialog": "^2.2.2",
     "@tauri-apps/plugin-fs": "^2.4.0",

@@ -1,0 +1,24 @@
+{
+  "name": "@open-factory/plugin-sdk",
+  "license": "MIT",
+  "version": "0.6.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "docs": "typedoc --entryPoints src/index.ts --out ../../docs/plugin-api"
+  },
+  "dependencies": {
+    "@open-factory/editor-core": "0.6.0"
+  }
+}

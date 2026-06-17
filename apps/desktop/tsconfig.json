@@ -16,9 +16,10 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "paths": {
-      "@open-factory/editor-core": ["../../packages/editor-core/src/index.ts"]
+      "@open-factory/editor-core": ["../../packages/editor-core/src/index.ts"],
+      "@open-factory/plugin-sdk": ["../../packages/plugin-sdk/src/index.ts"]
     }
   },
   "include": ["src"],
-  "references": [{ "path": "../../packages/editor-core" }]
+  "references": [{ "path": "../../packages/editor-core" }, { "path": "../../packages/plugin-sdk" }]
 }

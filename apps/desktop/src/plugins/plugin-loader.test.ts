@@ -1,6 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createProject } from '@open-factory/editor-core';
-import { createBuiltinExamplePlugin, extractManifestPermissions, loadPluginFiles, normalizePluginMetadata, type PluginRuntime, type PluginSourceFile } from './plugin-loader';
+import { PLUGIN_API_HOST_FUNCTIONS, type PluginAPI } from '@open-factory/plugin-sdk';
+import { createBuiltinExamplePlugin, extractManifestPermissions, formatPluginError, loadPluginFiles, normalizePluginMetadata, type PluginRuntime, type PluginSourceFile } from './plugin-loader';
+
+type MissingPluginApiHostFunctions = Exclude<keyof PluginAPI, (typeof PLUGIN_API_HOST_FUNCTIONS)[number]>;
+const assertAllPluginApiHostFunctionsAreListed: MissingPluginApiHostFunctions extends never ? true : never = true;
+void assertAllPluginApiHostFunctionsAreListed;
 
 describe('plugin loader', () => {
   it('loads valid plugins and isolates load errors', async () => {
@@ -16,7 +21,9 @@ describe('plugin loader', () => {
     });
 
     expect(registry.plugins.map((entry) => entry.plugin.id)).toEqual(['good']);
-    expect(registry.errors).toEqual([{ sourcePath: 'C:/Plugins/bad.js', message: 'load failed' }]);
+    expect(registry.errors).toHaveLength(1);
+    expect(registry.errors[0]).toMatchObject({ sourcePath: 'C:/Plugins/bad.js' });
+    expect(registry.errors[0].message).toContain('load failed');
   });
 
   it('invokes plugin hooks through the runtime', async () => {
@@ -96,6 +103,26 @@ describe('plugin loader', () => {
   it('returns undefined when source has no static manifest permissions', () => {
     expect(extractManifestPermissions('module.exports = { hooks: {} };')).toBeUndefined();
     expect(extractManifestPermissions('module.exports = { manifest: { permissions: makePermissions() } };')).toBeUndefined();
+  });
+
+  it('exports a complete PluginAPI host function list for SDK consumers', () => {
+    expect(PLUGIN_API_HOST_FUNCTIONS).toEqual([
+      'getProject',
+      'updateProject',
+      'registerMenu',
+      'showToast',
+      'readTextFile',
+      'writeTextFile',
+      'sendMessage',
+      'onMessage'
+    ]);
+  });
+
+  it('preserves runtime stack details with line and column numbers', () => {
+    const error = new Error('plugin crashed');
+    error.stack = 'Error: plugin crashed\n    at onExportBefore (C:/Plugins/dev/index.js:12:7)';
+
+    expect(formatPluginError(error)).toContain('C:/Plugins/dev/index.js:12:7');
   });
 });
 

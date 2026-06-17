@@ -4,11 +4,12 @@ import { fileURLToPath } from 'node:url';
 export default defineConfig({
   resolve: {
     alias: {
-      '@open-factory/editor-core': fileURLToPath(new URL('./packages/editor-core/src/index.ts', import.meta.url))
+      '@open-factory/editor-core': fileURLToPath(new URL('./packages/editor-core/src/index.ts', import.meta.url)),
+      '@open-factory/plugin-sdk': fileURLToPath(new URL('./packages/plugin-sdk/src/index.ts', import.meta.url))
     }
   },
   test: {
-    include: ['packages/editor-core/__tests__/**/*.test.ts', 'apps/desktop/src/**/*.test.ts', 'scripts/**/*.test.mjs'],
+    include: ['packages/editor-core/__tests__/**/*.test.ts', 'apps/desktop/src/**/*.test.ts', 'scripts/**/*.test.mjs', 'tools/**/*.test.ts'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],

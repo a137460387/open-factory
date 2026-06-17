@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import { addMediaCardToTimeline, openExportDialog, waitForE2eActions } from './e2e-actions';
 
 type HookSummary = { pluginId: string; hookName: string; ok: boolean };
+type HookLogEntry = HookSummary & { result?: { devReloadVersion?: string } };
 
 test('shows discovered plugins from a mocked catalog request', async ({ page }) => {
   await page.route('**/plugin-catalog.json', async (route) => {
@@ -87,6 +88,38 @@ test('lists plugin manifests, isolates permission errors, and toggles export hoo
     { pluginId: 'e2e.export-count', hookName: 'onExportBefore', ok: true },
     { pluginId: 'e2e.missing-permission', hookName: 'onExportBefore', ok: false }
   ]);
+});
+
+test('reloads dev plugins after local file changes without restarting the app', async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.evaluate(() => window.__E2E_ACTIONS__!.clearE2eFiles!());
+  await page.evaluate(() => window.__E2E_ACTIONS__!.installDevReloadPlugin!('v1'));
+
+  await openPluginSettings(page);
+  await expect(pluginEntry(page, 'e2e.dev-reload')).toBeVisible();
+  await closeSettings(page);
+
+  await page.waitForTimeout(900);
+  await page.evaluate(() => window.__E2E_ACTIONS__!.updateDevReloadPlugin!('v2'));
+  await page.waitForTimeout(1200);
+
+  await page.getByTestId('import-media-button').click();
+  await addMediaCardToTimeline(page, 0);
+  await page.evaluate(() => window.__E2E_ACTIONS__!.clearPluginHookLog!());
+  await page.evaluate(() => window.__E2E_ACTIONS__!.setSavePath!('C:/Exports/plugin-dev-reload.mp4'));
+  await openExportDialog(page);
+  await page.getByTestId('export-enqueue-button').click();
+
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const entries = window.__E2E_ACTIONS__!.getPluginHookLog!() as HookLogEntry[];
+        return entries.find((entry) => entry.pluginId === 'e2e.dev-reload')?.result?.devReloadVersion;
+      })
+    )
+    .toBe('v2');
 });
 
 async function openPluginSettings(page: Page): Promise<void> {

@@ -140,6 +140,9 @@ const pluginCatalogCachePath = `${appDataDir}/plugin-catalog-cache.json`;
 const pluginPath = `${pluginDir}/export-count.js`;
 const permissionDeniedPluginPath = `${pluginDir}/missing-permission.js`;
 const brokenPluginPath = `${pluginDir}/broken.js`;
+const devPluginDir = `${pluginDir}/dev-reload`;
+const devPluginManifestPath = `${devPluginDir}/plugin.json`;
+const devPluginEntryPath = `${devPluginDir}/index.js`;
 
 files.set(sampleProjectPath, JSON.stringify(makeProjectFile(tinyVideo, false), null, 2));
 files.set(missingProjectPath, JSON.stringify(makeProjectFile('C:/Missing/tiny-video.mp4', true), null, 2));
@@ -2383,6 +2386,11 @@ window.__E2E_ACTIONS__ = {
     files.delete(pluginCatalogCachePath);
     exists.set(pluginCatalogCachePath, false);
     mtimes.delete(pluginCatalogCachePath);
+    for (const path of [devPluginManifestPath, devPluginEntryPath]) {
+      files.delete(path);
+      exists.set(path, false);
+      mtimes.delete(path);
+    }
     for (const path of Array.from(files.keys()).filter((item) => item.includes('/Backups/') || item.startsWith('C:/Backups/'))) {
       files.delete(path);
       exists.set(path, false);
@@ -2455,7 +2463,25 @@ window.__E2E_ACTIONS__ = {
   },
   refreshPluginRegistry: () => refreshPluginRegistry(),
   getPluginHookLog: () => getPluginHookLog(),
-  clearPluginHookLog: () => clearPluginHookLog()
+  clearPluginHookLog: () => clearPluginHookLog(),
+  installDevReloadPlugin: (version: unknown = 'v1') => {
+    files.set(devPluginManifestPath, makeDevPluginManifest());
+    files.set(devPluginEntryPath, makeDevPluginEntry(typeof version === 'string' ? version : 'v1'));
+    exists.set(devPluginDir, true);
+    exists.set(devPluginManifestPath, true);
+    exists.set(devPluginEntryPath, true);
+    const now = Date.now();
+    mtimes.set(devPluginManifestPath, now);
+    mtimes.set(devPluginEntryPath, now);
+    persistFiles();
+    return refreshPluginRegistry();
+  },
+  updateDevReloadPlugin: (version: unknown = 'v2') => {
+    files.set(devPluginEntryPath, makeDevPluginEntry(typeof version === 'string' ? version : 'v2'));
+    exists.set(devPluginEntryPath, true);
+    mtimes.set(devPluginEntryPath, Date.now());
+    persistFiles();
+  }
 };
 
 function makeWhisperVideoClip(): Extract<import('@open-factory/editor-core').Clip, { type: 'video' }> {
@@ -2855,6 +2881,34 @@ function makeWarmContrastCube(): string {
     '1 0.08 1',
     '0.05 1 1',
     '1 1 1'
+  ].join('\n');
+}
+
+function makeDevPluginManifest(): string {
+  return JSON.stringify(
+    {
+      id: 'e2e.dev-reload',
+      name: 'E2E Dev Reload',
+      version: '1.0.0',
+      description: 'Reloads automatically when its local files change.',
+      main: 'index.js',
+      dev: true,
+      permissions: ['export-hook']
+    },
+    null,
+    2
+  );
+}
+
+function makeDevPluginEntry(version: string): string {
+  return [
+    'module.exports = {',
+    '  hooks: {',
+    '    onExportBefore() {',
+    `      return { devReloadVersion: "${version}" };`,
+    '    }',
+    '  }',
+    '};'
   ].join('\n');
 }
 

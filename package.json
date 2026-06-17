@@ -12,12 +12,13 @@
   ],
   "scripts": {
     "dev": "cd apps/desktop && bun run dev",
+    "create-plugin": "bun tools/create-plugin/index.ts",
     "typecheck": "tsc -b",
     "test": "vitest run --coverage",
     "e2e": "cd apps/desktop && bun run e2e",
     "e2e:headed": "cd apps/desktop && bun run e2e:headed",
     "e2e:ui": "cd apps/desktop && bun run e2e:ui",
-    "build": "tsc -p packages/editor-core/tsconfig.build.json && cd apps/desktop && bun run build",
+    "build": "tsc -p packages/editor-core/tsconfig.build.json && tsc -p packages/plugin-sdk/tsconfig.build.json && cd apps/desktop && bun run build",
     "tauri:dev": "cd apps/desktop && bun run tauri:dev",
     "tauri:build": "cd apps/desktop && bun run tauri:build",
     "smoke:tauri": "cd apps/desktop && bun run smoke:tauri",
@@ -31,6 +32,7 @@
   "devDependencies": {
     "@playwright/test": "^1.53.1",
     "@vitest/coverage-v8": "^3.2.4",
+    "typedoc": "^0.28.19",
     "typescript": "^5.8.3",
     "vitest": "^3.2.4"
   }

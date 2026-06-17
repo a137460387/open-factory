@@ -1,40 +1,40 @@
 import type { Clip, ExportSettings, Project } from '@open-factory/editor-core';
+import type {
+  OpenFactoryPlugin,
+  OpenFactoryPluginManifest,
+  PluginHookName,
+  PluginHookPayloads,
+  PluginHooks,
+  PluginMessagePayload,
+  PluginPermission
+} from '@open-factory/plugin-sdk';
 
-export type PluginHookName = 'onClipSelected' | 'onExportBefore' | 'onMenuRegister';
-export type PluginPermission = 'read-project' | 'write-project' | 'export-hook' | 'menu-register';
-
-export interface PluginHookPayloads {
-  onClipSelected: { clip?: Clip };
-  onExportBefore: { project: Project; outputPath: string; settings?: Partial<Omit<ExportSettings, 'outputPath'>> };
-  onMenuRegister: { menus: Array<{ id: string; label: string }> };
-}
-
-export type PluginHooks = Partial<{
-  [K in PluginHookName]: (payload: PluginHookPayloads[K]) => unknown | Promise<unknown>;
-}>;
-
-export interface OpenFactoryPlugin {
-  id: string;
-  name: string;
-  version: string;
-  description: string;
-  permissions: PluginPermission[];
-  hooks: PluginHooks;
-}
+export type { OpenFactoryPlugin, OpenFactoryPluginManifest, PluginHookName, PluginHookPayloads, PluginHooks, PluginMessagePayload, PluginPermission };
 
 export interface PluginSourceFile {
   path: string;
   code: string;
+  rootPath?: string;
+  manifestPath?: string;
+  manifest?: Partial<OpenFactoryPluginManifest>;
+  dev?: boolean;
 }
 
 export interface PluginRuntime {
   plugin: OpenFactoryPlugin;
   invokeHook<K extends PluginHookName>(hookName: K, payload: PluginHookPayloads[K]): Promise<unknown>;
+  receiveMessage?(payload: PluginMessagePayload): Promise<void>;
+  setMessageRouter?(router: PluginMessageRouter): void;
   dispose(): void;
 }
 
+export type PluginMessageRouter = (targetPluginId: string, event: string, data: unknown) => void | Promise<void>;
+
 export interface LoadedPlugin {
   sourcePath: string;
+  rootPath: string;
+  manifestPath?: string;
+  dev: boolean;
   plugin: OpenFactoryPlugin;
   runtime: PluginRuntime;
   errors: string[];
@@ -57,6 +57,9 @@ export async function loadPluginFiles(files: PluginSourceFile[], runtimeFactory:
       const runtime = await runtimeFactory(file);
       plugins.push({
         sourcePath: file.path,
+        rootPath: file.rootPath ?? directoryName(file.path),
+        manifestPath: file.manifestPath,
+        dev: file.dev === true,
         plugin: runtime.plugin,
         runtime: withPermissionGuard(runtime),
         errors: [],
@@ -66,7 +69,7 @@ export async function loadPluginFiles(files: PluginSourceFile[], runtimeFactory:
     } catch (error) {
       errors.push({
         sourcePath: file.path,
-        message: error instanceof Error ? error.message : String(error)
+        message: formatPluginError(error)
       });
     }
   }
@@ -100,6 +103,8 @@ export function createBuiltinExamplePlugin(): LoadedPlugin {
   const guardedRuntime = withPermissionGuard(runtime);
   return {
     sourcePath: 'builtin:export-count',
+    rootPath: 'builtin:export-count',
+    dev: false,
     plugin,
     runtime: guardedRuntime,
     errors: [],
@@ -154,18 +159,24 @@ async function createWorkerPluginRuntime(source: PluginSourceFile): Promise<Plug
   const worker = new Worker(workerUrl, { name: `open-factory-plugin-${source.path}` });
   URL.revokeObjectURL(workerUrl);
   let nextId = 1;
+  let messageRouter: PluginMessageRouter | undefined;
   const pending = new Map<number, { resolve(value: unknown): void; reject(error: Error): void; timer: ReturnType<typeof setTimeout> }>();
   worker.addEventListener('message', (event: MessageEvent<WorkerResponse>) => {
-    const entry = pending.get(event.data.id);
+    const response = event.data;
+    if (!('id' in response)) {
+      void messageRouter?.(response.toPluginId, response.event, response.data);
+      return;
+    }
+    const entry = pending.get(response.id);
     if (!entry) {
       return;
     }
     clearTimeout(entry.timer);
-    pending.delete(event.data.id);
-    if (event.data.ok) {
-      entry.resolve(event.data.value);
+    pending.delete(response.id);
+    if (response.ok) {
+      entry.resolve(response.value);
     } else {
-      entry.reject(new Error(event.data.error || 'Plugin worker failed'));
+      entry.reject(new Error(response.error || 'Plugin worker failed'));
     }
   });
   const request = (message: Omit<WorkerRequest, 'id'>) =>
@@ -179,7 +190,7 @@ async function createWorkerPluginRuntime(source: PluginSourceFile): Promise<Plug
       pending.set(id, { resolve, reject, timer });
       worker.postMessage({ ...message, id });
     });
-  const plugin = normalizeWorkerMetadata(await request({ type: 'load', path: source.path, code: source.code }));
+  const plugin = normalizeWorkerMetadata(await request({ type: 'load', path: source.path, code: source.code, manifest: source.manifest }));
   return {
     plugin,
     invokeHook(hookName, payload) {
@@ -187,6 +198,12 @@ async function createWorkerPluginRuntime(source: PluginSourceFile): Promise<Plug
         return Promise.resolve(undefined);
       }
       return request({ type: 'hook', hookName, payload });
+    },
+    async receiveMessage(payload) {
+      await request({ type: 'message', message: payload });
+    },
+    setMessageRouter(router) {
+      messageRouter = router;
     },
     dispose() {
       for (const [id, entry] of pending) {
@@ -201,6 +218,7 @@ async function createWorkerPluginRuntime(source: PluginSourceFile): Promise<Plug
 
 function normalizeWorkerMetadata(input: unknown): OpenFactoryPlugin {
   const record = input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
+  const manifest = record.manifest && typeof record.manifest === 'object' ? (record.manifest as Record<string, unknown>) : record;
   const hooks = Array.isArray(record.hooks) ? record.hooks : [];
   const hookMap: PluginHooks = {};
   for (const hookName of hooks) {
@@ -209,11 +227,11 @@ function normalizeWorkerMetadata(input: unknown): OpenFactoryPlugin {
     }
   }
   return {
-    id: typeof record.id === 'string' ? record.id : 'plugin',
-    name: typeof record.name === 'string' ? record.name : 'plugin',
-    version: typeof record.version === 'string' ? record.version : '0.0.0',
-    description: typeof record.description === 'string' ? record.description : '',
-    permissions: normalizePluginPermissions(record.permissions),
+    id: typeof manifest.id === 'string' ? manifest.id : 'plugin',
+    name: typeof manifest.name === 'string' ? manifest.name : 'plugin',
+    version: typeof manifest.version === 'string' ? manifest.version : '0.0.0',
+    description: typeof manifest.description === 'string' ? manifest.description : '',
+    permissions: normalizePluginPermissions(manifest.permissions),
     hooks: hookMap
   };
 }
@@ -242,6 +260,13 @@ export function getLoadedPluginStatus(plugin: LoadedPlugin): 'enabled' | 'disabl
   return plugin.errors.length > 0 ? 'error' : 'enabled';
 }
 
+export function formatPluginError(error: unknown): string {
+  if (error instanceof Error) {
+    return error.stack || error.message;
+  }
+  return String(error);
+}
+
 function withPermissionGuard(runtime: PluginRuntime): PluginRuntime {
   return {
     plugin: runtime.plugin,
@@ -251,6 +276,12 @@ function withPermissionGuard(runtime: PluginRuntime): PluginRuntime {
       }
       assertPluginHookPermission(runtime.plugin, hookName);
       return runtime.invokeHook(hookName, payload);
+    },
+    receiveMessage(payload) {
+      return runtime.receiveMessage?.(payload) ?? Promise.resolve();
+    },
+    setMessageRouter(router) {
+      runtime.setMessageRouter?.(router);
     },
     dispose() {
       runtime.dispose();
@@ -443,22 +474,72 @@ function stableHash(input: string): string {
   return hash.toString(16);
 }
 
-interface WorkerRequest {
-  id: number;
-  type: 'load' | 'hook';
-  path?: string;
-  code?: string;
-  hookName?: PluginHookName;
-  payload?: unknown;
+function directoryName(path: string): string {
+  const normalized = path.replace(/\\/g, '/');
+  const index = normalized.lastIndexOf('/');
+  return index >= 0 ? normalized.slice(0, index) : '.';
 }
 
-type WorkerResponse = { id: number; ok: true; value: unknown } | { id: number; ok: false; error: string };
+interface WorkerRequest {
+  id: number;
+  type: 'load' | 'hook' | 'message';
+  path?: string;
+  code?: string;
+  manifest?: Partial<OpenFactoryPluginManifest>;
+  hookName?: PluginHookName;
+  payload?: unknown;
+  message?: PluginMessagePayload;
+}
+
+type WorkerResponse =
+  | { id: number; ok: true; value: unknown }
+  | { id: number; ok: false; error: string }
+  | { type: 'host-send-message'; toPluginId: string; event: string; data: unknown };
 
 const WORKER_BOOTSTRAP = `
 let loadedPlugin;
-function normalizePlugin(input) {
+const messageHandlers = [];
+function createPluginApi(fromPluginId) {
+  return {
+    getProject() {
+      return Promise.reject(new Error('getProject is unavailable in the current plugin sandbox'));
+    },
+    updateProject() {
+      return Promise.reject(new Error('updateProject is unavailable in the current plugin sandbox'));
+    },
+    registerMenu() {
+      return Promise.reject(new Error('registerMenu is unavailable in the current plugin sandbox'));
+    },
+    showToast() {
+      return Promise.resolve();
+    },
+    readTextFile() {
+      return Promise.reject(new Error('readTextFile is unavailable in the current plugin sandbox'));
+    },
+    writeTextFile() {
+      return Promise.reject(new Error('writeTextFile is unavailable in the current plugin sandbox'));
+    },
+    sendMessage(pluginId, event, data) {
+      self.postMessage({ type: 'host-send-message', fromPluginId, toPluginId: pluginId, event, data });
+      return Promise.resolve();
+    },
+    onMessage(handler) {
+      if (typeof handler !== 'function') {
+        return () => undefined;
+      }
+      messageHandlers.push(handler);
+      return () => {
+        const index = messageHandlers.indexOf(handler);
+        if (index >= 0) {
+          messageHandlers.splice(index, 1);
+        }
+      };
+    }
+  };
+}
+function normalizePlugin(input, manifestOverride) {
   const record = input && typeof input === 'object' ? input : {};
-  const manifest = record.manifest && typeof record.manifest === 'object' ? record.manifest : record;
+  const manifest = manifestOverride && typeof manifestOverride === 'object' ? { ...(record.manifest && typeof record.manifest === 'object' ? record.manifest : record), ...manifestOverride } : record.manifest && typeof record.manifest === 'object' ? record.manifest : record;
   const hooks = record.hooks && typeof record.hooks === 'object' ? record.hooks : {};
   return {
     id: typeof manifest.id === 'string' && manifest.id.trim() ? manifest.id.trim() : 'plugin',
@@ -486,20 +567,28 @@ self.onmessage = async (event) => {
       const module = { exports: {} };
       const exports = module.exports;
       const sandbox = {};
-      new Function('module', 'exports', 'globalThis', '"use strict";\\n' + message.code)(module, exports, sandbox);
+      const preliminaryId = message.manifest && typeof message.manifest.id === 'string' ? message.manifest.id : 'plugin';
+      const openFactory = createPluginApi(preliminaryId);
+      sandbox.openFactory = openFactory;
+      new Function('module', 'exports', 'globalThis', 'openFactory', '"use strict";\\n' + message.code)(module, exports, sandbox, openFactory);
       const exported = module.exports && Object.keys(module.exports).length > 0 ? module.exports : undefined;
-      loadedPlugin = normalizePlugin(module.exports.default || exported || sandbox.openFactoryPlugin || sandbox.plugin);
+      loadedPlugin = normalizePlugin(module.exports.default || exported || sandbox.openFactoryPlugin || sandbox.plugin, message.manifest);
       self.postMessage({ id: message.id, ok: true, value: metadata(loadedPlugin) });
       return;
     }
     if (!loadedPlugin) {
       throw new Error('Plugin is not loaded');
     }
+    if (message.type === 'message') {
+      await Promise.all(messageHandlers.map((handler) => handler(message.message)));
+      self.postMessage({ id: message.id, ok: true, value: undefined });
+      return;
+    }
     const hook = loadedPlugin.hooks[message.hookName];
     const value = typeof hook === 'function' ? await hook(message.payload) : undefined;
     self.postMessage({ id: message.id, ok: true, value });
   } catch (error) {
-    self.postMessage({ id: message.id, ok: false, error: error instanceof Error ? error.message : String(error) });
+    self.postMessage({ id: message.id, ok: false, error: error instanceof Error ? error.stack || error.message : String(error) });
   }
 };
 `;
