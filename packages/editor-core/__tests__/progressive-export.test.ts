@@ -3,9 +3,11 @@ import {
   buildProgressiveExportPlan,
   buildProgressivePartialPath,
   buildProgressiveResumeArgs,
+  buildProgressiveSegmentOutputPath,
   createExportTask,
   createProgressiveExportState,
   estimateProgressiveCompletedDuration,
+  getPlayablePartialMovFlags,
   interruptExportTask,
   isProgressiveExportSupported,
   updateExportTaskProgressive,
@@ -98,5 +100,18 @@ describe('progressive export helpers', () => {
     const [interrupted] = interruptExportTask([{ ...updated, status: 'running' }], 'progressive-task', 'paused', 'now');
     expect(interrupted.status).toBe('interrupted');
     expect(interrupted.progressive?.completedDuration).toBe(4.25);
+  });
+
+  it('handles partial segment names, invalid progress, and empty export args', () => {
+    const emptyArgsPlan = buildProgressiveExportPlan({ ...plan, outputArgs: [], fullArgs: [], displayCommand: '' }, 'C:/Exports/empty.partial.mp4');
+
+    expect(estimateProgressiveCompletedDuration(Number.NaN, 0.5)).toBe(0);
+    expect(estimateProgressiveCompletedDuration(10, Number.NaN)).toBe(0);
+    expect(estimateProgressiveCompletedDuration(10, 2)).toBe(9.99);
+    expect(getPlayablePartialMovFlags()).toBe('+frag_keyframe+empty_moov+default_base_moof');
+    expect(buildProgressiveSegmentOutputPath('C:/Exports/final.partial.mp4', 12.8)).toBe('C:/Exports/final.resume-12.partial.mp4');
+    expect(buildProgressiveSegmentOutputPath('C:/Exports/final.mov', -3)).toBe('C:/Exports/final.resume-0.partial.mp4');
+    expect(emptyArgsPlan.outputArgs).toEqual(['-movflags', '+frag_keyframe+empty_moov+default_base_moof', 'C:/Exports/empty.partial.mp4']);
+    expect(emptyArgsPlan.fullArgs).toEqual(['-movflags', '+frag_keyframe+empty_moov+default_base_moof', 'C:/Exports/empty.partial.mp4']);
   });
 });

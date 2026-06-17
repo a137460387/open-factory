@@ -163,6 +163,18 @@ export function sampleColorCurves(curves: Partial<ColorCurves> | undefined, x: n
   };
 }
 
+export function applyColorCurvesToRgb(input: RgbColor, curves: Partial<ColorCurves> | undefined): RgbColor {
+  const normalized = normalizeColorCurves(curves);
+  const luma = clamp(input.r * 0.2126 + input.g * 0.7152 + input.b * 0.0722, 0, 1);
+  const master = sampleCurve(normalized.master, luma);
+  const delta = master - luma;
+  return {
+    r: sampleCurve(normalized.r, clamp(input.r + delta, 0, 1)),
+    g: sampleCurve(normalized.g, clamp(input.g + delta, 0, 1)),
+    b: sampleCurve(normalized.b, clamp(input.b + delta, 0, 1))
+  };
+}
+
 export function serializeColorCurvesToCube(curves: Partial<ColorCurves> | undefined, size = 17, title = 'open-factory color curves'): string {
   const sampleCount = Math.max(2, Math.round(size));
   const lines = [

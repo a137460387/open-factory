@@ -254,6 +254,35 @@ const zh = {
       douyin: '抖音 1080 x 1920'
     }
   },
+  lutEditor: {
+    title: 'LUT 编辑器',
+    description: '从三向色轮、曲线和参考图生成 3D LUT。',
+    name: 'LUT 名称',
+    precision: '精度',
+    precisions: {
+      17: '17 点',
+      33: '33 点',
+      65: '65 点'
+    },
+    threeWay: '三向色轮',
+    curves: '曲线映射',
+    colorMatch: '颜色匹配',
+    loadReference: '加载参考图',
+    referenceImageFilter: '参考图片',
+    referenceLoaded: '参考图已加载',
+    referenceFailed: '参考图加载失败',
+    referenceFailedMessage: '无法读取参考图片样本。',
+    referenceEmpty: '尚未加载参考图。',
+    referenceCurrent: (name: string) => `当前参考：${name}`,
+    preview: '实时预览',
+    matrixSummary: (size: number, count: number) => `${size} 点 / ${count} 个采样`,
+    export: '导出 .cube',
+    exporting: '正在导出 LUT...',
+    exportedTitle: 'LUT 已导出',
+    exportFailed: 'LUT 导出失败',
+    exportFailedMessage: '无法写入 LUT 文件。',
+    cubeFilter: 'Cube LUT'
+  },
   toolbar: {
     fileMenu: '文件',
     editMenu: '编辑',
@@ -279,6 +308,8 @@ const zh = {
     videoStitchWizard: '视频拼接向导',
     motionGraphic: '运动图形',
     thumbnailGenerator: '生成缩略图',
+    lutEditor: 'LUT 编辑器',
+    exportProfessionalNle: '导出至专业 NLE',
     syncCompare: '同步对比',
     sceneReorder: '场景重组',
     sceneDetection: '场景检测',
@@ -1151,6 +1182,31 @@ const zh = {
     formats: {
       edl: 'CMX3600 EDL',
       fcpXml: 'Final Cut Pro 7 XML'
+    }
+  },
+  professionalNleExport: {
+    title: '导出至专业 NLE',
+    description: '导出 AAF、OMF 或扩展 FCP XML，用于 Avid、Premiere 和旧版交换流程。',
+    format: '格式',
+    mediaMode: '媒体处理',
+    mediaModes: {
+      link: '仅链接原始媒体',
+      copy: '复制媒体到导出目录'
+    },
+    export: '导出',
+    exporting: '正在导出...',
+    success: '专业 NLE 文件已导出',
+    failed: '专业 NLE 导出失败',
+    failedMessage: '无法导出专业交换文件。',
+    filterName: (format: string) => {
+      if (format === 'aaf') return 'Advanced Authoring Format';
+      if (format === 'omf') return 'Open Media Framework';
+      return 'Final Cut Pro XML';
+    },
+    formats: {
+      aaf: 'AAF',
+      omf: 'OMF 2.0',
+      fcpXml: 'Final Cut Pro XML'
     }
   },
   mediaBin: {
@@ -4236,6 +4292,35 @@ const enOverrides = {
       douyin: 'Douyin 1080 x 1920'
     }
   },
+  lutEditor: {
+    title: 'LUT Editor',
+    description: 'Build a 3D LUT from three-way wheels, curves, and a reference image.',
+    name: 'LUT Name',
+    precision: 'Precision',
+    precisions: {
+      17: '17 Point',
+      33: '33 Point',
+      65: '65 Point'
+    },
+    threeWay: 'Three-Way Wheels',
+    curves: 'Curve Mapping',
+    colorMatch: 'Color Match',
+    loadReference: 'Load Reference',
+    referenceImageFilter: 'Reference Image',
+    referenceLoaded: 'Reference Loaded',
+    referenceFailed: 'Reference Load Failed',
+    referenceFailedMessage: 'Unable to read the reference image sample.',
+    referenceEmpty: 'No reference image loaded.',
+    referenceCurrent: (name: string) => `Current reference: ${name}`,
+    preview: 'Live Preview',
+    matrixSummary: (size: number, count: number) => `${size} point / ${count} samples`,
+    export: 'Export .cube',
+    exporting: 'Exporting LUT...',
+    exportedTitle: 'LUT Exported',
+    exportFailed: 'LUT Export Failed',
+    exportFailedMessage: 'Unable to write the LUT file.',
+    cubeFilter: 'Cube LUT'
+  },
   toolbar: {
     fileMenu: 'File',
     editMenu: 'Edit',
@@ -4260,6 +4345,8 @@ const enOverrides = {
     videoStitchWizard: 'Video Stitch Wizard',
     motionGraphic: 'Motion Graphics',
     thumbnailGenerator: 'Generate Thumbnail',
+    lutEditor: 'LUT Editor',
+    exportProfessionalNle: 'Export to Professional NLE',
     syncCompare: 'Sync Compare',
     sceneReorder: 'Scene Reorder',
     sceneDetection: 'Scene Detection',
@@ -5081,6 +5168,31 @@ const enOverrides = {
     formats: {
       edl: 'CMX3600 EDL',
       fcpXml: 'Final Cut Pro 7 XML'
+    }
+  },
+  professionalNleExport: {
+    title: 'Export to Professional NLE',
+    description: 'Export AAF, OMF, or extended FCP XML for Avid, Premiere, and legacy interchange workflows.',
+    format: 'Format',
+    mediaMode: 'Media Handling',
+    mediaModes: {
+      link: 'Link original media only',
+      copy: 'Copy media to export folder'
+    },
+    export: 'Export',
+    exporting: 'Exporting...',
+    success: 'Professional NLE file exported',
+    failed: 'Professional NLE export failed',
+    failedMessage: 'Unable to export the professional interchange file.',
+    filterName: (format: string) => {
+      if (format === 'aaf') return 'Advanced Authoring Format';
+      if (format === 'omf') return 'Open Media Framework';
+      return 'Final Cut Pro XML';
+    },
+    formats: {
+      aaf: 'AAF',
+      omf: 'OMF 2.0',
+      fcpXml: 'Final Cut Pro XML'
     }
   },
   mediaBin: {

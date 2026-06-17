@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { createNestedSequenceClip, createSequence, createTrack, exportCmx3600Edl, exportFinalCutXml, flattenTimelineForExport } from '../src';
+import {
+  DEFAULT_COLOR_CORRECTION,
+  createDefaultColorCurves,
+  createDefaultThreeWayColor,
+  createNestedSequenceClip,
+  createSequence,
+  createTrack,
+  createTransition,
+  exportAaf,
+  exportCmx3600Edl,
+  exportFinalCutXml,
+  exportOmf,
+  exportProfessionalNle,
+  flattenTimelineForExport
+} from '../src';
 import { makeAudioClip, makeProject, makeTimeline, makeVideoClip } from './test-utils';
 
 describe('timeline export', () => {
@@ -96,5 +110,109 @@ describe('timeline export', () => {
       recordStart: 5,
       recordEnd: 7
     });
+  });
+
+  it('exports AAF MobSlot timecode with SourceClip and MasterMob identifiers', () => {
+    const project = {
+      ...makeProject(),
+      name: 'AAF Test',
+      settings: { fps: 30, width: 1920, height: 1080 },
+      timeline: makeTimeline([makeVideoClip({ id: 'clip-aaf', name: 'Interview A', start: 1, duration: 2, trimStart: 0.5 })])
+    };
+
+    const aaf = exportAaf(project);
+    const aafCopy = exportAaf(project, { mediaMode: 'copy' });
+
+    expect(aaf).toContain('MasterMob: AAF Test');
+    expect(aaf).toContain('MobSlot 1');
+    expect(aaf).toContain('SourceClip Interview A');
+    expect(aaf).toContain('MobSlotTimecode 00:00:01:00 -> 00:00:03:00');
+    expect(aafCopy).toContain('MediaMode: copy');
+  });
+
+  it('exports OMF 2.0 magic bytes for legacy NLE interchange', () => {
+    const omf = exportOmf(makeProject());
+
+    expect(omf.slice(0, 4)).toBe('OMFI');
+    expect(omf).toContain('OMFI 2.0');
+    expect(omf).toContain('MasterMob: Test Project');
+  });
+
+  it('maps FCP XML color filters and transition nodes', () => {
+    const timeline = makeTimeline([
+      makeVideoClip({
+        id: 'clip-fcp-color',
+        name: 'Color A',
+        start: 0,
+        duration: 2,
+        colorCorrection: {
+          ...DEFAULT_COLOR_CORRECTION,
+          brightness: 0.2,
+          saturation: 1.4,
+          lutPath: 'C:/Looks/warm.cube',
+          colorCurves: {
+            ...createDefaultColorCurves(),
+            master: [
+              { x: 0, y: 0 },
+              { x: 1, y: 0.9 }
+            ]
+          },
+          threeWayColor: {
+            ...createDefaultThreeWayColor(),
+            gain: { r: 0.1, g: 0, b: 0, intensity: 1 }
+          }
+        }
+      }),
+      makeVideoClip({ id: 'clip-fcp-next', name: 'Color B', start: 2, duration: 2 })
+    ]);
+    timeline.transitions = [
+      createTransition({
+        id: 'transition-dissolve',
+        type: 'dissolve',
+        duration: 0.5,
+        fromClipId: 'clip-fcp-color',
+        toClipId: 'clip-fcp-next'
+      })
+    ];
+    const project = {
+      ...makeProject(),
+      timeline,
+      settings: { fps: 30, width: 1920, height: 1080 }
+    };
+
+    const xml = exportProfessionalNle(project, 'fcp-xml');
+
+    expect(xml).toContain('<filter>');
+    expect(xml).toContain('<name>Open Factory Color Correction</name>');
+    expect(xml).toContain('<parameter><name>Brightness</name><value>0.2</value></parameter>');
+    expect(xml).toContain('<parameter><name>LUT Path</name><value>C:/Looks/warm.cube</value></parameter>');
+    expect(xml).toContain('<parameter><name>Color Curves</name><value>present</value></parameter>');
+    expect(xml).toContain('<parameter><name>Three-Way Color</name><value>present</value></parameter>');
+    expect(xml).toContain('<transitionitem id="transitionitem-1">');
+    expect(xml).toContain('<name>Cross Dissolve</name>');
+  });
+
+  it('routes professional NLE export through AAF and OMF wrappers with media path replacement', () => {
+    const project = {
+      ...makeProject(),
+      name: 'NLE Wrapper Test',
+      settings: { fps: 30, width: 1920, height: 1080 },
+      media: [{ id: 'asset-wrapper', type: 'video' as const, name: 'wrapper.mp4', path: 'C:/Media/wrapper.mp4', duration: 4, width: 1920, height: 1080 }],
+      timeline: makeTimeline([makeVideoClip({ id: 'clip-wrapper', name: 'Wrapper Clip', mediaId: 'asset-wrapper', duration: 2 })])
+    };
+
+    const aaf = exportProfessionalNle(project, 'aaf', {
+      mediaMode: 'copy',
+      mediaPathMap: new Map([['C:/Media/wrapper.mp4', 'C:/Exports/media/wrapper.mp4']])
+    });
+    const omf = exportOmf(project, {
+      mediaMode: 'copy',
+      mediaPathMap: { 'C:/Media/wrapper.mp4': 'C:/Exports/media/wrapper.mp4' }
+    });
+
+    expect(aaf).toContain('MediaMode: copy');
+    expect(aaf).toContain('SourcePath C:/Exports/media/wrapper.mp4');
+    expect(omf).toContain('OMFI 2.0');
+    expect(omf).toContain('SourcePath C:/Exports/media/wrapper.mp4');
   });
 });

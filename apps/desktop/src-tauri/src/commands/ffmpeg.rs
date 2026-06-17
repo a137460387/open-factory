@@ -3817,6 +3817,49 @@ offset=1.35
     }
 
     #[test]
+    fn interpolates_motion_graphic_numeric_keyframes_for_export_filters() {
+        let manifest = MotionGraphicTemplateManifest {
+            version: 1,
+            template_type: "progress-bar".to_string(),
+            params: serde_json::json!({ "progress": 0.25 }),
+            param_keyframes: HashMap::from([(
+                "progress".to_string(),
+                vec![
+                    MotionGraphicKeyframeManifest {
+                        id: Some("start".to_string()),
+                        time: 0.0,
+                        value: 0.0,
+                        easing: None,
+                    },
+                    MotionGraphicKeyframeManifest {
+                        id: Some("end".to_string()),
+                        time: 1.0,
+                        value: 1.0,
+                        easing: None,
+                    },
+                ],
+            )]),
+        };
+
+        assert_eq!(
+            motion_graphic_number_param(&manifest, "progress", 0.25, -1.0),
+            0.0
+        );
+        assert_eq!(
+            motion_graphic_number_param(&manifest, "progress", 0.25, 0.5),
+            0.5
+        );
+        assert_eq!(
+            motion_graphic_number_param(&manifest, "progress", 0.25, 2.0),
+            1.0
+        );
+        assert_eq!(
+            motion_graphic_number_param(&manifest, "height", 48.0, 0.5),
+            48.0
+        );
+    }
+
+    #[test]
     fn builds_quality_evaluation_argument_array_with_ssim_psnr_and_vmaf() {
         let args = build_quality_evaluation_args(
             Path::new(r"C:\Media\original.mp4"),

@@ -51,6 +51,7 @@ interface ToolbarProps {
   onOpenVideoStitchWizard(): void;
   onAddMotionGraphic(): void;
   onOpenThumbnailGenerator(): void;
+  onOpenLutEditor(): void;
   onOpenSyncCompare(): void;
   onOpenSceneDetection(): void;
   onOpenSceneReorder(): void;
@@ -73,6 +74,7 @@ interface ToolbarProps {
   onStopRecording(): void;
   onExportVideo(): void;
   onExportTimeline(): void;
+  onExportProfessionalNle(): void;
   onExportCurrentFrame(): void;
   onCancelExport(): void;
   onSplitSelected(): void;
@@ -352,6 +354,19 @@ export function Toolbar(props: ToolbarProps) {
               }}
             >
               <span>{t.createSharePackage}</span>
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+              type="button"
+              disabled={!canExport}
+              data-testid="toolbar-file-professional-nle-export-menu-item"
+              onClick={() => {
+                setFileMenuOpen(false);
+                props.onExportProfessionalNle();
+              }}
+            >
+              <span>{t.exportProfessionalNle}</span>
+              <FileDown size={14} />
             </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
@@ -689,6 +704,18 @@ export function Toolbar(props: ToolbarProps) {
             >
               <span>{t.thumbnailGenerator}</span>
               <Camera size={14} />
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-tools-lut-editor-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onOpenLutEditor();
+              }}
+            >
+              <span>{t.lutEditor}</span>
+              <WandSparkles size={14} />
             </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"

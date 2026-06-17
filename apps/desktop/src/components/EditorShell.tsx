@@ -303,6 +303,8 @@ const ExportDialog = lazy(() => import('../export/ExportDialog').then((module) =
 const SettingsDialog = lazy(() => import('../settings/SettingsDialog').then((module) => ({ default: module.SettingsDialog })));
 const MacroHistoryDialog = lazy(() => import('../macros/MacroHistoryDialog').then((module) => ({ default: module.MacroHistoryDialog })));
 const TimelineExportDialog = lazy(() => import('../timeline-export/TimelineExportDialog').then((module) => ({ default: module.TimelineExportDialog })));
+const ProfessionalNleExportDialog = lazy(() => import('../professional-nle/ProfessionalNleExportDialog').then((module) => ({ default: module.ProfessionalNleExportDialog })));
+const LutEditorDialog = lazy(() => import('../lut-editor/LutEditorDialog').then((module) => ({ default: module.LutEditorDialog })));
 const BatchTranscodeDialog = lazy(() => import('../media/BatchTranscodeDialog').then((module) => ({ default: module.BatchTranscodeDialog })));
 const BatchWatermarkDialog = lazy(() => import('../media/BatchWatermarkDialog').then((module) => ({ default: module.BatchWatermarkDialog })));
 const BatchProjectProcessingDialog = lazy(() => import('../projectBatch/BatchProjectProcessingDialog').then((module) => ({ default: module.BatchProjectProcessingDialog })));
@@ -367,6 +369,8 @@ export function EditorShell() {
   const [batchProjectProcessingOpen, setBatchProjectProcessingOpen] = useState(false);
   const [batchTranscodeInitialPaths, setBatchTranscodeInitialPaths] = useState<string[]>([]);
   const [thumbnailGeneratorAssetIds, setThumbnailGeneratorAssetIds] = useState<string[]>();
+  const [lutEditorOpen, setLutEditorOpen] = useState(false);
+  const [professionalNleExportOpen, setProfessionalNleExportOpen] = useState(false);
   const [gifExportAsset, setGifExportAsset] = useState<MediaAsset>();
   const [spectrumAsset, setSpectrumAsset] = useState<MediaAsset>();
   const [mediaVersionCompare, setMediaVersionCompare] = useState<MediaVersionCompareRequest>();
@@ -3371,6 +3375,7 @@ export function EditorShell() {
           onOpenVideoStitchWizard={() => setVideoStitchWizardOpen(true)}
           onAddMotionGraphic={addMotionGraphic}
           onOpenThumbnailGenerator={() => setThumbnailGeneratorAssetIds([])}
+          onOpenLutEditor={() => setLutEditorOpen(true)}
           onOpenSyncCompare={openSyncCompare}
           onOpenSceneDetection={() => setSceneDetectionRequestId((id) => id + 1)}
           onOpenSceneReorder={() => setSceneReorderOpen(true)}
@@ -3394,6 +3399,7 @@ export function EditorShell() {
           onStopRecording={() => void stopEditorRecording()}
           onExportVideo={() => setExportDialogOpen(true)}
           onExportTimeline={() => setTimelineExportDialogOpen(true)}
+          onExportProfessionalNle={() => setProfessionalNleExportOpen(true)}
           onExportCurrentFrame={() => void exportCurrentFrame()}
           onCancelExport={() => void cancelCurrentExport()}
           onSplitSelected={splitSelected}
@@ -3705,6 +3711,8 @@ export function EditorShell() {
             />
           ) : null}
           {timelineExportDialogOpen ? <TimelineExportDialog project={project} onClose={() => setTimelineExportDialogOpen(false)} onImportEdl={importEdlTimeline} /> : null}
+          {professionalNleExportOpen ? <ProfessionalNleExportDialog project={project} onClose={() => setProfessionalNleExportOpen(false)} /> : null}
+          {lutEditorOpen ? <LutEditorDialog onClose={() => setLutEditorOpen(false)} /> : null}
           {snapshotNameOpen ? <SnapshotNameDialog defaultName={project.name} onConfirm={(name) => void saveNamedSnapshot(name)} onClose={() => setSnapshotNameOpen(false)} /> : null}
           {snapshotHistoryOpen ? (
             <SnapshotHistoryDialog projectId={project.id} projectPath={projectPath} onRestore={restoreSnapshotProject} onClose={() => setSnapshotHistoryOpen(false)} />

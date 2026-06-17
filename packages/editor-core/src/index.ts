@@ -12,6 +12,7 @@ export * from './audio-visualization-themes';
 export * from './motion-blur';
 export * from './motion-graphics';
 export * from './thumbnail-scoring';
+export * from './lut-creator';
 export * from './timeline';
 export * from './timeline-heatmap';
 export * from './timeline-minimap';

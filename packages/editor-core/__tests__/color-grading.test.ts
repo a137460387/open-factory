@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   applyThreeWayColor,
+  applyColorCurvesToRgb,
   createDefaultThreeWayColor,
   isDefaultColorCurves,
   isNeutralThreeWayColor,
@@ -53,6 +54,28 @@ describe('color grading helpers', () => {
     expect(sample.r).toBeCloseTo(209 / 255, 6);
     expect(sample.g).toBeCloseTo(209 / 255, 6);
     expect(sample.b).toBeCloseTo(209 / 255, 6);
+    expect(applyColorCurvesToRgb({ r: 0.2, g: 0.4, b: 0.6 }, undefined)).toEqual({ r: 0.2, g: 0.4, b: 0.6 });
+  });
+
+  it('applies RGB curves without flattening chroma', () => {
+    const result = applyColorCurvesToRgb(
+      { r: 0.8, g: 0.4, b: 0.2 },
+      {
+        ...normalizeColorCurves(undefined),
+        master: [
+          { x: 0, y: 0.1 },
+          { x: 1, y: 1 }
+        ],
+        r: [
+          { x: 0, y: 0 },
+          { x: 1, y: 0.5 }
+        ]
+      }
+    );
+
+    expect(result.r).toBeLessThan(result.g);
+    expect(result.g).toBeGreaterThan(0.4);
+    expect(result.b).toBeGreaterThan(0.2);
   });
 
   it('serializes color curves as a 17 point 1D cube LUT', () => {
