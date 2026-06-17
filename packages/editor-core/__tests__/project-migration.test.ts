@@ -641,6 +641,38 @@ describe('project schema migration', () => {
     expect(migrateProjectFile(file).project.beatMarkers).toEqual([]);
   });
 
+  it('serializes and migrates clip beat markers and detected BPM', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips[0] = makeVideoClip({
+      id: 'clip-beat',
+      duration: 2,
+      beatMarkers: [
+        { id: 'late', time: 99 },
+        { id: 'beat-a', time: 0.5 },
+        { id: 'bad', time: Number.NaN }
+      ],
+      detectedBpm: 128.123456
+    });
+
+    const file = serializeProject(project);
+    const clip = file.project.timeline.tracks[0].clips[0];
+    const migratedClip = migrateProjectFile(file).project.timeline.tracks[0].clips[0];
+
+    expect(clip.beatMarkers).toEqual([
+      { id: 'beat-a', time: 0.5 },
+      { id: 'late', time: 2 }
+    ]);
+    expect(clip.detectedBpm).toBe(128.123456);
+    expect(migratedClip.beatMarkers).toEqual(clip.beatMarkers);
+    expect(migratedClip.detectedBpm).toBe(128.123456);
+
+    delete (clip as Partial<typeof clip>).beatMarkers;
+    delete (clip as Partial<typeof clip>).detectedBpm;
+    const legacyClip = migrateProjectFile(file).project.timeline.tracks[0].clips[0];
+    expect(legacyClip.beatMarkers).toBeUndefined();
+    expect(legacyClip.detectedBpm).toBeUndefined();
+  });
+
   it('backfills missing project annotations during migration', () => {
     const file = serializeProject(makeProject());
     delete (file.project as Partial<typeof file.project>).annotations;

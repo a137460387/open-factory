@@ -154,7 +154,7 @@ import {
   type ReplaceMediaDurationMode
 } from '@open-factory/editor-core';
 import { clsx } from 'clsx';
-import { AudioWaveform, Bookmark, Captions, Flag, Group, MessageSquarePlus, MessageSquareText, Mic2, Music2, Plus, Scissors, Trash2, Type, Ungroup } from 'lucide-react';
+import { AudioWaveform, Bookmark, Captions, Flag, Group, Magnet, MessageSquarePlus, MessageSquareText, Mic2, Music2, Plus, Scissors, Trash2, Type, Ungroup } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createCreditsClip, createTextClip } from '../../lib/clipFactory';
 import { probeMediaPath } from '../../lib/media';
@@ -325,6 +325,7 @@ export function Timeline({
   const bookmarkPanelOpen = controlledBookmarkPanelOpen ?? localBookmarkPanelOpen;
   const [bookmarkRename, setBookmarkRename] = useState<BookmarkRenameState | undefined>();
   const [timelineColorFilter, setTimelineColorFilter] = useState<TimelineLabelColor | null>(null);
+  const [beatSnapEnabled, setBeatSnapEnabled] = useState(true);
   const [envelopeEditMode, setEnvelopeEditMode] = useState(false);
   const [selectedTrackIds, setSelectedTrackIds] = useState<string[]>([]);
   const [trackSelectionAnchorId, setTrackSelectionAnchorId] = useState<string | undefined>();
@@ -2403,7 +2404,7 @@ function addProjectBookmark(time = playheadTime): void {
       { time: 0, kind: 'timeline-start' },
       { time: playheadTime, kind: 'playhead' },
       ...(project.timeline.markers ?? []).map((marker) => ({ time: marker.time, kind: 'marker' as const })),
-      ...(project.beatMarkers ?? []).map((marker) => ({ time: marker.time, kind: 'beat' as const })),
+      ...(beatSnapEnabled ? (project.beatMarkers ?? []).map((marker) => ({ time: marker.time, kind: 'beat' as const })) : []),
       ...project.timeline.tracks.flatMap((track) =>
         track.clips
           .filter((item) => item.id !== clip.id)
@@ -2474,6 +2475,15 @@ function addProjectBookmark(time = playheadTime): void {
         </button>
         <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.addBeatMarker} data-testid="add-beat-marker-button" onClick={addBeatMarker}>
           <Music2 size={16} />
+        </button>
+        <button
+          className={`rounded-md border p-2 hover:bg-panel ${beatSnapEnabled ? 'border-brand text-brand' : 'border-line'}`}
+          title={beatSnapEnabled ? zhCN.timeline.beatSnapEnabled : zhCN.timeline.beatSnapDisabled}
+          aria-pressed={beatSnapEnabled}
+          data-testid="timeline-beat-snap-toggle"
+          onClick={() => setBeatSnapEnabled((enabled) => !enabled)}
+        >
+          <Magnet size={16} />
         </button>
         <button
           className={`rounded-md border p-2 hover:bg-panel ${dialoguePanelOpen ? 'border-brand text-brand' : 'border-line'}`}

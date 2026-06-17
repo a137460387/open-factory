@@ -31,8 +31,10 @@ import {
   normalizeAudioDenoise,
   normalizeAudioPitchSemitones,
   normalizeClipBorder,
+  normalizeClipBeatMarkers,
   normalizeCollaborationNote,
   normalizeCollaborationNotes,
+  normalizeDetectedBpm,
   normalizeFrameInterpolation,
   normalizeMask,
   normalizeMasks,
@@ -145,7 +147,15 @@ import {
 } from '../text-animation';
 import { cloneEffects, normalizeEffect, normalizeEffects, type Effect, type EffectParams, type EffectType } from '../effects';
 import { applyStyleToClip, type ApplyStyleTransferOptions, type StyleSummary } from '../style-transfer';
-import { calculateBeatSnapUpdates, normalizeBeatMarkers, type BeatMarker, type BeatSnapUpdate } from '../beats';
+import {
+  buildBeatSyncSpeedKeyframes,
+  calculateBeatAlignmentUpdates,
+  calculateBeatSnapUpdates,
+  normalizeBeatMarkers,
+  type BeatAlignmentUpdate,
+  type BeatMarker,
+  type BeatSnapUpdate
+} from '../beats';
 import { normalizeTimelineLabelColor, type TimelineLabelColor } from '../timeline-color-labels';
 import { applyProtectedRippleDeleteToTrack, canMoveClipWithProtectedRanges } from '../timeline-protection';
 import { buildCrossfadeGapFillTransition, buildRepeatedGapFillClip, findTimelineGapAtTime, type FillGapOperation } from '../timeline-gap-fill';
@@ -2736,6 +2746,83 @@ export class SnapToBeatsCommand implements Command {
   }
 }
 
+export interface BatchAlignToBeatOptions {
+  maxDistance?: number;
+  syncSpeed?: boolean;
+}
+
+export class BatchAlignToBeatCommand implements Command {
+  readonly description = 'Batch align clips to beats';
+  private before?: Timeline;
+  private after?: Timeline;
+  private updates?: BeatAlignmentUpdate[];
+
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clipIds: string[],
+    private readonly beatTimes: number[],
+    private readonly options: BatchAlignToBeatOptions = {}
+  ) {}
+
+  get appliedUpdates(): BeatAlignmentUpdate[] {
+    return this.updates ?? [];
+  }
+
+  execute(): void {
+    const timeline = this.accessor.getTimeline();
+    this.before ??= timeline;
+    if (!this.after) {
+      this.updates = calculateBeatAlignmentUpdates(timeline, this.clipIds, this.beatTimes, this.options.maxDistance ?? 0.05);
+      if (this.updates.length === 0) {
+        throw new Error('No selected video clips are within beat alignment range');
+      }
+      const updatesByClipId = new Map(this.updates.map((update) => [update.clipId, update]));
+      const syncSpeed = this.options.syncSpeed === true;
+      const nextTimeline = {
+        ...timeline,
+        tracks: timeline.tracks.map((track) => ({
+          ...track,
+          clips: track.clips.map((clip) => {
+            const update = updatesByClipId.get(clip.id);
+            if (!update) {
+              return clip;
+            }
+            const duration = round(update.toEnd - update.toStart);
+            let next = {
+              ...clip,
+              start: update.toStart,
+              duration,
+              beatMarkers: normalizeClipBeatMarkers(clip.beatMarkers, duration),
+              detectedBpm: normalizeDetectedBpm(clip.detectedBpm)
+            } as Clip;
+            if (syncSpeed && next.type === 'video') {
+              const speedFrames = buildBeatSyncSpeedKeyframes(next, this.beatTimes);
+              if (speedFrames.length > 0) {
+                next = {
+                  ...next,
+                  keyframes: normalizeClipKeyframes({ ...(next.keyframes ?? {}), speed: speedFrames }, next.duration)
+                } as Clip;
+              }
+            }
+            return next;
+          })
+        }))
+      };
+      if (timelineHasOverlaps(nextTimeline)) {
+        throw new Error('Clip overlaps another clip on this track');
+      }
+      this.after = nextTimeline;
+    }
+    this.accessor.setTimeline(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setTimeline(this.before);
+    }
+  }
+}
+
 export class SlipClipCommand implements Command {
   readonly description = 'Slip clip';
   private before?: Clip;
@@ -4033,6 +4120,13 @@ export class UpdateClipCommand implements Command {
         } as Clip;
       }
     }
+    const beatMarkers = this.patch.beatMarkers === undefined ? normalizeClipBeatMarkers(this.after.beatMarkers, this.after.duration) : normalizeClipBeatMarkers(this.patch.beatMarkers, this.after.duration);
+    const detectedBpm = this.patch.detectedBpm === undefined ? normalizeDetectedBpm(this.after.detectedBpm) : normalizeDetectedBpm(this.patch.detectedBpm);
+    this.after = {
+      ...this.after,
+      beatMarkers,
+      detectedBpm
+    } as Clip;
     if ('style' in this.before || this.patch.style) {
       this.after = {
         ...this.after,

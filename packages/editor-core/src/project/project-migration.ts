@@ -14,10 +14,12 @@ import {
   normalizeAudioChannelRouting,
   normalizeAudioPitchSemitones,
   normalizeChromaKey,
+  normalizeClipBeatMarkers,
   normalizeClipBorder,
   normalizeClipPanoramaView,
   normalizeClipProjection,
   normalizeColorCorrection,
+  normalizeDetectedBpm,
   normalizeFrameInterpolation,
   normalizeMasks,
   normalizeMasterVolume,
@@ -368,6 +370,8 @@ function cloneTransition(transition: Transition, timeline: Timeline): Transition
 }
 
 function cloneClip<TClip extends Clip>(clip: TClip): TClip {
+  const beatMarkers = normalizeClipBeatMarkers(clip.beatMarkers, clip.duration);
+  const detectedBpm = normalizeDetectedBpm(clip.detectedBpm);
   const cloned = {
     ...clip,
     speed: clampClipSpeed(clip.speed),
@@ -393,8 +397,16 @@ function cloneClip<TClip extends Clip>(clip: TClip): TClip {
     keyframes: normalizeClipKeyframes(cloneClipKeyframes(clip.keyframes), clip.duration),
     effects: cloneEffects(clip.effects),
     blendMode: normalizeClipBlendMode(clip.blendMode),
-    multicam: clip.type === 'nested-sequence' ? normalizeMulticamSequence(clip.multicam, clip.duration) : undefined
+    multicam: clip.type === 'nested-sequence' ? normalizeMulticamSequence(clip.multicam, clip.duration) : undefined,
+    beatMarkers,
+    detectedBpm
   };
+  if (!beatMarkers) {
+    delete (cloned as Partial<Clip>).beatMarkers;
+  }
+  if (detectedBpm === undefined) {
+    delete (cloned as Partial<Clip>).detectedBpm;
+  }
   if (clip.type === 'video' || clip.type === 'audio' || clip.type === 'nested-sequence') {
     Object.assign(cloned, {
       pitchSemitones: normalizeAudioPitchSemitones(clip.pitchSemitones),

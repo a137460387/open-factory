@@ -27,6 +27,7 @@ import type {
   AudioClip,
   AudioFadeCurve,
   BaseClip,
+  BeatMarker,
   ChromaKey,
   ChromaKeyColor,
   ChromaKeyMode,
@@ -522,6 +523,28 @@ export function createId(prefix = 'id'): string {
   return `${prefix}-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`;
 }
 
+export function normalizeClipBeatMarkers(markers: BeatMarker[] | undefined, maxTime?: number): BeatMarker[] | undefined {
+  if (!Array.isArray(markers)) {
+    return undefined;
+  }
+  const limit = typeof maxTime === 'number' && Number.isFinite(maxTime) ? Math.max(0, maxTime) : Number.POSITIVE_INFINITY;
+  const normalized = markers
+    .filter((marker) => marker && typeof marker.time === 'number' && Number.isFinite(marker.time))
+    .map((marker) => ({
+      id: typeof marker.id === 'string' && marker.id ? marker.id : createId('beat'),
+      time: round(Math.min(limit, Math.max(0, marker.time)))
+    }))
+    .sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
+  return normalized.length > 0 ? normalized : undefined;
+}
+
+export function normalizeDetectedBpm(bpm: number | undefined): number | undefined {
+  if (typeof bpm !== 'number' || !Number.isFinite(bpm) || bpm <= 0) {
+    return undefined;
+  }
+  return round(Math.min(400, Math.max(1, bpm)));
+}
+
 export function createDefaultTimeline(): Timeline {
   return {
     markers: [],
@@ -737,6 +760,8 @@ export function createBaseClip(
   input: Omit<BaseClip, 'id' | 'transform' | 'speed' | 'colorCorrection'> &
     Partial<Pick<BaseClip, 'id' | 'transform' | 'speed' | 'colorCorrection'>>
 ): BaseClip {
+  const beatMarkers = normalizeClipBeatMarkers(input.beatMarkers, input.duration);
+  const detectedBpm = normalizeDetectedBpm(input.detectedBpm);
   return {
     id: input.id ?? createId('clip'),
     name: input.name,
@@ -767,7 +792,9 @@ export function createBaseClip(
     sequenceFrameRate: normalizeSequenceFrameRate(input.sequenceFrameRate),
     blendMode: normalizeClipBlendMode(input.blendMode),
     contentAnalysis: normalizeClipContentAnalysis(input.contentAnalysis),
-    pitchData: normalizeClipPitchData(input.pitchData)
+    pitchData: normalizeClipPitchData(input.pitchData),
+    ...(beatMarkers ? { beatMarkers } : {}),
+    ...(detectedBpm !== undefined ? { detectedBpm } : {})
   };
 }
 

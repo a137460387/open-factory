@@ -23,6 +23,7 @@ import {
   AddTransitionCommand,
   ApplyStyleCommand,
   BatchAlignSubtitleCommand,
+  BatchAlignToBeatCommand,
   BatchShiftSubtitleCommand,
   BatchUpdateKeyframeCommand,
   DEFAULT_COLOR_CORRECTION,
@@ -1229,6 +1230,37 @@ describe('timeline commands', () => {
       ])
     );
     expect(() => new SnapToBeatsCommand(overlapping, ['clip-a'], [1.1], 0.3).execute()).toThrow('overlaps');
+  });
+
+  it('aligns selected video clip starts and ends to nearby beats as one undoable batch', () => {
+    const accessor = makeAccessor(
+      makeTimeline([
+        makeVideoClip({ id: 'clip-a', start: 0.97, duration: 1.06 }),
+        makeVideoClip({ id: 'clip-b', start: 3.02, duration: 0.96 }),
+        makeAudioClip({ id: 'audio-a', start: 4.02, duration: 1 })
+      ])
+    );
+    const manager = new CommandManager();
+    const command = new BatchAlignToBeatCommand(accessor, ['clip-a', 'clip-b', 'audio-a'], [1, 2, 3, 4], { maxDistance: 0.05 });
+
+    manager.execute(command);
+
+    expect(command.appliedUpdates).toEqual([
+      { clipId: 'clip-a', fromStart: 0.97, toStart: 1, fromEnd: 2.03, toEnd: 2, startError: 0.03, endError: 0.03 },
+      { clipId: 'clip-b', fromStart: 3.02, toStart: 3, fromEnd: 3.98, toEnd: 4, startError: 0.02, endError: 0.02 }
+    ]);
+    expect(accessor.current().tracks[0].clips.map((clip) => ({ id: clip.id, start: clip.start, duration: clip.duration }))).toEqual([
+      { id: 'clip-a', start: 1, duration: 1 },
+      { id: 'clip-b', start: 3, duration: 1 }
+    ]);
+
+    manager.undo();
+
+    expect(accessor.current().tracks[0].clips.map((clip) => ({ id: clip.id, start: clip.start, duration: clip.duration }))).toEqual([
+      { id: 'clip-a', start: 0.97, duration: 1.06 },
+      { id: 'clip-b', start: 3.02, duration: 0.96 }
+    ]);
+    expect(accessor.current().tracks[1].clips[0].start).toBe(4.02);
   });
 
   it('updates clip uniform and independent canvas scale values', () => {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildAtempoFilters,
+  buildBeatSyncSpeedKeyframes,
   appendExportRangeSequence,
   buildExportProjectFromProject,
   buildFfmpegCurrentFrameExportPlan,
@@ -3088,6 +3089,25 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.filterComplex).toContain("if(lte(((PTS-STARTPTS)*TB),1.5)");
     expect(plan.filterComplex).toContain('/1.5');
     expect(plan.duration).toBe(1);
+  });
+
+  it('turns beat-sync speed keyframes into dynamic setpts expressions', () => {
+    const project = makeProject();
+    const clip = makeVideoClip({ id: 'clip-beat-sync-speed', start: 0, duration: 2, speed: 1 });
+    project.timeline.tracks[0].clips = [
+      {
+        ...clip,
+        keyframes: {
+          speed: buildBeatSyncSpeedKeyframes(clip, [0, 0.4, 1.1, 2])
+        }
+      }
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain("setpts='(if(lte(((PTS-STARTPTS)*TB)");
+    expect(plan.filterComplex).toContain('/1.375');
+    expect(plan.filterComplex).toContain('/0.778');
   });
 
   it('falls back to average speed and warns when speed ramp setpts exceeds the expression limit', () => {

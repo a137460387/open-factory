@@ -57,6 +57,7 @@ interface ToolbarProps {
   onOpenSmartRecommendations(): void;
   onOpenContentAnalysis(): void;
   onOpenRhythmAnalysis(): void;
+  onOpenBeatSync(): void;
   onDetectBeats(): void;
   onSnapToBeats(): void;
   onSplitToBeats(): void;
@@ -144,7 +145,7 @@ interface ToolbarProps {
   lastBackupAt?: string;
 }
 
-const TIMELINE_GRID_UNITS: TimelineGridUnit[] = ['frame', '5-frames', '10-frames', 'second', '5-seconds', 'measure'];
+const TIMELINE_GRID_UNITS: TimelineGridUnit[] = ['frame', '5-frames', '10-frames', 'second', '5-seconds', 'beat', 'measure', 'four-measures'];
 
 export function Toolbar(props: ToolbarProps) {
   const t = zhCN.toolbar;
@@ -756,6 +757,18 @@ export function Toolbar(props: ToolbarProps) {
               }}
             >
               <span>{t.rhythmAnalysis}</span>
+              <Activity size={14} />
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-tools-beat-sync-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onOpenBeatSync();
+              }}
+            >
+              <span>{t.beatSync}</span>
               <Activity size={14} />
             </button>
             <label className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-xs text-slate-600" data-testid="toolbar-tools-beat-sensitivity-row">

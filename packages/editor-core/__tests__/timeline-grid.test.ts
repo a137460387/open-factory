@@ -16,7 +16,9 @@ describe('timeline grid snapping', () => {
     expect(getTimelineGridIntervalSeconds('10-frames', 20)).toBeCloseTo(0.5);
     expect(getTimelineGridIntervalSeconds('second', 0)).toBe(1);
     expect(getTimelineGridIntervalSeconds('5-seconds', 30)).toBe(5);
+    expect(getTimelineGridIntervalSeconds('beat', 30)).toBeUndefined();
     expect(getTimelineGridIntervalSeconds('measure', 30)).toBeUndefined();
+    expect(getTimelineGridIntervalSeconds('four-measures', 30)).toBeUndefined();
   });
 
   it('normalizes every valid grid unit and falls back for invalid values', () => {
@@ -25,7 +27,9 @@ describe('timeline grid snapping', () => {
     expect(normalizeTimelineGridUnit('10-frames')).toBe('10-frames');
     expect(normalizeTimelineGridUnit('second')).toBe('second');
     expect(normalizeTimelineGridUnit('5-seconds')).toBe('5-seconds');
+    expect(normalizeTimelineGridUnit('beat')).toBe('beat');
     expect(normalizeTimelineGridUnit('measure')).toBe('measure');
+    expect(normalizeTimelineGridUnit('four-measures')).toBe('four-measures');
     expect(normalizeTimelineGridUnit('bar')).toBe('frame');
   });
 
@@ -74,7 +78,7 @@ describe('timeline grid snapping', () => {
     ).toEqual([0, 0.1, 0.2]);
   });
 
-  it('builds second and measure grid timestamps', () => {
+  it('builds second and beat-density grid timestamps', () => {
     expect(
       buildTimelineGridLines({
         unit: 'second',
@@ -87,6 +91,21 @@ describe('timeline grid snapping', () => {
       }).map((line) => line.time)
     ).toEqual([2, 3, 4]);
 
+    const beatTimes = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8];
+
+    expect(
+      buildTimelineGridLines({
+        unit: 'beat',
+        fps: 30,
+        duration: 10,
+        visibleStart: 0,
+        visibleEnd: 2,
+        zoom: 120,
+        viewportWidth: 800,
+        beatTimes
+      }).map((line) => line.time)
+    ).toEqual([0, 0.5, 1, 1.5, 2]);
+
     expect(
       buildTimelineGridLines({
         unit: 'measure',
@@ -96,9 +115,22 @@ describe('timeline grid snapping', () => {
         visibleEnd: 10,
         zoom: 120,
         viewportWidth: 800,
-        beatTimes: [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4]
+        beatTimes
       }).map((line) => line.time)
-    ).toEqual([0, 2, 4]);
+    ).toEqual([0, 2, 4, 6, 8]);
+
+    expect(
+      buildTimelineGridLines({
+        unit: 'four-measures',
+        fps: 30,
+        duration: 10,
+        visibleStart: 0,
+        visibleEnd: 10,
+        zoom: 120,
+        viewportWidth: 800,
+        beatTimes
+      }).map((line) => line.time)
+    ).toEqual([0, 8]);
   });
 
   it('builds dense-filtered measure lines from sorted non-negative beats', () => {

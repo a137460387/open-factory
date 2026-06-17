@@ -10,6 +10,7 @@ import {
   AddProjectBookmarkCommand,
   ApplySplitLayoutCommand,
   BatchImportSubtitleCommand,
+  BatchAlignToBeatCommand,
   AddTrackCommand,
   AddTransitionCommand,
   CreateMulticamSequenceCommand,
@@ -29,7 +30,6 @@ import {
   RenameMediaFolderCommand,
   PiPLayoutCommand,
   SetMediaFolderCollapsedCommand,
-  SnapToBeatsCommand,
   SplitClipCommand,
   SplitClipAtTimesCommand,
   UpdateProjectBeatMarkersCommand,
@@ -39,6 +39,7 @@ import {
   UpdateClipCommand,
   createBeatMarker,
   calculateBeatSplitTimesForClip,
+  estimateBpmFromBeatMarkers,
   createExportRange,
   createId,
   createProject,
@@ -385,6 +386,9 @@ export function EditorShell() {
   const [templateExportPreset, setTemplateExportPreset] = useState<ExportPreset>();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [beatSensitivity, setBeatSensitivity] = useState<BeatSensitivity>('medium');
+  const [beatSyncOpen, setBeatSyncOpen] = useState(false);
+  const [beatSyncSpeedEnabled, setBeatSyncSpeedEnabled] = useState(false);
+  const [beatSyncManualBpm, setBeatSyncManualBpm] = useState('');
   const [smartRoughCutOpen, setSmartRoughCutOpen] = useState(false);
   const [historyPanelOpen, setHistoryPanelOpen] = useState(false);
   const [projectDocumentationOpen, setProjectDocumentationOpen] = useState(false);
@@ -524,8 +528,19 @@ export function EditorShell() {
       (selectedClip.type === 'audio' || selectedClip.type === 'video') &&
       (selectedClipMedia.type === 'audio' || selectedClipMedia.hasAudio)
   );
-  const canSnapToBeats = selectedClipIds.length > 0 && (project.beatMarkers?.length ?? 0) > 0;
-  const canSplitToBeats = Boolean(selectedClip && (project.beatMarkers?.length ?? 0) > 0);
+  const selectedClipTimelineBeatTimes = useMemo(() => {
+    const times = selectedClips.flatMap((clip) => (clip.beatMarkers ?? []).map((marker) => round(clip.start + marker.time)));
+    return Array.from(new Set(times)).sort((left, right) => left - right);
+  }, [selectedClips]);
+  const beatSyncBeatTimes = useMemo(() => {
+    return selectedClipTimelineBeatTimes.length > 0 ? selectedClipTimelineBeatTimes : (project.beatMarkers ?? []).map((marker) => marker.time);
+  }, [project.beatMarkers, selectedClipTimelineBeatTimes]);
+  const detectedBeatBpm = selectedClip?.detectedBpm ?? estimateBpmFromBeatMarkers(selectedClip?.beatMarkers);
+  const canSnapToBeats = selectedClipIds.length > 0 && beatSyncBeatTimes.length > 0;
+  const canSplitToBeats = Boolean(selectedClip && beatSyncBeatTimes.length > 0);
+  useEffect(() => {
+    setBeatSyncManualBpm(detectedBeatBpm ? String(detectedBeatBpm) : '');
+  }, [detectedBeatBpm, selectedClip?.id]);
   const timelineHeightPx = clampTimelineHeight(layoutSettings.timelineHeightPx, viewportSize.height);
   const effectivePanels = useMemo(() => getEffectivePanelState(layoutSettings, viewportSize.width), [layoutSettings, viewportSize.width]);
   const reviewVisibility = useMemo(() => getReviewModeShellVisibility(reviewMode), [reviewMode]);
@@ -2299,24 +2314,27 @@ export function EditorShell() {
     try {
       const sourceBeatTimes = await detectBeats(selectedClipMedia.path, beatSensitivity);
       const speed = getClipSpeed(selectedClip);
-      const detected = sourceBeatTimes
+      const localBeatMarkers = sourceBeatTimes
         .map((sourceTime) => {
           const localTime = (sourceTime - selectedClip.trimStart) / speed;
           if (!Number.isFinite(localTime) || localTime < -0.000001 || localTime > selectedClip.duration + 0.000001) {
             return undefined;
           }
-          return createBeatMarker(selectedClip.start + Math.min(selectedClip.duration, Math.max(0, localTime)));
+          return createBeatMarker(Math.min(selectedClip.duration, Math.max(0, localTime)));
         })
         .filter((marker): marker is ReturnType<typeof createBeatMarker> => Boolean(marker));
-      if (detected.length === 0) {
+      if (localBeatMarkers.length === 0) {
         showToast({ kind: 'warning', title: zhCN.editorToasts.beatDetectFailed, message: zhCN.editorToasts.beatDetectNoMarkers });
         return;
       }
+      const detectedBpm = estimateBpmFromBeatMarkers(localBeatMarkers);
+      commandManager.execute(new UpdateClipCommand(timelineAccessor, selectedClip.id, { beatMarkers: localBeatMarkers, detectedBpm }));
       const clipStart = selectedClip.start;
       const clipEnd = selectedClip.start + selectedClip.duration;
       const preserved = (project.beatMarkers ?? []).filter((marker) => marker.time < clipStart - 0.000001 || marker.time > clipEnd + 0.000001);
-      commandManager.execute(new UpdateProjectBeatMarkersCommand(projectAccessor, [...preserved, ...detected]));
-      showToast({ kind: 'success', title: zhCN.editorToasts.beatDetectComplete(detected.length) });
+      const timelineMarkers = localBeatMarkers.map((marker, index) => createBeatMarker(selectedClip.start + marker.time, `${selectedClip.id}-beat-${index + 1}`));
+      commandManager.execute(new UpdateProjectBeatMarkersCommand(projectAccessor, [...preserved, ...timelineMarkers]));
+      showToast({ kind: 'success', title: zhCN.editorToasts.beatDetectComplete(localBeatMarkers.length), message: detectedBpm ? zhCN.editorToasts.beatDetectBpm(detectedBpm) : undefined });
     } catch (error) {
       showToast({ kind: 'error', title: zhCN.editorToasts.beatDetectFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.beatDetectNoMarkers });
     }
@@ -2328,27 +2346,27 @@ export function EditorShell() {
       showToast({ kind: 'warning', title: zhCN.editorToasts.beatSnapUnavailable, message: zhCN.editorToasts.beatSnapNoSelection });
       return;
     }
-    const beatTimes = (project.beatMarkers ?? []).map((marker) => marker.time);
+    const beatTimes = beatSyncBeatTimes;
     if (beatTimes.length === 0) {
       showToast({ kind: 'warning', title: zhCN.editorToasts.beatSnapUnavailable, message: zhCN.editorToasts.beatSnapNoMarkers });
       return;
     }
     try {
-      const command = new SnapToBeatsCommand(timelineAccessor, ids, beatTimes, 0.35);
+      const command = new BatchAlignToBeatCommand(timelineAccessor, ids, beatTimes, { maxDistance: 0.05, syncSpeed: beatSyncSpeedEnabled });
       commandManager.execute(command);
       setSelectedClipIds(ids);
       showToast({ kind: 'success', title: zhCN.editorToasts.beatSnapComplete(command.appliedUpdates.length) });
     } catch (error) {
       showToast({ kind: 'warning', title: zhCN.editorToasts.beatSnapUnavailable, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
     }
-  }, [project.beatMarkers, selectedClipId, selectedClipIds, setSelectedClipIds]);
+  }, [beatSyncBeatTimes, beatSyncSpeedEnabled, selectedClipId, selectedClipIds, setSelectedClipIds]);
 
   const splitSelectedToBeats = useCallback(() => {
     if (!selectedClip) {
       showToast({ kind: 'warning', title: zhCN.editorToasts.beatSplitUnavailable, message: zhCN.editorToasts.beatSplitNoSelection });
       return;
     }
-    const beatTimes = (project.beatMarkers ?? []).map((marker) => marker.time);
+    const beatTimes = beatSyncBeatTimes;
     if (beatTimes.length === 0) {
       showToast({ kind: 'warning', title: zhCN.editorToasts.beatSplitUnavailable, message: zhCN.editorToasts.beatSnapNoMarkers });
       return;
@@ -2365,7 +2383,21 @@ export function EditorShell() {
     } catch (error) {
       showToast({ kind: 'warning', title: zhCN.editorToasts.beatSplitUnavailable, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
     }
-  }, [clearSelectedClipIds, project.beatMarkers, selectedClip]);
+  }, [beatSyncBeatTimes, clearSelectedClipIds, selectedClip]);
+
+  const applyManualBeatBpm = useCallback(() => {
+    if (!selectedClip) {
+      showToast({ kind: 'warning', title: zhCN.editorToasts.beatSnapUnavailable, message: zhCN.editorToasts.beatSnapNoSelection });
+      return;
+    }
+    const bpm = Number(beatSyncManualBpm);
+    if (!Number.isFinite(bpm) || bpm <= 0) {
+      showToast({ kind: 'warning', title: zhCN.editorToasts.beatDetectFailed, message: zhCN.editorToasts.beatBpmInvalid });
+      return;
+    }
+    commandManager.execute(new UpdateClipCommand(timelineAccessor, selectedClip.id, { detectedBpm: bpm }));
+    showToast({ kind: 'success', title: zhCN.editorToasts.beatBpmUpdated(Math.round(bpm)) });
+  }, [beatSyncManualBpm, selectedClip]);
 
   const createMulticamSequence = useCallback(() => {
     try {
@@ -3172,6 +3204,7 @@ export function EditorShell() {
           onOpenSmartRecommendations={() => setSmartRecommendationsOpen(true)}
           onOpenContentAnalysis={() => setContentAnalysisOpen(true)}
           onOpenRhythmAnalysis={() => setRhythmAnalysisOpen(true)}
+          onOpenBeatSync={() => setBeatSyncOpen(true)}
           onDetectBeats={() => void detectSelectedBeats()}
           onSnapToBeats={snapSelectedToBeats}
           onSplitToBeats={splitSelectedToBeats}
@@ -3585,6 +3618,59 @@ export function EditorShell() {
             />
           ) : null}
           {rhythmAnalysisOpen ? <RhythmAnalysisDialog project={project} onClose={() => setRhythmAnalysisOpen(false)} /> : null}
+          {beatSyncOpen ? (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" role="dialog" aria-modal="true" data-testid="beat-sync-dialog">
+              <div className="w-full max-w-md rounded-lg border border-line bg-white p-4 shadow-xl">
+                <div className="mb-4 flex items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-base font-semibold text-ink">{zhCN.toolbar.beatSync}</h2>
+                    <p className="mt-1 text-sm text-slate-600" data-testid="beat-sync-bpm-label">{zhCN.toolbar.beatSyncDetectedBpm(detectedBeatBpm)}</p>
+                    <p className="mt-1 text-xs text-slate-500" data-testid="beat-sync-marker-count">{zhCN.toolbar.beatSyncMarkers(beatSyncBeatTimes.length)}</p>
+                  </div>
+                  <button className="rounded-md border border-line px-2 py-1 text-xs text-slate-600 hover:bg-panel" type="button" data-testid="beat-sync-close-button" onClick={() => setBeatSyncOpen(false)}>
+                    {zhCN.toolbar.beatSyncClose}
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  <label className="flex items-center justify-between gap-3 text-sm text-slate-700">
+                    <span>{zhCN.toolbar.beatSensitivity}</span>
+                    <select className="rounded border border-line bg-white px-2 py-1 text-sm" value={beatSensitivity} data-testid="beat-sync-sensitivity-select" onChange={(event) => setBeatSensitivity(event.target.value as BeatSensitivity)}>
+                      <option value="low">{zhCN.toolbar.beatSensitivityOptions.low}</option>
+                      <option value="medium">{zhCN.toolbar.beatSensitivityOptions.medium}</option>
+                      <option value="high">{zhCN.toolbar.beatSensitivityOptions.high}</option>
+                    </select>
+                  </label>
+                  <label className="flex items-center justify-between gap-3 text-sm text-slate-700">
+                    <span>{zhCN.toolbar.beatSyncManualBpm}</span>
+                    <input
+                      className="w-28 rounded border border-line px-2 py-1 text-right text-sm"
+                      type="number"
+                      min="1"
+                      step="0.1"
+                      value={beatSyncManualBpm}
+                      data-testid="beat-sync-bpm-input"
+                      onChange={(event) => setBeatSyncManualBpm(event.target.value)}
+                    />
+                  </label>
+                  <label className="flex items-center justify-between gap-3 text-sm text-slate-700">
+                    <span>{zhCN.toolbar.beatSyncSpeed}</span>
+                    <input type="checkbox" checked={beatSyncSpeedEnabled} data-testid="beat-sync-speed-checkbox" onChange={(event) => setBeatSyncSpeedEnabled(event.target.checked)} />
+                  </label>
+                </div>
+                <div className="mt-4 flex flex-wrap justify-end gap-2">
+                  <button className="rounded-md border border-line px-3 py-2 text-sm hover:bg-panel" type="button" data-testid="beat-sync-apply-bpm-button" onClick={applyManualBeatBpm}>
+                    {zhCN.toolbar.beatSyncApplyBpm}
+                  </button>
+                  <button className="rounded-md border border-line px-3 py-2 text-sm hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50" type="button" disabled={!canDetectBeats} data-testid="beat-sync-detect-button" onClick={() => void detectSelectedBeats()}>
+                    {zhCN.toolbar.beatSyncRunDetect}
+                  </button>
+                  <button className="rounded-md bg-brand px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50" type="button" disabled={!canSnapToBeats} data-testid="beat-sync-align-button" onClick={snapSelectedToBeats}>
+                    {zhCN.toolbar.beatSyncRunAlign}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
           {timelineSearchOpen ? <TimelineSearchPanel project={project} onClose={() => setTimelineSearchOpen(false)} /> : null}
           {shortcutCheatsheetOpen ? <ShortcutCheatsheetPanel bindings={shortcutBindings} onClose={() => setShortcutCheatsheetOpen(false)} /> : null}
           {settingsOpen ? (

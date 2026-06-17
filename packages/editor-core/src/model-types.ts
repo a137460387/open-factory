@@ -526,6 +526,8 @@ export interface BaseClip {
   contentAnalysis?: ClipContentAnalysis;
   spatialAudio?: ClipSpatialAudio;
   pitchData?: ClipPitchDataPoint[];
+  beatMarkers?: BeatMarker[];
+  detectedBpm?: number;
 }
 
 export interface ClipAudioDenoise {

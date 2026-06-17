@@ -1443,8 +1443,8 @@ window.__E2E_ACTIONS__ = {
           type: 'video',
           name: 'Video 1',
           clips: [
-            makeBeatVideoClip('clip-beat-a', 'Clip Beat A', 0.88),
-            makeBeatVideoClip('clip-beat-b', 'Clip Beat B', 2.12)
+            makeBeatVideoClip('clip-beat-a', 'Clip Beat A', 0.97),
+            makeBeatVideoClip('clip-beat-b', 'Clip Beat B', 2.03)
           ]
         }),
         createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [makeBeatAudioClip()] }),
