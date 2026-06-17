@@ -77,6 +77,7 @@ import { serializeSubtitleCueInputsToAss, serializeSubtitleCueInputsToSrt, seria
 import { normalizeDataSubtitleSource, resolveDataSubtitleText } from '../subtitles/data-subtitle';
 import { buildPathTextFrameLayouts } from '../text-path';
 import { buildCreditsRollYExpression, formatCreditsRowsForTextfile } from '../credits-roll';
+import { MOTION_GRAPHIC_SEQUENCE_KIND, normalizeMotionGraphic } from '../motion-graphics';
 import {
   DEFAULT_EXPORT_COLOR_MANAGEMENT,
   buildExportColorTagArgs,
@@ -173,6 +174,7 @@ const WATERMARK_MARGIN_PX = 24;
 const SLATE_DURATION_SECONDS = 0.5;
 const CUSTOM_SHADER_SEQUENCE_KIND = 'custom-shader-sequence';
 const PATH_TEXT_SEQUENCE_KIND = 'path-text-sequence';
+const MOTION_GRAPHIC_SEQUENCE_PATH_MODE = 'motion-graphic-sequence';
 const EXPORT_PREVIEW_SAMPLE_KINDS: ExportPreviewSampleKind[] = ['start', 'middle', 'end'];
 
 interface LoudnessNormalizationPreset {
@@ -403,7 +405,8 @@ function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project[
                     bold: clip.style.bold,
                     italic: clip.style.italic
                   }
-                : null
+                : null,
+            motionGraphic: clip.type === 'motion-graphic' ? normalizeMotionGraphic(clip.motionGraphic, clip.duration) : null
           } satisfies ExportClip;
         })
       };
@@ -494,6 +497,23 @@ export function buildFfmpegExportPlan(
         args: buildCustomShaderSequenceInputArgs(settings)
       });
       pathTextSequenceInputByClipId.set(clip.id, inputs[inputs.length - 1].index);
+    }
+  }
+
+  if (!audioOnly && !videoFramesOnly && !audioVisualization) {
+    for (const clip of orderedClips) {
+      const artifact = buildMotionGraphicSequenceArtifact(clip, settings);
+      if (!artifact) {
+        continue;
+      }
+      textArtifacts.push(artifact);
+      warnings.push(`Motion graphic clip ${clip.id} will render frame-by-frame and may be slow.`);
+      inputs.push({
+        index: inputs.length,
+        path: artifact.placeholder,
+        args: buildCustomShaderSequenceInputArgs(settings)
+      });
+      visualInputByClipId.set(clip.id, inputs[inputs.length - 1].index);
     }
   }
 
@@ -1357,7 +1377,7 @@ function buildVisualItems(
     consumedClipIds.add(pair.toClip.id);
   }
 
-  for (const clip of orderedPlaybackClips.filter((item) => item.type === 'video' || item.type === 'image' || item.type === 'text' || item.type === 'credits' || item.type === 'nested-sequence' || item.type === 'adjustment')) {
+  for (const clip of orderedPlaybackClips.filter((item) => item.type === 'video' || item.type === 'image' || item.type === 'text' || item.type === 'credits' || item.type === 'nested-sequence' || item.type === 'adjustment' || item.type === 'motion-graphic')) {
     if (consumedClipIds.has(clip.id)) {
       continue;
     }
@@ -2658,6 +2678,33 @@ function buildPathTextSequenceArtifact(clip: ExportClip, settings: ExportSetting
     fileName: `path-text-${safeId}.json`,
     placeholder: `__PATH_TEXT_SEQUENCE_${safeId}__`,
     pathMode: 'path-text-sequence'
+  };
+}
+
+function buildMotionGraphicSequenceArtifact(clip: ExportClip, settings: ExportSettings): TextArtifact | undefined {
+  if (clip.type !== 'motion-graphic' || !clip.motionGraphic) {
+    return undefined;
+  }
+  const safeId = safeLabel(clip.id);
+  const fps = Math.max(1, settings.fps);
+  const frameCount = Math.max(1, Math.ceil(Math.max(clip.duration, 1 / fps) * fps));
+  return {
+    clipId: `${clip.id}:motion-graphic`,
+    text: JSON.stringify({
+      kind: MOTION_GRAPHIC_SEQUENCE_KIND,
+      version: 1,
+      clipId: clip.id,
+      templateType: clip.motionGraphic.templateType,
+      motionGraphic: normalizeMotionGraphic(clip.motionGraphic, clip.duration),
+      width: Math.max(1, Math.round(settings.width)),
+      height: Math.max(1, Math.round(settings.height)),
+      fps,
+      frameCount,
+      duration: clip.duration
+    }),
+    fileName: `motion-graphic-${safeId}.json`,
+    placeholder: `__MOTION_GRAPHIC_SEQUENCE_${safeId}__`,
+    pathMode: MOTION_GRAPHIC_SEQUENCE_PATH_MODE
   };
 }
 

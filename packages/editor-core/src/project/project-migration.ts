@@ -61,6 +61,7 @@ import { normalizeMediaFolderId, normalizeMediaFolders, normalizeMediaImportedAt
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
 import { cloneEffects } from '../effects';
 import { normalizeCreditsRollSpeed, normalizeCreditsRows, normalizeCreditsStyle } from '../credits-roll';
+import { normalizeMotionGraphic } from '../motion-graphics';
 import { normalizeBeatMarkers } from '../beats';
 import { isVariableFrameRateProbe } from '../vfr';
 import { clampTransitionDuration, findAdjacentTransitionClips, getTimelineDuration } from '../timeline';
@@ -449,6 +450,12 @@ function cloneClip<TClip extends Clip>(clip: TClip): TClip {
       rows: normalizeCreditsRows(clip.rows, clip.text),
       rollSpeed: normalizeCreditsRollSpeed(clip.rollSpeed),
       style: normalizeCreditsStyle(clip.style)
+    } as TClip;
+  }
+  if (clip.type === 'motion-graphic') {
+    return {
+      ...cloned,
+      motionGraphic: normalizeMotionGraphic(clip.motionGraphic, clip.duration)
     } as TClip;
   }
   return cloned as TClip;

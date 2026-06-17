@@ -162,6 +162,7 @@ import { normalizeTimelineLabelColor, type TimelineLabelColor } from '../timelin
 import { applyProtectedRippleDeleteToTrack, canMoveClipWithProtectedRanges } from '../timeline-protection';
 import { buildCrossfadeGapFillTransition, buildRepeatedGapFillClip, findTimelineGapAtTime, type FillGapOperation } from '../timeline-gap-fill';
 import { createMulticamSequenceProject, setMulticamSwitch } from '../multicam';
+import { normalizeMotionGraphic } from '../motion-graphics';
 import { applyCmx3600EdlImport, buildCmx3600EdlImport, type Cmx3600EdlImportOptions, type Cmx3600EdlImportResult } from '../export/timeline-import';
 import {
   calculateSpeedCurveSourceDuration,
@@ -2313,6 +2314,57 @@ export class AddAdjustmentLayerCommand implements Command {
   }
 }
 
+export class AddMotionGraphicCommand implements Command {
+  readonly description: string;
+  private insertedTrack = false;
+
+  constructor(private readonly accessor: TimelineAccessor, private readonly track: Track, private readonly clip: Extract<Clip, { type: 'motion-graphic' }>) {
+    this.description = `Add motion graphic ${clip.name}`;
+  }
+
+  execute(): void {
+    if (this.track.type !== 'video') {
+      throw new Error('Motion graphics must be added to a video track');
+    }
+    const timeline = this.accessor.getTimeline();
+    const existingTrack = timeline.tracks.find((item) => item.id === this.track.id);
+    if (existingTrack) {
+      if (existingTrack.type !== 'video') {
+        throw new Error('Motion graphics must be added to a video track');
+      }
+      if (detectOverlap(existingTrack, this.clip)) {
+        throw new Error('Clip overlaps another clip on this track');
+      }
+      this.accessor.setTimeline(insertClip(timeline, this.clip));
+      return;
+    }
+
+    this.insertedTrack = true;
+    this.accessor.setTimeline({
+      ...timeline,
+      tracks: [
+        ...timeline.tracks,
+        {
+          ...this.track,
+          clips: [this.clip]
+        }
+      ]
+    });
+  }
+
+  undo(): void {
+    const timeline = removeClip(this.accessor.getTimeline(), this.clip.id).timeline;
+    if (!this.insertedTrack) {
+      this.accessor.setTimeline(timeline);
+      return;
+    }
+    this.accessor.setTimeline({
+      ...timeline,
+      tracks: timeline.tracks.filter((track) => track.id !== this.track.id)
+    });
+  }
+}
+
 export class AddSubtitleClipCommand implements Command {
   readonly description: string;
 
@@ -3788,6 +3840,7 @@ export type ClipPatch = Partial<Omit<Clip, 'type' | 'id' | 'transform' | 'colorC
   rollSpeed?: number;
   style?: Partial<TextStyle> | Partial<SubtitleStyle> | Partial<CreditsStyle>;
   pathText?: Partial<TextPathOptions>;
+  motionGraphic?: Partial<Extract<Clip, { type: 'motion-graphic' }>['motionGraphic']>;
 };
 
 export class UpdateSubtitleStyleCommand implements Command {
@@ -4247,6 +4300,12 @@ export class UpdateClipCommand implements Command {
         style: normalizeCreditsStyle(this.after.style)
       };
     }
+    if (this.after.type === 'motion-graphic') {
+      this.after = {
+        ...this.after,
+        motionGraphic: normalizeMotionGraphic(this.patch.motionGraphic ?? this.after.motionGraphic, this.after.duration)
+      };
+    }
     const track = findTrack(timeline, this.after.trackId);
     if (detectOverlap(track, this.after, this.before.id)) {
       throw new Error('Clip overlaps another clip on this track');
@@ -4656,6 +4715,12 @@ function cloneClipForNestedSequence<TClip extends Clip>(clip: TClip): TClip {
       rows: normalizeCreditsRows(clip.rows, clip.text),
       rollSpeed: normalizeCreditsRollSpeed(clip.rollSpeed),
       style: normalizeCreditsStyle(clip.style)
+    } as TClip;
+  }
+  if (clip.type === 'motion-graphic') {
+    return {
+      ...cloned,
+      motionGraphic: normalizeMotionGraphic(clip.motionGraphic, clip.duration)
     } as TClip;
   }
   if (clip.type === 'text' || clip.type === 'subtitle') {

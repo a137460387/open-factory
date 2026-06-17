@@ -87,6 +87,15 @@ const fixtures = [
     validate: validatePathTextFixture
   },
   {
+    name: 'motion-graphic',
+    description: 'countdown motion graphic baked to a PNG sequence overlay',
+    outputWidth: 1280,
+    outputHeight: 720,
+    expectedDuration: 1.5,
+    create: createMotionGraphicFixture,
+    validate: validateMotionGraphicFixture
+  },
+  {
     name: 'multi-clip-overlay',
     description: 'two sequential video clips with an image overlay over the second segment',
     outputWidth: 1280,
@@ -1268,6 +1277,120 @@ async function validatePathTextFixture(context) {
         passed: pinkPixelCount > 100,
         actual: pinkPixelCount,
         expected: '> 100'
+      }
+    ]
+  };
+}
+
+async function createMotionGraphicFixture(context) {
+  const backgroundPath = join(context.fixtureDir, 'motion-graphic-background.mp4');
+  await createColorVideoFixture(backgroundPath, {
+    color: COLORS.darkBlue.ffmpeg,
+    width: context.outputWidth,
+    height: context.outputHeight,
+    duration: context.fixture.expectedDuration,
+    audio: false
+  });
+  const backgroundStat = statSync(backgroundPath);
+  return buildProject({
+    id: 'golden-motion-graphic',
+    name: 'Golden Motion Graphic',
+    width: context.outputWidth,
+    height: context.outputHeight,
+    media: [
+      videoAsset({
+        id: 'asset-motion-background',
+        name: 'motion-graphic-background.mp4',
+        path: backgroundPath,
+        duration: context.fixture.expectedDuration,
+        width: context.outputWidth,
+        height: context.outputHeight,
+        hasAudio: false,
+        stat: backgroundStat
+      })
+    ],
+    tracks: [
+      {
+        id: 'track-motion-background',
+        type: 'video',
+        name: 'Background',
+        clips: [
+          videoClip({
+            id: 'clip-motion-background',
+            name: 'Motion background',
+            mediaId: 'asset-motion-background',
+            trackId: 'track-motion-background',
+            duration: context.fixture.expectedDuration
+          })
+        ]
+      },
+      {
+        id: 'track-motion-graphic',
+        type: 'video',
+        name: 'Motion Graphic',
+        clips: [
+          motionGraphicClip({
+            id: 'clip-motion-countdown',
+            name: 'Countdown motion graphic',
+            trackId: 'track-motion-graphic',
+            duration: context.fixture.expectedDuration,
+            motionGraphic: {
+              version: 1,
+              templateType: 'countdown',
+              params: {
+                startSeconds: 6,
+                prefix: 'T-',
+                suffix: '',
+                fontSize: 144,
+                color: '#f7d84a',
+                backgroundColor: '#243247',
+                ringThickness: 18
+              }
+            }
+          })
+        ]
+      },
+      emptyAudioTrack(),
+      emptyTextTrack()
+    ]
+  });
+}
+
+async function validateMotionGraphicFixture(context) {
+  const frame = await readFrame(context.outputPath, {
+    at: 0.6,
+    width: context.outputWidth,
+    height: context.outputHeight
+  });
+  const nonBackgroundPixelCount = countDifferentPixels(frame, COLORS.darkBlue.rgb, 80);
+  const yellowPixelCount = countNearPixels(frame, COLORS.yellow.rgb, 100);
+  const artifactModes = context.plan.textArtifacts.map((artifact) => artifact.pathMode);
+  return {
+    checks: [
+      {
+        name: 'motion-graphic-sequence-artifact',
+        passed:
+          context.plan.textArtifacts.some((artifact) => artifact.pathMode === 'motion-graphic-sequence') &&
+          context.plan.filterComplex.includes('vclip_motion_countdown') &&
+          context.plan.filterComplex.includes('overlay='),
+        actual: {
+          textArtifacts: artifactModes,
+          hasMotionLayer: context.plan.filterComplex.includes('vclip_motion_countdown'),
+          hasOverlay: context.plan.filterComplex.includes('overlay=')
+        },
+        expected: 'motion-graphic-sequence artifact and overlay layer'
+      },
+      {
+        name: 'motion-graphic-non-background-pixels',
+        passed: nonBackgroundPixelCount > 1_000,
+        actual: nonBackgroundPixelCount,
+        expected: '> 1000'
+      },
+      {
+        name: 'motion-graphic-colored-pixels',
+        passed: yellowPixelCount > 250,
+        actual: yellowPixelCount,
+        expected: '> 250 yellow pixels'
       }
     ]
   };
@@ -3864,6 +3987,25 @@ function adjustmentClip(input) {
   };
 }
 
+function motionGraphicClip(input) {
+  return {
+    id: input.id,
+    type: 'motion-graphic',
+    name: input.name ?? 'Motion Graphic',
+    trackId: input.trackId,
+    start: input.start ?? 0,
+    duration: input.duration,
+    trimStart: input.trimStart ?? 0,
+    trimEnd: input.trimEnd ?? 0,
+    speed: input.speed ?? 1,
+    colorCorrection: input.colorCorrection ?? { brightness: 0, contrast: 1, saturation: 1, hue: 0 },
+    chromaKey: input.chromaKey,
+    transform: input.transform ?? { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
+    keyframes: input.keyframes,
+    motionGraphic: input.motionGraphic ?? { version: 1, templateType: 'countdown', params: {} }
+  };
+}
+
 function textClip(input) {
   return {
     id: input.id,
@@ -3959,6 +4101,8 @@ async function materializeTextArtifacts(plan, textDir) {
       replacement = await materializeCustomShaderSequenceArtifact(artifact, textDir, safeName);
     } else if (artifact.pathMode === 'path-text-sequence') {
       replacement = await materializePathTextSequenceArtifact(artifact, textDir, safeName);
+    } else if (artifact.pathMode === 'motion-graphic-sequence') {
+      replacement = await materializeMotionGraphicSequenceArtifact(artifact, textDir, safeName);
     } else {
       writeFileSync(artifactPath, artifact.text);
       replacement = artifact.pathMode === 'argument' ? normalizePath(artifactPath) : escapeDrawtextPath(normalizePath(artifactPath));
@@ -4036,6 +4180,39 @@ async function materializePathTextSequenceArtifact(artifact, textDir, safeName) 
   return normalizePath(framePattern);
 }
 
+async function materializeMotionGraphicSequenceArtifact(artifact, textDir, safeName) {
+  const manifest = JSON.parse(artifact.text);
+  if (manifest.kind !== 'motion-graphic-sequence') {
+    throw new Error(`Unsupported motion graphic artifact kind: ${manifest.kind}`);
+  }
+  const sequenceDir = join(textDir, safeName.replace(/\.json$/i, ''));
+  mkdirSync(sequenceDir, { recursive: true });
+  const framePattern = join(sequenceDir, 'frame%04d.png');
+  const width = Math.max(1, Math.round(manifest.width ?? 1));
+  const height = Math.max(1, Math.round(manifest.height ?? 1));
+  const fps = Math.max(1, Number(manifest.fps ?? 30));
+  const frameCount = Math.max(1, Math.round(manifest.frameCount ?? 1));
+  for (let index = 0; index < frameCount; index += 1) {
+    const framePath = join(sequenceDir, `frame${String(index + 1).padStart(4, '0')}.png`);
+    await runChecked('ffmpeg', [
+      '-hide_banner',
+      '-y',
+      '-f',
+      'lavfi',
+      '-i',
+      `color=c=black@0:s=${width}x${height}:d=${formatSeconds(1 / fps)}`,
+      '-vf',
+      buildMotionGraphicFrameFilter(manifest, index / fps),
+      '-frames:v',
+      '1',
+      '-f',
+      'image2',
+      framePath
+    ]);
+  }
+  return normalizePath(framePattern);
+}
+
 function buildCustomShaderBakeFilter(manifest) {
   const width = Math.max(1, Math.round(manifest.width));
   const height = Math.max(1, Math.round(manifest.height));
@@ -4068,6 +4245,302 @@ function buildPathTextFrameFilter(manifest, frame) {
     );
   }
   return filters.join(',');
+}
+
+function buildMotionGraphicFrameFilter(manifest, time) {
+  const width = Math.max(1, Math.round(manifest.width ?? 1));
+  const height = Math.max(1, Math.round(manifest.height ?? 1));
+  const graphic = manifest.motionGraphic ?? { templateType: manifest.templateType, params: {} };
+  const templateType = String(graphic.templateType ?? manifest.templateType ?? '');
+  const filters = ['format=rgba'];
+  if (templateType === 'scoreboard') {
+    filters.push(...buildMotionGraphicScoreboardFilters(manifest, time));
+  } else if (templateType === 'progress-bar') {
+    filters.push(...buildMotionGraphicProgressBarFilters(manifest, time));
+  } else if (templateType === 'data-chart') {
+    filters.push(...buildMotionGraphicDataChartFilters(manifest, time));
+  } else if (templateType === 'countdown') {
+    filters.push(...buildMotionGraphicCountdownFilters(manifest, time));
+  } else if (templateType === 'social-lower-third') {
+    filters.push(...buildMotionGraphicSocialLowerThirdFilters(manifest, time));
+  } else if (templateType === 'map-route') {
+    filters.push(...buildMotionGraphicMapRouteFilters(manifest, time));
+  } else {
+    filters.push(`drawbox=x=0:y=0:w=${width}:h=${height}:color=white@0.05:t=fill`);
+  }
+  return filters.join(',');
+}
+
+function buildMotionGraphicScoreboardFilters(manifest, time) {
+  const width = Math.max(1, Math.round(manifest.width ?? 1));
+  const height = Math.max(1, Math.round(manifest.height ?? 1));
+  const graphic = manifest.motionGraphic ?? { params: {} };
+  const params = graphic.params ?? {};
+  const background = cssColorToFfmpeg(motionGraphicColorParam(params, 'backgroundColor', '#111827'));
+  const accent = cssColorToFfmpeg(motionGraphicColorParam(params, 'accentColor', '#22d3ee'));
+  const backgroundOpacity = clampNumber(motionGraphicNumberParam(graphic, 'backgroundOpacity', 0.82, time), 0, 1);
+  const homeLabel = escapeDrawtextText(motionGraphicStringParam(params, 'homeLabel', 'HOME'));
+  const awayLabel = escapeDrawtextText(motionGraphicStringParam(params, 'awayLabel', 'AWAY'));
+  const periodLabel = escapeDrawtextText(motionGraphicStringParam(params, 'periodLabel', 'Q4'));
+  const homeScore = Math.max(0, Math.round(motionGraphicNumberParam(graphic, 'homeScore', 2, time)));
+  const awayScore = Math.max(0, Math.round(motionGraphicNumberParam(graphic, 'awayScore', 1, time)));
+  const scoreFont = Math.max(24, height * 0.18);
+  const labelFont = Math.max(14, height * 0.055);
+  const panelHeight = height / 1.8;
+  return [
+    `drawbox=x=0:y=0:w=${width}:h=${height}:color=${background}@${formatSeconds(backgroundOpacity)}:t=fill`,
+    `drawbox=x=${formatSeconds(width / 20)}:y=${formatSeconds(height / 8)}:w=${formatSeconds(width / 2 - width / 10)}:h=${formatSeconds(panelHeight)}:color=${accent}@1:t=fill`,
+    `drawbox=x=${formatSeconds(width / 2 + width / 20)}:y=${formatSeconds(height / 8)}:w=${formatSeconds(width / 2 - width / 10)}:h=${formatSeconds(panelHeight)}:color=${accent}@0.20:t=fill`,
+    `drawtext=text='${homeLabel}':fontsize=${formatSeconds(labelFont)}:fontcolor=white:x='(w*0.25-text_w/2)':y='${formatSeconds(height * 0.2)}'`,
+    `drawtext=text='${awayLabel}':fontsize=${formatSeconds(labelFont)}:fontcolor=white:x='(w*0.75-text_w/2)':y='${formatSeconds(height * 0.2)}'`,
+    `drawtext=text='${homeScore}':fontsize=${formatSeconds(scoreFont)}:fontcolor=white:x='(w*0.25-text_w/2)':y='${formatSeconds(height * 0.42)}'`,
+    `drawtext=text='${awayScore}':fontsize=${formatSeconds(scoreFont)}:fontcolor=white:x='(w*0.75-text_w/2)':y='${formatSeconds(height * 0.42)}'`,
+    `drawtext=text='${periodLabel}':fontsize=${formatSeconds(labelFont)}:fontcolor=${accent}@1:x='(w-text_w)/2':y='${formatSeconds(height * 0.82)}'`
+  ];
+}
+
+function buildMotionGraphicProgressBarFilters(manifest, time) {
+  const width = Math.max(1, Math.round(manifest.width ?? 1));
+  const height = Math.max(1, Math.round(manifest.height ?? 1));
+  const graphic = manifest.motionGraphic ?? { params: {} };
+  const params = graphic.params ?? {};
+  const background = cssColorToFfmpeg(motionGraphicColorParam(params, 'backgroundColor', '#0f172a'));
+  const barColor = cssColorToFfmpeg(motionGraphicColorParam(params, 'barColor', '#34d399'));
+  const progress = clampNumber(motionGraphicNumberParam(graphic, 'progress', 0.65, time), 0, 1);
+  const barHeight = clampNumber(motionGraphicNumberParam(graphic, 'height', 48, time), 12, height);
+  const radius = clampNumber(motionGraphicNumberParam(graphic, 'cornerRadius', 14, time), 0, 80);
+  const barWidth = Math.max(1, width * 0.82);
+  const fillWidth = Math.max(1, barWidth * progress);
+  const y = Math.max(0, (height - barHeight) / 2);
+  const x = Math.max(0, (width - barWidth) / 2);
+  const label = escapeDrawtextText(motionGraphicStringParam(params, 'label', 'Progress'));
+  return [
+    `drawbox=x=0:y=0:w=${width}:h=${height}:color=black@0.0:t=fill`,
+    `drawbox=x=${formatSeconds(x)}:y=${formatSeconds(y)}:w=${formatSeconds(barWidth)}:h=${formatSeconds(barHeight)}:color=${background}@0.35:t=fill`,
+    `drawbox=x=${formatSeconds(x)}:y=${formatSeconds(y)}:w=${formatSeconds(fillWidth)}:h=${formatSeconds(barHeight)}:color=${barColor}@1:t=fill`,
+    `drawbox=x=${formatSeconds(x)}:y=${formatSeconds(y)}:w=${formatSeconds(barWidth)}:h=${formatSeconds(barHeight)}:color=${barColor}@1:t=${formatSeconds(Math.max(1, radius))}`,
+    `drawtext=text='${label}':fontsize=${formatSeconds(Math.max(14, height * 0.1))}:fontcolor=white:x='(w-text_w)/2':y='${formatSeconds(y - height * 0.14)}'`
+  ];
+}
+
+function buildMotionGraphicDataChartFilters(manifest, time) {
+  const width = Math.max(1, Math.round(manifest.width ?? 1));
+  const height = Math.max(1, Math.round(manifest.height ?? 1));
+  const graphic = manifest.motionGraphic ?? { params: {} };
+  const params = graphic.params ?? {};
+  const chartKind = motionGraphicStringParam(params, 'chartKind', 'bar');
+  const title = escapeDrawtextText(motionGraphicStringParam(params, 'title', 'Data'));
+  const values = motionGraphicNumberListParam(params, 'dataValues', [38, 64, 46, 82, 58]);
+  const maxValue = Math.max(1, motionGraphicNumberParam(graphic, 'maxValue', 100, time));
+  const primary = cssColorToFfmpeg(motionGraphicColorParam(params, 'primaryColor', '#60a5fa'));
+  const secondary = cssColorToFfmpeg(motionGraphicColorParam(params, 'secondaryColor', '#f97316'));
+  const showLabels = motionGraphicBoolParam(params, 'showLabels', true);
+  const filters = [
+    `drawbox=x=0:y=0:w=${width}:h=${height}:color=black@0.0:t=fill`,
+    `drawbox=x=${formatSeconds(width / 20)}:y=${formatSeconds(height / 10)}:w=${formatSeconds(width - width / 10)}:h=${formatSeconds(height - height / 5)}:color=0x0f172a@0.9:t=fill`,
+    `drawtext=text='${title}':fontsize=${formatSeconds(Math.max(16, height * 0.08))}:fontcolor=white:x='${formatSeconds(width * 0.08)}':y='${formatSeconds(height * 0.12)}'`
+  ];
+  const plotLeft = width * 0.08;
+  const plotTop = height * 0.22;
+  const plotWidth = width * 0.84;
+  const plotHeight = height * 0.62;
+  const itemWidth = Math.max(1, plotWidth / Math.max(1, values.length));
+  values.forEach((value, index) => {
+    const normalized = clampNumber(value / maxValue, 0, 1);
+    const barHeight = Math.max(1, plotHeight * normalized);
+    const x = plotLeft + itemWidth * index + itemWidth * 0.15;
+    const y = plotTop + plotHeight - barHeight;
+    const barColor = index % 2 === 0 ? primary : secondary;
+    filters.push(
+      `drawbox=x=${formatSeconds(x)}:y=${formatSeconds(y)}:w=${formatSeconds(Math.max(1, itemWidth * 0.7))}:h=${formatSeconds(barHeight)}:color=${barColor}@1:t=fill`
+    );
+    if (chartKind === 'line') {
+      filters.push(
+        `drawbox=x=${formatSeconds(x)}:y=${formatSeconds(y)}:w=${formatSeconds(Math.max(1, itemWidth * 0.14))}:h=${formatSeconds(Math.max(2, plotHeight * 0.05))}:color=${barColor}@1:t=fill`
+      );
+    }
+    if (chartKind === 'pie') {
+      const pieX = width * 0.68;
+      const pieY = height * 0.35;
+      const pieSize = height * 0.36;
+      filters.push(
+        `drawbox=x=${formatSeconds(pieX)}:y=${formatSeconds(pieY)}:w=${formatSeconds(pieSize)}:h=${formatSeconds(pieSize)}:color=${barColor}@0.12:t=fill`
+      );
+    }
+    if (showLabels) {
+      filters.push(
+        `drawtext=text='${Math.round(value)}':fontsize=${formatSeconds(Math.max(12, height * 0.045))}:fontcolor=white:x='${formatSeconds(x)}':y='${formatSeconds(plotTop + plotHeight + height * 0.02)}'`
+      );
+    }
+  });
+  return filters;
+}
+
+function buildMotionGraphicCountdownFilters(manifest, time) {
+  const width = Math.max(1, Math.round(manifest.width ?? 1));
+  const height = Math.max(1, Math.round(manifest.height ?? 1));
+  const graphic = manifest.motionGraphic ?? { params: {} };
+  const params = graphic.params ?? {};
+  const background = cssColorToFfmpeg(motionGraphicColorParam(params, 'backgroundColor', '#111827'));
+  const color = cssColorToFfmpeg(motionGraphicColorParam(params, 'color', '#ffffff'));
+  const startSeconds = Math.max(1, motionGraphicNumberParam(graphic, 'startSeconds', 10, time));
+  const displayValue = Math.max(0, Math.ceil(Math.max(0, startSeconds - time)));
+  const prefix = escapeDrawtextText(motionGraphicStringParam(params, 'prefix', ''));
+  const suffix = escapeDrawtextText(motionGraphicStringParam(params, 'suffix', ''));
+  const fontSize = clampNumber(motionGraphicNumberParam(graphic, 'fontSize', 112, time), 16, 360);
+  const ringThickness = clampNumber(motionGraphicNumberParam(graphic, 'ringThickness', 16, time), 0, 80);
+  const ringSize = Math.max(1, Math.min(width, height) * 0.52);
+  const ringX = Math.max(0, (width - ringSize) / 2);
+  const ringY = Math.max(0, (height - ringSize) / 2);
+  return [
+    `drawbox=x=0:y=0:w=${width}:h=${height}:color=${background}@1:t=fill`,
+    `drawbox=x=${formatSeconds(ringX)}:y=${formatSeconds(ringY)}:w=${formatSeconds(ringSize)}:h=${formatSeconds(ringSize)}:color=${color}@0.9:t=${formatSeconds(Math.max(1, ringThickness))}`,
+    `drawtext=text='${prefix}${displayValue}${suffix}':fontsize=${formatSeconds(fontSize)}:fontcolor=${color}@1:x='(w-text_w)/2':y='(h-text_h)/2'`
+  ];
+}
+
+function buildMotionGraphicSocialLowerThirdFilters(manifest, time) {
+  const width = Math.max(1, Math.round(manifest.width ?? 1));
+  const height = Math.max(1, Math.round(manifest.height ?? 1));
+  const graphic = manifest.motionGraphic ?? { params: {} };
+  const params = graphic.params ?? {};
+  const barColor = cssColorToFfmpeg(motionGraphicColorParam(params, 'accentColor', '#ff4fd8'));
+  const displayName = escapeDrawtextText(motionGraphicStringParam(params, 'displayName', 'Open Factory'));
+  const handle = escapeDrawtextText(motionGraphicStringParam(params, 'handle', '@openfactory'));
+  const platform = escapeDrawtextText(motionGraphicStringParam(params, 'platform', 'custom'));
+  const followerCount = Math.max(0, Math.round(motionGraphicNumberParam(graphic, 'followerCount', 12800, time)));
+  const avatarInitials = escapeDrawtextText(motionGraphicStringParam(params, 'avatarInitials', 'OF'));
+  const showIcon = motionGraphicBoolParam(params, 'showIcon', true);
+  const bandHeight = Math.max(1, height * 0.28);
+  const bandY = height - bandHeight - height * 0.1;
+  const fontSize = Math.max(16, height * 0.12);
+  const handleSize = Math.max(12, height * 0.07);
+  const filters = [
+    `drawbox=x=0:y=0:w=${width}:h=${height}:color=black@0.0:t=fill`,
+    `drawbox=x=0:y=${formatSeconds(bandY)}:w=${width}:h=${formatSeconds(bandHeight)}:color=${barColor}@0.92:t=fill`,
+    `drawbox=x=${formatSeconds(width / 20)}:y=${formatSeconds(bandY + bandHeight * 0.15)}:w=${formatSeconds(bandHeight * 0.7)}:h=${formatSeconds(bandHeight * 0.7)}:color=white@0.12:t=fill`,
+    `drawtext=text='${displayName}':fontsize=${formatSeconds(fontSize)}:fontcolor=white:x='${formatSeconds(width * 0.18)}':y='${formatSeconds(bandY + bandHeight * 0.16)}'`,
+    `drawtext=text='${handle}':fontsize=${formatSeconds(handleSize)}:fontcolor=white:x='${formatSeconds(width * 0.18)}':y='${formatSeconds(bandY + bandHeight * 0.54)}'`,
+    `drawtext=text='${followerCount} followers':fontsize=${formatSeconds(handleSize * 0.9)}:fontcolor=white:x='${formatSeconds(width * 0.54)}':y='${formatSeconds(bandY + bandHeight * 0.54)}'`
+  ];
+  if (showIcon) {
+    filters.push(`drawtext=text='${platform}':fontsize=${formatSeconds(handleSize)}:fontcolor=white:x='${formatSeconds(width * 0.08)}':y='${formatSeconds(bandY + bandHeight * 0.28)}'`);
+  }
+  filters.push(
+    `drawbox=x=${formatSeconds(width * 0.1)}:y=${formatSeconds(bandY + bandHeight * 0.22)}:w=${formatSeconds(width * 0.06)}:h=${formatSeconds(bandHeight * 0.56)}:color=white@0.24:t=fill`,
+    `drawtext=text='${avatarInitials}':fontsize=${formatSeconds(Math.max(16, bandHeight * 0.28))}:fontcolor=${barColor}@1:x='${formatSeconds(width * 0.13)}':y='${formatSeconds(bandY + bandHeight * 0.3)}'`
+  );
+  return filters;
+}
+
+function buildMotionGraphicMapRouteFilters(manifest, time) {
+  const width = Math.max(1, Math.round(manifest.width ?? 1));
+  const height = Math.max(1, Math.round(manifest.height ?? 1));
+  const graphic = manifest.motionGraphic ?? { params: {} };
+  const params = graphic.params ?? {};
+  const lineColor = cssColorToFfmpeg(motionGraphicColorParam(params, 'lineColor', '#facc15'));
+  const mapTint = cssColorToFfmpeg(motionGraphicColorParam(params, 'mapTintColor', '#1e293b'));
+  const progress = clampNumber(motionGraphicNumberParam(graphic, 'progress', 0.7, time), 0, 1);
+  const strokeWidth = clampNumber(motionGraphicNumberParam(graphic, 'strokeWidth', 12, time), 2, 80);
+  const waypointCount = Math.round(clampNumber(motionGraphicNumberParam(graphic, 'waypointCount', 5, time), 2, 12));
+  const showPins = motionGraphicBoolParam(params, 'showPins', true);
+  const zoom = clampNumber(motionGraphicNumberParam(graphic, 'zoom', 1, time), 0.5, 3);
+  const routeLeft = width * 0.14;
+  const routeTop = height * 0.2;
+  const routeWidth = width * 0.72 * Math.min(2, zoom);
+  const routeHeight = height * 0.54;
+  const filters = [
+    `drawbox=x=0:y=0:w=${width}:h=${height}:color=black@0.0:t=fill`,
+    `drawbox=x=${formatSeconds(routeLeft)}:y=${formatSeconds(routeTop)}:w=${formatSeconds(routeWidth)}:h=${formatSeconds(routeHeight)}:color=${mapTint}@0.35:t=fill`,
+    `drawbox=x=${formatSeconds(routeLeft)}:y=${formatSeconds(routeTop + routeHeight * 0.7)}:w=${formatSeconds(routeWidth * progress)}:h=${formatSeconds(strokeWidth)}:color=${lineColor}@1:t=fill`
+  ];
+  for (let index = 0; index < waypointCount; index += 1) {
+    const position = waypointCount <= 1 ? 0 : index / (waypointCount - 1);
+    const x = routeLeft + routeWidth * position;
+    const y = routeTop + routeHeight * (0.32 + 0.18 * (index % 2));
+    filters.push(
+      `drawbox=x=${formatSeconds(x - strokeWidth * 0.35)}:y=${formatSeconds(y - strokeWidth * 0.35)}:w=${formatSeconds(strokeWidth * 0.7)}:h=${formatSeconds(strokeWidth * 0.7)}:color=${lineColor}@1:t=fill`
+    );
+  }
+  if (showPins) {
+    const pinX = routeLeft + routeWidth * progress;
+    const pinY = routeTop + routeHeight * 0.64;
+    filters.push(
+      `drawbox=x=${formatSeconds(pinX - strokeWidth * 0.5)}:y=${formatSeconds(pinY - strokeWidth * 0.5)}:w=${formatSeconds(strokeWidth)}:h=${formatSeconds(strokeWidth)}:color=white@1:t=fill`
+    );
+  }
+  return filters;
+}
+
+function motionGraphicStringParam(params, key, fallback) {
+  const value = params?.[key];
+  const text = typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' ? String(value).trim() : '';
+  return text || fallback;
+}
+
+function motionGraphicBoolParam(params, key, fallback) {
+  const value = params?.[key];
+  return typeof value === 'boolean' ? value : fallback;
+}
+
+function motionGraphicColorParam(params, key, fallback) {
+  const value = params?.[key];
+  return typeof value === 'string' && value.trim() ? value.trim() : fallback;
+}
+
+function motionGraphicNumberParam(graphic, key, fallback, time) {
+  const value = Number(graphic?.params?.[key]);
+  const staticValue = Number.isFinite(value) ? value : fallback;
+  const frames = graphic?.paramKeyframes?.[key];
+  return interpolateMotionGraphicKeyframes(Array.isArray(frames) ? frames : [], time, staticValue);
+}
+
+function motionGraphicNumberListParam(params, key, fallback) {
+  const value = params?.[key];
+  const source = Array.isArray(value)
+    ? value
+    : typeof value === 'string'
+      ? value.split(',').map((item) => item.trim())
+      : fallback;
+  const numbers = source.map((item) => Number(item)).filter((item) => Number.isFinite(item));
+  return numbers.length > 0 ? numbers : fallback;
+}
+
+function interpolateMotionGraphicKeyframes(frames, time, fallback) {
+  const points = frames
+    .map((frame) => ({ time: Number(frame?.time), value: Number(frame?.value) }))
+    .filter((frame) => Number.isFinite(frame.time) && Number.isFinite(frame.value))
+    .map((frame) => ({ time: Math.max(0, frame.time), value: frame.value }))
+    .sort((left, right) => left.time - right.time);
+  if (points.length === 0) {
+    return fallback;
+  }
+  const safeTime = Math.max(0, Number(time) || 0);
+  if (safeTime <= points[0].time) {
+    return points[0].value;
+  }
+  if (safeTime >= points[points.length - 1].time) {
+    return points[points.length - 1].value;
+  }
+  for (let index = 0; index + 1 < points.length; index += 1) {
+    const left = points[index];
+    const right = points[index + 1];
+    if (safeTime < left.time || safeTime > right.time) {
+      continue;
+    }
+    const span = Math.max(0.000001, right.time - left.time);
+    const progress = clampNumber((safeTime - left.time) / span, 0, 1);
+    return left.value + (right.value - left.value) * progress;
+  }
+  return fallback;
+}
+
+function clampNumber(value, min, max) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    return min;
+  }
+  return Math.min(max, Math.max(min, number));
 }
 
 function cssColorToFfmpeg(value) {

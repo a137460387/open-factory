@@ -10,11 +10,13 @@ import {
   DEFAULT_AUDIO_PITCH_SEMITONES,
   DEFAULT_AUDIO_REVERSE,
   DEFAULT_SPATIAL_AUDIO,
+  createMotionGraphicClip as createCoreMotionGraphicClip,
   normalizeChromaKey,
   type Clip,
   type MediaAsset,
   type Timeline,
   type Track,
+  type MotionGraphicTemplateType,
   createAdjustmentClip,
   createCreditsClip as createCoreCreditsClip,
   createId,
@@ -127,6 +129,33 @@ export function createAdjustmentLayerClip(track: Track, timeline: Timeline): Ext
     colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
     transform: { ...DEFAULT_TRANSFORM },
     masks: []
+  });
+}
+
+export function createMotionGraphicClip(
+  track: Track,
+  timeline: Timeline,
+  start = findAppendStart(track, timeline),
+  templateType: MotionGraphicTemplateType = 'countdown'
+): Extract<Clip, { type: 'motion-graphic' }> {
+  return createCoreMotionGraphicClip({
+    id: createId('clip'),
+    name: zhCN.motionGraphics.clipName(zhCN.motionGraphics.templates[templateType].name),
+    trackId: track.id,
+    start,
+    duration: 5,
+    trimStart: 0,
+    trimEnd: 0,
+    speed: DEFAULT_CLIP_SPEED,
+    colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+    transform: { ...DEFAULT_TRANSFORM },
+    chromaKey: normalizeChromaKey(DEFAULT_CHROMA_KEY),
+    masks: [],
+    motionGraphic: {
+      version: 1,
+      templateType,
+      params: {}
+    }
   });
 }
 

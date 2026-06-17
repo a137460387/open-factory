@@ -3,6 +3,7 @@ import {
   AddAdjustmentLayerCommand,
   AutoRepairProjectHealthCommand,
   AddClipCommand,
+  AddMotionGraphicCommand,
   AddMediaFolderCommand,
   AddProjectAnnotationCommand,
   AddReviewAnnotationCommand,
@@ -136,7 +137,7 @@ import { isEditableKeyboardTarget, isShortcutCheatsheetKey } from '../accessibil
 import type { ExportQueueRecoveryCandidate } from '../export/export-queue-persistence';
 import { revealExport } from '../lib/exportVideo';
 import { clearMediaCache } from '../cache/cache-service';
-import { createAdjustmentLayerClip, createClipFromAsset, findPreferredTrack } from '../lib/clipFactory';
+import { createAdjustmentLayerClip, createClipFromAsset, createMotionGraphicClip, findPreferredTrack } from '../lib/clipFactory';
 import { zhCN } from '../i18n/strings';
 import {
   applyWorkspaceLayout,
@@ -1954,6 +1955,23 @@ export function EditorShell() {
     }
   }, [project.timeline, setSelectedClipId]);
 
+  const addMotionGraphic = useCallback(() => {
+    try {
+      const trackCount = project.timeline.tracks.filter((track) => track.type === 'video').length;
+      const track = createTrack({
+        id: createId('track'),
+        type: 'video',
+        name: zhCN.motionGraphics.trackName(trackCount + 1),
+        clips: []
+      });
+      const clip = createMotionGraphicClip(track, project.timeline, playheadTime);
+      commandManager.execute(new AddMotionGraphicCommand(timelineAccessor, track, clip));
+      setSelectedClipId(clip.id);
+    } catch (error) {
+      showToast({ kind: 'error', title: zhCN.editorToasts.addClipFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.addClipFailedMessage });
+    }
+  }, [playheadTime, project.timeline, setSelectedClipId]);
+
   const addTitleTemplate = useCallback(
     (templateId: TitleTemplateId) => {
       const track = project.timeline.tracks.find((item) => item.type === 'text');
@@ -3349,6 +3367,7 @@ export function EditorShell() {
           onOpenMediaPrecheck={() => setMediaPrecheckOpen(true)}
           onOpenMediaOrganizer={openMediaOrganizer}
           onOpenVideoStitchWizard={() => setVideoStitchWizardOpen(true)}
+          onAddMotionGraphic={addMotionGraphic}
           onOpenSyncCompare={openSyncCompare}
           onOpenSceneDetection={() => setSceneDetectionRequestId((id) => id + 1)}
           onOpenSceneReorder={() => setSceneReorderOpen(true)}

@@ -27,6 +27,7 @@ import type {
 import type { CreditsRow } from '../credits-roll';
 import type { TargetAspectRatio } from '../reframe';
 import type { ClipSpatialAudio } from '../spatial-audio';
+import type { MotionGraphic } from '../motion-graphics';
 
 export type ExportLoudnessNormalization = 'off' | 'youtube' | 'ebu-r128';
 export type ExportPlatformPreset = 'youtube-1080p' | 'youtube-shorts' | 'tiktok' | 'instagram-reels' | 'twitter-x' | 'bilibili';
@@ -300,7 +301,7 @@ export interface ExportTextPathOptions {
 
 export type ExportSubtitleMode = 'burn-in' | 'soft-sub';
 export type ExportSubtitleFormat = 'srt' | 'vtt' | 'ass' | 'ssa';
-export type TextArtifactPathMode = 'filter' | 'argument' | 'shader-sequence' | 'path-text-sequence' | 'sidecar';
+export type TextArtifactPathMode = 'filter' | 'argument' | 'shader-sequence' | 'path-text-sequence' | 'motion-graphic-sequence' | 'sidecar';
 
 export interface ExportSubtitleStyle extends ExportTextStyle {
   yOffset: number;
@@ -317,7 +318,7 @@ export interface ExportCreditsStyle extends ExportTextStyle {
   horizontalMargin: number;
 }
 
-export type ExportClipType = 'video' | 'audio' | 'image' | 'text' | 'subtitle' | 'credits' | 'nested-sequence' | 'adjustment';
+export type ExportClipType = 'video' | 'audio' | 'image' | 'text' | 'subtitle' | 'credits' | 'nested-sequence' | 'adjustment' | 'motion-graphic';
 export type ExportTrackType = 'video' | 'audio' | 'text' | 'subtitle';
 export type ExportTransitionType = 'fade-black' | 'dissolve';
 
@@ -378,6 +379,7 @@ export interface ExportClip {
   subtitleMode: ExportSubtitleMode | null;
   dataSubtitle: DataSubtitleSource | null;
   creditsStyle: ExportCreditsStyle | null;
+  motionGraphic: MotionGraphic | null;
 }
 
 export interface ExportTrack {

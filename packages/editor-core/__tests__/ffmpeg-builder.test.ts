@@ -21,7 +21,7 @@ import {
   type Clip,
   type Project
 } from '../src';
-import { makeAdjustmentClip, makeAudioClip, makeCreditsClip, makeProject, makeSubtitleClip, makeTextClip, makeVideoClip } from './test-utils';
+import { makeAdjustmentClip, makeAudioClip, makeCreditsClip, makeMotionGraphicClip, makeProject, makeSubtitleClip, makeTextClip, makeVideoClip } from './test-utils';
 
 function makeAudioVisualizationProject(): Project {
   const project = makeProject();
@@ -550,6 +550,38 @@ describe('multitrack ffmpeg builder', () => {
     expect(manifest.kind).toBe('path-text-sequence');
     expect(manifest.frameCount).toBe(60);
     expect(manifest.frames[0].chars.length).toBeGreaterThan(0);
+  });
+
+  it('exports motion graphic clips through a baked PNG sequence overlay artifact', () => {
+    const project = makeProject();
+    project.timeline.tracks = [
+      createTrack({ id: 'track-background', type: 'video', name: 'Background', clips: [makeVideoClip({ id: 'clip-background', trackId: 'track-background', duration: 2 })] }),
+      createTrack({ id: 'track-motion', type: 'video', name: 'Motion', clips: [makeMotionGraphicClip({ id: 'clip-motion-countdown', trackId: 'track-motion', duration: 2 })] }),
+      createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
+      createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.inputs).toContainEqual(
+      expect.objectContaining({
+        path: '__MOTION_GRAPHIC_SEQUENCE_clip_motion_countdown__',
+        args: ['-f', 'image2', '-framerate', '30', '-start_number', '1']
+      })
+    );
+    expect(plan.filterComplex).toContain('vclip_motion_countdown');
+    expect(plan.filterComplex).toContain('overlay=');
+    expect(plan.textArtifacts).toContainEqual(
+      expect.objectContaining({
+        clipId: 'clip-motion-countdown:motion-graphic',
+        fileName: 'motion-graphic-clip_motion_countdown.json',
+        pathMode: 'motion-graphic-sequence'
+      })
+    );
+    const artifact = plan.textArtifacts.find((item) => item.pathMode === 'motion-graphic-sequence');
+    expect(artifact).toBeDefined();
+    const manifest = JSON.parse(artifact?.text ?? '{}') as { kind: string; templateType: string; frameCount: number };
+    expect(manifest).toMatchObject({ kind: 'motion-graphic-sequence', templateType: 'countdown', frameCount: 60 });
   });
 
   it('builds EBU R128 loudness normalization with the broadcast target', () => {

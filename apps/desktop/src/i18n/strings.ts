@@ -148,6 +148,72 @@ const zh = {
     defaultCreditsContent: '导演 | 林青\n演员 | Ada\n特别鸣谢 | Open Factory',
     defaultAdjustmentName: '调整层'
   },
+  motionGraphics: {
+    title: '运动图形',
+    template: '模板',
+    trackName: (index: number) => `运动图形 ${index}`,
+    clipName: (name: string) => `运动图形 - ${name}`,
+    templates: {
+      scoreboard: { name: '计分板', description: '比分、时段和主客队信息。' },
+      'progress-bar': { name: '进度条', description: '带标签和圆角的进度提示条。' },
+      'data-chart': { name: '数据图表', description: '柱状、折线或饼图的数据展示。' },
+      countdown: { name: '倒计时', description: '数字倒计时，可配前后缀与环形提示。' },
+      'social-lower-third': { name: '社交信息条', description: '姓名、账号和关注数的下三分之一条。' },
+      'map-route': { name: '地图路径动画', description: '路线描边、航点和地图底色动画。' }
+    },
+    fields: {
+      homeLabel: '主队标签',
+      awayLabel: '客队标签',
+      homeScore: '主队分数',
+      awayScore: '客队分数',
+      periodLabel: '阶段标签',
+      accentColor: '强调色',
+      backgroundOpacity: '背景透明度',
+      progress: '进度',
+      label: '标签',
+      barColor: '进度条颜色',
+      backgroundColor: '背景色',
+      height: '高度',
+      cornerRadius: '圆角',
+      chartKind: '图表类型',
+      title: '标题',
+      dataValues: '数据值',
+      maxValue: '最大值',
+      primaryColor: '主色',
+      secondaryColor: '辅色',
+      showLabels: '显示数值',
+      startSeconds: '起始秒数',
+      prefix: '前缀',
+      suffix: '后缀',
+      fontSize: '字号',
+      color: '文字颜色',
+      ringThickness: '环宽',
+      displayName: '显示名称',
+      handle: '账号',
+      platform: '平台',
+      followerCount: '粉丝数',
+      avatarInitials: '头像字母',
+      showIcon: '显示图标',
+      lineColor: '线路颜色',
+      mapTintColor: '地图底色',
+      waypointCount: '航点数量',
+      showPins: '显示标记',
+      zoom: '缩放'
+    },
+    selectOptions: {
+      chartKind: {
+        bar: '柱状',
+        line: '折线',
+        pie: '饼图'
+      },
+      platform: {
+        youtube: 'YouTube',
+        bilibili: 'B站',
+        douyin: '抖音',
+        custom: '自定义'
+      }
+    }
+  },
   toolbar: {
     fileMenu: '文件',
     editMenu: '编辑',
@@ -171,6 +237,7 @@ const zh = {
     mediaPrecheck: '素材预检',
     mediaOrganizer: '媒体整理',
     videoStitchWizard: '视频拼接向导',
+    motionGraphic: '运动图形',
     syncCompare: '同步对比',
     sceneReorder: '场景重组',
     sceneDetection: '场景检测',
@@ -4020,6 +4087,72 @@ const enOverrides = {
     defaultCreditsContent: 'Director | Lin Qing\nCast | Ada\nSpecial Thanks | Open Factory',
     defaultAdjustmentName: 'Adjustment Layer'
   },
+  motionGraphics: {
+    title: 'Motion Graphics',
+    template: 'Template',
+    trackName: (index: number) => `Motion Graphics ${index}`,
+    clipName: (name: string) => `Motion Graphic - ${name}`,
+    templates: {
+      scoreboard: { name: 'Scoreboard', description: 'Score, period, and team details.' },
+      'progress-bar': { name: 'Progress Bar', description: 'A labeled rounded progress indicator.' },
+      'data-chart': { name: 'Data Chart', description: 'Bar, line, or pie chart data display.' },
+      countdown: { name: 'Countdown', description: 'Numeric countdown with prefix, suffix, and ring cue.' },
+      'social-lower-third': { name: 'Social Lower Third', description: 'Name, handle, and follower count lower third.' },
+      'map-route': { name: 'Map Route Animation', description: 'Animated route stroke, waypoints, and map tint.' }
+    },
+    fields: {
+      homeLabel: 'Home Label',
+      awayLabel: 'Away Label',
+      homeScore: 'Home Score',
+      awayScore: 'Away Score',
+      periodLabel: 'Period Label',
+      accentColor: 'Accent Color',
+      backgroundOpacity: 'Background Opacity',
+      progress: 'Progress',
+      label: 'Label',
+      barColor: 'Bar Color',
+      backgroundColor: 'Background Color',
+      height: 'Height',
+      cornerRadius: 'Corner Radius',
+      chartKind: 'Chart Kind',
+      title: 'Title',
+      dataValues: 'Data Values',
+      maxValue: 'Max Value',
+      primaryColor: 'Primary Color',
+      secondaryColor: 'Secondary Color',
+      showLabels: 'Show Labels',
+      startSeconds: 'Start Seconds',
+      prefix: 'Prefix',
+      suffix: 'Suffix',
+      fontSize: 'Font Size',
+      color: 'Text Color',
+      ringThickness: 'Ring Thickness',
+      displayName: 'Display Name',
+      handle: 'Handle',
+      platform: 'Platform',
+      followerCount: 'Follower Count',
+      avatarInitials: 'Avatar Initials',
+      showIcon: 'Show Icon',
+      lineColor: 'Line Color',
+      mapTintColor: 'Map Tint',
+      waypointCount: 'Waypoint Count',
+      showPins: 'Show Pins',
+      zoom: 'Zoom'
+    },
+    selectOptions: {
+      chartKind: {
+        bar: 'Bar',
+        line: 'Line',
+        pie: 'Pie'
+      },
+      platform: {
+        youtube: 'YouTube',
+        bilibili: 'Bilibili',
+        douyin: 'Douyin',
+        custom: 'Custom'
+      }
+    }
+  },
   toolbar: {
     fileMenu: 'File',
     editMenu: 'Edit',
@@ -4042,6 +4175,7 @@ const enOverrides = {
     mediaPrecheck: 'Media Precheck',
     mediaOrganizer: 'Media Organizer',
     videoStitchWizard: 'Video Stitch Wizard',
+    motionGraphic: 'Motion Graphics',
     syncCompare: 'Sync Compare',
     sceneReorder: 'Scene Reorder',
     sceneDetection: 'Scene Detection',

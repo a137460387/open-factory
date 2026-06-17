@@ -37,6 +37,7 @@ import {
   MAX_CLIP_SPEED,
   MIN_CLIP_SPEED,
   MOTION_BLUR_SAMPLE_COUNTS,
+  MOTION_GRAPHIC_TEMPLATE_TYPES,
   TEXT_ANIMATION_DIRECTIONS,
   TEXT_ANIMATION_PRESETS,
   RemoveEffectCommand,
@@ -78,11 +79,16 @@ import {
   normalizeMasks,
   normalizeMotionBlurParams,
   normalizeMotionTrack,
+  createDefaultMotionGraphic,
+  getMotionGraphicTemplateDefinition,
   normalizePrivacyBlurEffect,
+  normalizeMotionGraphic,
   normalizeSequenceFrameRate,
   normalizeSlowMotionMode,
   normalizeStabilization,
   normalizeTextPath,
+  setMotionGraphicParam,
+  setMotionGraphicParamKeyframe,
   normalizeThreeWayColor,
   normalizeVideoRestoration,
   findCompleteClipGroup,
@@ -139,7 +145,10 @@ import {
   type SubtitleStyleTemplate,
   type SubtitleProofreadingIssue,
   type SubtitleProofreadingIssueType,
-  type FrameInterpolationCompareMode
+  type FrameInterpolationCompareMode,
+  type MotionGraphicParamDefinition,
+  type MotionGraphicParamValue,
+  type MotionGraphicTemplateType
 } from '@open-factory/editor-core';
 import { ArrowDown, ArrowUp, GripVertical, Palette, Pipette, Plus, SlidersHorizontal, Trash2, X } from 'lucide-react';
 import { t, zhCN } from '../../i18n/strings';
@@ -1103,6 +1112,8 @@ function ClipInspector({
             </div>
           ) : null}
         </Section>
+
+        {clip.type === 'motion-graphic' ? <MotionGraphicPanel clip={clip} selectedClipLocked={selectedClipLocked} playheadTime={playheadTime} /> : null}
 
         {clip.type === 'video' || clip.type === 'audio' ? (
           <Section title={zhCN.inspector.sections.speed}>
@@ -3969,6 +3980,178 @@ function PrivacyBlurPanel({
   );
 }
 
+function MotionGraphicPanel({
+  clip,
+  selectedClipLocked,
+  playheadTime
+}: {
+  clip: Extract<Clip, { type: 'motion-graphic' }>;
+  selectedClipLocked: boolean;
+  playheadTime: number;
+}) {
+  const motionGraphicsText = zhCN.motionGraphics;
+  const motionGraphic = normalizeMotionGraphic(clip.motionGraphic, clip.duration);
+  const definition = getMotionGraphicTemplateDefinition(motionGraphic.templateType);
+  const selectOptions = motionGraphicsText.selectOptions as Record<string, Record<string, string>>;
+  const localKeyframeTime = Math.min(clip.duration, Math.max(0, playheadTime - clip.start));
+  const commitMotionGraphic = (next: Partial<Extract<Clip, { type: 'motion-graphic' }>['motionGraphic']> | undefined) => {
+    try {
+      commandManager.execute(new UpdateClipCommand(timelineAccessor, clip.id, { motionGraphic: next }));
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.inspector.propertyRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.propertyRejectedMessage });
+    }
+  };
+  const commitTemplate = (templateType: MotionGraphicTemplateType) => {
+    commitMotionGraphic(createDefaultMotionGraphic(templateType));
+  };
+  const commitParam = (param: MotionGraphicParamDefinition, value: MotionGraphicParamValue) => {
+    commitMotionGraphic(setMotionGraphicParam(motionGraphic, param.key, value, clip.duration));
+  };
+  const addParamKeyframe = (param: MotionGraphicParamDefinition) => {
+    if (param.type !== 'number' || !param.keyframeable) {
+      return;
+    }
+    const value = motionGraphic.params[param.key];
+    if (typeof value !== 'number') {
+      return;
+    }
+    try {
+      commitMotionGraphic(
+        setMotionGraphicParamKeyframe(motionGraphic, param.key, { time: localKeyframeTime, value }, clip.duration)
+      );
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.inspector.keyframeRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.addKeyframeFailed });
+    }
+  };
+
+  return (
+    <Section title={motionGraphicsText.title}>
+      {selectedClipLocked ? <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs font-medium text-amber-800">{zhCN.inspector.locked}</div> : null}
+      <label className="block text-xs font-medium text-slate-600">
+        {motionGraphicsText.template}
+        <select
+          className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60"
+          value={motionGraphic.templateType}
+          disabled={selectedClipLocked}
+          data-testid="motion-graphic-template-select"
+          onChange={(event) => commitTemplate(event.target.value as MotionGraphicTemplateType)}
+        >
+          {MOTION_GRAPHIC_TEMPLATE_TYPES.map((templateType) => (
+            <option key={templateType} value={templateType}>
+              {motionGraphicsText.templates[templateType].name}
+            </option>
+          ))}
+        </select>
+        <div className="mt-1 text-[11px] text-slate-500">{motionGraphicsText.templates[motionGraphic.templateType].description}</div>
+      </label>
+      <div className="space-y-3">
+        {definition.params.map((param) => {
+          const label = motionGraphicsText.fields[param.key as keyof typeof motionGraphicsText.fields] ?? param.key;
+          const currentValue = motionGraphic.params[param.key];
+          const testId = `motion-graphic-param-${param.key}`;
+          if (param.type === 'number') {
+            const numberValue = typeof currentValue === 'number' ? currentValue : typeof param.defaultValue === 'number' ? param.defaultValue : 0;
+            const field = (
+              <RangeNumberField
+                label={label}
+                value={numberValue}
+                min={param.min ?? 0}
+                max={param.max ?? Math.max(numberValue, param.min ?? 100)}
+                step={param.step ?? 1}
+                format={(value) => formatMotionGraphicNumberValue(param, value)}
+                disabled={selectedClipLocked}
+                onCommit={(value) => commitParam(param, value)}
+                testId={testId}
+              />
+            );
+            return param.keyframeable ? (
+              <AnimatedField
+                key={param.key}
+                label={label}
+                disabled={selectedClipLocked}
+                onAddKeyframe={() => addParamKeyframe(param)}
+                testId={`add-motion-graphic-${param.key}-keyframe-button`}
+              >
+                {field}
+              </AnimatedField>
+            ) : (
+              <div key={param.key}>{field}</div>
+            );
+          }
+          if (param.type === 'string') {
+            return (
+              <TextField
+                key={param.key}
+                label={label}
+                value={typeof currentValue === 'string' ? currentValue : String(param.defaultValue ?? '')}
+                disabled={selectedClipLocked}
+                testId={testId}
+                onCommit={(value) => commitParam(param, value)}
+              />
+            );
+          }
+          if (param.type === 'color') {
+            return (
+              <ColorField
+                key={param.key}
+                label={label}
+                value={typeof currentValue === 'string' ? currentValue : String(param.defaultValue ?? '#ffffff')}
+                disabled={selectedClipLocked}
+                testId={testId}
+                onCommit={(value) => commitParam(param, value)}
+              />
+            );
+          }
+          if (param.type === 'boolean') {
+            return (
+              <ToggleField
+                key={param.key}
+                label={label}
+                checked={typeof currentValue === 'boolean' ? currentValue : Boolean(param.defaultValue)}
+                disabled={selectedClipLocked}
+                testId={testId}
+                onCommit={(value) => commitParam(param, value)}
+              />
+            );
+          }
+          if (param.type === 'select') {
+            const value = typeof currentValue === 'string' ? currentValue : String(param.defaultValue ?? '');
+            return (
+              <label key={param.key} className="block text-xs font-medium text-slate-600">
+                {label}
+                <select
+                  className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60"
+                  value={value}
+                  disabled={selectedClipLocked}
+                  data-testid={testId}
+                  onChange={(event) => commitParam(param, event.target.value)}
+                >
+                  {(param.options ?? []).map((option) => (
+                  <option key={option} value={option}>
+                      {selectOptions[param.key]?.[option] ?? option}
+                  </option>
+                  ))}
+                </select>
+              </label>
+            );
+          }
+          const value = Array.isArray(currentValue) ? currentValue.join(', ') : Array.isArray(param.defaultValue) ? param.defaultValue.join(', ') : '';
+          return (
+            <TextField
+              key={param.key}
+              label={label}
+              value={value}
+              disabled={selectedClipLocked}
+              testId={testId}
+              onCommit={(nextValue) => commitParam(param, nextValue)}
+            />
+          );
+        })}
+      </div>
+    </Section>
+  );
+}
+
 function MasksEditor({
   masks,
   onAdd,
@@ -4274,20 +4457,30 @@ function EffectsEditor({
   );
 }
 
-function TextField({ label, value, onCommit, testId }: { label: string; value: string; onCommit(value: string): void; testId?: string }) {
+function formatMotionGraphicNumberValue(param: MotionGraphicParamDefinition, value: number): string {
+  if (param.max !== undefined && param.min === 0 && param.max <= 1.001) {
+    return `${Math.round(value * 100)}%`;
+  }
+  if ((param.step ?? 1) < 1) {
+    return value.toFixed(2);
+  }
+  return `${Math.round(value)}`;
+}
+
+function TextField({ label, value, onCommit, disabled, testId }: { label: string; value: string; onCommit(value: string): void; disabled?: boolean; testId?: string }) {
   return (
     <label className="block text-xs font-medium text-slate-600">
       {label}
-      <input className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink" defaultValue={value} data-testid={testId} onBlur={(event) => onCommit(event.target.value)} />
+      <input className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60" defaultValue={value} disabled={disabled} data-testid={testId} onBlur={(event) => onCommit(event.target.value)} />
     </label>
   );
 }
 
-function TextAreaField({ label, value, onCommit, testId }: { label: string; value: string; onCommit(value: string): void; testId?: string }) {
+function TextAreaField({ label, value, onCommit, disabled, testId }: { label: string; value: string; onCommit(value: string): void; disabled?: boolean; testId?: string }) {
   return (
     <label className="block text-xs font-medium text-slate-600">
       {label}
-      <textarea className="mt-1 min-h-20 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink" defaultValue={value} onBlur={(event) => onCommit(event.target.value)} data-testid={testId} />
+      <textarea className="mt-1 min-h-20 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60" defaultValue={value} disabled={disabled} onBlur={(event) => onCommit(event.target.value)} data-testid={testId} />
     </label>
   );
 }
@@ -4716,11 +4909,11 @@ function RangeNumberField({
   );
 }
 
-function ColorField({ label, value, onCommit, testId }: { label: string; value: string; onCommit(value: string): void; testId?: string }) {
+function ColorField({ label, value, onCommit, disabled, testId }: { label: string; value: string; onCommit(value: string): void; disabled?: boolean; testId?: string }) {
   return (
     <label className="flex items-center justify-between text-xs font-medium text-slate-600">
       {label}
-      <input className="h-8 w-12 rounded border border-line" type="color" value={value} onChange={(event) => onCommit(event.target.value)} data-testid={testId} />
+      <input className="h-8 w-12 rounded border border-line disabled:cursor-not-allowed disabled:opacity-60" type="color" value={value} disabled={disabled} onChange={(event) => onCommit(event.target.value)} data-testid={testId} />
     </label>
   );
 }
@@ -4969,7 +5162,7 @@ function formatInputColorSpaceLabel(colorSpace: InputColorSpace): string {
   return zhCN.inspector.inputColorSpaces[colorSpace];
 }
 
-function AnimatedField({ label, children, onAddKeyframe, testId }: { label: string; children: ReactNode; onAddKeyframe(): void; testId?: string }) {
+function AnimatedField({ label, children, onAddKeyframe, disabled, testId }: { label: string; children: ReactNode; onAddKeyframe(): void; disabled?: boolean; testId?: string }) {
   return (
     <div className="grid grid-cols-[1fr_auto] items-end gap-2">
       <div>
@@ -4980,6 +5173,7 @@ function AnimatedField({ label, children, onAddKeyframe, testId }: { label: stri
         className="mb-0.5 h-8 w-8 rounded-md border border-line bg-white text-xs font-semibold text-brand hover:bg-panel"
         type="button"
         title={zhCN.inspector.addKeyframeTitle(label)}
+        disabled={disabled}
         data-testid={testId ?? `add-${label.toLowerCase()}-keyframe-button`}
         onClick={onAddKeyframe}
       >

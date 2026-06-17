@@ -11,6 +11,7 @@ import { REC709_INPUT_COLOR_SPACE, normalizeInputColorSpace } from './color-log-
 import { normalizeClipContentAnalysis } from './content-analysis';
 import { DEFAULT_PROJECT_COLOR_PIPELINE, normalizeProjectColorPipeline } from './color-pipeline';
 import { getColorSpaceDisplayName, normalizeExportColorSpace, normalizeProjectWorkingColorSpace, type MediaColorProfile } from './export/color-management';
+import { normalizeMotionGraphic } from './motion-graphics';
 import { normalizeSpatialAudio } from './spatial-audio';
 import { normalizeClipPitchData } from './audio-pitch';
 import { normalizeDataSubtitleSource } from './subtitles/data-subtitle';
@@ -79,6 +80,7 @@ import type {
   MediaLabelColor,
   MediaMetadata,
   MotionTrackPoint,
+  MotionGraphicClip,
   MulticamAngle,
   MulticamSequence,
   MulticamSwitch,
@@ -181,6 +183,7 @@ export type {
   MediaLabelColor,
   MediaMetadata,
   MotionTrackPoint,
+  MotionGraphicClip,
   MulticamAngle,
   MulticamSequence,
   MulticamSwitch,
@@ -861,6 +864,17 @@ export function createAdjustmentClip(
   return {
     ...createBaseClip(input),
     type: 'adjustment'
+  };
+}
+
+export function createMotionGraphicClip(
+  input: Omit<MotionGraphicClip, 'id' | 'type' | 'transform' | 'speed' | 'colorCorrection' | 'motionGraphic'> &
+    Partial<Pick<MotionGraphicClip, 'id' | 'transform' | 'speed' | 'colorCorrection' | 'motionGraphic'>>
+): MotionGraphicClip {
+  return {
+    ...createBaseClip(input),
+    type: 'motion-graphic',
+    motionGraphic: normalizeMotionGraphic(input.motionGraphic, input.duration)
   };
 }
 
@@ -1643,6 +1657,7 @@ export function serializeLegacyProject(project: Project): {
           motionTrack: normalizeMotionTrack(clip.motionTrack, clip.duration),
           border: normalizeClipBorder(clip.border),
           multicam: clip.type === 'nested-sequence' ? normalizeMulticamSequence(clip.multicam, clip.duration) : undefined,
+          ...(clip.type === 'motion-graphic' ? { motionGraphic: normalizeMotionGraphic(clip.motionGraphic, clip.duration) } : {}),
           sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
           keyframes: cloneClipKeyframesLocal(clip.keyframes),
           pitchData: normalizeClipPitchData(clip.pitchData),

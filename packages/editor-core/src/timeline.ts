@@ -15,6 +15,7 @@ import {
 import type { Clip, ClipKeyframes, KeyframeProperty, Timeline, Track, Transition } from './model-types';
 import { cloneEffects } from './effects';
 import { cloneClipKeyframes, interpolateKeyframes, normalizeClipKeyframes } from './keyframes';
+import { normalizeMotionGraphic } from './motion-graphics';
 import { DEFAULT_SNAP_GRID, round, snap } from './time';
 
 const EPSILON = 0.000001;
@@ -54,7 +55,8 @@ export function splitClip<TClip extends Clip>(clip: TClip, splitTime: number): [
     motionTrack: normalizeMotionTrack(clip.motionTrack, leftDuration),
     sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
     keyframes: normalizeClipKeyframes(cloneClipKeyframes(clip.keyframes), leftDuration),
-    effects: cloneEffects(clip.effects)
+    effects: cloneEffects(clip.effects),
+    ...cloneMotionGraphicForDuration(clip, leftDuration)
   } as TClip;
   const right = {
     ...clip,
@@ -71,7 +73,8 @@ export function splitClip<TClip extends Clip>(clip: TClip, splitTime: number): [
     motionTrack: normalizeMotionTrack(clip.motionTrack, rightDuration),
     sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
     keyframes: shiftClipKeyframes(cloneClipKeyframes(clip.keyframes), leftDuration, rightDuration),
-    effects: cloneEffects(clip.effects)
+    effects: cloneEffects(clip.effects),
+    ...cloneMotionGraphicForDuration(clip, rightDuration)
   } as TClip;
 
   return [left, right];
@@ -101,7 +104,8 @@ export function trimClip<TClip extends Clip>(clip: TClip, newTrimStart: number, 
     motionTrack: normalizeMotionTrack(clip.motionTrack, duration),
     sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
     keyframes: normalizeClipKeyframes(cloneClipKeyframes(clip.keyframes), duration),
-    effects: cloneEffects(clip.effects)
+    effects: cloneEffects(clip.effects),
+    ...cloneMotionGraphicForDuration(clip, duration)
   } as TClip;
 }
 
@@ -118,7 +122,8 @@ export function moveClip<TClip extends Clip>(clip: TClip, newStart: number): TCl
     motionTrack: normalizeMotionTrack(clip.motionTrack, clip.duration),
     sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
     keyframes: cloneClipKeyframes(clip.keyframes),
-    effects: cloneEffects(clip.effects)
+    effects: cloneEffects(clip.effects),
+    ...cloneMotionGraphicForDuration(clip, clip.duration)
   } as TClip;
 }
 
@@ -311,8 +316,16 @@ export function setClipSpeed<TClip extends Clip>(clip: TClip, speed: number): TC
     motionTrack: normalizeMotionTrack(clip.motionTrack, duration),
     sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
     keyframes: normalizeClipKeyframes(cloneClipKeyframes(clip.keyframes), duration),
-    effects: cloneEffects(clip.effects)
+    effects: cloneEffects(clip.effects),
+    ...cloneMotionGraphicForDuration(clip, duration)
   } as TClip;
+}
+
+function cloneMotionGraphicForDuration<TClip extends Clip>(clip: TClip, duration: number): Partial<TClip> {
+  if (clip.type !== 'motion-graphic') {
+    return {};
+  }
+  return { motionGraphic: normalizeMotionGraphic(clip.motionGraphic, duration) } as unknown as Partial<TClip>;
 }
 
 export function calculateSpeedCurveSourceDuration(

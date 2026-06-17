@@ -7,6 +7,7 @@ import type { MediaColorProfile, ProjectWorkingColorSpace } from './export/color
 import type { ClipSpatialAudio } from './spatial-audio';
 import type { Effect } from './effects';
 import type { TimecodeFormat } from './time';
+import type { MotionGraphic } from './motion-graphics';
 
 export interface BeatMarker {
   id: string;
@@ -28,7 +29,7 @@ export type AssetType = 'video' | 'audio' | 'image';
 
 export type TrackType = 'video' | 'audio' | 'text' | 'subtitle';
 
-export type ClipType = 'video' | 'audio' | 'image' | 'text' | 'subtitle' | 'credits' | 'nested-sequence' | 'adjustment';
+export type ClipType = 'video' | 'audio' | 'image' | 'text' | 'subtitle' | 'credits' | 'nested-sequence' | 'adjustment' | 'motion-graphic';
 
 export type TransitionType = 'fade-black' | 'dissolve';
 
@@ -458,7 +459,7 @@ export interface TrackCompressor {
   makeupGain: number;
 }
 
-export type Clip = VideoClip | AudioClip | ImageClip | TextClip | SubtitleClip | CreditsClip | NestedSequenceClip | AdjustmentClip;
+export type Clip = VideoClip | AudioClip | ImageClip | TextClip | SubtitleClip | CreditsClip | NestedSequenceClip | AdjustmentClip | MotionGraphicClip;
 
 export type AudioChannelRoutingMode =
   | 'normal'
@@ -640,6 +641,11 @@ export interface NestedSequenceClip extends BaseClip {
 
 export interface AdjustmentClip extends BaseClip {
   type: 'adjustment';
+}
+
+export interface MotionGraphicClip extends BaseClip {
+  type: 'motion-graphic';
+  motionGraphic: MotionGraphic;
 }
 
 export interface MulticamSequence {

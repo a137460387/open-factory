@@ -10,6 +10,7 @@ export * from './color-match';
 export * from './effects';
 export * from './audio-visualization-themes';
 export * from './motion-blur';
+export * from './motion-graphics';
 export * from './timeline';
 export * from './timeline-heatmap';
 export * from './timeline-minimap';

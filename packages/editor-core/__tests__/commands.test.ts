@@ -6,6 +6,7 @@ import {
   AddEffectCommand,
   AddKeyframeCommand,
   AddMaskCommand,
+  AddMotionGraphicCommand,
   AddProjectAnnotationCommand,
   AddReviewAnnotationCommand,
   AddCollaborationNoteCommand,
@@ -97,7 +98,7 @@ import {
   findCompleteClipGroup,
   getReplaceMediaCompatibilityWarnings
 } from '../src';
-import { makeAccessor, makeAdjustmentClip, makeAudioClip, makeCreditsClip, makeProject, makeSubtitleClip, makeTextClip, makeTimeline, makeVideoClip } from './test-utils';
+import { makeAccessor, makeAdjustmentClip, makeAudioClip, makeCreditsClip, makeMotionGraphicClip, makeProject, makeSubtitleClip, makeTextClip, makeTimeline, makeVideoClip } from './test-utils';
 
 describe('timeline commands', () => {
   it('loads a project with undo and redo support', () => {
@@ -259,6 +260,23 @@ describe('timeline commands', () => {
 
     manager.undo();
     expect(accessor.current().tracks.find((item) => item.id === 'track-adjustment')?.clips).toHaveLength(0);
+  });
+
+  it('adds motion graphics as one undoable command', () => {
+    const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'clip-base', duration: 4 })]));
+    const manager = new CommandManager();
+    const track = createTrack({ id: 'track-motion-graphics', type: 'video', name: 'Motion Graphics', clips: [] });
+    const clip = makeMotionGraphicClip({ id: 'motion-countdown', trackId: 'track-motion-graphics', duration: 4 });
+
+    manager.execute(new AddMotionGraphicCommand(accessor, track, clip));
+    expect(accessor.current().tracks.at(-1)?.id).toBe('track-motion-graphics');
+    expect(accessor.current().tracks.at(-1)?.clips[0]).toMatchObject({ id: 'motion-countdown', type: 'motion-graphic' });
+
+    manager.undo();
+    expect(accessor.current().tracks.some((item) => item.id === 'track-motion-graphics')).toBe(false);
+
+    manager.redo();
+    expect(accessor.current().tracks.at(-1)?.clips[0].type).toBe('motion-graphic');
   });
 
   it('adds subtitle clips only to subtitle tracks with undo and redo', () => {

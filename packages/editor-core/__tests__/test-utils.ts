@@ -13,6 +13,8 @@ import {
   DEFAULT_SPATIAL_AUDIO,
   createTrack,
   createAdjustmentClip,
+  createMotionGraphicClip,
+  createDefaultMotionGraphic,
   normalizeChromaKey,
   normalizeClipPanoramaView,
   normalizeClipProjection,
@@ -205,6 +207,38 @@ export function makeAdjustmentClip(overrides: ClipOverrides<Extract<Clip, { type
     contentAnalysis: overrides.contentAnalysis,
     keyframes: overrides.keyframes,
     effects: overrides.effects
+  });
+}
+
+export function makeMotionGraphicClip(overrides: ClipOverrides<Extract<Clip, { type: 'motion-graphic' }>> = {}): Extract<Clip, { type: 'motion-graphic' }> {
+  return createMotionGraphicClip({
+    id: overrides.id ?? 'motion-graphic-1',
+    name: overrides.name ?? 'Motion Graphic',
+    trackId: overrides.trackId ?? 'track-motion-graphic',
+    start: overrides.start ?? 0,
+    duration: overrides.duration ?? 5,
+    trimStart: overrides.trimStart ?? 0,
+    trimEnd: overrides.trimEnd ?? 0,
+    speed: overrides.speed ?? DEFAULT_CLIP_SPEED,
+    colorCorrection: { ...DEFAULT_COLOR_CORRECTION, ...overrides.colorCorrection },
+    transform: { ...DEFAULT_TRANSFORM, ...overrides.transform },
+    chromaKey: normalizeChromaKey(overrides.chromaKey),
+    stabilization: normalizeStabilization(overrides.stabilization),
+    frameInterpolation: normalizeFrameInterpolation(overrides.frameInterpolation),
+    slowMotionMode: normalizeSlowMotionMode(overrides.slowMotionMode),
+    audioDenoise: normalizeAudioDenoise(overrides.audioDenoise),
+    audioChannelRouting: normalizeAudioChannelRouting(overrides.audioChannelRouting),
+    videoRestoration: normalizeVideoRestoration(overrides.videoRestoration),
+    qualityEnhancement: normalizeQualityEnhancement(overrides.qualityEnhancement),
+    masks: normalizeMasks(overrides.masks),
+    motionTrack: normalizeMotionTrack(overrides.motionTrack, overrides.duration ?? 5),
+    border: overrides.border,
+    sequenceFrameRate: normalizeSequenceFrameRate(overrides.sequenceFrameRate),
+    blendMode: normalizeClipBlendMode(overrides.blendMode),
+    contentAnalysis: overrides.contentAnalysis,
+    keyframes: overrides.keyframes,
+    effects: overrides.effects,
+    motionGraphic: overrides.motionGraphic ?? createDefaultMotionGraphic('countdown')
   });
 }
 

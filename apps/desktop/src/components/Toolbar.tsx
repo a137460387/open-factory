@@ -49,6 +49,7 @@ interface ToolbarProps {
   onOpenMediaPrecheck(): void;
   onOpenMediaOrganizer(): void;
   onOpenVideoStitchWizard(): void;
+  onAddMotionGraphic(): void;
   onOpenSyncCompare(): void;
   onOpenSceneDetection(): void;
   onOpenSceneReorder(): void;
@@ -663,6 +664,18 @@ export function Toolbar(props: ToolbarProps) {
               }}
             >
               <span>{t.videoStitchWizard}</span>
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-tools-motion-graphic-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onAddMotionGraphic();
+              }}
+            >
+              <span>{t.motionGraphic}</span>
+              <WandSparkles size={14} />
             </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
