@@ -35,6 +35,7 @@ import {
   normalizeCollaborationNote,
   normalizeCollaborationNotes,
   normalizeDetectedBpm,
+  normalizeClipSceneCuts,
   normalizeFrameInterpolation,
   normalizeMask,
   normalizeMasks,
@@ -124,6 +125,7 @@ import { normalizeClipContentAnalysis } from '../content-analysis';
 import { normalizeClipPitchData } from '../audio-pitch';
 import { normalizeDataSubtitleSource } from '../subtitles/data-subtitle';
 import { normalizeSpatialAudio, type ClipSpatialAudio } from '../spatial-audio';
+import { filterShortSceneCuts } from '../scene-cuts';
 import {
   addMediaFolderToProject,
   deleteMediaFolder,
@@ -653,9 +655,17 @@ function sliceClipForLocalRange<TClip extends Clip>(clip: TClip, range: LocalTim
     trimStart,
     trimEnd,
     transform: { ...clip.transform },
+    scenecuts: sliceClipSceneCuts(clip.scenecuts, range.start, pieceDuration),
     keyframes: sliceClipKeyframes(clip.keyframes, range.start, pieceDuration),
     effects: cloneEffects(clip.effects)
   } as TClip;
+}
+
+function sliceClipSceneCuts(cuts: number[] | undefined, offset: number, duration: number): number[] | undefined {
+  const localCuts = (cuts ?? [])
+    .filter((time) => time > offset + 0.000001 && time < offset + duration - 0.000001)
+    .map((time) => round(time - offset));
+  return normalizeClipSceneCuts(localCuts, duration);
 }
 
 function sliceClipKeyframes(keyframes: ClipKeyframes | undefined, offset: number, duration: number): ClipKeyframes | undefined {
@@ -3255,6 +3265,84 @@ export class SplitClipAtTimesCommand implements Command {
   }
 }
 
+export interface BatchSplitAtSceneCutItem {
+  clipId: string;
+  cuts?: number[];
+  minSceneSeconds?: number;
+}
+
+export class BatchSplitAtSceneCutsCommand implements Command {
+  readonly description = 'Split clips at scene cuts';
+  private before?: Timeline;
+  private after?: Timeline;
+
+  constructor(private readonly accessor: TimelineAccessor, private readonly items: BatchSplitAtSceneCutItem[]) {}
+
+  execute(): void {
+    const timeline = this.accessor.getTimeline();
+    this.before ??= timeline;
+    if (!this.after) {
+      let next = timeline;
+      let splitCount = 0;
+      for (const item of this.items) {
+        const clip = findClip(next, item.clipId);
+        const cuts = item.cuts ?? clip.scenecuts ?? [];
+        const splitTimes = filterShortSceneCuts(cuts, clip.duration, item.minSceneSeconds ?? 0);
+        if (splitTimes.length === 0) {
+          continue;
+        }
+        const ranges = buildSplitRanges(clip.duration, splitTimes);
+        if (ranges.length <= 1) {
+          continue;
+        }
+        next = replaceClip(next, { ...clip, scenecuts: splitTimes } as Clip);
+        next = replaceClipWithSlices(next, item.clipId, ranges, false);
+        splitCount += splitTimes.length;
+      }
+      if (splitCount === 0) {
+        throw new Error('No valid scene cuts inside clip bounds');
+      }
+      this.after = next;
+    }
+    this.accessor.setTimeline(this.after);
+  }
+
+  undo(): void {
+    if (!this.before) {
+      return;
+    }
+    this.accessor.setTimeline(this.before);
+  }
+}
+
+export class BatchAddMarkersCommand implements Command {
+  readonly description = 'Add timeline markers';
+  private before?: Timeline;
+  private markers?: TimelineMarker[];
+
+  constructor(private readonly accessor: TimelineAccessor, private readonly inputs: AddTimelineMarkerInput[]) {}
+
+  execute(): void {
+    const timeline = this.accessor.getTimeline();
+    this.before ??= timeline;
+    this.markers ??= this.inputs.map((input) => createTimelineMarker(input, getTimelineDuration(timeline)));
+    if (this.markers.length === 0) {
+      throw new Error('No timeline markers to add');
+    }
+    this.accessor.setTimeline({
+      ...timeline,
+      markers: sortMarkers([...(timeline.markers ?? []), ...this.markers])
+    });
+  }
+
+  undo(): void {
+    if (!this.before) {
+      return;
+    }
+    this.accessor.setTimeline(this.before);
+  }
+}
+
 export class RemoveSilenceCommand implements Command {
   readonly description = 'Remove silence';
   private before?: Timeline;
@@ -4122,10 +4210,12 @@ export class UpdateClipCommand implements Command {
     }
     const beatMarkers = this.patch.beatMarkers === undefined ? normalizeClipBeatMarkers(this.after.beatMarkers, this.after.duration) : normalizeClipBeatMarkers(this.patch.beatMarkers, this.after.duration);
     const detectedBpm = this.patch.detectedBpm === undefined ? normalizeDetectedBpm(this.after.detectedBpm) : normalizeDetectedBpm(this.patch.detectedBpm);
+    const scenecuts = this.patch.scenecuts === undefined ? normalizeClipSceneCuts(this.after.scenecuts, this.after.duration) : normalizeClipSceneCuts(this.patch.scenecuts, this.after.duration);
     this.after = {
       ...this.after,
       beatMarkers,
-      detectedBpm
+      detectedBpm,
+      scenecuts
     } as Clip;
     if ('style' in this.before || this.patch.style) {
       this.after = {

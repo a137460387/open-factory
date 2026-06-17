@@ -24,7 +24,9 @@ import {
   ApplyStyleCommand,
   BatchAlignSubtitleCommand,
   BatchAlignToBeatCommand,
+  BatchAddMarkersCommand,
   BatchShiftSubtitleCommand,
+  BatchSplitAtSceneCutsCommand,
   BatchUpdateKeyframeCommand,
   DEFAULT_COLOR_CORRECTION,
   type Command,
@@ -1461,6 +1463,57 @@ describe('timeline commands', () => {
 
     manager.undo();
     expect(accessor.current().tracks[0].clips).toEqual([makeVideoClip({ id: 'clip-scene', duration: 3 })]);
+  });
+
+  it('splits scene cut batches and restores clip count with one undo', () => {
+    const original = makeVideoClip({ id: 'clip-scene-batch', duration: 4, scenecuts: [1, 2.5, 3.7] });
+    const accessor = makeAccessor(makeTimeline([original]));
+    const manager = new CommandManager();
+
+    manager.execute(new BatchSplitAtSceneCutsCommand(accessor, [{ clipId: original.id, minSceneSeconds: 1 }]));
+
+    expect(accessor.current().tracks[0].clips.map((clip) => [clip.start, clip.duration])).toEqual([
+      [0, 1],
+      [1, 1.5],
+      [2.5, 1.5]
+    ]);
+    expect(accessor.current().tracks[0].clips.every((clip) => clip.scenecuts === undefined)).toBe(true);
+    manager.undo();
+    expect(accessor.current().tracks[0].clips).toEqual([original]);
+  });
+
+  it('adds scene markers as one undoable batch', () => {
+    const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'clip-marker-source', duration: 3 })]));
+    const manager = new CommandManager();
+
+    manager.execute(
+      new BatchAddMarkersCommand(accessor, [
+        { id: 'scene-marker-2', time: 2, label: '场景 2', color: '#f97316' },
+        { id: 'scene-marker-1', time: 1, label: '场景 1', color: '#f97316' }
+      ])
+    );
+
+    expect(accessor.current().markers?.map((marker) => marker.label)).toEqual(['场景 1', '场景 2']);
+    manager.undo();
+    expect(accessor.current().markers).toBeUndefined();
+  });
+
+  it('rejects empty scene batches and normalizes clip scene cut updates', () => {
+    const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'clip-update-scenes', duration: 3 })]));
+    const manager = new CommandManager();
+
+    expect(() => manager.execute(new BatchSplitAtSceneCutsCommand(accessor, []))).toThrow('No valid scene cuts');
+    expect(() => manager.execute(new BatchSplitAtSceneCutsCommand(accessor, [{ clipId: 'clip-update-scenes', cuts: [0, 3] }]))).toThrow('No valid scene cuts');
+    expect(() => manager.execute(new BatchAddMarkersCommand(accessor, []))).toThrow('No timeline markers');
+
+    manager.execute(new UpdateClipCommand(accessor, 'clip-update-scenes', { scenecuts: [2, Number.NaN, -1, 9, 2] }));
+    expect(accessor.current().tracks[0].clips[0].scenecuts).toEqual([0, 2, 3]);
+
+    manager.execute(new UpdateClipCommand(accessor, 'clip-update-scenes', { scenecuts: [] }));
+    expect(accessor.current().tracks[0].clips[0].scenecuts).toBeUndefined();
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips[0].scenecuts).toEqual([0, 2, 3]);
   });
 
   it('splits a clip at beat times and restores the whole edit with one undo', () => {

@@ -48,6 +48,15 @@ describe('audio volume envelope', () => {
     ]);
   });
 
+  it('builds virtual envelope endpoints when no volume keyframes exist', () => {
+    const clip = makeAudioClip({ duration: 3, volume: 0.4 });
+
+    expect(getVolumeEnvelopePoints(clip).map((point) => [point.id, point.time, point.value, point.persisted])).toEqual([
+      ['volume-envelope-start', 0, 0.4, false],
+      ['volume-envelope-end', 3, 0.4, false]
+    ]);
+  });
+
   it('keeps envelope values synchronized with inspector volume keyframes', () => {
     const clip = makeAudioClip({
       duration: 5,

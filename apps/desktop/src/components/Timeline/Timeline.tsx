@@ -6,9 +6,11 @@ import {
   AddProjectBookmarkCommand,
   AddTimelineNoteCommand,
   AddTimelineMarkerCommand,
+  BatchAddMarkersCommand,
   BatchAlignSubtitleCommand,
   BatchKeyframeEditCommand,
   BatchImportSubtitleCommand,
+  BatchSplitAtSceneCutsCommand,
   BatchUpdateKeyframeCommand,
   BatchUpdateTrackCommand,
   AddTrackCommand,
@@ -76,9 +78,14 @@ import {
   SplitClipAtTimesCommand,
   TrimClipCommand,
   UpdateProjectBeatMarkersCommand,
+  UpdateProjectBookmarksCommand,
   canMoveClipWithProtectedRanges,
   createId,
   createBeatMarker,
+  buildSceneMarkerInputs,
+  estimateSceneCutCountForThreshold,
+  filterShortSceneCuts,
+  getSceneDetectionAnalysisLimit,
   compareDialogueWithWhisper,
   createSubtitleClipsFromDialogues,
   createProtectedRange,
@@ -167,6 +174,7 @@ import { TITLE_TEMPLATE_DRAG_MIME, isTitleTemplateId } from '../../lib/titleTemp
 import {
   analyzeWaveform,
   convertLocalFileSrc,
+  cancelSceneDetection,
   detectSceneChanges,
   extractCoverFrames,
   generateGapFillMedia,
@@ -177,6 +185,7 @@ import {
   saveFileDialog,
   writeFile,
   type CoverFrameResult,
+  type SceneDetectProgressEvent,
   type WhisperProgressEvent
 } from '../../lib/tauri-bridge';
 import { commandManager, projectAccessor, timelineAccessor } from '../../store/commandManager';
@@ -254,7 +263,8 @@ export function Timeline({
   reduceMotion = false,
   bookmarkPanelOpen: controlledBookmarkPanelOpen,
   onBookmarkPanelOpenChange,
-  onConvertMediaFrameRate
+  onConvertMediaFrameRate,
+  sceneDetectionRequestId = 0
 }: {
   thumbnailTrackVisible?: boolean;
   minimapVisible?: boolean;
@@ -264,6 +274,7 @@ export function Timeline({
   bookmarkPanelOpen?: boolean;
   onBookmarkPanelOpenChange?(open: boolean): void;
   onConvertMediaFrameRate?(assetId: string): void;
+  sceneDetectionRequestId?: number;
 }) {
   const project = useEditorStore((state) => state.project);
   const selectedClipId = useEditorStore((state) => state.selectedClipId);
@@ -446,6 +457,17 @@ export function Timeline({
     return timelineNotes.filter((note) => note.text.toLowerCase().includes(query) || note.color.toLowerCase().includes(query));
   }, [timelineNoteSearch, timelineNotes]);
   const allClips = useMemo(() => project.timeline.tracks.flatMap((track) => track.clips), [project.timeline]);
+  const sceneCutOverlays = useMemo(
+    () =>
+      allClips.flatMap((clip) =>
+        (clip.scenecuts ?? []).map((time, index) => ({
+          id: `${clip.id}-${index}-${time}`,
+          clipId: clip.id,
+          time: round(clip.start + time)
+        }))
+      ),
+    [allClips]
+  );
   const clipGroups = useMemo(() => normalizeClipGroups(project.clipGroups, allClips.map((clip) => clip.id)), [allClips, project.clipGroups]);
   const clipGroupByClipId = useMemo(() => {
     const map = new Map<string, ClipGroup>();
@@ -577,6 +599,18 @@ export function Timeline({
     window.addEventListener('resize', syncScrollViewport);
     return () => window.removeEventListener('resize', syncScrollViewport);
   }, []);
+
+  useEffect(() => {
+    if (sceneDetectionRequestId <= 0) {
+      return;
+    }
+    const targetClipId = selectedClipId ?? selectedClipIds[0];
+    if (!targetClipId) {
+      showToast({ kind: 'warning', title: zhCN.timeline.sceneUnavailableTitle, message: zhCN.timeline.sceneUnavailableMessage });
+      return;
+    }
+    openSceneDetection(targetClipId);
+  }, [sceneDetectionRequestId]);
 
   useEffect(() => {
     if (!heatmap?.enabled) {
@@ -1842,16 +1876,7 @@ function addProjectBookmark(time = playheadTime): void {
     }
   }
 
-  function splitBySceneTimes(clipId: string, times: number[]): void {
-    try {
-      commandManager.execute(new SplitClipAtTimesCommand(timelineAccessor, clipId, times));
-      showToast({ kind: 'success', title: zhCN.timeline.sceneSplitTitle, message: zhCN.timeline.sceneSplitMessage(times.length) });
-    } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.sceneSplitFailedTitle, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
-    }
-  }
-
-  async function openSceneDetection(clipId: string): Promise<void> {
+  function openSceneDetection(clipId: string): void {
     const clip = findClip(clipId);
     const asset = getClipMediaAsset(clip);
     setClipMenu(undefined);
@@ -1860,29 +1885,154 @@ function addProjectBookmark(time = playheadTime): void {
       showToast({ kind: 'warning', title: zhCN.timeline.sceneUnavailableTitle, message: zhCN.timeline.sceneUnavailableMessage });
       return;
     }
-    setSceneDialog({ clip, progress: 0 });
+    setSceneDialog({
+      clip,
+      asset,
+      status: 'ready',
+      threshold: 10,
+      progress: 0,
+      scenecuts: clip.scenecuts ?? [],
+      filterShortScenes: true,
+      minSceneSeconds: 1,
+      splitAtCuts: true,
+      addMarkers: false,
+      syncChapters: false
+    });
+  }
+
+  async function startSceneDetection(): Promise<void> {
+    const current = sceneDialog;
+    if (!current || current.status === 'running') {
+      return;
+    }
+    const clip = findClip(current.clip.id);
+    const asset = getClipMediaAsset(clip);
+    if (clip.type !== 'video' || !asset) {
+      showToast({ kind: 'warning', title: zhCN.timeline.sceneUnavailableTitle, message: zhCN.timeline.sceneUnavailableMessage });
+      return;
+    }
+    const speed = getClipSpeed(clip);
+    const sourceStart = clip.trimStart;
+    const sourceEnd = sourceStart + clip.duration * speed;
+    const limit = getSceneDetectionAnalysisLimit(asset.duration || clip.duration);
+    const taskId = `scene-${clip.id}-${Date.now()}`;
+    setSceneDialog((dialog) =>
+      dialog?.clip.id === clip.id
+        ? {
+            ...dialog,
+            clip,
+            asset,
+            status: 'running',
+            progress: 0,
+            analyzedFrames: 0,
+            totalFrames: undefined,
+            taskId,
+            limited: limit.limited,
+            analyzedDuration: limit.analysisDuration
+          }
+        : dialog
+    );
     let unlisten: (() => void) | undefined;
     try {
-      unlisten = await listenBridge<{ progress: number }>('scene-detect-progress', (payload) => {
-        setSceneDialog((current) => (current?.clip.id === clip.id ? { ...current, progress: payload.progress } : current));
+      unlisten = await listenBridge<SceneDetectProgressEvent>('scene-detect-progress', (payload) => {
+        setSceneDialog((dialog) =>
+          dialog?.clip.id === clip.id && dialog.taskId === taskId
+            ? {
+                ...dialog,
+                progress: payload.progress,
+                analyzedFrames: payload.analyzedFrames ?? dialog.analyzedFrames,
+                totalFrames: payload.totalFrames ?? dialog.totalFrames
+              }
+            : dialog
+        );
       });
-      const speed = getClipSpeed(clip);
-      const sourceStart = clip.trimStart;
-      const sourceEnd = sourceStart + clip.duration * speed;
-      const result = await detectSceneChanges({ path: asset.path, threshold: 0.3, duration: asset.duration || clip.duration });
-      const splitTimes = result.sceneTimes
+      const result = await detectSceneChanges({
+        path: asset.path,
+        threshold: current.threshold,
+        duration: limit.analysisDuration,
+        taskId,
+        frameRate: project.settings.fps
+      });
+      const scenecuts = result.sceneTimes
         .filter((time) => time > sourceStart + 0.000001 && time < sourceEnd - 0.000001)
         .map((time) => round((time - sourceStart) / speed));
-      if (splitTimes.length === 0) {
+      commandManager.execute(new UpdateClipCommand(timelineAccessor, clip.id, { scenecuts }));
+      setSceneDialog((dialog) =>
+        dialog?.clip.id === clip.id
+          ? {
+              ...dialog,
+              clip: { ...clip, scenecuts },
+              status: 'complete',
+              progress: 1,
+              scenecuts,
+              taskId: undefined,
+              limited: result.limited ?? limit.limited,
+              analyzedDuration: result.analyzedDuration ?? limit.analysisDuration
+            }
+          : dialog
+      );
+      if (scenecuts.length === 0) {
         showToast({ kind: 'info', title: zhCN.timeline.noSceneCutsTitle });
+      }
+    } catch (error) {
+      if (error instanceof Error && /canceled/i.test(error.message)) {
+        setSceneDialog((dialog) => (dialog?.clip.id === clip.id ? { ...dialog, status: 'ready', progress: 0, taskId: undefined } : dialog));
         return;
       }
-      splitBySceneTimes(clip.id, splitTimes);
-    } catch (error) {
+      setSceneDialog((dialog) => (dialog?.clip.id === clip.id ? { ...dialog, status: 'ready', progress: 0, taskId: undefined } : dialog));
       showToast({ kind: 'error', title: zhCN.timeline.sceneDetectFailedTitle, message: error instanceof Error ? error.message : zhCN.timeline.sceneDetectFailedMessage });
     } finally {
       unlisten?.();
+    }
+  }
+
+  async function cancelCurrentSceneDetection(): Promise<void> {
+    const taskId = sceneDialog?.taskId;
+    if (!taskId) {
       setSceneDialog(undefined);
+      return;
+    }
+    try {
+      await cancelSceneDetection(taskId);
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.sceneCancelFailedTitle, message: error instanceof Error ? error.message : zhCN.timeline.sceneDetectFailedMessage });
+    } finally {
+      setSceneDialog((dialog) => (dialog?.taskId === taskId ? { ...dialog, status: 'ready', progress: 0, taskId: undefined } : dialog));
+    }
+  }
+
+  function applySceneDetectionResult(): void {
+    const current = sceneDialog;
+    if (!current || current.status === 'running') {
+      return;
+    }
+    const filteredCuts = current.filterShortScenes
+      ? filterShortSceneCuts(current.scenecuts, current.clip.duration, current.minSceneSeconds)
+      : filterShortSceneCuts(current.scenecuts, current.clip.duration, 0);
+    if (filteredCuts.length === 0) {
+      showToast({ kind: 'info', title: zhCN.timeline.noSceneCutsTitle });
+      return;
+    }
+    try {
+      if (current.addMarkers) {
+        const markers = buildSceneMarkerInputs(filteredCuts, current.clip.start, { idPrefix: `scene-${current.clip.id}` });
+        commandManager.execute(new BatchAddMarkersCommand(timelineAccessor, markers));
+      }
+      if (current.syncChapters) {
+        const chapters = buildSceneMarkerInputs(filteredCuts, current.clip.start, { idPrefix: `scene-chapter-${current.clip.id}` }).map((marker) => ({
+          id: marker.id ?? createId('bookmark'),
+          time: marker.time,
+          note: marker.label
+        }));
+        commandManager.execute(new UpdateProjectBookmarksCommand(projectAccessor, [...(project.bookmarks ?? []), ...chapters]));
+      }
+      if (current.splitAtCuts) {
+        commandManager.execute(new BatchSplitAtSceneCutsCommand(timelineAccessor, [{ clipId: current.clip.id, cuts: filteredCuts, minSceneSeconds: 0 }]));
+      }
+      showToast({ kind: 'success', title: zhCN.timeline.sceneSplitTitle, message: zhCN.timeline.sceneApplyMessage(filteredCuts.length) });
+      setSceneDialog(undefined);
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.timeline.sceneSplitFailedTitle, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
     }
   }
 
@@ -2771,6 +2921,14 @@ function addProjectBookmark(time = playheadTime): void {
                 onRemove={removeTimelineMarker}
               />
             ))}
+            {sceneCutOverlays.map((cut) => (
+              <SceneCutOverlay
+                key={cut.id}
+                cut={cut}
+                left={LABEL_WIDTH + cut.time * zoom}
+                onSeek={setPlayheadTime}
+              />
+            ))}
             {(project.bookmarks ?? []).map((bookmark) => (
               <TimelineBookmarkOverlay key={bookmark.id} bookmark={bookmark} left={LABEL_WIDTH + bookmark.time * zoom} onSeek={setPlayheadTime} onRemove={removeProjectBookmark} />
             ))}
@@ -2887,7 +3045,16 @@ function addProjectBookmark(time = playheadTime): void {
           onApply={(ranges) => applySilenceRemoval(silenceDialog.clip.id, ranges)}
         />
       ) : null}
-      {sceneDialog ? <SceneDetectionDialog progress={sceneDialog.progress} /> : null}
+      {sceneDialog ? (
+        <SceneDetectionDialog
+          state={sceneDialog}
+          onChange={setSceneDialog}
+          onDetect={() => void startSceneDetection()}
+          onCancelDetect={() => void cancelCurrentSceneDetection()}
+          onApply={applySceneDetectionResult}
+          onClose={() => setSceneDialog(undefined)}
+        />
+      ) : null}
       {coverFrameDialog ? (
         <CoverFramePickerDialog
           state={coverFrameDialog}
@@ -3030,7 +3197,21 @@ interface SilenceDialogState {
 
 interface SceneDialogState {
   clip: Clip;
+  asset: MediaAsset;
+  status: 'ready' | 'running' | 'complete';
+  threshold: number;
   progress: number;
+  analyzedFrames?: number;
+  totalFrames?: number;
+  scenecuts: number[];
+  filterShortScenes: boolean;
+  minSceneSeconds: number;
+  splitAtCuts: boolean;
+  addMarkers: boolean;
+  syncChapters: boolean;
+  taskId?: string;
+  limited?: boolean;
+  analyzedDuration?: number;
 }
 
 interface WhisperDialogState {
@@ -3749,6 +3930,35 @@ function TimelineMarkerOverlay({
   );
 }
 
+function SceneCutOverlay({
+  cut,
+  left,
+  onSeek
+}: {
+  cut: { id: string; clipId: string; time: number };
+  left: number;
+  onSeek(time: number): void;
+}) {
+  return (
+    <button
+      className="absolute bottom-0 top-0 z-30 w-2 -translate-x-1/2 bg-transparent"
+      style={{ left }}
+      type="button"
+      title={zhCN.timeline.sceneCutMarkerTitle(cut.time)}
+      data-testid={`timeline-scenecut-${cut.id}`}
+      data-clip-id={cut.clipId}
+      onClick={(event) => {
+        event.stopPropagation();
+        onSeek(cut.time);
+      }}
+    >
+      <span className="absolute bottom-0 top-0 left-1/2 w-0.5 -translate-x-1/2 bg-orange-500/80" />
+      <span className="absolute left-1/2 top-0 h-3 w-3 -translate-x-1/2 rounded-sm border border-white bg-orange-500 shadow-sm" />
+      <span className="sr-only">{zhCN.timeline.sceneCutMarkerTitle(cut.time)}</span>
+    </button>
+  );
+}
+
 function BeatMarkerOverlay({
   marker,
   left,
@@ -4405,18 +4615,128 @@ function SilenceDetectionDialog({
   );
 }
 
-function SceneDetectionDialog({ progress }: { progress: number }) {
+function SceneDetectionDialog({
+  state,
+  onChange,
+  onDetect,
+  onCancelDetect,
+  onApply,
+  onClose
+}: {
+  state: SceneDialogState;
+  onChange(state: SceneDialogState): void;
+  onDetect(): void;
+  onCancelDetect(): void;
+  onApply(): void;
+  onClose(): void;
+}) {
+  const estimatedCount = estimateSceneCutCountForThreshold(state.scenecuts, state.threshold, state.clip.duration);
+  const filteredCuts = state.filterShortScenes ? filterShortSceneCuts(state.scenecuts, state.clip.duration, state.minSceneSeconds) : filterShortSceneCuts(state.scenecuts, state.clip.duration, 0);
+  const progressText =
+    state.totalFrames && state.totalFrames > 0
+      ? zhCN.timeline.sceneProgressFrames(state.analyzedFrames ?? 0, state.totalFrames)
+      : zhCN.timeline.sceneProgressPercent(state.progress);
+  const canApply = state.status === 'complete' && filteredCuts.length > 0 && (state.splitAtCuts || state.addMarkers || state.syncChapters);
+  const running = state.status === 'running';
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" data-testid="scene-detect-dialog">
-      <section className="w-full max-w-sm rounded-md border border-line bg-white shadow-soft">
-        <div className="border-b border-line px-4 py-3">
-          <h2 className="text-sm font-semibold">{zhCN.timeline.sceneDialogTitle}</h2>
-        </div>
-        <div className="px-4 py-5">
-          <div className="mb-2 text-sm text-slate-600">{zhCN.timeline.sceneScanning}</div>
-          <div className="h-2 overflow-hidden rounded-full bg-slate-200">
-            <div className="h-full bg-brand transition-all" style={{ width: `${Math.round(Math.max(0, Math.min(1, progress)) * 100)}%` }} />
+      <section className="w-full max-w-lg rounded-md border border-line bg-white shadow-soft">
+        <div className="flex items-start justify-between gap-3 border-b border-line px-4 py-3">
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold">{zhCN.timeline.sceneDialogTitle}</h2>
+            <div className="mt-1 truncate text-xs text-slate-500">{state.clip.name}</div>
           </div>
+          <button className="rounded-md border border-line px-3 py-1.5 text-xs font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50" type="button" disabled={running} onClick={onClose} data-testid="scene-detect-close-button">
+            {zhCN.common.close}
+          </button>
+        </div>
+        <div className="space-y-4 px-4 py-4">
+          <label className="block text-xs font-medium text-slate-600">
+            <span className="flex items-center justify-between gap-2">
+              <span>{zhCN.timeline.sceneThreshold}</span>
+              <span className="tabular-nums">{Math.round(state.threshold)}</span>
+            </span>
+            <input
+              className="mt-2 w-full accent-brand"
+              type="range"
+              min={0}
+              max={100}
+              step={1}
+              value={state.threshold}
+              disabled={running}
+              data-testid="scene-threshold-input"
+              onChange={(event) => onChange({ ...state, threshold: Number(event.target.value) })}
+            />
+          </label>
+          <div className="rounded-md border border-line bg-panel px-3 py-2 text-xs text-slate-600" data-testid="scene-estimate">
+            {zhCN.timeline.sceneEstimate(estimatedCount)}
+          </div>
+          {running ? (
+            <div className="rounded-md border border-line bg-white p-3" data-testid="scene-progress">
+              <div className="mb-2 flex items-center justify-between gap-2 text-xs text-slate-600">
+                <span>{zhCN.timeline.sceneScanning}</span>
+                <span className="tabular-nums">{progressText}</span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+                <div className="h-full bg-brand transition-all" style={{ width: `${Math.round(Math.max(0, Math.min(1, state.progress)) * 100)}%` }} />
+              </div>
+            </div>
+          ) : null}
+          {state.limited ? (
+            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800" data-testid="scene-limit-warning">
+              {zhCN.timeline.sceneAnalysisLimited}
+            </div>
+          ) : null}
+          {state.status === 'complete' ? (
+            <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-medium text-emerald-800" data-testid="scene-result-summary">
+              {zhCN.timeline.sceneDetectedCount(state.scenecuts.length, filteredCuts.length)}
+            </div>
+          ) : null}
+          <div className="grid gap-3 rounded-md border border-line bg-white p-3 text-sm text-slate-700">
+            <label className="flex items-center justify-between gap-3">
+              <span>{zhCN.timeline.sceneFilterShort}</span>
+              <input type="checkbox" checked={state.filterShortScenes} disabled={running} data-testid="scene-filter-short-checkbox" onChange={(event) => onChange({ ...state, filterShortScenes: event.target.checked })} />
+            </label>
+            <label className="flex items-center justify-between gap-3 text-xs text-slate-600">
+              <span>{zhCN.timeline.sceneMinDuration}</span>
+              <input
+                className="h-8 w-20 rounded-md border border-line px-2 text-right tabular-nums"
+                type="number"
+                min={0}
+                step={0.1}
+                value={state.minSceneSeconds}
+                disabled={running || !state.filterShortScenes}
+                data-testid="scene-min-duration-input"
+                onChange={(event) => onChange({ ...state, minSceneSeconds: Math.max(0, Number(event.target.value)) })}
+              />
+            </label>
+            <label className="flex items-center justify-between gap-3">
+              <span>{zhCN.timeline.sceneSplitAtCuts}</span>
+              <input type="checkbox" checked={state.splitAtCuts} disabled={running} data-testid="scene-split-checkbox" onChange={(event) => onChange({ ...state, splitAtCuts: event.target.checked })} />
+            </label>
+            <label className="flex items-center justify-between gap-3">
+              <span>{zhCN.timeline.sceneAddMarkers}</span>
+              <input type="checkbox" checked={state.addMarkers} disabled={running} data-testid="scene-marker-checkbox" onChange={(event) => onChange({ ...state, addMarkers: event.target.checked })} />
+            </label>
+            <label className="flex items-center justify-between gap-3">
+              <span>{zhCN.timeline.sceneSyncChapters}</span>
+              <input type="checkbox" checked={state.syncChapters} disabled={running} data-testid="scene-chapter-checkbox" onChange={(event) => onChange({ ...state, syncChapters: event.target.checked })} />
+            </label>
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 border-t border-line px-4 py-3">
+          {running ? (
+            <button className="rounded-md border border-line px-3 py-2 text-sm font-medium hover:bg-panel" type="button" data-testid="scene-cancel-button" onClick={onCancelDetect}>
+              {zhCN.common.cancel}
+            </button>
+          ) : (
+            <button className="rounded-md border border-line px-3 py-2 text-sm font-medium hover:bg-panel" type="button" data-testid="scene-detect-button" onClick={onDetect}>
+              {state.status === 'complete' ? zhCN.timeline.sceneDetectAgain : zhCN.timeline.startSceneDetect}
+            </button>
+          )}
+          <button className="rounded-md bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-[#176858] disabled:cursor-not-allowed disabled:opacity-50" type="button" disabled={!canApply} data-testid="scene-apply-button" onClick={onApply}>
+            {zhCN.timeline.sceneApply}
+          </button>
         </div>
       </section>
     </div>

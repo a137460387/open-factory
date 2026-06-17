@@ -673,6 +673,25 @@ describe('project schema migration', () => {
     expect(legacyClip.detectedBpm).toBeUndefined();
   });
 
+  it('serializes and migrates clip scene cuts with legacy fallback', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips[0] = makeVideoClip({
+      id: 'clip-scenes',
+      duration: 3,
+      scenecuts: [2, Number.NaN, -1, 99, 2]
+    });
+
+    const file = serializeProject(project);
+    const clip = file.project.timeline.tracks[0].clips[0];
+    const migratedClip = migrateProjectFile(file).project.timeline.tracks[0].clips[0];
+
+    expect(clip.scenecuts).toEqual([0, 2, 3]);
+    expect(migratedClip.scenecuts).toEqual([0, 2, 3]);
+
+    delete (clip as Partial<typeof clip>).scenecuts;
+    expect(migrateProjectFile(file).project.timeline.tracks[0].clips[0].scenecuts).toBeUndefined();
+  });
+
   it('backfills missing project annotations during migration', () => {
     const file = serializeProject(makeProject());
     delete (file.project as Partial<typeof file.project>).annotations;

@@ -20,6 +20,7 @@ import { normalizeCreditsRollSpeed, normalizeCreditsRows, normalizeCreditsStyle 
 import { normalizeTimelineLabelColor } from './timeline-color-labels';
 import { normalizeProjectFps, normalizeTimecodeFormat, round } from './time';
 import { normalizeMediaVersions } from './media-versions';
+import { normalizeSceneCutTimes } from './scene-cuts';
 import type {
   AdjustmentClip,
   AssetType,
@@ -545,6 +546,10 @@ export function normalizeDetectedBpm(bpm: number | undefined): number | undefine
   return round(Math.min(400, Math.max(1, bpm)));
 }
 
+export function normalizeClipSceneCuts(cuts: number[] | undefined, maxTime?: number): number[] | undefined {
+  return normalizeSceneCutTimes(cuts, maxTime);
+}
+
 export function createDefaultTimeline(): Timeline {
   return {
     markers: [],
@@ -762,6 +767,7 @@ export function createBaseClip(
 ): BaseClip {
   const beatMarkers = normalizeClipBeatMarkers(input.beatMarkers, input.duration);
   const detectedBpm = normalizeDetectedBpm(input.detectedBpm);
+  const scenecuts = normalizeClipSceneCuts(input.scenecuts, input.duration);
   return {
     id: input.id ?? createId('clip'),
     name: input.name,
@@ -794,7 +800,8 @@ export function createBaseClip(
     contentAnalysis: normalizeClipContentAnalysis(input.contentAnalysis),
     pitchData: normalizeClipPitchData(input.pitchData),
     ...(beatMarkers ? { beatMarkers } : {}),
-    ...(detectedBpm !== undefined ? { detectedBpm } : {})
+    ...(detectedBpm !== undefined ? { detectedBpm } : {}),
+    ...(scenecuts ? { scenecuts } : {})
   };
 }
 

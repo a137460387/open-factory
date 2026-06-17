@@ -82,6 +82,7 @@ export function makeVideoClip(overrides: ClipOverrides<Extract<Clip, { type: 'vi
     pitchData: overrides.pitchData,
     beatMarkers: overrides.beatMarkers,
     detectedBpm: overrides.detectedBpm,
+    scenecuts: overrides.scenecuts,
     keyframes: overrides.keyframes,
     effects: overrides.effects,
     volume: overrides.volume ?? 1,
@@ -126,6 +127,7 @@ export function makeAudioClip(overrides: ClipOverrides<Extract<Clip, { type: 'au
     pitchData: overrides.pitchData,
     beatMarkers: overrides.beatMarkers,
     detectedBpm: overrides.detectedBpm,
+    scenecuts: overrides.scenecuts,
     keyframes: overrides.keyframes,
     effects: overrides.effects,
     volume: overrides.volume ?? 1,
@@ -168,6 +170,7 @@ export function makeImageClip(overrides: ClipOverrides<Extract<Clip, { type: 'im
     sequenceFrameRate: normalizeSequenceFrameRate(overrides.sequenceFrameRate),
     blendMode: normalizeClipBlendMode(overrides.blendMode),
     contentAnalysis: overrides.contentAnalysis,
+    scenecuts: overrides.scenecuts,
     keyframes: overrides.keyframes,
     effects: overrides.effects,
     kenBurns: overrides.kenBurns

@@ -528,6 +528,7 @@ export interface BaseClip {
   pitchData?: ClipPitchDataPoint[];
   beatMarkers?: BeatMarker[];
   detectedBpm?: number;
+  scenecuts?: number[];
 }
 
 export interface ClipAudioDenoise {

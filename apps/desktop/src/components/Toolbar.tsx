@@ -49,6 +49,7 @@ interface ToolbarProps {
   onOpenMediaPrecheck(): void;
   onOpenVideoStitchWizard(): void;
   onOpenSyncCompare(): void;
+  onOpenSceneDetection(): void;
   onOpenSceneReorder(): void;
   onOpenStyleTransfer(): void;
   onOpenCollaborationNotes(): void;
@@ -84,6 +85,7 @@ interface ToolbarProps {
   canApplyPiPLayout: boolean;
   canApplySplitLayout: boolean;
   canOpenSyncCompare: boolean;
+  canOpenSceneDetection: boolean;
   canOpenSceneReorder: boolean;
   pipLayoutPosition: PiPLayoutPosition;
   onPiPLayoutPositionChange(position: PiPLayoutPosition): void;
@@ -674,6 +676,19 @@ export function Toolbar(props: ToolbarProps) {
             >
               <span>{t.sceneReorder}</span>
               <WandSparkles size={14} />
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+              type="button"
+              disabled={!props.canOpenSceneDetection}
+              data-testid="toolbar-tools-scene-detection-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onOpenSceneDetection();
+              }}
+            >
+              <span>{t.sceneDetection}</span>
+              <Scissors size={14} />
             </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"

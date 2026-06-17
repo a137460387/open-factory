@@ -389,6 +389,7 @@ export function EditorShell() {
   const [beatSyncOpen, setBeatSyncOpen] = useState(false);
   const [beatSyncSpeedEnabled, setBeatSyncSpeedEnabled] = useState(false);
   const [beatSyncManualBpm, setBeatSyncManualBpm] = useState('');
+  const [sceneDetectionRequestId, setSceneDetectionRequestId] = useState(0);
   const [smartRoughCutOpen, setSmartRoughCutOpen] = useState(false);
   const [historyPanelOpen, setHistoryPanelOpen] = useState(false);
   const [projectDocumentationOpen, setProjectDocumentationOpen] = useState(false);
@@ -516,6 +517,7 @@ export function EditorShell() {
   const canApplySplitLayout = selectedSplitLayoutClips.length >= 2 && selectedSplitLayoutClips.length <= 4;
   const syncCompareClipRefs = useMemo(() => findSyncCompareClipRefs(project.timeline, selectedClipIds), [project.timeline, selectedClipIds]);
   const canOpenSyncCompare = syncCompareClipRefs.length === 2;
+  const canOpenSceneDetection = Boolean(selectedClip && selectedClipMedia && selectedClip.type === 'video');
   const canOpenSceneReorder = useMemo(() => selectedClips.filter(isSceneReorderClip).length >= 2, [selectedClips]);
   const contentAnalysisTargets = useMemo(() => collectContentAnalysisTargets(project), [project]);
   const mediaContentAnalysis = useMemo(() => summarizeContentAnalysisByMedia(contentAnalysisTargets), [contentAnalysisTargets]);
@@ -3196,6 +3198,7 @@ export function EditorShell() {
           onOpenMediaPrecheck={() => setMediaPrecheckOpen(true)}
           onOpenVideoStitchWizard={() => setVideoStitchWizardOpen(true)}
           onOpenSyncCompare={openSyncCompare}
+          onOpenSceneDetection={() => setSceneDetectionRequestId((id) => id + 1)}
           onOpenSceneReorder={() => setSceneReorderOpen(true)}
           onOpenStyleTransfer={() => setStyleTransferOpen(true)}
           onOpenCollaborationNotes={() => setCollaborationNotesOpen(true)}
@@ -3236,6 +3239,7 @@ export function EditorShell() {
           canApplyPiPLayout={canApplyPiPLayout}
           canApplySplitLayout={canApplySplitLayout}
           canOpenSyncCompare={canOpenSyncCompare}
+          canOpenSceneDetection={canOpenSceneDetection}
           canOpenSceneReorder={canOpenSceneReorder}
           pipLayoutPosition={pipLayoutPosition}
           onPiPLayoutPositionChange={setPiPLayoutPosition}
@@ -3491,6 +3495,7 @@ export function EditorShell() {
                   bookmarkPanelOpen={layoutSettings.panels.bookmarks}
                   onBookmarkPanelOpenChange={(bookmarks) => persistPanelVisibilityPatch({ bookmarks })}
                   onConvertMediaFrameRate={convertVfrMediaToCfr}
+                  sceneDetectionRequestId={sceneDetectionRequestId}
                 />
               )}
             </ErrorBoundary>

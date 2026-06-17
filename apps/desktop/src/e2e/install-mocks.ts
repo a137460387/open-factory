@@ -853,7 +853,15 @@ const mocks: TauriMocks = {
     cache.set(plan.outputPath.replace(`${appDataDir}/`, ''), JSON.stringify({ proxyPath: plan.outputPath }));
     return { assetId: plan.assetId, proxyPath: plan.outputPath, durationMs: 10 };
   },
-  detectSceneChanges: () => ({ sceneTimes: mockSceneTimes }),
+  detectSceneChanges: async (request) => {
+    const frameRate = request.frameRate ?? 30;
+    const totalFrames = request.duration ? Math.ceil(request.duration * frameRate) : undefined;
+    emit('scene-detect-progress', { progress: 0.35, ptsTime: request.duration ? request.duration * 0.35 : undefined, analyzedFrames: totalFrames ? Math.round(totalFrames * 0.35) : undefined, totalFrames });
+    await wait(10);
+    emit('scene-detect-progress', { progress: 1, ptsTime: request.duration, analyzedFrames: totalFrames, totalFrames });
+    return { sceneTimes: mockSceneTimes, limited: false, analyzedDuration: request.duration ?? 0 };
+  },
+  cancelSceneDetection: () => undefined,
   runWhisper: async ({ clipId }) => {
     emit('whisper-progress', { clipId, progress: 0.35, progressPct: 35 });
     await wait(10);

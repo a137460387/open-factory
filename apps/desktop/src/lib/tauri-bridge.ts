@@ -488,10 +488,21 @@ export interface SceneDetectRequest {
   path: string;
   threshold?: number;
   duration?: number;
+  taskId?: string;
+  frameRate?: number;
 }
 
 export interface SceneDetectionResult {
   sceneTimes: number[];
+  limited?: boolean;
+  analyzedDuration?: number;
+}
+
+export interface SceneDetectProgressEvent {
+  progress: number;
+  ptsTime?: number | null;
+  analyzedFrames?: number | null;
+  totalFrames?: number | null;
 }
 
 export interface WhisperRequest {
@@ -680,6 +691,7 @@ export type TauriMocks = Partial<{
   detectSilence(path: string, thresholdDb: number, minGapMs: number): Promise<NativeSilenceRange[]> | NativeSilenceRange[];
   generateProxy(plan: ProxyPlan): Promise<ProxyResult> | ProxyResult;
   detectSceneChanges(request: SceneDetectRequest): Promise<SceneDetectionResult> | SceneDetectionResult;
+  cancelSceneDetection(taskId: string): Promise<void> | void;
   runWhisper(request: WhisperRequest): Promise<WhisperResult> | WhisperResult;
   runDemucs(request: DemucsRequest): Promise<DemucsResult> | DemucsResult;
   cancelDemucs(clipId: string): Promise<void> | void;
@@ -1027,6 +1039,14 @@ export async function detectSceneChanges(request: SceneDetectRequest): Promise<S
     return mock(request);
   }
   return invoke<SceneDetectionResult>('detect_scene_changes', { request });
+}
+
+export async function cancelSceneDetection(taskId: string): Promise<void> {
+  const mock = getTauriMocks()?.cancelSceneDetection;
+  if (mock) {
+    return mock(taskId);
+  }
+  return invoke<void>('cancel_scene_detection', { taskId });
 }
 
 export async function runWhisper(request: WhisperRequest): Promise<WhisperResult> {

@@ -40,4 +40,16 @@ describe('frame search history', () => {
       { type: 'marker', query: 'Beat', label: 'Beat', time: 0, selectedClipIds: ['clip-a'] }
     ]);
   });
+
+  it('falls back to sanitized history when appending invalid entries', () => {
+    const history = appendFrameSearchHistoryEntry(
+      [{ type: 'clip', query: '  Interview  ', label: '  Interview A  ', time: 3, createdAt: ' 2026-06-17T00:00:00.000Z ' }],
+      { type: 'bad', query: 'x', label: 'x', time: 1 } as never,
+      2
+    );
+
+    expect(history).toEqual([{ type: 'clip', query: 'Interview', label: 'Interview A', time: 3, createdAt: '2026-06-17T00:00:00.000Z' }]);
+    expect(sanitizeFrameSearchHistory('bad input')).toEqual([]);
+    expect(sanitizeFrameSearchHistory([null, 42])).toEqual([]);
+  });
 });

@@ -114,6 +114,7 @@ pub fn run() {
             commands::preview_window::set_preview_window_resolution_scale,
             commands::proxy::generate_proxy,
             commands::scene::detect_scene_changes,
+            commands::scene::cancel_scene_detection,
             commands::secrets::read_translation_api_key,
             commands::secrets::write_translation_api_key,
             commands::share::create_share_package,
