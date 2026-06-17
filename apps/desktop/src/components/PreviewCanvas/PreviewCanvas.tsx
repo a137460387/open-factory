@@ -1,14 +1,17 @@
 import { ArrowUpRight, BarChart3, Blend, Columns2, FileDown, GitCompareArrows, MousePointer2, Pause, Pipette, Play, RectangleHorizontal, Rows2, Type as TypeIcon } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode, type WheelEvent as ReactWheelEvent } from 'react';
 import {
-  CutMulticamClipCommand,
+  RecordAngleCutCommand,
+  TrimMulticamSwitchCommand,
   UpdateClipCommand,
   UpdateMaskCommand,
   buildClipTransformBox,
+  buildMulticamSwitchHistory,
   buildTimelineRenderFrameKey,
   buildTimelineRenderFrameRequests,
   closePathPoints,
   diffTimelineSnapshots,
+  findFrequentMulticamSwitchWarnings,
   getActiveMulticamAngle,
   getRenderableTracks,
   getTimelineRenderInvalidationRanges,
@@ -40,9 +43,11 @@ import {
   type Sequence,
   type FrameJumpParseError,
   type FrameSearchHistoryEntry,
+  type MulticamSwitchHistoryEntry,
   type Transform,
   type Timeline
 } from '@open-factory/editor-core';
+import { isEditableKeyboardTarget } from '../../accessibility/keyboard-navigation';
 import {
   buildChromaKeySamplePatch,
   calculatePreviewPixelCoordinates,
@@ -126,6 +131,7 @@ export function PreviewCanvas({
   const originalRendererRef = useRef(new PreviewRenderer());
   const previousTimelineRef = useRef<Timeline | undefined>();
   const scopeFrameCounterRef = useRef(0);
+  const liveCutSessionRef = useRef<{ clipId: string; command: RecordAngleCutCommand } | null>(null);
   const project = useEditorStore((state) => state.project);
   const projectPath = useEditorStore((state) => state.projectPath);
   const previewTimeline = useEditorStore((state) => state.previewTimeline);
@@ -162,6 +168,7 @@ export function PreviewCanvas({
   const [frameSearchError, setFrameSearchError] = useState<string>();
   const [frameSearchHistory, setFrameSearchHistory] = useState<FrameSearchHistoryEntry[]>([]);
   const [adaptivePreviewState, setAdaptivePreviewState] = useState(DEFAULT_PREVIEW_ADAPTIVE_QUALITY_STATE);
+  const [multicamLiveMode, setMulticamLiveMode] = useState(false);
   const prerenderCenter = Math.round(playheadTime * 2) / 2;
   const fps = project.settings.fps || 30;
   const snapshotCompareEnabled = Boolean(snapshotCompareProject);
@@ -176,6 +183,42 @@ export function PreviewCanvas({
     () => (selectedMulticamClip ? project.sequences.find((sequence) => sequence.id === selectedMulticamClip.sequenceId) : undefined),
     [project.sequences, selectedMulticamClip]
   );
+  const recordMulticamAngleCut = (angleId: string) => {
+    if (!selectedMulticamClip) {
+      return;
+    }
+    try {
+      const existingSession = liveCutSessionRef.current;
+      if (multicamLiveMode && existingSession?.clipId === selectedMulticamClip.id) {
+        existingSession.command.record(playheadTime, angleId);
+      } else {
+        const command = new RecordAngleCutCommand(projectAccessor, selectedMulticamClip.id, [{ sceneTime: playheadTime, angleId }]);
+        commandManager.execute(command);
+        liveCutSessionRef.current = multicamLiveMode ? { clipId: selectedMulticamClip.id, command } : null;
+      }
+    } catch (error) {
+      showToast({
+        kind: 'warning',
+        title: t.multicamCutFailedTitle,
+        message: error instanceof Error ? error.message : t.multicamCutFailedMessage
+      });
+    }
+  };
+  const trimMulticamSwitchAtHandle = (switchId: string, frameDelta: number) => {
+    if (!selectedMulticamClip) {
+      return;
+    }
+    try {
+      commandManager.execute(new TrimMulticamSwitchCommand(projectAccessor, selectedMulticamClip.id, switchId, frameDelta, fps));
+      liveCutSessionRef.current = null;
+    } catch (error) {
+      showToast({
+        kind: 'warning',
+        title: t.multicamCutFailedTitle,
+        message: error instanceof Error ? error.message : t.multicamCutFailedMessage
+      });
+    }
+  };
   const editableCanvasClips = useMemo(() => buildEditableCanvasClips(project, playheadTime), [project, playheadTime]);
   const selectedEditableClip = useMemo(() => editableCanvasClips.find((item) => item.clip.id === selectedClipId), [editableCanvasClips, selectedClipId]);
   const selectedInspectorClip = useMemo(() => selectedEditableClip?.clip, [selectedEditableClip]);
@@ -192,6 +235,33 @@ export function PreviewCanvas({
   useEffect(() => {
     setFrameSearchHistory(readFrameSearchHistory());
   }, []);
+
+  useEffect(() => {
+    liveCutSessionRef.current = null;
+    setMulticamLiveMode(false);
+  }, [selectedMulticamClip?.id]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!multicamLiveMode || !isPlaying || !selectedMulticamClip?.multicam || event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) {
+        return;
+      }
+      if (isEditableKeyboardTarget(event.target)) {
+        return;
+      }
+      if (!/^[1-8]$/.test(event.key)) {
+        return;
+      }
+      const angle = selectedMulticamClip.multicam.angles[Number(event.key) - 1];
+      if (!angle) {
+        return;
+      }
+      event.preventDefault();
+      recordMulticamAngleCut(angle.id);
+    };
+    window.addEventListener('keydown', onKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', onKeyDown, { capture: true });
+  }, [isPlaying, multicamLiveMode, selectedMulticamClip, playheadTime]);
 
   useEffect(() => {
     if (typeof colorScopesVisible === 'boolean') {
@@ -1495,17 +1565,15 @@ export function PreviewCanvas({
                   sequences={project.sequences}
                   colorPipeline={project.settings.colorPipeline}
                   playheadTime={playheadTime}
-                  onSelectAngle={(angleId) => {
-                    try {
-                      commandManager.execute(new CutMulticamClipCommand(projectAccessor, selectedMulticamClip.id, playheadTime, angleId));
-                    } catch (error) {
-                      showToast({
-                        kind: 'warning',
-                        title: t.multicamCutFailedTitle,
-                        message: error instanceof Error ? error.message : t.multicamCutFailedMessage
-                      });
-                    }
+                  fps={fps}
+                  liveMode={multicamLiveMode}
+                  isPlaying={isPlaying}
+                  onLiveModeChange={(enabled) => {
+                    liveCutSessionRef.current = null;
+                    setMulticamLiveMode(enabled);
                   }}
+                  onSelectAngle={recordMulticamAngleCut}
+                  onTrimSwitch={trimMulticamSwitchAtHandle}
                 />
               ) : null}
             </div>
@@ -2451,10 +2519,15 @@ interface MulticamPreviewGridProps {
   sequences: Sequence[];
   colorPipeline?: Project['settings']['colorPipeline'];
   playheadTime: number;
+  fps: number;
+  liveMode: boolean;
+  isPlaying: boolean;
+  onLiveModeChange(enabled: boolean): void;
   onSelectAngle(angleId: string): void;
+  onTrimSwitch(switchId: string, frameDelta: number): void;
 }
 
-function MulticamPreviewGrid({ clip, sequence, media, sequences, colorPipeline, playheadTime, onSelectAngle }: MulticamPreviewGridProps) {
+function MulticamPreviewGrid({ clip, sequence, media, sequences, colorPipeline, playheadTime, fps, liveMode, isPlaying, onLiveModeChange, onSelectAngle, onTrimSwitch }: MulticamPreviewGridProps) {
   const t = zhCN.preview;
   const canvasRefs = useRef(new Map<string, HTMLCanvasElement>());
   const renderersRef = useRef(new Map<string, PreviewRenderer>());
@@ -2467,6 +2540,8 @@ function MulticamPreviewGrid({ clip, sequence, media, sequences, colorPipeline, 
     }
   }, [clip.multicam, localTime]);
   const columns = (clip.multicam?.angles.length ?? 0) <= 4 ? 2 : 3;
+  const history = useMemo(() => (clip.multicam ? buildMulticamSwitchHistory(clip.multicam, clip.duration, fps) : []), [clip.duration, clip.multicam, fps]);
+  const warnings = useMemo(() => (clip.multicam ? findFrequentMulticamSwitchWarnings(clip.multicam, clip.duration, fps) : []), [clip.duration, clip.multicam, fps]);
 
   useEffect(() => {
     let canceled = false;
@@ -2507,42 +2582,114 @@ function MulticamPreviewGrid({ clip, sequence, media, sequences, colorPipeline, 
 
   return (
     <div
-      className="absolute inset-2 z-20 grid gap-2 rounded-md border border-white/15 bg-black/70 p-2 shadow-soft"
-      style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
+      className="absolute inset-x-2 bottom-2 top-14 z-20 grid gap-2 rounded-md border border-white/15 bg-black/70 p-2 shadow-soft"
+      style={{ gridTemplateColumns: 'minmax(0,1fr) minmax(210px, 0.32fr)' }}
       data-testid="multicam-preview-grid"
       aria-label={t.multicamGrid}
+      data-live-mode={liveMode ? 'true' : 'false'}
     >
-      {clip.multicam.angles.map((angle, index) => (
+      <div className="grid min-h-0 gap-2" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }} data-testid="multicam-angle-grid">
+        {clip.multicam.angles.map((angle, index) => (
+          <button
+            key={angle.id}
+            type="button"
+            className={`group relative min-h-0 overflow-hidden rounded-md border bg-black text-left ${
+              activeAngleId === angle.id ? 'border-amber-300 ring-2 ring-amber-300/60' : 'border-white/15 hover:border-white/40'
+            }`}
+            title={t.multicamAngle(angle.name)}
+            aria-label={t.multicamAngle(angle.name)}
+            data-testid={`multicam-angle-button-${angle.id}`}
+            data-active={activeAngleId === angle.id ? 'true' : 'false'}
+            onClick={() => onSelectAngle(angle.id)}
+          >
+            <canvas
+              ref={(node) => {
+                if (node) {
+                  canvasRefs.current.set(angle.id, node);
+                } else {
+                  canvasRefs.current.delete(angle.id);
+                }
+              }}
+              width={480}
+              height={270}
+              className="h-full w-full object-cover"
+              data-testid={`multicam-angle-canvas-${angle.id}`}
+            />
+            <span className="absolute left-2 top-2 rounded bg-black/75 px-2 py-1 text-[11px] font-medium text-white">
+              {index + 1}. {angle.name}
+            </span>
+          </button>
+        ))}
+      </div>
+      <aside className="flex min-h-0 flex-col overflow-hidden rounded-md border border-white/15 bg-black/55 text-white" data-testid="multicam-cut-history-panel">
+        <div className="flex items-center justify-between gap-2 border-b border-white/10 px-3 py-2">
+          <span className="text-xs font-semibold uppercase text-white/75">{t.multicamHistory}</span>
+          <button
+            type="button"
+            className={`inline-flex h-7 shrink-0 items-center rounded border px-2 text-[11px] font-semibold ${
+              liveMode ? 'border-amber-300 bg-amber-300 text-black' : 'border-white/20 bg-white/10 text-white hover:bg-white/15'
+            }`}
+            data-testid="multicam-live-mode-toggle"
+            data-active={liveMode ? 'true' : 'false'}
+            onClick={() => onLiveModeChange(!liveMode)}
+          >
+            {liveMode ? t.multicamLiveModeActive : t.multicamLiveMode}
+          </button>
+        </div>
+        {warnings.length > 0 ? (
+          <div className="border-b border-amber-300/25 bg-amber-300/15 px-3 py-2 text-[11px] font-medium text-amber-100" data-testid="multicam-frequency-warning">
+            {t.multicamTooFrequent}
+          </div>
+        ) : null}
+        <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-2" data-testid="multicam-history-list" data-playing={isPlaying ? 'true' : 'false'}>
+          {history.map((entry) => (
+            <MulticamHistoryRow key={entry.switchId} entry={entry} onTrimSwitch={onTrimSwitch} />
+          ))}
+        </div>
+      </aside>
+    </div>
+  );
+}
+
+function MulticamHistoryRow({ entry, onTrimSwitch }: { entry: MulticamSwitchHistoryEntry; onTrimSwitch(switchId: string, frameDelta: number): void }) {
+  const t = zhCN.preview;
+  return (
+    <div
+      className={`grid grid-cols-[54px_minmax(0,1fr)_54px_auto] items-center gap-2 rounded border px-2 py-1.5 text-[11px] ${
+        entry.tooFrequent ? 'border-amber-300/45 bg-amber-300/15' : 'border-white/10 bg-white/5'
+      }`}
+      data-testid={`multicam-history-row-${entry.switchId}`}
+      data-angle-id={entry.angleId}
+      data-too-frequent={entry.tooFrequent ? 'true' : 'false'}
+    >
+      <span className="font-mono text-white/70">{entry.timecode}</span>
+      <span className="truncate font-medium text-white">
+        {entry.angleIndex + 1}. {entry.angleName}
+      </span>
+      <span className="font-mono text-white/55">{entry.durationTimecode}</span>
+      <span className="inline-flex shrink-0 gap-1">
         <button
-          key={angle.id}
           type="button"
-          className={`group relative min-h-0 overflow-hidden rounded-md border bg-black text-left ${
-            activeAngleId === angle.id ? 'border-emerald-400 ring-2 ring-emerald-400/45' : 'border-white/15 hover:border-white/40'
-          }`}
-          title={t.multicamAngle(angle.name)}
-          aria-label={t.multicamAngle(angle.name)}
-          data-testid={`multicam-angle-button-${angle.id}`}
-          data-active={activeAngleId === angle.id ? 'true' : 'false'}
-          onClick={() => onSelectAngle(angle.id)}
+          className="inline-flex h-6 w-6 items-center justify-center rounded border border-white/15 bg-white/10 text-white hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-35"
+          title={t.multicamTrimEarlier}
+          aria-label={t.multicamTrimEarlier}
+          disabled={entry.time <= 0}
+          data-testid={`multicam-trim-earlier-${entry.switchId}`}
+          onClick={() => onTrimSwitch(entry.switchId, -10)}
         >
-          <canvas
-            ref={(node) => {
-              if (node) {
-                canvasRefs.current.set(angle.id, node);
-              } else {
-                canvasRefs.current.delete(angle.id);
-              }
-            }}
-            width={480}
-            height={270}
-            className="h-full w-full object-cover"
-            data-testid={`multicam-angle-canvas-${angle.id}`}
-          />
-          <span className="absolute left-2 top-2 rounded bg-black/75 px-2 py-1 text-[11px] font-medium text-white">
-            {index + 1}. {angle.name}
-          </span>
+          -10
         </button>
-      ))}
+        <button
+          type="button"
+          className="inline-flex h-6 w-6 items-center justify-center rounded border border-white/15 bg-white/10 text-white hover:bg-white/20"
+          title={t.multicamTrimLater}
+          aria-label={t.multicamTrimLater}
+          data-testid={`multicam-trim-later-${entry.switchId}`}
+          onClick={() => onTrimSwitch(entry.switchId, 10)}
+        >
+          +10
+        </button>
+      </span>
     </div>
   );
 }

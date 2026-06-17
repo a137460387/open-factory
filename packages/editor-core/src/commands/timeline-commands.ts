@@ -161,7 +161,7 @@ import {
 import { normalizeTimelineLabelColor, type TimelineLabelColor } from '../timeline-color-labels';
 import { applyProtectedRippleDeleteToTrack, canMoveClipWithProtectedRanges } from '../timeline-protection';
 import { buildCrossfadeGapFillTransition, buildRepeatedGapFillClip, findTimelineGapAtTime, type FillGapOperation } from '../timeline-gap-fill';
-import { createMulticamSequenceProject, setMulticamSwitch } from '../multicam';
+import { createMulticamSequenceProject, setMulticamSwitch, trimMulticamSwitch } from '../multicam';
 import { normalizeMotionGraphic } from '../motion-graphics';
 import { applyCmx3600EdlImport, buildCmx3600EdlImport, type Cmx3600EdlImportOptions, type Cmx3600EdlImportResult } from '../export/timeline-import';
 import {
@@ -3317,6 +3317,77 @@ export class SplitClipAtTimesCommand implements Command {
   }
 }
 
+export interface MulticamAngleCut {
+  sceneTime: number;
+  angleId: string;
+}
+
+export class RecordAngleCutCommand implements Command {
+  readonly description = 'Record multicam angle cuts';
+  private before?: Project;
+  private after?: Project;
+  private readonly cuts: MulticamAngleCut[];
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly clipId: string,
+    cuts: MulticamAngleCut[] = []
+  ) {
+    this.cuts = cuts.map((cut) => ({ sceneTime: cut.sceneTime, angleId: cut.angleId }));
+  }
+
+  get cutCount(): number {
+    return this.cuts.length;
+  }
+
+  record(sceneTime: number, angleId: string): void {
+    this.cuts.push({ sceneTime, angleId });
+    this.applyCuts();
+  }
+
+  execute(): void {
+    this.applyCuts();
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+
+  private applyCuts(): void {
+    this.before ??= this.accessor.getProject();
+    this.after = this.cuts.reduce((project, cut) => cutMulticamClip(project, this.clipId, cut.sceneTime, cut.angleId), this.before);
+    this.accessor.setProject(this.after);
+  }
+}
+
+export class TrimMulticamSwitchCommand implements Command {
+  readonly description = 'Trim multicam switch';
+  private before?: Project;
+  private after?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly clipId: string,
+    private readonly switchId: string,
+    private readonly frameDelta: number,
+    private readonly fps: number
+  ) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    this.after ??= trimMulticamClip(this.before, this.clipId, this.switchId, this.frameDelta, this.fps);
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
 export interface BatchSplitAtSceneCutItem {
   clipId: string;
   cuts?: number[];
@@ -4677,6 +4748,26 @@ function cutMulticamClip(project: Project, clipId: string, sceneTime: number, an
   }
   const localTime = round(Math.min(clip.duration, Math.max(0, sceneTime - clip.start + clip.trimStart)));
   const switches = setMulticamSwitch(clip.multicam, localTime, angleId, clip.duration);
+  return replaceProjectActiveTimeline(
+    syncedProject,
+    replaceClip(timeline, {
+      ...clip,
+      multicam: {
+        ...clip.multicam,
+        switches
+      }
+    })
+  );
+}
+
+function trimMulticamClip(project: Project, clipId: string, switchId: string, frameDelta: number, fps: number): Project {
+  const syncedProject = replaceProjectActiveTimeline(project, project.timeline);
+  const timeline = syncedProject.timeline;
+  const clip = findClip(timeline, clipId);
+  if (clip.type !== 'nested-sequence' || !clip.multicam) {
+    throw new Error('Clip is not a multicam sequence');
+  }
+  const switches = trimMulticamSwitch(clip.multicam, switchId, frameDelta, fps, clip.duration);
   return replaceProjectActiveTimeline(
     syncedProject,
     replaceClip(timeline, {

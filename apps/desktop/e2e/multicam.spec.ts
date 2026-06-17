@@ -42,3 +42,52 @@ test('creates a multicam sequence, records an angle cut, and exports direct angl
   expect(plan.fullArgs.join(' ')).not.toContain('__NESTED_SEQUENCE_');
   await expect.poll(() => page.evaluate(() => window.__E2E_ACTIONS__!.getFileExists!('C:/Exports/multicam-e2e.mp4'))).toBe(true);
 });
+
+test('records live multicam angle cuts with number keys and updates the history panel', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.evaluate(() => window.__E2E_ACTIONS__!.setupMulticamFixture!());
+
+  await page.getByTestId('toolbar-create-multicam-button').click();
+  await expect(page.getByTestId('multicam-preview-grid')).toBeVisible();
+  await page.getByTestId('multicam-live-mode-toggle').click();
+  await expect(page.getByTestId('multicam-live-mode-toggle')).toHaveAttribute('data-active', 'true');
+
+  await page.getByTestId('toolbar-playback-button').click();
+  await page.evaluate(() => window.__E2E_ACTIONS__!.setPlayheadTime!(1));
+  await page.keyboard.press('2');
+
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const clip = window.__E2E_ACTIONS__!.getTimelineSnapshot!().tracks[0].clips[0] as {
+          multicam?: { switches: Array<{ time: number; angleId: string }> };
+        };
+        return clip.multicam?.switches.length ?? 0;
+      })
+    )
+    .toBe(2);
+
+  const switches = await page.evaluate(() => {
+    const clip = window.__E2E_ACTIONS__!.getTimelineSnapshot!().tracks[0].clips[0] as {
+      multicam?: { switches: Array<{ time: number; angleId: string }> };
+    };
+    return clip.multicam?.switches ?? [];
+  });
+  expect(switches[1].angleId).toBe('angle-2');
+  expect(switches[1].time).toBeGreaterThanOrEqual(0.9);
+  expect(switches[1].time).toBeLessThan(2.5);
+  await expect(page.locator('[data-testid^="multicam-history-row-"][data-angle-id="angle-2"]')).toHaveCount(1);
+
+  await page.getByTestId('toolbar-undo-button').click();
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const clip = window.__E2E_ACTIONS__!.getTimelineSnapshot!().tracks[0].clips[0] as {
+          multicam?: { switches: Array<{ time: number; angleId: string }> };
+        };
+        return clip.multicam?.switches.length ?? 0;
+      })
+    )
+    .toBe(1);
+});
