@@ -138,6 +138,7 @@ import { createKeyframe, removeKeyframeForProperty, setKeyframeForProperty } fro
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
 import { normalizeProjectDocumentation } from '../project/documentation';
 import { applyProjectHealthAutoRepair, type ProjectHealthAutoRepairInput, type ProjectHealthRepairReport } from '../project/project-health-repair';
+import { applyProxyMigration, type ProxyMigrationUpdate } from '../proxy/proxy-management';
 import {
   buildTextAnimationKeyframes,
   mergeTextAnimationKeyframes,
@@ -1079,6 +1080,35 @@ export class MergeMediaCommand implements Command {
       }
       assertMediaAssetsExist(this.before, new Set([this.keepAssetId, ...removeIds]));
       this.after = mergeMediaReferences(this.before, this.keepAssetId, removeIds);
+    }
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class MigrateProxiesCommand implements Command {
+  readonly description = 'Migrate proxy paths';
+  private before?: Project;
+  private after?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly updates: ProxyMigrationUpdate[]
+  ) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    if (!this.after) {
+      this.after = {
+        ...this.before,
+        media: applyProxyMigration(this.before.media, this.updates),
+        updatedAt: new Date().toISOString()
+      };
     }
     this.accessor.setProject(this.after);
   }

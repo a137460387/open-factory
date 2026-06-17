@@ -8,8 +8,22 @@ const STATUS_ORDER: Record<MediaJobStatus, number> = {
   success: 4
 };
 
+const PRIORITY_ORDER = {
+  high: 0,
+  low: 1
+} as const;
+
 export function sortMediaJobsForMonitor(jobs: MediaJob[]): MediaJob[] {
-  return [...jobs].sort((left, right) => STATUS_ORDER[left.status] - STATUS_ORDER[right.status] || timestamp(left.createdAt) - timestamp(right.createdAt) || left.id.localeCompare(right.id));
+  return [...jobs].sort(compareMediaJobPriority);
+}
+
+export function compareMediaJobPriority(left: MediaJob, right: MediaJob): number {
+  return (
+    STATUS_ORDER[left.status] - STATUS_ORDER[right.status] ||
+    PRIORITY_ORDER[left.priority ?? 'low'] - PRIORITY_ORDER[right.priority ?? 'low'] ||
+    timestamp(left.createdAt) - timestamp(right.createdAt) ||
+    left.id.localeCompare(right.id)
+  );
 }
 
 export function moveMediaJobBefore(jobs: MediaJob[], jobId: string, targetJobId: string): MediaJob[] {

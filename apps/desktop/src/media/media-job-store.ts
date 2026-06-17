@@ -1,10 +1,11 @@
 import type { MediaAsset, ProxySettings } from '@open-factory/editor-core';
 import { shouldGenerateProxy } from '@open-factory/editor-core';
 import { create } from 'zustand';
-import { moveMediaJobBefore as reorderMediaJobs, normalizeMediaJobProgress } from './media-job-monitor';
+import { compareMediaJobPriority, moveMediaJobBefore as reorderMediaJobs, normalizeMediaJobProgress } from './media-job-monitor';
 
 export type MediaJobType = 'proxy' | 'waveform' | 'gif-preview' | 'vfr-conversion' | 'frame-rate-conversion' | 'stabilization-analysis';
 export type MediaJobStatus = 'pending' | 'running' | 'success' | 'error' | 'canceled';
+export type MediaJobPriority = 'high' | 'low';
 
 export interface MediaJob {
   id: string;
@@ -14,8 +15,11 @@ export interface MediaJob {
   type: MediaJobType;
   status: MediaJobStatus;
   progress: number;
+  priority: MediaJobPriority;
   force?: boolean;
   cfrFrameRate?: number;
+  sourceStart?: number;
+  sourceDuration?: number;
   createdAt: string;
   updatedAt: string;
   startedAt?: string;
@@ -27,6 +31,9 @@ export interface MediaJob {
 export interface MediaJobOptions {
   force?: boolean;
   cfrFrameRate?: number;
+  priority?: MediaJobPriority;
+  sourceStart?: number;
+  sourceDuration?: number;
 }
 
 export interface MediaJobInput {
@@ -37,6 +44,7 @@ export interface MediaJobInput {
   type: MediaJobType;
   status?: MediaJobStatus;
   progress?: number;
+  priority?: MediaJobPriority;
   error?: string;
 }
 
@@ -64,21 +72,20 @@ export const useMediaJobStore = create<MediaJobState>((set, get) => ({
   runnerActive: false,
   enqueueJobsForMedia: (media, proxySettings) => {
     const existingKeys = new Set(get().jobs.map((job) => job.key));
-    const jobsToAdd = media.flatMap((asset) => buildJobsForAsset(asset, proxySettings)).filter((job) => !existingKeys.has(job.key));
+    const jobsToAdd = media.flatMap((asset) => buildJobsForAsset(asset, proxySettings, { priority: 'low' })).filter((job) => !existingKeys.has(job.key));
     if (jobsToAdd.length === 0) {
       return;
     }
-    set((state) => ({ jobs: [...state.jobs, ...jobsToAdd] }));
+    set((state) => ({ jobs: sortQueueJobs([...state.jobs, ...jobsToAdd]) }));
   },
   enqueueProxyJobsForMedia: (media, proxySettings, options) => {
-    const existingKeys = new Set(get().jobs.map((job) => job.key));
     const jobsToAdd = media
       .flatMap((asset) => buildJobsForAsset(asset, proxySettings, options).filter((job) => job.type === 'proxy'))
-      .filter((job) => !existingKeys.has(job.key));
+      .filter((job) => !get().jobs.some((existing) => existing.key === job.key && existing.priority === job.priority && existing.sourceStart === job.sourceStart && existing.sourceDuration === job.sourceDuration));
     if (jobsToAdd.length === 0) {
       return;
     }
-    set((state) => ({ jobs: [...state.jobs, ...jobsToAdd] }));
+    set((state) => ({ jobs: sortQueueJobs([...upgradeExistingProxyJobs(state.jobs, jobsToAdd), ...jobsToAdd.filter((job) => !state.jobs.some((existing) => existing.key === job.key))]) }));
   },
   enqueueMonitorJob: (input) => {
     const now = new Date().toISOString();
@@ -91,6 +98,7 @@ export const useMediaJobStore = create<MediaJobState>((set, get) => ({
       type: input.type,
       status: input.status ?? 'pending',
       progress: normalizeMediaJobProgress(input.progress),
+      priority: input.priority ?? 'low',
       createdAt: now,
       updatedAt: now,
       startedAt: input.status === 'running' ? now : undefined,
@@ -98,11 +106,11 @@ export const useMediaJobStore = create<MediaJobState>((set, get) => ({
       canceledAt: input.status === 'canceled' ? now : undefined,
       error: input.error
     };
-    set((state) => ({ jobs: [...state.jobs.filter((item) => item.id !== id), job] }));
+    set((state) => ({ jobs: sortQueueJobs([...state.jobs.filter((item) => item.id !== id), job]) }));
     return id;
   },
   startNextJob: () => {
-    const next = get().jobs.find((job) => job.status === 'pending');
+    const next = [...get().jobs].filter((job) => job.status === 'pending').sort(compareMediaJobPriority)[0];
     if (!next) {
       return undefined;
     }
@@ -172,7 +180,7 @@ function buildJobsForAsset(asset: MediaAsset, proxySettings?: ProxySettings, opt
   const jobs: MediaJob[] = [];
   const canQueueProxy = asset.type === 'video' && !(asset.proxyPath && asset.proxyStatus === 'ready');
   if (canQueueProxy && (options.force || shouldGenerateProxy(asset, proxySettings))) {
-    jobs.push(createJob(asset, 'proxy', proxySettings, options.force, options.cfrFrameRate));
+    jobs.push(createJob(asset, 'proxy', proxySettings, options));
   }
   if (asset.type === 'audio' || (asset.type === 'video' && asset.hasAudio)) {
     jobs.push(createJob(asset, 'waveform'));
@@ -180,10 +188,11 @@ function buildJobsForAsset(asset: MediaAsset, proxySettings?: ProxySettings, opt
   return jobs;
 }
 
-function createJob(asset: MediaAsset, type: MediaJobType, proxySettings?: ProxySettings, force?: boolean, cfrFrameRate?: number): MediaJob {
+function createJob(asset: MediaAsset, type: MediaJobType, proxySettings?: ProxySettings, options: MediaJobOptions = {}): MediaJob {
   const sourceStamp = `${asset.path}|${asset.size ?? 0}|${asset.mtimeMs ?? 0}`;
-  const cfrStamp = type === 'proxy' && cfrFrameRate ? `|cfr=${cfrFrameRate}` : '';
-  const settingsStamp = type === 'proxy' && proxySettings ? `|${proxySettings.maxWidth}x${proxySettings.maxHeight}|${proxySettings.triggerShortEdge}|${proxySettings.videoBitrate}${cfrStamp}` : '';
+  const cfrStamp = type === 'proxy' && options.cfrFrameRate ? `|cfr=${options.cfrFrameRate}` : '';
+  const segmentStamp = type === 'proxy' && (options.sourceStart !== undefined || options.sourceDuration !== undefined) ? `|seg=${options.sourceStart ?? 0}:${options.sourceDuration ?? 0}` : '';
+  const settingsStamp = type === 'proxy' && proxySettings ? `|${proxySettings.maxWidth}x${proxySettings.maxHeight}|${proxySettings.triggerShortEdge}|${proxySettings.videoBitrate}${cfrStamp}${segmentStamp}` : '';
   return {
     id: `${type}-${asset.id}-${Math.random().toString(36).slice(2)}`,
     key: `${type}|${asset.id}|${sourceStamp}${settingsStamp}`,
@@ -192,9 +201,36 @@ function createJob(asset: MediaAsset, type: MediaJobType, proxySettings?: ProxyS
     type,
     status: 'pending',
     progress: 0,
-    force: force || undefined,
-    cfrFrameRate,
+    priority: options.priority ?? 'low',
+    force: options.force || undefined,
+    cfrFrameRate: options.cfrFrameRate,
+    sourceStart: options.sourceStart,
+    sourceDuration: options.sourceDuration,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
+}
+
+function upgradeExistingProxyJobs(jobs: MediaJob[], incoming: MediaJob[]): MediaJob[] {
+  return jobs.map((job) => {
+    const matching = incoming.find((candidate) => candidate.key === job.key && candidate.type === 'proxy');
+    if (!matching) {
+      return job;
+    }
+    return {
+      ...job,
+      priority: compareMediaJobPriority(matching, job) < 0 ? matching.priority : job.priority,
+      force: job.force || matching.force,
+      cfrFrameRate: matching.cfrFrameRate ?? job.cfrFrameRate,
+      sourceStart: matching.sourceStart ?? job.sourceStart,
+      sourceDuration: matching.sourceDuration ?? job.sourceDuration,
+      updatedAt: new Date().toISOString()
+    };
+  });
+}
+
+function sortQueueJobs(jobs: MediaJob[]): MediaJob[] {
+  const activeOrPending = jobs.filter((job) => job.status === 'running' || job.status === 'pending').sort(compareMediaJobPriority);
+  const rest = jobs.filter((job) => job.status !== 'running' && job.status !== 'pending');
+  return [...activeOrPending, ...rest];
 }

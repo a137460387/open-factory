@@ -40,6 +40,7 @@ import {
   ImportEDLCommand,
   LoadProjectCommand,
   MoveMediaToFolderCommand,
+  MigrateProxiesCommand,
   MoveClipCommand,
   MoveClipsCommand,
   PackNestedSequenceCommand,
@@ -260,6 +261,41 @@ describe('timeline commands', () => {
 
     manager.undo();
     expect(accessor.current().tracks.find((item) => item.id === 'track-adjustment')?.clips).toHaveLength(0);
+  });
+
+  it('migrates proxy path references and undoes without moving files back', () => {
+    let project = {
+      ...makeProject(),
+      media: [
+        {
+          ...makeProject().media[0],
+          id: 'asset-proxy',
+          proxyPath: 'C:/Proxy/source.mp4',
+          proxyStatus: 'ready' as const
+        }
+      ]
+    };
+    const accessor = {
+      getProject: () => project,
+      setProject: (next: typeof project) => {
+        project = next;
+      }
+    };
+    const manager = new CommandManager();
+
+    manager.execute(
+      new MigrateProxiesCommand(accessor, [
+        {
+          assetId: 'asset-proxy',
+          fromPath: 'C:/Proxy/source.mp4',
+          toPath: 'D:/ProxyArchive/asset-proxy-source.mp4'
+        }
+      ])
+    );
+    expect(project.media[0].proxyPath).toBe('D:/ProxyArchive/asset-proxy-source.mp4');
+
+    manager.undo();
+    expect(project.media[0].proxyPath).toBe('C:/Proxy/source.mp4');
   });
 
   it('adds motion graphics as one undoable command', () => {

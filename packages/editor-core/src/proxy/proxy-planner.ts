@@ -24,10 +24,12 @@ export function buildProxyPlan(
   asset: MediaAsset,
   appDataDir: string,
   settings: ProxySettings = DEFAULT_PROXY_SETTINGS,
-  options: { force?: boolean; cfrFrameRate?: number } = {}
+  options: { force?: boolean; cfrFrameRate?: number; sourceStart?: number; sourceDuration?: number } = {}
 ): ProxyPlan | null {
   const force = options.force === true;
   const cfrFrameRate = options.cfrFrameRate ?? (force && asset.variableFrameRate ? getCfrTargetFrameRate({ avgFrameRate: asset.avgFrameRate, realFrameRate: asset.realFrameRate }, asset.frameRate ?? 30) : undefined);
+  const sourceStart = normalizeProxySegmentValue(options.sourceStart);
+  const sourceDuration = normalizeProxySegmentValue(options.sourceDuration);
   if (asset.type !== 'video' || (!cfrFrameRate && asset.proxyPath && asset.proxyStatus === 'ready')) {
     return null;
   }
@@ -38,7 +40,7 @@ export function buildProxyPlan(
     path: asset.path,
     size: asset.size,
     mtimeMs: asset.mtimeMs,
-    formatVersion: `proxy-${settings.maxWidth}x${settings.maxHeight}-${settings.videoBitrate}${cfrFrameRate ? `-cfr-${cfrFrameRate}` : ''}`
+    formatVersion: `proxy-${settings.maxWidth}x${settings.maxHeight}-${settings.videoBitrate}${cfrFrameRate ? `-cfr-${cfrFrameRate}` : ''}${sourceStart !== undefined || sourceDuration !== undefined ? `-seg-${sourceStart ?? 0}-${sourceDuration ?? 0}` : ''}`
   });
   const paths = buildCachePaths('proxy', key);
   const dimensions = fitWithin(asset.width, asset.height, settings.maxWidth, settings.maxHeight);
@@ -51,7 +53,9 @@ export function buildProxyPlan(
     height: dimensions.height,
     videoBitrate: settings.videoBitrate,
     reason,
-    cfrFrameRate
+    cfrFrameRate,
+    sourceStart,
+    sourceDuration
   };
 }
 
@@ -83,4 +87,11 @@ export function fitWithin(width: number, height: number, maxWidth: number, maxHe
   const fittedWidth = Math.max(2, Math.round((width * scale) / 2) * 2);
   const fittedHeight = Math.max(2, Math.round((height * scale) / 2) * 2);
   return { width: fittedWidth, height: fittedHeight };
+}
+
+function normalizeProxySegmentValue(value: number | undefined): number | undefined {
+  if (value === undefined || !Number.isFinite(value)) {
+    return undefined;
+  }
+  return Math.max(0, Math.round(value * 1000) / 1000);
 }

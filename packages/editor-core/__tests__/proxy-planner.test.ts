@@ -92,6 +92,15 @@ describe('proxy planner', () => {
     expect(plan?.outputPath).toMatch(/proxies\/[a-f0-9]{16}\.mp4$/);
   });
 
+  it('builds incremental proxy plans for the used trimmed source segment', () => {
+    const asset = { ...makeProject().media[0], size: 40 * 1024 * 1024, width: 1920, height: 1080, mtimeMs: 1234 };
+
+    const plan = buildProxyPlan(asset, 'C:/Cache/open-factory', undefined, { force: true, sourceStart: 12.3456, sourceDuration: 4.2 });
+
+    expect(plan).toMatchObject({ sourceStart: 12.346, sourceDuration: 4.2 });
+    expect(plan?.outputPath).toMatch(/proxies\/[a-f0-9]{16}\.mp4$/);
+  });
+
   it('proxies HEVC and ProRes media even below the resolution threshold', () => {
     const hevc = { ...makeProject().media[0], size: 10 * 1024 * 1024, width: 1280, height: 720, mtimeMs: 1234, videoCodec: 'hevc' };
     const prores = { ...hevc, videoCodec: 'prores_ks' };

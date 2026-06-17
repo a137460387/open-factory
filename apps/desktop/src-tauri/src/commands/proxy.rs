@@ -17,6 +17,8 @@ pub struct ProxyPlanDto {
     video_bitrate: String,
     reason: String,
     cfr_frame_rate: Option<f64>,
+    source_start: Option<f64>,
+    source_duration: Option<f64>,
 }
 
 #[derive(Debug, Serialize)]
@@ -38,30 +40,13 @@ pub async fn generate_proxy(app: AppHandle, plan: ProxyPlanDto) -> Result<ProxyR
     let input_arg = normalize_path(&input_path);
     let output_arg = normalize_path(&output_path);
     let filter = build_proxy_video_filter(plan.width, plan.height, plan.cfr_frame_rate);
+    let args = build_proxy_args(&plan, &input_arg, &filter, &output_arg);
     let status = Command::new(if cfg!(windows) {
         "ffmpeg.exe"
     } else {
         "ffmpeg"
     })
-    .args([
-        "-y",
-        "-i",
-        &input_arg,
-        "-vf",
-        &filter,
-        "-an",
-        "-c:v",
-        "libx264",
-        "-preset",
-        "veryfast",
-        "-b:v",
-        &plan.video_bitrate,
-        "-pix_fmt",
-        "yuv420p",
-        "-movflags",
-        "+faststart",
-        &output_arg,
-    ])
+    .args(&args)
     .stderr(Stdio::piped())
     .stdout(Stdio::null())
     .status()
@@ -94,6 +79,46 @@ fn build_proxy_video_filter(width: u32, height: u32, cfr_frame_rate: Option<f64>
     }
 }
 
+fn build_proxy_args(
+    plan: &ProxyPlanDto,
+    input_arg: &str,
+    filter: &str,
+    output_arg: &str,
+) -> Vec<String> {
+    let mut args = vec!["-y".to_string()];
+    if let Some(source_start) = valid_segment_value(plan.source_start) {
+        args.push("-ss".to_string());
+        args.push(trim_float(source_start));
+    }
+    if let Some(source_duration) = valid_segment_value(plan.source_duration) {
+        args.push("-t".to_string());
+        args.push(trim_float(source_duration));
+    }
+    args.extend([
+        "-i".to_string(),
+        input_arg.to_string(),
+        "-vf".to_string(),
+        filter.to_string(),
+        "-an".to_string(),
+        "-c:v".to_string(),
+        "libx264".to_string(),
+        "-preset".to_string(),
+        "veryfast".to_string(),
+        "-b:v".to_string(),
+        plan.video_bitrate.clone(),
+        "-pix_fmt".to_string(),
+        "yuv420p".to_string(),
+        "-movflags".to_string(),
+        "+faststart".to_string(),
+        output_arg.to_string(),
+    ]);
+    args
+}
+
+fn valid_segment_value(value: Option<f64>) -> Option<f64> {
+    value.filter(|item| item.is_finite() && *item > 0.0)
+}
+
 fn trim_float(value: f64) -> String {
     let rounded = (value * 1000.0).round() / 1000.0;
     let mut text = format!("{rounded:.3}");
@@ -123,6 +148,41 @@ mod tests {
         assert_eq!(
             build_proxy_video_filter(1280, 720, Some(30.0)),
             "fps=30,scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2"
+        );
+    }
+
+    #[test]
+    fn builds_incremental_proxy_args_with_source_segment() {
+        let plan = ProxyPlanDto {
+            asset_id: "asset".to_string(),
+            input_path: "C:/Media/source.mp4".to_string(),
+            output_path: "C:/Proxy/source.mp4".to_string(),
+            width: 1280,
+            height: 720,
+            video_bitrate: "2500k".to_string(),
+            reason: "manual".to_string(),
+            cfr_frame_rate: None,
+            source_start: Some(12.3456),
+            source_duration: Some(4.2),
+        };
+        let args = build_proxy_args(
+            &plan,
+            "C:/Media/source.mp4",
+            "scale=1280:720",
+            "C:/Proxy/source.mp4",
+        );
+
+        assert_eq!(
+            &args[0..7],
+            [
+                "-y",
+                "-ss",
+                "12.346",
+                "-t",
+                "4.2",
+                "-i",
+                "C:/Media/source.mp4"
+            ]
         );
     }
 }

@@ -24,6 +24,7 @@ import {
   ImportEDLCommand,
   LoadProjectCommand,
   MergeMediaCommand,
+  MigrateProxiesCommand,
   NewProjectCommand,
   RemoveMediaCommand,
   MoveMediaToFolderCommand,
@@ -54,6 +55,7 @@ import {
   round,
   getSplitLayoutDefinition,
   getClipSpeed,
+  getClipSourceVisibleDuration,
   getCfrTargetFrameRate,
   getColorSpaceDisplayName,
   getProjectFrameRateConversionTarget,
@@ -111,6 +113,7 @@ import {
   buildOperationReplaySchedule,
   getOperationProjectAtStep,
   generateOperationRecordingSlidesHtml,
+  buildProxyMigration,
   normalizeOperationReplaySpeed,
   hasLowConfidenceSpeakerSegments,
   type OperationRecordingFile,
@@ -281,6 +284,7 @@ import {
 import { DEFAULT_PREVIEW_PERFORMANCE_SETTINGS, type PreviewPerformanceSettings, type PreviewQualityMode, type PreviewSkipFrames } from '../lib/preview/preview-performance';
 import { createProxyForAsset, type ProxyGenerationOptions } from '../media/proxy';
 import { ensureMediaJobRunner } from '../media/media-job-runner';
+import { runScheduledProxyIntegrityCheck } from '../media/proxy-integrity';
 import { DuplicateMediaDialog, type DuplicateMediaMergeSelection } from '../media/DuplicateMediaDialog';
 import { MediaOrganizerDialog, type MediaOrganizerDuplicateSelection } from '../media/MediaOrganizerDialog';
 import { useMediaJobStore } from '../media/media-job-store';
@@ -1971,6 +1975,15 @@ export function EditorShell() {
       try {
         const clip = createClipFromAsset(asset, track, project.timeline);
         commandManager.execute(new AddClipCommand(timelineAccessor, clip));
+        if (asset.type === 'video') {
+          useMediaJobStore.getState().enqueueProxyJobsForMedia([asset], useProxySettingsStore.getState().settings, {
+            force: true,
+            priority: 'high',
+            sourceStart: clip.trimStart,
+            sourceDuration: getClipSourceVisibleDuration(clip)
+          });
+          void ensureMediaJobRunner();
+        }
         setSelectedClipId(clip.id);
       } catch (error) {
         showToast({ kind: 'error', title: zhCN.editorToasts.addClipFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.addClipFailedMessage });
@@ -2813,6 +2826,28 @@ export function EditorShell() {
     [generateProxyForMedia]
   );
 
+  const migrateProxiesToDirectory = useCallback(async (targetDirectory: string) => {
+    const updates = buildProxyMigration(useEditorStore.getState().project.media, targetDirectory);
+    if (updates.length === 0) {
+      showToast({ kind: 'info', title: zhCN.editorToasts.proxyMigrationSkipped });
+      return;
+    }
+    const moved: typeof updates = [];
+    try {
+      for (const update of updates) {
+        await bridgeMoveFile(update.fromPath, update.toPath);
+        moved.push(update);
+      }
+      commandManager.execute(new MigrateProxiesCommand(projectAccessor, updates));
+      showToast({ kind: 'success', title: zhCN.editorToasts.proxyMigrated, message: zhCN.editorToasts.proxyMigratedMessage(updates.length) });
+    } catch (error) {
+      for (const update of moved.reverse()) {
+        await bridgeMoveFile(update.toPath, update.fromPath).catch(() => undefined);
+      }
+      showToast({ kind: 'error', title: zhCN.editorToasts.proxyMigrationFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.proxyMigrationFailedMessage });
+    }
+  }, []);
+
   const convertVfrMediaToCfr = useCallback(
     (assetId: string) => {
       const asset = useEditorStore.getState().project.media.find((item) => item.id === assetId);
@@ -3387,6 +3422,36 @@ export function EditorShell() {
   useShortcuts(shortcutHandlers, shortcutBindings);
   useMacroShortcuts(macros, executeMacro);
   useBackgroundMediaJobs(project.media);
+  useEffect(() => {
+    let disposed = false;
+    const runIntegrityCheck = async () => {
+      const currentProject = useEditorStore.getState().project;
+      await runScheduledProxyIntegrityCheck(currentProject, {
+        enqueueProxyAssets: (assetIds) => {
+          if (disposed || assetIds.length === 0) {
+            return;
+          }
+          const latestProject = useEditorStore.getState().project;
+          const proxySettings = useProxySettingsStore.getState().settings;
+          for (const asset of latestProject.media.filter((item) => assetIds.includes(item.id))) {
+            useMediaJobStore.getState().enqueueProxyJobsForMedia([asset], proxySettings, {
+              force: true,
+              priority: projectUsesMediaOnTimeline(latestProject, asset.id) ? 'high' : 'low'
+            });
+          }
+          void ensureMediaJobRunner();
+        }
+      }).catch((error) => {
+        console.warn('Unable to run proxy integrity check', error);
+      });
+    };
+    void runIntegrityCheck();
+    const timer = window.setInterval(() => void runIntegrityCheck(), 60 * 60 * 1000);
+    return () => {
+      disposed = true;
+      window.clearInterval(timer);
+    };
+  }, []);
   const rightPrimaryPanelLabel = projectDocumentationOpen ? zhCN.panels.projectDocumentation : historyPanelOpen ? zhCN.panels.history : smartRoughCutOpen ? zhCN.panels.smartRoughCut : zhCN.panels.inspector;
 
   return (
@@ -3934,6 +3999,7 @@ export function EditorShell() {
               onTimelineInteractionSettingsChange={updateTimelineInteractionSettings}
               onDeleteProxies={(assetIds) => deleteProxiesForMedia(assetIds)}
               onRegenerateProxies={(assetIds) => regenerateProxiesForMedia(assetIds)}
+              onMigrateProxies={(targetDirectory) => migrateProxiesToDirectory(targetDirectory)}
               onClose={() => setSettingsOpen(false)}
             />
           ) : null}
@@ -4151,6 +4217,10 @@ function mergeProjectSpeakers(existing: ProjectSpeaker[] | undefined, imported: 
     next.push(speaker);
   }
   return next;
+}
+
+function projectUsesMediaOnTimeline(project: Project, assetId: string): boolean {
+  return project.timeline.tracks.some((track) => track.clips.some((clip) => 'mediaId' in clip && clip.mediaId === assetId));
 }
 
 function getSubtitleDataImportTargetTrackId(timeline: CoreTimeline, mode: SubtitleDataImportMode, selectedClipIds: string[]): string | undefined {

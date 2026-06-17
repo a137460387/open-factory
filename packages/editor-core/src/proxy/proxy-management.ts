@@ -34,6 +34,24 @@ export interface ProxyCleanupPlan {
   skippedInUsePaths: string[];
 }
 
+export interface ProxyMigrationUpdate {
+  assetId: string;
+  fromPath: string;
+  toPath: string;
+}
+
+export interface ProxyCoverageStats {
+  proxiedMediaCount: number;
+  totalMediaCount: number;
+  coverageRatio: number;
+  estimatedPreviewSecondsSaved: number;
+}
+
+export interface ProxyStorageTrendPoint {
+  day: string;
+  totalBytes: number;
+}
+
 export function validateProxyAsset(
   asset: MediaAsset,
   input: {
@@ -119,6 +137,62 @@ export function planProxyBatchDelete(items: ProxyInventoryItem[], assetIds: stri
   return items.filter((item) => selected.has(item.assetId) && item.proxyPath).map((item) => item.proxyPath);
 }
 
+export function buildProxyMigration(media: MediaAsset[], targetDirectory: string): ProxyMigrationUpdate[] {
+  const target = normalizeDirectory(targetDirectory);
+  const usedNames = new Set<string>();
+  return media
+    .filter((asset) => Boolean(asset.proxyPath))
+    .map((asset) => {
+      const fileName = uniqueProxyFileName(`${asset.id}-${fileNameFromPath(asset.proxyPath!)}`, usedNames);
+      return {
+        assetId: asset.id,
+        fromPath: asset.proxyPath!,
+        toPath: `${target}/${fileName}`
+      };
+    });
+}
+
+export function applyProxyMigration(media: MediaAsset[], updates: ProxyMigrationUpdate[]): MediaAsset[] {
+  const updateByAssetId = new Map(updates.map((update) => [update.assetId, update]));
+  return media.map((asset) => {
+    const update = updateByAssetId.get(asset.id);
+    if (!update || asset.proxyPath !== update.fromPath) {
+      return asset;
+    }
+    return { ...asset, proxyPath: update.toPath, proxyStatus: asset.type === 'video' ? 'ready' : asset.proxyStatus, proxyError: undefined };
+  });
+}
+
+export function getProxyAssetsNeedingRegeneration(items: ProxyInventoryItem[]): string[] {
+  return items.filter((item) => item.status === 'expired' || item.status === 'corrupt' || item.status === 'missing').map((item) => item.assetId);
+}
+
+export function shouldRunProxyIntegrityCheck(lastRunAtMs: number | undefined, nowMs: number, intervalMs = 24 * 60 * 60 * 1000): boolean {
+  return lastRunAtMs === undefined || nowMs - lastRunAtMs >= intervalMs;
+}
+
+export function calculateProxyCoverageStats(media: MediaAsset[]): ProxyCoverageStats {
+  const proxyCapable = media.filter((asset) => asset.type === 'video');
+  const proxied = proxyCapable.filter((asset) => Boolean(asset.proxyPath && asset.proxyStatus === 'ready'));
+  return {
+    proxiedMediaCount: proxied.length,
+    totalMediaCount: proxyCapable.length,
+    coverageRatio: proxyCapable.length === 0 ? 1 : proxied.length / proxyCapable.length,
+    estimatedPreviewSecondsSaved: proxied.reduce((total, asset) => total + Math.max(0, asset.duration ?? 0), 0)
+  };
+}
+
+export function buildProxyStorageTrend(items: ProxyInventoryItem[], nowMs: number, days = 7): ProxyStorageTrendPoint[] {
+  const dayStarts = Array.from({ length: Math.max(1, days) }, (_, index) => startOfUtcDay(nowMs) - (Math.max(1, days) - 1 - index) * 24 * 60 * 60 * 1000);
+  return dayStarts.map((dayStart) => {
+    const dayEnd = dayStart + 24 * 60 * 60 * 1000;
+    return {
+      day: new Date(dayStart).toISOString().slice(0, 10),
+      totalBytes: items.filter((item) => (item.generatedAtMs ?? 0) < dayEnd).reduce((total, item) => total + Math.max(0, item.size), 0)
+    };
+  });
+}
+
 export function markExpiredProxyAssets(media: MediaAsset[], sourceStats: Record<string, ProxyFileStatLike | undefined>): MediaAsset[] {
   return media.map((asset) => {
     if (!asset.proxyPath) {
@@ -143,4 +217,35 @@ function collectTimelineProxyPaths(media: MediaAsset[], timeline: Timeline | und
     }
   }
   return paths;
+}
+
+function normalizeDirectory(path: string): string {
+  return path.replace(/\\/g, '/').replace(/\/+$/, '') || '.';
+}
+
+function fileNameFromPath(path: string): string {
+  return path.replace(/\\/g, '/').split('/').filter(Boolean).at(-1) ?? 'proxy.mp4';
+}
+
+function uniqueProxyFileName(fileName: string, usedNames: Set<string>): string {
+  const normalized = fileName.replace(/[^a-zA-Z0-9._-]/g, '-');
+  if (!usedNames.has(normalized)) {
+    usedNames.add(normalized);
+    return normalized;
+  }
+  const dotIndex = normalized.lastIndexOf('.');
+  const stem = dotIndex > 0 ? normalized.slice(0, dotIndex) : normalized;
+  const ext = dotIndex > 0 ? normalized.slice(dotIndex) : '';
+  let index = 2;
+  while (usedNames.has(`${stem}-${index}${ext}`)) {
+    index += 1;
+  }
+  const next = `${stem}-${index}${ext}`;
+  usedNames.add(next);
+  return next;
+}
+
+function startOfUtcDay(value: number): number {
+  const date = new Date(value);
+  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
 }

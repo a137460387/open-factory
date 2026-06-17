@@ -16,6 +16,8 @@ export interface ProxyPlan {
   videoBitrate: string;
   reason: 'large-resolution' | 'editing-codec' | 'manual' | 'vfr-cfr';
   cfrFrameRate?: number;
+  sourceStart?: number;
+  sourceDuration?: number;
 }
 
 export type ProxyCapableAsset = MediaAsset & { type: 'video' };

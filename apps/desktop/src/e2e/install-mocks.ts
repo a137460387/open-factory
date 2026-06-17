@@ -63,6 +63,7 @@ let postExportQualityStatus: 'pass' | 'warning' | 'fail' = 'pass';
 let exportGateHeld = false;
 const exportGates: Array<{ taskId?: string; release: () => void }> = [];
 let exportWarmupDelayMs = 0;
+let proxyGenerationDelayMs = 10;
 let nextExportError: string | undefined;
 let mockSceneTimes = [1];
 let lastConfirmMessage: string | undefined;
@@ -877,7 +878,7 @@ const mocks: TauriMocks = {
   },
   detectBeats: () => [1, 2, 3, 4],
   generateProxy: async (plan) => {
-    await wait(10);
+    await wait(proxyGenerationDelayMs);
     files.set(plan.outputPath, 'mock proxy');
     exists.set(plan.outputPath, true);
     cache.set(plan.outputPath.replace(`${appDataDir}/`, ''), JSON.stringify({ proxyPath: plan.outputPath }));
@@ -2191,7 +2192,7 @@ window.__E2E_ACTIONS__ = {
     }
   },
   enqueueMockMediaJob: (input: unknown) => {
-    const job = input as { id?: string; assetId?: string; assetName?: string; type?: string; status?: string; progress?: number; error?: string };
+    const job = input as { id?: string; assetId?: string; assetName?: string; type?: string; status?: string; progress?: number; priority?: string; error?: string };
     return useMediaJobStore.getState().enqueueMonitorJob({
       id: job.id,
       assetId: job.assetId ?? 'mock-asset',
@@ -2199,9 +2200,11 @@ window.__E2E_ACTIONS__ = {
       type: job.type === 'gif-preview' || job.type === 'vfr-conversion' || job.type === 'frame-rate-conversion' || job.type === 'stabilization-analysis' || job.type === 'waveform' ? job.type : 'proxy',
       status: job.status === 'running' || job.status === 'success' || job.status === 'error' || job.status === 'canceled' ? job.status : 'pending',
       progress: typeof job.progress === 'number' ? job.progress : 0,
+      priority: job.priority === 'high' ? 'high' : 'low',
       error: job.error
     });
   },
+  getMediaJobs: () => useMediaJobStore.getState().jobs,
   getExportRanges: () => useEditorStore.getState().project.exportRanges,
   getProjectSnapshot: () => useEditorStore.getState().project,
   getProjectMedia: () => useEditorStore.getState().project.media,
@@ -2239,6 +2242,11 @@ window.__E2E_ACTIONS__ = {
   setExportWarmupDelay: (delayMs: unknown) => {
     if (typeof delayMs === 'number' && Number.isFinite(delayMs)) {
       exportWarmupDelayMs = Math.max(0, delayMs);
+    }
+  },
+  setProxyGenerationDelay: (delayMs: unknown) => {
+    if (typeof delayMs === 'number' && Number.isFinite(delayMs)) {
+      proxyGenerationDelayMs = Math.max(0, delayMs);
     }
   },
   setPostExportQualityStatus: (status: unknown) => {
@@ -2432,6 +2440,7 @@ window.__E2E_ACTIONS__ = {
     void collaborationController.disable();
     useCollaborationStore.getState().reset();
     exportWarmupDelayMs = 0;
+    proxyGenerationDelayMs = 10;
     nextExportError = undefined;
     postExportQualityStatus = 'pass';
     localStorage.removeItem('open-factory:proxy-settings');

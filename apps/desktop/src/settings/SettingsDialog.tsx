@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Cloud, Download, FilePlus, FolderOpen, GripVertical, RotateCcw, Save, Star, Trash2, X, XCircle } from 'lucide-react';
 import {
   buildProxyInventory,
+  buildProxyStorageTrend,
+  calculateProxyCoverageStats,
   planProxyCleanup,
   summarizeProxyInventory,
   DEFAULT_POST_EXPORT_QUALITY_ASSURANCE_SETTINGS,
@@ -152,6 +154,7 @@ interface SettingsDialogProps {
   onTimelineInteractionSettingsChange(settings: Partial<TimelineInteractionSettings>): void;
   onDeleteProxies(assetIds: string[]): Promise<void> | void;
   onRegenerateProxies(assetIds: string[]): Promise<void> | void;
+  onMigrateProxies(targetDirectory: string): Promise<void> | void;
   onClose(): void;
 }
 
@@ -177,6 +180,7 @@ export function SettingsDialog({
   onTimelineInteractionSettingsChange,
   onDeleteProxies,
   onRegenerateProxies,
+  onMigrateProxies,
   onClose
 }: SettingsDialogProps) {
   const t = zhCN.settings;
@@ -1863,6 +1867,7 @@ export function SettingsDialog({
                 onTriggerShortEdgeChange={setProxyTriggerShortEdge}
                 onDeleteProxies={onDeleteProxies}
                 onRegenerateProxies={onRegenerateProxies}
+                onMigrateProxies={onMigrateProxies}
                 onReset={resetProxySettings}
               />
             ) : null}
@@ -2773,6 +2778,7 @@ function ProxySettingsPanel({
   onTriggerShortEdgeChange,
   onDeleteProxies,
   onRegenerateProxies,
+  onMigrateProxies,
   onReset
 }: {
   project: Project;
@@ -2782,13 +2788,17 @@ function ProxySettingsPanel({
   onTriggerShortEdgeChange(threshold: ProxyTriggerThreshold): void;
   onDeleteProxies(assetIds: string[]): Promise<void> | void;
   onRegenerateProxies(assetIds: string[]): Promise<void> | void;
+  onMigrateProxies(targetDirectory: string): Promise<void> | void;
   onReset(): void;
 }) {
   const t = zhCN.settings.proxy;
   const [items, setItems] = useState<ProxyInventoryItem[]>([]);
   const [selectedAssetIds, setSelectedAssetIds] = useState<Set<string>>(new Set());
   const [refreshing, setRefreshing] = useState(false);
+  const [migrating, setMigrating] = useState(false);
   const stats = summarizeProxyInventory(items);
+  const coverageStats = calculateProxyCoverageStats(project.media);
+  const storageTrend = buildProxyStorageTrend(items, Date.now(), 7);
 
   const refreshInventory = async () => {
     setRefreshing(true);
@@ -2854,6 +2864,19 @@ function ProxySettingsPanel({
     const deleteAssetIds = items.filter((item) => cleanup.deletePaths.includes(item.proxyPath)).map((item) => item.assetId);
     await deleteSelected(deleteAssetIds);
   };
+  const migrateDirectory = async () => {
+    const targetDirectory = await openDirectoryDialog();
+    if (!targetDirectory) {
+      return;
+    }
+    setMigrating(true);
+    try {
+      await onMigrateProxies(targetDirectory);
+      await refreshInventory();
+    } finally {
+      setMigrating(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -2898,6 +2921,27 @@ function ProxySettingsPanel({
           </select>
         </label>
       </div>
+      <div className="grid gap-3 sm:grid-cols-3" data-testid="proxy-stats-dashboard">
+        <div className="rounded-md border border-line bg-white p-3">
+          <div className="text-[11px] font-semibold uppercase text-slate-500">{t.coverage}</div>
+          <div className="mt-1 text-lg font-semibold text-ink" data-testid="proxy-coverage-ratio">{Math.round(coverageStats.coverageRatio * 100)}%</div>
+          <div className="text-[11px] text-slate-500">{coverageStats.proxiedMediaCount}/{coverageStats.totalMediaCount}</div>
+        </div>
+        <div className="rounded-md border border-line bg-white p-3">
+          <div className="text-[11px] font-semibold uppercase text-slate-500">{t.previewSaved}</div>
+          <div className="mt-1 text-lg font-semibold text-ink" data-testid="proxy-preview-saved">{formatDurationSeconds(coverageStats.estimatedPreviewSecondsSaved)}</div>
+        </div>
+        <div className="rounded-md border border-line bg-white p-3">
+          <div className="text-[11px] font-semibold uppercase text-slate-500">{t.storageTrend}</div>
+          <div className="mt-2 flex h-8 items-end gap-1" data-testid="proxy-storage-trend">
+            {storageTrend.map((point) => {
+              const maxBytes = Math.max(1, ...storageTrend.map((item) => item.totalBytes));
+              const height = Math.max(2, Math.round((point.totalBytes / maxBytes) * 32));
+              return <span key={point.day} className="w-full rounded-sm bg-brand/70" title={`${point.day}: ${formatBytes(point.totalBytes)}`} style={{ height }} />;
+            })}
+          </div>
+        </div>
+      </div>
       <div className="rounded-md border border-line bg-white p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
@@ -2931,6 +2975,9 @@ function ProxySettingsPanel({
             </button>
             <button className="rounded-md border border-line px-2 py-1 text-xs font-medium text-slate-700 hover:bg-panel" type="button" data-testid="proxy-clear-unused-button" onClick={() => void clearUnused()}>
               {t.clearUnused}
+            </button>
+            <button className="rounded-md border border-line px-2 py-1 text-xs font-medium text-slate-700 hover:bg-panel disabled:opacity-40" type="button" data-testid="proxy-migrate-directory-button" disabled={migrating || items.length === 0} onClick={() => void migrateDirectory()}>
+              {migrating ? t.migrating : t.migrateDirectory}
             </button>
           </div>
         </div>
@@ -3021,6 +3068,15 @@ function formatBytes(bytes: number): string {
     unit += 1;
   }
   return `${value >= 10 || unit === 0 ? Math.round(value) : value.toFixed(1)} ${units[unit]}`;
+}
+
+function formatDurationSeconds(seconds: number): string {
+  if (seconds <= 0) {
+    return '0s';
+  }
+  const minutes = Math.floor(seconds / 60);
+  const remainder = Math.round(seconds % 60);
+  return minutes > 0 ? `${minutes}m ${remainder}s` : `${remainder}s`;
 }
 
 function formatDateTime(value: number): string {

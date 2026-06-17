@@ -36,3 +36,37 @@ test('auto-generates a proxy for 4K HEVC media while export uses the original so
   expect(plan.inputs.map((input) => input.path)).toContain(sourcePath);
   expect(plan.fullArgs.join(' ')).not.toContain(imported!.proxyPath!);
 });
+
+test('prioritizes timeline-used proxy work ahead of media-library proxy work', async ({ page }) => {
+  const sourcePath = 'C:/Media/four-k-hevc.mov';
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.evaluate(() => {
+    window.__E2E_ACTIONS__!.clearE2eFiles!();
+    window.__E2E_ACTIONS__!.setProxyGenerationDelay!(1000);
+    window.__E2E_ACTIONS__!.enqueueMockMediaJob!({
+      id: 'low-library-proxy',
+      assetId: 'asset-library-only',
+      assetName: 'library-only.mov',
+      type: 'proxy',
+      priority: 'low'
+    });
+  });
+
+  await page.evaluate((path) => window.__E2E_ACTIONS__!.setOpenFileDialogPaths!([path]), sourcePath);
+  await page.getByTestId('import-media-button').click();
+  await addMediaCardToTimeline(page, 0);
+
+  await expect
+    .poll(
+      () =>
+        page.evaluate(() => {
+          const pendingProxyJobs = (window.__E2E_ACTIONS__!.getMediaJobs!() as Array<{ type: string; status: string; priority: string; assetName: string }>).filter(
+            (job) => job.type === 'proxy' && job.status === 'pending'
+          );
+          return pendingProxyJobs[0] ? `${pendingProxyJobs[0].priority}:${pendingProxyJobs[0].assetName}` : '';
+        }),
+      { timeout: 5000 }
+    )
+    .toBe('high:four-k-hevc.mov');
+});
