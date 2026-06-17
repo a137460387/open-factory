@@ -866,6 +866,28 @@ export class AddTrackCommand implements Command {
   }
 }
 
+export class AddSpeakerDiarizationTracksCommand implements Command {
+  readonly description = 'Add speaker diarization tracks';
+  private before?: Timeline;
+
+  constructor(private readonly accessor: TimelineAccessor, private readonly tracks: Track[]) {}
+
+  execute(): void {
+    const timeline = this.accessor.getTimeline();
+    this.before ??= timeline;
+    const existingIds = new Set(timeline.tracks.map((track) => track.id));
+    const nextTracks = this.tracks.filter((track) => !existingIds.has(track.id));
+    this.accessor.setTimeline({ ...timeline, tracks: [...timeline.tracks, ...nextTracks] });
+  }
+
+  undo(): void {
+    if (!this.before) {
+      return;
+    }
+    this.accessor.setTimeline(this.before);
+  }
+}
+
 export type TrackPatch = Partial<Pick<Track, 'name' | 'language' | 'subtitleType' | 'color' | 'muted' | 'solo' | 'locked' | 'volume' | 'pan' | 'eq' | 'compressor'>>;
 
 function applyTrackPatch(track: Track, patch?: TrackPatch): Track {

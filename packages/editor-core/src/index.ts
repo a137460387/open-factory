@@ -104,6 +104,7 @@ export * from './audio/waveform';
 export * from './audio/vu-meter';
 export * from './audio/silence-detection';
 export * from './audio/dialogue-detection';
+export * from './audio/speaker-diarization';
 export * from './audio/ducking';
 export * from './audio-envelope';
 export * from './scopes/color-scopes';

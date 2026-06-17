@@ -73,6 +73,7 @@ interface ToolbarProps {
   onToggleSmartRoughCut(): void;
   onSeparateAudio(): void;
   onCancelAudioSeparation(): void;
+  onRunSpeakerDiarization(): void;
   onCreateMulticamSequence(): void;
   onApplyPiPLayout(): void;
   onApplySplitLayout(layoutId: string): void;
@@ -93,6 +94,8 @@ interface ToolbarProps {
   canSeparateAudio: boolean;
   audioSeparationRunning: boolean;
   audioSeparationProgress?: number;
+  canRunSpeakerDiarization: boolean;
+  speakerDiarizationRunning: boolean;
   macroRecordingActive: boolean;
   macroRecordingStepCount: number;
   recordingActive: boolean;
@@ -808,6 +811,19 @@ export function Toolbar(props: ToolbarProps) {
             >
               <span>{props.audioSeparationRunning ? t.cancelAudioSeparation : t.audioSeparation}</span>
               {props.audioSeparationRunning && props.audioSeparationProgress !== undefined ? <span className="text-xs text-slate-500">{Math.round(props.audioSeparationProgress * 100)}%</span> : null}
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+              type="button"
+              disabled={!props.canRunSpeakerDiarization || props.speakerDiarizationRunning}
+              data-testid="toolbar-tools-speaker-diarization-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onRunSpeakerDiarization();
+              }}
+            >
+              <span>{t.speakerDiarization}</span>
+              <Mic2 size={14} />
             </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"

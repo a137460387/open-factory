@@ -5,6 +5,7 @@ import {
   AddMediaFolderCommand,
   AddProjectAnnotationCommand,
   AddReviewAnnotationCommand,
+  AddSpeakerDiarizationTracksCommand,
   AddProjectBookmarkCommand,
   ApplySplitLayoutCommand,
   BatchImportSubtitleCommand,
@@ -47,6 +48,7 @@ import {
   createMainSideSplitLayout,
   detectSubtitleDataOverlaps,
   dirname,
+  round,
   getSplitLayoutDefinition,
   getClipSpeed,
   getCfrTargetFrameRate,
@@ -101,8 +103,11 @@ import {
   getOperationProjectAtStep,
   generateOperationRecordingSlidesHtml,
   normalizeOperationReplaySpeed,
+  hasLowConfidenceSpeakerSegments,
   type OperationRecordingFile,
-  type OperationReplaySpeed
+  type OperationReplaySpeed,
+  type SpeakerDiarizationSegment,
+  type Track
 } from '@open-factory/editor-core';
 import { ChevronLeft, ChevronRight, GripHorizontal } from 'lucide-react';
 import { Toolbar } from './Toolbar';
@@ -160,6 +165,7 @@ import { getReviewModeShellVisibility } from '../review/reviewMode';
 import { saveReviewReport } from '../review/reviewReport';
 import type { SharePackageWorkflowProgress } from '../lib/sharePackage';
 import { canSeparateAudioForClip, getDemucsAvailability, separateAudioForClip, type DemucsAvailability } from '../lib/demucs';
+import { analyzeSpeakerDiarizationForClip, canDiarizeSpeakersForClip } from '../lib/speakerDiarization';
 import {
   chooseProjectSavePath,
   chooseProjectToOpen,
@@ -296,6 +302,7 @@ const SceneReorderDialog = lazy(() => import('../scene-reorder/SceneReorderDialo
 const StyleTransferDialog = lazy(() => import('../style-transfer/StyleTransferDialog'));
 const CollaborationNotesPanel = lazy(() => import('../collaboration/CollaborationNotesPanel'));
 const OperationReplayDialog = lazy(() => import('../operation-recording/OperationReplayDialog'));
+const SpeakerDiarizationDialog = lazy(() => import('../speaker-diarization/SpeakerDiarizationDialog'));
 const SmartRecommendationsDialog = lazy(() => import('../smart-recommendations/SmartRecommendationsDialog'));
 const ContentAnalysisDialog = lazy(() => import('../media/ContentAnalysisDialog').then((module) => ({ default: module.ContentAnalysisDialog })));
 const RhythmAnalysisDialog = lazy(() => import('../analysis/RhythmAnalysisDialog').then((module) => ({ default: module.RhythmAnalysisDialog })));
@@ -415,6 +422,12 @@ export function EditorShell() {
   const [demucsAvailability, setDemucsAvailability] = useState<DemucsAvailability>({ ready: false, error: zhCN.demucs.notConfigured });
   const [audioSeparationClipId, setAudioSeparationClipId] = useState<string>();
   const [audioSeparationProgress, setAudioSeparationProgress] = useState<number>();
+  const [speakerDiarizationRunning, setSpeakerDiarizationRunning] = useState(false);
+  const [speakerDiarizationResult, setSpeakerDiarizationResult] = useState<{
+    sourceName: string;
+    segments: SpeakerDiarizationSegment[];
+    tracks: Track[];
+  }>();
   const [recordingTask, setRecordingTask] = useState<{ taskId: string; source: RecordingSource; outputPath: string; startedAt: number }>();
   const [recordingElapsedSeconds, setRecordingElapsedSeconds] = useState(0);
   const {
@@ -497,7 +510,9 @@ export function EditorShell() {
   const canOpenSceneReorder = useMemo(() => selectedClips.filter(isSceneReorderClip).length >= 2, [selectedClips]);
   const contentAnalysisTargets = useMemo(() => collectContentAnalysisTargets(project), [project]);
   const mediaContentAnalysis = useMemo(() => summarizeContentAnalysisByMedia(contentAnalysisTargets), [contentAnalysisTargets]);
+  const speakerDiarizationTarget = useMemo(() => findSpeakerDiarizationTarget(project, selectedClipIds.length > 0 ? selectedClipIds : selectedClipId ? [selectedClipId] : []), [project, selectedClipId, selectedClipIds]);
   const canSeparateSelectedAudio = canSeparateAudioForClip(selectedClip, selectedClipMedia, demucsAvailability.ready) && !audioSeparationClipId;
+  const canRunSpeakerDiarization = Boolean(speakerDiarizationTarget && !speakerDiarizationRunning);
   const canDetectBeats = Boolean(
     selectedClip &&
       selectedClipMedia &&
@@ -1964,6 +1979,63 @@ export function EditorShell() {
     }
   }, [addMedia, demucsAvailability, demucsExecutablePath, selectedClip, selectedClipMedia, setSelectedClipIds]);
 
+  const runSpeakerDiarization = useCallback(async () => {
+    const target = speakerDiarizationTarget;
+    if (!target) {
+      showToast({ kind: 'warning', title: zhCN.speakerDiarization.unavailableTitle, message: zhCN.speakerDiarization.unavailableMessage });
+      return;
+    }
+    setSpeakerDiarizationRunning(true);
+    showToast({ kind: 'info', title: zhCN.speakerDiarization.runningTitle, message: zhCN.speakerDiarization.runningMessage });
+    try {
+      const dialogueIntervals = collectSpeakerDiarizationDialogueIntervals(project, target.clip);
+      const analysis = await analyzeSpeakerDiarizationForClip(target.clip, target.asset, dialogueIntervals);
+      if (analysis.segments.length === 0 || analysis.tracks.length === 0) {
+        setSpeakerDiarizationResult(undefined);
+        showToast({ kind: 'warning', title: zhCN.speakerDiarization.noResultsTitle, message: zhCN.speakerDiarization.noResultsMessage });
+        return;
+      }
+      setSelectedClipId(target.clip.id);
+      setSpeakerDiarizationResult({
+        sourceName: target.clip.name || target.asset.name,
+        segments: analysis.segments,
+        tracks: analysis.tracks
+      });
+    } catch (error) {
+      showToast({ kind: 'error', title: zhCN.speakerDiarization.failedTitle, message: error instanceof Error ? error.message : zhCN.speakerDiarization.failedMessage });
+    } finally {
+      setSpeakerDiarizationRunning(false);
+    }
+  }, [project, setSelectedClipId, speakerDiarizationTarget]);
+
+  const applySpeakerDiarization = useCallback(async () => {
+    if (!speakerDiarizationResult) {
+      return;
+    }
+    if (hasLowConfidenceSpeakerSegments(speakerDiarizationResult.segments)) {
+      const lowCount = speakerDiarizationResult.segments.filter((segment) => segment.confidenceLabel === 'low').length;
+      const accepted = await bridgeConfirm(zhCN.speakerDiarization.lowConfidenceConfirm(lowCount), {
+        title: zhCN.speakerDiarization.title,
+        kind: 'warning'
+      });
+      if (!accepted) {
+        return;
+      }
+    }
+    try {
+      commandManager.execute(new AddSpeakerDiarizationTracksCommand(timelineAccessor, speakerDiarizationResult.tracks));
+      setSelectedClipIds(speakerDiarizationResult.tracks.flatMap((track) => track.clips.map((clip) => clip.id)));
+      showToast({
+        kind: 'success',
+        title: zhCN.speakerDiarization.completeTitle,
+        message: zhCN.speakerDiarization.completeMessage(speakerDiarizationResult.tracks.length, speakerDiarizationResult.segments.length)
+      });
+      setSpeakerDiarizationResult(undefined);
+    } catch (error) {
+      showToast({ kind: 'error', title: zhCN.speakerDiarization.failedTitle, message: error instanceof Error ? error.message : zhCN.speakerDiarization.failedMessage });
+    }
+  }, [setSelectedClipIds, speakerDiarizationResult]);
+
   const cancelAudioSeparation = useCallback(async () => {
     if (!audioSeparationClipId) {
       return;
@@ -3056,6 +3128,7 @@ export function EditorShell() {
           }}
           onSeparateAudio={() => void separateSelectedAudio()}
           onCancelAudioSeparation={() => void cancelAudioSeparation()}
+          onRunSpeakerDiarization={() => void runSpeakerDiarization()}
           onCreateMulticamSequence={createMulticamSequence}
           onApplyPiPLayout={applyPiPLayout}
           onApplySplitLayout={applySplitLayout}
@@ -3076,6 +3149,8 @@ export function EditorShell() {
           canSeparateAudio={canSeparateSelectedAudio}
           audioSeparationRunning={Boolean(audioSeparationClipId)}
           audioSeparationProgress={audioSeparationProgress}
+          canRunSpeakerDiarization={canRunSpeakerDiarization}
+          speakerDiarizationRunning={speakerDiarizationRunning}
           macroRecordingActive={macroRecordingActive}
           macroRecordingStepCount={macroRecordingStepCount}
           recordingActive={Boolean(recordingTask)}
@@ -3419,6 +3494,15 @@ export function EditorShell() {
               onSpeedChange={(speed) => setOperationReplaySpeed(normalizeOperationReplaySpeed(speed))}
               onExportSlides={() => void exportOperationRecordingSlides()}
               onClose={() => setOperationRecordingOpen(false)}
+            />
+          ) : null}
+          {speakerDiarizationResult ? (
+            <SpeakerDiarizationDialog
+              sourceName={speakerDiarizationResult.sourceName}
+              segments={speakerDiarizationResult.segments}
+              tracks={speakerDiarizationResult.tracks}
+              onApply={() => void applySpeakerDiarization()}
+              onClose={() => setSpeakerDiarizationResult(undefined)}
             />
           ) : null}
           {smartRecommendationsOpen ? <SmartRecommendationsDialog project={project} onAddToTimeline={addAssetToTimeline} onClose={() => setSmartRecommendationsOpen(false)} /> : null}
@@ -3822,6 +3906,40 @@ function collectContentAnalysisTargets(project: Project): ContentAnalysisTarget[
     }
   }
   return targets;
+}
+
+function findSpeakerDiarizationTarget(project: Project, preferredClipIds: string[]): { clip: Extract<Clip, { type: 'audio' | 'video' }>; asset: MediaAsset } | undefined {
+  const preferred = new Set(preferredClipIds);
+  const clips = project.timeline.tracks.flatMap((track) => track.clips);
+  const candidates = [...clips.filter((clip) => preferred.has(clip.id)), ...clips];
+  for (const clip of candidates) {
+    if (clip.type !== 'audio' && clip.type !== 'video') {
+      continue;
+    }
+    const asset = project.media.find((item) => item.id === clip.mediaId);
+    if (canDiarizeSpeakersForClip(clip, asset)) {
+      return { clip, asset: asset! };
+    }
+  }
+  return undefined;
+}
+
+function collectSpeakerDiarizationDialogueIntervals(project: Project, clip: Extract<Clip, { type: 'audio' | 'video' }>): Array<{ start: number; end: number }> {
+  const clipStart = clip.start;
+  const clipEnd = round(clip.start + clip.duration);
+  return project.timeline.tracks
+    .filter((track) => track.type === 'subtitle')
+    .flatMap((track) => track.clips)
+    .filter((subtitle): subtitle is Extract<Clip, { type: 'subtitle' }> => subtitle.type === 'subtitle')
+    .map((subtitle) => ({
+      start: Math.max(clipStart, subtitle.start),
+      end: Math.min(clipEnd, round(subtitle.start + subtitle.duration))
+    }))
+    .filter((interval) => interval.end > interval.start)
+    .map((interval) => ({
+      start: round(interval.start - clipStart),
+      end: round(interval.end - clipStart)
+    }));
 }
 
 function findContentAnalysisTarget(project: Project, clipId: string): ContentAnalysisTarget | undefined {
