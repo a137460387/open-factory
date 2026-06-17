@@ -7,6 +7,7 @@ import {
   buildFfmpegCurrentFrameExportPlan,
   buildFfmpegExportPlan,
   buildFfmpegPreviewSamplePlans,
+  buildThumbnailExportSettings,
   calculateExportPreviewSampleTimes,
   calculateSplitLayoutTransforms,
   calculateWatermarkOverlayPosition,
@@ -1074,6 +1075,28 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.fullArgs).not.toContain('-c:a');
     expect(plan.fullArgs.at(-1)).toBe('D:/Exports/frame.jpg');
     expect(plan.duration).toBeCloseTo(1 / 30);
+  });
+
+  it('builds thumbnail platform current-frame exports with preset dimensions', () => {
+    const cases = [
+      ['youtube', 's=1280x720:r=30', 'D:/Exports/youtube.jpg'],
+      ['bilibili', 's=1920x1080:r=30', 'D:/Exports/bilibili.jpg'],
+      ['douyin', 's=1080x1920:r=30', 'D:/Exports/douyin.jpg']
+    ] as const;
+
+    for (const [platform, expectedSize, outputPath] of cases) {
+      const project = makeProject();
+      const plan = buildFfmpegCurrentFrameExportPlan(
+        buildExportProjectFromProject(project, {
+          outputPath,
+          settings: buildThumbnailExportSettings(platform, true)
+        }),
+        1.25
+      );
+
+      expect(plan.filterComplex).toContain(expectedSize);
+      expect(plan.outputArgs).toEqual(['-ss', '1.25', '-frames:v', '1', '-f', 'image2', outputPath]);
+    }
   });
 
   it('calculates export preview sample times from the timeline start, middle, and end', () => {

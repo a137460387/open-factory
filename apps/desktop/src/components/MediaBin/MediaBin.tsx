@@ -46,6 +46,7 @@ interface MediaBinProps {
   onImportPaths(paths: string[]): void;
   onBatchTranscode(paths: string[]): void;
   onBatchGenerateCovers(): void;
+  onGenerateThumbnails(assetIds: string[]): void;
   onExportGif(asset: MediaAsset): void;
   onAnalyzeSpectrum(asset: MediaAsset): void;
   onScanDuplicates(): void;
@@ -85,6 +86,7 @@ export function MediaBin({
   onImportPaths,
   onBatchTranscode,
   onBatchGenerateCovers,
+  onGenerateThumbnails,
   onExportGif,
   onAnalyzeSpectrum,
   onScanDuplicates,
@@ -116,6 +118,7 @@ export function MediaBin({
   const [mediaLibraryView, setMediaLibraryView] = useState<MediaLibraryViewSettings>(DEFAULT_MEDIA_LIBRARY_VIEW_SETTINGS);
   const [mediaInfo, setMediaInfo] = useState<MediaInfoState>();
   const [sourcePaths, setSourcePaths] = useState<MediaSourcePathsState>();
+  const [selectedMediaIds, setSelectedMediaIds] = useState<Set<string>>(() => new Set());
   const missingCount = media.filter((asset) => asset.missing).length;
   const smartAlbums = collectSmartAlbums(media, Date.now(), mediaMetadata);
   const smartAlbumIds = smartAlbumId === 'none' ? undefined : new Set(smartAlbums.find((album) => album.id === smartAlbumId)?.assetIds ?? []);
@@ -145,6 +148,22 @@ export function MediaBin({
   const runningJob = jobs.find((job) => job.status === 'running');
   const pendingCount = jobs.filter((job) => job.status === 'pending').length;
   const failedCount = jobs.filter((job) => job.status === 'error').length;
+  const selectedVideoIds = useMemo(
+    () => media.filter((asset) => asset.type === 'video' && selectedMediaIds.has(asset.id)).map((asset) => asset.id),
+    [media, selectedMediaIds]
+  );
+
+  const toggleSelectedMedia = (assetId: string) => {
+    setSelectedMediaIds((current) => {
+      const next = new Set(current);
+      if (next.has(assetId)) {
+        next.delete(assetId);
+      } else {
+        next.add(assetId);
+      }
+      return next;
+    });
+  };
 
   const updateMediaLibraryView = (patch: Partial<MediaLibraryViewSettings>) => {
     setMediaLibraryView((current) => {
@@ -217,6 +236,14 @@ export function MediaBin({
   }, []);
 
   useEffect(() => {
+    const validIds = new Set(media.map((asset) => asset.id));
+    setSelectedMediaIds((current) => {
+      const next = new Set(Array.from(current).filter((id) => validIds.has(id)));
+      return next.size === current.size ? current : next;
+    });
+  }, [media]);
+
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (!(event.ctrlKey || event.metaKey) || event.shiftKey || event.altKey || isEditableKeyboardTarget(event.target)) {
         return;
@@ -282,6 +309,15 @@ export function MediaBin({
           >
             <ImageDown size={15} />
             {t.batchGenerateCovers}
+          </button>
+          <button
+            className="inline-flex items-center gap-2 rounded-md border border-line bg-panel px-2 py-2 text-sm font-medium text-slate-700 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={() => onGenerateThumbnails(selectedVideoIds)}
+            disabled={selectedVideoIds.length === 0}
+            data-testid="batch-generate-thumbnails-button"
+          >
+            <ImageDown size={15} />
+            {t.batchGenerateThumbnails(selectedVideoIds.length)}
           </button>
           <button
             className="inline-flex items-center gap-2 rounded-md border border-line bg-panel px-2 py-2 text-sm font-medium text-slate-700 hover:bg-white"
@@ -455,6 +491,8 @@ export function MediaBin({
             onAnalyzeSpectrum={onAnalyzeSpectrum}
             onShowInfo={(asset) => void openMediaInfo(asset)}
             onFindSources={findSourcePaths}
+            selectedMediaIds={selectedMediaIds}
+            onToggleSelected={toggleSelectedMedia}
           />
         ) : (
           <div className="space-y-3">
@@ -484,6 +522,8 @@ export function MediaBin({
               onAnalyzeSpectrum={onAnalyzeSpectrum}
               onShowInfo={(asset) => void openMediaInfo(asset)}
               onFindSources={findSourcePaths}
+              selectedMediaIds={selectedMediaIds}
+              onToggleSelected={toggleSelectedMedia}
             />
             <RootMediaDropZone onMoveMediaToFolder={onMoveMediaToFolder} />
             <MediaCardGrid
@@ -506,6 +546,8 @@ export function MediaBin({
               onAnalyzeSpectrum={onAnalyzeSpectrum}
               onShowInfo={(asset) => void openMediaInfo(asset)}
               onFindSources={findSourcePaths}
+              selectedMediaIds={selectedMediaIds}
+              onToggleSelected={toggleSelectedMedia}
             />
           </div>
         )}
@@ -664,6 +706,8 @@ function MediaFolderTree(props: {
   onAnalyzeSpectrum(asset: MediaAsset): void;
   onShowInfo(asset: MediaAsset): void;
   onFindSources(asset: MediaAsset): void;
+  selectedMediaIds: Set<string>;
+  onToggleSelected(assetId: string): void;
 }) {
   const roots = props.folders.filter((folder) => !folder.parentId);
   if (roots.length === 0) {
@@ -705,7 +749,9 @@ function MediaFolderNode({
   onExportGif,
   onAnalyzeSpectrum,
   onShowInfo,
-  onFindSources
+  onFindSources,
+  selectedMediaIds,
+  onToggleSelected
 }: {
   folder: MediaFolder;
   depth: number;
@@ -734,6 +780,8 @@ function MediaFolderNode({
   onAnalyzeSpectrum(asset: MediaAsset): void;
   onShowInfo(asset: MediaAsset): void;
   onFindSources(asset: MediaAsset): void;
+  selectedMediaIds: Set<string>;
+  onToggleSelected(assetId: string): void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState(folder.name);
@@ -833,6 +881,8 @@ function MediaFolderNode({
               onAnalyzeSpectrum={onAnalyzeSpectrum}
               onShowInfo={onShowInfo}
               onFindSources={onFindSources}
+              selectedMediaIds={selectedMediaIds}
+              onToggleSelected={onToggleSelected}
             />
           ))}
           <MediaCardGrid
@@ -855,6 +905,8 @@ function MediaFolderNode({
             onAnalyzeSpectrum={onAnalyzeSpectrum}
             onShowInfo={onShowInfo}
             onFindSources={onFindSources}
+            selectedMediaIds={selectedMediaIds}
+            onToggleSelected={onToggleSelected}
           />
         </div>
       ) : null}
@@ -1021,7 +1073,9 @@ function MediaCardGrid({
   onExportGif,
   onAnalyzeSpectrum,
   onShowInfo,
-  onFindSources
+  onFindSources,
+  selectedMediaIds,
+  onToggleSelected
 }: {
   media: MediaAsset[];
   gridSize: MediaLibraryGridSize;
@@ -1042,6 +1096,8 @@ function MediaCardGrid({
   onAnalyzeSpectrum(asset: MediaAsset): void;
   onShowInfo(asset: MediaAsset): void;
   onFindSources(asset: MediaAsset): void;
+  selectedMediaIds: Set<string>;
+  onToggleSelected(assetId: string): void;
 }) {
   if (media.length === 0) {
     return null;
@@ -1070,6 +1126,8 @@ function MediaCardGrid({
           onAnalyzeSpectrum={() => onAnalyzeSpectrum(asset)}
           onShowInfo={() => onShowInfo(asset)}
           onFindSources={() => onFindSources(asset)}
+          selected={selectedMediaIds.has(asset.id)}
+          onToggleSelected={() => onToggleSelected(asset.id)}
         />
       ))}
     </div>
@@ -1315,7 +1373,9 @@ function MediaCard({
   onExportGif,
   onAnalyzeSpectrum,
   onShowInfo,
-  onFindSources
+  onFindSources,
+  selected,
+  onToggleSelected
 }: {
   asset: MediaAsset;
   metadata?: MediaMetadata;
@@ -1335,6 +1395,8 @@ function MediaCard({
   onAnalyzeSpectrum(): void;
   onShowInfo(): void;
   onFindSources(): void;
+  selected: boolean;
+  onToggleSelected(): void;
 }) {
   const proxySettings = useProxySettingsStore((state) => state.settings);
   const proxyStatus = asset.proxyStatus ?? (asset.type === 'video' ? 'none' : undefined);
@@ -1404,11 +1466,20 @@ function MediaCard({
       }}
     >
       <div className="checkerboard relative aspect-video">
+        <label
+          className="absolute left-2 top-2 z-10 inline-flex h-6 w-6 items-center justify-center rounded border border-white/80 bg-white/90 shadow"
+          title={zhCN.mediaBin.selectForThumbnail}
+          aria-label={zhCN.mediaBin.selectForThumbnail}
+          data-testid={`media-select-${asset.id}`}
+          onClick={(event) => event.stopPropagation()}
+        >
+          <input className="h-4 w-4 accent-brand" type="checkbox" checked={selected} onChange={onToggleSelected} />
+        </label>
         {asset.thumbnail ? <img className="h-full w-full object-cover" src={asset.thumbnail} alt="" /> : <IconPreview type={asset.type} />}
-        {asset.missing ? <span className="absolute left-2 top-2 rounded bg-rose-600 px-2 py-1 text-xs font-semibold text-white" data-testid={`missing-media-badge-${asset.id}`}>{zhCN.common.missing}</span> : null}
+        {asset.missing ? <span className="absolute left-2 top-10 rounded bg-rose-600 px-2 py-1 text-xs font-semibold text-white" data-testid={`missing-media-badge-${asset.id}`}>{zhCN.common.missing}</span> : null}
         {asset.variableFrameRate ? (
           <span
-            className="absolute left-2 top-2 rounded bg-sky-700 px-2 py-1 text-xs font-semibold text-white shadow"
+            className="absolute left-2 top-10 rounded bg-sky-700 px-2 py-1 text-xs font-semibold text-white shadow"
             title={zhCN.mediaBin.vfrTooltip}
             data-testid={`vfr-badge-${asset.id}`}
           >

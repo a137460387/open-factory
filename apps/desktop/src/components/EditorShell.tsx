@@ -324,6 +324,7 @@ const TimelineSearchPanel = lazy(() => import('../timeline-search/TimelineSearch
 const SnapshotNameDialog = lazy(() => import('../project-snapshots/SnapshotNameDialog').then((module) => ({ default: module.SnapshotNameDialog })));
 const SnapshotHistoryDialog = lazy(() => import('../project-snapshots/SnapshotHistoryDialog').then((module) => ({ default: module.SnapshotHistoryDialog })));
 const SnapshotVersionCompareDialog = lazy(() => import('../project-snapshots/SnapshotVersionCompareDialog').then((module) => ({ default: module.SnapshotVersionCompareDialog })));
+const ThumbnailGeneratorDialog = lazy(() => import('../thumbnail/ThumbnailGeneratorDialog').then((module) => ({ default: module.ThumbnailGeneratorDialog })));
 
 interface ProjectPasswordRequest {
   title: string;
@@ -365,6 +366,7 @@ export function EditorShell() {
   const [batchWatermarkOpen, setBatchWatermarkOpen] = useState(false);
   const [batchProjectProcessingOpen, setBatchProjectProcessingOpen] = useState(false);
   const [batchTranscodeInitialPaths, setBatchTranscodeInitialPaths] = useState<string[]>([]);
+  const [thumbnailGeneratorAssetIds, setThumbnailGeneratorAssetIds] = useState<string[]>();
   const [gifExportAsset, setGifExportAsset] = useState<MediaAsset>();
   const [spectrumAsset, setSpectrumAsset] = useState<MediaAsset>();
   const [mediaVersionCompare, setMediaVersionCompare] = useState<MediaVersionCompareRequest>();
@@ -3368,6 +3370,7 @@ export function EditorShell() {
           onOpenMediaOrganizer={openMediaOrganizer}
           onOpenVideoStitchWizard={() => setVideoStitchWizardOpen(true)}
           onAddMotionGraphic={addMotionGraphic}
+          onOpenThumbnailGenerator={() => setThumbnailGeneratorAssetIds([])}
           onOpenSyncCompare={openSyncCompare}
           onOpenSceneDetection={() => setSceneDetectionRequestId((id) => id + 1)}
           onOpenSceneReorder={() => setSceneReorderOpen(true)}
@@ -3523,6 +3526,7 @@ export function EditorShell() {
                   onImportPaths={(paths) => void importDropped(paths)}
                   onBatchTranscode={(paths) => openBatchTranscode(paths)}
                   onBatchGenerateCovers={() => void batchGenerateCovers()}
+                  onGenerateThumbnails={(assetIds) => setThumbnailGeneratorAssetIds(assetIds)}
                   onExportGif={(asset) => setGifExportAsset(asset)}
                   onAnalyzeSpectrum={(asset) => setSpectrumAsset(asset)}
                   onScanDuplicates={() => void scanDuplicateMedia()}
@@ -3721,6 +3725,9 @@ export function EditorShell() {
           ) : null}
           {batchWatermarkOpen ? <BatchWatermarkDialog project={project} onClose={() => setBatchWatermarkOpen(false)} /> : null}
           {batchProjectProcessingOpen ? <BatchProjectProcessingDialog onClose={() => setBatchProjectProcessingOpen(false)} /> : null}
+          {thumbnailGeneratorAssetIds ? (
+            <ThumbnailGeneratorDialog project={project} initialAssetIds={thumbnailGeneratorAssetIds} onClose={() => setThumbnailGeneratorAssetIds(undefined)} />
+          ) : null}
           {gifExportAsset ? <GifExportDialog asset={gifExportAsset} onClose={() => setGifExportAsset(undefined)} /> : null}
           {spectrumAsset ? (
             <AudioSpectrumDialog
