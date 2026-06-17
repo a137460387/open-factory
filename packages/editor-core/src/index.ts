@@ -1,4 +1,4 @@
-export * from './time';
+﻿export * from './time';
 export * from './model';
 export * from './blend-modes';
 export * from './color-log-luts';
@@ -44,12 +44,9 @@ export * from './timeline-feedback';
 export * from './timeline-templates';
 export * from './style-transfer';
 export * from './smart-recommendations';
-<<<<<<< Updated upstream
 export * from './operation-recording';
-=======
 export * from './complexity-score';
 export * from './export-optimization-suggestions';
->>>>>>> Stashed changes
 export * from './frame-search';
 export * from './scene-reorder';
 export * from './vfr';

@@ -1,4 +1,4 @@
-import { Activity, Archive, Camera, Captions, ChevronDown, CircleHelp, ClipboardList, Download, FileDown, FilePlus2, FileText, FolderOpen, GitCompareArrows, Grid2X2, History, ImageDown, LayoutGrid, LockKeyhole, MessageSquareText, Mic2, Monitor, PanelsTopLeft, Pause, PictureInPicture2, Play, Redo2, RotateCcw, Save, Scissors, Settings, Square, Trash2, Undo2, WandSparkles, XCircle } from 'lucide-react';
+﻿import { Activity, Archive, Camera, Captions, ChevronDown, CircleHelp, ClipboardList, Download, FileDown, FilePlus2, FileText, FolderOpen, GitCompareArrows, Grid2X2, History, ImageDown, LayoutGrid, LockKeyhole, MessageSquareText, Mic2, Monitor, PanelsTopLeft, Pause, PictureInPicture2, Play, Redo2, RotateCcw, Save, Scissors, Settings, Square, Trash2, Undo2, WandSparkles, XCircle } from 'lucide-react';
 import {
   BUILT_IN_SPLIT_LAYOUTS,
   SPLIT_LAYOUT_PRESET_IDS,
@@ -52,11 +52,8 @@ interface ToolbarProps {
   onOpenSceneReorder(): void;
   onOpenStyleTransfer(): void;
   onOpenCollaborationNotes(): void;
-<<<<<<< Updated upstream
   onOpenOperationRecording(): void;
-=======
   onOpenComplexityScore(): void;
->>>>>>> Stashed changes
   onOpenSmartRecommendations(): void;
   onOpenContentAnalysis(): void;
   onOpenRhythmAnalysis(): void;
@@ -704,7 +701,6 @@ export function Toolbar(props: ToolbarProps) {
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
               type="button"
-<<<<<<< Updated upstream
               data-testid="toolbar-tools-operation-recording-menu-item"
               onClick={() => {
                 setToolsMenuOpen(false);
@@ -713,7 +709,10 @@ export function Toolbar(props: ToolbarProps) {
             >
               <span>{t.operationRecording}</span>
               <History size={14} />
-=======
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
               data-testid="toolbar-tools-complexity-score-menu-item"
               onClick={() => {
                 setToolsMenuOpen(false);
@@ -722,7 +721,6 @@ export function Toolbar(props: ToolbarProps) {
             >
               <span>{t.complexityScore}</span>
               <Activity size={14} />
->>>>>>> Stashed changes
             </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+﻿import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import {
   AddAdjustmentLayerCommand,
   AutoRepairProjectHealthCommand,
@@ -303,12 +303,9 @@ const SyncComparePanel = lazy(() => import('../sync-compare/SyncComparePanel').t
 const SceneReorderDialog = lazy(() => import('../scene-reorder/SceneReorderDialog').then((module) => ({ default: module.SceneReorderDialog })));
 const StyleTransferDialog = lazy(() => import('../style-transfer/StyleTransferDialog'));
 const CollaborationNotesPanel = lazy(() => import('../collaboration/CollaborationNotesPanel'));
-<<<<<<< Updated upstream
 const OperationReplayDialog = lazy(() => import('../operation-recording/OperationReplayDialog'));
 const SpeakerDiarizationDialog = lazy(() => import('../speaker-diarization/SpeakerDiarizationDialog'));
-=======
 const ComplexityScorePanel = lazy(() => import('../complexity/ComplexityScorePanel'));
->>>>>>> Stashed changes
 const SmartRecommendationsDialog = lazy(() => import('../smart-recommendations/SmartRecommendationsDialog'));
 const ContentAnalysisDialog = lazy(() => import('../media/ContentAnalysisDialog').then((module) => ({ default: module.ContentAnalysisDialog })));
 const RhythmAnalysisDialog = lazy(() => import('../analysis/RhythmAnalysisDialog').then((module) => ({ default: module.RhythmAnalysisDialog })));
@@ -366,16 +363,13 @@ export function EditorShell() {
   const [sceneReorderOpen, setSceneReorderOpen] = useState(false);
   const [styleTransferOpen, setStyleTransferOpen] = useState(false);
   const [collaborationNotesOpen, setCollaborationNotesOpen] = useState(false);
-<<<<<<< Updated upstream
   const [operationRecordingOpen, setOperationRecordingOpen] = useState(false);
   const [operationRecording, setOperationRecording] = useState<OperationRecordingFile>();
   const [operationRecordingActive, setOperationRecordingActive] = useState(false);
   const [operationRecordingStep, setOperationRecordingStep] = useState(-1);
   const [operationReplaySpeed, setOperationReplaySpeed] = useState<OperationReplaySpeed>(1);
   const [operationReplayRunning, setOperationReplayRunning] = useState(false);
-=======
   const [complexityScoreOpen, setComplexityScoreOpen] = useState(false);
->>>>>>> Stashed changes
   const [smartRecommendationsOpen, setSmartRecommendationsOpen] = useState(false);
   const [contentAnalysisOpen, setContentAnalysisOpen] = useState(false);
   const [rhythmAnalysisOpen, setRhythmAnalysisOpen] = useState(false);
@@ -3173,11 +3167,8 @@ export function EditorShell() {
           onOpenSceneReorder={() => setSceneReorderOpen(true)}
           onOpenStyleTransfer={() => setStyleTransferOpen(true)}
           onOpenCollaborationNotes={() => setCollaborationNotesOpen(true)}
-<<<<<<< Updated upstream
           onOpenOperationRecording={() => setOperationRecordingOpen(true)}
-=======
           onOpenComplexityScore={() => setComplexityScoreOpen(true)}
->>>>>>> Stashed changes
           onOpenSmartRecommendations={() => setSmartRecommendationsOpen(true)}
           onOpenContentAnalysis={() => setContentAnalysisOpen(true)}
           onOpenRhythmAnalysis={() => setRhythmAnalysisOpen(true)}
@@ -3552,7 +3543,6 @@ export function EditorShell() {
             <StyleTransferDialog project={project} selectedClipId={selectedClipId} selectedClipIds={selectedClipIds} onClose={() => setStyleTransferOpen(false)} />
           ) : null}
           {collaborationNotesOpen ? <CollaborationNotesPanel project={project} playheadTime={playheadTime} onClose={() => setCollaborationNotesOpen(false)} /> : null}
-<<<<<<< Updated upstream
           {operationRecordingOpen ? (
             <OperationReplayDialog
               recording={operationRecording}
@@ -3581,9 +3571,7 @@ export function EditorShell() {
               onClose={() => setSpeakerDiarizationResult(undefined)}
             />
           ) : null}
-=======
           {complexityScoreOpen ? <ComplexityScorePanel project={project} onClose={() => setComplexityScoreOpen(false)} /> : null}
->>>>>>> Stashed changes
           {smartRecommendationsOpen ? <SmartRecommendationsDialog project={project} onAddToTimeline={addAssetToTimeline} onClose={() => setSmartRecommendationsOpen(false)} /> : null}
           {contentAnalysisOpen ? (
             <ContentAnalysisDialog

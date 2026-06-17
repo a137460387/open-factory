@@ -1,4 +1,4 @@
-const formatSignedNumber = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}`;
+﻿const formatSignedNumber = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}`;
 
 const zh = {
   common: {
@@ -174,11 +174,8 @@ const zh = {
     sceneReorder: '场景重组',
     styleTransfer: '风格迁移',
     collaborationNotes: '协同标注',
-<<<<<<< Updated upstream
     operationRecording: '操作回放',
-=======
     complexityScore: '复杂度评分',
->>>>>>> Stashed changes
     smartRecommendations: '智能推荐',
     contentAnalysis: '内容分析',
     rhythmAnalysis: '节奏分析',
@@ -3958,11 +3955,8 @@ const enOverrides = {
     sceneReorder: 'Scene Reorder',
     styleTransfer: 'Style Transfer',
     collaborationNotes: 'Collaboration Notes',
-<<<<<<< Updated upstream
     operationRecording: 'Operation Replay',
-=======
     complexityScore: 'Complexity Score',
->>>>>>> Stashed changes
     smartRecommendations: 'Smart Recommendations',
     contentAnalysis: 'Content Analysis',
     rhythmAnalysis: 'Rhythm Analysis',
