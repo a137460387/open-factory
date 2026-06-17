@@ -7,6 +7,7 @@ import {
   normalizeThreeWayColor
 } from './color-grading';
 import { normalizeClipBlendMode } from './blend-modes';
+import { normalizeColorNodeGraph } from './color-node-graph';
 import { REC709_INPUT_COLOR_SPACE, normalizeInputColorSpace } from './color-log-luts';
 import { normalizeClipContentAnalysis } from './content-analysis';
 import { DEFAULT_PROJECT_COLOR_PIPELINE, normalizeProjectColorPipeline } from './color-pipeline';
@@ -810,6 +811,7 @@ export function createBaseClip(
     trimEnd: round(Math.max(0, input.trimEnd)),
     speed: clampClipSpeed(input.speed),
     colorCorrection: normalizeColorCorrection(input.colorCorrection),
+    ...(input.colorNodeGraph ? { colorNodeGraph: normalizeColorNodeGraph(input.colorNodeGraph, input.colorCorrection) } : {}),
     transform: normalizeTransform(input.transform),
     chromaKey: normalizeChromaKey(input.chromaKey),
     stabilization: normalizeStabilization(input.stabilization),

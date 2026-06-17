@@ -46,6 +46,7 @@ import {
   type ColorWheelValue,
   type ThreeWayColor
 } from '../color-grading';
+import { buildColorNodeGraphFilterPlan, detectColorNodeGraphCycle, normalizeColorNodeGraph } from '../color-node-graph';
 import { getLogToRec709Lut, isLogInputColorSpace, serializeLogToRec709Cube } from '../color-log-luts';
 import { buildAcesOdtFilterChain, buildProjectColorPipelineExportDefaults, normalizeProjectColorPipeline } from '../color-pipeline';
 import {
@@ -302,6 +303,7 @@ function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project[
             transform: normalizeTransform(clip.transform),
             border: normalizeClipBorder(clip.border),
             colorCorrection: normalizeColorCorrection(clip.colorCorrection),
+            ...(clip.colorNodeGraph ? { colorNodeGraph: normalizeColorNodeGraph(clip.colorNodeGraph, clip.colorCorrection) } : {}),
             chromaKey: normalizeChromaKey(clip.chromaKey),
             stabilization: normalizeStabilization(clip.stabilization),
             frameInterpolation: normalizeFrameInterpolation(clip.frameInterpolation),
@@ -1576,9 +1578,109 @@ function buildVisualClipFilter(
   if (hasPrivacyBlurMasks(clip)) {
     return buildPrivacyBlurClipFilter(inputIndex, clip, label, settings, textArtifacts, warnings, capabilities, trim);
   }
+  if (clip.colorNodeGraph) {
+    const graphFilter = buildColorNodeGraphVisualFilter(inputIndex, clip, label, settings, textArtifacts, warnings, capabilities, trim);
+    if (graphFilter) {
+      return graphFilter;
+    }
+  }
   const filters = [`[${inputIndex}:v]${trim}`, ...buildChromaKeyFilters(clip)];
   filters.push(...buildVisualPostKeyFilters(clip, settings, textArtifacts, warnings, capabilities, label));
   return filters.join(',');
+}
+
+function buildColorNodeGraphVisualFilter(
+  inputIndex: number,
+  clip: ExportClip,
+  label: string,
+  settings: ExportSettings,
+  textArtifacts: TextArtifact[],
+  warnings: string[],
+  capabilities: FfmpegCapabilities | undefined,
+  trim: string
+): string | null {
+  const normalized = normalizeColorNodeGraph(clip.colorNodeGraph, clip.colorCorrection);
+  const cycle = detectColorNodeGraphCycle(normalized);
+  if (cycle) {
+    warnings.push(`Color node graph for clip ${clip.id} contains a cycle (${cycle.join(' -> ')}); falling back to the legacy color correction chain.`);
+    return null;
+  }
+  const baseLabel = `${safeLabel(label)}_node_base`;
+  const graphOutputLabel = `${safeLabel(label)}_node_graph_output`;
+  const baseFilters = [
+    `[${inputIndex}:v]${trim}`,
+    ...buildChromaKeyFilters(clip),
+    ...buildVisualPreColorFilters(clip, settings, warnings, capabilities)
+  ];
+  const graphFilters = buildColorNodeGraphFilterPlan(normalized, {
+    inputLabel: baseLabel,
+    outputLabel: graphOutputLabel,
+    clipId: clip.id,
+    mediaKind: 'video',
+    escapeFilePath: escapeDrawtextValue,
+    registerArtifact: (artifact) => {
+      textArtifacts.push({
+        clipId: `${clip.id}:${artifact.nodeId}`,
+        text: artifact.text,
+        fileName: artifact.fileName,
+        placeholder: artifact.placeholder,
+        pathMode: 'filter'
+      });
+      return artifact.placeholder;
+    }
+  }).filters;
+  const postFilters = [
+    `[${graphOutputLabel}]${buildVisualPostColorFilters(clip, settings, textArtifacts, label, false).join(',')}`
+  ];
+  return [`${baseFilters.join(',')}[${baseLabel}]`, ...graphFilters, ...postFilters].join(',');
+}
+
+function buildVisualPreColorFilters(
+  clip: ExportClip,
+  settings: ExportSettings,
+  warnings: string[],
+  capabilities: FfmpegCapabilities | undefined
+): string[] {
+  const filters: string[] = [];
+  if (isKenBurnsAnimatedScaleClip(clip)) {
+    filters.push(buildSetptsFilter(clip, false, warnings), buildKenBurnsZoompanFilter(clip, settings), 'setsar=1', buildSetptsFilter(clip, true, warnings));
+  } else {
+    filters.push(buildSetptsFilter(clip, true, warnings), ...buildStabilizationFilters(clip), ...buildPanoramaProjectionFilters(clip), ...buildReframeFilters(settings), buildScaleFilter(clip), 'setsar=1');
+  }
+  if (settings.scaleMode === 'fit' && !isReframeEnabled(settings.targetAspectRatio)) {
+    filters.push(
+      `scale=${settings.width}:${settings.height}:force_original_aspect_ratio=decrease`,
+      `pad=${settings.width}:${settings.height}:(ow-iw)/2:(oh-ih)/2:color=black`
+    );
+  }
+  filters.push(...buildSlowMotionFilters(clip, settings, capabilities, warnings));
+  filters.push(...buildFrameInterpolationFilters(clip, capabilities, warnings));
+  filters.push(...buildVideoRestorationFilters(clip));
+  filters.push(...buildQualityEnhancementFilters(clip));
+  filters.push(...buildSourceColorSpaceConversionFilters(clip, settings));
+  filters.push('format=rgba');
+  filters.push(...buildMaskFilters(clip));
+  return filters;
+}
+
+function buildVisualPostColorFilters(
+  clip: ExportClip,
+  settings: ExportSettings,
+  textArtifacts: TextArtifact[],
+  label: string,
+  includeColorCorrection = true
+): string[] {
+  const filters: string[] = [];
+  if (includeColorCorrection) {
+    filters.push(...buildColorCorrectionFilters(clip, textArtifacts));
+  }
+  filters.push(...buildEffectFilters(clip.effects, settings.fps));
+  filters.push(...buildClipBorderFilters(clip));
+  if (Math.abs(clip.transform.rotation) > 0.001) {
+    filters.push(`rotate=${formatFfmpegNumber(clip.transform.rotation)}*PI/180:c=none`);
+  }
+  filters.push(...buildOpacityFilters(clip, label));
+  return filters;
 }
 
 function buildVisualPostKeyFilters(

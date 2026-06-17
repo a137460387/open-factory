@@ -305,6 +305,7 @@ const MacroHistoryDialog = lazy(() => import('../macros/MacroHistoryDialog').the
 const TimelineExportDialog = lazy(() => import('../timeline-export/TimelineExportDialog').then((module) => ({ default: module.TimelineExportDialog })));
 const ProfessionalNleExportDialog = lazy(() => import('../professional-nle/ProfessionalNleExportDialog').then((module) => ({ default: module.ProfessionalNleExportDialog })));
 const LutEditorDialog = lazy(() => import('../lut-editor/LutEditorDialog').then((module) => ({ default: module.LutEditorDialog })));
+const ColorNodeEditorDialog = lazy(() => import('../color-node-editor/ColorNodeEditorDialog').then((module) => ({ default: module.ColorNodeEditorDialog })));
 const BatchTranscodeDialog = lazy(() => import('../media/BatchTranscodeDialog').then((module) => ({ default: module.BatchTranscodeDialog })));
 const BatchWatermarkDialog = lazy(() => import('../media/BatchWatermarkDialog').then((module) => ({ default: module.BatchWatermarkDialog })));
 const BatchProjectProcessingDialog = lazy(() => import('../projectBatch/BatchProjectProcessingDialog').then((module) => ({ default: module.BatchProjectProcessingDialog })));
@@ -370,6 +371,7 @@ export function EditorShell() {
   const [batchTranscodeInitialPaths, setBatchTranscodeInitialPaths] = useState<string[]>([]);
   const [thumbnailGeneratorAssetIds, setThumbnailGeneratorAssetIds] = useState<string[]>();
   const [lutEditorOpen, setLutEditorOpen] = useState(false);
+  const [colorNodeEditorOpen, setColorNodeEditorOpen] = useState(false);
   const [professionalNleExportOpen, setProfessionalNleExportOpen] = useState(false);
   const [gifExportAsset, setGifExportAsset] = useState<MediaAsset>();
   const [spectrumAsset, setSpectrumAsset] = useState<MediaAsset>();
@@ -1978,6 +1980,14 @@ export function EditorShell() {
     }
   }, [playheadTime, project.timeline, setSelectedClipId]);
 
+  const openColorNodeEditor = useCallback(() => {
+    if (!selectedClip || selectedClip.type === 'audio') {
+      showToast({ kind: 'warning', title: zhCN.colorNodeEditor.unavailableTitle, message: zhCN.colorNodeEditor.unavailableMessage });
+      return;
+    }
+    setColorNodeEditorOpen(true);
+  }, [selectedClip]);
+
   const addTitleTemplate = useCallback(
     (templateId: TitleTemplateId) => {
       const track = project.timeline.tracks.find((item) => item.type === 'text');
@@ -3376,6 +3386,7 @@ export function EditorShell() {
           onAddMotionGraphic={addMotionGraphic}
           onOpenThumbnailGenerator={() => setThumbnailGeneratorAssetIds([])}
           onOpenLutEditor={() => setLutEditorOpen(true)}
+          onOpenColorNodeEditor={openColorNodeEditor}
           onOpenSyncCompare={openSyncCompare}
           onOpenSceneDetection={() => setSceneDetectionRequestId((id) => id + 1)}
           onOpenSceneReorder={() => setSceneReorderOpen(true)}
@@ -3713,6 +3724,15 @@ export function EditorShell() {
           {timelineExportDialogOpen ? <TimelineExportDialog project={project} onClose={() => setTimelineExportDialogOpen(false)} onImportEdl={importEdlTimeline} /> : null}
           {professionalNleExportOpen ? <ProfessionalNleExportDialog project={project} onClose={() => setProfessionalNleExportOpen(false)} /> : null}
           {lutEditorOpen ? <LutEditorDialog onClose={() => setLutEditorOpen(false)} /> : null}
+          {colorNodeEditorOpen && selectedClip && selectedClip.type !== 'audio' ? (
+            <ColorNodeEditorDialog
+              clip={selectedClip}
+              onApply={(graph) => {
+                commandManager.execute(new UpdateClipCommand(timelineAccessor, selectedClip.id, { colorNodeGraph: graph }));
+              }}
+              onClose={() => setColorNodeEditorOpen(false)}
+            />
+          ) : null}
           {snapshotNameOpen ? <SnapshotNameDialog defaultName={project.name} onConfirm={(name) => void saveNamedSnapshot(name)} onClose={() => setSnapshotNameOpen(false)} /> : null}
           {snapshotHistoryOpen ? (
             <SnapshotHistoryDialog projectId={project.id} projectPath={projectPath} onRestore={restoreSnapshotProject} onClose={() => setSnapshotHistoryOpen(false)} />

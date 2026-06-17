@@ -2,6 +2,7 @@ import type { ColorCurves, ThreeWayColor } from './color-grading';
 import type { InputColorSpace } from './color-log-luts';
 import type { ClipBlendMode } from './blend-modes';
 import type { ClipContentAnalysis } from './content-analysis';
+import type { ColorNodeGraph } from './color-node-graph';
 import type { ProjectColorPipeline } from './color-pipeline';
 import type { MediaColorProfile, ProjectWorkingColorSpace } from './export/color-management';
 import type { ClipSpatialAudio } from './spatial-audio';
@@ -509,6 +510,7 @@ export interface BaseClip {
   trimEnd: number;
   speed: number;
   colorCorrection: ColorCorrection;
+  colorNodeGraph?: ColorNodeGraph;
   transform: Transform;
   chromaKey?: ChromaKey;
   stabilization?: ClipStabilization;

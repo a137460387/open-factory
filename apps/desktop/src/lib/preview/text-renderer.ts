@@ -44,7 +44,7 @@ export function drawTextWebGl(compositor: WebGlPreviewCompositor, clip: TextClip
   if (clip.type === 'subtitle' && !text) {
     return;
   }
-  compositor.drawText(text, clip.transform, clip.style, clip.colorCorrection, clip.effects, { bypassProcessing, colorPipeline });
+  compositor.drawText(text, clip.transform, clip.style, clip.colorCorrection, clip.effects, clip.colorNodeGraph, { bypassProcessing, colorPipeline });
   recordPreviewDraw(clip.type, 'text', text);
 }
 
@@ -114,8 +114,8 @@ export function drawCreditsRollWebGl(
   if (!context) {
     return;
   }
-  drawCreditsRoll2d(context, layer, clip, bypassProcessing, localTime);
-  compositor.drawSource(layer, width, height, DEFAULT_TRANSFORM, undefined, undefined, undefined, undefined, { bypassProcessing: true, colorPipeline });
+  drawCreditsRoll2d(context, layer, clip, bypassProcessing || Boolean(clip.colorNodeGraph), localTime);
+  compositor.drawSourceWithColorNodeGraph(layer, width, height, DEFAULT_TRANSFORM, clip.colorNodeGraph, undefined, undefined, undefined, undefined, { colorPipeline });
 }
 
 export function drawMissing2d(context: CanvasRenderingContext2D, canvas: HTMLCanvasElement, name: string, clipType: Clip['type']): void {

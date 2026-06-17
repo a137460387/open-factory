@@ -6,6 +6,7 @@ export * from './content-analysis';
 export * from './cover-frames';
 export * from './color-pipeline';
 export * from './color-grading';
+export * from './color-node-graph';
 export * from './color-match';
 export * from './effects';
 export * from './audio-visualization-themes';

@@ -49,6 +49,7 @@ import {
   normalizeTransform,
   normalizeVideoRestoration
 } from '../model';
+import { normalizeColorNodeGraph } from '../color-node-graph';
 import type { Clip, ImageSequenceInfo, MediaAsset, MediaFolder, MediaMetadata, Project, Sequence, Timeline, Transition } from '../model-types';
 import { normalizeClipGroups } from '../clip-groups';
 import { normalizeClipBlendMode } from '../blend-modes';
@@ -383,6 +384,7 @@ function cloneClip<TClip extends Clip>(clip: TClip): TClip {
     speed: clampClipSpeed(clip.speed),
     colorLabel: normalizeTimelineLabelColor(clip.colorLabel),
     colorCorrection: normalizeColorCorrection(clip.colorCorrection),
+    ...(clip.colorNodeGraph ? { colorNodeGraph: normalizeColorNodeGraph(clip.colorNodeGraph, clip.colorCorrection) } : {}),
     transform: normalizeTransform(clip.transform),
     chromaKey: normalizeChromaKey(clip.chromaKey),
     stabilization: normalizeStabilization(clip.stabilization),

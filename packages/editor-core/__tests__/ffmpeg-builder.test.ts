@@ -2552,6 +2552,61 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.filterComplex).not.toContain('eq=brightness=0:contrast=1:saturation=1');
   });
 
+  it('generates node graph filters for sequential and LUT color nodes in export args', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-node-graph',
+        duration: 2,
+        colorNodeGraph: {
+          version: 1,
+          outputNodeId: 'output',
+          nodes: [
+            {
+              id: 'input',
+              type: 'input',
+              name: 'Input',
+              position: { x: 0, y: 0 },
+              correction: { brightness: 0, contrast: 1, saturation: 1, hue: 0, lutPath: null }
+            },
+            {
+              id: 'sequential',
+              type: 'sequential',
+              name: 'Sequential',
+              position: { x: 200, y: 0 },
+              correction: { brightness: 0.2, contrast: 1.1, saturation: 1.05, hue: 5, lutPath: null }
+            },
+            {
+              id: 'lut',
+              type: 'lut',
+              name: 'LUT',
+              position: { x: 400, y: 0 },
+              correction: { brightness: 0, contrast: 1, saturation: 1, hue: 0, lutPath: 'C:\\Looks\\Warm.cube' }
+            },
+            {
+              id: 'output',
+              type: 'output',
+              name: 'Output',
+              position: { x: 600, y: 0 },
+              correction: { brightness: 0, contrast: 1, saturation: 1, hue: 0, lutPath: null }
+            }
+          ],
+          connections: [
+            { id: 'input-sequential', from: 'input', to: 'sequential' },
+            { id: 'sequential-lut', from: 'sequential', to: 'lut' },
+            { id: 'lut-output', from: 'lut', to: 'output' }
+          ]
+        }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('eq=brightness=0.2:contrast=1.1:saturation=1.05');
+    expect(plan.filterComplex).toContain(String.raw`lut3d=file=C\\:/Looks/Warm.cube`);
+    expect(plan.filterComplex).not.toContain('lut1d=file=');
+  });
+
   it('generates built-in camera log LUT artifacts before user cube LUTs', () => {
     const project = makeProject();
     project.timeline.tracks[0].clips = [

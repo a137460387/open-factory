@@ -54,7 +54,7 @@ export async function drawVideoWebGl(
         return;
       }
     }
-    compositor.drawSource(video, asset.width || 1280, asset.height || 720, clip.transform, clip.colorCorrection, clip.effects, clip.chromaKey, clip.masks, {
+    compositor.drawSourceWithColorNodeGraph(video, asset.width || 1280, asset.height || 720, clip.transform, clip.colorNodeGraph, clip.colorCorrection, clip.effects, clip.chromaKey, clip.masks, {
       bypassProcessing,
       disabledEffectTypes,
       colorPipeline,
@@ -72,7 +72,7 @@ export async function drawVideoWebGl(
           return;
         }
       }
-      compositor.drawSource(fallback, asset.width || 1280, asset.height || 720, clip.transform, clip.colorCorrection, clip.effects, clip.chromaKey, clip.masks, {
+      compositor.drawSourceWithColorNodeGraph(fallback, asset.width || 1280, asset.height || 720, clip.transform, clip.colorNodeGraph, clip.colorCorrection, clip.effects, clip.chromaKey, clip.masks, {
         bypassProcessing,
         disabledEffectTypes,
         colorPipeline,

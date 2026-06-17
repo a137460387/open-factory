@@ -162,7 +162,11 @@ export class PreviewRenderer {
     const renderClip = withCanvasKeyframedPosition(clip, canvasWidth, canvasHeight);
     if (renderClip.type === 'adjustment') {
       if (!bypassProcessing) {
-        compositor.applyAdjustmentLayer(renderClip.colorCorrection, renderClip.effects, { disabledEffectTypes, colorPipeline });
+        if (renderClip.colorNodeGraph) {
+          compositor.applyColorNodeGraph(renderClip.colorNodeGraph, renderClip.colorCorrection, renderClip.effects, { disabledEffectTypes, colorPipeline });
+        } else {
+          compositor.applyAdjustmentLayer(renderClip.colorCorrection, renderClip.effects, { disabledEffectTypes, colorPipeline });
+        }
       }
       return;
     }
@@ -172,7 +176,7 @@ export class PreviewRenderer {
         drawMissingWebGl(compositor, renderClip.name, renderClip.type);
         return;
       }
-      compositor.drawSource(nested, canvasWidth, canvasHeight, renderClip.transform, renderClip.colorCorrection, renderClip.effects, renderClip.chromaKey, renderClip.masks, {
+      compositor.drawSourceWithColorNodeGraph(nested, canvasWidth, canvasHeight, renderClip.transform, renderClip.colorNodeGraph, renderClip.colorCorrection, renderClip.effects, renderClip.chromaKey, renderClip.masks, {
         bypassProcessing,
         disabledEffectTypes,
         colorPipeline,

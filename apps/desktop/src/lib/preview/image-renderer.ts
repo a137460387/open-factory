@@ -24,7 +24,7 @@ export function drawImageWebGl(
   disabledEffectTypes: EffectType[] = [],
   colorPipeline?: ProjectColorPipeline
 ): void {
-  compositor.drawSource(img, asset.width || 1280, asset.height || 720, clip.transform, clip.colorCorrection, clip.effects, clip.chromaKey, clip.masks, {
+  compositor.drawSourceWithColorNodeGraph(img, asset.width || 1280, asset.height || 720, clip.transform, clip.colorNodeGraph, clip.colorCorrection, clip.effects, clip.chromaKey, clip.masks, {
     bypassProcessing,
     disabledEffectTypes,
     colorPipeline,

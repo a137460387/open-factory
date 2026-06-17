@@ -33,6 +33,7 @@ import {
   normalizeStabilization,
   normalizeTextPath,
   normalizeVideoRestoration,
+  normalizeColorNodeGraph,
   type Clip,
   type Project,
   type SubtitleStyle,
@@ -42,6 +43,7 @@ import {
   type Transform,
   type ColorCorrection,
   type CreditsStyle,
+  type ColorNodeGraph,
   createProject
 } from '../src';
 
@@ -50,6 +52,13 @@ type ClipOverrides<TClip extends Clip> = Partial<Omit<TClip, 'transform' | 'styl
   style?: Partial<TextStyle> | Partial<SubtitleStyle> | Partial<CreditsStyle>;
   colorCorrection?: Partial<ColorCorrection>;
 };
+
+function buildColorNodeGraphPatch(colorNodeGraph: unknown): { colorNodeGraph?: ColorNodeGraph } {
+  if (!colorNodeGraph || typeof colorNodeGraph !== 'object') {
+    return {};
+  }
+  return { colorNodeGraph: normalizeColorNodeGraph(colorNodeGraph as Partial<ColorNodeGraph>) };
+}
 
 export function makeVideoClip(overrides: ClipOverrides<Extract<Clip, { type: 'video' }>> = {}): Extract<Clip, { type: 'video' }> {
   return {
@@ -64,6 +73,7 @@ export function makeVideoClip(overrides: ClipOverrides<Extract<Clip, { type: 'vi
     trimEnd: overrides.trimEnd ?? 0,
     speed: overrides.speed ?? DEFAULT_CLIP_SPEED,
     colorCorrection: { ...DEFAULT_COLOR_CORRECTION, ...overrides.colorCorrection },
+    ...buildColorNodeGraphPatch(overrides.colorNodeGraph),
     transform: { ...DEFAULT_TRANSFORM, ...overrides.transform },
     chromaKey: normalizeChromaKey(overrides.chromaKey),
     stabilization: normalizeStabilization(overrides.stabilization),
@@ -112,6 +122,7 @@ export function makeAudioClip(overrides: ClipOverrides<Extract<Clip, { type: 'au
     trimEnd: overrides.trimEnd ?? 0,
     speed: overrides.speed ?? DEFAULT_CLIP_SPEED,
     colorCorrection: { ...DEFAULT_COLOR_CORRECTION, ...overrides.colorCorrection },
+    ...buildColorNodeGraphPatch(overrides.colorNodeGraph),
     transform: { ...DEFAULT_TRANSFORM, ...overrides.transform },
     chromaKey: normalizeChromaKey(overrides.chromaKey),
     stabilization: normalizeStabilization(overrides.stabilization),
@@ -157,6 +168,7 @@ export function makeImageClip(overrides: ClipOverrides<Extract<Clip, { type: 'im
     trimEnd: overrides.trimEnd ?? 0,
     speed: overrides.speed ?? DEFAULT_CLIP_SPEED,
     colorCorrection: { ...DEFAULT_COLOR_CORRECTION, ...overrides.colorCorrection },
+    ...buildColorNodeGraphPatch(overrides.colorNodeGraph),
     transform: { ...DEFAULT_TRANSFORM, ...overrides.transform },
     chromaKey: normalizeChromaKey(overrides.chromaKey),
     stabilization: normalizeStabilization(overrides.stabilization),
@@ -190,6 +202,7 @@ export function makeAdjustmentClip(overrides: ClipOverrides<Extract<Clip, { type
     trimEnd: overrides.trimEnd ?? 0,
     speed: overrides.speed ?? DEFAULT_CLIP_SPEED,
     colorCorrection: { ...DEFAULT_COLOR_CORRECTION, ...overrides.colorCorrection },
+    ...buildColorNodeGraphPatch(overrides.colorNodeGraph),
     transform: { ...DEFAULT_TRANSFORM, ...overrides.transform },
     chromaKey: normalizeChromaKey(overrides.chromaKey),
     stabilization: normalizeStabilization(overrides.stabilization),
@@ -221,6 +234,7 @@ export function makeMotionGraphicClip(overrides: ClipOverrides<Extract<Clip, { t
     trimEnd: overrides.trimEnd ?? 0,
     speed: overrides.speed ?? DEFAULT_CLIP_SPEED,
     colorCorrection: { ...DEFAULT_COLOR_CORRECTION, ...overrides.colorCorrection },
+    ...buildColorNodeGraphPatch(overrides.colorNodeGraph),
     transform: { ...DEFAULT_TRANSFORM, ...overrides.transform },
     chromaKey: normalizeChromaKey(overrides.chromaKey),
     stabilization: normalizeStabilization(overrides.stabilization),
@@ -254,6 +268,7 @@ export function makeTextClip(overrides: ClipOverrides<Extract<Clip, { type: 'tex
     trimEnd: overrides.trimEnd ?? 0,
     speed: overrides.speed ?? DEFAULT_CLIP_SPEED,
     colorCorrection: { ...DEFAULT_COLOR_CORRECTION, ...overrides.colorCorrection },
+    ...buildColorNodeGraphPatch(overrides.colorNodeGraph),
     transform: { ...DEFAULT_TRANSFORM, ...overrides.transform },
     chromaKey: normalizeChromaKey(overrides.chromaKey),
     stabilization: normalizeStabilization(overrides.stabilization),
@@ -297,6 +312,7 @@ export function makeSubtitleClip(overrides: ClipOverrides<Extract<Clip, { type: 
     trimEnd: overrides.trimEnd ?? 0,
     speed: overrides.speed ?? DEFAULT_CLIP_SPEED,
     colorCorrection: { ...DEFAULT_COLOR_CORRECTION, ...overrides.colorCorrection },
+    ...buildColorNodeGraphPatch(overrides.colorNodeGraph),
     transform: { ...DEFAULT_TRANSFORM, ...overrides.transform },
     chromaKey: normalizeChromaKey(overrides.chromaKey),
     stabilization: normalizeStabilization(overrides.stabilization),
@@ -338,6 +354,7 @@ export function makeCreditsClip(overrides: ClipOverrides<Extract<Clip, { type: '
     trimEnd: overrides.trimEnd ?? 0,
     speed: overrides.speed ?? DEFAULT_CLIP_SPEED,
     colorCorrection: { ...DEFAULT_COLOR_CORRECTION, ...overrides.colorCorrection },
+    ...buildColorNodeGraphPatch(overrides.colorNodeGraph),
     transform: { ...DEFAULT_TRANSFORM, ...overrides.transform },
     chromaKey: normalizeChromaKey(overrides.chromaKey),
     stabilization: normalizeStabilization(overrides.stabilization),

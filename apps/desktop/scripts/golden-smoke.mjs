@@ -207,6 +207,15 @@ const fixtures = [
     validate: validateColorCorrectionFixture
   },
   {
+    name: 'node-color',
+    description: 'gray video clip processed through a multi-node color graph with curve and 3D LUT passes',
+    outputWidth: 1280,
+    outputHeight: 720,
+    expectedDuration: 1.5,
+    create: createNodeColorFixture,
+    validate: validateNodeColorFixture
+  },
+  {
     name: 'motion-blur',
     description: 'high-contrast stripe video softened by the motion-blur convolution effect',
     outputWidth: 1280,
@@ -2095,6 +2104,127 @@ async function validateColorCorrectionFixture(context) {
   };
 }
 
+async function createNodeColorFixture(context) {
+  const sourcePath = join(context.fixtureDir, 'node-color-source.mp4');
+  const lutPath = join(context.fixtureDir, 'node-red.cube');
+  writeFileSync(lutPath, solidRedCube());
+  await createColorVideoFixture(sourcePath, {
+    color: COLORS.gray.ffmpeg,
+    width: context.outputWidth,
+    height: context.outputHeight,
+    duration: context.fixture.expectedDuration,
+    audio: false
+  });
+  return buildProject({
+    id: 'golden-node-color',
+    name: 'Golden Node Color',
+    width: context.outputWidth,
+    height: context.outputHeight,
+    media: [
+      videoAsset({
+        id: 'asset-node-color-source',
+        name: 'node-color-source.mp4',
+        path: sourcePath,
+        duration: context.fixture.expectedDuration,
+        width: context.outputWidth,
+        height: context.outputHeight,
+        hasAudio: false,
+        stat: statSync(sourcePath)
+      })
+    ],
+    tracks: [
+      {
+        id: 'track-node-color',
+        type: 'video',
+        name: 'Node Color',
+        clips: [
+          videoClip({
+            id: 'clip-node-color',
+            name: 'Node color gray',
+            mediaId: 'asset-node-color-source',
+            trackId: 'track-node-color',
+            duration: context.fixture.expectedDuration,
+            colorNodeGraph: {
+              version: 1,
+              outputNodeId: 'node-output',
+              nodes: [
+                colorGraphNode('input', 'node-input', 'Source', { x: 40, y: 120 }),
+                colorGraphNode('sequential', 'node-contrast', 'Contrast', { x: 280, y: 120 }, { brightness: 0.12, contrast: 1.18, saturation: 1.15 }),
+                colorGraphNode('sequential', 'node-curve', 'Curve', { x: 520, y: 120 }, {
+                  colorCurves: {
+                    master: [
+                      { x: 0, y: 0 },
+                      { x: 0.5, y: 0.72 },
+                      { x: 1, y: 1 }
+                    ],
+                    r: [
+                      { x: 0, y: 0 },
+                      { x: 1, y: 1 }
+                    ],
+                    g: [
+                      { x: 0, y: 0 },
+                      { x: 1, y: 1 }
+                    ],
+                    b: [
+                      { x: 0, y: 0 },
+                      { x: 1, y: 1 }
+                    ]
+                  }
+                }),
+                colorGraphNode('lut', 'node-red-lut', 'Red LUT', { x: 760, y: 120 }, { lutPath: normalizePath(lutPath) }),
+                colorGraphNode('output', 'node-output', 'Output', { x: 1000, y: 120 })
+              ],
+              connections: [
+                { id: 'node-input-contrast', from: 'node-input', to: 'node-contrast' },
+                { id: 'node-contrast-curve', from: 'node-contrast', to: 'node-curve' },
+                { id: 'node-curve-lut', from: 'node-curve', to: 'node-red-lut' },
+                { id: 'node-lut-output', from: 'node-red-lut', to: 'node-output' }
+              ]
+            }
+          })
+        ]
+      },
+      emptyAudioTrack(),
+      emptyTextTrack()
+    ]
+  });
+}
+
+async function validateNodeColorFixture(context) {
+  const curveArtifact = context.plan.textArtifacts.find((artifact) => artifact.fileName === 'node-curves-clip_node_color-node_curve.cube');
+  const redDominant = context.centerPixel[0] > 180 && context.centerPixel[1] < 80 && context.centerPixel[2] < 80;
+  return {
+    checks: [
+      {
+        name: 'node-color-filter-chain',
+        passed:
+          context.plan.filterComplex.includes('eq=brightness=0.12:contrast=1.18:saturation=1.15') &&
+          context.plan.filterComplex.includes('lut1d=file=__NODE_CURVE_LUT_clip_node_color_node_curve__') &&
+          context.plan.filterComplex.includes('lut3d=file=') &&
+          context.plan.filterComplex.includes('node-red.cube'),
+        actual: {
+          hasEq: context.plan.filterComplex.includes('eq=brightness=0.12:contrast=1.18:saturation=1.15'),
+          hasCurve: context.plan.filterComplex.includes('lut1d=file=__NODE_CURVE_LUT_clip_node_color_node_curve__'),
+          hasLut: context.plan.filterComplex.includes('lut3d=file=') && context.plan.filterComplex.includes('node-red.cube')
+        },
+        expected: 'node eq, generated curve LUT, and user 3D LUT filters'
+      },
+      {
+        name: 'node-color-curve-artifact',
+        passed: Boolean(curveArtifact?.text.includes('LUT_1D_SIZE 17')),
+        actual: context.plan.textArtifacts.map((artifact) => artifact.fileName),
+        expected: 'node curve .cube text artifact'
+      },
+      {
+        name: 'node-color-center-pixel-red',
+        passed: redDominant,
+        actual: context.centerPixel,
+        expected: 'red channel dominant after node LUT'
+      }
+    ]
+  };
+}
+
 async function createMotionBlurFixture(context) {
   const sourcePath = join(context.fixtureDir, 'motion-blur-source.mp4');
   await createMotionBlurSourceFixture(sourcePath, {
@@ -3845,6 +3975,35 @@ function buildProject(input) {
   };
 }
 
+function colorGraphNode(type, id, name, position, correction = {}) {
+  return {
+    id,
+    type,
+    name,
+    position,
+    correction: {
+      brightness: 0,
+      contrast: 1,
+      saturation: 1,
+      hue: 0,
+      lutPath: null,
+      ...correction
+    },
+    lutPath: correction.lutPath ?? null,
+    enabled: true
+  };
+}
+
+function solidRedCube() {
+  return [
+    'TITLE "Open Factory Node Red"',
+    'LUT_3D_SIZE 2',
+    'DOMAIN_MIN 0 0 0',
+    'DOMAIN_MAX 1 1 1',
+    ...Array.from({ length: 8 }, () => '1 0 0')
+  ].join('\n');
+}
+
 function videoAsset(input) {
   return {
     id: input.id,
@@ -3910,6 +4069,7 @@ function videoClip(input) {
     trimEnd: input.trimEnd ?? 0,
     speed: input.speed ?? 1,
     colorCorrection: input.colorCorrection ?? { brightness: 0, contrast: 1, saturation: 1, hue: 0 },
+    colorNodeGraph: input.colorNodeGraph,
     chromaKey: input.chromaKey,
     transform: input.transform ?? { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
     projection: input.projection,
@@ -3999,6 +4159,7 @@ function motionGraphicClip(input) {
     trimEnd: input.trimEnd ?? 0,
     speed: input.speed ?? 1,
     colorCorrection: input.colorCorrection ?? { brightness: 0, contrast: 1, saturation: 1, hue: 0 },
+    colorNodeGraph: input.colorNodeGraph,
     chromaKey: input.chromaKey,
     transform: input.transform ?? { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
     keyframes: input.keyframes,

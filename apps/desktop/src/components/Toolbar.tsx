@@ -52,6 +52,7 @@ interface ToolbarProps {
   onAddMotionGraphic(): void;
   onOpenThumbnailGenerator(): void;
   onOpenLutEditor(): void;
+  onOpenColorNodeEditor(): void;
   onOpenSyncCompare(): void;
   onOpenSceneDetection(): void;
   onOpenSceneReorder(): void;
@@ -716,6 +717,18 @@ export function Toolbar(props: ToolbarProps) {
             >
               <span>{t.lutEditor}</span>
               <WandSparkles size={14} />
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-tools-color-node-editor-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onOpenColorNodeEditor();
+              }}
+            >
+              <span>{t.colorNodeEditor}</span>
+              <GitCompareArrows size={14} />
             </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"

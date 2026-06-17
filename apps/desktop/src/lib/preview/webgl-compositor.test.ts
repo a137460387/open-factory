@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_CHROMA_KEY, DEFAULT_COLOR_CORRECTION, type ChromaKey, type ClipMask, type Effect } from '@open-factory/editor-core';
-import { buildAcesToneMappingShaderInjection, buildBlendModeShaderInjection, resolveWebGlSourceProcessing } from './webgl-compositor';
+import { DEFAULT_CHROMA_KEY, DEFAULT_COLOR_CORRECTION, createDefaultColorNodeGraph, type ChromaKey, type ClipMask, type Effect } from '@open-factory/editor-core';
+import { buildAcesToneMappingShaderInjection, buildBlendModeShaderInjection, resolveColorNodeGraphPreviewPasses, resolveWebGlSourceProcessing } from './webgl-compositor';
 
 describe('WebGL preview compositor bypass processing', () => {
   const effects: Effect[] = [{ id: 'effect-blur', type: 'blur', enabled: true, params: { radius: 6 } }];
@@ -76,5 +76,29 @@ describe('WebGL preview compositor bypass processing', () => {
     expect(source).toContain('blendSoftLightChannel');
     expect(source).toContain('abs(base - top)');
     expect(source).toContain('base * top');
+  });
+
+  it('resolves color node graph preview passes in topological order', () => {
+    const graph = createDefaultColorNodeGraph({ brightness: 0.15 });
+    graph.nodes.push({
+      id: 'node-contrast',
+      type: 'sequential',
+      name: 'Contrast',
+      position: { x: 320, y: 160 },
+      correction: {
+        ...graph.nodes[0].correction,
+        brightness: 0,
+        contrast: 1.25
+      },
+      enabled: true
+    });
+    graph.connections.push({ id: 'default-contrast', from: 'node-default', to: 'node-contrast' });
+    graph.outputNodeId = 'node-contrast';
+
+    const passes = resolveColorNodeGraphPreviewPasses(graph);
+
+    expect(passes.map((pass) => pass.nodeId)).toEqual(['node-default', 'node-contrast']);
+    expect(passes[0].correction.brightness).toBe(0.15);
+    expect(passes[1].correction.contrast).toBe(1.25);
   });
 });

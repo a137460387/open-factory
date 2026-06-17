@@ -1306,6 +1306,53 @@ describe('project schema migration', () => {
     expect(migrated.project.timeline.tracks[0].clips[0].colorCorrection.inputColorSpace).toBe('slog3');
   });
 
+  it('serializes and migrates clip color node graphs while older clips still fall back to a single-node graph', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips[0] = {
+      ...project.timeline.tracks[0].clips[0],
+      colorNodeGraph: {
+        version: 1,
+        outputNodeId: 'output',
+        nodes: [
+          {
+            id: 'input',
+            type: 'input',
+            name: 'Input',
+            position: { x: 0, y: 0 },
+            correction: { brightness: 0, contrast: 1, saturation: 1, hue: 0, lutPath: null }
+          },
+          {
+            id: 'sequential',
+            type: 'sequential',
+            name: 'Sequential',
+            position: { x: 200, y: 0 },
+            correction: { brightness: 0.1, contrast: 1.2, saturation: 1, hue: 0, lutPath: null }
+          },
+          {
+            id: 'output',
+            type: 'output',
+            name: 'Output',
+            position: { x: 400, y: 0 },
+            correction: { brightness: 0, contrast: 1, saturation: 1, hue: 0, lutPath: null }
+          }
+        ],
+        connections: [
+          { id: 'input-sequential', from: 'input', to: 'sequential' },
+          { id: 'sequential-output', from: 'sequential', to: 'output' }
+        ]
+      }
+    } as never;
+
+    const file = serializeProject(project);
+    expect(file.project.timeline.tracks[0].clips[0].colorNodeGraph?.nodes).toHaveLength(3);
+
+    const migrated = migrateProjectFile(file);
+    expect(migrated.project.timeline.tracks[0].clips[0].colorNodeGraph?.connections).toHaveLength(2);
+
+    delete file.project.timeline.tracks[0].clips[0].colorNodeGraph;
+    expect(migrateProjectFile(file).project.timeline.tracks[0].clips[0].colorNodeGraph).toBeUndefined();
+  });
+
   it('backfills track control defaults during migration', () => {
     const project = makeProject();
     const legacyTrack = { ...project.timeline.tracks[0] };

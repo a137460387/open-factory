@@ -10,11 +10,13 @@ import {
   normalizeColorCorrection,
   normalizeClipBlendMode,
   normalizeInputColorSpace,
+  normalizeColorNodeGraph,
   normalizeProjectColorPipeline,
   normalizeThreeWayColor,
   normalizeChromaKey,
   normalizeMasks,
   buildMotionBlurPreviewVector,
+  topologicallySortColorNodeGraph,
   triangulatePathMask,
   sampleColorCurves,
   clipBlendModeToShaderIndex,
@@ -23,6 +25,8 @@ import {
   type ClipPanoramaView,
   type ClipMask,
   type ColorCorrection,
+  type ColorNode,
+  type ColorNodeGraph,
   type ColorWheelValue,
   type EffectType,
   type Effect,
@@ -105,6 +109,12 @@ export interface WebGlResolvedSourceProcessing {
   effectParams: ReturnType<typeof buildPreviewEffectParams>;
 }
 
+export interface ColorNodeGraphPreviewPass {
+  nodeId: string;
+  nodeType: ColorNode['type'];
+  correction: ColorCorrection;
+}
+
 export class WebGlPreviewCompositor {
   private readonly gl: WebGLRenderingContext;
   private readonly program: ProgramInfo;
@@ -149,10 +159,10 @@ export class WebGlPreviewCompositor {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
   }
 
-  begin(width: number, height: number): void {
+  begin(width: number, height: number, clearColor: [number, number, number, number] = [0.078, 0.094, 0.125, 1]): void {
     const gl = this.gl;
     gl.viewport(0, 0, width, height);
-    gl.clearColor(0.078, 0.094, 0.125, 1);
+    gl.clearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -225,6 +235,68 @@ export class WebGlPreviewCompositor {
     this.finishBlendPass();
   }
 
+  drawSourceWithColorNodeGraph(
+    source: TexImageSource,
+    mediaWidth: number,
+    mediaHeight: number,
+    transform: Transform,
+    colorNodeGraph: Partial<ColorNodeGraph> | undefined,
+    fallbackColorCorrection?: Partial<ColorCorrection>,
+    effects?: Effect[],
+    chromaKey?: Partial<ChromaKey>,
+    masks?: ClipMask[],
+    options: WebGlSourceProcessingOptions = {}
+  ): boolean {
+    if (options.bypassProcessing || !colorNodeGraph) {
+      this.drawSource(source, mediaWidth, mediaHeight, transform, fallbackColorCorrection, effects, chromaKey, masks, options);
+      return true;
+    }
+
+    let passes: ColorNodeGraphPreviewPass[];
+    try {
+      passes = resolveColorNodeGraphPreviewPasses(colorNodeGraph, fallbackColorCorrection);
+    } catch (error) {
+      console.warn('Unable to resolve color node graph preview passes', error);
+      this.drawSource(source, mediaWidth, mediaHeight, transform, fallbackColorCorrection, effects, chromaKey, masks, options);
+      return false;
+    }
+
+    const width = Math.max(1, Number(this.gl.canvas.width));
+    const height = Math.max(1, Number(this.gl.canvas.height));
+    const scratch = document.createElement('canvas');
+    scratch.width = width;
+    scratch.height = height;
+
+    let scratchCompositor: WebGlPreviewCompositor;
+    try {
+      scratchCompositor = new WebGlPreviewCompositor(scratch);
+    } catch (error) {
+      console.warn('Unable to allocate color node graph preview compositor', error);
+      this.drawSource(source, mediaWidth, mediaHeight, transform, fallbackColorCorrection, effects, chromaKey, masks, options);
+      return false;
+    }
+
+    scratchCompositor.begin(width, height, [0, 0, 0, 0]);
+    scratchCompositor.drawSource(source, mediaWidth, mediaHeight, transform, undefined, undefined, chromaKey, masks, {
+      ...options,
+      blendMode: 'normal',
+      colorPipeline: 'sdr-srgb'
+    });
+    for (const pass of passes) {
+      scratchCompositor.applyAdjustmentLayer(pass.correction, undefined, { colorPipeline: 'sdr-srgb' });
+    }
+    if ((effects?.length ?? 0) > 0 || options.colorPipeline) {
+      scratchCompositor.applyAdjustmentLayer(undefined, effects, { disabledEffectTypes: options.disabledEffectTypes, colorPipeline: options.colorPipeline });
+    }
+    scratchCompositor.finish();
+
+    this.drawSource(scratch, width, height, DEFAULT_TRANSFORM, undefined, undefined, undefined, undefined, {
+      bypassProcessing: true,
+      blendMode: options.blendMode
+    });
+    return true;
+  }
+
   drawPanoramaSource(source: TexImageSource, mediaWidth: number, mediaHeight: number, transform: Transform, panorama: ClipPanoramaView, options: WebGlSourceProcessingOptions = {}): boolean {
     if (options.bypassProcessing || normalizeClipBlendMode(options.blendMode) !== 'normal') {
       return false;
@@ -270,6 +342,7 @@ export class WebGlPreviewCompositor {
     style: TextStyle | SubtitleStyle,
     colorCorrection?: Partial<ColorCorrection>,
     effects?: Effect[],
+    colorNodeGraph?: Partial<ColorNodeGraph>,
     options: WebGlSourceProcessingOptions = {}
   ): void {
     const canvas = document.createElement('canvas');
@@ -286,7 +359,18 @@ export class WebGlPreviewCompositor {
     drawTextBackground(ctx, canvas.width / 2, canvas.height / 2, text, style);
     ctx.fillStyle = style.color;
     ctx.fillText(text, canvas.width / 2, canvas.height / 2);
-    this.drawSource(canvas, canvas.width, canvas.height, resolveTextTransform(Number(this.gl.canvas.height), transform, style), colorCorrection, effects, undefined, undefined, options);
+    this.drawSourceWithColorNodeGraph(
+      canvas,
+      canvas.width,
+      canvas.height,
+      resolveTextTransform(Number(this.gl.canvas.height), transform, style),
+      colorNodeGraph,
+      colorCorrection,
+      effects,
+      undefined,
+      undefined,
+      options
+    );
   }
 
   drawMissing(name: string): void {
@@ -345,6 +429,30 @@ export class WebGlPreviewCompositor {
     context.putImageData(image, 0, 0);
     this.begin(frame.width, frame.height);
     this.drawSource(canvas, frame.width, frame.height, DEFAULT_TRANSFORM, colorCorrection, effects, undefined, undefined, options);
+  }
+
+  applyColorNodeGraph(colorNodeGraph: Partial<ColorNodeGraph> | undefined, fallbackColorCorrection?: Partial<ColorCorrection>, effects?: Effect[], options: WebGlSourceProcessingOptions = {}): boolean {
+    if (options.bypassProcessing || !colorNodeGraph) {
+      this.applyAdjustmentLayer(fallbackColorCorrection, effects, options);
+      return true;
+    }
+
+    let passes: ColorNodeGraphPreviewPass[];
+    try {
+      passes = resolveColorNodeGraphPreviewPasses(colorNodeGraph, fallbackColorCorrection);
+    } catch (error) {
+      console.warn('Unable to resolve adjustment color node graph preview passes', error);
+      this.applyAdjustmentLayer(fallbackColorCorrection, effects, options);
+      return false;
+    }
+
+    for (const pass of passes) {
+      this.applyAdjustmentLayer(pass.correction, undefined, { colorPipeline: 'sdr-srgb' });
+    }
+    if ((effects?.length ?? 0) > 0 || options.colorPipeline) {
+      this.applyAdjustmentLayer(undefined, effects, { disabledEffectTypes: options.disabledEffectTypes, colorPipeline: options.colorPipeline });
+    }
+    return true;
   }
 
   private getTexture(source: TexImageSource): WebGLTexture {
@@ -483,6 +591,23 @@ export function resolveWebGlSourceProcessing(
     maskUniforms: buildMaskUniforms(masks),
     effectParams: buildPreviewEffectParams(effects, options.disabledEffectTypes)
   };
+}
+
+export function resolveColorNodeGraphPreviewPasses(
+  colorNodeGraph: Partial<ColorNodeGraph> | undefined,
+  fallbackColorCorrection?: Partial<ColorCorrection>
+): ColorNodeGraphPreviewPass[] {
+  const normalized = normalizeColorNodeGraph(colorNodeGraph, fallbackColorCorrection);
+  return topologicallySortColorNodeGraph(normalized)
+    .filter((node) => node.enabled !== false && node.type !== 'input' && node.type !== 'output')
+    .map((node) => ({
+      nodeId: node.id,
+      nodeType: node.type,
+      correction: normalizeColorCorrection({
+        ...node.correction,
+        lutPath: node.type === 'lut' ? node.lutPath ?? node.correction.lutPath : node.correction.lutPath
+      })
+    }));
 }
 
 function buildChromaKeyColorUniforms(chromaKey: ChromaKey): Float32Array {
