@@ -31,6 +31,10 @@ interface Window {
     };
     errors?: string[];
   };
+  __OPEN_FACTORY_PROFILER_DEBUG__?: {
+    frameCount: number;
+    lastFrameIndex?: number;
+  };
   __OPEN_FACTORY_AUDIO_MIX_DEBUG__?: { clipTypes: string[]; gainValues: number[] };
   webkitAudioContext?: typeof AudioContext;
 }

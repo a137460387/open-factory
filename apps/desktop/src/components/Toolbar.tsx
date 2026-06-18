@@ -63,6 +63,7 @@ interface ToolbarProps {
   onOpenComplexityScore(): void;
   onOpenSmartRecommendations(): void;
   onOpenContentAnalysis(): void;
+  onOpenPerformanceProfiler(): void;
   onOpenRhythmAnalysis(): void;
   onOpenBeatSync(): void;
   onDetectBeats(): void;
@@ -851,6 +852,18 @@ export function Toolbar(props: ToolbarProps) {
               }}
             >
               <span>{t.contentAnalysis}</span>
+              <Activity size={14} />
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-tools-performance-profiler-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onOpenPerformanceProfiler();
+              }}
+            >
+              <span>{t.performanceProfiler}</span>
               <Activity size={14} />
             </button>
             <button

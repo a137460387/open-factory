@@ -16,6 +16,7 @@ import {
   getRenderableTracks,
   getTimelineRenderInvalidationRanges,
   getTimelinePlaybackDuration,
+  estimateRenderPassBreakdown,
   hitTestClipTransformBox,
   isPathMaskClosed,
   isNestedSequenceDepthExceeded,
@@ -44,6 +45,7 @@ import {
   type FrameJumpParseError,
   type FrameSearchHistoryEntry,
   type MulticamSwitchHistoryEntry,
+  type ProfilerFrameSample,
   type Transform,
   type Timeline
 } from '@open-factory/editor-core';
@@ -109,6 +111,7 @@ interface PreviewCanvasProps {
   colorScopesVisible?: boolean;
   onColorScopesVisibleChange?(visible: boolean): void;
   reviewMode?: boolean;
+  onProfilerFrame?(sample: ProfilerFrameSample): void;
   onAddReviewAnnotation?(annotation: Omit<ReviewAnnotation, 'id'> & Partial<Pick<ReviewAnnotation, 'id'>>): void;
   onExportReviewReport?(): void;
 }
@@ -119,6 +122,7 @@ export function PreviewCanvas({
   colorScopesVisible,
   onColorScopesVisibleChange,
   reviewMode = false,
+  onProfilerFrame,
   onAddReviewAnnotation,
   onExportReviewReport
 }: PreviewCanvasProps) {
@@ -129,6 +133,7 @@ export function PreviewCanvas({
   const transformDragRef = useRef<CanvasTransformDrag | null>(null);
   const pathMaskDragRef = useRef<PathMaskDrag | null>(null);
   const panoramaDragRef = useRef<PanoramaPreviewDrag | null>(null);
+  const profilerFrameIndexRef = useRef(0);
   const previewPanDragRef = useRef<PreviewPanDrag | null>(null);
   const reviewDragRef = useRef<ReviewAnnotationDrag | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -368,6 +373,37 @@ export function PreviewCanvas({
     fallbackReason: metrics?.fallbackReason ?? gpuCapabilities.fallbackReason
   });
 
+  const emitProfilerFrame = (metrics: GpuPreviewMetrics | undefined, elapsedMs: number, timeline: Timeline, cached = false) => {
+    if (!onProfilerFrame) {
+      return;
+    }
+    const safeMetrics = resolveGpuMetrics(metrics);
+    const totalMs = Math.max(safeMetrics.gpuFrameMs, Number.isFinite(elapsedMs) ? elapsedMs : 0);
+    const effectCount = countActivePreviewEffects(timeline, playheadTime);
+    const render = estimateRenderPassBreakdown({
+      totalMs,
+      drawCalls: safeMetrics.drawCalls,
+      effectCount,
+      overlayActive: scopesOpen || compareEnabled
+    });
+    const customShaderActive = hasActiveCustomShader(timeline, playheadTime);
+    const reason = customShaderActive
+      ? `custom-shader耗时${render.effectsMs.toFixed(1)}ms`
+      : cached
+        ? `render-cache耗时${render.compositeMs.toFixed(1)}ms`
+        : `WebGL pass耗时${render.totalMs.toFixed(1)}ms`;
+    profilerFrameIndexRef.current += 1;
+    onProfilerFrame({
+      frameIndex: profilerFrameIndexRef.current,
+      timestampMs: performance.now(),
+      playheadTime,
+      render,
+      drawCalls: safeMetrics.drawCalls,
+      textureBytes: safeMetrics.textureBytes,
+      reason
+    });
+  };
+
   useEffect(() => {
     setTimelineCompareRanges(snapshotCompareRanges);
     return () => setTimelineCompareRanges([]);
@@ -481,8 +517,11 @@ export function PreviewCanvas({
           if (cached) {
             try {
               if (!canceled) {
+                const cachedStartedAt = performance.now();
                 rendererRef.current.drawCachedFrame(canvas, cached);
-                setGpuPreviewMetrics(resolveGpuMetrics(rendererRef.current.getGpuMetrics()));
+                const metrics = resolveGpuMetrics(rendererRef.current.getGpuMetrics());
+                setGpuPreviewMetrics(metrics);
+                emitProfilerFrame(metrics, performance.now() - cachedStartedAt, timeline, true);
               }
             } finally {
               cached.close();
@@ -490,6 +529,7 @@ export function PreviewCanvas({
             return;
           }
         }
+        const renderStartedAt = performance.now();
         const result = await rendererRef.current.render(canvas, timeline, project.media, playheadTime, {
           captureFrame: shouldCaptureScopes || shouldCaptureDifference,
           disabledEffectTypes: previewDisabledEffectTypes,
@@ -499,7 +539,9 @@ export function PreviewCanvas({
         if (canceled) {
           return;
         }
-        setGpuPreviewMetrics(resolveGpuMetrics(result.gpuMetrics));
+        const metrics = resolveGpuMetrics(result.gpuMetrics);
+        setGpuPreviewMetrics(metrics);
+        emitProfilerFrame(metrics, performance.now() - renderStartedAt, timeline);
         if (result.frame && shouldCaptureScopes) {
           setScopeFrame(result.frame);
         }
@@ -556,6 +598,7 @@ export function PreviewCanvas({
     project.sequences,
     project.settings.colorPipeline,
     project.timeline,
+    onProfilerFrame,
     scopesOpen,
     setAudioLevels,
     snapshotCompareProject,
@@ -2133,6 +2176,20 @@ function ReviewToolButton({
       {icon}
     </button>
   );
+}
+
+function countActivePreviewEffects(timeline: Timeline, playheadTime: number): number {
+  return getRenderableTracks(timeline)
+    .flatMap((track) => track.clips)
+    .filter((clip) => playheadTime >= clip.start && playheadTime < clip.start + clip.duration)
+    .reduce((total, clip) => total + (clip.effects ?? []).filter((effect) => effect.enabled).length + (clip.colorNodeGraph ? 1 : 0), 0);
+}
+
+function hasActiveCustomShader(timeline: Timeline, playheadTime: number): boolean {
+  return getRenderableTracks(timeline)
+    .flatMap((track) => track.clips)
+    .filter((clip) => playheadTime >= clip.start && playheadTime < clip.start + clip.duration)
+    .some((clip) => (clip.effects ?? []).some((effect) => effect.enabled && effect.type === 'custom-shader'));
 }
 
 function ReviewAnnotationOverlay({

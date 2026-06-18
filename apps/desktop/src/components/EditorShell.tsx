@@ -120,7 +120,16 @@ import {
   type OperationRecordingFile,
   type OperationReplaySpeed,
   type SpeakerDiarizationSegment,
-  type Track
+  type Track,
+  analyzeExportSpeed,
+  appendProfilerMemorySample,
+  buildPerformanceProfilerReport,
+  type PerformanceProfilerReport,
+  type ProfilerExportSpeedSample,
+  type ProfilerFrameSample,
+  type ProfilerMemorySample,
+  type ProfilerQueueSample,
+  type ProfilerTraceEvent
 } from '@open-factory/editor-core';
 import { ChevronLeft, ChevronRight, GripHorizontal } from 'lucide-react';
 import { Toolbar } from './Toolbar';
@@ -139,6 +148,7 @@ import { readCustomKeybindings } from '../shortcuts/keybindings';
 import type { TimelineShortcutBindings } from '../shortcuts/timeline-shortcuts';
 import { isEditableKeyboardTarget, isShortcutCheatsheetKey } from '../accessibility/keyboard-navigation';
 import type { ExportQueueRecoveryCandidate } from '../export/export-queue-persistence';
+import { useExportQueueStore } from '../export/export-queue-store';
 import { revealExport } from '../lib/exportVideo';
 import { clearMediaCache } from '../cache/cache-service';
 import { createAdjustmentLayerClip, createClipFromAsset, createMotionGraphicClip, findPreferredTrack } from '../lib/clipFactory';
@@ -206,6 +216,7 @@ import {
   detectBeats,
   emitBridge,
   getAppDataDir,
+  getCacheSize,
   getPreviewWindowState,
   listenBridge,
   openPreviewWindow,
@@ -335,6 +346,7 @@ const ComplexityScorePanel = lazy(() => import('../complexity/ComplexityScorePan
 const SmartRecommendationsDialog = lazy(() => import('../smart-recommendations/SmartRecommendationsDialog'));
 const ContentAnalysisDialog = lazy(() => import('../media/ContentAnalysisDialog').then((module) => ({ default: module.ContentAnalysisDialog })));
 const RhythmAnalysisDialog = lazy(() => import('../analysis/RhythmAnalysisDialog').then((module) => ({ default: module.RhythmAnalysisDialog })));
+const ProfilerDialog = lazy(() => import('../profiler/ProfilerDialog').then((module) => ({ default: module.ProfilerDialog })));
 const TimelineSearchPanel = lazy(() => import('../timeline-search/TimelineSearchPanel').then((module) => ({ default: module.TimelineSearchPanel })));
 const SnapshotNameDialog = lazy(() => import('../project-snapshots/SnapshotNameDialog').then((module) => ({ default: module.SnapshotNameDialog })));
 const SnapshotHistoryDialog = lazy(() => import('../project-snapshots/SnapshotHistoryDialog').then((module) => ({ default: module.SnapshotHistoryDialog })));
@@ -346,6 +358,16 @@ interface ProjectPasswordRequest {
   title: string;
   description: string;
   resolve(password?: string): void;
+}
+
+interface ProfilerRecordingBuffer {
+  startedAtMs: number;
+  frames: ProfilerFrameSample[];
+  exportSpeed: ProfilerExportSpeedSample[];
+  memory: ProfilerMemorySample[];
+  queues: ProfilerQueueSample[];
+  traceEvents: ProfilerTraceEvent[];
+  exportProgressByTaskId: Map<string, { timestampMs: number; progress: number }>;
 }
 
 export function EditorShell() {
@@ -405,6 +427,10 @@ export function EditorShell() {
   const [complexityScoreOpen, setComplexityScoreOpen] = useState(false);
   const [smartRecommendationsOpen, setSmartRecommendationsOpen] = useState(false);
   const [contentAnalysisOpen, setContentAnalysisOpen] = useState(false);
+  const [profilerOpen, setProfilerOpen] = useState(false);
+  const [profilerRecording, setProfilerRecording] = useState(false);
+  const [profilerElapsedMs, setProfilerElapsedMs] = useState(0);
+  const [profilerReport, setProfilerReport] = useState<PerformanceProfilerReport>();
   const [rhythmAnalysisOpen, setRhythmAnalysisOpen] = useState(false);
   const [contentAnalysisRunningClipId, setContentAnalysisRunningClipId] = useState<string>();
   const [timelineSearchOpen, setTimelineSearchOpen] = useState(false);
@@ -497,6 +523,8 @@ export function EditorShell() {
   const macroRecorderRef = useRef<{ active: boolean; replaying: boolean; steps: CommandSnapshot[] }>({ active: false, replaying: false, steps: [] });
   const operationRecorderRef = useRef<{ active: boolean; replaying: boolean; recording?: OperationRecordingFile }>({ active: false, replaying: false });
   const operationReplayTimersRef = useRef<number[]>([]);
+  const profilerRecordingRef = useRef<ProfilerRecordingBuffer>();
+  const latestProfilerTextureBytesRef = useRef(0);
 
   const selectedClip = useMemo(() => selectClipById(project, selectedClipId), [project, selectedClipId]);
   const selectedClips = useMemo(() => selectedClipIds.map((id) => selectClipById(project, id)).filter((clip): clip is Clip => Boolean(clip)), [project, selectedClipIds]);
@@ -505,10 +533,150 @@ export function EditorShell() {
     [project.media, selectedClip]
   );
   const allTimelineClips = useMemo(() => project.timeline.tracks.flatMap((track) => track.clips), [project.timeline.tracks]);
+  const stopProfilerRecording = useCallback(() => {
+    const recording = profilerRecordingRef.current;
+    if (!recording) {
+      setProfilerRecording(false);
+      return;
+    }
+    try {
+      const stoppedAtMs = performance.now();
+      setProfilerReport(
+        buildPerformanceProfilerReport({
+          startedAtMs: recording.startedAtMs,
+          stoppedAtMs,
+          frames: recording.frames,
+          exportSpeed: recording.exportSpeed,
+          memory: recording.memory,
+          queues: recording.queues,
+          traceEvents: recording.traceEvents
+        })
+      );
+      setProfilerElapsedMs(stoppedAtMs - recording.startedAtMs);
+    } catch (error) {
+      console.warn('Unable to finalize profiler recording', error);
+    } finally {
+      profilerRecordingRef.current = undefined;
+      setProfilerRecording(false);
+    }
+  }, []);
+  const startProfilerRecording = useCallback(() => {
+    try {
+      const startedAtMs = performance.now();
+      profilerRecordingRef.current = {
+        startedAtMs,
+        frames: [],
+        exportSpeed: [],
+        memory: [],
+        queues: [],
+        traceEvents: [],
+        exportProgressByTaskId: new Map()
+      };
+      if (import.meta.env.VITE_E2E === 'true') {
+        window.__OPEN_FACTORY_PROFILER_DEBUG__ = { frameCount: 0 };
+      }
+      latestProfilerTextureBytesRef.current = 0;
+      setProfilerReport(undefined);
+      setProfilerElapsedMs(0);
+      setProfilerRecording(true);
+    } catch (error) {
+      console.warn('Unable to start profiler recording', error);
+      profilerRecordingRef.current = undefined;
+      setProfilerRecording(false);
+    }
+  }, []);
+  const handleProfilerFrame = useCallback(
+    (sample: ProfilerFrameSample) => {
+      const recording = profilerRecordingRef.current;
+      if (!recording) {
+        return;
+      }
+      try {
+        latestProfilerTextureBytesRef.current = Math.max(0, sample.textureBytes);
+        recording.frames.push(sample);
+        recording.traceEvents.push(...createProfilerTraceEventsForFrame(sample));
+        if (import.meta.env.VITE_E2E === 'true') {
+          window.__OPEN_FACTORY_PROFILER_DEBUG__ = {
+            frameCount: recording.frames.length,
+            lastFrameIndex: sample.frameIndex
+          };
+        }
+      } catch (error) {
+        console.warn('Unable to record profiler frame', error);
+        stopProfilerRecording();
+      }
+    },
+    [stopProfilerRecording]
+  );
+  const exportProfilerReportJson = useCallback(async () => {
+    if (!profilerReport) {
+      return;
+    }
+    try {
+      const fileName = `${sanitizeFileName(project.name || 'open-factory')}-performance-report.json`;
+      const outputPath = await bridgeSaveFileDialog(fileName, [{ name: zhCN.profiler.exportDialogName, extensions: ['json'] }]);
+      if (!outputPath) {
+        return;
+      }
+      await bridgeWriteFile(outputPath, `${JSON.stringify(profilerReport, null, 2)}\n`);
+      showToast({ kind: 'success', title: zhCN.profiler.exportedTitle, message: outputPath });
+    } catch (error) {
+      showToast({ kind: 'error', title: zhCN.profiler.exportFailedTitle, message: error instanceof Error ? error.message : zhCN.common.unavailable });
+    }
+  }, [profilerReport, project.name]);
   const selectedClipLocked = useMemo(
     () => Boolean(selectedClip && project.timeline.tracks.find((track) => track.id === selectedClip.trackId)?.locked),
     [project.timeline.tracks, selectedClip]
   );
+
+  useEffect(() => {
+    if (!profilerRecording) {
+      return undefined;
+    }
+    let disposed = false;
+    const sample = async () => {
+      const recording = profilerRecordingRef.current;
+      if (!recording || disposed) {
+        return;
+      }
+      const now = performance.now();
+      setProfilerElapsedMs(now - recording.startedAtMs);
+      try {
+        const exportTasks = useExportQueueStore.getState().tasks;
+        const mediaJobs = useMediaJobStore.getState().jobs;
+        const queueSample: ProfilerQueueSample = {
+          timestampMs: now,
+          exportPending: exportTasks.filter((task) => task.status === 'pending' || task.status === 'scheduled' || task.status === 'interrupted').length,
+          exportRunning: exportTasks.filter((task) => task.status === 'running').length,
+          mediaPending: mediaJobs.filter((job) => job.status === 'pending').length,
+          mediaRunning: mediaJobs.filter((job) => job.status === 'running').length
+        };
+        recording.queues.push(queueSample);
+        sampleProfilerExportSpeed(recording, exportTasks, now, project.settings.fps, queueSample.exportPending + queueSample.exportRunning);
+        const proxyCacheBytes = await getCacheSize().catch(() => 0);
+        if (disposed || !profilerRecordingRef.current) {
+          return;
+        }
+        profilerRecordingRef.current.memory = appendProfilerMemorySample(profilerRecordingRef.current.memory, {
+          timestampMs: now,
+          jsHeapBytes: readBrowserJsHeapBytes(),
+          webglTextureBytes: latestProfilerTextureBytesRef.current,
+          proxyCacheBytes,
+          undoHistoryBytes: estimateUndoHistoryBytes(useEditorStore.getState().historyMeta)
+        });
+      } catch (error) {
+        console.warn('Unable to sample profiler metrics', error);
+        stopProfilerRecording();
+      }
+    };
+    void sample();
+    const timer = window.setInterval(() => void sample(), 1000);
+    return () => {
+      disposed = true;
+      window.clearInterval(timer);
+    };
+  }, [profilerRecording, project.settings.fps, stopProfilerRecording]);
+
   const canCreateMulticamSequence = useMemo(() => {
     if (selectedClipIds.length < 2 || selectedClipIds.length > 8) {
       return false;
@@ -3502,6 +3670,7 @@ export function EditorShell() {
           onOpenComplexityScore={() => setComplexityScoreOpen(true)}
           onOpenSmartRecommendations={() => setSmartRecommendationsOpen(true)}
           onOpenContentAnalysis={() => setContentAnalysisOpen(true)}
+          onOpenPerformanceProfiler={() => setProfilerOpen(true)}
           onOpenRhythmAnalysis={() => setRhythmAnalysisOpen(true)}
           onOpenBeatSync={() => setBeatSyncOpen(true)}
           onDetectBeats={() => void detectSelectedBeats()}
@@ -3698,6 +3867,7 @@ export function EditorShell() {
                   colorScopesVisible={layoutSettings.panels.colorScopes}
                   onColorScopesVisibleChange={(colorScopes) => persistPanelVisibilityPatch({ colorScopes })}
                   reviewMode={reviewMode}
+                  onProfilerFrame={handleProfilerFrame}
                   onAddReviewAnnotation={addReviewAnnotationAtPlayhead}
                   onExportReviewReport={() => void createReviewReport()}
                 />
@@ -3942,6 +4112,22 @@ export function EditorShell() {
               onAnalyzePreferred={() => void analyzePreferredContentTargets()}
               onExport={(clipId) => void exportContentAnalysis(clipId)}
               onClose={() => setContentAnalysisOpen(false)}
+            />
+          ) : null}
+          {profilerOpen ? (
+            <ProfilerDialog
+              recording={profilerRecording}
+              elapsedMs={profilerElapsedMs}
+              report={profilerReport}
+              onStart={startProfilerRecording}
+              onStop={stopProfilerRecording}
+              onExportJson={() => void exportProfilerReportJson()}
+              onClose={() => {
+                if (profilerRecording) {
+                  stopProfilerRecording();
+                }
+                setProfilerOpen(false);
+              }}
             />
           ) : null}
           {rhythmAnalysisOpen ? <RhythmAnalysisDialog project={project} onClose={() => setRhythmAnalysisOpen(false)} /> : null}
@@ -4727,6 +4913,83 @@ function ArchiveProgressDialog({ progress }: { progress: ArchiveProgress }) {
       </section>
     </div>
   );
+}
+
+function sampleProfilerExportSpeed(recording: ProfilerRecordingBuffer, tasks: ExportTask[], now: number, fallbackFps: number, queueDepth: number): void {
+  for (const task of tasks) {
+    if (task.status !== 'running') {
+      recording.exportProgressByTaskId.delete(task.id);
+      continue;
+    }
+    const previous = recording.exportProgressByTaskId.get(task.id);
+    if (previous && task.progress > previous.progress) {
+      const speed = analyzeExportSpeed({
+        durationSeconds: task.plan.duration,
+        progressDelta: task.progress - previous.progress,
+        elapsedMs: now - previous.timestampMs,
+        expectedFps: task.plan.settings?.fps ?? fallbackFps,
+        hardwareEncoding: task.plan.settings?.hardwareEncoding,
+        queueDepth
+      });
+      recording.exportSpeed.push({
+        timestampMs: now,
+        taskId: task.id,
+        progress: task.progress,
+        ...speed
+      });
+    }
+    recording.exportProgressByTaskId.set(task.id, { timestampMs: now, progress: task.progress });
+  }
+}
+
+function createProfilerTraceEventsForFrame(sample: ProfilerFrameSample): ProfilerTraceEvent[] {
+  const frameStart = Math.max(0, sample.timestampMs - sample.render.totalMs);
+  let cursor = frameStart;
+  const passes: Array<{ name: string; category: string; durationMs: number; depth: number }> = [
+    { name: 'composite', category: 'composite', durationMs: sample.render.compositeMs, depth: 1 },
+    { name: 'color', category: 'color', durationMs: sample.render.colorMs, depth: 1 },
+    { name: sample.reason.includes('custom-shader') ? 'custom-shader' : 'effects', category: 'effects', durationMs: sample.render.effectsMs, depth: 1 },
+    { name: 'overlay', category: 'overlay', durationMs: sample.render.overlayMs, depth: 1 }
+  ];
+  const events: ProfilerTraceEvent[] = [
+    {
+      id: `frame-${sample.frameIndex}`,
+      name: `frame ${sample.frameIndex}`,
+      category: 'preview',
+      startMs: frameStart,
+      durationMs: sample.render.totalMs,
+      depth: 0
+    }
+  ];
+  for (const pass of passes) {
+    events.push({
+      id: `frame-${sample.frameIndex}-${pass.name}`,
+      name: pass.name,
+      category: pass.category,
+      startMs: cursor,
+      durationMs: pass.durationMs,
+      depth: pass.depth
+    });
+    cursor += pass.durationMs;
+  }
+  return events;
+}
+
+function readBrowserJsHeapBytes(): number {
+  const memory = (performance as Performance & { memory?: { usedJSHeapSize?: number } }).memory;
+  return Number.isFinite(memory?.usedJSHeapSize ?? NaN) ? Math.max(0, memory?.usedJSHeapSize ?? 0) : 0;
+}
+
+function estimateUndoHistoryBytes(historyMeta: { entries: unknown[]; total: number }): number {
+  try {
+    return Math.max(0, JSON.stringify(historyMeta.entries).length * 2 + historyMeta.total * 256);
+  } catch {
+    return Math.max(0, historyMeta.total * 256);
+  }
+}
+
+function sanitizeFileName(value: string): string {
+  return value.replace(/[<>:"/\\|?*\x00-\x1f]/g, '-').trim() || 'open-factory';
 }
 
 function SharePackageProgressDialog({ progress }: { progress: SharePackageWorkflowProgress }) {

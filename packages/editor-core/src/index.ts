@@ -51,6 +51,7 @@ export * from './timeline-templates';
 export * from './style-transfer';
 export * from './smart-recommendations';
 export * from './operation-recording';
+export * from './profiler';
 export * from './complexity-score';
 export * from './export-optimization-suggestions';
 export * from './frame-search';

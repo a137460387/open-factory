@@ -385,6 +385,7 @@ const zh = {
     complexityScore: '复杂度评分',
     smartRecommendations: '智能推荐',
     contentAnalysis: '内容分析',
+    performanceProfiler: '性能分析',
     rhythmAnalysis: '节奏分析',
     beatSync: '节拍同步',
     beatSyncDetectedBpm: (bpm?: number) => (bpm ? `检测到 BPM：${Math.round(bpm)}` : '检测到 BPM：--'),
@@ -4049,6 +4050,31 @@ const zh = {
       skipped: '跳过'
     }
   },
+  profiler: {
+    title: '性能分析',
+    subtitle: '本地录制预览、导出、内存和任务队列指标，用于诊断项目卡顿。',
+    recording: '录制状态',
+    start: '开始录制',
+    stop: '停止',
+    exportJson: '导出 JSON',
+    frameCount: '帧样本',
+    averageFrameMs: '平均帧耗时',
+    peakMemory: '峰值内存',
+    peakQueueDepth: '队列峰值',
+    slowestFrames: '最慢 3 帧',
+    flamegraph: '火焰图',
+    empty: '停止录制后会显示报告。',
+    recordingHint: '正在采集帧、内存和队列指标。',
+    exportDialogName: '性能报告',
+    exportedTitle: '性能报告已导出',
+    exportFailedTitle: '性能报告导出失败',
+    passLabels: {
+      composite: '合成',
+      color: '色彩',
+      effects: '特效',
+      overlay: '叠加'
+    }
+  },
   sharePackage: {
     title: '创建分享包',
     fileDialogFilter: '分享包',
@@ -4598,6 +4624,7 @@ const enOverrides = {
     complexityScore: 'Complexity Score',
     smartRecommendations: 'Smart Recommendations',
     contentAnalysis: 'Content Analysis',
+    performanceProfiler: 'Performance Profiler',
     rhythmAnalysis: 'Rhythm Analysis',
     beatSync: 'Beat Sync',
     beatSyncDetectedBpm: (bpm?: number) => (bpm ? `Detected BPM: ${Math.round(bpm)}` : 'Detected BPM: --'),
@@ -7815,6 +7842,31 @@ const enOverrides = {
       pass: 'Pass',
       blocking: 'Blocking',
       skipped: 'Skipped'
+    }
+  },
+  profiler: {
+    title: 'Performance Profiler',
+    subtitle: 'Record local preview, export, memory, and task queue metrics to diagnose project stalls.',
+    recording: 'Recording',
+    start: 'Start Recording',
+    stop: 'Stop',
+    exportJson: 'Export JSON',
+    frameCount: 'Frame Samples',
+    averageFrameMs: 'Average Frame',
+    peakMemory: 'Peak Memory',
+    peakQueueDepth: 'Peak Queue',
+    slowestFrames: 'Slowest 3 Frames',
+    flamegraph: 'Flamegraph',
+    empty: 'Stop recording to show the report.',
+    recordingHint: 'Collecting frame, memory, and queue metrics.',
+    exportDialogName: 'Performance Report',
+    exportedTitle: 'Performance report exported',
+    exportFailedTitle: 'Performance report export failed',
+    passLabels: {
+      composite: 'Composite',
+      color: 'Color',
+      effects: 'Effects',
+      overlay: 'Overlay'
     }
   },
   sharePackage: {
