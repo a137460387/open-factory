@@ -54,6 +54,12 @@ export interface ExportAudioVisualizationSettings {
   themeId?: string;
   theme?: AudioVisualizationThemeDefinition;
 }
+
+export interface ExportSpatialAudioAssets {
+  hrtfPath?: string | null;
+  roomImpulseResponses?: Partial<Record<'small-room' | 'hall' | 'outdoor', string>>;
+}
+
 export type ExportWatermarkPosition =
   | 'top-left'
   | 'top-center'
@@ -178,6 +184,7 @@ export interface ExportSettings {
   colorManagement?: ExportColorManagementSettings;
   postExportScript?: ExportPostExportScriptSettings | null;
   masterProcessing?: ExportMasterProcessingSettings | null;
+  spatialAudioAssets?: ExportSpatialAudioAssets | null;
 }
 
 export interface ExportTransform {
@@ -281,6 +288,9 @@ export interface ExportClipKeyframes {
   roll?: ExportKeyframe[];
   spatialX?: ExportKeyframe[];
   spatialY?: ExportKeyframe[];
+  spatialAzimuth?: ExportKeyframe[];
+  spatialElevation?: ExportKeyframe[];
+  spatialDistanceMeters?: ExportKeyframe[];
   pathStartOffset?: ExportKeyframe[];
 }
 

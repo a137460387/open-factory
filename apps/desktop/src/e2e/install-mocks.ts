@@ -341,6 +341,22 @@ const mocks: TauriMocks = {
     }
     return exists.get(path) ?? !path.endsWith('.autosave');
   },
+  ensureSpatialAudioAssets: () => {
+    const hrtfPath = `${appDataDir}/hrtf/kemar.bin`;
+    const roomImpulseResponses = {
+      'small-room': `${appDataDir}/hrtf/ir/small-room.wav`,
+      hall: `${appDataDir}/hrtf/ir/hall.wav`,
+      outdoor: `${appDataDir}/hrtf/ir/outdoor.wav`
+    };
+    files.set(hrtfPath, 'mock clean-room hrtf');
+    exists.set(hrtfPath, true);
+    Object.values(roomImpulseResponses).forEach((path) => {
+      files.set(path, 'mock ir');
+      exists.set(path, true);
+    });
+    persistFiles();
+    return { hrtfPath, roomImpulseResponses, copied: true };
+  },
   readColorMatchFrameSample: (path) => {
     if (path === tinyImage) {
       return solidColorSample([217, 85, 63]);

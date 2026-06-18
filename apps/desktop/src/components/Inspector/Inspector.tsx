@@ -25,6 +25,7 @@ import {
   DEFAULT_EFFECT_PARAMS,
   DEFAULT_SUBTITLE_PROOFREADING_SETTINGS,
   DEFAULT_SPATIAL_AUDIO,
+  SPATIAL_AUDIO_ROOM_MODELS,
   DEFAULT_COLOR_CORRECTION,
   DEFAULT_TEXT_ARC,
   DEFAULT_TEXT_LAYOUT,
@@ -156,6 +157,8 @@ import {
   type MaskPatch,
   type PrivacyBlurEffect,
   type SpatialAudioDistance,
+  type SpatialAudioRenderMode,
+  type SpatialAudioRoomModel,
   type TextAnimationDirection,
   type TextAnimationPreset,
   type ThreeWayColor,
@@ -734,7 +737,9 @@ function ClipInspector({
   const fadeOutCurve = 'fadeOutCurve' in clip ? normalizeAudioFadeCurve(clip.fadeOutCurve) : 'linear';
   const spatialAudio = 'volume' in clip ? normalizeSpatialAudio(clip.spatialAudio) : DEFAULT_SPATIAL_AUDIO;
   const pitchSummary = useMemo(() => summarizePitchData(clip.pitchData), [clip.pitchData]);
+  const spatialRenderModeOptions: SpatialAudioRenderMode[] = ['panner', 'binaural'];
   const spatialDistanceOptions: SpatialAudioDistance[] = ['near', 'medium', 'far'];
+  const spatialRoomOptions: SpatialAudioRoomModel[] = SPATIAL_AUDIO_ROOM_MODELS;
   const audioChannelRouting = 'volume' in clip ? clip.audioChannelRouting ?? 'normal' : 'normal';
   const audioChannelRoutingOptions: AudioChannelRoutingMode[] =
     asset?.audioChannels === 1 ? ['normal', 'mono-left', 'mono-right', 'mono-both'] : ['normal', 'swap-stereo', 'stereo-left-mono', 'stereo-right-mono', 'stereo-to-mono'];
@@ -2628,6 +2633,21 @@ function ClipInspector({
             <details className="rounded-md border border-line bg-white" data-testid="spatial-audio-section" open>
               <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-slate-700">{t('inspector.sections.spatialAudio')}</summary>
               <div className="space-y-3 border-t border-line p-2">
+                <label className="block text-xs font-medium text-slate-600">
+                  {t('inspector.fields.spatialRenderMode')}
+                  <select
+                    className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                    value={spatialAudio.renderMode}
+                    data-testid="clip-spatial-render-mode-select"
+                    onChange={(event) => commit({ spatialAudio: { ...spatialAudio, renderMode: event.target.value as SpatialAudioRenderMode } })}
+                  >
+                    {spatialRenderModeOptions.map((mode) => (
+                      <option key={mode} value={mode}>
+                        {t(`inspector.spatialRenderModes.${mode}`)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <div className="grid grid-cols-2 gap-2">
                   <AnimatedField label={t('inspector.fields.spatialX')} onAddKeyframe={() => addKeyframe('spatialX', spatialAudio.x)} testId="add-spatial-x-keyframe-button">
                     <RangeNumberField
@@ -2675,6 +2695,59 @@ function ClipInspector({
                     {spatialDistanceOptions.map((distance) => (
                       <option key={distance} value={distance}>
                         {t(`inspector.spatialDistanceOptions.${distance}`)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <AnimatedField label={t('inspector.fields.spatialAzimuth')} onAddKeyframe={() => addKeyframe('spatialAzimuth', spatialAudio.azimuth)} testId="add-spatial-azimuth-keyframe-button">
+                    <RangeNumberField
+                      label={t('inspector.fields.spatialAzimuth')}
+                      value={spatialAudio.azimuth}
+                      min={-180}
+                      max={180}
+                      step={1}
+                      format={(value) => `${Math.round(value)}°`}
+                      onCommit={(azimuth) => commit({ spatialAudio: { ...spatialAudio, renderMode: 'binaural', azimuth } })}
+                      testId="clip-spatial-azimuth-input"
+                    />
+                  </AnimatedField>
+                  <AnimatedField label={t('inspector.fields.spatialElevation')} onAddKeyframe={() => addKeyframe('spatialElevation', spatialAudio.elevation)} testId="add-spatial-elevation-keyframe-button">
+                    <RangeNumberField
+                      label={t('inspector.fields.spatialElevation')}
+                      value={spatialAudio.elevation}
+                      min={-90}
+                      max={90}
+                      step={1}
+                      format={(value) => `${Math.round(value)}°`}
+                      onCommit={(elevation) => commit({ spatialAudio: { ...spatialAudio, renderMode: 'binaural', elevation } })}
+                      testId="clip-spatial-elevation-input"
+                    />
+                  </AnimatedField>
+                </div>
+                <AnimatedField label={t('inspector.fields.spatialDistanceMeters')} onAddKeyframe={() => addKeyframe('spatialDistanceMeters', spatialAudio.distanceMeters)} testId="add-spatial-distance-meters-keyframe-button">
+                  <RangeNumberField
+                    label={t('inspector.fields.spatialDistanceMeters')}
+                    value={spatialAudio.distanceMeters}
+                    min={0.1}
+                    max={100}
+                    step={0.1}
+                    format={(value) => `${value.toFixed(1)} m`}
+                    onCommit={(distanceMeters) => commit({ spatialAudio: { ...spatialAudio, renderMode: 'binaural', distanceMeters } })}
+                    testId="clip-spatial-distance-meters-input"
+                  />
+                </AnimatedField>
+                <label className="block text-xs font-medium text-slate-600">
+                  {t('inspector.fields.spatialRoomModel')}
+                  <select
+                    className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                    value={spatialAudio.roomModel}
+                    data-testid="clip-spatial-room-model-select"
+                    onChange={(event) => commit({ spatialAudio: { ...spatialAudio, roomModel: event.target.value as SpatialAudioRoomModel } })}
+                  >
+                    {spatialRoomOptions.map((room) => (
+                      <option key={room} value={room}>
+                        {t(`inspector.spatialRoomModels.${room}`)}
                       </option>
                     ))}
                   </select>

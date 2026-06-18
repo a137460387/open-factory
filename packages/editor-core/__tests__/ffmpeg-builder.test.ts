@@ -427,6 +427,43 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.filterComplex).toContain(':eval=frame');
   });
 
+  it('builds binaural spatial audio with sofalizer when an HRTF path is available', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-binaural',
+        duration: 2,
+        spatialAudio: { renderMode: 'binaural', azimuth: 90, elevation: 15, distanceMeters: 3, roomModel: 'small-room' }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(project, {
+        outputPath: 'out.mp4',
+        settings: { spatialAudioAssets: { hrtfPath: 'C:/Users/Test/AppData/Roaming/open-factory/hrtf/kemar.bin' } }
+      })
+    );
+
+    expect(plan.filterComplex).toContain('sofalizer=sofa=C\\:/Users/Test/AppData/Roaming/open-factory/hrtf/kemar.bin:azi=90:ele=15');
+    expect(plan.fullArgs.join(' ')).toContain('sofalizer=sofa=C\\:/Users/Test/AppData/Roaming/open-factory/hrtf/kemar.bin:azi=90:ele=15');
+  });
+
+  it('falls back to pan spatial audio when binaural HRTF is missing', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-binaural-fallback',
+        duration: 2,
+        spatialAudio: { x: -1, renderMode: 'binaural', azimuth: 90 }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).not.toContain('sofalizer=');
+    expect(plan.filterComplex).toContain('pan=stereo|c0=1*c0|c1=0*c1');
+  });
+
   it('builds YouTube loudness normalization as a two-pass loudnorm plan', () => {
     const project = makeProject();
     const plan = buildFfmpegExportPlan(

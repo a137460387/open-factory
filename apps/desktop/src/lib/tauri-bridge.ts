@@ -100,6 +100,12 @@ export interface SharePackageResult {
   durationMs: number;
 }
 
+export interface SpatialAudioAssets {
+  hrtfPath: string;
+  roomImpulseResponses: Record<'small-room' | 'hall' | 'outdoor', string>;
+  copied: boolean;
+}
+
 export interface SharedLibraryArchiveFileEntry {
   sourcePath: string;
   archivePath: string;
@@ -658,6 +664,7 @@ export type TauriMocks = Partial<{
   copyFile(sourcePath: string, destinationPath: string): Promise<void> | void;
   moveFile(sourcePath: string, destinationPath: string): Promise<void> | void;
   fsExists(path: string): Promise<boolean> | boolean;
+  ensureSpatialAudioAssets(): Promise<SpatialAudioAssets> | SpatialAudioAssets;
   readColorMatchFrameSample(path: string): Promise<ColorMatchFrameSample | undefined> | ColorMatchFrameSample | undefined;
   getAppDataDir(): Promise<string> | string;
   getTempSegmentsDir(): Promise<string> | string;
@@ -943,6 +950,14 @@ export async function fsExists(path: string): Promise<boolean> {
     return mock(path);
   }
   return invoke<boolean>('fs_exists', { path });
+}
+
+export async function ensureSpatialAudioAssets(): Promise<SpatialAudioAssets> {
+  const mock = getTauriMocks()?.ensureSpatialAudioAssets;
+  if (mock) {
+    return mock();
+  }
+  return invoke<SpatialAudioAssets>('ensure_spatial_audio_assets');
 }
 
 export async function getAppDataDir(): Promise<string> {

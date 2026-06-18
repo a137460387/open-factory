@@ -89,6 +89,7 @@ pub fn run() {
             commands::files::get_temp_segments_dir,
             commands::files::get_file_stat,
             commands::files::scan_directory,
+            commands::spatial_audio::ensure_spatial_audio_assets,
             commands::project_crypto::encrypt_project_file,
             commands::project_crypto::decrypt_project_file,
             commands::project_crypto::is_encrypted_project_file,

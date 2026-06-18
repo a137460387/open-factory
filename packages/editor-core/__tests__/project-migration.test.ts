@@ -195,24 +195,32 @@ describe('project schema migration', () => {
     project.timeline.tracks[0].clips = [
       makeVideoClip({
         id: 'clip-spatial',
-        spatialAudio: { x: -1, y: 0.25, z: 0.5, distance: 'far' },
+        spatialAudio: { x: -1, y: 0.25, z: 0.5, distance: 'far', renderMode: 'binaural', azimuth: 90, elevation: 15, distanceMeters: 4, roomModel: 'hall' },
         keyframes: {
           spatialX: [
             { id: 'spatial-x-a', time: 0, value: -1, easing: 'linear' },
             { id: 'spatial-x-b', time: 2, value: 1, easing: 'linear' }
-          ]
+          ],
+          spatialAzimuth: [
+            { id: 'spatial-azimuth-a', time: 0, value: 0, easing: 'linear' },
+            { id: 'spatial-azimuth-b', time: 2, value: 90, easing: 'linear' }
+          ],
+          spatialElevation: [{ id: 'spatial-elevation-a', time: 1, value: 15, easing: 'linear' }],
+          spatialDistanceMeters: [{ id: 'spatial-distance-a', time: 1, value: 4, easing: 'linear' }]
         }
       })
     ];
     project.sequences = [{ ...project.sequences[0], timeline: project.timeline }];
 
     const file = serializeProject(project);
-    expect(file.project.timeline.tracks[0].clips[0].spatialAudio).toEqual({ x: -1, y: 0.25, z: 0.5, distance: 'far' });
+    expect(file.project.timeline.tracks[0].clips[0].spatialAudio).toMatchObject({ x: -1, y: 0.25, z: 0.5, distance: 'far', renderMode: 'binaural', azimuth: 90, elevation: 15, distanceMeters: 4, roomModel: 'hall' });
     expect(file.project.timeline.tracks[0].clips[0].keyframes?.spatialX).toHaveLength(2);
+    expect(file.project.timeline.tracks[0].clips[0].keyframes?.spatialAzimuth).toHaveLength(2);
 
     const migrated = migrateProjectFile(file);
-    expect(migrated.project.timeline.tracks[0].clips[0].spatialAudio).toEqual({ x: -1, y: 0.25, z: 0.5, distance: 'far' });
+    expect(migrated.project.timeline.tracks[0].clips[0].spatialAudio).toMatchObject({ x: -1, y: 0.25, z: 0.5, distance: 'far', renderMode: 'binaural', azimuth: 90, elevation: 15, distanceMeters: 4, roomModel: 'hall' });
     expect(migrated.project.timeline.tracks[0].clips[0].keyframes?.spatialX?.at(-1)).toMatchObject({ time: 2, value: 1 });
+    expect(migrated.project.timeline.tracks[0].clips[0].keyframes?.spatialAzimuth?.at(-1)).toMatchObject({ time: 2, value: 90 });
 
     delete file.project.timeline.tracks[0].clips[0].spatialAudio;
     delete file.project.timeline.tracks[0].clips[0].keyframes;

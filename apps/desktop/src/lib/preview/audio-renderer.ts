@@ -13,6 +13,7 @@ import {
   normalizeAudioPitchSemitones,
   calculateSpatialDistanceGain,
   normalizeSpatialAudio,
+  resolveSpatialCartesianPosition,
   normalizeTrackCompressor,
   normalizeTrackEQ,
   readVuMeter,
@@ -161,7 +162,10 @@ export class PreviewAudioRenderer {
     const spatial = normalizeSpatialAudio({
       ...clip.spatialAudio,
       x: getClipKeyframeValue(clip, 'spatialX', localTime),
-      y: getClipKeyframeValue(clip, 'spatialY', localTime)
+      y: getClipKeyframeValue(clip, 'spatialY', localTime),
+      azimuth: getClipKeyframeValue(clip, 'spatialAzimuth', localTime),
+      elevation: getClipKeyframeValue(clip, 'spatialElevation', localTime),
+      distanceMeters: getClipKeyframeValue(clip, 'spatialDistanceMeters', localTime)
     });
     node.gain.gain.value = muted ? 0 : volume * (track ? getTrackVolume(track) : 1) * getFadeMultiplier(clip, playheadTime) * calculateSpatialDistanceGain(spatial);
     if (node.spatialPanner) {
@@ -169,7 +173,8 @@ export class PreviewAudioRenderer {
       node.spatialPanner.distanceModel = spatial.distance === 'near' ? 'linear' : 'inverse';
       node.spatialPanner.refDistance = spatial.distance === 'near' ? 0.5 : spatial.distance === 'far' ? 2 : 1;
       node.spatialPanner.maxDistance = spatial.distance === 'far' ? 10 : 6;
-      setPannerPosition(node.spatialPanner, spatial.x, spatial.y, spatial.z);
+      const position = resolveSpatialCartesianPosition(spatial);
+      setPannerPosition(node.spatialPanner, position.x, position.y, position.z);
     }
     if (node.panner) {
       node.panner.pan.value = node.spatialPanner ? (track ? getTrackPan(track) : 0) : Math.min(1, Math.max(-1, spatial.x + (track ? getTrackPan(track) : 0)));

@@ -158,6 +158,9 @@ describe('keyframe interpolation', () => {
     expect(getClipStaticKeyframeValue(makeVideoClip({ speed: 1.5 }), 'speed')).toBe(1.5);
     expect(getClipStaticKeyframeValue(makeVideoClip({ spatialAudio: { x: -0.4, y: 0.6, z: 0, distance: 'medium' } }), 'spatialX')).toBe(-0.4);
     expect(getClipStaticKeyframeValue(makeVideoClip({ spatialAudio: { x: -0.4, y: 0.6, z: 0, distance: 'medium' } }), 'spatialY')).toBe(0.6);
+    expect(getClipStaticKeyframeValue(makeVideoClip({ spatialAudio: { renderMode: 'binaural', azimuth: 90, elevation: 15, distanceMeters: 4 } }), 'spatialAzimuth')).toBe(90);
+    expect(getClipStaticKeyframeValue(makeVideoClip({ spatialAudio: { renderMode: 'binaural', azimuth: 90, elevation: 15, distanceMeters: 4 } }), 'spatialElevation')).toBe(15);
+    expect(getClipStaticKeyframeValue(makeVideoClip({ spatialAudio: { renderMode: 'binaural', azimuth: 90, elevation: 15, distanceMeters: 4 } }), 'spatialDistanceMeters')).toBe(4);
     expect(getClipStaticKeyframeValue(text, 'pathStartOffset')).toBe(0);
     expect(getClipKeyframeValue(text, 'x', 0.5)).toBe(0.5);
     expect(animated).toMatchObject({ transform: { x: 0.5, y: -0.5, opacity: 0.75 } });

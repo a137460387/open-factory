@@ -19,5 +19,6 @@ pub mod secrets;
 pub mod share;
 pub mod shared_library;
 pub mod smoke;
+pub mod spatial_audio;
 pub mod transcode;
 pub mod whisper;

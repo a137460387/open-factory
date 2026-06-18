@@ -92,6 +92,9 @@ export interface ClipKeyframes {
   roll?: Keyframe<number>[];
   spatialX?: Keyframe<number>[];
   spatialY?: Keyframe<number>[];
+  spatialAzimuth?: Keyframe<number>[];
+  spatialElevation?: Keyframe<number>[];
+  spatialDistanceMeters?: Keyframe<number>[];
   pathStartOffset?: Keyframe<number>[];
 }
 

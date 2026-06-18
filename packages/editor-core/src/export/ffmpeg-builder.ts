@@ -74,7 +74,7 @@ import { buildMotionBlurExportFilter, normalizeMotionBlurParams } from '../motio
 import { flattenMulticamProjectForExport } from '../multicam';
 import { collectExportMediaMetadata } from '../media-batch';
 import { buildReframeCropFilter, clampReframeOffset, isReframeEnabled, normalizeTargetAspectRatio, resolveReframeDimensions } from '../reframe';
-import { calculateSpatialDistanceGain, isDefaultSpatialAudio, mapSpatialXToPanGains, normalizeSpatialAudio } from '../spatial-audio';
+import { buildSofalizerArgs, calculateSpatialDistanceGain, isDefaultSpatialAudio, mapSpatialXToPanGains, normalizeSpatialAudio } from '../spatial-audio';
 import { averageClipMotionScore, buildSceneBoundaryProtectionRanges, resolveFrameInterpolationMode } from './frame-interpolation';
 import { calculateSpeedCurveSourceDuration, getClipSourceVisibleDuration, getClipSpeed, getRenderableTracks, getTimelinePlaybackDuration, getTrackPan, getTrackVolume } from '../timeline';
 import { round } from '../time';
@@ -171,6 +171,7 @@ export const DEFAULT_EXPORT_SETTINGS: Omit<ExportSettings, 'outputPath'> = {
   colorManagement: DEFAULT_EXPORT_COLOR_MANAGEMENT,
   colorPipeline: 'sdr-srgb',
   masterProcessing: null,
+  spatialAudioAssets: null,
   audioVisualization: {
     style: 'waveform-line',
     color: '#22d3ee',
@@ -963,8 +964,24 @@ function normalizeExportReframeSettings(settings: ExportSettings): ExportSetting
     timecodeBurnIn: normalizeTimecodeBurnIn(settings.timecodeBurnIn),
     slate: normalizeExportSlate(settings.slate),
     audioVisualization: normalizeExportAudioVisualization(settings.audioVisualization),
-    masterProcessing: normalizeExportMasterProcessing(settings.masterProcessing)
+    masterProcessing: normalizeExportMasterProcessing(settings.masterProcessing),
+    spatialAudioAssets: normalizeExportSpatialAudioAssets(settings.spatialAudioAssets)
   };
+}
+
+function normalizeExportSpatialAudioAssets(input: ExportSettings['spatialAudioAssets'] | undefined): ExportSettings['spatialAudioAssets'] {
+  if (!input || typeof input !== 'object') {
+    return null;
+  }
+  const hrtfPath = typeof input.hrtfPath === 'string' && input.hrtfPath.trim() ? normalizeFfmpegPath(input.hrtfPath.trim()) : null;
+  const roomImpulseResponses = input.roomImpulseResponses && typeof input.roomImpulseResponses === 'object'
+    ? Object.fromEntries(
+        Object.entries(input.roomImpulseResponses)
+          .filter((entry): entry is ['small-room' | 'hall' | 'outdoor', string] => ['small-room', 'hall', 'outdoor'].includes(entry[0]) && typeof entry[1] === 'string' && entry[1].trim().length > 0)
+          .map(([key, value]) => [key, normalizeFfmpegPath(value.trim())])
+      )
+    : {};
+  return hrtfPath || Object.keys(roomImpulseResponses).length > 0 ? { hrtfPath, roomImpulseResponses } : null;
 }
 
 function mergeExportMetadata(base: ExportProject['metadata'], override: ExportProject['metadata']): ExportProject['metadata'] {
@@ -3640,7 +3657,7 @@ function buildAudioFilters(
         getExportClipSourceDuration(clip)
       )},asetpts=PTS-STARTPTS${pitchAndReverseFilters.length > 0 ? `,${pitchAndReverseFilters.join(',')}` : ''}${speedFilters.length > 0 ? `,${speedFilters.join(',')}` : ''}${fadeFilters}${restorationFilters}${denoiseFilters}${trackProcessingFilters},adelay=${delay}:all=1,${buildVolumeFilter(
         clip
-      )}${buildAudioChannelRoutingFilter(clip)}${buildPanFilter(clip)}${buildSpatialAudioFilter(clip)},aformat=channel_layouts=stereo,aresample=${settings.sampleRate}[${label}]`
+      )}${buildAudioChannelRoutingFilter(clip)}${buildPanFilter(clip)}${buildSpatialAudioFilter(clip, settings)},aformat=channel_layouts=stereo,aresample=${settings.sampleRate}[${label}]`
     );
     labels.push(label);
   }
@@ -3756,8 +3773,12 @@ function buildPanFilter(clip: ExportClip): string {
   return `,stereopan=pan=${formatPan(clip.pan)}`;
 }
 
-function buildSpatialAudioFilter(clip: ExportClip): string {
+function buildSpatialAudioFilter(clip: ExportClip, settings: ExportSettings): string {
   const spatial = normalizeSpatialAudio(clip.spatialAudio);
+  const sofalizerArgs = buildSofalizerArgs(spatial, settings.spatialAudioAssets?.hrtfPath ?? undefined);
+  if (sofalizerArgs.length > 0) {
+    return `,sofalizer=${sofalizerArgs.map(escapeSofalizerArg).join(':')}`;
+  }
   const xFrames = getAnimatedFrames(clip, 'spatialX');
   const yFrames = getAnimatedFrames(clip, 'spatialY');
   if (isDefaultSpatialAudio(spatial) && xFrames.length === 0 && yFrames.length === 0) {
@@ -3784,6 +3805,22 @@ function buildSpatialAudioFilter(clip: ExportClip): string {
     }
   }
   return parts.length > 0 ? `,${parts.join(',')}` : '';
+}
+
+function escapeSofalizerArg(arg: string): string {
+  const separator = arg.indexOf('=');
+  if (separator < 0) {
+    return arg;
+  }
+  const key = arg.slice(0, separator);
+  const value = arg.slice(separator + 1);
+  return key === 'sofa' ? `${key}=${escapeFilterFileValue(value)}` : `${key}=${value}`;
+}
+
+function escapeFilterFileValue(value: string): string {
+  return normalizeFfmpegPath(value)
+    .replace(/:/g, '\\:')
+    .replace(/'/g, "\\'");
 }
 
 function buildSpatialPanGainExpression(frames: Array<{ time: number; value: number; easing?: ExportKeyframe['easing'] }>, fallbackX: number, channel: 'left' | 'right'): string {

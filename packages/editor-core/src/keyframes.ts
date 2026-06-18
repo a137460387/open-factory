@@ -31,6 +31,9 @@ export const KEYFRAME_PROPERTY_LIMITS: Record<KeyframeProperty, { min: number; m
   roll: { min: -180, max: 180 },
   spatialX: { min: -1, max: 1 },
   spatialY: { min: -1, max: 1 },
+  spatialAzimuth: { min: -180, max: 180 },
+  spatialElevation: { min: -90, max: 90 },
+  spatialDistanceMeters: { min: 0.1, max: 100 },
   pathStartOffset: { min: 0, max: 1 }
 };
 
@@ -229,6 +232,15 @@ export function getClipStaticKeyframeValue(clip: Clip, property: KeyframePropert
   }
   if (property === 'spatialY') {
     return 'volume' in clip ? clip.spatialAudio?.y ?? 0 : 0;
+  }
+  if (property === 'spatialAzimuth') {
+    return 'volume' in clip ? clip.spatialAudio?.azimuth ?? 0 : 0;
+  }
+  if (property === 'spatialElevation') {
+    return 'volume' in clip ? clip.spatialAudio?.elevation ?? 0 : 0;
+  }
+  if (property === 'spatialDistanceMeters') {
+    return 'volume' in clip ? clip.spatialAudio?.distanceMeters ?? 1 : 1;
   }
   if (property === 'pathStartOffset') {
     return clip.type === 'text' ? normalizeTextPath(clip.pathText).startOffset : 0;

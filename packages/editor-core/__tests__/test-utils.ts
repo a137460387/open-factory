@@ -33,6 +33,7 @@ import {
   normalizeMotionTrack,
   normalizeQualityEnhancement,
   normalizeSequenceFrameRate,
+  normalizeSpatialAudio,
   normalizeSlowMotionMode,
   normalizeStabilization,
   normalizeRichTextDocument,
@@ -52,13 +53,15 @@ import {
   type ColorCorrection,
   type CreditsStyle,
   type ColorNodeGraph,
+  type ClipSpatialAudio,
   createProject
 } from '../src';
 
-type ClipOverrides<TClip extends Clip> = Partial<Omit<TClip, 'transform' | 'style' | 'colorCorrection'>> & {
+type ClipOverrides<TClip extends Clip> = Partial<Omit<TClip, 'transform' | 'style' | 'colorCorrection' | 'spatialAudio'>> & {
   transform?: Partial<Transform>;
   style?: Partial<TextStyle> | Partial<SubtitleStyle> | Partial<CreditsStyle>;
   colorCorrection?: Partial<ColorCorrection>;
+  spatialAudio?: Partial<ClipSpatialAudio>;
 };
 
 function buildColorNodeGraphPatch(colorNodeGraph: unknown): { colorNodeGraph?: ColorNodeGraph } {
@@ -114,7 +117,7 @@ export function makeVideoClip(overrides: ClipOverrides<Extract<Clip, { type: 'vi
     fadeOutDuration: overrides.fadeOutDuration ?? DEFAULT_AUDIO_FADE_DURATION,
     fadeInCurve: overrides.fadeInCurve ?? DEFAULT_AUDIO_FADE_CURVE,
     fadeOutCurve: overrides.fadeOutCurve ?? DEFAULT_AUDIO_FADE_CURVE,
-    spatialAudio: overrides.spatialAudio ?? { ...DEFAULT_SPATIAL_AUDIO }
+    spatialAudio: normalizeSpatialAudio(overrides.spatialAudio ?? DEFAULT_SPATIAL_AUDIO)
   };
 }
 
@@ -161,7 +164,7 @@ export function makeAudioClip(overrides: ClipOverrides<Extract<Clip, { type: 'au
     fadeOutDuration: overrides.fadeOutDuration ?? DEFAULT_AUDIO_FADE_DURATION,
     fadeInCurve: overrides.fadeInCurve ?? DEFAULT_AUDIO_FADE_CURVE,
     fadeOutCurve: overrides.fadeOutCurve ?? DEFAULT_AUDIO_FADE_CURVE,
-    spatialAudio: overrides.spatialAudio ?? { ...DEFAULT_SPATIAL_AUDIO }
+    spatialAudio: normalizeSpatialAudio(overrides.spatialAudio ?? DEFAULT_SPATIAL_AUDIO)
   };
 }
 

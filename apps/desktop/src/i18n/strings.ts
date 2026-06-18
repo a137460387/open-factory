@@ -2880,6 +2880,11 @@ const zh = {
       spatialY: '前后位置 Y',
       spatialZ: '上下位置 Z',
       spatialDistance: '距离衰减',
+      spatialRenderMode: '空间化模式',
+      spatialAzimuth: '方位角',
+      spatialElevation: '仰角',
+      spatialDistanceMeters: '3D 距离',
+      spatialRoomModel: '房间声学',
       pitchShift: '音高',
       primaryPitchNote: '主调',
       pitchRange: '音域',
@@ -3106,6 +3111,16 @@ const zh = {
       medium: '中',
       far: '远'
     },
+    spatialRenderModes: {
+      panner: '普通 Panner',
+      binaural: '双耳 3D'
+    },
+    spatialRoomModels: {
+      none: '无',
+      'small-room': '小房间',
+      hall: '大厅',
+      outdoor: '户外'
+    },
     projection: {
       flat: '普通平面',
       equirectangular: '360° 等距柱状',
@@ -3201,6 +3216,9 @@ const zh = {
       roll: 'Roll',
       spatialX: '空间 X',
       spatialY: '空间 Y',
+      spatialAzimuth: '方位角',
+      spatialElevation: '仰角',
+      spatialDistanceMeters: '3D 距离',
       pathStartOffset: '路径偏移'
     }
   },
@@ -7252,6 +7270,11 @@ const enOverrides = {
       spatialY: 'Front/Back Y',
       spatialZ: 'Up/Down Z',
       spatialDistance: 'Distance Falloff',
+      spatialRenderMode: 'Spatial Mode',
+      spatialAzimuth: 'Azimuth',
+      spatialElevation: 'Elevation',
+      spatialDistanceMeters: '3D Distance',
+      spatialRoomModel: 'Room Acoustics',
       pitchShift: 'Pitch Shift',
       primaryPitchNote: 'Primary Note',
       pitchRange: 'Range',
@@ -7443,6 +7466,16 @@ const enOverrides = {
       medium: 'Medium',
       far: 'Far'
     },
+    spatialRenderModes: {
+      panner: 'Standard Panner',
+      binaural: 'Binaural 3D'
+    },
+    spatialRoomModels: {
+      none: 'None',
+      'small-room': 'Small Room',
+      hall: 'Hall',
+      outdoor: 'Outdoor'
+    },
     projection: {
       flat: 'Flat',
       equirectangular: '360° Equirectangular',
@@ -7523,6 +7556,9 @@ const enOverrides = {
       roll: 'Roll',
       spatialX: 'Spatial X',
       spatialY: 'Spatial Y',
+      spatialAzimuth: 'Azimuth',
+      spatialElevation: 'Elevation',
+      spatialDistanceMeters: '3D Distance',
       pathStartOffset: 'Path Offset'
     }
   },

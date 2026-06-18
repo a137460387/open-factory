@@ -13,6 +13,7 @@ import {
   shouldRetryPostExportQuality,
   timelineHasExportableVideo,
   applyLowPowerThreads,
+  normalizeSpatialAudio,
   type ExportProject,
   type ExportReport,
   type ExportSettings,
@@ -27,7 +28,7 @@ import {
   type RenderFarmTaskConfig
 } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
-import { cancelExport as bridgeCancelExport, copyFile, getAvailableMemoryBytes, getFfmpegCapabilities, getTempSegmentsDir, listenBridge, removeFile, runExport, runPostExportQualityAssurance, writeFile } from '../lib/tauri-bridge';
+import { cancelExport as bridgeCancelExport, copyFile, ensureSpatialAudioAssets, getAvailableMemoryBytes, getFfmpegCapabilities, getTempSegmentsDir, listenBridge, removeFile, runExport, runPostExportQualityAssurance, writeFile } from '../lib/tauri-bridge';
 import { readExportBackgroundSettings, readExportQualityAssuranceSettings } from '../settings/appSettings';
 import { runExportBeforePlugins } from '../plugins/plugin-manager';
 import { getExportLogPath, persistFinishedTaskToHistory } from './export-history';
@@ -64,7 +65,8 @@ export async function enqueueExport(
     throw new Error(zhCN.errors.ffmpegMissing);
   }
   await runExportBeforePlugins(project, outputPath, settings);
-  const exportProject = buildExportProjectFromProject(project, { outputPath, settings, metadata: options.metadata });
+  const exportSettings = await withSpatialAudioAssets(project, settings);
+  const exportProject = buildExportProjectFromProject(project, { outputPath, settings: exportSettings, metadata: options.metadata });
   const backgroundSettings = await readExportBackgroundSettings().catch(() => undefined);
   const rawPlan = buildFfmpegExportPlan(exportProject, capabilities, 0, [], { exportRange });
   const plan = applyLowPowerThreads(rawPlan, backgroundSettings?.lowPowerMode === true, getHardwareConcurrency());
@@ -83,6 +85,34 @@ export async function enqueueExport(
   signalRunner();
   ensureExportQueueRunner();
   return task;
+}
+
+async function withSpatialAudioAssets(
+  project: Project,
+  settings: Partial<Omit<ExportSettings, 'outputPath'>> | undefined
+): Promise<Partial<Omit<ExportSettings, 'outputPath'>> | undefined> {
+  if (!projectUsesBinauralSpatialAudio(project)) {
+    return settings;
+  }
+  try {
+    const assets = await ensureSpatialAudioAssets();
+    return {
+      ...settings,
+      spatialAudioAssets: {
+        hrtfPath: assets.hrtfPath,
+        roomImpulseResponses: assets.roomImpulseResponses
+      }
+    };
+  } catch (error) {
+    console.warn('Unable to prepare spatial audio assets; falling back to standard panner export.', error);
+    return settings;
+  }
+}
+
+function projectUsesBinauralSpatialAudio(project: Project): boolean {
+  return project.timeline.tracks
+    .flatMap((track) => track.clips)
+    .some((clip) => 'volume' in clip && normalizeSpatialAudio(clip.spatialAudio).renderMode === 'binaural');
 }
 
 export function retryQueuedExportTask(taskId: string): void {

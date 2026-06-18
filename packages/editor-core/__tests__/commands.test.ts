@@ -1385,7 +1385,7 @@ describe('timeline commands', () => {
 
     manager.execute(new UpdateClipCommand(accessor, 'clip-1', { spatialAudio: { x: -2, y: 0.25, z: 4, distance: 'far' } }));
 
-    expect(accessor.current().tracks[0].clips[0].spatialAudio).toEqual({ x: -1, y: 0.25, z: 1, distance: 'far' });
+    expect(accessor.current().tracks[0].clips[0].spatialAudio).toMatchObject({ x: -1, y: 0.25, z: 1, distance: 'far' });
 
     manager.undo();
     expect(accessor.current().tracks[0].clips[0].spatialAudio).toMatchObject({ x: 0, y: 0, z: 0, distance: 'medium' });
