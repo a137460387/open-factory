@@ -139,8 +139,10 @@ void main() {
   it('normalizes transition defaults and duration bounds', () => {
     expect(normalizeTransitionType(undefined)).toBe('dissolve');
     expect(normalizeTransitionType('fade-black')).toBe('fade-black');
+    expect(normalizeTransitionType('wipe-left')).toBe('wipe-left');
     expect(normalizeTransitionDuration(undefined)).toBe(0.5);
     expect(normalizeTransitionDuration(Number.NaN)).toBe(0.5);
-    expect(normalizeTransitionDuration(-1)).toBe(0.001);
+    expect(normalizeTransitionDuration(-1)).toBe(0.1);
+    expect(normalizeTransitionDuration(99)).toBe(5);
   });
 });

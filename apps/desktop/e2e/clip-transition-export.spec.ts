@@ -30,3 +30,28 @@ test('adds a dissolve transition between adjacent clips and exports shortened du
   expect(plan.duration).toBeCloseTo(11.5, 2);
   expect(plan.filterComplex).toContain('xfade=transition=dissolve:duration=0.5:offset=5.5');
 });
+
+test('changes a transition to wipe left and exports wipeleft xfade args', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.getByTestId('import-media-button').click();
+  await addMediaCardToTimeline(page);
+  await addMediaCardToTimeline(page);
+
+  const firstClip = page.locator('[data-testid^="timeline-clip-"]').first();
+  const box = await firstClip.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.click((box?.x ?? 0) + (box?.width ?? 0) - 4, (box?.y ?? 0) + (box?.height ?? 0) / 2, { button: 'right' });
+  await expect(page.getByTestId('transition-menu')).toBeVisible();
+  await page.getByTestId('transition-type-select').selectOption('wipe-left');
+  await page.getByTestId('transition-duration-input').fill('0.5');
+  await page.getByTestId('transition-add-button').click();
+
+  await openExportDialog(page);
+  await page.getByTestId('export-output-path').fill('C:/Exports/transition-wipe-output.mp4');
+  await page.getByTestId('export-enqueue-button').click();
+  await expectExportTaskStatus(page, 0, 'success');
+
+  const plan = await page.evaluate(() => window.__E2E_ACTIONS__!.getLastExportPlan!() as { filterComplex: string });
+  expect(plan.filterComplex).toContain('xfade=transition=wipeleft:duration=0.5:offset=5.5');
+});

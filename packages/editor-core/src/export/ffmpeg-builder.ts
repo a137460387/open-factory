@@ -1384,11 +1384,7 @@ function buildVisualItems(
     const pairDuration = round(pair.fromClip.duration + pair.toClip.duration - duration);
     filters.push(buildTransitionClipFilter(fromInput, customShaderSequenceClips.get(pair.fromClip.id) ?? pair.fromClip, `${label}_from`, settings, textArtifacts, warnings, capabilities));
     filters.push(buildTransitionClipFilter(toInput, customShaderSequenceClips.get(pair.toClip.id) ?? pair.toClip, `${label}_to`, settings, textArtifacts, warnings, capabilities));
-    filters.push(
-      `[${label}_from][${label}_to]xfade=transition=${mapTransitionType(transition.type)}:duration=${formatFfmpegSeconds(
-        duration
-      )}:offset=${formatFfmpegSeconds(Math.max(0, pair.fromClip.duration - duration))}[${label}_raw]`
-    );
+    filters.push(...buildSmartTransitionFilters(transition, label, duration, Math.max(0, pair.fromClip.duration - duration), settings));
     filters.push(`[${label}_raw]setpts=PTS-STARTPTS+${formatFfmpegSeconds(start)}/TB[${label}]`);
     items.push({
       kind: 'media',
@@ -1529,8 +1525,120 @@ function clampExportTransitionDuration(transition: ExportTransition, fromClip: E
   return round(Math.min(normalizeTransitionDuration(transition.duration), Math.max(0, Math.min(fromClip.duration, toClip.duration) * 0.5)));
 }
 
-function mapTransitionType(type: ExportTransition['type']): string {
-  return type === 'fade-black' ? 'fadeblack' : 'dissolve';
+function buildSmartTransitionFilters(
+  transition: ExportTransition,
+  label: string,
+  duration: number,
+  offset: number,
+  settings: ExportSettings
+): string[] {
+  const fromLabel = `${label}_from`;
+  const toLabel = `${label}_to`;
+  const rawLabel = `${label}_raw`;
+  const durationArg = formatFfmpegSeconds(duration);
+  const offsetArg = formatFfmpegSeconds(offset);
+  if (transition.type === 'rotate') {
+    const rotatedLabel = `${label}_rotate_from`;
+    return [
+      `[${fromLabel}]rotate='PI/10*t/${durationArg}':ow=iw:oh=ih:c=black@0,format=rgba[${rotatedLabel}]`,
+      `[${rotatedLabel}][${toLabel}]xfade=transition=fade:duration=${durationArg}:offset=${offsetArg}[${rawLabel}]`
+    ];
+  }
+  if (transition.type === 'motion-blur-wipe') {
+    const fromBlurLabel = `${label}_motion_from`;
+    const toBlurLabel = `${label}_motion_to`;
+    return [
+      `[${fromLabel}]minterpolate=fps=${formatFfmpegNumber(settings.fps)},gblur=sigma=6:steps=2[${fromBlurLabel}]`,
+      `[${toLabel}]minterpolate=fps=${formatFfmpegNumber(settings.fps)},gblur=sigma=6:steps=2[${toBlurLabel}]`,
+      `[${fromBlurLabel}][${toBlurLabel}]xfade=transition=wipeleft:duration=${durationArg}:offset=${offsetArg}[${rawLabel}]`
+    ];
+  }
+  if (transition.type === 'shape-heart' || transition.type === 'shape-star') {
+    const shapeLabel = `${label}_shape_to`;
+    return [
+      `[${toLabel}]format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='${buildShapeWipeGeqExpression(transition.type)}'[${shapeLabel}]`,
+      `[${fromLabel}][${shapeLabel}]overlay=format=auto[${rawLabel}]`
+    ];
+  }
+  return [`[${fromLabel}][${toLabel}]xfade=transition=${mapTransitionType(transition.type)}:duration=${durationArg}:offset=${offsetArg}[${rawLabel}]`];
+}
+
+export function mapTransitionType(type: ExportTransition['type']): string {
+  switch (type) {
+    case 'fade-black':
+    case 'flash-black':
+      return 'fadeblack';
+    case 'wipe-left':
+      return 'wipeleft';
+    case 'wipe-right':
+      return 'wiperight';
+    case 'wipe-up':
+      return 'wipeup';
+    case 'wipe-down':
+      return 'wipedown';
+    case 'zoom-dissolve':
+      return 'zoominzoomout';
+    case 'flash-white':
+      return 'fadewhite';
+    case 'block':
+      return 'pixelize';
+    case 'film-roll-open':
+      return 'horzopen';
+    case 'film-roll-close':
+      return 'horzclose';
+    case 'motion-blur-wipe':
+      return 'wipeleft';
+    case 'rotate':
+      return 'fade';
+    case 'shape-heart':
+    case 'shape-star':
+      return 'custom';
+    default:
+      return 'dissolve';
+  }
+}
+
+export function buildShapeWipeGeqExpression(type: Extract<ExportTransition['type'], 'shape-heart' | 'shape-star'>): string {
+  if (type === 'shape-star') {
+    return 'if(lte(abs(X-W/2)/(W/2)+abs(Y-H/2)/(H/2),0.82),255,0)';
+  }
+  return 'if(lte(pow((X-W/2)/(W/2),2)+pow((Y-H/2)/(H/2)-sqrt(abs((X-W/2)/(W/2))),2),1),255,0)';
+}
+
+export interface TransitionPreviewArgsOptions {
+  width?: number;
+  height?: number;
+  fps?: number;
+  duration?: number;
+}
+
+export function buildTransitionPreviewArgs(type: ExportTransition['type'], options: TransitionPreviewArgsOptions = {}): string[] {
+  const width = Math.max(16, Math.round(options.width ?? 160));
+  const height = Math.max(16, Math.round(options.height ?? 90));
+  const fps = Math.max(1, Math.round(options.fps ?? 30));
+  const duration = formatFfmpegSeconds(normalizeTransitionDuration(options.duration));
+  const offset = '0';
+  const baseFilter =
+    type === 'shape-heart' || type === 'shape-star'
+      ? `[1:v]format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='${buildShapeWipeGeqExpression(type)}'[shape];[0:v][shape]overlay=format=auto,scale=${width}:${height}`
+      : `[0:v][1:v]xfade=transition=${mapTransitionType(type)}:duration=${duration}:offset=${offset},scale=${width}:${height}`;
+  return [
+    '-f',
+    'lavfi',
+    '-i',
+    `testsrc2=size=${width}x${height}:rate=${fps}:duration=${duration}`,
+    '-f',
+    'lavfi',
+    '-i',
+    `smptebars=size=${width}x${height}:rate=${fps}:duration=${duration}`,
+    '-filter_complex',
+    baseFilter,
+    '-frames:v',
+    '1',
+    '-f',
+    'image2pipe',
+    'pipe:1'
+  ];
 }
 
 function visualKindOrder(item: VisualItem): number {

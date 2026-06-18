@@ -32,7 +32,23 @@ export type TrackType = 'video' | 'audio' | 'text' | 'subtitle';
 
 export type ClipType = 'video' | 'audio' | 'image' | 'text' | 'subtitle' | 'credits' | 'nested-sequence' | 'adjustment' | 'motion-graphic';
 
-export type TransitionType = 'fade-black' | 'dissolve';
+export type TransitionType =
+  | 'fade-black'
+  | 'dissolve'
+  | 'wipe-left'
+  | 'wipe-right'
+  | 'wipe-up'
+  | 'wipe-down'
+  | 'zoom-dissolve'
+  | 'flash-white'
+  | 'flash-black'
+  | 'block'
+  | 'rotate'
+  | 'film-roll-open'
+  | 'film-roll-close'
+  | 'shape-heart'
+  | 'shape-star'
+  | 'motion-blur-wipe';
 
 export type TimelineLabelColor = 'red' | 'orange' | 'amber' | 'yellow' | 'lime' | 'green' | 'teal' | 'cyan' | 'blue' | 'indigo' | 'purple' | 'pink';
 

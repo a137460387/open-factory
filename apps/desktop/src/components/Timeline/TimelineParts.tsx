@@ -929,7 +929,7 @@ function ClipBlock({
       ) : null}
       {transition ? (
         <span className="absolute right-1 top-1 z-20 rounded bg-brand px-1 text-[10px] font-semibold text-white" data-testid={`timeline-transition-${transition.id}`}>
-          {transition.type === 'fade-black' ? 'FB' : 'DS'}
+          {formatTransitionBadge(transition.type)}
         </span>
       ) : null}
       {frameRateMismatch ? (
@@ -1066,6 +1066,20 @@ function ClipBlock({
       )}
     </div>
   );
+}
+
+function formatTransitionBadge(type: TransitionType): string {
+  if (type === 'dissolve') {
+    return 'DS';
+  }
+  if (type === 'fade-black') {
+    return 'FB';
+  }
+  return type
+    .split('-')
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('')
+    .slice(0, 3);
 }
 
 function VolumeEnvelopeOverlay({

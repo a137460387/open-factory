@@ -7,7 +7,9 @@ import {
   buildFfmpegCurrentFrameExportPlan,
   buildFfmpegExportPlan,
   buildFfmpegPreviewSamplePlans,
+  buildShapeWipeGeqExpression,
   buildThumbnailExportSettings,
+  buildTransitionPreviewArgs,
   calculateExportPreviewSampleTimes,
   calculateSplitLayoutTransforms,
   calculateWatermarkOverlayPosition,
@@ -19,6 +21,7 @@ import {
   DEFAULT_EXPORT_MASTER_PROCESSING,
   DEFAULT_CUSTOM_SHADER_SOURCE,
   exportRenderRangeFromPoints,
+  mapTransitionType,
   type Clip,
   type Project
 } from '../src';
@@ -3669,6 +3672,85 @@ describe('multitrack ffmpeg builder', () => {
 
     expect(plan.filterComplex).toContain('xfade=transition=fadeblack:duration=0.25:offset=1.75');
     expect(plan.duration).toBe(3.75);
+  });
+
+  it.each([
+    ['wipe-left', 'wipeleft'],
+    ['wipe-right', 'wiperight'],
+    ['wipe-up', 'wipeup'],
+    ['wipe-down', 'wipedown'],
+    ['zoom-dissolve', 'zoominzoomout'],
+    ['flash-white', 'fadewhite'],
+    ['flash-black', 'fadeblack'],
+    ['block', 'pixelize'],
+    ['film-roll-open', 'horzopen'],
+    ['film-roll-close', 'horzclose']
+  ] as const)('builds %s xfade args for adjacent video clip transitions', (type, ffmpegTransition) => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({ id: 'clip-a', start: 0, duration: 2 }),
+      makeVideoClip({ id: 'clip-b', start: 2, duration: 2 })
+    ];
+    project.timeline.transitions = [{ id: `transition-${type}`, type, duration: 0.5, fromClipId: 'clip-a', toClipId: 'clip-b' }];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(mapTransitionType(type)).toBe(ffmpegTransition);
+    expect(plan.filterComplex).toContain(`xfade=transition=${ffmpegTransition}:duration=0.5:offset=1.5`);
+  });
+
+  it('builds rotate transition args with rotate plus xfade filters', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({ id: 'clip-a', start: 0, duration: 2 }),
+      makeVideoClip({ id: 'clip-b', start: 2, duration: 2 })
+    ];
+    project.timeline.transitions = [{ id: 'transition-rotate', type: 'rotate', duration: 0.5, fromClipId: 'clip-a', toClipId: 'clip-b' }];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain("rotate='PI/10*t/0.5'");
+    expect(plan.filterComplex).toContain('xfade=transition=fade:duration=0.5:offset=1.5');
+  });
+
+  it('builds motion blur wipe args with interpolation, blur, and wipe xfade', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({ id: 'clip-a', start: 0, duration: 2 }),
+      makeVideoClip({ id: 'clip-b', start: 2, duration: 2 })
+    ];
+    project.timeline.transitions = [{ id: 'transition-motion', type: 'motion-blur-wipe', duration: 0.5, fromClipId: 'clip-a', toClipId: 'clip-b' }];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('minterpolate=fps=30');
+    expect(plan.filterComplex).toContain('gblur=sigma=6');
+    expect(plan.filterComplex).toContain('xfade=transition=wipeleft:duration=0.5:offset=1.5');
+  });
+
+  it('builds shape wipe geq alpha expressions', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({ id: 'clip-a', start: 0, duration: 2 }),
+      makeVideoClip({ id: 'clip-b', start: 2, duration: 2 })
+    ];
+    project.timeline.transitions = [{ id: 'transition-heart', type: 'shape-heart', duration: 0.5, fromClipId: 'clip-a', toClipId: 'clip-b' }];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(buildShapeWipeGeqExpression('shape-heart')).toContain('sqrt(abs((X-W/2)/(W/2)))');
+    expect(buildShapeWipeGeqExpression('shape-star')).toContain('abs(X-W/2)/(W/2)+abs(Y-H/2)/(H/2)');
+    expect(plan.filterComplex).toContain("geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='if(lte(pow((X-W/2)/(W/2),2)");
+    expect(plan.filterComplex).toContain('overlay=format=auto');
+  });
+
+  it('builds thumbnail preview args for transition picker thumbnails', () => {
+    const wipeArgs = buildTransitionPreviewArgs('wipe-left', { width: 96, height: 54, duration: 0.4 });
+    const shapeArgs = buildTransitionPreviewArgs('shape-star', { width: 96, height: 54 });
+
+    expect(wipeArgs).toContain('-filter_complex');
+    expect(wipeArgs.join(' ')).toContain('xfade=transition=wipeleft:duration=0.4:offset=0');
+    expect(shapeArgs.join(' ')).toContain("geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)'");
   });
 
   it('warns and falls back when a transition cannot be rendered as one visual segment', () => {

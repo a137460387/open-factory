@@ -515,6 +515,26 @@ export const DEFAULT_NESTED_SEQUENCE_NAME = 'Nested Sequence';
 export const MAX_NESTED_SEQUENCE_DEPTH = 3;
 export const DEFAULT_TRANSITION_TYPE: TransitionType = 'dissolve';
 export const DEFAULT_TRANSITION_DURATION = 0.5;
+export const MIN_TRANSITION_DURATION = 0.1;
+export const MAX_TRANSITION_DURATION = 5;
+export const TRANSITION_TYPES: TransitionType[] = [
+  'dissolve',
+  'fade-black',
+  'wipe-left',
+  'wipe-right',
+  'wipe-up',
+  'wipe-down',
+  'zoom-dissolve',
+  'flash-white',
+  'flash-black',
+  'block',
+  'rotate',
+  'film-roll-open',
+  'film-roll-close',
+  'shape-heart',
+  'shape-star',
+  'motion-blur-wipe'
+];
 export const DEFAULT_TIMELINE_MARKER_COLOR = '#f97316';
 export const DEFAULT_PROJECT_ANNOTATION_COLOR = '#facc15';
 export const DEFAULT_REVIEW_ANNOTATION_COLOR = '#facc15';
@@ -1615,14 +1635,14 @@ function getNestedSequenceDepthForTimeline(project: Project, timeline: Timeline,
 }
 
 export function normalizeTransitionType(type: TransitionType | undefined): TransitionType {
-  return type === 'fade-black' || type === 'dissolve' ? type : DEFAULT_TRANSITION_TYPE;
+  return type && TRANSITION_TYPES.includes(type) ? type : DEFAULT_TRANSITION_TYPE;
 }
 
 export function normalizeTransitionDuration(duration: number | undefined): number {
   if (typeof duration !== 'number' || !Number.isFinite(duration)) {
     return DEFAULT_TRANSITION_DURATION;
   }
-  return round(Math.max(0.001, duration));
+  return round(Math.min(MAX_TRANSITION_DURATION, Math.max(MIN_TRANSITION_DURATION, duration)));
 }
 
 export function isDefaultColorCorrection(colorCorrection: Partial<ColorCorrection> | undefined): boolean {

@@ -26,6 +26,7 @@ import type {
   TextArcOptions,
   TextLayoutOptions,
   TextOpenTypeFeatures,
+  TransitionType,
   TrackCompressor,
   TrackEQ,
   TrackEQBandType
@@ -331,7 +332,7 @@ export interface ExportCreditsStyle extends ExportTextStyle {
 
 export type ExportClipType = 'video' | 'audio' | 'image' | 'text' | 'subtitle' | 'credits' | 'nested-sequence' | 'adjustment' | 'motion-graphic';
 export type ExportTrackType = 'video' | 'audio' | 'text' | 'subtitle';
-export type ExportTransitionType = 'fade-black' | 'dissolve';
+export type ExportTransitionType = TransitionType;
 
 export interface ExportClip {
   id: string;
