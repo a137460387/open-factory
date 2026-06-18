@@ -26,7 +26,7 @@ describe('frame interpolation compare preview plan', () => {
     speed: 1,
     transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
     colorCorrection: { brightness: 0, contrast: 1, saturation: 1, hue: 0 },
-    frameInterpolation: { enabled: false, targetFps: 60 },
+    frameInterpolation: { enabled: false, targetFps: 60, mode: 'adaptive', protectionFrames: 2 },
     slowMotionMode: 'none'
   };
 

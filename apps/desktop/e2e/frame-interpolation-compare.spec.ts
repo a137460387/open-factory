@@ -32,3 +32,21 @@ test('shows frame interpolation comparison grid and applies the selected mode', 
   });
   expect(slowMotionMode).toBe('mci');
 });
+
+test('evaluates mocked frame interpolation SSIM and shows the quality grade', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.getByTestId('import-media-button').click();
+  await addMediaCardToTimeline(page, 0);
+  await page.locator('[data-testid^="timeline-clip-"]').first().click();
+
+  await page.getByTestId('frame-interpolation-toggle').check();
+  await page.getByTestId('frame-interpolation-mode-select').selectOption('mci');
+  await page.getByTestId('frame-interpolation-quality-button').click();
+
+  await expect(page.getByTestId('frame-interpolation-quality-status')).toContainText('补帧质量：优');
+  await expect(page.getByTestId('frame-interpolation-quality-ssim')).toContainText('SSIM 0.991');
+
+  const calls = await page.evaluate(() => window.__E2E_ACTIONS__!.getExportPreviewRunCalls!() as Array<{ id: string; fullArgs: string[]; outputPath: string }>);
+  expect(calls.find((call) => call.id === 'frame-interpolation-mci')?.outputPath).toContain('/interp-cache/interp-');
+});

@@ -34,6 +34,7 @@ import {
   EFFECT_TYPES,
   MANUAL_AUDIO_VISUALIZATION_THEME_ID,
   FRAME_INTERPOLATION_TARGET_FPS,
+  FRAME_INTERPOLATION_MODES,
   INPUT_COLOR_SPACES,
   KEYFRAME_PROPERTY_LIMITS,
   MAX_CHROMA_KEY_COLORS,
@@ -119,7 +120,9 @@ import {
   serializeSubtitleProofreadingCsv,
   buildPrivacyMasksFromDetections,
   buildAudioRestorationWaveformComparison,
+  frameInterpolationCachePath,
   createTrack,
+  mapSsimToFrameInterpolationQualityGrade,
   applyKeyframeHandlePatch,
   calculateBezierHandleCoordinates,
   calculateKeyframeSpeedSamples,
@@ -165,6 +168,7 @@ import {
   type RichTextRun,
   type TextArcOptions,
   type FrameInterpolationCompareMode,
+  type FrameInterpolationMode,
   type MotionGraphicParamDefinition,
   type MotionGraphicParamValue,
   type MotionGraphicTemplateType,
@@ -181,6 +185,7 @@ import {
   bridgeConfirm,
   cancelMotionTracking,
   detectPrivacyRegions,
+  evaluateExportQuality,
   convertLocalFileSrc,
   getAppDataDir,
   getFfmpegCapabilities,
@@ -401,6 +406,8 @@ function ClipInspector({
   const [frameInterpolationCompareItems, setFrameInterpolationCompareItems] = useState<FrameInterpolationComparePreviewViewItem[]>([]);
   const [frameInterpolationCompareError, setFrameInterpolationCompareError] = useState<string>();
   const [frameInterpolationExpandedMode, setFrameInterpolationExpandedMode] = useState<FrameInterpolationCompareMode>();
+  const [frameInterpolationQualityRunning, setFrameInterpolationQualityRunning] = useState(false);
+  const [frameInterpolationQualityError, setFrameInterpolationQualityError] = useState<string>();
   const [audioDenoiseSupported, setAudioDenoiseSupported] = useState<boolean | undefined>();
   const [colorMatchReferenceClipId, setColorMatchReferenceClipId] = useState<string>('');
   const [colorMatchBusy, setColorMatchBusy] = useState(false);
@@ -433,6 +440,7 @@ function ClipInspector({
   useEffect(() => {
     setFrameInterpolationCompareItems([]);
     setFrameInterpolationCompareError(undefined);
+    setFrameInterpolationQualityError(undefined);
     setFrameInterpolationExpandedMode(undefined);
   }, [clip.id]);
 
@@ -469,6 +477,51 @@ function ClipInspector({
       showToast({ kind: 'warning', title: zhCN.inspector.frameInterpolationCompare.failedTitle, message });
     } finally {
       setFrameInterpolationCompareRunning(false);
+    }
+  };
+  const runFrameInterpolationQualityEvaluation = async () => {
+    if (clip.type !== 'video' || !asset?.path) {
+      setFrameInterpolationQualityError(zhCN.inspector.frameInterpolationCompare.missingMedia);
+      return;
+    }
+    setFrameInterpolationQualityRunning(true);
+    setFrameInterpolationQualityError(undefined);
+    try {
+      const appDataDir = await getAppDataDir();
+      const outputDir = frameInterpolationCachePath(appDataDir, asset.path, frameInterpolation);
+      const plan = buildFrameInterpolationComparePreviewPlan(project, clip, asset, playheadTime, outputDir, zhCN.inspector.frameInterpolationCompare.modes);
+      const preview = await runExportPreviewSamples({ samples: plan.samples, timeoutMs: FRAME_INTERPOLATION_COMPARE_TIMEOUT_MS });
+      const samplesById = new Map(preview.samples.map((sample) => [sample.id, sample]));
+      const selectedMode = frameInterpolation.mode === 'adaptive' ? 'mci' : frameInterpolation.mode === 'copy' ? 'original' : frameInterpolation.mode;
+      const baseline = samplesById.get('frame-interpolation-blend') ?? samplesById.get('frame-interpolation-original');
+      const candidate = samplesById.get(`frame-interpolation-${selectedMode}`) ?? samplesById.get('frame-interpolation-mci') ?? baseline;
+      if (!baseline || !candidate) {
+        throw new Error(zhCN.inspector.frameInterpolationCompare.failedMessage);
+      }
+      const result = await evaluateExportQuality({
+        taskId: `frame-interpolation-quality-${clip.id}`,
+        sourcePath: baseline.path,
+        outputPath: candidate.path,
+        duration: clip.duration
+      });
+      const ssim = Number.isFinite(result.ssim) ? result.ssim! : 0;
+      commit({
+        frameInterpolation: {
+          ...frameInterpolation,
+          quality: {
+            ssim,
+            grade: mapSsimToFrameInterpolationQualityGrade(ssim),
+            sampleCount: 10,
+            evaluatedAt: new Date().toISOString()
+          }
+        }
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : zhCN.inspector.frameInterpolationCompare.failedMessage;
+      setFrameInterpolationQualityError(message);
+      showToast({ kind: 'warning', title: zhCN.inspector.frameInterpolationCompare.qualityFailedTitle, message });
+    } finally {
+      setFrameInterpolationQualityRunning(false);
     }
   };
   const commitSubtitleType = (nextType: 'subtitle' | 'cc') => {
@@ -1661,6 +1714,54 @@ function ClipInspector({
                 ))}
               </select>
             </label>
+            <label className="block text-xs font-medium text-slate-600">
+              <span>{zhCN.inspector.frameInterpolationCompare.modeLabel}</span>
+              <select
+                className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60"
+                value={frameInterpolation.mode}
+                disabled={frameInterpolationUnavailable || !frameInterpolation.enabled}
+                onChange={(event) => commit({ frameInterpolation: { ...frameInterpolation, mode: event.target.value as FrameInterpolationMode } })}
+                data-testid="frame-interpolation-mode-select"
+              >
+                {FRAME_INTERPOLATION_MODES.map((mode) => (
+                  <option key={mode} value={mode}>{zhCN.inspector.frameInterpolationCompare.modeLabels[mode]}</option>
+                ))}
+              </select>
+            </label>
+            <NumberField
+              label={zhCN.inspector.frameInterpolationCompare.protectionFrames}
+              value={frameInterpolation.protectionFrames}
+              min={0}
+              max={5}
+              step={1}
+              disabled={frameInterpolationUnavailable || !frameInterpolation.enabled}
+              onCommit={(protectionFrames) => commit({ frameInterpolation: { ...frameInterpolation, protectionFrames } })}
+              testId="frame-interpolation-protection-input"
+            />
+            <div className="rounded-md border border-line bg-panel p-2 text-xs text-slate-700" data-testid="frame-interpolation-quality-status">
+              <div className="font-semibold text-ink">
+                {zhCN.inspector.frameInterpolationCompare.qualityLabel}：{frameInterpolation.quality ? zhCN.inspector.frameInterpolationCompare.qualityGrades[frameInterpolation.quality.grade] : zhCN.inspector.frameInterpolationCompare.qualityNotEvaluated}
+              </div>
+              {frameInterpolation.quality ? (
+                <div className="mt-1 text-slate-600" data-testid="frame-interpolation-quality-ssim">
+                  {zhCN.inspector.frameInterpolationCompare.qualitySsim(frameInterpolation.quality.ssim, frameInterpolation.quality.sampleCount)}
+                </div>
+              ) : null}
+            </div>
+            <button
+              className="w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium text-ink hover:bg-panel disabled:cursor-not-allowed disabled:opacity-60"
+              type="button"
+              data-testid="frame-interpolation-quality-button"
+              disabled={frameInterpolationQualityRunning || frameInterpolationUnavailable || !frameInterpolation.enabled || !asset}
+              onClick={() => void runFrameInterpolationQualityEvaluation()}
+            >
+              {frameInterpolationQualityRunning ? zhCN.inspector.frameInterpolationCompare.qualityRunning : zhCN.inspector.frameInterpolationCompare.qualityButton}
+            </button>
+            {frameInterpolationQualityError ? (
+              <div className="rounded-md border border-red-200 bg-red-50 p-2 text-xs font-medium text-red-700" data-testid="frame-interpolation-quality-error">
+                {frameInterpolationQualityError}
+              </div>
+            ) : null}
             {frameInterpolationUnavailable ? (
               <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs font-medium text-amber-800" data-testid="frame-interpolation-unavailable">
                 {zhCN.inspector.fields.frameInterpolationUnsupported}

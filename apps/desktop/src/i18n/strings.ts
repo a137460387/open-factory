@@ -2723,6 +2723,25 @@ const zh = {
       running: '生成对比预览...',
       failedTitle: '对比预览失败',
       failedMessage: '无法生成补帧对比预览。',
+      qualityButton: '评估补帧质量',
+      qualityRunning: '评估质量...',
+      qualityFailedTitle: '补帧质量评估失败',
+      qualityLabel: '补帧质量',
+      qualityNotEvaluated: '未评估',
+      qualitySsim: (ssim: number, count: number) => `SSIM ${ssim.toFixed(3)} / ${count} 帧`,
+      protectionFrames: '场景保护帧',
+      modeLabel: '插值模式',
+      modeLabels: {
+        adaptive: '自适应',
+        blend: 'Blend',
+        mci: 'MCI',
+        copy: '帧复制'
+      },
+      qualityGrades: {
+        excellent: '优',
+        good: '良',
+        poor: '差'
+      },
       missingMedia: '找不到当前片段的源媒体。',
       selectMode: '选择模式',
       selected: '已选择',
@@ -7117,6 +7136,25 @@ const enOverrides = {
       running: 'Generating preview...',
       failedTitle: 'Compare Preview Failed',
       failedMessage: 'Unable to generate the frame interpolation preview.',
+      qualityButton: 'Evaluate Quality',
+      qualityRunning: 'Evaluating quality...',
+      qualityFailedTitle: 'Frame Quality Evaluation Failed',
+      qualityLabel: 'Interpolation Quality',
+      qualityNotEvaluated: 'Not evaluated',
+      qualitySsim: (ssim: number, count: number) => `SSIM ${ssim.toFixed(3)} / ${count} frames`,
+      protectionFrames: 'Scene Protection Frames',
+      modeLabel: 'Interpolation Mode',
+      modeLabels: {
+        adaptive: 'Adaptive',
+        blend: 'Blend',
+        mci: 'MCI',
+        copy: 'Frame Copy'
+      },
+      qualityGrades: {
+        excellent: 'Excellent',
+        good: 'Good',
+        poor: 'Poor'
+      },
       missingMedia: 'The selected clip source media is missing.',
       selectMode: 'Select Mode',
       selected: 'Selected',

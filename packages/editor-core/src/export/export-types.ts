@@ -13,6 +13,7 @@ import type {
   ClipBorder,
   ClipAudioRestoration,
   DataSubtitleSource,
+  ClipFrameInterpolation,
   ClipMaskKeyframe,
   ClipPanoramaOutputProjection,
   ClipPrivacyBlur,
@@ -20,6 +21,7 @@ import type {
   ClipQualityEnhancement,
   ClipSlowMotionMode,
   ClipVideoRestoration,
+  MotionTrackPoint,
   PathPoint,
   RichTextDocument,
   SubtitleTrackType,
@@ -31,6 +33,7 @@ import type {
   TrackEQ,
   TrackEQBandType
 } from '../model';
+import type { ClipContentAnalysis } from '../content-analysis';
 import type { CreditsRow } from '../credits-roll';
 import type { TargetAspectRatio } from '../reframe';
 import type { ClipSpatialAudio } from '../spatial-audio';
@@ -231,10 +234,7 @@ export interface ExportStabilization {
   trfPath?: string | null;
 }
 
-export interface ExportFrameInterpolation {
-  enabled: boolean;
-  targetFps: 24 | 30 | 48 | 60 | 120;
-}
+export type ExportFrameInterpolation = ClipFrameInterpolation;
 
 export interface ExportAudioDenoise {
   enabled: boolean;
@@ -355,6 +355,9 @@ export interface ExportClip {
   chromaKey: ExportChromaKey;
   stabilization: ExportStabilization;
   frameInterpolation: ExportFrameInterpolation;
+  contentAnalysis?: ClipContentAnalysis;
+  motionTrack?: MotionTrackPoint[];
+  scenecuts?: number[];
   audioDenoise: ExportAudioDenoise;
   audioRestoration: ExportAudioRestoration;
   spatialAudio: ClipSpatialAudio;

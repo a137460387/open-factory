@@ -1205,7 +1205,7 @@ describe('project schema migration', () => {
       type: 'image',
       mediaId: 'asset-sequence',
       stabilization: { enabled: true, smoothing: 120, zoom: -1, analyzed: true, trfPath: ' C:\\Temp\\clip.trf ' },
-      frameInterpolation: { enabled: true, targetFps: 999 },
+      frameInterpolation: { enabled: true, targetFps: 999, mode: 'invalid-mode', protectionFrames: 99 },
       slowMotionMode: 'invalid-mode',
       sequenceFrameRate: 240
     } as never;
@@ -1217,7 +1217,7 @@ describe('project schema migration', () => {
     expect(file.project.media[0].imageSequence?.paths[0]).toBe('C:/Media/frame001.png');
     expect(migrated.project.media[0].imageSequence).toMatchObject({ pattern: 'C:/Media/frame%03d.png', frameRate: 24, frameCount: 3 });
     expect(clip.stabilization).toEqual({ enabled: true, smoothing: 100, zoom: 0, analyzed: true, trfPath: 'C:\\Temp\\clip.trf' });
-    expect(clip.frameInterpolation).toEqual({ enabled: true, targetFps: 60 });
+    expect(clip.frameInterpolation).toEqual({ enabled: true, targetFps: 60, mode: 'adaptive', protectionFrames: 5 });
     expect(clip.slowMotionMode).toBe('none');
     expect(clip.sequenceFrameRate).toBe(120);
   });

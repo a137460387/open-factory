@@ -229,9 +229,9 @@ describe('model factories', () => {
       trfPath: 'C:\\Temp\\clip.trf'
     });
     expect(normalizeStabilization(undefined)).toEqual({ enabled: false, smoothing: 30, zoom: 0, analyzed: false, trfPath: null });
-    expect(normalizeFrameInterpolation({ enabled: true, targetFps: 120 })).toEqual({ enabled: true, targetFps: 120 });
-    expect(normalizeFrameInterpolation({ enabled: true, targetFps: 144 as never })).toEqual({ enabled: true, targetFps: 60 });
-    expect(normalizeFrameInterpolation(undefined)).toEqual({ enabled: false, targetFps: 60 });
+    expect(normalizeFrameInterpolation({ enabled: true, targetFps: 120, mode: 'mci', protectionFrames: 5 })).toEqual({ enabled: true, targetFps: 120, mode: 'mci', protectionFrames: 5 });
+    expect(normalizeFrameInterpolation({ enabled: true, targetFps: 144 as never, mode: 'invalid' as never, protectionFrames: 99 })).toEqual({ enabled: true, targetFps: 60, mode: 'adaptive', protectionFrames: 5 });
+    expect(normalizeFrameInterpolation(undefined)).toEqual({ enabled: false, targetFps: 60, mode: 'adaptive', protectionFrames: 2 });
     expect(normalizeVideoRestoration(undefined)).toEqual({
       deinterlace: { enabled: false, mode: 0 },
       temporalDenoise: { preset: 'off', lumaSpatial: 4, chromaSpatial: 3, lumaTmp: 6 },

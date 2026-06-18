@@ -75,6 +75,7 @@ import { flattenMulticamProjectForExport } from '../multicam';
 import { collectExportMediaMetadata } from '../media-batch';
 import { buildReframeCropFilter, clampReframeOffset, isReframeEnabled, normalizeTargetAspectRatio, resolveReframeDimensions } from '../reframe';
 import { calculateSpatialDistanceGain, isDefaultSpatialAudio, mapSpatialXToPanGains, normalizeSpatialAudio } from '../spatial-audio';
+import { averageClipMotionScore, buildSceneBoundaryProtectionRanges, resolveFrameInterpolationMode } from './frame-interpolation';
 import { calculateSpeedCurveSourceDuration, getClipSourceVisibleDuration, getClipSpeed, getRenderableTracks, getTimelinePlaybackDuration, getTrackPan, getTrackVolume } from '../timeline';
 import { round } from '../time';
 import { serializeSubtitleCueInputsToAss, serializeSubtitleCueInputsToSrt, serializeSubtitleCueInputsToVtt, type SubtitleCueInput } from '../subtitles/srt';
@@ -322,6 +323,9 @@ function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project[
             chromaKey: normalizeChromaKey(clip.chromaKey),
             stabilization: normalizeStabilization(clip.stabilization),
             frameInterpolation: normalizeFrameInterpolation(clip.frameInterpolation),
+            contentAnalysis: clip.contentAnalysis,
+            motionTrack: clip.motionTrack,
+            scenecuts: clip.scenecuts,
             audioDenoise: normalizeAudioDenoise(clip.audioDenoise),
             audioRestoration: normalizeAudioRestoration(clip.audioRestoration),
             spatialAudio: normalizeSpatialAudio(clip.spatialAudio),
@@ -2105,11 +2109,30 @@ function buildFrameInterpolationFilters(clip: ExportClip, capabilities: FfmpegCa
   if (!clip.frameInterpolation.enabled || (clip.type !== 'video' && clip.type !== 'nested-sequence')) {
     return [];
   }
+  const mode = resolveFrameInterpolationMode(clip.frameInterpolation.mode, averageClipMotionScore(clip));
+  if (mode === 'copy') {
+    return [`fps=fps=${clip.frameInterpolation.targetFps}:round=near`];
+  }
   if (capabilities?.hasMinterpolate === false) {
     warnings.push(`Frame interpolation for clip ${clip.id} was skipped because the current FFmpeg build does not support minterpolate.`);
     return [];
   }
-  return [`minterpolate=fps=${clip.frameInterpolation.targetFps}:mi_mode=mci:mc_mode=aobmc`];
+  const sceneRanges = buildSceneBoundaryProtectionRanges(clip.scenecuts, clip.frameInterpolation.targetFps, clip.duration, clip.frameInterpolation.protectionFrames);
+  if (sceneRanges.length > 0) {
+    warnings.push(`Frame interpolation for clip ${clip.id} protects ${sceneRanges.length} scene boundary range(s).`);
+  }
+  if (mode === 'blend') {
+    return [buildFrameInterpolationFilterArg(clip.frameInterpolation.targetFps, 'blend', sceneRanges.length > 0)];
+  }
+  return [buildFrameInterpolationFilterArg(clip.frameInterpolation.targetFps, 'mci', sceneRanges.length > 0)];
+}
+
+function buildFrameInterpolationFilterArg(fps: number, mode: 'blend' | 'mci', sceneProtected: boolean): string {
+  const sceneDetection = sceneProtected ? ':scd=fdiff' : '';
+  if (mode === 'blend') {
+    return `minterpolate=fps=${fps}:mi_mode=blend${sceneDetection}`;
+  }
+  return `minterpolate=fps=${fps}:mi_mode=mci:mc_mode=aobmc${sceneDetection}`;
 }
 
 function buildVideoRestorationFilters(clip: ExportClip): string[] {

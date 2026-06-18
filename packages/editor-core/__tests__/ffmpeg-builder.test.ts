@@ -3026,6 +3026,60 @@ describe('multitrack ffmpeg builder', () => {
     expect(filter).toContain('minterpolate=fps=60:mi_mode=blend');
   });
 
+  it('selects adaptive frame interpolation filters from motion analysis', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-static',
+        frameInterpolation: { enabled: true, targetFps: 60, mode: 'adaptive', protectionFrames: 2 },
+        contentAnalysis: {
+          version: 1,
+          analyzedAt: '2026-06-18T00:00:00.000Z',
+          sceneTypes: ['indoor'],
+          primarySceneType: 'indoor',
+          emotionCurve: [],
+          dialogueTurns: [],
+          segments: [{ start: 0, end: 10, sceneTypes: ['indoor'], brightness: 0.5, motion: 0.05 }]
+        }
+      }),
+      makeVideoClip({
+        id: 'clip-extreme',
+        start: 10,
+        frameInterpolation: { enabled: true, targetFps: 60, mode: 'adaptive', protectionFrames: 2 },
+        contentAnalysis: {
+          version: 1,
+          analyzedAt: '2026-06-18T00:00:00.000Z',
+          sceneTypes: ['action'],
+          primarySceneType: 'action',
+          emotionCurve: [],
+          dialogueTurns: [],
+          segments: [{ start: 0, end: 10, sceneTypes: ['action'], brightness: 0.5, motion: 0.95 }]
+        }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('minterpolate=fps=60:mi_mode=blend');
+    expect(plan.filterComplex).toContain('fps=fps=60:round=near');
+  });
+
+  it('enables scene change protection for detected frame interpolation boundaries', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-scene-protected-interp',
+        frameInterpolation: { enabled: true, targetFps: 60, mode: 'mci', protectionFrames: 2 },
+        scenecuts: [1]
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('minterpolate=fps=60:mi_mode=mci:mc_mode=aobmc:scd=fdiff');
+    expect(plan.warnings).toContain('Frame interpolation for clip clip-scene-protected-interp protects 1 scene boundary range(s).');
+  });
+
   it('chains deinterlace, denoise, and sharpen in repair order before color correction effects', () => {
     const project = makeProject();
     project.timeline.tracks[0].clips = [

@@ -84,6 +84,7 @@ export * from './commands/command';
 export * from './commands/command-manager';
 export * from './commands/timeline-commands';
 export * from './export/ffmpeg';
+export * from './export/frame-interpolation';
 export * from './export/frame-interpolation-preview';
 export * from './export/color-management';
 export * from './export/export-ranges';

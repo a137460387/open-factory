@@ -131,9 +131,23 @@ export interface ClipStabilization {
 
 export type FrameInterpolationTargetFps = 24 | 30 | 48 | 60 | 120;
 
+export type FrameInterpolationMode = 'adaptive' | 'blend' | 'mci' | 'copy';
+
+export type FrameInterpolationQualityGrade = 'excellent' | 'good' | 'poor';
+
+export interface FrameInterpolationQuality {
+  ssim: number;
+  grade: FrameInterpolationQualityGrade;
+  sampleCount: number;
+  evaluatedAt?: string;
+}
+
 export interface ClipFrameInterpolation {
   enabled: boolean;
   targetFps: FrameInterpolationTargetFps;
+  mode: FrameInterpolationMode;
+  protectionFrames: number;
+  quality?: FrameInterpolationQuality;
 }
 
 export type ClipSlowMotionMode = 'none' | 'blend' | 'mci' | 'optical-flow';

@@ -69,6 +69,9 @@ import type {
   DataSubtitleSource,
   DataSubtitleSourceType,
   ExportRange,
+  FrameInterpolationMode,
+  FrameInterpolationQuality,
+  FrameInterpolationQualityGrade,
   FrameInterpolationTargetFps,
   ImageClip,
   ImageSequenceInfo,
@@ -181,6 +184,9 @@ export type {
   DataSubtitleSource,
   DataSubtitleSourceType,
   ExportRange,
+  FrameInterpolationMode,
+  FrameInterpolationQuality,
+  FrameInterpolationQualityGrade,
   FrameInterpolationTargetFps,
   ImageClip,
   ImageSequenceInfo,
@@ -453,10 +459,13 @@ export const DEFAULT_STABILIZATION: ClipStabilization = {
 };
 
 export const FRAME_INTERPOLATION_TARGET_FPS: readonly FrameInterpolationTargetFps[] = [24, 30, 48, 60, 120];
+export const FRAME_INTERPOLATION_MODES: readonly FrameInterpolationMode[] = ['adaptive', 'blend', 'mci', 'copy'];
 
 export const DEFAULT_FRAME_INTERPOLATION: ClipFrameInterpolation = {
   enabled: false,
-  targetFps: 60
+  targetFps: 60,
+  mode: 'adaptive',
+  protectionFrames: 2
 };
 
 export const CLIP_SLOW_MOTION_MODES: readonly ClipSlowMotionMode[] = ['none', 'blend', 'mci', 'optical-flow'];
@@ -1029,10 +1038,24 @@ export function normalizeFrameInterpolation(frameInterpolation: Partial<ClipFram
   const targetFps = FRAME_INTERPOLATION_TARGET_FPS.includes(frameInterpolation?.targetFps as FrameInterpolationTargetFps)
     ? (frameInterpolation?.targetFps as FrameInterpolationTargetFps)
     : DEFAULT_FRAME_INTERPOLATION.targetFps;
-  return {
+  const normalized: ClipFrameInterpolation = {
     enabled: frameInterpolation?.enabled === true,
-    targetFps
+    targetFps,
+    mode: FRAME_INTERPOLATION_MODES.includes(frameInterpolation?.mode as FrameInterpolationMode) ? (frameInterpolation?.mode as FrameInterpolationMode) : DEFAULT_FRAME_INTERPOLATION.mode,
+    protectionFrames: Math.min(5, Math.max(0, Math.round(Number.isFinite(frameInterpolation?.protectionFrames) ? frameInterpolation!.protectionFrames! : DEFAULT_FRAME_INTERPOLATION.protectionFrames)))
   };
+  if (frameInterpolation?.quality && Number.isFinite(frameInterpolation.quality.ssim)) {
+    normalized.quality = {
+      ssim: Math.max(0, Math.min(1, frameInterpolation.quality.ssim)),
+      grade:
+        frameInterpolation.quality.grade === 'excellent' || frameInterpolation.quality.grade === 'good' || frameInterpolation.quality.grade === 'poor'
+          ? frameInterpolation.quality.grade
+          : 'poor',
+      sampleCount: Math.max(0, Math.round(Number.isFinite(frameInterpolation.quality.sampleCount) ? frameInterpolation.quality.sampleCount : 0)),
+      ...(typeof frameInterpolation.quality.evaluatedAt === 'string' ? { evaluatedAt: frameInterpolation.quality.evaluatedAt } : {})
+    };
+  }
+  return normalized;
 }
 
 export function normalizeSlowMotionMode(mode: ClipSlowMotionMode | string | undefined): ClipSlowMotionMode {
