@@ -3933,7 +3933,22 @@ function buildEasingExpression(progress: string, easing: ExportKeyframe['easing'
   if (easing === 'ease-in-out') {
     return `if(lt(${progress},0.5),2*(${progress})*(${progress}),1-pow(-2*(${progress})+2,2)/2)`;
   }
+  if (easing === 'elastic') {
+    return `if(eq(${progress},0),0,if(eq(${progress},1),1,min(1,max(0,pow(2,-10*(${progress}))*sin(((${progress})*10-0.75)*2*PI/3)+1))))`;
+  }
+  if (easing === 'bounce') {
+    return buildBounceEasingExpression(progress);
+  }
   return progress;
+}
+
+function buildBounceEasingExpression(progress: string): string {
+  const n1 = '7.5625';
+  const d1 = '2.75';
+  const second = `${n1}*((${progress})-1.5/${d1})*((${progress})-1.5/${d1})+0.75`;
+  const third = `${n1}*((${progress})-2.25/${d1})*((${progress})-2.25/${d1})+0.9375`;
+  const fourth = `${n1}*((${progress})-2.625/${d1})*((${progress})-2.625/${d1})+0.984375`;
+  return `if(lt(${progress},1/${d1}),${n1}*(${progress})*(${progress}),if(lt(${progress},2/${d1}),${second},if(lt(${progress},2.5/${d1}),${third},${fourth})))`;
 }
 
 function formatAtempo(value: number): string {

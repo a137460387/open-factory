@@ -259,7 +259,7 @@ export interface ExportImageSequence {
   paths: string[];
 }
 
-export type ExportKeyframeEasing = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out';
+export type ExportKeyframeEasing = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out' | 'elastic' | 'bounce';
 
 export interface ExportKeyframe {
   id: string;

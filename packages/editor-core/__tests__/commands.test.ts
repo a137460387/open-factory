@@ -1824,6 +1824,67 @@ describe('timeline commands', () => {
     expect(accessor.current().tracks[0].clips[0].keyframes?.opacity?.[0].easing).toBe('ease-out');
   });
 
+  it('updates bezier keyframe handles and restores them through undo', () => {
+    const accessor = makeAccessor(
+      makeTimeline([
+        makeVideoClip({
+          id: 'clip-handles',
+          duration: 3,
+          keyframes: {
+            opacity: [{ id: 'kf-opacity', time: 1, value: 0.5, easing: 'linear', outHandle: { dx: 0.2, dy: 0.1 }, handleMode: 'independent' }]
+          }
+        })
+      ])
+    );
+    const manager = new CommandManager();
+
+    manager.execute(
+      new UpdateKeyframeCommand(accessor, 'clip-handles', 'opacity', 'kf-opacity', {
+        outHandle: { dx: 0.5, dy: -0.2 },
+        handleMode: 'broken'
+      })
+    );
+    expect(accessor.current().tracks[0].clips[0].keyframes?.opacity?.[0]).toMatchObject({
+      outHandle: { dx: 0.5, dy: -0.2 },
+      handleMode: 'broken'
+    });
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips[0].keyframes?.opacity?.[0]).toMatchObject({
+      outHandle: { dx: 0.2, dy: 0.1 },
+      handleMode: 'independent'
+    });
+  });
+
+  it('distributes selected keyframe times and aligns values as undoable batch edits', () => {
+    const accessor = makeAccessor(
+      makeTimeline([
+        makeVideoClip({
+          id: 'clip-align',
+          duration: 4,
+          keyframes: {
+            opacity: [
+              { id: 'kf-a', time: 0, value: 0.2, easing: 'linear' },
+              { id: 'kf-b', time: 0.25, value: 0.5, easing: 'linear' },
+              { id: 'kf-c', time: 2, value: 0.8, easing: 'linear' }
+            ]
+          }
+        })
+      ])
+    );
+    const manager = new CommandManager();
+    const refs = ['kf-a', 'kf-b', 'kf-c'].map((keyframeId) => ({ clipId: 'clip-align', property: 'opacity' as const, keyframeId }));
+
+    manager.execute(new BatchKeyframeEditCommand(accessor, refs, { type: 'distribute-time' }));
+    expect(accessor.current().tracks[0].clips[0].keyframes?.opacity?.map((frame) => frame.time)).toEqual([0, 1, 2]);
+
+    manager.execute(new BatchKeyframeEditCommand(accessor, refs, { type: 'align-value', value: 0.4 }));
+    expect(accessor.current().tracks[0].clips[0].keyframes?.opacity?.map((frame) => frame.value)).toEqual([0.4, 0.4, 0.4]);
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips[0].keyframes?.opacity?.map((frame) => frame.value)).toEqual([0.2, 0.5, 0.8]);
+  });
+
   it('applies text animation presets through an undoable command', () => {
     const accessor = makeAccessor(makeTimeline([makeTextClip({ id: 'text-1', duration: 2, text: 'Title' })]));
     const manager = new CommandManager();

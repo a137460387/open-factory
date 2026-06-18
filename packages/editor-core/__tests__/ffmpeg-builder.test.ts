@@ -1651,6 +1651,29 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.filterComplex).toContain("volume='if(lt(t,0),1,if(lte(t,1),1+(0.5-1)*((t-0)/1),0.5))':eval=frame");
   });
 
+  it('maps elastic and bounce keyframe easing into ffmpeg expressions', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-volume-easing-keyframes',
+        duration: 2,
+        volume: 1,
+        keyframes: {
+          volume: [
+            { id: 'volume-start', time: 0, value: 1, easing: 'elastic' },
+            { id: 'volume-mid', time: 1, value: 0.5, easing: 'bounce' },
+            { id: 'volume-end', time: 2, value: 1, easing: 'linear' }
+          ]
+        }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('sin(((((t-0)/1))*10-0.75)*2*PI/3)');
+    expect(plan.filterComplex).toContain('7.5625*(((t-1)/1))*(((t-1)/1))');
+  });
+
   it('turns scale keyframes into a frame-evaluated scale expression', () => {
     const project = makeProject();
     project.media = [

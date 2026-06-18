@@ -58,7 +58,14 @@ export type SubtitleLanguage = string;
 
 export type SubtitleTrackType = 'subtitle' | 'cc';
 
-export type KeyframeEasing = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out';
+export type KeyframeEasing = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out' | 'elastic' | 'bounce';
+
+export type KeyframeHandleMode = 'unified' | 'independent' | 'broken';
+
+export interface KeyframeHandle {
+  dx: number;
+  dy: number;
+}
 
 export type AudioFadeCurve = Extract<KeyframeEasing, 'linear' | 'ease-in' | 'ease-out'>;
 
@@ -67,6 +74,9 @@ export interface Keyframe<T> {
   time: number;
   value: T;
   easing: KeyframeEasing;
+  inHandle?: KeyframeHandle;
+  outHandle?: KeyframeHandle;
+  handleMode?: KeyframeHandleMode;
 }
 
 export interface ClipKeyframes {

@@ -2540,6 +2540,8 @@ const zh = {
       applyShift: '移位',
       applyScale: '缩放',
       applyEasing: '应用缓动',
+      distributeTime: '时间对齐',
+      alignValue: '值对齐',
       delete: '删除'
     },
     clipGroup: {
@@ -2697,6 +2699,9 @@ const zh = {
       speedCurve: '变速曲线',
       speedCurveMin: '0.25x',
       speedCurveMax: '4x',
+      speedDerivative: '速度曲线',
+      preciseTime: '精确时间',
+      preciseValue: '精确数值',
       slowMotionMode: '慢动作模式',
       scale: '缩放',
       scaleX: '缩放 X',
@@ -3084,7 +3089,9 @@ const zh = {
       linear: '线性',
       easeIn: '缓入',
       easeOut: '缓出',
-      easeInOut: '缓入缓出'
+      easeInOut: '缓入缓出',
+      elastic: '弹性',
+      bounce: '弹跳'
     },
     effectNames: {
       blur: '高斯模糊',
@@ -6841,6 +6848,8 @@ const enOverrides = {
       applyShift: 'Shift',
       applyScale: 'Scale',
       applyEasing: 'Apply Easing',
+      distributeTime: 'Align Time',
+      alignValue: 'Align Value',
       delete: 'Delete'
     },
     clipGroup: {
@@ -6983,6 +6992,12 @@ const enOverrides = {
       start: 'Start',
       duration: 'Duration',
       speed: 'Speed',
+      speedCurve: 'Speed Curve',
+      speedCurveMin: '0.25x',
+      speedCurveMax: '4x',
+      speedDerivative: 'Velocity Curve',
+      preciseTime: 'Precise Time',
+      preciseValue: 'Precise Value',
       slowMotionMode: 'Slow Motion Mode',
       scale: 'Scale',
       scaleX: 'Scale X',
@@ -7276,6 +7291,14 @@ const enOverrides = {
       deblock: 'Compression Deblocking',
       colorBoost: 'Color Enhancement',
       frameCompensation: 'Frame Rate Compensation'
+    },
+    easing: {
+      linear: 'Linear',
+      easeIn: 'Ease In',
+      easeOut: 'Ease Out',
+      easeInOut: 'Ease In Out',
+      elastic: 'Elastic',
+      bounce: 'Bounce'
     },
     effectNames: {
       blur: 'Gaussian Blur',

@@ -2,15 +2,24 @@ import { describe, expect, it } from 'vitest';
 import {
   applyEasing,
   applyClipKeyframes,
+  applyBatchKeyframeEasing,
+  applyKeyframeHandlePatch,
+  calculateBezierHandleCoordinates,
+  calculateKeyframeSpeedSamples,
+  alignKeyframeValues,
   cloneClipKeyframes,
   createKeyframe,
   createKenBurnsKeyframes,
+  distributeKeyframeTimes,
   getClipKeyframeValue,
   getClipStaticKeyframeValue,
   interpolateKeyframes,
   normalizeClipKeyframes,
   normalizeEasing,
+  normalizeKeyframeHandle,
+  normalizeKeyframeHandleMode,
   normalizeKeyframes,
+  parseKeyframeExpression,
   removeKeyframeForProperty,
   setKeyframeForProperty,
   resolveAnimatedTransform,
@@ -34,6 +43,8 @@ describe('keyframe interpolation', () => {
   it('applies ease-in-out interpolation', () => {
     expect(applyEasing(0.5, 'ease-in')).toBe(0.25);
     expect(applyEasing(0.5, 'ease-out')).toBe(0.75);
+    expect(applyEasing(0.75, 'bounce')).toBeGreaterThan(0.9);
+    expect(applyEasing(0.5, 'elastic')).toBeGreaterThan(0.9);
     expect(applyEasing(-1, 'linear')).toBe(0);
     expect(applyEasing(2, 'linear')).toBe(1);
     expect(applyEasing(0.25, 'ease-in-out')).toBeCloseTo(0.125, 3);
@@ -69,6 +80,7 @@ describe('keyframe interpolation', () => {
     expect(normalizeKeyframes(undefined, 1, 0)).toEqual([]);
     expect(normalizeKeyframes([{ id: '', time: Number.NaN, value: 1, easing: 'linear' }], 1, 0)).toEqual([]);
     expect(normalizeEasing('not-easing')).toBe('linear');
+    expect(normalizeEasing('bounce')).toBe('bounce');
     expect(createKeyframe('opacity', { id: 'opacity-a', time: 2, value: 99, easing: 'ease-out' }, 1)).toEqual({
       id: 'opacity-a',
       time: 1,
@@ -183,6 +195,110 @@ describe('keyframe interpolation', () => {
     ]);
     expect(removeKeyframeForProperty(withOpacity, 'volume', 'missing')).toEqual(withOpacity);
     expect(removeKeyframeForProperty(withOpacity, 'opacity', 'opacity-a')).toBeUndefined();
+  });
+
+  it('calculates unified bezier handles as mirrored coordinates', () => {
+    const coordinates = calculateBezierHandleCoordinates(
+      { id: 'b', time: 1, value: 0.5, easing: 'linear', outHandle: { dx: 0.3, dy: 0.2 }, handleMode: 'unified' },
+      { id: 'a', time: 0, value: 0, easing: 'linear' },
+      { id: 'c', time: 2, value: 1, easing: 'linear' }
+    );
+
+    expect(coordinates.mode).toBe('unified');
+    expect(coordinates.outHandle).toMatchObject({ time: 1.3, value: 0.7, dx: 0.3, dy: 0.2 });
+    expect(coordinates.inHandle).toMatchObject({ time: 0.7, value: 0.3, dx: -0.3, dy: -0.2 });
+  });
+
+  it('clamps independent bezier handles inside adjacent segments', () => {
+    const coordinates = calculateBezierHandleCoordinates(
+      { id: 'b', time: 1, value: 0.5, easing: 'linear', inHandle: { dx: -9, dy: 0.1 }, outHandle: { dx: 9, dy: -0.1 }, handleMode: 'independent' },
+      { id: 'a', time: 0.25, value: 0, easing: 'linear' },
+      { id: 'c', time: 1.5, value: 1, easing: 'linear' }
+    );
+
+    expect(coordinates.mode).toBe('independent');
+    expect(coordinates.inHandle?.dx).toBe(-0.75);
+    expect(coordinates.outHandle?.dx).toBe(0.5);
+  });
+
+  it('keeps broken bezier handles exactly as authored', () => {
+    const coordinates = calculateBezierHandleCoordinates(
+      { id: 'b', time: 1, value: 0.5, easing: 'linear', inHandle: { dx: 0.2, dy: 0.1 }, outHandle: { dx: -0.2, dy: -0.1 }, handleMode: 'broken' },
+      { id: 'a', time: 0, value: 0, easing: 'linear' },
+      { id: 'c', time: 2, value: 1, easing: 'linear' }
+    );
+
+    expect(coordinates.mode).toBe('broken');
+    expect(coordinates.inHandle).toMatchObject({ time: 1.2, value: 0.6, dx: 0.2, dy: 0.1 });
+    expect(coordinates.outHandle).toMatchObject({ time: 0.8, value: 0.4, dx: -0.2, dy: -0.1 });
+  });
+
+  it('calculates speed derivative samples for keyframe curves', () => {
+    const samples = calculateKeyframeSpeedSamples(
+      [
+        { id: 'a', time: 0, value: 0, easing: 'linear' },
+        { id: 'b', time: 2, value: 2, easing: 'linear' }
+      ],
+      2,
+      0,
+      3
+    );
+
+    expect(samples.map((sample) => sample.time)).toEqual([0, 1, 2]);
+    expect(samples[1].value).toBeCloseTo(1, 3);
+  });
+
+  it('applies batch easing presets and distributes keyframe times', () => {
+    const frames = [
+      { id: 'a', time: 0, value: 0, easing: 'linear' as const },
+      { id: 'b', time: 0.3, value: 1, easing: 'linear' as const },
+      { id: 'c', time: 1.2, value: 2, easing: 'linear' as const }
+    ];
+
+    expect(applyBatchKeyframeEasing(frames, 'elastic').map((frame) => frame.easing)).toEqual(['elastic', 'elastic', 'elastic']);
+    expect(distributeKeyframeTimes(frames).map((frame) => frame.time)).toEqual([0, 0.6, 1.2]);
+  });
+
+  it('parses precise keyframe math expressions with previous values', () => {
+    expect(parseKeyframeExpression('prev+0.5', { prev: 1.25, current: 2, min: 0, max: 3 })).toBe(1.75);
+    expect(parseKeyframeExpression('(current+next)/2', { current: 1, next: 3 })).toBe(2);
+  });
+
+  it('covers keyframe helper edge cases and expression failures', () => {
+    expect(applyEasing(0.2, 'bounce')).toBeGreaterThan(0);
+    expect(applyEasing(0.5, 'bounce')).toBeGreaterThan(0.7);
+    expect(applyEasing(0.9, 'bounce')).toBeGreaterThan(0.9);
+    expect(normalizeKeyframeHandle({ dx: Number.NaN, dy: 1 })).toBeUndefined();
+    expect(normalizeKeyframeHandleMode('locked')).toBeUndefined();
+
+    const unified = applyKeyframeHandlePatch(
+      { id: 'a', time: 1, value: 1, easing: 'linear' },
+      'in',
+      { dx: -0.25, dy: 0.2 },
+      'unified'
+    );
+    expect(unified).toMatchObject({ inHandle: { dx: -0.25, dy: 0.2 }, outHandle: { dx: 0.25, dy: -0.2 }, handleMode: 'unified' });
+    expect(applyKeyframeHandlePatch({ id: 'b', time: 1, value: 1, easing: 'linear' }, 'out', { dx: Number.NaN, dy: 0 }, 'broken')).toMatchObject({
+      outHandle: { dx: 0, dy: 0 },
+      handleMode: 'broken'
+    });
+
+    expect(
+      interpolateKeyframes(
+        [
+          { id: 'a', time: 0, value: 1, easing: 'linear', outHandle: { dx: 0.2, dy: 0.4 } },
+          { id: 'b', time: 1, value: 1, easing: 'linear', inHandle: { dx: -0.2, dy: -0.4 } }
+        ],
+        0.5,
+        1
+      )
+    ).toBe(1);
+    expect(alignKeyframeValues([{ id: 'a', time: 0, value: 0.25, easing: 'linear' }], 0.75)[0].value).toBe(0.75);
+    expect(() => parseKeyframeExpression('', {})).toThrow('empty');
+    expect(() => parseKeyframeExpression('prev+1', {})).toThrow('Missing prev');
+    expect(() => parseKeyframeExpression('current/(next-next)', { current: 1, next: 1 })).toThrow('finite');
+    expect(() => parseKeyframeExpression('(current+1', { current: 1 })).toThrow('closing parenthesis');
+    expect(() => parseKeyframeExpression('current foo', { current: 1 })).toThrow('Unsupported');
   });
 
   it('creates Ken Burns scale keyframes at the start and end of a clip', () => {

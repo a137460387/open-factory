@@ -74,6 +74,8 @@ import type {
   ImageSequenceInfo,
   Keyframe,
   KeyframeEasing,
+  KeyframeHandle,
+  KeyframeHandleMode,
   KeyframeProperty,
   Mask,
   MaskType,
@@ -184,6 +186,8 @@ export type {
   ImageSequenceInfo,
   Keyframe,
   KeyframeEasing,
+  KeyframeHandle,
+  KeyframeHandleMode,
   KeyframeProperty,
   Mask,
   MaskType,
@@ -1852,7 +1856,11 @@ function cloneClipKeyframesLocal(keyframes: ClipKeyframes | undefined): ClipKeyf
   for (const property of Object.keys(keyframes) as KeyframeProperty[]) {
     const frames = keyframes[property];
     if (frames?.length) {
-      output[property] = frames.map((frame) => ({ ...frame }));
+      output[property] = frames.map((frame) => ({
+        ...frame,
+        ...(frame.inHandle ? { inHandle: { ...frame.inHandle } } : {}),
+        ...(frame.outHandle ? { outHandle: { ...frame.outHandle } } : {})
+      }));
     }
   }
   return Object.keys(output).length > 0 ? output : undefined;

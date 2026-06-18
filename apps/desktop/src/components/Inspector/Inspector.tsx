@@ -59,6 +59,7 @@ import {
   getClipSpeed,
   getTimelineDuration,
   getClipKeyframeValue,
+  interpolateKeyframes,
   getEffectNumberParam,
   getEffectStringParam,
   getTransformScaleX,
@@ -119,6 +120,10 @@ import {
   buildPrivacyMasksFromDetections,
   buildAudioRestorationWaveformComparison,
   createTrack,
+  applyKeyframeHandlePatch,
+  calculateBezierHandleCoordinates,
+  calculateKeyframeSpeedSamples,
+  parseKeyframeExpression,
   renderSubtitleStyleTemplatePreview,
   richTextToPlainText,
   type AudioFadeCurve,
@@ -141,6 +146,7 @@ import {
   type InputColorSpace,
   type Keyframe,
   type KeyframeEasing,
+  type KeyframeHandleMode,
   type KeyframeProperty,
   type ClipMask,
   type ClipSlowMotionMode,
@@ -898,7 +904,7 @@ function ClipInspector({
       showToast({ kind: 'warning', title: zhCN.inspector.pitchAnalysis.exportFailed, message: error instanceof Error ? error.message : zhCN.inspector.pitchAnalysis.failedMessage });
     }
   };
-  const updateSelectedKeyframe = (patch: Partial<Pick<NonNullable<typeof selectedKeyframeFrame>, 'time' | 'value' | 'easing'>>) => {
+  const updateSelectedKeyframe = (patch: Partial<Pick<Keyframe<number>, 'time' | 'value' | 'easing' | 'inHandle' | 'outHandle' | 'handleMode'>>) => {
     if (!selectedKeyframe) {
       return;
     }
@@ -935,7 +941,31 @@ function ClipInspector({
   const shiftSelectedKeyframes = () => runBatchKeyframeEdit({ type: 'shift', delta: batchShiftSeconds });
   const scaleSelectedKeyframes = () => runBatchKeyframeEdit({ type: 'scale-time', factor: batchScaleFactor });
   const updateSelectedKeyframeEasing = () => runBatchKeyframeEdit({ type: 'easing', easing: batchEasing });
+  const distributeSelectedKeyframes = () => runBatchKeyframeEdit({ type: 'distribute-time' });
+  const alignSelectedKeyframeValues = () => runBatchKeyframeEdit({ type: 'align-value' });
   const deleteSelectedKeyframes = () => runBatchKeyframeEdit({ type: 'delete' }, true);
+  const updateSelectedKeyframeExpression = (field: 'time' | 'value', expression: string) => {
+    if (!selectedKeyframe || !selectedKeyframeFrame) {
+      return;
+    }
+    const frames = [...(clip.keyframes?.[selectedKeyframe.property] ?? [])].sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
+    const frameIndex = frames.findIndex((frame) => frame.id === selectedKeyframe.keyframeId);
+    const previous = frameIndex > 0 ? frames[frameIndex - 1] : undefined;
+    const next = frameIndex >= 0 ? frames[frameIndex + 1] : undefined;
+    const limits = field === 'time' ? { min: 0, max: clip.duration } : KEYFRAME_PROPERTY_LIMITS[selectedKeyframe.property];
+    try {
+      const parsed = parseKeyframeExpression(expression, {
+        prev: field === 'time' ? previous?.time : previous?.value,
+        current: field === 'time' ? selectedKeyframeFrame.time : selectedKeyframeFrame.value,
+        next: field === 'time' ? next?.time : next?.value,
+        min: limits.min,
+        max: limits.max
+      });
+      updateSelectedKeyframe({ [field]: parsed });
+    } catch (error) {
+      showToast({ kind: 'warning', title: zhCN.inspector.keyframeRejectedTitle, message: error instanceof Error ? error.message : zhCN.inspector.updateKeyframeFailed });
+    }
+  };
   const updateCurveKeyframes = (property: KeyframeProperty, frames: Keyframe<number>[]) => {
     try {
       commandManager.execute(
@@ -946,7 +976,15 @@ function ClipInspector({
               clipId: clip.id,
               property,
               replace: true,
-              keyframes: frames.map((frame) => ({ id: frame.id, time: frame.time, value: frame.value, easing: frame.easing }))
+              keyframes: frames.map((frame) => ({
+                id: frame.id,
+                time: frame.time,
+                value: frame.value,
+                easing: frame.easing,
+                inHandle: frame.inHandle,
+                outHandle: frame.outHandle,
+                handleMode: frame.handleMode
+              }))
             }
           ],
           'Edit keyframe curve'
@@ -1902,6 +1940,8 @@ function ClipInspector({
                   <option value="ease-in">{zhCN.inspector.easing.easeIn}</option>
                   <option value="ease-out">{zhCN.inspector.easing.easeOut}</option>
                   <option value="ease-in-out">{zhCN.inspector.easing.easeInOut}</option>
+                  <option value="elastic">{zhCN.inspector.easing.elastic}</option>
+                  <option value="bounce">{zhCN.inspector.easing.bounce}</option>
                 </select>
               </label>
               <div className="mt-2 grid grid-cols-2 gap-2">
@@ -1912,6 +1952,22 @@ function ClipInspector({
                   onClick={updateSelectedKeyframeEasing}
                 >
                   {zhCN.inspector.batchKeyframes.applyEasing}
+                </button>
+                <button
+                  className="rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel"
+                  type="button"
+                  data-testid="batch-keyframe-distribute-time-button"
+                  onClick={distributeSelectedKeyframes}
+                >
+                  {zhCN.inspector.batchKeyframes.distributeTime}
+                </button>
+                <button
+                  className="rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel"
+                  type="button"
+                  data-testid="batch-keyframe-align-value-button"
+                  onClick={alignSelectedKeyframeValues}
+                >
+                  {zhCN.inspector.batchKeyframes.alignValue}
                 </button>
                 <button
                   className="rounded-md border border-rose-300 px-2 py-1.5 text-sm font-medium text-rose-700 hover:bg-rose-50"
@@ -1951,6 +2007,22 @@ function ClipInspector({
                 format={(value) => formatKeyframeValue(selectedKeyframe.property, value)}
                 onCommit={(value) => updateSelectedKeyframe({ value })}
               />
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <ExpressionNumberField
+                  label={zhCN.inspector.fields.preciseTime}
+                  value={selectedKeyframeFrame.time}
+                  format={(value) => `${value.toFixed(2)}s`}
+                  onCommit={(expression) => updateSelectedKeyframeExpression('time', expression)}
+                  testId="selected-keyframe-time-expression"
+                />
+                <ExpressionNumberField
+                  label={zhCN.inspector.fields.preciseValue}
+                  value={selectedKeyframeFrame.value}
+                  format={(value) => formatKeyframeValue(selectedKeyframe.property, value)}
+                  onCommit={(expression) => updateSelectedKeyframeExpression('value', expression)}
+                  testId="selected-keyframe-value-expression"
+                />
+              </div>
               <label className="mt-2 block text-xs font-medium text-slate-600">
                 {zhCN.inspector.fields.easing}
                 <select
@@ -1963,6 +2035,8 @@ function ClipInspector({
                   <option value="ease-in">{zhCN.inspector.easing.easeIn}</option>
                   <option value="ease-out">{zhCN.inspector.easing.easeOut}</option>
                   <option value="ease-in-out">{zhCN.inspector.easing.easeInOut}</option>
+                  <option value="elastic">{zhCN.inspector.easing.elastic}</option>
+                  <option value="bounce">{zhCN.inspector.easing.bounce}</option>
                 </select>
               </label>
               <button
@@ -3432,7 +3506,8 @@ function SpeedCurveEditor({ clip, onCommit }: { clip: Clip; onCommit(frames: Spe
 
 type CurveEditorDrag =
   | { mode: 'box'; start: CanvasPoint; current: CanvasPoint }
-  | { mode: 'points'; start: CurveEditorFrame; base: CurveEditorFrame[]; selectedIds: string[] };
+  | { mode: 'points'; start: CurveEditorFrame; base: CurveEditorFrame[]; selectedIds: string[] }
+  | { mode: 'handle'; keyframeId: string; handle: 'in' | 'out'; base: CurveEditorFrame[] };
 
 type CanvasPoint = { x: number; y: number };
 type CurveEditorFrame = Keyframe<number>;
@@ -3451,6 +3526,7 @@ function KeyframeCurveEditor({
   onCommit(frames: CurveEditorFrame[]): void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const speedCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const dragRef = useRef<CurveEditorDrag | null>(null);
   const [draft, setDraft] = useState<CurveEditorFrame[]>(() => getCurveEditorFrames(clip, property));
   const [selectionBox, setSelectionBox] = useState<{ start: CanvasPoint; current: CanvasPoint } | null>(null);
@@ -3471,6 +3547,10 @@ function KeyframeCurveEditor({
     if (canvas) {
       drawKeyframeCurveCanvas(canvas, draft, property, duration, selectedIds, selectionBox);
     }
+    const speedCanvas = speedCanvasRef.current;
+    if (speedCanvas) {
+      drawKeyframeVelocityCanvas(speedCanvas, draft, property, duration);
+    }
   }, [draft, duration, property, selectedIds, selectionBox]);
 
   const updateDraft = (frames: CurveEditorFrame[]) => {
@@ -3485,8 +3565,17 @@ function KeyframeCurveEditor({
       return;
     }
     const frame = eventToCurveEditorFrame(event, canvas, property, duration);
-    const nearest = findNearestCurveFrame(draftRef.current, frame, property, duration, 0.055);
+    const point = eventToCanvasPoint(event, canvas);
+    const nearestHandle = findNearestCurveHandle(draftRef.current, property, duration, canvas, point, 8);
     event.currentTarget.setPointerCapture(event.pointerId);
+    if (nearestHandle) {
+      if (!selectedIds.includes(nearestHandle.keyframeId)) {
+        onSelectionChange(refsForIds([nearestHandle.keyframeId]));
+      }
+      dragRef.current = { mode: 'handle', keyframeId: nearestHandle.keyframeId, handle: nearestHandle.handle, base: draftRef.current.map((item) => ({ ...item })) };
+      return;
+    }
+    const nearest = findNearestCurveFrame(draftRef.current, frame, property, duration, 0.055);
     if (nearest !== null) {
       const nearestFrame = draftRef.current[nearest];
       const nextSelectedIds = selectedIds.includes(nearestFrame.id) ? selectedIds : [nearestFrame.id];
@@ -3496,7 +3585,6 @@ function KeyframeCurveEditor({
       dragRef.current = { mode: 'points', start: frame, base: draftRef.current.map((item) => ({ ...item })), selectedIds: nextSelectedIds };
       return;
     }
-    const point = eventToCanvasPoint(event, canvas);
     dragRef.current = { mode: 'box', start: point, current: point };
     setSelectionBox({ start: point, current: point });
   };
@@ -3510,6 +3598,21 @@ function KeyframeCurveEditor({
       const current = eventToCanvasPoint(event, canvas);
       dragRef.current = { ...drag, current };
       setSelectionBox({ start: drag.start, current });
+      return;
+    }
+    if (drag.mode === 'handle') {
+      const target = drag.base.find((item) => item.id === drag.keyframeId);
+      if (!target) {
+        return;
+      }
+      const handleFrame = eventToCurveEditorFrame(event, canvas, property, duration);
+      const handle = {
+        dx: roundFinite(handleFrame.time - target.time),
+        dy: roundFinite(handleFrame.value - target.value)
+      };
+      updateDraft(
+        drag.base.map((item) => (item.id === drag.keyframeId ? applyKeyframeHandlePatch(item, drag.handle, handle, item.handleMode ?? 'independent') : item))
+      );
       return;
     }
     const frame = eventToCurveEditorFrame(event, canvas, property, duration);
@@ -3546,9 +3649,37 @@ function KeyframeCurveEditor({
     }
     onCommit(normalizeCurveEditorFrames(draftRef.current, property, duration));
   };
+  const handleContextMenu = (event: ReactMouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      return;
+    }
+    event.preventDefault();
+    const point = eventToCanvasPoint(event, canvas);
+    const nearestHandle = findNearestCurveHandle(draftRef.current, property, duration, canvas, point, 10);
+    const targetId = nearestHandle?.keyframeId ?? findNearestCurveFrameIdByPoint(draftRef.current, property, duration, canvas, point, 10);
+    if (!targetId) {
+      return;
+    }
+    const next = draftRef.current.map((frame) => (frame.id === targetId ? { ...frame, handleMode: nextHandleMode(frame.handleMode) } : frame));
+    updateDraft(next);
+    onCommit(normalizeCurveEditorFrames(next, property, duration));
+    onSelectionChange(refsForIds([targetId]));
+  };
 
   return (
     <div className="rounded-md border border-line bg-panel p-2" data-testid="keyframe-curve-editor">
+      <div className="mb-1 flex items-center justify-between text-[11px] font-medium text-slate-500">
+        <span>{zhCN.inspector.fields.speedDerivative}</span>
+        <span className="tabular-nums">{draft.length}</span>
+      </div>
+      <canvas
+        ref={speedCanvasRef}
+        className="mb-2 block h-16 w-full rounded border border-line bg-slate-950"
+        width={288}
+        height={64}
+        data-testid="keyframe-speed-curve-canvas"
+      />
       <div className="mb-1 flex items-center justify-between text-[11px] font-medium text-slate-500">
         <span>{formatKeyframeProperty(property)}</span>
         <span>{formatKeyframeValue(property, KEYFRAME_PROPERTY_LIMITS[property].min)} - {formatKeyframeValue(property, KEYFRAME_PROPERTY_LIMITS[property].max)}</span>
@@ -3563,6 +3694,7 @@ function KeyframeCurveEditor({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
+        onContextMenu={handleContextMenu}
       />
     </div>
   );
@@ -3579,7 +3711,10 @@ function normalizeCurveEditorFrames(frames: CurveEditorFrame[], property: Keyfra
       id: frame.id,
       time: roundFinite(Math.min(duration, Math.max(0, frame.time))),
       value: roundFinite(Math.min(limits.max, Math.max(limits.min, frame.value))),
-      easing: frame.easing
+      easing: frame.easing,
+      inHandle: frame.inHandle ? { ...frame.inHandle } : undefined,
+      outHandle: frame.outHandle ? { ...frame.outHandle } : undefined,
+      handleMode: frame.handleMode
     }))
     .sort((left, right) => left.time - right.time || left.id.localeCompare(right.id));
 }
@@ -3619,14 +3754,43 @@ function drawKeyframeCurveCanvas(
     context.strokeStyle = '#38bdf8';
     context.lineWidth = 2;
     context.beginPath();
-    points.forEach(({ point }, index) => {
-      if (index === 0) {
-        context.moveTo(point.x, point.y);
-      } else {
-        context.lineTo(point.x, point.y);
+    for (let index = 0; index < points.length - 1; index += 1) {
+      const left = points[index];
+      const right = points[index + 1];
+      for (let step = 0; step <= 20; step += 1) {
+        const sampleTime = left.frame.time + ((right.frame.time - left.frame.time) * step) / 20;
+        const sampleValue = getInterpolatedCurveEditorValue(left.frame, right.frame, sampleTime);
+        const point = curveFrameToPoint({ id: 'sample', time: sampleTime, value: sampleValue, easing: 'linear' }, property, duration, canvas);
+        if (index === 0 && step === 0) {
+          context.moveTo(point.x, point.y);
+        } else {
+          context.lineTo(point.x, point.y);
+        }
       }
-    });
+    }
     context.stroke();
+  }
+  for (const [index, { frame, point }] of points.entries()) {
+    if (!selectedIds.includes(frame.id)) {
+      continue;
+    }
+    const coordinates = calculateBezierHandleCoordinates(frame, points[index - 1]?.frame, points[index + 1]?.frame, frame.handleMode ?? 'independent');
+    context.strokeStyle = 'rgba(251,191,36,0.85)';
+    context.fillStyle = '#fbbf24';
+    context.lineWidth = 1;
+    for (const handle of [coordinates.inHandle, coordinates.outHandle]) {
+      if (!handle) {
+        continue;
+      }
+      const handlePoint = curveFrameToPoint({ id: 'handle', time: handle.time, value: handle.value, easing: 'linear' }, property, duration, canvas);
+      context.beginPath();
+      context.moveTo(point.x, point.y);
+      context.lineTo(handlePoint.x, handlePoint.y);
+      context.stroke();
+      context.beginPath();
+      context.arc(handlePoint.x, handlePoint.y, 3.5, 0, Math.PI * 2);
+      context.fill();
+    }
   }
   for (const { frame, point } of points) {
     const selected = selectedIds.includes(frame.id);
@@ -3651,6 +3815,113 @@ function drawKeyframeCurveCanvas(
   }
 }
 
+function drawKeyframeVelocityCanvas(canvas: HTMLCanvasElement, frames: CurveEditorFrame[], property: KeyframeProperty, duration: number): void {
+  const context = canvas.getContext('2d');
+  if (!context) {
+    return;
+  }
+  const width = canvas.width;
+  const height = canvas.height;
+  context.clearRect(0, 0, width, height);
+  context.fillStyle = '#0f172a';
+  context.fillRect(0, 0, width, height);
+  context.strokeStyle = 'rgba(148,163,184,0.22)';
+  context.lineWidth = 1;
+  context.beginPath();
+  context.moveTo(0, height / 2);
+  context.lineTo(width, height / 2);
+  context.stroke();
+  const fallback = frames[0]?.value ?? getKeyframeFallbackForCurve(property);
+  const samples = calculateKeyframeSpeedSamples(frames, duration, fallback, 48);
+  const maxAbs = Math.max(0.001, ...samples.map((sample) => Math.abs(sample.value)));
+  context.strokeStyle = '#a78bfa';
+  context.lineWidth = 2;
+  context.beginPath();
+  samples.forEach((sample, index) => {
+    const x = (sample.time / Math.max(0.001, duration)) * width;
+    const y = height / 2 - (sample.value / maxAbs) * (height * 0.42);
+    if (index === 0) {
+      context.moveTo(x, y);
+    } else {
+      context.lineTo(x, y);
+    }
+  });
+  context.stroke();
+}
+
+function getInterpolatedCurveEditorValue(left: CurveEditorFrame, right: CurveEditorFrame, time: number): number {
+  return interpolateKeyframes([left, right], time, left.value);
+}
+
+function findNearestCurveHandle(
+  frames: CurveEditorFrame[],
+  property: KeyframeProperty,
+  duration: number,
+  canvas: HTMLCanvasElement,
+  point: CanvasPoint,
+  maxDistancePx: number
+): { keyframeId: string; handle: 'in' | 'out' } | null {
+  const sorted = normalizeCurveEditorFrames(frames, property, duration);
+  let nearest: { keyframeId: string; handle: 'in' | 'out' } | null = null;
+  let nearestDistance = maxDistancePx;
+  for (const [index, frame] of sorted.entries()) {
+    const coordinates = calculateBezierHandleCoordinates(frame, sorted[index - 1], sorted[index + 1], frame.handleMode ?? 'independent');
+    for (const [handle, coordinatesPoint] of [
+      ['in', coordinates.inHandle],
+      ['out', coordinates.outHandle]
+    ] as const) {
+      if (!coordinatesPoint) {
+        continue;
+      }
+      const handlePoint = curveFrameToPoint({ id: 'handle', time: coordinatesPoint.time, value: coordinatesPoint.value, easing: 'linear' }, property, duration, canvas);
+      const distance = Math.hypot(handlePoint.x - point.x, handlePoint.y - point.y);
+      if (distance <= nearestDistance) {
+        nearest = { keyframeId: frame.id, handle };
+        nearestDistance = distance;
+      }
+    }
+  }
+  return nearest;
+}
+
+function findNearestCurveFrameIdByPoint(
+  frames: CurveEditorFrame[],
+  property: KeyframeProperty,
+  duration: number,
+  canvas: HTMLCanvasElement,
+  point: CanvasPoint,
+  maxDistancePx: number
+): string | null {
+  let nearest: string | null = null;
+  let nearestDistance = maxDistancePx;
+  for (const frame of frames) {
+    const framePoint = curveFrameToPoint(frame, property, duration, canvas);
+    const distance = Math.hypot(framePoint.x - point.x, framePoint.y - point.y);
+    if (distance <= nearestDistance) {
+      nearest = frame.id;
+      nearestDistance = distance;
+    }
+  }
+  return nearest;
+}
+
+function nextHandleMode(mode: KeyframeHandleMode | undefined): KeyframeHandleMode {
+  if (mode === 'unified') {
+    return 'independent';
+  }
+  if (mode === 'independent') {
+    return 'broken';
+  }
+  return 'unified';
+}
+
+function getKeyframeFallbackForCurve(property: KeyframeProperty): number {
+  if (property === 'opacity' || property === 'volume' || property === 'scaleX' || property === 'scaleY' || property === 'speed') {
+    return 1;
+  }
+  return 0;
+}
+
 function eventToCurveEditorFrame(event: ReactPointerEvent<HTMLCanvasElement>, canvas: HTMLCanvasElement, property: KeyframeProperty, duration: number): CurveEditorFrame {
   const point = eventToCanvasPoint(event, canvas);
   const limits = KEYFRAME_PROPERTY_LIMITS[property];
@@ -3663,7 +3934,7 @@ function eventToCurveEditorFrame(event: ReactPointerEvent<HTMLCanvasElement>, ca
   };
 }
 
-function eventToCanvasPoint(event: ReactPointerEvent<HTMLCanvasElement>, canvas: HTMLCanvasElement): CanvasPoint {
+function eventToCanvasPoint(event: { clientX: number; clientY: number }, canvas: HTMLCanvasElement): CanvasPoint {
   const rect = canvas.getBoundingClientRect();
   return {
     x: Math.min(canvas.width, Math.max(0, ((event.clientX - rect.left) / Math.max(1, rect.width)) * canvas.width)),
@@ -5295,6 +5566,55 @@ function RangeNumberField({
         />
         <span className="w-14 text-right text-xs tabular-nums text-slate-500">{format(value)}</span>
       </span>
+    </label>
+  );
+}
+
+function ExpressionNumberField({
+  label,
+  value,
+  format,
+  onCommit,
+  testId
+}: {
+  label: string;
+  value: number;
+  format(value: number): string;
+  onCommit(expression: string): void;
+  testId?: string;
+}) {
+  const [draft, setDraft] = useState(formatNumberInputValue(value));
+  useEffect(() => {
+    setDraft(formatNumberInputValue(value));
+  }, [value]);
+  const commitDraft = () => {
+    const trimmed = draft.trim();
+    if (!trimmed) {
+      setDraft(formatNumberInputValue(value));
+      return;
+    }
+    onCommit(trimmed);
+    setDraft(formatNumberInputValue(value));
+  };
+  return (
+    <label className="block text-xs font-medium text-slate-600">
+      <span className="flex items-center justify-between gap-2">
+        <span>{label}</span>
+        <span className="text-[11px] font-normal tabular-nums text-slate-500">{format(value)}</span>
+      </span>
+      <input
+        className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-xs tabular-nums text-ink"
+        type="text"
+        value={draft}
+        data-testid={testId}
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={commitDraft}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            event.currentTarget.blur();
+          }
+        }}
+      />
     </label>
   );
 }

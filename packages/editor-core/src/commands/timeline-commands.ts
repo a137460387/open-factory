@@ -20,6 +20,8 @@ import {
   type AudioFadeCurve,
   type Keyframe,
   type KeyframeEasing,
+  type KeyframeHandle,
+  type KeyframeHandleMode,
   type KeyframeProperty,
   normalizeColorCorrection,
   normalizeChromaKey,
@@ -136,7 +138,7 @@ import {
   type MediaFolderInput
 } from '../media-folders';
 import type { BatchEditableMediaMetadata } from '../media-batch';
-import { createKeyframe, removeKeyframeForProperty, setKeyframeForProperty } from '../keyframes';
+import { alignKeyframeValues, applyBatchKeyframeEasing, createKeyframe, distributeKeyframeTimes, removeKeyframeForProperty, setKeyframeForProperty } from '../keyframes';
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
 import { normalizeProjectDocumentation } from '../project/documentation';
 import { applyConformMedia, type ConformMediaReplacement } from '../project/conform-media';
@@ -3877,6 +3879,9 @@ export interface AddKeyframeInput {
   time: number;
   value: number;
   easing?: KeyframeEasing;
+  inHandle?: KeyframeHandle;
+  outHandle?: KeyframeHandle;
+  handleMode?: KeyframeHandleMode;
 }
 
 export class AddKeyframeCommand implements Command {
@@ -3953,7 +3958,7 @@ export class BatchUpdateKeyframeCommand implements Command {
   }
 }
 
-export type KeyframePatch = Partial<Pick<Keyframe<number>, 'time' | 'value' | 'easing'>>;
+export type KeyframePatch = Partial<Pick<Keyframe<number>, 'time' | 'value' | 'easing' | 'inHandle' | 'outHandle' | 'handleMode'>>;
 
 export interface KeyframeSelectionRef {
   clipId: string;
@@ -3965,7 +3970,9 @@ export type BatchKeyframeEditOperation =
   | { type: 'shift'; delta: number }
   | { type: 'scale-time'; factor: number; center?: number }
   | { type: 'delete' }
-  | { type: 'easing'; easing: KeyframeEasing };
+  | { type: 'easing'; easing: KeyframeEasing }
+  | { type: 'distribute-time' }
+  | { type: 'align-value'; value?: number };
 
 export class UpdateKeyframeCommand implements Command {
   readonly description = 'Update keyframe';
@@ -3993,7 +4000,10 @@ export class UpdateKeyframeCommand implements Command {
         id: existing.id,
         time: this.patch.time ?? existing.time,
         value: this.patch.value ?? existing.value,
-        easing: this.patch.easing ?? existing.easing
+        easing: this.patch.easing ?? existing.easing,
+        inHandle: this.patch.inHandle ?? existing.inHandle,
+        outHandle: this.patch.outHandle ?? existing.outHandle,
+        handleMode: this.patch.handleMode ?? existing.handleMode
       },
       this.before.duration
     );
@@ -4036,6 +4046,8 @@ export class BatchKeyframeEditCommand implements Command {
       return;
     }
     const center = this.operation.type === 'scale-time' ? this.operation.center ?? calculateKeyframeSelectionCenter(timeline, refs) : 0;
+    const distributedTimes = this.operation.type === 'distribute-time' ? calculateDistributedKeyframeTimeMap(timeline, refs) : new Map<string, number>();
+    const alignValue = this.operation.type === 'align-value' ? getBatchAlignValue(timeline, refs, this.operation.value) : undefined;
     const refsByClipId = groupKeyframeRefsByClip(refs);
     for (const [clipId, clipRefs] of refsByClipId) {
       const beforeClip = findClip(timeline, clipId);
@@ -4051,8 +4063,12 @@ export class BatchKeyframeEditCommand implements Command {
           keyframes = removeKeyframeForProperty(keyframes, ref.property, ref.keyframeId);
           continue;
         }
-        const nextTime = getBatchEditedKeyframeTime(beforeClip, existing, this.operation, center);
-        const nextEasing = this.operation.type === 'easing' ? this.operation.easing : existing.easing;
+        const nextTime =
+          this.operation.type === 'distribute-time'
+            ? distributedTimes.get(keyframeRefKey(ref)) ?? existing.time
+            : getBatchEditedKeyframeTime(beforeClip, existing, this.operation, center);
+        const nextValue = this.operation.type === 'align-value' ? alignKeyframeValues([existing], alignValue)[0].value : existing.value;
+        const nextEasing = this.operation.type === 'easing' ? applyBatchKeyframeEasing([existing], this.operation.easing)[0].easing : existing.easing;
         keyframes = setKeyframeForProperty(
           keyframes,
           ref.property,
@@ -4061,8 +4077,11 @@ export class BatchKeyframeEditCommand implements Command {
             {
               id: existing.id,
               time: nextTime,
-              value: existing.value,
-              easing: nextEasing
+              value: nextValue,
+              easing: nextEasing,
+              inHandle: existing.inHandle,
+              outHandle: existing.outHandle,
+              handleMode: existing.handleMode
             },
             beforeClip.duration
           ),
@@ -4125,6 +4144,55 @@ function calculateKeyframeSelectionCenter(timeline: Timeline, refs: KeyframeSele
     return 0;
   }
   return round((Math.min(...absoluteTimes) + Math.max(...absoluteTimes)) / 2);
+}
+
+function keyframeRefKey(ref: KeyframeSelectionRef): string {
+  return `${ref.clipId}\0${ref.property}\0${ref.keyframeId}`;
+}
+
+function calculateDistributedKeyframeTimeMap(timeline: Timeline, refs: KeyframeSelectionRef[]): Map<string, number> {
+  const entries = refs.flatMap((ref) => {
+    const clip = findClip(timeline, ref.clipId);
+    const frame = clip.keyframes?.[ref.property]?.find((item) => item.id === ref.keyframeId);
+    return frame
+      ? [
+          {
+            ref,
+            clip,
+            frame: {
+              ...frame,
+              id: keyframeRefKey(ref),
+              time: clip.start + frame.time
+            }
+          }
+        ]
+      : [];
+  });
+  const distributed = distributeKeyframeTimes(entries.map((entry) => entry.frame));
+  const distributedByKey = new Map(distributed.map((frame) => [frame.id, frame.time]));
+  const output = new Map<string, number>();
+  for (const entry of entries) {
+    const absoluteTime = distributedByKey.get(keyframeRefKey(entry.ref));
+    if (absoluteTime === undefined) {
+      continue;
+    }
+    output.set(keyframeRefKey(entry.ref), clampKeyframeTime(absoluteTime - entry.clip.start, entry.clip.duration));
+  }
+  return output;
+}
+
+function getBatchAlignValue(timeline: Timeline, refs: KeyframeSelectionRef[], value: number | undefined): number {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value;
+  }
+  for (const ref of refs) {
+    const clip = findClip(timeline, ref.clipId);
+    const frame = clip.keyframes?.[ref.property]?.find((item) => item.id === ref.keyframeId);
+    if (frame) {
+      return frame.value;
+    }
+  }
+  return 0;
 }
 
 function getBatchEditedKeyframeTime(
