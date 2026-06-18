@@ -123,10 +123,11 @@ export function replaceMediaPathBasename(path: string, nextName: string): string
   return `${path.slice(0, separatorIndex + 1)}${nextName}`;
 }
 
-export function collectExportMediaMetadata(project: Pick<Project, 'media' | 'mediaMetadata'>): BatchEditableMediaMetadata | undefined {
+export function collectExportMediaMetadata(project: Pick<Project, 'media'> & Partial<Pick<Project, 'mediaMetadata'>>): BatchEditableMediaMetadata | undefined {
   const output: BatchEditableMediaMetadata = {};
+  const mediaMetadata = project.mediaMetadata ?? {};
   for (const asset of project.media) {
-    const metadata = project.mediaMetadata[asset.id];
+    const metadata = mediaMetadata[asset.id];
     if (!metadata) {
       continue;
     }

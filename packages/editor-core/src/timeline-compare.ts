@@ -7,7 +7,7 @@ export interface TimelineDiffRange {
   end: number;
 }
 
-export type TimelineVersionDiffType = 'track-added' | 'track-removed' | 'clip-added' | 'clip-deleted' | 'clip-modified';
+export type TimelineVersionDiffType = 'track-added' | 'track-removed' | 'clip-added' | 'clip-deleted' | 'clip-modified' | 'clip-moved';
 
 export interface TimelineVersionDiffField {
   field: string;
@@ -35,6 +35,8 @@ export interface TimelineVersionDiff {
   items: TimelineVersionDiffItem[];
   summary: TimelineVersionDiffSummary;
 }
+
+export type TimelineDiffNavigationDirection = 'previous' | 'next';
 
 export function diffTimelineSnapshots(current: Timeline, snapshot: Timeline): TimelineDiffRange[] {
   const duration = Math.max(getTimelineDuration(current), getTimelineDuration(snapshot));
@@ -99,9 +101,10 @@ export function diffTimelineVersions(before: Timeline, after: Timeline): Timelin
     }
     const fields = diffClipFields(beforeClip.clip, afterClip.clip, beforeClip.trackId, afterClip.trackId);
     if (fields.length > 0) {
+      const type: TimelineVersionDiffType = isMoveOnlyDiff(fields) ? 'clip-moved' : 'clip-modified';
       items.push({
-        id: `clip-modified:${clipId}`,
-        type: 'clip-modified',
+        id: `${type}:${clipId}`,
+        type,
         label: afterClip.clip.name,
         trackId: afterClip.trackId,
         clipId,
@@ -126,7 +129,7 @@ export function diffTimelineVersions(before: Timeline, after: Timeline): Timelin
     (acc, item) => {
       if (item.type === 'clip-added') acc.added += 1;
       if (item.type === 'clip-deleted') acc.deleted += 1;
-      if (item.type === 'clip-modified') acc.modified += 1;
+      if (item.type === 'clip-modified' || item.type === 'clip-moved') acc.modified += 1;
       if (item.type === 'track-added' || item.type === 'track-removed') acc.trackChanges += 1;
       return acc;
     },
@@ -160,7 +163,7 @@ export function applyTimelineVersionDiffSelection(target: Timeline, source: Time
       }
     } else if (item.type === 'clip-deleted' && item.clipId) {
       next = removeClipById(next, item.clipId);
-    } else if (item.type === 'clip-modified' && item.clipId) {
+    } else if ((item.type === 'clip-modified' || item.type === 'clip-moved') && item.clipId) {
       const sourceClip = findClipWithTrack(source, item.clipId);
       if (sourceClip) {
         next = upsertClip(removeClipById(next, item.clipId), sourceClip.trackId, sourceClip.clip);
@@ -168,6 +171,36 @@ export function applyTimelineVersionDiffSelection(target: Timeline, source: Time
     }
   }
   return next;
+}
+
+export function getTimelineVersionDiffNavigationIndex(
+  items: readonly TimelineVersionDiffItem[],
+  currentIndex: number,
+  direction: TimelineDiffNavigationDirection
+): number {
+  if (items.length === 0) {
+    return -1;
+  }
+  if (direction === 'previous') {
+    return currentIndex <= 0 ? items.length - 1 : currentIndex - 1;
+  }
+  return currentIndex < 0 || currentIndex >= items.length - 1 ? 0 : currentIndex + 1;
+}
+
+export function calculateTimelineCompareScrollSync(
+  sourceScrollLeft: number,
+  sourceScrollWidth: number,
+  sourceViewportWidth: number,
+  targetScrollWidth: number,
+  targetViewportWidth: number
+): number {
+  const sourceMax = Math.max(0, sourceScrollWidth - sourceViewportWidth);
+  const targetMax = Math.max(0, targetScrollWidth - targetViewportWidth);
+  if (sourceMax <= 0 || targetMax <= 0) {
+    return 0;
+  }
+  const ratio = Math.min(1, Math.max(0, sourceScrollLeft / sourceMax));
+  return round(ratio * targetMax);
 }
 
 function collectTimelineBoundaries(current: Timeline, snapshot: Timeline, duration: number): number[] {
@@ -258,6 +291,10 @@ function diffClipFields(before: Clip, after: Clip, beforeTrackId: string, afterT
     }
   }
   return fields;
+}
+
+function isMoveOnlyDiff(fields: TimelineVersionDiffField[]): boolean {
+  return fields.length > 0 && fields.every((field) => field.field === 'start' || field.field === 'trackId');
 }
 
 function compactClip(clip: Clip): Record<string, unknown> {

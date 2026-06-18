@@ -1,15 +1,26 @@
 import {
   AddTrackCommand,
+  BrollInsertCommand,
+  DialogueRoughCutCommand,
   RemoveSilenceCommand,
+  RhythmAssembleCommand,
   SplitClipAtTimesCommand,
+  buildBrollInsertClips,
+  createTrack,
   getClipSpeed,
   round,
   type Clip,
   type MediaAsset,
-  type SilentRange
+  type Project,
+  type SilentRange,
+  type SmartRoughCutBrollCandidate,
+  type SmartRoughCutVisualClip,
+  type Timeline,
+  type Track
 } from '@open-factory/editor-core';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { zhCN } from '../../i18n/strings';
+import { detectClipDialogue } from '../../lib/dialogueDetection';
 import { detectClipSilence } from '../../lib/silenceDetection';
 import { detectSceneChanges } from '../../lib/tauri-bridge';
 import { buildWhisperSubtitleTrackForClip, canGenerateSubtitlesForClip, getWhisperAvailability, type WhisperAvailability } from '../../lib/whisper';
@@ -48,19 +59,35 @@ interface SilenceCandidate {
   range: SilentRange;
 }
 
+type SmartRoughCutTab = 'basic' | 'dialogue' | 'broll' | 'rhythm';
+
 export function SmartRoughCutPanel({ selectedClip, media }: SmartRoughCutPanelProps) {
   const [state, setState] = useState(createInitialSmartRoughCutState);
   const [pendingScene, setPendingScene] = useState<{ clipId: string; items: SceneCandidate[]; selection: SmartRoughCutSelection }>();
   const [pendingSilence, setPendingSilence] = useState<{ clipId: string; items: SilenceCandidate[]; selection: SmartRoughCutSelection }>();
+  const [activeTab, setActiveTab] = useState<SmartRoughCutTab>('basic');
+  const [brollTrackId, setBrollTrackId] = useState('');
+  const [rhythmTrackId, setRhythmTrackId] = useState('');
   const [whisperAvailability, setWhisperAvailability] = useState<WhisperAvailability>({ ready: false, error: zhCN.whisper.notConfigured });
   const whisperExecutablePath = useWhisperSettingsStore((item) => item.executablePath);
   const whisperModelPath = useWhisperSettingsStore((item) => item.modelPath);
+  const project = useEditorStore((item) => item.project);
+  const selectedClipIds = useEditorStore((item) => item.selectedClipIds);
   const setSelectedClipId = useEditorStore((item) => item.setSelectedClipId);
+  const timeline = project.timeline;
   const asset = useMemo(() => getClipMediaAsset(selectedClip, media), [selectedClip, media]);
+  const selectedTimelineClips = useMemo(() => getTimelineClips(timeline).filter((clip) => selectedClipIds.includes(clip.id)), [selectedClipIds, timeline]);
+  const selectedVisualClips = useMemo(() => selectedTimelineClips.filter(isVisualClip), [selectedTimelineClips]);
+  const mainVisualClips = useMemo(() => getPrimaryVisualClips(timeline, selectedVisualClips), [selectedVisualClips, timeline]);
+  const videoTracks = useMemo(() => timeline.tracks.filter((track) => track.type === 'video'), [timeline]);
+  const rhythmBeatTimes = useMemo(() => getRhythmBeatTimes(project, selectedTimelineClips), [project, selectedTimelineClips]);
   const anyRunning = Object.values(state.steps).some((step) => step.status === 'running');
   const canRunScene = selectedClip?.type === 'video' && Boolean(asset);
   const canRunSilence = Boolean(selectedClip && asset && (selectedClip.type === 'audio' || (selectedClip.type === 'video' && asset.hasAudio)));
   const canRunWhisper = canGenerateSubtitlesForClip(selectedClip, asset, whisperAvailability.ready);
+  const canRunDialogue = Boolean(selectedClip && asset && (selectedClip.type === 'audio' || (selectedClip.type === 'video' && asset.hasAudio)));
+  const canRunBroll = mainVisualClips.length > 0 && buildBrollCandidates(media, selectedTimelineClips).length > 0;
+  const canRunRhythm = selectedVisualClips.length > 0 && rhythmBeatTimes.length >= 2;
 
   useEffect(() => {
     let disposed = false;
@@ -73,6 +100,13 @@ export function SmartRoughCutPanel({ selectedClip, media }: SmartRoughCutPanelPr
       disposed = true;
     };
   }, [whisperExecutablePath, whisperModelPath]);
+
+  useEffect(() => {
+    if (rhythmTrackId && videoTracks.some((track) => track.id === rhythmTrackId)) {
+      return;
+    }
+    setRhythmTrackId(selectedVisualClips[0]?.trackId ?? videoTracks[0]?.id ?? '');
+  }, [rhythmTrackId, selectedVisualClips, videoTracks]);
 
   async function runSceneDetection(): Promise<void> {
     await runStep('scene', async () => {
@@ -176,6 +210,56 @@ export function SmartRoughCutPanel({ selectedClip, media }: SmartRoughCutPanelPr
     });
   }
 
+  async function runDialogueRoughCut(): Promise<void> {
+    await runStep('dialogue', async () => {
+      const { clip, mediaAsset } = requireSelectedMedia('dialogue');
+      if (clip.type !== 'audio' && clip.type !== 'video') {
+        throw new Error(zhCN.smartRoughCut.dialogueUnavailable);
+      }
+      if (clip.type === 'video' && !mediaAsset.hasAudio) {
+        throw new Error(zhCN.smartRoughCut.dialogueUnavailable);
+      }
+      const intervals = await detectClipDialogue(clip, mediaAsset, 'medium');
+      const command = new DialogueRoughCutCommand(timelineAccessor, clip.id, intervals);
+      commandManager.execute(command);
+      setSelectedClipId(`${clip.id}-dialogue-1`);
+      return { dialogueClips: command.clipCount };
+    });
+  }
+
+  async function runBrollInsert(): Promise<void> {
+    await runStep('broll', async () => {
+      const candidates = buildBrollCandidates(media, selectedTimelineClips);
+      const targetTrackId = brollTrackId || 'track-broll-auto';
+      ensureVideoTrack(targetTrackId, zhCN.smartRoughCut.steps.broll);
+      const clips = buildBrollInsertClips(mainVisualClips, candidates, targetTrackId);
+      if (clips.length === 0) {
+        throw new Error(zhCN.smartRoughCut.brollUnavailable);
+      }
+      commandManager.execute(new BrollInsertCommand(timelineAccessor, clips));
+      setSelectedClipId(clips[0]?.id);
+      return { brollClips: clips.length };
+    });
+  }
+
+  async function runRhythmAssemble(): Promise<void> {
+    await runStep('rhythm', async () => {
+      const targetTrackId = rhythmTrackId || selectedVisualClips[0]?.trackId || videoTracks[0]?.id;
+      if (!targetTrackId || selectedVisualClips.length === 0 || rhythmBeatTimes.length < 2) {
+        throw new Error(zhCN.smartRoughCut.rhythmUnavailable);
+      }
+      const command = new RhythmAssembleCommand(
+        timelineAccessor,
+        selectedVisualClips.map((clip) => clip.id),
+        rhythmBeatTimes,
+        targetTrackId
+      );
+      commandManager.execute(command);
+      setSelectedClipId(`${selectedVisualClips[0].id}-rhythm-1`);
+      return { rhythmClips: command.clipCount };
+    });
+  }
+
   async function runStep(step: SmartRoughCutStep, execute: () => Promise<Partial<typeof state.report>>): Promise<void> {
     setState((current) => markSmartRoughCutStepRunning(current, step));
     try {
@@ -191,9 +275,24 @@ export function SmartRoughCutPanel({ selectedClip, media }: SmartRoughCutPanelPr
 
   function requireSelectedMedia(step: SmartRoughCutStep): { clip: Clip; mediaAsset: MediaAsset } {
     if (!selectedClip || !asset) {
-      throw new Error(step === 'scene' ? zhCN.smartRoughCut.sceneUnavailable : step === 'silence' ? zhCN.smartRoughCut.silenceUnavailable : zhCN.smartRoughCut.whisperUnavailable);
+      throw new Error(
+        step === 'scene'
+          ? zhCN.smartRoughCut.sceneUnavailable
+          : step === 'silence'
+            ? zhCN.smartRoughCut.silenceUnavailable
+            : step === 'dialogue'
+              ? zhCN.smartRoughCut.dialogueUnavailable
+              : zhCN.smartRoughCut.whisperUnavailable
+      );
     }
     return { clip: selectedClip, mediaAsset: asset };
+  }
+
+  function ensureVideoTrack(trackId: string, name: string): void {
+    if (timelineAccessor.getTimeline().tracks.some((track) => track.id === trackId)) {
+      return;
+    }
+    commandManager.execute(new AddTrackCommand(timelineAccessor, createTrack({ id: trackId, type: 'video', name, clips: [] })));
   }
 
   return (
@@ -205,56 +304,121 @@ export function SmartRoughCutPanel({ selectedClip, media }: SmartRoughCutPanelPr
         </div>
       </div>
       <div className="min-h-0 flex-1 overflow-auto p-3">
-        <SmartStep
-          title={zhCN.smartRoughCut.steps.scene}
-          description={zhCN.smartRoughCut.sceneDescription}
-          status={state.steps.scene.status}
-          error={state.steps.scene.error}
-          testId="smart-scene"
-          buttonLabel={zhCN.smartRoughCut.detectScene}
-          disabled={anyRunning || !canRunScene}
-          onRun={() => void runSceneDetection()}
-        >
-          {pendingScene ? (
-            <SceneResultList
-              items={pendingScene.items}
-              selection={pendingScene.selection}
-              onSelectionChange={(selection) => setPendingScene((current) => (current ? { ...current, selection } : current))}
-              onApply={applySceneSplit}
+        <div className="mb-3 grid grid-cols-4 gap-1 rounded-md border border-line bg-panel p-1" data-testid="smart-rough-cut-tabs">
+          {(['basic', 'dialogue', 'broll', 'rhythm'] as SmartRoughCutTab[]).map((tab) => (
+            <button
+              key={tab}
+              className={`rounded px-2 py-1.5 text-xs font-medium ${activeTab === tab ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:bg-white'}`}
+              type="button"
+              data-testid={`smart-rough-cut-tab-${tab}`}
+              aria-pressed={activeTab === tab}
+              onClick={() => setActiveTab(tab)}
+            >
+              {zhCN.smartRoughCut.tabs[tab]}
+            </button>
+          ))}
+        </div>
+        {activeTab === 'basic' ? (
+          <div>
+            <SmartStep
+              title={zhCN.smartRoughCut.steps.scene}
+              description={zhCN.smartRoughCut.sceneDescription}
+              status={state.steps.scene.status}
+              error={state.steps.scene.error}
+              testId="smart-scene"
+              buttonLabel={zhCN.smartRoughCut.detectScene}
+              disabled={anyRunning || !canRunScene}
+              onRun={() => void runSceneDetection()}
+            >
+              {pendingScene ? (
+                <SceneResultList
+                  items={pendingScene.items}
+                  selection={pendingScene.selection}
+                  onSelectionChange={(selection) => setPendingScene((current) => (current ? { ...current, selection } : current))}
+                  onApply={applySceneSplit}
+                />
+              ) : null}
+            </SmartStep>
+            <SmartStep
+              title={zhCN.smartRoughCut.steps.silence}
+              description={zhCN.smartRoughCut.silenceDescription}
+              status={state.steps.silence.status}
+              error={state.steps.silence.error}
+              testId="smart-silence"
+              buttonLabel={zhCN.smartRoughCut.detectSilence}
+              disabled={anyRunning || !canRunSilence}
+              onRun={() => void runSilenceDetection()}
+            >
+              {pendingSilence ? (
+                <SilenceResultList
+                  items={pendingSilence.items}
+                  selection={pendingSilence.selection}
+                  onSelectionChange={(selection) => setPendingSilence((current) => (current ? { ...current, selection } : current))}
+                  onApply={applySilenceRemoval}
+                />
+              ) : null}
+            </SmartStep>
+            <SmartStep
+              title={zhCN.smartRoughCut.steps.whisper}
+              description={whisperAvailability.ready ? zhCN.smartRoughCut.whisperDescription : whisperAvailability.error ?? zhCN.whisper.notConfigured}
+              status={state.steps.whisper.status}
+              error={state.steps.whisper.error}
+              testId="smart-whisper"
+              buttonLabel={zhCN.smartRoughCut.generateSubtitles}
+              disabled={anyRunning || !canRunWhisper}
+              onRun={() => void runWhisper()}
             />
-          ) : null}
-        </SmartStep>
-        <SmartStep
-          title={zhCN.smartRoughCut.steps.silence}
-          description={zhCN.smartRoughCut.silenceDescription}
-          status={state.steps.silence.status}
-          error={state.steps.silence.error}
-          testId="smart-silence"
-          buttonLabel={zhCN.smartRoughCut.detectSilence}
-          disabled={anyRunning || !canRunSilence}
-          onRun={() => void runSilenceDetection()}
-        >
-          {pendingSilence ? (
-            <SilenceResultList
-              items={pendingSilence.items}
-              selection={pendingSilence.selection}
-              onSelectionChange={(selection) => setPendingSilence((current) => (current ? { ...current, selection } : current))}
-              onApply={applySilenceRemoval}
-            />
-          ) : null}
-        </SmartStep>
-        <SmartStep
-          title={zhCN.smartRoughCut.steps.whisper}
-          description={whisperAvailability.ready ? zhCN.smartRoughCut.whisperDescription : whisperAvailability.error ?? zhCN.whisper.notConfigured}
-          status={state.steps.whisper.status}
-          error={state.steps.whisper.error}
-          testId="smart-whisper"
-          buttonLabel={zhCN.smartRoughCut.generateSubtitles}
-          disabled={anyRunning || !canRunWhisper}
-          onRun={() => void runWhisper()}
-        />
+          </div>
+        ) : null}
+        {activeTab === 'dialogue' ? (
+          <SmartStep
+            title={zhCN.smartRoughCut.steps.dialogue}
+            description={zhCN.smartRoughCut.dialogueDescription}
+            status={state.steps.dialogue.status}
+            error={state.steps.dialogue.error}
+            testId="smart-dialogue"
+            buttonLabel={zhCN.smartRoughCut.generateDialogueCut}
+            disabled={anyRunning || !canRunDialogue}
+            onRun={() => void runDialogueRoughCut()}
+          />
+        ) : null}
+        {activeTab === 'broll' ? (
+          <SmartStep
+            title={zhCN.smartRoughCut.steps.broll}
+            description={zhCN.smartRoughCut.brollDescription}
+            status={state.steps.broll.status}
+            error={state.steps.broll.error}
+            testId="smart-broll"
+            buttonLabel={zhCN.smartRoughCut.insertBroll}
+            disabled={anyRunning || !canRunBroll}
+            onRun={() => void runBrollInsert()}
+          >
+            <TrackSelect value={brollTrackId} tracks={videoTracks} autoLabel={zhCN.smartRoughCut.steps.broll} testId="smart-broll-track" onChange={setBrollTrackId} />
+          </SmartStep>
+        ) : null}
+        {activeTab === 'rhythm' ? (
+          <SmartStep
+            title={zhCN.smartRoughCut.steps.rhythm}
+            description={`${zhCN.smartRoughCut.rhythmDescription} ${zhCN.smartRoughCut.beatCount(rhythmBeatTimes.length)}`}
+            status={state.steps.rhythm.status}
+            error={state.steps.rhythm.error}
+            testId="smart-rhythm"
+            buttonLabel={zhCN.smartRoughCut.assembleRhythm}
+            disabled={anyRunning || !canRunRhythm}
+            onRun={() => void runRhythmAssemble()}
+          >
+            <TrackSelect value={rhythmTrackId} tracks={videoTracks} testId="smart-rhythm-track" onChange={setRhythmTrackId} />
+          </SmartStep>
+        ) : null}
         <div className="mt-3 rounded-md border border-line bg-panel p-3 text-xs text-slate-600" data-testid="smart-rough-cut-report">
-          {zhCN.smartRoughCut.report(state.report.removedSilenceSeconds.toFixed(1), state.report.sceneSplits, state.report.subtitleClips)}
+          {zhCN.smartRoughCut.report(
+            state.report.removedSilenceSeconds.toFixed(1),
+            state.report.sceneSplits,
+            state.report.subtitleClips,
+            state.report.dialogueClips,
+            state.report.brollClips,
+            state.report.rhythmClips
+          )}
         </div>
       </div>
     </section>
@@ -297,6 +461,34 @@ function SmartStep({
       </button>
       {children}
     </section>
+  );
+}
+
+function TrackSelect({
+  value,
+  tracks,
+  autoLabel,
+  testId,
+  onChange
+}: {
+  value: string;
+  tracks: Track[];
+  autoLabel?: string;
+  testId: string;
+  onChange(value: string): void;
+}) {
+  return (
+    <label className="mt-2 block text-xs text-slate-600">
+      <span className="mb-1 block font-medium text-slate-700">{zhCN.smartRoughCut.targetTrack}</span>
+      <select className="w-full rounded-md border border-line bg-white px-2 py-1.5 text-xs text-ink" value={value} data-testid={testId} onChange={(event) => onChange(event.target.value)}>
+        {autoLabel ? <option value="">{autoLabel}</option> : null}
+        {tracks.map((track) => (
+          <option key={track.id} value={track.id}>
+            {track.name}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 
@@ -432,6 +624,38 @@ function getClipMediaAsset(clip: Clip | undefined, media: MediaAsset[]): MediaAs
     return undefined;
   }
   return media.find((asset) => asset.id === clip.mediaId);
+}
+
+function getTimelineClips(timeline: Timeline): Clip[] {
+  return timeline.tracks.flatMap((track) => track.clips);
+}
+
+function isVisualClip(clip: Clip): clip is SmartRoughCutVisualClip {
+  return clip.type === 'video' || clip.type === 'image';
+}
+
+function getPrimaryVisualClips(timeline: Timeline, selectedVisualClips: SmartRoughCutVisualClip[]): SmartRoughCutVisualClip[] {
+  if (selectedVisualClips.length > 0) {
+    return selectedVisualClips;
+  }
+  return (timeline.tracks.find((track) => track.type === 'video')?.clips ?? []).filter(isVisualClip);
+}
+
+function buildBrollCandidates(media: MediaAsset[], selectedClips: Clip[]): SmartRoughCutBrollCandidate[] {
+  const selectedMediaIds = new Set(selectedClips.flatMap((clip) => ('mediaId' in clip ? [clip.mediaId] : [])));
+  const preferred = media.filter((asset) => (asset.type === 'video' || asset.type === 'image') && !asset.missing && !selectedMediaIds.has(asset.id));
+  const fallback = preferred.length > 0 ? preferred : media.filter((asset) => (asset.type === 'video' || asset.type === 'image') && !asset.missing);
+  return fallback.map((asset) => ({ kind: 'media', asset }));
+}
+
+function getRhythmBeatTimes(project: Project, selectedClips: Clip[]): number[] {
+  const projectBeats = (project.beatMarkers ?? []).map((marker) => marker.time);
+  if (projectBeats.length >= 2) {
+    return projectBeats;
+  }
+  return selectedClips
+    .flatMap((clip) => (clip.beatMarkers ?? []).map((marker) => round(clip.start + marker.time)))
+    .sort((left, right) => left - right);
 }
 
 function sumSilentDuration(ranges: SilentRange[]): number {

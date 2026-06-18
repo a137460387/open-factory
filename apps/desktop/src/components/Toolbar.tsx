@@ -43,6 +43,7 @@ interface ToolbarProps {
   onSaveSnapshot(): void;
   onOpenSnapshotHistory(): void;
   onOpenSnapshotCompare(): void;
+  onOpenTimelineCompare(): void;
   onImportMedia(): void;
   onImportDataSubtitles(mode: SubtitleDataImportMode): void;
   onBatchTranscode(): void;
@@ -547,6 +548,18 @@ export function Toolbar(props: ToolbarProps) {
               <span className="text-xs text-slate-500">{props.timelineMinimapVisible ? t.safeFrameGuidesVisible : t.safeFrameGuidesHidden}</span>
             </button>
             <div className="my-1 border-t border-line" />
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-view-timeline-compare-menu-item"
+              onClick={() => {
+                setViewMenuOpen(false);
+                props.onOpenTimelineCompare();
+              }}
+            >
+              <span>{t.timelineCompare}</span>
+              <GitCompareArrows size={14} />
+            </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
               type="button"

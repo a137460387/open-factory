@@ -1919,6 +1919,37 @@ mod tests {
     }
 
     #[test]
+    fn detect_beat_peaks_returns_empty_for_silent_or_tiny_inputs() {
+        let silent = [
+            RmsSample {
+                time: 0.0,
+                rms: 0.0,
+            },
+            RmsSample {
+                time: 0.25,
+                rms: 0.0,
+            },
+            RmsSample {
+                time: 0.5,
+                rms: 0.0,
+            },
+        ];
+        let tiny = [
+            RmsSample {
+                time: 0.0,
+                rms: 0.2,
+            },
+            RmsSample {
+                time: 0.25,
+                rms: 0.9,
+            },
+        ];
+
+        assert!(detect_beat_peaks_from_rms(&silent, "medium").is_empty());
+        assert!(detect_beat_peaks_from_rms(&tiny, "medium").is_empty());
+    }
+
+    #[test]
     fn parses_ffprobe_media_analysis_video_audio_and_hdr_fields() {
         let raw = br#"{
           "streams": [

@@ -59,6 +59,20 @@ test('smart rough cut applies only selected scene result items', async ({ page }
   expect(clips[1]).toMatchObject({ start: 0.8 });
 });
 
+test('smart rough cut dialogue mode creates one clip per detected voice interval', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+  await page.evaluate(() => window.__E2E_ACTIONS__!.setupSmartRoughCutFixture!());
+
+  await page.getByTestId('toolbar-smart-rough-cut-button').click();
+  await page.getByTestId('smart-rough-cut-tab-dialogue').click();
+  await page.getByTestId('smart-dialogue-button').click();
+
+  await expect(page.getByTestId('smart-dialogue-status')).toHaveAttribute('data-status', 'complete');
+  await expect.poll(() => getVideoClipCount(page)).toBe(2);
+  await expect(page.getByTestId('smart-rough-cut-report')).toContainText('2 个对话 clip');
+});
+
 async function getVideoClipCount(page: Page): Promise<number> {
   return page.evaluate(() => {
     const timeline = window.__E2E_ACTIONS__!.getTimelineSnapshot!() as {

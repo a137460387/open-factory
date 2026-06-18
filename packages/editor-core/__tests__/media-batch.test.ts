@@ -82,5 +82,6 @@ describe('media batch rename helpers', () => {
 
     expect(collectExportMediaMetadata(project)).toEqual({ title: 'Scene title', author: 'Ada', description: 'A roll' });
     expect(collectExportMediaMetadata({ media: [asset], mediaMetadata: {} })).toBeUndefined();
+    expect(collectExportMediaMetadata({ media: [asset] })).toBeUndefined();
   });
 });

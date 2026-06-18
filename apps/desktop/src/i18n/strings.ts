@@ -449,6 +449,7 @@ const zh = {
     contentAnalysis: '内容分析',
     performanceProfiler: '性能分析',
     colorAnalysis: '色彩分析',
+    timelineCompare: '时间线对比',
     rhythmAnalysis: '节奏分析',
     beatSync: '节拍同步',
     beatSyncDetectedBpm: (bpm?: number) => (bpm ? `检测到 BPM：${Math.round(bpm)}` : '检测到 BPM：--'),
@@ -2439,10 +2440,19 @@ const zh = {
   smartRoughCut: {
     title: '智能粗剪',
     noSelection: '请选择音频或视频片段。',
+    tabs: {
+      basic: '基础',
+      dialogue: '对话',
+      broll: 'B-roll',
+      rhythm: '节奏'
+    },
     steps: {
       scene: '场景检测',
       silence: '静音检测',
-      whisper: 'Whisper 字幕'
+      whisper: 'Whisper 字幕',
+      dialogue: '对话驱动粗剪',
+      broll: 'B-roll 智能插入',
+      rhythm: '节奏驱动剪辑'
     },
     statuses: {
       idle: '未运行',
@@ -2453,9 +2463,15 @@ const zh = {
     sceneDescription: '检测选中视频片段的切换点，确认后按场景分割。',
     silenceDescription: '检测选中片段中的静音段，预览后再删除。',
     whisperDescription: '使用本地 Whisper 配置生成字幕轨。',
+    dialogueDescription: '检测选中片段的人声段，并把人声压缩排列为对话版粗剪。',
+    brollDescription: '按主轨 clip 的内容标签和名称匹配媒体库中的 B-roll，并插入到目标轨道。',
+    rhythmDescription: '使用节拍点把选中视频集合切分并按节拍间隔排列。',
     sceneUnavailable: '请选择视频片段后再检测场景。',
     silenceUnavailable: '请选择带音频的音频或视频片段。',
     whisperUnavailable: '请先选择可生成字幕的音频或视频片段，并配置 Whisper 路径。',
+    dialogueUnavailable: '请选择带音频的音频或视频片段。',
+    brollUnavailable: '需要至少一个主轨视频或图片片段，以及媒体库中的视频或图片素材。',
+    rhythmUnavailable: '请选择视频或图片片段，并在项目或选中音频上准备至少两个节拍点。',
     detectScene: '检测场景',
     applySceneSplit: '按场景分割',
     applySelectedScene: '应用选中项',
@@ -2463,6 +2479,11 @@ const zh = {
     applySilenceRemoval: '确认删除静音',
     applySelectedSilence: '应用选中项',
     generateSubtitles: '生成字幕',
+    generateDialogueCut: '生成对话粗剪',
+    insertBroll: '插入 B-roll',
+    assembleRhythm: '节奏排列',
+    targetTrack: '目标轨道',
+    beatCount: (count: number) => `${count} 个节拍点`,
     scenePreview: (times: number[]) => (times.length > 0 ? `检测到 ${times.length} 个切点：${times.map((time) => `${time.toFixed(2)}s`).join(', ')}` : '未检测到可用切点。'),
     silencePreview: (count: number, duration: string) => `将删除 ${count} 段静音，合计 ${duration}s。`,
     selectAll: '全选',
@@ -2470,7 +2491,8 @@ const zh = {
     selectedCount: (selected: number, total: number) => `${selected}/${total} 已选`,
     sceneRange: (start: string, end: string) => `${start} - ${end}`,
     silenceRange: (start: string, end: string, duration: string) => `${start} - ${end}（${duration}）`,
-    report: (removedSeconds: string, sceneSplits: number, subtitleClips: number) => `删除了 ${removedSeconds}s 静音，分割为 ${sceneSplits > 0 ? sceneSplits + 1 : 0} 段，生成 ${subtitleClips} 条字幕。`,
+    report: (removedSeconds: string, sceneSplits: number, subtitleClips: number, dialogueClips = 0, brollClips = 0, rhythmClips = 0) =>
+      `删除了 ${removedSeconds}s 静音，分割为 ${sceneSplits > 0 ? sceneSplits + 1 : 0} 段，生成 ${subtitleClips} 条字幕 / ${dialogueClips} 个对话 clip / ${brollClips} 个 B-roll / ${rhythmClips} 个节奏 clip。`,
     stepComplete: (step: string) => `${step}完成`,
     stepFailed: (step: string) => `${step}失败`
   },
@@ -4216,13 +4238,41 @@ const zh = {
       'track-removed': '删除轨道',
       'clip-added': '新增片段',
       'clip-deleted': '删除片段',
-      'clip-modified': '属性修改'
+      'clip-modified': '属性修改',
+      'clip-moved': '位置移动'
     },
     previewSummary: (name: string, tracks: number, media: number, duration: string) => `${name} · ${tracks} 条轨道 · ${media} 个素材 · ${duration}`,
     columns: {
       name: '名称',
       time: '时间',
       size: '大小'
+    }
+  },
+  timelineCompare: {
+    title: '时间线对比',
+    subtitle: '并排查看两个项目快照的时间线差异。',
+    versionA: '版本 A',
+    versionB: '版本 B',
+    noSnapshots: '先保存至少两个快照再进行时间线对比。',
+    noDiffs: '没有差异。',
+    loading: '加载快照...',
+    zoom: '缩放',
+    readonly: '只读',
+    emptyTrack: '空轨道',
+    previousDiff: '上一处差异',
+    nextDiff: '下一处差异',
+    activeDiff: (index: number, total: number) => `${index} / ${total}`,
+    summary: (added: number, deleted: number, modified: number, tracks: number) => `${added} 新增 / ${deleted} 删除 / ${modified} 修改或移动 / ${tracks} 轨道变化`,
+    applySelected: '应用选中',
+    selectDiffs: '请选择要应用的差异。',
+    syncOffset: (offset: number) => `同步偏移 ${Math.round(offset)}px`,
+    diffTypes: {
+      'track-added': '新增轨道',
+      'track-removed': '删除轨道',
+      'clip-added': '新增 clip',
+      'clip-deleted': '删除 clip',
+      'clip-modified': '修改 clip',
+      'clip-moved': '位置移动'
     }
   },
   releaseWorkflow: {
@@ -4908,6 +4958,7 @@ const enOverrides = {
     contentAnalysis: 'Content Analysis',
     performanceProfiler: 'Performance Profiler',
     colorAnalysis: 'Color Analysis',
+    timelineCompare: 'Timeline Compare',
     rhythmAnalysis: 'Rhythm Analysis',
     beatSync: 'Beat Sync',
     beatSyncDetectedBpm: (bpm?: number) => (bpm ? `Detected BPM: ${Math.round(bpm)}` : 'Detected BPM: --'),
@@ -8230,13 +8281,41 @@ const enOverrides = {
       'track-removed': 'Track Removed',
       'clip-added': 'Clip Added',
       'clip-deleted': 'Clip Deleted',
-      'clip-modified': 'Property Modified'
+      'clip-modified': 'Property Modified',
+      'clip-moved': 'Position Moved'
     },
     previewSummary: (name: string, tracks: number, media: number, duration: string) => `${name} · ${tracks} tracks · ${media} media · ${duration}`,
     columns: {
       name: 'Name',
       time: 'Time',
       size: 'Size'
+    }
+  },
+  timelineCompare: {
+    title: 'Timeline Compare',
+    subtitle: 'Review timeline differences between two project snapshots side by side.',
+    versionA: 'Version A',
+    versionB: 'Version B',
+    noSnapshots: 'Save at least two snapshots before comparing timelines.',
+    noDiffs: 'No differences.',
+    loading: 'Loading snapshots...',
+    zoom: 'Zoom',
+    readonly: 'Read-only',
+    emptyTrack: 'Empty track',
+    previousDiff: 'Previous Diff',
+    nextDiff: 'Next Diff',
+    activeDiff: (index: number, total: number) => `${index} / ${total}`,
+    summary: (added: number, deleted: number, modified: number, tracks: number) => `${added} added / ${deleted} deleted / ${modified} modified or moved / ${tracks} track changes`,
+    applySelected: 'Apply Selected',
+    selectDiffs: 'Select diffs to apply.',
+    syncOffset: (offset: number) => `Sync offset ${Math.round(offset)}px`,
+    diffTypes: {
+      'track-added': 'Track Added',
+      'track-removed': 'Track Removed',
+      'clip-added': 'Clip Added',
+      'clip-deleted': 'Clip Deleted',
+      'clip-modified': 'Clip Modified',
+      'clip-moved': 'Position Moved'
     }
   },
   releaseWorkflow: {

@@ -164,6 +164,7 @@ import {
   type BeatMarker,
   type BeatSnapUpdate
 } from '../beats';
+import { buildDialogueRoughCutClips, buildRhythmAssembleClips, type SmartDialogueInterval, type SmartRoughCutVisualClip } from '../smart-rough-cut-v2';
 import { normalizeTimelineLabelColor, type TimelineLabelColor } from '../timeline-color-labels';
 import { applyProtectedRippleDeleteToTrack, canMoveClipWithProtectedRanges } from '../timeline-protection';
 import { buildCrossfadeGapFillTransition, buildRepeatedGapFillClip, findTimelineGapAtTime, type FillGapOperation } from '../timeline-gap-fill';
@@ -3711,6 +3712,142 @@ export class RemoveSilenceCommand implements Command {
     }
     this.accessor.setTimeline(this.before);
   }
+}
+
+export class DialogueRoughCutCommand implements Command {
+  readonly description = 'Dialogue rough cut';
+  private before?: Timeline;
+  private after?: Timeline;
+  private generatedCount = 0;
+
+  constructor(private readonly accessor: TimelineAccessor, private readonly clipId: string, private readonly intervals: SmartDialogueInterval[]) {}
+
+  get clipCount(): number {
+    return this.generatedCount;
+  }
+
+  execute(): void {
+    const timeline = this.accessor.getTimeline();
+    this.before ??= timeline;
+    if (!this.after) {
+      const clip = findClip(timeline, this.clipId);
+      if (clip.type !== 'audio' && clip.type !== 'video') {
+        throw new Error('Dialogue rough cut requires an audio or video clip');
+      }
+      const clips = buildDialogueRoughCutClips(clip, this.intervals);
+      if (clips.length === 0) {
+        throw new Error('No dialogue intervals inside clip bounds');
+      }
+      this.generatedCount = clips.length;
+      this.after = replaceClipWithGeneratedClips(timeline, clip.id, clips);
+    }
+    this.accessor.setTimeline(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setTimeline(this.before);
+    }
+  }
+}
+
+export class BrollInsertCommand implements Command {
+  readonly description = 'Insert B-roll clips';
+  private before?: Timeline;
+  private after?: Timeline;
+
+  constructor(private readonly accessor: TimelineAccessor, private readonly clips: SmartRoughCutVisualClip[]) {}
+
+  execute(): void {
+    const timeline = this.accessor.getTimeline();
+    this.before ??= timeline;
+    if (!this.after) {
+      if (this.clips.length === 0) {
+        throw new Error('No B-roll clips to insert');
+      }
+      this.after = insertGeneratedClips(timeline, this.clips);
+    }
+    this.accessor.setTimeline(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setTimeline(this.before);
+    }
+  }
+}
+
+export class RhythmAssembleCommand implements Command {
+  readonly description = 'Rhythm assemble clips';
+  private before?: Timeline;
+  private after?: Timeline;
+  private generatedCount = 0;
+
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clipIds: string[],
+    private readonly beatTimes: number[],
+    private readonly targetTrackId?: string
+  ) {}
+
+  get clipCount(): number {
+    return this.generatedCount;
+  }
+
+  execute(): void {
+    const timeline = this.accessor.getTimeline();
+    this.before ??= timeline;
+    if (!this.after) {
+      const selected = new Set(this.clipIds);
+      const clips = timeline.tracks
+        .flatMap((track) => track.clips)
+        .filter((clip): clip is SmartRoughCutVisualClip => selected.has(clip.id) && (clip.type === 'video' || clip.type === 'image'));
+      const assembled = buildRhythmAssembleClips(clips, this.beatTimes, this.targetTrackId);
+      if (assembled.length === 0) {
+        throw new Error('No rhythm clips to assemble');
+      }
+      this.generatedCount = assembled.length;
+      const withoutSources = removeClipsFromTimeline(timeline, new Set(clips.map((clip) => clip.id)));
+      this.after = insertGeneratedClips(withoutSources, assembled);
+    }
+    this.accessor.setTimeline(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setTimeline(this.before);
+    }
+  }
+}
+
+function replaceClipWithGeneratedClips(timeline: Timeline, sourceClipId: string, clips: Clip[]): Timeline {
+  const withoutSource = removeClip(timeline, sourceClipId).timeline;
+  return insertGeneratedClips(withoutSource, clips);
+}
+
+function insertGeneratedClips(timeline: Timeline, clips: Clip[]): Timeline {
+  let next = timeline;
+  for (const clip of clips) {
+    const track = findTrack(next, clip.trackId);
+    if (track.clips.some((item) => item.id === clip.id)) {
+      throw new Error(`Clip ${clip.id} already exists`);
+    }
+    if (detectOverlap(track, clip)) {
+      throw new Error('Clip overlaps another clip on this track');
+    }
+    next = insertClip(next, clip);
+  }
+  return sortTimelineClips(next);
+}
+
+function sortTimelineClips(timeline: Timeline): Timeline {
+  return {
+    ...timeline,
+    tracks: timeline.tracks.map((track) => ({
+      ...track,
+      clips: [...track.clips].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id))
+    }))
+  };
 }
 
 export class DeleteClipCommand implements Command {

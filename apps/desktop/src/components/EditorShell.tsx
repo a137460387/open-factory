@@ -379,6 +379,7 @@ const TimelineSearchPanel = lazy(() => import('../timeline-search/TimelineSearch
 const SnapshotNameDialog = lazy(() => import('../project-snapshots/SnapshotNameDialog').then((module) => ({ default: module.SnapshotNameDialog })));
 const SnapshotHistoryDialog = lazy(() => import('../project-snapshots/SnapshotHistoryDialog').then((module) => ({ default: module.SnapshotHistoryDialog })));
 const SnapshotVersionCompareDialog = lazy(() => import('../project-snapshots/SnapshotVersionCompareDialog').then((module) => ({ default: module.SnapshotVersionCompareDialog })));
+const TimelineCompareDialog = lazy(() => import('../timeline-compare/TimelineCompareDialog').then((module) => ({ default: module.TimelineCompareDialog })));
 const ReleaseWorkflowDialog = lazy(() => import('../release/ReleaseWorkflowDialog').then((module) => ({ default: module.ReleaseWorkflowDialog })));
 const ThumbnailGeneratorDialog = lazy(() => import('../thumbnail/ThumbnailGeneratorDialog').then((module) => ({ default: module.ThumbnailGeneratorDialog })));
 
@@ -471,6 +472,7 @@ export function EditorShell() {
   const [snapshotNameOpen, setSnapshotNameOpen] = useState(false);
   const [snapshotHistoryOpen, setSnapshotHistoryOpen] = useState(false);
   const [snapshotCompareOpen, setSnapshotCompareOpen] = useState(false);
+  const [timelineCompareOpen, setTimelineCompareOpen] = useState(false);
   const [releaseWorkflowOpen, setReleaseWorkflowOpen] = useState(false);
   const [projectEncryptionSaveOpen, setProjectEncryptionSaveOpen] = useState(false);
   const [projectPasswordRequest, setProjectPasswordRequest] = useState<ProjectPasswordRequest | undefined>();
@@ -3940,6 +3942,7 @@ export function EditorShell() {
           onSaveSnapshot={() => setSnapshotNameOpen(true)}
           onOpenSnapshotHistory={() => setSnapshotHistoryOpen(true)}
           onOpenSnapshotCompare={() => setSnapshotCompareOpen(true)}
+          onOpenTimelineCompare={() => setTimelineCompareOpen(true)}
           onImportMedia={() => void importMedia()}
           onBatchTranscode={() => openBatchTranscode()}
           onOpenBatchWatermark={() => setBatchWatermarkOpen(true)}
@@ -4323,6 +4326,9 @@ export function EditorShell() {
           ) : null}
           {snapshotCompareOpen ? (
             <SnapshotVersionCompareDialog project={project} projectPath={projectPath} onApply={applySnapshotDiffSelection} onClose={() => setSnapshotCompareOpen(false)} />
+          ) : null}
+          {timelineCompareOpen ? (
+            <TimelineCompareDialog project={project} projectPath={projectPath} onApply={applySnapshotDiffSelection} onClose={() => setTimelineCompareOpen(false)} />
           ) : null}
           {releaseWorkflowOpen ? (
             <ReleaseWorkflowDialog

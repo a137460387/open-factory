@@ -62,6 +62,7 @@ export * from './scene-reorder';
 export * from './vfr';
 export * from './beats';
 export * from './scene-cuts';
+export * from './smart-rough-cut-v2';
 export * from './storyboard';
 export * from './canvas-transform';
 export * from './masks/path-mask';

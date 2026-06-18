@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { applyTimelineVersionDiffSelection, createTrack, diffTimelineSnapshots, diffTimelineVersions } from '../src';
+import {
+  applyTimelineVersionDiffSelection,
+  calculateTimelineCompareScrollSync,
+  createTrack,
+  diffTimelineSnapshots,
+  diffTimelineVersions,
+  getTimelineVersionDiffNavigationIndex
+} from '../src';
 import { makeAudioClip, makeSubtitleClip, makeTextClip, makeTimeline, makeVideoClip } from './test-utils';
 
 describe('timeline snapshot compare', () => {
@@ -28,22 +35,26 @@ describe('timeline snapshot compare', () => {
     expect(diffTimelineSnapshots(current, snapshot)).toEqual([{ start: 0, end: 3 }]);
   });
 
-  it('classifies added, deleted, and modified clips with changed fields', () => {
+  it('classifies added, deleted, modified, and moved clips with changed fields', () => {
     const before = makeTimeline([
       makeVideoClip({ id: 'clip-a', start: 0, duration: 2, name: 'A' }),
+      makeVideoClip({ id: 'clip-moved', start: 2, duration: 1, name: 'Moved' }),
       makeVideoClip({ id: 'clip-deleted', start: 3, duration: 1, name: 'Deleted' })
     ]);
     const after = makeTimeline([
       makeVideoClip({ id: 'clip-a', start: 0, duration: 3, name: 'A changed' }),
+      makeVideoClip({ id: 'clip-moved', start: 5, duration: 1, name: 'Moved' }),
       makeVideoClip({ id: 'clip-added', start: 4, duration: 1, name: 'Added' })
     ]);
 
     const diff = diffTimelineVersions(before, after);
 
-    expect(diff.summary).toEqual({ added: 1, deleted: 1, modified: 1, trackChanges: 0 });
+    expect(diff.summary).toEqual({ added: 1, deleted: 1, modified: 2, trackChanges: 0 });
+    expect(diff.items.map((item) => item.type)).toEqual(expect.arrayContaining(['clip-added', 'clip-deleted', 'clip-modified', 'clip-moved']));
     expect(diff.items.find((item) => item.id === 'clip-modified:clip-a')?.fields.map((field) => field.field)).toEqual(
       expect.arrayContaining(['duration', 'name'])
     );
+    expect(diff.items.find((item) => item.id === 'clip-moved:clip-moved')?.fields).toEqual([{ field: 'start', before: 2, after: 5 }]);
   });
 
   it('applies only selected snapshot differences to a target timeline', () => {
@@ -192,5 +203,33 @@ describe('timeline snapshot compare', () => {
     );
     expect(moved.tracks.find((track) => track.id === 'track-text')?.clips).toEqual([]);
     expect(moved.tracks.find((track) => track.id === 'track-subtitle')?.clips[0]).toMatchObject({ id: 'title', text: 'Final' });
+  });
+
+  it('cherry-picks a moved clip by applying its new timeline position', () => {
+    const current = makeTimeline([makeVideoClip({ id: 'move-me', start: 0, duration: 2 })]);
+    const source = makeTimeline([makeVideoClip({ id: 'move-me', start: 4, duration: 2 })]);
+
+    const diff = diffTimelineVersions(current, source);
+    const merged = applyTimelineVersionDiffSelection(current, source, ['clip-moved:move-me']);
+
+    expect(diff.items.find((item) => item.id === 'clip-moved:move-me')).toBeTruthy();
+    expect(merged.tracks[0].clips[0]).toMatchObject({ id: 'move-me', start: 4 });
+  });
+
+  it('calculates previous and next diff navigation indexes with wrapping', () => {
+    const diff = diffTimelineVersions(
+      makeTimeline([makeVideoClip({ id: 'a', start: 0 }), makeVideoClip({ id: 'b', start: 2 })]),
+      makeTimeline([makeVideoClip({ id: 'a', start: 1 }), makeVideoClip({ id: 'c', start: 3 })])
+    );
+
+    expect(getTimelineVersionDiffNavigationIndex(diff.items, -1, 'next')).toBe(0);
+    expect(getTimelineVersionDiffNavigationIndex(diff.items, 0, 'next')).toBe(1);
+    expect(getTimelineVersionDiffNavigationIndex(diff.items, 0, 'previous')).toBe(diff.items.length - 1);
+    expect(getTimelineVersionDiffNavigationIndex([], 0, 'next')).toBe(-1);
+  });
+
+  it('calculates synchronized timeline compare scroll offsets', () => {
+    expect(calculateTimelineCompareScrollSync(200, 1000, 500, 1600, 600)).toBe(400);
+    expect(calculateTimelineCompareScrollSync(200, 400, 500, 1600, 600)).toBe(0);
   });
 });

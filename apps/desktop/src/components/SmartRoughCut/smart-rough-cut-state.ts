@@ -1,4 +1,4 @@
-export type SmartRoughCutStep = 'scene' | 'silence' | 'whisper';
+export type SmartRoughCutStep = 'scene' | 'silence' | 'whisper' | 'dialogue' | 'broll' | 'rhythm';
 export type SmartRoughCutStepStatus = 'idle' | 'running' | 'complete' | 'error';
 
 export interface SmartRoughCutStepState {
@@ -9,6 +9,9 @@ export interface SmartRoughCutReport {
   sceneSplits: number;
   removedSilenceSeconds: number;
   subtitleClips: number;
+  dialogueClips: number;
+  brollClips: number;
+  rhythmClips: number;
 }
 
 export interface SmartRoughCutState {
@@ -23,12 +26,18 @@ export function createInitialSmartRoughCutState(): SmartRoughCutState {
     steps: {
       scene: { status: 'idle' },
       silence: { status: 'idle' },
-      whisper: { status: 'idle' }
+      whisper: { status: 'idle' },
+      dialogue: { status: 'idle' },
+      broll: { status: 'idle' },
+      rhythm: { status: 'idle' }
     },
     report: {
       sceneSplits: 0,
       removedSilenceSeconds: 0,
-      subtitleClips: 0
+      subtitleClips: 0,
+      dialogueClips: 0,
+      brollClips: 0,
+      rhythmClips: 0
     }
   };
 }
