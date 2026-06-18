@@ -12,7 +12,9 @@ import {
   ApplySplitLayoutCommand,
   BatchImportSubtitleCommand,
   BatchAlignToBeatCommand,
+  BatchRenameMediaCommand,
   BatchShiftClipsCommand,
+  BatchUpdateMetadataCommand,
   AddTrackCommand,
   AddTransitionCommand,
   buildConformMediaReplacements,
@@ -59,6 +61,7 @@ import {
   detectSubtitleDataOverlaps,
   dirname,
   round,
+  replaceMediaPathBasename,
   getSplitLayoutDefinition,
   getClipSpeed,
   getClipSourceVisibleDuration,
@@ -97,6 +100,7 @@ import {
   type ProjectSpeaker,
   type ReviewAnnotation,
   type Clip,
+  type BatchEditableMediaMetadata,
   type ClipContentAnalysis,
   type BeatSensitivity,
   type KeyframeProperty,
@@ -114,6 +118,7 @@ import {
   type AutoAudioSyncApplyMode,
   type AutoAudioSyncResult,
   type MediaVersionCompareRequest,
+  type MediaRenamePreviewItem,
   type SmartDuplicateGroup,
   createOperationRecording,
   recordOperationCommand,
@@ -2324,6 +2329,67 @@ export function EditorShell() {
     commandManager.execute(new MoveMediaToFolderCommand(projectAccessor, assetIds, folderId));
   }, []);
 
+  const batchUpdateMediaMetadata = useCallback((assetIds: string[], metadata: BatchEditableMediaMetadata) => {
+    if (assetIds.length === 0) {
+      return;
+    }
+    commandManager.execute(new BatchUpdateMetadataCommand(projectAccessor, assetIds.map((assetId) => ({ assetId, metadata }))));
+    showToast({ kind: 'success', title: zhCN.mediaBin.batchEditMetadata, message: zhCN.mediaBin.batchMetadataUpdated(assetIds.length) });
+  }, []);
+
+  const batchRenameMedia = useCallback(async (_assetIds: string[], preview: MediaRenamePreviewItem[], renameFiles: boolean) => {
+    const state = useEditorStore.getState();
+    const assetById = new Map(state.project.media.map((asset) => [asset.id, asset]));
+    const renamePlan = preview
+      .filter((item) => item.changed)
+      .map((item) => {
+        const asset = assetById.get(item.assetId);
+        return asset
+          ? {
+              assetId: item.assetId,
+              name: item.nextName,
+              oldPath: asset.path,
+              nextPath: renameFiles ? replaceMediaPathBasename(asset.path, item.nextName) : asset.path
+            }
+          : undefined;
+      })
+      .filter((item): item is { assetId: string; name: string; oldPath: string; nextPath: string } => Boolean(item));
+    if (renamePlan.length === 0) {
+      return;
+    }
+    let commandExecuted = false;
+    try {
+      commandManager.execute(
+        new BatchRenameMediaCommand(
+          projectAccessor,
+          renamePlan.map((item) => ({
+            assetId: item.assetId,
+            name: item.name,
+            path: renameFiles ? item.nextPath : undefined
+          }))
+        )
+      );
+      commandExecuted = true;
+      if (renameFiles) {
+        for (const item of renamePlan) {
+          if (item.oldPath !== item.nextPath) {
+            await bridgeMoveFile(item.oldPath, item.nextPath);
+          }
+        }
+      }
+      showToast({ kind: 'success', title: zhCN.mediaBin.batchRename, message: zhCN.mediaBin.batchRenameCompleted(renamePlan.length) });
+    } catch (error) {
+      if (commandExecuted && renameFiles) {
+        commandManager.undo();
+      }
+      showToast({
+        kind: 'error',
+        title: zhCN.mediaBin.batchRenameFailed,
+        message: error instanceof Error ? error.message : zhCN.mediaBin.batchRenameFailedMessage
+      });
+    }
+  }, []);
+
   const relinkMedia = useCallback(
     async (assetId: string) => {
       const asset = project.media.find((item) => item.id === assetId);
@@ -3962,6 +4028,8 @@ export function EditorShell() {
                   onSetLabel={(assetId, labelColor) => setMediaMetadata(assetId, { ...project.mediaMetadata[assetId], labelColor })}
                   onSetRating={(assetId, rating) => setMediaMetadata(assetId, { ...project.mediaMetadata[assetId], rating })}
                   onSetFlag={(assetId, flag) => setMediaMetadata(assetId, { ...project.mediaMetadata[assetId], flag })}
+                  onBatchUpdateMetadata={batchUpdateMediaMetadata}
+                  onBatchRenameMedia={batchRenameMedia}
                   onAddTitleTemplate={addTitleTemplate}
                   onCreateFolder={createMediaFolder}
                   onRenameFolder={renameMediaFolder}

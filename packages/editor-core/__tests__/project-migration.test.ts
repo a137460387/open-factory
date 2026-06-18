@@ -443,6 +443,11 @@ describe('project schema migration', () => {
         labelColor: 'blue',
         rating: 5,
         flag: 'green',
+        title: 'Scene title',
+        author: 'Open Factory',
+        description: 'Clean-room project media',
+        copyright: 'Copyright 2026',
+        date: '2026-06-18',
         versions: [
           { id: 'version-2', label: 'v2', assetId: 'asset-2', path: 'C:/Videos/sample-v2.mp4', name: 'sample-v2.mp4', createdAt: '2026-06-16T00:00:00.000Z', duration: 18 },
           { id: 'invalid-version', label: 'bad', assetId: '', path: '', name: '', createdAt: '' }
@@ -461,6 +466,11 @@ describe('project schema migration', () => {
         labelColor: 'blue',
         rating: 5,
         flag: 'green',
+        title: 'Scene title',
+        author: 'Open Factory',
+        description: 'Clean-room project media',
+        copyright: 'Copyright 2026',
+        date: '2026-06-18',
         versions: [{ id: 'version-2', label: 'v2', assetId: 'asset-2', path: 'C:/Videos/sample-v2.mp4', name: 'sample-v2.mp4', createdAt: '2026-06-16T00:00:00.000Z', duration: 18 }],
         fingerprint: { version: 1, kind: 'video', algorithm: 'phash', hash: 'abc123', frameHashes: ['abc123'], rmsVector: [1] }
       }

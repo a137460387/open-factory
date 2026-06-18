@@ -48,6 +48,7 @@ import {
   normalizeProtectedRanges,
   normalizeProjectSettings,
   normalizeProjectSpeakers,
+  normalizeMediaMetadataEntry,
   normalizeQualityEnhancement,
   normalizeSequenceFrameRate,
   normalizeSlowMotionMode,
@@ -134,6 +135,7 @@ import {
   setMediaFolderCollapsed,
   type MediaFolderInput
 } from '../media-folders';
+import type { BatchEditableMediaMetadata } from '../media-batch';
 import { createKeyframe, removeKeyframeForProperty, setKeyframeForProperty } from '../keyframes';
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
 import { normalizeProjectDocumentation } from '../project/documentation';
@@ -1142,6 +1144,95 @@ export class MergeMediaCommand implements Command {
       }
       assertMediaAssetsExist(this.before, new Set([this.keepAssetId, ...removeIds]));
       this.after = mergeMediaReferences(this.before, this.keepAssetId, removeIds);
+    }
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export interface BatchUpdateMetadataCommandItem {
+  assetId: string;
+  metadata: BatchEditableMediaMetadata;
+}
+
+export class BatchUpdateMetadataCommand implements Command {
+  readonly description = 'Batch update media metadata';
+  private before?: Project;
+  private after?: Project;
+
+  constructor(private readonly accessor: ProjectAccessor, private readonly updates: BatchUpdateMetadataCommandItem[]) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    if (!this.after) {
+      const assetIds = normalizeAssetIdSet(this.updates.map((update) => update.assetId));
+      assertMediaAssetsExist(this.before, assetIds);
+      const mediaMetadata = { ...this.before.mediaMetadata };
+      for (const update of this.updates) {
+        const current = mediaMetadata[update.assetId] ?? {};
+        const normalized = normalizeMediaMetadataEntry({
+          ...current,
+          ...update.metadata
+        });
+        if (normalized) {
+          mediaMetadata[update.assetId] = normalized;
+        } else {
+          delete mediaMetadata[update.assetId];
+        }
+      }
+      this.after = touchProject({
+        ...this.before,
+        mediaMetadata
+      });
+    }
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export interface BatchRenameMediaCommandItem {
+  assetId: string;
+  name: string;
+  path?: string;
+}
+
+export class BatchRenameMediaCommand implements Command {
+  readonly description = 'Batch rename media';
+  private before?: Project;
+  private after?: Project;
+
+  constructor(private readonly accessor: ProjectAccessor, private readonly renames: BatchRenameMediaCommandItem[]) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    if (!this.after) {
+      const assetIds = normalizeAssetIdSet(this.renames.map((rename) => rename.assetId));
+      assertMediaAssetsExist(this.before, assetIds);
+      const renameByAssetId = new Map(this.renames.map((rename) => [rename.assetId, rename]));
+      this.after = touchProject({
+        ...this.before,
+        media: this.before.media.map((asset) => {
+          const rename = renameByAssetId.get(asset.id);
+          if (!rename) {
+            return asset;
+          }
+          return {
+            ...asset,
+            name: rename.name.trim() || asset.name,
+            path: rename.path?.trim() || asset.path
+          };
+        })
+      });
     }
     this.accessor.setProject(this.after);
   }

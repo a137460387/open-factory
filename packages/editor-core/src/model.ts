@@ -303,6 +303,11 @@ export function normalizeMediaMetadataEntry(metadata: MediaMetadata | undefined)
   const flag = normalizeMediaFlag(metadata?.flag);
   const versions = normalizeMediaVersions(metadata?.versions);
   const fingerprint = normalizeMediaFingerprint(metadata?.fingerprint);
+  const title = normalizeMediaMetadataText(metadata?.title, 160);
+  const author = normalizeMediaMetadataText(metadata?.author, 160);
+  const description = normalizeMediaMetadataText(metadata?.description, 2000);
+  const copyright = normalizeMediaMetadataText(metadata?.copyright, 240);
+  const date = normalizeMediaMetadataText(metadata?.date, 40);
   const normalized: MediaMetadata = {};
   if (labelColor) {
     normalized.labelColor = labelColor;
@@ -319,7 +324,27 @@ export function normalizeMediaMetadataEntry(metadata: MediaMetadata | undefined)
   if (fingerprint) {
     normalized.fingerprint = fingerprint;
   }
+  if (title) {
+    normalized.title = title;
+  }
+  if (author) {
+    normalized.author = author;
+  }
+  if (description) {
+    normalized.description = description;
+  }
+  if (copyright) {
+    normalized.copyright = copyright;
+  }
+  if (date) {
+    normalized.date = date;
+  }
   return Object.keys(normalized).length > 0 ? normalized : undefined;
+}
+
+function normalizeMediaMetadataText(value: string | undefined, maxLength: number): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed.slice(0, maxLength) : undefined;
 }
 
 export function normalizeMediaColorProfile(profile: Partial<MediaColorProfile> | undefined): MediaColorProfile | undefined {

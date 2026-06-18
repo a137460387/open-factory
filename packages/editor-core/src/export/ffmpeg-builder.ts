@@ -72,6 +72,7 @@ import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
 import { triangulatePathMask } from '../masks/path-mask';
 import { buildMotionBlurExportFilter, normalizeMotionBlurParams } from '../motion-blur';
 import { flattenMulticamProjectForExport } from '../multicam';
+import { collectExportMediaMetadata } from '../media-batch';
 import { buildReframeCropFilter, clampReframeOffset, isReframeEnabled, normalizeTargetAspectRatio, resolveReframeDimensions } from '../reframe';
 import { calculateSpatialDistanceGain, isDefaultSpatialAudio, mapSpatialXToPanGains, normalizeSpatialAudio } from '../spatial-audio';
 import { calculateSpeedCurveSourceDuration, getClipSourceVisibleDuration, getClipSpeed, getRenderableTracks, getTimelinePlaybackDuration, getTrackPan, getTrackVolume } from '../timeline';
@@ -261,6 +262,7 @@ export function buildExportProjectFromProject(project: Project, options: BuildEx
     name: exportSourceProject.name,
     settings,
     masterVolume: normalizeMasterVolume(exportSourceProject.masterVolume),
+    metadata: collectExportMediaMetadata(exportSourceProject),
     timeline: buildExportTimeline(primaryTimeline, mediaById, options),
     sequences: getProjectSequences(exportSourceProject)
       .filter((sequence) => sequence.id !== 'sequence-main')
@@ -862,6 +864,7 @@ export function buildFfmpegExportPlan(
           ...(audioOnly
             ? []
             : videoEncodingArgs),
+          ...buildExportContainerMetadataArgs(project.metadata),
           ...(audioOnly ? [] : buildExportColorMetadataArgs(settings)),
           ...sphericalMetadataArgs,
           '-c:a',
@@ -3074,6 +3077,23 @@ function buildExportColorMetadataArgs(settings: ExportSettings): string[] {
     args.push(...buildIccMetadataArgs(colorManagement.outputColorSpace));
   }
   return args;
+}
+
+function buildExportContainerMetadataArgs(metadata: ExportProject['metadata']): string[] {
+  if (!metadata) {
+    return [];
+  }
+  const entries: Array<[string, string | undefined]> = [
+    ['title', metadata.title],
+    ['artist', metadata.author],
+    ['comment', metadata.description],
+    ['copyright', metadata.copyright],
+    ['date', metadata.date]
+  ];
+  return entries.flatMap(([key, value]) => {
+    const normalized = value?.replace(/[\r\n\t]+/g, ' ').trim();
+    return normalized ? ['-metadata', `${key}=${normalized}`] : [];
+  });
 }
 
 function buildExportColorManagementFilters(settings: ExportSettings): string[] {

@@ -1367,6 +1367,12 @@ const zh = {
     rootFolder: '根目录',
     newAdjustmentLayer: '新建调整层',
     batchTranscode: '批量转码',
+    batchEditMetadata: '批量编辑元数据',
+    batchRename: '批量重命名',
+    batchMetadataUpdated: (count: number) => `已更新 ${count} 个素材的元数据`,
+    batchRenameCompleted: (count: number) => `已重命名 ${count} 个素材`,
+    batchRenameFailed: '批量重命名失败',
+    batchRenameFailedMessage: '项目内引用已回退，磁盘文件未继续重命名。',
     batchGenerateCovers: '批量生成封面',
     batchGenerateThumbnails: (count: number) => (count > 0 ? `生成缩略图 (${count})` : '生成缩略图'),
     selectForThumbnail: '选择用于批量生成缩略图',
@@ -1397,6 +1403,43 @@ const zh = {
       lut: 'LUT',
       'workspace-layout': '工作区布局',
       'custom-layout': '自定义布局'
+    },
+    batchMetadataDialog: {
+      title: '批量编辑元数据',
+      summary: (count: number) => `将非空字段写入 ${count} 个素材`,
+      apply: '应用元数据',
+      fields: {
+        title: '标题',
+        author: '作者',
+        description: '描述',
+        copyright: '版权',
+        date: '日期'
+      }
+    },
+    batchRenameDialog: {
+      title: '批量重命名',
+      summary: (count: number) => `预览 ${count} 个素材的新引用名`,
+      template: '文件名模板',
+      variableHint: '模板变量',
+      variableTokens: ['{index:03d}', '{date}', '{originalName}', '{originalStem}', '{extension}'],
+      startIndex: '起始序号',
+      date: '日期变量',
+      find: '查找',
+      replace: '替换为',
+      caseTransform: '大小写转换',
+      caseOptions: {
+        none: '不转换',
+        lower: '小写',
+        upper: '大写',
+        title: '标题大小写'
+      },
+      sequencePrefix: '添加序号前缀',
+      datePrefix: '添加日期前缀',
+      removeSpecialCharacters: '去除特殊字符',
+      renameFiles: '同时重命名磁盘文件',
+      preview: '预览',
+      conflictSuffix: (suffix: number) => `冲突已追加 _${suffix}`,
+      confirm: '确认重命名'
     },
     gifExport: {
       title: '导出为 GIF',
@@ -5703,6 +5746,12 @@ const enOverrides = {
     rootFolder: 'Root',
     newAdjustmentLayer: 'New Adjustment Layer',
     batchTranscode: 'Batch Transcode',
+    batchEditMetadata: 'Batch Edit Metadata',
+    batchRename: 'Batch Rename',
+    batchMetadataUpdated: (count: number) => `Updated metadata for ${count} assets`,
+    batchRenameCompleted: (count: number) => `Renamed ${count} assets`,
+    batchRenameFailed: 'Batch rename failed',
+    batchRenameFailedMessage: 'Project references were rolled back and disk renaming stopped.',
     batchGenerateCovers: 'Batch Covers',
     batchGenerateThumbnails: (count: number) => (count > 0 ? `Generate Thumbnails (${count})` : 'Generate Thumbnails'),
     selectForThumbnail: 'Select for batch thumbnail generation',
@@ -5733,6 +5782,43 @@ const enOverrides = {
       lut: 'LUT',
       'workspace-layout': 'Workspace Layout',
       'custom-layout': 'Custom Layout'
+    },
+    batchMetadataDialog: {
+      title: 'Batch Edit Metadata',
+      summary: (count: number) => `Write non-empty fields to ${count} assets`,
+      apply: 'Apply Metadata',
+      fields: {
+        title: 'Title',
+        author: 'Author',
+        description: 'Description',
+        copyright: 'Copyright',
+        date: 'Date'
+      }
+    },
+    batchRenameDialog: {
+      title: 'Batch Rename',
+      summary: (count: number) => `Preview new reference names for ${count} assets`,
+      template: 'Filename Template',
+      variableHint: 'Template Variables',
+      variableTokens: ['{index:03d}', '{date}', '{originalName}', '{originalStem}', '{extension}'],
+      startIndex: 'Start Index',
+      date: 'Date Variable',
+      find: 'Find',
+      replace: 'Replace With',
+      caseTransform: 'Case Transform',
+      caseOptions: {
+        none: 'None',
+        lower: 'Lowercase',
+        upper: 'Uppercase',
+        title: 'Title Case'
+      },
+      sequencePrefix: 'Add sequence prefix',
+      datePrefix: 'Add date prefix',
+      removeSpecialCharacters: 'Remove special characters',
+      renameFiles: 'Also rename disk files',
+      preview: 'Preview',
+      conflictSuffix: (suffix: number) => `Conflict resolved with _${suffix}`,
+      confirm: 'Rename'
     },
     gifExport: {
       title: 'Export as GIF',

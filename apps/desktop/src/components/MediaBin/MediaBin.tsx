@@ -4,13 +4,16 @@ import {
   CONTENT_SCENE_TYPES,
   collectSmartAlbums,
   collectFingerprintReferences,
+  DEFAULT_MEDIA_RENAME_TEMPLATE,
   filterMediaAssets,
   getMediaFolderDepth,
   isFrameRateMismatch,
   listFingerprintSourcePaths,
   getMediaVersionLabel,
   shouldGenerateProxy,
+  buildMediaRenamePreview,
   type MediaAsset,
+  type BatchEditableMediaMetadata,
   type ClipContentAnalysis,
   type ContentSceneType,
   type MediaFlag,
@@ -18,6 +21,8 @@ import {
   type MediaLabelColor,
   type MediaMetadata,
   type MediaMetadataFilter,
+  type MediaRenamePreviewItem,
+  type MediaRenameRules,
   type SmartAlbumId,
   type TitleTemplateId
 } from '@open-factory/editor-core';
@@ -61,6 +66,8 @@ interface MediaBinProps {
   onSetLabel(assetId: string, labelColor?: MediaLabelColor): void;
   onSetRating(assetId: string, rating: number): void;
   onSetFlag(assetId: string, flag?: MediaFlag): void;
+  onBatchUpdateMetadata(assetIds: string[], metadata: BatchEditableMediaMetadata): void;
+  onBatchRenameMedia(assetIds: string[], preview: MediaRenamePreviewItem[], renameFiles: boolean): Promise<void> | void;
   onAddTitleTemplate(templateId: TitleTemplateId): void;
   onCreateFolder(parentId?: string | null): void;
   onRenameFolder(folderId: string, name: string): void;
@@ -101,6 +108,8 @@ export function MediaBin({
   onSetLabel,
   onSetRating,
   onSetFlag,
+  onBatchUpdateMetadata,
+  onBatchRenameMedia,
   onAddTitleTemplate,
   onCreateFolder,
   onRenameFolder,
@@ -119,6 +128,8 @@ export function MediaBin({
   const [mediaInfo, setMediaInfo] = useState<MediaInfoState>();
   const [sourcePaths, setSourcePaths] = useState<MediaSourcePathsState>();
   const [selectedMediaIds, setSelectedMediaIds] = useState<Set<string>>(() => new Set());
+  const [batchMetadataAssetIds, setBatchMetadataAssetIds] = useState<string[]>();
+  const [batchRenameAssetIds, setBatchRenameAssetIds] = useState<string[]>();
   const missingCount = media.filter((asset) => asset.missing).length;
   const smartAlbums = collectSmartAlbums(media, Date.now(), mediaMetadata);
   const smartAlbumIds = smartAlbumId === 'none' ? undefined : new Set(smartAlbums.find((album) => album.id === smartAlbumId)?.assetIds ?? []);
@@ -152,6 +163,8 @@ export function MediaBin({
     () => media.filter((asset) => asset.type === 'video' && selectedMediaIds.has(asset.id)).map((asset) => asset.id),
     [media, selectedMediaIds]
   );
+  const batchMetadataAssets = useMemo(() => getMediaAssetsByIdOrder(media, batchMetadataAssetIds), [media, batchMetadataAssetIds]);
+  const batchRenameAssets = useMemo(() => getMediaAssetsByIdOrder(media, batchRenameAssetIds), [media, batchRenameAssetIds]);
 
   const toggleSelectedMedia = (assetId: string) => {
     setSelectedMediaIds((current) => {
@@ -163,6 +176,27 @@ export function MediaBin({
       }
       return next;
     });
+  };
+
+  const resolveBatchAssetIds = (assetId: string) => {
+    if (!selectedMediaIds.has(assetId)) {
+      return [assetId];
+    }
+    return media.filter((asset) => selectedMediaIds.has(asset.id)).map((asset) => asset.id);
+  };
+
+  const openBatchMetadataEditor = (assetId: string) => {
+    const assetIds = resolveBatchAssetIds(assetId);
+    if (assetIds.length > 1) {
+      setBatchMetadataAssetIds(assetIds);
+    }
+  };
+
+  const openBatchRenameEditor = (assetId: string) => {
+    const assetIds = resolveBatchAssetIds(assetId);
+    if (assetIds.length > 1) {
+      setBatchRenameAssetIds(assetIds);
+    }
   };
 
   const updateMediaLibraryView = (patch: Partial<MediaLibraryViewSettings>) => {
@@ -493,6 +527,8 @@ export function MediaBin({
             onFindSources={findSourcePaths}
             selectedMediaIds={selectedMediaIds}
             onToggleSelected={toggleSelectedMedia}
+            onOpenBatchMetadata={openBatchMetadataEditor}
+            onOpenBatchRename={openBatchRenameEditor}
           />
         ) : (
           <div className="space-y-3">
@@ -524,6 +560,8 @@ export function MediaBin({
               onFindSources={findSourcePaths}
               selectedMediaIds={selectedMediaIds}
               onToggleSelected={toggleSelectedMedia}
+              onOpenBatchMetadata={openBatchMetadataEditor}
+              onOpenBatchRename={openBatchRenameEditor}
             />
             <RootMediaDropZone onMoveMediaToFolder={onMoveMediaToFolder} />
             <MediaCardGrid
@@ -548,14 +586,315 @@ export function MediaBin({
               onFindSources={findSourcePaths}
               selectedMediaIds={selectedMediaIds}
               onToggleSelected={toggleSelectedMedia}
+              onOpenBatchMetadata={openBatchMetadataEditor}
+              onOpenBatchRename={openBatchRenameEditor}
             />
           </div>
         )}
       </div>
       {mediaInfo ? <MediaInfoDialog state={mediaInfo} onClose={() => setMediaInfo(undefined)} /> : null}
       {sourcePaths ? <MediaSourcePathsDialog state={sourcePaths} onClose={() => setSourcePaths(undefined)} /> : null}
+      {batchMetadataAssets.length > 0 ? (
+        <BatchMetadataDialog
+          assets={batchMetadataAssets}
+          onClose={() => setBatchMetadataAssetIds(undefined)}
+          onSubmit={(metadata) => {
+            onBatchUpdateMetadata(batchMetadataAssets.map((asset) => asset.id), metadata);
+            setBatchMetadataAssetIds(undefined);
+          }}
+        />
+      ) : null}
+      {batchRenameAssets.length > 0 ? (
+        <BatchRenameDialog
+          assets={batchRenameAssets}
+          allAssets={media}
+          onClose={() => setBatchRenameAssetIds(undefined)}
+          onConfirm={(preview, renameFiles) => {
+            void Promise.resolve(onBatchRenameMedia(batchRenameAssets.map((asset) => asset.id), preview, renameFiles)).finally(() => setBatchRenameAssetIds(undefined));
+          }}
+        />
+      ) : null}
     </aside>
   );
+}
+
+function BatchMetadataDialog({
+  assets,
+  onClose,
+  onSubmit
+}: {
+  assets: MediaAsset[];
+  onClose(): void;
+  onSubmit(metadata: BatchEditableMediaMetadata): void;
+}) {
+  const t = zhCN.mediaBin.batchMetadataDialog;
+  const [title, setTitle] = useState('');
+  const [author, setAuthor] = useState('');
+  const [description, setDescription] = useState('');
+  const [copyright, setCopyright] = useState('');
+  const [date, setDate] = useState('');
+  const metadata = buildBatchMetadataPatch({ title, author, description, copyright, date });
+  const canSubmit = Object.keys(metadata).length > 0;
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" role="dialog" aria-modal="true" aria-labelledby="batch-metadata-title" data-testid="batch-metadata-dialog">
+      <form
+        className="w-full max-w-lg rounded-md border border-line bg-white p-4 shadow-soft"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (canSubmit) {
+            onSubmit(metadata);
+          }
+        }}
+      >
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold text-ink" id="batch-metadata-title">{t.title}</h2>
+            <p className="mt-1 text-xs text-slate-500">{t.summary(assets.length)}</p>
+          </div>
+          <button className="rounded p-1 text-slate-500 hover:bg-panel" type="button" aria-label={zhCN.common.close} onClick={onClose}>
+            <X size={16} />
+          </button>
+        </div>
+        <div className="grid gap-3">
+          <BatchTextField label={t.fields.title} value={title} onChange={setTitle} testId="batch-metadata-title-input" />
+          <BatchTextField label={t.fields.author} value={author} onChange={setAuthor} testId="batch-metadata-author-input" />
+          <label className="grid gap-1 text-xs font-semibold text-slate-700">
+            {t.fields.description}
+            <textarea
+              className="min-h-20 rounded-md border border-line px-2 py-1.5 text-sm font-normal text-ink outline-none focus:border-brand"
+              value={description}
+              data-testid="batch-metadata-description-input"
+              onChange={(event) => setDescription(event.target.value)}
+            />
+          </label>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <BatchTextField label={t.fields.copyright} value={copyright} onChange={setCopyright} testId="batch-metadata-copyright-input" />
+            <BatchTextField label={t.fields.date} value={date} onChange={setDate} testId="batch-metadata-date-input" />
+          </div>
+        </div>
+        <div className="mt-4 flex justify-end gap-2">
+          <button className="rounded-md border border-line px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-panel" type="button" onClick={onClose}>
+            {zhCN.common.cancel}
+          </button>
+          <button className="rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-40" type="submit" disabled={!canSubmit} data-testid="batch-metadata-confirm-button">
+            {t.apply}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function BatchRenameDialog({
+  assets,
+  allAssets,
+  onClose,
+  onConfirm
+}: {
+  assets: MediaAsset[];
+  allAssets: MediaAsset[];
+  onClose(): void;
+  onConfirm(preview: MediaRenamePreviewItem[], renameFiles: boolean): void;
+}) {
+  const t = zhCN.mediaBin.batchRenameDialog;
+  const [template, setTemplate] = useState(DEFAULT_MEDIA_RENAME_TEMPLATE);
+  const [sequencePrefix, setSequencePrefix] = useState(false);
+  const [datePrefix, setDatePrefix] = useState(false);
+  const [findText, setFindText] = useState('');
+  const [replaceText, setReplaceText] = useState('');
+  const [caseTransform, setCaseTransform] = useState<MediaRenameRules['caseTransform']>('none');
+  const [removeSpecialCharacters, setRemoveSpecialCharacters] = useState(false);
+  const [startIndex, setStartIndex] = useState(1);
+  const [date, setDate] = useState(formatBatchRenameDate(new Date()));
+  const [renameFiles, setRenameFiles] = useState(false);
+  const templateRef = useRef<HTMLInputElement>(null);
+  const rules = useMemo<MediaRenameRules>(
+    () => ({
+      template,
+      sequencePrefix,
+      datePrefix,
+      find: findText.trim() || undefined,
+      replace: replaceText,
+      caseTransform,
+      removeSpecialCharacters,
+      startIndex,
+      date
+    }),
+    [caseTransform, date, datePrefix, findText, removeSpecialCharacters, replaceText, sequencePrefix, startIndex, template]
+  );
+  const preview = useMemo(() => buildMediaRenamePreview(assets, allAssets, rules), [assets, allAssets, rules]);
+  const hasChanges = preview.some((item) => item.changed);
+  const insertTemplateToken = (token: string) => {
+    const input = templateRef.current;
+    const start = input?.selectionStart ?? template.length;
+    const end = input?.selectionEnd ?? template.length;
+    const next = `${template.slice(0, start)}${token}${template.slice(end)}`;
+    setTemplate(next);
+    requestAnimationFrame(() => {
+      templateRef.current?.focus();
+      templateRef.current?.setSelectionRange(start + token.length, start + token.length);
+    });
+  };
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" role="dialog" aria-modal="true" aria-labelledby="batch-rename-title" data-testid="batch-rename-dialog">
+      <form
+        className="grid max-h-[88vh] w-full max-w-3xl grid-rows-[auto_minmax(0,1fr)_auto] rounded-md border border-line bg-white shadow-soft"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (hasChanges) {
+            onConfirm(preview, renameFiles);
+          }
+        }}
+      >
+        <div className="flex items-start justify-between gap-3 border-b border-line p-4">
+          <div>
+            <h2 className="text-base font-semibold text-ink" id="batch-rename-title">{t.title}</h2>
+            <p className="mt-1 text-xs text-slate-500">{t.summary(assets.length)}</p>
+          </div>
+          <button className="rounded p-1 text-slate-500 hover:bg-panel" type="button" aria-label={zhCN.common.close} onClick={onClose}>
+            <X size={16} />
+          </button>
+        </div>
+        <div className="min-h-0 overflow-y-auto p-4">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(260px,0.9fr)]">
+            <div className="space-y-3">
+              <label className="grid gap-1 text-xs font-semibold text-slate-700">
+                {t.template}
+                <input
+                  ref={templateRef}
+                  className="rounded-md border border-line px-2 py-1.5 text-sm font-normal text-ink outline-none focus:border-brand"
+                  value={template}
+                  list="media-rename-template-variables"
+                  data-testid="batch-rename-template-input"
+                  onChange={(event) => setTemplate(event.target.value)}
+                />
+              </label>
+              <datalist id="media-rename-template-variables">
+                {t.variableTokens.map((token) => <option key={token} value={token} />)}
+              </datalist>
+              <div className="flex flex-wrap gap-1" aria-label={t.variableHint}>
+                {t.variableTokens.map((token) => (
+                  <button key={token} className="rounded border border-line bg-panel px-2 py-1 text-[11px] font-semibold text-slate-600 hover:bg-white" type="button" onClick={() => insertTemplateToken(token)}>
+                    {token}
+                  </button>
+                ))}
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <label className="grid gap-1 text-xs font-semibold text-slate-700">
+                  {t.startIndex}
+                  <input
+                    className="rounded-md border border-line px-2 py-1.5 text-sm font-normal text-ink outline-none focus:border-brand"
+                    type="number"
+                    min={1}
+                    value={startIndex}
+                    onChange={(event) => setStartIndex(Math.max(1, Number(event.target.value) || 1))}
+                  />
+                </label>
+                <BatchTextField label={t.date} value={date} onChange={setDate} testId="batch-rename-date-input" />
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <BatchTextField label={t.find} value={findText} onChange={setFindText} testId="batch-rename-find-input" />
+                <BatchTextField label={t.replace} value={replaceText} onChange={setReplaceText} testId="batch-rename-replace-input" />
+              </div>
+              <label className="grid gap-1 text-xs font-semibold text-slate-700">
+                {t.caseTransform}
+                <select className="rounded-md border border-line px-2 py-1.5 text-sm font-normal text-ink outline-none focus:border-brand" value={caseTransform} onChange={(event) => setCaseTransform(event.target.value as MediaRenameRules['caseTransform'])}>
+                  <option value="none">{t.caseOptions.none}</option>
+                  <option value="lower">{t.caseOptions.lower}</option>
+                  <option value="upper">{t.caseOptions.upper}</option>
+                  <option value="title">{t.caseOptions.title}</option>
+                </select>
+              </label>
+              <div className="grid gap-2 text-xs font-semibold text-slate-700">
+                <label className="inline-flex items-center gap-2">
+                  <input className="h-4 w-4 accent-brand" type="checkbox" checked={sequencePrefix} onChange={(event) => setSequencePrefix(event.target.checked)} />
+                  {t.sequencePrefix}
+                </label>
+                <label className="inline-flex items-center gap-2">
+                  <input className="h-4 w-4 accent-brand" type="checkbox" checked={datePrefix} onChange={(event) => setDatePrefix(event.target.checked)} />
+                  {t.datePrefix}
+                </label>
+                <label className="inline-flex items-center gap-2">
+                  <input className="h-4 w-4 accent-brand" type="checkbox" checked={removeSpecialCharacters} onChange={(event) => setRemoveSpecialCharacters(event.target.checked)} />
+                  {t.removeSpecialCharacters}
+                </label>
+                <label className="inline-flex items-center gap-2">
+                  <input className="h-4 w-4 accent-brand" type="checkbox" checked={renameFiles} data-testid="batch-rename-files-checkbox" onChange={(event) => setRenameFiles(event.target.checked)} />
+                  {t.renameFiles}
+                </label>
+              </div>
+            </div>
+            <div className="min-h-0 rounded-md border border-line bg-panel">
+              <div className="border-b border-line px-3 py-2 text-xs font-semibold text-slate-700">{t.preview}</div>
+              <div className="max-h-[420px] overflow-y-auto p-2">
+                {preview.map((item) => (
+                  <div key={item.assetId} className="mb-2 rounded-md border border-line bg-white p-2 text-xs last:mb-0" data-testid="batch-rename-preview-row" data-next-name={item.nextName}>
+                    <div className="truncate text-slate-500" title={item.originalName}>{item.originalName}</div>
+                    <div className="mt-1 truncate font-semibold text-ink" title={item.nextName}>{item.nextName}</div>
+                    {item.conflictSuffix ? <div className="mt-1 text-[11px] text-amber-700">{t.conflictSuffix(item.conflictSuffix)}</div> : null}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 border-t border-line p-4">
+          <button className="rounded-md border border-line px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-panel" type="button" onClick={onClose}>
+            {zhCN.common.cancel}
+          </button>
+          <button className="rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-40" type="submit" disabled={!hasChanges} data-testid="batch-rename-confirm-button">
+            {t.confirm}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function BatchTextField({ label, value, onChange, testId }: { label: string; value: string; onChange(value: string): void; testId: string }) {
+  return (
+    <label className="grid gap-1 text-xs font-semibold text-slate-700">
+      {label}
+      <input
+        className="rounded-md border border-line px-2 py-1.5 text-sm font-normal text-ink outline-none focus:border-brand"
+        value={value}
+        data-testid={testId}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </label>
+  );
+}
+
+function buildBatchMetadataPatch(fields: Record<keyof BatchEditableMediaMetadata, string>): BatchEditableMediaMetadata {
+  const metadata: BatchEditableMediaMetadata = {};
+  if (fields.title.trim()) {
+    metadata.title = fields.title.trim();
+  }
+  if (fields.author.trim()) {
+    metadata.author = fields.author.trim();
+  }
+  if (fields.description.trim()) {
+    metadata.description = fields.description.trim();
+  }
+  if (fields.copyright.trim()) {
+    metadata.copyright = fields.copyright.trim();
+  }
+  if (fields.date.trim()) {
+    metadata.date = fields.date.trim();
+  }
+  return metadata;
+}
+
+function getMediaAssetsByIdOrder(media: MediaAsset[], assetIds: string[] | undefined): MediaAsset[] {
+  if (!assetIds?.length) {
+    return [];
+  }
+  const byId = new Map(media.map((asset) => [asset.id, asset]));
+  return assetIds.map((assetId) => byId.get(assetId)).filter((asset): asset is MediaAsset => Boolean(asset));
+}
+
+function formatBatchRenameDate(date: Date): string {
+  return date.toISOString().slice(0, 10).replace(/-/g, '');
 }
 
 function SmartAlbumBar({ albums, activeId, onSelect }: { albums: ReturnType<typeof collectSmartAlbums>; activeId: SmartAlbumId | 'none'; onSelect(id: SmartAlbumId | 'none'): void }) {
@@ -708,6 +1047,8 @@ function MediaFolderTree(props: {
   onFindSources(asset: MediaAsset): void;
   selectedMediaIds: Set<string>;
   onToggleSelected(assetId: string): void;
+  onOpenBatchMetadata(assetId: string): void;
+  onOpenBatchRename(assetId: string): void;
 }) {
   const roots = props.folders.filter((folder) => !folder.parentId);
   if (roots.length === 0) {
@@ -751,7 +1092,9 @@ function MediaFolderNode({
   onShowInfo,
   onFindSources,
   selectedMediaIds,
-  onToggleSelected
+  onToggleSelected,
+  onOpenBatchMetadata,
+  onOpenBatchRename
 }: {
   folder: MediaFolder;
   depth: number;
@@ -782,6 +1125,8 @@ function MediaFolderNode({
   onFindSources(asset: MediaAsset): void;
   selectedMediaIds: Set<string>;
   onToggleSelected(assetId: string): void;
+  onOpenBatchMetadata(assetId: string): void;
+  onOpenBatchRename(assetId: string): void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draftName, setDraftName] = useState(folder.name);
@@ -883,6 +1228,8 @@ function MediaFolderNode({
               onFindSources={onFindSources}
               selectedMediaIds={selectedMediaIds}
               onToggleSelected={onToggleSelected}
+              onOpenBatchMetadata={onOpenBatchMetadata}
+              onOpenBatchRename={onOpenBatchRename}
             />
           ))}
           <MediaCardGrid
@@ -907,6 +1254,8 @@ function MediaFolderNode({
             onFindSources={onFindSources}
             selectedMediaIds={selectedMediaIds}
             onToggleSelected={onToggleSelected}
+            onOpenBatchMetadata={onOpenBatchMetadata}
+            onOpenBatchRename={onOpenBatchRename}
           />
         </div>
       ) : null}
@@ -1075,7 +1424,9 @@ function MediaCardGrid({
   onShowInfo,
   onFindSources,
   selectedMediaIds,
-  onToggleSelected
+  onToggleSelected,
+  onOpenBatchMetadata,
+  onOpenBatchRename
 }: {
   media: MediaAsset[];
   gridSize: MediaLibraryGridSize;
@@ -1098,6 +1449,8 @@ function MediaCardGrid({
   onFindSources(asset: MediaAsset): void;
   selectedMediaIds: Set<string>;
   onToggleSelected(assetId: string): void;
+  onOpenBatchMetadata(assetId: string): void;
+  onOpenBatchRename(assetId: string): void;
 }) {
   if (media.length === 0) {
     return null;
@@ -1128,6 +1481,9 @@ function MediaCardGrid({
           onFindSources={() => onFindSources(asset)}
           selected={selectedMediaIds.has(asset.id)}
           onToggleSelected={() => onToggleSelected(asset.id)}
+          batchSelectionCount={selectedMediaIds.has(asset.id) ? selectedMediaIds.size : 1}
+          onOpenBatchMetadata={() => onOpenBatchMetadata(asset.id)}
+          onOpenBatchRename={() => onOpenBatchRename(asset.id)}
         />
       ))}
     </div>
@@ -1375,7 +1731,10 @@ function MediaCard({
   onShowInfo,
   onFindSources,
   selected,
-  onToggleSelected
+  onToggleSelected,
+  batchSelectionCount,
+  onOpenBatchMetadata,
+  onOpenBatchRename
 }: {
   asset: MediaAsset;
   metadata?: MediaMetadata;
@@ -1397,6 +1756,9 @@ function MediaCard({
   onFindSources(): void;
   selected: boolean;
   onToggleSelected(): void;
+  batchSelectionCount: number;
+  onOpenBatchMetadata(): void;
+  onOpenBatchRename(): void;
 }) {
   const proxySettings = useProxySettingsStore((state) => state.settings);
   const proxyStatus = asset.proxyStatus ?? (asset.type === 'video' ? 'none' : undefined);
@@ -1527,6 +1889,34 @@ function MediaCard({
       </div>
       {labelMenuOpen ? (
         <div className="absolute right-2 top-2 z-10 w-48 rounded-md border border-line bg-white p-2 text-xs shadow-soft" data-testid={`media-label-menu-${asset.id}`}>
+          {batchSelectionCount > 1 ? (
+            <>
+              <button
+                className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
+                type="button"
+                data-testid="batch-edit-metadata-menu-item"
+                onClick={() => {
+                  onOpenBatchMetadata();
+                  setLabelMenuOpen(false);
+                }}
+              >
+                <Tag size={13} />
+                {zhCN.mediaBin.batchEditMetadata}
+              </button>
+              <button
+                className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
+                type="button"
+                data-testid="batch-rename-media-menu-item"
+                onClick={() => {
+                  onOpenBatchRename();
+                  setLabelMenuOpen(false);
+                }}
+              >
+                <List size={13} />
+                {zhCN.mediaBin.batchRename}
+              </button>
+            </>
+          ) : null}
           <button
             className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
             type="button"
@@ -1652,7 +2042,7 @@ function MediaCard({
         </div>
       ) : null}
       <div className="p-2">
-        <div className="truncate text-sm font-medium" title={asset.path}>
+        <div className="truncate text-sm font-medium" title={asset.path} data-testid={`media-name-${asset.id}`}>
           {asset.name}
         </div>
         <div className="mt-1 flex items-center justify-between gap-2 text-xs text-slate-500">

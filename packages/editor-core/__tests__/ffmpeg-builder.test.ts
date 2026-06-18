@@ -116,6 +116,36 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.settings).toMatchObject({ width: 1280, height: 720, fps: 60 });
   });
 
+  it('injects media metadata into ffmpeg container args', () => {
+    const project = makeProject();
+    project.mediaMetadata = {
+      'asset-1': {
+        title: 'Opening Scene',
+        author: 'Ada',
+        description: 'Local editorial description',
+        copyright: 'Copyright 2026',
+        date: '2026-06-18'
+      }
+    };
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.outputArgs).toEqual(
+      expect.arrayContaining([
+        '-metadata',
+        'title=Opening Scene',
+        '-metadata',
+        'artist=Ada',
+        '-metadata',
+        'comment=Local editorial description',
+        '-metadata',
+        'copyright=Copyright 2026',
+        '-metadata',
+        'date=2026-06-18'
+      ])
+    );
+  });
+
   it('adds colorspace conversion and ICC generation for non-default output color spaces', () => {
     const plan = buildFfmpegExportPlan(
       buildExportProjectFromProject(makeProject(), {

@@ -353,6 +353,11 @@ export interface MediaMetadata {
   flag?: MediaFlag;
   versions?: MediaVersion[];
   fingerprint?: MediaFingerprint;
+  title?: string;
+  author?: string;
+  description?: string;
+  copyright?: string;
+  date?: string;
 }
 
 export interface ProjectAnnotation {

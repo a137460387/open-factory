@@ -28,6 +28,7 @@ export * from './media-folders';
 export * from './media-versions';
 export * from './media-fingerprint';
 export * from './media-organizer';
+export * from './media-batch';
 export * from './keyframes';
 export * from './timeline-thumbnails';
 export * from './timeline-protection';

@@ -432,6 +432,13 @@ export interface ExportProject {
   name: string;
   settings: ExportSettings;
   masterVolume: number;
+  metadata?: {
+    title?: string;
+    author?: string;
+    description?: string;
+    copyright?: string;
+    date?: string;
+  };
   timeline: ExportTimeline;
   sequences: ExportSequence[];
 }
