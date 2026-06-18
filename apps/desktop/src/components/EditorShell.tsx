@@ -14,13 +14,18 @@ import {
   BatchAlignToBeatCommand,
   BatchRenameMediaCommand,
   BatchShiftClipsCommand,
+  BatchUpdateClipCommand,
   BatchUpdateMetadataCommand,
   AddTrackCommand,
   AddTransitionCommand,
   buildConformMediaReplacements,
   buildConformPreflight,
   buildConformReport,
+  analyzeColorFrameSample,
+  buildColorAlignmentUpdates,
+  buildTimelineColorHeatmapData,
   CreateMulticamSequenceCommand,
+  detectSceneColorJumps,
   ConformMediaCommand,
   DEFAULT_TIMELINE_GRID_SETTINGS,
   DEFAULT_PROJECT_ANNOTATION_COLOR,
@@ -115,6 +120,10 @@ import {
   type TimelineGridUnit,
   type TitleTemplateId,
   type ExportTask,
+  type ColorAnalysisClipSample,
+  type SceneColorDifference,
+  type TimelineColorAnalysisResult,
+  type TimelineColorHeatmapPoint,
   type AutoAudioSyncApplyMode,
   type AutoAudioSyncResult,
   type MediaVersionCompareRequest,
@@ -243,6 +252,7 @@ import {
   removeFile as bridgeRemoveFile,
   trashFile as bridgeTrashFile,
   readFile as bridgeReadFile,
+  readColorMatchFrameSample,
   saveFileDialog as bridgeSaveFileDialog,
   sendNotification,
   startRecording,
@@ -346,6 +356,7 @@ const TimelineExportDialog = lazy(() => import('../timeline-export/TimelineExpor
 const ProfessionalNleExportDialog = lazy(() => import('../professional-nle/ProfessionalNleExportDialog').then((module) => ({ default: module.ProfessionalNleExportDialog })));
 const LutEditorDialog = lazy(() => import('../lut-editor/LutEditorDialog').then((module) => ({ default: module.LutEditorDialog })));
 const ColorNodeEditorDialog = lazy(() => import('../color-node-editor/ColorNodeEditorDialog').then((module) => ({ default: module.ColorNodeEditorDialog })));
+const ColorAnalysisDialog = lazy(() => import('../color-analysis/ColorAnalysisDialog').then((module) => ({ default: module.ColorAnalysisDialog })));
 const BatchTranscodeDialog = lazy(() => import('../media/BatchTranscodeDialog').then((module) => ({ default: module.BatchTranscodeDialog })));
 const BatchWatermarkDialog = lazy(() => import('../media/BatchWatermarkDialog').then((module) => ({ default: module.BatchWatermarkDialog })));
 const BatchProjectProcessingDialog = lazy(() => import('../projectBatch/BatchProjectProcessingDialog').then((module) => ({ default: module.BatchProjectProcessingDialog })));
@@ -425,6 +436,12 @@ export function EditorShell() {
   const [thumbnailGeneratorAssetIds, setThumbnailGeneratorAssetIds] = useState<string[]>();
   const [lutEditorOpen, setLutEditorOpen] = useState(false);
   const [colorNodeEditorOpen, setColorNodeEditorOpen] = useState(false);
+  const [colorAnalysisOpen, setColorAnalysisOpen] = useState(false);
+  const [colorAnalysisBusy, setColorAnalysisBusy] = useState(false);
+  const [colorAnalysisResults, setColorAnalysisResults] = useState<TimelineColorAnalysisResult[]>([]);
+  const [colorAnalysisJumps, setColorAnalysisJumps] = useState<SceneColorDifference[]>([]);
+  const [colorHeatmapPoints, setColorHeatmapPoints] = useState<TimelineColorHeatmapPoint[]>([]);
+  const [colorAnalysisSamples, setColorAnalysisSamples] = useState<ColorAnalysisClipSample[]>([]);
   const [professionalNleExportOpen, setProfessionalNleExportOpen] = useState(false);
   const [gifExportAsset, setGifExportAsset] = useState<MediaAsset>();
   const [spectrumAsset, setSpectrumAsset] = useState<MediaAsset>();
@@ -555,6 +572,22 @@ export function EditorShell() {
     [project.media, selectedClip]
   );
   const allTimelineClips = useMemo(() => project.timeline.tracks.flatMap((track) => track.clips), [project.timeline.tracks]);
+  const visualTimelineClipRefs = useMemo(
+    () =>
+      project.timeline.tracks
+        .flatMap((track) =>
+          track.clips
+            .filter((clip) => clip.type === 'video' || clip.type === 'image')
+            .map((clip) => ({
+              clip,
+              trackId: track.id,
+              media: project.media.find((asset) => 'mediaId' in clip && asset.id === clip.mediaId)
+            }))
+        )
+        .filter((item): item is { clip: Extract<Clip, { type: 'video' | 'image' }>; trackId: string; media: MediaAsset } => Boolean(item.media))
+        .sort((left, right) => left.clip.start - right.clip.start || left.clip.id.localeCompare(right.clip.id)),
+    [project.media, project.timeline.tracks]
+  );
   const stopProfilerRecording = useCallback(() => {
     const recording = profilerRecordingRef.current;
     if (!recording) {
@@ -2283,6 +2316,71 @@ export function EditorShell() {
     setColorNodeEditorOpen(true);
   }, [selectedClip]);
 
+  const runTimelineColorAnalysis = useCallback(async () => {
+    if (colorAnalysisBusy) {
+      return;
+    }
+    setColorAnalysisBusy(true);
+    const results: TimelineColorAnalysisResult[] = [];
+    const samples: ColorAnalysisClipSample[] = [];
+    for (const item of visualTimelineClipRefs) {
+      try {
+        const sample = await readColorMatchFrameSample(item.media.path);
+        if (!sample) {
+          continue;
+        }
+        const metrics = analyzeColorFrameSample(sample);
+        results.push({
+          clipId: item.clip.id,
+          trackId: item.trackId,
+          mediaId: item.media.id,
+          name: item.clip.name || item.media.name,
+          start: item.clip.start,
+          duration: item.clip.duration,
+          metrics
+        });
+        samples.push({ clipId: item.clip.id, sample });
+      } catch {
+        // Skip unreadable clips so one failed background sample cannot block the whole analysis.
+      }
+    }
+    const jumps = detectSceneColorJumps(results);
+    setColorAnalysisResults(results);
+    setColorAnalysisSamples(samples);
+    setColorAnalysisJumps(jumps);
+    setColorHeatmapPoints(buildTimelineColorHeatmapData(results));
+    setColorAnalysisBusy(false);
+    showToast({ kind: 'success', title: zhCN.colorAnalysis.completedTitle, message: zhCN.colorAnalysis.completedMessage(results.length, jumps.length) });
+  }, [colorAnalysisBusy, visualTimelineClipRefs]);
+
+  const alignTimelineColorToReference = useCallback(
+    (referenceClipId: string) => {
+      const updates = buildColorAlignmentUpdates(colorAnalysisSamples, referenceClipId);
+      if (updates.length === 0) {
+        showToast({ kind: 'warning', title: zhCN.colorAnalysis.title, message: zhCN.colorAnalysis.alignSkipped });
+        return;
+      }
+      commandManager.execute(
+        new BatchUpdateClipCommand(
+          timelineAccessor,
+          updates.map((update) => ({
+            clipId: update.clipId,
+            patch: { colorCorrection: update.colorCorrection }
+          }))
+        )
+      );
+      showToast({ kind: 'success', title: zhCN.colorAnalysis.title, message: zhCN.colorAnalysis.alignApplied(updates.length) });
+    },
+    [colorAnalysisSamples]
+  );
+
+  const openColorAnalysis = useCallback(() => {
+    setColorAnalysisOpen(true);
+    if (colorAnalysisResults.length === 0) {
+      void runTimelineColorAnalysis();
+    }
+  }, [colorAnalysisResults.length, runTimelineColorAnalysis]);
+
   const addTitleTemplate = useCallback(
     (templateId: TitleTemplateId) => {
       const track = project.timeline.tracks.find((item) => item.type === 'text');
@@ -3853,6 +3951,7 @@ export function EditorShell() {
           onOpenThumbnailGenerator={() => setThumbnailGeneratorAssetIds([])}
           onOpenLutEditor={() => setLutEditorOpen(true)}
           onOpenColorNodeEditor={openColorNodeEditor}
+          onOpenColorAnalysis={openColorAnalysis}
           onOpenSyncCompare={openSyncCompare}
           onOpenSceneDetection={() => setSceneDetectionRequestId((id) => id + 1)}
           onOpenSceneReorder={() => setSceneReorderOpen(true)}
@@ -4155,6 +4254,8 @@ export function EditorShell() {
                   thumbnailTrackVisible={thumbnailTrackVisible}
                   minimapVisible={timelineMinimapVisible}
                   heatmap={timelineHeatmap}
+                  colorHeatmap={colorHeatmapPoints}
+                  colorJumps={colorAnalysisJumps}
                   timelineGridSettings={timelineGridSettings}
                   reduceMotion={timelineInteractionSettings.reduceMotion}
                   bookmarkPanelOpen={layoutSettings.panels.bookmarks}
@@ -4204,6 +4305,16 @@ export function EditorShell() {
                 commandManager.execute(new UpdateClipCommand(timelineAccessor, selectedClip.id, { colorNodeGraph: graph }));
               }}
               onClose={() => setColorNodeEditorOpen(false)}
+            />
+          ) : null}
+          {colorAnalysisOpen ? (
+            <ColorAnalysisDialog
+              results={colorAnalysisResults}
+              jumps={colorAnalysisJumps}
+              busy={colorAnalysisBusy}
+              onAnalyze={() => void runTimelineColorAnalysis()}
+              onAlign={alignTimelineColorToReference}
+              onClose={() => setColorAnalysisOpen(false)}
             />
           ) : null}
           {snapshotNameOpen ? <SnapshotNameDialog defaultName={project.name} onConfirm={(name) => void saveNamedSnapshot(name)} onClose={() => setSnapshotNameOpen(false)} /> : null}

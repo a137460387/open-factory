@@ -149,9 +149,11 @@ import {
   type TimelineSnapCandidate,
   type TimelineGridSettings,
   type TimelineHeatmapSegment,
+  type TimelineColorHeatmapPoint,
   type TimelineMinimapLayout,
   type TimelineMinimapViewportRect,
   type TimelineSnapHighlight,
+  type SceneColorDifference,
   type TimelineLabelColor,
   type MediaVersionEntry,
   type DialogueInterval,
@@ -265,6 +267,8 @@ export function Timeline({
   thumbnailTrackVisible = true,
   minimapVisible = true,
   heatmap,
+  colorHeatmap = [],
+  colorJumps = [],
   timelineGridSettings = DEFAULT_TIMELINE_GRID_SETTINGS,
   reduceMotion = false,
   bookmarkPanelOpen: controlledBookmarkPanelOpen,
@@ -275,6 +279,8 @@ export function Timeline({
   thumbnailTrackVisible?: boolean;
   minimapVisible?: boolean;
   heatmap?: TimelineHeatmapViewSettings;
+  colorHeatmap?: TimelineColorHeatmapPoint[];
+  colorJumps?: SceneColorDifference[];
   timelineGridSettings?: TimelineGridSettings;
   reduceMotion?: boolean;
   bookmarkPanelOpen?: boolean;
@@ -2835,6 +2841,9 @@ function addProjectBookmark(time = playheadTime): void {
           />
           {thumbnailTrackVisible ? <ThumbnailTrack samples={thumbnailTrackSamples} media={project.media} zoom={zoom} width={width} /> : null}
           <div className="relative">
+            {colorHeatmap.length > 0 || colorJumps.length > 0 ? (
+              <TimelineColorHeatmapLayer points={colorHeatmap} jumps={colorJumps} zoom={zoom} width={width} />
+            ) : null}
             {gridLines.map((line) => (
               <div
                 key={`${line.time}-${line.major ? 'major' : 'minor'}`}
@@ -5264,6 +5273,58 @@ function TimelineMinimap({
         data-visible-end={viewport.end}
       />
     </aside>
+  );
+}
+
+function TimelineColorHeatmapLayer({
+  points,
+  jumps,
+  zoom,
+  width
+}: {
+  points: TimelineColorHeatmapPoint[];
+  jumps: SceneColorDifference[];
+  zoom: number;
+  width: number;
+}) {
+  return (
+    <div
+      className="pointer-events-none absolute top-0 z-[7] h-9"
+      style={{ left: 0, width: LABEL_WIDTH + width }}
+      data-testid="timeline-color-heatmap-layer"
+    >
+      {points.map((point) => {
+        const barHeight = 8 + point.height * 22;
+        return (
+          <div
+            key={point.clipId}
+            className="absolute top-1 rounded-sm border border-white/70 shadow-sm"
+            style={{
+              left: LABEL_WIDTH + point.start * zoom,
+              width: Math.max(3, (point.end - point.start) * zoom),
+              height: barHeight,
+              backgroundColor: point.color
+            }}
+            title={`${Math.round(point.colorTemperatureKelvin)}K / ${point.brightness.toFixed(1)}`}
+            data-testid="timeline-color-heatmap-point"
+            data-clip-id={point.clipId}
+          />
+        );
+      })}
+      {jumps.map((jump) => (
+        <div
+          key={`${jump.fromClipId}-${jump.toClipId}-${jump.time}`}
+          className="absolute top-0 h-9 border-l-2 border-amber-500"
+          style={{ left: LABEL_WIDTH + jump.time * zoom }}
+          title={`${jump.fromClipId} -> ${jump.toClipId}: ${jump.score.toFixed(2)}`}
+          data-testid="timeline-color-jump-marker"
+          data-from-clip-id={jump.fromClipId}
+          data-to-clip-id={jump.toClipId}
+        >
+          <span className="absolute -left-1.5 top-0 h-3 w-3 rotate-45 bg-amber-500 shadow-sm" />
+        </div>
+      ))}
+    </div>
   );
 }
 

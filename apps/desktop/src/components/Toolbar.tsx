@@ -55,6 +55,7 @@ interface ToolbarProps {
   onOpenThumbnailGenerator(): void;
   onOpenLutEditor(): void;
   onOpenColorNodeEditor(): void;
+  onOpenColorAnalysis(): void;
   onOpenSyncCompare(): void;
   onOpenSceneDetection(): void;
   onOpenSceneReorder(): void;
@@ -757,6 +758,18 @@ export function Toolbar(props: ToolbarProps) {
             >
               <span>{t.colorNodeEditor}</span>
               <GitCompareArrows size={14} />
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-tools-color-analysis-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onOpenColorAnalysis();
+              }}
+            >
+              <span>{t.colorAnalysis}</span>
+              <Activity size={14} />
             </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"

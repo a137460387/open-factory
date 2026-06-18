@@ -380,6 +380,34 @@ const zh = {
       addition: '相加'
     }
   },
+  colorAnalysis: {
+    title: '色彩分析',
+    summary: (count: number, jumps: number) => `${count} 个片段已分析，${jumps} 处跳色风险`,
+    referenceClip: '参考片段',
+    noResults: '暂无分析结果',
+    analyze: '分析时间线',
+    analyzing: '分析中...',
+    alignToReference: '对齐至参考',
+    completedTitle: '色彩分析完成',
+    completedMessage: (count: number, jumps: number) => `已分析 ${count} 个片段，标记 ${jumps} 处跳色。`,
+    alignApplied: (count: number) => `已对齐 ${count} 个片段。`,
+    alignSkipped: '没有可对齐的片段。',
+    columns: {
+      clip: '片段',
+      brightness: '亮度',
+      temperature: '色温',
+      saturation: '饱和度',
+      contrast: '对比度',
+      tint: '色调'
+    },
+    tintBias: {
+      warm: '偏暖',
+      cool: '偏冷',
+      neutral: '中性'
+    },
+    jumpListTitle: '跳色风险',
+    jumpLabel: (from: string, to: string, score: number) => `${from} -> ${to}，差异 ${score.toFixed(2)}`
+  },
   toolbar: {
     fileMenu: '文件',
     editMenu: '编辑',
@@ -420,6 +448,7 @@ const zh = {
     smartRecommendations: '智能推荐',
     contentAnalysis: '内容分析',
     performanceProfiler: '性能分析',
+    colorAnalysis: '色彩分析',
     rhythmAnalysis: '节奏分析',
     beatSync: '节拍同步',
     beatSyncDetectedBpm: (bpm?: number) => (bpm ? `检测到 BPM：${Math.round(bpm)}` : '检测到 BPM：--'),
@@ -4811,6 +4840,34 @@ const enOverrides = {
       addition: 'Addition'
     }
   },
+  colorAnalysis: {
+    title: 'Color Analysis',
+    summary: (count: number, jumps: number) => `${count} clips analyzed, ${jumps} color jump risks`,
+    referenceClip: 'Reference Clip',
+    noResults: 'No analysis results yet',
+    analyze: 'Analyze Timeline',
+    analyzing: 'Analyzing...',
+    alignToReference: 'Align to Reference',
+    completedTitle: 'Color analysis complete',
+    completedMessage: (count: number, jumps: number) => `Analyzed ${count} clips and marked ${jumps} color jumps.`,
+    alignApplied: (count: number) => `Aligned ${count} clips.`,
+    alignSkipped: 'No clips can be aligned.',
+    columns: {
+      clip: 'Clip',
+      brightness: 'Brightness',
+      temperature: 'Temperature',
+      saturation: 'Saturation',
+      contrast: 'Contrast',
+      tint: 'Tint'
+    },
+    tintBias: {
+      warm: 'Warm',
+      cool: 'Cool',
+      neutral: 'Neutral'
+    },
+    jumpListTitle: 'Color Jump Risks',
+    jumpLabel: (from: string, to: string, score: number) => `${from} -> ${to}, difference ${score.toFixed(2)}`
+  },
   toolbar: {
     fileMenu: 'File',
     editMenu: 'Edit',
@@ -4850,6 +4907,7 @@ const enOverrides = {
     smartRecommendations: 'Smart Recommendations',
     contentAnalysis: 'Content Analysis',
     performanceProfiler: 'Performance Profiler',
+    colorAnalysis: 'Color Analysis',
     rhythmAnalysis: 'Rhythm Analysis',
     beatSync: 'Beat Sync',
     beatSyncDetectedBpm: (bpm?: number) => (bpm ? `Detected BPM: ${Math.round(bpm)}` : 'Detected BPM: --'),

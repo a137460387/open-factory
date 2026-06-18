@@ -4615,6 +4615,43 @@ export class UpdateClipCommand implements Command {
   }
 }
 
+export interface BatchUpdateClipCommandItem {
+  clipId: string;
+  patch: ClipPatch;
+}
+
+export class BatchUpdateClipCommand implements Command {
+  readonly description = 'Batch update clips';
+  private before?: Timeline;
+  private after?: Timeline;
+
+  constructor(private readonly accessor: TimelineAccessor, private readonly updates: BatchUpdateClipCommandItem[]) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getTimeline();
+    if (!this.after) {
+      let timeline = this.before;
+      const batchAccessor: TimelineAccessor = {
+        getTimeline: () => timeline,
+        setTimeline: (nextTimeline) => {
+          timeline = nextTimeline;
+        }
+      };
+      for (const update of this.updates) {
+        new UpdateClipCommand(batchAccessor, update.clipId, update.patch).execute();
+      }
+      this.after = timeline;
+    }
+    this.accessor.setTimeline(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setTimeline(this.before);
+    }
+  }
+}
+
 export interface AddEffectInput {
   id?: string;
   type: EffectType;

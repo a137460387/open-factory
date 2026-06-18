@@ -8,6 +8,7 @@ export * from './color-pipeline';
 export * from './color-grading';
 export * from './color-node-graph';
 export * from './color-match';
+export * from './color-analysis';
 export * from './effects';
 export * from './audio-visualization-themes';
 export * from './motion-blur';

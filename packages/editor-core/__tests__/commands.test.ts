@@ -19,6 +19,7 @@ import {
   ApplyTextAnimationCommand,
   BatchKeyframeEditCommand,
   BatchProofreadSubtitleCommand,
+  BatchUpdateClipCommand,
   BatchUpdateClipGroupClipsCommand,
   BatchUpdateTrackCommand,
   AddTransitionCommand,
@@ -1969,6 +1970,33 @@ describe('timeline commands', () => {
     expect(reverted.speed).toBe(1);
     expect(reverted.duration).toBe(3);
     expect(reverted.colorCorrection).toEqual(DEFAULT_COLOR_CORRECTION);
+  });
+
+  it('batch updates clip color correction with undo', () => {
+    const accessor = makeAccessor(
+      makeTimeline([
+        makeVideoClip({ id: 'clip-a', start: 0, duration: 2 }),
+        makeVideoClip({ id: 'clip-b', start: 2, duration: 2 })
+      ])
+    );
+    const manager = new CommandManager();
+
+    manager.execute(
+      new BatchUpdateClipCommand(accessor, [
+        { clipId: 'clip-a', patch: { colorCorrection: { brightness: 0.2 } } },
+        { clipId: 'clip-b', patch: { colorCorrection: { contrast: 1.4, saturation: 0.8 } } }
+      ])
+    );
+
+    const [clipA, clipB] = accessor.current().tracks[0].clips;
+    expect(clipA.colorCorrection.brightness).toBe(0.2);
+    expect(clipB.colorCorrection.contrast).toBe(1.4);
+    expect(clipB.colorCorrection.saturation).toBe(0.8);
+
+    manager.undo();
+    const [revertedA, revertedB] = accessor.current().tracks[0].clips;
+    expect(revertedA.colorCorrection).toEqual(DEFAULT_COLOR_CORRECTION);
+    expect(revertedB.colorCorrection).toEqual(DEFAULT_COLOR_CORRECTION);
   });
 
   it('clamps speed and color correction patches', () => {
