@@ -364,6 +364,7 @@ const zh = {
     releaseVersion: '发布版本',
     mediaReport: '素材使用分析',
     clipReport: '导出剪辑报告',
+    conformMedia: '套底（Conform）',
     createSharePackage: '创建分享包',
     batchTranscode: '批量转码',
     batchWatermark: '批量水印',
@@ -528,6 +529,16 @@ const zh = {
     importBookmarks: '导入书签',
     exportBookmarks: '导出书签',
     lastBackupAt: (time: string) => `上次备份 ${time}`
+  },
+  conformMedia: {
+    commandDescription: '套底媒体',
+    canceledTitle: '已取消套底',
+    noMatchesTitle: '没有可套底素材',
+    noMatchesMessage: '未在所选目录中找到匹配的原始媒体。',
+    completedTitle: '套底完成',
+    completedMessage: (success: number, warnings: number, failures: number) => `成功 ${success} 条 / 警告 ${warnings} 条 / 失败 ${failures} 条`,
+    failedTitle: '套底失败',
+    failedMessage: '无法完成套底。'
   },
   tutorial: {
     start: '新手教程',
@@ -4631,6 +4642,7 @@ const enOverrides = {
     releaseVersion: 'Release Version',
     mediaReport: 'Media Usage Analysis',
     clipReport: 'Export Clip Report',
+    conformMedia: 'Conform Media',
     createSharePackage: 'Create Share Package',
     batchTranscode: 'Batch Transcode',
     batchWatermark: 'Batch Watermark',
@@ -4795,6 +4807,16 @@ const enOverrides = {
     importBookmarks: 'Import Bookmarks',
     exportBookmarks: 'Export Bookmarks',
     lastBackupAt: (time: string) => `Last backup ${time}`
+  },
+  conformMedia: {
+    commandDescription: 'Conform media',
+    canceledTitle: 'Conform canceled',
+    noMatchesTitle: 'No conformable media',
+    noMatchesMessage: 'No matching original media was found in the selected directory.',
+    completedTitle: 'Conform complete',
+    completedMessage: (success: number, warnings: number, failures: number) => `${success} succeeded / ${warnings} warnings / ${failures} failed`,
+    failedTitle: 'Conform failed',
+    failedMessage: 'Unable to complete conform.'
   },
   videoStitchWizard: {
     title: 'Video Stitch Wizard',

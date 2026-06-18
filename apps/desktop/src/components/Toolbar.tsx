@@ -37,6 +37,7 @@ interface ToolbarProps {
   onCreateMediaReport(): void;
   onCreateClipReport(): void;
   onCreateSharePackage(): void;
+  onConformMedia(): void;
   onImportBookmarks(): void;
   onExportBookmarks(): void;
   onSaveSnapshot(): void;
@@ -334,6 +335,17 @@ export function Toolbar(props: ToolbarProps) {
               }}
             >
               <span>{t.clipReport}</span>
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-file-conform-media-menu-item"
+              onClick={() => {
+                setFileMenuOpen(false);
+                props.onConformMedia();
+              }}
+            >
+              <span>{t.conformMedia}</span>
             </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"

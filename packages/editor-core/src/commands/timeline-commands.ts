@@ -137,6 +137,7 @@ import {
 import { createKeyframe, removeKeyframeForProperty, setKeyframeForProperty } from '../keyframes';
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
 import { normalizeProjectDocumentation } from '../project/documentation';
+import { applyConformMedia, type ConformMediaReplacement } from '../project/conform-media';
 import { applyProjectHealthAutoRepair, type ProjectHealthAutoRepairInput, type ProjectHealthRepairReport } from '../project/project-health-repair';
 import { normalizeProjectReleaseVersion } from '../project/release-workflow';
 import { applyProxyMigration, type ProxyMigrationUpdate } from '../proxy/proxy-management';
@@ -260,6 +261,39 @@ export class UpdateProjectSettingsCommand implements Command {
       ...project,
       settings: normalizeProjectSettings({ ...project.settings, ...this.patch })
     });
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class ConformMediaCommand implements Command {
+  description: string;
+  private before?: Project;
+  private after?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly replacements: ConformMediaReplacement[],
+    description = 'Conform media'
+  ) {
+    this.description = description;
+  }
+
+  execute(): void {
+    if (this.after) {
+      this.accessor.setProject(this.after);
+      return;
+    }
+    this.before ??= this.accessor.getProject();
+    this.after = {
+      ...applyConformMedia(this.accessor.getProject(), this.replacements),
+      updatedAt: new Date().toISOString()
+    };
+    this.accessor.setProject(this.after);
   }
 
   undo(): void {

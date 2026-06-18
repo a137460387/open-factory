@@ -100,6 +100,7 @@ export * from './project/documentation';
 export * from './project/relative-paths';
 export * from './project/relink-score';
 export * from './project/batch-relink';
+export * from './project/conform-media';
 export * from './project/project-health-check';
 export * from './project/project-health-repair';
 export * from './project/duplicate-media';

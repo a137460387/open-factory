@@ -14,7 +14,11 @@ import {
   BatchAlignToBeatCommand,
   AddTrackCommand,
   AddTransitionCommand,
+  buildConformMediaReplacements,
+  buildConformPreflight,
+  buildConformReport,
   CreateMulticamSequenceCommand,
+  ConformMediaCommand,
   DEFAULT_TIMELINE_GRID_SETTINGS,
   DEFAULT_PROJECT_ANNOTATION_COLOR,
   DEFAULT_REVIEW_ANNOTATION_COLOR,
@@ -115,6 +119,7 @@ import {
   getOperationProjectAtStep,
   generateOperationRecordingSlidesHtml,
   buildProxyMigration,
+  matchConformByFilename,
   normalizeOperationReplaySpeed,
   hasLowConfidenceSpeakerSegments,
   type OperationRecordingFile,
@@ -222,6 +227,7 @@ import {
   openPreviewWindow,
   openDirectoryDialog,
   openFileDialog as bridgeOpenFileDialog,
+  scanDirectory,
   moveFile as bridgeMoveFile,
   removeFile as bridgeRemoveFile,
   trashFile as bridgeTrashFile,
@@ -1411,6 +1417,44 @@ export function EditorShell() {
       showToast({ kind: 'error', title: zhCN.clipReport.failed, message: error instanceof Error ? error.message : zhCN.clipReport.failedMessage });
     }
   }, [project]);
+
+  const conformMedia = useCallback(async () => {
+    try {
+      const directory = await openDirectoryDialog();
+      if (!directory) {
+        showToast({ kind: 'info', title: zhCN.conformMedia.canceledTitle });
+        return;
+      }
+      const paths = await scanDirectory(directory, 3);
+      const currentProject = useEditorStore.getState().project;
+      const matches = matchConformByFilename(
+        currentProject.media,
+        paths.map((path) => ({ path })),
+        { caseInsensitive: true }
+      );
+      const preflight = buildConformPreflight(currentProject.media, matches, { fallbackFrameRate: currentProject.settings.fps });
+      const replacements = buildConformMediaReplacements(preflight);
+      const report = buildConformReport(preflight, { selectedOnly: true });
+
+      if (replacements.length === 0) {
+        showToast({ kind: 'warning', title: zhCN.conformMedia.noMatchesTitle, message: zhCN.conformMedia.noMatchesMessage });
+        return;
+      }
+
+      commandManager.execute(new ConformMediaCommand(projectAccessor, replacements, zhCN.conformMedia.commandDescription));
+      showToast({
+        kind: report.failureCount > 0 || report.warningCount > 0 ? 'warning' : 'success',
+        title: zhCN.conformMedia.completedTitle,
+        message: zhCN.conformMedia.completedMessage(report.successCount, report.warningCount, report.failureCount)
+      });
+    } catch (error) {
+      showToast({
+        kind: 'error',
+        title: zhCN.conformMedia.failedTitle,
+        message: error instanceof Error ? error.message : zhCN.conformMedia.failedMessage
+      });
+    }
+  }, []);
 
   const jumpToMediaAsset = useCallback((assetId: string) => {
     const element = document.querySelector(`[data-testid="media-card-${assetId}"]`) as HTMLElement | null;
@@ -3645,6 +3689,7 @@ export function EditorShell() {
           onCreateMediaReport={() => void createMediaReport()}
           onCreateClipReport={() => void createClipReport()}
           onCreateSharePackage={() => void createCurrentSharePackage()}
+          onConformMedia={() => void conformMedia()}
           onImportBookmarks={() => void importBookmarks()}
           onExportBookmarks={() => void exportBookmarks()}
           onSaveSnapshot={() => setSnapshotNameOpen(true)}
