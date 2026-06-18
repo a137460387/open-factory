@@ -26,6 +26,9 @@ import {
   DEFAULT_SUBTITLE_PROOFREADING_SETTINGS,
   DEFAULT_SPATIAL_AUDIO,
   DEFAULT_COLOR_CORRECTION,
+  DEFAULT_TEXT_ARC,
+  DEFAULT_TEXT_LAYOUT,
+  DEFAULT_TEXT_OPEN_TYPE_FEATURES,
   DEFAULT_TEXT_PATH,
   DEFAULT_THREE_WAY_COLOR,
   EFFECT_TYPES,
@@ -86,6 +89,10 @@ import {
   normalizeSequenceFrameRate,
   normalizeSlowMotionMode,
   normalizeStabilization,
+  normalizeRichTextDocument,
+  normalizeTextArc,
+  normalizeTextLayout,
+  normalizeTextOpenTypeFeatures,
   normalizeTextPath,
   setMotionGraphicParam,
   setMotionGraphicParamKeyframe,
@@ -111,6 +118,7 @@ import {
   buildPrivacyMasksFromDetections,
   createTrack,
   renderSubtitleStyleTemplatePreview,
+  richTextToPlainText,
   type AudioFadeCurve,
   type AudioChannelRoutingMode,
   type BatchKeyframeEditOperation,
@@ -145,12 +153,18 @@ import {
   type SubtitleStyleTemplate,
   type SubtitleProofreadingIssue,
   type SubtitleProofreadingIssueType,
+  type RichTextDocument,
+  type RichTextRun,
+  type TextArcOptions,
   type FrameInterpolationCompareMode,
   type MotionGraphicParamDefinition,
   type MotionGraphicParamValue,
-  type MotionGraphicTemplateType
+  type MotionGraphicTemplateType,
+  type TextBoxFitMode,
+  type TextLayoutOptions,
+  type TextOpenTypeFeatures
 } from '@open-factory/editor-core';
-import { ArrowDown, ArrowUp, GripVertical, Palette, Pipette, Plus, SlidersHorizontal, Trash2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Bold, GripVertical, Italic, Palette, Pipette, Plus, SlidersHorizontal, Trash2, Underline, X } from 'lucide-react';
 import { t, zhCN } from '../../i18n/strings';
 import { commandManager, projectAccessor, timelineAccessor } from '../../store/commandManager';
 import {
@@ -530,11 +544,32 @@ function ClipInspector({
   };
   const localKeyframeTime = Math.min(clip.duration, Math.max(0, playheadTime - clip.start));
   const textPath = clip.type === 'text' ? normalizeTextPath(clip.pathText) : undefined;
+  const textLayout = clip.type === 'text' ? normalizeTextLayout(clip.textLayout) : undefined;
+  const textOpenTypeFeatures = clip.type === 'text' ? normalizeTextOpenTypeFeatures(clip.openTypeFeatures) : undefined;
+  const textArc = clip.type === 'text' ? normalizeTextArc(clip.arcText) : undefined;
   const updateTextPath = (patch: Partial<NonNullable<typeof textPath>>) => {
     if (clip.type !== 'text' || !textPath) {
       return;
     }
     commit({ pathText: normalizeTextPath({ ...textPath, ...patch }) });
+  };
+  const updateTextLayout = (patch: Partial<TextLayoutOptions>) => {
+    if (clip.type !== 'text' || !textLayout) {
+      return;
+    }
+    commit({ textLayout: normalizeTextLayout({ ...textLayout, ...patch }) });
+  };
+  const updateTextOpenTypeFeatures = (patch: Partial<TextOpenTypeFeatures>) => {
+    if (clip.type !== 'text' || !textOpenTypeFeatures) {
+      return;
+    }
+    commit({ openTypeFeatures: normalizeTextOpenTypeFeatures({ ...textOpenTypeFeatures, ...patch }) });
+  };
+  const updateTextArc = (patch: Partial<TextArcOptions>) => {
+    if (clip.type !== 'text' || !textArc) {
+      return;
+    }
+    commit({ arcText: normalizeTextArc({ ...textArc, ...patch }) });
   };
   const addKeyframe = (property: KeyframeProperty, value = getClipKeyframeValue(clip, property, localKeyframeTime)) => {
     try {
@@ -2478,11 +2513,19 @@ function ClipInspector({
 
         {clip.type === 'text' || clip.type === 'subtitle' || clip.type === 'credits' ? (
           <Section title={clip.type === 'subtitle' ? zhCN.inspector.sections.subtitle : clip.type === 'credits' ? zhCN.inspector.sections.credits : zhCN.inspector.sections.text}>
-            <TextAreaField label={zhCN.inspector.fields.text} value={clip.text} onCommit={(text) => commit({ text })} testId="clip-text-input" />
+            {clip.type === 'text' ? (
+              <RichTextEditor
+                clip={clip}
+                disabled={selectedClipLocked}
+                onCommit={(richText) => commit({ text: richTextToPlainText(richText, clip.text), richText })}
+              />
+            ) : (
+              <TextAreaField label={zhCN.inspector.fields.text} value={clip.text} onCommit={(text) => commit({ text })} testId="clip-text-input" />
+            )}
             <NumberField label={zhCN.inspector.fields.fontSize} value={clip.style.fontSize} min={8} step={1} onCommit={(fontSize) => commit({ style: { fontSize } })} />
             <TextField label={zhCN.inspector.fields.fontFamily} value={clip.style.fontFamily} onCommit={(fontFamily) => commit({ style: { fontFamily } })} />
             <ColorField label={zhCN.inspector.fields.color} value={clip.style.color} onCommit={(color) => commit({ style: { color } })} testId={clip.type === 'subtitle' ? 'subtitle-color-input' : undefined} />
-            <ColorField label={zhCN.inspector.fields.background} value={clip.style.backgroundColor} onCommit={(backgroundColor) => commit({ style: { backgroundColor } })} />
+            <ColorField label={zhCN.inspector.fields.background} value={clip.style.backgroundColor} onCommit={(backgroundColor) => commit({ style: { backgroundColor } })} testId="clip-background-color-input" />
             <RangeField
               label={zhCN.inspector.fields.backgroundOpacity}
               value={clip.style.backgroundOpacity}
@@ -2702,6 +2745,47 @@ function ClipInspector({
                 <SubtitleProofreadingPanel clip={clip} selectedSubtitleClips={selectedSubtitleClips.length > 0 ? selectedSubtitleClips : [clip]} selectedClipLocked={selectedClipLocked} projectSettings={projectSettings} />
                 <SubtitleRetimingPanel clip={clip} selectedSubtitleClips={selectedSubtitleClips.length > 0 ? selectedSubtitleClips : [clip]} projectSettings={projectSettings} />
               </>
+            ) : null}
+            {clip.type === 'text' ? (
+              <details className="rounded-md border border-line bg-white" data-testid="advanced-text-layout-section" open>
+                <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-slate-700">{zhCN.inspector.sections.typography}</summary>
+                <div className="space-y-3 border-t border-line p-2">
+                  <label className="block text-xs font-medium text-slate-600">
+                    {zhCN.inspector.fields.textFitMode}
+                    <select
+                      className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                      value={textLayout?.fitMode ?? DEFAULT_TEXT_LAYOUT.fitMode}
+                      disabled={selectedClipLocked}
+                      data-testid="text-fit-mode-select"
+                      onChange={(event) => updateTextLayout({ fitMode: event.target.value as TextBoxFitMode })}
+                    >
+                      <option value="fixed">{zhCN.inspector.textLayout.fitModes.fixed}</option>
+                      <option value="auto-height">{zhCN.inspector.textLayout.fitModes.autoHeight}</option>
+                      <option value="auto-scale">{zhCN.inspector.textLayout.fitModes.autoScale}</option>
+                    </select>
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <NumberField label={zhCN.inspector.fields.boxWidth} value={textLayout?.boxWidth ?? DEFAULT_TEXT_LAYOUT.boxWidth} min={24} max={4096} step={1} disabled={selectedClipLocked} onCommit={(boxWidth) => updateTextLayout({ boxWidth })} testId="text-box-width-input" />
+                    <NumberField label={zhCN.inspector.fields.boxHeight} value={textLayout?.boxHeight ?? DEFAULT_TEXT_LAYOUT.boxHeight} min={24} max={4096} step={1} disabled={selectedClipLocked} onCommit={(boxHeight) => updateTextLayout({ boxHeight })} testId="text-box-height-input" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <NumberField label={zhCN.inspector.fields.paragraphSpacing} value={textLayout?.paragraphSpacing ?? DEFAULT_TEXT_LAYOUT.paragraphSpacing} min={0} max={240} step={1} disabled={selectedClipLocked} onCommit={(paragraphSpacing) => updateTextLayout({ paragraphSpacing })} testId="text-paragraph-spacing-input" />
+                    <NumberField label={zhCN.inspector.fields.firstLineIndent} value={textLayout?.firstLineIndent ?? DEFAULT_TEXT_LAYOUT.firstLineIndent} min={-960} max={960} step={1} disabled={selectedClipLocked} onCommit={(firstLineIndent) => updateTextLayout({ firstLineIndent })} testId="text-first-line-indent-input" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <ToggleField label={zhCN.inspector.fields.openTypeLiga} checked={textOpenTypeFeatures?.liga ?? DEFAULT_TEXT_OPEN_TYPE_FEATURES.liga} disabled={selectedClipLocked} onCommit={(liga) => updateTextOpenTypeFeatures({ liga })} testId="text-opentype-liga-toggle" />
+                    <ToggleField label={zhCN.inspector.fields.openTypeSmcp} checked={textOpenTypeFeatures?.smcp ?? DEFAULT_TEXT_OPEN_TYPE_FEATURES.smcp} disabled={selectedClipLocked} onCommit={(smcp) => updateTextOpenTypeFeatures({ smcp })} testId="text-opentype-smcp-toggle" />
+                    <ToggleField label={zhCN.inspector.fields.openTypeTnum} checked={textOpenTypeFeatures?.tnum ?? DEFAULT_TEXT_OPEN_TYPE_FEATURES.tnum} disabled={selectedClipLocked} onCommit={(tnum) => updateTextOpenTypeFeatures({ tnum })} testId="text-opentype-tnum-toggle" />
+                    <ToggleField label={zhCN.inspector.fields.openTypeSwsh} checked={textOpenTypeFeatures?.swsh ?? DEFAULT_TEXT_OPEN_TYPE_FEATURES.swsh} disabled={selectedClipLocked} onCommit={(swsh) => updateTextOpenTypeFeatures({ swsh })} testId="text-opentype-swsh-toggle" />
+                  </div>
+                  <ToggleField label={zhCN.inspector.fields.arcTextMode} checked={textArc?.enabled ?? DEFAULT_TEXT_ARC.enabled} disabled={selectedClipLocked} onCommit={(enabled) => updateTextArc({ enabled })} testId="arc-text-toggle" />
+                  <div className="grid grid-cols-2 gap-2">
+                    <NumberField label={zhCN.inspector.fields.arcTextRadius} value={textArc?.radius ?? DEFAULT_TEXT_ARC.radius} min={24} max={4000} step={1} disabled={selectedClipLocked} onCommit={(radius) => updateTextArc({ radius })} testId="arc-text-radius-input" />
+                    <NumberField label={zhCN.inspector.fields.arcTextStartAngle} value={textArc?.startAngle ?? DEFAULT_TEXT_ARC.startAngle} min={-360} max={360} step={1} disabled={selectedClipLocked} onCommit={(startAngle) => updateTextArc({ startAngle })} testId="arc-text-start-angle-input" />
+                  </div>
+                  <ToggleField label={zhCN.inspector.fields.arcTextRotateCharacters} checked={textArc?.rotateCharacters ?? DEFAULT_TEXT_ARC.rotateCharacters} disabled={selectedClipLocked} onCommit={(rotateCharacters) => updateTextArc({ rotateCharacters })} testId="arc-text-rotate-toggle" />
+                </div>
+              </details>
             ) : null}
             {clip.type === 'text' ? (
               <details className="rounded-md border border-line bg-white" data-testid="path-text-section" open>
@@ -3980,6 +4064,225 @@ function PrivacyBlurPanel({
   );
 }
 
+function RichTextEditor({
+  clip,
+  disabled,
+  onCommit
+}: {
+  clip: Extract<Clip, { type: 'text' }>;
+  disabled?: boolean;
+  onCommit(richText: RichTextDocument): void;
+}) {
+  const editorRef = useRef<HTMLDivElement | null>(null);
+  const commitFromDom = () => {
+    const element = editorRef.current;
+    if (!element || disabled) {
+      return;
+    }
+    const richText = parseRichTextFromElement(element, clip.text);
+    onCommit(richText);
+  };
+  const applyInlineCommand = (command: 'bold' | 'italic' | 'underline') => {
+    if (disabled) {
+      return;
+    }
+    document.execCommand(command);
+    commitFromDom();
+  };
+  const applyColor = (color: string) => {
+    if (disabled) {
+      return;
+    }
+    document.execCommand('foreColor', false, color);
+    commitFromDom();
+  };
+  const applyFontSize = (fontSize: number) => {
+    if (disabled) {
+      return;
+    }
+    document.execCommand('fontSize', false, '4');
+    const selection = document.getSelection();
+    const anchor = selection?.anchorNode?.parentElement;
+    if (anchor?.tagName === 'FONT') {
+      anchor.removeAttribute('size');
+      anchor.style.fontSize = `${fontSize}px`;
+    }
+    commitFromDom();
+  };
+  return (
+    <div className="space-y-2" data-testid="rich-text-editor">
+      <div className="flex flex-wrap items-center gap-1">
+        <button
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-white text-slate-700 hover:bg-panel disabled:opacity-40"
+          type="button"
+          title={zhCN.inspector.richText.bold}
+          aria-label={zhCN.inspector.richText.bold}
+          disabled={disabled}
+          data-testid="rich-text-bold-button"
+          onMouseDown={(event) => {
+            event.preventDefault();
+            applyInlineCommand('bold');
+          }}
+        >
+          <Bold size={15} />
+        </button>
+        <button
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-white text-slate-700 hover:bg-panel disabled:opacity-40"
+          type="button"
+          title={zhCN.inspector.richText.italic}
+          aria-label={zhCN.inspector.richText.italic}
+          disabled={disabled}
+          data-testid="rich-text-italic-button"
+          onMouseDown={(event) => {
+            event.preventDefault();
+            applyInlineCommand('italic');
+          }}
+        >
+          <Italic size={15} />
+        </button>
+        <button
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-white text-slate-700 hover:bg-panel disabled:opacity-40"
+          type="button"
+          title={zhCN.inspector.richText.underline}
+          aria-label={zhCN.inspector.richText.underline}
+          disabled={disabled}
+          data-testid="rich-text-underline-button"
+          onMouseDown={(event) => {
+            event.preventDefault();
+            applyInlineCommand('underline');
+          }}
+        >
+          <Underline size={15} />
+        </button>
+        <input
+          className="h-8 w-10 rounded-md border border-line bg-white p-1 disabled:opacity-40"
+          type="color"
+          defaultValue={clip.style.color}
+          title={zhCN.inspector.richText.color}
+          aria-label={zhCN.inspector.richText.color}
+          disabled={disabled}
+          data-testid="rich-text-color-input"
+          onChange={(event) => applyColor(event.target.value)}
+        />
+        <input
+          className="h-8 w-16 rounded-md border border-line px-2 text-xs text-slate-700 disabled:opacity-40"
+          type="number"
+          min={8}
+          max={512}
+          step={1}
+          defaultValue={clip.style.fontSize}
+          title={zhCN.inspector.richText.fontSize}
+          aria-label={zhCN.inspector.richText.fontSize}
+          disabled={disabled}
+          data-testid="rich-text-font-size-input"
+          onBlur={(event) => applyFontSize(Number(event.target.value))}
+        />
+      </div>
+      <div
+        ref={editorRef}
+        className="min-h-24 w-full rounded-md border border-line bg-white px-2 py-2 text-sm text-ink outline-none focus:border-brand disabled:opacity-40"
+        contentEditable={!disabled}
+        suppressContentEditableWarning
+        data-testid="clip-text-input"
+        onBlur={commitFromDom}
+        onPaste={(event) => {
+          event.preventDefault();
+          document.execCommand('insertText', false, event.clipboardData.getData('text/plain'));
+        }}
+        dangerouslySetInnerHTML={{ __html: richTextToHtml(normalizeRichTextDocument(clip.richText, clip.text)) }}
+      />
+    </div>
+  );
+}
+
+function parseRichTextFromElement(element: HTMLElement, fallbackText: string): RichTextDocument {
+  const blockNodes = Array.from(element.childNodes).filter((node) => isParagraphNode(node));
+  const paragraphs = (blockNodes.length > 0 ? blockNodes : [element]).map((node) => {
+    const runs = collectRichTextRuns(node, {});
+    return { runs: runs.length > 0 ? runs : [{ text: '' }] };
+  });
+  return normalizeRichTextDocument({ paragraphs }, fallbackText);
+}
+
+function collectRichTextRuns(node: Node, inherited: Omit<RichTextRun, 'text'>): RichTextRun[] {
+  if (node.nodeType === Node.TEXT_NODE) {
+    const text = node.textContent ?? '';
+    return text ? [{ text, ...inherited }] : [];
+  }
+  if (!(node instanceof HTMLElement)) {
+    return Array.from(node.childNodes).flatMap((child) => collectRichTextRuns(child, inherited));
+  }
+  const next: Omit<RichTextRun, 'text'> = { ...inherited };
+  const tag = node.tagName.toLowerCase();
+  if (tag === 'b' || tag === 'strong' || Number.parseInt(node.style.fontWeight, 10) >= 600) {
+    next.bold = true;
+  }
+  if (tag === 'i' || tag === 'em' || node.style.fontStyle === 'italic') {
+    next.italic = true;
+  }
+  if (tag === 'u' || node.style.textDecorationLine.includes('underline') || node.style.textDecoration.includes('underline')) {
+    next.underline = true;
+  }
+  const color = normalizeCssColorForModel(node.style.color);
+  if (color) {
+    next.color = color;
+  }
+  const fontSize = Number.parseFloat(node.style.fontSize);
+  if (Number.isFinite(fontSize)) {
+    next.fontSize = fontSize;
+  }
+  if (tag === 'br') {
+    return [];
+  }
+  return Array.from(node.childNodes).flatMap((child) => collectRichTextRuns(child, next));
+}
+
+function richTextToHtml(document: RichTextDocument): string {
+  return document.paragraphs
+    .map((paragraph) => `<div>${paragraph.runs.map((run) => richTextRunToHtml(run)).join('') || '<br>'}</div>`)
+    .join('');
+}
+
+function richTextRunToHtml(run: RichTextRun): string {
+  const styles = [
+    run.color ? `color:${escapeHtmlAttribute(run.color)}` : '',
+    run.fontSize ? `font-size:${run.fontSize}px` : '',
+    run.underline ? 'text-decoration:underline' : ''
+  ].filter(Boolean);
+  let html = `<span${styles.length > 0 ? ` style="${styles.join(';')}"` : ''}>${escapeHtml(run.text)}</span>`;
+  if (run.bold) {
+    html = `<strong>${html}</strong>`;
+  }
+  if (run.italic) {
+    html = `<em>${html}</em>`;
+  }
+  return html;
+}
+
+function isParagraphNode(node: Node): boolean {
+  return node instanceof HTMLElement && ['div', 'p'].includes(node.tagName.toLowerCase());
+}
+
+function normalizeCssColorForModel(color: string): string | undefined {
+  const value = color.trim();
+  if (!value) {
+    return undefined;
+  }
+  const rgb = value.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+  if (rgb) {
+    return `#${[rgb[1], rgb[2], rgb[3]].map((part) => Number(part).toString(16).padStart(2, '0')).join('')}`;
+  }
+  return value;
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function escapeHtmlAttribute(value: string): string {
+  return escapeHtml(value).replace(/'/g, '&#39;');
+}
+
 function MotionGraphicPanel({
   clip,
   selectedClipLocked,
@@ -4582,7 +4885,8 @@ function NumberField({
   step,
   onCommit,
   hideLabel = false,
-  testId
+  testId,
+  disabled
 }: {
   label: string;
   value: number;
@@ -4592,6 +4896,7 @@ function NumberField({
   onCommit(value: number): void;
   hideLabel?: boolean;
   testId?: string;
+  disabled?: boolean;
 }) {
   const [draft, setDraft] = useState(formatNumberInputValue(value));
   useEffect(() => {
@@ -4617,6 +4922,7 @@ function NumberField({
         min={min}
         max={max}
         step={step ?? 1}
+        disabled={disabled}
         onChange={(event) => setDraft(event.target.value)}
         onBlur={commitDraft}
         onKeyDown={(event) => {

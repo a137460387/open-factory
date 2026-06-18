@@ -361,6 +361,7 @@ const zh = {
     saveProject: '保存项目',
     saveEncryptedProject: '加密保存',
     archiveProject: '归档项目',
+    releaseVersion: '发布版本',
     mediaReport: '素材使用分析',
     clipReport: '导出剪辑报告',
     createSharePackage: '创建分享包',
@@ -2376,6 +2377,7 @@ const zh = {
       dataSubtitle: '动态数据字幕',
       text: '文字',
       credits: '片尾字幕',
+      typography: '高级排版',
       pathText: '路径文字',
       textAnimation: '动画'
     },
@@ -2620,6 +2622,19 @@ const zh = {
       animationPreset: '动画预设',
       animationDuration: '动画时长',
       animationDirection: '方向',
+      textFitMode: '文本框模式',
+      boxWidth: '框宽',
+      boxHeight: '框高',
+      paragraphSpacing: '段间距',
+      firstLineIndent: '首行缩进',
+      openTypeLiga: '连字',
+      openTypeSmcp: '小型大写',
+      openTypeTnum: '等宽数字',
+      openTypeSwsh: '花式替换',
+      arcTextMode: '圆弧文字',
+      arcTextRadius: '圆弧半径',
+      arcTextStartAngle: '起始角度',
+      arcTextRotateCharacters: '字符随圆弧旋转',
       pathTextMode: '路径文字',
       pathTextStartOffset: '起始偏移',
       pathTextLetterSpacing: '字间距',
@@ -2639,7 +2654,22 @@ const zh = {
       bottomMargin: '底部边距',
       exportMode: '导出模式',
       bold: '加粗',
-      italic: '斜体'
+      italic: '斜体',
+      underline: '下划线'
+    },
+    richText: {
+      bold: '加粗',
+      italic: '斜体',
+      underline: '下划线',
+      color: '字符颜色',
+      fontSize: '字符字号'
+    },
+    textLayout: {
+      fitModes: {
+        fixed: '固定大小',
+        autoHeight: '自动高度',
+        autoScale: '自动缩放'
+      }
     },
     dataSubtitle: {
       bind: '绑定 CSV/JSON',
@@ -3974,6 +4004,51 @@ const zh = {
       size: '大小'
     }
   },
+  releaseWorkflow: {
+    title: '发布版本',
+    subtitle: '生成项目版本记录、发布检查清单和可对比快照。',
+    currentVersion: (version: string) => `当前项目版本：${version}`,
+    targetVersion: (version: string) => `本次发布版本：${version}`,
+    major: '主版本',
+    minor: '次版本',
+    patch: '修订号',
+    exportPreset: '导出预设',
+    exportPath: '导出文件路径',
+    outputPathRequired: '请填写本次发布对应的导出文件路径。',
+    assignee: '负责人',
+    changelog: '变更日志（Markdown）',
+    checklist: '发布检查清单',
+    history: '发布历史',
+    emptyHistory: '暂无发布记录。',
+    refresh: '刷新',
+    publish: '发布',
+    publishing: '发布中',
+    published: '版本已发布',
+    publishedMessage: (version: string) => `已生成 ${version} 的发布记录。`,
+    publishFailed: '发布失败',
+    publishBlocked: '发布已阻断',
+    blockingSummary: (count: number) => `${count} 个检查项未通过。`,
+    loadFailed: '发布记录读取失败',
+    snapshotName: (version: string) => `Release ${version}`,
+    compareTitle: '发布对比',
+    compareBase: '基准发布',
+    compareTarget: '目标发布',
+    compare: '对比差异',
+    compareFailed: '发布对比失败',
+    compareSelectionRequired: '请选择两个不同的发布版本。',
+    noReleaseSelected: '未选择发布版本',
+    checks: {
+      qualityGate: '质检报告无阻断问题',
+      mediaRelink: '所有媒体已 Relink',
+      subtitleProof: '字幕拼写检查',
+      exportPreset: '导出预设已选择'
+    },
+    status: {
+      pass: '通过',
+      blocking: '阻断',
+      skipped: '跳过'
+    }
+  },
   sharePackage: {
     title: '创建分享包',
     fileDialogFilter: '分享包',
@@ -4499,6 +4574,7 @@ const enOverrides = {
     saveProject: 'Save Project',
     saveEncryptedProject: 'Encrypted Save',
     archiveProject: 'Archive Project',
+    releaseVersion: 'Release Version',
     mediaReport: 'Media Usage Analysis',
     clipReport: 'Export Clip Report',
     createSharePackage: 'Create Share Package',
@@ -6238,6 +6314,7 @@ const enOverrides = {
       dataSubtitle: 'Live Data Subtitle',
       text: 'Text',
       credits: 'Credits',
+      typography: 'Advanced Typography',
       pathText: 'Path Text',
       textAnimation: 'Animation'
     },
@@ -6429,6 +6506,19 @@ const enOverrides = {
       animationPreset: 'Animation Preset',
       animationDuration: 'Animation Duration',
       animationDirection: 'Direction',
+      textFitMode: 'Text Box Mode',
+      boxWidth: 'Box Width',
+      boxHeight: 'Box Height',
+      paragraphSpacing: 'Paragraph Spacing',
+      firstLineIndent: 'First Line Indent',
+      openTypeLiga: 'Ligatures',
+      openTypeSmcp: 'Small Caps',
+      openTypeTnum: 'Tabular Numbers',
+      openTypeSwsh: 'Swashes',
+      arcTextMode: 'Arc Text',
+      arcTextRadius: 'Arc Radius',
+      arcTextStartAngle: 'Start Angle',
+      arcTextRotateCharacters: 'Rotate Characters Along Arc',
       pathTextMode: 'Path Text',
       pathTextStartOffset: 'Start Offset',
       pathTextLetterSpacing: 'Letter Spacing',
@@ -6448,7 +6538,22 @@ const enOverrides = {
       bottomMargin: 'Bottom Margin',
       exportMode: 'Export Mode',
       bold: 'Bold',
-      italic: 'Italic'
+      italic: 'Italic',
+      underline: 'Underline'
+    },
+    richText: {
+      bold: 'Bold',
+      italic: 'Italic',
+      underline: 'Underline',
+      color: 'Character Color',
+      fontSize: 'Character Size'
+    },
+    textLayout: {
+      fitModes: {
+        fixed: 'Fixed Size',
+        autoHeight: 'Auto Height',
+        autoScale: 'Auto Scale'
+      }
     },
     dataSubtitle: {
       bind: 'Bind CSV/JSON',
@@ -7665,6 +7770,51 @@ const enOverrides = {
       name: 'Name',
       time: 'Time',
       size: 'Size'
+    }
+  },
+  releaseWorkflow: {
+    title: 'Release Version',
+    subtitle: 'Create release records, checklist results, and comparable snapshots.',
+    currentVersion: (version: string) => `Current project version: ${version}`,
+    targetVersion: (version: string) => `Release version: ${version}`,
+    major: 'Major',
+    minor: 'Minor',
+    patch: 'Patch',
+    exportPreset: 'Export Preset',
+    exportPath: 'Export File Path',
+    outputPathRequired: 'Enter the export file path for this release.',
+    assignee: 'Owner',
+    changelog: 'Changelog (Markdown)',
+    checklist: 'Release Checklist',
+    history: 'Release History',
+    emptyHistory: 'No release records.',
+    refresh: 'Refresh',
+    publish: 'Publish',
+    publishing: 'Publishing',
+    published: 'Version Published',
+    publishedMessage: (version: string) => `Release record ${version} was created.`,
+    publishFailed: 'Publish failed',
+    publishBlocked: 'Publish blocked',
+    blockingSummary: (count: number) => `${count} checklist item(s) failed.`,
+    loadFailed: 'Release records failed to load',
+    snapshotName: (version: string) => `Release ${version}`,
+    compareTitle: 'Release Compare',
+    compareBase: 'Base Release',
+    compareTarget: 'Target Release',
+    compare: 'Compare Diffs',
+    compareFailed: 'Release compare failed',
+    compareSelectionRequired: 'Select two different releases.',
+    noReleaseSelected: 'No release selected',
+    checks: {
+      qualityGate: 'Quality report has no blockers',
+      mediaRelink: 'All media relinked',
+      subtitleProof: 'Subtitle proofing',
+      exportPreset: 'Export preset selected'
+    },
+    status: {
+      pass: 'Pass',
+      blocking: 'Blocking',
+      skipped: 'Skipped'
     }
   },
   sharePackage: {

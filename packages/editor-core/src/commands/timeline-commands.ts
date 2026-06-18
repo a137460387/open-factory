@@ -138,6 +138,7 @@ import { createKeyframe, removeKeyframeForProperty, setKeyframeForProperty } fro
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
 import { normalizeProjectDocumentation } from '../project/documentation';
 import { applyProjectHealthAutoRepair, type ProjectHealthAutoRepairInput, type ProjectHealthRepairReport } from '../project/project-health-repair';
+import { normalizeProjectReleaseVersion } from '../project/release-workflow';
 import { applyProxyMigration, type ProxyMigrationUpdate } from '../proxy/proxy-management';
 import {
   buildTextAnimationKeyframes,
@@ -148,6 +149,7 @@ import {
   type TextAnimationDirection,
   type TextAnimationPreset
 } from '../text-animation';
+import { normalizeRichTextDocument, normalizeTextArc, normalizeTextLayout, normalizeTextOpenTypeFeatures } from '../text-layout';
 import { cloneEffects, normalizeEffect, normalizeEffects, type Effect, type EffectParams, type EffectType } from '../effects';
 import { applyStyleToClip, type ApplyStyleTransferOptions, type StyleSummary } from '../style-transfer';
 import {
@@ -257,6 +259,32 @@ export class UpdateProjectSettingsCommand implements Command {
     this.accessor.setProject({
       ...project,
       settings: normalizeProjectSettings({ ...project.settings, ...this.patch })
+    });
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class UpdateProjectReleaseVersionCommand implements Command {
+  readonly description = 'Update project release version';
+  private before?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly releaseVersion: string
+  ) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    const project = this.accessor.getProject();
+    this.accessor.setProject({
+      ...project,
+      releaseVersion: normalizeProjectReleaseVersion(this.releaseVersion),
+      updatedAt: new Date().toISOString()
     });
   }
 
@@ -3906,6 +3934,10 @@ export type ClipPatch = Partial<Omit<Clip, 'type' | 'id' | 'transform' | 'colorC
   kenBurns?: boolean;
   volume?: number;
   text?: string;
+  richText?: Extract<Clip, { type: 'text' }>['richText'];
+  textLayout?: Extract<Clip, { type: 'text' }>['textLayout'];
+  openTypeFeatures?: Extract<Clip, { type: 'text' }>['openTypeFeatures'];
+  arcText?: Extract<Clip, { type: 'text' }>['arcText'];
   colorLabel?: TimelineLabelColor | null;
   mediaId?: string;
   subtitleType?: SubtitleTrackType;
@@ -4380,6 +4412,10 @@ export class UpdateClipCommand implements Command {
     if (this.after.type === 'text') {
       this.after = {
         ...this.after,
+        richText: normalizeRichTextDocument(this.after.richText, this.after.text),
+        textLayout: normalizeTextLayout(this.after.textLayout),
+        openTypeFeatures: normalizeTextOpenTypeFeatures(this.after.openTypeFeatures),
+        arcText: normalizeTextArc(this.after.arcText),
         pathText: normalizeTextPath(this.after.pathText)
       };
     }
@@ -4845,6 +4881,18 @@ function cloneClipForNestedSequence<TClip extends Clip>(clip: TClip): TClip {
     } as TClip;
   }
   if (clip.type === 'text' || clip.type === 'subtitle') {
+    if (clip.type === 'text') {
+      return {
+        ...cloned,
+        text: clip.text,
+        style: { ...clip.style },
+        richText: normalizeRichTextDocument(clip.richText, clip.text),
+        textLayout: normalizeTextLayout(clip.textLayout),
+        openTypeFeatures: normalizeTextOpenTypeFeatures(clip.openTypeFeatures),
+        arcText: normalizeTextArc(clip.arcText),
+        pathText: normalizeTextPath(clip.pathText)
+      } as TClip;
+    }
     return { ...cloned, style: { ...clip.style } } as TClip;
   }
   return cloned as TClip;

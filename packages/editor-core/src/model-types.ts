@@ -213,6 +213,7 @@ export interface Project {
   version: ProjectVersion;
   id: string;
   name: string;
+  releaseVersion: string;
   createdAt: string;
   updatedAt: string;
   masterVolume: number;
@@ -605,6 +606,10 @@ export interface TextClip extends BaseClip {
   type: 'text';
   text: string;
   style: TextStyle;
+  richText?: RichTextDocument;
+  textLayout?: TextLayoutOptions;
+  openTypeFeatures?: TextOpenTypeFeatures;
+  arcText?: TextArcOptions;
   pathText?: TextPathOptions;
 }
 
@@ -679,11 +684,53 @@ export interface TextStyle {
   italic: boolean;
 }
 
+export type TextBoxFitMode = 'fixed' | 'auto-height' | 'auto-scale';
+
+export interface RichTextRun {
+  text: string;
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  color?: string;
+  fontSize?: number;
+}
+
+export interface RichTextParagraph {
+  runs: RichTextRun[];
+}
+
+export interface RichTextDocument {
+  paragraphs: RichTextParagraph[];
+}
+
+export interface TextLayoutOptions {
+  fitMode: TextBoxFitMode;
+  boxWidth: number;
+  boxHeight: number;
+  paragraphSpacing: number;
+  firstLineIndent: number;
+}
+
+export interface TextOpenTypeFeatures {
+  liga: boolean;
+  smcp: boolean;
+  tnum: boolean;
+  swsh: boolean;
+}
+
 export interface TextPathOptions {
   enabled: boolean;
   path: PathPoint[];
   startOffset: number;
   letterSpacing: number;
+  rotateCharacters: boolean;
+}
+
+export interface TextArcOptions {
+  enabled: boolean;
+  radius: number;
+  startAngle: number;
+  clockwise: boolean;
   rotateCharacters: boolean;
 }
 

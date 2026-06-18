@@ -8,6 +8,9 @@ import {
   DEFAULT_AUDIO_REVERSE,
   DEFAULT_CREDITS_ROLL_SPEED,
   DEFAULT_CREDITS_STYLE,
+  DEFAULT_TEXT_ARC,
+  DEFAULT_TEXT_LAYOUT,
+  DEFAULT_TEXT_OPEN_TYPE_FEATURES,
   DEFAULT_SUBTITLE_MODE,
   DEFAULT_SUBTITLE_STYLE,
   DEFAULT_SPATIAL_AUDIO,
@@ -31,6 +34,10 @@ import {
   normalizeSequenceFrameRate,
   normalizeSlowMotionMode,
   normalizeStabilization,
+  normalizeRichTextDocument,
+  normalizeTextArc,
+  normalizeTextLayout,
+  normalizeTextOpenTypeFeatures,
   normalizeTextPath,
   normalizeVideoRestoration,
   normalizeColorNodeGraph,
@@ -296,6 +303,10 @@ export function makeTextClip(overrides: ClipOverrides<Extract<Clip, { type: 'tex
       bold: overrides.style?.bold ?? false,
       italic: overrides.style?.italic ?? false
     },
+    richText: normalizeRichTextDocument(overrides.richText, overrides.text ?? 'Hello'),
+    textLayout: normalizeTextLayout(overrides.textLayout ?? DEFAULT_TEXT_LAYOUT),
+    openTypeFeatures: normalizeTextOpenTypeFeatures(overrides.openTypeFeatures ?? DEFAULT_TEXT_OPEN_TYPE_FEATURES),
+    arcText: normalizeTextArc(overrides.arcText ?? DEFAULT_TEXT_ARC),
     pathText: normalizeTextPath(overrides.pathText)
   };
 }

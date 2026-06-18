@@ -1,5 +1,8 @@
 import {
   DEFAULT_TEXT_STYLE,
+  DEFAULT_TEXT_ARC,
+  DEFAULT_TEXT_LAYOUT,
+  DEFAULT_TEXT_OPEN_TYPE_FEATURES,
   DEFAULT_TRANSFORM,
   DEFAULT_CLIP_SPEED,
   DEFAULT_CHROMA_KEY,
@@ -93,6 +96,10 @@ export function createTextClip(track: Track, timeline: Timeline): Clip {
     masks: [],
     text: zhCN.clips.defaultTextContent,
     style: { ...DEFAULT_TEXT_STYLE },
+    richText: { paragraphs: [{ runs: [{ text: zhCN.clips.defaultTextContent }] }] },
+    textLayout: { ...DEFAULT_TEXT_LAYOUT },
+    openTypeFeatures: { ...DEFAULT_TEXT_OPEN_TYPE_FEATURES },
+    arcText: { ...DEFAULT_TEXT_ARC },
     pathText: { ...DEFAULT_TEXT_PATH, path: DEFAULT_TEXT_PATH.path.map((point) => ({ ...point, handleIn: point.handleIn ? { ...point.handleIn } : undefined, handleOut: point.handleOut ? { ...point.handleOut } : undefined })) }
   };
 }

@@ -281,6 +281,47 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.outputArgs).toContain('5');
   });
 
+  it('splits rich text paragraphs into separate drawtext filters', () => {
+    const project = makeProject();
+    project.timeline.tracks[2].clips = [
+      makeTextClip({
+        id: 'rich-text',
+        text: 'One\nTwo\nThree',
+        richText: {
+          paragraphs: [
+            { runs: [{ text: 'One' }] },
+            { runs: [{ text: 'Two', bold: true, color: '#ff0000' }] },
+            { runs: [{ text: 'Three', italic: true, fontSize: 60 }] }
+          ]
+        },
+        textLayout: { fitMode: 'auto-height', boxWidth: 480, boxHeight: 120, paragraphSpacing: 18, firstLineIndent: 20 }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex.match(/drawtext=textfile=__TEXTFILE_rich_text_/g)).toHaveLength(3);
+    expect(plan.textArtifacts.filter((artifact) => artifact.clipId.startsWith('rich-text:text-'))).toHaveLength(3);
+    expect(plan.textArtifacts.map((artifact) => artifact.text)).toEqual(['One', 'Two', 'Three']);
+  });
+
+  it('adds OpenType feature args to drawtext when enabled', () => {
+    const project = makeProject();
+    project.timeline.tracks[2].clips = [
+      makeTextClip({
+        id: 'opentype-text',
+        text: '123 Office',
+        openTypeFeatures: { liga: true, smcp: true, tnum: true, swsh: false }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('fontfeatures=liga=1,smcp=1,tnum=1');
+    expect(plan.filterComplex).toContain('text_shaping=1');
+    expect(plan.filterComplex).toContain('drawtext=textfile=__TEXTFILE_opentype_text__');
+  });
+
   it('skips spatial audio filters for default clip position', () => {
     const plan = buildFfmpegExportPlan(buildExportProjectFromProject(makeProject(), { outputPath: 'out.mp4' }));
 
@@ -551,6 +592,34 @@ describe('multitrack ffmpeg builder', () => {
     expect(manifest.kind).toBe('path-text-sequence');
     expect(manifest.frameCount).toBe(60);
     expect(manifest.frames[0].chars.length).toBeGreaterThan(0);
+  });
+
+  it('exports arc text clips through the path text sequence artifact pipeline', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-background', duration: 2 })];
+    project.timeline.tracks[2].clips = [
+      makeTextClip({
+        id: 'clip-arc-text',
+        text: 'ARC',
+        duration: 2,
+        arcText: { enabled: true, radius: 140, startAngle: -20, clockwise: true, rotateCharacters: true },
+        pathText: { enabled: false, path: [], startOffset: 0, letterSpacing: 6, rotateCharacters: true }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).toContain('pathtextsrc_clip_arc_text');
+    expect(plan.filterComplex).not.toContain('drawtext=textfile=__TEXTFILE_clip_arc_text__');
+    expect(plan.textArtifacts[0]).toEqual(
+      expect.objectContaining({
+        clipId: 'clip-arc-text:arc-text',
+        fileName: 'arc-text-clip_arc_text.json',
+        pathMode: 'path-text-sequence'
+      })
+    );
+    const manifest = JSON.parse(plan.textArtifacts[0].text) as { frames: Array<{ chars: Array<{ angle: number }> }> };
+    expect(manifest.frames[0].chars[0].angle).not.toBe(0);
   });
 
   it('exports motion graphic clips through a baked PNG sequence overlay artifact', () => {

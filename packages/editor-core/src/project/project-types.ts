@@ -24,6 +24,7 @@ export interface ProjectFileV1 {
   project: {
     id: string;
     name: string;
+    releaseVersion?: string;
     createdAt: string;
     updatedAt: string;
     settings: ProjectSettings;
@@ -37,6 +38,7 @@ export interface ProjectFileV2 {
   project: {
     id: string;
     name: string;
+    releaseVersion?: string;
     createdAt: string;
     updatedAt: string;
     masterVolume?: number;

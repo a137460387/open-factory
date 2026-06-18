@@ -3,9 +3,9 @@ import { expect, test } from '@playwright/test';
 test('brightens the WebGL preview when clip color correction changes', async ({ page }) => {
   await page.goto('/');
   await page.getByTestId('add-text-clip-button').click();
-  await page.getByTestId('clip-text-input').fill(' ');
+  await page.getByTestId('clip-text-input').fill('Preview');
   await page.getByTestId('clip-text-input').blur();
-  await page.locator('input[type="color"]').nth(1).fill('#555555');
+  await page.getByTestId('clip-background-color-input').fill('#555555');
   await page.getByTestId('clip-background-opacity-slider').fill('1');
 
   const before = await waitForPreviewPixel(page);

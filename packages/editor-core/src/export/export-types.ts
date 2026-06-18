@@ -20,7 +20,11 @@ import type {
   ClipSlowMotionMode,
   ClipVideoRestoration,
   PathPoint,
+  RichTextDocument,
   SubtitleTrackType,
+  TextArcOptions,
+  TextLayoutOptions,
+  TextOpenTypeFeatures,
   TrackCompressor,
   TrackEQ,
   TrackEQBandType
@@ -290,6 +294,10 @@ export interface ExportTextStyle {
   opacity: number;
   bold: boolean;
   italic: boolean;
+  richText: RichTextDocument | null;
+  textLayout: TextLayoutOptions | null;
+  openTypeFeatures: TextOpenTypeFeatures | null;
+  arcText: TextArcOptions | null;
 }
 
 export interface ExportTextPathOptions {

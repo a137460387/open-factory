@@ -1,4 +1,18 @@
-import { DEFAULT_TRANSFORM, layoutTextAlongPath, normalizeTextPath, resolveDataSubtitleText, resolvePathTextStartOffset, type Clip, type ProjectColorPipeline } from '@open-factory/editor-core';
+import {
+  DEFAULT_TRANSFORM,
+  buildArcTextLayout,
+  buildRichTextDrawSegments,
+  calculateTextAutoLayout,
+  layoutTextAlongPath,
+  normalizeTextArc,
+  normalizeTextLayout,
+  normalizeTextPath,
+  resolveDataSubtitleText,
+  resolvePathTextStartOffset,
+  richTextToPlainText,
+  type Clip,
+  type ProjectColorPipeline
+} from '@open-factory/editor-core';
 import { zhCN } from '../../i18n/strings';
 import { recordPreviewDraw } from './debug';
 import { drawTransformedSource2d } from './transform-2d';
@@ -8,8 +22,16 @@ type TextClip = Extract<Clip, { type: 'text' }> | Extract<Clip, { type: 'subtitl
 type CreditsClip = Extract<Clip, { type: 'credits' }>;
 
 export function drawText2d(context: CanvasRenderingContext2D, canvas: HTMLCanvasElement, clip: TextClip, bypassProcessing = false, localTime = 0): void {
+  if (clip.type === 'text' && normalizeTextArc(clip.arcText).enabled) {
+    drawArcText2d(context, canvas, clip, bypassProcessing);
+    return;
+  }
   if (clip.type === 'text' && normalizeTextPath(clip.pathText).enabled) {
     drawPathText2d(context, canvas, clip, bypassProcessing, localTime);
+    return;
+  }
+  if (clip.type === 'text' && shouldDrawRichTextPreview(clip)) {
+    drawRichText2d(context, canvas, clip, bypassProcessing);
     return;
   }
   const text = resolveTextContent(clip, localTime);
@@ -40,7 +62,7 @@ export function drawText2d(context: CanvasRenderingContext2D, canvas: HTMLCanvas
 }
 
 export function drawTextWebGl(compositor: WebGlPreviewCompositor, clip: TextClip, bypassProcessing = false, colorPipeline?: ProjectColorPipeline, localTime = 0): void {
-  const text = resolveTextContent(clip, localTime);
+  const text = clip.type === 'text' ? richTextToPlainText(clip.richText, clip.text) : resolveTextContent(clip, localTime);
   if (clip.type === 'subtitle' && !text) {
     return;
   }
@@ -160,6 +182,134 @@ function drawTextBackground(
   context.globalAlpha = Math.min(1, Math.max(0, backgroundOpacity)) * Math.min(1, Math.max(0, transformOpacity));
   context.fillStyle = backgroundColor;
   context.fillRect(-width / 2, -height / 2, width, height);
+}
+
+function drawRichText2d(context: CanvasRenderingContext2D, canvas: HTMLCanvasElement, clip: Extract<Clip, { type: 'text' }>, bypassProcessing: boolean): void {
+  const previousFilter = context.filter;
+  const transform = clip.transform;
+  const correction = clip.colorCorrection;
+  const layout = calculateTextAutoLayout({
+    richText: clip.richText,
+    plainText: clip.text,
+    baseStyle: clip.style,
+    layout: clip.textLayout
+  });
+  const segments = buildRichTextDrawSegments({
+    richText: clip.richText,
+    plainText: clip.text,
+    baseStyle: clip.style,
+    layout: normalizeTextLayout(clip.textLayout)
+  });
+  context.save();
+  context.filter = bypassProcessing
+    ? 'none'
+    : `brightness(${Math.max(0, 1 + correction.brightness)}) contrast(${correction.contrast}) saturate(${correction.saturation}) hue-rotate(${correction.hue}deg)`;
+  context.globalAlpha = transform.opacity;
+  context.translate(canvas.width / 2 + transform.x, canvas.height / 2 + transform.y);
+  context.rotate((transform.rotation * Math.PI) / 180);
+  context.scale(transform.scale, transform.scale);
+  context.textAlign = 'left';
+  context.textBaseline = 'top';
+  for (const segment of segments) {
+    const fontSize = Math.max(1, segment.style.fontSize * layout.scale);
+    context.font = `${segment.style.italic ? 'italic ' : ''}${segment.style.bold ? '700 ' : '400 '}${fontSize}px ${clip.style.fontFamily}`;
+    context.fillStyle = segment.style.color;
+    context.globalAlpha = transform.opacity;
+    const x = segment.xOffset - layout.width / 2;
+    const y = segment.yOffset - layout.height / 2;
+    drawTextRunBackground(context, segment.text, x, y, fontSize, clip.style.backgroundColor, clip.style.backgroundOpacity, transform.opacity);
+    context.globalAlpha = transform.opacity;
+    context.fillText(segment.text, x, y);
+    if (segment.style.underline) {
+      const width = context.measureText(segment.text).width;
+      context.fillRect(x, y + fontSize * 1.08, width, Math.max(1, fontSize * 0.06));
+    }
+  }
+  context.filter = previousFilter;
+  context.restore();
+  recordPreviewDraw(clip.type, 'text', richTextToPlainText(clip.richText, clip.text));
+}
+
+function drawArcText2d(context: CanvasRenderingContext2D, canvas: HTMLCanvasElement, clip: Extract<Clip, { type: 'text' }>, bypassProcessing: boolean): void {
+  const previousFilter = context.filter;
+  const transform = clip.transform;
+  const correction = clip.colorCorrection;
+  const arcText = normalizeTextArc(clip.arcText);
+  const pathText = normalizeTextPath(clip.pathText);
+  const scale = Math.max(0.01, clip.transform.scaleX ?? clip.transform.scale);
+  const fontSize = Math.max(1, clip.style.fontSize * scale);
+  const chars = buildArcTextLayout({
+    text: richTextToPlainText(clip.richText, clip.text),
+    arc: arcText,
+    fontSize,
+    letterSpacing: pathText.letterSpacing,
+    centerX: canvas.width / 2 + transform.x,
+    centerY: canvas.height / 2 + transform.y
+  });
+  context.save();
+  context.filter = bypassProcessing
+    ? 'none'
+    : `brightness(${Math.max(0, 1 + correction.brightness)}) contrast(${correction.contrast}) saturate(${correction.saturation}) hue-rotate(${correction.hue}deg)`;
+  context.globalAlpha = transform.opacity;
+  context.font = `${clip.style.italic ? 'italic ' : ''}${clip.style.bold ? '700 ' : '400 '}${fontSize}px ${clip.style.fontFamily}`;
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.fillStyle = clip.style.color;
+  for (const item of chars) {
+    context.save();
+    context.translate(item.x, item.y);
+    if (arcText.rotateCharacters) {
+      context.rotate((item.rotation * Math.PI) / 180);
+    }
+    drawTextBackground(context, item.char, fontSize, clip.style.backgroundColor, clip.style.backgroundOpacity, transform.opacity);
+    context.globalAlpha = transform.opacity;
+    context.fillStyle = clip.style.color;
+    context.fillText(item.char, 0, 0);
+    context.restore();
+  }
+  context.filter = previousFilter;
+  context.restore();
+  recordPreviewDraw(clip.type, 'text');
+}
+
+function drawTextRunBackground(
+  context: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  fontSize: number,
+  backgroundColor: string,
+  backgroundOpacity: number,
+  transformOpacity: number
+): void {
+  if (backgroundOpacity <= 0) {
+    return;
+  }
+  const metrics = context.measureText(text);
+  const padding = Math.max(6, fontSize * 0.25);
+  context.globalAlpha = Math.min(1, Math.max(0, backgroundOpacity)) * Math.min(1, Math.max(0, transformOpacity));
+  context.fillStyle = backgroundColor;
+  context.fillRect(x - padding, y - padding / 2, Math.max(fontSize, metrics.width) + padding * 2, fontSize * 1.35 + padding);
+}
+
+function shouldDrawRichTextPreview(clip: Extract<Clip, { type: 'text' }>): boolean {
+  const richText = clip.richText;
+  const layout = normalizeTextLayout(clip.textLayout);
+  const defaultLayout = normalizeTextLayout(undefined);
+  return Boolean(
+    richText &&
+      (richText.paragraphs.length > 1 ||
+        richText.paragraphs.some(
+          (paragraph) =>
+            paragraph.runs.length > 1 ||
+            paragraph.runs.some((run) => run.bold !== undefined || run.italic !== undefined || run.underline !== undefined || run.color !== undefined || run.fontSize !== undefined)
+        ) ||
+        layout.fitMode !== defaultLayout.fitMode ||
+        layout.boxWidth !== defaultLayout.boxWidth ||
+        layout.boxHeight !== defaultLayout.boxHeight ||
+        layout.paragraphSpacing !== defaultLayout.paragraphSpacing ||
+        layout.firstLineIndent !== defaultLayout.firstLineIndent)
+  );
 }
 
 function drawPathText2d(context: CanvasRenderingContext2D, canvas: HTMLCanvasElement, clip: Extract<Clip, { type: 'text' }>, bypassProcessing: boolean, localTime: number): void {

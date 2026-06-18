@@ -33,6 +33,7 @@ interface ToolbarProps {
   onSaveProject(): void;
   onSaveEncryptedProject(): void;
   onArchiveProject(): void;
+  onOpenReleaseWorkflow(): void;
   onCreateMediaReport(): void;
   onCreateClipReport(): void;
   onCreateSharePackage(): void;
@@ -343,6 +344,17 @@ export function Toolbar(props: ToolbarProps) {
               }}
             >
               <span>{t.archiveProject}</span>
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-file-release-version-menu-item"
+              onClick={() => {
+                setFileMenuOpen(false);
+                props.onOpenReleaseWorkflow();
+              }}
+            >
+              <span>{t.releaseVersion}</span>
             </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"

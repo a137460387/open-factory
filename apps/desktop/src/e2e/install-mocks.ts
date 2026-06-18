@@ -2257,6 +2257,7 @@ window.__E2E_ACTIONS__ = {
   },
   getWrittenFile: (path: unknown) => (typeof path === 'string' ? files.get(path) : undefined),
   getWrittenFileSize: (path: unknown) => (typeof path === 'string' ? files.get(path)?.length ?? 0 : 0),
+  getReleaseFiles: () => Array.from(files.keys()).filter((path) => path.includes('/releases/') && path.endsWith('.json') && exists.get(path) !== false),
   getBackupFiles: (path: unknown) => {
     if (typeof path !== 'string') {
       return [];
@@ -2359,7 +2360,7 @@ window.__E2E_ACTIONS__ = {
       exists.set(path, false);
       mtimes.delete(path);
     }
-    for (const path of Array.from(files.keys()).filter((item) => item.includes('/snapshots/'))) {
+    for (const path of Array.from(files.keys()).filter((item) => item.includes('/snapshots/') || item.includes('/releases/'))) {
       files.delete(path);
       exists.set(path, false);
       mtimes.delete(path);

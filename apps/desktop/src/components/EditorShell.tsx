@@ -37,6 +37,7 @@ import {
   UpdateProjectBeatMarkersCommand,
   UpdateProjectBookmarksCommand,
   UpdateProjectExportRangesCommand,
+  UpdateProjectReleaseVersionCommand,
   UpdateProjectSpeakersCommand,
   UpdateClipCommand,
   createBeatMarker,
@@ -338,6 +339,7 @@ const TimelineSearchPanel = lazy(() => import('../timeline-search/TimelineSearch
 const SnapshotNameDialog = lazy(() => import('../project-snapshots/SnapshotNameDialog').then((module) => ({ default: module.SnapshotNameDialog })));
 const SnapshotHistoryDialog = lazy(() => import('../project-snapshots/SnapshotHistoryDialog').then((module) => ({ default: module.SnapshotHistoryDialog })));
 const SnapshotVersionCompareDialog = lazy(() => import('../project-snapshots/SnapshotVersionCompareDialog').then((module) => ({ default: module.SnapshotVersionCompareDialog })));
+const ReleaseWorkflowDialog = lazy(() => import('../release/ReleaseWorkflowDialog').then((module) => ({ default: module.ReleaseWorkflowDialog })));
 const ThumbnailGeneratorDialog = lazy(() => import('../thumbnail/ThumbnailGeneratorDialog').then((module) => ({ default: module.ThumbnailGeneratorDialog })));
 
 interface ProjectPasswordRequest {
@@ -409,6 +411,7 @@ export function EditorShell() {
   const [snapshotNameOpen, setSnapshotNameOpen] = useState(false);
   const [snapshotHistoryOpen, setSnapshotHistoryOpen] = useState(false);
   const [snapshotCompareOpen, setSnapshotCompareOpen] = useState(false);
+  const [releaseWorkflowOpen, setReleaseWorkflowOpen] = useState(false);
   const [projectEncryptionSaveOpen, setProjectEncryptionSaveOpen] = useState(false);
   const [projectPasswordRequest, setProjectPasswordRequest] = useState<ProjectPasswordRequest | undefined>();
   const [projectTemplateOpen, setProjectTemplateOpen] = useState(false);
@@ -1717,6 +1720,10 @@ export function EditorShell() {
     },
     [clearSelectedClipIds, setPlayheadTime]
   );
+
+  const updateProjectReleaseVersion = useCallback((version: string) => {
+    commandManager.execute(new UpdateProjectReleaseVersionCommand(projectAccessor, version));
+  }, []);
 
   const scanDuplicateMedia = useCallback(async () => {
     try {
@@ -3466,6 +3473,7 @@ export function EditorShell() {
           onSaveProject={() => void saveProject()}
           onSaveEncryptedProject={saveEncryptedProject}
           onArchiveProject={() => void archiveCurrentProject()}
+          onOpenReleaseWorkflow={() => setReleaseWorkflowOpen(true)}
           onCreateMediaReport={() => void createMediaReport()}
           onCreateClipReport={() => void createClipReport()}
           onCreateSharePackage={() => void createCurrentSharePackage()}
@@ -3837,6 +3845,16 @@ export function EditorShell() {
           ) : null}
           {snapshotCompareOpen ? (
             <SnapshotVersionCompareDialog project={project} projectPath={projectPath} onApply={applySnapshotDiffSelection} onClose={() => setSnapshotCompareOpen(false)} />
+          ) : null}
+          {releaseWorkflowOpen ? (
+            <ReleaseWorkflowDialog
+              project={project}
+              projectPath={projectPath}
+              lastExportPath={lastExportPath}
+              onReleaseCreated={updateProjectReleaseVersion}
+              onApplyDiff={applySnapshotDiffSelection}
+              onClose={() => setReleaseWorkflowOpen(false)}
+            />
           ) : null}
           {batchTranscodeOpen ? (
             <BatchTranscodeDialog

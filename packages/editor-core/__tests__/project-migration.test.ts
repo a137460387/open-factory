@@ -7,8 +7,21 @@ describe('project schema migration', () => {
     const file = serializeProject(makeProject(), 'C:/Videos/project.cutproj.json');
 
     expect(file.schemaVersion).toBe(2);
+    expect(file.project.releaseVersion).toBe('0.1.0');
     expect(file.project.media[0].relativePath).toBe('sample.mp4');
     expect(file.project.media[0].originalAbsolutePath).toBe('C:/Videos/sample.mp4');
+  });
+
+  it('serializes and migrates project release version while old files stay compatible', () => {
+    const project = makeProject();
+    project.releaseVersion = '2.3.4';
+    const file = serializeProject(project);
+
+    expect(file.project.releaseVersion).toBe('2.3.4');
+    expect(migrateProjectFile(file).project.releaseVersion).toBe('2.3.4');
+
+    delete file.project.releaseVersion;
+    expect(migrateProjectFile(file).project.releaseVersion).toBe('0.1.0');
   });
 
   it('serializes and migrates project timecode settings with legacy fallback', () => {

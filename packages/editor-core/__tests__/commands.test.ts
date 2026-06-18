@@ -88,6 +88,7 @@ import {
   UpdateProjectAudioCommand,
   UpdateProjectCoverCommand,
   UpdateProjectDocumentationCommand,
+  UpdateProjectReleaseVersionCommand,
   UpdateProjectSpeakersCommand,
   UpdateProjectSettingsCommand,
   UpdateTrackCommand,
@@ -261,6 +262,26 @@ describe('timeline commands', () => {
 
     manager.undo();
     expect(accessor.current().tracks.find((item) => item.id === 'track-adjustment')?.clips).toHaveLength(0);
+  });
+
+  it('updates project release version with undo and semver normalization', () => {
+    let project = makeProject();
+    const accessor = {
+      getProject: () => project,
+      setProject: (next: typeof project) => {
+        project = next;
+      }
+    };
+    const manager = new CommandManager();
+
+    manager.execute(new UpdateProjectReleaseVersionCommand(accessor, '02.003.004'));
+    expect(project.releaseVersion).toBe('2.3.4');
+
+    manager.undo();
+    expect(project.releaseVersion).toBe('0.1.0');
+
+    manager.redo();
+    expect(project.releaseVersion).toBe('2.3.4');
   });
 
   it('migrates proxy path references and undoes without moving files back', () => {
@@ -1819,6 +1840,41 @@ describe('timeline commands', () => {
       expect(text.style.color).toBe('#ff0000');
       expect(text.style.backgroundColor).toBe('#102030');
       expect(text.style.backgroundOpacity).toBe(0.4);
+    }
+  });
+
+  it('restores rich text formatting on undo', () => {
+    const accessor = makeAccessor(makeTimeline([makeTextClip({ id: 'text-rich', text: 'Plain' })]));
+    const manager = new CommandManager();
+
+    manager.execute(
+      new UpdateClipCommand(accessor, 'text-rich', {
+        text: 'Plain Bold',
+        richText: {
+          paragraphs: [
+            {
+              runs: [
+                { text: 'Plain ' },
+                { text: 'Bold', bold: true, underline: true, color: '#ff4fd8', fontSize: 72 }
+              ]
+            }
+          ]
+        }
+      })
+    );
+
+    const updated = accessor.current().tracks[2].clips[0];
+    expect(updated.type).toBe('text');
+    if (updated.type === 'text') {
+      expect(updated.richText?.paragraphs[0].runs[1]).toMatchObject({ text: 'Bold', bold: true, underline: true, color: '#ff4fd8', fontSize: 72 });
+    }
+
+    manager.undo();
+    const reverted = accessor.current().tracks[2].clips[0];
+    expect(reverted.type).toBe('text');
+    if (reverted.type === 'text') {
+      expect(reverted.text).toBe('Plain');
+      expect(reverted.richText?.paragraphs[0].runs).toEqual([{ text: 'Plain' }]);
     }
   });
 

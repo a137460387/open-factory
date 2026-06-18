@@ -52,6 +52,7 @@ function makeProject(): Project {
     version: '0.2',
     id: 'project',
     name: 'Project',
+    releaseVersion: '0.1.0',
     createdAt: '2026-06-16T00:00:00.000Z',
     updatedAt: '2026-06-16T00:00:00.000Z',
     masterVolume: 1,

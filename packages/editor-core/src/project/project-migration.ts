@@ -61,6 +61,7 @@ import { normalizeTimelineLabelColor } from '../timeline-color-labels';
 import { normalizeMediaFolderId, normalizeMediaFolders, normalizeMediaImportedAt } from '../media-folders';
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
 import { cloneEffects } from '../effects';
+import { normalizeRichTextDocument, normalizeTextArc, normalizeTextLayout, normalizeTextOpenTypeFeatures } from '../text-layout';
 import { normalizeCreditsRollSpeed, normalizeCreditsRows, normalizeCreditsStyle } from '../credits-roll';
 import { normalizeMotionGraphic } from '../motion-graphics';
 import { normalizeBeatMarkers } from '../beats';
@@ -69,6 +70,7 @@ import { clampTransitionDuration, findAdjacentTransitionClips, getTimelineDurati
 import type { MigrationResult, ProjectFile, ProjectFileV1, ProjectFileV2 } from './project-types';
 import { isAbsolutePath, makeRelativePath, normalizePath, resolveMediaPath } from './relative-paths';
 import { normalizeProjectDocumentation } from './documentation';
+import { normalizeProjectReleaseVersion } from './release-workflow';
 
 const DEFAULT_SETTINGS = { fps: 30, timecodeFormat: 'ndf' as const, width: 1280, height: 720, colorPipeline: 'sdr-srgb' as const, workingColorSpace: 'srgb' as const };
 
@@ -113,6 +115,7 @@ export function serializeProjectFile(project: Project, projectPath?: string): Pr
     project: {
       id: project.id,
       name: project.name,
+      releaseVersion: normalizeProjectReleaseVersion(project.releaseVersion),
       createdAt: project.createdAt,
       updatedAt: new Date().toISOString(),
       masterVolume: normalizeMasterVolume(project.masterVolume),
@@ -162,6 +165,7 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         version: '0.2',
         id: file.project.id,
         name: file.project.name,
+        releaseVersion: normalizeProjectReleaseVersion(file.project.releaseVersion),
         createdAt: file.project.createdAt,
         updatedAt: file.project.updatedAt,
         masterVolume: normalizeMasterVolume(file.project.masterVolume),
@@ -198,6 +202,7 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         version: '0.2',
         id: file.project.id,
         name: file.project.name,
+        releaseVersion: normalizeProjectReleaseVersion(undefined),
         createdAt: file.project.createdAt,
         updatedAt: file.project.updatedAt,
         masterVolume: 1,
@@ -431,7 +436,17 @@ function cloneClip<TClip extends Clip>(clip: TClip): TClip {
     });
   }
   if (clip.type === 'text') {
-    return { ...cloned, style: { ...DEFAULT_TEXT_STYLE, ...clip.style }, pathText: normalizeTextPath(clip.pathText) } as TClip;
+    const text = typeof clip.text === 'string' ? clip.text : '';
+    return {
+      ...cloned,
+      text,
+      style: { ...DEFAULT_TEXT_STYLE, ...clip.style },
+      richText: normalizeRichTextDocument(clip.richText, text),
+      textLayout: normalizeTextLayout(clip.textLayout),
+      openTypeFeatures: normalizeTextOpenTypeFeatures(clip.openTypeFeatures),
+      arcText: normalizeTextArc(clip.arcText),
+      pathText: normalizeTextPath(clip.pathText)
+    } as TClip;
   }
   if (clip.type === 'subtitle') {
     const subtitleType = normalizeSubtitleTrackType(clip.subtitleType);

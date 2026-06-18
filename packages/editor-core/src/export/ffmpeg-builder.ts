@@ -36,6 +36,7 @@ import {
   normalizeMediaColorProfile,
   type ClipKeyframes,
   type Project,
+  type TextStyle,
   type Timeline
 } from '../model';
 import {
@@ -77,6 +78,16 @@ import { round } from '../time';
 import { serializeSubtitleCueInputsToAss, serializeSubtitleCueInputsToSrt, serializeSubtitleCueInputsToVtt, type SubtitleCueInput } from '../subtitles/srt';
 import { normalizeDataSubtitleSource, resolveDataSubtitleText } from '../subtitles/data-subtitle';
 import { buildPathTextFrameLayouts } from '../text-path';
+import {
+  buildArcTextLayout,
+  buildRichTextDrawSegments,
+  calculateTextAutoLayout,
+  formatOpenTypeFeatureList,
+  normalizeTextArc,
+  normalizeTextLayout,
+  normalizeTextOpenTypeFeatures,
+  richTextToPlainText
+} from '../text-layout';
 import { buildCreditsRollYExpression, formatCreditsRowsForTextfile } from '../credits-roll';
 import { MOTION_GRAPHIC_SEQUENCE_KIND, normalizeMotionGraphic } from '../motion-graphics';
 import {
@@ -356,7 +367,11 @@ function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project[
                     y: clip.transform.y,
                     opacity: clip.transform.opacity,
                     bold: clip.style.bold,
-                    italic: clip.style.italic
+                    italic: clip.style.italic,
+                    richText: clip.richText ?? null,
+                    textLayout: clip.textLayout ?? null,
+                    openTypeFeatures: clip.openTypeFeatures ?? null,
+                    arcText: clip.arcText ?? null
                   }
                 : null,
             textPath: clip.type === 'text' ? normalizeTextPath(clip.pathText) : null,
@@ -375,6 +390,10 @@ function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project[
                     opacity: clip.transform.opacity,
                     bold: clip.style.bold,
                     italic: clip.style.italic,
+                    richText: null,
+                    textLayout: null,
+                    openTypeFeatures: null,
+                    arcText: null,
                     yOffset: clip.style.yOffset,
                     outlineColor: clip.style.outlineColor,
                     outlineWidth: clip.style.outlineWidth,
@@ -405,7 +424,11 @@ function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project[
                     y: clip.transform.y,
                     opacity: clip.transform.opacity,
                     bold: clip.style.bold,
-                    italic: clip.style.italic
+                    italic: clip.style.italic,
+                    richText: null,
+                    textLayout: null,
+                    openTypeFeatures: null,
+                    arcText: null
                   }
                 : null,
             motionGraphic: clip.type === 'motion-graphic' ? normalizeMotionGraphic(clip.motionGraphic, clip.duration) : null
@@ -626,9 +649,9 @@ export function buildFfmpegExportPlan(
             filters.push(filter);
             textArtifacts.push(artifact);
           } else {
-            const { filter, artifact } = buildTextFilter(currentVideo, nextVideo, item.clip, settings);
+            const { filter, artifacts } = buildTextFilter(currentVideo, nextVideo, item.clip, settings);
             filters.push(filter);
-            textArtifacts.push(artifact);
+            textArtifacts.push(...artifacts);
           }
           currentVideo = nextVideo;
           videoStep += 1;
@@ -2732,11 +2755,16 @@ function buildCustomShaderSequenceClip(clip: ExportClip): ExportClip {
 }
 
 function buildPathTextSequenceArtifact(clip: ExportClip, settings: ExportSettings): TextArtifact | undefined {
-  if (clip.type !== 'text' || !clip.textStyle || !clip.textPath?.enabled || !clip.textStyle.text.trim()) {
+  if (clip.type !== 'text' || !clip.textStyle) {
     return undefined;
   }
-  const pathText = normalizeTextPath(clip.textPath);
-  if (!pathText.enabled || pathText.path.length < 2) {
+  const text = richTextToPlainText(clip.textStyle.richText ?? undefined, clip.textStyle.text);
+  if (!text.trim()) {
+    return undefined;
+  }
+  const pathText = normalizeTextPath(clip.textPath ?? undefined);
+  const arcText = normalizeTextArc(clip.textStyle.arcText ?? undefined);
+  if (!arcText.enabled && (!pathText.enabled || pathText.path.length < 2)) {
     return undefined;
   }
   const safeId = safeLabel(clip.id);
@@ -2744,23 +2772,42 @@ function buildPathTextSequenceArtifact(clip: ExportClip, settings: ExportSetting
   const fontSize = Math.max(1, Math.round(clip.textStyle.fontSize * scale));
   const fps = Math.max(1, settings.fps);
   const frameCount = Math.max(1, Math.ceil(Math.max(clip.duration, 1 / fps) * fps));
-  const frames = buildPathTextFrameLayouts({
-    text: clip.textStyle.text,
-    path: pathText.path,
-    pathText,
-    keyframes: clip.keyframes,
-    duration: clip.duration,
-    fps,
-    width: settings.width,
-    height: settings.height,
-    fontSize,
-    letterSpacing: pathText.letterSpacing,
-    rotateCharacters: pathText.rotateCharacters,
-    offsetX: clip.transform.x,
-    offsetY: clip.transform.y
-  });
+  const frames = arcText.enabled
+    ? Array.from({ length: frameCount }, (_, frameIndex) => ({
+        time: round(frameIndex / fps),
+        chars: buildArcTextLayout({
+          text,
+          arc: arcText,
+          fontSize,
+          letterSpacing: pathText.letterSpacing,
+          centerX: settings.width / 2 + clip.transform.x,
+          centerY: settings.height / 2 + clip.transform.y
+        }).map((item) => ({
+          char: item.char,
+          index: item.index,
+          x: item.x,
+          y: item.y,
+          angle: item.rotation,
+          distance: Math.abs(item.angle - arcText.startAngle)
+        }))
+      }))
+    : buildPathTextFrameLayouts({
+        text,
+        path: pathText.path,
+        pathText,
+        keyframes: clip.keyframes,
+        duration: clip.duration,
+        fps,
+        width: settings.width,
+        height: settings.height,
+        fontSize,
+        letterSpacing: pathText.letterSpacing,
+        rotateCharacters: pathText.rotateCharacters,
+        offsetX: clip.transform.x,
+        offsetY: clip.transform.y
+      });
   return {
-    clipId: `${clip.id}:path-text`,
+    clipId: `${clip.id}:${arcText.enabled ? 'arc-text' : 'path-text'}`,
     text: JSON.stringify({
       kind: PATH_TEXT_SEQUENCE_KIND,
       version: 1,
@@ -2777,7 +2824,7 @@ function buildPathTextSequenceArtifact(clip: ExportClip, settings: ExportSetting
       italic: clip.textStyle.italic,
       frames: frames.slice(0, frameCount)
     }),
-    fileName: `path-text-${safeId}.json`,
+    fileName: `${arcText.enabled ? 'arc-text' : 'path-text'}-${safeId}.json`,
     placeholder: `__PATH_TEXT_SEQUENCE_${safeId}__`,
     pathMode: 'path-text-sequence'
   };
@@ -2972,20 +3019,24 @@ function getExportClipSourceDuration(clip: ExportClip): number {
   return clip.type === 'video' || clip.type === 'audio' || clip.type === 'nested-sequence' ? Math.max(0.001, clip.sourceDuration) : Math.max(0.001, clip.duration);
 }
 
-function buildTextFilter(inputLabel: string, outputLabel: string, clip: ExportClip, settings: ExportSettings): { filter: string; artifact: TextArtifact } {
+function buildTextFilter(inputLabel: string, outputLabel: string, clip: ExportClip, settings: ExportSettings): { filter: string; artifacts: TextArtifact[] } {
   const safeId = safeLabel(clip.id);
   const placeholder = `__TEXTFILE_${safeId}__`;
   const textSourceLabel = `textsrc_${safeId}`;
   const textDrawLabel = `textdraw_${safeId}`;
   const textLayerLabel = `textlayer_${safeId}`;
+  const style = clip.textStyle;
+  if (style && shouldUseAdvancedTextFilters(style)) {
+    return buildAdvancedTextFilter(inputLabel, outputLabel, clip, settings, style, textSourceLabel, textLayerLabel);
+  }
   const artifact: TextArtifact = {
     clipId: clip.id,
-    text: clip.textStyle?.text ?? '',
+    text: style?.text ?? '',
     fileName: `${safeId}.txt`,
     placeholder
   };
-  const style = clip.textStyle;
   const fontPath = style?.fontPath ? `:fontfile=${escapeDrawtextValue(style.fontPath)}` : '';
+  const openType = buildOpenTypeDrawtextOptions(style);
   const fontColor = cssColorToFfmpeg(style?.fontColor ?? 'white');
   const backgroundColor = cssColorToFfmpeg(style?.backgroundColor ?? 'black');
   const backgroundOpacity = formatOpacity(style?.backgroundOpacity ?? 0);
@@ -2995,16 +3046,124 @@ function buildTextFilter(inputLabel: string, outputLabel: string, clip: ExportCl
   const layerDuration = Math.max(0.001, clip.start + clip.duration);
   const opacityFilters = buildOpacityFilters(clip, textLayerLabel);
   return {
-    artifact,
+    artifacts: [artifact],
     filter: [
       `color=c=black@0:s=${settings.width}x${settings.height}:r=${settings.fps}:d=${formatFfmpegSeconds(layerDuration)},format=rgba[${textSourceLabel}]`,
-      `[${textSourceLabel}]drawtext=textfile=${placeholder}${fontPath}:fontsize=${fontSize}:fontcolor=${fontColor}:x='${x}':y='${y}':alpha=1:box=1:boxcolor=${backgroundColor}@${backgroundOpacity}:boxborderw=${Math.max(
+      `[${textSourceLabel}]drawtext=textfile=${placeholder}${fontPath}${openType}:fontsize=${fontSize}:fontcolor=${fontColor}:x='${x}':y='${y}':alpha=1:box=1:boxcolor=${backgroundColor}@${backgroundOpacity}:boxborderw=${Math.max(
         0,
         Math.round((style?.fontSize ?? 48) * 0.25)
       )}:enable='between(t,${formatFfmpegSeconds(clip.start)},${formatFfmpegSeconds(clip.start + clip.duration)})'[${textDrawLabel}]`,
       `[${textDrawLabel}]${opacityFilters.join(',')}`,
       `[${inputLabel}][${textLayerLabel}]overlay=x=0:y=0:eval=frame:enable='between(t,${formatFfmpegSeconds(clip.start)},${formatFfmpegSeconds(clip.start + clip.duration)})'[${outputLabel}]`
     ].join(';')
+  };
+}
+
+function buildAdvancedTextFilter(
+  inputLabel: string,
+  outputLabel: string,
+  clip: ExportClip,
+  settings: ExportSettings,
+  style: NonNullable<ExportClip['textStyle']>,
+  textSourceLabel: string,
+  textLayerLabel: string
+): { filter: string; artifacts: TextArtifact[] } {
+  const safeId = safeLabel(clip.id);
+  const layout = calculateTextAutoLayout({
+    richText: style.richText ?? undefined,
+    plainText: style.text,
+    baseStyle: exportTextStyleToTextStyle(style),
+    layout: style.textLayout ?? undefined
+  });
+  const normalizedLayout = normalizeTextLayout(style.textLayout ?? undefined);
+  const segments = buildRichTextDrawSegments({
+    richText: style.richText ?? undefined,
+    plainText: style.text,
+    baseStyle: exportTextStyleToTextStyle(style),
+    layout: normalizedLayout
+  });
+  const artifacts: TextArtifact[] = [];
+  const layerDuration = Math.max(0.001, clip.start + clip.duration);
+  const backgroundColor = cssColorToFfmpeg(style.backgroundColor);
+  const backgroundOpacity = formatOpacity(style.backgroundOpacity);
+  const fontPath = style.fontPath ? `:fontfile=${escapeDrawtextValue(style.fontPath)}` : '';
+  const openType = buildOpenTypeDrawtextOptions(style);
+  const filters: string[] = [`color=c=black@0:s=${settings.width}x${settings.height}:r=${settings.fps}:d=${formatFfmpegSeconds(layerDuration)},format=rgba[${textSourceLabel}]`];
+  let previousLabel = textSourceLabel;
+
+  segments.forEach((segment, index) => {
+    const placeholder = `__TEXTFILE_${safeId}_${segment.paragraphIndex}_${segment.runIndex}__`;
+    const nextLabel = `textdraw_${safeId}_${index}`;
+    const fontSize = buildTextFontSizeExpression(clip, Math.max(1, Math.round(segment.style.fontSize * layout.scale)));
+    const baseX = buildDrawtextPositionExpression(clip, 'x', style.x);
+    const baseY = buildDrawtextPositionExpression(clip, 'y', style.y);
+    const x = `${baseX}${formatSigned(segment.xOffset - layout.width / 2)}`;
+    const y = `${baseY}${formatSigned(segment.yOffset - layout.height / 2)}`;
+    artifacts.push({
+      clipId: `${clip.id}:text-${segment.paragraphIndex}-${segment.runIndex}`,
+      text: segment.text,
+      fileName: `${safeId}-${segment.paragraphIndex}-${segment.runIndex}.txt`,
+      placeholder
+    });
+    filters.push(
+      `[${previousLabel}]drawtext=textfile=${placeholder}${fontPath}${openType}:fontsize=${fontSize}:fontcolor=${cssColorToFfmpeg(
+        segment.style.color
+      )}:x='${x}':y='${y}':alpha=1:box=1:boxcolor=${backgroundColor}@${backgroundOpacity}:boxborderw=${Math.max(
+        0,
+        Math.round(segment.style.fontSize * 0.25)
+      )}:enable='between(t,${formatFfmpegSeconds(clip.start)},${formatFfmpegSeconds(clip.start + clip.duration)})'[${nextLabel}]`
+    );
+    previousLabel = nextLabel;
+  });
+
+  const opacityFilters = buildOpacityFilters(clip, textLayerLabel);
+  filters.push(`[${previousLabel}]${opacityFilters.join(',')}`);
+  filters.push(
+    `[${inputLabel}][${textLayerLabel}]overlay=x=0:y=0:eval=frame:enable='between(t,${formatFfmpegSeconds(clip.start)},${formatFfmpegSeconds(clip.start + clip.duration)})'[${outputLabel}]`
+  );
+  return { filter: filters.join(';'), artifacts };
+}
+
+function shouldUseAdvancedTextFilters(style: NonNullable<ExportClip['textStyle']>): boolean {
+  const richText = style.richText ?? undefined;
+  const hasRichStructure = richText
+    ? richText.paragraphs.length > 1 ||
+      richText.paragraphs.some(
+        (paragraph) =>
+          paragraph.runs.length > 1 ||
+          paragraph.runs.some((run) => run.bold !== undefined || run.italic !== undefined || run.underline !== undefined || run.color !== undefined || run.fontSize !== undefined)
+      )
+    : false;
+  const layout = normalizeTextLayout(style.textLayout ?? undefined);
+  const defaultLayout = normalizeTextLayout(undefined);
+  const hasCustomLayout =
+    layout.fitMode !== defaultLayout.fitMode ||
+    layout.boxWidth !== defaultLayout.boxWidth ||
+    layout.boxHeight !== defaultLayout.boxHeight ||
+    layout.paragraphSpacing !== defaultLayout.paragraphSpacing ||
+    layout.firstLineIndent !== defaultLayout.firstLineIndent;
+  return hasRichStructure || hasCustomLayout;
+}
+
+function buildOpenTypeDrawtextOptions(style: NonNullable<ExportClip['textStyle']> | null | undefined): string {
+  const features = formatOpenTypeFeatureList(normalizeTextOpenTypeFeatures(style?.openTypeFeatures ?? undefined));
+  if (!features) {
+    return '';
+  }
+  const family = (style?.fontFamily ?? 'Sans').split(',')[0]?.replace(/["']/g, '').trim() || 'Sans';
+  const fontPattern = `${family}:fontfeatures=${features}`;
+  return style?.fontPath ? `:text_shaping=1:font='${escapeDrawtextValue(fontPattern)}'` : `:font='${escapeDrawtextValue(fontPattern)}':text_shaping=1`;
+}
+
+function exportTextStyleToTextStyle(style: NonNullable<ExportClip['textStyle']>): TextStyle {
+  return {
+    fontSize: style.fontSize,
+    color: style.fontColor,
+    backgroundColor: style.backgroundColor,
+    backgroundOpacity: style.backgroundOpacity,
+    fontFamily: style.fontFamily,
+    bold: style.bold,
+    italic: style.italic
   };
 }
 
