@@ -66,6 +66,7 @@ const exportGates: Array<{ taskId?: string; release: () => void }> = [];
 let exportWarmupDelayMs = 0;
 let proxyGenerationDelayMs = 10;
 let nextExportError: string | undefined;
+let effectPresetCommunityResponse: string | undefined;
 let mockSceneTimes = [1];
 let lastConfirmMessage: string | undefined;
 let availableMemoryBytes = 8 * 1024 * 1024 * 1024;
@@ -143,6 +144,7 @@ const pluginDir = `${appDataDir}/plugins`;
 const pluginCatalogCachePath = `${appDataDir}/plugin-catalog-cache.json`;
 const presetMarketCachePath = `${appDataDir}/market-cache/presets.json`;
 const presetMarketRatingsPath = `${appDataDir}/market-cache/ratings.json`;
+const effectPresetCommunityCachePath = `${appDataDir}/effect-presets/community.json`;
 const pluginPath = `${pluginDir}/export-count.js`;
 const permissionDeniedPluginPath = `${pluginDir}/missing-permission.js`;
 const brokenPluginPath = `${pluginDir}/broken.js`;
@@ -1006,6 +1008,13 @@ window.fetch = (input, init) => {
   }
   if (url.includes('export-preset-market')) {
     return Promise.resolve(new Response('offline', { status: 503 }));
+  }
+  if (url.includes('effect-preset-library')) {
+    return Promise.resolve(
+      effectPresetCommunityResponse
+        ? new Response(effectPresetCommunityResponse, { status: 200, headers: { 'Content-Type': 'application/json' } })
+        : new Response('offline', { status: 503 })
+    );
   }
   if (url === silencePatternAudio) {
     return Promise.resolve(new Response(silencePatternWav.buffer.slice(0) as ArrayBuffer, { headers: { 'Content-Type': 'audio/wav' } }));
@@ -2365,6 +2374,22 @@ window.__E2E_ACTIONS__ = {
     persistFiles();
   },
   getPresetMarketCachePath: () => presetMarketCachePath,
+  setEffectPresetCommunityCache: (contents: unknown) => {
+    if (typeof contents !== 'string') {
+      throw new Error('Invalid setEffectPresetCommunityCache E2E action input.');
+    }
+    files.set(effectPresetCommunityCachePath, contents);
+    exists.set(effectPresetCommunityCachePath, true);
+    mtimes.set(effectPresetCommunityCachePath, Date.now());
+    persistFiles();
+  },
+  setEffectPresetCommunityResponse: (contents: unknown) => {
+    if (typeof contents !== 'string') {
+      throw new Error('Invalid setEffectPresetCommunityResponse E2E action input.');
+    }
+    effectPresetCommunityResponse = contents;
+  },
+  getEffectPresetCommunityCachePath: () => effectPresetCommunityCachePath,
   getReleaseFiles: () => Array.from(files.keys()).filter((path) => path.includes('/releases/') && path.endsWith('.json') && exists.get(path) !== false),
   getBackupFiles: (path: unknown) => {
     if (typeof path !== 'string') {
@@ -2509,7 +2534,15 @@ window.__E2E_ACTIONS__ = {
     files.delete(presetMarketRatingsPath);
     exists.set(presetMarketRatingsPath, false);
     mtimes.delete(presetMarketRatingsPath);
+    files.delete(effectPresetCommunityCachePath);
+    exists.set(effectPresetCommunityCachePath, false);
+    mtimes.delete(effectPresetCommunityCachePath);
     for (const path of Array.from(files.keys()).filter((item) => item.includes('/market-cache/installed/'))) {
+      files.delete(path);
+      exists.set(path, false);
+      mtimes.delete(path);
+    }
+    for (const path of Array.from(files.keys()).filter((item) => item.includes('/effect-presets/') && item.endsWith('.ofeffect.json'))) {
       files.delete(path);
       exists.set(path, false);
       mtimes.delete(path);

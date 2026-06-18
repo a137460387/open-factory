@@ -154,6 +154,7 @@ import {
 } from '../text-animation';
 import { normalizeRichTextDocument, normalizeTextArc, normalizeTextLayout, normalizeTextOpenTypeFeatures } from '../text-layout';
 import { cloneEffects, normalizeEffect, normalizeEffects, type Effect, type EffectParams, type EffectType } from '../effects';
+import { buildEffectPresetClipPatch, type EffectPreset } from '../effect-presets';
 import { applyStyleToClip, type ApplyStyleTransferOptions, type StyleSummary } from '../style-transfer';
 import {
   buildBeatSyncSpeedKeyframes,
@@ -4748,6 +4749,38 @@ export class UpdateClipCommand implements Command {
   undo(): void {
     if (this.before) {
       this.accessor.setTimeline(replaceClip(this.accessor.getTimeline(), this.before));
+    }
+  }
+}
+
+export class ApplyEffectPresetCommand implements Command {
+  readonly description = 'Apply effect preset';
+  private before?: Timeline;
+  private after?: Timeline;
+
+  constructor(private readonly accessor: TimelineAccessor, private readonly clipId: string, private readonly preset: EffectPreset) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getTimeline();
+    if (!this.after) {
+      let timeline = this.before;
+      const clip = findClip(timeline, this.clipId);
+      const patch = buildEffectPresetClipPatch(this.preset, clip.duration);
+      const commandAccessor: TimelineAccessor = {
+        getTimeline: () => timeline,
+        setTimeline: (nextTimeline) => {
+          timeline = nextTimeline;
+        }
+      };
+      new UpdateClipCommand(commandAccessor, this.clipId, patch).execute();
+      this.after = timeline;
+    }
+    this.accessor.setTimeline(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setTimeline(this.before);
     }
   }
 }

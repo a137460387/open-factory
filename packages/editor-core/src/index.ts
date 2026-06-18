@@ -10,6 +10,7 @@ export * from './color-node-graph';
 export * from './color-match';
 export * from './color-analysis';
 export * from './effects';
+export * from './effect-presets';
 export * from './audio-visualization-themes';
 export * from './motion-blur';
 export * from './motion-graphics';

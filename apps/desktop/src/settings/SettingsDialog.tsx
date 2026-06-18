@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Cloud, Download, FilePlus, FolderOpen, GripVertical, RotateCcw, Save, Star, Trash2, X, XCircle } from 'lucide-react';
+import { Cloud, Download, FilePlus, FolderOpen, GripVertical, RotateCcw, Save, SlidersHorizontal, Star, Trash2, X, XCircle } from 'lucide-react';
 import {
   buildProxyInventory,
   buildProxyStorageTrend,
@@ -12,6 +12,8 @@ import {
   SUPPORTED_PROJECT_FPS,
   UpdateClipCommand,
   UpdateProjectSettingsCommand,
+  createEffectPresetFromClip,
+  serializeEffectPresetFile,
   getColorSpaceDisplayName,
   normalizeProjectColorPipeline,
   normalizeProjectFps,
@@ -20,6 +22,7 @@ import {
   normalizeVfrHandlingStrategy,
   supportsDropFrameTimecode,
   type Clip,
+  type EffectPresetFilters,
   type Project,
   type ProjectColorPipeline,
   type PostExportQualityAssuranceSettings,
@@ -69,6 +72,13 @@ import {
   type PresetMarketFilters,
   type PresetMarketLoadResult
 } from '../export/preset-market';
+import {
+  filterEffectPresetCommunityCards,
+  installEffectPresetCommunityCard,
+  loadEffectPresetCommunityLibrary,
+  type EffectPresetCommunityCard,
+  type EffectPresetCommunityLoadResult
+} from '../effects/effect-preset-library';
 import { getLoadedPluginStatus, type PluginPermission } from '../plugins/plugin-loader';
 import { ensureMediaJobRunner } from '../media/media-job-runner';
 import { calculateMediaJobEtaSeconds, sortMediaJobsForMonitor } from '../media/media-job-monitor';
@@ -173,7 +183,7 @@ interface SettingsDialogProps {
   onClose(): void;
 }
 
-type SettingsTab = 'general' | 'display' | 'appearance' | 'lut-library' | 'shortcuts' | 'macros' | 'automation' | 'translation' | 'local-models' | 'proxy' | 'task-monitor' | 'export-presets' | 'backup' | 'plugins';
+type SettingsTab = 'general' | 'display' | 'appearance' | 'lut-library' | 'effect-presets' | 'shortcuts' | 'macros' | 'automation' | 'translation' | 'local-models' | 'proxy' | 'task-monitor' | 'export-presets' | 'backup' | 'plugins';
 const VFR_HANDLING_OPTIONS: VfrHandlingStrategy[] = ['ignore', 'auto-cfr', 'ask'];
 const EXPORT_RULE_COPY_SUCCESS_ID = 'copy-success';
 const EXPORT_RULE_FAILURE_NOTIFICATION_ID = 'failure-notification';
@@ -241,6 +251,12 @@ export function SettingsDialog({
   const [presetMarketSource, setPresetMarketSource] = useState<PresetMarketLoadResult['source']>('empty');
   const [presetMarketWarning, setPresetMarketWarning] = useState<string>();
   const [installingPresetMarketCardId, setInstallingPresetMarketCardId] = useState<string>();
+  const [effectPresetCards, setEffectPresetCards] = useState<EffectPresetCommunityCard[]>([]);
+  const [effectPresetFilters, setEffectPresetFilters] = useState<EffectPresetFilters>({ style: 'all', use: 'all' });
+  const [effectPresetLoading, setEffectPresetLoading] = useState(false);
+  const [effectPresetSource, setEffectPresetSource] = useState<EffectPresetCommunityLoadResult['source']>('empty');
+  const [effectPresetWarning, setEffectPresetWarning] = useState<string>();
+  const [installingEffectPresetCardId, setInstallingEffectPresetCardId] = useState<string>();
   const translationProvider = useTranslationSettingsStore((state) => state.provider);
   const translationApiKey = useTranslationSettingsStore((state) => state.apiKey);
   const translationApiKeyError = useTranslationSettingsStore((state) => state.apiKeyError);
@@ -274,6 +290,10 @@ export function SettingsDialog({
     () => filterPresetMarketCards(presetMarketCards, presetMarketFilters),
     [presetMarketCards, presetMarketFilters]
   );
+  const filteredEffectPresetCards = useMemo(
+    () => filterEffectPresetCommunityCards(effectPresetCards, effectPresetFilters),
+    [effectPresetCards, effectPresetFilters]
+  );
 
   useEffect(() => {
     if (!open) {
@@ -283,6 +303,7 @@ export function SettingsDialog({
     void loadBackupSettings();
     void loadExportPresetSyncSettings();
     void loadPresetMarketPanel();
+    void loadEffectPresetLibraryPanel();
     void loadExportBackgroundSettings();
     void loadExportQualityAssuranceSettings();
     void loadExportRules();
@@ -636,6 +657,28 @@ export function SettingsDialog({
     }
   }
 
+  async function loadEffectPresetLibraryPanel() {
+    try {
+      setEffectPresetLoading(true);
+      setEffectPresetWarning(undefined);
+      const library = await loadEffectPresetCommunityLibrary();
+      setEffectPresetCards(library.cards);
+      setEffectPresetSource(library.source);
+      setEffectPresetWarning(library.warning);
+      if (library.source === 'empty' && library.warning) {
+        showToast({ kind: 'warning', title: zhCN.effectPresetLibrary.loadFailed, message: library.warning });
+      }
+    } catch (libraryError) {
+      const message = libraryError instanceof Error ? libraryError.message : zhCN.effectPresetLibrary.loadFailedMessage;
+      setEffectPresetCards([]);
+      setEffectPresetSource('empty');
+      setEffectPresetWarning(message);
+      showToast({ kind: 'warning', title: zhCN.effectPresetLibrary.loadFailed, message });
+    } finally {
+      setEffectPresetLoading(false);
+    }
+  }
+
   async function installMarketPreset(card: PresetMarketCard) {
     try {
       setInstallingPresetMarketCardId(card.id);
@@ -665,6 +708,22 @@ export function SettingsDialog({
     }
   }
 
+  async function installEffectPreset(card: EffectPresetCommunityCard) {
+    try {
+      setInstallingEffectPresetCardId(card.id);
+      const path = await installEffectPresetCommunityCard(card);
+      showToast({ kind: 'success', title: zhCN.effectPresetLibrary.installed, message: path });
+    } catch (installError) {
+      showToast({
+        kind: 'warning',
+        title: zhCN.effectPresetLibrary.installFailed,
+        message: installError instanceof Error ? installError.message : zhCN.effectPresetLibrary.installFailedMessage
+      });
+    } finally {
+      setInstallingEffectPresetCardId(undefined);
+    }
+  }
+
   async function ratePresetMarketCard(cardId: string, rating: number) {
     try {
       setPresetMarketRatings(await writePresetMarketRating(cardId, rating));
@@ -691,6 +750,29 @@ export function SettingsDialog({
         kind: 'warning',
         title: zhCN.presetMarket.shareFailed,
         message: shareError instanceof Error ? shareError.message : zhCN.presetMarket.shareFailedMessage
+      });
+    }
+  }
+
+  async function shareSelectedEffectPreset() {
+    try {
+      if (!selectedClip) {
+        showToast({ kind: 'info', title: zhCN.effectPresetLibrary.noClipSelected, message: zhCN.effectPresetLibrary.noClipSelectedMessage });
+        return;
+      }
+      const preset = createEffectPresetFromClip(selectedClip, {
+        id: `${selectedClip.id}-effect-preset`,
+        name: selectedClip.name || zhCN.effectPresetLibrary.defaultPresetName,
+        author: zhCN.effectPresetLibrary.localAuthor,
+        tags: []
+      });
+      await navigator.clipboard.writeText(serializeEffectPresetFile(preset));
+      showToast({ kind: 'success', title: zhCN.effectPresetLibrary.shared, message: zhCN.effectPresetLibrary.sharedMessage });
+    } catch (shareError) {
+      showToast({
+        kind: 'warning',
+        title: zhCN.effectPresetLibrary.shareFailed,
+        message: shareError instanceof Error ? shareError.message : zhCN.effectPresetLibrary.shareFailedMessage
       });
     }
   }
@@ -1271,6 +1353,14 @@ export function SettingsDialog({
               onClick={() => setTab('lut-library')}
             >
               {t.tabs.lutLibrary}
+            </button>
+            <button
+              className={`mt-1 w-full rounded-md px-3 py-2 text-left text-sm font-semibold ${tab === 'effect-presets' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}
+              type="button"
+              data-testid="settings-tab-effect-presets"
+              onClick={() => setTab('effect-presets')}
+            >
+              {t.tabs.effectPresets}
             </button>
             <button
               className={`mt-1 w-full rounded-md px-3 py-2 text-left text-sm font-semibold ${tab === 'shortcuts' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}
@@ -1870,6 +1960,21 @@ export function SettingsDialog({
                   ))}
                 </div>
               </>
+            ) : null}
+            {tab === 'effect-presets' ? (
+              <EffectPresetCommunityPanel
+                cards={filteredEffectPresetCards}
+                filters={effectPresetFilters}
+                loading={effectPresetLoading}
+                source={effectPresetSource}
+                warning={effectPresetWarning}
+                installingCardId={installingEffectPresetCardId}
+                canShare={Boolean(selectedClip)}
+                onFiltersChange={setEffectPresetFilters}
+                onRefresh={() => void loadEffectPresetLibraryPanel()}
+                onInstall={(card) => void installEffectPreset(card)}
+                onShare={() => void shareSelectedEffectPreset()}
+              />
             ) : null}
             {tab === 'shortcuts' ? (
               <div>
@@ -2994,6 +3099,160 @@ function PresetMarketPanel({
         })}
       </div>
     </section>
+  );
+}
+
+function EffectPresetCommunityPanel({
+  cards,
+  filters,
+  loading,
+  source,
+  warning,
+  installingCardId,
+  canShare,
+  onFiltersChange,
+  onRefresh,
+  onInstall,
+  onShare
+}: {
+  cards: EffectPresetCommunityCard[];
+  filters: EffectPresetFilters;
+  loading: boolean;
+  source: EffectPresetCommunityLoadResult['source'];
+  warning?: string;
+  installingCardId?: string;
+  canShare: boolean;
+  onFiltersChange(filters: EffectPresetFilters): void;
+  onRefresh(): void;
+  onInstall(card: EffectPresetCommunityCard): void;
+  onShare(): void;
+}) {
+  const t = zhCN.effectPresetLibrary;
+  const updateFilter = (key: keyof EffectPresetFilters, value: string) => onFiltersChange({ ...filters, [key]: value });
+
+  return (
+    <section className="rounded-md border border-line bg-panel p-3" data-testid="effect-preset-community-panel">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold text-ink">{t.title}</h3>
+          <p className="text-xs text-slate-500">{t.description}</p>
+          <p className="mt-1 text-[11px] font-medium text-slate-500" data-testid="effect-preset-source" data-source={source}>
+            {t.sourceLabels[source]}
+          </p>
+        </div>
+        <div className="flex flex-wrap justify-end gap-2">
+          <button
+            className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+            type="button"
+            disabled={!canShare}
+            data-testid="effect-preset-share-button"
+            onClick={onShare}
+          >
+            <FilePlus size={13} />
+            {t.share}
+          </button>
+          <button
+            className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+            type="button"
+            disabled={loading}
+            data-testid="effect-preset-refresh-button"
+            onClick={onRefresh}
+          >
+            <RotateCcw size={13} />
+            {loading ? t.loading : t.refresh}
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-3 grid gap-2 sm:grid-cols-2" data-testid="effect-preset-filters">
+        <EffectPresetFilterSelect
+          label={t.filters.style}
+          value={filters.style ?? 'all'}
+          options={t.filters.styleOptions}
+          testId="effect-preset-style-filter"
+          onChange={(value) => updateFilter('style', value)}
+        />
+        <EffectPresetFilterSelect
+          label={t.filters.use}
+          value={filters.use ?? 'all'}
+          options={t.filters.useOptions}
+          testId="effect-preset-use-filter"
+          onChange={(value) => updateFilter('use', value)}
+        />
+      </div>
+
+      {warning ? (
+        <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800" data-testid="effect-preset-warning">
+          {warning}
+        </div>
+      ) : null}
+      {loading ? <div className="mt-3 rounded-md border border-line bg-white p-3 text-sm text-slate-600">{t.loading}</div> : null}
+      {!loading && cards.length === 0 ? <div className="mt-3 rounded-md border border-line bg-white p-3 text-sm text-slate-600">{t.empty}</div> : null}
+
+      <div className="mt-3 grid gap-2 md:grid-cols-2" data-testid="effect-preset-community-list">
+        {cards.map((card) => {
+          const installing = installingCardId === card.id;
+          return (
+            <div key={card.id} className="rounded-md border border-line bg-white p-3" data-testid="effect-preset-community-card" data-preset-id={card.id}>
+              <div className="flex items-start gap-3">
+                <div className="grid h-20 w-28 shrink-0 place-items-center overflow-hidden rounded border border-line bg-panel">
+                  {card.thumbnail ? <img className="h-full w-full object-cover" src={card.thumbnail} alt="" data-testid="effect-preset-community-thumbnail" /> : <SlidersHorizontal size={18} className="text-slate-400" />}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-semibold text-ink">{card.name}</div>
+                  <div className="truncate text-xs text-slate-500">{t.byAuthor(card.author)}</div>
+                  {card.description ? <p className="mt-2 line-clamp-2 text-xs text-slate-500">{card.description}</p> : null}
+                </div>
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1" data-testid="effect-preset-community-tags">
+                {card.tags.map((tag) => (
+                  <span key={tag} className="rounded bg-panel px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                    {(t.tagLabels as Record<string, string>)[tag] ?? tag}
+                  </span>
+                ))}
+              </div>
+              <button
+                className="mt-3 inline-flex w-full items-center justify-center gap-1 rounded-md bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
+                type="button"
+                disabled={installing}
+                data-testid="effect-preset-install-button"
+                onClick={() => onInstall(card)}
+              >
+                <Download size={13} />
+                {installing ? t.installing : t.install}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function EffectPresetFilterSelect({
+  label,
+  value,
+  options,
+  testId,
+  onChange
+}: {
+  label: string;
+  value: string;
+  options: Record<string, string>;
+  testId: string;
+  onChange(value: string): void;
+}) {
+  return (
+    <label className="block text-xs font-medium text-slate-600">
+      {label}
+      <select className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink" value={value} data-testid={testId} onChange={(event) => onChange(event.target.value)}>
+        {Object.entries(options).map(([option, optionLabel]) => (
+          <option key={option} value={option}>
+            {optionLabel}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 

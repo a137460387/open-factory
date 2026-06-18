@@ -9,6 +9,7 @@ import {
   AddReviewAnnotationCommand,
   AddSpeakerDiarizationTracksCommand,
   AddProjectBookmarkCommand,
+  ApplyEffectPresetCommand,
   ApplySplitLayoutCommand,
   BatchImportSubtitleCommand,
   BatchAlignToBeatCommand,
@@ -120,6 +121,7 @@ import {
   type TimelineGridUnit,
   type TitleTemplateId,
   type ExportTask,
+  type EffectPreset,
   type ColorAnalysisClipSample,
   type SceneColorDifference,
   type TimelineColorAnalysisResult,
@@ -2293,6 +2295,22 @@ export function EditorShell() {
     }
   }, [project.timeline, setSelectedClipId]);
 
+  const applyEffectPresetToSelectedClip = useCallback(
+    (preset: EffectPreset) => {
+      if (!selectedClip) {
+        showToast({ kind: 'warning', title: zhCN.effectPresetLibrary.noClipSelected, message: zhCN.effectPresetLibrary.noClipSelectedMessage });
+        return;
+      }
+      try {
+        commandManager.execute(new ApplyEffectPresetCommand(timelineAccessor, selectedClip.id, preset));
+        showToast({ kind: 'success', title: zhCN.effectPresetLibrary.applied, message: preset.name });
+      } catch (error) {
+        showToast({ kind: 'error', title: zhCN.effectPresetLibrary.applyFailed, message: error instanceof Error ? error.message : zhCN.effectPresetLibrary.applyFailedMessage });
+      }
+    },
+    [selectedClip]
+  );
+
   const addMotionGraphic = useCallback(() => {
     try {
       const trackCount = project.timeline.tracks.filter((track) => track.type === 'video').length;
@@ -4110,6 +4128,7 @@ export function EditorShell() {
                   mediaMetadata={project.mediaMetadata}
                   mediaContentAnalysis={mediaContentAnalysis}
                   sharedLibraryResources={sharedLibraryResources}
+                  selectedClipId={selectedClipId}
                   projectFrameRate={project.settings.fps}
                   onImport={() => void importMedia()}
                   onImportPaths={(paths) => void importDropped(paths)}
@@ -4138,6 +4157,7 @@ export function EditorShell() {
                   onDeleteFolder={deleteMediaFolder}
                   onSetFolderCollapsed={setMediaFolderCollapsed}
                   onMoveMediaToFolder={moveMediaToFolder}
+                  onApplyEffectPreset={applyEffectPresetToSelectedClip}
                 />
               </section>
             )

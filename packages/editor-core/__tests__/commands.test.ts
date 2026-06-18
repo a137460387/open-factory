@@ -16,6 +16,7 @@ import {
   AddTrackCommand,
   AddTimelineMarkerCommand,
   AddMediaFolderCommand,
+  ApplyEffectPresetCommand,
   ApplyTextAnimationCommand,
   BatchKeyframeEditCommand,
   BatchProofreadSubtitleCommand,
@@ -2143,6 +2144,46 @@ describe('timeline commands', () => {
 
     manager.undo();
     expect(accessor.current().tracks[0].clips[0].effects?.map((effect) => effect.id)).toEqual(['effect-blur']);
+  });
+
+  it('applies an effect preset through one undoable command', () => {
+    const accessor = makeAccessor(
+      makeTimeline([
+        makeVideoClip({
+          id: 'clip-preset',
+          colorCorrection: { brightness: 0 },
+          effects: [{ id: 'effect-old', type: 'blur', enabled: true, params: { radius: 4 } }]
+        })
+      ])
+    );
+    const manager = new CommandManager();
+    const preset = {
+      id: 'preset-film',
+      name: 'Preset Film',
+      author: 'Ada',
+      tags: ['cinematic'],
+      createdAt: '2026-06-18T00:00:00.000Z',
+      updatedAt: '2026-06-18T00:00:00.000Z',
+      stack: {
+        colorCorrection: { ...DEFAULT_COLOR_CORRECTION, brightness: 0.2, saturation: 0.75 },
+        effects: [{ id: 'effect-new', type: 'film-grain' as const, enabled: true, params: { strength: 0.3, size: 2 } }],
+        blendMode: 'screen' as const,
+        keyframes: { opacity: [{ id: 'kf-opacity', time: 1, value: 0.5, easing: 'ease-in-out' as const }] }
+      }
+    };
+
+    manager.execute(new ApplyEffectPresetCommand(accessor, 'clip-preset', preset));
+
+    expect(accessor.current().tracks[0].clips[0]).toMatchObject({
+      colorCorrection: { brightness: 0.2, saturation: 0.75 },
+      effects: [{ id: 'effect-new', type: 'film-grain', enabled: true, params: { strength: 0.3, size: 2 } }],
+      blendMode: 'screen'
+    });
+    expect(accessor.current().tracks[0].clips[0].keyframes?.opacity?.[0]).toMatchObject({ id: 'kf-opacity', value: 0.5 });
+
+    manager.undo();
+    expect(accessor.current().tracks[0].clips[0].effects?.[0]).toMatchObject({ id: 'effect-old', type: 'blur' });
+    expect(accessor.current().tracks[0].clips[0].colorCorrection.brightness).toBe(0);
   });
 
   it('adds, updates, removes, and restores masks with undo and redo', () => {

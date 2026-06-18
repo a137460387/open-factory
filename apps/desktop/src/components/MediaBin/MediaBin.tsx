@@ -24,9 +24,10 @@ import {
   type MediaRenamePreviewItem,
   type MediaRenameRules,
   type SmartAlbumId,
-  type TitleTemplateId
+  type TitleTemplateId,
+  type EffectPreset
 } from '@open-factory/editor-core';
-import { AlertCircle, BadgeCheck, ChevronDown, ChevronRight, FileAudio2, FileImage, FileText, FileVideo2, Flag, Folder, FolderPlus, GalleryHorizontal, Gauge, Grid2X2, ImageDown, Import, Info, Link2, List, Loader2, Merge, Plus, Search, SlidersHorizontal, Star, Tag, Trash2, X } from 'lucide-react';
+import { AlertCircle, BadgeCheck, ChevronDown, ChevronRight, FileAudio2, FileImage, FileText, FileVideo2, Flag, Folder, FolderPlus, GalleryHorizontal, Gauge, Grid2X2, ImageDown, Import, Info, Link2, List, Loader2, Merge, Plus, RotateCcw, Search, SlidersHorizontal, Star, Tag, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { clsx } from 'clsx';
 import { zhCN } from '../../i18n/strings';
@@ -38,6 +39,7 @@ import { DEFAULT_MEDIA_LIBRARY_VIEW_SETTINGS, normalizeMediaLibraryViewSettings,
 import { readViewSettings, saveViewSettings } from '../../settings/appSettings';
 import type { SharedLibraryResource } from '../../shared-library/sharedLibrary';
 import { useProxySettingsStore } from '../../store/proxySettingsStore';
+import { loadLocalEffectPresets } from '../../effects/effect-preset-library';
 import { getMediaKeyboardNavigationIndex, inferMediaKeyboardColumnCount } from './media-keyboard';
 
 interface MediaBinProps {
@@ -46,6 +48,7 @@ interface MediaBinProps {
   mediaMetadata: Record<string, MediaMetadata>;
   mediaContentAnalysis: Record<string, ClipContentAnalysis>;
   sharedLibraryResources?: SharedLibraryResource[];
+  selectedClipId?: string;
   projectFrameRate: number;
   onImport(): void;
   onImportPaths(paths: string[]): void;
@@ -74,9 +77,10 @@ interface MediaBinProps {
   onDeleteFolder(folderId: string): void;
   onSetFolderCollapsed(folderId: string, collapsed: boolean): void;
   onMoveMediaToFolder(assetIds: string[], folderId?: string | null): void;
+  onApplyEffectPreset(preset: EffectPreset): void;
 }
 
-type MediaBinView = 'all' | 'video' | 'audio' | 'image' | 'tagged' | 'titles' | 'shared';
+type MediaBinView = 'all' | 'video' | 'audio' | 'image' | 'tagged' | 'titles' | 'shared' | 'effects';
 type QuickMediaFilter = Extract<MediaMetadataFilter, 'all' | 'selected' | 'five-star'>;
 const MEDIA_CARD_DRAG_MIME = 'application/x-open-factory-media-id';
 type MediaInfoState = { asset: MediaAsset; loading: boolean; analysis?: MediaAnalysis; error?: string };
@@ -88,6 +92,7 @@ export function MediaBin({
   mediaMetadata,
   mediaContentAnalysis,
   sharedLibraryResources = [],
+  selectedClipId,
   projectFrameRate,
   onImport,
   onImportPaths,
@@ -115,7 +120,8 @@ export function MediaBin({
   onRenameFolder,
   onDeleteFolder,
   onSetFolderCollapsed,
-  onMoveMediaToFolder
+  onMoveMediaToFolder,
+  onApplyEffectPreset
 }: MediaBinProps) {
   const t = zhCN.mediaBin;
   const [dragOver, setDragOver] = useState(false);
@@ -127,6 +133,9 @@ export function MediaBin({
   const [mediaLibraryView, setMediaLibraryView] = useState<MediaLibraryViewSettings>(DEFAULT_MEDIA_LIBRARY_VIEW_SETTINGS);
   const [mediaInfo, setMediaInfo] = useState<MediaInfoState>();
   const [sourcePaths, setSourcePaths] = useState<MediaSourcePathsState>();
+  const [effectPresets, setEffectPresets] = useState<EffectPreset[]>([]);
+  const [effectPresetsLoading, setEffectPresetsLoading] = useState(false);
+  const [effectPresetsError, setEffectPresetsError] = useState<string>();
   const [selectedMediaIds, setSelectedMediaIds] = useState<Set<string>>(() => new Set());
   const [batchMetadataAssetIds, setBatchMetadataAssetIds] = useState<string[]>();
   const [batchRenameAssetIds, setBatchRenameAssetIds] = useState<string[]>();
@@ -135,7 +144,7 @@ export function MediaBin({
   const smartAlbumIds = smartAlbumId === 'none' ? undefined : new Set(smartAlbums.find((album) => album.id === smartAlbumId)?.assetIds ?? []);
   const metadataFilter: MediaMetadataFilter = filter === 'tagged' ? 'tagged' : quickFilter;
   const visibleMedia =
-    filter === 'titles' || filter === 'shared'
+    filter === 'titles' || filter === 'shared' || filter === 'effects'
       ? []
       : filterMediaAssets(media, {
           query: search,
@@ -209,6 +218,19 @@ export function MediaBin({
     });
   };
 
+  const refreshEffectPresetList = async () => {
+    setEffectPresetsLoading(true);
+    setEffectPresetsError(undefined);
+    try {
+      setEffectPresets(await loadLocalEffectPresets());
+    } catch (error) {
+      setEffectPresets([]);
+      setEffectPresetsError(error instanceof Error ? error.message : t.effectPresets.loadFailedMessage);
+    } finally {
+      setEffectPresetsLoading(false);
+    }
+  };
+
   const openMediaInfo = async (asset: MediaAsset) => {
     setMediaInfo({ asset, loading: true });
     try {
@@ -276,6 +298,12 @@ export function MediaBin({
       return next.size === current.size ? current : next;
     });
   }, [media]);
+
+  useEffect(() => {
+    if (filter === 'effects') {
+      void refreshEffectPresetList();
+    }
+  }, [filter]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -416,8 +444,8 @@ export function MediaBin({
               </button>
             ))}
           </div>
-          <div className="grid grid-cols-6 gap-1" data-testid="media-type-filter-bar">
-            {(['video', 'audio', 'image', 'tagged', 'titles', 'shared'] as MediaBinView[]).map((item) => (
+          <div className="grid grid-cols-7 gap-1" data-testid="media-type-filter-bar">
+            {(['video', 'audio', 'image', 'tagged', 'titles', 'shared', 'effects'] as MediaBinView[]).map((item) => (
               <button
                 key={item}
                 className={clsx(
@@ -428,7 +456,7 @@ export function MediaBin({
                 data-testid={`media-filter-${item}`}
                 onClick={() => {
                   setFilter(item);
-                  if (item === 'tagged' || item === 'titles' || item === 'shared') {
+                  if (item === 'tagged' || item === 'titles' || item === 'shared' || item === 'effects') {
                     setQuickFilter('all');
                   }
                   setSmartAlbumId('none');
@@ -454,14 +482,14 @@ export function MediaBin({
               ))}
             </select>
           </label>
-          {filter !== 'titles' && filter !== 'shared' ? (
+          {filter !== 'titles' && filter !== 'shared' && filter !== 'effects' ? (
             <SmartAlbumBar albums={smartAlbums} activeId={smartAlbumId} onSelect={setSmartAlbumId} />
           ) : null}
-          {filter !== 'titles' && filter !== 'shared' ? (
+          {filter !== 'titles' && filter !== 'shared' && filter !== 'effects' ? (
             <MediaLibraryViewToolbar settings={mediaLibraryView} onChange={updateMediaLibraryView} />
           ) : null}
         </div>
-        {filter !== 'titles' && filter !== 'shared' && jobs.length > 0 ? (
+        {filter !== 'titles' && filter !== 'shared' && filter !== 'effects' && jobs.length > 0 ? (
           <div className="mb-3 rounded-md border border-line bg-panel p-2 text-xs" data-testid="media-job-queue">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
@@ -481,6 +509,15 @@ export function MediaBin({
           <SharedLibraryGrid resources={sharedLibraryResources} />
         ) : filter === 'titles' ? (
           <TitleTemplateGrid onAddTitleTemplate={onAddTitleTemplate} />
+        ) : filter === 'effects' ? (
+          <EffectPresetGrid
+            presets={effectPresets}
+            loading={effectPresetsLoading}
+            error={effectPresetsError}
+            selectedClipId={selectedClipId}
+            onApply={onApplyEffectPreset}
+            onRefresh={() => void refreshEffectPresetList()}
+          />
         ) : media.length === 0 ? (
           <button
             className="flex h-full min-h-[220px] w-full flex-col items-center justify-center rounded-md border border-dashed border-slate-300 bg-panel p-6 text-center text-sm text-slate-600"
@@ -940,6 +977,72 @@ function SharedLibraryGrid({ resources }: { resources: SharedLibraryResource[] }
               </div>
               <span className="shrink-0 rounded bg-panel px-1.5 py-0.5 text-[11px] font-semibold text-slate-600">{zhCN.mediaBin.sharedVersion(resource.version)}</span>
             </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EffectPresetGrid({
+  presets,
+  loading,
+  error,
+  selectedClipId,
+  onApply,
+  onRefresh
+}: {
+  presets: EffectPreset[];
+  loading: boolean;
+  error?: string;
+  selectedClipId?: string;
+  onApply(preset: EffectPreset): void;
+  onRefresh(): void;
+}) {
+  const t = zhCN.mediaBin.effectPresets;
+  return (
+    <div className="space-y-3" data-testid="effect-preset-library">
+      <div className="flex items-center justify-between gap-3 rounded-md border border-line bg-panel p-3">
+        <div className="min-w-0">
+          <div className="text-sm font-semibold text-ink">{t.title}</div>
+          <div className="text-xs text-slate-500">{selectedClipId ? t.ready : t.selectClip}</div>
+        </div>
+        <button className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel" type="button" data-testid="effect-presets-refresh-button" onClick={onRefresh}>
+          <RotateCcw size={13} />
+          {t.refresh}
+        </button>
+      </div>
+      {loading ? <div className="rounded-md border border-line bg-white p-3 text-sm text-slate-600" data-testid="effect-presets-loading">{t.loading}</div> : null}
+      {error ? <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800" data-testid="effect-presets-error">{error}</div> : null}
+      {!loading && presets.length === 0 ? <div className="rounded-md border border-line bg-white p-3 text-sm text-slate-600" data-testid="effect-presets-empty">{t.empty}</div> : null}
+      <div className="grid gap-2" data-testid="effect-preset-list">
+        {presets.map((preset) => (
+          <div key={preset.id} className="rounded-md border border-line bg-white p-3 shadow-sm" data-testid="effect-preset-card" data-preset-id={preset.id}>
+            <div className="flex items-start gap-3">
+              <div className="grid h-16 w-24 shrink-0 place-items-center overflow-hidden rounded border border-line bg-panel">
+                {preset.thumbnail ? <img className="h-full w-full object-cover" src={preset.thumbnail} alt="" data-testid="effect-preset-thumbnail" /> : <SlidersHorizontal size={18} className="text-slate-400" />}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-semibold text-ink">{preset.name}</div>
+                <div className="truncate text-xs text-slate-500">{t.byAuthor(preset.author)}</div>
+                <div className="mt-2 flex flex-wrap gap-1" data-testid="effect-preset-tags">
+                  {preset.tags.map((tag) => (
+                    <span key={tag} className="rounded bg-panel px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                    {(t.tagLabels as Record<string, string>)[tag] ?? tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <button
+              className="mt-3 w-full rounded-md bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
+              type="button"
+              disabled={!selectedClipId}
+              data-testid="effect-preset-apply-button"
+              onClick={() => onApply(preset)}
+            >
+              {t.apply}
+            </button>
           </div>
         ))}
       </div>

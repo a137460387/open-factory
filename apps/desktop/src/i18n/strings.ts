@@ -826,6 +826,7 @@ const zh = {
       display: '显示',
       appearance: '外观',
       lutLibrary: 'LUT库',
+      effectPresets: '特效预设库',
       shortcuts: '快捷键',
       macros: '宏',
       automation: '自动化',
@@ -1583,7 +1584,30 @@ const zh = {
       image: '图片',
       tagged: '已标记',
       titles: '标题',
-      shared: '共享库'
+      shared: '共享库',
+      effects: '特效'
+    },
+    effectPresets: {
+      title: '本地特效预设',
+      refresh: '刷新',
+      loading: '正在读取特效预设...',
+      empty: '本地还没有特效预设。',
+      ready: '点击预设会应用到当前选中 clip。',
+      selectClip: '请选择一个时间线 clip 后再应用预设。',
+      apply: '应用预设',
+      loadFailedMessage: '无法读取本地特效预设。',
+      byAuthor: (author: string) => `作者：${author}`,
+      tagLabels: {
+        cinematic: '电影',
+        fresh: '清新',
+        retro: '复古',
+        bw: '黑白',
+        cyber: '赛博',
+        portrait: '人像',
+        landscape: '风景',
+        food: '食品',
+        sport: '运动'
+      }
     },
     smartAlbums: {
       all: '全部素材',
@@ -3870,6 +3894,68 @@ const zh = {
       ]
     }
   },
+  effectPresetLibrary: {
+    title: '特效预设库',
+    description: '浏览静态社区特效参数组合；离线时读取本地缓存，安装后写入本机特效预设目录。',
+    refresh: '刷新预设库',
+    loading: '正在加载特效预设库...',
+    empty: '没有匹配的特效预设。',
+    install: '安装',
+    installing: '正在安装...',
+    installed: '特效预设已安装',
+    installFailed: '特效预设安装失败',
+    installFailedMessage: '无法安装该特效预设。',
+    loadFailed: '特效预设库加载失败',
+    loadFailedMessage: '无法读取特效预设库。',
+    share: '分享当前 Clip',
+    shared: '特效预设 JSON 已复制',
+    sharedMessage: '可粘贴到 GitHub Issue 投稿。',
+    shareFailed: '复制特效预设失败',
+    shareFailedMessage: '无法写入剪贴板。',
+    noClipSelected: '未选择 Clip',
+    noClipSelectedMessage: '请选择一个时间线 clip。',
+    applied: '特效预设已应用',
+    applyFailed: '特效预设应用失败',
+    applyFailedMessage: '无法应用该特效预设。',
+    defaultPresetName: '特效预设',
+    localAuthor: '本机用户',
+    byAuthor: (author: string) => `作者：${author}`,
+    sourceLabels: {
+      remote: '来源：远程预设库',
+      cache: '来源：本地缓存',
+      empty: '来源：无可用预设库数据'
+    },
+    filters: {
+      style: '风格',
+      use: '用途',
+      styleOptions: {
+        all: '全部风格',
+        cinematic: '电影',
+        fresh: '清新',
+        retro: '复古',
+        bw: '黑白',
+        cyber: '赛博'
+      },
+      useOptions: {
+        all: '全部用途',
+        portrait: '人像',
+        landscape: '风景',
+        food: '食品',
+        sport: '运动'
+      }
+    },
+    tagLabels: {
+      cinematic: '电影',
+      fresh: '清新',
+      retro: '复古',
+      bw: '黑白',
+      cyber: '赛博',
+      portrait: '人像',
+      landscape: '风景',
+      food: '食品',
+      sport: '运动'
+    }
+  },
   editorToasts: {
     projectSaved: '项目已保存',
     autosaveCheckFailed: '无法检查自动保存恢复',
@@ -5284,6 +5370,7 @@ const enOverrides = {
       display: 'Display',
       appearance: 'Appearance',
       lutLibrary: 'LUT Library',
+      effectPresets: 'Effect Presets',
       shortcuts: 'Shortcuts',
       macros: 'Macros',
       automation: 'Automation',
@@ -6041,7 +6128,30 @@ const enOverrides = {
       image: 'Image',
       tagged: 'Tagged',
       titles: 'Titles',
-      shared: 'Shared'
+      shared: 'Shared',
+      effects: 'Effects'
+    },
+    effectPresets: {
+      title: 'Local Effect Presets',
+      refresh: 'Refresh',
+      loading: 'Reading effect presets...',
+      empty: 'No local effect presets yet.',
+      ready: 'Click a preset to apply it to the selected clip.',
+      selectClip: 'Select a timeline clip before applying a preset.',
+      apply: 'Apply Preset',
+      loadFailedMessage: 'Unable to read local effect presets.',
+      byAuthor: (author: string) => `Author: ${author}`,
+      tagLabels: {
+        cinematic: 'Cinematic',
+        fresh: 'Fresh',
+        retro: 'Retro',
+        bw: 'B&W',
+        cyber: 'Cyber',
+        portrait: 'Portrait',
+        landscape: 'Landscape',
+        food: 'Food',
+        sport: 'Sport'
+      }
     },
     smartAlbums: {
       all: 'All Media',
@@ -7938,6 +8048,68 @@ const enOverrides = {
         { value: 'gif', label: 'GIF' },
         { value: 'webm', label: 'WebM' }
       ]
+    }
+  },
+  effectPresetLibrary: {
+    title: 'Effect Preset Library',
+    description: 'Browse static community effect stacks. Offline mode uses the local cache, and installs stay in the local effect preset directory.',
+    refresh: 'Refresh Library',
+    loading: 'Loading effect preset library...',
+    empty: 'No matching effect presets.',
+    install: 'Install',
+    installing: 'Installing...',
+    installed: 'Effect preset installed',
+    installFailed: 'Effect preset install failed',
+    installFailedMessage: 'Unable to install this effect preset.',
+    loadFailed: 'Effect preset library load failed',
+    loadFailedMessage: 'Unable to read the effect preset library.',
+    share: 'Share Current Clip',
+    shared: 'Effect preset JSON copied',
+    sharedMessage: 'Paste it into a GitHub Issue submission.',
+    shareFailed: 'Effect preset copy failed',
+    shareFailedMessage: 'Unable to write to the clipboard.',
+    noClipSelected: 'No clip selected',
+    noClipSelectedMessage: 'Select a timeline clip.',
+    applied: 'Effect preset applied',
+    applyFailed: 'Effect preset apply failed',
+    applyFailedMessage: 'Unable to apply this effect preset.',
+    defaultPresetName: 'Effect Preset',
+    localAuthor: 'Local user',
+    byAuthor: (author: string) => `Author: ${author}`,
+    sourceLabels: {
+      remote: 'Source: remote library',
+      cache: 'Source: local cache',
+      empty: 'Source: no library data'
+    },
+    filters: {
+      style: 'Style',
+      use: 'Use',
+      styleOptions: {
+        all: 'All styles',
+        cinematic: 'Cinematic',
+        fresh: 'Fresh',
+        retro: 'Retro',
+        bw: 'B&W',
+        cyber: 'Cyber'
+      },
+      useOptions: {
+        all: 'All uses',
+        portrait: 'Portrait',
+        landscape: 'Landscape',
+        food: 'Food',
+        sport: 'Sport'
+      }
+    },
+    tagLabels: {
+      cinematic: 'Cinematic',
+      fresh: 'Fresh',
+      retro: 'Retro',
+      bw: 'B&W',
+      cyber: 'Cyber',
+      portrait: 'Portrait',
+      landscape: 'Landscape',
+      food: 'Food',
+      sport: 'Sport'
     }
   },
   editorToasts: {
