@@ -12,6 +12,7 @@ import { useDemucsSettingsStore } from './store/demucsSettingsStore';
 import { usePrivacyDetectionSettingsStore } from './store/privacyDetectionSettingsStore';
 import { useWhisperSettingsStore } from './store/whisperSettingsStore';
 import { initializeThemeFromSettings } from './theme/useTheme';
+import { StartupUpdateChecker } from './updater/StartupUpdateChecker';
 
 export function App() {
   useSyncExternalStore(subscribeLanguage, getLanguage, getLanguage);
@@ -31,6 +32,7 @@ export function App() {
     <>
       {previewWindowMode ? <PreviewWindowShell /> : <EditorShell />}
       <ToastViewport />
+      {previewWindowMode ? null : <StartupUpdateChecker />}
       {previewWindowMode ? null : <NativePreviewSmokeRunner />}
       {previewWindowMode ? null : <NativeCancelSmokeRunner />}
     </>

@@ -14,6 +14,7 @@ import {
   type KeyframeProperty,
   type Clip,
   type MediaAsset,
+  type Project,
   type ProjectFileV2
 } from '@open-factory/editor-core';
 import { commandManager, timelineAccessor } from '../store/commandManager';
@@ -1012,6 +1013,52 @@ window.fetch = (input, init) => {
   return realFetch(input as RequestInfo | URL, init);
 };
 window.__E2E_ACTIONS__ = {
+  setupLargeTimelineFixture: (clipCountInput?: unknown) => {
+    const clipCount = typeof clipCountInput === 'number' && Number.isFinite(clipCountInput) && clipCountInput > 0 ? Math.floor(clipCountInput) : 500;
+    const project = createProject('Large Timeline E2E');
+    const mediaId = 'media-large-timeline-video';
+    const asset: MediaAsset = {
+      id: mediaId,
+      type: 'video',
+      name: 'large-timeline-video.mp4',
+      path: tinyVideo,
+      duration: 2,
+      width: 1280,
+      height: 720,
+      size: 4096,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 2,
+      audioSampleRate: 44_100,
+      audioCodec: 'aac'
+    };
+    const trackCount = 5;
+    const tracks = Array.from({ length: trackCount }, (_, trackIndex) =>
+      createTrack({
+        id: `track-large-${trackIndex}`,
+        type: 'video',
+        name: `Video ${trackIndex + 1}`,
+        clips: []
+      })
+    );
+    for (let index = 0; index < clipCount; index += 1) {
+      const trackIndex = index % trackCount;
+      const localIndex = Math.floor(index / trackCount);
+      const track = tracks[trackIndex];
+      track.clips.push(makeLargeTimelineVideoClip(`clip-large-${String(index).padStart(4, '0')}`, track.id, mediaId, localIndex * 1.25));
+    }
+    const timeline = { transitions: [], markers: [], tracks };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
   setupEfficientEditingFixture: () => {
     const project = createProject('Efficient Editing E2E');
     const asset: MediaAsset = {
@@ -2146,6 +2193,15 @@ window.__E2E_ACTIONS__ = {
     commandManager.clear();
   },
   getTimelineSnapshot: () => useEditorStore.getState().project.timeline,
+  setProjectSnapshot: (project: unknown) => {
+    if (!project || typeof project !== 'object') {
+      throw new Error('Invalid setProjectSnapshot E2E action input.');
+    }
+    useEditorStore.getState().setProject(project as Project);
+    useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
   getPlayheadTime: () => useEditorStore.getState().playheadTime,
   isPreviewWindowOpen: () => previewWindowState.open,
   closePreviewWindow: () => {
@@ -2577,6 +2633,24 @@ function makeEditingVideoClip(id: string, start: number, duration: number, trimS
     duration,
     trimStart,
     trimEnd,
+    speed: DEFAULT_CLIP_SPEED,
+    colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+    transform: { ...DEFAULT_TRANSFORM },
+    volume: 1
+  };
+}
+
+function makeLargeTimelineVideoClip(id: string, trackId: string, mediaId: string, start: number): Extract<Clip, { type: 'video' }> {
+  return {
+    id,
+    type: 'video',
+    name: `${id}.mp4`,
+    mediaId,
+    trackId,
+    start,
+    duration: 1,
+    trimStart: 0,
+    trimEnd: 0,
     speed: DEFAULT_CLIP_SPEED,
     colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
     transform: { ...DEFAULT_TRANSFORM },

@@ -24,6 +24,7 @@ import {
   readTutorialProgressSettings,
   readTimelineInteractionSettings,
   readTimelineGridSettings,
+  readUpdateSettings,
   readViewSettings,
   saveBackupSettings,
   saveAudioVisualizationThemeSettings,
@@ -46,6 +47,7 @@ import {
   saveTutorialProgressSettings,
   saveTimelineInteractionSettings,
   saveTimelineGridSettings,
+  saveUpdateSettings,
   saveViewSettings
 } from './appSettings';
 
@@ -666,6 +668,32 @@ describe('app settings storage', () => {
 
     const normalized = await saveTimelineGridSettings({ unit: 'unknown' as never });
     expect(normalized).toEqual({ enabled: true, unit: 'frame' });
+  });
+
+  it('persists update checks off for locked deployments', async () => {
+    await expect(readUpdateSettings()).resolves.toEqual({ autoCheckEnabled: true });
+
+    await saveLanguageSetting('en');
+    const update = await saveUpdateSettings({ autoCheckEnabled: false });
+
+    expect(update).toEqual({ autoCheckEnabled: false });
+    expect(await readUpdateSettings()).toEqual(update);
+    expect(await readAppSettings()).toEqual({
+      language: 'en',
+      update
+    });
+  });
+
+  it('persists custom updater endpoint urls', async () => {
+    const update = await saveUpdateSettings({
+      customEndpoint: ' http://updates.intranet/open-factory/latest.json '
+    });
+
+    expect(update).toEqual({
+      autoCheckEnabled: true,
+      customEndpoint: 'http://updates.intranet/open-factory/latest.json'
+    });
+    expect(JSON.parse(files.get(settingsPath) ?? '{}')).toEqual({ update });
   });
 
   it('persists normalized declarative automation rules in settings.json', async () => {

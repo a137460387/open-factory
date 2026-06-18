@@ -105,6 +105,8 @@ import {
   saveLanguageSetting,
   saveLocalCoeditingSettings,
   saveLocalAiModelsSettings,
+  readUpdateSettings,
+  saveUpdateSettings,
   type AutomationRule,
   type BackupSettings,
   type CollaborationIdentitySettings,
@@ -137,6 +139,7 @@ import {
   type ThemeSettings
 } from '../theme/theme';
 import { getCurrentThemeSettings, setThemeSettings, useTheme } from '../theme/useTheme';
+import { DEFAULT_UPDATE_SETTINGS, getEffectiveUpdaterEndpoint, type UpdateSettings } from '../updater/update-settings';
 
 interface SettingsDialogProps {
   open: boolean;
@@ -214,6 +217,7 @@ export function SettingsDialog({
   const [collaborationIdentity, setCollaborationIdentity] = useState<CollaborationIdentitySettings>(() => ({ ...DEFAULT_COLLABORATION_IDENTITY_SETTINGS }));
   const [localCoediting, setLocalCoediting] = useState<LocalCoeditingSettings>(() => ({ ...DEFAULT_LOCAL_COEDITING_SETTINGS }));
   const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(() => ({ colorGamut: 'srgb' }));
+  const [updateSettings, setUpdateSettings] = useState<UpdateSettings>(() => ({ ...DEFAULT_UPDATE_SETTINGS }));
   const [localModelsSettings, setLocalModelsSettings] = useState<LocalAiModelsSettings>({});
   const [localModelStatuses, setLocalModelStatuses] = useState<Partial<Record<LocalAiModelId, LocalAiModelResolvedStatus>>>({});
   const [webdavPassword, setWebdavPassword] = useState('');
@@ -262,6 +266,7 @@ export function SettingsDialog({
     void loadCollaborationIdentity();
     void loadLocalCoediting();
     void loadDisplaySettings();
+    void loadUpdateSettings();
     void loadLocalModelsSettings();
     void loadTranslationApiKey();
     hydrateThemeForm(getCurrentThemeSettings());
@@ -671,6 +676,18 @@ export function SettingsDialog({
     }
   }
 
+  async function loadUpdateSettings() {
+    try {
+      setUpdateSettings(await readUpdateSettings());
+    } catch (updateError) {
+      showToast({
+        kind: 'warning',
+        title: t.general.saveFailed,
+        message: updateError instanceof Error ? updateError.message : t.general.saveFailedMessage
+      });
+    }
+  }
+
   async function loadLocalModelsSettings() {
     try {
       const settings = await readLocalAiModelsSettings();
@@ -862,6 +879,20 @@ export function SettingsDialog({
         kind: 'warning',
         title: t.general.saveFailed,
         message: coeditingError instanceof Error ? coeditingError.message : t.general.saveFailedMessage
+      });
+    }
+  }
+
+  async function updateAppUpdateSettings(patch: Partial<UpdateSettings>) {
+    const optimistic = { ...updateSettings, ...patch };
+    setUpdateSettings(optimistic);
+    try {
+      setUpdateSettings(await saveUpdateSettings(optimistic));
+    } catch (updateError) {
+      showToast({
+        kind: 'warning',
+        title: t.general.saveFailed,
+        message: updateError instanceof Error ? updateError.message : t.general.saveFailedMessage
       });
     }
   }
@@ -1236,6 +1267,38 @@ export function SettingsDialog({
                   </select>
                 </label>
                 <div className="rounded-md border border-line bg-panel p-3 text-xs text-slate-600">{t.general.languageDescription}</div>
+                <div className="rounded-md border border-line bg-panel p-3" data-testid="settings-update-section">
+                  <div className="mb-3">
+                    <h4 className="text-xs font-semibold text-slate-700">{t.general.updatesTitle}</h4>
+                    <p className="mt-1 text-xs text-slate-500">{t.general.updatesDescription}</p>
+                  </div>
+                  <label className="mb-3 flex items-start gap-2 text-xs text-slate-600">
+                    <input
+                      className="mt-0.5 h-4 w-4 accent-brand"
+                      type="checkbox"
+                      checked={updateSettings.autoCheckEnabled}
+                      data-testid="settings-update-auto-check"
+                      onChange={(event) => void updateAppUpdateSettings({ autoCheckEnabled: event.target.checked })}
+                    />
+                    <span>
+                      <span className="block font-semibold text-slate-700">{t.general.autoUpdateCheck}</span>
+                      <span className="mt-1 block">{t.general.autoUpdateCheckDescription}</span>
+                    </span>
+                  </label>
+                  <label className="block text-xs font-medium text-slate-600">
+                    {t.general.updateEndpoint}
+                    <input
+                      className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                      value={updateSettings.customEndpoint ?? ''}
+                      placeholder={getEffectiveUpdaterEndpoint(DEFAULT_UPDATE_SETTINGS)}
+                      data-testid="settings-update-endpoint-input"
+                      onChange={(event) => void updateAppUpdateSettings({ customEndpoint: event.target.value })}
+                    />
+                  </label>
+                  <p className="mt-1 text-[11px] text-slate-500">
+                    {updateSettings.customEndpoint ? t.general.updateEndpointDescription : t.general.defaultUpdateEndpoint}
+                  </p>
+                </div>
                 <div className="rounded-md border border-line bg-panel p-3">
                   <div className="mb-2">
                     <h4 className="text-xs font-semibold text-slate-700">{t.general.previewPerformanceTitle}</h4>

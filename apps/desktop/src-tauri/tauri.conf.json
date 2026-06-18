@@ -20,7 +20,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost data: blob:; media-src 'self' asset: http://asset.localhost; connect-src ipc: http://ipc.localhost http://asset.localhost; worker-src 'self' blob:",
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost data: blob:; media-src 'self' asset: http://asset.localhost; connect-src ipc: http://ipc.localhost http://asset.localhost https://api.github.com https://github.com; worker-src 'self' blob:",
       "assetProtocol": {
         "enable": true,
         "scope": [
@@ -38,7 +38,43 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
-    "icon": ["icons/icon.ico"]
+    "targets": ["msi", "nsis", "app", "dmg", "deb", "appimage"],
+    "createUpdaterArtifacts": false,
+    "category": "Video",
+    "icon": ["icons/icon.ico"],
+    "linux": {
+      "appimage": {
+        "bundleMediaFramework": true
+      },
+      "deb": {
+        "depends": ["libwebkit2gtk-4.1-0", "libssl3"]
+      }
+    },
+    "macOS": {
+      "minimumSystemVersion": "11.0",
+      "signingIdentity": null,
+      "providerShortName": null,
+      "hardenedRuntime": true,
+      "dmg": {
+        "windowSize": {
+          "width": 660,
+          "height": 420
+        },
+        "appPosition": {
+          "x": 180,
+          "y": 170
+        },
+        "applicationFolderPosition": {
+          "x": 480,
+          "y": 170
+        }
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDM1RkVEMDU2QzNDMzczRTMKUldUamM4UERWdEQrTmE0cmlCYUN2cVUyZERVWjV6RFNJejdUY0JLa1lRZVV2SWtTVDhaTVVuWlEK",
+      "endpoints": ["https://github.com/open-factory/open-factory/releases/latest/download/latest.json"]
+    }
   }
 }

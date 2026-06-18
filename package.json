@@ -27,7 +27,7 @@
     "smoke:cancel": "cd apps/desktop && bun run smoke:cancel",
     "smoke:golden": "cd apps/desktop && bun run smoke:golden",
     "media:compat": "node scripts/media-compat-test.mjs",
-    "check:release": "bun run typecheck && bun run test && bun run build && bun run e2e && bun run tauri:build && bun run smoke:golden && bun run smoke:preview && bun run smoke:cancel && bun run smoke:tauri && bun run smoke:dialog"
+    "check:release": "node scripts/check-release.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.53.1",

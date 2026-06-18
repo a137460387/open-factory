@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import {
   areClipsAdjacent,
   CLIP_GROUP_COLOR_HEX,
@@ -22,8 +23,10 @@ import {
   type TimelineLabelColor,
   type TimelineRulerTick,
   type TimelineThumbnailTrackSample,
+  type TimelineLargeProjectMode,
   type TimelineVirtualRenderWindow,
   type VolumeEnvelopePoint,
+  shouldLoadTimelineClipAssets,
   type Track,
   type Transition,
   type TransitionType
@@ -70,6 +73,7 @@ export interface DragState {
 export const TRACK_HEIGHT = 54;
 export const LABEL_WIDTH = 138;
 export const TRACK_DRAG_MIME = 'application/x-open-factory-track-id';
+const LARGE_PROJECT_ASSET_HYDRATION_DELAY_MS = 1_200;
 
 export interface VolumeEnvelopePointRequest {
   clipId: string;
@@ -307,6 +311,8 @@ export function TrackRow({
   onVolumeEnvelopeMenu,
   onClipDoubleClick,
   virtualWindow,
+  assetLoadWindow,
+  largeProjectMode,
   rollingTrimActive,
   slipEditActive,
   slideEditActive,
@@ -344,6 +350,8 @@ export function TrackRow({
   onVolumeEnvelopeMenu(request: VolumeEnvelopeMenuRequest): void;
   onClipDoubleClick(clip: Clip): void;
   virtualWindow: TimelineVirtualRenderWindow;
+  assetLoadWindow: { scrollLeft: number; viewportWidth: number; labelWidth: number };
+  largeProjectMode: TimelineLargeProjectMode;
   rollingTrimActive: boolean;
   slipEditActive: boolean;
   slideEditActive: boolean;
@@ -539,8 +547,17 @@ export function TrackRow({
           const displayClip = previewClip ?? clip;
           const left = (previewClip?.start ?? movedStart ?? trimPreview?.previewStart ?? clip.start) * zoom;
           const width = Math.max(16, (previewClip?.duration ?? trimPreview?.previewDuration ?? clip.duration) * zoom);
+          const loadAssets = shouldLoadTimelineClipAssets({
+            clipStart: clip.start,
+            clipDuration: clip.duration,
+            zoom,
+            scrollLeft: assetLoadWindow.scrollLeft,
+            viewportWidth: assetLoadWindow.viewportWidth,
+            labelWidth: assetLoadWindow.labelWidth,
+            preloadPx: 100
+          });
           return (
-            <ClipBlock
+            <MemoizedClipBlock
               key={clip.id}
               clip={displayClip}
               asset={'mediaId' in clip ? mediaById.get(clip.mediaId) : undefined}
@@ -575,12 +592,72 @@ export function TrackRow({
               projectFrameRate={projectFrameRate}
               envelopeEditMode={envelopeEditMode}
               reduceMotion={reduceMotion}
+              loadAssets={loadAssets}
+              largeProjectMode={largeProjectMode}
               collaborationLock={collaborationLocksByClipId.get(clip.id)}
             />
           );
         })}
       </div>
     </div>
+  );
+}
+
+interface ClipAssetStripsProps {
+  clip: Extract<Clip, { type: 'video' }>;
+  asset: MediaAsset;
+  clipPixelWidth: number;
+  trackMuted: boolean;
+  waveformColor: string;
+  largeProjectMode: TimelineLargeProjectMode;
+}
+
+function DeferredClipAssetStrips(props: ClipAssetStripsProps) {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    setReady(false);
+    const timeoutId = window.setTimeout(() => setReady(true), LARGE_PROJECT_ASSET_HYDRATION_DELAY_MS);
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [props.asset.id, props.clip.id]);
+
+  return ready ? <ClipAssetStrips {...props} /> : null;
+}
+
+function DeferredWaveformStrip(props: WaveformStripProps) {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    setReady(false);
+    const timeoutId = window.setTimeout(() => setReady(true), LARGE_PROJECT_ASSET_HYDRATION_DELAY_MS);
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [props.asset.id, props.clipId]);
+
+  return ready ? <WaveformStrip {...props} /> : null;
+}
+
+function ClipAssetStrips({ clip, asset, clipPixelWidth, trackMuted, waveformColor, largeProjectMode }: ClipAssetStripsProps) {
+  return (
+    <>
+      <VideoThumbnailStrip clip={clip} asset={asset} pixelWidth={clipPixelWidth} frameStep={largeProjectMode.previewFrameStep} />
+      {asset.hasAudio ? (
+        <WaveformStrip
+          clipId={clip.id}
+          asset={asset}
+          pixelWidth={clipPixelWidth}
+          clipDuration={clip.duration}
+          muted={trackMuted || Boolean(clip.muted)}
+          color={waveformColor}
+          pitchData={clip.pitchData}
+          compact
+          resolutionScale={largeProjectMode.waveformResolutionScale}
+        />
+      ) : null}
+    </>
   );
 }
 
@@ -680,6 +757,8 @@ function ClipBlock({
   projectFrameRate,
   envelopeEditMode,
   reduceMotion,
+  loadAssets,
+  largeProjectMode,
   collaborationLock
 }: {
   clip: Clip;
@@ -715,6 +794,8 @@ function ClipBlock({
   projectFrameRate: number;
   envelopeEditMode: boolean;
   reduceMotion: boolean;
+  loadAssets: boolean;
+  largeProjectMode: TimelineLargeProjectMode;
   collaborationLock?: CollaborationClipLock;
 }) {
   const waveformColor = getTrackWaveformColor(trackType);
@@ -736,7 +817,7 @@ function ClipBlock({
         asset?.missing ? 'border-rose-500 bg-[repeating-linear-gradient(135deg,rgba(244,63,94,0.18)_0,rgba(244,63,94,0.18)_6px,transparent_6px,transparent_12px)]' : selected ? 'border-coral ring-2 ring-coral/30' : 'border-white/80',
         locked ? 'cursor-not-allowed opacity-70' : 'cursor-grab',
         isMoveDragging && 'opacity-80 shadow-[0_12px_22px_rgba(15,23,42,0.24)] ring-2 ring-brand/30',
-        !reduceMotion && 'transition-all duration-150 ease-out'
+        !reduceMotion && !largeProjectMode.disableAnimations && 'transition-all duration-150 ease-out'
       )}
       style={{ left, width }}
       onPointerDown={(event) => {
@@ -839,9 +920,12 @@ function ClipBlock({
           {zhCN.timeline.lockedByUser(collaborationLock.userName)}
         </span>
       ) : null}
-      {clip.type === 'video' && asset ? <VideoThumbnailStrip clip={clip} asset={asset} pixelWidth={clipPixelWidth} /> : null}
-      {clip.type === 'video' && asset?.hasAudio ? (
-        <WaveformStrip clipId={clip.id} asset={asset} pixelWidth={clipPixelWidth} clipDuration={clip.duration} muted={trackMuted || Boolean(clip.muted)} color={waveformColor} pitchData={clip.pitchData} compact />
+      {loadAssets && clip.type === 'video' && asset ? (
+        largeProjectMode.enabled ? (
+          <DeferredClipAssetStrips clip={clip} asset={asset} clipPixelWidth={clipPixelWidth} trackMuted={trackMuted} waveformColor={waveformColor} largeProjectMode={largeProjectMode} />
+        ) : (
+          <ClipAssetStrips clip={clip} asset={asset} clipPixelWidth={clipPixelWidth} trackMuted={trackMuted} waveformColor={waveformColor} largeProjectMode={largeProjectMode} />
+        )
       ) : null}
       {transition ? (
         <span className="absolute right-1 top-1 z-20 rounded bg-brand px-1 text-[10px] font-semibold text-white" data-testid={`timeline-transition-${transition.id}`}>
@@ -878,8 +962,12 @@ function ClipBlock({
           }}
         />
       )}
-      {clip.type === 'audio' && asset ? (
-        <WaveformStrip clipId={clip.id} asset={asset} pixelWidth={clipPixelWidth} clipDuration={clip.duration} muted={trackMuted || Boolean(clip.muted)} color={waveformColor} pitchData={clip.pitchData} />
+      {loadAssets && clip.type === 'audio' && asset ? (
+        largeProjectMode.enabled ? (
+          <DeferredWaveformStrip clipId={clip.id} asset={asset} pixelWidth={clipPixelWidth} clipDuration={clip.duration} muted={trackMuted || Boolean(clip.muted)} color={waveformColor} pitchData={clip.pitchData} resolutionScale={largeProjectMode.waveformResolutionScale} />
+        ) : (
+          <WaveformStrip clipId={clip.id} asset={asset} pixelWidth={clipPixelWidth} clipDuration={clip.duration} muted={trackMuted || Boolean(clip.muted)} color={waveformColor} pitchData={clip.pitchData} resolutionScale={largeProjectMode.waveformResolutionScale} />
+        )
       ) : null}
       {envelopeEditMode && clip.type === 'audio' && 'volume' in clip ? (
         <VolumeEnvelopeOverlay
@@ -1147,14 +1235,46 @@ function getClipToneClass(type: Clip['type']): string {
   return 'bg-sky-100 text-sky-950';
 }
 
-function VideoThumbnailStrip({ clip, asset, pixelWidth }: { clip: Extract<Clip, { type: 'video' }>; asset: MediaAsset; pixelWidth: number }) {
-  const [frames, setFrames] = useState<TimelineThumbnailFrame[]>(() => getTimelineThumbnailPlaceholders(asset, clip, pixelWidth));
+const MemoizedClipBlock = memo(ClipBlock, areClipBlockPropsEqual);
+
+function areClipBlockPropsEqual(previous: Parameters<typeof ClipBlock>[0], next: Parameters<typeof ClipBlock>[0]): boolean {
+  return previous.clip === next.clip &&
+    previous.asset === next.asset &&
+    previous.left === next.left &&
+    previous.width === next.width &&
+    previous.selected === next.selected &&
+    previous.selectedKeyframe === next.selectedKeyframe &&
+    previous.selectedKeyframes === next.selectedKeyframes &&
+    previous.drag === next.drag &&
+    previous.selectedClipIds === next.selectedClipIds &&
+    previous.locked === next.locked &&
+    previous.clipPixelWidth === next.clipPixelWidth &&
+    previous.trackMuted === next.trackMuted &&
+    previous.trackType === next.trackType &&
+    previous.nextAdjacentClip === next.nextAdjacentClip &&
+    previous.transition === next.transition &&
+    previous.rollingTrimActive === next.rollingTrimActive &&
+    previous.slipEditActive === next.slipEditActive &&
+    previous.slideEditActive === next.slideEditActive &&
+    previous.clipGroup === next.clipGroup &&
+    previous.trackColor === next.trackColor &&
+    previous.projectFrameRate === next.projectFrameRate &&
+    previous.envelopeEditMode === next.envelopeEditMode &&
+    previous.reduceMotion === next.reduceMotion &&
+    previous.loadAssets === next.loadAssets &&
+    previous.largeProjectMode === next.largeProjectMode &&
+    previous.collaborationLock === next.collaborationLock;
+}
+
+function VideoThumbnailStrip({ clip, asset, pixelWidth, frameStep = 1 }: { clip: Extract<Clip, { type: 'video' }>; asset: MediaAsset; pixelWidth: number; frameStep?: number }) {
+  const requestPixelWidth = Math.max(1, pixelWidth / Math.max(1, frameStep));
+  const [frames, setFrames] = useState<TimelineThumbnailFrame[]>(() => getTimelineThumbnailPlaceholders(asset, clip, requestPixelWidth));
 
   useEffect(() => {
     let canceled = false;
-    const placeholders = getTimelineThumbnailPlaceholders(asset, clip, pixelWidth);
+    const placeholders = getTimelineThumbnailPlaceholders(asset, clip, requestPixelWidth);
     setFrames(placeholders);
-    void getTimelineThumbnails(asset, clip, pixelWidth)
+    void getTimelineThumbnails(asset, clip, requestPixelWidth)
       .then((nextFrames) => {
         if (!canceled) {
           setFrames(nextFrames);
@@ -1168,7 +1288,7 @@ function VideoThumbnailStrip({ clip, asset, pixelWidth }: { clip: Extract<Clip, 
     return () => {
       canceled = true;
     };
-  }, [asset, clip.duration, clip.keyframes, clip.speed, clip.trimStart, pixelWidth]);
+  }, [asset, clip.duration, clip.keyframes, clip.speed, clip.trimStart, requestPixelWidth]);
 
   if (frames.length === 0) {
     return null;
@@ -1185,16 +1305,7 @@ function VideoThumbnailStrip({ clip, asset, pixelWidth }: { clip: Extract<Clip, 
   );
 }
 
-function WaveformStrip({
-  clipId,
-  asset,
-  pixelWidth,
-  clipDuration,
-  muted,
-  color,
-  pitchData,
-  compact = false
-}: {
+interface WaveformStripProps {
   clipId: string;
   asset: MediaAsset;
   pixelWidth: number;
@@ -1203,13 +1314,26 @@ function WaveformStrip({
   color: string;
   pitchData?: ClipPitchDataPoint[];
   compact?: boolean;
-}) {
+  resolutionScale?: number;
+}
+
+function WaveformStrip({
+  clipId,
+  asset,
+  pixelWidth,
+  clipDuration,
+  muted,
+  color,
+  pitchData,
+  compact = false,
+  resolutionScale = 1
+}: WaveformStripProps) {
   const [waveform, setWaveform] = useState<WaveformResult | undefined>();
   const [failed, setFailed] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const canvasWidth = Math.max(1, Math.round(pixelWidth));
   const canvasHeight = compact ? 16 : 40;
-  const pointsPerSecond = useMemo(() => Math.max(16, Math.ceil(canvasWidth / Math.max(0.001, clipDuration))), [canvasWidth, clipDuration]);
+  const pointsPerSecond = useMemo(() => Math.max(8, Math.ceil((canvasWidth / Math.max(0.001, clipDuration)) * Math.max(0.1, resolutionScale))), [canvasWidth, clipDuration, resolutionScale]);
 
   useEffect(() => {
     let canceled = false;

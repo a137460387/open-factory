@@ -57,7 +57,10 @@ import {
   DEFAULT_TIMELINE_GRID_SETTINGS,
   findTimelineSnapTargetWithGrid,
   fitTimelineZoomToWindow,
+  filterTimelineVirtualTracks,
+  getTimelineLargeProjectMode,
   getTimelineVirtualRenderWindow,
+  getTimelineVirtualTrackWindow,
   ensurePlayheadVisible,
   MoveClipCommand,
   MoveClipsCommand,
@@ -346,7 +349,7 @@ export function Timeline({
   const [selectedTrackIds, setSelectedTrackIds] = useState<string[]>([]);
   const [trackSelectionAnchorId, setTrackSelectionAnchorId] = useState<string | undefined>();
   const [trackBatchMenu, setTrackBatchMenu] = useState<TrackBatchMenuState | undefined>();
-  const [scrollViewport, setScrollViewport] = useState({ scrollLeft: 0, viewportWidth: 960 });
+  const [scrollViewport, setScrollViewport] = useState({ scrollLeft: 0, scrollTop: 0, viewportWidth: 960 });
   const [timelineViewportHeight, setTimelineViewportHeight] = useState(240);
   const whisperExecutablePath = useWhisperSettingsStore((state) => state.executablePath);
   const whisperModelPath = useWhisperSettingsStore((state) => state.modelPath);
@@ -359,6 +362,8 @@ export function Timeline({
     10,
     ...project.timeline.tracks.flatMap((track) => track.clips.map((clip) => clip.start + clip.duration + 2))
   );
+  const allClips = useMemo(() => project.timeline.tracks.flatMap((track) => track.clips), [project.timeline]);
+  const largeProjectMode = useMemo(() => getTimelineLargeProjectMode({ clipCount: allClips.length }), [allClips.length]);
 
   useEffect(() => {
     if (bookmarkPanelOpen && (project.bookmarks?.length ?? 0) > 0) {
@@ -441,11 +446,12 @@ export function Timeline({
         duration: timelineDuration,
         width: 120,
         height: minimapHeight,
+        maxClips: largeProjectMode.minimapClipLimit,
         markers: project.timeline.markers ?? [],
         bookmarks: project.bookmarks ?? [],
         exportRanges: exportRangeHighlights
       }),
-    [exportRangeHighlights, minimapHeight, project.bookmarks, project.timeline, timelineDuration]
+    [exportRangeHighlights, largeProjectMode.minimapClipLimit, minimapHeight, project.bookmarks, project.timeline, timelineDuration]
   );
   const minimapViewport = useMemo(
     () =>
@@ -469,7 +475,6 @@ export function Timeline({
     }
     return timelineNotes.filter((note) => note.text.toLowerCase().includes(query) || note.color.toLowerCase().includes(query));
   }, [timelineNoteSearch, timelineNotes]);
-  const allClips = useMemo(() => project.timeline.tracks.flatMap((track) => track.clips), [project.timeline]);
   const sceneCutOverlays = useMemo(
     () =>
       allClips.flatMap((clip) =>
@@ -500,10 +505,22 @@ export function Timeline({
         viewportWidth: scrollViewport.viewportWidth,
         zoom,
         labelWidth: LABEL_WIDTH,
-        overscanScreens: 2
+        overscanScreens: largeProjectMode.virtualOverscanScreens
       }),
-    [scrollViewport.scrollLeft, scrollViewport.viewportWidth, zoom]
+    [largeProjectMode.virtualOverscanScreens, scrollViewport.scrollLeft, scrollViewport.viewportWidth, zoom]
   );
+  const virtualTrackWindow = useMemo(
+    () =>
+      getTimelineVirtualTrackWindow({
+        scrollTop: scrollViewport.scrollTop,
+        viewportHeight: timelineViewportHeight,
+        rowHeight: TRACK_HEIGHT,
+        trackCount: project.timeline.tracks.length,
+        overscanRows: 2
+      }),
+    [project.timeline.tracks.length, scrollViewport.scrollTop, timelineViewportHeight]
+  );
+  const virtualTracks = useMemo(() => filterTimelineVirtualTracks(project.timeline.tracks, virtualTrackWindow), [project.timeline.tracks, virtualTrackWindow]);
   const thumbnailTrackSamples = useMemo(() => {
     const samples = buildTimelineThumbnailTrackSamples(project.timeline, {
       zoom,
@@ -2222,7 +2239,7 @@ function addProjectBookmark(time = playheadTime): void {
     if (!scroll) {
       return;
     }
-    setScrollViewport({ scrollLeft: scroll.scrollLeft, viewportWidth: scroll.clientWidth || 960 });
+    setScrollViewport({ scrollLeft: scroll.scrollLeft, scrollTop: scroll.scrollTop, viewportWidth: scroll.clientWidth || 960 });
     setTimelineViewportHeight(scroll.clientHeight || 240);
   }
 
@@ -2838,12 +2855,13 @@ function addProjectBookmark(time = playheadTime): void {
                 segments={heatmapSegments}
                 zoom={zoom}
                 width={width}
-                height={Math.max(TRACK_HEIGHT, project.timeline.tracks.length * TRACK_HEIGHT)}
+                height={Math.max(TRACK_HEIGHT, virtualTrackWindow.totalHeight)}
                 opacity={heatmap.opacity}
                 colorScheme={heatmap.colorScheme}
               />
             ) : null}
-            {project.timeline.tracks.map((track) => (
+            {virtualTrackWindow.beforeHeight > 0 ? <div style={{ height: virtualTrackWindow.beforeHeight }} data-testid="timeline-track-virtual-spacer-before" /> : null}
+            {virtualTracks.map((track) => (
               <TrackRow
                 key={track.id}
                 track={track}
@@ -2887,6 +2905,8 @@ function addProjectBookmark(time = playheadTime): void {
                 onVolumeEnvelopeMenu={openVolumeEnvelopeMenu}
                 onClipDoubleClick={openNestedSequence}
                 virtualWindow={virtualWindow}
+                assetLoadWindow={{ scrollLeft: scrollViewport.scrollLeft, viewportWidth: scrollViewport.viewportWidth, labelWidth: LABEL_WIDTH }}
+                largeProjectMode={largeProjectMode}
                 rollingTrimActive={rollingTrimActive}
                 slipEditActive={slipEditActive}
                 slideEditActive={slideEditActive}
@@ -2898,6 +2918,7 @@ function addProjectBookmark(time = playheadTime): void {
                 collaborationLocksByClipId={collaborationLocksByClipId}
               />
             ))}
+            {virtualTrackWindow.afterHeight > 0 ? <div style={{ height: virtualTrackWindow.afterHeight }} data-testid="timeline-track-virtual-spacer-after" /> : null}
             {protectedRanges.map((range) => (
               <div
                 key={range.id}

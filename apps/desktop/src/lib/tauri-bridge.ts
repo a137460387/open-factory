@@ -1,11 +1,15 @@
 import { convertFileSrc, invoke } from '@tauri-apps/api/core';
 import { emit, listen } from '@tauri-apps/api/event';
+import { getVersion as getTauriAppVersion } from '@tauri-apps/api/app';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { confirm, message as dialogMessage } from '@tauri-apps/plugin-dialog';
+import { relaunch as relaunchProcess } from '@tauri-apps/plugin-process';
 import { open as openShellPath } from '@tauri-apps/plugin-shell';
+import { check as checkTauriUpdate, type DownloadEvent as TauriUpdateDownloadEvent } from '@tauri-apps/plugin-updater';
 import type { BeatSensitivity, ColorMatchFrameSample, ExportPreviewSamplePlan, ExportReport, FfmpegCapabilities, FfmpegExportPlan, MotionTrackPoint, PostExportQualityAssuranceResult, ProxyPlan } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { isTauriRuntime } from './tauri';
+import desktopPackage from '../../package.json';
 
 export interface FileDialogFilter {
   name: string;
@@ -196,6 +200,25 @@ export interface SystemResourceSnapshot {
   totalMemoryBytes: number;
   availableMemoryBytes: number;
   usedMemoryBytes: number;
+}
+
+export type AppUpdateDownloadEvent = TauriUpdateDownloadEvent;
+
+export interface AppUpdateCheckOptions {
+  headers?: HeadersInit;
+  timeout?: number;
+  target?: string;
+  allowDowngrades?: boolean;
+}
+
+export interface AvailableAppUpdate {
+  currentVersion: string;
+  version: string;
+  date?: string;
+  body?: string;
+  rawJson: Record<string, unknown>;
+  downloadAndInstall(onEvent?: (event: AppUpdateDownloadEvent) => void): Promise<void>;
+  close?(): Promise<void>;
 }
 
 export interface MediaFormatInfo {
@@ -692,6 +715,9 @@ export type TauriMocks = Partial<{
   updateExportTrayProgress(progress: number, runningCount: number): Promise<void> | void;
   runExportPowerAction(action: 'shutdown' | 'hibernate', allowPowerActions: boolean): Promise<void> | void;
   sendNotification(title: string, body: string): Promise<void> | void;
+  getAppVersion(): Promise<string> | string;
+  checkAppUpdate(options?: AppUpdateCheckOptions): Promise<AvailableAppUpdate | null> | AvailableAppUpdate | null;
+  relaunchApp(): Promise<void> | void;
   startCollaborationHost(request: CollaborationHostRequest): Promise<CollaborationHostState> | CollaborationHostState;
   stopCollaborationHost(): Promise<void> | void;
   broadcastCollaborationMessage(message: string): Promise<void> | void;
@@ -1649,6 +1675,51 @@ export async function runExportPowerAction(action: 'shutdown' | 'hibernate', all
   }
   if (isTauriRuntime()) {
     await invoke('run_export_power_action', { action, allowPowerActions });
+  }
+}
+
+export async function checkAppUpdate(options?: AppUpdateCheckOptions): Promise<AvailableAppUpdate | null> {
+  const mock = getTauriMocks()?.checkAppUpdate;
+  if (mock) {
+    return mock(options);
+  }
+  if (!isTauriRuntime()) {
+    return null;
+  }
+  const update = await checkTauriUpdate(options);
+  if (!update) {
+    return null;
+  }
+  return {
+    currentVersion: update.currentVersion,
+    version: update.version,
+    date: update.date,
+    body: update.body,
+    rawJson: update.rawJson,
+    downloadAndInstall: (onEvent) => update.downloadAndInstall(onEvent),
+    close: () => update.close()
+  };
+}
+
+export async function getAppVersion(): Promise<string> {
+  const mock = getTauriMocks()?.getAppVersion;
+  if (mock) {
+    return mock();
+  }
+  if (!isTauriRuntime()) {
+    return desktopPackage.version;
+  }
+  return getTauriAppVersion().catch(() => desktopPackage.version);
+}
+
+export async function relaunchApp(): Promise<void> {
+  const mock = getTauriMocks()?.relaunchApp;
+  if (mock) {
+    await mock();
+    return;
+  }
+  if (isTauriRuntime()) {
+    await relaunchProcess();
   }
 }
 

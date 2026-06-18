@@ -12,6 +12,8 @@
     "fs:write-files",
     "fs:allow-exists",
     "notification:default",
+    "process:default",
+    "updater:default",
     {
       "identifier": "fs:scope",
       "allow": [

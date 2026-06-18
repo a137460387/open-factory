@@ -104,4 +104,39 @@ describe('timeline minimap', () => {
     expect(layout.markers.map((marker) => marker.kind)).toEqual(['export-range-start', 'export-range-end', 'marker', 'bookmark']);
     expect(layout.markers.map((marker) => marker.y)).toEqual([20, 140, 50, 80]);
   });
+
+  it('samples large minimap clip lists to the configured limit while keeping the end points', () => {
+    const clips = Array.from({ length: 12 }, (_, index) => ({
+      id: `clip-${index}`,
+      type: 'video' as const,
+      name: `Clip ${index}`,
+      trackId: 'video-1',
+      mediaId: 'media-a',
+      start: index,
+      duration: 0.5,
+      trimStart: 0,
+      trimEnd: 0,
+      speed: 1,
+      volume: 1,
+      colorCorrection: { brightness: 0, contrast: 1, saturation: 1, hue: 0 },
+      transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 }
+    }));
+    const layout = buildTimelineMinimapLayout(
+      {
+        tracks: [
+          {
+            id: 'video-1',
+            type: 'video',
+            name: 'V1',
+            clips
+          }
+        ]
+      },
+      { duration: 20, height: 120, maxClips: 5 }
+    );
+
+    expect(layout.clips).toHaveLength(5);
+    expect(layout.clips[0].id).toBe('clip-0');
+    expect(layout.clips[layout.clips.length - 1].id).toBe('clip-11');
+  });
 });

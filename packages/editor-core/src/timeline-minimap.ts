@@ -91,6 +91,7 @@ export function buildTimelineMinimapLayout(
     duration: number;
     width?: number;
     height: number;
+    maxClips?: number;
     markers?: TimelineMarker[];
     bookmarks?: TimelineBookmark[];
     exportRanges?: Array<Pick<ExportRange, 'id' | 'start' | 'end'>>;
@@ -110,7 +111,7 @@ export function buildTimelineMinimapLayout(
     color: track.color ? getTimelineLabelColorHex(track.color) : '#94a3b8'
   }));
   const trackById = new Map(tracks.map((track) => [track.id, track]));
-  const clips = timeline.tracks.flatMap((track) => {
+  const allClips = timeline.tracks.flatMap((track) => {
     const lane = trackById.get(track.id);
     if (!lane) {
       return [];
@@ -126,6 +127,7 @@ export function buildTimelineMinimapLayout(
       color
     }));
   });
+  const clips = sampleMinimapClips(allClips, options.maxClips);
   const markers: TimelineMinimapMarkerLine[] = [
     ...(options.exportRanges ?? []).flatMap((range) => [
       { id: `${range.id}-start`, y: timeToMinimapY(range.start, duration, height), color: '#0ea5e9', kind: 'export-range-start' as const },
@@ -135,6 +137,27 @@ export function buildTimelineMinimapLayout(
     ...(options.bookmarks ?? []).map((bookmark) => ({ id: bookmark.id, y: timeToMinimapY(bookmark.time, duration, height), color: '#a855f7', kind: 'bookmark' as const }))
   ];
   return { tracks, clips, markers };
+}
+
+function sampleMinimapClips(clips: TimelineMinimapClipRect[], maxClips: number | undefined): TimelineMinimapClipRect[] {
+  const limit = Number.isFinite(maxClips) ? Math.max(0, Math.floor(maxClips ?? 0)) : 0;
+  if (limit <= 0 || clips.length <= limit) {
+    return clips;
+  }
+  if (limit === 1) {
+    return [clips[0]];
+  }
+  const sampled: TimelineMinimapClipRect[] = [];
+  const step = (clips.length - 1) / (limit - 1);
+  const seen = new Set<string>();
+  for (let index = 0; index < limit; index += 1) {
+    const clip = clips[Math.min(clips.length - 1, Math.round(index * step))];
+    if (!seen.has(clip.id)) {
+      sampled.push(clip);
+      seen.add(clip.id);
+    }
+  }
+  return sampled;
 }
 
 function calculateViewportDuration(viewportWidth: number, labelWidth: number, zoom: number, duration: number): number {

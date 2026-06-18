@@ -767,6 +767,13 @@ const zh = {
       description: '配置界面语言和本机偏好。',
       language: '界面语言',
       languageDescription: '语言会保存到本机设置文件。',
+      updatesTitle: '自动更新',
+      updatesDescription: '启动时在后台检查发布版本；失败会静默跳过，不影响本地编辑。',
+      autoUpdateCheck: '启动时自动检查更新',
+      autoUpdateCheckDescription: '关闭后不会访问更新端点，适合版本锁定或离线部署。',
+      updateEndpoint: '企业更新服务器 URL',
+      updateEndpointDescription: '留空时使用 GitHub Releases latest.json；可填写内网 HTTP/HTTPS endpoint。',
+      defaultUpdateEndpoint: '使用默认 GitHub Releases endpoint',
       projectFrameRate: '项目帧率',
       timecodeFormat: '时间码格式',
       timecodeNdf: 'NDF（Non-Drop Frame）',
@@ -1244,6 +1251,20 @@ const zh = {
       loadFailed: '插件加载失败',
       loadFailedMessage: '无法读取插件目录。'
     }
+  },
+  updater: {
+    toastTitle: (version: string) => `v${version} 可用，点击更新`,
+    toastMessage: '已在后台完成版本检查。',
+    viewReleaseNotes: '查看更新',
+    dialogTitle: (version: string) => `版本 v${version} 可用`,
+    releaseNotes: '更新日志',
+    noReleaseNotes: '暂无更新日志。',
+    installAndRestart: '安装并重启',
+    installing: '正在安装更新...',
+    installFailed: '更新安装失败',
+    installFailedMessage: '请稍后重试或从发布页手动下载。',
+    sourceEndpoint: '更新端点',
+    sourceNative: '内置更新器'
   },
   timelineExport: {
     title: '导出时间线',
@@ -4962,6 +4983,13 @@ const enOverrides = {
       description: 'Configure interface language and local preferences.',
       language: 'Interface Language',
       languageDescription: 'The language is saved to the local settings file.',
+      updatesTitle: 'Automatic Updates',
+      updatesDescription: 'Checks release versions in the background on startup; failures are skipped silently and do not affect local editing.',
+      autoUpdateCheck: 'Check for updates on startup',
+      autoUpdateCheckDescription: 'Turn this off to avoid contacting the update endpoint for locked or offline deployments.',
+      updateEndpoint: 'Enterprise Update Server URL',
+      updateEndpointDescription: 'Leave empty to use the GitHub Releases latest.json endpoint; HTTP/HTTPS intranet endpoints are supported.',
+      defaultUpdateEndpoint: 'Using the default GitHub Releases endpoint',
       projectFrameRate: 'Project Frame Rate',
       timecodeFormat: 'Timecode Format',
       timecodeNdf: 'NDF (Non-Drop Frame)',
@@ -5439,6 +5467,20 @@ const enOverrides = {
       loadFailed: 'Plugin load failed',
       loadFailedMessage: 'Unable to read the plugin directory.'
     }
+  },
+  updater: {
+    toastTitle: (version: string) => `v${version} is available, click to update`,
+    toastMessage: 'The background version check completed.',
+    viewReleaseNotes: 'View Update',
+    dialogTitle: (version: string) => `Version v${version} is available`,
+    releaseNotes: 'Release Notes',
+    noReleaseNotes: 'No release notes are available.',
+    installAndRestart: 'Install and Restart',
+    installing: 'Installing update...',
+    installFailed: 'Update install failed',
+    installFailedMessage: 'Try again later or download from the release page.',
+    sourceEndpoint: 'Update endpoint',
+    sourceNative: 'Built-in updater'
   },
   timelineExport: {
     title: 'Export Timeline',

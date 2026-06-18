@@ -43,6 +43,19 @@ export function ToastViewport() {
             <div className="min-w-0 flex-1">
               <div className="text-sm font-semibold text-ink">{item.title}</div>
               {item.message ? <div className="mt-1 text-sm text-slate-600">{item.message}</div> : null}
+              {item.action ? (
+                <button
+                  className="mt-2 rounded-md border border-line bg-white px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-panel"
+                  type="button"
+                  data-testid="toast-action-button"
+                  onClick={() => {
+                    item.action?.onClick();
+                    setItems((current) => current.filter((candidate) => candidate.id !== item.id));
+                  }}
+                >
+                  {item.action.label}
+                </button>
+              ) : null}
             </div>
             <button
               className="rounded p-1 text-slate-500 hover:bg-black/5"

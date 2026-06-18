@@ -4,6 +4,10 @@ export interface ToastEventDetail {
   title: string;
   message?: string;
   kind?: ToastKind;
+  action?: {
+    label: string;
+    onClick(): void;
+  };
 }
 
 export function showToast(detail: ToastEventDetail): void {

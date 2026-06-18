@@ -42,6 +42,11 @@ import {
   type LocalAiModelsSettings
 } from './localModels';
 import { normalizeTutorialProgressSettings, type TutorialProgressSettings } from '../tutorial/tutorialState';
+import {
+  normalizeUpdateSettings,
+  shouldPersistUpdateSettings,
+  type UpdateSettings
+} from '../updater/update-settings';
 
 const BROWSER_SETTINGS_KEY = 'open-factory:settings';
 
@@ -268,6 +273,7 @@ export interface AppSettings {
   automationRules?: AutomationRule[];
   customSplitLayouts?: SplitLayoutDefinition[];
   timelineGrid?: TimelineGridSettings;
+  update?: UpdateSettings;
 }
 
 export async function initializeLanguageFromSettings(): Promise<Language> {
@@ -448,11 +454,23 @@ export async function readTimelineGridSettings(): Promise<TimelineGridSettings> 
   return settings.timelineGrid ?? { ...DEFAULT_TIMELINE_GRID_SETTINGS };
 }
 
+export async function readUpdateSettings(): Promise<UpdateSettings> {
+  const settings = await readAppSettings();
+  return normalizeUpdateSettings(settings.update);
+}
+
 export async function saveTimelineGridSettings(timelineGrid: Partial<TimelineGridSettings>): Promise<TimelineGridSettings> {
   const settings = await readAppSettings();
   const nextTimelineGrid = normalizeTimelineGridSettings({ ...settings.timelineGrid, ...timelineGrid });
   await writeAppSettings({ ...settings, timelineGrid: nextTimelineGrid });
   return nextTimelineGrid;
+}
+
+export async function saveUpdateSettings(update: Partial<UpdateSettings>): Promise<UpdateSettings> {
+  const settings = await readAppSettings();
+  const nextUpdate = normalizeUpdateSettings({ ...settings.update, ...update });
+  await writeAppSettings({ ...settings, update: nextUpdate });
+  return nextUpdate;
 }
 
 export async function savePreviewPerformanceSettings(previewPerformance: Partial<PreviewPerformanceSettings>): Promise<PreviewPerformanceSettings> {
@@ -701,6 +719,10 @@ function normalizeSettings(settings: Partial<AppSettings>): AppSettings {
   }
   if (settings.timelineGrid) {
     normalized.timelineGrid = normalizeTimelineGridSettings(settings.timelineGrid);
+  }
+  const update = normalizeUpdateSettings(settings.update);
+  if (shouldPersistUpdateSettings(update)) {
+    normalized.update = update;
   }
   return normalized;
 }
