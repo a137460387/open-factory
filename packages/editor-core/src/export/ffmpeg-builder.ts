@@ -137,6 +137,7 @@ export interface BuildExportProjectOptions {
   outputPath: string;
   defaultFontPath?: string | null;
   settings?: Partial<Omit<ExportSettings, 'outputPath'>>;
+  metadata?: ExportProject['metadata'];
 }
 
 export const DEFAULT_EXPORT_SETTINGS: Omit<ExportSettings, 'outputPath'> = {
@@ -262,7 +263,7 @@ export function buildExportProjectFromProject(project: Project, options: BuildEx
     name: exportSourceProject.name,
     settings,
     masterVolume: normalizeMasterVolume(exportSourceProject.masterVolume),
-    metadata: collectExportMediaMetadata(exportSourceProject),
+    metadata: mergeExportMetadata(collectExportMediaMetadata(exportSourceProject), options.metadata),
     timeline: buildExportTimeline(primaryTimeline, mediaById, options),
     sequences: getProjectSequences(exportSourceProject)
       .filter((sequence) => sequence.id !== 'sequence-main')
@@ -959,6 +960,18 @@ function normalizeExportReframeSettings(settings: ExportSettings): ExportSetting
     slate: normalizeExportSlate(settings.slate),
     audioVisualization: normalizeExportAudioVisualization(settings.audioVisualization),
     masterProcessing: normalizeExportMasterProcessing(settings.masterProcessing)
+  };
+}
+
+function mergeExportMetadata(base: ExportProject['metadata'], override: ExportProject['metadata']): ExportProject['metadata'] {
+  if (!override) {
+    return base;
+  }
+  return {
+    ...(base ?? {}),
+    ...Object.fromEntries(
+      Object.entries(override).filter((entry): entry is [keyof NonNullable<ExportProject['metadata']>, string] => typeof entry[1] === 'string' && entry[1].trim().length > 0)
+    )
   };
 }
 

@@ -20,6 +20,7 @@ import {
   type ExportReport,
   type FfmpegExportPlan,
   type ProgressiveExportState,
+  type VersionedExportTaskMetadata,
   type RenderFarmSegmentStatus,
   type RenderFarmTaskConfig
 } from '@open-factory/editor-core';
@@ -33,7 +34,7 @@ export interface ExportQueueState {
   queuePaused: boolean;
   maxConcurrent: number;
   lastCompletedPath?: string;
-  addTask: (input: { name: string; projectName?: string; outputPath: string; plan: FfmpegExportPlan; priority?: ExportTaskPriority; renderFarm?: RenderFarmTaskConfig; progressive?: ProgressiveExportState; scheduledStartAt?: string }) => ExportTask;
+  addTask: (input: { name: string; projectName?: string; outputPath: string; plan: FfmpegExportPlan; priority?: ExportTaskPriority; renderFarm?: RenderFarmTaskConfig; progressive?: ProgressiveExportState; versionedBatch?: VersionedExportTaskMetadata; scheduledStartAt?: string }) => ExportTask;
   activateScheduledTasks: (now?: string) => void;
   startNextTasks: () => string[];
   updateTaskProgress: (taskId: string, progress: number) => void;

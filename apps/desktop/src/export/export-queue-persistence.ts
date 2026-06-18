@@ -167,7 +167,8 @@ function buildPersistenceSignature(tasks: ExportTask[]): string {
       logPath: task.logPath,
       error: task.error,
       renderFarm: task.renderFarm,
-      progressive: task.progressive
+      progressive: task.progressive,
+      versionedBatch: task.versionedBatch
     }))
   );
 }

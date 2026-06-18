@@ -830,6 +830,7 @@ const zh = {
       shortcuts: '快捷键',
       macros: '宏',
       automation: '自动化',
+      scripts: '脚本',
       translation: '字幕翻译',
       localModels: '本地模型',
       proxy: '代理媒体',
@@ -1002,6 +1003,51 @@ const zh = {
       disabled: '停用',
       example: '示例',
       ruleSummary: (trigger: string, actions: number) => `${trigger} · ${actions} 个动作`
+    },
+    scripts: {
+      title: '脚本',
+      description: '在本机 Worker 沙箱中运行 JavaScript，批量操作当前时间线。',
+      examplesTitle: '内置示例',
+      filesTitle: '本地脚本',
+      fileDialogName: 'Open Factory 时间线脚本',
+      defaultScriptName: '未命名脚本',
+      name: '脚本名称',
+      new: '新建',
+      save: '保存',
+      run: '运行脚本',
+      running: '运行中',
+      import: '导入',
+      export: '导出',
+      unsavedDraft: '未保存草稿',
+      emptyFiles: '还没有保存的脚本。',
+      outputEmpty: '输出会显示在这里。',
+      saved: '脚本已保存',
+      deleted: '脚本已删除',
+      imported: '脚本已导入',
+      exported: '脚本已导出',
+      loadFailed: '脚本读取失败',
+      loadFailedMessage: '无法读取脚本目录。',
+      saveFailed: '脚本保存失败',
+      saveFailedMessage: '无法写入脚本文件。',
+      deleteFailed: '脚本删除失败',
+      deleteFailedMessage: '无法删除脚本文件。',
+      importFailed: '脚本导入失败',
+      importFailedMessage: '无法读取脚本文件。',
+      exportFailed: '脚本导出失败',
+      exportFailedMessage: '无法写入脚本文件。',
+      runFailed: '脚本运行失败',
+      runFailedMessage: '脚本运行时发生错误。',
+      runCommand: '运行时间线脚本',
+      operationSummary: (count: number) => `已应用 ${count} 个时间线操作`,
+      exportSummary: (count: number) => `捕获 ${count} 个导出请求`,
+      elapsed: (ms: number) => `耗时 ${Math.max(0, Math.round(ms))} ms`,
+      examples: {
+        'bulk-speed': { name: '批量调整所有 clip 速度', description: '把视频、音频和嵌套序列统一设置为 1.25x。' },
+        'sort-by-color-label': { name: '按颜色标签排序 clip', description: '按标签顺序重排片段起点。' },
+        'minute-markers': { name: '生成每分钟标记点', description: '按时间线长度添加分钟标记。' },
+        'export-each-clip': { name: '批量导出每个 clip 为独立文件', description: '为每个片段记录一个导出请求。' },
+        'project-stats': { name: '统计项目信息并打印', description: '输出片段数、标记数和总时长。' }
+      }
     },
     appearance: {
       title: '外观',
@@ -3439,9 +3485,61 @@ const zh = {
       title: '导出模式',
       options: {
         single: '单个导出',
+        'version-batch': '批量版本导出',
         'sequence-batch': '批量序列渲染',
         'codec-compare': '对比导出',
         pipeline: '流水线'
+      }
+    },
+    versionBatch: {
+      title: '导出版本',
+      description: '为同一项目创建多个平台版本，每个版本可覆盖预设、分辨率、水印和字幕语言。',
+      outputTemplate: '输出文件名模板',
+      outputTemplatePlaceholder: 'C:/Exports/{version_name}-{platform}-{language}.mp4',
+      exportTemplate: '导出模板',
+      importTemplate: '导入模板',
+      templateFilter: '批量版本模板',
+      templateSavedTitle: '批量版本模板已保存',
+      templateLoadedTitle: '批量版本模板已导入',
+      templateFailed: '批量版本模板处理失败。',
+      add: '添加版本',
+      remove: '删除版本',
+      noneSelected: '请至少启用一个导出版本。',
+      defaultVersionName: (index: number) => `版本 ${index}`,
+      queuedMessage: (count: number) => `${count} 个版本任务已加入导出队列。`,
+      columns: {
+        version: '版本',
+        platform: '平台',
+        language: '语言',
+        range: '范围',
+        preset: '预设',
+        width: '宽',
+        height: '高',
+        watermark: '水印',
+        output: '输出'
+      },
+      watermarkModes: {
+        inherit: '沿用',
+        none: '关闭',
+        text: '文字'
+      },
+      rangeModes: {
+        default: '默认',
+        custom: '自定'
+      },
+      rangeStart: '起点秒',
+      rangeDuration: '时长秒',
+      report: {
+        title: '版本差异报告',
+        columns: {
+          version: '版本',
+          platform: '平台/语言',
+          resolution: '分辨率',
+          fileSize: '文件大小',
+          duration: '时长',
+          elapsed: '耗时',
+          status: '状态'
+        }
       }
     },
     codecCompare: {
@@ -5381,6 +5479,7 @@ const enOverrides = {
       shortcuts: 'Shortcuts',
       macros: 'Macros',
       automation: 'Automation',
+      scripts: 'Scripts',
       translation: 'Subtitle Translation',
       localModels: 'Local Models',
       proxy: 'Proxy Media',
@@ -5553,6 +5652,51 @@ const enOverrides = {
       disabled: 'Disabled',
       example: 'Example',
       ruleSummary: (trigger: string, actions: number) => `${trigger} · ${actions} actions`
+    },
+    scripts: {
+      title: 'Scripts',
+      description: 'Run JavaScript in a local Worker sandbox to batch-edit the current timeline.',
+      examplesTitle: 'Built-in Examples',
+      filesTitle: 'Local Scripts',
+      fileDialogName: 'Open Factory Timeline Script',
+      defaultScriptName: 'Untitled Script',
+      name: 'Script Name',
+      new: 'New',
+      save: 'Save',
+      run: 'Run Script',
+      running: 'Running',
+      import: 'Import',
+      export: 'Export',
+      unsavedDraft: 'Unsaved draft',
+      emptyFiles: 'No saved scripts yet.',
+      outputEmpty: 'Output appears here.',
+      saved: 'Script saved',
+      deleted: 'Script deleted',
+      imported: 'Script imported',
+      exported: 'Script exported',
+      loadFailed: 'Script load failed',
+      loadFailedMessage: 'Unable to read the scripts directory.',
+      saveFailed: 'Script save failed',
+      saveFailedMessage: 'Unable to write the script file.',
+      deleteFailed: 'Script delete failed',
+      deleteFailedMessage: 'Unable to delete the script file.',
+      importFailed: 'Script import failed',
+      importFailedMessage: 'Unable to read the script file.',
+      exportFailed: 'Script export failed',
+      exportFailedMessage: 'Unable to write the script file.',
+      runFailed: 'Script failed',
+      runFailedMessage: 'The script failed while running.',
+      runCommand: 'Run Timeline Script',
+      operationSummary: (count: number) => `Applied ${count} timeline operation(s)`,
+      exportSummary: (count: number) => `Captured ${count} export request(s)`,
+      elapsed: (ms: number) => `Elapsed ${Math.max(0, Math.round(ms))} ms`,
+      examples: {
+        'bulk-speed': { name: 'Bulk adjust clip speed', description: 'Set video, audio, and nested sequences to 1.25x.' },
+        'sort-by-color-label': { name: 'Sort clips by color label', description: 'Reorder clip starts by label order.' },
+        'minute-markers': { name: 'Generate minute markers', description: 'Add markers across the timeline duration.' },
+        'export-each-clip': { name: 'Export each clip', description: 'Record one export request per clip.' },
+        'project-stats': { name: 'Print project stats', description: 'Log clip count, marker count, and duration.' }
+      }
     },
     appearance: {
       title: 'Appearance',
@@ -7654,9 +7798,61 @@ const enOverrides = {
       title: 'Export Mode',
       options: {
         single: 'Single Export',
+        'version-batch': 'Versioned Batch',
         'sequence-batch': 'Batch Sequence Render',
         'codec-compare': 'Compare Export',
         pipeline: 'Pipeline'
+      }
+    },
+    versionBatch: {
+      title: 'Export Versions',
+      description: 'Create multiple platform versions from one project. Each version can override preset, resolution, watermark, and subtitle language.',
+      outputTemplate: 'Output filename template',
+      outputTemplatePlaceholder: 'C:/Exports/{version_name}-{platform}-{language}.mp4',
+      exportTemplate: 'Export Template',
+      importTemplate: 'Import Template',
+      templateFilter: 'Versioned batch template',
+      templateSavedTitle: 'Versioned batch template saved',
+      templateLoadedTitle: 'Versioned batch template imported',
+      templateFailed: 'Versioned batch template failed.',
+      add: 'Add Version',
+      remove: 'Remove Version',
+      noneSelected: 'Enable at least one export version.',
+      defaultVersionName: (index: number) => `Version ${index}`,
+      queuedMessage: (count: number) => `${count} version export tasks added to the queue.`,
+      columns: {
+        version: 'Version',
+        platform: 'Platform',
+        language: 'Language',
+        range: 'Range',
+        preset: 'Preset',
+        width: 'W',
+        height: 'H',
+        watermark: 'Watermark',
+        output: 'Output'
+      },
+      watermarkModes: {
+        inherit: 'Inherit',
+        none: 'Off',
+        text: 'Text'
+      },
+      rangeModes: {
+        default: 'Default',
+        custom: 'Custom'
+      },
+      rangeStart: 'Start seconds',
+      rangeDuration: 'Duration seconds',
+      report: {
+        title: 'Version Difference Report',
+        columns: {
+          version: 'Version',
+          platform: 'Platform/Language',
+          resolution: 'Resolution',
+          fileSize: 'File Size',
+          duration: 'Duration',
+          elapsed: 'Elapsed',
+          status: 'Status'
+        }
       }
     },
     codecCompare: {

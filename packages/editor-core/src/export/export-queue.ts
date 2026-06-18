@@ -3,6 +3,7 @@ import type { ExportReport, FfmpegExportPlan } from './export-types';
 import type { ProgressiveExportState } from './progressive';
 import { calculateRenderFarmProgress, type RenderFarmSegmentStatus, type RenderFarmTaskConfig } from './render-farm';
 import { startResourceAwareExportTaskSlots } from './scheduling';
+import type { VersionedExportTaskMetadata } from './versioned-batch';
 
 export type ExportTaskStatus = 'scheduled' | 'pending' | 'running' | 'interrupted' | 'canceled' | 'error' | 'success';
 export type ExportTaskPriority = 'high' | 'normal' | 'low';
@@ -38,6 +39,7 @@ export interface ExportTask {
   renderFarm?: RenderFarmTaskConfig;
   segments?: RenderFarmSegmentStatus[];
   progressive?: ProgressiveExportState;
+  versionedBatch?: VersionedExportTaskMetadata;
 }
 
 export interface ExportTaskHistoryEntry {
@@ -64,12 +66,14 @@ export function createExportTask(input: {
   priority?: ExportTaskPriority;
   renderFarm?: RenderFarmTaskConfig;
   progressive?: ProgressiveExportState;
+  versionedBatch?: VersionedExportTaskMetadata;
   scheduledStartAt?: string;
   id?: string;
   now?: string;
 }): ExportTask {
   const now = input.now ?? new Date().toISOString();
   const scheduledStartAt = normalizeScheduledStartAt(input.scheduledStartAt, now);
+  const versionedBatch = normalizeVersionedExportTaskMetadata(input.versionedBatch);
   return {
     id: input.id ?? createId('export-task'),
     name: input.name,
@@ -79,6 +83,7 @@ export function createExportTask(input: {
     priority: normalizeExportTaskPriority(input.priority),
     renderFarm: normalizeRenderFarmTaskConfig(input.renderFarm),
     progressive: normalizeProgressiveExportState(input.progressive),
+    ...(versionedBatch ? { versionedBatch } : {}),
     status: scheduledStartAt ? 'scheduled' : 'pending',
     progress: 0,
     createdAt: now,
@@ -99,6 +104,19 @@ export function clampExportConcurrency(value: number): number {
 
 export function startExportTaskSlots(tasks: ExportTask[], maxConcurrent = 2, now = new Date().toISOString()): ExportTask[] {
   return startResourceAwareExportTaskSlots(tasks, clampExportConcurrency(maxConcurrent), now);
+}
+
+function normalizeVersionedExportTaskMetadata(metadata: VersionedExportTaskMetadata | undefined): VersionedExportTaskMetadata | undefined {
+  if (!metadata?.batchId?.trim() || !metadata.versionId?.trim() || !metadata.versionName?.trim()) {
+    return undefined;
+  }
+  return {
+    batchId: metadata.batchId.trim(),
+    versionId: metadata.versionId.trim(),
+    versionName: metadata.versionName.trim(),
+    ...(metadata.platform?.trim() ? { platform: metadata.platform.trim() } : {}),
+    ...(metadata.language?.trim() ? { language: metadata.language.trim() } : {})
+  };
 }
 
 export function activateScheduledExportTasks(tasks: ExportTask[], now = new Date().toISOString()): ExportTask[] {

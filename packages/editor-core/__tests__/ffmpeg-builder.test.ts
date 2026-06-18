@@ -146,6 +146,29 @@ describe('multitrack ffmpeg builder', () => {
     );
   });
 
+  it('lets versioned export metadata override project media metadata', () => {
+    const project = makeProject();
+    project.mediaMetadata = {
+      'asset-1': {
+        title: 'Opening Scene',
+        description: 'Original description'
+      }
+    };
+
+    const plan = buildFfmpegExportPlan(
+      buildExportProjectFromProject(project, {
+        outputPath: 'out.mp4',
+        metadata: {
+          title: 'Vertical Social Cut',
+          description: 'TikTok / zh'
+        }
+      })
+    );
+
+    expect(plan.outputArgs).toEqual(expect.arrayContaining(['-metadata', 'title=Vertical Social Cut', '-metadata', 'comment=TikTok / zh']));
+    expect(plan.outputArgs).not.toContain('title=Opening Scene');
+  });
+
   it('adds colorspace conversion and ICC generation for non-default output color spaces', () => {
     const plan = buildFfmpegExportPlan(
       buildExportProjectFromProject(makeProject(), {

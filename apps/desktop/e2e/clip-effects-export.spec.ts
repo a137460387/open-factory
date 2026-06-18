@@ -8,7 +8,7 @@ test('adds a blur effect and includes gblur in the export plan', async ({ page }
   await addMediaCardToTimeline(page, 0);
   await page.locator('[data-testid^="timeline-clip-"]').first().click();
 
-  await page.getByText('特效', { exact: true }).click();
+  await page.getByTestId('right-panel').getByText('特效', { exact: true }).click();
   await page.getByTestId('effect-type-select').selectOption('blur');
   await page.getByTestId('add-effect-button').click();
   await expect(page.getByTestId('effect-item-blur')).toBeVisible();
@@ -28,7 +28,7 @@ test('adds a motion blur effect and includes temporal blend in the export plan',
   await addMediaCardToTimeline(page, 0);
   await page.locator('[data-testid^="timeline-clip-"]').first().click();
 
-  await page.getByText('特效', { exact: true }).click();
+  await page.getByTestId('right-panel').getByText('特效', { exact: true }).click();
   await page.getByTestId('effect-type-select').selectOption('motion-blur');
   await page.getByTestId('add-effect-button').click();
   await expect(page.getByTestId('effect-item-motion-blur')).toBeVisible();
@@ -52,7 +52,7 @@ test('adds an audio spectrum effect and includes showfreqs in the export plan', 
   await addMediaCardToTimeline(page, 0);
   await page.locator('[data-testid^="timeline-clip-"]').first().click();
 
-  await page.getByText('特效', { exact: true }).click();
+  await page.getByTestId('right-panel').getByText('特效', { exact: true }).click();
   await page.getByTestId('effect-type-select').selectOption('audio-spectrum');
   await page.getByTestId('add-effect-button').click();
   await expect(page.getByTestId('effect-item-audio-spectrum')).toBeVisible();
@@ -75,7 +75,7 @@ test('exports circular mirrored audio spectrum args with crop mask', async ({ pa
   await addMediaCardToTimeline(page, 0);
   await page.locator('[data-testid^="timeline-clip-"]').first().click();
 
-  await page.getByText('特效', { exact: true }).click();
+  await page.getByTestId('right-panel').getByText('特效', { exact: true }).click();
   await page.getByTestId('effect-type-select').selectOption('audio-spectrum');
   await page.getByTestId('add-effect-button').click();
   await expect(page.getByTestId('effect-item-audio-spectrum')).toBeVisible();
@@ -104,7 +104,7 @@ test('adds a custom shader effect, keeps preview visible, and exports through ov
   await addMediaCardToTimeline(page, 0);
   await page.locator('[data-testid^="timeline-clip-"]').first().click();
 
-  await page.getByText('特效', { exact: true }).click();
+  await page.getByTestId('right-panel').getByText('特效', { exact: true }).click();
   await page.getByTestId('effect-type-select').selectOption('custom-shader');
   await page.getByTestId('add-effect-button').click();
   await expect(page.getByTestId('effect-item-custom-shader')).toBeVisible();

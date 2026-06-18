@@ -52,7 +52,7 @@ let openFileDialogPaths: string[] = [];
 let savePath = 'C:/Exports/open-factory-test.mp4';
 let openDirectoryPath = 'C:/Relink';
 let lastExportPlan: FfmpegExportPlan | undefined;
-let exportRunCalls: Array<{ taskId?: string; fullArgs: string[]; duration: number }> = [];
+let exportRunCalls: Array<{ taskId?: string; fullArgs: string[]; duration: number; outputPath?: string; settings?: FfmpegExportPlan['settings'] }> = [];
 let lastExportPreviewSamplesResult: ExportPreviewSamplesResult | undefined;
 let exportPreviewRunCalls: Array<{ id: string; fullArgs: string[]; time: number; outputPath: string }> = [];
 let lastGifExportRequest: GifExportRequest | undefined;
@@ -402,7 +402,7 @@ const mocks: TauriMocks = {
   }),
   runExport: async (plan, taskId) => {
     lastExportPlan = plan;
-    exportRunCalls.push({ taskId, fullArgs: [...plan.fullArgs], duration: plan.duration });
+    exportRunCalls.push({ taskId, fullArgs: [...plan.fullArgs], duration: plan.duration, outputPath: plan.fullArgs.at(-1), settings: plan.settings });
     const cancelKey = exportCancelKey(taskId);
     canceledExportTaskIds.delete(cancelKey);
     emit('export-progress', taskId ? { taskId, progress: 0.2 } : 0.2);
@@ -2543,6 +2543,11 @@ window.__E2E_ACTIONS__ = {
       mtimes.delete(path);
     }
     for (const path of Array.from(files.keys()).filter((item) => item.includes('/effect-presets/') && item.endsWith('.ofeffect.json'))) {
+      files.delete(path);
+      exists.set(path, false);
+      mtimes.delete(path);
+    }
+    for (const path of Array.from(files.keys()).filter((item) => item.includes('/scripts/') && item.endsWith('.js'))) {
       files.delete(path);
       exists.set(path, false);
       mtimes.delete(path);

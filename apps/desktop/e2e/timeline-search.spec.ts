@@ -8,7 +8,7 @@ test('searches timeline clips by effect type', async ({ page }) => {
   await addMediaCardToTimeline(page, 0);
   await page.locator('[data-testid^="timeline-clip-"]').first().click();
 
-  await page.getByText('特效', { exact: true }).click();
+  await page.getByTestId('right-panel').getByText('特效', { exact: true }).click();
   await page.getByTestId('effect-type-select').selectOption('blur');
   await page.getByTestId('add-effect-button').click();
   await expect(page.getByTestId('effect-item-blur')).toBeVisible();

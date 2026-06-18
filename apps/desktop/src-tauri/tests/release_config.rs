@@ -25,3 +25,14 @@ fn linux_deb_dependencies_include_webkit_and_ssl() {
     assert!(dependencies.iter().any(|value| value == "libwebkit2gtk-4.1-0"));
     assert!(dependencies.iter().any(|value| value == "libssl3"));
 }
+
+#[test]
+fn windows_bundle_targets_include_msi_and_nsis() {
+    let config = tauri_config();
+    let targets = config["bundle"]["targets"]
+        .as_array()
+        .expect("bundle targets array");
+
+    assert!(targets.iter().any(|value| value == "msi"));
+    assert!(targets.iter().any(|value| value == "nsis"));
+}

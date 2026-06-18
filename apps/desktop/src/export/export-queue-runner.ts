@@ -13,6 +13,7 @@ import {
   shouldRetryPostExportQuality,
   timelineHasExportableVideo,
   applyLowPowerThreads,
+  type ExportProject,
   type ExportReport,
   type ExportSettings,
   type ExportRenderRange,
@@ -22,6 +23,7 @@ import {
   type Project,
   type FfmpegExportPlan,
   type ExportRecoveryLogEntry,
+  type VersionedExportTaskMetadata,
   type RenderFarmTaskConfig
 } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
@@ -51,7 +53,8 @@ export async function enqueueExport(
   renderFarm?: RenderFarmTaskConfig,
   scheduledStartAt?: string,
   exportRange?: ExportRenderRange | null,
-  progressive = false
+  progressive = false,
+  options: { metadata?: ExportProject['metadata']; versionedBatch?: VersionedExportTaskMetadata } = {}
 ): Promise<ExportTask> {
   if (!timelineHasExportableVideo(project.timeline)) {
     throw new Error(zhCN.errors.exportNeedsVideo);
@@ -61,7 +64,7 @@ export async function enqueueExport(
     throw new Error(zhCN.errors.ffmpegMissing);
   }
   await runExportBeforePlugins(project, outputPath, settings);
-  const exportProject = buildExportProjectFromProject(project, { outputPath, settings });
+  const exportProject = buildExportProjectFromProject(project, { outputPath, settings, metadata: options.metadata });
   const backgroundSettings = await readExportBackgroundSettings().catch(() => undefined);
   const rawPlan = buildFfmpegExportPlan(exportProject, capabilities, 0, [], { exportRange });
   const plan = applyLowPowerThreads(rawPlan, backgroundSettings?.lowPowerMode === true, getHardwareConcurrency());
@@ -74,6 +77,7 @@ export async function enqueueExport(
     priority,
     renderFarm,
     progressive: progressiveState?.supported && !renderFarm?.enabled ? progressiveState : undefined,
+    versionedBatch: options.versionedBatch,
     scheduledStartAt
   });
   signalRunner();
