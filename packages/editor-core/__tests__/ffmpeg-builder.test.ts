@@ -3357,6 +3357,41 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.filterComplex).toContain('adelay=0:all=1,volume=0.4,stereopan=pan=-1,aformat=channel_layouts=stereo');
   });
 
+  it('adds enabled advanced audio restoration filters before denoise', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [
+      makeVideoClip({
+        id: 'clip-audio-restore',
+        duration: 2,
+        audioRestoration: {
+          declip: { enabled: true },
+          dereverb: { enabled: true, strength: 1 },
+          dewind: { enabled: true },
+          fill: { enabled: true }
+        },
+        audioDenoise: { enabled: true, strength: 0.8 }
+      })
+    ];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+    const expectedChain = 'adeclip=w=55:o=10:arptresh=0.05,aecho=0.8:0.9:60:0.4,highpass=f=80:poles=2,lowpass=f=8000,apad,atrim=duration=2';
+
+    expect(plan.filterComplex).toContain(expectedChain);
+    expect(plan.filterComplex.indexOf(expectedChain)).toBeLessThan(plan.filterComplex.indexOf('arnndn=m=model.rnnn:mix=0.8'));
+  });
+
+  it('skips advanced audio restoration filters when all tools are off', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [makeVideoClip({ id: 'clip-audio-restore-default', duration: 2 })];
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+
+    expect(plan.filterComplex).not.toContain('adeclip=');
+    expect(plan.filterComplex).not.toContain('aecho=');
+    expect(plan.filterComplex).not.toContain('highpass=f=80');
+    expect(plan.filterComplex).not.toContain('apad');
+  });
+
   it('adds clip audio channel routing filters and skips the normal default', () => {
     const expectations = [
       ['mono-left', 'pan=stereo|c0=c0|c1=0*c0'],

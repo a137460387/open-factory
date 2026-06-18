@@ -66,6 +66,7 @@ import {
   normalizeAudioFadeCurve,
   normalizeAudioFadeDuration,
   normalizeAudioDenoise,
+  normalizeAudioRestoration,
   normalizeAudioPitchSemitones,
   normalizeSpatialAudio,
   normalizeChromaKey,
@@ -116,6 +117,7 @@ import {
   calculateSubtitleScaleUpdates,
   serializeSubtitleProofreadingCsv,
   buildPrivacyMasksFromDetections,
+  buildAudioRestorationWaveformComparison,
   createTrack,
   renderSubtitleStyleTemplatePreview,
   richTextToPlainText,
@@ -657,6 +659,8 @@ function ClipInspector({
   const showSlowMotionMode = clip.type === 'video' && getClipSpeed(clip) < 1;
   const audioDenoise = normalizeAudioDenoise(clip.audioDenoise);
   const audioDenoiseUnavailable = audioDenoiseSupported === false;
+  const audioRestoration = normalizeAudioRestoration(clip.audioRestoration);
+  const audioRestorationComparison = buildAudioRestorationWaveformComparison(buildAudioRestorationPreviewPeaks(clip.pitchData), audioRestoration);
   const blendMode = normalizeClipBlendMode(clip.blendMode);
   const projection = normalizeClipProjection(clip.projection);
   const panorama = normalizeClipPanoramaView(clip.panorama);
@@ -684,6 +688,9 @@ function ClipInspector({
   };
   const updateQualityEnhancement = (patch: Partial<typeof qualityEnhancement>) => {
     commit({ qualityEnhancement: normalizeQualityEnhancement({ ...qualityEnhancement, ...patch }) });
+  };
+  const updateAudioRestoration = (patch: Partial<typeof audioRestoration>) => {
+    commit({ audioRestoration: normalizeAudioRestoration({ ...audioRestoration, ...patch }) });
   };
   const motionTrack = normalizeMotionTrack(clip.motionTrack, clip.duration) ?? [];
   const colorCurves = normalizeColorCurves(colorCorrection.colorCurves);
@@ -2341,6 +2348,47 @@ function ClipInspector({
               testId="clip-pitch-input"
             />
             <ToggleField label={zhCN.inspector.fields.reverseAudio} checked={reverseAudio} onCommit={(nextReverseAudio) => commit({ reverseAudio: nextReverseAudio })} testId="clip-reverse-audio-toggle" />
+            <details className="rounded-md border border-line bg-white" data-testid="audio-advanced-restoration-section" open>
+              <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-slate-700">{t('inspector.sections.audioRestoration')}</summary>
+              <div className="space-y-3 border-t border-line p-2">
+                <ToggleField
+                  label={t('inspector.fields.audioRestorationDeclip')}
+                  checked={audioRestoration.declip.enabled}
+                  onCommit={(enabled) => updateAudioRestoration({ declip: { ...audioRestoration.declip, enabled } })}
+                  testId="audio-restoration-declip-toggle"
+                />
+                <ToggleField
+                  label={t('inspector.fields.audioRestorationDereverb')}
+                  checked={audioRestoration.dereverb.enabled}
+                  onCommit={(enabled) => updateAudioRestoration({ dereverb: { ...audioRestoration.dereverb, enabled } })}
+                  testId="audio-restoration-dereverb-toggle"
+                />
+                <RangeNumberField
+                  label={t('inspector.fields.strength')}
+                  value={audioRestoration.dereverb.strength}
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  format={(value) => `${Math.round(value * 100)}%`}
+                  disabled={!audioRestoration.dereverb.enabled}
+                  onCommit={(strength) => updateAudioRestoration({ dereverb: { ...audioRestoration.dereverb, strength } })}
+                  testId="audio-restoration-dereverb-strength"
+                />
+                <ToggleField
+                  label={t('inspector.fields.audioRestorationDewind')}
+                  checked={audioRestoration.dewind.enabled}
+                  onCommit={(enabled) => updateAudioRestoration({ dewind: { ...audioRestoration.dewind, enabled } })}
+                  testId="audio-restoration-dewind-toggle"
+                />
+                <ToggleField
+                  label={t('inspector.fields.audioRestorationFill')}
+                  checked={audioRestoration.fill.enabled}
+                  onCommit={(enabled) => updateAudioRestoration({ fill: { ...audioRestoration.fill, enabled } })}
+                  testId="audio-restoration-fill-toggle"
+                />
+                <AudioRestorationWaveformPreview before={audioRestorationComparison.before} after={audioRestorationComparison.after} />
+              </div>
+            </details>
             <details className="rounded-md border border-line bg-white" data-testid="audio-channel-routing-section" open>
               <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-slate-700">{zhCN.inspector.fields.audioChannelRouting}</summary>
               <div className="border-t border-line p-2">
@@ -2913,6 +2961,42 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
       <div className="space-y-3">{children}</div>
     </section>
   );
+}
+
+function AudioRestorationWaveformPreview({ before, after }: { before: number[]; after: number[] }) {
+  const count = Math.max(before.length, after.length);
+  const bars = Array.from({ length: count }, (_, index) => ({
+    before: before[index] ?? 0,
+    after: after[index] ?? before[index] ?? 0
+  }));
+
+  return (
+    <div className="space-y-1.5" data-testid="audio-restoration-waveform-preview">
+      <div className="flex items-center gap-3 text-[11px] font-medium text-slate-500">
+        <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-slate-300" />{t('inspector.fields.audioRestorationBefore')}</span>
+        <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500" />{t('inspector.fields.audioRestorationAfter')}</span>
+      </div>
+      <div className="flex h-14 items-end gap-0.5 rounded border border-line bg-panel px-1.5 py-1.5">
+        {bars.map((bar, index) => (
+          <div key={index} className="relative h-full min-w-0 flex-1">
+            <div className="absolute bottom-0 left-0 right-0 rounded-sm bg-slate-300" style={{ height: `${Math.max(4, Math.round(bar.before * 100))}%` }} />
+            <div className="absolute bottom-0 left-1/4 right-1/4 rounded-sm bg-emerald-500/80" style={{ height: `${Math.max(4, Math.round(bar.after * 100))}%` }} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function buildAudioRestorationPreviewPeaks(pitchData: Clip['pitchData']): number[] {
+  if (pitchData && pitchData.length > 0) {
+    const sample = pitchData.slice(0, 32);
+    const minHz = Math.min(...sample.map((point) => point.hz));
+    const maxHz = Math.max(...sample.map((point) => point.hz));
+    const span = Math.max(1, maxHz - minHz);
+    return sample.map((point) => 0.2 + ((point.hz - minHz) / span) * 0.75);
+  }
+  return Array.from({ length: 32 }, (_, index) => Math.min(0.95, Math.max(0.08, 0.48 + Math.sin(index * 0.72) * 0.22 + Math.cos(index * 0.31) * 0.12)));
 }
 
 function SubtitleStyleTemplatesPanel({

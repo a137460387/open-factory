@@ -11,6 +11,7 @@ import type {
   AudioFadeCurve,
   AudioChannelRoutingMode,
   ClipBorder,
+  ClipAudioRestoration,
   DataSubtitleSource,
   ClipMaskKeyframe,
   ClipPanoramaOutputProjection,
@@ -241,6 +242,7 @@ export interface ExportAudioDenoise {
 
 export type ExportVideoRestoration = ClipVideoRestoration;
 export type ExportQualityEnhancement = ClipQualityEnhancement;
+export type ExportAudioRestoration = ClipAudioRestoration;
 
 export interface ExportPanoramaView {
   yaw: number;
@@ -353,6 +355,7 @@ export interface ExportClip {
   stabilization: ExportStabilization;
   frameInterpolation: ExportFrameInterpolation;
   audioDenoise: ExportAudioDenoise;
+  audioRestoration: ExportAudioRestoration;
   spatialAudio: ClipSpatialAudio;
   videoRestoration: ExportVideoRestoration;
   qualityEnhancement: ExportQualityEnhancement;

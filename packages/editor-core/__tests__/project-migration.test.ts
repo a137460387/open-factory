@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_CLIP_BORDER, DEFAULT_COLOR_CORRECTION, DEFAULT_CREDITS_ROLL_SPEED, DEFAULT_CREDITS_STYLE, DEFAULT_QUALITY_ENHANCEMENT, DEFAULT_SPATIAL_AUDIO, DEFAULT_SUBTITLE_LANGUAGE, DEFAULT_SUBTITLE_STYLE, DEFAULT_VIDEO_RESTORATION, createMulticamSequenceProject, createTrack, migrateProjectFile, serializeProject, type ProjectFileV1 } from '../src';
+import { DEFAULT_AUDIO_RESTORATION, DEFAULT_CLIP_BORDER, DEFAULT_COLOR_CORRECTION, DEFAULT_CREDITS_ROLL_SPEED, DEFAULT_CREDITS_STYLE, DEFAULT_QUALITY_ENHANCEMENT, DEFAULT_SPATIAL_AUDIO, DEFAULT_SUBTITLE_LANGUAGE, DEFAULT_SUBTITLE_STYLE, DEFAULT_VIDEO_RESTORATION, createMulticamSequenceProject, createTrack, migrateProjectFile, serializeProject, type ProjectFileV1 } from '../src';
 import { makeAdjustmentClip, makeAudioClip, makeCreditsClip, makeProject, makeSubtitleClip, makeTextClip, makeVideoClip } from './test-utils';
 
 describe('project schema migration', () => {
@@ -949,12 +949,13 @@ describe('project schema migration', () => {
     }
   });
 
-  it('backfills clip speed, color correction, and audio denoise defaults during migration', () => {
+  it('backfills clip speed, color correction, and audio defaults during migration', () => {
     const project = makeProject();
     const legacyClip = { ...project.timeline.tracks[0].clips[0] };
     delete (legacyClip as Partial<typeof legacyClip>).speed;
     delete (legacyClip as Partial<typeof legacyClip>).colorCorrection;
     delete (legacyClip as Partial<typeof legacyClip>).audioDenoise;
+    delete (legacyClip as Partial<typeof legacyClip>).audioRestoration;
     delete (legacyClip as Partial<typeof legacyClip>).videoRestoration;
     delete (legacyClip as Partial<typeof legacyClip>).qualityEnhancement;
     delete (legacyClip as Partial<typeof legacyClip>).projection;
@@ -967,6 +968,7 @@ describe('project schema migration', () => {
     expect(clip.speed).toBe(1);
     expect(clip.colorCorrection).toEqual(DEFAULT_COLOR_CORRECTION);
     expect(clip.audioDenoise).toEqual({ enabled: false, strength: 0.5 });
+    expect(clip.audioRestoration).toEqual(DEFAULT_AUDIO_RESTORATION);
     expect(clip.videoRestoration).toEqual(DEFAULT_VIDEO_RESTORATION);
     expect(clip.qualityEnhancement).toEqual(DEFAULT_QUALITY_ENHANCEMENT);
     expect(clip.projection).toBe('flat');

@@ -56,6 +56,7 @@ import { normalizeClipBlendMode } from '../blend-modes';
 import { normalizeClipContentAnalysis } from '../content-analysis';
 import { normalizeSpatialAudio } from '../spatial-audio';
 import { normalizeClipPitchData } from '../audio-pitch';
+import { normalizeAudioRestoration } from '../audio-restoration';
 import { normalizeDataSubtitleSource } from '../subtitles/data-subtitle';
 import { normalizeTimelineLabelColor } from '../timeline-color-labels';
 import { normalizeMediaFolderId, normalizeMediaFolders, normalizeMediaImportedAt } from '../media-folders';
@@ -396,6 +397,7 @@ function cloneClip<TClip extends Clip>(clip: TClip): TClip {
     frameInterpolation: normalizeFrameInterpolation(clip.frameInterpolation),
     slowMotionMode: normalizeSlowMotionMode(clip.slowMotionMode),
     audioDenoise: normalizeAudioDenoise(clip.audioDenoise),
+    audioRestoration: normalizeAudioRestoration(clip.audioRestoration),
     audioChannelRouting: normalizeAudioChannelRouting(clip.audioChannelRouting),
     videoRestoration: normalizeVideoRestoration(clip.videoRestoration),
     qualityEnhancement: normalizeQualityEnhancement(clip.qualityEnhancement),

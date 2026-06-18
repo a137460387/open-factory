@@ -39,6 +39,7 @@ import {
   type TextStyle,
   type Timeline
 } from '../model';
+import { buildAudioRestorationFilterChain, normalizeAudioRestoration } from '../audio-restoration';
 import {
   isDefaultColorCurves,
   isNeutralThreeWayColor,
@@ -319,6 +320,7 @@ function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project[
             stabilization: normalizeStabilization(clip.stabilization),
             frameInterpolation: normalizeFrameInterpolation(clip.frameInterpolation),
             audioDenoise: normalizeAudioDenoise(clip.audioDenoise),
+            audioRestoration: normalizeAudioRestoration(clip.audioRestoration),
             spatialAudio: normalizeSpatialAudio(clip.spatialAudio),
             videoRestoration: normalizeVideoRestoration(clip.videoRestoration),
             qualityEnhancement: normalizeQualityEnhancement(clip.qualityEnhancement),
@@ -3467,11 +3469,12 @@ function buildAudioFilters(
     const pitchAndReverseFilters = buildPitchAndReverseAudioFilters(clip, settings.sampleRate);
     const fadeFilters = buildAudioFadeFilters(clip);
     const denoiseFilters = buildAudioDenoiseFilters(clip, capabilities, warnings);
+    const restorationFilters = buildAudioRestorationFilters(clip);
     const trackProcessingFilters = buildTrackAudioFilters(clip);
     filters.push(
       `[${inputIndex}:a:0]atrim=start=0:duration=${formatFfmpegSeconds(
         getExportClipSourceDuration(clip)
-      )},asetpts=PTS-STARTPTS${pitchAndReverseFilters.length > 0 ? `,${pitchAndReverseFilters.join(',')}` : ''}${speedFilters.length > 0 ? `,${speedFilters.join(',')}` : ''}${fadeFilters}${denoiseFilters}${trackProcessingFilters},adelay=${delay}:all=1,${buildVolumeFilter(
+      )},asetpts=PTS-STARTPTS${pitchAndReverseFilters.length > 0 ? `,${pitchAndReverseFilters.join(',')}` : ''}${speedFilters.length > 0 ? `,${speedFilters.join(',')}` : ''}${fadeFilters}${restorationFilters}${denoiseFilters}${trackProcessingFilters},adelay=${delay}:all=1,${buildVolumeFilter(
         clip
       )}${buildAudioChannelRoutingFilter(clip)}${buildPanFilter(clip)}${buildSpatialAudioFilter(clip)},aformat=channel_layouts=stereo,aresample=${settings.sampleRate}[${label}]`
     );
@@ -3575,6 +3578,11 @@ function buildAudioDenoiseFilters(clip: ExportClip, capabilities: FfmpegCapabili
     return '';
   }
   return `,arnndn=m=model.rnnn:mix=${formatFfmpegNumber(clip.audioDenoise.strength)}`;
+}
+
+function buildAudioRestorationFilters(clip: ExportClip): string {
+  const filterChain = buildAudioRestorationFilterChain(clip.audioRestoration, { duration: clip.duration });
+  return filterChain ? `,${filterChain}` : '';
 }
 
 function buildPanFilter(clip: ExportClip): string {

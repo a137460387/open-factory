@@ -15,6 +15,7 @@ import { getColorSpaceDisplayName, normalizeExportColorSpace, normalizeProjectWo
 import { normalizeMotionGraphic } from './motion-graphics';
 import { normalizeSpatialAudio } from './spatial-audio';
 import { normalizeClipPitchData } from './audio-pitch';
+import { normalizeAudioRestoration } from './audio-restoration';
 import { normalizeDataSubtitleSource } from './subtitles/data-subtitle';
 import { cloneEffects } from './effects';
 import { normalizePathPoints } from './masks/path-mask';
@@ -37,6 +38,8 @@ import type {
   ChromaKeyMode,
   Clip,
   ClipAudioDenoise,
+  ClipAudioRestoration,
+  ClipAudioRestorationGap,
   ClipBorder,
   ClipFrameInterpolation,
   ClipGroup,
@@ -145,6 +148,8 @@ export type {
   ChromaKeyMode,
   Clip,
   ClipAudioDenoise,
+  ClipAudioRestoration,
+  ClipAudioRestorationGap,
   ClipBorder,
   ClipFrameInterpolation,
   ClipGroup,
@@ -833,6 +838,7 @@ export function createBaseClip(
     frameInterpolation: normalizeFrameInterpolation(input.frameInterpolation),
     slowMotionMode: normalizeSlowMotionMode(input.slowMotionMode),
     audioDenoise: normalizeAudioDenoise(input.audioDenoise),
+    audioRestoration: normalizeAudioRestoration(input.audioRestoration),
     audioChannelRouting: normalizeAudioChannelRouting(input.audioChannelRouting),
     videoRestoration: normalizeVideoRestoration(input.videoRestoration),
     qualityEnhancement: normalizeQualityEnhancement(input.qualityEnhancement),
@@ -1666,6 +1672,7 @@ export function serializeLegacyProject(project: Project): {
           chromaKey: normalizeChromaKey(clip.chromaKey),
           stabilization: normalizeStabilization(clip.stabilization),
           audioDenoise: normalizeAudioDenoise(clip.audioDenoise),
+          audioRestoration: normalizeAudioRestoration(clip.audioRestoration),
           videoRestoration: normalizeVideoRestoration(clip.videoRestoration),
           qualityEnhancement: normalizeQualityEnhancement(clip.qualityEnhancement),
           projection: normalizeClipProjection(clip.projection),

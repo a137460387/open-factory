@@ -518,6 +518,7 @@ export interface BaseClip {
   frameInterpolation?: ClipFrameInterpolation;
   slowMotionMode?: ClipSlowMotionMode;
   audioDenoise?: ClipAudioDenoise;
+  audioRestoration?: ClipAudioRestoration;
   audioChannelRouting?: AudioChannelRoutingMode;
   videoRestoration?: ClipVideoRestoration;
   qualityEnhancement?: ClipQualityEnhancement;
@@ -541,6 +542,27 @@ export interface BaseClip {
 export interface ClipAudioDenoise {
   enabled: boolean;
   strength: number;
+}
+
+export interface ClipAudioRestorationToggle {
+  enabled: boolean;
+}
+
+export interface ClipAudioDereverbSettings {
+  enabled: boolean;
+  strength: number;
+}
+
+export interface ClipAudioRestoration {
+  declip: ClipAudioRestorationToggle;
+  dereverb: ClipAudioDereverbSettings;
+  dewind: ClipAudioRestorationToggle;
+  fill: ClipAudioRestorationToggle;
+}
+
+export interface ClipAudioRestorationGap {
+  start: number;
+  duration: number;
 }
 
 export interface ColorCorrection {
