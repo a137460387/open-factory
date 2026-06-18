@@ -33,7 +33,7 @@ import { getLanguage, normalizeLanguage, zhCN, type Language } from '../i18n/str
 import { parseAutomationRulesJson, serializeAutomationRulesJson } from '../automation/automation-rules';
 import { pickDemucsExecutablePath } from '../lib/demucs';
 import { loadLutLibrary, toggleLutFavorite, type LutLibraryItem } from '../lib/lutLibrary';
-import { fsExists, getFileStat, getSystemResourceSnapshot, openDirectoryDialog, openFileDialog, openPath, readExportPresetSyncWebdavPassword, readWebdavPassword, writeExportPresetSyncWebdavPassword, writeWebdavPassword, type SystemResourceSnapshot } from '../lib/tauri-bridge';
+import { bridgeConfirm, fsExists, getFileStat, getSystemResourceSnapshot, openDirectoryDialog, openFileDialog, openPath, readExportPresetSyncWebdavPassword, readWebdavPassword, writeExportPresetSyncWebdavPassword, writeWebdavPassword, type SystemResourceSnapshot } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
 import { PREVIEW_QUALITY_MODES, PREVIEW_SKIP_FRAME_OPTIONS, type PreviewPerformanceSettings, type PreviewQualityMode, type PreviewSkipFrames } from '../lib/preview/preview-performance';
 import {
@@ -57,6 +57,18 @@ import {
   type PluginCatalogEntry,
   type PluginCatalogResult
 } from '../plugins/plugin-market';
+import { loadExportPresets, serializeExportPresetPackage } from '../export/export-presets';
+import {
+  filterPresetMarketCards,
+  installPresetMarketCard,
+  loadPresetMarket,
+  presetMarketCardHasCustomConflict,
+  readPresetMarketRatings,
+  writePresetMarketRating,
+  type PresetMarketCard,
+  type PresetMarketFilters,
+  type PresetMarketLoadResult
+} from '../export/preset-market';
 import { getLoadedPluginStatus, type PluginPermission } from '../plugins/plugin-loader';
 import { ensureMediaJobRunner } from '../media/media-job-runner';
 import { calculateMediaJobEtaSeconds, sortMediaJobsForMonitor } from '../media/media-job-monitor';
@@ -222,6 +234,13 @@ export function SettingsDialog({
   const [localModelStatuses, setLocalModelStatuses] = useState<Partial<Record<LocalAiModelId, LocalAiModelResolvedStatus>>>({});
   const [webdavPassword, setWebdavPassword] = useState('');
   const [exportPresetSyncPassword, setExportPresetSyncPassword] = useState('');
+  const [presetMarketCards, setPresetMarketCards] = useState<PresetMarketCard[]>([]);
+  const [presetMarketRatings, setPresetMarketRatings] = useState<Record<string, number>>({});
+  const [presetMarketFilters, setPresetMarketFilters] = useState<PresetMarketFilters>({ platform: 'all', quality: 'all', format: 'all' });
+  const [presetMarketLoading, setPresetMarketLoading] = useState(false);
+  const [presetMarketSource, setPresetMarketSource] = useState<PresetMarketLoadResult['source']>('empty');
+  const [presetMarketWarning, setPresetMarketWarning] = useState<string>();
+  const [installingPresetMarketCardId, setInstallingPresetMarketCardId] = useState<string>();
   const translationProvider = useTranslationSettingsStore((state) => state.provider);
   const translationApiKey = useTranslationSettingsStore((state) => state.apiKey);
   const translationApiKeyError = useTranslationSettingsStore((state) => state.apiKeyError);
@@ -251,6 +270,10 @@ export function SettingsDialog({
   const [customThemeName, setCustomThemeName] = useState('');
   const [customThemeColors, setCustomThemeColors] = useState<CustomThemeColors>(() => ({ ...DEFAULT_CUSTOM_THEME_COLORS }));
   const activeTheme = useMemo(() => resolveTheme(themeSettings), [themeSettings]);
+  const filteredPresetMarketCards = useMemo(
+    () => filterPresetMarketCards(presetMarketCards, presetMarketFilters),
+    [presetMarketCards, presetMarketFilters]
+  );
 
   useEffect(() => {
     if (!open) {
@@ -259,6 +282,7 @@ export function SettingsDialog({
     void refresh();
     void loadBackupSettings();
     void loadExportPresetSyncSettings();
+    void loadPresetMarketPanel();
     void loadExportBackgroundSettings();
     void loadExportQualityAssuranceSettings();
     void loadExportRules();
@@ -585,6 +609,88 @@ export function SettingsDialog({
         kind: 'warning',
         title: t.exportPresetSync.saveFailed,
         message: settingsError instanceof Error ? settingsError.message : t.exportPresetSync.saveFailedMessage
+      });
+    }
+  }
+
+  async function loadPresetMarketPanel() {
+    try {
+      setPresetMarketLoading(true);
+      setPresetMarketWarning(undefined);
+      const [market, ratings] = await Promise.all([loadPresetMarket(), readPresetMarketRatings()]);
+      setPresetMarketCards(market.cards);
+      setPresetMarketRatings(ratings);
+      setPresetMarketSource(market.source);
+      setPresetMarketWarning(market.warning);
+      if (market.source === 'empty' && market.warning) {
+        showToast({ kind: 'warning', title: zhCN.presetMarket.loadFailed, message: market.warning });
+      }
+    } catch (marketError) {
+      const message = marketError instanceof Error ? marketError.message : zhCN.presetMarket.loadFailedMessage;
+      setPresetMarketCards([]);
+      setPresetMarketSource('empty');
+      setPresetMarketWarning(message);
+      showToast({ kind: 'warning', title: zhCN.presetMarket.loadFailed, message });
+    } finally {
+      setPresetMarketLoading(false);
+    }
+  }
+
+  async function installMarketPreset(card: PresetMarketCard) {
+    try {
+      setInstallingPresetMarketCardId(card.id);
+      const existingPresets = await loadExportPresets();
+      let conflictMode: 'rename' | 'overwrite' = 'rename';
+      if (presetMarketCardHasCustomConflict(card, existingPresets)) {
+        const overwrite = await bridgeConfirm(zhCN.presetMarket.overwriteConfirm(card.name));
+        if (!overwrite) {
+          return;
+        }
+        conflictMode = 'overwrite';
+      }
+      const result = await installPresetMarketCard(card, conflictMode);
+      showToast({
+        kind: 'success',
+        title: zhCN.presetMarket.installed,
+        message: zhCN.presetMarket.installedMessage(result.imported, result.overwritten)
+      });
+    } catch (installError) {
+      showToast({
+        kind: 'warning',
+        title: zhCN.presetMarket.installFailed,
+        message: installError instanceof Error ? installError.message : zhCN.presetMarket.installFailedMessage
+      });
+    } finally {
+      setInstallingPresetMarketCardId(undefined);
+    }
+  }
+
+  async function ratePresetMarketCard(cardId: string, rating: number) {
+    try {
+      setPresetMarketRatings(await writePresetMarketRating(cardId, rating));
+    } catch (ratingError) {
+      showToast({
+        kind: 'warning',
+        title: zhCN.presetMarket.ratingFailed,
+        message: ratingError instanceof Error ? ratingError.message : zhCN.presetMarket.ratingFailedMessage
+      });
+    }
+  }
+
+  async function shareCustomExportPresets() {
+    try {
+      const presets = (await loadExportPresets()).filter((preset) => !preset.builtin);
+      if (presets.length === 0) {
+        showToast({ kind: 'info', title: zhCN.presetMarket.shareEmpty });
+        return;
+      }
+      await navigator.clipboard.writeText(serializeExportPresetPackage(presets, { creator: zhCN.presetMarket.localAuthor }));
+      showToast({ kind: 'success', title: zhCN.presetMarket.shared, message: zhCN.presetMarket.sharedMessage(presets.length) });
+    } catch (shareError) {
+      showToast({
+        kind: 'warning',
+        title: zhCN.presetMarket.shareFailed,
+        message: shareError instanceof Error ? shareError.message : zhCN.presetMarket.shareFailedMessage
       });
     }
   }
@@ -1936,12 +2042,28 @@ export function SettingsDialog({
             ) : null}
             {tab === 'task-monitor' ? <TaskMonitorSettingsPanel /> : null}
             {tab === 'export-presets' ? (
-              <ExportPresetSyncSettingsPanel
-                settings={exportPresetSyncSettings}
-                password={exportPresetSyncPassword}
-                onSettingsChange={(settings) => void updateExportPresetSyncSettings(settings)}
-                onPasswordChange={(password) => void updateExportPresetSyncPassword(password)}
-              />
+              <div className="space-y-4">
+                <PresetMarketPanel
+                  cards={filteredPresetMarketCards}
+                  ratings={presetMarketRatings}
+                  filters={presetMarketFilters}
+                  loading={presetMarketLoading}
+                  source={presetMarketSource}
+                  warning={presetMarketWarning}
+                  installingCardId={installingPresetMarketCardId}
+                  onFiltersChange={setPresetMarketFilters}
+                  onRefresh={() => void loadPresetMarketPanel()}
+                  onInstall={(card) => void installMarketPreset(card)}
+                  onRate={(cardId, rating) => void ratePresetMarketCard(cardId, rating)}
+                  onShare={() => void shareCustomExportPresets()}
+                />
+                <ExportPresetSyncSettingsPanel
+                  settings={exportPresetSyncSettings}
+                  password={exportPresetSyncPassword}
+                  onSettingsChange={(settings) => void updateExportPresetSyncSettings(settings)}
+                  onPasswordChange={(password) => void updateExportPresetSyncPassword(password)}
+                />
+              </div>
             ) : null}
             {tab === 'backup' ? (
               <BackupSettingsPanel
@@ -2719,6 +2841,186 @@ function BackupSettingsPanel({
         ) : null}
       </div>
     </div>
+  );
+}
+
+function PresetMarketPanel({
+  cards,
+  ratings,
+  filters,
+  loading,
+  source,
+  warning,
+  installingCardId,
+  onFiltersChange,
+  onRefresh,
+  onInstall,
+  onRate,
+  onShare
+}: {
+  cards: PresetMarketCard[];
+  ratings: Record<string, number>;
+  filters: PresetMarketFilters;
+  loading: boolean;
+  source: PresetMarketLoadResult['source'];
+  warning?: string;
+  installingCardId?: string;
+  onFiltersChange(filters: PresetMarketFilters): void;
+  onRefresh(): void;
+  onInstall(card: PresetMarketCard): void;
+  onRate(cardId: string, rating: number): void;
+  onShare(): void;
+}) {
+  const t = zhCN.presetMarket;
+  const updateFilter = (key: keyof PresetMarketFilters, value: string) => onFiltersChange({ ...filters, [key]: value });
+
+  return (
+    <section className="rounded-md border border-line bg-panel p-3" data-testid="preset-market-panel">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold text-ink">{t.title}</h3>
+          <p className="text-xs text-slate-500">{t.description}</p>
+          <p className="mt-1 text-[11px] font-medium text-slate-500" data-testid="preset-market-source" data-source={source}>
+            {t.sourceLabels[source]}
+          </p>
+        </div>
+        <div className="flex flex-wrap justify-end gap-2">
+          <button
+            className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
+            type="button"
+            data-testid="preset-market-share-button"
+            onClick={onShare}
+          >
+            <FilePlus size={13} />
+            {t.share}
+          </button>
+          <button
+            className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+            type="button"
+            disabled={loading}
+            data-testid="preset-market-refresh-button"
+            onClick={onRefresh}
+          >
+            <RotateCcw size={13} />
+            {loading ? t.loading : t.refresh}
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-3 grid gap-2 sm:grid-cols-3" data-testid="preset-market-filters">
+        <PresetMarketFilterSelect
+          label={t.filters.platform}
+          value={filters.platform ?? 'all'}
+          options={t.filters.platformOptions}
+          testId="preset-market-platform-filter"
+          onChange={(value) => updateFilter('platform', value)}
+        />
+        <PresetMarketFilterSelect
+          label={t.filters.quality}
+          value={filters.quality ?? 'all'}
+          options={t.filters.qualityOptions}
+          testId="preset-market-quality-filter"
+          onChange={(value) => updateFilter('quality', value)}
+        />
+        <PresetMarketFilterSelect
+          label={t.filters.format}
+          value={filters.format ?? 'all'}
+          options={t.filters.formatOptions}
+          testId="preset-market-format-filter"
+          onChange={(value) => updateFilter('format', value)}
+        />
+      </div>
+
+      {warning ? (
+        <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800" data-testid="preset-market-warning">
+          {warning}
+        </div>
+      ) : null}
+      {loading ? <div className="mt-3 rounded-md border border-line bg-white p-3 text-sm text-slate-600">{t.loading}</div> : null}
+      {!loading && cards.length === 0 ? <div className="mt-3 rounded-md border border-line bg-white p-3 text-sm text-slate-600">{t.empty}</div> : null}
+
+      <div className="mt-3 grid gap-2 md:grid-cols-2" data-testid="preset-market-list">
+        {cards.map((card) => {
+          const displayedRating = ratings[card.id] ?? card.rating;
+          const installing = installingCardId === card.id;
+          return (
+            <div key={card.id} className="rounded-md border border-line bg-white p-3" data-testid="preset-market-card" data-preset-id={card.id}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold text-ink">{card.name}</div>
+                  <div className="truncate text-xs text-slate-500">{t.byAuthor(card.author)}</div>
+                </div>
+                <div className="shrink-0 rounded bg-panel px-2 py-1 text-[11px] font-semibold text-slate-600" data-testid="preset-market-downloads">
+                  {t.downloads(card.downloads)}
+                </div>
+              </div>
+              <p className="mt-2 line-clamp-2 text-xs text-slate-500">{card.description}</p>
+              <div className="mt-2 flex flex-wrap gap-1" data-testid="preset-market-tags">
+                {card.tags.map((tag) => (
+                  <span key={tag} className="rounded bg-panel px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                    {tag}
+                  </span>
+                ))}
+              </div>
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-1" data-testid="preset-market-rating" data-rating={displayedRating}>
+                  {[1, 2, 3, 4, 5].map((rating) => (
+                    <button
+                      key={rating}
+                      className={`inline-flex h-7 w-7 items-center justify-center rounded-md border border-line ${rating <= displayedRating ? 'bg-amber-50 text-amber-600' : 'bg-white text-slate-400'} hover:bg-panel`}
+                      type="button"
+                      title={t.rate(rating)}
+                      aria-label={t.rate(rating)}
+                      data-testid={`preset-market-rate-${rating}`}
+                      onClick={() => onRate(card.id, rating)}
+                    >
+                      <Star size={13} fill={rating <= displayedRating ? 'currentColor' : 'none'} />
+                    </button>
+                  ))}
+                </div>
+                <button
+                  className="inline-flex items-center justify-center gap-1 rounded-md bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
+                  type="button"
+                  disabled={installing}
+                  data-testid="preset-market-install-button"
+                  onClick={() => onInstall(card)}
+                >
+                  <Download size={13} />
+                  {installing ? t.installing : t.install}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+function PresetMarketFilterSelect({
+  label,
+  value,
+  options,
+  testId,
+  onChange
+}: {
+  label: string;
+  value: string;
+  options: ReadonlyArray<{ value: string; label: string }>;
+  testId: string;
+  onChange(value: string): void;
+}) {
+  return (
+    <label className="block text-xs font-medium text-slate-600">
+      {label}
+      <select className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink" value={value} data-testid={testId} onChange={(event) => onChange(event.target.value)}>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 

@@ -106,6 +106,8 @@ const fourKHevcVideo = 'C:/Media/four-k-hevc.mov';
 const displayP3Video = 'C:/Media/display-p3.mov';
 const tinyVideoB = 'C:/Media/camera-b.mp4';
 const tinyAudio = 'C:/Media/tiny-audio.wav';
+const autoSyncPrimaryAudio = 'C:/Media/auto-sync-primary.wav';
+const autoSyncSecondaryAudio = 'C:/Media/auto-sync-secondary.wav';
 const tinyImage = 'C:/Media/test-image.png';
 const duplicateVideoA = 'C:/Media/duplicate-a.mp4';
 const duplicateVideoB = 'C:/Media/duplicate-b.mp4';
@@ -139,6 +141,8 @@ const macrosPath = `${appDataDir}/macros.json`;
 const macroHistoryPath = `${appDataDir}/macro-history.json`;
 const pluginDir = `${appDataDir}/plugins`;
 const pluginCatalogCachePath = `${appDataDir}/plugin-catalog-cache.json`;
+const presetMarketCachePath = `${appDataDir}/market-cache/presets.json`;
+const presetMarketRatingsPath = `${appDataDir}/market-cache/ratings.json`;
 const pluginPath = `${pluginDir}/export-count.js`;
 const permissionDeniedPluginPath = `${pluginDir}/missing-permission.js`;
 const brokenPluginPath = `${pluginDir}/broken.js`;
@@ -868,6 +872,9 @@ const mocks: TauriMocks = {
     return { results };
   },
   analyzeWaveform: (path, samplesPerSec) => {
+    if (path === autoSyncPrimaryAudio || path === autoSyncSecondaryAudio) {
+      return makeAutoSyncWaveform(path, samplesPerSec);
+    }
     const total = Math.max(1, Math.ceil(6 * Math.max(1, samplesPerSec)));
     return Array.from({ length: total }, (_, index) => {
       const time = index / Math.max(1, samplesPerSec);
@@ -997,6 +1004,9 @@ window.fetch = (input, init) => {
     const texts = Array.isArray(body.q) ? body.q : [];
     return Promise.resolve(new Response(JSON.stringify({ data: { translations: texts.map((text) => ({ translatedText: `${text} 翻译` })) } }), { status: 200 }));
   }
+  if (url.includes('export-preset-market')) {
+    return Promise.resolve(new Response('offline', { status: 503 }));
+  }
   if (url === silencePatternAudio) {
     return Promise.resolve(new Response(silencePatternWav.buffer.slice(0) as ArrayBuffer, { headers: { 'Content-Type': 'audio/wav' } }));
   }
@@ -1027,10 +1037,7 @@ window.__E2E_ACTIONS__ = {
       height: 720,
       size: 4096,
       mtimeMs: 1_000,
-      hasAudio: true,
-      audioChannels: 2,
-      audioSampleRate: 44_100,
-      audioCodec: 'aac'
+      hasAudio: false
     };
     const trackCount = 5;
     const tracks = Array.from({ length: trackCount }, (_, trackIndex) =>
@@ -1055,8 +1062,6 @@ window.__E2E_ACTIONS__ = {
       sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
       activeSequenceId: PRIMARY_SEQUENCE_ID
     });
-    useEditorStore.getState().setSelectedClipIds([]);
-    useEditorStore.getState().setPlayheadTime(0);
     commandManager.clear();
   },
   setupEfficientEditingFixture: () => {
@@ -1559,6 +1564,43 @@ window.__E2E_ACTIONS__ = {
     });
     useEditorStore.getState().setSelectedClipIds(['clip-beat-audio']);
     useEditorStore.getState().setSelectedClipId('clip-beat-audio');
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupAutoAudioSyncFixture: () => {
+    const project = createProject('Auto Audio Sync E2E');
+    const media: MediaAsset[] = [
+      makeAutoSyncMedia('media-auto-primary', 'Camera Reference', autoSyncPrimaryAudio),
+      makeAutoSyncMedia('media-auto-secondary', 'Mic Secondary', autoSyncSecondaryAudio)
+    ];
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({
+          id: 'track-auto-primary',
+          type: 'audio',
+          name: 'Camera Audio',
+          clips: [makeAutoSyncAudioClip('clip-auto-primary', 'Camera Reference', 'media-auto-primary', 'track-auto-primary', 0)]
+        }),
+        createTrack({
+          id: 'track-auto-secondary',
+          type: 'audio',
+          name: 'Boom Mic',
+          clips: [makeAutoSyncAudioClip('clip-auto-secondary', 'Boom Mic', 'media-auto-secondary', 'track-auto-secondary', 1)]
+        }),
+        createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media,
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    useEditorStore.getState().setSelectedClipId('clip-auto-primary');
+    useEditorStore.getState().setSelectedClipIds(['clip-auto-primary', 'clip-auto-secondary']);
     useEditorStore.getState().setPlayheadTime(0);
     commandManager.clear();
   },
@@ -2313,6 +2355,16 @@ window.__E2E_ACTIONS__ = {
   },
   getWrittenFile: (path: unknown) => (typeof path === 'string' ? files.get(path) : undefined),
   getWrittenFileSize: (path: unknown) => (typeof path === 'string' ? files.get(path)?.length ?? 0 : 0),
+  setPresetMarketCache: (contents: unknown) => {
+    if (typeof contents !== 'string') {
+      throw new Error('Invalid setPresetMarketCache E2E action input.');
+    }
+    files.set(presetMarketCachePath, contents);
+    exists.set(presetMarketCachePath, true);
+    mtimes.set(presetMarketCachePath, Date.now());
+    persistFiles();
+  },
+  getPresetMarketCachePath: () => presetMarketCachePath,
   getReleaseFiles: () => Array.from(files.keys()).filter((path) => path.includes('/releases/') && path.endsWith('.json') && exists.get(path) !== false),
   getBackupFiles: (path: unknown) => {
     if (typeof path !== 'string') {
@@ -2451,6 +2503,17 @@ window.__E2E_ACTIONS__ = {
     files.delete(pluginCatalogCachePath);
     exists.set(pluginCatalogCachePath, false);
     mtimes.delete(pluginCatalogCachePath);
+    files.delete(presetMarketCachePath);
+    exists.set(presetMarketCachePath, false);
+    mtimes.delete(presetMarketCachePath);
+    files.delete(presetMarketRatingsPath);
+    exists.set(presetMarketRatingsPath, false);
+    mtimes.delete(presetMarketRatingsPath);
+    for (const path of Array.from(files.keys()).filter((item) => item.includes('/market-cache/installed/'))) {
+      files.delete(path);
+      exists.set(path, false);
+      mtimes.delete(path);
+    }
     for (const path of [devPluginManifestPath, devPluginEntryPath]) {
       files.delete(path);
       exists.set(path, false);
@@ -2711,6 +2774,53 @@ function makeBeatAudioClip(): Extract<Clip, { type: 'audio' }> {
     transform: { ...DEFAULT_TRANSFORM },
     volume: 1
   };
+}
+
+function makeAutoSyncMedia(id: string, name: string, path: string): MediaAsset {
+  return {
+    id,
+    type: 'audio',
+    name,
+    path,
+    duration: 4,
+    width: 0,
+    height: 0,
+    size: 2048,
+    mtimeMs: 1_000,
+    hasAudio: true,
+    audioChannels: 1,
+    audioSampleRate: 48_000,
+    audioCodec: 'pcm_s16le'
+  };
+}
+
+function makeAutoSyncAudioClip(id: string, name: string, mediaId: string, trackId: string, start: number): Extract<Clip, { type: 'audio' }> {
+  return {
+    id,
+    type: 'audio',
+    name,
+    mediaId,
+    trackId,
+    start,
+    duration: 4,
+    trimStart: 0,
+    trimEnd: 0,
+    speed: DEFAULT_CLIP_SPEED,
+    colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+    transform: { ...DEFAULT_TRANSFORM },
+    volume: 1
+  };
+}
+
+function makeAutoSyncWaveform(path: string, samplesPerSec: number): number[] {
+  const rate = Math.max(1, samplesPerSec);
+  const delay = path === autoSyncSecondaryAudio ? 0.35 : 0;
+  const peaks = [0.8 + delay, 2.15 + delay];
+  const total = Math.max(1, Math.ceil(4 * rate));
+  return Array.from({ length: total }, (_, index) => {
+    const time = index / rate;
+    return peaks.some((peak) => Math.abs(time - peak) <= 0.012) ? 1 : 0.01;
+  });
 }
 
 function makeStoryboardClip(

@@ -74,6 +74,7 @@ export const TRACK_HEIGHT = 54;
 export const LABEL_WIDTH = 138;
 export const TRACK_DRAG_MIME = 'application/x-open-factory-track-id';
 const LARGE_PROJECT_ASSET_HYDRATION_DELAY_MS = 1_200;
+const LARGE_PROJECT_ASSET_IDLE_TIMEOUT_MS = 2_500;
 
 export interface VolumeEnvelopePointRequest {
   clipId: string;
@@ -617,10 +618,7 @@ function DeferredClipAssetStrips(props: ClipAssetStripsProps) {
 
   useEffect(() => {
     setReady(false);
-    const timeoutId = window.setTimeout(() => setReady(true), LARGE_PROJECT_ASSET_HYDRATION_DELAY_MS);
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
+    return scheduleLargeProjectAssetHydration(() => setReady(true));
   }, [props.asset.id, props.clip.id]);
 
   return ready ? <ClipAssetStrips {...props} /> : null;
@@ -631,13 +629,36 @@ function DeferredWaveformStrip(props: WaveformStripProps) {
 
   useEffect(() => {
     setReady(false);
-    const timeoutId = window.setTimeout(() => setReady(true), LARGE_PROJECT_ASSET_HYDRATION_DELAY_MS);
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
+    return scheduleLargeProjectAssetHydration(() => setReady(true));
   }, [props.asset.id, props.clipId]);
 
   return ready ? <WaveformStrip {...props} /> : null;
+}
+
+function scheduleLargeProjectAssetHydration(onReady: () => void): () => void {
+  let idleId: number | undefined;
+  let completed = false;
+  const run = () => {
+    if (completed) {
+      return;
+    }
+    completed = true;
+    onReady();
+  };
+  const delayId = window.setTimeout(() => {
+    if (typeof window.requestIdleCallback === 'function') {
+      idleId = window.requestIdleCallback(run, { timeout: LARGE_PROJECT_ASSET_IDLE_TIMEOUT_MS });
+    } else {
+      run();
+    }
+  }, LARGE_PROJECT_ASSET_HYDRATION_DELAY_MS);
+  return () => {
+    completed = true;
+    window.clearTimeout(delayId);
+    if (idleId !== undefined && typeof window.cancelIdleCallback === 'function') {
+      window.cancelIdleCallback(idleId);
+    }
+  };
 }
 
 function ClipAssetStrips({ clip, asset, clipPixelWidth, trackMuted, waveformColor, largeProjectMode }: ClipAssetStripsProps) {

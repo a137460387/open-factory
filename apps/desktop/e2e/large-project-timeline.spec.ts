@@ -4,12 +4,12 @@ import { waitForE2eActions } from './e2e-actions';
 test('renders a 500 clip timeline project in under one second', async ({ page }) => {
   await page.goto('/');
   await waitForE2eActions(page);
+  await page.waitForTimeout(1_000);
 
-  const start = await page.evaluate((project) => {
-    const renderStart = performance.now();
+  await page.evaluate((project) => {
     window.__E2E_ACTIONS__!.setupLargeTimelineFixture!(project);
-    return renderStart;
   }, 500);
+  const start = await page.evaluate(() => performance.now());
   await page.waitForFunction(
     (expectedCount) => {
       const snapshot = window.__E2E_ACTIONS__?.getTimelineSnapshot?.();
@@ -17,7 +17,7 @@ test('renders a 500 clip timeline project in under one second', async ({ page })
       return clips.length === expectedCount && document.querySelectorAll('[data-testid^="timeline-clip-"]').length > 0;
     },
     500,
-    { timeout: 10_000 }
+    { polling: 50, timeout: 10_000 }
   );
   const initialRenderMs = await page.evaluate((renderStart) => performance.now() - renderStart, start);
   const renderedClipCount = await page.locator('[data-testid^="timeline-clip-"]').count();

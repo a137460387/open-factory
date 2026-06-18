@@ -141,6 +141,39 @@ const zh = {
     confidence: (label: 'high' | 'medium' | 'low', confidence: number) => `${label === 'high' ? '高' : label === 'medium' ? '中' : '低'} · ${Math.round(confidence * 100)}%`,
     range: (start: number, end: number) => `${start.toFixed(2)}s - ${end.toFixed(2)}s`
   },
+  autoAudioSync: {
+    title: '音频同步',
+    close: '关闭',
+    analyze: '分析同步',
+    analyzing: '分析中',
+    apply: '应用同步',
+    primaryTrack: '主轨',
+    applyMode: '同步模式',
+    keepSecondary: '副轨作为独立轨道保留',
+    replacePrimary: '用副轨替换主轨音频',
+    trackColumn: '轨道',
+    startColumn: '起点',
+    offsetColumn: '偏移',
+    confidenceColumn: '置信度',
+    pending: '待分析',
+    ready: '选择主轨后开始分析。',
+    unavailableTitle: '无法进行音频同步',
+    unavailableMessage: '请选择 2 到 5 个带音频的片段。',
+    notEnoughTracksMessage: '至少需要 1 条主轨和 1 条副轨。',
+    runningTitle: '正在同步音频',
+    runningMessage: '正在分析本地波形并计算副轨偏移。',
+    failedTitle: '音频同步失败',
+    failedMessage: '无法完成音频同步分析。',
+    completeTitle: '音频同步已应用',
+    completeMessage: (count: number) => `已移动 ${count} 条副轨。`,
+    skippedLowConfidence: (count: number) => `${count} 条低置信度副轨未自动应用。`,
+    noApplicableResults: '没有可自动应用的高/中置信度结果。',
+    summary: (count: number, primary: string) => `${count} 条候选音频 · 主轨 ${primary || '--'}`,
+    offset: (ms: number) => `${ms >= 0 ? '+' : ''}${ms} ms`,
+    confidence: (label: 'high' | 'medium' | 'low', score: number) => `${label === 'high' ? '高' : label === 'medium' ? '中' : '低'} · ${Math.round(score * 100)}%`,
+    lowConfidenceNotice: (count: number) => `${count} 条低置信度结果需要人工确认，不会自动应用。`,
+    applyCount: (count: number) => `${count} 条副轨将被移动`
+  },
   clips: {
     defaultTextName: '文字',
     defaultTextContent: '标题',
@@ -409,6 +442,7 @@ const zh = {
     audioSeparation: '音频分离',
     cancelAudioSeparation: '取消音频分离',
     speakerDiarization: '声纹分轨',
+    autoAudioSync: '音频同步',
     macroHistory: '宏历史',
     startMacroRecording: '开始宏录制',
     stopMacroRecording: '停止宏录制',
@@ -3684,6 +3718,64 @@ const zh = {
       }
     }
   },
+  presetMarket: {
+    title: '预设市场',
+    description: '浏览静态社区导出预设；离线时显示本地缓存，安装后写入本机预设列表。',
+    refresh: '刷新市场',
+    loading: '正在加载预设市场...',
+    empty: '没有匹配的市场预设。',
+    install: '安装',
+    installing: '正在安装...',
+    installed: '预设已安装',
+    installedMessage: (imported: number, overwritten: number) => `已导入 ${imported} 个预设${overwritten > 0 ? `，覆盖 ${overwritten} 个` : ''}。`,
+    installFailed: '预设安装失败',
+    installFailedMessage: '无法安装该预设。',
+    loadFailed: '预设市场加载失败',
+    loadFailedMessage: '无法读取预设市场。',
+    invalidJson: '预设市场 JSON 格式无效。',
+    unknownAuthor: '未知作者',
+    localAuthor: '本机用户',
+    share: '分享我的预设',
+    shareEmpty: '没有可分享的自定义预设',
+    shared: '预设 JSON 已复制',
+    sharedMessage: (count: number) => `已复制 ${count} 个自定义预设，可粘贴到 GitHub Issue 投稿。`,
+    shareFailed: '复制预设失败',
+    shareFailedMessage: '无法写入剪贴板。',
+    ratingFailed: '评分保存失败',
+    ratingFailedMessage: '无法写入本地评分。',
+    overwriteConfirm: (name: string) => `已存在同名自定义预设“${name}”，是否覆盖？`,
+    byAuthor: (author: string) => `作者：${author}`,
+    downloads: (count: number) => `${count} 下载`,
+    rate: (rating: number) => `${rating} 星`,
+    sourceLabels: {
+      remote: '来源：远程市场',
+      cache: '来源：本地缓存',
+      empty: '来源：无可用市场数据'
+    },
+    filters: {
+      platform: '平台',
+      quality: '画质',
+      format: '格式',
+      platformOptions: [
+        { value: 'all', label: '全部平台' },
+        { value: 'youtube', label: 'YouTube' },
+        { value: '抖音', label: '抖音' },
+        { value: 'b站', label: 'B站' }
+      ],
+      qualityOptions: [
+        { value: 'all', label: '全部画质' },
+        { value: '4k', label: '4K' },
+        { value: '1080p', label: '1080p' },
+        { value: '快速', label: '快速' }
+      ],
+      formatOptions: [
+        { value: 'all', label: '全部格式' },
+        { value: 'mp4', label: 'MP4' },
+        { value: 'gif', label: 'GIF' },
+        { value: 'webm', label: 'WebM' }
+      ]
+    }
+  },
   editorToasts: {
     projectSaved: '项目已保存',
     autosaveCheckFailed: '无法检查自动保存恢复',
@@ -4437,6 +4529,39 @@ const enOverrides = {
     confidence: (label: 'high' | 'medium' | 'low', confidence: number) => `${label === 'high' ? 'High' : label === 'medium' ? 'Medium' : 'Low'} · ${Math.round(confidence * 100)}%`,
     range: (start: number, end: number) => `${start.toFixed(2)}s - ${end.toFixed(2)}s`
   },
+  autoAudioSync: {
+    title: 'Audio Sync',
+    close: 'Close',
+    analyze: 'Analyze Sync',
+    analyzing: 'Analyzing',
+    apply: 'Apply Sync',
+    primaryTrack: 'Primary Track',
+    applyMode: 'Sync Mode',
+    keepSecondary: 'Keep secondary tracks',
+    replacePrimary: 'Replace primary audio with secondary',
+    trackColumn: 'Track',
+    startColumn: 'Start',
+    offsetColumn: 'Offset',
+    confidenceColumn: 'Confidence',
+    pending: 'Pending',
+    ready: 'Choose a primary track and analyze.',
+    unavailableTitle: 'Audio sync unavailable',
+    unavailableMessage: 'Select 2 to 5 clips with audio.',
+    notEnoughTracksMessage: 'At least one primary and one secondary track are required.',
+    runningTitle: 'Syncing audio',
+    runningMessage: 'Analyzing local waveforms and calculating secondary offsets.',
+    failedTitle: 'Audio sync failed',
+    failedMessage: 'Unable to complete audio sync analysis.',
+    completeTitle: 'Audio sync applied',
+    completeMessage: (count: number) => `Shifted ${count} secondary tracks.`,
+    skippedLowConfidence: (count: number) => `${count} low-confidence secondary tracks were not applied automatically.`,
+    noApplicableResults: 'No high or medium confidence results can be applied automatically.',
+    summary: (count: number, primary: string) => `${count} candidate audio clips · Primary ${primary || '--'}`,
+    offset: (ms: number) => `${ms >= 0 ? '+' : ''}${ms} ms`,
+    confidence: (label: 'high' | 'medium' | 'low', score: number) => `${label === 'high' ? 'High' : label === 'medium' ? 'Medium' : 'Low'} · ${Math.round(score * 100)}%`,
+    lowConfidenceNotice: (count: number) => `${count} low-confidence results need manual confirmation and will not be applied automatically.`,
+    applyCount: (count: number) => `${count} secondary tracks will be shifted`
+  },
   clips: {
     defaultTextName: 'Text',
     defaultTextContent: 'Title',
@@ -4704,6 +4829,7 @@ const enOverrides = {
     audioSeparation: 'Audio Separation',
     cancelAudioSeparation: 'Cancel Audio Separation',
     speakerDiarization: 'Speaker Diarization',
+    autoAudioSync: 'Audio Sync',
     macroHistory: 'Macro History',
     startMacroRecording: 'Start Macro Recording',
     stopMacroRecording: 'Stop Macro Recording',
@@ -7559,6 +7685,64 @@ const enOverrides = {
         name: 'Audio-only m4a',
         description: 'AAC audio export without a video stream.'
       }
+    }
+  },
+  presetMarket: {
+    title: 'Preset Market',
+    description: 'Browse static community export presets. Offline mode uses the local cache, and installs stay in the local preset list.',
+    refresh: 'Refresh Market',
+    loading: 'Loading preset market...',
+    empty: 'No matching market presets.',
+    install: 'Install',
+    installing: 'Installing...',
+    installed: 'Preset installed',
+    installedMessage: (imported: number, overwritten: number) => `Imported ${imported} preset(s)${overwritten > 0 ? `, overwritten ${overwritten}` : ''}.`,
+    installFailed: 'Preset install failed',
+    installFailedMessage: 'Unable to install this preset.',
+    loadFailed: 'Preset market load failed',
+    loadFailedMessage: 'Unable to read the preset market.',
+    invalidJson: 'Invalid preset market JSON.',
+    unknownAuthor: 'Unknown author',
+    localAuthor: 'Local user',
+    share: 'Share My Presets',
+    shareEmpty: 'No custom presets to share',
+    shared: 'Preset JSON copied',
+    sharedMessage: (count: number) => `Copied ${count} custom preset(s). Paste them into a GitHub Issue submission.`,
+    shareFailed: 'Preset copy failed',
+    shareFailedMessage: 'Unable to write to the clipboard.',
+    ratingFailed: 'Rating save failed',
+    ratingFailedMessage: 'Unable to write the local rating.',
+    overwriteConfirm: (name: string) => `A custom preset named "${name}" already exists. Overwrite it?`,
+    byAuthor: (author: string) => `Author: ${author}`,
+    downloads: (count: number) => `${count} downloads`,
+    rate: (rating: number) => `${rating} stars`,
+    sourceLabels: {
+      remote: 'Source: remote market',
+      cache: 'Source: local cache',
+      empty: 'Source: no market data'
+    },
+    filters: {
+      platform: 'Platform',
+      quality: 'Quality',
+      format: 'Format',
+      platformOptions: [
+        { value: 'all', label: 'All platforms' },
+        { value: 'youtube', label: 'YouTube' },
+        { value: '抖音', label: 'Douyin' },
+        { value: 'b站', label: 'Bilibili' }
+      ],
+      qualityOptions: [
+        { value: 'all', label: 'All quality' },
+        { value: '4k', label: '4K' },
+        { value: '1080p', label: '1080p' },
+        { value: '快速', label: 'Fast' }
+      ],
+      formatOptions: [
+        { value: 'all', label: 'All formats' },
+        { value: 'mp4', label: 'MP4' },
+        { value: 'gif', label: 'GIF' },
+        { value: 'webm', label: 'WebM' }
+      ]
     }
   },
   editorToasts: {

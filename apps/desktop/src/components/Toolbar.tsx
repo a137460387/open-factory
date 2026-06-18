@@ -70,6 +70,7 @@ interface ToolbarProps {
   onDetectBeats(): void;
   onSnapToBeats(): void;
   onSplitToBeats(): void;
+  onOpenAutoAudioSync(): void;
   onOpenMacroHistory(): void;
   onStartMacroRecording(): void;
   onStopMacroRecording(): void;
@@ -102,6 +103,7 @@ interface ToolbarProps {
   canDetectBeats: boolean;
   canSnapToBeats: boolean;
   canSplitToBeats: boolean;
+  canOpenAutoAudioSync: boolean;
   beatSensitivity: BeatSensitivity;
   onBeatSensitivityChange(sensitivity: BeatSensitivity): void;
   canSeparateAudio: boolean;
@@ -109,6 +111,7 @@ interface ToolbarProps {
   audioSeparationProgress?: number;
   canRunSpeakerDiarization: boolean;
   speakerDiarizationRunning: boolean;
+  autoAudioSyncRunning: boolean;
   macroRecordingActive: boolean;
   macroRecordingStepCount: number;
   recordingActive: boolean;
@@ -981,6 +984,19 @@ export function Toolbar(props: ToolbarProps) {
             >
               <span>{t.speakerDiarization}</span>
               <Mic2 size={14} />
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+              type="button"
+              disabled={!props.canOpenAutoAudioSync || props.autoAudioSyncRunning}
+              data-testid="toolbar-tools-auto-audio-sync-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onOpenAutoAudioSync();
+              }}
+            >
+              <span>{t.autoAudioSync}</span>
+              <Activity size={14} />
             </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"

@@ -2656,6 +2656,38 @@ export class MoveClipsCommand implements Command {
   }
 }
 
+export class BatchShiftClipsCommand implements Command {
+  readonly description = 'Shift clips';
+  private delegate?: MoveClipsCommand;
+
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly offsetsByClipId: Record<string, number>,
+    private readonly protectedRanges: ProtectedRange[] = []
+  ) {}
+
+  execute(): void {
+    if (!this.delegate) {
+      const timeline = this.accessor.getTimeline();
+      const startsByClipId = Object.fromEntries(
+        Object.entries(this.offsetsByClipId).map(([clipId, offset]) => {
+          const clip = findClip(timeline, clipId);
+          return [clipId, round(clip.start + offset)];
+        })
+      );
+      if (Object.keys(startsByClipId).length === 0) {
+        throw new Error('No clips to shift');
+      }
+      this.delegate = new MoveClipsCommand(this.accessor, startsByClipId, this.protectedRanges);
+    }
+    this.delegate.execute();
+  }
+
+  undo(): void {
+    this.delegate?.undo();
+  }
+}
+
 export class BatchReorderClipsCommand implements Command {
   readonly description = 'Batch reorder clips';
   private delegate?: MoveClipsCommand;
@@ -3983,6 +4015,7 @@ export type ClipPatch = Partial<Omit<Clip, 'type' | 'id' | 'transform' | 'colorC
   pitchSemitones?: number;
   audioChannelRouting?: Clip['audioChannelRouting'];
   pitchData?: Clip['pitchData'];
+  muted?: boolean;
   reverseAudio?: boolean;
   fadeInDuration?: number;
   fadeOutDuration?: number;

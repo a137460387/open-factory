@@ -12,6 +12,7 @@ import {
   ApplySplitLayoutCommand,
   BatchImportSubtitleCommand,
   BatchAlignToBeatCommand,
+  BatchShiftClipsCommand,
   AddTrackCommand,
   AddTransitionCommand,
   buildConformMediaReplacements,
@@ -73,6 +74,7 @@ import {
   normalizeProjectWorkingColorSpace,
   normalizeProjectSpeakers,
   normalizeExportRanges,
+  resolveAutoAudioSyncApplyRoute,
   applyTimelineVersionDiffSelection,
   instantiateProjectTemplate,
   instantiateTitleTemplate,
@@ -109,6 +111,8 @@ import {
   type TimelineGridUnit,
   type TitleTemplateId,
   type ExportTask,
+  type AutoAudioSyncApplyMode,
+  type AutoAudioSyncResult,
   type MediaVersionCompareRequest,
   type SmartDuplicateGroup,
   createOperationRecording,
@@ -195,6 +199,8 @@ import { saveReviewReport } from '../review/reviewReport';
 import type { SharePackageWorkflowProgress } from '../lib/sharePackage';
 import { canSeparateAudioForClip, getDemucsAvailability, separateAudioForClip, type DemucsAvailability } from '../lib/demucs';
 import { analyzeSpeakerDiarizationForClip, canDiarizeSpeakersForClip } from '../lib/speakerDiarization';
+import { analyzeAutoAudioSyncTargets, canUseClipForAutoAudioSync, type AutoAudioSyncTarget } from '../lib/autoAudioSync';
+import { AutoAudioSyncDialog } from '../audio-sync/AutoAudioSyncDialog';
 import {
   chooseProjectSavePath,
   chooseProjectToOpen,
@@ -508,6 +514,11 @@ export function EditorShell() {
     segments: SpeakerDiarizationSegment[];
     tracks: Track[];
   }>();
+  const [autoAudioSyncOpen, setAutoAudioSyncOpen] = useState(false);
+  const [autoAudioSyncRunning, setAutoAudioSyncRunning] = useState(false);
+  const [autoAudioSyncPrimaryClipId, setAutoAudioSyncPrimaryClipId] = useState<string>();
+  const [autoAudioSyncMode, setAutoAudioSyncMode] = useState<AutoAudioSyncApplyMode>('keep-secondary');
+  const [autoAudioSyncResults, setAutoAudioSyncResults] = useState<AutoAudioSyncResult[]>([]);
   const [recordingTask, setRecordingTask] = useState<{ taskId: string; source: RecordingSource; outputPath: string; startedAt: number }>();
   const [recordingElapsedSeconds, setRecordingElapsedSeconds] = useState(0);
   const {
@@ -734,8 +745,22 @@ export function EditorShell() {
   const contentAnalysisTargets = useMemo(() => collectContentAnalysisTargets(project), [project]);
   const mediaContentAnalysis = useMemo(() => summarizeContentAnalysisByMedia(contentAnalysisTargets), [contentAnalysisTargets]);
   const speakerDiarizationTarget = useMemo(() => findSpeakerDiarizationTarget(project, selectedClipIds.length > 0 ? selectedClipIds : selectedClipId ? [selectedClipId] : []), [project, selectedClipId, selectedClipIds]);
+  const autoAudioSyncTargets = useMemo(() => collectAutoAudioSyncTargets(project, selectedClipIds.length > 0 ? selectedClipIds : selectedClipId ? [selectedClipId] : []), [project, selectedClipId, selectedClipIds]);
+  const resolvedAutoAudioSyncPrimaryClipId = autoAudioSyncTargets.some((target) => target.clip.id === autoAudioSyncPrimaryClipId) ? autoAudioSyncPrimaryClipId! : (autoAudioSyncTargets[0]?.clip.id ?? '');
+  const autoAudioSyncDialogTargets = useMemo(
+    () =>
+      autoAudioSyncTargets.map((target) => ({
+        clipId: target.clip.id,
+        clipName: target.clip.name,
+        mediaName: target.asset.name,
+        trackName: target.track.name,
+        start: target.clip.start
+      })),
+    [autoAudioSyncTargets]
+  );
   const canSeparateSelectedAudio = canSeparateAudioForClip(selectedClip, selectedClipMedia, demucsAvailability.ready) && !audioSeparationClipId;
   const canRunSpeakerDiarization = Boolean(speakerDiarizationTarget && !speakerDiarizationRunning);
+  const canOpenAutoAudioSync = autoAudioSyncTargets.length >= 2 && autoAudioSyncTargets.length <= 5 && !autoAudioSyncRunning;
   const canDetectBeats = Boolean(
     selectedClip &&
       selectedClipMedia &&
@@ -2568,6 +2593,62 @@ export function EditorShell() {
     }
   }, [setSelectedClipIds, speakerDiarizationResult]);
 
+  const openAutoAudioSync = useCallback(() => {
+    if (autoAudioSyncTargets.length < 2 || autoAudioSyncTargets.length > 5) {
+      showToast({ kind: 'warning', title: zhCN.autoAudioSync.unavailableTitle, message: zhCN.autoAudioSync.unavailableMessage });
+      return;
+    }
+    setAutoAudioSyncPrimaryClipId((current) => (current && autoAudioSyncTargets.some((target) => target.clip.id === current) ? current : autoAudioSyncTargets[0].clip.id));
+    setAutoAudioSyncResults([]);
+    setAutoAudioSyncOpen(true);
+  }, [autoAudioSyncTargets]);
+
+  const runAutoAudioSync = useCallback(async () => {
+    const primary = autoAudioSyncTargets.find((target) => target.clip.id === resolvedAutoAudioSyncPrimaryClipId);
+    const secondaryTargets = autoAudioSyncTargets.filter((target) => target.clip.id !== resolvedAutoAudioSyncPrimaryClipId).slice(0, 4);
+    if (!primary || secondaryTargets.length === 0) {
+      showToast({ kind: 'warning', title: zhCN.autoAudioSync.unavailableTitle, message: zhCN.autoAudioSync.notEnoughTracksMessage });
+      return;
+    }
+    setAutoAudioSyncRunning(true);
+    showToast({ kind: 'info', title: zhCN.autoAudioSync.runningTitle, message: zhCN.autoAudioSync.runningMessage });
+    try {
+      const analysis = await analyzeAutoAudioSyncTargets(primary, secondaryTargets);
+      setAutoAudioSyncResults(analysis.results);
+      const lowCount = analysis.results.filter((result) => result.confidence === 'low' || !result.applied).length;
+      if (lowCount > 0) {
+        showToast({ kind: 'warning', title: zhCN.autoAudioSync.unavailableTitle, message: zhCN.autoAudioSync.skippedLowConfidence(lowCount) });
+      }
+    } catch (error) {
+      showToast({ kind: 'error', title: zhCN.autoAudioSync.failedTitle, message: error instanceof Error ? error.message : zhCN.autoAudioSync.failedMessage });
+    } finally {
+      setAutoAudioSyncRunning(false);
+    }
+  }, [autoAudioSyncTargets, resolvedAutoAudioSyncPrimaryClipId]);
+
+  const applyAutoAudioSync = useCallback(() => {
+    const route = resolveAutoAudioSyncApplyRoute(resolvedAutoAudioSyncPrimaryClipId, autoAudioSyncResults, autoAudioSyncMode);
+    const shiftedClipIds = Object.keys(route.offsetsByClipId);
+    if (shiftedClipIds.length === 0) {
+      showToast({ kind: 'warning', title: zhCN.autoAudioSync.unavailableTitle, message: zhCN.autoAudioSync.noApplicableResults });
+      return;
+    }
+    try {
+      commandManager.execute(new BatchShiftClipsCommand(timelineAccessor, route.offsetsByClipId));
+      if (route.mutePrimaryClipId) {
+        commandManager.execute(new UpdateClipCommand(timelineAccessor, route.mutePrimaryClipId, { muted: true }));
+      }
+      setSelectedClipIds(shiftedClipIds);
+      showToast({ kind: 'success', title: zhCN.autoAudioSync.completeTitle, message: zhCN.autoAudioSync.completeMessage(shiftedClipIds.length) });
+      if (route.skippedLowConfidenceClipIds.length > 0) {
+        showToast({ kind: 'warning', title: zhCN.autoAudioSync.unavailableTitle, message: zhCN.autoAudioSync.skippedLowConfidence(route.skippedLowConfidenceClipIds.length) });
+      }
+      setAutoAudioSyncOpen(false);
+    } catch (error) {
+      showToast({ kind: 'error', title: zhCN.autoAudioSync.failedTitle, message: error instanceof Error ? error.message : zhCN.autoAudioSync.failedMessage });
+    }
+  }, [autoAudioSyncMode, autoAudioSyncResults, resolvedAutoAudioSyncPrimaryClipId, setSelectedClipIds]);
+
   const cancelAudioSeparation = useCallback(async () => {
     if (!audioSeparationClipId) {
       return;
@@ -3721,6 +3802,7 @@ export function EditorShell() {
           onDetectBeats={() => void detectSelectedBeats()}
           onSnapToBeats={snapSelectedToBeats}
           onSplitToBeats={splitSelectedToBeats}
+          onOpenAutoAudioSync={openAutoAudioSync}
           onOpenMacroHistory={() => setMacroHistoryOpen(true)}
           onStartMacroRecording={startMacroRecording}
           onStopMacroRecording={() => void stopMacroRecording()}
@@ -3758,6 +3840,7 @@ export function EditorShell() {
           canDetectBeats={canDetectBeats}
           canSnapToBeats={canSnapToBeats}
           canSplitToBeats={canSplitToBeats}
+          canOpenAutoAudioSync={canOpenAutoAudioSync}
           beatSensitivity={beatSensitivity}
           onBeatSensitivityChange={setBeatSensitivity}
           canSeparateAudio={canSeparateSelectedAudio}
@@ -3765,6 +3848,7 @@ export function EditorShell() {
           audioSeparationProgress={audioSeparationProgress}
           canRunSpeakerDiarization={canRunSpeakerDiarization}
           speakerDiarizationRunning={speakerDiarizationRunning}
+          autoAudioSyncRunning={autoAudioSyncRunning}
           macroRecordingActive={macroRecordingActive}
           macroRecordingStepCount={macroRecordingStepCount}
           recordingActive={Boolean(recordingTask)}
@@ -4144,6 +4228,23 @@ export function EditorShell() {
               tracks={speakerDiarizationResult.tracks}
               onApply={() => void applySpeakerDiarization()}
               onClose={() => setSpeakerDiarizationResult(undefined)}
+            />
+          ) : null}
+          {autoAudioSyncOpen ? (
+            <AutoAudioSyncDialog
+              targets={autoAudioSyncDialogTargets}
+              primaryClipId={resolvedAutoAudioSyncPrimaryClipId}
+              mode={autoAudioSyncMode}
+              running={autoAudioSyncRunning}
+              results={autoAudioSyncResults}
+              onPrimaryChange={(clipId) => {
+                setAutoAudioSyncPrimaryClipId(clipId);
+                setAutoAudioSyncResults([]);
+              }}
+              onModeChange={setAutoAudioSyncMode}
+              onAnalyze={() => void runAutoAudioSync()}
+              onApply={applyAutoAudioSync}
+              onClose={() => setAutoAudioSyncOpen(false)}
             />
           ) : null}
           {complexityScoreOpen ? <ComplexityScorePanel project={project} onClose={() => setComplexityScoreOpen(false)} /> : null}
@@ -4654,6 +4755,31 @@ function findSpeakerDiarizationTarget(project: Project, preferredClipIds: string
     }
   }
   return undefined;
+}
+
+function collectAutoAudioSyncTargets(project: Project, preferredClipIds: string[]): AutoAudioSyncTarget[] {
+  if (preferredClipIds.length === 0) {
+    return [];
+  }
+  const locations = project.timeline.tracks.flatMap((track) => track.clips.map((clip) => ({ clip, track })));
+  const seen = new Set<string>();
+  const targets: AutoAudioSyncTarget[] = [];
+  for (const clipId of preferredClipIds) {
+    const location = locations.find((item) => item.clip.id === clipId);
+    if (!location || seen.has(location.clip.id)) {
+      continue;
+    }
+    seen.add(location.clip.id);
+    const clip = location.clip;
+    if (clip.type !== 'audio' && clip.type !== 'video') {
+      continue;
+    }
+    const asset = project.media.find((item) => item.id === clip.mediaId);
+    if (asset && canUseClipForAutoAudioSync(clip, asset)) {
+      targets.push({ clip, asset, track: location.track });
+    }
+  }
+  return targets;
 }
 
 function collectSpeakerDiarizationDialogueIntervals(project: Project, clip: Extract<Clip, { type: 'audio' | 'video' }>): Array<{ start: number; end: number }> {

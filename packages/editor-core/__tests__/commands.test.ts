@@ -26,6 +26,7 @@ import {
   BatchAlignSubtitleCommand,
   BatchAlignToBeatCommand,
   BatchAddMarkersCommand,
+  BatchShiftClipsCommand,
   BatchShiftSubtitleCommand,
   BatchSplitAtSceneCutsCommand,
   BatchUpdateKeyframeCommand,
@@ -399,6 +400,28 @@ describe('timeline commands', () => {
     expect(accessor.current().tracks.find((track) => track.id === 'track-subtitle')?.clips.map((clip) => [clip.id, clip.start, clip.duration])).toEqual([
       ['sub-a', 0.5, 1],
       ['sub-b', 2.5, 1]
+    ]);
+  });
+
+  it('batch shifts media clips as one undoable command', () => {
+    const accessor = makeAccessor(
+      makeTimeline([
+        makeAudioClip({ id: 'audio-a', start: 1, duration: 1 }),
+        makeAudioClip({ id: 'audio-b', start: 4, duration: 1 })
+      ])
+    );
+    const manager = new CommandManager();
+
+    manager.execute(new BatchShiftClipsCommand(accessor, { 'audio-a': 0.25, 'audio-b': -0.5 }));
+    expect(accessor.current().tracks.find((track) => track.id === 'track-audio')?.clips.map((clip) => [clip.id, clip.start])).toEqual([
+      ['audio-a', 1.25],
+      ['audio-b', 3.5]
+    ]);
+
+    manager.undo();
+    expect(accessor.current().tracks.find((track) => track.id === 'track-audio')?.clips.map((clip) => [clip.id, clip.start])).toEqual([
+      ['audio-a', 1],
+      ['audio-b', 4]
     ]);
   });
 

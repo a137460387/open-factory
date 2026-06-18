@@ -797,6 +797,20 @@ mod tests {
     }
 
     #[test]
+    fn rejects_empty_webdav_text_put_contents() {
+        let error = build_webdav_text_put_args(&WebdavTextPutRequest {
+            url: "https://dav.example.test/presets/export.ofpreset.json".to_string(),
+            username: None,
+            password: None,
+            contents: String::new(),
+            content_type: Some("application/json".to_string()),
+        })
+        .unwrap_err();
+
+        assert!(error.contains("contents are empty"));
+    }
+
+    #[test]
     fn rejects_non_http_webdav_text_urls() {
         let error = build_webdav_text_get_args(&WebdavTextRequest {
             url: "file:///tmp/export.ofpreset.json".to_string(),
