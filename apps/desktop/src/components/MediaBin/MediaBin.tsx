@@ -29,11 +29,12 @@ import {
 } from '@open-factory/editor-core';
 import { AlertCircle, BadgeCheck, ChevronDown, ChevronRight, FileAudio2, FileImage, FileText, FileVideo2, Flag, Folder, FolderPlus, GalleryHorizontal, Gauge, Grid2X2, ImageDown, Import, Info, Link2, List, Loader2, Merge, Plus, RotateCcw, Search, SlidersHorizontal, Star, Tag, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
+import { computeMediaPreviewDelay, isMediaPreviewable } from './media-hover-preview';
 import { clsx } from 'clsx';
 import { zhCN } from '../../i18n/strings';
 import { isTauriRuntime } from '../../lib/tauri';
 import { TITLE_TEMPLATE_DRAG_MIME } from '../../lib/titleTemplates';
-import { analyzeMedia, listenDragDrop, type MediaAnalysis } from '../../lib/tauri-bridge';
+import { analyzeMedia, convertLocalFileSrc, listenDragDrop, type MediaAnalysis } from '../../lib/tauri-bridge';
 import { useMediaJobStore } from '../../media/media-job-store';
 import { DEFAULT_MEDIA_LIBRARY_VIEW_SETTINGS, normalizeMediaLibraryViewSettings, sortMediaLibraryAssets, type MediaLibraryGridSize, type MediaLibrarySortKey, type MediaLibraryViewMode, type MediaLibraryViewSettings } from '../../media/mediaLibraryView';
 import { readViewSettings, saveViewSettings } from '../../settings/appSettings';
@@ -1870,6 +1871,8 @@ function MediaCard({
   const canConvertFrameRate = asset.type === 'video' && (asset.variableFrameRate || frameRateMismatch);
   const [labelMenuOpen, setLabelMenuOpen] = useState(false);
   const [versionsOpen, setVersionsOpen] = useState(false);
+  const [hoverPreviewActive, setHoverPreviewActive] = useState(false);
+  const hoverTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const labelColor = metadata?.labelColor;
   const rating = metadata?.rating ?? 0;
   const flag = metadata?.flag;
@@ -1909,7 +1912,12 @@ function MediaCard({
         }
         if (event.key === ' ' || event.code === 'Space') {
           event.preventDefault();
-          onShowInfo();
+          if (isMediaPreviewable(asset.type) && !asset.missing) {
+            setHoverPreviewActive(true);
+            setTimeout(() => setHoverPreviewActive(false), 3000);
+          } else {
+            onShowInfo();
+          }
           return;
         }
         if (event.key.toLowerCase() === 'g') {
@@ -1929,6 +1937,17 @@ function MediaCard({
         event.preventDefault();
         setLabelMenuOpen(true);
       }}
+      onMouseEnter={() => {
+        if (!isMediaPreviewable(asset.type)) return;
+        const { schedule, cancel } = computeMediaPreviewDelay();
+        cancel(hoverTimerRef.current);
+        hoverTimerRef.current = schedule(() => setHoverPreviewActive(true));
+      }}
+      onMouseLeave={() => {
+        if (hoverTimerRef.current) clearTimeout(hoverTimerRef.current);
+        hoverTimerRef.current = undefined;
+        setHoverPreviewActive(false);
+      }}
     >
       <div className="checkerboard relative aspect-video">
         <label
@@ -1941,6 +1960,18 @@ function MediaCard({
           <input className="h-4 w-4 accent-brand" type="checkbox" checked={selected} onChange={onToggleSelected} />
         </label>
         {asset.thumbnail ? <img className="h-full w-full object-cover" src={asset.thumbnail} alt="" /> : <IconPreview type={asset.type} />}
+        {hoverPreviewActive && isMediaPreviewable(asset.type) && !asset.missing ? (
+          <video
+            className="absolute inset-0 h-full w-full object-cover"
+            src={convertLocalFileSrc(asset.path)}
+            muted
+            autoPlay
+            loop
+            playsInline
+            preload="metadata"
+            data-testid={`media-hover-preview-${asset.id}`}
+          />
+        ) : null}
         {asset.missing ? <span className="absolute left-2 top-10 rounded bg-rose-600 px-2 py-1 text-xs font-semibold text-white" data-testid={`missing-media-badge-${asset.id}`}>{zhCN.common.missing}</span> : null}
         {asset.variableFrameRate ? (
           <span

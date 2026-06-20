@@ -91,7 +91,7 @@
   type VersionedExportReportRow,
   type VersionedExportTaskMetadata
 } from '@open-factory/editor-core';
-import { AlertTriangle, Cloud, CloudDownload, Clock3, Download, FileText, FolderOpen, Image as ImageIcon, ListPlus, Loader2, Minimize2, Save, Trash2, Upload, X } from 'lucide-react';
+import { AlertTriangle, Cloud, CloudDownload, Clock3, Copy, Download, FileText, FolderOpen, Image as ImageIcon, ListPlus, Loader2, Minimize2, Save, Trash2, Upload, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { zhCN } from '../i18n/strings';
 import { chooseExportPath, revealExport } from '../lib/exportVideo';
@@ -149,6 +149,7 @@ import { EXPORT_COMPLETION_ACTIONS, localDatetimeInputValue, normalizeExportComp
 import { loadExportHistoryIntoStore } from './export-history';
 import { estimateExportFileSizeBytes, formatEstimatedFileSize } from './export-size-estimate';
 import { useExportQueueStore } from './export-queue-store';
+import { matchExportDiagnostics } from './export-diagnostics';
 import { retryExportUploadFromHistory } from './export-upload';
 import { ensureMediaJobRunner } from '../media/media-job-runner';
 import { useMediaJobStore } from '../media/media-job-store';
@@ -5356,7 +5357,7 @@ function ExportTaskRow({ taskId }: { taskId: string }) {
           })}
         </div>
       ) : null}
-      {task.error ? <div className="mt-1 whitespace-pre-wrap text-[11px] text-rose-700">{task.error}</div> : null}
+      {task.error ? <ExportDiagnosticsPanel error={task.error} /> : null}
       {task.report?.loudness ? (
         <div className="mt-1 text-[11px] text-slate-600" data-testid="export-task-loudness-report">
           {zhCN.exportDialog.loudnessReport(formatLoudness(task.report.loudness.integratedLoudness))}
@@ -5391,5 +5392,42 @@ function StatusPill({ status }: { status: ExportTaskStatus }) {
     <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${className}`} data-testid="export-task-status" data-status={status}>
       {zhCN.exportDialog.status[status]}
     </span>
+  );
+}
+
+function ExportDiagnosticsPanel({ error }: { error: string }) {
+  const [copied, setCopied] = useState(false);
+  const matches = matchExportDiagnostics(error);
+  const handleCopy = () => {
+    void navigator.clipboard.writeText(error).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+  return (
+    <div className="mt-1 rounded-md border border-rose-200 bg-rose-50 p-2 text-[11px]" data-testid="export-diagnostics-panel">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1 whitespace-pre-wrap text-rose-700">{error}</div>
+        <button
+          className="shrink-0 inline-flex items-center gap-1 rounded border border-rose-300 bg-white px-1.5 py-0.5 font-medium text-rose-700 hover:bg-rose-100"
+          type="button"
+          onClick={handleCopy}
+          data-testid="export-diagnostics-copy"
+        >
+          <Copy size={11} />
+          {copied ? '已复制' : '复制'}
+        </button>
+      </div>
+      {matches.length > 0 ? (
+        <div className="mt-2 space-y-1" data-testid="export-diagnostics-suggestions">
+          {matches.map((match) => (
+            <div key={match.label} className="rounded border border-amber-200 bg-amber-50 p-1.5">
+              <div className="font-semibold text-amber-800">{match.label}</div>
+              <div className="mt-0.5 text-amber-700">{match.suggestion}</div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
   );
 }
