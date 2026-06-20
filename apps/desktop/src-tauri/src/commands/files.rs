@@ -100,6 +100,15 @@ pub fn read_file(app: AppHandle, path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
+pub fn read_file_header_bytes(app: AppHandle, path: String, byte_count: Option<usize>) -> Result<Vec<u8>, String> {
+    let safe_path = validate_path(&app, Path::new(&path))?;
+    let count = byte_count.unwrap_or(16).min(64);
+    let data = fs::read(&safe_path)
+        .map_err(|error| format!("Unable to read {}: {}", normalize_path(&safe_path), error))?;
+    Ok(data.into_iter().take(count).collect())
+}
+
+#[tauri::command]
 pub fn write_file(app: AppHandle, path: String, contents: String) -> Result<(), String> {
     let safe_path = validate_path_for_write(&app, Path::new(&path))?;
     if let Some(parent) = safe_path.parent() {

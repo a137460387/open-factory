@@ -673,6 +673,7 @@ export type TauriMocks = Partial<{
   saveFileDialog(options: { defaultPath?: string; filters: FileDialogFilter[] }): Promise<string | undefined> | string | undefined;
   openDirectoryDialog(): Promise<string | undefined> | string | undefined;
   readFile(path: string): Promise<string> | string;
+  readFileHeaderBytes(path: string, byteCount?: number): Promise<Uint8Array> | Uint8Array;
   writeFile(path: string, contents: string): Promise<void> | void;
   encryptProjectFile(path: string, contents: string, password: string): Promise<void> | void;
   decryptProjectFile(path: string, password: string): Promise<string> | string;
@@ -864,6 +865,15 @@ export async function readFile(path: string): Promise<string> {
     return mock(path);
   }
   return invoke<string>('read_file', { path });
+}
+
+export async function readFileHeaderBytes(path: string, byteCount = 16): Promise<Uint8Array> {
+  const mock = getTauriMocks()?.readFileHeaderBytes;
+  if (mock) {
+    return mock(path, byteCount);
+  }
+  const result = await invoke<number[]>('read_file_header_bytes', { path, byteCount });
+  return new Uint8Array(result);
 }
 
 export async function writeFile(path: string, contents: string): Promise<void> {

@@ -312,3 +312,4 @@ fn write_frontend_smoke_page_load_marker(
         serde_json::to_string_pretty(&report).unwrap_or_default(),
     );
 }
+            commands::files::read_file_header_bytes,

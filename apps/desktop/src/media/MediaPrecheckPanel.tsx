@@ -123,6 +123,8 @@ function formatIssue(issue: MediaPrecheckIssue): string {
       return t.issues.integrity(issue.details ?? '');
     case 'hdr-sdr':
       return t.issues.hdrSdr(issue.details ?? '');
+    case 'file-header-mismatch':
+      return issue.details === 'force-imported' ? zhCN.preImport.riskBadge : (issue.details ?? t.issues.unknown);
     default:
       return issue.details ?? t.issues.unknown;
   }

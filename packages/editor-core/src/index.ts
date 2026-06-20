@@ -141,3 +141,4 @@ export * from './subtitles/retiming';
 export * from './subtitles/proofreading';
 export * from './subtitles/data-import';
 export * from './subtitles/style-templates';
+export * from './media-file-sniff';

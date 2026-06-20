@@ -3,7 +3,7 @@ import type { MediaAsset } from '../model';
 export type MediaPrecheckStatus = 'pass' | 'warning' | 'error';
 export type MediaPrecheckProjectColorSpace = 'sdr' | 'hdr';
 export type FfprobePrecheckErrorCategory = 'unsupported-codec' | 'invalid-data' | 'missing-file' | 'permission' | 'unknown';
-export type MediaPrecheckIssueType = 'ffprobe-error' | 'codec' | 'av-sync' | 'integrity' | 'hdr-sdr';
+export type MediaPrecheckIssueType = 'ffprobe-error' | 'codec' | 'av-sync' | 'integrity' | 'hdr-sdr' | 'file-header-mismatch';
 
 export interface MediaPrecheckVideoStream {
   codecName?: string;
@@ -49,6 +49,8 @@ export interface MediaPrecheckInput {
   ffprobeError?: string;
   integrityErrorOutput?: string;
   projectColorSpace?: MediaPrecheckProjectColorSpace;
+  fileSniff?: FileSniffResult;
+  forcedImport?: boolean;
 }
 
 export interface MediaPrecheckResult {
@@ -89,6 +91,23 @@ export function buildMediaPrecheckResult(input: MediaPrecheckInput): MediaPreche
       severity: 'error',
       details: input.integrityErrorOutput.trim()
     });
+  }
+  if (input.fileSniff?.status === 'mismatch') {
+    issues.push({
+      type: 'file-header-mismatch',
+      severity: 'warning',
+      details: `${input.fileSniff.extension} -> ${input.fileSniff.detectedLabel ?? 'unknown'}`
+    });
+  }
+  if (input.forcedImport) {
+    return {
+      assetId: input.asset.id,
+      name: input.asset.name,
+      path: input.asset.path,
+      type: input.asset.type,
+      status: 'warning',
+      issues: [...issues, { type: 'file-header-mismatch', severity: 'warning', details: 'force-imported' }]
+    };
   }
   return {
     assetId: input.asset.id,
@@ -185,3 +204,4 @@ function isHdrVideoStream(stream: MediaPrecheckVideoStream): boolean {
   const values = [stream.colorTransfer, stream.colorPrimaries, stream.colorSpace, stream.pixelFormat, ...(stream.hdrMetadata ?? [])].map((value) => value?.toLowerCase() ?? '');
   return values.some((value) => value.includes('smpte2084') || value.includes('arib-std-b67') || value.includes('bt2020') || value.includes('hdr'));
 }
+import type { FileSniffResult } from '../media-file-sniff';

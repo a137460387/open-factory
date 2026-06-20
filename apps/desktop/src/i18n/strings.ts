@@ -4531,6 +4531,16 @@ const zh = {
       size: '大小'
     }
   },
+  preImport: {
+    title: '导入前预检',
+    running: '正在预检文件',
+    summary: (pass: number, warning: number, risk: number) => `通过 ${pass} · 警告 ${warning} · 风险 ${risk}`,
+    forceImport: '仍然导入',
+    importing: '导入中',
+    fileHeaderMismatch: (ext: string, detected: string) => `文件头不匹配：扩展名 ${ext}，实际内容 ${detected}`,
+    riskBadge: '风险',
+    passAll: '全部通过'
+  },
   timelineCompare: {
     title: '时间线对比',
     subtitle: '并排查看两个项目快照的时间线差异。',
@@ -8828,6 +8838,16 @@ const enOverrides = {
       time: 'Time',
       size: 'Size'
     }
+  },
+  preImport: {
+    title: 'Pre-import Validation',
+    running: 'Checking files',
+    summary: (pass: number, warning: number, risk: number) => `Pass ${pass} · Warning ${warning} · Risk ${risk}`,
+    forceImport: 'Import anyway',
+    importing: 'Importing',
+    fileHeaderMismatch: (ext: string, detected: string) => `Header mismatch: extension ${ext}, actual content ${detected}`,
+    riskBadge: 'Risk',
+    passAll: 'All passed'
   },
   timelineCompare: {
     title: 'Timeline Compare',

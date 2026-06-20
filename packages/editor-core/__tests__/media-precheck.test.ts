@@ -95,4 +95,51 @@ describe('media precheck', () => {
     expect(integrity.status).toBe('error');
     expect(integrity.issues[0]).toMatchObject({ type: 'integrity', severity: 'error' });
   });
+
+  it('flags file header mismatch when MP4 file contains WAV data', () => {
+    const wavHeader = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x41, 0x56, 0x45]);
+    const sniff = sniffFileHeader(wavHeader, 'fake.mp4');
+    const result = buildMediaPrecheckResult({
+      asset: { id: 'sniff', name: 'fake.mp4', path: 'C:/Media/fake.mp4', type: 'video' },
+      analysis: { videoStreams: [], audioStreams: [{ codecName: 'pcm_s16le', duration: 5 }] },
+      fileSniff: sniff
+    });
+    expect(result.status).toBe('warning');
+    expect(result.issues.some((i) => i.type === 'file-header-mismatch')).toBe(true);
+  });
+
+  it('marks forced import as warning status', () => {
+    const result = buildMediaPrecheckResult({
+      asset: { id: 'forced', name: 'forced.mp4', path: 'C:/Media/forced.mp4', type: 'video' },
+      ffprobeError: 'Invalid data found when processing input',
+      forcedImport: true
+    });
+    expect(result.status).toBe('warning');
+    expect(result.issues.some((i) => i.type === 'file-header-mismatch' && i.details === 'force-imported')).toBe(true);
+  });
+
+  it('three-state logic: pass for matching header, warning for mismatch, error for ffprobe failure', () => {
+    const mp4Header = new Uint8Array([0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70]);
+    const pass = buildMediaPrecheckResult({
+      asset: { id: 'a', name: 'a.mp4', path: '/a.mp4', type: 'video' },
+      analysis: { videoStreams: [{ codecName: 'h264', duration: 3 }], audioStreams: [{ codecName: 'aac', duration: 3 }] },
+      fileSniff: sniffFileHeader(mp4Header, 'a.mp4')
+    });
+    expect(pass.status).toBe('pass');
+
+    const wavHeader = new Uint8Array([0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x41, 0x56, 0x45]);
+    const warn = buildMediaPrecheckResult({
+      asset: { id: 'b', name: 'b.mp4', path: '/b.mp4', type: 'video' },
+      analysis: { videoStreams: [], audioStreams: [{ codecName: 'pcm_s16le', duration: 3 }] },
+      fileSniff: sniffFileHeader(wavHeader, 'b.mp4')
+    });
+    expect(warn.status).toBe('warning');
+
+    const err = buildMediaPrecheckResult({
+      asset: { id: 'c', name: 'c.mp4', path: '/c.mp4', type: 'video' },
+      ffprobeError: 'moov atom not found'
+    });
+    expect(err.status).toBe('error');
+  });
 });
+import { sniffFileHeader } from '../src/media-file-sniff';
