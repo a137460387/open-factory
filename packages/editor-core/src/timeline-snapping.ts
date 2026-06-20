@@ -4,6 +4,20 @@ export type SnapEdge = 'start' | 'end';
 
 export type SnapCandidateKind = 'timeline-start' | 'playhead' | 'marker' | 'beat' | 'clip-start' | 'clip-end' | 'grid';
 
+/**
+ * Snap candidate priority hierarchy (higher = preferred when distances match):
+ *   beat (5) > marker (4) > grid (3) > playhead/timeline-start (2) > clip-start/clip-end (1) > unknown (0)
+ */
+const SNAP_CANDIDATE_PRIORITY: Record<SnapCandidateKind, number> = {
+  beat: 5,
+  marker: 4,
+  grid: 3,
+  playhead: 2,
+  'timeline-start': 2,
+  'clip-start': 1,
+  'clip-end': 1,
+};
+
 export interface TimelineSnapCandidate {
   time: number;
   kind?: SnapCandidateKind;
@@ -72,15 +86,21 @@ function normalizeCandidate(candidate: number | TimelineSnapCandidate): Timeline
   return typeof candidate === 'number' ? { time: candidate } : candidate;
 }
 
-function snapCandidatePriority(candidate: TimelineSnapCandidate): number {
-  if (candidate.kind === 'beat') {
-    return 3;
+export function snapCandidatePriority(candidate: TimelineSnapCandidate): number {
+  if (!candidate.kind) return 0;
+  return SNAP_CANDIDATE_PRIORITY[candidate.kind] ?? 0;
+}
+
+/** Human-readable label for snap candidate kind (zh-CN). */
+export function snapCandidateKindLabel(kind: SnapCandidateKind | undefined): string {
+  switch (kind) {
+    case 'beat': return '节拍';
+    case 'marker': return '标记点';
+    case 'grid': return '网格';
+    case 'playhead': return '播放头';
+    case 'timeline-start': return '时间线起点';
+    case 'clip-start': return 'clip起点';
+    case 'clip-end': return 'clip终点';
+    default: return '吸附';
   }
-  if (candidate.kind === 'marker') {
-    return 2;
-  }
-  if (candidate.kind === 'playhead' || candidate.kind === 'timeline-start') {
-    return 1;
-  }
-  return 0;
 }
