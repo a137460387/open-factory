@@ -95,8 +95,10 @@ import {
   replaceProjectActiveTimeline,
   serializeTimelineBookmarks,
   applyArchiveRelinkPlan,
+  shouldAutoShowMediaHealthDashboard,
   type DuplicateMediaGroup,
   type DuplicateMediaIssue,
+  type MediaHealthDashboard,
   type MediaCleanupReport,
   type MissingMediaIssue,
   type MediaAsset,
@@ -210,6 +212,7 @@ import { createProjectArchivePlan, writeProjectArchive, type ArchiveProgress } f
 import { collectProjectArchivePreflight, saveClipReport, saveOfflineMediaReport } from '../lib/mediaReport';
 import { saveProjectSnapshot } from '../lib/projectSnapshots';
 import { buildProjectHealthAutoRepairInput, scanProjectHealth } from '../lib/projectHealth';
+import { readMediaHealthAutoShowEnabled, scanMediaHealthDashboard, writeMediaHealthAutoShowEnabled } from '../lib/mediaHealthDashboard';
 import { getReviewModeShellVisibility } from '../review/reviewMode';
 import { saveReviewReport } from '../review/reviewReport';
 import type { SharePackageWorkflowProgress } from '../lib/sharePackage';
@@ -334,6 +337,7 @@ import { useBackgroundMediaJobs } from '../media/useBackgroundMediaJobs';
 import { analyzeClipContentLocally, exportClipContentAnalysisJson } from '../media/contentAnalysis';
 import type { ContentAnalysisTarget } from '../media/ContentAnalysisDialog';
 import { ProjectHealthDialog } from '../project-health/ProjectHealthDialog';
+import { MediaHealthDashboardDialog } from '../media/MediaHealthDashboardDialog';
 import { ProjectTemplateDialog } from '../project-templates/ProjectTemplateDialog';
 import { loadSharedLibrary, type SharedLibraryResource } from '../shared-library/sharedLibrary';
 import { commandManager, projectAccessor, timelineAccessor } from '../store/commandManager';
@@ -493,10 +497,15 @@ export function EditorShell() {
   const [storyboardOpen, setStoryboardOpen] = useState(false);
   const [macroHistoryOpen, setMacroHistoryOpen] = useState(false);
   const [projectHealthOpen, setProjectHealthOpen] = useState(false);
+  const [mediaHealthDashboardOpen, setMediaHealthDashboardOpen] = useState(false);
   const [reviewMode, setReviewMode] = useState(() => (typeof window === 'undefined' ? false : window.location.hash === '#review'));
   const [projectHealthReport, setProjectHealthReport] = useState<ProjectHealthReport>();
   const [projectHealthRepairReport, setProjectHealthRepairReport] = useState<ProjectHealthRepairReport>();
   const [projectHealthScanning, setProjectHealthScanning] = useState(false);
+  const [mediaHealthDashboard, setMediaHealthDashboard] = useState<MediaHealthDashboard>();
+  const [mediaHealthScanning, setMediaHealthScanning] = useState(false);
+  const [mediaHealthAutoShowEnabled, setMediaHealthAutoShowEnabled] = useState(() => readMediaHealthAutoShowEnabled());
+  const mediaHealthAutoShowCheckedRef = useRef(false);
   const [duplicateMediaGroups, setDuplicateMediaGroups] = useState<DuplicateMediaGroup[]>([]);
   const [duplicateMediaOpen, setDuplicateMediaOpen] = useState(false);
   const [mediaOrganizerOpen, setMediaOrganizerOpen] = useState(false);
@@ -2564,6 +2573,41 @@ export function EditorShell() {
     void refreshProjectHealth();
   }, [refreshProjectHealth]);
 
+  const refreshMediaHealthDashboard = useCallback(async () => {
+    try {
+      setMediaHealthScanning(true);
+      const state = useEditorStore.getState();
+      const result = await scanMediaHealthDashboard(state.project, useProxySettingsStore.getState().settings);
+      setMediaHealthDashboard(result.dashboard);
+      setProjectHealthReport(result.report);
+      return result;
+    } catch (error) {
+      showToast({
+        kind: 'error',
+        title: zhCN.mediaHealthDashboard.toasts.scanFailed,
+        message: error instanceof Error ? error.message : zhCN.mediaHealthDashboard.toasts.scanFailedMessage
+      });
+      return undefined;
+    } finally {
+      setMediaHealthScanning(false);
+    }
+  }, []);
+
+  const openMediaHealthDashboard = useCallback(() => {
+    setMediaHealthDashboardOpen(true);
+    void refreshMediaHealthDashboard();
+  }, [refreshMediaHealthDashboard]);
+
+  const setMediaHealthAutoShow = useCallback((enabled: boolean) => {
+    setMediaHealthAutoShowEnabled(enabled);
+    writeMediaHealthAutoShowEnabled(enabled);
+  }, []);
+
+  const openMediaHealthRelinkPanel = useCallback(() => {
+    setMediaHealthDashboardOpen(false);
+    openProjectHealth();
+  }, [openProjectHealth]);
+
   const relinkMissingFromHealth = useCallback(
     async (issue: MissingMediaIssue) => {
       const state = useEditorStore.getState();
@@ -2688,6 +2732,11 @@ export function EditorShell() {
       showToast({ kind: 'error', title: zhCN.projectHealth.toasts.fixFailed, message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage });
     }
   }, [projectHealthReport, refreshProjectHealth]);
+
+  const repairFromMediaHealthDashboard = useCallback(async () => {
+    await autoRepairProjectHealth();
+    await refreshMediaHealthDashboard();
+  }, [autoRepairProjectHealth, refreshMediaHealthDashboard]);
 
   const separateSelectedAudio = useCallback(async () => {
     if (!selectedClip || (selectedClip.type !== 'audio' && selectedClip.type !== 'video') || !selectedClipMedia) {
@@ -3936,6 +3985,30 @@ export function EditorShell() {
       window.clearInterval(timer);
     };
   }, []);
+  useEffect(() => {
+    if (mediaHealthAutoShowCheckedRef.current || !mediaHealthAutoShowEnabled) {
+      return;
+    }
+    mediaHealthAutoShowCheckedRef.current = true;
+    let disposed = false;
+    scanMediaHealthDashboard(useEditorStore.getState().project, useProxySettingsStore.getState().settings)
+      .then((result) => {
+        if (disposed) {
+          return;
+        }
+        setMediaHealthDashboard(result.dashboard);
+        setProjectHealthReport(result.report);
+        if (shouldAutoShowMediaHealthDashboard({ enabled: mediaHealthAutoShowEnabled, issueCount: result.dashboard.issueCount })) {
+          setMediaHealthDashboardOpen(true);
+        }
+      })
+      .catch((error) => {
+        console.warn('Unable to auto scan media health dashboard', error);
+      });
+    return () => {
+      disposed = true;
+    };
+  }, [mediaHealthAutoShowEnabled]);
   const rightPrimaryPanelLabel = projectDocumentationOpen ? zhCN.panels.projectDocumentation : historyPanelOpen ? zhCN.panels.history : smartRoughCutOpen ? zhCN.panels.smartRoughCut : zhCN.panels.inspector;
 
   return (
@@ -3967,6 +4040,7 @@ export function EditorShell() {
           onOpenBatchProjectProcessing={() => setBatchProjectProcessingOpen(true)}
           onOpenMediaPrecheck={() => setMediaPrecheckOpen(true)}
           onOpenMediaOrganizer={openMediaOrganizer}
+          onOpenMediaHealthDashboard={openMediaHealthDashboard}
           onOpenVideoStitchWizard={() => setVideoStitchWizardOpen(true)}
           onAddMotionGraphic={addMotionGraphic}
           onOpenThumbnailGenerator={() => setThumbnailGeneratorAssetIds([])}
@@ -4598,6 +4672,18 @@ export function EditorShell() {
             groups={duplicateMediaGroups}
             onConfirm={mergeDuplicateMediaGroups}
             onClose={() => setDuplicateMediaOpen(false)}
+          />
+        ) : null}
+        {mediaHealthDashboardOpen ? (
+          <MediaHealthDashboardDialog
+            dashboard={mediaHealthDashboard}
+            scanning={mediaHealthScanning}
+            autoShowEnabled={mediaHealthAutoShowEnabled}
+            onAutoShowEnabledChange={setMediaHealthAutoShow}
+            onClose={() => setMediaHealthDashboardOpen(false)}
+            onRescan={() => void refreshMediaHealthDashboard()}
+            onRepair={() => void repairFromMediaHealthDashboard()}
+            onOpenRelinkPanel={openMediaHealthRelinkPanel}
           />
         ) : null}
         {mediaOrganizerOpen ? (

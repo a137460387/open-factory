@@ -51,6 +51,7 @@ interface ToolbarProps {
   onOpenBatchProjectProcessing(): void;
   onOpenMediaPrecheck(): void;
   onOpenMediaOrganizer(): void;
+  onOpenMediaHealthDashboard(): void;
   onOpenVideoStitchWizard(): void;
   onAddMotionGraphic(): void;
   onOpenThumbnailGenerator(): void;
@@ -712,6 +713,18 @@ export function Toolbar(props: ToolbarProps) {
             >
               <span>{t.mediaOrganizer}</span>
               <Archive size={14} />
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-tools-media-health-dashboard-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onOpenMediaHealthDashboard();
+              }}
+            >
+              <span>{t.mediaHealthDashboard}</span>
+              <Activity size={14} />
             </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"

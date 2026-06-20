@@ -18,6 +18,7 @@ tauri-build = { version = "2", features = [] }
 aes-gcm = "0.10"
 base64 = "0.22"
 keyring = "3"
+lettre = { version = "0.11", default-features = false, features = ["builder", "hostname", "rustls-tls", "smtp-transport"] }
 reqwest = "0.13"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

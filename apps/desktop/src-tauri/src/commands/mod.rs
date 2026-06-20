@@ -10,6 +10,7 @@ pub mod gif;
 pub mod media;
 pub mod preview_window;
 pub mod privacy;
+pub mod publish;
 pub mod project_crypto;
 pub mod proxy;
 pub mod recording;

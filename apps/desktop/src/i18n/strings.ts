@@ -432,6 +432,7 @@ const zh = {
     batchProjectProcessing: '批量处理项目',
     mediaPrecheck: '素材预检',
     mediaOrganizer: '媒体整理',
+    mediaHealthDashboard: '媒体健康仪表板',
     videoStitchWizard: '视频拼接向导',
     motionGraphic: '运动图形',
     thumbnailGenerator: '生成缩略图',
@@ -1818,6 +1819,43 @@ const zh = {
       fixFailedMessage: '无法应用该修复。'
     },
     autoRepairDuplicateConfirm: (count: number) => `检测到 ${count} 组重复素材。自动修复将合并引用并保留其中一个素材，是否继续？`
+  },
+  mediaHealthDashboard: {
+    title: '媒体健康仪表板',
+    scanning: '正在扫描媒体状态...',
+    waiting: '等待扫描结果',
+    summary: (count: number) => (count > 0 ? `发现 ${count} 项媒体健康问题` : '媒体状态良好'),
+    autoShow: '有问题时启动显示',
+    repair: '一键修复',
+    rescan: '重新扫描',
+    openRelink: '跳转重连',
+    repairTasks: '一键修复任务',
+    repairTaskCount: (count: number) => `${count} 项待处理`,
+    noRepairTasks: '暂无可自动修复任务。',
+    cards: {
+      proxyCoverage: '代理覆盖率',
+      missingMedia: '缺失媒体',
+      expiredProxy: '过期代理',
+      unusedMedia: '未使用媒体',
+      storage: '存储占用',
+      recentImports: '最近导入'
+    },
+    proxyCoverageValue: (ready: number, total: number) => `${ready} / ${total}`,
+    proxyCoveragePercent: (percent: number) => `${percent}% 已覆盖`,
+    storageKinds: {
+      media: '媒体',
+      proxy: '代理',
+      cache: '缓存'
+    },
+    repairTaskLabels: {
+      'generate-missing-proxies': (count: number) => `生成缺失代理：${count} 个`,
+      'clean-unused-media': (count: number) => `清理未使用媒体：${count} 个`,
+      'rebuild-damaged-cache': (count: number) => `重建损坏缓存：${count} 个`
+    },
+    toasts: {
+      scanFailed: '媒体健康扫描失败',
+      scanFailedMessage: '无法完成媒体健康扫描。'
+    }
   },
   titleTemplates: {
     'lower-third': {
@@ -3623,7 +3661,9 @@ const zh = {
       title: '导出流水线',
       description: '把导出、脚本钩子、质检、上传和通知节点串联成可复用流程。',
       defaultName: '两步导出流水线',
+      publishDefaultName: '导出后自动发布流水线',
       createTwoNode: '创建导出→脚本',
+      createPublish: '创建发布流水线',
       summary: (nodes: number, edges: number) => `${nodes} 个节点 / ${edges} 条连接`,
       empty: '先创建或导入一个流水线。',
       completedTitle: '流水线执行完成',
@@ -3638,7 +3678,11 @@ const zh = {
         'quality-check': '运行质检',
         'script-hook': '执行脚本钩子',
         'webdav-upload': '上传 WebDAV',
-        notification: '发送通知'
+        notification: '发送通知',
+        'publish-platform': '发布到平台',
+        'email-notification': '发送邮件通知',
+        'webhook-callback': 'Webhook 回调',
+        'write-release-record': '写入发布记录'
       },
       status: {
         waiting: '等待',
@@ -3646,6 +3690,17 @@ const zh = {
         complete: '完成',
         failed: '失败',
         skipped: '跳过'
+      },
+      publishMessages: {
+        outsideWindow: '不在发布窗口内',
+        smtpSent: 'SMTP 邮件已发送',
+        webhookPosted: 'Webhook 已回调',
+        releaseRecordWritten: '发布记录已写入',
+        platformRequiresUploader: (platform: string) => `${platform} 发布需要本地上传器接管`,
+        smtpMissing: '缺少 SMTP 配置',
+        webhookMissing: '缺少 Webhook 配置',
+        webhookStatus: (status: number) => `Webhook 返回 HTTP ${status}`,
+        failed: '发布节点执行失败'
       }
     },
     batchPaths: '批量路径',
@@ -5169,6 +5224,7 @@ const enOverrides = {
     batchProjectProcessing: 'Batch Project Processing',
     mediaPrecheck: 'Media Precheck',
     mediaOrganizer: 'Media Organizer',
+    mediaHealthDashboard: 'Media Health Dashboard',
     videoStitchWizard: 'Video Stitch Wizard',
     motionGraphic: 'Motion Graphics',
     thumbnailGenerator: 'Generate Thumbnail',
@@ -7973,7 +8029,9 @@ const enOverrides = {
       title: 'Export Pipeline',
       description: 'Chain export, script hooks, quality checks, uploads, and notifications into a reusable flow.',
       defaultName: 'Two-step Export Pipeline',
+      publishDefaultName: 'Post-export Publish Pipeline',
       createTwoNode: 'Create Export -> Script',
+      createPublish: 'Create Publish Pipeline',
       summary: (nodes: number, edges: number) => `${nodes} node(s) / ${edges} edge(s)`,
       empty: 'Create or import a pipeline first.',
       completedTitle: 'Pipeline complete',
@@ -7988,7 +8046,11 @@ const enOverrides = {
         'quality-check': 'Run Quality Check',
         'script-hook': 'Run Script Hook',
         'webdav-upload': 'Upload WebDAV',
-        notification: 'Send Notification'
+        notification: 'Send Notification',
+        'publish-platform': 'Publish to Platform',
+        'email-notification': 'Send Email Notification',
+        'webhook-callback': 'Webhook Callback',
+        'write-release-record': 'Write Release Record'
       },
       status: {
         waiting: 'Waiting',
@@ -7996,6 +8058,17 @@ const enOverrides = {
         complete: 'Complete',
         failed: 'Failed',
         skipped: 'Skipped'
+      },
+      publishMessages: {
+        outsideWindow: 'Outside publish window',
+        smtpSent: 'SMTP email sent',
+        webhookPosted: 'Webhook posted',
+        releaseRecordWritten: 'Release record written',
+        platformRequiresUploader: (platform: string) => `${platform} publishing requires a local user-managed uploader`,
+        smtpMissing: 'SMTP settings are missing',
+        webhookMissing: 'Webhook settings are missing',
+        webhookStatus: (status: number) => `Webhook returned HTTP ${status}`,
+        failed: 'Publish node failed'
       }
     },
     batchPaths: 'Batch Paths',

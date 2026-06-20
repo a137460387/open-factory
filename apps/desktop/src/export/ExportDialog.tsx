@@ -41,6 +41,7 @@
   resolveReframeDimensions,
   SequenceDependencyCycleError,
   ExportPipelineCycleError,
+  createPublishAutomationPipeline,
   createTwoStepExportPipeline,
   getPipelineUpstreamNodeIds,
   shouldRunExportPipelineNode,
@@ -68,6 +69,7 @@
   type ExportPipeline,
   type ExportPipelineNode,
   type ExportPipelineNodeStatus,
+  type ExportPublishNodeLog,
   type ExportTaskHistoryEntry,
   type ExportUploadState,
   type ExportUploadTargetType,
@@ -121,6 +123,7 @@ import {
   type QualityEvaluationResult
 } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
+import { runPublishPipelineNode } from './publish-pipeline-runner';
 import {
   DEFAULT_EXPORT_UPLOAD_SETTINGS,
   DEFAULT_EXPORT_PRESET_SYNC_SETTINGS,
@@ -311,11 +314,15 @@ interface SubtitleLanguageOption {
 function PipelineSection({
   pipeline,
   statuses,
-  onCreateTemplate
+  publishLogs,
+  onCreateTemplate,
+  onCreatePublishTemplate
 }: {
   pipeline: ExportPipeline;
   statuses: Record<string, ExportPipelineNodeStatus>;
+  publishLogs: ExportPublishNodeLog[];
   onCreateTemplate(): void;
+  onCreatePublishTemplate(): void;
 }) {
   const t = zhCN.exportDialog.pipeline;
   return (
@@ -331,6 +338,14 @@ function PipelineSection({
             onClick={onCreateTemplate}
           >
             {t.createTwoNode}
+          </button>
+          <button
+            type="button"
+            className="rounded-md border border-line px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
+            data-testid="export-pipeline-create-publish"
+            onClick={onCreatePublishTemplate}
+          >
+            {t.createPublish}
           </button>
           <span className="text-xs text-slate-500" data-testid="export-pipeline-summary">
             {t.summary(pipeline.nodes.length, pipeline.edges.length)}
@@ -362,6 +377,16 @@ function PipelineSection({
             })}
           </div>
         )}
+        {publishLogs.length > 0 ? (
+          <div className="grid gap-1 rounded-md border border-line bg-panel p-2 text-xs" data-testid="export-publish-log-list">
+            {publishLogs.map((log) => (
+              <div key={`${log.nodeId}-${log.finishedAt}`} className="flex items-center justify-between gap-2" data-testid="export-publish-log" data-status={log.status}>
+                <span className="min-w-0 truncate">{log.message}</span>
+                <span className="shrink-0 tabular-nums text-slate-500">{log.durationMs} ms</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -415,6 +440,7 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
   const [exportMode, setExportMode] = useState<ExportMode>('single');
   const [pipelineConfig, setPipelineConfig] = useState<ExportPipeline>(() => ({ id: 'pipeline-custom', name: zhCN.exportDialog.pipeline.defaultName, nodes: [], edges: [] }));
   const [pipelineStatuses, setPipelineStatuses] = useState<Record<string, ExportPipelineNodeStatus>>({});
+  const [publishPipelineLogs, setPublishPipelineLogs] = useState<ExportPublishNodeLog[]>([]);
   const [customPresetName, setCustomPresetName] = useState('');
   const [batchOutputPaths, setBatchOutputPaths] = useState('');
   const [versionedBatchTemplate, setVersionedBatchTemplate] = useState('C:/Exports/{version_name}-{platform}-{language}.mp4');
@@ -1245,6 +1271,8 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
     }
     const sorted = topologicallySortExportPipeline(pipelineConfig);
     let snapshot = Object.fromEntries(pipelineConfig.nodes.map((node) => [node.id, 'waiting' as ExportPipelineNodeStatus]));
+    let publishLogs: ExportPublishNodeLog[] = [];
+    setPublishPipelineLogs([]);
     setPipelineStatuses(snapshot);
     let pipelineOutputPath = outputPath;
     for (const node of sorted) {
@@ -1260,7 +1288,14 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
         if (node.type === 'export-mp4') {
           pipelineOutputPath = await runPipelineExportNode(pipelineOutputPath);
         } else {
-          await runPipelineUtilityNode(node);
+          const publishLog = await runPipelineUtilityNode(node, pipelineOutputPath, publishLogs);
+          if (publishLog) {
+            publishLogs = [...publishLogs, publishLog];
+            setPublishPipelineLogs(publishLogs);
+            snapshot = updatePipelineStatus(snapshot, node.id, publishLog.status === 'failed' ? 'failed' : publishLog.status === 'skipped' ? 'skipped' : 'complete');
+            setPipelineStatuses(snapshot);
+            continue;
+          }
         }
         snapshot = updatePipelineStatus(snapshot, node.id, 'complete');
         setPipelineStatuses(snapshot);
@@ -1302,14 +1337,34 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
     return selectedPath;
   }
 
-  async function runPipelineUtilityNode(_node: ExportPipelineNode): Promise<void> {
+  async function runPipelineUtilityNode(node: ExportPipelineNode, currentOutputPath: string, existingLogs: ExportPublishNodeLog[]): Promise<ExportPublishNodeLog | undefined> {
+    if (node.type === 'email-notification' || node.type === 'webhook-callback' || node.type === 'publish-platform' || node.type === 'write-release-record') {
+      const stat = await getFileStat(currentOutputPath).catch(() => ({ path: currentOutputPath, size: 0, mtimeMs: Date.now() }));
+      return runPublishPipelineNode(node, {
+        project,
+        outputPath: currentOutputPath,
+        outputSize: stat.size,
+        duration: getTimelinePlaybackDuration(project.timeline),
+        existingLogs,
+        messages: zhCN.exportDialog.pipeline.publishMessages
+      });
+    }
     await delay(40);
+    return undefined;
   }
 
   function createPipelineTemplate(): void {
     const next = createTwoStepExportPipeline(t.pipeline.defaultName);
     setPipelineConfig(next);
     setPipelineStatuses(Object.fromEntries(next.nodes.map((node) => [node.id, 'waiting' as ExportPipelineNodeStatus])));
+    setPublishPipelineLogs([]);
+  }
+
+  function createPublishPipelineTemplate(): void {
+    const next = createPublishAutomationPipeline(t.pipeline.publishDefaultName);
+    setPipelineConfig(next);
+    setPipelineStatuses(Object.fromEntries(next.nodes.map((node) => [node.id, 'waiting' as ExportPipelineNodeStatus])));
+    setPublishPipelineLogs([]);
   }
 
   async function previewExport(): Promise<void> {
@@ -1879,7 +1934,13 @@ function relinkFromPreflight(): void {
             </div>
           ) : null}
           {exportMode === 'pipeline' ? (
-            <PipelineSection pipeline={pipelineConfig} statuses={pipelineStatuses} onCreateTemplate={createPipelineTemplate} />
+            <PipelineSection
+              pipeline={pipelineConfig}
+              statuses={pipelineStatuses}
+              publishLogs={publishPipelineLogs}
+              onCreateTemplate={createPipelineTemplate}
+              onCreatePublishTemplate={createPublishPipelineTemplate}
+            />
           ) : exportMode === 'codec-compare' ? (
             <div className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3" data-testid="export-codec-compare-tab">
               <label className="pt-1 text-xs font-medium text-slate-600">{t.codecCompare.title}</label>

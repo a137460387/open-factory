@@ -71,8 +71,17 @@ export function parseProjectReleaseRecord(contents: string): ProjectReleaseRecor
     changelog: typeof parsed.changelog === 'string' ? parsed.changelog : '',
     snapshotPath: typeof parsed.snapshotPath === 'string' ? parsed.snapshotPath : '',
     exportPresetId: typeof parsed.exportPresetId === 'string' ? parsed.exportPresetId : undefined,
-    exportPresetName: typeof parsed.exportPresetName === 'string' ? parsed.exportPresetName : undefined
+    exportPresetName: typeof parsed.exportPresetName === 'string' ? parsed.exportPresetName : undefined,
+    publishLogs: Array.isArray(parsed.publishLogs) ? parsed.publishLogs.filter(isPublishLogEntry) : undefined
   };
+}
+
+function isPublishLogEntry(value: unknown): boolean {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+  const item = value as { nodeId?: unknown; nodeType?: unknown; status?: unknown; durationMs?: unknown };
+  return typeof item.nodeId === 'string' && typeof item.nodeType === 'string' && (item.status === 'success' || item.status === 'failed' || item.status === 'skipped') && typeof item.durationMs === 'number';
 }
 
 function isReleaseRecordFileName(fileName: string): boolean {

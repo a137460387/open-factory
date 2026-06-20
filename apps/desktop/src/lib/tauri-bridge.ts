@@ -174,6 +174,25 @@ export interface WebdavTextPutRequest extends WebdavTextRequest {
   contentType?: string;
 }
 
+export interface SmtpEmailRequest {
+  host: string;
+  port: number;
+  username?: string;
+  password?: string;
+  from: string;
+  to: string[];
+  subject: string;
+  html: string;
+  secure?: boolean;
+}
+
+export interface WebhookJsonRequest {
+  url: string;
+  headers?: Record<string, string>;
+  body: Record<string, unknown>;
+  timeoutMs?: number;
+}
+
 export type TranslationApiProvider = 'deepl' | 'google';
 
 export interface SharePackageProgressEvent {
@@ -692,6 +711,10 @@ export type TauriMocks = Partial<{
   writeExportPresetSyncWebdavPassword(password?: string): Promise<void> | void;
   readTranslationApiKey(provider: TranslationApiProvider): Promise<string | undefined> | string | undefined;
   writeTranslationApiKey(provider: TranslationApiProvider, apiKey?: string): Promise<void> | void;
+  readSmtpPassword(profile: string): Promise<string | undefined> | string | undefined;
+  writeSmtpPassword(profile: string, password?: string): Promise<void> | void;
+  sendSmtpEmail(request: SmtpEmailRequest): Promise<void> | void;
+  postWebhookJson(request: WebhookJsonRequest): Promise<{ status: number }> | { status: number };
   analyzeClip(request: AnalyzeClipRequest): Promise<AnalyzeClipResult> | AnalyzeClipResult;
   analyzeMotionTrack(request: AnalyzeMotionTrackRequest): Promise<AnalyzeMotionTrackResult> | AnalyzeMotionTrackResult;
   evaluateExportQuality(request: QualityEvaluationRequest): Promise<QualityEvaluationResult> | QualityEvaluationResult;
@@ -1380,6 +1403,40 @@ export async function writeTranslationApiKey(provider: TranslationApiProvider, a
     throw new Error('Translation API Key storage requires the Tauri runtime.');
   }
   await invoke('write_translation_api_key', { provider, key: apiKey });
+}
+
+export async function readSmtpPassword(profile: string): Promise<string | undefined> {
+  const mock = getTauriMocks()?.readSmtpPassword;
+  if (mock) {
+    return mock(profile);
+  }
+  return invoke<string | undefined>('read_smtp_password', { profile });
+}
+
+export async function writeSmtpPassword(profile: string, password?: string): Promise<void> {
+  const mock = getTauriMocks()?.writeSmtpPassword;
+  if (mock) {
+    await mock(profile, password);
+    return;
+  }
+  await invoke('write_smtp_password', { profile, password });
+}
+
+export async function sendSmtpEmail(request: SmtpEmailRequest): Promise<void> {
+  const mock = getTauriMocks()?.sendSmtpEmail;
+  if (mock) {
+    await mock(request);
+    return;
+  }
+  await invoke('send_smtp_email', { request });
+}
+
+export async function postWebhookJson(request: WebhookJsonRequest): Promise<{ status: number }> {
+  const mock = getTauriMocks()?.postWebhookJson;
+  if (mock) {
+    return mock(request);
+  }
+  return invoke<{ status: number }>('post_webhook_json', { request });
 }
 
 export async function analyzeClip(request: AnalyzeClipRequest): Promise<AnalyzeClipResult> {

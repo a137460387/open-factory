@@ -1,4 +1,26 @@
-export type ExportPipelineNodeType = 'export-mp4' | 'generate-gif' | 'extract-cover' | 'quality-check' | 'script-hook' | 'webdav-upload' | 'notification';
+import {
+  normalizePublishPlatform,
+  normalizePublishWindow,
+  normalizeSmtpSettings,
+  normalizeWebhookSettings,
+  type ExportPublishPlatform,
+  type ExportPublishSmtpSettings,
+  type ExportPublishWebhookSettings,
+  type ExportPublishWindow
+} from './publish-pipeline';
+
+export type ExportPipelineNodeType =
+  | 'export-mp4'
+  | 'generate-gif'
+  | 'extract-cover'
+  | 'quality-check'
+  | 'script-hook'
+  | 'webdav-upload'
+  | 'notification'
+  | 'publish-platform'
+  | 'email-notification'
+  | 'webhook-callback'
+  | 'write-release-record';
 export type ExportPipelineCondition = 'on-success' | 'on-failure' | 'always';
 export type ExportPipelineNodeStatus = 'waiting' | 'running' | 'complete' | 'failed' | 'skipped';
 
@@ -9,6 +31,10 @@ export interface ExportPipelineNode {
   condition?: ExportPipelineCondition;
   retryOnFailure?: boolean;
   script?: string;
+  platform?: ExportPublishPlatform;
+  smtp?: ExportPublishSmtpSettings;
+  webhook?: ExportPublishWebhookSettings;
+  publishWindow?: ExportPublishWindow;
 }
 
 export interface ExportPipelineEdge {
@@ -39,6 +65,56 @@ export function createTwoStepExportPipeline(name = 'Export Pipeline'): ExportPip
       { id: 'node-script-hook', type: 'script-hook', name: 'Script Hook', condition: 'on-success', script: 'echo {output}' }
     ],
     edges: [{ from: 'node-export-mp4', to: 'node-script-hook' }]
+  });
+}
+
+export function createPublishAutomationPipeline(name = 'Publish Pipeline'): ExportPipeline {
+  return normalizeExportPipeline({
+    id: 'pipeline-publish',
+    name,
+    nodes: [
+      { id: 'node-export-mp4', type: 'export-mp4', name: 'Export MP4', condition: 'always' },
+      {
+        id: 'node-email-notification',
+        type: 'email-notification',
+        name: 'Email Notification',
+        condition: 'on-success',
+        smtp: {
+          host: 'smtp.example.local',
+          port: 587,
+          from: 'open-factory@example.local',
+          to: ['producer@example.local'],
+          subject: 'Open Factory export complete',
+          passwordKey: 'default'
+        },
+        publishWindow: { daysOfWeek: [1, 2, 3, 4, 5, 6, 7], startHour: 0, endHour: 24 }
+      },
+      {
+        id: 'node-publish-platform',
+        type: 'publish-platform',
+        name: 'Publish to Platform',
+        condition: 'on-success',
+        platform: 'youtube'
+      },
+      {
+        id: 'node-webhook-callback',
+        type: 'webhook-callback',
+        name: 'Webhook Callback',
+        condition: 'on-success',
+        webhook: {
+          url: 'https://example.invalid/open-factory/export-complete',
+          headers: { 'X-Open-Factory': 'export' },
+          timeoutMs: 5000
+        }
+      },
+      { id: 'node-release-record', type: 'write-release-record', name: 'Write Release Record', condition: 'on-success' }
+    ],
+    edges: [
+      { from: 'node-export-mp4', to: 'node-email-notification' },
+      { from: 'node-export-mp4', to: 'node-publish-platform' },
+      { from: 'node-export-mp4', to: 'node-webhook-callback' },
+      { from: 'node-export-mp4', to: 'node-release-record' }
+    ]
   });
 }
 
@@ -134,12 +210,27 @@ function normalizePipelineNode(node: Partial<ExportPipelineNode>): ExportPipelin
     name: typeof node.name === 'string' && node.name.trim() ? node.name.trim().slice(0, 120) : defaultNodeName(type),
     condition: normalizePipelineCondition(node.condition),
     retryOnFailure: node.retryOnFailure === true,
-    ...(typeof node.script === 'string' && node.script.trim() ? { script: node.script.trim() } : {})
+    ...(typeof node.script === 'string' && node.script.trim() ? { script: node.script.trim() } : {}),
+    ...(type === 'publish-platform' ? { platform: normalizePublishPlatform(node.platform) } : {}),
+    ...(type === 'email-notification' && normalizeSmtpSettings(node.smtp) ? { smtp: normalizeSmtpSettings(node.smtp) } : {}),
+    ...(type === 'webhook-callback' && normalizeWebhookSettings(node.webhook) ? { webhook: normalizeWebhookSettings(node.webhook) } : {}),
+    ...(normalizePublishWindow(node.publishWindow) ? { publishWindow: normalizePublishWindow(node.publishWindow) } : {})
   };
 }
 
 function normalizePipelineNodeType(type: ExportPipelineNodeType | string | undefined): ExportPipelineNodeType {
-  return type === 'generate-gif' || type === 'extract-cover' || type === 'quality-check' || type === 'script-hook' || type === 'webdav-upload' || type === 'notification' ? type : 'export-mp4';
+  return type === 'generate-gif' ||
+    type === 'extract-cover' ||
+    type === 'quality-check' ||
+    type === 'script-hook' ||
+    type === 'webdav-upload' ||
+    type === 'notification' ||
+    type === 'publish-platform' ||
+    type === 'email-notification' ||
+    type === 'webhook-callback' ||
+    type === 'write-release-record'
+    ? type
+    : 'export-mp4';
 }
 
 function normalizePipelineCondition(condition: ExportPipelineCondition | string | undefined): ExportPipelineCondition {
@@ -154,7 +245,11 @@ function defaultNodeName(type: ExportPipelineNodeType): string {
     'quality-check': 'Run Quality Check',
     'script-hook': 'Script Hook',
     'webdav-upload': 'Upload WebDAV',
-    notification: 'Send Notification'
+    notification: 'Send Notification',
+    'publish-platform': 'Publish Platform',
+    'email-notification': 'Email Notification',
+    'webhook-callback': 'Webhook Callback',
+    'write-release-record': 'Write Release Record'
   }[type];
 }
 

@@ -30,8 +30,10 @@ import type {
   PreviewWindowRequest,
   PreviewWindowResolutionScale,
   PreviewWindowState,
+  SmtpEmailRequest,
   TauriMocks,
   TranslationApiProvider,
+  WebhookJsonRequest,
   WebdavExportUploadRequest,
   WebdavProjectBackupRequest,
   WebdavTextPutRequest
@@ -77,6 +79,8 @@ const translationApiKeys = new Map<TranslationApiProvider, string>();
 let lastWebdavPutRequest: WebdavProjectBackupRequest | undefined;
 let lastWebdavExportUploadRequest: WebdavExportUploadRequest | undefined;
 let lastWebdavTextPutRequest: WebdavTextPutRequest | undefined;
+let lastSmtpEmailRequest: SmtpEmailRequest | undefined;
+let lastWebhookJsonRequest: WebhookJsonRequest | undefined;
 const webdavTextFiles = new Map<string, string>();
 let minimizedToTray = false;
 let previewWindowState: PreviewWindowState = {
@@ -599,6 +603,15 @@ const mocks: TauriMocks = {
     } else {
       translationApiKeys.delete(provider);
     }
+  },
+  readSmtpPassword: () => 'mock-smtp-password',
+  writeSmtpPassword: () => undefined,
+  sendSmtpEmail: (request) => {
+    lastSmtpEmailRequest = request;
+  },
+  postWebhookJson: (request) => {
+    lastWebhookJsonRequest = request;
+    return { status: 200 };
   },
   analyzeClip: async ({ clipId }) => {
     emit('clip-analysis-progress', { clipId, progress: 0.35, progressPct: 35 });
@@ -2427,6 +2440,8 @@ window.__E2E_ACTIONS__ = {
   getNotifications: () => notifications,
   getLastWebdavPutRequest: () => lastWebdavPutRequest,
   getLastWebdavExportUploadRequest: () => lastWebdavExportUploadRequest,
+  getLastSmtpEmailRequest: () => lastSmtpEmailRequest,
+  getLastWebhookJsonRequest: () => lastWebhookJsonRequest,
   addKeyframe: (clipId: unknown, property: unknown, time: unknown, value: unknown) => {
     if (typeof clipId !== 'string' || !isKeyframeProperty(property) || typeof time !== 'number' || typeof value !== 'number') {
       throw new Error('Invalid addKeyframe E2E action input.');
@@ -2590,6 +2605,8 @@ window.__E2E_ACTIONS__ = {
     lastWebdavPutRequest = undefined;
     lastWebdavExportUploadRequest = undefined;
     lastWebdavTextPutRequest = undefined;
+    lastSmtpEmailRequest = undefined;
+    lastWebhookJsonRequest = undefined;
     webdavTextFiles.clear();
     lastExportPlan = undefined;
     exportRunCalls = [];
