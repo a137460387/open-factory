@@ -157,7 +157,8 @@ pub fn run() {
             commands::smoke::get_preview_smoke_config,
             commands::smoke::get_cancel_smoke_config,
             send_notification,
-            force_close_window
+            force_close_window,
+            commands::files::read_file_header_bytes
         ])
         .setup(|app| {
             let window_exists = app.get_webview_window("main").is_some();
@@ -312,4 +313,3 @@ fn write_frontend_smoke_page_load_marker(
         serde_json::to_string_pretty(&report).unwrap_or_default(),
     );
 }
-            commands::files::read_file_header_bytes,
