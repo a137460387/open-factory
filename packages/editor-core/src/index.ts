@@ -142,3 +142,5 @@ export * from './subtitles/proofreading';
 export * from './subtitles/data-import';
 export * from './subtitles/style-templates';
 export * from './media-file-sniff';
+export * from './subtitles/spell-check';
+export * from './export/export-notification';
