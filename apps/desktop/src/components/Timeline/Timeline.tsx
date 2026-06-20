@@ -166,6 +166,7 @@ import {
   type ReplaceMediaCompatibilityWarning,
   type ReplaceMediaDurationMode
 } from '@open-factory/editor-core';
+import { zoomTimelineByGesture, LONG_PRESS_PAN_THRESHOLD_MS } from '@open-factory/editor-core';
 import { clsx } from 'clsx';
 import { AudioWaveform, Bookmark, Captions, Flag, Group, Magnet, MessageSquarePlus, MessageSquareText, Mic2, Music2, Plus, Scissors, Star, Trash2, Type, Ungroup } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -2251,6 +2252,116 @@ function addProjectBookmark(time = playheadTime): void {
     setTimelineViewportHeight(scroll.clientHeight || 240);
   }
 
+  // Safari gesture zoom support
+  useEffect(() => {
+    const scroll = scrollRef.current;
+    if (!scroll) {
+      return;
+    }
+    let gestureBaseZoom = zoom;
+
+    function onGestureStart(event: Event): void {
+      event.preventDefault();
+      gestureBaseZoom = zoom;
+      gestureScaleRef.current = 1;
+    }
+
+    function onGestureChange(event: Event): void {
+      event.preventDefault();
+      const scale = (event as unknown as { scale?: number }).scale ?? 1;
+      gestureScaleRef.current = scale;
+      const nextZoom = zoomTimelineByGesture(gestureBaseZoom, scale);
+      const rect = scroll!.getBoundingClientRect();
+      const anchorX = (event as unknown as { clientX?: number }).clientX ?? (rect.left + rect.width / 2);
+      applyZoom(nextZoom, anchorX - rect.left);
+    }
+
+    function onGestureEnd(event: Event): void {
+      event.preventDefault();
+      gestureScaleRef.current = 1;
+    }
+
+    scroll.addEventListener('gesturestart', onGestureStart, { passive: false });
+    scroll.addEventListener('gesturechange', onGestureChange, { passive: false });
+    scroll.addEventListener('gestureend', onGestureEnd, { passive: false });
+    return () => {
+      scroll.removeEventListener('gesturestart', onGestureStart);
+      scroll.removeEventListener('gesturechange', onGestureChange);
+      scroll.removeEventListener('gestureend', onGestureEnd);
+    };
+  });
+
+  // Long-press pan: press and hold >300ms on blank area starts panning instead of selecting
+  function onTimelinePointerDown(event: React.PointerEvent<HTMLDivElement>): void {
+    if (event.button !== 0) {
+      return;
+    }
+    const target = event.target as HTMLElement;
+    if (target.closest('[data-testid^="timeline-clip-"]') || target.closest('[data-testid^="track-header-"]')) {
+      return;
+    }
+    longPressActiveRef.current = false;
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const scroll = scrollRef.current;
+    if (!scroll) {
+      return;
+    }
+    const startScrollLeft = scroll.scrollLeft;
+    longPressTimerRef.current = setTimeout(() => {
+      longPressActiveRef.current = true;
+      setIsPanning(true);
+    }, LONG_PRESS_PAN_THRESHOLD_MS);
+
+    function onMove(moveEvent: PointerEvent): void {
+      if (!longPressActiveRef.current) {
+        const dx = Math.abs(moveEvent.clientX - startX);
+        const dy = Math.abs(moveEvent.clientY - startY);
+        if (dx > 5 || dy > 5) {
+          if (longPressTimerRef.current) {
+            clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+          }
+        }
+        return;
+      }
+      moveEvent.preventDefault();
+      const delta = startX - moveEvent.clientX;
+      scroll!.scrollLeft = startScrollLeft + delta;
+      syncScrollViewport();
+    }
+
+    function onUp(): void {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+      longPressActiveRef.current = false;
+      setIsPanning(false);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    }
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }
+
+  function onTimelineDoubleClick(event: React.MouseEvent<HTMLDivElement>): void {
+    const target = event.target as HTMLElement;
+    if (target.closest('[data-testid^="timeline-clip-"]') || target.closest('[data-testid^="track-header-"]')) {
+      return;
+    }
+    const scroll = scrollRef.current;
+    if (!scroll) {
+      return;
+    }
+    const duration = Math.max(1, getTimelineDuration(project.timeline));
+    setTimelineZoom(fitTimelineZoomToWindow(duration, scroll.clientWidth ?? 960, LABEL_WIDTH));
+    requestAnimationFrame(() => {
+      scroll.scrollLeft = 0;
+    });
+  }
+
   function scrollTimelineFromMinimap(y: number, mode: 'top' | 'center'): void {
     const scroll = scrollRef.current;
     if (!scroll) {
@@ -2813,6 +2924,8 @@ function addProjectBookmark(time = playheadTime): void {
           onScroll={syncScrollViewport}
           onDragOver={onTimelineDragOver}
           onDrop={onTimelineDrop}
+          onPointerDown={onTimelinePointerDown}
+          onDoubleClick={onTimelineDoubleClick}
           data-testid="timeline-scroll-container"
         >
         <div className="relative" style={{ width: LABEL_WIDTH + width }}>
@@ -5403,3 +5516,7 @@ function heatmapColor(value: number, colorScheme: TimelineHeatmapViewSettings['c
 function keyframeRefKey(ref: SelectedKeyframeRef): string {
   return `${ref.clipId}\0${ref.property}\0${ref.keyframeId}`;
 }
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressActiveRef = useRef(false);
+  const gestureScaleRef = useRef(1);
+  const [isPanning, setIsPanning] = useState(false);

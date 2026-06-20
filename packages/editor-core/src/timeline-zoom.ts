@@ -64,3 +64,11 @@ export function fitTimelineZoomToWindow(duration: number, viewportWidth: number,
   const visibleWidth = Math.max(1, viewportWidth - labelWidth);
   return clampTimelineZoom(visibleWidth / Math.max(1, duration));
 }
+export const LONG_PRESS_PAN_THRESHOLD_MS = 300;
+
+export function zoomTimelineByGesture(currentZoom: number, gestureScale: number): number {
+  if (!Number.isFinite(gestureScale) || gestureScale <= 0) {
+    return clampTimelineZoom(currentZoom);
+  }
+  return clampTimelineZoom(currentZoom * gestureScale);
+}

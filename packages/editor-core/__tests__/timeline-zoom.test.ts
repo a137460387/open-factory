@@ -7,7 +7,9 @@ import {
   clampTimelineZoom,
   ensurePlayheadVisible,
   fitTimelineZoomToWindow,
-  zoomTimelineByWheel
+  zoomTimelineByWheel,
+  zoomTimelineByGesture,
+  LONG_PRESS_PAN_THRESHOLD_MS
 } from '../src';
 
 describe('timeline zoom calculations', () => {
@@ -69,5 +71,37 @@ describe('timeline zoom calculations', () => {
   it('fits timeline duration to the available viewport width', () => {
     expect(fitTimelineZoomToWindow(10, 938, 138)).toBe(80);
     expect(fitTimelineZoomToWindow(0, 100, 138)).toBe(MIN_TIMELINE_ZOOM);
+  });
+
+  it('defines a long-press pan threshold of 300ms', () => {
+    expect(LONG_PRESS_PAN_THRESHOLD_MS).toBe(300);
+  });
+
+  it('zooms by Safari gesture scale factor', () => {
+    expect(zoomTimelineByGesture(80, 1.5)).toBe(120);
+    expect(zoomTimelineByGesture(80, 0.5)).toBe(40);
+    expect(zoomTimelineByGesture(80, 0)).toBe(BASE_TIMELINE_ZOOM);
+    expect(zoomTimelineByGesture(80, -1)).toBe(BASE_TIMELINE_ZOOM);
+    expect(zoomTimelineByGesture(80, Number.NaN)).toBe(BASE_TIMELINE_ZOOM);
+    expect(zoomTimelineByGesture(80, 100)).toBe(MAX_TIMELINE_ZOOM);
+  });
+
+  it('keeps the anchor viewport position stable when zooming via gesture', () => {
+    const anchorViewportX = 400;
+    const oldZoom = 80;
+    const newZoom = zoomTimelineByGesture(oldZoom, 2);
+
+    const nextScrollLeft = calculateAnchoredScrollLeft({
+      scrollLeft: 200,
+      anchorViewportX,
+      oldZoom,
+      newZoom,
+      labelWidth: 138
+    });
+
+    const anchorTimelineX = 200 + anchorViewportX - 138;
+    const anchorTime = anchorTimelineX / oldZoom;
+    const expectedScrollLeft = 138 + anchorTime * newZoom - anchorViewportX;
+    expect(nextScrollLeft).toBeCloseTo(expectedScrollLeft, 5);
   });
 });
