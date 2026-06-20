@@ -62,6 +62,12 @@ input,
 select,
 textarea {
   font: inherit;
+  transition:
+    background-color 150ms ease-out,
+    border-color 150ms ease-out,
+    color 150ms ease-out,
+    box-shadow 150ms ease-out,
+    opacity 150ms ease-out;
 }
 
 button:disabled {

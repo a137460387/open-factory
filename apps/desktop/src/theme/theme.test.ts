@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   BUILTIN_THEMES,
   buildThemeCssVariables,
+  contrastRatio,
   deleteCustomTheme,
   applyThemeDefinitionToDocument,
   upsertCustomTheme,
+  validateThemeContrast,
   type ThemeSettings
 } from './theme';
 
@@ -58,6 +60,28 @@ describe('theme definitions', () => {
 
     expect(deleted.customThemes).toHaveLength(0);
     expect(deleted.activeThemeId).toBe('dark');
+  });
+
+  it('calculates WCAG contrast ratio correctly', () => {
+    // white on black = 21:1
+    expect(contrastRatio('#ffffff', '#000000')).toBeCloseTo(21, 0);
+    // same color = 1:1
+    expect(contrastRatio('#808080', '#808080')).toBeCloseTo(1, 2);
+  });
+
+  it('all built-in themes pass WCAG AA for primary/secondary text pairs', () => {
+    for (const [id, theme] of Object.entries(BUILTIN_THEMES)) {
+      const results = validateThemeContrast(theme);
+      const failures = results.filter((r) => !r.pass && r.foreground !== theme.colors.textMuted);
+      expect(failures, `Theme ${id} has AA failures: ${JSON.stringify(failures)}`).toHaveLength(0);
+    }
+  });
+
+  it('all built-in themes pass WCAG AA for muted text on primary bg', () => {
+    for (const [id, theme] of Object.entries(BUILTIN_THEMES)) {
+      const ratio = contrastRatio(theme.colors.textMuted, theme.colors.bgPrimary);
+      expect(ratio, `Theme ${id} textMuted on bgPrimary`).toBeGreaterThanOrEqual(4.5);
+    }
   });
 });
 

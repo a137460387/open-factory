@@ -90,8 +90,8 @@ export const BUILTIN_THEMES: Record<BuiltinThemeId, ThemeDefinition> = {
       bgSecondary: '#f5f6f8',
       bgElevated: '#ffffff',
       textPrimary: '#16181d',
-      textSecondary: '#4b5563',
-      textMuted: '#64748b',
+     textSecondary: '#4b5563',
+      textMuted: '#5a6b7c',
       border: '#d9dde5',
       accent: '#1f7a68',
       accentContrast: '#ffffff',
@@ -421,4 +421,55 @@ function relativeLuminance(hex: string): number {
 
 function readableTextColor(hex: string): string {
   return relativeLuminance(hex) > 0.48 ? '#000000' : '#ffffff';
+}
+
+/** WCAG 2.x contrast ratio between two hex colors (>= 4.5:1 for AA normal text). */
+export function contrastRatio(foreground: string, background: string): number {
+  const l1 = relativeLuminance(foreground);
+  const l2 = relativeLuminance(background);
+  const lighter = Math.max(l1, l2);
+  const darker = Math.min(l1, l2);
+  return (lighter + 0.05) / (darker + 0.05);
+}
+
+export type WcagLevel = 'AAA' | 'AA' | 'fail';
+
+export function wcagLevel(ratio: number): WcagLevel {
+  if (ratio >= 7) return 'AAA';
+  if (ratio >= 4.5) return 'AA';
+  return 'fail';
+}
+
+export interface ContrastCheckResult {
+  foreground: string;
+  background: string;
+  ratio: number;
+  level: WcagLevel;
+  pass: boolean;
+}
+
+export const WCAG_TEXT_PAIRS: Array<[keyof ThemeColors, keyof ThemeColors]> = [
+  ['textPrimary', 'bgPrimary'],
+  ['textPrimary', 'bgSecondary'],
+  ['textPrimary', 'bgElevated'],
+  ['textSecondary', 'bgPrimary'],
+  ['textSecondary', 'bgSecondary'],
+  ['textSecondary', 'bgElevated'],
+  ['textMuted', 'bgPrimary'],
+  ['textMuted', 'bgSecondary'],
+  ['textMuted', 'bgElevated'],
+];
+
+/** Validate all text/background pairs for WCAG AA (>= 4.5:1). */
+export function validateThemeContrast(theme: ThemeDefinition): ContrastCheckResult[] {
+  return WCAG_TEXT_PAIRS.map(([fg, bg]) => {
+    const ratio = contrastRatio(theme.colors[fg], theme.colors[bg]);
+    return {
+      foreground: theme.colors[fg],
+      background: theme.colors[bg],
+      ratio: Math.round(ratio * 100) / 100,
+      level: wcagLevel(ratio),
+      pass: ratio >= 4.5,
+    };
+  });
 }
