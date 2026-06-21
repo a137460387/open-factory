@@ -19,6 +19,7 @@ import {
   ApplyEffectPresetCommand,
   ApplyTextAnimationCommand,
   BatchKeyframeEditCommand,
+  BatchApplyAspectRatioCommand,
   BatchProofreadSubtitleCommand,
   BatchUpdateClipCommand,
   BatchUpdateClipGroupClipsCommand,
@@ -2828,3 +2829,30 @@ describe('timeline commands', () => {
     expect(accessor.current()).toBe(before);
   });
 });
+  it('applies batch aspect ratio crop with undo and redo', () => {
+    const timeline = makeTimeline([makeVideoClip({ id: 'bc1' }), makeVideoClip({ id: 'bc2' })]);
+    const accessor = makeAccessor(timeline);
+    const manager = new CommandManager();
+
+    const command = new BatchApplyAspectRatioCommand(accessor, [
+      { clipId: 'bc1', targetAspectRatio: '9:16', offsetX: 0, offsetY: 0 },
+      { clipId: 'bc2', targetAspectRatio: '9:16', offsetX: 0.5, offsetY: -0.3 }
+    ]);
+
+    manager.execute(command);
+    const after = accessor.current();
+    const clip1 = after.tracks.flatMap((t) => t.clips).find((c) => c.id === 'bc1');
+    const clip2 = after.tracks.flatMap((t) => t.clips).find((c) => c.id === 'bc2');
+    expect((clip1 as any)?.reframeSettings?.targetAspectRatio).toBe('9:16');
+    expect((clip2 as any)?.reframeSettings?.reframeOffsetX).toBe(0.5);
+
+    manager.undo();
+    const restored = accessor.current();
+    const rc1 = restored.tracks.flatMap((t) => t.clips).find((c) => c.id === 'bc1');
+    expect((rc1 as any)?.reframeSettings?.targetAspectRatio).toBeUndefined();
+
+    manager.redo();
+    const redone = accessor.current();
+    const rdc1 = redone.tracks.flatMap((t) => t.clips).find((c) => c.id === 'bc1');
+    expect((rdc1 as any)?.reframeSettings?.targetAspectRatio).toBe('9:16');
+  });

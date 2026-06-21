@@ -148,3 +148,7 @@ export * from './export/export-preset-recommendations';
 export * from './timeline-prerender';
 export * from './audio-fade-curves';
 export * from './media-tags';
+export * from './batch-crop';
+export * from './naming-template';
+export * from './quick-actions';
+export * from './duplicate-media-merge';

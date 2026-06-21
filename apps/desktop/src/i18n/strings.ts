@@ -4806,6 +4806,62 @@ const zh = {
         { label: '滑轨大步长', keys: 'Shift + ← / → / ↑ / ↓' }
       ]
     }
+  },
+  batchCrop: {
+    title: '批量转比例',
+    subtitle: '对选中 clip 统一应用目标宽高比裁剪。',
+    anchorCenter: '居中',
+    anchorSmart: '智能跟随',
+    custom: '自定义',
+    apply: '应用',
+    cancel: '取消',
+    previewCount: (count: number) => `预览 ${count} 个 clip`,
+    appliedTitle: '批量裁剪已应用',
+    appliedMessage: (count: number) => `已对 ${count} 个 clip 应用裁剪比例。`
+  },
+  quickActions: {
+    mute: '静音',
+    solo: '独奏',
+    volume: '音量',
+    aspectRatio: '裁剪比例',
+    addMarker: '标记',
+    copy: '复制',
+    delete: '删除',
+    splitHere: '分割',
+    inspector: '属性'
+  },
+  namingTemplate: {
+    title: '文件命名规则',
+    template: '命名模板',
+    preview: '预览',
+    variables: '变量',
+    dateFormat: '日期格式',
+    indexPadding: '序号补零位数',
+    indexStart: '起始序号',
+    customText: '自定义文本',
+    saved: '命名模板已保存',
+    saveFailed: '命名模板保存失败'
+  },
+  duplicateMediaMerge: {
+    qualityCompare: '质量对比',
+    resolution: '分辨率',
+    bitrate: '码率',
+    fileSize: '文件大小',
+    recommended: '推荐保留',
+    mergeHistory: '合并历史',
+    mergeHistoryTitle: (count: number) => `${count} 条合并记录`,
+    undoLast: '撤销最近合并',
+    undoLastMessage: '将恢复被合并文件的引用。',
+    undoLastSuccess: '已撤销最近一次合并',
+    undoLastFailed: '撤销合并失败',
+    moveToTrash: '移动到回收站',
+    moveFailed: '移动到回收站失败',
+    crossProject: '跨项目重复',
+    crossProjectMessage: (count: number) => `检测到 ${count} 个与共享库重复的文件。`,
+    noHistory: '暂无合并历史。',
+    historyEntry: (kept: string, merged: number) => `保留 ${kept}，合并 ${merged} 个文件。`,
+    deleteConfirm: '确认合并删除',
+    deleteConfirmMessage: '合并后将移除被合并文件的引用。'
   }
 } as const;
 
