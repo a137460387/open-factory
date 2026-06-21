@@ -367,6 +367,10 @@ export function Timeline({
   const heatmapWorkerRef = useRef<Worker | null>(null);
   const heatmapRequestIdRef = useRef(0);
   const [heatmapSegments, setHeatmapSegments] = useState<TimelineHeatmapSegment[]>([]);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressActiveRef = useRef(false);
+  const gestureScaleRef = useRef(1);
+  const [isPanning, setIsPanning] = useState(false);
   const timelineDuration = Math.max(
     10,
     ...project.timeline.tracks.flatMap((track) => track.clips.map((clip) => clip.start + clip.duration + 2))
@@ -5516,7 +5520,3 @@ function heatmapColor(value: number, colorScheme: TimelineHeatmapViewSettings['c
 function keyframeRefKey(ref: SelectedKeyframeRef): string {
   return `${ref.clipId}\0${ref.property}\0${ref.keyframeId}`;
 }
-  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const longPressActiveRef = useRef(false);
-  const gestureScaleRef = useRef(1);
-  const [isPanning, setIsPanning] = useState(false);
