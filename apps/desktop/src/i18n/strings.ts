@@ -3974,6 +3974,33 @@ const zh = {
       apng: 'APNG'
     }
   },
+  exportRecommendations: {
+    groupLabel: '推荐',
+    hideRecommendations: '不再显示推荐',
+    reasonResolution: (orient: string) => `${orient}项目`,
+    reasonDuration: (seconds: number) => `${seconds}秒以内的短视频`,
+    reasonSubtitles: '含字幕，建议开启软字幕',
+    reasonHdr: '含HDR素材',
+    recommended: '推荐'
+  },
+  thumbnailPrerender: {
+    progress: '缩略图预渲染中',
+    largeProjectMode: '大项目模式'
+  },
+  tagCloud: {
+    title: '标签云',
+    collapse: '收起',
+    expand: '展开',
+    renameTag: '重命名标签',
+    deleteTag: '删除标签',
+    noTags: '暂无标签'
+  },
+  audioFadeCurve: {
+    linear: '线性',
+    logarithmic: '对数',
+    exponential: '指数',
+    sCurve: 'S形'
+  },
   exportPresets: {
     customDescription: '自定义导出预设。',
     nameRequired: '请输入预设名称。',
@@ -8308,6 +8335,33 @@ const enOverrides = {
       webp: 'WebP',
       apng: 'APNG'
     }
+  },
+  exportRecommendations: {
+    groupLabel: 'Recommended',
+    hideRecommendations: 'Hide recommendations',
+    reasonResolution: (orient: string) => `${orient} project`,
+    reasonDuration: (seconds: number) => `Short video under ${seconds}s`,
+    reasonSubtitles: 'Has subtitles, suggest soft subs',
+    reasonHdr: 'Contains HDR media',
+    recommended: 'Recommended'
+  },
+  thumbnailPrerender: {
+    progress: 'Thumbnail prerendering',
+    largeProjectMode: 'Large project mode'
+  },
+  tagCloud: {
+    title: 'Tag Cloud',
+    collapse: 'Collapse',
+    expand: 'Expand',
+    renameTag: 'Rename tag',
+    deleteTag: 'Delete tag',
+    noTags: 'No tags yet'
+  },
+  audioFadeCurve: {
+    linear: 'Linear',
+    logarithmic: 'Logarithmic',
+    exponential: 'Exponential',
+    sCurve: 'S-curve'
   },
   exportPresets: {
     customDescription: 'Custom export preset.',

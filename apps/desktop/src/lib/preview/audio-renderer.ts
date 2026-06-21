@@ -362,13 +362,18 @@ function setPannerPosition(panner: PannerNode, x: number, y: number, z: number):
   (panner as PannerNode & { setPosition?: (x: number, y: number, z: number) => void }).setPosition?.(x, y, z);
 }
 
-function applyFadeCurve(value: number, curve: 'linear' | 'ease-in' | 'ease-out'): number {
+import type { AudioFadeCurve } from '@open-factory/editor-core';
+
+function applyFadeCurve(value: number, curve: AudioFadeCurve): number {
   const clamped = Math.max(0, Math.min(1, value));
   if (curve === 'ease-in') {
     return clamped * clamped;
   }
   if (curve === 'ease-out') {
     return 1 - (1 - clamped) * (1 - clamped);
+  }
+  if (curve === 'ease-in-out') {
+    return clamped < 0.5 ? 2 * clamped * clamped : 1 - (-2 * clamped + 2) * (-2 * clamped + 2) / 2;
   }
   return clamped;
 }

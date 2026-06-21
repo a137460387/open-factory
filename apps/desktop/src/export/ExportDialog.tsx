@@ -89,7 +89,10 @@
   type TargetAspectRatio,
   type VersionedExportDefinition,
   type VersionedExportReportRow,
-  type VersionedExportTaskMetadata
+  type VersionedExportTaskMetadata,
+  buildExportPresetRecommendations,
+  buildExportRecommendationContext,
+  type ExportPresetRecommendation
 } from '@open-factory/editor-core';
 import { AlertTriangle, Cloud, CloudDownload, Clock3, Copy, Download, FileText, FolderOpen, Image as ImageIcon, ListPlus, Loader2, Minimize2, Save, Trash2, Upload, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
@@ -129,6 +132,7 @@ import {
   DEFAULT_EXPORT_PRESET_SYNC_SETTINGS,
   readAudioVisualizationThemeSettings,
   readExportBackgroundSettings,
+  readDisableExportRecommendations,
   readExportOptimizationSettings,
   readExportPresetSyncSettings,
   readExportUploadSettings,
@@ -485,6 +489,20 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
   const [renderFarmEnabled, setRenderFarmEnabled] = useState(false);
   const [renderFarmInstances, setRenderFarmInstances] = useState(suggestedRenderFarmInstances);
   const [progressiveExportEnabled, setProgressiveExportEnabled] = useState(false);
+  const [disableRecommendations, setDisableRecommendations] = useState(false);
+  const recommendationContext = useMemo(() => buildExportRecommendationContext(project), [project]);
+  const recommendations = useMemo(() => {
+    if (disableRecommendations) return [];
+    return buildExportPresetRecommendations(recommendationContext, (code, ctx) => {
+      const tRec = zhCN.exportRecommendations;
+      if (code === 'resolution') return ctx.height > ctx.width ? tRec.reasonResolution('竖屏') : tRec.reasonResolution('横屏');
+      if (code === 'duration') return tRec.reasonDuration(60);
+      if (code === 'subtitles') return tRec.reasonSubtitles;
+      if (code === 'hdr') return tRec.reasonHdr;
+      return code;
+    });
+  }, [recommendationContext, disableRecommendations]);
+  const recommendedPresetIds = useMemo(() => new Set(recommendations.map((r) => r.presetId)), [recommendations]);
   const tasks = useExportQueueStore((state) => state.tasks);
   const history = useExportQueueStore((state) => state.history);
   const runnerActive = useExportQueueStore((state) => state.runnerActive);
@@ -655,6 +673,7 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
 
   useEffect(() => {
     let canceled = false;
+    void readDisableExportRecommendations().then(setDisableRecommendations).catch(() => {});
     void loadExportPresets()
       .then((nextPresets) => {
         if (canceled) {
@@ -1712,6 +1731,19 @@ function relinkFromPreflight(): void {
             <label className="pt-1.5 text-xs font-medium text-slate-600">{t.preset}</label>
             <div>
               <select className="w-full rounded-md border border-line px-2 py-1.5" value={presetId} onChange={(event) => setPresetId(event.target.value)} data-testid="export-preset-select">
+                {recommendations.length > 0 ? (
+                  <optgroup label={zhCN.exportRecommendations.groupLabel} data-testid="export-recommendation-group">
+                    {recommendations.map((rec) => {
+                      const preset = presets.find((p) => p.id === rec.presetId);
+                      if (!preset) return null;
+                      return (
+                        <option key={`rec-${preset.id}`} value={preset.id} data-testid={`export-recommended-${preset.id}`}>
+                          {zhCN.exportRecommendations.recommended} {preset.name}
+                        </option>
+                      );
+                    })}
+                  </optgroup>
+                ) : null}
                 {presets.map((preset) => (
                   <option key={preset.id} value={preset.id}>
                     {preset.name}
@@ -1719,6 +1751,15 @@ function relinkFromPreflight(): void {
                 ))}
               </select>
               <div className="mt-1 text-[11px] text-slate-500">{selectedPreset.description}</div>
+              {(() => {
+                const rec = recommendations.find((r) => r.presetId === presetId);
+                if (!rec) return null;
+                return (
+                  <div className="mt-1 text-[11px] text-emerald-600" data-testid="export-recommendation-reason">
+                    {zhCN.exportRecommendations.recommended}：{rec.reasons.map((r) => r.label).join('、')}
+                  </div>
+                );
+              })()}
               {exportPresetSyncSettings.lastSyncedAt ? (
                 <div className="mt-1 text-[11px] text-slate-500" data-testid="export-preset-cloud-sync-last-time">
                   {t.cloudSyncStatus(exportPresetSyncSettings.lastSyncedAt)}

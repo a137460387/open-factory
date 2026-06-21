@@ -67,7 +67,7 @@ export interface KeyframeHandle {
   dy: number;
 }
 
-export type AudioFadeCurve = Extract<KeyframeEasing, 'linear' | 'ease-in' | 'ease-out'>;
+export type AudioFadeCurve = 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out';
 
 export interface Keyframe<T> {
   id: string;
@@ -385,6 +385,7 @@ export interface MediaMetadata {
   description?: string;
   copyright?: string;
   date?: string;
+  customTags?: string[];
 }
 
 export interface ProjectAnnotation {

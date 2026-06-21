@@ -3916,12 +3916,17 @@ function buildAudioFadeFilters(clip: ExportClip): string {
   return filters.length > 0 ? `,${filters.join(',')}` : '';
 }
 
+import { mapAudioFadeCurveToFfmpeg, type AudioFadeCurveType } from '../audio-fade-curves';
+
 function formatAudioFadeCurve(curve: ExportClip['fadeInCurve']): string {
   if (curve === 'ease-in') {
     return ':curve=qsin';
   }
   if (curve === 'ease-out') {
     return ':curve=hsin';
+  }
+  if (curve === 'ease-in-out') {
+    return ':curve=esin';
   }
   return '';
 }

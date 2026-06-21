@@ -144,3 +144,7 @@ export * from './subtitles/style-templates';
 export * from './media-file-sniff';
 export * from './subtitles/spell-check';
 export * from './export/export-notification';
+export * from './export/export-preset-recommendations';
+export * from './timeline-prerender';
+export * from './audio-fade-curves';
+export * from './media-tags';

@@ -1,0 +1,146 @@
+import { describe, expect, it } from 'vitest';
+import type { Project } from '../src/model-types';
+import {
+  buildExportPresetRecommendations,
+  buildExportRecommendationContext,
+  checkProjectHasHdrMedia,
+  hasSubtitleTracks,
+  type ExportRecommendationContext,
+  type ExportRecommendationReasonCode
+} from '../src/export/export-preset-recommendations';
+import { createProject } from '../src/model';
+
+function makeProject(overrides: Partial<Project> = {}): Project {
+  return { ...createProject('test'), ...overrides };
+}
+
+function makeContext(overrides: Partial<ExportRecommendationContext> = {}): ExportRecommendationContext {
+  return {
+    width: 1920,
+    height: 1080,
+    duration: 120,
+    hasSubtitles: false,
+    hasHdrMedia: false,
+    ...overrides
+  };
+}
+
+describe('buildExportRecommendationContext', () => {
+  it('detects portrait resolution from project settings', () => {
+    const project = makeProject();
+    project.settings.width = 1080;
+    project.settings.height = 1920;
+    const context = buildExportRecommendationContext(project);
+    expect(context.width).toBe(1080);
+    expect(context.height).toBe(1920);
+  });
+
+  it('detects subtitle tracks in project', () => {
+    const project = makeProject();
+    project.timeline.tracks.push({
+      id: 'sub-track-1',
+      type: 'subtitle',
+      name: '字幕',
+      clips: [{ id: 'sub-1', type: 'subtitle', start: 0, duration: 5, text: 'hello', style: {} as any, subtitleMode: 'soft-sub' }]
+    } as any);
+    const context = buildExportRecommendationContext(project);
+    expect(context.hasSubtitles).toBe(true);
+  });
+});
+
+describe('buildExportPresetRecommendations', () => {
+  it('recommends tiktok for portrait short video', () => {
+    const context = makeContext({ width: 1080, height: 1920, duration: 30 });
+    const results = buildExportPresetRecommendations(context, (code) => code);
+    expect(results.length).toBeGreaterThan(0);
+    expect(results[0].presetId).toBe('tiktok');
+  });
+
+  it('includes resolution reason for portrait project', () => {
+    const context = makeContext({ width: 1080, height: 1920, duration: 30 });
+    const results = buildExportPresetRecommendations(context, (code) => code);
+    const tiktok = results.find((r) => r.presetId === 'tiktok');
+    expect(tiktok).toBeDefined();
+    expect(tiktok!.reasons.some((r) => r.code === 'resolution')).toBe(true);
+  });
+
+  it('includes duration reason for short project', () => {
+    const context = makeContext({ width: 1080, height: 1920, duration: 30 });
+    const results = buildExportPresetRecommendations(context, (code) => code);
+    const tiktok = results.find((r) => r.presetId === 'tiktok');
+    expect(tiktok).toBeDefined();
+    expect(tiktok!.reasons.some((r) => r.code === 'duration')).toBe(true);
+  });
+
+  it('includes subtitles reason when project has subtitles', () => {
+    const context = makeContext({ width: 1080, height: 1920, duration: 30, hasSubtitles: true });
+    const results = buildExportPresetRecommendations(context, (code) => code);
+    const tiktok = results.find((r) => r.presetId === 'tiktok');
+    expect(tiktok).toBeDefined();
+    expect(tiktok!.reasons.some((r) => r.code === 'subtitles')).toBe(true);
+  });
+
+  it('includes hdr reason when project has HDR media', () => {
+    const context = makeContext({ width: 1080, height: 1920, duration: 30, hasHdrMedia: true });
+    const results = buildExportPresetRecommendations(context, (code) => code);
+    const tiktok = results.find((r) => r.presetId === 'tiktok');
+    expect(tiktok).toBeDefined();
+    expect(tiktok!.reasons.some((r) => r.code === 'hdr')).toBe(true);
+  });
+
+  it('returns at most 3 recommendations', () => {
+    const context = makeContext({ width: 1080, height: 1920, duration: 30, hasSubtitles: true, hasHdrMedia: true });
+    const results = buildExportPresetRecommendations(context, (code) => code);
+    expect(results.length).toBeLessThanOrEqual(3);
+  });
+
+  it('generates human-readable reason label via labelFn', () => {
+    const context = makeContext({ width: 1080, height: 1920, duration: 30 });
+    const labelMap: Record<ExportRecommendationReasonCode, string> = {
+      resolution: '竖屏短视频',
+      duration: '60秒以内',
+      subtitles: '含字幕',
+      hdr: '含HDR素材'
+    };
+    const results = buildExportPresetRecommendations(context, (code) => labelMap[code]);
+    expect(results[0].reasons[0].label).toBe('竖屏短视频');
+  });
+});
+
+describe('hasSubtitleTracks', () => {
+  it('returns false for project without subtitle tracks', () => {
+    expect(hasSubtitleTracks(makeProject())).toBe(false);
+  });
+
+  it('returns true when project has subtitle clips', () => {
+    const project = makeProject();
+    project.timeline.tracks.push({
+      id: 'sub-track',
+      type: 'subtitle',
+      name: '字幕',
+      clips: [{ id: 'sub-1', type: 'subtitle', start: 0, duration: 3, text: 'hi', style: {} as any, subtitleMode: 'soft-sub' }]
+    } as any);
+    expect(hasSubtitleTracks(project)).toBe(true);
+  });
+});
+
+describe('checkProjectHasHdrMedia', () => {
+  it('returns false for project without HDR media', () => {
+    expect(checkProjectHasHdrMedia(makeProject())).toBe(false);
+  });
+
+  it('returns true when project media has rec2020 color profile', () => {
+    const project = makeProject();
+    project.media.push({
+      id: 'hdr-asset',
+      type: 'video',
+      name: 'hdr.mp4',
+      path: '/hdr.mp4',
+      duration: 10,
+      width: 3840,
+      height: 2160,
+      colorProfile: { sourceColorSpace: 'rec2020', label: 'BT.2020' }
+    });
+    expect(checkProjectHasHdrMedia(project)).toBe(true);
+  });
+});

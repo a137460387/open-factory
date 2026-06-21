@@ -2122,7 +2122,7 @@ describe('timeline commands', () => {
         fadeInDuration: 99,
         fadeOutDuration: -1,
         fadeInCurve: 'ease-out',
-        fadeOutCurve: 'ease-in-out' as never
+        fadeOutCurve: 'ease-in-out'
       })
     );
 
@@ -2132,7 +2132,7 @@ describe('timeline commands', () => {
       fadeInDuration: 3,
       fadeOutDuration: 0,
       fadeInCurve: 'ease-out',
-      fadeOutCurve: 'linear'
+      fadeOutCurve: 'ease-in-out'
     });
 
     manager.undo();

@@ -1140,7 +1140,7 @@ describe('project schema migration', () => {
         fadeInDuration: 99,
         fadeOutDuration: -5,
         fadeInCurve: 'ease-in',
-        fadeOutCurve: 'ease-in-out' as never
+        fadeOutCurve: 'ease-in-out'
       })
     ];
     const clamped = migrateProjectFile(serializeProject(project)).project.timeline.tracks[0].clips[0];
@@ -1151,7 +1151,7 @@ describe('project schema migration', () => {
       fadeInDuration: 4,
       fadeOutDuration: 0,
       fadeInCurve: 'ease-in',
-      fadeOutCurve: 'linear'
+      fadeOutCurve: 'ease-in-out'
     });
   });
 

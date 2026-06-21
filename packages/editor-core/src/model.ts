@@ -1166,7 +1166,7 @@ export function normalizeAudioPitchSemitones(semitones: number | undefined): num
 }
 
 export function normalizeAudioFadeCurve(curve: AudioFadeCurve | undefined): AudioFadeCurve {
-  return curve === 'ease-in' || curve === 'ease-out' || curve === 'linear' ? curve : DEFAULT_AUDIO_FADE_CURVE;
+  return curve === 'ease-in' || curve === 'ease-out' || curve === 'ease-in-out' || curve === 'linear' ? curve : DEFAULT_AUDIO_FADE_CURVE;
 }
 
 export function normalizeAudioFadeDuration(duration: number | undefined, clipDuration = Number.POSITIVE_INFINITY): number {

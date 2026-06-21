@@ -274,6 +274,8 @@ export interface AppSettings {
   customSplitLayouts?: SplitLayoutDefinition[];
   timelineGrid?: TimelineGridSettings;
   update?: UpdateSettings;
+  disableExportRecommendations?: boolean;
+  thumbnailPrerenderEnabled?: boolean;
 }
 
 export async function initializeLanguageFromSettings(): Promise<Language> {
@@ -430,6 +432,26 @@ export async function saveCustomSplitLayouts(customSplitLayouts: SplitLayoutDefi
   const nextLayouts = normalizeCustomSplitLayouts(customSplitLayouts);
   await writeAppSettings({ ...settings, customSplitLayouts: nextLayouts });
   return nextLayouts;
+}
+
+export async function readDisableExportRecommendations(): Promise<boolean> {
+  const settings = await readAppSettings();
+  return settings.disableExportRecommendations ?? false;
+}
+
+export async function saveDisableExportRecommendations(disabled: boolean): Promise<void> {
+  const settings = await readAppSettings();
+  await writeAppSettings({ ...settings, disableExportRecommendations: disabled });
+}
+
+export async function readThumbnailPrerenderEnabled(): Promise<boolean> {
+  const settings = await readAppSettings();
+  return settings.thumbnailPrerenderEnabled ?? true;
+}
+
+export async function saveThumbnailPrerenderEnabled(enabled: boolean): Promise<void> {
+  const settings = await readAppSettings();
+  await writeAppSettings({ ...settings, thumbnailPrerenderEnabled: enabled });
 }
 
 export async function readViewSettings(): Promise<ViewSettings> {
