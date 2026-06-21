@@ -53,12 +53,27 @@ test('gesture zoom keeps anchor viewport position stable', async ({ page }) => {
   const beforeClipBox = await clip.boundingBox();
   expect(beforeClipBox).not.toBeNull();
 
-  await scroll.dispatchEvent('gesturestart', { detail: 0, clientX: anchorX, clientY: anchorY });
-  for (let scale = 1.1; scale <= 2.0; scale += 0.2) {
-    await scroll.dispatchEvent('gesturechange', { detail: scale, clientX: anchorX, clientY: anchorY });
+  async function dispatchGesture(type: string, scale: number): Promise<void> {
+    await page.evaluate(
+      ({ type, scale, cx, cy }) => {
+        const el = document.querySelector('[data-testid="timeline-scroll-container"]');
+        if (!el) return;
+        const ev = new Event(type, { bubbles: true, cancelable: true });
+        Object.defineProperty(ev, 'scale', { value: scale });
+        Object.defineProperty(ev, 'clientX', { value: cx });
+        Object.defineProperty(ev, 'clientY', { value: cy });
+        el.dispatchEvent(ev);
+      },
+      { type, scale, cx: anchorX, cy: anchorY },
+    );
+  }
+
+  await dispatchGesture('gesturestart', 0);
+  for (let s = 1.1; s <= 2.0; s += 0.2) {
+    await dispatchGesture('gesturechange', s);
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   }
-  await scroll.dispatchEvent('gestureend', { detail: 2.0, clientX: anchorX, clientY: anchorY });
+  await dispatchGesture('gestureend', 2.0);
 
   const afterClipBox = await clip.boundingBox();
   expect(afterClipBox).not.toBeNull();

@@ -2272,7 +2272,8 @@ function addProjectBookmark(time = playheadTime): void {
 
     function onGestureChange(event: Event): void {
       event.preventDefault();
-      const scale = (event as unknown as { scale?: number }).scale ?? 1;
+      const raw = event as unknown as { scale?: number; detail?: number };
+      const scale = raw.scale ?? (typeof raw.detail === 'number' && raw.detail > 0 ? raw.detail : 1);
       gestureScaleRef.current = scale;
       const nextZoom = zoomTimelineByGesture(gestureBaseZoom, scale);
       const rect = scroll!.getBoundingClientRect();
