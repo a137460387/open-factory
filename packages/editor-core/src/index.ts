@@ -153,3 +153,5 @@ export * from './naming-template';
 export * from './quick-actions';
 export * from './duplicate-media-merge';
 export * from './batch-media-replace';
+export * from './subtitle-style-quickbar';
+export * from './export/export-retry-strategy';
