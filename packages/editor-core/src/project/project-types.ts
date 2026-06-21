@@ -61,6 +61,7 @@ export interface ProjectFileV2 {
     timeline: Timeline;
     sequences?: Sequence[];
     activeSequenceId?: string;
+    zoomMemory?: Record<string, number>;
   };
   warnings?: string[];
 }

@@ -1,7 +1,16 @@
+import type { ZoomEditMode } from './model-types';
+
 export const BASE_TIMELINE_ZOOM = 80;
 export const MIN_TIMELINE_ZOOM = BASE_TIMELINE_ZOOM * 0.1;
 export const MAX_TIMELINE_ZOOM = BASE_TIMELINE_ZOOM * 20;
 export const DEFAULT_TIMELINE_ZOOM_STEP = 1.2;
+
+/** 各编辑模式的默认缩放偏好 */
+export const ZOOM_MODE_DEFAULTS: Record<ZoomEditMode, number> = {
+  editing: BASE_TIMELINE_ZOOM * 3,
+  browsing: BASE_TIMELINE_ZOOM * 0.8,
+  audio: BASE_TIMELINE_ZOOM * 1.5,
+};
 
 export interface AnchoredZoomInput {
   scrollLeft: number;
@@ -71,4 +80,86 @@ export function zoomTimelineByGesture(currentZoom: number, gestureScale: number)
     return clampTimelineZoom(currentZoom);
   }
   return clampTimelineZoom(currentZoom * gestureScale);
+}
+
+/**
+ * 构建缩放记忆的上下文 key。
+ * 格式: "{sequenceId}:{editMode}"
+ * 每个序列/复合剪辑独立记忆自己的缩放偏好。
+ */
+export function buildZoomContextKey(sequenceId: string, editMode: ZoomEditMode): string {
+  return `${sequenceId}:${editMode}`;
+}
+
+/**
+ * 从 zoomMemory 记忆中恢复指定上下文的缩放级别。
+ * 优先级：记忆值 > 模式默认值 > BASE_TIMELINE_ZOOM
+ */
+export function resolveZoomForContext(
+  zoomMemory: Record<string, number> | undefined,
+  sequenceId: string,
+  editMode: ZoomEditMode
+): number {
+  const key = buildZoomContextKey(sequenceId, editMode);
+  if (zoomMemory && typeof zoomMemory[key] === 'number' && Number.isFinite(zoomMemory[key])) {
+    return clampTimelineZoom(zoomMemory[key]);
+  }
+  return clampTimelineZoom(ZOOM_MODE_DEFAULTS[editMode]);
+}
+
+/**
+ * 保存一条缩放记忆条目，返回新的 zoomMemory 记录。
+ */
+export function saveZoomMemoryEntry(
+  zoomMemory: Record<string, number> | undefined,
+  sequenceId: string,
+  editMode: ZoomEditMode,
+  zoomLevel: number
+): Record<string, number> {
+  const key = buildZoomContextKey(sequenceId, editMode);
+  return { ...(zoomMemory ?? {}), [key]: clampTimelineZoom(zoomLevel) };
+}
+
+/**
+ * 根据当前 UI 状态推断应使用的缩放编辑模式。
+ * - 有选中关键帧或正在编辑属性面板 => 'editing'
+ * - 当前序列的轨道包含音频片段且选中音频clip => 'audio'
+ * - 其他 => 'browsing'
+ */
+export function detectZoomEditMode(context: {
+  hasSelectedKeyframe?: boolean;
+  isInspectorKeyframeOpen?: boolean;
+  selectedClipType?: string;
+  activeTrackTypes?: string[];
+}): ZoomEditMode {
+  if (context.hasSelectedKeyframe || context.isInspectorKeyframeOpen) {
+    return 'editing';
+  }
+  if (context.selectedClipType === 'audio') {
+    return 'audio';
+  }
+  return 'browsing';
+}
+
+/**
+ * 清理 zoomMemory 中不属于当前项目序列的孤立条目。
+ */
+export function pruneZoomMemory(
+  zoomMemory: Record<string, number> | undefined,
+  validSequenceIds: string[]
+): Record<string, number> | undefined {
+  if (!zoomMemory) {
+    return undefined;
+  }
+  const validSet = new Set(validSequenceIds);
+  const result: Record<string, number> = {};
+  let hasEntries = false;
+  for (const [key, value] of Object.entries(zoomMemory)) {
+    const seqId = key.split(':')[0];
+    if (validSet.has(seqId)) {
+      result[key] = value;
+      hasEntries = true;
+    }
+  }
+  return hasEntries ? result : undefined;
 }

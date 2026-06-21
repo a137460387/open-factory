@@ -139,7 +139,8 @@ import type {
   VfrHandlingStrategy,
   VideoClip,
   VideoDeinterlaceMode,
-  VideoDenoisePreset
+  VideoDenoisePreset,
+  ZoomEditMode
 } from './model-types';
 export type {
   AdjustmentClip,
@@ -255,7 +256,8 @@ export type {
   VfrHandlingStrategy,
   VideoClip,
   VideoDeinterlaceMode,
-  VideoDenoisePreset
+  VideoDenoisePreset,
+  ZoomEditMode
 } from './model-types';
 export const MAX_CHROMA_KEY_COLORS = 3;
 

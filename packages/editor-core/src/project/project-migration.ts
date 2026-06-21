@@ -71,6 +71,7 @@ import { clampTransitionDuration, findAdjacentTransitionClips, getTimelineDurati
 import type { MigrationResult, ProjectFile, ProjectFileV1, ProjectFileV2 } from './project-types';
 import { isAbsolutePath, makeRelativePath, normalizePath, resolveMediaPath } from './relative-paths';
 import { normalizeProjectDocumentation } from './documentation';
+import { pruneZoomMemory } from '../timeline-zoom';
 import { normalizeProjectReleaseVersion } from './release-workflow';
 
 const DEFAULT_SETTINGS = { fps: 30, timecodeFormat: 'ndf' as const, width: 1280, height: 720, colorPipeline: 'sdr-srgb' as const, workingColorSpace: 'srgb' as const };
@@ -139,6 +140,7 @@ export function serializeProjectFile(project: Project, projectPath?: string): Pr
       timeline: primaryTimeline,
       sequences,
       activeSequenceId: project.activeSequenceId ?? PRIMARY_SEQUENCE_ID
+      , zoomMemory: normalizeZoomMemory(project.zoomMemory)
     },
     warnings: warnings.length > 0 ? warnings : undefined
   };
@@ -189,6 +191,7 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         timeline: activeTimeline,
         sequences,
         activeSequenceId
+        , zoomMemory: normalizeZoomMemory(file.project.zoomMemory, sequences)
       },
       warnings: [...(file.warnings ?? [])]
     };
@@ -478,4 +481,36 @@ function cloneClip<TClip extends Clip>(clip: TClip): TClip {
     } as TClip;
   }
   return cloned as TClip;
+}
+
+/**
+ * 规范化 zoomMemory 记录。
+ * - 保留值为有限正数的条目
+ * - 可选地清理不属于有效序列的孤立条目
+ */
+function normalizeZoomMemory(
+  zoomMemory: unknown,
+  sequences?: Sequence[]
+): Record<string, number> | undefined {
+  if (!zoomMemory || typeof zoomMemory !== 'object' || Array.isArray(zoomMemory)) {
+    return undefined;
+  }
+  const validIds = sequences ? new Set(sequences.map((s) => s.id)) : undefined;
+  const result: Record<string, number> = {};
+  let hasEntries = false;
+  for (const [key, value] of Object.entries(zoomMemory as Record<string, unknown>)) {
+    const num = Number(value);
+    if (!Number.isFinite(num) || num <= 0) {
+      continue;
+    }
+    if (validIds) {
+      const seqId = key.split(':')[0];
+      if (!validIds.has(seqId)) {
+        continue;
+      }
+    }
+    result[key] = num;
+    hasEntries = true;
+  }
+  return hasEntries ? result : undefined;
 }

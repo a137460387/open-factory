@@ -1,5 +1,5 @@
 import type { Clip, HistoryMeta, KeyframeProperty, MediaAsset, MediaMetadata, Project, Timeline, TimelineDiffRange } from '@open-factory/editor-core';
-import { clampTimelineZoom, createProject, getTimelineDuration, normalizeMediaMetadataEntry, replaceProjectActiveTimeline, switchProjectActiveSequence } from '@open-factory/editor-core';
+import { clampTimelineZoom, createProject, getTimelineDuration, normalizeMediaMetadataEntry, replaceProjectActiveTimeline, switchProjectActiveSequence, resolveZoomForContext, saveZoomMemoryEntry, detectZoomEditMode, type ZoomEditMode } from '@open-factory/editor-core';
 import { create } from 'zustand';
 import { zhCN } from '../i18n/strings';
 
@@ -11,6 +11,7 @@ export interface SelectedKeyframeRef {
 
 export interface EditorState {
   project: Project;
+  zoomEditMode: ZoomEditMode;
   selectedClipId?: string;
   selectedClipIds: string[];
   selectedKeyframe?: SelectedKeyframeRef;
@@ -50,6 +51,9 @@ export interface EditorState {
   setInPoint: (time?: number) => void;
   setOutPoint: (time?: number) => void;
   setTimelineZoom: (zoom: number) => void;
+  setZoomEditMode: (mode: ZoomEditMode) => void;
+  saveCurrentZoomMemory: () => void;
+  switchZoomEditMode: (mode: ZoomEditMode) => void;
   setProjectPath: (projectPath?: string) => void;
   setDirty: (dirty: boolean) => void;
   setHistoryMeta: (meta: HistoryMeta) => void;
@@ -62,6 +66,7 @@ export interface EditorState {
 
 export const useEditorStore = create<EditorState>((set, get) => ({
   project: createProject(zhCN.project.defaultName),
+  zoomEditMode: 'browsing',
   selectedClipIds: [],
   selectedKeyframes: [],
   playheadTime: 0,
@@ -209,6 +214,22 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setInPoint: (inPoint) => set({ inPoint }),
   setOutPoint: (outPoint) => set({ outPoint }),
   setTimelineZoom: (zoom) => set({ timelineZoom: clampTimelineZoom(zoom) }),
+  setZoomEditMode: (mode) => set({ zoomEditMode: mode }),
+  saveCurrentZoomMemory: () =>
+    set((state) => ({
+      project: {
+        ...state.project,
+        zoomMemory: saveZoomMemoryEntry(state.project.zoomMemory, state.project.activeSequenceId, state.zoomEditMode, state.timelineZoom),
+        updatedAt: new Date().toISOString()
+      },
+      dirty: true
+    })),
+  switchZoomEditMode: (mode) =>
+    set((state) => {
+      const seqId = state.project.activeSequenceId;
+      const restoredZoom = resolveZoomForContext(state.project.zoomMemory, seqId, mode);
+      return { zoomEditMode: mode, timelineZoom: restoredZoom };
+    }),
   setProjectPath: (projectPath) => set({ projectPath }),
   setDirty: (dirty) => set({ dirty }),
   setHistoryMeta: (historyMeta) => set({ historyMeta }),

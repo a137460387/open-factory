@@ -26,6 +26,9 @@ export interface CreditsStyle extends TextStyle {
 }
 export type ProjectVersion = '0.2';
 
+/** 缩放编辑模式：剪辑模式(帧精度高zoom) / 浏览模式(全局低zoom) / 音频编辑模式(波形查看zoom) */
+export type ZoomEditMode = 'editing' | 'browsing' | 'audio';
+
 export type AssetType = 'video' | 'audio' | 'image';
 
 export type TrackType = 'video' | 'audio' | 'text' | 'subtitle';
@@ -279,6 +282,8 @@ export interface Project {
   timeline: Timeline;
   sequences: Sequence[];
   activeSequenceId: string;
+  /** 缩放层级记忆：key 为 "序列id:编辑模式"，value 为缩放级别 */
+  zoomMemory?: Record<string, number>;
 }
 
 export type ProjectDocumentation = Record<string, string>;
