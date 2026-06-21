@@ -152,3 +152,4 @@ export * from './batch-crop';
 export * from './naming-template';
 export * from './quick-actions';
 export * from './duplicate-media-merge';
+export * from './batch-media-replace';
