@@ -1,4 +1,4 @@
-﻿const formatSignedNumber = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}`;
+const formatSignedNumber = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(2)}`;
 
 const zh = {
   common: {
@@ -50,6 +50,18 @@ const zh = {
       squareSocial: { name: '正方形社交', description: '1:1, 30fps, 1080x1080' },
       podcast: { name: '播客', description: '纯音频轨，导出 M4A' },
       cinema: { name: '电影', description: '16:9, 24fps, 4K, LUT 预设' }
+    },
+    recommendation: {
+      tab: '智能推荐',
+      apply: '应用推荐',
+      ignore: '忽略',
+      verticalDetected: (count: number, height: number) => `检测到${count}个${height}视频，推荐竖版短视频模板`,
+      horizontalDetected: (count: number) => `检测到${count}个横版视频，推荐横版YouTube模板`,
+      squareDetected: (count: number) => `检测到${count}个正方形视频，推荐社交模板`,
+      audioOnly: '检测到纯音频文件，推荐播客模板',
+      cinemaDetected: (count: number) => `检测到${count}个高分辨率视频，推荐电影模板`,
+      noMedia: '未检测到媒体文件',
+      trackSuggestion: (videoTracks: number, audioTracks: number) => `建议${videoTracks}条视频轨 + ${audioTracks}条音频轨`
     }
   },
   timelineTemplates: {

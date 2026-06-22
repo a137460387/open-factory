@@ -1,4 +1,4 @@
-﻿export * from './time';
+export * from './time';
 export * from './model';
 export * from './blend-modes';
 export * from './color-log-luts';
@@ -155,3 +155,7 @@ export * from './duplicate-media-merge';
 export * from './batch-media-replace';
 export * from './subtitle-style-quickbar';
 export * from './export/export-retry-strategy';
+
+export * from './audio/multicam-audio-sync';
+export * from './export/export-preset-diff';
+export * from './annotation-sync';
