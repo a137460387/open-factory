@@ -3571,7 +3571,16 @@ const zh = {
         light: '轻',
         medium: '中',
         heavy: '重'
-      }
+      },
+      confidence: '置信度',
+      confidenceLevels: {
+        high: '高',
+        medium: '中',
+        low: '低',
+        insufficient: '样本不足'
+      },
+      confidenceTooltip: (count: number) => `历史样本 ${count} 个，样本越多预估越准`,
+      historyComparison: '预估 vs 实际对比'
     },
     optimization: {
       title: '优化建议',
@@ -8068,7 +8077,16 @@ const enOverrides = {
         light: 'Light',
         medium: 'Medium',
         heavy: 'Heavy'
-      }
+      },
+      confidence: 'Confidence',
+      confidenceLevels: {
+        high: 'High',
+        medium: 'Medium',
+        low: 'Low',
+        insufficient: 'Insufficient'
+      },
+      confidenceTooltip: (count: number) => `${count} history sample(s); more samples improve estimate accuracy`,
+      historyComparison: 'Estimated vs Actual'
     },
     optimization: {
       title: 'Optimization Suggestions',

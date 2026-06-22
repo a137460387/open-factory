@@ -47,9 +47,179 @@ export const EXPORT_COST_EFFECT_COMPLEXITY_FACTORS: Record<EffectType, number> =
   'film-grain': 1.25,
   'chromatic-aberration': 1.35,
   'audio-spectrum': 1.7,
-  'custom-shader': 3,
+  'custom-shader': 2.5,
   'motion-blur': 2.2
 };
+
+// --- P0-1: realtime estimate enhancements ---
+
+export type EstimateConfidenceLevel = 'high' | 'medium' | 'low' | 'insufficient';
+
+export interface ExportEstimateConfidence {
+  level: EstimateConfidenceLevel;
+  sampleCount: number;
+  label: string;
+}
+
+export interface ExportEstimateHistoryComparisonEntry {
+  id: string;
+  estimatedSeconds: number;
+  actualSeconds: number;
+  errorPercent: number;
+  timestamp?: string;
+}
+
+export interface LearnedComplexityCoefficient {
+  effectType: string;
+  defaultFactor: number;
+  learnedFactor: number;
+  sampleCount: number;
+}
+
+const MIN_CONFIDENCE_SAMPLES = 3;
+const MEDIUM_CONFIDENCE_SAMPLES = 6;
+const HIGH_CONFIDENCE_SAMPLES = 10;
+const LEARNING_MIN_SAMPLES = 2;
+const LEARNING_MAX_ADJUSTMENT = 0.5;
+const MAX_HISTORY_COMPARISON_ENTRIES = 10;
+
+export function calculateEstimateConfidence(sampleCount: number): ExportEstimateConfidence {
+  const count = Number.isFinite(sampleCount) ? Math.max(0, Math.floor(sampleCount)) : 0;
+  if (count >= HIGH_CONFIDENCE_SAMPLES) {
+    return { level: 'high', sampleCount: count, label: 'high' };
+  }
+  if (count >= MEDIUM_CONFIDENCE_SAMPLES) {
+    return { level: 'medium', sampleCount: count, label: 'medium' };
+  }
+  if (count >= MIN_CONFIDENCE_SAMPLES) {
+    return { level: 'low', sampleCount: count, label: 'low' };
+  }
+  return { level: 'insufficient', sampleCount: count, label: 'insufficient' };
+}
+
+export function buildEstimateHistoryComparison(
+  samples: ExportCostHistorySample[]
+): ExportEstimateHistoryComparisonEntry[] {
+  return samples
+    .filter(
+      (s) =>
+        Number.isFinite(s.estimatedDurationSeconds) &&
+        (s.estimatedDurationSeconds as number) > 0 &&
+        Number.isFinite(s.exportDurationSeconds) &&
+        s.exportDurationSeconds > 0
+    )
+    .slice(0, MAX_HISTORY_COMPARISON_ENTRIES)
+    .map((s, index) => {
+      const estimated = s.estimatedDurationSeconds as number;
+      const actual = s.exportDurationSeconds;
+      return {
+        id: `entry-${index}`,
+        estimatedSeconds: roundTo(estimated, 1),
+        actualSeconds: roundTo(actual, 1),
+        errorPercent: roundTo(((actual - estimated) / estimated) * 100, 1)
+      };
+    });
+}
+
+export function learnComplexityCoefficients(
+  historySamples: ExportCostHistorySample[],
+  currentFactors: Record<string, number> = {}
+): LearnedComplexityCoefficient[] {
+  const result: LearnedComplexityCoefficient[] = [];
+  const allEffectTypes = Object.keys(EXPORT_COST_EFFECT_COMPLEXITY_FACTORS);
+
+  for (const effectType of allEffectTypes) {
+    const defaultFactor = EXPORT_COST_EFFECT_COMPLEXITY_FACTORS[effectType as EffectType] ?? 1;
+    const relevantSamples = historySamples.filter((s) => {
+      if (!Number.isFinite(s.estimatedDurationSeconds) || !s.estimatedDurationSeconds) return false;
+      if (!Number.isFinite(s.exportDurationSeconds) || s.exportDurationSeconds <= 0) return false;
+      return true;
+    });
+
+    if (relevantSamples.length < LEARNING_MIN_SAMPLES) {
+      const stored = currentFactors[effectType];
+      result.push({
+        effectType,
+        defaultFactor,
+        learnedFactor: Number.isFinite(stored) && stored! > 0 ? roundTo(stored!, 2) : defaultFactor,
+        sampleCount: relevantSamples.length
+      });
+      continue;
+    }
+
+    const avgErrorRatio =
+      relevantSamples.reduce((sum, s) => sum + s.exportDurationSeconds / (s.estimatedDurationSeconds as number), 0) /
+      relevantSamples.length;
+
+    const adjustment = Math.max(-LEARNING_MAX_ADJUSTMENT, Math.min(LEARNING_MAX_ADJUSTMENT, avgErrorRatio - 1));
+    const stored = currentFactors[effectType];
+    const baseFactor = Number.isFinite(stored) && stored! > 0 ? stored! : defaultFactor;
+    const learnedFactor = roundTo(Math.max(0.5, baseFactor * (1 + adjustment * 0.3)), 2);
+
+    result.push({ effectType, defaultFactor, learnedFactor, sampleCount: relevantSamples.length });
+  }
+
+  return result;
+}
+
+export function applyLearnedCoefficients(
+  learned: LearnedComplexityCoefficient[]
+): Record<string, number> {
+  const result: Record<string, number> = {};
+  for (const item of learned) {
+    if (item.sampleCount >= LEARNING_MIN_SAMPLES && item.learnedFactor !== item.defaultFactor) {
+      result[item.effectType] = item.learnedFactor;
+    }
+  }
+  return result;
+}
+
+export function createDebouncedEstimator<TArgs, TResult>(
+  fn: (args: TArgs) => TResult,
+  delayMs: number
+): {
+  call: (args: TArgs) => void;
+  flush: () => TResult | undefined;
+  cancel: () => void;
+  lastResult: () => TResult | undefined;
+} {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let lastArgs: TArgs | undefined;
+  let result: TResult | undefined;
+  let hasResult = false;
+
+  return {
+    call(args: TArgs) {
+      lastArgs = args;
+      if (timer !== undefined) {
+        clearTimeout(timer);
+      }
+      timer = setTimeout(() => {
+        timer = undefined;
+        result = fn(args);
+        hasResult = true;
+      }, Math.max(0, delayMs));
+    },
+    flush() {
+      if (timer !== undefined && lastArgs !== undefined) {
+        clearTimeout(timer);
+        timer = undefined;
+        result = fn(lastArgs);
+        hasResult = true;
+      }
+      return result;
+    },
+    cancel() {
+      if (timer !== undefined) {
+        clearTimeout(timer);
+        timer = undefined;
+      }
+    },
+    lastResult() {
+      return hasResult ? result : undefined;
+    }
+  };
+}
 
 const DEFAULT_EXPORT_SECONDS_PER_TIMELINE_SECOND = 0.65;
 const BASE_PIXELS_PER_SECOND = 1920 * 1080 * 30;

@@ -1,4 +1,5 @@
-﻿import {
+import type { ExportCostHistorySample } from '@open-factory/editor-core';
+import {
   TARGET_ASPECT_RATIOS,
   SUPPORTED_PROJECT_FPS,
   appendExportRangeSequence,
@@ -39,6 +40,8 @@
   estimateExportCost,
   normalizeTargetAspectRatio,
   resolveReframeDimensions,
+  calculateEstimateConfidence,
+  buildEstimateHistoryComparison,
   SequenceDependencyCycleError,
   ExportPipelineCycleError,
   createPublishAutomationPipeline,
@@ -562,6 +565,17 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
   const exportCostHistoryError = useMemo(
     () => calculateHistoricalEstimateErrorPercent(exportCostEstimate.estimatedDurationSeconds, lastExportDurationSeconds),
     [exportCostEstimate.estimatedDurationSeconds, lastExportDurationSeconds]
+  );
+  const historyCostSamples = useMemo<ExportCostHistorySample[]>(
+    () =>
+      history
+        .filter((entry) => entry.status === 'success' && entry.startedAt)
+        .slice(0, 10)
+        .map((entry) => ({
+          exportDurationSeconds: (Date.parse(entry.finishedAt) - Date.parse(entry.startedAt!)) / 1000,
+          timelineDurationSeconds: getTimelinePlaybackDuration(project.timeline)
+        })),
+    [history, project.timeline]
   );
   const hardwareEncodingEligible = !isAudioOnly && (exportSettings.format === 'mp4' || exportSettings.format === 'mov');
   const hardwareEncodingRequested = hardwareEncodingEligible && exportSettings.hardwareEncoding === true;
@@ -1935,7 +1949,7 @@ function relinkFromPreflight(): void {
               tone={capabilities?.hardwareEncoderAvailable ? 'ok' : 'warn'}
             />
           </div>
-          <ExportCostEstimatePanel estimate={exportCostEstimate} historyErrorPercent={exportCostHistoryError} />
+          <ExportCostEstimatePanel estimate={exportCostEstimate} historyErrorPercent={exportCostHistoryError} historySamples={historyCostSamples} />
           <ExportOptimizationPanel suggestions={exportOptimizationSuggestions} onApply={applyOptimizationSuggestion} onDismiss={(suggestion) => void dismissOptimizationSuggestion(suggestion)} />
           {!isAudioOnly ? (
             <div className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3" data-testid="export-preview-panel">
@@ -4467,8 +4481,11 @@ function ReframePreviewBox({ aspect, offsetX, offsetY }: { aspect: TargetAspectR
   );
 }
 
-function ExportCostEstimatePanel({ estimate, historyErrorPercent }: { estimate: ReturnType<typeof estimateExportCost>; historyErrorPercent?: number }) {
+function ExportCostEstimatePanel({ estimate, historyErrorPercent, historySamples }: { estimate: ReturnType<typeof estimateExportCost>; historyErrorPercent?: number; historySamples?: ExportCostHistorySample[] }) {
   const t = zhCN.exportDialog.costEstimate;
+  const confidence = calculateEstimateConfidence(historySamples?.length ?? 0);
+  const comparisonEntries = buildEstimateHistoryComparison(historySamples ?? []);
+  const confidenceLabel = t.confidenceLevels[confidence.level];
   return (
     <section className="rounded-md border border-line bg-panel/60 p-3 text-xs text-slate-600" data-testid="export-cost-estimate-panel">
       <div className="mb-2 flex items-start justify-between gap-3">
@@ -4476,8 +4493,17 @@ function ExportCostEstimatePanel({ estimate, historyErrorPercent }: { estimate: 
           <div className="font-semibold text-slate-800">{t.title}</div>
           <div className="mt-0.5 text-[11px] text-slate-500">{t.description}</div>
         </div>
-        <div className="rounded-full bg-white px-2 py-1 font-semibold text-slate-700" data-testid="export-cost-complexity">
-          {t.complexityValue(estimate.complexityFactor)}
+        <div className="flex items-center gap-2">
+          <span
+            className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${confidence.level === 'high' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : confidence.level === 'medium' ? 'border-sky-200 bg-sky-50 text-sky-700' : confidence.level === 'low' ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-slate-200 bg-slate-50 text-slate-500'}`}
+            data-testid="export-cost-confidence"
+            title={t.confidenceTooltip(confidence.sampleCount)}
+          >
+            {t.confidence}: {confidenceLabel}
+          </span>
+          <div className="rounded-full bg-white px-2 py-1 font-semibold text-slate-700" data-testid="export-cost-complexity">
+            {t.complexityValue(estimate.complexityFactor)}
+          </div>
         </div>
       </div>
       <div className="grid gap-2 md:grid-cols-5">
@@ -4487,6 +4513,31 @@ function ExportCostEstimatePanel({ estimate, historyErrorPercent }: { estimate: 
         <CostMetric label={t.completion} value={formatCostCompletion(estimate.estimatedCompletionIso)} testId="export-cost-completion" />
         <CostMetric label={t.historyError} value={formatCostHistoryError(historyErrorPercent)} testId="export-cost-history-error" />
       </div>
+      {comparisonEntries.length > 0 ? (
+        <div className="mt-3 rounded-md border border-line bg-white p-2" data-testid="export-cost-history-comparison">
+          <div className="mb-1 text-[11px] font-semibold text-slate-700">{t.historyComparison}</div>
+          <div className="grid gap-1">
+            {comparisonEntries.slice(0, 5).map((entry) => (
+              <div key={entry.id} className="flex items-center gap-2 text-[11px]" data-testid="export-cost-history-entry">
+                <span className="w-12 text-right tabular-nums text-slate-500">{t.durationSeconds(Math.round(entry.estimatedSeconds))}</span>
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${Math.min(100, Math.max(5, (entry.actualSeconds / Math.max(entry.estimatedSeconds, entry.actualSeconds)) * 100))}%`,
+                      backgroundColor: entry.errorPercent > 10 ? '#f59e0b' : '#10b981'
+                    }}
+                  />
+                </div>
+                <span className="w-12 tabular-nums text-slate-600">{t.durationSeconds(Math.round(entry.actualSeconds))}</span>
+                <span className={`w-14 text-right tabular-nums ${entry.errorPercent > 10 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                  {entry.errorPercent > 0 ? '+' : ''}{entry.errorPercent.toFixed(0)}%
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }

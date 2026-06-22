@@ -15,7 +15,13 @@ import {
   type PostExportQualityAssuranceSettings,
   type TimelineGridSettings,
   type TimelineHeatmapColorScheme,
-  type TimelineHeatmapType
+  type TimelineHeatmapType,
+  type TouchOptimizationSettings,
+  DEFAULT_TOUCH_OPTIMIZATION_SETTINGS,
+  normalizeTouchOptimizationSettings,
+  type MediaGroupingSettings,
+  DEFAULT_MEDIA_GROUPING_SETTINGS,
+  normalizeMediaGroupingSettings
 } from '@open-factory/editor-core';
 import { fsExists, getAppDataDir, readFile, writeFile } from '../lib/tauri-bridge';
 import {
@@ -276,6 +282,8 @@ export interface AppSettings {
   update?: UpdateSettings;
   disableExportRecommendations?: boolean;
   thumbnailPrerenderEnabled?: boolean;
+  touchOptimization?: TouchOptimizationSettings;
+  mediaGrouping?: MediaGroupingSettings;
 }
 
 export async function initializeLanguageFromSettings(): Promise<Language> {
@@ -1242,4 +1250,28 @@ function normalizeOptionalInteger(value: unknown, min: number, max: number): num
     return undefined;
   }
   return Math.round(Math.min(max, Math.max(min, value)));
+}
+
+export async function readTouchOptimizationSettings(): Promise<TouchOptimizationSettings> {
+  const settings = await readAppSettings();
+  return normalizeTouchOptimizationSettings(settings.touchOptimization);
+}
+
+export async function saveTouchOptimizationSettings(touchOptimization: Partial<TouchOptimizationSettings>): Promise<TouchOptimizationSettings> {
+  const settings = await readAppSettings();
+  const next = normalizeTouchOptimizationSettings({ ...settings.touchOptimization, ...touchOptimization });
+  await writeAppSettings({ ...settings, touchOptimization: next });
+  return next;
+}
+
+export async function readMediaGroupingSettings(): Promise<MediaGroupingSettings> {
+  const settings = await readAppSettings();
+  return normalizeMediaGroupingSettings(settings.mediaGrouping);
+}
+
+export async function saveMediaGroupingSettings(mediaGrouping: Partial<MediaGroupingSettings>): Promise<MediaGroupingSettings> {
+  const settings = await readAppSettings();
+  const next = normalizeMediaGroupingSettings({ ...settings.mediaGrouping, ...mediaGrouping });
+  await writeAppSettings({ ...settings, mediaGrouping: next });
+  return next;
 }

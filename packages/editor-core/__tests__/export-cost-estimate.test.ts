@@ -10,7 +10,12 @@ import {
   estimateExportCost,
   estimateExportFileSizeMb,
   normalizeExportMasterProcessing,
-  parseExportBitrate
+  parseExportBitrate,
+  calculateEstimateConfidence,
+  buildEstimateHistoryComparison,
+  learnComplexityCoefficients,
+  applyLearnedCoefficients,
+  createDebouncedEstimator
 } from '../src';
 import { EFFECT_TYPES } from '../src/effects';
 import { makeProject, makeTimeline, makeVideoClip } from './test-utils';
@@ -179,5 +184,107 @@ describe('export cost estimate', () => {
   it('covers every clip effect type in the cost factor table', () => {
     expect(assertExportCostEffectCoverage()).toBe(true);
     expect(Object.keys(EXPORT_COST_EFFECT_COMPLEXITY_FACTORS).sort()).toEqual([...EFFECT_TYPES].sort());
+  });
+
+  it('debounce estimator delays execution and flushes immediately', () => {
+    const calls: number[] = [];
+    const debounced = createDebouncedEstimator((value: number) => {
+      calls.push(value);
+      return value * 2;
+    }, 300);
+    debounced.call(1);
+    debounced.call(2);
+    debounced.call(3);
+    expect(calls).toEqual([]);
+    expect(debounced.lastResult()).toBeUndefined();
+    const result = debounced.flush();
+    expect(result).toBe(6);
+    expect(calls).toEqual([3]);
+    expect(debounced.lastResult()).toBe(6);
+  });
+
+  it('debounce estimator cancel prevents execution', () => {
+    const calls: number[] = [];
+    const debounced = createDebouncedEstimator((value: number) => {
+      calls.push(value);
+      return value;
+    }, 300);
+    debounced.call(42);
+    debounced.cancel();
+    debounced.flush();
+    expect(calls).toEqual([]);
+    expect(debounced.lastResult()).toBeUndefined();
+  });
+
+  it('calculates estimate confidence based on sample count', () => {
+    expect(calculateEstimateConfidence(0)).toEqual({ level: 'insufficient', sampleCount: 0, label: 'insufficient' });
+    expect(calculateEstimateConfidence(2)).toEqual({ level: 'insufficient', sampleCount: 2, label: 'insufficient' });
+    expect(calculateEstimateConfidence(3)).toEqual({ level: 'low', sampleCount: 3, label: 'low' });
+    expect(calculateEstimateConfidence(5)).toEqual({ level: 'low', sampleCount: 5, label: 'low' });
+    expect(calculateEstimateConfidence(6)).toEqual({ level: 'medium', sampleCount: 6, label: 'medium' });
+    expect(calculateEstimateConfidence(9)).toEqual({ level: 'medium', sampleCount: 9, label: 'medium' });
+    expect(calculateEstimateConfidence(10)).toEqual({ level: 'high', sampleCount: 10, label: 'high' });
+    expect(calculateEstimateConfidence(50)).toEqual({ level: 'high', sampleCount: 50, label: 'high' });
+  });
+
+  it('confidence floors negative or NaN sample counts to 0', () => {
+    expect(calculateEstimateConfidence(-5)).toEqual({ level: 'insufficient', sampleCount: 0, label: 'insufficient' });
+    expect(calculateEstimateConfidence(NaN)).toEqual({ level: 'insufficient', sampleCount: 0, label: 'insufficient' });
+  });
+
+  it('builds history comparison entries from valid samples only', () => {
+    const entries = buildEstimateHistoryComparison([
+      { exportDurationSeconds: 12, estimatedDurationSeconds: 10 },
+      { exportDurationSeconds: 8 },
+      { exportDurationSeconds: 0, estimatedDurationSeconds: 5 },
+      { exportDurationSeconds: 20, estimatedDurationSeconds: 15 }
+    ]);
+    expect(entries).toHaveLength(2);
+    expect(entries[0].estimatedSeconds).toBe(10);
+    expect(entries[0].actualSeconds).toBe(12);
+    expect(entries[0].errorPercent).toBeCloseTo(20, 0);
+    expect(entries[1].errorPercent).toBeCloseTo(33.3, 0);
+  });
+
+  it('history comparison caps at 10 entries', () => {
+    const manySamples = Array.from({ length: 15 }, (_, i) => ({
+      exportDurationSeconds: 10 + i,
+      estimatedDurationSeconds: 8 + i
+    }));
+    expect(buildEstimateHistoryComparison(manySamples)).toHaveLength(10);
+  });
+
+  it('learned complexity coefficients adjust based on historical error', () => {
+    const samples = [
+      { exportDurationSeconds: 15, estimatedDurationSeconds: 10 },
+      { exportDurationSeconds: 16, estimatedDurationSeconds: 10 },
+      { exportDurationSeconds: 14, estimatedDurationSeconds: 10 }
+    ];
+    const learned = learnComplexityCoefficients(samples);
+    expect(learned.length).toBeGreaterThan(0);
+    const customShader = learned.find((c) => c.effectType === 'custom-shader');
+    expect(customShader).toBeDefined();
+    expect(customShader!.sampleCount).toBe(3);
+    expect(customShader!.learnedFactor).not.toBe(customShader!.defaultFactor);
+  });
+
+  it('learned coefficients stay at default when insufficient samples', () => {
+    const samples = [{ exportDurationSeconds: 10, estimatedDurationSeconds: 8 }];
+    const learned = learnComplexityCoefficients(samples);
+    for (const item of learned) {
+      expect(item.learnedFactor).toBe(item.defaultFactor);
+      expect(item.sampleCount).toBe(1);
+    }
+  });
+
+  it('applyLearnedCoefficients only includes changed factors with enough samples', () => {
+    const learned = [
+      { effectType: 'blur', defaultFactor: 1.35, learnedFactor: 1.45, sampleCount: 3 },
+      { effectType: 'sharpen', defaultFactor: 1.2, learnedFactor: 1.2, sampleCount: 3 },
+      { effectType: 'vignette', defaultFactor: 1.15, learnedFactor: 1.1, sampleCount: 1 }
+    ];
+    const applied = applyLearnedCoefficients(learned);
+    expect(Object.keys(applied)).toEqual(['blur']);
+    expect(applied.blur).toBe(1.45);
   });
 });

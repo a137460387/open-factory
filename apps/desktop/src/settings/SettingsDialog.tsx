@@ -153,8 +153,11 @@ import {
   type ExportPresetSyncSettings,
   type ExportConditionRule,
   type LocalCoeditingSettings,
-  type TimelineInteractionSettings
+  type TimelineInteractionSettings,
+  readTouchOptimizationSettings,
+  saveTouchOptimizationSettings
 } from './appSettings';
+import type { TouchOptimizationSettings } from '@open-factory/editor-core';
 import {
   LOCAL_AI_MODEL_DEFINITIONS,
   LOCAL_AI_MODEL_IDS,
@@ -255,6 +258,7 @@ export function SettingsDialog({
   const [collaborationIdentity, setCollaborationIdentity] = useState<CollaborationIdentitySettings>(() => ({ ...DEFAULT_COLLABORATION_IDENTITY_SETTINGS }));
   const [localCoediting, setLocalCoediting] = useState<LocalCoeditingSettings>(() => ({ ...DEFAULT_LOCAL_COEDITING_SETTINGS }));
   const [displaySettings, setDisplaySettings] = useState<DisplaySettings>(() => ({ colorGamut: 'srgb' }));
+  const [touchOptimizationSettings, setTouchOptimizationSettings] = useState<TouchOptimizationSettings>(() => ({ enabled: false, autoDetect: true, trimHandleScale: 1.6, uiSpacingMultiplier: 1.3, longPressMs: 500, doubleTapMs: 300 }));
   const [updateSettings, setUpdateSettings] = useState<UpdateSettings>(() => ({ ...DEFAULT_UPDATE_SETTINGS }));
   const [localModelsSettings, setLocalModelsSettings] = useState<LocalAiModelsSettings>({});
   const [localModelStatuses, setLocalModelStatuses] = useState<Partial<Record<LocalAiModelId, LocalAiModelResolvedStatus>>>({});
@@ -342,6 +346,7 @@ export function SettingsDialog({
     void loadDisplaySettings();
     void loadUpdateSettings();
     void loadLocalModelsSettings();
+    void readTouchOptimizationSettings().then(setTouchOptimizationSettings).catch(() => {});
     void loadTranslationApiKey();
     hydrateThemeForm(getCurrentThemeSettings());
     showCurrentPlugins();
@@ -1478,6 +1483,20 @@ export function SettingsDialog({
     }
   }
 
+  async function updateTouchOptimizationSettings(patch: Partial<TouchOptimizationSettings>) {
+    const nextSettings = { ...touchOptimizationSettings, ...patch };
+    setTouchOptimizationSettings(nextSettings);
+    try {
+      setTouchOptimizationSettings(await saveTouchOptimizationSettings(nextSettings));
+    } catch (touchError) {
+      showToast({
+        kind: 'warning',
+        title: '触屏设置保存失败',
+        message: touchError instanceof Error ? touchError.message : '无法写入触屏优化设置。'
+      });
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-testid="settings-dialog">
       <div className="flex max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg bg-white shadow-soft">
@@ -2026,6 +2045,19 @@ export function SettingsDialog({
                   </span>
                 </label>
                 <ExportQualityAssuranceSettingsPanel settings={exportQualityAssuranceSettings} onChange={(patch) => void updateExportQualityAssuranceSettings(patch)} />
+                <label className="flex items-start gap-2 rounded-md border border-line bg-panel p-3 text-xs text-slate-600">
+                  <input
+                    className="mt-0.5 h-4 w-4 accent-brand"
+                    type="checkbox"
+                    checked={touchOptimizationSettings.enabled}
+                    data-testid="settings-touch-optimization-toggle"
+                    onChange={(event) => void updateTouchOptimizationSettings({ enabled: event.target.checked })}
+                  />
+                  <span>
+                    <span className="block font-semibold text-slate-700">触屏优化模式</span>
+                    <span className="mt-1 block">开启后时间线交互元素自动放大、间距增加，适配触屏设备。关闭后使用标准鼠标交互尺寸。</span>
+                  </span>
+                </label>
                 <ExportRulesSettingsPanel
                   rules={exportRules}
                   onRuleChange={(rule) => void updateExportRule(rule)}
