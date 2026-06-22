@@ -546,7 +546,21 @@ export interface TimelineBookmark {
   id: string;
   time: number;
   note: string;
+  groupId?: string;
+  thumbnailPath?: string;
+  annotation?: string;
+  createdAt?: string;
 }
+
+export interface BookmarkGroup {
+  id: string;
+  name: string;
+  color: string;
+  collapsed: boolean;
+  sortOrder: number;
+}
+
+export type BookmarkSortMode = 'time' | 'group' | 'created';
 
 export interface ClipPitchDataPoint {
   time: number;

@@ -698,13 +698,17 @@ export function createTimelineMarker(
 }
 
 export function createTimelineBookmark(
-  bookmark: Omit<TimelineBookmark, 'id' | 'note'> & Partial<Pick<TimelineBookmark, 'id' | 'note'>>,
+  bookmark: Omit<TimelineBookmark, 'id' | 'note'> & Partial<Pick<TimelineBookmark, 'id' | 'note' | 'groupId' | 'thumbnailPath' | 'annotation' | 'createdAt'>>,
   maxTime?: number
 ): TimelineBookmark {
   return {
     id: bookmark.id ?? createId('bookmark'),
     time: normalizeTimelinePointTime(bookmark.time, maxTime),
-    note: normalizeTimelineBookmarkNote(bookmark.note)
+    note: normalizeTimelineBookmarkNote(bookmark.note),
+    ...(bookmark.groupId ? { groupId: bookmark.groupId.trim() } : {}),
+    ...(bookmark.thumbnailPath ? { thumbnailPath: bookmark.thumbnailPath } : {}),
+    ...(bookmark.annotation !== undefined ? { annotation: normalizeBookmarkAnnotation(bookmark.annotation) } : {}),
+    ...(bookmark.createdAt ? { createdAt: bookmark.createdAt } : {})
   };
 }
 
@@ -1784,6 +1788,14 @@ function normalizeTimelineMarkerLabel(label: string | undefined): string {
 function normalizeTimelineBookmarkNote(note: string | undefined): string {
   const trimmed = note?.trim();
   return trimmed ? trimmed.slice(0, 120) : 'Bookmark';
+}
+
+function normalizeBookmarkAnnotation(annotation: string | undefined): string | undefined {
+  const trimmed = annotation?.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  return trimmed.slice(0, 50);
 }
 
 function normalizeTimelineMarkerColor(color: string | undefined): string {
