@@ -1,6 +1,27 @@
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync, mkdtempSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { tmpdir } from 'node:os';
+
+const FONTCONFIG_DIR = join(tmpdir(), 'open-factory-fontconfig');
+const FONTCONFIG_FILE = join(FONTCONFIG_DIR, 'fonts.conf');
+try {
+  mkdirSync(FONTCONFIG_DIR, { recursive: true });
+  const fontDirs = process.platform === 'win32'
+    ? ['C:/Windows/Fonts', 'C:/WINDOWS/Fonts']
+    : process.platform === 'darwin'
+      ? ['/System/Library/Fonts', '/Library/Fonts']
+      : ['/usr/share/fonts'];
+  writeFileSync(FONTCONFIG_FILE, [
+    '<?xml version="1.0"?>',
+    '<!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">',
+    '<fontconfig>',
+    ...fontDirs.map((d) => `  <dir>${d}</dir>`),
+    '</fontconfig>',
+    ''
+  ].join('\n'));
+} catch {}
+
 
 export function normalizePath(value) {
   return String(value).replace(/\\/g, '/');
@@ -93,7 +114,8 @@ export function requireReleaseExecutable(executable, commandHint) {
 }
 
 export function spawnProcess(command, args, options = {}) {
-  return spawn(commandForPlatform(command), args, options);
+  const mergedEnv = { ...process.env, FONTCONFIG_FILE, ...(options.env || {}) };
+  return spawn(commandForPlatform(command), args, { ...options, env: mergedEnv });
 }
 
 export function waitForExitOrKill(childProcess, timeoutMs) {

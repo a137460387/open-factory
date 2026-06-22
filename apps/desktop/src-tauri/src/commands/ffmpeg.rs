@@ -2896,6 +2896,41 @@ fn bake_motion_graphic_sequence(
     let frame_count = manifest.frame_count.max(1) as usize;
     let fps = manifest.fps.max(1.0);
     let frame_duration = 1.0 / fps;
+    // Create a minimal fontconfig configuration so ffmpeg drawtext filters work
+    // on systems where fontconfig is installed but not configured (e.g. Windows
+    // with gyan.dev ffmpeg builds). Without this, drawtext emits
+    // "Fontconfig error: Cannot load default config file" and exits with status 5.
+    let fontconfig_dir = std::env::temp_dir().join("open-factory-fontconfig");
+    let _ = std::fs::create_dir_all(&fontconfig_dir);
+    let fonts_conf_path = fontconfig_dir.join("fonts.conf");
+    let fonts_conf_content = if cfg!(target_os = "windows") {
+        concat!(
+            "<?xml version=\"1.0\"?>\n",
+            "<!DOCTYPE fontconfig SYSTEM \"urn:fontconfig:fonts.dtd\">\n",
+            "<fontconfig>\n",
+            "  <dir>C:/Windows/Fonts</dir>\n",
+            "  <dir>C:/WINDOWS/Fonts</dir>\n",
+            "</fontconfig>\n",
+        )
+    } else if cfg!(target_os = "macos") {
+        concat!(
+            "<?xml version=\"1.0\"?>\n",
+            "<!DOCTYPE fontconfig SYSTEM \"urn:fontconfig:fonts.dtd\">\n",
+            "<fontconfig>\n",
+            "  <dir>/System/Library/Fonts</dir>\n",
+            "  <dir>/Library/Fonts</dir>\n",
+            "</fontconfig>\n",
+        )
+    } else {
+        concat!(
+            "<?xml version=\"1.0\"?>\n",
+            "<!DOCTYPE fontconfig SYSTEM \"urn:fontconfig:fonts.dtd\">\n",
+            "<fontconfig>\n",
+            "  <dir>/usr/share/fonts</dir>\n",
+            "</fontconfig>\n",
+        )
+    };
+    let _ = std::fs::write(&fonts_conf_path, fonts_conf_content);
     for index in 0..frame_count {
         let frame_time = index as f64 / fps;
         let frame_path = sequence_dir.join(format!("frame{:04}.png", index + 1));
@@ -2921,6 +2956,7 @@ fn bake_motion_graphic_sequence(
         ];
         let output = Command::new(ffmpeg_binary())
             .args(&args)
+            .env("FONTCONFIG_FILE", &fonts_conf_path)
             .output()
             .map_err(|error| {
                 format!(
@@ -2956,7 +2992,17 @@ fn build_motion_graphic_frame_filter(manifest: &MotionGraphicSequenceManifest, t
             width, height
         )),
     }
-    filters.join(",")
+    let raw = filters.join(",");
+    // Inject fontfile into all drawtext filters so ffmpeg does not rely on
+    // fontconfig, which may not be configured on Windows.
+    let fontfile = if cfg!(target_os = "windows") {
+        ":fontfile=C\\\\:/Windows/Fonts/arial.ttf"
+    } else if cfg!(target_os = "macos") {
+        ":fontfile=/Library/Fonts/Arial.ttf"
+    } else {
+        ":fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+    };
+    raw.replace(":fontsize=", &format!("{}:fontsize=", fontfile))
 }
 
 fn build_motion_graphic_scoreboard_filters(manifest: &MotionGraphicSequenceManifest, time: f64) -> Vec<String> {

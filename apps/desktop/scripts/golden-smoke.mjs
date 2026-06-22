@@ -4429,7 +4429,13 @@ function buildMotionGraphicFrameFilter(manifest, time) {
   } else {
     filters.push(`drawbox=x=0:y=0:w=${width}:h=${height}:color=white@0.05:t=fill`);
   }
-  return filters.join(',');
+  const raw = filters.join(',');
+  const ff = process.platform === 'win32'
+    ? ':fontfile=C\\\\:/Windows/Fonts/arial.ttf'
+    : process.platform === 'darwin'
+      ? ':fontfile=/Library/Fonts/Arial.ttf'
+      : ':fontfile=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf';
+  return raw.replace(/:fontsize=/g, `${ff}:fontsize=`);
 }
 
 function buildMotionGraphicScoreboardFilters(manifest, time) {
