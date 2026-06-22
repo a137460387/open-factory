@@ -165,4 +165,8 @@ export * from './export/export-retry-strategy';
 
 export * from './audio/multicam-audio-sync';
 export * from './export/export-preset-diff';
+export * from './export/preset-compatibility';
 export * from './annotation-sync';
+export * from './audio-detach';
+export * from './tag-learning';
+export * from './project/template-sharing';
