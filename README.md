@@ -1,4 +1,9 @@
-﻿# 开源工厂 (open-factory)
+# 开源工厂 (open-factory)
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-v3.10.0-brightgreen)](https://github.com/user/open-factory/releases/tag/v3.10.0)
+[![Bun](https://img.shields.io/badge/Bun-%3E%3D%201.3-fb923c)](https://bun.sh)
+[![Rust](https://img.shields.io/badge/Rust-%3E%3D%201.77-dea584)](https://www.rust-lang.org)
 
 本地优先的桌面视频编辑器，基于 Tauri 2、Rust、React、TypeScript 构建。无登录、无遥测、无云端上传，所有媒体文件保留在本地。
 
@@ -21,6 +26,14 @@
 - 自动保存与崩溃恢复、项目归档、快照版本管理
 - 场景检测、静音检测、节拍检测、智能粗剪面板
 - 插件系统、宏录制与回放、批量自动化规则
+
+## 文档
+
+- [架构设计](docs/architecture.md)
+- [开发路线图](docs/roadmap.md)
+- [设计目标](docs/design-goals.md)
+- [产品计划](docs/product-plan.md)
+- [插件 API](docs/plugin-api/index.html)
 
 ## 环境要求
 
@@ -55,6 +68,10 @@ bun run check:release
 ```bash
 bun run tauri:build
 ```
+
+## About
+
+Open Factory is a local-first desktop video editor built with Tauri, Bun, TypeScript, and Rust. It keeps all media on your machine with zero telemetry, zero logins, and zero cloud uploads. The project is designed for creators who want full control over their editing workflow without sacrificing performance or privacy.
 
 ## License
 
