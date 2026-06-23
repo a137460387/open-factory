@@ -175,3 +175,5 @@ export * from './audio-detach';
 export * from './tag-learning';
 export * from './project/template-sharing';
 export * from './stress-test';
+export * from './batch-export-script';
+export * from './archive-encryption';

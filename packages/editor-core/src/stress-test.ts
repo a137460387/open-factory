@@ -1,5 +1,6 @@
 import { createId } from './model';
 import { round } from './time';
+import type { TimecodeFormat } from './time';
 import type { Project, Clip, Track, Sequence, VideoClip } from './model-types';
 
 export type StressScenarioId = 'mega-clips' | 'long-timeline' | 'mass-keyframes' | 'deep-nested';
@@ -51,6 +52,28 @@ export interface StressReport {
 
 const DEGRADATION_THRESHOLD = 1.5;
 
+const STRESS_SETTINGS = { fps: 30, timecodeFormat: 'frames' as TimecodeFormat, width: 1920, height: 1080 };
+
+function emptyProjectFields() {
+  return {
+    version: '0.2' as const,
+    releaseVersion: '0.2',
+    masterVolume: 1,
+    mediaFolders: [] as never[],
+    annotations: [] as never[],
+    reviewAnnotations: [] as never[],
+    collaborationNotes: [] as never[],
+    timelineNotes: [] as never[],
+    bookmarks: [] as never[],
+    beatMarkers: [] as never[],
+    exportRanges: [] as never[],
+    protectedRanges: [] as never[],
+    clipGroups: [] as never[],
+    speakers: [] as never[],
+    documentation: {} as Record<string, string>,
+  };
+}
+
 export function createVideoClipForStress(
   trackId: string,
   start: number,
@@ -88,9 +111,12 @@ export function generateMegaClipsProject(clipCount = 520): { project: Project; t
       name: 'stress-mega-clips',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      settings: { resolution: { width: 1920, height: 1080 }, frameRate: 30, backgroundColor: '#000000' },
+      ...emptyProjectFields(),
+      settings: STRESS_SETTINGS,
       media: [],
       mediaMetadata: {},
+      sequences: [],
+      activeSequenceId: '',
       timeline,
     },
     trackId,
@@ -113,9 +139,12 @@ export function generateLongTimelineProject(targetHours = 4.5): { project: Proje
       name: 'stress-long-timeline',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      settings: { resolution: { width: 1920, height: 1080 }, frameRate: 30, backgroundColor: '#000000' },
+      ...emptyProjectFields(),
+      settings: STRESS_SETTINGS,
       media: [],
       mediaMetadata: {},
+      sequences: [],
+      activeSequenceId: '',
       timeline,
     },
     trackId,
@@ -146,9 +175,12 @@ export function generateMassKeyframesProject(keyframeCount = 120): { project: Pr
       name: 'stress-mass-keyframes',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      settings: { resolution: { width: 1920, height: 1080 }, frameRate: 30, backgroundColor: '#000000' },
+      ...emptyProjectFields(),
+      settings: STRESS_SETTINGS,
       media: [],
       mediaMetadata: {},
+      sequences: [],
+      activeSequenceId: '',
       timeline,
     },
     trackId,
@@ -185,7 +217,8 @@ export function generateDeepNestedProject(depth = 5): { project: Project; sequen
       name: 'stress-deep-nested',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      settings: { resolution: { width: 1920, height: 1080 }, frameRate: 30, backgroundColor: '#000000' },
+      ...emptyProjectFields(),
+      settings: STRESS_SETTINGS,
       media: [],
       mediaMetadata: {},
       timeline,

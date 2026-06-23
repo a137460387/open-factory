@@ -42,6 +42,7 @@ import {
   type TimelineScriptOperation,
   type VfrHandlingStrategy
 } from '@open-factory/editor-core';
+import type { StressScenarioId } from '@open-factory/editor-core';
 import { formatBackupDisplayTime } from '../backup/projectBackup';
 import { getLanguage, normalizeLanguage, zhCN, type Language } from '../i18n/strings';
 import { parseAutomationRulesJson, serializeAutomationRulesJson } from '../automation/automation-rules';
@@ -2088,13 +2089,13 @@ export function SettingsDialog({
                       <h4 className="text-xs font-semibold text-slate-700">项目压力测试</h4>
                       <p className="text-[11px] text-slate-500">在独立临时项目中模拟极端场景，不影响当前工作。</p>
                       <div className="flex flex-wrap gap-2">
-                        {['mega-clips', 'long-timeline', 'mass-keyframes', 'deep-nested'].map((sid) => (
+                        {(['mega-clips', 'long-timeline', 'mass-keyframes', 'deep-nested'] as StressScenarioId[]).map((sid) => (
                           <button
                             key={sid}
                             className="rounded-md border border-line bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50"
                             data-testid={`stress-run-${sid}`}
                             onClick={() => {
-                              const { project, metrics: baseMetrics } = generateStressScenario(sid as any);
+                              const { project, metrics: baseMetrics } = generateStressScenario(sid);
                               const start = Date.now();
                               const renderStart = performance.now();
                               const _clone = JSON.parse(JSON.stringify(project));
