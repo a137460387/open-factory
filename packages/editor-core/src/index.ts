@@ -174,3 +174,4 @@ export * from './annotation-sync';
 export * from './audio-detach';
 export * from './tag-learning';
 export * from './project/template-sharing';
+export * from './stress-test';

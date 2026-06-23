@@ -26,6 +26,10 @@ import {
   normalizeTimecodeFormat,
   normalizeVfrHandlingStrategy,
   supportsDropFrameTimecode,
+  generateStressScenario,
+  measurePerfMetrics,
+  buildStressReport,
+  serializeStressReport,
   type Clip,
   type BuiltinTimelineScript,
   type EffectPresetFilters,
@@ -263,6 +267,8 @@ export function SettingsDialog({
   const [localModelsSettings, setLocalModelsSettings] = useState<LocalAiModelsSettings>({});
   const [localModelStatuses, setLocalModelStatuses] = useState<Partial<Record<LocalAiModelId, LocalAiModelResolvedStatus>>>({});
   const [webdavPassword, setWebdavPassword] = useState('');
+  const [developerMode, setDeveloperMode] = useState(false);
+  const [stressTestResult, setStressTestResult] = useState<string | null>(null);
   const [exportPresetSyncPassword, setExportPresetSyncPassword] = useState('');
   const [presetMarketCards, setPresetMarketCards] = useState<PresetMarketCard[]>([]);
   const [presetMarketRatings, setPresetMarketRatings] = useState<Record<string, number>>({});
@@ -2063,6 +2069,53 @@ export function SettingsDialog({
                   onRuleChange={(rule) => void updateExportRule(rule)}
                   onChooseCopyDirectory={() => void chooseExportRuleCopyDirectory()}
                 />
+                <div className="rounded-md border border-line bg-panel p-3" data-testid="settings-developer-section">
+                  <label className="flex items-start gap-2 text-xs text-slate-600">
+                    <input
+                      className="mt-0.5 h-4 w-4 accent-brand"
+                      type="checkbox"
+                      checked={developerMode}
+                      data-testid="settings-developer-mode-toggle"
+                      onChange={(e) => setDeveloperMode(e.target.checked)}
+                    />
+                    <span>
+                      <span className="block font-semibold text-slate-700">开发者模式</span>
+                      <span className="mt-1 block">开启后显示开发者工具，包括项目压力测试。</span>
+                    </span>
+                  </label>
+                  {developerMode ? (
+                    <div className="mt-3 space-y-2 border-t border-line pt-3" data-testid="stress-test-panel">
+                      <h4 className="text-xs font-semibold text-slate-700">项目压力测试</h4>
+                      <p className="text-[11px] text-slate-500">在独立临时项目中模拟极端场景，不影响当前工作。</p>
+                      <div className="flex flex-wrap gap-2">
+                        {['mega-clips', 'long-timeline', 'mass-keyframes', 'deep-nested'].map((sid) => (
+                          <button
+                            key={sid}
+                            className="rounded-md border border-line bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50"
+                            data-testid={`stress-run-${sid}`}
+                            onClick={() => {
+                              const { project, metrics: baseMetrics } = generateStressScenario(sid as any);
+                              const start = Date.now();
+                              const renderStart = performance.now();
+                              const _clone = JSON.parse(JSON.stringify(project));
+                              const renderTimeMs = performance.now() - renderStart;
+                              const metrics = measurePerfMetrics(baseMetrics, renderTimeMs, 0, 0);
+                              const report = buildStressReport(sid, start, metrics, undefined, '3.9.0');
+                              setStressTestResult(serializeStressReport(report));
+                            }}
+                          >
+                            {sid === 'mega-clips' ? '超大项目' : sid === 'long-timeline' ? '超长TL' : sid === 'mass-keyframes' ? '大量KF' : '深度嵌套'}
+                          </button>
+                        ))}
+                      </div>
+                      {stressTestResult ? (
+                        <pre className="mt-2 max-h-48 overflow-auto rounded border border-line bg-white p-2 text-[10px] text-slate-700" data-testid="stress-test-result">
+                          {stressTestResult}
+                        </pre>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
               </div>
             ) : null}
             {tab === 'display' ? (

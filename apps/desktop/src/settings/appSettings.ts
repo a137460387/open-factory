@@ -284,6 +284,7 @@ export interface AppSettings {
   thumbnailPrerenderEnabled?: boolean;
   touchOptimization?: TouchOptimizationSettings;
   mediaGrouping?: MediaGroupingSettings;
+  developerMode?: boolean;
 }
 
 export async function initializeLanguageFromSettings(): Promise<Language> {
