@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, afterEach } from 'vitest';
 import {
   createSequenceCompareLayout,
   normalizeSplitRatio,
@@ -8,6 +8,8 @@ import {
   deserializeSequenceCompareLayout,
   areSequencesIndependent,
   collectTimelineMarkers,
+  saveSequenceCompareLayout,
+  loadSequenceCompareLayout,
   createId,
   createTrack,
   type SequenceCompareLayout,
@@ -186,5 +188,67 @@ describe('collectTimelineMarkers', () => {
   it('returns markers array or empty', () => {
     expect(collectTimelineMarkers({})).toEqual([]);
     expect(collectTimelineMarkers({ markers: [makeMarker('m1', 'X', 0)] })).toHaveLength(1);
+  });
+});
+
+describe('saveSequenceCompareLayout / loadSequenceCompareLayout', () => {
+  const originalWindow = (globalThis as Record<string, unknown>).window;
+
+  afterEach(() => {
+    if (originalWindow === undefined) {
+      delete (globalThis as Record<string, unknown>).window;
+    } else {
+      (globalThis as Record<string, unknown>).window = originalWindow;
+    }
+  });
+
+  it('save is a no-op when window is undefined', () => {
+    delete (globalThis as Record<string, unknown>).window;
+    const layout = createSequenceCompareLayout('a', 'b');
+    expect(() => saveSequenceCompareLayout(layout)).not.toThrow();
+  });
+
+  it('load returns undefined when window is undefined', () => {
+    delete (globalThis as Record<string, unknown>).window;
+    expect(loadSequenceCompareLayout()).toBeUndefined();
+  });
+
+  it('round-trips through save and load with mocked localStorage', () => {
+    const store: Record<string, string> = {};
+    (globalThis as Record<string, unknown>).window = {
+      localStorage: {
+        getItem: (key: string) => store[key] ?? null,
+        setItem: (key: string, value: string) => { store[key] = value; },
+      },
+    };
+    const layout = createSequenceCompareLayout('left', 'right', { splitRatio: 0.6, syncMarkersEnabled: true });
+    saveSequenceCompareLayout(layout);
+    const loaded = loadSequenceCompareLayout();
+    expect(loaded).toBeDefined();
+    expect(loaded!.leftSequenceId).toBe('left');
+    expect(loaded!.rightSequenceId).toBe('right');
+    expect(loaded!.splitRatio).toBe(0.6);
+    expect(loaded!.syncMarkersEnabled).toBe(true);
+  });
+
+  it('save silently handles storage quota exceeded', () => {
+    (globalThis as Record<string, unknown>).window = {
+      localStorage: {
+        getItem: () => null,
+        setItem: () => { throw new Error('QuotaExceededError'); },
+      },
+    };
+    const layout = createSequenceCompareLayout('a', 'b');
+    expect(() => saveSequenceCompareLayout(layout)).not.toThrow();
+  });
+
+  it('load returns undefined when localStorage has invalid data', () => {
+    (globalThis as Record<string, unknown>).window = {
+      localStorage: {
+        getItem: () => 'not-valid-json',
+        setItem: () => {},
+      },
+    };
+    expect(loadSequenceCompareLayout()).toBeUndefined();
   });
 });

@@ -165,4 +165,34 @@ describe('collaboration permissions', () => {
     expect(result.roles).toHaveLength(1);
     expect(result.roles[0].userId).toBe('u1');
   });
+
+  it('normalizeCollaborationPermissionConfig normalizes changeLog entries with missing fields', () => {
+    const result = normalizeCollaborationPermissionConfig({
+      changeLog: [
+        { id: 'cl-1', userId: 'u1', previousRole: 'editor', newRole: 'viewer', action: 'changed' },
+        { id: 'cl-2', userId: 'u2', action: 'revoked' },
+        { id: 'cl-3', userId: 'u3', previousRole: 'invalid-role', newRole: 'editor', changedBy: 'u1', changedByName: 'Alice', timestamp: '2026-01-01', action: 'assigned' },
+        null,
+        { id: '', userId: '' },
+      ] as any,
+      roles: [
+        { userId: 'u1', userName: 'User 1', role: 'editor', assignedAt: '2026-01-01', assignedBy: 'owner-1' },
+      ]
+    }, 'owner-1');
+    // null filtered out, { id: '', userId: '' } passes typeof check
+    expect(result.changeLog.length).toBe(4);
+    expect(result.changeLog[0].userName).toBe('u1');
+    expect(result.changeLog[0].changedBy).toBe('owner-1');
+    expect(result.changeLog[0].changedByName).toBe('owner-1');
+    expect(result.changeLog[0].previousRole).toBe('editor');
+    expect(result.changeLog[1].previousRole).toBeNull();
+    expect(result.changeLog[1].newRole).toBe('viewer');
+    expect(result.changeLog[1].action).toBe('revoked');
+    expect(result.changeLog[2].previousRole).toBeNull();
+    expect(result.changeLog[2].changedByName).toBe('Alice');
+    expect(result.changeLog[2].action).toBe('assigned');
+    // last entry has empty strings normalized
+    expect(result.changeLog[3].id).toBe('');
+    expect(result.changeLog[3].userName).toBe('');
+  });
 });

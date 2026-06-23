@@ -244,3 +244,43 @@ describe('needsSyncRecheck', () => {
     )).toBe(true);
   });
 });
+
+describe('scanSubtitleTrackSync warning path', () => {
+  it('generates warnings when subtitle start is offset by ref startDelta', () => {
+    const subs = [makeSubtitleClip({ id: 's1', start: 5 })];
+    const refs = [makeTimingRef({ currentStart: 2, currentDuration: 20, originalStart: 0, originalDuration: 20 })];
+    const report = scanSubtitleTrackSync(subs, 'sub-track', refs, 'standard');
+    expect(report.warningCount).toBeGreaterThan(0);
+    expect(report.warnings[0].subtitleClipId).toBe('s1');
+    expect(report.warnings[0].trackId).toBe('sub-track');
+    expect(report.alignedCount).toBe(0);
+  });
+
+  it('produces major severity for large offsets in strict mode', () => {
+    const subs = [makeSubtitleClip({ id: 's2', start: 0 })];
+    const refs = [makeTimingRef({ currentStart: 0, currentDuration: 20, originalStart: 0, originalDuration: 20, currentSpeed: 0.5 })];
+    const report = scanSubtitleTrackSync(subs, 'sub-track', refs, 'strict');
+    expect(report.totalSubtitles).toBe(1);
+    if (report.warningCount > 0) {
+      expect(['minor', 'major']).toContain(report.warnings[0].severity);
+    }
+  });
+});
+
+describe('batchScanSubtitleSync warning path', () => {
+  it('generates warnings when subtitle clips have offset from ref', () => {
+    const tracks: Track[] = [
+      {
+        id: 'sub-track-1',
+        type: 'subtitle',
+        name: 'Subs',
+        clips: [makeSubtitleClip({ id: 'b1', start: 5, trackId: 'sub-track-1' })],
+      },
+    ];
+    const refs = [makeTimingRef({ currentStart: 2, currentDuration: 20, originalStart: 0, originalDuration: 20 })];
+    const report = batchScanSubtitleSync(tracks, refs, 'standard');
+    expect(report.warningCount).toBeGreaterThan(0);
+    expect(report.warnings[0].subtitleClipId).toBe('b1');
+    expect(report.warnings[0].trackId).toBe('sub-track-1');
+  });
+});

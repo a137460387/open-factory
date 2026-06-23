@@ -15,7 +15,13 @@ export default defineConfig({
       reporter: ['text', 'html', 'lcov'],
       reportsDirectory: 'coverage',
       include: ['packages/editor-core/src/**/*.ts'],
-      exclude: ['packages/editor-core/src/index.ts'],
+      exclude: [
+        'packages/editor-core/src/index.ts',
+        'packages/editor-core/src/model-types.ts',
+        'packages/editor-core/src/project/project-types.ts',
+        'packages/editor-core/src/proxy/proxy-types.ts',
+        'packages/editor-core/src/**/earcut.d.ts',
+      ],
       thresholds: {
         lines: 80,
         functions: 80,
