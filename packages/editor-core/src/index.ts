@@ -162,6 +162,10 @@ export * from './duplicate-media-merge';
 export * from './batch-media-replace';
 export * from './subtitle-style-quickbar';
 export * from './export/export-retry-strategy';
+export * from './export/error-knowledge';
+export * from './timeline-sequence-compare';
+export * from './subtitles/sync-monitor';
+export * from './proxy/proxy-batch-verify';
 
 export * from './audio/multicam-audio-sync';
 export * from './export/export-preset-diff';

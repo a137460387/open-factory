@@ -388,6 +388,10 @@ const SnapshotVersionCompareDialog = lazy(() => import('../project-snapshots/Sna
 const TimelineCompareDialog = lazy(() => import('../timeline-compare/TimelineCompareDialog').then((module) => ({ default: module.TimelineCompareDialog })));
 const ReleaseWorkflowDialog = lazy(() => import('../release/ReleaseWorkflowDialog').then((module) => ({ default: module.ReleaseWorkflowDialog })));
 const ThumbnailGeneratorDialog = lazy(() => import('../thumbnail/ThumbnailGeneratorDialog').then((module) => ({ default: module.ThumbnailGeneratorDialog })));
+const ErrorKnowledgeDialog = lazy(() => import('../export-error-knowledge/ErrorKnowledgeDialog').then((module) => ({ default: module.ErrorKnowledgeDialog })));
+const SequenceCompareDialog = lazy(() => import('../sequence-compare/SequenceCompareDialog').then((module) => ({ default: module.SequenceCompareDialog })));
+const SubtitleSyncPanel = lazy(() => import('../subtitle-sync-monitor/SubtitleSyncPanel').then((module) => ({ default: module.SubtitleSyncPanel })));
+const ProxyBatchVerifyDialog = lazy(() => import('../proxy-batch-verify/ProxyBatchVerifyDialog').then((module) => ({ default: module.ProxyBatchVerifyDialog })));
 
 interface ProjectPasswordRequest {
   title: string;
@@ -550,6 +554,10 @@ export function EditorShell() {
     tracks: Track[];
   }>();
   const [autoAudioSyncOpen, setAutoAudioSyncOpen] = useState(false);
+  const [errorKnowledgeOpen, setErrorKnowledgeOpen] = useState(false);
+  const [sequenceCompareOpen, setSequenceCompareOpen] = useState(false);
+  const [subtitleSyncOpen, setSubtitleSyncOpen] = useState(false);
+  const [proxyVerifyOpen, setProxyVerifyOpen] = useState(false);
   const [autoAudioSyncRunning, setAutoAudioSyncRunning] = useState(false);
   const [autoAudioSyncPrimaryClipId, setAutoAudioSyncPrimaryClipId] = useState<string>();
   const [autoAudioSyncMode, setAutoAudioSyncMode] = useState<AutoAudioSyncApplyMode>('keep-secondary');
@@ -4154,6 +4162,10 @@ export function EditorShell() {
           onRedo={redo}
           onClearCache={() => void clearCache()}
           onOpenSettings={() => setSettingsOpen(true)}
+              onOpenErrorKnowledge={() => setErrorKnowledgeOpen(true)}
+              onOpenSequenceCompare={() => setSequenceCompareOpen(true)}
+              onOpenSubtitleSync={() => setSubtitleSyncOpen(true)}
+              onOpenProxyVerify={() => setProxyVerifyOpen(true)}
           onStartTutorial={startTutorial}
           onOpenProjectHealth={openProjectHealth}
           sharePackageBusy={sharePackageBusy}
@@ -4633,6 +4645,35 @@ export function EditorShell() {
             />
           ) : null}
           {macroHistoryOpen ? <MacroHistoryDialog entries={macroHistory} onClose={() => setMacroHistoryOpen(false)} /> : null}
+          {errorKnowledgeOpen ? (
+            <ErrorKnowledgeDialog
+              stderr={""}
+              onClose={() => setErrorKnowledgeOpen(false)}
+            />
+          ) : null}
+          {sequenceCompareOpen ? (
+            <SequenceCompareDialog
+              project={project}
+              onClose={() => setSequenceCompareOpen(false)}
+            />
+          ) : null}
+          {subtitleSyncOpen ? (
+            <SubtitleSyncPanel
+              tracks={project.timeline.tracks}
+              timingRefs={[]}
+              projectDuration={getTimelineDuration(project.timeline)}
+              onClose={() => setSubtitleSyncOpen(false)}
+              onRepairSubtitle={(id, start, duration) => {
+                commandManager.execute(new UpdateClipCommand(timelineAccessor, id, { start, duration }));
+              }}
+            />
+          ) : null}
+          {proxyVerifyOpen ? (
+            <ProxyBatchVerifyDialog
+              media={project.media}
+              onClose={() => setProxyVerifyOpen(false)}
+            />
+          ) : null}
         </Suspense>
         {projectEncryptionSaveOpen ? (
           <ProjectEncryptionSaveDialog

@@ -75,6 +75,10 @@ interface ToolbarProps {
   onSplitToBeats(): void;
   onOpenAutoAudioSync(): void;
   onOpenMacroHistory(): void;
+  onOpenErrorKnowledge(): void;
+  onOpenSequenceCompare(): void;
+  onOpenSubtitleSync(): void;
+  onOpenProxyVerify(): void;
   onStartMacroRecording(): void;
   onStopMacroRecording(): void;
   onImportSubtitles(): void;
@@ -564,6 +568,17 @@ export function Toolbar(props: ToolbarProps) {
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
               type="button"
+              data-testid="toolbar-view-sequence-compare"
+              onClick={() => {
+                setViewMenuOpen(false);
+                props.onOpenSequenceCompare();
+              }}
+            >
+              <span>{zhCN.sequenceCompare.title}</span>
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
               data-testid="toolbar-view-heatmap-menu-item"
               aria-pressed={props.timelineHeatmap.enabled}
               onClick={() => props.onTimelineHeatmapChange({ enabled: !props.timelineHeatmap.enabled })}
@@ -702,6 +717,18 @@ export function Toolbar(props: ToolbarProps) {
             >
               <span>{t.mediaPrecheck}</span>
             </button>
+
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-tools-proxy-verify-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onOpenProxyVerify();
+              }}
+            >
+              <span>{zhCN.proxyBatchVerify.title}</span>
+            </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
               type="button"
@@ -796,6 +823,18 @@ export function Toolbar(props: ToolbarProps) {
             >
               <span>{t.colorAnalysis}</span>
               <Activity size={14} />
+            </button>
+
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-tools-error-knowledge-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onOpenErrorKnowledge();
+              }}
+            >
+              <span>{zhCN.errorKnowledge.title}</span>
             </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
@@ -931,6 +970,18 @@ export function Toolbar(props: ToolbarProps) {
             >
               <span>{t.rhythmAnalysis}</span>
               <Activity size={14} />
+            </button>
+
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-tools-subtitle-sync-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onOpenSubtitleSync();
+              }}
+            >
+              <span>{zhCN.subtitleSyncMonitor.title}</span>
             </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
