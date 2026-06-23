@@ -177,3 +177,7 @@ export * from './project/template-sharing';
 export * from './stress-test';
 export * from './batch-export-script';
 export * from './archive-encryption';
+export * from './performance-monitor';
+export * from './format-converter';
+export * from './subtitles/emotion-analysis';
+export * from './export/export-history-classifier';

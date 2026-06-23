@@ -1,4 +1,4 @@
-﻿import { Activity, Archive, Camera, Captions, ChevronDown, CircleHelp, ClipboardList, Download, FileDown, FilePlus2, FileText, FolderOpen, GitCompareArrows, Grid2X2, History, ImageDown, LayoutGrid, LockKeyhole, MessageSquareText, Mic2, Monitor, PanelsTopLeft, Pause, PictureInPicture2, Play, Redo2, RotateCcw, Save, Scissors, Settings, Square, Trash2, Undo2, WandSparkles, XCircle } from 'lucide-react';
+import { Activity, Archive, Camera, Captions, ChevronDown, CircleHelp, ClipboardList, Download, FileDown, FilePlus2, FileText, FolderOpen, GitCompareArrows, Grid2X2, History, ImageDown, LayoutGrid, LockKeyhole, MessageSquareText, Mic2, Monitor, PanelsTopLeft, Pause, PictureInPicture2, Play, Redo2, RotateCcw, Save, Scissors, Settings, Square, Trash2, Undo2, Palette, Wand2, WandSparkles, XCircle } from 'lucide-react';
 import {
   BUILT_IN_SPLIT_LAYOUTS,
   SPLIT_LAYOUT_PRESET_IDS,
@@ -15,6 +15,7 @@ import { useState } from 'react';
 import { formatBackupDisplayTime } from '../backup/projectBackup';
 import { useExportQueueStore } from '../export/export-queue-store';
 import { zhCN } from '../i18n/strings';
+import { featureStrings } from '../i18n/featureStrings';
 import { pickWhisperExecutablePath, pickWhisperModelPath } from '../lib/whisper';
 import { showToast } from '../lib/toast';
 import { useMediaJobStore } from '../media/media-job-store';
@@ -79,6 +80,9 @@ interface ToolbarProps {
   onOpenSequenceCompare(): void;
   onOpenSubtitleSync(): void;
   onOpenProxyVerify(): void;
+  onOpenFormatConverter(): void;
+  onOpenEmotionAnalysis(): void;
+  onOpenExportHistoryClassifier(): void;
   onStartMacroRecording(): void;
   onStopMacroRecording(): void;
   onImportSubtitles(): void;
@@ -835,6 +839,42 @@ export function Toolbar(props: ToolbarProps) {
               }}
             >
               <span>{zhCN.errorKnowledge.title}</span>
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-tools-format-converter-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onOpenFormatConverter();
+              }}
+            >
+              <span>{featureStrings.formatConverter.title}</span>
+              <Wand2 size={14} />
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-tools-emotion-analysis-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onOpenEmotionAnalysis();
+              }}
+            >
+              <span>{featureStrings.subtitleEmotion.title}</span>
+              <Palette size={14} />
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-tools-export-history-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onOpenExportHistoryClassifier();
+              }}
+            >
+              <span>{featureStrings.exportHistory.title}</span>
+              <History size={14} />
             </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"

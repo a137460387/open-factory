@@ -9387,7 +9387,7 @@ const enOverrides = {
         { label: 'Slider large step', keys: 'Shift + ← / → / ↑ / ↓' }
       ]
     }
-  }
+  },
 } satisfies DeepPartial<LocaleStrings>;
 
 export const locales: Record<Language, LocaleStrings> = {
@@ -9531,3 +9531,5 @@ function formatBytes(bytes: number): string {
   }
   return `${bytes} B`;
 }
+
+

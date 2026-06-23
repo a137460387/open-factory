@@ -1,4 +1,4 @@
-﻿import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import {
   AddAdjustmentLayerCommand,
   AutoRepairProjectHealthCommand,
@@ -180,6 +180,9 @@ import { revealExport } from '../lib/exportVideo';
 import { clearMediaCache } from '../cache/cache-service';
 import { createAdjustmentLayerClip, createClipFromAsset, createMotionGraphicClip, findPreferredTrack } from '../lib/clipFactory';
 import { zhCN } from '../i18n/strings';
+import { featureStrings } from '../i18n/featureStrings';
+import { usePerformanceMonitorStore } from '../store/performanceMonitorStore';
+import { PerformanceAlertIcon } from './PerformanceMonitorPanel';
 import {
   applyWorkspaceLayout,
   BUILT_IN_WORKSPACE_LAYOUT_IDS,
@@ -393,6 +396,11 @@ const SequenceCompareDialog = lazy(() => import('../sequence-compare/SequenceCom
 const SubtitleSyncPanel = lazy(() => import('../subtitle-sync-monitor/SubtitleSyncPanel').then((module) => ({ default: module.SubtitleSyncPanel })));
 const ProxyBatchVerifyDialog = lazy(() => import('../proxy-batch-verify/ProxyBatchVerifyDialog').then((module) => ({ default: module.ProxyBatchVerifyDialog })));
 
+const PerformanceMonitorPanel = lazy(() => import('./PerformanceMonitorPanel').then((module) => ({ default: module.PerformanceMonitorPanel })));
+const FormatConverterDialog = lazy(() => import('./FormatConverterDialog').then((module) => ({ default: module.FormatConverterDialog })));
+const EmotionAnalysisPanel = lazy(() => import('./EmotionAnalysisPanel').then((module) => ({ default: module.EmotionAnalysisPanel })));
+const ExportHistoryClassifierPanel = lazy(() => import('./ExportHistoryClassifierPanel').then((module) => ({ default: module.ExportHistoryClassifierPanel })));
+
 interface ProjectPasswordRequest {
   title: string;
   description: string;
@@ -558,6 +566,29 @@ export function EditorShell() {
   const [sequenceCompareOpen, setSequenceCompareOpen] = useState(false);
   const [subtitleSyncOpen, setSubtitleSyncOpen] = useState(false);
   const [proxyVerifyOpen, setProxyVerifyOpen] = useState(false);
+  const [formatConverterOpen, setFormatConverterOpen] = useState(false);
+  const [emotionAnalysisOpen, setEmotionAnalysisOpen] = useState(false);
+  const [exportHistoryClassifierOpen, setExportHistoryClassifierOpen] = useState(false);
+  const [formatConverterMockFiles, setFormatConverterMockFiles] = useState<any[]>([]);
+  const [mockSubtitleClips, setMockSubtitleClips] = useState<any[]>([]);
+  const [mockExportHistory, setMockExportHistory] = useState<any[]>([]);
+
+  // E2E: expose stores for test instrumentation
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).__PERF_MONITOR_STORE__ = usePerformanceMonitorStore;
+      (window as any).__APP_STORE__ = {
+        setFormatConverterOpen,
+        setEmotionAnalysisOpen,
+        setEmotionPanelOpen: setEmotionAnalysisOpen,
+        setFormatConverterMockFiles,
+        setExportHistoryClassifierOpen,
+        setExportHistoryPanelOpen: setExportHistoryClassifierOpen,
+        setMockSubtitleClips,
+        setMockExportHistory,
+      };
+    }
+  }, [setFormatConverterOpen, setEmotionAnalysisOpen, setExportHistoryClassifierOpen]);
   const [autoAudioSyncRunning, setAutoAudioSyncRunning] = useState(false);
   const [autoAudioSyncPrimaryClipId, setAutoAudioSyncPrimaryClipId] = useState<string>();
   const [autoAudioSyncMode, setAutoAudioSyncMode] = useState<AutoAudioSyncApplyMode>('keep-secondary');
@@ -4166,6 +4197,9 @@ export function EditorShell() {
               onOpenSequenceCompare={() => setSequenceCompareOpen(true)}
               onOpenSubtitleSync={() => setSubtitleSyncOpen(true)}
               onOpenProxyVerify={() => setProxyVerifyOpen(true)}
+              onOpenFormatConverter={() => setFormatConverterOpen(true)}
+              onOpenEmotionAnalysis={() => setEmotionAnalysisOpen(true)}
+              onOpenExportHistoryClassifier={() => setExportHistoryClassifierOpen(true)}
           onStartTutorial={startTutorial}
           onOpenProjectHealth={openProjectHealth}
           sharePackageBusy={sharePackageBusy}
@@ -4177,6 +4211,9 @@ export function EditorShell() {
           onRevealExport={lastExportPath ? () => void revealExport(lastExportPath) : undefined}
           lastBackupAt={lastBackupAt}
         />
+        <div className="absolute right-3 top-2 z-10">
+          <PerformanceAlertIcon />
+        </div>
         <main
           className="grid min-h-0 min-w-0 gap-px bg-line transition-[grid-template-columns] duration-200 ease-out"
           style={{ gridTemplateColumns: mainGridColumns }}
@@ -4674,6 +4711,32 @@ export function EditorShell() {
               onClose={() => setProxyVerifyOpen(false)}
             />
           ) : null}
+          {formatConverterOpen ? (
+            <FormatConverterDialog
+              open={formatConverterOpen}
+              onClose={() => setFormatConverterOpen(false)}
+              initialFiles={formatConverterMockFiles}
+            />
+          ) : null}
+          {emotionAnalysisOpen ? (
+            <EmotionAnalysisPanel
+              open={emotionAnalysisOpen}
+              onClose={() => setEmotionAnalysisOpen(false)}
+              subtitleClips={mockSubtitleClips}
+              onApplyStyles={() => {}}
+            />
+          ) : null}
+          {exportHistoryClassifierOpen ? (
+            <ExportHistoryClassifierPanel
+              open={exportHistoryClassifierOpen}
+              onClose={() => setExportHistoryClassifierOpen(false)}
+              history={mockExportHistory}
+            />
+          ) : null}
+          <PerformanceMonitorPanel
+            open={usePerformanceMonitorStore((s) => s.panelOpen)}
+            onClose={() => usePerformanceMonitorStore.getState().setPanelOpen(false)}
+          />
         </Suspense>
         {projectEncryptionSaveOpen ? (
           <ProjectEncryptionSaveDialog
