@@ -167,7 +167,10 @@ import {
   matchFrameFromClip,
   revealInTimeline as coreRevealInTimeline,
   navigateToNextInstance as coreNavigateToNextInstance,
-  getMediaInstanceNavigation
+  getMediaInstanceNavigation,
+  type ClipboardKeyframeGroup,
+  type PasteMode,
+  PasteKeyframesCommand
 } from '@open-factory/editor-core';
 import { ChevronLeft, ChevronRight, GripHorizontal } from 'lucide-react';
 import { Toolbar } from './Toolbar';
@@ -538,6 +541,8 @@ export function EditorShell() {
   const [mediaOrganizerScanning, setMediaOrganizerScanning] = useState(false);
   const [shortcutBindings, setShortcutBindings] = useState<TimelineShortcutBindings>({});
   const [shortcutCheatsheetOpen, setShortcutCheatsheetOpen] = useState(false);
+  const [pasteKeyframeDialogOpen, setPasteKeyframeDialogOpen] = useState(false);
+  const [pasteKeyframeDialogGroups, setPasteKeyframeDialogGroups] = useState<ClipboardKeyframeGroup[]>([]);
   const [macros, setMacros] = useState<ClipMacro[]>([]);
   const [macroHistory, setMacroHistory] = useState<MacroHistoryEntry[]>([]);
   const [sharedLibraryResources, setSharedLibraryResources] = useState<SharedLibraryResource[]>([]);
@@ -4139,7 +4144,59 @@ export function EditorShell() {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [shortcutCheatsheetOpen]);
-  useShortcuts(shortcutHandlers, shortcutBindings);
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.key !== 'c' || event.shiftKey) return;
+      if (isEditableKeyboardTarget(event.target)) return;
+      const state = useEditorStore.getState();
+      const refs = state.selectedKeyframes;
+      if (refs.length === 0) return;
+      event.preventDefault();
+      const timeline = state.project.timeline;
+      const allClips = timeline.tracks.flatMap((t) => t.clips);
+      const groups: ClipboardKeyframeGroup[] = [];
+      for (const ref of refs) {
+        const clip = allClips.find((c) => c.id === ref.clipId);
+        if (!clip) continue;
+        const kf = clip.keyframes?.[ref.property]?.find((k) => k.id === ref.keyframeId);
+        if (!kf) continue;
+        const existing = groups.find((g) => g.sourceClipId === ref.clipId && g.property === ref.property);
+        if (existing) {
+          existing.keyframes.push(kf);
+        } else {
+          groups.push({ sourceClipId: ref.clipId, sourceClipStart: clip.start, property: ref.property, keyframes: [kf] });
+        }
+      }
+      if (groups.length > 0) {
+        state.setClipboardKeyframes(groups);
+        const count = groups.reduce((sum, g) => sum + g.keyframes.length, 0);
+        showToast({ kind: 'success', title: zhCN.keyframePaste.copied(count) });
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.key !== 'v' || event.shiftKey) return;
+      if (isEditableKeyboardTarget(event.target)) return;
+      const state = useEditorStore.getState();
+      const groups = state.clipboardKeyframes;
+      if (!groups || groups.length === 0) {
+        showToast({ kind: 'warning', title: zhCN.keyframePaste.noSelection });
+        return;
+      }
+      if (!state.selectedClipId) {
+        showToast({ kind: 'warning', title: zhCN.keyframePaste.noTarget });
+        return;
+      }
+      setPasteKeyframeDialogGroups(groups);
+      setPasteKeyframeDialogOpen(true);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);  useShortcuts(shortcutHandlers, shortcutBindings);
   useMacroShortcuts(macros, executeMacro);
   useBackgroundMediaJobs(project.media);
   useEffect(() => {
@@ -4819,6 +4876,13 @@ export function EditorShell() {
           ) : null}
           {timelineSearchOpen ? <TimelineSearchPanel project={project} onClose={() => setTimelineSearchOpen(false)} /> : null}
           {shortcutCheatsheetOpen ? <ShortcutCheatsheetPanel bindings={shortcutBindings} onClose={() => setShortcutCheatsheetOpen(false)} /> : null}
+          {pasteKeyframeDialogOpen && selectedClipId ? (
+            <PasteKeyframeDialog
+              groups={pasteKeyframeDialogGroups}
+              targetClipId={selectedClipId}
+              onClose={() => setPasteKeyframeDialogOpen(false)}
+            />
+          ) : null}
           {settingsOpen ? (
             <SettingsDialog
               open={settingsOpen}
@@ -5715,6 +5779,54 @@ function estimateUndoHistoryBytes(historyMeta: { entries: unknown[]; total: numb
 
 function sanitizeFileName(value: string): string {
   return value.replace(/[<>:"/\\|?*\x00-\x1f]/g, '-').trim() || 'open-factory';
+}
+
+function PasteKeyframeDialog({ groups, targetClipId, onClose }: { groups: ClipboardKeyframeGroup[]; targetClipId: string; onClose(): void }) {
+  const targetClip = useEditorStore.getState().project.timeline.tracks.flatMap((t) => t.clips).find((c) => c.id === targetClipId);
+  const hasCrossProperty = targetClip ? groups.some((g) => !Object.keys(targetClip.keyframes ?? {}).includes(g.property)) : false;
+
+  function handlePaste(mode: PasteMode): void {
+    commandManager.execute(new PasteKeyframesCommand(timelineAccessor, { groups, targetClipId, mode }));
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" data-testid="paste-keyframe-dialog">
+      <section className="w-full max-w-sm rounded-md border border-line bg-white shadow-soft">
+        <div className="border-b border-line px-4 py-3">
+          <h2 className="text-sm font-semibold">{zhCN.keyframePaste.title}</h2>
+        </div>
+        <div className="space-y-3 px-4 py-3">
+          {hasCrossProperty && (
+            <p className="text-xs text-amber-600" data-testid="paste-cross-property-warning">
+              {zhCN.keyframePaste.crossPropertyWarning}
+            </p>
+          )}
+          <div className="flex gap-2">
+            <button
+              className="flex-1 rounded-md border border-line px-3 py-2 text-sm font-medium hover:bg-panel"
+              onClick={() => handlePaste('relative')}
+              data-testid="paste-relative-button"
+            >
+              {zhCN.keyframePaste.relative}
+            </button>
+            <button
+              className="flex-1 rounded-md bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-[#176858]"
+              onClick={() => handlePaste('absolute')}
+              data-testid="paste-absolute-button"
+            >
+              {zhCN.keyframePaste.absolute}
+            </button>
+          </div>
+        </div>
+        <div className="flex justify-end border-t border-line px-4 py-2">
+          <button className="rounded-md px-3 py-1.5 text-sm text-slate-500 hover:bg-panel" onClick={onClose} data-testid="paste-cancel-button">
+            {zhCN.duplicateMedia.cancel}
+          </button>
+        </div>
+      </section>
+    </div>
+  );
 }
 
 function SharePackageProgressDialog({ progress }: { progress: SharePackageWorkflowProgress }) {

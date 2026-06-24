@@ -1,4 +1,4 @@
-import type { Clip, HistoryMeta, KeyframeProperty, MediaAsset, MediaMetadata, Project, Timeline, TimelineDiffRange } from '@open-factory/editor-core';
+import type { Clip, HistoryMeta, KeyframeProperty, MediaAsset, MediaMetadata, Project, Timeline, TimelineDiffRange, ClipboardKeyframeGroup } from '@open-factory/editor-core';
 import { clampTimelineZoom, createProject, getTimelineDuration, normalizeMediaMetadataEntry, replaceProjectActiveTimeline, switchProjectActiveSequence, resolveZoomForContext, saveZoomMemoryEntry, detectZoomEditMode, type ZoomEditMode } from '@open-factory/editor-core';
 import { create } from 'zustand';
 import { zhCN } from '../i18n/strings';
@@ -30,6 +30,8 @@ export interface EditorState {
   previewTimeline?: Timeline;
   timelineCompareRanges: TimelineDiffRange[];
   chromaKeyPickClipId?: string;
+  clipboardKeyframes?: ClipboardKeyframeGroup[];
+  setClipboardKeyframes: (groups?: ClipboardKeyframeGroup[]) => void;
   replaceProject: (project: Project) => void;
   replaceTimeline: (timeline: Timeline) => void;
   setActiveSequenceId: (sequenceId: string) => void;
@@ -238,6 +240,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setPreviewTimeline: (previewTimeline) => set({ previewTimeline }),
   setTimelineCompareRanges: (timelineCompareRanges) => set({ timelineCompareRanges }),
   setChromaKeyPickClipId: (chromaKeyPickClipId) => set({ chromaKeyPickClipId })
+  ,
+  setClipboardKeyframes: (clipboardKeyframes) => set({ clipboardKeyframes }),
 }));
 
 export function selectClipById(project: Project, clipId?: string): Clip | undefined {

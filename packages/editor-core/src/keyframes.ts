@@ -772,3 +772,79 @@ function setLastScaleFrame(
   next[next.length - 1] = createKeyframe(property, { ...last, time: duration, value: scale }, duration);
   return next;
 }
+
+export interface ClipboardKeyframeGroup {
+  sourceClipId: string;
+  sourceClipStart: number;
+  property: KeyframeProperty;
+  keyframes: Keyframe<number>[];
+}
+
+export type PasteMode = 'relative' | 'absolute';
+
+export function normalizeCrossPropertyValue(
+  value: number,
+  sourceProperty: KeyframeProperty,
+  targetProperty: KeyframeProperty
+): number {
+  if (sourceProperty === targetProperty) {
+    return value;
+  }
+  const sourceLimits = KEYFRAME_PROPERTY_LIMITS[sourceProperty];
+  const targetLimits = KEYFRAME_PROPERTY_LIMITS[targetProperty];
+  if (!sourceLimits || !targetLimits) {
+    return value;
+  }
+  const sourceRange = sourceLimits.max - sourceLimits.min;
+  if (Math.abs(sourceRange) < 0.000001) {
+    return targetLimits.min;
+  }
+  const normalized = (value - sourceLimits.min) / sourceRange;
+  return round(targetLimits.min + normalized * (targetLimits.max - targetLimits.min));
+}
+
+export function normalizePastedKeyframes(
+  groups: ClipboardKeyframeGroup[],
+  targetClipStart: number,
+  targetClipDuration: number,
+  mode: PasteMode,
+  targetProperty?: KeyframeProperty
+): Array<{ property: KeyframeProperty; keyframes: Keyframe<number>[] }> {
+  const result: Array<{ property: KeyframeProperty; keyframes: Keyframe<number>[] }> = [];
+  for (const group of groups) {
+    const property = targetProperty ?? group.property;
+    const limits = KEYFRAME_PROPERTY_LIMITS[property];
+    const fallback = getKeyframeFallbackValue(property);
+    const needsNormalization = targetProperty != null && targetProperty !== group.property;
+    const mapped: Keyframe<number>[] = [];
+    for (const kf of group.keyframes) {
+      let time = kf.time;
+      if (mode === 'absolute') {
+        const absoluteTime = group.sourceClipStart + kf.time;
+        time = absoluteTime - targetClipStart;
+      }
+      time = Math.min(targetClipDuration, Math.max(0, time));
+      let value = kf.value;
+      if (needsNormalization) {
+        value = normalizeCrossPropertyValue(value, group.property, property);
+      }
+      if (limits) {
+        value = Math.min(limits.max, Math.max(limits.min, value));
+      }
+      mapped.push({
+        id: createId('keyframe'),
+        time: round(time),
+        value: round(value),
+        easing: normalizeEasing(kf.easing),
+        ...(kf.inHandle ? { inHandle: { ...kf.inHandle } } : {}),
+        ...(kf.outHandle ? { outHandle: { ...kf.outHandle } } : {}),
+        ...(kf.handleMode ? { handleMode: kf.handleMode } : {})
+      });
+    }
+    mapped.sort((a, b) => a.time - b.time);
+    if (mapped.length > 0) {
+      result.push({ property, keyframes: normalizeKeyframes(mapped, targetClipDuration, fallback, property) });
+    }
+  }
+  return result;
+}

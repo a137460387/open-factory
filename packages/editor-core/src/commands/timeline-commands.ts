@@ -141,7 +141,7 @@ import {
 } from '../media-folders';
 import type { BatchEditableMediaMetadata } from '../media-batch';
 import { alignKeyframeValues, applyBatchKeyframeEasing, createKeyframe, distributeKeyframeTimes, removeKeyframeForProperty, setKeyframeForProperty } from '../keyframes';
-import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
+import { cloneClipKeyframes, normalizeClipKeyframes, type ClipboardKeyframeGroup, type PasteMode, normalizePastedKeyframes } from '../keyframes';
 import { normalizeProjectDocumentation } from '../project/documentation';
 import { applyConformMedia, type ConformMediaReplacement } from '../project/conform-media';
 import { applyProjectHealthAutoRepair, type ProjectHealthAutoRepairInput, type ProjectHealthRepairReport } from '../project/project-health-repair';
@@ -226,6 +226,53 @@ export class NewProjectCommand implements Command {
   undo(): void {
     if (this.before) {
       this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export interface PasteKeyframesInput {
+  groups: ClipboardKeyframeGroup[];
+  targetClipId: string;
+  mode: PasteMode;
+  targetProperty?: KeyframeProperty;
+}
+
+export class PasteKeyframesCommand implements Command {
+  readonly description = 'Paste keyframes';
+  private before?: Clip;
+  private after?: Clip;
+
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly input: PasteKeyframesInput
+  ) {}
+
+  execute(): void {
+    const timeline = this.accessor.getTimeline();
+    this.before ??= findClip(timeline, this.input.targetClipId);
+    const result = normalizePastedKeyframes(
+      this.input.groups,
+      this.before.start,
+      this.before.duration,
+      this.input.mode,
+      this.input.targetProperty
+    );
+    let keyframes = cloneClipKeyframes(this.before.keyframes);
+    for (const { property, keyframes: pasted } of result) {
+      for (const kf of pasted) {
+        keyframes = setKeyframeForProperty(keyframes, property, kf, this.before.duration);
+      }
+    }
+    this.after = {
+      ...this.before,
+      keyframes: normalizeClipKeyframes(keyframes, this.before.duration)
+    } as Clip;
+    this.accessor.setTimeline(replaceClip(timeline, this.after));
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setTimeline(replaceClip(this.accessor.getTimeline(), this.before));
     }
   }
 }

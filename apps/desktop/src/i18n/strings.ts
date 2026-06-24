@@ -1784,6 +1784,18 @@ const zh = {
     deleteConfirm: (name: string) => `确认删除子剪辑「${name}」？`,
     addToTimeline: '添加到时间线'
   },
+  keyframePaste: {
+    title: '粘贴关键帧',
+    relative: '相对粘贴',
+    relativeDesc: '关键帧时间以目标剪辑入点为基准偏移',
+    absolute: '绝对粘贴',
+    absoluteDesc: '关键帧保持原始时间码位置',
+    crossPropertyWarning: '跨属性粘贴：值将自动归一化适配',
+    paste: '粘贴',
+    copied: (count: number) => `已复制 ${count} 个关键帧`,
+    noSelection: '请先选中关键帧',
+    noTarget: '请先选中目标剪辑'
+  },
   duplicateMedia: {
     title: (count: number) => `${count} 组重复素材`,
     subtitle: '按文件大小和前 4KB 内容 hash 检测。',
@@ -6863,6 +6875,18 @@ const enOverrides = {
     subclipCount: (count: number) => `${count} subclips`,
     deleteConfirm: (name: string) => `Delete subclip "${name}"?`,
     addToTimeline: 'Add to Timeline'
+  },
+  keyframePaste: {
+    title: 'Paste Keyframes',
+    relative: 'Relative',
+    relativeDesc: 'Keyframe times offset from target clip in-point',
+    absolute: 'Absolute',
+    absoluteDesc: 'Keyframes keep original timecode position',
+    crossPropertyWarning: 'Cross-property paste: values will be normalized',
+    paste: 'Paste',
+    copied: (count: number) => `${count} keyframes copied`,
+    noSelection: 'Select keyframes first',
+    noTarget: 'Select a target clip first'
   },
   preview: {
     title: 'Preview',
