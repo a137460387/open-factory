@@ -343,6 +343,15 @@ const fixtures = [
     validate: validateSceneDetectFixture
   },
   {
+    name: 'lut-intensity',
+    description: 'gray source with green LUT at 50% intensity through split+blend',
+    outputWidth: 1280,
+    outputHeight: 720,
+    expectedDuration: 1.5,
+    create: createLutIntensityFixture,
+    validate: validateLutIntensityFixture
+  },
+  {
     name: 'gif-animation',
     description: 'two-pass GIF animation export with palettegen and paletteuse',
     outputWidth: 320,
@@ -3517,6 +3526,94 @@ async function validateSceneDetectFixture(context) {
   };
 }
 
+async function createLutIntensityFixture(context) {
+  const sourcePath = join(context.fixtureDir, 'lut-intensity-source.mp4');
+  const lutPath = join(context.fixtureDir, 'green-lut.cube');
+  writeFileSync(lutPath, solidGreenCube());
+  await createColorVideoFixture(sourcePath, {
+    color: COLORS.gray.ffmpeg,
+    width: context.outputWidth,
+    height: context.outputHeight,
+    duration: context.fixture.expectedDuration,
+    audio: false
+  });
+  return buildProject({
+    id: 'golden-lut-intensity',
+    name: 'Golden LUT Intensity',
+    width: context.outputWidth,
+    height: context.outputHeight,
+    media: [
+      videoAsset({
+        id: 'asset-lut-intensity-source',
+        name: 'lut-intensity-source.mp4',
+        path: sourcePath,
+        duration: context.fixture.expectedDuration,
+        width: context.outputWidth,
+        height: context.outputHeight,
+        hasAudio: false,
+        stat: statSync(sourcePath)
+      })
+    ],
+    tracks: [
+      {
+        id: 'track-lut-intensity',
+        type: 'video',
+        name: 'LUT Intensity',
+        clips: [
+          videoClip({
+            id: 'clip-lut-intensity',
+            name: 'LUT Intensity Gray',
+            mediaId: 'asset-lut-intensity-source',
+            trackId: 'track-lut-intensity',
+            duration: context.fixture.expectedDuration,
+            colorCorrection: {
+              brightness: 0,
+              contrast: 1,
+              saturation: 1,
+              hue: 0,
+              luts: [{ path: normalizePath(lutPath), intensity: 0.5 }]
+            }
+          })
+        ]
+      },
+      emptyAudioTrack(),
+      emptyTextTrack()
+    ]
+  });
+}
+
+async function validateLutIntensityFixture(context) {
+  const gray = COLORS.gray.rgb;
+  const lutTarget = [0, 255, 0];
+  const expectedR = Math.round(gray[0] * 0.5 + lutTarget[0] * 0.5);
+  const expectedG = Math.round(gray[1] * 0.5 + lutTarget[1] * 0.5);
+  const expectedB = Math.round(gray[2] * 0.5 + lutTarget[2] * 0.5);
+  const tolerance = 45;
+  const rClose = Math.abs(context.centerPixel[0] - expectedR) <= tolerance;
+  const gClose = Math.abs(context.centerPixel[1] - expectedG) <= tolerance;
+  const bClose = Math.abs(context.centerPixel[2] - expectedB) <= tolerance;
+  return {
+    checks: [
+      {
+        name: 'lut-intensity-filter-chain',
+        passed: context.plan.filterComplex.includes('lut3d=') && context.plan.filterComplex.includes('split') && context.plan.filterComplex.includes('blend=all_expr='),
+        actual: {
+          hasLut3d: context.plan.filterComplex.includes('lut3d='),
+          hasSplit: context.plan.filterComplex.includes('split'),
+          hasBlend: context.plan.filterComplex.includes('blend=all_expr=')
+        },
+        expected: 'lut3d + split + blend filters for intensity < 1'
+      },
+      {
+        name: 'lut-intensity-center-pixel',
+        passed: rClose && gClose && bClose,
+        actual: context.centerPixel,
+        expected: 'approx (' + expectedR + ',' + expectedG + ',' + expectedB + ') +/- ' + tolerance + ' (gray blended 50% with green)'
+      }
+    ]
+  };
+}
+
 async function createGifAnimationFixture(context) {
   const sourcePath = join(context.fixtureDir, 'gif-source.mp4');
   await runChecked('ffmpeg', [
@@ -4004,6 +4101,16 @@ function solidRedCube() {
   ].join('\n');
 }
 
+function solidGreenCube() {
+  return [
+    'TITLE "Open Factory LUT Intensity Green"',
+    'LUT_3D_SIZE 2',
+    'DOMAIN_MIN 0 0 0',
+    'DOMAIN_MAX 1 1 1',
+    ...Array.from({ length: 8 }, () => '0 1 0')
+  ].join('\n');
+}
+
 function videoAsset(input) {
   return {
     id: input.id,
@@ -4076,6 +4183,7 @@ function videoClip(input) {
     panorama: input.panorama,
     border: input.border,
     blendMode: input.blendMode,
+    luts: input.luts,
     keyframes: input.keyframes,
     effects: input.effects,
     volume: input.volume ?? 1,
