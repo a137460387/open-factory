@@ -1768,6 +1768,22 @@ const zh = {
     titleTemplateCount: (count: number) => `${count} 个标题模板`,
     addTitleTemplate: '添加标题模板'
   },
+  subclip: {
+    newSubclip: '新建子剪辑',
+    editSubclip: '编辑子剪辑',
+    deleteSubclip: '删除子剪辑',
+    name: '名称',
+    inPoint: '入点',
+    outPoint: '出点',
+    duration: '时长',
+    color: '颜色',
+    description: '描述',
+    save: '保存子剪辑',
+    noSubclips: '暂无子剪辑',
+    subclipCount: (count: number) => `${count} 个子剪辑`,
+    deleteConfirm: (name: string) => `确认删除子剪辑「${name}」？`,
+    addToTimeline: '添加到时间线'
+  },
   duplicateMedia: {
     title: (count: number) => `${count} 组重复素材`,
     subtitle: '按文件大小和前 4KB 内容 hash 检测。',
@@ -6831,6 +6847,22 @@ const enOverrides = {
     },
     titleTemplateCount: (count: number) => `${count} title templates`,
     addTitleTemplate: 'Add Title Template'
+  },
+  subclip: {
+    newSubclip: 'New Subclip',
+    editSubclip: 'Edit Subclip',
+    deleteSubclip: 'Delete Subclip',
+    name: 'Name',
+    inPoint: 'In Point',
+    outPoint: 'Out Point',
+    duration: 'Duration',
+    color: 'Color',
+    description: 'Description',
+    save: 'Save Subclip',
+    noSubclips: 'No subclips',
+    subclipCount: (count: number) => `${count} subclips`,
+    deleteConfirm: (name: string) => `Delete subclip "${name}"?`,
+    addToTimeline: 'Add to Timeline'
   },
   preview: {
     title: 'Preview',

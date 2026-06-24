@@ -25,25 +25,40 @@ import {
   createId,
   getTimelineDuration
 } from '@open-factory/editor-core';
+import type { Subclip } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 
-export function createClipFromAsset(asset: MediaAsset, track: Track, timeline: Timeline): Clip {
-  const duration = asset.imageSequence ? Math.max(asset.imageSequence.frameCount / asset.imageSequence.frameRate, 1 / asset.imageSequence.frameRate) : asset.type === 'image' ? 5 : Math.max(asset.duration || 5, 1);
+export interface SubclipClipOptions {
+  subclip: Subclip;
+  subclipName: string;
+}
+
+export function createClipFromAsset(asset: MediaAsset, track: Track, timeline: Timeline, subclipOptions?: SubclipClipOptions): Clip {
+  let duration: number;
+  let trimStart = 0;
+  if (subclipOptions) {
+    const { subclip } = subclipOptions;
+    trimStart = Math.max(0, subclip.inPoint);
+    duration = Math.max(0.01, subclip.outPoint - subclip.inPoint);
+  } else {
+    duration = asset.imageSequence ? Math.max(asset.imageSequence.frameCount / asset.imageSequence.frameRate, 1 / asset.imageSequence.frameRate) : asset.type === 'image' ? 5 : Math.max(asset.duration || 5, 1);
+  }
   const start = findAppendStart(track, timeline);
   const base = {
     id: createId('clip'),
-    name: asset.name,
+    name: subclipOptions ? subclipOptions.subclipName : asset.name,
     trackId: track.id,
     start,
     duration,
-    trimStart: 0,
+    trimStart,
     trimEnd: 0,
     speed: DEFAULT_CLIP_SPEED,
     colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
     transform: { ...DEFAULT_TRANSFORM },
     chromaKey: normalizeChromaKey(DEFAULT_CHROMA_KEY),
     masks: [],
-    sequenceFrameRate: asset.imageSequence?.frameRate
+    sequenceFrameRate: asset.imageSequence?.frameRate,
+    subclipId: subclipOptions?.subclip.id
   };
 
   if (asset.type === 'audio') {

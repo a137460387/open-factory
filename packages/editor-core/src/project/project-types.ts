@@ -14,6 +14,7 @@ import type {
   ProtectedRange,
   ReviewAnnotation,
   Sequence,
+  Subclip,
   Timeline,
   TimelineBookmark,
   TimelineNote
@@ -61,6 +62,7 @@ export interface ProjectFileV2 {
     timeline: Timeline;
     sequences?: Sequence[];
     activeSequenceId?: string;
+    subclips?: Subclip[];
     zoomMemory?: Record<string, number>;
   };
   warnings?: string[];
@@ -77,3 +79,4 @@ export interface MediaPathResolution {
   path: string;
   usedRelativePath: boolean;
 }
+

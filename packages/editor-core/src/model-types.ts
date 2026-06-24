@@ -284,6 +284,27 @@ export interface Project {
   activeSequenceId: string;
   /** 缩放层级记忆：key 为 "序列id:编辑模式"，value 为缩放级别 */
   zoomMemory?: Record<string, number>;
+  /** 虚拟子剪辑列表 */
+  subclips?: Subclip[];
+}
+
+/** 虚拟子剪辑：对源媒体特定区间的命名引用，不生成实际文件 */
+export interface Subclip {
+  id: string;
+  /** 子剪辑名称 */
+  name: string;
+  /** 关联的源媒体 assetId */
+  sourceMediaId: string;
+  /** 入点（秒），相对于源媒体 */
+  inPoint: number;
+  /** 出点（秒），相对于源媒体 */
+  outPoint: number;
+  /** 颜色标签 */
+  color?: TimelineLabelColor | null;
+  /** 描述 */
+  description?: string;
+  /** 创建时间 */
+  createdAt?: string;
 }
 
 export type ProjectDocumentation = Record<string, string>;
@@ -605,6 +626,8 @@ export interface BaseClip {
   beatMarkers?: BeatMarker[];
   detectedBpm?: number;
   scenecuts?: number[];
+  /** 若此 clip 来源于虚拟子剪辑，记录其 subclipId */
+  subclipId?: string;
 }
 
 export interface ClipAudioDenoise {

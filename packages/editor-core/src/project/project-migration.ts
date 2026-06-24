@@ -50,7 +50,7 @@ import {
   normalizeVideoRestoration
 } from '../model';
 import { normalizeColorNodeGraph } from '../color-node-graph';
-import type { Clip, ImageSequenceInfo, MediaAsset, MediaFolder, MediaMetadata, Project, Sequence, Timeline, Transition } from '../model-types';
+import type { Clip, ImageSequenceInfo, MediaAsset, MediaFolder, MediaMetadata, Project, Sequence, Subclip, Timeline, Transition } from '../model-types';
 import { normalizeClipGroups } from '../clip-groups';
 import { normalizeClipBlendMode } from '../blend-modes';
 import { normalizeClipContentAnalysis } from '../content-analysis';
@@ -139,6 +139,7 @@ export function serializeProjectFile(project: Project, projectPath?: string): Pr
       documentation: normalizeProjectDocumentation(project.documentation),
       timeline: primaryTimeline,
       sequences,
+      subclips: project.subclips ?? [],
       activeSequenceId: project.activeSequenceId ?? PRIMARY_SEQUENCE_ID
       , zoomMemory: normalizeZoomMemory(project.zoomMemory)
     },
@@ -190,6 +191,7 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         documentation: normalizeProjectDocumentation(file.project.documentation),
         timeline: activeTimeline,
         sequences,
+        subclips: normalizeSubclips((file.project as any).subclips),
         activeSequenceId
         , zoomMemory: normalizeZoomMemory(file.project.zoomMemory, sequences)
       },
@@ -227,6 +229,7 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         speakers: [],
         documentation: {},
         timeline: primaryTimeline,
+        subclips: [],
         sequences,
         activeSequenceId: PRIMARY_SEQUENCE_ID
       },
@@ -235,6 +238,23 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
   }
 
   throw new Error('Unsupported project file format.');
+}
+
+
+function normalizeSubclip(input: Partial<Subclip> | undefined): Subclip | null {
+  if (!input || typeof input !== 'object') return null;
+  const id = typeof input.id === 'string' ? input.id : `subclip-${Math.random().toString(36).slice(2, 10)}`;
+  const name = typeof input.name === 'string' ? input.name : 'Untitled';
+  const sourceMediaId = typeof input.sourceMediaId === 'string' ? input.sourceMediaId : '';
+  if (!sourceMediaId) return null;
+  const inPoint = Number.isFinite(input.inPoint) ? Math.max(0, input.inPoint!) : 0;
+  const outPoint = Number.isFinite(input.outPoint) ? Math.max(inPoint, input.outPoint!) : inPoint;
+  return { id, name, sourceMediaId, inPoint, outPoint, color: input.color, description: input.description, createdAt: input.createdAt };
+}
+
+function normalizeSubclips(subclips: unknown): Subclip[] {
+  if (!Array.isArray(subclips)) return [];
+  return subclips.map(normalizeSubclip).filter((s): s is Subclip => s !== null);
 }
 
 function normalizeMediaMetadata(metadata: Record<string, MediaMetadata> | undefined, media: MediaAsset[]): Record<string, MediaMetadata> {
@@ -514,3 +534,4 @@ function normalizeZoomMemory(
   }
   return hasEntries ? result : undefined;
 }
+

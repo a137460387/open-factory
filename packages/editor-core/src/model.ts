@@ -110,6 +110,7 @@ import type {
   RichTextParagraph,
   RichTextRun,
   Sequence,
+  Subclip,
   SubtitleClip,
   SubtitleLanguage,
   SubtitleMode,
@@ -228,6 +229,7 @@ export type {
   RichTextParagraph,
   RichTextRun,
   Sequence,
+  Subclip,
   SubtitleClip,
   SubtitleLanguage,
   SubtitleMode,
@@ -865,7 +867,23 @@ export function createProject(name = 'Untitled Project'): Project {
     documentation: {},
     timeline,
     sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
-    activeSequenceId: PRIMARY_SEQUENCE_ID
+    activeSequenceId: PRIMARY_SEQUENCE_ID,
+    subclips: []
+  };
+}
+
+export function createSubclip(
+  input: Omit<Subclip, "id" | "createdAt"> & Partial<Pick<Subclip, "id" | "createdAt">>
+): Subclip {
+  return {
+    id: input.id ?? createId("subclip"),
+    name: input.name,
+    sourceMediaId: input.sourceMediaId,
+    inPoint: round(Math.max(0, input.inPoint)),
+    outPoint: round(Math.max(input.inPoint, input.outPoint)),
+    color: normalizeTimelineLabelColor(input.color),
+    description: input.description,
+    createdAt: input.createdAt ?? new Date().toISOString()
   };
 }
 

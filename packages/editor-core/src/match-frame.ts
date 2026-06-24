@@ -11,6 +11,8 @@ export interface MatchFrameResult {
   clipId: string;
   /** clip 所在序列 id */
   sequenceId?: string;
+  /** 若 clip 来源于虚拟子剪辑，记录其 subclipId */
+  subclipId?: string;
 }
 
 /** 反向查找结果 */
@@ -81,6 +83,7 @@ export function matchFrameFromClip(options: MatchFrameOptions): MatchFrameResult
       return {
         mediaId: clip.id,
         sourceTime: calculateSourceTime(clip.start, clip.trimStart, clip.speed, playheadTime),
+        subclipId: clip.subclipId,
         clipId: clip.id,
         sequenceId: (clip as NestedSequenceClip).sequenceId,
       };
@@ -111,11 +114,12 @@ export function matchFrameFromClip(options: MatchFrameOptions): MatchFrameResult
   }
 
   return {
-    mediaId,
-    sourceTime: calculateSourceTime(clip.start, clip.trimStart, clip.speed, playheadTime),
-    clipId: clip.id,
-    sequenceId: activeSequenceId,
-  };
+      mediaId,
+      sourceTime: calculateSourceTime(clip.start, clip.trimStart, clip.speed, playheadTime),
+      subclipId: clip.subclipId,
+      clipId: clip.id,
+      sequenceId: activeSequenceId,
+    };
 }
 
 /**
@@ -216,3 +220,4 @@ function findClipAtTime(timeline: Timeline, time: number): Clip | undefined {
   }
   return undefined;
 }
+

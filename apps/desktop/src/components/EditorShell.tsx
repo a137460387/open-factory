@@ -9,6 +9,7 @@ import {
   AddReviewAnnotationCommand,
   AddSpeakerDiarizationTracksCommand,
   AddProjectBookmarkCommand,
+  AddSubclipCommand,
   ApplyEffectPresetCommand,
   ApplySplitLayoutCommand,
   BatchImportSubtitleCommand,
@@ -34,6 +35,7 @@ import {
   DeleteGroupCommand,
   DeleteClipsCommand,
   DeleteMediaFolderCommand,
+  DeleteSubclipCommand,
   ImportEDLCommand,
   LoadProjectCommand,
   MergeMediaCommand,
@@ -53,12 +55,14 @@ import {
   UpdateProjectReleaseVersionCommand,
   UpdateProjectSpeakersCommand,
   UpdateClipCommand,
+  UpdateSubclipCommand,
   createBeatMarker,
   calculateBeatSplitTimesForClip,
   estimateBpmFromBeatMarkers,
   createExportRange,
   createId,
   createProject,
+  createSubclip,
   createTrack,
   buildVideoStitchSequence,
   buildCoverFrameBatchTasks,
@@ -108,6 +112,7 @@ import {
   type ProjectSpeaker,
   type ReviewAnnotation,
   type Clip,
+  type Subclip,
   type BatchEditableMediaMetadata,
   type ClipContentAnalysis,
   type BeatSensitivity,
@@ -2333,6 +2338,38 @@ export function EditorShell() {
     [project, setSelectedClipId]
   );
 
+
+
+  const handleAddSubclip = useCallback((subclip: Subclip) => {
+    commandManager.execute(new AddSubclipCommand(projectAccessor, subclip));
+    showToast({ kind: 'success', title: zhCN.subclip.newSubclip, message: subclip.name });
+  }, []);
+
+  const handleUpdateSubclip = useCallback((subclipId: string, patch: Partial<Subclip>) => {
+    commandManager.execute(new UpdateSubclipCommand(projectAccessor, subclipId, patch));
+  }, []);
+
+  const handleDeleteSubclip = useCallback((subclipId: string) => {
+    commandManager.execute(new DeleteSubclipCommand(projectAccessor, subclipId));
+    showToast({ kind: 'info', title: zhCN.subclip.deleteSubclip, message: '' });
+  }, []);
+
+  const handleAddSubclipToTimeline = useCallback((assetId: string, subclip: Subclip) => {
+    const asset = project.media.find((item) => item.id === assetId);
+    const track = asset ? findPreferredTrack(project.timeline, asset) : undefined;
+    if (!asset || !track) {
+      showToast({ kind: 'error', title: zhCN.editorToasts.noCompatibleTrack, message: zhCN.editorToasts.noCompatibleTrackMessage });
+      return;
+    }
+    try {
+      const clip = createClipFromAsset(asset, track, project.timeline, { subclip, subclipName: subclip.name });
+      commandManager.execute(new AddClipCommand(timelineAccessor, clip));
+      setSelectedClipId(clip.id);
+    } catch (error) {
+      showToast({ kind: 'error', title: zhCN.editorToasts.addClipFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.addClipFailedMessage });
+    }
+  }, [project, setSelectedClipId]);
+
   const addAdjustmentLayer = useCallback(() => {
     try {
       const adjustmentTrackCount = project.timeline.tracks.filter((track) => track.type === 'video' && track.clips.some((clip) => clip.type === 'adjustment')).length;
@@ -4398,6 +4435,11 @@ export function EditorShell() {
                   pinnedIds={pinnedIds}
                   onPinToSession={handlePinToSession}
                   recentMediaIds={recentMediaIds}
+                  subclips={project.subclips}
+                  onAddSubclip={handleAddSubclip}
+                  onUpdateSubclip={handleUpdateSubclip}
+                  onDeleteSubclip={handleDeleteSubclip}
+                  onAddSubclipToTimeline={handleAddSubclipToTimeline}
                 />
               </section>
             )

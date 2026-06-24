@@ -27,8 +27,8 @@ import {
   type TitleTemplateId,
   type EffectPreset
 } from '@open-factory/editor-core';
-import { parseFavoritesSearchFilter } from '@open-factory/editor-core';
-import { AlertCircle, BadgeCheck, ChevronDown, ChevronRight, FileAudio2, FileImage, FileText, FileVideo2, Flag, Folder, FolderPlus, GalleryHorizontal, Gauge, Grid2X2, Heart, ImageDown, Import, Info, Link2, List, Loader2, Merge, Plus, RotateCcw, Search, SlidersHorizontal, Star, Tag, Trash2, X } from 'lucide-react';
+import { createSubclip, parseFavoritesSearchFilter, type Subclip, type TimelineLabelColor } from '@open-factory/editor-core';
+import { AlertCircle, BadgeCheck, ChevronDown, ChevronRight, FileAudio2, FileImage, FileText, FileVideo2, Flag, Folder, FolderPlus, GalleryHorizontal, Gauge, Grid2X2, Heart, ImageDown, Import, Info, Link2, List, Loader2, Merge, Plus, RotateCcw, Scissors, Search, SlidersHorizontal, Star, Tag, Trash2, X } from 'lucide-react';
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { computeMediaPreviewDelay, isMediaPreviewable } from './media-hover-preview';
 import { clsx } from 'clsx';
@@ -95,11 +95,29 @@ interface MediaBinProps {
   pinnedIds?: Set<string>;
   onPinToSession?(assetId: string): void;
   recentMediaIds?: string[];
+  subclips?: Subclip[];
+  onAddSubclip?(subclip: Subclip): void;
+  onUpdateSubclip?(subclipId: string, patch: Partial<Subclip>): void;
+  onDeleteSubclip?(subclipId: string): void;
+  onAddSubclipToTimeline?(assetId: string, subclip: Subclip): void;
 }
 
 type MediaBinView = 'all' | 'video' | 'audio' | 'image' | 'tagged' | 'titles' | 'shared' | 'effects';
 type QuickMediaFilter = Extract<MediaMetadataFilter, 'all' | 'selected' | 'five-star'>;
 const MEDIA_CARD_DRAG_MIME = 'application/x-open-factory-media-id';
+const SUBCLIP_DRAG_MIME = 'application/x-open-factory-subclip';
+
+interface SubclipContextValue {
+  subclips: Subclip[];
+  onAddSubclip(subclip: Subclip): void;
+  onUpdateSubclip(subclipId: string, patch: Partial<Subclip>): void;
+  onDeleteSubclip(subclipId: string): void;
+  onAddSubclipToTimeline(assetId: string, subclip: Subclip): void;
+  onOpenSubclipDialog(assetId: string, editingSubclipId?: string): void;
+  expandedSubclipAssetIds: Set<string>;
+  onToggleSubclipExpanded(assetId: string): void;
+}
+const SubclipCtx = createContext<SubclipContextValue | null>(null);
 type MediaInfoState = { asset: MediaAsset; loading: boolean; analysis?: MediaAnalysis; error?: string };
 type MediaSourcePathsState = { asset: MediaAsset; paths: string[] };
 
@@ -144,7 +162,12 @@ export function MediaBin({
   onRevealInTimeline = () => {},
   pinnedIds,
   onPinToSession = () => {},
-  recentMediaIds = []
+  recentMediaIds = [],
+  subclips = [],
+  onAddSubclip = () => {},
+  onUpdateSubclip = () => {},
+  onDeleteSubclip = () => {},
+  onAddSubclipToTimeline = () => {}
 }: MediaBinProps) {
   const t = zhCN.mediaBin;
   const [dragOver, setDragOver] = useState(false);
@@ -162,6 +185,20 @@ export function MediaBin({
   const [selectedMediaIds, setSelectedMediaIds] = useState<Set<string>>(() => new Set());
   const [batchMetadataAssetIds, setBatchMetadataAssetIds] = useState<string[]>();
   const [batchRenameAssetIds, setBatchRenameAssetIds] = useState<string[]>();
+  const [subclipDialogAssetId, setSubclipDialogAssetId] = useState<string>();
+  const [editingSubclipId, setEditingSubclipId] = useState<string>();
+  const [expandedSubclipAssetIds, setExpandedSubclipAssetIds] = useState<Set<string>>(() => new Set());
+  const handleOpenSubclipDialog = (assetId: string, editingId?: string) => {
+    setSubclipDialogAssetId(assetId);
+    setEditingSubclipId(editingId);
+  };
+  const handleToggleSubclipExpanded = (assetId: string) => {
+    setExpandedSubclipAssetIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(assetId)) next.delete(assetId); else next.add(assetId);
+      return next;
+    });
+  };
   const missingCount = media.filter((asset) => asset.missing).length;
   const _effectivePinnedIds = pinnedIds ?? new Set<string>();
   const smartAlbums = collectSmartAlbums(media, Date.now(), mediaMetadata, { favoriteIds, recentUseIds: recentMediaIds });
@@ -368,6 +405,7 @@ export function MediaBin({
   };
 
   return (
+    <SubclipCtx.Provider value={{ subclips, onAddSubclip, onUpdateSubclip, onDeleteSubclip, onAddSubclipToTimeline, onOpenSubclipDialog: handleOpenSubclipDialog, expandedSubclipAssetIds, onToggleSubclipExpanded: handleToggleSubclipExpanded }}>
     <MediaCardExtrasCtx.Provider value={_extrasValue}>
       <aside
       className={clsx('flex h-full min-h-0 flex-col bg-white', dragOver && 'ring-2 ring-inset ring-brand')}
@@ -698,8 +736,18 @@ export function MediaBin({
           }}
         />
       ) : null}
+      {subclipDialogAssetId ? (
+        <SubclipDialog
+          asset={media.find((a) => a.id === subclipDialogAssetId)!}
+          editingSubclip={editingSubclipId ? subclips.find((s) => s.id === editingSubclipId) : undefined}
+          onAddSubclip={onAddSubclip}
+          onUpdateSubclip={onUpdateSubclip}
+          onClose={() => { setSubclipDialogAssetId(undefined); setEditingSubclipId(undefined); }}
+        />
+      ) : null}
     </aside>
     </MediaCardExtrasCtx.Provider>
+    </SubclipCtx.Provider>
   );
 }
 
@@ -1924,6 +1972,7 @@ function MediaCard({
   const rating = metadata?.rating ?? 0;
   const flag = metadata?.flag;
   const extras = useContext(MediaCardExtrasCtx);
+  const sc = useContext(SubclipCtx);
   const mediaVersions = metadata?.versions ?? [];
   const versionCount = 1 + mediaVersions.length;
   return (
@@ -2112,6 +2161,17 @@ function MediaCard({
             <Info size={13} />
             {zhCN.mediaBin.mediaInfo.menuItem}
           </button>
+          {sc && (asset.type === 'video' || asset.type === 'audio') ? (
+            <button
+              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid={`media-new-subclip-${asset.id}`}
+              onClick={() => { sc.onOpenSubclipDialog(asset.id); setLabelMenuOpen(false); } }
+            >
+              <Scissors size={13} />
+              {zhCN.subclip.newSubclip}
+            </button>
+          ) : null}
           <button
             className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
             type="button"
@@ -2378,10 +2438,150 @@ function MediaCard({
             {zhCN.mediaBin.relink}
           </button>
         ) : null}
+        {sc && sc.subclips.filter((s) => s.sourceMediaId === asset.id).length > 0 ? (
+          <div className="mt-2">
+            <button
+              className="inline-flex w-full items-center gap-1 rounded border border-line bg-panel px-2 py-1 text-[11px] font-semibold text-slate-600 hover:bg-white"
+              type="button"
+              data-testid={`toggle-subclips-${asset.id}`}
+              onClick={(e) => { e.stopPropagation(); sc.onToggleSubclipExpanded(asset.id); }}
+            >
+              {sc.expandedSubclipAssetIds.has(asset.id) ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              <Scissors size={11} />
+              {zhCN.subclip.subclipCount(sc.subclips.filter((s) => s.sourceMediaId === asset.id).length)}
+            </button>
+            {sc.expandedSubclipAssetIds.has(asset.id) ? (
+              <div className="mt-1 space-y-1" data-testid={`subclip-list-${asset.id}`}>
+                {sc.subclips.filter((s) => s.sourceMediaId === asset.id).map((sub) => (
+                  <div
+                    key={sub.id}
+                    className="rounded border border-line bg-white px-2 py-1.5 text-[11px] shadow-sm"
+                    draggable
+                    data-testid={`subclip-card-${sub.id}`}
+                    onDragStart={(event) => {
+                      event.dataTransfer.effectAllowed = 'copy';
+                      event.dataTransfer.setData(SUBCLIP_DRAG_MIME, JSON.stringify({ assetId: asset.id, subclip: sub }));
+                    }}
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="truncate font-semibold text-slate-700" title={sub.name}>{sub.name}</span>
+                      <span className="shrink-0 text-slate-400">{formatDuration(sub.inPoint)} \u2013 {formatDuration(sub.outPoint)}</span>
+                    </div>
+                    {sub.color ? <span className="mt-0.5 inline-block h-2 w-2 rounded-full" style={{ backgroundColor: sub.color }} /> : null}
+                    <div className="mt-1 flex items-center gap-1">
+                      <button
+                        className="rounded border border-line px-1.5 py-0.5 text-[10px] font-medium text-slate-600 hover:bg-panel"
+                        type="button"
+                        data-testid={`add-subclip-to-timeline-${sub.id}`}
+                        onClick={(e) => { e.stopPropagation(); sc.onAddSubclipToTimeline(asset.id, sub); }}
+                      >
+                        {zhCN.subclip.addToTimeline}
+                      </button>
+                      <button
+                        className="rounded border border-line px-1.5 py-0.5 text-[10px] font-medium text-slate-600 hover:bg-panel"
+                        type="button"
+                        data-testid={`edit-subclip-${sub.id}`}
+                        onClick={(e) => { e.stopPropagation(); sc.onOpenSubclipDialog(asset.id, sub.id); }}
+                      >
+                        {zhCN.subclip.editSubclip}
+                      </button>
+                      <button
+                        className="rounded border border-line px-1.5 py-0.5 text-[10px] font-medium text-rose-600 hover:bg-panel"
+                        type="button"
+                        data-testid={`delete-subclip-${sub.id}`}
+                        onClick={(e) => { e.stopPropagation(); sc.onDeleteSubclip(sub.id); }}
+                      >
+                        <Trash2 size={10} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </div>
   );
 }
+
+const TIMELINE_COLORS: Array<{ key: TimelineLabelColor; value: string }> = [
+  { key: 'red', value: '#ef4444' },
+  { key: 'orange', value: '#f97316' },
+  { key: 'amber', value: '#f59e0b' },
+  { key: 'yellow', value: '#eab308' },
+  { key: 'lime', value: '#84cc16' },
+  { key: 'green', value: '#22c55e' },
+  { key: 'teal', value: '#14b8a6' },
+  { key: 'cyan', value: '#06b6d4' },
+  { key: 'blue', value: '#3b82f6' },
+  { key: 'indigo', value: '#6366f1' },
+  { key: 'purple', value: '#a855f7' },
+  { key: 'pink', value: '#ec4899' },
+];
+
+function SubclipDialog({
+  asset,
+  editingSubclip,
+  onAddSubclip,
+  onUpdateSubclip,
+  onClose,
+}: {
+  asset: MediaAsset;
+  editingSubclip?: Subclip;
+  onAddSubclip(subclip: Subclip): void;
+  onUpdateSubclip(subclipId: string, patch: Partial<Subclip>): void;
+  onClose(): void;
+}) {
+  const t = zhCN.subclip;
+  const isEdit = !!editingSubclip;
+  const [name, setName] = useState(editingSubclip?.name ?? asset.name);
+  const [inPoint, setInPoint] = useState(editingSubclip?.inPoint ?? 0);
+  const [outPoint, setOutPoint] = useState(editingSubclip?.outPoint ?? asset.duration);
+  const [color, setColor] = useState<TimelineLabelColor | null>(editingSubclip?.color ?? null);
+  const [description, setDescription] = useState(editingSubclip?.description ?? '');
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    const validIn = Math.max(0, inPoint);
+    const validOut = Math.max(validIn + 0.01, outPoint);
+    if (isEdit && editingSubclip) {
+      onUpdateSubclip(editingSubclip.id, { name: name.trim() || asset.name, inPoint: validIn, outPoint: Math.min(validOut, asset.duration), color, description: description.trim() || undefined });
+    } else {
+      onAddSubclip(createSubclip({ name: name.trim() || asset.name, sourceMediaId: asset.id, inPoint: validIn, outPoint: Math.min(validOut, asset.duration), color, description: description.trim() || undefined }));
+    }
+    onClose();
+  };
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" data-testid="subclip-dialog">
+      <form className="grid max-h-[80vh] w-full max-w-md grid-rows-[auto_minmax(0,1fr)_auto] rounded-md border border-line bg-white shadow-soft" onSubmit={handleSubmit}>
+        <div className="flex items-center justify-between border-b border-line px-4 py-3">
+          <h2 className="text-sm font-semibold text-ink">{isEdit ? t.editSubclip : t.newSubclip}</h2>
+          <button className="rounded p-1 hover:bg-panel" type="button" onClick={onClose} data-testid="subclip-dialog-close"><X size={16} /></button>
+        </div>
+        <div className="space-y-3 overflow-y-auto px-4 py-3">
+          <label className="block text-xs font-medium text-slate-600">{t.name}<input className="mt-1 w-full rounded border border-line px-2 py-1.5 text-sm" value={name} onChange={(e) => setName(e.target.value)} autoFocus data-testid="subclip-dialog-name" /></label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block text-xs font-medium text-slate-600">{t.inPoint}<input className="mt-1 w-full rounded border border-line px-2 py-1.5 text-sm tabular-nums" type="number" min={0} max={asset.duration} step={0.01} value={inPoint} onChange={(e) => setInPoint(Number(e.target.value))} data-testid="subclip-dialog-in" /></label>
+            <label className="block text-xs font-medium text-slate-600">{t.outPoint}<input className="mt-1 w-full rounded border border-line px-2 py-1.5 text-sm tabular-nums" type="number" min={0} max={asset.duration} step={0.01} value={outPoint} onChange={(e) => setOutPoint(Number(e.target.value))} data-testid="subclip-dialog-out" /></label>
+          </div>
+          <div>
+            <div className="mb-1 text-xs font-medium text-slate-600">{t.color}</div>
+            <div className="flex flex-wrap gap-1.5" data-testid="subclip-dialog-colors">
+              <button type="button" className={`h-5 w-5 rounded-full border-2 ${color === null ? 'border-ink' : 'border-transparent'} bg-slate-300`} onClick={() => setColor(null)} data-testid="subclip-color-none" />
+              {TIMELINE_COLORS.map((item) => (<button key={item.key} type="button" className={`h-5 w-5 rounded-full border-2 ${color === item.key ? 'border-ink' : 'border-transparent'}`} style={{ backgroundColor: item.value }} onClick={() => setColor(item.key)} data-testid={`subclip-color-${item.key}`} />))}
+            </div>
+          </div>
+          <label className="block text-xs font-medium text-slate-600">{t.description}<textarea className="mt-1 w-full rounded border border-line px-2 py-1.5 text-sm" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} data-testid="subclip-dialog-description" /></label>
+        </div>
+        <div className="flex items-center justify-end gap-2 border-t border-line px-4 py-3">
+          <button className="rounded border border-line px-3 py-1.5 text-xs font-medium hover:bg-panel" type="button" onClick={onClose}>{zhCN.common.cancel}</button>
+          <button className="rounded bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90" type="submit" data-testid="subclip-dialog-save">{t.save}</button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 
 function labelColorToHex(color: MediaLabelColor): string {
   return MEDIA_LABEL_COLORS.find((item) => item.key === color)?.value ?? '#64748b';
