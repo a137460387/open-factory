@@ -1,4 +1,4 @@
-import { hasExportMasterProcessing, normalizeAudioVisualizationTheme, normalizeExportMasterProcessing, normalizeSubtitleLanguage, normalizeSubtitleLanguageList, type ExportSettings } from '@open-factory/editor-core';
+import { hasExportMasterProcessing, normalizeAudioVisualizationTheme, normalizeExportMasterProcessing, normalizeSubtitleLanguage, normalizeSubtitleLanguageList, type ExportSettings, type ExportStemFormat } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { fsExists, getAppDataDir, getWebdavText, putWebdavText, readFile, writeFile, type WebdavTextPutRequest, type WebdavTextRequest, type WebdavTextResult } from '../lib/tauri-bridge';
 
@@ -921,6 +921,13 @@ function sanitizeExportSettings(settings: unknown): ExportPresetSettings {
   if (masterProcessing && hasExportMasterProcessing(masterProcessing)) {
     output.masterProcessing = masterProcessing;
   }
+  const stemTracks = sanitizeStemTracks(input.stemTracks);
+  if (stemTracks && stemTracks.length > 0) {
+    output.stemTracks = stemTracks;
+  }
+  if (input.stemMode === 'independent' || input.stemMode === 'combined' || input.stemMode === 'stems-only') {
+    output.stemMode = input.stemMode;
+  }
   return output;
 }
 
@@ -929,6 +936,23 @@ function sanitizeMasterProcessing(value: unknown): ExportPresetSettings['masterP
     return undefined;
   }
   return normalizeExportMasterProcessing(value as ExportPresetSettings['masterProcessing']);
+}
+
+function sanitizeStemTracks(value: unknown): ExportPresetSettings['stemTracks'] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  const valid: NonNullable<ExportPresetSettings['stemTracks']> = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue;
+    const input = item as Record<string, unknown>;
+    if (typeof input.trackIndex !== 'number' || !Number.isFinite(input.trackIndex)) continue;
+    const trackName = typeof input.trackName === 'string' ? input.trackName : `Track ${input.trackIndex}`;
+    const selected = input.selected !== false;
+    const format: ExportStemFormat = (input.format === 'wav' || input.format === 'aiff' || input.format === 'm4a') ? input.format : 'default';
+    valid.push({ trackIndex: input.trackIndex, trackName, selected, format });
+  }
+  return valid.length > 0 ? valid : undefined;
 }
 
 function sanitizeColorManagement(value: unknown): ExportPresetSettings['colorManagement'] | undefined {

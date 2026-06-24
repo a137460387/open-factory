@@ -3626,8 +3626,43 @@ const zh = {
         'version-batch': '批量版本导出',
         'sequence-batch': '批量序列渲染',
         'codec-compare': '对比导出',
-        pipeline: '流水线'
+        pipeline: '流水线',
+        stem: 'Stem 分轨'
       }
+    },
+    stem: {
+      title: 'Stem 分轨导出',
+      description: '将各音频轨分别导出为独立文件，保留完整的各轨信号。',
+      trackList: '音频轨道',
+      noAudioTracks: '项目中没有音频轨道可导出。',
+      selectAll: '全选',
+      deselectAll: '取消全选',
+      format: '输出格式',
+      trackName: '轨道名称',
+      useDefaultFormat: '跟随预设',
+      mode: '导出模式',
+      modes: {
+        independent: '独立文件',
+        combined: '合并 + Stem',
+        'stems-only': '仅 Stem'
+      },
+      modeDescriptions: {
+        independent: '每个选中轨道导出为一个独立文件。',
+        combined: '同时输出混合版和各 Stem 文件。',
+        'stems-only': '仅导出各 Stem，不输出混合版。'
+      },
+      preset: 'Stem 预设',
+      savePreset: '保存 Stem 预设',
+      presetName: '预设名称',
+      deletePreset: '删除预设',
+      formatOptions: {
+        default: '跟随预设',
+        wav: 'WAV',
+        aiff: 'AIFF',
+        m4a: 'M4A'
+      },
+      queuedMessage: (count: number) => `${count} 个 Stem 任务已加入导出队列。`,
+      namingRule: '{project}_{stem_name}_{index}.ext'
     },
     versionBatch: {
       title: '导出版本',
@@ -8282,8 +8317,43 @@ const enOverrides = {
         'version-batch': 'Versioned Batch',
         'sequence-batch': 'Batch Sequence Render',
         'codec-compare': 'Compare Export',
-        pipeline: 'Pipeline'
+        pipeline: 'Pipeline',
+        stem: 'Stem Export'
       }
+    },
+    stem: {
+      title: 'Stem Export',
+      description: 'Export each audio track as a separate file, preserving the full signal of each track.',
+      trackList: 'Audio Tracks',
+      noAudioTracks: 'No audio tracks available for stem export.',
+      selectAll: 'Select All',
+      deselectAll: 'Deselect All',
+      format: 'Output Format',
+      trackName: 'Track Name',
+      useDefaultFormat: 'Follow Preset',
+      mode: 'Export Mode',
+      modes: {
+        independent: 'Independent Files',
+        combined: 'Mixed + Stems',
+        'stems-only': 'Stems Only'
+      },
+      modeDescriptions: {
+        independent: 'Export each selected track as an independent file.',
+        combined: 'Output both the mixed version and individual stem files.',
+        'stems-only': 'Export only individual stems, no mixed output.'
+      },
+      preset: 'Stem Preset',
+      savePreset: 'Save Stem Preset',
+      presetName: 'Preset Name',
+      deletePreset: 'Delete Preset',
+      formatOptions: {
+        default: 'Follow Preset',
+        wav: 'WAV',
+        aiff: 'AIFF',
+        m4a: 'M4A'
+      },
+      queuedMessage: (count: number) => `${count} stem export tasks added to the queue.`,
+      namingRule: '{project}_{stem_name}_{index}.ext'
     },
     versionBatch: {
       title: 'Export Versions',

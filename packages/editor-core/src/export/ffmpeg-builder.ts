@@ -204,6 +204,7 @@ interface BuildFfmpegExportPlanOptions {
     time: number;
   };
   exportRange?: ExportRenderRange | null;
+  stemTrackIndex?: number;
 }
 
 interface SubtitleLanguageGroup {
@@ -470,7 +471,8 @@ export function buildFfmpegExportPlan(
   const duration = Math.max(project.timeline.duration, 0.001);
   const settings = normalizeSettingsForExportFormat(project.settings);
   const audioVisualization = settings.outputMode === 'audio-visualization';
-  const audioOnly = !audioVisualization && (settings.outputMode === 'audio' || settings.format === 'm4a');
+  const stemMode = typeof options.stemTrackIndex === 'number' && Number.isFinite(options.stemTrackIndex);
+  const audioOnly = !audioVisualization && (settings.outputMode === 'audio' || settings.format === 'm4a' || stemMode);
   const audioVisualizationSettings = audioVisualization ? normalizeExportAudioVisualization(settings.audioVisualization) : undefined;
   const pngSequence = settings.format === 'png-sequence';
   const gifExport = settings.format === 'gif';
@@ -505,7 +507,12 @@ export function buildFfmpegExportPlan(
   const textArtifacts: TextArtifact[] = [];
   const allClips = project.timeline.tracks.flatMap((track) => track.clips).filter((clip) => clip.duration > 0);
   const sphericalMetadataArgs = hasSphericalVideoClips(allClips) && !audioOnly && !videoFramesOnly ? ['-metadata:s:v:0', 'spherical=true'] : [];
-  const renderableTracks = getRenderableTracks({ tracks: project.timeline.tracks });
+  const stemTrackIdx = options.stemTrackIndex;
+  const allRenderableTracks = getRenderableTracks({ tracks: project.timeline.tracks });
+  const stemFilterActive = typeof stemTrackIdx === 'number' && Number.isFinite(stemTrackIdx);
+  const renderableTracks = stemFilterActive
+    ? allRenderableTracks.filter((track) => track.index === stemTrackIdx)
+    : allRenderableTracks;
   const renderableTrackIndexes = new Set(renderableTracks.map((track) => track.index));
   const orderedClips = renderableTracks
     .flatMap((track) => track.clips)
@@ -908,6 +915,63 @@ export function buildFfmpegExportPlan(
 
 export function buildFfmpegCurrentFrameExportPlan(project: ExportProject, time: number, capabilities?: FfmpegCapabilities): FfmpegExportPlan {
   return buildFfmpegExportPlan(project, capabilities, 0, [], { frameExport: { time } });
+}
+
+export interface StemExportPlan {
+  trackIndex: number;
+  trackName: string;
+  format: string;
+  outputPath: string;
+  plan: FfmpegExportPlan;
+}
+
+export function buildStemExportPlans(
+  project: ExportProject,
+  capabilities: FfmpegCapabilities | undefined,
+  stemTracks: Array<{ trackIndex: number; trackName: string; format: string }>,
+  outputDir: string
+): StemExportPlan[] {
+  return stemTracks.map((stem) => {
+    const stemOutputPath = buildStemOutputPath(outputDir, project.name, stem.trackName, stem.trackIndex, stem.format);
+    const stemSettings: ExportSettings = {
+      ...project.settings,
+      outputPath: stemOutputPath,
+      format: stem.format === 'default' ? (project.settings.format === 'm4a' ? 'm4a' : 'wav') : stem.format,
+      outputMode: 'audio' as const
+    };
+    const stemProject: ExportProject = {
+      ...project,
+      settings: stemSettings,
+      timeline: {
+        ...project.timeline,
+        tracks: project.timeline.tracks.map((track) => ({
+          ...track,
+          muted: track.index !== stem.trackIndex,
+          solo: track.index === stem.trackIndex
+        }))
+      }
+    };
+    const plan = buildFfmpegExportPlan(stemProject, capabilities, 0, [], { stemTrackIndex: stem.trackIndex });
+    return {
+      trackIndex: stem.trackIndex,
+      trackName: stem.trackName,
+      format: stem.format,
+      outputPath: stemProject.settings.outputPath,
+      plan
+    };
+  });
+}
+
+function sanitizeStemPathComponent(name: string): string {
+  return name.replace(/[<>:"/\\|?*() ]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '').trim();
+}
+
+function buildStemOutputPath(outputDir: string, projectName: string, stemName: string, trackIndex: number, format: string): string {
+  const ext = format === 'default' ? 'wav' : format;
+  const safeProject = sanitizeStemPathComponent(projectName || 'project');
+  const safeStem = sanitizeStemPathComponent(stemName || `track-${trackIndex}`);
+  const dir = outputDir.replace(/[\\/]+$/, '');
+  return `${dir}/${safeProject}_${safeStem}_${trackIndex}.${ext}`;
 }
 
 export function calculateExportPreviewSampleTimes(duration: number): Array<{ kind: ExportPreviewSampleKind; time: number }> {

@@ -22,10 +22,12 @@ import {
   DEFAULT_CUSTOM_SHADER_SOURCE,
   exportRenderRangeFromPoints,
   mapTransitionType,
+  buildStemExportPlans,
+  buildStemOutputFileName,
   type Clip,
   type Project
 } from '../src';
-import { makeAdjustmentClip, makeAudioClip, makeCreditsClip, makeMotionGraphicClip, makeProject, makeSubtitleClip, makeTextClip, makeVideoClip } from './test-utils';
+import { makeAdjustmentClip, makeAudioClip, makeCreditsClip, makeMotionGraphicClip, makeProject, makeSubtitleClip, makeTextClip, makeTimeline, makeVideoClip } from './test-utils';
 
 function makeAudioVisualizationProject(): Project {
   const project = makeProject();
@@ -3990,6 +3992,64 @@ describe('multitrack ffmpeg builder', () => {
     missingInputProject.timeline.transitions = [{ id: 'transition-missing', type: 'dissolve', duration: 0.5, fromClipId: 'clip-a', toClipId: 'clip-b' }];
     const missingInputPlan = buildFfmpegExportPlan(buildExportProjectFromProject(missingInputProject, { outputPath: 'out.mp4' }));
     expect(missingInputPlan.warnings).toContain('Transition transition-missing was skipped because one of its clips has no media input.');
+  });
+});
+
+describe('stem export', () => {
+  it('buildStemOutputFileName generates correct naming format', () => {
+    const name = buildStemOutputFileName({ projectName: 'My Project', stemName: 'Vocals', trackIndex: 1, format: 'wav' });
+    expect(name).toBe('My_Project_Vocals_1.wav');
+  });
+
+  it('buildStemOutputFileName sanitizes special characters', () => {
+    const name = buildStemOutputFileName({ projectName: 'A/B:Test', stemName: 'Drums (L/R)', trackIndex: 2, format: 'm4a' });
+    expect(name).toBe('A_B_Test_Drums_L_R_2.m4a');
+  });
+
+  it('buildStemExportPlans generates one plan per selected stem in independent mode', () => {
+    const project = makeProject();
+    project.timeline.tracks = [
+      createTrack({ id: 't-v', type: 'video', name: 'Video 1', clips: [makeVideoClip({ id: 'clip-v', trackId: 't-v', start: 0, duration: 5 })] }),
+      createTrack({ id: 't-a1', type: 'audio', name: 'Vocals', clips: [makeAudioClip({ id: 'clip-a1', trackId: 't-a1', start: 0, duration: 5 })] }),
+      createTrack({ id: 't-a2', type: 'audio', name: 'Drums', clips: [makeAudioClip({ id: 'clip-a2', trackId: 't-a2', start: 0, duration: 3 })] })
+    ];
+    const exportProject = buildExportProjectFromProject(project, { outputPath: 'out.mp4' });
+    const stems = [
+      { trackIndex: 1, trackName: 'Vocals', format: 'wav' },
+      { trackIndex: 2, trackName: 'Drums', format: 'wav' }
+    ];
+    const plans = buildStemExportPlans(exportProject, undefined, stems, '/output');
+    expect(plans).toHaveLength(2);
+    expect(plans[0].trackName).toBe('Vocals');
+    expect(plans[1].trackName).toBe('Drums');
+  });
+
+  it('buildStemExportPlans sets audioOnly output for each stem plan', () => {
+    const project = makeProject();
+    project.timeline.tracks = [
+      createTrack({ id: 't-v', type: 'video', name: 'Video 1', clips: [makeVideoClip({ id: 'clip-v2', trackId: 't-v', start: 0, duration: 5 })] }),
+      createTrack({ id: 't-a1', type: 'audio', name: 'Music', clips: [makeAudioClip({ id: 'clip-m1', trackId: 't-a1', start: 0, duration: 5 })] })
+    ];
+    const exportProject = buildExportProjectFromProject(project, { outputPath: 'out.mp4' });
+    const stems = [{ trackIndex: 1, trackName: 'Music', format: 'wav' }];
+    const plans = buildStemExportPlans(exportProject, undefined, stems, '/output');
+    expect(plans).toHaveLength(1);
+    expect(plans[0].outputPath).toContain('Music');
+    expect(plans[0].outputPath).toContain('.wav');
+  });
+
+  it('stemTrackIndex filters to only the target track', () => {
+    const project = makeProject();
+    project.timeline.tracks = [
+      createTrack({ id: 't-v', type: 'video', name: 'Video 1', clips: [] }),
+      createTrack({ id: 't-a1', type: 'audio', name: 'Vocals', clips: [makeAudioClip({ id: 'clip-v', trackId: 't-a1', start: 0, duration: 5 })] }),
+      createTrack({ id: 't-a2', type: 'audio', name: 'Drums', clips: [makeAudioClip({ id: 'clip-d', trackId: 't-a2', start: 0, duration: 3 })] })
+    ];
+    project.settings.outputMode = 'audio';
+    const exportProject = buildExportProjectFromProject(project, { outputPath: 'out.wav' });
+    const plan = buildFfmpegExportPlan(exportProject, undefined, 0, [], { stemTrackIndex: 1 });
+    expect(plan.fullArgs.length).toBeGreaterThan(0);
+    expect(plan.warnings.filter((w) => w.includes('muted'))).toHaveLength(0);
   });
 });
 

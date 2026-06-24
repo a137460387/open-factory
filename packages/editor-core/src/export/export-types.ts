@@ -186,6 +186,45 @@ export interface ExportSettings {
   postExportScript?: ExportPostExportScriptSettings | null;
   masterProcessing?: ExportMasterProcessingSettings | null;
   spatialAudioAssets?: ExportSpatialAudioAssets | null;
+  stemTracks?: ExportStemTrack[];
+  stemMode?: ExportStemMode;
+}
+
+export type ExportStemFormat = 'default' | 'wav' | 'aiff' | 'm4a';
+
+export type ExportStemMode = 'independent' | 'combined' | 'stems-only';
+
+export interface ExportStemTrack {
+  trackIndex: number;
+  trackName: string;
+  selected: boolean;
+  format: ExportStemFormat;
+}
+
+export interface ExportStemPreset {
+  id: string;
+  name: string;
+  description: string;
+  tracks: Array<{ trackIndex: number; trackName: string; format: ExportStemFormat }>;
+  mode: ExportStemMode;
+  updatedAt?: string;
+}
+
+export interface ExportStemNamingContext {
+  projectName: string;
+  stemName: string;
+  trackIndex: number;
+  format: string;
+}
+
+export function buildStemOutputFileName(ctx: ExportStemNamingContext): string {
+  const safeProject = sanitizeStemName(ctx.projectName || 'project');
+  const safeStem = sanitizeStemName(ctx.stemName || `track-${ctx.trackIndex}`);
+  return `${safeProject}_${safeStem}_${ctx.trackIndex}.${ctx.format}`;
+}
+
+function sanitizeStemName(name: string): string {
+  return name.replace(/[<>:"/\\|?*() ]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '').trim();
 }
 
 export interface ExportTransform {

@@ -25,7 +25,10 @@ import {
   type FfmpegExportPlan,
   type ExportRecoveryLogEntry,
   type VersionedExportTaskMetadata,
-  type RenderFarmTaskConfig
+  type RenderFarmTaskConfig,
+  buildStemExportPlans,
+  type ExportStemMode,
+  type ExportStemFormat
 } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { cancelExport as bridgeCancelExport, copyFile, ensureSpatialAudioAssets, getAvailableMemoryBytes, getFfmpegCapabilities, getTempSegmentsDir, listenBridge, removeFile, runExport, runPostExportQualityAssurance, writeFile } from '../lib/tauri-bridge';
@@ -86,6 +89,71 @@ export async function enqueueExport(
   ensureExportQueueRunner();
   return task;
 }
+
+export interface StemExportQueueOptions {
+  project: Project;
+  outputDir: string;
+  stemTracks: Array<{ trackIndex: number; trackName: string; format: ExportStemFormat }>;
+  stemMode: ExportStemMode;
+  settings?: Partial<Omit<ExportSettings, 'outputPath'>>;
+  priority?: ExportTaskPriority;
+  renderFarm?: RenderFarmTaskConfig;
+  scheduledStartAt?: string;
+  metadata?: ExportProject['metadata'];
+}
+
+export async function enqueueStemExport(options: StemExportQueueOptions): Promise<ExportTask[]> {
+  const { project, outputDir, stemTracks, stemMode, settings, priority, renderFarm, scheduledStartAt, metadata } = options;
+  const capabilities = await getFfmpegCapabilities();
+  if (!capabilities.available) {
+    throw new Error(zhCN.errors.ffmpegMissing);
+  }
+  const exportProject = buildExportProjectFromProject(project, { outputPath: outputDir, settings, metadata });
+  const stemPlans = buildStemExportPlans(exportProject, capabilities, stemTracks, outputDir);
+  const backgroundSettings = await readExportBackgroundSettings().catch(() => undefined);
+  const queuedTasks: ExportTask[] = [];
+
+  for (const stem of stemPlans) {
+    const plan = applyLowPowerThreads(stem.plan, backgroundSettings?.lowPowerMode === true, getHardwareConcurrency());
+    const task = useExportQueueStore.getState().addTask({
+      name: `Stem: ${stem.trackName}`,
+      projectName: project.name,
+      outputPath: stem.outputPath,
+      plan,
+      priority,
+      renderFarm,
+      scheduledStartAt,
+      progressive: undefined,
+      versionedBatch: undefined
+    });
+    queuedTasks.push(task);
+  }
+
+  if (stemMode === 'combined') {
+    const mixedOutputPath = `${outputDir.replace(/[\\/]+$/, '')}/_mixed.mp4`;
+    const mixedSettings = { ...settings, outputPath: mixedOutputPath };
+    const mixedProject = buildExportProjectFromProject(project, { outputPath: mixedOutputPath, settings: mixedSettings, metadata });
+    const rawPlan = buildFfmpegExportPlan(mixedProject, capabilities, 0, []);
+    const plan = applyLowPowerThreads(rawPlan, backgroundSettings?.lowPowerMode === true, getHardwareConcurrency());
+    const task = useExportQueueStore.getState().addTask({
+      name: fileNameFromPath(mixedOutputPath) || `${project.name} 混合导出`,
+      projectName: project.name,
+      outputPath: mixedOutputPath,
+      plan,
+      priority,
+      renderFarm,
+      scheduledStartAt,
+      progressive: undefined,
+      versionedBatch: undefined
+    });
+    queuedTasks.push(task);
+  }
+
+  signalRunner();
+  ensureExportQueueRunner();
+  return queuedTasks;
+}
+
 
 async function withSpatialAudioAssets(
   project: Project,

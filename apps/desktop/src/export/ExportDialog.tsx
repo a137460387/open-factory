@@ -96,7 +96,9 @@ import {
   type VersionedExportTaskMetadata,
   buildExportPresetRecommendations,
   buildExportRecommendationContext,
-  type ExportPresetRecommendation
+  type ExportPresetRecommendation,
+  type ExportStemFormat,
+  type ExportStemMode
 } from '@open-factory/editor-core';
 import { AlertTriangle, Cloud, CloudDownload, Clock3, Copy, Download, FileText, FolderOpen, Image as ImageIcon, ListPlus, Loader2, Minimize2, Save, Trash2, Upload, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
@@ -152,7 +154,7 @@ import {
 import { drawAudioVisualizationThemePreviewFrame } from '../media/audioVisualizationThemePreview';
 import { getWhisperAvailability } from '../lib/whisper';
 import { useWhisperSettingsStore } from '../store/whisperSettingsStore';
-import { cancelQueuedExportTask, enqueueExport, pauseQueuedExportTask, retryQueuedExportTask, setExportQueueMaxConcurrent, setExportQueuePaused } from './export-queue-runner';
+import { cancelQueuedExportTask, enqueueExport, enqueueStemExport, pauseQueuedExportTask, retryQueuedExportTask, setExportQueueMaxConcurrent, setExportQueuePaused } from './export-queue-runner';
 import { EXPORT_COMPLETION_ACTIONS, localDatetimeInputValue, normalizeExportCompletionAction, normalizeScheduledExportStart, type ExportCompletionAction } from './export-background';
 import { loadExportHistoryIntoStore } from './export-history';
 import { estimateExportFileSizeBytes, formatEstimatedFileSize } from './export-size-estimate';
@@ -209,7 +211,7 @@ interface ExportDialogProps {
 }
 
 type ExportRangeMode = 'all' | 'in-out' | 'selected-clips';
-type ExportMode = 'single' | 'version-batch' | 'sequence-batch' | 'codec-compare' | 'pipeline';
+type ExportMode = 'single' | 'version-batch' | 'sequence-batch' | 'codec-compare' | 'pipeline' | 'stem';
 type SequenceBatchPresetMode = 'shared' | 'individual';
 type VersionWatermarkMode = 'inherit' | 'none' | 'text';
 type VersionRangeMode = 'default' | 'custom';
@@ -505,6 +507,9 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
   const [codecCompareSort, setCodecCompareSort] = useState<{ key: CodecCompareSortKey; direction: CodecCompareSortDirection }>({ key: 'presetName', direction: 'asc' });
   const [codecCompareRecommendationMode, setCodecCompareRecommendationMode] = useState<CodecCompareRecommendationMode>('quality');
   const [codecCompareEvaluatingTaskId, setCodecCompareEvaluatingTaskId] = useState<string>();
+  const [stemTracks, setStemTracks] = useState<Array<{ trackIndex: number; trackName: string; selected: boolean; format: ExportStemFormat }>>([]);
+  const [stemMode, setStemMode] = useState<ExportStemMode>('independent');
+  const [stemOutputDir, setStemOutputDir] = useState('');
   const [priority, setPriority] = useState<ExportTaskPriority>('normal');
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [scheduledStartInput, setScheduledStartInput] = useState(() => localDatetimeInputValue(new Date(Date.now() + 60_000)));
@@ -592,6 +597,24 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
       })
     );
   }, [exportSettings, project.settings.fps, project.settings.height, project.settings.width, project.timeline]);
+  useEffect(() => {
+    const allTracks = project.timeline.tracks;
+    const audioTrackEntries = allTracks
+      .map((track, idx) => ({ track, idx }))
+      .filter(({ track }) => track.type === 'audio' || track.clips.some((clip) => 'volume' in clip));
+    setStemTracks((prev) => {
+      const byIndex = new Map(prev.map((item) => [item.trackIndex, item]));
+      return audioTrackEntries.map(({ track, idx }) => {
+        const existing = byIndex.get(idx);
+        return {
+          trackIndex: idx,
+          trackName: existing?.trackName ?? (track.name || `Track ${idx}`),
+          selected: existing?.selected ?? true,
+          format: existing?.format ?? 'default'
+        };
+      });
+    });
+  }, [project.timeline]);
   const exportCostEstimate = useMemo(() => estimateExportCost({ project, settings: exportSettings }), [exportSettings, project]);
   const exportOptimizationSuggestions = useMemo(
     () =>
@@ -1306,6 +1329,29 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
         setCodecCompareResults(createInitialCodecCompareResults(compareJobs, queuedTasks));
         return;
       }
+      if (exportMode === 'stem') {
+        const selectedStemTracks = stemTracks.filter((track) => track.selected);
+        if (selectedStemTracks.length === 0) {
+          throw new Error(t.stem.noAudioTracks);
+        }
+        const stemOutDir = stemOutputDir || (await openDirectoryDialog());
+        if (!stemOutDir) {
+          return;
+        }
+        setStemOutputDir(stemOutDir);
+        const tasks = await enqueueStemExport({
+          project,
+          outputDir: stemOutDir,
+          stemTracks: selectedStemTracks.map((track) => ({
+            trackIndex: track.trackIndex,
+            trackName: track.trackName,
+            format: track.format
+          })),
+          stemMode
+        });
+        showToast({ kind: 'info', title: t.queuedTitle, message: t.stem.queuedMessage(tasks.length) });
+        return;
+      }
       const paths = batchOutputPaths
         .split(/\r?\n/)
         .map((path) => path.trim())
@@ -1773,7 +1819,7 @@ function relinkFromPreflight(): void {
           <div className="grid grid-cols-[110px_1fr] items-center gap-2">
             <label className="text-xs font-medium text-slate-600">{t.mode.title}</label>
             <div className="inline-flex w-fit rounded-md border border-line bg-panel p-1" data-testid="export-mode-tabs">
-              {(['single', 'version-batch', 'sequence-batch', 'codec-compare', 'pipeline'] as const).map((mode) => (
+              {(['single', 'version-batch', 'sequence-batch', 'codec-compare', 'pipeline', 'stem'] as const).map((mode) => (
                 <button
                   key={mode}
                   type="button"
@@ -2398,6 +2444,99 @@ function relinkFromPreflight(): void {
                     ))
                   )}
                 </div>
+              </div>
+            </div>
+          ) : exportMode === 'stem' ? (
+            <div className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3" data-testid="export-stem-tab">
+              <label className="pt-1 text-xs font-medium text-slate-600">{t.stem.title}</label>
+              <div className="space-y-3">
+                <p className="text-xs text-slate-500">{t.stem.description}</p>
+                <div className="grid gap-2 md:grid-cols-[1fr_220px]">
+                  <label className="block text-xs font-medium text-slate-600">
+                    {t.stem.format}
+                    <select
+                      className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-xs"
+                      value={stemMode}
+                      onChange={(event) => setStemMode(event.target.value as ExportStemMode)}
+                      data-testid="export-stem-mode-select"
+                    >
+                      <option value="independent">{t.stem.modes.independent}</option>
+                      <option value="combined">{t.stem.modes.combined}</option>
+                      <option value="stems-only">{t.stem.modes['stems-only']}</option>
+                    </select>
+                  </label>
+                  <div className="text-xs text-slate-500">{t.stem.modeDescriptions[stemMode]}</div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-slate-600">{t.stem.trackList}</label>
+                    <div className="flex gap-2">
+                      <button
+                        className="text-[11px] text-brand hover:underline"
+                        type="button"
+                        onClick={() => setStemTracks((prev) => prev.map((track) => ({ ...track, selected: true })))}
+                        data-testid="export-stem-select-all"
+                      >
+                        {t.stem.selectAll}
+                      </button>
+                      <button
+                        className="text-[11px] text-brand hover:underline"
+                        type="button"
+                        onClick={() => setStemTracks((prev) => prev.map((track) => ({ ...track, selected: false })))}
+                        data-testid="export-stem-deselect-all"
+                      >
+                        {t.stem.deselectAll}
+                      </button>
+                    </div>
+                  </div>
+                  {stemTracks.length === 0 ? (
+                    <p className="text-xs text-slate-500">{t.stem.noAudioTracks}</p>
+                  ) : (
+                    <div className="space-y-1" data-testid="export-stem-track-list">
+                      {stemTracks.map((track) => (
+                        <label
+                          key={track.trackIndex}
+                          className="flex items-center gap-2 rounded-md border border-line px-2 py-1.5 text-xs"
+                          data-testid={`export-stem-track-${track.trackIndex}`}
+                        >
+                          <input
+                            type="checkbox"
+                            className="h-3.5 w-3.5 accent-brand"
+                            checked={track.selected}
+                            onChange={(event) =>
+                              setStemTracks((prev) =>
+                                prev.map((item) =>
+                                  item.trackIndex === track.trackIndex ? { ...item, selected: event.target.checked } : item
+                                )
+                              )
+                            }
+                          />
+                          <span className="flex-1 font-medium text-slate-700">{track.trackName}</span>
+                          <select
+                            className="rounded-md border border-line px-1 py-0.5 text-[11px]"
+                            value={track.format}
+                            onChange={(event) =>
+                              setStemTracks((prev) =>
+                                prev.map((item) =>
+                                  item.trackIndex === track.trackIndex
+                                    ? { ...item, format: event.target.value as ExportStemFormat }
+                                    : item
+                                )
+                              )
+                            }
+                            data-testid={`export-stem-format-${track.trackIndex}`}
+                          >
+                            <option value="default">{t.stem.formatOptions.default}</option>
+                            <option value="wav">{t.stem.formatOptions.wav}</option>
+                            <option value="aiff">{t.stem.formatOptions.aiff}</option>
+                            <option value="m4a">{t.stem.formatOptions.m4a}</option>
+                          </select>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="text-[11px] text-slate-400">{t.stem.namingRule}</div>
               </div>
             </div>
           ) : (
