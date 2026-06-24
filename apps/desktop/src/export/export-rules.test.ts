@@ -1,8 +1,10 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type { ExportConditionRule } from '../settings/appSettings';
+import { setLanguage } from '../i18n/strings';
 import { replaceExportRuleVariables, resolveCopyDestination, runExportRuleEvent } from './export-rules';
 
 describe('export condition rules', () => {
+  beforeAll(() => { setLanguage('en'); });
   it('replaces date and project variables with a path-safe project segment', () => {
     expect(
       replaceExportRuleVariables('D:/Out/{date}/{project}', {
@@ -74,7 +76,7 @@ describe('export condition rules', () => {
     expect(playTone).not.toHaveBeenCalled();
 
     await runExportRuleEvent(rules, { type: 'export-failure', task: { name: 'bad.mp4', outputPath: 'D:/Renders/bad.mp4', error: 'ffmpeg failed' } }, { copyFile, notify, playTone });
-    expect(notify).toHaveBeenCalledWith('导出失败', 'ffmpeg failed');
+    expect(notify).toHaveBeenCalledWith('Export Failed', 'ffmpeg failed');
 
     await runExportRuleEvent(rules, { type: 'queue-complete' }, { copyFile, notify, playTone });
     expect(playTone).toHaveBeenCalledTimes(1);

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createProject } from '@open-factory/editor-core';
 import { runAutosaveTick } from '../hooks/useAutosave';
+import { setLanguage } from '../i18n/strings';
 import {
   deleteAutosaveAfterSave,
   findStartupAutosaveRecovery,
@@ -41,6 +42,7 @@ describe('project autosave files', () => {
   let mtimes: Map<string, number>;
 
   beforeEach(() => {
+    setLanguage('en');
     storage = new MemoryStorage();
     writes = [];
     removes = [];
@@ -162,6 +164,6 @@ describe('project autosave files', () => {
 
     const restored = await readProjectFile(path, path, { password: 'secret' });
     expect(restored.name).toBe('Encrypted');
-    await expect(readProjectFile(path, path, { password: 'wrong' })).rejects.toThrow('密码错误');
+    await expect(readProjectFile(path, path, { password: 'wrong' })).rejects.toThrow('Wrong password');
   });
 });

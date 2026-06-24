@@ -1,11 +1,13 @@
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { DEFAULT_CLIP_SPEED, DEFAULT_COLOR_CORRECTION, DEFAULT_TRANSFORM, type Clip, type MediaAsset } from '@open-factory/editor-core';
+import { setLanguage } from '../i18n/strings';
 import { assertDemucsSettingsReady, buildSeparatedAudioMediaAssets, buildSeparatedAudioTracksForClip, canSeparateAudioForClip } from './demucs';
 
 describe('demucs helpers', () => {
+  beforeAll(() => { setLanguage('en'); });
   it('returns clear errors when the demucs path is not configured or missing', async () => {
-    await expect(assertDemucsSettingsReady({ executablePath: '' })).rejects.toThrow('Demucs 路径未配置。');
-    await expect(assertDemucsSettingsReady({ executablePath: 'C:/Tools/demucs.exe' }, async () => false)).rejects.toThrow('Demucs 可执行文件不存在。');
+    await expect(assertDemucsSettingsReady({ executablePath: '' })).rejects.toThrow('Demucs path is not configured.');
+    await expect(assertDemucsSettingsReady({ executablePath: 'C:/Tools/demucs.exe' }, async () => false)).rejects.toThrow('Demucs executable does not exist.');
   });
 
   it('enables separation only for configured audio/video clips with audio media', () => {
@@ -33,7 +35,7 @@ describe('demucs helpers', () => {
     );
     const tracks = buildSeparatedAudioTracksForClip(clip, media);
 
-    expect(media.map((asset) => asset.name)).toEqual(['Interview 人声.wav', 'Interview 背景音.wav']);
+    expect(media.map((asset) => asset.name)).toEqual(['Interview Vocals.wav', 'Interview Background.wav']);
     expect(media.map((asset) => asset.size)).toEqual([100, 200]);
     expect(tracks).toHaveLength(2);
     expect(tracks.map((track) => track.type)).toEqual(['audio', 'audio']);

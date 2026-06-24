@@ -1,5 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type { MediaAsset } from '@open-factory/editor-core';
+import { setLanguage } from '../i18n/strings';
 import type { AutomationRule } from '../settings/appSettings';
 import { evaluateAutomationCondition, parseAutomationRulesJson, runAutomationRulesForMedia } from './automation-rules';
 
@@ -17,6 +18,8 @@ const video: MediaAsset = {
 };
 
 describe('automation rules', () => {
+  beforeAll(() => { setLanguage('en'); });
+
   it('matches numeric and text conditions for media fields', () => {
     expect(evaluateAutomationCondition(video, { field: 'duration', op: '>', value: 300 })).toBe(true);
     expect(evaluateAutomationCondition(video, { field: 'height', op: '<=', value: 2160 })).toBe(true);
@@ -77,6 +80,6 @@ describe('automation rules', () => {
     expect(dependencies.enqueueProxy).toHaveBeenCalledWith(video);
     expect(dependencies.setLabel).toHaveBeenCalledWith('asset-long', 'green');
     expect(dependencies.moveToGroup).toHaveBeenCalledWith(video, 'Long videos');
-    expect(dependencies.notify).toHaveBeenCalledWith('自动化规则已触发', '已处理 long-interview.mov。');
+    expect(dependencies.notify).toHaveBeenCalledWith('Automation rule triggered', 'Processed long-interview.mov.');
   });
 });
