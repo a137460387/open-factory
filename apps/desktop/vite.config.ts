@@ -3,6 +3,11 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   plugins: [react()],
   clearScreen: false,
+  optimizeDeps: {
+    esbuildOptions: {
+      target: 'es2022',
+    },
+  },
   server: {
     host: 'localhost',
     port: 1420,
