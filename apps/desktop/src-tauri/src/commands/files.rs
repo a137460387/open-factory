@@ -4,11 +4,11 @@ use crate::path_validator::{
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 use std::time::UNIX_EPOCH;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_fs::FilePath;
+use tauri_plugin_fs::FsExt;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -143,36 +143,14 @@ pub fn trash_file(app: AppHandle, path: String) -> Result<(), String> {
     trash_file_inner(&safe_path)
 }
 
-#[cfg(target_os = "windows")]
 fn trash_file_inner(path: &Path) -> Result<(), String> {
-    let script = "$path=$args[0]; Add-Type -AssemblyName Microsoft.VisualBasic; [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile($path, 'OnlyErrorDialogs', 'SendToRecycleBin')";
-    let status = Command::new("powershell.exe")
-        .args(["-NoProfile", "-NonInteractive", "-Command", script])
-        .arg(path)
-        .status()
-        .map_err(|error| {
-            format!(
-                "Unable to send {} to recycle bin: {}",
-                normalize_path(path),
-                error
-            )
-        })?;
-    if status.success() {
-        Ok(())
-    } else {
-        Err(format!(
-            "Unable to send {} to recycle bin",
-            normalize_path(path)
-        ))
-    }
-}
-
-#[cfg(not(target_os = "windows"))]
-fn trash_file_inner(path: &Path) -> Result<(), String> {
-    Err(format!(
-        "System trash is not supported for {}",
-        normalize_path(path)
-    ))
+    trash::delete(path).map_err(|error| {
+        format!(
+            "Unable to send {} to trash: {}",
+            normalize_path(path),
+            error
+        )
+    })
 }
 
 #[tauri::command]
@@ -318,6 +296,7 @@ fn authorize_file_path_to_string(app: &AppHandle, path: FilePath) -> Result<Stri
     let path_buf: PathBuf = path.into_path().map_err(|error| error.to_string())?;
     authorize_existing_path(app, &path_buf)?;
     authorize_parent_directory(app, &path_buf)?;
+    let _ = app.fs_scope().allow_file(&path_buf);
     Ok(normalize_path(&path_buf))
 }
 
@@ -328,12 +307,14 @@ fn authorize_writable_file_path_to_string(
     let path_buf: PathBuf = path.into_path().map_err(|error| error.to_string())?;
     authorize_path_for_write(app, &path_buf)?;
     authorize_parent_directory(app, &path_buf)?;
+    let _ = app.fs_scope().allow_file(&path_buf);
     Ok(normalize_path(&path_buf))
 }
 
 fn authorize_directory_path_to_string(app: &AppHandle, path: FilePath) -> Result<String, String> {
     let path_buf: PathBuf = path.into_path().map_err(|error| error.to_string())?;
     authorize_existing_path(app, &path_buf)?;
+    let _ = app.fs_scope().allow_directory(&path_buf, true);
     Ok(normalize_path(&path_buf))
 }
 

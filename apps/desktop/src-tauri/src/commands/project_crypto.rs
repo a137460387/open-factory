@@ -2,15 +2,17 @@ use crate::path_validator::{validate_path, validate_path_for_write};
 use aes_gcm::aead::rand_core::RngCore;
 use aes_gcm::aead::{Aead, OsRng};
 use aes_gcm::{Aes256Gcm, KeyInit, Nonce};
+use argon2::{Algorithm, Argon2, Params, Version};
+use argon2::Block as Argon2Block;
 use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::Path;
 use tauri::AppHandle;
 
-const MAGIC: &[u8; 9] = b"OFCUTENC1";
+const MAGIC_V1: &[u8; 9] = b"OFCUTENC1";
+const MAGIC_V2: &[u8; 9] = b"OFCUTENC2";
 const SALT_LEN: usize = 16;
 const NONCE_LEN: usize = 12;
-const KEY_DERIVE_ROUNDS: usize = 120_000;
 const PASSWORD_ERROR: &str = "密码错误";
 
 #[tauri::command]
@@ -55,13 +57,14 @@ pub fn encrypt_project_contents(contents: &[u8], password: &str) -> Result<Vec<u
     let mut nonce_bytes = [0_u8; NONCE_LEN];
     OsRng.fill_bytes(&mut salt);
     OsRng.fill_bytes(&mut nonce_bytes);
-    let key = derive_key(password.as_bytes(), &salt);
+    let key = derive_key_argon2(password.as_bytes(), &salt);
     let cipher = Aes256Gcm::new_from_slice(&key).map_err(|error| error.to_string())?;
     let ciphertext = cipher
         .encrypt(Nonce::from_slice(&nonce_bytes), contents)
         .map_err(|error| error.to_string())?;
-    let mut output = Vec::with_capacity(MAGIC.len() + SALT_LEN + NONCE_LEN + ciphertext.len());
-    output.extend_from_slice(MAGIC);
+    let mut output =
+        Vec::with_capacity(MAGIC_V2.len() + SALT_LEN + NONCE_LEN + ciphertext.len());
+    output.extend_from_slice(MAGIC_V2);
     output.extend_from_slice(&salt);
     output.extend_from_slice(&nonce_bytes);
     output.extend_from_slice(&ciphertext);
@@ -70,17 +73,22 @@ pub fn encrypt_project_contents(contents: &[u8], password: &str) -> Result<Vec<u
 
 pub fn decrypt_project_contents(contents: &[u8], password: &str) -> Result<Vec<u8>, String> {
     let password = normalize_password(password)?;
-    let header_len = MAGIC.len() + SALT_LEN + NONCE_LEN;
+    let header_len = MAGIC_V1.len() + SALT_LEN + NONCE_LEN;
     if contents.len() <= header_len || !is_encrypted_project_bytes(contents) {
         return Err("Encrypted project format is invalid".to_string());
     }
-    let salt_start = MAGIC.len();
+    let legacy = contents.starts_with(MAGIC_V1);
+    let salt_start = MAGIC_V1.len();
     let nonce_start = salt_start + SALT_LEN;
     let ciphertext_start = nonce_start + NONCE_LEN;
     let salt = &contents[salt_start..nonce_start];
     let nonce = &contents[nonce_start..ciphertext_start];
     let ciphertext = &contents[ciphertext_start..];
-    let key = derive_key(password.as_bytes(), salt);
+    let key = if legacy {
+        derive_key_legacy(password.as_bytes(), salt)
+    } else {
+        derive_key_argon2(password.as_bytes(), salt)
+    };
     let cipher = Aes256Gcm::new_from_slice(&key).map_err(|error| error.to_string())?;
     cipher
         .decrypt(Nonce::from_slice(nonce), ciphertext)
@@ -88,7 +96,7 @@ pub fn decrypt_project_contents(contents: &[u8], password: &str) -> Result<Vec<u
 }
 
 pub fn is_encrypted_project_bytes(contents: &[u8]) -> bool {
-    contents.starts_with(MAGIC)
+    contents.starts_with(MAGIC_V1) || contents.starts_with(MAGIC_V2)
 }
 
 fn normalize_password(password: &str) -> Result<&str, String> {
@@ -99,12 +107,25 @@ fn normalize_password(password: &str) -> Result<&str, String> {
     Ok(trimmed)
 }
 
-fn derive_key(password: &[u8], salt: &[u8]) -> [u8; 32] {
+fn derive_key_argon2(password: &[u8], salt: &[u8]) -> [u8; 32] {
+    let params = Params::new(65536, 3, 1, None).expect("valid argon2 params");
+    let argon2 = Argon2::new(Algorithm::Argon2id, Version::V0x13, params);
+    let mut output = [0_u8; 32];
+    let mut blocks = vec![Argon2Block::default(); 65536];
+    argon2
+        .hash_password_into_with_memory(password, salt, &mut output, &mut blocks)
+        .expect("argon2 hash failed");
+    output
+}
+
+/// Legacy SHA-256 iterative KDF (v1 format). Used only for reading old files.
+fn derive_key_legacy(password: &[u8], salt: &[u8]) -> [u8; 32] {
+    const ROUNDS: usize = 120_000;
     let mut digest = Sha256::new();
     digest.update(salt);
     digest.update(password);
     let mut key = digest.finalize().to_vec();
-    for _ in 0..KEY_DERIVE_ROUNDS {
+    for _ in 0..ROUNDS {
         let mut round = Sha256::new();
         round.update(&key);
         round.update(salt);
@@ -139,8 +160,49 @@ mod tests {
     fn encrypted_format_contains_magic_salt_nonce_and_ciphertext() {
         let encrypted = encrypt_project_contents(b"project", "secret").unwrap();
         assert!(is_encrypted_project_bytes(&encrypted));
-        assert!(encrypted.starts_with(MAGIC));
-        assert!(encrypted.len() > MAGIC.len() + SALT_LEN + NONCE_LEN);
-        assert_eq!(&encrypted[..MAGIC.len()], MAGIC);
+        assert!(encrypted.starts_with(MAGIC_V2));
+        assert!(encrypted.len() > MAGIC_V2.len() + SALT_LEN + NONCE_LEN);
+        assert_eq!(&encrypted[..MAGIC_V2.len()], MAGIC_V2);
+    }
+
+    #[test]
+    fn decrypts_v1_legacy_file_with_sha256_kdf() {
+        let password = "legacy-pass";
+        let salt = [1_u8; SALT_LEN];
+        let nonce_bytes = [2_u8; NONCE_LEN];
+        let key = derive_key_legacy(password.as_bytes(), &salt);
+        let cipher = Aes256Gcm::new_from_slice(&key).unwrap();
+        let ciphertext = cipher
+            .encrypt(Nonce::from_slice(&nonce_bytes), &b"v1 payload"[..])
+            .unwrap();
+        let mut v1_blob = Vec::new();
+        v1_blob.extend_from_slice(MAGIC_V1);
+        v1_blob.extend_from_slice(&salt);
+        v1_blob.extend_from_slice(&nonce_bytes);
+        v1_blob.extend_from_slice(&ciphertext);
+
+        assert!(v1_blob.starts_with(MAGIC_V1));
+        assert!(is_encrypted_project_bytes(&v1_blob));
+        let decrypted = decrypt_project_contents(&v1_blob, password).unwrap();
+        assert_eq!(decrypted, b"v1 payload");
+    }
+
+    #[test]
+    fn v1_wrong_password_returns_password_error() {
+        let salt = [3_u8; SALT_LEN];
+        let nonce_bytes = [4_u8; NONCE_LEN];
+        let key = derive_key_legacy(b"correct", &salt);
+        let cipher = Aes256Gcm::new_from_slice(&key).unwrap();
+        let ciphertext = cipher
+            .encrypt(Nonce::from_slice(&nonce_bytes), &b"secret"[..])
+            .unwrap();
+        let mut v1_blob = Vec::new();
+        v1_blob.extend_from_slice(MAGIC_V1);
+        v1_blob.extend_from_slice(&salt);
+        v1_blob.extend_from_slice(&nonce_bytes);
+        v1_blob.extend_from_slice(&ciphertext);
+
+        let error = decrypt_project_contents(&v1_blob, "wrong").unwrap_err();
+        assert_eq!(error, PASSWORD_ERROR);
     }
 }

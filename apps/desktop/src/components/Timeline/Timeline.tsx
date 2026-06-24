@@ -320,6 +320,7 @@ export function Timeline({
   const setPreviewTimeline = useEditorStore((state) => state.setPreviewTimeline);
   const setActiveSequenceId = useEditorStore((state) => state.setActiveSequenceId);
   const renderCacheRanges = useRenderCacheStore((state) => state.ranges);
+  const staleRanges = useRenderCacheStore((state) => state.staleRanges);
   const [drag, setDrag] = useState<DragState | undefined>();
   const [snapHighlight, setSnapHighlight] = useState<TimelineSnapHighlight | undefined>();
   const [selectionRect, setSelectionRect] = useState<SelectionRect | undefined>();
@@ -2940,6 +2941,7 @@ function addProjectBookmark(time = playheadTime): void {
             width={width}
             currentTimecode={playheadTimecode}
             cachedRanges={renderCacheRanges}
+            staleRanges={staleRanges}
             diffRanges={timelineCompareRanges}
             exportRanges={exportRangeHighlights}
             protectedRanges={protectedRanges}

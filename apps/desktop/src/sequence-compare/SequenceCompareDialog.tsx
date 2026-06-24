@@ -41,7 +41,7 @@ export function SequenceCompareDialog({ project, onClose, onDragClipToSequence }
       if (data.clipId && onDragClipToSequence) {
         onDragClipToSequence(data.clipId, targetSequenceId, 0);
       }
-    } catch {}
+    } catch (error) { console.warn('[SequenceCompare] failed to load', error); }
   }
 
   return (

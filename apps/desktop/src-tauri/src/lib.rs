@@ -154,6 +154,7 @@ pub fn run() {
             commands::recording::stop_recording,
             commands::reports::write_clip_report,
             commands::whisper::run_whisper,
+            commands::render_preview_cache::render_preview_cache,
             commands::smoke::get_preview_smoke_config,
             commands::smoke::get_cancel_smoke_config,
             send_notification,

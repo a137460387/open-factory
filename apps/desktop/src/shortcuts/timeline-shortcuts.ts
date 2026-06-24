@@ -23,7 +23,11 @@ export type TimelineShortcutAction =
   | 'switch-previous-branch'
   | 'redo'
   | 'save'
-  | 'export-current-frame';
+  | 'export-current-frame'
+  | 'match-frame'
+  | 'reveal-in-timeline'
+  | 'navigate-next-instance'
+  | 'render-in-out';
 
 export interface TimelineShortcutKey {
   key: string;
@@ -67,7 +71,11 @@ export const TIMELINE_SHORTCUT_DEFINITIONS: TimelineShortcutDefinition[] = [
   { action: 'switch-previous-branch', defaultBindings: ['Ctrl+Alt+Z'] },
   { action: 'redo', defaultBindings: ['Ctrl+Shift+Z', 'Ctrl+Y'] },
   { action: 'save', defaultBindings: ['Ctrl+S'] },
-  { action: 'export-current-frame', defaultBindings: ['Shift+E'] }
+  { action: 'export-current-frame', defaultBindings: ['Shift+E'] },
+  { action: 'match-frame', defaultBindings: ['F'] },
+  { action: 'reveal-in-timeline', defaultBindings: ['Shift+F'] },
+  { action: 'navigate-next-instance', defaultBindings: ['Ctrl+F'] },
+  { action: 'render-in-out', defaultBindings: ['Shift+Enter'] }
 ];
 
 export function resolveTimelineShortcutAction(event: TimelineShortcutKey, customBindings: TimelineShortcutBindings = {}): TimelineShortcutAction | null {

@@ -630,7 +630,7 @@ export function SettingsDialog({
 
   function formatMacroConflict(conflict: MacroShortcutConflict): string {
     if (conflict.type === 'timeline' && conflict.timelineAction) {
-      return t.shortcuts.actions[conflict.timelineAction];
+      return (t.shortcuts.actions as Record<string, string>)[conflict.timelineAction] ?? conflict.timelineAction;
     }
     return conflict.macroName ?? conflict.macroId ?? t.macros.unknownMacro;
   }

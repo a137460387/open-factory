@@ -14,6 +14,7 @@ pub mod publish;
 pub mod project_crypto;
 pub mod proxy;
 pub mod recording;
+pub mod render_preview_cache;
 pub mod reports;
 pub mod scene;
 pub mod secrets;

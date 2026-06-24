@@ -27,6 +27,10 @@ interface ShortcutHandlers {
   redo(): void;
   save(): void;
   exportCurrentFrame(): void;
+  matchFrame(): void;
+  revealInTimeline(): void;
+  navigateNextInstance(): void;
+  renderInOut(): void;
 }
 
 export function useShortcuts(handlers: ShortcutHandlers, bindings: TimelineShortcutBindings = {}): void {
@@ -136,6 +140,18 @@ export function useShortcuts(handlers: ShortcutHandlers, bindings: TimelineShort
           break;
         case 'export-current-frame':
           handlers.exportCurrentFrame();
+          break;
+        case 'match-frame':
+          handlers.matchFrame();
+          break;
+        case 'reveal-in-timeline':
+          handlers.revealInTimeline();
+          break;
+        case 'navigate-next-instance':
+          handlers.navigateNextInstance();
+          break;
+        case 'render-in-out':
+          handlers.renderInOut();
           break;
       }
     };

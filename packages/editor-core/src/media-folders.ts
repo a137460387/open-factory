@@ -13,7 +13,9 @@ export type SmartAlbumId =
   | 'duration-short'
   | 'duration-medium'
   | 'duration-long'
-  | 'recent-imports';
+  | 'recent-imports'
+  | 'favorites'
+  | 'recent-use';
 
 export interface SmartAlbum {
   id: SmartAlbumId;
@@ -141,7 +143,9 @@ export function moveMediaAssetsToFolder(project: Project, assetIds: string[], fo
   };
 }
 
-export function collectSmartAlbums(media: MediaAsset[], nowMs = Date.now(), metadata: Record<string, MediaMetadata> = {}): SmartAlbum[] {
+export interface CollectSmartAlbumsExtras { favoriteIds?: string[]; recentUseIds?: string[]; }
+
+export function collectSmartAlbums(media: MediaAsset[], nowMs = Date.now(), metadata: Record<string, MediaMetadata> = {}, extras?: CollectSmartAlbumsExtras): SmartAlbum[] {
   const albums: SmartAlbum[] = [
     { id: 'rating-five', assetIds: [] },
     { id: 'flag-green', assetIds: [] },
@@ -153,7 +157,9 @@ export function collectSmartAlbums(media: MediaAsset[], nowMs = Date.now(), meta
     { id: 'duration-short', assetIds: [] },
     { id: 'duration-medium', assetIds: [] },
     { id: 'duration-long', assetIds: [] },
-    { id: 'recent-imports', assetIds: [] }
+    { id: 'recent-imports', assetIds: [] },
+    { id: 'favorites', assetIds: [] },
+    { id: 'recent-use', assetIds: [] }
   ];
   const byId = new Map(albums.map((album) => [album.id, album]));
   for (const asset of media) {
@@ -171,6 +177,16 @@ export function collectSmartAlbums(media: MediaAsset[], nowMs = Date.now(), meta
     byId.get(durationAlbumId(asset.duration))?.assetIds.push(asset.id);
     if (isRecentImport(asset.importedAt, nowMs)) {
       byId.get('recent-imports')?.assetIds.push(asset.id);
+    }
+  }
+  if (extras?.favoriteIds) {
+    for (const id of extras.favoriteIds) {
+      byId.get('favorites')?.assetIds.push(id);
+    }
+  }
+  if (extras?.recentUseIds) {
+    for (const id of extras.recentUseIds) {
+      byId.get('recent-use')?.assetIds.push(id);
     }
   }
   return albums;

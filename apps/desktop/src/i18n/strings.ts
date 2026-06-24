@@ -1165,7 +1165,11 @@ const zh = {
         'switch-previous-branch': '切换到上一历史分支',
         redo: '重做',
         save: '保存项目',
-        'export-current-frame': '导出当前帧'
+        'export-current-frame': '导出当前帧',
+        'match-frame': '匹配帧',
+        'reveal-in-timeline': '在时间线中查找',
+        'navigate-next-instance': '下一个实例',
+        'render-in-out': '渲染选区'
       }
     },
     macros: {
@@ -1704,7 +1708,9 @@ const zh = {
       'duration-short': '短片',
       'duration-medium': '中片',
       'duration-long': '长片',
-      'recent-imports': '最近导入'
+      'recent-imports': '最近导入',
+      'favorites': '收藏夹',
+      'recent-use': '最近使用'
     },
     rating: '评分',
     ratingValue: (value: number) => `${value} 星`,
@@ -5023,6 +5029,46 @@ const zh = {
     progress: (current: number, total: number) => '验证中 ' + current + '/' + total,
     readable: '可读',
     notReadable: '不可读'
+  },
+  matchFrame: {
+    matchFrame: '匹配帧',
+    revealInTimeline: '在时间线中查找',
+    navigateNext: '下一个实例',
+    instanceCounter: (current: number, total: number) => `${current}/${total}`,
+    matchToNested: '匹配到嵌套序列',
+    penetrateToSource: '穿透到源媒体',
+    mediaPreview: '媒体预览定位',
+    noSourceFound: '未找到源媒体'
+  },
+  renderCache: {
+    renderInOut: '渲染选区',
+    renderFull: '渲染整个时间线',
+    rendering: '渲染中...',
+    renderComplete: '渲染完成',
+    renderFailed: '渲染失败',
+    cacheValid: '缓存有效',
+    cacheStale: '缓存已过期',
+    clearCache: '清除缓存',
+    clearStaleCache: '清除过期缓存',
+    cacheSize: '缓存大小',
+    noInOutPoint: '未设置入出点，将渲染整个时间线'
+  },
+  broadcastCompliance: {
+    title: '合规检查',
+    check: '检查',
+    autoFix: '自动修复',
+    pass: '符合',
+    warn: '警告',
+    fail: '不符合'
+  },
+  mediaFavorites: {
+    addToFavorites: '添加到收藏',
+    removeFromFavorites: '取消收藏',
+    favorites: '收藏夹',
+    pinToSession: '本次会话置顶',
+    sharedFavorites: '跨项目共享收藏',
+    filterFavorites: '筛选收藏',
+    noFavorites: '暂无收藏'
   }
 } as const;
 
@@ -6148,7 +6194,11 @@ const enOverrides = {
         'switch-previous-branch': 'Switch to Previous History Branch',
         redo: 'Redo',
         save: 'Save Project',
-        'export-current-frame': 'Export Current Frame'
+        'export-current-frame': 'Export Current Frame',
+        'match-frame': 'Match Frame',
+        'reveal-in-timeline': 'Reveal in Timeline',
+        'navigate-next-instance': 'Next Instance',
+        'render-in-out': 'Render In/Out'
       }
     },
     macros: {
@@ -6687,7 +6737,9 @@ const enOverrides = {
       'duration-short': 'Short',
       'duration-medium': 'Medium',
       'duration-long': 'Long',
-      'recent-imports': 'Recent Imports'
+      'recent-imports': 'Recent Imports',
+      'favorites': 'Favorites',
+      'recent-use': 'Recently Used'
     },
     rating: 'Rating',
     ratingValue: (value: number) => `${value} star`,
@@ -9388,7 +9440,69 @@ const enOverrides = {
       ]
     }
   },
-} satisfies DeepPartial<LocaleStrings>;
+  matchFrame: {
+    matchFrame: '匹配帧',
+    revealInTimeline: '在时间线中查找',
+    navigateNext: '下一个实例',
+    instanceCounter: (current: number, total: number) => `${current}/${total}`,
+    matchToNested: '匹配到嵌套序列',
+    penetrateToSource: '穿透到源媒体',
+    mediaPreview: '媒体预览定位',
+    noSourceFound: '未找到源媒体',
+  },
+  renderCache: {
+    renderInOut: '渲染选区',
+    renderFull: '渲染整个时间线',
+    rendering: '渲染中...',
+    renderComplete: '渲染完成',
+    renderFailed: '渲染失败',
+    cacheValid: '缓存有效',
+    cacheStale: '缓存已过期',
+    clearCache: '清除缓存',
+    clearStaleCache: '清除过期缓存',
+    cacheSize: '缓存大小',
+    noInOutPoint: '未设置入出点，将渲染整个时间线',
+  },
+  broadcastCompliance: {
+    title: '合规检查',
+    selectSpec: '选择目标规格',
+    checkAll: '开始检查',
+    autoFix: '一键修复',
+    pass: '符合',
+    warn: '警告',
+    fail: '不符合',
+    noIssues: '全部通过',
+    issuesFound: (count: number) => `发现 ${count} 项问题`,
+    loudnormFix: '已启用响度标准化',
+    codecSuggestion: (codec: string) => `建议切换为 ${codec}`,
+    durationOverflow: (sec: number) => `超出 ${sec.toFixed(1)} 秒`,
+    specs: {
+      netflix: 'Netflix 1080p',
+      youtube: 'YouTube 1080p',
+      ebu: 'EBU R103 广播',
+      douyin: '抖音/B站',
+      youtubeShorts: 'YouTube Shorts 竖版',
+      itunes: 'iTunes/Apple TV',
+    },
+  },
+  mediaFavorites: {
+    addToFavorites: '添加到收藏',
+    removeFromFavorites: '取消收藏',
+    favorites: '收藏夹',
+    recent: '最近使用',
+    pinToSession: '本次会话置顶',
+    unpin: '取消置顶',
+    sharedFavorites: '跨项目共享收藏',
+    filterFavorites: '筛选收藏',
+    filterRecent: '筛选最近使用',
+    noFavorites: '暂无收藏',
+    noRecent: '暂无最近使用记录',
+    favoriteCount: (count: number) => `${count} 个收藏`,
+    recentCount: (count: number) => `${count} 个最近使用`,
+    crossProjectShared: '跨项目共享',
+    storedInProject: '存储在项目文件中',
+  },
+} as DeepPartial<LocaleStrings>;
 
 export const locales: Record<Language, LocaleStrings> = {
   zh,

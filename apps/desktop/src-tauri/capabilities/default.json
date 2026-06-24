@@ -19,12 +19,7 @@
       "allow": [
         { "path": "$APPDATA/open-factory/**" },
         { "path": "$APPCACHE/open-factory/**" },
-        { "path": "$TEMP/open-factory-*/**" },
-        { "path": "$DOCUMENT/**" },
-        { "path": "$DOWNLOAD/**" },
-        { "path": "$VIDEO/**" },
-        { "path": "$AUDIO/**" },
-        { "path": "$PICTURE/**" }
+        { "path": "$TEMP/open-factory-*/**" }
       ]
     },
     "shell:allow-open"

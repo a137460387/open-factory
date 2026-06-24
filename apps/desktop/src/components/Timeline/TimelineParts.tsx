@@ -178,6 +178,7 @@ export function Ruler({
   width: number;
   currentTimecode: string;
   cachedRanges: TimelineRenderRange[];
+  staleRanges: TimelineRenderRange[];
   diffRanges: TimelineDiffRange[];
   exportRanges: Array<{ id: string; start: number; end: number }>;
   protectedRanges: Array<{ id: string; start: number; end: number }>;

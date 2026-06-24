@@ -27,8 +27,9 @@ import {
   type TitleTemplateId,
   type EffectPreset
 } from '@open-factory/editor-core';
-import { AlertCircle, BadgeCheck, ChevronDown, ChevronRight, FileAudio2, FileImage, FileText, FileVideo2, Flag, Folder, FolderPlus, GalleryHorizontal, Gauge, Grid2X2, ImageDown, Import, Info, Link2, List, Loader2, Merge, Plus, RotateCcw, Search, SlidersHorizontal, Star, Tag, Trash2, X } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
+import { parseFavoritesSearchFilter } from '@open-factory/editor-core';
+import { AlertCircle, BadgeCheck, ChevronDown, ChevronRight, FileAudio2, FileImage, FileText, FileVideo2, Flag, Folder, FolderPlus, GalleryHorizontal, Gauge, Grid2X2, Heart, ImageDown, Import, Info, Link2, List, Loader2, Merge, Plus, RotateCcw, Search, SlidersHorizontal, Star, Tag, Trash2, X } from 'lucide-react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { computeMediaPreviewDelay, isMediaPreviewable } from './media-hover-preview';
 import { clsx } from 'clsx';
 import { zhCN } from '../../i18n/strings';
@@ -42,6 +43,15 @@ import type { SharedLibraryResource } from '../../shared-library/sharedLibrary';
 import { useProxySettingsStore } from '../../store/proxySettingsStore';
 import { loadLocalEffectPresets } from '../../effects/effect-preset-library';
 import { getMediaKeyboardNavigationIndex, inferMediaKeyboardColumnCount } from './media-keyboard';
+
+interface MediaCardExtras {
+  favoriteIds: Set<string>;
+  onToggleFavorite(assetId: string): void;
+  onRevealInTimeline(assetId: string): void;
+  pinnedIds: Set<string>;
+  onPinToSession(assetId: string): void;
+}
+const MediaCardExtrasCtx = createContext<MediaCardExtras | null>(null);
 
 interface MediaBinProps {
   media: MediaAsset[];
@@ -79,6 +89,12 @@ interface MediaBinProps {
   onSetFolderCollapsed(folderId: string, collapsed: boolean): void;
   onMoveMediaToFolder(assetIds: string[], folderId?: string | null): void;
   onApplyEffectPreset(preset: EffectPreset): void;
+  favoriteIds?: string[];
+  onToggleFavorite?(assetId: string): void;
+  onRevealInTimeline?(assetId: string): void;
+  pinnedIds?: Set<string>;
+  onPinToSession?(assetId: string): void;
+  recentMediaIds?: string[];
 }
 
 type MediaBinView = 'all' | 'video' | 'audio' | 'image' | 'tagged' | 'titles' | 'shared' | 'effects';
@@ -122,7 +138,13 @@ export function MediaBin({
   onDeleteFolder,
   onSetFolderCollapsed,
   onMoveMediaToFolder,
-  onApplyEffectPreset
+  onApplyEffectPreset,
+  favoriteIds = [],
+  onToggleFavorite = () => {},
+  onRevealInTimeline = () => {},
+  pinnedIds,
+  onPinToSession = () => {},
+  recentMediaIds = []
 }: MediaBinProps) {
   const t = zhCN.mediaBin;
   const [dragOver, setDragOver] = useState(false);
@@ -141,23 +163,38 @@ export function MediaBin({
   const [batchMetadataAssetIds, setBatchMetadataAssetIds] = useState<string[]>();
   const [batchRenameAssetIds, setBatchRenameAssetIds] = useState<string[]>();
   const missingCount = media.filter((asset) => asset.missing).length;
-  const smartAlbums = collectSmartAlbums(media, Date.now(), mediaMetadata);
+  const _effectivePinnedIds = pinnedIds ?? new Set<string>();
+  const smartAlbums = collectSmartAlbums(media, Date.now(), mediaMetadata, { favoriteIds, recentUseIds: recentMediaIds });
   const smartAlbumIds = smartAlbumId === 'none' ? undefined : new Set(smartAlbums.find((album) => album.id === smartAlbumId)?.assetIds ?? []);
   const metadataFilter: MediaMetadataFilter = filter === 'tagged' ? 'tagged' : quickFilter;
+  const _parsedSearch = parseFavoritesSearchFilter(search);
+  const _searchQuery = _parsedSearch.cleanQuery;
+  const _searchFilterSet = _parsedSearch.filter === 'favorites'
+    ? new Set(favoriteIds)
+    : _parsedSearch.filter === 'recent'
+      ? new Set(recentMediaIds)
+      : undefined;
   const visibleMedia =
     filter === 'titles' || filter === 'shared' || filter === 'effects'
       ? []
       : filterMediaAssets(media, {
-          query: search,
+          query: _searchQuery,
           filter: filter === 'tagged' ? 'all' : filter,
           metadataFilter,
           metadata: mediaMetadata
         })
           .filter((asset) => sceneFilter === 'all' || mediaContentAnalysis[asset.id]?.sceneTypes.includes(sceneFilter))
-          .filter((asset) => !smartAlbumIds || smartAlbumIds.has(asset.id));
+          .filter((asset) => !smartAlbumIds || smartAlbumIds.has(asset.id))
+          .filter((asset) => !_searchFilterSet || _searchFilterSet.has(asset.id));
   const sortedVisibleMedia = useMemo(
-    () => sortMediaLibraryAssets(visibleMedia, mediaLibraryView),
-    [visibleMedia, mediaLibraryView]
+    () => {
+      const sorted = sortMediaLibraryAssets(visibleMedia, mediaLibraryView);
+      if (_effectivePinnedIds.size === 0) return sorted;
+      const pinned = sorted.filter((a) => _effectivePinnedIds.has(a.id));
+      const rest = sorted.filter((a) => !_effectivePinnedIds.has(a.id));
+      return [...pinned, ...rest];
+    },
+    [visibleMedia, mediaLibraryView, _effectivePinnedIds]
   );
   const importedTimelineMedia = useMemo(
     () => sortMediaLibraryAssets(visibleMedia, { sortKey: 'importedAt', sortDirection: 'asc' }),
@@ -322,8 +359,17 @@ export function MediaBin({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
+  const _extrasValue: MediaCardExtras = {
+    favoriteIds: new Set(favoriteIds),
+    onToggleFavorite,
+    onRevealInTimeline,
+    pinnedIds: _effectivePinnedIds,
+    onPinToSession,
+  };
+
   return (
-    <aside
+    <MediaCardExtrasCtx.Provider value={_extrasValue}>
+      <aside
       className={clsx('flex h-full min-h-0 flex-col bg-white', dragOver && 'ring-2 ring-inset ring-brand')}
       onDragOver={(event) => {
         event.preventDefault();
@@ -653,6 +699,7 @@ export function MediaBin({
         />
       ) : null}
     </aside>
+    </MediaCardExtrasCtx.Provider>
   );
 }
 
@@ -1876,6 +1923,7 @@ function MediaCard({
   const labelColor = metadata?.labelColor;
   const rating = metadata?.rating ?? 0;
   const flag = metadata?.flag;
+  const extras = useContext(MediaCardExtrasCtx);
   const mediaVersions = metadata?.versions ?? [];
   const versionCount = 1 + mediaVersions.length;
   return (
@@ -2008,6 +2056,7 @@ function MediaCard({
           </button>
         ) : null}
         {labelColor ? <span className={clsx('absolute right-2 h-4 w-4 rounded-full border border-white shadow', versionCount > 1 ? 'top-8' : 'top-2')} style={{ backgroundColor: labelColorToHex(labelColor) }} data-testid={`media-label-${asset.id}`} /> : null}
+        {extras?.favoriteIds.has(asset.id) ? <span className="absolute right-2 top-2 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-white/90 shadow" data-testid={`media-favorite-badge-${asset.id}`}><Heart size={12} className="text-rose-500" fill="currentColor" /></span> : null}
         {flag ? (
           <span
             className={clsx(
@@ -2140,6 +2189,48 @@ function MediaCard({
             >
               <Gauge size={13} />
               {zhCN.mediaBin.spectrumAnalysis}
+            </button>
+          ) : null}
+          {extras ? (
+            <button
+              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid={`media-reveal-in-timeline-${asset.id}`}
+              onClick={() => {
+                extras.onRevealInTimeline(asset.id);
+                setLabelMenuOpen(false);
+              }}
+            >
+              <Search size={13} />
+              {zhCN.matchFrame.revealInTimeline}
+            </button>
+          ) : null}
+          {extras ? (
+            <button
+              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid={`media-toggle-favorite-${asset.id}`}
+              onClick={() => {
+                extras.onToggleFavorite(asset.id);
+                setLabelMenuOpen(false);
+              }}
+            >
+              <Heart size={13} className={extras.favoriteIds.has(asset.id) ? 'text-rose-500' : ''} fill={extras.favoriteIds.has(asset.id) ? 'currentColor' : 'none'} />
+              {extras.favoriteIds.has(asset.id) ? zhCN.mediaFavorites.removeFromFavorites : zhCN.mediaFavorites.addToFavorites}
+            </button>
+          ) : null}
+          {extras ? (
+            <button
+              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid={`media-pin-to-session-${asset.id}`}
+              onClick={() => {
+                extras.onPinToSession(asset.id);
+                setLabelMenuOpen(false);
+              }}
+            >
+              <Star size={13} className={extras.pinnedIds.has(asset.id) ? 'text-amber-500' : ''} fill={extras.pinnedIds.has(asset.id) ? 'currentColor' : 'none'} />
+              {zhCN.mediaFavorites.pinToSession}
             </button>
           ) : null}
           <div className="mb-2 flex items-center gap-1 font-semibold text-slate-700">

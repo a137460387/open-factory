@@ -88,3 +88,7 @@ tauri.key
 goal-open-factory.md
 docs/internal/
 package-lock.json
+
+*.bak
+*-report.json
+apps/desktop/ffprobe.exe

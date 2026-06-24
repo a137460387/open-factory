@@ -158,6 +158,12 @@ import {
   type ProfilerQueueSample,
   type ProfilerTraceEvent
 } from '@open-factory/editor-core';
+import {
+  matchFrameFromClip,
+  revealInTimeline as coreRevealInTimeline,
+  navigateToNextInstance as coreNavigateToNextInstance,
+  getMediaInstanceNavigation
+} from '@open-factory/editor-core';
 import { ChevronLeft, ChevronRight, GripHorizontal } from 'lucide-react';
 import { Toolbar } from './Toolbar';
 import { runConfiguredAutomationForMedia, type AutomationActionDependencies } from '../automation/automation-rules';
@@ -179,7 +185,7 @@ import { useExportQueueStore } from '../export/export-queue-store';
 import { revealExport } from '../lib/exportVideo';
 import { clearMediaCache } from '../cache/cache-service';
 import { createAdjustmentLayerClip, createClipFromAsset, createMotionGraphicClip, findPreferredTrack } from '../lib/clipFactory';
-import { zhCN } from '../i18n/strings';
+import { zhCN, t } from '../i18n/strings';
 import { featureStrings } from '../i18n/featureStrings';
 import { usePerformanceMonitorStore } from '../store/performanceMonitorStore';
 import { PerformanceAlertIcon } from './PerformanceMonitorPanel';
@@ -270,6 +276,7 @@ import {
   type PreviewWindowState,
   type RecordingSource
 } from '../lib/tauri-bridge';
+import { renderPreviewCache } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
 import {
   createPreviewWindowPlaybackState,
@@ -3656,6 +3663,102 @@ export function EditorShell() {
     setSelectedClipIds(state.project.timeline.tracks.flatMap((track) => track.clips.map((item) => item.id)));
   }, [setSelectedClipIds, setSelectedKeyframes]);
 
+  const matchFrameToSource = useCallback(() => {
+    if (!selectedClipId) return;
+    const result = matchFrameFromClip({
+      timeline: project.timeline,
+      clipId: selectedClipId,
+      playheadTime,
+      sequences: project.sequences,
+      activeSequenceId: project.activeSequenceId,
+      penetrationMode: 'source'
+    });
+    if (result) {
+      const asset = project.media.find((m) => m.id === result.mediaId);
+      if (asset) {
+        showToast({ kind: 'info', title: t('matchFrame.matchFrame'), message: `${asset.name} @ ${result.sourceTime.toFixed(1)}s` });
+      }
+    }
+  }, [selectedClipId, project, playheadTime, showToast]);
+
+  const revealMediaInTimeline = useCallback(() => {
+    if (!selectedClipMedia) return;
+    const result = coreRevealInTimeline(project.timeline, selectedClipMedia.id, project.sequences);
+    if (result.instances.length > 0) {
+      setSelectedClipIds(result.instances.map((inst) => inst.clipId));
+      if (result.instances[0]) {
+        setSelectedClipId(result.instances[0].clipId);
+        setPlayheadTime(result.instances[0].startTime);
+      }
+      showToast({ kind: 'info', title: t('matchFrame.revealInTimeline'), message: `找到 ${result.instances.length} 个实例` });
+    } else {
+      showToast({ kind: 'warning', title: t('matchFrame.revealInTimeline'), message: t('matchFrame.noSourceFound') });
+    }
+  }, [selectedClipMedia, project, setSelectedClipIds, setSelectedClipId, setPlayheadTime, showToast]);
+
+  const navigateToNextInstance = useCallback(() => {
+    if (!selectedClipMedia || !selectedClipId) return;
+    const nextId = coreNavigateToNextInstance(project.timeline, selectedClipMedia.id, selectedClipId, project.sequences);
+    if (nextId) {
+      setSelectedClipId(nextId);
+      const nav = getMediaInstanceNavigation(project.timeline, selectedClipMedia.id, nextId, project.sequences);
+      showToast({ kind: 'info', title: t('matchFrame.navigateNext'), message: `${nav.currentIndex + 1}/${nav.total}` });
+    }
+  }, [selectedClipMedia, selectedClipId, project, setSelectedClipId, showToast]);
+
+  const renderInOutRegion = useCallback(async () => {
+    const startSec = inPoint ?? 0;
+    const endSec = outPoint ?? getTimelineDuration(project.timeline);
+    if (endSec <= startSec) {
+      showToast({ kind: 'warning', title: t('renderCache.renderInOut'), message: t('renderCache.noInOutPoint') });
+      return;
+    }
+    try {
+      const result = await renderPreviewCache({
+        projectId: project.name,
+        startSec,
+        endSec,
+        sourcePath: projectPath ?? '',
+        width: project.settings.width,
+        height: project.settings.height
+      });
+      if (result.success) {
+        showToast({ kind: 'success', title: t('renderCache.renderInOut'), message: t('renderCache.renderComplete') });
+      } else {
+        showToast({ kind: 'warning', title: t('renderCache.renderInOut'), message: result.error ?? t('renderCache.renderFailed') });
+      }
+    } catch {
+      showToast({ kind: 'warning', title: t('renderCache.renderInOut'), message: t('renderCache.renderFailed') });
+    }
+  }, [inPoint, outPoint, project, projectPath, showToast]);
+
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+  const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set());
+  const [recentMediaIds, setRecentMediaIds] = useState<string[]>([]);
+
+  const handleToggleFavorite = useCallback((assetId: string) => {
+    setFavoriteIds((prev) => prev.includes(assetId) ? prev.filter((id) => id !== assetId) : [...prev, assetId]);
+  }, []);
+
+  const handlePinToSession = useCallback((assetId: string) => {
+    setPinnedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(assetId)) next.delete(assetId);
+      else next.add(assetId);
+      return next;
+    });
+  }, []);
+
+  const handleRevealFromMediaBin = useCallback((assetId: string) => {
+    const result = coreRevealInTimeline(project.timeline, assetId, project.sequences);
+    if (result.instances.length > 0) {
+      setSelectedClipIds(result.instances.map((inst) => inst.clipId));
+      showToast({ kind: 'info', title: t('matchFrame.revealInTimeline'), message: 'Found ' + result.instances.length + ' instances' });
+    } else {
+      showToast({ kind: 'warning', title: t('matchFrame.revealInTimeline'), message: t('matchFrame.noSourceFound') });
+    }
+  }, [project, t, setSelectedClipIds, showToast]);
+
   const shortcutHandlers = useMemo(
     () => ({
       togglePlayback,
@@ -3682,7 +3785,11 @@ export function EditorShell() {
       switchToPreviousHistoryBranch,
       redo,
       save: () => void saveProject(),
-      exportCurrentFrame: () => void exportCurrentFrame()
+      exportCurrentFrame: () => void exportCurrentFrame(),
+      matchFrame: () => void matchFrameToSource(),
+      revealInTimeline: () => void revealMediaInTimeline(),
+      navigateNextInstance: () => void navigateToNextInstance(),
+      renderInOut: () => void renderInOutRegion()
     }),
     [
       addAnnotationAtPlayhead,
@@ -3708,7 +3815,11 @@ export function EditorShell() {
       switchToPreviousHistoryBranch,
       togglePlayback,
       toggleTimelineGridSnap,
-      undo
+      undo,
+      matchFrameToSource,
+      revealMediaInTimeline,
+      navigateToNextInstance,
+      renderInOutRegion
     ]
   );
 
@@ -4281,6 +4392,12 @@ export function EditorShell() {
                   onSetFolderCollapsed={setMediaFolderCollapsed}
                   onMoveMediaToFolder={moveMediaToFolder}
                   onApplyEffectPreset={applyEffectPresetToSelectedClip}
+                  favoriteIds={favoriteIds}
+                  onToggleFavorite={handleToggleFavorite}
+                  onRevealInTimeline={handleRevealFromMediaBin}
+                  pinnedIds={pinnedIds}
+                  onPinToSession={handlePinToSession}
+                  recentMediaIds={recentMediaIds}
                 />
               </section>
             )

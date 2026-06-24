@@ -1541,6 +1541,32 @@ export async function cancelBatchTranscodeTask(taskId: string): Promise<void> {
   await invoke('cancel_batch_transcode_task', { taskId });
 }
 
+export interface RenderPreviewCacheRequest {
+  projectId: string;
+  startSec: number;
+  endSec: number;
+  sourcePath: string;
+  width: number;
+  height: number;
+}
+
+export interface RenderPreviewCacheResult {
+  outputPath: string;
+  durationMs: number;
+  success: boolean;
+  error?: string;
+}
+
+export interface RenderPreviewCacheProgressEvent {
+  projectId: string;
+  progress: number;
+  stage: string;
+}
+
+export async function renderPreviewCache(request: RenderPreviewCacheRequest): Promise<RenderPreviewCacheResult> {
+  return await invoke<RenderPreviewCacheResult>('render_preview_cache', { request });
+}
+
 export async function getCacheDir(): Promise<string> {
   const mock = getTauriMocks()?.getCacheDir;
   if (mock) {
@@ -1837,6 +1863,10 @@ export async function listenBatchTranscodeProgress(handler: (payload: BatchTrans
 
 export async function listenCoverFrameProgress(handler: (payload: CoverFrameProgressEvent) => void): Promise<() => void> {
   return listenBridge<CoverFrameProgressEvent>('cover-frame-progress', handler);
+}
+
+export async function listenRenderPreviewCacheProgress(handler: (payload: RenderPreviewCacheProgressEvent) => void): Promise<() => void> {
+  return listenBridge<RenderPreviewCacheProgressEvent>('render-preview-cache-progress', handler);
 }
 
 export async function listenDragDrop(handler: (event: { type: string; paths?: string[] }) => void): Promise<() => void> {

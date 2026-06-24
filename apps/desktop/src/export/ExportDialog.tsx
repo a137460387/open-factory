@@ -1,4 +1,5 @@
 import type { ExportCostHistorySample } from '@open-factory/editor-core';
+import { BUILTIN_BROADCAST_SPECS, checkCompliance, buildComplianceFix, type BroadcastSpec, type ExportComplianceParams, type ComplianceCheckResult } from '@open-factory/editor-core';
 import {
   TARGET_ASPECT_RATIOS,
   SUPPORTED_PROJECT_FPS,
@@ -436,6 +437,45 @@ function VersionedBatchReportTable({ rows }: { rows: VersionedExportReportRow[] 
 }
 
 export function ExportDialog({ project, initialPreset, selectedClipIds = [], inPoint, outPoint, onClose, onCompleted, onRelinkMissing }: ExportDialogProps) {
+  const [complianceOpen, setComplianceOpen] = useState(false);
+  const [selectedSpecId, setSelectedSpecId] = useState<string>('youtube-1080p');
+  const [complianceResults, setComplianceResults] = useState<ComplianceCheckResult[]>([]);
+  function runComplianceCheck() {
+    const spec = BUILTIN_BROADCAST_SPECS.find((s) => s.id === selectedSpecId);
+    if (!spec) return;
+    const parseBitrate = (v: string | null | undefined, unit: 'mbps' | 'kbps'): number | undefined => {
+      if (!v) return undefined;
+      const m = v.trim().match(/^(\d+(?:\.\d+)?)\s*(k|m)?b?ps?$/i);
+      if (!m) return undefined;
+      const n = parseFloat(m[1]);
+      const prefix = (m[2] ?? '').toLowerCase();
+      if (unit === 'mbps') return prefix === 'k' ? n / 1000 : n;
+      return prefix === 'm' ? n * 1000 : n;
+    };
+    const w = draftSettings.width ?? project.settings.width;
+    const h = draftSettings.height ?? project.settings.height;
+    const params: ExportComplianceParams = {
+      videoCodec: exportSettings.videoCodec,
+      videoBitrateMbps: parseBitrate(draftSettings.videoBitrate, 'mbps'),
+      width: w,
+      height: h,
+      fps: draftSettings.fps ?? project.settings.fps,
+      audioCodec: exportSettings.audioCodec,
+      audioBitrateKbps: parseBitrate(draftSettings.audioBitrate, 'kbps'),
+      subtitleFormat: exportSettings.subtitleFormat,
+      durationSec: getTimelinePlaybackDuration(project.timeline),
+    };
+    setComplianceResults(checkCompliance(spec, params));
+  }
+  function applyComplianceFix() {
+    const spec = BUILTIN_BROADCAST_SPECS.find((s) => s.id === selectedSpecId);
+    if (!spec || complianceResults.length === 0) return;
+    const fix = buildComplianceFix(spec, complianceResults);
+    if (fix.loudnorm) {
+      setDraftSettings((current) => ({ ...current, loudnessNormalization: 'ebu' as ExportLoudnessNormalization }));
+      void import('../lib/tauri-bridge').then((b) => b.sendNotification('Loudnorm', 'Target: ' + fix.loudnorm!.targetLufs + ' LUFS'));
+    }
+  }
   const t = zhCN.exportDialog;
   const [outputPath, setOutputPath] = useState('');
   const [capabilities, setCapabilities] = useState<FfmpegCapabilities | undefined>();
@@ -1697,6 +1737,31 @@ function relinkFromPreflight(): void {
             <X size={18} />
           </button>
         </div>
+        <details className="border-b border-line" data-testid="compliance-checker">
+          <summary className="flex cursor-pointer items-center gap-2 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-panel" data-testid="compliance-checker-toggle" onClick={(e) => { e.preventDefault(); setComplianceOpen(!complianceOpen); }}>{'Broadcast Compliance'}</summary>
+          {complianceOpen ? (
+            <div className="space-y-3 px-4 py-3" data-testid="compliance-checker-content">
+              <div className="flex items-center gap-2">
+                <select className="rounded border border-line px-2 py-1 text-xs" value={selectedSpecId} onChange={(e) => setSelectedSpecId(e.target.value)} data-testid="compliance-spec-selector">
+                  {BUILTIN_BROADCAST_SPECS.map((spec) => (<option key={spec.id} value={spec.id}>{spec.name}</option>))}
+                </select>
+                <button className="rounded bg-brand px-3 py-1 text-xs font-medium text-white hover:bg-brand/90" type="button" onClick={runComplianceCheck} data-testid="compliance-check-button">Check</button>
+                {complianceResults.some((r) => r.level === 'fail' && r.autoFix) ? (<button className="rounded bg-amber-500 px-3 py-1 text-xs font-medium text-white hover:bg-amber-600" type="button" onClick={applyComplianceFix} data-testid="compliance-auto-fix-button">Auto Fix</button>) : null}
+              </div>
+              {complianceResults.length > 0 ? (
+                <div className="space-y-1" data-testid="compliance-results">
+                  {complianceResults.map((result, i) => (
+                    <div key={i} className="flex items-center gap-2 text-xs" data-testid={`compliance-result-${i}`}>
+                      <span className={result.level === 'pass' ? 'text-emerald-600' : result.level === 'warn' ? 'text-amber-500' : 'text-rose-600'}>{result.level === 'pass' ? '✓' : result.level === 'warn' ? '⚠' : '✗'}</span>
+                      <span className="font-medium">{result.name}</span>
+                      <span className="text-slate-500">{result.message}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </details>
         <div className="max-h-[78vh] space-y-4 overflow-y-auto p-4 text-sm">
           <div className="grid grid-cols-[110px_1fr_auto] items-center gap-2">
             <label className="text-xs font-medium text-slate-600">{t.output}</label>
