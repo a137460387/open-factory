@@ -3,6 +3,8 @@ import {
   addMediaVersion,
   buildMediaVersionCompareRequest,
   createMediaVersionFromAsset,
+  findMediaVersionAsset,
+  findMediaVersionOwner,
   getMediaVersionLabel,
   listMediaVersionEntries,
   normalizeMediaVersions,
@@ -70,5 +72,52 @@ describe('media versions', () => {
     expect(request?.left.assetId).toBe('asset-1');
     expect(request?.right.assetId).toBe('asset-2');
     expect(request?.time).toBe(4.25);
+  });
+
+  it('returns undefined when asset has fewer than 2 versions', () => {
+    const project = makeProject();
+    expect(buildMediaVersionCompareRequest(project, 'asset-1')).toBeUndefined();
+  });
+
+  it('returns undefined when assetId is not found', () => {
+    const project = makeProject();
+    expect(buildMediaVersionCompareRequest(project, 'nonexistent')).toBeUndefined();
+  });
+
+  it('falls back to first/second entry when version IDs do not match', () => {
+    const project = makeProject();
+    const versionAsset = { ...project.media[0], id: 'asset-2', name: 'sample-v2.mp4', path: 'C:/Videos/sample-v2.mp4' };
+    project.media.push(versionAsset);
+    project.mediaMetadata = {
+      'asset-1': {
+        versions: [createMediaVersionFromAsset(versionAsset, 1, '2026-06-16T00:00:00.000Z')]
+      }
+    };
+
+    const request = buildMediaVersionCompareRequest(project, 'asset-1', 'nonexistent-left', 'nonexistent-right');
+    expect(request).toBeDefined();
+    expect(request?.left.assetId).toBe('asset-1');
+    expect(request?.right.assetId).toBe('asset-2');
+  });
+
+  it('finds media version owner by original asset id', () => {
+    const project = makeProject();
+    const versionAsset = { ...project.media[0], id: 'asset-2', name: 'v2.mp4', path: 'C:/Videos/v2.mp4' };
+    project.media.push(versionAsset);
+    project.mediaMetadata = {
+      'asset-1': {
+        versions: [createMediaVersionFromAsset(versionAsset, 1, '2026-06-16T00:00:00.000Z')]
+      }
+    };
+
+    expect(findMediaVersionOwner(project, 'asset-1')?.id).toBe('asset-1');
+    expect(findMediaVersionOwner(project, 'asset-2')?.id).toBe('asset-1');
+    expect(findMediaVersionOwner(project, 'nonexistent')).toBeUndefined();
+  });
+
+  it('finds media version asset by entry assetId', () => {
+    const project = makeProject();
+    expect(findMediaVersionAsset(project, { assetId: 'asset-1' })?.id).toBe('asset-1');
+    expect(findMediaVersionAsset(project, { assetId: 'nonexistent' })).toBeUndefined();
   });
 });

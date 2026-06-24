@@ -5,6 +5,7 @@ import {
   buildExportRecommendationContext,
   checkProjectHasHdrMedia,
   hasSubtitleTracks,
+  isHdrMediaProfile,
   type ExportRecommendationContext,
   type ExportRecommendationReasonCode
 } from '../src/export/export-preset-recommendations';
@@ -142,5 +143,53 @@ describe('checkProjectHasHdrMedia', () => {
       colorProfile: { sourceColorSpace: 'rec2020', label: 'BT.2020' }
     });
     expect(checkProjectHasHdrMedia(project)).toBe(true);
+  });
+});
+
+describe('isHdrMediaProfile', () => {
+  it('returns false for undefined profile', () => {
+    expect(isHdrMediaProfile(undefined)).toBe(false);
+  });
+
+  it('returns true for rec2020 profile', () => {
+    expect(isHdrMediaProfile({ sourceColorSpace: 'rec2020', label: 'BT.2020' })).toBe(true);
+  });
+
+  it('returns false for sRGB profile', () => {
+    expect(isHdrMediaProfile({ sourceColorSpace: 'srgb', label: 'sRGB' })).toBe(false);
+  });
+});
+
+describe('buildExportPresetRecommendations default labelFn', () => {
+  it('uses default labelFn when no labelFn provided', () => {
+    const context = makeContext({ width: 1080, height: 1920, duration: 30 });
+    const results = buildExportPresetRecommendations(context);
+    expect(results.length).toBeGreaterThan(0);
+    const first = results[0];
+    expect(first.reasons[0].label).toBe('portrait');
+  });
+
+  it('generates duration label for short duration via default labelFn', () => {
+    const context = makeContext({ width: 1080, height: 1920, duration: 30 });
+    const results = buildExportPresetRecommendations(context);
+    expect(results.length).toBeGreaterThan(0);
+    const durationReason = results[0].reasons.find((r) => r.code === 'duration');
+    expect(durationReason?.label).toBe('short');
+  });
+
+  it('generates subtitles label when hasSubtitles via default labelFn', () => {
+    const context = makeContext({ width: 1080, height: 1920, duration: 30, hasSubtitles: true });
+    const results = buildExportPresetRecommendations(context);
+    expect(results.length).toBeGreaterThan(0);
+    const subtitleReason = results[0].reasons.find((r) => r.code === 'subtitles');
+    expect(subtitleReason?.label).toBe('subtitles');
+  });
+
+  it('generates hdr label when hasHdrMedia', () => {
+    const context = makeContext({ width: 1080, height: 1920, duration: 30, hasHdrMedia: true });
+    const results = buildExportPresetRecommendations(context);
+    expect(results.length).toBeGreaterThan(0);
+    const hdrReason = results[0].reasons.find((r) => r.code === 'hdr');
+    expect(hdrReason?.label).toBe('hdr');
   });
 });

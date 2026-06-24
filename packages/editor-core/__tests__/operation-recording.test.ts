@@ -67,6 +67,22 @@ describe('operation recording', () => {
     expect(html).toContain('Trim &lt;clip&gt;');
     expect(html).toContain('Clip 1 / Track 3');
   });
+
+  it('serializes command with non-function data properties', () => {
+    const initial = makeProject(0);
+    const command = {
+      description: 'Set param',
+      execute: () => undefined,
+      undo: () => undefined,
+      paramId: 'brightness',
+      value: 0.5,
+    } as unknown as Command;
+    const recording = recordOperationCommand(createOperationRecording(initial, { startedAtMs: 1_000 }), command, makeProject(1), 1_200);
+
+    const parsed = parseOperationRecording(serializeOperationRecording(recording));
+    expect(parsed?.commands).toHaveLength(1);
+    expect(parsed?.commands[0].commandType).toBe('Object');
+  });
 });
 
 function makeRecording(clipCounts: number[], timestamps = clipCounts.map((_, index) => 1_000 + index * 100)): OperationRecordingFile {

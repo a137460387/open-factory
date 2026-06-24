@@ -7,10 +7,11 @@ import {
   doesPropertyChangeTriggerStale,
   calculateDurationOverflow,
   clipToDigestInput,
+  collectClipsInRange,
   type ClipDigestInput,
   type SelectionRenderCacheEntry,
 } from '../src/selection-prerender';
-import type { Clip, VideoClip } from '../src/model';
+import type { Clip, VideoClip, Timeline } from '../src/model';
 
 function makeClipDigest(overrides: Partial<ClipDigestInput> = {}): ClipDigestInput {
   return {
@@ -87,6 +88,26 @@ describe('calculateSelectionRenderHash', () => {
   it('uses custom sha256 function when provided', async () => {
     const h = await calculateSelectionRenderHash(0, 10, [makeClipDigest()], async () => 'custom-hash');
     expect(h).toBe('custom-hash');
+  });
+
+  it('falls back to simpleHash when crypto.subtle is unavailable', async () => {
+    const origCrypto = globalThis.crypto;
+    try {
+      Object.defineProperty(globalThis, 'crypto', {
+        value: { subtle: undefined },
+        configurable: true,
+        writable: true,
+      });
+      const h = await calculateSelectionRenderHash(0, 10, [makeClipDigest()]);
+      expect(typeof h).toBe('string');
+      expect(h.length).toBeGreaterThan(0);
+    } finally {
+      Object.defineProperty(globalThis, 'crypto', {
+        value: origCrypto,
+        configurable: true,
+        writable: true,
+      });
+    }
   });
 });
 
@@ -169,5 +190,35 @@ describe('clipToDigestInput', () => {
     expect(d.speed).toBe(2);
     expect(d.trimStart).toBe(1);
     expect(d.colorBrightness).toBe(0);
+  });
+});
+
+describe('collectClipsInRange', () => {
+  function makeTimeline(clips: Clip[]): Timeline {
+    return { tracks: [{ id: 't1', type: 'video', name: 'V1', clips }] } as unknown as Timeline;
+  }
+
+  it('returns empty array for empty timeline', () => {
+    expect(collectClipsInRange(makeTimeline([]), 0, 10)).toEqual([]);
+  });
+
+  it('returns clips that overlap the range', () => {
+    const clip1 = makeVideoClip({ id: 'c1', start: 2, duration: 5 });
+    const clip2 = makeVideoClip({ id: 'c2', start: 20, duration: 5 });
+    const result = collectClipsInRange(makeTimeline([clip1, clip2]), 0, 10);
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('c1');
+  });
+
+  it('returns clips whose end overlaps start of range', () => {
+    const clip = makeVideoClip({ id: 'c1', start: 0, duration: 5 });
+    const result = collectClipsInRange(makeTimeline([clip]), 4, 10);
+    expect(result).toHaveLength(1);
+  });
+
+  it('excludes clips whose end is at range start', () => {
+    const clip = makeVideoClip({ id: 'c1', start: 0, duration: 5 });
+    const result = collectClipsInRange(makeTimeline([clip]), 5, 10);
+    expect(result).toHaveLength(0);
   });
 });
