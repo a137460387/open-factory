@@ -34,6 +34,7 @@ import {
   normalizeMasks,
   normalizeVideoRestoration,
   normalizeMediaColorProfile,
+  normalizeLutLayers,
   type ClipKeyframes,
   type Project,
   type TextStyle,
@@ -2551,8 +2552,21 @@ function buildColorCorrectionFilters(clip: ExportClip, textArtifacts: TextArtifa
       filters.push(`lut3d=file=${placeholder}`);
     }
   }
-  if (colorCorrection.lutPath) {
-    filters.push(`lut3d=file=${escapeDrawtextValue(colorCorrection.lutPath)}`);
+  const lutLayers = normalizeLutLayers(colorCorrection.luts, colorCorrection.lutPath);
+  let lutBlendCounter = 0;
+  for (const layer of lutLayers) {
+    if (layer.intensity <= 0) continue;
+    if (Math.abs(layer.intensity - 1) < 0.001) {
+      filters.push(`lut3d=file=${escapeDrawtextValue(layer.path)}`);
+    } else {
+      const idx = lutBlendCounter++;
+      const intensity = formatFfmpegNumber(layer.intensity);
+      filters.push(
+        `split[lut${idx}a][lut${idx}b]`,
+        `[lut${idx}b]lut3d=file=${escapeDrawtextValue(layer.path)}[lut${idx}c]`,
+        `[lut${idx}a][lut${idx}c]blend=all_expr='A*(1-${intensity})+B*${intensity}'`
+      );
+    }
   }
   const hasBasicCorrection =
     colorCorrection.brightness !== DEFAULT_COLOR_CORRECTION.brightness ||

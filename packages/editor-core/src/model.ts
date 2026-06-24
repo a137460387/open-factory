@@ -80,6 +80,7 @@ import type {
   KeyframeHandle,
   KeyframeHandleMode,
   KeyframeProperty,
+  LUTLayer,
   Mask,
   MaskType,
   MediaAsset,
@@ -197,6 +198,7 @@ export type {
   KeyframeHandle,
   KeyframeHandleMode,
   KeyframeProperty,
+  LUTLayer,
   Mask,
   MaskType,
   MediaAsset,
@@ -434,6 +436,7 @@ export const DEFAULT_COLOR_CORRECTION: ColorCorrection = {
   saturation: 1,
   hue: 0,
   lutPath: null,
+  luts: [],
   colorCurves: DEFAULT_COLOR_CURVES,
   threeWayColor: DEFAULT_THREE_WAY_COLOR
 };
@@ -1013,6 +1016,7 @@ export function normalizeColorCorrection(colorCorrection: Partial<ColorCorrectio
     saturation: round(Math.min(2, Math.max(0, colorCorrection?.saturation ?? DEFAULT_COLOR_CORRECTION.saturation))),
     hue: round(Math.min(180, Math.max(-180, colorCorrection?.hue ?? DEFAULT_COLOR_CORRECTION.hue))),
     lutPath: normalizeLutPath(colorCorrection?.lutPath),
+    luts: normalizeLutLayers(colorCorrection?.luts, colorCorrection?.lutPath),
     colorCurves: normalizeColorCurves(colorCorrection?.colorCurves),
     threeWayColor: normalizeThreeWayColor(colorCorrection?.threeWayColor)
   };
@@ -1730,6 +1734,7 @@ export function isDefaultColorCorrection(colorCorrection: Partial<ColorCorrectio
     normalized.saturation === DEFAULT_COLOR_CORRECTION.saturation &&
     normalized.hue === DEFAULT_COLOR_CORRECTION.hue &&
     normalized.lutPath === DEFAULT_COLOR_CORRECTION.lutPath &&
+    (normalized.luts?.length ?? 0) === 0 &&
     isDefaultColorCurves(normalized.colorCurves) &&
     isNeutralThreeWayColor(normalized.threeWayColor)
   );
@@ -1901,6 +1906,25 @@ function normalizeOptionalHexColor(color: string | undefined): string | undefine
 function normalizeLutPath(path: string | null | undefined): string | null {
   const trimmed = path?.trim();
   return trimmed ? trimmed : null;
+}
+
+export function normalizeLutLayers(luts: LUTLayer[] | undefined, lutPath?: string | null): LUTLayer[] {
+  // If luts array is explicitly provided, normalize it (max 3, filter intensity=0)
+  if (luts && luts.length > 0) {
+    return luts
+      .slice(0, 3)
+      .map((l) => ({
+        path: (typeof l.path === 'string' ? l.path.trim() : '') || '',
+        intensity: round(Math.min(1, Math.max(0, typeof l.intensity === 'number' ? l.intensity : 1)))
+      }))
+      .filter((l) => l.path.length > 0);
+  }
+  // Backward compat: upgrade legacy lutPath string to single LUTLayer
+  const normalizedPath = normalizeLutPath(lutPath);
+  if (normalizedPath) {
+    return [{ path: normalizedPath, intensity: 1 }];
+  }
+  return [];
 }
 
 function cloneClipKeyframesLocal(keyframes: ClipKeyframes | undefined): ClipKeyframes | undefined {

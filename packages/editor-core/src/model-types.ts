@@ -656,6 +656,11 @@ export interface ClipAudioRestorationGap {
   duration: number;
 }
 
+export interface LUTLayer {
+  path: string;
+  intensity: number; // 0~1, default 1.0
+}
+
 export interface ColorCorrection {
   inputColorSpace?: InputColorSpace;
   brightness: number;
@@ -663,6 +668,7 @@ export interface ColorCorrection {
   saturation: number;
   hue: number;
   lutPath?: string | null;
+  luts?: LUTLayer[];
   colorCurves?: ColorCurves;
   threeWayColor?: ThreeWayColor;
 }

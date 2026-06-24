@@ -11,6 +11,7 @@ import {
   type ThreeWayColor
 } from './color-grading';
 import { getLogToRec709Lut, isLogInputColorSpace, normalizeInputColorSpace, REC709_INPUT_COLOR_SPACE, serializeLogToRec709Cube, type InputColorSpace, type LogInputColorSpace } from './color-log-luts';
+import { normalizeLutLayers, type LUTLayer } from './model';
 import { round } from './time';
 
 export type ColorNodeType = 'input' | 'sequential' | 'parallel' | 'layer' | 'output' | 'lut';
@@ -24,6 +25,7 @@ export interface ColorNodeCorrection {
   saturation: number;
   hue: number;
   lutPath?: string | null;
+  luts?: LUTLayer[];
   colorCurves?: ColorCurves;
   threeWayColor?: ThreeWayColor;
 }
@@ -98,6 +100,7 @@ export const DEFAULT_COLOR_NODE_CORRECTION: ColorNodeCorrection = {
   saturation: 1,
   hue: 0,
   lutPath: null,
+  luts: [],
   colorCurves: DEFAULT_COLOR_CURVES,
   threeWayColor: DEFAULT_THREE_WAY_COLOR
 };
@@ -136,6 +139,7 @@ export function normalizeColorNodeCorrection(correction: Partial<ColorNodeCorrec
     saturation: round(Math.min(2, Math.max(0, finiteOrDefault(correction?.saturation, DEFAULT_COLOR_NODE_CORRECTION.saturation)))),
     hue: round(Math.min(180, Math.max(-180, finiteOrDefault(correction?.hue, DEFAULT_COLOR_NODE_CORRECTION.hue)))),
     lutPath: normalizeLutPath(correction?.lutPath),
+    luts: normalizeLutLayers(correction?.luts, correction?.lutPath),
     colorCurves: normalizeColorCurves(correction?.colorCurves),
     threeWayColor: normalizeThreeWayColor(correction?.threeWayColor)
   };
@@ -150,6 +154,7 @@ export function isDefaultColorNodeCorrection(correction: Partial<ColorNodeCorrec
     normalized.saturation === DEFAULT_COLOR_NODE_CORRECTION.saturation &&
     normalized.hue === DEFAULT_COLOR_NODE_CORRECTION.hue &&
     normalized.lutPath === DEFAULT_COLOR_NODE_CORRECTION.lutPath &&
+    (normalized.luts?.length ?? 0) === 0 &&
     isDefaultColorCurves(normalized.colorCurves) &&
     isNeutralThreeWayColor(normalized.threeWayColor)
   );
@@ -477,7 +482,8 @@ function buildNodeFilters(node: ColorNode, options: BuildColorNodeGraphFilterPla
   }
   const correction = normalizeColorNodeCorrection({
     ...node.correction,
-    lutPath: node.type === 'lut' ? node.lutPath ?? node.correction.lutPath : node.correction.lutPath
+    lutPath: node.type === 'lut' ? node.lutPath ?? node.correction.lutPath : node.correction.lutPath,
+    luts: node.correction.luts
   });
   const filters: string[] = [];
   const inputColorSpace = correction.inputColorSpace ?? REC709_INPUT_COLOR_SPACE;
@@ -487,8 +493,10 @@ function buildNodeFilters(node: ColorNode, options: BuildColorNodeGraphFilterPla
       filters.push(`lut3d=file=${registerLogLut(node, lut.colorSpace, options)}`);
     }
   }
-  if (correction.lutPath) {
-    filters.push(`lut3d=file=${(options.escapeFilePath ?? defaultEscapeFilePath)(correction.lutPath)}`);
+  const lutLayers = normalizeLutLayers(correction.luts, correction.lutPath);
+  for (const layer of lutLayers) {
+    if (layer.intensity <= 0) continue;
+    filters.push(`lut3d=file=${(options.escapeFilePath ?? defaultEscapeFilePath)(layer.path)}`);
   }
   if (
     correction.brightness !== DEFAULT_COLOR_NODE_CORRECTION.brightness ||
