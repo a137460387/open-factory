@@ -3148,6 +3148,16 @@ function addProjectBookmark(time = playheadTime): void {
             ) : null}
             {gapMenu ? <GapActionMenu menu={gapMenu} onClose={() => setGapMenu(undefined)} onCloseGap={closeGap} onFillGap={(strategy) => void fillGap(strategy)} /> : null}
             {gapStatsOpen ? <GapStatsPanel timeline={project.timeline} tracks={project.timeline.tracks} onClose={() => setGapStatsOpen(false)} /> : null}
+            {sequenceSettingsDialogOpen && activeSequence ? (
+              <SequenceSettingsDialog
+                sequence={activeSequence}
+                projectSettings={{ fps: project.settings.fps, width: project.settings.width ?? 1280, height: project.settings.height ?? 720 }}
+                onSave={(settings) => {
+                  commandManager.execute(new UpdateSequenceSettingsCommand(projectAccessor, activeSequence.id, settings));
+                }}
+                onClose={() => setSequenceSettingsDialogOpen(false)}
+              />
+            ) : null}
             {volumeEnvelopeMenu ? <VolumeEnvelopeMenu menu={volumeEnvelopeMenu} onFade={applyVolumeEnvelopeFade} onReset={resetVolumeEnvelope} onClose={() => setVolumeEnvelopeMenu(undefined)} /> : null}
             {clipMenu ? (
               <ClipActionMenu
