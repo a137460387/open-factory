@@ -1131,6 +1131,18 @@ const zh = {
       noClipSelectedMessage: '请选择视频或图片片段后再预览或应用 LUT。',
       readyForClip: (name: string) => `将应用到 ${name}`
     },
+    gapPanel: {
+      title: '间隙统计',
+      totalCount: '总间隙数',
+      totalDuration: '总间隙时长',
+      maxGap: '最大间隙',
+      minGap: '最小间隙',
+      track: '轨道',
+      count: '数量',
+      duration: '时长',
+      noGaps: '无间隙',
+      seconds: (v: number) => `${v.toFixed(1)}s`
+    },
     shortcuts: {
       title: '快捷键',
       description: '重新绑定时间线和导出快捷键。',
@@ -1169,6 +1181,8 @@ const zh = {
         'match-frame': '匹配帧',
         'reveal-in-timeline': '在时间线中查找',
         'navigate-next-instance': '下一个实例',
+        'navigate-prev-gap': '上一间隙',
+        'navigate-next-gap': '下一间隙',
         'render-in-out': '渲染选区'
       }
     },
@@ -6261,6 +6275,8 @@ const enOverrides = {
         'match-frame': 'Match Frame',
         'reveal-in-timeline': 'Reveal in Timeline',
         'navigate-next-instance': 'Next Instance',
+        'navigate-prev-gap': 'Previous Gap',
+        'navigate-next-gap': 'Next Gap',
         'render-in-out': 'Render In/Out'
       }
     },

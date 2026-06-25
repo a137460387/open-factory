@@ -170,7 +170,9 @@ import {
   getMediaInstanceNavigation,
   type ClipboardKeyframeGroup,
   type PasteMode,
-  PasteKeyframesCommand
+  PasteKeyframesCommand,
+  computeTimelineGaps,
+  navigateGap
 } from '@open-factory/editor-core';
 import { ChevronLeft, ChevronRight, GripHorizontal } from 'lucide-react';
 import { Toolbar } from './Toolbar';
@@ -3831,6 +3833,16 @@ export function EditorShell() {
       matchFrame: () => void matchFrameToSource(),
       revealInTimeline: () => void revealMediaInTimeline(),
       navigateNextInstance: () => void navigateToNextInstance(),
+      navigatePrevGap: () => {
+        const gaps = computeTimelineGaps(project.timeline);
+        const target = navigateGap(gaps, playheadTime, -1);
+        if (target) setPlayheadTime(target.start);
+      },
+      navigateNextGap: () => {
+        const gaps = computeTimelineGaps(project.timeline);
+        const target = navigateGap(gaps, playheadTime, 1);
+        if (target) setPlayheadTime(target.start);
+      },
       renderInOut: () => void renderInOutRegion()
     }),
     [
@@ -3861,7 +3873,10 @@ export function EditorShell() {
       matchFrameToSource,
       revealMediaInTimeline,
       navigateToNextInstance,
-      renderInOutRegion
+      renderInOutRegion,
+      project,
+      playheadTime,
+      setPlayheadTime
     ]
   );
 

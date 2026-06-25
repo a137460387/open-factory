@@ -30,6 +30,8 @@ interface ShortcutHandlers {
   matchFrame(): void;
   revealInTimeline(): void;
   navigateNextInstance(): void;
+  navigatePrevGap(): void;
+  navigateNextGap(): void;
   renderInOut(): void;
 }
 
@@ -149,6 +151,12 @@ export function useShortcuts(handlers: ShortcutHandlers, bindings: TimelineShort
           break;
         case 'navigate-next-instance':
           handlers.navigateNextInstance();
+          break;
+        case 'navigate-prev-gap':
+          handlers.navigatePrevGap();
+          break;
+        case 'navigate-next-gap':
+          handlers.navigateNextGap();
           break;
         case 'render-in-out':
           handlers.renderInOut();

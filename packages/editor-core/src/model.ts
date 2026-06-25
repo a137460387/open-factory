@@ -111,6 +111,7 @@ import type {
   RichTextParagraph,
   RichTextRun,
   Sequence,
+  SequenceSettings,
   Subclip,
   SubtitleClip,
   SubtitleLanguage,
@@ -231,6 +232,7 @@ export type {
   RichTextParagraph,
   RichTextRun,
   Sequence,
+  SequenceSettings,
   Subclip,
   SubtitleClip,
   SubtitleLanguage,
@@ -891,12 +893,13 @@ export function createSubclip(
 }
 
 export function createSequence(sequence: Omit<Sequence, 'id' | 'name'> & Partial<Pick<Sequence, 'id' | 'name'>>): Sequence {
-  return {
-    id: sequence.id ?? createId('sequence'),
-    name: normalizeSequenceName(sequence.name),
-    timeline: sequence.timeline
-  };
-}
+    return {
+      id: sequence.id ?? createId('sequence'),
+      name: normalizeSequenceName(sequence.name),
+      timeline: sequence.timeline,
+      ...(sequence.settings ? { settings: sequence.settings } : {})
+    };
+  }
 
 export function createBaseClip(
   input: Omit<BaseClip, 'id' | 'transform' | 'speed' | 'colorCorrection'> &

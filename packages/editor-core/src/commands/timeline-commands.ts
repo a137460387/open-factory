@@ -112,6 +112,9 @@ import {
   type TransitionType,
   type Transform
 } from '../model';
+import type { SequenceSettings } from '../model-types';
+import { recalculateClipStartsForFrameRate } from '../sequence-settings';
+import { clampTrackHeight, DEFAULT_TRACK_HEIGHT } from '../track-height';
 import {
   type ClipGroupBatchPatch,
   createClipGroup,
@@ -221,6 +224,99 @@ export class NewProjectCommand implements Command {
   execute(): void {
     this.before ??= this.accessor.getProject();
     this.accessor.setProject(this.nextProject);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+/** 更新序列独立设置（帧率/分辨率/时长） */
+export class UpdateSequenceSettingsCommand implements Command {
+  readonly description: string;
+  private before?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly sequenceId: string,
+    private readonly newSettings: SequenceSettings | undefined
+  ) {
+    this.description = 'Update sequence settings';
+  }
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    const project = this.accessor.getProject();
+    const oldSequence = project.sequences.find((s) => s.id === this.sequenceId);
+    if (!oldSequence) return;
+
+    const oldSettings = oldSequence.settings;
+    const oldFps = oldSettings?.frameRate ?? project.settings.fps;
+    const newFps = this.newSettings?.frameRate ?? project.settings.fps;
+
+    const sequences = project.sequences.map((seq) => {
+      if (seq.id !== this.sequenceId) return seq;
+      return { ...seq, settings: this.newSettings };
+    });
+
+    // 帧率变更时重新对齐 clip 位置
+    if (oldFps !== newFps) {
+      for (const seq of sequences) {
+        if (seq.id !== this.sequenceId) continue;
+        recalculateClipStartsForFrameRate(seq.timeline, oldFps, newFps);
+      }
+    }
+
+    // 如果当前活跃序列就是被修改的序列，同步 timeline
+    let timeline = project.timeline;
+    if (project.activeSequenceId === this.sequenceId) {
+      const activeSeq = sequences.find((s) => s.id === this.sequenceId);
+      if (activeSeq) timeline = activeSeq.timeline;
+    }
+
+    this.accessor.setProject({
+      ...project,
+      timeline,
+      sequences,
+      updatedAt: new Date().toISOString()
+    });
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+/** 批量设置所有轨道高度 */
+export class BatchUpdateTrackHeightCommand implements Command {
+  readonly description: string;
+  private before?: Project;
+  private readonly height: number;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    height: number
+  ) {
+    this.description = 'Batch update track height';
+    this.height = clampTrackHeight(height);
+  }
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    const project = this.accessor.getProject();
+    const tracks = project.timeline.tracks.map((track) => ({
+      ...track,
+      displayHeight: this.height
+    }));
+    this.accessor.setProject({
+      ...project,
+      timeline: { ...project.timeline, tracks },
+      updatedAt: new Date().toISOString()
+    });
   }
 
   undo(): void {

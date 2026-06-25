@@ -358,7 +358,8 @@ function cloneProjectSequences(project: Project): Sequence[] {
     createSequence({
       id: sequence.id,
       name: sequence.name,
-      timeline: cloneTimeline(sequence.id === activeSequenceId ? project.timeline : sequence.timeline)
+      timeline: cloneTimeline(sequence.id === activeSequenceId ? project.timeline : sequence.timeline),
+      ...(sequence.settings ? { settings: sequence.settings } : {})
     })
   );
   if (!cloned.some((sequence) => sequence.id === PRIMARY_SEQUENCE_ID)) {
@@ -372,7 +373,8 @@ function cloneFileSequences(sequences: Sequence[] | undefined, primaryTimeline: 
     createSequence({
       id: sequence.id,
       name: normalizeSequenceName(sequence.name),
-      timeline: cloneTimeline(sequence.timeline)
+      timeline: cloneTimeline(sequence.timeline),
+      ...((sequence as any).settings ? { settings: (sequence as any).settings } : {})
     })
   );
   const primaryIndex = cloned.findIndex((sequence) => sequence.id === PRIMARY_SEQUENCE_ID);

@@ -27,7 +27,9 @@ export type TimelineShortcutAction =
   | 'match-frame'
   | 'reveal-in-timeline'
   | 'navigate-next-instance'
-  | 'render-in-out';
+  | 'render-in-out'
+  | 'navigate-prev-gap'
+  | 'navigate-next-gap';
 
 export interface TimelineShortcutKey {
   key: string;
@@ -74,8 +76,6 @@ export const TIMELINE_SHORTCUT_DEFINITIONS: TimelineShortcutDefinition[] = [
   { action: 'export-current-frame', defaultBindings: ['Shift+E'] },
   { action: 'match-frame', defaultBindings: ['F'] },
   { action: 'reveal-in-timeline', defaultBindings: ['Shift+F'] },
-  { action: 'navigate-next-instance', defaultBindings: ['Ctrl+F'] },
-  { action: 'render-in-out', defaultBindings: ['Shift+Enter'] }
 ];
 
 export function resolveTimelineShortcutAction(event: TimelineShortcutKey, customBindings: TimelineShortcutBindings = {}): TimelineShortcutAction | null {

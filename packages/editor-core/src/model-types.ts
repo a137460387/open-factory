@@ -493,12 +493,24 @@ export interface Sequence {
   id: string;
   name: string;
   timeline: Timeline;
+  /** 序列独立设置，未设置时继承项目级设置 */
+  settings?: SequenceSettings;
+}
+
+/** 序列独立设置（帧率/分辨率/时长），字段均为可选，未设置时继承项目级 */
+export interface SequenceSettings {
+  width?: number;
+  height?: number;
+  frameRate?: number;
+  duration?: number;
 }
 
 export interface Track {
   id: string;
   type: TrackType;
   name: string;
+  /** 轨道独立显示高度（px），未设置时使用默认值48 */
+  displayHeight?: number;
   language?: SubtitleLanguage;
   subtitleType?: SubtitleTrackType;
   color?: TimelineLabelColor | null;
