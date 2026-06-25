@@ -209,6 +209,7 @@ import { addSharedLibraryResource, loadSharedSubtitleStyleTemplates, subtitleSty
 import { validateCustomShaderSource } from '../../lib/preview/custom-shader';
 import { showToast } from '../../lib/toast';
 import { SubtitleAIPolishPanel } from './SubtitleAIPolishPanel';
+import { ChapterTitleAIPanel } from './ChapterTitleAIPanel';
 import { markLocalAiModelUsed } from '../../settings/appSettings';
 import { useEditorStore, type SelectedKeyframeRef } from '../../store/editorStore';
 import { usePrivacyDetectionSettingsStore } from '../../store/privacyDetectionSettingsStore';
@@ -231,6 +232,12 @@ interface InspectorProps {
 export function Inspector({ clip, selectedClips = [], selectedCount, selectedClipLocked, selectedKeyframe, selectedKeyframes = [], media, playheadTime, projectSettings }: InspectorProps) {
   const project = useEditorStore((state) => state.project);
   const selectedSubtitleClips = selectedClips.filter((item): item is Extract<Clip, { type: 'subtitle' }> => item.type === 'subtitle');
+  const allTimelineSubtitleClips = useMemo(() => {
+    return project.timeline.tracks
+      .flatMap((track) => track.clips)
+      .filter((c): c is Extract<Clip, { type: 'subtitle' }> => c.type === 'subtitle')
+      .sort((a, b) => a.start - b.start);
+  }, [project.timeline.tracks]);
   const selectedGroup = useMemo(() => {
     const groups = normalizeClipGroups(project.clipGroups, project.timeline.tracks.flatMap((track) => track.clips.map((item) => item.id)));
     return findCompleteClipGroup(groups, selectedClips.map((item) => item.id));
@@ -247,6 +254,7 @@ export function Inspector({ clip, selectedClips = [], selectedCount, selectedCli
             <SubtitleProofreadingPanel selectedSubtitleClips={selectedSubtitleClips} selectedClipLocked={selectedClipLocked} projectSettings={projectSettings} />
             <SubtitleRetimingPanel selectedSubtitleClips={selectedSubtitleClips} projectSettings={projectSettings} />
             <SubtitleAIPolishPanel selectedSubtitleClips={selectedSubtitleClips} selectedClipLocked={selectedClipLocked} />
+            <ChapterTitleAIPanel allSubtitleClips={allTimelineSubtitleClips} totalDuration={getTimelineDuration(project.timeline)} selectedClipLocked={selectedClipLocked} />
           </div>
         </aside>
       );
@@ -383,6 +391,12 @@ function ClipInspector({
   const clipDurationTimecode = secondsToTimecode(clip.duration, projectSettings.fps, projectSettings.timecodeFormat);
   const assetDurationTimecode = asset ? secondsToTimecode(asset.duration, projectSettings.fps, projectSettings.timecodeFormat) : undefined;
   const project = useEditorStore((state) => state.project);
+  const allTimelineSubtitleClips = useMemo(() => {
+    return project.timeline.tracks
+      .flatMap((track) => track.clips)
+      .filter((c): c is Extract<Clip, { type: 'subtitle' }> => c.type === 'subtitle')
+      .sort((a, b) => a.start - b.start);
+  }, [project.timeline.tracks]);
   const setSelectedClipIds = useEditorStore((state) => state.setSelectedClipIds);
   const setSelectedKeyframes = useEditorStore((state) => state.setSelectedKeyframes);
   const chromaKeyPickClipId = useEditorStore((state) => state.chromaKeyPickClipId);
@@ -3043,6 +3057,7 @@ function ClipInspector({
                 <SubtitleProofreadingPanel clip={clip} selectedSubtitleClips={selectedSubtitleClips.length > 0 ? selectedSubtitleClips : [clip]} selectedClipLocked={selectedClipLocked} projectSettings={projectSettings} />
                 <SubtitleRetimingPanel clip={clip} selectedSubtitleClips={selectedSubtitleClips.length > 0 ? selectedSubtitleClips : [clip]} projectSettings={projectSettings} />
                 <SubtitleAIPolishPanel selectedSubtitleClips={selectedSubtitleClips.length > 0 ? selectedSubtitleClips : [clip]} selectedClipLocked={selectedClipLocked} />
+                <ChapterTitleAIPanel allSubtitleClips={allTimelineSubtitleClips} totalDuration={getTimelineDuration(project.timeline)} selectedClipLocked={selectedClipLocked} />
               </>
             ) : null}
             {clip.type === 'text' ? (
