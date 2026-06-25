@@ -165,7 +165,8 @@ pub fn run() {
             commands::ai::read_ai_api_key,
             commands::ai::write_ai_api_key,
             commands::ai::check_ollama_reachable,
-            commands::ai::list_ollama_models
+            commands::ai::list_ollama_models,
+            commands::ai::extract_ai_frames
         ])
         .setup(|app| {
             let window_exists = app.get_webview_window("main").is_some();

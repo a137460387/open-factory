@@ -37,6 +37,17 @@ describe('media bin filtering', () => {
   });
 });
 
+  it('filters by AI analysis tags', () => {
+    const aiMedia = [
+      makeAsset('video-1', 'video', 'Meeting.mp4'),
+      makeAsset('video-2', 'video', 'Office.mp4'),
+    ];
+    aiMedia[0].aiAnalysis = { tags: ['室内', '办公'], scene: '办公室', mood: '专注', objects: ['桌子'], analysisTime: '', providerId: 'openai' };
+    expect(filterMediaAssets(aiMedia, { query: '室内' }).map((a) => a.id)).toEqual(['video-1']);
+    expect(filterMediaAssets(aiMedia, { query: '办公' }).map((a) => a.id)).toEqual(['video-1']);
+    expect(filterMediaAssets(aiMedia, { query: 'xyz' }).map((a) => a.id)).toEqual([]);
+  });
+
 function makeAsset(id: string, type: MediaAsset['type'], name: string): MediaAsset {
   return {
     id,

@@ -1,3 +1,4 @@
+import type { MediaAIAnalysis } from './ai-service';
 import type { ColorCurves, ThreeWayColor } from './color-grading';
 import type { InputColorSpace } from './color-log-luts';
 import type { ClipBlendMode } from './blend-modes';
@@ -361,6 +362,7 @@ export interface MediaAsset {
   proxyStatus?: 'none' | 'pending' | 'ready' | 'error';
   proxyError?: string;
   imageSequence?: ImageSequenceInfo;
+  aiAnalysis?: MediaAIAnalysis;
 }
 
 export interface ImageSequenceInfo {

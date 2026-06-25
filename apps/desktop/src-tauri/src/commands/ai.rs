@@ -1,5 +1,11 @@
 use keyring::{Entry, Error as KeyringError};
 use serde::{Deserialize, Serialize};
+use base64::Engine;
+use std::process::Command;
+use tauri::AppHandle;
+
+use crate::path_validator::validate_path;
+use super::binaries::ffmpeg_binary;
 
 const AI_KEYCHAIN_SERVICE: &str = "open-factory.ai";
 
@@ -15,12 +21,14 @@ pub struct CallAiApiRequest {
     pub max_tokens: Option<u32>,
     #[serde(default)]
     pub temperature: Option<f64>,
+    #[serde(default)]
+    pub timeout_secs: Option<u64>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct AiMessage {
     pub role: String,
-    pub content: String,
+    pub content: serde_json::Value,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -48,7 +56,7 @@ pub async fn call_ai_api(request: CallAiApiRequest, api_key: Option<String>) -> 
     let start = std::time::Instant::now();
 
     let client = reqwest::Client::builder()
-        .timeout(std::time::Duration::from_secs(30))
+        .timeout(std::time::Duration::from_secs(request.timeout_secs.unwrap_or(30)))
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
 
@@ -272,6 +280,66 @@ fn truncate_error(text: &str) -> String {
     } else {
         format!("{}...", &text[..max])
     }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ExtractAiFramesRequest {
+    pub source_path: String,
+    pub times: Vec<f64>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ExtractAiFramesResult {
+    pub frames: Vec<String>,
+}
+
+#[tauri::command]
+pub async fn extract_ai_frames(
+    app: AppHandle,
+    request: ExtractAiFramesRequest,
+) -> Result<ExtractAiFramesResult, String> {
+    tauri::async_runtime::spawn_blocking(move || extract_ai_frames_blocking(app, request))
+        .await
+        .map_err(|error| error.to_string())?
+}
+
+fn extract_ai_frames_blocking(
+    app: AppHandle,
+    request: ExtractAiFramesRequest,
+) -> Result<ExtractAiFramesResult, String> {
+    let safe_source = validate_path(&app, std::path::Path::new(&request.source_path))?;
+    let source = safe_source.to_string_lossy().to_string();
+    let mut frames = Vec::new();
+    for &time in &request.times {
+        let output = Command::new(ffmpeg_binary())
+            .args(&[
+                "-hide_banner",
+                "-ss",
+                &format!("{:.3}", time),
+                "-i",
+                &source,
+                "-vframes",
+                "1",
+                "-vf",
+                "scale=512:-2",
+                "-f",
+                "image2pipe",
+                "-vcodec",
+                "mjpeg",
+                "pipe:1",
+            ])
+            .output()
+            .map_err(|e| format!("无法启动 FFmpeg: {}", e))?;
+        if !output.status.success() {
+            return Err(format!(
+                "FFmpeg 抽帧失败: {}",
+                String::from_utf8_lossy(&output.stderr).trim()
+            ));
+        }
+        let b64 = base64::engine::general_purpose::STANDARD.encode(&output.stdout);
+        frames.push(b64);
+    }
+    Ok(ExtractAiFramesResult { frames })
 }
 
 #[cfg(test)]

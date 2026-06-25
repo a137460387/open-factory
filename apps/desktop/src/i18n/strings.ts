@@ -3325,6 +3325,26 @@ const zh = {
       copyBilibili: '复制 B 站格式',
       copied: '已复制到剪贴板'
     },
+    aiContentAnalysis: {
+      title: 'AI 内容分析',
+      analyze: 'AI 分析',
+      analyzing: 'AI 分析中...',
+      extractingFrames: '正在抽帧...',
+      noProvider: '未配置视觉服务商',
+      costPreview: (tokens: number, cost: number) => `预计消耗约 ${tokens} 个 token（约¥${cost}）`,
+      tags: '标签',
+      scene: '场景',
+      mood: '氛围',
+      objects: '物体',
+      resultsTitle: '分析结果',
+      apply: '应用',
+      failedTitle: '分析失败',
+      failedMessage: 'AI 内容分析请求失败，请检查服务商配置。',
+      appliedTitle: '已应用',
+      appliedMessage: 'AI 分析结果已保存到媒体项。',
+      tagSearch: 'AI标签',
+      selectProvider: '选择视觉服务商'
+    },
     audioChannelRoutingOptions: {
       normal: '正常',
       'mono-left': '路由到左声道',
@@ -8157,6 +8177,26 @@ const enOverrides = {
       copyYouTube: 'Copy YouTube Format',
       copyBilibili: 'Copy Bilibili Format',
       copied: 'Copied to clipboard'
+    },
+    aiContentAnalysis: {
+      title: 'AI Content Analysis',
+      analyze: 'AI Analyze',
+      analyzing: 'AI analyzing...',
+      extractingFrames: 'Extracting frames...',
+      noProvider: 'No vision provider configured',
+      costPreview: (tokens: number, cost: number) => `Estimated ~${tokens} tokens (~¥${cost})`,
+      tags: 'Tags',
+      scene: 'Scene',
+      mood: 'Mood',
+      objects: 'Objects',
+      resultsTitle: 'Analysis Results',
+      apply: 'Apply',
+      failedTitle: 'Analysis Failed',
+      failedMessage: 'AI content analysis request failed. Check provider configuration.',
+      appliedTitle: 'Applied',
+      appliedMessage: 'AI analysis results saved to media item.',
+      tagSearch: 'AI Tags',
+      selectProvider: 'Select Vision Provider'
     },
     audioChannelRoutingOptions: {
       normal: 'Normal',

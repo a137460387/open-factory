@@ -715,6 +715,7 @@ export type TauriMocks = Partial<{
   readSmtpPassword(profile: string): Promise<string | undefined> | string | undefined;
   writeSmtpPassword(profile: string, password?: string): Promise<void> | void;
   callAiApi(request: CallAiApiRequest, apiKey?: string): Promise<CallAiApiResult> | CallAiApiResult;
+  extractAiFrames(request: ExtractAiFramesRequest): Promise<ExtractAiFramesResult> | ExtractAiFramesResult;
   testAiConnection(baseUrl: string, apiKey?: string, providerId?: string): Promise<boolean> | boolean;
   readAiApiKey(providerId: string): Promise<string | undefined> | string | undefined;
   writeAiApiKey(providerId: string, apiKey?: string): Promise<void> | void;
@@ -1896,7 +1897,7 @@ export async function listenDragDrop(handler: (event: { type: string; paths?: st
 
 export interface CallAiApiMessage {
   role: 'system' | 'user' | 'assistant';
-  content: string;
+  content: string | Array<{ type: string; text?: string; image_url?: { url: string } }>;
 }
 
 export interface CallAiApiRequest {
@@ -1907,6 +1908,7 @@ export interface CallAiApiRequest {
   customHeaders?: Record<string, string>;
   maxTokens?: number;
   temperature?: number;
+  timeoutSecs?: number;
 }
 
 export interface CallAiApiResult {
@@ -1931,6 +1933,23 @@ export async function callAiApi(request: CallAiApiRequest, apiKey?: string): Pro
     return mock(request, apiKey);
   }
   return invoke<CallAiApiResult>('call_ai_api', { request, apiKey });
+}
+
+export interface ExtractAiFramesRequest {
+  sourcePath: string;
+  times: number[];
+}
+
+export interface ExtractAiFramesResult {
+  frames: string[];
+}
+
+export async function extractAiFrames(request: ExtractAiFramesRequest): Promise<ExtractAiFramesResult> {
+  const mock = getTauriMocks()?.extractAiFrames;
+  if (mock) {
+    return mock(request);
+  }
+  return invoke<ExtractAiFramesResult>('extract_ai_frames', { request });
 }
 
 export async function testAiConnection(baseUrl: string, apiKey?: string, providerId?: string): Promise<boolean> {

@@ -28,7 +28,7 @@ import {
   type EffectPreset
 } from '@open-factory/editor-core';
 import { createSubclip, parseFavoritesSearchFilter, type Subclip, type TimelineLabelColor } from '@open-factory/editor-core';
-import { AlertCircle, BadgeCheck, ChevronDown, ChevronRight, FileAudio2, FileImage, FileText, FileVideo2, Flag, Folder, FolderPlus, GalleryHorizontal, Gauge, Grid2X2, Heart, ImageDown, Import, Info, Link2, List, Loader2, Merge, Plus, RotateCcw, Scissors, Search, SlidersHorizontal, Star, Tag, Trash2, X } from 'lucide-react';
+import { AlertCircle, BadgeCheck, ChevronDown, ChevronRight, FileAudio2, FileImage, FileText, FileVideo2, Flag, Folder, FolderPlus, GalleryHorizontal, Gauge, Grid2X2, Heart, ImageDown, Import, Info, Link2, List, Loader2, Merge, Plus, RotateCcw, Scissors, Search, SlidersHorizontal, Sparkles, Star, Tag, Trash2, X } from 'lucide-react';
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { computeMediaPreviewDelay, isMediaPreviewable } from './media-hover-preview';
 import { clsx } from 'clsx';
@@ -43,6 +43,8 @@ import type { SharedLibraryResource } from '../../shared-library/sharedLibrary';
 import { useProxySettingsStore } from '../../store/proxySettingsStore';
 import { loadLocalEffectPresets } from '../../effects/effect-preset-library';
 import { getMediaKeyboardNavigationIndex, inferMediaKeyboardColumnCount } from './media-keyboard';
+import { MediaAIAnalysisDialog } from './MediaAIAnalysisDialog';
+
 
 interface MediaCardExtras {
   favoriteIds: Set<string>;
@@ -50,6 +52,7 @@ interface MediaCardExtras {
   onRevealInTimeline(assetId: string): void;
   pinnedIds: Set<string>;
   onPinToSession(assetId: string): void;
+  onAnalyzeAI(assetId: string): void;
 }
 const MediaCardExtrasCtx = createContext<MediaCardExtras | null>(null);
 
@@ -188,6 +191,7 @@ export function MediaBin({
   const [subclipDialogAssetId, setSubclipDialogAssetId] = useState<string>();
   const [editingSubclipId, setEditingSubclipId] = useState<string>();
   const [expandedSubclipAssetIds, setExpandedSubclipAssetIds] = useState<Set<string>>(() => new Set());
+  const [aiAnalysisAsset, setAiAnalysisAsset] = useState<MediaAsset>();
   const handleOpenSubclipDialog = (assetId: string, editingId?: string) => {
     setSubclipDialogAssetId(assetId);
     setEditingSubclipId(editingId);
@@ -402,6 +406,10 @@ export function MediaBin({
     onRevealInTimeline,
     pinnedIds: _effectivePinnedIds,
     onPinToSession,
+    onAnalyzeAI: (assetId) => {
+      const found = media.find((a) => a.id === assetId);
+      if (found) setAiAnalysisAsset(found);
+    },
   };
 
   return (
@@ -714,6 +722,7 @@ export function MediaBin({
           </div>
         )}
       </div>
+      {aiAnalysisAsset ? <MediaAIAnalysisDialog asset={aiAnalysisAsset} onClose={() => setAiAnalysisAsset(undefined)} /> : null}
       {mediaInfo ? <MediaInfoDialog state={mediaInfo} onClose={() => setMediaInfo(undefined)} /> : null}
       {sourcePaths ? <MediaSourcePathsDialog state={sourcePaths} onClose={() => setSourcePaths(undefined)} /> : null}
       {batchMetadataAssets.length > 0 ? (
@@ -2293,6 +2302,20 @@ function MediaCard({
               {zhCN.mediaFavorites.pinToSession}
             </button>
           ) : null}
+          {(asset.type === 'video' || asset.type === 'image') && extras ? (
+            <button
+              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid={`media-ai-analyze-${asset.id}`}
+              onClick={() => {
+                extras.onAnalyzeAI(asset.id);
+                setLabelMenuOpen(false);
+              }}
+            >
+              <Sparkles size={13} />
+              {zhCN.inspector.aiContentAnalysis.title}
+            </button>
+          ) : null}
           <div className="mb-2 flex items-center gap-1 font-semibold text-slate-700">
             <Tag size={13} />
             {zhCN.mediaBin.label}
@@ -2336,6 +2359,16 @@ function MediaCard({
         </div>
         <div className="mt-1 truncate text-[11px] text-slate-500" data-testid={`media-color-profile-${asset.id}`}>{formatMediaColorProfile(asset)}</div>
         {contentAnalysis ? <MediaSceneTagList assetId={asset.id} analysis={contentAnalysis} /> : null}
+        {asset.aiAnalysis?.tags && asset.aiAnalysis.tags.length > 0 ? (
+          <div className="mt-1 flex flex-wrap gap-1" data-testid={`ai-tags-${asset.id}`}>
+            {asset.aiAnalysis.tags.slice(0, 5).map((tag, i) => (
+              <span key={i} className="inline-block rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-700">{tag}</span>
+            ))}
+            {asset.aiAnalysis.scene ? (
+              <span className="inline-block text-[10px] text-slate-400" title={asset.aiAnalysis.scene}>{asset.aiAnalysis.scene}</span>
+            ) : null}
+          </div>
+        ) : null}
         {asset.type === 'video' ? (
           <ProxyStatus status={proxyStatus} error={asset.proxyError} canGenerate={canGenerateProxy} onGenerateProxy={onGenerateProxy} assetId={asset.id} />
         ) : null}

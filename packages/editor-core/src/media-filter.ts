@@ -18,7 +18,7 @@ export function filterMediaAssets(media: MediaAsset[], options: MediaFilterOptio
   const typeFilter = options.typeFilter ?? (isAssetTypeFilter(legacyFilter) ? legacyFilter : 'all');
   const metadataFilter = options.metadataFilter ?? (isMetadataFilter(legacyFilter) ? legacyFilter : 'all');
   return media.filter((asset) => {
-    const matchesSearch = query.length === 0 || asset.name.toLowerCase().includes(query);
+    const matchesSearch = query.length === 0 || asset.name.toLowerCase().includes(query) || (asset.aiAnalysis?.tags ?? []).some((tag) => tag.toLowerCase().includes(query));
     const matchesType = typeFilter === 'all' || asset.type === typeFilter;
     const matchesMetadata = mediaMetadataMatchesFilter(options.metadata?.[asset.id], metadataFilter);
     return matchesSearch && matchesType && matchesMetadata;

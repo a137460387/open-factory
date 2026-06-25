@@ -22,6 +22,7 @@ import { collaborationController } from '../collaboration/local-network';
 import { useCollaborationStore } from '../store/collaborationStore';
 import { useEditorStore } from '../store/editorStore';
 import { usePrivacyDetectionSettingsStore } from '../store/privacyDetectionSettingsStore';
+import { useAISettingsStore } from '../store/aiSettingsStore';
 import type {
   BatchTranscodeTaskResult,
   ExportPreviewSamplesResult,
@@ -76,6 +77,7 @@ let webdavPassword: string | undefined;
 let exportUploadWebdavPassword: string | undefined;
 let exportPresetSyncWebdavPassword: string | undefined;
 const translationApiKeys = new Map<TranslationApiProvider, string>();
+const aiApiKeys = new Map<string, string>();
 let lastWebdavPutRequest: WebdavProjectBackupRequest | undefined;
 let lastWebdavExportUploadRequest: WebdavExportUploadRequest | undefined;
 let lastWebdavTextPutRequest: WebdavTextPutRequest | undefined;
@@ -1016,6 +1018,62 @@ const mocks: TauriMocks = {
     listeners.set(event, set);
     return () => set.delete(handler as (payload: unknown) => void);
   },
+  callAiApi: (request) => {
+    const systemContent = typeof request.messages[0]?.content === 'string' ? request.messages[0].content : '';
+    if (systemContent.includes('字幕编辑助手')) {
+      return {
+        content: JSON.stringify([
+          { index: 0, text: '你好，世界。' },
+          { index: 1, text: '今天天气真好。' },
+          { index: 2, text: '我们去散步吧。' }
+        ]),
+        inputTokens: 100,
+        outputTokens: 50,
+        latencyMs: 10
+      };
+    }
+    if (systemContent.includes('章节标题助手')) {
+      return {
+        content: JSON.stringify([
+          { time: 0.5, title: '开场问候' },
+          { time: 40, title: '天气话题' },
+          { time: 80, title: '户外散步' }
+        ]),
+        inputTokens: 100,
+        outputTokens: 50,
+        latencyMs: 10
+      };
+    }
+    if (systemContent.includes('视频内容分析助手')) {
+      return {
+        content: JSON.stringify({
+          tags: ['室内', '访谈', '对话'],
+          scene: '室内访谈场景',
+          mood: '轻松愉快',
+          objects: ['人物', '桌子']
+        }),
+        inputTokens: 100,
+        outputTokens: 50,
+        latencyMs: 10
+      };
+    }
+    return { content: '{}', inputTokens: 100, outputTokens: 50, latencyMs: 10 };
+  },
+  extractAiFrames: (request) => ({
+    frames: request.times.map((_, i) => `fake-base64-${i}`)
+  }),
+  testAiConnection: () => true,
+  readAiApiKey: (providerId) => aiApiKeys.get(providerId),
+  writeAiApiKey: (providerId, apiKey) => {
+    const normalized = apiKey?.trim();
+    if (normalized) {
+      aiApiKeys.set(providerId, normalized);
+    } else {
+      aiApiKeys.delete(providerId);
+    }
+  },
+  checkOllamaReachable: () => false,
+  listOllamaModels: () => ({ reachable: false, models: [] }),
   emit: (event, payload) => emit(event, payload)
 };
 
@@ -2602,6 +2660,7 @@ window.__E2E_ACTIONS__ = {
     exportUploadWebdavPassword = undefined;
     exportPresetSyncWebdavPassword = undefined;
     translationApiKeys.clear();
+    aiApiKeys.clear();
     lastWebdavPutRequest = undefined;
     lastWebdavExportUploadRequest = undefined;
     lastWebdavTextPutRequest = undefined;
@@ -2681,6 +2740,105 @@ window.__E2E_ACTIONS__ = {
     exists.set(devPluginEntryPath, true);
     mtimes.set(devPluginEntryPath, Date.now());
     persistFiles();
+  },
+  setupAIServiceConfigFixture: () => {
+    const project = createProject('AI Service Config E2E');
+    const timeline = { transitions: [], markers: [], tracks: [] };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupAISubtitlePolishFixture: async () => {
+    const project = createProject('AI Subtitle Polish E2E');
+    const sub1 = makeMockSubtitleClip('ai-sub-1', 'track-ai-subtitle', '你好，世界', 0);
+    const sub2 = makeMockSubtitleClip('ai-sub-2', 'track-ai-subtitle', '今天天气很好', 2);
+    const sub3 = makeMockSubtitleClip('ai-sub-3', 'track-ai-subtitle', '我们去散步吧', 4);
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({ id: 'track-ai-video', type: 'video', name: 'Video 1', clips: [] }),
+        createTrack({ id: 'track-ai-subtitle', type: 'subtitle', name: 'AI Subtitles', language: 'zh', clips: [sub1, sub2, sub3] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    await useAISettingsStore.getState().setProviderApiKey('mimo', 'test-mimo-key');
+    useAISettingsStore.getState().toggleProvider('mimo', true);
+    useAISettingsStore.getState().setServiceMapping('subtitle-polish', 'mimo');
+    useEditorStore.getState().setSelectedClipIds(['ai-sub-1', 'ai-sub-2', 'ai-sub-3']);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupAIChapterTitlesFixture: async () => {
+    const project = createProject('AI Chapter Titles E2E');
+    const sub1 = makeMockSubtitleClip('ai-ch-sub-1', 'track-ai-chapter', '开场白，大家好', 0);
+    const sub2 = makeMockSubtitleClip('ai-ch-sub-2', 'track-ai-chapter', '今天我们来聊聊天气', 40);
+    const sub3 = makeMockSubtitleClip('ai-ch-sub-3', 'track-ai-chapter', '户外散步真舒服', 80);
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({ id: 'track-ai-video', type: 'video', name: 'Video 1', clips: [] }),
+        createTrack({ id: 'track-ai-chapter', type: 'subtitle', name: 'AI Chapter Subtitles', language: 'zh', clips: [sub1, sub2, sub3] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    await useAISettingsStore.getState().setProviderApiKey('mimo', 'test-mimo-key');
+    useAISettingsStore.getState().toggleProvider('mimo', true);
+    useAISettingsStore.getState().setServiceMapping('chapter-title', 'mimo');
+    useEditorStore.getState().setSelectedClipIds(['ai-ch-sub-1']);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupAIContentTagsFixture: async () => {
+    const project = createProject('AI Content Tags E2E');
+    const assetId = 'media-ai-content-video';
+    const asset: MediaAsset = {
+      id: assetId,
+      type: 'video',
+      name: 'ai-content-video.mp4',
+      path: tinyVideo,
+      duration: 30,
+      width: 1280,
+      height: 720,
+      size: 4096,
+      mtimeMs: 1_000,
+      hasAudio: false
+    };
+    const timeline = { transitions: [], markers: [], tracks: [] };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    await useAISettingsStore.getState().setProviderApiKey('mimo', 'test-mimo-key');
+    useAISettingsStore.getState().updateProvider('mimo', { defaultModel: 'gpt-4o' });
+    useAISettingsStore.getState().toggleProvider('mimo', true);
+    useAISettingsStore.getState().setServiceMapping('vision-analysis', 'mimo');
+    useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
   }
 };
 
