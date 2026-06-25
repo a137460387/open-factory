@@ -104,6 +104,12 @@ import {
   findCompleteClipGroup,
   getReplaceMediaCompatibilityWarnings
 } from '../src';
+import {
+  UpdateSequenceSettingsCommand,
+  BatchUpdateTrackHeightCommand,
+  NewProjectCommand,
+  PRIMARY_SEQUENCE_ID
+} from '../src';
 import { makeAccessor, makeAdjustmentClip, makeAudioClip, makeCreditsClip, makeMotionGraphicClip, makeProject, makeSubtitleClip, makeTextClip, makeTimeline, makeVideoClip } from './test-utils';
 
 describe('timeline commands', () => {
@@ -2855,4 +2861,142 @@ describe('timeline commands', () => {
     const redone = accessor.current();
     const rdc1 = redone.tracks.flatMap((t) => t.clips).find((c) => c.id === 'bc1');
     expect((rdc1 as any)?.reframeSettings?.targetAspectRatio).toBe('9:16');
+  });
+
+  describe('NewProjectCommand', () => {
+    it('replaces the entire project with undo and redo', () => {
+      let project = makeProject();
+      const accessor = {
+        getProject: () => project,
+        setProject: (next: typeof project) => { project = next; }
+      };
+      const manager = new CommandManager();
+      const freshProject = { ...makeProject(), id: 'fresh', name: 'Fresh Project' };
+
+      manager.execute(new NewProjectCommand(accessor, freshProject));
+      expect(project.id).toBe('fresh');
+      expect(project.name).toBe('Fresh Project');
+
+      manager.undo();
+      expect(project.id).not.toBe('fresh');
+
+      manager.redo();
+      expect(project.id).toBe('fresh');
+    });
+  });
+
+  describe('UpdateSequenceSettingsCommand', () => {
+    it('updates sequence settings with undo and redo', () => {
+      let project = makeProject();
+      const accessor = {
+        getProject: () => project,
+        setProject: (next: typeof project) => { project = next; }
+      };
+      const manager = new CommandManager();
+
+      manager.execute(new UpdateSequenceSettingsCommand(accessor, PRIMARY_SEQUENCE_ID, { frameRate: 24 }));
+      const seq = project.sequences.find((s) => s.id === PRIMARY_SEQUENCE_ID);
+      expect(seq?.settings?.frameRate).toBe(24);
+
+      manager.undo();
+      const restored = project.sequences.find((s) => s.id === PRIMARY_SEQUENCE_ID);
+      expect(restored?.settings?.frameRate).toBeUndefined();
+
+      manager.redo();
+      const redone = project.sequences.find((s) => s.id === PRIMARY_SEQUENCE_ID);
+      expect(redone?.settings?.frameRate).toBe(24);
+    });
+
+    it('does nothing when the sequence is not found', () => {
+      let project = makeProject();
+      const before = { ...project };
+      const accessor = {
+        getProject: () => project,
+        setProject: (next: typeof project) => { project = next; }
+      };
+      const manager = new CommandManager();
+
+      manager.execute(new UpdateSequenceSettingsCommand(accessor, 'nonexistent', { frameRate: 24 }));
+      expect(project.sequences).toEqual(before.sequences);
+    });
+
+    it('applies undefined settings to clear overrides', () => {
+      let project = makeProject();
+      const accessor = {
+        getProject: () => project,
+        setProject: (next: typeof project) => { project = next; }
+      };
+      const manager = new CommandManager();
+
+      manager.execute(new UpdateSequenceSettingsCommand(accessor, PRIMARY_SEQUENCE_ID, { frameRate: 60 }));
+      expect(project.sequences.find((s) => s.id === PRIMARY_SEQUENCE_ID)?.settings?.frameRate).toBe(60);
+
+      manager.execute(new UpdateSequenceSettingsCommand(accessor, PRIMARY_SEQUENCE_ID, undefined));
+      expect(project.sequences.find((s) => s.id === PRIMARY_SEQUENCE_ID)?.settings).toBeUndefined();
+    });
+
+    it('recalculates clip positions when frame rate changes', () => {
+      const clip = makeVideoClip({ id: 'clip-fps', start: 0, duration: 30 });
+      const timeline = makeTimeline([clip]);
+      let project = {
+        ...makeProject(),
+        timeline,
+        sequences: [{ id: PRIMARY_SEQUENCE_ID, name: 'Main', timeline }],
+        activeSequenceId: PRIMARY_SEQUENCE_ID
+      };
+      const accessor = {
+        getProject: () => project,
+        setProject: (next: typeof project) => { project = next; }
+      };
+      const manager = new CommandManager();
+
+      manager.execute(new UpdateSequenceSettingsCommand(accessor, PRIMARY_SEQUENCE_ID, { frameRate: 60 }));
+      const updatedSeq = project.sequences.find((s) => s.id === PRIMARY_SEQUENCE_ID);
+      expect(updatedSeq?.settings?.frameRate).toBe(60);
+    });
+  });
+
+  describe('BatchUpdateTrackHeightCommand', () => {
+    it('sets all track heights with undo and redo', () => {
+      let project = makeProject();
+      const accessor = {
+        getProject: () => project,
+        setProject: (next: typeof project) => { project = next; }
+      };
+      const manager = new CommandManager();
+
+      manager.execute(new BatchUpdateTrackHeightCommand(accessor, 80));
+      for (const track of project.timeline.tracks) {
+        expect(track.displayHeight).toBe(80);
+      }
+
+      manager.undo();
+      for (const track of project.timeline.tracks) {
+        expect(track.displayHeight).toBeUndefined();
+      }
+
+      manager.redo();
+      for (const track of project.timeline.tracks) {
+        expect(track.displayHeight).toBe(80);
+      }
+    });
+
+    it('clamps track height to valid range', () => {
+      let project = makeProject();
+      const accessor = {
+        getProject: () => project,
+        setProject: (next: typeof project) => { project = next; }
+      };
+      const manager = new CommandManager();
+
+      manager.execute(new BatchUpdateTrackHeightCommand(accessor, -10));
+      for (const track of project.timeline.tracks) {
+        expect(track.displayHeight).toBe(24);
+      }
+
+      manager.execute(new BatchUpdateTrackHeightCommand(accessor, 500));
+      for (const track of project.timeline.tracks) {
+        expect(track.displayHeight).toBe(200);
+      }
+    });
   });
