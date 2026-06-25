@@ -29,7 +29,12 @@ import {
   shouldLoadTimelineClipAssets,
   type Track,
   type Transition,
-  type TransitionType
+  type TransitionType,
+  detectTrackGaps,
+  getEffectiveTrackHeight,
+  clampTrackHeight,
+  DEFAULT_TRACK_HEIGHT,
+  WAVEFORM_HIDE_THRESHOLD
 } from '@open-factory/editor-core';
 import { AlertTriangle, MoreHorizontal } from 'lucide-react';
 import type { TimelineRenderRange } from '@open-factory/editor-core';
@@ -338,7 +343,7 @@ export function TrackRow({
   onKeyframeSelect(keyframe: SelectedKeyframeRef, additive: boolean): void;
   onDragStart(drag: DragState): void;
   onTrackPointerDown(event: React.PointerEvent<HTMLDivElement>): void;
-  onTrackUpdate(trackId: string, patch: Partial<Pick<Track, 'color' | 'muted' | 'solo' | 'locked' | 'volume'>>): void;
+  onTrackUpdate(trackId: string, patch: Partial<Pick<Track, 'color' | 'muted' | 'solo' | 'locked' | 'volume' | 'displayHeight'>>): void;
   onTrackHeaderClick(trackId: string, event: React.MouseEvent<HTMLDivElement>): void;
   onTrackBatchMenu(trackId: string, x: number, y: number): void;
   onTrackReorder(draggedTrackId: string, targetTrackId: string): void;
@@ -380,9 +385,9 @@ export function TrackRow({
     }
   }
   return (
-    <div className="grid border-b border-line" style={{ gridTemplateColumns: `${LABEL_WIDTH}px 1fr`, height: TRACK_HEIGHT }}>
+    <div className="grid border-b border-line" style={{ gridTemplateColumns: `${LABEL_WIDTH}px 1fr`, height: getEffectiveTrackHeight(track.displayHeight) }}>
       <div
-        className={clsx('flex items-center gap-2 border-r px-3 outline-none', selectedTrack ? 'border-brand/60 bg-brand/10' : 'border-line bg-panel')}
+        className={clsx('relative flex items-center gap-2 border-r px-3 outline-none', selectedTrack ? 'border-brand/60 bg-brand/10' : 'border-line bg-panel')}
         role="option"
         aria-selected={selectedTrack}
         data-testid={`track-header-${track.id}`}
@@ -504,6 +509,31 @@ export function TrackRow({
           onChange={(event) => onTrackUpdate(track.id, { volume: Number(event.target.value) })}
           data-testid={`track-volume-${track.id}`}
         />
+        <div
+          className="absolute bottom-0 left-0 right-0 z-10 h-[3px] cursor-ns-resize bg-transparent hover:bg-brand/50"
+          data-testid={`track-resize-handle-${track.id}`}
+          onPointerDown={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const startY = e.clientY;
+            const startHeight = getEffectiveTrackHeight(track.displayHeight);
+            const onMove = (ev: PointerEvent) => {
+              const newHeight = clampTrackHeight(startHeight + ev.clientY - startY);
+              onTrackUpdate(track.id, { displayHeight: newHeight });
+            };
+            const onUp = () => {
+              window.removeEventListener('pointermove', onMove);
+              window.removeEventListener('pointerup', onUp);
+            };
+            window.addEventListener('pointermove', onMove);
+            window.addEventListener('pointerup', onUp);
+          }}
+          onDoubleClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onTrackUpdate(track.id, { displayHeight: DEFAULT_TRACK_HEIGHT });
+          }}
+        />
       </div>
       <div
         className="relative bg-white"
@@ -541,6 +571,23 @@ export function TrackRow({
               ];
             })
           : null}
+        {useMemo(() => {
+          const minDuration = projectFrameRate > 0 ? 1 / projectFrameRate : 0;
+          return detectTrackGaps(track, { minDuration }).map((gap) => (
+            <div
+              key={`gap-${gap.trackId}-${gap.start}`}
+              className="absolute top-0 z-[1] h-full opacity-40"
+              style={{
+                left: gap.start * zoom,
+                width: Math.max(2, gap.duration * zoom),
+                backgroundImage: 'repeating-linear-gradient(135deg, transparent, transparent 3px, rgba(148,163,184,0.35) 3px, rgba(148,163,184,0.35) 5px)',
+                backgroundSize: '8px 8px'
+              }}
+              title={`${zhCN.timeline.gapPrefix}${gap.duration.toFixed(1)}s`}
+              data-testid={`timeline-gap-${gap.trackId}-${gap.start}`}
+            />
+          ));
+        }, [track.clips, zoom, projectFrameRate])}
         {virtualClips.map((clip) => {
           const isSelected = selectedClipIds.includes(clip.id) || selectedClipId === clip.id;
           const trimPreview = drag?.clip?.id === clip.id && (drag.mode === 'trim-left' || drag.mode === 'trim-right') ? drag : undefined;
