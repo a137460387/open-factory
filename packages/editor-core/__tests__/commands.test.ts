@@ -21,6 +21,7 @@ import {
   BatchKeyframeEditCommand,
   BatchApplyAspectRatioCommand,
   BatchProofreadSubtitleCommand,
+  BatchUpdateSubtitleTextCommand,
   BatchUpdateClipCommand,
   BatchUpdateClipGroupClipsCommand,
   BatchUpdateTrackCommand,
@@ -2998,5 +2999,78 @@ describe('timeline commands', () => {
       for (const track of project.timeline.tracks) {
         expect(track.displayHeight).toBe(200);
       }
+    });
+  });
+
+  describe('BatchUpdateSubtitleTextCommand', () => {
+    it('updates subtitle text and supports undo/redo', () => {
+      const timeline = makeTimeline();
+      timeline.tracks.push(
+        createTrack({
+          id: 'track-subtitle',
+          type: 'subtitle',
+          name: 'Subtitles',
+          clips: [
+            makeSubtitleClip({ id: 'sub-a', start: 0, duration: 2, text: 'original a' }),
+            makeSubtitleClip({ id: 'sub-b', start: 3, duration: 2, text: 'original b' })
+          ]
+        })
+      );
+      const accessor = makeAccessor(timeline);
+      const manager = new CommandManager();
+
+      manager.execute(
+        new BatchUpdateSubtitleTextCommand(accessor, [
+          { clipId: 'sub-a', text: 'polished a' },
+          { clipId: 'sub-b', text: 'polished b' }
+        ])
+      );
+      const clips = accessor.current().tracks.find((t) => t.id === 'track-subtitle')!.clips;
+      expect(clips.find((c) => c.id === 'sub-a')!.text).toBe('polished a');
+      expect(clips.find((c) => c.id === 'sub-b')!.text).toBe('polished b');
+
+      manager.undo();
+      const undone = accessor.current().tracks.find((t) => t.id === 'track-subtitle')!.clips;
+      expect(undone.find((c) => c.id === 'sub-a')!.text).toBe('original a');
+      expect(undone.find((c) => c.id === 'sub-b')!.text).toBe('original b');
+
+      manager.redo();
+      const redone = accessor.current().tracks.find((t) => t.id === 'track-subtitle')!.clips;
+      expect(redone.find((c) => c.id === 'sub-a')!.text).toBe('polished a');
+      expect(redone.find((c) => c.id === 'sub-b')!.text).toBe('polished b');
+    });
+
+    it('throws on empty updates', () => {
+      const accessor = makeAccessor(makeTimeline());
+      const manager = new CommandManager();
+      expect(() => manager.execute(new BatchUpdateSubtitleTextCommand(accessor, []))).toThrow('No subtitle text updates');
+    });
+
+    it('throws when no subtitle clips match the updates', () => {
+      const accessor = makeAccessor(makeTimeline());
+      const manager = new CommandManager();
+      expect(() => manager.execute(new BatchUpdateSubtitleTextCommand(accessor, [{ clipId: 'nonexistent', text: 'x' }]))).toThrow('No subtitle clips found for text updates');
+    });
+
+    it('skips non-subtitle clips', () => {
+      const timeline = makeTimeline([makeVideoClip({ id: 'vid-1', start: 0, duration: 5 })]);
+      const accessor = makeAccessor(timeline);
+      const manager = new CommandManager();
+      expect(() => manager.execute(new BatchUpdateSubtitleTextCommand(accessor, [{ clipId: 'vid-1', text: 'x' }]))).toThrow('No subtitle clips found for text updates');
+    });
+
+    it('skips updates where text is unchanged', () => {
+      const timeline = makeTimeline();
+      timeline.tracks.push(
+        createTrack({
+          id: 'track-subtitle',
+          type: 'subtitle',
+          name: 'Subtitles',
+          clips: [makeSubtitleClip({ id: 'sub-a', start: 0, duration: 2, text: 'same' })]
+        })
+      );
+      const accessor = makeAccessor(timeline);
+      const manager = new CommandManager();
+      expect(() => manager.execute(new BatchUpdateSubtitleTextCommand(accessor, [{ clipId: 'sub-a', text: 'same' }]))).toThrow('No subtitle clips found for text updates');
     });
   });

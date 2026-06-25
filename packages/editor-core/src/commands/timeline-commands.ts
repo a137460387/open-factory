@@ -3175,6 +3175,59 @@ export class BatchProofreadSubtitleCommand implements Command {
   }
 }
 
+export interface SubtitleTextUpdate {
+  clipId: string;
+  text: string;
+}
+
+export class BatchUpdateSubtitleTextCommand implements Command {
+  readonly description = 'Update subtitle text (AI polish)';
+  private before?: Timeline;
+  private after?: Timeline;
+
+  constructor(private readonly accessor: TimelineAccessor, private readonly updates: SubtitleTextUpdate[]) {}
+
+  execute(): void {
+    const timeline = this.accessor.getTimeline();
+    this.before ??= timeline;
+    if (!this.after) {
+      const updatesByClipId = new Map(this.updates.map((u) => [u.clipId, u]));
+      if (updatesByClipId.size === 0) {
+        throw new Error('No subtitle text updates');
+      }
+      let changed = 0;
+      const nextTimeline = {
+        ...timeline,
+        tracks: timeline.tracks.map((track) => ({
+          ...track,
+          clips: track.clips.map((clip) => {
+            const update = updatesByClipId.get(clip.id);
+            if (!update || clip.type !== 'subtitle') {
+              return clip;
+            }
+            if (clip.text === update.text) {
+              return clip;
+            }
+            changed += 1;
+            return { ...clip, text: update.text };
+          })
+        }))
+      };
+      if (changed === 0) {
+        throw new Error('No subtitle clips found for text updates');
+      }
+      this.after = nextTimeline;
+    }
+    this.accessor.setTimeline(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setTimeline(this.before);
+    }
+  }
+}
+
 export class SnapToBeatsCommand implements Command {
   readonly description = 'Snap clips to beats';
   private before?: Timeline;

@@ -208,6 +208,7 @@ import { deleteCustomSubtitleStyleTemplate, loadSubtitleStyleTemplates, saveCust
 import { addSharedLibraryResource, loadSharedSubtitleStyleTemplates, subtitleStyleTemplateToSharedResource } from '../../shared-library/sharedLibrary';
 import { validateCustomShaderSource } from '../../lib/preview/custom-shader';
 import { showToast } from '../../lib/toast';
+import { SubtitleAIPolishPanel } from './SubtitleAIPolishPanel';
 import { markLocalAiModelUsed } from '../../settings/appSettings';
 import { useEditorStore, type SelectedKeyframeRef } from '../../store/editorStore';
 import { usePrivacyDetectionSettingsStore } from '../../store/privacyDetectionSettingsStore';
@@ -245,6 +246,7 @@ export function Inspector({ clip, selectedClips = [], selectedCount, selectedCli
           <div className="min-h-0 flex-1 overflow-y-auto p-3">
             <SubtitleProofreadingPanel selectedSubtitleClips={selectedSubtitleClips} selectedClipLocked={selectedClipLocked} projectSettings={projectSettings} />
             <SubtitleRetimingPanel selectedSubtitleClips={selectedSubtitleClips} projectSettings={projectSettings} />
+            <SubtitleAIPolishPanel selectedSubtitleClips={selectedSubtitleClips} selectedClipLocked={selectedClipLocked} />
           </div>
         </aside>
       );
@@ -3040,6 +3042,7 @@ function ClipInspector({
                 </label>
                 <SubtitleProofreadingPanel clip={clip} selectedSubtitleClips={selectedSubtitleClips.length > 0 ? selectedSubtitleClips : [clip]} selectedClipLocked={selectedClipLocked} projectSettings={projectSettings} />
                 <SubtitleRetimingPanel clip={clip} selectedSubtitleClips={selectedSubtitleClips.length > 0 ? selectedSubtitleClips : [clip]} projectSettings={projectSettings} />
+                <SubtitleAIPolishPanel selectedSubtitleClips={selectedSubtitleClips.length > 0 ? selectedSubtitleClips : [clip]} selectedClipLocked={selectedClipLocked} />
               </>
             ) : null}
             {clip.type === 'text' ? (
