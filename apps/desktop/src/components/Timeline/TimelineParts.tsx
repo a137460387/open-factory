@@ -34,7 +34,8 @@ import {
   getEffectiveTrackHeight,
   clampTrackHeight,
   DEFAULT_TRACK_HEIGHT,
-  WAVEFORM_HIDE_THRESHOLD
+  WAVEFORM_HIDE_THRESHOLD,
+  shouldShowWaveform,
 } from '@open-factory/editor-core';
 import { AlertTriangle, MoreHorizontal } from 'lucide-react';
 import type { TimelineRenderRange } from '@open-factory/editor-core';
@@ -176,7 +177,8 @@ export function Ruler({
   protectedRanges,
   dialogueMarkers,
   onSeek,
-  onContextMenu
+  onContextMenu,
+  audioScrubEnabled
 }: {
   ticks: TimelineRulerTick[];
   zoom: number;
@@ -190,6 +192,7 @@ export function Ruler({
   dialogueMarkers: DialogueInterval[];
   onSeek(time: number): void;
   onContextMenu(request: { time: number; x: number; y: number }): void;
+  audioScrubEnabled?: boolean;
 }) {
   function timeFromEvent(event: React.PointerEvent<HTMLDivElement> | React.MouseEvent<HTMLDivElement>): number {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -222,7 +225,46 @@ export function Ruler({
             if (event.button !== 0) {
               return;
             }
-            onSeek(timeFromEvent(event));
+            const startTime = timeFromEvent(event);
+            const startX = event.clientX;
+            let scrubbing = false;
+            let lastScrubTime = 0;
+            let scrubCtx = audioScrubEnabled ? (() => { try { const Ctor = window.AudioContext || (window as unknown as Record<string, unknown>).webkitAudioContext as AudioContext | undefined; return Ctor ? new Ctor() : null; } catch { return null; } })() : null;
+            onSeek(startTime);
+            const onMove = (moveEvent: PointerEvent) => {
+              if (!scrubbing && Math.abs(moveEvent.clientX - startX) > 3) {
+                scrubbing = true;
+              }
+              if (scrubbing) {
+                const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+                const t = Math.max(0, (moveEvent.clientX - rect.left) / zoom);
+                onSeek(t);
+                const now = Date.now();
+                if (scrubCtx && now - lastScrubTime >= 30) {
+                  try {
+                    const speedPxPerSec = Math.abs(moveEvent.clientX - startX) / Math.max(0.001, (now - event.timeStamp) / 1000);
+                    const intervalMul = speedPxPerSec > 500 ? 0.25 : speedPxPerSec > 100 ? 0.5 : 1.0;
+                    const dur = 0.05 * intervalMul;
+                    const osc = scrubCtx.createOscillator();
+                    const gain = scrubCtx.createGain();
+                    osc.frequency.value = 200 + (t * 100) % 800;
+                    gain.gain.setValueAtTime(0.15, scrubCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, scrubCtx.currentTime + dur);
+                    osc.connect(gain).connect(scrubCtx.destination);
+                    osc.start(scrubCtx.currentTime);
+                    osc.stop(scrubCtx.currentTime + dur);
+                    lastScrubTime = now;
+                  } catch { /* silent degradation */ }
+                }
+              }
+            };
+            const onUp = () => {
+              window.removeEventListener('pointermove', onMove);
+              window.removeEventListener('pointerup', onUp);
+              if (scrubCtx) { try { scrubCtx.close(); } catch {} scrubCtx = null; }
+            };
+            window.addEventListener('pointermove', onMove);
+            window.addEventListener('pointerup', onUp);
           }}
           onDoubleClick={(event) => {
             if (event.button !== 0) {
@@ -624,6 +666,7 @@ export function TrackRow({
               clipPixelWidth={width}
               trackMuted={Boolean(track.muted)}
               trackType={track.type}
+              trackHeight={getEffectiveTrackHeight(track.displayHeight)}
               nextAdjacentClip={nextAdjacentByClipId.get(clip.id)}
               transition={transitions.find((transition) => transition.fromClipId === clip.id && transition.toClipId === nextAdjacentByClipId.get(clip.id)?.id)}
               onTransitionMenu={onTransitionMenu}
@@ -659,6 +702,7 @@ interface ClipAssetStripsProps {
   trackMuted: boolean;
   waveformColor: string;
   largeProjectMode: TimelineLargeProjectMode;
+  trackHeight?: number;
 }
 
 function DeferredClipAssetStrips(props: ClipAssetStripsProps) {
@@ -709,7 +753,8 @@ function scheduleLargeProjectAssetHydration(onReady: () => void): () => void {
   };
 }
 
-function ClipAssetStrips({ clip, asset, clipPixelWidth, trackMuted, waveformColor, largeProjectMode }: ClipAssetStripsProps) {
+function ClipAssetStrips({ clip, asset, clipPixelWidth, trackMuted, waveformColor, largeProjectMode, trackHeight }: ClipAssetStripsProps) {
+  const showWaveform = shouldShowWaveform(trackHeight ?? 48);
   return (
     <>
       <VideoThumbnailStrip clip={clip} asset={asset} pixelWidth={clipPixelWidth} frameStep={largeProjectMode.previewFrameStep} />
@@ -809,6 +854,7 @@ function ClipBlock({
   clipPixelWidth,
   trackMuted,
   trackType,
+  trackHeight,
   nextAdjacentClip,
   transition,
   onTransitionMenu,
@@ -846,6 +892,7 @@ function ClipBlock({
   clipPixelWidth: number;
   trackMuted: boolean;
   trackType: Track['type'];
+  trackHeight?: number;
   nextAdjacentClip?: Clip;
   transition?: Transition;
   onTransitionMenu(request: TransitionMenuRequest): void;
@@ -871,6 +918,7 @@ function ClipBlock({
   const effectiveColor = getEffectiveClipColorLabel(clip, { color: trackColor });
   const effectiveColorHex = effectiveColor ? getTimelineLabelColorHex(effectiveColor) : DEFAULT_TIMELINE_LABEL_COLOR_HEX;
   const isMoveDragging = drag?.mode === 'move' && (drag.clipIds?.includes(clip.id) || drag.clip?.id === clip.id);
+  const showWaveform = shouldShowWaveform(trackHeight ?? DEFAULT_TRACK_HEIGHT);
   const trimBubble =
     drag?.clip?.id === clip.id && (drag.mode === 'trim-left' || drag.mode === 'trim-right')
       ? buildTrimDurationBubble(drag.clip.duration, drag.previewDuration ?? clip.duration)
@@ -1033,9 +1081,9 @@ function ClipBlock({
       )}
       {loadAssets && clip.type === 'audio' && asset ? (
         largeProjectMode.enabled ? (
-          <DeferredWaveformStrip clipId={clip.id} asset={asset} pixelWidth={clipPixelWidth} clipDuration={clip.duration} muted={trackMuted || Boolean(clip.muted)} color={waveformColor} pitchData={clip.pitchData} resolutionScale={largeProjectMode.waveformResolutionScale} />
+          showWaveform ? <DeferredWaveformStrip clipId={clip.id} asset={asset} pixelWidth={clipPixelWidth} clipDuration={clip.duration} muted={trackMuted || Boolean(clip.muted)} color={waveformColor} pitchData={clip.pitchData} resolutionScale={largeProjectMode.waveformResolutionScale} /> : null
         ) : (
-          <WaveformStrip clipId={clip.id} asset={asset} pixelWidth={clipPixelWidth} clipDuration={clip.duration} muted={trackMuted || Boolean(clip.muted)} color={waveformColor} pitchData={clip.pitchData} resolutionScale={largeProjectMode.waveformResolutionScale} />
+          showWaveform ? <WaveformStrip clipId={clip.id} asset={asset} pixelWidth={clipPixelWidth} clipDuration={clip.duration} muted={trackMuted || Boolean(clip.muted)} color={waveformColor} pitchData={clip.pitchData} resolutionScale={largeProjectMode.waveformResolutionScale} /> : null
         )
       ) : null}
       {envelopeEditMode && clip.type === 'audio' && 'volume' in clip ? (

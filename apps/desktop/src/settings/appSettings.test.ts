@@ -556,16 +556,16 @@ describe('app settings storage', () => {
   });
 
   it('persists reduced motion timeline interaction settings only when enabled', async () => {
-    await expect(readTimelineInteractionSettings()).resolves.toEqual({ reduceMotion: false });
+    await expect(readTimelineInteractionSettings()).resolves.toEqual({ reduceMotion: false, audioScrubEnabled: true });
 
     await saveLanguageSetting('en');
     const interaction = await saveTimelineInteractionSettings({ reduceMotion: true });
 
-    expect(interaction).toEqual({ reduceMotion: true });
-    expect(await readTimelineInteractionSettings()).toEqual({ reduceMotion: true });
+    expect(interaction).toEqual({ reduceMotion: true, audioScrubEnabled: true });
+    expect(await readTimelineInteractionSettings()).toEqual({ reduceMotion: true, audioScrubEnabled: true });
     expect(await readAppSettings()).toEqual({
       language: 'en',
-      timelineInteraction: { reduceMotion: true }
+      timelineInteraction: { reduceMotion: true, audioScrubEnabled: true }
     });
 
     await saveTimelineInteractionSettings({ reduceMotion: false });

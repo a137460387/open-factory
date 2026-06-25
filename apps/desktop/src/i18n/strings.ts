@@ -3,6 +3,7 @@ const formatSignedNumber = (value: number) => `${value >= 0 ? '+' : ''}${value.t
 const zh = {
   common: {
     saved: '已保存',
+    save: '保存',
     unsavedChanges: '未保存更改',
     idle: '空闲',
     clear: '清除',
@@ -1131,18 +1132,7 @@ const zh = {
       noClipSelectedMessage: '请选择视频或图片片段后再预览或应用 LUT。',
       readyForClip: (name: string) => `将应用到 ${name}`
     },
-    gapPanel: {
-      title: '间隙统计',
-      totalCount: '总间隙数',
-      totalDuration: '总间隙时长',
-      maxGap: '最大间隙',
-      minGap: '最小间隙',
-      track: '轨道',
-      count: '数量',
-      duration: '时长',
-      noGaps: '无间隙',
-      seconds: (v: number) => `${v.toFixed(1)}s`
-    },
+
     shortcuts: {
       title: '快捷键',
       description: '重新绑定时间线和导出快捷键。',
@@ -2287,6 +2277,7 @@ const zh = {
     trackBatchDeleteEmpty: '删除空轨道',
     trackBatchSetColor: '设置颜色',
     trackBatchSelectedCount: (count: number) => `已选 ${count} 条轨道`,
+    trackBatchSetEqualHeight: '设置所有轨道等高',
     trackVolume: '轨道音量',
     mediaMissing: '媒体文件缺失',
     sampledWaveform: '抽样波形预览',
@@ -2321,6 +2312,18 @@ const zh = {
     closeGapAction: '关闭间隙',
     closeGapFailedTitle: '无法关闭间隙',
     gapPrefix: '间隙 ',
+    gapPanel: {
+      title: '间隙统计',
+      totalCount: '总间隙数',
+      totalDuration: '总间隙时长',
+      maxGap: '最大间隙',
+      minGap: '最小间隙',
+      track: '轨道',
+      count: '数量',
+      duration: '时长',
+      noGaps: '无间隙',
+      seconds: (v: number) => `${v.toFixed(1)}s`
+    },
     smartGapFillFreezeFrameAction: '智能填充：冻结帧',
     smartGapFillBlackAction: '智能填充：黑场',
     smartGapFillWhiteAction: '智能填充：白场',
@@ -2465,6 +2468,16 @@ const zh = {
     nestedSequenceDepthTitle: '嵌套序列过深',
     nestedSequenceDepthMessage: '预览最多递归显示 3 层嵌套序列。',
     silenceDialogTitle: '静音检测',
+    audioScrubSettingEnabled: '拖动播放头时播放音频',
+    audioScrubSetting: '音频搓擦',
+    sequenceSettingsSaved: '序列设置已保存',
+    sequenceSettingsHeight: '高度',
+    sequenceSettingsWidth: '宽度',
+    sequenceSettingsFps: '帧率',
+    sequenceSettingsInherit: '(继承)',
+    sequenceSettingsOverride: '覆盖项目设置',
+    sequenceSettingsButton: '序列设置',
+    sequenceSettingsTitle: '序列设置',
     silenceScanning: '正在解码并扫描音频...',
     silenceThreshold: '静音阈值 dB',
     silenceMinDuration: '最小静音时长 s',
@@ -5174,6 +5187,7 @@ export type LocaleStrings = WidenLocale<typeof zh>;
 const enOverrides = {
   common: {
     saved: 'Saved',
+    save: 'Save',
     unsavedChanges: 'Unsaved changes',
     idle: 'Idle',
     clear: 'Clear',
@@ -6238,6 +6252,7 @@ const enOverrides = {
       noClipSelectedMessage: 'Select a video or image clip before previewing or applying a LUT.',
       readyForClip: (name: string) => `Will apply to ${name}`
     },
+
     shortcuts: {
       title: 'Shortcuts',
       description: 'Rebind timeline and export shortcuts.',
@@ -7229,6 +7244,7 @@ const enOverrides = {
     trackBatchDeleteEmpty: 'Delete Empty Tracks',
     trackBatchSetColor: 'Set Color',
     trackBatchSelectedCount: (count: number) => `${count} tracks selected`,
+    trackBatchSetEqualHeight: 'Set All Tracks Equal Height',
     trackVolume: 'Track Volume',
     mediaMissing: 'Media file missing',
     sampledWaveform: 'Sampled waveform preview',
@@ -7263,6 +7279,18 @@ const enOverrides = {
     closeGapAction: 'Close Gap',
     closeGapFailedTitle: 'Unable to close gap',
     gapPrefix: 'Gap ',
+    gapPanel: {
+      title: 'Gap Statistics',
+      totalCount: 'Total Gaps',
+      totalDuration: 'Total Gap Duration',
+      maxGap: 'Longest Gap',
+      minGap: 'Shortest Gap',
+      track: 'Track',
+      count: 'Count',
+      duration: 'Duration',
+      noGaps: 'No Gaps',
+      seconds: (v: number) => `${v.toFixed(1)}s`
+    },
     smartGapFillFreezeFrameAction: 'Smart Fill: Freeze Frame',
     smartGapFillBlackAction: 'Smart Fill: Black',
     smartGapFillWhiteAction: 'Smart Fill: White',
@@ -7369,6 +7397,16 @@ const enOverrides = {
       audio: 'Audio',
       text: 'Text',
       subtitle: 'Subtitle',
+    audioScrubSettingEnabled: 'Play audio while dragging playhead',
+    audioScrubSetting: 'Audio Scrubbing',
+    sequenceSettingsSaved: 'Sequence settings saved',
+    sequenceSettingsHeight: 'Height',
+    sequenceSettingsWidth: 'Width',
+    sequenceSettingsFps: 'Frame Rate',
+    sequenceSettingsInherit: '(inherited)',
+    sequenceSettingsOverride: 'Override Project Settings',
+    sequenceSettingsButton: 'Sequence Settings',
+    sequenceSettingsTitle: 'Sequence Settings',
       cc: 'CC'
     },
     newTrackName: (type: string, index: number) => `${formatTrackType(type)} ${index}`

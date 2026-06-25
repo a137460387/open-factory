@@ -166,9 +166,9 @@ import {
   type ReplaceMediaCompatibilityWarning,
   type ReplaceMediaDurationMode
 } from '@open-factory/editor-core';
-import { zoomTimelineByGesture, LONG_PRESS_PAN_THRESHOLD_MS } from '@open-factory/editor-core';
+import { zoomTimelineByGesture, LONG_PRESS_PAN_THRESHOLD_MS, computeTimelineGaps, getGapStats, getEffectiveSequenceSettings, BatchUpdateTrackHeightCommand, UpdateSequenceSettingsCommand, shouldShowWaveform } from '@open-factory/editor-core';
 import { clsx } from 'clsx';
-import { AudioWaveform, Bookmark, Captions, Flag, Group, Magnet, MessageSquarePlus, MessageSquareText, Mic2, Music2, Plus, Scissors, Star, Trash2, Type, Ungroup } from 'lucide-react';
+import { AudioWaveform, Bookmark, Captions, CircleDot, Flag, Group, Magnet, MessageSquarePlus, MessageSquareText, Mic2, Music2, Plus, Scissors, Settings2, Star, Trash2, Type, Ungroup, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createCreditsClip, createTextClip } from '../../lib/clipFactory';
 import { probeMediaPath } from '../../lib/media';
@@ -205,6 +205,7 @@ import { LABEL_WIDTH, Ruler, ThumbnailTrack, TrackRow, TRACK_HEIGHT, type ClipMe
 import { buildRulerContextMenuItems, type RulerContextMenuAction } from './timeline-ruler-menu';
 import { buildKeyboardClipMoveStarts, buildKeyboardClipTrim, getKeyboardSelectedClipIds } from './timeline-keyboard';
 import type { TimelineHeatmapViewSettings } from '../../settings/appSettings';
+import { readTimelineInteractionSettings } from '../../settings/appSettings';
 
 function isCreditsTextFile(file: File): boolean {
   return /\.(txt|csv)$/i.test(file.name);
@@ -359,8 +360,16 @@ export function Timeline({
   const [selectedTrackIds, setSelectedTrackIds] = useState<string[]>([]);
   const [trackSelectionAnchorId, setTrackSelectionAnchorId] = useState<string | undefined>();
   const [trackBatchMenu, setTrackBatchMenu] = useState<TrackBatchMenuState | undefined>();
+  const [gapStatsOpen, setGapStatsOpen] = useState(false);
+  const [sequenceSettingsDialogOpen, setSequenceSettingsDialogOpen] = useState(false);
+  const [audioScrubEnabled, setAudioScrubEnabled] = useState(true);
+  const [equalHeightPrompt, setEqualHeightPrompt] = useState(false);
+  const [equalHeightValue, setEqualHeightValue] = useState('48');
   const [scrollViewport, setScrollViewport] = useState({ scrollLeft: 0, scrollTop: 0, viewportWidth: 960 });
   const [timelineViewportHeight, setTimelineViewportHeight] = useState(240);
+  useEffect(() => {
+    readTimelineInteractionSettings().then((s: { audioScrubEnabled?: boolean }) => setAudioScrubEnabled(s.audioScrubEnabled !== false)).catch(() => {});
+  }, []);
   const whisperExecutablePath = useWhisperSettingsStore((state) => state.executablePath);
   const whisperModelPath = useWhisperSettingsStore((state) => state.modelPath);
   const rootRef = useRef<HTMLElement | null>(null);
@@ -2755,6 +2764,7 @@ function addProjectBookmark(time = playheadTime): void {
                 <span className="font-medium text-slate-700">{activeSequence?.name ?? zhCN.timeline.mainSequence}</span>
               </>
             )}
+            <button className="ml-2 rounded p-0.5 hover:bg-panel" type="button" title={zhCN.timeline.sequenceSettingsButton} data-testid="sequence-settings-button" onClick={() => setSequenceSettingsDialogOpen(true)}><Settings2 size={12} /></button>
           </div>
         </div>
         <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.addVideoTrack} data-testid="add-video-track-button" onClick={() => addTrack('video')}>
@@ -2864,6 +2874,15 @@ function addProjectBookmark(time = playheadTime): void {
         >
           <AudioWaveform size={16} />
         </button>
+        <button
+          className={`rounded-md border p-2 hover:bg-panel ${gapStatsOpen ? 'border-brand text-brand' : 'border-line'}`}
+          title={zhCN.timeline.gapPanel.title}
+          aria-pressed={gapStatsOpen}
+          data-testid="gap-stats-toggle"
+          onClick={() => setGapStatsOpen((open) => !open)}
+        >
+          <CircleDot size={16} />
+        </button>
         <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.splitSelectedClip} onClick={splitSelected}>
           <Scissors size={16} />
         </button>
@@ -2948,6 +2967,7 @@ function addProjectBookmark(time = playheadTime): void {
             dialogueMarkers={dialogueMarkers}
             onSeek={setPlayheadTime}
             onContextMenu={openRulerMenu}
+            audioScrubEnabled={audioScrubEnabled}
           />
           <TimelineNoteLayer
             width={width}
@@ -3127,6 +3147,7 @@ function addProjectBookmark(time = playheadTime): void {
               />
             ) : null}
             {gapMenu ? <GapActionMenu menu={gapMenu} onClose={() => setGapMenu(undefined)} onCloseGap={closeGap} onFillGap={(strategy) => void fillGap(strategy)} /> : null}
+            {gapStatsOpen ? <GapStatsPanel timeline={project.timeline} tracks={project.timeline.tracks} onClose={() => setGapStatsOpen(false)} /> : null}
             {volumeEnvelopeMenu ? <VolumeEnvelopeMenu menu={volumeEnvelopeMenu} onFade={applyVolumeEnvelopeFade} onReset={resetVolumeEnvelope} onClose={() => setVolumeEnvelopeMenu(undefined)} /> : null}
             {clipMenu ? (
               <ClipActionMenu
@@ -3162,9 +3183,47 @@ function addProjectBookmark(time = playheadTime): void {
                 selectedTracks={selectedTracksForBatch()}
                 onPatch={applyBatchTrackPatch}
                 onDeleteEmpty={deleteSelectedEmptyTracks}
+                onSetEqualHeight={() => { setEqualHeightPrompt(true); setTrackBatchMenu(undefined); }}
                 onClose={() => setTrackBatchMenu(undefined)}
               />
             ) : null}
+
+{equalHeightPrompt ? (
+  <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30" data-testid="equal-height-dialog" onClick={() => setEqualHeightPrompt(false)}>
+    <div className="w-72 rounded-lg bg-white p-4 shadow-lg" onClick={(e) => e.stopPropagation()}>
+      <h3 className="mb-3 text-sm font-semibold">{zhCN.timeline.trackBatchSetEqualHeight}</h3>
+      <label className="mb-3 block text-xs text-slate-600">
+        <span>px</span>
+        <input
+          className="mt-1 w-full rounded border border-line px-2 py-1 text-sm"
+          type="number"
+          min={24}
+          max={200}
+          value={equalHeightValue}
+          onChange={(e) => setEqualHeightValue(e.target.value)}
+          data-testid="equal-height-input"
+        />
+      </label>
+      <div className="flex justify-end gap-2">
+        <button className="rounded px-3 py-1 text-xs hover:bg-panel" type="button" onClick={() => setEqualHeightPrompt(false)}>{zhCN.timeline.close}</button>
+        <button
+          className="rounded bg-brand px-3 py-1 text-xs text-white hover:bg-brand/90"
+          type="button"
+          data-testid="equal-height-confirm"
+          onClick={() => {
+            const h = Number(equalHeightValue);
+            if (Number.isFinite(h)) {
+              try { commandManager.execute(new BatchUpdateTrackHeightCommand(projectAccessor, h)); } catch {}
+            }
+            setEqualHeightPrompt(false);
+          }}
+        >
+          {zhCN.timeline.close}
+        </button>
+      </div>
+    </div>
+  </div>
+) : null}
             {selectionRect ? <SelectionMarquee rect={selectionRect} /> : null}
             {typeof inPoint === 'number' ? (
         <div
@@ -3453,12 +3512,14 @@ function TrackBatchMenu({
   selectedTracks,
   onPatch,
   onDeleteEmpty,
+  onSetEqualHeight,
   onClose
 }: {
   menu: TrackBatchMenuState;
   selectedTracks: Track[];
   onPatch(patchForTrack: (track: Track) => TrackPatch): void;
   onDeleteEmpty(): void;
+  onSetEqualHeight(): void;
   onClose(): void;
 }) {
   const disabled = selectedTracks.length === 0;
@@ -3521,6 +3582,15 @@ function TrackBatchMenu({
           {zhCN.timeline.defaultLabelColor}
         </button>
       </div>
+      <button
+        className="mt-1 block w-full rounded px-2 py-1.5 text-left hover:bg-panel disabled:opacity-40"
+        type="button"
+        data-testid="track-batch-equal-height"
+        disabled={disabled}
+        onClick={onSetEqualHeight}
+      >
+        {zhCN.timeline.trackBatchSetEqualHeight}
+      </button>
       <button className="mt-1 block w-full rounded px-2 py-1.5 text-left text-slate-500 hover:bg-panel" type="button" onClick={onClose}>
         {zhCN.timeline.close}
       </button>
@@ -5522,4 +5592,106 @@ function heatmapColor(value: number, colorScheme: TimelineHeatmapViewSettings['c
 
 function keyframeRefKey(ref: SelectedKeyframeRef): string {
   return `${ref.clipId}\0${ref.property}\0${ref.keyframeId}`;
+}
+
+function SequenceSettingsDialog({
+  sequence,
+  projectSettings,
+  onSave,
+  onClose
+}: {
+  sequence: { id: string; name?: string; settings?: { frameRate?: number; width?: number; height?: number; duration?: number } };
+  projectSettings: { fps: number; width: number; height: number };
+  onSave(settings: { frameRate?: number; width?: number; height?: number } | undefined): void;
+  onClose(): void;
+}) {
+  const seqSettings = sequence.settings;
+  const [override, setOverride] = useState(!!seqSettings);
+  const [fps, setFps] = useState(String(seqSettings?.frameRate ?? projectSettings.fps));
+  const [width, setWidth] = useState(String(seqSettings?.width ?? projectSettings.width));
+  const [height, setHeight] = useState(String(seqSettings?.height ?? projectSettings.height));
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" data-testid="sequence-settings-dialog" onPointerDown={(e) => { e.stopPropagation(); }}>
+      <div className="w-[360px] rounded-lg border border-line bg-white p-4 shadow-lg" onPointerDown={(e) => e.stopPropagation()}>
+        <div className="mb-3 flex items-center justify-between">
+          <span className="text-sm font-semibold">{zhCN.timeline.sequenceSettingsTitle}</span>
+          <button className="rounded p-1 hover:bg-panel" type="button" onClick={onClose}><X size={14} /></button>
+        </div>
+        <label className="mb-3 flex items-center gap-2 text-xs">
+          <input type="checkbox" checked={override} onChange={(e) => setOverride(e.target.checked)} data-testid="sequence-settings-override" />
+          {zhCN.timeline.sequenceSettingsOverride}
+        </label>
+        <div className="space-y-2 text-xs">
+          <label className="flex items-center gap-2">
+            <span className="w-16 shrink-0">{zhCN.timeline.sequenceSettingsFps}</span>
+            <input className="w-20 rounded border border-line px-2 py-1 disabled:opacity-50" type="number" step="0.001" min="1" max="240" value={fps} disabled={!override} onChange={(e) => setFps(e.target.value)} data-testid="sequence-settings-fps" />
+            {!override && <span className="text-slate-400">{zhCN.timeline.sequenceSettingsInherit}</span>}
+          </label>
+          <label className="flex items-center gap-2">
+            <span className="w-16 shrink-0">{zhCN.timeline.sequenceSettingsWidth}</span>
+            <input className="w-20 rounded border border-line px-2 py-1 disabled:opacity-50" type="number" step="1" min="1" max="16384" value={width} disabled={!override} onChange={(e) => setWidth(e.target.value)} data-testid="sequence-settings-width" />
+            {!override && <span className="text-slate-400">{zhCN.timeline.sequenceSettingsInherit}</span>}
+          </label>
+          <label className="flex items-center gap-2">
+            <span className="w-16 shrink-0">{zhCN.timeline.sequenceSettingsHeight}</span>
+            <input className="w-20 rounded border border-line px-2 py-1 disabled:opacity-50" type="number" step="1" min="1" max="16384" value={height} disabled={!override} onChange={(e) => setHeight(e.target.value)} data-testid="sequence-settings-height" />
+            {!override && <span className="text-slate-400">{zhCN.timeline.sequenceSettingsInherit}</span>}
+          </label>
+        </div>
+        <div className="mt-4 flex justify-end gap-2">
+          <button className="rounded px-3 py-1.5 text-xs hover:bg-panel" type="button" onClick={onClose}>{zhCN.common.cancel}</button>
+          <button className="rounded bg-brand px-3 py-1.5 text-xs text-white hover:opacity-90" type="button" data-testid="sequence-settings-save" onClick={() => {
+            if (override) {
+              onSave({ frameRate: parseFloat(fps) || undefined, width: parseInt(width) || undefined, height: parseInt(height) || undefined });
+            } else {
+              onSave(undefined);
+            }
+            onClose();
+          }}>{zhCN.common.save}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GapStatsPanel({ timeline, tracks, onClose }: { timeline: { tracks: Track[] }; tracks: Track[]; onClose(): void }) {
+  const gaps = computeTimelineGaps(timeline);
+  const stats = getGapStats(gaps);
+  return (
+    <div
+      className="fixed z-50 w-[260px] rounded-md border border-line bg-white p-3 text-xs shadow-soft"
+      style={{ right: 16, top: 120 }}
+      data-testid="gap-stats-panel"
+      onPointerDown={(event) => event.stopPropagation()}
+    >
+      <div className="mb-2 flex items-center justify-between">
+        <span className="text-sm font-semibold">{zhCN.timeline.gapPanel.title}</span>
+        <button className="rounded p-1 hover:bg-panel" type="button" data-testid="gap-stats-close" onClick={onClose}><X size={14} /></button>
+      </div>
+      {stats.totalCount === 0 ? (
+        <div className="py-4 text-center text-slate-500">{zhCN.timeline.gapPanel.noGaps}</div>
+      ) : (
+        <div className="space-y-2">
+          <div className="flex justify-between"><span>{zhCN.timeline.gapPanel.totalCount}</span><span className="font-medium">{stats.totalCount}</span></div>
+          <div className="flex justify-between"><span>{zhCN.timeline.gapPanel.totalDuration}</span><span className="font-medium">{zhCN.timeline.gapPanel.seconds(stats.totalDuration)}</span></div>
+          <div className="flex justify-between"><span>{zhCN.timeline.gapPanel.maxGap}</span><span className="font-medium">{stats.maxGap ? zhCN.timeline.gapPanel.seconds(stats.maxGap.duration) : '-'}</span></div>
+          <div className="flex justify-between"><span>{zhCN.timeline.gapPanel.minGap}</span><span className="font-medium">{stats.minGap ? zhCN.timeline.gapPanel.seconds(stats.minGap.duration) : '-'}</span></div>
+          {Object.keys(stats.byTrack).length > 1 && (
+            <div className="mt-2 border-t border-line pt-2">
+              <div className="mb-1 font-semibold">{zhCN.timeline.gapPanel.track}</div>
+              {Object.entries(stats.byTrack).map(([trackId, entry]) => {
+                const track = tracks.find((t) => t.id === trackId);
+                return (
+                  <div key={trackId} className="flex justify-between py-0.5">
+                    <span className="text-slate-600">{track?.name ?? trackId}</span>
+                    <span>{entry.count}{zhCN.timeline.gapPanel.count} / {zhCN.timeline.gapPanel.seconds(entry.totalDuration)}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }

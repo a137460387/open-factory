@@ -97,6 +97,7 @@ export interface PreviewWindowSettings {
 
 export interface TimelineInteractionSettings {
   reduceMotion: boolean;
+  audioScrubEnabled?: boolean;
 }
 
 export type DisplayColorGamut = 'srgb' | 'p3' | 'rec2020';
@@ -230,7 +231,8 @@ export const DEFAULT_PREVIEW_WINDOW_SETTINGS: PreviewWindowSettings = {
 };
 
 export const DEFAULT_TIMELINE_INTERACTION_SETTINGS: TimelineInteractionSettings = {
-  reduceMotion: false
+  reduceMotion: false,
+  audioScrubEnabled: true
 };
 
 export const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = {
@@ -955,7 +957,8 @@ export function normalizeTimelineInteractionSettings(settings: Partial<TimelineI
     return undefined;
   }
   return {
-    reduceMotion: settings.reduceMotion === true
+    reduceMotion: settings.reduceMotion === true,
+    audioScrubEnabled: settings.audioScrubEnabled !== false
   };
 }
 
@@ -1156,7 +1159,7 @@ function defaultDisplaySettings(): DisplaySettings {
 }
 
 function shouldPersistTimelineInteractionSettings(settings: TimelineInteractionSettings): boolean {
-  return settings.reduceMotion !== DEFAULT_TIMELINE_INTERACTION_SETTINGS.reduceMotion;
+  return settings.reduceMotion !== DEFAULT_TIMELINE_INTERACTION_SETTINGS.reduceMotion || settings.audioScrubEnabled !== DEFAULT_TIMELINE_INTERACTION_SETTINGS.audioScrubEnabled;
 }
 
 function shouldPersistDisplaySettings(settings: DisplaySettings): boolean {
