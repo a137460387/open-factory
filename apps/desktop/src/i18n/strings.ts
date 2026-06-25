@@ -859,7 +859,8 @@ const zh = {
       taskMonitor: '任务监控',
       exportPresets: '导出预设',
       backup: '备份',
-      plugins: '插件'
+      plugins: '插件',
+      aiServices: 'AI服务'
     },
     general: {
       title: '通用',
@@ -1417,6 +1418,35 @@ const zh = {
       },
       loadFailed: '插件加载失败',
       loadFailedMessage: '无法读取插件目录。'
+    },
+    aiServices: {
+      title: 'AI 服务',
+      description: '配置本地 AI 服务商，用于字幕润色、章节标题、视觉分析等功能。',
+      privacyNote: '所有 AI 请求通过本地 Rust 代理发送，不经过任何中间服务器。API Key 存储在系统 Keychain 中。',
+      endpoint: '端点地址',
+      apiKey: 'API Key',
+      model: '默认模型',
+      ollamaNoKey: 'Ollama 无需 API Key',
+      ollamaReachable: '本地可达',
+      testConnection: '测试连接',
+      testing: '测试中...',
+      testOk: '连接可用',
+      testFail: '连接失败',
+      addCustomTitle: '添加自定义服务商',
+      customNamePlaceholder: '服务商名称',
+      customEndpointPlaceholder: '端点 URL (如 https://api.example.com/v1)',
+      customModelPlaceholder: '默认模型 (如 gpt-4o)',
+      addCustom: '添加',
+      removeCustom: '删除自定义服务商',
+      serviceMappingTitle: '功能映射',
+      serviceLabels: {
+        'subtitle-polish': '字幕润色',
+        'chapter-title': '章节标题',
+        'vision-analysis': '视觉分析',
+        voiceover: '配音'
+      },
+      usageTitle: '用量统计',
+      usageCount: (n: number) => `共 ${n} 次调用`
     }
   },
   updater: {
@@ -5979,7 +6009,8 @@ const enOverrides = {
       taskMonitor: 'Task Monitor',
       exportPresets: 'Export Presets',
       backup: 'Backup',
-      plugins: 'Plugins'
+      plugins: 'Plugins',
+      aiServices: 'AI Services'
     },
     general: {
       title: 'General',
@@ -6537,6 +6568,35 @@ const enOverrides = {
       },
       loadFailed: 'Plugin load failed',
       loadFailedMessage: 'Unable to read the plugin directory.'
+    },
+    aiServices: {
+      title: 'AI Services',
+      description: 'Configure local AI providers for subtitle polish, chapter titles, vision analysis, and more.',
+      privacyNote: 'All AI requests are sent through a local Rust proxy without any intermediary servers. API Keys are stored in the system Keychain.',
+      endpoint: 'Endpoint URL',
+      apiKey: 'API Key',
+      model: 'Default Model',
+      ollamaNoKey: 'Ollama does not require an API key',
+      ollamaReachable: 'Reachable',
+      testConnection: 'Test Connection',
+      testing: 'Testing...',
+      testOk: 'Connection OK',
+      testFail: 'Connection failed',
+      addCustomTitle: 'Add Custom Provider',
+      customNamePlaceholder: 'Provider Name',
+      customEndpointPlaceholder: 'Endpoint URL (e.g. https://api.example.com/v1)',
+      customModelPlaceholder: 'Default Model (e.g. gpt-4o)',
+      addCustom: 'Add',
+      removeCustom: 'Remove Custom Provider',
+      serviceMappingTitle: 'Service Mapping',
+      serviceLabels: {
+        'subtitle-polish': 'Subtitle Polish',
+        'chapter-title': 'Chapter Titles',
+        'vision-analysis': 'Vision Analysis',
+        voiceover: 'Voiceover'
+      },
+      usageTitle: 'Usage Statistics',
+      usageCount: (n: number) => `${n} calls total`
     }
   },
   updater: {

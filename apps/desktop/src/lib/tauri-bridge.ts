@@ -714,6 +714,12 @@ export type TauriMocks = Partial<{
   writeTranslationApiKey(provider: TranslationApiProvider, apiKey?: string): Promise<void> | void;
   readSmtpPassword(profile: string): Promise<string | undefined> | string | undefined;
   writeSmtpPassword(profile: string, password?: string): Promise<void> | void;
+  callAiApi(request: CallAiApiRequest, apiKey?: string): Promise<CallAiApiResult> | CallAiApiResult;
+  testAiConnection(baseUrl: string, apiKey?: string, providerId?: string): Promise<boolean> | boolean;
+  readAiApiKey(providerId: string): Promise<string | undefined> | string | undefined;
+  writeAiApiKey(providerId: string, apiKey?: string): Promise<void> | void;
+  checkOllamaReachable(): Promise<boolean> | boolean;
+  listOllamaModels(): Promise<OllamaModelsResult> | OllamaModelsResult;
   sendSmtpEmail(request: SmtpEmailRequest): Promise<void> | void;
   postWebhookJson(request: WebhookJsonRequest): Promise<{ status: number }> | { status: number };
   analyzeClip(request: AnalyzeClipRequest): Promise<AnalyzeClipResult> | AnalyzeClipResult;
@@ -1886,4 +1892,90 @@ export async function listenDragDrop(handler: (event: { type: string; paths?: st
     }
     handler(payload);
   });
+}
+
+export interface CallAiApiMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+}
+
+export interface CallAiApiRequest {
+  providerId: string;
+  baseUrl: string;
+  model: string;
+  messages: CallAiApiMessage[];
+  customHeaders?: Record<string, string>;
+  maxTokens?: number;
+  temperature?: number;
+}
+
+export interface CallAiApiResult {
+  content: string;
+  inputTokens: number;
+  outputTokens: number;
+  latencyMs: number;
+}
+
+export interface OllamaModel {
+  name: string;
+  size: number;
+}
+
+export interface OllamaModelsResult {
+  reachable: boolean;
+  models: OllamaModel[];
+}
+export async function callAiApi(request: CallAiApiRequest, apiKey?: string): Promise<CallAiApiResult> {
+  const mock = getTauriMocks()?.callAiApi;
+  if (mock) {
+    return mock(request, apiKey);
+  }
+  return invoke<CallAiApiResult>('call_ai_api', { request, apiKey });
+}
+
+export async function testAiConnection(baseUrl: string, apiKey?: string, providerId?: string): Promise<boolean> {
+  const mock = getTauriMocks()?.testAiConnection;
+  if (mock) {
+    return mock(baseUrl, apiKey, providerId);
+  }
+  return invoke<boolean>('test_ai_connection', { baseUrl, apiKey, providerId: providerId ?? 'custom' });
+}
+
+export async function readAiApiKey(providerId: string): Promise<string | undefined> {
+  const mock = getTauriMocks()?.readAiApiKey;
+  if (mock) {
+    return mock(providerId);
+  }
+  if (!isTauriRuntime()) {
+    return undefined;
+  }
+  return invoke<string | undefined>('read_ai_api_key', { providerId });
+}
+
+export async function writeAiApiKey(providerId: string, apiKey?: string): Promise<void> {
+  const mock = getTauriMocks()?.writeAiApiKey;
+  if (mock) {
+    await mock(providerId, apiKey);
+    return;
+  }
+  if (!isTauriRuntime()) {
+    throw new Error('AI API Key storage requires the Tauri runtime.');
+  }
+  await invoke('write_ai_api_key', { providerId, key: apiKey });
+}
+
+export async function checkOllamaReachable(): Promise<boolean> {
+  const mock = getTauriMocks()?.checkOllamaReachable;
+  if (mock) {
+    return mock();
+  }
+  return invoke<boolean>('check_ollama_reachable');
+}
+
+export async function listOllamaModels(): Promise<OllamaModelsResult> {
+  const mock = getTauriMocks()?.listOllamaModels;
+  if (mock) {
+    return mock();
+  }
+  return invoke<OllamaModelsResult>('list_ollama_models');
 }

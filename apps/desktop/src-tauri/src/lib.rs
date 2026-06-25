@@ -159,7 +159,13 @@ pub fn run() {
             commands::smoke::get_cancel_smoke_config,
             send_notification,
             force_close_window,
-            commands::files::read_file_header_bytes
+            commands::files::read_file_header_bytes,
+            commands::ai::call_ai_api,
+            commands::ai::test_ai_connection,
+            commands::ai::read_ai_api_key,
+            commands::ai::write_ai_api_key,
+            commands::ai::check_ollama_reachable,
+            commands::ai::list_ollama_models
         ])
         .setup(|app| {
             let window_exists = app.get_webview_window("main").is_some();

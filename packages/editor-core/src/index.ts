@@ -189,3 +189,4 @@ export * from './export/export-history-classifier';
 export * from './audio-scrub';
 export * from './sequence-settings';
 export * from './track-height';
+export * from './ai-service';

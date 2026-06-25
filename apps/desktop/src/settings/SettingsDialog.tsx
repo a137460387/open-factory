@@ -111,6 +111,7 @@ import { usePrivacyDetectionSettingsStore } from '../store/privacyDetectionSetti
 import { PROXY_RESOLUTION_PRESETS, PROXY_TRIGGER_THRESHOLDS, useProxySettingsStore, type ProxyResolutionPreset, type ProxyTriggerThreshold } from '../store/proxySettingsStore';
 import { useRecordingSettingsStore } from '../store/recordingSettingsStore';
 import { useTranslationSettingsStore, type TranslationProvider } from '../store/translationSettingsStore';
+import { AIServicesSettingsPanel } from './AIServicesSettingsPanel';
 import { useWhisperSettingsStore } from '../store/whisperSettingsStore';
 import { applyLocalCoeditingSettings } from '../collaboration/settings';
 import { runTimelineScriptInWorker } from '../scripting/timeline-script-runtime';
@@ -207,7 +208,7 @@ interface SettingsDialogProps {
   onClose(): void;
 }
 
-type SettingsTab = 'general' | 'display' | 'appearance' | 'lut-library' | 'effect-presets' | 'shortcuts' | 'macros' | 'automation' | 'scripts' | 'translation' | 'local-models' | 'proxy' | 'task-monitor' | 'export-presets' | 'backup' | 'plugins';
+type SettingsTab = 'general' | 'display' | 'appearance' | 'lut-library' | 'effect-presets' | 'shortcuts' | 'macros' | 'automation' | 'scripts' | 'translation' | 'local-models' | 'proxy' | 'task-monitor' | 'export-presets' | 'backup' | 'plugins' | 'ai-services';
 const VFR_HANDLING_OPTIONS: VfrHandlingStrategy[] = ['ignore', 'auto-cfr', 'ask'];
 const EXPORT_RULE_COPY_SUCCESS_ID = 'copy-success';
 const EXPORT_RULE_FAILURE_NOTIFICATION_ID = 'failure-notification';
@@ -1646,6 +1647,14 @@ export function SettingsDialog({
             >
               {t.tabs.plugins}
             </button>
+            <button
+              className={`mt-1 w-full rounded-md px-3 py-2 text-left text-sm font-semibold ${tab === 'ai-services' ? 'bg-white text-ink shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}
+              type="button"
+              data-testid="settings-tab-ai-services"
+              onClick={() => setTab('ai-services')}
+            >
+              {t.tabs.aiServices}
+            </button>
           </nav>
           <main className="min-w-0 flex-1 overflow-y-auto p-4">
             {tab === 'general' ? (
@@ -2483,6 +2492,9 @@ export function SettingsDialog({
                 onTogglePlugin={(entry) => void togglePlugin(entry)}
                 onUninstallPlugin={(entry) => void removePlugin(entry)}
               />
+            ) : null}
+            {tab === 'ai-services' ? (
+              <AIServicesSettingsPanel />
             ) : null}
           </main>
         </div>

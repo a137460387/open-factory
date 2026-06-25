@@ -41,7 +41,7 @@
     "targets": ["msi", "nsis", "app", "dmg", "deb", "appimage"],
     "createUpdaterArtifacts": false,
     "category": "Video",
-    "icon": ["icons/icon.ico"],
+    "icon": ["icons/icon.ico", "icons/icon.png", "icons/icon.icns"],
     "linux": {
       "appimage": {
         "bundleMediaFramework": true

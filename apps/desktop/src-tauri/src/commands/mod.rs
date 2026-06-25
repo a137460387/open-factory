@@ -24,3 +24,4 @@ pub mod smoke;
 pub mod spatial_audio;
 pub mod transcode;
 pub mod whisper;
+pub mod ai;
