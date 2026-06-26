@@ -328,6 +328,21 @@ fn authorize_parent_directory(app: &AppHandle, path: &Path) -> Result<(), String
     Ok(())
 }
 
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
+
+#[tauri::command]
+pub fn write_binary_file(app: AppHandle, path: String, base64_data: String) -> Result<(), String> {
+    let safe_path = validate_path_for_write(&app, Path::new(&path))?;
+    if let Some(parent) = safe_path.parent() {
+        if !parent.as_os_str().is_empty() {
+            fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+        }
+    }
+    let bytes = BASE64.decode(&base64_data).map_err(|e| format!("Invalid base64 data: {}", e))?;
+    fs::write(&safe_path, bytes)
+        .map_err(|error| format!("Unable to write {}: {}", normalize_path(&safe_path), error))
+}
+
 fn normalize_path(path: &Path) -> String {
     path.to_string_lossy().replace('\\', "/")
 }

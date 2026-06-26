@@ -342,6 +342,100 @@ fn extract_ai_frames_blocking(
     Ok(ExtractAiFramesResult { frames })
 }
 
+
+// --- TTS voiceover ---
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CallTtsApiRequest {
+    pub base_url: String,
+    pub voice_id: String,
+    pub text: String,
+    #[serde(default = "default_tts_speed")]
+    pub speed: f64,
+    #[serde(default)]
+    pub stability: Option<f64>,
+    #[serde(default)]
+    pub engine: Option<String>,
+    #[serde(default)]
+    pub model: Option<String>,
+}
+
+fn default_tts_speed() -> f64 {
+    1.0
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CallTtsApiResult {
+    pub audio_base64: String,
+    pub latency_ms: u64,
+}
+
+#[tauri::command]
+pub async fn call_tts_api(request: CallTtsApiRequest, api_key: Option<String>) -> Result<CallTtsApiResult, String> {
+    let start = std::time::Instant::now();
+    let engine = request.engine.as_deref().unwrap_or("compatible");
+    let base = request.base_url.trim_end_matches('/');
+    let (url, body) = match engine {
+        "elevenlabs" => {
+            let url = format!("{}/text-to-speech/{}", base, urlencoding::encode(&request.voice_id));
+            let b = serde_json::json!({
+                "text": request.text,
+                "model_id": request.model.as_deref().unwrap_or("eleven_multilingual_v2"),
+                "voice_settings": {
+                    "stability": request.stability.unwrap_or(0.5),
+                    "speed": request.speed
+                }
+            });
+            (url, b)
+        }
+        _ => {
+            let url = format!("{}/audio/speech", base);
+            let b = serde_json::json!({
+                "model": request.model.as_deref().unwrap_or("tts-1"),
+                "input": request.text,
+                "voice": request.voice_id,
+                "speed": request.speed
+            });
+            (url, b)
+        }
+    };
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(60))
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+    let mut req_builder = client
+        .post(&url)
+        .header("Content-Type", "application/json")
+        .header("Accept", "audio/mpeg");
+    if let Some(key) = &api_key {
+        let trimmed = key.trim();
+        if !trimmed.is_empty() {
+            if engine == "elevenlabs" {
+                req_builder = req_builder.header("xi-api-key", trimmed);
+            } else {
+                req_builder = req_builder.header("Authorization", format!("Bearer {}", trimmed));
+            }
+        }
+    }
+    let response = req_builder
+        .body(body.to_string())
+        .send()
+        .await
+        .map_err(|e| format!("TTS API request failed: {}", e))?;
+    let status = response.status();
+    let response_bytes = response
+        .bytes()
+        .await
+        .map_err(|e| format!("Failed to read TTS API response: {}", e))?;
+    if !status.is_success() {
+        let error_text = String::from_utf8_lossy(&response_bytes);
+        return Err(format!("TTS API returned status {}: {}", status, truncate_error(&error_text)));
+    }
+    let audio_base64 = base64::engine::general_purpose::STANDARD.encode(&response_bytes);
+    let latency_ms = start.elapsed().as_millis() as u64;
+    Ok(CallTtsApiResult { audio_base64, latency_ms })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

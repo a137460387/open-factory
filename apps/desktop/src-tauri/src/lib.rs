@@ -80,6 +80,7 @@ pub fn run() {
             commands::files::authorize_paths,
             commands::files::read_file,
             commands::files::write_file,
+            commands::files::write_binary_file,
             commands::files::remove_file,
             commands::files::trash_file,
             commands::files::copy_file,
@@ -166,7 +167,8 @@ pub fn run() {
             commands::ai::write_ai_api_key,
             commands::ai::check_ollama_reachable,
             commands::ai::list_ollama_models,
-            commands::ai::extract_ai_frames
+            commands::ai::extract_ai_frames,
+            commands::ai::call_tts_api
         ])
         .setup(|app| {
             let window_exists = app.get_webview_window("main").is_some();

@@ -28,7 +28,11 @@ import {
   parseRoughCutAIResponse,
   buildRoughCutSystemPrompt,
   buildRoughCutUserPrompt,
-  ROUGH_CUT_TEMPLATES
+  ROUGH_CUT_TEMPLATES,
+  buildTtsEndpoint,
+  buildTtsRequestBody,
+  generateTtsCacheKey,
+  detectTtsEngine
 } from '../src/ai-service';
 
 describe('AI provider presets', () => {
@@ -605,5 +609,136 @@ describe('AI rough cut', () => {
         expect(seg.defaultDuration).toBeGreaterThan(0);
       }
     }
+  });
+});
+
+describe('TTS endpoint building', () => {
+  it('builds ElevenLabs endpoint with voiceId in path', () => {
+    const url = buildTtsEndpoint({
+      providerId: 'elevenlabs',
+      baseUrl: 'https://api.elevenlabs.io/v1',
+      engine: 'elevenlabs',
+      voiceId: 'abc-123',
+      speed: 1.0
+    });
+    expect(url).toBe('https://api.elevenlabs.io/v1/text-to-speech/abc-123');
+  });
+
+  it('URL-encodes voiceId for ElevenLabs', () => {
+    const url = buildTtsEndpoint({
+      providerId: 'elevenlabs',
+      baseUrl: 'https://api.elevenlabs.io/v1',
+      engine: 'elevenlabs',
+      voiceId: 'voice/id+test',
+      speed: 1.0
+    });
+    expect(url).toContain('text-to-speech/voice%2Fid%2Btest');
+  });
+
+  it('builds OpenAI TTS endpoint', () => {
+    const url = buildTtsEndpoint({
+      providerId: 'openai',
+      baseUrl: 'https://api.openai.com/v1',
+      engine: 'openai',
+      voiceId: 'alloy',
+      speed: 1.0
+    });
+    expect(url).toBe('https://api.openai.com/v1/audio/speech');
+  });
+
+  it('builds compatible TTS endpoint like OpenAI', () => {
+    const url = buildTtsEndpoint({
+      providerId: 'custom',
+      baseUrl: 'https://my-tts.example.com/v1',
+      engine: 'compatible',
+      voiceId: 'speaker1',
+      speed: 1.0
+    });
+    expect(url).toBe('https://my-tts.example.com/v1/audio/speech');
+  });
+});
+
+describe('TTS request body', () => {
+  it('builds ElevenLabs body with voice_settings', () => {
+    const body = buildTtsRequestBody('Hello world', {
+      providerId: 'elevenlabs',
+      baseUrl: 'https://api.elevenlabs.io/v1',
+      engine: 'elevenlabs',
+      voiceId: 'abc',
+      speed: 1.2,
+      stability: 0.7
+    });
+    expect(body.text).toBe('Hello world');
+    expect(body.model_id).toBe('eleven_multilingual_v2');
+    expect(body.voice_settings).toEqual({ stability: 0.7, speed: 1.2 });
+  });
+
+  it('builds OpenAI body with input and voice', () => {
+    const body = buildTtsRequestBody('Test text', {
+      providerId: 'openai',
+      baseUrl: 'https://api.openai.com/v1',
+      engine: 'openai',
+      voiceId: 'alloy',
+      speed: 1.0
+    });
+    expect(body.input).toBe('Test text');
+    expect(body.voice).toBe('alloy');
+    expect(body.model).toBe('tts-1');
+    expect(body.speed).toBe(1.0);
+  });
+});
+
+describe('TTS cache key generation', () => {
+  it('generates deterministic hash for same input', () => {
+    const config = { providerId: 'elevenlabs', baseUrl: 'https://api.elevenlabs.io/v1', engine: 'elevenlabs' as const, voiceId: 'abc', speed: 1.0, stability: 0.5 };
+    const key1 = generateTtsCacheKey('hello', config);
+    const key2 = generateTtsCacheKey('hello', config);
+    expect(key1).toBe(key2);
+  });
+
+  it('generates different hash for different text', () => {
+    const config = { providerId: 'elevenlabs', baseUrl: 'https://api.elevenlabs.io/v1', engine: 'elevenlabs' as const, voiceId: 'abc', speed: 1.0 };
+    expect(generateTtsCacheKey('hello', config)).not.toBe(generateTtsCacheKey('world', config));
+  });
+
+  it('generates different hash for different voiceId', () => {
+    const config1 = { providerId: 'elevenlabs', baseUrl: 'https://api.elevenlabs.io/v1', engine: 'elevenlabs' as const, voiceId: 'voice1', speed: 1.0 };
+    const config2 = { providerId: 'elevenlabs', baseUrl: 'https://api.elevenlabs.io/v1', engine: 'elevenlabs' as const, voiceId: 'voice2', speed: 1.0 };
+    expect(generateTtsCacheKey('hello', config1)).not.toBe(generateTtsCacheKey('hello', config2));
+  });
+
+  it('generates different hash for different speed', () => {
+    const config1 = { providerId: 'openai', baseUrl: 'https://api.openai.com/v1', engine: 'openai' as const, voiceId: 'alloy', speed: 1.0 };
+    const config2 = { providerId: 'openai', baseUrl: 'https://api.openai.com/v1', engine: 'openai' as const, voiceId: 'alloy', speed: 1.5 };
+    expect(generateTtsCacheKey('hello', config1)).not.toBe(generateTtsCacheKey('hello', config2));
+  });
+
+  it('includes stability for ElevenLabs engine', () => {
+    const config1 = { providerId: 'elevenlabs', baseUrl: 'https://api.elevenlabs.io/v1', engine: 'elevenlabs' as const, voiceId: 'abc', speed: 1.0, stability: 0.3 };
+    const config2 = { providerId: 'elevenlabs', baseUrl: 'https://api.elevenlabs.io/v1', engine: 'elevenlabs' as const, voiceId: 'abc', speed: 1.0, stability: 0.8 };
+    expect(generateTtsCacheKey('hello', config1)).not.toBe(generateTtsCacheKey('hello', config2));
+  });
+
+  it('returns 8-char hex string', () => {
+    const key = generateTtsCacheKey('test', { providerId: 'openai', baseUrl: 'https://api.openai.com/v1', engine: 'openai', voiceId: 'alloy', speed: 1.0 });
+    expect(key).toMatch(/^[0-9a-f]{8}$/);
+  });
+});
+
+describe('TTS engine detection', () => {
+  it('detects ElevenLabs from URL', () => {
+    expect(detectTtsEngine('https://api.elevenlabs.io/v1', 'custom')).toBe('elevenlabs');
+  });
+
+  it('detects OpenAI from URL', () => {
+    expect(detectTtsEngine('https://api.openai.com/v1', 'custom')).toBe('openai');
+  });
+
+  it('detects ElevenLabs from providerId', () => {
+    expect(detectTtsEngine('https://custom.api.com/v1', 'elevenlabs')).toBe('elevenlabs');
+  });
+
+  it('falls back to compatible for unknown', () => {
+    expect(detectTtsEngine('https://my-tts.example.com/api', 'custom')).toBe('compatible');
   });
 });

@@ -173,6 +173,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createCreditsClip, createTextClip } from '../../lib/clipFactory';
 import { probeMediaPath } from '../../lib/media';
 import { zhCN } from '../../i18n/strings';
+import { generateTtsVoiceover, collectSubtitleClipsForTts } from '../../lib/ttsVoiceover';
 import { showToast } from '../../lib/toast';
 import { readTransitionFavorites, toggleTransitionFavorite } from '../../timeline/transition-favorites';
 import { detectClipDialogue } from '../../lib/dialogueDetection';
@@ -199,6 +200,7 @@ import {
 import { commandManager, projectAccessor, timelineAccessor } from '../../store/commandManager';
 import { useCollaborationStore } from '../../store/collaborationStore';
 import { useEditorStore, type SelectedKeyframeRef } from '../../store/editorStore';
+import { useAISettingsStore } from '../../store/aiSettingsStore';
 import { useRenderCacheStore } from '../../store/renderCacheStore';
 import { useWhisperSettingsStore } from '../../store/whisperSettingsStore';
 import { LABEL_WIDTH, Ruler, ThumbnailTrack, TrackRow, TRACK_HEIGHT, type ClipMenuRequest, type DragState, type GapMenuRequest, type VolumeEnvelopeMenuRequest, type VolumeEnvelopePointRequest } from './TimelineParts';
@@ -2236,6 +2238,15 @@ function addProjectBookmark(time = playheadTime): void {
     }
   }
 
+  async function ttsVoiceover(clipId: string): Promise<void> {
+    const clip = findClip(clipId);
+    setClipMenu(undefined);
+    if (clip.type !== 'subtitle') return;
+    const inputClips = collectSubtitleClipsForTts(project, clip.trackId);
+    if (inputClips.length === 0) return;
+    await generateTtsVoiceover(inputClips);
+  }
+
   function onWheel(event: React.WheelEvent<HTMLDivElement>): void {
     if (event.ctrlKey || event.metaKey) {
       event.preventDefault();
@@ -3175,6 +3186,7 @@ function addProjectBookmark(time = playheadTime): void {
                 onGenerateCover={() => void openCoverFrameGeneration(clipMenu.clipId)}
                 onGenerateSubtitles={() => void generateSubtitles(clipMenu.clipId)}
                 onAlignSubtitles={() => void alignSubtitlesToWaveform(clipMenu.clipId)}
+                onTtsVoiceover={() => void ttsVoiceover(clipMenu.clipId)}
                 onReplaceMedia={() => void openReplaceMedia(clipMenu.clipId)}
                 onSwitchVersion={(mediaId) => switchClipMediaVersion(clipMenu.clipId, mediaId)}
                 onConvertFrameRate={() => convertClipFrameRate(clipMenu.clipId)}
@@ -4639,6 +4651,7 @@ function ClipActionMenu({
   onGenerateCover,
   onGenerateSubtitles,
   onAlignSubtitles,
+  onTtsVoiceover,
   onReplaceMedia,
   onSwitchVersion,
   onConvertFrameRate,
@@ -4664,6 +4677,7 @@ function ClipActionMenu({
   onGenerateCover(): void;
   onGenerateSubtitles(): void;
   onAlignSubtitles(): void;
+  onTtsVoiceover(): void;
   onReplaceMedia(): void;
   onSwitchVersion(mediaId: string): void;
   onConvertFrameRate(): void;
@@ -4680,6 +4694,7 @@ function ClipActionMenu({
   const canGenerateCover = clip?.type === 'video' && asset?.type === 'video';
   const canGenerateSubtitles = canGenerateSubtitlesForClip(clip, asset, whisperReady);
   const canAlignSubtitles = clip?.type === 'subtitle';
+  const canTtsVoiceover = clip?.type === 'subtitle';
   const canReplaceMedia = Boolean(clip && (clip.type === 'video' || clip.type === 'audio' || clip.type === 'image'));
   const canConvertFrameRate = Boolean(asset?.type === 'video' && (asset.variableFrameRate || isFrameRateMismatch(asset.frameRate, projectFrameRate)));
   const currentMediaId = clip && 'mediaId' in clip ? clip.mediaId : undefined;
@@ -4735,6 +4750,15 @@ function ClipActionMenu({
         onClick={onAlignSubtitles}
       >
         {zhCN.timeline.alignSubtitlesAction}
+      </button>
+      <button
+        className="block w-full rounded px-2 py-2 text-left hover:bg-panel disabled:opacity-40"
+        type="button"
+        disabled={!canTtsVoiceover}
+        data-testid="clip-action-tts-voiceover"
+        onClick={onTtsVoiceover}
+      >
+        {zhCN.aiTts.subtitleToVoiceover}
       </button>
       <button
         className="block w-full rounded px-2 py-2 text-left hover:bg-panel disabled:opacity-40"

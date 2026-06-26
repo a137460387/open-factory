@@ -2790,6 +2790,7 @@ dependencies = [
  "tokio",
  "tokio-tungstenite",
  "trash",
+ "urlencoding",
  "zip 2.4.2",
 ]
 

@@ -179,7 +179,7 @@ import {
   type TextLayoutOptions,
   type TextOpenTypeFeatures
 } from '@open-factory/editor-core';
-import { ArrowDown, ArrowUp, Bold, GripVertical, Italic, Palette, Pipette, Plus, SlidersHorizontal, Trash2, Underline, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Bold, GripVertical, Italic, Mic, Palette, Pipette, Plus, SlidersHorizontal, Trash2, Underline, X } from 'lucide-react';
 import { t, zhCN } from '../../i18n/strings';
 import { commandManager, projectAccessor, timelineAccessor } from '../../store/commandManager';
 import {
@@ -208,6 +208,7 @@ import { deleteCustomSubtitleStyleTemplate, loadSubtitleStyleTemplates, saveCust
 import { addSharedLibraryResource, loadSharedSubtitleStyleTemplates, subtitleStyleTemplateToSharedResource } from '../../shared-library/sharedLibrary';
 import { validateCustomShaderSource } from '../../lib/preview/custom-shader';
 import { showToast } from '../../lib/toast';
+import { generateTtsVoiceover } from '../../lib/ttsVoiceover';
 import { SubtitleAIPolishPanel } from './SubtitleAIPolishPanel';
 import { ChapterTitleAIPanel } from './ChapterTitleAIPanel';
 import { AIColorGradingPanel } from './AIColorGradingPanel';
@@ -3207,6 +3208,17 @@ function ClipInspector({
             ) : null}
             <ToggleField label={zhCN.inspector.fields.bold} checked={clip.style.bold} onCommit={(bold) => commit({ style: { bold } })} />
             <ToggleField label={zhCN.inspector.fields.italic} checked={clip.style.italic} onCommit={(italic) => commit({ style: { italic } })} />
+            {(clip.type === 'text' || clip.type === 'subtitle') ? (
+              <button
+                className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md border border-line bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-panel"
+                type="button"
+                data-testid="text-clip-tts-voiceover"
+                onClick={() => generateTtsVoiceover([{ id: clip.id, text: clip.text, start: clip.start, duration: clip.duration }])}
+              >
+                <Mic size={14} />
+                {zhCN.aiTts.textToVoiceover}
+              </button>
+            ) : null}
           </Section>
         ) : null}
       </div>

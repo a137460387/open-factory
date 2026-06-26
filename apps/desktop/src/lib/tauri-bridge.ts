@@ -675,6 +675,7 @@ export type TauriMocks = Partial<{
   readFile(path: string): Promise<string> | string;
   readFileHeaderBytes(path: string, byteCount?: number): Promise<Uint8Array> | Uint8Array;
   writeFile(path: string, contents: string): Promise<void> | void;
+  writeBinaryFile(path: string, base64Data: string): Promise<void> | void;
   encryptProjectFile(path: string, contents: string, password: string): Promise<void> | void;
   decryptProjectFile(path: string, password: string): Promise<string> | string;
   isEncryptedProjectFile(path: string): Promise<boolean> | boolean;
@@ -721,6 +722,7 @@ export type TauriMocks = Partial<{
   writeAiApiKey(providerId: string, apiKey?: string): Promise<void> | void;
   checkOllamaReachable(): Promise<boolean> | boolean;
   listOllamaModels(): Promise<OllamaModelsResult> | OllamaModelsResult;
+  callTtsApi(request: CallTtsApiRequest, apiKey?: string): Promise<CallTtsApiResult> | CallTtsApiResult;
   sendSmtpEmail(request: SmtpEmailRequest): Promise<void> | void;
   postWebhookJson(request: WebhookJsonRequest): Promise<{ status: number }> | { status: number };
   analyzeClip(request: AnalyzeClipRequest): Promise<AnalyzeClipResult> | AnalyzeClipResult;
@@ -890,6 +892,15 @@ export async function writeFile(path: string, contents: string): Promise<void> {
     return;
   }
   await invoke('write_file', { path, contents });
+}
+
+export async function writeBinaryFile(path: string, base64Data: string): Promise<void> {
+  const mock = getTauriMocks()?.writeBinaryFile;
+  if (mock) {
+    await mock(path, base64Data);
+    return;
+  }
+  await invoke('write_binary_file', { path, base64Data });
 }
 
 export async function encryptProjectFile(path: string, contents: string, password: string): Promise<void> {
@@ -1927,6 +1938,22 @@ export interface OllamaModelsResult {
   reachable: boolean;
   models: OllamaModel[];
 }
+
+export interface CallTtsApiRequest {
+  baseUrl: string;
+  voiceId: string;
+  text: string;
+  speed: number;
+  stability?: number;
+  engine?: string;
+  model?: string;
+}
+
+export interface CallTtsApiResult {
+  audioBase64: string;
+  latencyMs: number;
+}
+
 export async function callAiApi(request: CallAiApiRequest, apiKey?: string): Promise<CallAiApiResult> {
   const mock = getTauriMocks()?.callAiApi;
   if (mock) {
@@ -1997,4 +2024,12 @@ export async function listOllamaModels(): Promise<OllamaModelsResult> {
     return mock();
   }
   return invoke<OllamaModelsResult>('list_ollama_models');
+}
+
+export async function callTtsApi(request: CallTtsApiRequest, apiKey?: string): Promise<CallTtsApiResult> {
+  const mock = getTauriMocks()?.callTtsApi;
+  if (mock) {
+    return mock(request, apiKey);
+  }
+  return invoke<CallTtsApiResult>('call_tts_api', { request, apiKey });
 }

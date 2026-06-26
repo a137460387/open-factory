@@ -22,6 +22,9 @@ interface StoredAISettings {
   providers: StoredAIProvider[];
   serviceMapping: Record<AIServiceType, string>;
   usageRecords: AIUsageRecord[];
+  ttsVoiceId?: string;
+  ttsSpeed?: number;
+  ttsStability?: number;
 }
 
 interface AISettingsState {
@@ -32,6 +35,13 @@ interface AISettingsState {
   ollamaModels: string[];
   loadedProviderKeys: Set<string>;
   testResults: Record<string, { ok: boolean; latencyMs?: number }>;
+  ttsVoiceId: string;
+  ttsSpeed: number;
+  ttsStability: number;
+
+  setTtsVoiceId: (voiceId: string) => void;
+  setTtsSpeed: (speed: number) => void;
+  setTtsStability: (stability: number) => void;
 
   loadProviderKey: (providerId: string) => Promise<void>;
   setProviderApiKey: (providerId: string, apiKey: string) => Promise<void>;
@@ -77,7 +87,10 @@ function writeStoredSettings(settings: StoredAISettings): void {
       isBuiltIn: p.isBuiltIn
     })),
     serviceMapping: settings.serviceMapping,
-    usageRecords: settings.usageRecords.slice(-100)
+    usageRecords: settings.usageRecords.slice(-100),
+    ttsVoiceId: settings.ttsVoiceId,
+    ttsSpeed: settings.ttsSpeed,
+    ttsStability: settings.ttsStability
   };
   localStorage.setItem(AI_SETTINGS_STORAGE_KEY, JSON.stringify(toStore));
 }
@@ -141,6 +154,22 @@ export const useAISettingsStore = create<AISettingsState>((set, get) => ({
   ollamaModels: [],
   loadedProviderKeys: new Set<string>(),
   testResults: {},
+  ttsVoiceId: readStoredSettings().ttsVoiceId ?? '',
+  ttsSpeed: readStoredSettings().ttsSpeed ?? 1.0,
+  ttsStability: readStoredSettings().ttsStability ?? 0.5,
+
+  setTtsVoiceId(voiceId) {
+    set({ ttsVoiceId: voiceId });
+    writeStoredSettings(get());
+  },
+  setTtsSpeed(speed) {
+    set({ ttsSpeed: speed });
+    writeStoredSettings(get());
+  },
+  setTtsStability(stability) {
+    set({ ttsStability: stability });
+    writeStoredSettings(get());
+  },
 
   async loadProviderKey(providerId) {
     if (get().loadedProviderKeys.has(providerId)) {

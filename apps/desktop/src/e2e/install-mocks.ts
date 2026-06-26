@@ -291,6 +291,10 @@ const mocks: TauriMocks = {
     mtimes.set(path, Date.now());
     persistFiles();
   },
+  writeBinaryFile: (path, base64Data) => {
+    exists.set(path, true);
+    mtimes.set(path, Date.now());
+  },
   encryptProjectFile: (path, contents, password) => {
     files.set(path, `OFCUTENC1\n${password}\n${contents}`);
     exists.set(path, true);
@@ -1102,6 +1106,10 @@ const mocks: TauriMocks = {
   },
   checkOllamaReachable: () => false,
   listOllamaModels: () => ({ reachable: false, models: [] }),
+  callTtsApi: (request) => ({
+    audioBase64: 'SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYYqK0NcAAAAAAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAABhgC7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7u7//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAYYqK0Nc',
+    latencyMs: 50
+  }),
   emit: (event, payload) => emit(event, payload)
 };
 
@@ -2926,7 +2934,35 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setSelectedClipIds([]);
     useEditorStore.getState().setPlayheadTime(0);
     commandManager.clear();
-  }
+  },
+  setupAITtsVoiceoverFixture: async () => {
+    const project = createProject('AI TTS Voiceover E2E');
+    const sub1 = makeMockSubtitleClip('tts-sub-1', 'track-tts-subtitle', '你好，欢迎来到我们的频道', 0);
+    const sub2 = makeMockSubtitleClip('tts-sub-2', 'track-tts-subtitle', '今天给大家介绍新产品', 3);
+    const sub3 = makeMockSubtitleClip('tts-sub-3', 'track-tts-subtitle', '感谢观看，下期再见', 6);
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({ id: 'track-tts-video', type: 'video', name: 'Video 1', clips: [] }),
+        createTrack({ id: 'track-tts-subtitle', type: 'subtitle', name: 'TTS Subtitles', language: 'zh', clips: [sub1, sub2, sub3] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    await useAISettingsStore.getState().setProviderApiKey('mimo', 'test-mimo-key');
+    useAISettingsStore.getState().toggleProvider('mimo', true);
+    useAISettingsStore.getState().setServiceMapping('voiceover', 'mimo');
+    useAISettingsStore.getState().setTtsVoiceId('mock-voice-id');
+    useEditorStore.getState().setSelectedClipIds(['tts-sub-1']);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
 };
 
 function makeWhisperVideoClip(): Extract<import('@open-factory/editor-core').Clip, { type: 'video' }> {
