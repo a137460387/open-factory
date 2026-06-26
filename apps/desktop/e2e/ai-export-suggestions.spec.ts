@@ -15,8 +15,7 @@ test('shows AI export suggestions and applies them to draft settings', async ({ 
   // Toggle open to trigger analysis
   await page.getByTestId('ai-export-suggestion-toggle').click();
 
-  // Wait for suggestions to appear (mock returns 3 suggestions)
-  await expect(page.getByTestId('ai-export-suggestion-loading')).toBeVisible();
+  // Wait for suggestions to appear (mock returns instantly)
   await expect(page.getByTestId('ai-export-suggestion-priority-high')).toBeVisible({ timeout: 10_000 });
   await expect(page.getByTestId('ai-export-suggestion-priority-medium')).toBeVisible();
   await expect(page.getByTestId('ai-export-suggestion-priority-low')).toBeVisible();

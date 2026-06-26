@@ -11,7 +11,7 @@ test('AI rough cut generates storyboard and confirms clips to timeline', async (
 
   // Fill in description and start generation
   await page.getByTestId('ai-rough-cut-text-input').fill('产品宣传视频');
-  await page.getByTestId('ai-rough-cut-generate-button').click();
+  await page.getByTestId('ai-rough-cut-start').click();
 
   // Wait for preview phase with storyboard
   await expect(page.getByTestId('ai-rough-cut-storyboard')).toBeVisible({ timeout: 10_000 });
@@ -21,7 +21,7 @@ test('AI rough cut generates storyboard and confirms clips to timeline', async (
   await expect(storyItems).toHaveCount(3);
 
   // Confirm clips to timeline
-  await page.getByTestId('ai-rough-cut-confirm-button').click();
+  await page.getByTestId('ai-rough-cut-confirm').click();
 
   // Verify clips were added to timeline
   await expect.poll(async () => {

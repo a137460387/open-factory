@@ -1884,7 +1884,7 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setPlayheadTime(0);
     commandManager.clear();
   },
-  setupAIRoughCutFixture: () => {
+  setupAIRoughCutFixture: async () => {
     const project = createProject('AI Rough Cut E2E');
     const mediaAssets: MediaAsset[] = [
       {
@@ -1941,6 +1941,9 @@ window.__E2E_ACTIONS__ = {
     });
     useEditorStore.getState().setSelectedClipIds([]);
     useEditorStore.getState().setPlayheadTime(0);
+    await useAISettingsStore.getState().setProviderApiKey('openai', 'test-openai-key');
+    useAISettingsStore.getState().toggleProvider('openai', true);
+    useAISettingsStore.getState().setServiceMapping('rough-cut', 'openai');
     commandManager.clear();
   },
   setupMulticamFixture: () => {
