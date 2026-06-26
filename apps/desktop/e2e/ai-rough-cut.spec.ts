@@ -17,7 +17,7 @@ test('AI rough cut generates storyboard and confirms clips to timeline', async (
   await expect(page.getByTestId('ai-rough-cut-storyboard')).toBeVisible({ timeout: 10_000 });
 
   // Verify 3 clips appear in storyboard
-  const storyItems = page.locator('[data-testid^="ai-rough-cut-storyboard-item-"]');
+  const storyItems = page.locator('[data-testid^="ai-rough-cut-clip-"]');
   await expect(storyItems).toHaveCount(3);
 
   // Confirm clips to timeline
