@@ -8,6 +8,10 @@ import {
   createAllBuiltInProviders,
   createBuiltInProvider,
   estimateVisionCost,
+  parseColorGradingSuggestionResponse,
+  buildColorGradingColorCorrectionPatch,
+  mapColorParameterToColorCorrection,
+  COLOR_GRADING_PARAMETER_LIMITS,
   formatChaptersBilibili,
   formatChaptersYouTube,
   isProviderConfigured,
@@ -326,5 +330,201 @@ describe('estimateVisionCost', () => {
     const result = estimateVisionCost(2, 'unknown-model');
     expect(result.tokens).toBe(2100);
     expect(result.costCny).toBeGreaterThan(0);
+  });
+});
+
+describe('COLOR_GRADING_PARAMETER_LIMITS', () => {
+  it('has limits for all 10 parameters', () => {
+    const expected = ['brightness', 'contrast', 'saturation', 'hue', 'lift_r', 'lift_g', 'lift_b', 'gain_r', 'gain_g', 'gain_b'];
+    for (const param of expected) {
+      expect(COLOR_GRADING_PARAMETER_LIMITS[param]).toBeDefined();
+      expect(typeof COLOR_GRADING_PARAMETER_LIMITS[param].min).toBe('number');
+      expect(typeof COLOR_GRADING_PARAMETER_LIMITS[param].max).toBe('number');
+    }
+  });
+
+  it('brightness range is -1 to 1', () => {
+    expect(COLOR_GRADING_PARAMETER_LIMITS.brightness).toEqual({ min: -1, max: 1 });
+  });
+
+  it('contrast range is 0 to 2', () => {
+    expect(COLOR_GRADING_PARAMETER_LIMITS.contrast).toEqual({ min: 0, max: 2 });
+  });
+
+  it('hue range is -180 to 180', () => {
+    expect(COLOR_GRADING_PARAMETER_LIMITS.hue).toEqual({ min: -180, max: 180 });
+  });
+});
+
+describe('mapColorParameterToColorCorrection', () => {
+  it('maps brightness to { brightness }', () => {
+    expect(mapColorParameterToColorCorrection('brightness', 0.5)).toEqual({ brightness: 0.5 });
+  });
+
+  it('maps contrast to { contrast }', () => {
+    expect(mapColorParameterToColorCorrection('contrast', 1.2)).toEqual({ contrast: 1.2 });
+  });
+
+  it('maps saturation to { saturation }', () => {
+    expect(mapColorParameterToColorCorrection('saturation', 0.8)).toEqual({ saturation: 0.8 });
+  });
+
+  it('maps hue to { hue }', () => {
+    expect(mapColorParameterToColorCorrection('hue', 30)).toEqual({ hue: 30 });
+  });
+
+  it('maps lift_r to threeWayColor.lift.r', () => {
+    expect(mapColorParameterToColorCorrection('lift_r', 0.3)).toEqual({ threeWayColor: { lift: { r: 0.3 } } });
+  });
+
+  it('maps lift_g to threeWayColor.lift.g', () => {
+    expect(mapColorParameterToColorCorrection('lift_g', -0.2)).toEqual({ threeWayColor: { lift: { g: -0.2 } } });
+  });
+
+  it('maps lift_b to threeWayColor.lift.b', () => {
+    expect(mapColorParameterToColorCorrection('lift_b', 0.1)).toEqual({ threeWayColor: { lift: { b: 0.1 } } });
+  });
+
+  it('maps gain_r to threeWayColor.gain.r', () => {
+    expect(mapColorParameterToColorCorrection('gain_r', 0.4)).toEqual({ threeWayColor: { gain: { r: 0.4 } } });
+  });
+
+  it('maps gain_g to threeWayColor.gain.g', () => {
+    expect(mapColorParameterToColorCorrection('gain_g', -0.1)).toEqual({ threeWayColor: { gain: { g: -0.1 } } });
+  });
+
+  it('maps gain_b to threeWayColor.gain.b', () => {
+    expect(mapColorParameterToColorCorrection('gain_b', 0.6)).toEqual({ threeWayColor: { gain: { b: 0.6 } } });
+  });
+
+  it('returns null for unknown parameter', () => {
+    expect(mapColorParameterToColorCorrection('unknown', 1)).toBeNull();
+  });
+});
+
+describe('parseColorGradingSuggestionResponse', () => {
+  it('parses a valid response', () => {
+    const input = {
+      style: 'cinematic',
+      issues: ['偏暗', '饱和度不足'],
+      suggestions: [
+        { parameter: 'brightness', currentValue: 0, recommendedValue: 0.2, reason: '画面偏暗' },
+        { parameter: 'saturation', currentValue: 1, recommendedValue: 1.3, reason: '色彩偏淡' }
+      ]
+    };
+    const result = parseColorGradingSuggestionResponse(input);
+    expect(result).not.toBeNull();
+    expect(result!.style).toBe('cinematic');
+    expect(result!.issues).toEqual(['偏暗', '饱和度不足']);
+    expect(result!.suggestions).toHaveLength(2);
+    expect(result!.suggestions[0].parameter).toBe('brightness');
+    expect(result!.suggestions[0].recommendedValue).toBe(0.2);
+    expect(result!.suggestions[1].parameter).toBe('saturation');
+  });
+
+  it('returns null for non-object input', () => {
+    expect(parseColorGradingSuggestionResponse(null)).toBeNull();
+    expect(parseColorGradingSuggestionResponse('string')).toBeNull();
+    expect(parseColorGradingSuggestionResponse(42)).toBeNull();
+  });
+
+  it('returns null when suggestions is not an array', () => {
+    expect(parseColorGradingSuggestionResponse({ style: 'test', issues: [], suggestions: 'bad' })).toBeNull();
+  });
+
+  it('returns null when suggestions is empty', () => {
+    expect(parseColorGradingSuggestionResponse({ style: 'test', issues: [], suggestions: [] })).toBeNull();
+  });
+
+  it('filters out entries with unknown parameter names', () => {
+    const input = {
+      style: '',
+      issues: [],
+      suggestions: [
+        { parameter: 'brightness', recommendedValue: 0.5, reason: '' },
+        { parameter: 'unknown_param', recommendedValue: 1, reason: '' }
+      ]
+    };
+    const result = parseColorGradingSuggestionResponse(input);
+    expect(result).not.toBeNull();
+    expect(result!.suggestions).toHaveLength(1);
+    expect(result!.suggestions[0].parameter).toBe('brightness');
+  });
+
+  it('clamps out-of-range values', () => {
+    const input = {
+      style: '',
+      issues: [],
+      suggestions: [
+        { parameter: 'brightness', recommendedValue: 5, reason: '' },
+        { parameter: 'contrast', recommendedValue: -1, reason: '' }
+      ]
+    };
+    const result = parseColorGradingSuggestionResponse(input);
+    expect(result).not.toBeNull();
+    expect(result!.suggestions[0].recommendedValue).toBe(1);
+    expect(result!.suggestions[1].recommendedValue).toBe(0);
+  });
+
+  it('filters out entries with non-finite recommendedValue', () => {
+    const input = {
+      style: '',
+      issues: [],
+      suggestions: [
+        { parameter: 'brightness', recommendedValue: NaN, reason: '' }
+      ]
+    };
+    expect(parseColorGradingSuggestionResponse(input)).toBeNull();
+  });
+});
+
+describe('buildColorGradingColorCorrectionPatch', () => {
+  it('builds patch for basic parameters', () => {
+    const items = [
+      { parameter: 'brightness', recommendedValue: 0.3 },
+      { parameter: 'contrast', recommendedValue: 1.2 },
+      { parameter: 'saturation', recommendedValue: 1.1 },
+      { parameter: 'hue', recommendedValue: 10 }
+    ];
+    const patch = buildColorGradingColorCorrectionPatch(items);
+    expect(patch).toEqual({ brightness: 0.3, contrast: 1.2, saturation: 1.1, hue: 10 });
+  });
+
+  it('builds patch for three-way color parameters', () => {
+    const items = [
+      { parameter: 'lift_r', recommendedValue: 0.2 },
+      { parameter: 'gain_b', recommendedValue: -0.3 }
+    ];
+    const patch = buildColorGradingColorCorrectionPatch(items);
+    expect(patch).toEqual({
+      threeWayColor: {
+        lift: { r: 0.2 },
+        gain: { b: -0.3 }
+      }
+    });
+  });
+
+  it('builds patch for mixed basic and three-way parameters', () => {
+    const items = [
+      { parameter: 'brightness', recommendedValue: 0.1 },
+      { parameter: 'lift_r', recommendedValue: -0.1 },
+      { parameter: 'gain_g', recommendedValue: 0.3 }
+    ];
+    const patch = buildColorGradingColorCorrectionPatch(items);
+    expect(patch).toEqual({
+      brightness: 0.1,
+      threeWayColor: {
+        lift: { r: -0.1 },
+        gain: { g: 0.3 }
+      }
+    });
+  });
+
+  it('returns null for empty array', () => {
+    expect(buildColorGradingColorCorrectionPatch([])).toBeNull();
+  });
+
+  it('returns null when all items map to unknown parameters', () => {
+    expect(buildColorGradingColorCorrectionPatch([{ parameter: 'unknown', recommendedValue: 1 }])).toBeNull();
   });
 });

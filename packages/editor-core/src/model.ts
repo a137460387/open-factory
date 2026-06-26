@@ -145,6 +145,8 @@ import type {
   VideoDenoisePreset,
   ZoomEditMode
 } from './model-types';
+
+export type { AIColorHistoryEntry } from './model-types';
 export type {
   AdjustmentClip,
   AssetType,
@@ -943,7 +945,8 @@ export function createBaseClip(
     pitchData: normalizeClipPitchData(input.pitchData),
     ...(beatMarkers ? { beatMarkers } : {}),
     ...(detectedBpm !== undefined ? { detectedBpm } : {}),
-    ...(scenecuts ? { scenecuts } : {})
+    ...(scenecuts ? { scenecuts } : {}),
+    ...(Array.isArray(input.aiColorHistory) ? { aiColorHistory: input.aiColorHistory.slice(0, 3) } : {})
   };
 }
 

@@ -642,6 +642,22 @@ export interface BaseClip {
   scenecuts?: number[];
   /** 若此 clip 来源于虚拟子剪辑，记录其 subclipId */
   subclipId?: string;
+  /** AI 调色建议历史（LRU 最多 3 条） */
+  aiColorHistory?: AIColorHistoryEntry[];
+}
+
+export interface AIColorHistoryEntry {
+  timestamp: number;
+  style: string;
+  issues: string[];
+  suggestions: AIColorGradingSuggestionItem[];
+}
+
+export interface AIColorGradingSuggestionItem {
+  parameter: string;
+  currentValue?: number;
+  recommendedValue: number;
+  reason: string;
 }
 
 export interface ClipAudioDenoise {

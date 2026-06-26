@@ -210,6 +210,7 @@ import { validateCustomShaderSource } from '../../lib/preview/custom-shader';
 import { showToast } from '../../lib/toast';
 import { SubtitleAIPolishPanel } from './SubtitleAIPolishPanel';
 import { ChapterTitleAIPanel } from './ChapterTitleAIPanel';
+import { AIColorGradingPanel } from './AIColorGradingPanel';
 import { markLocalAiModelUsed } from '../../settings/appSettings';
 import { useEditorStore, type SelectedKeyframeRef } from '../../store/editorStore';
 import { usePrivacyDetectionSettingsStore } from '../../store/privacyDetectionSettingsStore';
@@ -2494,6 +2495,11 @@ function ClipInspector({
               >
                 {zhCN.common.reset}
               </button>
+              <AIColorGradingPanel
+                clip={clip}
+                sourcePath={asset?.path ?? ''}
+                selectedClipLocked={selectedClipLocked}
+              />
             </div>
           </details>
         ) : null}

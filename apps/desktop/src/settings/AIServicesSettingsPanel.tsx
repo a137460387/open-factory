@@ -4,7 +4,7 @@ import { zhCN } from '../i18n/strings';
 import { useAISettingsStore, type AIServiceType } from '../store/aiSettingsStore';
 import type { AIProvider } from '@open-factory/editor-core';
 
-const SERVICE_TYPES: AIServiceType[] = ['subtitle-polish', 'chapter-title', 'vision-analysis', 'voiceover'];
+const SERVICE_TYPES: AIServiceType[] = ['subtitle-polish', 'chapter-title', 'vision-analysis', 'voiceover', 'color-grading-suggestion'];
 
 export function AIServicesSettingsPanel() {
   const t = zhCN.settings.aiServices;

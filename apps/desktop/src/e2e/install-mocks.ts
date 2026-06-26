@@ -1044,6 +1044,22 @@ const mocks: TauriMocks = {
         latencyMs: 10
       };
     }
+    if (systemContent.includes('调色助手')) {
+      return {
+        content: JSON.stringify({
+          style: '电影感',
+          issues: ['画面偏暗', '饱和度不足'],
+          suggestions: [
+            { parameter: 'brightness', currentValue: 0, recommendedValue: 0.2, reason: '提升画面亮度' },
+            { parameter: 'saturation', currentValue: 1, recommendedValue: 1.3, reason: '增强色彩饱和度' },
+            { parameter: 'contrast', currentValue: 1, recommendedValue: 1.1, reason: '适当增加对比度' }
+          ]
+        }),
+        inputTokens: 100,
+        outputTokens: 50,
+        latencyMs: 10
+      };
+    }
     if (systemContent.includes('视频内容分析助手')) {
       return {
         content: JSON.stringify({

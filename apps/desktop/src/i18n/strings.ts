@@ -19,7 +19,8 @@ const zh = {
     none: '无',
     secondsShort: '秒',
     noVideo: '无视频',
-    audioOnly: '仅音频'
+    audioOnly: '仅音频',
+    back: '返回'
   },
   project: {
     defaultName: '未命名项目'
@@ -1443,7 +1444,8 @@ const zh = {
         'subtitle-polish': '字幕润色',
         'chapter-title': '章节标题',
         'vision-analysis': '视觉分析',
-        voiceover: '配音'
+        voiceover: '配音',
+        'color-grading-suggestion': '调色建议'
       },
       usageTitle: '用量统计',
       usageCount: (n: number) => `共 ${n} 次调用`
@@ -3343,7 +3345,33 @@ const zh = {
       appliedTitle: '已应用',
       appliedMessage: 'AI 分析结果已保存到媒体项。',
       tagSearch: 'AI标签',
-      selectProvider: '选择视觉服务商'
+     selectProvider: '选择视觉服务商'
+   },
+    aiColorSuggestion: {
+      title: 'AI 调色建议',
+      selectProvider: '选择视觉服务商',
+      noProvider: '未配置视觉服务商',
+      analyze: 'AI 调色分析',
+      analyzing: 'AI 分析中...',
+      extractingFrame: '正在提取关键帧...',
+      previewTitle: '调色建议预览',
+      style: '风格',
+      issues: '画面问题',
+      parameter: '参数',
+      currentValue: '当前值',
+      recommendedValue: '建议值',
+      reason: '原因',
+      applySelected: '一键应用',
+      appliedTitle: '调色建议已应用',
+      appliedMessage: (count: number) => `已应用 ${count} 条调色建议。`,
+      failedTitle: '调色分析失败',
+      failedMessage: 'AI 调色建议请求失败，请检查视觉服务商配置。',
+      cancelledTitle: '分析已取消',
+      noSuggestion: 'AI 未返回调色建议。',
+      historyTitle: '历史记录',
+      historyEmpty: '暂无历史记录',
+      selectAll: '全选',
+      deselectAll: '取消全选'
     },
     audioChannelRoutingOptions: {
       normal: '正常',
