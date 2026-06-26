@@ -5,7 +5,7 @@ import { readAiApiKey, writeAiApiKey, checkOllamaReachable, listOllamaModels } f
 
 const AI_SETTINGS_STORAGE_KEY = 'open-factory:ai-settings';
 
-export type AIServiceType = 'subtitle-polish' | 'chapter-title' | 'vision-analysis' | 'voiceover' | 'color-grading-suggestion' | 'rough-cut';
+export type AIServiceType = 'subtitle-polish' | 'chapter-title' | 'vision-analysis' | 'voiceover' | 'color-grading-suggestion' | 'rough-cut' | 'export-suggestion';
 
 interface StoredAIProvider {
   id: string;
@@ -142,7 +142,8 @@ function initializeServiceMapping(): Record<AIServiceType, string> {
     'vision-analysis': stored.serviceMapping['vision-analysis'] ?? 'openai',
     'voiceover': stored.serviceMapping['voiceover'] ?? 'elevenlabs',
     'color-grading-suggestion': stored.serviceMapping['color-grading-suggestion'] ?? 'openai',
-    'rough-cut': stored.serviceMapping['rough-cut'] ?? 'openai'
+    'rough-cut': stored.serviceMapping['rough-cut'] ?? 'openai',
+    'export-suggestion': stored.serviceMapping['export-suggestion'] ?? 'openai',
   };
 }
 

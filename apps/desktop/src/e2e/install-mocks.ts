@@ -1089,6 +1089,18 @@ const mocks: TauriMocks = {
         latencyMs: 10
       };
     }
+    if (systemContent.includes('video encoding advisor')) {
+      return {
+        content: JSON.stringify([
+          { parameter: 'videoBitrate', currentValue: 'auto', suggestedValue: '8M', reason: '4K内容建议提高码率', priority: 'high' },
+          { parameter: 'loudnessNormalization', currentValue: 'off', suggestedValue: 'ebu', reason: '建议启用EBU响度标准化', priority: 'medium' },
+          { parameter: 'subtitleFormat', currentValue: 'none', suggestedValue: 'srt', reason: '项目含字幕轨，建议导出SRT', priority: 'low' }
+        ]),
+        inputTokens: 100,
+        outputTokens: 50,
+        latencyMs: 10
+      };
+    }
     return { content: '{}', inputTokens: 100, outputTokens: 50, latencyMs: 10 };
   },
   extractAiFrames: (request) => ({
@@ -2961,6 +2973,58 @@ window.__E2E_ACTIONS__ = {
     useAISettingsStore.getState().setTtsVoiceId('mock-voice-id');
     useEditorStore.getState().setSelectedClipIds(['tts-sub-1']);
     useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupAIExportSuggestionFixture: async () => {
+    const project = createProject('AI Export Suggestion E2E');
+    const assetId = 'media-export-suggest-video';
+    const asset: MediaAsset = {
+      id: assetId,
+      type: 'video',
+      name: 'export-suggest-video.mp4',
+      path: tinyVideo,
+      duration: 30,
+      width: 3840,
+      height: 2160,
+      size: 4096,
+      mtimeMs: 1_000,
+      hasAudio: true
+    };
+    const clipV = {
+      id: 'es-clip-video',
+      type: 'video' as const,
+      name: 'export-suggest-video.mp4',
+      mediaId: assetId,
+      trackId: 'track-es-video',
+      start: 0,
+      duration: 30,
+      trimStart: 0,
+      trimEnd: 0,
+      speed: DEFAULT_CLIP_SPEED,
+      transform: { ...DEFAULT_TRANSFORM },
+      colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+      effects: [],
+      keyframes: {},
+      volume: 1
+    };
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({ id: 'track-es-video', type: 'video', name: 'Video 1', clips: [clipV] }),
+        createTrack({ id: 'track-es-audio', type: 'audio', name: 'Audio 1', clips: [] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    await useAISettingsStore.getState().setProviderApiKey('openai', 'test-openai-key');
+    useAISettingsStore.getState().toggleProvider('openai', true);
+    useAISettingsStore.getState().setServiceMapping('export-suggestion', 'openai');
     commandManager.clear();
   },
 };

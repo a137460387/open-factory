@@ -32,7 +32,13 @@ import {
   buildTtsEndpoint,
   buildTtsRequestBody,
   generateTtsCacheKey,
-  detectTtsEngine
+  detectTtsEngine,
+  buildExportProjectInfo,
+  buildExportOptimizationSystemPrompt,
+  buildExportOptimizationUserPrompt,
+  parseExportOptimizationResponse,
+  sortExportSuggestionsByPriority,
+  EXPORT_SUGGESTION_CACHE_TTL_MS
 } from '../src/ai-service';
 
 describe('AI provider presets', () => {
@@ -742,3 +748,136 @@ describe('TTS engine detection', () => {
     expect(detectTtsEngine('https://my-tts.example.com/api', 'custom')).toBe('compatible');
   });
 });
+
+describe('AI Export Optimization - buildExportProjectInfo', () => {
+  const project = {
+    settings: { width: 1920, height: 1080, fps: 30 },
+    timeline: {
+      tracks: [
+        { type: 'video', clips: [{ start: 0, duration: 5 }, { start: 5, duration: 3, effects: [{ type: 'blur' }] }] },
+        { type: 'subtitle', clips: [{ start: 0, duration: 2 }] }
+      ]
+    }
+  };
+
+  it('returns correct project info fields', () => {
+    const info = buildExportProjectInfo(project as any);
+    expect(info.width).toBe(1920);
+    expect(info.height).toBe(1080);
+    expect(info.fps).toBe(30);
+    expect(info.trackCount).toBe(2);
+    expect(info.clipCount).toBe(3);
+    expect(info.durationSeconds).toBe(8);
+    expect(info.hasSubtitle).toBe(true);
+    expect(info.effectCount).toBe(1);
+  });
+
+  it('detects no subtitle when none present', () => {
+    const p = { settings: project.settings, timeline: { tracks: [{ type: 'video', clips: [{ start: 0, duration: 1 }] }] } };
+    expect(buildExportProjectInfo(p as any).hasSubtitle).toBe(false);
+  });
+
+  it('handles empty timeline', () => {
+    const p = { settings: project.settings, timeline: { tracks: [] } };
+    const info = buildExportProjectInfo(p as any);
+    expect(info.clipCount).toBe(0);
+    expect(info.durationSeconds).toBe(0);
+    expect(info.trackCount).toBe(0);
+  });
+});
+
+describe('AI Export Optimization - buildExportOptimizationSystemPrompt', () => {
+  it('returns non-empty prompt mentioning video encoding', () => {
+    const prompt = buildExportOptimizationSystemPrompt();
+    expect(prompt).toContain('video encoding');
+    expect(prompt).toContain('videoBitrate');
+    expect(prompt).toContain('loudnessNormalization');
+    expect(prompt).toContain('JSON array');
+  });
+});
+
+describe('AI Export Optimization - buildExportOptimizationUserPrompt', () => {
+  it('includes project info and preset settings in output', () => {
+    const info = { durationSeconds: 60, width: 1920, height: 1080, fps: 30, trackCount: 3, effectCount: 2, hasSubtitle: true, hasHDR: false, clipCount: 10 };
+    const prompt = buildExportOptimizationUserPrompt(info, { format: 'mp4', videoCodec: 'h264', videoBitrate: '8M', audioBitrate: '192k' });
+    expect(prompt).toContain('60s');
+    expect(prompt).toContain('1920x1080');
+    expect(prompt).toContain('mp4');
+    expect(prompt).toContain('h264');
+    expect(prompt).toContain('8M');
+    expect(prompt).toContain('Subtitles: yes');
+    expect(prompt).toContain('HDR: no');
+  });
+
+  it('uses defaults when settings are empty', () => {
+    const info = { durationSeconds: 10, width: 1280, height: 720, fps: 24, trackCount: 1, effectCount: 0, hasSubtitle: false, hasHDR: false, clipCount: 1 };
+    const prompt = buildExportOptimizationUserPrompt(info, {});
+    expect(prompt).toContain('mp4');
+    expect(prompt).toContain('h264');
+    expect(prompt).toContain('auto');
+  });
+});
+
+describe('AI Export Optimization - parseExportOptimizationResponse', () => {
+  it('parses valid suggestions', () => {
+    const input = [
+      { parameter: 'videoBitrate', currentValue: '2M', suggestedValue: '8M', reason: 'too low for 1080p', priority: 'high' },
+      { parameter: 'fps', currentValue: '24', suggestedValue: '30', reason: 'match source', priority: 'low' }
+    ];
+    const result = parseExportOptimizationResponse(input);
+    expect(result).toHaveLength(2);
+    expect(result[0].parameter).toBe('videoBitrate');
+    expect(result[0].priority).toBe('high');
+  });
+
+  it('filters out invalid entries', () => {
+    const input = [
+      { parameter: 'videoBitrate', currentValue: '2M', suggestedValue: '8M', reason: 'ok', priority: 'high' },
+      { parameter: 123, currentValue: 'a', suggestedValue: 'b', reason: 'c', priority: 'high' },
+      null,
+      { parameter: 'fps', currentValue: '24', suggestedValue: '30', reason: 'ok', priority: 'invalid' }
+    ];
+    const result = parseExportOptimizationResponse(input);
+    expect(result).toHaveLength(1);
+  });
+
+  it('returns empty array for non-array input', () => {
+    expect(parseExportOptimizationResponse(null)).toEqual([]);
+    expect(parseExportOptimizationResponse({})).toEqual([]);
+    expect(parseExportOptimizationResponse('string')).toEqual([]);
+  });
+
+  it('handles empty array', () => {
+    expect(parseExportOptimizationResponse([])).toEqual([]);
+  });
+});
+
+describe('AI Export Optimization - sortExportSuggestionsByPriority', () => {
+  it('sorts high before medium before low', () => {
+    const input = [
+      { parameter: 'a', currentValue: '1', suggestedValue: '2', reason: 'r', priority: 'low' as const },
+      { parameter: 'b', currentValue: '1', suggestedValue: '2', reason: 'r', priority: 'high' as const },
+      { parameter: 'c', currentValue: '1', suggestedValue: '2', reason: 'r', priority: 'medium' as const }
+    ];
+    const sorted = sortExportSuggestionsByPriority(input);
+    expect(sorted[0].priority).toBe('high');
+    expect(sorted[1].priority).toBe('medium');
+    expect(sorted[2].priority).toBe('low');
+  });
+
+  it('does not mutate original array', () => {
+    const input = [
+      { parameter: 'a', currentValue: '1', suggestedValue: '2', reason: 'r', priority: 'low' as const },
+      { parameter: 'b', currentValue: '1', suggestedValue: '2', reason: 'r', priority: 'high' as const }
+    ];
+    sortExportSuggestionsByPriority(input);
+    expect(input[0].priority).toBe('low');
+  });
+});
+
+describe('AI Export Optimization - EXPORT_SUGGESTION_CACHE_TTL_MS', () => {
+  it('is 5 minutes', () => {
+    expect(EXPORT_SUGGESTION_CACHE_TTL_MS).toBe(300_000);
+  });
+});
+

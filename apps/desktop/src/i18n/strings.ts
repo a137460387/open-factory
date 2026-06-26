@@ -1446,7 +1446,8 @@ const zh = {
         'vision-analysis': '视觉分析',
         voiceover: '配音',
         'color-grading-suggestion': '调色建议',
-        'rough-cut': 'AI粗剪'
+        'rough-cut': 'AI粗剪',
+        'export-suggestion': '导出参数建议'
       },
       usageTitle: '用量统计',
       usageCount: (n: number) => `共 ${n} 次调用`
@@ -2789,6 +2790,25 @@ const zh = {
     appliedMessage: (count: number) => `生成了 ${count} 段配音`,
     failedTitle: '配音生成失败',
     failedMessage: '请检查 TTS 服务配置后重试',
+  },
+  aiExportSuggestion: {
+    title: 'AI导出参数建议',
+    description: '基于项目内容和当前导出设置，AI智能推荐最优参数配置',
+    analyzing: 'AI正在分析导出参数…',
+    noProvider: '未配置可用的AI服务商',
+    empty: '暂无优化建议',
+    apply: '一键应用',
+    refresh: '刷新建议',
+    priorityLabels: { high: '高优先级', medium: '中优先级', low: '低优先级' },
+    parameterLabels: {
+      videoBitrate: '视频码率',
+      audioBitrate: '音频码率',
+      resolution: '分辨率',
+      fps: '帧率',
+      encoder: '编码器',
+      loudnessNormalization: '响度标准化',
+      subtitleFormat: '字幕格式'
+    }
   },
   inspector: {
     multipleSelected: (count: number) => `多个片段已选中（${count}）`,
