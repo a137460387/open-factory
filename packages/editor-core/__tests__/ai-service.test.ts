@@ -23,7 +23,12 @@ import {
   parseVisionAnalysisResponse,
   removeFillerWords,
   splitChapterSegments,
-  suggestChapterCount
+  suggestChapterCount,
+  buildMediaInfoForAI,
+  parseRoughCutAIResponse,
+  buildRoughCutSystemPrompt,
+  buildRoughCutUserPrompt,
+  ROUGH_CUT_TEMPLATES
 } from '../src/ai-service';
 
 describe('AI provider presets', () => {
@@ -526,5 +531,79 @@ describe('buildColorGradingColorCorrectionPatch', () => {
 
   it('returns null when all items map to unknown parameters', () => {
     expect(buildColorGradingColorCorrectionPatch([{ parameter: 'unknown', recommendedValue: 1 }])).toBeNull();
+  });
+});
+
+describe('AI rough cut', () => {
+  it('buildMediaInfoForAI maps media with aiAnalysis', () => {
+    const result = buildMediaInfoForAI([
+      { id: 'm1', name: 'a.mp4', type: 'video', duration: 10, aiAnalysis: { tags: ['产品'], scene: '展示', mood: '专业' } },
+      { id: 'm2', name: 'b.mp4', type: 'video', duration: 5 }
+    ]);
+    expect(result).toHaveLength(2);
+    expect(result[0]).toMatchObject({ mediaId: 'm1', filename: 'a.mp4', tags: ['产品'], scene: '展示', mood: '专业' });
+    expect(result[1]).toMatchObject({ mediaId: 'm2', filename: 'b.mp4', tags: undefined, scene: undefined, mood: undefined });
+  });
+
+  it('parseRoughCutAIResponse parses valid array', () => {
+    const result = parseRoughCutAIResponse([
+      { mediaId: 'm1', startTime: 0, duration: 3, trackIndex: 0, reason: 'good' }
+    ]);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ mediaId: 'm1', duration: 3, trackIndex: 0, reason: 'good' });
+  });
+
+  it('parseRoughCutAIResponse filters invalid entries', () => {
+    const result = parseRoughCutAIResponse([
+      { mediaId: 'm1', startTime: 0, duration: 3, trackIndex: 0, reason: 'good' },
+      { mediaId: 123, duration: 2 },
+      null,
+      { mediaId: '', duration: 1 },
+      'not an object'
+    ]);
+    expect(result).toHaveLength(1);
+  });
+
+  it('parseRoughCutAIResponse returns empty for non-array', () => {
+    expect(parseRoughCutAIResponse('bad')).toEqual([]);
+    expect(parseRoughCutAIResponse(null)).toEqual([]);
+    expect(parseRoughCutAIResponse({})).toEqual([]);
+  });
+
+  it('parseRoughCutAIResponse clamps negative startTime and duration', () => {
+    const result = parseRoughCutAIResponse([
+      { mediaId: 'm1', startTime: -5, duration: -2, trackIndex: -1, reason: '' }
+    ]);
+    expect(result[0].startTime).toBe(0);
+    expect(result[0].duration).toBeGreaterThanOrEqual(0.1);
+    expect(result[0].trackIndex).toBe(0);
+  });
+
+  it('buildRoughCutSystemPrompt contains 粗剪', () => {
+    const prompt = buildRoughCutSystemPrompt();
+    expect(prompt).toContain('粗剪');
+    expect(prompt).toContain('mediaId');
+  });
+
+  it('buildRoughCutUserPrompt includes description and media info', () => {
+    const prompt = buildRoughCutUserPrompt('产品介绍', [
+      { mediaId: 'm1', filename: 'a.mp4', type: 'video', duration: 10, tags: ['产品'], scene: '展示', mood: '专业' }
+    ]);
+    expect(prompt).toContain('产品介绍');
+    expect(prompt).toContain('a.mp4');
+    expect(prompt).toContain('产品');
+  });
+
+  it('ROUGH_CUT_TEMPLATES has templates with segments', () => {
+    expect(ROUGH_CUT_TEMPLATES.length).toBeGreaterThanOrEqual(3);
+    for (const tpl of ROUGH_CUT_TEMPLATES) {
+      expect(tpl.id).toBeTruthy();
+      expect(tpl.name).toBeTruthy();
+      expect(tpl.segments.length).toBeGreaterThan(0);
+      for (const seg of tpl.segments) {
+        expect(seg.label).toBeTruthy();
+        expect(seg.defaultDuration).toBeGreaterThan(0);
+      }
+    }
   });
 });

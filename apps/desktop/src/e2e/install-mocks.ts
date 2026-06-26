@@ -1073,6 +1073,18 @@ const mocks: TauriMocks = {
         latencyMs: 10
       };
     }
+    if (systemContent.includes('视频粗剪助手')) {
+      return {
+        content: JSON.stringify([
+          { mediaId: 'media-rough-cut-a', startTime: 0, duration: 3, trackIndex: 0, reason: '产品外观展示' },
+          { mediaId: 'media-rough-cut-b', startTime: 1, duration: 4, trackIndex: 0, reason: '使用场景演示' },
+          { mediaId: 'media-rough-cut-c', startTime: 0, duration: 2, trackIndex: 0, reason: '结尾场景' }
+        ]),
+        inputTokens: 100,
+        outputTokens: 50,
+        latencyMs: 10
+      };
+    }
     return { content: '{}', inputTokens: 100, outputTokens: 50, latencyMs: 10 };
   },
   extractAiFrames: (request) => ({
@@ -1849,6 +1861,65 @@ window.__E2E_ACTIONS__ = {
     });
     useEditorStore.getState().setSelectedClipIds(['clip-smart-video']);
     useEditorStore.getState().setSelectedClipId('clip-smart-video');
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupAIRoughCutFixture: () => {
+    const project = createProject('AI Rough Cut E2E');
+    const mediaAssets: MediaAsset[] = [
+      {
+        id: 'media-rough-cut-a',
+        type: 'video',
+        name: 'product-intro.mp4',
+        path: tinyVideo,
+        duration: 5,
+        width: 1920,
+        height: 1080,
+        size: 8192,
+        mtimeMs: 1_000,
+        hasAudio: true,
+        aiAnalysis: { tags: ['产品', '外观'], scene: '产品展示', mood: '专业', objects: ['产品', '桌子'], analysisTime: '2025-01-01T00:00:00Z', providerId: 'mock' }
+      },
+      {
+        id: 'media-rough-cut-b',
+        type: 'video',
+        name: 'usage-demo.mp4',
+        path: tinyVideo,
+        duration: 8,
+        width: 1920,
+        height: 1080,
+        size: 16384,
+        mtimeMs: 2_000,
+        hasAudio: true,
+        aiAnalysis: { tags: ['演示', '使用'], scene: '使用场景', mood: '轻松', objects: ['人物', '产品'], analysisTime: '2025-01-01T00:00:00Z', providerId: 'mock' }
+      },
+      {
+        id: 'media-rough-cut-c',
+        type: 'video',
+        name: 'ending-scene.mp4',
+        path: tinyVideo,
+        duration: 4,
+        width: 1920,
+        height: 1080,
+        size: 4096,
+        mtimeMs: 3_000,
+        hasAudio: true,
+        aiAnalysis: { tags: ['结尾', '场景'], scene: '结尾', mood: '温馨', objects: ['场景', '灯光'], analysisTime: '2025-01-01T00:00:00Z', providerId: 'mock' }
+      }
+    ];
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [createTrack({ id: 'track-video', type: 'video', name: 'Video 1', clips: [] })]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: mediaAssets,
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    useEditorStore.getState().setSelectedClipIds([]);
     useEditorStore.getState().setPlayheadTime(0);
     commandManager.clear();
   },

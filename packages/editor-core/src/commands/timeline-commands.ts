@@ -2864,6 +2864,48 @@ export class BatchImportSubtitleCommand implements Command {
   }
 }
 
+export class BatchAddClipsCommand implements Command {
+  readonly description = 'Batch add clips (AI rough cut)';
+  private before?: Timeline;
+  private after?: Timeline;
+  private insertedTrackIds: string[] = [];
+
+  constructor(
+    private readonly accessor: TimelineAccessor,
+    private readonly clips: Clip[],
+    private readonly newTracks: Array<{ id: string; name: string; type: 'video' | 'audio' }>
+  ) {}
+
+  execute(): void {
+    const timeline = this.accessor.getTimeline();
+    this.before ??= timeline;
+    if (!this.after) {
+      const trackMap = new Map<string, Track>();
+      for (const nt of this.newTracks) {
+        if (!timeline.tracks.some((t) => t.id === nt.id)) {
+          trackMap.set(nt.id, createTrack({ id: nt.id, type: nt.type, name: nt.name, clips: [] }));
+          this.insertedTrackIds.push(nt.id);
+        }
+      }
+      const newTracks = Array.from(trackMap.values());
+      let updatedTimeline: Timeline = newTracks.length > 0
+        ? { ...timeline, tracks: [...timeline.tracks, ...newTracks] }
+        : timeline;
+      for (const clip of this.clips) {
+        updatedTimeline = insertClip(updatedTimeline, clip);
+      }
+      this.after = updatedTimeline;
+    }
+    this.accessor.setTimeline(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setTimeline(this.before);
+    }
+  }
+}
+
 export class MoveClipCommand implements Command {
   readonly description = 'Move clip';
   private before?: Clip;

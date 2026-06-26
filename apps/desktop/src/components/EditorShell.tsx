@@ -373,6 +373,7 @@ const AudioMixer = lazy(() => import('./AudioMixer/AudioMixer').then((module) =>
 const Inspector = lazy(() => import('./Inspector/Inspector').then((module) => ({ default: module.Inspector })));
 const PreviewCanvas = lazy(() => import('./PreviewCanvas/PreviewCanvas').then((module) => ({ default: module.PreviewCanvas })));
 const SmartRoughCutPanel = lazy(() => import('./SmartRoughCut/SmartRoughCutPanel').then((module) => ({ default: module.SmartRoughCutPanel })));
+const AIRoughCutPanel = lazy(() => import('./AIRoughCut/AIRoughCutPanel').then((module) => ({ default: module.AIRoughCutPanel })));
 const HistoryPanel = lazy(() => import('./History/HistoryPanel').then((module) => ({ default: module.HistoryPanel })));
 const ProjectDocumentationPanel = lazy(() => import('./ProjectDocumentationPanel').then((module) => ({ default: module.ProjectDocumentationPanel })));
 const ExportDialog = lazy(() => import('../export/ExportDialog').then((module) => ({ default: module.ExportDialog })));
@@ -521,6 +522,7 @@ export function EditorShell() {
   const [beatSyncManualBpm, setBeatSyncManualBpm] = useState('');
   const [sceneDetectionRequestId, setSceneDetectionRequestId] = useState(0);
   const [smartRoughCutOpen, setSmartRoughCutOpen] = useState(false);
+  const [aiRoughCutOpen, setAiRoughCutOpen] = useState(false);
   const [historyPanelOpen, setHistoryPanelOpen] = useState(false);
   const [projectDocumentationOpen, setProjectDocumentationOpen] = useState(false);
   const [storyboardOpen, setStoryboardOpen] = useState(false);
@@ -949,6 +951,7 @@ export function EditorShell() {
       setLayoutSettings(next);
       setHistoryPanelOpen(layout.panels.history);
       setSmartRoughCutOpen(false);
+      setAiRoughCutOpen(false);
       void saveLayoutSettings(next).catch((error) => {
         console.warn('Unable to save workspace layout', error);
       });
@@ -1125,6 +1128,7 @@ export function EditorShell() {
       if (next) {
         setHistoryPanelOpen(false);
         setSmartRoughCutOpen(false);
+        setAiRoughCutOpen(false);
         persistLayoutPatch({
           rightPanelCollapsed: false,
           panels: { ...layoutSettings.panels, inspector: true, history: false }
@@ -4268,7 +4272,7 @@ export function EditorShell() {
       disposed = true;
     };
   }, [mediaHealthAutoShowEnabled]);
-  const rightPrimaryPanelLabel = projectDocumentationOpen ? zhCN.panels.projectDocumentation : historyPanelOpen ? zhCN.panels.history : smartRoughCutOpen ? zhCN.panels.smartRoughCut : zhCN.panels.inspector;
+  const rightPrimaryPanelLabel = projectDocumentationOpen ? zhCN.panels.projectDocumentation : historyPanelOpen ? zhCN.panels.history : aiRoughCutOpen ? zhCN.aiRoughCut.title : smartRoughCutOpen ? zhCN.panels.smartRoughCut : zhCN.panels.inspector;
 
   return (
     <ErrorBoundary name={zhCN.panels.editor}>
@@ -4340,6 +4344,12 @@ export function EditorShell() {
             setProjectDocumentationOpen(false);
             setSmartRoughCutOpen((open) => !open);
           }}
+          onToggleAIRoughCut={() => {
+            setHistoryPanelOpen(false);
+            setProjectDocumentationOpen(false);
+            setSmartRoughCutOpen(false);
+            setAiRoughCutOpen((open) => !open);
+          }}
           onSeparateAudio={() => void separateSelectedAudio()}
           onCancelAudioSeparation={() => void cancelAudioSeparation()}
           onRunSpeakerDiarization={() => void runSpeakerDiarization()}
@@ -4373,6 +4383,7 @@ export function EditorShell() {
           recordingActive={Boolean(recordingTask)}
           recordingElapsedSeconds={recordingElapsedSeconds}
           smartRoughCutOpen={smartRoughCutOpen}
+          aiRoughCutOpen={aiRoughCutOpen}
           historyPanelOpen={historyPanelOpen}
           projectDocumentationOpen={projectDocumentationOpen}
           storyboardOpen={storyboardOpen}
@@ -4401,6 +4412,7 @@ export function EditorShell() {
           onTimelineHeatmapChange={updateTimelineHeatmap}
           onToggleHistoryPanel={() => {
             setSmartRoughCutOpen(false);
+            setAiRoughCutOpen(false);
             setProjectDocumentationOpen(false);
             setHistoryPanelOpen((open) => {
               const next = !open;
@@ -4580,6 +4592,8 @@ export function EditorShell() {
                       <ProjectDocumentationPanel project={project} />
                     ) : historyPanelOpen ? (
                       <HistoryPanel />
+                    ) : aiRoughCutOpen ? (
+                      <AIRoughCutPanel media={project.media} onClose={() => setAiRoughCutOpen(false)} />
                     ) : smartRoughCutOpen ? (
                       <SmartRoughCutPanel selectedClip={selectedClip} media={project.media} />
                     ) : layoutSettings.panels.inspector ? (

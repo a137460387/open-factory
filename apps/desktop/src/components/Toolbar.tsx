@@ -95,6 +95,7 @@ interface ToolbarProps {
   onCancelExport(): void;
   onSplitSelected(): void;
   onToggleSmartRoughCut(): void;
+  onToggleAIRoughCut(): void;
   onSeparateAudio(): void;
   onCancelAudioSeparation(): void;
   onRunSpeakerDiarization(): void;
@@ -128,6 +129,7 @@ interface ToolbarProps {
   recordingActive: boolean;
   recordingElapsedSeconds: number;
   smartRoughCutOpen: boolean;
+  aiRoughCutOpen: boolean;
   historyPanelOpen: boolean;
   projectDocumentationOpen: boolean;
   storyboardOpen: boolean;
@@ -1495,6 +1497,7 @@ export function Toolbar(props: ToolbarProps) {
       <ToolButton title={t.storyboard} onClick={props.onToggleStoryboard} icon={<LayoutGrid size={17} />} testId="storyboard-toggle-button" active={props.storyboardOpen} />
       <ToolButton title={t.splitSelectedClip} onClick={props.onSplitSelected} icon={<Scissors size={17} />} testId="toolbar-split-button" />
       <ToolButton title={t.smartRoughCut} onClick={props.onToggleSmartRoughCut} icon={<WandSparkles size={17} />} testId="toolbar-smart-rough-cut-button" active={props.smartRoughCutOpen} />
+      <ToolButton title={zhCN.aiRoughCut.title} onClick={props.onToggleAIRoughCut} icon={<WandSparkles size={17} />} testId="toolbar-ai-rough-cut-button" active={props.aiRoughCutOpen} />
       <ToolButton title={t.createMulticamSequence} disabled={!props.canCreateMulticamSequence} onClick={props.onCreateMulticamSequence} icon={<PanelsTopLeft size={17} />} testId="toolbar-create-multicam-button" />
       <div className="relative">
         <button

@@ -109,7 +109,8 @@ import {
   UpdateSequenceSettingsCommand,
   BatchUpdateTrackHeightCommand,
   NewProjectCommand,
-  PRIMARY_SEQUENCE_ID
+  PRIMARY_SEQUENCE_ID,
+  BatchAddClipsCommand
 } from '../src';
 import { makeAccessor, makeAdjustmentClip, makeAudioClip, makeCreditsClip, makeMotionGraphicClip, makeProject, makeSubtitleClip, makeTextClip, makeTimeline, makeVideoClip } from './test-utils';
 
@@ -3072,5 +3073,55 @@ describe('timeline commands', () => {
       const accessor = makeAccessor(timeline);
       const manager = new CommandManager();
       expect(() => manager.execute(new BatchUpdateSubtitleTextCommand(accessor, [{ clipId: 'sub-a', text: 'same' }]))).toThrow('No subtitle clips found for text updates');
+    });
+  });
+
+  describe('BatchAddClipsCommand', () => {
+    it('adds clips and new tracks, then undoes cleanly', () => {
+      const timeline = makeTimeline();
+      const accessor = makeAccessor(timeline);
+      const manager = new CommandManager();
+
+      const clips = [
+        makeVideoClip({ id: 'batch-clip-1', mediaId: 'media-1', start: 0, duration: 3, trackId: 'new-track-1' }),
+        makeVideoClip({ id: 'batch-clip-2', mediaId: 'media-2', start: 3, duration: 4, trackId: 'new-track-1' })
+      ];
+      const newTracks = [{ id: 'new-track-1', name: 'AI 1', type: 'video' as const }];
+
+      const command = new BatchAddClipsCommand(accessor, clips, newTracks);
+      manager.execute(command);
+      expect(command.description).toBe('Batch add clips (AI rough cut)');
+
+      const afterExecute = accessor.current();
+      expect(afterExecute.tracks.some((t) => t.id === 'new-track-1')).toBe(true);
+      const addedTrack = afterExecute.tracks.find((t) => t.id === 'new-track-1')!;
+      expect(addedTrack.clips.length).toBe(2);
+      expect(addedTrack.clips.map((c) => c.id)).toEqual(['batch-clip-1', 'batch-clip-2']);
+
+      manager.undo();
+      const afterUndo = accessor.current();
+      expect(afterUndo.tracks.some((t) => t.id === 'new-track-1')).toBe(false);
+
+      manager.redo();
+      const afterRedo = accessor.current();
+      expect(afterRedo.tracks.find((t) => t.id === 'new-track-1')!.clips.length).toBe(2);
+    });
+
+    it('does not duplicate existing tracks', () => {
+      const timeline = makeTimeline();
+      timeline.tracks.push(createTrack({ id: 'existing-track', type: 'video', name: 'Existing', clips: [] }));
+      const accessor = makeAccessor(timeline);
+      const manager = new CommandManager();
+
+      const clips = [
+        makeVideoClip({ id: 'dup-clip-1', mediaId: 'media-1', start: 0, duration: 2, trackId: 'existing-track' })
+      ];
+      const newTracks = [{ id: 'existing-track', name: 'Dup', type: 'video' as const }];
+
+      manager.execute(new BatchAddClipsCommand(accessor, clips, newTracks));
+      const result = accessor.current();
+      const existingTracks = result.tracks.filter((t) => t.id === 'existing-track');
+      expect(existingTracks).toHaveLength(1);
+      expect(existingTracks[0].clips.length).toBe(1);
     });
   });

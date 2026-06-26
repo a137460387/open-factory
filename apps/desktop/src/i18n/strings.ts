@@ -1445,7 +1445,8 @@ const zh = {
         'chapter-title': '章节标题',
         'vision-analysis': '视觉分析',
         voiceover: '配音',
-        'color-grading-suggestion': '调色建议'
+        'color-grading-suggestion': '调色建议',
+        'rough-cut': 'AI粗剪'
       },
       usageTitle: '用量统计',
       usageCount: (n: number) => `共 ${n} 次调用`
@@ -2745,6 +2746,32 @@ const zh = {
       `删除了 ${removedSeconds}s 静音，分割为 ${sceneSplits > 0 ? sceneSplits + 1 : 0} 段，生成 ${subtitleClips} 条字幕 / ${dialogueClips} 个对话 clip / ${brollClips} 个 B-roll / ${rhythmClips} 个节奏 clip。`,
     stepComplete: (step: string) => `${step}完成`,
     stepFailed: (step: string) => `${step}失败`
+  },
+  aiRoughCut: {
+    title: 'AI粗剪助手',
+    inputMode: '输入方式',
+    textDescription: '文字描述',
+    textDescriptionPlaceholder: '描述视频主题或脚本摘要，如"制作一个90秒产品宣传片"',
+    template: '结构模板',
+    templateDuration: '时长(秒)',
+    mediaMatch: '媒体匹配',
+    mediaMatchHint: '将媒体库中有AI内容标签的素材打包发送给AI，以获得更精准的匹配。',
+    mediaMatchNoAnalysis: '建议先对媒体库运行AI内容分析以获得更好的匹配效果',
+    storyboard: '故事板预览',
+    storyboardEmpty: '暂无剪辑建议',
+    confirmCreate: '确认创建',
+    generating: 'AI正在生成粗剪方案…',
+    noProvider: '未配置可用的AI服务商',
+    selectProvider: '选择服务商',
+    segment: (label: string) => label,
+    clipCount: (count: number) => `${count} 个片段`,
+    totalDuration: (sec: number) => `总时长 ${sec.toFixed(1)}s`,
+    applied: '粗剪方案已创建',
+    appliedMessage: (count: number) => `在新序列中创建了 ${count} 个片段`,
+    failedTitle: '粗剪生成失败',
+    failedMessage: '请检查AI服务配置后重试',
+    deleteClip: '删除',
+    reorderHint: '拖动调整顺序',
   },
   inspector: {
     multipleSelected: (count: number) => `多个片段已选中（${count}）`,
@@ -6692,7 +6719,9 @@ const enOverrides = {
         'subtitle-polish': 'Subtitle Polish',
         'chapter-title': 'Chapter Titles',
         'vision-analysis': 'Vision Analysis',
-        voiceover: 'Voiceover'
+        voiceover: 'Voiceover',
+        'color-grading-suggestion': 'Color Grading',
+        'rough-cut': 'AI Rough Cut'
       },
       usageTitle: 'Usage Statistics',
       usageCount: (n: number) => `${n} calls total`
