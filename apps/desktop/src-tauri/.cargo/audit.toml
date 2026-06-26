@@ -1,0 +1,38 @@
+[advisories]
+ignore = [
+    # unic-* crates (RUSTSEC-2025-0081, 0075, 0080, 0100, 0098):
+    # Transitive via urlpattern 0.3.0 -> tauri-utils -> tauri.
+    # tauri-utils (including latest 2.9.3) still pins urlpattern ^0.3 which
+    # depends on unic-ucd-ident; no upstream upgrade path exists yet.
+    # Tracked: https://github.com/tauri-apps/tauri/issues/12767
+    "RUSTSEC-2025-0081", # unic-char-property unmaintained
+    "RUSTSEC-2025-0075", # unic-char-range unmaintained
+    "RUSTSEC-2025-0080", # unic-common unmaintained
+    "RUSTSEC-2025-0100", # unic-ucd-ident unmaintained
+    "RUSTSEC-2025-0098", # unic-ucd-version unmaintained
+
+    # glib 0.18.5 unsound (VariantStrIter Iterator impl):
+    # Transitive via gtk 0.18.2 -> libappindicator -> tray-icon -> tauri.
+    # gtk-rs 0.18 (GTK3) is unmaintained; Tauri 2 requires it on Linux.
+    # Project does not use VariantStrIter API; no runtime impact.
+    "RUSTSEC-2024-0429", # glib VariantStrIter unsound
+
+    # gtk-rs GTK3 bindings unmaintained (10 crates):
+    # Same root cause: Tauri 2 depends on gtk-rs 0.18 (GTK3) on Linux.
+    # No upgrade path without migrating to GTK4 + Tauri backend change.
+    "RUSTSEC-2024-0411", # gdkwayland-sys
+    "RUSTSEC-2024-0412", # gdk
+    "RUSTSEC-2024-0413", # atk
+    "RUSTSEC-2024-0414", # gdkx11-sys
+    "RUSTSEC-2024-0415", # gtk
+    "RUSTSEC-2024-0416", # atk-sys
+    "RUSTSEC-2024-0417", # gdkx11
+    "RUSTSEC-2024-0418", # gdk-sys
+    "RUSTSEC-2024-0419", # gtk3-macros
+    "RUSTSEC-2024-0420", # gtk-sys
+
+    # proc-macro-error 1.0.4 unmaintained:
+    # Transitive dependency; crate is unmaintained but functionally stable.
+    # No direct replacement without upgrading the proc-macro chain.
+    "RUSTSEC-2024-0370", # proc-macro-error unmaintained
+]
