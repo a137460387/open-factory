@@ -61,10 +61,10 @@ test('prioritizes timeline-used proxy work ahead of media-library proxy work', a
     .poll(
       () =>
         page.evaluate(() => {
-          const pendingProxyJobs = (window.__E2E_ACTIONS__!.getMediaJobs!() as Array<{ type: string; status: string; priority: string; assetName: string }>).filter(
-            (job) => job.type === 'proxy' && job.status === 'pending'
+          const activeProxyJobs = (window.__E2E_ACTIONS__!.getMediaJobs!() as Array<{ type: string; status: string; priority: string; assetName: string }>).filter(
+            (job) => job.type === 'proxy' && (job.status === 'pending' || job.status === 'running')
           );
-          return pendingProxyJobs[0] ? `${pendingProxyJobs[0].priority}:${pendingProxyJobs[0].assetName}` : '';
+          return activeProxyJobs[0] ? `${activeProxyJobs[0].priority}:${activeProxyJobs[0].assetName}` : '';
         }),
       { timeout: 5000 }
     )
