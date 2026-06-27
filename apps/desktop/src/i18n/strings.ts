@@ -1450,7 +1450,8 @@ const zh = {
         'rough-cut': 'AI粗剪',
         'export-suggestion': '导出参数建议',
         'chat-editor': 'AI对话助手',
-        'video-summary': 'AI视频摘要'
+        'video-summary': 'AI视频摘要',
+        'narration-script': '旁白脚本'
       },
       usageTitle: '用量统计',
       usageCount: (n: number) => `共 ${n} 次调用`
@@ -4865,6 +4866,28 @@ const zh = {
     done: '完成',
     exportHtml: '导出HTML报告'
   },
+  aiNarration: {
+    title: 'AI旁白脚本',
+    styleCommentary: '解说旁白',
+    styleAdvertisement: '广告文案',
+    styleDocumentary: '纪录片叙事',
+    styleSocialMedia: '活泼社媒风',
+    generating: '正在生成旁白脚本...',
+    noProvider: '未配置AI文本服务商',
+    noMarkers: '无章节标记，将整体生成一段旁白',
+    generate: '生成脚本',
+    sendToTts: '送TTS配音',
+    text: '旁白文本',
+    speakerNote: '朗读提示',
+    timeRange: '时间范围',
+    selectStyle: '选择风格',
+    selectProvider: '选择AI服务商',
+    errorTitle: '生成失败',
+    errorMessage: '无法生成旁白脚本，请检查AI服务配置。',
+    cancel: '取消',
+    regenerate: '重新生成',
+    chapterCount: (n: number) => String(n) + ' 个章节',
+  },
   mediaPrecheck: {
     title: '素材预检',
     running: '正在检查素材',
@@ -6941,7 +6964,8 @@ const enOverrides = {
         'color-grading-suggestion': 'Color Grading',
         'rough-cut': 'AI Rough Cut',
         'chat-editor': 'AI Chat Editor',
-        'video-summary': 'AI Video Summary'
+        'video-summary': 'AI Video Summary',
+        'narration-script': 'Narration Script'
       },
       usageTitle: 'Usage Statistics',
       usageCount: (n: number) => `${n} calls total`
@@ -9683,6 +9707,28 @@ const enOverrides = {
     cancel: 'Cancel',
     done: 'Done',
     exportHtml: 'Export HTML Report'
+  },
+  aiNarration: {
+    title: 'AI Narration Script',
+    styleCommentary: 'Commentary',
+    styleAdvertisement: 'Advertisement',
+    styleDocumentary: 'Documentary',
+    styleSocialMedia: 'Social Media',
+    generating: 'Generating narration script...',
+    noProvider: 'No text AI provider configured',
+    noMarkers: 'No chapter markers found, will generate a single narration segment',
+    generate: 'Generate Script',
+    sendToTts: 'Send to TTS',
+    text: 'Narration Text',
+    speakerNote: 'Speaker Note',
+    timeRange: 'Time Range',
+    selectStyle: 'Select Style',
+    selectProvider: 'Select AI Provider',
+    errorTitle: 'Generation Failed',
+    errorMessage: 'Unable to generate narration script. Please check AI service configuration.',
+    cancel: 'Cancel',
+    regenerate: 'Regenerate',
+    chapterCount: (n: number) => String(n) + ' chapters',
   },
   mediaPrecheck: {
     title: 'Media Precheck',

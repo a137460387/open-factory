@@ -38,6 +38,7 @@ interface ToolbarProps {
   onCreateMediaReport(): void;
   onCreateClipReport(): void;
   onGenerateVideoSummary(): void;
+  onGenerateNarration(): void;
   onCreateSharePackage(): void;
   onConformMedia(): void;
   onImportBookmarks(): void;
@@ -1151,6 +1152,17 @@ export function Toolbar(props: ToolbarProps) {
             >
               <span>{t.autoAudioSync}</span>
               <Activity size={14} />
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-tools-narration-menu-item"
+              onClick={() => {
+                setToolsMenuOpen(false);
+                props.onGenerateNarration();
+              }}
+            >
+              <span>{zhCN.aiNarration.title}</span>
             </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
