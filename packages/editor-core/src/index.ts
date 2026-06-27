@@ -190,3 +190,8 @@ export * from './audio-scrub';
 export * from './sequence-settings';
 export * from './track-height';
 export * from './ai-service';
+export * from './director-mode';
+
+export * from './music-match';
+export * from './highlight-reel';
+export * from './contextual-translation';

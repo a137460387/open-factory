@@ -1101,6 +1101,76 @@ const mocks: TauriMocks = {
         latencyMs: 10
       };
     }
+    if (systemContent.includes('视频导演助手')) {
+      return {
+        content: JSON.stringify({
+          segments: [
+            { mediaId: 'media-director-a', trimStart: 0, duration: 3, trackIndex: 0, order: 0, reason: '产品外观展示' },
+            { mediaId: 'media-director-b', trimStart: 1, duration: 4, trackIndex: 0, order: 1, reason: '使用场景演示' },
+            { mediaId: 'media-director-c', trimStart: 0, duration: 2, trackIndex: 0, order: 2, reason: '结尾场景' }
+          ],
+          markers: [
+            { time: 0, label: '开场' },
+            { time: 7, label: '结尾' }
+          ],
+          musicTrackPlaceholder: false
+        }),
+        inputTokens: 100,
+        outputTokens: 50,
+        latencyMs: 10
+      };
+    }
+    if (systemContent.includes('音乐推荐助手')) {
+      return {
+        content: JSON.stringify({
+          mood: '活力积极',
+          tempo: 'medium',
+          genres: ['流行', '电子'],
+          keywords: ['活力', '积极', '产品展示'],
+          searchSuggestions: ['upbeat corporate background music', 'energetic product showcase']
+        }),
+        inputTokens: 100,
+        outputTokens: 50,
+        latencyMs: 10
+      };
+    }
+    if (systemContent.includes('视频集锦编辑助手')) {
+      return {
+        content: JSON.stringify({
+          selectedIds: ['clip-highlight-a', 'clip-highlight-c'],
+          transitionNotes: ['快速过渡到精彩结尾']
+        }),
+        inputTokens: 100,
+        outputTokens: 50,
+        latencyMs: 10
+      };
+    }
+    if (systemContent.includes('字幕翻译术语提取助手')) {
+      return {
+        content: JSON.stringify({
+          terms: [
+            { original: 'OpenFactory', type: 'product', translation: 'OpenFactory' },
+            { original: '张三', type: 'person', translation: 'Zhang San' },
+            { original: '北京', type: 'place', translation: 'Beijing' }
+          ]
+        }),
+        inputTokens: 100,
+        outputTokens: 50,
+        latencyMs: 10
+      };
+    }
+    if (systemContent.includes('字幕翻译助手')) {
+      return {
+        content: JSON.stringify([
+          { index: 0, translatedText: 'Hello, welcome to OpenFactory' },
+          { index: 1, translatedText: 'Zhang San works in Beijing' },
+          { index: 2, translatedText: 'Thanks for using our product' }
+        ]),
+        inputTokens: 100,
+        outputTokens: 50,
+        latencyMs: 10
+      };
+    }
     return { content: '{}', inputTokens: 100, outputTokens: 50, latencyMs: 10 };
   },
   extractAiFrames: (request) => ({
@@ -3028,6 +3098,129 @@ window.__E2E_ACTIONS__ = {
     await useAISettingsStore.getState().setProviderApiKey('openai', 'test-openai-key');
     useAISettingsStore.getState().toggleProvider('openai', true);
     useAISettingsStore.getState().setServiceMapping('export-suggestion', 'openai');
+    commandManager.clear();
+  },
+  setupDirectorModeFixture: async () => {
+    const project = createProject('Director Mode E2E');
+    const mediaAssets: MediaAsset[] = [
+      {
+        id: 'media-director-a', type: 'video', name: 'product-intro.mp4', path: tinyVideo,
+        duration: 5, width: 1920, height: 1080, size: 8192, mtimeMs: 1_000, hasAudio: true,
+        aiAnalysis: { tags: ['产品', '外观'], scene: '产品展示', mood: '专业', objects: ['产品'], analysisTime: '2025-01-01T00:00:00Z', providerId: 'mock' }
+      },
+      {
+        id: 'media-director-b', type: 'video', name: 'usage-demo.mp4', path: tinyVideo,
+        duration: 8, width: 1920, height: 1080, size: 16384, mtimeMs: 2_000, hasAudio: true,
+        aiAnalysis: { tags: ['演示', '使用'], scene: '使用场景', mood: '轻松', objects: ['人物'], analysisTime: '2025-01-01T00:00:00Z', providerId: 'mock' }
+      },
+      {
+        id: 'media-director-c', type: 'video', name: 'ending-scene.mp4', path: tinyVideo,
+        duration: 4, width: 1920, height: 1080, size: 4096, mtimeMs: 3_000, hasAudio: true,
+        aiAnalysis: { tags: ['结尾'], scene: '结尾', mood: '温馨', objects: ['场景'], analysisTime: '2025-01-01T00:00:00Z', providerId: 'mock' }
+      }
+    ];
+    const timeline = { transitions: [], markers: [], tracks: [createTrack({ id: 'track-video', type: 'video', name: 'Video 1', clips: [] })] };
+    useEditorStore.getState().setProject({
+      ...project, media: mediaAssets, timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(0);
+    await useAISettingsStore.getState().setProviderApiKey('openai', 'test-openai-key');
+    useAISettingsStore.getState().toggleProvider('openai', true);
+    commandManager.clear();
+  },
+  setupMusicMatchFixture: async () => {
+    const project = createProject('Music Match E2E');
+    const mediaAssets: MediaAsset[] = [
+      {
+        id: 'media-mm-video', type: 'video', name: 'product-video.mp4', path: tinyVideo,
+        duration: 10, width: 1920, height: 1080, size: 8192, mtimeMs: 1_000, hasAudio: true,
+        aiAnalysis: { tags: ['产品'], scene: '产品展示', mood: '活力积极', objects: ['产品'], analysisTime: '2025-01-01T00:00:00Z', providerId: 'mock' }
+      },
+      {
+        id: 'media-mm-audio', type: 'audio', name: 'background-music.wav', path: tinyAudio,
+        duration: 15, width: 0, height: 0, size: 2048, mtimeMs: 2_000, hasAudio: true,
+        aiAnalysis: { tags: ['音乐'], scene: '背景音乐', mood: '活力积极', objects: [], analysisTime: '2025-01-01T00:00:00Z', providerId: 'mock' }
+      }
+    ];
+    const timeline = {
+      transitions: [], markers: [],
+      tracks: [
+        createTrack({ id: 'track-video', type: 'video', name: 'Video 1', clips: [makeStoryboardClip('clip-mm-video', 'video', 'product-video.mp4', 'media-mm-video', 0, 10)] }),
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project, media: mediaAssets, timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(0);
+    await useAISettingsStore.getState().setProviderApiKey('openai', 'test-openai-key');
+    useAISettingsStore.getState().toggleProvider('openai', true);
+    commandManager.clear();
+  },
+  setupHighlightReelFixture: async () => {
+    const project = createProject('Highlight Reel E2E');
+    const mediaAssets: MediaAsset[] = [
+      {
+        id: 'media-highlight-a', type: 'video', name: 'highlight-a.mp4', path: tinyVideo,
+        duration: 4, width: 1920, height: 1080, size: 8192, mtimeMs: 1_000, hasAudio: true,
+        aiAnalysis: { tags: ['精彩'], scene: '动作场景', mood: 'exciting 动感', objects: [], analysisTime: '2025-01-01T00:00:00Z', providerId: 'mock' }
+      },
+      {
+        id: 'media-highlight-b', type: 'video', name: 'highlight-b.mp4', path: tinyVideo,
+        duration: 3, width: 1920, height: 1080, size: 4096, mtimeMs: 2_000, hasAudio: true,
+        aiAnalysis: { tags: ['日常'], scene: '日常场景', mood: '平静', objects: [], analysisTime: '2025-01-01T00:00:00Z', providerId: 'mock' }
+      },
+      {
+        id: 'media-highlight-c', type: 'video', name: 'highlight-c.mp4', path: tinyVideo,
+        duration: 5, width: 1920, height: 1080, size: 4096, mtimeMs: 3_000, hasAudio: true,
+        aiAnalysis: { tags: ['高潮'], scene: '高潮片段', mood: 'energetic 激情', objects: [], analysisTime: '2025-01-01T00:00:00Z', providerId: 'mock' }
+      }
+    ];
+    const clipA = makeStoryboardClip('clip-highlight-a', 'video', 'highlight-a.mp4', 'media-highlight-a', 0, 4);
+    const clipB = makeStoryboardClip('clip-highlight-b', 'video', 'highlight-b.mp4', 'media-highlight-b', 4, 3);
+    const clipC = makeStoryboardClip('clip-highlight-c', 'video', 'highlight-c.mp4', 'media-highlight-c', 7, 5);
+    const timeline = {
+      transitions: [], markers: [],
+      tracks: [createTrack({ id: 'track-video', type: 'video', name: 'Video 1', clips: [clipA, clipB, clipC] })]
+    };
+    useEditorStore.getState().setProject({
+      ...project, media: mediaAssets, timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(0);
+    await useAISettingsStore.getState().setProviderApiKey('openai', 'test-openai-key');
+    useAISettingsStore.getState().toggleProvider('openai', true);
+    commandManager.clear();
+  },
+  setupContextualTranslationFixture: async () => {
+    const project = createProject('Contextual Translation E2E');
+    const sub1 = makeMockSubtitleClip('ctx-sub-1', 'track-ctx-subtitle', '你好，欢迎使用OpenFactory', 0);
+    const sub2 = makeMockSubtitleClip('ctx-sub-2', 'track-ctx-subtitle', '张三在北京办公', 2);
+    const sub3 = makeMockSubtitleClip('ctx-sub-3', 'track-ctx-subtitle', '感谢使用我们的产品', 4);
+    const timeline = {
+      transitions: [], markers: [],
+      tracks: [
+        createTrack({ id: 'track-ctx-video', type: 'video', name: 'Video 1', clips: [] }),
+        createTrack({ id: 'track-ctx-subtitle', type: 'subtitle', name: 'Subtitles', language: 'zh', clips: [sub1, sub2, sub3] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project, media: [], timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    await useAISettingsStore.getState().setProviderApiKey('openai', 'test-openai-key');
+    useAISettingsStore.getState().toggleProvider('openai', true);
+    useEditorStore.getState().setSelectedClipIds(['ctx-sub-1', 'ctx-sub-2', 'ctx-sub-3']);
+    useEditorStore.getState().setPlayheadTime(0);
     commandManager.clear();
   },
 };

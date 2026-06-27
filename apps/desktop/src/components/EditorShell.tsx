@@ -374,6 +374,10 @@ const Inspector = lazy(() => import('./Inspector/Inspector').then((module) => ({
 const PreviewCanvas = lazy(() => import('./PreviewCanvas/PreviewCanvas').then((module) => ({ default: module.PreviewCanvas })));
 const SmartRoughCutPanel = lazy(() => import('./SmartRoughCut/SmartRoughCutPanel').then((module) => ({ default: module.SmartRoughCutPanel })));
 const AIRoughCutPanel = lazy(() => import('./AIRoughCut/AIRoughCutPanel').then((module) => ({ default: module.AIRoughCutPanel })));
+const DirectorModePanel = lazy(() => import('./DirectorMode/DirectorModePanel').then((module) => ({ default: module.DirectorModePanel })));
+const MusicMatchPanel = lazy(() => import('./MusicMatch/MusicMatchPanel').then((module) => ({ default: module.MusicMatchPanel })));
+const HighlightReelPanel = lazy(() => import('./HighlightReel/HighlightReelPanel').then((module) => ({ default: module.HighlightReelPanel })));
+const ContextualTranslationPanel = lazy(() => import('./ContextualTranslation/ContextualTranslationPanel').then((module) => ({ default: module.ContextualTranslationPanel })));
 const HistoryPanel = lazy(() => import('./History/HistoryPanel').then((module) => ({ default: module.HistoryPanel })));
 const ProjectDocumentationPanel = lazy(() => import('./ProjectDocumentationPanel').then((module) => ({ default: module.ProjectDocumentationPanel })));
 const ExportDialog = lazy(() => import('../export/ExportDialog').then((module) => ({ default: module.ExportDialog })));
@@ -523,6 +527,10 @@ export function EditorShell() {
   const [sceneDetectionRequestId, setSceneDetectionRequestId] = useState(0);
   const [smartRoughCutOpen, setSmartRoughCutOpen] = useState(false);
   const [aiRoughCutOpen, setAiRoughCutOpen] = useState(false);
+  const [directorModeOpen, setDirectorModeOpen] = useState(false);
+  const [musicMatchOpen, setMusicMatchOpen] = useState(false);
+  const [highlightReelOpen, setHighlightReelOpen] = useState(false);
+  const [contextualTranslationOpen, setContextualTranslationOpen] = useState(false);
   const [historyPanelOpen, setHistoryPanelOpen] = useState(false);
   const [projectDocumentationOpen, setProjectDocumentationOpen] = useState(false);
   const [storyboardOpen, setStoryboardOpen] = useState(false);
@@ -4272,7 +4280,7 @@ export function EditorShell() {
       disposed = true;
     };
   }, [mediaHealthAutoShowEnabled]);
-  const rightPrimaryPanelLabel = projectDocumentationOpen ? zhCN.panels.projectDocumentation : historyPanelOpen ? zhCN.panels.history : aiRoughCutOpen ? zhCN.aiRoughCut.title : smartRoughCutOpen ? zhCN.panels.smartRoughCut : zhCN.panels.inspector;
+  const rightPrimaryPanelLabel = projectDocumentationOpen ? zhCN.panels.projectDocumentation : historyPanelOpen ? zhCN.panels.history : aiRoughCutOpen ? zhCN.aiRoughCut.title : directorModeOpen ? zhCN.directorMode.title : musicMatchOpen ? zhCN.musicMatch.title : highlightReelOpen ? zhCN.highlightReel.title : contextualTranslationOpen ? zhCN.contextualTranslation.title : smartRoughCutOpen ? zhCN.panels.smartRoughCut : zhCN.panels.inspector;
 
   return (
     <ErrorBoundary name={zhCN.panels.editor}>
@@ -4348,7 +4356,51 @@ export function EditorShell() {
             setHistoryPanelOpen(false);
             setProjectDocumentationOpen(false);
             setSmartRoughCutOpen(false);
+            setDirectorModeOpen(false);
+            setMusicMatchOpen(false);
+            setHighlightReelOpen(false);
+            setContextualTranslationOpen(false);
             setAiRoughCutOpen((open) => !open);
+          }}
+          onToggleDirectorMode={() => {
+            setHistoryPanelOpen(false);
+            setProjectDocumentationOpen(false);
+            setSmartRoughCutOpen(false);
+            setAiRoughCutOpen(false);
+            setMusicMatchOpen(false);
+            setHighlightReelOpen(false);
+            setContextualTranslationOpen(false);
+            setDirectorModeOpen((open) => !open);
+          }}
+          onToggleMusicMatch={() => {
+            setHistoryPanelOpen(false);
+            setProjectDocumentationOpen(false);
+            setSmartRoughCutOpen(false);
+            setAiRoughCutOpen(false);
+            setDirectorModeOpen(false);
+            setHighlightReelOpen(false);
+            setContextualTranslationOpen(false);
+            setMusicMatchOpen((open) => !open);
+          }}
+          onToggleHighlightReel={() => {
+            setHistoryPanelOpen(false);
+            setProjectDocumentationOpen(false);
+            setSmartRoughCutOpen(false);
+            setAiRoughCutOpen(false);
+            setDirectorModeOpen(false);
+            setMusicMatchOpen(false);
+            setContextualTranslationOpen(false);
+            setHighlightReelOpen((open) => !open);
+          }}
+          onToggleContextualTranslation={() => {
+            setHistoryPanelOpen(false);
+            setProjectDocumentationOpen(false);
+            setSmartRoughCutOpen(false);
+            setAiRoughCutOpen(false);
+            setDirectorModeOpen(false);
+            setMusicMatchOpen(false);
+            setHighlightReelOpen(false);
+            setContextualTranslationOpen((open) => !open);
           }}
           onSeparateAudio={() => void separateSelectedAudio()}
           onCancelAudioSeparation={() => void cancelAudioSeparation()}
@@ -4384,6 +4436,10 @@ export function EditorShell() {
           recordingElapsedSeconds={recordingElapsedSeconds}
           smartRoughCutOpen={smartRoughCutOpen}
           aiRoughCutOpen={aiRoughCutOpen}
+          directorModeOpen={directorModeOpen}
+          musicMatchOpen={musicMatchOpen}
+          highlightReelOpen={highlightReelOpen}
+          contextualTranslationOpen={contextualTranslationOpen}
           historyPanelOpen={historyPanelOpen}
           projectDocumentationOpen={projectDocumentationOpen}
           storyboardOpen={storyboardOpen}
@@ -4594,6 +4650,14 @@ export function EditorShell() {
                       <HistoryPanel />
                     ) : aiRoughCutOpen ? (
                       <AIRoughCutPanel media={project.media} onClose={() => setAiRoughCutOpen(false)} />
+                    ) : directorModeOpen ? (
+                      <DirectorModePanel media={project.media} favoriteIds={favoriteIds} onClose={() => setDirectorModeOpen(false)} />
+                    ) : musicMatchOpen ? (
+                      <MusicMatchPanel media={project.media} sequenceDuration={project.sequences.find((s) => s.id === project.activeSequenceId)?.settings?.duration ?? 0} onClose={() => setMusicMatchOpen(false)} />
+                    ) : highlightReelOpen ? (
+                      <HighlightReelPanel media={project.media} clips={project.timeline.tracks.flatMap((t) => t.clips)} selectedClipIds={selectedClipIds} onClose={() => setHighlightReelOpen(false)} />
+                    ) : contextualTranslationOpen ? (
+                      <ContextualTranslationPanel subtitleClips={project.timeline.tracks.filter((t) => t.type === 'subtitle').flatMap((t) => t.clips).filter((c) => c.type === 'subtitle')} onClose={() => setContextualTranslationOpen(false)} />
                     ) : smartRoughCutOpen ? (
                       <SmartRoughCutPanel selectedClip={selectedClip} media={project.media} />
                     ) : layoutSettings.panels.inspector ? (

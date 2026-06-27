@@ -96,6 +96,10 @@ interface ToolbarProps {
   onSplitSelected(): void;
   onToggleSmartRoughCut(): void;
   onToggleAIRoughCut(): void;
+  onToggleDirectorMode(): void;
+  onToggleMusicMatch(): void;
+ onToggleHighlightReel(): void;
+  onToggleContextualTranslation(): void;
   onSeparateAudio(): void;
   onCancelAudioSeparation(): void;
   onRunSpeakerDiarization(): void;
@@ -130,6 +134,10 @@ interface ToolbarProps {
   recordingElapsedSeconds: number;
   smartRoughCutOpen: boolean;
   aiRoughCutOpen: boolean;
+  directorModeOpen: boolean;
+  musicMatchOpen: boolean;
+  highlightReelOpen: boolean;
+  contextualTranslationOpen: boolean;
   historyPanelOpen: boolean;
   projectDocumentationOpen: boolean;
   storyboardOpen: boolean;
@@ -1497,7 +1505,11 @@ export function Toolbar(props: ToolbarProps) {
       <ToolButton title={t.storyboard} onClick={props.onToggleStoryboard} icon={<LayoutGrid size={17} />} testId="storyboard-toggle-button" active={props.storyboardOpen} />
       <ToolButton title={t.splitSelectedClip} onClick={props.onSplitSelected} icon={<Scissors size={17} />} testId="toolbar-split-button" />
       <ToolButton title={t.smartRoughCut} onClick={props.onToggleSmartRoughCut} icon={<WandSparkles size={17} />} testId="toolbar-smart-rough-cut-button" active={props.smartRoughCutOpen} />
-      <ToolButton title={zhCN.aiRoughCut.title} onClick={props.onToggleAIRoughCut} icon={<WandSparkles size={17} />} testId="toolbar-ai-rough-cut-button" active={props.aiRoughCutOpen} />
+  <ToolButton title={zhCN.aiRoughCut.title} onClick={props.onToggleAIRoughCut} icon={<WandSparkles size={17} />} testId="toolbar-ai-rough-cut-button" active={props.aiRoughCutOpen} />
+          <ToolButton title={zhCN.directorMode.title} onClick={props.onToggleDirectorMode} icon={<WandSparkles size={17} />} testId="toolbar-director-mode-button" active={props.directorModeOpen} />
+          <ToolButton title={zhCN.musicMatch.title} onClick={props.onToggleMusicMatch} icon={<WandSparkles size={17} />} testId="toolbar-music-match-button" active={props.musicMatchOpen} />
+          <ToolButton title={zhCN.highlightReel.title} onClick={props.onToggleHighlightReel} icon={<WandSparkles size={17} />} testId="toolbar-highlight-reel-button" active={props.highlightReelOpen} />
+          <ToolButton title={zhCN.contextualTranslation.title} onClick={props.onToggleContextualTranslation} icon={<WandSparkles size={17} />} testId="toolbar-contextual-translation-button" active={props.contextualTranslationOpen} />
       <ToolButton title={t.createMulticamSequence} disabled={!props.canCreateMulticamSequence} onClick={props.onCreateMulticamSequence} icon={<PanelsTopLeft size={17} />} testId="toolbar-create-multicam-button" />
       <div className="relative">
         <button
