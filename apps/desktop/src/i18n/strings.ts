@@ -1447,7 +1447,8 @@ const zh = {
         voiceover: '配音',
         'color-grading-suggestion': '调色建议',
         'rough-cut': 'AI粗剪',
-        'export-suggestion': '导出参数建议'
+        'export-suggestion': '导出参数建议',
+        'chat-editor': 'AI对话助手'
       },
       usageTitle: '用量统计',
       usageCount: (n: number) => `共 ${n} 次调用`
@@ -5486,6 +5487,25 @@ const zh = {
     warn: '警告',
     fail: '不符合'
   },
+  aiChatEditor: {
+    title: 'AI助手',
+    placeholder: '输入剪辑指令，如"把第一个片段速度改为0.5倍"',
+    send: '发送',
+    clear: '清空对话',
+    noProvider: '未配置AI服务商，请在设置中配置',
+    selectProvider: '选择AI服务商',
+    generating: 'AI正在思考...',
+    executed: (desc: string) => `已执行：${desc}，可按Ctrl+Z撤销`,
+    undoHint: '可按Ctrl+Z撤销',
+    queryAnswer: 'AI回答',
+    actionRejected: '该操作被安全策略拒绝',
+    parseError: 'AI返回格式错误，请重试',
+    networkError: 'AI服务连接失败，请检查网络和API配置',
+    emptyInput: '请输入指令',
+    userMessage: '用户',
+    assistantMessage: 'AI助手',
+    noTimeline: '请先添加素材到时间线',
+  },
   mediaFavorites: {
     addToFavorites: '添加到收藏',
     removeFromFavorites: '取消收藏',
@@ -6899,7 +6919,8 @@ const enOverrides = {
         'vision-analysis': 'Vision Analysis',
         voiceover: 'Voiceover',
         'color-grading-suggestion': 'Color Grading',
-        'rough-cut': 'AI Rough Cut'
+        'rough-cut': 'AI Rough Cut',
+        'chat-editor': 'AI Chat Editor'
       },
       usageTitle: 'Usage Statistics',
       usageCount: (n: number) => `${n} calls total`

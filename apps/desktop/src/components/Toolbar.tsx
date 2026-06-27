@@ -100,6 +100,7 @@ interface ToolbarProps {
   onToggleMusicMatch(): void;
  onToggleHighlightReel(): void;
   onToggleContextualTranslation(): void;
+  onToggleAIChatEditor(): void;
   onSeparateAudio(): void;
   onCancelAudioSeparation(): void;
   onRunSpeakerDiarization(): void;
@@ -138,6 +139,7 @@ interface ToolbarProps {
   musicMatchOpen: boolean;
   highlightReelOpen: boolean;
   contextualTranslationOpen: boolean;
+  aiChatEditorOpen: boolean;
   historyPanelOpen: boolean;
   projectDocumentationOpen: boolean;
   storyboardOpen: boolean;
@@ -1510,6 +1512,7 @@ export function Toolbar(props: ToolbarProps) {
           <ToolButton title={zhCN.musicMatch.title} onClick={props.onToggleMusicMatch} icon={<WandSparkles size={17} />} testId="toolbar-music-match-button" active={props.musicMatchOpen} />
           <ToolButton title={zhCN.highlightReel.title} onClick={props.onToggleHighlightReel} icon={<WandSparkles size={17} />} testId="toolbar-highlight-reel-button" active={props.highlightReelOpen} />
           <ToolButton title={zhCN.contextualTranslation.title} onClick={props.onToggleContextualTranslation} icon={<WandSparkles size={17} />} testId="toolbar-contextual-translation-button" active={props.contextualTranslationOpen} />
+          <ToolButton title={zhCN.aiChatEditor.title} onClick={props.onToggleAIChatEditor} icon={<WandSparkles size={17} />} testId="toolbar-ai-chat-editor-button" active={props.aiChatEditorOpen} />
       <ToolButton title={t.createMulticamSequence} disabled={!props.canCreateMulticamSequence} onClick={props.onCreateMulticamSequence} icon={<PanelsTopLeft size={17} />} testId="toolbar-create-multicam-button" />
       <div className="relative">
         <button
