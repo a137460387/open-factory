@@ -1454,7 +1454,34 @@ const zh = {
         'narration-script': '旁白脚本'
       },
       usageTitle: '用量统计',
-      usageCount: (n: number) => `共 ${n} 次调用`
+usageCount: (n: number) => `共 ${n} 次调用`,      usageStatsTitle: 'AI 使用统计',
+      monthlyCost: '本月费用',
+      monthlyCalls: '本月调用',
+      totalCalls: '总调用次数',
+      providerDistribution: '服务商分布',
+      featureFrequency: '功能使用频率',
+      dailyTrend: '最近30天趋势',
+      recommendations: '智能推荐',
+      costAlertTitle: '费用预警',
+      costAlertThreshold: '预警阈值（元）',
+      costAlertExceeded: (threshold: number) => `本月AI费用已超过 ${threshold} 元`,
+      noUsageData: '暂无使用数据',
+      costUnit: '元',
+      callUnit: '次',
+      tokensUnit: 'tokens',
+      inputTokens: '输入 Tokens',
+      outputTokens: '输出 Tokens',
+      recommendContextualTranslation: '试过字幕润色，AI上下文翻译质量更好',
+      recommendDirectorMode: '试过粗剪助手，AI导演模式可一键生成完整时间线',
+      recommendVideoSummary: '试过视觉分析，AI视频摘要可生成完整报告',
+      recommendNarrationScript: '试过章节标题，AI旁白脚本可直接配音',
+      recommendRoughCut: '试过AI对话助手，AI粗剪可自动分析最佳片段',
+      recommendHighlightReel: '试过AI视频摘要，AI精彩集锦可自动挑选亮点',
+      recommendNarrationFromVoiceover: '试过配音，AI旁白脚本可按章节自动生成',
+      recommendVisionAnalysis: '试过调色建议，视觉分析可深入理解画面内容',
+      recommendSummaryFromExport: '试过导出建议，AI视频摘要可全面分析项目',
+      recommendVoiceover: '试过旁白脚本，ElevenLabs配音可让旁白更生动'
+
     }
   },
   updater: {
@@ -6968,7 +6995,34 @@ const enOverrides = {
         'narration-script': 'Narration Script'
       },
       usageTitle: 'Usage Statistics',
-      usageCount: (n: number) => `${n} calls total`
+      usageCount: (n: number) => `${n} calls total`,      usageStatsTitle: 'AI Usage Statistics',
+      monthlyCost: 'Monthly Cost',
+      monthlyCalls: 'Monthly Calls',
+      totalCalls: 'Total Calls',
+      providerDistribution: 'Provider Distribution',
+      featureFrequency: 'Feature Usage Frequency',
+      dailyTrend: 'Last 30 Days Trend',
+      recommendations: 'Recommendations',
+      costAlertTitle: 'Cost Alert',
+      costAlertThreshold: 'Alert Threshold (CNY)',
+      costAlertExceeded: (threshold: number) => `Monthly AI cost exceeds ¥${threshold}`,
+      noUsageData: 'No usage data yet',
+      costUnit: 'CNY',
+      callUnit: 'calls',
+      tokensUnit: 'tokens',
+      inputTokens: 'Input Tokens',
+      outputTokens: 'Output Tokens',
+      recommendContextualTranslation: "You've used subtitle polish — contextual translation offers better quality",
+      recommendDirectorMode: "You've used rough cut — director mode can generate a full timeline",
+      recommendVideoSummary: "You've used vision analysis — video summary generates a complete report",
+      recommendNarrationScript: "You've used chapter titles — narration script can be sent to TTS",
+      recommendRoughCut: "You've used chat editor — rough cut can auto-analyze best clips",
+      recommendHighlightReel: "You've used video summary — highlight reel auto-selects best moments",
+      recommendNarrationFromVoiceover: "You've used voiceover — narration script generates per-chapter",
+      recommendVisionAnalysis: "You've used color grading — vision analysis deeply understands visuals",
+      recommendSummaryFromExport: "You've used export suggestions — video summary fully analyzes the project",
+      recommendVoiceover: "You've used narration script — ElevenLabs voiceover makes it more vivid"
+
     }
   },
   updater: {

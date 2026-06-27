@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight, Plug, TestTube, Trash2 } from 'lucide-react'
 import { zhCN } from '../i18n/strings';
 import { useAISettingsStore, type AIServiceType } from '../store/aiSettingsStore';
 import type { AIProvider } from '@open-factory/editor-core';
+import { AIUsageStatsPanel } from '../components/AIUsageStats/AIUsageStatsPanel';
 
 const SERVICE_TYPES: AIServiceType[] = ['subtitle-polish', 'chapter-title', 'vision-analysis', 'voiceover', 'color-grading-suggestion', 'rough-cut', 'export-suggestion'];
 
@@ -232,14 +233,7 @@ export function AIServicesSettingsPanel() {
         ))}
       </div>
 
-      {store.usageRecords.length > 0 ? (
-        <div className="rounded-md border border-line bg-panel p-3">
-          <h4 className="text-xs font-semibold text-ink">{t.usageTitle}</h4>
-          <p className="mt-1 text-xs text-slate-500">
-            {t.usageCount(store.usageRecords.length)}
-          </p>
-        </div>
-      ) : null}
+      <AIUsageStatsPanel />
     </div>
   );
 }

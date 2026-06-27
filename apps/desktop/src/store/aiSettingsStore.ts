@@ -25,6 +25,7 @@ interface StoredAISettings {
   ttsVoiceId?: string;
   ttsSpeed?: number;
   ttsStability?: number;
+  costAlertThreshold?: number;
 }
 
 interface AISettingsState {
@@ -38,6 +39,9 @@ interface AISettingsState {
   ttsVoiceId: string;
   ttsSpeed: number;
   ttsStability: number;
+  costAlertThreshold: number;
+
+  setCostAlertThreshold: (threshold: number) => void;
 
   setTtsVoiceId: (voiceId: string) => void;
   setTtsSpeed: (speed: number) => void;
@@ -90,7 +94,8 @@ function writeStoredSettings(settings: StoredAISettings): void {
     usageRecords: settings.usageRecords.slice(-100),
     ttsVoiceId: settings.ttsVoiceId,
     ttsSpeed: settings.ttsSpeed,
-    ttsStability: settings.ttsStability
+    ttsStability: settings.ttsStability,
+    costAlertThreshold: settings.costAlertThreshold
   };
   localStorage.setItem(AI_SETTINGS_STORAGE_KEY, JSON.stringify(toStore));
 }
@@ -161,6 +166,7 @@ export const useAISettingsStore = create<AISettingsState>((set, get) => ({
   ttsVoiceId: readStoredSettings().ttsVoiceId ?? '',
   ttsSpeed: readStoredSettings().ttsSpeed ?? 1.0,
   ttsStability: readStoredSettings().ttsStability ?? 0.5,
+  costAlertThreshold: readStoredSettings().costAlertThreshold ?? 0,
 
   setTtsVoiceId(voiceId) {
     set({ ttsVoiceId: voiceId });
@@ -172,6 +178,11 @@ export const useAISettingsStore = create<AISettingsState>((set, get) => ({
   },
   setTtsStability(stability) {
     set({ ttsStability: stability });
+    writeStoredSettings(get());
+  },
+
+  setCostAlertThreshold(threshold) {
+    set({ costAlertThreshold: threshold });
     writeStoredSettings(get());
   },
 

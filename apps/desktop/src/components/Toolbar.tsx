@@ -1,5 +1,6 @@
-import { Activity, Archive, Camera, Captions, ChevronDown, CircleHelp, ClipboardList, Download, FileDown, FilePlus2, FileText, FolderOpen, GitCompareArrows, Grid2X2, History, ImageDown, LayoutGrid, LockKeyhole, MessageSquareText, Mic2, Monitor, PanelsTopLeft, Pause, PictureInPicture2, Play, Redo2, RotateCcw, Save, Scissors, Settings, Square, Trash2, Undo2, Palette, Wand2, WandSparkles, XCircle } from 'lucide-react';
+import { Activity, Archive, Camera, Captions, ChevronDown, CircleHelp, ClipboardList, Download, FileDown, FilePlus2, FileText, FolderOpen, GitCompareArrows, Grid2X2, History, ImageDown, LayoutGrid, LockKeyhole, MessageSquareText, Mic2, Monitor, PanelsTopLeft, Pause, PictureInPicture2, Play, Redo2, RotateCcw, Save, Scissors, Settings, Square, Trash2, Undo2, Palette, Wand2, WandSparkles, XCircle, AlertTriangle } from 'lucide-react';
 import {
+  checkCostAlert,
   BUILT_IN_SPLIT_LAYOUTS,
   SPLIT_LAYOUT_PRESET_IDS,
   timelineHasExportableVideo,
@@ -22,6 +23,7 @@ import { useMediaJobStore } from '../media/media-job-store';
 import { PREVIEW_QUALITY_MODES, type PreviewQualityMode } from '../lib/preview/preview-performance';
 import { useEditorStore } from '../store/editorStore';
 import { useWhisperSettingsStore } from '../store/whisperSettingsStore';
+import { useAISettingsStore } from '../store/aiSettingsStore';
 import type { WorkspaceLayoutDefinition, WorkspaceLayoutId } from '../layout/layoutSettings';
 import type { TimelineHeatmapViewSettings } from '../settings/appSettings';
 
@@ -188,6 +190,7 @@ const TIMELINE_GRID_UNITS: TimelineGridUnit[] = ['frame', '5-frames', '10-frames
 
 export function Toolbar(props: ToolbarProps) {
   const t = zhCN.toolbar;
+  const aiSettings = useAISettingsStore();
   const edit = zhCN.editMenu;
   const [fileMenuOpen, setFileMenuOpen] = useState(false);
   const [importMenuOpen, setImportMenuOpen] = useState(false);
@@ -1470,7 +1473,10 @@ export function Toolbar(props: ToolbarProps) {
           />
         ) : null}
       </div>
-      <ToolButton title={t.settings} onClick={props.onOpenSettings} icon={<Settings size={17} />} testId="toolbar-settings-button" />
+      {checkCostAlert(aiSettings.usageRecords, aiSettings.costAlertThreshold) ? (
+        <ToolButton title={zhCN.settings.aiServices.costAlertTitle} onClick={props.onOpenSettings} icon={<AlertTriangle size={17} className="text-amber-500" />} testId="toolbar-cost-alert" />
+      ) : null}
+            <ToolButton title={t.settings} onClick={props.onOpenSettings} icon={<Settings size={17} />} testId="toolbar-settings-button" />
       <ToolButton title={t.clearMediaCache} onClick={props.onClearCache} icon={<Trash2 size={17} />} testId="settings-clear-cache-button" />
       <label className="ml-1 inline-flex h-9 items-center gap-1 rounded-md border border-line bg-panel px-2 text-[11px] text-slate-600" title={t.autosaveInterval}>
         <span>{t.autosave}</span>
@@ -1653,6 +1659,7 @@ function SplitLayoutPicker({
   onSaveCustom(): Promise<void>;
 }) {
   const t = zhCN.toolbar;
+  const aiSettings = useAISettingsStore();
   const layouts = [...SPLIT_LAYOUT_PRESET_IDS.map((id) => BUILT_IN_SPLIT_LAYOUTS[id]), ...customLayouts];
   return (
     <div className="absolute left-0 top-10 z-30 w-80 rounded-md border border-line bg-white p-3 text-xs shadow-soft" data-testid="split-layout-picker">
@@ -1711,6 +1718,7 @@ function WorkspaceLayoutPicker({
   onSave(): void;
 }) {
   const t = zhCN.toolbar;
+  const aiSettings = useAISettingsStore();
   const builtInLayouts = layouts.filter((layout) => layout.builtIn);
   const customLayouts = layouts.filter((layout) => !layout.builtIn);
   return (
@@ -1778,6 +1786,7 @@ function WorkspaceLayoutOption({
   onApply(layoutId: WorkspaceLayoutId): void;
 }) {
   const t = zhCN.toolbar;
+  const aiSettings = useAISettingsStore();
   const name = layout.builtIn ? t.workspaceLayouts[layout.id as keyof typeof t.workspaceLayouts] ?? layout.name : layout.name;
   return (
     <button

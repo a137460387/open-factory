@@ -18,6 +18,8 @@ export interface AIUsageRecord {
   inputTokens: number;
   outputTokens: number;
   estimatedCostCny: number;
+  /** Which AI feature generated this record (optional for backward compat) */
+  service?: string;
 }
 
 export interface AITestConnectionResult {
