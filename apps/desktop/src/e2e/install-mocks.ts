@@ -1064,6 +1064,41 @@ const mocks: TauriMocks = {
         latencyMs: 10
       };
     }
+    if (systemContent.includes('视频编辑助手')) {
+      return {
+        content: JSON.stringify([{ action: 'setSpeed', clipId: 'clip-chat-video', value: 0.5 }]),
+        inputTokens: 100,
+        outputTokens: 50,
+        latencyMs: 10
+      };
+    }
+    if (systemContent.includes('截帧图片')) {
+      return {
+        content: JSON.stringify({
+          title: 'AI生成的视频摘要',
+          summary: '这是一个测试视频项目，包含精彩的开场和结尾场景。',
+          scenes: [{ time: 0, description: '开场场景' }, { time: 3, description: '结尾场景' }],
+          emotionArc: '从平静到激动',
+          keyMoments: [{ time: 0, description: '视频开场' }],
+          tags: ['测试', 'E2E']
+        }),
+        inputTokens: 100,
+        outputTokens: 50,
+        latencyMs: 10
+      };
+    }
+    if (systemContent.includes('旁白撰稿人')) {
+      return {
+        content: JSON.stringify([
+          { markerTime: 0, duration: 3, text: '开场旁白文稿内容。', speakerNote: '语速平稳' },
+          { markerTime: 3, duration: 3, text: '第二段旁白内容。', speakerNote: '略微加快' },
+          { markerTime: 6, duration: 2, text: '结尾旁白总结。', speakerNote: '语气沉稳' }
+        ]),
+        inputTokens: 100,
+        outputTokens: 50,
+        latencyMs: 10
+      };
+    }
     if (systemContent.includes('视频内容分析助手')) {
       return {
         content: JSON.stringify({
@@ -2987,6 +3022,203 @@ window.__E2E_ACTIONS__ = {
     useAISettingsStore.getState().setServiceMapping('chapter-title', 'mimo');
     useEditorStore.getState().setSelectedClipIds(['ai-ch-sub-1']);
     useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupAIChatEditorFixture: async () => {
+    const project = createProject('AI Chat Editor E2E');
+    const videoClip = {
+      id: 'clip-chat-video',
+      type: 'video' as const,
+      name: 'chat-video.mp4',
+      mediaId: 'media-chat-video',
+      trackId: 'track-chat-video',
+      start: 0,
+      duration: 6,
+      trimStart: 0,
+      trimEnd: 0,
+      speed: DEFAULT_CLIP_SPEED,
+      colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+      transform: { ...DEFAULT_TRANSFORM },
+      volume: 1
+    };
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({ id: 'track-chat-video', type: 'video', name: 'Video 1', clips: [videoClip] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [{
+        id: 'media-chat-video',
+        type: 'video' as const,
+        name: 'chat-video.mp4',
+        path: tinyVideo,
+        duration: 6,
+        width: 1280,
+        height: 720,
+        size: 4096,
+        mtimeMs: 1_000,
+        hasAudio: true,
+        audioChannels: 2,
+        audioSampleRate: 48_000,
+        audioCodec: 'aac'
+      }],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    await useAISettingsStore.getState().setProviderApiKey('openai', 'test-openai-key');
+    useAISettingsStore.getState().toggleProvider('openai', true);
+    useEditorStore.getState().setSelectedClipIds(['clip-chat-video']);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupAIVideoSummaryFixture: async () => {
+    const project = createProject('AI Video Summary E2E');
+    const asset: MediaAsset = {
+      id: 'media-summary-video',
+      type: 'video',
+      name: 'summary-video.mp4',
+      path: tinyVideo,
+      duration: 6,
+      width: 1280,
+      height: 720,
+      size: 4096,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 2,
+      audioSampleRate: 48_000,
+      audioCodec: 'aac'
+    };
+    const videoClip = {
+      id: 'clip-summary-video',
+      type: 'video' as const,
+      name: 'summary-video.mp4',
+      mediaId: 'media-summary-video',
+      trackId: 'track-summary-video',
+      start: 0,
+      duration: 6,
+      trimStart: 0,
+      trimEnd: 0,
+      speed: DEFAULT_CLIP_SPEED,
+      colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+      transform: { ...DEFAULT_TRANSFORM },
+      volume: 1
+    };
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({ id: 'track-summary-video', type: 'video', name: 'Video 1', clips: [videoClip] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    await useAISettingsStore.getState().setProviderApiKey('openai', 'test-openai-key');
+    useAISettingsStore.getState().updateProvider('openai', { defaultModel: 'gpt-4o' });
+    useAISettingsStore.getState().toggleProvider('openai', true);
+    useAISettingsStore.getState().setServiceMapping('video-summary', 'openai');
+    commandManager.clear();
+  },
+  setupAINarrationScriptFixture: async () => {
+    const project = createProject('AI Narration Script E2E');
+    const videoClip = {
+      id: 'clip-narration-video',
+      type: 'video' as const,
+      name: 'narration-video.mp4',
+      mediaId: 'media-narration-video',
+      trackId: 'track-narration-video',
+      start: 0,
+      duration: 8,
+      trimStart: 0,
+      trimEnd: 0,
+      speed: DEFAULT_CLIP_SPEED,
+      colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+      transform: { ...DEFAULT_TRANSFORM },
+      volume: 1
+    };
+    const timeline = {
+      transitions: [],
+      markers: [
+        { time: 0, label: '开场', id: 'marker-narr-0', color: '#3b82f6' },
+        { time: 3, label: '中段', id: 'marker-narr-1', color: '#22c55e' },
+        { time: 6, label: '结尾', id: 'marker-narr-2', color: '#f59e0b' },
+      ],
+      tracks: [
+        createTrack({ id: 'track-narration-video', type: 'video', name: 'Video 1', clips: [videoClip] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [{
+        id: 'media-narration-video',
+        type: 'video' as const,
+        name: 'narration-video.mp4',
+        path: tinyVideo,
+        duration: 8,
+        width: 1280,
+        height: 720,
+        size: 4096,
+        mtimeMs: 1_000,
+        hasAudio: true,
+        audioChannels: 2,
+        audioSampleRate: 48_000,
+        audioCodec: 'aac'
+      }],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    await useAISettingsStore.getState().setProviderApiKey('openai', 'test-openai-key');
+    useAISettingsStore.getState().toggleProvider('openai', true);
+    useAISettingsStore.getState().setServiceMapping('narration-script', 'openai');
+    commandManager.clear();
+  },
+  setupAIUsageStatsFixture: async () => {
+    const project = createProject('AI Usage Stats E2E');
+    const timeline = { transitions: [], markers: [], tracks: [] };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    await useAISettingsStore.getState().setProviderApiKey('openai', 'test-openai-key');
+    useAISettingsStore.getState().toggleProvider('openai', true);
+    // Add 3 usage records for different AI features
+    const now = Date.now();
+    useAISettingsStore.getState().addUsageRecord({
+      providerId: 'openai',
+      timestamp: now,
+      inputTokens: 100,
+      outputTokens: 50,
+      estimatedCostCny: 0.05,
+      service: 'subtitle-polish'
+    });
+    useAISettingsStore.getState().addUsageRecord({
+      providerId: 'openai',
+      timestamp: now - 60000,
+      inputTokens: 200,
+      outputTokens: 100,
+      estimatedCostCny: 0.10,
+      service: 'chapter-title'
+    });
+    useAISettingsStore.getState().addUsageRecord({
+      providerId: 'openai',
+      timestamp: now - 120000,
+      inputTokens: 150,
+      outputTokens: 80,
+      estimatedCostCny: 0.08,
+      service: 'narration-script'
+    });
     commandManager.clear();
   },
   setupAIContentTagsFixture: async () => {
