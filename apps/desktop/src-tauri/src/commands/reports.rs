@@ -42,6 +42,41 @@ fn normalize_path(path: &Path) -> String {
     path.to_string_lossy().replace('\\', "/")
 }
 
+#[tauri::command]
+pub fn write_video_summary(app: AppHandle, path: String, html: String) -> Result<(), String> {
+    let safe_path = validate_path_for_write(&app, Path::new(&path))?;
+    write_video_summary_file(&safe_path, &html)
+}
+
+pub fn write_video_summary_file(path: &Path, html: &str) -> Result<(), String> {
+    validate_video_summary_path(path)?;
+    if let Some(parent) = path.parent() {
+        if !parent.as_os_str().is_empty() {
+            fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+        }
+    }
+    fs::write(path, html).map_err(|error| {
+        format!(
+            "Unable to write video summary {}: {}",
+            normalize_path(path),
+            error
+        )
+    })
+}
+
+fn validate_video_summary_path(path: &Path) -> Result<(), String> {
+    let extension = path
+        .extension()
+        .and_then(|value| value.to_str())
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+    if extension == "html" || extension == "htm" {
+        Ok(())
+    } else {
+        Err("video_summary_must_be_html".to_string())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -78,5 +113,30 @@ mod tests {
             .expect("system time should be valid")
             .as_nanos();
         std::env::temp_dir().join(format!("open-factory-{name}-{nanos}"))
+    }
+
+    #[test]
+    fn writes_video_summary_html_file() {
+        let root = unique_temp_dir("video-summary-write");
+        let path = root.join("nested").join("summary.html");
+
+        write_video_summary_file(&path, "<!doctype html><h1>Summary</h1>").expect("summary should write");
+
+        let contents = fs::read_to_string(&path).expect("summary should exist");
+        assert!(contents.contains("<h1>Summary</h1>"));
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn rejects_non_html_video_summary_paths() {
+        let root = unique_temp_dir("video-summary-reject");
+        let path = root.join("summary.txt");
+
+        let error =
+            write_video_summary_file(&path, "<h1>Summary</h1>").expect_err("txt should be rejected");
+
+        assert_eq!(error, "video_summary_must_be_html");
+        assert!(!path.exists());
+        let _ = fs::remove_dir_all(root);
     }
 }

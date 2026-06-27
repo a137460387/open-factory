@@ -680,6 +680,7 @@ export type TauriMocks = Partial<{
   decryptProjectFile(path: string, password: string): Promise<string> | string;
   isEncryptedProjectFile(path: string): Promise<boolean> | boolean;
   writeClipReport(path: string, html: string): Promise<void> | void;
+  writeVideoSummary(path: string, html: string): Promise<void> | void;
   removeFile(path: string): Promise<void> | void;
   trashFile(path: string): Promise<void> | void;
   copyFile(sourcePath: string, destinationPath: string): Promise<void> | void;
@@ -2032,4 +2033,12 @@ export async function callTtsApi(request: CallTtsApiRequest, apiKey?: string): P
     return mock(request, apiKey);
   }
   return invoke<CallTtsApiResult>('call_tts_api', { request, apiKey });
+}
+export async function writeVideoSummary(path: string, html: string): Promise<void> {
+  const mock = getTauriMocks()?.writeVideoSummary;
+  if (mock) {
+    await mock(path, html);
+    return;
+  }
+  await invoke('write_video_summary', { path, html });
 }

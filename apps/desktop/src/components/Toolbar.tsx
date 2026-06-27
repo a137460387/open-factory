@@ -37,6 +37,7 @@ interface ToolbarProps {
   onOpenReleaseWorkflow(): void;
   onCreateMediaReport(): void;
   onCreateClipReport(): void;
+  onGenerateVideoSummary(): void;
   onCreateSharePackage(): void;
   onConformMedia(): void;
   onImportBookmarks(): void;
@@ -361,6 +362,17 @@ export function Toolbar(props: ToolbarProps) {
               }}
             >
               <span>{t.clipReport}</span>
+            </button>
+            <button
+              className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="toolbar-file-video-summary-menu-item"
+              onClick={() => {
+                setFileMenuOpen(false);
+                props.onGenerateVideoSummary();
+              }}
+            >
+              <span>{t.videoSummary}</span>
             </button>
             <button
               className="flex w-full items-center justify-between px-3 py-2 text-left text-sm text-slate-700 hover:bg-panel"

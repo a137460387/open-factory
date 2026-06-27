@@ -379,6 +379,7 @@ const MusicMatchPanel = lazy(() => import('./MusicMatch/MusicMatchPanel').then((
 const HighlightReelPanel = lazy(() => import('./HighlightReel/HighlightReelPanel').then((module) => ({ default: module.HighlightReelPanel })));
 const ContextualTranslationPanel = lazy(() => import('./ContextualTranslation/ContextualTranslationPanel').then((module) => ({ default: module.ContextualTranslationPanel })));
 const AIChatEditorPanel = lazy(() => import('./AIChatEditor/AIChatEditorPanel').then((module) => ({ default: module.AIChatEditorPanel })));
+const AIVideoSummaryPanel = lazy(() => import('./AIVideoSummary/AIVideoSummaryPanel').then((module) => ({ default: module.AIVideoSummaryPanel })));
 const HistoryPanel = lazy(() => import('./History/HistoryPanel').then((module) => ({ default: module.HistoryPanel })));
 const ProjectDocumentationPanel = lazy(() => import('./ProjectDocumentationPanel').then((module) => ({ default: module.ProjectDocumentationPanel })));
 const ExportDialog = lazy(() => import('../export/ExportDialog').then((module) => ({ default: module.ExportDialog })));
@@ -533,6 +534,7 @@ export function EditorShell() {
   const [highlightReelOpen, setHighlightReelOpen] = useState(false);
   const [contextualTranslationOpen, setContextualTranslationOpen] = useState(false);
   const [aiChatEditorOpen, setAiChatEditorOpen] = useState(false);
+  const [videoSummaryOpen, setVideoSummaryOpen] = useState(false);
   const [historyPanelOpen, setHistoryPanelOpen] = useState(false);
   const [projectDocumentationOpen, setProjectDocumentationOpen] = useState(false);
   const [storyboardOpen, setStoryboardOpen] = useState(false);
@@ -963,6 +965,7 @@ export function EditorShell() {
       setSmartRoughCutOpen(false);
       setAiRoughCutOpen(false);
       setAiChatEditorOpen(false);
+      setVideoSummaryOpen(false);
       void saveLayoutSettings(next).catch((error) => {
         console.warn('Unable to save workspace layout', error);
       });
@@ -1141,6 +1144,7 @@ export function EditorShell() {
         setSmartRoughCutOpen(false);
         setAiRoughCutOpen(false);
         setAiChatEditorOpen(false);
+        setVideoSummaryOpen(false);
         persistLayoutPatch({
           rightPanelCollapsed: false,
           panels: { ...layoutSettings.panels, inspector: true, history: false }
@@ -4284,7 +4288,7 @@ export function EditorShell() {
       disposed = true;
     };
   }, [mediaHealthAutoShowEnabled]);
-  const rightPrimaryPanelLabel = projectDocumentationOpen ? zhCN.panels.projectDocumentation : historyPanelOpen ? zhCN.panels.history : aiRoughCutOpen ? zhCN.aiRoughCut.title : directorModeOpen ? zhCN.directorMode.title : musicMatchOpen ? zhCN.musicMatch.title : highlightReelOpen ? zhCN.highlightReel.title : contextualTranslationOpen ? zhCN.contextualTranslation.title : aiChatEditorOpen ? zhCN.aiChatEditor.title : smartRoughCutOpen ? zhCN.panels.smartRoughCut : zhCN.panels.inspector;
+  const rightPrimaryPanelLabel = projectDocumentationOpen ? zhCN.panels.projectDocumentation : historyPanelOpen ? zhCN.panels.history : aiRoughCutOpen ? zhCN.aiRoughCut.title : directorModeOpen ? zhCN.directorMode.title : musicMatchOpen ? zhCN.musicMatch.title : highlightReelOpen ? zhCN.highlightReel.title : contextualTranslationOpen ? zhCN.contextualTranslation.title : aiChatEditorOpen ? zhCN.aiChatEditor.title : videoSummaryOpen ? zhCN.aiVideoSummary.title : smartRoughCutOpen ? zhCN.panels.smartRoughCut : zhCN.panels.inspector;
 
   return (
     <ErrorBoundary name={zhCN.panels.editor}>
@@ -4301,6 +4305,7 @@ export function EditorShell() {
           onOpenReleaseWorkflow={() => setReleaseWorkflowOpen(true)}
           onCreateMediaReport={() => void createMediaReport()}
           onCreateClipReport={() => void createClipReport()}
+          onGenerateVideoSummary={() => setVideoSummaryOpen(true)}
           onCreateSharePackage={() => void createCurrentSharePackage()}
           onConformMedia={() => void conformMedia()}
           onImportBookmarks={() => void importBookmarks()}
@@ -4365,6 +4370,7 @@ export function EditorShell() {
             setHighlightReelOpen(false);
             setContextualTranslationOpen(false);
             setAiChatEditorOpen(false);
+            setVideoSummaryOpen(false);
             setAiRoughCutOpen((open) => !open);
           }}
           onToggleDirectorMode={() => {
@@ -4376,6 +4382,7 @@ export function EditorShell() {
             setHighlightReelOpen(false);
             setContextualTranslationOpen(false);
             setAiChatEditorOpen(false);
+            setVideoSummaryOpen(false);
             setDirectorModeOpen((open) => !open);
           }}
           onToggleMusicMatch={() => {
@@ -4387,6 +4394,7 @@ export function EditorShell() {
             setHighlightReelOpen(false);
             setContextualTranslationOpen(false);
             setAiChatEditorOpen(false);
+            setVideoSummaryOpen(false);
             setMusicMatchOpen((open) => !open);
           }}
           onToggleHighlightReel={() => {
@@ -4398,6 +4406,7 @@ export function EditorShell() {
             setMusicMatchOpen(false);
             setContextualTranslationOpen(false);
             setAiChatEditorOpen(false);
+            setVideoSummaryOpen(false);
             setHighlightReelOpen((open) => !open);
           }}
           onToggleContextualTranslation={() => {
@@ -4409,6 +4418,7 @@ export function EditorShell() {
             setMusicMatchOpen(false);
             setHighlightReelOpen(false);
             setAiChatEditorOpen(false);
+            setVideoSummaryOpen(false);
             setContextualTranslationOpen((open) => !open);
           }}
           onToggleAIChatEditor={() => {
@@ -4420,6 +4430,7 @@ export function EditorShell() {
             setMusicMatchOpen(false);
             setHighlightReelOpen(false);
             setContextualTranslationOpen(false);
+            setVideoSummaryOpen(false);
             setAiChatEditorOpen((open) => !open);
           }}
           onSeparateAudio={() => void separateSelectedAudio()}
@@ -4681,6 +4692,8 @@ export function EditorShell() {
                       <ContextualTranslationPanel subtitleClips={project.timeline.tracks.filter((t) => t.type === 'subtitle').flatMap((t) => t.clips).filter((c) => c.type === 'subtitle')} onClose={() => setContextualTranslationOpen(false)} />
                     ) : aiChatEditorOpen ? (
                       <AIChatEditorPanel project={project} onClose={() => setAiChatEditorOpen(false)} />
+                    ) : videoSummaryOpen ? (
+                      <AIVideoSummaryPanel project={project} onClose={() => setVideoSummaryOpen(false)} />
                     ) : smartRoughCutOpen ? (
                       <SmartRoughCutPanel selectedClip={selectedClip} media={project.media} />
                     ) : layoutSettings.panels.inspector ? (

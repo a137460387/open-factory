@@ -195,4 +195,5 @@ export * from './director-mode';
 export * from './music-match';
 export * from './highlight-reel';
 export * from './contextual-translation';
+export * from './ai-video-summary';
 export * from './ai-chat-editor';

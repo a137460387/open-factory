@@ -447,6 +447,7 @@ const zh = {
     releaseVersion: '发布版本',
     mediaReport: '素材使用分析',
     clipReport: '导出剪辑报告',
+    videoSummary: '生成AI视频摘要',
     conformMedia: '套底（Conform）',
     createSharePackage: '创建分享包',
     batchTranscode: '批量转码',
@@ -1448,7 +1449,8 @@ const zh = {
         'color-grading-suggestion': '调色建议',
         'rough-cut': 'AI粗剪',
         'export-suggestion': '导出参数建议',
-        'chat-editor': 'AI对话助手'
+        'chat-editor': 'AI对话助手',
+        'video-summary': 'AI视频摘要'
       },
       usageTitle: '用量统计',
       usageCount: (n: number) => `共 ${n} 次调用`
@@ -4846,6 +4848,23 @@ const zh = {
     failedMessage: '无法生成剪辑报告。',
     defaultExportPreset: '未指定'
   },
+  aiVideoSummary: {
+    title: 'AI视频摘要',
+    analyzing: '正在分析视频内容...',
+    extractingFrames: '正在提取关键帧...',
+    generating: '正在生成摘要报告...',
+    noProvider: '未配置支持Vision的AI服务商',
+    selectProvider: '选择AI服务商',
+    startGenerate: '开始生成',
+    saveSuccess: '摘要报告已保存',
+    saveFailed: '摘要报告保存失败',
+    saveFailedMessage: '无法保存摘要报告。',
+    errorTitle: '生成失败',
+    errorMessage: '无法生成视频摘要，请检查AI服务配置。',
+    cancel: '取消',
+    done: '完成',
+    exportHtml: '导出HTML报告'
+  },
   mediaPrecheck: {
     title: '素材预检',
     running: '正在检查素材',
@@ -5971,6 +5990,7 @@ const enOverrides = {
     releaseVersion: 'Release Version',
     mediaReport: 'Media Usage Analysis',
     clipReport: 'Export Clip Report',
+    videoSummary: 'Generate AI Video Summary',
     conformMedia: 'Conform Media',
     createSharePackage: 'Create Share Package',
     batchTranscode: 'Batch Transcode',
@@ -6920,7 +6940,8 @@ const enOverrides = {
         voiceover: 'Voiceover',
         'color-grading-suggestion': 'Color Grading',
         'rough-cut': 'AI Rough Cut',
-        'chat-editor': 'AI Chat Editor'
+        'chat-editor': 'AI Chat Editor',
+        'video-summary': 'AI Video Summary'
       },
       usageTitle: 'Usage Statistics',
       usageCount: (n: number) => `${n} calls total`
@@ -9645,6 +9666,23 @@ const enOverrides = {
     failed: 'Clip report failed',
     failedMessage: 'Unable to generate the clip report.',
     defaultExportPreset: 'Not specified'
+  },
+  aiVideoSummary: {
+    title: 'AI Video Summary',
+    analyzing: 'Analyzing video content...',
+    extractingFrames: 'Extracting key frames...',
+    generating: 'Generating summary report...',
+    noProvider: 'No Vision-capable AI provider configured',
+    selectProvider: 'Select AI Provider',
+    startGenerate: 'Start Generation',
+    saveSuccess: 'Summary report saved',
+    saveFailed: 'Failed to save summary report',
+    saveFailedMessage: 'Unable to save the summary report.',
+    errorTitle: 'Generation Failed',
+    errorMessage: 'Unable to generate video summary. Please check AI service configuration.',
+    cancel: 'Cancel',
+    done: 'Done',
+    exportHtml: 'Export HTML Report'
   },
   mediaPrecheck: {
     title: 'Media Precheck',
