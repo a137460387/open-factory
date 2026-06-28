@@ -1238,6 +1238,20 @@ const mocks: TauriMocks = {
         latencyMs: 10
       };
     }
+    if (systemContent.includes('字幕样式推荐助手')) {
+      return {
+        content: JSON.stringify({
+          recommended: [
+            { templateId: 'variety-bold', reason: '视频风格活泼适合综艺综字，色彩醒目', confidence: 0.9 },
+            { templateId: 'social-bold', reason: '适合短视频风格，字大醒目', confidence: 0.75 },
+            { templateId: 'cinema-white', reason: '简约大气适合正式内容', confidence: 0.6 }
+          ]
+        }),
+        inputTokens: 100,
+        outputTokens: 50,
+        latencyMs: 10
+      };
+    }
     return { content: '{}', inputTokens: 100, outputTokens: 50, latencyMs: 10 };
   },
   extractAiFrames: (request) => ({
@@ -3369,6 +3383,38 @@ window.__E2E_ACTIONS__ = {
     useAISettingsStore.getState().updateProvider('mimo', { defaultModel: 'gpt-4o' });
     useAISettingsStore.getState().toggleProvider('mimo', true);
     useEditorStore.getState().setSelectedClipIds(['scene-match-clip-a']);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupAISubtitleStyleFixture: async () => {
+    const project = createProject('AI Subtitle Style E2E');
+    const assetVideo: MediaAsset = {
+      id: 'media-sub-style-video', type: 'video', name: 'style-video.mp4',
+      path: tinyVideo, duration: 30, width: 1920, height: 1080, size: 4096, mtimeMs: 1_000, hasAudio: false,
+      aiAnalysis: { tags: ['outdoor', 'sunny'], scene: 'outdoor sunny scene', mood: 'cheerful', objects: ['sky'], analysisTime: new Date().toISOString(), providerId: 'mimo' }
+    };
+    const sub1 = makeMockSubtitleClip('sub-style-1', 'track-sub-style-subtitle', '你好，世界', 0);
+    const sub2 = makeMockSubtitleClip('sub-style-2', 'track-sub-style-subtitle', '今天天气真好', 3);
+    const sub3 = makeMockSubtitleClip('sub-style-3', 'track-sub-style-subtitle', '我们去散步吧', 6);
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({ id: 'track-sub-style-video', type: 'video', name: 'Video 1', clips: [] }),
+        createTrack({ id: 'track-sub-style-subtitle', type: 'subtitle', name: 'Style Subtitles', language: 'zh', clips: [sub1, sub2, sub3] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [assetVideo],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    await useAISettingsStore.getState().setProviderApiKey('mimo', 'test-mimo-key');
+    useAISettingsStore.getState().updateProvider('mimo', { defaultModel: 'gpt-4o' });
+    useAISettingsStore.getState().toggleProvider('mimo', true);
+    useEditorStore.getState().setSelectedClipIds(['sub-style-1']);
     useEditorStore.getState().setPlayheadTime(0);
     commandManager.clear();
   },

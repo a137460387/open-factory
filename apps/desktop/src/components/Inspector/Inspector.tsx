@@ -213,6 +213,7 @@ import { SubtitleAIPolishPanel } from './SubtitleAIPolishPanel';
 import { ChapterTitleAIPanel } from './ChapterTitleAIPanel';
 import { AIColorGradingPanel } from './AIColorGradingPanel';
 import { AISceneMatchPanel } from './AISceneMatchPanel';
+import { AISubtitleStylePanel } from './AISubtitleStylePanel';
 import { markLocalAiModelUsed } from '../../settings/appSettings';
 import { useEditorStore, type SelectedKeyframeRef } from '../../store/editorStore';
 import { usePrivacyDetectionSettingsStore } from '../../store/privacyDetectionSettingsStore';
@@ -3025,6 +3026,12 @@ function ClipInspector({
                   onSave={saveCurrentSubtitleStyleTemplate}
                   onDelete={deleteSubtitleStyleTemplate}
                   onAddToSharedLibrary={(template) => void addSubtitleStyleTemplateToSharedLibrary(template)}
+                />
+                <AISubtitleStylePanel
+                  clip={clip}
+                  media={media}
+                  subtitleTrack={subtitleTrack}
+                  selectedClipLocked={selectedClipLocked}
                 />
                 <ColorField label={zhCN.inspector.fields.outlineColor} value={clip.style.outlineColor} onCommit={(outlineColor) => commit({ style: { outlineColor } })} testId="subtitle-outline-color-input" />
                 <NumberField label={zhCN.inspector.fields.outlineWidth} value={clip.style.outlineWidth} min={0} max={12} step={1} onCommit={(outlineWidth) => commit({ style: { outlineWidth } })} testId="subtitle-outline-width-input" />
