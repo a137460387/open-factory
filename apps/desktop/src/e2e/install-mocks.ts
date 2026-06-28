@@ -1206,6 +1206,19 @@ const mocks: TauriMocks = {
         latencyMs: 10
       };
     }
+    if (systemContent.includes('语义搜索助手')) {
+      return {
+        content: JSON.stringify({
+          results: [
+            { mediaId: 'media-ai-search-a', score: 0.92, reason: '室外阳光明媚的场景，与搜索描述高度匹配' },
+            { mediaId: 'media-ai-search-b', score: 0.75, reason: '包含户外元素，部分匹配搜索关键词' }
+          ]
+        }),
+        inputTokens: 100,
+        outputTokens: 50,
+        latencyMs: 10
+      };
+    }
     return { content: '{}', inputTokens: 100, outputTokens: 50, latencyMs: 10 };
   },
   extractAiFrames: (request) => ({
@@ -3248,6 +3261,37 @@ window.__E2E_ACTIONS__ = {
     useAISettingsStore.getState().updateProvider('mimo', { defaultModel: 'gpt-4o' });
     useAISettingsStore.getState().toggleProvider('mimo', true);
     useAISettingsStore.getState().setServiceMapping('vision-analysis', 'mimo');
+    useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupAISemanticSearchFixture: async () => {
+    const project = createProject('AI Semantic Search E2E');
+    const assetA: MediaAsset = {
+      id: 'media-ai-search-a', type: 'video', name: 'outdoor-sunny.mp4',
+      path: tinyVideo, duration: 30, width: 1280, height: 720, size: 4096, mtimeMs: 1_000, hasAudio: false,
+      aiAnalysis: { tags: ['户外', '阳光'], scene: '阳光明媚的户外场景', mood: '愉快', objects: ['天空', '草地'], analysisTime: new Date().toISOString(), providerId: 'mimo' }
+    };
+    const assetB: MediaAsset = {
+      id: 'media-ai-search-b', type: 'video', name: 'park-walk.mp4',
+      path: tinyVideo, duration: 20, width: 1280, height: 720, size: 3072, mtimeMs: 1_000, hasAudio: false,
+      aiAnalysis: { tags: ['户外', '散步'], scene: '公园散步场景', mood: '放松', objects: ['树木', '小路'], analysisTime: new Date().toISOString(), providerId: 'mimo' }
+    };
+    const assetC: MediaAsset = {
+      id: 'media-ai-search-unanalyzed', type: 'video', name: 'unanalyzed-clip.mp4',
+      path: tinyVideo, duration: 10, width: 640, height: 360, size: 2048, mtimeMs: 1_000, hasAudio: false
+    };
+    const timeline = { transitions: [], markers: [], tracks: [] };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [assetA, assetB, assetC],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    await useAISettingsStore.getState().setProviderApiKey('mimo', 'test-mimo-key');
+    useAISettingsStore.getState().updateProvider('mimo', { defaultModel: 'gpt-4o' });
+    useAISettingsStore.getState().toggleProvider('mimo', true);
     useEditorStore.getState().setSelectedClipIds([]);
     useEditorStore.getState().setPlayheadTime(0);
     commandManager.clear();

@@ -44,6 +44,7 @@ import { useProxySettingsStore } from '../../store/proxySettingsStore';
 import { loadLocalEffectPresets } from '../../effects/effect-preset-library';
 import { getMediaKeyboardNavigationIndex, inferMediaKeyboardColumnCount } from './media-keyboard';
 import { MediaAIAnalysisDialog } from './MediaAIAnalysisDialog';
+import { AISemanticSearchPanel } from './AISemanticSearchPanel';
 
 
 interface MediaCardExtras {
@@ -192,6 +193,7 @@ export function MediaBin({
   const [editingSubclipId, setEditingSubclipId] = useState<string>();
   const [expandedSubclipAssetIds, setExpandedSubclipAssetIds] = useState<Set<string>>(() => new Set());
   const [aiAnalysisAsset, setAiAnalysisAsset] = useState<MediaAsset>();
+  const [aiSearchMode, setAiSearchMode] = useState(false);
   const handleOpenSubclipDialog = (assetId: string, editingId?: string) => {
     setSubclipDialogAssetId(assetId);
     setEditingSubclipId(editingId);
@@ -506,13 +508,26 @@ export function MediaBin({
             <span className="sr-only">{t.searchPlaceholder}</span>
             <Search className="pointer-events-none absolute left-2 top-2.5 text-slate-400" size={15} />
             <input
-              className="w-full rounded-md border border-line bg-white py-2 pl-8 pr-2 text-sm text-ink"
+              className={clsx('w-full rounded-md border bg-white py-2 pl-8 pr-14 text-sm text-ink', aiSearchMode ? 'border-brand' : 'border-line')}
               value={search}
-              placeholder={t.searchPlaceholder}
+              placeholder={aiSearchMode ? t.aiSemanticSearch.searchPlaceholder : t.searchPlaceholder}
               data-testid="media-search-input"
               onChange={(event) => setSearch(event.target.value)}
             />
+            <button
+              type="button"
+              className={clsx('absolute right-1 top-1 rounded-md px-1.5 py-1 text-xs font-semibold', aiSearchMode ? 'bg-brand text-white' : 'bg-white text-slate-500 hover:bg-panel')}
+              onClick={() => setAiSearchMode(!aiSearchMode)}
+              data-testid="ai-search-toggle"
+              title={t.aiSemanticSearch.toggleLabel}
+            >
+              <Sparkles size={14} />
+            </button>
           </label>
+          {aiSearchMode && (
+            <AISemanticSearchPanel media={media} onSelectMedia={(id) => { setAiSearchMode(false); setSearch(''); }} />
+          )}
+          {!aiSearchMode && (<>
           <div className="grid grid-cols-3 gap-1" data-testid="media-filter-bar">
             {(['all', 'selected', 'five-star'] as QuickMediaFilter[]).map((item) => (
               <button
@@ -581,6 +596,7 @@ export function MediaBin({
           {filter !== 'titles' && filter !== 'shared' && filter !== 'effects' ? (
             <MediaLibraryViewToolbar settings={mediaLibraryView} onChange={updateMediaLibraryView} />
           ) : null}
+          </>)}
         </div>
         {filter !== 'titles' && filter !== 'shared' && filter !== 'effects' && jobs.length > 0 ? (
           <div className="mb-3 rounded-md border border-line bg-panel p-2 text-xs" data-testid="media-job-queue">
