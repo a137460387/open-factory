@@ -1253,6 +1253,20 @@ const mocks: TauriMocks = {
         latencyMs: 10
       };
     }
+    if (systemContent.includes('质量评估助手')) {
+      return {
+        content: JSON.stringify({
+          overallScore: 85,
+          issues: [
+            { type: '曝光', severity: 'medium', description: '画面整体偏暗，亮部细节不足', suggestedFix: '建议调整亮度+0.3' },
+            { type: '噪点', severity: 'low', description: '暗部有轻微噪点', suggestedFix: '建议开启去噪' }
+          ]
+        }),
+        inputTokens: 100,
+        outputTokens: 50,
+        latencyMs: 10
+      };
+    }
     return { content: '{}', inputTokens: 100, outputTokens: 50, latencyMs: 10 };
   },
   extractAiFrames: (request) => ({
@@ -3497,6 +3511,27 @@ window.__E2E_ACTIONS__ = {
     await useAISettingsStore.getState().setProviderApiKey('openai', 'test-openai-key');
     useAISettingsStore.getState().toggleProvider('openai', true);
     useAISettingsStore.getState().setServiceMapping('export-suggestion', 'openai');
+    commandManager.clear();
+  },
+  setupAIQualityAssessmentFixture: async () => {
+    const project = createProject('AI Quality Assessment E2E');
+    const asset: MediaAsset = {
+      id: 'media-qa-a', type: 'video', name: 'quality-test.mp4',
+      path: tinyVideo, duration: 30, width: 1280, height: 720, size: 4096, mtimeMs: 1_000, hasAudio: false
+    };
+    const timeline = { transitions: [], markers: [], tracks: [createTrack({ id: 'track-qa-video', type: 'video', name: 'Video 1', clips: [] })] };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    await useAISettingsStore.getState().setProviderApiKey('mimo', 'test-mimo-key');
+    useAISettingsStore.getState().updateProvider('mimo', { defaultModel: 'gpt-4o' });
+    useAISettingsStore.getState().toggleProvider('mimo', true);
+    useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(0);
     commandManager.clear();
   },
   setupDirectorModeFixture: async () => {
