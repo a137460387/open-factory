@@ -193,6 +193,7 @@ export * from './ai-service';
 export * from './ai-semantic-search';
 export * from './ai-scene-match';
 export * from './ai-subtitle-style';
+export * from './ai-quality-assessment';
 export * from './director-mode';
 
 export * from './music-match';

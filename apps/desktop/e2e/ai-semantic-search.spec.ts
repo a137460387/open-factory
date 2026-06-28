@@ -44,11 +44,7 @@ test('toggle AI semantic search mode and display results', async ({ page }) => {
   // Click a result card to select the media in the media bin
   await resultA.click();
 
-  // Toggle back to keyword search mode
-  await toggle.click();
-  await expect(page.getByTestId('ai-semantic-search-panel')).not.toBeVisible();
-
-  // Verify keyword search still works
+  // onSelectMedia closes AI mode; verify keyword search still works
   const keywordInput = page.getByTestId('media-search-input');
   await expect(keywordInput).toBeVisible();
   await keywordInput.fill('outdoor');

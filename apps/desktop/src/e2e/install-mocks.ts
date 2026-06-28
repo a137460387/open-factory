@@ -1022,7 +1022,8 @@ const mocks: TauriMocks = {
     listeners.set(event, set);
     return () => set.delete(handler as (payload: unknown) => void);
   },
-  callAiApi: (request) => {
+  callAiApi: async (request) => {
+    await new Promise(r => setTimeout(r, 100));
     const systemContent = typeof request.messages[0]?.content === 'string' ? request.messages[0].content : '';
     if (systemContent.includes('字幕编辑助手')) {
       return {

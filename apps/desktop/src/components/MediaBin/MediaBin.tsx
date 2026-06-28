@@ -25,7 +25,13 @@ import {
   type MediaRenameRules,
   type SmartAlbumId,
   type TitleTemplateId,
-  type EffectPreset
+  type EffectPreset,
+  mapScoreToGrade,
+  buildQualityAssessmentSystemPrompt,
+  buildQualityAssessmentUserPrompt,
+  parseQualityAssessmentResponse,
+  hasAvailableTextProvider,
+  type QualityAssessmentResult
 } from '@open-factory/editor-core';
 import { createSubclip, parseFavoritesSearchFilter, type Subclip, type TimelineLabelColor } from '@open-factory/editor-core';
 import { AlertCircle, BadgeCheck, ChevronDown, ChevronRight, FileAudio2, FileImage, FileText, FileVideo2, Flag, Folder, FolderPlus, GalleryHorizontal, Gauge, Grid2X2, Heart, ImageDown, Import, Info, Link2, List, Loader2, Merge, Plus, RotateCcw, Scissors, Search, SlidersHorizontal, Sparkles, Star, Tag, Trash2, X } from 'lucide-react';
@@ -35,12 +41,13 @@ import { clsx } from 'clsx';
 import { zhCN } from '../../i18n/strings';
 import { isTauriRuntime } from '../../lib/tauri';
 import { TITLE_TEMPLATE_DRAG_MIME } from '../../lib/titleTemplates';
-import { analyzeMedia, convertLocalFileSrc, listenDragDrop, type MediaAnalysis } from '../../lib/tauri-bridge';
+import { analyzeMedia, callAiApi, convertLocalFileSrc, listenDragDrop, readAiApiKey, type MediaAnalysis } from '../../lib/tauri-bridge';
 import { useMediaJobStore } from '../../media/media-job-store';
 import { DEFAULT_MEDIA_LIBRARY_VIEW_SETTINGS, normalizeMediaLibraryViewSettings, sortMediaLibraryAssets, type MediaLibraryGridSize, type MediaLibrarySortKey, type MediaLibraryViewMode, type MediaLibraryViewSettings } from '../../media/mediaLibraryView';
 import { readViewSettings, saveViewSettings } from '../../settings/appSettings';
 import type { SharedLibraryResource } from '../../shared-library/sharedLibrary';
 import { useProxySettingsStore } from '../../store/proxySettingsStore';
+import { useAISettingsStore } from '../../store/aiSettingsStore';
 import { loadLocalEffectPresets } from '../../effects/effect-preset-library';
 import { getMediaKeyboardNavigationIndex, inferMediaKeyboardColumnCount } from './media-keyboard';
 import { MediaAIAnalysisDialog } from './MediaAIAnalysisDialog';
@@ -54,6 +61,11 @@ interface MediaCardExtras {
   pinnedIds: Set<string>;
   onPinToSession(assetId: string): void;
   onAnalyzeAI(assetId: string): void;
+  qualityResults: Map<string, QualityAssessmentResult>;
+  qualityErrors: Map<string, string>;
+  qualityLoading: Set<string>;
+ onQualityAssess(assetId: string): void;
+  onBatchQualityScan(): void;
 }
 const MediaCardExtrasCtx = createContext<MediaCardExtras | null>(null);
 
@@ -193,6 +205,9 @@ export function MediaBin({
   const [editingSubclipId, setEditingSubclipId] = useState<string>();
   const [expandedSubclipAssetIds, setExpandedSubclipAssetIds] = useState<Set<string>>(() => new Set());
   const [aiAnalysisAsset, setAiAnalysisAsset] = useState<MediaAsset>();
+  const [qualityResults, setQualityResults] = useState<Map<string, QualityAssessmentResult>>(new Map());
+  const [qualityErrors, setQualityErrors] = useState<Map<string, string>>(new Map());
+  const [qualityLoading, setQualityLoading] = useState<Set<string>>(new Set());
   const [aiSearchMode, setAiSearchMode] = useState(false);
   const handleOpenSubclipDialog = (assetId: string, editingId?: string) => {
     setSubclipDialogAssetId(assetId);
@@ -402,7 +417,45 @@ export function MediaBin({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  const _extrasValue: MediaCardExtras = {
+  const handleQualityAssess = async (assetId: string) => {
+    const asset = media.find((a) => a.id === assetId);
+    if (!asset) return;
+    const providers = useAISettingsStore.getState().providers;
+    if (!hasAvailableTextProvider(providers)) return;
+    setQualityLoading((prev) => new Set(prev).add(assetId));
+    setQualityErrors((prev) => { const next = new Map(prev); next.delete(assetId); return next; });
+    try {
+      const selectedProvider = providers.find((p) => p.enabled && hasAvailableTextProvider([p])) ?? providers[0];
+      const apiKey = await readAiApiKey(selectedProvider.id);
+      const response = await callAiApi({
+        providerId: selectedProvider.id,
+        baseUrl: selectedProvider.baseUrl,
+        model: selectedProvider.defaultModel,
+        messages: [
+          { role: 'system', content: buildQualityAssessmentSystemPrompt() },
+          { role: 'user', content: buildQualityAssessmentUserPrompt({ name: asset.name, type: asset.type, width: asset.width, height: asset.height, duration: asset.duration, hasAudio: asset.hasAudio }) }
+        ],
+        temperature: 0.3,
+        timeoutSecs: 30
+      }, apiKey);
+      const result = parseQualityAssessmentResponse(JSON.parse(response.content));
+      setQualityResults((prev) => new Map(prev).set(assetId, result));
+    } catch {
+      setQualityErrors((prev) => new Map(prev).set(assetId, zhCN.mediaBin.aiQualityAssessment.failedMessage));
+    } finally {
+      setQualityLoading((prev) => { const next = new Set(prev); next.delete(assetId); return next; });
+   }
+ };
+
+  const handleBatchQualityScan = () => {
+    for (const asset of media) {
+      if (!qualityResults.has(asset.id) && !qualityLoading.has(asset.id)) {
+        handleQualityAssess(asset.id);
+      }
+    }
+  };
+
+ const _extrasValue: MediaCardExtras = {
     favoriteIds: new Set(favoriteIds),
     onToggleFavorite,
     onRevealInTimeline,
@@ -412,7 +465,12 @@ export function MediaBin({
       const found = media.find((a) => a.id === assetId);
       if (found) setAiAnalysisAsset(found);
     },
-  };
+    qualityResults,
+    qualityErrors,
+    qualityLoading,
+   onQualityAssess: handleQualityAssess,
+    onBatchQualityScan: handleBatchQualityScan,
+ };
 
   return (
     <SubclipCtx.Provider value={{ subclips, onAddSubclip, onUpdateSubclip, onDeleteSubclip, onAddSubclipToTimeline, onOpenSubclipDialog: handleOpenSubclipDialog, expandedSubclipAssetIds, onToggleSubclipExpanded: handleToggleSubclipExpanded }}>
@@ -2130,7 +2188,9 @@ function MediaCard({
           </button>
         ) : null}
         {labelColor ? <span className={clsx('absolute right-2 h-4 w-4 rounded-full border border-white shadow', versionCount > 1 ? 'top-8' : 'top-2')} style={{ backgroundColor: labelColorToHex(labelColor) }} data-testid={`media-label-${asset.id}`} /> : null}
-        {extras?.favoriteIds.has(asset.id) ? <span className="absolute right-2 top-2 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-white/90 shadow" data-testid={`media-favorite-badge-${asset.id}`}><Heart size={12} className="text-rose-500" fill="currentColor" /></span> : null}
+       {extras?.favoriteIds.has(asset.id) ? <span className="absolute right-2 top-2 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-white/90 shadow" data-testid={`media-favorite-badge-${asset.id}`}><Heart size={12} className="text-rose-500" fill="currentColor" /></span> : null}
+        {extras?.qualityLoading.has(asset.id) ? <span className="absolute left-2 top-2 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-white/90 shadow" data-testid={`quality-badge-loading-${asset.id}`}><Loader2 size={12} className="animate-spin text-slate-500" /></span> : null}
+        {extras?.qualityResults.has(asset.id) ? (() => { const g = mapScoreToGrade(extras.qualityResults.get(asset.id)!.overallScore); return <span className={clsx('absolute left-2 top-2 z-10 flex items-center justify-center rounded-full bg-white/90 px-1.5 py-0.5 text-[10px] font-bold shadow', g === 'green' ? 'text-emerald-600' : g === 'yellow' ? 'text-amber-500' : 'text-rose-600')} title={zhCN.mediaBin.aiQualityAssessment.scoreBadge + ': ' + extras.qualityResults.get(asset.id)!.overallScore} data-testid={`quality-badge-${asset.id}`}>{extras.qualityResults.get(asset.id)!.overallScore}</span>; })() : null}
         {flag ? (
           <span
             className={clsx(
@@ -2170,14 +2230,28 @@ function MediaCard({
                 }}
               >
                 <List size={13} />
-                {zhCN.mediaBin.batchRename}
-              </button>
-            </>
+               {zhCN.mediaBin.batchRename}
+             </button>
+           </>
+         ) : null}
+          {extras ? (
+            <button
+              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
+              type="button"
+              data-testid="batch-quality-scan"
+              onClick={() => {
+                extras.onBatchQualityScan();
+                setLabelMenuOpen(false);
+              }}
+            >
+              <Gauge size={13} />
+              {zhCN.mediaBin.aiQualityAssessment.batchScan}
+            </button>
           ) : null}
-          <button
-            className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
-            type="button"
-            data-testid={`media-info-${asset.id}`}
+         <button
+           className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
+           type="button"
+           data-testid={`media-info-${asset.id}`}
             onClick={() => {
               onShowInfo();
               setLabelMenuOpen(false);
@@ -2330,6 +2404,21 @@ function MediaCard({
             >
               <Sparkles size={13} />
               {zhCN.inspector.aiContentAnalysis.title}
+            </button>
+          ) : null}
+          {extras ? (
+            <button
+              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
+              type="button"
+              disabled={extras.qualityLoading.has(asset.id)}
+              data-testid={`media-quality-assess-${asset.id}`}
+              onClick={() => {
+                extras.onQualityAssess(asset.id);
+                setLabelMenuOpen(false);
+              }}
+            >
+              <Gauge size={13} />
+              {extras.qualityLoading.has(asset.id) ? zhCN.mediaBin.aiQualityAssessment.assessing : zhCN.mediaBin.aiQualityAssessment.assess}
             </button>
           ) : null}
           <div className="mb-2 flex items-center gap-1 font-semibold text-slate-700">

@@ -363,6 +363,7 @@ export interface MediaAsset {
   proxyError?: string;
   imageSequence?: ImageSequenceInfo;
   aiAnalysis?: MediaAIAnalysis;
+  qualityAssessment?: import('./ai-quality-assessment').QualityAssessmentResult;
 }
 
 export interface ImageSequenceInfo {
