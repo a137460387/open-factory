@@ -14,6 +14,7 @@ import {
   buildTrimDurationBubble,
   type Clip,
   type CollaborationClipLock,
+  type AnomalyInterval,
   type ClipGroup,
   type ClipPitchDataPoint,
   type DialogueInterval,
@@ -370,7 +371,8 @@ export function TrackRow({
   projectFrameRate,
   envelopeEditMode,
   reduceMotion,
-  collaborationLocksByClipId
+  collaborationLocksByClipId,
+  onRemoveAnomaly
 }: {
   track: Track;
   zoom: number;
@@ -410,6 +412,7 @@ export function TrackRow({
   envelopeEditMode: boolean;
   reduceMotion: boolean;
   collaborationLocksByClipId: Map<string, CollaborationClipLock>;
+  onRemoveAnomaly(clipId: string, anomaly: AnomalyInterval): void;
 }) {
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const frequencyBands = useAudioMeterStore((state) => state.trackFrequencyBands[track.id] ?? getSilentFrequencyBands());
@@ -687,6 +690,7 @@ export function TrackRow({
               loadAssets={loadAssets}
               largeProjectMode={largeProjectMode}
               collaborationLock={collaborationLocksByClipId.get(clip.id)}
+              onRemoveAnomaly={onRemoveAnomaly}
             />
           );
         })}
@@ -874,7 +878,8 @@ function ClipBlock({
   reduceMotion,
   loadAssets,
   largeProjectMode,
-  collaborationLock
+  collaborationLock,
+  onRemoveAnomaly
 }: {
   clip: Clip;
   asset?: MediaAsset;
@@ -913,6 +918,7 @@ function ClipBlock({
   loadAssets: boolean;
   largeProjectMode: TimelineLargeProjectMode;
   collaborationLock?: CollaborationClipLock;
+  onRemoveAnomaly(clipId: string, anomaly: AnomalyInterval): void;
 }) {
   const waveformColor = getTrackWaveformColor(trackType);
   const effectiveColor = getEffectiveClipColorLabel(clip, { color: trackColor });
@@ -1160,6 +1166,21 @@ function ClipBlock({
         />
         );
       })}
+      {(clip.anomalies ?? []).length > 0 && (
+        <span className="absolute bottom-0 left-0 right-0 z-10 flex h-1.5" data-testid={"anomaly-markers-" + clip.id}>
+          {(clip.anomalies ?? []).map((anomaly, idx) => (
+            <span
+              key={idx}
+              className="cursor-pointer h-1.5 flex-1"
+              style={{ backgroundColor: anomaly.type === "black" ? "#ef4444" : "#eab308" }}
+              title={anomaly.type === "black" ? "黑场" : "静态长镜头"}
+              data-testid={"anomaly-marker-" + clip.id + "-" + idx}
+              onPointerDown={(event) => { event.stopPropagation(); }}
+              onClick={(event) => { event.stopPropagation(); onRemoveAnomaly(clip.id, anomaly); }}
+            />
+          ))}
+        </span>
+      )}
       {locked ? null : (
         <span
           className="absolute right-0 top-0 z-30 h-full w-[4px] cursor-ew-resize bg-black/20 opacity-0 transition group-hover:opacity-100"

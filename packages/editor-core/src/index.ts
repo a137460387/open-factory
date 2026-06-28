@@ -203,3 +203,7 @@ export * from './ai-video-summary';
 export * from './ai-narration';
 export * from './ai-chat-editor';
 export * from './ai-usage-stats';
+export * from './ai-reframe';
+export * from './ai-transition-recommend';
+export * from './anomaly-detection';
+export * from './subtitles/subtitle-speaker-diarization';

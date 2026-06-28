@@ -287,6 +287,8 @@ export interface Project {
   zoomMemory?: Record<string, number>;
   /** 虚拟子剪辑列表 */
   subclips?: Subclip[];
+  /** 说话人标签映射（说话人ID→名称） */
+  speakerLabels?: Record<number, string>;
 }
 
 /** 虚拟子剪辑：对源媒体特定区间的命名引用，不生成实际文件 */
@@ -645,6 +647,10 @@ export interface BaseClip {
   subclipId?: string;
   /** AI 调色建议历史（LRU 最多 3 条） */
   aiColorHistory?: AIColorHistoryEntry[];
+  /** AI 智能裁切构图数据 */
+  aiReframe?: ClipAIReframe;
+  /** 异常片段检测结果（黑场/静态长镜头） */
+  anomalies?: AnomalyInterval[];
 }
 
 export interface AIColorHistoryEntry {
@@ -768,6 +774,8 @@ export interface SubtitleClip extends BaseClip {
   subtitleType?: SubtitleTrackType;
   text: string;
   speaker?: string;
+  /** AI说话人分离分配的说话人ID */
+  speakerId?: number;
   soundDesc?: string;
   style: SubtitleStyle;
   subtitleMode: SubtitleMode;
@@ -916,3 +924,5 @@ export interface MediaFolder {
   collapsed?: boolean;
   createdAt: string;
 }
+import type { ClipAIReframe } from './ai-reframe';
+import type { AnomalyInterval } from './anomaly-detection';

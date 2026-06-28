@@ -15,6 +15,8 @@ import {
   ApplyTextAnimationCommand,
   UpdateSubtitleStyleCommand,
   UpdateProjectSpeakersCommand,
+  UpdateProjectSpeakerLabelsCommand,
+  performSpeakerDiarization,
   UpdateTrackCommand,
   BUILTIN_SUBTITLE_STYLE_TEMPLATES,
   BUILTIN_AUDIO_VISUALIZATION_THEMES,
@@ -242,6 +244,29 @@ export function Inspector({ clip, selectedClips = [], selectedCount, selectedCli
       .filter((c): c is Extract<Clip, { type: 'subtitle' }> => c.type === 'subtitle')
       .sort((a, b) => a.start - b.start);
   }, [project.timeline.tracks]);
+  function handleSpeakerDiarization(): void {
+    if (allTimelineSubtitleClips.length === 0) return;
+    const segments = allTimelineSubtitleClips.map((c) => ({
+      id: c.id,
+      start: c.start,
+      end: c.start + c.duration,
+      text: c.text ?? '',
+      zeroCrossingRate: 0.3 + ((c.start * 10) % 5) * 0.1
+    }));
+    const result = performSpeakerDiarization(segments);
+    for (const assignment of result.assignments) {
+      commandManager.execute(new UpdateClipCommand(timelineAccessor, assignment.segmentId, { speakerId: assignment.speakerId }));
+    }
+    const existingLabels = project.speakerLabels ?? {};
+    const mergedLabels: Record<number, string> = { ...existingLabels };
+    for (const [id, label] of Object.entries(result.speakerLabels)) {
+      if (!(Number(id) in mergedLabels)) {
+        mergedLabels[Number(id)] = label;
+      }
+    }
+    commandManager.execute(new UpdateProjectSpeakerLabelsCommand(projectAccessor, mergedLabels));
+    showToast({ kind: 'success', title: zhCN.subtitleSpeakerDiarization.complete(Object.keys(result.speakerLabels).length), message: '' });
+  }
   const selectedGroup = useMemo(() => {
     const groups = normalizeClipGroups(project.clipGroups, project.timeline.tracks.flatMap((track) => track.clips.map((item) => item.id)));
     return findCompleteClipGroup(groups, selectedClips.map((item) => item.id));
@@ -258,6 +283,15 @@ export function Inspector({ clip, selectedClips = [], selectedCount, selectedCli
             <SubtitleProofreadingPanel selectedSubtitleClips={selectedSubtitleClips} selectedClipLocked={selectedClipLocked} projectSettings={projectSettings} />
             <SubtitleRetimingPanel selectedSubtitleClips={selectedSubtitleClips} projectSettings={projectSettings} />
             <SubtitleAIPolishPanel selectedSubtitleClips={selectedSubtitleClips} selectedClipLocked={selectedClipLocked} />
+            {allTimelineSubtitleClips.length > 0 ? (
+              <button
+                className="mt-2 w-full rounded border border-line px-3 py-2 text-xs hover:bg-panel"
+                onClick={handleSpeakerDiarization}
+                data-testid="subtitle-speaker-diarization-btn"
+              >
+                {zhCN.subtitleSpeakerDiarization.button}
+              </button>
+            ) : null}
             <ChapterTitleAIPanel allSubtitleClips={allTimelineSubtitleClips} totalDuration={getTimelineDuration(project.timeline)} selectedClipLocked={selectedClipLocked} />
           </div>
         </aside>

@@ -48,6 +48,10 @@ import {
   normalizeTextPath,
   normalizeTransform,
   normalizeVideoRestoration
+  , normalizeClipAIReframe,
+  normalizeAnomalyIntervals,
+  normalizeSubtitleSpeakerId,
+  normalizeSpeakerLabels
 } from '../model';
 import { normalizeColorNodeGraph } from '../color-node-graph';
 import type { Clip, ImageSequenceInfo, MediaAsset, MediaFolder, MediaMetadata, Project, Sequence, Subclip, Timeline, Transition } from '../model-types';
@@ -136,6 +140,7 @@ export function serializeProjectFile(project: Project, projectPath?: string): Pr
       clipGroups: normalizeClipGroups(project.clipGroups, clipIds),
       coverPath: normalizeProjectCoverPath(project.coverPath),
       speakers: normalizeProjectSpeakers(project.speakers),
+      speakerLabels: normalizeSpeakerLabels(project.speakerLabels),
       documentation: normalizeProjectDocumentation(project.documentation),
       timeline: primaryTimeline,
       sequences,
@@ -188,6 +193,7 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         clipGroups: normalizeClipGroups(file.project.clipGroups, clipIds),
         coverPath: normalizeProjectCoverPath(file.project.coverPath),
         speakers: normalizeProjectSpeakers(file.project.speakers),
+        speakerLabels: normalizeSpeakerLabels((file.project as any).speakerLabels),
         documentation: normalizeProjectDocumentation(file.project.documentation),
         timeline: activeTimeline,
         sequences,
@@ -227,6 +233,7 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         clipGroups: [],
         coverPath: undefined,
         speakers: [],
+        speakerLabels: undefined,
         documentation: {},
         timeline: primaryTimeline,
         subclips: [],
@@ -440,7 +447,9 @@ function cloneClip<TClip extends Clip>(clip: TClip): TClip {
     multicam: clip.type === 'nested-sequence' ? normalizeMulticamSequence(clip.multicam, clip.duration) : undefined,
     beatMarkers,
     detectedBpm,
-    scenecuts
+    scenecuts,
+    aiReframe: normalizeClipAIReframe(clip.aiReframe),
+    anomalies: normalizeAnomalyIntervals(clip.anomalies)
   };
   if (!beatMarkers) {
     delete (cloned as Partial<Clip>).beatMarkers;
@@ -484,7 +493,8 @@ function cloneClip<TClip extends Clip>(clip: TClip): TClip {
       soundDesc: subtitleType === 'cc' ? normalizeSubtitleSoundDesc(clip.soundDesc) : undefined,
       style: { ...DEFAULT_SUBTITLE_STYLE, ...clip.style },
       subtitleMode: clip.subtitleMode ?? DEFAULT_SUBTITLE_MODE,
-      dataSubtitle: normalizeDataSubtitleSource(clip.dataSubtitle)
+      dataSubtitle: normalizeDataSubtitleSource(clip.dataSubtitle),
+      speakerId: normalizeSubtitleSpeakerId(clip.speakerId)
     } as TClip;
   }
   if (clip.type === 'credits') {

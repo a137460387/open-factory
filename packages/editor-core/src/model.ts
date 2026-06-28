@@ -1933,6 +1933,83 @@ export function normalizeLutLayers(luts: LUTLayer[] | undefined, lutPath?: strin
   return [];
 }
 
+export function normalizeClipAIReframe(value: unknown): import('./ai-reframe').ClipAIReframe | undefined {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+  const obj = value as Record<string, unknown>;
+  const targetAspect = typeof obj.targetAspect === 'string' ? obj.targetAspect : undefined;
+  const confidence = typeof obj.confidence === 'number' && Number.isFinite(obj.confidence) ? obj.confidence : undefined;
+  const generatedAt = typeof obj.generatedAt === 'number' && Number.isFinite(obj.generatedAt) ? obj.generatedAt : undefined;
+  if (!targetAspect || confidence === undefined || generatedAt === undefined) {
+    return undefined;
+  }
+  if (!Array.isArray(obj.keyframes)) {
+    return undefined;
+  }
+  const keyframes: import('./ai-reframe').ReframeKeyframe[] = [];
+  for (const kf of obj.keyframes) {
+    if (!kf || typeof kf !== 'object') continue;
+    const k = kf as Record<string, unknown>;
+    const time = typeof k.time === 'number' ? k.time : undefined;
+    const cropX = typeof k.cropX === 'number' ? k.cropX : undefined;
+    const cropY = typeof k.cropY === 'number' ? k.cropY : undefined;
+    const cropW = typeof k.cropW === 'number' ? k.cropW : undefined;
+    const cropH = typeof k.cropH === 'number' ? k.cropH : undefined;
+    if (time !== undefined && cropX !== undefined && cropY !== undefined && cropW !== undefined && cropH !== undefined) {
+      keyframes.push({ time, cropX, cropY, cropW, cropH });
+    }
+  }
+  if (keyframes.length === 0) {
+    return undefined;
+  }
+  return { targetAspect, keyframes, confidence: Math.min(1, Math.max(0, confidence)), generatedAt };
+}
+
+export function normalizeAnomalyIntervals(value: unknown): import('./anomaly-detection').AnomalyInterval[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const validTypes = new Set(['black', 'static']);
+  const validSeverities = new Set(['low', 'medium', 'high']);
+  const result: import('./anomaly-detection').AnomalyInterval[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue;
+    const r = item as Record<string, unknown>;
+    const typ = validTypes.has(r.type as string) ? (r.type as import('./anomaly-detection').AnomalyType) : undefined;
+    const startTime = typeof r.startTime === 'number' ? r.startTime : undefined;
+    const endTime = typeof r.endTime === 'number' ? r.endTime : undefined;
+    const severity = validSeverities.has(r.severity as string) ? (r.severity as import('./anomaly-detection').AnomalySeverity) : undefined;
+    if (typ !== undefined && startTime !== undefined && endTime !== undefined && severity !== undefined && endTime > startTime) {
+      result.push({ type: typ, startTime, endTime, severity });
+    }
+  }
+  return result;
+}
+
+export function normalizeSubtitleSpeakerId(value: unknown): number | undefined {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value !== Math.floor(value)) {
+    return undefined;
+  }
+  return value;
+}
+
+export function normalizeSpeakerLabels(value: unknown): Record<number, string> | undefined {
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+  const result: Record<number, string> = {};
+  let hasEntries = false;
+  for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
+    const numKey = Number(key);
+    if (!Number.isFinite(numKey) || numKey < 0 || numKey !== Math.floor(numKey)) continue;
+    if (typeof val !== 'string') continue;
+    result[numKey] = val;
+    hasEntries = true;
+  }
+  return hasEntries ? result : undefined;
+}
+
 function cloneClipKeyframesLocal(keyframes: ClipKeyframes | undefined): ClipKeyframes | undefined {
   if (!keyframes) {
     return undefined;

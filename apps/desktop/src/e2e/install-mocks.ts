@@ -3657,6 +3657,101 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setPlayheadTime(0);
     commandManager.clear();
   },
+
+  setupAiReframeFixture: async () => {
+    const project = createProject('AI Reframe E2E');
+    const mediaAssets: MediaAsset[] = [
+      {
+        id: 'media-reframe-a', type: 'video', name: 'reframe-clip.mp4', path: tinyVideo,
+        duration: 10, width: 1920, height: 1080, size: 8192, mtimeMs: 1_000, hasAudio: true,
+      },
+    ];
+    const clipA = makeStoryboardClip('clip-reframe-a', 'video', 'reframe-clip.mp4', 'media-reframe-a', 0, 10);
+    const timeline = {
+      transitions: [], markers: [],
+      tracks: [createTrack({ id: 'track-video', type: 'video', name: 'Video 1', clips: [clipA] })],
+    };
+    useEditorStore.getState().setProject({
+      ...project, media: mediaAssets, timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
+    useEditorStore.getState().setSelectedClipIds(['clip-reframe-a']);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+
+  setupAiTransitionRecommendFixture: async () => {
+    const project = createProject('AI Transition Recommend E2E');
+    const mediaAssets: MediaAsset[] = [
+      {
+        id: 'media-trans-a', type: 'video', name: 'transition-a.mp4', path: tinyVideo,
+        duration: 5, width: 1920, height: 1080, size: 4096, mtimeMs: 1_000, hasAudio: true,
+      },
+      {
+        id: 'media-trans-b', type: 'video', name: 'transition-b.mp4', path: tinyVideo,
+        duration: 5, width: 1920, height: 1080, size: 4096, mtimeMs: 2_000, hasAudio: true,
+      },
+    ];
+    const clipA = makeStoryboardClip('clip-trans-a', 'video', 'transition-a.mp4', 'media-trans-a', 0, 5);
+    const clipB = makeStoryboardClip('clip-trans-b', 'video', 'transition-b.mp4', 'media-trans-b', 5, 5);
+    const timeline = {
+      transitions: [], markers: [],
+      tracks: [createTrack({ id: 'track-video', type: 'video', name: 'Video 1', clips: [clipA, clipB] })],
+    };
+    useEditorStore.getState().setProject({
+      ...project, media: mediaAssets, timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
+    useEditorStore.getState().setSelectedClipIds(['clip-trans-a']);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+
+  setupSubtitleSpeakerDiarizationFixture: async () => {
+    const project = createProject('Speaker Diarization E2E');
+    const sub1 = makeMockSubtitleClip('spk-sub-1', 'track-spk-subtitle', '大家好，欢迎来到节目', 0);
+    const sub2 = makeMockSubtitleClip('spk-sub-2', 'track-spk-subtitle', '今天讨论人工智能', 4.2);
+    const sub3 = makeMockSubtitleClip('spk-sub-3', 'track-spk-subtitle', '感谢收看，下次再见', 8.4);
+    const timeline = {
+      transitions: [], markers: [],
+      tracks: [
+        createTrack({ id: 'track-spk-subtitle', type: 'subtitle', name: 'Subtitle 1', clips: [sub1, sub2, sub3] }),
+      ],
+    };
+    useEditorStore.getState().setProject({
+      ...project, media: [], timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
+    useEditorStore.getState().setSelectedClipIds(['spk-sub-1', 'spk-sub-2', 'spk-sub-3']);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+
+  setupAnomalyDetectionFixture: async () => {
+    const project = createProject('Anomaly Detection E2E');
+    const mediaAssets: MediaAsset[] = [
+      {
+        id: 'media-anomaly-a', type: 'video', name: 'anomaly-clip.mp4', path: tinyVideo,
+        duration: 15, width: 1920, height: 1080, size: 8192, mtimeMs: 1_000, hasAudio: true,
+      },
+    ];
+    const clipA = makeStoryboardClip('clip-anomaly-a', 'video', 'anomaly-clip.mp4', 'media-anomaly-a', 0, 15);
+    const timeline = {
+      transitions: [], markers: [],
+      tracks: [createTrack({ id: 'track-video', type: 'video', name: 'Video 1', clips: [clipA] })],
+    };
+    useEditorStore.getState().setProject({
+      ...project, media: mediaAssets, timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
+    useEditorStore.getState().setSelectedClipIds(['clip-anomaly-a']);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
 };
 
 function makeWhisperVideoClip(): Extract<import('@open-factory/editor-core').Clip, { type: 'video' }> {

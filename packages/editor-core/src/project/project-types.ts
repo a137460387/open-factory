@@ -58,6 +58,7 @@ export interface ProjectFileV2 {
     clipGroups?: ClipGroup[];
     coverPath?: string;
     speakers?: ProjectSpeaker[];
+    speakerLabels?: Record<number, string>;
     documentation?: ProjectDocumentation;
     timeline: Timeline;
     sequences?: Sequence[];

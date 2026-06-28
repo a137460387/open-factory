@@ -1452,6 +1452,77 @@ describe('project schema migration', () => {
 
     const migrated = migrateProjectFile(serializeProject(project));
 
-    expect(migrated.project.timeline.transitions).toEqual(project.timeline.transitions);
+   expect(migrated.project.timeline.transitions).toEqual(project.timeline.transitions);
+ });
+
+  it('serializes and migrates clip aiReframe while old clips remain undefined', () => {
+    const project = makeProject();
+    const reframe = {
+      targetAspect: '16:9',
+      keyframes: [{ time: 0, cropX: 10, cropY: 20, cropW: 1920, cropH: 1080 }, { time: 2, cropX: 30, cropY: 40, cropW: 1920, cropH: 1080 }],
+      confidence: 0.92,
+      generatedAt: 1719000000000
+    };
+    const reframeClip = makeVideoClip({ id: 'clip-reframe' });
+    (reframeClip as any).aiReframe = reframe;
+    project.timeline.tracks[0].clips = [reframeClip];
+    project.sequences = [{ ...project.sequences[0], timeline: project.timeline }];
+
+    const file = serializeProject(project);
+    const migrated = migrateProjectFile(file);
+    expect(migrated.project.timeline.tracks[0].clips[0].aiReframe?.targetAspect).toBe('16:9');
+    expect(migrated.project.timeline.tracks[0].clips[0].aiReframe?.keyframes).toHaveLength(2);
+    expect(migrated.project.timeline.tracks[0].clips[0].aiReframe?.confidence).toBeCloseTo(0.92);
+
+    delete file.project.timeline.tracks[0].clips[0].aiReframe;
+    expect(migrateProjectFile(file).project.timeline.tracks[0].clips[0].aiReframe).toBeUndefined();
+  });
+
+  it('serializes and migrates clip anomalies while old clips remain empty', () => {
+    const project = makeProject();
+    const anomalies = [
+      { type: 'black' as const, startTime: 0, endTime: 2.5, severity: 'medium' as const },
+      { type: 'static' as const, startTime: 5, endTime: 18, severity: 'high' as const }
+    ];
+    const anomalyClip = makeVideoClip({ id: 'clip-anomaly' });
+    (anomalyClip as any).anomalies = anomalies;
+    project.timeline.tracks[0].clips = [anomalyClip];
+    project.sequences = [{ ...project.sequences[0], timeline: project.timeline }];
+
+    const file = serializeProject(project);
+    const migrated = migrateProjectFile(file);
+    expect(migrated.project.timeline.tracks[0].clips[0].anomalies).toHaveLength(2);
+    expect(migrated.project.timeline.tracks[0].clips[0].anomalies![0].type).toBe('black');
+    expect(migrated.project.timeline.tracks[0].clips[0].anomalies![1].severity).toBe('high');
+
+    delete file.project.timeline.tracks[0].clips[0].anomalies;
+    expect(migrateProjectFile(file).project.timeline.tracks[0].clips[0].anomalies).toEqual([]);
+  });
+
+  it('serializes and migrates subtitle speakerId while old subtitle clips remain undefined', () => {
+    const project = makeProject();
+    const speakerClip = makeSubtitleClip({ id: 'clip-sub-speaker' });
+    (speakerClip as any).speakerId = 2;
+    project.timeline.tracks[0].clips = [speakerClip];
+    project.sequences = [{ ...project.sequences[0], timeline: project.timeline }];
+
+    const file = serializeProject(project);
+    const migrated = migrateProjectFile(file);
+    expect(migrated.project.timeline.tracks[0].clips[0].speakerId).toBe(2);
+
+    delete (file.project.timeline.tracks[0].clips[0] as any).speakerId;
+    expect(migrateProjectFile(file).project.timeline.tracks[0].clips[0].speakerId).toBeUndefined();
+  });
+
+  it('serializes and migrates speakerLabels while old projects remain undefined', () => {
+    const project = makeProject();
+    (project as any).speakerLabels = { 0: '主持人', 1: '嘉宾A', 2: '嘉宾B' };
+
+    const file = serializeProject(project);
+    const migrated = migrateProjectFile(file);
+    expect(migrated.project.speakerLabels).toEqual({ 0: '主持人', 1: '嘉宾A', 2: '嘉宾B' });
+
+    delete (file.project as any).speakerLabels;
+    expect(migrateProjectFile(file).project.speakerLabels).toBeUndefined();
   });
 });

@@ -233,6 +233,34 @@ export class NewProjectCommand implements Command {
   }
 }
 
+export class UpdateProjectSpeakerLabelsCommand implements Command {
+  readonly description = 'Update project speaker labels';
+  private before?: Project;
+  private after?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly speakerLabels: Record<number, string>
+  ) {}
+
+  execute(): void {
+    const project = this.accessor.getProject();
+    this.before ??= project;
+    this.after = {
+      ...project,
+      speakerLabels: { ...this.speakerLabels },
+      updatedAt: new Date().toISOString()
+    };
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
 /** 更新序列独立设置（帧率/分辨率/时长） */
 export class UpdateSequenceSettingsCommand implements Command {
   readonly description: string;
@@ -4596,6 +4624,7 @@ export type ClipPatch = Partial<Omit<Clip, 'type' | 'id' | 'transform' | 'colorC
   mediaId?: string;
   subtitleType?: SubtitleTrackType;
   speaker?: string;
+  speakerId?: number;
   soundDesc?: string;
   subtitleMode?: SubtitleMode;
   dataSubtitle?: Extract<Clip, { type: 'subtitle' }>['dataSubtitle'];

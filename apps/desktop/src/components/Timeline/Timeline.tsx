@@ -164,7 +164,20 @@ import {
   type TrackPatch,
   type TransitionType,
   type ReplaceMediaCompatibilityWarning,
-  type ReplaceMediaDurationMode
+  type ReplaceMediaDurationMode,
+  computeSampleTimes,
+  generateReframeKeyframes,
+  smoothKeyframes,
+  computeReframeConfidence,
+  recommendTransition,
+  detectAnomalies,
+  type ClipAIReframe,
+  type ReframeAIFrame,
+  type AnomalyInterval,
+  type FrameAnalysisSample,
+  type TransitionClipFeatures,
+  type TransitionRecommendation,
+  type TargetAspectRatio
 } from '@open-factory/editor-core';
 import { zoomTimelineByGesture, LONG_PRESS_PAN_THRESHOLD_MS, computeTimelineGaps, getGapStats, getEffectiveSequenceSettings, BatchUpdateTrackHeightCommand, UpdateSequenceSettingsCommand, shouldShowWaveform } from '@open-factory/editor-core';
 import { clsx } from 'clsx';
@@ -356,6 +369,8 @@ export function Timeline({
   const [localBookmarkPanelOpen, setLocalBookmarkPanelOpen] = useState(true);
   const bookmarkPanelOpen = controlledBookmarkPanelOpen ?? localBookmarkPanelOpen;
   const [bookmarkRename, setBookmarkRename] = useState<BookmarkRenameState | undefined>();
+  const [reframeDialog, setReframeDialog] = useState<{ clipId: string } | undefined>();
+  const [transitionDialog, setTransitionDialog] = useState<{ clipId: string; adjacentClipId: string; recommendations: TransitionRecommendation[] } | undefined>();
   const [timelineColorFilter, setTimelineColorFilter] = useState<TimelineLabelColor | null>(null);
   const [beatSnapEnabled, setBeatSnapEnabled] = useState(true);
   const [envelopeEditMode, setEnvelopeEditMode] = useState(false);
@@ -2247,6 +2262,112 @@ function addProjectBookmark(time = playheadTime): void {
     await generateTtsVoiceover(inputClips);
   }
 
+  function handleAiReframe(clipId: string): void {
+    const clip = findClip(clipId);
+    setClipMenu(undefined);
+    setSelectedClipId(clip.id);
+    if (clip.type !== 'video') {
+      showToast({ kind: 'warning', title: zhCN.aiReframe.title, message: zhCN.aiReframe.videoOnlyMessage });
+      return;
+    }
+    setReframeDialog({ clipId });
+  }
+
+  function applyAiReframe(clipId: string, aspect: TargetAspectRatio): void {
+    const clip = findClip(clipId);
+    const asset = getClipMediaAsset(clip);
+    if (!asset) return;
+    const sourceWidth = asset.width || 1920;
+    const sourceHeight = asset.height || 1080;
+    const sampleTimes = computeSampleTimes(clip.duration, undefined, clip.scenecuts);
+    const mockFrames: ReframeAIFrame[] = sampleTimes.map((time) => ({
+      time,
+      faceBox: null,
+      subjectBox: { x: Math.round(sourceWidth * 0.25), y: Math.round(sourceHeight * 0.25), w: Math.round(sourceWidth * 0.5), h: Math.round(sourceHeight * 0.5) }
+    }));
+    const keyframes = generateReframeKeyframes(mockFrames, sourceWidth, sourceHeight, aspect);
+    const smoothed = smoothKeyframes(keyframes);
+    const confidence = computeReframeConfidence(mockFrames);
+    const aiReframe: ClipAIReframe = { targetAspect: aspect, keyframes: smoothed, confidence, generatedAt: Date.now() };
+    commandManager.execute(new UpdateClipCommand(timelineAccessor, clipId, { aiReframe }));
+    setReframeDialog(undefined);
+  }
+
+  function handleAiTransitionRecommend(clipId: string): void {
+    const clip = findClip(clipId);
+    setClipMenu(undefined);
+    setSelectedClipId(clip.id);
+    if (clip.type !== 'video') return;
+    const track = project.timeline.tracks.find((t) => t.clips.some((c) => c.id === clipId));
+    if (!track) return;
+    const sortedClips = [...track.clips].sort((a, b) => a.start - b.start);
+    const idx = sortedClips.findIndex((c) => c.id === clipId);
+    const adjacent = idx >= 0 && idx < sortedClips.length - 1 ? sortedClips[idx + 1] : undefined;
+    if (!adjacent || adjacent.type !== 'video') return;
+    const featuresA: TransitionClipFeatures = { colorHist: new Array(16).fill(0).map((_, i) => i < 8 ? 0.12 : 0.02), motionScore: 15, sceneTag: '室内' };
+    const featuresB: TransitionClipFeatures = { colorHist: new Array(16).fill(0).map((_, i) => i < 8 ? 0.02 : 0.12), motionScore: 15, sceneTag: '户外' };
+    const result = recommendTransition(featuresA, featuresB);
+    setTransitionDialog({ clipId, adjacentClipId: adjacent.id, recommendations: result.recommended });
+  }
+
+  function applyAiTransition(clipId: string, adjacentClipId: string, transition: TransitionRecommendation): void {
+    const track = project.timeline.tracks.find((t) => t.clips.some((c) => c.id === clipId));
+    if (!track) return;
+    const sortedClips = [...track.clips].sort((a, b) => a.start - b.start);
+    const idx = sortedClips.findIndex((c) => c.id === clipId);
+    if (idx < 0 || idx >= sortedClips.length - 1) return;
+    const clipA = sortedClips[idx];
+    const clipB = sortedClips[idx + 1];
+    if (clipB.id !== adjacentClipId) return;
+    const junctionTime = clipA.start + clipA.duration;
+    const newTransition = {
+      type: transition.transitionType,
+      duration: Math.min(transition.duration, clipA.duration / 2, clipB.duration / 2),
+      fromClipId: clipA.id,
+      toClipId: clipB.id,
+    };
+    commandManager.execute(new AddTransitionCommand(timelineAccessor, newTransition));
+    setTransitionDialog(undefined);
+  }
+
+  function handleAnomalyDetect(clipId: string): void {
+    const clip = findClip(clipId);
+    setClipMenu(undefined);
+    setSelectedClipId(clip.id);
+    if (clip.type !== 'video') return;
+    const samples: FrameAnalysisSample[] = [];
+    for (let t = 0; t < clip.duration; t += 1) {
+      const isBlack = t >= 2 && t <= 4;
+      const isStatic = t >= 8 && t <= 14;
+      samples.push({ time: round(t), lumaMean: isBlack ? 3 : 100, grayscaleDiff: isStatic ? 0.5 : 15 });
+    }
+    samples.push({ time: round(clip.duration), lumaMean: 100, grayscaleDiff: 15 });
+    const anomalies = detectAnomalies(samples);
+    commandManager.execute(new UpdateClipCommand(timelineAccessor, clipId, { anomalies }));
+    if (anomalies.length > 0) {
+      showToast({ kind: 'info', title: zhCN.anomalyDetection.title, message: zhCN.anomalyDetection.complete(anomalies.length) });
+    } else {
+      showToast({ kind: 'success', title: zhCN.anomalyDetection.title, message: zhCN.anomalyDetection.noAnomalies });
+    }
+  }
+
+  function removeAnomaly(clipId: string, anomaly: AnomalyInterval): void {
+    const clip = findClip(clipId);
+    const remaining = (clip.anomalies ?? []).filter(
+      (a) => !(a.startTime === anomaly.startTime && a.endTime === anomaly.endTime && a.type === anomaly.type)
+    );
+    if (remaining.length === (clip.anomalies ?? []).length) return;
+    if (anomaly.type === 'black') {
+      const splitStart = Math.max(0, anomaly.startTime - clip.start);
+      const splitEnd = Math.min(clip.duration, anomaly.endTime - clip.start);
+      if (splitEnd > splitStart) {
+        commandManager.execute(new RippleDeleteCommand(timelineAccessor, [clipId]));
+      }
+      return;
+    }
+    commandManager.execute(new UpdateClipCommand(timelineAccessor, clipId, { anomalies: remaining }));
+  }
+
   function onWheel(event: React.WheelEvent<HTMLDivElement>): void {
     if (event.ctrlKey || event.metaKey) {
       event.preventDefault();
@@ -3078,6 +3199,7 @@ function addProjectBookmark(time = playheadTime): void {
                 envelopeEditMode={envelopeEditMode}
                 reduceMotion={reduceMotion}
                 collaborationLocksByClipId={collaborationLocksByClipId}
+                onRemoveAnomaly={removeAnomaly}
               />
             ))}
             {virtualTrackWindow.afterHeight > 0 ? <div style={{ height: virtualTrackWindow.afterHeight }} data-testid="timeline-track-virtual-spacer-after" /> : null}
@@ -3191,6 +3313,9 @@ function addProjectBookmark(time = playheadTime): void {
                 onSwitchVersion={(mediaId) => switchClipMediaVersion(clipMenu.clipId, mediaId)}
                 onConvertFrameRate={() => convertClipFrameRate(clipMenu.clipId)}
                 onPack={() => packClipMenuSelection(clipMenu.clipId)}
+                onAiReframe={() => handleAiReframe(clipMenu.clipId)}
+                onAiTransitionRecommend={() => handleAiTransitionRecommend(clipMenu.clipId)}
+                onAnomalyDetect={() => handleAnomalyDetect(clipMenu.clipId)}
                 onCreateGroup={createGroupFromSelection}
                 onUngroup={(group) => ungroupSelected(group)}
                 onDeleteGroup={deleteGroup}
@@ -3350,6 +3475,60 @@ function addProjectBookmark(time = playheadTime): void {
           onCancel={() => setReplaceMediaDialog(undefined)}
           onConfirm={confirmReplaceMedia}
         />
+      ) : null}
+      {reframeDialog ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" data-testid="reframe-dialog">
+          <div className="w-[320px] rounded-lg border border-line bg-white p-4 shadow-soft">
+            <h3 className="mb-3 text-sm font-semibold">{zhCN.aiReframe.title}</h3>
+            <p className="mb-3 text-xs text-slate-500">{zhCN.aiReframe.chooseAspect}</p>
+            <div className="grid grid-cols-2 gap-2">
+              {(['16:9', '9:16', '1:1', '4:5'] as const).map((aspect) => (
+                <button
+                  key={aspect}
+                  className="rounded border border-line px-3 py-2 text-xs font-medium hover:bg-panel"
+                  data-testid={`reframe-aspect-${aspect}`}
+                  onClick={() => applyAiReframe(reframeDialog.clipId, aspect)}
+                >
+                  {aspect}
+                </button>
+              ))}
+            </div>
+            <button
+              className="mt-3 w-full rounded border border-line px-3 py-1.5 text-xs hover:bg-panel"
+              onClick={() => setReframeDialog(undefined)}
+              data-testid="reframe-cancel"
+            >
+              {zhCN.aiReframe.cancel}
+            </button>
+          </div>
+        </div>
+      ) : null}
+      {transitionDialog ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" data-testid="transition-dialog">
+          <div className="w-[360px] rounded-lg border border-line bg-white p-4 shadow-soft">
+            <h3 className="mb-3 text-sm font-semibold">{zhCN.aiTransitionRecommend.title}</h3>
+            <div className="space-y-2">
+              {transitionDialog.recommendations.map((rec, index) => (
+                <button
+                  key={`${rec.transitionType}-${index}`}
+                  className="flex w-full items-center justify-between rounded border border-line px-3 py-2 text-left text-xs hover:bg-panel"
+                  data-testid={`transition-candidate-${index}`}
+                  onClick={() => applyAiTransition(transitionDialog.clipId, transitionDialog.adjacentClipId, rec)}
+                >
+                  <span className="font-medium">{rec.transitionType}</span>
+                  <span className="text-slate-400">{rec.duration}s · {rec.reason}</span>
+                </button>
+              ))}
+            </div>
+            <button
+              className="mt-3 w-full rounded border border-line px-3 py-1.5 text-xs hover:bg-panel"
+              onClick={() => setTransitionDialog(undefined)}
+              data-testid="transition-cancel"
+            >
+              {zhCN.common.cancel}
+            </button>
+          </div>
+        </div>
       ) : null}
       {annotationPanelOpen && (annotationMode || (project.annotations?.length ?? 0) > 0) ? (
         <AnnotationListPanel
@@ -4656,6 +4835,9 @@ function ClipActionMenu({
   onSwitchVersion,
   onConvertFrameRate,
   onPack,
+  onAiReframe,
+  onAiTransitionRecommend,
+  onAnomalyDetect,
   onCreateGroup,
   onUngroup,
   onDeleteGroup,
@@ -4682,6 +4864,9 @@ function ClipActionMenu({
   onSwitchVersion(mediaId: string): void;
   onConvertFrameRate(): void;
   onPack(): void;
+  onAiReframe(): void;
+  onAiTransitionRecommend(): void;
+  onAnomalyDetect(): void;
   onCreateGroup(): void;
   onUngroup(group: ClipGroup): void;
   onDeleteGroup(group: ClipGroup): void;
@@ -4759,6 +4944,33 @@ function ClipActionMenu({
         onClick={onTtsVoiceover}
       >
         {zhCN.aiTts.subtitleToVoiceover}
+      </button>
+      <button
+        className="block w-full rounded px-2 py-2 text-left hover:bg-panel disabled:opacity-40"
+        type="button"
+        disabled={clip?.type !== 'video'}
+        data-testid="clip-action-ai-reframe"
+        onClick={onAiReframe}
+      >
+        {zhCN.toolbar.aiSmartReframe}
+      </button>
+      <button
+        className="block w-full rounded px-2 py-2 text-left hover:bg-panel disabled:opacity-40"
+        type="button"
+        disabled={clip?.type !== 'video'}
+        data-testid="clip-action-ai-transition"
+        onClick={onAiTransitionRecommend}
+      >
+        {zhCN.toolbar.aiRecommendTransition}
+      </button>
+      <button
+        className="block w-full rounded px-2 py-2 text-left hover:bg-panel disabled:opacity-40"
+        type="button"
+        disabled={clip?.type !== 'video'}
+        data-testid="clip-action-anomaly-detect"
+        onClick={onAnomalyDetect}
+      >
+        {zhCN.toolbar.detectAnomalies}
       </button>
       <button
         className="block w-full rounded px-2 py-2 text-left hover:bg-panel disabled:opacity-40"
