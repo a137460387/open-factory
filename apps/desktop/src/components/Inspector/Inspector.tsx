@@ -212,6 +212,7 @@ import { generateTtsVoiceover } from '../../lib/ttsVoiceover';
 import { SubtitleAIPolishPanel } from './SubtitleAIPolishPanel';
 import { ChapterTitleAIPanel } from './ChapterTitleAIPanel';
 import { AIColorGradingPanel } from './AIColorGradingPanel';
+import { AISceneMatchPanel } from './AISceneMatchPanel';
 import { markLocalAiModelUsed } from '../../settings/appSettings';
 import { useEditorStore, type SelectedKeyframeRef } from '../../store/editorStore';
 import { usePrivacyDetectionSettingsStore } from '../../store/privacyDetectionSettingsStore';
@@ -3219,11 +3220,19 @@ function ClipInspector({
                 {zhCN.aiTts.textToVoiceover}
               </button>
             ) : null}
-          </Section>
+           </Section>
+       ) : null}
+        {'mediaId' in clip ? (
+          <AISceneMatchPanel
+            clip={clip}
+            media={media}
+            timelineClips={project.timeline.tracks.flatMap((track) => track.clips)}
+            selectedClipLocked={selectedClipLocked}
+          />
         ) : null}
-      </div>
-    </aside>
-  );
+     </div>
+   </aside>
+ );
 }
 
 function PanelTitle() {

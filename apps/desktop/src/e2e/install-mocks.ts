@@ -1219,6 +1219,25 @@ const mocks: TauriMocks = {
         latencyMs: 10
       };
     }
+    if (systemContent.includes('素材推荐助手')) {
+      return {
+        content: JSON.stringify({
+          similar: [
+            { mediaId: 'media-scene-match-a', score: 0.9, reason: '场景相近，适合连续使用' },
+            { mediaId: 'media-scene-match-b', score: 0.7, reason: '氛围类似' },
+            { mediaId: 'media-scene-match-c', score: 0.5, reason: '色调一致' }
+          ],
+          contrast: [
+            { mediaId: 'media-scene-match-d', score: 0.85, reason: '明暗对比鲜明' },
+            { mediaId: 'media-scene-match-e', score: 0.6, reason: '节奏变化' },
+            { mediaId: 'media-scene-match-f', score: 0.4, reason: '色彩反差' }
+          ]
+        }),
+        inputTokens: 100,
+        outputTokens: 50,
+        latencyMs: 10
+      };
+    }
     return { content: '{}', inputTokens: 100, outputTokens: 50, latencyMs: 10 };
   },
   extractAiFrames: (request) => ({
@@ -3293,6 +3312,63 @@ window.__E2E_ACTIONS__ = {
     useAISettingsStore.getState().updateProvider('mimo', { defaultModel: 'gpt-4o' });
     useAISettingsStore.getState().toggleProvider('mimo', true);
     useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupAISceneMatchFixture: async () => {
+    const project = createProject('AI Scene Match E2E');
+    const assetA: MediaAsset = {
+      id: 'media-scene-match-a', type: 'video', name: 'outdoor-sunny.mp4',
+      path: tinyVideo, duration: 30, width: 1280, height: 720, size: 4096, mtimeMs: 1_000, hasAudio: false,
+      aiAnalysis: { tags: ['outdoor', 'sunny'], scene: 'outdoor sunny scene', mood: 'cheerful', objects: ['sky', 'grass'], analysisTime: new Date().toISOString(), providerId: 'mimo' }
+    };
+    const assetB: MediaAsset = {
+      id: 'media-scene-match-b', type: 'video', name: 'park-walk.mp4',
+      path: tinyVideo, duration: 20, width: 1280, height: 720, size: 3072, mtimeMs: 1_000, hasAudio: false,
+      aiAnalysis: { tags: ['outdoor', 'walk'], scene: 'park walking scene', mood: 'relaxed', objects: ['trees', 'path'], analysisTime: new Date().toISOString(), providerId: 'mimo' }
+    };
+    const assetC: MediaAsset = {
+      id: 'media-scene-match-c', type: 'video', name: 'nature-forest.mp4',
+      path: tinyVideo, duration: 15, width: 1280, height: 720, size: 3072, mtimeMs: 1_000, hasAudio: false,
+      aiAnalysis: { tags: ['nature', 'forest'], scene: 'forest nature scene', mood: 'calm', objects: ['trees', 'river'], analysisTime: new Date().toISOString(), providerId: 'mimo' }
+    };
+    const assetD: MediaAsset = {
+      id: 'media-scene-match-d', type: 'video', name: 'night-city.mp4',
+      path: tinyVideo, duration: 25, width: 1280, height: 720, size: 3072, mtimeMs: 1_000, hasAudio: false,
+      aiAnalysis: { tags: ['night', 'city'], scene: 'night cityscape', mood: 'moody', objects: ['buildings', 'lights'], analysisTime: new Date().toISOString(), providerId: 'mimo' }
+    };
+    const assetE: MediaAsset = {
+      id: 'media-scene-match-e', type: 'video', name: 'unanalyzed-1.mp4',
+      path: tinyVideo, duration: 10, width: 640, height: 360, size: 2048, mtimeMs: 1_000, hasAudio: false
+    };
+    const assetF: MediaAsset = {
+      id: 'media-scene-match-f', type: 'video', name: 'unanalyzed-2.mp4',
+      path: tinyVideo, duration: 8, width: 640, height: 360, size: 2048, mtimeMs: 1_000, hasAudio: false
+    };
+    const clipA = {
+      id: 'scene-match-clip-a', type: 'video' as const, name: 'outdoor-sunny.mp4',
+      mediaId: 'media-scene-match-a', trackId: 'track-scene-match-video', start: 0, duration: 30,
+      trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, transform: { ...DEFAULT_TRANSFORM },
+      colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, effects: [], keyframes: {}, volume: 1
+    };
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({ id: 'track-scene-match-video', type: 'video', name: 'Video 1', clips: [clipA] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [assetA, assetB, assetC, assetD, assetE, assetF],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    await useAISettingsStore.getState().setProviderApiKey('mimo', 'test-mimo-key');
+    useAISettingsStore.getState().updateProvider('mimo', { defaultModel: 'gpt-4o' });
+    useAISettingsStore.getState().toggleProvider('mimo', true);
+    useEditorStore.getState().setSelectedClipIds(['scene-match-clip-a']);
     useEditorStore.getState().setPlayheadTime(0);
     commandManager.clear();
   },
