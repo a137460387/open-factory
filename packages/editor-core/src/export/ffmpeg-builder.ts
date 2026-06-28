@@ -93,6 +93,7 @@ import {
   richTextToPlainText
 } from '../text-layout';
 import { buildCreditsRollYExpression, formatCreditsRowsForTextfile } from '../credits-roll';
+import { buildPrivacyRedactionFFmpegExpressions } from '../privacy-redaction';
 import { MOTION_GRAPHIC_SEQUENCE_KIND, normalizeMotionGraphic } from '../motion-graphics';
 import {
   DEFAULT_EXPORT_COLOR_MANAGEMENT,
@@ -443,7 +444,8 @@ function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project[
                     arcText: null
                   }
                 : null,
-            motionGraphic: clip.type === 'motion-graphic' ? normalizeMotionGraphic(clip.motionGraphic, clip.duration) : null
+            motionGraphic: clip.type === 'motion-graphic' ? normalizeMotionGraphic(clip.motionGraphic, clip.duration) : null,
+            privacyRedactions: 'privacyRedactions' in clip && Array.isArray(clip.privacyRedactions) ? clip.privacyRedactions.filter((r: any) => r && r.enabled !== false && Array.isArray(r.keyframes) && r.keyframes.length > 0) : []
           } satisfies ExportClip;
         })
       };
@@ -1821,6 +1823,8 @@ function buildVisualClipFilter(
   }
   const filters = [`[${inputIndex}:v]${trim}`, ...buildChromaKeyFilters(clip)];
   filters.push(...buildVisualPostKeyFilters(clip, settings, textArtifacts, warnings, capabilities, label));
+  const redactionExprs = buildPrivacyRedactionFFmpegExpressions(clip.privacyRedactions ?? [], settings.width, settings.height, 'boxblur');
+  if (redactionExprs.length > 0) filters.push(...redactionExprs);
   return filters.join(',');
 }
 

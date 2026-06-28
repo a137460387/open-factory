@@ -82,6 +82,10 @@ import {
   TrimClipCommand,
   UpdateProjectBeatMarkersCommand,
   UpdateProjectBookmarksCommand,
+  UpdateProjectBeatSnapSuggestionsCommand,
+  calculateBeatSnapForClips,
+  applyBeatSnapToClip,
+  type BeatSnapSuggestion,
   canMoveClipWithProtectedRanges,
   createId,
   createBeatMarker,
@@ -181,7 +185,7 @@ import {
 } from '@open-factory/editor-core';
 import { zoomTimelineByGesture, LONG_PRESS_PAN_THRESHOLD_MS, computeTimelineGaps, getGapStats, getEffectiveSequenceSettings, BatchUpdateTrackHeightCommand, UpdateSequenceSettingsCommand, shouldShowWaveform } from '@open-factory/editor-core';
 import { clsx } from 'clsx';
-import { AudioWaveform, Bookmark, Captions, CircleDot, Flag, Group, Magnet, MessageSquarePlus, MessageSquareText, Mic2, Music2, Plus, Scissors, Settings2, Star, Trash2, Type, Ungroup, X } from 'lucide-react';
+import { AudioWaveform, Bookmark, Captions, CircleDot, Flag, Group, Magnet, MessageSquarePlus, MessageSquareText, Mic2, Music2, Plus, Scissors, Settings2, Star, Trash2, Type, Ungroup, Wand2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createCreditsClip, createTextClip } from '../../lib/clipFactory';
 import { probeMediaPath } from '../../lib/media';
@@ -373,6 +377,7 @@ export function Timeline({
   const [transitionDialog, setTransitionDialog] = useState<{ clipId: string; adjacentClipId: string; recommendations: TransitionRecommendation[] } | undefined>();
   const [timelineColorFilter, setTimelineColorFilter] = useState<TimelineLabelColor | null>(null);
   const [beatSnapEnabled, setBeatSnapEnabled] = useState(true);
+  const [beatSnapPanelOpen, setBeatSnapPanelOpen] = useState(false);
   const [envelopeEditMode, setEnvelopeEditMode] = useState(false);
   const [selectedTrackIds, setSelectedTrackIds] = useState<string[]>([]);
   const [trackSelectionAnchorId, setTrackSelectionAnchorId] = useState<string | undefined>();
@@ -2932,6 +2937,16 @@ function addProjectBookmark(time = playheadTime): void {
         >
           <Magnet size={16} />
         </button>
+        {(project.beatSnapSuggestions ?? []).length > 0 && (
+          <button
+            className="rounded-md border border-brand p-2 text-brand hover:bg-panel"
+            title={zhCN.editorToasts.beatSnapAISmartSnap}
+            data-testid="beat-snap-ai-button"
+            onClick={() => setBeatSnapPanelOpen((open) => !open)}
+          >
+            <Wand2 size={16} />
+          </button>
+        )}
         <button
           className={`rounded-md border p-2 hover:bg-panel ${dialoguePanelOpen ? 'border-brand text-brand' : 'border-line'}`}
           title={zhCN.timeline.dialogueDetectionAction}
@@ -3467,6 +3482,72 @@ function addProjectBookmark(time = playheadTime): void {
           onGenerateSubtitles={generateDialogueSubtitles}
           onClose={() => setDialoguePanelOpen(false)}
         />
+      ) : null}
+      {beatSnapPanelOpen && (project.beatSnapSuggestions ?? []).length > 0 ? (
+        <div className="absolute right-2 top-16 z-40 w-72 rounded-lg border border-line bg-surface p-3 shadow-soft" data-testid="beat-snap-suggestions-panel">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-xs font-semibold" data-testid="beat-snap-suggestions-count">
+              {zhCN.editorToasts.beatSnapApplyAll} ({(project.beatSnapSuggestions ?? []).length})
+            </span>
+            <button className="text-xs text-muted hover:text-foreground" onClick={() => setBeatSnapPanelOpen(false)} data-testid="beat-snap-panel-close">
+              <X size={14} />
+            </button>
+          </div>
+          <div className="max-h-40 space-y-1 overflow-y-auto">
+            {(project.beatSnapSuggestions ?? []).map((suggestion) => (
+              <div key={`${suggestion.clipId}-${suggestion.edge}`} className="flex items-center justify-between rounded border border-line px-2 py-1 text-xs" data-testid={`beat-snap-suggestion-${suggestion.clipId}-${suggestion.edge}`}>
+                <span>{zhCN.editorToasts.beatSnapSuggestHint(suggestion.edge === 'in' ? '入' : '出', suggestion.suggestedTime.toFixed(2) + 's')}</span>
+                <div className="flex gap-1">
+                  <button
+                    className="rounded bg-brand px-1.5 py-0.5 text-[10px] text-white hover:opacity-80"
+                    data-testid={`beat-snap-apply-suggestion-${suggestion.clipId}-${suggestion.edge}`}
+                    onClick={() => {
+                      const currentProject = useEditorStore.getState().project;
+                      const clips = currentProject.timeline.tracks.flatMap((t) => t.clips);
+                      const clip = clips.find((c) => c.id === suggestion.clipId);
+                      if (!clip) return;
+                      const updated = applyBeatSnapToClip(clip, suggestion.edge, suggestion.suggestedTime);
+                      const remaining = (currentProject.beatSnapSuggestions ?? []).filter((s) => !(s.clipId === suggestion.clipId && s.edge === suggestion.edge));
+                      commandManager.execute(new UpdateClipCommand(timelineAccessor, clip.id, updated));
+                      commandManager.execute(new UpdateProjectBeatSnapSuggestionsCommand(projectAccessor, remaining));
+                    }}
+                  >
+                    {zhCN.editorToasts.beatSnapApplySuggestion}
+                  </button>
+                  <button
+                    className="rounded border border-line px-1.5 py-0.5 text-[10px] hover:bg-panel"
+                    data-testid={`beat-snap-dismiss-${suggestion.clipId}-${suggestion.edge}`}
+                    onClick={() => {
+                      const currentProject = useEditorStore.getState().project;
+                      const remaining = (currentProject.beatSnapSuggestions ?? []).filter((s) => !(s.clipId === suggestion.clipId && s.edge === suggestion.edge));
+                      commandManager.execute(new UpdateProjectBeatSnapSuggestionsCommand(projectAccessor, remaining));
+                    }}
+                  >
+                    {zhCN.editorToasts.beatSnapDismiss}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <button
+            className="mt-2 w-full rounded bg-brand px-2 py-1 text-xs text-white hover:opacity-80"
+            data-testid="beat-snap-apply-all"
+            onClick={() => {
+              const currentProject = useEditorStore.getState().project;
+              const clips = currentProject.timeline.tracks.flatMap((t) => t.clips);
+              for (const suggestion of currentProject.beatSnapSuggestions ?? []) {
+                const clip = clips.find((c) => c.id === suggestion.clipId);
+                if (clip) {
+                  const updated = applyBeatSnapToClip(clip, suggestion.edge, suggestion.suggestedTime);
+                  commandManager.execute(new UpdateClipCommand(timelineAccessor, clip.id, updated));
+                }
+              }
+              commandManager.execute(new UpdateProjectBeatSnapSuggestionsCommand(projectAccessor, []));
+            }}
+          >
+            {zhCN.editorToasts.beatSnapApplyAll}
+          </button>
+        </div>
       ) : null}
       {replaceMediaDialog ? (
         <ReplaceMediaDialog

@@ -18,6 +18,7 @@ import type {
   ClipMaskKeyframe,
   ClipPanoramaOutputProjection,
   ClipPrivacyBlur,
+  ClipPrivacyRedaction,
   ClipProjection,
   ClipQualityEnhancement,
   ClipSlowMotionMode,
@@ -447,6 +448,7 @@ export interface ExportClip {
   dataSubtitle: DataSubtitleSource | null;
   creditsStyle: ExportCreditsStyle | null;
   motionGraphic: MotionGraphic | null;
+  privacyRedactions?: ClipPrivacyRedaction[];
 }
 
 export interface ExportTrack {

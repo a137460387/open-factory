@@ -52,6 +52,8 @@ import { loadLocalEffectPresets } from '../../effects/effect-preset-library';
 import { getMediaKeyboardNavigationIndex, inferMediaKeyboardColumnCount } from './media-keyboard';
 import { MediaAIAnalysisDialog } from './MediaAIAnalysisDialog';
 import { AISemanticSearchPanel } from './AISemanticSearchPanel';
+import { AIMediaOrganizePanel } from './AIMediaOrganizePanel';
+import type { MediaCollection } from '@open-factory/editor-core';
 
 
 interface MediaCardExtras {
@@ -116,6 +118,8 @@ interface MediaBinProps {
   onUpdateSubclip?(subclipId: string, patch: Partial<Subclip>): void;
   onDeleteSubclip?(subclipId: string): void;
   onAddSubclipToTimeline?(assetId: string, subclip: Subclip): void;
+  mediaCollections?: MediaCollection[];
+  onUpdateMediaCollections?(collections: MediaCollection[]): void;
 }
 
 type MediaBinView = 'all' | 'video' | 'audio' | 'image' | 'tagged' | 'titles' | 'shared' | 'effects';
@@ -183,7 +187,9 @@ export function MediaBin({
   onAddSubclip = () => {},
   onUpdateSubclip = () => {},
   onDeleteSubclip = () => {},
-  onAddSubclipToTimeline = () => {}
+  onAddSubclipToTimeline = () => {},
+  mediaCollections = [],
+  onUpdateMediaCollections = () => {}
 }: MediaBinProps) {
   const t = zhCN.mediaBin;
   const [dragOver, setDragOver] = useState(false);
@@ -209,6 +215,7 @@ export function MediaBin({
   const [qualityErrors, setQualityErrors] = useState<Map<string, string>>(new Map());
   const [qualityLoading, setQualityLoading] = useState<Set<string>>(new Set());
   const [aiSearchMode, setAiSearchMode] = useState(false);
+  const [organizePanelOpen, setOrganizePanelOpen] = useState(false);
   const handleOpenSubclipDialog = (assetId: string, editingId?: string) => {
     setSubclipDialogAssetId(assetId);
     setEditingSubclipId(editingId);
@@ -651,6 +658,29 @@ export function MediaBin({
           {filter !== 'titles' && filter !== 'shared' && filter !== 'effects' ? (
             <SmartAlbumBar albums={smartAlbums} activeId={smartAlbumId} onSelect={setSmartAlbumId} />
           ) : null}
+          {media.length > 20 && !aiSearchMode && (
+            <div className="flex items-center gap-2" data-testid="media-organize-section">
+              {organizePanelOpen ? null : (
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-center gap-1.5 rounded-md border border-brand/30 bg-brand/5 px-3 py-1.5 text-xs font-semibold text-brand hover:bg-brand/10"
+                  onClick={() => setOrganizePanelOpen(true)}
+                  data-testid="media-organize-trigger"
+                >
+                  <Sparkles size={13} />
+                  {zhCN.aiOrganize.button}
+                </button>
+              )}
+              {organizePanelOpen && onUpdateMediaCollections && (
+                <AIMediaOrganizePanel
+                  media={media}
+                  existingCollections={mediaCollections}
+                  onCollectionsUpdated={(cols) => onUpdateMediaCollections(cols)}
+                  onClose={() => setOrganizePanelOpen(false)}
+                />
+              )}
+            </div>
+          )}
           {filter !== 'titles' && filter !== 'shared' && filter !== 'effects' ? (
             <MediaLibraryViewToolbar settings={mediaLibraryView} onChange={updateMediaLibraryView} />
           ) : null}

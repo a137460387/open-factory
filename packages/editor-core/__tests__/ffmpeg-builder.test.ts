@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+﻿import { describe, expect, it } from 'vitest';
 import {
   buildAtempoFilters,
   buildBeatSyncSpeedKeyframes,
@@ -1612,6 +1612,38 @@ describe('multitrack ffmpeg builder', () => {
     expect(plan.filterComplex).toContain("crop=w='iw*if(lt(t,0),0.25");
     expect(plan.filterComplex).toContain(expectedFilter);
     expect(plan.filterComplex).toContain("overlay=x='main_w*if(lt(t,0),0.2");
+  });
+
+  it('generates boxblur privacy redaction FFmpeg expressions from clip privacyRedactions', () => {
+    const project = makeProject();
+    const clip = makeVideoClip({ id: 'clip-redact', duration: 4 });
+    (clip as any).privacyRedactions = [
+      {
+        id: 'redact-face-1',
+        type: 'face',
+        keyframes: [
+          { time: 0.0, x: 0.1, y: 0.2, w: 0.15, h: 0.2 },
+          { time: 2.0, x: 0.12, y: 0.22, w: 0.14, h: 0.19 }
+        ],
+        blurStrength: 1,
+        enabled: true
+      }
+    ];
+    project.timeline.tracks[0].clips = [clip];
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+    expect(plan.filterComplex).toContain("boxblur=");
+    expect(plan.filterComplex).toContain("enable='between(t,");
+  });
+
+  it('skips privacy redaction filters when all redactions are disabled', () => {
+    const project = makeProject();
+    const clip = makeVideoClip({ id: 'clip-redact-disabled', duration: 4 });
+    (clip as any).privacyRedactions = [
+      { id: 'redact-face-off', type: 'face', keyframes: [{ time: 0, x: 0.1, y: 0.2, w: 0.15, h: 0.2 }], blurStrength: 1, enabled: false }
+    ];
+    project.timeline.tracks[0].clips = [clip];
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+    expect(plan.filterComplex).not.toContain("boxblur=");
   });
 
   it('adds preset video and audio bitrate args', () => {

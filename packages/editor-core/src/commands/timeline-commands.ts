@@ -5775,3 +5775,47 @@ export class DeleteSubclipCommand implements Command {
     }
   }
 }
+
+export class UpdateProjectBeatSnapSuggestionsCommand implements Command {
+  readonly description = 'Update beat snap suggestions';
+  private before?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly suggestions: import('../model-types').BeatSnapSuggestion[]
+  ) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    const project = this.accessor.getProject();
+    this.accessor.setProject(touchProject({ ...project, beatSnapSuggestions: [...this.suggestions] }));
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class UpdateProjectMediaCollectionsCommand implements Command {
+  readonly description = 'Update media collections';
+  private before?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly collections: import('../model-types').MediaCollection[]
+  ) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    const project = this.accessor.getProject();
+    this.accessor.setProject(touchProject({ ...project, mediaCollections: [...this.collections] }));
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}

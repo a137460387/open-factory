@@ -29,6 +29,7 @@ import {
   CreateMulticamSequenceCommand,
   detectSceneColorJumps,
   ConformMediaCommand,
+  UpdateProjectMediaCollectionsCommand,
   DEFAULT_TIMELINE_GRID_SETTINGS,
   DEFAULT_PROJECT_ANNOTATION_COLOR,
   DEFAULT_REVIEW_ANNOTATION_COLOR,
@@ -4623,6 +4624,8 @@ export function EditorShell() {
                   onUpdateSubclip={handleUpdateSubclip}
                   onDeleteSubclip={handleDeleteSubclip}
                   onAddSubclipToTimeline={handleAddSubclipToTimeline}
+                  mediaCollections={project.mediaCollections ?? []}
+                  onUpdateMediaCollections={(cols) => commandManager.execute(new UpdateProjectMediaCollectionsCommand(projectAccessor, cols))}
                 />
               </section>
             )

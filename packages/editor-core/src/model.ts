@@ -147,6 +147,7 @@ import type {
 } from './model-types';
 
 export type { AIColorHistoryEntry } from './model-types';
+export type { ClipPrivacyRedaction, PrivacyRedactionType, RedactionKeyframe, ClipAILookMatch, WheelAdjustments, BeatSnapSuggestion, MediaCollection } from './model-types';
 export type {
   AdjustmentClip,
   AssetType,
@@ -875,7 +876,9 @@ export function createProject(name = 'Untitled Project'): Project {
     timeline,
     sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
     activeSequenceId: PRIMARY_SEQUENCE_ID,
-    subclips: []
+    subclips: [],
+    beatSnapSuggestions: [],
+    mediaCollections: []
   };
 }
 
@@ -946,7 +949,10 @@ export function createBaseClip(
     ...(beatMarkers ? { beatMarkers } : {}),
     ...(detectedBpm !== undefined ? { detectedBpm } : {}),
     ...(scenecuts ? { scenecuts } : {}),
-    ...(Array.isArray(input.aiColorHistory) ? { aiColorHistory: input.aiColorHistory.slice(0, 3) } : {})
+    ...(Array.isArray(input.aiColorHistory) ? { aiColorHistory: input.aiColorHistory.slice(0, 3) } : {}),
+    ...(Array.isArray(input.privacyRedactions) ? { privacyRedactions: normalizePrivacyRedactions(input.privacyRedactions) } : {}),
+    ...(input.beatSnapped === true ? { beatSnapped: true } : {}),
+    ...(input.aiLookMatch && typeof input.aiLookMatch === 'object' ? { aiLookMatch: normalizeAILookMatch(input.aiLookMatch) } : {})
   };
 }
 
@@ -2026,4 +2032,57 @@ function cloneClipKeyframesLocal(keyframes: ClipKeyframes | undefined): ClipKeyf
     }
   }
   return Object.keys(output).length > 0 ? output : undefined;
+}
+
+export function normalizePrivacyRedactions(input: unknown): import('./model-types').ClipPrivacyRedaction[] {
+  if (!Array.isArray(input)) return [];
+  return input
+    .filter((r): r is Record<string, unknown> => r != null && typeof r === 'object')
+    .filter((r) => typeof r.id === 'string' && (r.type === 'face' || r.type === 'license_plate' || r.type === 'screen'))
+    .map((r) => ({
+      id: r.id as string,
+      type: r.type as import('./model-types').PrivacyRedactionType,
+      keyframes: Array.isArray(r.keyframes)
+        ? r.keyframes
+            .filter((k): k is Record<string, unknown> => k != null && typeof k === 'object' && typeof k.time === 'number')
+            .map((k) => ({
+              time: round(Math.max(0, k.time as number)),
+              x: round(Math.min(1, Math.max(0, typeof k.x === 'number' ? k.x : 0))),
+              y: round(Math.min(1, Math.max(0, typeof k.y === 'number' ? k.y : 0))),
+              w: round(Math.min(1, Math.max(0.001, typeof k.w === 'number' ? k.w : 0.1))),
+              h: round(Math.min(1, Math.max(0.001, typeof k.h === 'number' ? k.h : 0.1)))
+            }))
+            .sort((a, b) => a.time - b.time)
+        : [],
+      blurStrength: typeof r.blurStrength === 'number' && Number.isFinite(r.blurStrength) ? Math.min(1, Math.max(0, r.blurStrength)) : 1,
+      enabled: r.enabled !== false
+    }));
+}
+
+export function normalizeAILookMatch(input: unknown): import('./model-types').ClipAILookMatch | undefined {
+  if (!input || typeof input !== 'object') return undefined;
+  const obj = input as Record<string, unknown>;
+  if (typeof obj.sourceImageHash !== 'string' || !obj.sourceImageHash) return undefined;
+  if (!obj.wheelAdjustments || typeof obj.wheelAdjustments !== 'object') return undefined;
+  const wa = obj.wheelAdjustments as Record<string, unknown>;
+  const parseRgb = (v: unknown): { r: number; g: number; b: number } => {
+    if (!v || typeof v !== 'object') return { r: 0, g: 0, b: 0 };
+    const o = v as Record<string, unknown>;
+    return { r: typeof o.r === 'number' ? o.r : 0, g: typeof o.g === 'number' ? o.g : 0, b: typeof o.b === 'number' ? o.b : 0 };
+  };
+  const clampWheel = (v: { r: number; g: number; b: number }) => ({
+    r: round(Math.min(1, Math.max(-1, v.r))),
+    g: round(Math.min(1, Math.max(-1, v.g))),
+    b: round(Math.min(1, Math.max(-1, v.b)))
+  });
+  return {
+    sourceImageHash: obj.sourceImageHash as string,
+    wheelAdjustments: { lift: clampWheel(parseRgb(wa.lift)), gamma: clampWheel(parseRgb(wa.gamma)), gain: clampWheel(parseRgb(wa.gain)) },
+    curveControlPoints: typeof obj.curveControlPoints === 'object' && obj.curveControlPoints
+      ? obj.curveControlPoints as import('./model-types').ClipAILookMatch['curveControlPoints']
+      : { master: [{ x: 0, y: 0 }, { x: 1, y: 1 }], r: [{ x: 0, y: 0 }, { x: 1, y: 1 }], g: [{ x: 0, y: 0 }, { x: 1, y: 1 }], b: [{ x: 0, y: 0 }, { x: 1, y: 1 }] },
+    confidence: typeof obj.confidence === 'number' && Number.isFinite(obj.confidence) ? Math.min(1, Math.max(0, obj.confidence)) : 0,
+    generatedAt: typeof obj.generatedAt === 'string' ? obj.generatedAt : new Date().toISOString(),
+    blendStrength: typeof obj.blendStrength === 'number' && Number.isFinite(obj.blendStrength) ? Math.min(100, Math.max(0, obj.blendStrength)) : 100
+  };
 }

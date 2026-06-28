@@ -395,3 +395,45 @@ export function AIColorGradingPanel({
     </div>
   );
 }
+
+export function AILookMatchPanel({ clip }: { clip: Clip }) {
+  const lookMatch = clip.aiLookMatch;
+  if (!lookMatch) return null;
+  const updateBlend = (blendStrength: number) => {
+    commandManager.execute(new UpdateClipCommand(timelineAccessor, clip.id, {
+      aiLookMatch: { ...lookMatch, blendStrength },
+    }));
+  };
+  return (
+    <div className="mt-2 space-y-2" data-testid="ai-look-match-panel">
+      <div className="text-xs font-semibold text-slate-700">{zhCN.inspector.aiLookMatch.title}</div>
+      <div className="text-xs text-slate-500">
+        {zhCN.inspector.aiLookMatch.reason}: {lookMatch.confidence > 0 ? `置信度 ${(lookMatch.confidence * 100).toFixed(0)}%` : ''}
+      </div>
+      <label className="block text-xs text-slate-600">
+        <span>{zhCN.inspector.aiLookMatch.blendStrength} ({lookMatch.blendStrength}%)</span>
+        <input
+          type="range"
+          min={0}
+          max={100}
+          step={1}
+          value={lookMatch.blendStrength}
+          className="mt-1 w-full"
+          data-testid="ai-look-match-blend"
+          onChange={(e) => updateBlend(Number(e.target.value))}
+        />
+      </label>
+      <div className="text-xs text-slate-500" data-testid="ai-look-match-preview">
+        {zhCN.inspector.aiLookMatch.before} → {zhCN.inspector.aiLookMatch.after}
+      </div>
+      <button
+        className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+        type="button"
+        data-testid="ai-look-match-apply"
+        onClick={() => { /* colorCorrection already reflects the look */ }}
+      >
+        {zhCN.inspector.aiLookMatch.apply}
+      </button>
+    </div>
+  );
+}

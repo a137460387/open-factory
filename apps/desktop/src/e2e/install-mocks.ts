@@ -3752,6 +3752,158 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setPlayheadTime(0);
     commandManager.clear();
   },
+  setupPrivacyRedactionFixture: async () => {
+    const project = createProject('Privacy Redaction E2E');
+    const asset: MediaAsset = {
+      id: 'media-pr', type: 'video', name: 'privacy-test.mp4',
+      path: tinyVideo, duration: 10, width: 1280, height: 720, size: 4096, mtimeMs: 1_000, hasAudio: false,
+    };
+    const clip = {
+      id: 'clip-pr', type: 'video' as const, name: 'privacy-test.mp4',
+      mediaId: 'media-pr', trackId: 'track-pr-video',
+      start: 0, duration: 10, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED,
+      colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM }, volume: 1,
+      privacyRedactions: [
+        { id: 'redact-face-1', type: 'face' as const, keyframes: [
+          { time: 0, x: 0.3, y: 0.2, w: 0.15, h: 0.2 },
+          { time: 2, x: 0.31, y: 0.21, w: 0.15, h: 0.2 },
+          { time: 4, x: 0.32, y: 0.19, w: 0.16, h: 0.21 },
+        ], blurStrength: 0.8, enabled: true },
+        { id: 'redact-face-2', type: 'face' as const, keyframes: [
+          { time: 0, x: 0.6, y: 0.3, w: 0.12, h: 0.18 },
+          { time: 2, x: 0.61, y: 0.31, w: 0.12, h: 0.18 },
+          { time: 4, x: 0.6, y: 0.29, w: 0.13, h: 0.19 },
+        ], blurStrength: 1, enabled: true },
+      ],
+    };
+    const timeline = {
+      transitions: [], markers: [],
+      tracks: [createTrack({ id: 'track-pr-video', type: 'video', name: 'Video 1', clips: [clip] })],
+    };
+    useEditorStore.getState().setProject({
+      ...project, media: [asset], timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
+    useEditorStore.getState().setSelectedClipIds(['clip-pr']);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupLookMatchFixture: async () => {
+    const project = createProject('AI Look Match E2E');
+    const asset: MediaAsset = {
+      id: 'media-lm', type: 'video', name: 'look-match-test.mp4',
+      path: tinyVideo, duration: 10, width: 1920, height: 1080, size: 4096, mtimeMs: 1_000, hasAudio: true,
+    };
+    const clip = {
+      id: 'clip-lm', type: 'video' as const, name: 'look-match-test.mp4',
+      mediaId: 'media-lm', trackId: 'track-lm-video',
+      start: 0, duration: 10, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED,
+      colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM }, volume: 1,
+      aiLookMatch: {
+        sourceImageHash: 'abc123',
+        wheelAdjustments: {
+          lift: { r: 0.05, g: -0.02, b: -0.03 },
+          gamma: { r: 0.03, g: 0, b: -0.03 },
+          gain: { r: 0.04, g: 0.01, b: -0.02 },
+        },
+        curveControlPoints: {
+          master: [{ x: 0, y: 0 }, { x: 0.25, y: 0.22 }, { x: 0.5, y: 0.52 }, { x: 0.75, y: 0.78 }, { x: 1, y: 1 }],
+          r: [{ x: 0, y: 0 }, { x: 0.5, y: 0.54 }, { x: 1, y: 1 }],
+          g: [{ x: 0, y: 0 }, { x: 0.5, y: 0.51 }, { x: 1, y: 1 }],
+          b: [{ x: 0, y: 0 }, { x: 0.5, y: 0.46 }, { x: 1, y: 1 }],
+        },
+        confidence: 0.85,
+        generatedAt: '2026-06-29T00:00:00.000Z',
+        blendStrength: 80,
+      },
+    };
+    const timeline = {
+      transitions: [], markers: [],
+      tracks: [createTrack({ id: 'track-lm-video', type: 'video', name: 'Video 1', clips: [clip] })],
+    };
+    useEditorStore.getState().setProject({
+      ...project, media: [asset], timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
+    await useAISettingsStore.getState().setProviderApiKey('mimo', 'test-mimo-key');
+    useAISettingsStore.getState().updateProvider('mimo', { defaultModel: 'gpt-4o' });
+    useAISettingsStore.getState().toggleProvider('mimo', true);
+    useEditorStore.getState().setSelectedClipIds(['clip-lm']);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupBeatSnapFixture: async () => {
+    const project = createProject('Beat Snap E2E');
+    const asset: MediaAsset = {
+      id: 'media-bs', type: 'video', name: 'beat-snap-test.mp4',
+      path: tinyVideo, duration: 15, width: 1920, height: 1080, size: 4096, mtimeMs: 1_000, hasAudio: true,
+    };
+    const clip1 = {
+      id: 'clip-bs-1', type: 'video' as const, name: 'clip-1.mp4',
+      mediaId: 'media-bs', trackId: 'track-bs',
+      start: 0, duration: 3.0, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED,
+      colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM }, volume: 1,
+      beatSnapped: true,
+    };
+    const clip2 = {
+      id: 'clip-bs-2', type: 'video' as const, name: 'clip-2.mp4',
+      mediaId: 'media-bs', trackId: 'track-bs',
+      start: 3.0, duration: 4.0, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED,
+      colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM }, volume: 1,
+      beatSnapped: true,
+    };
+    const clip3 = {
+      id: 'clip-bs-3', type: 'video' as const, name: 'clip-3.mp4',
+      mediaId: 'media-bs', trackId: 'track-bs',
+      start: 7.0, duration: 5.0, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED,
+      colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM }, volume: 1,
+      beatSnapped: false,
+    };
+    const timeline = {
+      transitions: [], markers: [],
+      tracks: [createTrack({ id: 'track-bs', type: 'video', name: 'Video 1', clips: [clip1, clip2, clip3] })],
+    };
+    const beatSnapSuggestions = [
+      { clipId: 'clip-bs-3', edge: 'in' as const, suggestedTime: 7.12, originalTime: 7.0 },
+    ];
+    useEditorStore.getState().setProject({
+      ...project, media: [asset], timeline, beatSnapSuggestions,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
+    useEditorStore.getState().setSelectedClipIds(['clip-bs-1', 'clip-bs-2', 'clip-bs-3']);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupMediaOrganizeFixture: async () => {
+    const project = createProject('Media Organize E2E');
+    const mediaAssets: MediaAsset[] = [];
+    for (let i = 0; i < 25; i++) {
+      mediaAssets.push({
+        id: `media-organize-${i}`, type: 'video', name: `clip-${i}.mp4`, path: tinyVideo,
+        duration: 5, width: 1920, height: 1080, size: 4096, mtimeMs: i * 1000, hasAudio: true,
+        aiAnalysis: {
+          tags: i < 10 ? ['户外', '自然'] : i < 20 ? ['室内', '人物'] : ['夜景', '城市'],
+          scene: i < 10 ? '户外场景' : i < 20 ? '室内场景' : '城市夜景',
+          mood: '平静', objects: [], analysisTime: '2026-01-01T00:00:00.000Z', providerId: 'mock',
+        },
+      });
+    }
+    const timeline = { transitions: [], markers: [], tracks: [createTrack({ id: 'track-mo', type: 'video', name: 'Video 1', clips: [] })] };
+    const existingCollections = [
+      { id: 'col-manual-1', name: '手动分组', mediaIds: ['media-organize-0'], source: 'manual' as const, createdAt: '2026-01-01T00:00:00.000Z' },
+    ];
+    useEditorStore.getState().setProject({
+      ...project, media: mediaAssets, timeline, mediaCollections: existingCollections,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
+    useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
 };
 
 function makeWhisperVideoClip(): Extract<import('@open-factory/editor-core').Clip, { type: 'video' }> {

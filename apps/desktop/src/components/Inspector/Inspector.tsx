@@ -91,6 +91,7 @@ import {
   createDefaultMotionGraphic,
   getMotionGraphicTemplateDefinition,
   normalizePrivacyBlurEffect,
+  normalizePrivacyRedactions,
   normalizeMotionGraphic,
   normalizeSequenceFrameRate,
   normalizeSlowMotionMode,
@@ -213,7 +214,7 @@ import { showToast } from '../../lib/toast';
 import { generateTtsVoiceover } from '../../lib/ttsVoiceover';
 import { SubtitleAIPolishPanel } from './SubtitleAIPolishPanel';
 import { ChapterTitleAIPanel } from './ChapterTitleAIPanel';
-import { AIColorGradingPanel } from './AIColorGradingPanel';
+import { AIColorGradingPanel, AILookMatchPanel } from './AIColorGradingPanel';
 import { AISceneMatchPanel } from './AISceneMatchPanel';
 import { AISubtitleStylePanel } from './AISubtitleStylePanel';
 import { markLocalAiModelUsed } from '../../settings/appSettings';
@@ -798,6 +799,7 @@ function ClipInspector({
   const audioChannelRoutingOptions: AudioChannelRoutingMode[] =
     asset?.audioChannels === 1 ? ['normal', 'mono-left', 'mono-right', 'mono-both'] : ['normal', 'swap-stereo', 'stereo-left-mono', 'stereo-right-mono', 'stereo-to-mono'];
   const masks = normalizeMasks(clip.masks);
+  const privacyRedactions = normalizePrivacyRedactions(clip.privacyRedactions);
   const updatePanorama = (patch: Partial<typeof panorama>) => {
     commit({ panorama: normalizeClipPanoramaView({ ...panorama, ...patch }) });
   };
@@ -1747,6 +1749,53 @@ function ClipInspector({
               onRun={() => void runPrivacyBlurDetection()}
             />
             <MasksEditor masks={masks} onAdd={addMask} onUpdate={updateMask} onRemove={removeMask} />
+            {privacyRedactions.length > 0 || true ? (
+              <div className="mt-2 space-y-2" data-testid="privacy-redaction-panel">
+                <div className="text-xs font-semibold text-slate-700">{zhCN.inspector.privacyRedaction.title}</div>
+                {privacyRedactions.map((r) => (
+                  <div key={r.id} className="rounded-md border border-line p-2 space-y-1" data-testid={`privacy-redaction-item-${r.id}`}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-slate-800">{zhCN.inspector.privacyRedaction.regions[r.type] ?? r.type}</span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          className="rounded p-1 text-xs hover:bg-panel"
+                          type="button"
+                          title={zhCN.inspector.privacyRedaction.toggle}
+                          data-testid={`privacy-redaction-toggle-${r.id}`}
+                          onClick={() => { const updated = privacyRedactions.map((pr) => pr.id === r.id ? { ...pr, enabled: !pr.enabled } : pr); commit({ privacyRedactions: updated }); }}
+                        >{r.enabled ? '✓' : '✗'}</button>
+                        <button
+                          className="rounded p-1 text-xs text-red-500 hover:bg-red-50"
+                          type="button"
+                          title={zhCN.inspector.privacyRedaction.remove}
+                          data-testid={`privacy-redaction-remove-${r.id}`}
+                          onClick={() => { commit({ privacyRedactions: privacyRedactions.filter((pr) => pr.id !== r.id) }); }}
+                        ><Trash2 size={12} /></button>
+                      </div>
+                    </div>
+                    <label className="block text-xs text-slate-600">
+                      <span>{zhCN.inspector.privacyRedaction.blurStrength}</span>
+                      <input
+                        type="range"
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        value={r.blurStrength}
+                        className="mt-1 w-full"
+                        data-testid={`privacy-redaction-blur-${r.id}`}
+                        onChange={(e) => { const updated = privacyRedactions.map((pr) => pr.id === r.id ? { ...pr, blurStrength: Number(e.target.value) } : pr); commit({ privacyRedactions: updated }); }}
+                      />
+                    </label>
+                  </div>
+                ))}
+                <button
+                  className="w-full rounded-md border border-dashed border-line px-2 py-1.5 text-xs text-slate-500 hover:border-brand hover:text-brand"
+                  type="button"
+                  data-testid="privacy-redaction-add"
+                  onClick={() => { commit({ privacyRedactions: [...privacyRedactions, { id: createId('redaction'), type: 'face', keyframes: [{ time: 0, x: 0.25, y: 0.25, w: 0.2, h: 0.25 }], blurStrength: 1, enabled: true }] }); }}
+                >+ {zhCN.inspector.privacyRedaction.addRegion}</button>
+              </div>
+            ) : null}
           </Section>
         ) : null}
 
@@ -2537,6 +2586,7 @@ function ClipInspector({
                 sourcePath={asset?.path ?? ''}
                 selectedClipLocked={selectedClipLocked}
               />
+              <AILookMatchPanel clip={clip} />
             </div>
           </details>
         ) : null}
@@ -6191,3 +6241,4 @@ function resolveSelectedKeyframeEntries(
     return clip && frame ? [{ ref, clip, frame }] : [];
   });
 }
+

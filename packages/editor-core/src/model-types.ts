@@ -239,6 +239,54 @@ export interface ClipPrivacyBlur {
   color?: string;
 }
 
+export type PrivacyRedactionType = 'face' | 'license_plate' | 'screen';
+
+export interface RedactionKeyframe {
+  time: number;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+export interface ClipPrivacyRedaction {
+  id: string;
+  type: PrivacyRedactionType;
+  keyframes: RedactionKeyframe[];
+  blurStrength: number;
+  enabled: boolean;
+}
+
+export interface WheelAdjustments {
+  lift: { r: number; g: number; b: number };
+  gamma: { r: number; g: number; b: number };
+  gain: { r: number; g: number; b: number };
+}
+
+export interface ClipAILookMatch {
+  sourceImageHash: string;
+  wheelAdjustments: WheelAdjustments;
+  curveControlPoints: { master: Array<{ x: number; y: number }>; r: Array<{ x: number; y: number }>; g: Array<{ x: number; y: number }>; b: Array<{ x: number; y: number }> };
+  confidence: number;
+  generatedAt: string;
+  blendStrength: number;
+}
+
+export interface BeatSnapSuggestion {
+  clipId: string;
+  edge: 'in' | 'out';
+  suggestedTime: number;
+  originalTime: number;
+}
+
+export interface MediaCollection {
+  id: string;
+  name: string;
+  mediaIds: string[];
+  source: 'ai' | 'manual';
+  createdAt: string;
+}
+
 export interface ClipMask {
   id: string;
   type: MaskType;
@@ -289,6 +337,10 @@ export interface Project {
   subclips?: Subclip[];
   /** 说话人标签映射（说话人ID→名称） */
   speakerLabels?: Record<number, string>;
+  /** AI 卡点建议列表 */
+  beatSnapSuggestions?: BeatSnapSuggestion[];
+  /** 媒体库分组/收藏 */
+  mediaCollections?: MediaCollection[];
 }
 
 /** 虚拟子剪辑：对源媒体特定区间的命名引用，不生成实际文件 */
@@ -651,6 +703,12 @@ export interface BaseClip {
   aiReframe?: ClipAIReframe;
   /** 异常片段检测结果（黑场/静态长镜头） */
   anomalies?: AnomalyInterval[];
+  /** AI 隐私打码区域列表 */
+  privacyRedactions?: ClipPrivacyRedaction[];
+  /** 是否已卡点吸附到节拍 */
+  beatSnapped?: boolean;
+  /** AI 参考图调色匹配数据 */
+  aiLookMatch?: ClipAILookMatch;
 }
 
 export interface AIColorHistoryEntry {
