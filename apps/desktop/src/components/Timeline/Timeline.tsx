@@ -4885,7 +4885,7 @@ function ClipActionMenu({
   const currentMediaId = clip && 'mediaId' in clip ? clip.mediaId : undefined;
   return (
     <div
-      className="fixed z-50 w-[230px] rounded-md border border-line bg-white p-2 text-xs shadow-soft"
+      className="fixed z-50 max-h-[80vh] w-[230px] overflow-y-auto rounded-md border border-line bg-white p-2 text-xs shadow-soft"
       style={{ left: menu.x, top: menu.y }}
       data-testid="clip-action-menu"
       onPointerDown={(event) => event.stopPropagation()}
