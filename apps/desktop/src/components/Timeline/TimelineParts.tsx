@@ -373,7 +373,9 @@ export function TrackRow({
   reduceMotion,
   collaborationLocksByClipId,
   onRemoveAnomaly,
-  continuityWarnings
+  continuityWarnings,
+  colorConsistencyWarnings,
+  sfxSuggestions
 }: {
   track: Track;
   zoom: number;
@@ -415,6 +417,8 @@ export function TrackRow({
   collaborationLocksByClipId: Map<string, CollaborationClipLock>;
   onRemoveAnomaly(clipId: string, anomaly: AnomalyInterval): void;
   continuityWarnings?: Array<{ clipAId: string; clipBId: string; type: string; confidence: number; reason: string }>;
+  colorConsistencyWarnings?: Array<{ clipAId: string; clipBId: string; type: string; deltaRGB: number | null; reason: string }>;
+  sfxSuggestions?: Array<{ time: number; category: string; confidence: number; matchedAssetId: string | null; status: string }>;
 }) {
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const frequencyBands = useAudioMeterStore((state) => state.trackFrequencyBands[track.id] ?? getSilentFrequencyBands());
@@ -664,6 +668,43 @@ export function TrackRow({
                 </span>
               );
             })}
+          </span>
+        ) : null}
+        {Array.isArray(colorConsistencyWarnings) && colorConsistencyWarnings.length > 0 ? (
+          <span className="absolute inset-0 z-[4] pointer-events-none" data-testid={`color-consistency-warnings-${track.id}`}>
+            {colorConsistencyWarnings.map((w, wi) => {
+              const boundaryClip = sortedClips.find((c) => c.id === w.clipAId);
+              if (!boundaryClip) return null;
+              const boundaryTime = boundaryClip.start + boundaryClip.duration;
+              const label = w.type === 'skin_tone' ? zhCN.colorConsistency.skinTone : w.type === 'white_balance' ? zhCN.colorConsistency.whiteBalance : zhCN.colorConsistency.both;
+              return (
+                <span
+                  key={wi}
+                  className="absolute top-1 z-[4] flex h-5 w-5 items-center justify-center rounded-full bg-purple-500 text-white shadow cursor-pointer pointer-events-auto"
+                  style={{ left: boundaryTime * zoom - 10 }}
+                  title={zhCN.colorConsistency.title + ': ' + label + (w.deltaRGB != null ? ' (ΔRGB=' + w.deltaRGB.toFixed(1) + ')' : '')}
+                  data-testid={`color-consistency-warning-${w.clipAId}-${w.clipBId}-${w.type}`}
+                >
+                  <span>🎨</span>
+                </span>
+              );
+            })}
+          </span>
+        ) : null}
+        {Array.isArray(sfxSuggestions) && sfxSuggestions.length > 0 ? (
+          <span className="absolute inset-0 z-[5] pointer-events-none" data-testid={`sfx-suggestions-${track.id}`}>
+            {sfxSuggestions.map((s, si) => (
+              <span
+                key={si}
+                className="absolute bottom-0 z-[5] flex h-4 w-4 items-center justify-center rounded-full bg-teal-500 text-white shadow cursor-pointer pointer-events-auto"
+                style={{ left: s.time * zoom - 8 }}
+                title={zhCN.sfxMatch.candidatePoint + ': ' + s.category + ' (' + (s.confidence * 100).toFixed(0) + '%)' + (s.matchedAssetId ? '' : ' - ' + zhCN.sfxMatch.noMatch)}
+                data-testid={`sfx-suggestion-${track.id}-${si}`}
+                data-sfx-status={s.status}
+              >
+                <span className="text-[9px]">♪</span>
+              </span>
+            ))}
           </span>
         ) : null}
         {virtualClips.map((clip) => {
@@ -1107,6 +1148,16 @@ function ClipBlock({
           data-testid={`shake-badge-${clip.id}`}
         >
           <AlertTriangle size={11} />
+        </span>
+      ) : null}
+      {'motionType' in clip && (clip as { motionType?: { type: string; confidence: number } }).motionType ? (
+        <span
+          className="absolute bottom-1 left-1 z-20 inline-flex h-4 w-4 items-center justify-center rounded-full bg-indigo-500 text-white shadow"
+          title={zhCN.motionType.title + ': ' + ((zhCN.motionType as Record<string, string>)[(clip as { motionType: { type: string } }).motionType.type] ?? (clip as { motionType: { type: string } }).motionType.type)}
+          data-testid={`motion-type-badge-${clip.id}`}
+          data-motion-type={(clip as { motionType: { type: string } }).motionType.type}
+        >
+          <span className="text-[8px] font-bold">M</span>
         </span>
       ) : null}
       {clip.type === 'video' && clip.aiPipSuggestion ? (

@@ -4462,6 +4462,95 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setProject({ ...p, timeline, sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }], activeSequenceId: PRIMARY_SEQUENCE_ID });
   },
   commandManager: { undo: () => commandManager.undo(), redo: () => commandManager.redo() } as any,
+  setupMotionTypeFixture: () => {
+    const project = createProject('Motion Type E2E');
+    const assetPan = { id: 'media-mt-pan', type: 'video' as const, name: 'pan.mp4', path: tinyVideo, duration: 5, width: 1920, height: 1080, size: 4096, mtimeMs: 1_000, hasAudio: false };
+    const assetTilt = { id: 'media-mt-tilt', type: 'video' as const, name: 'tilt.mp4', path: tinyVideo, duration: 5, width: 1920, height: 1080, size: 4096, mtimeMs: 1_000, hasAudio: false };
+    const assetStatic = { id: 'media-mt-static', type: 'video' as const, name: 'static.mp4', path: tinyVideo, duration: 5, width: 1920, height: 1080, size: 4096, mtimeMs: 1_000, hasAudio: false };
+    const clipPan = { id: 'clip-mt-pan', type: 'video' as const, name: 'pan.mp4', mediaId: 'media-mt-pan', trackId: 'track-mt-video', start: 0, duration: 5, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1, colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM }, motionType: { type: 'pan' as const, confidence: 0.92, analyzedAt: new Date().toISOString() } };
+    const clipTilt = { id: 'clip-mt-tilt', type: 'video' as const, name: 'tilt.mp4', mediaId: 'media-mt-tilt', trackId: 'track-mt-video', start: 5, duration: 5, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1, colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM }, motionType: { type: 'tilt' as const, confidence: 0.88, analyzedAt: new Date().toISOString() } };
+    const clipStatic = { id: 'clip-mt-static', type: 'video' as const, name: 'static.mp4', mediaId: 'media-mt-static', trackId: 'track-mt-video', start: 10, duration: 5, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1, colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM }, motionType: { type: 'static' as const, confidence: 0.95, analyzedAt: new Date().toISOString() } };
+    const timeline = { transitions: [], markers: [], tracks: [createTrack({ id: 'track-mt-video', type: 'video', name: 'Video 1', clips: [clipPan, clipTilt, clipStatic] })] };
+    useEditorStore.getState().setProject({ ...project, media: [assetPan, assetTilt, assetStatic], timeline, sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }], activeSequenceId: PRIMARY_SEQUENCE_ID });
+    commandManager.clear();
+  },
+  filterByMotionType: (motionTypeInput?: unknown) => {
+    const mt = typeof motionTypeInput === 'string' ? motionTypeInput : 'pan';
+    const p = useEditorStore.getState().project;
+    if (!p) return 0;
+    const matched = p.media.filter((m) => {
+      const clip = p.timeline.tracks.flatMap((t) => t.clips).find((c) => 'mediaId' in c && c.mediaId === m.id && 'motionType' in c && (c as { motionType?: { type: string } }).motionType?.type === mt);
+      return clip != null;
+    });
+    return matched.length;
+  },
+  setupColorConsistencyFixture: () => {
+    const project = createProject('Color Consistency E2E');
+    const assetA = { id: 'media-cc-a', type: 'video' as const, name: 'cc-a.mp4', path: tinyVideo, duration: 5, width: 1920, height: 1080, size: 4096, mtimeMs: 1_000, hasAudio: false };
+    const assetB = { id: 'media-cc-b', type: 'video' as const, name: 'cc-b.mp4', path: tinyVideo, duration: 5, width: 1920, height: 1080, size: 4096, mtimeMs: 1_000, hasAudio: false };
+    const clipA = { id: 'clip-cc-a', type: 'video' as const, name: 'cc-a.mp4', mediaId: 'media-cc-a', trackId: 'track-cc-video', start: 0, duration: 5, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1, colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM } };
+    const clipB = { id: 'clip-cc-b', type: 'video' as const, name: 'cc-b.mp4', mediaId: 'media-cc-b', trackId: 'track-cc-video', start: 5, duration: 5, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1, colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM } };
+    const timeline = {
+      transitions: [], markers: [],
+      tracks: [createTrack({ id: 'track-cc-video', type: 'video', name: 'Video 1', clips: [clipA, clipB] })],
+      colorConsistencyWarnings: [
+        { clipAId: 'clip-cc-a', clipBId: 'clip-cc-b', type: 'skin_tone' as const, deltaRGB: 45.2, reason: '肤色ΔRGB=45.2 > 30' },
+      ]
+    };
+    useEditorStore.getState().setProject({ ...project, media: [assetA, assetB], timeline, sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }], activeSequenceId: PRIMARY_SEQUENCE_ID });
+    commandManager.clear();
+  },
+  applyColorCompensation: () => {
+    const p = useEditorStore.getState().project;
+    if (!p) return;
+    const warnings = (p.timeline.colorConsistencyWarnings ?? []).filter((w) => !(w.clipAId === 'clip-cc-a' && w.clipBId === 'clip-cc-b'));
+    const timeline = { ...p.timeline, colorConsistencyWarnings: warnings };
+    useEditorStore.getState().setProject({ ...p, timeline, sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }], activeSequenceId: PRIMARY_SEQUENCE_ID });
+  },
+  setupSfxMatchFixture: () => {
+    const project = createProject('SFX Match E2E');
+    const asset = { id: 'media-sfx', type: 'video' as const, name: 'sfx-clip.mp4', path: tinyVideo, duration: 20, width: 1920, height: 1080, size: 4096, mtimeMs: 1_000, hasAudio: false };
+    const clip1 = { id: 'clip-sfx-1', type: 'video' as const, name: 'sfx-clip.mp4', mediaId: 'media-sfx', trackId: 'track-sfx-video', start: 0, duration: 10, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1, colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM } };
+    const clip2 = { id: 'clip-sfx-2', type: 'video' as const, name: 'sfx-clip-b.mp4', mediaId: 'media-sfx', trackId: 'track-sfx-video', start: 10, duration: 10, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1, colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM } };
+    const timeline = {
+      transitions: [], markers: [],
+      tracks: [createTrack({ id: 'track-sfx-video', type: 'video', name: 'Video 1', clips: [clip1, clip2] })],
+      sfxSuggestions: [
+        { time: 3.0, category: 'footstep', confidence: 0.85, matchedAssetId: 'sfx-footstep-1', status: 'pending' as const },
+        { time: 12.0, category: 'door_slam', confidence: 0.72, matchedAssetId: null, status: 'pending' as const },
+      ]
+    };
+    useEditorStore.getState().setProject({ ...project, media: [asset], timeline, sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }], activeSequenceId: PRIMARY_SEQUENCE_ID });
+    commandManager.clear();
+  },
+  insertSfx: (sfxIndexInput?: unknown) => {
+    const idx = typeof sfxIndexInput === 'number' ? sfxIndexInput : 0;
+    const p = useEditorStore.getState().project;
+    if (!p) return;
+    const suggestions = [...(p.timeline.sfxSuggestions ?? [])];
+    if (idx >= 0 && idx < suggestions.length) {
+      suggestions[idx] = { ...suggestions[idx], status: 'accepted' };
+    }
+    const timeline = { ...p.timeline, sfxSuggestions: suggestions };
+    useEditorStore.getState().setProject({ ...p, timeline, sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }], activeSequenceId: PRIMARY_SEQUENCE_ID });
+  },
+  setupPacingAnalysisFixture: () => {
+    const project = createProject('Pacing Analysis E2E');
+    const asset = { id: 'media-pacing', type: 'video' as const, name: 'pacing.mp4', path: tinyVideo, duration: 90, width: 1920, height: 1080, size: 4096, mtimeMs: 1_000, hasAudio: false };
+    const clips = Array.from({ length: 18 }, (_, i) => ({
+      id: `clip-pacing-${i}`, type: 'video' as const, name: `pacing-${i}.mp4`, mediaId: 'media-pacing', trackId: 'track-pacing', start: i * 5, duration: 5, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1, colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM },
+    }));
+    const cpmCurve = Array.from({ length: 30 }, (_, i) => ({ time: i * 3, cpm: i >= 20 && i <= 24 ? 1.0 : 4.0 }));
+    const pacingAnalysis = {
+      cpmCurve,
+      slowSegments: [{ start: 60, end: 75 }],
+      fastSegments: [] as Array<{ start: number; end: number }>,
+      overallAvgCPM: 3.5,
+    };
+    const timeline = { transitions: [], markers: [], tracks: [createTrack({ id: 'track-pacing', type: 'video', name: 'Video 1', clips })] };
+    useEditorStore.getState().setProject({ ...project, media: [asset], timeline, pacingAnalysis, sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }], activeSequenceId: PRIMARY_SEQUENCE_ID });
+    commandManager.clear();
+  },
 };
 
 function makeWhisperVideoClip(): Extract<import('@open-factory/editor-core').Clip, { type: 'video' }> {

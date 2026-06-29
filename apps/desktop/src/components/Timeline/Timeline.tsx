@@ -3216,9 +3216,48 @@ function addProjectBookmark(time = playheadTime): void {
                 collaborationLocksByClipId={collaborationLocksByClipId}
                 onRemoveAnomaly={removeAnomaly}
                 continuityWarnings={project.timeline.continuityWarnings ?? []}
+                colorConsistencyWarnings={project.timeline.colorConsistencyWarnings ?? []}
+                sfxSuggestions={project.timeline.sfxSuggestions ?? []}
               />
             ))}
             {virtualTrackWindow.afterHeight > 0 ? <div style={{ height: virtualTrackWindow.afterHeight }} data-testid="timeline-track-virtual-spacer-after" /> : null}
+            {project.pacingAnalysis ? (() => {
+              const pa = project.pacingAnalysis;
+              const chartHeight = 40;
+              const maxCpm = pa.cpmCurve.length > 0 ? Math.max(...pa.cpmCurve.map((p) => p.cpm), 1) : 1;
+              return (
+                <div className="relative h-10 border-t border-line bg-panel" style={{ marginLeft: LABEL_WIDTH }} data-testid="pacing-analysis-chart">
+                  {pa.slowSegments.map((seg, si) => (
+                    <div
+                      key={si}
+                      className="absolute top-0 bottom-0 bg-blue-500/15 cursor-pointer"
+                      style={{ left: seg.start * zoom, width: Math.max(2, (seg.end - seg.start) * zoom) }}
+                      title={zhCN.pacingAnalysis.slowSegment + ' ' + seg.start.toFixed(1) + 's-' + seg.end.toFixed(1) + 's: ' + zhCN.pacingAnalysis.suggestion}
+                      data-testid={`pacing-slow-segment-${si}`}
+                    />
+                  ))}
+                  {pa.fastSegments.map((seg, fi) => (
+                    <div
+                      key={fi}
+                      className="absolute top-0 bottom-0 bg-red-500/15"
+                      style={{ left: seg.start * zoom, width: Math.max(2, (seg.end - seg.start) * zoom) }}
+                      title={zhCN.pacingAnalysis.fastSegment + ' ' + seg.start.toFixed(1) + 's-' + seg.end.toFixed(1) + 's'}
+                      data-testid={`pacing-fast-segment-${fi}`}
+                    />
+                  ))}
+                  <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none" viewBox={`0 0 ${Math.max(1, pa.cpmCurve.length)} ${maxCpm}`}>
+                    {pa.cpmCurve.map((pt, i) => {
+                      if (i === 0) return null;
+                      const prev = pa.cpmCurve[i - 1];
+                      return <line key={i} x1={i - 1} y1={maxCpm - prev.cpm} x2={i} y2={maxCpm - pt.cpm} stroke="#6366f1" strokeWidth={maxCpm * 0.03} />;
+                    })}
+                  </svg>
+                  <div className="absolute right-1 top-0.5 text-[9px] text-muted" data-testid="pacing-avg-cpm">
+                    {zhCN.pacingAnalysis.avgCpm}: {pa.overallAvgCPM.toFixed(1)}
+                  </div>
+                </div>
+              );
+            })() : null}
             {protectedRanges.map((range) => (
               <div
                 key={range.id}
