@@ -3215,6 +3215,7 @@ function addProjectBookmark(time = playheadTime): void {
                 reduceMotion={reduceMotion}
                 collaborationLocksByClipId={collaborationLocksByClipId}
                 onRemoveAnomaly={removeAnomaly}
+                continuityWarnings={project.timeline.continuityWarnings ?? []}
               />
             ))}
             {virtualTrackWindow.afterHeight > 0 ? <div style={{ height: virtualTrackWindow.afterHeight }} data-testid="timeline-track-virtual-spacer-after" /> : null}

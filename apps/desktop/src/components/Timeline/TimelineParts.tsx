@@ -372,7 +372,8 @@ export function TrackRow({
   envelopeEditMode,
   reduceMotion,
   collaborationLocksByClipId,
-  onRemoveAnomaly
+  onRemoveAnomaly,
+  continuityWarnings
 }: {
   track: Track;
   zoom: number;
@@ -413,6 +414,7 @@ export function TrackRow({
   reduceMotion: boolean;
   collaborationLocksByClipId: Map<string, CollaborationClipLock>;
   onRemoveAnomaly(clipId: string, anomaly: AnomalyInterval): void;
+  continuityWarnings?: Array<{ clipAId: string; clipBId: string; type: string; confidence: number; reason: string }>;
 }) {
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const frequencyBands = useAudioMeterStore((state) => state.trackFrequencyBands[track.id] ?? getSilentFrequencyBands());
@@ -633,6 +635,37 @@ export function TrackRow({
             />
           ));
         }, [track.clips, zoom, projectFrameRate])}
+        {Array.isArray(track.musicStructure) && track.musicStructure.length > 0 ? (
+          <span className="absolute inset-0 z-[2] pointer-events-none" data-testid={`music-structure-markers-${track.id}`}>
+            {track.musicStructure.map((ms, mi) => {
+              const color = ms.type === 'energy_rise' ? 'bg-green-500' : ms.type === 'energy_drop' ? 'bg-red-500' : 'bg-blue-500';
+              const label = ms.type === 'energy_rise' ? zhCN.musicStructure.energyRise : ms.type === 'energy_drop' ? zhCN.musicStructure.energyDrop : zhCN.musicStructure.timbreShift;
+              return <span key={mi} className={`absolute top-0 bottom-0 w-px ${color} opacity-60`} style={{ left: ms.time * zoom }} data-testid={`music-structure-marker-${track.id}-${mi}`} title={label} />;
+            })}
+          </span>
+        ) : null}
+        {Array.isArray(continuityWarnings) && continuityWarnings.length > 0 ? (
+          <span className="absolute inset-0 z-[3] pointer-events-none" data-testid={`continuity-warnings-${track.id}`}>
+            {continuityWarnings.map((w, wi) => {
+              const boundaryClip = sortedClips.find((c) => c.id === w.clipAId);
+              if (!boundaryClip) return null;
+              const boundaryTime = boundaryClip.start + boundaryClip.duration;
+              const isAxisJump = w.type === 'axis_jump';
+              const label = isAxisJump ? zhCN.continuityCheck.axisJump : zhCN.continuityCheck.jumpCut;
+              return (
+                <span
+                  key={wi}
+                  className={`absolute top-1 z-[3] flex h-5 w-5 items-center justify-center rounded-full ${isAxisJump ? 'bg-red-500' : 'bg-orange-400'} text-white shadow cursor-pointer pointer-events-auto`}
+                  style={{ left: boundaryTime * zoom - 10 }}
+                  title={label + ': ' + w.reason}
+                  data-testid={`continuity-warning-${w.clipAId}-${w.clipBId}-${w.type}`}
+                >
+                  <AlertTriangle size={12} />
+                </span>
+              );
+            })}
+          </span>
+        ) : null}
         {virtualClips.map((clip) => {
           const isSelected = selectedClipIds.includes(clip.id) || selectedClipId === clip.id;
           const trimPreview = drag?.clip?.id === clip.id && (drag.mode === 'trim-left' || drag.mode === 'trim-right') ? drag : undefined;
@@ -1085,6 +1118,24 @@ function ClipBlock({
           <AlertTriangle size={11} />
         </span>
       ) : null}
+      {Array.isArray(clip.flashWarnings) && clip.flashWarnings.length > 0 ? (
+        <span
+          className="absolute bottom-1 right-5 z-20 inline-flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-white shadow"
+          title={zhCN.flashWarning.badge + ' (' + clip.flashWarnings.length + ')'}
+          data-testid={`flash-warning-badge-${clip.id}`}
+        >
+          <AlertTriangle size={11} />
+        </span>
+      ) : null}
+      {'readingSpeedWarning' in clip && (clip as { readingSpeedWarning?: { severity: string } | null }).readingSpeedWarning ? (
+        <span
+          className={`absolute bottom-1 right-9 z-20 inline-flex h-4 w-4 items-center justify-center rounded-full ${(clip as { readingSpeedWarning: { severity: string } }).readingSpeedWarning.severity === 'critical' ? 'bg-red-500' : 'bg-yellow-400'} text-white shadow`}
+          title={zhCN.subtitleReadingSpeed.title + ' (' + (clip as { readingSpeedWarning: { charsPerSecond: number } }).readingSpeedWarning.charsPerSecond.toFixed(1) + ' ' + zhCN.subtitleReadingSpeed.charsPerSecond + ')'}
+          data-testid={`reading-speed-warning-${clip.id}`}
+        >
+          <AlertTriangle size={11} />
+        </span>
+      ) : null}
       {locked ? null : (
         <span
           className="absolute left-0 top-0 z-30 h-full w-[4px] cursor-ew-resize bg-black/20 opacity-0 transition group-hover:opacity-100"
@@ -1186,8 +1237,19 @@ function ClipBlock({
         />
         );
       })}
+      {Array.isArray(clip.flashWarnings) && clip.flashWarnings.length > 0 ? (
+        <span className="absolute bottom-1.5 left-0 right-0 z-10 flex h-1" data-testid={`flash-warning-bars-${clip.id}`}>
+          {clip.flashWarnings.map((fw, fi) => {
+            const clipDuration = clip.duration || 1;
+            const leftPct = Math.max(0, (fw.startTime - clip.start) / clipDuration * 100);
+            const widthPct = Math.min(100 - leftPct, (fw.endTime - fw.startTime) / clipDuration * 100);
+            const color = fw.severity === 'high' ? 'bg-red-500' : fw.severity === 'medium' ? 'bg-orange-400' : 'bg-yellow-300';
+            return <span key={fi} className={`absolute h-1 ${color} opacity-70`} style={{ left: leftPct + '%', width: widthPct + '%' }} data-testid={`flash-bar-${clip.id}-${fi}`} />;
+          })}
+        </span>
+      ) : null}
       {(clip.anomalies ?? []).length > 0 && (
-        <span className="absolute bottom-0 left-0 right-0 z-10 flex h-1.5" data-testid={"anomaly-markers-" + clip.id}>
+          <span className="absolute bottom-0 left-0 right-0 z-10 flex h-1.5" data-testid={"anomaly-markers-" + clip.id}>
           {(clip.anomalies ?? []).map((anomaly, idx) => (
             <span
               key={idx}

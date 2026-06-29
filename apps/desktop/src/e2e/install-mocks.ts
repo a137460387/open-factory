@@ -4290,6 +4290,177 @@ window.__E2E_ACTIONS__ = {
     });
     commandManager.clear();
   },
+  setupFlashWarningFixture: () => {
+    const project = createProject('Flash Warning E2E');
+    const asset = { id: 'media-flash-video', type: 'video' as const, name: 'flash-video.mp4', path: tinyVideo, duration: 10, width: 1920, height: 1080, size: 4096, mtimeMs: 1_000, hasAudio: false };
+    const clip = {
+      id: 'clip-flash-1', type: 'video' as const, name: 'flash-video.mp4', mediaId: 'media-flash-video', trackId: 'track-flash-video', start: 0, duration: 10, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1, colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM },
+      flashWarnings: [
+        { startTime: 2, endTime: 4, flashRate: 5, severity: 'medium' as const, isRedFlash: false },
+        { startTime: 6, endTime: 8, flashRate: 8, severity: 'high' as const, isRedFlash: true },
+      ]
+    };
+    const timeline = { transitions: [], markers: [], tracks: [createTrack({ id: 'track-flash-video', type: 'video', name: 'Video 1', clips: [clip] })] };
+    useEditorStore.getState().setProject({ ...project, media: [asset], timeline, sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }], activeSequenceId: PRIMARY_SEQUENCE_ID });
+    commandManager.clear();
+  },
+  setupFlashWarningReduceFixture: () => {
+    const project = createProject('Flash Warning Reduce E2E');
+    const asset = { id: 'media-flash-reduce', type: 'video' as const, name: 'flash-reduce.mp4', path: tinyVideo, duration: 10, width: 1920, height: 1080, size: 4096, mtimeMs: 1_000, hasAudio: false };
+    const clip = {
+      id: 'clip-flash-reduce', type: 'video' as const, name: 'flash-reduce.mp4', mediaId: 'media-flash-reduce', trackId: 'track-flash-reduce', start: 0, duration: 10, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1, colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM },
+      flashWarnings: [
+        { startTime: 2, endTime: 4, flashRate: 4, severity: 'low' as const, isRedFlash: false },
+      ]
+    };
+    const timeline = { transitions: [], markers: [], tracks: [createTrack({ id: 'track-flash-reduce', type: 'video', name: 'Video 1', clips: [clip] })] };
+    useEditorStore.getState().setProject({ ...project, media: [asset], timeline, sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }], activeSequenceId: PRIMARY_SEQUENCE_ID });
+    commandManager.clear();
+  },
+  setupContinuityWarningFixture: () => {
+    const project = createProject('Continuity Check E2E');
+    const assetA = { id: 'media-cont-a', type: 'video' as const, name: 'cont-a.mp4', path: tinyVideo, duration: 5, width: 1920, height: 1080, size: 4096, mtimeMs: 1_000, hasAudio: false };
+    const assetB = { id: 'media-cont-b', type: 'video' as const, name: 'cont-b.mp4', path: tinyVideo, duration: 5, width: 1920, height: 1080, size: 4096, mtimeMs: 1_000, hasAudio: false };
+    const clipA = { id: 'clip-cont-a', type: 'video' as const, name: 'cont-a.mp4', mediaId: 'media-cont-a', trackId: 'track-cont-video', start: 0, duration: 5, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1, colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM } };
+    const clipB = { id: 'clip-cont-b', type: 'video' as const, name: 'cont-b.mp4', mediaId: 'media-cont-b', trackId: 'track-cont-video', start: 5, duration: 5, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1, colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM } };
+    const timeline = {
+      transitions: [], markers: [],
+      tracks: [createTrack({ id: 'track-cont-video', type: 'video', name: 'Video 1', clips: [clipA, clipB] })],
+      continuityWarnings: [
+        { clipAId: 'clip-cont-a', clipBId: 'clip-cont-b', type: 'axis_jump' as const, confidence: 0.9, reason: '同场景内左突变为右' },
+        { clipAId: 'clip-cont-a', clipBId: 'clip-cont-b', type: 'jump_cut' as const, confidence: 0.85, reason: '构图中心距离<5%, 时长差<0.5s' },
+      ]
+    };
+    useEditorStore.getState().setProject({ ...project, media: [assetA, assetB], timeline, sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }], activeSequenceId: PRIMARY_SEQUENCE_ID });
+    commandManager.clear();
+  },
+  setupMusicStructureFixture: () => {
+    const project = createProject('Music Structure E2E');
+    const asset = { id: 'media-music', type: 'audio' as const, name: 'music.wav', path: tinyVideo, duration: 30, width: 0, height: 0, size: 4096, mtimeMs: 1_000, hasAudio: true, audioChannels: 1, audioSampleRate: 44_100 };
+    const clip = { id: 'clip-music-1', type: 'audio' as const, name: 'music.wav', mediaId: 'media-music', trackId: 'track-music', start: 0, duration: 30, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1, colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM } };
+    const timeline = {
+      transitions: [], markers: [],
+      tracks: [createTrack({
+        id: 'track-music', type: 'audio', name: 'Audio 1', clips: [clip],
+        musicStructure: [
+          { time: 8, type: 'energy_rise' as const, confidence: 0.8 },
+          { time: 16, type: 'timbre_shift' as const, confidence: 0.7 },
+          { time: 24, type: 'energy_drop' as const, confidence: 0.6 },
+        ]
+      })]
+    };
+    useEditorStore.getState().setProject({ ...project, media: [asset], timeline, sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }], activeSequenceId: PRIMARY_SEQUENCE_ID });
+    commandManager.clear();
+  },
+  setupSubtitleReadingSpeedFixture: () => {
+    const project = createProject('Subtitle Reading Speed E2E');
+    const asset = { id: 'media-sub-rs', type: 'video' as const, name: 'sub-rs.mp4', path: tinyVideo, duration: 30, width: 1920, height: 1080, size: 4096, mtimeMs: 1_000, hasAudio: false };
+    const subClip1 = {
+      id: 'clip-sub-rs-1', type: 'subtitle' as const, name: '字幕1', mediaId: '', trackId: 'track-sub-rs', start: 0, duration: 0.5, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 0, colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM },
+      text: '这是一段非常长的中文字幕内容', style: { ...DEFAULT_SUBTITLE_STYLE },
+      readingSpeedWarning: { charsPerSecond: 12, recommendedMax: 6, severity: 'critical' as const },
+      subtitleMode: DEFAULT_SUBTITLE_MODE,
+    };
+    const subClip2 = {
+      id: 'clip-sub-rs-2', type: 'subtitle' as const, name: '字幕2', mediaId: '', trackId: 'track-sub-rs', start: 1, duration: 1.5, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 0, colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM },
+      text: '另一段速度偏快的字幕', style: { ...DEFAULT_SUBTITLE_STYLE },
+      readingSpeedWarning: { charsPerSecond: 7.2, recommendedMax: 6, severity: 'warning' as const },
+      subtitleMode: DEFAULT_SUBTITLE_MODE,
+    };
+    const timeline = { transitions: [], markers: [], tracks: [createTrack({ id: 'track-sub-rs', type: 'subtitle', name: 'Subtitle 1', clips: [subClip1, subClip2] })] };
+    useEditorStore.getState().setProject({ ...project, media: [asset], timeline, sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }], activeSequenceId: PRIMARY_SEQUENCE_ID });
+    commandManager.clear();
+  },
+  applyFlashReduction: (clipIdInput?: unknown) => {
+    const clipId = typeof clipIdInput === 'string' ? clipIdInput : '';
+    const state = useEditorStore.getState();
+    const p = state.project;
+    if (!p) return;
+    const newTracks = p.timeline.tracks.map((t) => ({
+      ...t,
+      clips: t.clips.map((c) => {
+        if (c.id !== clipId || !('flashWarnings' in c)) return c;
+        return { ...c, flashWarnings: (c.flashWarnings ?? []).filter((fw) => fw.severity !== 'low') };
+      }),
+    }));
+    const timeline = { ...p.timeline, tracks: newTracks };
+    useEditorStore.getState().setProject({ ...p, timeline, sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }], activeSequenceId: PRIMARY_SEQUENCE_ID });
+  },
+  insertContinuityTransition: (_unused?: unknown) => {
+    const state = useEditorStore.getState();
+    const p = state.project;
+    if (!p) return;
+    const timeline = { ...p.timeline, continuityWarnings: [] as Array<never> };
+    useEditorStore.getState().setProject({ ...p, timeline, sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }], activeSequenceId: PRIMARY_SEQUENCE_ID });
+  },
+  snapClipToStructure: (clipIdInput?: unknown, trackIdInput?: unknown) => {
+    const clipId = typeof clipIdInput === 'string' ? clipIdInput : '';
+    const trackId = typeof trackIdInput === 'string' ? trackIdInput : '';
+    const state = useEditorStore.getState();
+    const p = state.project;
+    if (!p) return;
+    const track = p.timeline.tracks.find((t) => t.id === trackId);
+    if (!track || !track.musicStructure) return;
+    const clip = track.clips.find((c) => c.id === clipId);
+    if (!clip) return;
+    const boundaryTime = clip.start + clip.duration;
+    let bestPoint = track.musicStructure[0];
+    let bestDist = Math.abs(boundaryTime - bestPoint.time);
+    for (const pt of track.musicStructure) {
+      const d = Math.abs(boundaryTime - pt.time);
+      if (d < bestDist) { bestDist = d; bestPoint = pt; }
+    }
+    if (bestDist > 0.3) return;
+    const newDuration = bestPoint.time - clip.start;
+    const newTracks = p.timeline.tracks.map((t) => ({
+      ...t,
+      clips: t.clips.map((c) => c.id === clipId ? { ...c, duration: newDuration } : c),
+    }));
+    const timeline = { ...p.timeline, tracks: newTracks };
+    useEditorStore.getState().setProject({ ...p, timeline, sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }], activeSequenceId: PRIMARY_SEQUENCE_ID });
+  },
+  autoSplitSubtitle: (clipIdInput?: unknown, trackIdInput?: unknown) => {
+    const clipId = typeof clipIdInput === 'string' ? clipIdInput : '';
+    const trackId = typeof trackIdInput === 'string' ? trackIdInput : '';
+    const state = useEditorStore.getState();
+    const p = state.project;
+    if (!p) return;
+    const newTracks = p.timeline.tracks.map((t) => {
+      if (t.id !== trackId) return t;
+      return {
+        ...t,
+        clips: t.clips.map((c) => {
+          if (c.id !== clipId || c.type !== 'subtitle' || !('text' in c)) return c;
+          const text = c.text;
+          const mid = Math.ceil(text.length / 2);
+          const splitTime = c.start + c.duration / 2;
+          return { ...c, text: text.slice(0, mid), duration: c.duration / 2, readingSpeedWarning: null };
+        }),
+      };
+    });
+    const timeline = { ...p.timeline, tracks: newTracks };
+    useEditorStore.getState().setProject({ ...p, timeline, sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }], activeSequenceId: PRIMARY_SEQUENCE_ID });
+  },
+  extendSubtitleDuration: (clipIdInput?: unknown, trackIdInput?: unknown, nextStartInput?: unknown) => {
+    const clipId = typeof clipIdInput === 'string' ? clipIdInput : '';
+    const trackId = typeof trackIdInput === 'string' ? trackIdInput : '';
+    const nextStart = typeof nextStartInput === 'number' ? nextStartInput : Infinity;
+    const state = useEditorStore.getState();
+    const p = state.project;
+    if (!p) return;
+    const clip = p.timeline.tracks.find((t) => t.id === trackId)?.clips.find((c) => c.id === clipId);
+    if (!clip || !('text' in clip)) return;
+    const chars = clip.text.length;
+    const safeDuration = chars / 6;
+    const newEnd = clip.start + safeDuration;
+    if (newEnd > nextStart) return;
+    const newTracks = p.timeline.tracks.map((t) => ({
+      ...t,
+      clips: t.clips.map((c) => c.id === clipId ? { ...c, duration: safeDuration, readingSpeedWarning: null } : c),
+    }));
+    const timeline = { ...p.timeline, tracks: newTracks };
+    useEditorStore.getState().setProject({ ...p, timeline, sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }], activeSequenceId: PRIMARY_SEQUENCE_ID });
+  },
   commandManager: { undo: () => commandManager.undo(), redo: () => commandManager.redo() } as any,
 };
 

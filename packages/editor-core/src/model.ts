@@ -954,7 +954,8 @@ export function createBaseClip(
     ...(Array.isArray(input.privacyRedactions) ? { privacyRedactions: normalizePrivacyRedactions(input.privacyRedactions) } : {}),
     ...(input.beatSnapped === true ? { beatSnapped: true } : {}),
     ...(input.aiLookMatch && typeof input.aiLookMatch === 'object' ? { aiLookMatch: normalizeAILookMatch(input.aiLookMatch) } : {}),
-    ...(input.aiPipSuggestion && typeof input.aiPipSuggestion === 'object' ? { aiPipSuggestion: normalizeAiPipSuggestion(input.aiPipSuggestion) } : {})
+    ...(input.aiPipSuggestion && typeof input.aiPipSuggestion === 'object' ? { aiPipSuggestion: normalizeAiPipSuggestion(input.aiPipSuggestion) } : {}),
+    ...(Array.isArray(input.flashWarnings) ? { flashWarnings: normalizeFlashWarnings(input.flashWarnings) } : {})
   };
 }
 
@@ -1849,9 +1850,12 @@ export function serializeLegacyProject(project: Project): {
           sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
           keyframes: cloneClipKeyframesLocal(clip.keyframes),
           pitchData: normalizeClipPitchData(clip.pitchData),
-          dataSubtitle: clip.type === 'subtitle' ? normalizeDataSubtitleSource(clip.dataSubtitle) : undefined
-        }))
-      }))
+          dataSubtitle: clip.type === 'subtitle' ? normalizeDataSubtitleSource(clip.dataSubtitle) : undefined,
+          readingSpeedWarning: clip.type === 'subtitle' ? normalizeReadingSpeedWarning((clip as { readingSpeedWarning?: unknown }).readingSpeedWarning) : undefined
+        })),
+        musicStructure: normalizeMusicStructurePoints((track as { musicStructure?: unknown }).musicStructure)
+      })),
+      continuityWarnings: normalizeContinuityWarnings((project.timeline as { continuityWarnings?: unknown }).continuityWarnings)
     }
   };
 }
@@ -2191,4 +2195,50 @@ export function normalizePlatformFitSuggestion(input: unknown): import('./model-
     keptSegments: normalizeSegments(obj.keptSegments),
     removedSegments: normalizeSegments(obj.removedSegments)
   };
+}
+/** Normalize flash warnings array */
+function normalizeFlashWarnings(input: unknown): import('./flash-warning').FlashWarning[] {
+  if (!Array.isArray(input)) return [];
+  return input.filter((w): w is import('./flash-warning').FlashWarning =>
+    w != null && typeof w === 'object' &&
+    typeof (w as Record<string, unknown>).startTime === 'number' &&
+    typeof (w as Record<string, unknown>).endTime === 'number' &&
+    typeof (w as Record<string, unknown>).flashRate === 'number' &&
+    typeof (w as Record<string, unknown>).severity === 'string' &&
+    typeof (w as Record<string, unknown>).isRedFlash === 'boolean'
+  );
+}
+
+/** Normalize reading speed warning */
+function normalizeReadingSpeedWarning(input: unknown): import('./subtitle-reading-speed').ReadingSpeedWarning | null {
+  if (!input || typeof input !== 'object') return null;
+  const obj = input as Record<string, unknown>;
+  if (typeof obj.charsPerSecond !== 'number' || typeof obj.recommendedMax !== 'number' || typeof obj.severity !== 'string') return null;
+  const validSeverities = ['ok', 'warning', 'critical'];
+  if (!validSeverities.includes(obj.severity as string)) return null;
+  return { charsPerSecond: obj.charsPerSecond, recommendedMax: obj.recommendedMax, severity: obj.severity as import('./subtitle-reading-speed').ReadingSpeedSeverity };
+}
+
+/** Normalize music structure points */
+function normalizeMusicStructurePoints(input: unknown): import('./music-structure').MusicStructurePoint[] {
+  if (!Array.isArray(input)) return [];
+  return input.filter((p): p is import('./music-structure').MusicStructurePoint =>
+    p != null && typeof p === 'object' &&
+    typeof (p as Record<string, unknown>).time === 'number' &&
+    typeof (p as Record<string, unknown>).type === 'string' &&
+    typeof (p as Record<string, unknown>).confidence === 'number'
+  );
+}
+
+/** Normalize continuity warnings */
+function normalizeContinuityWarnings(input: unknown): import('./continuity-check').ContinuityWarning[] {
+  if (!Array.isArray(input)) return [];
+  return input.filter((w): w is import('./continuity-check').ContinuityWarning =>
+    w != null && typeof w === 'object' &&
+    typeof (w as Record<string, unknown>).clipAId === 'string' &&
+    typeof (w as Record<string, unknown>).clipBId === 'string' &&
+    typeof (w as Record<string, unknown>).type === 'string' &&
+    typeof (w as Record<string, unknown>).confidence === 'number' &&
+    typeof (w as Record<string, unknown>).reason === 'string'
+  );
 }

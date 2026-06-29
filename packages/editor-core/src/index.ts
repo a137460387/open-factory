@@ -219,3 +219,7 @@ export * from './ai-denoise-recommendation';
 export * from './ai-broll-suggestion';
 export * from './ai-version-diff';
 export * from './ai-loudness-suggestion';
+export * from './flash-warning';
+export * from './continuity-check';
+export * from './music-structure';
+export * from './subtitle-reading-speed';

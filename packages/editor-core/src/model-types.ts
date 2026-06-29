@@ -246,6 +246,10 @@ export interface ClipPrivacyBlur {
   effect: PrivacyBlurEffect;
   color?: string;
 }
+import type { FlashWarning } from './flash-warning';
+import type { ContinuityWarning } from './continuity-check';
+import type { MusicStructurePoint } from './music-structure';
+import type { ReadingSpeedWarning } from './subtitle-reading-speed';
 
 export type PrivacyRedactionType = 'face' | 'license_plate' | 'screen';
 
@@ -560,6 +564,8 @@ export interface Timeline {
   markers?: TimelineMarker[];
   /** AI B-roll素材建议 */
   brollSuggestions?: BrollSuggestion[];
+  /** 连续性警告（跳轴/跳切） */
+  continuityWarnings?: ContinuityWarning[];
 }
 
 export interface Sequence {
@@ -594,6 +600,8 @@ export interface Track {
   pan?: number;
   eq?: TrackEQ;
   compressor?: TrackCompressor;
+  /** 音乐结构标记点 */
+  musicStructure?: MusicStructurePoint[];
   clips: Clip[];
 }
 
@@ -731,6 +739,8 @@ export interface BaseClip {
   platformFitRemoved?: boolean;
   /** AI智能降噪推荐 */
   aiDenoiseRecommendation?: AIDenoiseRecommendation;
+  /** 闪烁光敏警告 */
+  flashWarnings?: FlashWarning[];
 }
 
 export interface AIColorHistoryEntry {
@@ -860,6 +870,8 @@ export interface SubtitleClip extends BaseClip {
   style: SubtitleStyle;
   subtitleMode: SubtitleMode;
   dataSubtitle?: DataSubtitleSource;
+  /** 阅读速度警告 */
+  readingSpeedWarning?: ReadingSpeedWarning | null;
 }
 
 export interface CreditsClip extends BaseClip {
