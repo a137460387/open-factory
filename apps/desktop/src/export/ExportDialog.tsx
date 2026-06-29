@@ -1,4 +1,5 @@
 import type { ExportCostHistorySample, AIExportSuggestion } from '@open-factory/editor-core';
+import { generatePlatformFitSuggestion, ApplyPlatformFitCommand, RestorePlatformFitClipCommand, PLATFORM_LIMITS } from '@open-factory/editor-core';
 import { BUILTIN_BROADCAST_SPECS, checkCompliance, buildComplianceFix, type BroadcastSpec, type ExportComplianceParams, type ComplianceCheckResult } from '@open-factory/editor-core';
 import {
   TARGET_ASPECT_RATIOS,
@@ -110,6 +111,7 @@ import {
 import { AlertTriangle, Cloud, CloudDownload, Clock3, Copy, Download, FileText, FolderOpen, Image as ImageIcon, ListPlus, Loader2, Minimize2, Save, Trash2, Upload, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { zhCN } from '../i18n/strings';
+import { commandManager, projectAccessor } from '../store/commandManager';
 import { chooseExportPath, revealExport } from '../lib/exportVideo';
 import { isFontFamilyAvailable } from '../lib/fonts';
 import {
@@ -495,6 +497,8 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
   const [preflight, setPreflight] = useState<{ issues: PreflightResult[]; selectedJobs: ExportJob[]; codecCompareJobs?: CodecCompareJob[] }>();
   const [presets, setPresets] = useState<ExportPreset[]>(initialPreset ? [initialPreset, ...BUILTIN_EXPORT_PRESETS] : BUILTIN_EXPORT_PRESETS);
   const [presetId, setPresetId] = useState(initialPreset?.id ?? BUILTIN_EXPORT_PRESETS[0].id);
+  const [platformFitTarget, setPlatformFitTarget] = useState('');
+  const [platformFitCustomSeconds, setPlatformFitCustomSeconds] = useState(60);
   const [draftSettings, setDraftSettings] = useState<ExportPresetSettings>({ ...(initialPreset?.settings ?? BUILTIN_EXPORT_PRESETS[0].settings) });
   const [exportRangeMode, setExportRangeMode] = useState<ExportRangeMode>('all');
   const [exportMode, setExportMode] = useState<ExportMode>('single');
@@ -1862,6 +1866,81 @@ function relinkFromPreflight(): void {
               </div>
             </div>
           </div>
+          <div className="grid grid-cols-[110px_1fr_auto] items-center gap-2">
+            <label className="pt-1.5 text-xs font-medium text-slate-600">{zhCN.preview.platformFitTitle}</label>
+            <select
+              className="w-full rounded-md border border-line px-2 py-1.5"
+              value={platformFitTarget}
+              onChange={(event) => {
+                const val = event.target.value;
+                setPlatformFitTarget(val);
+                if (val !== 'custom' && val !== '') {
+                  setPlatformFitCustomSeconds(PLATFORM_LIMITS[val as keyof typeof PLATFORM_LIMITS] ?? 60);
+                }
+              }}
+              data-testid="platform-fit-select"
+            >
+              <option value="">{'不限制'}</option>
+              <option value="tiktok">{zhCN.preview.platformFitTikTok}</option>
+              <option value="reels">{zhCN.preview.platformFitReels}</option>
+              <option value="shorts">{zhCN.preview.platformFitShorts}</option>
+              <option value="custom">{zhCN.preview.platformFitCustom}</option>
+            </select>
+            {platformFitTarget === 'custom' ? (
+              <input
+                type="number"
+                className="w-20 rounded-md border border-line px-2 py-1.5 text-xs"
+                min={5}
+                max={600}
+                value={platformFitCustomSeconds}
+                onChange={(event) => setPlatformFitCustomSeconds(Number(event.target.value) || 60)}
+                data-testid="platform-fit-custom-seconds"
+              />
+            ) : null}
+            {platformFitTarget ? (
+              <button
+                className="rounded-md border border-line bg-white px-2 py-1.5 text-xs font-medium hover:bg-panel"
+                type="button"
+                data-testid="platform-fit-apply"
+                onClick={() => {
+                  const limit = platformFitTarget === 'custom' ? platformFitCustomSeconds : (PLATFORM_LIMITS[platformFitTarget as keyof typeof PLATFORM_LIMITS] ?? 60);
+                  const clips = project.timeline.tracks.flatMap((track) => track.clips).map((clip) => ({
+                    clipId: clip.id,
+                    start: clip.start,
+                    end: clip.start + clip.duration,
+                    score: undefined as number | undefined,
+                    sceneChanges: [] as number[],
+                  }));
+                  const suggestion = generatePlatformFitSuggestion(clips, limit);
+                  const fullSuggestion = { ...suggestion, targetPlatform: platformFitTarget as 'tiktok' | 'reels' | 'shorts' | 'custom', limitSeconds: limit };
+                  const cmd = new ApplyPlatformFitCommand(projectAccessor, fullSuggestion);
+                  commandManager.execute(cmd);
+                }}
+              >
+                {zhCN.preview.platformFitApply}
+              </button>
+            ) : null}
+          </div>
+          {project.platformFitSuggestion && project.platformFitSuggestion.removedSegments.length > 0 ? (
+            <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs" data-testid="platform-fit-removed-list">
+              <span className="font-medium text-amber-700">{zhCN.preview.platformFitTitle}{'：'}</span>
+              <span className="text-amber-600">{project.platformFitSuggestion.removedSegments.length}{' 个片段将被裁剪'}</span>
+              {project.platformFitSuggestion.removedSegments.map((seg) => (
+                <button
+                  key={seg.clipId}
+                  className="ml-2 inline-flex items-center rounded border border-line px-1.5 py-0.5 text-[10px] font-medium text-slate-600 hover:bg-panel"
+                  type="button"
+                  data-testid={`platform-fit-restore-${seg.clipId}`}
+                  onClick={() => {
+                    const cmd = new RestorePlatformFitClipCommand(projectAccessor, seg.clipId);
+                    commandManager.execute(cmd);
+                  }}
+                >
+                  {zhCN.preview.platformFitRestore}
+                </button>
+              ))}
+            </div>
+          ) : null}
           <div className="grid grid-cols-[110px_1fr_auto] gap-2">
             <label className="pt-1.5 text-xs font-medium text-slate-600">{t.preset}</label>
             <div>

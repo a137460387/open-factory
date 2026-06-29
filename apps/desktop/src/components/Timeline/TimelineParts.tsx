@@ -940,7 +940,8 @@ function ClipBlock({
         asset?.missing ? 'border-rose-500 bg-[repeating-linear-gradient(135deg,rgba(244,63,94,0.18)_0,rgba(244,63,94,0.18)_6px,transparent_6px,transparent_12px)]' : selected ? 'border-coral ring-2 ring-coral/30' : 'border-white/80',
         locked ? 'cursor-not-allowed opacity-70' : 'cursor-grab',
         isMoveDragging && 'opacity-80 shadow-[0_12px_22px_rgba(15,23,42,0.24)] ring-2 ring-brand/30',
-        !reduceMotion && !largeProjectMode.disableAnimations && 'transition-all duration-150 ease-out'
+        !reduceMotion && !largeProjectMode.disableAnimations && 'transition-all duration-150 ease-out',
+        clip.type === 'video' && clip.platformFitRemoved && 'opacity-40 grayscale'
       )}
       style={{ left, width }}
       onPointerDown={(event) => {
@@ -1009,6 +1010,7 @@ function ClipBlock({
       data-dragging={isMoveDragging ? 'true' : 'false'}
       data-reduce-motion={reduceMotion ? 'true' : 'false'}
       data-collaboration-locked={collaborationLock ? 'true' : 'false'}
+      data-platform-fit-removed={clip.type === 'video' && clip.platformFitRemoved ? 'true' : 'false'}
     >
       {trimBubble ? (
         <span
@@ -1061,6 +1063,24 @@ function ClipBlock({
           style={{ right: transition ? 28 : 4 }}
           title={frameRateWarningTitle}
           data-testid={`timeline-frame-rate-warning-${clip.id}`}
+        >
+          <AlertTriangle size={11} />
+        </span>
+      ) : null}
+      {clip.type === 'video' && (clip.stabilization?.shakeScore ?? 0) > 50 ? (
+        <span
+          className="absolute bottom-1 right-1 z-20 inline-flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white shadow"
+          title={zhCN.preview.shakeAnalysisHigh}
+          data-testid={`shake-badge-${clip.id}`}
+        >
+          <AlertTriangle size={11} />
+        </span>
+      ) : null}
+      {clip.type === 'video' && clip.aiPipSuggestion ? (
+        <span
+          className="absolute bottom-1 left-5 z-20 inline-flex h-4 w-4 items-center justify-center rounded-full bg-blue-500 text-white shadow"
+          title={zhCN.preview.pipAvoidanceWarning}
+          data-testid={`pip-warning-${clip.id}`}
         >
           <AlertTriangle size={11} />
         </span>

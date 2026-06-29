@@ -110,7 +110,12 @@ import {
   BatchUpdateTrackHeightCommand,
   NewProjectCommand,
   PRIMARY_SEQUENCE_ID,
-  BatchAddClipsCommand
+  BatchAddClipsCommand,
+  ApplyMulticamAiCutSuggestionsCommand,
+  ApplyShakeStabilizationCommand,
+  ApplyPipPlacementCommand,
+  ApplyPlatformFitCommand,
+  RestorePlatformFitClipCommand
 } from '../src';
 import { makeAccessor, makeAdjustmentClip, makeAudioClip, makeCreditsClip, makeMotionGraphicClip, makeProject, makeSubtitleClip, makeTextClip, makeTimeline, makeVideoClip } from './test-utils';
 
@@ -3125,3 +3130,194 @@ describe('timeline commands', () => {
       expect(existingTracks[0].clips.length).toBe(1);
     });
   });
+
+describe('AI feature commands', () => {
+  function makeMulticamProject() {
+    const clip = {
+      id: 'multicam-clip',
+      type: 'nested-sequence' as const,
+      name: 'Multicam',
+      mediaId: 'asset-1',
+      trackId: 'track-video',
+      start: 0,
+      duration: 10,
+      trimStart: 0,
+      trimEnd: 0,
+      speed: 1,
+      colorCorrection: { brightness: 0, contrast: 1, saturation: 1, hue: 0 },
+      transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
+      volume: 1,
+      multicam: {
+        angles: [
+          { id: 'angle-1', clipId: 'multicam-clip', trackId: 'track-a', name: 'Camera 1', offset: 0 },
+          { id: 'angle-2', clipId: 'multicam-clip', trackId: 'track-b', name: 'Camera 2', offset: 0 }
+        ],
+        switches: [{ id: 'sw-1', time: 0, angleId: 'angle-1' }]
+      }
+    };
+    let proj = makeProject();
+    proj = {
+      ...proj,
+      timeline: {
+        transitions: [],
+        markers: [],
+        tracks: [
+          { id: 'track-video', type: 'video' as const, name: 'Video 1', clips: [clip as any], volume: 1, pan: 0, muted: false, solo: false, locked: false, color: null },
+          { id: 'track-audio', type: 'audio' as const, name: 'Audio 1', clips: [], volume: 1, pan: 0, muted: false, solo: false, locked: false, color: null },
+          { id: 'track-text', type: 'text' as const, name: 'Text 1', clips: [], volume: 1, pan: 0, muted: false, solo: false, locked: false, color: null }
+        ]
+      }
+    };
+    return proj;
+  }
+
+  it('ApplyMulticamAiCutSuggestionsCommand applies suggestions and undoes', () => {
+    let project = makeMulticamProject();
+    const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+    const manager = new CommandManager();
+    const suggestions = [
+      { time: 2, angleId: 'angle-2', confidence: 0.9, reason: 'higher audio' },
+      { time: 5, angleId: 'angle-1', confidence: 0.8, reason: 'motion' }
+    ];
+    const cmd = new ApplyMulticamAiCutSuggestionsCommand(accessor, 'multicam-clip', suggestions);
+    manager.execute(cmd);
+    const updated = project.timeline.tracks[0].clips[0] as any;
+    expect(updated.multicam?.aiCutSuggestions).toHaveLength(2);
+    // 1 original switch at t=0 + 2 suggestions = 3 total
+    expect(updated.multicam?.switches.length).toBe(3);
+    manager.undo();
+    const original = project.timeline.tracks[0].clips[0] as any;
+    expect(original.multicam?.aiCutSuggestions).toBeUndefined();
+  });
+
+  it('ApplyMulticamAiCutSuggestionsCommand applies 3 suggestions correctly', () => {
+    let project = makeMulticamProject();
+    const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+    const manager = new CommandManager();
+    const suggestions = [
+      { time: 2, angleId: 'angle-2', confidence: 0.9, reason: 'speaker' },
+      { time: 5, angleId: 'angle-1', confidence: 0.8, reason: 'motion' },
+      { time: 8, angleId: 'angle-2', confidence: 0.7, reason: 'energy' }
+    ];
+    const cmd = new ApplyMulticamAiCutSuggestionsCommand(accessor, 'multicam-clip', suggestions);
+    manager.execute(cmd);
+    const updated = project.timeline.tracks[0].clips[0] as any;
+    // 1 original + 3 suggestions = 4 total
+    expect(updated.multicam?.switches.length).toBe(4);
+    expect(updated.multicam?.aiCutSuggestions).toHaveLength(3);
+    // Verify each suggestion time is present in switches
+    const switchTimes = updated.multicam.switches.map((s: any) => s.time);
+    expect(switchTimes).toContain(2);
+    expect(switchTimes).toContain(5);
+    expect(switchTimes).toContain(8);
+    manager.undo();
+    const original = project.timeline.tracks[0].clips[0] as any;
+    expect(original.multicam?.switches.length).toBe(1);
+  });
+
+  it('ApplyMulticamAiCutSuggestionsCommand throws on non-multicam clip', () => {
+    let project = makeProject();
+    const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+    expect(() => new ApplyMulticamAiCutSuggestionsCommand(accessor, 'clip-1', []).execute()).toThrow('not a multicam');
+  });
+
+  it('ApplyMulticamAiCutSuggestionsCommand deduplicates execute', () => {
+    let project = makeMulticamProject();
+    const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+    const manager = new CommandManager();
+    const cmd = new ApplyMulticamAiCutSuggestionsCommand(accessor, 'multicam-clip', [{ time: 3, angleId: 'angle-2', confidence: 0.7, reason: 'test' }]);
+    manager.execute(cmd);
+    const first = project.timeline.tracks[0].clips[0];
+    manager.execute(cmd);
+    expect(project.timeline.tracks[0].clips[0]).toEqual(first);
+  });
+
+  it('ApplyShakeStabilizationCommand applies and undoes', () => {
+    let project = makeProject();
+    const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+    const manager = new CommandManager();
+    const cmd = new ApplyShakeStabilizationCommand(accessor, 'clip-1', { shakeScore: 75, severity: 'high', suggestedFilter: 'vidstab', sampledAt: Date.now() });
+    manager.execute(cmd);
+    expect(project.timeline.tracks[0].clips[0].stabilization?.shakeScore).toBe(75);
+    expect(project.timeline.tracks[0].clips[0].stabilization?.severity).toBe('high');
+    expect(project.timeline.tracks[0].clips[0].stabilization?.enabled).toBe(true);
+    expect(project.timeline.tracks[0].clips[0].stabilization?.analyzed).toBe(true);
+    manager.undo();
+    expect(project.timeline.tracks[0].clips[0].stabilization?.shakeScore).toBeUndefined();
+  });
+
+  it('ApplyPipPlacementCommand updates transform for all corners', () => {
+    const expected = [
+      { corner: 'top-left' as const, x: -0.5, y: 0.5 },
+      { corner: 'top-right' as const, x: 0.5, y: 0.5 },
+      { corner: 'bottom-left' as const, x: -0.5, y: -0.5 },
+      { corner: 'bottom-right' as const, x: 0.5, y: -0.5 }
+    ];
+    for (const { corner, x, y } of expected) {
+      let project = makeProject();
+      const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+      const manager = new CommandManager();
+      const cmd = new ApplyPipPlacementCommand(accessor, 'clip-1', corner);
+      manager.execute(cmd);
+      expect(project.timeline.tracks[0].clips[0].transform.x).toBe(x);
+      expect(project.timeline.tracks[0].clips[0].transform.y).toBe(y);
+      manager.undo();
+      expect(project.timeline.tracks[0].clips[0].transform.x).toBe(0);
+      expect(project.timeline.tracks[0].clips[0].transform.y).toBe(0);
+    }
+  });
+
+  it('ApplyPlatformFitCommand marks removed clips and undoes', () => {
+    const clipA = makeVideoClip({ id: 'clip-a', start: 0, duration: 30 });
+    const clipB = makeVideoClip({ id: 'clip-b', start: 30, duration: 20 });
+    let project = { ...makeProject(), timeline: makeTimeline([clipA, clipB]) };
+    const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+    const manager = new CommandManager();
+    const suggestion = { targetPlatform: 'tiktok' as const, limitSeconds: 60, keptSegments: [{ clipId: 'clip-a', start: 0, end: 30, score: 0.8 }], removedSegments: [{ clipId: 'clip-b', start: 30, end: 50, score: 0.3 }] };
+    const cmd = new ApplyPlatformFitCommand(accessor, suggestion);
+    manager.execute(cmd);
+    expect(project.platformFitSuggestion?.targetPlatform).toBe('tiktok');
+    expect((project.timeline.tracks[0].clips.find(c => c.id === 'clip-b') as any)?.platformFitRemoved).toBe(true);
+    expect((project.timeline.tracks[0].clips.find(c => c.id === 'clip-a') as any)?.platformFitRemoved).toBeUndefined();
+    manager.undo();
+    expect(project.platformFitSuggestion).toBeUndefined();
+    expect((project.timeline.tracks[0].clips.find(c => c.id === 'clip-b') as any)?.platformFitRemoved).toBeUndefined();
+  });
+
+  it('ApplyPlatformFitCommand clears platformFitRemoved from non-removed clips', () => {
+    const clipA = { ...makeVideoClip({ id: 'clip-a', start: 0, duration: 30 }), platformFitRemoved: true } as any;
+    let project = { ...makeProject(), timeline: makeTimeline([clipA, makeVideoClip({ id: 'clip-b', start: 30, duration: 20 })]) };
+    const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+    const suggestion = { targetPlatform: 'reels' as const, limitSeconds: 90, keptSegments: [{ clipId: 'clip-a', start: 0, end: 30, score: 0.8 }, { clipId: 'clip-b', start: 30, end: 50, score: 0.5 }], removedSegments: [] };
+    new ApplyPlatformFitCommand(accessor, suggestion).execute();
+    expect((project.timeline.tracks[0].clips.find(c => c.id === 'clip-a') as any)?.platformFitRemoved).toBeUndefined();
+  });
+
+  it('RestorePlatformFitClipCommand restores removed clip and undoes', () => {
+    let project = { ...makeProject(), timeline: makeTimeline([makeVideoClip({ id: 'clip-a' }), makeVideoClip({ id: 'clip-b', start: 30, duration: 20 })]), platformFitSuggestion: { targetPlatform: 'shorts' as const, limitSeconds: 60, keptSegments: [{ clipId: 'clip-a', start: 0, end: 10, score: 0.8 }], removedSegments: [{ clipId: 'clip-b', start: 30, end: 50, score: 0.3 }] } };
+    const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+    const manager = new CommandManager();
+    const cmd = new RestorePlatformFitClipCommand(accessor, 'clip-b');
+    manager.execute(cmd);
+    expect(project.platformFitSuggestion?.removedSegments).toHaveLength(0);
+    expect(project.platformFitSuggestion?.keptSegments).toHaveLength(2);
+    manager.undo();
+    expect(project.platformFitSuggestion?.removedSegments).toHaveLength(1);
+    expect(project.platformFitSuggestion?.keptSegments).toHaveLength(1);
+  });
+
+  it('RestorePlatformFitClipCommand handles missing clip gracefully', () => {
+    let project = { ...makeProject(), timeline: makeTimeline([makeVideoClip()]), platformFitSuggestion: { targetPlatform: 'custom' as const, limitSeconds: 30, keptSegments: [], removedSegments: [] } };
+    const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+    new RestorePlatformFitClipCommand(accessor, 'nonexistent').execute();
+    expect(project.platformFitSuggestion?.removedSegments).toHaveLength(0);
+  });
+
+  it('RestorePlatformFitClipCommand works without platformFitSuggestion', () => {
+    const clipA = { ...makeVideoClip({ id: 'clip-a' }), platformFitRemoved: true } as any;
+    let project = { ...makeProject(), timeline: makeTimeline([clipA]) };
+    const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+    new RestorePlatformFitClipCommand(accessor, 'clip-a').execute();
+    expect((project.timeline.tracks[0].clips.find(c => c.id === 'clip-a') as any)?.platformFitRemoved).toBeUndefined();
+  });
+});

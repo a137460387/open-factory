@@ -50,7 +50,11 @@ import {
   normalizeVideoRestoration,
   serializeLegacyProject,
   suggestDeinterlaceMode,
-  switchProjectActiveSequence
+  switchProjectActiveSequence,
+  normalizeAiPipSuggestion,
+  normalizePlatformFitSuggestion,
+  normalizeAILookMatch,
+  normalizePrivacyRedactions
 } from '../src';
 import { makeProject, makeVideoClip } from './test-utils';
 
@@ -450,5 +454,312 @@ describe('model factories', () => {
       sequenceId: PRIMARY_SEQUENCE_ID
     } as ReturnType<typeof createNestedSequenceClip>;
     expect(getNestedSequenceDepth(project)).toBe(MAX_NESTED_SEQUENCE_DEPTH + 1);
+  });
+});
+
+describe('normalizeAiPipSuggestion', () => {
+  it('returns undefined for non-object input', () => {
+    expect(normalizeAiPipSuggestion(null)).toBeUndefined();
+    expect(normalizeAiPipSuggestion(undefined)).toBeUndefined();
+    expect(normalizeAiPipSuggestion('string')).toBeUndefined();
+    expect(normalizeAiPipSuggestion(42)).toBeUndefined();
+  });
+
+  it('defaults to bottom-right for invalid corner', () => {
+    const result = normalizeAiPipSuggestion({ recommendedCorner: 'invalid', overlapReduction: 10, confidence: 0.5 });
+    expect(result?.recommendedCorner).toBe('bottom-right');
+  });
+
+  it('preserves valid corners', () => {
+    for (const corner of ['top-left', 'top-right', 'bottom-left', 'bottom-right']) {
+      const result = normalizeAiPipSuggestion({ recommendedCorner: corner, overlapReduction: 50, confidence: 0.8 });
+      expect(result?.recommendedCorner).toBe(corner);
+    }
+  });
+
+  it('clamps overlapReduction to 0..100', () => {
+    expect(normalizeAiPipSuggestion({ recommendedCorner: 'top-left', overlapReduction: -10, confidence: 0.5 })?.overlapReduction).toBe(0);
+    expect(normalizeAiPipSuggestion({ recommendedCorner: 'top-left', overlapReduction: 150, confidence: 0.5 })?.overlapReduction).toBe(100);
+  });
+
+  it('defaults overlapReduction to 0 for non-number', () => {
+    expect(normalizeAiPipSuggestion({ recommendedCorner: 'top-left', overlapReduction: 'abc', confidence: 0.5 })?.overlapReduction).toBe(0);
+  });
+
+  it('clamps confidence to 0..1', () => {
+    expect(normalizeAiPipSuggestion({ recommendedCorner: 'top-left', overlapReduction: 50, confidence: -0.5 })?.confidence).toBe(0);
+    expect(normalizeAiPipSuggestion({ recommendedCorner: 'top-left', overlapReduction: 50, confidence: 2 })?.confidence).toBe(1);
+  });
+
+  it('defaults confidence to 0.5 for non-number', () => {
+    expect(normalizeAiPipSuggestion({ recommendedCorner: 'top-left', overlapReduction: 50, confidence: null })?.confidence).toBe(0.5);
+  });
+
+  it('handles NaN overlapReduction and confidence', () => {
+    const result = normalizeAiPipSuggestion({ recommendedCorner: 'top-left', overlapReduction: NaN, confidence: NaN });
+    expect(result?.overlapReduction).toBe(0);
+    expect(result?.confidence).toBe(0.5);
+  });
+});
+
+describe('normalizePlatformFitSuggestion', () => {
+  it('returns undefined for non-object input', () => {
+    expect(normalizePlatformFitSuggestion(null)).toBeUndefined();
+    expect(normalizePlatformFitSuggestion(undefined)).toBeUndefined();
+    expect(normalizePlatformFitSuggestion(123)).toBeUndefined();
+  });
+
+  it('defaults platform to custom for invalid value', () => {
+    const result = normalizePlatformFitSuggestion({ targetPlatform: 'unknown', limitSeconds: 60, keptSegments: [], removedSegments: [] });
+    expect(result?.targetPlatform).toBe('custom');
+  });
+
+  it('preserves valid platforms', () => {
+    for (const platform of ['tiktok', 'reels', 'shorts', 'custom']) {
+      const result = normalizePlatformFitSuggestion({ targetPlatform: platform, limitSeconds: 60, keptSegments: [], removedSegments: [] });
+      expect(result?.targetPlatform).toBe(platform);
+    }
+  });
+
+  it('defaults limitSeconds to 60 for non-number', () => {
+    expect(normalizePlatformFitSuggestion({ targetPlatform: 'tiktok', limitSeconds: 'abc', keptSegments: [], removedSegments: [] })?.limitSeconds).toBe(60);
+  });
+
+  it('defaults limitSeconds to 60 for zero/negative', () => {
+    expect(normalizePlatformFitSuggestion({ targetPlatform: 'tiktok', limitSeconds: 0, keptSegments: [], removedSegments: [] })?.limitSeconds).toBe(60);
+    expect(normalizePlatformFitSuggestion({ targetPlatform: 'tiktok', limitSeconds: -5, keptSegments: [], removedSegments: [] })?.limitSeconds).toBe(60);
+  });
+
+  it('normalizes segment arrays', () => {
+    const result = normalizePlatformFitSuggestion({
+      targetPlatform: 'reels',
+      limitSeconds: 90,
+      keptSegments: [{ clipId: 'a', start: 0, end: 10, score: 0.8 }],
+      removedSegments: [{ clipId: 'b', start: 10, end: 20, score: 0.3 }]
+    });
+    expect(result?.keptSegments).toHaveLength(1);
+    expect(result?.removedSegments).toHaveLength(1);
+    expect(result?.keptSegments[0].clipId).toBe('a');
+    expect(result?.removedSegments[0].score).toBe(0.3);
+  });
+
+  it('filters out invalid segments (missing clipId, end <= start)', () => {
+    const result = normalizePlatformFitSuggestion({
+      targetPlatform: 'shorts',
+      limitSeconds: 60,
+      keptSegments: [
+        { clipId: '', start: 0, end: 10 },
+        { clipId: 'valid', start: 0, end: 10 },
+        { clipId: 'inv', start: 10, end: 5 },
+        { start: 0, end: 10 },
+        42
+      ],
+      removedSegments: null
+    });
+    expect(result?.keptSegments).toHaveLength(1);
+    expect(result?.keptSegments[0].clipId).toBe('valid');
+    expect(result?.removedSegments).toHaveLength(0);
+  });
+
+  it('defaults score to 0.5 for non-number', () => {
+    const result = normalizePlatformFitSuggestion({
+      targetPlatform: 'tiktok',
+      limitSeconds: 60,
+      keptSegments: [{ clipId: 'a', start: 0, end: 10 }],
+      removedSegments: []
+    });
+    expect(result?.keptSegments[0].score).toBe(0.5);
+  });
+
+  it('clamps score to 0..1', () => {
+    const result = normalizePlatformFitSuggestion({
+      targetPlatform: 'tiktok',
+      limitSeconds: 60,
+      keptSegments: [{ clipId: 'a', start: 0, end: 10, score: 2 }, { clipId: 'b', start: 10, end: 20, score: -0.5 }],
+      removedSegments: []
+    });
+    expect(result?.keptSegments[0].score).toBe(1);
+    expect(result?.keptSegments[1].score).toBe(0);
+  });
+
+  it('rounds numeric values', () => {
+    const result = normalizePlatformFitSuggestion({
+      targetPlatform: 'custom',
+      limitSeconds: 45.1234567,
+      keptSegments: [{ clipId: 'a', start: 0.1234567, end: 10.9876543, score: 0.85678901 }],
+      removedSegments: []
+    });
+    expect(result?.limitSeconds).toBe(45.123457);
+    expect(result?.keptSegments[0].start).toBe(0.123457);
+    expect(result?.keptSegments[0].end).toBe(10.987654);
+    expect(result?.keptSegments[0].score).toBe(0.856789);
+  });
+});
+
+describe('normalizeAILookMatch', () => {
+  it('returns undefined for null/undefined/non-object', () => {
+    expect(normalizeAILookMatch(null)).toBeUndefined();
+    expect(normalizeAILookMatch(undefined)).toBeUndefined();
+    expect(normalizeAILookMatch('string')).toBeUndefined();
+    expect(normalizeAILookMatch(42)).toBeUndefined();
+  });
+
+  it('returns undefined for missing sourceImageHash', () => {
+    expect(normalizeAILookMatch({})).toBeUndefined();
+    expect(normalizeAILookMatch({ sourceImageHash: '' })).toBeUndefined();
+    expect(normalizeAILookMatch({ sourceImageHash: 123 })).toBeUndefined();
+  });
+
+  it('returns undefined for missing wheelAdjustments', () => {
+    expect(normalizeAILookMatch({ sourceImageHash: 'abc' })).toBeUndefined();
+    expect(normalizeAILookMatch({ sourceImageHash: 'abc', wheelAdjustments: null })).toBeUndefined();
+  });
+
+  it('parses valid input with all fields', () => {
+    const result = normalizeAILookMatch({
+      sourceImageHash: 'hash123',
+      wheelAdjustments: {
+        lift: { r: 0.1, g: -0.2, b: 0.3 },
+        gamma: { r: -0.1, g: 0.2, b: -0.3 },
+        gain: { r: 0.5, g: 0.5, b: 0.5 }
+      },
+      curveControlPoints: {
+        master: [{ x: 0, y: 0 }, { x: 1, y: 1 }],
+        r: [{ x: 0, y: 0.1 }],
+        g: [{ x: 0.2, y: 0.8 }],
+        b: [{ x: 0, y: 0 }, { x: 1, y: 1 }]
+      },
+      confidence: 0.75,
+      generatedAt: '2025-01-01T00:00:00Z',
+      blendStrength: 80
+    });
+    expect(result).toBeDefined();
+    expect(result?.sourceImageHash).toBe('hash123');
+    expect(result?.wheelAdjustments.lift).toEqual({ r: 0.1, g: -0.2, b: 0.3 });
+    expect(result?.wheelAdjustments.gamma).toEqual({ r: -0.1, g: 0.2, b: -0.3 });
+    expect(result?.wheelAdjustments.gain).toEqual({ r: 0.5, g: 0.5, b: 0.5 });
+    expect(result?.confidence).toBe(0.75);
+    expect(result?.generatedAt).toBe('2025-01-01T00:00:00Z');
+    expect(result?.blendStrength).toBe(80);
+    expect(result?.curveControlPoints.master).toEqual([{ x: 0, y: 0 }, { x: 1, y: 1 }]);
+  });
+
+  it('uses defaults for missing optional fields', () => {
+    const result = normalizeAILookMatch({
+      sourceImageHash: 'hash',
+      wheelAdjustments: {}
+    });
+    expect(result?.confidence).toBe(0);
+    expect(result?.blendStrength).toBe(100);
+    expect(result?.generatedAt).toBeTruthy();
+    expect(result?.curveControlPoints.master).toEqual([{ x: 0, y: 0 }, { x: 1, y: 1 }]);
+  });
+
+  it('clamps confidence to 0..1', () => {
+    const lo = normalizeAILookMatch({ sourceImageHash: 'h', wheelAdjustments: {}, confidence: -0.5 });
+    expect(lo?.confidence).toBe(0);
+    const hi = normalizeAILookMatch({ sourceImageHash: 'h', wheelAdjustments: {}, confidence: 2 });
+    expect(hi?.confidence).toBe(1);
+  });
+
+  it('clamps blendStrength to 0..100', () => {
+    const lo = normalizeAILookMatch({ sourceImageHash: 'h', wheelAdjustments: {}, blendStrength: -10 });
+    expect(lo?.blendStrength).toBe(0);
+    const hi = normalizeAILookMatch({ sourceImageHash: 'h', wheelAdjustments: {}, blendStrength: 200 });
+    expect(hi?.blendStrength).toBe(100);
+  });
+
+  it('handles non-object wheelAdjustment channels gracefully', () => {
+    const result = normalizeAILookMatch({
+      sourceImageHash: 'h',
+      wheelAdjustments: { lift: null, gamma: 'bad', gain: undefined }
+    });
+    expect(result?.wheelAdjustments.lift).toEqual({ r: 0, g: 0, b: 0 });
+    expect(result?.wheelAdjustments.gamma).toEqual({ r: 0, g: 0, b: 0 });
+    expect(result?.wheelAdjustments.gain).toEqual({ r: 0, g: 0, b: 0 });
+  });
+
+  it('clamps wheel values to -1..1', () => {
+    const result = normalizeAILookMatch({
+      sourceImageHash: 'h',
+      wheelAdjustments: { lift: { r: -2, g: 3, b: 0.5 } }
+    });
+    expect(result?.wheelAdjustments.lift.r).toBe(-1);
+    expect(result?.wheelAdjustments.lift.g).toBe(1);
+    expect(result?.wheelAdjustments.lift.b).toBe(0.5);
+  });
+});
+
+describe('normalizePrivacyRedactions', () => {
+  it('returns empty array for non-array input', () => {
+    expect(normalizePrivacyRedactions(null)).toEqual([]);
+    expect(normalizePrivacyRedactions(undefined)).toEqual([]);
+    expect(normalizePrivacyRedactions('string')).toEqual([]);
+    expect(normalizePrivacyRedactions({})).toEqual([]);
+  });
+
+  it('filters out entries without id or invalid type', () => {
+    const result = normalizePrivacyRedactions([
+      { type: 'face' },
+      { id: 'a', type: 'invalid' },
+      null,
+      'string'
+    ]);
+    expect(result).toEqual([]);
+  });
+
+  it('parses valid entries', () => {
+    const result = normalizePrivacyRedactions([
+      { id: 'r1', type: 'face', keyframes: [{ time: 1, x: 0.1, y: 0.2, w: 0.3, h: 0.4 }], blurStrength: 0.8, enabled: true },
+      { id: 'r2', type: 'license_plate', keyframes: [], blurStrength: 0.5, enabled: false }
+    ]);
+    expect(result).toHaveLength(2);
+    expect(result[0].id).toBe('r1');
+    expect(result[0].type).toBe('face');
+    expect(result[0].enabled).toBe(true);
+    expect(result[0].blurStrength).toBe(0.8);
+    expect(result[0].keyframes[0].time).toBe(1);
+    expect(result[1].enabled).toBe(false);
+  });
+
+  it('defaults blurStrength to 1 and enabled to true', () => {
+    const result = normalizePrivacyRedactions([{ id: 'r', type: 'screen' }]);
+    expect(result[0].blurStrength).toBe(1);
+    expect(result[0].enabled).toBe(true);
+  });
+
+  it('handles missing or non-array keyframes', () => {
+    const result = normalizePrivacyRedactions([{ id: 'r', type: 'face' }]);
+    expect(result[0].keyframes).toEqual([]);
+  });
+
+  it('filters invalid keyframes and sorts by time', () => {
+    const result = normalizePrivacyRedactions([{
+      id: 'r',
+      type: 'face',
+      keyframes: [
+        { time: 3, x: 0.1, y: 0.1, w: 0.1, h: 0.1 },
+        null,
+        { time: 1, x: 0.2, y: 0.2, w: 0.2, h: 0.2 },
+        'string'
+      ]
+    }]);
+    expect(result[0].keyframes).toHaveLength(2);
+    expect(result[0].keyframes[0].time).toBe(1);
+    expect(result[0].keyframes[1].time).toBe(3);
+  });
+
+  it('clamps keyframe values to valid ranges', () => {
+    const result = normalizePrivacyRedactions([{
+      id: 'r',
+      type: 'face',
+      keyframes: [{ time: -1, x: -0.5, y: 1.5, w: 0, h: 2 }]
+    }]);
+    const kf = result[0].keyframes[0];
+    expect(kf.time).toBe(0);
+    expect(kf.x).toBe(0);
+    expect(kf.y).toBe(1);
+    expect(kf.w).toBe(0.001);
+    expect(kf.h).toBe(1);
   });
 });

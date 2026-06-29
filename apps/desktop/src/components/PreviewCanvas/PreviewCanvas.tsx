@@ -2,6 +2,7 @@ import { ArrowUpRight, BarChart3, Blend, Columns2, FileDown, Gauge, GitCompareAr
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode, type WheelEvent as ReactWheelEvent } from 'react';
 import {
   RecordAngleCutCommand,
+  ApplyMulticamAiCutSuggestionsCommand,
   TrimMulticamSwitchCommand,
   UpdateClipCommand,
   UpdateMaskCommand,
@@ -2796,6 +2797,38 @@ function MulticamPreviewGrid({ clip, sequence, media, sequences, colorPipeline, 
             <MulticamHistoryRow key={entry.switchId} entry={entry} onTrimSwitch={onTrimSwitch} />
           ))}
         </div>
+        {clip.multicam?.aiCutSuggestions && clip.multicam.aiCutSuggestions.length > 0 ? (
+          <div className="border-t border-white/10 p-2" data-testid="multicam-ai-cut-panel">
+            <div className="mb-1 flex items-center justify-between">
+              <span className="text-[11px] font-semibold uppercase text-amber-200/80">{t.multicamAiCutTitle}</span>
+              <button
+                type="button"
+                className="inline-flex h-6 shrink-0 items-center rounded border border-amber-300/40 bg-amber-300/20 px-2 text-[10px] font-semibold text-amber-100 hover:bg-amber-300/30"
+                data-testid="multicam-ai-cut-apply-all"
+                onClick={() => {
+                  const cmd = new ApplyMulticamAiCutSuggestionsCommand(projectAccessor, clip.id, clip.multicam!.aiCutSuggestions!);
+                  commandManager.execute(cmd);
+                }}
+              >
+                {t.multicamAiCutApplyAll}
+              </button>
+            </div>
+            <div className="flex max-h-24 flex-col gap-1 overflow-y-auto">
+              {clip.multicam.aiCutSuggestions.map((suggestion, index) => {
+                const angleName = clip.multicam?.angles.find((a) => a.id === suggestion.angleId)?.name ?? suggestion.angleId;
+                return (
+                  <div key={`${suggestion.time}-${suggestion.angleId}`} className="rounded border border-white/10 bg-white/5 px-2 py-1 text-[10px]" data-testid={`multicam-ai-cut-suggestion-${index}`}>
+                    <span className="font-mono text-white/70">{secondsToTimecode(suggestion.time, fps)}</span>
+                    {` `}
+                    <span className="font-medium text-white">{angleName}</span>
+                    <span className="ml-1 text-white/50">({Math.round(suggestion.confidence * 100)}%)</span>
+                    <div className="mt-0.5 text-white/40">{t.multicamAiCutReason(suggestion.reason)}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
       </aside>
     </div>
   );

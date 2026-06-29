@@ -12,6 +12,8 @@ import {
   BatchKeyframeEditCommand,
   BatchSubtitleTimingCommand,
   BatchUpdateKeyframeCommand,
+  ApplyShakeStabilizationCommand,
+  ApplyPipPlacementCommand,
   ApplyTextAnimationCommand,
   UpdateSubtitleStyleCommand,
   UpdateProjectSpeakersCommand,
@@ -2001,6 +2003,44 @@ function ClipInspector({
               onCommit={(zoom) => commit({ stabilization: { ...stabilization, zoom } })}
               testId="stabilization-zoom"
             />
+          </Section>
+        ) : null}
+
+        {clip.type === 'video' && (clip.stabilization?.shakeScore ?? 0) > 50 ? (
+          <Section title={zhCN.preview.shakeAnalysisTitle}>
+            <div className="rounded-md border border-line bg-panel p-2 text-xs text-slate-600" data-testid="shake-analysis-panel">
+              <span data-testid="shake-analysis-severity">{zhCN.preview.shakeAnalysisScore(clip.stabilization?.shakeScore ?? 0)}</span>
+            </div>
+            <button
+              className="w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel"
+              type="button"
+              data-testid="apply-shake-stabilization"
+              onClick={() => {
+                const cmd = new ApplyShakeStabilizationCommand(projectAccessor, clip.id, { suggestedFilter: 'vidstab' });
+                commandManager.execute(cmd);
+              }}
+            >
+              {zhCN.preview.shakeAnalysisApplyAntiShake}
+            </button>
+          </Section>
+        ) : null}
+
+        {clip.type === 'video' && clip.aiPipSuggestion ? (
+          <Section title={zhCN.preview.pipAvoidanceTitle}>
+            <div className="rounded-md border border-line bg-panel p-2 text-xs text-slate-600" data-testid="pip-avoidance-panel">
+              <span>{zhCN.preview.pipAvoidanceWarning}</span>
+            </div>
+            <button
+              className="w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel"
+              type="button"
+              data-testid="apply-pip-placement"
+              onClick={() => {
+                const cmd = new ApplyPipPlacementCommand(projectAccessor, clip.id, clip.aiPipSuggestion!.recommendedCorner);
+                commandManager.execute(cmd);
+              }}
+            >
+              {zhCN.preview.pipAvoidanceApply}
+            </button>
           </Section>
         ) : null}
 

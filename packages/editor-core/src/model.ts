@@ -92,6 +92,7 @@ import type {
   MotionTrackPoint,
   MotionGraphicClip,
   MulticamAngle,
+  MulticamAiCutSuggestion,
   MulticamSequence,
   MulticamSwitch,
   NestedSequenceClip,
@@ -952,7 +953,8 @@ export function createBaseClip(
     ...(Array.isArray(input.aiColorHistory) ? { aiColorHistory: input.aiColorHistory.slice(0, 3) } : {}),
     ...(Array.isArray(input.privacyRedactions) ? { privacyRedactions: normalizePrivacyRedactions(input.privacyRedactions) } : {}),
     ...(input.beatSnapped === true ? { beatSnapped: true } : {}),
-    ...(input.aiLookMatch && typeof input.aiLookMatch === 'object' ? { aiLookMatch: normalizeAILookMatch(input.aiLookMatch) } : {})
+    ...(input.aiLookMatch && typeof input.aiLookMatch === 'object' ? { aiLookMatch: normalizeAILookMatch(input.aiLookMatch) } : {}),
+    ...(input.aiPipSuggestion && typeof input.aiPipSuggestion === 'object' ? { aiPipSuggestion: normalizeAiPipSuggestion(input.aiPipSuggestion) } : {})
   };
 }
 
@@ -1065,10 +1067,30 @@ export function normalizeStabilization(stabilization: Partial<ClipStabilization>
     smoothing: Math.round(Math.min(100, Math.max(1, finiteOrDefault(stabilization?.smoothing, DEFAULT_STABILIZATION.smoothing)))),
     zoom: round(Math.min(5, Math.max(0, finiteOrDefault(stabilization?.zoom, DEFAULT_STABILIZATION.zoom)))),
     analyzed: stabilization?.analyzed === true,
-    trfPath
+    trfPath,
+    ...normalizeShakeAnalysisFields(stabilization)
   };
 }
 
+function normalizeShakeAnalysisFields(stabilization: Partial<ClipStabilization> | undefined): {
+  shakeScore?: number;
+  severity?: 'low' | 'medium' | 'high';
+  suggestedFilter?: 'vidstab' | 'none';
+  sampledAt?: number;
+} {
+  if (!stabilization?.shakeScore && stabilization?.shakeScore !== 0) return {};
+  const score = round(Math.max(0, Math.min(100, stabilization.shakeScore)));
+  const validSeverities = ['low', 'medium', 'high'] as const;
+  const severity = validSeverities.includes(stabilization.severity as typeof validSeverities[number])
+    ? stabilization.severity as typeof validSeverities[number]
+    : score < 20 ? 'low' : score <= 50 ? 'medium' : 'high';
+  return {
+    shakeScore: score,
+    severity,
+    suggestedFilter: stabilization.suggestedFilter === 'vidstab' ? 'vidstab' : 'none',
+    sampledAt: typeof stabilization.sampledAt === 'number' && Number.isFinite(stabilization.sampledAt) ? stabilization.sampledAt : undefined
+  };
+}
 export function isStabilizationExportable(stabilization: Partial<ClipStabilization> | undefined): boolean {
   const normalized = normalizeStabilization(stabilization);
   return normalized.enabled && normalized.analyzed && Boolean(normalized.trfPath);
@@ -1339,10 +1361,39 @@ export function normalizeMulticamSequence(multicam: Partial<MulticamSequence> | 
   }
   return {
     angles,
-    switches: Array.from(byTime.values()).sort((left, right) => left.time - right.time || left.id.localeCompare(right.id))
+    switches: Array.from(byTime.values()).sort((left, right) => left.time - right.time || left.id.localeCompare(right.id)),
+    aiCutSuggestions: normalizeAiCutSuggestions(multicam.aiCutSuggestions, angleIds)
   };
 }
 
+function normalizeAiCutSuggestions(
+  suggestions: unknown,
+  validAngleIds: Set<string>
+): MulticamAiCutSuggestion[] | undefined {
+  if (!Array.isArray(suggestions) || suggestions.length === 0) return undefined;
+  const normalized = suggestions
+    .filter(
+      (s): s is Record<string, unknown> =>
+        s != null &&
+        typeof s === 'object' &&
+        typeof (s as Record<string, unknown>).time === 'number' &&
+        typeof (s as Record<string, unknown>).angleId === 'string'
+    )
+    .map((s) => ({
+      time: round(Math.max(0, (s as { time: number }).time)),
+      angleId: ((s as { angleId: string }).angleId || '').trim(),
+      confidence: typeof (s as { confidence?: unknown }).confidence === 'number' &&
+        Number.isFinite((s as { confidence: number }).confidence)
+        ? round(Math.min(1, Math.max(0, (s as { confidence: number }).confidence)))
+        : 0.5,
+      reason: typeof (s as { reason?: unknown }).reason === 'string'
+        ? ((s as { reason: string }).reason || '').trim().slice(0, 200)
+        : ''
+    }))
+    .filter((s) => s.angleId.length > 0 && validAngleIds.has(s.angleId))
+    .sort((a, b) => a.time - b.time);
+  return normalized.length > 0 ? normalized : undefined;
+}
 export function normalizeSequenceFrameRate(frameRate: number | undefined): number | undefined {
   if (typeof frameRate !== 'number' || !Number.isFinite(frameRate)) {
     return undefined;
@@ -2084,5 +2135,60 @@ export function normalizeAILookMatch(input: unknown): import('./model-types').Cl
     confidence: typeof obj.confidence === 'number' && Number.isFinite(obj.confidence) ? Math.min(1, Math.max(0, obj.confidence)) : 0,
     generatedAt: typeof obj.generatedAt === 'string' ? obj.generatedAt : new Date().toISOString(),
     blendStrength: typeof obj.blendStrength === 'number' && Number.isFinite(obj.blendStrength) ? Math.min(100, Math.max(0, obj.blendStrength)) : 100
+  };
+}
+
+export function normalizeAiPipSuggestion(input: unknown): import('./model-types').AiPipPlacementSuggestion | undefined {
+  if (!input || typeof input !== 'object') return undefined;
+  const obj = input as Record<string, unknown>;
+  const validCorners = ['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const;
+  const corner = validCorners.includes(obj.recommendedCorner as typeof validCorners[number])
+    ? (obj.recommendedCorner as typeof validCorners[number])
+    : 'bottom-right';
+  return {
+    recommendedCorner: corner,
+    overlapReduction: typeof obj.overlapReduction === 'number' && Number.isFinite(obj.overlapReduction)
+      ? round(Math.min(100, Math.max(0, obj.overlapReduction)))
+      : 0,
+    confidence: typeof obj.confidence === 'number' && Number.isFinite(obj.confidence)
+      ? round(Math.min(1, Math.max(0, obj.confidence)))
+      : 0.5
+  };
+}
+
+export function normalizePlatformFitSuggestion(input: unknown): import('./model-types').ProjectPlatformFitSuggestion | undefined {
+  if (!input || typeof input !== 'object') return undefined;
+  const obj = input as Record<string, unknown>;
+  const validPlatforms = ['tiktok', 'reels', 'shorts', 'custom'] as const;
+  const platform = validPlatforms.includes(obj.targetPlatform as typeof validPlatforms[number])
+    ? (obj.targetPlatform as typeof validPlatforms[number])
+    : 'custom';
+  const limitSeconds = typeof obj.limitSeconds === 'number' && Number.isFinite(obj.limitSeconds) && obj.limitSeconds > 0
+    ? round(obj.limitSeconds)
+    : 60;
+  const normalizeSegments = (segs: unknown): import('./model-types').PlatformFitSegment[] => {
+    if (!Array.isArray(segs)) return [];
+    return segs
+      .filter((s): s is Record<string, unknown> =>
+        s != null && typeof s === 'object' &&
+        typeof (s as Record<string, unknown>).clipId === 'string' &&
+        typeof (s as Record<string, unknown>).start === 'number' &&
+        typeof (s as Record<string, unknown>).end === 'number'
+      )
+      .map((s) => ({
+        clipId: (s.clipId as string).trim(),
+        start: round(Math.max(0, s.start as number)),
+        end: round(Math.max(0, s.end as number)),
+        score: typeof s.score === 'number' && Number.isFinite(s.score)
+          ? round(Math.min(1, Math.max(0, s.score as number)))
+          : 0.5
+      }))
+      .filter((s) => s.clipId.length > 0 && s.end > s.start);
+  };
+  return {
+    targetPlatform: platform,
+    limitSeconds,
+    keptSegments: normalizeSegments(obj.keptSegments),
+    removedSegments: normalizeSegments(obj.removedSegments)
   };
 }

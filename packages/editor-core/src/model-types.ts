@@ -134,6 +134,10 @@ export interface ClipStabilization {
   zoom: number;
   analyzed: boolean;
   trfPath?: string | null;
+  shakeScore?: number;
+  severity?: 'low' | 'medium' | 'high';
+  suggestedFilter?: 'vidstab' | 'none';
+  sampledAt?: number;
 }
 
 export type FrameInterpolationTargetFps = 24 | 30 | 48 | 60 | 120;
@@ -341,6 +345,8 @@ export interface Project {
   beatSnapSuggestions?: BeatSnapSuggestion[];
   /** 媒体库分组/收藏 */
   mediaCollections?: MediaCollection[];
+  /** AI 平台时长适配裁剪建议 */
+  platformFitSuggestion?: ProjectPlatformFitSuggestion;
 }
 
 /** 虚拟子剪辑：对源媒体特定区间的命名引用，不生成实际文件 */
@@ -709,6 +715,10 @@ export interface BaseClip {
   beatSnapped?: boolean;
   /** AI 参考图调色匹配数据 */
   aiLookMatch?: ClipAILookMatch;
+  /** AI 画中画避让建议 */
+  aiPipSuggestion?: AiPipPlacementSuggestion;
+  /** AI 平台适配裁剪标记 */
+  platformFitRemoved?: boolean;
 }
 
 export interface AIColorHistoryEntry {
@@ -874,6 +884,7 @@ export interface MotionGraphicClip extends BaseClip {
 export interface MulticamSequence {
   angles: MulticamAngle[];
   switches: MulticamSwitch[];
+  aiCutSuggestions?: MulticamAiCutSuggestion[];
 }
 
 export interface MulticamAngle {
@@ -888,6 +899,36 @@ export interface MulticamSwitch {
   id: string;
   time: number;
   angleId: string;
+}
+
+export interface MulticamAiCutSuggestion {
+  time: number;
+  angleId: string;
+  confidence: number;
+  reason: string;
+}
+
+/** AI 画中画智能避让建议 */
+export interface AiPipPlacementSuggestion {
+  recommendedCorner: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+  overlapReduction: number;
+  confidence: number;
+}
+
+/** AI 平台时长适配裁剪片段 */
+export interface PlatformFitSegment {
+  clipId: string;
+  start: number;
+  end: number;
+  score: number;
+}
+
+/** AI 平台时长适配裁剪建议 */
+export interface ProjectPlatformFitSuggestion {
+  targetPlatform: 'tiktok' | 'reels' | 'shorts' | 'custom';
+  limitSeconds: number;
+  keptSegments: PlatformFitSegment[];
+  removedSegments: PlatformFitSegment[];
 }
 
 export interface TextStyle {

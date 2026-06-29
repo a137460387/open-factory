@@ -3735,7 +3735,7 @@ window.__E2E_ACTIONS__ = {
     const mediaAssets: MediaAsset[] = [
       {
         id: 'media-anomaly-a', type: 'video', name: 'anomaly-clip.mp4', path: tinyVideo,
-        duration: 15, width: 1920, height: 1080, size: 8192, mtimeMs: 1_000, hasAudio: true,
+        duration: 5, width: 1920, height: 1080, size: 8192, mtimeMs: 1_000, hasAudio: true,
       },
     ];
     const clipA = makeStoryboardClip('clip-anomaly-a', 'video', 'anomaly-clip.mp4', 'media-anomaly-a', 0, 15);
@@ -3838,7 +3838,7 @@ window.__E2E_ACTIONS__ = {
     const project = createProject('Beat Snap E2E');
     const asset: MediaAsset = {
       id: 'media-bs', type: 'video', name: 'beat-snap-test.mp4',
-      path: tinyVideo, duration: 15, width: 1920, height: 1080, size: 4096, mtimeMs: 1_000, hasAudio: true,
+      path: tinyVideo, duration: 5, width: 1920, height: 1080, size: 4096, mtimeMs: 1_000, hasAudio: true,
     };
     const clip1 = {
       id: 'clip-bs-1', type: 'video' as const, name: 'clip-1.mp4',
@@ -3904,6 +3904,155 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setPlayheadTime(0);
     commandManager.clear();
   },
+  setupMulticamAiCutFixture: () => setupMulticamAiCutFixtureInner(),
+  setupShakeAnalysisFixture: () => {
+    const project = createProject('Shake Analysis E2E');
+    const asset: MediaAsset = {
+      id: 'media-shake-video', type: 'video', name: 'shaky-clip.mp4', path: tinyVideo,
+      duration: 10, width: 1920, height: 1080, size: 8192, mtimeMs: 1000, hasAudio: true,
+    };
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [createTrack({ id: 'track-shake', type: 'video', name: 'Video 1', clips: [
+        {
+          id: 'clip-shake',
+          type: 'video',
+          name: 'shaky-clip.mp4',
+          mediaId: 'media-shake-video',
+          trackId: 'track-shake',
+          start: 0,
+          duration: 10,
+          trimStart: 0,
+          trimEnd: 0,
+          speed: 1,
+          colorCorrection: { brightness: 0, contrast: 1, saturation: 1, hue: 0 },
+          transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
+          volume: 1,
+          stabilization: {
+            enabled: false,
+            smoothing: 5,
+            zoom: 0,
+            analyzed: false,
+            shakeScore: 75,
+            severity: 'high',
+            suggestedFilter: 'vidstab',
+            sampledAt: Date.now(),
+          },
+        },
+      ] })],
+    };
+    useEditorStore.getState().setProject({
+      ...project, media: [asset], timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
+    useEditorStore.getState().setSelectedClipIds(['clip-shake']);
+    useEditorStore.getState().setSelectedClipId('clip-shake');
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupPipAvoidanceFixture: () => {
+    const project = createProject('PiP Avoidance E2E');
+    const asset: MediaAsset = {
+      id: 'media-pip-video', type: 'video', name: 'main-video.mp4', path: tinyVideo,
+      duration: 10, width: 1920, height: 1080, size: 8192, mtimeMs: 1000, hasAudio: true,
+    };
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [createTrack({ id: 'track-pip', type: 'video', name: 'Video 1', clips: [
+        {
+          id: 'clip-pip',
+          type: 'video',
+          name: 'pip-clip.mp4',
+          mediaId: 'media-pip-video',
+          trackId: 'track-pip',
+          start: 0,
+          duration: 10,
+          trimStart: 0,
+          trimEnd: 0,
+          speed: 1,
+          colorCorrection: { brightness: 0, contrast: 1, saturation: 1, hue: 0 },
+          transform: { x: 0.5, y: -0.5, scale: 0.3, rotation: 0, opacity: 1 },
+          volume: 1,
+          aiPipSuggestion: {
+            recommendedCorner: 'top-left',
+            overlapReduction: 60,
+            confidence: 0.85,
+          },
+        },
+      ] })],
+    };
+    useEditorStore.getState().setProject({
+      ...project, media: [asset], timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
+    useEditorStore.getState().setSelectedClipIds(['clip-pip']);
+    useEditorStore.getState().setSelectedClipId('clip-pip');
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupPlatformFitFixture: () => {
+    const project = createProject('Platform Fit E2E');
+    const clips = [];
+    for (let i = 0; i < 5; i++) {
+      clips.push({
+        id: `clip-pf-${i}`,
+        type: 'video',
+        name: `segment-${i}.mp4`,
+        mediaId: `media-pf-${i}`,
+        trackId: 'track-pf',
+        start: i * 5,
+        duration: 5,
+        trimStart: 0,
+        trimEnd: 0,
+        speed: 1,
+        colorCorrection: { brightness: 0, contrast: 1, saturation: 1, hue: 0 },
+        transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
+        volume: 1,
+        platformFitRemoved: i >= 3 ? true : undefined,
+      } as any);
+    }
+    const assets: MediaAsset[] = [];
+    for (let i = 0; i < 5; i++) {
+      assets.push({
+        id: `media-pf-${i}`, type: 'video', name: `segment-${i}.mp4`, path: tinyVideo,
+        duration: 5, width: 1920, height: 1080, size: 8192, mtimeMs: 1000 + i, hasAudio: true,
+      });
+    }
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [createTrack({ id: 'track-pf', type: 'video', name: 'Video 1', clips })],
+    };
+    const projWithFit = {
+      ...project,
+      platformFitSuggestion: {
+        targetPlatform: 'tiktok' as const,
+        limitSeconds: 15,
+        keptSegments: [
+          { clipId: 'clip-pf-0', start: 0, end: 5, score: 0.9 },
+          { clipId: 'clip-pf-1', start: 5, end: 10, score: 0.8 },
+          { clipId: 'clip-pf-2', start: 10, end: 15, score: 0.7 },
+        ],
+        removedSegments: [
+          { clipId: 'clip-pf-3', start: 15, end: 20, score: 0.3 },
+          { clipId: 'clip-pf-4', start: 20, end: 25, score: 0.2 },
+        ],
+      },
+    };
+    useEditorStore.getState().setProject({
+      ...projWithFit, media: assets, timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
+    useEditorStore.getState().setSelectedClipIds(['clip-pf-0']);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  commandManager: { undo: () => commandManager.undo(), redo: () => commandManager.redo() } as any,
 };
 
 function makeWhisperVideoClip(): Extract<import('@open-factory/editor-core').Clip, { type: 'video' }> {
@@ -4569,6 +4718,69 @@ function makeMissingAsset(
     height,
     missing: true,
     size: 4096,
-    mtimeMs: 1000
+    mtimeMs: 1000,
   };
+}
+
+function setupMulticamAiCutFixtureInner() {
+    const project = createProject('Multicam AI Cut E2E');
+    const mcTimeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({ id: 'track-angle-a', type: 'video', name: 'Angle A', clips: [] }),
+        createTrack({ id: 'track-angle-b', type: 'video', name: 'Angle B', clips: [] }),
+        createTrack({ id: 'track-angle-c', type: 'video', name: 'Angle C', clips: [] }),
+      ],
+    };
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({ id: 'track-mc', type: 'video', name: 'Video 1', clips: [
+          {
+            id: 'clip-mc-nested',
+            type: 'nested-sequence',
+            name: 'Multicam Clip',
+            trackId: 'track-mc',
+            start: 0,
+            duration: 10,
+            trimStart: 0,
+            trimEnd: 0,
+            speed: 1,
+            colorCorrection: { brightness: 0, contrast: 1, saturation: 1, hue: 0 },
+            transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
+            volume: 1,
+            sequenceId: 'seq-mc-nested',
+            multicam: {
+              angles: [
+                { id: 'angle-a', clipId: 'clip-angle-a', trackId: 'track-angle-a', name: 'Camera A', offset: 0 },
+                { id: 'angle-b', clipId: 'clip-angle-b', trackId: 'track-angle-b', name: 'Camera B', offset: 0 },
+                { id: 'angle-c', clipId: 'clip-angle-c', trackId: 'track-angle-c', name: 'Camera C', offset: 0 },
+              ],
+              switches: [
+                { id: 'sw-init', time: 0, angleId: 'angle-a' },
+              ],
+              aiCutSuggestions: [
+                { time: 2, angleId: 'angle-b', confidence: 0.92, reason: 'active speaker' },
+                { time: 4.5, angleId: 'angle-c', confidence: 0.85, reason: 'wide shot' },
+                { time: 7, angleId: 'angle-a', confidence: 0.78, reason: 'close-up' },
+              ],
+            },
+          } as any,
+        ]}),
+      ],
+    };
+    useEditorStore.getState().setProject({
+      ...project, media: [], timeline,
+      sequences: [
+        { id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline },
+        { id: 'seq-mc-nested', name: 'Multicam Nested', timeline: mcTimeline },
+      ],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
+    useEditorStore.getState().setSelectedClipIds(['clip-mc-nested']);
+    useEditorStore.getState().setSelectedClipId('clip-mc-nested');
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
 }

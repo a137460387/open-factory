@@ -18,6 +18,7 @@ import {
   DEFAULT_NESTED_SEQUENCE_NAME,
   getProjectSequences,
   normalizeMasterVolume,
+  normalizeMulticamSequence,
   type AudioFadeCurve,
   type Keyframe,
   type KeyframeEasing,
@@ -3923,6 +3924,223 @@ export class TrimMulticamSwitchCommand implements Command {
     if (this.before) {
       this.accessor.setProject(this.before);
     }
+  }
+}
+
+export class ApplyMulticamAiCutSuggestionsCommand implements Command {
+  readonly description = 'Apply AI multicam cut suggestions';
+  private before?: Project;
+  private after?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly clipId: string,
+    private readonly suggestions: Array<{ time: number; angleId: string; confidence: number; reason: string }>
+  ) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    if (!this.after) {
+      const project = this.before;
+      const clip = findClip(project.timeline, this.clipId);
+      if (clip.type !== 'nested-sequence' || !clip.multicam) {
+        throw new Error('Clip is not a multicam sequence');
+      }
+      const normalized = normalizeMulticamSequence(clip.multicam, clip.duration);
+      if (!normalized) {
+        throw new Error('Invalid multicam sequence');
+      }
+      const switchMap = new Map<number, { time: number; angleId: string }>();
+      for (const sw of normalized.switches) {
+        switchMap.set(sw.time, { time: sw.time, angleId: sw.angleId });
+      }
+      for (const suggestion of this.suggestions) {
+        const localTime = round(Math.min(clip.duration, Math.max(0, suggestion.time - clip.start + clip.trimStart)));
+        switchMap.set(localTime, { time: localTime, angleId: suggestion.angleId });
+      }
+      const newSwitches = [...switchMap.values()]
+        .sort((a, b) => a.time - b.time)
+        .map((sw) => ({ id: createId('multicam-switch'), time: sw.time, angleId: sw.angleId }));
+      const finalMc = normalizeMulticamSequence({ ...normalized, switches: newSwitches }, clip.duration);
+      if (!finalMc) {
+        throw new Error('Invalid multicam after merge');
+      }
+      const multicam = { ...clip.multicam, switches: finalMc.switches, aiCutSuggestions: this.suggestions };
+      const updatedClip = { ...clip, multicam };
+      this.after = replaceProjectActiveTimeline(project, replaceClip(project.timeline, updatedClip));
+    }
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class ApplyShakeStabilizationCommand implements Command {
+  readonly description = 'Apply shake stabilization';
+  private before?: Project;
+  private after?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly clipId: string,
+    private readonly stabilizationUpdate: Partial<ClipStabilization>
+  ) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    if (!this.after) {
+      const timeline = this.before.timeline;
+      const clip = findClip(timeline, this.clipId);
+      const prev = clip.stabilization ?? normalizeStabilization({});
+      const updated: ClipStabilization = normalizeStabilization({
+        ...prev,
+        ...this.stabilizationUpdate,
+        enabled: true,
+        analyzed: true
+      });
+      const updatedClip = { ...clip, stabilization: updated };
+      this.after = replaceProjectActiveTimeline(this.before, replaceClip(timeline, updatedClip));
+    }
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) this.accessor.setProject(this.before);
+  }
+}
+
+export class ApplyPipPlacementCommand implements Command {
+  readonly description = 'Apply PiP placement suggestion';
+  private before?: Project;
+  private after?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly clipId: string,
+    private readonly suggestedCorner: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
+  ) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    if (!this.after) {
+      const timeline = this.before.timeline;
+      const clip = findClip(timeline, this.clipId);
+      const currentTransform = clip.transform ?? normalizeTransform({});
+      const updatedTransform = { ...currentTransform };
+      switch (this.suggestedCorner) {
+        case 'top-left':
+          updatedTransform.x = -0.5;
+          updatedTransform.y = 0.5;
+          break;
+        case 'top-right':
+          updatedTransform.x = 0.5;
+          updatedTransform.y = 0.5;
+          break;
+        case 'bottom-left':
+          updatedTransform.x = -0.5;
+          updatedTransform.y = -0.5;
+          break;
+        case 'bottom-right':
+        default:
+          updatedTransform.x = 0.5;
+          updatedTransform.y = -0.5;
+          break;
+      }
+      const updatedClip = { ...clip, transform: updatedTransform };
+      this.after = replaceProjectActiveTimeline(this.before, replaceClip(timeline, updatedClip));
+    }
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) this.accessor.setProject(this.before);
+  }
+}
+
+export class ApplyPlatformFitCommand implements Command {
+  readonly description = 'Apply platform fit suggestion';
+  private before?: Project;
+  private after?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly suggestion: import('../model-types').ProjectPlatformFitSuggestion
+  ) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    if (!this.after) {
+      const removedIds = new Set(this.suggestion.removedSegments.map((s) => s.clipId));
+      let project: Project = { ...this.before, platformFitSuggestion: this.suggestion };
+      const timeline = project.timeline;
+      const updatedTracks = timeline.tracks.map((track) => ({
+        ...track,
+        clips: track.clips.map((clip) => {
+          if (removedIds.has(clip.id)) {
+            return { ...clip, platformFitRemoved: true };
+          }
+          const { platformFitRemoved, ...rest } = clip as typeof clip & { platformFitRemoved?: boolean };
+          return rest;
+        })
+      }));
+      project = replaceProjectActiveTimeline(project, { ...timeline, tracks: updatedTracks });
+      this.after = project;
+    }
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) this.accessor.setProject(this.before);
+  }
+}
+
+export class RestorePlatformFitClipCommand implements Command {
+  readonly description = 'Restore a platform-fit removed clip';
+  private before?: Project;
+  private after?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly clipId: string
+  ) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    if (!this.after) {
+      let project = this.before;
+      if (project.platformFitSuggestion) {
+        const kept = project.platformFitSuggestion.removedSegments.find((s) => s.clipId === this.clipId);
+        if (kept) {
+          const newSuggestion = {
+            ...project.platformFitSuggestion,
+            removedSegments: project.platformFitSuggestion.removedSegments.filter((s) => s.clipId !== this.clipId),
+            keptSegments: [...project.platformFitSuggestion.keptSegments, kept].sort((a, b) => a.start - b.start)
+          };
+          project = { ...project, platformFitSuggestion: newSuggestion };
+        }
+      }
+      const timeline = project.timeline;
+      const updatedTracks = timeline.tracks.map((track) => ({
+        ...track,
+        clips: track.clips.map((clip) => {
+          if (clip.id === this.clipId) {
+            const { platformFitRemoved, ...rest } = clip as typeof clip & { platformFitRemoved?: boolean };
+            return rest;
+          }
+          return clip;
+        })
+      }));
+      this.after = replaceProjectActiveTimeline(project, { ...timeline, tracks: updatedTracks });
+    }
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) this.accessor.setProject(this.before);
   }
 }
 
