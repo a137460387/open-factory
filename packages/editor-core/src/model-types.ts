@@ -359,6 +359,8 @@ export interface Project {
   versionDiffs?: Record<string, VersionDiffSummary>;
   /** AI智能响度适配建议 */
   loudnessSuggestion?: LoudnessSuggestion;
+  /** AI剪辑节奏分析 */
+  pacingAnalysis?: PacingAnalysis;
 }
 
 /** 虚拟子剪辑：对源媒体特定区间的命名引用，不生成实际文件 */
@@ -566,6 +568,10 @@ export interface Timeline {
   brollSuggestions?: BrollSuggestion[];
   /** 连续性警告（跳轴/跳切） */
   continuityWarnings?: ContinuityWarning[];
+  /** AI跨Clip色彩一致性警告 */
+  colorConsistencyWarnings?: ColorConsistencyWarning[];
+  /** AI音效匹配建议 */
+  sfxSuggestions?: SfxSuggestion[];
 }
 
 export interface Sequence {
@@ -741,6 +747,8 @@ export interface BaseClip {
   aiDenoiseRecommendation?: AIDenoiseRecommendation;
   /** 闪烁光敏警告 */
   flashWarnings?: FlashWarning[];
+  /** 镜头运动类型分析结果 */
+  motionType?: ClipMotionType;
 }
 
 export interface AIColorHistoryEntry {
@@ -1049,3 +1057,37 @@ export interface MediaFolder {
 }
 import type { ClipAIReframe } from './ai-reframe';
 import type { AnomalyInterval } from './anomaly-detection';
+import type { ClipMotionType } from './ai-motion-type';
+
+export type ColorConsistencyWarningType = 'skin_tone' | 'white_balance' | 'both';
+export interface ColorConsistencyWarning {
+  clipAId: string;
+  clipBId: string;
+  type: ColorConsistencyWarningType;
+  deltaRGB: number | null;
+  reason: string;
+}
+
+export type SfxSuggestionStatus = 'pending' | 'accepted' | 'rejected';
+export interface SfxSuggestion {
+  time: number;
+  category: string;
+  confidence: number;
+  matchedAssetId: string | null;
+  status: SfxSuggestionStatus;
+}
+
+export interface CpmCurvePoint {
+  time: number;
+  cpm: number;
+}
+export interface PacingSegment {
+  start: number;
+  end: number;
+}
+export interface PacingAnalysis {
+  cpmCurve: CpmCurvePoint[];
+  slowSegments: PacingSegment[];
+  fastSegments: PacingSegment[];
+  overallAvgCPM: number;
+}

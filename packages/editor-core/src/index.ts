@@ -223,3 +223,7 @@ export * from './flash-warning';
 export * from './continuity-check';
 export * from './music-structure';
 export * from './subtitle-reading-speed';
+export * from './ai-motion-type';
+export * from './ai-color-consistency';
+export * from './ai-sfx-match';
+export * from './ai-pacing-analysis';
