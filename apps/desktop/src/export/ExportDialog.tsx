@@ -108,6 +108,7 @@ import {
   EXPORT_SUGGESTION_CACHE_TTL_MS,
   isProviderConfigured
 } from '@open-factory/editor-core';
+import { AILoudnessSuggestionSection } from './AILoudnessSuggestionSection';
 import { AlertTriangle, Cloud, CloudDownload, Clock3, Copy, Download, FileText, FolderOpen, Image as ImageIcon, ListPlus, Loader2, Minimize2, Save, Trash2, Upload, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { zhCN } from '../i18n/strings';
@@ -2095,6 +2096,7 @@ function relinkFromPreflight(): void {
             loudnessNormalizationEligible={loudnessNormalizationEligible}
             setDraftSettings={setDraftSettings}
           />
+          <AILoudnessSuggestionSection project={project} />
           {!timelineVisualControlsDisabled && subtitleLanguageOptions.length > 0 ? (
             <SubtitleLanguageSection
               options={subtitleLanguageOptions}

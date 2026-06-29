@@ -215,3 +215,7 @@ export * from './ai-reframe';
 export * from './ai-transition-recommend';
 export * from './anomaly-detection';
 export * from './subtitles/subtitle-speaker-diarization';
+export * from './ai-denoise-recommendation';
+export * from './ai-broll-suggestion';
+export * from './ai-version-diff';
+export * from './ai-loudness-suggestion';

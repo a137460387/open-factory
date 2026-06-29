@@ -13,6 +13,7 @@ import {
   type FfmpegExportPlan,
   type KeyframeProperty,
   type Clip,
+  type DenoiseFilterRecommendation,
   type MediaAsset,
   type Project,
   type ProjectFileV2
@@ -1265,6 +1266,38 @@ const mocks: TauriMocks = {
         inputTokens: 100,
         outputTokens: 50,
         latencyMs: 10
+      };
+    }
+    if (systemContent.includes('降噪推荐助手')) {
+      return {
+        content: JSON.stringify({
+       recommendedFilters: [
+          { filter: 'afftdn' as const, params: { nr: 20, nf: -25 }, reason: '检测到嗡声(hum)干扰，建议使用自适应降噪' },
+          { filter: 'highpass' as const, params: { f: 80 }, reason: '检测到嗡声低频干扰，建议高通滤波' }
+        ],
+          confidence: 0.85
+        }),
+        inputTokens: 100, outputTokens: 50, latencyMs: 10
+      };
+    }
+    if (systemContent.includes('B-roll推荐助手')) {
+      return {
+        content: JSON.stringify({
+          suggestions: [
+            { segmentId: 'subtitle-clip-long', mediaId: 'media-broll-nature', insertTime: 1, reason: '自然风景与文本匹配', confidence: 0.88 },
+            { segmentId: 'subtitle-clip-long', mediaId: 'media-broll-city', insertTime: 1.5, reason: '城市场景对比', confidence: 0.72 }
+          ]
+        }),
+        inputTokens: 100, outputTokens: 50, latencyMs: 10
+      };
+    }
+    if (systemContent.includes('版本对比摘要助手')) {
+      return {
+        content: JSON.stringify({
+          summary: '两个版本之间有3处变化：新增2个剪辑、修改1个修剪点',
+          highlights: ['新增了clip-new-1和clip-new-2', '修剪点变化超过0.1秒阈值', '轨道数量保持不变']
+        }),
+        inputTokens: 100, outputTokens: 50, latencyMs: 10
       };
     }
     return { content: '{}', inputTokens: 100, outputTokens: 50, latencyMs: 10 };
@@ -4050,6 +4083,211 @@ window.__E2E_ACTIONS__ = {
     });
     useEditorStore.getState().setSelectedClipIds(['clip-pf-0']);
     useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupAIDenoiseFixture: async () => {
+    const project = createProject('AI Denoise E2E');
+    const asset: MediaAsset = {
+      id: 'media-denoise-audio', type: 'audio', name: 'test-audio.wav',
+      path: tinyVideo, duration: 10, width: 0, height: 0, size: 4096, mtimeMs: 1_000,
+      hasAudio: true, audioChannels: 1, audioSampleRate: 44_100
+    };
+    const clip = {
+      id: 'denoise-clip-1', type: 'audio' as const, name: 'test-audio.wav',
+      mediaId: 'media-denoise-audio', trackId: 'track-denoise-audio', start: 0, duration: 10,
+      trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1,
+      colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM },
+      aiDenoiseRecommendation: {
+        noiseProfile: { humScore: 0.65, hissScore: 0.42, windScore: 0.1, snrEstimate: 8.5 },
+        recommendedFilters: [
+          { filter: 'afftdn', params: { nr: 20, nf: -25 }, reason: '检测到嗡声(hum)干扰，建议使用自适应降噪' } as DenoiseFilterRecommendation,
+          { filter: 'highpass', params: { f: 80 }, reason: '检测到嗡声低频干扰，建议高通滤波' } as DenoiseFilterRecommendation
+        ],
+        appliedFilters: [],
+        generatedAt: new Date().toISOString()
+      }
+    };
+    const timeline = {
+      transitions: [], markers: [],
+      tracks: [
+        createTrack({ id: 'track-denoise-audio', type: 'audio', name: 'Audio 1', clips: [clip] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project, media: [asset], timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    await useAISettingsStore.getState().setProviderApiKey('mimo', 'test-mimo-key');
+    useAISettingsStore.getState().updateProvider('mimo', { defaultModel: 'gpt-4o' });
+    useAISettingsStore.getState().toggleProvider('mimo', true);
+    useEditorStore.getState().setSelectedClipIds(['denoise-clip-1']);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupAIDenoiseFixtureNoProvider: async () => {
+    const project = createProject('AI Denoise No Provider E2E');
+    const asset: MediaAsset = {
+      id: 'media-denoise-audio-2', type: 'audio', name: 'test-audio-2.wav',
+      path: tinyVideo, duration: 10, width: 0, height: 0, size: 4096, mtimeMs: 1_000,
+      hasAudio: true, audioChannels: 1, audioSampleRate: 44_100
+    };
+    const clip = {
+      id: 'denoise-clip-2', type: 'audio' as const, name: 'test-audio-2.wav',
+      mediaId: 'media-denoise-audio-2', trackId: 'track-denoise-audio-2', start: 0, duration: 10,
+      trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1,
+      colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM }
+    };
+    const timeline = {
+      transitions: [], markers: [],
+      tracks: [createTrack({ id: 'track-denoise-audio-2', type: 'audio', name: 'Audio 1', clips: [clip] })]
+    };
+    useEditorStore.getState().setProject({ ...project, media: [asset], timeline });
+    useAISettingsStore.getState().toggleProvider('mimo', false);
+    useAISettingsStore.getState().updateProvider('mimo', { apiKey: '' });
+    useAISettingsStore.getState().toggleProvider('ollama', false);
+    useAISettingsStore.getState().updateProvider('ollama', { apiKey: '' });
+    aiApiKeys.delete('mimo');
+    aiApiKeys.delete('ollama');
+    useEditorStore.getState().setSelectedClipIds(['denoise-clip-2']);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupAIBrollFixture: async () => {
+    const project = createProject('AI B-roll E2E');
+    const videoAsset: MediaAsset = {
+      id: 'media-broll-video', type: 'video', name: 'main-video.mp4',
+      path: tinyVideo, duration: 30, width: 1280, height: 720, size: 4096, mtimeMs: 1_000, hasAudio: false
+    };
+    const natureAsset: MediaAsset = {
+      id: 'media-broll-nature', type: 'video', name: 'nature.mp4',
+      path: tinyVideo, duration: 10, width: 1280, height: 720, size: 2048, mtimeMs: 1_000, hasAudio: false,
+      aiAnalysis: { tags: ['nature', 'forest', 'tree'], scene: 'nature scene', mood: 'calm', objects: ['tree'], analysisTime: new Date().toISOString(), providerId: 'mimo' }
+    };
+    const cityAsset: MediaAsset = {
+      id: 'media-broll-city', type: 'video', name: 'city.mp4',
+      path: tinyVideo, duration: 8, width: 1280, height: 720, size: 2048, mtimeMs: 1_000, hasAudio: false,
+      aiAnalysis: { tags: ['city', 'urban', 'building'], scene: 'city scene', mood: 'busy', objects: ['building'], analysisTime: new Date().toISOString(), providerId: 'mimo' }
+    };
+    const mainClip = {
+      id: 'broll-main-clip', type: 'video' as const, name: 'main-video.mp4',
+      mediaId: 'media-broll-video', trackId: 'track-broll-video', start: 0, duration: 30,
+      trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1,
+      colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM }
+    };
+    const longSubtitleClip = {
+      id: 'subtitle-clip-long', type: 'subtitle' as const, name: 'Long subtitle',
+      trackId: 'track-broll-subtitle', start: 0, duration: 5, text: 'nature forest walking',
+      trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, style: { ...DEFAULT_SUBTITLE_STYLE },
+      subtitleMode: DEFAULT_SUBTITLE_MODE,
+      colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM },
+      brollSuggestions: [
+        { segmentId: 'subtitle-clip-long', mediaId: 'media-broll-nature', insertTime: 1, reason: '自然场景匹配', confidence: 0.85, status: 'pending' as const },
+        { segmentId: 'subtitle-clip-long', mediaId: 'media-broll-city', insertTime: 1.5, reason: '城市场景匹配', confidence: 0.72, status: 'pending' as const }
+      ]
+    };
+    const timeline = {
+      transitions: [], markers: [],
+      tracks: [
+        createTrack({ id: 'track-broll-video', type: 'video', name: 'Video 1', clips: [mainClip] }),
+        createTrack({ id: 'track-broll-subtitle', type: 'subtitle', name: 'Subtitles', clips: [longSubtitleClip] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project, media: [videoAsset, natureAsset, cityAsset], timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    await useAISettingsStore.getState().setProviderApiKey('mimo', 'test-mimo-key');
+    useAISettingsStore.getState().updateProvider('mimo', { defaultModel: 'gpt-4o' });
+    useAISettingsStore.getState().toggleProvider('mimo', true);
+    useEditorStore.getState().setSelectedClipIds(['subtitle-clip-long']);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupAIBrollFixtureNoGaps: async () => {
+    const project = createProject('AI B-roll No Gaps E2E');
+    const videoAsset: MediaAsset = {
+      id: 'media-broll-video-2', type: 'video', name: 'main-video-2.mp4',
+      path: tinyVideo, duration: 30, width: 1280, height: 720, size: 4096, mtimeMs: 1_000, hasAudio: false
+    };
+    const mainClip = {
+      id: 'broll-main-clip-2', type: 'video' as const, name: 'main-video-2.mp4',
+      mediaId: 'media-broll-video-2', trackId: 'track-broll-video-2', start: 0, duration: 30,
+      trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1,
+      colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM }
+    };
+    const shortClip = {
+      id: 'subtitle-clip-short', type: 'subtitle' as const, name: 'Short subtitle',
+      trackId: 'track-broll-subtitle-2', start: 0, duration: 2, text: 'hi',
+      trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, style: { ...DEFAULT_SUBTITLE_STYLE },
+      subtitleMode: DEFAULT_SUBTITLE_MODE,
+      colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM }
+    };
+    const timeline = {
+      transitions: [], markers: [],
+      tracks: [
+        createTrack({ id: 'track-broll-video-2', type: 'video', name: 'Video 1', clips: [mainClip] }),
+        createTrack({ id: 'track-broll-subtitle-2', type: 'subtitle', name: 'Subtitles', clips: [shortClip] })
+      ]
+    };
+    useEditorStore.getState().setProject({ ...project, media: [videoAsset], timeline });
+    await useAISettingsStore.getState().setProviderApiKey('mimo', 'test-mimo-key');
+    useAISettingsStore.getState().updateProvider('mimo', { defaultModel: 'gpt-4o' });
+    useAISettingsStore.getState().toggleProvider('mimo', true);
+    useEditorStore.getState().setSelectedClipIds(['subtitle-clip-short']);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
+  setupAIVersionDiffFixture: async () => {
+    const project = createProject('AI Version Diff E2E');
+    const asset: MediaAsset = {
+      id: 'media-version-diff', type: 'video', name: 'test-video.mp4',
+      path: tinyVideo, duration: 10, width: 1280, height: 720, size: 4096, mtimeMs: 1_000, hasAudio: false
+    };
+    const clipA = {
+      id: 'clip-vdiff-a', type: 'video' as const, name: 'test-video.mp4',
+      mediaId: 'media-version-diff', trackId: 'track-vdiff', start: 0, duration: 5,
+      trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1,
+      colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM }
+    };
+    const timeline = {
+      transitions: [], markers: [],
+      tracks: [createTrack({ id: 'track-vdiff', type: 'video', name: 'Video 1', clips: [clipA] })]
+    };
+    useEditorStore.getState().setProject({
+      ...project, media: [asset], timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    await useAISettingsStore.getState().setProviderApiKey('mimo', 'test-mimo-key');
+    useAISettingsStore.getState().updateProvider('mimo', { defaultModel: 'gpt-4o' });
+    useAISettingsStore.getState().toggleProvider('mimo', true);
+    commandManager.clear();
+  },
+  setupAILoudnessFixture: () => {
+    const project = createProject('AI Loudness E2E');
+    const asset: MediaAsset = {
+      id: 'media-loudness-audio', type: 'audio', name: 'loud-audio.wav',
+      path: tinyVideo, duration: 10, width: 0, height: 0, size: 4096, mtimeMs: 1_000,
+      hasAudio: true, audioChannels: 1, audioSampleRate: 44_100
+    };
+    const clip = {
+      id: 'loudness-clip-1', type: 'audio' as const, name: 'loud-audio.wav',
+      mediaId: 'media-loudness-audio', trackId: 'track-loudness-audio', start: 0, duration: 10,
+      trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1,
+      colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM }
+    };
+    const timeline = {
+      transitions: [], markers: [],
+      tracks: [createTrack({ id: 'track-loudness-audio', type: 'audio', name: 'Audio 1', clips: [clip] })]
+    };
+    useEditorStore.getState().setProject({
+      ...project, media: [asset], timeline,
+      loudnessSuggestion: { measuredLUFS: -24, targetPlatform: 'youtube', targetLUFS: -14, suggestedGainDb: 10, appliedAt: null },
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
     commandManager.clear();
   },
   commandManager: { undo: () => commandManager.undo(), redo: () => commandManager.redo() } as any,

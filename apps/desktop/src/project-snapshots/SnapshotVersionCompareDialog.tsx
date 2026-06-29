@@ -1,8 +1,11 @@
 import { diffTimelineVersions, type Project, type TimelineVersionDiffItem } from '@open-factory/editor-core';
+import { diffVersionSnapshots, serializeDiffForAi, parseVersionDiffAiResponse } from '@open-factory/editor-core';
 import { X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { zhCN } from '../i18n/strings';
 import { listProjectSnapshots, readProjectSnapshot, type ProjectSnapshotEntry } from '../lib/projectSnapshots';
+import { callAiApi, readAiApiKey } from '../lib/tauri-bridge';
+import { useAISettingsStore } from '../store/aiSettingsStore';
 import { showToast } from '../lib/toast';
 
 interface SnapshotVersionCompareDialogProps {
@@ -25,6 +28,10 @@ export function SnapshotVersionCompareDialog({ project, projectPath, onApply, on
   const [baseId, setBaseId] = useState('current');
   const [targetId, setTargetId] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
+  const [aiSummary, setAiSummary] = useState<{ summary: string; highlights: string[] } | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [showAiModal, setShowAiModal] = useState(false);
+  const providers = useAISettingsStore((s) => s.providers);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -55,10 +62,47 @@ export function SnapshotVersionCompareDialog({ project, projectPath, onApply, on
       }
     };
     void load();
-    return () => {
+  return () => {
       disposed = true;
     };
   }, [project, project.id, projectPath, t.compareFailed, t.currentVersion]);
+
+    const handleAiSummary = async () => {
+    if (!base || !target || items.length === 0) return;
+    const provider = providers.find((p) => p.enabled);
+    if (!provider) return;
+    setAiLoading(true);
+    try {
+      const apiKey = await readAiApiKey(provider.id);
+      const snapshotDiffItems = items.map((item) => ({
+        type: item.type === 'clip-added' ? 'added' as const : item.type === 'clip-deleted' ? 'removed' as const : 'modified' as const,
+        clipId: item.clipId,
+        trackId: item.trackId,
+        detail: item.label,
+      }));
+      const payload = serializeDiffForAi(snapshotDiffItems);
+      const response = await callAiApi({
+        providerId: provider.id,
+        baseUrl: provider.baseUrl,
+        model: provider.defaultModel,
+        messages: [
+          { role: 'system', content: '\u7248\u672c\u5bf9\u6bd4\u6458\u8981\u52a9\u624b' },
+          { role: 'user', content: payload },
+        ],
+        temperature: 0.3,
+        timeoutSecs: 30,
+      }, apiKey);
+      const parsed = JSON.parse(response.content);
+      const aiResponse = parseVersionDiffAiResponse(parsed);
+      setAiSummary(aiResponse);
+      setShowAiModal(true);
+    } catch (err) {
+      showToast({ kind: 'error', title: zhCN.projectSnapshots.aiVersionDiff.failedTitle, message: err instanceof Error ? err.message : zhCN.projectSnapshots.aiVersionDiff.failedMessage });
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
 
   const base = versions.find((version) => version.id === baseId);
   const target = versions.find((version) => version.id === targetId);
@@ -100,8 +144,21 @@ export function SnapshotVersionCompareDialog({ project, projectPath, onApply, on
             <VersionSelect label={t.compareBase} value={baseId} versions={versions} onChange={setBaseId} testId="snapshot-version-base-select" />
             <VersionSelect label={t.compareTarget} value={targetId} versions={versions.filter((version) => version.id !== 'current')} onChange={setTargetId} testId="snapshot-version-target-select" />
           </div>
-          <div className="text-xs font-semibold text-slate-600" data-testid="snapshot-version-diff-summary">
-            {diff ? t.diffSummary(diff.summary.added, diff.summary.deleted, diff.summary.modified, diff.summary.trackChanges) : loading ? zhCN.common.unavailable : t.noSnapshots}
+          <div className="flex items-center gap-2">
+            <div className="text-xs font-semibold text-slate-600" data-testid="snapshot-version-diff-summary">
+              {diff ? t.diffSummary(diff.summary.added, diff.summary.deleted, diff.summary.modified, diff.summary.trackChanges) : loading ? zhCN.common.unavailable : t.noSnapshots}
+            </div>
+            {items.length > 0 && (
+              <button
+                className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                type="button"
+                disabled={aiLoading || !providers.some((p) => p.enabled)}
+                onClick={() => void handleAiSummary()}
+                data-testid="snapshot-version-ai-summary"
+              >
+                {aiLoading ? zhCN.projectSnapshots.aiVersionDiff.analyzing : zhCN.projectSnapshots.aiVersionDiff.compareAndSummarize}
+              </button>
+            )}
           </div>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto bg-white">
@@ -117,6 +174,37 @@ export function SnapshotVersionCompareDialog({ project, projectPath, onApply, on
             </div>
           )}
         </div>
+        {showAiModal && aiSummary && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4" data-testid="ai-version-diff-modal">
+            <div className="flex max-h-[70vh] w-full max-w-lg flex-col overflow-hidden rounded-md border border-line bg-white shadow-soft">
+              <div className="flex items-center justify-between border-b border-line px-4 py-3">
+                <div className="text-base font-semibold text-ink">{zhCN.projectSnapshots.aiVersionDiff.summaryTitle}</div>
+                <button className="rounded-md p-2 text-slate-500 hover:bg-panel" type="button" onClick={() => setShowAiModal(false)}>
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-3">
+                <div data-testid="ai-version-diff-summary-text">
+                  <div className="text-xs font-semibold text-slate-700 mb-1">{zhCN.projectSnapshots.aiVersionDiff.summary}</div>
+                  <p className="text-sm text-slate-800">{aiSummary.summary}</p>
+                </div>
+                {aiSummary.highlights.length > 0 && (
+                  <div data-testid="ai-version-diff-highlights">
+                    <div className="text-xs font-semibold text-slate-700 mb-1">{zhCN.projectSnapshots.aiVersionDiff.highlights}</div>
+                    <ul className="list-disc list-inside text-sm text-slate-700">
+                      {aiSummary.highlights.map((h, i) => <li key={i}>{h}</li>)}
+                    </ul>
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-end border-t border-line p-4">
+                <button className="rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-panel" type="button" onClick={() => setShowAiModal(false)}>
+                  {zhCN.common.close}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="flex justify-end gap-2 border-t border-line p-4">
           <button className="rounded-md border border-line bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-panel" type="button" onClick={onClose}>
             {zhCN.common.close}

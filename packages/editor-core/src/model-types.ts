@@ -1,3 +1,7 @@
+import type { AIDenoiseRecommendation } from './ai-denoise-recommendation';
+import type { BrollSuggestion } from './ai-broll-suggestion';
+import type { VersionDiffSummary } from './ai-version-diff';
+import type { LoudnessSuggestion } from './ai-loudness-suggestion';
 import type { MediaAIAnalysis } from './ai-service';
 import type { ColorCurves, ThreeWayColor } from './color-grading';
 import type { InputColorSpace } from './color-log-luts';
@@ -347,6 +351,10 @@ export interface Project {
   mediaCollections?: MediaCollection[];
   /** AI 平台时长适配裁剪建议 */
   platformFitSuggestion?: ProjectPlatformFitSuggestion;
+  /** AI版本对比摘要 */
+  versionDiffs?: Record<string, VersionDiffSummary>;
+  /** AI智能响度适配建议 */
+  loudnessSuggestion?: LoudnessSuggestion;
 }
 
 /** 虚拟子剪辑：对源媒体特定区间的命名引用，不生成实际文件 */
@@ -550,6 +558,8 @@ export interface Timeline {
   tracks: Track[];
   transitions?: Transition[];
   markers?: TimelineMarker[];
+  /** AI B-roll素材建议 */
+  brollSuggestions?: BrollSuggestion[];
 }
 
 export interface Sequence {
@@ -719,6 +729,8 @@ export interface BaseClip {
   aiPipSuggestion?: AiPipPlacementSuggestion;
   /** AI 平台适配裁剪标记 */
   platformFitRemoved?: boolean;
+  /** AI智能降噪推荐 */
+  aiDenoiseRecommendation?: AIDenoiseRecommendation;
 }
 
 export interface AIColorHistoryEntry {
