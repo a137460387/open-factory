@@ -15,19 +15,10 @@ export function CharacterTimelinePanel() {
   const [editLabel, setEditLabel] = useState('');
 
   const timeline: CharacterTimeline | undefined = project?.characterTimeline;
-  if (!timeline || Object.keys(timeline.characters).length === 0) {
-    return (
-      <div className="px-3 py-2 text-xs text-muted" data-testid="character-panel-empty">
-        {zhCN.characterTimeline.noData}
-      </div>
-    );
-  }
-
-  const entries = Object.entries(timeline.characters);
 
   const handleRename = useCallback(
     (charId: string) => {
-      if (!editLabel.trim() || !project) return;
+      if (!editLabel.trim() || !project || !timeline) return;
       const updated: CharacterTimeline = {
         ...timeline,
         characters: {
@@ -43,6 +34,16 @@ export function CharacterTimelinePanel() {
     },
     [editLabel, timeline, project],
   );
+
+  if (!timeline || Object.keys(timeline.characters).length === 0) {
+    return (
+      <div className="px-3 py-2 text-xs text-muted" data-testid="character-panel-empty">
+        {zhCN.characterTimeline.noData}
+      </div>
+    );
+  }
+
+  const entries = Object.entries(timeline.characters);
 
   return (
     <div className="border-t border-line bg-panel" data-testid="character-panel">

@@ -185,6 +185,7 @@ import { StoryboardView } from './Storyboard/StoryboardView';
 import { Timeline } from './Timeline/Timeline';
 import { CharacterTimelinePanel } from './Timeline/CharacterTimelinePanel';
 import { PreflightChecklistPanel } from './Export/PreflightChecklistPanel';
+import { DubbingAdaptationPanel } from './Export/DubbingAdaptationPanel';
 import { useAutosave } from '../hooks/useAutosave';
 import { useCloseGuard } from '../hooks/useCloseGuard';
 import { useExportQueue } from '../hooks/useExportQueue';
@@ -4778,6 +4779,7 @@ export function EditorShell() {
         ) : null}
         <CharacterTimelinePanel />
         <PreflightChecklistPanel />
+        <DubbingAdaptationPanel />
         <Suspense fallback={null}>
           {exportDialogOpen ? (
             <ExportDialog
@@ -6016,5 +6018,3 @@ function projectTemplateCopy(templateId: ProjectTemplateId): { name: string; des
       return templates.cinema;
   }
 }
-import { DubbingAdaptationPanel } from './Export/DubbingAdaptationPanel';
-        <DubbingAdaptationPanel />
