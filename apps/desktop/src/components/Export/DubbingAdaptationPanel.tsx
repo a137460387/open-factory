@@ -14,7 +14,11 @@ const TYPE_LABEL: Record<string, string> = {
 
 export function DubbingAdaptationPanel() {
   const project = useEditorStore((s) => s.project);
-  const ttsSegments = project?.ttsSegments ?? [];
+  const ttsSegments: TtsSegment[] = project?.ttsSegments ?? [];
+
+  if (ttsSegments.length === 0) {
+    return null;
+  }
 
   const handleAnalyze = () => {
     if (!project) return;
@@ -35,38 +39,34 @@ export function DubbingAdaptationPanel() {
         </button>
       </div>
 
-      {ttsSegments.length === 0 ? (
-        <p data-testid="dubbing-no-segments" className="text-xs text-gray-400">{zhCN.dubbingAdaptation.noSegments}</p>
-      ) : (
-        <ul className="flex flex-col gap-1">
-          {ttsSegments.map((seg) => (
-            <li
+      <ul className="flex flex-col gap-1">
+        {ttsSegments.map((seg) => (
+          <li
               key={seg.id}
               data-testid={`dubbing-segment-${seg.id}`}
               className="rounded border border-gray-700 p-2 text-xs"
             >
               <div className="flex justify-between">
-                <span data-testid={`dubbing-delta-${seg.id}`}>
+              <span data-testid={`dubbing-delta-${seg.id}`}>
                   {zhCN.dubbingAdaptation.durationDelta}: {seg.timingAdaptation?.durationDelta.toFixed(2) ?? '—'}s
                 </span>
-                <span data-testid={`dubbing-type-${seg.id}`}>
+              <span data-testid={`dubbing-type-${seg.id}`}>
                   {zhCN.dubbingAdaptation.adaptationType}: {seg.timingAdaptation ? TYPE_LABEL[seg.timingAdaptation.adaptationType] ?? seg.timingAdaptation.adaptationType : '—'}
                 </span>
               </div>
-              {seg.timingAdaptation?.atempoRatio != null && (
-                <div data-testid={`dubbing-atempo-${seg.id}`}>
+            {seg.timingAdaptation?.atempoRatio != null && (
+              <div data-testid={`dubbing-atempo-${seg.id}`}>
                   {zhCN.dubbingAdaptation.atempoRatio}: {seg.timingAdaptation.atempoRatio.toFixed(4)}
-                </div>
-              )}
-              {seg.timingAdaptation?.suggestedOutPoint != null && (
-                <div data-testid={`dubbing-outpoint-${seg.id}`}>
+              </div>
+            )}
+            {seg.timingAdaptation?.suggestedOutPoint != null && (
+              <div data-testid={`dubbing-outpoint-${seg.id}`}>
                   {zhCN.dubbingAdaptation.suggestedOutPoint}: {seg.timingAdaptation.suggestedOutPoint.toFixed(2)}s
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

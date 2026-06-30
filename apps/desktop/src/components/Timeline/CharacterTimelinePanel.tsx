@@ -36,11 +36,7 @@ export function CharacterTimelinePanel() {
   );
 
   if (!timeline || Object.keys(timeline.characters).length === 0) {
-    return (
-      <div className="px-3 py-2 text-xs text-muted" data-testid="character-panel-empty">
-        {zhCN.characterTimeline.noData}
-      </div>
-    );
+    return null;
   }
 
   const entries = Object.entries(timeline.characters);
