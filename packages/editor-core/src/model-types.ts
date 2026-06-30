@@ -14,6 +14,7 @@ import type { ClipSpatialAudio } from './spatial-audio';
 import type { Effect } from './effects';
 import type { TimecodeFormat } from './time';
 import type { MotionGraphic } from './motion-graphics';
+import type { CharacterTimeline } from './ai-character-timeline';
 
 export interface BeatMarker {
   id: string;
@@ -361,6 +362,8 @@ export interface Project {
   loudnessSuggestion?: LoudnessSuggestion;
   /** AI剪辑节奏分析 */
   pacingAnalysis?: PacingAnalysis;
+  /** AI人物出镜时间轴 */
+  characterTimeline?: import('./ai-character-timeline').CharacterTimeline;
 }
 
 /** 虚拟子剪辑：对源媒体特定区间的命名引用，不生成实际文件 */

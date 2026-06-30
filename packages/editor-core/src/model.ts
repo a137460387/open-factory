@@ -879,7 +879,8 @@ export function createProject(name = 'Untitled Project'): Project {
     activeSequenceId: PRIMARY_SEQUENCE_ID,
     subclips: [],
     beatSnapSuggestions: [],
-    mediaCollections: []
+    mediaCollections: [],
+    characterTimeline: undefined
   };
 }
 

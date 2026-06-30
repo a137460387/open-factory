@@ -227,3 +227,4 @@ export * from './ai-motion-type';
 export * from './ai-color-consistency';
 export * from './ai-sfx-match';
 export * from './ai-pacing-analysis';
+export * from './ai-character-timeline';

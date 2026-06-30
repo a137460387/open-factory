@@ -4551,6 +4551,37 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setProject({ ...project, media: [asset], timeline, pacingAnalysis, sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }], activeSequenceId: PRIMARY_SEQUENCE_ID });
     commandManager.clear();
   },
+  setupCharacterTimelineFixture: () => {
+    const project = createProject('Character Timeline E2E');
+    const asset = { id: 'media-char', type: 'video' as const, name: 'char-clip.mp4', path: tinyVideo, duration: 10, width: 1920, height: 1080, size: 4096, mtimeMs: 1_000, hasAudio: false };
+    const clip1 = { id: 'clip-char-1', type: 'video' as const, name: 'char-clip-1.mp4', mediaId: 'media-char', trackId: 'track-char-video', start: 0, duration: 5, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1, colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM } };
+    const clip2 = { id: 'clip-char-2', type: 'video' as const, name: 'char-clip-2.mp4', mediaId: 'media-char', trackId: 'track-char-video', start: 5, duration: 5, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1, colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM } };
+    const characterTimeline = {
+      characters: {
+        character_1: { label: '戴眼镜的男性', appearances: [{ clipId: 'clip-char-1', startTime: 0, endTime: 4, confidence: 0.85 }] },
+        character_2: { label: '红色上衣的女性', appearances: [{ clipId: 'clip-char-2', startTime: 5, endTime: 9, confidence: 0.78 }] },
+      },
+      lastAnalyzedAt: new Date().toISOString(),
+    };
+    const timeline = { transitions: [], markers: [], tracks: [createTrack({ id: 'track-char-video', type: 'video', name: 'Video 1', clips: [clip1, clip2] })] };
+    useEditorStore.getState().setProject({ ...project, media: [asset], timeline, characterTimeline, sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }], activeSequenceId: PRIMARY_SEQUENCE_ID });
+    commandManager.clear();
+  },
+  setupCharacterTimelineMergeFixture: () => {
+    const project = createProject('Character Timeline Merge E2E');
+    const asset = { id: 'media-char-merge', type: 'video' as const, name: 'char-merge.mp4', path: tinyVideo, duration: 10, width: 1920, height: 1080, size: 4096, mtimeMs: 1_000, hasAudio: false };
+    const clip1 = { id: 'clip-char-merge-1', type: 'video' as const, name: 'char-merge-1.mp4', mediaId: 'media-char-merge', trackId: 'track-char-merge', start: 0, duration: 5, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1, colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM } };
+    const clip2 = { id: 'clip-char-merge-2', type: 'video' as const, name: 'char-merge-2.mp4', mediaId: 'media-char-merge', trackId: 'track-char-merge', start: 5, duration: 5, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1, colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM } };
+    const characterTimeline = {
+      characters: {
+        character_1: { label: '戴眼镜, 蓝色上衣, 男性', appearances: [{ clipId: 'clip-char-merge-1', startTime: 0, endTime: 4, confidence: 0.85 }, { clipId: 'clip-char-merge-2', startTime: 5, endTime: 9, confidence: 0.82 }] },
+      },
+      lastAnalyzedAt: new Date().toISOString(),
+    };
+    const timeline = { transitions: [], markers: [], tracks: [createTrack({ id: 'track-char-merge', type: 'video', name: 'Video 1', clips: [clip1, clip2] })] };
+    useEditorStore.getState().setProject({ ...project, media: [asset], timeline, characterTimeline, sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }], activeSequenceId: PRIMARY_SEQUENCE_ID });
+    commandManager.clear();
+  },
 };
 
 function makeWhisperVideoClip(): Extract<import('@open-factory/editor-core').Clip, { type: 'video' }> {
