@@ -184,6 +184,7 @@ import { ShortcutCheatsheetPanel } from './ShortcutCheatsheetPanel';
 import { StoryboardView } from './Storyboard/StoryboardView';
 import { Timeline } from './Timeline/Timeline';
 import { CharacterTimelinePanel } from './Timeline/CharacterTimelinePanel';
+import { PreflightChecklistPanel } from './Export/PreflightChecklistPanel';
 import { useAutosave } from '../hooks/useAutosave';
 import { useCloseGuard } from '../hooks/useCloseGuard';
 import { useExportQueue } from '../hooks/useExportQueue';
@@ -4776,6 +4777,7 @@ export function EditorShell() {
           </section>
         ) : null}
         <CharacterTimelinePanel />
+        <PreflightChecklistPanel />
         <Suspense fallback={null}>
           {exportDialogOpen ? (
             <ExportDialog

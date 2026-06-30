@@ -364,6 +364,8 @@ export interface Project {
   pacingAnalysis?: PacingAnalysis;
   /** AI人物出镜时间轴 */
   characterTimeline?: import('./ai-character-timeline').CharacterTimeline;
+  /** AI导出前置检查清单 */
+  preflightReport?: import('./ai-preflight-checklist').PreflightReport;
 }
 
 /** 虚拟子剪辑：对源媒体特定区间的命名引用，不生成实际文件 */

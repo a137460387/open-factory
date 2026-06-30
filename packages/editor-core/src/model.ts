@@ -880,7 +880,8 @@ export function createProject(name = 'Untitled Project'): Project {
     subclips: [],
     beatSnapSuggestions: [],
     mediaCollections: [],
-    characterTimeline: undefined
+    characterTimeline: undefined,
+    preflightReport: undefined
   };
 }
 

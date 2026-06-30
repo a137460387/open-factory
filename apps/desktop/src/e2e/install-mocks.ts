@@ -4582,6 +4582,55 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setProject({ ...project, media: [asset], timeline, characterTimeline, sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }], activeSequenceId: PRIMARY_SEQUENCE_ID });
     commandManager.clear();
   },
+  setupPreflightChecklistFixture: () => {
+    const project = createProject('Preflight Checklist E2E');
+    const asset = { id: 'media-preflight', type: 'video' as const, name: 'preflight.mp4', path: tinyVideo, duration: 10, width: 1920, height: 1080, size: 4096, mtimeMs: 1_000, hasAudio: false };
+    const clip1 = {
+      id: 'clip-preflight-1', type: 'video' as const, name: 'preflight-1.mp4', mediaId: 'media-preflight', trackId: 'track-preflight', start: 0, duration: 5, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1, colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM },
+      flashWarnings: [{ startTime: 1.0, endTime: 2.0, flashRate: 5.0, severity: 'high' as const, isRedFlash: true }],
+    };
+    const clip2 = {
+      id: 'clip-preflight-2', type: 'video' as const, name: 'preflight-2.mp4', mediaId: 'media-preflight', trackId: 'track-preflight', start: 5, duration: 5, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1, colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM },
+    };
+    const timeline = {
+      transitions: [], markers: [],
+      tracks: [createTrack({ id: 'track-preflight', type: 'video', name: 'Video 1', clips: [clip1, clip2] })],
+      continuityWarnings: [{ clipAId: 'clip-preflight-1', clipBId: 'clip-preflight-2', type: 'jump_cut' as const, confidence: 0.9, reason: '跳切检测' }],
+    };
+    useEditorStore.getState().setProject({ ...project, media: [asset], timeline, sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }], activeSequenceId: PRIMARY_SEQUENCE_ID });
+    commandManager.clear();
+  },
+  setupPreflightAcknowledgeFixture: () => {
+    const project = createProject('Preflight Acknowledge E2E');
+    const asset = { id: 'media-preflight-ack', type: 'video' as const, name: 'preflight-ack.mp4', path: tinyVideo, duration: 10, width: 1920, height: 1080, size: 4096, mtimeMs: 1_000, hasAudio: false };
+    const clip1 = {
+      id: 'clip-preflight-ack-1', type: 'video' as const, name: 'preflight-ack-1.mp4', mediaId: 'media-preflight-ack', trackId: 'track-preflight-ack', start: 0, duration: 5, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1, colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM },
+      flashWarnings: [{ startTime: 1.0, endTime: 2.0, flashRate: 5.0, severity: 'high' as const, isRedFlash: true }],
+    };
+    const clip2 = {
+      id: 'clip-preflight-ack-2', type: 'video' as const, name: 'preflight-ack-2.mp4', mediaId: 'media-preflight-ack', trackId: 'track-preflight-ack', start: 5, duration: 5, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1, colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM },
+    };
+    const timeline = {
+      transitions: [], markers: [],
+      tracks: [createTrack({ id: 'track-preflight-ack', type: 'video', name: 'Video 1', clips: [clip1, clip2] })],
+      continuityWarnings: [{ clipAId: 'clip-preflight-ack-1', clipBId: 'clip-preflight-ack-2', type: 'jump_cut' as const, confidence: 0.9, reason: '跳切检测' }],
+    };
+    const flashIssueId = 'flash-clip-preflight-ack-1-1';
+    const continuityIssueId = 'continuity-clip-preflight-ack-1-clip-preflight-ack-2-jump_cut';
+    const preflightReport = {
+      generatedAt: new Date().toISOString(),
+      issuesByCategory: {
+        flash: [{ id: flashIssueId, category: 'flash' as const, severity: 'critical' as const, message: '闪烁警告: flashRate=5.0, severity=high, 红色闪烁', time: 1.0, clipId: 'clip-preflight-ack-1' }],
+        continuity: [{ id: continuityIssueId, category: 'continuity' as const, severity: 'warning' as const, message: '连续性警告: jump_cut - 跳切检测', clipId: 'clip-preflight-ack-1' }],
+      },
+      aiSummary: '发现1个严重问题和1个警告',
+      totalCritical: 1,
+      totalWarnings: 1,
+      acknowledgedIssueIds: [],
+    };
+    useEditorStore.getState().setProject({ ...project, media: [asset], timeline, preflightReport, sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }], activeSequenceId: PRIMARY_SEQUENCE_ID });
+    commandManager.clear();
+  },
 };
 
 function makeWhisperVideoClip(): Extract<import('@open-factory/editor-core').Clip, { type: 'video' }> {
