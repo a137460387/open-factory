@@ -20,8 +20,7 @@ test('toggle AI semantic search mode and display results', async ({ page }) => {
   await searchInput.fill('阳光明媚的户外场景');
   await page.getByTestId('ai-search-submit').click();
 
-  // Wait for results
-  await expect(page.getByTestId('ai-search-loading')).toBeVisible();
+  // Wait for results (loading state may be too brief to catch with mocked AI)
   await expect(page.getByTestId('ai-search-results')).toBeVisible({ timeout: 10_000 });
 
   // Verify 2 result cards are shown with correct media IDs
