@@ -4666,6 +4666,27 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setProject({ ...project, media: [asset1, asset2, asset3], timeline, sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }], activeSequenceId: PRIMARY_SEQUENCE_ID });
     commandManager.clear();
   },
+  setupDubbingAdaptationCompressFixture: () => {
+    const project = createProject('Dubbing Adaptation E2E');
+    useEditorStore.getState().setProject({
+      ...project,
+      ttsSegments: [
+        { id: 'tts-seg-1', subtitleClipId: 'clip-sub-1', originalDuration: 10, dubbedDuration: 13 },
+      ],
+    });
+    commandManager.clear();
+  },
+  setupDubbingAdaptationPadFixture: () => {
+    const project = createProject('Dubbing Adaptation Pad E2E');
+    useEditorStore.getState().setProject({
+      ...project,
+      ttsSegments: [
+        { id: 'tts-seg-short', subtitleClipId: 'clip-sub-s', originalDuration: 10, dubbedDuration: 7 },
+        { id: 'tts-seg-extreme', subtitleClipId: 'clip-sub-e', originalDuration: 10, dubbedDuration: 20 },
+      ],
+    });
+    commandManager.clear();
+  },
 };
 
 function makeWhisperVideoClip(): Extract<import('@open-factory/editor-core').Clip, { type: 'video' }> {

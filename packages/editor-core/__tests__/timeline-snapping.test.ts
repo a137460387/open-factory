@@ -203,4 +203,20 @@ describe('timeline snapping', () => {
       expect(target?.candidate.kind).toBe('clip-start');
     });
   });
+
+  it('skips candidates with negative or non-finite time values', () => {
+    const result = findTimelineSnapTarget({
+      clipStart: 5, clipDuration: 3, pixelsPerSecond: 100,
+      edges: ['start'],
+      candidates: [
+        { time: -1, kind: 'marker' },
+        { time: Number.POSITIVE_INFINITY, kind: 'marker' },
+        { time: Number.NaN, kind: 'marker' },
+        { time: 5.01, kind: 'marker' }
+      ],
+      thresholdPx: 5
+    });
+    expect(result).not.toBeNull();
+    expect(result!.snappedStart).toBeCloseTo(5.01);
+  });
 });

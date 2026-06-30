@@ -237,6 +237,47 @@ describe('aggregatePreflightIssues', () => {
     expect(categories).toContain('flash');
     expect(categories).toContain('continuity');
   });
+
+  it('aggregates anomaly issues from video clips', () => {
+    const project = makeProject({
+      timeline: {
+        transitions: [],
+        markers: [],
+        tracks: [{
+          id: 'track-1',
+          type: 'video',
+          name: 'Video 1',
+          clips: [{
+            id: 'clip-anom',
+            type: 'video',
+            name: 'anomaly.mp4',
+            mediaId: 'media-1',
+            trackId: 'track-1',
+            start: 0,
+            duration: 5,
+            trimStart: 0,
+            trimEnd: 0,
+            speed: 1,
+            volume: 1,
+            colorCorrection: { brightness: 0, contrast: 0, saturation: 0, temperature: 0, tint: 0, highlights: 0, shadows: 0, whites: 0, blacks: 0, vibrance: 0, hue: 0, gamma: 0, exposure: 0 },
+            transform: { x: 0, y: 0, scaleX: 1, scaleY: 1, rotation: 0, opacity: 1 },
+            anomalies: [
+              { startTime: 1.5, endTime: 3.0, type: 'flicker', severity: 'high' },
+              { startTime: 4.0, endTime: 5.0, type: 'glitch', severity: 'low' },
+            ],
+          }],
+        }],
+      },
+    });
+    const issues = aggregatePreflightIssues(project);
+    expect(issues.length).toBe(2);
+    expect(issues[0].category).toBe('anomaly');
+    expect(issues[0].severity).toBe('critical');
+    expect(issues[0].clipId).toBe('clip-anom');
+    expect(issues[0].time).toBe(1.5);
+    expect(issues[1].severity).toBe('warning');
+    expect(issues[1].time).toBe(4.0);
+  });
 });
 
 describe('groupIssuesByCategory', () => {

@@ -366,6 +366,8 @@ export interface Project {
   characterTimeline?: import('./ai-character-timeline').CharacterTimeline;
   /** AI导出前置检查清单 */
   preflightReport?: import('./ai-preflight-checklist').PreflightReport;
+  /** AI配音时长适配建议 */
+  ttsSegments?: TtsSegment[];
 }
 
 /** 虚拟子剪辑：对源媒体特定区间的命名引用，不生成实际文件 */
@@ -1054,6 +1056,38 @@ export interface DataSubtitleSource {
 }
 
 export type DataSubtitleClip = SubtitleClip & { dataSubtitle: DataSubtitleSource };
+
+/** 配音时长适配类型 */
+export type DubbingAdaptationType = 'compress' | 'pad' | 'trim' | 'none';
+
+/** 配音时长适配建议 */
+export interface TimingAdaptation {
+  /** 配音时长与原始字幕时长的差值（秒） */
+  durationDelta: number;
+  /** 适配类型 */
+  adaptationType: DubbingAdaptationType;
+  /** atempo 压缩比（compress 时有效），范围 0.75~1.0 */
+  atempoRatio: number | null;
+  /** 建议出点时间（秒），trim/extend 时有效 */
+  suggestedOutPoint: number | null;
+}
+
+/** TTS 配音片段 */
+export interface TtsSegment {
+  id: string;
+  /** 关联字幕 clip ID */
+  subtitleClipId: string;
+  /** 原始字幕时长（秒） */
+  originalDuration: number;
+  /** TTS 配音音频时长（秒） */
+  dubbedDuration: number;
+  /** 音频文件路径 */
+  audioPath?: string;
+  /** 语言 */
+  language?: string;
+  /** 配音时长适配建议（由算法自动生成） */
+  timingAdaptation?: TimingAdaptation;
+}
 
 export interface MediaFolder {
   id: string;

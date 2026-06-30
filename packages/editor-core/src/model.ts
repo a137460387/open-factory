@@ -269,6 +269,7 @@ export type {
   VideoDenoisePreset,
   ZoomEditMode
 } from './model-types';
+export type { TtsSegment, TimingAdaptation, DubbingAdaptationType } from './model-types';
 export const MAX_CHROMA_KEY_COLORS = 3;
 
 export function isMediaLabelColor(value: unknown): value is MediaLabelColor {

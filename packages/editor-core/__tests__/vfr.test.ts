@@ -20,4 +20,11 @@ describe('variable frame rate helpers', () => {
     expect(isFrameRateMismatch(undefined, 30)).toBe(false);
     expect(getProjectFrameRateConversionTarget(59.9402)).toBe(59.94);
   });
+
+  it('returns undefined when frame rate values are non-finite or denominator is zero', () => {
+    expect(parseFrameRateRatio('NaN/1')).toBeUndefined();
+    expect(parseFrameRateRatio('inf/1')).toBeUndefined();
+    expect(parseFrameRateRatio('30/0')).toBeUndefined();
+    expect(parseFrameRateRatio('30/NaN')).toBeUndefined();
+  });
 });

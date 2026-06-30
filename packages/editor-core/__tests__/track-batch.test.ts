@@ -83,4 +83,8 @@ describe('track batch helpers', () => {
     expect(moveSelectedTrackIds(['v1', 'v2', 'a1'], ['v1'], 'missing', 'v2')).toEqual(['v1', 'v2', 'a1']);
     expect(moveSelectedTrackIds(['v1', 'v2', 'a1'], ['v1'], 'v1', 'missing')).toEqual(['v1', 'v2', 'a1']);
   });
+
+  it('returns original order when selectedTrackIds is empty', () => {
+    expect(moveSelectedTrackIds(['v1', 'v2', 'a1'], [], 'v1', 'v2')).toEqual(['v1', 'v2', 'a1']);
+  });
 });

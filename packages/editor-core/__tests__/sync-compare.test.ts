@@ -60,6 +60,9 @@ describe('sync compare helpers', () => {
   });
 
   it('returns exactly two selected visual clip refs in selection order', () => {
+    // empty or wrong-length selection returns []
+    expect(findSyncCompareClipRefs(makeTimeline([]), [])).toEqual([]);
+    expect(findSyncCompareClipRefs(makeTimeline([makeVideoClip({ id: 'v1' }), makeVideoClip({ id: 'v2' }), makeVideoClip({ id: 'v3' })]), ['v1', 'v2', 'v3'])).toEqual([]);
     const left = makeImageClip({ id: 'image-a' });
     const right = makeVideoClip({ id: 'video-b' });
     const timeline = makeTimeline([right, makeAudioClip({ id: 'audio-c' }), left]);

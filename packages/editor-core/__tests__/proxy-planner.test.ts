@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildProxyPlan, fitWithin, isEditingCodec, shouldGenerateProxy } from '../src';
+import { getProxyTriggerReason } from '../src/proxy/proxy-planner';
 import { makeProject } from './test-utils';
 
 describe('proxy planner', () => {
@@ -120,5 +121,10 @@ describe('proxy planner', () => {
     expect(plan?.reason).toBe('large-resolution');
     expect(plan?.width).toBe(1280);
     expect(plan?.height).toBe(720);
+  });
+
+  it('returns null trigger reason for non-video media assets', () => {
+    const image = { ...makeProject().media[0], type: 'image' as const };
+    expect(getProxyTriggerReason(image)).toBeNull();
   });
 });

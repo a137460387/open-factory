@@ -90,4 +90,10 @@ describe('color match', () => {
     expect(curves.g.length).toBeGreaterThan(2);
     expect(curves.b.length).toBeGreaterThan(2);
   });
+
+  it('throws when every pixel has zero alpha or data is empty', () => {
+    expect(() => calculateColorMatchStats({ data: new Uint8ClampedArray(0), width: 0, height: 0 })).toThrow(
+      'Color match requires at least one visible pixel.'
+    );
+  });
 });

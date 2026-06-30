@@ -110,4 +110,13 @@ describe('sequence batch export helpers', () => {
     expect(exportProject.timeline.tracks.flatMap((track) => track.clips).map((clip) => clip.id)).toContain('alt-video');
     expect(exportProject.sequences.find((sequence) => sequence.id === PRIMARY_SEQUENCE_ID)?.timeline).toBe(alt.timeline);
   });
+
+  it('returns the synced project unchanged when no matching or primary sequence exists', () => {
+    const project = makeProject();
+    project.sequences = [];
+
+    const result = buildProjectForSequenceExport(project, 'nonexistent-id');
+
+    expect(result.timeline).toBe(project.timeline);
+  });
 });

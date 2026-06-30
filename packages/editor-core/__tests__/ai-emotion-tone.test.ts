@@ -156,8 +156,15 @@ describe('batchAnalyzeEmotionTones', () => {
     expect(results.size).toBe(2);
     expect(results.has('clip-fail')).toBe(false);
   });
-});
 
+  it('skips segments when analyze function returns null', async () => {
+    const clips = [makeClip('clip-1'), makeClip('clip-2')];
+    const analyzeFn = async (): Promise<EmotionAnalysis | null> => null;
+
+    const results = await batchAnalyzeEmotionTones(clips, analyzeFn);
+    expect(results.size).toBe(0);
+  });
+});
 describe('EMOTION_COLORS', () => {
   it('has a color for every valid tone', () => {
     const tones = ['energetic', 'calm', 'tense', 'happy', 'sad', 'neutral'];

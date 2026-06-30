@@ -34,6 +34,7 @@ describe('media bin filtering', () => {
     expect(filterMediaAssets(media, { metadataFilter: 'five-star', metadata }).map((asset) => asset.id)).toEqual(['video-1', 'audio-1']);
     expect(filterMediaAssets(media, { metadataFilter: 'selected', metadata }).map((asset) => asset.id)).toEqual(['video-1']);
     expect(filterMediaAssets(media, { filter: 'video', metadataFilter: 'five-star', metadata }).map((asset) => asset.id)).toEqual(['video-1']);
+    expect(filterMediaAssets(media, { metadataFilter: 'rejected', metadata }).map((asset) => asset.id)).toEqual(['audio-1']);
   });
 });
 

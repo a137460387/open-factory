@@ -73,4 +73,12 @@ describe('timeline heatmap calculations', () => {
     expect(calculateTimelineHeatmap('volume', timeline, { duration: 1 })).toHaveLength(1);
     expect(calculateTimelineHeatmap('cut-frequency', timeline, { duration: 1 })).toHaveLength(1);
   });
+
+  it('skips muted clips in volume heatmap calculation', () => {
+    const timeline = makeTimeline([makeVideoClip({ id: 'clip-muted', trackId: 'track-video', start: 0, duration: 2, muted: true })]);
+
+    const heatmap = calculateVolumeHeatmap(timeline, { bucketSeconds: 1, duration: 2 });
+
+    expect(heatmap.every((segment) => segment.value === 0)).toBe(true);
+  });
 });

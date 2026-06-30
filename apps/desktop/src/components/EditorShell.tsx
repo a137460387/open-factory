@@ -6016,3 +6016,5 @@ function projectTemplateCopy(templateId: ProjectTemplateId): { name: string; des
       return templates.cinema;
   }
 }
+import { DubbingAdaptationPanel } from './Export/DubbingAdaptationPanel';
+        <DubbingAdaptationPanel />

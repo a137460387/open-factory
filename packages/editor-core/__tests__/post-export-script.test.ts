@@ -19,6 +19,10 @@ describe('post export script helpers', () => {
     expect(normalizeExportPostScript({ command: ' echo {output} ' })).toEqual({ command: 'echo {output}' });
   });
 
+  it('rejects post-export scripts with a non-string command field', () => {
+    expect(normalizeExportPostScript({ command: 123 })).toBeNull();
+  });
+
   it('formats dates and durations deterministically', () => {
     expect(formatPostExportDate(new Date(2026, 0, 5))).toBe('20260105');
     expect(formatPostExportDuration(10)).toBe('10');

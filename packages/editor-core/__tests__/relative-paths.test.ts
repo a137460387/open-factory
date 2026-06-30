@@ -32,4 +32,8 @@ describe('relative path helpers', () => {
     expect(isCrossDrivePath('D:/a.mp4', 'E:/b.cutproj.json')).toBe(true);
     expect(isCrossDrivePath('/media/a.mp4', '/projects/b.cutproj.json')).toBe(false);
   });
+
+  it('returns null when media has no drive but project has a drive letter', () => {
+    expect(makeRelativePath('/Users/me/clip.mp4', 'D:/Projects/project.cutproj.json')).toBeNull();
+  });
 });

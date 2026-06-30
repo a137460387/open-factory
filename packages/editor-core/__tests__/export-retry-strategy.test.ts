@@ -78,6 +78,14 @@ describe('buildRetryTimelineData', () => {
     expect(data[1].label).toContain('降级');
     expect(data[1].status).toBe('success');
   });
+
+  it('should label manual retry entries correctly', () => {
+    const entries = [
+      { attempt: 3, timestamp: 'T3', action: 'manual' as const, degraded: false, result: 'success' as const },
+    ];
+    const data = buildRetryTimelineData(entries);
+    expect(data[0].label).toBe('手动重试');
+  });
 });
 
 describe('normalizeRetryConfig', () => {

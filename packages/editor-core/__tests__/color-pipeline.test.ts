@@ -83,6 +83,8 @@ describe('project color pipeline', () => {
     expect(buildAcesOdtFilterChain('aces', 'rec2020')[1]).toContain('matrix=bt2020nc:transfer=bt2020-10:primaries=bt2020');
     expect(buildAcesOdtFilterChain('aces', 'dci-p3')[1]).toContain('matrix=bt709:transfer=bt709:primaries=smpte432');
     expect(buildAcesOdtFilterChain('aces', 'srgb')[1]).toContain('matrix=bt709:transfer=iec61966-2-1:primaries=bt709');
+    expect(buildAcesOdtFilterChain('aces', 'display-p3')[1]).toContain('matrix=bt709:transfer=iec61966-2-1:primaries=smpte432');
+    expect(buildAcesOdtFilterChain('aces', 'rec709')[1]).toContain('matrix=bt709:transfer=bt709:primaries=bt709');
   });
 
   it('clamps non-finite and high Hill ACES channel values', () => {

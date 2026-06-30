@@ -22,6 +22,9 @@ describe('ffmpeg escaping', () => {
   it('converts css hex colors to ffmpeg colors', () => {
     expect(cssColorToFfmpeg('#fff')).toBe('0xffffff');
     expect(cssColorToFfmpeg('#336699')).toBe('0x336699');
+    expect(cssColorToFfmpeg('')).toBe('white');
+    expect(cssColorToFfmpeg(' ')).toBe('white');
+    expect(cssColorToFfmpeg('blue')).toBe('blue');
   });
 
   it('formats seconds with bounded precision', () => {
