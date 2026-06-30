@@ -60,7 +60,17 @@ export function PreflightChecklistPanel() {
   );
 
   if (!report) {
-    return null;
+    return (
+      <div className="px-3 py-2" data-testid="preflight-panel">
+        <button
+          className="px-3 py-1.5 text-xs bg-accent text-white rounded hover:opacity-90"
+          onClick={handleGenerate}
+          data-testid="preflight-generate-btn"
+        >
+          {zhCN.preflightChecklist.title}
+        </button>
+      </div>
+    );
   }
 
   const allIssues = Object.values(report.issuesByCategory).flat();
