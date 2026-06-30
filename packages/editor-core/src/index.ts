@@ -229,3 +229,4 @@ export * from './ai-sfx-match';
 export * from './ai-pacing-analysis';
 export * from './ai-character-timeline';
 export * from './ai-preflight-checklist';
+export * from './ai-emotion-tone';

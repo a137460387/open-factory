@@ -754,6 +754,8 @@ export interface BaseClip {
   flashWarnings?: FlashWarning[];
   /** 镜头运动类型分析结果 */
   motionType?: ClipMotionType;
+  /** AI情感基调分析结果 */
+  emotionAnalysis?: import('./ai-emotion-tone').EmotionAnalysis;
 }
 
 export interface AIColorHistoryEntry {

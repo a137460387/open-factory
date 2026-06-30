@@ -38,6 +38,7 @@ import {
   WAVEFORM_HIDE_THRESHOLD,
   shouldShowWaveform,
 } from '@open-factory/editor-core';
+import { EMOTION_COLORS } from '@open-factory/editor-core';
 import { AlertTriangle, MoreHorizontal } from 'lucide-react';
 import type { TimelineRenderRange } from '@open-factory/editor-core';
 import type { TimelineDiffRange } from '@open-factory/editor-core';
@@ -1186,6 +1187,14 @@ function ClipBlock({
         >
           <AlertTriangle size={11} />
         </span>
+      ) : null}
+      {'emotionAnalysis' in clip && (clip as { emotionAnalysis?: { emotionTone: string; intensity: number } }).emotionAnalysis ? (
+        <span
+          className="absolute bottom-0 left-0 right-0 z-20 h-[3px]"
+          style={{ backgroundColor: EMOTION_COLORS[(clip as { emotionAnalysis: { emotionTone: keyof typeof EMOTION_COLORS } }).emotionAnalysis.emotionTone] }}
+          title={`${zhCN.emotionTone.title}: ${zhCN.emotionTone[(clip as { emotionAnalysis: { emotionTone: string } }).emotionAnalysis.emotionTone as keyof typeof zhCN.emotionTone] ?? (clip as { emotionAnalysis: { emotionTone: string } }).emotionAnalysis.emotionTone} (${Math.round((clip as { emotionAnalysis: { intensity: number } }).emotionAnalysis.intensity * 100)}%)`}
+          data-testid={`emotion-bar-${clip.id}`}
+        />
       ) : null}
       {locked ? null : (
         <span

@@ -4631,6 +4631,41 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setProject({ ...project, media: [asset], timeline, preflightReport, sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }], activeSequenceId: PRIMARY_SEQUENCE_ID });
     commandManager.clear();
   },
+  setupEmotionToneFixture: () => {
+    const project = createProject('Emotion Tone E2E');
+    const asset = { id: 'media-emo', type: 'video' as const, name: 'emo.mp4', path: tinyVideo, duration: 10, width: 1920, height: 1080, size: 4096, mtimeMs: 1_000, hasAudio: false };
+    const clipWithEmotion = {
+      id: 'clip-emo-1', type: 'video' as const, name: 'emo-1.mp4', mediaId: 'media-emo', trackId: 'track-emo', start: 0, duration: 5, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1, colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM },
+      emotionAnalysis: { emotionTone: 'calm' as const, intensity: 0.8, reason: '平静的水面', analyzedAt: new Date().toISOString() },
+    };
+    const clipWithoutEmotion = {
+      id: 'clip-emo-2', type: 'video' as const, name: 'emo-2.mp4', mediaId: 'media-emo', trackId: 'track-emo', start: 5, duration: 5, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1, colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM },
+    };
+    const timeline = { transitions: [], markers: [], tracks: [createTrack({ id: 'track-emo', type: 'video', name: 'Video 1', clips: [clipWithEmotion, clipWithoutEmotion] })] };
+    useEditorStore.getState().setProject({ ...project, media: [asset], timeline, sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }], activeSequenceId: PRIMARY_SEQUENCE_ID });
+    commandManager.clear();
+  },
+  setupEmotionToneMultiFixture: () => {
+    const project = createProject('Emotion Tone Multi E2E');
+    const asset1 = { id: 'media-emo-m1', type: 'video' as const, name: 'emo-m1.mp4', path: tinyVideo, duration: 5, width: 1920, height: 1080, size: 4096, mtimeMs: 1_000, hasAudio: false };
+    const asset2 = { id: 'media-emo-m2', type: 'video' as const, name: 'emo-m2.mp4', path: tinyVideo, duration: 5, width: 1920, height: 1080, size: 4096, mtimeMs: 2_000, hasAudio: false };
+    const asset3 = { id: 'media-emo-m3', type: 'video' as const, name: 'emo-m3.mp4', path: tinyVideo, duration: 5, width: 1920, height: 1080, size: 4096, mtimeMs: 3_000, hasAudio: false };
+    const clipCalm = {
+      id: 'clip-emo-calm', type: 'video' as const, name: 'emo-calm.mp4', mediaId: 'media-emo-m1', trackId: 'track-emo-multi', start: 0, duration: 3, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1, colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM },
+      emotionAnalysis: { emotionTone: 'calm' as const, intensity: 0.75, reason: '安静的湖面', analyzedAt: new Date().toISOString() },
+    };
+    const clipEnergetic = {
+      id: 'clip-emo-energetic', type: 'video' as const, name: 'emo-energetic.mp4', mediaId: 'media-emo-m2', trackId: 'track-emo-multi', start: 3, duration: 3, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1, colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM },
+      emotionAnalysis: { emotionTone: 'energetic' as const, intensity: 0.9, reason: '快节奏舞蹈', analyzedAt: new Date().toISOString() },
+    };
+    const clipTense = {
+      id: 'clip-emo-tense', type: 'video' as const, name: 'emo-tense.mp4', mediaId: 'media-emo-m3', trackId: 'track-emo-multi', start: 6, duration: 3, trimStart: 0, trimEnd: 0, speed: DEFAULT_CLIP_SPEED, volume: 1, colorCorrection: { ...DEFAULT_COLOR_CORRECTION }, transform: { ...DEFAULT_TRANSFORM },
+      emotionAnalysis: { emotionTone: 'tense' as const, intensity: 0.85, reason: '追逐场景', analyzedAt: new Date().toISOString() },
+    };
+    const timeline = { transitions: [], markers: [], tracks: [createTrack({ id: 'track-emo-multi', type: 'video', name: 'Video 1', clips: [clipCalm, clipEnergetic, clipTense] })] };
+    useEditorStore.getState().setProject({ ...project, media: [asset1, asset2, asset3], timeline, sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }], activeSequenceId: PRIMARY_SEQUENCE_ID });
+    commandManager.clear();
+  },
 };
 
 function makeWhisperVideoClip(): Extract<import('@open-factory/editor-core').Clip, { type: 'video' }> {
