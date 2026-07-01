@@ -1,6 +1,8 @@
 import { round } from './time';
 import type { TransitionType } from './model-types';
 import { DEFAULT_TRANSITION_TYPE } from './model';
+import type { AiModuleResult, TranslateFn } from './ai-module-types';
+import { identityTranslator } from './ai-module-types';
 
 export const CHI_SQUARE_BINS = 16;
 export const CHI_SQUARE_THRESHOLD = 0.4;
@@ -149,4 +151,31 @@ export function recommendTransition(
   return {
     recommended: recommendations.sort((a, b) => b.confidence - a.confidence)
   };
+}
+
+const REASON_KEY_MAP: Record<string, string> = {
+  '颜色差异较大，推荐交叉溶解过渡': 'aiTransitionRecommend.reasons.colorDistance',
+  '运动幅度高，推荐闪白过渡': 'aiTransitionRecommend.reasons.highMotion',
+  '画面静止，推荐黑场过渡': 'aiTransitionRecommend.reasons.staticScene',
+  '场景类型变化，推荐擦除过渡': 'aiTransitionRecommend.reasons.sceneChange',
+  '默认过渡': 'aiTransitionRecommend.reasons.fallback',
+};
+
+export async function recommendTransitionSafe(
+  clipA: TransitionClipFeatures,
+  clipB: TransitionClipFeatures,
+  t: TranslateFn = identityTranslator
+): Promise<AiModuleResult<TransitionRecommendationResult>> {
+  try {
+    const result = recommendTransition(clipA, clipB);
+    const localized: TransitionRecommendationResult = {
+      recommended: result.recommended.map((r) => ({
+        ...r,
+        reason: t(REASON_KEY_MAP[r.reason] ?? r.reason),
+      })),
+    };
+    return { data: localized, error: null, isProcessing: false };
+  } catch {
+    return { data: { recommended: [] }, error: t('aiModules.error.computationFailed'), isProcessing: false };
+  }
 }

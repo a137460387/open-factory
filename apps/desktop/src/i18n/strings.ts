@@ -180,7 +180,21 @@ const zh = {
     confidence: (c: number) => `置信度 ${Math.round(c * 100)}%`,
     reason: '推荐理由',
     applied: '转场已应用',
-    fallbackDissolve: '默认使用交叉溶解'
+    fallbackDissolve: '默认使用交叉溶解',
+    reasons: {
+      colorDistance: '颜色差异较大，推荐交叉溶解过渡',
+      highMotion: '运动幅度高，推荐闪白过渡',
+      staticScene: '画面静止，推荐黑场过渡',
+      sceneChange: '场景类型变化，推荐擦除过渡',
+      fallback: '默认过渡'
+    }
+  },
+  aiModules: {
+    error: {
+      computationFailed: 'AI 分析失败，请重试',
+      invalidInput: '输入数据无效',
+      parseFailed: 'AI 响应解析失败'
+    }
   },
   anomalyDetection: {
     title: '检测异常片段',
@@ -6163,7 +6177,21 @@ const enOverrides = {
     confidence: (c: number) => `Confidence ${Math.round(c * 100)}%`,
     reason: 'Reason',
     applied: 'Transition applied',
-    fallbackDissolve: 'Defaulting to cross dissolve'
+    fallbackDissolve: 'Defaulting to cross dissolve',
+    reasons: {
+      colorDistance: 'Large color difference, recommending cross dissolve',
+      highMotion: 'High motion, recommending flash white',
+      staticScene: 'Static scene, recommending fade to black',
+      sceneChange: 'Scene change, recommending wipe left',
+      fallback: 'Default transition'
+    }
+  },
+  aiModules: {
+    error: {
+      computationFailed: 'AI analysis failed, please retry',
+      invalidInput: 'Invalid input data',
+      parseFailed: 'AI response parsing failed'
+    }
   },
   anomalyDetection: {
     title: 'Detect Anomalies',

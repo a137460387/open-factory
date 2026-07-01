@@ -1,4 +1,6 @@
 import type { BuiltinSubtitleStyleTemplateId } from './subtitles/style-templates';
+import type { AiModuleResult, TranslateFn } from './ai-module-types';
+import { identityTranslator } from './ai-module-types';
 
 export const SUBTITLE_STYLE_LANDSCAPE_ONLY: BuiltinSubtitleStyleTemplateId[] = [
   'news-lower-third'
@@ -41,6 +43,18 @@ export function buildSubtitleStyleVideoContext(
     scene: ai?.scene,
     mood: ai?.mood
   };
+}
+
+export async function parseSubtitleStyleResponseSafe(
+  json: unknown,
+  t: TranslateFn = identityTranslator
+): Promise<AiModuleResult<SubtitleStyleAIResponse>> {
+  try {
+    const data = parseSubtitleStyleResponse(json);
+    return { data, error: null, isProcessing: false };
+  } catch {
+    return { data: { recommended: [] }, error: t('aiModules.error.parseFailed'), isProcessing: false };
+  }
 }
 
 /**

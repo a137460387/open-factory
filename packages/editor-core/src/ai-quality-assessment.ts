@@ -1,3 +1,6 @@
+import type { AiModuleResult, TranslateFn } from './ai-module-types';
+import { identityTranslator } from './ai-module-types';
+
 export type QualitySeverity = 'low' | 'medium' | 'high';
 
 export type QualityGrade = 'green' | 'yellow' | 'red';
@@ -191,4 +194,16 @@ export function analyzeAudioRms(samples: Float32Array, quietDb = -40, clipDb = -
     isQuiet: rmsDb < quietDb,
     isClipping: rmsDb > clipDb
   };
+}
+
+export async function parseQualityAssessmentResponseSafe(
+  json: unknown,
+  t: TranslateFn = identityTranslator
+): Promise<AiModuleResult<QualityAssessmentResult>> {
+  try {
+    const data = parseQualityAssessmentResponse(json);
+    return { data, error: null, isProcessing: false };
+  } catch {
+    return { data: { overallScore: 0, issues: [] }, error: t('aiModules.error.parseFailed'), isProcessing: false };
+  }
 }

@@ -6,6 +6,8 @@
 
 import type { ColorWheelValue } from './color-grading';
 import { DEFAULT_COLOR_WHEEL_VALUE } from './color-grading';
+import type { AiModuleResult, TranslateFn } from './ai-module-types';
+import { identityTranslator } from './ai-module-types';
 
 export const SKIN_TONE_DISTANCE_THRESHOLD = 30;
 export const MAX_LIFT_COMPENSATION = 0.5;
@@ -93,4 +95,16 @@ export function generateCompensationWheel(
       intensity: 1
     }
   };
+}
+
+export async function checkColorConsistencySafe(
+  input: ColorConsistencyInput,
+  t: TranslateFn = identityTranslator
+): Promise<AiModuleResult<ColorConsistencyResult | null>> {
+  try {
+    const data = checkColorConsistency(input);
+    return { data, error: null, isProcessing: false };
+  } catch {
+    return { data: null, error: t('aiModules.error.computationFailed'), isProcessing: false };
+  }
 }

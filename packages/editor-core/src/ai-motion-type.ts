@@ -8,6 +8,8 @@
 
 import { round } from './time';
 import { estimateDisplacementVectors } from './shake-analysis';
+import type { AiModuleResult, TranslateFn } from './ai-module-types';
+import { identityTranslator } from './ai-module-types';
 
 export type MotionType = 'static' | 'pan' | 'tilt' | 'zoom_in' | 'zoom_out' | 'handheld';
 
@@ -299,4 +301,24 @@ function computeBlockNCC(
   }
   const denom = Math.sqrt(normA * normB);
   return denom > 0 ? dot / denom : 0;
+}
+
+export async function analyzeMotionTypeSafe(
+  frames: ArrayLike<number>[],
+  width: number,
+  height: number,
+  gridSize = 4,
+  searchRadius = 4,
+  t: TranslateFn = identityTranslator
+): Promise<AiModuleResult<{ motionType: ClipMotionType; vectorField: MotionVectorField }>> {
+  try {
+    const data = analyzeMotionType(frames, width, height, gridSize, searchRadius);
+    return { data, error: null, isProcessing: false };
+  } catch {
+    return {
+      data: { motionType: { type: 'static', confidence: 0, analyzedAt: '' }, vectorField: { vectors: [] } },
+      error: t('aiModules.error.computationFailed'),
+      isProcessing: false,
+    };
+  }
 }

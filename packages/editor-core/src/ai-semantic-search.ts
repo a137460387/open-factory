@@ -1,3 +1,6 @@
+import type { AiModuleResult, TranslateFn } from './ai-module-types';
+import { identityTranslator } from './ai-module-types';
+
 export const SEMANTIC_SEARCH_HISTORY_LIMIT = 10;
 export const SEMANTIC_SEARCH_LARGE_LIBRARY_THRESHOLD = 200;
 export const SEMANTIC_SEARCH_MAX_RESULTS = 20;
@@ -170,3 +173,14 @@ export function hasAvailableTextProvider(providers: Array<{ enabled: boolean; ap
   });
 }
 
+export async function parseSemanticSearchResponseSafe(
+  json: unknown,
+  t: TranslateFn = identityTranslator
+): Promise<AiModuleResult<SemanticSearchResult[]>> {
+  try {
+    const data = parseSemanticSearchResponse(json);
+    return { data, error: null, isProcessing: false };
+  } catch {
+    return { data: [], error: t('aiModules.error.parseFailed'), isProcessing: false };
+  }
+}

@@ -1,3 +1,6 @@
+import type { AiModuleResult, TranslateFn } from './ai-module-types';
+import { identityTranslator } from './ai-module-types';
+
 export const SCENE_MATCH_MAX_SIMILAR = 3;
 export const SCENE_MATCH_MAX_CONTRAST = 3;
 
@@ -212,4 +215,16 @@ export function getUnanalyzedMediaIdsForSceneMatch(
   return allMedia
     .filter((m) => !m.aiAnalysis && !resultIds.has(m.id))
     .map((m) => m.id);
+}
+
+export async function parseSceneMatchResponseSafe(
+  json: unknown,
+  t: TranslateFn = identityTranslator
+): Promise<AiModuleResult<SceneMatchResponse>> {
+  try {
+    const data = parseSceneMatchResponse(json);
+    return { data, error: null, isProcessing: false };
+  } catch {
+    return { data: { similar: [], contrast: [] }, error: t('aiModules.error.parseFailed'), isProcessing: false };
+  }
 }

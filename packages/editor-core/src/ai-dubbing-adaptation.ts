@@ -6,6 +6,8 @@
  */
 
 import type { TtsSegment, TimingAdaptation, DubbingAdaptationType, Project } from './model-types';
+import type { AiModuleResult, TranslateFn } from './ai-module-types';
+import { identityTranslator } from './ai-module-types';
 
 /** 超过此比例视为需要适配 */
 export const DURATION_DELTA_THRESHOLD = 0.15;
@@ -117,4 +119,22 @@ export function getSegmentsNeedingAdaptation(project: Project): TtsSegment[] {
   return (project.ttsSegments ?? []).filter(
     (seg) => seg.timingAdaptation?.adaptationType !== 'none' && seg.timingAdaptation?.adaptationType !== undefined,
   );
+}
+
+export async function computeTimingAdaptationSafe(
+  originalDuration: number,
+  dubbedDuration: number,
+  nextSegmentStart?: number,
+  t: TranslateFn = identityTranslator
+): Promise<AiModuleResult<TimingAdaptation>> {
+  try {
+    const data = computeTimingAdaptation(originalDuration, dubbedDuration, nextSegmentStart);
+    return { data, error: null, isProcessing: false };
+  } catch {
+    return {
+      data: { durationDelta: 0, adaptationType: 'none', atempoRatio: null, suggestedOutPoint: null },
+      error: t('aiModules.error.computationFailed'),
+      isProcessing: false,
+    };
+  }
 }

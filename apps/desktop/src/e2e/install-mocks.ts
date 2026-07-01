@@ -4507,6 +4507,18 @@ window.__E2E_ACTIONS__ = {
     const timeline = { ...p.timeline, colorConsistencyWarnings: warnings };
     useEditorStore.getState().setProject({ ...p, timeline, sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }], activeSequenceId: PRIMARY_SEQUENCE_ID });
   },
+  injectMalformedColorWarnings: () => {
+    const p = useEditorStore.getState().project;
+    if (!p) return;
+    const malformedWarnings = [
+      { clipAId: null, clipBId: null, type: null, deltaRGB: null, reason: null },
+      { clipAId: undefined, clipBId: undefined, type: undefined, deltaRGB: undefined, reason: undefined },
+      {},
+      { clipAId: 123, clipBId: true, type: 42, deltaRGB: 'not-a-number', reason: {} },
+    ];
+    const timeline = { ...p.timeline, colorConsistencyWarnings: malformedWarnings as unknown as typeof p.timeline.colorConsistencyWarnings };
+    useEditorStore.getState().setProject({ ...p, timeline, sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }], activeSequenceId: PRIMARY_SEQUENCE_ID });
+  },
   setupSfxMatchFixture: () => {
     const project = createProject('SFX Match E2E');
     const asset = { id: 'media-sfx', type: 'video' as const, name: 'sfx-clip.mp4', path: tinyVideo, duration: 20, width: 1920, height: 1080, size: 4096, mtimeMs: 1_000, hasAudio: false };

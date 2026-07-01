@@ -231,3 +231,4 @@ export * from './ai-character-timeline';
 export * from './ai-preflight-checklist';
 export * from './ai-emotion-tone';
 export * from './ai-dubbing-adaptation';
+export * from './ai-module-types';
