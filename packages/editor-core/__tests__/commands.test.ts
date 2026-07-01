@@ -12,6 +12,7 @@ import {
   AddCollaborationNoteCommand,
   AddTimelineNoteCommand,
   AddProjectBookmarkCommand,
+  AddSpeakerDiarizationTracksCommand,
   AddSubtitleClipCommand,
   AddTrackCommand,
   AddTimelineMarkerCommand,
@@ -115,7 +116,17 @@ import {
   ApplyShakeStabilizationCommand,
   ApplyPipPlacementCommand,
   ApplyPlatformFitCommand,
-  RestorePlatformFitClipCommand
+  RestorePlatformFitClipCommand,
+  PasteKeyframesCommand,
+  BatchImportSubtitleCommand,
+  AddSubclipCommand,
+  UpdateSubclipCommand,
+  DeleteSubclipCommand,
+  UpdateProjectBeatSnapSuggestionsCommand,
+  UpdateProjectMediaCollectionsCommand,
+  SetMediaFolderCollapsedCommand,
+  type Subclip,
+  type MediaFolder
 } from '../src';
 import { makeAccessor, makeAdjustmentClip, makeAudioClip, makeCreditsClip, makeMotionGraphicClip, makeProject, makeSubtitleClip, makeTextClip, makeTimeline, makeVideoClip } from './test-utils';
 
@@ -3319,5 +3330,488 @@ describe('AI feature commands', () => {
     const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
     new RestorePlatformFitClipCommand(accessor, 'clip-a').execute();
     expect((project.timeline.tracks[0].clips.find(c => c.id === 'clip-a') as any)?.platformFitRemoved).toBeUndefined();
+  });
+});
+
+describe('P1-3 coverage: timeline commands edge cases', () => {
+  describe('PasteKeyframesCommand', () => {
+    it('pastes keyframes in relative mode', () => {
+      const kf = { id: 'kf-src', time: 0.5, value: 0.8, easing: 'linear' as const };
+      const clip = makeVideoClip({ id: 'clip-1', start: 0, duration: 10 });
+      const accessor = makeAccessor(makeTimeline([clip]));
+      const input = {
+        groups: [{ sourceClipId: 'src-clip', sourceClipStart: 0, property: 'opacity' as const, keyframes: [kf] }],
+        targetClipId: 'clip-1',
+        mode: 'relative' as const
+      };
+      const manager = new CommandManager();
+      manager.execute(new PasteKeyframesCommand(accessor, input));
+      const updated = accessor.current().tracks[0].clips[0];
+      expect(updated.keyframes?.opacity).toBeDefined();
+      expect(updated.keyframes!.opacity!.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('pastes keyframes in absolute mode', () => {
+      const kf = { id: 'kf-abs', time: 2, value: 0.5, easing: 'linear' as const };
+      const clip = makeVideoClip({ id: 'clip-1', start: 0, duration: 10 });
+      const accessor = makeAccessor(makeTimeline([clip]));
+      const input = {
+        groups: [{ sourceClipId: 'src-clip', sourceClipStart: 0, property: 'volume' as const, keyframes: [kf] }],
+        targetClipId: 'clip-1',
+        mode: 'absolute' as const
+      };
+      new PasteKeyframesCommand(accessor, input).execute();
+      const updated = accessor.current().tracks[0].clips[0];
+      expect(updated.keyframes?.volume).toBeDefined();
+    });
+
+    it('undo restores original keyframes', () => {
+      const existingKf = { id: 'kf-orig', time: 1, value: 0.9, easing: 'linear' as const };
+      const pasteKf = { id: 'kf-paste', time: 0.5, value: 0.3, easing: 'linear' as const };
+      const clip = makeVideoClip({ id: 'clip-1', start: 0, duration: 10, keyframes: { opacity: [existingKf] } });
+      const accessor = makeAccessor(makeTimeline([clip]));
+      const input = {
+        groups: [{ sourceClipId: 'src', sourceClipStart: 0, property: 'opacity' as const, keyframes: [pasteKf] }],
+        targetClipId: 'clip-1',
+        mode: 'relative' as const
+      };
+      const manager = new CommandManager();
+      manager.execute(new PasteKeyframesCommand(accessor, input));
+      manager.undo();
+      const restored = accessor.current().tracks[0].clips[0];
+      expect(restored.keyframes?.opacity).toHaveLength(1);
+      expect(restored.keyframes!.opacity![0].id).toBe('kf-orig');
+    });
+
+    it('pastes with targetProperty cross-mapping', () => {
+      const kf = { id: 'kf-cross', time: 0.5, value: 50, easing: 'linear' as const };
+      const clip = makeVideoClip({ id: 'clip-1', start: 0, duration: 10 });
+      const accessor = makeAccessor(makeTimeline([clip]));
+      const input = {
+        groups: [{ sourceClipId: 'src', sourceClipStart: 0, property: 'opacity' as const, keyframes: [kf] }],
+        targetClipId: 'clip-1',
+        mode: 'relative' as const,
+        targetProperty: 'volume' as const
+      };
+      new PasteKeyframesCommand(accessor, input).execute();
+      const updated = accessor.current().tracks[0].clips[0];
+      expect(updated.keyframes?.volume).toBeDefined();
+    });
+  });
+
+  describe('BatchImportSubtitleCommand', () => {
+    it('throws when track is not subtitle type', () => {
+      const timeline = makeTimeline();
+      const accessor = makeAccessor(timeline);
+      const badTrack = { id: 'bad', type: 'video' as const, name: 'Bad', clips: [] };
+      expect(() => new BatchImportSubtitleCommand(accessor, badTrack as any, { mode: 'append' }).execute())
+        .toThrow('Batch subtitle import requires a subtitle track');
+    });
+
+    it('throws when clips array is empty', () => {
+      const timeline = makeTimeline();
+      const accessor = makeAccessor(timeline);
+      const emptyTrack = { id: 'sub-empty', type: 'subtitle' as const, name: 'Empty', clips: [] };
+      expect(() => new BatchImportSubtitleCommand(accessor, emptyTrack as any, { mode: 'append' }).execute())
+        .toThrow('No subtitle clips to import');
+    });
+
+    it('throws when clip in track is not subtitle type', () => {
+      const timeline = makeTimeline();
+      const accessor = makeAccessor(timeline);
+      const videoClip = makeVideoClip({ id: 'vc-1' });
+      const badTrack = { id: 'sub-bad', type: 'subtitle' as const, name: 'Mixed', clips: [videoClip as any] };
+      expect(() => new BatchImportSubtitleCommand(accessor, badTrack as any, { mode: 'append' }).execute())
+        .toThrow('Batch subtitle import can only contain subtitle clips');
+    });
+
+    it('throws when targetTrackId points to non-subtitle track', () => {
+      const subClip = makeSubtitleClip({ id: 'sub-1', trackId: 'src-track' });
+      const sourceTrack = { id: 'src-track', type: 'subtitle' as const, name: 'Source', clips: [subClip] };
+      const timeline = makeTimeline();
+      const accessor = makeAccessor(timeline);
+      expect(() => new BatchImportSubtitleCommand(accessor, sourceTrack as any, { mode: 'append', targetTrackId: 'track-video' }).execute())
+        .toThrow('Subtitle import target must be a subtitle track');
+    });
+
+    it('appends to existing subtitle track', () => {
+      const subClip = makeSubtitleClip({ id: 'sub-new', trackId: 'src', start: 10, duration: 5 });
+      const sourceTrack = { id: 'src', type: 'subtitle' as const, name: 'Import', clips: [subClip] };
+      const existingSub = makeSubtitleClip({ id: 'sub-existing', trackId: 'track-subtitle', start: 0, duration: 5 });
+      const subTrack = createTrack({ id: 'track-subtitle', type: 'subtitle', name: 'Existing', clips: [existingSub] });
+      const tl = { ...makeTimeline(), tracks: [...makeTimeline().tracks, subTrack] };
+      const accessor = makeAccessor(tl);
+      new BatchImportSubtitleCommand(accessor, sourceTrack as any, { mode: 'append' }).execute();
+      const result = accessor.current().tracks.find(t => t.id === 'track-subtitle');
+      expect(result!.clips).toHaveLength(2);
+    });
+
+    it('creates new track in new-track mode', () => {
+      const subClip = makeSubtitleClip({ id: 'sub-new', trackId: 'src' });
+      const sourceTrack = { id: 'src', type: 'subtitle' as const, name: 'Import', clips: [subClip] };
+      const existingSub = makeSubtitleClip({ id: 'sub-existing', trackId: 'track-subtitle', start: 0, duration: 5 });
+      const subTrack = createTrack({ id: 'track-subtitle', type: 'subtitle', name: 'Existing', clips: [existingSub] });
+      const tl = { ...makeTimeline(), tracks: [...makeTimeline().tracks, subTrack] };
+      const accessor = makeAccessor(tl);
+      new BatchImportSubtitleCommand(accessor, sourceTrack as any, { mode: 'new-track' }).execute();
+      const subtitleTracks = accessor.current().tracks.filter(t => t.type === 'subtitle');
+      expect(subtitleTracks.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('replaces current track in replace-current-track mode', () => {
+      const subClip = makeSubtitleClip({ id: 'sub-new', trackId: 'src' });
+      const sourceTrack = { id: 'src', type: 'subtitle' as const, name: 'Import', clips: [subClip] };
+      const existingSub = makeSubtitleClip({ id: 'sub-existing', trackId: 'track-subtitle', start: 0, duration: 5 });
+      const subTrack = createTrack({ id: 'track-subtitle', type: 'subtitle', name: 'Existing', clips: [existingSub] });
+      const tl = { ...makeTimeline(), tracks: [...makeTimeline().tracks, subTrack] };
+      const accessor = makeAccessor(tl);
+      new BatchImportSubtitleCommand(accessor, sourceTrack as any, { mode: 'replace-current-track' }).execute();
+      const result = accessor.current().tracks.find(t => t.id === 'track-subtitle');
+      expect(result!.clips).toHaveLength(1);
+      expect(result!.clips[0].id).toBe('sub-new');
+    });
+
+    it('undo restores original timeline', () => {
+      const subClip = makeSubtitleClip({ id: 'sub-new', trackId: 'src' });
+      const sourceTrack = { id: 'src', type: 'subtitle' as const, name: 'Import', clips: [subClip] };
+      const existingSub = makeSubtitleClip({ id: 'sub-existing', trackId: 'track-subtitle', start: 0, duration: 5 });
+      const subTrack = createTrack({ id: 'track-subtitle', type: 'subtitle', name: 'Existing', clips: [existingSub] });
+      const tl = { ...makeTimeline(), tracks: [...makeTimeline().tracks, subTrack] };
+      const accessor = makeAccessor(tl);
+      const manager = new CommandManager();
+      manager.execute(new BatchImportSubtitleCommand(accessor, sourceTrack as any, { mode: 'append' }));
+      manager.undo();
+      const restored = accessor.current().tracks.find(t => t.id === 'track-subtitle');
+      expect(restored!.clips).toHaveLength(1);
+      expect(restored!.clips[0].id).toBe('sub-existing');
+    });
+  });
+
+  describe('AddMotionGraphicCommand', () => {
+    it('throws when adding to non-video track', () => {
+      const timeline = makeTimeline();
+      const accessor = makeAccessor(timeline);
+      const audioTrack = timeline.tracks.find(t => t.type === 'audio')!;
+      const mgClip = makeMotionGraphicClip({ id: 'mg-1' });
+      expect(() => new AddMotionGraphicCommand(accessor, audioTrack, mgClip).execute())
+        .toThrow('Motion graphics must be added to a video track');
+    });
+
+    it('throws when clip overlaps existing on track', () => {
+      const existing = makeMotionGraphicClip({ id: 'mg-existing', start: 0, duration: 10 });
+      const videoTrack = createTrack({ id: 'track-video', type: 'video', name: 'Video', clips: [existing] });
+      const tl = { ...makeTimeline(), tracks: [videoTrack, ...makeTimeline().tracks.filter(t => t.id !== 'track-video')] };
+      const accessor = makeAccessor(tl);
+      const overlapping = makeMotionGraphicClip({ id: 'mg-new', start: 5, duration: 10 });
+      expect(() => new AddMotionGraphicCommand(accessor, videoTrack, overlapping).execute())
+        .toThrow('Clip overlaps another clip on this track');
+    });
+
+    it('undo removes inserted track', () => {
+      const timeline = makeTimeline();
+      const accessor = makeAccessor(timeline);
+      const newTrack = { id: 'mg-track', type: 'video' as const, name: 'MG Track', clips: [] };
+      const mgClip = makeMotionGraphicClip({ id: 'mg-1', trackId: 'mg-track' });
+      const manager = new CommandManager();
+      manager.execute(new AddMotionGraphicCommand(accessor, newTrack, mgClip));
+      expect(accessor.current().tracks.some(t => t.id === 'mg-track')).toBe(true);
+      manager.undo();
+      expect(accessor.current().tracks.some(t => t.id === 'mg-track')).toBe(false);
+    });
+  });
+
+  describe('UpdateClipGroupCommand', () => {
+    it('throws when group not found', () => {
+      let project = makeProject();
+      const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+      expect(() => new UpdateClipGroupCommand(accessor, 'nonexistent-group', { name: 'New' }).execute())
+        .toThrow(/Clip group .* not found/);
+    });
+
+    it('updates group name and color', () => {
+      const clip1 = makeVideoClip({ id: 'c-1' });
+      const clip2 = makeVideoClip({ id: 'c-2', start: 15, duration: 5 });
+      const timeline = makeTimeline([clip1, clip2]);
+      let project = {
+        ...makeProject(),
+        timeline,
+        clipGroups: [{ id: 'group-1', name: 'Old', color: 'blue', clipIds: ['c-1', 'c-2'] }]
+      };
+      const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+      new UpdateClipGroupCommand(accessor, 'group-1', { name: 'New', color: 'green' }).execute();
+      expect(project.clipGroups[0].name).toBe('New');
+      expect(project.clipGroups[0].color).toBe('green');
+    });
+  });
+
+  describe('PackNestedSequenceCommand', () => {
+    it('throws when no clips selected', () => {
+      let project = makeProject();
+      const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+      expect(() => new PackNestedSequenceCommand(accessor, []).execute())
+        .toThrow('No clips selected for nested sequence');
+    });
+
+    it('throws when overlapping unselected clip', () => {
+      const clip1 = makeVideoClip({ id: 'c-1', start: 0, duration: 10 });
+      const clip2 = makeVideoClip({ id: 'c-2', start: 5, duration: 10 });
+      let project = { ...makeProject(), timeline: makeTimeline([clip1, clip2]) };
+      const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+      expect(() => new PackNestedSequenceCommand(accessor, ['c-1']).execute())
+        .toThrow('Nested sequence would overlap an unselected clip');
+    });
+  });
+
+  describe('Subclip commands', () => {
+    const makeSubclipObj = (overrides: Partial<Subclip> = {}): Subclip => ({
+      id: overrides.id ?? 'subclip-1',
+      name: overrides.name ?? 'My Subclip',
+      sourceMediaId: overrides.sourceMediaId ?? 'asset-1',
+      inPoint: overrides.inPoint ?? 5,
+      outPoint: overrides.outPoint ?? 15,
+      ...(overrides.color !== undefined ? { color: overrides.color } : {}),
+      ...(overrides.description !== undefined ? { description: overrides.description } : {}),
+      ...(overrides.createdAt !== undefined ? { createdAt: overrides.createdAt } : {})
+    });
+
+    it('AddSubclipCommand adds subclip and undoes', () => {
+      let project = makeProject();
+      const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+      const subclip = makeSubclipObj();
+      const manager = new CommandManager();
+      manager.execute(new AddSubclipCommand(accessor, subclip));
+      expect(project.subclips).toHaveLength(1);
+      expect(project.subclips[0].id).toBe('subclip-1');
+      manager.undo();
+      expect(project.subclips).toHaveLength(0);
+    });
+
+    it('UpdateSubclipCommand updates name and description', () => {
+      const subclip = makeSubclipObj();
+      let project = { ...makeProject(), subclips: [subclip] };
+      const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+      new UpdateSubclipCommand(accessor, 'subclip-1', { name: 'Updated', description: 'New desc' }).execute();
+      expect(project.subclips[0].name).toBe('Updated');
+      expect(project.subclips[0].description).toBe('New desc');
+    });
+
+    it('UpdateSubclipCommand clamps inPoint to >= 0', () => {
+      const subclip = makeSubclipObj({ inPoint: 5, outPoint: 15 });
+      let project = { ...makeProject(), subclips: [subclip] };
+      const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+      new UpdateSubclipCommand(accessor, 'subclip-1', { inPoint: -3 }).execute();
+      expect(project.subclips[0].inPoint).toBe(0);
+    });
+
+    it('UpdateSubclipCommand clamps outPoint to >= inPoint', () => {
+      const subclip = makeSubclipObj({ inPoint: 5, outPoint: 15 });
+      let project = { ...makeProject(), subclips: [subclip] };
+      const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+      new UpdateSubclipCommand(accessor, 'subclip-1', { outPoint: 2 }).execute();
+      expect(project.subclips[0].outPoint).toBe(5);
+    });
+
+    it('UpdateSubclipCommand updates color', () => {
+      const subclip = makeSubclipObj();
+      let project = { ...makeProject(), subclips: [subclip] };
+      const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+      new UpdateSubclipCommand(accessor, 'subclip-1', { color: 'red' }).execute();
+      expect(project.subclips[0].color).toBe('red');
+    });
+
+    it('DeleteSubclipCommand removes subclip and undoes', () => {
+      const subclip = makeSubclipObj();
+      let project = { ...makeProject(), subclips: [subclip] };
+      const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+      const manager = new CommandManager();
+      manager.execute(new DeleteSubclipCommand(accessor, 'subclip-1'));
+      expect(project.subclips).toHaveLength(0);
+      manager.undo();
+      expect(project.subclips).toHaveLength(1);
+      expect(project.subclips[0].id).toBe('subclip-1');
+    });
+
+    it('DeleteSubclipCommand handles nonexistent subclip gracefully', () => {
+      let project = { ...makeProject(), subclips: [makeSubclipObj()] };
+      const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+      new DeleteSubclipCommand(accessor, 'nonexistent').execute();
+      expect(project.subclips).toHaveLength(1);
+    });
+  });
+
+  describe('UpdateProjectBeatSnapSuggestionsCommand', () => {
+    it('sets beat snap suggestions', () => {
+      let project = makeProject();
+      const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+      const suggestions = [
+        { clipId: 'c-1', edge: 'in' as const, suggestedTime: 1.5, originalTime: 1.0 },
+        { clipId: 'c-1', edge: 'out' as const, suggestedTime: 10.5, originalTime: 10.0 }
+      ];
+      new UpdateProjectBeatSnapSuggestionsCommand(accessor, suggestions).execute();
+      expect(project.beatSnapSuggestions).toHaveLength(2);
+      expect(project.beatSnapSuggestions[0].clipId).toBe('c-1');
+    });
+
+    it('undo restores previous state', () => {
+      let project = makeProject();
+      const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+      const suggestions = [{ clipId: 'c-1', edge: 'in' as const, suggestedTime: 1.5, originalTime: 1.0 }];
+      const manager = new CommandManager();
+      manager.execute(new UpdateProjectBeatSnapSuggestionsCommand(accessor, suggestions));
+      manager.undo();
+      expect(project.beatSnapSuggestions).toHaveLength(0);
+    });
+  });
+
+  describe('UpdateProjectMediaCollectionsCommand', () => {
+    it('sets media collections', () => {
+      let project = makeProject();
+      const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+      const collections = [
+        { id: 'coll-1', name: 'AI Collection', mediaIds: ['asset-1'], source: 'ai' as const, createdAt: '2024-01-01' }
+      ];
+      new UpdateProjectMediaCollectionsCommand(accessor, collections).execute();
+      expect(project.mediaCollections).toHaveLength(1);
+      expect(project.mediaCollections[0].name).toBe('AI Collection');
+    });
+
+    it('undo restores previous state', () => {
+      let project = makeProject();
+      const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+      const collections = [{ id: 'coll-1', name: 'Test', mediaIds: [], source: 'manual' as const, createdAt: '2024-01-01' }];
+      const manager = new CommandManager();
+      manager.execute(new UpdateProjectMediaCollectionsCommand(accessor, collections));
+      manager.undo();
+      expect(project.mediaCollections).toHaveLength(0);
+    });
+  });
+
+  describe('SetMediaFolderCollapsedCommand', () => {
+    it('collapses a folder', () => {
+      const folder: MediaFolder = { id: 'folder-1', name: 'My Folder', createdAt: '2024-01-01' };
+      let project = { ...makeProject(), mediaFolders: [folder] };
+      const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+      new SetMediaFolderCollapsedCommand(accessor, 'folder-1', true).execute();
+      expect(project.mediaFolders[0].collapsed).toBe(true);
+    });
+
+    it('expands a folder', () => {
+      const folder: MediaFolder = { id: 'folder-1', name: 'My Folder', collapsed: true, createdAt: '2024-01-01' };
+      let project = { ...makeProject(), mediaFolders: [folder] };
+      const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+      new SetMediaFolderCollapsedCommand(accessor, 'folder-1', false).execute();
+      expect(project.mediaFolders[0].collapsed).toBe(false);
+    });
+
+    it('undo restores previous state', () => {
+      const folder: MediaFolder = { id: 'folder-1', name: 'My Folder', createdAt: '2024-01-01' };
+      let project = { ...makeProject(), mediaFolders: [folder] };
+      const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+      const manager = new CommandManager();
+      manager.execute(new SetMediaFolderCollapsedCommand(accessor, 'folder-1', true));
+      manager.undo();
+      expect(project.mediaFolders[0].collapsed).toBeUndefined();
+    });
+  });
+
+  describe('undo without execute returns safely', () => {
+    it('AddSpeakerDiarizationTracksCommand', () => {
+      const accessor = makeAccessor(makeTimeline());
+      new AddSpeakerDiarizationTracksCommand(accessor, []).undo();
+    });
+    it('UpdateTrackCommand', () => {
+      const accessor = makeAccessor(makeTimeline());
+      new UpdateTrackCommand(accessor, 'x', {}).undo();
+    });
+    it('BatchUpdateTrackCommand', () => {
+      const accessor = makeAccessor(makeTimeline());
+      new BatchUpdateTrackCommand(accessor, { patches: {} }).undo();
+    });
+    it('UpdateProjectAudioCommand', () => {
+      let project = makeProject();
+      const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+      new UpdateProjectAudioCommand(accessor, {}).undo();
+    });
+    it('UpdateProjectBookmarkCommand', () => {
+      let project = makeProject();
+      const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+      new UpdateProjectBookmarkCommand(accessor, 'x', {}).undo();
+    });
+    it('UpdateProjectBookmarksCommand', () => {
+      let project = makeProject();
+      const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+      new UpdateProjectBookmarksCommand(accessor, []).undo();
+    });
+    it('UpdateProjectBeatMarkersCommand', () => {
+      let project = makeProject();
+      const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+      new UpdateProjectBeatMarkersCommand(accessor, []).undo();
+    });
+    it('UpdateProjectExportRangesCommand', () => {
+      let project = makeProject();
+      const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+      new UpdateProjectExportRangesCommand(accessor, []).undo();
+    });
+    it('UpdateProjectProtectedRangesCommand', () => {
+      let project = makeProject();
+      const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+      new UpdateProjectProtectedRangesCommand(accessor, []).undo();
+    });
+    it('UpdateProjectAnnotationCommand', () => {
+      let project = makeProject();
+      const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+      new UpdateProjectAnnotationCommand(accessor, 'x', {}).undo();
+    });
+    it('UpdateReviewAnnotationCommand', () => {
+      let project = makeProject();
+      const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+      new UpdateReviewAnnotationCommand(accessor, 'x', {}).undo();
+    });
+    it('UpdateCollaborationNoteCommand', () => {
+      let project = makeProject();
+      const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+      new UpdateCollaborationNoteCommand(accessor, 'x', {}).undo();
+    });
+    it('UpdateTimelineNoteCommand', () => {
+      let project = makeProject();
+      const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+      new UpdateTimelineNoteCommand(accessor, 'x', {}).undo();
+    });
+    it('MoveClipsCommand', () => {
+      const accessor = makeAccessor(makeTimeline());
+      new MoveClipsCommand(accessor, {}).undo();
+    });
+    it('BatchSplitAtSceneCutsCommand', () => {
+      const accessor = makeAccessor(makeTimeline());
+      new BatchSplitAtSceneCutsCommand(accessor, []).undo();
+    });
+    it('BatchAddMarkersCommand', () => {
+      const accessor = makeAccessor(makeTimeline());
+      new BatchAddMarkersCommand(accessor, []).undo();
+    });
+    it('RemoveProjectBookmarkCommand', () => {
+      let project = makeProject();
+      const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+      new RemoveProjectBookmarkCommand(accessor, 'x').undo();
+    });
+    it('RemoveReviewAnnotationCommand', () => {
+      let project = makeProject();
+      const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+      new RemoveReviewAnnotationCommand(accessor, 'x').undo();
+    });
+    it('RemoveCollaborationNoteCommand', () => {
+      let project = makeProject();
+      const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+      new RemoveCollaborationNoteCommand(accessor, 'x').undo();
+    });
+    it('RemoveTimelineNoteCommand', () => {
+      let project = makeProject();
+      const accessor = { getProject: () => project, setProject: (next: typeof project) => { project = next; } };
+      new RemoveTimelineNoteCommand(accessor, 'x').undo();
+    });
+    it('RemoveTimelineMarkerCommand', () => {
+      const accessor = makeAccessor(makeTimeline());
+      new RemoveTimelineMarkerCommand(accessor, 'x').undo();
+    });
   });
 });
