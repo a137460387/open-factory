@@ -62,6 +62,7 @@ import {
   RemoveTimelineNoteCommand,
   RemoveProjectBookmarkCommand,
   RemoveKeyframeCommand,
+  RemoveMediaCommand,
   RemoveTimelineMarkerCommand,
   RemoveTransitionCommand,
   ReorderEffectsCommand,
@@ -3814,4 +3815,550 @@ describe('P1-3 coverage: timeline commands edge cases', () => {
       new RemoveTimelineMarkerCommand(accessor, 'x').undo();
     });
   });
+
+  describe('coverage: project property ?? [] branches', () => {
+    const makePAccessor = () => {
+      let project = { ...makeProject(), timeline: makeTimeline([makeVideoClip({ id: 'tc', start: 0, duration: 10 })]) };
+      return {
+        acc: {
+          getProject: () => project,
+          setProject: (next: typeof project) => { project = next; }
+        },
+        project: () => project,
+        del: (prop: string) => { delete (project as any)[prop]; }
+      };
+    };
+    const annInput = () => ({ text: 'a', time: 1, color: '#fff' });
+    const revInput = () => ({ text: 'r', time: 2, severity: 'info' as const });
+    const colInput = () => ({ text: 'c', author: 'u' });
+    const noteInput = () => ({ start: 3, end: 4 });
+    const bmkInput = () => ({ time: 5, label: 'b' });
+
+    // --- annotations ---
+    it('AddProjectAnnotation.execute with undefined annotations', () => {
+      const { acc, project, del } = makePAccessor();
+      del('annotations');
+      new AddProjectAnnotationCommand(acc, annInput()).execute();
+      expect(project().annotations).toHaveLength(1);
+    });
+    it('AddProjectAnnotation.undo with undefined annotations', () => {
+      const { acc, project, del } = makePAccessor();
+      const cmd = new AddProjectAnnotationCommand(acc, annInput());
+      cmd.execute();
+      del('annotations');
+      cmd.undo();
+      expect(project().annotations).toEqual([]);
+    });
+    it('UpdateProjectAnnotation.execute with undefined annotations', () => {
+      const { acc, del } = makePAccessor();
+      del('annotations');
+      expect(() => new UpdateProjectAnnotationCommand(acc, 'x', {}).execute()).toThrow();
+    });
+    it('UpdateProjectAnnotation.undo with undefined annotations', () => {
+      const { acc, project, del } = makePAccessor();
+      const add = new AddProjectAnnotationCommand(acc, annInput());
+      add.execute();
+      const id = project().annotations![0].id;
+      const upd = new UpdateProjectAnnotationCommand(acc, id, { text: 'u' });
+      upd.execute();
+      del('annotations');
+      upd.undo();
+      expect(project().annotations).toEqual([]);
+    });
+    it('RemoveProjectAnnotation.execute with undefined annotations', () => {
+      const { acc, del } = makePAccessor();
+      del('annotations');
+      expect(() => new RemoveProjectAnnotationCommand(acc, 'x').execute()).toThrow();
+    });
+    it('RemoveProjectAnnotation.undo with undefined annotations', () => {
+      const { acc, project, del } = makePAccessor();
+      const add = new AddProjectAnnotationCommand(acc, annInput());
+      add.execute();
+      const id = project().annotations![0].id;
+      const rm = new RemoveProjectAnnotationCommand(acc, id);
+      rm.execute();
+      del('annotations');
+      rm.undo();
+      expect(project().annotations).toHaveLength(1);
+    });
+
+    // --- reviewAnnotations ---
+    it('AddReviewAnnotation.execute with undefined reviewAnnotations', () => {
+      const { acc, project, del } = makePAccessor();
+      del('reviewAnnotations');
+      new AddReviewAnnotationCommand(acc, revInput()).execute();
+      expect(project().reviewAnnotations).toHaveLength(1);
+    });
+    it('AddReviewAnnotation.undo with undefined reviewAnnotations', () => {
+      const { acc, project, del } = makePAccessor();
+      const cmd = new AddReviewAnnotationCommand(acc, revInput());
+      cmd.execute();
+      del('reviewAnnotations');
+      cmd.undo();
+      expect(project().reviewAnnotations).toEqual([]);
+    });
+    it('UpdateReviewAnnotation.execute with undefined reviewAnnotations', () => {
+      const { acc, del } = makePAccessor();
+      del('reviewAnnotations');
+      expect(() => new UpdateReviewAnnotationCommand(acc, 'x', {}).execute()).toThrow();
+    });
+    it('UpdateReviewAnnotation.undo with undefined reviewAnnotations', () => {
+      const { acc, project, del } = makePAccessor();
+      const add = new AddReviewAnnotationCommand(acc, revInput());
+      add.execute();
+      const id = project().reviewAnnotations![0].id;
+      const upd = new UpdateReviewAnnotationCommand(acc, id, { text: 'u' });
+      upd.execute();
+      del('reviewAnnotations');
+      upd.undo();
+      expect(project().reviewAnnotations).toEqual([]);
+    });
+    it('RemoveReviewAnnotation.execute with undefined reviewAnnotations', () => {
+      const { acc, del } = makePAccessor();
+      del('reviewAnnotations');
+      expect(() => new RemoveReviewAnnotationCommand(acc, 'x').execute()).toThrow();
+    });
+    it('RemoveReviewAnnotation.undo with undefined reviewAnnotations', () => {
+      const { acc, project, del } = makePAccessor();
+      const add = new AddReviewAnnotationCommand(acc, revInput());
+      add.execute();
+      const id = project().reviewAnnotations![0].id;
+      const rm = new RemoveReviewAnnotationCommand(acc, id);
+      rm.execute();
+      del('reviewAnnotations');
+      rm.undo();
+      expect(project().reviewAnnotations).toHaveLength(1);
+    });
+
+    // --- collaborationNotes ---
+    it('AddCollaborationNote.execute with undefined collaborationNotes', () => {
+      const { acc, project, del } = makePAccessor();
+      del('collaborationNotes');
+      new AddCollaborationNoteCommand(acc, colInput()).execute();
+      expect(project().collaborationNotes).toHaveLength(1);
+    });
+    it('AddCollaborationNote.undo with undefined collaborationNotes', () => {
+      const { acc, project, del } = makePAccessor();
+      const cmd = new AddCollaborationNoteCommand(acc, colInput());
+      cmd.execute();
+      del('collaborationNotes');
+      cmd.undo();
+      expect(project().collaborationNotes).toEqual([]);
+    });
+    it('UpdateCollaborationNote.execute with undefined collaborationNotes', () => {
+      const { acc, del } = makePAccessor();
+      del('collaborationNotes');
+      expect(() => new UpdateCollaborationNoteCommand(acc, 'x', { updatedAt: '2026-01-01T00:00:00.000Z' }).execute()).toThrow();
+    });
+    it('UpdateCollaborationNote.undo with undefined collaborationNotes', () => {
+      const { acc, project, del } = makePAccessor();
+      const add = new AddCollaborationNoteCommand(acc, colInput());
+      add.execute();
+      const id = project().collaborationNotes![0].id;
+      const upd = new UpdateCollaborationNoteCommand(acc, id, { text: 'u', updatedAt: '2026-01-01T00:00:00.000Z' });
+      upd.execute();
+      del('collaborationNotes');
+      upd.undo();
+      expect(project().collaborationNotes).toEqual([]);
+    });
+    it('RemoveCollaborationNote.execute with undefined collaborationNotes', () => {
+      const { acc, del } = makePAccessor();
+      del('collaborationNotes');
+      expect(() => new RemoveCollaborationNoteCommand(acc, 'x').execute()).toThrow();
+    });
+    it('RemoveCollaborationNote.undo with undefined collaborationNotes', () => {
+      const { acc, project, del } = makePAccessor();
+      const add = new AddCollaborationNoteCommand(acc, colInput());
+      add.execute();
+      const id = project().collaborationNotes![0].id;
+      const rm = new RemoveCollaborationNoteCommand(acc, id);
+      rm.execute();
+      del('collaborationNotes');
+      rm.undo();
+      expect(project().collaborationNotes).toHaveLength(1);
+    });
+
+    // --- timelineNotes ---
+    it('AddTimelineNote.execute with undefined timelineNotes', () => {
+      const { acc, project, del } = makePAccessor();
+      del('timelineNotes');
+      new AddTimelineNoteCommand(acc, noteInput()).execute();
+      expect(project().timelineNotes).toHaveLength(1);
+    });
+    it('AddTimelineNote.undo with undefined timelineNotes', () => {
+      const { acc, project, del } = makePAccessor();
+      const cmd = new AddTimelineNoteCommand(acc, noteInput());
+      cmd.execute();
+      del('timelineNotes');
+      cmd.undo();
+      expect(project().timelineNotes).toEqual([]);
+    });
+    it('UpdateTimelineNote.execute with undefined timelineNotes', () => {
+      const { acc, del } = makePAccessor();
+      del('timelineNotes');
+      expect(() => new UpdateTimelineNoteCommand(acc, 'x', {}).execute()).toThrow();
+    });
+    it('UpdateTimelineNote.undo with undefined timelineNotes', () => {
+      const { acc, project, del } = makePAccessor();
+      const add = new AddTimelineNoteCommand(acc, noteInput());
+      add.execute();
+      const id = project().timelineNotes![0].id;
+      const upd = new UpdateTimelineNoteCommand(acc, id, { text: 'u' });
+      upd.execute();
+      del('timelineNotes');
+      upd.undo();
+      expect(project().timelineNotes).toEqual([]);
+    });
+    it('RemoveTimelineNote.execute with undefined timelineNotes', () => {
+      const { acc, del } = makePAccessor();
+      del('timelineNotes');
+      expect(() => new RemoveTimelineNoteCommand(acc, 'x').execute()).toThrow();
+    });
+    it('RemoveTimelineNote.undo with undefined timelineNotes', () => {
+      const { acc, project, del } = makePAccessor();
+      const add = new AddTimelineNoteCommand(acc, noteInput());
+      add.execute();
+      const id = project().timelineNotes![0].id;
+      const rm = new RemoveTimelineNoteCommand(acc, id);
+      rm.execute();
+      del('timelineNotes');
+      rm.undo();
+      expect(project().timelineNotes).toHaveLength(1);
+    });
+
+    // --- bookmarks ---
+    it('AddProjectBookmark.execute with undefined bookmarks', () => {
+      const { acc, project, del } = makePAccessor();
+      del('bookmarks');
+      new AddProjectBookmarkCommand(acc, bmkInput()).execute();
+      expect(project().bookmarks).toHaveLength(1);
+    });
+    it('AddProjectBookmark.undo with undefined bookmarks', () => {
+      const { acc, project, del } = makePAccessor();
+      const cmd = new AddProjectBookmarkCommand(acc, bmkInput());
+      cmd.execute();
+      del('bookmarks');
+      cmd.undo();
+      expect(project().bookmarks).toEqual([]);
+    });
+    it('UpdateProjectBookmark.execute with undefined bookmarks', () => {
+      const { acc, del } = makePAccessor();
+      del('bookmarks');
+      expect(() => new UpdateProjectBookmarkCommand(acc, 'x', {}).execute()).toThrow();
+    });
+    it('UpdateProjectBookmark.undo with undefined bookmarks', () => {
+      const { acc, project, del } = makePAccessor();
+      const add = new AddProjectBookmarkCommand(acc, bmkInput());
+      add.execute();
+      const id = project().bookmarks![0].id;
+      const upd = new UpdateProjectBookmarkCommand(acc, id, { note: 'u' });
+      upd.execute();
+      del('bookmarks');
+      upd.undo();
+      expect(project().bookmarks).toEqual([]);
+    });
+    it('RemoveProjectBookmark.execute with undefined bookmarks', () => {
+      const { acc, del } = makePAccessor();
+      del('bookmarks');
+      expect(() => new RemoveProjectBookmarkCommand(acc, 'x').execute()).toThrow();
+    });
+    it('RemoveProjectBookmark.undo with undefined bookmarks', () => {
+      const { acc, project, del } = makePAccessor();
+      const add = new AddProjectBookmarkCommand(acc, bmkInput());
+      add.execute();
+      const id = project().bookmarks![0].id;
+      const rm = new RemoveProjectBookmarkCommand(acc, id);
+      rm.execute();
+      del('bookmarks');
+      rm.undo();
+      expect(project().bookmarks).toHaveLength(1);
+    });
+  });
+
+  describe('coverage: timeline transitions/markers ?? [] branches', () => {
+    const twoAdjacentClips = () => {
+      const c1 = makeVideoClip({ id: 'c1', start: 0, duration: 5 });
+      const c2 = makeVideoClip({ id: 'c2', start: 5, duration: 5, mediaId: 'm2' });
+      return makeTimeline([c1, c2]);
+    };
+
+    it('AddTransition.execute with undefined transitions', () => {
+      const accessor = makeAccessor(twoAdjacentClips());
+      delete (accessor.current() as any).transitions;
+      new AddTransitionCommand(accessor, { type: 'dissolve' as const, duration: 1, fromClipId: 'c1', toClipId: 'c2' }).execute();
+      expect(accessor.current().transitions).toHaveLength(1);
+    });
+    it('AddTransition.undo with undefined transitions', () => {
+      const accessor = makeAccessor(twoAdjacentClips());
+      const cmd = new AddTransitionCommand(accessor, { type: 'dissolve' as const, duration: 1, fromClipId: 'c1', toClipId: 'c2' });
+      cmd.execute();
+      delete (accessor.current() as any).transitions;
+      cmd.undo();
+      expect(accessor.current().transitions).toEqual([]);
+    });
+    it('RemoveTransition.execute with undefined transitions', () => {
+      const accessor = makeAccessor(twoAdjacentClips());
+      delete (accessor.current() as any).transitions;
+      expect(() => new RemoveTransitionCommand(accessor, 'x').execute()).toThrow();
+    });
+    it('RemoveTransition.undo with undefined transitions', () => {
+      const accessor = makeAccessor(twoAdjacentClips());
+      const add = new AddTransitionCommand(accessor, { type: 'dissolve' as const, duration: 1, fromClipId: 'c1', toClipId: 'c2' });
+      add.execute();
+      const tid = accessor.current().transitions![0].id;
+      const rm = new RemoveTransitionCommand(accessor, tid);
+      rm.execute();
+      delete (accessor.current() as any).transitions;
+      rm.undo();
+      expect(accessor.current().transitions).toHaveLength(1);
+    });
+
+    it('AddTimelineMarker.execute with undefined markers', () => {
+      const accessor = makeAccessor(makeTimeline());
+      new AddTimelineMarkerCommand(accessor, { time: 5, label: 'm' }).execute();
+      expect(accessor.current().markers).toHaveLength(1);
+    });
+    it('AddTimelineMarker.undo with undefined markers', () => {
+      const accessor = makeAccessor(makeTimeline());
+      const cmd = new AddTimelineMarkerCommand(accessor, { time: 5, label: 'm' });
+      cmd.execute();
+      expect(accessor.current().markers).toBeDefined();
+      delete (accessor.current() as any).markers;
+      cmd.undo();
+      expect(accessor.current().markers ?? []).toEqual([]);
+    });
+    it('UpdateTimelineMarker.execute with undefined markers', () => {
+      const accessor = makeAccessor(makeTimeline());
+      delete (accessor.current() as any).markers;
+      expect(() => new UpdateTimelineMarkerCommand(accessor, 'x', {}).execute()).toThrow();
+    });
+    it('UpdateTimelineMarker.undo with undefined markers', () => {
+      const accessor = makeAccessor(makeTimeline());
+      const add = new AddTimelineMarkerCommand(accessor, { time: 5, label: 'm' });
+      add.execute();
+      const mid = accessor.current().markers![0].id;
+      const upd = new UpdateTimelineMarkerCommand(accessor, mid, { label: 'u' });
+      upd.execute();
+      delete (accessor.current() as any).markers;
+      upd.undo();
+      expect(accessor.current().markers ?? []).toEqual([]);
+    });
+    it('RemoveTimelineMarker.execute with undefined markers', () => {
+      const accessor = makeAccessor(makeTimeline());
+      delete (accessor.current() as any).markers;
+      expect(() => new RemoveTimelineMarkerCommand(accessor, 'x').execute()).toThrow();
+    });
+    it('RemoveTimelineMarker.undo with undefined markers', () => {
+      const accessor = makeAccessor(makeTimeline());
+      const add = new AddTimelineMarkerCommand(accessor, { time: 5, label: 'm' });
+      add.execute();
+      const mid = accessor.current().markers![0].id;
+      const rm = new RemoveTimelineMarkerCommand(accessor, mid);
+      rm.execute();
+      delete (accessor.current() as any).markers;
+      rm.undo();
+      expect(accessor.current().markers).toHaveLength(1);
+    });
+
+    it('DeleteClip.execute with undefined transitions', () => {
+      const tl = makeTimeline([makeVideoClip({ id: 'dc', start: 0, duration: 5 })]);
+      const accessor = makeAccessor(tl);
+      delete (accessor.current() as any).transitions;
+      new DeleteClipCommand(accessor, 'dc').execute();
+      expect(accessor.current().tracks[0].clips).toHaveLength(0);
+    });
+    it('SplitClip.execute with undefined transitions', () => {
+      const accessor = makeAccessor(makeTimeline([makeVideoClip({ id: 'sc', start: 0, duration: 10 })]));
+      delete (accessor.current() as any).transitions;
+      new SplitClipCommand(accessor, 'sc', 5).execute();
+      const allClips = accessor.current().tracks.flatMap((t) => t.clips);
+      expect(allClips.filter((c) => c.id.startsWith('sc'))).toHaveLength(0);
+      expect(allClips.length).toBeGreaterThanOrEqual(2);
+    });
+    it('RippleDelete.execute with undefined transitions', () => {
+      const tl = makeTimeline([makeVideoClip({ id: 'rd', start: 0, duration: 5 })]);
+      const accessor = makeAccessor(tl);
+      delete (accessor.current() as any).transitions;
+      new RippleDeleteCommand(accessor, ['rd']).execute();
+      expect(accessor.current().tracks[0].clips).toHaveLength(0);
+    });
+    it('CloseGap.execute with undefined transitions', () => {
+      const c1 = makeVideoClip({ id: 'g1', start: 0, duration: 3 });
+      const c2 = makeVideoClip({ id: 'g2', start: 5, duration: 5, mediaId: 'm2' });
+      const tl = makeTimeline([c1, c2]);
+      const accessor = makeAccessor(tl);
+      delete (accessor.current() as any).transitions;
+      new CloseGapCommand(accessor, tl.tracks[0].id, 4).execute();
+      expect(accessor.current().tracks[0].clips[1].start).toBeCloseTo(3);
+    });
+    it('RollingTrim.execute with undefined transitions', () => {
+      const c1 = makeVideoClip({ id: 'rt1', start: 0, duration: 5, trimEnd: 2 });
+      const c2 = makeVideoClip({ id: 'rt2', start: 5, duration: 5, mediaId: 'm2', trimStart: 1 });
+      const tl = makeTimeline([c1, c2]);
+      const accessor = makeAccessor(tl);
+      delete (accessor.current() as any).transitions;
+      new RollingTrimCommand(accessor, 'rt1', 'rt2', 1).execute();
+      const clips = accessor.current().tracks[0].clips;
+      expect(clips.find((c) => c.id === 'rt1')!.duration).toBeCloseTo(6);
+    });
+  });
+
+  describe('coverage: sort comparator || branches', () => {
+    it('CloseGap with same-start clips triggers id comparator', () => {
+      const c1 = makeVideoClip({ id: 'aa', start: 0, duration: 3 });
+      const c2 = makeVideoClip({ id: 'bb', start: 5, duration: 5, mediaId: 'm2' });
+      const tl = makeTimeline([c1, c2]);
+      const accessor = makeAccessor(tl);
+      new CloseGapCommand(accessor, tl.tracks[0].id, 4).execute();
+      expect(accessor.current().tracks[0].clips[1].start).toBeCloseTo(3);
+    });
+    it('SlideClip with 3 adjacent clips triggers sort comparator', () => {
+      const c1 = makeVideoClip({ id: 's1', start: 0, duration: 5, trimEnd: 2 });
+      const c2 = makeVideoClip({ id: 's2', start: 5, duration: 5, mediaId: 'm2' });
+      const c3 = makeVideoClip({ id: 's3', start: 10, duration: 5, mediaId: 'm3', trimEnd: 2 });
+      const tl = makeTimeline([c1, c2, c3]);
+      const accessor = makeAccessor(tl);
+      new SlideClipCommand(accessor, 's2', 1).execute();
+      expect(accessor.current().tracks[0].clips.find((c) => c.id === 's2')!.start).toBeCloseTo(6);
+    });
+  });
+
+  describe('coverage: helper error paths', () => {
+    it('findTrack throws for non-existent trackId', () => {
+      const tl = makeTimeline([makeVideoClip()]);
+      const accessor = makeAccessor(tl);
+      expect(() => new CloseGapCommand(accessor, 'non-existent-track', 5).execute()).toThrow(/not found/i);
+    });
+    it('findClip throws for non-existent clipId', () => {
+      const tl = makeTimeline([makeVideoClip()]);
+      const accessor = makeAccessor(tl);
+      expect(() => new TrimClipCommand(accessor, 'non-existent-clip', 0, 0).execute()).toThrow(/not found/i);
+    });
+    it('findClipLocation throws for non-existent clipId', () => {
+      const tl = makeTimeline([makeVideoClip()]);
+      const accessor = makeAccessor(tl);
+      expect(() => new DeleteClipsCommand(accessor, ['non-existent-clip']).execute()).toThrow(/not found/i);
+    });
+    it('normalizeAssetIdSet throws for empty array', () => {
+      const project = makeProject();
+      const acc = { getProject: () => project, setProject: () => {} };
+      expect(() => new RemoveMediaCommand(acc, []).execute()).toThrow(/No media assets selected/i);
+    });
+    it('assertMediaAssetsExist throws for missing asset', () => {
+      const project = makeProject();
+      const acc = { getProject: () => project, setProject: () => {} };
+      expect(() => new RemoveMediaCommand(acc, ['non-existent']).execute()).toThrow(/not found/i);
+    });
+  });
+
+  describe('coverage: undo guard early returns', () => {
+    it('AddProjectAnnotationCommand.undo() without execute is a no-op', () => {
+      const project = makeProject();
+      const acc = { getProject: () => project, setProject: () => {} };
+      const cmd = new AddProjectAnnotationCommand(acc, { text: 'a', time: 1, color: '#fff' });
+      cmd.undo();
+      expect(project.annotations ?? []).toHaveLength(0);
+    });
+    it('AddReviewAnnotationCommand.undo() without execute is a no-op', () => {
+      const project = makeProject();
+      const acc = { getProject: () => project, setProject: () => {} };
+      const cmd = new AddReviewAnnotationCommand(acc, { text: 'r', time: 2, severity: 'info' });
+      cmd.undo();
+      expect(project.reviewAnnotations ?? []).toHaveLength(0);
+    });
+    it('AddCollaborationNoteCommand.undo() without execute is a no-op', () => {
+      const project = makeProject();
+      const acc = { getProject: () => project, setProject: () => {} };
+      const cmd = new AddCollaborationNoteCommand(acc, { text: 'c', author: 'u' });
+      cmd.undo();
+      expect(project.collaborationNotes ?? []).toHaveLength(0);
+    });
+    it('AddTimelineNoteCommand.undo() without execute is a no-op', () => {
+      const project = makeProject();
+      const acc = { getProject: () => project, setProject: () => {} };
+      const cmd = new AddTimelineNoteCommand(acc, { start: 3, end: 4 });
+      cmd.undo();
+      expect(project.timelineNotes ?? []).toHaveLength(0);
+    });
+  });
+
+  describe('coverage: UpdateClipCommand ?? ternary branches', () => {
+    it('patch with masks hits else branch', () => {
+      const clip = makeVideoClip({ id: 'uc-masks', start: 0, duration: 5 });
+      const tl = makeTimeline([clip]);
+      const accessor = makeAccessor(tl);
+      new UpdateClipCommand(accessor, 'uc-masks', { masks: [] }).execute();
+      expect(accessor.current().tracks[0].clips.find((c) => c.id === 'uc-masks')!.masks).toBeDefined();
+    });
+    it('patch with motionTrack hits else branch', () => {
+      const clip = makeVideoClip({ id: 'uc-mt', start: 0, duration: 5 });
+      const tl = makeTimeline([clip]);
+      const accessor = makeAccessor(tl);
+      new UpdateClipCommand(accessor, 'uc-mt', { motionTrack: [{ time: 0, dx: 10, dy: 5 }] }).execute();
+      expect(accessor.current().tracks[0].clips.find((c) => c.id === 'uc-mt')!.motionTrack).toBeDefined();
+    });
+    it('patch with border hits else branch', () => {
+      const clip = makeVideoClip({ id: 'uc-border', start: 0, duration: 5 });
+      const tl = makeTimeline([clip]);
+      const accessor = makeAccessor(tl);
+      new UpdateClipCommand(accessor, 'uc-border', { border: { width: 2, color: '#ff0000' } }).execute();
+      expect(accessor.current().tracks[0].clips.find((c) => c.id === 'uc-border')!.border).toBeDefined();
+    });
+    it('patch with contentAnalysis hits else branch', () => {
+      const clip = makeVideoClip({ id: 'uc-ca', start: 0, duration: 5 });
+      const tl = makeTimeline([clip]);
+      const accessor = makeAccessor(tl);
+      new UpdateClipCommand(accessor, 'uc-ca', { contentAnalysis: { scenes: [{ start: 0, end: 2 }] } }).execute();
+      expect(accessor.current().tracks[0].clips.find((c) => c.id === 'uc-ca')!.contentAnalysis).toBeDefined();
+    });
+    it('patch with pitchData hits else branch', () => {
+      const clip = makeVideoClip({ id: 'uc-pd', start: 0, duration: 5 });
+      const tl = makeTimeline([clip]);
+      const accessor = makeAccessor(tl);
+      new UpdateClipCommand(accessor, 'uc-pd', { pitchData: [{ time: 0, hz: 440 }] }).execute();
+      expect(accessor.current().tracks[0].clips.find((c) => c.id === 'uc-pd')!.pitchData).toBeDefined();
+    });
+  });
+
+  describe('coverage: UpdateClipCommand beatMarkers/detectedBpm branches', () => {
+    it('patch with beatMarkers hits else branch', () => {
+      const clip = makeVideoClip({ id: 'uc-bm', start: 0, duration: 5 });
+      const tl = makeTimeline([clip]);
+      const accessor = makeAccessor(tl);
+      new UpdateClipCommand(accessor, 'uc-bm', { beatMarkers: [{ time: 1, label: 'beat' }] }).execute();
+      expect(accessor.current().tracks[0].clips.find((c) => c.id === 'uc-bm')!.beatMarkers).toBeDefined();
+    });
+    it('patch with detectedBpm hits else branch', () => {
+      const clip = makeVideoClip({ id: 'uc-bpm', start: 0, duration: 5 });
+      const tl = makeTimeline([clip]);
+      const accessor = makeAccessor(tl);
+      new UpdateClipCommand(accessor, 'uc-bpm', { detectedBpm: 120 }).execute();
+      expect(accessor.current().tracks[0].clips.find((c) => c.id === 'uc-bpm')!.detectedBpm).toBe(120);
+    });
+  });
+
+  describe('coverage: UpdateClipCommand type-specific branches', () => {
+    it('subtitle clip type-specific normalization', () => {
+      const clip = makeSubtitleClip({ id: 'uc-sub', start: 0, duration: 2, trackId: 'track-text' });
+      const tl = makeTimeline([clip]);
+      const accessor = makeAccessor(tl);
+      new UpdateClipCommand(accessor, 'uc-sub', { text: 'Updated subtitle' }).execute();
+      expect(accessor.current().tracks.flatMap((t) => t.clips).find((c) => c.id === 'uc-sub')!.text).toBe('Updated subtitle');
+    });
+    it('credits clip type-specific normalization', () => {
+      const clip = makeCreditsClip({ id: 'uc-credits', start: 0, duration: 5 });
+      const tl = makeTimeline([clip]);
+      const accessor = makeAccessor(tl);
+      new UpdateClipCommand(accessor, 'uc-credits', { text: 'Director | Bob' }).execute();
+      expect(accessor.current().tracks.flatMap((t) => t.clips).find((c) => c.id === 'uc-credits')!.text).toBe('Director | Bob');
+    });
+    it('motion-graphic clip type-specific normalization', () => {
+      const clip = makeMotionGraphicClip({ id: 'uc-mg', start: 0, duration: 5, trackId: 'track-video' });
+      const tl = makeTimeline([clip]);
+      const accessor = makeAccessor(tl);
+      new UpdateClipCommand(accessor, 'uc-mg', { text: 'Updated MG' }).execute();
+      expect(accessor.current().tracks.flatMap((t) => t.clips).find((c) => c.id === 'uc-mg')!.text).toBe('Updated MG');
+    });
+  });
+
 });
