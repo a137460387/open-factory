@@ -1,5 +1,7 @@
 # AI Agent Rules
 
+- All user-facing output — chat replies, reasoning/status narration, task summaries, commit and PR descriptions — must be written in Simplified Chinese. This is the standing project default and overrides any default preference for ASCII-only or English text.
+- Conventional-commit prefixes (`feat:`, `fix:`, `chore:`, etc.), code identifiers, file paths, and code itself are unaffected by the rule above.
 - Do not upload user media. open-factory is local-first and must not add telemetry, login, or cloud services.
 - Timeline mutation must go through command objects. Do not directly call Zustand setters to modify timeline clips or tracks from React components.
 - Core timeline algorithms must have Vitest coverage. Keep `packages/editor-core` coverage at or above 80%.

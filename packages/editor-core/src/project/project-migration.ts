@@ -55,6 +55,10 @@ import {
 } from '../model';
 import { normalizeColorNodeGraph } from '../color-node-graph';
 import type { Clip, ImageSequenceInfo, MediaAsset, MediaFolder, MediaMetadata, Project, Sequence, Subclip, Timeline, Transition } from '../model-types';
+import type { TimingAdaptation, TtsSegment, DubbingAdaptationType } from '../model-types';
+import type { CharacterTimeline } from '../ai-character-timeline';
+import type { PreflightReport } from '../ai-preflight-checklist';
+import type { EmotionAnalysis, EmotionTone } from '../ai-emotion-tone';
 import { normalizeClipGroups } from '../clip-groups';
 import { normalizeClipBlendMode } from '../blend-modes';
 import { normalizeClipContentAnalysis } from '../content-analysis';
@@ -79,6 +83,80 @@ import { pruneZoomMemory } from '../timeline-zoom';
 import { normalizeProjectReleaseVersion } from './release-workflow';
 
 const DEFAULT_SETTINGS = { fps: 30, timecodeFormat: 'ndf' as const, width: 1280, height: 720, colorPipeline: 'sdr-srgb' as const, workingColorSpace: 'srgb' as const };
+
+const VALID_DUBBING_ADAPTATION_TYPES: ReadonlySet<DubbingAdaptationType> = new Set(['compress', 'pad', 'trim', 'none']);
+const VALID_EMOTION_TONES: ReadonlySet<EmotionTone> = new Set(['energetic', 'calm', 'tense', 'happy', 'sad', 'neutral']);
+
+function normalizeTimingAdaptation(input: unknown): TimingAdaptation | undefined {
+  if (!input || typeof input !== 'object') return undefined;
+  const obj = input as Record<string, unknown>;
+  if (typeof obj.durationDelta !== 'number' || !Number.isFinite(obj.durationDelta)) return undefined;
+  if (typeof obj.adaptationType !== 'string' || !VALID_DUBBING_ADAPTATION_TYPES.has(obj.adaptationType as DubbingAdaptationType)) return undefined;
+  const atempoRatio = typeof obj.atempoRatio === 'number' && Number.isFinite(obj.atempoRatio) ? obj.atempoRatio : null;
+  const suggestedOutPoint = typeof obj.suggestedOutPoint === 'number' && Number.isFinite(obj.suggestedOutPoint) ? obj.suggestedOutPoint : null;
+  return { durationDelta: obj.durationDelta, adaptationType: obj.adaptationType as DubbingAdaptationType, atempoRatio, suggestedOutPoint };
+}
+
+function normalizeTtsSegment(input: unknown): TtsSegment | null {
+  if (!input || typeof input !== 'object') return null;
+  const obj = input as Record<string, unknown>;
+  if (typeof obj.id !== 'string' || !obj.id.trim()) return null;
+  if (typeof obj.subtitleClipId !== 'string' || !obj.subtitleClipId.trim()) return null;
+  if (typeof obj.originalDuration !== 'number' || !Number.isFinite(obj.originalDuration)) return null;
+  if (typeof obj.dubbedDuration !== 'number' || !Number.isFinite(obj.dubbedDuration)) return null;
+  return {
+    id: obj.id,
+    subtitleClipId: obj.subtitleClipId,
+    originalDuration: obj.originalDuration,
+    dubbedDuration: obj.dubbedDuration,
+    audioPath: typeof obj.audioPath === 'string' ? obj.audioPath : undefined,
+    language: typeof obj.language === 'string' ? obj.language : undefined,
+    timingAdaptation: normalizeTimingAdaptation(obj.timingAdaptation),
+  };
+}
+
+function normalizeTtsSegments(input: unknown): TtsSegment[] {
+  if (!Array.isArray(input)) return [];
+  const result = input.map(normalizeTtsSegment).filter((s): s is TtsSegment => s !== null);
+  return result.length > 0 ? result : [];
+}
+
+function normalizeCharacterTimeline(input: unknown): CharacterTimeline | undefined {
+  if (!input || typeof input !== 'object') return undefined;
+  const obj = input as Record<string, unknown>;
+  if (!obj.characters || typeof obj.characters !== 'object') return undefined;
+  if (typeof obj.lastAnalyzedAt !== 'string') return undefined;
+  return { characters: obj.characters as CharacterTimeline['characters'], lastAnalyzedAt: obj.lastAnalyzedAt };
+}
+
+function normalizePreflightReport(input: unknown): PreflightReport | undefined {
+  if (!input || typeof input !== 'object') return undefined;
+  const obj = input as Record<string, unknown>;
+  if (typeof obj.generatedAt !== 'string') return undefined;
+  if (!obj.issuesByCategory || typeof obj.issuesByCategory !== 'object') return undefined;
+  if (typeof obj.aiSummary !== 'string') return undefined;
+  if (typeof obj.totalCritical !== 'number' || !Number.isFinite(obj.totalCritical)) return undefined;
+  if (typeof obj.totalWarnings !== 'number' || !Number.isFinite(obj.totalWarnings)) return undefined;
+  if (!Array.isArray(obj.acknowledgedIssueIds)) return undefined;
+  return {
+    generatedAt: obj.generatedAt,
+    issuesByCategory: obj.issuesByCategory as PreflightReport['issuesByCategory'],
+    aiSummary: obj.aiSummary,
+    totalCritical: obj.totalCritical,
+    totalWarnings: obj.totalWarnings,
+    acknowledgedIssueIds: obj.acknowledgedIssueIds as string[],
+  };
+}
+
+function normalizeEmotionAnalysis(input: unknown): EmotionAnalysis | undefined {
+  if (!input || typeof input !== 'object') return undefined;
+  const obj = input as Record<string, unknown>;
+  if (typeof obj.emotionTone !== 'string' || !VALID_EMOTION_TONES.has(obj.emotionTone as EmotionTone)) return undefined;
+  if (typeof obj.intensity !== 'number' || !Number.isFinite(obj.intensity)) return undefined;
+  if (typeof obj.reason !== 'string') return undefined;
+  if (typeof obj.analyzedAt !== 'string') return undefined;
+  return { emotionTone: obj.emotionTone as EmotionTone, intensity: obj.intensity, reason: obj.reason, analyzedAt: obj.analyzedAt };
+}
 
 export function serializeProjectFile(project: Project, projectPath?: string): ProjectFileV2 {
   const warnings: string[] = [];
@@ -147,6 +225,9 @@ export function serializeProjectFile(project: Project, projectPath?: string): Pr
       subclips: project.subclips ?? [],
       activeSequenceId: project.activeSequenceId ?? PRIMARY_SEQUENCE_ID
       , zoomMemory: normalizeZoomMemory(project.zoomMemory)
+      , ttsSegments: project.ttsSegments ?? []
+      , characterTimeline: project.characterTimeline
+      , preflightReport: project.preflightReport
     },
     warnings: warnings.length > 0 ? warnings : undefined
   };
@@ -200,6 +281,9 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         subclips: normalizeSubclips((file.project as any).subclips),
         activeSequenceId
         , zoomMemory: normalizeZoomMemory(file.project.zoomMemory, sequences)
+        , ttsSegments: normalizeTtsSegments(file.project.ttsSegments)
+        , characterTimeline: normalizeCharacterTimeline(file.project.characterTimeline)
+        , preflightReport: normalizePreflightReport(file.project.preflightReport)
       },
       warnings: [...(file.warnings ?? [])]
     };
@@ -239,6 +323,7 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         subclips: [],
         sequences,
         activeSequenceId: PRIMARY_SEQUENCE_ID
+        , ttsSegments: []
       },
       warnings: ['Migrated legacy version 0.1 project file from assets to media.']
     };
@@ -449,7 +534,8 @@ function cloneClip<TClip extends Clip>(clip: TClip): TClip {
     detectedBpm,
     scenecuts,
     aiReframe: normalizeClipAIReframe(clip.aiReframe),
-    anomalies: normalizeAnomalyIntervals(clip.anomalies)
+    anomalies: normalizeAnomalyIntervals(clip.anomalies),
+    emotionAnalysis: normalizeEmotionAnalysis((clip as any).emotionAnalysis)
   };
   if (!beatMarkers) {
     delete (cloned as Partial<Clip>).beatMarkers;

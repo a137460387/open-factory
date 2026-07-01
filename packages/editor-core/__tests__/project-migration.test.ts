@@ -1525,4 +1525,142 @@ describe('project schema migration', () => {
     delete (file.project as any).speakerLabels;
     expect(migrateProjectFile(file).project.speakerLabels).toBeUndefined();
   });
+
+  it('serializes and migrates characterTimeline while old projects remain undefined', () => {
+    const project = makeProject();
+    (project as any).characterTimeline = {
+      characters: {
+        character_1: { label: '戴眼镜的男性', appearances: [{ clipId: 'clip-1', startTime: 0, endTime: 5, confidence: 0.9 }] },
+      },
+      lastAnalyzedAt: '2026-07-01T00:00:00.000Z',
+    };
+
+    const file = serializeProject(project);
+    expect(file.project.characterTimeline?.characters.character_1.label).toBe('戴眼镜的男性');
+
+    const migrated = migrateProjectFile(file);
+    expect(migrated.project.characterTimeline?.characters.character_1.label).toBe('戴眼镜的男性');
+    expect(migrated.project.characterTimeline?.lastAnalyzedAt).toBe('2026-07-01T00:00:00.000Z');
+
+    delete (file.project as any).characterTimeline;
+    expect(migrateProjectFile(file).project.characterTimeline).toBeUndefined();
+  });
+
+  it('serializes and migrates preflightReport while old projects remain undefined', () => {
+    const project = makeProject();
+    (project as any).preflightReport = {
+      generatedAt: '2026-07-01T00:00:00.000Z',
+      issuesByCategory: { flash: [{ id: 'flash-1', category: 'flash', severity: 'warning', message: '闪烁警告' }] },
+      aiSummary: '项目有1个警告',
+      totalCritical: 0,
+      totalWarnings: 1,
+      acknowledgedIssueIds: [],
+    };
+
+    const file = serializeProject(project);
+    expect(file.project.preflightReport?.totalWarnings).toBe(1);
+
+    const migrated = migrateProjectFile(file);
+    expect(migrated.project.preflightReport?.totalWarnings).toBe(1);
+    expect(migrated.project.preflightReport?.aiSummary).toBe('项目有1个警告');
+
+    delete (file.project as any).preflightReport;
+    expect(migrateProjectFile(file).project.preflightReport).toBeUndefined();
+  });
+
+  it('serializes and migrates emotionAnalysis on video clips while old clips remain undefined', () => {
+    const project = makeProject();
+    const emotionClip = makeVideoClip({ id: 'clip-emotion' });
+    (emotionClip as any).emotionAnalysis = {
+      emotionTone: 'happy',
+      intensity: 0.8,
+      reason: '角色面带微笑',
+      analyzedAt: '2026-07-01T00:00:00.000Z',
+    };
+    project.timeline.tracks[0].clips = [emotionClip];
+    project.sequences = [{ ...project.sequences[0], timeline: project.timeline }];
+
+    const file = serializeProject(project);
+    expect(file.project.timeline.tracks[0].clips[0].emotionAnalysis?.emotionTone).toBe('happy');
+
+    const migrated = migrateProjectFile(file);
+    expect(migrated.project.timeline.tracks[0].clips[0].emotionAnalysis?.emotionTone).toBe('happy');
+    expect(migrated.project.timeline.tracks[0].clips[0].emotionAnalysis?.intensity).toBeCloseTo(0.8);
+
+    delete (file.project.timeline.tracks[0].clips[0] as any).emotionAnalysis;
+    expect(migrateProjectFile(file).project.timeline.tracks[0].clips[0].emotionAnalysis).toBeUndefined();
+  });
+
+  it('serializes and migrates ttsSegments with timingAdaptation while old projects default to empty', () => {
+    const project = makeProject();
+    (project as any).ttsSegments = [
+      {
+        id: 'tts-1',
+        subtitleClipId: 'subtitle-1',
+        originalDuration: 3.0,
+        dubbedDuration: 3.5,
+        audioPath: 'C:/Media/tts-1.wav',
+        language: 'zh',
+        timingAdaptation: {
+          durationDelta: 0.5,
+          adaptationType: 'compress',
+          atempoRatio: 0.86,
+          suggestedOutPoint: null,
+        },
+      },
+    ];
+
+    const file = serializeProject(project);
+    expect(file.project.ttsSegments).toHaveLength(1);
+    expect(file.project.ttsSegments![0].timingAdaptation?.adaptationType).toBe('compress');
+
+    const migrated = migrateProjectFile(file);
+    expect(migrated.project.ttsSegments).toHaveLength(1);
+    expect(migrated.project.ttsSegments![0].timingAdaptation?.atempoRatio).toBeCloseTo(0.86);
+
+    delete (file.project as any).ttsSegments;
+    expect(migrateProjectFile(file).project.ttsSegments).toEqual([]);
+  });
+
+  it('gracefully handles invalid timingAdaptation data during migration', () => {
+    const project = makeProject();
+    (project as any).ttsSegments = [
+      {
+        id: 'tts-bad',
+        subtitleClipId: 'subtitle-1',
+        originalDuration: 2.0,
+        dubbedDuration: 2.5,
+        timingAdaptation: { durationDelta: 'not-a-number', adaptationType: 'invalid', atempoRatio: null, suggestedOutPoint: null },
+      },
+      {
+        id: 'tts-good',
+        subtitleClipId: 'subtitle-2',
+        originalDuration: 1.0,
+        dubbedDuration: 1.5,
+        timingAdaptation: { durationDelta: 0.5, adaptationType: 'pad', atempoRatio: null, suggestedOutPoint: null },
+      },
+    ];
+
+    const file = serializeProject(project);
+    const migrated = migrateProjectFile(file);
+
+    expect(migrated.project.ttsSegments).toHaveLength(2);
+    expect(migrated.project.ttsSegments![0].timingAdaptation).toBeUndefined();
+    expect(migrated.project.ttsSegments![1].timingAdaptation?.adaptationType).toBe('pad');
+  });
+
+  it('gracefully handles invalid emotionAnalysis.emotionTone during migration', () => {
+    const project = makeProject();
+    const badEmotionClip = makeVideoClip({ id: 'clip-bad-emotion' });
+    (badEmotionClip as any).emotionAnalysis = { emotionTone: 'invalid-tone', intensity: 0.5, reason: 'test', analyzedAt: '2026-07-01T00:00:00.000Z' };
+    const goodEmotionClip = makeVideoClip({ id: 'clip-good-emotion' });
+    (goodEmotionClip as any).emotionAnalysis = { emotionTone: 'calm', intensity: 0.3, reason: '平静场景', analyzedAt: '2026-07-01T00:00:00.000Z' };
+    project.timeline.tracks[0].clips = [badEmotionClip, goodEmotionClip];
+    project.sequences = [{ ...project.sequences[0], timeline: project.timeline }];
+
+    const migrated = migrateProjectFile(serializeProject(project));
+
+    expect(migrated.project.timeline.tracks[0].clips[0].emotionAnalysis).toBeUndefined();
+    expect(migrated.project.timeline.tracks[0].clips[1].emotionAnalysis?.emotionTone).toBe('calm');
+  });
 });

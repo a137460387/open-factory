@@ -17,8 +17,11 @@ import type {
   Subclip,
   Timeline,
   TimelineBookmark,
-  TimelineNote
+  TimelineNote,
+  TtsSegment
 } from '../model-types';
+import type { CharacterTimeline } from '../ai-character-timeline';
+import type { PreflightReport } from '../ai-preflight-checklist';
 
 export interface ProjectFileV1 {
   version: '0.1';
@@ -65,6 +68,9 @@ export interface ProjectFileV2 {
     activeSequenceId?: string;
     subclips?: Subclip[];
     zoomMemory?: Record<string, number>;
+    ttsSegments?: TtsSegment[];
+    characterTimeline?: CharacterTimeline;
+    preflightReport?: PreflightReport;
   };
   warnings?: string[];
 }
