@@ -42,11 +42,11 @@ export function serializeAutomationRulesJson(rules: AutomationRule[]): string {
   return `${JSON.stringify(rules, null, 2)}\n`;
 }
 
-export function getTriggeredAutomationRules(rules: AutomationRule[], trigger: AutomationTrigger): AutomationRule[] {
+function getTriggeredAutomationRules(rules: AutomationRule[], trigger: AutomationTrigger): AutomationRule[] {
   return rules.filter((rule) => rule.enabled && rule.trigger === trigger);
 }
 
-export function automationRuleMatchesMedia(rule: AutomationRule, asset: MediaAsset): boolean {
+function automationRuleMatchesMedia(rule: AutomationRule, asset: MediaAsset): boolean {
   return rule.conditions.every((condition) => evaluateAutomationCondition(asset, condition));
 }
 
@@ -98,7 +98,7 @@ export async function runConfiguredAutomationForMedia(event: AutomationEventCont
   return runAutomationRulesForMedia(rules, event, dependencies);
 }
 
-export async function executeAutomationActions(
+async function executeAutomationActions(
   rule: AutomationRule,
   asset: MediaAsset,
   dependencies: AutomationActionDependencies

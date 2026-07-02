@@ -80,7 +80,7 @@ export interface DragState {
 
 export const TRACK_HEIGHT = 54;
 export const LABEL_WIDTH = 138;
-export const TRACK_DRAG_MIME = 'application/x-open-factory-track-id';
+const TRACK_DRAG_MIME = 'application/x-open-factory-track-id';
 const LARGE_PROJECT_ASSET_HYDRATION_DELAY_MS = 1_200;
 const LARGE_PROJECT_ASSET_IDLE_TIMEOUT_MS = 2_500;
 

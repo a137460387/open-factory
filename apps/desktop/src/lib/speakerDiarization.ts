@@ -50,7 +50,7 @@ export async function analyzeSpeakerDiarizationForClip(
   }
 }
 
-export function buildSpeakerFramesFromAudioBuffer(decoded: AudioBuffer, clip: Extract<Clip, { type: 'audio' | 'video' }>): SpeakerDiarizationFrame[] {
+function buildSpeakerFramesFromAudioBuffer(decoded: AudioBuffer, clip: Extract<Clip, { type: 'audio' | 'video' }>): SpeakerDiarizationFrame[] {
   const speed = Math.max(0.001, getClipSpeed(clip));
   const sourceStart = Math.max(0, clip.trimStart);
   const sourceEnd = Math.min(decoded.duration, sourceStart + clip.duration * speed);

@@ -78,7 +78,7 @@ export function createPerformanceBenchmarkReport(options = {}) {
   };
 }
 
-export async function runPerformanceBenchmark(options = {}) {
+async function runPerformanceBenchmark(options = {}) {
   const report = createPerformanceBenchmarkReport(options);
   if (options.reportPath) {
     await writeFile(options.reportPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');

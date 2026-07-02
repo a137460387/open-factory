@@ -7,7 +7,7 @@ import {
 } from '@open-factory/editor-core';
 import { clearCache as bridgeClearCache, getCacheSize, readCache, writeCache } from '../lib/tauri-bridge';
 
-export async function getAssetCacheKey(asset: MediaAsset): Promise<string | undefined> {
+async function getAssetCacheKey(asset: MediaAsset): Promise<string | undefined> {
   if (!asset.size || !asset.mtimeMs) {
     return undefined;
   }

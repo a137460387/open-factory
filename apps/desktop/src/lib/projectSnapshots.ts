@@ -95,7 +95,7 @@ export function createSnapshotFileName(name: string, date = new Date(), encrypte
   return `${timestamp}_${encodeURIComponent(normalizeSnapshotName(name))}${encrypted ? ENCRYPTED_SNAPSHOT_SUFFIX : SNAPSHOT_SUFFIX}`;
 }
 
-export function normalizeSnapshotName(name: string): string {
+function normalizeSnapshotName(name: string): string {
   const trimmed = name.trim().replace(/\s+/g, ' ');
   return trimmed.length > 0 ? trimmed : 'snapshot';
 }

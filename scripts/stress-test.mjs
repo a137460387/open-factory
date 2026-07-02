@@ -12,7 +12,7 @@ const DEFAULT_URL = process.env.OPEN_FACTORY_STRESS_URL ?? 'http://localhost:142
 const DEFAULT_PROJECT_PATH = 'C:/Projects/stress-200.cutproj.json';
 const DEFAULT_REPORT_PATH = path.join(ROOT_DIR, 'stress-test-report.json');
 
-export const DEFAULT_STRESS_THRESHOLDS = Object.freeze({
+const DEFAULT_STRESS_THRESHOLDS = Object.freeze({
   initialRenderMs: 2_000,
   memoryMb: 500
 });
@@ -143,7 +143,7 @@ export function assertStressReport(report) {
   }
 }
 
-export async function runStressTest(options = {}) {
+async function runStressTest(options = {}) {
   const url = options.url ?? DEFAULT_URL;
   const projectPath = options.projectPath ?? DEFAULT_PROJECT_PATH;
   const reportPath = options.reportPath ?? DEFAULT_REPORT_PATH;

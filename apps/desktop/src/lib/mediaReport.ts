@@ -10,7 +10,7 @@ import {
 import { getLanguage, zhCN } from '../i18n/strings';
 import { fsExists, getFileStat, saveFileDialog, writeClipReport, writeFile } from './tauri-bridge';
 
-export async function collectOfflineMediaFileStatuses(project: Project): Promise<OfflineMediaFileStatus[]> {
+async function collectOfflineMediaFileStatuses(project: Project): Promise<OfflineMediaFileStatus[]> {
   const paths = collectOfflineMediaReportPaths(project);
   return Promise.all(
     paths.map(async (path) => {

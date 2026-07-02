@@ -1,4 +1,4 @@
-export const MEDIA_PREVIEW_DELAY_MS = 500;
+const MEDIA_PREVIEW_DELAY_MS = 500;
 
 export type MediaPreviewInput = {
   delayMs?: number;
