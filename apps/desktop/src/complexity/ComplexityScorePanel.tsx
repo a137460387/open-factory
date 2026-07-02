@@ -156,5 +156,3 @@ function drawRadar(context: CanvasRenderingContext2D, dimensions: readonly Compl
     context.fill();
   }
 }
-
-export default ComplexityScorePanel;

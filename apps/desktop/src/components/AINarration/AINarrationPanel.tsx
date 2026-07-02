@@ -279,5 +279,3 @@ export function AINarrationPanel({ project, onClose }: { project: Project; onClo
     </div>
   );
 }
-
-export default AINarrationPanel;

@@ -408,7 +408,7 @@ const StyleTransferDialog = lazy(() => import('../style-transfer/StyleTransferDi
 const CollaborationNotesPanel = lazy(() => import('../collaboration/CollaborationNotesPanel'));
 const OperationReplayDialog = lazy(() => import('../operation-recording/OperationReplayDialog'));
 const SpeakerDiarizationDialog = lazy(() => import('../speaker-diarization/SpeakerDiarizationDialog'));
-const ComplexityScorePanel = lazy(() => import('../complexity/ComplexityScorePanel'));
+const ComplexityScorePanel = lazy(() => import('../complexity/ComplexityScorePanel').then((module) => ({ default: module.ComplexityScorePanel })));
 const SmartRecommendationsDialog = lazy(() => import('../smart-recommendations/SmartRecommendationsDialog'));
 const ContentAnalysisDialog = lazy(() => import('../media/ContentAnalysisDialog').then((module) => ({ default: module.ContentAnalysisDialog })));
 const RhythmAnalysisDialog = lazy(() => import('../analysis/RhythmAnalysisDialog').then((module) => ({ default: module.RhythmAnalysisDialog })));
