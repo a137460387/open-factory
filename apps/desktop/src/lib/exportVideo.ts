@@ -1,7 +1,6 @@
-import { buildExportProjectFromProject, buildFfmpegCurrentFrameExportPlan, buildFfmpegExportPlan, timelineHasExportableVideo, type Project } from '@open-factory/editor-core';
+import { buildExportProjectFromProject, buildFfmpegCurrentFrameExportPlan, timelineHasExportableVideo, type Project } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
-import { cancelExport as bridgeCancelExport, getFfmpegCapabilities, listenBridge, openDirectoryDialog, openPath, runExport, saveFileDialog } from './tauri-bridge';
-import { normalizeExportProgressPayload, type ExportProgressEvent } from '../export/export-progress';
+import { getFfmpegCapabilities, openDirectoryDialog, openPath, runExport, saveFileDialog } from './tauri-bridge';
 
 export interface ExportCallbacks {
   onProgress(progress: number): void;
@@ -24,27 +23,6 @@ export async function chooseCurrentFrameExportPath(project: Project, time: numbe
   ]);
 }
 
-export async function startExport(project: Project, outputPath: string, callbacks: ExportCallbacks): Promise<void> {
-  if (!timelineHasExportableVideo(project.timeline)) {
-    throw new Error(zhCN.errors.exportNeedsVideo);
-  }
-  const capabilities = await getFfmpegCapabilities();
-  if (!capabilities.available) {
-    throw new Error(zhCN.errors.ffmpegMissing);
-  }
-  const exportProject = buildExportProjectFromProject(project, { outputPath });
-  const plan = buildFfmpegExportPlan(exportProject, capabilities);
-  callbacks.onWarnings?.(plan.warnings);
-
-  const unlisten = await listenBridge<ExportProgressEvent>('export-progress', (progress) => callbacks.onProgress(normalizeExportProgressPayload(progress)));
-  try {
-    await runExport(plan);
-    callbacks.onProgress(1);
-  } finally {
-    unlisten();
-  }
-}
-
 export async function startCurrentFrameExport(project: Project, outputPath: string, time: number, callbacks: ExportCallbacks = { onProgress: () => undefined }): Promise<void> {
   if (!timelineHasExportableVideo(project.timeline)) {
     throw new Error(zhCN.errors.exportNeedsVideo);
@@ -61,10 +39,6 @@ export async function startCurrentFrameExport(project: Project, outputPath: stri
   callbacks.onWarnings?.(plan.warnings);
   await runExport(plan);
   callbacks.onProgress(1);
-}
-
-export async function cancelExport(): Promise<void> {
-  await bridgeCancelExport();
 }
 
 export async function revealExport(path: string): Promise<void> {
