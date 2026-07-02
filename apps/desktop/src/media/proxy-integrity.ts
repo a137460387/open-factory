@@ -42,7 +42,7 @@ export async function runScheduledProxyIntegrityCheck(project: Project, dependen
   return { ran: true, assetIds, inventory };
 }
 
-export async function collectProxyIntegrityInventory(project: Project, dependencies: ProxyIntegrityCheckDependencies = {}): Promise<ProxyInventoryItem[]> {
+async function collectProxyIntegrityInventory(project: Project, dependencies: ProxyIntegrityCheckDependencies = {}): Promise<ProxyInventoryItem[]> {
   const sourceStats: Record<string, ProxyFileStatLike | undefined> = {};
   const proxyStats: Record<string, ProxyFileStatLike | undefined> = {};
   const existingProxyPaths = new Set<string>();

@@ -90,7 +90,7 @@ export function detectTopFrequencyPeaks(points: FrequencyPoint[], count = 3): Fr
   return ranked.map((point, index) => ({ ...point, rank: index + 1 }));
 }
 
-export function buildPhasePoints(left: ArrayLike<number>, right: ArrayLike<number>, maxPoints = 128): PhasePoint[] {
+function buildPhasePoints(left: ArrayLike<number>, right: ArrayLike<number>, maxPoints = 128): PhasePoint[] {
   const length = Math.min(left.length, right.length);
   if (length === 0 || maxPoints <= 0) {
     return [];

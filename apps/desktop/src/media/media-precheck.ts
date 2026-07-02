@@ -1,37 +1,5 @@
-import { buildMediaPrecheckResult, sniffFileHeader, getFileExtension, type MediaPrecheckResult, type Project, type FileSniffResult } from '@open-factory/editor-core';
-import { analyzeMedia, scanMediaIntegrity, readFileHeaderBytes, type MediaAnalysis, type MediaIntegrityScanResult } from '../lib/tauri-bridge';
-
-export interface PreImportFileEntry {
-  name: string;
-  path: string;
-  type: 'video' | 'audio' | 'image';
-}
-
-export interface PreImportResult {
-  entry: PreImportFileEntry;
-  status: 'pass' | 'warning' | 'error';
-  fileSniff?: FileSniffResult;
-  forced?: boolean;
-}
-
-export async function runBatchPreImportCheck(files: PreImportFileEntry[]): Promise<PreImportResult[]> {
-  const results: PreImportResult[] = [];
-  for (const file of files) {
-    try {
-      const header = await readFileHeaderBytes(file.path, 16);
-      const sniff = sniffFileHeader(header, file.name);
-      const status = sniff.status === 'mismatch' ? 'warning' : 'pass';
-      results.push({ entry: file, status, fileSniff: sniff });
-    } catch {
-      results.push({ entry: file, status: 'error' });
-    }
-  }
-  return results;
-}
-
-export function markForcedImport(result: PreImportResult): PreImportResult {
-  return { ...result, status: 'warning', forced: true };
-}
+import { buildMediaPrecheckResult, type MediaPrecheckResult, type Project } from '@open-factory/editor-core';
+import { analyzeMedia, scanMediaIntegrity, type MediaAnalysis, type MediaIntegrityScanResult } from '../lib/tauri-bridge';
 
 export interface MediaPrecheckDependencies {
   analyzeMedia(path: string): Promise<MediaAnalysis> | MediaAnalysis;

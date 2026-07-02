@@ -104,7 +104,7 @@ async function decodeWaveform(arrayBuffer: ArrayBuffer, pointsPerSecond: number)
   }
 }
 
-export function extractPeaks(bytes: Uint8Array, pointsPerSecond: number, durationHint: number, isSampled = false): WaveformResult {
+function extractPeaks(bytes: Uint8Array, pointsPerSecond: number, durationHint: number, isSampled = false): WaveformResult {
   const duration = Math.max(durationHint || bytes.length / 44_100, 0.001);
   const totalPoints = Math.max(32, Math.ceil(duration * pointsPerSecond));
   const stride = isSampled ? Math.max(1, Math.floor(bytes.length / (totalPoints * 8))) : 1;

@@ -8,7 +8,7 @@ import { useMediaJobStore, type MediaJob } from './media-job-store';
 import { shouldIgnoreMediaJobCompletion } from './media-job-monitor';
 
 let runnerPromise: Promise<void> | undefined;
-export const MEDIA_JOB_MAX_CONCURRENT = 3;
+const MEDIA_JOB_MAX_CONCURRENT = 3;
 
 export function enqueueBackgroundMediaJobs(media: MediaAsset[], proxySettings?: ProxySettings): void {
   useMediaJobStore.getState().enqueueJobsForMedia(media, proxySettings);

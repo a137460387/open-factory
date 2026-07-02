@@ -45,7 +45,7 @@ export class BackgroundMediaTaskQueue {
   }
 }
 
-export const backgroundMediaTaskQueue = new BackgroundMediaTaskQueue();
+const backgroundMediaTaskQueue = new BackgroundMediaTaskQueue();
 
 export function runBackgroundMediaTask<T>(run: () => Promise<T> | T): Promise<T> {
   return backgroundMediaTaskQueue.run(run);
