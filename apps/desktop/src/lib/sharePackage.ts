@@ -117,7 +117,7 @@ export function buildSharePackageRequest(project: Project, outputPath: string, e
   };
 }
 
-export function waitForSharePackageExportTask(taskId: string, onProgress?: (task: ExportTask) => void): Promise<ExportTask> {
+function waitForSharePackageExportTask(taskId: string, onProgress?: (task: ExportTask) => void): Promise<ExportTask> {
   const current = useExportQueueStore.getState().tasks.find((task) => task.id === taskId);
   if (current) {
     onProgress?.(current);

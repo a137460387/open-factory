@@ -90,7 +90,7 @@ export async function runProjectBatchQueue(tasks: ProjectBatchTask[], runner: Pr
   return summarizeProjectBatchResults(results);
 }
 
-export function summarizeProjectBatchResults(results: ProjectBatchTaskResult[]): ProjectBatchReport {
+function summarizeProjectBatchResults(results: ProjectBatchTaskResult[]): ProjectBatchReport {
   return {
     total: results.length,
     succeeded: results.filter((result) => result.status === 'success').length,
@@ -195,7 +195,7 @@ export function updateProjectSubtitleStyle(
   return changedCount > 0 ? { project: { ...project, timeline: { ...project.timeline, tracks } }, changedCount } : { project, changedCount };
 }
 
-export function buildProjectBatchOutputPath(projectPath: string, outputDirectory: string | undefined, extension: string, suffix = ''): string {
+function buildProjectBatchOutputPath(projectPath: string, outputDirectory: string | undefined, extension: string, suffix = ''): string {
   const directory = normalizeOutputDirectory(outputDirectory) || dirname(projectPath);
   const baseName = projectFileBaseName(projectPath);
   return `${directory}/${baseName}${suffix}.${extension.replace(/^\./, '')}`;

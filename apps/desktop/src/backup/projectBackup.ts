@@ -13,7 +13,7 @@ import {
 } from '../lib/tauri-bridge';
 import { readBackupSettings, saveBackupSettings, type BackupSettings } from '../settings/appSettings';
 
-export const LOCAL_BACKUP_LIMIT = 10;
+const LOCAL_BACKUP_LIMIT = 10;
 
 export interface BackupTargetStatus {
   ok: boolean;
@@ -130,7 +130,7 @@ export async function runLocalBackup(
   }
 }
 
-export async function runWebdavBackup(
+async function runWebdavBackup(
   projectPath: string,
   serializedProject: string,
   settings: BackupSettings,
@@ -174,7 +174,7 @@ export function createLocalBackupPath(directory: string, projectName: string, pr
   return `${root}/${backupStemForProject(projectName, projectPath)}-${formatBackupTimestampForFile(date)}.cutproj.json`;
 }
 
-export function backupStemForProject(projectName: string, projectPath: string): string {
+function backupStemForProject(projectName: string, projectPath: string): string {
   const candidate = projectName.trim() || fileStemFromPath(projectPath) || 'project';
   return sanitizeBackupStem(candidate);
 }
@@ -190,7 +190,7 @@ export function sanitizeBackupStem(value: string): string {
     .slice(0, 80) || 'project';
 }
 
-export function formatBackupTimestampForFile(date: Date): string {
+function formatBackupTimestampForFile(date: Date): string {
   const pad = (value: number, width = 2) => String(value).padStart(width, '0');
   return [
     date.getUTCFullYear(),
@@ -217,7 +217,7 @@ export function formatBackupDisplayTime(iso: string | undefined): string | undef
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
-export async function rotateLocalBackups(directory: string, stem: string, dependencies: ProjectBackupDependencies = {}): Promise<string[]> {
+async function rotateLocalBackups(directory: string, stem: string, dependencies: ProjectBackupDependencies = {}): Promise<string[]> {
   const scanDirectoryImpl = dependencies.scanDirectory ?? scanDirectory;
   const getFileStatImpl = dependencies.getFileStat ?? getFileStat;
   const removeFileImpl = dependencies.removeFile ?? removeFile;
