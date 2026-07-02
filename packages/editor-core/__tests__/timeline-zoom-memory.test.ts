@@ -8,8 +8,8 @@ import {
   ZOOM_MODE_DEFAULTS,
   BASE_TIMELINE_ZOOM,
   clampTimelineZoom
-} from './timeline-zoom';
-import type { ZoomEditMode } from './model-types';
+} from '../src/timeline-zoom';
+import type { ZoomEditMode } from '../src/model-types';
 
 describe('buildZoomContextKey', () => {
   it('should build key from sequence id and edit mode', () => {
@@ -134,15 +134,3 @@ describe('nested sequence independent memory', () => {
     expect(resolveZoomForContext(memory, 'nested-1', 'editing')).toBe(clampTimelineZoom(150));
   });
 });
-import { describe, it, expect } from 'vitest';
-import {
-  buildZoomContextKey,
-  resolveZoomForContext,
-  saveZoomMemoryEntry,
-  detectZoomEditMode,
-  pruneZoomMemory,
-  ZOOM_MODE_DEFAULTS,
-  BASE_TIMELINE_ZOOM,
-  clampTimelineZoom
-} from '../src/timeline-zoom';
-import type { ZoomEditMode } from '../src/model-types';
