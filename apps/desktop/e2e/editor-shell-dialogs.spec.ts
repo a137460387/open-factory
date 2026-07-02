@@ -12,3 +12,18 @@ test('autosave recovery dialog is shown when recovery data exists', async ({ pag
   expect(count).toBeLessThanOrEqual(1);
 });
 
+test('archive progress dialog is not rendered by default', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+
+  const archiveDialog = page.getByTestId('archive-progress-dialog');
+  expect(await archiveDialog.count()).toBe(0);
+});
+
+test('export queue recovery dialog is not rendered by default', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+
+  const exportDialog = page.getByTestId('export-queue-recovery-dialog');
+  expect(await exportDialog.count()).toBe(0);
+});

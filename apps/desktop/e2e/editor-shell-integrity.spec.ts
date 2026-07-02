@@ -10,4 +10,7 @@ test('editor main layout renders after P1-4 refactoring', async ({ page }) => {
 
   // The left panel (media bin area) should be present
   await expect(page.getByTestId('left-panel')).toBeVisible();
+
+  // The editor shell root should be attached to DOM
+  await expect(page.getByTestId('editor-shell')).toBeAttached();
 });

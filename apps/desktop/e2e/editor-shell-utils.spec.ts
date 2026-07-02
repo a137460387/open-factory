@@ -12,5 +12,8 @@ test('utility functions produce expected output after P1-4 extraction', async ({
     return shell !== null;
   });
   expect(result).toBe(true);
-});
 
+  // The extraction of utility functions should not break the main layout
+  await expect(page.getByTestId('left-panel')).toBeVisible();
+  await expect(page.getByTestId('timeline-panel')).toBeVisible();
+});

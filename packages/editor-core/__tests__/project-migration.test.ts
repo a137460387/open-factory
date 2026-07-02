@@ -1564,8 +1564,26 @@ describe('project schema migration', () => {
     expect(migrated.project.preflightReport?.totalWarnings).toBe(1);
     expect(migrated.project.preflightReport?.aiSummary).toBe('项目有1个警告');
 
+   delete (file.project as any).preflightReport;
+   expect(migrateProjectFile(file).project.preflightReport).toBeUndefined();
+ });
+
+  it('old project without characterTimeline remains undefined after migration', () => {
+    const project = makeProject();
+    const file = serializeProject(project);
+    // simulate an old project that never had characterTimeline
+    delete (file.project as any).characterTimeline;
+    const migrated = migrateProjectFile(file);
+    expect(migrated.project.characterTimeline).toBeUndefined();
+  });
+
+  it('old project without preflightReport remains undefined after migration', () => {
+    const project = makeProject();
+    const file = serializeProject(project);
+    // simulate an old project that never had preflightReport
     delete (file.project as any).preflightReport;
-    expect(migrateProjectFile(file).project.preflightReport).toBeUndefined();
+    const migrated = migrateProjectFile(file);
+    expect(migrated.project.preflightReport).toBeUndefined();
   });
 
   it('serializes and migrates emotionAnalysis on video clips while old clips remain undefined', () => {
@@ -1662,5 +1680,25 @@ describe('project schema migration', () => {
 
     expect(migrated.project.timeline.tracks[0].clips[0].emotionAnalysis).toBeUndefined();
     expect(migrated.project.timeline.tracks[0].clips[1].emotionAnalysis?.emotionTone).toBe('calm');
+  });
+
+  it('handles TTS segment without timingAdaptation field gracefully', () => {
+    const project = makeProject();
+    (project as any).ttsSegments = [
+      {
+        id: 'tts-no-timing',
+        subtitleClipId: 'subtitle-1',
+        originalDuration: 3.0,
+        dubbedDuration: 3.5,
+        audioPath: 'C:/Media/tts-1.wav',
+        language: 'zh',
+      },
+    ];
+
+    const file = serializeProject(project);
+    const migrated = migrateProjectFile(file);
+
+    expect(migrated.project.ttsSegments).toHaveLength(1);
+    expect(migrated.project.ttsSegments![0].timingAdaptation).toBeUndefined();
   });
 });
