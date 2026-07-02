@@ -26,9 +26,12 @@ test-results/
 stress-test-report.json
 media-compat-report.json
 .nyc_output/
+e2e-*.txt
+e2e-*.json
 
-# Logs
+# Logs and error output
 *.log
+*.err
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -81,6 +84,10 @@ tauri.key
 .turbo/
 *.tsbuildinfo
 *.bak
+*.tmp
+debug-*
+parse_e2e.py
+*-screenshot.png
 
 # Local project/session artifacts
 *.cutproj.json
@@ -89,6 +96,8 @@ goal-open-factory.md
 docs/internal/
 package-lock.json
 
-*.bak
 *-report.json
 apps/desktop/ffprobe.exe
+
+# Verification reports (local only, not pushed to public repo)
+.verification/
