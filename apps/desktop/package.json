@@ -3,6 +3,14 @@
   "license": "MIT",
   "version": "0.6.0",
   "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/a137460387/open-factory.git"
+  },
+  "homepage": "https://github.com/a137460387/open-factory#readme",
+  "bugs": {
+    "url": "https://github.com/a137460387/open-factory/issues"
+  },
   "type": "module",
   "scripts": {
     "dev": "vite --host localhost",

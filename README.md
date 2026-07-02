@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![CI](https://github.com/a137460387/open-factory/actions/workflows/ci.yml/badge.svg)
-[![Version](https://img.shields.io/badge/version-v3.10.0-brightgreen)](https://github.com/user/open-factory/releases/tag/v3.10.0)
+[![Version](https://img.shields.io/badge/version-v3.10.0-brightgreen)](https://github.com/a137460387/open-factory/releases/tag/v3.10.0)
 [![Bun](https://img.shields.io/badge/Bun-%3E%3D%201.3-fb923c)](https://bun.sh)
 [![Rust](https://img.shields.io/badge/Rust-%3E%3D%201.77-dea584)](https://www.rust-lang.org)
 

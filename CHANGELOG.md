@@ -109,15 +109,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 ### Fixed
 - Corrected `read_file_header_bytes` position in `generate_handler`
 
-[v3.10.0]: https://github.com/user/open-factory/compare/v3.9.0...v3.10.0
-[v3.9.0]: https://github.com/user/open-factory/compare/v3.8.0...v3.9.0
-[v3.8.0]: https://github.com/user/open-factory/compare/v3.7.0...v3.8.0
-[v3.7.0]: https://github.com/user/open-factory/compare/v3.6.0...v3.7.0
-[v3.6.0]: https://github.com/user/open-factory/compare/v3.5.0...v3.6.0
-[v3.5.0]: https://github.com/user/open-factory/compare/v3.4.0...v3.5.0
-[v3.4.0]: https://github.com/user/open-factory/compare/v3.3.0...v3.4.0
-[v3.3.0]: https://github.com/user/open-factory/compare/v3.2.0...v3.3.0
-[v3.2.0]: https://github.com/user/open-factory/compare/v3.1.0...v3.2.0
-[v3.1.0]: https://github.com/user/open-factory/compare/v3.0.1...v3.1.0
-[v3.0.1]: https://github.com/user/open-factory/compare/v3.0.0...v3.0.1
-[v3.0.0]: https://github.com/user/open-factory/releases/tag/v3.0.0
+[v3.10.0]: https://github.com/a137460387/open-factory/compare/v3.9.0...v3.10.0
+[v3.9.0]: https://github.com/a137460387/open-factory/compare/v3.8.0...v3.9.0
+[v3.8.0]: https://github.com/a137460387/open-factory/compare/v3.7.0...v3.8.0
+[v3.7.0]: https://github.com/a137460387/open-factory/compare/v3.6.0...v3.7.0
+[v3.6.0]: https://github.com/a137460387/open-factory/compare/v3.5.0...v3.6.0
+[v3.5.0]: https://github.com/a137460387/open-factory/compare/v3.4.0...v3.5.0
+[v3.4.0]: https://github.com/a137460387/open-factory/compare/v3.3.0...v3.4.0
+[v3.3.0]: https://github.com/a137460387/open-factory/compare/v3.2.0...v3.3.0
+[v3.2.0]: https://github.com/a137460387/open-factory/compare/v3.1.0...v3.2.0
+[v3.1.0]: https://github.com/a137460387/open-factory/compare/v3.0.1...v3.1.0
+[v3.0.1]: https://github.com/a137460387/open-factory/compare/v3.0.0...v3.0.1
+[v3.0.0]: https://github.com/a137460387/open-factory/releases/tag/v3.0.0

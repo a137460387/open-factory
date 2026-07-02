@@ -4,7 +4,15 @@
   "version": "3.10.0",
   "private": true,
   "packageManager": "bun@1.3.14",
-  "description": "Local-first desktop video editor MVP.",
+  "description": "Local-first desktop video editor with AI-powered editing and plugin extensibility.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/a137460387/open-factory.git"
+  },
+  "homepage": "https://github.com/a137460387/open-factory#readme",
+  "bugs": {
+    "url": "https://github.com/a137460387/open-factory/issues"
+  },
   "type": "module",
   "workspaces": [
     "apps/*",
