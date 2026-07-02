@@ -125,7 +125,9 @@ EXIT_CODE=0
 
 该行无 `+` 或 `-` 前缀，是 diff 的上下文行（已有代码），不是本 commit 新增或修改的内容。`61d9fc82` 没有引入或变更 `MediaInfoState` 或其 `loading` 字段。
 
-**结论**：三个 P0-2 commit 的 diff 中，无任何新增或修改涉及 loading / isProcessing / spinner / pending。
+**`MediaInfoState.loading` 补充说明**：`MediaInfoState` 是 `MediaBin.tsx` 中已有的类型定义（`type MediaInfoState = { asset: MediaAsset; loading: boolean; analysis?: MediaAnalysis; error?: string }`），用于媒体信息面板的加载状态。该字段在 `61d9fc82` 的 diff 中作为上下文行出现，说明它在该 commit 之前已存在于代码中。这个 `loading` 是媒体信息面板的局部 UI 状态，与 `AiModuleResult.isProcessing` 无关，也与 P0-2 编号指向的功能（无论哪个版本）无关。
+
+**结论**：三个 P0-2 commit 的 diff 中，无任何新增或修改涉及 loading / isProcessing / spinner / pending。唯一的匹配（`MediaInfoState.loading`）是已有代码的上下文行，与本次排查目标无关。
 
 ---
 
