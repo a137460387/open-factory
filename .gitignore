@@ -23,6 +23,7 @@ coverage/
 **/coverage/
 playwright-report/
 test-results/
+*-trace.zip
 stress-test-report.json
 media-compat-report.json
 .nyc_output/
