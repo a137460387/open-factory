@@ -27,3 +27,11 @@ test('export queue recovery dialog is not rendered by default', async ({ page })
   const exportDialog = page.getByTestId('export-queue-recovery-dialog');
   expect(await exportDialog.count()).toBe(0);
 });
+
+test('project password dialog is not rendered by default', async ({ page }) => {
+  await page.goto('/');
+  await waitForE2eActions(page);
+
+  const passwordDialog = page.getByTestId('project-password-dialog');
+  expect(await passwordDialog.count()).toBe(0);
+});

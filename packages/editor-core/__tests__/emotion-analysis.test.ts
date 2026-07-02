@@ -229,3 +229,21 @@ describe('EMOTION_ACCURACY_DISCLAIMER', () => {
     expect(EMOTION_ACCURACY_DISCLAIMER).toContain('参考');
   });
 });
+
+describe('analyzeSubtitleEmotion - edge cases', () => {
+  it('returns neutral for empty text without throwing', () => {
+    const clip = makeSubtitleClip('empty', '');
+    const result = analyzeSubtitleEmotion(clip);
+    expect(result.emotion).toBe('neutral');
+    expect(result.confidence).toBe(1);
+    expect(result.scores.neutral).toBe(1);
+  });
+
+  it('handles clip with missing style field gracefully', () => {
+    // analyzeSubtitleEmotion only reads clip.text and clip.id, not style
+    const clip = { id: 'no-style', text: '普通文本' } as SubtitleClip;
+    const result = analyzeSubtitleEmotion(clip);
+    expect(result.emotion).toBe('neutral');
+    expect(result.clipId).toBe('no-style');
+  });
+});
