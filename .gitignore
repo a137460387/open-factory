@@ -95,6 +95,7 @@ parse_e2e.py
 !.example.cutproj.json
 goal-open-factory.md
 docs/internal/
+docs/plugin-api/
 package-lock.json
 
 *-report.json
