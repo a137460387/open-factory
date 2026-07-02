@@ -1609,6 +1609,19 @@ describe('project schema migration', () => {
     expect(migrateProjectFile(file).project.timeline.tracks[0].clips[0].emotionAnalysis).toBeUndefined();
   });
 
+  it('old project without emotionAnalysis on video clips remains undefined after migration', () => {
+    const project = makeProject();
+    const clip = makeVideoClip({ id: 'clip-no-emotion' });
+    project.timeline.tracks[0].clips = [clip];
+    project.sequences = [{ ...project.sequences[0], timeline: project.timeline }];
+
+    const file = serializeProject(project);
+    expect(file.project.timeline.tracks[0].clips[0].emotionAnalysis).toBeUndefined();
+
+    const migrated = migrateProjectFile(file);
+    expect(migrated.project.timeline.tracks[0].clips[0].emotionAnalysis).toBeUndefined();
+  });
+
   it('serializes and migrates ttsSegments with timingAdaptation while old projects default to empty', () => {
     const project = makeProject();
     (project as any).ttsSegments = [

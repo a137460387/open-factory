@@ -656,9 +656,10 @@ export function EditorShell() {
         setExportHistoryPanelOpen: setExportHistoryClassifierOpen,
         setMockSubtitleClips,
         setMockExportHistory,
+        setArchiveProgress,
       };
     }
-  }, [setFormatConverterOpen, setEmotionAnalysisOpen, setExportHistoryClassifierOpen]);
+  }, [setFormatConverterOpen, setEmotionAnalysisOpen, setExportHistoryClassifierOpen, setArchiveProgress]);
   const [autoAudioSyncRunning, setAutoAudioSyncRunning] = useState(false);
   const [autoAudioSyncPrimaryClipId, setAutoAudioSyncPrimaryClipId] = useState<string>();
   const [autoAudioSyncMode, setAutoAudioSyncMode] = useState<AutoAudioSyncApplyMode>('keep-secondary');
