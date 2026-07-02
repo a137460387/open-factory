@@ -51,9 +51,9 @@ export async function parseSubtitleStyleResponseSafe(
 ): Promise<AiModuleResult<SubtitleStyleAIResponse>> {
   try {
     const data = parseSubtitleStyleResponse(json);
-    return { data, error: null, isProcessing: false };
+    return { data, error: null };
   } catch {
-    return { data: { recommended: [] }, error: t('aiModules.error.parseFailed'), isProcessing: false };
+    return { data: { recommended: [] }, error: t('aiModules.error.parseFailed') };
   }
 }
 

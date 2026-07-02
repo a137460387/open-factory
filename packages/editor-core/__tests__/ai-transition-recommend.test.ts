@@ -220,7 +220,6 @@ describe('recommendTransitionSafe', () => {
   it('returns success result with data', async () => {
     const result = await recommendTransitionSafe(clipA, clipB);
     expect(result.error).toBeNull();
-    expect(result.isProcessing).toBe(false);
     expect(result.data.recommended.length).toBeGreaterThan(0);
   });
 
@@ -260,7 +259,6 @@ describe('recommendTransitionSafe', () => {
     }) as unknown as TransitionClipFeatures;
     const result = await recommendTransitionSafe(brokenClip, clipB);
     expect(result.error).not.toBeNull();
-    expect(result.isProcessing).toBe(false);
     expect(result.data.recommended).toEqual([]);
   });
 

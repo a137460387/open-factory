@@ -202,8 +202,8 @@ export async function parseQualityAssessmentResponseSafe(
 ): Promise<AiModuleResult<QualityAssessmentResult>> {
   try {
     const data = parseQualityAssessmentResponse(json);
-    return { data, error: null, isProcessing: false };
+    return { data, error: null };
   } catch {
-    return { data: { overallScore: 0, issues: [] }, error: t('aiModules.error.parseFailed'), isProcessing: false };
+    return { data: { overallScore: 0, issues: [] }, error: t('aiModules.error.parseFailed') };
   }
 }

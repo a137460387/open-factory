@@ -179,8 +179,8 @@ export async function parseSemanticSearchResponseSafe(
 ): Promise<AiModuleResult<SemanticSearchResult[]>> {
   try {
     const data = parseSemanticSearchResponse(json);
-    return { data, error: null, isProcessing: false };
+    return { data, error: null };
   } catch {
-    return { data: [], error: t('aiModules.error.parseFailed'), isProcessing: false };
+    return { data: [], error: t('aiModules.error.parseFailed') };
   }
 }

@@ -223,8 +223,8 @@ export async function parseSceneMatchResponseSafe(
 ): Promise<AiModuleResult<SceneMatchResponse>> {
   try {
     const data = parseSceneMatchResponse(json);
-    return { data, error: null, isProcessing: false };
+    return { data, error: null };
   } catch {
-    return { data: { similar: [], contrast: [] }, error: t('aiModules.error.parseFailed'), isProcessing: false };
+    return { data: { similar: [], contrast: [] }, error: t('aiModules.error.parseFailed') };
   }
 }

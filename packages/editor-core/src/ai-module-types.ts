@@ -16,5 +16,4 @@ export const identityTranslator: TranslateFn = (key) => key;
 export interface AiModuleResult<T> {
   data: T;
   error: string | null;
-  isProcessing: boolean;
 }

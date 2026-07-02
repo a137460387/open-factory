@@ -32,7 +32,6 @@ describe('parseSemanticSearchResponseSafe', () => {
     const json = { results: [{ mediaId: 'm1', score: 0.9, reason: '匹配' }] };
     const res = await parseSemanticSearchResponseSafe(json);
     expect(res.error).toBeNull();
-    expect(res.isProcessing).toBe(false);
     expect(res.data).toHaveLength(1);
   });
 
@@ -40,12 +39,6 @@ describe('parseSemanticSearchResponseSafe', () => {
     const res = await parseSemanticSearchResponseSafe(throwingProxy());
     expect(res.error).toBeTruthy();
     expect(res.data).toEqual([]);
-    expect(res.isProcessing).toBe(false);
-  });
-
-  it('isProcessing is always false after resolve', async () => {
-    const res = await parseSemanticSearchResponseSafe(null);
-    expect(res.isProcessing).toBe(false);
   });
 
   it('t() receives i18n key on error', async () => {
@@ -67,7 +60,6 @@ describe('parseSceneMatchResponseSafe', () => {
     const json = { similar: [{ mediaId: 'm1', score: 0.8, reason: '相似' }], contrast: [] };
     const res = await parseSceneMatchResponseSafe(json);
     expect(res.error).toBeNull();
-    expect(res.isProcessing).toBe(false);
     expect(res.data.similar.length).toBeGreaterThanOrEqual(1);
   });
 
@@ -75,11 +67,6 @@ describe('parseSceneMatchResponseSafe', () => {
     const res = await parseSceneMatchResponseSafe(throwingProxy());
     expect(res.error).toBeTruthy();
     expect(res.data).toEqual({ similar: [], contrast: [] });
-  });
-
-  it('isProcessing is always false', async () => {
-    const res = await parseSceneMatchResponseSafe(null);
-    expect(res.isProcessing).toBe(false);
   });
 
   it('t() receives i18n key on error', async () => {
@@ -101,7 +88,6 @@ describe('parseSubtitleStyleResponseSafe', () => {
     const json = { recommended: [{ templateId: 'news', reason: '适合', confidence: 0.9 }] };
     const res = await parseSubtitleStyleResponseSafe(json);
     expect(res.error).toBeNull();
-    expect(res.isProcessing).toBe(false);
     expect(res.data.recommended.length).toBeGreaterThanOrEqual(1);
   });
 
@@ -109,11 +95,6 @@ describe('parseSubtitleStyleResponseSafe', () => {
     const res = await parseSubtitleStyleResponseSafe(throwingProxy());
     expect(res.error).toBeTruthy();
     expect(res.data).toEqual({ recommended: [] });
-  });
-
-  it('isProcessing is always false', async () => {
-    const res = await parseSubtitleStyleResponseSafe(null);
-    expect(res.isProcessing).toBe(false);
   });
 
   it('t() receives i18n key on error', async () => {
@@ -135,7 +116,6 @@ describe('parseQualityAssessmentResponseSafe', () => {
     const json = { overallScore: 85, issues: [] };
     const res = await parseQualityAssessmentResponseSafe(json);
     expect(res.error).toBeNull();
-    expect(res.isProcessing).toBe(false);
     expect(res.data.overallScore).toBe(85);
   });
 
@@ -143,11 +123,6 @@ describe('parseQualityAssessmentResponseSafe', () => {
     const res = await parseQualityAssessmentResponseSafe(throwingProxy());
     expect(res.error).toBeTruthy();
     expect(res.data).toEqual({ overallScore: 0, issues: [] });
-  });
-
-  it('isProcessing is always false', async () => {
-    const res = await parseQualityAssessmentResponseSafe(null);
-    expect(res.isProcessing).toBe(false);
   });
 
   it('t() receives i18n key on error', async () => {
@@ -171,7 +146,6 @@ describe('recommendTransitionSafe', () => {
   it('success: returns data with error null', async () => {
     const res = await recommendTransitionSafe(clipA, clipB);
     expect(res.error).toBeNull();
-    expect(res.isProcessing).toBe(false);
     expect(res.data.recommended.length).toBeGreaterThanOrEqual(1);
   });
 
@@ -180,11 +154,6 @@ describe('recommendTransitionSafe', () => {
     const res = await recommendTransitionSafe(proxy as any, proxy as any);
     expect(res.error).toBeTruthy();
     expect(res.data).toEqual({ recommended: [] });
-  });
-
-  it('isProcessing is always false', async () => {
-    const res = await recommendTransitionSafe(clipA, clipB);
-    expect(res.isProcessing).toBe(false);
   });
 
   it('localizes reasons via t()', async () => {
@@ -210,7 +179,6 @@ describe('analyzeMotionTypeSafe', () => {
   it('success: returns data with error null', async () => {
     const res = await analyzeMotionTypeSafe([], 32, 32);
     expect(res.error).toBeNull();
-    expect(res.isProcessing).toBe(false);
     expect(res.data.motionType.type).toBe('static');
   });
 
@@ -220,11 +188,6 @@ describe('analyzeMotionTypeSafe', () => {
     expect(res.error).toBeTruthy();
     expect(res.data.motionType.type).toBe('static');
     expect(res.data.motionType.confidence).toBe(0);
-  });
-
-  it('isProcessing is always false', async () => {
-    const res = await analyzeMotionTypeSafe([], 32, 32);
-    expect(res.isProcessing).toBe(false);
   });
 
   it('t() receives i18n key on error', async () => {
@@ -254,7 +217,6 @@ describe('checkColorConsistencySafe', () => {
   it('success: returns data with error null', async () => {
     const res = await checkColorConsistencySafe(validInput);
     expect(res.error).toBeNull();
-    expect(res.isProcessing).toBe(false);
     expect(res.data).not.toBeNull();
   });
 
@@ -263,11 +225,6 @@ describe('checkColorConsistencySafe', () => {
     const res = await checkColorConsistencySafe(proxy as any);
     expect(res.error).toBeTruthy();
     expect(res.data).toBeNull();
-  });
-
-  it('isProcessing is always false', async () => {
-    const res = await checkColorConsistencySafe(validInput);
-    expect(res.isProcessing).toBe(false);
   });
 
   it('t() receives i18n key on error', async () => {
@@ -290,7 +247,6 @@ describe('computeTimingAdaptationSafe', () => {
   it('success: returns data with error null', async () => {
     const res = await computeTimingAdaptationSafe(10, 11);
     expect(res.error).toBeNull();
-    expect(res.isProcessing).toBe(false);
     expect(res.data.adaptationType).toBe('none');
   });
 
@@ -300,11 +256,6 @@ describe('computeTimingAdaptationSafe', () => {
     expect(res.error).toBeTruthy();
     expect(res.data.adaptationType).toBe('none');
     expect(res.data.durationDelta).toBe(0);
-  });
-
-  it('isProcessing is always false', async () => {
-    const res = await computeTimingAdaptationSafe(10, 11);
-    expect(res.isProcessing).toBe(false);
   });
 
   it('t() receives i18n key on error', async () => {

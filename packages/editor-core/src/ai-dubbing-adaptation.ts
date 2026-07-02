@@ -129,12 +129,11 @@ export async function computeTimingAdaptationSafe(
 ): Promise<AiModuleResult<TimingAdaptation>> {
   try {
     const data = computeTimingAdaptation(originalDuration, dubbedDuration, nextSegmentStart);
-    return { data, error: null, isProcessing: false };
+    return { data, error: null };
   } catch {
     return {
       data: { durationDelta: 0, adaptationType: 'none', atempoRatio: null, suggestedOutPoint: null },
       error: t('aiModules.error.computationFailed'),
-      isProcessing: false,
     };
   }
 }

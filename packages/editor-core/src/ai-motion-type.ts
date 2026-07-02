@@ -313,12 +313,11 @@ export async function analyzeMotionTypeSafe(
 ): Promise<AiModuleResult<{ motionType: ClipMotionType; vectorField: MotionVectorField }>> {
   try {
     const data = analyzeMotionType(frames, width, height, gridSize, searchRadius);
-    return { data, error: null, isProcessing: false };
+    return { data, error: null };
   } catch {
     return {
       data: { motionType: { type: 'static', confidence: 0, analyzedAt: '' }, vectorField: { vectors: [] } },
       error: t('aiModules.error.computationFailed'),
-      isProcessing: false,
     };
   }
 }

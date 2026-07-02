@@ -174,8 +174,8 @@ export async function recommendTransitionSafe(
         reason: t(REASON_KEY_MAP[r.reason] ?? r.reason),
       })),
     };
-    return { data: localized, error: null, isProcessing: false };
+    return { data: localized, error: null };
   } catch {
-    return { data: { recommended: [] }, error: t('aiModules.error.computationFailed'), isProcessing: false };
+    return { data: { recommended: [] }, error: t('aiModules.error.computationFailed') };
   }
 }

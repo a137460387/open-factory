@@ -103,8 +103,8 @@ export async function checkColorConsistencySafe(
 ): Promise<AiModuleResult<ColorConsistencyResult | null>> {
   try {
     const data = checkColorConsistency(input);
-    return { data, error: null, isProcessing: false };
+    return { data, error: null };
   } catch {
-    return { data: null, error: t('aiModules.error.computationFailed'), isProcessing: false };
+    return { data: null, error: t('aiModules.error.computationFailed') };
   }
 }
