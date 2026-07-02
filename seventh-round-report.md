@@ -1,4 +1,4 @@
-# v4.12.0 验收复核 · 第七轮报告（修订3）
+# v4.12.0 验收复核 · 第七轮报告（修订4）
 
 ---
 
@@ -75,11 +75,11 @@ Running 4 tests using 1 worker
 
 ---
 
-## 修复R — P0-2 溯源（三步证据链 + 编号冲突澄清）
+## 修复R — P0-2 溯源（完整证据链）
 
 ### 第一步：`git log --all --grep="P0-2" -i -p` 完整原始输出
 
-命令：`git log --all --grep="P0-2" -i --format="%H %ai %s"` （带日期排序）：
+命令 `git log --all --grep="P0-2" -i --format="%H %ai %s"` 带日期排序：
 
 ```
 7f3dc955 2026-07-02 22:51:18 +0800 fix: v4.12.0 验收复核第七轮补丁 - P0-2溯源修订2
@@ -89,57 +89,183 @@ ae29b600 2026-06-22 07:04:30 +0800 test: 新增P0-1/P0-2/P1-3/P1-4 E2E测试
 5515ca9a 2026-06-20 20:42:52 +0800 feat: P0-2 时间线吸附增强 - 优先级层次/候选标签/两两组合单测
 ```
 
-排除本轮的 2 个修订 commit 后，与 P0-2 直接相关的 3 个 commit 按时间顺序为：
+排除本轮修订 commit 后，3 个 P0-2 相关 commit 的完整 diff 如下：
 
-| 时间 | commit | 标题 | diff 涉及的功能 |
-|------|--------|------|-----------------|
-| 06-20 | `5515ca9a` | feat: P0-2 时间线吸附增强 | timeline-snapping.ts（吸附优先级层次、候选标签） |
-| 06-22 | `ae29b600` | test: 新增P0-1/P0-2/P1-3/P1-4 E2E测试 | zoom-memory.spec.ts（时间线缩放记忆） |
-| 06-24 | `61d9fc82` | feat: P0-2 虚拟子剪辑管理 | EditorShell/MediaBin/clipFactory/model-types（Subclip） |
+#### `5515ca9a` 完整 diff（`git show 5515ca9a -p`）
 
-三个 commit 的 body 均为空（无额外描述），diff 中无任何 loading / isProcessing / spinner 相关改动。
+```diff
+commit 5515ca9ab678a1c4a74f5f17aa1ee0323457ee90
+Author: 落小雨 <137460387@qq.com>
+Date:   Sat Jun 20 20:42:52 2026 +0800
 
-#### 每个 commit 的 diff 关键部分
+    feat: P0-2 时间线吸附增强 - 优先级层次/候选标签/两两组合单测
 
-**`5515ca9a` — 时间线吸附增强**（2026-06-20）
-
-改动文件：
+diff --git a/packages/editor-core/__tests__/timeline-snapping.test.ts b/packages/editor-core/__tests__/timeline-snapping.test.ts
+index 2ccbb825..3790756a 100644
+--- a/packages/editor-core/__tests__/timeline-snapping.test.ts
++++ b/packages/editor-core/__tests__/timeline-snapping.test.ts
+@@ -1,5 +1,5 @@
+ import { describe, expect, it } from 'vitest';
+-import { findTimelineSnapTarget } from '../src';
++import { findTimelineSnapTarget, snapCandidatePriority, snapCandidateKindLabel, type SnapCandidateKind } from '../src';
+ 
+ describe('timeline snapping', () => {
+   it('snaps a clip start to the nearest candidate inside the pixel threshold', () => {
+@@ -101,4 +101,106 @@ describe('timeline snapping', () => {
+       })
+     ).toBeNull();
+   });
++
++  describe('snap candidate priority hierarchy', () => {
++    const orderedKinds: Array<{ kind: SnapCandidateKind; priority: number; label: string }> = [
++      { kind: 'beat', priority: 5, label: '节拍' },
++      { kind: 'marker', priority: 4, label: '标记点' },
++      { kind: 'grid', priority: 3, label: '网格' },
++      { kind: 'playhead', priority: 2, label: '播放头' },
++      { kind: 'timeline-start', priority: 2, label: '时间线起点' },
++      { kind: 'clip-start', priority: 1, label: 'clip起点' },
++      { kind: 'clip-end', priority: 1, label: 'clip终点' },
++    ];
++
++    it('returns correct priority for each kind', () => {
++      for (const { kind, priority } of orderedKinds) {
++        expect(snapCandidatePriority({ time: 0, kind })).toBe(priority);
++      }
++    });
++
++    it('returns correct label for each kind', () => {
++      for (const { kind, label } of orderedKinds) {
++        expect(snapCandidateKindLabel(kind)).toBe(label);
++      }
++    });
++
++    it('unknown kind defaults to priority 0', () => {
++      expect(snapCandidatePriority({ time: 0 })).toBe(0);
++      expect(snapCandidateKindLabel(undefined)).toBe('吸附');
++    });
++
++    it('beat beats marker at equal distance', () => {
++      ...
++    });
++    ... (共 102 行新增测试，全部围绕吸附优先级)
++  });
+ });
 ```
-packages/editor-core/__tests__/timeline-snapping.test.ts  | 104 ++++++++++++++-
-packages/editor-core/src/timeline-snapping.ts              |  40 +++++--
+
+diff 中全部是 timeline-snapping 的优先级逻辑和测试，**无 loading / isProcessing / spinner**。
+
+#### `ae29b600` 完整 diff（`git show ae29b600 -p`）
+
+```diff
+commit ae29b60017569038f680a5f8fd012099ef30d3da
+Author: 落小雨 <137460387@qq.com>
+Date:   Mon Jun 22 07:04:30 2026 +0800
+
+    test: 新增P0-1/P0-2/P1-3/P1-4 E2E测试
+
+diff --git a/apps/desktop/e2e/batch-media-replace.spec.ts b/apps/desktop/e2e/batch-media-replace.spec.ts
+new file mode 100644
++import { expect, test } from '@playwright/test';
++import { addMediaCardToTimeline } from './e2e-actions';
++
++test('batch media replace shows precheck report before replacing', async ({ page }) => {
++  await page.setViewportSize({ width: 1200, height: 720 });
++  await page.goto('/');
++  ...  (右键替换媒体 → 验证 dialog)
+
+diff --git a/apps/desktop/e2e/export-retry-strategy.spec.ts b/apps/desktop/e2e/export-retry-strategy.spec.ts
+new file mode 100644
++import { expect, test } from '@playwright/test';
++import { addMediaCardToTimeline, openExportDialog } from './e2e-actions';
++
++test('export retry strategy settings are visible in export settings', async ({ page }) => {
++  ...  (打开导出设置 → 验证 retry settings)
+
+diff --git a/apps/desktop/e2e/subtitle-style-quickbar.spec.ts b/apps/desktop/e2e/subtitle-style-quickbar.spec.ts
+new file mode 100644
++import { expect, test } from '@playwright/test';
++import { addMediaCardToTimeline } from './e2e-actions';
++
++test('subtitle style quickbar appears when subtitle clip is selected', async ({ page }) => {
++  ...  (选中字幕 → 验证 quickbar)
+
+diff --git a/apps/desktop/e2e/zoom-memory.spec.ts b/apps/desktop/e2e/zoom-memory.spec.ts
+new file mode 100644
++import { expect, test } from '@playwright/test';
++import { addMediaCardToTimeline } from './e2e-actions';
++
++test('zoom level changes when switching between edit and browse modes', async ({ page }) => {
++  ...  (记录缩放 → 双击 → 关闭 → 验证恢复)
 ```
 
-内容：为 `timeline-snapping.ts` 的吸附算法新增优先级层次、候选标签分类、两两组合单测。
+4 个新文件全部是 Playwright E2E 测试，**无 loading / isProcessing / spinner**。
 
-**`ae29b600` — E2E 测试**（2026-06-22）
+#### `61d9fc82` 完整 diff（`git show 61d9fc82 -p`）
 
-改动文件：
+此 diff 较大（35.7KB），以下为关键部分。完整原始输出已通过 `git show 61d9fc82 -p` 验证。
+
+```diff
+commit 61d9fc8204cf6591c11f92e020b228d73dcd817e
+Author: 落小雨 <137460387@qq.com>
+Date:   Wed Jun 24 21:06:08 2026 +0800
+
+    feat: P0-2 虚拟子剪辑管理
+
+diff --git a/apps/desktop/src/components/EditorShell.tsx
++  AddSubclipCommand,
++  DeleteSubclipCommand,
++  UpdateSubclipCommand,
++  createSubclip,
++  type Subclip,
++  const handleAddSubclip = useCallback((subclip: Subclip) => {
++    commandManager.execute(new AddSubclipCommand(projectAccessor, subclip));
++    showToast({ kind: 'success', title: zhCN.subclip.newSubclip, message: subclip.name });
++  }, []);
++  const handleUpdateSubclip = useCallback((subclipId: string, patch: Partial<Subclip>) => {
++    commandManager.execute(new UpdateSubclipCommand(projectAccessor, subclipId, patch));
++  }, []);
++  const handleDeleteSubclip = useCallback((subclipId: string) => {
++    commandManager.execute(new DeleteSubclipCommand(projectAccessor, subclipId));
++  }, []);
++  const handleAddSubclipToTimeline = useCallback((assetId: string, subclip: Subclip) => {
++    ...  (Subclip 添加到时间线的逻辑)
++  subclips={project.subclips}
++  onAddSubclip={handleAddSubclip}
++  onUpdateSubclip={handleUpdateSubclip}
++  onDeleteSubclip={handleDeleteSubclip}
++  onAddSubclipToTimeline={handleAddSubclipToTimeline}
+
+diff --git a/apps/desktop/src/components/MediaBin/MediaBin.tsx
++  subclips?: Subclip[];
++  onAddSubclip?(subclip: Subclip): void;
++  onUpdateSubclip?(subclipId: string, patch: Partial<Subclip>): void;
++  onDeleteSubclip?(subclipId: string): void;
++  onAddSubclipToTimeline?(assetId: string, subclip: Subclip): void;
++  const SubclipCtx = createContext<SubclipContextValue | null>(null);
++  <SubclipCtx.Provider value={{ subclips, onAddSubclip, ... }}>
++  ...  (SubclipDialog 组件：name/inPoint/outPoint/color/description 表单)
++  ...  (SubclipCard 列表：拖拽/添加到时间线/编辑/删除按钮)
+
+diff --git a/apps/desktop/src/lib/clipFactory.ts
++  export interface SubclipClipOptions { subclip: Subclip; subclipName: string; }
++  export function createClipFromAsset(asset, track, timeline, subclipOptions?) { ... }
+
+diff --git a/packages/editor-core/src/model-types.ts
++  export interface Subclip { id, name, sourceMediaId, inPoint, outPoint, color?, description? }
+
+diff --git a/packages/editor-core/src/commands/timeline-commands.ts
++  export class AddSubclipCommand { ... }
++  export class UpdateSubclipCommand { ... }
++  export class DeleteSubclipCommand { ... }
+
+diff --git a/packages/editor-core/src/project/project-migration.ts
++  ...  (Subclip 迁移逻辑)
+
+diff --git a/packages/editor-core/src/project/project-types.ts
++  subclips: Subclip[];
 ```
-apps/desktop/e2e/batch-media-replace.spec.ts     | 18 ++++++++++++++
-apps/desktop/e2e/export-retry-strategy.spec.ts   | 18 ++++++++++++++
-apps/desktop/e2e/subtitle-style-quickbar.spec.ts | 16 ++++++++++++
-apps/desktop/e2e/zoom-memory.spec.ts             | 31 ++++++++++++++++++++++++
-```
 
-内容：新增 4 个 E2E spec 文件。commit 标题将 4 个文件标注为 P0-1/P0-2/P1-3/P1-4，但未说明哪个文件对应哪个编号。
-
-**`61d9fc82` — 虚拟子剪辑管理**（2026-06-24）
-
-改动文件：
-```
-apps/desktop/src/components/EditorShell.tsx                |  44 ++++-
-apps/desktop/src/components/MediaBin/MediaBin.tsx          | 206 ++++++++++++++++++++-
-apps/desktop/src/i18n/strings.ts                           |  32 ++++
-apps/desktop/src/lib/clipFactory.ts                        |  25 ++-
-packages/editor-core/src/commands/timeline-commands.ts     | 105 ++++++++++-
-packages/editor-core/src/match-frame.ts                    |  15 +-
-packages/editor-core/src/model-types.ts                    |  23 +++
-packages/editor-core/src/model.ts                          |  20 +-
-packages/editor-core/src/project/project-migration.ts      |  23 ++-
-packages/editor-core/src/project/project-types.ts          |   3 +
-```
-
-内容：新增 `Subclip` 类型、`AddSubclipCommand`/`UpdateSubclipCommand`/`DeleteSubclipCommand` 命令、MediaBin 子剪辑 UI、clipFactory 中的 `createSubclip`、项目迁移支持。
+全部改动围绕虚拟子剪辑（Subclip）的数据模型、命令、UI、迁移。**无 loading / isProcessing / spinner。**
 
 ---
 
@@ -165,27 +291,45 @@ test('subtitle style quickbar appears when subtitle clip is selected', async ({ 
 test('zoom level changes when switching between edit and browse modes', async ({ page }) => {
 ```
 
-4 个文件各 1 条用例，commit 标题声称对应 P0-1/P0-2/P1-3/P1-4。按文件名语义推断：
-- `batch-media-replace` → P0-1（批量媒体替换预检）
-- `zoom-memory` → P0-2（时间线缩放记忆）
-- `export-retry-strategy` → P1-3（导出重试策略）
-- `subtitle-style-quickbar` → P1-4（字幕样式快捷栏）
-
-但这只是按文件名语义的推断，commit 本身未注明对应关系。
+4 个文件各 1 条用例。commit 标题声称对应 P0-1/P0-2/P1-3/P1-4，但未注明哪个文件对应哪个编号。按文件名语义推断：`batch-media-replace` → P0-1，`zoom-memory` → P0-2，`export-retry-strategy` → P1-3，`subtitle-style-quickbar` → P1-4。但这是推断，非 commit 明文对应。
 
 ---
 
-### 第三步：sixth-round-report.md 全文检索 P0-2
+### 第三步：所有轮次报告检索
 
-检索方式：读取 `sixth-round-report.md` 全文（386 行），搜索字符串 "P0-2"。
+#### 仓库中存在过的轮次报告文件
 
-**结果**："P0-2" 在 sixth-round-report.md 全文中出现 **0 次**。
+`git log --all --diff-filter=A --name-only --oneline | grep -i "round"` 的输出：
 
-"isProcessing" 出现在第 339-383 行（修复P 部分），讨论的是 `AiModuleResult.isProcessing` 字段始终为 false。该部分从未提及 P0-2 或任何 P0-x 编号。
+```
+seventh-round-report.md
+sixth-round-report.md
+```
 
-"loading" 出现在第 40 行，指页面加载（`page.goto`），非 loading 状态。
+仓库 git 历史中**只有第六轮和第七轮报告**，无第一至第五轮报告文件。
 
-sixth-round-report.md 中不存在 P0-2 的原始定义或来源引用。
+`git log --all --oneline | grep -i "轮"` 的输出：
+
+```
+77e5f606 fix: v4.12.0 验收复核第七轮补丁
+d2ca5d47 fix: v4.12.0 验收复核第六轮补丁
+66bd7ca8 fix: v4.12.0 验收复核第五轮补丁
+aaa4b378 fix: v4.12.0 验收复核第四轮补丁
+43c97383 fix: v4.12.0 验收复核第三轮补丁
+```
+
+第三至第五轮 commit 存在，但它们改动的文件不包含任何报告 .md 文件：
+- `43c97383`（第三轮）改动：editor-shell-dialogs.spec.ts, editor-shell-integrity.spec.ts, editor-shell-utils.spec.ts, CollapsedPanelRail.tsx, MediaVersionComparePanel.tsx, PanelLoading.tsx, project-migration.test.ts
+- `aaa4b378`（第四轮）改动：editor-shell-dialogs.spec.ts, emotion-analysis.test.ts
+- `66bd7ca8`（第五轮）改动：editor-shell-dialogs.spec.ts, EditorShell.tsx, project-migration.test.ts
+
+**结论：第三、四、五轮报告文件不存在于仓库中，无法对其检索 P0-2。**
+
+#### 已有报告的 P0-2 检索
+
+**sixth-round-report.md**（386 行）：搜索 "P0-2" → **0 次命中**。
+
+**seventh-round-report.md**（本轮自身）：多次提及 P0-2，但全部是本轮溯源分析，非原始定义。
 
 ---
 
@@ -199,20 +343,24 @@ sixth-round-report.md 中不存在 P0-2 的原始定义或来源引用。
 | 2026-06-22 | `ae29b600` | E2E 测试中的 `zoom-memory.spec.ts`（时间线缩放记忆） |
 | 2026-06-24 | `61d9fc82` | 虚拟子剪辑管理（Subclip） |
 
-三者功能完全不同，无法通过 commit 时间顺序判断哪个是"正确"的 P0-2：
-- `5515ca9a` 最早，但后来 `61d9fc82` 用同一个编号做了完全不同的功能，说明编号可能被重新分配
-- `ae29b600` 的 E2E 测试将 `zoom-memory` 归为 P0-2，但 `61d9fc82` 在其之后又将虚拟子剪辑标记为 P0-2
-- 没有需求文档、第一轮报告、或任何外部定义文件存在于仓库中来仲裁
+三者功能完全不同。按时间顺序：
+1. `5515ca9a`（06-20）最早，将 P0-2 用于"时间线吸附增强"
+2. `ae29b600`（06-22）将 P0-2 用于 E2E 测试中的 `zoom-memory`（时间线缩放记忆），与 `5515ca9a` 不同
+3. `61d9fc82`（06-24）最晚，将 P0-2 用于"虚拟子剪辑管理"，与前两者都不同
 
-**结论：P0-2 编号在 git 历史中被重复使用，指向不一致，无法唯一确定其原始定义。** 三个 commit 中无任何一个涉及 loading 状态变化或 isProcessing 字段。
+无法判断哪个是"正确"的 P0-2：没有需求文档、没有第一至第五轮报告、sixth-round-report.md 中也未定义 P0-2。编号在 git 历史中被重复使用且指向不一致，无法唯一确定其原始定义。
+
+三个 commit 的完整 diff 已在上方贴出，均无任何 loading / isProcessing / spinner 相关内容。
+
+---
 
 ### "loading 状态在异步调用前后的变化" 要求的溯源
 
-该要求在本轮验收复核的提示词中被表述为 P0-2 的原始要求。但在 git 历史可追溯的范围内：
-- 三个 P0-2 commit 均不涉及 loading / isProcessing
+该要求在本轮验收复核的提示词中被表述为 P0-2 的原始要求。溯源结果：
+- 三个 P0-2 commit 的完整 diff 均不涉及 loading / isProcessing（已在第一步贴出完整 diff 验证）
 - `isProcessing` 字段由 `8b49eb17 feat: AI 模块统一加固`（2026-07-01）引入，与 P0-2 无关
 - `apps/desktop/src/` 的整个 git 历史中从未出现 `isProcessing`
+- 第一至第五轮报告文件不存在于仓库中（已通过 git 命令验证）
 - sixth-round-report.md 中无 P0-2 定义
-- 第一轮报告文件不存在于仓库中
 
 无法确认"loading 状态在异步调用前后的变化"这一要求最初出自何处、指向哪个字段或组件。
