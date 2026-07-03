@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { Cloud, Download, FilePlus, FolderOpen, GripVertical, Play, RotateCcw, Save, SlidersHorizontal, Star, Trash2, X, XCircle } from 'lucide-react';
 import {
   buildProxyInventory,
@@ -2953,6 +2953,16 @@ function AppearanceSettingsPanel({
     activeThemeId: '__preview-custom-theme',
     customThemes: [{ id: '__preview-custom-theme', name: customName || t.defaultCustomName, colors: customColors }]
   });
+  const activeThemePreviewStyle: CSSProperties = useMemo(() => ({
+    borderColor: activeTheme.colors.border,
+    backgroundColor: activeTheme.colors.bgPrimary,
+    color: activeTheme.colors.textPrimary
+  }), [activeTheme.colors.border, activeTheme.colors.bgPrimary, activeTheme.colors.textPrimary]);
+  const previewThemeStyle: CSSProperties = useMemo(() => ({
+    borderColor: previewTheme.colors.border,
+    backgroundColor: previewTheme.colors.bgPrimary,
+    color: previewTheme.colors.textPrimary
+  }), [previewTheme.colors.border, previewTheme.colors.bgPrimary, previewTheme.colors.textPrimary]);
   return (
     <div className="space-y-4">
       <div>
@@ -2984,11 +2994,7 @@ function AppearanceSettingsPanel({
         data-testid="theme-preview"
         data-active-theme={activeTheme.id}
         data-live-theme={liveTheme.id}
-        style={{
-          borderColor: activeTheme.colors.border,
-          backgroundColor: activeTheme.colors.bgPrimary,
-          color: activeTheme.colors.textPrimary
-        }}
+        style={activeThemePreviewStyle}
       >
         <div className="text-xs font-semibold">{activeTheme.name}</div>
         <div className="mt-2 grid grid-cols-4 gap-2">
@@ -3024,11 +3030,7 @@ function AppearanceSettingsPanel({
         </div>
         <div
           className="mt-3 rounded-md border p-3 text-xs"
-          style={{
-            borderColor: previewTheme.colors.border,
-            backgroundColor: previewTheme.colors.bgPrimary,
-            color: previewTheme.colors.textPrimary
-          }}
+          style={previewThemeStyle}
         >
           <div className="font-semibold">{customName || t.defaultCustomName}</div>
           <div className="mt-2 flex gap-2">
