@@ -284,6 +284,20 @@ import {
   type SubtitleLanguageOption,
 } from './lib/exportSettingsHelpers';
 
+import {
+  buildExportJobs,
+  delay,
+  formatDuration,
+  formatExportRangeSummary,
+  pipelineStatusClass,
+  resolveActiveExportRanges,
+  resolveInOutExportRanges,
+  resolveSelectedClipExportRange,
+  updatePipelineStatus,
+  type ExportJob,
+  type ExportRangeMode,
+} from './lib/pipelineHelpers';
+
 interface ExportDialogProps {
   project: Project;
   initialPreset?: ExportPreset;
@@ -295,7 +309,6 @@ interface ExportDialogProps {
   onRelinkMissing?(): void;
 }
 
-type ExportRangeMode = 'all' | 'in-out' | 'selected-clips';
 type ExportMode = 'single' | 'version-batch' | 'sequence-batch' | 'codec-compare' | 'pipeline' | 'stem';
 type SequenceBatchPresetMode = 'shared' | 'individual';
 type VersionWatermarkMode = 'inherit' | 'none' | 'text';
@@ -316,16 +329,6 @@ interface VersionedExportRowState {
   watermarkMode: VersionWatermarkMode;
 }
 
-interface ExportJob {
-  outputPath: string;
-  range?: ExportRenderRange | null;
-  project?: Project;
-  settings?: ExportPresetSettings;
-  metadata?: ExportProject['metadata'];
-  versionedBatch?: VersionedExportTaskMetadata;
-  presetName?: string;
-  sequenceName?: string;
-}
 
 type ExportWarmupUiStatus = { status: 'running' | 'complete' | 'cached'; step?: ExportWarmupStepId };
 
@@ -2978,84 +2981,7 @@ async function runProxyGenerationWarmup(project: Project): Promise<void> {
   }
 }
 
-function resolveInOutExportRanges(project: Project, inPoint: number | undefined, outPoint: number | undefined): NormalizedExportRenderRange[] {
-  const timelineDuration = getTimelinePlaybackDuration(project.timeline);
-  const fps = project.settings.fps || 30;
-  const stored = normalizeExportRanges(project.exportRanges, timelineDuration).flatMap((range) => {
-    const normalized = normalizeExportRenderRange(
-      {
-        id: range.id,
-        label: range.label,
-        start: range.start,
-        duration: range.end - range.start
-      },
-      timelineDuration,
-      fps
-    );
-    return normalized ? [normalized] : [];
-  });
-  if (stored.length > 0) {
-    return stored;
-  }
-  const current = exportRenderRangeFromPoints(inPoint, outPoint, timelineDuration, fps, { id: 'current-in-out', label: zhCN.timeline.exportRangeLabel(1) });
-  return current ? [current] : [];
-}
 
-function resolveSelectedClipExportRange(project: Project, selectedClipIds: string[]): NormalizedExportRenderRange | null {
-  const selected = new Set(selectedClipIds);
-  if (selected.size === 0) {
-    return null;
-  }
-  const clips = project.timeline.tracks.flatMap((track) => track.clips).filter((clip) => selected.has(clip.id));
-  if (clips.length === 0) {
-    return null;
-  }
-  const start = Math.min(...clips.map((clip) => clip.start));
-  const end = Math.max(...clips.map((clip) => clip.start + clip.duration));
-  return exportRenderRangeFromPoints(start, end, getTimelinePlaybackDuration(project.timeline), project.settings.fps || 30, {
-    id: 'selected-clips',
-    label: zhCN.exportDialog.range.options['selected-clips']
-  });
-}
-
-function resolveActiveExportRanges(
-  mode: ExportRangeMode,
-  inOutRanges: NormalizedExportRenderRange[],
-  selectedClipRange: NormalizedExportRenderRange | null
-): NormalizedExportRenderRange[] {
-  if (mode === 'in-out') {
-    return inOutRanges;
-  }
-  if (mode === 'selected-clips') {
-    return selectedClipRange ? [selectedClipRange] : [];
-  }
-  return [];
-}
-
-function buildExportJobs(paths: string[], ranges: NormalizedExportRenderRange[]): ExportJob[] {
-  if (ranges.length === 0) {
-    return paths.map((path) => ({ outputPath: path, range: null }));
-  }
-  if (ranges.length === 1) {
-    return paths.map((path) => ({ outputPath: path, range: ranges[0] }));
-  }
-  if (paths.length >= ranges.length) {
-    return ranges.map((range, index) => ({ outputPath: paths[index], range }));
-  }
-  const basePath = paths[0];
-  return ranges.map((range, index) => ({
-    outputPath: appendExportRangeSequence(basePath, index + 1, ranges.length),
-    range
-  }));
-}
-
-function updatePipelineStatus(
-  statuses: Record<string, ExportPipelineNodeStatus>,
-  nodeId: string,
-  status: ExportPipelineNodeStatus
-): Record<string, ExportPipelineNodeStatus> {
-  return { ...statuses, [nodeId]: status };
-}
 
 async function waitForExportTasks(taskIds: string[]): Promise<void> {
   const ids = new Set(taskIds);
@@ -3071,46 +2997,6 @@ async function waitForExportTasks(taskIds: string[]): Promise<void> {
     await delay(100);
   }
   throw new Error(zhCN.exportDialog.pipeline.timeout);
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => window.setTimeout(resolve, ms));
-}
-
-function pipelineStatusClass(status: ExportPipelineNodeStatus): string {
-  if (status === 'complete') {
-    return 'border-emerald-200 bg-emerald-50 text-emerald-700';
-  }
-  if (status === 'failed') {
-    return 'border-rose-200 bg-rose-50 text-rose-700';
-  }
-  if (status === 'running') {
-    return 'border-blue-200 bg-blue-50 text-blue-700';
-  }
-  if (status === 'skipped') {
-    return 'border-slate-200 bg-slate-50 text-slate-500';
-  }
-  return 'border-slate-200 bg-white text-slate-600';
-}
-
-function formatExportRangeSummary(
-  mode: ExportRangeMode,
-  ranges: NormalizedExportRenderRange[],
-  selectedClipRange: NormalizedExportRenderRange | null
-): string {
-  if (mode === 'all') {
-    return zhCN.exportDialog.range.allSummary;
-  }
-  if (mode === 'selected-clips' && !selectedClipRange) {
-    return zhCN.exportDialog.range.unavailable;
-  }
-  if (ranges.length === 0) {
-    return zhCN.exportDialog.range.unavailable;
-  }
-  if (ranges.length === 1) {
-    return zhCN.exportDialog.range.singleSummary(formatDuration(ranges[0].start), formatDuration(ranges[0].duration));
-  }
-  return zhCN.exportDialog.range.multiSummary(ranges.length);
 }
 
 async function runCompletionAction(action: ExportCompletionAction, settings: ExportBackgroundSettings): Promise<void> {
@@ -4535,12 +4421,6 @@ function formatPlatformPresetName(platformPreset: PreflightResult['platformPrese
   return zhCN.exportDialog.preset;
 }
 
-function formatDuration(value: number | undefined): string {
-  if (typeof value !== 'number' || !Number.isFinite(value)) {
-    return zhCN.common.unavailable;
-  }
-  return `${Math.round(value * 10) / 10}s`;
-}
 
 function formatCostDuration(value: number | undefined): string {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
