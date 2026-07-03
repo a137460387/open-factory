@@ -4,6 +4,7 @@ use lettre::{Message, SmtpTransport, Transport};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use std::net::IpAddr;
 use std::time::Duration;
 
 #[derive(Debug, Deserialize)]
@@ -49,7 +50,7 @@ pub async fn post_webhook_json(request: WebhookJsonRequest) -> Result<WebhookJso
         .build()
         .map_err(|error| error.to_string())?;
     let response = client
-        .post(parse_webhook_url(&request.url)?)
+        .post(parse_webhook_url(&request.url).await?)
         .headers(build_headers(request.headers)?)
         .json(&request.body)
         .send()
@@ -100,11 +101,56 @@ fn send_smtp_email_blocking(request: SmtpEmailRequest) -> Result<(), String> {
         .map_err(|error| format!("Unable to send SMTP email: {}", error))
 }
 
-fn parse_webhook_url(url: &str) -> Result<reqwest::Url, String> {
+async fn parse_webhook_url(url: &str) -> Result<reqwest::Url, String> {
     let parsed = reqwest::Url::parse(url.trim()).map_err(|error| error.to_string())?;
     match parsed.scheme() {
-        "https" | "http" => Ok(parsed),
-        _ => Err("Webhook URL must use http or https.".to_string()),
+        "https" | "http" => {}
+        _ => return Err("Webhook URL must use http or https.".to_string()),
+    }
+    let host = parsed
+        .host_str()
+        .ok_or_else(|| "Webhook URL has no host.".to_string())?;
+    let port = parsed.port_or_known_default().unwrap_or(80);
+    let addrs: Vec<IpAddr> = tokio::net::lookup_host((host, port))
+        .await
+        .map_err(|error| format!("Failed to resolve webhook host: {}", error))?
+        .map(|addr| addr.ip())
+        .collect();
+    if addrs.is_empty() {
+        return Err("Webhook host resolved to no addresses.".to_string());
+    }
+    for ip in &addrs {
+        if is_private_ip(*ip) {
+            return Err(format!(
+                "Webhook URL resolves to a private/reserved IP address ({}). SSRF blocked.",
+                ip
+            ));
+        }
+    }
+    Ok(parsed)
+}
+
+fn is_private_ip(ip: IpAddr) -> bool {
+    match ip {
+        IpAddr::V4(v4) => {
+            v4.is_loopback()
+                || v4.is_private()
+                || v4.is_link_local()
+                || v4.is_broadcast()
+                || v4.is_unspecified()
+                || v4.octets()[0] == 10
+                || (v4.octets()[0] == 172 && (v4.octets()[1] & 0xF0) == 16)
+                || (v4.octets()[0] == 192 && v4.octets()[1] == 168)
+                || v4.octets()[0] == 169 && v4.octets()[1] == 254
+        }
+        IpAddr::V6(v6) => {
+            v6.is_loopback()
+                || v6.is_unspecified()
+                || {
+                    let segments = v6.segments();
+                    (segments[0] & 0xFE00) == 0xFC00 // fc00::/7 unique local
+                }
+        }
     }
 }
 
@@ -148,11 +194,17 @@ fn normalize_optional(value: Option<&str>) -> Option<String> {
 mod tests {
     use super::*;
 
-    #[test]
-    fn parses_http_and_https_webhook_urls() {
-        assert_eq!(parse_webhook_url("https://hooks.example.test/export").unwrap().scheme(), "https");
-        assert_eq!(parse_webhook_url("http://localhost:8787/export").unwrap().scheme(), "http");
-        assert!(parse_webhook_url("file:///tmp/export.json").is_err());
+    #[tokio::test]
+    async fn parses_http_and_https_webhook_urls() {
+        assert_eq!(parse_webhook_url("https://hooks.example.test/export").await.unwrap().scheme(), "https");
+        assert!(parse_webhook_url("file:///tmp/export.json").await.is_err());
+    }
+
+    #[tokio::test]
+    async fn blocks_private_ip_webhook_urls() {
+        assert!(parse_webhook_url("http://127.0.0.1:8080/export").await.is_err());
+        assert!(parse_webhook_url("http://10.0.0.1/export").await.is_err());
+        assert!(parse_webhook_url("http://192.168.1.1/export").await.is_err());
     }
 
     #[test]
