@@ -1,7 +1,7 @@
 import type { AutoAudioSyncApplyMode, AutoAudioSyncResult } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 
-export interface AutoAudioSyncDialogTarget {
+interface AutoAudioSyncDialogTarget {
   clipId: string;
   clipName: string;
   mediaName: string;

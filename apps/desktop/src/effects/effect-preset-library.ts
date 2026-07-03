@@ -26,7 +26,7 @@ export interface EffectPresetCommunityCard {
   preset: EffectPreset;
 }
 
-export interface EffectPresetCommunityFile {
+interface EffectPresetCommunityFile {
   schemaVersion: 1;
   presets: EffectPresetCommunityCard[];
 }
@@ -46,7 +46,7 @@ export interface EffectPresetCommunityLoadOptions {
 const EFFECT_PRESET_DIR = 'effect-presets';
 const COMMUNITY_CACHE_FILE = 'community.json';
 
-export const EFFECT_PRESET_COMMUNITY_URL = 'https://gist.githubusercontent.com/open-factory/effect-preset-library/raw/effect-presets.json';
+const EFFECT_PRESET_COMMUNITY_URL = 'https://gist.githubusercontent.com/open-factory/effect-preset-library/raw/effect-presets.json';
 
 const bridgeEffectPresetStorage: EffectPresetLibraryStorage = {
   getAppDataDir,
@@ -56,7 +56,7 @@ const bridgeEffectPresetStorage: EffectPresetLibraryStorage = {
   scanDirectory
 };
 
-export function getEffectPresetLibraryDir(appDataDir: string): string {
+function getEffectPresetLibraryDir(appDataDir: string): string {
   return `${trimPathEnd(appDataDir)}/${EFFECT_PRESET_DIR}`;
 }
 

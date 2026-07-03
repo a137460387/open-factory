@@ -1,7 +1,7 @@
 export type SmartRoughCutStep = 'scene' | 'silence' | 'whisper' | 'dialogue' | 'broll' | 'rhythm';
 export type SmartRoughCutStepStatus = 'idle' | 'running' | 'complete' | 'error';
 
-export interface SmartRoughCutStepState {
+interface SmartRoughCutStepState {
   status: SmartRoughCutStepStatus;
   error?: string;
 }

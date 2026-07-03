@@ -7,7 +7,7 @@ export const MAX_CODEC_COMPARE_PRESETS = 4;
 export type CodecCompareRecommendationMode = 'quality' | 'size';
 export type CodecCompareSortKey = 'presetName' | 'fileSizeBytes' | 'durationMs' | 'ssim' | 'psnr';
 export type CodecCompareSortDirection = 'asc' | 'desc';
-export type CodecCompareQualityStatus = 'idle' | 'running' | 'complete' | 'error';
+type CodecCompareQualityStatus = 'idle' | 'running' | 'complete' | 'error';
 
 export interface CodecCompareJob {
   presetId: string;
@@ -61,7 +61,7 @@ export function buildCodecCompareJobs(input: { baseOutputPath: string; presets: 
   });
 }
 
-export function buildCodecCompareOutputPath(baseOutputPath: string, preset: ExportPreset, index: number): string {
+function buildCodecCompareOutputPath(baseOutputPath: string, preset: ExportPreset, index: number): string {
   const normalized = baseOutputPath.trim();
   const separatorIndex = Math.max(normalized.lastIndexOf('/'), normalized.lastIndexOf('\\'));
   const directory = separatorIndex >= 0 ? normalized.slice(0, separatorIndex + 1) : '';

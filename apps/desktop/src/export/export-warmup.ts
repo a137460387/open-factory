@@ -65,7 +65,7 @@ export function resetExportWarmupCache(): void {
   warmupCache.clear();
 }
 
-export function buildExportWarmupCacheKey(project: Project): string {
+function buildExportWarmupCacheKey(project: Project): string {
   const mediaStamp = project.media
     .map((asset) => [asset.id, asset.path, asset.missing ? 'missing' : 'ok', asset.proxyStatus ?? 'none', asset.proxyPath ?? '', asset.size ?? 0, asset.mtimeMs ?? 0].join(':'))
     .sort()

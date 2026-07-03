@@ -43,7 +43,7 @@ import { runConfiguredExportUpload } from './export-upload';
 import { clearMediaCache } from '../cache/cache-service';
 import { appendExportSpeedSample } from './export-speed-history';
 
-export const EXPORT_MEMORY_PAUSE_THRESHOLD_BYTES = 2 * 1024 * 1024 * 1024;
+const EXPORT_MEMORY_PAUSE_THRESHOLD_BYTES = 2 * 1024 * 1024 * 1024;
 const RESOURCE_RECHECK_DELAY_MS = 500;
 let runnerPromise: Promise<void> | undefined;
 const activeRuns = new Map<string, Promise<void>>();

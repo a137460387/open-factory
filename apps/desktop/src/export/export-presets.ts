@@ -16,7 +16,7 @@ export interface ExportPreset {
 export type ExportPresetImportConflictMode = 'overwrite' | 'rename' | 'skip';
 export type ExportPresetSyncConflictResolution = 'merge' | 'keep-local' | 'keep-remote';
 
-export interface StoredExportPresetsFile {
+interface StoredExportPresetsFile {
   schemaVersion: 1;
   presets: Array<Omit<ExportPreset, 'builtin'>>;
 }
@@ -82,7 +82,7 @@ export interface ExportPresetSyncResult {
 
 const PRESETS_FILE_NAME = 'presets.json';
 export const EXPORT_PRESET_PACKAGE_EXTENSION = 'ofpreset.json';
-export const OFFICIAL_EXPORT_PRESET_PACKAGE_URL = 'https://github.com/open-factory/open-factory/releases/latest/download/export-presets.ofpreset.json';
+const OFFICIAL_EXPORT_PRESET_PACKAGE_URL = 'https://github.com/open-factory/open-factory/releases/latest/download/export-presets.ofpreset.json';
 
 export const BUILTIN_EXPORT_PRESETS: ExportPreset[] = [
   {
@@ -359,7 +359,7 @@ export function getExportPreset(id: string, presets: ExportPreset[] = BUILTIN_EX
   return presets.find((preset) => preset.id === id) ?? presets[0] ?? BUILTIN_EXPORT_PRESETS[0];
 }
 
-export function isBuiltinExportPreset(id: string): boolean {
+function isBuiltinExportPreset(id: string): boolean {
   return BUILTIN_EXPORT_PRESETS.some((preset) => preset.id === id);
 }
 
@@ -404,7 +404,7 @@ export async function deleteCustomExportPreset(id: string, storage: ExportPreset
   return mergeExportPresets(remaining);
 }
 
-export function mergeExportPresets(customPresets: ExportPreset[]): ExportPreset[] {
+function mergeExportPresets(customPresets: ExportPreset[]): ExportPreset[] {
   const customIds = new Set(BUILTIN_EXPORT_PRESETS.map((preset) => preset.id));
   const sanitizedCustoms = customPresets
     .filter((preset) => !customIds.has(preset.id))

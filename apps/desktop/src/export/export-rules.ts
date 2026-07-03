@@ -31,7 +31,7 @@ export function replaceExportRuleVariables(template: string, context: ExportRule
   return template.replaceAll('{date}', date).replaceAll('{project}', project);
 }
 
-export function getTriggeredExportRules(rules: ExportConditionRule[], trigger: ExportRuleTrigger): ExportConditionRule[] {
+function getTriggeredExportRules(rules: ExportConditionRule[], trigger: ExportRuleTrigger): ExportConditionRule[] {
   return rules.filter((rule) => rule.enabled && rule.trigger === trigger);
 }
 
@@ -80,7 +80,7 @@ export async function runConfiguredExportRules(event: ExportRuleEventContext): P
   });
 }
 
-export async function playExportRuleTone(): Promise<void> {
+async function playExportRuleTone(): Promise<void> {
   const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
   if (!AudioContextCtor) {
     return;

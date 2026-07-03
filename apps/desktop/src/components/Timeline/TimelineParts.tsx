@@ -50,7 +50,7 @@ import { getWaveform, type WaveformResult } from '../../media/waveform';
 import { getSilentFrequencyBands, useAudioMeterStore } from '../../store/audioMeterStore';
 import type { SelectedKeyframeRef } from '../../store/editorStore';
 
-export type DragMode = 'move' | 'trim-left' | 'trim-right' | 'rolling-trim' | 'slip' | 'slide' | 'playhead' | 'keyframe';
+type DragMode = 'move' | 'trim-left' | 'trim-right' | 'rolling-trim' | 'slip' | 'slide' | 'playhead' | 'keyframe';
 
 export interface DragState {
   mode: DragMode;

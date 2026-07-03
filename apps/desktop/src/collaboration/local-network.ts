@@ -22,7 +22,7 @@ type CollaborationMessage =
   | { type: 'project-sync'; project: Project; timestamp: number }
   | { type: 'presence'; user: CollaborationUserPresence };
 
-export interface CollaborationControllerState {
+interface CollaborationControllerState {
   enabled: boolean;
   role: CollaborationRole;
   permission: CollaborationPermission;
@@ -33,7 +33,7 @@ export interface CollaborationControllerState {
   lastSyncAt?: number;
 }
 
-export class LocalNetworkCollaborationController {
+class LocalNetworkCollaborationController {
   private state: CollaborationControllerState = {
     enabled: false,
     role: 'host',
@@ -205,7 +205,7 @@ export class LocalNetworkCollaborationController {
 
 export const collaborationController = new LocalNetworkCollaborationController();
 
-export function buildCollaborationOperationFromCommand(command: Command, userId: string, project: Project, timestamp = Date.now()): CollaborationOperation {
+function buildCollaborationOperationFromCommand(command: Command, userId: string, project: Project, timestamp = Date.now()): CollaborationOperation {
   const params = extractSerializableCommandParams(command);
   const clipId = typeof params.clipId === 'string' ? params.clipId : undefined;
   return {

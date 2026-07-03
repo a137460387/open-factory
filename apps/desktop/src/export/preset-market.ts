@@ -10,7 +10,7 @@ import {
   type ExportPresetStorage
 } from './export-presets';
 
-export type PresetMarketFilterValue = 'all' | string;
+type PresetMarketFilterValue = 'all' | string;
 
 export interface PresetMarketFilters {
   platform?: PresetMarketFilterValue;
@@ -29,12 +29,12 @@ export interface PresetMarketCard {
   preset: ExportPresetPackagePreset;
 }
 
-export interface PresetMarketFile {
+interface PresetMarketFile {
   schemaVersion: 1;
   presets: PresetMarketCard[];
 }
 
-export interface PresetMarketRatingsFile {
+interface PresetMarketRatingsFile {
   schemaVersion: 1;
   ratings: Record<string, number>;
 }
@@ -58,7 +58,7 @@ const MARKET_PRESETS_FILE = 'presets.json';
 const MARKET_RATINGS_FILE = 'ratings.json';
 const MARKET_INSTALLED_DIR = 'installed';
 
-export const EXPORT_PRESET_MARKET_URL = 'https://gist.githubusercontent.com/open-factory/export-preset-market/raw/presets.json';
+const EXPORT_PRESET_MARKET_URL = 'https://gist.githubusercontent.com/open-factory/export-preset-market/raw/presets.json';
 
 const bridgePresetMarketStorage: PresetMarketStorage = {
   getAppDataDir,
@@ -71,11 +71,11 @@ export function getPresetMarketCachePath(appDataDir: string): string {
   return `${appDataDir.replace(/[\\/]+$/, '')}/${MARKET_CACHE_DIR}/${MARKET_PRESETS_FILE}`;
 }
 
-export function getPresetMarketRatingsPath(appDataDir: string): string {
+function getPresetMarketRatingsPath(appDataDir: string): string {
   return `${appDataDir.replace(/[\\/]+$/, '')}/${MARKET_CACHE_DIR}/${MARKET_RATINGS_FILE}`;
 }
 
-export function getPresetMarketInstalledPackagePath(appDataDir: string, cardId: string): string {
+function getPresetMarketInstalledPackagePath(appDataDir: string, cardId: string): string {
   return `${appDataDir.replace(/[\\/]+$/, '')}/${MARKET_CACHE_DIR}/${MARKET_INSTALLED_DIR}/${sanitizeFileSegment(cardId)}.ofpreset.json`;
 }
 
@@ -155,7 +155,7 @@ export function presetMarketCardHasCustomConflict(card: PresetMarketCard, existi
   return existingPresets.some((preset) => !preset.builtin && preset.name.trim().toLowerCase() === name);
 }
 
-export function buildPresetMarketPackage(card: PresetMarketCard, exportedAt: string = new Date(Date.now()).toISOString()): ExportPresetPackageFile {
+function buildPresetMarketPackage(card: PresetMarketCard, exportedAt: string = new Date(Date.now()).toISOString()): ExportPresetPackageFile {
   return {
     version: 1,
     creator: card.author,
@@ -171,7 +171,7 @@ export function buildPresetMarketPackage(card: PresetMarketCard, exportedAt: str
   };
 }
 
-export function serializePresetMarketPackage(card: PresetMarketCard): string {
+function serializePresetMarketPackage(card: PresetMarketCard): string {
   return `${JSON.stringify(buildPresetMarketPackage(card), null, 2)}\n`;
 }
 

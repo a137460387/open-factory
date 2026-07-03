@@ -10980,7 +10980,7 @@ const enOverrides = {
   },
 } as DeepPartial<LocaleStrings>;
 
-export const locales: Record<Language, LocaleStrings> = {
+const locales: Record<Language, LocaleStrings> = {
   zh,
   en: mergeLocale<LocaleStrings>(zh, enOverrides)
 };

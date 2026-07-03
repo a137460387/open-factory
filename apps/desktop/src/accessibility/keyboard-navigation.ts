@@ -1,4 +1,4 @@
-export const CORE_KEYBOARD_FOCUS_ORDER = [
+const CORE_KEYBOARD_FOCUS_ORDER = [
   'toolbar-file-menu-button',
   'toolbar-import-menu-button',
   'toolbar-export-button',

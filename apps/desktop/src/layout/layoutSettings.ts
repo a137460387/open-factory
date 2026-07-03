@@ -1,22 +1,22 @@
-export const TIMELINE_MIN_HEIGHT_PX = 120;
-export const TIMELINE_DEFAULT_HEIGHT_PX = 260;
-export const TIMELINE_MAX_VIEWPORT_RATIO = 0.6;
-export const INSPECTOR_AUTO_COLLAPSE_WIDTH_PX = 1200;
-export const WORKSPACE_LEFT_PANEL_MIN_WIDTH_PX = 48;
-export const WORKSPACE_LEFT_PANEL_DEFAULT_WIDTH_PX = 280;
-export const WORKSPACE_LEFT_PANEL_MAX_WIDTH_PX = 420;
-export const WORKSPACE_RIGHT_PANEL_MIN_WIDTH_PX = 48;
-export const WORKSPACE_RIGHT_PANEL_DEFAULT_WIDTH_PX = 360;
-export const WORKSPACE_RIGHT_PANEL_MAX_WIDTH_PX = 560;
-export const WORKSPACE_MIXER_MIN_HEIGHT_PX = 160;
-export const WORKSPACE_MIXER_DEFAULT_HEIGHT_PX = 220;
-export const WORKSPACE_MIXER_MAX_HEIGHT_PX = 420;
+const TIMELINE_MIN_HEIGHT_PX = 120;
+const TIMELINE_DEFAULT_HEIGHT_PX = 260;
+const TIMELINE_MAX_VIEWPORT_RATIO = 0.6;
+const INSPECTOR_AUTO_COLLAPSE_WIDTH_PX = 1200;
+const WORKSPACE_LEFT_PANEL_MIN_WIDTH_PX = 48;
+const WORKSPACE_LEFT_PANEL_DEFAULT_WIDTH_PX = 280;
+const WORKSPACE_LEFT_PANEL_MAX_WIDTH_PX = 420;
+const WORKSPACE_RIGHT_PANEL_MIN_WIDTH_PX = 48;
+const WORKSPACE_RIGHT_PANEL_DEFAULT_WIDTH_PX = 360;
+const WORKSPACE_RIGHT_PANEL_MAX_WIDTH_PX = 560;
+const WORKSPACE_MIXER_MIN_HEIGHT_PX = 160;
+const WORKSPACE_MIXER_DEFAULT_HEIGHT_PX = 220;
+const WORKSPACE_MIXER_MAX_HEIGHT_PX = 420;
 
 export type BuiltInWorkspaceLayoutId = 'standard-editing' | 'color-grading' | 'audio-editing';
 export type WorkspaceLayoutId = BuiltInWorkspaceLayoutId | string;
-export type WorkspacePreviewPosition = 'center' | 'left' | 'right';
+type WorkspacePreviewPosition = 'center' | 'left' | 'right';
 
-export interface WorkspacePanelVisibility {
+interface WorkspacePanelVisibility {
   mediaLibrary: boolean;
   inspector: boolean;
   audioMixer: boolean;
@@ -59,7 +59,7 @@ export interface EffectivePanelState {
   audioMixerVisible: boolean;
 }
 
-export const DEFAULT_WORKSPACE_PANEL_VISIBILITY: WorkspacePanelVisibility = {
+const DEFAULT_WORKSPACE_PANEL_VISIBILITY: WorkspacePanelVisibility = {
   mediaLibrary: true,
   inspector: true,
   audioMixer: true,
@@ -136,7 +136,7 @@ export function clampTimelineHeight(heightPx: number, viewportHeightPx: number):
   return Math.min(maxHeight, Math.max(TIMELINE_MIN_HEIGHT_PX, Math.round(height)));
 }
 
-export function clampWorkspacePanelWidth(value: unknown, min: number, max: number, fallback: number): number {
+function clampWorkspacePanelWidth(value: unknown, min: number, max: number, fallback: number): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
     return fallback;
   }
@@ -180,7 +180,7 @@ export function getEffectivePanelState(settings: EditorLayoutSettings, viewportW
   };
 }
 
-export function workspaceLayoutToSettings(layout: WorkspaceLayoutDefinition): Omit<EditorLayoutSettings, 'leftPanelCollapsed' | 'rightPanelCollapsed' | 'customWorkspaceLayouts'> {
+function workspaceLayoutToSettings(layout: WorkspaceLayoutDefinition): Omit<EditorLayoutSettings, 'leftPanelCollapsed' | 'rightPanelCollapsed' | 'customWorkspaceLayouts'> {
   const normalized = normalizeWorkspaceLayoutDefinition(layout, layout.id) ?? BUILT_IN_WORKSPACE_LAYOUTS['standard-editing'];
   return {
     timelineHeightPx: normalized.timelineHeightPx,
@@ -226,7 +226,7 @@ export function createCustomWorkspaceLayout(
   };
 }
 
-export function normalizeWorkspaceLayoutDefinition(input: unknown, fallbackId = 'custom-workspace'): WorkspaceLayoutDefinition | undefined {
+function normalizeWorkspaceLayoutDefinition(input: unknown, fallbackId = 'custom-workspace'): WorkspaceLayoutDefinition | undefined {
   if (!input || typeof input !== 'object') {
     return undefined;
   }
@@ -249,7 +249,7 @@ export function normalizeWorkspaceLayoutDefinition(input: unknown, fallbackId = 
   };
 }
 
-export function normalizeCustomWorkspaceLayouts(layouts: unknown): WorkspaceLayoutDefinition[] {
+function normalizeCustomWorkspaceLayouts(layouts: unknown): WorkspaceLayoutDefinition[] {
   if (!Array.isArray(layouts)) {
     return [];
   }

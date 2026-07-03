@@ -2,10 +2,10 @@ import { joinPath, type ExportTask } from '@open-factory/editor-core';
 import { getAppDataDir, readFile, writeFile } from '../lib/tauri-bridge';
 import { useExportQueueStore } from './export-queue-store';
 
-export const EXPORT_QUEUE_STATE_FILE = 'export-queue-state.json';
-export const EXPORT_QUEUE_STATE_VERSION = 1;
+const EXPORT_QUEUE_STATE_FILE = 'export-queue-state.json';
+const EXPORT_QUEUE_STATE_VERSION = 1;
 
-export interface ExportQueueStateFile {
+interface ExportQueueStateFile {
   version: 1;
   savedAt: string;
   tasks: ExportTask[];
@@ -23,7 +23,7 @@ export interface ExportQueueStateStorage {
   writeFile(path: string, contents: string): Promise<void> | void;
 }
 
-export function getExportQueueStatePath(appDataDir: string): string {
+function getExportQueueStatePath(appDataDir: string): string {
   return joinPath(appDataDir, EXPORT_QUEUE_STATE_FILE);
 }
 

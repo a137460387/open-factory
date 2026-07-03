@@ -23,7 +23,7 @@ export interface PublishPipelineNodeContext {
   messages: PublishPipelineMessages;
 }
 
-export interface PublishPipelineMessages {
+interface PublishPipelineMessages {
   outsideWindow: string;
   smtpSent: string;
   webhookPosted: string;
