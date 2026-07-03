@@ -1,0 +1,180 @@
+Unused exports (123)
+CORE_KEYBOARD_FOCUS_ORDER                             apps/desktop/src/accessibility/keyboard-navigation.ts:1:14
+LocalNetworkCollaborationController         class     apps/desktop/src/collaboration/local-network.ts:36:14     
+buildCollaborationOperationFromCommand      function  apps/desktop/src/collaboration/local-network.ts:208:17    
+EFFECT_PRESET_COMMUNITY_URL                           apps/desktop/src/effects/effect-preset-library.ts:49:14   
+getEffectPresetLibraryDir                   function  apps/desktop/src/effects/effect-preset-library.ts:59:17   
+buildCodecCompareOutputPath                 function  apps/desktop/src/export/codec-compare.ts:64:17            
+OFFICIAL_EXPORT_PRESET_PACKAGE_URL                    apps/desktop/src/export/export-presets.ts:85:14           
+isBuiltinExportPreset                       function  apps/desktop/src/export/export-presets.ts:362:17          
+mergeExportPresets                          function  apps/desktop/src/export/export-presets.ts:407:17          
+EXPORT_QUEUE_STATE_FILE                               apps/desktop/src/export/export-queue-persistence.ts:5:14  
+EXPORT_QUEUE_STATE_VERSION                            apps/desktop/src/export/export-queue-persistence.ts:6:14  
+getExportQueueStatePath                     function  apps/desktop/src/export/export-queue-persistence.ts:26:17 
+EXPORT_MEMORY_PAUSE_THRESHOLD_BYTES                   apps/desktop/src/export/export-queue-runner.ts:46:14      
+getTriggeredExportRules                     function  apps/desktop/src/export/export-rules.ts:34:17             
+playExportRuleTone                          function  apps/desktop/src/export/export-rules.ts:83:23             
+buildExportWarmupCacheKey                   function  apps/desktop/src/export/export-warmup.ts:68:17            
+EXPORT_PRESET_MARKET_URL                              apps/desktop/src/export/preset-market.ts:61:14            
+getPresetMarketRatingsPath                  function  apps/desktop/src/export/preset-market.ts:74:17            
+getPresetMarketInstalledPackagePath         function  apps/desktop/src/export/preset-market.ts:78:17            
+buildPresetMarketPackage                    function  apps/desktop/src/export/preset-market.ts:158:17           
+serializePresetMarketPackage                function  apps/desktop/src/export/preset-market.ts:174:17           
+locales                                               apps/desktop/src/i18n/strings.ts:10983:14                 
+TIMELINE_MIN_HEIGHT_PX                                apps/desktop/src/layout/layoutSettings.ts:1:14            
+TIMELINE_DEFAULT_HEIGHT_PX                            apps/desktop/src/layout/layoutSettings.ts:2:14            
+TIMELINE_MAX_VIEWPORT_RATIO                           apps/desktop/src/layout/layoutSettings.ts:3:14            
+INSPECTOR_AUTO_COLLAPSE_WIDTH_PX                      apps/desktop/src/layout/layoutSettings.ts:4:14            
+WORKSPACE_LEFT_PANEL_MIN_WIDTH_PX                     apps/desktop/src/layout/layoutSettings.ts:5:14            
+WORKSPACE_LEFT_PANEL_DEFAULT_WIDTH_PX                 apps/desktop/src/layout/layoutSettings.ts:6:14            
+WORKSPACE_LEFT_PANEL_MAX_WIDTH_PX                     apps/desktop/src/layout/layoutSettings.ts:7:14            
+WORKSPACE_RIGHT_PANEL_MIN_WIDTH_PX                    apps/desktop/src/layout/layoutSettings.ts:8:14            
+WORKSPACE_RIGHT_PANEL_DEFAULT_WIDTH_PX                apps/desktop/src/layout/layoutSettings.ts:9:14            
+WORKSPACE_RIGHT_PANEL_MAX_WIDTH_PX                    apps/desktop/src/layout/layoutSettings.ts:10:14           
+WORKSPACE_MIXER_MIN_HEIGHT_PX                         apps/desktop/src/layout/layoutSettings.ts:11:14           
+WORKSPACE_MIXER_DEFAULT_HEIGHT_PX                     apps/desktop/src/layout/layoutSettings.ts:12:14           
+WORKSPACE_MIXER_MAX_HEIGHT_PX                         apps/desktop/src/layout/layoutSettings.ts:13:14           
+DEFAULT_WORKSPACE_PANEL_VISIBILITY                    apps/desktop/src/layout/layoutSettings.ts:62:14           
+clampWorkspacePanelWidth                    function  apps/desktop/src/layout/layoutSettings.ts:139:17          
+workspaceLayoutToSettings                   function  apps/desktop/src/layout/layoutSettings.ts:183:17          
+normalizeWorkspaceLayoutDefinition          function  apps/desktop/src/layout/layoutSettings.ts:229:17          
+normalizeCustomWorkspaceLayouts             function  apps/desktop/src/layout/layoutSettings.ts:252:17          
+DUPLICATE_HASH_BYTES                                  apps/desktop/src/lib/duplicateMedia.ts:4:14               
+isGenericFontFamily                         function  apps/desktop/src/lib/fonts.ts:25:17                       
+LUT_FAVORITES_FILE                                    apps/desktop/src/lib/lutLibrary.ts:18:14                  
+renderCubePreviewDataUrl                    function  apps/desktop/src/lib/lutLibrary.ts:85:17                  
+MIN_PREVIEW_ZOOM                                      apps/desktop/src/lib/preview/frame-inspector.ts:3:14      
+MAX_PREVIEW_ZOOM                                      apps/desktop/src/lib/preview/frame-inspector.ts:4:14      
+GPU_PREFETCH_LOOKAHEAD_SECONDS                        apps/desktop/src/lib/preview/gpu-acceleration.ts:11:14    
+LOW_QUALITY_DISABLED_EFFECTS                          apps/desktop/src/lib/preview/preview-performance.ts:48:14 
+PREVIEW_FPS_WINDOW_MS                                 apps/desktop/src/lib/preview/preview-performance.ts:49:14 
+PREVIEW_STABLE_UPGRADE_MS                             apps/desktop/src/lib/preview/preview-performance.ts:50:14 
+normalizePreviewQualityMode                 function  apps/desktop/src/lib/preview/preview-performance.ts:52:17 
+normalizePreviewSkipFrames                  function  apps/desktop/src/lib/preview/preview-performance.ts:56:17 
+getPreviewQualityScale                      function  apps/desktop/src/lib/preview/preview-performance.ts:73:17 
+AUTOSAVE_KEY                                          apps/desktop/src/lib/projectFiles.ts:23:14                
+AUTOSAVE_INTERVAL_KEY                                 apps/desktop/src/lib/projectFiles.ts:24:14                
+ENCRYPTED_PROJECT_EXTENSION                           apps/desktop/src/lib/projectFiles.ts:27:14                
+autosaveProject                             function  apps/desktop/src/lib/projectFiles.ts:106:17               
+writeAutosaveProject                        function  apps/desktop/src/lib/projectFiles.ts:122:23               
+SUBTITLE_EXTENSIONS                                   apps/desktop/src/lib/subtitles.ts:23:14                   
+SUBTITLE_DATA_EXTENSIONS                              apps/desktop/src/lib/subtitles.ts:24:14                   
+mergeSubtitleStyleTemplates                 function  apps/desktop/src/lib/subtitleStyleTemplates.ts:107:17     
+MACRO_TARGET_CLIP_ID                                  apps/desktop/src/macros/clip-macros.ts:24:14              
+MACROS_FILE                                           apps/desktop/src/macros/clip-macros.ts:68:14              
+MACRO_HISTORY_FILE                                    apps/desktop/src/macros/clip-macros.ts:69:14              
+MAX_MACRO_HISTORY_ENTRIES                             apps/desktop/src/macros/clip-macros.ts:70:14              
+MACRO_FILE_EXTENSION                                  apps/desktop/src/macros/clip-macros.ts:71:14              
+DEFAULT_CLIP_MACROS                                   apps/desktop/src/macros/clip-macros.ts:73:14              
+sanitizeClipMacros                          function  apps/desktop/src/macros/clip-macros.ts:158:17             
+parseMacroHistory                           function  apps/desktop/src/macros/clip-macros.ts:363:17             
+sanitizeMacroHistory                        function  apps/desktop/src/macros/clip-macros.ts:372:17             
+DEFAULT_BACKGROUND_MEDIA_TASK_LIMIT                   apps/desktop/src/media/background-media-task-queue.ts:1:14
+DEFAULT_BATCH_WATERMARK_FONT                          apps/desktop/src/media/batchWatermark.ts:15:14            
+buildBatchWatermarkJob                      function  apps/desktop/src/media/batchWatermark.ts:55:17            
+buildBatchWatermarkOutputPath               function  apps/desktop/src/media/batchWatermark.ts:69:17            
+getRequiredPermissionForHook                function  apps/desktop/src/plugins/plugin-loader.ts:239:17          
+assertPluginHookPermission                  function  apps/desktop/src/plugins/plugin-loader.ts:249:17          
+ensurePluginRegistry                        function  apps/desktop/src/plugins/plugin-manager.ts:46:23          
+runPluginHook                               function  apps/desktop/src/plugins/plugin-manager.ts:60:23          
+resetPluginRegistryForTests                 function  apps/desktop/src/plugins/plugin-manager.ts:106:17         
+readPluginDevSignature                      function  apps/desktop/src/plugins/plugin-manager.ts:293:23         
+PLUGIN_CATALOG_URL                                    apps/desktop/src/plugins/plugin-market.ts:5:14            
+PLUGIN_CATALOG_CACHE_FILE                             apps/desktop/src/plugins/plugin-market.ts:6:14            
+computeSha256Hex                            function  apps/desktop/src/plugins/plugin-market.ts:145:23          
+readProjectReleaseRecord                    function  apps/desktop/src/release/projectReleases.ts:46:23         
+TIMELINE_SCRIPT_EXTENSION                             apps/desktop/src/scripting/timeline-scripts.ts:4:14       
+DEFAULT_PREVIEW_WINDOW_SETTINGS                       apps/desktop/src/settings/appSettings.ts:226:14           
+DEFAULT_DISPLAY_SETTINGS                              apps/desktop/src/settings/appSettings.ts:240:14           
+DEFAULT_AUDIO_VISUALIZATION_THEME_SETTINGS            apps/desktop/src/settings/appSettings.ts:257:14           
+saveDisableExportRecommendations            function  apps/desktop/src/settings/appSettings.ts:456:23           
+readThumbnailPrerenderEnabled               function  apps/desktop/src/settings/appSettings.ts:461:23           
+saveThumbnailPrerenderEnabled               function  apps/desktop/src/settings/appSettings.ts:466:23           
+writeAppSettings                            function  apps/desktop/src/settings/appSettings.ts:635:23           
+getSettingsFilePath                         function  apps/desktop/src/settings/appSettings.ts:645:23           
+normalizeCustomSplitLayouts                 function  apps/desktop/src/settings/appSettings.ts:766:17           
+normalizeExportRules                        function  apps/desktop/src/settings/appSettings.ts:888:17           
+normalizeExportBackgroundSettings           function  apps/desktop/src/settings/appSettings.ts:923:17           
+normalizePreviewWindowSettings              function  apps/desktop/src/settings/appSettings.ts:934:17           
+normalizeTimelineInteractionSettings        function  apps/desktop/src/settings/appSettings.ts:958:17           
+normalizeDisplaySettings                    function  apps/desktop/src/settings/appSettings.ts:968:17           
+normalizeCollaborationIdentitySettings      function  apps/desktop/src/settings/appSettings.ts:977:17           
+normalizeLocalCoeditingSettings             function  apps/desktop/src/settings/appSettings.ts:985:17           
+normalizeAudioVisualizationThemeSettings    function  apps/desktop/src/settings/appSettings.ts:997:17           
+normalizeExportUploadSettings               function  apps/desktop/src/settings/appSettings.ts:1011:17          
+normalizeExportPresetSyncSettings           function  apps/desktop/src/settings/appSettings.ts:1036:17          
+normalizeViewSettings                       function  apps/desktop/src/settings/appSettings.ts:1060:17          
+normalizeBackupSettings                     function  apps/desktop/src/settings/appSettings.ts:1085:17          
+readMediaGroupingSettings                   function  apps/desktop/src/settings/appSettings.ts:1278:23          
+saveMediaGroupingSettings                   function  apps/desktop/src/settings/appSettings.ts:1283:23          
+getSharedLibraryDir                         function  apps/desktop/src/shared-library/sharedLibrary.ts:69:17    
+saveSharedLibrary                           function  apps/desktop/src/shared-library/sharedLibrary.ts:85:23    
+timelineTemplateToSharedResource            function  apps/desktop/src/shared-library/sharedLibrary.ts:197:17   
+KEYBINDINGS_FILE                                      apps/desktop/src/shortcuts/keybindings.ts:10:14           
+sanitizeCustomKeybindings                   function  apps/desktop/src/shortcuts/keybindings.ts:45:17           
+isAIServiceReady                            function  apps/desktop/src/store/aiSettingsStore.ts:328:17          
+getAIServiceProvider                        function  apps/desktop/src/store/aiSettingsStore.ts:335:17          
+readProxySettings                           function  apps/desktop/src/store/proxySettingsStore.ts:53:17        
+toProxySettings                             function  apps/desktop/src/store/proxySettingsStore.ts:68:17        
+DEFAULT_RECORDING_SETTINGS                            apps/desktop/src/store/recordingSettingsStore.ts:18:14    
+customThemeToDefinition                     function  apps/desktop/src/theme/theme.ts:279:17                    
+normalizeCustomThemeColors                  function  apps/desktop/src/theme/theme.ts:327:17                    
+wcagLevel                                   function  apps/desktop/src/theme/theme.ts:437:17                    
+WCAG_TEXT_PAIRS                                       apps/desktop/src/theme/theme.ts:451:14                    
+normalizeUpdaterEndpointUrl                 function  apps/desktop/src/updater/update-settings.ts:32:17         
+Unused exported types (55)
+AutoAudioSyncDialogTarget             interface  apps/desktop/src/audio-sync/AutoAudioSyncDialog.tsx:4:18               
+CollaborationControllerState          interface  apps/desktop/src/collaboration/local-network.ts:25:18                  
+SmartRoughCutStepState                interface  apps/desktop/src/components/SmartRoughCut/smart-rough-cut-state.ts:4:18
+DragMode                              type       apps/desktop/src/components/Timeline/TimelineParts.tsx:53:13           
+EffectPresetCommunityFile             interface  apps/desktop/src/effects/effect-preset-library.ts:29:18                
+CodecCompareQualityStatus             type       apps/desktop/src/export/codec-compare.ts:10:13                         
+StoredExportPresetsFile               interface  apps/desktop/src/export/export-presets.ts:19:18                        
+ExportProgressPayload                 interface  apps/desktop/src/export/export-progress.ts:1:18                        
+ExportQueueStateFile                  interface  apps/desktop/src/export/export-queue-persistence.ts:8:18               
+PresetMarketFilterValue               type       apps/desktop/src/export/preset-market.ts:13:13                         
+PresetMarketFile                      interface  apps/desktop/src/export/preset-market.ts:32:18                         
+PresetMarketRatingsFile               interface  apps/desktop/src/export/preset-market.ts:37:18                         
+PublishPipelineMessages               interface  apps/desktop/src/export/publish-pipeline-runner.ts:26:18               
+WorkspacePreviewPosition              type       apps/desktop/src/layout/layoutSettings.ts:17:13                        
+WorkspacePanelVisibility              interface  apps/desktop/src/layout/layoutSettings.ts:19:18                        
+FrameInterpolationComparePreviewItem  interface  apps/desktop/src/lib/frameInterpolationComparePreview.ts:16:18         
+PutTimelineRenderFrameInput           interface  apps/desktop/src/lib/preview/render-cache-controller.ts:11:18          
+ArchiveCopyTask                       interface  apps/desktop/src/lib/projectArchive.ts:3:18                            
+SharePackageWorkflowStage             type       apps/desktop/src/lib/sharePackage.ts:19:13                             
+StoredSubtitleStyleTemplatesFile      interface  apps/desktop/src/lib/subtitleStyleTemplates.ts:9:18                    
+ToastKind                             type       apps/desktop/src/lib/toast.ts:1:13                                     
+MediaJobPriority                      type       apps/desktop/src/media/media-job-store.ts:8:13                         
+MediaJobInput                         interface  apps/desktop/src/media/media-job-store.ts:39:18                        
+MediaLibrarySortDirection             type       apps/desktop/src/media/mediaLibraryView.ts:6:13                        
+PluginHooks                           type       apps/desktop/src/plugins/plugin-loader.ts:12:97                        
+PluginMessageRouter                   type       apps/desktop/src/plugins/plugin-loader.ts:31:13                        
+PluginInstallStatus                   type       apps/desktop/src/plugins/plugin-market.ts:24:13                        
+PluginCatalogResponseLike             interface  apps/desktop/src/plugins/plugin-market.ts:31:18                        
+PluginInstallConfirmer                type       apps/desktop/src/plugins/plugin-market.ts:37:13                        
+PluginHashProvider                    type       apps/desktop/src/plugins/plugin-market.ts:38:13                        
+ProjectBatchRunSuccess                interface  apps/desktop/src/projectBatch/projectBatch.ts:46:18                    
+LocalBackupSettings                   interface  apps/desktop/src/settings/appSettings.ts:59:18                         
+WebdavBackupSettings                  interface  apps/desktop/src/settings/appSettings.ts:64:18                         
+PreviewWindowBounds                   interface  apps/desktop/src/settings/appSettings.ts:83:18                         
+PreviewWindowResolutionScale          type       apps/desktop/src/settings/appSettings.ts:90:13                         
+DisplayColorGamut                     type       apps/desktop/src/settings/appSettings.ts:103:13                        
+LocalCoeditingMode                    type       apps/desktop/src/settings/appSettings.ts:114:13                        
+LocalCoeditingPermission              type       apps/desktop/src/settings/appSettings.ts:115:13                        
+ExportUploadTargetType                type       apps/desktop/src/settings/appSettings.ts:131:13                        
+ExportPresetSyncConflictMode          type       apps/desktop/src/settings/appSettings.ts:145:13                        
+ExportRuleAction                      type       apps/desktop/src/settings/appSettings.ts:173:13                        
+AutomationConditionOperator           type       apps/desktop/src/settings/appSettings.ts:176:13                        
+AutomationConditionField              type       apps/desktop/src/settings/appSettings.ts:177:13                        
+AutomationActionType                  type       apps/desktop/src/settings/appSettings.ts:178:13                        
+LocalAiModelStatus                    type       apps/desktop/src/settings/localModels.ts:4:13                          
+SharedLibraryResourceType             type       apps/desktop/src/shared-library/sharedLibrary.ts:18:13                 
+SharedLibraryIndexFile                interface  apps/desktop/src/shared-library/sharedLibrary.ts:31:18                 
+ThemeId                               type       apps/desktop/src/theme/theme.ts:2:13                                   
+ThemeColors                           interface  apps/desktop/src/theme/theme.ts:4:18                                   
+WcagLevel                             type       apps/desktop/src/theme/theme.ts:435:13                                 
+AIColorGradingSuggestionItem          interface  packages/editor-core/src/model-types.ts:770:18                         
+AiPipPlacementSuggestion              interface  packages/editor-core/src/model-types.ts:953:18                         
+PlatformFitSegment                    interface  packages/editor-core/src/model-types.ts:960:18                         
+ProjectPlatformFitSuggestion          interface  packages/editor-core/src/model-types.ts:968:18                         
+SfxSuggestion                         interface  packages/editor-core/src/model-types.ts:1113:18                        
