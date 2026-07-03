@@ -1859,6 +1859,37 @@ export function SettingsDialog({
                         onChange={(event) => void updateLocalCoediting({ hostUrl: event.target.value })}
                       />
                     </label>
+                    {localCoediting.mode === 'host' && (
+                      <>
+                        <label className="block text-xs font-medium text-slate-600">
+                          {t.general.localCoeditingNetworkMode}
+                          <select
+                            className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                            value={localCoediting.networkMode ?? 'localhost'}
+                            data-testid="settings-local-coediting-network-mode"
+                            onChange={(event) => void updateLocalCoediting({ networkMode: event.target.value === 'lan' ? 'lan' : 'localhost' })}
+                          >
+                            <option value="localhost">{t.general.localCoeditingNetworkLocalhost}</option>
+                            <option value="lan">{t.general.localCoeditingNetworkLan}</option>
+                          </select>
+                        </label>
+                        <label className="block text-xs font-medium text-slate-600">
+                          {t.general.localCoeditingAuthToken}
+                          <input
+                            className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                            value={localCoediting.authToken ?? ''}
+                            placeholder={t.general.localCoeditingAuthTokenPlaceholder}
+                            data-testid="settings-local-coediting-auth-token"
+                            onChange={(event) => void updateLocalCoediting({ authToken: event.target.value || undefined })}
+                          />
+                        </label>
+                      </>
+                    )}
+                    {localCoediting.mode === 'host' && localCoediting.networkMode === 'lan' && (
+                      <div className="sm:col-span-2 rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800" data-testid="settings-local-coediting-lan-warning">
+                        {t.general.localCoeditingLanWarning}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="rounded-md border border-line bg-panel p-3">

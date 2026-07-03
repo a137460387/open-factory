@@ -659,6 +659,8 @@ export interface CancelSmokeConfig {
 
 export interface CollaborationHostRequest {
   port: number;
+  networkMode?: string;
+  authToken?: string;
 }
 
 export interface CollaborationHostState {

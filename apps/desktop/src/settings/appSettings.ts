@@ -120,6 +120,8 @@ export interface LocalCoeditingSettings {
   permission: LocalCoeditingPermission;
   port: number;
   hostUrl?: string;
+  networkMode?: 'localhost' | 'lan';
+  authToken?: string;
 }
 
 export interface AudioVisualizationThemeSettings {
@@ -248,7 +250,8 @@ export const DEFAULT_LOCAL_COEDITING_SETTINGS: LocalCoeditingSettings = {
   enabled: false,
   mode: 'host',
   permission: 'edit',
-  port: 37822
+  port: 37822,
+  networkMode: 'localhost'
 };
 
 export const DEFAULT_AUDIO_VISUALIZATION_THEME_SETTINGS: AudioVisualizationThemeSettings = {
@@ -985,7 +988,9 @@ export function normalizeLocalCoeditingSettings(settings: Partial<LocalCoediting
     mode: settings?.mode === 'client' ? 'client' : 'host',
     permission: settings?.permission === 'read-only' ? 'read-only' : 'edit',
     port: normalizeInteger(settings?.port, 1, 65535, DEFAULT_LOCAL_COEDITING_SETTINGS.port),
-    hostUrl: typeof settings?.hostUrl === 'string' && settings.hostUrl.trim() ? settings.hostUrl.trim().slice(0, 300) : undefined
+    hostUrl: typeof settings?.hostUrl === 'string' && settings.hostUrl.trim() ? settings.hostUrl.trim().slice(0, 300) : undefined,
+    networkMode: settings?.networkMode === 'lan' ? 'lan' : 'localhost',
+    authToken: typeof settings?.authToken === 'string' && settings.authToken.trim() ? settings.authToken.trim().slice(0, 256) : undefined
   };
 }
 
@@ -1176,7 +1181,9 @@ function shouldPersistLocalCoeditingSettings(settings: LocalCoeditingSettings): 
     settings.mode !== DEFAULT_LOCAL_COEDITING_SETTINGS.mode ||
     settings.permission !== DEFAULT_LOCAL_COEDITING_SETTINGS.permission ||
     settings.port !== DEFAULT_LOCAL_COEDITING_SETTINGS.port ||
-    Boolean(settings.hostUrl)
+    Boolean(settings.hostUrl) ||
+    settings.networkMode !== DEFAULT_LOCAL_COEDITING_SETTINGS.networkMode ||
+    Boolean(settings.authToken)
   );
 }
 

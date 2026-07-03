@@ -9,7 +9,11 @@ export async function applyLocalCoeditingSettings(settings: LocalCoeditingSettin
   }
   const resolvedIdentity = identity ?? (await readCollaborationIdentitySettings());
   if (settings.mode === 'host') {
-    await collaborationController.enableHost({ port: settings.port });
+    await collaborationController.enableHost({
+      port: settings.port,
+      networkMode: settings.networkMode,
+      authToken: settings.authToken,
+    });
   } else {
     await collaborationController.enableClient({ permission: settings.permission });
   }
