@@ -544,6 +544,8 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
   const [scheduledStartInput, setScheduledStartInput] = useState(() => localDatetimeInputValue(new Date(Date.now() + 60_000)));
   const [completionAction, setCompletionAction] = useState<ExportCompletionAction>('none');
   const [exportBackgroundSettings, setExportBackgroundSettings] = useState<ExportBackgroundSettings>(() => ({ allowPowerActions: false, postExportScriptAcknowledged: false, lowPowerMode: false }));
+  const [postExportScriptPendingConfirm, setPostExportScriptPendingConfirm] = useState(false);
+  const pendingConfirmResolveRef = useRef<((value: boolean) => void) | null>(null);
   const [exportOptimizationSettings, setExportOptimizationSettings] = useState<ExportOptimizationSettings>(() => ({ ...DEFAULT_EXPORT_OPTIMIZATION_SETTINGS }));
   const [exportUploadSettings, setExportUploadSettings] = useState<ExportUploadSettings>(() => ({
     ...DEFAULT_EXPORT_UPLOAD_SETTINGS,
@@ -1683,11 +1685,17 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
   }
 
   async function ensurePostExportScriptAcknowledged(): Promise<boolean> {
-    if (!exportSettings.postExportScript?.command || exportBackgroundSettings.postExportScriptAcknowledged) {
+    if (!exportSettings.postExportScript?.command) {
       return true;
     }
-    setError(t.postExportScript.ackRequired);
-    return false;
+    if (!exportBackgroundSettings.postExportScriptAcknowledged) {
+      setError(t.postExportScript.ackRequired);
+      return false;
+    }
+    return new Promise<boolean>((resolve) => {
+      pendingConfirmResolveRef.current = resolve;
+      setPostExportScriptPendingConfirm(true);
+    });
   }
 
   async function setPostExportScriptAcknowledged(checked: boolean): Promise<void> {
@@ -2887,6 +2895,37 @@ function relinkFromPreflight(): void {
           </button>
         </div>
       </section>
+      {postExportScriptPendingConfirm ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-testid="export-post-script-confirm-overlay">
+          <div className="w-full max-w-md space-y-4 rounded-md border border-line bg-white p-4 shadow-lg" data-testid="export-post-script-confirm-dialog">
+            <div>
+              <h3 className="text-sm font-semibold">{t.postExportScript.confirmTitle}</h3>
+              <p className="mt-1 text-xs text-slate-500">{t.postExportScript.confirmMessage}</p>
+            </div>
+            <div className="rounded-md border border-line bg-slate-50 p-3 font-mono text-xs break-all" data-testid="export-post-script-confirm-command">
+              {exportSettings.postExportScript?.command ?? ''}
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                className="rounded-md border border-line px-3 py-1.5 text-xs font-medium hover:bg-panel"
+                type="button"
+                onClick={() => { setPostExportScriptPendingConfirm(false); pendingConfirmResolveRef.current?.(false); }}
+                data-testid="export-post-script-confirm-cancel"
+              >
+                {t.postExportScript.cancelButton}
+              </button>
+              <button
+                className="rounded-md bg-brand px-3 py-1.5 text-xs font-medium text-white hover:bg-[#176858]"
+                type="button"
+                onClick={() => { setPostExportScriptPendingConfirm(false); pendingConfirmResolveRef.current?.(true); }}
+                data-testid="export-post-script-confirm-ok"
+              >
+                {t.postExportScript.confirmButton}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
