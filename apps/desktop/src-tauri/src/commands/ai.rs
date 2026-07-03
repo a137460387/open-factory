@@ -89,6 +89,7 @@ pub async fn call_ai_api(request: CallAiApiRequest, api_key: Option<String>) -> 
 
     if let Some(headers) = &request.custom_headers {
         for (k, v) in headers {
+            validate_custom_header(k)?;
             req_builder = req_builder.header(k.as_str(), v.as_str());
         }
     }
@@ -436,6 +437,38 @@ pub async fn call_tts_api(request: CallTtsApiRequest, api_key: Option<String>) -
     Ok(CallTtsApiResult { audio_base64, latency_ms })
 }
 
+
+fn validate_custom_header(name: &str) -> Result<(), String> {
+    let lower = name.to_ascii_lowercase();
+    const BLOCKED: &[&str] = &[
+        "host", "cookie", "authorization", "content-length",
+        "transfer-encoding", "connection", "proxy-authorization",
+        "upgrade", "te", "trailer",
+    ];
+    if BLOCKED.contains(&lower.as_str()) {
+        return Err(format!(
+            "Custom header '{}' is not allowed for security reasons.", name
+        ));
+    }
+    // RFC 7230 token: visible ASCII, no whitespace or separators
+    if name.is_empty()
+        || name.len() > 128
+        || !name.chars().all(|c| c.is_ascii_graphic() && !is_header_separator(c))
+    {
+        return Err(format!(
+            "Custom header name '{}' is invalid. Must be a valid HTTP token (visible ASCII, no spaces/separators).",
+            name
+        ));
+    }
+    Ok(())
+}
+
+fn is_header_separator(c: char) -> bool {
+    matches!(c, '(' | ')' | '<' | '>' | '@' | ',' | ';' | ':' | '"' | '/' | '[' | ']' | '?' | '=' | '{' | '}' | ' ')
+        || c == '\u{005c}'
+        || c.is_ascii_whitespace()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -472,5 +505,30 @@ mod tests {
     fn keeps_short_error_messages() {
         let short_text = "Error message";
         assert_eq!(truncate_error(short_text), "Error message");
+    }
+
+    #[test]
+    fn blocks_security_sensitive_headers() {
+        assert!(validate_custom_header("Host").is_err());
+        assert!(validate_custom_header("authorization").is_err());
+        assert!(validate_custom_header("Cookie").is_err());
+        assert!(validate_custom_header("content-length").is_err());
+        assert!(validate_custom_header("transfer-encoding").is_err());
+        assert!(validate_custom_header("proxy-authorization").is_err());
+    }
+
+    #[test]
+    fn blocks_invalid_header_tokens() {
+        assert!(validate_custom_header("").is_err());
+        assert!(validate_custom_header("X-Custom Header").is_err());
+        assert!(validate_custom_header("X	Header").is_err());
+        assert!(validate_custom_header("XBad").is_err());
+    }
+
+    #[test]
+    fn accepts_valid_custom_headers() {
+        assert!(validate_custom_header("X-Custom-Header").is_ok());
+        assert!(validate_custom_header("X-Api-Key").is_ok());
+        assert!(validate_custom_header("Accept-Language").is_ok());
     }
 }
