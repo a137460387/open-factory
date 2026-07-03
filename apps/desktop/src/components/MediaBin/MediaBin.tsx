@@ -35,7 +35,7 @@ import {
 } from '@open-factory/editor-core';
 import { createSubclip, parseFavoritesSearchFilter, type Subclip, type TimelineLabelColor } from '@open-factory/editor-core';
 import { AlertCircle, BadgeCheck, ChevronDown, ChevronRight, FileAudio2, FileImage, FileText, FileVideo2, Flag, Folder, FolderPlus, GalleryHorizontal, Gauge, Grid2X2, Heart, ImageDown, Import, Info, Link2, List, Loader2, Merge, Plus, RotateCcw, Scissors, Search, SlidersHorizontal, Sparkles, Star, Tag, Trash2, X } from 'lucide-react';
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
 import { computeMediaPreviewDelay, isMediaPreviewable } from './media-hover-preview';
 import { clsx } from 'clsx';
 import { zhCN } from '../../i18n/strings';
@@ -1715,6 +1715,12 @@ function MediaLibraryTimelineView({ media, onAddToTimeline, onExportGif }: { med
   );
 }
 
+const GRID_COLUMN_STYLES: Record<MediaLibraryGridSize, CSSProperties> = {
+  small: { gridTemplateColumns: 'repeat(auto-fill, minmax(118px, 1fr))' },
+  medium: { gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))' },
+  large: { gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' },
+};
+
 function MediaCardGrid({
   media,
   gridSize,
@@ -1767,9 +1773,8 @@ function MediaCardGrid({
   if (media.length === 0) {
     return null;
   }
-  const minWidth = gridSize === 'small' ? 118 : gridSize === 'large' ? 240 : 170;
   return (
-    <div className="grid gap-3" style={{ gridTemplateColumns: `repeat(auto-fill, minmax(${minWidth}px, 1fr))` }} data-testid="media-grid-view" data-grid-size={gridSize} data-media-card-grid="true">
+    <div className="grid gap-3" style={GRID_COLUMN_STYLES[gridSize]} data-testid="media-grid-view" data-grid-size={gridSize} data-media-card-grid="true">
       {media.map((asset) => (
         <MediaCard
           key={asset.id}
@@ -2022,6 +2027,9 @@ const MEDIA_LABEL_COLORS: Array<{ key: MediaLabelColor; value: string }> = [
   { key: 'blue', value: '#3b82f6' },
   { key: 'purple', value: '#a855f7' }
 ];
+const MEDIA_LABEL_COLOR_STYLES: Record<string, CSSProperties> = Object.fromEntries(
+  MEDIA_LABEL_COLORS.map((c) => [c.key, { backgroundColor: c.value }])
+);
 
 function MediaCard({
   asset,
@@ -2462,7 +2470,7 @@ function MediaCard({
                 className="h-7 rounded border border-line"
                 type="button"
                 title={zhCN.mediaBin.labelColors[color.key]}
-                style={{ backgroundColor: color.value }}
+                style={MEDIA_LABEL_COLOR_STYLES[color.key]}
                 data-testid={`media-label-color-${color.key}`}
                 onClick={() => {
                   onSetLabel(color.key);
@@ -2687,6 +2695,9 @@ const TIMELINE_COLORS: Array<{ key: TimelineLabelColor; value: string }> = [
   { key: 'purple', value: '#a855f7' },
   { key: 'pink', value: '#ec4899' },
 ];
+const TIMELINE_COLOR_STYLES: Record<string, CSSProperties> = Object.fromEntries(
+  TIMELINE_COLORS.map((c) => [c.key, { backgroundColor: c.value }])
+);
 
 function SubclipDialog({
   asset,
@@ -2736,7 +2747,7 @@ function SubclipDialog({
             <div className="mb-1 text-xs font-medium text-slate-600">{t.color}</div>
             <div className="flex flex-wrap gap-1.5" data-testid="subclip-dialog-colors">
               <button type="button" className={`h-5 w-5 rounded-full border-2 ${color === null ? 'border-ink' : 'border-transparent'} bg-slate-300`} onClick={() => setColor(null)} data-testid="subclip-color-none" />
-              {TIMELINE_COLORS.map((item) => (<button key={item.key} type="button" className={`h-5 w-5 rounded-full border-2 ${color === item.key ? 'border-ink' : 'border-transparent'}`} style={{ backgroundColor: item.value }} onClick={() => setColor(item.key)} data-testid={`subclip-color-${item.key}`} />))}
+              {TIMELINE_COLORS.map((item) => (<button key={item.key} type="button" className={`h-5 w-5 rounded-full border-2 ${color === item.key ? 'border-ink' : 'border-transparent'}`} style={TIMELINE_COLOR_STYLES[item.key]} onClick={() => setColor(item.key)} data-testid={`subclip-color-${item.key}`} />))}
             </div>
           </div>
           <label className="block text-xs font-medium text-slate-600">{t.description}<textarea className="mt-1 w-full rounded border border-line px-2 py-1.5 text-sm" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} data-testid="subclip-dialog-description" /></label>
