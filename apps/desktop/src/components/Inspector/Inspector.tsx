@@ -3532,7 +3532,7 @@ function SubtitleStyleTemplatesPanel({
                   data-testid={`subtitle-style-template-${template.id}`}
                   onClick={() => onApply(template)}
                 >
-                  <img className="block h-12 w-full object-cover" src={makeSvgDataUri(renderSubtitleStyleTemplatePreview(template))} alt={label} />
+                  <img className="block h-12 w-full object-cover" src={makeSvgDataUri(renderSubtitleStyleTemplatePreview(template))} alt={label} loading="lazy" />
                   <span className="flex min-h-8 items-center justify-between gap-1 px-1.5 py-1">
                     <span className="min-w-0 truncate">{label}</span>
                     {template.kind === 'custom' ? <span className="shrink-0 rounded-sm bg-white px-1 text-[10px] font-medium text-slate-500">{template.id.startsWith('shared-') ? t.sharedBadge : t.customBadge}</span> : null}
