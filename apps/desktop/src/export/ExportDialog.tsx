@@ -2202,7 +2202,7 @@ function relinkFromPreflight(): void {
                     {previewSamples.map((sample) => (
                       <figure key={sample.id} className="overflow-hidden rounded-md border border-line bg-panel" data-testid="export-preview-thumbnail" data-path={sample.path}>
                         <div className="aspect-video bg-black">
-                          <img className="h-full w-full object-cover" src={sample.src} alt={sample.label} data-testid="export-preview-image" />
+                          <img className="h-full w-full object-cover" src={sample.src} alt={sample.label} data-testid="export-preview-image" loading="lazy" />
                         </div>
                         <figcaption className="flex items-center justify-between gap-2 px-2 py-1.5 text-[11px] text-slate-600">
                           <span className="font-medium text-slate-700">{sample.label}</span>
