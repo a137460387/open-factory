@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import DOMPurify from 'dompurify';
 import type { Clip, ClipGroup, MediaAsset, Project, ProjectSettings, ProjectSpeaker } from '@open-factory/editor-core';
 import {
   AddSubtitleClipCommand,
@@ -4965,7 +4966,7 @@ function RichTextEditor({
           event.preventDefault();
           document.execCommand('insertText', false, event.clipboardData.getData('text/plain'));
         }}
-        dangerouslySetInnerHTML={{ __html: richTextToHtml(normalizeRichTextDocument(clip.richText, clip.text)) }}
+        dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(richTextToHtml(normalizeRichTextDocument(clip.richText, clip.text))) }}
       />
     </div>
   );

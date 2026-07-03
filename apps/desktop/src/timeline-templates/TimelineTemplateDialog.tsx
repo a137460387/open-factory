@@ -8,6 +8,7 @@ import {
   type TimelineTemplateDefinition,
   type TimelineTemplatePlaceholderBindings
 } from '@open-factory/editor-core';
+import DOMPurify from 'dompurify';
 import { X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { zhCN } from '../i18n/strings';
@@ -147,7 +148,7 @@ export function TimelineTemplateDialog({ mode, project, selectedClipIds, onCreat
               </div>
               {selectedTemplate ? (
                 <div className="min-w-0 space-y-3">
-                  <div className="overflow-hidden rounded-md border border-line bg-panel p-2" data-testid="timeline-template-preview" dangerouslySetInnerHTML={{ __html: previewSvg }} />
+                  <div className="overflow-hidden rounded-md border border-line bg-panel p-2" data-testid="timeline-template-preview" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(previewSvg) }} />
                   {selectedTemplate.placeholders.length > 0 ? (
                     <div className="space-y-2" data-testid="timeline-template-placeholders">
                       {selectedTemplate.placeholders.map((placeholder) => (

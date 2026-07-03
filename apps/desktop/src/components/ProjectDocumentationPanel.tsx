@@ -7,6 +7,7 @@ import {
   type Project,
   type ProjectDocumentation
 } from '@open-factory/editor-core';
+import DOMPurify from 'dompurify';
 import { Download } from 'lucide-react';
 import { zhCN } from '../i18n/strings';
 import { commandManager, projectAccessor } from '../store/commandManager';
@@ -79,7 +80,7 @@ export function ProjectDocumentationPanel({ project }: ProjectDocumentationPanel
                 <div
                   className="prose prose-sm max-w-none rounded-md bg-panel p-2 text-xs text-slate-700"
                   data-testid={`project-documentation-preview-${section.id}`}
-                  dangerouslySetInnerHTML={{ __html: renderSimpleMarkdown(value) || `<p>${zhCN.projectDocumentation.emptyPreview}</p>` }}
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(renderSimpleMarkdown(value) || `<p>${zhCN.projectDocumentation.emptyPreview}</p>`) }}
                 />
               </div>
             </details>
