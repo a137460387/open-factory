@@ -349,6 +349,20 @@ function PipelineSection({
   onCreatePublishTemplate(): void;
 }) {
   const t = zhCN.exportDialog.pipeline;
+  const downstreamMap = useMemo(() => {
+    const nameById = new Map(pipeline.nodes.map((node) => [node.id, node.name]));
+    const map = new Map<string, string[]>();
+    for (const edge of pipeline.edges) {
+      const existing = map.get(edge.from);
+      const name = nameById.get(edge.to) ?? edge.to;
+      if (existing) {
+        existing.push(name);
+      } else {
+        map.set(edge.from, [name]);
+      }
+    }
+    return map;
+  }, [pipeline.nodes, pipeline.edges]);
   return (
     <div className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3" data-testid="export-pipeline-tab">
       <label className="pt-1 text-xs font-medium text-slate-600">{t.title}</label>
@@ -383,7 +397,7 @@ function PipelineSection({
           <div className="grid gap-2" data-testid="export-pipeline-node-list">
             {pipeline.nodes.map((node) => {
               const status = statuses[node.id] ?? 'waiting';
-              const downstream = pipeline.edges.filter((edge) => edge.from === node.id).map((edge) => pipeline.nodes.find((item) => item.id === edge.to)?.name ?? edge.to);
+              const downstream = downstreamMap.get(node.id) ?? [];
               return (
                 <div key={node.id} className="rounded-md border border-line bg-white p-3 text-xs" data-testid="export-pipeline-node" data-node-id={node.id}>
                   <div className="flex items-start justify-between gap-3">
