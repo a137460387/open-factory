@@ -1229,7 +1229,7 @@ function EffectPresetGrid({
           <div key={preset.id} className="rounded-md border border-line bg-white p-3 shadow-sm" data-testid="effect-preset-card" data-preset-id={preset.id}>
             <div className="flex items-start gap-3">
               <div className="grid h-16 w-24 shrink-0 place-items-center overflow-hidden rounded border border-line bg-panel">
-                {preset.thumbnail ? <img className="h-full w-full object-cover" src={preset.thumbnail} alt="" data-testid="effect-preset-thumbnail" /> : <SlidersHorizontal size={18} className="text-slate-400" />}
+                {preset.thumbnail ? <img className="h-full w-full object-cover" src={preset.thumbnail} alt="" data-testid="effect-preset-thumbnail" loading="lazy" /> : <SlidersHorizontal size={18} className="text-slate-400" />}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-semibold text-ink">{preset.name}</div>
@@ -1688,7 +1688,7 @@ function MediaLibraryTimelineView({ media, onAddToTimeline, onExportGif }: { med
           return (
             <div key={asset.id} className="flex-none overflow-hidden rounded-md border border-line bg-panel" style={{ width }} data-testid={`media-timeline-item-${asset.id}`}>
               <div className="checkerboard relative h-20">
-                {asset.thumbnail ? <img className="h-full w-full object-cover" src={asset.thumbnail} alt="" /> : <IconPreview type={asset.type} />}
+                {asset.thumbnail ? <img className="h-full w-full object-cover" src={asset.thumbnail} alt="" loading="lazy" /> : <IconPreview type={asset.type} />}
                 <span className="absolute bottom-1 right-1 rounded bg-black/70 px-1.5 py-0.5 text-[11px] font-semibold text-white">{formatDuration(asset.duration)}</span>
               </div>
               <div className="space-y-1 p-2">
@@ -2169,7 +2169,7 @@ function MediaCard({
         >
           <input className="h-4 w-4 accent-brand" type="checkbox" checked={selected} onChange={onToggleSelected} />
         </label>
-        {asset.thumbnail ? <img className="h-full w-full object-cover" src={asset.thumbnail} alt="" /> : <IconPreview type={asset.type} />}
+        {asset.thumbnail ? <img className="h-full w-full object-cover" src={asset.thumbnail} alt="" loading="lazy" /> : <IconPreview type={asset.type} />}
         {hoverPreviewActive && isMediaPreviewable(asset.type) && !asset.missing ? (
           <video
             className="absolute inset-0 h-full w-full object-cover"
