@@ -148,7 +148,7 @@ mod tests {
 
     #[tokio::test]
     async fn parses_http_and_https_webhook_urls() {
-        assert_eq!(parse_webhook_url("https://hooks.example.test/export").await.unwrap().scheme(), "https");
+        assert_eq!(parse_webhook_url("https://1.2.3.4/export").await.unwrap().scheme(), "https");
         assert!(parse_webhook_url("file:///tmp/export.json").await.is_err());
     }
 
