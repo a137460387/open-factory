@@ -1,7 +1,7 @@
 import { createAudioRmsFingerprint, createVideoFingerprint, detectDuplicateMediaGroups, type DuplicateMediaGroup, type MediaAsset, type MediaContentSignature, type MediaFingerprint, type MediaMetadata } from '@open-factory/editor-core';
 import { convertLocalFileSrc, getFileStat } from './tauri-bridge';
 
-export const DUPLICATE_HASH_BYTES = 4096;
+const DUPLICATE_HASH_BYTES = 4096;
 
 export async function scanDuplicateMediaGroups(media: MediaAsset[], mediaMetadata: Record<string, MediaMetadata> = {}): Promise<DuplicateMediaGroup[]> {
   const signatures: MediaContentSignature[] = [];

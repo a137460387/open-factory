@@ -21,7 +21,7 @@ import {
 import { eventToAccelerator, getEffectiveTimelineShortcutBindings, normalizeAccelerator, type TimelineShortcutAction, type TimelineShortcutBindings, type TimelineShortcutKey } from '../shortcuts/timeline-shortcuts';
 import { getAppDataDir, openFileDialog, readFile, saveFileDialog, writeFile } from '../lib/tauri-bridge';
 
-export const MACRO_TARGET_CLIP_ID = '__TARGET_CLIP__';
+const MACRO_TARGET_CLIP_ID = '__TARGET_CLIP__';
 
 export type CommandSnapshot =
   | { type: 'update-clip'; clipId: string; patch: ClipPatch }
@@ -65,12 +65,12 @@ export interface MacroStorage {
   writeFile(path: string, contents: string): Promise<void> | void;
 }
 
-export const MACROS_FILE = 'macros.json';
-export const MACRO_HISTORY_FILE = 'macro-history.json';
-export const MAX_MACRO_HISTORY_ENTRIES = 20;
-export const MACRO_FILE_EXTENSION = 'macro.json';
+const MACROS_FILE = 'macros.json';
+const MACRO_HISTORY_FILE = 'macro-history.json';
+const MAX_MACRO_HISTORY_ENTRIES = 20;
+const MACRO_FILE_EXTENSION = 'macro.json';
 
-export const DEFAULT_CLIP_MACROS: ClipMacro[] = [
+const DEFAULT_CLIP_MACROS: ClipMacro[] = [
   {
     id: 'macro-scale-150',
     name: '放大 150%',
@@ -155,7 +155,7 @@ export function parseMacroFile(raw: string): ClipMacro[] {
   }
 }
 
-export function sanitizeClipMacros(input: unknown): ClipMacro[] {
+function sanitizeClipMacros(input: unknown): ClipMacro[] {
   if (!Array.isArray(input)) {
     return [];
   }
@@ -360,7 +360,7 @@ export async function appendMacroHistoryEntry(entry: MacroHistoryEntry, storage:
   return writeMacroHistory([entry, ...current], storage);
 }
 
-export function parseMacroHistory(raw: string): MacroHistoryEntry[] {
+function parseMacroHistory(raw: string): MacroHistoryEntry[] {
   try {
     const parsed = JSON.parse(raw) as { entries?: unknown };
     return sanitizeMacroHistory(parsed.entries);
@@ -369,7 +369,7 @@ export function parseMacroHistory(raw: string): MacroHistoryEntry[] {
   }
 }
 
-export function sanitizeMacroHistory(input: unknown): MacroHistoryEntry[] {
+function sanitizeMacroHistory(input: unknown): MacroHistoryEntry[] {
   if (!Array.isArray(input)) {
     return [];
   }

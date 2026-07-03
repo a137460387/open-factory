@@ -8,7 +8,7 @@ import {
 import { useRenderCacheStore } from '../../store/renderCacheStore';
 import type { TimelineRenderCacheWorkerInput, TimelineRenderCacheWorkerOutput } from '../../workers/timeline-render-cache.worker';
 
-export interface PutTimelineRenderFrameInput {
+interface PutTimelineRenderFrameInput {
   key: string;
   bitmap: ImageBitmap;
   time: number;

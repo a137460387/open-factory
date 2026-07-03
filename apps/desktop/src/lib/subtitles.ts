@@ -20,8 +20,8 @@ import { zhCN } from '../i18n/strings';
 import { fileNameFromPath } from './tauri';
 import { openFileDialog, readFile } from './tauri-bridge';
 
-export const SUBTITLE_EXTENSIONS = ['srt', 'vtt'];
-export const SUBTITLE_DATA_EXTENSIONS = ['csv', 'json'];
+const SUBTITLE_EXTENSIONS = ['srt', 'vtt'];
+const SUBTITLE_DATA_EXTENSIONS = ['csv', 'json'];
 
 export async function pickSubtitlePaths(): Promise<string[]> {
   return openFileDialog(true, [{ name: zhCN.fileDialogs.subtitles, extensions: SUBTITLE_EXTENSIONS }]);

@@ -13,7 +13,7 @@ import {
   type Project
 } from '@open-factory/editor-core';
 
-export interface FrameInterpolationComparePreviewItem {
+interface FrameInterpolationComparePreviewItem {
   mode: FrameInterpolationCompareMode;
   label: string;
   outputPath: string;

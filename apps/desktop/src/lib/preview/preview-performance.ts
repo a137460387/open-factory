@@ -45,15 +45,15 @@ export const DEFAULT_PREVIEW_ADAPTIVE_QUALITY_STATE: PreviewAdaptiveQualityState
 
 export const PREVIEW_QUALITY_MODES: PreviewQualityMode[] = ['full', 'half', 'quarter', 'audio-only'];
 export const PREVIEW_SKIP_FRAME_OPTIONS: PreviewSkipFrames[] = [1, 2, 4];
-export const LOW_QUALITY_DISABLED_EFFECTS: EffectType[] = ['film-grain', 'chromatic-aberration', 'custom-shader'];
-export const PREVIEW_FPS_WINDOW_MS = 3000;
-export const PREVIEW_STABLE_UPGRADE_MS = 3000;
+const LOW_QUALITY_DISABLED_EFFECTS: EffectType[] = ['film-grain', 'chromatic-aberration', 'custom-shader'];
+const PREVIEW_FPS_WINDOW_MS = 3000;
+const PREVIEW_STABLE_UPGRADE_MS = 3000;
 
-export function normalizePreviewQualityMode(value: unknown): PreviewQualityMode {
+function normalizePreviewQualityMode(value: unknown): PreviewQualityMode {
   return value === 'half' || value === 'quarter' || value === 'audio-only' ? value : 'full';
 }
 
-export function normalizePreviewSkipFrames(value: unknown): PreviewSkipFrames {
+function normalizePreviewSkipFrames(value: unknown): PreviewSkipFrames {
   const numeric = typeof value === 'number' ? value : Number(value);
   return numeric === 2 || numeric === 4 ? numeric : 1;
 }
@@ -70,7 +70,7 @@ export function normalizePreviewPerformanceSettings(value: unknown): PreviewPerf
   };
 }
 
-export function getPreviewQualityScale(mode: PreviewQualityMode): number {
+function getPreviewQualityScale(mode: PreviewQualityMode): number {
   if (mode === 'half') {
     return 0.5;
   }

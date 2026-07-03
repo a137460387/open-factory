@@ -20,11 +20,11 @@ import {
   type UnsavedCloseAction
 } from './tauri-bridge';
 
-export const AUTOSAVE_KEY = 'open-factory:autosave';
-export const AUTOSAVE_INTERVAL_KEY = 'open-factory:autosave-interval-seconds';
+const AUTOSAVE_KEY = 'open-factory:autosave';
+const AUTOSAVE_INTERVAL_KEY = 'open-factory:autosave-interval-seconds';
 export const RECENT_PROJECT_PATH_KEY = 'open-factory:recent-project-path';
 export const DEFAULT_AUTOSAVE_INTERVAL_SECONDS = 60;
-export const ENCRYPTED_PROJECT_EXTENSION = '.cutproj.enc';
+const ENCRYPTED_PROJECT_EXTENSION = '.cutproj.enc';
 
 export interface ProjectFileEncryptionOptions {
   encrypted?: boolean;
@@ -103,7 +103,7 @@ export async function writeProjectFile(project: Project, path?: string, options:
   return path;
 }
 
-export function autosaveProject(project: Project): void {
+function autosaveProject(project: Project): void {
   getBrowserStorage()?.setItem(AUTOSAVE_KEY, JSON.stringify(serializeProject(project), null, 2));
 }
 
@@ -119,7 +119,7 @@ export function writeAutosaveIntervalSeconds(seconds: number): number {
   return normalized;
 }
 
-export async function writeAutosaveProject(project: Project, projectPath?: string): Promise<string | undefined> {
+async function writeAutosaveProject(project: Project, projectPath?: string): Promise<string | undefined> {
   if (!hasNativeFileRuntime()) {
     autosaveProject(project);
     return undefined;

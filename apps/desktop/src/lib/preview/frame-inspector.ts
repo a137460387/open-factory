@@ -1,7 +1,7 @@
 import { MAX_CHROMA_KEY_COLORS, normalizeChromaKey, type ChromaKeyColor, type Clip, type ClipPatch } from '@open-factory/editor-core';
 
-export const MIN_PREVIEW_ZOOM = 0.25;
-export const MAX_PREVIEW_ZOOM = 4;
+const MIN_PREVIEW_ZOOM = 0.25;
+const MAX_PREVIEW_ZOOM = 4;
 
 export interface PreviewPixelCoordinateInput {
   canvasWidth: number;

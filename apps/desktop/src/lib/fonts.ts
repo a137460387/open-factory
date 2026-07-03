@@ -22,6 +22,6 @@ export function isFontFamilyAvailable(fontFamily: string): boolean {
   });
 }
 
-export function isGenericFontFamily(fontFamily: string): boolean {
+function isGenericFontFamily(fontFamily: string): boolean {
   return GENERIC_FONT_FAMILIES.has(fontFamily.trim().toLowerCase());
 }

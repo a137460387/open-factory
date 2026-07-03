@@ -8,7 +8,7 @@ import {
 } from '@open-factory/editor-core';
 
 export const GPU_TEXTURE_POOL_MAX_BYTES = 512 * 1024 * 1024;
-export const GPU_PREFETCH_LOOKAHEAD_SECONDS = 3;
+const GPU_PREFETCH_LOOKAHEAD_SECONDS = 3;
 
 export interface GpuTexturePoolOptions<TTexture> {
   maxBytes?: number;

@@ -12,7 +12,7 @@ import {
 
 export const DEFAULT_BATCH_WATERMARK_TEMPLATE = '{name}_watermarked';
 export const DEFAULT_BATCH_WATERMARK_TEXT = 'Watermark';
-export const DEFAULT_BATCH_WATERMARK_FONT = 'Arial';
+const DEFAULT_BATCH_WATERMARK_FONT = 'Arial';
 
 export interface BatchWatermarkOptions {
   assetIds: string[];
@@ -52,7 +52,7 @@ export function buildBatchWatermarkJobs(project: Project, options: BatchWatermar
   return ensureUniqueOutputPaths(jobs);
 }
 
-export function buildBatchWatermarkJob(project: Project, asset: MediaAsset, options: BatchWatermarkOptions, index: number): BatchWatermarkJob {
+function buildBatchWatermarkJob(project: Project, asset: MediaAsset, options: BatchWatermarkOptions, index: number): BatchWatermarkJob {
   const format = normalizeOutputFormat(options.format);
   const settings = buildBatchWatermarkExportSettings(project, asset, options, format);
   return {
@@ -66,7 +66,7 @@ export function buildBatchWatermarkJob(project: Project, asset: MediaAsset, opti
   };
 }
 
-export function buildBatchWatermarkOutputPath(asset: MediaAsset, options: BatchWatermarkOptions, index: number, format = DEFAULT_OUTPUT_FORMAT): string {
+function buildBatchWatermarkOutputPath(asset: MediaAsset, options: BatchWatermarkOptions, index: number, format = DEFAULT_OUTPUT_FORMAT): string {
   const directory = normalizeDirectory(options.outputDirectory) || dirname(asset.path);
   const fileName = buildBatchWatermarkFileName(asset, options.fileNameTemplate, index, format);
   return directory ? `${directory}/${fileName}` : fileName;

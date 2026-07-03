@@ -6,7 +6,7 @@ import {
 } from '@open-factory/editor-core';
 import { fsExists, getAppDataDir, readFile, writeFile } from './tauri-bridge';
 
-export interface StoredSubtitleStyleTemplatesFile {
+interface StoredSubtitleStyleTemplatesFile {
   schemaVersion: 1;
   templates: Array<Omit<SubtitleStyleTemplate, 'kind'>>;
 }
@@ -104,7 +104,7 @@ export function serializeCustomSubtitleStyleTemplates(templates: SubtitleStyleTe
   return `${JSON.stringify(payload, null, 2)}\n`;
 }
 
-export function mergeSubtitleStyleTemplates(customTemplates: SubtitleStyleTemplate[]): SubtitleStyleTemplate[] {
+function mergeSubtitleStyleTemplates(customTemplates: SubtitleStyleTemplate[]): SubtitleStyleTemplate[] {
   const builtinIds = new Set(BUILTIN_SUBTITLE_STYLE_TEMPLATES.map((template) => template.id));
   return [
     ...BUILTIN_SUBTITLE_STYLE_TEMPLATES,

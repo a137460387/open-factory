@@ -16,7 +16,7 @@ import {
   type SharePackageResult
 } from './tauri-bridge';
 
-export type SharePackageWorkflowStage = 'exporting' | SharePackageProgressEvent['stage'];
+type SharePackageWorkflowStage = 'exporting' | SharePackageProgressEvent['stage'];
 
 export interface SharePackageWorkflowProgress {
   stage: SharePackageWorkflowStage;

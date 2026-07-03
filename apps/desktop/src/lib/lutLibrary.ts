@@ -15,7 +15,7 @@ export interface LutLibraryStorage {
   writeFile(path: string, contents: string): Promise<void> | void;
 }
 
-export const LUT_FAVORITES_FILE = 'lut-favorites.json';
+const LUT_FAVORITES_FILE = 'lut-favorites.json';
 
 const DEFAULT_STORAGE: LutLibraryStorage = {
   getAppDataDir,
@@ -82,7 +82,7 @@ export function parseLutFavorites(raw: string): string[] {
   }
 }
 
-export function renderCubePreviewDataUrl(contents: string, width = 96, height = 54): string {
+function renderCubePreviewDataUrl(contents: string, width = 96, height = 54): string {
   if (typeof document === 'undefined') {
     return '';
   }

@@ -1,4 +1,4 @@
-export const DEFAULT_BACKGROUND_MEDIA_TASK_LIMIT = 3;
+const DEFAULT_BACKGROUND_MEDIA_TASK_LIMIT = 3;
 
 type PendingTask<T> = {
   run: () => Promise<T> | T;

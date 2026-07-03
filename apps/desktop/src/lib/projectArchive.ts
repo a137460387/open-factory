@@ -1,6 +1,6 @@
 import { joinPath, makeRelativePath, normalizePath, serializeProject, type MediaAsset, type Project } from '@open-factory/editor-core';
 
-export interface ArchiveCopyTask {
+interface ArchiveCopyTask {
   sourcePath: string;
   destinationPath: string;
   relativePath: string;
