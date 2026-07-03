@@ -423,19 +423,25 @@ export function TrackRow({
 }) {
   const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const frequencyBands = useAudioMeterStore((state) => state.trackFrequencyBands[track.id] ?? getSilentFrequencyBands());
-  const mediaById = new Map(media.map((asset) => [asset.id, asset]));
+  const mediaById = useMemo(() => new Map(media.map((asset) => [asset.id, asset])), [media]);
   const locked = Boolean(track.locked);
   const selectedTrack = selectedTrackIds.includes(track.id);
-  const nextAdjacentByClipId = new Map<string, Clip>();
-  const sortedClips = [...track.clips].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id));
-  const virtualClips = filterTimelineVirtualClips(track.clips, virtualWindow).filter((clip) => !colorFilter || getEffectiveClipColorLabel(clip, track) === colorFilter);
-  for (let index = 0; index < sortedClips.length - 1; index += 1) {
-    const current = sortedClips[index];
-    const next = sortedClips[index + 1];
-    if (areClipsAdjacent(current, next)) {
-      nextAdjacentByClipId.set(current.id, next);
+  const sortedClips = useMemo(() => [...track.clips].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id)), [track.clips]);
+  const nextAdjacentByClipId = useMemo(() => {
+    const adjacent = new Map<string, Clip>();
+    for (let index = 0; index < sortedClips.length - 1; index += 1) {
+      const current = sortedClips[index];
+      const next = sortedClips[index + 1];
+      if (areClipsAdjacent(current, next)) {
+        adjacent.set(current.id, next);
+      }
     }
-  }
+    return adjacent;
+  }, [sortedClips]);
+  const virtualClips = useMemo(
+    () => filterTimelineVirtualClips(track.clips, virtualWindow).filter((clip) => !colorFilter || getEffectiveClipColorLabel(clip, track) === colorFilter),
+    [track.clips, virtualWindow, colorFilter, track]
+  );
   return (
     <div className="grid border-b border-line" style={{ gridTemplateColumns: `${LABEL_WIDTH}px 1fr`, height: getEffectiveTrackHeight(track.displayHeight) }}>
       <div
