@@ -1516,6 +1516,57 @@ struct PostExportScriptContext<'a> {
     now: SystemTime,
 }
 
+/// Characters that could be interpreted by shell or command-line parsers in dangerous ways.
+const SHELL_META_CHARS: &[char] = &[
+    '|', '&', ';', '<', '>', '`', '$', '\n', '\r', '\0', '"', '\'',
+];
+
+fn contains_shell_metacharacters(value: &str) -> bool {
+    value.chars().any(|c| SHELL_META_CHARS.contains(&c))
+}
+
+fn validate_post_export_script_context(
+    context: &PostExportScriptContext<'_>,
+) -> Result<(), String> {
+    if contains_shell_metacharacters(context.output_path) {
+        return Err(
+            "Post-export script blocked: output path contains unsafe characters.".to_string(),
+        );
+    }
+    if contains_shell_metacharacters(context.project_name) {
+        return Err(
+            "Post-export script blocked: project name contains unsafe characters.".to_string(),
+        );
+    }
+    Ok(())
+}
+
+fn validate_post_export_program(program: &str) -> Result<(), String> {
+    if contains_shell_metacharacters(program) {
+        return Err(format!(
+            "Post-export script blocked: program contains unsafe characters: {}",
+            program
+        ));
+    }
+    let path = std::path::Path::new(program);
+    for component in path.components() {
+        if matches!(component, std::path::Component::ParentDir) {
+            return Err(format!(
+                "Post-export script blocked: program path must not contain directory traversal: {}",
+                program
+            ));
+        }
+    }
+    // If program looks like a file path, require it to be absolute
+    if (program.contains('/') || program.contains('\\')) && !path.is_absolute() {
+        return Err(format!(
+            "Post-export script blocked: program path must be absolute: {}",
+            program
+        ));
+    }
+    Ok(())
+}
+
 fn run_post_export_script(
     script: Option<&PostExportScriptDto>,
     context: PostExportScriptContext<'_>,
@@ -1523,6 +1574,19 @@ fn run_post_export_script(
     let command = script?.command.trim();
     if command.is_empty() {
         return None;
+    }
+    if let Err(error) = validate_post_export_script_context(&context) {
+        return Some(PostExportScriptResult {
+            command: command.to_string(),
+            resolved_command: String::new(),
+            program: String::new(),
+            args: vec![],
+            stdout: String::new(),
+            stderr: String::new(),
+            exit_code: None,
+            success: false,
+            error: Some(error),
+        });
     }
     let resolved_command = expand_post_export_script_command(command, &context);
     let tokens = match split_command_line(&resolved_command) {
@@ -1543,6 +1607,19 @@ fn run_post_export_script(
         }
     };
     let program = tokens[0].clone();
+    if let Err(error) = validate_post_export_program(&program) {
+        return Some(PostExportScriptResult {
+            command: command.to_string(),
+            resolved_command,
+            program,
+            args: vec![],
+            stdout: String::new(),
+            stderr: String::new(),
+            exit_code: None,
+            success: false,
+            error: Some(error),
+        });
+    }
     let args = tokens[1..].to_vec();
     match Command::new(&program).args(&args).output() {
         Ok(output) => {
@@ -4268,6 +4345,118 @@ unrelated line
             vec!["tool", "C:/Exports/final cut.mp4", "--flag", "two words"]
         );
         assert!(split_command_line("tool \"unterminated").is_err());
+    }
+
+    #[test]
+    fn rejects_post_export_script_with_shell_metacharacters_in_output() {
+        let context = PostExportScriptContext {
+            output_path: "C:/Exports/final; rm -rf /",
+            project_name: "Launch Cut",
+            duration_seconds: 12.5,
+            now: UNIX_EPOCH,
+        };
+
+        let result = run_post_export_script(
+            Some(&PostExportScriptDto {
+                command: "tool {output}".to_string(),
+            }),
+            context,
+        )
+        .expect("should return error result");
+
+        assert!(!result.success);
+        assert!(result.error.unwrap().contains("unsafe characters"));
+    }
+
+    #[test]
+    fn rejects_post_export_script_with_shell_metacharacters_in_project() {
+        let context = PostExportScriptContext {
+            output_path: "C:/Exports/final.mp4",
+            project_name: "test && echo pwned",
+            duration_seconds: 12.5,
+            now: UNIX_EPOCH,
+        };
+
+        let result = run_post_export_script(
+            Some(&PostExportScriptDto {
+                command: "tool {project}".to_string(),
+            }),
+            context,
+        )
+        .expect("should return error result");
+
+        assert!(!result.success);
+        assert!(result.error.unwrap().contains("unsafe characters"));
+    }
+
+    #[test]
+    fn rejects_post_export_script_with_path_traversal_in_program() {
+        let context = PostExportScriptContext {
+            output_path: "C:/Exports/final.mp4",
+            project_name: "Launch Cut",
+            duration_seconds: 12.5,
+            now: UNIX_EPOCH,
+        };
+
+        let result = run_post_export_script(
+            Some(&PostExportScriptDto {
+                command: "../evil/script".to_string(),
+            }),
+            context,
+        )
+        .expect("should return error result");
+
+        assert!(!result.success);
+        assert!(result
+            .error
+            .unwrap()
+            .contains("directory traversal"));
+    }
+
+    #[test]
+    fn rejects_post_export_script_with_relative_program_path() {
+        let context = PostExportScriptContext {
+            output_path: "C:/Exports/final.mp4",
+            project_name: "Launch Cut",
+            duration_seconds: 12.5,
+            now: UNIX_EPOCH,
+        };
+
+        let result = run_post_export_script(
+            Some(&PostExportScriptDto {
+                command: "subdir/script.sh".to_string(),
+            }),
+            context,
+        )
+        .expect("should return error result");
+
+        assert!(!result.success);
+        assert!(result.error.unwrap().contains("must be absolute"));
+    }
+
+    #[test]
+    fn post_export_script_allows_simple_commands() {
+        let context = PostExportScriptContext {
+            output_path: "C:/Exports/final.mp4",
+            project_name: "Launch Cut",
+            duration_seconds: 12.5,
+            now: UNIX_EPOCH,
+        };
+
+        let result = run_post_export_script(
+            Some(&PostExportScriptDto {
+                command: "__open_factory_missing_post_export_command__".to_string(),
+            }),
+            context,
+        )
+        .expect("should produce a result");
+
+        // Should fail because program doesn't exist, not because of validation
+        assert!(!result.success);
+        assert!(result
+            .error
+            .unwrap_or_default()
+            .contains("Unable to start post-export script"));
     }
 
     #[test]
