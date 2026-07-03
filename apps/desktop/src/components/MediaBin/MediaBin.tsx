@@ -35,7 +35,8 @@ import {
 } from '@open-factory/editor-core';
 import { createSubclip, parseFavoritesSearchFilter, type Subclip, type TimelineLabelColor } from '@open-factory/editor-core';
 import { AlertCircle, BadgeCheck, ChevronDown, ChevronRight, FileAudio2, FileImage, FileText, FileVideo2, Flag, Folder, FolderPlus, GalleryHorizontal, Gauge, Grid2X2, Heart, ImageDown, Import, Info, Link2, List, Loader2, Merge, Plus, RotateCcw, Scissors, Search, SlidersHorizontal, Sparkles, Star, Tag, Trash2, X } from 'lucide-react';
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { createContext, Fragment, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type RefObject } from 'react';
 import { computeMediaPreviewDelay, isMediaPreviewable } from './media-hover-preview';
 import { clsx } from 'clsx';
 import { zhCN } from '../../i18n/strings';
@@ -1721,6 +1722,37 @@ const GRID_COLUMN_STYLES: Record<MediaLibraryGridSize, CSSProperties> = {
   large: { gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' },
 };
 
+const GRID_MIN_COLUMN_WIDTHS: Record<MediaLibraryGridSize, number> = {
+  small: 118,
+  medium: 170,
+  large: 240,
+};
+
+const GRID_ROW_HEIGHTS: Record<MediaLibraryGridSize, number> = {
+  small: 120,
+  medium: 170,
+  large: 240,
+};
+
+function useColumnCount(parentRef: RefObject<HTMLDivElement | null>, gridSize: MediaLibraryGridSize): number {
+  const [columns, setColumns] = useState(1);
+  useEffect(() => {
+    const el = parentRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width ?? 0;
+      setColumns(width > 0 ? Math.max(1, Math.floor(width / GRID_MIN_COLUMN_WIDTHS[gridSize])) : 1);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [gridSize, parentRef]);
+  return columns;
+}
+
+function estimateCardRowHeight(gridSize: MediaLibraryGridSize): number {
+  return GRID_ROW_HEIGHTS[gridSize];
+}
+
 function MediaCardGrid({
   media,
   gridSize,
@@ -1806,6 +1838,137 @@ function MediaCardGrid({
     </div>
   );
 }
+
+function VirtualMediaCardGrid({
+  media,
+  gridSize,
+  mediaMetadata,
+  mediaContentAnalysis,
+  projectFrameRate,
+  onAddToTimeline,
+  onAddVersion,
+  onCompareVersions,
+  onRelink,
+  onGenerateProxy,
+  onConvertToCfr,
+  onSetLabel,
+  onSetRating,
+  onSetFlag,
+  onBatchTranscode,
+  onExportGif,
+  onAnalyzeSpectrum,
+  onShowInfo,
+  onFindSources,
+  selectedMediaIds,
+  onToggleSelected,
+  onOpenBatchMetadata,
+  onOpenBatchRename
+}: {
+  media: MediaAsset[];
+  gridSize: MediaLibraryGridSize;
+  mediaMetadata: Record<string, MediaMetadata>;
+  mediaContentAnalysis: Record<string, ClipContentAnalysis>;
+  projectFrameRate: number;
+  onAddToTimeline(assetId: string): void;
+  onAddVersion(assetId: string): void;
+  onCompareVersions(assetId: string): void;
+  onRelink(assetId: string): void;
+  onGenerateProxy(assetId: string): void;
+  onConvertToCfr(assetId: string): void;
+  onSetLabel(assetId: string, labelColor?: MediaLabelColor): void;
+  onSetRating(assetId: string, rating: number): void;
+  onSetFlag(assetId: string, flag?: MediaFlag): void;
+  onBatchTranscode(paths: string[]): void;
+  onExportGif(asset: MediaAsset): void;
+  onAnalyzeSpectrum(asset: MediaAsset): void;
+  onShowInfo(asset: MediaAsset): void;
+  onFindSources(asset: MediaAsset): void;
+  selectedMediaIds: Set<string>;
+  onToggleSelected(assetId: string): void;
+  onOpenBatchMetadata(assetId: string): void;
+  onOpenBatchRename(assetId: string): void;
+}) {
+  const parentRef = useRef<HTMLDivElement>(null);
+  const columnCount = useColumnCount(parentRef as RefObject<HTMLDivElement | null>, gridSize);
+  const rowCount = Math.ceil(media.length / columnCount);
+  const rowHeight = estimateCardRowHeight(gridSize);
+
+  const virtualizer = useVirtualizer({
+    count: rowCount,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => rowHeight + 12,
+    overscan: 3,
+  });
+
+  const prevMediaLenRef = useRef(media.length);
+  useEffect(() => {
+    if (media.length !== prevMediaLenRef.current) {
+      prevMediaLenRef.current = media.length;
+      virtualizer.scrollToIndex(0, { align: 'start' });
+    }
+  }, [media.length, virtualizer]);
+
+  if (media.length === 0) {
+    return null;
+  }
+
+  const virtualItems = virtualizer.getVirtualItems();
+  const paddingTop = virtualItems.length > 0 ? virtualItems[0]!.start : 0;
+  const paddingBottom = virtualItems.length > 0 ? virtualizer.getTotalSize() - virtualItems[virtualItems.length - 1]!.end : 0;
+
+  return (
+    <div
+      ref={parentRef}
+      className="h-full overflow-auto"
+      data-testid="media-grid-view"
+      data-grid-size={gridSize}
+      data-media-card-grid="true"
+    >
+      <div
+        className="grid gap-3"
+        style={{ gridTemplateColumns: 'repeat(' + columnCount + ', 1fr)', paddingTop, paddingBottom }}
+      >
+        {virtualItems.map((virtualRow) => {
+          const rowStart = virtualRow.index * columnCount;
+          const rowItems = media.slice(rowStart, rowStart + columnCount);
+          return (
+            <Fragment key={virtualRow.key}>
+              {rowItems.map((asset) => (
+                <MediaCard
+                  key={asset.id}
+                  asset={asset}
+                  metadata={mediaMetadata[asset.id]}
+                  contentAnalysis={mediaContentAnalysis[asset.id]}
+                  projectFrameRate={projectFrameRate}
+                  onAdd={() => onAddToTimeline(asset.id)}
+                  onAddVersion={() => onAddVersion(asset.id)}
+                  onCompareVersions={() => onCompareVersions(asset.id)}
+                  onRelink={() => onRelink(asset.id)}
+                  onGenerateProxy={() => onGenerateProxy(asset.id)}
+                  onConvertToCfr={() => onConvertToCfr(asset.id)}
+                  onSetLabel={(labelColor) => onSetLabel(asset.id, labelColor)}
+                  onSetRating={(rating) => onSetRating(asset.id, rating)}
+                  onSetFlag={(flag) => onSetFlag(asset.id, flag)}
+                  onBatchTranscode={() => onBatchTranscode([asset.path])}
+                  onExportGif={() => onExportGif(asset)}
+                  onAnalyzeSpectrum={() => onAnalyzeSpectrum(asset)}
+                  onShowInfo={() => onShowInfo(asset)}
+                  onFindSources={() => onFindSources(asset)}
+                  selected={selectedMediaIds.has(asset.id)}
+                  onToggleSelected={() => onToggleSelected(asset.id)}
+                  batchSelectionCount={selectedMediaIds.has(asset.id) ? selectedMediaIds.size : 1}
+                  onOpenBatchMetadata={() => onOpenBatchMetadata(asset.id)}
+                  onOpenBatchRename={() => onOpenBatchRename(asset.id)}
+                />
+              ))}
+            </Fragment>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 
 function TitleTemplateGrid({ onAddTitleTemplate }: { onAddTitleTemplate(templateId: TitleTemplateId): void }) {
   return (
