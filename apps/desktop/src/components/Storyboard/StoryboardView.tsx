@@ -212,7 +212,7 @@ export function StoryboardView() {
 function StoryboardThumb({ asset, name }: { asset?: MediaAsset; name: string }) {
   const src = asset?.thumbnail || (asset?.type === 'image' ? convertLocalFileSrc(asset.path) : undefined);
   if (src) {
-    return <img className="aspect-video w-full bg-slate-100 object-cover" src={src} alt={name} draggable={false} />;
+    return <img className="aspect-video w-full bg-slate-100 object-cover" src={src} alt={name} draggable={false} loading="lazy" />;
   }
   return (
     <div className="flex aspect-video w-full items-center justify-center bg-slate-100 text-xs font-medium text-slate-500">
