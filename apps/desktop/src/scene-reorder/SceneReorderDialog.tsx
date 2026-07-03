@@ -185,7 +185,7 @@ function SceneReorderCard({ index, clip, asset, feature }: { index: number; clip
   return (
     <article className="overflow-hidden rounded-md border border-line bg-white shadow-sm" data-testid={`scene-reorder-card-${clip.id}`}>
       {src ? (
-        <img className="aspect-video w-full bg-slate-100 object-cover" src={src} alt={clip.name} draggable={false} />
+        <img className="aspect-video w-full bg-slate-100 object-cover" src={src} alt={clip.name} draggable={false} loading="lazy" />
       ) : (
         <div className="flex aspect-video w-full items-center justify-center bg-slate-100 text-xs font-medium text-slate-500">{clip.type === 'image' ? zhCN.storyboard.image : zhCN.storyboard.video}</div>
       )}
