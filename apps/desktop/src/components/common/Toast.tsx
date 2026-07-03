@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { clsx } from 'clsx';
 import { zhCN } from '../../i18n/strings';
 import type { ToastEventDetail } from '../../lib/toast';
+import { useSafeTimeout } from '../../hooks/useSafeTimeout';
 
 interface ToastItem extends ToastEventDetail {
   id: number;
@@ -17,19 +18,20 @@ const toneClass = {
 
 export function ToastViewport() {
   const [items, setItems] = useState<ToastItem[]>([]);
+  const safeTimeout = useSafeTimeout();
 
   useEffect(() => {
     const onToast = (event: Event) => {
       const detail = (event as CustomEvent<ToastEventDetail>).detail;
       const id = Date.now() + Math.random();
       setItems((current) => [...current, { id, kind: 'info', ...detail }]);
-      window.setTimeout(() => {
+      safeTimeout(() => {
         setItems((current) => current.filter((item) => item.id !== id));
       }, 4500);
     };
     window.addEventListener('open-factory-toast', onToast);
     return () => window.removeEventListener('open-factory-toast', onToast);
-  }, []);
+  }, [safeTimeout]);
 
   if (items.length === 0) {
     return null;

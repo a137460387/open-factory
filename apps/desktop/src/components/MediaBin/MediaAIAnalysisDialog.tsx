@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
+import { useSafeTimeout } from '../../hooks/useSafeTimeout';
 import type { MediaAsset, MediaAIAnalysis } from '@open-factory/editor-core';
 import {
   isVisionCapable,
@@ -27,6 +28,7 @@ export function MediaAIAnalysisDialog({
 }) {
   const providers = useAISettingsStore((s) => s.providers);
   const serviceMapping = useAISettingsStore((s) => s.serviceMapping);
+  const safeTimeout = useSafeTimeout();
   const visionProviders = providers.filter(
     (p) => p.enabled && isProviderConfigured(p) && isVisionCapable(p.defaultModel)
   );
@@ -137,7 +139,7 @@ export function MediaAIAnalysisDialog({
 
     showToast({ kind: 'success', title: t.appliedTitle, message: t.appliedMessage });
     setPhase('done');
-    setTimeout(() => onClose(), 300);
+    safeTimeout(() => onClose(), 300);
   }, [result, asset.id, onClose]);
 
   return (

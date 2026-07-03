@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSafeTimeout } from '../hooks/useSafeTimeout';
 import type { Project, LoudnessSuggestion, PlatformTarget } from '@open-factory/editor-core';
 import { PLATFORM_TARGETS, calculateGainDelta, shouldSuggestGain } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
@@ -7,6 +8,7 @@ const t = zhCN.exportDialog.aiLoudnessSuggestion;
 
 export function AILoudnessSuggestionSection({ project, onApply }: { project: Project; onApply?: (s: LoudnessSuggestion) => void }) {
   const existing = project.loudnessSuggestion;
+  const safeTimeout = useSafeTimeout();
   const [suggestion, setSuggestion] = useState<LoudnessSuggestion | null>(null);
   const [measuring, setMeasuring] = useState(false);
   const [targetPlatform, setTargetPlatform] = useState<PlatformTarget>(existing?.targetPlatform ?? 'youtube');
@@ -14,7 +16,7 @@ export function AILoudnessSuggestionSection({ project, onApply }: { project: Pro
   const handleMeasure = () => {
     if (existing) { setSuggestion(existing); return; }
     setMeasuring(true);
-    setTimeout(() => setMeasuring(false), 300);
+    safeTimeout(() => setMeasuring(false), 300);
   };
 
   const targetLUFS = PLATFORM_TARGETS[targetPlatform];

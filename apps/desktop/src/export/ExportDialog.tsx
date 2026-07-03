@@ -111,6 +111,7 @@ import {
 import { AILoudnessSuggestionSection } from './AILoudnessSuggestionSection';
 import { AlertTriangle, Cloud, CloudDownload, Clock3, Copy, Download, FileText, FolderOpen, Image as ImageIcon, ListPlus, Loader2, Minimize2, Save, Trash2, Upload, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
+import { useSafeTimeout } from '../hooks/useSafeTimeout';
 import { zhCN } from '../i18n/strings';
 import { commandManager, projectAccessor } from '../store/commandManager';
 import { chooseExportPath, revealExport } from '../lib/exportVideo';
@@ -6010,10 +6011,11 @@ function StatusPill({ status }: { status: ExportTaskStatus }) {
 function ExportDiagnosticsPanel({ error }: { error: string }) {
   const [copied, setCopied] = useState(false);
   const matches = matchExportDiagnostics(error);
+  const safeTimeout = useSafeTimeout();
   const handleCopy = () => {
     void navigator.clipboard.writeText(error).then(() => {
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      safeTimeout(() => setCopied(false), 2000);
     });
   };
   return (

@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { useSafeTimeout } from '../../hooks/useSafeTimeout';
 import { ChevronDown, History, Loader2, Sparkles, X } from 'lucide-react';
 import { clsx } from 'clsx';
 import {
@@ -51,6 +52,7 @@ export function AISemanticSearchPanel({ media, onSelectMedia }: AISemanticSearch
   const providers = useAISettingsStore((s) => s.providers);
   const available = hasAvailableTextProvider(providers);
 
+  const safeTimeout = useSafeTimeout();
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
@@ -170,7 +172,7 @@ export function AISemanticSearchPanel({ media, onSelectMedia }: AISemanticSearch
           disabled={!available}
           data-testid="ai-search-input"
           onFocus={() => setShowHistory(true)}
-          onBlur={() => setTimeout(() => setShowHistory(false), 200)}
+          onBlur={() => safeTimeout(() => setShowHistory(false), 200)}
         />
         <button
           type="submit"

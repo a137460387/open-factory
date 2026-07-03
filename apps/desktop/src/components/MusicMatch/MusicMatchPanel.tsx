@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
+import { useSafeTimeout } from '../../hooks/useSafeTimeout';
 import type { MediaAsset } from '@open-factory/editor-core';
 import {
   buildMusicMatchSystemPrompt,
@@ -102,6 +103,7 @@ export function MusicMatchPanel({
     setPhase('idle');
   }, []);
 
+  const safeTimeout = useSafeTimeout();
   const copyKeywords = useCallback(async () => {
     if (!result) return;
     const allKeywords = [...result.keywords, ...result.searchSuggestions].join('、');
@@ -109,7 +111,7 @@ export function MusicMatchPanel({
       await navigator.clipboard.writeText(allKeywords);
       setCopied(true);
       showToast({ kind: 'success', title: t.copied });
-      setTimeout(() => setCopied(false), 2000);
+      safeTimeout(() => setCopied(false), 2000);
     } catch {
       showToast({ kind: 'error', title: '复制失败' });
     }
