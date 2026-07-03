@@ -307,6 +307,10 @@ import { ExportOptimizationPanel, formatOptimizationSuggestionTitle, ExportWarmu
 import { PreflightPanel } from './components/PreflightPanel';
 import { formatFpsOption, formatOptionLabel, WatermarkNumberField, PresetNumberField, PresetFpsField, PresetTextField, PresetColorField, PresetSelectField, PresetCheckboxField } from './components/PresetFields';
 import { formatBytes, formatMilliseconds, formatOptionalNumber, priorityLabel, getLastExportDurationSeconds, estimateDimensions, formatExportWarning } from './lib/exportFormatHelpers';
+import { PipelineSection } from './components/PipelineSection';
+import { VersionedBatchReportTable } from './components/VersionedBatchReportTable';
+import { ReframePreviewBox } from './components/ReframePreviewBox';
+import { Info } from './components/Info';
 
 interface ExportDialogProps {
   project: Project;
@@ -385,136 +389,6 @@ interface ExportPreviewThumbnail {
   durationMs: number;
 }
 
-
-function PipelineSection({
-  pipeline,
-  statuses,
-  publishLogs,
-  onCreateTemplate,
-  onCreatePublishTemplate
-}: {
-  pipeline: ExportPipeline;
-  statuses: Record<string, ExportPipelineNodeStatus>;
-  publishLogs: ExportPublishNodeLog[];
-  onCreateTemplate(): void;
-  onCreatePublishTemplate(): void;
-}) {
-  const t = zhCN.exportDialog.pipeline;
-  const downstreamMap = useMemo(() => {
-    const nameById = new Map(pipeline.nodes.map((node) => [node.id, node.name]));
-    const map = new Map<string, string[]>();
-    for (const edge of pipeline.edges) {
-      const existing = map.get(edge.from);
-      const name = nameById.get(edge.to) ?? edge.to;
-      if (existing) {
-        existing.push(name);
-      } else {
-        map.set(edge.from, [name]);
-      }
-    }
-    return map;
-  }, [pipeline.nodes, pipeline.edges]);
-  return (
-    <div className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3" data-testid="export-pipeline-tab">
-      <label className="pt-1 text-xs font-medium text-slate-600">{t.title}</label>
-      <div className="space-y-3">
-        <p className="text-xs text-slate-500">{t.description}</p>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            className="rounded-md border border-line px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
-            data-testid="export-pipeline-create-two-node"
-            onClick={onCreateTemplate}
-          >
-            {t.createTwoNode}
-          </button>
-          <button
-            type="button"
-            className="rounded-md border border-line px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
-            data-testid="export-pipeline-create-publish"
-            onClick={onCreatePublishTemplate}
-          >
-            {t.createPublish}
-          </button>
-          <span className="text-xs text-slate-500" data-testid="export-pipeline-summary">
-            {t.summary(pipeline.nodes.length, pipeline.edges.length)}
-          </span>
-        </div>
-        {pipeline.nodes.length === 0 ? (
-          <div className="rounded-md border border-dashed border-line bg-panel px-3 py-6 text-center text-xs text-slate-500" data-testid="export-pipeline-empty">
-            {t.empty}
-          </div>
-        ) : (
-          <div className="grid gap-2" data-testid="export-pipeline-node-list">
-            {pipeline.nodes.map((node) => {
-              const status = statuses[node.id] ?? 'waiting';
-              const downstream = downstreamMap.get(node.id) ?? [];
-              return (
-                <div key={node.id} className="rounded-md border border-line bg-white p-3 text-xs" data-testid="export-pipeline-node" data-node-id={node.id}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="font-semibold text-ink">{node.name}</div>
-                      <div className="mt-1 text-slate-500">{t.nodeTypes[node.type]}</div>
-                      {downstream.length > 0 ? <div className="mt-1 text-slate-500">{t.downstream(downstream.join(' / '))}</div> : null}
-                    </div>
-                    <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${pipelineStatusClass(status)}`} data-testid="export-pipeline-node-status" data-status={status}>
-                      {t.status[status]}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-        {publishLogs.length > 0 ? (
-          <div className="grid gap-1 rounded-md border border-line bg-panel p-2 text-xs" data-testid="export-publish-log-list">
-            {publishLogs.map((log) => (
-              <div key={`${log.nodeId}-${log.finishedAt}`} className="flex items-center justify-between gap-2" data-testid="export-publish-log" data-status={log.status}>
-                <span className="min-w-0 truncate">{log.message}</span>
-                <span className="shrink-0 tabular-nums text-slate-500">{log.durationMs} ms</span>
-              </div>
-            ))}
-          </div>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-function VersionedBatchReportTable({ rows }: { rows: VersionedExportReportRow[] }) {
-  const t = zhCN.exportDialog.versionBatch.report;
-  return (
-    <div className="overflow-hidden rounded-md border border-line" data-testid="export-version-report">
-      <div className="border-b border-line bg-panel px-3 py-2 text-xs font-semibold text-slate-700">{t.title}</div>
-      <table className="w-full border-collapse text-xs">
-        <thead className="bg-panel/60 text-slate-600">
-          <tr>
-            <th className="px-2 py-2 text-left font-semibold">{t.columns.version}</th>
-            <th className="px-2 py-2 text-left font-semibold">{t.columns.platform}</th>
-            <th className="px-2 py-2 text-left font-semibold">{t.columns.resolution}</th>
-            <th className="px-2 py-2 text-left font-semibold">{t.columns.fileSize}</th>
-            <th className="px-2 py-2 text-left font-semibold">{t.columns.duration}</th>
-            <th className="px-2 py-2 text-left font-semibold">{t.columns.elapsed}</th>
-            <th className="px-2 py-2 text-left font-semibold">{t.columns.status}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={`${row.batchId}-${row.versionId}`} className="border-t border-line" data-testid="export-version-report-row" data-version-id={row.versionId}>
-              <td className="px-2 py-2 font-medium text-slate-800">{row.versionName}</td>
-              <td className="px-2 py-2 text-slate-600">{[row.platform, row.language].filter(Boolean).join(' / ') || zhCN.common.auto}</td>
-              <td className="px-2 py-2 tabular-nums text-slate-600">{row.width && row.height ? `${row.width} x ${row.height}` : zhCN.common.auto}</td>
-              <td className="px-2 py-2 tabular-nums text-slate-600" data-testid="export-version-report-size">{formatBytes(row.fileSizeBytes ?? undefined)}</td>
-              <td className="px-2 py-2 tabular-nums text-slate-600">{row.durationSeconds === null ? zhCN.common.auto : formatDuration(row.durationSeconds)}</td>
-              <td className="px-2 py-2 tabular-nums text-slate-600" data-testid="export-version-report-elapsed">{formatMilliseconds(row.elapsedMs ?? undefined)}</td>
-              <td className="px-2 py-2 text-slate-600">{zhCN.exportDialog.status[row.status] ?? row.status}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
 
 export function ExportDialog({ project, initialPreset, selectedClipIds = [], inPoint, outPoint, onClose, onCompleted, onRelinkMissing }: ExportDialogProps) {
   const [complianceOpen, setComplianceOpen] = useState(false);
@@ -3765,24 +3639,6 @@ function ReframeOffsetField({
   );
 }
 
-function ReframePreviewBox({ aspect, offsetX, offsetY }: { aspect: TargetAspectRatio; offsetX: number; offsetY: number }) {
-  const normalized = normalizeTargetAspectRatio(aspect);
-  const ratioClass = normalized === '9:16' ? 'aspect-[9/16]' : normalized === '1:1' ? 'aspect-square' : normalized === '4:5' ? 'aspect-[4/5]' : normalized === '21:9' ? 'aspect-[21/9]' : 'aspect-video';
-  const translateX = `${clampReframeOffset(offsetX) * 18}%`;
-  const translateY = `${clampReframeOffset(offsetY) * 18}%`;
-  return (
-    <div className="flex items-center justify-center rounded-md bg-panel p-2" data-testid="export-reframe-preview">
-      <div className="relative h-24 w-full max-w-32 overflow-hidden rounded border border-line bg-slate-200">
-        <div className="absolute inset-2 rounded bg-gradient-to-br from-slate-500 via-slate-400 to-slate-600" />
-        <div
-          className={`absolute left-1/2 top-1/2 max-h-[88%] w-[58%] -translate-x-1/2 -translate-y-1/2 border-2 border-brand bg-brand/10 ${ratioClass}`}
-          style={{ transform: `translate(calc(-50% + ${translateX}), calc(-50% + ${translateY}))` }}
-        />
-      </div>
-    </div>
-  );
-}
-
 function applyExportSuggestionToDraft(
   setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>,
   suggestion: AIExportSuggestion,
@@ -3955,13 +3811,4 @@ function AIExportSuggestionPanel({
 }
 
 
-function Info({ label, value, tone }: { label: string; value: string; tone?: 'ok' | 'warn' | 'bad' }) {
-  const toneClass = tone === 'ok' ? 'text-emerald-700' : tone === 'warn' ? 'text-amber-700' : tone === 'bad' ? 'text-rose-700' : 'text-slate-700';
-  return (
-    <div className="rounded-md bg-panel p-2">
-      <div className="text-[11px] uppercase tracking-normal text-slate-500">{label}</div>
-      <div className={`truncate font-medium ${toneClass}`}>{value}</div>
-    </div>
-  );
-}
 
