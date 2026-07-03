@@ -166,7 +166,7 @@ export function AISceneMatchPanel({
         data-testid={`ai-scene-match-card-${card.mediaId}`}
       >
         {thumbnailSrc && (
-          <img src={thumbnailSrc} alt="" className="h-10 w-14 rounded object-cover shrink-0" />
+          <img src={thumbnailSrc} alt="" className="h-10 w-14 rounded object-cover shrink-0" loading="lazy" />
         )}
         <div className="min-w-0 flex-1">
           <div className="truncate font-medium text-slate-800">{card.name}</div>
