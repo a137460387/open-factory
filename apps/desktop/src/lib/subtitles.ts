@@ -143,10 +143,6 @@ export function isSubtitlePath(path: string): boolean {
   return SUBTITLE_EXTENSIONS.some((extension) => path.toLowerCase().endsWith(`.${extension}`));
 }
 
-export function isSubtitleDataPath(path: string): boolean {
-  return SUBTITLE_DATA_EXTENSIONS.some((extension) => path.toLowerCase().endsWith(`.${extension}`));
-}
-
 function inferSubtitleDataFormat(path: string): SubtitleDataImportFormat {
   return path.toLowerCase().endsWith('.json') ? 'json' : 'csv';
 }

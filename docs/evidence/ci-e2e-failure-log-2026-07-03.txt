@@ -1,0 +1,75 @@
+# E2E CI Failure Log — Run 28609548344, commit 3c56ab7d (main)
+# Date: 2026-07-02T17:34:48 UTC
+# Source: `gh run view 28609548344 --log` — raw CI log extracted and deduplicated
+# Note: ANSI escape codes stripped for readability; original raw lines at end of file.
+#
+# The e2e job has NEVER succeeded since it was added to CI (commit 4a7f2c59).
+# Root cause: Vite dev server cannot resolve @open-factory/editor-core because
+# the dist/ directory (referenced by package.json exports) was never built.
+
+## Primary Error (repeated ~15 times for each source file importing editor-core)
+
+[WebServer] Error: Failed to scan for dependencies from entries:
+[WebServer] ✘ [ERROR] Failed to resolve entry for package "@open-factory/editor-core".
+  The package may have incorrect main/module/exports specified in its package.json.
+  [plugin vite:dep-scan]
+
+## esbuild internals (stack trace context)
+
+    ../../node_modules/esbuild/lib/main.js:1498:21:
+      1498 │         let result = await callback({
+           ╵                      ^
+  This error came from the "onResolve" callback registered here:
+    ../../node_modules/vite/dist/node/chunks/dep-DBxKXgCP.js
+
+## editor-core package.json exports (the target Vite tries to resolve)
+
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } }
+  "main": "./dist/index.js"
+  "module": "./dist/index.js"
+  → dist/ is gitignored and was never built in the e2e CI job.
+
+## Contrast with other CI jobs that DON'T fail
+
+  - frontend job: uses `tsc -b` (tsconfig paths resolve from source, not dist/)
+  - rust job: includes `bun run build` which runs `tsc -p tsconfig.build.json`
+    → produces dist/index.js before anything tries to resolve it
+  - e2e job: runs `bunx playwright test` directly, NO build step
+    → Playwright webServer starts `vite --host localhost` → dep-scan
+    → missing dist/ → dev server crash → all e2e tests fail
+
+## Secondary error (after Vite crash)
+
+  ffmpeg exited with code 1 during opacity-keyframe-export test
+  (secondary to the resolution failure; not independently investigated)
+
+## CI run history on main (e2e job was added in commit 4a7f2c59)
+
+  Run ID        | Conclusion | Commit    | Date
+  28609548344   | failure    | 3c56ab7d  | 2026-07-02 17:34
+  28606217156   | failure    | 147e9417  | 2026-07-02 16:38
+  28604441398   | failure    | f6f9abb5  | 2026-07-02 16:08
+  28603330859   | failure    | 8283dc7f  | 2026-07-02 15:51
+  28603143723   | failure    | c24ab7fc  | 2026-07-02 15:48
+  28562974896   | failure    | ba449b10  | 2026-07-02 03:20
+  28484723642   | success    | d04b1506  | 2026-07-01 00:22  (no e2e job yet)
+  28433369793   | success    | 003b4bb8  | 2026-06-30 09:11  (no e2e job yet)
+
+  All runs WITH the e2e job have failed.
+
+---
+
+## RAW CI LOG (with ANSI escape codes preserved, deduplicated)
+
+### Line 1 — Error entry point
+e2e  Run E2E tests  2026-07-02T17:34:48.2062547Z [WebServer] Error: Failed to scan for dependencies from entries:
+
+### Line 2 — Primary error message
+e2e  Run E2E tests  2026-07-02T17:34:48.2067295Z [WebServer] ✘ [ERROR] Failed to resolve entry for package "@open-factory/editor-core". The package may have incorrect main/module/exports specified in its package.json. [plugin vite:dep-scan]
+
+### Lines 3-4 — Stack trace
+e2e  Run E2E tests  2026-07-02T17:34:48.2069919Z [WebServer]     ../../node_modules/esbuild/lib/main.js:1498:21:
+e2e  Run E2E tests  2026-07-02T17:34:48.2070875Z [WebServer]       1498 │         let result = await callback({
+e2e  Run E2E tests  2026-07-02T17:34:48.2071723Z [WebServer]            ╵                      ^^
+e2e  Run E2E tests  2026-07-02T17:34:48.2072291Z [WebServer]
+e2e  Run E2E tests  2026-07-02T17:34:48.2106116Z [WebServer]   This error came from the "onResolve" callback registered here:

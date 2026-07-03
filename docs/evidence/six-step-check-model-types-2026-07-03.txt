@@ -1,0 +1,169 @@
+=== 六步检查: model-types.ts 10 个 unused exported types ===
+证据源: docs/evidence/knip-output-2026-07-03.txt lines 185-194
+检查时间: 2026-07-03 08:33:16
+
+============================================
+TYPE: AIColorGradingSuggestionItem
+knip 原始行:
+185:AIColorGradingSuggestionItem          interface  packages/editor-core/src/model-types.ts:770:18                         
+
+Step 1 - 类型名 grep (排除 model-types.ts): packages/editor-core/src/ai-service.ts
+Step 2 - 字符串引用: 0 matches
+Step 3 - IPC/Rust 侧引用: 0 matches
+Step 4 - 事件总线: 0 matches
+Step 5 - 动态 import: 0 matches
+Step 6 - barrel re-export: 0 matches
+
+============================================
+TYPE: ClipAudioRestorationToggle
+knip 原始行:
+186:ClipAudioRestorationToggle            interface  packages/editor-core/src/model-types.ts:782:18                         
+
+Step 1 - 类型名 grep (排除 model-types.ts): 0 matches
+Step 2 - 字符串引用: 0 matches
+Step 3 - IPC/Rust 侧引用: 0 matches
+Step 4 - 事件总线: 0 matches
+Step 5 - 动态 import: 0 matches
+Step 6 - barrel re-export: 0 matches
+
+============================================
+TYPE: ClipAudioDereverbSettings
+knip 原始行:
+187:ClipAudioDereverbSettings             interface  packages/editor-core/src/model-types.ts:786:18                         
+
+Step 1 - 类型名 grep (排除 model-types.ts): 0 matches
+Step 2 - 字符串引用: 0 matches
+Step 3 - IPC/Rust 侧引用: 0 matches
+Step 4 - 事件总线: 0 matches
+Step 5 - 动态 import: 0 matches
+Step 6 - barrel re-export: 0 matches
+
+============================================
+TYPE: AiPipPlacementSuggestion
+knip 原始行:
+188:AiPipPlacementSuggestion              interface  packages/editor-core/src/model-types.ts:953:18                         
+
+Step 1 - 类型名 grep (排除 model-types.ts): packages/editor-core/src/model.ts
+Step 2 - 字符串引用: 0 matches
+Step 3 - IPC/Rust 侧引用: 0 matches
+Step 4 - 事件总线: 0 matches
+Step 5 - 动态 import: packages/editor-core/src/model.ts:export function normalizeAiPipSuggestion(input: unknown): import('./model-types').AiPipPlacementSuggestion | undefined {
+Step 6 - barrel re-export: 0 matches
+
+============================================
+TYPE: PlatformFitSegment
+knip 原始行:
+189:PlatformFitSegment                    interface  packages/editor-core/src/model-types.ts:960:18                         
+
+Step 1 - 类型名 grep (排除 model-types.ts): packages/editor-core/src/model.ts
+packages/editor-core/src/platform-fit.ts
+Step 2 - 字符串引用: 0 matches
+Step 3 - IPC/Rust 侧引用: 0 matches
+Step 4 - 事件总线: 0 matches
+Step 5 - 动态 import: packages/editor-core/src/model.ts:  const normalizeSegments = (segs: unknown): import('./model-types').PlatformFitSegment[] => {
+Step 6 - barrel re-export: 0 matches
+
+============================================
+TYPE: ProjectPlatformFitSuggestion
+knip 原始行:
+190:ProjectPlatformFitSuggestion          interface  packages/editor-core/src/model-types.ts:968:18                         
+
+Step 1 - 类型名 grep (排除 model-types.ts): packages/editor-core/src/commands/timeline-commands.ts
+packages/editor-core/src/model.ts
+Step 2 - 字符串引用: 0 matches
+Step 3 - IPC/Rust 侧引用: 0 matches
+Step 4 - 事件总线: 0 matches
+Step 5 - 动态 import: packages/editor-core/src/commands/timeline-commands.ts:    private readonly suggestion: import('../model-types').ProjectPlatformFitSuggestion
+packages/editor-core/src/model.ts:export function normalizePlatformFitSuggestion(input: unknown): import('./model-types').ProjectPlatformFitSuggestion | undefined {
+Step 6 - barrel re-export: 0 matches
+
+============================================
+TYPE: ColorConsistencyWarningType
+knip 原始行:
+191:ColorConsistencyWarningType           type       packages/editor-core/src/model-types.ts:1103:13                        
+
+Step 1 - 类型名 grep (排除 model-types.ts): 0 matches
+Step 2 - 字符串引用: 0 matches
+Step 3 - IPC/Rust 侧引用: 0 matches
+Step 4 - 事件总线: 0 matches
+Step 5 - 动态 import: 0 matches
+Step 6 - barrel re-export: 0 matches
+
+============================================
+TYPE: ColorConsistencyWarning
+knip 原始行:
+191:ColorConsistencyWarningType           type       packages/editor-core/src/model-types.ts:1103:13                        
+192:ColorConsistencyWarning               interface  packages/editor-core/src/model-types.ts:1104:18                        
+
+Step 1 - 类型名 grep (排除 model-types.ts): 0 matches
+Step 2 - 字符串引用: 0 matches
+Step 3 - IPC/Rust 侧引用: 0 matches
+Step 4 - 事件总线: 0 matches
+Step 5 - 动态 import: 0 matches
+Step 6 - barrel re-export: 0 matches
+
+============================================
+TYPE: SfxSuggestionStatus
+knip 原始行:
+193:SfxSuggestionStatus                   type       packages/editor-core/src/model-types.ts:1112:13                        
+
+Step 1 - 类型名 grep (排除 model-types.ts): 0 matches
+Step 2 - 字符串引用: 0 matches
+Step 3 - IPC/Rust 侧引用: 0 matches
+Step 4 - 事件总线: 0 matches
+Step 5 - 动态 import: 0 matches
+Step 6 - barrel re-export: 0 matches
+
+============================================
+TYPE: SfxSuggestion
+knip 原始行:
+193:SfxSuggestionStatus                   type       packages/editor-core/src/model-types.ts:1112:13                        
+194:SfxSuggestion                         interface  packages/editor-core/src/model-types.ts:1113:18                        
+
+Step 1 - 类型名 grep (排除 model-types.ts): packages/editor-core/src/ai-sfx-match.ts
+packages/editor-core/__tests__/ai-sfx-match.test.ts
+Step 2 - 字符串引用: 0 matches
+Step 3 - IPC/Rust 侧引用: 0 matches
+Step 4 - 事件总线: 0 matches
+Step 5 - 动态 import: 0 matches
+Step 6 - barrel re-export: 0 matches
+
+
+============================================
+六步检查分类汇总
+============================================
+
+=== B-new-1 ~ B-new-5: 全六步零引用, SAFE_DELETE (可移除 export) ===
+
+B-new-1: ClipAudioRestorationToggle    model-types.ts:782   — 六步全零
+B-new-2: ClipAudioDereverbSettings     model-types.ts:786   — 六步全零
+B-new-3: ColorConsistencyWarningType   model-types.ts:1103  — 六步全零
+B-new-4: ColorConsistencyWarning       model-types.ts:1104  — 六步全零
+B-new-5: SfxSuggestionStatus           model-types.ts:1112  — 六步全零
+
+=== B-skip-1 ~ B-skip-5: 有内部消费者, export 需保留, 不能移除 ===
+
+B-skip-1: AIColorGradingSuggestionItem  model-types.ts:770
+  → ai-service.ts 内部引用该类型 (Step 1 非零)
+  → 移除 export 会导致 ai-service.ts 编译失败
+
+B-skip-2: AiPipPlacementSuggestion      model-types.ts:953
+  → model.ts 内部引用 (Step 1 非零)
+  → model.ts 通过 import('./model-types').AiPipPlacementSuggestion 使用 (Step 5 非零)
+  → 移除 export 会导致 model.ts 编译失败
+
+B-skip-3: PlatformFitSegment            model-types.ts:960
+  → model.ts + platform-fit.ts 内部引用 (Step 1 非零)
+  → model.ts 通过 import('./model-types').PlatformFitSegment[] 使用 (Step 5 非零)
+  → 移除 export 会导致两个文件编译失败
+
+B-skip-4: ProjectPlatformFitSuggestion  model-types.ts:968
+  → timeline-commands.ts + model.ts 内部引用 (Step 1 非零)
+  → 两处通过 import('../model-types').ProjectPlatformFitSuggestion 使用 (Step 5 非零)
+  → 移除 export 会导致两个文件编译失败
+
+B-skip-5: SfxSuggestion                 model-types.ts:1113
+  → ai-sfx-match.ts + ai-sfx-match.test.ts 内部引用 (Step 1 非零)
+  → 移除 export 会导致编译和测试失败
+
+结论: 10 个 unused exported types 中, 5 个可安全移除 export, 5 个因内部引用必须保留
