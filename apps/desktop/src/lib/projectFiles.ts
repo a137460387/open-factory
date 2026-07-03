@@ -184,10 +184,6 @@ export async function findStartupAutosaveRecovery(): Promise<AutosaveRecoveryCan
   return undefined;
 }
 
-export async function restoreAutosaveRecovery(candidate: AutosaveRecoveryCandidate): Promise<Project> {
-  return readProjectFile(candidate.autosavePath, candidate.projectPath ?? candidate.autosavePath);
-}
-
 export async function discardAutosaveRecovery(candidate: AutosaveRecoveryCandidate): Promise<void> {
   await removeFile(candidate.autosavePath);
 }
