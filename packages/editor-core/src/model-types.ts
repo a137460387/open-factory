@@ -779,11 +779,11 @@ export interface ClipAudioDenoise {
   strength: number;
 }
 
-export interface ClipAudioRestorationToggle {
+interface ClipAudioRestorationToggle {
   enabled: boolean;
 }
 
-export interface ClipAudioDereverbSettings {
+interface ClipAudioDereverbSettings {
   enabled: boolean;
   strength: number;
 }
@@ -1100,8 +1100,8 @@ import type { ClipAIReframe } from './ai-reframe';
 import type { AnomalyInterval } from './anomaly-detection';
 import type { ClipMotionType } from './ai-motion-type';
 
-export type ColorConsistencyWarningType = 'skin_tone' | 'white_balance' | 'both';
-export interface ColorConsistencyWarning {
+type ColorConsistencyWarningType = 'skin_tone' | 'white_balance' | 'both';
+interface ColorConsistencyWarning {
   clipAId: string;
   clipBId: string;
   type: ColorConsistencyWarningType;
@@ -1109,7 +1109,7 @@ export interface ColorConsistencyWarning {
   reason: string;
 }
 
-export type SfxSuggestionStatus = 'pending' | 'accepted' | 'rejected';
+type SfxSuggestionStatus = 'pending' | 'accepted' | 'rejected';
 export interface SfxSuggestion {
   time: number;
   category: string;
