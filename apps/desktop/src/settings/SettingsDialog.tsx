@@ -2223,7 +2223,7 @@ export function SettingsDialog({
                     <div key={item.path} className="rounded-md border border-line bg-white p-3 shadow-sm" data-testid="lut-library-item">
                       <div className="flex items-start gap-3">
                         <div className="h-[54px] w-24 shrink-0 overflow-hidden rounded bg-slate-100">
-                          {item.previewDataUrl ? <img className="h-full w-full object-cover" src={item.previewDataUrl} alt="" /> : null}
+                          {item.previewDataUrl ? <img className="h-full w-full object-cover" src={item.previewDataUrl} alt="" loading="lazy" /> : null}
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="truncate text-sm font-semibold text-ink" title={item.path}>{item.name}</div>
@@ -3746,7 +3746,7 @@ function EffectPresetCommunityPanel({
             <div key={card.id} className="rounded-md border border-line bg-white p-3" data-testid="effect-preset-community-card" data-preset-id={card.id}>
               <div className="flex items-start gap-3">
                 <div className="grid h-20 w-28 shrink-0 place-items-center overflow-hidden rounded border border-line bg-panel">
-                  {card.thumbnail ? <img className="h-full w-full object-cover" src={card.thumbnail} alt="" data-testid="effect-preset-community-thumbnail" /> : <SlidersHorizontal size={18} className="text-slate-400" />}
+                  {card.thumbnail ? <img className="h-full w-full object-cover" src={card.thumbnail} alt="" data-testid="effect-preset-community-thumbnail" loading="lazy" /> : <SlidersHorizontal size={18} className="text-slate-400" />}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-semibold text-ink">{card.name}</div>
