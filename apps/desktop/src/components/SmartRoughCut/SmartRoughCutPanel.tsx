@@ -525,7 +525,7 @@ function SceneResultList({
             data-testid={`smart-scene-checkbox-${item.id}`}
           />
           <span className="h-10 w-16 flex-none overflow-hidden rounded bg-slate-200">
-            {item.thumbnail ? <img className="h-full w-full object-cover" src={item.thumbnail} alt="" /> : null}
+            {item.thumbnail ? <img className="h-full w-full object-cover" src={item.thumbnail} alt="" loading="lazy" /> : null}
           </span>
           <span className="min-w-0 flex-1 text-slate-700">{zhCN.smartRoughCut.sceneRange(formatSeconds(item.start), formatSeconds(item.end))}</span>
         </label>
