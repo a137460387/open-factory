@@ -1,8 +1,13 @@
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, beforeAll } from 'vitest';
 import { ShortcutCheatsheetPanel } from './ShortcutCheatsheetPanel';
+import { setLanguage } from '../i18n/strings';
 
 describe('ShortcutCheatsheetPanel', () => {
+  beforeAll(() => {
+    setLanguage('zh');
+  });
+
   it('renders the shortcuts panel with timeline, media, and inspector keyboard sections', () => {
     const html = renderToStaticMarkup(<ShortcutCheatsheetPanel bindings={{ 'toggle-playback': ['P'] }} onClose={() => undefined} />);
     expect(html).toContain('data-testid="shortcut-cheatsheet-panel"');
