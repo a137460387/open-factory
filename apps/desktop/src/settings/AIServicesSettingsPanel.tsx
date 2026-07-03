@@ -12,7 +12,7 @@ export function AIServicesSettingsPanel() {
   const store = useAISettingsStore();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [testingId, setTestingId] = useState<string | null>(null);
-  const [testResult, setTestResult] = useState<Record<string, boolean | null>>({});
+  const [testResult, setTestResult] = useState<Record<string, { ok: boolean; error?: string } | null>>({});
   const [customName, setCustomName] = useState('');
   const [customEndpoint, setCustomEndpoint] = useState('');
   const [customModel, setCustomModel] = useState('');
@@ -25,7 +25,10 @@ export function AIServicesSettingsPanel() {
     setTestingId(providerId);
     try {
       const ok = await store.testConnection(providerId);
-      setTestResult((prev) => ({ ...prev, [providerId]: ok }));
+      setTestResult((prev) => ({ ...prev, [providerId]: { ok } }));
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      setTestResult((prev) => ({ ...prev, [providerId]: { ok: false, error: message } }));
     } finally {
       setTestingId(null);
     }
@@ -163,11 +166,13 @@ export function AIServicesSettingsPanel() {
                       <TestTube className="h-3 w-3" />
                       {testingId === provider.id ? t.testing : t.testConnection}
                     </button>
-                    {testResult[provider.id] === true ? (
+                    {testResult[provider.id]?.ok === true ? (
                       <span className="text-[10px] font-medium text-emerald-700">{t.testOk}</span>
                     ) : null}
-                    {testResult[provider.id] === false ? (
-                      <span className="text-[10px] font-medium text-rose-700">{t.testFail}</span>
+                    {testResult[provider.id]?.ok === false ? (
+                      <span className="text-[10px] font-medium text-rose-700">
+                        {testResult[provider.id]?.error || t.testFail}
+                      </span>
                     ) : null}
                   </div>
                 </div>

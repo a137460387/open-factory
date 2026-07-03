@@ -4,7 +4,6 @@ use lettre::{Message, SmtpTransport, Transport};
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::net::IpAddr;
 use std::time::Duration;
 
 #[derive(Debug, Deserialize)]
@@ -102,57 +101,10 @@ fn send_smtp_email_blocking(request: SmtpEmailRequest) -> Result<(), String> {
 }
 
 async fn parse_webhook_url(url: &str) -> Result<reqwest::Url, String> {
-    let parsed = reqwest::Url::parse(url.trim()).map_err(|error| error.to_string())?;
-    match parsed.scheme() {
-        "https" | "http" => {}
-        _ => return Err("Webhook URL must use http or https.".to_string()),
-    }
-    let host = parsed
-        .host_str()
-        .ok_or_else(|| "Webhook URL has no host.".to_string())?;
-    let port = parsed.port_or_known_default().unwrap_or(80);
-    let addrs: Vec<IpAddr> = tokio::net::lookup_host((host, port))
-        .await
-        .map_err(|error| format!("Failed to resolve webhook host: {}", error))?
-        .map(|addr| addr.ip())
-        .collect();
-    if addrs.is_empty() {
-        return Err("Webhook host resolved to no addresses.".to_string());
-    }
-    for ip in &addrs {
-        if is_private_ip(*ip) {
-            return Err(format!(
-                "Webhook URL resolves to a private/reserved IP address ({}). SSRF blocked.",
-                ip
-            ));
-        }
-    }
-    Ok(parsed)
+    crate::net_guard::ensure_not_private(url).await
 }
 
-fn is_private_ip(ip: IpAddr) -> bool {
-    match ip {
-        IpAddr::V4(v4) => {
-            v4.is_loopback()
-                || v4.is_private()
-                || v4.is_link_local()
-                || v4.is_broadcast()
-                || v4.is_unspecified()
-                || v4.octets()[0] == 10
-                || (v4.octets()[0] == 172 && (v4.octets()[1] & 0xF0) == 16)
-                || (v4.octets()[0] == 192 && v4.octets()[1] == 168)
-                || v4.octets()[0] == 169 && v4.octets()[1] == 254
-        }
-        IpAddr::V6(v6) => {
-            v6.is_loopback()
-                || v6.is_unspecified()
-                || {
-                    let segments = v6.segments();
-                    (segments[0] & 0xFE00) == 0xFC00 // fc00::/7 unique local
-                }
-        }
-    }
-}
+
 
 fn build_headers(headers: Option<std::collections::HashMap<String, String>>) -> Result<HeaderMap, String> {
     let mut map = HeaderMap::new();

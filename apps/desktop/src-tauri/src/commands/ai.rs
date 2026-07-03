@@ -1,7 +1,9 @@
 use keyring::{Entry, Error as KeyringError};
 use serde::{Deserialize, Serialize};
 use base64::Engine;
+use std::collections::HashMap;
 use std::process::Command;
+use std::sync::{Mutex, OnceLock};
 use tauri::AppHandle;
 
 use crate::path_validator::validate_path;
@@ -53,6 +55,9 @@ pub struct OllamaModelsResult {
 
 #[tauri::command]
 pub async fn call_ai_api(request: CallAiApiRequest, api_key: Option<String>) -> Result<CallAiApiResult, String> {
+    if request.provider_id != "ollama" {
+        crate::net_guard::ensure_not_private(&request.base_url).await?;
+    }
     let start = std::time::Instant::now();
 
     let client = reqwest::Client::builder()
@@ -137,6 +142,9 @@ pub async fn call_ai_api(request: CallAiApiRequest, api_key: Option<String>) -> 
 
 #[tauri::command]
 pub async fn test_ai_connection(base_url: String, api_key: Option<String>, provider_id: String) -> Result<bool, String> {
+    if provider_id != "ollama" {
+        crate::net_guard::ensure_not_private(&base_url).await?;
+    }
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(10))
         .build()
@@ -241,6 +249,12 @@ fn ai_key_entry(provider_id: &str) -> Result<Entry, String> {
     })
 }
 
+static PROVIDER_ID_CACHE: OnceLock<Mutex<HashMap<String, &'static str>>> = OnceLock::new();
+
+fn provider_id_cache() -> &'static Mutex<HashMap<String, &'static str>> {
+    PROVIDER_ID_CACHE.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
 fn normalize_provider_id(provider_id: &str) -> Result<&'static str, String> {
     match provider_id.trim().to_ascii_lowercase().as_str() {
         "openai" => Ok("openai"),
@@ -265,7 +279,15 @@ fn normalize_provider_id(provider_id: &str) -> Result<&'static str, String> {
                 .chars()
                 .map(|ch| if ch.is_ascii_alphanumeric() || ch == '-' || ch == '_' { ch } else { '-' })
                 .collect();
-            Ok(Box::leak(normalized.into_boxed_str()))
+            let mut cache = provider_id_cache()
+                .lock()
+                .map_err(|_| "Failed to lock provider ID cache".to_string())?;
+            if let Some(&cached) = cache.get(&normalized) {
+                return Ok(cached);
+            }
+            let leaked: &'static str = Box::leak(normalized.clone().into_boxed_str());
+            cache.insert(normalized, leaked);
+            Ok(leaked)
         }
     }
 }
@@ -313,7 +335,7 @@ fn extract_ai_frames_blocking(
     let mut frames = Vec::new();
     for &time in &request.times {
         let output = Command::new(ffmpeg_binary())
-            .args(&[
+            .args([
                 "-hide_banner",
                 "-ss",
                 &format!("{:.3}", time),
@@ -373,6 +395,7 @@ pub struct CallTtsApiResult {
 
 #[tauri::command]
 pub async fn call_tts_api(request: CallTtsApiRequest, api_key: Option<String>) -> Result<CallTtsApiResult, String> {
+    crate::net_guard::ensure_not_private(&request.base_url).await?;
     let start = std::time::Instant::now();
     let engine = request.engine.as_deref().unwrap_or("compatible");
     let base = request.base_url.trim_end_matches('/');

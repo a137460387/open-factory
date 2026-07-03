@@ -279,11 +279,11 @@ export const useAISettingsStore = create<AISettingsState>((set, get) => ({
         testResults: { ...state.testResults, [providerId]: { ok, latencyMs: ok ? 0 : undefined } }
       }));
       return ok;
-    } catch {
+    } catch (error: unknown) {
       set((state) => ({
         testResults: { ...state.testResults, [providerId]: { ok: false } }
       }));
-      return false;
+      throw error;
     }
   },
 

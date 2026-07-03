@@ -1,4 +1,5 @@
 mod commands;
+pub mod net_guard;
 pub mod path_validator;
 
 use serde_json::json;
