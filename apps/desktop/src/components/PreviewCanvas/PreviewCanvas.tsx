@@ -105,6 +105,9 @@ import { useTheme } from '../../theme/useTheme';
 const PREVIEW_CANVAS_WIDTH = 1280;
 const PREVIEW_CANVAS_HEIGHT = 720;
 const CANVAS_TRANSFORM_HANDLES: CanvasTransformHandle[] = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
+const SAFE_FRAME_ACTION_STYLE: CSSProperties = { left: '5%', top: '5%', width: '90%', height: '90%' };
+const SAFE_FRAME_TITLE_STYLE: CSSProperties = { left: '10%', top: '10%', width: '80%', height: '80%' };
+const MULTICAM_GRID_STYLE: CSSProperties = { gridTemplateColumns: 'minmax(0,1fr) minmax(210px, 0.32fr)' };
 
 interface PreviewCanvasProps {
   safeFrameGuides?: boolean;
@@ -1842,8 +1845,8 @@ export function PreviewCanvas({
 function SafeFrameGuides() {
   return (
     <div className="pointer-events-none absolute inset-0 z-20" data-testid="preview-safe-frame-guides" aria-hidden="true">
-      <div className="absolute border border-white/70 shadow-[0_0_0_1px_rgba(0,0,0,0.45)]" style={{ left: '5%', top: '5%', width: '90%', height: '90%' }} data-testid="preview-safe-frame-action" />
-      <div className="absolute border border-amber-300/80 shadow-[0_0_0_1px_rgba(0,0,0,0.45)]" style={{ left: '10%', top: '10%', width: '80%', height: '80%' }} data-testid="preview-safe-frame-title" />
+      <div className="absolute border border-white/70 shadow-[0_0_0_1px_rgba(0,0,0,0.45)]" style={SAFE_FRAME_ACTION_STYLE} data-testid="preview-safe-frame-action" />
+      <div className="absolute border border-amber-300/80 shadow-[0_0_0_1px_rgba(0,0,0,0.45)]" style={SAFE_FRAME_TITLE_STYLE} data-testid="preview-safe-frame-title" />
       <div className="absolute left-1/2 top-0 h-full w-px -translate-x-1/2 bg-white/65 shadow-[0_0_0_1px_rgba(0,0,0,0.35)]" data-testid="preview-safe-frame-center-vertical" />
       <div className="absolute left-0 top-1/2 h-px w-full -translate-y-1/2 bg-white/65 shadow-[0_0_0_1px_rgba(0,0,0,0.35)]" data-testid="preview-safe-frame-center-horizontal" />
       <div className="absolute left-1/2 top-1/2 h-5 w-5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/70 shadow-[0_0_0_1px_rgba(0,0,0,0.45)]" data-testid="preview-safe-frame-center" />
@@ -2734,7 +2737,7 @@ function MulticamPreviewGrid({ clip, sequence, media, sequences, colorPipeline, 
   return (
     <div
       className="absolute inset-x-2 bottom-2 top-14 z-20 grid gap-2 rounded-md border border-white/15 bg-black/70 p-2 shadow-soft"
-      style={{ gridTemplateColumns: 'minmax(0,1fr) minmax(210px, 0.32fr)' }}
+      style={MULTICAM_GRID_STYLE}
       data-testid="multicam-preview-grid"
       aria-label={t.multicamGrid}
       data-live-mode={liveMode ? 'true' : 'false'}
