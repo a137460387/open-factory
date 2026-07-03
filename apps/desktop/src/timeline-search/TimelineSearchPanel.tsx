@@ -172,7 +172,7 @@ export function TimelineSearchPanel({ project, onClose }: TimelineSearchPanelPro
                     onClick={() => jumpToResult(result, index)}
                   >
                     <span className="flex h-9 w-[52px] items-center justify-center overflow-hidden rounded border border-line bg-slate-100 text-xs font-semibold text-slate-500">
-                      {media?.thumbnail ? <img className="h-full w-full object-cover" src={media.thumbnail} alt="" /> : result.kind === 'marker' ? t.markerThumb : t.clipThumb}
+                      {media?.thumbnail ? <img className="h-full w-full object-cover" src={media.thumbnail} alt="" loading="lazy" /> : result.kind === 'marker' ? t.markerThumb : t.clipThumb}
                     </span>
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-semibold text-ink">{result.label}</span>
