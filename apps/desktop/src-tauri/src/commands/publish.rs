@@ -82,7 +82,7 @@ fn send_smtp_email_blocking(request: SmtpEmailRequest) -> Result<(), String> {
         .header(ContentType::TEXT_HTML)
         .body(request.html)
         .map_err(|error| format!("Unable to build SMTP message: {}", error))?;
-    let mut transport_builder = if request.secure.unwrap_or(false) {
+    let mut transport_builder = if request.secure.unwrap_or(true) {
         SmtpTransport::relay(&host).map_err(|error| format!("Unable to configure SMTP TLS: {}", error))?
     } else {
         SmtpTransport::builder_dangerous(&host)
