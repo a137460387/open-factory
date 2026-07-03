@@ -155,7 +155,7 @@ function SummaryCell({ label, value }: { label: string; value: string }) {
 function RecommendationPreview({ recommendation, large = false }: { recommendation: SmartSegmentRecommendation; large?: boolean }) {
   const className = large ? 'aspect-video w-full overflow-hidden rounded-md border border-line bg-slate-100' : 'aspect-video w-full overflow-hidden bg-slate-100';
   if (recommendation.thumbnail) {
-    return <img className={`${className} object-cover`} src={recommendation.thumbnail} alt="" />;
+    return <img className={`${className} object-cover`} src={recommendation.thumbnail} alt="" loading="lazy" />;
   }
   return (
     <div className={`${className} grid place-items-center text-slate-400`}>
