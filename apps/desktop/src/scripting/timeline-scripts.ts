@@ -1,7 +1,7 @@
 import { fsExists, getAppDataDir, openFileDialog, readFile, removeFile, saveFileDialog, scanDirectory, writeFile } from '../lib/tauri-bridge';
 import { zhCN } from '../i18n/strings';
 
-export const TIMELINE_SCRIPT_EXTENSION = '.js';
+const TIMELINE_SCRIPT_EXTENSION = '.js';
 const TIMELINE_SCRIPTS_DIR = 'scripts';
 
 export interface TimelineScriptFile {

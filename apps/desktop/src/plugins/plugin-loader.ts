@@ -28,7 +28,7 @@ export interface PluginRuntime {
   dispose(): void;
 }
 
-export type PluginMessageRouter = (targetPluginId: string, event: string, data: unknown) => void | Promise<void>;
+type PluginMessageRouter = (targetPluginId: string, event: string, data: unknown) => void | Promise<void>;
 
 export interface LoadedPlugin {
   sourcePath: string;
@@ -236,7 +236,7 @@ function normalizeWorkerMetadata(input: unknown): OpenFactoryPlugin {
   };
 }
 
-export function getRequiredPermissionForHook(hookName: PluginHookName): PluginPermission {
+function getRequiredPermissionForHook(hookName: PluginHookName): PluginPermission {
   if (hookName === 'onExportBefore') {
     return 'export-hook';
   }
@@ -246,7 +246,7 @@ export function getRequiredPermissionForHook(hookName: PluginHookName): PluginPe
   return 'read-project';
 }
 
-export function assertPluginHookPermission(plugin: OpenFactoryPlugin, hookName: PluginHookName): void {
+function assertPluginHookPermission(plugin: OpenFactoryPlugin, hookName: PluginHookName): void {
   const required = getRequiredPermissionForHook(hookName);
   if (!plugin.permissions.includes(required)) {
     throw new Error(`${plugin.name} missing ${required} permission for ${hookName}`);

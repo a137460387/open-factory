@@ -29,7 +29,7 @@ export function getEffectiveUpdaterEndpoint(settings: UpdateSettings): string {
   return settings.customEndpoint || DEFAULT_UPDATE_ENDPOINT;
 }
 
-export function normalizeUpdaterEndpointUrl(value: unknown): string | undefined {
+function normalizeUpdaterEndpointUrl(value: unknown): string | undefined {
   if (typeof value !== 'string') {
     return undefined;
   }

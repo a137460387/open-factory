@@ -325,14 +325,14 @@ function toStoredProvider(p: AIProvider): StoredAIProvider {
   };
 }
 
-export function isAIServiceReady(service: AIServiceType): boolean {
+function isAIServiceReady(service: AIServiceType): boolean {
   const state = useAISettingsStore.getState();
   const providerId = state.serviceMapping[service];
   const provider = state.providers.find((p) => p.id === providerId);
   return provider ? isProviderConfigured(provider) : false;
 }
 
-export function getAIServiceProvider(service: AIServiceType): AIProvider | undefined {
+function getAIServiceProvider(service: AIServiceType): AIProvider | undefined {
   const state = useAISettingsStore.getState();
   const providerId = state.serviceMapping[service];
   return state.providers.find((p) => p.id === providerId);

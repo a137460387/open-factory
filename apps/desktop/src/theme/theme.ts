@@ -1,7 +1,7 @@
 export type BuiltinThemeId = 'dark' | 'light' | 'high-contrast' | 'oled';
-export type ThemeId = BuiltinThemeId | string;
+type ThemeId = BuiltinThemeId | string;
 
-export interface ThemeColors {
+interface ThemeColors {
   bgPrimary: string;
   bgSecondary: string;
   bgElevated: string;
@@ -276,7 +276,7 @@ export function applyThemeDefinitionToDocument(theme: ThemeDefinition, target: D
   target.body.dataset.theme = theme.id;
 }
 
-export function customThemeToDefinition(theme: CustomTheme): ThemeDefinition {
+function customThemeToDefinition(theme: CustomTheme): ThemeDefinition {
   const colors = normalizeCustomThemeColors(theme.colors);
   const backgroundIsDark = relativeLuminance(colors.background) < 0.4;
   const surfaceMixColor = backgroundIsDark ? '#ffffff' : '#000000';
@@ -324,7 +324,7 @@ export function extractCustomThemeColors(theme: ThemeDefinition): CustomThemeCol
   };
 }
 
-export function normalizeCustomThemeColors(colors: Partial<CustomThemeColors> | undefined): CustomThemeColors {
+function normalizeCustomThemeColors(colors: Partial<CustomThemeColors> | undefined): CustomThemeColors {
   return {
     primary: normalizeHexColor(colors?.primary, DEFAULT_CUSTOM_THEME_COLORS.primary),
     accent: normalizeHexColor(colors?.accent, DEFAULT_CUSTOM_THEME_COLORS.accent),
@@ -432,9 +432,9 @@ export function contrastRatio(foreground: string, background: string): number {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-export type WcagLevel = 'AAA' | 'AA' | 'fail';
+type WcagLevel = 'AAA' | 'AA' | 'fail';
 
-export function wcagLevel(ratio: number): WcagLevel {
+function wcagLevel(ratio: number): WcagLevel {
   if (ratio >= 7) return 'AAA';
   if (ratio >= 4.5) return 'AA';
   return 'fail';
@@ -448,7 +448,7 @@ export interface ContrastCheckResult {
   pass: boolean;
 }
 
-export const WCAG_TEXT_PAIRS: Array<[keyof ThemeColors, keyof ThemeColors]> = [
+const WCAG_TEXT_PAIRS: Array<[keyof ThemeColors, keyof ThemeColors]> = [
   ['textPrimary', 'bgPrimary'],
   ['textPrimary', 'bgSecondary'],
   ['textPrimary', 'bgElevated'],

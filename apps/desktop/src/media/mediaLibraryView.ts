@@ -3,7 +3,7 @@ import type { MediaAsset } from '@open-factory/editor-core';
 export type MediaLibraryViewMode = 'grid' | 'list' | 'timeline';
 export type MediaLibraryGridSize = 'small' | 'medium' | 'large';
 export type MediaLibrarySortKey = 'name' | 'duration' | 'size' | 'importedAt';
-export type MediaLibrarySortDirection = 'asc' | 'desc';
+type MediaLibrarySortDirection = 'asc' | 'desc';
 
 export interface MediaLibraryViewSettings {
   mode: MediaLibraryViewMode;

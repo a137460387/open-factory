@@ -15,7 +15,7 @@ import {
   type SharedLibraryImportResult
 } from '../lib/tauri-bridge';
 
-export type SharedLibraryResourceType = 'export-preset' | 'subtitle-style' | 'macro' | 'title-template' | 'timeline-template' | 'lut' | 'workspace-layout' | 'custom-layout';
+type SharedLibraryResourceType = 'export-preset' | 'subtitle-style' | 'macro' | 'title-template' | 'timeline-template' | 'lut' | 'workspace-layout' | 'custom-layout';
 export type SharedLibraryConflictMode = 'overwrite' | 'keep-both';
 
 export interface SharedLibraryResource<TPayload = unknown> {
@@ -28,7 +28,7 @@ export interface SharedLibraryResource<TPayload = unknown> {
   filePath?: string;
 }
 
-export interface SharedLibraryIndexFile {
+interface SharedLibraryIndexFile {
   schemaVersion: 1;
   resources: SharedLibraryResource[];
 }
@@ -82,7 +82,7 @@ export async function loadSharedLibrary(storage: SharedLibraryStorage = bridgeSt
   return parseSharedLibraryIndex(await storage.readFile(path));
 }
 
-export async function saveSharedLibrary(resources: SharedLibraryResource[], storage: SharedLibraryStorage = bridgeStorage): Promise<void> {
+async function saveSharedLibrary(resources: SharedLibraryResource[], storage: SharedLibraryStorage = bridgeStorage): Promise<void> {
   const path = getSharedLibraryIndexPath(await storage.getAppDataDir());
   await storage.writeFile(path, serializeSharedLibraryIndex(resources));
 }
@@ -194,7 +194,7 @@ export async function loadSharedSubtitleStyleTemplates(storage: SharedLibrarySto
   });
 }
 
-export function timelineTemplateToSharedResource(template: TimelineTemplateDefinition): Omit<SharedLibraryResource, 'version' | 'updatedAt'> {
+function timelineTemplateToSharedResource(template: TimelineTemplateDefinition): Omit<SharedLibraryResource, 'version' | 'updatedAt'> {
   return {
     id: `shared-timeline-${sanitizeId(template.id)}`,
     type: 'timeline-template',

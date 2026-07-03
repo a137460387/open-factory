@@ -56,12 +56,12 @@ import {
 
 const BROWSER_SETTINGS_KEY = 'open-factory:settings';
 
-export interface LocalBackupSettings {
+interface LocalBackupSettings {
   enabled: boolean;
   directory?: string;
 }
 
-export interface WebdavBackupSettings {
+interface WebdavBackupSettings {
   enabled: boolean;
   url?: string;
   username?: string;
@@ -80,14 +80,14 @@ export interface ExportBackgroundSettings {
   lowPowerMode: boolean;
 }
 
-export interface PreviewWindowBounds {
+interface PreviewWindowBounds {
   x?: number;
   y?: number;
   width: number;
   height: number;
 }
 
-export type PreviewWindowResolutionScale = 1 | 0.5 | 0.25;
+type PreviewWindowResolutionScale = 1 | 0.5 | 0.25;
 
 export interface PreviewWindowSettings {
   bounds: PreviewWindowBounds;
@@ -100,7 +100,7 @@ export interface TimelineInteractionSettings {
   audioScrubEnabled?: boolean;
 }
 
-export type DisplayColorGamut = 'srgb' | 'p3' | 'rec2020';
+type DisplayColorGamut = 'srgb' | 'p3' | 'rec2020';
 
 export interface DisplaySettings {
   colorGamut: DisplayColorGamut;
@@ -111,8 +111,8 @@ export interface CollaborationIdentitySettings {
   color: string;
 }
 
-export type LocalCoeditingMode = 'host' | 'client';
-export type LocalCoeditingPermission = 'read-only' | 'edit';
+type LocalCoeditingMode = 'host' | 'client';
+type LocalCoeditingPermission = 'read-only' | 'edit';
 
 export interface LocalCoeditingSettings {
   enabled: boolean;
@@ -128,7 +128,7 @@ export interface AudioVisualizationThemeSettings {
   customThemes: CustomAudioVisualizationTheme[];
 }
 
-export type ExportUploadTargetType = 'webdav' | 'local';
+type ExportUploadTargetType = 'webdav' | 'local';
 
 export interface ExportUploadSettings {
   enabled: boolean;
@@ -142,7 +142,7 @@ export interface ExportUploadSettings {
   };
 }
 
-export type ExportPresetSyncConflictMode = 'merge' | 'keep-local' | 'keep-remote';
+type ExportPresetSyncConflictMode = 'merge' | 'keep-local' | 'keep-remote';
 
 export interface ExportPresetSyncSettings {
   enabled: boolean;
@@ -170,12 +170,12 @@ export interface TimelineHeatmapViewSettings {
 }
 
 export type ExportRuleTrigger = 'export-success' | 'export-failure' | 'queue-complete';
-export type ExportRuleAction = 'copy-to-directory' | 'system-notification' | 'play-tone';
+type ExportRuleAction = 'copy-to-directory' | 'system-notification' | 'play-tone';
 
 export type AutomationTrigger = 'on-import' | 'on-export-complete' | 'on-project-open';
-export type AutomationConditionOperator = '>' | '>=' | '<' | '<=' | '==' | '!=' | 'contains';
-export type AutomationConditionField = 'duration' | 'width' | 'height' | 'resolution' | 'fileSize' | 'size' | 'format' | 'type' | 'name';
-export type AutomationActionType = 'generate-proxy' | 'add-tag' | 'add-color-label' | 'move-to-group' | 'send-notification';
+type AutomationConditionOperator = '>' | '>=' | '<' | '<=' | '==' | '!=' | 'contains';
+type AutomationConditionField = 'duration' | 'width' | 'height' | 'resolution' | 'fileSize' | 'size' | 'format' | 'type' | 'name';
+type AutomationActionType = 'generate-proxy' | 'add-tag' | 'add-color-label' | 'move-to-group' | 'send-notification';
 
 export interface AutomationCondition {
   field: AutomationConditionField;
@@ -223,7 +223,7 @@ export const DEFAULT_EXPORT_PRESET_SYNC_SETTINGS: ExportPresetSyncSettings = {
   conflictMode: 'merge'
 };
 
-export const DEFAULT_PREVIEW_WINDOW_SETTINGS: PreviewWindowSettings = {
+const DEFAULT_PREVIEW_WINDOW_SETTINGS: PreviewWindowSettings = {
   bounds: {
     width: 960,
     height: 540
@@ -237,7 +237,7 @@ export const DEFAULT_TIMELINE_INTERACTION_SETTINGS: TimelineInteractionSettings 
   audioScrubEnabled: true
 };
 
-export const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = {
+const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = {
   colorGamut: 'srgb'
 };
 
@@ -254,7 +254,7 @@ export const DEFAULT_LOCAL_COEDITING_SETTINGS: LocalCoeditingSettings = {
   networkMode: 'localhost'
 };
 
-export const DEFAULT_AUDIO_VISUALIZATION_THEME_SETTINGS: AudioVisualizationThemeSettings = {
+const DEFAULT_AUDIO_VISUALIZATION_THEME_SETTINGS: AudioVisualizationThemeSettings = {
   customThemes: []
 };
 
@@ -453,17 +453,17 @@ export async function readDisableExportRecommendations(): Promise<boolean> {
   return settings.disableExportRecommendations ?? false;
 }
 
-export async function saveDisableExportRecommendations(disabled: boolean): Promise<void> {
+async function saveDisableExportRecommendations(disabled: boolean): Promise<void> {
   const settings = await readAppSettings();
   await writeAppSettings({ ...settings, disableExportRecommendations: disabled });
 }
 
-export async function readThumbnailPrerenderEnabled(): Promise<boolean> {
+async function readThumbnailPrerenderEnabled(): Promise<boolean> {
   const settings = await readAppSettings();
   return settings.thumbnailPrerenderEnabled ?? true;
 }
 
-export async function saveThumbnailPrerenderEnabled(enabled: boolean): Promise<void> {
+async function saveThumbnailPrerenderEnabled(enabled: boolean): Promise<void> {
   const settings = await readAppSettings();
   await writeAppSettings({ ...settings, thumbnailPrerenderEnabled: enabled });
 }
@@ -632,7 +632,7 @@ export async function readAppSettings(): Promise<AppSettings> {
   return normalizeSettings(JSON.parse(raw) as Partial<AppSettings>);
 }
 
-export async function writeAppSettings(settings: AppSettings): Promise<void> {
+async function writeAppSettings(settings: AppSettings): Promise<void> {
   const normalized = normalizeSettings(settings);
   const settingsPath = await getSettingsFilePath().catch(() => undefined);
   if (settingsPath) {
@@ -642,7 +642,7 @@ export async function writeAppSettings(settings: AppSettings): Promise<void> {
   getBrowserStorage()?.setItem(BROWSER_SETTINGS_KEY, JSON.stringify(normalized));
 }
 
-export async function getSettingsFilePath(): Promise<string> {
+async function getSettingsFilePath(): Promise<string> {
   const appDataDir = await getAppDataDir();
   return `${appDataDir.replace(/\/+$/, '')}/settings.json`;
 }
@@ -763,7 +763,7 @@ function normalizeSettings(settings: Partial<AppSettings>): AppSettings {
   return normalized;
 }
 
-export function normalizeCustomSplitLayouts(layouts: unknown): SplitLayoutDefinition[] {
+function normalizeCustomSplitLayouts(layouts: unknown): SplitLayoutDefinition[] {
   if (!Array.isArray(layouts)) {
     return [];
   }
@@ -885,7 +885,7 @@ function normalizeAutomationValue(value: unknown): string | number | boolean | u
   return undefined;
 }
 
-export function normalizeExportRules(rules: unknown): ExportConditionRule[] {
+function normalizeExportRules(rules: unknown): ExportConditionRule[] {
   if (!Array.isArray(rules)) {
     return [];
   }
@@ -920,7 +920,7 @@ function normalizeExportRuleAction(value: unknown): ExportRuleAction | undefined
   return value === 'copy-to-directory' || value === 'system-notification' || value === 'play-tone' ? value : undefined;
 }
 
-export function normalizeExportBackgroundSettings(settings: Partial<ExportBackgroundSettings> | undefined): ExportBackgroundSettings | undefined {
+function normalizeExportBackgroundSettings(settings: Partial<ExportBackgroundSettings> | undefined): ExportBackgroundSettings | undefined {
   if (!settings || typeof settings !== 'object') {
     return undefined;
   }
@@ -931,7 +931,7 @@ export function normalizeExportBackgroundSettings(settings: Partial<ExportBackgr
   };
 }
 
-export function normalizePreviewWindowSettings(settings: Partial<PreviewWindowSettings> | undefined): PreviewWindowSettings | undefined {
+function normalizePreviewWindowSettings(settings: Partial<PreviewWindowSettings> | undefined): PreviewWindowSettings | undefined {
   if (!settings || typeof settings !== 'object') {
     return undefined;
   }
@@ -955,7 +955,7 @@ export function normalizePreviewWindowSettings(settings: Partial<PreviewWindowSe
   };
 }
 
-export function normalizeTimelineInteractionSettings(settings: Partial<TimelineInteractionSettings> | undefined): TimelineInteractionSettings | undefined {
+function normalizeTimelineInteractionSettings(settings: Partial<TimelineInteractionSettings> | undefined): TimelineInteractionSettings | undefined {
   if (!settings || typeof settings !== 'object') {
     return undefined;
   }
@@ -965,7 +965,7 @@ export function normalizeTimelineInteractionSettings(settings: Partial<TimelineI
   };
 }
 
-export function normalizeDisplaySettings(settings: Partial<DisplaySettings> | undefined): DisplaySettings | undefined {
+function normalizeDisplaySettings(settings: Partial<DisplaySettings> | undefined): DisplaySettings | undefined {
   if (!settings || typeof settings !== 'object') {
     return undefined;
   }
@@ -974,7 +974,7 @@ export function normalizeDisplaySettings(settings: Partial<DisplaySettings> | un
   };
 }
 
-export function normalizeCollaborationIdentitySettings(settings: Partial<CollaborationIdentitySettings> | undefined): CollaborationIdentitySettings {
+function normalizeCollaborationIdentitySettings(settings: Partial<CollaborationIdentitySettings> | undefined): CollaborationIdentitySettings {
   const name = typeof settings?.name === 'string' && settings.name.trim() ? settings.name.trim().slice(0, 80) : DEFAULT_COLLABORATION_IDENTITY_SETTINGS.name;
   return {
     name,
@@ -982,7 +982,7 @@ export function normalizeCollaborationIdentitySettings(settings: Partial<Collabo
   };
 }
 
-export function normalizeLocalCoeditingSettings(settings: Partial<LocalCoeditingSettings> | undefined): LocalCoeditingSettings {
+function normalizeLocalCoeditingSettings(settings: Partial<LocalCoeditingSettings> | undefined): LocalCoeditingSettings {
   return {
     enabled: settings?.enabled === true,
     mode: settings?.mode === 'client' ? 'client' : 'host',
@@ -994,7 +994,7 @@ export function normalizeLocalCoeditingSettings(settings: Partial<LocalCoediting
   };
 }
 
-export function normalizeAudioVisualizationThemeSettings(settings: Partial<AudioVisualizationThemeSettings> | undefined): AudioVisualizationThemeSettings {
+function normalizeAudioVisualizationThemeSettings(settings: Partial<AudioVisualizationThemeSettings> | undefined): AudioVisualizationThemeSettings {
   return {
     customThemes: normalizeCustomAudioVisualizationThemes(settings?.customThemes)
   };
@@ -1008,7 +1008,7 @@ function normalizeDisplayColorGamut(value: unknown): DisplayColorGamut {
   return value === 'p3' || value === 'rec2020' ? value : 'srgb';
 }
 
-export function normalizeExportUploadSettings(settings: Partial<ExportUploadSettings> | undefined): ExportUploadSettings | undefined {
+function normalizeExportUploadSettings(settings: Partial<ExportUploadSettings> | undefined): ExportUploadSettings | undefined {
   if (!settings || typeof settings !== 'object') {
     return undefined;
   }
@@ -1033,7 +1033,7 @@ export function normalizeExportUploadSettings(settings: Partial<ExportUploadSett
   return normalized;
 }
 
-export function normalizeExportPresetSyncSettings(settings: Partial<ExportPresetSyncSettings> | undefined): ExportPresetSyncSettings | undefined {
+function normalizeExportPresetSyncSettings(settings: Partial<ExportPresetSyncSettings> | undefined): ExportPresetSyncSettings | undefined {
   if (!settings || typeof settings !== 'object') {
     return undefined;
   }
@@ -1057,7 +1057,7 @@ export function normalizeExportPresetSyncSettings(settings: Partial<ExportPreset
   return normalized;
 }
 
-export function normalizeViewSettings(settings: Partial<ViewSettings> | undefined): ViewSettings | undefined {
+function normalizeViewSettings(settings: Partial<ViewSettings> | undefined): ViewSettings | undefined {
   if (!settings || typeof settings !== 'object') {
     return undefined;
   }
@@ -1082,7 +1082,7 @@ export function normalizeTimelineHeatmapViewSettings(settings: Partial<TimelineH
   };
 }
 
-export function normalizeBackupSettings(settings: Partial<BackupSettings> | undefined): BackupSettings | undefined {
+function normalizeBackupSettings(settings: Partial<BackupSettings> | undefined): BackupSettings | undefined {
   if (!settings || typeof settings !== 'object') {
     return undefined;
   }
@@ -1275,12 +1275,12 @@ export async function saveTouchOptimizationSettings(touchOptimization: Partial<T
   return next;
 }
 
-export async function readMediaGroupingSettings(): Promise<MediaGroupingSettings> {
+async function readMediaGroupingSettings(): Promise<MediaGroupingSettings> {
   const settings = await readAppSettings();
   return normalizeMediaGroupingSettings(settings.mediaGrouping);
 }
 
-export async function saveMediaGroupingSettings(mediaGrouping: Partial<MediaGroupingSettings>): Promise<MediaGroupingSettings> {
+async function saveMediaGroupingSettings(mediaGrouping: Partial<MediaGroupingSettings>): Promise<MediaGroupingSettings> {
   const settings = await readAppSettings();
   const next = normalizeMediaGroupingSettings({ ...settings.mediaGrouping, ...mediaGrouping });
   await writeAppSettings({ ...settings, mediaGrouping: next });

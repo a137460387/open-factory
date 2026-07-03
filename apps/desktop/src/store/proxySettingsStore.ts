@@ -65,7 +65,7 @@ export function readProxySettings(): Pick<ProxySettingsState, 'resolutionPreset'
   }
 }
 
-export function toProxySettings(resolutionPreset: ProxyResolutionPreset, triggerShortEdge: ProxyTriggerThreshold): ProxySettings {
+function toProxySettings(resolutionPreset: ProxyResolutionPreset, triggerShortEdge: ProxyTriggerThreshold): ProxySettings {
   return {
     ...DEFAULT_PROXY_SETTINGS,
     ...PROXY_RESOLUTION_PRESETS[resolutionPreset],

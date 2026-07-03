@@ -1,7 +1,7 @@
 import type { FileStat } from '../lib/tauri-bridge';
 
 export type LocalAiModelId = 'whisper' | 'demucs' | 'yunet';
-export type LocalAiModelStatus = 'installed' | 'missing' | 'invalid';
+type LocalAiModelStatus = 'installed' | 'missing' | 'invalid';
 
 export interface LocalAiModelDefinition {
   id: LocalAiModelId;

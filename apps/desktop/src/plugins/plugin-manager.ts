@@ -43,7 +43,7 @@ export async function refreshPluginRegistry(): Promise<PluginRegistry> {
   return registry;
 }
 
-export async function ensurePluginRegistry(): Promise<PluginRegistry> {
+async function ensurePluginRegistry(): Promise<PluginRegistry> {
   if (registry) {
     return registry;
   }
@@ -57,7 +57,7 @@ export function getPluginRegistrySnapshot(): PluginRegistry | undefined {
   return registry;
 }
 
-export async function runPluginHook<K extends PluginHookName>(hookName: K, payload: PluginHookPayloads[K]): Promise<PluginHookLogEntry[]> {
+async function runPluginHook<K extends PluginHookName>(hookName: K, payload: PluginHookPayloads[K]): Promise<PluginHookLogEntry[]> {
   const current = await ensurePluginRegistry();
   return runPluginHookForRegistry(current, hookName, payload);
 }
@@ -103,7 +103,7 @@ export function clearPluginHookLog(): void {
   hookLog.length = 0;
 }
 
-export function resetPluginRegistryForTests(): void {
+function resetPluginRegistryForTests(): void {
   stopPluginDevWatcher();
   for (const plugin of registry?.plugins ?? []) {
     plugin.runtime.dispose();
@@ -290,7 +290,7 @@ export function createPluginDevWatcher({
   };
 }
 
-export async function readPluginDevSignature(roots: string[]): Promise<string> {
+async function readPluginDevSignature(roots: string[]): Promise<string> {
   const entries: string[] = [];
   for (const root of Array.from(new Set(roots.map(normalizePath))).sort((left, right) => left.localeCompare(right))) {
     const paths = (await scanDirectory(root, 3).catch(() => [])).map(normalizePath).sort((left, right) => left.localeCompare(right));

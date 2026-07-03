@@ -43,7 +43,7 @@ export async function listProjectReleaseRecords(projectId: string): Promise<Proj
     .sort((left, right) => right.releasedAt.localeCompare(left.releasedAt) || right.path.localeCompare(left.path));
 }
 
-export async function readProjectReleaseRecord(path: string): Promise<ProjectReleaseRecord> {
+async function readProjectReleaseRecord(path: string): Promise<ProjectReleaseRecord> {
   return parseProjectReleaseRecord(await readFile(path));
 }
 

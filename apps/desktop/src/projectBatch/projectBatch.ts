@@ -43,7 +43,7 @@ export interface ProjectBatchReport {
   results: ProjectBatchTaskResult[];
 }
 
-export interface ProjectBatchRunSuccess {
+interface ProjectBatchRunSuccess {
   status?: 'success' | 'skipped';
   projectName?: string;
   outputPath?: string;

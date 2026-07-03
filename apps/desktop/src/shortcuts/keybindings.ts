@@ -7,7 +7,7 @@ export interface KeybindingStorage {
   writeFile(path: string, contents: string): Promise<void> | void;
 }
 
-export const KEYBINDINGS_FILE = 'keybindings.json';
+const KEYBINDINGS_FILE = 'keybindings.json';
 
 const DEFAULT_STORAGE: KeybindingStorage = {
   getAppDataDir,
@@ -42,7 +42,7 @@ export function parseCustomKeybindings(raw: string): TimelineShortcutBindings {
   }
 }
 
-export function sanitizeCustomKeybindings(input: unknown): TimelineShortcutBindings {
+function sanitizeCustomKeybindings(input: unknown): TimelineShortcutBindings {
   if (!input || typeof input !== 'object') {
     return {};
   }

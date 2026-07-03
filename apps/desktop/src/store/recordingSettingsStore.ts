@@ -15,7 +15,7 @@ export interface RecordingSettingsState {
   setSettings: (settings: Partial<RecordingSettings>) => void;
 }
 
-export const DEFAULT_RECORDING_SETTINGS: RecordingSettings = {
+const DEFAULT_RECORDING_SETTINGS: RecordingSettings = {
   width: 1280,
   height: 720,
   frameRate: 30

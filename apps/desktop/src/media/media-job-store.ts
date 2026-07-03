@@ -5,7 +5,7 @@ import { compareMediaJobPriority, moveMediaJobBefore as reorderMediaJobs, normal
 
 export type MediaJobType = 'proxy' | 'waveform' | 'gif-preview' | 'vfr-conversion' | 'frame-rate-conversion' | 'stabilization-analysis';
 export type MediaJobStatus = 'pending' | 'running' | 'success' | 'error' | 'canceled';
-export type MediaJobPriority = 'high' | 'low';
+type MediaJobPriority = 'high' | 'low';
 
 export interface MediaJob {
   id: string;
@@ -36,7 +36,7 @@ export interface MediaJobOptions {
   sourceDuration?: number;
 }
 
-export interface MediaJobInput {
+interface MediaJobInput {
   id?: string;
   key?: string;
   assetId: string;

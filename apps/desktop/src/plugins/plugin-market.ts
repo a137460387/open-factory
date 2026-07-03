@@ -2,8 +2,8 @@ import { bridgeConfirm, copyFile, getAppDataDir, readFile, writeFile } from '../
 import { refreshPluginRegistry, type PluginRegistry } from './plugin-manager';
 import { extractManifestPermissions, type PluginPermission } from './plugin-loader';
 
-export const PLUGIN_CATALOG_URL = '/plugin-catalog.json';
-export const PLUGIN_CATALOG_CACHE_FILE = 'plugin-catalog-cache.json';
+const PLUGIN_CATALOG_URL = '/plugin-catalog.json';
+const PLUGIN_CATALOG_CACHE_FILE = 'plugin-catalog-cache.json';
 
 export interface PluginCatalogEntry {
   id: string;
@@ -21,21 +21,21 @@ export interface PluginCatalogResult {
   source: 'network' | 'cache';
 }
 
-export type PluginInstallStatus = 'not-installed' | 'installed' | 'update-available';
+type PluginInstallStatus = 'not-installed' | 'installed' | 'update-available';
 
 export interface PluginInstallState {
   status: PluginInstallStatus;
   installedVersion?: string;
 }
 
-export interface PluginCatalogResponseLike {
+interface PluginCatalogResponseLike {
   ok: boolean;
   text(): Promise<string>;
 }
 
 export type PluginCatalogFetcher = (url: string) => Promise<PluginCatalogResponseLike>;
-export type PluginInstallConfirmer = (entry: PluginCatalogEntry, permissions: PluginPermission[]) => Promise<boolean> | boolean;
-export type PluginHashProvider = (contents: string) => Promise<string> | string;
+type PluginInstallConfirmer = (entry: PluginCatalogEntry, permissions: PluginPermission[]) => Promise<boolean> | boolean;
+type PluginHashProvider = (contents: string) => Promise<string> | string;
 
 export interface PluginInstallOptions {
   fetcher?: PluginCatalogFetcher;
@@ -142,7 +142,7 @@ export async function installCatalogPlugin(entry: PluginCatalogEntry, optionsOrF
   return path;
 }
 
-export async function computeSha256Hex(contents: string): Promise<string> {
+async function computeSha256Hex(contents: string): Promise<string> {
   if (!globalThis.crypto?.subtle) {
     throw new Error('Web Crypto API is unavailable for plugin verification.');
   }
