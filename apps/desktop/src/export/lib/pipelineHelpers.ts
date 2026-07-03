@@ -11,7 +11,7 @@ import {
 } from '@open-factory/editor-core';
 import { zhCN } from '../../i18n/strings';
 import type { ExportPresetSettings } from '../export-presets';
-import type { ExportProject } from '@open-factory/editor-core';
+import type { ExportProject, VersionedExportTaskMetadata } from '@open-factory/editor-core';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -25,7 +25,7 @@ export interface ExportJob {
   project?: Project;
   settings?: ExportPresetSettings;
   metadata?: ExportProject['metadata'];
-  versionedBatch?: { versionedBatchId?: string; versionedBatchName?: string; versionedBatchIndex?: number };
+  versionedBatch?: VersionedExportTaskMetadata;
   presetName?: string;
   sequenceName?: string;
 }
