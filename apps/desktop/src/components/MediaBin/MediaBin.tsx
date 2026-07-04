@@ -3055,11 +3055,14 @@ function IconPreview({ type }: { type: MediaAsset['type'] }) {
   );
 }
 
+let pendingFocusIndex: number | null = null;
+
 function focusMediaCardByKeyboard(
   event: ReactKeyboardEvent<HTMLElement>,
   nav: MediaGridNavCtxValue
 ): void {
-  const currentIndex = Number(event.currentTarget.getAttribute('data-media-index'));
+  const domIndex = Number(event.currentTarget.getAttribute('data-media-index'));
+  const currentIndex = pendingFocusIndex ?? domIndex;
   if (!Number.isFinite(currentIndex)) return;
   const nextIndex = getMediaKeyboardNavigationIndex({
     currentIndex,
@@ -3068,12 +3071,20 @@ function focusMediaCardByKeyboard(
     key: event.key
   });
   if (nextIndex === undefined) return;
+  pendingFocusIndex = nextIndex;
   nav.scrollToMediaIndex(nextIndex);
-  requestAnimationFrame(() => {
-    const grid = event.currentTarget.closest('[data-media-card-grid="true"]');
+  const grid = event.currentTarget.closest('[data-media-card-grid="true"]');
+  function focusWhenReady(attempts: number): void {
+    if (pendingFocusIndex !== nextIndex) return;
     const target = grid?.querySelector<HTMLElement>(`[data-media-index="${nextIndex}"]`);
-    target?.focus();
-  });
+    if (target) {
+      target.focus();
+      if (pendingFocusIndex === nextIndex) pendingFocusIndex = null;
+    } else if (attempts < 10) {
+      requestAnimationFrame(() => focusWhenReady(attempts + 1));
+    }
+  }
+  requestAnimationFrame(() => focusWhenReady(0));
 }
 
 function formatBytes(bytes?: number): string {
