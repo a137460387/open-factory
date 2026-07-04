@@ -1807,9 +1807,10 @@ function MediaCardGrid({
   }
   return (
     <div className="grid gap-3" style={GRID_COLUMN_STYLES[gridSize]} data-testid="media-grid-view" data-grid-size={gridSize} data-media-card-grid="true">
-      {media.map((asset) => (
+      {media.map((asset, index) => (
         <MediaCard
           key={asset.id}
+          mediaIndex={index}
           asset={asset}
           metadata={mediaMetadata[asset.id]}
           contentAnalysis={mediaContentAnalysis[asset.id]}
@@ -1933,9 +1934,10 @@ function VirtualMediaCardGrid({
           const rowItems = media.slice(rowStart, rowStart + columnCount);
           return (
             <Fragment key={virtualRow.key}>
-              {rowItems.map((asset) => (
+              {rowItems.map((asset, itemIndex) => (
                 <MediaCard
                   key={asset.id}
+                  mediaIndex={rowStart + itemIndex}
                   asset={asset}
                   metadata={mediaMetadata[asset.id]}
                   contentAnalysis={mediaContentAnalysis[asset.id]}
@@ -2217,7 +2219,8 @@ function MediaCard({
   onToggleSelected,
   batchSelectionCount,
   onOpenBatchMetadata,
-  onOpenBatchRename
+  onOpenBatchRename,
+  mediaIndex
 }: {
   asset: MediaAsset;
   metadata?: MediaMetadata;
@@ -2242,6 +2245,7 @@ function MediaCard({
   batchSelectionCount: number;
   onOpenBatchMetadata(): void;
   onOpenBatchRename(): void;
+  mediaIndex: number;
 }) {
   const proxySettings = useProxySettingsStore((state) => state.settings);
   const proxyStatus = asset.proxyStatus ?? (asset.type === 'video' ? 'none' : undefined);
@@ -2264,6 +2268,7 @@ function MediaCard({
       className={clsx('relative overflow-hidden rounded-md border bg-white shadow-sm outline-none focus:ring-2 focus:ring-brand', asset.missing ? 'border-rose-300' : 'border-line')}
       data-testid={`media-card-${asset.id}`}
       data-media-card="true"
+      data-media-index={mediaIndex}
       data-missing={asset.missing ? 'true' : 'false'}
       data-folder-id={asset.folderId ?? 'root'}
       data-label-color={labelColor ?? 'none'}
