@@ -1,3 +1,15 @@
+# Known Issues
+
+## MediaBin 虚拟化：键盘导航边界场景待手动验证
+
+**状态**: 已合并 main，待真实设备手动测试
+**合并时间**: 2026-07-04
+**相关分支**: mediabin-virtualization-wip（9 commits）
+
+MediaBin Grid 视图已引入 @tanstack/react-virtual 虚拟化。键盘导航（方向键移动焦点）改为数据索引驱动 + requestAnimationFrame 延迟聚焦。极端滚动边界场景下的行为尚未经过真实设备手动测试，如遇到方向键无响应等问题，参考 `docs/audit/mediabin-virtualization-manual-test-checklist.md` 排查。
+
+---
+
 # Known Issues — v4.12.0
 
 ## quick-xml 0.39.4 DoS（RUSTSEC-2026-0194/0195）

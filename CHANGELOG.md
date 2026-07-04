@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Performance
+- MediaBin Grid view virtualized with @tanstack/react-virtual (row-based, dynamic column count via ResizeObserver)
+- Keyboard navigation rewritten to data-index driven with requestAnimationFrame deferred focus
+- Known issue: keyboard navigation in extreme scroll-boundary scenarios pending manual testing
+
 ## [v3.10.0] - 2026-06-23
 
 ### Added
