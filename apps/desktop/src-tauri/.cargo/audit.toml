@@ -35,4 +35,16 @@ ignore = [
     # Transitive dependency; crate is unmaintained but functionally stable.
     # No direct replacement without upgrading the proc-macro chain.
     "RUSTSEC-2024-0370", # proc-macro-error unmaintained
+
+    # quick-xml 0.39.4 DoS (RUSTSEC-2026-0194, 0195):
+    # Transitive via plist 1.9.0 -> tauri-utils -> tauri.
+    # Both are DoS-class: quadratic attribute-check (0194) and unbounded
+    # namespace-declaration allocation (0195) in XML parsing.
+    # Project never parses untrusted XML — plist is used only by tauri
+    # at build time for macOS Info.plist (developer-controlled files).
+    # No runtime user-supplied XML reaches quick-xml code paths.
+    # plist 1.9.0 (latest) still pins quick-xml ^0.39; upgrade path blocked.
+    # Tracked: remove once plist or tauri-utils updates to quick-xml >= 0.41.0
+    "RUSTSEC-2026-0194", # quick-xml quadratic attribute check DoS
+    "RUSTSEC-2026-0195", # quick-xml NsReader memory-exhaustion DoS
 ]
