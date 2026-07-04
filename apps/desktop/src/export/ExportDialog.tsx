@@ -306,14 +306,7 @@ import { ExportCostEstimatePanel } from './components/ExportCostEstimatePanel';
 import { ExportOptimizationPanel, formatOptimizationSuggestionTitle, ExportWarmupStatusPanel, type ExportWarmupUiStatus } from './components/ExportOptimizationPanel';
 import { PreflightPanel } from './components/PreflightPanel';
 import { formatFpsOption, formatOptionLabel, WatermarkNumberField, PresetNumberField, PresetFpsField, PresetTextField, PresetColorField, PresetSelectField, PresetCheckboxField } from './components/PresetFields';
-import { formatBytes, formatMilliseconds, formatOptionalNumber, priorityLabel, getLastExportDurationSeconds, estimateDimensions, formatExportWarning } from './lib/exportFormatHelpers';
-import { PipelineSection } from './components/PipelineSection';
-import { VersionedBatchReportTable } from './components/VersionedBatchReportTable';
-import { ReframePreviewBox } from './components/ReframePreviewBox';
-import { Info } from './components/Info';
-import { MasterProcessingSection, SubtitleLanguageSection, ColorManagementSection, MonitoringSection, PostExportScriptSection, WatermarkSection, ReframeOffsetField } from './components/ExportSettingsSections';
-import { AudioVisualizationSection } from './components/AudioVisualizationSection';
-import { AIExportSuggestionPanel } from './components/AIExportSuggestionPanel';
+import { formatBytes, formatMilliseconds, formatOptionalNumber, priorityLabel } from './lib/exportFormatHelpers';
 
 interface ExportDialogProps {
   project: Project;
@@ -392,6 +385,136 @@ interface ExportPreviewThumbnail {
   durationMs: number;
 }
 
+
+function PipelineSection({
+  pipeline,
+  statuses,
+  publishLogs,
+  onCreateTemplate,
+  onCreatePublishTemplate
+}: {
+  pipeline: ExportPipeline;
+  statuses: Record<string, ExportPipelineNodeStatus>;
+  publishLogs: ExportPublishNodeLog[];
+  onCreateTemplate(): void;
+  onCreatePublishTemplate(): void;
+}) {
+  const t = zhCN.exportDialog.pipeline;
+  const downstreamMap = useMemo(() => {
+    const nameById = new Map(pipeline.nodes.map((node) => [node.id, node.name]));
+    const map = new Map<string, string[]>();
+    for (const edge of pipeline.edges) {
+      const existing = map.get(edge.from);
+      const name = nameById.get(edge.to) ?? edge.to;
+      if (existing) {
+        existing.push(name);
+      } else {
+        map.set(edge.from, [name]);
+      }
+    }
+    return map;
+  }, [pipeline.nodes, pipeline.edges]);
+  return (
+    <div className="grid grid-cols-[110px_1fr] gap-2 rounded-md border border-line p-3" data-testid="export-pipeline-tab">
+      <label className="pt-1 text-xs font-medium text-slate-600">{t.title}</label>
+      <div className="space-y-3">
+        <p className="text-xs text-slate-500">{t.description}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className="rounded-md border border-line px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
+            data-testid="export-pipeline-create-two-node"
+            onClick={onCreateTemplate}
+          >
+            {t.createTwoNode}
+          </button>
+          <button
+            type="button"
+            className="rounded-md border border-line px-2 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel"
+            data-testid="export-pipeline-create-publish"
+            onClick={onCreatePublishTemplate}
+          >
+            {t.createPublish}
+          </button>
+          <span className="text-xs text-slate-500" data-testid="export-pipeline-summary">
+            {t.summary(pipeline.nodes.length, pipeline.edges.length)}
+          </span>
+        </div>
+        {pipeline.nodes.length === 0 ? (
+          <div className="rounded-md border border-dashed border-line bg-panel px-3 py-6 text-center text-xs text-slate-500" data-testid="export-pipeline-empty">
+            {t.empty}
+          </div>
+        ) : (
+          <div className="grid gap-2" data-testid="export-pipeline-node-list">
+            {pipeline.nodes.map((node) => {
+              const status = statuses[node.id] ?? 'waiting';
+              const downstream = downstreamMap.get(node.id) ?? [];
+              return (
+                <div key={node.id} className="rounded-md border border-line bg-white p-3 text-xs" data-testid="export-pipeline-node" data-node-id={node.id}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="font-semibold text-ink">{node.name}</div>
+                      <div className="mt-1 text-slate-500">{t.nodeTypes[node.type]}</div>
+                      {downstream.length > 0 ? <div className="mt-1 text-slate-500">{t.downstream(downstream.join(' / '))}</div> : null}
+                    </div>
+                    <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${pipelineStatusClass(status)}`} data-testid="export-pipeline-node-status" data-status={status}>
+                      {t.status[status]}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {publishLogs.length > 0 ? (
+          <div className="grid gap-1 rounded-md border border-line bg-panel p-2 text-xs" data-testid="export-publish-log-list">
+            {publishLogs.map((log) => (
+              <div key={`${log.nodeId}-${log.finishedAt}`} className="flex items-center justify-between gap-2" data-testid="export-publish-log" data-status={log.status}>
+                <span className="min-w-0 truncate">{log.message}</span>
+                <span className="shrink-0 tabular-nums text-slate-500">{log.durationMs} ms</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function VersionedBatchReportTable({ rows }: { rows: VersionedExportReportRow[] }) {
+  const t = zhCN.exportDialog.versionBatch.report;
+  return (
+    <div className="overflow-hidden rounded-md border border-line" data-testid="export-version-report">
+      <div className="border-b border-line bg-panel px-3 py-2 text-xs font-semibold text-slate-700">{t.title}</div>
+      <table className="w-full border-collapse text-xs">
+        <thead className="bg-panel/60 text-slate-600">
+          <tr>
+            <th className="px-2 py-2 text-left font-semibold">{t.columns.version}</th>
+            <th className="px-2 py-2 text-left font-semibold">{t.columns.platform}</th>
+            <th className="px-2 py-2 text-left font-semibold">{t.columns.resolution}</th>
+            <th className="px-2 py-2 text-left font-semibold">{t.columns.fileSize}</th>
+            <th className="px-2 py-2 text-left font-semibold">{t.columns.duration}</th>
+            <th className="px-2 py-2 text-left font-semibold">{t.columns.elapsed}</th>
+            <th className="px-2 py-2 text-left font-semibold">{t.columns.status}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={`${row.batchId}-${row.versionId}`} className="border-t border-line" data-testid="export-version-report-row" data-version-id={row.versionId}>
+              <td className="px-2 py-2 font-medium text-slate-800">{row.versionName}</td>
+              <td className="px-2 py-2 text-slate-600">{[row.platform, row.language].filter(Boolean).join(' / ') || zhCN.common.auto}</td>
+              <td className="px-2 py-2 tabular-nums text-slate-600">{row.width && row.height ? `${row.width} x ${row.height}` : zhCN.common.auto}</td>
+              <td className="px-2 py-2 tabular-nums text-slate-600" data-testid="export-version-report-size">{formatBytes(row.fileSizeBytes ?? undefined)}</td>
+              <td className="px-2 py-2 tabular-nums text-slate-600">{row.durationSeconds === null ? zhCN.common.auto : formatDuration(row.durationSeconds)}</td>
+              <td className="px-2 py-2 tabular-nums text-slate-600" data-testid="export-version-report-elapsed">{formatMilliseconds(row.elapsedMs ?? undefined)}</td>
+              <td className="px-2 py-2 text-slate-600">{zhCN.exportDialog.status[row.status] ?? row.status}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
 
 export function ExportDialog({ project, initialPreset, selectedClipIds = [], inPoint, outPoint, onClose, onCompleted, onRelinkMissing }: ExportDialogProps) {
   const [complianceOpen, setComplianceOpen] = useState(false);
@@ -2915,7 +3038,1006 @@ async function runCompletionAction(action: ExportCompletionAction, settings: Exp
   }
 }
 
+function MasterProcessingSection({
+  masterProcessing,
+  loudnessNormalization,
+  loudnessNormalizationEligible,
+  setDraftSettings
+}: {
+  masterProcessing: ExportPresetSettings['masterProcessing'];
+  loudnessNormalization: ExportLoudnessNormalization;
+  loudnessNormalizationEligible: boolean;
+  setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>;
+}) {
+  const t = zhCN.exportDialog.masterProcessing;
+  const master = normalizeExportMasterProcessing(masterProcessing);
+  const active = hasExportMasterProcessing(master) || loudnessNormalization !== 'off';
+  return (
+    <details className="rounded-md border border-line p-3" data-testid="export-master-processing-section">
+      <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-semibold text-slate-700" data-testid="export-master-processing-summary">
+        <span>{t.title}</span>
+        <span className="text-[11px] font-normal text-slate-500">{active ? t.on : t.off}</span>
+      </summary>
+      <div className="mt-3 space-y-3 text-xs">
+        <div className="grid gap-3 md:grid-cols-3">
+          <PresetCheckboxField label={t.eqEnabled} checked={master.eq.enabled} onChange={(checked) => updateMasterEqEnabled(setDraftSettings, checked)} testId="export-master-eq-toggle" />
+          <PresetCheckboxField label={t.stereoEnabled} checked={master.stereoEnhancer.enabled} onChange={(checked) => updateMasterStereoEnabled(setDraftSettings, checked)} testId="export-master-stereo-toggle" />
+          <PresetCheckboxField label={t.limiterEnabled} checked={master.limiter.enabled} onChange={(checked) => updateMasterLimiterEnabled(setDraftSettings, checked)} testId="export-master-limiter-toggle" />
+        </div>
+        <div className="grid gap-3 md:grid-cols-[1fr_180px_180px]">
+          <PresetSelectField
+            label={t.loudnessNormalization}
+            value={loudnessNormalization}
+            disabled={!loudnessNormalizationEligible}
+            onChange={(value) => updateLoudnessNormalization(setDraftSettings, value)}
+            testId="export-loudness-normalization-select"
+            options={['off', 'youtube', 'ebu-r128']}
+          />
+          <WatermarkNumberField
+            label={t.stereoAmount}
+            value={master.stereoEnhancer.amount}
+            min={0}
+            max={2}
+            step={0.05}
+            disabled={!master.stereoEnhancer.enabled}
+            testId="export-master-stereo-amount"
+            onChange={(value) => updateMasterStereoAmount(setDraftSettings, value)}
+          />
+          <WatermarkNumberField
+            label={t.limiterLevel}
+            value={master.limiter.levelOutDb}
+            min={-24}
+            max={0}
+            step={0.1}
+            disabled={!master.limiter.enabled}
+            testId="export-master-limiter-level"
+            onChange={(value) => updateMasterLimiterLevel(setDraftSettings, value)}
+          />
+        </div>
+        <div className="overflow-hidden rounded-md border border-line" data-testid="export-master-eq-bands">
+          <div className="grid grid-cols-[86px_1fr_72px_64px] gap-2 border-b border-line bg-panel px-2 py-1 text-[11px] font-semibold text-slate-500">
+            <span>{t.band}</span>
+            <span>{t.gain}</span>
+            <span>{t.frequency}</span>
+            <span>{t.q}</span>
+          </div>
+          {master.eq.bands.map((band, index) => (
+            <div key={band.id} className="grid grid-cols-[86px_1fr_72px_64px] items-center gap-2 border-b border-line px-2 py-1 last:border-b-0" data-testid="export-master-eq-band">
+              <div className="truncate font-medium text-slate-600" title={t.bandName(index, band.frequency)}>
+                {t.bandName(index, band.frequency)}
+              </div>
+              <input
+                className="min-w-0 accent-brand"
+                type="range"
+                min={-24}
+                max={24}
+                step={0.5}
+                value={band.gain}
+                disabled={!master.eq.enabled}
+                data-testid={`export-master-eq-gain-${index}`}
+                onChange={(event) => updateMasterEqBand(setDraftSettings, index, { gain: Number(event.target.value) })}
+              />
+              <input
+                className="h-7 min-w-0 rounded border border-line bg-white px-1 text-right tabular-nums disabled:bg-slate-100"
+                type="number"
+                min={20}
+                max={20000}
+                step={1}
+                value={band.frequency}
+                disabled={!master.eq.enabled}
+                data-testid={`export-master-eq-frequency-${index}`}
+                onChange={(event) => updateMasterEqBand(setDraftSettings, index, { frequency: Number(event.target.value) })}
+              />
+              <input
+                className="h-7 min-w-0 rounded border border-line bg-white px-1 text-right tabular-nums disabled:bg-slate-100"
+                type="number"
+                min={0.1}
+                max={4}
+                step={0.1}
+                value={band.q}
+                disabled={!master.eq.enabled}
+                data-testid={`export-master-eq-q-${index}`}
+                onChange={(event) => updateMasterEqBand(setDraftSettings, index, { q: Number(event.target.value) })}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    </details>
+  );
+}
+
+function SubtitleLanguageSection({
+  options,
+  selectedLanguages,
+  burnInLanguage,
+  setDraftSettings
+}: {
+  options: SubtitleLanguageOption[];
+  selectedLanguages?: string[];
+  burnInLanguage?: string | null;
+  setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>;
+}) {
+  const selected = normalizeSubtitleLanguageList(selectedLanguages);
+  const enabledLanguages = selected ? new Set(selected) : new Set(options.map((option) => option.language));
+  const activeBurnInLanguage = burnInLanguage ? normalizeSubtitleLanguage(burnInLanguage) : options[0]?.language ?? 'zh';
+  const t = zhCN.exportDialog.subtitleLanguages;
+  return (
+    <section className="rounded-md border border-line p-3 text-xs" data-testid="export-subtitle-language-section">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="font-semibold text-slate-700">{t.title}</div>
+          <div className="mt-0.5 text-slate-500">{t.description}</div>
+        </div>
+        <label className="flex items-center gap-2 text-slate-600">
+          <span>{t.burnInLanguage}</span>
+          <select
+            className="rounded-md border border-line px-2 py-1"
+            value={activeBurnInLanguage}
+            data-testid="export-subtitle-burn-language-select"
+            onChange={(event) => updateSubtitleBurnInLanguage(setDraftSettings, event.target.value)}
+          >
+            {options.map((option) => (
+              <option key={option.language} value={option.language}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {options.map((option) => (
+          <label key={option.language} className="inline-flex items-center gap-2 rounded-md border border-line px-2 py-1.5 text-slate-700">
+            <input
+              type="checkbox"
+              checked={enabledLanguages.has(option.language)}
+              onChange={(event) => updateSubtitleLanguageSelection(setDraftSettings, option.language, event.currentTarget.checked, options)}
+              data-testid={`export-subtitle-language-${option.language}`}
+            />
+            <span>{option.label}</span>
+            <span className="text-slate-500">{t.trackCount(option.trackCount)}</span>
+          </label>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 
+function ColorManagementSection({
+  colorManagement,
+  setDraftSettings
+}: {
+  colorManagement: ExportPresetSettings['colorManagement'];
+  setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>;
+}) {
+  const t = zhCN.exportDialog.colorManagement;
+  const normalized = normalizeExportColorManagement(colorManagement);
+  const active = normalized.inputColorSpace !== 'srgb' || normalized.outputColorSpace !== 'srgb' || normalized.embedIccProfile === false;
+  return (
+    <details className="rounded-md border border-line p-3" data-testid="export-color-management-section">
+      <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-semibold text-slate-700" data-testid="export-color-management-summary">
+        <span>{t.title}</span>
+        <span className="text-[11px] font-normal text-slate-500">{active ? t.custom : t.default}</span>
+      </summary>
+      <div className="mt-3 grid gap-3 md:grid-cols-3">
+        <PresetSelectField
+          label={t.inputColorSpace}
+          value={normalized.inputColorSpace}
+          onChange={(value) => updateColorManagement(setDraftSettings, { inputColorSpace: value as ExportColorSpace })}
+          options={[...EXPORT_COLOR_SPACES]}
+          testId="export-input-color-space-select"
+        />
+        <PresetSelectField
+          label={t.outputColorSpace}
+          value={normalized.outputColorSpace}
+          onChange={(value) => updateColorManagement(setDraftSettings, { outputColorSpace: value as ExportColorSpace })}
+          options={[...EXPORT_COLOR_SPACES]}
+          testId="export-output-color-space-select"
+        />
+        <PresetCheckboxField
+          label={t.embedIccProfile}
+          checked={normalized.embedIccProfile}
+          onChange={(checked) => updateColorManagement(setDraftSettings, { embedIccProfile: checked })}
+          testId="export-embed-icc-toggle"
+        />
+      </div>
+    </details>
+  );
+}
 
+function AudioVisualizationSection({
+  visualization,
+  setDraftSettings,
+  onChooseImage
+}: {
+  visualization: NonNullable<ExportPresetSettings['audioVisualization']>;
+  setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>;
+  onChooseImage(): void;
+}) {
+  const t = zhCN.exportDialog.audioVisualization;
+  const [customThemes, setCustomThemes] = useState<CustomAudioVisualizationTheme[]>([]);
+  const [customThemeName, setCustomThemeName] = useState('');
+  const background = visualization.background;
+  const backgroundType = background.type;
+  const backgroundColor = background.type === 'image' ? '#050816' : background.color;
+  const backgroundColor2 = background.type === 'gradient' ? background.color2 : '#1d4ed8';
+  const backgroundPath = background.type === 'image' ? background.path : '';
+  const selectedThemeId = visualization.themeId ?? MANUAL_AUDIO_VISUALIZATION_THEME_ID;
+  const themeOptions = useMemo(() => [...BUILTIN_AUDIO_VISUALIZATION_THEMES, ...customThemes], [customThemes]);
+
+  useEffect(() => {
+    let canceled = false;
+    void readAudioVisualizationThemeSettings()
+      .then((settings) => {
+        if (!canceled) {
+          setCustomThemes(settings.customThemes);
+        }
+      })
+      .catch(() => {
+        if (!canceled) {
+          setCustomThemes([]);
+        }
+      });
+    return () => {
+      canceled = true;
+    };
+  }, []);
+
+  const saveCurrentTheme = async () => {
+    try {
+      const name = customThemeName.trim() || `${t.customThemes} ${customThemes.length + 1}`;
+      const expanded = expandAudioVisualizationTheme({
+        themeId: visualization.themeId,
+        theme: visualization.theme,
+        color: visualization.color,
+        background: visualization.background.type === 'image' ? undefined : visualization.background
+      });
+      const nextThemes = upsertCustomAudioVisualizationTheme(customThemes, {
+        id: name,
+        name,
+        colorStart: expanded.colorStart,
+        colorEnd: expanded.colorEnd,
+        background: expanded.background,
+        glow: expanded.glow,
+        glowColor: expanded.glowColor,
+        glowStrength: expanded.glowStrength,
+        particles: expanded.particles,
+        particleColor: expanded.particleColor,
+        border: expanded.border,
+        borderColor: expanded.borderColor,
+        borderWidth: expanded.borderWidth
+      });
+      const saved = await saveAudioVisualizationThemeSettings({ customThemes: nextThemes });
+      setCustomThemes(saved.customThemes);
+      const savedTheme = saved.customThemes.find((theme) => theme.id === nextThemes.at(-1)?.id);
+      if (savedTheme) {
+        updateAudioVisualizationTheme(setDraftSettings, savedTheme, saved.customThemes);
+      }
+      setCustomThemeName('');
+    } catch (error) {
+      showToast({ kind: 'warning', title: t.saveThemeFailed, message: error instanceof Error ? error.message : t.saveThemeFailed });
+    }
+  };
+
+  const deleteCustomTheme = async (themeId: string) => {
+    const nextThemes = removeCustomAudioVisualizationTheme(customThemes, themeId);
+    const saved = await saveAudioVisualizationThemeSettings({ customThemes: nextThemes });
+    setCustomThemes(saved.customThemes);
+    if (selectedThemeId === themeId) {
+      updateAudioVisualizationTheme(setDraftSettings, undefined, saved.customThemes);
+    }
+  };
+
+  return (
+    <section className="rounded-md border border-line p-3" data-testid="export-audio-viz-section">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h3 className="text-xs font-semibold text-slate-700">{t.title}</h3>
+          <p className="mt-0.5 text-[11px] text-slate-500">{t.description}</p>
+        </div>
+      </div>
+      <div className="mt-3 space-y-2">
+        <div className="text-xs font-semibold text-slate-700">{t.theme}</div>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3" data-testid="export-audio-viz-theme-grid">
+          <ThemePreviewButton
+            label={t.manualTheme}
+            selected={selectedThemeId === MANUAL_AUDIO_VISUALIZATION_THEME_ID}
+            source={{ color: visualization.color, background: backgroundType === 'image' ? undefined : background }}
+            style={visualization.style}
+            testId="export-audio-viz-theme-manual"
+            onSelect={() => updateAudioVisualizationTheme(setDraftSettings, undefined, customThemes)}
+          />
+          {themeOptions.map((theme) => (
+            <ThemePreviewButton
+              key={theme.id}
+              label={theme.name}
+              selected={selectedThemeId === theme.id}
+              source={{ themeId: theme.id, theme: customThemes.some((item) => item.id === theme.id) ? theme : undefined }}
+              style={visualization.style}
+              testId={`export-audio-viz-theme-${theme.id}`}
+              onSelect={() => updateAudioVisualizationTheme(setDraftSettings, theme, customThemes)}
+              action={
+                customThemes.some((item) => item.id === theme.id) ? (
+                  <button
+                    className="rounded p-1 text-slate-400 hover:bg-white/10 hover:text-white"
+                    type="button"
+                    title={t.deleteTheme}
+                    aria-label={t.deleteTheme}
+                    data-testid={`export-audio-viz-theme-delete-${theme.id}`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void deleteCustomTheme(theme.id);
+                    }}
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                ) : undefined
+              }
+            />
+          ))}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <input
+            className="min-w-48 flex-1 rounded-md border border-line px-2 py-1.5 text-xs"
+            value={customThemeName}
+            placeholder={t.customThemeName}
+            data-testid="export-audio-viz-custom-theme-name"
+            onChange={(event) => setCustomThemeName(event.target.value)}
+          />
+          <button
+            className="inline-flex items-center gap-2 rounded-md border border-line px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-panel"
+            type="button"
+            data-testid="export-audio-viz-save-theme"
+            onClick={() => void saveCurrentTheme()}
+          >
+            <Save size={13} />
+            {t.saveCustomTheme}
+          </button>
+        </div>
+      </div>
+      <div className="mt-3 grid gap-3 md:grid-cols-4">
+        <PresetSelectField
+          label={t.style}
+          value={visualization.style}
+          onChange={(value) => updateAudioVisualizationStyle(setDraftSettings, value)}
+          options={[...AUDIO_VISUALIZATION_STYLES]}
+          testId="export-audio-viz-style-select"
+        />
+        <PresetColorField
+          label={t.color}
+          value={visualization.color}
+          onChange={(value) => updateAudioVisualizationColor(setDraftSettings, value)}
+          testId="export-audio-viz-color-input"
+        />
+        <PresetSelectField
+          label={t.backgroundType}
+          value={backgroundType}
+          onChange={(value) => updateAudioVisualizationBackgroundType(setDraftSettings, value)}
+          options={[...AUDIO_VISUALIZATION_BACKGROUND_TYPES]}
+          testId="export-audio-viz-background-select"
+        />
+        {backgroundType === 'image' ? (
+          <div className="space-y-1 text-xs font-medium text-slate-600 md:col-span-2">
+            <span>{t.backgroundImage}</span>
+            <div className="flex gap-2">
+              <input
+                className="min-w-0 flex-1 rounded-md border border-line px-2 py-1.5"
+                value={backgroundPath}
+                onChange={(event) => updateAudioVisualizationBackgroundImagePath(setDraftSettings, event.target.value)}
+                data-testid="export-audio-viz-background-image-input"
+              />
+              <button className="rounded-md border border-line px-2 py-1.5 text-xs font-medium hover:bg-panel" type="button" data-testid="export-audio-viz-background-image-button" onClick={onChooseImage}>
+                {t.chooseImage}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <PresetColorField
+              label={t.backgroundColor}
+              value={backgroundColor}
+              onChange={(value) => updateAudioVisualizationBackgroundColor(setDraftSettings, 'color', value)}
+              testId="export-audio-viz-background-color-input"
+            />
+            {backgroundType === 'gradient' ? (
+              <PresetColorField
+                label={t.backgroundColor2}
+                value={backgroundColor2}
+                onChange={(value) => updateAudioVisualizationBackgroundColor(setDraftSettings, 'color2', value)}
+                testId="export-audio-viz-background-color2-input"
+              />
+            ) : null}
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function ThemePreviewButton({
+  label,
+  selected,
+  source,
+  style,
+  testId,
+  action,
+  onSelect
+}: {
+  label: string;
+  selected: boolean;
+  source: Parameters<typeof drawAudioVisualizationThemePreviewFrame>[1];
+  style: ExportAudioVisualizationStyle;
+  testId: string;
+  action?: ReactNode;
+  onSelect(): void;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const context = canvas?.getContext('2d');
+    if (!canvas || !context) {
+      return;
+    }
+    drawAudioVisualizationThemePreviewFrame(context, source, style, canvas.width, canvas.height);
+  }, [source, style]);
+
+  return (
+    <div className="relative">
+      <button
+        className={`w-full overflow-hidden rounded-md border text-left transition ${selected ? 'border-brand ring-2 ring-brand/30' : 'border-line hover:border-slate-400'}`}
+        type="button"
+        data-testid={testId}
+        onClick={onSelect}
+      >
+        <canvas ref={canvasRef} className="block aspect-[16/9] w-full bg-slate-950" width={192} height={108} aria-hidden="true" />
+        <span className="block truncate bg-white px-2 py-1.5 text-xs font-semibold text-slate-700">{label}</span>
+      </button>
+      {action ? <div className="absolute right-1 top-1">{action}</div> : null}
+    </div>
+  );
+}
+
+function MonitoringSection({
+  timecodeBurnIn,
+  slate,
+  setDraftSettings
+}: {
+  timecodeBurnIn: ExportPresetSettings['timecodeBurnIn'];
+  slate: ExportPresetSettings['slate'];
+  setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>;
+}) {
+  const t = zhCN.exportDialog.monitoring;
+  const positionLabels = zhCN.exportDialog.watermark.positions;
+  const enabled = timecodeBurnIn?.enabled === true;
+  const timecode = enabled ? timecodeBurnInFrom(timecodeBurnIn) : { ...DEFAULT_TIMECODE_BURN_IN };
+  const slateEnabled = slate?.enabled === true;
+
+  return (
+    <details className="rounded-md border border-line p-3" data-testid="export-monitoring-section">
+      <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-semibold text-slate-700" data-testid="export-monitoring-summary">
+        <span>{t.title}</span>
+        <span className="text-[11px] font-normal text-slate-500">{enabled || slateEnabled ? t.on : t.off}</span>
+      </summary>
+      <div className="mt-3 grid gap-3 md:grid-cols-3">
+        <PresetCheckboxField label={t.timecodeEnabled} checked={enabled} onChange={(checked) => updateTimecodeBurnInEnabled(setDraftSettings, checked)} testId="export-timecode-toggle" />
+        <label className="space-y-1 text-xs font-medium text-slate-600">
+          <span>{t.timecodePosition}</span>
+          <select
+            className="w-full rounded-md border border-line px-2 py-1.5 disabled:bg-slate-100"
+            value={timecode.position}
+            disabled={!enabled}
+            onChange={(event) => updateTimecodeBurnInPosition(setDraftSettings, event.target.value)}
+            data-testid="export-timecode-position-select"
+          >
+            {WATERMARK_POSITIONS.map((option) => (
+              <option key={option} value={option}>
+                {positionLabels[option]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <WatermarkNumberField
+          label={t.timecodeFontSize}
+          value={timecode.fontSize}
+          min={8}
+          max={96}
+          step={1}
+          disabled={!enabled}
+          onChange={(value) => updateTimecodeBurnInFontSize(setDraftSettings, value)}
+          testId="export-timecode-font-size"
+        />
+        <PresetColorField
+          label={t.timecodeColor}
+          value={timecode.color}
+          disabled={!enabled}
+          onChange={(value) => updateTimecodeBurnInColor(setDraftSettings, 'color', value)}
+          testId="export-timecode-color"
+        />
+        <PresetColorField
+          label={t.timecodeBackgroundColor}
+          value={timecode.backgroundColor}
+          disabled={!enabled}
+          onChange={(value) => updateTimecodeBurnInColor(setDraftSettings, 'backgroundColor', value)}
+          testId="export-timecode-background-color"
+        />
+        <PresetCheckboxField
+          label={t.includeFrameNumber}
+          checked={timecode.includeFrameNumber}
+          disabled={!enabled}
+          onChange={(checked) => updateTimecodeBurnInFrameNumber(setDraftSettings, checked)}
+          testId="export-timecode-frame-number-toggle"
+        />
+        <PresetCheckboxField label={t.slateEnabled} checked={slateEnabled} onChange={(checked) => updateSlateEnabled(setDraftSettings, checked)} testId="export-slate-toggle" />
+      </div>
+    </details>
+  );
+}
+
+function PostExportScriptSection({
+  script,
+  acknowledged,
+  setDraftSettings,
+  onAcknowledgedChange
+}: {
+  script: ExportPresetSettings['postExportScript'];
+  acknowledged: boolean;
+  setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>;
+  onAcknowledgedChange(checked: boolean): void;
+}) {
+  const t = zhCN.exportDialog.postExportScript;
+  const command = script?.command ?? '';
+  const enabled = command.trim().length > 0;
+  return (
+    <details className="rounded-md border border-line p-3" data-testid="export-post-script-section">
+      <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-semibold text-slate-700" data-testid="export-post-script-summary">
+        <span>{t.title}</span>
+        <span className="text-[11px] font-normal text-slate-500">{enabled ? t.enabled : t.disabled}</span>
+      </summary>
+      <div className="mt-3 space-y-3">
+        <label className="block space-y-1 text-xs font-medium text-slate-600">
+          <span>{t.command}</span>
+          <input
+            className="w-full rounded-md border border-line px-2 py-1.5 font-mono text-xs"
+            placeholder={t.placeholder}
+            value={command}
+            onChange={(event) => updatePostExportScriptCommand(setDraftSettings, event.target.value)}
+            data-testid="export-post-script-command-input"
+          />
+        </label>
+        <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900" data-testid="export-post-script-warning">
+          <label className="flex items-start gap-2">
+            <input
+              className="mt-0.5 h-4 w-4 accent-brand"
+              type="checkbox"
+              checked={acknowledged}
+              onChange={(event) => onAcknowledgedChange(event.target.checked)}
+              data-testid="export-post-script-ack-toggle"
+            />
+            <span>
+              <span className="block font-semibold">{t.securityTitle}</span>
+              <span className="mt-1 block">{t.securityMessage}</span>
+            </span>
+          </label>
+        </div>
+        <div className="text-[11px] leading-4 text-slate-500" data-testid="export-post-script-variables">
+          {t.variables}
+        </div>
+      </div>
+    </details>
+  );
+}
+
+function WatermarkSection({
+  watermark,
+  setDraftSettings,
+  onChooseImage
+}: {
+  watermark: ExportPresetSettings['watermark'];
+  setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>;
+  onChooseImage(): void;
+}) {
+  const t = zhCN.exportDialog.watermark;
+  const enabled = watermark?.enabled === true;
+  const type = watermark?.type ?? 'text';
+  const position = normalizeWatermarkPosition(watermark?.position);
+  const imageWatermark = watermark?.type === 'image' ? watermark : imageWatermarkFrom(watermark);
+  const textWatermark = watermark?.type === 'text' ? watermark : textWatermarkFrom(watermark);
+
+  return (
+    <details className="rounded-md border border-line p-3" data-testid="export-watermark-section">
+      <summary className="flex cursor-pointer list-none items-center justify-between text-xs font-semibold text-slate-700" data-testid="export-watermark-summary">
+        <span>{t.title}</span>
+        <span className="text-[11px] font-normal text-slate-500">{enabled ? t.on : t.off}</span>
+      </summary>
+      <div className="mt-3 grid gap-3">
+        <div className="grid gap-3 md:grid-cols-[180px_180px_1fr]">
+          <PresetCheckboxField label={t.enabled} checked={enabled} onChange={(checked) => updateWatermarkEnabled(setDraftSettings, checked)} testId="export-watermark-enabled-toggle" />
+          <label className="space-y-1 text-xs font-medium text-slate-600">
+            <span>{t.type}</span>
+            <select
+              className="w-full rounded-md border border-line px-2 py-1.5 disabled:bg-slate-100"
+              value={type}
+              disabled={!enabled}
+              onChange={(event) => updateWatermarkType(setDraftSettings, event.target.value)}
+              data-testid="export-watermark-type-select"
+            >
+              <option value="text">{t.types.text}</option>
+              <option value="image">{t.types.image}</option>
+            </select>
+          </label>
+          <label className="space-y-1 text-xs font-medium text-slate-600">
+            <span>{t.position}</span>
+            <select
+              className="w-full rounded-md border border-line px-2 py-1.5 disabled:bg-slate-100"
+              value={position}
+              disabled={!enabled}
+              onChange={(event) => updateWatermarkPosition(setDraftSettings, event.target.value)}
+              data-testid="export-watermark-position-select"
+            >
+              {WATERMARK_POSITIONS.map((option) => (
+                <option key={option} value={option}>
+                  {t.positions[option]}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        {type === 'image' ? (
+          <div className="grid gap-3 md:grid-cols-[1fr_120px_120px]">
+            <label className="space-y-1 text-xs font-medium text-slate-600">
+              <span>{t.imagePath}</span>
+              <div className="flex gap-2">
+                <input
+                  className="min-w-0 flex-1 rounded-md border border-line px-2 py-1.5 disabled:bg-slate-100"
+                  value={imageWatermark.path}
+                  disabled={!enabled}
+                  onChange={(event) => updateImageWatermarkPath(setDraftSettings, event.target.value)}
+                  data-testid="export-image-watermark-path-input"
+                />
+                <button
+                  className="rounded-md border border-line p-2 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-45"
+                  title={t.chooseImage}
+                  type="button"
+                  disabled={!enabled}
+                  onClick={onChooseImage}
+                  data-testid="export-image-watermark-choose-button"
+                >
+                  <FolderOpen size={16} />
+                </button>
+              </div>
+            </label>
+            <WatermarkNumberField label={t.scalePercent} value={imageWatermark.scalePercent} min={1} max={50} step={1} disabled={!enabled} testId="export-image-watermark-scale-input" onChange={(value) => updateImageWatermarkScale(setDraftSettings, value)} />
+            <WatermarkNumberField label={t.opacity} value={imageWatermark.opacity} min={0} max={1} step={0.05} disabled={!enabled} testId="export-image-watermark-opacity-input" onChange={(value) => updateImageWatermarkOpacity(setDraftSettings, value)} />
+          </div>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-[1fr_150px_110px_110px]">
+            <PresetTextField label={t.text} value={textWatermark.text} disabled={!enabled} onChange={(value) => updateTextWatermarkText(setDraftSettings, value)} testId="export-text-watermark-input" />
+            <PresetTextField label={t.fontFamily} value={textWatermark.fontFamily} disabled={!enabled} onChange={(value) => updateTextWatermarkFont(setDraftSettings, value)} testId="export-text-watermark-font-input" />
+            <label className="space-y-1 text-xs font-medium text-slate-600">
+              <span>{t.color}</span>
+              <input
+                className="h-[34px] w-full rounded-md border border-line px-1 py-1 disabled:bg-slate-100"
+                type="color"
+                value={/^#[0-9a-fA-F]{6}$/.test(textWatermark.color) ? textWatermark.color : '#ffffff'}
+                disabled={!enabled}
+                onChange={(event) => updateTextWatermarkColor(setDraftSettings, event.target.value)}
+                data-testid="export-text-watermark-color-input"
+              />
+            </label>
+            <WatermarkNumberField label={t.fontSize} value={textWatermark.fontSize} min={8} max={240} step={1} disabled={!enabled} testId="export-text-watermark-size-input" onChange={(value) => updateTextWatermarkSize(setDraftSettings, value)} />
+          </div>
+        )}
+      </div>
+    </details>
+  );
+}
+
+function ReframeOffsetField({
+  label,
+  value,
+  axis,
+  setDraftSettings
+}: {
+  label: string;
+  value: number;
+  axis: 'x' | 'y';
+  setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>;
+}) {
+  return (
+    <label className="space-y-1 text-xs font-medium text-slate-600">
+      <span>{label}</span>
+      <div className="flex items-center gap-2">
+        <input
+          className="w-full accent-brand"
+          type="range"
+          min={-1}
+          max={1}
+          step={0.01}
+          value={value}
+          onChange={(event) => updateReframeOffset(setDraftSettings, axis, event.target.value)}
+          data-testid={`export-reframe-offset-${axis}`}
+        />
+        <span className="w-10 text-right tabular-nums">{value.toFixed(2)}</span>
+      </div>
+    </label>
+  );
+}
+
+function ReframePreviewBox({ aspect, offsetX, offsetY }: { aspect: TargetAspectRatio; offsetX: number; offsetY: number }) {
+  const normalized = normalizeTargetAspectRatio(aspect);
+  const ratioClass = normalized === '9:16' ? 'aspect-[9/16]' : normalized === '1:1' ? 'aspect-square' : normalized === '4:5' ? 'aspect-[4/5]' : normalized === '21:9' ? 'aspect-[21/9]' : 'aspect-video';
+  const translateX = `${clampReframeOffset(offsetX) * 18}%`;
+  const translateY = `${clampReframeOffset(offsetY) * 18}%`;
+  return (
+    <div className="flex items-center justify-center rounded-md bg-panel p-2" data-testid="export-reframe-preview">
+      <div className="relative h-24 w-full max-w-32 overflow-hidden rounded border border-line bg-slate-200">
+        <div className="absolute inset-2 rounded bg-gradient-to-br from-slate-500 via-slate-400 to-slate-600" />
+        <div
+          className={`absolute left-1/2 top-1/2 max-h-[88%] w-[58%] -translate-x-1/2 -translate-y-1/2 border-2 border-brand bg-brand/10 ${ratioClass}`}
+          style={{ transform: `translate(calc(-50% + ${translateX}), calc(-50% + ${translateY}))` }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function applyExportSuggestionToDraft(
+  setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>,
+  suggestion: AIExportSuggestion,
+  project: Project
+) {
+  const param = suggestion.parameter;
+  const value = suggestion.suggestedValue;
+  setDraftSettings((prev) => {
+    if (param === 'videoBitrate') return { ...prev, videoBitrate: value };
+    if (param === 'audioBitrate') return { ...prev, audioBitrate: value };
+    if (param === 'fps') return { ...prev, fps: Number(value) || prev.fps };
+    if (param === 'encoder') return { ...prev, videoCodec: value };
+    if (param === 'loudnessNormalization') return { ...prev, loudnessNormalization: value as ExportLoudnessNormalization };
+    if (param === 'subtitleFormat') return { ...prev, subtitleFormat: value as ExportSubtitleFormat };
+    if (param === 'resolution') {
+      const m = value.match(/(\d+)\s*[x×]\s*(\d+)/);
+      if (m) return { ...prev, width: Number(m[1]), height: Number(m[2]) };
+    }
+    if (param === 'hardwareEncoding') return { ...prev, hardwareEncoding: value === 'true' || value === 'yes' };
+    return prev;
+  });
+}
+
+let aiExportSuggestionCache: { key: string; ts: number; data: AIExportSuggestion[] } | null = null;
+
+function AIExportSuggestionPanel({
+  project,
+  draftSettings,
+  setDraftSettings
+}: {
+  project: Project;
+  draftSettings: ExportPresetSettings;
+  setDraftSettings: Dispatch<SetStateAction<ExportPresetSettings>>;
+}) {
+  const t = zhCN.aiExportSuggestion;
+  const providers = useAISettingsStore((s) => s.providers);
+  const serviceMapping = useAISettingsStore((s) => s.serviceMapping);
+  const providerId = serviceMapping['export-suggestion'];
+  const provider = providers.find((p) => p.id === providerId && p.enabled && isProviderConfigured(p));
+
+  const [expanded, setExpanded] = useState(false);
+  const [phase, setPhase] = useState<'idle' | 'analyzing'>('idle');
+  const [suggestions, setSuggestions] = useState<AIExportSuggestion[]>([]);
+
+  async function runAnalysis() {
+    if (!provider) return;
+    const cacheKey = JSON.stringify({ p: project.settings, d: { f: draftSettings.format, vc: draftSettings.videoCodec, vb: draftSettings.videoBitrate, ab: draftSettings.audioBitrate } });
+    if (aiExportSuggestionCache && aiExportSuggestionCache.key === cacheKey && Date.now() - aiExportSuggestionCache.ts < EXPORT_SUGGESTION_CACHE_TTL_MS) {
+      setSuggestions(aiExportSuggestionCache.data);
+      return;
+    }
+    setPhase('analyzing');
+    try {
+      const apiKey = await readAiApiKey(provider.id);
+      const projectInfo = buildExportProjectInfo(project as unknown as { settings: { width: number; height: number; fps: number }; timeline: { tracks: Array<{ type: string; clips: Array<Record<string, unknown>> }> } });
+      const systemPrompt = buildExportOptimizationSystemPrompt();
+      const userPrompt = buildExportOptimizationUserPrompt(projectInfo, { ...draftSettings, videoBitrate: draftSettings.videoBitrate ?? undefined, audioBitrate: draftSettings.audioBitrate ?? undefined });
+      const response = await callAiApi({
+        providerId: provider.id,
+        baseUrl: provider.baseUrl,
+        model: provider.defaultModel,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        customHeaders: provider.customHeaders,
+        maxTokens: 4096,
+        temperature: 0.3
+      }, apiKey);
+      let parsed: AIExportSuggestion[] = [];
+      try {
+        parsed = parseExportOptimizationResponse(JSON.parse(response.content));
+      } catch { /* ignore parse errors */ }
+      const sorted = sortExportSuggestionsByPriority(parsed);
+      setSuggestions(sorted);
+      aiExportSuggestionCache = { key: cacheKey, ts: Date.now(), data: sorted };
+    } catch {
+      setSuggestions([]);
+    } finally {
+      setPhase('idle');
+    }
+  }
+
+  function handleToggle(e: React.SyntheticEvent<HTMLDetailsElement>) {
+    const isOpen = (e.target as HTMLDetailsElement).open;
+    setExpanded(isOpen);
+    if (isOpen && suggestions.length === 0 && phase === 'idle') {
+      void runAnalysis();
+    }
+  }
+
+  function applyAll() {
+    for (const s of suggestions) {
+      applyExportSuggestionToDraft(setDraftSettings, s, project);
+    }
+  }
+
+  if (!provider) {
+    return (
+      <section className="rounded-md border border-dashed border-line bg-panel/50 px-3 py-3 text-center text-xs text-slate-500" data-testid="ai-export-suggestion-no-provider">
+        {t.noProvider}
+      </section>
+    );
+  }
+
+  const priorityGroups: Record<string, AIExportSuggestion[]> = { high: [], medium: [], low: [] };
+  for (const s of suggestions) {
+    (priorityGroups[s.priority] ?? (priorityGroups[s.priority] = [])).push(s);
+  }
+
+  return (
+    <details className="rounded-md border border-line bg-white p-3 text-xs" data-testid="ai-export-suggestion-panel" onToggle={handleToggle}>
+      <summary className="cursor-pointer select-none font-semibold text-slate-800" data-testid="ai-export-suggestion-toggle">
+        {t.title}
+      </summary>
+      <div className="mt-0.5 text-[11px] text-slate-500">{t.description}</div>
+      {phase === 'analyzing' ? (
+        <div className="mt-2 flex items-center gap-2 text-slate-500" data-testid="ai-export-suggestion-loading">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          {t.analyzing}
+        </div>
+      ) : suggestions.length === 0 && expanded ? (
+        <div className="mt-2 rounded-md border border-dashed border-line bg-panel/50 px-3 py-3 text-center text-slate-500" data-testid="ai-export-suggestion-empty">
+          {t.empty}
+        </div>
+      ) : suggestions.length > 0 ? (
+        <div className="mt-2 space-y-3">
+          {(['high', 'medium', 'low'] as const).map((pri) => {
+            const group = priorityGroups[pri];
+            if (!group || group.length === 0) return null;
+            return (
+              <div key={pri} data-testid={`ai-export-suggestion-priority-${pri}`}>
+                <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">{t.priorityLabels[pri]}</div>
+                <div className="space-y-2">
+                  {group.map((s, i) => (
+                    <div key={s.parameter + '-' + i} className="rounded-md border border-line bg-panel/30 p-2" data-testid={'ai-export-suggestion-' + s.parameter}>
+                      <div className="font-medium text-slate-800">{t.parameterLabels[s.parameter as keyof typeof t.parameterLabels] ?? s.parameter}</div>
+                      <div className="mt-0.5 text-slate-600">
+                        <span className="text-slate-500">{s.currentValue}</span>
+                        <span className="mx-1 text-slate-400">&rarr;</span>
+                        <span className="font-semibold text-emerald-700">{s.suggestedValue}</span>
+                      </div>
+                      <div className="mt-0.5 text-[11px] text-slate-500">{s.reason}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+          <button
+            className="mt-2 rounded-md bg-brand px-3 py-1.5 font-semibold text-white hover:bg-[#176858]"
+            type="button"
+            onClick={applyAll}
+            data-testid="ai-export-suggestion-apply"
+          >
+            {t.apply}
+          </button>
+          <button
+            className="ml-2 rounded-md border border-line bg-white px-3 py-1.5 font-medium text-slate-700 hover:bg-panel"
+            type="button"
+            onClick={() => void runAnalysis()}
+            data-testid="ai-export-suggestion-refresh"
+          >
+            {t.refresh}
+          </button>
+        </div>
+      ) : null}
+    </details>
+  );
+}
+
+
+function getLastExportDurationSeconds(history: ExportTaskHistoryEntry[]): number | undefined {
+  const entry = history.find((item) => item.startedAt && item.finishedAt);
+  if (!entry?.startedAt || !entry.finishedAt) {
+    return undefined;
+  }
+  const started = Date.parse(entry.startedAt);
+  const finished = Date.parse(entry.finishedAt);
+  if (!Number.isFinite(started) || !Number.isFinite(finished) || finished < started) {
+    return undefined;
+  }
+  return (finished - started) / 1000;
+}
+
+function estimateDimensions(width: number, height: number, format: string): { width: number; height: number } {
+  const safeWidth = Math.max(1, Math.round(width));
+  const safeHeight = Math.max(1, Math.round(height));
+  if (format !== 'gif') {
+    return { width: safeWidth, height: safeHeight };
+  }
+  const longest = Math.max(safeWidth, safeHeight);
+  if (longest <= 1080) {
+    return { width: safeWidth, height: safeHeight };
+  }
+  const ratio = 1080 / longest;
+  return {
+    width: Math.max(1, Math.round(safeWidth * ratio)),
+    height: Math.max(1, Math.round(safeHeight * ratio))
+  };
+}
+
+function formatExportWarning(warning: string): string {
+  const textClip = warning.match(/^Text clip (.+) was skipped because FFmpeg drawtext\/libfreetype is unavailable\.$/);
+  if (textClip) {
+    return zhCN.exportDialog.textClipSkippedDrawtext(textClip[1]);
+  }
+  const transitionVisual = warning.match(/^Transition (.+) was skipped because both clips must be visual media clips\.$/);
+  if (transitionVisual) {
+    return zhCN.exportDialog.transitionSkippedVisualOnly(transitionVisual[1]);
+  }
+  const transitionChained = warning.match(/^Transition (.+) was skipped because chained transitions are not yet supported in one export segment\.$/);
+  if (transitionChained) {
+    return zhCN.exportDialog.transitionSkippedChained(transitionChained[1]);
+  }
+  const transitionMissingInput = warning.match(/^Transition (.+) was skipped because one of its clips has no media input\.$/);
+  if (transitionMissingInput) {
+    return zhCN.exportDialog.transitionSkippedMissingInput(transitionMissingInput[1]);
+  }
+  const missingMedia = warning.match(/^Clip (.+) has no media path and was skipped\.$/);
+  if (missingMedia) {
+    return zhCN.exportDialog.clipSkippedMissingMedia(missingMedia[1]);
+  }
+  const speedRampFallback = warning.match(/^Speed ramp setpts for clip (.+) exceeded 4096 characters and fell back to average speed\.$/);
+  if (speedRampFallback) {
+    return zhCN.exportDialog.speedRampSetptsFallback(speedRampFallback[1]);
+  }
+  const customShaderSlowWarning = warning.match(/^Custom shader effect for clip (.+) will render frame-by-frame and may be slow\.$/);
+  if (customShaderSlowWarning) {
+    return zhCN.exportDialog.customShaderSlowWarning(customShaderSlowWarning[1]);
+  }
+  const opticalFlowFallback = warning.match(/^Optical flow slow motion for clip (.+) fell back to blend because the current FFmpeg build did not report minterpolate support\.$/);
+  if (opticalFlowFallback) {
+    return zhCN.exportDialog.opticalFlowFallbackBlend(opticalFlowFallback[1]);
+  }
+  const slowMotionSkipped = warning.match(/^Slow motion interpolation for clip (.+) was skipped because the current FFmpeg build does not support minterpolate\.$/);
+  if (slowMotionSkipped) {
+    return zhCN.exportDialog.slowMotionInterpolationSkipped(slowMotionSkipped[1]);
+  }
+  if (warning === 'Current FFmpeg does not support drawtext/libfreetype. Install an FFmpeg build with libfreetype to export text overlays.') {
+    return zhCN.exportDialog.ffmpegDrawtextUnavailable;
+  }
+  if (warning === 'Hardware video encoding was requested but no supported H.264 hardware encoder was detected. Falling back to software encoding.') {
+    return zhCN.exportDialog.hardwareEncodingFallback;
+  }
+  return warning;
+}
+
+function Info({ label, value, tone }: { label: string; value: string; tone?: 'ok' | 'warn' | 'bad' }) {
+  const toneClass = tone === 'ok' ? 'text-emerald-700' : tone === 'warn' ? 'text-amber-700' : tone === 'bad' ? 'text-rose-700' : 'text-slate-700';
+  return (
+    <div className="rounded-md bg-panel p-2">
+      <div className="text-[11px] uppercase tracking-normal text-slate-500">{label}</div>
+      <div className={`truncate font-medium ${toneClass}`}>{value}</div>
+    </div>
+  );
+}
 

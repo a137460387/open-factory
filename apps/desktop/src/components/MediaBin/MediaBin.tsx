@@ -35,7 +35,8 @@ import {
 } from '@open-factory/editor-core';
 import { createSubclip, parseFavoritesSearchFilter, type Subclip, type TimelineLabelColor } from '@open-factory/editor-core';
 import { AlertCircle, BadgeCheck, ChevronDown, ChevronRight, FileAudio2, FileImage, FileText, FileVideo2, Flag, Folder, FolderPlus, GalleryHorizontal, Gauge, Grid2X2, Heart, ImageDown, Import, Info, Link2, List, Loader2, Merge, Plus, RotateCcw, Scissors, Search, SlidersHorizontal, Sparkles, Star, Tag, Trash2, X } from 'lucide-react';
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { createContext, Fragment, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type ReactNode, type RefObject } from 'react';
 import { computeMediaPreviewDelay, isMediaPreviewable } from './media-hover-preview';
 import { clsx } from 'clsx';
 import { zhCN } from '../../i18n/strings';
@@ -49,7 +50,7 @@ import type { SharedLibraryResource } from '../../shared-library/sharedLibrary';
 import { useProxySettingsStore } from '../../store/proxySettingsStore';
 import { useAISettingsStore } from '../../store/aiSettingsStore';
 import { loadLocalEffectPresets } from '../../effects/effect-preset-library';
-import { getMediaKeyboardNavigationIndex, inferMediaKeyboardColumnCount } from './media-keyboard';
+import { getMediaKeyboardNavigationIndex } from './media-keyboard';
 import { MediaAIAnalysisDialog } from './MediaAIAnalysisDialog';
 import { AISemanticSearchPanel } from './AISemanticSearchPanel';
 import { AIMediaOrganizePanel } from './AIMediaOrganizePanel';
@@ -70,6 +71,14 @@ interface MediaCardExtras {
   onBatchQualityScan(): void;
 }
 const MediaCardExtrasCtx = createContext<MediaCardExtras | null>(null);
+
+interface MediaGridNavCtxValue {
+  columnCount: number;
+  mediaCount: number;
+  scrollToMediaIndex(index: number): void;
+  pendingFocusRef: { current: number | null };
+}
+const MediaGridNavCtx = createContext<MediaGridNavCtxValue | null>(null);
 
 interface MediaBinProps {
   media: MediaAsset[];
@@ -739,7 +748,7 @@ export function MediaBin({
         ) : mediaLibraryView.mode === 'timeline' ? (
           <MediaLibraryTimelineView media={importedTimelineMedia} onAddToTimeline={onAddToTimeline} onExportGif={onExportGif} />
         ) : smartAlbumId !== 'none' ? (
-          <MediaCardGrid
+          <VirtualMediaCardGrid
             media={sortedVisibleMedia}
             gridSize={mediaLibraryView.gridSize}
             mediaMetadata={mediaMetadata}
@@ -798,7 +807,7 @@ export function MediaBin({
               onOpenBatchRename={openBatchRenameEditor}
             />
             <RootMediaDropZone onMoveMediaToFolder={onMoveMediaToFolder} />
-            <MediaCardGrid
+            <VirtualMediaCardGrid
               media={sortedVisibleMedia.filter((asset) => !asset.folderId)}
               gridSize={mediaLibraryView.gridSize}
               mediaMetadata={mediaMetadata}
@@ -1544,7 +1553,7 @@ function MediaFolderNode({
               onOpenBatchRename={onOpenBatchRename}
             />
           ))}
-          <MediaCardGrid
+          <VirtualMediaCardGrid
             media={folderMedia}
             mediaMetadata={mediaMetadata}
             mediaContentAnalysis={mediaContentAnalysis}
@@ -1715,13 +1724,39 @@ function MediaLibraryTimelineView({ media, onAddToTimeline, onExportGif }: { med
   );
 }
 
-const GRID_COLUMN_STYLES: Record<MediaLibraryGridSize, CSSProperties> = {
-  small: { gridTemplateColumns: 'repeat(auto-fill, minmax(118px, 1fr))' },
-  medium: { gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))' },
-  large: { gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' },
+
+const GRID_MIN_COLUMN_WIDTHS: Record<MediaLibraryGridSize, number> = {
+  small: 118,
+  medium: 170,
+  large: 240,
 };
 
-function MediaCardGrid({
+const GRID_ROW_HEIGHTS: Record<MediaLibraryGridSize, number> = {
+  small: 120,
+  medium: 170,
+  large: 240,
+};
+
+function useColumnCount(parentRef: RefObject<HTMLDivElement | null>, gridSize: MediaLibraryGridSize): number {
+  const [columns, setColumns] = useState(1);
+  useEffect(() => {
+    const el = parentRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width ?? 0;
+      setColumns(width > 0 ? Math.max(1, Math.floor(width / GRID_MIN_COLUMN_WIDTHS[gridSize])) : 1);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [gridSize, parentRef]);
+  return columns;
+}
+
+function estimateCardRowHeight(gridSize: MediaLibraryGridSize): number {
+  return GRID_ROW_HEIGHTS[gridSize];
+}
+
+function VirtualMediaCardGrid({
   media,
   gridSize,
   mediaMetadata,
@@ -1770,42 +1805,98 @@ function MediaCardGrid({
   onOpenBatchMetadata(assetId: string): void;
   onOpenBatchRename(assetId: string): void;
 }) {
+  const parentRef = useRef<HTMLDivElement>(null);
+  const columnCount = useColumnCount(parentRef as RefObject<HTMLDivElement | null>, gridSize);
+  const rowCount = Math.ceil(media.length / columnCount);
+  const rowHeight = estimateCardRowHeight(gridSize);
+
+  const virtualizer = useVirtualizer({
+    count: rowCount,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => rowHeight + 12,
+    overscan: 3,
+  });
+
+  const prevMediaLenRef = useRef(media.length);
+  useEffect(() => {
+    if (media.length !== prevMediaLenRef.current) {
+      prevMediaLenRef.current = media.length;
+      virtualizer.scrollToIndex(0, { align: 'start' });
+    }
+  }, [media.length, virtualizer]);
+
   if (media.length === 0) {
     return null;
   }
+
+  const virtualItems = virtualizer.getVirtualItems();
+  const paddingTop = virtualItems.length > 0 ? virtualItems[0]!.start : 0;
+  const paddingBottom = virtualItems.length > 0 ? virtualizer.getTotalSize() - virtualItems[virtualItems.length - 1]!.end : 0;
+
   return (
-    <div className="grid gap-3" style={GRID_COLUMN_STYLES[gridSize]} data-testid="media-grid-view" data-grid-size={gridSize} data-media-card-grid="true">
-      {media.map((asset) => (
-        <MediaCard
-          key={asset.id}
-          asset={asset}
-          metadata={mediaMetadata[asset.id]}
-          contentAnalysis={mediaContentAnalysis[asset.id]}
-          projectFrameRate={projectFrameRate}
-          onAdd={() => onAddToTimeline(asset.id)}
-          onAddVersion={() => onAddVersion(asset.id)}
-          onCompareVersions={() => onCompareVersions(asset.id)}
-          onRelink={() => onRelink(asset.id)}
-          onGenerateProxy={() => onGenerateProxy(asset.id)}
-          onConvertToCfr={() => onConvertToCfr(asset.id)}
-          onSetLabel={(labelColor) => onSetLabel(asset.id, labelColor)}
-          onSetRating={(rating) => onSetRating(asset.id, rating)}
-          onSetFlag={(flag) => onSetFlag(asset.id, flag)}
-          onBatchTranscode={() => onBatchTranscode([asset.path])}
-          onExportGif={() => onExportGif(asset)}
-          onAnalyzeSpectrum={() => onAnalyzeSpectrum(asset)}
-          onShowInfo={() => onShowInfo(asset)}
-          onFindSources={() => onFindSources(asset)}
-          selected={selectedMediaIds.has(asset.id)}
-          onToggleSelected={() => onToggleSelected(asset.id)}
-          batchSelectionCount={selectedMediaIds.has(asset.id) ? selectedMediaIds.size : 1}
-          onOpenBatchMetadata={() => onOpenBatchMetadata(asset.id)}
-          onOpenBatchRename={() => onOpenBatchRename(asset.id)}
-        />
-      ))}
+    <MediaGridNavCtx.Provider value={{
+      columnCount,
+      mediaCount: media.length,
+      scrollToMediaIndex: (idx) => {
+        const rowIdx = Math.floor(idx / columnCount);
+        virtualizer.scrollToIndex(rowIdx, { align: 'auto' });
+      },
+      pendingFocusRef: useRef<number | null>(null)
+    }}>
+    <div
+      ref={parentRef}
+      className="h-full overflow-auto"
+      data-testid="media-grid-view"
+      data-grid-size={gridSize}
+      data-media-card-grid="true"
+    >
+      <div
+        className="grid gap-3"
+        style={{ gridTemplateColumns: 'repeat(' + columnCount + ', 1fr)', paddingTop, paddingBottom }}
+      >
+        {virtualItems.map((virtualRow) => {
+          const rowStart = virtualRow.index * columnCount;
+          const rowItems = media.slice(rowStart, rowStart + columnCount);
+          return (
+            <Fragment key={virtualRow.key}>
+              {rowItems.map((asset, itemIndex) => (
+                <MediaCard
+                  key={asset.id}
+                  mediaIndex={rowStart + itemIndex}
+                  asset={asset}
+                  metadata={mediaMetadata[asset.id]}
+                  contentAnalysis={mediaContentAnalysis[asset.id]}
+                  projectFrameRate={projectFrameRate}
+                  onAdd={() => onAddToTimeline(asset.id)}
+                  onAddVersion={() => onAddVersion(asset.id)}
+                  onCompareVersions={() => onCompareVersions(asset.id)}
+                  onRelink={() => onRelink(asset.id)}
+                  onGenerateProxy={() => onGenerateProxy(asset.id)}
+                  onConvertToCfr={() => onConvertToCfr(asset.id)}
+                  onSetLabel={(labelColor) => onSetLabel(asset.id, labelColor)}
+                  onSetRating={(rating) => onSetRating(asset.id, rating)}
+                  onSetFlag={(flag) => onSetFlag(asset.id, flag)}
+                  onBatchTranscode={() => onBatchTranscode([asset.path])}
+                  onExportGif={() => onExportGif(asset)}
+                  onAnalyzeSpectrum={() => onAnalyzeSpectrum(asset)}
+                  onShowInfo={() => onShowInfo(asset)}
+                  onFindSources={() => onFindSources(asset)}
+                  selected={selectedMediaIds.has(asset.id)}
+                  onToggleSelected={() => onToggleSelected(asset.id)}
+                  batchSelectionCount={selectedMediaIds.has(asset.id) ? selectedMediaIds.size : 1}
+                  onOpenBatchMetadata={() => onOpenBatchMetadata(asset.id)}
+                  onOpenBatchRename={() => onOpenBatchRename(asset.id)}
+                />
+              ))}
+            </Fragment>
+          );
+        })}
+      </div>
     </div>
+    </MediaGridNavCtx.Provider>
   );
 }
+
 
 function TitleTemplateGrid({ onAddTitleTemplate }: { onAddTitleTemplate(templateId: TitleTemplateId): void }) {
   return (
@@ -2054,7 +2145,8 @@ function MediaCard({
   onToggleSelected,
   batchSelectionCount,
   onOpenBatchMetadata,
-  onOpenBatchRename
+  onOpenBatchRename,
+  mediaIndex
 }: {
   asset: MediaAsset;
   metadata?: MediaMetadata;
@@ -2079,6 +2171,7 @@ function MediaCard({
   batchSelectionCount: number;
   onOpenBatchMetadata(): void;
   onOpenBatchRename(): void;
+  mediaIndex: number;
 }) {
   const proxySettings = useProxySettingsStore((state) => state.settings);
   const proxyStatus = asset.proxyStatus ?? (asset.type === 'video' ? 'none' : undefined);
@@ -2101,6 +2194,7 @@ function MediaCard({
       className={clsx('relative overflow-hidden rounded-md border bg-white shadow-sm outline-none focus:ring-2 focus:ring-brand', asset.missing ? 'border-rose-300' : 'border-line')}
       data-testid={`media-card-${asset.id}`}
       data-media-card="true"
+      data-media-index={mediaIndex}
       data-missing={asset.missing ? 'true' : 'false'}
       data-folder-id={asset.folderId ?? 'root'}
       data-label-color={labelColor ?? 'none'}
@@ -2120,7 +2214,7 @@ function MediaCard({
         }
         if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) {
           event.preventDefault();
-          focusMediaCardByKeyboard(event);
+          const nav = useContext(MediaGridNavCtx); if (nav) focusMediaCardByKeyboard(event, nav);
           return;
         }
         if (event.key === 'Enter') {
@@ -2856,21 +2950,37 @@ function IconPreview({ type }: { type: MediaAsset['type'] }) {
   );
 }
 
-function focusMediaCardByKeyboard(event: ReactKeyboardEvent<HTMLElement>): void {
-  const grid = event.currentTarget.closest('[data-media-card-grid="true"]');
-  const cards = Array.from(grid?.querySelectorAll<HTMLElement>('[data-media-card="true"]') ?? []);
-  const currentIndex = cards.findIndex((card) => card === event.currentTarget);
-  const columnCount = inferMediaKeyboardColumnCount(cards.map((card) => card.getBoundingClientRect().top));
+function focusMediaCardByKeyboard(
+  event: ReactKeyboardEvent<HTMLElement>,
+  nav: MediaGridNavCtxValue
+): void {
+  const ref = nav.pendingFocusRef;
+  const domIndex = Number(event.currentTarget.getAttribute('data-media-index'));
+  const currentIndex = ref.current ?? domIndex;
+  if (!Number.isFinite(currentIndex)) return;
   const nextIndex = getMediaKeyboardNavigationIndex({
     currentIndex,
-    itemCount: cards.length,
-    columnCount,
+    itemCount: nav.mediaCount,
+    columnCount: nav.columnCount,
     key: event.key
   });
-  if (nextIndex === undefined) {
-    return;
+  if (nextIndex === undefined) return;
+  ref.current = nextIndex;
+  nav.scrollToMediaIndex(nextIndex);
+  const grid = event.currentTarget.closest('[data-media-card-grid="true"]');
+  function focusWhenReady(attempts: number): void {
+    if (ref.current !== nextIndex) return;
+    const target = grid?.querySelector<HTMLElement>(`[data-media-index="${nextIndex}"]`);
+    if (target) {
+      target.focus();
+      if (ref.current === nextIndex) ref.current = null;
+    } else if (attempts < 10) {
+      requestAnimationFrame(() => focusWhenReady(attempts + 1));
+    } else {
+      ref.current = null;
+    }
   }
-  cards[nextIndex]?.focus();
+  requestAnimationFrame(() => focusWhenReady(0));
 }
 
 function formatBytes(bytes?: number): string {
