@@ -774,7 +774,7 @@ export function MediaBin({
             onOpenBatchRename={openBatchRenameEditor}
           />
         ) : (
-          <div className="flex flex-col gap-3">
+          <div className="flex min-h-full flex-col gap-3">
             <MediaFolderTree
               folders={mediaFolders}
               media={sortedVisibleMedia}
