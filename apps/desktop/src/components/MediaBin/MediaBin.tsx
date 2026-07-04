@@ -774,7 +774,7 @@ export function MediaBin({
             onOpenBatchRename={openBatchRenameEditor}
           />
         ) : (
-          <div className="space-y-3">
+          <div className="flex flex-col gap-3">
             <MediaFolderTree
               folders={mediaFolders}
               media={sortedVisibleMedia}
@@ -1845,7 +1845,7 @@ function VirtualMediaCardGrid({
     }}>
     <div
       ref={parentRef}
-      className="h-full overflow-auto"
+      className="flex-1 min-h-0 overflow-auto"
       data-testid="media-grid-view"
       data-grid-size={gridSize}
       data-media-card-grid="true"
