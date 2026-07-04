@@ -110,6 +110,9 @@ jobs:
       - name: Install Playwright Chromium
         run: bunx playwright install --with-deps chromium
 
+      - name: Build workspace packages
+        run: bun run --filter @open-factory/editor-core --filter @open-factory/plugin-sdk build
+
       - name: Run E2E tests
         run: bunx playwright test --workers=2 --retries=1 --reporter=list,html
         working-directory: apps/desktop
