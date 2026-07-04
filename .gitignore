@@ -103,3 +103,7 @@ apps/desktop/ffprobe.exe
 
 # Verification reports (local only, not pushed to public repo)
 .verification/
+
+# Claude Code local tooling artifacts
+.superpowers/
+skills/
