@@ -50,7 +50,7 @@ import type { SharedLibraryResource } from '../../shared-library/sharedLibrary';
 import { useProxySettingsStore } from '../../store/proxySettingsStore';
 import { useAISettingsStore } from '../../store/aiSettingsStore';
 import { loadLocalEffectPresets } from '../../effects/effect-preset-library';
-import { getMediaKeyboardNavigationIndex, inferMediaKeyboardColumnCount } from './media-keyboard';
+import { getMediaKeyboardNavigationIndex } from './media-keyboard';
 import { MediaAIAnalysisDialog } from './MediaAIAnalysisDialog';
 import { AISemanticSearchPanel } from './AISemanticSearchPanel';
 import { AIMediaOrganizePanel } from './AIMediaOrganizePanel';
@@ -71,6 +71,13 @@ interface MediaCardExtras {
   onBatchQualityScan(): void;
 }
 const MediaCardExtrasCtx = createContext<MediaCardExtras | null>(null);
+
+interface MediaGridNavCtxValue {
+  columnCount: number;
+  mediaCount: number;
+  scrollToMediaIndex(index: number): void;
+}
+const MediaGridNavCtx = createContext<MediaGridNavCtxValue | null>(null);
 
 interface MediaBinProps {
   media: MediaAsset[];
@@ -1722,6 +1729,12 @@ const GRID_COLUMN_STYLES: Record<MediaLibraryGridSize, CSSProperties> = {
   large: { gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' },
 };
 
+const GRID_COLUMN_COUNTS: Record<MediaLibraryGridSize, number> = {
+  small: 3,
+  medium: 3,
+  large: 3,
+};
+
 const GRID_MIN_COLUMN_WIDTHS: Record<MediaLibraryGridSize, number> = {
   small: 118,
   medium: 170,
@@ -1806,6 +1819,14 @@ function MediaCardGrid({
     return null;
   }
   return (
+    <MediaGridNavCtx.Provider value={{
+      columnCount: GRID_COLUMN_COUNTS[gridSize],
+      mediaCount: media.length,
+      scrollToMediaIndex: (idx) => {
+        const el = document.querySelector<HTMLElement>(`[data-media-index="${idx}"]`);
+        el?.scrollIntoView({ block: 'nearest' });
+      }
+    }}>
     <div className="grid gap-3" style={GRID_COLUMN_STYLES[gridSize]} data-testid="media-grid-view" data-grid-size={gridSize} data-media-card-grid="true">
       {media.map((asset, index) => (
         <MediaCard
@@ -1837,6 +1858,7 @@ function MediaCardGrid({
         />
       ))}
     </div>
+    </MediaGridNavCtx.Provider>
   );
 }
 
@@ -1918,6 +1940,14 @@ function VirtualMediaCardGrid({
   const paddingBottom = virtualItems.length > 0 ? virtualizer.getTotalSize() - virtualItems[virtualItems.length - 1]!.end : 0;
 
   return (
+    <MediaGridNavCtx.Provider value={{
+      columnCount,
+      mediaCount: media.length,
+      scrollToMediaIndex: (idx) => {
+        const rowIdx = Math.floor(idx / columnCount);
+        virtualizer.scrollToIndex(rowIdx, { align: 'auto' });
+      }
+    }}>
     <div
       ref={parentRef}
       className="h-full overflow-auto"
@@ -1968,6 +1998,7 @@ function VirtualMediaCardGrid({
         })}
       </div>
     </div>
+    </MediaGridNavCtx.Provider>
   );
 }
 
@@ -2288,7 +2319,7 @@ function MediaCard({
         }
         if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key)) {
           event.preventDefault();
-          focusMediaCardByKeyboard(event);
+          const nav = useContext(MediaGridNavCtx); if (nav) focusMediaCardByKeyboard(event, nav);
           return;
         }
         if (event.key === 'Enter') {
@@ -3024,21 +3055,25 @@ function IconPreview({ type }: { type: MediaAsset['type'] }) {
   );
 }
 
-function focusMediaCardByKeyboard(event: ReactKeyboardEvent<HTMLElement>): void {
-  const grid = event.currentTarget.closest('[data-media-card-grid="true"]');
-  const cards = Array.from(grid?.querySelectorAll<HTMLElement>('[data-media-card="true"]') ?? []);
-  const currentIndex = cards.findIndex((card) => card === event.currentTarget);
-  const columnCount = inferMediaKeyboardColumnCount(cards.map((card) => card.getBoundingClientRect().top));
+function focusMediaCardByKeyboard(
+  event: ReactKeyboardEvent<HTMLElement>,
+  nav: MediaGridNavCtxValue
+): void {
+  const currentIndex = Number(event.currentTarget.getAttribute('data-media-index'));
+  if (!Number.isFinite(currentIndex)) return;
   const nextIndex = getMediaKeyboardNavigationIndex({
     currentIndex,
-    itemCount: cards.length,
-    columnCount,
+    itemCount: nav.mediaCount,
+    columnCount: nav.columnCount,
     key: event.key
   });
-  if (nextIndex === undefined) {
-    return;
-  }
-  cards[nextIndex]?.focus();
+  if (nextIndex === undefined) return;
+  nav.scrollToMediaIndex(nextIndex);
+  requestAnimationFrame(() => {
+    const grid = event.currentTarget.closest('[data-media-card-grid="true"]');
+    const target = grid?.querySelector<HTMLElement>(`[data-media-index="${nextIndex}"]`);
+    target?.focus();
+  });
 }
 
 function formatBytes(bytes?: number): string {
