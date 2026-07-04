@@ -147,9 +147,19 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn parses_http_and_https_webhook_urls() {
+    async fn parses_http_and_https_schemes() {
+        // IP literal avoids DNS; verifies scheme gating only.
         assert_eq!(parse_webhook_url("https://1.2.3.4/export").await.unwrap().scheme(), "https");
+        assert_eq!(parse_webhook_url("http://1.2.3.4/export").await.unwrap().scheme(), "http");
         assert!(parse_webhook_url("file:///tmp/export.json").await.is_err());
+        assert!(parse_webhook_url("ftp://1.2.3.4/export").await.is_err());
+    }
+
+    #[tokio::test]
+    async fn resolves_dns_and_blocks_private_loopback() {
+        // localhost → 127.0.0.1 triggers the DNS resolution → private IP rejection path.
+        let err = parse_webhook_url("http://localhost:9999/export").await.unwrap_err();
+        assert!(err.contains("SSRF blocked"), "expected SSRF block, got: {err}");
     }
 
     #[tokio::test]
