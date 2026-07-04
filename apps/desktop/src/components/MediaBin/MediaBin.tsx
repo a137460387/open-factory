@@ -76,6 +76,7 @@ interface MediaGridNavCtxValue {
   columnCount: number;
   mediaCount: number;
   scrollToMediaIndex(index: number): void;
+  pendingFocusRef: { current: number | null };
 }
 const MediaGridNavCtx = createContext<MediaGridNavCtxValue | null>(null);
 
@@ -1825,7 +1826,8 @@ function MediaCardGrid({
       scrollToMediaIndex: (idx) => {
         const el = document.querySelector<HTMLElement>(`[data-media-index="${idx}"]`);
         el?.scrollIntoView({ block: 'nearest' });
-      }
+      },
+      pendingFocusRef: useRef<number | null>(null)
     }}>
     <div className="grid gap-3" style={GRID_COLUMN_STYLES[gridSize]} data-testid="media-grid-view" data-grid-size={gridSize} data-media-card-grid="true">
       {media.map((asset, index) => (
@@ -1946,7 +1948,8 @@ function VirtualMediaCardGrid({
       scrollToMediaIndex: (idx) => {
         const rowIdx = Math.floor(idx / columnCount);
         virtualizer.scrollToIndex(rowIdx, { align: 'auto' });
-      }
+      },
+      pendingFocusRef: useRef<number | null>(null)
     }}>
     <div
       ref={parentRef}
@@ -3055,14 +3058,13 @@ function IconPreview({ type }: { type: MediaAsset['type'] }) {
   );
 }
 
-let pendingFocusIndex: number | null = null;
-
 function focusMediaCardByKeyboard(
   event: ReactKeyboardEvent<HTMLElement>,
   nav: MediaGridNavCtxValue
 ): void {
+  const ref = nav.pendingFocusRef;
   const domIndex = Number(event.currentTarget.getAttribute('data-media-index'));
-  const currentIndex = pendingFocusIndex ?? domIndex;
+  const currentIndex = ref.current ?? domIndex;
   if (!Number.isFinite(currentIndex)) return;
   const nextIndex = getMediaKeyboardNavigationIndex({
     currentIndex,
@@ -3071,17 +3073,19 @@ function focusMediaCardByKeyboard(
     key: event.key
   });
   if (nextIndex === undefined) return;
-  pendingFocusIndex = nextIndex;
+  ref.current = nextIndex;
   nav.scrollToMediaIndex(nextIndex);
   const grid = event.currentTarget.closest('[data-media-card-grid="true"]');
   function focusWhenReady(attempts: number): void {
-    if (pendingFocusIndex !== nextIndex) return;
+    if (ref.current !== nextIndex) return;
     const target = grid?.querySelector<HTMLElement>(`[data-media-index="${nextIndex}"]`);
     if (target) {
       target.focus();
-      if (pendingFocusIndex === nextIndex) pendingFocusIndex = null;
+      if (ref.current === nextIndex) ref.current = null;
     } else if (attempts < 10) {
       requestAnimationFrame(() => focusWhenReady(attempts + 1));
+    } else {
+      ref.current = null;
     }
   }
   requestAnimationFrame(() => focusWhenReady(0));
