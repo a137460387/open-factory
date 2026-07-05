@@ -5148,9 +5148,8 @@ export function EditorShell() {
           ) : null}
           <PerformanceMonitorPanel
             open={usePerformanceMonitorStore((s) => s.panelOpen)}
-            onClose={() => usePerformanceMonitorStore.getState().setPanelOpen(false)}
-          />
-        </Suspense>
+          onClose={() => usePerformanceMonitorStore.getState().setPanelOpen(false)}
+         />
         {projectEncryptionSaveOpen ? (
           <ProjectEncryptionSaveDialog
             onConfirm={(options) => void confirmProjectEncryptionSave(options)}
@@ -5239,6 +5238,7 @@ export function EditorShell() {
             onCloseCelebration={closeTutorialCelebration}
           />
         ) : null}
+        </Suspense>
       </div>
     </ErrorBoundary>
   );
