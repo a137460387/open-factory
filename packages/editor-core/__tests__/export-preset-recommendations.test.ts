@@ -192,4 +192,27 @@ describe('buildExportPresetRecommendations default labelFn', () => {
     const hdrReason = results[0].reasons.find((r) => r.code === 'hdr');
     expect(hdrReason?.label).toBe('hdr');
   });
+
+  it('scores landscape presets for landscape resolution', () => {
+    const context = makeContext({ width: 1920, height: 1080, duration: 120 });
+    const results = buildExportPresetRecommendations(context, (code) => code);
+    expect(results.length).toBeGreaterThan(0);
+    expect(results[0].reasons.some((r) => r.code === 'resolution')).toBe(true);
+  });
+});
+
+describe('checkProjectHasHdrMedia media without colorProfile', () => {
+  it('returns false for media entries that lack colorProfile', () => {
+    const project = makeProject();
+    project.media.push({
+      id: 'sdr-asset',
+      type: 'video',
+      name: 'sdr.mp4',
+      path: '/sdr.mp4',
+      duration: 10,
+      width: 1920,
+      height: 1080
+    });
+    expect(checkProjectHasHdrMedia(project)).toBe(false);
+  });
 });
