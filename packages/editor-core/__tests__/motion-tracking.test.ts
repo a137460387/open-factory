@@ -43,6 +43,24 @@ describe('motion tracking keyframe binding', () => {
     ]);
   });
 
+  it('returns empty keyframes when motion track points are undefined', () => {
+    const keyframes = motionTrackToPositionKeyframes(undefined, DEFAULT_TRANSFORM, 2);
+    expect(keyframes.x).toEqual([]);
+    expect(keyframes.y).toEqual([]);
+  });
+
+  it('binds tracking data to a new keyframe set when existing is undefined', () => {
+    const keyframes = bindMotionTrackToPositionKeyframes(
+      undefined,
+      [{ time: 0.5, dx: 0.1, dy: 0.2 }],
+      DEFAULT_TRANSFORM,
+      1
+    );
+
+    expect(keyframes?.x).toEqual([{ id: 'motion-track-x-0', time: 0.5, value: 0.1, easing: 'linear' }]);
+    expect(keyframes?.y).toEqual([{ id: 'motion-track-y-0', time: 0.5, value: 0.2, easing: 'linear' }]);
+  });
+
   it('replaces only position keyframes when binding tracking data', () => {
     const keyframes = bindMotionTrackToPositionKeyframes(
       {
