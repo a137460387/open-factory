@@ -153,7 +153,21 @@ describe('timeline bookmark enhancements', () => {
       const json = serializeBookmarkGroups(groups);
       const parsed = parseBookmarkGroupsJson(json);
       expect(parsed[0].collapsed).toBe(true);
-      expect(parsed[0].name).toBe('G1');
+    expect(parsed[0].name).toBe('G1');
     });
+  });
+
+  it('returns unsorted copy for unknown sort mode', () => {
+    const bookmarks: TimelineBookmark[] = [
+      makeBookmark({ id: 'b1', time: 10 }),
+      makeBookmark({ id: 'b2', time: 5 })
+    ];
+    const result = sortBookmarks(bookmarks, 'unknown' as unknown as 'time');
+    expect(result).toHaveLength(2);
+  });
+
+  it('returns empty array when parsed JSON is not an array', () => {
+    expect(parseBookmarkGroupsJson('{}')).toEqual([]);
+    expect(parseBookmarkGroupsJson('"text"')).toEqual([]);
   });
 });
