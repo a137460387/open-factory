@@ -88,4 +88,18 @@ describe('color analysis', () => {
     expect(updates).toHaveLength(2);
     expect(updates[0].colorCorrection.colorCurves?.r.length).toBeGreaterThan(2);
   });
+
+  it('returns empty updates when reference clip is not found', () => {
+    const updates = buildColorAlignmentUpdates(
+      [{ clipId: 'target', sample: sampleFromPixels([[45, 108, 223]]) }],
+      'nonexistent'
+    );
+    expect(updates).toEqual([]);
+  });
+
+  it('classifies tint bias as neutral when chroma offsets are close to zero', () => {
+    const metrics = analyzeColorFrameSample(sampleFromPixels([[128, 128, 128]]));
+    expect(metrics.tintBias).toBe('neutral');
+    expect(metrics.averageBrightness).toBe(128);
+  });
 });
