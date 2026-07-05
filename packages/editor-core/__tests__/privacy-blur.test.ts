@@ -29,4 +29,19 @@ describe('privacy blur detection conversion', () => {
     expect(buildPrivacyMasksFromDetections([])).toEqual([]);
     expect(buildPrivacyMasksFromDetections([{ time: Number.NaN, x: 0, y: 0, w: 0.2, h: 0.2 }])).toEqual([]);
   });
+
+  it('sorts by time then x then y, falls back on non-finite coordinates, and uses default idPrefix', () => {
+    const [mask] = buildPrivacyMasksFromDetections([
+      { time: 1, x: Number.NaN, y: 0.3, w: 0.2, h: 0.2 },
+      { time: 1, x: 0.5, y: 0.1, w: 0.2, h: 0.2 },
+      { time: 1, x: 0.5, y: 0.3, w: 0.2, h: 0.2 }
+    ]);
+
+    expect(mask.keyframes).toHaveLength(3);
+    expect(mask.keyframes[0]).toMatchObject({ time: 1, x: 0, y: 0.3 });
+    expect(mask.keyframes[1]).toMatchObject({ time: 1, x: 0.5, y: 0.1 });
+    expect(mask.keyframes[2]).toMatchObject({ time: 1, x: 0.5, y: 0.3 });
+    expect(mask.privacyBlur.enabled).toBe(true);
+    expect(mask.privacyBlur.effect).toBe('pixelize');
+  });
 });
