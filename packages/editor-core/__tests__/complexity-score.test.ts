@@ -10,6 +10,7 @@ import {
   getComplexityLevel
 } from '../src';
 import { createTrack } from '../src';
+import type { Clip } from '../src';
 import { makeAudioClip, makeProject, makeTimeline, makeVideoClip } from './test-utils';
 
 describe('complexity score', () => {
@@ -82,6 +83,27 @@ describe('complexity score', () => {
 
     expect(score.rawValue).toBe(15);
     expect(score.score).toBe(100);
+  });
+
+  it('skips non-audio-video-nested clip types in audio complexity scoring', () => {
+    const timeline = makeTimeline([
+      makeAudioClip({ id: 'audio-a', volume: 0.5 })
+    ]);
+    const textClip: Clip = { ...makeAudioClip({ id: 'text-1', start: 5, duration: 3 }), type: 'text', text: '' } as Clip;
+    timeline.tracks[1].clips.push(textClip);
+    const score = calculateAudioComplexityScore(timeline);
+    // text clip skipped; volume on audio-a (1 node) + default EQ on track (1 node)
+    // rawValue = audioTracks(1*2) + trackNodes(1*2) + clipNodes(1) = 5
+    expect(score.rawValue).toBe(5);
+  });
+
+  it('counts non-default spatial audio as an audio processing node', () => {
+    const timeline = makeTimeline([
+      makeAudioClip({ id: 'audio-spatial', spatialAudio: { x: 1 } })
+    ]);
+    const score = calculateAudioComplexityScore(timeline);
+    // audioTracks(1*2) + trackNodes(1*2 default EQ) + clipNodes(1 spatial) = 5
+    expect(score.rawValue).toBe(5);
   });
 
   it('scores keyframe density per clip', () => {
