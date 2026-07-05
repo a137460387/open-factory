@@ -58,4 +58,26 @@ describe('storyboard', () => {
     manager.undo();
     expect(accessor.current().tracks[0].clips.map((clip) => clip.id)).toEqual(['clip-a', 'clip-b', 'clip-c']);
   });
+
+  it('sorts storyboard cards by trackIndex when start times match', () => {
+    const timeline = makeTimeline([
+      makeVideoClip({ id: 'clip-video', start: 0, duration: 2, trackId: 'track-video' }),
+      makeImageClip({ id: 'clip-image', start: 0, duration: 2, trackId: 'track-audio' })
+    ]);
+    const cards = getStoryboardCards(timeline);
+    expect(cards.map((card) => card.clip.id)).toEqual(['clip-video', 'clip-image']);
+  });
+
+  it('sorts by id for same start on same track and handles clips not in orderedClipIds', () => {
+    const timeline = makeTimeline([
+      makeVideoClip({ id: 'clip-b', start: 0, duration: 2 }),
+      makeVideoClip({ id: 'clip-a', start: 0, duration: 2 })
+    ]);
+    const cards = getStoryboardCards(timeline);
+    expect(cards.map((card) => card.clip.id)).toEqual(['clip-a', 'clip-b']);
+
+    const starts = buildStoryboardReorderStarts(timeline, []);
+    expect(starts['clip-a']).toBe(0);
+    expect(starts['clip-b']).toBe(2);
+  });
 });
