@@ -46,6 +46,34 @@ describe('text animation presets', () => {
     }
   );
 
+  it.each([
+    ['fade', { opacity: 2 }, { opacity: 0.8 }],
+    ['fly-up', { opacity: 2, y: 2 }, { opacity: 0.8, y: -0.2 }],
+    ['slide-left', { opacity: 2, x: 2 }, { opacity: 0.8, x: 0.1 }],
+    ['typewriter', { opacity: 2, scaleX: 5 }, { opacity: 0.8, scaleX: 1.0 }],
+    ['bounce', { opacity: 2, y: 3 }, { opacity: 0.8, y: -0.2 }],
+    ['scale', { opacity: 2, scaleX: 3, scaleY: 3 }, { opacity: 0.8, scaleX: 1.0, scaleY: 1.0 }]
+  ] satisfies Array<[TextAnimationPreset, Partial<Record<keyof ClipKeyframes, number>>, Partial<Record<keyof ClipKeyframes, number>>]>)(
+    'builds %s outro keyframes with the expected counts and initial values',
+    (preset, counts, initialValues) => {
+      const keyframes = buildTextAnimationKeyframes({
+        preset,
+        direction: 'out',
+        duration: 0.5,
+        clipDuration: 3,
+        transform: baseTransform,
+        text: 'HELLO'
+      });
+
+      for (const [property, count] of Object.entries(counts) as Array<[keyof ClipKeyframes, number]>) {
+        expect(keyframes[property]).toHaveLength(count);
+      }
+      for (const [property, value] of Object.entries(initialValues) as Array<[keyof ClipKeyframes, number]>) {
+        expect(keyframes[property]?.[0]?.value).toBeCloseTo(value, 3);
+      }
+    }
+  );
+
   it('scales keyframe times with the requested duration and clamps to the allowed range', () => {
     const short = buildTextAnimationKeyframes({ preset: 'fade', direction: 'in', duration: 0.01, clipDuration: 3, transform: baseTransform });
     const long = buildTextAnimationKeyframes({ preset: 'fade', direction: 'out', duration: 99, clipDuration: 5, transform: baseTransform });
