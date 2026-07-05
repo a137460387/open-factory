@@ -65,8 +65,8 @@ export interface BatchReplaceResult {
  */
 export function checkClipCompatibility(
   clip: Pick<Clip, 'id' | 'name'> & { duration: number },
-  oldAsset: Pick<MediaAsset, 'id' | 'name' | 'width' | 'height' | 'duration'> | undefined,
-  newAsset: Pick<MediaAsset, 'id' | 'name' | 'width' | 'height' | 'duration'>,
+  oldAsset: Pick<MediaAsset, 'id' | 'name' | 'width' | 'height' | 'duration' | 'videoCodec'> | undefined,
+  newAsset: Pick<MediaAsset, 'id' | 'name' | 'width' | 'height' | 'duration' | 'videoCodec'>,
   durationStrategy: DurationStrategy = 'keep'
 ): ClipCompatResult {
   const issues: CompatIssue[] = [];
@@ -92,7 +92,6 @@ export function checkClipCompatibility(
 
   // 时长检查
   if (durationStrategy !== 'stretch' && oldAsset) {
-    const clipSourceDuration = clip.duration + (clip as any).trimStart + (clip as any).trimEnd;
     if (newAsset.duration < clip.duration) {
       const severity: CompatSeverity = durationStrategy === 'trim' ? 'warning' : 'error';
       issues.push({
@@ -107,8 +106,8 @@ export function checkClipCompatibility(
 
   // 编解码器检查
   if (oldAsset) {
-    const oldCodec = (oldAsset as any).videoCodec;
-    const newCodec = (newAsset as any).videoCodec;
+    const oldCodec = oldAsset.videoCodec;
+    const newCodec = newAsset.videoCodec;
     if (oldCodec && newCodec && oldCodec !== newCodec) {
       issues.push({
         type: 'codec',

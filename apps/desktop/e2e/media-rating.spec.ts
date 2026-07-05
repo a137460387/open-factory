@@ -12,6 +12,7 @@ test('rates media and filters the five star smart album', async ({ page }) => {
   await expect(cards.first()).toHaveAttribute('data-rating', '5');
 
   await page.getByTestId('smart-album-rating-five').click();
+
   await expect(page.locator('[data-testid^="media-card-"]')).toHaveCount(1);
   await expect(page.locator('[data-testid^="media-card-"]').first()).toHaveAttribute('data-rating', '5');
 });

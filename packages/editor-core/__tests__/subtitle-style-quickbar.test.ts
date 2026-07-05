@@ -6,7 +6,7 @@ import {
   resolveActiveTemplateId,
   applyStyleTemplateBatch,
   QUICKBAR_MAX_VISIBLE
-} from '../src/subtitle-style-quickbar';
+} from '../src/subtitles/subtitle-style-quickbar';
 import { DEFAULT_SUBTITLE_STYLE, type SubtitleStyle, type SubtitleClip } from '../src/model';
 import { BUILTIN_SUBTITLE_STYLE_TEMPLATES } from '../src/subtitles/style-templates';
 

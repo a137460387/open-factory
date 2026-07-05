@@ -110,6 +110,9 @@ jobs:
       - name: Install Playwright Chromium
         run: bunx playwright install --with-deps chromium
 
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
       - name: Build workspace packages
         run: bun run --filter @open-factory/editor-core --filter @open-factory/plugin-sdk build
 

@@ -191,7 +191,7 @@ export function relinkAudioToVideo(
   if (!isLinkedAudioClip(audioClip)) {
     throw new Error(`Clip ${audioClipId} is not a linked audio clip`);
   }
-  const linkedAudio = audioClip as unknown as import('./model-types').AudioClip;
+  const linkedAudio = audioClip as unknown as AudioClip;
   const linkedVideo = videoClip as unknown as AudioDetachedVideoClip;
 
   // 检查对齐

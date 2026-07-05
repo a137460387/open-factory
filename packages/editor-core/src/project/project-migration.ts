@@ -65,7 +65,7 @@ import { normalizeClipContentAnalysis } from '../content-analysis';
 import { normalizeSpatialAudio } from '../spatial-audio';
 import { normalizeClipPitchData } from '../audio-pitch';
 import { normalizeAudioRestoration } from '../audio-restoration';
-import { normalizeDataSubtitleSource } from '../subtitles/data-subtitle';
+import { normalizeDataSubtitleSource } from '../data-subtitle';
 import { normalizeTimelineLabelColor } from '../timeline-color-labels';
 import { normalizeMediaFolderId, normalizeMediaFolders, normalizeMediaImportedAt } from '../media-folders';
 import { cloneClipKeyframes, normalizeClipKeyframes } from '../keyframes';
@@ -274,11 +274,11 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         clipGroups: normalizeClipGroups(file.project.clipGroups, clipIds),
         coverPath: normalizeProjectCoverPath(file.project.coverPath),
         speakers: normalizeProjectSpeakers(file.project.speakers),
-        speakerLabels: normalizeSpeakerLabels((file.project as any).speakerLabels),
+        speakerLabels: normalizeSpeakerLabels(file.project.speakerLabels),
         documentation: normalizeProjectDocumentation(file.project.documentation),
         timeline: activeTimeline,
         sequences,
-        subclips: normalizeSubclips((file.project as any).subclips),
+        subclips: normalizeSubclips(file.project.subclips),
         activeSequenceId
         , zoomMemory: normalizeZoomMemory(file.project.zoomMemory, sequences)
         , ttsSegments: normalizeTtsSegments(file.project.ttsSegments)
@@ -466,7 +466,7 @@ function cloneFileSequences(sequences: Sequence[] | undefined, primaryTimeline: 
       id: sequence.id,
       name: normalizeSequenceName(sequence.name),
       timeline: cloneTimeline(sequence.timeline),
-      ...((sequence as any).settings ? { settings: (sequence as any).settings } : {})
+      ...(sequence.settings ? { settings: sequence.settings } : {})
     })
   );
   const primaryIndex = cloned.findIndex((sequence) => sequence.id === PRIMARY_SEQUENCE_ID);
@@ -535,7 +535,7 @@ function cloneClip<TClip extends Clip>(clip: TClip): TClip {
     scenecuts,
     aiReframe: normalizeClipAIReframe(clip.aiReframe),
     anomalies: normalizeAnomalyIntervals(clip.anomalies),
-    emotionAnalysis: normalizeEmotionAnalysis((clip as any).emotionAnalysis)
+    emotionAnalysis: normalizeEmotionAnalysis(clip.emotionAnalysis)
   };
   if (!beatMarkers) {
     delete (cloned as Partial<Clip>).beatMarkers;

@@ -1,7 +1,7 @@
 import type { Project } from '../model-types';
-import type { MediaColorProfile } from './color-management';
+import type { MediaColorProfile } from '../color-management';
 import { getTimelinePlaybackDuration } from '../timeline';
-import type { ExportColorSpace } from './color-management';
+import type { ExportColorSpace } from '../color-management';
 
 export type ExportRecommendationReasonCode = 'resolution' | 'duration' | 'subtitles' | 'hdr';
 

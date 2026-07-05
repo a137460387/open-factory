@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+﻿import { expect, test } from '@playwright/test';
 import { waitForE2eActions } from './e2e-actions';
 
 test('creates a media folder, moves media into it, saves, and reopens with the structure intact', async ({ page }) => {
@@ -25,12 +25,15 @@ test('creates a media folder, moves media into it, saves, and reopens with the s
         throw new Error('Missing media drag source or folder drop target');
       }
       const dataTransfer = new DataTransfer();
+      dataTransfer.setData('application/x-open-factory-media-id', assetId);
       source.dispatchEvent(new DragEvent('dragstart', { bubbles: true, cancelable: true, dataTransfer }));
       target.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer }));
       target.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer }));
     },
     { assetId, folderId }
   );
+
+
   await expect(page.getByTestId(`media-card-${assetId}`)).toHaveAttribute('data-folder-id', folderId);
 
   await page.evaluate((path) => window.__E2E_ACTIONS__!.setSavePath!(path), projectPath);

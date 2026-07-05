@@ -390,7 +390,7 @@ export function Timeline({
   const [scrollViewport, setScrollViewport] = useState({ scrollLeft: 0, scrollTop: 0, viewportWidth: 960 });
   const [timelineViewportHeight, setTimelineViewportHeight] = useState(240);
   useEffect(() => {
-    readTimelineInteractionSettings().then((s: { audioScrubEnabled?: boolean }) => setAudioScrubEnabled(s.audioScrubEnabled !== false)).catch(() => {});
+    readTimelineInteractionSettings().then((s: { audioScrubEnabled?: boolean }) => setAudioScrubEnabled(s.audioScrubEnabled !== false)).catch((error) => console.warn('Unable to load timeline interaction settings', error));
   }, []);
   const whisperExecutablePath = useWhisperSettingsStore((state) => state.executablePath);
   const whisperModelPath = useWhisperSettingsStore((state) => state.modelPath);

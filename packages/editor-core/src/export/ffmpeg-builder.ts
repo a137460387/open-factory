@@ -80,7 +80,7 @@ import { averageClipMotionScore, buildSceneBoundaryProtectionRanges, resolveFram
 import { calculateSpeedCurveSourceDuration, getClipSourceVisibleDuration, getClipSpeed, getRenderableTracks, getTimelinePlaybackDuration, getTrackPan, getTrackVolume } from '../timeline';
 import { round } from '../time';
 import { serializeSubtitleCueInputsToAss, serializeSubtitleCueInputsToSrt, serializeSubtitleCueInputsToVtt, type SubtitleCueInput } from '../subtitles/srt';
-import { normalizeDataSubtitleSource, resolveDataSubtitleText } from '../subtitles/data-subtitle';
+import { normalizeDataSubtitleSource, resolveDataSubtitleText } from '../data-subtitle';
 import { buildPathTextFrameLayouts } from '../text-path';
 import {
   buildArcTextLayout,
@@ -104,7 +104,7 @@ import {
   isDefaultExportColorManagement,
   normalizeExportColorManagement,
   normalizeProjectWorkingColorSpace
-} from './color-management';
+} from '../color-management';
 import { normalizeExportRenderRange, type ExportRenderRange, type NormalizedExportRenderRange } from './export-ranges';
 import { normalizeExportPostScript } from './post-export-script';
 import { cssColorToFfmpeg, escapeDrawtextValue, formatFfmpegSeconds, normalizeFfmpegPath, quoteForDisplay } from './ffmpeg-escape';

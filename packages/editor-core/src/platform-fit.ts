@@ -8,17 +8,11 @@
  */
 
 import { round } from './time';
+import type { PlatformFitSegment } from './model-types';
 
 // -- Public types ------------------------------------------------
 
 export type PlatformFitTarget = 'tiktok' | 'reels' | 'shorts' | 'custom';
-
-export interface PlatformFitSegment {
-  clipId: string;
-  start: number;
-  end: number;
-  score: number;
-}
 
 export interface PlatformFitSuggestion {
   targetPlatform: PlatformFitTarget;

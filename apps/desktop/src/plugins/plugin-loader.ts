@@ -9,7 +9,7 @@ import type {
   PluginPermission
 } from '@open-factory/plugin-sdk';
 
-export type { OpenFactoryPlugin, OpenFactoryPluginManifest, PluginHookName, PluginHookPayloads, PluginHooks, PluginMessagePayload, PluginPermission };
+export type { OpenFactoryPlugin, OpenFactoryPluginManifest, PluginHookName, PluginHookPayloads, PluginMessagePayload, PluginPermission };
 
 export interface PluginSourceFile {
   path: string;

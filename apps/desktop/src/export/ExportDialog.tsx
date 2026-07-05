@@ -141,6 +141,7 @@ import {
   putWebdavText,
   writeFile,
   writeExportUploadWebdavPassword,
+  sendNotification,
   type QualityEvaluationProgressEvent,
   type QualityEvaluationResult
 } from '../lib/tauri-bridge';
@@ -553,7 +554,7 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
     const fix = buildComplianceFix(spec, complianceResults);
     if (fix.loudnorm) {
       setDraftSettings((current) => ({ ...current, loudnessNormalization: 'ebu' as ExportLoudnessNormalization }));
-      void import('../lib/tauri-bridge').then((b) => b.sendNotification('Loudnorm', 'Target: ' + fix.loudnorm!.targetLufs + ' LUFS'));
+      sendNotification('Loudnorm', 'Target: ' + fix.loudnorm!.targetLufs + ' LUFS');
     }
   }
   const t = zhCN.exportDialog;
@@ -832,7 +833,7 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
 
   useEffect(() => {
     let canceled = false;
-    void readDisableExportRecommendations().then(setDisableRecommendations).catch(() => {});
+    void readDisableExportRecommendations().then(setDisableRecommendations).catch((error) => console.warn('Unable to load export recommendation settings', error));
     void loadExportPresets()
       .then((nextPresets) => {
         if (canceled) {

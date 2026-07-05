@@ -113,7 +113,7 @@ import {
   type TransitionType,
   type Transform
 } from '../model';
-import type { SequenceSettings } from '../model-types';
+import type { BeatSnapSuggestion, MediaCollection, ProjectPlatformFitSuggestion, SequenceSettings } from '../model-types';
 import { recalculateClipStartsForFrameRate } from '../sequence-settings';
 import { clampTrackHeight, DEFAULT_TRACK_HEIGHT } from '../track-height';
 import {
@@ -132,7 +132,7 @@ import { normalizeCreditsRollSpeed, normalizeCreditsRows, normalizeCreditsStyle,
 import { normalizeClipBlendMode } from '../blend-modes';
 import { normalizeClipContentAnalysis } from '../content-analysis';
 import { normalizeClipPitchData } from '../audio-pitch';
-import { normalizeDataSubtitleSource } from '../subtitles/data-subtitle';
+import { normalizeDataSubtitleSource } from '../data-subtitle';
 import { normalizeSpatialAudio, type ClipSpatialAudio } from '../spatial-audio';
 import { filterShortSceneCuts } from '../scene-cuts';
 import {
@@ -4068,7 +4068,7 @@ export class ApplyPlatformFitCommand implements Command {
 
   constructor(
     private readonly accessor: ProjectAccessor,
-    private readonly suggestion: import('../model-types').ProjectPlatformFitSuggestion
+    private readonly suggestion: ProjectPlatformFitSuggestion
   ) {}
 
   execute(): void {
@@ -6000,7 +6000,7 @@ export class UpdateProjectBeatSnapSuggestionsCommand implements Command {
 
   constructor(
     private readonly accessor: ProjectAccessor,
-    private readonly suggestions: import('../model-types').BeatSnapSuggestion[]
+    private readonly suggestions: BeatSnapSuggestion[]
   ) {}
 
   execute(): void {
@@ -6022,7 +6022,7 @@ export class UpdateProjectMediaCollectionsCommand implements Command {
 
   constructor(
     private readonly accessor: ProjectAccessor,
-    private readonly collections: import('../model-types').MediaCollection[]
+    private readonly collections: MediaCollection[]
   ) {}
 
   execute(): void {

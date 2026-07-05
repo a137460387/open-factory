@@ -5,7 +5,7 @@ import type { ClipBlendMode } from '../blend-modes';
 import type { ProjectColorPipeline } from '../color-pipeline';
 import type { Effect } from '../effects';
 import type { AudioVisualizationThemeDefinition } from '../audio-visualization-themes';
-import type { ExportColorManagementSettings, MediaColorProfile, ProjectWorkingColorSpace } from './color-management';
+import type { ExportColorManagementSettings, MediaColorProfile, ProjectWorkingColorSpace } from '../color-management';
 import type { PostExportQualityAssuranceResult } from './post-export-quality';
 import type { ExportPublishPipelineReport } from './publish-pipeline';
 import type {

@@ -71,7 +71,7 @@ export function formatOptimizationSuggestionTitle(suggestion: ExportOptimization
   return zhCN.exportDialog.optimization.suggestions[suggestion.id].title;
 }
 
-export function formatOptimizationSuggestionMessage(suggestion: ExportOptimizationSuggestion): string {
+function formatOptimizationSuggestionMessage(suggestion: ExportOptimizationSuggestion): string {
   const messages = zhCN.exportDialog.optimization.suggestions;
   if (suggestion.id === 'proxy-for-4k-downscale') {
     return messages[suggestion.id].message(Math.max(1, suggestion.mediaIds.length));

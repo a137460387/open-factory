@@ -1,4 +1,4 @@
-import {
+﻿import {
   MAX_MEDIA_FOLDER_DEPTH,
   TITLE_TEMPLATE_IDS,
   CONTENT_SCENE_TYPES,
@@ -748,6 +748,7 @@ export function MediaBin({
         ) : mediaLibraryView.mode === 'timeline' ? (
           <MediaLibraryTimelineView media={importedTimelineMedia} onAddToTimeline={onAddToTimeline} onExportGif={onExportGif} />
         ) : smartAlbumId !== 'none' ? (
+          <div className="flex min-h-full flex-col">
           <VirtualMediaCardGrid
             media={sortedVisibleMedia}
             gridSize={mediaLibraryView.gridSize}
@@ -773,6 +774,7 @@ export function MediaBin({
             onOpenBatchMetadata={openBatchMetadataEditor}
             onOpenBatchRename={openBatchRenameEditor}
           />
+          </div>
         ) : (
           <div className="flex min-h-full flex-col gap-3">
             <MediaFolderTree
@@ -1553,7 +1555,7 @@ function MediaFolderNode({
               onOpenBatchRename={onOpenBatchRename}
             />
           ))}
-          <VirtualMediaCardGrid
+          <MediaCardGrid
             media={folderMedia}
             mediaMetadata={mediaMetadata}
             mediaContentAnalysis={mediaContentAnalysis}
@@ -1577,6 +1579,7 @@ function MediaFolderNode({
             onToggleSelected={onToggleSelected}
             onOpenBatchMetadata={onOpenBatchMetadata}
             onOpenBatchRename={onOpenBatchRename}
+            folderId={folder.id}
           />
         </div>
       ) : null}
@@ -1725,6 +1728,12 @@ function MediaLibraryTimelineView({ media, onAddToTimeline, onExportGif }: { med
 }
 
 
+const GRID_COLUMN_STYLES: Record<MediaLibraryGridSize, CSSProperties> = {
+  small: { gridTemplateColumns: 'repeat(auto-fill, minmax(118px, 1fr))' },
+  medium: { gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))' },
+  large: { gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' },
+};
+
 const GRID_MIN_COLUMN_WIDTHS: Record<MediaLibraryGridSize, number> = {
   small: 118,
   medium: 170,
@@ -1754,6 +1763,109 @@ function useColumnCount(parentRef: RefObject<HTMLDivElement | null>, gridSize: M
 
 function estimateCardRowHeight(gridSize: MediaLibraryGridSize): number {
   return GRID_ROW_HEIGHTS[gridSize];
+}
+
+function MediaCardGrid({
+  media,
+  gridSize,
+  mediaMetadata,
+  mediaContentAnalysis,
+  projectFrameRate,
+  onAddToTimeline,
+  onAddVersion,
+  onCompareVersions,
+  onRelink,
+  onGenerateProxy,
+  onConvertToCfr,
+  onSetLabel,
+  onSetRating,
+  onSetFlag,
+  onBatchTranscode,
+  onExportGif,
+  onAnalyzeSpectrum,
+  onShowInfo,
+  onFindSources,
+  selectedMediaIds,
+  onToggleSelected,
+  onOpenBatchMetadata,
+  onOpenBatchRename,
+  folderId
+}: {
+  media: MediaAsset[];
+  gridSize: MediaLibraryGridSize;
+  mediaMetadata: Record<string, MediaMetadata>;
+  mediaContentAnalysis: Record<string, ClipContentAnalysis>;
+  projectFrameRate: number;
+  onAddToTimeline(assetId: string): void;
+  onAddVersion(assetId: string): void;
+  onCompareVersions(assetId: string): void;
+  onRelink(assetId: string): void;
+  onGenerateProxy(assetId: string): void;
+  onConvertToCfr(assetId: string): void;
+  onSetLabel(assetId: string, labelColor?: MediaLabelColor): void;
+  onSetRating(assetId: string, rating: number): void;
+  onSetFlag(assetId: string, flag?: MediaFlag): void;
+  onBatchTranscode(paths: string[]): void;
+  onExportGif(asset: MediaAsset): void;
+  onAnalyzeSpectrum(asset: MediaAsset): void;
+  onShowInfo(asset: MediaAsset): void;
+  onFindSources(asset: MediaAsset): void;
+  selectedMediaIds: Set<string>;
+  onToggleSelected(assetId: string): void;
+  onOpenBatchMetadata(assetId: string): void;
+  onOpenBatchRename(assetId: string): void;
+  folderId: string;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const columnCount = useColumnCount(containerRef as RefObject<HTMLDivElement | null>, gridSize);
+  const pendingFocusRef = useRef<number | null>(null);
+
+  if (media.length === 0) {
+    return null;
+  }
+  return (
+    <MediaGridNavCtx.Provider value={{
+      columnCount,
+      mediaCount: media.length,
+      scrollToMediaIndex: (idx) => {
+        const el = document.querySelector<HTMLElement>(`[data-media-index="${idx}"]`);
+        el?.scrollIntoView({ block: 'nearest' });
+      },
+      pendingFocusRef
+    }}>
+    <div ref={containerRef} className="grid gap-3" style={GRID_COLUMN_STYLES[gridSize]} data-testid={`media-folder-grid-${folderId}`} data-grid-size={gridSize} data-media-card-grid="true">
+      {media.map((asset, index) => (
+        <MediaCard
+          key={asset.id}
+          mediaIndex={index}
+          asset={asset}
+          metadata={mediaMetadata[asset.id]}
+          contentAnalysis={mediaContentAnalysis[asset.id]}
+          projectFrameRate={projectFrameRate}
+          onAdd={() => onAddToTimeline(asset.id)}
+          onAddVersion={() => onAddVersion(asset.id)}
+          onCompareVersions={() => onCompareVersions(asset.id)}
+          onRelink={() => onRelink(asset.id)}
+          onGenerateProxy={() => onGenerateProxy(asset.id)}
+          onConvertToCfr={() => onConvertToCfr(asset.id)}
+          onSetLabel={(labelColor) => onSetLabel(asset.id, labelColor)}
+          onSetRating={(rating) => onSetRating(asset.id, rating)}
+          onSetFlag={(flag) => onSetFlag(asset.id, flag)}
+          onBatchTranscode={() => onBatchTranscode([asset.path])}
+          onExportGif={() => onExportGif(asset)}
+          onAnalyzeSpectrum={() => onAnalyzeSpectrum(asset)}
+          onShowInfo={() => onShowInfo(asset)}
+          onFindSources={() => onFindSources(asset)}
+          selected={selectedMediaIds.has(asset.id)}
+          onToggleSelected={() => onToggleSelected(asset.id)}
+          batchSelectionCount={selectedMediaIds.has(asset.id) ? selectedMediaIds.size : 1}
+          onOpenBatchMetadata={() => onOpenBatchMetadata(asset.id)}
+          onOpenBatchRename={() => onOpenBatchRename(asset.id)}
+        />
+      ))}
+    </div>
+    </MediaGridNavCtx.Provider>
+  );
 }
 
 function VirtualMediaCardGrid({
@@ -1825,6 +1937,8 @@ function VirtualMediaCardGrid({
     }
   }, [media.length, virtualizer]);
 
+  const pendingFocusRef = useRef<number | null>(null);
+
   if (media.length === 0) {
     return null;
   }
@@ -1841,7 +1955,7 @@ function VirtualMediaCardGrid({
         const rowIdx = Math.floor(idx / columnCount);
         virtualizer.scrollToIndex(rowIdx, { align: 'auto' });
       },
-      pendingFocusRef: useRef<number | null>(null)
+      pendingFocusRef
     }}>
     <div
       ref={parentRef}

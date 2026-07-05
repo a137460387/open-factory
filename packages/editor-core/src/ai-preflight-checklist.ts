@@ -6,7 +6,7 @@
  * structured report, with AI summary generation support.
  */
 
-import type { Project } from './model-types';
+import type { Project, SubtitleClip, VideoClip } from './model-types';
 
 // --- Types ---
 
@@ -58,7 +58,7 @@ export function aggregatePreflightIssues(project: Project): PreflightIssue[] {
   for (const track of project.timeline.tracks) {
     for (const clip of track.clips) {
       if (clip.type !== 'video') continue;
-      const vc = clip as import('./model-types').VideoClip;
+      const vc = clip as VideoClip;
       if (vc.flashWarnings) {
         for (const fw of vc.flashWarnings) {
           issues.push({
@@ -126,7 +126,7 @@ export function aggregatePreflightIssues(project: Project): PreflightIssue[] {
   for (const track of project.timeline.tracks) {
     for (const clip of track.clips) {
       if (clip.type !== 'subtitle') continue;
-      const sc = clip as import('./model-types').SubtitleClip;
+      const sc = clip as SubtitleClip;
       if (sc.readingSpeedWarning) {
         const rsw = sc.readingSpeedWarning;
         issues.push({

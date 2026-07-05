@@ -181,11 +181,7 @@ import { runConfiguredAutomationForMedia, type AutomationActionDependencies } fr
 import { ErrorBoundary } from './common/ErrorBoundary';
 import { MediaBin } from './MediaBin/MediaBin';
 import { ShortcutCheatsheetPanel } from './ShortcutCheatsheetPanel';
-import { StoryboardView } from './Storyboard/StoryboardView';
 import { Timeline } from './Timeline/Timeline';
-import { CharacterTimelinePanel } from './Timeline/CharacterTimelinePanel';
-import { PreflightChecklistPanel } from './Export/PreflightChecklistPanel';
-import { DubbingAdaptationPanel } from './Export/DubbingAdaptationPanel';
 import { useAutosave } from '../hooks/useAutosave';
 import { useCloseGuard } from '../hooks/useCloseGuard';
 import { useExportQueue } from '../hooks/useExportQueue';
@@ -202,7 +198,7 @@ import { createAdjustmentLayerClip, createClipFromAsset, createMotionGraphicClip
 import { zhCN, t } from '../i18n/strings';
 import { featureStrings } from '../i18n/featureStrings';
 import { usePerformanceMonitorStore } from '../store/performanceMonitorStore';
-import { PerformanceAlertIcon } from './PerformanceMonitorPanel';
+import { PerformanceAlertIcon } from './PerformanceAlertIcon';
 import {
   applyWorkspaceLayout,
   BUILT_IN_WORKSPACE_LAYOUT_IDS,
@@ -242,7 +238,6 @@ import type { SharePackageWorkflowProgress } from '../lib/sharePackage';
 import { canSeparateAudioForClip, getDemucsAvailability, separateAudioForClip, type DemucsAvailability } from '../lib/demucs';
 import { analyzeSpeakerDiarizationForClip, canDiarizeSpeakersForClip } from '../lib/speakerDiarization';
 import { analyzeAutoAudioSyncTargets, canUseClipForAutoAudioSync, type AutoAudioSyncTarget } from '../lib/autoAudioSync';
-import { AutoAudioSyncDialog } from '../audio-sync/AutoAudioSyncDialog';
 import {
   chooseProjectSavePath,
   chooseProjectToOpen,
@@ -353,16 +348,13 @@ import { DEFAULT_PREVIEW_PERFORMANCE_SETTINGS, type PreviewPerformanceSettings, 
 import { createProxyForAsset, type ProxyGenerationOptions } from '../media/proxy';
 import { ensureMediaJobRunner } from '../media/media-job-runner';
 import { runScheduledProxyIntegrityCheck } from '../media/proxy-integrity';
-import { DuplicateMediaDialog, type DuplicateMediaMergeSelection } from '../media/DuplicateMediaDialog';
-import { MediaOrganizerDialog, type MediaOrganizerDuplicateSelection } from '../media/MediaOrganizerDialog';
+import type { DuplicateMediaMergeSelection } from '../media/DuplicateMediaDialog';
+import type { MediaOrganizerDuplicateSelection } from '../media/MediaOrganizerDialog';
 import { useMediaJobStore } from '../media/media-job-store';
 import { relinkMissingMediaInDirectory, relinkSingleMedia } from '../media/relink';
 import { useBackgroundMediaJobs } from '../media/useBackgroundMediaJobs';
 import { analyzeClipContentLocally, exportClipContentAnalysisJson } from '../media/contentAnalysis';
 import type { ContentAnalysisTarget } from '../media/ContentAnalysisDialog';
-import { ProjectHealthDialog } from '../project-health/ProjectHealthDialog';
-import { MediaHealthDashboardDialog } from '../media/MediaHealthDashboardDialog';
-import { ProjectTemplateDialog } from '../project-templates/ProjectTemplateDialog';
 import { loadSharedLibrary, type SharedLibraryResource } from '../shared-library/sharedLibrary';
 import { commandManager, projectAccessor, timelineAccessor } from '../store/commandManager';
 import { useCollaborationStore } from '../store/collaborationStore';
@@ -371,7 +363,6 @@ import { selectClipById, useEditorStore } from '../store/editorStore';
 import { useProxySettingsStore } from '../store/proxySettingsStore';
 import { useRecordingSettingsStore } from '../store/recordingSettingsStore';
 import type { VideoStitchWizardSettings } from '../video-stitching/VideoStitchWizardDialog';
-import { TimelineTemplateDialog } from '../timeline-templates/TimelineTemplateDialog';
 
 const AudioMixer = lazy(() => import('./AudioMixer/AudioMixer').then((module) => ({ default: module.AudioMixer })));
 const Inspector = lazy(() => import('./Inspector/Inspector').then((module) => ({ default: module.Inspector })));
@@ -429,9 +420,27 @@ const PerformanceMonitorPanel = lazy(() => import('./PerformanceMonitorPanel').t
 const FormatConverterDialog = lazy(() => import('./FormatConverterDialog').then((module) => ({ default: module.FormatConverterDialog })));
 const EmotionAnalysisPanel = lazy(() => import('./EmotionAnalysisPanel').then((module) => ({ default: module.EmotionAnalysisPanel })));
 const ExportHistoryClassifierPanel = lazy(() => import('./ExportHistoryClassifierPanel').then((module) => ({ default: module.ExportHistoryClassifierPanel })));
+const AutoAudioSyncDialog = lazy(() => import('../audio-sync/AutoAudioSyncDialog').then((module) => ({ default: module.AutoAudioSyncDialog })));
+const DuplicateMediaDialog = lazy(() => import('../media/DuplicateMediaDialog').then((module) => ({ default: module.DuplicateMediaDialog })));
+const MediaOrganizerDialog = lazy(() => import('../media/MediaOrganizerDialog').then((module) => ({ default: module.MediaOrganizerDialog })));
+const ProjectHealthDialog = lazy(() => import('../project-health/ProjectHealthDialog').then((module) => ({ default: module.ProjectHealthDialog })));
+const MediaHealthDashboardDialog = lazy(() => import('../media/MediaHealthDashboardDialog').then((module) => ({ default: module.MediaHealthDashboardDialog })));
+const ProjectTemplateDialog = lazy(() => import('../project-templates/ProjectTemplateDialog').then((module) => ({ default: module.ProjectTemplateDialog })));
+const TimelineTemplateDialog = lazy(() => import('../timeline-templates/TimelineTemplateDialog').then((module) => ({ default: module.TimelineTemplateDialog })));
+const MediaVersionComparePanel = lazy(() => import('./MediaVersionComparePanel').then((module) => ({ default: module.MediaVersionComparePanel })));
+const ProjectEncryptionSaveDialog = lazy(() => import('./dialogs/ProjectEncryptionSaveDialog').then((module) => ({ default: module.ProjectEncryptionSaveDialog })));
+const ProjectPasswordDialog = lazy(() => import('./dialogs/ProjectPasswordDialog').then((module) => ({ default: module.ProjectPasswordDialog })));
+const AutosaveRecoveryDialog = lazy(() => import('./dialogs/AutosaveRecoveryDialog').then((module) => ({ default: module.AutosaveRecoveryDialog })));
+const ExportQueueRecoveryDialog = lazy(() => import('./dialogs/ExportQueueRecoveryDialog').then((module) => ({ default: module.ExportQueueRecoveryDialog })));
+const ArchiveProgressDialog = lazy(() => import('./dialogs/ArchiveProgressDialog').then((module) => ({ default: module.ArchiveProgressDialog })));
+const PasteKeyframeDialog = lazy(() => import('./dialogs/PasteKeyframeDialog').then((module) => ({ default: module.PasteKeyframeDialog })));
+const SharePackageProgressDialog = lazy(() => import('./dialogs/SharePackageProgressDialog').then((module) => ({ default: module.SharePackageProgressDialog })));
+const StoryboardView = lazy(() => import('./Storyboard/StoryboardView').then((module) => ({ default: module.StoryboardView })));
+const CharacterTimelinePanel = lazy(() => import('./Timeline/CharacterTimelinePanel').then((module) => ({ default: module.CharacterTimelinePanel })));
+const PreflightChecklistPanel = lazy(() => import('./Export/PreflightChecklistPanel').then((module) => ({ default: module.PreflightChecklistPanel })));
+const DubbingAdaptationPanel = lazy(() => import('./Export/DubbingAdaptationPanel').then((module) => ({ default: module.DubbingAdaptationPanel })));
 
 import { PanelLoading } from './PanelLoading';
-import { MediaVersionComparePanel } from './MediaVersionComparePanel';
 import { CollapsedPanelRail } from './CollapsedPanelRail';
 import {
   getSubtitleDataImportTargetTrackId,
@@ -464,13 +473,7 @@ import {
   readBrowserJsHeapBytes,
   estimateUndoHistoryBytes,
 } from '../lib/profiler-helpers';
-import { ProjectEncryptionSaveDialog } from './dialogs/ProjectEncryptionSaveDialog';
-import { ProjectPasswordDialog, type ProjectPasswordRequest } from './dialogs/ProjectPasswordDialog';
-import { AutosaveRecoveryDialog } from './dialogs/AutosaveRecoveryDialog';
-import { ExportQueueRecoveryDialog } from './dialogs/ExportQueueRecoveryDialog';
-import { ArchiveProgressDialog } from './dialogs/ArchiveProgressDialog';
-import { PasteKeyframeDialog } from './dialogs/PasteKeyframeDialog';
-import { SharePackageProgressDialog } from './dialogs/SharePackageProgressDialog';
+import type { ProjectPasswordRequest } from './dialogs/ProjectPasswordDialog';
 import {
   mergeProjectSpeakers,
   sanitizeFileName,
@@ -646,8 +649,8 @@ export function EditorShell() {
   // E2E: expose stores for test instrumentation
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      (window as any).__PERF_MONITOR_STORE__ = usePerformanceMonitorStore;
-      (window as any).__APP_STORE__ = {
+      window.__PERF_MONITOR_STORE__ = usePerformanceMonitorStore;
+      window.__APP_STORE__ = {
         setFormatConverterOpen,
         setEmotionAnalysisOpen,
         setEmotionPanelOpen: setEmotionAnalysisOpen,
@@ -4790,7 +4793,9 @@ export function EditorShell() {
           <section className="min-h-0 overflow-hidden transition-[height] duration-200 ease-out" data-testid="timeline-panel" style={{ height: timelineHeightPx }}>
             <ErrorBoundary name={storyboardOpen ? zhCN.storyboard.title : zhCN.panels.timeline}>
               {storyboardOpen ? (
-                <StoryboardView />
+                <Suspense fallback={null}>
+                  <StoryboardView />
+                </Suspense>
               ) : (
                 <Timeline
                   thumbnailTrackVisible={thumbnailTrackVisible}
@@ -4809,9 +4814,11 @@ export function EditorShell() {
             </ErrorBoundary>
           </section>
         ) : null}
-        <CharacterTimelinePanel />
-        <PreflightChecklistPanel />
-        <DubbingAdaptationPanel />
+        <Suspense fallback={null}>
+          <CharacterTimelinePanel />
+          <PreflightChecklistPanel />
+          <DubbingAdaptationPanel />
+        </Suspense>
         <Suspense fallback={null}>
           {exportDialogOpen ? (
             <ExportDialog

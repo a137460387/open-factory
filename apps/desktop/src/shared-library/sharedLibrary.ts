@@ -66,7 +66,7 @@ const bridgeArchiveClient: SharedLibraryArchiveClient = {
   importSharedLibraryArchive
 };
 
-export function getSharedLibraryDir(appDataDir: string): string {
+function getSharedLibraryDir(appDataDir: string): string {
   return `${appDataDir.replace(/[\\/]+$/, '')}/${SHARED_LIBRARY_DIR}`;
 }
 

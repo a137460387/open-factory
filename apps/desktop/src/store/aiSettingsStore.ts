@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { AIProvider, AIUsageRecord } from '@open-factory/editor-core';
 import { createAllBuiltInProviders, isProviderConfigured } from '@open-factory/editor-core';
-import { readAiApiKey, writeAiApiKey, checkOllamaReachable, listOllamaModels } from '../lib/tauri-bridge';
+import { readAiApiKey, writeAiApiKey, checkOllamaReachable, listOllamaModels, testAiConnection } from '../lib/tauri-bridge';
 
 const AI_SETTINGS_STORAGE_KEY = 'open-factory:ai-settings';
 
@@ -273,7 +273,6 @@ export const useAISettingsStore = create<AISettingsState>((set, get) => ({
       return false;
     }
     try {
-      const { testAiConnection } = await import('../lib/tauri-bridge');
       const ok = await testAiConnection(provider.baseUrl, provider.apiKey, provider.id);
       set((state) => ({
         testResults: { ...state.testResults, [providerId]: { ok, latencyMs: ok ? 0 : undefined } }

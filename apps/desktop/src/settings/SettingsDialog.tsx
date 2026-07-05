@@ -354,7 +354,7 @@ export function SettingsDialog({
     void loadDisplaySettings();
     void loadUpdateSettings();
     void loadLocalModelsSettings();
-    void readTouchOptimizationSettings().then(setTouchOptimizationSettings).catch(() => {});
+    void readTouchOptimizationSettings().then(setTouchOptimizationSettings).catch((error) => console.warn('Unable to load touch optimization settings', error));
     void loadTranslationApiKey();
     hydrateThemeForm(getCurrentThemeSettings());
     showCurrentPlugins();

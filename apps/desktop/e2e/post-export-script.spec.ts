@@ -14,6 +14,8 @@ test('runs configured post-export script and shows stdout in export history', as
   await page.getByTestId('export-post-script-command-input').fill('echo {output}');
   await page.getByTestId('export-post-script-ack-toggle').check();
   await page.getByTestId('export-enqueue-button').click();
+  await page.getByTestId('export-post-script-confirm-ok').click();
+
   await expectExportTaskStatus(page, 0, 'success');
 
   await expect(page.getByTestId('export-history-entry')).toHaveCount(1);

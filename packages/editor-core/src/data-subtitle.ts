@@ -1,6 +1,6 @@
-import type { DataSubtitleRow, DataSubtitleSource, DataSubtitleSourceType, SubtitleClip } from '../model';
-import { round } from '../time';
-import type { SubtitleCueInput } from './srt';
+import type { DataSubtitleRow, DataSubtitleSource, DataSubtitleSourceType, SubtitleClip } from './model';
+import { round } from './time';
+import type { SubtitleCueInput } from './subtitles/srt';
 
 export interface DataSubtitleRenderContext {
   fps?: number;

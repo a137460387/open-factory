@@ -37,4 +37,8 @@ interface Window {
   };
   __OPEN_FACTORY_AUDIO_MIX_DEBUG__?: { clipTypes: string[]; gainValues: number[] };
   webkitAudioContext?: typeof AudioContext;
+  /** E2E test instrumentation - performance monitor zustand store */
+  __PERF_MONITOR_STORE__?: unknown;
+  /** E2E test instrumentation - app UI state setters */
+  __APP_STORE__?: Record<string, unknown>;
 }

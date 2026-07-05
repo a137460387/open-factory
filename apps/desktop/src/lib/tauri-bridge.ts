@@ -35,7 +35,7 @@ export interface ExportPreviewSamplesRequest {
   timeoutMs?: number;
 }
 
-export interface ExportPreviewSampleResult {
+interface ExportPreviewSampleResult {
   id: string;
   kind: ExportPreviewSamplePlan['kind'];
   label: string;
@@ -49,7 +49,7 @@ export interface ExportPreviewSamplesResult {
   durationMs: number;
 }
 
-export interface PreviewWindowBounds {
+interface PreviewWindowBounds {
   x?: number;
   y?: number;
   width: number;
@@ -73,14 +73,14 @@ export interface PreviewWindowState {
   resolutionScale: PreviewWindowResolutionScale;
 }
 
-export interface ExportTrayLabels {
+interface ExportTrayLabels {
   showWindow: string;
   pauseQueue: string;
   cancelAll: string;
   exit: string;
 }
 
-export interface SharePackageFileEntry {
+interface SharePackageFileEntry {
   sourcePath: string;
   archivePath: string;
 }
@@ -227,7 +227,7 @@ export interface SystemResourceSnapshot {
   usedMemoryBytes: number;
 }
 
-export type AppUpdateDownloadEvent = TauriUpdateDownloadEvent;
+type AppUpdateDownloadEvent = TauriUpdateDownloadEvent;
 
 export interface AppUpdateCheckOptions {
   headers?: HeadersInit;
@@ -246,7 +246,7 @@ export interface AvailableAppUpdate {
   close?(): Promise<void>;
 }
 
-export interface MediaFormatInfo {
+interface MediaFormatInfo {
   formatName?: string;
   formatLongName?: string;
   duration?: number;
@@ -254,7 +254,7 @@ export interface MediaFormatInfo {
   size?: number;
 }
 
-export interface MediaVideoStreamInfo {
+interface MediaVideoStreamInfo {
   index: number;
   codecName?: string;
   codecLongName?: string;
@@ -271,7 +271,7 @@ export interface MediaVideoStreamInfo {
   hdrMetadata: string[];
 }
 
-export interface MediaAudioStreamInfo {
+interface MediaAudioStreamInfo {
   index: number;
   codecName?: string;
   codecLongName?: string;
@@ -283,7 +283,7 @@ export interface MediaAudioStreamInfo {
   integratedLufs?: number;
 }
 
-export interface MediaBitratePoint {
+interface MediaBitratePoint {
   time: number;
   bitRate: number;
 }
@@ -305,7 +305,7 @@ export interface MediaIntegrityScanResult {
   errorOutput?: string;
 }
 
-export interface AudioSpectrumStats {
+interface AudioSpectrumStats {
   integratedLufs?: number;
   dynamicRangeLu?: number;
   truePeakDbfs?: number;
@@ -332,7 +332,7 @@ export interface GapFillMediaResult {
   height: number;
 }
 
-export type CoverFrameExtractionMode = 'i-frame' | 'interval';
+type CoverFrameExtractionMode = 'i-frame' | 'interval';
 
 export interface CoverFrameExtractionRequest {
   clipId: string;
@@ -355,7 +355,7 @@ export interface CoverFrameExtractionResult {
   frames: CoverFrameResult[];
 }
 
-export interface CoverFrameBatchTaskRequest {
+interface CoverFrameBatchTaskRequest {
   assetId: string;
   sourcePath: string;
   outputFileName: string;
@@ -366,7 +366,7 @@ export interface CoverFrameBatchRequest {
   tasks: CoverFrameBatchTaskRequest[];
 }
 
-export interface CoverFrameBatchTaskResult {
+interface CoverFrameBatchTaskResult {
   assetId: string;
   sourcePath: string;
   outputPath?: string;
@@ -501,7 +501,7 @@ export interface GifWorkflowResult {
 
 export type BatchTranscodePreset = 'h264-720p' | 'h264-1080p' | 'prores-proxy';
 
-export interface BatchTranscodeTaskRequest {
+interface BatchTranscodeTaskRequest {
   taskId: string;
   sourcePath: string;
 }
@@ -601,7 +601,7 @@ export interface PrivacyDetectionRequest {
   duration?: number;
 }
 
-export interface PrivacyDetectionBox {
+interface PrivacyDetectionBox {
   time: number;
   x: number;
   y: number;
@@ -879,7 +879,7 @@ export async function readFile(path: string): Promise<string> {
   return invoke<string>('read_file', { path });
 }
 
-export async function readFileHeaderBytes(path: string, byteCount = 16): Promise<Uint8Array> {
+async function readFileHeaderBytes(path: string, byteCount = 16): Promise<Uint8Array> {
   const mock = getTauriMocks()?.readFileHeaderBytes;
   if (mock) {
     return mock(path, byteCount);
@@ -923,7 +923,7 @@ export async function decryptProjectFile(path: string, password: string): Promis
   return invoke<string>('decrypt_project_file', { path, password });
 }
 
-export async function isEncryptedProjectFile(path: string): Promise<boolean> {
+async function isEncryptedProjectFile(path: string): Promise<boolean> {
   const mock = getTauriMocks()?.isEncryptedProjectFile;
   if (mock) {
     return mock(path);
@@ -1043,7 +1043,7 @@ export async function readColorMatchFrameSample(path: string): Promise<ColorMatc
   return mock ? mock(path) : undefined;
 }
 
-export async function authorizePaths(paths: string[]): Promise<void> {
+async function authorizePaths(paths: string[]): Promise<void> {
   const mock = getTauriMocks()?.authorizePaths;
   if (mock) {
     await mock(paths);
@@ -1258,7 +1258,7 @@ export async function getCancelSmokeConfig(): Promise<CancelSmokeConfig | undefi
   return invoke<CancelSmokeConfig | undefined>('get_cancel_smoke_config');
 }
 
-export async function detectFfmpeg(): Promise<boolean> {
+async function detectFfmpeg(): Promise<boolean> {
   const mock = getTauriMocks()?.detectFfmpeg;
   if (mock) {
     return mock();
@@ -1444,7 +1444,7 @@ export async function readSmtpPassword(profile: string): Promise<string | undefi
   return invoke<string | undefined>('read_smtp_password', { profile });
 }
 
-export async function writeSmtpPassword(profile: string, password?: string): Promise<void> {
+async function writeSmtpPassword(profile: string, password?: string): Promise<void> {
   const mock = getTauriMocks()?.writeSmtpPassword;
   if (mock) {
     await mock(profile, password);
@@ -1578,7 +1578,7 @@ export interface RenderPreviewCacheResult {
   error?: string;
 }
 
-export interface RenderPreviewCacheProgressEvent {
+interface RenderPreviewCacheProgressEvent {
   projectId: string;
   progress: number;
   stage: string;
@@ -1588,7 +1588,7 @@ export async function renderPreviewCache(request: RenderPreviewCacheRequest): Pr
   return await invoke<RenderPreviewCacheResult>('render_preview_cache', { request });
 }
 
-export async function getCacheDir(): Promise<string> {
+async function getCacheDir(): Promise<string> {
   const mock = getTauriMocks()?.getCacheDir;
   if (mock) {
     return mock();
@@ -1613,7 +1613,7 @@ export async function writeCache(path: string, contents: string): Promise<void> 
   await invoke('write_cache', { path, contents });
 }
 
-export async function removeCacheFile(path: string): Promise<void> {
+async function removeCacheFile(path: string): Promise<void> {
   const mock = getTauriMocks()?.removeCacheFile;
   if (mock) {
     await mock(path);
@@ -1774,7 +1774,7 @@ export async function minimizeToTray(): Promise<void> {
   }
 }
 
-export async function showMainWindow(): Promise<void> {
+async function showMainWindow(): Promise<void> {
   const mock = getTauriMocks()?.showMainWindow;
   if (mock) {
     await mock();
@@ -1886,7 +1886,7 @@ export async function listenCoverFrameProgress(handler: (payload: CoverFrameProg
   return listenBridge<CoverFrameProgressEvent>('cover-frame-progress', handler);
 }
 
-export async function listenRenderPreviewCacheProgress(handler: (payload: RenderPreviewCacheProgressEvent) => void): Promise<() => void> {
+async function listenRenderPreviewCacheProgress(handler: (payload: RenderPreviewCacheProgressEvent) => void): Promise<() => void> {
   return listenBridge<RenderPreviewCacheProgressEvent>('render-preview-cache-progress', handler);
 }
 
@@ -1909,7 +1909,7 @@ export async function listenDragDrop(handler: (event: { type: string; paths?: st
   });
 }
 
-export interface CallAiApiMessage {
+interface CallAiApiMessage {
   role: 'system' | 'user' | 'assistant';
   content: string | Array<{ type: string; text?: string; image_url?: { url: string } }>;
 }
@@ -1932,7 +1932,7 @@ export interface CallAiApiResult {
   latencyMs: number;
 }
 
-export interface OllamaModel {
+interface OllamaModel {
   name: string;
   size: number;
 }

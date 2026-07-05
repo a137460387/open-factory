@@ -1,9 +1,9 @@
-import type { SubtitleClip, SubtitleStyle } from './model-types';
+import type { SubtitleClip, SubtitleStyle } from '../model-types';
 import {
   BUILTIN_SUBTITLE_STYLE_TEMPLATES,
   type SubtitleStyleTemplate,
   type BuiltinSubtitleStyleTemplateId
-} from './subtitles/style-templates';
+} from './style-templates';
 
 export const QUICKBAR_MAX_VISIBLE = 8;
 

@@ -50,7 +50,7 @@ export const useProxySettingsStore = create<ProxySettingsState>((set, get) => {
   };
 });
 
-export function readProxySettings(): Pick<ProxySettingsState, 'resolutionPreset' | 'triggerShortEdge'> {
+function readProxySettings(): Pick<ProxySettingsState, 'resolutionPreset' | 'triggerShortEdge'> {
   if (typeof localStorage === 'undefined') {
     return { resolutionPreset: DEFAULT_RESOLUTION_PRESET, triggerShortEdge: DEFAULT_TRIGGER_SHORT_EDGE };
   }

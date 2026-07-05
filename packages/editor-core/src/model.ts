@@ -11,12 +11,12 @@ import { normalizeColorNodeGraph } from './color-node-graph';
 import { REC709_INPUT_COLOR_SPACE, normalizeInputColorSpace } from './color-log-luts';
 import { normalizeClipContentAnalysis } from './content-analysis';
 import { DEFAULT_PROJECT_COLOR_PIPELINE, normalizeProjectColorPipeline } from './color-pipeline';
-import { getColorSpaceDisplayName, normalizeExportColorSpace, normalizeProjectWorkingColorSpace, type MediaColorProfile } from './export/color-management';
+import { getColorSpaceDisplayName, normalizeExportColorSpace, normalizeProjectWorkingColorSpace, type MediaColorProfile } from './color-management';
 import { normalizeMotionGraphic } from './motion-graphics';
 import { normalizeSpatialAudio } from './spatial-audio';
 import { normalizeClipPitchData } from './audio-pitch';
 import { normalizeAudioRestoration } from './audio-restoration';
-import { normalizeDataSubtitleSource } from './subtitles/data-subtitle';
+import { normalizeDataSubtitleSource } from './data-subtitle';
 import { cloneEffects } from './effects';
 import { normalizePathPoints } from './masks/path-mask';
 import type { ProjectFile } from './project/project-types';
@@ -27,6 +27,7 @@ import { normalizeMediaVersions } from './media-versions';
 import { normalizeSceneCutTimes } from './scene-cuts';
 import type {
   AdjustmentClip,
+  AiPipPlacementSuggestion,
   AssetType,
   AudioChannelRoutingMode,
   AudioClip,
@@ -37,6 +38,7 @@ import type {
   ChromaKeyColor,
   ChromaKeyMode,
   Clip,
+  ClipAILookMatch,
   ClipAudioDenoise,
   ClipAudioRestoration,
   ClipAudioRestorationGap,
@@ -51,6 +53,7 @@ import type {
   ClipPitchDataPoint,
   ClipPanoramaView,
   ClipPrivacyBlur,
+  ClipPrivacyRedaction,
   ClipProjection,
   ClipQualityEnhancement,
   ClipSlowMotionMode,
@@ -98,10 +101,13 @@ import type {
   NestedSequenceClip,
   PathPoint,
   PathPointHandle,
+  PlatformFitSegment,
   PrivacyBlurEffect,
+  PrivacyRedactionType,
   Project,
   ProjectAnnotation,
   ProjectDocumentation,
+  ProjectPlatformFitSuggestion,
   ProjectSettings,
   ProjectSpeaker,
   ProjectVersion,
@@ -2092,14 +2098,14 @@ function cloneClipKeyframesLocal(keyframes: ClipKeyframes | undefined): ClipKeyf
   return Object.keys(output).length > 0 ? output : undefined;
 }
 
-export function normalizePrivacyRedactions(input: unknown): import('./model-types').ClipPrivacyRedaction[] {
+export function normalizePrivacyRedactions(input: unknown): ClipPrivacyRedaction[] {
   if (!Array.isArray(input)) return [];
   return input
     .filter((r): r is Record<string, unknown> => r != null && typeof r === 'object')
     .filter((r) => typeof r.id === 'string' && (r.type === 'face' || r.type === 'license_plate' || r.type === 'screen'))
     .map((r) => ({
       id: r.id as string,
-      type: r.type as import('./model-types').PrivacyRedactionType,
+      type: r.type as PrivacyRedactionType,
       keyframes: Array.isArray(r.keyframes)
         ? r.keyframes
             .filter((k): k is Record<string, unknown> => k != null && typeof k === 'object' && typeof k.time === 'number')
@@ -2117,7 +2123,7 @@ export function normalizePrivacyRedactions(input: unknown): import('./model-type
     }));
 }
 
-export function normalizeAILookMatch(input: unknown): import('./model-types').ClipAILookMatch | undefined {
+export function normalizeAILookMatch(input: unknown): ClipAILookMatch | undefined {
   if (!input || typeof input !== 'object') return undefined;
   const obj = input as Record<string, unknown>;
   if (typeof obj.sourceImageHash !== 'string' || !obj.sourceImageHash) return undefined;
@@ -2137,7 +2143,7 @@ export function normalizeAILookMatch(input: unknown): import('./model-types').Cl
     sourceImageHash: obj.sourceImageHash as string,
     wheelAdjustments: { lift: clampWheel(parseRgb(wa.lift)), gamma: clampWheel(parseRgb(wa.gamma)), gain: clampWheel(parseRgb(wa.gain)) },
     curveControlPoints: typeof obj.curveControlPoints === 'object' && obj.curveControlPoints
-      ? obj.curveControlPoints as import('./model-types').ClipAILookMatch['curveControlPoints']
+      ? obj.curveControlPoints as ClipAILookMatch['curveControlPoints']
       : { master: [{ x: 0, y: 0 }, { x: 1, y: 1 }], r: [{ x: 0, y: 0 }, { x: 1, y: 1 }], g: [{ x: 0, y: 0 }, { x: 1, y: 1 }], b: [{ x: 0, y: 0 }, { x: 1, y: 1 }] },
     confidence: typeof obj.confidence === 'number' && Number.isFinite(obj.confidence) ? Math.min(1, Math.max(0, obj.confidence)) : 0,
     generatedAt: typeof obj.generatedAt === 'string' ? obj.generatedAt : new Date().toISOString(),
@@ -2145,7 +2151,7 @@ export function normalizeAILookMatch(input: unknown): import('./model-types').Cl
   };
 }
 
-export function normalizeAiPipSuggestion(input: unknown): import('./model-types').AiPipPlacementSuggestion | undefined {
+export function normalizeAiPipSuggestion(input: unknown): AiPipPlacementSuggestion | undefined {
   if (!input || typeof input !== 'object') return undefined;
   const obj = input as Record<string, unknown>;
   const validCorners = ['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const;
@@ -2163,7 +2169,7 @@ export function normalizeAiPipSuggestion(input: unknown): import('./model-types'
   };
 }
 
-export function normalizePlatformFitSuggestion(input: unknown): import('./model-types').ProjectPlatformFitSuggestion | undefined {
+export function normalizePlatformFitSuggestion(input: unknown): ProjectPlatformFitSuggestion | undefined {
   if (!input || typeof input !== 'object') return undefined;
   const obj = input as Record<string, unknown>;
   const validPlatforms = ['tiktok', 'reels', 'shorts', 'custom'] as const;
@@ -2173,7 +2179,7 @@ export function normalizePlatformFitSuggestion(input: unknown): import('./model-
   const limitSeconds = typeof obj.limitSeconds === 'number' && Number.isFinite(obj.limitSeconds) && obj.limitSeconds > 0
     ? round(obj.limitSeconds)
     : 60;
-  const normalizeSegments = (segs: unknown): import('./model-types').PlatformFitSegment[] => {
+  const normalizeSegments = (segs: unknown): PlatformFitSegment[] => {
     if (!Array.isArray(segs)) return [];
     return segs
       .filter((s): s is Record<string, unknown> =>

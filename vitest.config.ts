@@ -20,6 +20,8 @@ export default defineConfig({
         'packages/editor-core/src/model-types.ts',
         'packages/editor-core/src/project/project-types.ts',
         'packages/editor-core/src/proxy/proxy-types.ts',
+        'packages/editor-core/src/cache/cache-types.ts',
+        'packages/editor-core/src/commands/command.ts',
         'packages/editor-core/src/**/earcut.d.ts',
       ],
       thresholds: {

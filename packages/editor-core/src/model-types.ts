@@ -2,14 +2,14 @@ import type { AIDenoiseRecommendation } from './ai-denoise-recommendation';
 import type { BrollSuggestion } from './ai-broll-suggestion';
 import type { VersionDiffSummary } from './ai-version-diff';
 import type { LoudnessSuggestion } from './ai-loudness-suggestion';
-import type { MediaAIAnalysis } from './ai-service';
+import type { MediaAIAnalysis, AIColorGradingSuggestionItem } from './ai-service';
 import type { ColorCurves, ThreeWayColor } from './color-grading';
 import type { InputColorSpace } from './color-log-luts';
 import type { ClipBlendMode } from './blend-modes';
 import type { ClipContentAnalysis } from './content-analysis';
 import type { ColorNodeGraph } from './color-node-graph';
 import type { ProjectColorPipeline } from './color-pipeline';
-import type { MediaColorProfile, ProjectWorkingColorSpace } from './export/color-management';
+import type { MediaColorProfile, ProjectWorkingColorSpace } from './color-management';
 import type { ClipSpatialAudio } from './spatial-audio';
 import type { Effect } from './effects';
 import type { TimecodeFormat } from './time';
@@ -767,13 +767,6 @@ export interface AIColorHistoryEntry {
   suggestions: AIColorGradingSuggestionItem[];
 }
 
-export interface AIColorGradingSuggestionItem {
-  parameter: string;
-  currentValue?: number;
-  recommendedValue: number;
-  reason: string;
-}
-
 export interface ClipAudioDenoise {
   enabled: boolean;
   strength: number;
@@ -1110,7 +1103,7 @@ interface ColorConsistencyWarning {
 }
 
 type SfxSuggestionStatus = 'pending' | 'accepted' | 'rejected';
-export interface SfxSuggestion {
+interface SfxSuggestion {
   time: number;
   category: string;
   confidence: number;

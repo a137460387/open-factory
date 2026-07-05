@@ -139,7 +139,7 @@ export function StatusPill({ status }: { status: ExportTaskStatus }) {
   );
 }
 
-export function ExportDiagnosticsPanel({ error }: { error: string }) {
+function ExportDiagnosticsPanel({ error }: { error: string }) {
   const [copied, setCopied] = useState(false);
   const matches = matchExportDiagnostics(error);
   const safeTimeout = useSafeTimeout();

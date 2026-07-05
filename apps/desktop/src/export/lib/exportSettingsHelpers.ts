@@ -171,11 +171,11 @@ function normalizeAudioCodecForFormat(format: string, current?: string): string 
   return current && current !== 'libopus' ? current : 'aac';
 }
 
-export function isAudioVisualizationFormat(format: string | undefined): format is string {
+function isAudioVisualizationFormat(format: string | undefined): format is string {
   return typeof format === 'string' && AUDIO_VISUALIZATION_FORMATS.includes(format);
 }
 
-export function normalizeAudioVisualizationDraft(
+function normalizeAudioVisualizationDraft(
   value: ExportPresetSettings['audioVisualization'],
 ): NonNullable<ExportPresetSettings['audioVisualization']> {
   const style =
@@ -215,7 +215,7 @@ function normalizeAudioVisualizationBackgroundDraft(
   return DEFAULT_AUDIO_VISUALIZATION.background;
 }
 
-export function normalizeHexColor(value: string | undefined, fallback: string): string {
+function normalizeHexColor(value: string | undefined, fallback: string): string {
   if (typeof value !== 'string') {
     return fallback;
   }
@@ -949,12 +949,12 @@ export function isWatermarkPosition(value: string): value is ExportWatermarkPosi
 // Low-level normalizers
 // ---------------------------------------------------------------------------
 
-export function clampUiNumber(value: string, min: number, max: number, fallback: number): number {
+function clampUiNumber(value: string, min: number, max: number, fallback: number): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? Math.min(max, Math.max(min, parsed)) : fallback;
 }
 
-export function normalizeLoudnessNormalization(value: unknown): ExportLoudnessNormalization {
+function normalizeLoudnessNormalization(value: unknown): ExportLoudnessNormalization {
   return value === 'youtube' || value === 'ebu-r128' ? value : 'off';
 }
 
@@ -970,7 +970,7 @@ export function timecodeBurnInFrom(value: ExportPresetSettings['timecodeBurnIn']
   return { ...DEFAULT_TIMECODE_BURN_IN };
 }
 
-export function normalizeSubtitleFormat(value: unknown): ExportSubtitleFormat {
+function normalizeSubtitleFormat(value: unknown): ExportSubtitleFormat {
   return value === 'vtt' || value === 'ass' || value === 'ssa' ? value : 'srt';
 }
 

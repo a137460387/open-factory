@@ -92,7 +92,7 @@ export function PostExportQualityAssurancePanel({ result }: { result: PostExport
   );
 }
 
-export function PostExportQualityCheckRow({ check }: { check: PostExportQualityCheckResult }) {
+function PostExportQualityCheckRow({ check }: { check: PostExportQualityCheckResult }) {
   const t = zhCN.exportDialog.postExportQuality;
   return (
     <div className="rounded-md bg-white/70 p-2" data-testid={`post-export-quality-check-${check.id}`} data-status={check.status}>
