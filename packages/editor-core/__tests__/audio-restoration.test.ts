@@ -62,4 +62,17 @@ describe('audio restoration', () => {
       ])
     ).toEqual([{ start: 1, duration: 0.099 }]);
   });
+
+  it('returns empty gaps when input is not an array', () => {
+    expect(detectAudioFillGaps(undefined)).toEqual([]);
+  });
+
+  it('returns unchanged waveform when restoration is disabled', () => {
+    const peaks = [0.3, 0.6, 0.8];
+    const comparison = buildAudioRestorationWaveformComparison(peaks, undefined);
+
+    expect(comparison.before).toEqual([0.3, 0.6, 0.8]);
+    expect(comparison.after).toEqual([0.3, 0.6, 0.8]);
+    expect(comparison.changed).toBe(false);
+  });
 });
