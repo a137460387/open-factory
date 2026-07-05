@@ -125,7 +125,7 @@ export function sniffFileHeader(header: Uint8Array, filename: string): FileSniff
   const extension = getFileExtension(filename);
   const expectedCategory = classifyFileExtension(extension);
   if (!header || header.length === 0) {
-    return { status: expectedCategory ? 'unknown' : 'unknown', extension, expectedCategory };
+    return { status: 'unknown', extension, expectedCategory };
   }
 
   for (const rule of SNIFF_RULES) {
@@ -141,5 +141,5 @@ export function sniffFileHeader(header: Uint8Array, filename: string): FileSniff
     }
   }
 
-  return { status: expectedCategory ? 'unknown' : 'unknown', extension, expectedCategory };
+  return { status: 'unknown', extension, expectedCategory };
 }
