@@ -134,4 +134,10 @@ describe('thumbnail scoring', () => {
     expect(score.motion).toBe(15);
     expect(score.total).toBe(15);
   });
+
+  it('returns zero clarity when frame is too small for Laplacian kernel', () => {
+    const tiny = makeSample({ width: 2, height: 2, pixels: [[120, 120, 120], [100, 100, 100], [80, 80, 80], [60, 60, 60]] });
+    const score = scoreThumbnailFrame(tiny);
+    expect(score.clarity).toBe(0);
+  });
 });
