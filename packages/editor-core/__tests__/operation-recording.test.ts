@@ -94,6 +94,49 @@ describe('operation recording', () => {
 
     expect(seen).toEqual([1, 2]);
   });
+
+  it('drops commands with invalid projectAfter from parsed recording', () => {
+    const validProject = { media: [], timeline: { tracks: [] } };
+    const parsed = parseOperationRecording(JSON.stringify({
+      format: 'open-factory-operation-recording',
+      version: 1,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      startedAtMs: 0,
+      initialProject: validProject,
+      commands: [
+        { description: 'bad', projectAfter: 'not-an-object', timestampMs: 1000 },
+        { description: 'good', projectAfter: validProject, timestampMs: 2000 }
+      ]
+    }));
+    expect(parsed?.commands).toHaveLength(1);
+    expect(parsed?.commands[0].description).toBe('good');
+  });
+
+  it('treats non-array commands as empty list during parse', () => {
+    const parsed = parseOperationRecording(JSON.stringify({
+      format: 'open-factory-operation-recording',
+      version: 1,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      startedAtMs: 0,
+      initialProject: { media: [], timeline: { tracks: [] } },
+      commands: 'not-an-array'
+    }));
+    expect(parsed?.commands).toEqual([]);
+  });
+
+  it('records command with unserializable payload as undefined', () => {
+    const circular: Record<string, unknown> = {};
+    circular.self = circular;
+    const command = {
+      description: 'circular',
+      execute: () => undefined,
+      undo: () => undefined,
+      payload: circular,
+    } as unknown as Command;
+    const initial = createOperationRecording(createProject('Test'), { startedAtMs: 1000 });
+    const recording = recordOperationCommand(initial, command, createProject('Test'), 2000);
+    expect(recording.commands[0].payload).toBeUndefined();
+  });
 });
 
 function makeRecording(clipCounts: number[], timestamps = clipCounts.map((_, index) => 1_000 + index * 100)): OperationRecordingFile {
