@@ -84,6 +84,14 @@ describe('thumbnail scoring', () => {
     expect(score.motion).toBe(15);
   });
 
+  it('uses next frame for motion comparison when previous is not available', () => {
+    const next = makeSample({ pixels: neutralPixels });
+    const sample = makeSample({ pixels: sharpColorPixels });
+    const score = scoreThumbnailFrame(sample, { next });
+
+    expect(score.motion).toBeLessThan(15);
+  });
+
   it('does not crash or add face points when YuNet detection is unavailable', () => {
     const sample = makeSample({ pixels: sharpColorPixels });
     delete sample.faceDetected;
