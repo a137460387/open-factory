@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_AUDIO_RESTORATION, DEFAULT_CLIP_BORDER, DEFAULT_COLOR_CORRECTION, DEFAULT_CREDITS_ROLL_SPEED, DEFAULT_CREDITS_STYLE, DEFAULT_QUALITY_ENHANCEMENT, DEFAULT_SPATIAL_AUDIO, DEFAULT_SUBTITLE_LANGUAGE, DEFAULT_SUBTITLE_STYLE, DEFAULT_VIDEO_RESTORATION, createMulticamSequenceProject, createTrack, migrateProjectFile, serializeProject, type ProjectFileV1 } from '../src';
-import { makeAdjustmentClip, makeAudioClip, makeCreditsClip, makeProject, makeSubtitleClip, makeTextClip, makeVideoClip } from './test-utils';
+import { makeAdjustmentClip, makeAudioClip, makeCreditsClip, makeMotionGraphicClip, makeProject, makeSubtitleClip, makeTextClip, makeVideoClip } from './test-utils';
 
 describe('project schema migration', () => {
   it('serializes schemaVersion 2 project files with media and relativePath', () => {
@@ -188,6 +188,21 @@ describe('project schema migration', () => {
 
     file.project.timeline.tracks[0].clips[0].blendMode = 'invalid' as never;
     expect(migrateProjectFile(file).project.timeline.tracks[0].clips[0].blendMode).toBe('normal');
+  });
+
+  it('serializes and migrates motion-graphic clip with normalized motionGraphic field', () => {
+    const project = makeProject();
+    project.timeline.tracks[0].clips = [makeMotionGraphicClip({ id: 'mg-1', trackId: 'track-1' })];
+    project.sequences = [{ ...project.sequences[0], timeline: project.timeline }];
+
+    const file = serializeProject(project);
+    const migratedClip = migrateProjectFile(file).project.timeline.tracks[0].clips[0];
+    expect(migratedClip.type).toBe('motion-graphic');
+    expect(migratedClip).toHaveProperty('motionGraphic');
+
+    delete (file.project.timeline.tracks[0].clips[0] as Record<string, unknown>).motionGraphic;
+    const restored = migrateProjectFile(file).project.timeline.tracks[0].clips[0];
+    expect(restored).toHaveProperty('motionGraphic');
   });
 
   it('serializes and migrates spatial audio settings and position keyframes', () => {
