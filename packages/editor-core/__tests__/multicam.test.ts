@@ -299,6 +299,14 @@ describe('trimMulticamSwitch', () => {
     };
     expect(() => trimMulticamSwitch(multicam, 'nonexistent', 1, 30, 10)).toThrow('Invalid multicam switch');
   });
+
+  it('throws when the multicam sequence has fewer than 2 angles', () => {
+    const multicam = {
+      angles: [{ id: 'angle-a', clipId: 'clip-a', trackId: 'track-a', name: 'A', offset: 0 }],
+      switches: [{ id: 'switch-0', time: 0, angleId: 'angle-a' }]
+    };
+    expect(() => trimMulticamSwitch(multicam, 'switch-0', 1, 30, 10)).toThrow('Invalid multicam sequence');
+  });
 });
 
 function makeProjectAccessor(initial: Project): ProjectAccessor & { current(): Project } {
