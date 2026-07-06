@@ -134,6 +134,12 @@ describe('naming template batch resolution', () => {
     expect(results).toEqual(['项目_001', '项目_002', '项目_003']);
   });
 
+  it('defaults indexStart to 1 when not specified in batch', () => {
+    const config: NamingTemplateConfig = { template: '{index}' };
+    const results = resolveNamingTemplateBatch(config, { projectName: 'P', presetName: 'P' }, 2);
+    expect(results).toEqual(['001', '002']);
+  });
+
   it('batch names do not collide', () => {
     const config: NamingTemplateConfig = { template: '{project}_{preset}_{index}', indexStart: 10, indexPadding: 3 };
     const results = resolveNamingTemplateBatch(config, { projectName: 'MyProject', presetName: 'HD' }, 5);
@@ -169,5 +175,16 @@ describe('naming template serialization', () => {
 
   it('handles missing template field', () => {
     expect(deserializeNamingTemplateConfig('{"foo":1}')).toBeUndefined();
+  });
+
+  it('defaults optional fields when omitted in JSON', () => {
+    const restored = deserializeNamingTemplateConfig('{"template":"test"}');
+    expect(restored).toEqual({
+      template: 'test',
+      indexStart: 1,
+      indexPadding: 3,
+      dateFormat: 'YYYYMMDD',
+      customText: undefined
+    });
   });
 });
