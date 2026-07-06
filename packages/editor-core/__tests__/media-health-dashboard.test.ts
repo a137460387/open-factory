@@ -77,7 +77,14 @@ describe('media health dashboard', () => {
   });
 
   it('keeps recent import trend to seven points', () => {
-    expect(buildRecentImportTrend([{ ...asset('a', 'C:/Media/a.mp4'), importedAt: '2026-06-18T01:00:00.000Z' }], nowMs)).toHaveLength(7);
+    const trend = buildRecentImportTrend([
+      { ...asset('a', 'C:/Media/a.mp4'), importedAt: '2026-06-18T01:00:00.000Z' },
+      asset('no-date', 'C:/Media/no-date.mp4'),
+      { ...asset('old', 'C:/Media/old.mp4'), importedAt: '2026-01-01T01:00:00.000Z' },
+      { ...asset('invalid', 'C:/Media/invalid.mp4'), importedAt: 'not-a-date' }
+    ], nowMs);
+    expect(trend).toHaveLength(7);
+    expect(trend.find((p) => p.day === '2026-06-18')?.count).toBe(1);
   });
 
   it('plans one-click repair task groups', () => {
