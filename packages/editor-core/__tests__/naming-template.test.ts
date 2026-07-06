@@ -84,6 +84,22 @@ describe('naming template variable expansion', () => {
     );
     expect(result).toBe('片段');
   });
+
+  it('uses fallback text from {text:Default} when no customText', () => {
+    const result = resolveNamingTemplate(
+      { template: '{text:默认文本}' },
+      { projectName: 'P', presetName: 'P' }
+    );
+    expect(result).toBe('默认文本');
+  });
+
+  it('prefers customText over fallback in {text:Default}', () => {
+    const result = resolveNamingTemplate(
+      { template: '{text:默认文本}', customText: '自定义' },
+      { projectName: 'P', presetName: 'P' }
+    );
+    expect(result).toBe('自定义');
+  });
 });
 
 describe('naming template index formatting', () => {
