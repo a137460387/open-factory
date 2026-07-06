@@ -87,4 +87,11 @@ describe('project serialization and export plan', () => {
     expect(plan.fullArgs.at(-1)).toBe('D:/Exports/final.mp4');
     expect(plan.duration).toBe(10);
   });
+
+  it('builds empty export plan when no video track exists', () => {
+    const project = makeProject();
+    project.timeline.tracks = [];
+    const plan = buildSingleVideoTrackExportPlan(project);
+    expect(plan.segments).toEqual([]);
+  });
 });
