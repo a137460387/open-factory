@@ -117,4 +117,23 @@ describe('3D LUT creator', () => {
     expect(buildLutCreatorReferenceTransform(undefined)).toBeNull();
     expect(cube.split('\n')[0]).toBe('TITLE "Title  Unsafe"');
   });
+
+  it('handles single-pixel neutral reference source', () => {
+    const transform = buildLutCreatorReferenceTransform({ width: 1, height: 1, data: [128, 128, 128, 255] });
+
+    expect(transform).not.toBeNull();
+    expect(transform?.r.sourceMean).toBeGreaterThan(0);
+    expect(transform?.r.sourceMean).toBeLessThan(1);
+  });
+
+  it('applies reference transform during matrix generation', () => {
+    const transform = buildLutCreatorReferenceTransform(sampleFromPixels([[217, 85, 63], [240, 120, 92]]));
+    const state = { ...createDefaultLutCreatorState(), precision: 17 as const, referenceTransform: transform };
+
+    const matrix = buildLutCreatorMatrix(state);
+    const defaultMatrix = buildLutCreatorMatrix(createDefaultLutCreatorState());
+
+    expect(matrix.values).toHaveLength(17 ** 3);
+    expect(matrix.values[128]).not.toEqual(defaultMatrix.values[128]);
+  });
 });
