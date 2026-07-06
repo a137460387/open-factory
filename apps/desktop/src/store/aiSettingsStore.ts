@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { AIProvider, AIUsageRecord } from '@open-factory/editor-core';
-import { createAllBuiltInProviders, isProviderConfigured } from '@open-factory/editor-core';
+import { createAllBuiltInProviders } from '@open-factory/editor-core';
 import { readAiApiKey, writeAiApiKey, checkOllamaReachable, listOllamaModels, testAiConnection } from '../lib/tauri-bridge';
 
 const AI_SETTINGS_STORAGE_KEY = 'open-factory:ai-settings';
@@ -322,17 +322,4 @@ function toStoredProvider(p: AIProvider): StoredAIProvider {
     customHeaders: p.customHeaders,
     isBuiltIn: p.isBuiltIn
   };
-}
-
-function isAIServiceReady(service: AIServiceType): boolean {
-  const state = useAISettingsStore.getState();
-  const providerId = state.serviceMapping[service];
-  const provider = state.providers.find((p) => p.id === providerId);
-  return provider ? isProviderConfigured(provider) : false;
-}
-
-function getAIServiceProvider(service: AIServiceType): AIProvider | undefined {
-  const state = useAISettingsStore.getState();
-  const providerId = state.serviceMapping[service];
-  return state.providers.find((p) => p.id === providerId);
 }
