@@ -112,6 +112,52 @@ describe('timeline export', () => {
     });
   });
 
+  it('skips nested-sequence clips that reference a missing sequence', () => {
+    const nestedClip = createNestedSequenceClip({
+      id: 'clip-missing-seq',
+      name: 'Missing Seq',
+      trackId: 'track-video',
+      sequenceId: 'nonexistent-sequence',
+      start: 0,
+      duration: 5,
+      trimStart: 0,
+      trimEnd: 0
+    });
+    const project = {
+      ...makeProject(),
+      timeline: makeTimeline([nestedClip])
+    };
+
+    const events = flattenTimelineForExport(project);
+
+    expect(events).toHaveLength(0);
+  });
+
+  it('filters out nested events that do not overlap with the clip visible window', () => {
+    const nestedTimeline = makeTimeline([makeVideoClip({ id: 'nested-source', name: 'Nested Source', start: 0, duration: 3 })]);
+    const nestedClip = createNestedSequenceClip({
+      id: 'clip-outside',
+      name: 'Outside Clip',
+      trackId: 'track-video',
+      sequenceId: 'sequence-nested',
+      start: 10,
+      duration: 3,
+      trimStart: 5,
+      trimEnd: 0
+    });
+    const project = {
+      ...makeProject(),
+      timeline: makeTimeline([nestedClip]),
+      sequences: [
+        createSequence({ id: 'sequence-nested', name: 'Nested', timeline: nestedTimeline })
+      ]
+    };
+
+    const events = flattenTimelineForExport(project);
+
+    expect(events).toHaveLength(0);
+  });
+
   it('exports AAF MobSlot timecode with SourceClip and MasterMob identifiers', () => {
     const project = {
       ...makeProject(),

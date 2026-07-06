@@ -160,4 +160,26 @@ describe('content analysis', () => {
       contentAnalysis: analysis
     });
   });
+
+  it('defaults segmentDuration to 1 when duration is zero', () => {
+    const analysis = buildClipContentAnalysis({ duration: 0, visualSamples: [] });
+    expect(analysis.segments).toEqual([{ start: 0, end: 1, sceneTypes: ['indoor'], brightness: 0.45, motion: 0.1 }]);
+  });
+
+  it('normalizes content analysis with non-array fields gracefully', () => {
+    const result = normalizeClipContentAnalysis({
+      analyzedAt: 42,
+      primarySceneType: 123,
+      sceneTypes: 'not-an-array',
+      segments: 'not-an-array',
+      emotionCurve: 'not-an-array',
+      dialogueTurns: 'not-an-array'
+    });
+    expect(result).toBeDefined();
+    expect(result?.segments).toEqual([]);
+    expect(result?.emotionCurve).toEqual([]);
+    expect(result?.dialogueTurns).toEqual([]);
+    expect(result?.sceneTypes).toEqual(['indoor']);
+    expect(result?.primarySceneType).toBe('indoor');
+  });
 });

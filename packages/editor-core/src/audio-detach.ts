@@ -3,7 +3,6 @@ import type { Clip, VideoClip, AudioClip, Track, Timeline } from './model-types'
 
 /**
  * 视频 clip 的音频分离相关字段扩展。
- * 在 VideoClip 上通过 as unknown as AudioDetachedVideoClip 访问。
  */
 export interface AudioDetachedVideoClip extends VideoClip {
   /** 标记音频已分离 */
@@ -159,12 +158,12 @@ export function unlinkAudioFromVideo(
       ...track,
       clips: track.clips.map((clip) => {
         if (clip.id === audioClipId && isLinkedAudioClip(clip)) {
-          const { softLinked, linkedVideoClipId, ...rest } = clip as LinkedAudioClip;
+          const { softLinked, linkedVideoClipId, ...rest } = clip;
           return { ...rest, softLinked: false } as AudioClip;
         }
         const linkedId = getLinkedClipId(clip);
         if (linkedId === audioClipId && isDetachedVideoClip(clip)) {
-          const { audioDetached, linkedAudioClipId, ...rest } = clip as AudioDetachedVideoClip;
+          const { audioDetached, linkedAudioClipId, ...rest } = clip;
           return { ...rest, audioDetached: false, volume: 1, muted: false } as VideoClip;
         }
         return clip;
@@ -191,8 +190,8 @@ export function relinkAudioToVideo(
   if (!isLinkedAudioClip(audioClip)) {
     throw new Error(`Clip ${audioClipId} is not a linked audio clip`);
   }
-  const linkedAudio = audioClip as unknown as AudioClip;
-  const linkedVideo = videoClip as unknown as AudioDetachedVideoClip;
+  const linkedAudio: AudioClip = audioClip;
+  const linkedVideo = videoClip;
 
   // 检查对齐
   if (!areClipsAligned(linkedVideo, linkedAudio)) {
@@ -261,22 +260,22 @@ function moveSingleClip(timeline: Timeline, clipId: string, deltaStart: number):
 }
 
 function getLinkedClipId(clip: Clip): string | undefined {
-  if (isDetachedVideoClip(clip)) return (clip as AudioDetachedVideoClip).linkedAudioClipId;
-  if (isLinkedAudioClip(clip)) return (clip as LinkedAudioClip).linkedVideoClipId;
+  if (isDetachedVideoClip(clip)) return clip.linkedAudioClipId;
+  if (isLinkedAudioClip(clip)) return clip.linkedVideoClipId;
   return undefined;
 }
 
-function isDetachedVideoClip(clip: Clip): boolean {
+function isDetachedVideoClip(clip: Clip): clip is AudioDetachedVideoClip {
   return clip.type === 'video' && (clip as Partial<AudioDetachedVideoClip>).audioDetached === true;
 }
 
-function isLinkedAudioClip(clip: Clip): boolean {
+function isLinkedAudioClip(clip: Clip): clip is LinkedAudioClip {
   return clip.type === 'audio' && typeof (clip as Partial<LinkedAudioClip>).linkedVideoClipId === 'string';
 }
 
 function isSoftLinked(clip: Clip): boolean {
   if (isDetachedVideoClip(clip)) return true;
-  if (isLinkedAudioClip(clip)) return (clip as LinkedAudioClip).softLinked !== false;
+  if (isLinkedAudioClip(clip)) return clip.softLinked !== false;
   return false;
 }
 

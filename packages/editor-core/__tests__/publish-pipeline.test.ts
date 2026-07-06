@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  normalizePublishWindow,
   appendPublishLogsToReleaseRecord,
   buildProjectReleaseRecord,
   buildPublishNodeLog,
@@ -69,6 +70,15 @@ describe('publish pipeline', () => {
     expect(isWithinPublishWindow(new Date('2026-06-18T01:30:00.000Z'), window)).toBe(true);
     expect(isWithinPublishWindow(new Date('2026-06-18T10:30:00.000Z'), window)).toBe(false);
     expect(isWithinPublishWindow(new Date('2026-06-20T02:00:00.000Z'), window)).toBe(false);
+  });
+
+  it('normalizes publish window with all-invalid days to undefined', () => {
+    expect(normalizePublishWindow(undefined)).toBeUndefined();
+    expect(normalizePublishWindow({ daysOfWeek: [0, 8, -1] })).toBeUndefined();
+    expect(normalizePublishWindow({ daysOfWeek: 'not-an-array' as unknown as number[] })).toBeUndefined();
+    const valid = normalizePublishWindow({ daysOfWeek: [1, 2, 3], startHour: 10, endHour: 20, timezoneOffsetMinutes: 480 });
+    expect(valid).toBeDefined();
+    expect(valid!.daysOfWeek).toEqual([1, 2, 3]);
   });
 
   it('records node execution log fields', () => {

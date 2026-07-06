@@ -7,7 +7,7 @@ import {
   serializeProject,
   timelineHasExportableVideo
 } from '../src';
-import { makeProject, makeTextClip, makeTimeline, makeVideoClip } from './test-utils';
+import { makeAdjustmentClip, makeProject, makeTextClip, makeTimeline, makeVideoClip } from './test-utils';
 
 describe('project serialization and export plan', () => {
   it('round trips project files without losing structure', () => {
@@ -38,6 +38,7 @@ describe('project serialization and export plan', () => {
     expect(timelineHasExportableVideo(makeProject().timeline)).toBe(true);
     expect(timelineHasExportableVideo(makeTimeline())).toBe(false);
     expect(timelineHasExportableVideo(makeTimeline([makeTextClip()]))).toBe(true);
+    expect(timelineHasExportableVideo(makeTimeline([makeAdjustmentClip({ trackId: 'track-video' })]))).toBe(false);
   });
 
   it('throws when an export clip references a missing asset', () => {
@@ -86,5 +87,12 @@ describe('project serialization and export plan', () => {
     expect(plan.fullArgs).toContain('-filter_complex');
     expect(plan.fullArgs.at(-1)).toBe('D:/Exports/final.mp4');
     expect(plan.duration).toBe(10);
+  });
+
+  it('builds empty export plan when no video track exists', () => {
+    const project = makeProject();
+    project.timeline.tracks = [];
+    const plan = buildSingleVideoTrackExportPlan(project);
+    expect(plan.segments).toEqual([]);
   });
 });

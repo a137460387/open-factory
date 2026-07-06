@@ -171,3 +171,31 @@ describe('timeline bookmark enhancements', () => {
     expect(parseBookmarkGroupsJson('"text"')).toEqual([]);
   });
 });
+
+  it('normalizes malformed persisted groups with defaults', () => {
+    const json = JSON.stringify([
+      { sortOrder: 'bad' },
+      { id: 123, name: '  ', sortOrder: Infinity }
+    ]);
+    const parsed = parseBookmarkGroupsJson(json);
+    expect(parsed).toHaveLength(2);
+    expect(parsed[0].name).toBe('未命名分组');
+    expect(parsed[0].sortOrder).toBe(0);
+    expect(parsed[0].collapsed).toBe(false);
+    expect(parsed[0].color).toMatch(/^#[a-fA-F0-9]{6}$/);
+    expect(parsed[1].name).toBe('未命名分组');
+    expect(parsed[1].sortOrder).toBe(0);
+  });
+
+  it('renders bookmark positions with group colors', () => {
+    const bookmarks: TimelineBookmark[] = [
+      makeBookmark({ id: 'b1', time: 5 }),
+      makeBookmark({ id: 'b2', time: 10, groupId: 'g1' })
+    ];
+    const groups: BookmarkGroup[] = [
+      createBookmarkGroup({ id: 'g1', name: 'G1', color: '#ef4444' })
+    ];
+    const dots = calculateBookmarkNavDots(bookmarks, 10, 200, groups);
+    expect(dots[0].color).toBe('#3b82f6');
+    expect(dots[1].color).toBe('#ef4444');
+  });

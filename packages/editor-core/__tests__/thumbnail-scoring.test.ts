@@ -61,6 +61,11 @@ describe('thumbnail scoring', () => {
     expect(timestamps.at(-1)).toBe(20);
   });
 
+  it('returns all-zero timestamps for zero or negative duration', () => {
+    expect(buildThumbnailSampleTimestamps(0)).toEqual(Array.from({ length: THUMBNAIL_SAMPLE_COUNT }, () => 0));
+    expect(buildThumbnailSampleTimestamps(-5)).toEqual(Array.from({ length: THUMBNAIL_SAMPLE_COUNT }, () => 0));
+  });
+
   it('scores face, clarity, color richness, and low motion dimensions', () => {
     const previous = makeSample({ pixels: neutralPixels });
     const colorful = makeSample({ faceDetected: true, pixels: sharpColorPixels });
@@ -77,6 +82,14 @@ describe('thumbnail scoring', () => {
     const score = scoreThumbnailFrame(makeSample({ pixels: neutralPixels }));
 
     expect(score.motion).toBe(15);
+  });
+
+  it('uses next frame for motion comparison when previous is not available', () => {
+    const next = makeSample({ pixels: neutralPixels });
+    const sample = makeSample({ pixels: sharpColorPixels });
+    const score = scoreThumbnailFrame(sample, { next });
+
+    expect(score.motion).toBeLessThan(15);
   });
 
   it('does not crash or add face points when YuNet detection is unavailable', () => {

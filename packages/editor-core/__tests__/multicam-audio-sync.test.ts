@@ -174,5 +174,11 @@ describe('multicam audio sync', () => {
       expect(report.windowResults.length).toBeGreaterThan(0);
       expect(report.confidence).toBeDefined();
     });
+
+    it('returns low confidence when audio is too short for any windows', () => {
+      const report = syncMulticamAudio(new Array(1).fill(0), new Array(1).fill(0), 'clip-a', { sampleRate: 100, windowDurationSeconds: 1, maxOffsetSeconds: 0.2 });
+      expect(report.windowResults).toHaveLength(0);
+      expect(report.confidence).toBe('low');
+    });
   });
 });

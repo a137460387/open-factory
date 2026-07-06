@@ -124,4 +124,92 @@ describe('media versions', () => {
   it('skips non-object entries when normalizing version lists', () => {
     expect(normalizeMediaVersions([null, 42, undefined, 'text'])).toBeUndefined();
   });
+
+  it('falls back to version properties when referenced media is absent from the list', () => {
+    const project = makeProject();
+    const versionAsset = {
+      ...project.media[0],
+      id: 'asset-2',
+      name: 'sample-v2.mp4',
+      path: 'C:/Videos/sample-v2.mp4'
+    };
+    const metadata = addMediaVersion(undefined, versionAsset);
+
+    const entries = listMediaVersionEntries(project.media[0], metadata);
+
+    expect(entries).toHaveLength(2);
+    expect(entries[1].assetId).toBe('asset-2');
+    expect(entries[1].path).toBe('C:/Videos/sample-v2.mp4');
+    expect(entries[1].name).toBe('sample-v2.mp4');
+    expect(entries[1].isOriginal).toBe(false);
+  });
+
+  it('returns undefined when removing the sole version from versions-only metadata', () => {
+    const project = makeProject();
+    const version = createMediaVersionFromAsset(
+      { ...project.media[0], id: 'asset-2', path: 'C:/Videos/v2.mp4', name: 'v2.mp4' },
+      1,
+      '2026-06-16T00:00:00.000Z'
+    );
+
+    const result = removeMediaVersion({ versions: [version] }, version.id);
+
+    expect(result).toBeUndefined();
+  });
+
+  it('returns undefined when removing from undefined metadata', () => {
+    expect(removeMediaVersion(undefined, 'nonexistent')).toBeUndefined();
+  });
+
+  it('finds existing version by matching path when assetId differs', () => {
+    const project = makeProject();
+    const existingVersion = {
+      id: 'v-custom',
+      label: 'v2',
+      assetId: 'different-id',
+      path: project.media[0].path,
+      name: 'custom.mp4',
+      createdAt: '2026-06-16T00:00:00.000Z'
+    };
+    const metadata = { versions: [existingVersion] };
+
+    const result = addMediaVersion(metadata, project.media[0]);
+
+    expect(result.versions).toHaveLength(1);
+    expect(result.versions?.[0].id).toBe('v-custom');
+  });
+
+  it('normalizes non-finite time to 0 in compare request', () => {
+    const project = makeProject();
+    const versionAsset = { ...project.media[0], id: 'asset-2', name: 'sample-v2.mp4', path: 'C:/Videos/sample-v2.mp4' };
+    project.media.push(versionAsset);
+    project.mediaMetadata = {
+      'asset-1': {
+        versions: [createMediaVersionFromAsset(versionAsset, 1, '2026-06-16T00:00:00.000Z')]
+      }
+    };
+
+    const request = buildMediaVersionCompareRequest(project, 'asset-1', undefined, undefined, Number.NaN);
+
+    expect(request?.time).toBe(0);
+  });
+
+  it('removes one version while keeping others in multi-version metadata', () => {
+    const project = makeProject();
+    const version1 = createMediaVersionFromAsset(
+      { ...project.media[0], id: 'asset-2', path: 'C:/Videos/v2.mp4', name: 'v2.mp4' },
+      1,
+      '2026-06-16T00:00:00.000Z'
+    );
+    const version2 = createMediaVersionFromAsset(
+      { ...project.media[0], id: 'asset-3', path: 'C:/Videos/v3.mp4', name: 'v3.mp4' },
+      2,
+      '2026-06-17T00:00:00.000Z'
+    );
+
+    const result = removeMediaVersion({ versions: [version1, version2] }, version1.id);
+
+    expect(result?.versions).toHaveLength(1);
+    expect(result?.versions?.[0].assetId).toBe('asset-3');
+  });
 });

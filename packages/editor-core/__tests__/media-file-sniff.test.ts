@@ -79,4 +79,61 @@ describe('media file header sniffing', () => {
     expect(classifyFileExtension('.png')).toBe('image');
     expect(classifyFileExtension('.xyz')).toBeUndefined();
   });
+
+  it('detects AVI by RIFF+AVI header', () => {
+    const header = bytes(0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x41, 0x56, 0x49, 0x20);
+    const result = sniffFileHeader(header, 'clip.avi');
+    expect(result.status).toBe('match');
+    expect(result.detectedLabel).toBe('AVI');
+    expect(result.detectedCategory).toBe('video');
+  });
+
+  it('detects MPEG-TS by sync byte 0x47', () => {
+    const result = sniffFileHeader(bytes(0x47, 0x40, 0x00, 0x10), 'recording.ts');
+    expect(result.status).toBe('match');
+    expect(result.detectedLabel).toBe('MPEG-TS');
+    expect(result.detectedCategory).toBe('video');
+  });
+
+  it('detects MP3 by ID3v2 tag', () => {
+    const result = sniffFileHeader(bytes(0x49, 0x44, 0x33, 0x04, 0x00), 'song.mp3');
+    expect(result.status).toBe('match');
+    expect(result.detectedLabel).toBe('MP3');
+    expect(result.detectedCategory).toBe('audio');
+  });
+
+  it('detects MP3 by MPEG sync word', () => {
+    const result = sniffFileHeader(bytes(0xff, 0xfb, 0x90, 0x00), 'track.mp3');
+    expect(result.status).toBe('match');
+    expect(result.detectedLabel).toBe('MP3');
+  });
+
+  it('detects FLAC by fLaC magic bytes', () => {
+    const result = sniffFileHeader(bytes(0x66, 0x4c, 0x61, 0x43, 0x00, 0x00), 'lossless.flac');
+    expect(result.status).toBe('match');
+    expect(result.detectedLabel).toBe('FLAC');
+    expect(result.detectedCategory).toBe('audio');
+  });
+
+  it('detects OGG by OggS magic bytes', () => {
+    const result = sniffFileHeader(bytes(0x4f, 0x67, 0x67, 0x53, 0x00), 'podcast.ogg');
+    expect(result.status).toBe('match');
+    expect(result.detectedLabel).toBe('OGG');
+    expect(result.detectedCategory).toBe('audio');
+  });
+
+  it('detects JPEG by FF D8 FF marker', () => {
+    const result = sniffFileHeader(bytes(0xff, 0xd8, 0xff, 0xe0), 'photo.jpg');
+    expect(result.status).toBe('match');
+    expect(result.detectedLabel).toBe('JPEG');
+    expect(result.detectedCategory).toBe('image');
+  });
+
+  it('detects WebP by RIFF+WEBP header', () => {
+    const header = bytes(0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50);
+    const result = sniffFileHeader(header, 'image.webp');
+    expect(result.status).toBe('match');
+    expect(result.detectedLabel).toBe('WebP');
+    expect(result.detectedCategory).toBe('image');
+  });
 });

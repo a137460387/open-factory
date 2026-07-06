@@ -112,11 +112,13 @@ export function serializeLogToRec709Cube(colorSpace: LogInputColorSpace): string
 
 function buildLogToRec709Lut(colorSpace: LogInputColorSpace): LogToRec709Lut {
   const spec = LOG_CURVE_SPECS[colorSpace];
+  const scale = LOG_TO_REC709_LUT_SIZE - 1;
   const points: Lut3dPoint[] = [];
   for (let blue = 0; blue < LOG_TO_REC709_LUT_SIZE; blue += 1) {
     for (let green = 0; green < LOG_TO_REC709_LUT_SIZE; green += 1) {
       for (let red = 0; red < LOG_TO_REC709_LUT_SIZE; red += 1) {
-        points.push(convertLogTripletToRec709([red, green, blue].map((value) => value / (LOG_TO_REC709_LUT_SIZE - 1)) as unknown as Lut3dPoint, spec));
+        const input: Lut3dPoint = [red / scale, green / scale, blue / scale];
+        points.push(convertLogTripletToRec709(input, spec));
       }
     }
   }
@@ -128,13 +130,17 @@ function buildLogToRec709Lut(colorSpace: LogInputColorSpace): LogToRec709Lut {
   });
 }
 
+function mapTuple(tuple: Lut3dPoint, fn: (value: number, index: number) => number): Lut3dPoint {
+  return [fn(tuple[0], 0), fn(tuple[1], 1), fn(tuple[2], 2)];
+}
+
 function convertLogTripletToRec709(input: Lut3dPoint, spec: LogCurveSpec): Lut3dPoint {
-  const expanded = input.map((channel, index) => {
+  const expanded = mapTuple(input, (channel, index) => {
     const normalized = Math.max(0, (channel - spec.lift) / Math.max(0.001, 1 - spec.lift));
     const contrast = Math.pow(normalized, spec.gamma) * spec.exposure;
     const tint = spec.shadowTint[index] * (1 - channel) + spec.highlightTint[index] * channel;
     return clamp01(contrast * tint);
-  }) as unknown as Lut3dPoint;
+  });
   const luma = expanded[0] * 0.2126 + expanded[1] * 0.7152 + expanded[2] * 0.0722;
   return [
     clamp01(luma + (expanded[0] - luma) * spec.saturation),

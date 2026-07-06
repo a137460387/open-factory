@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   CommandManager,
   CreateMulticamSequenceCommand,
+  createMulticamSequenceProject,
   CutMulticamClipCommand,
   RecordAngleCutCommand,
   TrimMulticamSwitchCommand,
+  trimMulticamSwitch,
   buildMulticamSwitchHistory,
   calculateAudioAlignmentOffset,
   calculateManualMarkerAlignmentOffsets,
@@ -19,7 +21,7 @@ import {
   type Project,
   type ProjectAccessor
 } from '../src';
-import { makeProject, makeVideoClip } from './test-utils';
+import { makeAudioClip, makeProject, makeVideoClip } from './test-utils';
 
 describe('multicam editing', () => {
   it('calculates audio alignment offset with cross-correlation', () => {
@@ -227,6 +229,12 @@ describe('multicam editing', () => {
     };
     expect(flattenMulticamProjectForExport(missingAngleProject).timeline.tracks[0].clips[0].type).toBe('nested-sequence');
 
+    const missingSequenceProject = {
+      ...accessor.current(),
+      sequences: []
+    };
+    expect(flattenMulticamProjectForExport(missingSequenceProject).timeline.tracks[0].clips[0].type).toBe('nested-sequence');
+
     const emptyFirstSegmentProject = {
       ...accessor.current(),
       sequences: accessor.current().sequences.map((sequence) =>
@@ -246,6 +254,58 @@ describe('multicam editing', () => {
     const flattened = flattenMulticamProjectForExport(emptyFirstSegmentProject).timeline.tracks[0].clips;
     expect(flattened).toHaveLength(1);
     expect(flattened[0].name).toContain('angle 2');
+  });
+});
+
+describe('createMulticamSequenceProject', () => {
+  it('throws when a referenced clip does not exist in the project', () => {
+    expect(() => createMulticamSequenceProject(makeTwoCameraProject(), ['clip-a', 'nonexistent'])).toThrow('Clip nonexistent not found');
+  });
+
+  it('throws when clips are not visual clips on video tracks', () => {
+    const project = makeProject();
+    project.timeline = {
+      ...project.timeline,
+      tracks: [
+        ...project.timeline.tracks,
+        createTrack({ id: 'track-audio-2', type: 'audio', name: 'Audio 2', clips: [makeAudioClip({ id: 'audio-mc', trackId: 'track-audio-2' })] })
+      ]
+    };
+
+    expect(() => createMulticamSequenceProject(project, ['clip-1', 'audio-mc'])).toThrow('Multicam clips must be visual clips on video tracks');
+  });
+
+  it('throws when fewer than 2 clips are provided', () => {
+    expect(() => createMulticamSequenceProject(makeTwoCameraProject(), ['clip-a'])).toThrow('Multicam requires 2 to 8 clips');
+    expect(() => createMulticamSequenceProject(makeTwoCameraProject(), [])).toThrow('Multicam requires 2 to 8 clips');
+  });
+
+  it('throws when multicam clip would overlap an unselected clip on the same track', () => {
+    const project = makeTwoCameraProject();
+    project.timeline.tracks[0].clips.push(makeVideoClip({ id: 'clip-c', trackId: 'track-a', mediaId: 'asset-1', start: 3, duration: 2 }));
+    project.sequences = [{ ...project.sequences[0], timeline: project.timeline }];
+    expect(() => createMulticamSequenceProject(project, ['clip-a', 'clip-b'])).toThrow('Multicam sequence would overlap an unselected clip');
+  });
+});
+
+describe('trimMulticamSwitch', () => {
+  it('throws when the switch id is not found in the sequence', () => {
+    const multicam = {
+      angles: [
+        { id: 'angle-a', clipId: 'clip-a', trackId: 'track-a', name: 'A', offset: 0 },
+        { id: 'angle-b', clipId: 'clip-b', trackId: 'track-b', name: 'B', offset: 0 }
+      ],
+      switches: [{ id: 'switch-0', time: 0, angleId: 'angle-a' }]
+    };
+    expect(() => trimMulticamSwitch(multicam, 'nonexistent', 1, 30, 10)).toThrow('Invalid multicam switch');
+  });
+
+  it('throws when the multicam sequence has fewer than 2 angles', () => {
+    const multicam = {
+      angles: [{ id: 'angle-a', clipId: 'clip-a', trackId: 'track-a', name: 'A', offset: 0 }],
+      switches: [{ id: 'switch-0', time: 0, angleId: 'angle-a' }]
+    };
+    expect(() => trimMulticamSwitch(multicam, 'switch-0', 1, 30, 10)).toThrow('Invalid multicam sequence');
   });
 });
 

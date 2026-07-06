@@ -69,12 +69,36 @@ describe('naming template variable expansion', () => {
     expect(result).toBe('30fps');
   });
 
+  it('uses empty string for fps when not provided', () => {
+    const result = resolveNamingTemplate(
+      { template: '{fps}' },
+      { projectName: 'P', presetName: 'P' }
+    );
+    expect(result).toBe('');
+  });
+
   it('expands {text} custom text variable', () => {
     const result = resolveNamingTemplate(
       { template: '{text}', customText: '片段' },
       { projectName: 'P', presetName: 'P' }
     );
     expect(result).toBe('片段');
+  });
+
+  it('uses fallback text from {text:Default} when no customText', () => {
+    const result = resolveNamingTemplate(
+      { template: '{text:默认文本}' },
+      { projectName: 'P', presetName: 'P' }
+    );
+    expect(result).toBe('默认文本');
+  });
+
+  it('prefers customText over fallback in {text:Default}', () => {
+    const result = resolveNamingTemplate(
+      { template: '{text:默认文本}', customText: '自定义' },
+      { projectName: 'P', presetName: 'P' }
+    );
+    expect(result).toBe('自定义');
   });
 });
 
@@ -108,6 +132,12 @@ describe('naming template batch resolution', () => {
     const config: NamingTemplateConfig = { template: '{project}_{index}', indexStart: 1, indexPadding: 3 };
     const results = resolveNamingTemplateBatch(config, { projectName: '项目', presetName: 'P' }, 3);
     expect(results).toEqual(['项目_001', '项目_002', '项目_003']);
+  });
+
+  it('defaults indexStart to 1 when not specified in batch', () => {
+    const config: NamingTemplateConfig = { template: '{index}' };
+    const results = resolveNamingTemplateBatch(config, { projectName: 'P', presetName: 'P' }, 2);
+    expect(results).toEqual(['001', '002']);
   });
 
   it('batch names do not collide', () => {
@@ -145,5 +175,16 @@ describe('naming template serialization', () => {
 
   it('handles missing template field', () => {
     expect(deserializeNamingTemplateConfig('{"foo":1}')).toBeUndefined();
+  });
+
+  it('defaults optional fields when omitted in JSON', () => {
+    const restored = deserializeNamingTemplateConfig('{"template":"test"}');
+    expect(restored).toEqual({
+      template: 'test',
+      indexStart: 1,
+      indexPadding: 3,
+      dateFormat: 'YYYYMMDD',
+      customText: undefined
+    });
   });
 });
