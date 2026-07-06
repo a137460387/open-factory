@@ -205,6 +205,21 @@ describe('project schema migration', () => {
     expect(restored).toHaveProperty('motionGraphic');
   });
 
+  it('serializes and migrates zoomMemory with invalid and orphaned entries', () => {
+    const project = makeProject();
+    project.sequences = [{ ...project.sequences[0], id: 'seq-valid' }];
+    project.zoomMemory = { 'seq-valid:0': 1.5, 'seq-valid:0:negative': -0.5, 'seq-orphan:0': 2, 'bad:0': Number.NaN };
+    project.timeline = { ...project.timeline };
+
+    const file = serializeProject(project);
+    file.project.zoomMemory = { 'seq-valid:0': 1.5, 'seq-valid:0:negative': -0.5, 'seq-orphan:0': 2, 'bad:0': Number.NaN };
+    const migrated = migrateProjectFile(file).project;
+    expect(migrated.zoomMemory?.['seq-valid:0']).toBe(1.5);
+    expect(migrated.zoomMemory?.['seq-valid:0:negative']).toBeUndefined();
+    expect(migrated.zoomMemory?.['seq-orphan:0']).toBeUndefined();
+    expect(migrated.zoomMemory?.['bad:0']).toBeUndefined();
+  });
+
   it('serializes and migrates spatial audio settings and position keyframes', () => {
     const project = makeProject();
     project.timeline.tracks[0].clips = [
