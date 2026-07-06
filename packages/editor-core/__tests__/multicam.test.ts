@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CommandManager,
   CreateMulticamSequenceCommand,
+  createMulticamSequenceProject,
   CutMulticamClipCommand,
   RecordAngleCutCommand,
   TrimMulticamSwitchCommand,
@@ -227,6 +228,12 @@ describe('multicam editing', () => {
     };
     expect(flattenMulticamProjectForExport(missingAngleProject).timeline.tracks[0].clips[0].type).toBe('nested-sequence');
 
+    const missingSequenceProject = {
+      ...accessor.current(),
+      sequences: []
+    };
+    expect(flattenMulticamProjectForExport(missingSequenceProject).timeline.tracks[0].clips[0].type).toBe('nested-sequence');
+
     const emptyFirstSegmentProject = {
       ...accessor.current(),
       sequences: accessor.current().sequences.map((sequence) =>
@@ -246,6 +253,12 @@ describe('multicam editing', () => {
     const flattened = flattenMulticamProjectForExport(emptyFirstSegmentProject).timeline.tracks[0].clips;
     expect(flattened).toHaveLength(1);
     expect(flattened[0].name).toContain('angle 2');
+  });
+});
+
+describe('createMulticamSequenceProject', () => {
+  it('throws when a referenced clip does not exist in the project', () => {
+    expect(() => createMulticamSequenceProject(makeTwoCameraProject(), ['clip-a', 'nonexistent'])).toThrow('Clip nonexistent not found');
   });
 });
 
