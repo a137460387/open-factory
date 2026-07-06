@@ -19,6 +19,13 @@ describe('auto audio sync', () => {
     expect(peak.score).toBeGreaterThan(0.9);
   });
 
+  it('returns zero offset gracefully for empty audio samples', () => {
+    const peak = findAudioSyncCorrelationPeak([], [], 44100, 1);
+    expect(peak.offsetSeconds).toBe(0);
+    expect(peak.score).toBe(0);
+    expect(peak.overlapSamples).toBe(0);
+  });
+
   it('refines coarse offsets by minimizing RMS error inside the fine search window', () => {
     const reference = pulseSeries([20, 36], 64);
     const delayedCandidate = pulseSeries([24, 40], 64);
