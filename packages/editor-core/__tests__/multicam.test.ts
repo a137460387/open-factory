@@ -279,6 +279,13 @@ describe('createMulticamSequenceProject', () => {
     expect(() => createMulticamSequenceProject(makeTwoCameraProject(), ['clip-a'])).toThrow('Multicam requires 2 to 8 clips');
     expect(() => createMulticamSequenceProject(makeTwoCameraProject(), [])).toThrow('Multicam requires 2 to 8 clips');
   });
+
+  it('throws when multicam clip would overlap an unselected clip on the same track', () => {
+    const project = makeTwoCameraProject();
+    project.timeline.tracks[0].clips.push(makeVideoClip({ id: 'clip-c', trackId: 'track-a', mediaId: 'asset-1', start: 3, duration: 2 }));
+    project.sequences = [{ ...project.sequences[0], timeline: project.timeline }];
+    expect(() => createMulticamSequenceProject(project, ['clip-a', 'clip-b'])).toThrow('Multicam sequence would overlap an unselected clip');
+  });
 });
 
 describe('trimMulticamSwitch', () => {
