@@ -1,6 +1,7 @@
 import type { Clip, MediaAsset, Project, Timeline } from '../model';
 import { getTimelineDuration } from '../timeline';
 import { buildExportProjectFromProject, buildFfmpegExportPlan } from './ffmpeg-builder';
+import { normalizeFfmpegPath } from './ffmpeg-escape';
 export * from './export-types';
 export * from './post-export-script';
 export * from './ffmpeg-builder';
@@ -23,9 +24,6 @@ export interface ExportPlan {
   limitation: string;
 }
 
-export function normalizeFfmpegPath(path: string): string {
-  return path.replace(/\\/g, '/');
-}
 
 export function buildSingleVideoTrackExportPlan(project: Project): ExportPlan {
   const videoTrack = project.timeline.tracks.find((track) => track.type === 'video');
