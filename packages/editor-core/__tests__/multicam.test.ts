@@ -273,6 +273,11 @@ describe('createMulticamSequenceProject', () => {
 
     expect(() => createMulticamSequenceProject(project, ['clip-1', 'audio-mc'])).toThrow('Multicam clips must be visual clips on video tracks');
   });
+
+  it('throws when fewer than 2 clips are provided', () => {
+    expect(() => createMulticamSequenceProject(makeTwoCameraProject(), ['clip-a'])).toThrow('Multicam requires 2 to 8 clips');
+    expect(() => createMulticamSequenceProject(makeTwoCameraProject(), [])).toThrow('Multicam requires 2 to 8 clips');
+  });
 });
 
 function makeProjectAccessor(initial: Project): ProjectAccessor & { current(): Project } {
