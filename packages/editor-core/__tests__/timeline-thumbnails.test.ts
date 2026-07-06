@@ -100,6 +100,36 @@ describe('timeline thumbnail sampling', () => {
 
     expect(sortTimelineThumbnailSamplesByPriority(samples, 18).map((sample) => sample.time)).toEqual([20, 10, 30, 0]);
   });
+
+  it('defaults target to 0 when playheadTime is not finite', () => {
+    const samples = [5, 15, 25].map((time) => ({ id: String(time), time, intervalSeconds: 10 }));
+
+    expect(sortTimelineThumbnailSamplesByPriority(samples, Number.NaN).map((sample) => sample.time)).toEqual([5, 15, 25]);
+    expect(sortTimelineThumbnailSamplesByPriority(samples, Number.POSITIVE_INFINITY).map((sample) => sample.time)).toEqual([5, 15, 25]);
+  });
+
+  it('applies speed curve keyframes when mapping thumbnail track source timestamps', () => {
+    const clip: VideoClip = {
+      ...makeVideoClip('clip-curve', 'media-curve', 10),
+      keyframes: {
+        speed: [
+          { id: 'speed-a', time: 0, value: 1, easing: 'linear' },
+          { id: 'speed-b', time: 10, value: 2, easing: 'linear' }
+        ]
+      }
+    };
+    const timeline: Timeline = {
+      tracks: [
+        createTrack({ id: 'track-video', type: 'video', name: 'Video 1', clips: [clip] })
+      ],
+      transitions: [],
+      markers: []
+    };
+
+    const samples = buildTimelineThumbnailTrackSamples(timeline, { zoom: 100, trackWidth: 300, duration: 5 });
+    expect(samples[0].clipId).toBe('clip-curve');
+    expect(samples[0].sourceTimestamp).toBeDefined();
+  });
 });
 
 function makeVideoClip(id: string, mediaId: string, duration: number, options: { trimStart?: number; speed?: number } = {}): VideoClip {

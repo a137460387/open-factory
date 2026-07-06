@@ -34,6 +34,16 @@ describe('media file header sniffing', () => {
     expect(result.detectedCategory).toBe('audio');
   });
 
+  it('reports match when extension differs but expectedCategory matches detected category', () => {
+    // WAV header with .wma extension: extension not in WAV rule extensions,
+    // but .wma classifies as 'audio' which matches WAV rule's category
+    const result = sniffFileHeader(bytes(0x52, 0x49, 0x46, 0x46, 0x00, 0x00, 0x00, 0x00, 0x57, 0x41, 0x56, 0x45), 'clip.wma');
+    expect(result.status).toBe('match');
+    expect(result.detectedLabel).toBe('WAV');
+    expect(result.expectedCategory).toBe('audio');
+    expect(result.detectedCategory).toBe('audio');
+  });
+
   it('reports unknown for unrecognized headers', () => {
     const result = sniffFileHeader(bytes(0x00, 0x01, 0x02, 0x03), 'data.xyz');
     expect(result.status).toBe('unknown');

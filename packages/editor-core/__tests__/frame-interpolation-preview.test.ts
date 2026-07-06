@@ -32,4 +32,19 @@ describe('frame interpolation compare preview', () => {
     expect(buildFrameInterpolationCompareFrameTimes(10, 1, 10.1, 25)).toEqual([10.02, 10.06, 10.1, 10.14, 10.18]);
     expect(buildFrameInterpolationCompareFrameTimes(10, 1, 10.01, 25)).toEqual([10, 10, 10.01, 10.05, 10.09]);
   });
+
+  it('falls back to default fps when targetFps is not finite', () => {
+    expect(buildFrameInterpolationCompareArgs('blend', NaN)).toEqual(['minterpolate=fps=30:mi_mode=blend']);
+    expect(buildFrameInterpolationCompareArgs('mci', Infinity)).toEqual(['minterpolate=fps=30:mi_mode=mci:mc_mode=aobmc']);
+  });
+
+  it('falls back to zero frame count when input is not finite', () => {
+    expect(estimateFrameInterpolationModeDurationMs(NaN, 'blend')).toBe(0);
+    expect(estimateFrameInterpolationModeDurationMs(Infinity, 'mci')).toBe(0);
+  });
+
+  it('handles non-finite clipStart, clipDuration, playheadTime and fps', () => {
+    expect(buildFrameInterpolationCompareFrameTimes(NaN, NaN, NaN, NaN)).toEqual([0, 0, 0, 0, 0]);
+    expect(buildFrameInterpolationCompareFrameTimes(Infinity, Infinity, Infinity, Infinity)).toEqual([0, 0, 0, 0, 0]);
+  });
 });

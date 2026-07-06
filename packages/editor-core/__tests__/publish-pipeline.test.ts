@@ -123,6 +123,26 @@ describe('publish pipeline', () => {
       { from: 'node-export-mp4', to: 'node-release-record' }
     ]);
   });
+
+  it('drops email node SMTP when settings are missing', () => {
+    const pipeline = normalizeExportPipeline({
+      nodes: [
+        { id: 'email', type: 'email-notification', name: 'Email' }
+      ]
+    });
+
+    expect(pipeline.nodes[0]).not.toHaveProperty('smtp');
+  });
+
+  it('drops webhook node config when URL is missing', () => {
+    const pipeline = normalizeExportPipeline({
+      nodes: [
+        { id: 'hook', type: 'webhook-callback', name: 'Hook' }
+      ]
+    });
+
+    expect(pipeline.nodes[0]).not.toHaveProperty('webhook');
+  });
 });
 
 function releaseRecord(): ProjectReleaseRecord {

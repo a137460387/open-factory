@@ -193,22 +193,25 @@ function createSandboxGlobal(): Record<string, unknown> {
 }
 
 function timelineScriptWorkerEntrypoint() {
+  const workerSelf = self as unknown as {
+    onmessage: ((event: MessageEvent) => void) | null;
+    postMessage(message: unknown): void;
+    [key: string]: unknown;
+  };
   const disabledGlobals = ['fetch', 'XMLHttpRequest', 'WebSocket'];
   for (const key of disabledGlobals) {
     try {
       Object.defineProperty(self, key, { value: undefined, configurable: false, writable: false });
     } catch {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (self as any)[key] = undefined;
+        (workerSelf as unknown as Record<string, unknown>)[key] = undefined;
       } catch {
         // Ignore readonly globals in older engines.
       }
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (self as any).onmessage = async (event: MessageEvent<{ script: string; snapshot: { clips: unknown[]; markers: unknown[] } }>) => {
+  workerSelf.onmessage = async (event: MessageEvent<{ script: string; snapshot: { clips: unknown[]; markers: unknown[] } }>) => {
     const startedAt = Date.now();
     const state = {
       clips: cloneJson(event.data.snapshot.clips),
@@ -284,8 +287,7 @@ function timelineScriptWorkerEntrypoint() {
         '"use strict";\n' + event.data.script
       );
       await run(api.getClips, api.updateClip, api.addClip, api.deleteClip, api.getMarkers, api.addMarker, api.exportProject, api.console, undefined, undefined, { fetch: undefined, XMLHttpRequest: undefined }, undefined, undefined);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (self as any).postMessage({
+      workerSelf.postMessage({
         ok: true,
         result: {
           operations: state.operations,
@@ -294,8 +296,7 @@ function timelineScriptWorkerEntrypoint() {
         }
       });
     } catch (error) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (self as any).postMessage({ ok: false, error: error instanceof Error ? error.message : String(error) });
+      workerSelf.postMessage({ ok: false, error: error instanceof Error ? error.message : String(error) });
     }
   };
 

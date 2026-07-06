@@ -124,4 +124,15 @@ describe('proxy management', () => {
       { day: '2026-06-18', totalBytes: 300 }
     ]);
   });
+
+  it('deduplicates migration target filenames for colliding normalized asset IDs', () => {
+    const asset1 = { ...baseAsset, id: 'asset 1', proxyPath: 'C:/Proxy/source.mp4' };
+    const asset2 = { ...baseAsset, id: 'asset@1', proxyPath: 'C:/Proxy/source.mp4' };
+    const asset3 = { ...baseAsset, id: 'asset!1', proxyPath: 'C:/Proxy/source.mp4' };
+    const updates = buildProxyMigration([asset1, asset2, asset3], 'D:/Proxy/');
+
+    expect(updates[0].toPath).toBe('D:/Proxy/asset-1-source.mp4');
+    expect(updates[1].toPath).toBe('D:/Proxy/asset-1-source-2.mp4');
+    expect(updates[2].toPath).toBe('D:/Proxy/asset-1-source-3.mp4');
+  });
 });

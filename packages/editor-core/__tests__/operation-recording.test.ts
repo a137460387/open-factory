@@ -83,6 +83,17 @@ describe('operation recording', () => {
     expect(parsed?.commands).toHaveLength(1);
     expect(parsed?.commands[0].commandType).toBe('Object');
   });
+
+  it('stops replay at upToIndex boundary', () => {
+    const recording = makeRecording([1, 2, 3]);
+    const seen: number[] = [];
+
+    replayOperationRecording(recording, (project) => {
+      seen.push(project.timeline.tracks[0].clips.length);
+    }, 1);
+
+    expect(seen).toEqual([1, 2]);
+  });
 });
 
 function makeRecording(clipCounts: number[], timestamps = clipCounts.map((_, index) => 1_000 + index * 100)): OperationRecordingFile {

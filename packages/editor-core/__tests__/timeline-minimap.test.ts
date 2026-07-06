@@ -139,4 +139,42 @@ describe('timeline minimap', () => {
     expect(layout.clips[0].id).toBe('clip-0');
     expect(layout.clips[layout.clips.length - 1].id).toBe('clip-11');
   });
+
+  it('renders subtitle track lanes alongside video and audio lanes', () => {
+    const tl = timeline();
+    tl.tracks.push({
+      id: 'subtitle-1',
+      type: 'subtitle',
+      name: 'Sub',
+      clips: [{ id: 'sub-1', type: 'subtitle', start: 0, duration: 5, text: 'hello', style: {}, subtitleMode: 'soft-sub' }]
+    } as any);
+    const layout = buildTimelineMinimapLayout(tl, { duration: 100, height: 200 });
+    expect(layout.tracks).toHaveLength(3);
+    expect(layout.tracks.find((t) => t.id === 'subtitle-1')).toBeDefined();
+    expect(layout.clips.find((c) => c.id === 'sub-1')).toBeDefined();
+  });
+  it('samples minimap clips to a single entry when maxClips is 1', () => {
+    const clips = Array.from({ length: 5 }, (_, index) => ({
+      id: `clip-${index}`,
+      type: 'video' as const,
+      name: `Clip ${index}`,
+      trackId: 'video-1',
+      mediaId: 'media-a',
+      start: index,
+      duration: 0.5,
+      trimStart: 0,
+      trimEnd: 0,
+      speed: 1,
+      volume: 1,
+      colorCorrection: { brightness: 0, contrast: 1, saturation: 1, hue: 0 },
+      transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 }
+    }));
+    const layout = buildTimelineMinimapLayout(
+      { tracks: [{ id: 'video-1', type: 'video', name: 'V1', clips }] },
+      { duration: 20, height: 120, maxClips: 1 }
+    );
+
+    expect(layout.clips).toHaveLength(1);
+    expect(layout.clips[0].id).toBe('clip-0');
+  });
 });

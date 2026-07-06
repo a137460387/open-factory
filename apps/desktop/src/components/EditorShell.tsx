@@ -162,7 +162,9 @@ import {
   type ProfilerFrameSample,
   type ProfilerMemorySample,
   type ProfilerQueueSample,
-  type ProfilerTraceEvent
+  type ProfilerTraceEvent,
+  type SubtitleClip,
+  type ExportTaskHistoryEntry
 } from '@open-factory/editor-core';
 import {
   matchFrameFromClip,
@@ -418,6 +420,7 @@ const ProxyBatchVerifyDialog = lazy(() => import('../proxy-batch-verify/ProxyBat
 
 const PerformanceMonitorPanel = lazy(() => import('./PerformanceMonitorPanel').then((module) => ({ default: module.PerformanceMonitorPanel })));
 const FormatConverterDialog = lazy(() => import('./FormatConverterDialog').then((module) => ({ default: module.FormatConverterDialog })));
+import type { DroppedFile } from './FormatConverterDialog';
 const EmotionAnalysisPanel = lazy(() => import('./EmotionAnalysisPanel').then((module) => ({ default: module.EmotionAnalysisPanel })));
 const ExportHistoryClassifierPanel = lazy(() => import('./ExportHistoryClassifierPanel').then((module) => ({ default: module.ExportHistoryClassifierPanel })));
 const AutoAudioSyncDialog = lazy(() => import('../audio-sync/AutoAudioSyncDialog').then((module) => ({ default: module.AutoAudioSyncDialog })));
@@ -642,9 +645,9 @@ export function EditorShell() {
   const [formatConverterOpen, setFormatConverterOpen] = useState(false);
   const [emotionAnalysisOpen, setEmotionAnalysisOpen] = useState(false);
   const [exportHistoryClassifierOpen, setExportHistoryClassifierOpen] = useState(false);
-  const [formatConverterMockFiles, setFormatConverterMockFiles] = useState<any[]>([]);
-  const [mockSubtitleClips, setMockSubtitleClips] = useState<any[]>([]);
-  const [mockExportHistory, setMockExportHistory] = useState<any[]>([]);
+  const [formatConverterMockFiles, setFormatConverterMockFiles] = useState<DroppedFile[]>([]);
+  const [mockSubtitleClips, setMockSubtitleClips] = useState<SubtitleClip[]>([]);
+  const [mockExportHistory, setMockExportHistory] = useState<ExportTaskHistoryEntry[]>([]);
 
   // E2E: expose stores for test instrumentation
   useEffect(() => {

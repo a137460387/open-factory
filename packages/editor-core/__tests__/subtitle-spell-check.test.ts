@@ -88,4 +88,18 @@ describe('subtitle spell check', () => {
     const results = scanSubtitleSpelling([{ clipId: 'c9', start: 9, text: 'All text is correct here' }]);
     expect(results.length).toBe(0);
   });
+
+  it('returns text unchanged when startIndex is out of range', () => {
+    const text = 'Hello world';
+    expect(applySpellCheckReplacement(text, { startIndex: -1, endIndex: 5, matchedWord: 'x', suggestions: ['y'], clipId: 'c', time: 0 }, 'y')).toBe(text);
+    expect(applySpellCheckReplacement(text, { startIndex: 100, endIndex: 105, matchedWord: 'x', suggestions: ['y'], clipId: 'c', time: 0 }, 'y')).toBe(text);
+  });
+
+  it('skips replacements with invalid startIndex in buildSpellCheckReplacement', () => {
+    const result = buildSpellCheckReplacement('abc', [
+      { startIndex: -1, endIndex: 2, replacement: 'X' },
+      { startIndex: 1, endIndex: 2, replacement: 'Y' }
+    ]);
+    expect(result).toBe('aYc');
+  });
 });

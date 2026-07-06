@@ -4038,6 +4038,11 @@ describe('stem export', () => {
     expect(name).toBe('A_B_Test_Drums_L_R_2.m4a');
   });
 
+  it('buildStemOutputFileName uses fallback defaults for empty projectName and stemName', () => {
+    const name = buildStemOutputFileName({ projectName: '', stemName: '', trackIndex: 3, format: 'wav' });
+    expect(name).toBe('project_track-3_3.wav');
+  });
+
   it('buildStemExportPlans generates one plan per selected stem in independent mode', () => {
     const project = makeProject();
     project.timeline.tracks = [

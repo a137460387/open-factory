@@ -38,7 +38,8 @@ import {
   type ClipKeyframes,
   type Project,
   type TextStyle,
-  type Timeline
+  type Timeline,
+  type ClipPrivacyRedaction
 } from '../model';
 import { buildAudioRestorationFilterChain, normalizeAudioRestoration } from '../audio-restoration';
 import {
@@ -445,7 +446,7 @@ function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project[
                   }
                 : null,
             motionGraphic: clip.type === 'motion-graphic' ? normalizeMotionGraphic(clip.motionGraphic, clip.duration) : null,
-            privacyRedactions: 'privacyRedactions' in clip && Array.isArray(clip.privacyRedactions) ? clip.privacyRedactions.filter((r: any) => r && r.enabled !== false && Array.isArray(r.keyframes) && r.keyframes.length > 0) : []
+            privacyRedactions: 'privacyRedactions' in clip && Array.isArray(clip.privacyRedactions) ? clip.privacyRedactions.filter((r: ClipPrivacyRedaction) => r && r.enabled !== false && Array.isArray(r.keyframes) && r.keyframes.length > 0) : []
           } satisfies ExportClip;
         })
       };

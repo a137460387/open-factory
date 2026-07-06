@@ -16,7 +16,7 @@ interface FormatConverterDialogProps {
   initialFiles?: DroppedFile[];
 }
 
-interface DroppedFile {
+export interface DroppedFile {
   path: string;
   name: string;
   format: string;

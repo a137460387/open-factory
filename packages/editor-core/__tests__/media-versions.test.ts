@@ -120,4 +120,8 @@ describe('media versions', () => {
     expect(findMediaVersionAsset(project, { assetId: 'asset-1' })?.id).toBe('asset-1');
     expect(findMediaVersionAsset(project, { assetId: 'nonexistent' })).toBeUndefined();
   });
+
+  it('skips non-object entries when normalizing version lists', () => {
+    expect(normalizeMediaVersions([null, 42, undefined, 'text'])).toBeUndefined();
+  });
 });

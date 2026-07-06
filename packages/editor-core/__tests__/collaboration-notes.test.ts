@@ -58,4 +58,13 @@ describe('collaboration notes', () => {
     expect(html).toContain('Bob');
     expect(html).toContain('Check cut');
   });
+
+  it('renders empty table message when no notes exist', () => {
+    const project = createProject('Empty Collab');
+    project.collaborationNotes = [];
+
+    const html = buildCollaborationReportHtml(project, { locale: 'en' });
+
+    expect(html).toContain('No collaboration notes.');
+  });
 });

@@ -124,4 +124,20 @@ describe('thumbnail scoring', () => {
     expect(buildThumbnailOutputFileName('频道片头.mov')).toBe('频道片头_thumb.jpg');
     expect(buildThumbnailOutputPath('C:\\Exports\\thumbs\\', 'Launch Cut.mp4')).toBe('C:/Exports/thumbs/Launch-Cut_thumb.jpg');
   });
+
+  it('scores zero-dimension sample with empty data gracefully', () => {
+    const degenerate: ThumbnailFrameSample = { timestamp: 0, width: 0, height: 0, data: [] };
+    const score = scoreThumbnailFrame(degenerate);
+    expect(score.face).toBe(0);
+    expect(score.clarity).toBe(0);
+    expect(score.color).toBe(0);
+    expect(score.motion).toBe(15);
+    expect(score.total).toBe(15);
+  });
+
+  it('returns zero clarity when frame is too small for Laplacian kernel', () => {
+    const tiny = makeSample({ width: 2, height: 2, pixels: [[120, 120, 120], [100, 100, 100], [80, 80, 80], [60, 60, 60]] });
+    const score = scoreThumbnailFrame(tiny);
+    expect(score.clarity).toBe(0);
+  });
 });
