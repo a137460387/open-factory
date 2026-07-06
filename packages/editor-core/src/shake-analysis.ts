@@ -167,11 +167,6 @@ export function buildTwoStepVidstabArgs(
 
 // -- Internal helpers --------------------------------------------
 
-function pixelAt(frame: ArrayLike<number>, x: number, y: number, w: number, _h: number): number {
-  if (x < 0 || x >= w || y < 0) return 0;
-  return frame[y * w + x] ?? 0;
-}
-
 function computeBlockNCC(
   a: ArrayLike<number>,
   b: ArrayLike<number>,
