@@ -20,7 +20,7 @@ import {
   type Project,
   type ProjectAccessor
 } from '../src';
-import { makeProject, makeVideoClip } from './test-utils';
+import { makeAudioClip, makeProject, makeVideoClip } from './test-utils';
 
 describe('multicam editing', () => {
   it('calculates audio alignment offset with cross-correlation', () => {
@@ -259,6 +259,19 @@ describe('multicam editing', () => {
 describe('createMulticamSequenceProject', () => {
   it('throws when a referenced clip does not exist in the project', () => {
     expect(() => createMulticamSequenceProject(makeTwoCameraProject(), ['clip-a', 'nonexistent'])).toThrow('Clip nonexistent not found');
+  });
+
+  it('throws when clips are not visual clips on video tracks', () => {
+    const project = makeProject();
+    project.timeline = {
+      ...project.timeline,
+      tracks: [
+        ...project.timeline.tracks,
+        createTrack({ id: 'track-audio-2', type: 'audio', name: 'Audio 2', clips: [makeAudioClip({ id: 'audio-mc', trackId: 'track-audio-2' })] })
+      ]
+    };
+
+    expect(() => createMulticamSequenceProject(project, ['clip-1', 'audio-mc'])).toThrow('Multicam clips must be visual clips on video tracks');
   });
 });
 
