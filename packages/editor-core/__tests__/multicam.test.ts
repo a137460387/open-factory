@@ -6,6 +6,7 @@ import {
   CutMulticamClipCommand,
   RecordAngleCutCommand,
   TrimMulticamSwitchCommand,
+  trimMulticamSwitch,
   buildMulticamSwitchHistory,
   calculateAudioAlignmentOffset,
   calculateManualMarkerAlignmentOffsets,
@@ -277,6 +278,19 @@ describe('createMulticamSequenceProject', () => {
   it('throws when fewer than 2 clips are provided', () => {
     expect(() => createMulticamSequenceProject(makeTwoCameraProject(), ['clip-a'])).toThrow('Multicam requires 2 to 8 clips');
     expect(() => createMulticamSequenceProject(makeTwoCameraProject(), [])).toThrow('Multicam requires 2 to 8 clips');
+  });
+});
+
+describe('trimMulticamSwitch', () => {
+  it('throws when the switch id is not found in the sequence', () => {
+    const multicam = {
+      angles: [
+        { id: 'angle-a', clipId: 'clip-a', trackId: 'track-a', name: 'A', offset: 0 },
+        { id: 'angle-b', clipId: 'clip-b', trackId: 'track-b', name: 'B', offset: 0 }
+      ],
+      switches: [{ id: 'switch-0', time: 0, angleId: 'angle-a' }]
+    };
+    expect(() => trimMulticamSwitch(multicam, 'nonexistent', 1, 30, 10)).toThrow('Invalid multicam switch');
   });
 });
 
