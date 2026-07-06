@@ -69,6 +69,14 @@ describe('naming template variable expansion', () => {
     expect(result).toBe('30fps');
   });
 
+  it('uses empty string for fps when not provided', () => {
+    const result = resolveNamingTemplate(
+      { template: '{fps}' },
+      { projectName: 'P', presetName: 'P' }
+    );
+    expect(result).toBe('');
+  });
+
   it('expands {text} custom text variable', () => {
     const result = resolveNamingTemplate(
       { template: '{text}', customText: '片段' },
