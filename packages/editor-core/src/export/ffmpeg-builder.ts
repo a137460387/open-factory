@@ -3999,8 +3999,6 @@ function buildAudioFadeFilters(clip: ExportClip): string {
   return filters.length > 0 ? `,${filters.join(',')}` : '';
 }
 
-import { mapAudioFadeCurveToFfmpeg, type AudioFadeCurveType } from '../audio-fade-curves';
-
 function formatAudioFadeCurve(curve: ExportClip['fadeInCurve']): string {
   if (curve === 'ease-in') {
     return ':curve=qsin';
