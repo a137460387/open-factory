@@ -5,7 +5,7 @@
  * 当差值超过原始时长的 15% 时自动生成适配建议。
  */
 
-import type { TtsSegment, TimingAdaptation, DubbingAdaptationType, Project } from './model-types';
+import type { TtsSegment, TimingAdaptation, Project } from './model-types';
 import type { AiModuleResult, TranslateFn } from './ai-module-types';
 import { identityTranslator } from './ai-module-types';
 
