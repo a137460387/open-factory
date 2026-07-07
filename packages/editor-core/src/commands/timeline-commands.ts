@@ -175,7 +175,6 @@ import {
 } from '../beats';
 import { buildDialogueRoughCutClips, buildRhythmAssembleClips, type SmartDialogueInterval, type SmartRoughCutVisualClip } from '../smart-rough-cut-v2';
 import { normalizeTimelineLabelColor, type TimelineLabelColor } from '../timeline-color-labels';
-import type { BatchCropResult } from '../batch-crop';
 import { applyProtectedRippleDeleteToTrack, canMoveClipWithProtectedRanges } from '../timeline-protection';
 import { buildCrossfadeGapFillTransition, buildRepeatedGapFillClip, findTimelineGapAtTime, type FillGapOperation } from '../timeline-gap-fill';
 import { createMulticamSequenceProject, setMulticamSwitch, trimMulticamSwitch } from '../multicam';
@@ -746,54 +745,6 @@ export class MoveMediaToFolderCommand implements Command {
   }
 }
 
-
-export class BatchApplyAspectRatioCommand implements Command {
-  readonly description = '批量转换裁剪比例';
-  private before?: Timeline;
-
-  constructor(
-    private readonly accessor: TimelineAccessor,
-    private readonly results: BatchCropResult[]
-  ) {}
-
-  execute(): void {
-    if (this.before) {
-      const timeline = this.apply(this.before);
-      this.accessor.setTimeline(timeline);
-      return;
-    }
-    this.before = this.accessor.getTimeline();
-    this.accessor.setTimeline(this.apply(this.before));
-  }
-
-  undo(): void {
-    if (this.before) {
-      this.accessor.setTimeline(this.before);
-    }
-  }
-
-  private apply(timeline: Timeline): Timeline {
-    const resultMap = new Map(this.results.map((r) => [r.clipId, r]));
-    return {
-      ...timeline,
-      tracks: timeline.tracks.map((track) => ({
-        ...track,
-        clips: track.clips.map((clip) => {
-          const result = resultMap.get(clip.id);
-          if (!result) return clip;
-          return {
-            ...clip,
-            reframeSettings: {
-              targetAspectRatio: result.targetAspectRatio,
-              reframeOffsetX: result.offsetX,
-              reframeOffsetY: result.offsetY
-            }
-          } as unknown as Clip;
-        })
-      }))
-    };
-  }
-}
 
 function insertClip(timeline: Timeline, clip: Clip, index?: number): Timeline {
 
