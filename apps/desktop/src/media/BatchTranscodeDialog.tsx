@@ -39,7 +39,6 @@ export function BatchTranscodeDialog({ initialPaths = [], existingMedia, onImpor
   const [preset, setPreset] = useState<BatchTranscodePreset>('h264-720p');
   const [jobs, setJobs] = useState<BatchTranscodeJob[]>([]);
   const [busy, setBusy] = useState(false);
-  const runningCount = jobs.filter((job) => job.status === 'running').length;
   const completedCount = jobs.filter((job) => job.status === 'completed').length;
   const failedCount = jobs.filter((job) => job.status === 'failed').length;
   const canceledCount = jobs.filter((job) => job.status === 'canceled').length;

@@ -164,7 +164,6 @@ export function AIRoughCutPanel({
 
     try {
       // Create a new sequence for the rough cut
-      const seqId = createId();
       const trackId = createId();
       const mediaMap = new Map(media.map((m) => [m.id, m]));
       let cursor = 0;
