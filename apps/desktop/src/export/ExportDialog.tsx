@@ -633,7 +633,6 @@ export function ExportDialog({ project, initialPreset, selectedClipIds = [], inP
       return code;
     });
   }, [recommendationContext, disableRecommendations]);
-  const recommendedPresetIds = useMemo(() => new Set(recommendations.map((r) => r.presetId)), [recommendations]);
   const tasks = useExportQueueStore((state) => state.tasks);
   const history = useExportQueueStore((state) => state.history);
   const runnerActive = useExportQueueStore((state) => state.runnerActive);

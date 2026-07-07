@@ -1659,7 +1659,6 @@ function SplitLayoutPicker({
   onSaveCustom(): Promise<void>;
 }) {
   const t = zhCN.toolbar;
-  const aiSettings = useAISettingsStore();
   const layouts = [...SPLIT_LAYOUT_PRESET_IDS.map((id) => BUILT_IN_SPLIT_LAYOUTS[id]), ...customLayouts];
   return (
     <div className="absolute left-0 top-10 z-30 w-80 rounded-md border border-line bg-white p-3 text-xs shadow-soft" data-testid="split-layout-picker">
@@ -1718,7 +1717,6 @@ function WorkspaceLayoutPicker({
   onSave(): void;
 }) {
   const t = zhCN.toolbar;
-  const aiSettings = useAISettingsStore();
   const builtInLayouts = layouts.filter((layout) => layout.builtIn);
   const customLayouts = layouts.filter((layout) => !layout.builtIn);
   return (
@@ -1786,7 +1784,6 @@ function WorkspaceLayoutOption({
   onApply(layoutId: WorkspaceLayoutId): void;
 }) {
   const t = zhCN.toolbar;
-  const aiSettings = useAISettingsStore();
   const name = layout.builtIn ? t.workspaceLayouts[layout.id as keyof typeof t.workspaceLayouts] ?? layout.name : layout.name;
   return (
     <button

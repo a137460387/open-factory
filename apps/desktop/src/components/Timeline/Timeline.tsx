@@ -2324,7 +2324,6 @@ function addProjectBookmark(time = playheadTime): void {
     const clipA = sortedClips[idx];
     const clipB = sortedClips[idx + 1];
     if (clipB.id !== adjacentClipId) return;
-    const junctionTime = clipA.start + clipA.duration;
     const newTransition = {
       type: transition.transitionType,
       duration: Math.min(transition.duration, clipA.duration / 2, clipB.duration / 2),
@@ -3223,7 +3222,6 @@ function addProjectBookmark(time = playheadTime): void {
             {virtualTrackWindow.afterHeight > 0 ? <div style={{ height: virtualTrackWindow.afterHeight }} data-testid="timeline-track-virtual-spacer-after" /> : null}
             {project.pacingAnalysis ? (() => {
               const pa = project.pacingAnalysis;
-              const chartHeight = 40;
               const maxCpm = pa.cpmCurve.length > 0 ? Math.max(...pa.cpmCurve.map((p) => p.cpm), 1) : 1;
               return (
                 <div className="relative h-10 border-t border-line bg-panel" style={{ marginLeft: LABEL_WIDTH }} data-testid="pacing-analysis-chart">

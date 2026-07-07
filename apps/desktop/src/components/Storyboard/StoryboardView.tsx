@@ -38,7 +38,6 @@ export function StoryboardView() {
   const project = useEditorStore((state) => state.project);
   const selectedClipIds = useEditorStore((state) => state.selectedClipIds);
   const setSelectedClipId = useEditorStore((state) => state.setSelectedClipId);
-  const setSelectedClipIds = useEditorStore((state) => state.setSelectedClipIds);
   const toggleSelectedClipId = useEditorStore((state) => state.toggleSelectedClipId);
   const clearSelectedClipIds = useEditorStore((state) => state.clearSelectedClipIds);
   const setPlayheadTime = useEditorStore((state) => state.setPlayheadTime);
