@@ -1,4 +1,4 @@
-import { round } from '../time';
+import { clamp, round } from '../time';
 
 export type AutoAudioSyncConfidence = 'high' | 'medium' | 'low';
 
@@ -380,8 +380,4 @@ function nextPowerOfTwo(value: number): number {
 
 function finiteOrDefault(value: number | undefined, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
 }

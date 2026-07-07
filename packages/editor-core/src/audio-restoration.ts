@@ -1,5 +1,5 @@
 import type { ClipAudioRestoration, ClipAudioRestorationGap } from './model-types';
-import { round } from './time';
+import { clamp, round } from './time';
 
 export const AUDIO_FILL_GAP_THRESHOLD_SECONDS = 0.1;
 
@@ -103,10 +103,6 @@ export function buildAudioRestorationWaveformComparison(peaks: number[] | undefi
 
 function finiteOrDefault(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
 }
 
 function formatAudioFilterNumber(value: number): string {
