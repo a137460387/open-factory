@@ -1,6 +1,6 @@
 import { DEFAULT_COLOR_CORRECTION, DEFAULT_TRANSFORM, createTrack } from '../model';
 import { getClipSourceVisibleDuration, getClipSpeed } from '../timeline';
-import { round } from '../time';
+import { clamp, round } from '../time';
 import type { Clip, Track } from '../model-types';
 import type { DialogueInterval } from './dialogue-detection';
 
@@ -287,8 +287,4 @@ function sanitizeId(value: string): string {
 
 function finiteOrDefault(value: number | undefined, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
 }
