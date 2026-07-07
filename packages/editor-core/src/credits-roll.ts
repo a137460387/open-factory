@@ -131,7 +131,16 @@ function normalizeCreditsCell(value: unknown): string {
 }
 
 function normalizeColor(value: unknown, fallback: string): string {
-  return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value.trim()) ? value.trim() : fallback;
+  const trimmed = typeof value === 'string' ? value.trim() : '';
+  if (!trimmed) return fallback;
+  const six = /^#([0-9a-fA-F]{6})$/.exec(trimmed);
+  if (six) return `#${six[1].toLowerCase()}`;
+  const three = /^#([0-9a-fA-F]{3})$/.exec(trimmed);
+  if (three) {
+    const [r, g, b] = three[1].toLowerCase();
+    return `#${r}${r}${g}${g}${b}${b}`;
+  }
+  return fallback;
 }
 
 function clampNumber(value: number | undefined, fallback: number, min: number, max: number): number {
