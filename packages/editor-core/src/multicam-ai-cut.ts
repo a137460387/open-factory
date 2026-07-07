@@ -59,11 +59,6 @@ export function calculateAudioRMS(samples: ArrayLike<number>): number {
 
 // -- Motion score (simple block-matching) -------------------------
 
-function pixelAt(frame: ArrayLike<number>, x: number, y: number, w: number, h: number): number {
-  if (x < 0 || x >= w || y < 0 || y >= h) return 0;
-  return frame[y * w + x];
-}
-
 function computeBlockNCC(
   a: ArrayLike<number>,
   b: ArrayLike<number>,

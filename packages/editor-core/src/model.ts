@@ -1971,12 +1971,28 @@ function normalizeProtectedRangeLabel(label: string | undefined): string {
 
 function normalizeHexColor(color: string | undefined, fallback: string): string {
   const trimmed = color?.trim();
-  return trimmed && /^#[0-9a-fA-F]{6}$/.test(trimmed) ? trimmed.toLowerCase() : fallback;
+  if (!trimmed) return fallback;
+  const six = /^#([0-9a-fA-F]{6})$/.exec(trimmed);
+  if (six) return `#${six[1].toLowerCase()}`;
+  const three = /^#([0-9a-fA-F]{3})$/.exec(trimmed);
+  if (three) {
+    const [r, g, b] = three[1].toLowerCase();
+    return `#${r}${r}${g}${g}${b}${b}`;
+  }
+  return fallback;
 }
 
 function normalizeOptionalHexColor(color: string | undefined): string | undefined {
   const trimmed = color?.trim();
-  return trimmed && /^#[0-9a-fA-F]{6}$/.test(trimmed) ? trimmed.toLowerCase() : undefined;
+  if (!trimmed) return undefined;
+  const six = /^#([0-9a-fA-F]{6})$/.exec(trimmed);
+  if (six) return `#${six[1].toLowerCase()}`;
+  const three = /^#([0-9a-fA-F]{3})$/.exec(trimmed);
+  if (three) {
+    const [r, g, b] = three[1].toLowerCase();
+    return `#${r}${r}${g}${g}${b}${b}`;
+  }
+  return undefined;
 }
 
 function normalizeLutPath(path: string | null | undefined): string | null {

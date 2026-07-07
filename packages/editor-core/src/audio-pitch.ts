@@ -157,6 +157,9 @@ export function normalizeClipPitchData(data: unknown): ClipPitchDataPoint[] | un
   }
   const normalized = data
     .map((item) => {
+      if (item == null || typeof item !== 'object') {
+        return undefined;
+      }
       const value = item as Partial<ClipPitchDataPoint>;
       const time = Number(value.time);
       const hz = Number(value.hz);

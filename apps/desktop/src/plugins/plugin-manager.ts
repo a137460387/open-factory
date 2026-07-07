@@ -103,17 +103,6 @@ export function clearPluginHookLog(): void {
   hookLog.length = 0;
 }
 
-function resetPluginRegistryForTests(): void {
-  stopPluginDevWatcher();
-  for (const plugin of registry?.plugins ?? []) {
-    plugin.runtime.dispose();
-  }
-  registry = undefined;
-  registryPromise = undefined;
-  clearPluginHookLog();
-  writeDisabledPluginIds(new Set());
-}
-
 export function setPluginEnabled(pluginId: string, enabled: boolean): PluginRegistry | undefined {
   const disabled = readDisabledPluginIds();
   if (enabled) {

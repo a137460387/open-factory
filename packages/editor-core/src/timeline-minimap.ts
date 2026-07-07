@@ -1,5 +1,6 @@
 import type { ExportRange, Timeline, TimelineBookmark, TimelineMarker } from './model-types';
 import { getTimelineLabelColorHex } from './timeline-color-labels';
+import { clamp } from './time';
 
 export const TIMELINE_MINIMAP_WIDTH = 120;
 export const TIMELINE_MINIMAP_MIN_VIEWPORT_HEIGHT = 12;
@@ -175,8 +176,4 @@ function sanitizeDuration(duration: number): number {
 
 function sanitizeZoom(zoom: number): number {
   return Number.isFinite(zoom) && zoom > 0 ? zoom : 1;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
 }

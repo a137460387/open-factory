@@ -43,6 +43,7 @@ describe('audio pitch analysis', () => {
     ).toEqual([{ time: 1.235, hz: 261.63, note: 'C4' }]);
 
     expect(normalizeClipPitchData([])).toBeUndefined();
+    expect(normalizeClipPitchData([null, undefined, 42, 'string', { time: 0.1, hz: 440 }])).toEqual([{ time: 0.1, hz: 440, note: 'A4' }]);
   });
 
   it('summarizes primary note, range and stability', () => {

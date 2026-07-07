@@ -1227,8 +1227,15 @@ function shouldPersistExportOptimizationSettings(settings: ExportOptimizationSet
 
 function normalizeHexColor(color: string | undefined, fallback: string): string {
   const candidate = typeof color === 'string' ? color.trim() : '';
-  const match = /^#?([0-9a-fA-F]{6})$/.exec(candidate);
-  return match ? `#${match[1].toLowerCase()}` : fallback;
+  if (!candidate) return fallback;
+  const six = /^#?([0-9a-fA-F]{6})$/.exec(candidate);
+  if (six) return `#${six[1].toLowerCase()}`;
+  const three = /^#?([0-9a-fA-F]{3})$/.exec(candidate);
+  if (three) {
+    const [r, g, b] = three[1].toLowerCase();
+    return `#${r}${r}${g}${g}${b}${b}`;
+  }
+  return fallback;
 }
 
 function normalizeExportPresetSyncConflictMode(value: unknown): ExportPresetSyncConflictMode {

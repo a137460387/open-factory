@@ -194,15 +194,6 @@ export async function loadSharedSubtitleStyleTemplates(storage: SharedLibrarySto
   });
 }
 
-function timelineTemplateToSharedResource(template: TimelineTemplateDefinition): Omit<SharedLibraryResource, 'version' | 'updatedAt'> {
-  return {
-    id: `shared-timeline-${sanitizeId(template.id)}`,
-    type: 'timeline-template',
-    name: template.name,
-    payload: template
-  };
-}
-
 export async function exportSharedLibrary(
   outputPath: string,
   storage: SharedLibraryStorage = bridgeStorage,

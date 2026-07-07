@@ -292,12 +292,6 @@ function normalizeFallbackPosition(value: string): AudioSpectrumPosition {
   return AUDIO_SPECTRUM_POSITIONS.includes(value as AudioSpectrumPosition) ? (value as AudioSpectrumPosition) : 'bottom';
 }
 
-function normalizeHexColor(value: EffectParamValue | undefined, fallback: string): string {
-  const candidate = stringParam(value, fallback);
-  const match = /^#?([0-9a-fA-F]{6})$/.exec(candidate);
-  return match ? `#${match[1].toLowerCase()}` : fallback;
-}
-
 function normalizeShaderSource(value: EffectParamValue | undefined): string {
   const source = typeof value === 'string' ? value.trim() : '';
   return source || DEFAULT_CUSTOM_SHADER_SOURCE;

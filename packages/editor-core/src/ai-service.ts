@@ -128,10 +128,6 @@ export function isProviderConfigured(provider: AIProvider): boolean {
   return Boolean(provider.apiKey && provider.apiKey.trim().length > 0);
 }
 
-export function isOllamaReachable(): boolean {
-  return false;
-}
-
 export function calculateSubtitlePolishBatchSplit(total: number, batchSize = 50): number[] {
   if (total <= 0) {
     return [];

@@ -4,6 +4,7 @@ import {
   calculateCreditsContentHeight,
   calculateCreditsRollYRange,
   formatCreditsRowsForTextfile,
+  normalizeCreditsStyle,
   normalizeCreditsRollSpeed,
   parseCreditsText
 } from '../src';
@@ -45,4 +46,22 @@ describe('credits roll', () => {
     expect(calculateCreditsRollYRange({ speed: 80, duration: 6, canvasHeight: 720 })).toEqual({ startY: 720, endY: 240 });
     expect(calculateCreditsContentHeight(parseCreditsText('A\nB\nC'), { fontSize: 40, lineSpacing: 10 })).toBe(150);
   });
+  it('normalizes 3-char hex shorthand to 6-char in credits style colors', () => {
+    const result = normalizeCreditsStyle({ color: '#f00', backgroundColor: '#abc' });
+    expect(result.color).toBe('#ff0000');
+    expect(result.backgroundColor).toBe('#aabbcc');
+  });
+
+  it('normalizes 6-char hex and strips case', () => {
+    const result = normalizeCreditsStyle({ color: '#AAFF00', backgroundColor: '#123ABC' });
+    expect(result.color).toBe('#aaff00');
+    expect(result.backgroundColor).toBe('#123abc');
+  });
+
+  it('falls back to defaults for invalid color strings', () => {
+    const result = normalizeCreditsStyle({ color: 'red', backgroundColor: '' });
+    expect(result.color).toBe('#ffffff');
+    expect(result.backgroundColor).toBe('#000000');
+  });
+
 });
