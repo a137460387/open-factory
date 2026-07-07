@@ -1,5 +1,5 @@
 import type { MediaHealthDashboard, MediaHealthRepairTask } from '@open-factory/editor-core';
-import { AlertTriangle, Archive, CalendarDays, Database, Gauge, Link2, RefreshCw, Trash2, Wrench, X } from 'lucide-react';
+import { AlertTriangle, Archive, CalendarDays, Database, Gauge, Link2, RefreshCw, Wrench, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { zhCN } from '../i18n/strings';
 

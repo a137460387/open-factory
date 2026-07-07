@@ -1,6 +1,6 @@
 import type { MediaAsset } from '../model-types';
 import type { ProxyFileStatLike, ProxyInventoryItem, ProxyInventoryStatus } from './proxy-management';
-import { validateProxyAsset, buildProxyInventory } from './proxy-management';
+import { validateProxyAsset } from './proxy-management';
 
 export type ProxyHealthCategory = 'healthy' | 'expired' | 'corrupt' | 'missing';
 

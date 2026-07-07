@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { X, ShieldCheck, RefreshCw, CheckCircle, AlertTriangle, XCircle, HelpCircle } from 'lucide-react';
 import { zhCN } from '../i18n/strings';
 import type { ProxyBatchVerifyReport, ProxyVerifyResult, ProxyRepairProgress, ProxyRepairHistoryEntry, ProxyVerifySchedule, MediaAsset } from '@open-factory/editor-core';
-import { buildBatchVerifyReport, classifyProxyVerifyResult, collectRepairAssetIds, createRepairProgress, updateRepairProgress, buildRepairHistoryEntry, shouldRunScheduledVerify } from '@open-factory/editor-core';
+import { buildBatchVerifyReport, classifyProxyVerifyResult, collectRepairAssetIds, createRepairProgress, updateRepairProgress, buildRepairHistoryEntry } from '@open-factory/editor-core';
 
 interface ProxyBatchVerifyDialogProps {
   media: MediaAsset[];

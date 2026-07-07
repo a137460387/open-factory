@@ -115,7 +115,7 @@ import {
 } from '../model';
 import type { BeatSnapSuggestion, MediaCollection, ProjectPlatformFitSuggestion, SequenceSettings } from '../model-types';
 import { recalculateClipStartsForFrameRate } from '../sequence-settings';
-import { clampTrackHeight, DEFAULT_TRACK_HEIGHT } from '../track-height';
+import { clampTrackHeight } from '../track-height';
 import {
   type ClipGroupBatchPatch,
   createClipGroup,
