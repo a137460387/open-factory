@@ -1,5 +1,3 @@
-import { round } from './time';
-
 export type FacingDirection = 'left' | 'right' | 'center' | 'unknown';
 export type ContinuityWarningType = 'axis_jump' | 'jump_cut';
 
