@@ -198,7 +198,6 @@ import { revealExport } from '../lib/exportVideo';
 import { clearMediaCache } from '../cache/cache-service';
 import { createAdjustmentLayerClip, createClipFromAsset, createMotionGraphicClip, findPreferredTrack } from '../lib/clipFactory';
 import { zhCN, t } from '../i18n/strings';
-import { featureStrings } from '../i18n/featureStrings';
 import { usePerformanceMonitorStore } from '../store/performanceMonitorStore';
 import { PerformanceAlertIcon } from './PerformanceAlertIcon';
 import {
@@ -238,8 +237,8 @@ import { getReviewModeShellVisibility } from '../review/reviewMode';
 import { saveReviewReport } from '../review/reviewReport';
 import type { SharePackageWorkflowProgress } from '../lib/sharePackage';
 import { canSeparateAudioForClip, getDemucsAvailability, separateAudioForClip, type DemucsAvailability } from '../lib/demucs';
-import { analyzeSpeakerDiarizationForClip, canDiarizeSpeakersForClip } from '../lib/speakerDiarization';
-import { analyzeAutoAudioSyncTargets, canUseClipForAutoAudioSync, type AutoAudioSyncTarget } from '../lib/autoAudioSync';
+import { analyzeSpeakerDiarizationForClip } from '../lib/speakerDiarization';
+import { analyzeAutoAudioSyncTargets, type AutoAudioSyncTarget } from '../lib/autoAudioSync';
 import {
   chooseProjectSavePath,
   chooseProjectToOpen,

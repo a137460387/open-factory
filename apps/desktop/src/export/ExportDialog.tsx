@@ -109,9 +109,8 @@ import {
   isProviderConfigured
 } from '@open-factory/editor-core';
 import { AILoudnessSuggestionSection } from './AILoudnessSuggestionSection';
-import { AlertTriangle, Cloud, CloudDownload, Clock3, Copy, Download, FileText, FolderOpen, Image as ImageIcon, ListPlus, Loader2, Minimize2, Save, Trash2, Upload, X } from 'lucide-react';
+import { Cloud, CloudDownload, Clock3, Download, FolderOpen, Image as ImageIcon, ListPlus, Loader2, Minimize2, Save, Trash2, Upload, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
-import { useSafeTimeout } from '../hooks/useSafeTimeout';
 import { zhCN } from '../i18n/strings';
 import { commandManager, projectAccessor } from '../store/commandManager';
 import { chooseExportPath } from '../lib/exportVideo';
@@ -174,7 +173,6 @@ import { EXPORT_COMPLETION_ACTIONS, localDatetimeInputValue, normalizeExportComp
 import { loadExportHistoryIntoStore } from './export-history';
 import { estimateExportFileSizeBytes, formatEstimatedFileSize } from './export-size-estimate';
 import { useExportQueueStore } from './export-queue-store';
-import { matchExportDiagnostics } from './export-diagnostics';
 import { retryExportUploadFromHistory } from './export-upload';
 import { ensureMediaJobRunner } from '../media/media-job-runner';
 import { useMediaJobStore } from '../media/media-job-store';
@@ -306,7 +304,7 @@ import {
 import { ExportCostEstimatePanel } from './components/ExportCostEstimatePanel';
 import { ExportOptimizationPanel, formatOptimizationSuggestionTitle, ExportWarmupStatusPanel, type ExportWarmupUiStatus } from './components/ExportOptimizationPanel';
 import { PreflightPanel } from './components/PreflightPanel';
-import { formatFpsOption, formatOptionLabel, WatermarkNumberField, PresetNumberField, PresetFpsField, PresetTextField, PresetColorField, PresetSelectField, PresetCheckboxField } from './components/PresetFields';
+import { WatermarkNumberField, PresetNumberField, PresetFpsField, PresetTextField, PresetColorField, PresetSelectField, PresetCheckboxField } from './components/PresetFields';
 import { formatBytes, formatMilliseconds, formatOptionalNumber, priorityLabel } from './lib/exportFormatHelpers';
 
 interface ExportDialogProps {

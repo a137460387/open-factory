@@ -1,5 +1,5 @@
 import type { Clip, HistoryMeta, KeyframeProperty, MediaAsset, MediaMetadata, Project, Timeline, TimelineDiffRange, ClipboardKeyframeGroup } from '@open-factory/editor-core';
-import { clampTimelineZoom, createProject, getTimelineDuration, normalizeMediaMetadataEntry, replaceProjectActiveTimeline, switchProjectActiveSequence, resolveZoomForContext, saveZoomMemoryEntry, detectZoomEditMode, type ZoomEditMode } from '@open-factory/editor-core';
+import { clampTimelineZoom, createProject, getTimelineDuration, normalizeMediaMetadataEntry, replaceProjectActiveTimeline, switchProjectActiveSequence, resolveZoomForContext, saveZoomMemoryEntry, type ZoomEditMode } from '@open-factory/editor-core';
 import { create } from 'zustand';
 import { zhCN } from '../i18n/strings';
 

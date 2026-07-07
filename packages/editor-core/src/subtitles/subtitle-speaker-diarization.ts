@@ -1,4 +1,3 @@
-import { round } from '../time';
 
 export const DEFAULT_PAUSE_THRESHOLD = 1.2;
 export const DEFAULT_ZCR_DIFF_THRESHOLD = 0.15;

@@ -1,5 +1,5 @@
 import { diffTimelineVersions, type Project, type TimelineVersionDiffItem } from '@open-factory/editor-core';
-import { diffVersionSnapshots, serializeDiffForAi, parseVersionDiffAiResponse } from '@open-factory/editor-core';
+import { serializeDiffForAi, parseVersionDiffAiResponse } from '@open-factory/editor-core';
 import { X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { zhCN } from '../i18n/strings';

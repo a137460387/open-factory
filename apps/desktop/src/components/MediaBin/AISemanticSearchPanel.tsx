@@ -1,7 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useSafeTimeout } from '../../hooks/useSafeTimeout';
-import { ChevronDown, History, Loader2, Sparkles, X } from 'lucide-react';
-import { clsx } from 'clsx';
+import { History, Loader2, Sparkles } from 'lucide-react';
 import {
   buildSemanticSearchMediaPayload,
   buildSemanticSearchSystemPrompt,

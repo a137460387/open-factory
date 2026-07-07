@@ -1,4 +1,3 @@
-import { normalizeCachePath } from './cache/cache-key';
 import { buildTimelineThumbnailCacheKey, calculateTimelineThumbnailTimestamps, planTimelineThumbnailCache, TIMELINE_THUMBNAIL_WIDTH } from './timeline-thumbnails';
 import type { Timeline, Track, VideoClip } from './model';
 import { round } from './time';

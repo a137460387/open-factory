@@ -183,7 +183,7 @@ import {
   type TransitionRecommendation,
   type TargetAspectRatio
 } from '@open-factory/editor-core';
-import { zoomTimelineByGesture, LONG_PRESS_PAN_THRESHOLD_MS, computeTimelineGaps, getGapStats, getEffectiveSequenceSettings, BatchUpdateTrackHeightCommand, UpdateSequenceSettingsCommand, shouldShowWaveform } from '@open-factory/editor-core';
+import { zoomTimelineByGesture, LONG_PRESS_PAN_THRESHOLD_MS, computeTimelineGaps, getGapStats, BatchUpdateTrackHeightCommand, UpdateSequenceSettingsCommand } from '@open-factory/editor-core';
 import { clsx } from 'clsx';
 import { AudioWaveform, Bookmark, Captions, CircleDot, Flag, Group, Magnet, MessageSquarePlus, MessageSquareText, Mic2, Music2, Plus, Scissors, Settings2, Star, Trash2, Type, Ungroup, Wand2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -217,7 +217,6 @@ import {
 import { commandManager, projectAccessor, timelineAccessor } from '../../store/commandManager';
 import { useCollaborationStore } from '../../store/collaborationStore';
 import { useEditorStore, type SelectedKeyframeRef } from '../../store/editorStore';
-import { useAISettingsStore } from '../../store/aiSettingsStore';
 import { useRenderCacheStore } from '../../store/renderCacheStore';
 import { useWhisperSettingsStore } from '../../store/whisperSettingsStore';
 import { LABEL_WIDTH, Ruler, ThumbnailTrack, TrackRow, TRACK_HEIGHT, type ClipMenuRequest, type DragState, type GapMenuRequest, type VolumeEnvelopeMenuRequest, type VolumeEnvelopePointRequest } from './TimelineParts';
