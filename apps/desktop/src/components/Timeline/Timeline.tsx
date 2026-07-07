@@ -6009,7 +6009,7 @@ function SequenceSettingsDialog({
           <button className="rounded px-3 py-1.5 text-xs hover:bg-panel" type="button" onClick={onClose}>{zhCN.common.cancel}</button>
           <button className="rounded bg-brand px-3 py-1.5 text-xs text-white hover:opacity-90" type="button" data-testid="sequence-settings-save" onClick={() => {
             if (override) {
-              onSave({ frameRate: parseFloat(fps) || undefined, width: parseInt(width) || undefined, height: parseInt(height) || undefined });
+              onSave({ frameRate: parseFloat(fps) || undefined, width: Number.parseInt(width, 10) || undefined, height: Number.parseInt(height, 10) || undefined });
             } else {
               onSave(undefined);
             }
