@@ -1,5 +1,4 @@
-import { createId } from './model';
-import type { BeatSnapSuggestion, Clip, Timeline } from './model-types';
+import type { BeatSnapSuggestion, Clip } from './model-types';
 import { round } from './time';
 
 export const BEAT_SNAP_TOLERANCE_MS = 150;

@@ -1,5 +1,5 @@
 import { createId } from './model';
-import type { MediaAsset, MediaCollection } from './model-types';
+import type { MediaCollection } from './model-types';
 
 export interface AIMediaOrganizeSuggestion {
   name: string;

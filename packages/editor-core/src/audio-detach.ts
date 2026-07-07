@@ -1,5 +1,5 @@
 import { createId } from './model';
-import type { Clip, VideoClip, AudioClip, Track, Timeline } from './model-types';
+import type { Clip, VideoClip, AudioClip, Timeline } from './model-types';
 
 /**
  * 视频 clip 的音频分离相关字段扩展。

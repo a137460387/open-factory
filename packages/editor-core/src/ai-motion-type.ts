@@ -7,7 +7,6 @@
  */
 
 import { round } from './time';
-import { estimateDisplacementVectors } from './shake-analysis';
 import type { AiModuleResult, TranslateFn } from './ai-module-types';
 import { identityTranslator } from './ai-module-types';
 
