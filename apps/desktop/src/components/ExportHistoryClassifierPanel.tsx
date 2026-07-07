@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { History, Filter, BarChart3, Tag } from 'lucide-react';
+import { History, BarChart3 } from 'lucide-react';
 import {
   classifyExportHistory,
   filterExportHistory,

@@ -15,7 +15,7 @@ import { callAiApi, readAiApiKey } from '../../lib/tauri-bridge';
 import { commandManager, timelineAccessor } from '../../store/commandManager';
 import { BatchAddClipsCommand } from '@open-factory/editor-core';
 import { showToast } from '../../lib/toast';
-import { createId, createBaseClip, DEFAULT_COLOR_CORRECTION, DEFAULT_TRANSFORM } from '@open-factory/editor-core';
+import { createId, createBaseClip } from '@open-factory/editor-core';
 
 const t = zhCN.aiRoughCut;
 

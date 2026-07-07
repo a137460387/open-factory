@@ -6,8 +6,6 @@
  * Jaccard similarity on descriptor tags.
  */
 
-import type { Project } from './model-types';
-
 // --- Types ---
 
 export interface CharacterBoundingBox {

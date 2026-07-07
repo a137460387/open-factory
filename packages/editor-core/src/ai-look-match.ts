@@ -1,7 +1,6 @@
-import { createId } from './model';
 import type { ClipAILookMatch, WheelAdjustments } from './model-types';
 import type { ColorCurves, CurvePoint, ThreeWayColor, ColorWheelValue } from './color-grading';
-import { DEFAULT_COLOR_WHEEL_VALUE, DEFAULT_CURVE_POINTS, normalizeThreeWayColor, normalizeColorCurves } from './color-grading';
+import { normalizeThreeWayColor, normalizeColorCurves } from './color-grading';
 import { round } from './time';
 
 export interface AILookMatchResponse {
