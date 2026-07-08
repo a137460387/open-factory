@@ -381,8 +381,6 @@ const AINarrationPanel = lazy(() => import('./AINarration/AINarrationPanel').the
 const HistoryPanel = lazy(() => import('./History/HistoryPanel').then((module) => ({ default: module.HistoryPanel })));
 const ProjectDocumentationPanel = lazy(() => import('./ProjectDocumentationPanel').then((module) => ({ default: module.ProjectDocumentationPanel })));
 const ExportDialog = lazy(() => import('../export/ExportDialog').then((module) => ({ default: module.ExportDialog })));
-const SettingsDialog = lazy(() => import('../settings/SettingsDialog').then((module) => ({ default: module.SettingsDialog })));
-const MacroHistoryDialog = lazy(() => import('../macros/MacroHistoryDialog').then((module) => ({ default: module.MacroHistoryDialog })));
 const TimelineExportDialog = lazy(() => import('../timeline-export/TimelineExportDialog').then((module) => ({ default: module.TimelineExportDialog })));
 const ProfessionalNleExportDialog = lazy(() => import('../professional-nle/ProfessionalNleExportDialog').then((module) => ({ default: module.ProfessionalNleExportDialog })));
 const LutEditorDialog = lazy(() => import('../lut-editor/LutEditorDialog').then((module) => ({ default: module.LutEditorDialog })));
@@ -413,16 +411,8 @@ const SnapshotVersionCompareDialog = lazy(() => import('../project-snapshots/Sna
 const TimelineCompareDialog = lazy(() => import('../timeline-compare/TimelineCompareDialog').then((module) => ({ default: module.TimelineCompareDialog })));
 const ReleaseWorkflowDialog = lazy(() => import('../release/ReleaseWorkflowDialog').then((module) => ({ default: module.ReleaseWorkflowDialog })));
 const ThumbnailGeneratorDialog = lazy(() => import('../thumbnail/ThumbnailGeneratorDialog').then((module) => ({ default: module.ThumbnailGeneratorDialog })));
-const ErrorKnowledgeDialog = lazy(() => import('../export-error-knowledge/ErrorKnowledgeDialog').then((module) => ({ default: module.ErrorKnowledgeDialog })));
-const SequenceCompareDialog = lazy(() => import('../sequence-compare/SequenceCompareDialog').then((module) => ({ default: module.SequenceCompareDialog })));
-const SubtitleSyncPanel = lazy(() => import('../subtitle-sync-monitor/SubtitleSyncPanel').then((module) => ({ default: module.SubtitleSyncPanel })));
-const ProxyBatchVerifyDialog = lazy(() => import('../proxy-batch-verify/ProxyBatchVerifyDialog').then((module) => ({ default: module.ProxyBatchVerifyDialog })));
 
 const PerformanceMonitorPanel = lazy(() => import('./PerformanceMonitorPanel').then((module) => ({ default: module.PerformanceMonitorPanel })));
-const FormatConverterDialog = lazy(() => import('./FormatConverterDialog').then((module) => ({ default: module.FormatConverterDialog })));
-import type { DroppedFile } from './FormatConverterDialog';
-const EmotionAnalysisPanel = lazy(() => import('./EmotionAnalysisPanel').then((module) => ({ default: module.EmotionAnalysisPanel })));
-const ExportHistoryClassifierPanel = lazy(() => import('./ExportHistoryClassifierPanel').then((module) => ({ default: module.ExportHistoryClassifierPanel })));
 const AutoAudioSyncDialog = lazy(() => import('../audio-sync/AutoAudioSyncDialog').then((module) => ({ default: module.AutoAudioSyncDialog })));
 const DuplicateMediaDialog = lazy(() => import('../media/DuplicateMediaDialog').then((module) => ({ default: module.DuplicateMediaDialog })));
 const MediaOrganizerDialog = lazy(() => import('../media/MediaOrganizerDialog').then((module) => ({ default: module.MediaOrganizerDialog })));
@@ -444,6 +434,7 @@ const PreflightChecklistPanel = lazy(() => import('./Export/PreflightChecklistPa
 const DubbingAdaptationPanel = lazy(() => import('./Export/DubbingAdaptationPanel').then((module) => ({ default: module.DubbingAdaptationPanel })));
 
 import { PanelLoading } from './PanelLoading';
+import { SettingsDialogs } from './dialogs/SettingsDialogs';
 import { CollapsedPanelRail } from './CollapsedPanelRail';
 import {
   getSubtitleDataImportTargetTrackId,
@@ -632,7 +623,6 @@ export function EditorShell() {
   const templateExportPreset = useEditorFeatureStore((s) => s.templateExportPreset);
 
   const setTemplateExportPreset = useEditorFeatureStore((s) => s.setTemplateExportPreset);
-  const settingsOpen = useEditorUIStore((s) => s.settingsOpen);
   const setSettingsOpen = useEditorUIStore((s) => s.setSettingsOpen);
   const beatSensitivity = useEditorSettingsStore((s) => s.beatSensitivity);
 
@@ -672,7 +662,6 @@ export function EditorShell() {
   const setProjectDocumentationOpen = useEditorUIStore((s) => s.setProjectDocumentationOpen);
   const storyboardOpen = useEditorUIStore((s) => s.storyboardOpen);
   const setStoryboardOpen = useEditorUIStore((s) => s.setStoryboardOpen);
-  const macroHistoryOpen = useEditorUIStore((s) => s.macroHistoryOpen);
   const setMacroHistoryOpen = useEditorUIStore((s) => s.setMacroHistoryOpen);
   const projectHealthOpen = useEditorUIStore((s) => s.projectHealthOpen);
   const setProjectHealthOpen = useEditorUIStore((s) => s.setProjectHealthOpen);
@@ -727,7 +716,6 @@ export function EditorShell() {
   const macros = useEditorSettingsStore((s) => s.macros);
 
   const setMacros = useEditorSettingsStore((s) => s.setMacros);
-  const macroHistory = useEditorFeatureStore((s) => s.macroHistory);
 
   const setMacroHistory = useEditorFeatureStore((s) => s.setMacroHistory);
   const sharedLibraryResources = useEditorSettingsStore((s) => s.sharedLibraryResources);
@@ -813,28 +801,15 @@ export function EditorShell() {
   const setSpeakerDiarizationResult = useEditorFeatureStore((s) => s.setSpeakerDiarizationResult);
   const autoAudioSyncOpen = useEditorUIStore((s) => s.autoAudioSyncOpen);
   const setAutoAudioSyncOpen = useEditorUIStore((s) => s.setAutoAudioSyncOpen);
-  const errorKnowledgeOpen = useEditorUIStore((s) => s.errorKnowledgeOpen);
   const setErrorKnowledgeOpen = useEditorUIStore((s) => s.setErrorKnowledgeOpen);
-  const sequenceCompareOpen = useEditorUIStore((s) => s.sequenceCompareOpen);
   const setSequenceCompareOpen = useEditorUIStore((s) => s.setSequenceCompareOpen);
-  const subtitleSyncOpen = useEditorUIStore((s) => s.subtitleSyncOpen);
   const setSubtitleSyncOpen = useEditorUIStore((s) => s.setSubtitleSyncOpen);
-  const proxyVerifyOpen = useEditorUIStore((s) => s.proxyVerifyOpen);
   const setProxyVerifyOpen = useEditorUIStore((s) => s.setProxyVerifyOpen);
-  const formatConverterOpen = useEditorUIStore((s) => s.formatConverterOpen);
   const setFormatConverterOpen = useEditorUIStore((s) => s.setFormatConverterOpen);
-  const emotionAnalysisOpen = useEditorUIStore((s) => s.emotionAnalysisOpen);
   const setEmotionAnalysisOpen = useEditorUIStore((s) => s.setEmotionAnalysisOpen);
-  const exportHistoryClassifierOpen = useEditorUIStore((s) => s.exportHistoryClassifierOpen);
   const setExportHistoryClassifierOpen = useEditorUIStore((s) => s.setExportHistoryClassifierOpen);
-  const formatConverterMockFiles = useEditorFeatureStore((s) => s.formatConverterMockFiles);
-
   const setFormatConverterMockFiles = useEditorFeatureStore((s) => s.setFormatConverterMockFiles);
-  const mockSubtitleClips = useEditorFeatureStore((s) => s.mockSubtitleClips);
-
   const setMockSubtitleClips = useEditorFeatureStore((s) => s.setMockSubtitleClips);
-  const mockExportHistory = useEditorFeatureStore((s) => s.mockExportHistory);
-
   const setMockExportHistory = useEditorFeatureStore((s) => s.setMockExportHistory);
 
   // E2E: expose stores for test instrumentation
@@ -5268,79 +5243,26 @@ export function EditorShell() {
               onClose={() => setPasteKeyframeDialogOpen(false)}
             />
           ) : null}
-          {settingsOpen ? (
-            <SettingsDialog
-              open={settingsOpen}
-              project={project}
-              selectedClip={selectedClip}
-              shortcutBindings={shortcutBindings}
-              macros={macros}
-              onShortcutBindingsChange={setShortcutBindings}
-              onMacrosChange={setMacros}
-              onExecuteMacro={(macro) => void executeMacro(macro)}
-              previewPerformance={previewPerformance}
-              timelineInteractionSettings={timelineInteractionSettings}
-              onPreviewPerformanceChange={updatePreviewPerformance}
-              onPreviewSkipFramesChange={(skipFrames: PreviewSkipFrames) => updatePreviewPerformance({ skipFrames })}
-              onTimelineInteractionSettingsChange={updateTimelineInteractionSettings}
-              onDeleteProxies={(assetIds) => deleteProxiesForMedia(assetIds)}
-              onRegenerateProxies={(assetIds) => regenerateProxiesForMedia(assetIds)}
-              onMigrateProxies={(targetDirectory) => migrateProxiesToDirectory(targetDirectory)}
-              onClose={() => setSettingsOpen(false)}
-            />
-          ) : null}
-          {macroHistoryOpen ? <MacroHistoryDialog entries={macroHistory} onClose={() => setMacroHistoryOpen(false)} /> : null}
-          {errorKnowledgeOpen ? (
-            <ErrorKnowledgeDialog
-              stderr={""}
-              onClose={() => setErrorKnowledgeOpen(false)}
-            />
-          ) : null}
-          {sequenceCompareOpen ? (
-            <SequenceCompareDialog
-              project={project}
-              onClose={() => setSequenceCompareOpen(false)}
-            />
-          ) : null}
-          {subtitleSyncOpen ? (
-            <SubtitleSyncPanel
-              tracks={project.timeline.tracks}
-              timingRefs={[]}
-              projectDuration={getTimelineDuration(project.timeline)}
-              onClose={() => setSubtitleSyncOpen(false)}
-              onRepairSubtitle={(id, start, duration) => {
-                commandManager.execute(new UpdateClipCommand(timelineAccessor, id, { start, duration }));
-              }}
-            />
-          ) : null}
-          {proxyVerifyOpen ? (
-            <ProxyBatchVerifyDialog
-              media={project.media}
-              onClose={() => setProxyVerifyOpen(false)}
-            />
-          ) : null}
-          {formatConverterOpen ? (
-            <FormatConverterDialog
-              open={formatConverterOpen}
-              onClose={() => setFormatConverterOpen(false)}
-              initialFiles={formatConverterMockFiles}
-            />
-          ) : null}
-          {emotionAnalysisOpen ? (
-            <EmotionAnalysisPanel
-              open={emotionAnalysisOpen}
-              onClose={() => setEmotionAnalysisOpen(false)}
-              subtitleClips={mockSubtitleClips}
-              onApplyStyles={() => {}}
-            />
-          ) : null}
-          {exportHistoryClassifierOpen ? (
-            <ExportHistoryClassifierPanel
-              open={exportHistoryClassifierOpen}
-              onClose={() => setExportHistoryClassifierOpen(false)}
-              history={mockExportHistory}
-            />
-          ) : null}
+          <SettingsDialogs
+            project={project}
+            selectedClip={selectedClip}
+            shortcutBindings={shortcutBindings}
+            macros={macros}
+            previewPerformance={previewPerformance}
+            timelineInteractionSettings={timelineInteractionSettings}
+            onShortcutBindingsChange={setShortcutBindings}
+            onMacrosChange={setMacros}
+            onExecuteMacro={(macro) => void executeMacro(macro)}
+            onPreviewPerformanceChange={updatePreviewPerformance}
+            onPreviewSkipFramesChange={(skipFrames: PreviewSkipFrames) => updatePreviewPerformance({ skipFrames })}
+            onTimelineInteractionSettingsChange={updateTimelineInteractionSettings}
+            onDeleteProxies={(assetIds) => deleteProxiesForMedia(assetIds)}
+            onRegenerateProxies={(assetIds) => regenerateProxiesForMedia(assetIds)}
+            onMigrateProxies={(targetDirectory) => migrateProxiesToDirectory(targetDirectory)}
+            onRepairSubtitle={(id, start, duration) => {
+              commandManager.execute(new UpdateClipCommand(timelineAccessor, id, { start, duration }));
+            }}
+          />
           <PerformanceMonitorPanel
             open={usePerformanceMonitorStore((s) => s.panelOpen)}
           onClose={() => usePerformanceMonitorStore.getState().setPanelOpen(false)}
