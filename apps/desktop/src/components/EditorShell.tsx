@@ -205,12 +205,9 @@ import {
   BUILT_IN_WORKSPACE_LAYOUT_IDS,
   clampTimelineHeight,
   createCustomWorkspaceLayout,
-  DEFAULT_EDITOR_LAYOUT_SETTINGS,
   getEffectivePanelState,
   getWorkspaceLayoutById,
-  normalizeStoredLayoutSettings,
   resolveWorkspaceLayoutShortcut,
-  type EditorLayoutSettings,
   type WorkspaceLayoutDefinition,
   type WorkspaceLayoutId
 } from '../layout/layoutSettings';
@@ -363,6 +360,7 @@ import { useDemucsSettingsStore } from '../store/demucsSettingsStore';
 import { selectClipById, useEditorStore } from '../store/editorStore';
 import { useProxySettingsStore } from '../store/proxySettingsStore';
 import { useRecordingSettingsStore } from '../store/recordingSettingsStore';
+import { useEditorUIStore } from '../store/editorUIStore';
 import type { VideoStitchWizardSettings } from '../video-stitching/VideoStitchWizardDialog';
 
 const AudioMixer = lazy(() => import('./AudioMixer/AudioMixer').then((module) => ({ default: module.AudioMixer })));
@@ -583,7 +581,8 @@ export function EditorShell() {
   const [macroHistoryOpen, setMacroHistoryOpen] = useState(false);
   const [projectHealthOpen, setProjectHealthOpen] = useState(false);
   const [mediaHealthDashboardOpen, setMediaHealthDashboardOpen] = useState(false);
-  const [reviewMode, setReviewMode] = useState(() => (typeof window === 'undefined' ? false : window.location.hash === '#review'));
+  const reviewMode = useEditorUIStore((s) => s.reviewMode);
+  const setReviewMode = useEditorUIStore((s) => s.setReviewMode);
   const [projectHealthReport, setProjectHealthReport] = useState<ProjectHealthReport>();
   const [projectHealthRepairReport, setProjectHealthRepairReport] = useState<ProjectHealthRepairReport>();
   const [projectHealthScanning, setProjectHealthScanning] = useState(false);
@@ -609,7 +608,8 @@ export function EditorShell() {
   const [autosaveIntervalSeconds, setAutosaveIntervalSeconds] = useState(() => readAutosaveIntervalSeconds());
   const [recoveryCandidate, setRecoveryCandidate] = useState<AutosaveRecoveryCandidate>();
   const [archiveProgress, setArchiveProgress] = useState<ArchiveProgress>();
-  const [layoutSettings, setLayoutSettings] = useState<EditorLayoutSettings>(DEFAULT_EDITOR_LAYOUT_SETTINGS);
+  const layoutSettings = useEditorUIStore((s) => s.layoutSettings);
+  const setLayoutSettings = useEditorUIStore((s) => s.setLayoutSettings);
   const [safeFrameGuides, setSafeFrameGuides] = useState(false);
   const [thumbnailTrackVisible, setThumbnailTrackVisible] = useState(true);
   const [timelineMinimapVisible, setTimelineMinimapVisible] = useState(true);
@@ -625,7 +625,8 @@ export function EditorShell() {
   const [tutorialSignals, setTutorialSignals] = useState<TutorialSignals>(DEFAULT_TUTORIAL_SIGNALS);
   const [pipLayoutPosition, setPiPLayoutPosition] = useState<PiPLayoutPosition>('bottom-right');
   const [customSplitLayouts, setCustomSplitLayouts] = useState<SplitLayoutDefinition[]>([]);
-  const [viewportSize, setViewportSize] = useState(() => readViewportSize());
+  const viewportSize = useEditorUIStore((s) => s.viewportSize);
+  const setViewportSize = useEditorUIStore((s) => s.setViewportSize);
   const [lastBackupAt, setLastBackupAt] = useState<string>();
   const [demucsAvailability, setDemucsAvailability] = useState<DemucsAvailability>({ ready: false, error: zhCN.demucs.notConfigured });
   const [audioSeparationClipId, setAudioSeparationClipId] = useState<string>();
@@ -960,22 +961,8 @@ export function EditorShell() {
       ? `minmax(0,1fr) ${layoutSettings.mixerHeightPx}px`
       : 'minmax(0,1fr)';
 
-  const persistLayoutPatch = useCallback((patch: Partial<EditorLayoutSettings>) => {
-    setLayoutSettings((current) => {
-      const next = normalizeStoredLayoutSettings({ ...current, ...patch }) ?? { ...DEFAULT_EDITOR_LAYOUT_SETTINGS };
-      void saveLayoutSettings(next).catch((error) => {
-        console.warn('Unable to save layout settings', error);
-      });
-      return next;
-    });
-  }, []);
-
-  const persistPanelVisibilityPatch = useCallback(
-    (patch: Partial<EditorLayoutSettings['panels']>) => {
-      persistLayoutPatch({ panels: { ...layoutSettings.panels, ...patch } });
-    },
-    [layoutSettings.panels, persistLayoutPatch]
-  );
+  const persistLayoutPatch = useEditorUIStore((s) => s.persistLayoutPatch);
+  const persistPanelVisibilityPatch = useEditorUIStore((s) => s.persistPanelVisibilityPatch);
 
   const refreshSharedLibraryResources = useCallback(async () => {
     try {
