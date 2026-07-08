@@ -1,5 +1,26 @@
 import { renderToStaticMarkup } from 'react-dom/server';
+import React from 'react';
 import { describe, expect, it, vi } from 'vitest';
+
+// Radix Dialog wraps content in a Portal (createPortal). renderToStaticMarkup
+// cannot serialise portals — they produce empty output. Mock the Portal to
+// render children inline and all other primitives as simple <div> wrappers.
+vi.mock('@radix-ui/react-dialog', () => {
+  const div = React.forwardRef<HTMLElement, React.HTMLAttributes<HTMLElement>>((props, ref) =>
+    React.createElement('div', { ...props, ref }),
+  );
+  const pass = ({ children }: React.PropsWithChildren) => children as React.ReactElement;
+  return {
+    Root: ({ children }: React.PropsWithChildren) => React.createElement('div', null, children),
+    Trigger: div,
+    Portal: pass,
+    Overlay: div,
+    Content: div,
+    Title: div,
+    Description: div,
+    Close: div,
+  };
+});
 
 vi.mock('../../store/editorStore', () => ({
   useEditorStore: { getState: () => ({ project: { timeline: { tracks: [] } } }) },
