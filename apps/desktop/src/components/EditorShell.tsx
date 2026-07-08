@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, type PointerEvent as ReactPointerEvent } from 'react';
 import {
   AddAdjustmentLayerCommand,
   AutoRepairProjectHealthCommand,
@@ -361,6 +361,9 @@ import { selectClipById, useEditorStore } from '../store/editorStore';
 import { useProxySettingsStore } from '../store/proxySettingsStore';
 import { useRecordingSettingsStore } from '../store/recordingSettingsStore';
 import { useEditorUIStore } from '../store/editorUIStore';
+import { useEditorSettingsStore } from '../store/editorSettingsStore';
+import { useEditorFeatureStore } from '../store/editorFeatureStore';
+import { useEditorMiscStore } from '../store/editorMiscStore';
 import type { VideoStitchWizardSettings } from '../video-stitching/VideoStitchWizardDialog';
 
 const AudioMixer = lazy(() => import('./AudioMixer/AudioMixer').then((module) => ({ default: module.AudioMixer })));
@@ -517,24 +520,42 @@ export function EditorShell() {
   const setBatchWatermarkOpen = useEditorUIStore((s) => s.setBatchWatermarkOpen);
   const batchProjectProcessingOpen = useEditorUIStore((s) => s.batchProjectProcessingOpen);
   const setBatchProjectProcessingOpen = useEditorUIStore((s) => s.setBatchProjectProcessingOpen);
-  const [batchTranscodeInitialPaths, setBatchTranscodeInitialPaths] = useState<string[]>([]);
-  const [thumbnailGeneratorAssetIds, setThumbnailGeneratorAssetIds] = useState<string[]>();
+  const batchTranscodeInitialPaths = useEditorFeatureStore((s) => s.batchTranscodeInitialPaths);
+  const setBatchTranscodeInitialPaths = useEditorFeatureStore((s) => s.setBatchTranscodeInitialPaths);
+  const thumbnailGeneratorAssetIds = useEditorFeatureStore((s) => s.thumbnailGeneratorAssetIds);
+  const setThumbnailGeneratorAssetIds = useEditorFeatureStore((s) => s.setThumbnailGeneratorAssetIds);
   const lutEditorOpen = useEditorUIStore((s) => s.lutEditorOpen);
   const setLutEditorOpen = useEditorUIStore((s) => s.setLutEditorOpen);
   const colorNodeEditorOpen = useEditorUIStore((s) => s.colorNodeEditorOpen);
   const setColorNodeEditorOpen = useEditorUIStore((s) => s.setColorNodeEditorOpen);
   const colorAnalysisOpen = useEditorUIStore((s) => s.colorAnalysisOpen);
   const setColorAnalysisOpen = useEditorUIStore((s) => s.setColorAnalysisOpen);
-  const [colorAnalysisBusy, setColorAnalysisBusy] = useState(false);
-  const [colorAnalysisResults, setColorAnalysisResults] = useState<TimelineColorAnalysisResult[]>([]);
-  const [colorAnalysisJumps, setColorAnalysisJumps] = useState<SceneColorDifference[]>([]);
-  const [colorHeatmapPoints, setColorHeatmapPoints] = useState<TimelineColorHeatmapPoint[]>([]);
-  const [colorAnalysisSamples, setColorAnalysisSamples] = useState<ColorAnalysisClipSample[]>([]);
+  const colorAnalysisBusy = useEditorFeatureStore((s) => s.colorAnalysisBusy);
+
+  const setColorAnalysisBusy = useEditorFeatureStore((s) => s.setColorAnalysisBusy);
+  const colorAnalysisResults = useEditorFeatureStore((s) => s.colorAnalysisResults);
+
+  const setColorAnalysisResults = useEditorFeatureStore((s) => s.setColorAnalysisResults);
+  const colorAnalysisJumps = useEditorFeatureStore((s) => s.colorAnalysisJumps);
+
+  const setColorAnalysisJumps = useEditorFeatureStore((s) => s.setColorAnalysisJumps);
+  const colorHeatmapPoints = useEditorFeatureStore((s) => s.colorHeatmapPoints);
+
+  const setColorHeatmapPoints = useEditorFeatureStore((s) => s.setColorHeatmapPoints);
+  const colorAnalysisSamples = useEditorFeatureStore((s) => s.colorAnalysisSamples);
+
+  const setColorAnalysisSamples = useEditorFeatureStore((s) => s.setColorAnalysisSamples);
   const professionalNleExportOpen = useEditorUIStore((s) => s.professionalNleExportOpen);
   const setProfessionalNleExportOpen = useEditorUIStore((s) => s.setProfessionalNleExportOpen);
-  const [gifExportAsset, setGifExportAsset] = useState<MediaAsset>();
-  const [spectrumAsset, setSpectrumAsset] = useState<MediaAsset>();
-  const [mediaVersionCompare, setMediaVersionCompare] = useState<MediaVersionCompareRequest>();
+  const gifExportAsset = useEditorFeatureStore((s) => s.gifExportAsset);
+
+  const setGifExportAsset = useEditorFeatureStore((s) => s.setGifExportAsset);
+  const spectrumAsset = useEditorFeatureStore((s) => s.spectrumAsset);
+
+  const setSpectrumAsset = useEditorFeatureStore((s) => s.setSpectrumAsset);
+  const mediaVersionCompare = useEditorFeatureStore((s) => s.mediaVersionCompare);
+
+  const setMediaVersionCompare = useEditorFeatureStore((s) => s.setMediaVersionCompare);
   const mediaPrecheckOpen = useEditorUIStore((s) => s.mediaPrecheckOpen);
   const setMediaPrecheckOpen = useEditorUIStore((s) => s.setMediaPrecheckOpen);
   const videoStitchWizardOpen = useEditorUIStore((s) => s.videoStitchWizardOpen);
@@ -549,11 +570,21 @@ export function EditorShell() {
   const setCollaborationNotesOpen = useEditorUIStore((s) => s.setCollaborationNotesOpen);
   const operationRecordingOpen = useEditorUIStore((s) => s.operationRecordingOpen);
   const setOperationRecordingOpen = useEditorUIStore((s) => s.setOperationRecordingOpen);
-  const [operationRecording, setOperationRecording] = useState<OperationRecordingFile>();
-  const [operationRecordingActive, setOperationRecordingActive] = useState(false);
-  const [operationRecordingStep, setOperationRecordingStep] = useState(-1);
-  const [operationReplaySpeed, setOperationReplaySpeed] = useState<OperationReplaySpeed>(1);
-  const [operationReplayRunning, setOperationReplayRunning] = useState(false);
+  const operationRecording = useEditorFeatureStore((s) => s.operationRecording);
+
+  const setOperationRecording = useEditorFeatureStore((s) => s.setOperationRecording);
+  const operationRecordingActive = useEditorFeatureStore((s) => s.operationRecordingActive);
+
+  const setOperationRecordingActive = useEditorFeatureStore((s) => s.setOperationRecordingActive);
+  const operationRecordingStep = useEditorFeatureStore((s) => s.operationRecordingStep);
+
+  const setOperationRecordingStep = useEditorFeatureStore((s) => s.setOperationRecordingStep);
+  const operationReplaySpeed = useEditorFeatureStore((s) => s.operationReplaySpeed);
+
+  const setOperationReplaySpeed = useEditorFeatureStore((s) => s.setOperationReplaySpeed);
+  const operationReplayRunning = useEditorFeatureStore((s) => s.operationReplayRunning);
+
+  const setOperationReplayRunning = useEditorFeatureStore((s) => s.setOperationReplayRunning);
   const complexityScoreOpen = useEditorUIStore((s) => s.complexityScoreOpen);
   const setComplexityScoreOpen = useEditorUIStore((s) => s.setComplexityScoreOpen);
   const smartRecommendationsOpen = useEditorUIStore((s) => s.smartRecommendationsOpen);
@@ -562,12 +593,20 @@ export function EditorShell() {
   const setContentAnalysisOpen = useEditorUIStore((s) => s.setContentAnalysisOpen);
   const profilerOpen = useEditorUIStore((s) => s.profilerOpen);
   const setProfilerOpen = useEditorUIStore((s) => s.setProfilerOpen);
-  const [profilerRecording, setProfilerRecording] = useState(false);
-  const [profilerElapsedMs, setProfilerElapsedMs] = useState(0);
-  const [profilerReport, setProfilerReport] = useState<PerformanceProfilerReport>();
+  const profilerRecording = useEditorFeatureStore((s) => s.profilerRecording);
+
+  const setProfilerRecording = useEditorFeatureStore((s) => s.setProfilerRecording);
+  const profilerElapsedMs = useEditorFeatureStore((s) => s.profilerElapsedMs);
+
+  const setProfilerElapsedMs = useEditorFeatureStore((s) => s.setProfilerElapsedMs);
+  const profilerReport = useEditorFeatureStore((s) => s.profilerReport);
+
+  const setProfilerReport = useEditorFeatureStore((s) => s.setProfilerReport);
   const rhythmAnalysisOpen = useEditorUIStore((s) => s.rhythmAnalysisOpen);
   const setRhythmAnalysisOpen = useEditorUIStore((s) => s.setRhythmAnalysisOpen);
-  const [contentAnalysisRunningClipId, setContentAnalysisRunningClipId] = useState<string>();
+  const contentAnalysisRunningClipId = useEditorFeatureStore((s) => s.contentAnalysisRunningClipId);
+
+  const setContentAnalysisRunningClipId = useEditorFeatureStore((s) => s.setContentAnalysisRunningClipId);
   const timelineSearchOpen = useEditorUIStore((s) => s.timelineSearchOpen);
   const setTimelineSearchOpen = useEditorUIStore((s) => s.setTimelineSearchOpen);
   const snapshotNameOpen = useEditorUIStore((s) => s.snapshotNameOpen);
@@ -582,19 +621,33 @@ export function EditorShell() {
   const setReleaseWorkflowOpen = useEditorUIStore((s) => s.setReleaseWorkflowOpen);
   const projectEncryptionSaveOpen = useEditorUIStore((s) => s.projectEncryptionSaveOpen);
   const setProjectEncryptionSaveOpen = useEditorUIStore((s) => s.setProjectEncryptionSaveOpen);
-  const [projectPasswordRequest, setProjectPasswordRequest] = useState<ProjectPasswordRequest | undefined>();
+  const projectPasswordRequest = useEditorFeatureStore((s) => s.projectPasswordRequest);
+
+  const setProjectPasswordRequest = useEditorFeatureStore((s) => s.setProjectPasswordRequest);
   const projectTemplateOpen = useEditorUIStore((s) => s.projectTemplateOpen);
   const setProjectTemplateOpen = useEditorUIStore((s) => s.setProjectTemplateOpen);
-  const [timelineTemplateMode, setTimelineTemplateMode] = useState<'save' | 'new'>();
-  const [templateExportPreset, setTemplateExportPreset] = useState<ExportPreset>();
+  const timelineTemplateMode = useEditorFeatureStore((s) => s.timelineTemplateMode);
+
+  const setTimelineTemplateMode = useEditorFeatureStore((s) => s.setTimelineTemplateMode);
+  const templateExportPreset = useEditorFeatureStore((s) => s.templateExportPreset);
+
+  const setTemplateExportPreset = useEditorFeatureStore((s) => s.setTemplateExportPreset);
   const settingsOpen = useEditorUIStore((s) => s.settingsOpen);
   const setSettingsOpen = useEditorUIStore((s) => s.setSettingsOpen);
-  const [beatSensitivity, setBeatSensitivity] = useState<BeatSensitivity>('medium');
+  const beatSensitivity = useEditorSettingsStore((s) => s.beatSensitivity);
+
+  const setBeatSensitivity = useEditorSettingsStore((s) => s.setBeatSensitivity);
   const beatSyncOpen = useEditorUIStore((s) => s.beatSyncOpen);
   const setBeatSyncOpen = useEditorUIStore((s) => s.setBeatSyncOpen);
-  const [beatSyncSpeedEnabled, setBeatSyncSpeedEnabled] = useState(false);
-  const [beatSyncManualBpm, setBeatSyncManualBpm] = useState('');
-  const [sceneDetectionRequestId, setSceneDetectionRequestId] = useState(0);
+  const beatSyncSpeedEnabled = useEditorSettingsStore((s) => s.beatSyncSpeedEnabled);
+
+  const setBeatSyncSpeedEnabled = useEditorSettingsStore((s) => s.setBeatSyncSpeedEnabled);
+  const beatSyncManualBpm = useEditorSettingsStore((s) => s.beatSyncManualBpm);
+
+  const setBeatSyncManualBpm = useEditorSettingsStore((s) => s.setBeatSyncManualBpm);
+  const sceneDetectionRequestId = useEditorSettingsStore((s) => s.sceneDetectionRequestId);
+
+  const setSceneDetectionRequestId = useEditorSettingsStore((s) => s.setSceneDetectionRequestId);
   const smartRoughCutOpen = useEditorUIStore((s) => s.smartRoughCutOpen);
   const setSmartRoughCutOpen = useEditorUIStore((s) => s.setSmartRoughCutOpen);
   const aiRoughCutOpen = useEditorUIStore((s) => s.aiRoughCutOpen);
@@ -627,76 +680,162 @@ export function EditorShell() {
   const setMediaHealthDashboardOpen = useEditorUIStore((s) => s.setMediaHealthDashboardOpen);
   const reviewMode = useEditorUIStore((s) => s.reviewMode);
   const setReviewMode = useEditorUIStore((s) => s.setReviewMode);
-  const [projectHealthReport, setProjectHealthReport] = useState<ProjectHealthReport>();
-  const [projectHealthRepairReport, setProjectHealthRepairReport] = useState<ProjectHealthRepairReport>();
-  const [projectHealthScanning, setProjectHealthScanning] = useState(false);
-  const [mediaHealthDashboard, setMediaHealthDashboard] = useState<MediaHealthDashboard>();
-  const [mediaHealthScanning, setMediaHealthScanning] = useState(false);
-  const [mediaHealthAutoShowEnabled, setMediaHealthAutoShowEnabled] = useState(() => readMediaHealthAutoShowEnabled());
+  const projectHealthReport = useEditorFeatureStore((s) => s.projectHealthReport);
+
+  const setProjectHealthReport = useEditorFeatureStore((s) => s.setProjectHealthReport);
+  const projectHealthRepairReport = useEditorFeatureStore((s) => s.projectHealthRepairReport);
+
+  const setProjectHealthRepairReport = useEditorFeatureStore((s) => s.setProjectHealthRepairReport);
+  const projectHealthScanning = useEditorFeatureStore((s) => s.projectHealthScanning);
+
+  const setProjectHealthScanning = useEditorFeatureStore((s) => s.setProjectHealthScanning);
+  const mediaHealthDashboard = useEditorFeatureStore((s) => s.mediaHealthDashboard);
+
+  const setMediaHealthDashboard = useEditorFeatureStore((s) => s.setMediaHealthDashboard);
+  const mediaHealthScanning = useEditorFeatureStore((s) => s.mediaHealthScanning);
+
+  const setMediaHealthScanning = useEditorFeatureStore((s) => s.setMediaHealthScanning);
+  const mediaHealthAutoShowEnabled = useEditorFeatureStore((s) => s.mediaHealthAutoShowEnabled);
+  const setMediaHealthAutoShowEnabled = useEditorFeatureStore((s) => s.setMediaHealthAutoShowEnabled);
   const mediaHealthAutoShowCheckedRef = useRef(false);
-  const [duplicateMediaGroups, setDuplicateMediaGroups] = useState<DuplicateMediaGroup[]>([]);
+  const duplicateMediaGroups = useEditorFeatureStore((s) => s.duplicateMediaGroups);
+
+  const setDuplicateMediaGroups = useEditorFeatureStore((s) => s.setDuplicateMediaGroups);
   const duplicateMediaOpen = useEditorUIStore((s) => s.duplicateMediaOpen);
   const setDuplicateMediaOpen = useEditorUIStore((s) => s.setDuplicateMediaOpen);
   const mediaOrganizerOpen = useEditorUIStore((s) => s.mediaOrganizerOpen);
   const setMediaOrganizerOpen = useEditorUIStore((s) => s.setMediaOrganizerOpen);
-  const [mediaOrganizerGroups, setMediaOrganizerGroups] = useState<SmartDuplicateGroup[]>([]);
-  const [mediaOrganizerCleanup, setMediaOrganizerCleanup] = useState<MediaCleanupReport>();
-  const [mediaOrganizerScanning, setMediaOrganizerScanning] = useState(false);
-  const [shortcutBindings, setShortcutBindings] = useState<TimelineShortcutBindings>({});
+  const mediaOrganizerGroups = useEditorFeatureStore((s) => s.mediaOrganizerGroups);
+
+  const setMediaOrganizerGroups = useEditorFeatureStore((s) => s.setMediaOrganizerGroups);
+  const mediaOrganizerCleanup = useEditorFeatureStore((s) => s.mediaOrganizerCleanup);
+
+  const setMediaOrganizerCleanup = useEditorFeatureStore((s) => s.setMediaOrganizerCleanup);
+  const mediaOrganizerScanning = useEditorFeatureStore((s) => s.mediaOrganizerScanning);
+
+  const setMediaOrganizerScanning = useEditorFeatureStore((s) => s.setMediaOrganizerScanning);
+  const shortcutBindings = useEditorSettingsStore((s) => s.shortcutBindings);
+
+  const setShortcutBindings = useEditorSettingsStore((s) => s.setShortcutBindings);
   const shortcutCheatsheetOpen = useEditorUIStore((s) => s.shortcutCheatsheetOpen);
   const setShortcutCheatsheetOpen = useEditorUIStore((s) => s.setShortcutCheatsheetOpen);
   const pasteKeyframeDialogOpen = useEditorUIStore((s) => s.pasteKeyframeDialogOpen);
   const setPasteKeyframeDialogOpen = useEditorUIStore((s) => s.setPasteKeyframeDialogOpen);
-  const [pasteKeyframeDialogGroups, setPasteKeyframeDialogGroups] = useState<ClipboardKeyframeGroup[]>([]);
-  const [macros, setMacros] = useState<ClipMacro[]>([]);
-  const [macroHistory, setMacroHistory] = useState<MacroHistoryEntry[]>([]);
-  const [sharedLibraryResources, setSharedLibraryResources] = useState<SharedLibraryResource[]>([]);
-  const [macroRecordingActive, setMacroRecordingActive] = useState(false);
-  const [macroRecordingStepCount, setMacroRecordingStepCount] = useState(0);
-  const [autosaveIntervalSeconds, setAutosaveIntervalSeconds] = useState(() => readAutosaveIntervalSeconds());
-  const [recoveryCandidate, setRecoveryCandidate] = useState<AutosaveRecoveryCandidate>();
-  const [archiveProgress, setArchiveProgress] = useState<ArchiveProgress>();
+  const pasteKeyframeDialogGroups = useEditorFeatureStore((s) => s.pasteKeyframeDialogGroups);
+
+  const setPasteKeyframeDialogGroups = useEditorFeatureStore((s) => s.setPasteKeyframeDialogGroups);
+  const macros = useEditorSettingsStore((s) => s.macros);
+
+  const setMacros = useEditorSettingsStore((s) => s.setMacros);
+  const macroHistory = useEditorFeatureStore((s) => s.macroHistory);
+
+  const setMacroHistory = useEditorFeatureStore((s) => s.setMacroHistory);
+  const sharedLibraryResources = useEditorSettingsStore((s) => s.sharedLibraryResources);
+
+  const setSharedLibraryResources = useEditorSettingsStore((s) => s.setSharedLibraryResources);
+  const macroRecordingActive = useEditorFeatureStore((s) => s.macroRecordingActive);
+
+  const setMacroRecordingActive = useEditorFeatureStore((s) => s.setMacroRecordingActive);
+  const macroRecordingStepCount = useEditorFeatureStore((s) => s.macroRecordingStepCount);
+
+  const setMacroRecordingStepCount = useEditorFeatureStore((s) => s.setMacroRecordingStepCount);
+  const autosaveIntervalSeconds = useEditorSettingsStore((s) => s.autosaveIntervalSeconds);
+  const setAutosaveIntervalSeconds = useEditorSettingsStore((s) => s.setAutosaveIntervalSeconds);
+  const recoveryCandidate = useEditorFeatureStore((s) => s.recoveryCandidate);
+
+  const setRecoveryCandidate = useEditorFeatureStore((s) => s.setRecoveryCandidate);
+  const archiveProgress = useEditorFeatureStore((s) => s.archiveProgress);
+
+  const setArchiveProgress = useEditorFeatureStore((s) => s.setArchiveProgress);
   const layoutSettings = useEditorUIStore((s) => s.layoutSettings);
   const setLayoutSettings = useEditorUIStore((s) => s.setLayoutSettings);
-  const [safeFrameGuides, setSafeFrameGuides] = useState(false);
-  const [thumbnailTrackVisible, setThumbnailTrackVisible] = useState(true);
-  const [timelineMinimapVisible, setTimelineMinimapVisible] = useState(true);
-  const [timelineHeatmap, setTimelineHeatmap] = useState<TimelineHeatmapViewSettings>(() => normalizeTimelineHeatmapViewSettings(undefined));
-  const [previewPerformance, setPreviewPerformance] = useState<PreviewPerformanceSettings>(DEFAULT_PREVIEW_PERFORMANCE_SETTINGS);
+  const safeFrameGuides = useEditorSettingsStore((s) => s.safeFrameGuides);
+
+  const setSafeFrameGuides = useEditorSettingsStore((s) => s.setSafeFrameGuides);
+  const thumbnailTrackVisible = useEditorSettingsStore((s) => s.thumbnailTrackVisible);
+
+  const setThumbnailTrackVisible = useEditorSettingsStore((s) => s.setThumbnailTrackVisible);
+  const timelineMinimapVisible = useEditorSettingsStore((s) => s.timelineMinimapVisible);
+
+  const setTimelineMinimapVisible = useEditorSettingsStore((s) => s.setTimelineMinimapVisible);
+  const timelineHeatmap = useEditorSettingsStore((s) => s.timelineHeatmap);
+  const setTimelineHeatmap = useEditorSettingsStore((s) => s.setTimelineHeatmap);
+  const previewPerformance = useEditorSettingsStore((s) => s.previewPerformance);
+
+  const setPreviewPerformance = useEditorSettingsStore((s) => s.setPreviewPerformance);
   const previewWindowOpen = useEditorUIStore((s) => s.previewWindowOpen);
   const setPreviewWindowOpen = useEditorUIStore((s) => s.setPreviewWindowOpen);
-  const [previewWindowResolutionScale, setPreviewWindowResolutionScale] = useState<PreviewWindowSettings['resolutionScale']>(1);
-  const [timelineGridSettings, setTimelineGridSettings] = useState<TimelineGridSettings>(DEFAULT_TIMELINE_GRID_SETTINGS);
-  const [timelineInteractionSettings, setTimelineInteractionSettings] = useState<TimelineInteractionSettings>(DEFAULT_TIMELINE_INTERACTION_SETTINGS);
-  const [collaborationIdentity, setCollaborationIdentity] = useState<CollaborationIdentitySettings>(() => ({ ...DEFAULT_COLLABORATION_IDENTITY_SETTINGS }));
-  const [tutorialProgress, setTutorialProgress] = useState<TutorialProgressSettings | undefined>();
-  const [tutorialCelebrationVisible, setTutorialCelebrationVisible] = useState(false);
-  const [tutorialSignals, setTutorialSignals] = useState<TutorialSignals>(DEFAULT_TUTORIAL_SIGNALS);
-  const [pipLayoutPosition, setPiPLayoutPosition] = useState<PiPLayoutPosition>('bottom-right');
-  const [customSplitLayouts, setCustomSplitLayouts] = useState<SplitLayoutDefinition[]>([]);
+  const previewWindowResolutionScale = useEditorSettingsStore((s) => s.previewWindowResolutionScale);
+
+  const setPreviewWindowResolutionScale = useEditorSettingsStore((s) => s.setPreviewWindowResolutionScale);
+  const timelineGridSettings = useEditorSettingsStore((s) => s.timelineGridSettings);
+
+  const setTimelineGridSettings = useEditorSettingsStore((s) => s.setTimelineGridSettings);
+  const timelineInteractionSettings = useEditorSettingsStore((s) => s.timelineInteractionSettings);
+
+  const setTimelineInteractionSettings = useEditorSettingsStore((s) => s.setTimelineInteractionSettings);
+  const collaborationIdentity = useEditorSettingsStore((s) => s.collaborationIdentity);
+  const setCollaborationIdentity = useEditorSettingsStore((s) => s.setCollaborationIdentity);
+  const tutorialProgress = useEditorSettingsStore((s) => s.tutorialProgress);
+
+  const setTutorialProgress = useEditorSettingsStore((s) => s.setTutorialProgress);
+  const tutorialCelebrationVisible = useEditorSettingsStore((s) => s.tutorialCelebrationVisible);
+
+  const setTutorialCelebrationVisible = useEditorSettingsStore((s) => s.setTutorialCelebrationVisible);
+  const tutorialSignals = useEditorSettingsStore((s) => s.tutorialSignals);
+
+  const setTutorialSignals = useEditorSettingsStore((s) => s.setTutorialSignals);
+  const pipLayoutPosition = useEditorSettingsStore((s) => s.pipLayoutPosition);
+
+  const setPiPLayoutPosition = useEditorSettingsStore((s) => s.setPiPLayoutPosition);
+  const customSplitLayouts = useEditorSettingsStore((s) => s.customSplitLayouts);
+
+  const setCustomSplitLayouts = useEditorSettingsStore((s) => s.setCustomSplitLayouts);
   const viewportSize = useEditorUIStore((s) => s.viewportSize);
   const setViewportSize = useEditorUIStore((s) => s.setViewportSize);
-  const [lastBackupAt, setLastBackupAt] = useState<string>();
-  const [demucsAvailability, setDemucsAvailability] = useState<DemucsAvailability>({ ready: false, error: zhCN.demucs.notConfigured });
-  const [audioSeparationClipId, setAudioSeparationClipId] = useState<string>();
-  const [audioSeparationProgress, setAudioSeparationProgress] = useState<number>();
-  const [speakerDiarizationRunning, setSpeakerDiarizationRunning] = useState(false);
-  const [speakerDiarizationResult, setSpeakerDiarizationResult] = useState<{
-    sourceName: string;
-    segments: SpeakerDiarizationSegment[];
-    tracks: Track[];
-  }>();
-  const [autoAudioSyncOpen, setAutoAudioSyncOpen] = useState(false);
-  const [errorKnowledgeOpen, setErrorKnowledgeOpen] = useState(false);
-  const [sequenceCompareOpen, setSequenceCompareOpen] = useState(false);
-  const [subtitleSyncOpen, setSubtitleSyncOpen] = useState(false);
-  const [proxyVerifyOpen, setProxyVerifyOpen] = useState(false);
-  const [formatConverterOpen, setFormatConverterOpen] = useState(false);
-  const [emotionAnalysisOpen, setEmotionAnalysisOpen] = useState(false);
-  const [exportHistoryClassifierOpen, setExportHistoryClassifierOpen] = useState(false);
-  const [formatConverterMockFiles, setFormatConverterMockFiles] = useState<DroppedFile[]>([]);
-  const [mockSubtitleClips, setMockSubtitleClips] = useState<SubtitleClip[]>([]);
-  const [mockExportHistory, setMockExportHistory] = useState<ExportTaskHistoryEntry[]>([]);
+  const lastBackupAt = useEditorSettingsStore((s) => s.lastBackupAt);
+
+  const setLastBackupAt = useEditorSettingsStore((s) => s.setLastBackupAt);
+  const demucsAvailability = useEditorFeatureStore((s) => s.demucsAvailability);
+
+  const setDemucsAvailability = useEditorFeatureStore((s) => s.setDemucsAvailability);
+  const audioSeparationClipId = useEditorFeatureStore((s) => s.audioSeparationClipId);
+
+  const setAudioSeparationClipId = useEditorFeatureStore((s) => s.setAudioSeparationClipId);
+  const audioSeparationProgress = useEditorFeatureStore((s) => s.audioSeparationProgress);
+
+  const setAudioSeparationProgress = useEditorFeatureStore((s) => s.setAudioSeparationProgress);
+  const speakerDiarizationRunning = useEditorFeatureStore((s) => s.speakerDiarizationRunning);
+
+  const setSpeakerDiarizationRunning = useEditorFeatureStore((s) => s.setSpeakerDiarizationRunning);
+  const speakerDiarizationResult = useEditorFeatureStore((s) => s.speakerDiarizationResult);
+
+  const setSpeakerDiarizationResult = useEditorFeatureStore((s) => s.setSpeakerDiarizationResult);
+  const autoAudioSyncOpen = useEditorUIStore((s) => s.autoAudioSyncOpen);
+  const setAutoAudioSyncOpen = useEditorUIStore((s) => s.setAutoAudioSyncOpen);
+  const errorKnowledgeOpen = useEditorUIStore((s) => s.errorKnowledgeOpen);
+  const setErrorKnowledgeOpen = useEditorUIStore((s) => s.setErrorKnowledgeOpen);
+  const sequenceCompareOpen = useEditorUIStore((s) => s.sequenceCompareOpen);
+  const setSequenceCompareOpen = useEditorUIStore((s) => s.setSequenceCompareOpen);
+  const subtitleSyncOpen = useEditorUIStore((s) => s.subtitleSyncOpen);
+  const setSubtitleSyncOpen = useEditorUIStore((s) => s.setSubtitleSyncOpen);
+  const proxyVerifyOpen = useEditorUIStore((s) => s.proxyVerifyOpen);
+  const setProxyVerifyOpen = useEditorUIStore((s) => s.setProxyVerifyOpen);
+  const formatConverterOpen = useEditorUIStore((s) => s.formatConverterOpen);
+  const setFormatConverterOpen = useEditorUIStore((s) => s.setFormatConverterOpen);
+  const emotionAnalysisOpen = useEditorUIStore((s) => s.emotionAnalysisOpen);
+  const setEmotionAnalysisOpen = useEditorUIStore((s) => s.setEmotionAnalysisOpen);
+  const exportHistoryClassifierOpen = useEditorUIStore((s) => s.exportHistoryClassifierOpen);
+  const setExportHistoryClassifierOpen = useEditorUIStore((s) => s.setExportHistoryClassifierOpen);
+  const formatConverterMockFiles = useEditorFeatureStore((s) => s.formatConverterMockFiles);
+
+  const setFormatConverterMockFiles = useEditorFeatureStore((s) => s.setFormatConverterMockFiles);
+  const mockSubtitleClips = useEditorFeatureStore((s) => s.mockSubtitleClips);
+
+  const setMockSubtitleClips = useEditorFeatureStore((s) => s.setMockSubtitleClips);
+  const mockExportHistory = useEditorFeatureStore((s) => s.mockExportHistory);
+
+  const setMockExportHistory = useEditorFeatureStore((s) => s.setMockExportHistory);
 
   // E2E: expose stores for test instrumentation
   useEffect(() => {
@@ -715,12 +854,24 @@ export function EditorShell() {
       };
     }
   }, [setFormatConverterOpen, setEmotionAnalysisOpen, setExportHistoryClassifierOpen, setArchiveProgress]);
-  const [autoAudioSyncRunning, setAutoAudioSyncRunning] = useState(false);
-  const [autoAudioSyncPrimaryClipId, setAutoAudioSyncPrimaryClipId] = useState<string>();
-  const [autoAudioSyncMode, setAutoAudioSyncMode] = useState<AutoAudioSyncApplyMode>('keep-secondary');
-  const [autoAudioSyncResults, setAutoAudioSyncResults] = useState<AutoAudioSyncResult[]>([]);
-  const [recordingTask, setRecordingTask] = useState<{ taskId: string; source: RecordingSource; outputPath: string; startedAt: number }>();
-  const [recordingElapsedSeconds, setRecordingElapsedSeconds] = useState(0);
+  const autoAudioSyncRunning = useEditorFeatureStore((s) => s.autoAudioSyncRunning);
+
+  const setAutoAudioSyncRunning = useEditorFeatureStore((s) => s.setAutoAudioSyncRunning);
+  const autoAudioSyncPrimaryClipId = useEditorFeatureStore((s) => s.autoAudioSyncPrimaryClipId);
+
+  const setAutoAudioSyncPrimaryClipId = useEditorFeatureStore((s) => s.setAutoAudioSyncPrimaryClipId);
+  const autoAudioSyncMode = useEditorFeatureStore((s) => s.autoAudioSyncMode);
+
+  const setAutoAudioSyncMode = useEditorFeatureStore((s) => s.setAutoAudioSyncMode);
+  const autoAudioSyncResults = useEditorFeatureStore((s) => s.autoAudioSyncResults);
+
+  const setAutoAudioSyncResults = useEditorFeatureStore((s) => s.setAutoAudioSyncResults);
+  const recordingTask = useEditorFeatureStore((s) => s.recordingTask);
+
+  const setRecordingTask = useEditorFeatureStore((s) => s.setRecordingTask);
+  const recordingElapsedSeconds = useEditorFeatureStore((s) => s.recordingElapsedSeconds);
+
+  const setRecordingElapsedSeconds = useEditorFeatureStore((s) => s.setRecordingElapsedSeconds);
   const {
     lastExportPath,
     setLastExportPath,
@@ -3877,9 +4028,15 @@ export function EditorShell() {
     }
   }, [inPoint, outPoint, project, projectPath, showToast]);
 
-  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
-  const [pinnedIds, setPinnedIds] = useState<Set<string>>(new Set());
-  const [recentMediaIds, setRecentMediaIds] = useState<string[]>([]);
+  const favoriteIds = useEditorMiscStore((s) => s.favoriteIds);
+
+
+  const setFavoriteIds = useEditorMiscStore((s) => s.setFavoriteIds);
+  const pinnedIds = useEditorMiscStore((s) => s.pinnedIds);
+  const setPinnedIds = useEditorMiscStore((s) => s.setPinnedIds);
+  const recentMediaIds = useEditorMiscStore((s) => s.recentMediaIds);
+
+  const setRecentMediaIds = useEditorMiscStore((s) => s.setRecentMediaIds);
 
   const handleToggleFavorite = useCallback((assetId: string) => {
     setFavoriteIds((prev) => prev.includes(assetId) ? prev.filter((id) => id !== assetId) : [...prev, assetId]);
