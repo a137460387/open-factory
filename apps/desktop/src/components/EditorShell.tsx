@@ -139,32 +139,9 @@ import {
   type MediaVersionCompareRequest,
   type MediaRenamePreviewItem,
   type SmartDuplicateGroup,
-  createOperationRecording,
-  recordOperationCommand,
-  serializeOperationRecording,
-  parseOperationRecording,
-  buildOperationReplaySchedule,
-  getOperationProjectAtStep,
-  generateOperationRecordingSlidesHtml,
   buildProxyMigration,
   matchConformByFilename,
-  normalizeOperationReplaySpeed,
   hasLowConfidenceSpeakerSegments,
-  type OperationRecordingFile,
-  type OperationReplaySpeed,
-  type SpeakerDiarizationSegment,
-  type Track,
-  analyzeExportSpeed,
-  appendProfilerMemorySample,
-  buildPerformanceProfilerReport,
-  type PerformanceProfilerReport,
-  type ProfilerExportSpeedSample,
-  type ProfilerFrameSample,
-  type ProfilerMemorySample,
-  type ProfilerQueueSample,
-  type ProfilerTraceEvent,
-  type SubtitleClip,
-  type ExportTaskHistoryEntry
 } from '@open-factory/editor-core';
 import {
   matchFrameFromClip,
@@ -190,6 +167,8 @@ import { useExportQueue } from '../hooks/useExportQueue';
 import { useMacroShortcuts } from '../hooks/useMacroShortcuts';
 import { useEditorShellSettings } from '../hooks/useEditorShellSettings';
 import { useEditorShellInteractions } from '../hooks/useEditorShellInteractions';
+import { useEditorShellProfiler } from '../hooks/useEditorShellProfiler';
+import { useEditorShellOperationRecording } from '../hooks/useEditorShellOperationRecording';
 import { useShortcuts } from '../hooks/useShortcuts';
 import { readCustomKeybindings } from '../shortcuts/keybindings';
 import type { TimelineShortcutBindings } from '../shortcuts/timeline-shortcuts';
@@ -292,18 +271,6 @@ import {
   normalizePreviewWindowPlaybackState,
   shouldApplyPreviewWindowPlaybackState
 } from '../lib/previewWindowSync';
-import {
-  appendMacroHistoryEntry,
-  buildMacroCommands,
-  findMacroTargetClip,
-  readClipMacros,
-  readMacroHistory,
-  snapshotCommand,
-  writeClipMacros,
-  type ClipMacro,
-  type CommandSnapshot,
-  type MacroHistoryEntry
-} from '../macros/clip-macros';
 import {
   readBackupSettings,
   readCollaborationIdentitySettings,
@@ -450,13 +417,6 @@ import {
   getWorkspaceLayoutDisplayName,
   moveAutomationMediaToGroup,
 } from '../lib/ui-helpers';
-import {
-  type ProfilerRecordingBuffer,
-  sampleProfilerExportSpeed,
-  createProfilerTraceEventsForFrame,
-  readBrowserJsHeapBytes,
-  estimateUndoHistoryBytes,
-} from '../lib/profiler-helpers';
 import type { ProjectPasswordRequest } from './dialogs/ProjectPasswordDialog';
 import {
   mergeProjectSpeakers,
@@ -539,25 +499,18 @@ export function EditorShell() {
   const setCollaborationNotesOpen = useEditorUIStore((s) => s.setCollaborationNotesOpen);
   const setOperationRecordingOpen = useEditorUIStore((s) => s.setOperationRecordingOpen);
   const operationRecording = useEditorFeatureStore((s) => s.operationRecording);
-  const setOperationRecording = useEditorFeatureStore((s) => s.setOperationRecording);
   const operationRecordingActive = useEditorFeatureStore((s) => s.operationRecordingActive);
-  const setOperationRecordingActive = useEditorFeatureStore((s) => s.setOperationRecordingActive);
   const operationRecordingStep = useEditorFeatureStore((s) => s.operationRecordingStep);
-  const setOperationRecordingStep = useEditorFeatureStore((s) => s.setOperationRecordingStep);
   const operationReplaySpeed = useEditorFeatureStore((s) => s.operationReplaySpeed);
   const operationReplayRunning = useEditorFeatureStore((s) => s.operationReplayRunning);
-  const setOperationReplayRunning = useEditorFeatureStore((s) => s.setOperationReplayRunning);
   const complexityScoreOpen = useEditorUIStore((s) => s.complexityScoreOpen);
   const setComplexityScoreOpen = useEditorUIStore((s) => s.setComplexityScoreOpen);
   const setSmartRecommendationsOpen = useEditorUIStore((s) => s.setSmartRecommendationsOpen);
   const setContentAnalysisOpen = useEditorUIStore((s) => s.setContentAnalysisOpen);
   const setProfilerOpen = useEditorUIStore((s) => s.setProfilerOpen);
   const profilerRecording = useEditorFeatureStore((s) => s.profilerRecording);
-  const setProfilerRecording = useEditorFeatureStore((s) => s.setProfilerRecording);
   const profilerElapsedMs = useEditorFeatureStore((s) => s.profilerElapsedMs);
-  const setProfilerElapsedMs = useEditorFeatureStore((s) => s.setProfilerElapsedMs);
   const profilerReport = useEditorFeatureStore((s) => s.profilerReport);
-  const setProfilerReport = useEditorFeatureStore((s) => s.setProfilerReport);
   const setRhythmAnalysisOpen = useEditorUIStore((s) => s.setRhythmAnalysisOpen);
   const contentAnalysisRunningClipId = useEditorFeatureStore((s) => s.contentAnalysisRunningClipId);
 
@@ -681,16 +634,14 @@ export function EditorShell() {
 
   const setMacros = useEditorSettingsStore((s) => s.setMacros);
 
-  const setMacroHistory = useEditorFeatureStore((s) => s.setMacroHistory);
   const sharedLibraryResources = useEditorSettingsStore((s) => s.sharedLibraryResources);
 
   const setSharedLibraryResources = useEditorSettingsStore((s) => s.setSharedLibraryResources);
   const macroRecordingActive = useEditorFeatureStore((s) => s.macroRecordingActive);
 
-  const setMacroRecordingActive = useEditorFeatureStore((s) => s.setMacroRecordingActive);
   const macroRecordingStepCount = useEditorFeatureStore((s) => s.macroRecordingStepCount);
 
-  const setMacroRecordingStepCount = useEditorFeatureStore((s) => s.setMacroRecordingStepCount);
+
   const autosaveIntervalSeconds = useEditorSettingsStore((s) => s.autosaveIntervalSeconds);
   const setAutosaveIntervalSeconds = useEditorSettingsStore((s) => s.setAutosaveIntervalSeconds);
   const recoveryCandidate = useEditorFeatureStore((s) => s.recoveryCandidate);
@@ -827,11 +778,6 @@ export function EditorShell() {
     restoreExportQueueRecovery,
     discardExportQueueRecovery
   } = useExportQueue(project);
-  const macroRecorderRef = useRef<{ active: boolean; replaying: boolean; steps: CommandSnapshot[] }>({ active: false, replaying: false, steps: [] });
-  const operationRecorderRef = useRef<{ active: boolean; replaying: boolean; recording?: OperationRecordingFile }>({ active: false, replaying: false });
-  const operationReplayTimersRef = useRef<number[]>([]);
-  const profilerRecordingRef = useRef<ProfilerRecordingBuffer>();
-  const latestProfilerTextureBytesRef = useRef(0);
 
   const selectedClip = useMemo(() => selectClipById(project, selectedClipId), [project, selectedClipId]);
   const selectedClips = useMemo(() => selectedClipIds.map((id) => selectClipById(project, id)).filter((clip): clip is Clip => Boolean(clip)), [project, selectedClipIds]);
@@ -856,149 +802,12 @@ export function EditorShell() {
         .sort((left, right) => left.clip.start - right.clip.start || left.clip.id.localeCompare(right.clip.id)),
     [project.media, project.timeline.tracks]
   );
-  const stopProfilerRecording = useCallback(() => {
-    const recording = profilerRecordingRef.current;
-    if (!recording) {
-      setProfilerRecording(false);
-      return;
-    }
-    try {
-      const stoppedAtMs = performance.now();
-      setProfilerReport(
-        buildPerformanceProfilerReport({
-          startedAtMs: recording.startedAtMs,
-          stoppedAtMs,
-          frames: recording.frames,
-          exportSpeed: recording.exportSpeed,
-          memory: recording.memory,
-          queues: recording.queues,
-          traceEvents: recording.traceEvents
-        })
-      );
-      setProfilerElapsedMs(stoppedAtMs - recording.startedAtMs);
-    } catch (error) {
-      console.warn('Unable to finalize profiler recording', error);
-    } finally {
-      profilerRecordingRef.current = undefined;
-      setProfilerRecording(false);
-    }
-  }, []);
-  const startProfilerRecording = useCallback(() => {
-    try {
-      const startedAtMs = performance.now();
-      profilerRecordingRef.current = {
-        startedAtMs,
-        frames: [],
-        exportSpeed: [],
-        memory: [],
-        queues: [],
-        traceEvents: [],
-        exportProgressByTaskId: new Map()
-      };
-      if (import.meta.env.VITE_E2E === 'true') {
-        window.__OPEN_FACTORY_PROFILER_DEBUG__ = { frameCount: 0 };
-      }
-      latestProfilerTextureBytesRef.current = 0;
-      setProfilerReport(undefined);
-      setProfilerElapsedMs(0);
-      setProfilerRecording(true);
-    } catch (error) {
-      console.warn('Unable to start profiler recording', error);
-      profilerRecordingRef.current = undefined;
-      setProfilerRecording(false);
-    }
-  }, []);
-  const handleProfilerFrame = useCallback(
-    (sample: ProfilerFrameSample) => {
-      const recording = profilerRecordingRef.current;
-      if (!recording) {
-        return;
-      }
-      try {
-        latestProfilerTextureBytesRef.current = Math.max(0, sample.textureBytes);
-        recording.frames.push(sample);
-        recording.traceEvents.push(...createProfilerTraceEventsForFrame(sample));
-        if (import.meta.env.VITE_E2E === 'true') {
-          window.__OPEN_FACTORY_PROFILER_DEBUG__ = {
-            frameCount: recording.frames.length,
-            lastFrameIndex: sample.frameIndex
-          };
-        }
-      } catch (error) {
-        console.warn('Unable to record profiler frame', error);
-        stopProfilerRecording();
-      }
-    },
-    [stopProfilerRecording]
-  );
-  const exportProfilerReportJson = useCallback(async () => {
-    if (!profilerReport) {
-      return;
-    }
-    try {
-      const fileName = `${sanitizeFileName(project.name || 'open-factory')}-performance-report.json`;
-      const outputPath = await bridgeSaveFileDialog(fileName, [{ name: zhCN.profiler.exportDialogName, extensions: ['json'] }]);
-      if (!outputPath) {
-        return;
-      }
-      await bridgeWriteFile(outputPath, `${JSON.stringify(profilerReport, null, 2)}\n`);
-      showToast({ kind: 'success', title: zhCN.profiler.exportedTitle, message: outputPath });
-    } catch (error) {
-      showToast({ kind: 'error', title: zhCN.profiler.exportFailedTitle, message: error instanceof Error ? error.message : zhCN.common.unavailable });
-    }
-  }, [profilerReport, project.name]);
+  const { handleProfilerFrame, startProfilerRecording, stopProfilerRecording, exportProfilerReportJson } = useEditorShellProfiler();
   const selectedClipLocked = useMemo(
     () => Boolean(selectedClip && project.timeline.tracks.find((track) => track.id === selectedClip.trackId)?.locked),
     [project.timeline.tracks, selectedClip]
   );
 
-  useEffect(() => {
-    if (!profilerRecording) {
-      return undefined;
-    }
-    let disposed = false;
-    const sample = async () => {
-      const recording = profilerRecordingRef.current;
-      if (!recording || disposed) {
-        return;
-      }
-      const now = performance.now();
-      setProfilerElapsedMs(now - recording.startedAtMs);
-      try {
-        const exportTasks = useExportQueueStore.getState().tasks;
-        const mediaJobs = useMediaJobStore.getState().jobs;
-        const queueSample: ProfilerQueueSample = {
-          timestampMs: now,
-          exportPending: exportTasks.filter((task) => task.status === 'pending' || task.status === 'scheduled' || task.status === 'interrupted').length,
-          exportRunning: exportTasks.filter((task) => task.status === 'running').length,
-          mediaPending: mediaJobs.filter((job) => job.status === 'pending').length,
-          mediaRunning: mediaJobs.filter((job) => job.status === 'running').length
-        };
-        recording.queues.push(queueSample);
-        sampleProfilerExportSpeed(recording, exportTasks, now, project.settings.fps, queueSample.exportPending + queueSample.exportRunning);
-        const proxyCacheBytes = await getCacheSize().catch(() => 0);
-        if (disposed || !profilerRecordingRef.current) {
-          return;
-        }
-        profilerRecordingRef.current.memory = appendProfilerMemorySample(profilerRecordingRef.current.memory, {
-          timestampMs: now,
-          jsHeapBytes: readBrowserJsHeapBytes(),
-          webglTextureBytes: latestProfilerTextureBytesRef.current,
-          proxyCacheBytes,
-          undoHistoryBytes: estimateUndoHistoryBytes(useEditorStore.getState().historyMeta)
-        });
-      } catch (error) {
-        console.warn('Unable to sample profiler metrics', error);
-        stopProfilerRecording();
-      }
-    };
-    void sample();
-    const timer = window.setInterval(() => void sample(), 1000);
-    return () => {
-      disposed = true;
-      window.clearInterval(timer);
-    };
-  }, [profilerRecording, project.settings.fps, stopProfilerRecording]);
 
   const canCreateMulticamSequence = useMemo(() => {
     if (selectedClipIds.length < 2 || selectedClipIds.length > 8) {
@@ -3655,252 +3464,20 @@ export function EditorShell() {
     ]
   );
 
-  const recordMacroHistory = useCallback(async (entry: MacroHistoryEntry) => {
-    try {
-      setMacroHistory(await appendMacroHistoryEntry(entry));
-    } catch (error) {
-      console.warn(zhCN.macros.history.title, error);
-    }
-  }, []);
-
-  const startMacroRecording = useCallback(() => {
-    macroRecorderRef.current = { active: true, replaying: false, steps: [] };
-    setMacroRecordingActive(true);
-    setMacroRecordingStepCount(0);
-    showToast({ kind: 'info', title: zhCN.settings.macros.recordingStarted, message: zhCN.settings.macros.recordingStartedMessage });
-  }, []);
-
-  const stopMacroRecording = useCallback(async () => {
-    const recorder = macroRecorderRef.current;
-    if (!recorder.active) {
-      return;
-    }
-    recorder.active = false;
-    setMacroRecordingActive(false);
-    setMacroRecordingStepCount(recorder.steps.length);
-    const steps = recorder.steps;
-    if (steps.length === 0) {
-      showToast({ kind: 'warning', title: zhCN.settings.macros.recordingStopped, message: zhCN.settings.macros.recordingEmpty });
-      return;
-    }
-    const defaultName = zhCN.settings.macros.recordingDefaultName(new Date().toLocaleString('zh-CN', { hour12: false }));
-    const name = window.prompt(zhCN.settings.macros.recordNamePrompt, defaultName)?.trim();
-    if (!name) {
-      return;
-    }
-    try {
-      const saved = await writeClipMacros([
-        ...macros,
-        {
-          id: createId('macro'),
-          name,
-          description: zhCN.settings.macros.savedRecordingMessage(steps.length),
-          steps
-        }
-      ]);
-      setMacros(saved);
-      showToast({ kind: 'success', title: zhCN.settings.macros.savedRecording, message: zhCN.settings.macros.savedRecordingMessage(steps.length) });
-    } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.settings.macros.saveFailed, message: error instanceof Error ? error.message : zhCN.settings.macros.saveFailedMessage });
-    }
-  }, [macros]);
-
-  const executeMacro = useCallback(
-    async (macro: ClipMacro) => {
-      const state = useEditorStore.getState();
-      const target = findMacroTargetClip(state.project.timeline, state.selectedClipIds, state.playheadTime);
-      const baseEntry = {
-        id: createId('macro-history'),
-        macroId: macro.id,
-        macroName: macro.name,
-        triggeredAt: new Date().toISOString(),
-        shortcut: macro.shortcut
-      };
-      if (!target) {
-        await recordMacroHistory({
-          ...baseEntry,
-          success: false,
-          error: zhCN.settings.macros.noTargetClip
-        });
-        showToast({ kind: 'warning', title: zhCN.settings.macros.noTargetClip, message: zhCN.settings.macros.noTargetClipMessage });
-        return;
-      }
-      try {
-        const commands = buildMacroCommands(timelineAccessor, macro, target.id);
-        if (commands.length === 0) {
-          throw new Error(zhCN.settings.macros.invalidSteps);
-        }
-        macroRecorderRef.current.replaying = true;
-        try {
-          for (const command of commands) {
-            commandManager.execute(command);
-          }
-        } finally {
-          macroRecorderRef.current.replaying = false;
-        }
-        setSelectedClipId(target.id);
-        await recordMacroHistory({
-          ...baseEntry,
-          targetClipId: target.id,
-          targetClipName: target.name,
-          success: true
-        });
-        showToast({ kind: 'success', title: zhCN.settings.macros.executed, message: `${macro.name} · ${target.name}` });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : zhCN.settings.macros.executeFailed;
-        await recordMacroHistory({
-          ...baseEntry,
-          targetClipId: target.id,
-          targetClipName: target.name,
-          success: false,
-          error: message
-        });
-        showToast({ kind: 'warning', title: zhCN.settings.macros.executeFailed, message });
-      }
-    },
-    [recordMacroHistory, setSelectedClipId]
-  );
-
-  const clearOperationReplayTimers = useCallback(() => {
-    for (const timer of operationReplayTimersRef.current) {
-      window.clearTimeout(timer);
-    }
-    operationReplayTimersRef.current = [];
-  }, []);
-
-  const applyOperationRecordingStep = useCallback((recording: OperationRecordingFile, stepIndex: number) => {
-    const projectAtStep = getOperationProjectAtStep(recording, stepIndex);
-    operationRecorderRef.current.replaying = true;
-    try {
-      commandManager.execute(new LoadProjectCommand(projectAccessor, projectAtStep, zhCN.operationRecording.replayCommand));
-    } finally {
-      operationRecorderRef.current.replaying = false;
-    }
-    setOperationRecordingStep(stepIndex);
-    setSelectedClipIds([]);
-    setSelectedClipId(undefined);
-  }, [setSelectedClipId, setSelectedClipIds]);
-
-  const startOperationRecording = useCallback(() => {
-    clearOperationReplayTimers();
-    const nextRecording = createOperationRecording(useEditorStore.getState().project);
-    operationRecorderRef.current = { active: true, replaying: false, recording: nextRecording };
-    setOperationRecording(nextRecording);
-    setOperationRecordingActive(true);
-    setOperationRecordingStep(-1);
-    setOperationReplayRunning(false);
-    showToast({ kind: 'info', title: zhCN.operationRecording.recordingStarted, message: zhCN.operationRecording.recordingStartedMessage });
-  }, [clearOperationReplayTimers]);
-
-  const stopOperationRecording = useCallback(() => {
-    operationRecorderRef.current.active = false;
-    setOperationRecordingActive(false);
-    showToast({
-      kind: operationRecorderRef.current.recording?.commands.length ? 'success' : 'warning',
-      title: zhCN.operationRecording.recordingStopped,
-      message: zhCN.operationRecording.summary(operationRecorderRef.current.recording?.commands.length ?? 0)
-    });
-  }, []);
-
-  const saveOperationRecording = useCallback(async () => {
-    const recording = operationRecorderRef.current.recording ?? operationRecording;
-    if (!recording || recording.commands.length === 0) {
-      return;
-    }
-    try {
-      const path = await bridgeSaveFileDialog('timeline-demo.ofrecording.json', [
-        { name: zhCN.operationRecording.fileDialogName, extensions: ['ofrecording.json', 'json'] }
-      ]);
-      if (!path) {
-        return;
-      }
-      await bridgeWriteFile(path, serializeOperationRecording(recording));
-      showToast({ kind: 'success', title: zhCN.operationRecording.savedTitle, message: zhCN.operationRecording.savedMessage(path) });
-    } catch (error) {
-      showToast({ kind: 'error', title: zhCN.operationRecording.saveFailed, message: error instanceof Error ? error.message : zhCN.operationRecording.saveFailedMessage });
-    }
-  }, [operationRecording]);
-
-  const loadOperationRecording = useCallback(async () => {
-    try {
-      const [path] = await bridgeOpenFileDialog(false, [{ name: zhCN.operationRecording.fileDialogName, extensions: ['ofrecording.json', 'json'] }]);
-      if (!path) {
-        return;
-      }
-      const parsed = parseOperationRecording(await bridgeReadFile(path));
-      if (!parsed) {
-        throw new Error(zhCN.operationRecording.invalidFile);
-      }
-      clearOperationReplayTimers();
-      operationRecorderRef.current = { active: false, replaying: false, recording: parsed };
-      setOperationRecording(parsed);
-      setOperationRecordingActive(false);
-      setOperationReplayRunning(false);
-      setOperationRecordingStep(-1);
-      applyOperationRecordingStep(parsed, -1);
-      showToast({ kind: 'success', title: zhCN.operationRecording.loadedTitle, message: zhCN.operationRecording.summary(parsed.commands.length) });
-    } catch (error) {
-      showToast({ kind: 'error', title: zhCN.operationRecording.loadFailed, message: error instanceof Error ? error.message : zhCN.operationRecording.loadFailedMessage });
-    }
-  }, [applyOperationRecordingStep, clearOperationReplayTimers]);
-
-  const pauseOperationReplay = useCallback(() => {
-    clearOperationReplayTimers();
-    setOperationReplayRunning(false);
-  }, [clearOperationReplayTimers]);
-
-  const replayOperationRecording = useCallback(() => {
-    const recording = operationRecorderRef.current.recording ?? operationRecording;
-    if (!recording || recording.commands.length === 0) {
-      return;
-    }
-    clearOperationReplayTimers();
-    setOperationReplayRunning(true);
-    applyOperationRecordingStep(recording, -1);
-    let elapsedMs = 0;
-    for (const step of buildOperationReplaySchedule(recording, operationReplaySpeed)) {
-      elapsedMs += step.delayMs;
-      const timer = window.setTimeout(() => {
-        applyOperationRecordingStep(recording, step.index);
-        if (step.index === recording.commands.length - 1) {
-          operationReplayTimersRef.current = [];
-          setOperationReplayRunning(false);
-          showToast({ kind: 'success', title: zhCN.operationRecording.replayFinished });
-        }
-      }, elapsedMs);
-      operationReplayTimersRef.current.push(timer);
-    }
-  }, [applyOperationRecordingStep, clearOperationReplayTimers, operationRecording, operationReplaySpeed]);
-
-  const jumpOperationRecording = useCallback(
-    (stepIndex: number) => {
-      const recording = operationRecorderRef.current.recording ?? operationRecording;
-      if (!recording) {
-        return;
-      }
-      clearOperationReplayTimers();
-      setOperationReplayRunning(false);
-      applyOperationRecordingStep(recording, stepIndex);
-    },
-    [applyOperationRecordingStep, clearOperationReplayTimers, operationRecording]
-  );
-
-  const exportOperationRecordingSlides = useCallback(async () => {
-    const recording = operationRecorderRef.current.recording ?? operationRecording;
-    if (!recording || recording.commands.length === 0) {
-      return;
-    }
-    try {
-      const path = await bridgeSaveFileDialog('timeline-demo-slides.html', [{ name: zhCN.operationRecording.slidesFileDialogName, extensions: ['html'] }]);
-      if (!path) {
-        return;
-      }
-      await bridgeWriteFile(path, generateOperationRecordingSlidesHtml(recording, 2));
-      showToast({ kind: 'success', title: zhCN.operationRecording.exportedTitle, message: path });
-    } catch (error) {
-      showToast({ kind: 'error', title: zhCN.operationRecording.exportFailed, message: error instanceof Error ? error.message : zhCN.operationRecording.exportFailedMessage });
-    }
-  }, [operationRecording]);
+  const {
+    recordMacroHistory,
+    startMacroRecording,
+    stopMacroRecording,
+    executeMacro,
+    startOperationRecording,
+    stopOperationRecording,
+    saveOperationRecording,
+    loadOperationRecording,
+    pauseOperationReplay,
+    replayOperationRecording,
+    jumpOperationRecording,
+    exportOperationRecordingSlides,
+  } = useEditorShellOperationRecording();
 
   useAutosave(autosaveIntervalSeconds);
   useCloseGuard(saveProject);
