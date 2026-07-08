@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { Cloud, Download, FilePlus, FolderOpen, GripVertical, Play, RotateCcw, Save, SlidersHorizontal, Star, Trash2, X, XCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   buildProxyInventory,
   buildProxyStorageTrend,
@@ -3040,18 +3041,17 @@ function AppearanceSettingsPanel({
           </div>
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
-          <button
-            className="inline-flex items-center gap-2 rounded-md bg-brand px-3 py-1.5 text-xs font-semibold text-white hover:brightness-95"
-            type="button"
+          <Button
+            size="sm"
             data-testid="theme-save-custom-button"
             onClick={onSaveCustom}
           >
             <Save size={14} />
             {t.saveCustom}
-          </button>
-          <button
-            className="inline-flex items-center gap-2 rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel disabled:opacity-50"
-            type="button"
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             title={canDeleteCustom ? t.deleteCustom : t.deleteDisabled}
             disabled={!canDeleteCustom}
             data-testid="theme-delete-custom-button"
@@ -3059,7 +3059,7 @@ function AppearanceSettingsPanel({
           >
             <Trash2 size={14} />
             {t.deleteCustom}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
