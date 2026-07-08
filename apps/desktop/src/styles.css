@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('/fonts/Inter-Regular.woff2') format('woff2');
+}
+
 :root {
   --color-bg-primary: #10141b;
   --color-bg-primary-rgb: 16 20 27;
@@ -34,6 +42,29 @@
   --color-scope-guide: #475569;
   --color-scope-guide-rgb: 71 85 105;
   --shadow-soft: 0 14px 32px rgba(0, 0, 0, 0.28);
+
+  /* shadcn/ui semantic variables — reference existing theme tokens */
+  --background: var(--color-bg-primary);
+  --foreground: var(--color-text-primary);
+  --card: var(--color-bg-secondary);
+  --card-foreground: var(--color-text-primary);
+  --popover: var(--color-bg-elevated);
+  --popover-foreground: var(--color-text-primary);
+  --primary: var(--color-accent);
+  --primary-foreground: var(--color-accent-contrast);
+  --secondary: var(--color-bg-elevated);
+  --secondary-foreground: var(--color-text-primary);
+  --muted: var(--color-bg-secondary);
+  --muted-foreground: var(--color-text-muted);
+  --accent: var(--color-accent-warm);
+  --accent-foreground: var(--color-text-primary);
+  --destructive: var(--color-danger);
+  --destructive-foreground: #ffffff;
+  --border: var(--color-border);
+  --input: var(--color-border);
+  --ring: var(--color-accent);
+  --radius: 0.5rem;
+
   color: var(--color-text-primary);
   background: var(--color-bg-primary);
   font-family:

@@ -16,6 +16,7 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "paths": {
+      "@/*": ["./src/*"],
       "@open-factory/editor-core": ["../../packages/editor-core/src/index.ts"],
       "@open-factory/plugin-sdk": ["../../packages/plugin-sdk/src/index.ts"]
     }
