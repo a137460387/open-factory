@@ -417,6 +417,12 @@ import { PanelLoading } from './PanelLoading';
 import { SettingsDialogs } from './dialogs/SettingsDialogs';
 import { ExportDialogs } from './dialogs/ExportDialogs';
 import { AnalysisDialogs } from './dialogs/AnalysisDialogs';
+import { BeatSyncDialog } from './dialogs/BeatSyncDialog';
+import { SnapshotDialogs } from './dialogs/SnapshotDialogs';
+import { ProjectHealthDialogs } from './dialogs/ProjectHealthDialogs';
+import { MediaCompareDialogs } from './dialogs/MediaCompareDialogs';
+import { RecoveryDialogs } from './dialogs/RecoveryDialogs';
+import { SecurityDialogs } from './dialogs/SecurityDialogs';
 import { CollapsedPanelRail } from './CollapsedPanelRail';
 import {
   getSubtitleDataImportTargetTrackId,
@@ -5019,90 +5025,30 @@ export function EditorShell() {
             stopProfilerRecording={stopProfilerRecording}
             exportProfilerReportJson={exportProfilerReportJson}
           />
-          {snapshotNameOpen ? <SnapshotNameDialog defaultName={project.name} onConfirm={(name) => void saveNamedSnapshot(name)} onClose={() => setSnapshotNameOpen(false)} /> : null}
-          {snapshotHistoryOpen ? (
-            <SnapshotHistoryDialog projectId={project.id} projectPath={projectPath} onRestore={restoreSnapshotProject} onClose={() => setSnapshotHistoryOpen(false)} />
-          ) : null}
-          {snapshotCompareOpen ? (
-            <SnapshotVersionCompareDialog project={project} projectPath={projectPath} onApply={applySnapshotDiffSelection} onClose={() => setSnapshotCompareOpen(false)} />
-          ) : null}
-          {timelineCompareOpen ? (
-            <TimelineCompareDialog project={project} projectPath={projectPath} onApply={applySnapshotDiffSelection} onClose={() => setTimelineCompareOpen(false)} />
-          ) : null}
-          {releaseWorkflowOpen ? (
-            <ReleaseWorkflowDialog
-              project={project}
-              projectPath={projectPath}
-              lastExportPath={lastExportPath}
-              onReleaseCreated={updateProjectReleaseVersion}
-              onApplyDiff={applySnapshotDiffSelection}
-              onClose={() => setReleaseWorkflowOpen(false)}
-            />
-          ) : null}
-          {thumbnailGeneratorAssetIds ? (
-            <ThumbnailGeneratorDialog project={project} initialAssetIds={thumbnailGeneratorAssetIds} onClose={() => setThumbnailGeneratorAssetIds(undefined)} />
-          ) : null}
-          {mediaVersionCompare ? (
-            <MediaVersionComparePanel request={mediaVersionCompare} media={project.media} onClose={() => setMediaVersionCompare(undefined)} />
-          ) : null}
-          {mediaPrecheckOpen ? <MediaPrecheckPanel project={project} onClose={() => setMediaPrecheckOpen(false)} onJumpToMedia={jumpToMediaAsset} /> : null}
-          {syncCompareOpen && syncCompareClipRefs.length === 2 ? (
-            <SyncComparePanel clips={[syncCompareClipRefs[0], syncCompareClipRefs[1]]} project={project} onClose={() => setSyncCompareOpen(false)} />
-          ) : null}
-          {collaborationNotesOpen ? <CollaborationNotesPanel project={project} playheadTime={playheadTime} onClose={() => setCollaborationNotesOpen(false)} /> : null}
-          {beatSyncOpen ? (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" role="dialog" aria-modal="true" data-testid="beat-sync-dialog">
-              <div className="w-full max-w-md rounded-lg border border-line bg-white p-4 shadow-xl">
-                <div className="mb-4 flex items-start justify-between gap-3">
-                  <div>
-                    <h2 className="text-base font-semibold text-ink">{zhCN.toolbar.beatSync}</h2>
-                    <p className="mt-1 text-sm text-slate-600" data-testid="beat-sync-bpm-label">{zhCN.toolbar.beatSyncDetectedBpm(detectedBeatBpm)}</p>
-                    <p className="mt-1 text-xs text-slate-500" data-testid="beat-sync-marker-count">{zhCN.toolbar.beatSyncMarkers(beatSyncBeatTimes.length)}</p>
-                  </div>
-                  <button className="rounded-md border border-line px-2 py-1 text-xs text-slate-600 hover:bg-panel" type="button" data-testid="beat-sync-close-button" onClick={() => setBeatSyncOpen(false)}>
-                    {zhCN.toolbar.beatSyncClose}
-                  </button>
-                </div>
-                <div className="space-y-3">
-                  <label className="flex items-center justify-between gap-3 text-sm text-slate-700">
-                    <span>{zhCN.toolbar.beatSensitivity}</span>
-                    <select className="rounded border border-line bg-white px-2 py-1 text-sm" value={beatSensitivity} data-testid="beat-sync-sensitivity-select" onChange={(event) => setBeatSensitivity(event.target.value as BeatSensitivity)}>
-                      <option value="low">{zhCN.toolbar.beatSensitivityOptions.low}</option>
-                      <option value="medium">{zhCN.toolbar.beatSensitivityOptions.medium}</option>
-                      <option value="high">{zhCN.toolbar.beatSensitivityOptions.high}</option>
-                    </select>
-                  </label>
-                  <label className="flex items-center justify-between gap-3 text-sm text-slate-700">
-                    <span>{zhCN.toolbar.beatSyncManualBpm}</span>
-                    <input
-                      className="w-28 rounded border border-line px-2 py-1 text-right text-sm"
-                      type="number"
-                      min="1"
-                      step="0.1"
-                      value={beatSyncManualBpm}
-                      data-testid="beat-sync-bpm-input"
-                      onChange={(event) => setBeatSyncManualBpm(event.target.value)}
-                    />
-                  </label>
-                  <label className="flex items-center justify-between gap-3 text-sm text-slate-700">
-                    <span>{zhCN.toolbar.beatSyncSpeed}</span>
-                    <input type="checkbox" checked={beatSyncSpeedEnabled} data-testid="beat-sync-speed-checkbox" onChange={(event) => setBeatSyncSpeedEnabled(event.target.checked)} />
-                  </label>
-                </div>
-                <div className="mt-4 flex flex-wrap justify-end gap-2">
-                  <button className="rounded-md border border-line px-3 py-2 text-sm hover:bg-panel" type="button" data-testid="beat-sync-apply-bpm-button" onClick={applyManualBeatBpm}>
-                    {zhCN.toolbar.beatSyncApplyBpm}
-                  </button>
-                  <button className="rounded-md border border-line px-3 py-2 text-sm hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50" type="button" disabled={!canDetectBeats} data-testid="beat-sync-detect-button" onClick={() => void detectSelectedBeats()}>
-                    {zhCN.toolbar.beatSyncRunDetect}
-                  </button>
-                  <button className="rounded-md bg-brand px-3 py-2 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50" type="button" disabled={!canSnapToBeats} data-testid="beat-sync-align-button" onClick={snapSelectedToBeats}>
-                    {zhCN.toolbar.beatSyncRunAlign}
-                  </button>
-                </div>
-              </div>
-            </div>
-          ) : null}
+          <SnapshotDialogs
+            project={project}
+            projectPath={projectPath}
+            lastExportPath={lastExportPath}
+            saveNamedSnapshot={saveNamedSnapshot}
+            restoreSnapshotProject={restoreSnapshotProject}
+            applySnapshotDiffSelection={applySnapshotDiffSelection}
+            updateProjectReleaseVersion={updateProjectReleaseVersion}
+          />
+          <MediaCompareDialogs
+            project={project}
+            playheadTime={playheadTime}
+            syncCompareClipRefs={syncCompareClipRefs}
+            jumpToMediaAsset={jumpToMediaAsset}
+          />
+          <BeatSyncDialog
+            detectedBeatBpm={detectedBeatBpm}
+            beatSyncBeatTimes={beatSyncBeatTimes}
+            canDetectBeats={canDetectBeats}
+            canSnapToBeats={canSnapToBeats}
+            applyManualBeatBpm={applyManualBeatBpm}
+            detectSelectedBeats={() => void detectSelectedBeats()}
+            snapSelectedToBeats={snapSelectedToBeats}
+          />
           {timelineSearchOpen ? <TimelineSearchPanel project={project} onClose={() => setTimelineSearchOpen(false)} /> : null}
           {shortcutCheatsheetOpen ? <ShortcutCheatsheetPanel bindings={shortcutBindings} onClose={() => setShortcutCheatsheetOpen(false)} /> : null}
           {pasteKeyframeDialogOpen && selectedClipId ? (
@@ -5136,87 +5082,35 @@ export function EditorShell() {
             open={usePerformanceMonitorStore((s) => s.panelOpen)}
           onClose={() => usePerformanceMonitorStore.getState().setPanelOpen(false)}
          />
-        {projectEncryptionSaveOpen ? (
-          <ProjectEncryptionSaveDialog
-            onConfirm={(options) => void confirmProjectEncryptionSave(options)}
-            onClose={() => setProjectEncryptionSaveOpen(false)}
-          />
-        ) : null}
-        {projectPasswordRequest ? (
-          <ProjectPasswordDialog
-            request={projectPasswordRequest}
-            onClose={() => {
-              projectPasswordRequest.resolve(undefined);
-              setProjectPasswordRequest(undefined);
-            }}
-            onConfirm={(password) => {
-              projectPasswordRequest.resolve(password);
-              setProjectPasswordRequest(undefined);
-            }}
-          />
-        ) : null}
-        {projectHealthOpen ? (
-          <ProjectHealthDialog
-            report={projectHealthReport}
-            repairReport={projectHealthRepairReport}
-            scanning={projectHealthScanning}
-            onClose={() => setProjectHealthOpen(false)}
-            onRescan={() => void refreshProjectHealth()}
-            onAutoRepair={() => void autoRepairProjectHealth()}
-            onRelink={(issue) => void relinkMissingFromHealth(issue)}
-            onRemoveOrphan={(issue) => void removeOrphanFromHealth(issue)}
-            onMergeDuplicate={(issue) => void mergeDuplicateFromHealth(issue)}
-            onQueueProxy={(issue) => void queueProxyFromHealth(issue)}
-          />
-        ) : null}
-        {duplicateMediaOpen ? (
-          <DuplicateMediaDialog
-            groups={duplicateMediaGroups}
-            onConfirm={mergeDuplicateMediaGroups}
-            onClose={() => setDuplicateMediaOpen(false)}
-          />
-        ) : null}
-        {mediaHealthDashboardOpen ? (
-          <MediaHealthDashboardDialog
-            dashboard={mediaHealthDashboard}
-            scanning={mediaHealthScanning}
-            autoShowEnabled={mediaHealthAutoShowEnabled}
-            onAutoShowEnabledChange={setMediaHealthAutoShow}
-            onClose={() => setMediaHealthDashboardOpen(false)}
-            onRescan={() => void refreshMediaHealthDashboard()}
-            onRepair={() => void repairFromMediaHealthDashboard()}
-            onOpenRelinkPanel={openMediaHealthRelinkPanel}
-          />
-        ) : null}
-        {mediaOrganizerOpen ? (
-          <MediaOrganizerDialog
-            groups={mediaOrganizerGroups}
-            cleanup={mediaOrganizerCleanup}
-            scanning={mediaOrganizerScanning}
-            onRescan={() => void refreshMediaOrganizer()}
-            onConfirmDuplicateGroups={confirmMediaOrganizerDuplicateGroups}
-            onRemoveMediaReferences={removeMediaOrganizerReferences}
-            onArchiveUnused={() => void archiveUnusedMedia()}
-            onApplyRenameTemplate={(template) => void renameUnusedMedia(template)}
-            onClose={() => setMediaOrganizerOpen(false)}
-          />
-        ) : null}
-        {recoveryCandidate ? (
-          <AutosaveRecoveryDialog
-            onRestore={() => void restoreRecovery()}
-            onDiscard={() => void discardRecovery()}
-          />
-        ) : null}
-        {exportQueueRecovery ? (
-          <ExportQueueRecoveryDialog
-            candidate={exportQueueRecovery}
-            onRestoreAll={() => void restoreExportQueueRecovery(exportQueueRecovery.tasks.map((task) => task.id))}
-            onRestoreSelected={(taskIds) => void restoreExportQueueRecovery(taskIds)}
-            onDiscardAll={() => void discardExportQueueRecovery()}
-          />
-        ) : null}
-        {archiveProgress ? <ArchiveProgressDialog progress={archiveProgress} /> : null}
-        {sharePackageProgress ? <SharePackageProgressDialog progress={sharePackageProgress} /> : null}
+        <SecurityDialogs confirmProjectEncryptionSave={confirmProjectEncryptionSave} />
+        <ProjectHealthDialogs
+          project={project}
+          refreshProjectHealth={refreshProjectHealth}
+          autoRepairProjectHealth={autoRepairProjectHealth}
+          relinkMissingFromHealth={relinkMissingFromHealth}
+          removeOrphanFromHealth={removeOrphanFromHealth}
+          mergeDuplicateFromHealth={mergeDuplicateFromHealth}
+          queueProxyFromHealth={queueProxyFromHealth}
+          mergeDuplicateMediaGroups={mergeDuplicateMediaGroups}
+          refreshMediaHealthDashboard={refreshMediaHealthDashboard}
+          repairFromMediaHealthDashboard={repairFromMediaHealthDashboard}
+          openMediaHealthRelinkPanel={openMediaHealthRelinkPanel}
+          refreshMediaOrganizer={refreshMediaOrganizer}
+          confirmMediaOrganizerDuplicateGroups={confirmMediaOrganizerDuplicateGroups}
+          removeMediaOrganizerReferences={removeMediaOrganizerReferences}
+          archiveUnusedMedia={archiveUnusedMedia}
+          renameUnusedMedia={renameUnusedMedia}
+        />
+        <RecoveryDialogs
+          recoveryCandidate={recoveryCandidate}
+          exportQueueRecovery={exportQueueRecovery}
+          archiveProgress={archiveProgress}
+          sharePackageProgress={sharePackageProgress}
+          restoreRecovery={restoreRecovery}
+          discardRecovery={discardRecovery}
+          restoreExportQueueRecovery={restoreExportQueueRecovery}
+          discardExportQueueRecovery={discardExportQueueRecovery}
+        />
         {tutorialProgress && (shouldShowTutorial(tutorialProgress) || tutorialCelebrationVisible) ? (
           <TutorialOverlay
             progress={tutorialCelebrationVisible ? { ...tutorialProgress, tutorialCompleted: true } : tutorialProgress}
