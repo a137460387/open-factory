@@ -139,7 +139,7 @@ describe('useEditorShellMiscCallbacks', () => {
 
   // --- clearCache ---
   it('clearCache 成功时显示成功提示', async () => {
-    vi.mocked(clearMediaCache).mockResolvedValue(undefined);
+    vi.mocked(clearMediaCache).mockResolvedValue(undefined as any);
 
     const { result } = renderHook(() => useEditorShellMiscCallbacks());
     await result.current.clearCache();
