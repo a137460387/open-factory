@@ -14,6 +14,7 @@ test('utility functions produce expected output after P1-4 extraction', async ({
   expect(result).toBe(true);
 
   // The extraction of utility functions should not break the main layout
-  await expect(page.getByTestId('left-panel')).toBeVisible();
-  await expect(page.getByTestId('timeline-panel')).toBeVisible();
+  // Wait for React to finish rendering after waitForE2eActions
+  await expect(page.getByTestId('left-panel')).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByTestId('timeline-panel')).toBeVisible({ timeout: 10_000 });
 });
