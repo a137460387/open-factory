@@ -173,7 +173,7 @@ export function AIBrollSuggestionPanel({
 
   return (
     <details className="mb-4" data-testid="ai-broll-section">
-      <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-slate-500">
+      <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">
         {t.title}
       </summary>
       <div className="space-y-2 p-1">
@@ -183,9 +183,9 @@ export function AIBrollSuggestionPanel({
 
         {!loading && !hasResults && (
           <div className="mb-2">
-            <label className="block text-xs text-slate-600">{t.selectProvider}</label>
+            <label className="block text-xs text-[var(--color-text-secondary)]">{t.selectProvider}</label>
             <select
-              className="w-full rounded-md border border-line bg-white px-2 py-1 text-sm"
+              className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1 text-sm"
               value={selectedProvider?.id ?? ''}
               disabled
               data-testid="ai-broll-provider-select"
@@ -200,7 +200,7 @@ export function AIBrollSuggestionPanel({
 
         {!loading && !hasResults && (
           <button
-            className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-50"
             type="button"
             disabled={!available}
             onClick={() => void handleAnalyze()}
@@ -212,7 +212,7 @@ export function AIBrollSuggestionPanel({
         )}
 
         {loading && (
-          <div className="flex items-center gap-2 py-3 text-sm text-slate-500" data-testid="ai-broll-loading">
+          <div className="flex items-center gap-2 py-3 text-sm text-[var(--color-text-muted)]" data-testid="ai-broll-loading">
             <Loader2 size={16} className="animate-spin" />
             {t.analyzing}
           </div>
@@ -226,7 +226,7 @@ export function AIBrollSuggestionPanel({
 
         {hasResults && (
           <div className="space-y-2" data-testid="ai-broll-results">
-            <div className="text-xs text-slate-500">{t.suggestionCount(pendingSuggestions.length)}</div>
+            <div className="text-xs text-[var(--color-text-muted)]">{t.suggestionCount(pendingSuggestions.length)}</div>
             {suggestions.map((s, i) => {
               const media = allMedia.find((m) => m.id === s.mediaId);
               const isAccepted = s.status === 'accepted';
@@ -234,18 +234,18 @@ export function AIBrollSuggestionPanel({
               return (
                 <div
                   key={`${s.segmentId}-${s.mediaId}-${i}`}
-                  className={`rounded-md border p-2 text-xs ${isAccepted ? 'border-green-300 bg-green-50' : isRejected ? 'border-slate-200 bg-slate-50 opacity-50' : 'border-brand/30 bg-brand/5'}`}
+                  className={`rounded-md border p-2 text-xs ${isAccepted ? 'border-[var(--color-accent)]/30 bg-[var(--color-accent)]/10' : isRejected ? 'border-line bg-[var(--color-bg-secondary)] opacity-50' : 'border-brand/30 bg-brand/5'}`}
                   data-testid={`ai-broll-suggestion-${i}`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-slate-800">{media?.name ?? s.mediaId}</span>
-                    <span className="text-slate-500">{t.confidence}: {Math.round(s.confidence * 100)}%</span>
+                    <span className="font-medium text-ink">{media?.name ?? s.mediaId}</span>
+                    <span className="text-[var(--color-text-muted)]">{t.confidence}: {Math.round(s.confidence * 100)}%</span>
                   </div>
-                  <div className="mt-0.5 text-slate-500">{t.reason}: {s.reason}</div>
+                  <div className="mt-0.5 text-[var(--color-text-muted)]">{t.reason}: {s.reason}</div>
                   {!isAccepted && !isRejected && (
                     <div className="mt-2 flex gap-2">
                       <button
-                        className="flex items-center gap-1 rounded-md bg-blue-600 px-2 py-1 text-xs text-white hover:bg-blue-700"
+                        className="flex items-center gap-1 rounded-md bg-[var(--color-accent)] px-2 py-1 text-xs text-white hover:bg-[var(--color-accent)]"
                         type="button"
                         onClick={() => handleInsert(s)}
                         data-testid={`ai-broll-insert-${i}`}
@@ -254,7 +254,7 @@ export function AIBrollSuggestionPanel({
                         {t.insert}
                       </button>
                       <button
-                        className="flex items-center gap-1 rounded-md border border-line bg-white px-2 py-1 text-xs text-slate-700 hover:bg-panel"
+                        className="flex items-center gap-1 rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1 text-xs text-[var(--color-text-secondary)] hover:bg-panel"
                         type="button"
                         onClick={() => handleReject(s)}
                         data-testid={`ai-broll-reject-${i}`}

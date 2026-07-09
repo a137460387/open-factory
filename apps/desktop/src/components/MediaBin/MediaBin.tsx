@@ -492,7 +492,7 @@ export function MediaBin({
     <SubclipCtx.Provider value={{ subclips, onAddSubclip, onUpdateSubclip, onDeleteSubclip, onAddSubclipToTimeline, onOpenSubclipDialog: handleOpenSubclipDialog, expandedSubclipAssetIds, onToggleSubclipExpanded: handleToggleSubclipExpanded }}>
     <MediaCardExtrasCtx.Provider value={_extrasValue}>
       <aside
-      className={clsx('flex h-full min-h-0 flex-col bg-white', dragOver && 'ring-2 ring-inset ring-brand')}
+      className={clsx('flex h-full min-h-0 flex-col bg-panel', dragOver && 'ring-2 ring-inset ring-brand')}
       onDragOver={(event) => {
         event.preventDefault();
         setDragOver(true);
@@ -512,7 +512,7 @@ export function MediaBin({
       <div className="flex items-center justify-between border-b border-line px-3 py-2">
         <div>
           <div className="text-sm font-semibold">{t.title}</div>
-          <div className="text-xs text-slate-500">{t.itemCount(media.length)}</div>
+          <div className="text-xs text-[var(--color-text-muted)]">{t.itemCount(media.length)}</div>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           {missingCount > 0 ? (
@@ -526,7 +526,7 @@ export function MediaBin({
             </button>
           ) : null}
           <button
-            className="inline-flex items-center gap-2 rounded-md border border-line bg-panel px-2 py-2 text-sm font-medium text-slate-700 hover:bg-white"
+            className="inline-flex items-center gap-2 rounded-md border border-line bg-panel px-2 py-2 text-sm font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]"
             onClick={onScanDuplicates}
             data-testid="scan-duplicate-media-button"
           >
@@ -534,7 +534,7 @@ export function MediaBin({
             {t.scanDuplicates}
           </button>
           <button
-            className="inline-flex items-center gap-2 rounded-md border border-line bg-panel px-2 py-2 text-sm font-medium text-slate-700 hover:bg-white"
+            className="inline-flex items-center gap-2 rounded-md border border-line bg-panel px-2 py-2 text-sm font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]"
             onClick={onBatchGenerateCovers}
             data-testid="batch-generate-covers-button"
           >
@@ -542,7 +542,7 @@ export function MediaBin({
             {t.batchGenerateCovers}
           </button>
           <button
-            className="inline-flex items-center gap-2 rounded-md border border-line bg-panel px-2 py-2 text-sm font-medium text-slate-700 hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-md border border-line bg-panel px-2 py-2 text-sm font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)] disabled:cursor-not-allowed disabled:opacity-50"
             onClick={() => onGenerateThumbnails(selectedVideoIds)}
             disabled={selectedVideoIds.length === 0}
             data-testid="batch-generate-thumbnails-button"
@@ -551,7 +551,7 @@ export function MediaBin({
             {t.batchGenerateThumbnails(selectedVideoIds.length)}
           </button>
           <button
-            className="inline-flex items-center gap-2 rounded-md border border-line bg-panel px-2 py-2 text-sm font-medium text-slate-700 hover:bg-white"
+            className="inline-flex items-center gap-2 rounded-md border border-line bg-panel px-2 py-2 text-sm font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]"
             onClick={onAddAdjustmentLayer}
             data-testid="new-adjustment-layer-button"
           >
@@ -559,7 +559,7 @@ export function MediaBin({
             {t.newAdjustmentLayer}
           </button>
           <button
-            className="inline-flex items-center gap-2 rounded-md border border-line bg-panel px-2 py-2 text-sm font-medium text-slate-700 hover:bg-white"
+            className="inline-flex items-center gap-2 rounded-md border border-line bg-panel px-2 py-2 text-sm font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]"
             onClick={() => onCreateFolder(null)}
             data-testid="media-folder-create-button"
           >
@@ -580,9 +580,9 @@ export function MediaBin({
         <div className="mb-3 space-y-2">
           <label className="relative block">
             <span className="sr-only">{t.searchPlaceholder}</span>
-            <Search className="pointer-events-none absolute left-2 top-2.5 text-slate-400" size={15} />
+            <Search className="pointer-events-none absolute left-2 top-2.5 text-[var(--color-text-muted)]" size={15} />
             <input
-              className={clsx('w-full rounded-md border bg-white py-2 pl-8 pr-14 text-sm text-ink', aiSearchMode ? 'border-brand' : 'border-line')}
+              className={clsx('w-full rounded-md border bg-[var(--color-bg-elevated)] py-2 pl-8 pr-14 text-sm text-ink', aiSearchMode ? 'border-brand' : 'border-line')}
               value={search}
               placeholder={aiSearchMode ? t.aiSemanticSearch.searchPlaceholder : t.searchPlaceholder}
               data-testid="media-search-input"
@@ -590,7 +590,7 @@ export function MediaBin({
             />
             <button
               type="button"
-              className={clsx('absolute right-1 top-1 rounded-md px-1.5 py-1 text-xs font-semibold', aiSearchMode ? 'bg-brand text-white' : 'bg-white text-slate-500 hover:bg-panel')}
+              className={clsx('absolute right-1 top-1 rounded-md px-1.5 py-1 text-xs font-semibold', aiSearchMode ? 'bg-brand text-white' : 'bg-[var(--color-bg-elevated)] text-[var(--color-text-muted)] hover:bg-panel')}
               onClick={() => setAiSearchMode(!aiSearchMode)}
               data-testid="ai-search-toggle"
               title={t.aiSemanticSearch.toggleLabel}
@@ -608,7 +608,7 @@ export function MediaBin({
                 key={item}
                 className={clsx(
                   'rounded-md border px-1.5 py-1 text-xs font-semibold',
-                  quickFilter === item && (item !== 'all' || filter === 'all') ? 'border-brand bg-white text-brand' : 'border-line bg-white text-slate-600 hover:bg-panel'
+                  quickFilter === item && (item !== 'all' || filter === 'all') ? 'border-brand bg-[var(--color-bg-elevated)] text-brand' : 'border-line bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:bg-panel'
                 )}
                 type="button"
                 data-testid={`media-filter-${item}`}
@@ -632,7 +632,7 @@ export function MediaBin({
                 key={item}
                 className={clsx(
                   'rounded-md border px-1.5 py-1 text-xs font-semibold',
-                  filter === item ? 'border-brand bg-white text-brand' : 'border-line bg-white text-slate-600 hover:bg-panel'
+                  filter === item ? 'border-brand bg-[var(--color-bg-elevated)] text-brand' : 'border-line bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:bg-panel'
                 )}
                 type="button"
                 data-testid={`media-filter-${item}`}
@@ -648,10 +648,10 @@ export function MediaBin({
               </button>
             ))}
           </div>
-          <label className="block text-[11px] font-medium text-slate-600">
+          <label className="block text-[11px] font-medium text-[var(--color-text-secondary)]">
             {zhCN.contentAnalysis.sceneFilter}
             <select
-              className="mt-1 h-8 w-full rounded border border-line bg-white px-2 text-xs text-ink"
+              className="mt-1 h-8 w-full rounded border border-line bg-[var(--color-bg-elevated)] px-2 text-xs text-ink"
               value={sceneFilter}
               data-testid="media-scene-filter-select"
               onChange={(event) => setSceneFilter(event.target.value as ContentSceneType | 'all')}
@@ -699,13 +699,13 @@ export function MediaBin({
           <div className="mb-3 rounded-md border border-line bg-panel p-2 text-xs" data-testid="media-job-queue">
             <div className="flex items-center justify-between gap-2">
               <div className="min-w-0">
-                <div className="font-semibold text-slate-700">{t.mediaJobs}</div>
-                <div className="truncate text-slate-500">
+                <div className="font-semibold text-[var(--color-text-secondary)]">{t.mediaJobs}</div>
+                <div className="truncate text-[var(--color-text-muted)]">
                   {runningJob ? `${t.jobType[runningJob.type]} · ${runningJob.assetName}` : runnerActive ? t.preparingQueue : zhCN.common.idle} · {t.pendingCount(pendingCount)}
                   {failedCount > 0 ? ` · ${t.failedCount(failedCount)}` : ''}
                 </div>
               </div>
-              <button className="rounded-md border border-line bg-white px-2 py-1 text-[11px] font-medium hover:bg-white/80" onClick={clearFinishedJobs}>
+              <button className="rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1 text-[11px] font-medium hover:bg-[var(--color-bg-secondary)]" onClick={clearFinishedJobs}>
                 {zhCN.common.clear}
               </button>
             </div>
@@ -726,10 +726,10 @@ export function MediaBin({
           />
         ) : media.length === 0 ? (
           <button
-            className="flex h-full min-h-[220px] w-full flex-col items-center justify-center rounded-md border border-dashed border-slate-300 bg-panel p-6 text-center text-sm text-slate-600"
+            className="flex h-full min-h-[220px] w-full flex-col items-center justify-center rounded-md border border-dashed border-slate-300 bg-panel p-6 text-center text-sm text-[var(--color-text-secondary)]"
             onClick={onImport}
           >
-            <Import className="mb-3 text-slate-500" size={30} />
+            <Import className="mb-3 text-[var(--color-text-muted)]" size={30} />
             {t.emptyDrop}
           </button>
         ) : mediaLibraryView.mode === 'list' ? (
@@ -895,7 +895,7 @@ function BatchMetadataDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" role="dialog" aria-modal="true" aria-labelledby="batch-metadata-title" data-testid="batch-metadata-dialog">
       <form
-        className="w-full max-w-lg rounded-md border border-line bg-white p-4 shadow-soft"
+        className="w-full max-w-lg rounded-md border border-line bg-[var(--color-bg-elevated)] p-4 shadow-soft"
         onSubmit={(event) => {
           event.preventDefault();
           if (canSubmit) {
@@ -906,16 +906,16 @@ function BatchMetadataDialog({
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold text-ink" id="batch-metadata-title">{t.title}</h2>
-            <p className="mt-1 text-xs text-slate-500">{t.summary(assets.length)}</p>
+            <p className="mt-1 text-xs text-[var(--color-text-muted)]">{t.summary(assets.length)}</p>
           </div>
-          <button className="rounded p-1 text-slate-500 hover:bg-panel" type="button" aria-label={zhCN.common.close} onClick={onClose}>
+          <button className="rounded p-1 text-[var(--color-text-muted)] hover:bg-panel" type="button" aria-label={zhCN.common.close} onClick={onClose}>
             <X size={16} />
           </button>
         </div>
         <div className="grid gap-3">
           <BatchTextField label={t.fields.title} value={title} onChange={setTitle} testId="batch-metadata-title-input" />
           <BatchTextField label={t.fields.author} value={author} onChange={setAuthor} testId="batch-metadata-author-input" />
-          <label className="grid gap-1 text-xs font-semibold text-slate-700">
+          <label className="grid gap-1 text-xs font-semibold text-[var(--color-text-secondary)]">
             {t.fields.description}
             <textarea
               className="min-h-20 rounded-md border border-line px-2 py-1.5 text-sm font-normal text-ink outline-none focus:border-brand"
@@ -930,7 +930,7 @@ function BatchMetadataDialog({
           </div>
         </div>
         <div className="mt-4 flex justify-end gap-2">
-          <button className="rounded-md border border-line px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-panel" type="button" onClick={onClose}>
+          <button className="rounded-md border border-line px-3 py-1.5 text-sm font-semibold text-[var(--color-text-secondary)] hover:bg-panel" type="button" onClick={onClose}>
             {zhCN.common.cancel}
           </button>
           <button className="rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-40" type="submit" disabled={!canSubmit} data-testid="batch-metadata-confirm-button">
@@ -995,7 +995,7 @@ function BatchRenameDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4" role="dialog" aria-modal="true" aria-labelledby="batch-rename-title" data-testid="batch-rename-dialog">
       <form
-        className="grid max-h-[88vh] w-full max-w-3xl grid-rows-[auto_minmax(0,1fr)_auto] rounded-md border border-line bg-white shadow-soft"
+        className="grid max-h-[88vh] w-full max-w-3xl grid-rows-[auto_minmax(0,1fr)_auto] rounded-md border border-line bg-[var(--color-bg-elevated)] shadow-soft"
         onSubmit={(event) => {
           event.preventDefault();
           if (hasChanges) {
@@ -1006,16 +1006,16 @@ function BatchRenameDialog({
         <div className="flex items-start justify-between gap-3 border-b border-line p-4">
           <div>
             <h2 className="text-base font-semibold text-ink" id="batch-rename-title">{t.title}</h2>
-            <p className="mt-1 text-xs text-slate-500">{t.summary(assets.length)}</p>
+            <p className="mt-1 text-xs text-[var(--color-text-muted)]">{t.summary(assets.length)}</p>
           </div>
-          <button className="rounded p-1 text-slate-500 hover:bg-panel" type="button" aria-label={zhCN.common.close} onClick={onClose}>
+          <button className="rounded p-1 text-[var(--color-text-muted)] hover:bg-panel" type="button" aria-label={zhCN.common.close} onClick={onClose}>
             <X size={16} />
           </button>
         </div>
         <div className="min-h-0 overflow-y-auto p-4">
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(260px,0.9fr)]">
             <div className="space-y-3">
-              <label className="grid gap-1 text-xs font-semibold text-slate-700">
+              <label className="grid gap-1 text-xs font-semibold text-[var(--color-text-secondary)]">
                 {t.template}
                 <input
                   ref={templateRef}
@@ -1031,13 +1031,13 @@ function BatchRenameDialog({
               </datalist>
               <div className="flex flex-wrap gap-1" aria-label={t.variableHint}>
                 {t.variableTokens.map((token) => (
-                  <button key={token} className="rounded border border-line bg-panel px-2 py-1 text-[11px] font-semibold text-slate-600 hover:bg-white" type="button" onClick={() => insertTemplateToken(token)}>
+                  <button key={token} className="rounded border border-line bg-panel px-2 py-1 text-[11px] font-semibold text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]" type="button" onClick={() => insertTemplateToken(token)}>
                     {token}
                   </button>
                 ))}
               </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <label className="grid gap-1 text-xs font-semibold text-slate-700">
+                <label className="grid gap-1 text-xs font-semibold text-[var(--color-text-secondary)]">
                   {t.startIndex}
                   <input
                     className="rounded-md border border-line px-2 py-1.5 text-sm font-normal text-ink outline-none focus:border-brand"
@@ -1053,7 +1053,7 @@ function BatchRenameDialog({
                 <BatchTextField label={t.find} value={findText} onChange={setFindText} testId="batch-rename-find-input" />
                 <BatchTextField label={t.replace} value={replaceText} onChange={setReplaceText} testId="batch-rename-replace-input" />
               </div>
-              <label className="grid gap-1 text-xs font-semibold text-slate-700">
+              <label className="grid gap-1 text-xs font-semibold text-[var(--color-text-secondary)]">
                 {t.caseTransform}
                 <select className="rounded-md border border-line px-2 py-1.5 text-sm font-normal text-ink outline-none focus:border-brand" value={caseTransform} onChange={(event) => setCaseTransform(event.target.value as MediaRenameRules['caseTransform'])}>
                   <option value="none">{t.caseOptions.none}</option>
@@ -1062,7 +1062,7 @@ function BatchRenameDialog({
                   <option value="title">{t.caseOptions.title}</option>
                 </select>
               </label>
-              <div className="grid gap-2 text-xs font-semibold text-slate-700">
+              <div className="grid gap-2 text-xs font-semibold text-[var(--color-text-secondary)]">
                 <label className="inline-flex items-center gap-2">
                   <input className="h-4 w-4 accent-brand" type="checkbox" checked={sequencePrefix} onChange={(event) => setSequencePrefix(event.target.checked)} />
                   {t.sequencePrefix}
@@ -1082,11 +1082,11 @@ function BatchRenameDialog({
               </div>
             </div>
             <div className="min-h-0 rounded-md border border-line bg-panel">
-              <div className="border-b border-line px-3 py-2 text-xs font-semibold text-slate-700">{t.preview}</div>
+              <div className="border-b border-line px-3 py-2 text-xs font-semibold text-[var(--color-text-secondary)]">{t.preview}</div>
               <div className="max-h-[420px] overflow-y-auto p-2">
                 {preview.map((item) => (
-                  <div key={item.assetId} className="mb-2 rounded-md border border-line bg-white p-2 text-xs last:mb-0" data-testid="batch-rename-preview-row" data-next-name={item.nextName}>
-                    <div className="truncate text-slate-500" title={item.originalName}>{item.originalName}</div>
+                  <div key={item.assetId} className="mb-2 rounded-md border border-line bg-[var(--color-bg-elevated)] p-2 text-xs last:mb-0" data-testid="batch-rename-preview-row" data-next-name={item.nextName}>
+                    <div className="truncate text-[var(--color-text-muted)]" title={item.originalName}>{item.originalName}</div>
                     <div className="mt-1 truncate font-semibold text-ink" title={item.nextName}>{item.nextName}</div>
                     {item.conflictSuffix ? <div className="mt-1 text-[11px] text-amber-700">{t.conflictSuffix(item.conflictSuffix)}</div> : null}
                   </div>
@@ -1096,7 +1096,7 @@ function BatchRenameDialog({
           </div>
         </div>
         <div className="flex justify-end gap-2 border-t border-line p-4">
-          <button className="rounded-md border border-line px-3 py-1.5 text-sm font-semibold text-slate-600 hover:bg-panel" type="button" onClick={onClose}>
+          <button className="rounded-md border border-line px-3 py-1.5 text-sm font-semibold text-[var(--color-text-secondary)] hover:bg-panel" type="button" onClick={onClose}>
             {zhCN.common.cancel}
           </button>
           <button className="rounded-md bg-brand px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-40" type="submit" disabled={!hasChanges} data-testid="batch-rename-confirm-button">
@@ -1110,7 +1110,7 @@ function BatchRenameDialog({
 
 function BatchTextField({ label, value, onChange, testId }: { label: string; value: string; onChange(value: string): void; testId: string }) {
   return (
-    <label className="grid gap-1 text-xs font-semibold text-slate-700">
+    <label className="grid gap-1 text-xs font-semibold text-[var(--color-text-secondary)]">
       {label}
       <input
         className="rounded-md border border-line px-2 py-1.5 text-sm font-normal text-ink outline-none focus:border-brand"
@@ -1158,7 +1158,7 @@ function SmartAlbumBar({ albums, activeId, onSelect }: { albums: ReturnType<type
   return (
     <div className="grid grid-cols-2 gap-1" data-testid="smart-album-bar">
       <button
-        className={clsx('rounded-md border px-1.5 py-1 text-xs font-semibold', activeId === 'none' ? 'border-brand bg-white text-brand' : 'border-line bg-white text-slate-600 hover:bg-panel')}
+        className={clsx('rounded-md border px-1.5 py-1 text-xs font-semibold', activeId === 'none' ? 'border-brand bg-[var(--color-bg-elevated)] text-brand' : 'border-line bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:bg-panel')}
         type="button"
         data-testid="smart-album-none"
         onClick={() => onSelect('none')}
@@ -1168,7 +1168,7 @@ function SmartAlbumBar({ albums, activeId, onSelect }: { albums: ReturnType<type
       {albums.map((album) => (
         <button
           key={album.id}
-          className={clsx('rounded-md border px-1.5 py-1 text-xs font-semibold', activeId === album.id ? 'border-brand bg-white text-brand' : 'border-line bg-white text-slate-600 hover:bg-panel')}
+          className={clsx('rounded-md border px-1.5 py-1 text-xs font-semibold', activeId === album.id ? 'border-brand bg-[var(--color-bg-elevated)] text-brand' : 'border-line bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:bg-panel')}
           type="button"
           data-testid={`smart-album-${album.id}`}
           onClick={() => onSelect(album.id)}
@@ -1182,20 +1182,20 @@ function SmartAlbumBar({ albums, activeId, onSelect }: { albums: ReturnType<type
 
 function SharedLibraryGrid({ resources }: { resources: SharedLibraryResource[] }) {
   if (resources.length === 0) {
-    return <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600" data-testid="shared-library-empty">{zhCN.mediaBin.sharedEmpty}</div>;
+    return <div className="rounded-md border border-line bg-panel p-3 text-sm text-[var(--color-text-secondary)]" data-testid="shared-library-empty">{zhCN.mediaBin.sharedEmpty}</div>;
   }
   return (
     <div className="space-y-2" data-testid="shared-library-resource-list">
-      <div className="text-xs font-medium text-slate-500">{zhCN.mediaBin.sharedResourceCount(resources.length)}</div>
+      <div className="text-xs font-medium text-[var(--color-text-muted)]">{zhCN.mediaBin.sharedResourceCount(resources.length)}</div>
       <div className="grid gap-2">
         {resources.map((resource) => (
-          <div key={resource.id} className="rounded-md border border-line bg-white p-3 shadow-sm" data-testid="shared-library-resource-card">
+          <div key={resource.id} className="rounded-md border border-line bg-[var(--color-bg-elevated)] p-3 shadow-sm" data-testid="shared-library-resource-card">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <div className="truncate text-sm font-semibold text-ink">{resource.name}</div>
-                <div className="mt-1 text-xs text-slate-500">{zhCN.mediaBin.sharedResourceTypes[resource.type]}</div>
+                <div className="mt-1 text-xs text-[var(--color-text-muted)]">{zhCN.mediaBin.sharedResourceTypes[resource.type]}</div>
               </div>
-              <span className="shrink-0 rounded bg-panel px-1.5 py-0.5 text-[11px] font-semibold text-slate-600">{zhCN.mediaBin.sharedVersion(resource.version)}</span>
+              <span className="shrink-0 rounded bg-panel px-1.5 py-0.5 text-[11px] font-semibold text-[var(--color-text-secondary)]">{zhCN.mediaBin.sharedVersion(resource.version)}</span>
             </div>
           </div>
         ))}
@@ -1225,29 +1225,29 @@ function EffectPresetGrid({
       <div className="flex items-center justify-between gap-3 rounded-md border border-line bg-panel p-3">
         <div className="min-w-0">
           <div className="text-sm font-semibold text-ink">{t.title}</div>
-          <div className="text-xs text-slate-500">{selectedClipId ? t.ready : t.selectClip}</div>
+          <div className="text-xs text-[var(--color-text-muted)]">{selectedClipId ? t.ready : t.selectClip}</div>
         </div>
-        <button className="inline-flex items-center gap-1 rounded-md border border-line bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-panel" type="button" data-testid="effect-presets-refresh-button" onClick={onRefresh}>
+        <button className="inline-flex items-center gap-1 rounded-md border border-line bg-[var(--color-bg-elevated)] px-3 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] hover:bg-panel" type="button" data-testid="effect-presets-refresh-button" onClick={onRefresh}>
           <RotateCcw size={13} />
           {t.refresh}
         </button>
       </div>
-      {loading ? <div className="rounded-md border border-line bg-white p-3 text-sm text-slate-600" data-testid="effect-presets-loading">{t.loading}</div> : null}
+      {loading ? <div className="rounded-md border border-line bg-[var(--color-bg-elevated)] p-3 text-sm text-[var(--color-text-secondary)]" data-testid="effect-presets-loading">{t.loading}</div> : null}
       {error ? <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800" data-testid="effect-presets-error">{error}</div> : null}
-      {!loading && presets.length === 0 ? <div className="rounded-md border border-line bg-white p-3 text-sm text-slate-600" data-testid="effect-presets-empty">{t.empty}</div> : null}
+      {!loading && presets.length === 0 ? <div className="rounded-md border border-line bg-[var(--color-bg-elevated)] p-3 text-sm text-[var(--color-text-secondary)]" data-testid="effect-presets-empty">{t.empty}</div> : null}
       <div className="grid gap-2" data-testid="effect-preset-list">
         {presets.map((preset) => (
-          <div key={preset.id} className="rounded-md border border-line bg-white p-3 shadow-sm" data-testid="effect-preset-card" data-preset-id={preset.id}>
+          <div key={preset.id} className="rounded-md border border-line bg-[var(--color-bg-elevated)] p-3 shadow-sm" data-testid="effect-preset-card" data-preset-id={preset.id}>
             <div className="flex items-start gap-3">
               <div className="grid h-16 w-24 shrink-0 place-items-center overflow-hidden rounded border border-line bg-panel">
-                {preset.thumbnail ? <img className="h-full w-full object-cover" src={preset.thumbnail} alt="" data-testid="effect-preset-thumbnail" loading="lazy" /> : <SlidersHorizontal size={18} className="text-slate-400" />}
+                {preset.thumbnail ? <img className="h-full w-full object-cover" src={preset.thumbnail} alt="" data-testid="effect-preset-thumbnail" loading="lazy" /> : <SlidersHorizontal size={18} className="text-[var(--color-text-muted)]" />}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-semibold text-ink">{preset.name}</div>
-                <div className="truncate text-xs text-slate-500">{t.byAuthor(preset.author)}</div>
+                <div className="truncate text-xs text-[var(--color-text-muted)]">{t.byAuthor(preset.author)}</div>
                 <div className="mt-2 flex flex-wrap gap-1" data-testid="effect-preset-tags">
                   {preset.tags.map((tag) => (
-                    <span key={tag} className="rounded bg-panel px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                    <span key={tag} className="rounded bg-panel px-2 py-0.5 text-[11px] font-medium text-[var(--color-text-secondary)]">
                     {(t.tagLabels as Record<string, string>)[tag] ?? tag}
                     </span>
                   ))}
@@ -1282,7 +1282,7 @@ function MediaLibraryViewToolbar({ settings, onChange }: { settings: MediaLibrar
         {viewModes.map((item) => (
           <button
             key={item.mode}
-            className={clsx('inline-flex items-center justify-center gap-1 rounded-md border px-1.5 py-1 text-xs font-semibold', settings.mode === item.mode ? 'border-brand bg-white text-brand' : 'border-line bg-white text-slate-600 hover:bg-white/80')}
+            className={clsx('inline-flex items-center justify-center gap-1 rounded-md border px-1.5 py-1 text-xs font-semibold', settings.mode === item.mode ? 'border-brand bg-[var(--color-bg-elevated)] text-brand' : 'border-line bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]')}
             type="button"
             title={item.label}
             aria-label={item.label}
@@ -1296,10 +1296,10 @@ function MediaLibraryViewToolbar({ settings, onChange }: { settings: MediaLibrar
         ))}
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <label className="block text-[11px] font-medium text-slate-600">
+        <label className="block text-[11px] font-medium text-[var(--color-text-secondary)]">
           {zhCN.mediaBin.sortBy}
           <select
-            className="mt-1 h-8 w-full rounded border border-line bg-white px-2 text-xs text-ink"
+            className="mt-1 h-8 w-full rounded border border-line bg-[var(--color-bg-elevated)] px-2 text-xs text-ink"
             value={settings.sortKey}
             data-testid="media-sort-key-select"
             onChange={(event) => onChange({ sortKey: event.target.value as MediaLibrarySortKey })}
@@ -1312,10 +1312,10 @@ function MediaLibraryViewToolbar({ settings, onChange }: { settings: MediaLibrar
           </select>
         </label>
         <div className="grid grid-cols-[1fr_auto] gap-1">
-          <label className="block text-[11px] font-medium text-slate-600">
+          <label className="block text-[11px] font-medium text-[var(--color-text-secondary)]">
             {zhCN.mediaBin.gridSize}
             <select
-              className="mt-1 h-8 w-full rounded border border-line bg-white px-2 text-xs text-ink disabled:opacity-50"
+              className="mt-1 h-8 w-full rounded border border-line bg-[var(--color-bg-elevated)] px-2 text-xs text-ink disabled:opacity-50"
               value={settings.gridSize}
               disabled={settings.mode !== 'grid'}
               data-testid="media-grid-size-select"
@@ -1329,7 +1329,7 @@ function MediaLibraryViewToolbar({ settings, onChange }: { settings: MediaLibrar
             </select>
           </label>
           <button
-            className="mt-5 h-8 rounded border border-line bg-white px-2 text-xs font-semibold text-slate-600 hover:bg-white/80"
+            className="mt-5 h-8 rounded border border-line bg-[var(--color-bg-elevated)] px-2 text-xs font-semibold text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]"
             type="button"
             data-testid="media-sort-direction-button"
             onClick={() => onChange({ sortDirection: settings.sortDirection === 'asc' ? 'desc' : 'asc' })}
@@ -1482,7 +1482,7 @@ function MediaFolderNode({
           onDeleteFolder(folder.id);
         }}
       >
-        <button className="rounded p-1 hover:bg-white" type="button" data-testid={`media-folder-toggle-${folder.id}`} onClick={() => onSetFolderCollapsed(folder.id, !folder.collapsed)}>
+        <button className="rounded p-1 hover:bg-[var(--color-bg-secondary)]" type="button" data-testid={`media-folder-toggle-${folder.id}`} onClick={() => onSetFolderCollapsed(folder.id, !folder.collapsed)}>
           {folder.collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
         </button>
         <Folder size={15} className="text-brand" />
@@ -1505,15 +1505,15 @@ function MediaFolderNode({
             }}
           />
         ) : (
-          <button className="min-w-0 flex-1 truncate text-left font-semibold text-slate-700" type="button" data-testid={`media-folder-name-${folder.id}`} onDoubleClick={() => setEditing(true)}>
+          <button className="min-w-0 flex-1 truncate text-left font-semibold text-[var(--color-text-secondary)]" type="button" data-testid={`media-folder-name-${folder.id}`} onDoubleClick={() => setEditing(true)}>
             {folder.name}
           </button>
         )}
-        <span className="text-slate-500">{folderMedia.length}</span>
-        <button className="rounded p-1 hover:bg-white disabled:opacity-40" type="button" title={zhCN.mediaBin.newSubfolder} data-testid={`media-folder-add-child-${folder.id}`} disabled={!canNest} onClick={() => onCreateFolder(folder.id)}>
+        <span className="text-[var(--color-text-muted)]">{folderMedia.length}</span>
+        <button className="rounded p-1 hover:bg-[var(--color-bg-secondary)] disabled:opacity-40" type="button" title={zhCN.mediaBin.newSubfolder} data-testid={`media-folder-add-child-${folder.id}`} disabled={!canNest} onClick={() => onCreateFolder(folder.id)}>
           <FolderPlus size={13} />
         </button>
-        <button className="rounded p-1 text-rose-600 hover:bg-white" type="button" title={zhCN.common.delete} data-testid={`media-folder-delete-${folder.id}`} onClick={() => onDeleteFolder(folder.id)}>
+        <button className="rounded p-1 text-rose-600 hover:bg-[var(--color-bg-secondary)]" type="button" title={zhCN.common.delete} data-testid={`media-folder-delete-${folder.id}`} onClick={() => onDeleteFolder(folder.id)}>
           <Trash2 size={13} />
         </button>
       </div>
@@ -1590,7 +1590,7 @@ function MediaFolderNode({
 function RootMediaDropZone({ onMoveMediaToFolder }: { onMoveMediaToFolder(assetIds: string[], folderId?: string | null): void }) {
   return (
     <div
-      className="rounded-md border border-dashed border-line bg-white px-2 py-1.5 text-xs font-medium text-slate-500"
+      className="rounded-md border border-dashed border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-xs font-medium text-[var(--color-text-muted)]"
       data-testid="media-folder-root-dropzone"
       onDragOver={(event) => event.preventDefault()}
       onDrop={(event) => {
@@ -1632,9 +1632,9 @@ function MediaLibraryListView({
     { key: 'importedAt', label: zhCN.mediaBin.listColumns.importedAt, sortable: true, testId: 'media-list-sort-importedAt' }
   ];
   return (
-    <div className="overflow-x-auto rounded-md border border-line bg-white" data-testid="media-list-view">
+    <div className="overflow-x-auto rounded-md border border-line bg-[var(--color-bg-elevated)]" data-testid="media-list-view">
       <table className="min-w-[820px] w-full border-collapse text-xs">
-        <thead className="bg-panel text-left text-[11px] uppercase tracking-normal text-slate-500">
+        <thead className="bg-panel text-left text-[11px] uppercase tracking-normal text-[var(--color-text-muted)]">
           <tr>
             {columns.map((column) => (
               <th key={column.key} className="border-b border-line px-2 py-2 font-semibold">
@@ -1659,22 +1659,22 @@ function MediaLibraryListView({
                   {asset.name}
                 </div>
               </td>
-              <td className="px-2 py-2 text-slate-600">{formatMediaFormat(asset)}</td>
-              <td className="px-2 py-2 text-slate-600">{formatMediaResolution(asset)}</td>
-              <td className="px-2 py-2 text-slate-600" data-testid={`media-list-color-profile-${asset.id}`}>{formatMediaColorProfile(asset)}</td>
-              <td className="px-2 py-2 tabular-nums text-slate-600">{formatDuration(asset.duration)}</td>
-              <td className="px-2 py-2 tabular-nums text-slate-600" data-testid={`media-list-size-${asset.id}`}>
+              <td className="px-2 py-2 text-[var(--color-text-secondary)]">{formatMediaFormat(asset)}</td>
+              <td className="px-2 py-2 text-[var(--color-text-secondary)]">{formatMediaResolution(asset)}</td>
+              <td className="px-2 py-2 text-[var(--color-text-secondary)]" data-testid={`media-list-color-profile-${asset.id}`}>{formatMediaColorProfile(asset)}</td>
+              <td className="px-2 py-2 tabular-nums text-[var(--color-text-secondary)]">{formatDuration(asset.duration)}</td>
+              <td className="px-2 py-2 tabular-nums text-[var(--color-text-secondary)]" data-testid={`media-list-size-${asset.id}`}>
                 {formatBytes(asset.size)}
               </td>
-              <td className="px-2 py-2 tabular-nums text-slate-600">{formatImportedAt(asset.importedAt)}</td>
+              <td className="px-2 py-2 tabular-nums text-[var(--color-text-secondary)]">{formatImportedAt(asset.importedAt)}</td>
               <td className="px-2 py-2">
                 <div className="flex justify-end gap-1">
                   {asset.type === 'video' ? (
-                    <button className="rounded border border-line px-2 py-1 font-medium text-slate-600 hover:bg-panel" type="button" data-testid={`media-list-export-gif-${asset.id}`} onClick={() => onExportGif(asset)}>
+                    <button className="rounded border border-line px-2 py-1 font-medium text-[var(--color-text-secondary)] hover:bg-panel" type="button" data-testid={`media-list-export-gif-${asset.id}`} onClick={() => onExportGif(asset)}>
                       GIF
                     </button>
                   ) : null}
-                  <button className="rounded border border-line bg-panel px-2 py-1 font-medium text-slate-700 hover:bg-white" type="button" data-testid={`media-list-add-${asset.id}`} onClick={() => onAddToTimeline(asset.id)}>
+                  <button className="rounded border border-line bg-panel px-2 py-1 font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]" type="button" data-testid={`media-list-add-${asset.id}`} onClick={() => onAddToTimeline(asset.id)}>
                     {zhCN.mediaBin.add}
                   </button>
                 </div>
@@ -1693,7 +1693,7 @@ function MediaLibraryTimelineView({ media, onAddToTimeline, onExportGif }: { med
   }
   const maxDuration = Math.max(1, ...media.map((asset) => asset.duration || 0));
   return (
-    <div className="overflow-x-auto rounded-md border border-line bg-white p-3" data-testid="media-timeline-view">
+    <div className="overflow-x-auto rounded-md border border-line bg-[var(--color-bg-elevated)] p-3" data-testid="media-timeline-view">
       <div className="flex min-w-max items-stretch gap-2">
         {media.map((asset) => {
           const width = Math.max(90, Math.min(240, 80 + (asset.duration / maxDuration) * 160));
@@ -1707,14 +1707,14 @@ function MediaLibraryTimelineView({ media, onAddToTimeline, onExportGif }: { med
                 <div className="truncate text-xs font-semibold text-ink" title={asset.path}>
                   {asset.name}
                 </div>
-                <div className="truncate text-[11px] text-slate-500">{formatImportedAt(asset.importedAt)}</div>
+                <div className="truncate text-[11px] text-[var(--color-text-muted)]">{formatImportedAt(asset.importedAt)}</div>
                 <div className="flex gap-1">
                   {asset.type === 'video' ? (
-                    <button className="rounded border border-line bg-white px-1.5 py-1 text-[11px] font-medium text-slate-600 hover:bg-panel" type="button" data-testid={`media-timeline-export-gif-${asset.id}`} onClick={() => onExportGif(asset)}>
+                    <button className="rounded border border-line bg-[var(--color-bg-elevated)] px-1.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)] hover:bg-panel" type="button" data-testid={`media-timeline-export-gif-${asset.id}`} onClick={() => onExportGif(asset)}>
                       GIF
                     </button>
                   ) : null}
-                  <button className="flex-1 rounded border border-line bg-white px-1.5 py-1 text-[11px] font-medium text-slate-700 hover:bg-panel" type="button" data-testid={`media-timeline-add-${asset.id}`} onClick={() => onAddToTimeline(asset.id)}>
+                  <button className="flex-1 rounded border border-line bg-[var(--color-bg-elevated)] px-1.5 py-1 text-[11px] font-medium text-[var(--color-text-secondary)] hover:bg-panel" type="button" data-testid={`media-timeline-add-${asset.id}`} onClick={() => onAddToTimeline(asset.id)}>
                     {zhCN.mediaBin.add}
                   </button>
                 </div>
@@ -2015,7 +2015,7 @@ function VirtualMediaCardGrid({
 function TitleTemplateGrid({ onAddTitleTemplate }: { onAddTitleTemplate(templateId: TitleTemplateId): void }) {
   return (
     <div className="grid grid-cols-1 gap-3" data-testid="title-template-grid">
-      <div className="rounded-md border border-line bg-panel px-3 py-2 text-xs font-medium text-slate-600">
+      <div className="rounded-md border border-line bg-panel px-3 py-2 text-xs font-medium text-[var(--color-text-secondary)]">
         {zhCN.mediaBin.titleTemplateCount(TITLE_TEMPLATE_IDS.length)}
       </div>
       {TITLE_TEMPLATE_IDS.map((templateId) => {
@@ -2023,7 +2023,7 @@ function TitleTemplateGrid({ onAddTitleTemplate }: { onAddTitleTemplate(template
         return (
           <div
             key={templateId}
-            className="rounded-md border border-line bg-white p-3 shadow-sm"
+            className="rounded-md border border-line bg-[var(--color-bg-elevated)] p-3 shadow-sm"
             draggable
             data-testid={`title-template-card-${templateId}`}
             onDragStart={(event) => {
@@ -2037,11 +2037,11 @@ function TitleTemplateGrid({ onAddTitleTemplate }: { onAddTitleTemplate(template
               </div>
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-semibold text-ink">{label.name}</div>
-                <div className="truncate text-xs text-slate-500">{label.defaultText}</div>
+                <div className="truncate text-xs text-[var(--color-text-muted)]">{label.defaultText}</div>
               </div>
             </div>
             <button
-              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md border border-line bg-panel px-2 py-1.5 text-sm font-medium hover:bg-white"
+              className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-md border border-line bg-panel px-2 py-1.5 text-sm font-medium hover:bg-[var(--color-bg-secondary)]"
               type="button"
               data-testid={`add-title-template-${templateId}`}
               onClick={() => onAddTitleTemplate(templateId)}
@@ -2060,13 +2060,13 @@ function MediaSourcePathsDialog({ state, onClose }: { state: MediaSourcePathsSta
   const paths = state.paths;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-testid="media-source-paths-dialog">
-      <div className="w-full max-w-xl overflow-hidden rounded-lg bg-white shadow-soft">
+      <div className="w-full max-w-xl overflow-hidden rounded-lg bg-[var(--color-bg-elevated)] shadow-soft">
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
           <div className="min-w-0">
             <h2 className="truncate text-base font-semibold text-ink">{zhCN.mediaBin.sourcePathsTitle}</h2>
-            <div className="truncate text-xs text-slate-500">{state.asset.name}</div>
+            <div className="truncate text-xs text-[var(--color-text-muted)]">{state.asset.name}</div>
           </div>
-          <button className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 hover:bg-panel" type="button" aria-label={zhCN.common.close} onClick={onClose}>
+          <button className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--color-text-muted)] hover:bg-panel" type="button" aria-label={zhCN.common.close} onClick={onClose}>
             <X size={17} />
           </button>
         </div>
@@ -2074,13 +2074,13 @@ function MediaSourcePathsDialog({ state, onClose }: { state: MediaSourcePathsSta
           {paths.length > 0 ? (
             <ul className="space-y-2">
               {paths.map((path) => (
-                <li key={path} className="rounded-md border border-line bg-panel px-2 py-1.5 font-mono text-slate-700" data-testid="media-source-path">
+                <li key={path} className="rounded-md border border-line bg-panel px-2 py-1.5 font-mono text-[var(--color-text-secondary)]" data-testid="media-source-path">
                   {path}
                 </li>
               ))}
             </ul>
           ) : (
-            <div className="rounded-md border border-line bg-panel p-3 text-slate-600" data-testid="media-source-path-empty">{zhCN.mediaBin.sourcePathsEmpty}</div>
+            <div className="rounded-md border border-line bg-panel p-3 text-[var(--color-text-secondary)]" data-testid="media-source-path-empty">{zhCN.mediaBin.sourcePathsEmpty}</div>
           )}
         </div>
       </div>
@@ -2095,18 +2095,18 @@ function MediaInfoDialog({ state, onClose }: { state: MediaInfoState; onClose():
   const firstAudio = analysis?.audioStreams[0];
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" data-testid="media-info-dialog">
-      <div className="flex max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg bg-white shadow-soft">
+      <div className="flex max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-lg bg-[var(--color-bg-elevated)] shadow-soft">
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
           <div className="min-w-0">
             <h2 className="truncate text-base font-semibold text-ink">{t.title}</h2>
-            <div className="truncate text-xs text-slate-500">{state.asset.name}</div>
+            <div className="truncate text-xs text-[var(--color-text-muted)]">{state.asset.name}</div>
           </div>
-          <button className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 hover:bg-panel" type="button" title={zhCN.common.close} aria-label={zhCN.common.close} data-testid="media-info-close-button" onClick={onClose}>
+          <button className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--color-text-muted)] hover:bg-panel" type="button" title={zhCN.common.close} aria-label={zhCN.common.close} data-testid="media-info-close-button" onClick={onClose}>
             <X size={16} />
           </button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
-          {state.loading ? <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-600">{t.loading}</div> : null}
+          {state.loading ? <div className="rounded-md border border-line bg-panel p-3 text-sm text-[var(--color-text-secondary)]">{t.loading}</div> : null}
           {state.error ? <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">{state.error}</div> : null}
           {analysis ? (
             <div className="space-y-4">
@@ -2129,7 +2129,7 @@ function MediaInfoDialog({ state, onClose }: { state: MediaInfoState; onClose():
                     <InfoRow label={t.hdrMetadata} value={firstVideo.hdrMetadata.length > 0 ? firstVideo.hdrMetadata.join(', ') : zhCN.common.none} />
                   </>
                 ) : (
-                  <div className="text-sm text-slate-500">{t.noVideo}</div>
+                  <div className="text-sm text-[var(--color-text-muted)]">{t.noVideo}</div>
                 )}
               </InfoSection>
               <InfoSection title={t.audio}>
@@ -2142,7 +2142,7 @@ function MediaInfoDialog({ state, onClose }: { state: MediaInfoState; onClose():
                     <InfoRow label={t.loudness} value={firstAudio.integratedLufs !== undefined ? `${firstAudio.integratedLufs.toFixed(1)} LUFS` : (analysis.loudnessError ?? zhCN.common.unavailable)} testId="media-info-loudness" />
                   </>
                 ) : (
-                  <div className="text-sm text-slate-500">{t.noAudio}</div>
+                  <div className="text-sm text-[var(--color-text-muted)]">{t.noAudio}</div>
                 )}
               </InfoSection>
               <InfoSection title={t.bitrateChart}>
@@ -2159,7 +2159,7 @@ function MediaInfoDialog({ state, onClose }: { state: MediaInfoState; onClose():
 function InfoSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="rounded-md border border-line bg-panel p-3">
-      <h3 className="mb-2 text-xs font-semibold uppercase tracking-normal text-slate-600">{title}</h3>
+      <h3 className="mb-2 text-xs font-semibold uppercase tracking-normal text-[var(--color-text-secondary)]">{title}</h3>
       <div className="grid gap-1 text-sm">{children}</div>
     </section>
   );
@@ -2168,7 +2168,7 @@ function InfoSection({ title, children }: { title: string; children: ReactNode }
 function InfoRow({ label, value, testId }: { label: string; value: string; testId?: string }) {
   return (
     <div className="grid grid-cols-[140px_minmax(0,1fr)] gap-3">
-      <div className="text-xs font-medium text-slate-500">{label}</div>
+      <div className="text-xs font-medium text-[var(--color-text-muted)]">{label}</div>
       <div className="min-w-0 break-words text-sm text-ink" data-testid={testId}>{value}</div>
     </div>
   );
@@ -2221,7 +2221,7 @@ function BitrateChart({ points }: { points: MediaAnalysis['bitratePoints'] }) {
     context.stroke();
   }, [points]);
 
-  return <canvas ref={canvasRef} className="h-32 w-full rounded-md border border-line bg-white" width={640} height={128} data-testid="media-info-bitrate-chart" />;
+  return <canvas ref={canvasRef} className="h-32 w-full rounded-md border border-line bg-[var(--color-bg-elevated)]" width={640} height={128} data-testid="media-info-bitrate-chart" />;
 }
 
 const MEDIA_LABEL_COLORS: Array<{ key: MediaLabelColor; value: string }> = [
@@ -2305,7 +2305,7 @@ function MediaCard({
   const versionCount = 1 + mediaVersions.length;
   return (
     <div
-      className={clsx('relative overflow-hidden rounded-md border bg-white shadow-sm outline-none focus:ring-2 focus:ring-brand', asset.missing ? 'border-rose-300' : 'border-line')}
+      className={clsx('relative overflow-hidden rounded-md border bg-[var(--color-bg-elevated)] shadow-sm outline-none focus:ring-2 focus:ring-brand', asset.missing ? 'border-rose-300' : 'border-line')}
       data-testid={`media-card-${asset.id}`}
       data-media-card="true"
       data-media-index={mediaIndex}
@@ -2435,7 +2435,7 @@ function MediaCard({
         ) : null}
         {labelColor ? <span className={clsx('absolute right-2 h-4 w-4 rounded-full border border-white shadow', versionCount > 1 ? 'top-8' : 'top-2')} style={{ backgroundColor: labelColorToHex(labelColor) }} data-testid={`media-label-${asset.id}`} /> : null}
        {extras?.favoriteIds.has(asset.id) ? <span className="absolute right-2 top-2 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-white/90 shadow" data-testid={`media-favorite-badge-${asset.id}`}><Heart size={12} className="text-rose-500" fill="currentColor" /></span> : null}
-        {extras?.qualityLoading.has(asset.id) ? <span className="absolute left-2 top-2 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-white/90 shadow" data-testid={`quality-badge-loading-${asset.id}`}><Loader2 size={12} className="animate-spin text-slate-500" /></span> : null}
+        {extras?.qualityLoading.has(asset.id) ? <span className="absolute left-2 top-2 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-white/90 shadow" data-testid={`quality-badge-loading-${asset.id}`}><Loader2 size={12} className="animate-spin text-[var(--color-text-muted)]" /></span> : null}
         {extras?.qualityResults.has(asset.id) ? (() => { const g = mapScoreToGrade(extras.qualityResults.get(asset.id)!.overallScore); return <span className={clsx('absolute left-2 top-2 z-10 flex items-center justify-center rounded-full bg-white/90 px-1.5 py-0.5 text-[10px] font-bold shadow', g === 'green' ? 'text-emerald-600' : g === 'yellow' ? 'text-amber-500' : 'text-rose-600')} title={zhCN.mediaBin.aiQualityAssessment.scoreBadge + ': ' + extras.qualityResults.get(asset.id)!.overallScore} data-testid={`quality-badge-${asset.id}`}>{extras.qualityResults.get(asset.id)!.overallScore}</span>; })() : null}
         {flag ? (
           <span
@@ -2451,11 +2451,11 @@ function MediaCard({
         ) : null}
       </div>
       {labelMenuOpen ? (
-        <div className="absolute right-2 top-2 z-10 w-48 rounded-md border border-line bg-white p-2 text-xs shadow-soft" data-testid={`media-label-menu-${asset.id}`}>
+        <div className="absolute right-2 top-2 z-10 w-48 rounded-md border border-line bg-[var(--color-bg-elevated)] p-2 text-xs shadow-soft" data-testid={`media-label-menu-${asset.id}`}>
           {batchSelectionCount > 1 ? (
             <>
               <button
-                className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
+                className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel"
                 type="button"
                 data-testid="batch-edit-metadata-menu-item"
                 onClick={() => {
@@ -2467,7 +2467,7 @@ function MediaCard({
                 {zhCN.mediaBin.batchEditMetadata}
               </button>
               <button
-                className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
+                className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel"
                 type="button"
                 data-testid="batch-rename-media-menu-item"
                 onClick={() => {
@@ -2482,7 +2482,7 @@ function MediaCard({
          ) : null}
           {extras ? (
             <button
-              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
+              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel"
               type="button"
               data-testid="batch-quality-scan"
               onClick={() => {
@@ -2495,7 +2495,7 @@ function MediaCard({
             </button>
           ) : null}
          <button
-           className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
+           className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel"
            type="button"
            data-testid={`media-info-${asset.id}`}
             onClick={() => {
@@ -2508,7 +2508,7 @@ function MediaCard({
           </button>
           {sc && (asset.type === 'video' || asset.type === 'audio') ? (
             <button
-              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
+              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel"
               type="button"
               data-testid={`media-new-subclip-${asset.id}`}
               onClick={() => { sc.onOpenSubclipDialog(asset.id); setLabelMenuOpen(false); } }
@@ -2518,7 +2518,7 @@ function MediaCard({
             </button>
           ) : null}
           <button
-            className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
+            className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel"
             type="button"
             data-testid={`media-add-version-${asset.id}`}
             onClick={() => {
@@ -2530,7 +2530,7 @@ function MediaCard({
             {zhCN.mediaBin.addVersion}
           </button>
           <button
-            className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
+            className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel"
             type="button"
             data-testid={`media-find-source-${asset.id}`}
             onClick={() => {
@@ -2542,7 +2542,7 @@ function MediaCard({
             {zhCN.mediaBin.findSourceFiles}
           </button>
           <button
-            className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel disabled:opacity-40"
+            className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel disabled:opacity-40"
             type="button"
             disabled={versionCount < 2}
             data-testid={`media-compare-versions-${asset.id}`}
@@ -2557,7 +2557,7 @@ function MediaCard({
           {asset.type === 'video' ? (
             <>
               <button
-                className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
+                className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel"
                 type="button"
                 data-testid={`media-batch-transcode-${asset.id}`}
                 onClick={() => {
@@ -2569,7 +2569,7 @@ function MediaCard({
                 {zhCN.mediaBin.batchTranscode}
               </button>
               <button
-                className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
+                className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel"
                 type="button"
                 data-testid={`media-export-gif-${asset.id}`}
                 onClick={() => {
@@ -2584,7 +2584,7 @@ function MediaCard({
           ) : null}
           {asset.type === 'video' || asset.type === 'audio' ? (
             <button
-              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
+              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel"
               type="button"
               data-testid={`media-spectrum-analysis-${asset.id}`}
               onClick={() => {
@@ -2598,7 +2598,7 @@ function MediaCard({
           ) : null}
           {extras ? (
             <button
-              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
+              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel"
               type="button"
               data-testid={`media-reveal-in-timeline-${asset.id}`}
               onClick={() => {
@@ -2612,7 +2612,7 @@ function MediaCard({
           ) : null}
           {extras ? (
             <button
-              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
+              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel"
               type="button"
               data-testid={`media-toggle-favorite-${asset.id}`}
               onClick={() => {
@@ -2626,7 +2626,7 @@ function MediaCard({
           ) : null}
           {extras ? (
             <button
-              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
+              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel"
               type="button"
               data-testid={`media-pin-to-session-${asset.id}`}
               onClick={() => {
@@ -2640,7 +2640,7 @@ function MediaCard({
           ) : null}
           {(asset.type === 'video' || asset.type === 'image') && extras ? (
             <button
-              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
+              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel"
               type="button"
               data-testid={`media-ai-analyze-${asset.id}`}
               onClick={() => {
@@ -2654,7 +2654,7 @@ function MediaCard({
           ) : null}
           {extras ? (
             <button
-              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-slate-700 hover:bg-panel"
+              className="mb-2 inline-flex w-full items-center gap-2 rounded-md border border-line px-2 py-1.5 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel"
               type="button"
               disabled={extras.qualityLoading.has(asset.id)}
               data-testid={`media-quality-assess-${asset.id}`}
@@ -2667,7 +2667,7 @@ function MediaCard({
               {extras.qualityLoading.has(asset.id) ? zhCN.mediaBin.aiQualityAssessment.assessing : zhCN.mediaBin.aiQualityAssessment.assess}
             </button>
           ) : null}
-          <div className="mb-2 flex items-center gap-1 font-semibold text-slate-700">
+          <div className="mb-2 flex items-center gap-1 font-semibold text-[var(--color-text-secondary)]">
             <Tag size={13} />
             {zhCN.mediaBin.label}
           </div>
@@ -2688,7 +2688,7 @@ function MediaCard({
             ))}
           </div>
           <button
-            className="mt-2 w-full rounded-md border border-line px-2 py-1 text-left font-medium text-slate-600 hover:bg-panel"
+            className="mt-2 w-full rounded-md border border-line px-2 py-1 text-left font-medium text-[var(--color-text-secondary)] hover:bg-panel"
             type="button"
             data-testid="media-label-clear"
             onClick={() => {
@@ -2704,19 +2704,19 @@ function MediaCard({
         <div className="truncate text-sm font-medium" title={asset.path} data-testid={`media-name-${asset.id}`}>
           {asset.name}
         </div>
-        <div className="mt-1 flex items-center justify-between gap-2 text-xs text-slate-500">
+        <div className="mt-1 flex items-center justify-between gap-2 text-xs text-[var(--color-text-muted)]">
           <span>{zhCN.mediaBin.assetType[asset.type]}</span>
           <span>{asset.type === 'audio' ? formatDuration(asset.duration) : `${asset.width || '-'}x${asset.height || '-'}`}</span>
         </div>
-        <div className="mt-1 truncate text-[11px] text-slate-500" data-testid={`media-color-profile-${asset.id}`}>{formatMediaColorProfile(asset)}</div>
+        <div className="mt-1 truncate text-[11px] text-[var(--color-text-muted)]" data-testid={`media-color-profile-${asset.id}`}>{formatMediaColorProfile(asset)}</div>
         {contentAnalysis ? <MediaSceneTagList assetId={asset.id} analysis={contentAnalysis} /> : null}
         {asset.aiAnalysis?.tags && asset.aiAnalysis.tags.length > 0 ? (
           <div className="mt-1 flex flex-wrap gap-1" data-testid={`ai-tags-${asset.id}`}>
             {asset.aiAnalysis.tags.slice(0, 5).map((tag, i) => (
-              <span key={i} className="inline-block rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-700">{tag}</span>
+              <span key={i} className="inline-block rounded-full bg-[var(--color-accent)]/15 px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-accent)]">{tag}</span>
             ))}
             {asset.aiAnalysis.scene ? (
-              <span className="inline-block text-[10px] text-slate-400" title={asset.aiAnalysis.scene}>{asset.aiAnalysis.scene}</span>
+              <span className="inline-block text-[10px] text-[var(--color-text-muted)]" title={asset.aiAnalysis.scene}>{asset.aiAnalysis.scene}</span>
             ) : null}
           </div>
         ) : null}
@@ -2733,19 +2733,19 @@ function MediaCard({
             {frameRateMismatch ? zhCN.mediaBin.convertFrameRateToProject(formatFrameRateLabel(projectFrameRate)) : zhCN.mediaBin.convertToCfr}
           </button>
         ) : null}
-        {asset.relativePath ? <div className="mt-1 truncate text-[11px] text-slate-400">{asset.relativePath}</div> : null}
+        {asset.relativePath ? <div className="mt-1 truncate text-[11px] text-[var(--color-text-muted)]">{asset.relativePath}</div> : null}
         {versionsOpen && versionCount > 1 ? (
           <div className="mt-2 space-y-1 rounded-md border border-line bg-panel p-2 text-[11px]" data-testid={`media-version-list-${asset.id}`}>
-            <div className="flex items-center justify-between gap-2 rounded bg-white px-2 py-1" data-testid={`media-version-row-${asset.id}-${asset.id}`}>
-              <span className="font-semibold text-slate-700">{getMediaVersionLabel(0)}</span>
-              <span className="min-w-0 flex-1 truncate text-slate-500">{asset.name}</span>
-              <span className="text-slate-400">{zhCN.mediaBin.versionOriginal}</span>
+            <div className="flex items-center justify-between gap-2 rounded bg-[var(--color-bg-elevated)] px-2 py-1" data-testid={`media-version-row-${asset.id}-${asset.id}`}>
+              <span className="font-semibold text-[var(--color-text-secondary)]">{getMediaVersionLabel(0)}</span>
+              <span className="min-w-0 flex-1 truncate text-[var(--color-text-muted)]">{asset.name}</span>
+              <span className="text-[var(--color-text-muted)]">{zhCN.mediaBin.versionOriginal}</span>
             </div>
             {mediaVersions.map((version, index) => (
-              <div key={version.id} className="flex items-center justify-between gap-2 rounded bg-white px-2 py-1" data-testid={`media-version-row-${asset.id}-${version.id}`}>
-                <span className="font-semibold text-slate-700">{version.label || getMediaVersionLabel(index + 1)}</span>
-                <span className="min-w-0 flex-1 truncate text-slate-500" title={version.path}>{version.name}</span>
-                <span className="text-slate-400">{formatDuration(version.duration ?? 0)}</span>
+              <div key={version.id} className="flex items-center justify-between gap-2 rounded bg-[var(--color-bg-elevated)] px-2 py-1" data-testid={`media-version-row-${asset.id}-${version.id}`}>
+                <span className="font-semibold text-[var(--color-text-secondary)]">{version.label || getMediaVersionLabel(index + 1)}</span>
+                <span className="min-w-0 flex-1 truncate text-[var(--color-text-muted)]" title={version.path}>{version.name}</span>
+                <span className="text-[var(--color-text-muted)]">{formatDuration(version.duration ?? 0)}</span>
               </div>
             ))}
           </div>
@@ -2773,7 +2773,7 @@ function MediaCard({
           <div className="flex items-center gap-1" aria-label={zhCN.mediaBin.flag}>
             <button
               type="button"
-              className={clsx('rounded border px-1.5 py-0.5 text-[11px] font-semibold', flag === 'green' ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-line text-slate-500 hover:bg-panel')}
+              className={clsx('rounded border px-1.5 py-0.5 text-[11px] font-semibold', flag === 'green' ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-line text-[var(--color-text-muted)] hover:bg-panel')}
               title={zhCN.mediaBin.flagGreenShortcut}
               data-testid={`media-flag-green-${asset.id}`}
               onClick={() => onSetFlag(flag === 'green' ? undefined : 'green')}
@@ -2782,7 +2782,7 @@ function MediaCard({
             </button>
             <button
               type="button"
-              className={clsx('rounded border px-1.5 py-0.5 text-[11px] font-semibold', flag === 'red' ? 'border-rose-300 bg-rose-50 text-rose-700' : 'border-line text-slate-500 hover:bg-panel')}
+              className={clsx('rounded border px-1.5 py-0.5 text-[11px] font-semibold', flag === 'red' ? 'border-rose-300 bg-rose-50 text-rose-700' : 'border-line text-[var(--color-text-muted)] hover:bg-panel')}
               title={zhCN.mediaBin.flagRedShortcut}
               data-testid={`media-flag-red-${asset.id}`}
               onClick={() => onSetFlag(flag === 'red' ? undefined : 'red')}
@@ -2792,7 +2792,7 @@ function MediaCard({
             {flag ? (
               <button
                 type="button"
-                className="rounded border border-line px-1.5 py-0.5 text-[11px] font-semibold text-slate-500 hover:bg-panel"
+                className="rounded border border-line px-1.5 py-0.5 text-[11px] font-semibold text-[var(--color-text-muted)] hover:bg-panel"
                 title={zhCN.mediaBin.flagClearShortcut}
                 data-testid={`media-flag-clear-${asset.id}`}
                 onClick={() => onSetFlag(undefined)}
@@ -2803,7 +2803,7 @@ function MediaCard({
           </div>
         </div>
         <button
-          className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md border border-line bg-panel px-2 py-1.5 text-sm font-medium hover:bg-white"
+          className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md border border-line bg-panel px-2 py-1.5 text-sm font-medium hover:bg-[var(--color-bg-secondary)]"
           type="button"
           onClick={onAdd}
           data-testid={`add-to-timeline-${asset.id}`}
@@ -2825,7 +2825,7 @@ function MediaCard({
         {sc && sc.subclips.filter((s) => s.sourceMediaId === asset.id).length > 0 ? (
           <div className="mt-2">
             <button
-              className="inline-flex w-full items-center gap-1 rounded border border-line bg-panel px-2 py-1 text-[11px] font-semibold text-slate-600 hover:bg-white"
+              className="inline-flex w-full items-center gap-1 rounded border border-line bg-panel px-2 py-1 text-[11px] font-semibold text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]"
               type="button"
               data-testid={`toggle-subclips-${asset.id}`}
               onClick={(e) => { e.stopPropagation(); sc.onToggleSubclipExpanded(asset.id); }}
@@ -2839,7 +2839,7 @@ function MediaCard({
                 {sc.subclips.filter((s) => s.sourceMediaId === asset.id).map((sub) => (
                   <div
                     key={sub.id}
-                    className="rounded border border-line bg-white px-2 py-1.5 text-[11px] shadow-sm"
+                    className="rounded border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-[11px] shadow-sm"
                     draggable
                     data-testid={`subclip-card-${sub.id}`}
                     onDragStart={(event) => {
@@ -2848,13 +2848,13 @@ function MediaCard({
                     }}
                   >
                     <div className="flex items-center justify-between gap-1">
-                      <span className="truncate font-semibold text-slate-700" title={sub.name}>{sub.name}</span>
-                      <span className="shrink-0 text-slate-400">{formatDuration(sub.inPoint)} \u2013 {formatDuration(sub.outPoint)}</span>
+                      <span className="truncate font-semibold text-[var(--color-text-secondary)]" title={sub.name}>{sub.name}</span>
+                      <span className="shrink-0 text-[var(--color-text-muted)]">{formatDuration(sub.inPoint)} \u2013 {formatDuration(sub.outPoint)}</span>
                     </div>
                     {sub.color ? <span className="mt-0.5 inline-block h-2 w-2 rounded-full" style={{ backgroundColor: sub.color }} /> : null}
                     <div className="mt-1 flex items-center gap-1">
                       <button
-                        className="rounded border border-line px-1.5 py-0.5 text-[10px] font-medium text-slate-600 hover:bg-panel"
+                        className="rounded border border-line px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-text-secondary)] hover:bg-panel"
                         type="button"
                         data-testid={`add-subclip-to-timeline-${sub.id}`}
                         onClick={(e) => { e.stopPropagation(); sc.onAddSubclipToTimeline(asset.id, sub); }}
@@ -2862,7 +2862,7 @@ function MediaCard({
                         {zhCN.subclip.addToTimeline}
                       </button>
                       <button
-                        className="rounded border border-line px-1.5 py-0.5 text-[10px] font-medium text-slate-600 hover:bg-panel"
+                        className="rounded border border-line px-1.5 py-0.5 text-[10px] font-medium text-[var(--color-text-secondary)] hover:bg-panel"
                         type="button"
                         data-testid={`edit-subclip-${sub.id}`}
                         onClick={(e) => { e.stopPropagation(); sc.onOpenSubclipDialog(asset.id, sub.id); }}
@@ -2940,25 +2940,25 @@ function SubclipDialog({
   };
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" data-testid="subclip-dialog">
-      <form className="grid max-h-[80vh] w-full max-w-md grid-rows-[auto_minmax(0,1fr)_auto] rounded-md border border-line bg-white shadow-soft" onSubmit={handleSubmit}>
+      <form className="grid max-h-[80vh] w-full max-w-md grid-rows-[auto_minmax(0,1fr)_auto] rounded-md border border-line bg-[var(--color-bg-elevated)] shadow-soft" onSubmit={handleSubmit}>
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
           <h2 className="text-sm font-semibold text-ink">{isEdit ? t.editSubclip : t.newSubclip}</h2>
           <button className="rounded p-1 hover:bg-panel" type="button" onClick={onClose} data-testid="subclip-dialog-close"><X size={16} /></button>
         </div>
         <div className="space-y-3 overflow-y-auto px-4 py-3">
-          <label className="block text-xs font-medium text-slate-600">{t.name}<input className="mt-1 w-full rounded border border-line px-2 py-1.5 text-sm" value={name} onChange={(e) => setName(e.target.value)} autoFocus data-testid="subclip-dialog-name" /></label>
+          <label className="block text-xs font-medium text-[var(--color-text-secondary)]">{t.name}<input className="mt-1 w-full rounded border border-line px-2 py-1.5 text-sm" value={name} onChange={(e) => setName(e.target.value)} autoFocus data-testid="subclip-dialog-name" /></label>
           <div className="grid grid-cols-2 gap-3">
-            <label className="block text-xs font-medium text-slate-600">{t.inPoint}<input className="mt-1 w-full rounded border border-line px-2 py-1.5 text-sm tabular-nums" type="number" min={0} max={asset.duration} step={0.01} value={inPoint} onChange={(e) => setInPoint(Number(e.target.value))} data-testid="subclip-dialog-in" /></label>
-            <label className="block text-xs font-medium text-slate-600">{t.outPoint}<input className="mt-1 w-full rounded border border-line px-2 py-1.5 text-sm tabular-nums" type="number" min={0} max={asset.duration} step={0.01} value={outPoint} onChange={(e) => setOutPoint(Number(e.target.value))} data-testid="subclip-dialog-out" /></label>
+            <label className="block text-xs font-medium text-[var(--color-text-secondary)]">{t.inPoint}<input className="mt-1 w-full rounded border border-line px-2 py-1.5 text-sm tabular-nums" type="number" min={0} max={asset.duration} step={0.01} value={inPoint} onChange={(e) => setInPoint(Number(e.target.value))} data-testid="subclip-dialog-in" /></label>
+            <label className="block text-xs font-medium text-[var(--color-text-secondary)]">{t.outPoint}<input className="mt-1 w-full rounded border border-line px-2 py-1.5 text-sm tabular-nums" type="number" min={0} max={asset.duration} step={0.01} value={outPoint} onChange={(e) => setOutPoint(Number(e.target.value))} data-testid="subclip-dialog-out" /></label>
           </div>
           <div>
-            <div className="mb-1 text-xs font-medium text-slate-600">{t.color}</div>
+            <div className="mb-1 text-xs font-medium text-[var(--color-text-secondary)]">{t.color}</div>
             <div className="flex flex-wrap gap-1.5" data-testid="subclip-dialog-colors">
               <button type="button" className={`h-5 w-5 rounded-full border-2 ${color === null ? 'border-ink' : 'border-transparent'} bg-slate-300`} onClick={() => setColor(null)} data-testid="subclip-color-none" />
               {TIMELINE_COLORS.map((item) => (<button key={item.key} type="button" className={`h-5 w-5 rounded-full border-2 ${color === item.key ? 'border-ink' : 'border-transparent'}`} style={TIMELINE_COLOR_STYLES[item.key]} onClick={() => setColor(item.key)} data-testid={`subclip-color-${item.key}`} />))}
             </div>
           </div>
-          <label className="block text-xs font-medium text-slate-600">{t.description}<textarea className="mt-1 w-full rounded border border-line px-2 py-1.5 text-sm" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} data-testid="subclip-dialog-description" /></label>
+          <label className="block text-xs font-medium text-[var(--color-text-secondary)]">{t.description}<textarea className="mt-1 w-full rounded border border-line px-2 py-1.5 text-sm" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} data-testid="subclip-dialog-description" /></label>
         </div>
         <div className="flex items-center justify-end gap-2 border-t border-line px-4 py-3">
           <button className="rounded border border-line px-3 py-1.5 text-xs font-medium hover:bg-panel" type="button" onClick={onClose}>{zhCN.common.cancel}</button>
@@ -3033,7 +3033,7 @@ function ProxyStatus({
         ? 'border-sky-200 bg-sky-50 text-sky-700'
         : status === 'error'
           ? 'border-rose-200 bg-rose-50 text-rose-700'
-          : 'border-slate-200 bg-slate-50 text-slate-600';
+          : 'border-line bg-[var(--color-bg-secondary)] text-[var(--color-text-secondary)]';
   return (
     <div className="mt-2 space-y-1">
       <div className={`inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ${tone}`} title={error} data-testid={`proxy-status-${assetId}`} data-proxy-status={status ?? 'none'}>
@@ -3042,7 +3042,7 @@ function ProxyStatus({
       </div>
       {canGenerate || status === 'pending' || status === 'ready' ? (
         <button
-          className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-line bg-white px-2 py-1.5 text-xs font-medium hover:bg-panel disabled:opacity-50"
+          className="inline-flex w-full items-center justify-center gap-2 rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-xs font-medium hover:bg-panel disabled:opacity-50"
           onClick={onGenerateProxy}
           disabled={!canGenerate || status === 'pending'}
           data-testid={`generate-proxy-${assetId}`}
@@ -3058,7 +3058,7 @@ function ProxyStatus({
 function IconPreview({ type }: { type: MediaAsset['type'] }) {
   const Icon = type === 'video' ? FileVideo2 : type === 'audio' ? FileAudio2 : FileImage;
   return (
-    <div className="flex h-full items-center justify-center text-slate-500">
+    <div className="flex h-full items-center justify-center text-[var(--color-text-muted)]">
       <Icon size={36} />
     </div>
   );

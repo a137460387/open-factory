@@ -147,11 +147,11 @@ export function MediaAIAnalysisDialog({
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
       data-testid="ai-content-analysis-dialog"
     >
-      <div className="w-[460px] max-h-[80vh] overflow-y-auto rounded-lg border border-line bg-white p-4 shadow-lg">
+      <div className="w-[460px] max-h-[80vh] overflow-y-auto rounded-lg border border-line bg-[var(--color-bg-elevated)] p-4 shadow-lg">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-slate-800">{t.title}</h3>
+          <h3 className="text-sm font-semibold text-ink">{t.title}</h3>
           <button
-            className="rounded p-1 text-slate-400 hover:bg-panel hover:text-slate-700"
+            className="rounded p-1 text-[var(--color-text-muted)] hover:bg-panel hover:text-[var(--color-text-secondary)]"
             type="button"
             onClick={onClose}
             data-testid="ai-content-analysis-close"
@@ -160,14 +160,14 @@ export function MediaAIAnalysisDialog({
           </button>
         </div>
 
-        <div className="mb-3 text-xs text-slate-500 truncate" title={asset.name}>{asset.name}</div>
+        <div className="mb-3 text-xs text-[var(--color-text-muted)] truncate" title={asset.name}>{asset.name}</div>
 
         {phase === 'idle' && (
           <div className="space-y-3">
             <div className="space-y-1">
-              <label className="block text-xs text-slate-600">{t.selectProvider}</label>
+              <label className="block text-xs text-[var(--color-text-secondary)]">{t.selectProvider}</label>
               <select
-                className="w-full rounded-md border border-line bg-white px-2 py-1 text-sm"
+                className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1 text-sm"
                 value={selectedProviderId}
                 onChange={(e) => setSelectedProviderId(e.target.value)}
                 disabled={visionProviders.length === 0}
@@ -179,14 +179,14 @@ export function MediaAIAnalysisDialog({
                 ))}
               </select>
             </div>
-            <div className="text-xs text-slate-500" data-testid="ai-content-analysis-cost">
+            <div className="text-xs text-[var(--color-text-muted)]" data-testid="ai-content-analysis-cost">
               {t.costPreview(costEstimate.tokens, costEstimate.costCny)}
             </div>
-            <div className="text-xs text-slate-500">
+            <div className="text-xs text-[var(--color-text-muted)]">
               抽帧: {frameTimes.length} 帧 ({frameTimes.map((t) => `${t.toFixed(1)}s`).join(', ')})
             </div>
             <button
-              className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-50"
               type="button"
               disabled={!selectedProvider}
               onClick={() => void startAnalysis()}
@@ -199,17 +199,17 @@ export function MediaAIAnalysisDialog({
 
         {(phase === 'extracting' || phase === 'analyzing') && (
           <div className="space-y-2">
-            <div className="text-xs text-slate-600" data-testid="ai-content-analysis-progress">
+            <div className="text-xs text-[var(--color-text-secondary)]" data-testid="ai-content-analysis-progress">
               {phase === 'extracting' ? t.extractingFrames : t.analyzing}
             </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--color-bg-elevated)]">
               <div
-                className="h-full bg-blue-600 transition-all"
+                className="h-full bg-[var(--color-accent)] transition-all"
                 style={{ width: `${progress.total > 0 ? (progress.done / progress.total) * 100 : 0}%` }}
               />
             </div>
             <button
-              className="w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel"
+              className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel"
               type="button"
               onClick={cancelAnalysis}
               data-testid="ai-content-analysis-cancel"
@@ -221,16 +221,16 @@ export function MediaAIAnalysisDialog({
 
         {phase === 'preview' && result && (
           <div className="space-y-3" data-testid="ai-content-analysis-results">
-            <div className="text-xs font-semibold text-slate-700">{t.resultsTitle}</div>
+            <div className="text-xs font-semibold text-[var(--color-text-secondary)]">{t.resultsTitle}</div>
 
             {result.tags.length > 0 && (
               <div className="space-y-1">
-                <div className="text-xs font-medium text-slate-600">{t.tags}</div>
+                <div className="text-xs font-medium text-[var(--color-text-secondary)]">{t.tags}</div>
                 <div className="flex flex-wrap gap-1">
                   {result.tags.map((tag, i) => (
                     <span
                       key={i}
-                      className="inline-block rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-medium text-blue-700"
+                      className="inline-block rounded-full bg-[var(--color-accent)]/15 px-2 py-0.5 text-[11px] font-medium text-[var(--color-accent)]"
                       data-testid={`ai-tag-${i}`}
                     >
                       {tag}
@@ -242,27 +242,27 @@ export function MediaAIAnalysisDialog({
 
             {result.scene && (
               <div className="space-y-1">
-                <div className="text-xs font-medium text-slate-600">{t.scene}</div>
-                <div className="text-xs text-slate-800">{result.scene}</div>
+                <div className="text-xs font-medium text-[var(--color-text-secondary)]">{t.scene}</div>
+                <div className="text-xs text-ink">{result.scene}</div>
               </div>
             )}
 
             {result.mood && (
               <div className="space-y-1">
-                <div className="text-xs font-medium text-slate-600">{t.mood}</div>
-                <div className="text-xs text-slate-800">{result.mood}</div>
+                <div className="text-xs font-medium text-[var(--color-text-secondary)]">{t.mood}</div>
+                <div className="text-xs text-ink">{result.mood}</div>
               </div>
             )}
 
             {result.objects.length > 0 && (
               <div className="space-y-1">
-                <div className="text-xs font-medium text-slate-600">{t.objects}</div>
-                <div className="text-xs text-slate-800">{result.objects.join(', ')}</div>
+                <div className="text-xs font-medium text-[var(--color-text-secondary)]">{t.objects}</div>
+                <div className="text-xs text-ink">{result.objects.join(', ')}</div>
               </div>
             )}
 
             <button
-              className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+              className="w-full rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--color-accent)]"
               type="button"
               onClick={applyResult}
               data-testid="ai-content-analysis-apply"

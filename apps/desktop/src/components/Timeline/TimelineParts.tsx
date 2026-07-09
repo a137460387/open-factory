@@ -113,10 +113,10 @@ export function ThumbnailTrack({
       <div className="flex items-center border-r border-line bg-panel px-3">
         <div className="min-w-0">
           <div className="truncate text-xs font-semibold">{zhCN.timeline.thumbnailTrack}</div>
-          <div className="text-[11px] text-slate-500">{zhCN.timeline.thumbnailTrackSubtitle}</div>
+          <div className="text-[11px] text-[var(--color-text-muted)]">{zhCN.timeline.thumbnailTrackSubtitle}</div>
         </div>
       </div>
-      <div className="relative overflow-hidden bg-slate-100" style={{ width }}>
+      <div className="relative overflow-hidden bg-[var(--color-bg-elevated)]" style={{ width }}>
         {samples.map((sample) => {
           const asset = sample.mediaId ? media.find((item) => item.id === sample.mediaId) : undefined;
           const left = sample.time * zoom;
@@ -205,7 +205,7 @@ export function Ruler({
     <div className="sticky top-0 z-30 grid h-10 grid-cols-[138px_1fr] border-b border-line bg-panel">
       <div className="grid grid-rows-[10px_1fr] border-r border-line">
         <div className="px-3 text-[9px] font-medium leading-[10px] text-emerald-700">{zhCN.timeline.renderCache}</div>
-        <div className="px-3 py-1 font-mono text-xs font-semibold tabular-nums text-slate-700" data-testid="timeline-ruler-timecode">
+        <div className="px-3 py-1 font-mono text-xs font-semibold tabular-nums text-[var(--color-text-secondary)]" data-testid="timeline-ruler-timecode">
           {currentTimecode}
         </div>
       </div>
@@ -320,7 +320,7 @@ export function Ruler({
           {ticks.map((tick) => (
             <div
               key={`${tick.unit}-${tick.time}`}
-              className="absolute top-0 z-10 h-full border-l border-slate-300 pl-1 text-[11px] text-slate-500"
+              className="absolute top-0 z-10 h-full border-l border-line pl-1 text-[11px] text-[var(--color-text-muted)]"
               style={{ left: tick.time * zoom }}
               data-testid="timeline-ruler-tick"
               data-ruler-unit={tick.unit}
@@ -491,11 +491,11 @@ export function TrackRow({
             }}
           />
           {colorPickerOpen ? (
-            <div className="absolute left-0 top-11 z-40 grid w-[116px] grid-cols-4 gap-1 rounded-md border border-line bg-white p-2 shadow-soft" data-testid={`track-color-picker-${track.id}`}>
+            <div className="absolute left-0 top-11 z-40 grid w-[116px] grid-cols-4 gap-1 rounded-md border border-line bg-[var(--color-bg-elevated)] p-2 shadow-soft" data-testid={`track-color-picker-${track.id}`}>
               {TIMELINE_LABEL_COLORS.map((color) => (
                 <button
                   key={color}
-                  className={clsx('h-5 w-5 rounded-full border', track.color === color ? 'border-slate-900 ring-2 ring-slate-300' : 'border-white')}
+                  className={clsx('h-5 w-5 rounded-full border', track.color === color ? 'border-line ring-2 ring-[var(--color-border)]' : 'border-white')}
                   style={{ backgroundColor: getTimelineLabelColorHex(color) }}
                   type="button"
                   title={zhCN.timeline.timelineLabelColorNames[color]}
@@ -509,7 +509,7 @@ export function TrackRow({
                 />
               ))}
               <button
-                className="col-span-4 mt-1 rounded border border-line px-2 py-1 text-[11px] text-slate-600 hover:bg-panel"
+                className="col-span-4 mt-1 rounded border border-line px-2 py-1 text-[11px] text-[var(--color-text-secondary)] hover:bg-panel"
                 type="button"
                 data-testid="track-color-clear"
                 onClick={(event) => {
@@ -532,7 +532,7 @@ export function TrackRow({
               </span>
             ) : null}
           </div>
-          <div className="text-[11px] uppercase tracking-normal text-slate-500">{formatTimelineTrackType(track)}</div>
+          <div className="text-[11px] uppercase tracking-normal text-[var(--color-text-muted)]">{formatTimelineTrackType(track)}</div>
           {track.type === 'audio' ? <AudioTrackFrequencyBands trackId={track.id} bands={frequencyBands} /> : null}
         </div>
         <div className="flex items-center gap-1">
@@ -541,7 +541,7 @@ export function TrackRow({
           <TrackToggle label="L" title={zhCN.timeline.lockTrack} active={locked} testId={`track-lock-${track.id}`} onClick={() => onTrackUpdate(track.id, { locked: !track.locked })} />
           {selectedTrack ? (
             <button
-              className="h-6 w-6 rounded border border-line bg-white text-slate-600 hover:bg-panel"
+              className="h-6 w-6 rounded border border-line bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:bg-panel"
               title={zhCN.timeline.trackBatchMenu}
               aria-label={zhCN.timeline.trackBatchMenu}
               type="button"
@@ -594,7 +594,7 @@ export function TrackRow({
         />
       </div>
       <div
-        className="relative bg-white"
+        className="relative bg-panel"
         data-testid={`timeline-track-body-${track.id}`}
         onPointerDown={onTrackPointerDown}
         onContextMenu={(event) => {
@@ -649,7 +649,7 @@ export function TrackRow({
         {Array.isArray(track.musicStructure) && track.musicStructure.length > 0 ? (
           <span className="absolute inset-0 z-[2] pointer-events-none" data-testid={`music-structure-markers-${track.id}`}>
             {track.musicStructure.map((ms, mi) => {
-              const color = ms.type === 'energy_rise' ? 'bg-green-500' : ms.type === 'energy_drop' ? 'bg-red-500' : 'bg-blue-500';
+              const color = ms.type === 'energy_rise' ? 'bg-green-500' : ms.type === 'energy_drop' ? 'bg-[var(--color-danger)]' : 'bg-[var(--color-accent)]';
               const label = ms.type === 'energy_rise' ? zhCN.musicStructure.energyRise : ms.type === 'energy_drop' ? zhCN.musicStructure.energyDrop : zhCN.musicStructure.timbreShift;
               return <span key={mi} className={`absolute top-0 bottom-0 w-px ${color} opacity-60`} style={{ left: ms.time * zoom }} data-testid={`music-structure-marker-${track.id}-${mi}`} title={label} />;
             })}
@@ -666,7 +666,7 @@ export function TrackRow({
               return (
                 <span
                   key={wi}
-                  className={`absolute top-1 z-[3] flex h-5 w-5 items-center justify-center rounded-full ${isAxisJump ? 'bg-red-500' : 'bg-orange-400'} text-white shadow cursor-pointer pointer-events-auto`}
+                  className={`absolute top-1 z-[3] flex h-5 w-5 items-center justify-center rounded-full ${isAxisJump ? 'bg-[var(--color-danger)]' : 'bg-orange-400'} text-white shadow cursor-pointer pointer-events-auto`}
                   style={{ left: boundaryTime * zoom - 10 }}
                   title={label + ': ' + w.reason}
                   data-testid={`continuity-warning-${w.clipAId}-${w.clipBId}-${w.type}`}
@@ -862,7 +862,7 @@ function ClipAssetStrips({ clip, asset, clipPixelWidth, trackMuted, waveformColo
 
 function AudioTrackFrequencyBands({ trackId, bands }: { trackId: string; bands: number[] }) {
   return (
-    <div className="mt-1 flex h-3 w-full max-w-[58px] items-end gap-px overflow-hidden rounded-sm bg-slate-200 px-px" title={zhCN.timeline.audioFrequencyMeter} data-testid={`track-vu-bands-${trackId}`}>
+    <div className="mt-1 flex h-3 w-full max-w-[58px] items-end gap-px overflow-hidden rounded-sm bg-[var(--color-bg-elevated)] px-px" title={zhCN.timeline.audioFrequencyMeter} data-testid={`track-vu-bands-${trackId}`}>
       {Array.from({ length: 16 }, (_, index) => {
         const level = Math.min(1, Math.max(0, bands[index] ?? 0));
         return <span key={index} className="w-0.5 rounded-t bg-emerald-500" style={{ height: `${Math.max(8, level * 100)}%` }} />;
@@ -910,7 +910,7 @@ function TrackToggle({
 }) {
   return (
     <button
-      className={clsx('h-6 w-6 rounded border text-[11px] font-semibold', active ? 'border-brand bg-brand text-white' : 'border-line bg-white text-slate-600 hover:bg-panel')}
+      className={clsx('h-6 w-6 rounded border text-[11px] font-semibold', active ? 'border-brand bg-brand text-white' : 'border-line bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:bg-panel')}
       title={title}
       type="button"
       data-testid={testId}
@@ -1111,7 +1111,7 @@ function ClipBlock({
         <>
           <span className="absolute left-0 right-0 top-0 z-20 h-1.5" style={{ backgroundColor: CLIP_GROUP_COLOR_HEX[clipGroup.color] }} data-testid={`timeline-clip-group-strip-${clip.id}`} />
           {width >= 86 ? (
-            <span className="absolute left-1 top-1.5 z-20 max-w-[70%] truncate rounded-sm bg-white/80 px-1 text-[9px] font-semibold text-slate-700" data-testid={`timeline-clip-group-label-${clip.id}`}>
+            <span className="absolute left-1 top-1.5 z-20 max-w-[70%] truncate rounded-sm bg-panel/80 px-1 text-[9px] font-semibold text-[var(--color-text-secondary)]" data-testid={`timeline-clip-group-label-${clip.id}`}>
               {clipGroup.name}
             </span>
           ) : null}
@@ -1119,7 +1119,7 @@ function ClipBlock({
       ) : null}
       {collaborationLock ? (
         <span
-          className="absolute right-1 top-1 z-30 max-w-[72%] truncate rounded-sm bg-slate-900/85 px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-sm"
+          className="absolute right-1 top-1 z-30 max-w-[72%] truncate rounded-sm bg-[var(--color-bg-primary)]/85 px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-sm"
           title={zhCN.timeline.lockedByUser(collaborationLock.userName)}
           data-testid={`timeline-clip-remote-lock-${clip.id}`}
         >
@@ -1150,7 +1150,7 @@ function ClipBlock({
       ) : null}
       {clip.type === 'video' && (clip.stabilization?.shakeScore ?? 0) > 50 ? (
         <span
-          className="absolute bottom-1 right-1 z-20 inline-flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-white shadow"
+          className="absolute bottom-1 right-1 z-20 inline-flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-danger)] text-white shadow"
           title={zhCN.preview.shakeAnalysisHigh}
           data-testid={`shake-badge-${clip.id}`}
         >
@@ -1169,7 +1169,7 @@ function ClipBlock({
       ) : null}
       {clip.type === 'video' && clip.aiPipSuggestion ? (
         <span
-          className="absolute bottom-1 left-5 z-20 inline-flex h-4 w-4 items-center justify-center rounded-full bg-blue-500 text-white shadow"
+          className="absolute bottom-1 left-5 z-20 inline-flex h-4 w-4 items-center justify-center rounded-full bg-[var(--color-accent)] text-white shadow"
           title={zhCN.preview.pipAvoidanceWarning}
           data-testid={`pip-warning-${clip.id}`}
         >
@@ -1187,7 +1187,7 @@ function ClipBlock({
       ) : null}
       {'readingSpeedWarning' in clip && (clip as { readingSpeedWarning?: { severity: string } | null }).readingSpeedWarning ? (
         <span
-          className={`absolute bottom-1 right-9 z-20 inline-flex h-4 w-4 items-center justify-center rounded-full ${(clip as { readingSpeedWarning: { severity: string } }).readingSpeedWarning.severity === 'critical' ? 'bg-red-500' : 'bg-yellow-400'} text-white shadow`}
+          className={`absolute bottom-1 right-9 z-20 inline-flex h-4 w-4 items-center justify-center rounded-full ${(clip as { readingSpeedWarning: { severity: string } }).readingSpeedWarning.severity === 'critical' ? 'bg-[var(--color-danger)]' : 'bg-yellow-400'} text-white shadow`}
           title={zhCN.subtitleReadingSpeed.title + ' (' + (clip as { readingSpeedWarning: { charsPerSecond: number } }).readingSpeedWarning.charsPerSecond.toFixed(1) + ' ' + zhCN.subtitleReadingSpeed.charsPerSecond + ')'}
           data-testid={`reading-speed-warning-${clip.id}`}
         >
@@ -1258,7 +1258,7 @@ function ClipBlock({
           key={`${marker.property}-${marker.id}`}
           className={clsx(
             'absolute bottom-0 z-20 h-2.5 w-2.5 -translate-x-1/2 rotate-45 cursor-ew-resize border shadow',
-            isSelectedKeyframe ? 'border-black bg-white' : 'border-white bg-coral'
+            isSelectedKeyframe ? 'border-black bg-[var(--color-bg-elevated)]' : 'border-white bg-coral'
           )}
           style={{ left: `${Math.min(100, Math.max(0, (markerTime / Math.max(0.001, clip.duration)) * 100))}%` }}
           title={zhCN.timeline.keyframeTitle(formatTimelineKeyframeProperty(marker.property), marker.time)}
@@ -1309,7 +1309,7 @@ function ClipBlock({
             const clipDuration = clip.duration || 1;
             const leftPct = Math.max(0, (fw.startTime - clip.start) / clipDuration * 100);
             const widthPct = Math.min(100 - leftPct, (fw.endTime - fw.startTime) / clipDuration * 100);
-            const color = fw.severity === 'high' ? 'bg-red-500' : fw.severity === 'medium' ? 'bg-orange-400' : 'bg-yellow-300';
+            const color = fw.severity === 'high' ? 'bg-[var(--color-danger)]' : fw.severity === 'medium' ? 'bg-orange-400' : 'bg-yellow-300';
             return <span key={fi} className={`absolute h-1 ${color} opacity-70`} style={{ left: leftPct + '%', width: widthPct + '%' }} data-testid={`flash-bar-${clip.id}-${fi}`} />;
           })}
         </span>
@@ -1440,7 +1440,7 @@ function VolumeEnvelopeOverlay({
       {persistedPoints.map((point) => (
         <button
           key={point.id}
-          className="absolute z-30 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-slate-900 bg-white shadow"
+          className="absolute z-30 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-line bg-[var(--color-bg-elevated)] shadow"
           style={{ left: `${envelopePointX(point, duration)}%`, top: `${envelopePointY(point)}%` }}
           type="button"
           title={zhCN.timeline.volumeEnvelopePointTitle(point.time, point.value)}
@@ -1521,18 +1521,18 @@ function selectedKeyframeKey(keyframe: SelectedKeyframeRef): string {
 
 function getClipToneClass(type: Clip['type']): string {
   if (type === 'audio') {
-    return 'bg-amber-100 text-amber-950';
+    return 'bg-emerald-900/40 text-emerald-200';
   }
   if (type === 'text' || type === 'credits') {
-    return 'bg-emerald-100 text-emerald-950';
+    return 'bg-amber-900/40 text-amber-200';
   }
   if (type === 'subtitle') {
-    return 'bg-indigo-100 text-indigo-950';
+    return 'bg-amber-900/40 text-amber-200';
   }
   if (type === 'nested-sequence') {
-    return 'bg-violet-100 text-violet-950';
+    return 'bg-violet-900/40 text-violet-200';
   }
-  return 'bg-sky-100 text-sky-950';
+  return 'bg-sky-900/40 text-sky-200';
 }
 
 const MemoizedClipBlock = memo(ClipBlock, areClipBlockPropsEqual);

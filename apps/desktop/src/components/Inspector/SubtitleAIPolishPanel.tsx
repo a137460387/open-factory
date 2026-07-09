@@ -186,15 +186,15 @@ export function SubtitleAIPolishPanel({
   }
 
   return (
-    <details className="rounded-md border border-line bg-white" data-testid="subtitle-ai-polish-section">
-      <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-slate-700">{t.title}</summary>
+    <details className="rounded-md border border-line bg-[var(--color-bg-elevated)]" data-testid="subtitle-ai-polish-section">
+      <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">{t.title}</summary>
       <div className="space-y-3 border-t border-line p-2">
         {phase === 'idle' && (
           <>
             <div className="space-y-2">
-              <label className="block text-xs text-slate-600">{t.selectProvider}</label>
+              <label className="block text-xs text-[var(--color-text-secondary)]">{t.selectProvider}</label>
               <select
-                className="w-full rounded-md border border-line bg-white px-2 py-1 text-sm"
+                className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1 text-sm"
                 value={selectedProviderId}
                 onChange={(e) => setSelectedProviderId(e.target.value)}
                 disabled={enabledProviders.length === 0}
@@ -206,7 +206,7 @@ export function SubtitleAIPolishPanel({
                 ))}
               </select>
             </div>
-            <label className="flex items-center gap-2 text-xs text-slate-600">
+            <label className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
               <input
                 type="checkbox"
                 checked={removeFillers}
@@ -216,7 +216,7 @@ export function SubtitleAIPolishPanel({
               {t.removeFillers}
             </label>
             <button
-              className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-50"
               type="button"
               disabled={!selectedProvider || selectedClipLocked}
               onClick={() => void startPolish()}
@@ -228,17 +228,17 @@ export function SubtitleAIPolishPanel({
         )}
         {phase === 'processing' && (
           <div className="space-y-2">
-            <div className="text-xs text-slate-600" data-testid="subtitle-ai-polish-progress">
+            <div className="text-xs text-[var(--color-text-secondary)]" data-testid="subtitle-ai-polish-progress">
               {t.processing(progress.done, progress.total)}
             </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--color-bg-elevated)]">
               <div
-                className="h-full bg-blue-600 transition-all"
+                className="h-full bg-[var(--color-accent)] transition-all"
                 style={{ width: `${progress.total > 0 ? (progress.done / progress.total) * 100 : 0}%` }}
               />
             </div>
             <button
-              className="w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel"
+              className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel"
               type="button"
               onClick={cancelPolish}
               data-testid="subtitle-ai-polish-cancel-button"
@@ -249,7 +249,7 @@ export function SubtitleAIPolishPanel({
         )}
         {phase === 'preview' && (
           <div className="space-y-2" data-testid="subtitle-ai-polish-preview">
-            <div className="text-xs font-semibold text-slate-700">{t.previewTitle}</div>
+            <div className="text-xs font-semibold text-[var(--color-text-secondary)]">{t.previewTitle}</div>
             <div className="max-h-60 space-y-2 overflow-y-auto">
               {polishedItems.map((item) => (
                 <div
@@ -259,8 +259,8 @@ export function SubtitleAIPolishPanel({
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      <div className="text-slate-500 line-through">{item.originalText}</div>
-                      <div className="mt-0.5 font-medium text-slate-800">{item.polishedText}</div>
+                      <div className="text-[var(--color-text-muted)] line-through">{item.originalText}</div>
+                      <div className="mt-0.5 font-medium text-ink">{item.polishedText}</div>
                     </div>
                     <button
                       className={`shrink-0 rounded px-2 py-0.5 text-[11px] font-medium ${
@@ -280,7 +280,7 @@ export function SubtitleAIPolishPanel({
             </div>
             <div className="grid grid-cols-2 gap-2">
               <button
-                className="rounded-md border border-line bg-white px-2 py-1 text-xs font-medium hover:bg-panel"
+                className="rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1 text-xs font-medium hover:bg-panel"
                 type="button"
                 onClick={acceptAll}
                 data-testid="subtitle-ai-polish-accept-all"
@@ -288,7 +288,7 @@ export function SubtitleAIPolishPanel({
                 {t.acceptAll}
               </button>
               <button
-                className="rounded-md border border-line bg-white px-2 py-1 text-xs font-medium hover:bg-panel"
+                className="rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1 text-xs font-medium hover:bg-panel"
                 type="button"
                 onClick={rejectAll}
                 data-testid="subtitle-ai-polish-reject-all"
@@ -297,7 +297,7 @@ export function SubtitleAIPolishPanel({
               </button>
             </div>
             <button
-              className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+              className="w-full rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--color-accent)]"
               type="button"
               onClick={applyAccepted}
               data-testid="subtitle-ai-polish-apply"

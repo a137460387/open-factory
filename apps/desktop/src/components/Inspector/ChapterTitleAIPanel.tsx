@@ -176,25 +176,25 @@ export function ChapterTitleAIPanel({
 
   if (!hasSubtitles) {
     return (
-      <details className="rounded-md border border-line bg-white" data-testid="chapter-title-ai-section">
-        <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-slate-700">{t.title}</summary>
+      <details className="rounded-md border border-line bg-[var(--color-bg-elevated)]" data-testid="chapter-title-ai-section">
+        <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">{t.title}</summary>
         <div className="space-y-3 border-t border-line p-2">
-          <div className="text-xs text-slate-500" data-testid="chapter-title-ai-no-subtitle">{t.noSubtitle}</div>
+          <div className="text-xs text-[var(--color-text-muted)]" data-testid="chapter-title-ai-no-subtitle">{t.noSubtitle}</div>
         </div>
       </details>
     );
   }
 
   return (
-    <details className="rounded-md border border-line bg-white" data-testid="chapter-title-ai-section">
-      <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-slate-700">{t.title}</summary>
+    <details className="rounded-md border border-line bg-[var(--color-bg-elevated)]" data-testid="chapter-title-ai-section">
+      <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">{t.title}</summary>
       <div className="space-y-3 border-t border-line p-2">
         {phase === 'idle' && (
           <>
             <div className="space-y-2">
-              <label className="block text-xs text-slate-600">{t.selectProvider}</label>
+              <label className="block text-xs text-[var(--color-text-secondary)]">{t.selectProvider}</label>
               <select
-                className="w-full rounded-md border border-line bg-white px-2 py-1 text-sm"
+                className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1 text-sm"
                 value={selectedProviderId}
                 onChange={(e) => setSelectedProviderId(e.target.value)}
                 disabled={enabledProviders.length === 0}
@@ -206,11 +206,11 @@ export function ChapterTitleAIPanel({
                 ))}
               </select>
             </div>
-            <div className="text-xs text-slate-500" data-testid="chapter-title-ai-suggestion">
+            <div className="text-xs text-[var(--color-text-muted)]" data-testid="chapter-title-ai-suggestion">
               {t.chapterCount}: {t.suggested(chapterSuggestion.min, chapterSuggestion.max)}
             </div>
             <button
-              className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-50"
               type="button"
               disabled={!selectedProvider || selectedClipLocked}
               onClick={() => void startGenerate()}
@@ -222,17 +222,17 @@ export function ChapterTitleAIPanel({
         )}
         {phase === 'processing' && (
           <div className="space-y-2">
-            <div className="text-xs text-slate-600" data-testid="chapter-title-ai-progress">
+            <div className="text-xs text-[var(--color-text-secondary)]" data-testid="chapter-title-ai-progress">
               {t.progress(progress.done, progress.total)}
             </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--color-bg-elevated)]">
               <div
-                className="h-full bg-blue-600 transition-all"
+                className="h-full bg-[var(--color-accent)] transition-all"
                 style={{ width: `${progress.total > 0 ? (progress.done / progress.total) * 100 : 0}%` }}
               />
             </div>
             <button
-              className="w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel"
+              className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel"
               type="button"
               onClick={cancelGenerate}
               data-testid="chapter-title-ai-cancel-button"
@@ -243,7 +243,7 @@ export function ChapterTitleAIPanel({
         )}
         {phase === 'preview' && (
           <div className="space-y-2" data-testid="chapter-title-ai-preview">
-            <div className="text-xs font-semibold text-slate-700">{t.previewTitle}</div>
+            <div className="text-xs font-semibold text-[var(--color-text-secondary)]">{t.previewTitle}</div>
             <div className="max-h-60 space-y-1 overflow-y-auto">
               {chapters.map((ch, idx) => {
                 const mins = Math.floor(ch.time / 60);
@@ -255,15 +255,15 @@ export function ChapterTitleAIPanel({
                     className="flex items-center gap-2 rounded-md border border-line p-2 text-xs"
                     data-testid={`chapter-title-ai-item-${idx}`}
                   >
-                    <span className="w-12 shrink-0 font-mono text-slate-500">{timeStr}</span>
-                    <span className="flex-1 font-medium text-slate-800">{ch.title}</span>
+                    <span className="w-12 shrink-0 font-mono text-[var(--color-text-muted)]">{timeStr}</span>
+                    <span className="flex-1 font-medium text-ink">{ch.title}</span>
                   </div>
                 );
               })}
             </div>
             <div className="grid grid-cols-2 gap-2">
               <button
-                className="rounded-md border border-line bg-white px-2 py-1 text-xs font-medium hover:bg-panel"
+                className="rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1 text-xs font-medium hover:bg-panel"
                 type="button"
                 onClick={copyYouTube}
                 data-testid="chapter-title-ai-copy-youtube"
@@ -271,7 +271,7 @@ export function ChapterTitleAIPanel({
                 {t.copyYouTube}
               </button>
               <button
-                className="rounded-md border border-line bg-white px-2 py-1 text-xs font-medium hover:bg-panel"
+                className="rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1 text-xs font-medium hover:bg-panel"
                 type="button"
                 onClick={copyBilibili}
                 data-testid="chapter-title-ai-copy-bilibili"
@@ -280,7 +280,7 @@ export function ChapterTitleAIPanel({
               </button>
             </div>
             <button
-              className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+              className="w-full rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--color-accent)]"
               type="button"
               onClick={applyChapters}
               data-testid="chapter-title-ai-apply"
