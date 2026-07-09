@@ -107,6 +107,8 @@ import {
   type MediaCleanupReport,
   type MissingMediaIssue,
   type MediaAsset,
+  type MediaLabelColor,
+  type MediaFlag,
   type OrphanMediaIssue,
   type ProjectHealthReport,
   type Project,
@@ -394,6 +396,9 @@ import { MediaCompareDialogs } from './dialogs/MediaCompareDialogs';
 import { RecoveryDialogs } from './dialogs/RecoveryDialogs';
 import { SecurityDialogs } from './dialogs/SecurityDialogs';
 import { CollapsedPanelRail } from './CollapsedPanelRail';
+import { ShellLeftPanel } from './layout/ShellLeftPanel';
+import { ShellRightPanel } from './layout/ShellRightPanel';
+import { ShellFloatingDialogs } from './layout/ShellFloatingDialogs';
 import {
   getSubtitleDataImportTargetTrackId,
   findTimelineClipForMediaSourceTime,
@@ -3080,7 +3085,199 @@ export function EditorShell() {
   useShortcuts(shortcutHandlers, shortcutBindings);
   useMacroShortcuts(macros, executeMacro);
   useBackgroundMediaJobs(project.media);
-  const rightPrimaryPanelLabel = projectDocumentationOpen ? zhCN.panels.projectDocumentation : historyPanelOpen ? zhCN.panels.history : aiRoughCutOpen ? zhCN.aiRoughCut.title : directorModeOpen ? zhCN.directorMode.title : musicMatchOpen ? zhCN.musicMatch.title : highlightReelOpen ? zhCN.highlightReel.title : contextualTranslationOpen ? zhCN.contextualTranslation.title : aiChatEditorOpen ? zhCN.aiChatEditor.title : videoSummaryOpen ? zhCN.aiVideoSummary.title : narrationOpen ? zhCN.aiNarration.title : smartRoughCutOpen ? zhCN.panels.smartRoughCut : zhCN.panels.inspector;
+
+  const leftPanelCallbacks = useMemo(() => ({
+    onImport: () => void importMedia(),
+    onImportPaths: (paths: string[]) => void importDropped(paths),
+    onBatchTranscode: (paths: string[]) => openBatchTranscode(paths),
+    onBatchGenerateCovers: () => void batchGenerateCovers(),
+    onGenerateThumbnails: (assetIds: string[]) => setThumbnailGeneratorAssetIds(assetIds),
+    onExportGif: (asset: MediaAsset) => setGifExportAsset(asset),
+    onAnalyzeSpectrum: (asset: MediaAsset) => setSpectrumAsset(asset),
+    onScanDuplicates: () => void scanDuplicateMedia(),
+    onAddToTimeline: addAssetToTimeline,
+    onAddVersion: (assetId: string) => void addVersionForMedia(assetId),
+    onCompareVersions: openMediaVersionCompare,
+    onAddAdjustmentLayer: addAdjustmentLayer,
+    onRelink: (assetId: string) => void relinkMedia(assetId),
+    onRelinkAll: () => void relinkAllMissing(),
+    onGenerateProxy: (assetId: string) => void generateProxyForMedia(assetId),
+    onConvertToCfr: convertVfrMediaToCfr,
+    onSetLabel: (assetId: string, labelColor?: MediaLabelColor) => setMediaMetadata(assetId, { ...project.mediaMetadata[assetId], labelColor }),
+    onSetRating: (assetId: string, rating: number) => setMediaMetadata(assetId, { ...project.mediaMetadata[assetId], rating }),
+    onSetFlag: (assetId: string, flag?: MediaFlag) => setMediaMetadata(assetId, { ...project.mediaMetadata[assetId], flag }),
+    onBatchUpdateMetadata: batchUpdateMediaMetadata,
+    onBatchRenameMedia: batchRenameMedia,
+    onAddTitleTemplate: addTitleTemplate,
+    onCreateFolder: createMediaFolder,
+    onRenameFolder: renameMediaFolder,
+    onDeleteFolder: deleteMediaFolder,
+    onSetFolderCollapsed: setMediaFolderCollapsed,
+    onMoveMediaToFolder: moveMediaToFolder,
+    onApplyEffectPreset: applyEffectPresetToSelectedClip,
+    onToggleFavorite: handleToggleFavorite,
+    onRevealInTimeline: handleRevealFromMediaBin,
+    onPinToSession: handlePinToSession,
+    onAddSubclip: handleAddSubclip,
+    onUpdateSubclip: handleUpdateSubclip,
+    onDeleteSubclip: handleDeleteSubclip,
+    onAddSubclipToTimeline: handleAddSubclipToTimeline,
+  }), [
+    importMedia, importDropped, openBatchTranscode, batchGenerateCovers,
+    setThumbnailGeneratorAssetIds, setGifExportAsset, setSpectrumAsset,
+    scanDuplicateMedia, addAssetToTimeline, addVersionForMedia,
+    openMediaVersionCompare, addAdjustmentLayer, relinkMedia, relinkAllMissing,
+    generateProxyForMedia, convertVfrMediaToCfr, setMediaMetadata,
+    batchUpdateMediaMetadata, batchRenameMedia, addTitleTemplate,
+    createMediaFolder, renameMediaFolder, deleteMediaFolder,
+    setMediaFolderCollapsed, moveMediaToFolder, applyEffectPresetToSelectedClip,
+    handleToggleFavorite, handleRevealFromMediaBin, handlePinToSession,
+    handleAddSubclip, handleUpdateSubclip, handleDeleteSubclip,
+    handleAddSubclipToTimeline, project.mediaMetadata,
+  ]);
+
+  const floatingDialogsCallbacks = useMemo(() => ({
+    templateExportPreset,
+    exportDialogOpen,
+    setExportDialogOpen,
+    timelineExportDialogOpen,
+    setTimelineExportDialogOpen,
+    lastExportPath,
+    onExportCompleted: (path: string) => {
+      setLastExportPath(path);
+      setTutorialSignals((current: TutorialSignals) => ({ ...current, videoExported: true }));
+      void runAutomationForMedia('on-export-complete', useEditorStore.getState().project.media);
+    },
+    onRelinkMissing: () => void relinkAllMissing(),
+    importEdlTimeline,
+    addMedia,
+    createProjectFromTemplate,
+    createProjectFromTimelineTemplate,
+    colorAnalysisResults,
+    colorAnalysisJumps,
+    colorAnalysisBusy,
+    runTimelineColorAnalysis,
+    alignTimelineColorToReference,
+    seekSpectrumTime,
+    setSpectrumSelectionRange,
+    splitSpectrumAtTime,
+    importVideosForStitchWizard,
+    generateVideoStitchTimeline,
+    addAssetToTimeline,
+    analyzeContentClip,
+    analyzePreferredContentTargets,
+    exportContentAnalysis,
+    applySpeakerDiarization,
+    speakerDiarizationResult,
+    contentAnalysisTargets,
+    operationRecording,
+    operationRecordingActive,
+    operationReplayRunning,
+    operationRecordingStep,
+    operationReplaySpeed,
+    startOperationRecording,
+    stopOperationRecording,
+    saveOperationRecording,
+    loadOperationRecording,
+    replayOperationRecording,
+    pauseOperationReplay,
+    jumpOperationRecording,
+    exportOperationRecordingSlides,
+    profilerRecording,
+    profilerElapsedMs,
+    profilerReport,
+    startProfilerRecording,
+    stopProfilerRecording,
+    exportProfilerReportJson,
+    saveNamedSnapshot,
+    restoreSnapshotProject,
+    applySnapshotDiffSelection,
+    updateProjectReleaseVersion,
+    syncCompareClipRefs,
+    jumpToMediaAsset,
+    detectedBeatBpm,
+    beatSyncBeatTimes,
+    canDetectBeats,
+    canSnapToBeats,
+    applyManualBeatBpm,
+    detectSelectedBeats: () => void detectSelectedBeats(),
+    snapSelectedToBeats,
+    updatePreviewPerformance,
+    updateTimelineInteractionSettings,
+    deleteProxiesForMedia,
+    regenerateProxiesForMedia,
+    migrateProxiesToDirectory,
+    executeMacro,
+    confirmProjectEncryptionSave,
+    refreshProjectHealth,
+    autoRepairProjectHealth,
+    relinkMissingFromHealth,
+    removeOrphanFromHealth,
+    mergeDuplicateFromHealth,
+    queueProxyFromHealth,
+    mergeDuplicateMediaGroups,
+    refreshMediaHealthDashboard,
+    repairFromMediaHealthDashboard,
+    openMediaHealthRelinkPanel,
+    refreshMediaOrganizer,
+    confirmMediaOrganizerDuplicateGroups,
+    removeMediaOrganizerReferences,
+    archiveUnusedMedia,
+    renameUnusedMedia,
+    recoveryCandidate,
+    exportQueueRecovery,
+    archiveProgress,
+    sharePackageProgress,
+    restoreRecovery,
+    discardRecovery,
+    restoreExportQueueRecovery,
+    discardExportQueueRecovery,
+    skipTutorial,
+    closeTutorialCelebration,
+    runAutomationForMedia,
+    setLastExportPath,
+    setTutorialSignals,
+  }), [
+    templateExportPreset, exportDialogOpen, setExportDialogOpen,
+    timelineExportDialogOpen, setTimelineExportDialogOpen, lastExportPath,
+    relinkAllMissing, importEdlTimeline, addMedia,
+    createProjectFromTemplate, createProjectFromTimelineTemplate,
+    colorAnalysisResults, colorAnalysisJumps, colorAnalysisBusy,
+    runTimelineColorAnalysis, alignTimelineColorToReference,
+    seekSpectrumTime, setSpectrumSelectionRange, splitSpectrumAtTime,
+    importVideosForStitchWizard, generateVideoStitchTimeline,
+    addAssetToTimeline, analyzeContentClip, analyzePreferredContentTargets,
+    exportContentAnalysis, applySpeakerDiarization, speakerDiarizationResult,
+    contentAnalysisTargets,
+    operationRecording, operationRecordingActive, operationReplayRunning,
+    operationRecordingStep, operationReplaySpeed,
+    startOperationRecording, stopOperationRecording,
+    saveOperationRecording, loadOperationRecording,
+    replayOperationRecording, pauseOperationReplay,
+    jumpOperationRecording, exportOperationRecordingSlides,
+    profilerRecording, profilerElapsedMs, profilerReport,
+    startProfilerRecording, stopProfilerRecording, exportProfilerReportJson,
+    saveNamedSnapshot, restoreSnapshotProject,
+    applySnapshotDiffSelection, updateProjectReleaseVersion,
+    syncCompareClipRefs, jumpToMediaAsset,
+    detectedBeatBpm, beatSyncBeatTimes, canDetectBeats, canSnapToBeats,
+    applyManualBeatBpm, detectSelectedBeats, snapSelectedToBeats,
+    updatePreviewPerformance, updateTimelineInteractionSettings,
+    deleteProxiesForMedia, regenerateProxiesForMedia, migrateProxiesToDirectory,
+    executeMacro, confirmProjectEncryptionSave,
+    refreshProjectHealth, autoRepairProjectHealth,
+    relinkMissingFromHealth, removeOrphanFromHealth,
+    mergeDuplicateFromHealth, queueProxyFromHealth,
+    mergeDuplicateMediaGroups, refreshMediaHealthDashboard,
+    repairFromMediaHealthDashboard, openMediaHealthRelinkPanel,
+    refreshMediaOrganizer, confirmMediaOrganizerDuplicateGroups,
+    removeMediaOrganizerReferences, archiveUnusedMedia, renameUnusedMedia,
+    recoveryCandidate, exportQueueRecovery, archiveProgress,
+    sharePackageProgress, restoreRecovery, discardRecovery,
+    restoreExportQueueRecovery, discardExportQueueRecovery,
+    skipTutorial, closeTutorialCelebration, runAutomationForMedia,
+    setLastExportPath, setTutorialSignals,
+  ]);
 
   return (
     <ErrorBoundary name={zhCN.panels.editor}>
@@ -3343,80 +3540,7 @@ export function EditorShell() {
           data-workspace-layout={layoutSettings.activeWorkspaceLayoutId}
           data-review-mode={reviewMode ? 'true' : 'false'}
         >
-          {reviewVisibility.showLeftPanel ? (
-            effectivePanels.leftPanelCollapsed ? (
-              <CollapsedPanelRail
-                side="left"
-                label={zhCN.layout.mediaPanelCollapsed}
-                title={zhCN.layout.expandMediaPanel}
-                testId="left-panel-expand-button"
-                onClick={() => persistLayoutPatch({ leftPanelCollapsed: false, panels: { ...layoutSettings.panels, mediaLibrary: true } })}
-              />
-            ) : (
-              <section className="relative h-full min-h-0 min-w-0 overflow-hidden" data-testid="left-panel" data-collapsed="false">
-                <button
-                  className="absolute right-2 top-2 z-20 inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-white/95 text-slate-600 shadow-sm hover:bg-panel"
-                  type="button"
-                  title={zhCN.layout.collapseMediaPanel}
-                  aria-label={zhCN.layout.collapseMediaPanel}
-                  data-testid="left-panel-collapse-button"
-                  onClick={() => persistLayoutPatch({ leftPanelCollapsed: true, panels: { ...layoutSettings.panels, mediaLibrary: false } })}
-                >
-                  <ChevronLeft size={16} />
-                </button>
-                <MediaBin
-                  media={project.media}
-                  mediaFolders={project.mediaFolders}
-                  mediaMetadata={project.mediaMetadata}
-                  mediaContentAnalysis={mediaContentAnalysis}
-                  sharedLibraryResources={sharedLibraryResources}
-                  selectedClipId={selectedClipId}
-                  projectFrameRate={project.settings.fps}
-                  onImport={() => void importMedia()}
-                  onImportPaths={(paths) => void importDropped(paths)}
-                  onBatchTranscode={(paths) => openBatchTranscode(paths)}
-                  onBatchGenerateCovers={() => void batchGenerateCovers()}
-                  onGenerateThumbnails={(assetIds) => setThumbnailGeneratorAssetIds(assetIds)}
-                  onExportGif={(asset) => setGifExportAsset(asset)}
-                  onAnalyzeSpectrum={(asset) => setSpectrumAsset(asset)}
-                  onScanDuplicates={() => void scanDuplicateMedia()}
-                  onAddToTimeline={addAssetToTimeline}
-                  onAddVersion={(assetId) => void addVersionForMedia(assetId)}
-                  onCompareVersions={openMediaVersionCompare}
-                  onAddAdjustmentLayer={addAdjustmentLayer}
-                  onRelink={(assetId) => void relinkMedia(assetId)}
-                  onRelinkAll={() => void relinkAllMissing()}
-                  onGenerateProxy={(assetId) => void generateProxyForMedia(assetId)}
-                  onConvertToCfr={convertVfrMediaToCfr}
-                  onSetLabel={(assetId, labelColor) => setMediaMetadata(assetId, { ...project.mediaMetadata[assetId], labelColor })}
-                  onSetRating={(assetId, rating) => setMediaMetadata(assetId, { ...project.mediaMetadata[assetId], rating })}
-                  onSetFlag={(assetId, flag) => setMediaMetadata(assetId, { ...project.mediaMetadata[assetId], flag })}
-                  onBatchUpdateMetadata={batchUpdateMediaMetadata}
-                  onBatchRenameMedia={batchRenameMedia}
-                  onAddTitleTemplate={addTitleTemplate}
-                  onCreateFolder={createMediaFolder}
-                  onRenameFolder={renameMediaFolder}
-                  onDeleteFolder={deleteMediaFolder}
-                  onSetFolderCollapsed={setMediaFolderCollapsed}
-                  onMoveMediaToFolder={moveMediaToFolder}
-                  onApplyEffectPreset={applyEffectPresetToSelectedClip}
-                  favoriteIds={favoriteIds}
-                  onToggleFavorite={handleToggleFavorite}
-                  onRevealInTimeline={handleRevealFromMediaBin}
-                  pinnedIds={pinnedIds}
-                  onPinToSession={handlePinToSession}
-                  recentMediaIds={recentMediaIds}
-                  subclips={project.subclips}
-                  onAddSubclip={handleAddSubclip}
-                  onUpdateSubclip={handleUpdateSubclip}
-                  onDeleteSubclip={handleDeleteSubclip}
-                  onAddSubclipToTimeline={handleAddSubclipToTimeline}
-                  mediaCollections={project.mediaCollections ?? []}
-                  onUpdateMediaCollections={(cols) => commandManager.execute(new UpdateProjectMediaCollectionsCommand(projectAccessor, cols))}
-                />
-              </section>
-            )
-          ) : null}
+          <ShellLeftPanel callbacks={leftPanelCallbacks} />
           <ErrorBoundary name={zhCN.panels.preview}>
             <Suspense fallback={<PanelLoading label={zhCN.panels.preview} />}>
               {previewWindowOpen ? (
@@ -3448,83 +3572,7 @@ export function EditorShell() {
               )}
             </Suspense>
           </ErrorBoundary>
-          {reviewVisibility.showRightPanel ? (
-            effectivePanels.rightPanelCollapsed ? (
-              <CollapsedPanelRail
-                side="right"
-                label={zhCN.layout.inspectorPanelCollapsed}
-                title={zhCN.layout.expandInspectorPanel}
-                testId="right-panel-expand-button"
-                onClick={() => persistLayoutPatch({ rightPanelCollapsed: false, panels: { ...layoutSettings.panels, inspector: true } })}
-              />
-            ) : (
-              <aside
-                className="relative grid h-full min-h-0 min-w-0 gap-px bg-line transition-[grid-template-rows] duration-200 ease-out"
-                style={{ gridTemplateRows: rightPanelRows }}
-                data-testid="right-panel"
-                data-collapsed="false"
-              >
-              <button
-                className="absolute right-2 top-2 z-20 inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-white/95 text-slate-600 shadow-sm hover:bg-panel"
-                type="button"
-                title={zhCN.layout.collapseInspectorPanel}
-                aria-label={zhCN.layout.collapseInspectorPanel}
-                data-testid="right-panel-collapse-button"
-                onClick={() => persistLayoutPatch({ rightPanelCollapsed: true, panels: { ...layoutSettings.panels, inspector: false, audioMixer: false } })}
-              >
-                <ChevronRight size={16} />
-              </button>
-              {effectivePanels.rightPrimaryPanelVisible ? (
-                <ErrorBoundary name={rightPrimaryPanelLabel}>
-                  <Suspense fallback={<PanelLoading label={rightPrimaryPanelLabel} />}>
-                    {projectDocumentationOpen ? (
-                      <ProjectDocumentationPanel project={project} />
-                    ) : historyPanelOpen ? (
-                      <HistoryPanel />
-                    ) : aiRoughCutOpen ? (
-                      <AIRoughCutPanel media={project.media} onClose={() => setAiRoughCutOpen(false)} />
-                    ) : directorModeOpen ? (
-                      <DirectorModePanel media={project.media} favoriteIds={favoriteIds} onClose={() => setDirectorModeOpen(false)} />
-                    ) : musicMatchOpen ? (
-                      <MusicMatchPanel media={project.media} sequenceDuration={project.sequences.find((s) => s.id === project.activeSequenceId)?.settings?.duration ?? 0} onClose={() => setMusicMatchOpen(false)} />
-                    ) : highlightReelOpen ? (
-                      <HighlightReelPanel media={project.media} clips={project.timeline.tracks.flatMap((t) => t.clips)} selectedClipIds={selectedClipIds} onClose={() => setHighlightReelOpen(false)} />
-                    ) : contextualTranslationOpen ? (
-                      <ContextualTranslationPanel subtitleClips={project.timeline.tracks.filter((t) => t.type === 'subtitle').flatMap((t) => t.clips).filter((c) => c.type === 'subtitle')} onClose={() => setContextualTranslationOpen(false)} />
-                    ) : aiChatEditorOpen ? (
-                      <AIChatEditorPanel project={project} onClose={() => setAiChatEditorOpen(false)} />
-                    ) : videoSummaryOpen ? (
-                      <AIVideoSummaryPanel project={project} onClose={() => setVideoSummaryOpen(false)} />
-                    ) : narrationOpen ? (
-                      <AINarrationPanel project={project} onClose={() => setNarrationOpen(false)} />
-                    ) : smartRoughCutOpen ? (
-                      <SmartRoughCutPanel selectedClip={selectedClip} media={project.media} />
-                    ) : layoutSettings.panels.inspector ? (
-                      <Inspector
-                        clip={selectedClip}
-                        selectedClips={selectedClips}
-                        selectedCount={selectedClipIds.length}
-                        selectedClipLocked={selectedClipLocked}
-                        selectedKeyframe={selectedKeyframe}
-                        selectedKeyframes={selectedKeyframes}
-                        media={project.media}
-                        playheadTime={playheadTime}
-                        projectSettings={project.settings}
-                      />
-                    ) : null}
-                  </Suspense>
-                </ErrorBoundary>
-              ) : null}
-              {effectivePanels.audioMixerVisible ? (
-                <ErrorBoundary name={zhCN.panels.audioMixer}>
-                  <Suspense fallback={<PanelLoading label={zhCN.panels.audioMixer} compact />}>
-                    <AudioMixer />
-                  </Suspense>
-                </ErrorBoundary>
-              ) : null}
-              </aside>
-            )
-          ) : null}
+          <ShellRightPanel />
         </main>
         {reviewVisibility.showTimelineResizeHandle ? (
           <div
@@ -3563,181 +3611,7 @@ export function EditorShell() {
             </ErrorBoundary>
           </section>
         ) : null}
-        <Suspense fallback={null}>
-          <CharacterTimelinePanel />
-          <PreflightChecklistPanel />
-          <DubbingAdaptationPanel />
-        </Suspense>
-        <Suspense fallback={null}>
-          <ExportDialogs
-            project={project}
-            selectedClipIds={selectedClipIds}
-            inPoint={inPoint}
-            outPoint={outPoint}
-            templateExportPreset={templateExportPreset}
-            exportDialogOpen={exportDialogOpen}
-            setExportDialogOpen={setExportDialogOpen}
-            timelineExportDialogOpen={timelineExportDialogOpen}
-            setTimelineExportDialogOpen={setTimelineExportDialogOpen}
-            onExportCompleted={(path) => {
-              setLastExportPath(path);
-              setTutorialSignals((current) => ({ ...current, videoExported: true }));
-              void runAutomationForMedia('on-export-complete', useEditorStore.getState().project.media);
-            }}
-            onRelinkMissing={() => void relinkAllMissing()}
-            onImportEdl={importEdlTimeline}
-            onAddMedia={addMedia}
-          />
-          {projectTemplateOpen ? <ProjectTemplateDialog onSelect={(templateId) => void createProjectFromTemplate(templateId)} onClose={() => setProjectTemplateOpen(false)} /> : null}
-          {timelineTemplateMode ? (
-            <TimelineTemplateDialog
-              mode={timelineTemplateMode}
-              project={project}
-              selectedClipIds={selectedClipIds}
-              onCreate={(nextProject) => void createProjectFromTimelineTemplate(nextProject)}
-              onSaved={() => setTimelineTemplateMode(undefined)}
-              onClose={() => setTimelineTemplateMode(undefined)}
-            />
-          ) : null}
-          <AnalysisDialogs
-            project={project}
-            selectedClip={selectedClip}
-            selectedClipId={selectedClipId}
-            selectedClipIds={selectedClipIds}
-            commandManager={commandManager}
-            timelineAccessor={timelineAccessor}
-            colorAnalysisResults={colorAnalysisResults}
-            colorAnalysisJumps={colorAnalysisJumps}
-            colorAnalysisBusy={colorAnalysisBusy}
-            runTimelineColorAnalysis={runTimelineColorAnalysis}
-            alignTimelineColorToReference={alignTimelineColorToReference}
-            seekSpectrumTime={seekSpectrumTime}
-            setSpectrumSelectionRange={setSpectrumSelectionRange}
-            splitSpectrumAtTime={splitSpectrumAtTime}
-            importVideosForStitchWizard={importVideosForStitchWizard}
-            generateVideoStitchTimeline={generateVideoStitchTimeline}
-            operationRecording={operationRecording}
-            operationRecordingActive={operationRecordingActive}
-            operationReplayRunning={operationReplayRunning}
-            operationRecordingStep={operationRecordingStep}
-            operationReplaySpeed={operationReplaySpeed}
-            startOperationRecording={startOperationRecording}
-            stopOperationRecording={stopOperationRecording}
-            saveOperationRecording={saveOperationRecording}
-            loadOperationRecording={loadOperationRecording}
-            replayOperationRecording={replayOperationRecording}
-            pauseOperationReplay={pauseOperationReplay}
-            jumpOperationRecording={jumpOperationRecording}
-            exportOperationRecordingSlides={exportOperationRecordingSlides}
-            speakerDiarizationResult={speakerDiarizationResult}
-            applySpeakerDiarization={applySpeakerDiarization}
-            addAssetToTimeline={addAssetToTimeline}
-            contentAnalysisTargets={contentAnalysisTargets}
-            contentAnalysisRunningClipId={contentAnalysisRunningClipId}
-            analyzeContentClip={analyzeContentClip}
-            analyzePreferredContentTargets={analyzePreferredContentTargets}
-            exportContentAnalysis={exportContentAnalysis}
-            profilerRecording={profilerRecording}
-            profilerElapsedMs={profilerElapsedMs}
-            profilerReport={profilerReport}
-            startProfilerRecording={startProfilerRecording}
-            stopProfilerRecording={stopProfilerRecording}
-            exportProfilerReportJson={exportProfilerReportJson}
-          />
-          <SnapshotDialogs
-            project={project}
-            projectPath={projectPath}
-            lastExportPath={lastExportPath}
-            saveNamedSnapshot={saveNamedSnapshot}
-            restoreSnapshotProject={restoreSnapshotProject}
-            applySnapshotDiffSelection={applySnapshotDiffSelection}
-            updateProjectReleaseVersion={updateProjectReleaseVersion}
-          />
-          <MediaCompareDialogs
-            project={project}
-            playheadTime={playheadTime}
-            syncCompareClipRefs={syncCompareClipRefs}
-            jumpToMediaAsset={jumpToMediaAsset}
-          />
-          <BeatSyncDialog
-            detectedBeatBpm={detectedBeatBpm}
-            beatSyncBeatTimes={beatSyncBeatTimes}
-            canDetectBeats={canDetectBeats}
-            canSnapToBeats={canSnapToBeats}
-            applyManualBeatBpm={applyManualBeatBpm}
-            detectSelectedBeats={() => void detectSelectedBeats()}
-            snapSelectedToBeats={snapSelectedToBeats}
-          />
-          {timelineSearchOpen ? <TimelineSearchPanel project={project} onClose={() => setTimelineSearchOpen(false)} /> : null}
-          {shortcutCheatsheetOpen ? <ShortcutCheatsheetPanel bindings={shortcutBindings} onClose={() => setShortcutCheatsheetOpen(false)} /> : null}
-          {pasteKeyframeDialogOpen && selectedClipId ? (
-            <PasteKeyframeDialog
-              groups={pasteKeyframeDialogGroups}
-              targetClipId={selectedClipId}
-              onClose={() => setPasteKeyframeDialogOpen(false)}
-            />
-          ) : null}
-          <SettingsDialogs
-            project={project}
-            selectedClip={selectedClip}
-            shortcutBindings={shortcutBindings}
-            macros={macros}
-            previewPerformance={previewPerformance}
-            timelineInteractionSettings={timelineInteractionSettings}
-            onShortcutBindingsChange={setShortcutBindings}
-            onMacrosChange={setMacros}
-            onExecuteMacro={(macro) => void executeMacro(macro)}
-            onPreviewPerformanceChange={updatePreviewPerformance}
-            onPreviewSkipFramesChange={(skipFrames: PreviewSkipFrames) => updatePreviewPerformance({ skipFrames })}
-            onTimelineInteractionSettingsChange={updateTimelineInteractionSettings}
-            onDeleteProxies={(assetIds) => deleteProxiesForMedia(assetIds)}
-            onRegenerateProxies={(assetIds) => regenerateProxiesForMedia(assetIds)}
-            onMigrateProxies={(targetDirectory) => migrateProxiesToDirectory(targetDirectory)}
-            onRepairSubtitle={(id, start, duration) => {
-              commandManager.execute(new UpdateClipCommand(timelineAccessor, id, { start, duration }));
-            }}
-          />
-          <PerformanceMonitorPanel
-            open={usePerformanceMonitorStore((s) => s.panelOpen)}
-          onClose={() => usePerformanceMonitorStore.getState().setPanelOpen(false)}
-         />
-        <SecurityDialogs confirmProjectEncryptionSave={confirmProjectEncryptionSave} />
-        <ProjectHealthDialogs
-          project={project}
-          refreshProjectHealth={refreshProjectHealth}
-          autoRepairProjectHealth={autoRepairProjectHealth}
-          relinkMissingFromHealth={relinkMissingFromHealth}
-          removeOrphanFromHealth={removeOrphanFromHealth}
-          mergeDuplicateFromHealth={mergeDuplicateFromHealth}
-          queueProxyFromHealth={queueProxyFromHealth}
-          mergeDuplicateMediaGroups={mergeDuplicateMediaGroups}
-          refreshMediaHealthDashboard={refreshMediaHealthDashboard}
-          repairFromMediaHealthDashboard={repairFromMediaHealthDashboard}
-          openMediaHealthRelinkPanel={openMediaHealthRelinkPanel}
-          refreshMediaOrganizer={refreshMediaOrganizer}
-          confirmMediaOrganizerDuplicateGroups={confirmMediaOrganizerDuplicateGroups}
-          removeMediaOrganizerReferences={removeMediaOrganizerReferences}
-          archiveUnusedMedia={archiveUnusedMedia}
-          renameUnusedMedia={renameUnusedMedia}
-        />
-        <RecoveryDialogs
-          recoveryCandidate={recoveryCandidate}
-          exportQueueRecovery={exportQueueRecovery}
-          archiveProgress={archiveProgress}
-          sharePackageProgress={sharePackageProgress}
-          restoreRecovery={restoreRecovery}
-          discardRecovery={discardRecovery}
-          restoreExportQueueRecovery={restoreExportQueueRecovery}
-          discardExportQueueRecovery={discardExportQueueRecovery}
-        />
-        {tutorialProgress && (shouldShowTutorial(tutorialProgress) || tutorialCelebrationVisible) ? (
-          <TutorialOverlay
-            progress={tutorialCelebrationVisible ? { ...tutorialProgress, tutorialCompleted: true } : tutorialProgress}
-            onSkip={skipTutorial}
-            onCloseCelebration={closeTutorialCelebration}
-          />
-        ) : null}
-        </Suspense>
+        <ShellFloatingDialogs {...floatingDialogsCallbacks} />
       </div>
     </ErrorBoundary>
   );
