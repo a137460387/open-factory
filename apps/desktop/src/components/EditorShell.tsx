@@ -40,7 +40,6 @@ import {
   ImportEDLCommand,
   LoadProjectCommand,
   MergeMediaCommand,
-  MigrateProxiesCommand,
   NewProjectCommand,
   RemoveMediaCommand,
   MoveMediaToFolderCommand,
@@ -141,7 +140,6 @@ import {
   type MediaVersionCompareRequest,
   type MediaRenamePreviewItem,
   type SmartDuplicateGroup,
-  buildProxyMigration,
   matchConformByFilename,
   hasLowConfidenceSpeakerSegments,
 } from '@open-factory/editor-core';
@@ -171,6 +169,8 @@ import { useEditorShellInteractions } from '../hooks/useEditorShellInteractions'
 import { useEditorShellProfiler } from '../hooks/useEditorShellProfiler';
 import { useEditorShellOperationRecording } from '../hooks/useEditorShellOperationRecording';
 import { useProjectHealthCallbacks, useAudioAnalysisCallbacks, useBeatSyncCallbacks, useRecordingCallbacks } from '../hooks/useEditorShellCallbacks';
+import { useContentAnalysisCallbacks } from '../hooks/useEditorShellContentAnalysisCallbacks';
+import { useProxyCallbacks } from '../hooks/useEditorShellProxyCallbacks';
 import { useShortcuts } from '../hooks/useShortcuts';
 import { readCustomKeybindings } from '../shortcuts/keybindings';
 import type { TimelineShortcutBindings } from '../shortcuts/timeline-shortcuts';
@@ -314,7 +314,6 @@ import {
   type TutorialSignals
 } from '../tutorial/tutorialState';
 import { DEFAULT_PREVIEW_PERFORMANCE_SETTINGS, type PreviewPerformanceSettings, type PreviewQualityMode, type PreviewSkipFrames } from '../lib/preview/preview-performance';
-import { createProxyForAsset, type ProxyGenerationOptions } from '../media/proxy';
 import { ensureMediaJobRunner } from '../media/media-job-runner';
 import { runScheduledProxyIntegrityCheck } from '../media/proxy-integrity';
 import type { DuplicateMediaMergeSelection } from '../media/DuplicateMediaDialog';
@@ -322,8 +321,6 @@ import type { MediaOrganizerDuplicateSelection } from '../media/MediaOrganizerDi
 import { useMediaJobStore } from '../media/media-job-store';
 import { relinkMissingMediaInDirectory, relinkSingleMedia } from '../media/relink';
 import { useBackgroundMediaJobs } from '../media/useBackgroundMediaJobs';
-import { analyzeClipContentLocally, exportClipContentAnalysisJson } from '../media/contentAnalysis';
-import type { ContentAnalysisTarget } from '../media/ContentAnalysisDialog';
 import { loadSharedLibrary, type SharedLibraryResource } from '../shared-library/sharedLibrary';
 import { commandManager, projectAccessor, timelineAccessor } from '../store/commandManager';
 import { useCollaborationStore } from '../store/collaborationStore';
@@ -408,7 +405,6 @@ import {
   findSpeakerDiarizationTarget,
   collectAutoAudioSyncTargets,
   collectSpeakerDiarizationDialogueIntervals,
-  findContentAnalysisTarget,
   summarizeContentAnalysisByMedia,
 } from '../lib/content-analysis-helpers';
 import {
@@ -1831,70 +1827,13 @@ export function EditorShell() {
     setSyncCompareOpen(true);
   }, [setPlayheadTime]);
 
-  const runSingleContentAnalysis = useCallback(async (target: ContentAnalysisTarget): Promise<boolean> => {
-    setContentAnalysisRunningClipId(target.clip.id);
-    try {
-      const analysis = await analyzeClipContentLocally(target.clip, target.asset);
-      commandManager.execute(new UpdateClipCommand(timelineAccessor, target.clip.id, { contentAnalysis: analysis }));
-      return true;
-    } catch (error) {
-      showToast({ kind: 'error', title: zhCN.contentAnalysis.failedTitle, message: error instanceof Error ? error.message : zhCN.contentAnalysis.failedMessage });
-      return false;
-    } finally {
-      setContentAnalysisRunningClipId(undefined);
-    }
-  }, []);
-
-  const analyzeContentClip = useCallback(
-    async (clipId: string) => {
-      const target = findContentAnalysisTarget(useEditorStore.getState().project, clipId);
-      if (!target) {
-        showToast({ kind: 'warning', title: zhCN.contentAnalysis.failedTitle, message: zhCN.contentAnalysis.noTargets });
-        return;
-      }
-      const completed = await runSingleContentAnalysis(target);
-      if (completed) {
-        showToast({ kind: 'success', title: zhCN.contentAnalysis.completedTitle, message: zhCN.contentAnalysis.completedMessage(1) });
-      }
-    },
-    [runSingleContentAnalysis]
-  );
-
-  const analyzePreferredContentTargets = useCallback(async () => {
-    const state = useEditorStore.getState();
-    const targets = collectContentAnalysisTargets(state.project);
-    const selected = targets.filter((target) => state.selectedClipIds.includes(target.clip.id));
-    const runTargets = selected.length > 0 ? selected : targets;
-    if (runTargets.length === 0) {
-      showToast({ kind: 'warning', title: zhCN.contentAnalysis.failedTitle, message: zhCN.contentAnalysis.noTargets });
-      return;
-    }
-    let completed = 0;
-    for (const target of runTargets) {
-      if (await runSingleContentAnalysis(target)) {
-        completed += 1;
-      }
-    }
-    if (completed > 0) {
-      showToast({ kind: 'success', title: zhCN.contentAnalysis.completedTitle, message: zhCN.contentAnalysis.completedMessage(completed) });
-    }
-  }, [runSingleContentAnalysis]);
-
-  const exportContentAnalysis = useCallback(async (clipId: string) => {
-    const target = findContentAnalysisTarget(useEditorStore.getState().project, clipId);
-    if (!target?.clip.contentAnalysis) {
-      showToast({ kind: 'warning', title: zhCN.contentAnalysis.failedTitle, message: zhCN.contentAnalysis.notAnalyzed });
-      return;
-    }
-    try {
-      const outputPath = await exportClipContentAnalysisJson(target.clip);
-      if (outputPath) {
-        showToast({ kind: 'success', title: zhCN.contentAnalysis.exportedTitle, message: outputPath });
-      }
-    } catch (error) {
-      showToast({ kind: 'error', title: zhCN.contentAnalysis.failedTitle, message: error instanceof Error ? error.message : zhCN.contentAnalysis.failedMessage });
-    }
-  }, []);
+  // --- 提取到 useContentAnalysisCallbacks hook ---
+  const {
+    runSingleContentAnalysis,
+    analyzeContentClip,
+    analyzePreferredContentTargets,
+    exportContentAnalysis,
+  } = useContentAnalysisCallbacks({ setContentAnalysisRunningClipId });
 
   const addAssetToTimeline = useCallback(
     (assetId: string) => {
@@ -2560,102 +2499,14 @@ export function EditorShell() {
     clearSelectedClipIds();
   }, [clearSelectedClipIds]);
 
-  const generateProxyForMedia = useCallback(
-    async (assetId: string, options: ProxyGenerationOptions = {}) => {
-      const asset = useEditorStore.getState().project.media.find((item) => item.id === assetId);
-      if (!asset || asset.type !== 'video') {
-        return;
-      }
-      setMedia(useEditorStore.getState().project.media.map((item) => (item.id === assetId ? { ...item, proxyStatus: 'pending', proxyError: undefined } : item)));
-      try {
-        const proxyAsset = await createProxyForAsset({ ...asset, proxyStatus: 'pending', proxyError: undefined }, proxySettings, options);
-        setMedia(useEditorStore.getState().project.media.map((item) => (item.id === assetId ? proxyAsset : item)));
-        showToast({ kind: 'success', title: zhCN.editorToasts.proxyReady, message: proxyAsset.name });
-      } catch (error) {
-        setMedia(
-          useEditorStore
-            .getState()
-            .project.media.map((item) =>
-              item.id === assetId
-                ? { ...item, proxyStatus: 'error', proxyError: error instanceof Error ? error.message : zhCN.editorToasts.proxyFailedMessage }
-                : item
-            )
-        );
-        showToast({ kind: 'error', title: zhCN.editorToasts.proxyFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.proxyFailedMessage });
-      }
-    },
-    [proxySettings, setMedia]
-  );
-
-  const deleteProxiesForMedia = useCallback(
-    async (assetIds: string[]) => {
-      const ids = new Set(assetIds);
-      const media = useEditorStore.getState().project.media;
-      const proxyPaths = media.filter((asset) => ids.has(asset.id) && asset.proxyPath).map((asset) => asset.proxyPath!);
-      try {
-        await Promise.all(proxyPaths.map((path) => bridgeRemoveFile(path).catch(() => undefined)));
-        setMedia(
-          useEditorStore.getState().project.media.map((asset) =>
-            ids.has(asset.id)
-              ? {
-                  ...asset,
-                  proxyPath: undefined,
-                  proxyStatus: asset.type === 'video' ? 'none' : undefined,
-                  proxyError: undefined
-                }
-              : asset
-          )
-        );
-        showToast({ kind: 'success', title: zhCN.editorToasts.proxyDeleted, message: zhCN.editorToasts.proxyDeletedMessage(proxyPaths.length) });
-      } catch (error) {
-        showToast({ kind: 'error', title: zhCN.editorToasts.proxyDeleteFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.proxyDeleteFailedMessage });
-      }
-    },
-    [setMedia]
-  );
-
-  const regenerateProxiesForMedia = useCallback(
-    async (assetIds: string[]) => {
-      for (const assetId of assetIds) {
-        await generateProxyForMedia(assetId, { force: true });
-      }
-    },
-    [generateProxyForMedia]
-  );
-
-  const migrateProxiesToDirectory = useCallback(async (targetDirectory: string) => {
-    const updates = buildProxyMigration(useEditorStore.getState().project.media, targetDirectory);
-    if (updates.length === 0) {
-      showToast({ kind: 'info', title: zhCN.editorToasts.proxyMigrationSkipped });
-      return;
-    }
-    const moved: typeof updates = [];
-    try {
-      for (const update of updates) {
-        await bridgeMoveFile(update.fromPath, update.toPath);
-        moved.push(update);
-      }
-      commandManager.execute(new MigrateProxiesCommand(projectAccessor, updates));
-      showToast({ kind: 'success', title: zhCN.editorToasts.proxyMigrated, message: zhCN.editorToasts.proxyMigratedMessage(updates.length) });
-    } catch (error) {
-      for (const update of moved.reverse()) {
-        await bridgeMoveFile(update.toPath, update.fromPath).catch(() => undefined);
-      }
-      showToast({ kind: 'error', title: zhCN.editorToasts.proxyMigrationFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.proxyMigrationFailedMessage });
-    }
-  }, []);
-
-  const convertVfrMediaToCfr = useCallback(
-    (assetId: string) => {
-      const asset = useEditorStore.getState().project.media.find((item) => item.id === assetId);
-      if (!asset || asset.type !== 'video') {
-        return;
-      }
-      const cfrFrameRate = getProjectFrameRateConversionTarget(project.settings.fps, getCfrTargetFrameRate({ avgFrameRate: asset.avgFrameRate, realFrameRate: asset.realFrameRate }, asset.frameRate ?? 30));
-      void generateProxyForMedia(assetId, { force: true, cfrFrameRate });
-    },
-    [generateProxyForMedia, project.settings.fps]
-  );
+  // --- 提取到 useProxyCallbacks hook ---
+  const {
+    generateProxyForMedia,
+    deleteProxiesForMedia,
+    regenerateProxiesForMedia,
+    migrateProxiesToDirectory,
+    convertVfrMediaToCfr,
+  } = useProxyCallbacks({ proxySettings, projectFps: project.settings.fps });
 
   const clearCache = useCallback(async () => {
     try {
