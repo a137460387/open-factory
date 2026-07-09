@@ -171,6 +171,10 @@ import { useEditorShellOperationRecording } from '../hooks/useEditorShellOperati
 import { useProjectHealthCallbacks, useAudioAnalysisCallbacks, useBeatSyncCallbacks, useRecordingCallbacks } from '../hooks/useEditorShellCallbacks';
 import { useContentAnalysisCallbacks } from '../hooks/useEditorShellContentAnalysisCallbacks';
 import { useProxyCallbacks } from '../hooks/useEditorShellProxyCallbacks';
+import { useEditorShellViewSettingsCallbacks } from '../hooks/useEditorShellViewSettingsCallbacks';
+import { useEditorShellPlaybackCallbacks } from '../hooks/useEditorShellPlaybackCallbacks';
+import { useEditorShellProjectCallbacks } from '../hooks/useEditorShellProjectCallbacks';
+import { useEditorShellMediaCallbacks } from '../hooks/useEditorShellMediaCallbacks';
 import { useShortcuts } from '../hooks/useShortcuts';
 import { readCustomKeybindings } from '../shortcuts/keybindings';
 import type { TimelineShortcutBindings } from '../shortcuts/timeline-shortcuts';
@@ -800,6 +804,104 @@ export function EditorShell() {
     [project.media, project.timeline.tracks]
   );
   const { handleProfilerFrame, startProfilerRecording, stopProfilerRecording, exportProfilerReportJson } = useEditorShellProfiler();
+
+  const {
+    saveCurrentWorkspaceLayout,
+    toggleSafeFrameGuides,
+    toggleThumbnailTrackVisible,
+    toggleTimelineMinimapVisible,
+    updateTimelineHeatmap,
+    updatePreviewPerformance,
+    updateTimelineInteractionSettings,
+    persistPreviewWindowState,
+    openDetachedPreview,
+    reembedPreviewWindow,
+    updateTimelineGridSettings,
+    toggleTimelineGridSnap,
+    changeTimelineGridUnit,
+    runAutomationForMedia,
+    beginTimelineResize,
+  } = useEditorShellViewSettingsCallbacks({ layoutSettings, setLayoutSettings });
+
+  const {
+    requestProjectPassword,
+    saveProject: saveProjectFn,
+    saveEncryptedProject,
+    startTutorial,
+    skipTutorial,
+    closeTutorialCelebration,
+    confirmProjectEncryptionSave,
+    archiveCurrentProject,
+    executeNewProject,
+    newProject,
+    createProjectFromTemplate,
+    createProjectFromTimelineTemplate,
+    openProject,
+    saveNamedSnapshot,
+    restoreSnapshotProject,
+    applySnapshotDiffSelection,
+  } = useEditorShellProjectCallbacks();
+
+  const {
+    refreshSharedLibraryResources,
+    persistMediaFingerprints,
+    applyImportedMediaColorConversionChoice,
+    queueFrameRateConversionForImportedMedia,
+    importMedia,
+    addVersionForMedia,
+    openBatchTranscode,
+    batchGenerateCovers,
+    createMediaFolder,
+    renameMediaFolder,
+    deleteMediaFolder,
+    setMediaFolderCollapsed,
+    moveMediaToFolder,
+    batchUpdateMediaMetadata,
+    batchRenameMedia,
+    relinkMedia,
+    relinkAllMissing,
+    scanDuplicateMedia,
+    mergeDuplicateMediaGroups,
+    refreshMediaOrganizer,
+    openMediaOrganizer,
+    confirmMediaOrganizerDuplicateGroups,
+    removeMediaOrganizerReferences,
+    archiveUnusedMedia,
+    renameUnusedMedia,
+    conformMedia,
+    handleAddSubclip,
+    handleUpdateSubclip,
+    handleDeleteSubclip,
+    jumpToMediaAsset,
+    updateProjectReleaseVersion,
+  } = useEditorShellMediaCallbacks({ runAutomationForMedia });
+
+  const {
+    undo,
+    switchToPreviousHistoryBranch,
+    redo,
+    togglePlayback,
+    reversePlayback,
+    pausePlayback,
+    forwardPlayback,
+    stepFrame,
+    addAnnotationAtPlayhead,
+    addReviewAnnotationAtPlayhead,
+    createReviewReport,
+    addBookmarkAtPlayhead,
+    jumpTimelineNavigationPoint,
+    exportBookmarks,
+    importBookmarks,
+    setSingleExportRange,
+    appendExportRange,
+    markInPoint,
+    markOutPoint,
+    markMultiRangeInPoint,
+    markMultiRangeOutPoint,
+  } = useEditorShellPlaybackCallbacks();
+
+  const saveProject = saveProjectFn;
+
   const selectedClipLocked = useMemo(
     () => Boolean(selectedClip && project.timeline.tracks.find((track) => track.id === selectedClip.trackId)?.locked),
     [project.timeline.tracks, selectedClip]
@@ -909,15 +1011,6 @@ export function EditorShell() {
   const persistLayoutPatch = useEditorUIStore((s) => s.persistLayoutPatch);
   const persistPanelVisibilityPatch = useEditorUIStore((s) => s.persistPanelVisibilityPatch);
 
-  const refreshSharedLibraryResources = useCallback(async () => {
-    try {
-      setSharedLibraryResources(await loadSharedLibrary());
-    } catch (error) {
-      console.warn('Unable to load shared library', error);
-      setSharedLibraryResources([]);
-    }
-  }, []);
-
   useEffect(() => {
     void refreshSharedLibraryResources();
     const onSharedLibraryUpdated = () => {
@@ -926,192 +1019,6 @@ export function EditorShell() {
     window.addEventListener('open-factory:shared-library-updated', onSharedLibraryUpdated);
     return () => window.removeEventListener('open-factory:shared-library-updated', onSharedLibraryUpdated);
   }, [refreshSharedLibraryResources]);
-
-  const saveCurrentWorkspaceLayout = useCallback(async () => {
-    const name = window.prompt(zhCN.layout.saveWorkspacePrompt, zhCN.layout.customWorkspaceDefaultName)?.trim();
-    if (!name) {
-      return;
-    }
-    const customLayout = createCustomWorkspaceLayout(name, layoutSettings);
-    const next = {
-      ...layoutSettings,
-      activeWorkspaceLayoutId: customLayout.id,
-      customWorkspaceLayouts: [...layoutSettings.customWorkspaceLayouts, customLayout]
-    };
-    setLayoutSettings(next);
-    try {
-      await saveLayoutSettings(next);
-      showToast({ kind: 'success', title: zhCN.layout.workspaceSaved, message: customLayout.shortcutSlot ? zhCN.layout.workspaceShortcut(customLayout.shortcutSlot) : customLayout.name });
-    } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.layout.workspaceSaveFailed, message: error instanceof Error ? error.message : zhCN.layout.workspaceSaveFailedMessage });
-    }
-  }, [layoutSettings]);
-
-  const toggleSafeFrameGuides = useCallback(() => {
-    setSafeFrameGuides((current) => {
-      const next = !current;
-      void saveViewSettings({ safeFrameGuides: next }).catch((error) => {
-        console.warn('Unable to save view settings', error);
-      });
-      return next;
-    });
-  }, []);
-
-  const toggleThumbnailTrackVisible = useCallback(() => {
-    setThumbnailTrackVisible((current) => {
-      const next = !current;
-      void saveViewSettings({ thumbnailTrackVisible: next }).catch((error) => {
-        console.warn('Unable to save view settings', error);
-      });
-      return next;
-    });
-  }, []);
-
-  const toggleTimelineMinimapVisible = useCallback(() => {
-    setTimelineMinimapVisible((current) => {
-      const next = !current;
-      void saveViewSettings({ timelineMinimapVisible: next }).catch((error) => {
-        console.warn('Unable to save view settings', error);
-      });
-      return next;
-    });
-  }, []);
-
-  const updateTimelineHeatmap = useCallback((patch: Partial<TimelineHeatmapViewSettings>) => {
-    setTimelineHeatmap((current) => {
-      const optimistic = normalizeTimelineHeatmapViewSettings({ ...current, ...patch });
-      void saveViewSettings({ timelineHeatmap: optimistic })
-        .then((view) => setTimelineHeatmap(view.timelineHeatmap))
-        .catch((error) => {
-          console.warn('Unable to save timeline heatmap settings', error);
-        });
-      return optimistic;
-    });
-  }, []);
-
-  const updatePreviewPerformance = useCallback((patch: Partial<PreviewPerformanceSettings>) => {
-    setPreviewPerformance((current) => {
-      const optimistic = { ...current, ...patch };
-      void savePreviewPerformanceSettings(optimistic)
-        .then((saved) => setPreviewPerformance(saved))
-        .catch((error) => {
-          console.warn('Unable to save preview performance settings', error);
-        });
-      return optimistic;
-    });
-  }, []);
-
-  const updateTimelineInteractionSettings = useCallback((patch: Partial<TimelineInteractionSettings>) => {
-    setTimelineInteractionSettings((current) => {
-      const optimistic = { ...current, ...patch };
-      void saveTimelineInteractionSettings(optimistic)
-        .then((saved) => setTimelineInteractionSettings(saved))
-        .catch((error) => {
-          console.warn('Unable to save timeline interaction settings', error);
-        });
-      return optimistic;
-    });
-  }, []);
-
-  const persistPreviewWindowState = useCallback((state: PreviewWindowState) => {
-    if (!state.bounds) {
-      return;
-    }
-    setPreviewWindowResolutionScale(state.resolutionScale);
-    void savePreviewWindowSettings({
-      bounds: state.bounds,
-      alwaysOnTop: state.alwaysOnTop,
-      resolutionScale: state.resolutionScale
-    }).catch((error) => {
-      console.warn('Unable to save preview window settings', error);
-    });
-  }, []);
-
-  const openDetachedPreview = useCallback(async () => {
-    try {
-      const settings = await readPreviewWindowSettings();
-      const state = await openPreviewWindow(settings);
-      setPreviewWindowOpen(state.open);
-      setPreviewWindowResolutionScale(state.resolutionScale);
-      if (state.bounds) {
-        persistPreviewWindowState(state);
-      }
-      await emitBridge('preview-window-project-state', {
-        source: 'main',
-        project,
-        playheadTime,
-        isPlaying,
-        previewPerformance,
-        resolutionScale: state.resolutionScale
-      });
-      await emitBridge('preview-window-sync', createPreviewWindowPlaybackState('main', playheadTime, isPlaying));
-    } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.toolbar.popoutPreview, message: error instanceof Error ? error.message : zhCN.common.unavailable });
-    }
-  }, [isPlaying, persistPreviewWindowState, playheadTime, previewPerformance, project]);
-
-  const reembedPreviewWindow = useCallback(async () => {
-    const state = await closePreviewWindow().catch(() => undefined);
-    if (state) {
-      persistPreviewWindowState(state);
-    }
-    setPreviewWindowOpen(false);
-  }, [persistPreviewWindowState]);
-
-  const updateTimelineGridSettings = useCallback((patch: Partial<TimelineGridSettings>) => {
-    setTimelineGridSettings((current) => {
-      const optimistic = { ...current, ...patch };
-      void saveTimelineGridSettings(optimistic)
-        .then((saved) => setTimelineGridSettings(saved))
-        .catch((error) => {
-          console.warn('Unable to save timeline grid settings', error);
-        });
-      return optimistic;
-    });
-  }, []);
-
-  const toggleTimelineGridSnap = useCallback(() => {
-    setTimelineGridSettings((current) => {
-      const optimistic = { ...current, enabled: !current.enabled };
-      void saveTimelineGridSettings(optimistic)
-        .then((saved) => setTimelineGridSettings(saved))
-        .catch((error) => {
-          console.warn('Unable to save timeline grid settings', error);
-        });
-      return optimistic;
-    });
-  }, []);
-
-  const changeTimelineGridUnit = useCallback(
-    (unit: TimelineGridUnit) => {
-      updateTimelineGridSettings({ unit });
-    },
-    [updateTimelineGridSettings]
-  );
-
-  const runAutomationForMedia = useCallback(async (trigger: 'on-import' | 'on-export-complete' | 'on-project-open', media: MediaAsset[]) => {
-    if (media.length === 0) {
-      return;
-    }
-    const dependencies: AutomationActionDependencies = {
-      enqueueProxy: (asset) => {
-        useMediaJobStore.getState().enqueueProxyJobsForMedia([asset], useProxySettingsStore.getState().settings, { force: true });
-        void ensureMediaJobRunner();
-      },
-      setLabel: (assetId, labelColor) => {
-        useEditorStore.getState().setMediaMetadata(assetId, { labelColor });
-      },
-      moveToGroup: (asset, groupName) => {
-        moveAutomationMediaToGroup(asset.id, groupName);
-      },
-      notify: (title, body) => sendNotification(title, body)
-    };
-    try {
-      await runConfiguredAutomationForMedia({ trigger, media, projectName: useEditorStore.getState().project.name }, dependencies);
-    } catch (error) {
-      console.warn('Automation rule execution failed', error);
-    }
-  }, []);
 
   useEffect(() => {
     let canceled = false;
@@ -1150,135 +1057,6 @@ export function EditorShell() {
     return () => window.clearInterval(interval);
   }, [recordingTask]);
 
-  const beginTimelineResize = useCallback(
-    (event: ReactPointerEvent<HTMLDivElement>) => {
-      event.preventDefault();
-      const startY = event.clientY;
-      const startHeight = timelineHeightPx;
-      let nextHeight = startHeight;
-      const onPointerMove = (moveEvent: PointerEvent) => {
-        nextHeight = clampTimelineHeight(startHeight + startY - moveEvent.clientY, readViewportSize().height);
-        setLayoutSettings((current) => ({ ...current, timelineHeightPx: nextHeight }));
-      };
-      const finish = () => {
-        window.removeEventListener('pointermove', onPointerMove);
-        window.removeEventListener('pointerup', finish);
-        window.removeEventListener('pointercancel', finish);
-        setLayoutSettings((current) => {
-          const next = { ...current, timelineHeightPx: nextHeight };
-          void saveLayoutSettings(next).catch((error) => {
-            console.warn('Unable to save layout settings', error);
-          });
-          return next;
-        });
-      };
-      window.addEventListener('pointermove', onPointerMove);
-      window.addEventListener('pointerup', finish);
-      window.addEventListener('pointercancel', finish);
-    },
-    [timelineHeightPx]
-  );
-
-  const requestProjectPassword = useCallback((title: string, description: string) => {
-    return new Promise<string | undefined>((resolve) => {
-      setProjectPasswordRequest({ title, description, resolve });
-    });
-  }, []);
-
-  const saveProject = useCallback(async (options: ProjectFileEncryptionOptions = {}) => {
-    const encryptedSave = options.encrypted === true;
-    const nextPath =
-      projectPath && !encryptedSave
-        ? projectPath
-        : await chooseProjectSavePath(`${project.name}${encryptedSave ? '.cutproj.enc' : '.cutproj.json'}`, encryptedSave);
-    if (!nextPath && !projectPath) {
-      return;
-    }
-    const targetPath = nextPath ?? projectPath;
-    if (!targetPath) {
-      return;
-    }
-    await writeProjectFile(project, targetPath, { ...options, encrypted: encryptedSave || isEncryptedProjectPath(targetPath) });
-    await deleteAutosaveAfterSave(targetPath, projectPath);
-    try {
-      setLastBackupAt((await readBackupSettings()).lastBackupAt);
-    } catch (error) {
-      console.warn(zhCN.settings.backup.statusSaveFailed, error);
-    }
-    setProjectPath(targetPath);
-    setDirty(false);
-    setTutorialSignals((current) => ({ ...current, projectSaved: true }));
-    showToast({ kind: 'success', title: zhCN.editorToasts.projectSaved });
-  }, [project, projectPath, setDirty, setProjectPath]);
-
-  const saveEncryptedProject = useCallback(() => {
-    setProjectEncryptionSaveOpen(true);
-  }, []);
-
-  const startTutorial = useCallback(() => {
-    const nextProgress = normalizeTutorialProgressSettings({ tutorialStep: 0, tutorialSkipped: false, tutorialCompleted: false });
-    setTutorialCelebrationVisible(false);
-    setTutorialSignals(DEFAULT_TUTORIAL_SIGNALS);
-    setTutorialProgress(nextProgress);
-    void saveTutorialProgressSettings(nextProgress).catch((error) => {
-      console.warn('Unable to save tutorial progress settings', error);
-    });
-  }, []);
-
-  const skipTutorial = useCallback(() => {
-    setTutorialCelebrationVisible(false);
-    setTutorialProgress((current) => {
-      const nextProgress = skipTutorialProgress(current ?? normalizeTutorialProgressSettings(undefined));
-      void saveTutorialProgressSettings(nextProgress).catch((error) => {
-        console.warn('Unable to save tutorial progress settings', error);
-      });
-      return nextProgress;
-    });
-  }, []);
-
-  const closeTutorialCelebration = useCallback(() => {
-    setTutorialCelebrationVisible(false);
-  }, []);
-
-  const confirmProjectEncryptionSave = useCallback(
-    async (options: ProjectFileEncryptionOptions) => {
-      setProjectEncryptionSaveOpen(false);
-      await saveProject(options);
-    },
-    [saveProject]
-  );
-
-  const archiveCurrentProject = useCallback(async () => {
-    try {
-      const preflight = await collectProjectArchivePreflight(project);
-      if (preflight.missingRows.length > 0) {
-        const shouldContinue = await bridgeConfirm(zhCN.projectArchive.missingMediaConfirm(preflight.missingRows.length), {
-          title: zhCN.projectArchive.title,
-          kind: 'warning'
-        });
-        if (!shouldContinue) {
-          return;
-        }
-      }
-      const archiveParentDir = projectPath ? dirname(projectPath) : await openDirectoryDialog();
-      if (!archiveParentDir) {
-        return;
-      }
-      const plan = createProjectArchivePlan(project, archiveParentDir, { skipSourcePaths: preflight.missingPaths });
-      setArchiveProgress({ copied: 0, total: plan.copyTasks.filter((task) => task.copyRequired).length });
-      await writeProjectArchive(plan, { copyFile: bridgeCopyFile, writeFile: bridgeWriteFile }, setArchiveProgress);
-      commandManager.clear();
-      setProject(plan.project, plan.projectPath);
-      setProjectPath(plan.projectPath);
-      setDirty(false);
-      showToast({ kind: 'success', title: zhCN.projectArchive.success, message: plan.projectPath });
-    } catch (error) {
-      showToast({ kind: 'error', title: zhCN.projectArchive.failed, message: error instanceof Error ? error.message : zhCN.projectArchive.failedMessage });
-    } finally {
-      setArchiveProgress(undefined);
-    }
-  }, [project, projectPath, setDirty, setProject, setProjectPath]);
-
   const createMediaReport = useCallback(async () => {
     try {
       const outputPath = await saveOfflineMediaReport(project);
@@ -1301,185 +1079,6 @@ export function EditorShell() {
     }
   }, [project]);
 
-  const conformMedia = useCallback(async () => {
-    try {
-      const directory = await openDirectoryDialog();
-      if (!directory) {
-        showToast({ kind: 'info', title: zhCN.conformMedia.canceledTitle });
-        return;
-      }
-      const paths = await scanDirectory(directory, 3);
-      const currentProject = useEditorStore.getState().project;
-      const matches = matchConformByFilename(
-        currentProject.media,
-        paths.map((path) => ({ path })),
-        { caseInsensitive: true }
-      );
-      const preflight = buildConformPreflight(currentProject.media, matches, { fallbackFrameRate: currentProject.settings.fps });
-      const replacements = buildConformMediaReplacements(preflight);
-      const report = buildConformReport(preflight, { selectedOnly: true });
-
-      if (replacements.length === 0) {
-        showToast({ kind: 'warning', title: zhCN.conformMedia.noMatchesTitle, message: zhCN.conformMedia.noMatchesMessage });
-        return;
-      }
-
-      commandManager.execute(new ConformMediaCommand(projectAccessor, replacements, zhCN.conformMedia.commandDescription));
-      showToast({
-        kind: report.failureCount > 0 || report.warningCount > 0 ? 'warning' : 'success',
-        title: zhCN.conformMedia.completedTitle,
-        message: zhCN.conformMedia.completedMessage(report.successCount, report.warningCount, report.failureCount)
-      });
-    } catch (error) {
-      showToast({
-        kind: 'error',
-        title: zhCN.conformMedia.failedTitle,
-        message: error instanceof Error ? error.message : zhCN.conformMedia.failedMessage
-      });
-    }
-  }, []);
-
-  const jumpToMediaAsset = useCallback((assetId: string) => {
-    const element = document.querySelector(`[data-testid="media-card-${assetId}"]`) as HTMLElement | null;
-    element?.scrollIntoView({ block: 'center', inline: 'nearest' });
-    element?.focus();
-  }, []);
-
-  const queueFrameRateConversionForImportedMedia = useCallback(
-    async (media: MediaAsset[]) => {
-      if (project.settings.vfrHandling === 'ignore') {
-        return;
-      }
-      const frameRateMedia = media.filter((asset) => asset.type === 'video' && (asset.variableFrameRate || isFrameRateMismatch(asset.frameRate, project.settings.fps)));
-      if (frameRateMedia.length === 0) {
-        return;
-      }
-      if (project.settings.vfrHandling === 'ask') {
-        const shouldConvert = await bridgeConfirm(zhCN.editorToasts.frameRateConversionPrompt(frameRateMedia.length, getProjectFrameRateConversionTarget(project.settings.fps)), {
-          title: zhCN.editorToasts.frameRateConversionPromptTitle,
-          kind: 'warning'
-        });
-        if (!shouldConvert) {
-          return;
-        }
-      }
-      for (const asset of frameRateMedia) {
-        const cfrFrameRate = isFrameRateMismatch(asset.frameRate, project.settings.fps)
-          ? getProjectFrameRateConversionTarget(project.settings.fps)
-          : getCfrTargetFrameRate({ avgFrameRate: asset.avgFrameRate, realFrameRate: asset.realFrameRate }, asset.frameRate ?? project.settings.fps);
-        useMediaJobStore.getState().enqueueProxyJobsForMedia([asset], useProxySettingsStore.getState().settings, {
-          force: true,
-          cfrFrameRate
-        });
-      }
-      void ensureMediaJobRunner();
-    },
-    [project.settings.fps, project.settings.vfrHandling]
-  );
-
-  const persistMediaFingerprints = useCallback(async (media: MediaAsset[]) => {
-    for (const asset of media) {
-      try {
-        const fingerprint = await generateMediaFingerprint(asset);
-        if (fingerprint) {
-          const metadata = useEditorStore.getState().project.mediaMetadata[asset.id];
-          useEditorStore.getState().setMediaMetadata(asset.id, { ...metadata, fingerprint });
-        }
-      } catch {
-        // Fingerprints improve duplicate detection but must not block local import.
-      }
-    }
-  }, []);
-
-  const applyImportedMediaColorConversionChoice = useCallback(async (media: MediaAsset[]): Promise<MediaAsset[]> => {
-    const workingColorSpace = normalizeProjectWorkingColorSpace(useEditorStore.getState().project.settings.workingColorSpace);
-    const mismatched = media.filter((asset) => asset.colorProfile && asset.colorProfile.sourceColorSpace !== workingColorSpace);
-    if (mismatched.length === 0) {
-      return media;
-    }
-    const confirmed = await bridgeConfirm(zhCN.editorToasts.colorConversionPrompt(mismatched.length, getColorSpaceDisplayName(workingColorSpace)), {
-      title: zhCN.settings.general.workingColorSpace
-    });
-    if (!confirmed) {
-      return media;
-    }
-    return media.map((asset) =>
-      asset.colorProfile && asset.colorProfile.sourceColorSpace !== workingColorSpace
-        ? { ...asset, colorProfile: { ...asset.colorProfile, autoConvertToWorkingSpace: true } }
-        : asset
-    );
-  }, []);
-
-  const importMedia = useCallback(async () => {
-    try {
-      const paths = await pickMediaPaths();
-      if (paths.length === 0) {
-        return;
-      }
-      const result = await probeMediaPaths(paths, project.media);
-      if (result.duplicateCount > 0) {
-        showToast({ kind: 'info', title: zhCN.editorToasts.duplicateTitle, message: zhCN.editorToasts.duplicateMessage(result.duplicateCount) });
-      }
-      if (result.media.length > 0) {
-        const importedMedia = await applyImportedMediaColorConversionChoice(result.media);
-        addMedia(importedMedia);
-        await persistMediaFingerprints(importedMedia);
-        await queueFrameRateConversionForImportedMedia(importedMedia);
-        void runAutomationForMedia('on-import', importedMedia);
-        showToast({ kind: 'success', title: zhCN.editorToasts.mediaImported, message: zhCN.editorToasts.mediaImportedMessage(result.media.length) });
-      }
-    } catch (error) {
-      showToast({ kind: 'error', title: zhCN.editorToasts.importFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.importFailedMessage });
-    }
-  }, [addMedia, applyImportedMediaColorConversionChoice, persistMediaFingerprints, project.media, queueFrameRateConversionForImportedMedia, runAutomationForMedia]);
-
-  const addVersionForMedia = useCallback(
-    async (assetId: string) => {
-      const currentProject = useEditorStore.getState().project;
-      const asset = currentProject.media.find((item) => item.id === assetId);
-      if (!asset) {
-        showToast({ kind: 'error', title: zhCN.editorToasts.mediaVersionAddFailed, message: zhCN.editorToasts.mediaVersionMissingAsset });
-        return;
-      }
-      try {
-        const paths = await pickMediaPaths();
-        const path = paths[0];
-        if (!path) {
-          return;
-        }
-        if (path === asset.path) {
-          showToast({ kind: 'warning', title: zhCN.editorToasts.mediaVersionAddFailed, message: zhCN.editorToasts.mediaVersionSameFile });
-          return;
-        }
-        const latestProject = useEditorStore.getState().project;
-        const existing = latestProject.media.find((item) => item.path === path);
-        const result = existing ? { media: [] as MediaAsset[], duplicateCount: 1 } : await probeMediaPaths([path], latestProject.media);
-        const importedMedia = result.media.length > 0 ? await applyImportedMediaColorConversionChoice(result.media) : result.media;
-        const versionAsset = existing ?? importedMedia[0];
-        if (!versionAsset) {
-          showToast({ kind: 'error', title: zhCN.editorToasts.mediaVersionAddFailed, message: zhCN.editorToasts.importFailedMessage });
-          return;
-        }
-        if (versionAsset.type !== asset.type) {
-          showToast({ kind: 'error', title: zhCN.editorToasts.mediaVersionAddFailed, message: zhCN.editorToasts.mediaVersionTypeMismatch });
-          return;
-        }
-        if (importedMedia.length > 0) {
-          addMedia(importedMedia);
-          await persistMediaFingerprints(importedMedia);
-          await queueFrameRateConversionForImportedMedia(importedMedia);
-          void runAutomationForMedia('on-import', importedMedia);
-        }
-        const metadata = useEditorStore.getState().project.mediaMetadata[assetId];
-        setMediaMetadata(assetId, appendMediaVersion(metadata, versionAsset));
-        showToast({ kind: 'success', title: zhCN.editorToasts.mediaVersionAdded, message: zhCN.editorToasts.mediaVersionAddedMessage(versionAsset.name) });
-      } catch (error) {
-        showToast({ kind: 'error', title: zhCN.editorToasts.mediaVersionAddFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.importFailedMessage });
-      }
-    },
-    [addMedia, applyImportedMediaColorConversionChoice, persistMediaFingerprints, queueFrameRateConversionForImportedMedia, runAutomationForMedia, setMediaMetadata]
-  );
-
   const openMediaVersionCompare = useCallback(
     (assetId: string) => {
       const request = buildMediaVersionCompareRequest(useEditorStore.getState().project, assetId, undefined, undefined, playheadTime);
@@ -1491,34 +1090,6 @@ export function EditorShell() {
     },
     [playheadTime]
   );
-
-  const openBatchTranscode = useCallback((paths: string[] = []) => {
-    setBatchTranscodeInitialPaths(paths);
-    setBatchTranscodeOpen(true);
-  }, []);
-
-  const batchGenerateCovers = useCallback(async () => {
-    const tasks = buildCoverFrameBatchTasks(useEditorStore.getState().project.media);
-    if (tasks.length === 0) {
-      showToast({ kind: 'warning', title: zhCN.editorToasts.coverBatchFailed, message: zhCN.editorToasts.coverBatchNoVideo });
-      return;
-    }
-    try {
-      const baseDir = projectPath ? dirname(projectPath) : await getAppDataDir();
-      const result = await batchExtractCoverFrames({
-        outputDir: joinLocalPath(baseDir, 'covers'),
-        tasks
-      });
-      const completed = result.results.filter((item) => item.status === 'completed').length;
-      if (completed === 0) {
-        showToast({ kind: 'error', title: zhCN.editorToasts.coverBatchFailed, message: result.results.find((item) => item.error)?.error ?? zhCN.editorToasts.coverBatchFailedMessage });
-        return;
-      }
-      showToast({ kind: 'success', title: zhCN.editorToasts.coverBatchCompleted, message: zhCN.editorToasts.coverBatchCompletedMessage(completed) });
-    } catch (error) {
-      showToast({ kind: 'error', title: zhCN.editorToasts.coverBatchFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.coverBatchFailedMessage });
-    }
-  }, [projectPath]);
 
   const importVideosForStitchWizard = useCallback(async (): Promise<string[]> => {
     try {
@@ -1608,193 +1179,6 @@ export function EditorShell() {
     [setPlayheadTime, setSelectedClipIds]
   );
 
-  const saveNamedSnapshot = useCallback(
-    async (name: string) => {
-      try {
-        const snapshot = await saveProjectSnapshot(project, name, projectPath);
-        setSnapshotNameOpen(false);
-        showToast({ kind: 'success', title: zhCN.projectSnapshots.saved, message: snapshot.name });
-      } catch (error) {
-        showToast({ kind: 'error', title: zhCN.projectSnapshots.saveFailed, message: error instanceof Error ? error.message : zhCN.projectSnapshots.saveFailed });
-      }
-    },
-    [project, projectPath]
-  );
-
-  const restoreSnapshotProject = useCallback(
-    (snapshotProject: Project) => {
-      commandManager.execute(new LoadProjectCommand(projectAccessor, snapshotProject, zhCN.projectSnapshots.restoreCommand));
-      clearSelectedClipIds();
-      setPlayheadTime(0);
-    },
-    [clearSelectedClipIds, setPlayheadTime]
-  );
-
-  const applySnapshotDiffSelection = useCallback(
-    (sourceProject: Project, itemIds: string[]) => {
-      const currentProject = useEditorStore.getState().project;
-      const nextTimeline = applyTimelineVersionDiffSelection(currentProject.timeline, sourceProject.timeline, itemIds);
-      const nextProject = replaceProjectActiveTimeline(currentProject, nextTimeline);
-      commandManager.execute(new LoadProjectCommand(projectAccessor, nextProject, zhCN.projectSnapshots.appliedDiffs));
-      clearSelectedClipIds();
-      setPlayheadTime(0);
-    },
-    [clearSelectedClipIds, setPlayheadTime]
-  );
-
-  const updateProjectReleaseVersion = useCallback((version: string) => {
-    commandManager.execute(new UpdateProjectReleaseVersionCommand(projectAccessor, version));
-  }, []);
-
-  const scanDuplicateMedia = useCallback(async () => {
-    try {
-      const currentProject = useEditorStore.getState().project;
-      const groups = await scanDuplicateMediaGroups(currentProject.media, currentProject.mediaMetadata);
-      if (groups.length === 0) {
-        showToast({ kind: 'info', title: zhCN.duplicateMedia.empty });
-        return;
-      }
-      setDuplicateMediaGroups(groups);
-      setDuplicateMediaOpen(true);
-    } catch (error) {
-      showToast({
-        kind: 'error',
-        title: zhCN.duplicateMedia.scanFailed,
-        message: error instanceof Error ? error.message : zhCN.duplicateMedia.scanFailedMessage
-      });
-    }
-  }, []);
-
-  const mergeDuplicateMediaGroups = useCallback((selections: DuplicateMediaMergeSelection[]) => {
-    try {
-      for (const selection of selections) {
-        commandManager.execute(new MergeMediaCommand(projectAccessor, selection.keepAssetId, selection.assetIds));
-      }
-      setDuplicateMediaOpen(false);
-      setDuplicateMediaGroups([]);
-      showToast({ kind: 'success', title: zhCN.duplicateMedia.mergedTitle, message: zhCN.duplicateMedia.mergedMessage(selections.length) });
-    } catch (error) {
-      showToast({ kind: 'error', title: zhCN.projectHealth.toasts.fixFailed, message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage });
-    }
-  }, []);
-
-  const refreshMediaOrganizer = useCallback(async () => {
-    setMediaOrganizerScanning(true);
-    try {
-      const currentProject = useEditorStore.getState().project;
-      const [groups, cleanup] = await Promise.all([
-        scanSmartDuplicateMediaGroups(currentProject.media, currentProject.mediaMetadata),
-        scanMediaCleanupReport(currentProject)
-      ]);
-      setMediaOrganizerGroups(groups);
-      setMediaOrganizerCleanup(cleanup);
-    } catch (error) {
-      showToast({
-        kind: 'error',
-        title: zhCN.mediaOrganizer.scanFailed,
-        message: error instanceof Error ? error.message : zhCN.mediaOrganizer.scanFailedMessage
-      });
-    } finally {
-      setMediaOrganizerScanning(false);
-    }
-  }, []);
-
-  const openMediaOrganizer = useCallback(() => {
-    setMediaOrganizerOpen(true);
-    void refreshMediaOrganizer();
-  }, [refreshMediaOrganizer]);
-
-  const confirmMediaOrganizerDuplicateGroups = useCallback(
-    async (selections: MediaOrganizerDuplicateSelection[], moveFilesToTrash: boolean) => {
-      try {
-        const assetById = new Map(useEditorStore.getState().project.media.map((asset) => [asset.id, asset]));
-        if (moveFilesToTrash) {
-          for (const assetId of selections.flatMap((selection) => selection.removeAssetIds)) {
-            const asset = assetById.get(assetId);
-            if (asset) {
-              await bridgeTrashFile(asset.path);
-            }
-          }
-        }
-        let removedCount = 0;
-        for (const selection of selections) {
-          commandManager.execute(new MergeMediaCommand(projectAccessor, selection.keepAssetId, [selection.keepAssetId, ...selection.removeAssetIds]));
-          removedCount += selection.removeAssetIds.length;
-        }
-        showToast({ kind: 'success', title: zhCN.mediaOrganizer.removedTitle, message: zhCN.mediaOrganizer.removedMessage(removedCount) });
-        void refreshMediaOrganizer();
-      } catch (error) {
-        showToast({ kind: 'error', title: zhCN.projectHealth.toasts.fixFailed, message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage });
-      }
-    },
-    [refreshMediaOrganizer]
-  );
-
-  const removeMediaOrganizerReferences = useCallback(
-    (assetIds: string[]) => {
-      try {
-        commandManager.execute(new RemoveMediaCommand(projectAccessor, assetIds));
-        showToast({ kind: 'success', title: zhCN.mediaOrganizer.removedTitle, message: zhCN.mediaOrganizer.removedMessage(assetIds.length) });
-        void refreshMediaOrganizer();
-      } catch (error) {
-        showToast({ kind: 'error', title: zhCN.projectHealth.toasts.fixFailed, message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage });
-      }
-    },
-    [refreshMediaOrganizer]
-  );
-
-  const archiveUnusedMedia = useCallback(async () => {
-    const unused = mediaOrganizerCleanup?.unused ?? [];
-    if (unused.length === 0) {
-      return;
-    }
-    try {
-      const archiveDir = await openDirectoryDialog();
-      if (!archiveDir) {
-        showToast({ kind: 'info', title: zhCN.mediaOrganizer.archiveCanceled });
-        return;
-      }
-      const relinkEntries = [];
-      for (let index = 0; index < unused.length; index += 1) {
-        const asset = unused[index];
-        const destination = buildArchiveDestinationPath(archiveDir, asset, index);
-        await bridgeMoveFile(asset.path, destination);
-        relinkEntries.push({ assetId: asset.id, newPath: destination });
-      }
-      const nextProject = applyArchiveRelinkPlan(useEditorStore.getState().project, relinkEntries);
-      commandManager.execute(new LoadProjectCommand(projectAccessor, nextProject, zhCN.mediaOrganizer.archivedTitle));
-      showToast({ kind: 'success', title: zhCN.mediaOrganizer.archivedTitle, message: zhCN.mediaOrganizer.archivedMessage(relinkEntries.length) });
-      void refreshMediaOrganizer();
-    } catch (error) {
-      showToast({ kind: 'error', title: zhCN.mediaOrganizer.archiveFailed, message: error instanceof Error ? error.message : zhCN.mediaOrganizer.archiveFailed });
-    }
-  }, [mediaOrganizerCleanup, refreshMediaOrganizer]);
-
-  const renameUnusedMedia = useCallback(
-    async (template: string) => {
-      const unused = mediaOrganizerCleanup?.unused ?? [];
-      if (unused.length === 0) {
-        return;
-      }
-      try {
-        const relinkEntries = [];
-        for (let index = 0; index < unused.length; index += 1) {
-          const asset = unused[index];
-          const destination = buildRenameDestinationPath(asset, template, index);
-          await bridgeMoveFile(asset.path, destination);
-          relinkEntries.push({ assetId: asset.id, newPath: destination });
-        }
-        const nextProject = applyArchiveRelinkPlan(useEditorStore.getState().project, relinkEntries);
-        commandManager.execute(new LoadProjectCommand(projectAccessor, nextProject, zhCN.mediaOrganizer.renameTitle));
-        showToast({ kind: 'success', title: zhCN.mediaOrganizer.renameTitle, message: zhCN.mediaOrganizer.archivedMessage(relinkEntries.length) });
-        void refreshMediaOrganizer();
-      } catch (error) {
-        showToast({ kind: 'error', title: zhCN.projectHealth.toasts.fixFailed, message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage });
-      }
-    },
-    [mediaOrganizerCleanup, refreshMediaOrganizer]
-  );
-
   const importSubtitles = useCallback(async () => {
     try {
       const paths = await pickSubtitlePaths();
@@ -1864,20 +1248,6 @@ export function EditorShell() {
   );
 
 
-
-  const handleAddSubclip = useCallback((subclip: Subclip) => {
-    commandManager.execute(new AddSubclipCommand(projectAccessor, subclip));
-    showToast({ kind: 'success', title: zhCN.subclip.newSubclip, message: subclip.name });
-  }, []);
-
-  const handleUpdateSubclip = useCallback((subclipId: string, patch: Partial<Subclip>) => {
-    commandManager.execute(new UpdateSubclipCommand(projectAccessor, subclipId, patch));
-  }, []);
-
-  const handleDeleteSubclip = useCallback((subclipId: string) => {
-    commandManager.execute(new DeleteSubclipCommand(projectAccessor, subclipId));
-    showToast({ kind: 'info', title: zhCN.subclip.deleteSubclip, message: '' });
-  }, []);
 
   const handleAddSubclipToTimeline = useCallback((assetId: string, subclip: Subclip) => {
     const asset = project.media.find((item) => item.id === assetId);
@@ -2040,125 +1410,6 @@ export function EditorShell() {
     [project.timeline, setSelectedClipId]
   );
 
-  const createMediaFolder = useCallback((parentId?: string | null) => {
-    try {
-      commandManager.execute(new AddMediaFolderCommand(projectAccessor, { name: zhCN.mediaBin.newFolder, parentId }));
-    } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.mediaBin.newFolder, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
-    }
-  }, []);
-
-  const renameMediaFolder = useCallback((folderId: string, name: string) => {
-    commandManager.execute(new RenameMediaFolderCommand(projectAccessor, folderId, name));
-  }, []);
-
-  const deleteMediaFolder = useCallback((folderId: string) => {
-    commandManager.execute(new DeleteMediaFolderCommand(projectAccessor, folderId));
-  }, []);
-
-  const setMediaFolderCollapsed = useCallback((folderId: string, collapsed: boolean) => {
-    commandManager.execute(new SetMediaFolderCollapsedCommand(projectAccessor, folderId, collapsed));
-  }, []);
-
-  const moveMediaToFolder = useCallback((assetIds: string[], folderId?: string | null) => {
-    commandManager.execute(new MoveMediaToFolderCommand(projectAccessor, assetIds, folderId));
-  }, []);
-
-  const batchUpdateMediaMetadata = useCallback((assetIds: string[], metadata: BatchEditableMediaMetadata) => {
-    if (assetIds.length === 0) {
-      return;
-    }
-    commandManager.execute(new BatchUpdateMetadataCommand(projectAccessor, assetIds.map((assetId) => ({ assetId, metadata }))));
-    showToast({ kind: 'success', title: zhCN.mediaBin.batchEditMetadata, message: zhCN.mediaBin.batchMetadataUpdated(assetIds.length) });
-  }, []);
-
-  const batchRenameMedia = useCallback(async (_assetIds: string[], preview: MediaRenamePreviewItem[], renameFiles: boolean) => {
-    const state = useEditorStore.getState();
-    const assetById = new Map(state.project.media.map((asset) => [asset.id, asset]));
-    const renamePlan = preview
-      .filter((item) => item.changed)
-      .map((item) => {
-        const asset = assetById.get(item.assetId);
-        return asset
-          ? {
-              assetId: item.assetId,
-              name: item.nextName,
-              oldPath: asset.path,
-              nextPath: renameFiles ? replaceMediaPathBasename(asset.path, item.nextName) : asset.path
-            }
-          : undefined;
-      })
-      .filter((item): item is { assetId: string; name: string; oldPath: string; nextPath: string } => Boolean(item));
-    if (renamePlan.length === 0) {
-      return;
-    }
-    let commandExecuted = false;
-    try {
-      commandManager.execute(
-        new BatchRenameMediaCommand(
-          projectAccessor,
-          renamePlan.map((item) => ({
-            assetId: item.assetId,
-            name: item.name,
-            path: renameFiles ? item.nextPath : undefined
-          }))
-        )
-      );
-      commandExecuted = true;
-      if (renameFiles) {
-        for (const item of renamePlan) {
-          if (item.oldPath !== item.nextPath) {
-            await bridgeMoveFile(item.oldPath, item.nextPath);
-          }
-        }
-      }
-      showToast({ kind: 'success', title: zhCN.mediaBin.batchRename, message: zhCN.mediaBin.batchRenameCompleted(renamePlan.length) });
-    } catch (error) {
-      if (commandExecuted && renameFiles) {
-        commandManager.undo();
-      }
-      showToast({
-        kind: 'error',
-        title: zhCN.mediaBin.batchRenameFailed,
-        message: error instanceof Error ? error.message : zhCN.mediaBin.batchRenameFailedMessage
-      });
-    }
-  }, []);
-
-  const relinkMedia = useCallback(
-    async (assetId: string) => {
-      const asset = project.media.find((item) => item.id === assetId);
-      if (!asset) {
-        return;
-      }
-      try {
-        const relinked = await relinkSingleMedia(asset);
-        if (!relinked) {
-          return;
-        }
-        setMedia(project.media.map((item) => (item.id === assetId ? relinked : item)));
-        showToast({ kind: 'success', title: zhCN.editorToasts.mediaRelinked, message: relinked.name });
-      } catch (error) {
-        showToast({ kind: 'error', title: zhCN.editorToasts.relinkFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.relinkFailedMessage });
-      }
-    },
-    [project.media, setMedia]
-  );
-
-  const relinkAllMissing = useCallback(async () => {
-    try {
-      const result = await relinkMissingMediaInDirectory(project.media);
-      setMedia(result.media);
-      showToast({
-        kind: result.relinkedCount > 0 ? 'success' : 'warning',
-        title: zhCN.editorToasts.relinkComplete,
-        message: zhCN.editorToasts.relinkCompleteMessage(result.relinkedCount, result.warnings.length)
-      });
-    } catch (error) {
-      showToast({ kind: 'error', title: zhCN.editorToasts.relinkFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.relinkMissingFailedMessage });
-    }
-  }, [project.media, setMedia]);
-
   // --- 提取到 useEditorShellCallbacks hook ---
   const {
     refreshProjectHealth,
@@ -2212,90 +1463,6 @@ export function EditorShell() {
   });
 
 
-
-  const executeNewProject = useCallback(
-    (nextProject: ReturnType<typeof createProject>, nextTemplatePreset?: ExportPreset) => {
-      commandManager.execute(
-        new NewProjectCommand(
-          {
-            getProject: projectAccessor.getProject,
-            setProject: (project) => setProject(project, undefined)
-          },
-          nextProject,
-          zhCN.toolbar.newProject
-        )
-      );
-      commandManager.clear();
-      setActiveProjectEncryptionPassword(undefined);
-      setProjectPath(undefined);
-      setDirty(false);
-      setTemplateExportPreset(nextTemplatePreset);
-    },
-    [setDirty, setProject, setProjectPath]
-  );
-
-  const newProject = useCallback(async () => {
-    if (dirty && !(await confirmDiscardChanges())) {
-      return;
-    }
-    executeNewProject(createProject(zhCN.project.defaultName));
-  }, [dirty, executeNewProject]);
-
-  const createProjectFromTemplate = useCallback(
-    async (templateId: ProjectTemplateId) => {
-      if (dirty && !(await confirmDiscardChanges())) {
-        return;
-      }
-      const copy = projectTemplateCopy(templateId);
-      const instance = instantiateProjectTemplate(templateId, { name: copy.name });
-      executeNewProject(instance.project, {
-        id: `template-${templateId}`,
-        name: copy.name,
-        description: copy.description,
-        builtin: true,
-        settings: instance.exportSettings
-      });
-      setProjectTemplateOpen(false);
-    },
-    [dirty, executeNewProject]
-  );
-
-  const createProjectFromTimelineTemplate = useCallback(
-    async (nextProject: Project) => {
-      if (dirty && !(await confirmDiscardChanges())) {
-        return;
-      }
-      executeNewProject(nextProject);
-      setTimelineTemplateMode(undefined);
-    },
-    [dirty, executeNewProject]
-  );
-
-  const openProject = useCallback(async () => {
-    try {
-      if (dirty && !(await confirmDiscardChanges())) {
-        return;
-      }
-      const path = await chooseProjectToOpen();
-      if (!path) {
-        return;
-      }
-      const password = isEncryptedProjectPath(path)
-        ? await requestProjectPassword(zhCN.projectFiles.encryptedOpenTitle, zhCN.projectFiles.encryptedOpenDescription)
-        : undefined;
-      if (isEncryptedProjectPath(path) && !password) {
-        return;
-      }
-      const nextProject = await readProjectFile(path, path, { password });
-      commandManager.clear();
-      setProject(nextProject, path);
-      void runAutomationForMedia('on-project-open', nextProject.media);
-      setTemplateExportPreset(undefined);
-      showToast({ kind: 'success', title: zhCN.editorToasts.projectOpened });
-    } catch (error) {
-      showToast({ kind: 'error', title: zhCN.editorToasts.openFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.openFailedMessage });
-    }
-  }, [dirty, requestProjectPassword, runAutomationForMedia, setProject]);
 
   const splitSelected = useCallback(() => {
     if (!selectedClip) {
@@ -2516,210 +1683,6 @@ export function EditorShell() {
       showToast({ kind: 'error', title: zhCN.editorToasts.cacheClearFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.cacheClearFailedMessage });
     }
   }, []);
-
-  const undo = useCallback(() => commandManager.undo(), []);
-  const switchToPreviousHistoryBranch = useCallback(() => commandManager.switchToPreviousBranch(), []);
-  const redo = useCallback(() => commandManager.redo(), []);
-  const togglePlayback = useCallback(() => {
-    if (getTimelineDuration(project.timeline) === 0) {
-      return;
-    }
-    const isPlaying = useEditorStore.getState().isPlaying;
-    if (!isPlaying) {
-      setPlaybackRate(1);
-    }
-    setIsPlaying(!isPlaying);
-  }, [project.timeline, setIsPlaying, setPlaybackRate]);
-  const reversePlayback = useCallback(() => {
-    if (getTimelineDuration(useEditorStore.getState().project.timeline) === 0) {
-      return;
-    }
-    setPlaybackRate(-1);
-    setIsPlaying(true);
-  }, [setIsPlaying, setPlaybackRate]);
-  const pausePlayback = useCallback(() => setIsPlaying(false), [setIsPlaying]);
-  const forwardPlayback = useCallback(() => {
-    if (getTimelineDuration(useEditorStore.getState().project.timeline) === 0) {
-      return;
-    }
-    setPlaybackRate(1);
-    setIsPlaying(true);
-  }, [setIsPlaying, setPlaybackRate]);
-  const stepFrame = useCallback(
-    (direction: -1 | 1) => {
-      const state = useEditorStore.getState();
-      const fps = state.project.settings.fps || 30;
-      setIsPlaying(false);
-      setPlaybackRate(1);
-      state.setPlayheadTime(state.playheadTime + direction / fps);
-    },
-    [setIsPlaying, setPlaybackRate]
-  );
-
-  const addAnnotationAtPlayhead = useCallback(() => {
-    const state = useEditorStore.getState();
-    try {
-      commandManager.execute(
-        new AddProjectAnnotationCommand(projectAccessor, {
-          time: state.playheadTime,
-          text: zhCN.timeline.annotationLabel((state.project.annotations?.length ?? 0) + 1),
-          color: DEFAULT_PROJECT_ANNOTATION_COLOR
-        })
-      );
-    } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.annotationRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.addAnnotationFailed });
-    }
-  }, []);
-
-  const addReviewAnnotationAtPlayhead = useCallback((annotation: Omit<ReviewAnnotation, 'id'> & Partial<Pick<ReviewAnnotation, 'id'>>) => {
-    try {
-      commandManager.execute(
-        new AddReviewAnnotationCommand(projectAccessor, {
-          ...annotation,
-          color: annotation.color ?? DEFAULT_REVIEW_ANNOTATION_COLOR
-        })
-      );
-      showToast({ kind: 'success', title: zhCN.preview.reviewAnnotationAdded, message: annotation.text });
-    } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.preview.reviewAnnotationFailedTitle, message: error instanceof Error ? error.message : zhCN.preview.reviewAnnotationFailedMessage });
-    }
-  }, []);
-
-  const createReviewReport = useCallback(async () => {
-    try {
-      const outputPath = await saveReviewReport(useEditorStore.getState().project);
-      if (outputPath) {
-        showToast({ kind: 'success', title: zhCN.preview.reviewReportSaved, message: outputPath });
-      }
-    } catch (error) {
-      showToast({ kind: 'error', title: zhCN.preview.reviewReportFailedTitle, message: error instanceof Error ? error.message : zhCN.preview.reviewReportFailedMessage });
-    }
-  }, []);
-
-  const addBookmarkAtPlayhead = useCallback(() => {
-    const state = useEditorStore.getState();
-    try {
-      commandManager.execute(
-        new AddProjectBookmarkCommand(projectAccessor, {
-          id: createId('bookmark'),
-          time: state.playheadTime,
-          note: zhCN.timeline.bookmarkLabel((state.project.bookmarks?.length ?? 0) + 1)
-        })
-      );
-    } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.bookmarkRejectedTitle, message: error instanceof Error ? error.message : zhCN.timeline.addBookmarkFailed });
-    }
-  }, []);
-
-  const jumpTimelineNavigationPoint = useCallback(
-    (direction: 'previous' | 'next') => {
-      const state = useEditorStore.getState();
-      const points = buildTimelineNavigationPoints(state.project.bookmarks, state.project.timeline.markers, getTimelineDuration(state.project.timeline));
-      const point = findTimelineNavigationPoint(points, state.playheadTime, direction);
-      if (point) {
-        setPlayheadTime(point.time);
-      }
-    },
-    [setPlayheadTime]
-  );
-
-  const exportBookmarks = useCallback(async () => {
-    try {
-      const state = useEditorStore.getState();
-      const outputPath = await bridgeSaveFileDialog(`${state.project.name}-bookmarks.json`, [{ name: zhCN.fileDialogs.bookmarks, extensions: ['json'] }]);
-      if (!outputPath) {
-        return;
-      }
-      await bridgeWriteFile(outputPath, serializeTimelineBookmarks(state.project.bookmarks ?? [], getTimelineDuration(state.project.timeline)));
-      showToast({ kind: 'success', title: zhCN.timeline.bookmarksExported, message: outputPath });
-    } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.bookmarksExportFailed, message: error instanceof Error ? error.message : zhCN.timeline.bookmarksExportFailedMessage });
-    }
-  }, []);
-
-  const importBookmarks = useCallback(async () => {
-    try {
-      const paths = await bridgeOpenFileDialog(false, [{ name: zhCN.fileDialogs.bookmarks, extensions: ['json'] }]);
-      const inputPath = paths[0];
-      if (!inputPath) {
-        return;
-      }
-      const state = useEditorStore.getState();
-      const imported = parseTimelineBookmarksJson(await bridgeReadFile(inputPath), getTimelineDuration(state.project.timeline));
-      const nextBookmarks = mergeImportedTimelineBookmarks(state.project.bookmarks ?? [], imported, getTimelineDuration(state.project.timeline));
-      commandManager.execute(new UpdateProjectBookmarksCommand(projectAccessor, nextBookmarks));
-      showToast({ kind: 'success', title: zhCN.timeline.bookmarksImported, message: zhCN.timeline.bookmarksImportedMessage(imported.length) });
-    } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.timeline.bookmarksImportFailed, message: error instanceof Error ? error.message : zhCN.timeline.bookmarksImportFailedMessage });
-    }
-  }, []);
-
-  const setSingleExportRange = useCallback((start: number, end: number) => {
-    const state = useEditorStore.getState();
-    const duration = getTimelineDuration(state.project.timeline);
-    const range = createExportRange(
-      {
-        id: state.project.exportRanges[0]?.id,
-        label: zhCN.timeline.exportRangeLabel(1),
-        start,
-        end
-      },
-      duration
-    );
-    if (range.end <= range.start) {
-      return;
-    }
-    commandManager.execute(new UpdateProjectExportRangesCommand(projectAccessor, [range]));
-  }, []);
-
-  const appendExportRange = useCallback((start: number, end: number) => {
-    const state = useEditorStore.getState();
-    const duration = getTimelineDuration(state.project.timeline);
-    const existing = normalizeExportRanges(state.project.exportRanges, duration);
-    const range = createExportRange(
-      {
-        label: zhCN.timeline.exportRangeLabel(existing.length + 1),
-        start,
-        end
-      },
-      duration
-    );
-    if (range.end <= range.start) {
-      return;
-    }
-    commandManager.execute(new UpdateProjectExportRangesCommand(projectAccessor, [...existing, range]));
-  }, []);
-
-  const markInPoint = useCallback(() => {
-    const state = useEditorStore.getState();
-    const time = state.playheadTime;
-    setInPoint(time);
-    if (typeof state.outPoint === 'number') {
-      setSingleExportRange(time, state.outPoint);
-    }
-  }, [setInPoint, setSingleExportRange]);
-
-  const markOutPoint = useCallback(() => {
-    const state = useEditorStore.getState();
-    const time = state.playheadTime;
-    setOutPoint(time);
-    if (typeof state.inPoint === 'number') {
-      setSingleExportRange(state.inPoint, time);
-    }
-  }, [setOutPoint, setSingleExportRange]);
-
-  const markMultiRangeInPoint = useCallback(() => {
-    setInPoint(useEditorStore.getState().playheadTime);
-  }, [setInPoint]);
-
-  const markMultiRangeOutPoint = useCallback(() => {
-    const state = useEditorStore.getState();
-    const time = state.playheadTime;
-    setOutPoint(time);
-    if (typeof state.inPoint === 'number') {
-      appendExportRange(state.inPoint, time);
-    }
-  }, [appendExportRange, setOutPoint]);
 
   const selectAllTimelineItems = useCallback(() => {
     const state = useEditorStore.getState();
