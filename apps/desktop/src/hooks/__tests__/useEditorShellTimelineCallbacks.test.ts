@@ -638,8 +638,10 @@ describe('useEditorShellTimelineCallbacks', () => {
       const { findCompleteClipGroup } = await import('@open-factory/editor-core');
       vi.mocked(findCompleteClipGroup).mockReturnValueOnce({
         id: 'group-1',
+        name: '组 1',
         clipIds: ['clip-1'],
-      } as any);
+        color: 'blue',
+      });
 
       const { result } = renderHook(() => useEditorShellTimelineCallbacks(defaultDeps));
       result.current.deleteSelected();
@@ -657,7 +659,7 @@ describe('useEditorShellTimelineCallbacks', () => {
   describe('navigatePrevGap / navigateNextGap', () => {
     it('navigatePrevGap 跳转到上一个间隙', async () => {
       const { computeTimelineGaps, navigateGap } = await import('@open-factory/editor-core');
-      vi.mocked(navigateGap).mockReturnValueOnce({ start: 2, end: 4 } as any);
+      vi.mocked(navigateGap).mockReturnValueOnce({ trackId: 'track-1', start: 2, end: 4, duration: 2 });
 
       const { result } = renderHook(() => useEditorShellTimelineCallbacks(defaultDeps));
       result.current.navigatePrevGap();
@@ -669,7 +671,7 @@ describe('useEditorShellTimelineCallbacks', () => {
 
     it('navigateNextGap 跳转到下一个间隙', async () => {
       const { navigateGap } = await import('@open-factory/editor-core');
-      vi.mocked(navigateGap).mockReturnValueOnce({ start: 15, end: 20 } as any);
+      vi.mocked(navigateGap).mockReturnValueOnce({ trackId: 'track-1', start: 15, end: 20, duration: 5 });
 
       const { result } = renderHook(() => useEditorShellTimelineCallbacks(defaultDeps));
       result.current.navigateNextGap();
