@@ -216,4 +216,133 @@ describe('useEditorShellPlaybackCallbacks', () => {
     expect(mockSetInPoint).toHaveBeenCalledWith(3.0);
     expect(mockCommandExecute).not.toHaveBeenCalled();
   });
+
+  // --- markOutPoint ---
+  it('markOutPoint 设置出点并当 inPoint 存在时创建单范围', () => {
+    mockPlaybackState.playheadTime = 10.0;
+    mockPlaybackState.inPoint = 5.0;
+
+    const { result } = renderHook(() => useEditorShellPlaybackCallbacks());
+    result.current.markOutPoint();
+
+    expect(mockSetOutPoint).toHaveBeenCalledWith(10.0);
+    expect(mockCommandExecute).toHaveBeenCalled();
+  });
+
+  it('markOutPoint 仅设置出点，当 inPoint 未定义时不创建范围', () => {
+    mockPlaybackState.playheadTime = 10.0;
+    mockPlaybackState.inPoint = undefined;
+
+    const { result } = renderHook(() => useEditorShellPlaybackCallbacks());
+    result.current.markOutPoint();
+
+    expect(mockSetOutPoint).toHaveBeenCalledWith(10.0);
+    expect(mockCommandExecute).not.toHaveBeenCalled();
+  });
+
+  // --- reversePlayback ---
+  it('reversePlayback 设置反向播放并启动', () => {
+    mockPlaybackState.isPlaying = false;
+
+    const { result } = renderHook(() => useEditorShellPlaybackCallbacks());
+    result.current.reversePlayback();
+
+    expect(mockSetPlaybackRate).toHaveBeenCalledWith(-1);
+    expect(mockSetIsPlaying).toHaveBeenCalledWith(true);
+  });
+
+  it('reversePlayback 在时间线为空时不执行操作', () => {
+    mockPlaybackState.project.timeline = { tracks: [], markers: [] };
+
+    const { result } = renderHook(() => useEditorShellPlaybackCallbacks());
+    result.current.reversePlayback();
+
+    expect(mockSetPlaybackRate).not.toHaveBeenCalled();
+    expect(mockSetIsPlaying).not.toHaveBeenCalled();
+  });
+
+  // --- forwardPlayback ---
+  it('forwardPlayback 设置正向播放并启动', () => {
+    mockPlaybackState.isPlaying = false;
+
+    const { result } = renderHook(() => useEditorShellPlaybackCallbacks());
+    result.current.forwardPlayback();
+
+    expect(mockSetPlaybackRate).toHaveBeenCalledWith(1);
+    expect(mockSetIsPlaying).toHaveBeenCalledWith(true);
+  });
+
+  it('forwardPlayback 在时间线为空时不执行操作', () => {
+    mockPlaybackState.project.timeline = { tracks: [], markers: [] };
+
+    const { result } = renderHook(() => useEditorShellPlaybackCallbacks());
+    result.current.forwardPlayback();
+
+    expect(mockSetPlaybackRate).not.toHaveBeenCalled();
+    expect(mockSetIsPlaying).not.toHaveBeenCalled();
+  });
+
+  // --- switchToPreviousHistoryBranch ---
+  it('switchToPreviousHistoryBranch 调用 commandManager.switchToPreviousBranch', () => {
+    const { result } = renderHook(() => useEditorShellPlaybackCallbacks());
+    result.current.switchToPreviousHistoryBranch();
+
+    expect(mockCommandSwitchToPreviousBranch).toHaveBeenCalledTimes(1);
+  });
+
+  // --- addAnnotationAtPlayhead ---
+  it('addAnnotationAtPlayhead 在播放头位置添加标注', () => {
+    mockPlaybackState.playheadTime = 5.0;
+    mockPlaybackState.project.annotations = [];
+
+    const { result } = renderHook(() => useEditorShellPlaybackCallbacks());
+    result.current.addAnnotationAtPlayhead();
+
+    expect(mockCommandExecute).toHaveBeenCalled();
+  });
+
+  // --- addBookmarkAtPlayhead ---
+  it('addBookmarkAtPlayhead 在播放头位置添加书签', () => {
+    mockPlaybackState.playheadTime = 3.0;
+    mockPlaybackState.project.bookmarks = [];
+
+    const { result } = renderHook(() => useEditorShellPlaybackCallbacks());
+    result.current.addBookmarkAtPlayhead();
+
+    expect(mockCommandExecute).toHaveBeenCalled();
+  });
+
+  // --- markMultiRangeInPoint ---
+  it('markMultiRangeInPoint 设置入点', () => {
+    mockPlaybackState.playheadTime = 2.0;
+
+    const { result } = renderHook(() => useEditorShellPlaybackCallbacks());
+    result.current.markMultiRangeInPoint();
+
+    expect(mockSetInPoint).toHaveBeenCalledWith(2.0);
+  });
+
+  // --- markMultiRangeOutPoint ---
+  it('markMultiRangeOutPoint 设置出点并追加导出范围', () => {
+    mockPlaybackState.playheadTime = 8.0;
+    mockPlaybackState.inPoint = 2.0;
+    mockPlaybackState.project.exportRanges = [];
+
+    const { result } = renderHook(() => useEditorShellPlaybackCallbacks());
+    result.current.markMultiRangeOutPoint();
+
+    expect(mockSetOutPoint).toHaveBeenCalledWith(8.0);
+    expect(mockCommandExecute).toHaveBeenCalled();
+  });
+
+  it('markMultiRangeOutPoint 仅设置出点，当 inPoint 未定义时不追加范围', () => {
+    mockPlaybackState.playheadTime = 8.0;
+    mockPlaybackState.inPoint = undefined;
+
+    const { result } = renderHook(() => useEditorShellPlaybackCallbacks());
+    result.current.markMultiRangeOutPoint();
+
+    expect(mockSetOutPoint).toHaveBeenCalledWith(8.0);
+    expect(mockCommandExecute).not.toHaveBeenCalled();
+  });
 });

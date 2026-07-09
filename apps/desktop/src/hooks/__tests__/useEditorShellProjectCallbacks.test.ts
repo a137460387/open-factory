@@ -247,4 +247,97 @@ describe('useEditorShellProjectCallbacks', () => {
     expect(mockSetTutorialCelebrationVisible).toHaveBeenCalledWith(false);
     expect(mockSetTutorialProgress).toHaveBeenCalled();
   });
+
+  // --- saveEncryptedProject ---
+  it('saveEncryptedProject 打开加密保存对话框', () => {
+    const { result } = renderHook(() => useEditorShellProjectCallbacks());
+    result.current.saveEncryptedProject();
+
+    expect(mockSetProjectEncryptionSaveOpen).toHaveBeenCalledWith(true);
+  });
+
+  // --- skipTutorial ---
+  it('skipTutorial 跳过教程并保存进度', () => {
+    const { result } = renderHook(() => useEditorShellProjectCallbacks());
+    result.current.skipTutorial();
+
+    expect(mockSetTutorialCelebrationVisible).toHaveBeenCalledWith(false);
+    expect(mockSetTutorialProgress).toHaveBeenCalled();
+  });
+
+  // --- closeTutorialCelebration ---
+  it('closeTutorialCelebration 关闭教程庆祝弹窗', () => {
+    const { result } = renderHook(() => useEditorShellProjectCallbacks());
+    result.current.closeTutorialCelebration();
+
+    expect(mockSetTutorialCelebrationVisible).toHaveBeenCalledWith(false);
+  });
+
+  // --- confirmProjectEncryptionSave ---
+  it('confirmProjectEncryptionSave 关闭对话框并调用 saveProject', async () => {
+    vi.mocked(writeProjectFile).mockResolvedValue(undefined as any);
+    vi.mocked(deleteAutosaveAfterSave).mockResolvedValue(undefined as any);
+
+    const { result } = renderHook(() => useEditorShellProjectCallbacks());
+    await result.current.confirmProjectEncryptionSave({ encrypted: true });
+
+    expect(mockSetProjectEncryptionSaveOpen).toHaveBeenCalledWith(false);
+    expect(writeProjectFile).toHaveBeenCalled();
+  });
+
+  // --- restoreSnapshotProject ---
+  it('restoreSnapshotProject 执行 LoadProjectCommand 并重置状态', () => {
+    const snapshotProject = { name: 'Snapshot', timeline: { tracks: [] } };
+
+    const { result } = renderHook(() => useEditorShellProjectCallbacks());
+    result.current.restoreSnapshotProject(snapshotProject as any);
+
+    expect(mockCommandExecute).toHaveBeenCalled();
+    expect(mockClearSelectedClipIds).toHaveBeenCalled();
+    expect(mockSetPlayheadTime).toHaveBeenCalledWith(0);
+  });
+
+  // --- newProject ---
+  it('newProject 在项目未修改时直接创建新项目', async () => {
+    mockEditorState.dirty = false;
+
+    const { result } = renderHook(() => useEditorShellProjectCallbacks());
+    await result.current.newProject();
+
+    expect(mockCommandExecute).toHaveBeenCalled();
+    expect(createProject).toHaveBeenCalled();
+  });
+
+  it('newProject 在项目已修改且用户确认丢弃时创建新项目', async () => {
+    mockEditorState.dirty = true;
+    const { confirmDiscardChanges } = await import('../../lib/projectFiles');
+    vi.mocked(confirmDiscardChanges).mockResolvedValue(true as any);
+
+    const { result } = renderHook(() => useEditorShellProjectCallbacks());
+    await result.current.newProject();
+
+    expect(mockCommandExecute).toHaveBeenCalled();
+  });
+
+  it('newProject 在项目已修改且用户取消时不创建新项目', async () => {
+    mockEditorState.dirty = true;
+    const { confirmDiscardChanges } = await import('../../lib/projectFiles');
+    vi.mocked(confirmDiscardChanges).mockResolvedValue(false as any);
+
+    const { result } = renderHook(() => useEditorShellProjectCallbacks());
+    await result.current.newProject();
+
+    expect(mockCommandExecute).not.toHaveBeenCalled();
+  });
+
+  // --- createProjectFromTemplate ---
+  it('createProjectFromTemplate 使用模板创建项目', async () => {
+    mockEditorState.dirty = false;
+
+    const { result } = renderHook(() => useEditorShellProjectCallbacks());
+    await result.current.createProjectFromTemplate('youtube-horizontal');
+
+    expect(mockCommandExecute).toHaveBeenCalled();
+    expect(mockSetProjectTemplateOpen).toHaveBeenCalledWith(false);
+  });
 });
