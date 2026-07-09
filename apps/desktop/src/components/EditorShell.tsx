@@ -156,13 +156,12 @@ import {
   computeTimelineGaps,
   navigateGap
 } from '@open-factory/editor-core';
-import { ChevronLeft, ChevronRight, GripHorizontal } from 'lucide-react';
 import { Toolbar } from './Toolbar';
 import { runConfiguredAutomationForMedia, type AutomationActionDependencies } from '../automation/automation-rules';
 import { ErrorBoundary } from './common/ErrorBoundary';
 import { MediaBin } from './MediaBin/MediaBin';
 import { ShortcutCheatsheetPanel } from './ShortcutCheatsheetPanel';
-import { Timeline } from './Timeline/Timeline';
+
 import { useAutosave } from '../hooks/useAutosave';
 import { useCloseGuard } from '../hooks/useCloseGuard';
 import { useExportQueue } from '../hooks/useExportQueue';
@@ -340,7 +339,6 @@ import type { VideoStitchWizardSettings } from '../video-stitching/VideoStitchWi
 
 const AudioMixer = lazy(() => import('./AudioMixer/AudioMixer').then((module) => ({ default: module.AudioMixer })));
 const Inspector = lazy(() => import('./Inspector/Inspector').then((module) => ({ default: module.Inspector })));
-const PreviewCanvas = lazy(() => import('./PreviewCanvas/PreviewCanvas').then((module) => ({ default: module.PreviewCanvas })));
 const SmartRoughCutPanel = lazy(() => import('./SmartRoughCut/SmartRoughCutPanel').then((module) => ({ default: module.SmartRoughCutPanel })));
 const AIRoughCutPanel = lazy(() => import('./AIRoughCut/AIRoughCutPanel').then((module) => ({ default: module.AIRoughCutPanel })));
 const DirectorModePanel = lazy(() => import('./DirectorMode/DirectorModePanel').then((module) => ({ default: module.DirectorModePanel })));
@@ -380,12 +378,10 @@ const ExportQueueRecoveryDialog = lazy(() => import('./dialogs/ExportQueueRecove
 const ArchiveProgressDialog = lazy(() => import('./dialogs/ArchiveProgressDialog').then((module) => ({ default: module.ArchiveProgressDialog })));
 const PasteKeyframeDialog = lazy(() => import('./dialogs/PasteKeyframeDialog').then((module) => ({ default: module.PasteKeyframeDialog })));
 const SharePackageProgressDialog = lazy(() => import('./dialogs/SharePackageProgressDialog').then((module) => ({ default: module.SharePackageProgressDialog })));
-const StoryboardView = lazy(() => import('./Storyboard/StoryboardView').then((module) => ({ default: module.StoryboardView })));
 const CharacterTimelinePanel = lazy(() => import('./Timeline/CharacterTimelinePanel').then((module) => ({ default: module.CharacterTimelinePanel })));
 const PreflightChecklistPanel = lazy(() => import('./Export/PreflightChecklistPanel').then((module) => ({ default: module.PreflightChecklistPanel })));
 const DubbingAdaptationPanel = lazy(() => import('./Export/DubbingAdaptationPanel').then((module) => ({ default: module.DubbingAdaptationPanel })));
 
-import { PanelLoading } from './PanelLoading';
 import { SettingsDialogs } from './dialogs/SettingsDialogs';
 import { ExportDialogs } from './dialogs/ExportDialogs';
 import { AnalysisDialogs } from './dialogs/AnalysisDialogs';
@@ -396,9 +392,8 @@ import { MediaCompareDialogs } from './dialogs/MediaCompareDialogs';
 import { RecoveryDialogs } from './dialogs/RecoveryDialogs';
 import { SecurityDialogs } from './dialogs/SecurityDialogs';
 import { CollapsedPanelRail } from './CollapsedPanelRail';
-import { ShellLeftPanel } from './layout/ShellLeftPanel';
-import { ShellRightPanel } from './layout/ShellRightPanel';
 import { ShellFloatingDialogs } from './layout/ShellFloatingDialogs';
+import { ShellMainArea } from './layout/ShellMainArea';
 import {
   getSubtitleDataImportTargetTrackId,
   findTimelineClipForMediaSourceTime,
@@ -3530,87 +3525,34 @@ export function EditorShell() {
         <div className="absolute right-3 top-2 z-10">
           <PerformanceAlertIcon />
         </div>
-        <main
-          className="grid min-h-0 min-w-0 gap-px bg-line transition-[grid-template-columns] duration-200 ease-out"
-          style={{ gridTemplateColumns: mainGridColumns }}
-          data-testid="editor-main-layout"
-          data-left-collapsed={effectivePanels.leftPanelCollapsed ? 'true' : 'false'}
-          data-right-collapsed={effectivePanels.rightPanelCollapsed ? 'true' : 'false'}
-          data-right-auto-collapsed={effectivePanels.rightPanelAutoCollapsed ? 'true' : 'false'}
-          data-workspace-layout={layoutSettings.activeWorkspaceLayoutId}
-          data-review-mode={reviewMode ? 'true' : 'false'}
-        >
-          <ShellLeftPanel callbacks={leftPanelCallbacks} />
-          <ErrorBoundary name={zhCN.panels.preview}>
-            <Suspense fallback={<PanelLoading label={zhCN.panels.preview} />}>
-              {previewWindowOpen ? (
-                <section className="grid min-h-0 place-items-center bg-[#111827] p-6 text-center text-white" data-testid="preview-window-placeholder">
-                  <div className="max-w-sm">
-                    <div className="text-sm font-semibold">{zhCN.preview.detachedPlaceholderTitle}</div>
-                    <div className="mt-2 text-xs leading-5 text-slate-300">{zhCN.preview.detachedPlaceholderMessage}</div>
-                    <button
-                      className="mt-4 inline-flex h-9 items-center justify-center rounded-md border border-white/15 bg-white/10 px-3 text-sm font-medium text-white hover:bg-white/20"
-                      type="button"
-                      data-testid="preview-window-reembed-button"
-                      onClick={() => void reembedPreviewWindow()}
-                    >
-                      {zhCN.preview.detachedReembed}
-                    </button>
-                  </div>
-                </section>
-              ) : (
-                <PreviewCanvas
-                  safeFrameGuides={safeFrameGuides}
-                  previewPerformance={previewPerformance}
-                  colorScopesVisible={layoutSettings.panels.colorScopes}
-                  onColorScopesVisibleChange={(colorScopes) => persistPanelVisibilityPatch({ colorScopes })}
-                  reviewMode={reviewMode}
-                  onProfilerFrame={handleProfilerFrame}
-                  onAddReviewAnnotation={addReviewAnnotationAtPlayhead}
-                  onExportReviewReport={() => void createReviewReport()}
-                />
-              )}
-            </Suspense>
-          </ErrorBoundary>
-          <ShellRightPanel />
-        </main>
-        {reviewVisibility.showTimelineResizeHandle ? (
-          <div
-            className="flex cursor-row-resize items-center justify-center bg-line text-slate-500 transition hover:bg-brand/20 hover:text-brand"
-            role="separator"
-            aria-orientation="horizontal"
-            aria-label={zhCN.layout.resizeTimeline}
-            data-testid="timeline-resize-handle"
-            onPointerDown={beginTimelineResize}
-          >
-            <GripHorizontal size={18} />
-          </div>
-        ) : null}
-        {reviewVisibility.showTimeline ? (
-          <section className="min-h-0 overflow-hidden transition-[height] duration-200 ease-out" data-testid="timeline-panel" style={{ height: timelineHeightPx }}>
-            <ErrorBoundary name={storyboardOpen ? zhCN.storyboard.title : zhCN.panels.timeline}>
-              {storyboardOpen ? (
-                <Suspense fallback={null}>
-                  <StoryboardView />
-                </Suspense>
-              ) : (
-                <Timeline
-                  thumbnailTrackVisible={thumbnailTrackVisible}
-                  minimapVisible={timelineMinimapVisible}
-                  heatmap={timelineHeatmap}
-                  colorHeatmap={colorHeatmapPoints}
-                  colorJumps={colorAnalysisJumps}
-                  timelineGridSettings={timelineGridSettings}
-                  reduceMotion={timelineInteractionSettings.reduceMotion}
-                  bookmarkPanelOpen={layoutSettings.panels.bookmarks}
-                  onBookmarkPanelOpenChange={(bookmarks) => persistPanelVisibilityPatch({ bookmarks })}
-                  onConvertMediaFrameRate={convertVfrMediaToCfr}
-                  sceneDetectionRequestId={sceneDetectionRequestId}
-                />
-              )}
-            </ErrorBoundary>
-          </section>
-        ) : null}
+        <ShellMainArea
+          mainGridColumns={mainGridColumns}
+          effectivePanels={effectivePanels}
+          layoutSettings={layoutSettings}
+          reviewMode={reviewMode}
+          previewWindowOpen={previewWindowOpen}
+          safeFrameGuides={safeFrameGuides}
+          previewPerformance={previewPerformance}
+          handleProfilerFrame={handleProfilerFrame}
+          addReviewAnnotationAtPlayhead={addReviewAnnotationAtPlayhead}
+          createReviewReport={createReviewReport}
+          reembedPreviewWindow={reembedPreviewWindow}
+          persistPanelVisibilityPatch={persistPanelVisibilityPatch}
+          reviewVisibility={reviewVisibility}
+          timelineHeightPx={timelineHeightPx}
+          storyboardOpen={storyboardOpen}
+          thumbnailTrackVisible={thumbnailTrackVisible}
+          timelineMinimapVisible={timelineMinimapVisible}
+          timelineHeatmap={timelineHeatmap}
+          colorHeatmapPoints={colorHeatmapPoints}
+          colorAnalysisJumps={colorAnalysisJumps}
+          timelineGridSettings={timelineGridSettings}
+          reduceMotion={timelineInteractionSettings.reduceMotion}
+          convertVfrMediaToCfr={convertVfrMediaToCfr}
+          sceneDetectionRequestId={sceneDetectionRequestId}
+          leftPanelCallbacks={leftPanelCallbacks}
+          beginTimelineResize={beginTimelineResize}
+        />
         <ShellFloatingDialogs {...floatingDialogsCallbacks} />
       </div>
     </ErrorBoundary>
