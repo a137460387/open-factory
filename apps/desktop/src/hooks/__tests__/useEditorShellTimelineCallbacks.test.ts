@@ -222,8 +222,11 @@ import { findPreferredTrack } from '../../lib/clipFactory';
 import {
   AddClipCommand,
   AddAdjustmentLayerCommand,
+  AddMotionGraphicCommand,
+  ApplyEffectPresetCommand,
   SplitClipCommand,
   DeleteClipsCommand,
+  DeleteGroupCommand,
   RippleDeleteCommand,
 } from '@open-factory/editor-core';
 
@@ -521,6 +524,168 @@ describe('useEditorShellTimelineCallbacks', () => {
       expect(mockSetSelectedClipIds).toHaveBeenCalledWith(
         expect.arrayContaining(['clip-1']),
       );
+    });
+  });
+
+  // ── addMotionGraphic ─────────────────────────────────────────
+
+  describe('addMotionGraphic', () => {
+    it('创建动态图形轨道和片段并执行 AddMotionGraphicCommand', () => {
+      const { result } = renderHook(() => useEditorShellTimelineCallbacks(defaultDeps));
+      result.current.addMotionGraphic();
+
+      expect(AddMotionGraphicCommand).toHaveBeenCalled();
+      expect(mockCommandExecute).toHaveBeenCalledTimes(1);
+      expect(mockSetSelectedClipId).toHaveBeenCalledWith('motion-clip-mock');
+    });
+
+    it('命令执行失败时显示错误 toast', () => {
+      mockCommandExecute.mockImplementation(() => {
+        throw new Error('无法创建动态图形');
+      });
+
+      const { result } = renderHook(() => useEditorShellTimelineCallbacks(defaultDeps));
+      result.current.addMotionGraphic();
+
+      expect(showToast).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'error' }),
+      );
+    });
+  });
+
+  // ── addTitleTemplate ─────────────────────────────────────────
+
+  describe('addTitleTemplate', () => {
+    it('在文本轨道上创建标题模板片段', () => {
+      mockEditorState.project.timeline.tracks.push({
+        id: 'text-track-1',
+        type: 'text',
+        name: 'T1',
+        clips: [],
+      });
+
+      const { result } = renderHook(() => useEditorShellTimelineCallbacks(defaultDeps));
+      result.current.addTitleTemplate('lower-third' as any);
+
+      expect(AddClipCommand).toHaveBeenCalled();
+      expect(mockSetSelectedClipId).toHaveBeenCalledWith('title-clip-mock');
+    });
+
+    it('无文本轨道时显示警告 toast', () => {
+      // 默认 mock 中没有 text 轨道
+      const { result } = renderHook(() => useEditorShellTimelineCallbacks(defaultDeps));
+      result.current.addTitleTemplate('lower-third' as any);
+
+      expect(showToast).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'warning' }),
+      );
+      expect(mockCommandExecute).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── applyEffectPresetToSelectedClip ──────────────────────────
+
+  describe('applyEffectPresetToSelectedClip', () => {
+    it('对选中片段应用效果预设', () => {
+      const preset = { id: 'preset-1', name: '模糊效果', effects: [] };
+
+      const { result } = renderHook(() => useEditorShellTimelineCallbacks(defaultDeps));
+      result.current.applyEffectPresetToSelectedClip(preset as any);
+
+      expect(ApplyEffectPresetCommand).toHaveBeenCalledWith(
+        'mock-timeline-accessor',
+        'clip-1',
+        preset,
+      );
+      expect(mockCommandExecute).toHaveBeenCalledTimes(1);
+      expect(showToast).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'success' }),
+      );
+    });
+
+    it('无选中片段时显示警告 toast', () => {
+      mockEditorState.selectedClipId = null;
+
+      const preset = { id: 'preset-1', name: '模糊效果', effects: [] };
+      const { result } = renderHook(() => useEditorShellTimelineCallbacks(defaultDeps));
+      result.current.applyEffectPresetToSelectedClip(preset as any);
+
+      expect(showToast).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'warning' }),
+      );
+      expect(mockCommandExecute).not.toHaveBeenCalled();
+    });
+
+    it('命令执行失败时显示错误 toast', () => {
+      mockCommandExecute.mockImplementation(() => {
+        throw new Error('预设应用失败');
+      });
+
+      const preset = { id: 'preset-1', name: '模糊效果', effects: [] };
+      const { result } = renderHook(() => useEditorShellTimelineCallbacks(defaultDeps));
+      result.current.applyEffectPresetToSelectedClip(preset as any);
+
+      expect(showToast).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'error' }),
+      );
+    });
+  });
+
+  // ── deleteSelected（组检测）──────────────────────────────────
+
+  describe('deleteSelected（组检测）', () => {
+    it('当选中片段属于完整组时执行 DeleteGroupCommand', async () => {
+      const { findCompleteClipGroup } = await import('@open-factory/editor-core');
+      vi.mocked(findCompleteClipGroup).mockReturnValueOnce({
+        id: 'group-1',
+        clipIds: ['clip-1'],
+      });
+
+      const { result } = renderHook(() => useEditorShellTimelineCallbacks(defaultDeps));
+      result.current.deleteSelected();
+
+      expect(DeleteGroupCommand).toHaveBeenCalledWith(
+        'mock-project-accessor',
+        'group-1',
+      );
+      expect(mockClearSelectedClipIds).toHaveBeenCalled();
+    });
+  });
+
+  // ── navigatePrevGap / navigateNextGap ───────────────────────
+
+  describe('navigatePrevGap / navigateNextGap', () => {
+    it('navigatePrevGap 跳转到上一个间隙', async () => {
+      const { computeTimelineGaps, navigateGap } = await import('@open-factory/editor-core');
+      vi.mocked(navigateGap).mockReturnValueOnce({ start: 2, end: 4 });
+
+      const { result } = renderHook(() => useEditorShellTimelineCallbacks(defaultDeps));
+      result.current.navigatePrevGap();
+
+      expect(computeTimelineGaps).toHaveBeenCalled();
+      expect(navigateGap).toHaveBeenCalledWith([], 5, -1);
+      expect(mockSetPlayheadTime).toHaveBeenCalledWith(2);
+    });
+
+    it('navigateNextGap 跳转到下一个间隙', async () => {
+      const { navigateGap } = await import('@open-factory/editor-core');
+      vi.mocked(navigateGap).mockReturnValueOnce({ start: 15, end: 20 });
+
+      const { result } = renderHook(() => useEditorShellTimelineCallbacks(defaultDeps));
+      result.current.navigateNextGap();
+
+      expect(navigateGap).toHaveBeenCalledWith([], 5, 1);
+      expect(mockSetPlayheadTime).toHaveBeenCalledWith(15);
+    });
+
+    it('无间隙时不更新 playhead', async () => {
+      const { navigateGap } = await import('@open-factory/editor-core');
+      vi.mocked(navigateGap).mockReturnValueOnce(null);
+
+      const { result } = renderHook(() => useEditorShellTimelineCallbacks(defaultDeps));
+      result.current.navigatePrevGap();
+
+      expect(mockSetPlayheadTime).not.toHaveBeenCalled();
     });
   });
 });
