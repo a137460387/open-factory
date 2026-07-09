@@ -78,8 +78,8 @@ export interface DragState {
   previewSlideDelta?: number;
 }
 
-export const TRACK_HEIGHT = 54;
-export const LABEL_WIDTH = 138;
+export const TRACK_HEIGHT = 60;
+export const LABEL_WIDTH = 160;
 const TRACK_DRAG_MIME = 'application/x-open-factory-track-id';
 const LARGE_PROJECT_ASSET_HYDRATION_DELAY_MS = 1_200;
 const LARGE_PROJECT_ASSET_IDLE_TIMEOUT_MS = 2_500;
@@ -202,7 +202,7 @@ export function Ruler({
   }
 
   return (
-    <div className="sticky top-0 z-30 grid h-10 grid-cols-[138px_1fr] border-b border-line bg-panel">
+    <div className="sticky top-0 z-30 grid h-11 grid-cols-[160px_1fr] border-b border-line bg-panel">
       <div className="grid grid-rows-[10px_1fr] border-r border-line">
         <div className="px-3 text-[9px] font-medium leading-[10px] text-emerald-700">{zhCN.timeline.renderCache}</div>
         <div className="px-3 py-1 font-mono text-xs font-semibold tabular-nums text-[var(--color-text-secondary)]" data-testid="timeline-ruler-timecode">
@@ -1016,7 +1016,7 @@ function ClipBlock({
   return (
     <div
       className={clsx(
-        'group absolute top-2 flex h-10 select-none items-center overflow-hidden rounded-md border px-2 text-xs font-medium shadow-sm',
+        'group absolute top-2 flex h-10 select-none items-center overflow-hidden rounded-md border px-2.5 text-xs font-medium shadow-sm',
         getClipToneClass(clip.type),
         asset?.missing ? 'border-rose-500 bg-[repeating-linear-gradient(135deg,rgba(244,63,94,0.18)_0,rgba(244,63,94,0.18)_6px,transparent_6px,transparent_12px)]' : selected ? 'border-coral ring-2 ring-coral/30' : 'border-white/80',
         locked ? 'cursor-not-allowed opacity-70' : 'cursor-grab',
