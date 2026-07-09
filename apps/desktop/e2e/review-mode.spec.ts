@@ -1,10 +1,11 @@
 import { expect, test } from '@playwright/test';
-import { waitForE2eActions } from './e2e-actions';
+import { waitForE2eActions, waitForAppStore } from './e2e-actions';
 
 test('enters review mode, hides editing controls, stores an annotation, and exports a report', async ({ page }) => {
   const reportPath = 'C:/Reports/review-mode.html';
   await page.goto('/');
   await waitForE2eActions(page);
+  await waitForAppStore(page);
   await page.evaluate(() => window.__E2E_ACTIONS__!.clearE2eFiles!());
   await page.evaluate((path) => window.__E2E_ACTIONS__!.setSavePath!(path), reportPath);
 

@@ -1,9 +1,10 @@
 import { expect, test } from '@playwright/test';
-import { waitForE2eActions } from './e2e-actions';
+import { waitForE2eActions, waitForAppStore } from './e2e-actions';
 
 test('opens complexity score panel with radar and total score', async ({ page }) => {
   await page.goto('/');
   await waitForE2eActions(page);
+  await waitForAppStore(page);
   await page.evaluate(() => window.__E2E_ACTIONS__!.setupComplexityScoreFixture!());
 
   await page.getByTestId('toolbar-tools-menu-button').click();

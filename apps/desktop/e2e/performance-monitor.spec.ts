@@ -1,10 +1,11 @@
 import { test, expect } from '@playwright/test';
-import { waitForE2eActions } from './e2e-actions';
+import { waitForE2eActions, waitForAppStore } from './e2e-actions';
 
 test.describe('Performance Monitor', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await waitForE2eActions(page);
+    await waitForAppStore(page);
   });
 
   test('alert icon appears when high memory is injected', async ({ page }) => {

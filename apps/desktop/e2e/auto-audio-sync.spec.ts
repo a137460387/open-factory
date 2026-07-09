@@ -1,9 +1,10 @@
 import { expect, test } from '@playwright/test';
-import { waitForE2eActions } from './e2e-actions';
+import { waitForE2eActions, waitForAppStore } from './e2e-actions';
 
 test('syncs a mocked secondary audio track by applying the calculated offset', async ({ page }) => {
   await page.goto('/');
   await waitForE2eActions(page);
+  await waitForAppStore(page);
   await page.evaluate(() => {
     window.__E2E_ACTIONS__!.clearE2eFiles!();
     window.__E2E_ACTIONS__!.setupAutoAudioSyncFixture!();

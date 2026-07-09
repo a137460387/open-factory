@@ -19,6 +19,7 @@ import {
   type ProjectFileV2
 } from '@open-factory/editor-core';
 import { commandManager, timelineAccessor } from '../store/commandManager';
+import { useEditorUIStore } from '../store/editorUIStore';
 import { collaborationController } from '../collaboration/local-network';
 import { useCollaborationStore } from '../store/collaborationStore';
 import { useEditorStore } from '../store/editorStore';
@@ -2654,6 +2655,7 @@ window.__E2E_ACTIONS__ = {
   closePreviewWindow: () => {
     previewWindowState = { ...previewWindowState, open: false };
     emit('preview-window-closed', previewWindowState);
+    useEditorUIStore.getState().setPreviewWindowOpen(false);
   },
   getPreviewWindowState: () => previewWindowState,
   setPlayheadTime: (time: unknown) => {

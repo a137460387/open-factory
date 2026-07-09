@@ -1846,6 +1846,23 @@ export function EditorShell() {
           leftPanelCallbacks={leftPanelCallbacks}
           beginTimelineResize={beginTimelineResize}
         />
+        <Suspense fallback={null}>
+          {complexityScoreOpen ? <ComplexityScorePanel project={project} onClose={() => setComplexityScoreOpen(false)} /> : null}
+          {autoAudioSyncOpen ? (
+            <AutoAudioSyncDialog
+              targets={autoAudioSyncDialogTargets}
+              primaryClipId={resolvedAutoAudioSyncPrimaryClipId}
+              mode={autoAudioSyncMode}
+              running={autoAudioSyncRunning}
+              results={autoAudioSyncResults}
+              onPrimaryChange={(clipId) => setAutoAudioSyncPrimaryClipId(clipId)}
+              onModeChange={(mode) => setAutoAudioSyncMode(mode)}
+              onAnalyze={() => void runAutoAudioSync()}
+              onApply={() => void applyAutoAudioSync()}
+              onClose={() => setAutoAudioSyncOpen(false)}
+            />
+          ) : null}
+        </Suspense>
         <ShellFloatingDialogs {...floatingDialogsCallbacks} />
       </div>
     </ErrorBoundary>

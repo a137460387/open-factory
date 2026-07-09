@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import {
   createOperationRecording,
   serializeOperationRecording,
@@ -6,12 +6,13 @@ import {
   buildOperationReplaySchedule,
   getOperationProjectAtStep,
   generateOperationRecordingSlidesHtml,
+  recordOperationCommand,
   type OperationRecordingFile,
 } from '@open-factory/editor-core';
 import { LoadProjectCommand, createId } from '@open-factory/editor-core';
 import { zhCN } from '../i18n/strings';
 import { showToast } from '../lib/toast';
-import { commandManager, projectAccessor, timelineAccessor } from '../store/commandManager';
+import { commandManager, projectAccessor, timelineAccessor, addOnExecuteListener } from '../store/commandManager';
 import { useEditorStore } from '../store/editorStore';
 import { useEditorFeatureStore } from '../store/editorFeatureStore';
 import { useEditorSettingsStore } from '../store/editorSettingsStore';
@@ -26,6 +27,7 @@ import {
   buildMacroCommands,
   findMacroTargetClip,
   writeClipMacros,
+  snapshotCommand,
   type ClipMacro,
   type CommandSnapshot,
   type MacroHistoryEntry,
@@ -52,6 +54,27 @@ export function useEditorShellOperationRecording(): {
   const macroRecorderRef = useRef<{ active: boolean; replaying: boolean; steps: CommandSnapshot[] }>({ active: false, replaying: false, steps: [] });
   const operationRecorderRef = useRef<{ active: boolean; replaying: boolean; recording?: OperationRecordingFile }>({ active: false, replaying: false });
   const operationReplayTimersRef = useRef<number[]>([]);
+
+  // 拦截命令执行，记录到宏录制或操作录制中
+  useEffect(() => {
+    return addOnExecuteListener((command) => {
+      // 宏录制
+      const macroRecorder = macroRecorderRef.current;
+      if (macroRecorder.active && !macroRecorder.replaying) {
+        const snapshot = snapshotCommand(command as any);
+        if (snapshot) {
+          macroRecorder.steps.push(snapshot);
+          useEditorFeatureStore.getState().setMacroRecordingStepCount(macroRecorder.steps.length);
+        }
+      }
+      // 操作录制
+      const opRecorder = operationRecorderRef.current;
+      if (opRecorder.active && !opRecorder.replaying && opRecorder.recording) {
+        opRecorder.recording = recordOperationCommand(opRecorder.recording, command as any, useEditorStore.getState().project);
+        useEditorFeatureStore.getState().setOperationRecording(opRecorder.recording);
+      }
+    });
+  }, []);
 
   // ===== 宏录制 =====
   const recordMacroHistory = useCallback(async (entry: MacroHistoryEntry) => {

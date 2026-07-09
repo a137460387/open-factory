@@ -213,7 +213,17 @@ export const useEditorUIStore = create<EditorUIState>((set, get) => ({
   },
 
   setReviewMode(updater) {
-    set((state) => ({ reviewMode: applyUpdater(state.reviewMode, updater) }));
+    set((state) => {
+      const next = applyUpdater(state.reviewMode, updater);
+      if (typeof window !== 'undefined') {
+        if (next) {
+          window.location.hash = '#review';
+        } else {
+          history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+      }
+      return { reviewMode: next };
+    });
   },
 
   setViewportSize(size) {
