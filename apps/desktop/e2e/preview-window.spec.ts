@@ -1,14 +1,16 @@
 import { expect, test } from '@playwright/test';
-import { waitForE2eActions } from './e2e-actions';
+import { waitForE2eActions, waitForAppStore } from './e2e-actions';
 
 test('pops preview into a detached window and restores embedded preview after close', async ({ page }) => {
   const settingsPath = 'C:/Users/E2E/AppData/Roaming/open-factory/settings.json';
 
   await page.goto('/');
   await waitForE2eActions(page);
+  await waitForAppStore(page);
   await page.evaluate(() => window.__E2E_ACTIONS__!.clearE2eFiles!());
   await page.reload();
   await waitForE2eActions(page);
+  await waitForAppStore(page);
 
   await expect(page.getByTestId('preview-canvas')).toBeVisible();
   await page.getByTestId('toolbar-popout-preview-button').click();

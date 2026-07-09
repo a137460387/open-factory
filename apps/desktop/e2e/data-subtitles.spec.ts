@@ -1,9 +1,10 @@
 import { expect, test } from '@playwright/test';
-import { waitForE2eActions } from './e2e-actions';
+import { waitForE2eActions, waitForAppStore } from './e2e-actions';
 
 test('imports three subtitle clips from CSV data with correct timecodes', async ({ page }) => {
   await page.goto('/');
   await waitForE2eActions(page);
+  await waitForAppStore(page);
 
   await page.getByTestId('toolbar-import-menu-button').click();
   await page.getByTestId('subtitle-data-import-mode-select').selectOption('new-track');
@@ -31,6 +32,7 @@ test('imports three subtitle clips from CSV data with correct timecodes', async 
 test('binds CSV data to a live data subtitle and previews the current row', async ({ page }) => {
   await page.goto('/');
   await waitForE2eActions(page);
+  await waitForAppStore(page);
 
   await page.getByTestId('import-subtitles-button').click();
   const subtitleClip = page.locator('[data-clip-type="subtitle"]').first();

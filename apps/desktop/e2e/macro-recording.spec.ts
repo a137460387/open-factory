@@ -1,13 +1,15 @@
 import { expect, test } from '@playwright/test';
-import { addMediaCardToTimeline, waitForE2eActions } from './e2e-actions';
+import { addMediaCardToTimeline, waitForE2eActions, waitForAppStore } from './e2e-actions';
 
 test('records two clip edits, saves a macro, and replays it on another clip', async ({ page }) => {
   const macroName = 'E2E Recorded Macro';
   await page.goto('/');
   await waitForE2eActions(page);
+  await waitForAppStore(page);
   await page.evaluate(() => window.__E2E_ACTIONS__!.clearE2eFiles!());
   await page.reload();
   await waitForE2eActions(page);
+  await waitForAppStore(page);
 
   await page.getByTestId('import-media-button').click();
   await addMediaCardToTimeline(page, 0);

@@ -74,6 +74,7 @@ export function ShellLeftPanel({ callbacks }: { callbacks: ShellLeftPanelCallbac
   const favoriteIds = useEditorMiscStore((s) => s.favoriteIds);
   const pinnedIds = useEditorMiscStore((s) => s.pinnedIds);
   const recentMediaIds = useEditorMiscStore((s) => s.recentMediaIds);
+  const sharedLibraryResources = useEditorSettingsStore((s) => s.sharedLibraryResources);
 
   const effectivePanels = useMemo(() => getEffectivePanelState(layoutSettings, viewportSize.width), [layoutSettings, viewportSize.width]);
   const reviewVisibility = useMemo(() => getReviewModeShellVisibility(reviewMode), [reviewMode]);
@@ -111,7 +112,7 @@ export function ShellLeftPanel({ callbacks }: { callbacks: ShellLeftPanelCallbac
         mediaFolders={project.mediaFolders}
         mediaMetadata={project.mediaMetadata}
         mediaContentAnalysis={mediaContentAnalysis}
-        sharedLibraryResources={[]}
+        sharedLibraryResources={sharedLibraryResources}
         selectedClipId={selectedClipId}
         projectFrameRate={project.settings.fps}
         onImport={callbacks.onImport}

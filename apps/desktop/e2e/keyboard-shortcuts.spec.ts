@@ -1,9 +1,10 @@
 import { expect, test } from '@playwright/test';
-import { addMediaCardToTimeline, waitForE2eActions } from './e2e-actions';
+import { addMediaCardToTimeline, waitForE2eActions, waitForAppStore } from './e2e-actions';
 
 test('timeline keyboard shortcuts toggle playback, delete a clip, and undo', async ({ page }) => {
   await page.goto('/');
   await waitForE2eActions(page);
+  await waitForAppStore(page);
   await page.evaluate(() => window.__E2E_ACTIONS__!.clearE2eFiles!());
   await page.reload();
   await waitForE2eActions(page);
@@ -29,6 +30,7 @@ test('timeline keyboard shortcuts toggle playback, delete a clip, and undo', asy
 test('custom keyboard shortcuts persist across reload', async ({ page }) => {
   await page.goto('/');
   await waitForE2eActions(page);
+  await waitForAppStore(page);
   await page.evaluate(() => window.__E2E_ACTIONS__!.clearE2eFiles!());
 
   await page.getByTestId('toolbar-settings-button').click();
@@ -53,6 +55,7 @@ test('custom keyboard shortcuts persist across reload', async ({ page }) => {
 test('global macro shortcut updates the target clip', async ({ page }) => {
   await page.goto('/');
   await waitForE2eActions(page);
+  await waitForAppStore(page);
   await page.evaluate(() => window.__E2E_ACTIONS__!.clearE2eFiles!());
   await page.reload();
   await waitForE2eActions(page);
@@ -87,6 +90,7 @@ test('global macro shortcut updates the target clip', async ({ page }) => {
 test('tab navigation reaches export and Enter opens the export dialog', async ({ page }) => {
   await page.goto('/');
   await waitForE2eActions(page);
+  await waitForAppStore(page);
   await page.evaluate(() => window.__E2E_ACTIONS__!.clearE2eFiles!());
   await page.reload();
   await waitForE2eActions(page);
@@ -113,6 +117,7 @@ test('tab navigation reaches export and Enter opens the export dialog', async ({
 test('question mark opens the shortcut cheatsheet panel', async ({ page }) => {
   await page.goto('/');
   await waitForE2eActions(page);
+  await waitForAppStore(page);
 
   await page.keyboard.press('Shift+/');
   await expect(page.getByTestId('shortcut-cheatsheet-panel')).toBeVisible();

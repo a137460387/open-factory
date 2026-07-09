@@ -1,11 +1,12 @@
 import { expect, test } from '@playwright/test';
-import { waitForE2eActions } from './e2e-actions';
+import { waitForE2eActions, waitForAppStore } from './e2e-actions';
 
 test('records three timeline commands, saves, loads, and replays to the recorded state', async ({ page }) => {
   const recordingPath = 'C:/Exports/timeline-demo.ofrecording.json';
 
   await page.goto('/');
   await waitForE2eActions(page);
+  await waitForAppStore(page);
   await page.evaluate(() => {
     window.__E2E_ACTIONS__!.clearE2eFiles!();
     window.__E2E_ACTIONS__!.setupEfficientEditingFixture!();
