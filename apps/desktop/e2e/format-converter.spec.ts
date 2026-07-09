@@ -1,10 +1,11 @@
 import { test, expect } from '@playwright/test';
-import { waitForE2eActions } from './e2e-actions';
+import { waitForE2eActions, waitForAppStore } from './e2e-actions';
 
 test.describe('Format Converter', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await waitForE2eActions(page);
+    await waitForAppStore(page);
   });
 
   test('format converter dialog opens and shows drop zone', async ({ page }) => {

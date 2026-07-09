@@ -20,6 +20,7 @@ vi.mock('../../store/editorSettingsStore', () => ({
   useEditorSettingsStore: {
     getState: () => ({
       setSharedLibraryResources: vi.fn(),
+      setTutorialSignals: vi.fn(),
     }),
   },
 }));

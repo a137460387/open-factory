@@ -650,6 +650,22 @@ export function EditorShell() {
   const tutorialSignals = useEditorSettingsStore((s) => s.tutorialSignals);
 
   const setTutorialSignals = useEditorSettingsStore((s) => s.setTutorialSignals);
+
+  // Advance tutorial when signals change
+  useEffect(() => {
+    const current = normalizeTutorialProgressSettings(tutorialProgress);
+    const nextProgress = advanceTutorialProgress(current, tutorialSignals);
+    if (nextProgress.tutorialStep !== current.tutorialStep || nextProgress.tutorialCompleted !== current.tutorialCompleted) {
+      setTutorialProgress(nextProgress);
+      if (nextProgress.tutorialCompleted) {
+        setTutorialCelebrationVisible(true);
+      }
+      void saveTutorialProgressSettings(nextProgress).catch((error) => {
+        console.warn('Unable to save tutorial progress', error);
+      });
+    }
+  }, [tutorialSignals, tutorialProgress, setTutorialProgress, setTutorialCelebrationVisible]);
+
   const pipLayoutPosition = useEditorSettingsStore((s) => s.pipLayoutPosition);
 
   const setPiPLayoutPosition = useEditorSettingsStore((s) => s.setPiPLayoutPosition);
@@ -1087,6 +1103,7 @@ export function EditorShell() {
         await persistMediaFingerprints(result.media);
         await queueFrameRateConversionForImportedMedia(result.media);
         void runAutomationForMedia('on-import', result.media);
+        setTutorialSignals((current: TutorialSignals) => ({ ...current, mediaImported: true }));
         showToast({ kind: 'success', title: zhCN.editorToasts.mediaImported, message: zhCN.editorToasts.mediaImportedMessage(result.media.length) });
       }
       if (result.duplicateCount > 0) {
