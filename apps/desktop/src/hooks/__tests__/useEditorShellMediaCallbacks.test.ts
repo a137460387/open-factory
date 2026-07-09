@@ -673,14 +673,14 @@ describe('useEditorShellMediaCallbacks', () => {
   describe('batchUpdateMediaMetadata', () => {
     it('对多个资产执行 BatchUpdateMetadataCommand 并显示成功 toast', () => {
       const { result } = renderHook(() => useEditorShellMediaCallbacks(defaultDeps));
-      result.current.batchUpdateMediaMetadata(['asset-1', 'asset-2'], { tags: ['test'] });
+      result.current.batchUpdateMediaMetadata(['asset-1', 'asset-2'], { title: '测试标题' });
 
       expect(mockCommandExecute).toHaveBeenCalledTimes(1);
       expect(BatchUpdateMetadataCommand).toHaveBeenCalledWith(
         'mock-project-accessor',
         expect.arrayContaining([
-          expect.objectContaining({ assetId: 'asset-1', metadata: { tags: ['test'] } }),
-          expect.objectContaining({ assetId: 'asset-2', metadata: { tags: ['test'] } }),
+          expect.objectContaining({ assetId: 'asset-1', metadata: { title: '测试标题' } }),
+          expect.objectContaining({ assetId: 'asset-2', metadata: { title: '测试标题' } }),
         ]),
       );
       expect(showToast).toHaveBeenCalledWith(
@@ -690,7 +690,7 @@ describe('useEditorShellMediaCallbacks', () => {
 
     it('空资产列表时不执行命令', () => {
       const { result } = renderHook(() => useEditorShellMediaCallbacks(defaultDeps));
-      result.current.batchUpdateMediaMetadata([], { tags: ['test'] });
+      result.current.batchUpdateMediaMetadata([], { title: '测试标题' });
 
       expect(mockCommandExecute).not.toHaveBeenCalled();
     });
