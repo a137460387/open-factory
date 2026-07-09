@@ -1335,7 +1335,7 @@ function ClipInspector({
               <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                 {zhCN.inspector.fields.slowMotionMode}
                 <select
-                  className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
+                  className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                   value={slowMotionMode}
                   data-testid="clip-slow-motion-mode-select"
                   onChange={(event) => commit({ slowMotionMode: event.target.value as ClipSlowMotionMode })}
@@ -1458,7 +1458,7 @@ function ClipInspector({
               <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                 {t('inspector.fields.blendMode')}
                 <select
-                  className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
+                  className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                   value={blendMode}
                   data-testid="clip-blend-mode-select"
                   onChange={(event) => commit({ blendMode: event.target.value as ClipBlendMode })}
@@ -1494,7 +1494,7 @@ function ClipInspector({
               <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                 {zhCN.inspector.fields.projection}
                 <select
-                  className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
+                  className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                   value={projection}
                   data-testid="clip-projection-select"
                   onChange={(event) => commit({ projection: event.target.value as ClipProjection, panorama })}
@@ -1509,7 +1509,7 @@ function ClipInspector({
                   <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                     {zhCN.inspector.fields.panoramaOutput}
                     <select
-                      className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
+                      className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                       value={panorama.outputProjection}
                       data-testid="clip-panorama-output-select"
                       onChange={(event) => updatePanorama({ outputProjection: event.target.value as ClipPanoramaOutputProjection })}
@@ -1575,7 +1575,7 @@ function ClipInspector({
             <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
               {zhCN.inspector.fields.keyingMode}
               <select
-                className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
+                className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                 value={keyingMode}
                 data-testid="keying-mode-select"
                 onChange={(event) => {
@@ -1816,7 +1816,7 @@ function ClipInspector({
             <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
               <span>{zhCN.inspector.fields.targetFrameRate}</span>
               <select
-                className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)] disabled:cursor-not-allowed disabled:opacity-60"
                 value={frameInterpolation.targetFps}
                 disabled={frameInterpolationUnavailable || !frameInterpolation.enabled}
                 onChange={(event) => commit({ frameInterpolation: { ...frameInterpolation, targetFps: Number(event.target.value) as typeof frameInterpolation.targetFps } })}
@@ -1830,7 +1830,7 @@ function ClipInspector({
             <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
               <span>{zhCN.inspector.frameInterpolationCompare.modeLabel}</span>
               <select
-                className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)] disabled:cursor-not-allowed disabled:opacity-60"
                 value={frameInterpolation.mode}
                 disabled={frameInterpolationUnavailable || !frameInterpolation.enabled}
                 onChange={(event) => commit({ frameInterpolation: { ...frameInterpolation, mode: event.target.value as FrameInterpolationMode } })}
@@ -2093,7 +2093,7 @@ function ClipInspector({
             <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
               <span>{zhCN.inspector.fields.referenceClip}</span>
               <select
-                className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)] disabled:cursor-not-allowed disabled:opacity-60"
                 value={colorMatchReferenceClipId}
                 disabled={colorMatchReferenceClips.length === 0 || colorMatchBusy}
                 onChange={(event) => setColorMatchReferenceClipId(event.target.value)}
@@ -2183,7 +2183,7 @@ function ClipInspector({
               <label className="mt-2 block text-xs font-medium text-[var(--color-text-secondary)]">
                 {zhCN.inspector.fields.easing}
                 <select
-                  className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
+                  className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                   value={batchEasing}
                   data-testid="batch-keyframe-easing-select"
                   onChange={(event) => setBatchEasing(event.target.value as KeyframeEasing)}
@@ -2278,7 +2278,7 @@ function ClipInspector({
               <label className="mt-2 block text-xs font-medium text-[var(--color-text-secondary)]">
                 {zhCN.inspector.fields.easing}
                 <select
-                  className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
+                  className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                   value={selectedKeyframeFrame.easing}
                   data-testid="selected-keyframe-easing"
                   onChange={(event) => updateSelectedKeyframe({ easing: event.target.value as KeyframeEasing })}
@@ -2308,7 +2308,7 @@ function ClipInspector({
             <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
               {zhCN.inspector.fields.property}
               <select
-                className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
+                className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                 value={curveProperty}
                 data-testid="keyframe-curve-property-select"
                 onChange={(event) => setCurveProperty(event.target.value as KeyframeProperty)}
@@ -2370,7 +2370,7 @@ function ClipInspector({
                 <label className="mt-2 block text-xs font-medium text-[var(--color-text-secondary)]">
                   {zhCN.inspector.fields.deinterlaceMode}
                   <select
-                    className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
+                    className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                     value={videoRestoration.deinterlace.mode}
                     data-testid="video-restoration-deinterlace-mode"
                     onChange={(event) =>
@@ -2402,7 +2402,7 @@ function ClipInspector({
                 <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                   {zhCN.inspector.fields.temporalDenoisePreset}
                   <select
-                    className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
+                    className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                     value={videoRestoration.temporalDenoise.preset}
                     data-testid="video-restoration-temporal-preset"
                     onChange={(event) =>
@@ -2727,7 +2727,7 @@ function ClipInspector({
                 <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                   {zhCN.inspector.fields.audioChannelRoutingMode}
                   <select
-                    className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
+                    className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                     value={audioChannelRoutingOptions.includes(audioChannelRouting) ? audioChannelRouting : 'normal'}
                     data-testid="clip-audio-channel-routing-select"
                     onChange={(event) => commit({ audioChannelRouting: event.target.value as AudioChannelRoutingMode })}
@@ -2788,7 +2788,7 @@ function ClipInspector({
                 <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                   {t('inspector.fields.spatialRenderMode')}
                   <select
-                    className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
+                    className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                     value={spatialAudio.renderMode}
                     data-testid="clip-spatial-render-mode-select"
                     onChange={(event) => commit({ spatialAudio: { ...spatialAudio, renderMode: event.target.value as SpatialAudioRenderMode } })}
@@ -2839,7 +2839,7 @@ function ClipInspector({
                 <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                   {t('inspector.fields.spatialDistance')}
                   <select
-                    className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
+                    className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                     value={spatialAudio.distance}
                     data-testid="clip-spatial-distance-select"
                     onChange={(event) => commit({ spatialAudio: { ...spatialAudio, distance: event.target.value as SpatialAudioDistance } })}
@@ -2892,7 +2892,7 @@ function ClipInspector({
                 <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                   {t('inspector.fields.spatialRoomModel')}
                   <select
-                    className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
+                    className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                     value={spatialAudio.roomModel}
                     data-testid="clip-spatial-room-model-select"
                     onChange={(event) => commit({ spatialAudio: { ...spatialAudio, roomModel: event.target.value as SpatialAudioRoomModel } })}
@@ -2932,7 +2932,7 @@ function ClipInspector({
               <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                 {zhCN.inspector.fields.fadeInCurve}
                 <select
-                  className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
+                  className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                   value={fadeInCurve}
                   onChange={(event) => commit({ fadeInCurve: event.target.value as AudioFadeCurve })}
                   data-testid="clip-fade-in-curve-select"
@@ -2945,7 +2945,7 @@ function ClipInspector({
               <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                 {zhCN.inspector.fields.fadeOutCurve}
                 <select
-                  className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
+                  className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                   value={fadeOutCurve}
                   onChange={(event) => commit({ fadeOutCurve: event.target.value as AudioFadeCurve })}
                   data-testid="clip-fade-out-curve-select"
@@ -2997,7 +2997,7 @@ function ClipInspector({
                   <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                     {zhCN.inspector.closedCaptions.kind}
                     <select
-                      className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink"
+                      className="mt-1 w-full rounded-lg border border-line px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                       value={subtitleType}
                       data-testid="subtitle-type-select"
                       onChange={(event) => commitSubtitleType(event.target.value === 'cc' ? 'cc' : 'subtitle')}
@@ -3011,7 +3011,7 @@ function ClipInspector({
                       <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                         {zhCN.inspector.closedCaptions.speaker}
                         <input
-                          className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink"
+                          className="mt-1 w-full rounded-lg border border-line px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                           defaultValue={activeSpeaker}
                           list={`subtitle-speakers-${clip.id}`}
                           placeholder={zhCN.inspector.closedCaptions.speakerPlaceholder}
@@ -3077,7 +3077,7 @@ function ClipInspector({
                       <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                         {zhCN.inspector.closedCaptions.soundDesc}
                         <select
-                          className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink"
+                          className="mt-1 w-full rounded-lg border border-line px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                           value={soundDescSelectValue}
                           data-testid="subtitle-sound-desc-select"
                           onChange={(event) => {
@@ -3187,7 +3187,7 @@ function ClipInspector({
                 <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                   {zhCN.inspector.fields.exportMode}
                   <select
-                    className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink"
+                    className="mt-1 w-full rounded-lg border border-line px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                     value={clip.subtitleMode}
                     data-testid="subtitle-mode-select"
                     onChange={(event) => commit({ subtitleMode: event.target.value === 'soft-sub' ? 'soft-sub' : 'burn-in' })}
@@ -3209,7 +3209,7 @@ function ClipInspector({
                   <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                     {zhCN.inspector.fields.textFitMode}
                     <select
-                      className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
+                      className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                       value={textLayout?.fitMode ?? DEFAULT_TEXT_LAYOUT.fitMode}
                       disabled={selectedClipLocked}
                       data-testid="text-fit-mode-select"
@@ -3290,7 +3290,7 @@ function ClipInspector({
                   <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                     {zhCN.inspector.fields.animationPreset}
                     <select
-                      className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
+                      className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                       value={textAnimationPreset}
                       data-testid="text-animation-preset-select"
                       onChange={(event) => setTextAnimationPreset(event.target.value as TextAnimationPreset)}
@@ -3315,7 +3315,7 @@ function ClipInspector({
                   <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                     {zhCN.inspector.fields.animationDirection}
                     <select
-                      className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
+                      className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                       value={textAnimationDirection}
                       data-testid="text-animation-direction-select"
                       onChange={(event) => setTextAnimationDirection(event.target.value as TextAnimationDirection)}
@@ -4817,7 +4817,7 @@ function PrivacyBlurPanel({
       <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
         {zhCN.inspector.fields.privacyBlurEffect}
         <select
-          className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
+          className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
           value={effect}
           data-testid="privacy-blur-effect-select"
           onChange={(event) => onEffectChange(normalizePrivacyBlurEffect(event.target.value as PrivacyBlurEffect))}
@@ -4932,7 +4932,7 @@ function RichTextEditor({
           <Underline size={15} />
         </button>
         <input
-          className="h-8 w-10 rounded-md border border-line bg-[var(--color-bg-elevated)] p-1 disabled:opacity-40"
+          className="h-8 w-10 rounded-lg border border-line bg-[var(--color-bg-elevated)] p-1 outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)] disabled:opacity-40"
           type="color"
           defaultValue={clip.style.color}
           title={zhCN.inspector.richText.color}
@@ -5110,7 +5110,7 @@ function MotionGraphicPanel({
       <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
         {motionGraphicsText.template}
         <select
-          className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)] disabled:cursor-not-allowed disabled:opacity-60"
           value={motionGraphic.templateType}
           disabled={selectedClipLocked}
           data-testid="motion-graphic-template-select"
@@ -5200,7 +5200,7 @@ function MotionGraphicPanel({
               <label key={param.key} className="block text-xs font-medium text-[var(--color-text-secondary)]">
                 {label}
                 <select
-                  className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60"
+                  className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)] disabled:cursor-not-allowed disabled:opacity-60"
                   value={value}
                   disabled={selectedClipLocked}
                   data-testid={testId}
@@ -5273,7 +5273,7 @@ function MasksEditor({
             <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
               {zhCN.inspector.fields.maskType}
               <select
-                className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
+                className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                 value={mask.type}
                 data-testid={`mask-type-${mask.id}`}
                 onChange={(event) => onUpdate(mask.id, { type: event.target.value as ClipMask['type'] })}
@@ -5324,7 +5324,7 @@ function MasksEditor({
               <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                 {zhCN.inspector.fields.privacyBlurEffect}
                 <select
-                  className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60"
+                  className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)] disabled:cursor-not-allowed disabled:opacity-60"
                   value={normalizePrivacyBlurEffect(mask.privacyBlur?.effect)}
                   disabled={mask.privacyBlur?.enabled !== true}
                   data-testid={`mask-privacy-blur-effect-${mask.id}`}
@@ -5347,7 +5347,7 @@ function MasksEditor({
                 <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                   {zhCN.inspector.fields.privacyBlurSolidColor}
                   <input
-                    className="mt-1 h-8 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 text-sm text-ink"
+                    className="mt-1 h-8 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                     type="color"
                     value={mask.privacyBlur?.color ?? '#000000'}
                     disabled={mask.privacyBlur?.enabled !== true}
@@ -5429,7 +5429,7 @@ function EffectsEditor({
         <label className="min-w-0 flex-1 text-xs font-medium text-[var(--color-text-secondary)]">
           {zhCN.inspector.fields.effectType}
           <select
-            className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
+            className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
             value={selectedType}
             data-testid="effect-type-select"
             onChange={(event) => setSelectedType(event.target.value as EffectType)}
@@ -5551,7 +5551,7 @@ function TextField({ label, value, onCommit, disabled, testId }: { label: string
   return (
     <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
       {label}
-      <input className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60" defaultValue={value} disabled={disabled} data-testid={testId} onBlur={(event) => onCommit(event.target.value)} />
+      <input className="mt-1 w-full rounded-lg border border-line px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)] disabled:cursor-not-allowed disabled:opacity-60" defaultValue={value} disabled={disabled} data-testid={testId} onBlur={(event) => onCommit(event.target.value)} />
     </label>
   );
 }
@@ -5616,7 +5616,7 @@ function CustomShaderEffectFields({
       <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
         {zhCN.inspector.fields.shaderExample}
         <select
-          className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
+          className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
           value={params.preset}
           data-testid="custom-shader-example-select"
           onChange={(event) => applyExample(event.target.value)}
@@ -5693,7 +5693,7 @@ function NumberField({
     <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
       {hideLabel ? <span className="sr-only">{label}</span> : label}
       <input
-        className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink"
+        className="mt-1 w-full rounded-lg border border-line px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
         type="number"
         value={draft}
         min={min}
@@ -5726,7 +5726,7 @@ function AudioSpectrumEffectFields({
       <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
         {zhCN.inspector.fields.style}
         <select
-          className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
+          className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
           value={getEffectStringParam(effect.params, 'style', params.style)}
           data-testid={`effect-param-${effect.id}-style`}
           onChange={(event) => onUpdate(effect.id, { params: { style: event.target.value } })}
@@ -5741,7 +5741,7 @@ function AudioSpectrumEffectFields({
       <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
         {zhCN.exportDialog.audioVisualization.theme}
         <select
-          className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
+          className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
           value={getEffectStringParam(effect.params, 'themeId', params.themeId)}
           data-testid={`effect-param-${effect.id}-theme`}
           onChange={(event) => onUpdate(effect.id, { params: { themeId: event.target.value } })}
@@ -5779,7 +5779,7 @@ function AudioSpectrumEffectFields({
       <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
         {zhCN.inspector.fields.position}
         <select
-          className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
+          className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
           value={getEffectStringParam(effect.params, 'position', params.position)}
           data-testid={`effect-param-${effect.id}-position`}
           onChange={(event) => onUpdate(effect.id, { params: { position: event.target.value } })}
@@ -5844,7 +5844,7 @@ function MotionBlurEffectFields({
       <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
         {zhCN.inspector.fields.samples}
         <select
-          className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
+          className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
           value={params.samples}
           data-testid={`effect-param-${effect.id}-samples`}
           onChange={(event) => onUpdate(effect.id, { params: { samples: Number(event.target.value) } })}
@@ -5955,7 +5955,7 @@ function RangeNumberField({
       <span className="flex items-center justify-between gap-2">
         <span>{label}</span>
         <input
-          className="w-20 rounded-md border border-line px-2 py-1 text-right text-xs tabular-nums text-ink disabled:cursor-not-allowed disabled:opacity-60"
+          className="w-20 rounded-lg border border-line px-2 py-1 text-right text-xs tabular-nums text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)] disabled:cursor-not-allowed disabled:opacity-60"
           type="number"
           value={Number(value.toFixed(3))}
           min={min}
@@ -6025,7 +6025,7 @@ function ExpressionNumberField({
         <span className="text-[11px] font-normal tabular-nums text-[var(--color-text-muted)]">{format(value)}</span>
       </span>
       <input
-        className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-xs tabular-nums text-ink"
+        className="mt-1 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-xs tabular-nums text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
         type="text"
         value={draft}
         data-testid={testId}

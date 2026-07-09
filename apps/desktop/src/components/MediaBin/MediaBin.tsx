@@ -582,7 +582,7 @@ export function MediaBin({
             <span className="sr-only">{t.searchPlaceholder}</span>
             <Search className="pointer-events-none absolute left-2 top-2.5 text-[var(--color-text-muted)]" size={15} />
             <input
-              className={clsx('w-full rounded-md border bg-[var(--color-bg-elevated)] py-2 pl-8 pr-14 text-sm text-ink', aiSearchMode ? 'border-brand' : 'border-line')}
+              className={clsx('w-full rounded-lg border bg-[var(--color-bg-elevated)] py-2 pl-8 pr-14 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]', aiSearchMode ? 'border-brand' : 'border-line')}
               value={search}
               placeholder={aiSearchMode ? t.aiSemanticSearch.searchPlaceholder : t.searchPlaceholder}
               data-testid="media-search-input"
@@ -651,7 +651,7 @@ export function MediaBin({
           <label className="block text-[11px] font-medium text-[var(--color-text-secondary)]">
             {zhCN.contentAnalysis.sceneFilter}
             <select
-              className="mt-1 h-8 w-full rounded border border-line bg-[var(--color-bg-elevated)] px-2 text-xs text-ink"
+              className="mt-1 h-8 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 text-xs text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
               value={sceneFilter}
               data-testid="media-scene-filter-select"
               onChange={(event) => setSceneFilter(event.target.value as ContentSceneType | 'all')}
@@ -918,7 +918,7 @@ function BatchMetadataDialog({
           <label className="grid gap-1 text-xs font-semibold text-[var(--color-text-secondary)]">
             {t.fields.description}
             <textarea
-              className="min-h-20 rounded-md border border-line px-2 py-1.5 text-sm font-normal text-ink outline-none focus:border-brand"
+              className="min-h-20 rounded-lg border border-line px-2 py-1.5 text-sm font-normal text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
               value={description}
               data-testid="batch-metadata-description-input"
               onChange={(event) => setDescription(event.target.value)}
@@ -1019,7 +1019,7 @@ function BatchRenameDialog({
                 {t.template}
                 <input
                   ref={templateRef}
-                  className="rounded-md border border-line px-2 py-1.5 text-sm font-normal text-ink outline-none focus:border-brand"
+                  className="rounded-lg border border-line px-2 py-1.5 text-sm font-normal text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                   value={template}
                   list="media-rename-template-variables"
                   data-testid="batch-rename-template-input"
@@ -1040,7 +1040,7 @@ function BatchRenameDialog({
                 <label className="grid gap-1 text-xs font-semibold text-[var(--color-text-secondary)]">
                   {t.startIndex}
                   <input
-                    className="rounded-md border border-line px-2 py-1.5 text-sm font-normal text-ink outline-none focus:border-brand"
+                    className="rounded-lg border border-line px-2 py-1.5 text-sm font-normal text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                     type="number"
                     min={1}
                     value={startIndex}
@@ -1055,7 +1055,7 @@ function BatchRenameDialog({
               </div>
               <label className="grid gap-1 text-xs font-semibold text-[var(--color-text-secondary)]">
                 {t.caseTransform}
-                <select className="rounded-md border border-line px-2 py-1.5 text-sm font-normal text-ink outline-none focus:border-brand" value={caseTransform} onChange={(event) => setCaseTransform(event.target.value as MediaRenameRules['caseTransform'])}>
+                <select className="rounded-lg border border-line px-2 py-1.5 text-sm font-normal text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]" value={caseTransform} onChange={(event) => setCaseTransform(event.target.value as MediaRenameRules['caseTransform'])}>
                   <option value="none">{t.caseOptions.none}</option>
                   <option value="lower">{t.caseOptions.lower}</option>
                   <option value="upper">{t.caseOptions.upper}</option>
@@ -1113,7 +1113,7 @@ function BatchTextField({ label, value, onChange, testId }: { label: string; val
     <label className="grid gap-1 text-xs font-semibold text-[var(--color-text-secondary)]">
       {label}
       <input
-        className="rounded-md border border-line px-2 py-1.5 text-sm font-normal text-ink outline-none focus:border-brand"
+        className="rounded-lg border border-line px-2 py-1.5 text-sm font-normal text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
         value={value}
         data-testid={testId}
         onChange={(event) => onChange(event.target.value)}
@@ -1299,7 +1299,7 @@ function MediaLibraryViewToolbar({ settings, onChange }: { settings: MediaLibrar
         <label className="block text-[11px] font-medium text-[var(--color-text-secondary)]">
           {zhCN.mediaBin.sortBy}
           <select
-            className="mt-1 h-8 w-full rounded border border-line bg-[var(--color-bg-elevated)] px-2 text-xs text-ink"
+            className="mt-1 h-8 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 text-xs text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
             value={settings.sortKey}
             data-testid="media-sort-key-select"
             onChange={(event) => onChange({ sortKey: event.target.value as MediaLibrarySortKey })}
@@ -1315,7 +1315,7 @@ function MediaLibraryViewToolbar({ settings, onChange }: { settings: MediaLibrar
           <label className="block text-[11px] font-medium text-[var(--color-text-secondary)]">
             {zhCN.mediaBin.gridSize}
             <select
-              className="mt-1 h-8 w-full rounded border border-line bg-[var(--color-bg-elevated)] px-2 text-xs text-ink disabled:opacity-50"
+              className="mt-1 h-8 w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 text-xs text-ink disabled:opacity-50 outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
               value={settings.gridSize}
               disabled={settings.mode !== 'grid'}
               data-testid="media-grid-size-select"
@@ -1488,7 +1488,7 @@ function MediaFolderNode({
         <Folder size={15} className="text-brand" />
         {editing ? (
           <input
-            className="min-w-0 flex-1 rounded border border-line px-1 py-0.5 text-xs"
+            className="min-w-0 flex-1 rounded-lg border border-line px-1 py-0.5 text-xs outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
             value={draftName}
             autoFocus
             data-testid={`media-folder-name-input-${folder.id}`}
@@ -2305,7 +2305,7 @@ function MediaCard({
   const versionCount = 1 + mediaVersions.length;
   return (
     <div
-      className={clsx('relative overflow-hidden rounded-lg border bg-[var(--color-bg-elevated)] shadow-sm outline-none focus:ring-2 focus:ring-brand', asset.missing ? 'border-rose-300' : 'border-line')}
+      className={clsx('relative overflow-hidden rounded-lg border bg-[var(--color-bg-elevated)] shadow-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]', asset.missing ? 'border-rose-300' : 'border-line')}
       data-testid={`media-card-${asset.id}`}
       data-media-card="true"
       data-media-index={mediaIndex}
@@ -2946,10 +2946,10 @@ function SubclipDialog({
           <button className="rounded p-1 hover:bg-panel" type="button" onClick={onClose} data-testid="subclip-dialog-close"><X size={16} /></button>
         </div>
         <div className="space-y-3 overflow-y-auto px-4 py-3">
-          <label className="block text-xs font-medium text-[var(--color-text-secondary)]">{t.name}<input className="mt-1 w-full rounded border border-line px-2 py-1.5 text-sm" value={name} onChange={(e) => setName(e.target.value)} autoFocus data-testid="subclip-dialog-name" /></label>
+          <label className="block text-xs font-medium text-[var(--color-text-secondary)]">{t.name}<input className="mt-1 w-full rounded-lg border border-line px-2 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]" value={name} onChange={(e) => setName(e.target.value)} autoFocus data-testid="subclip-dialog-name" /></label>
           <div className="grid grid-cols-2 gap-3">
-            <label className="block text-xs font-medium text-[var(--color-text-secondary)]">{t.inPoint}<input className="mt-1 w-full rounded border border-line px-2 py-1.5 text-sm tabular-nums" type="number" min={0} max={asset.duration} step={0.01} value={inPoint} onChange={(e) => setInPoint(Number(e.target.value))} data-testid="subclip-dialog-in" /></label>
-            <label className="block text-xs font-medium text-[var(--color-text-secondary)]">{t.outPoint}<input className="mt-1 w-full rounded border border-line px-2 py-1.5 text-sm tabular-nums" type="number" min={0} max={asset.duration} step={0.01} value={outPoint} onChange={(e) => setOutPoint(Number(e.target.value))} data-testid="subclip-dialog-out" /></label>
+            <label className="block text-xs font-medium text-[var(--color-text-secondary)]">{t.inPoint}<input className="mt-1 w-full rounded-lg border border-line px-2 py-1.5 text-sm tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]" type="number" min={0} max={asset.duration} step={0.01} value={inPoint} onChange={(e) => setInPoint(Number(e.target.value))} data-testid="subclip-dialog-in" /></label>
+            <label className="block text-xs font-medium text-[var(--color-text-secondary)]">{t.outPoint}<input className="mt-1 w-full rounded-lg border border-line px-2 py-1.5 text-sm tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]" type="number" min={0} max={asset.duration} step={0.01} value={outPoint} onChange={(e) => setOutPoint(Number(e.target.value))} data-testid="subclip-dialog-out" /></label>
           </div>
           <div>
             <div className="mb-1 text-xs font-medium text-[var(--color-text-secondary)]">{t.color}</div>
@@ -2958,7 +2958,7 @@ function SubclipDialog({
               {TIMELINE_COLORS.map((item) => (<button key={item.key} type="button" className={`h-5 w-5 rounded-full border-2 ${color === item.key ? 'border-ink' : 'border-transparent'}`} style={TIMELINE_COLOR_STYLES[item.key]} onClick={() => setColor(item.key)} data-testid={`subclip-color-${item.key}`} />))}
             </div>
           </div>
-          <label className="block text-xs font-medium text-[var(--color-text-secondary)]">{t.description}<textarea className="mt-1 w-full rounded border border-line px-2 py-1.5 text-sm" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} data-testid="subclip-dialog-description" /></label>
+          <label className="block text-xs font-medium text-[var(--color-text-secondary)]">{t.description}<textarea className="mt-1 w-full rounded-lg border border-line px-2 py-1.5 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]" rows={2} value={description} onChange={(e) => setDescription(e.target.value)} data-testid="subclip-dialog-description" /></label>
         </div>
         <div className="flex items-center justify-end gap-2 border-t border-line px-4 py-3">
           <button className="rounded border border-line px-3 py-1.5 text-xs font-medium hover:bg-panel" type="button" onClick={onClose}>{zhCN.common.cancel}</button>

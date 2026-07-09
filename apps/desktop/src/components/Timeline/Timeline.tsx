@@ -3140,7 +3140,7 @@ function addProjectBookmark(time = playheadTime): void {
             ))}
             {snapHighlight && !reduceMotion ? (
               <div
-                className="pointer-events-none absolute bottom-0 top-0 z-[24] border-l-2 border-yellow-300 bg-yellow-200/20 shadow-[0_0_12px_rgba(250,204,21,0.7)]"
+                className="pointer-events-none absolute bottom-0 top-0 z-[24] border-l-2 border-yellow-400 bg-yellow-400/10 shadow-[0_0_12px_rgba(250,204,21,0.5)]"
                 style={{ left: LABEL_WIDTH + snapHighlight.time * zoom }}
                 data-testid="timeline-snap-highlight"
                 data-time={snapHighlight.time}
@@ -3460,7 +3460,7 @@ function addProjectBookmark(time = playheadTime): void {
               </div>
             ))}
             <div
-              className="absolute bottom-0 top-0 z-20 w-0.5 bg-coral"
+              className="absolute bottom-0 top-0 z-20 w-0.5 bg-coral shadow-[0_0_8px_rgba(249,115,22,0.5)]"
               style={{ left: LABEL_WIDTH + playheadTime * zoom }}
               data-testid="timeline-playhead"
               onPointerDown={(event) => {

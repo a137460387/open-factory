@@ -164,7 +164,7 @@ export function AISemanticSearchPanel({ media, onSelectMedia }: AISemanticSearch
     <div className="space-y-2" data-testid="ai-semantic-search-panel">
       <form onSubmit={handleSubmit} className="relative">
         <input
-          className="w-full rounded-md border border-brand bg-[var(--color-bg-elevated)] py-2 pl-3 pr-16 text-sm text-ink"
+          className="w-full rounded-lg border border-brand bg-[var(--color-bg-elevated)] py-2 pl-3 pr-16 text-sm text-ink outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t.searchPlaceholder}
