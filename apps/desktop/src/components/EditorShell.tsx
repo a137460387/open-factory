@@ -169,6 +169,7 @@ import { useEditorShellSettings } from '../hooks/useEditorShellSettings';
 import { useEditorShellInteractions } from '../hooks/useEditorShellInteractions';
 import { useEditorShellProfiler } from '../hooks/useEditorShellProfiler';
 import { useEditorShellOperationRecording } from '../hooks/useEditorShellOperationRecording';
+import { useProjectHealthCallbacks, useAudioAnalysisCallbacks, useBeatSyncCallbacks, useRecordingCallbacks } from '../hooks/useEditorShellCallbacks';
 import { useShortcuts } from '../hooks/useShortcuts';
 import { readCustomKeybindings } from '../shortcuts/keybindings';
 import type { TimelineShortcutBindings } from '../shortcuts/timeline-shortcuts';
@@ -2219,391 +2220,59 @@ export function EditorShell() {
     }
   }, [project.media, setMedia]);
 
-  const refreshProjectHealth = useCallback(async () => {
-    try {
-      setProjectHealthScanning(true);
-      const state = useEditorStore.getState();
-      setProjectHealthReport(await scanProjectHealth(state.project, useProxySettingsStore.getState().settings));
-    } catch (error) {
-      showToast({
-        kind: 'error',
-        title: zhCN.projectHealth.toasts.scanFailed,
-        message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.scanFailedMessage
-      });
-    } finally {
-      setProjectHealthScanning(false);
-    }
-  }, []);
+  // --- 提取到 useEditorShellCallbacks hook ---
+  const {
+    refreshProjectHealth,
+    openProjectHealth,
+    refreshMediaHealthDashboard,
+    openMediaHealthDashboard,
+    setMediaHealthAutoShow,
+    openMediaHealthRelinkPanel,
+    relinkMissingFromHealth,
+    removeOrphanFromHealth,
+    mergeDuplicateFromHealth,
+    queueProxyFromHealth,
+    autoRepairProjectHealth,
+    repairFromMediaHealthDashboard,
+  } = useProjectHealthCallbacks({ projectHealthReport });
 
-  const openProjectHealth = useCallback(() => {
-    setProjectHealthRepairReport(undefined);
-    setProjectHealthOpen(true);
-    void refreshProjectHealth();
-  }, [refreshProjectHealth]);
+  const {
+    separateSelectedAudio,
+    runSpeakerDiarization,
+    applySpeakerDiarization,
+    openAutoAudioSync,
+    runAutoAudioSync,
+    applyAutoAudioSync,
+    cancelAudioSeparation,
+  } = useAudioAnalysisCallbacks({
+    selectedClip,
+    selectedClipMedia,
+    addMedia,
+    setSelectedClipId,
+    setSelectedClipIds,
+    demucsAvailability,
+    demucsExecutablePath,
+    audioSeparationClipId,
+    speakerDiarizationTarget,
+    speakerDiarizationResult,
+    autoAudioSyncTargets,
+    resolvedAutoAudioSyncPrimaryClipId,
+    autoAudioSyncResults,
+    autoAudioSyncMode,
+    project,
+  });
 
-  const refreshMediaHealthDashboard = useCallback(async () => {
-    try {
-      setMediaHealthScanning(true);
-      const state = useEditorStore.getState();
-      const result = await scanMediaHealthDashboard(state.project, useProxySettingsStore.getState().settings);
-      setMediaHealthDashboard(result.dashboard);
-      setProjectHealthReport(result.report);
-      return result;
-    } catch (error) {
-      showToast({
-        kind: 'error',
-        title: zhCN.mediaHealthDashboard.toasts.scanFailed,
-        message: error instanceof Error ? error.message : zhCN.mediaHealthDashboard.toasts.scanFailedMessage
-      });
-      return undefined;
-    } finally {
-      setMediaHealthScanning(false);
-    }
-  }, []);
+  const {
+    startEditorRecording,
+    stopEditorRecording,
+  } = useRecordingCallbacks({
+    addMedia,
+    persistMediaFingerprints,
+    recordingTask,
+    recordingSettings,
+  });
 
-  const openMediaHealthDashboard = useCallback(() => {
-    setMediaHealthDashboardOpen(true);
-    void refreshMediaHealthDashboard();
-  }, [refreshMediaHealthDashboard]);
 
-  const setMediaHealthAutoShow = useCallback((enabled: boolean) => {
-    setMediaHealthAutoShowEnabled(enabled);
-    writeMediaHealthAutoShowEnabled(enabled);
-  }, []);
-
-  const openMediaHealthRelinkPanel = useCallback(() => {
-    setMediaHealthDashboardOpen(false);
-    openProjectHealth();
-  }, [openProjectHealth]);
-
-  const relinkMissingFromHealth = useCallback(
-    async (issue: MissingMediaIssue) => {
-      const state = useEditorStore.getState();
-      const asset = state.project.media.find((item) => item.id === issue.assetId);
-      if (!asset) {
-        return;
-      }
-      try {
-        const relinked = await relinkSingleMedia(asset);
-        if (relinked) {
-          const current = useEditorStore.getState();
-          current.setMedia(current.project.media.map((item) => (item.id === issue.assetId ? relinked : item)));
-          showToast({ kind: 'success', title: zhCN.editorToasts.mediaRelinked, message: relinked.name });
-        }
-        await refreshProjectHealth();
-      } catch (error) {
-        showToast({ kind: 'error', title: zhCN.editorToasts.relinkFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.relinkFailedMessage });
-      }
-    },
-    [refreshProjectHealth]
-  );
-
-  const removeOrphanFromHealth = useCallback(
-    async (issue: OrphanMediaIssue) => {
-      try {
-        commandManager.execute(new RemoveMediaCommand(projectAccessor, issue.assetId));
-        showToast({ kind: 'success', title: zhCN.projectHealth.toasts.orphanRemoved, message: issue.name });
-        await refreshProjectHealth();
-      } catch (error) {
-        showToast({ kind: 'error', title: zhCN.projectHealth.toasts.fixFailed, message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage });
-      }
-    },
-    [refreshProjectHealth]
-  );
-
-  const mergeDuplicateFromHealth = useCallback(
-    async (issue: DuplicateMediaIssue) => {
-      try {
-        commandManager.execute(new MergeMediaCommand(projectAccessor, issue.keepAssetId, issue.assets.map((asset) => asset.assetId)));
-        showToast({ kind: 'success', title: zhCN.projectHealth.toasts.duplicateMerged });
-        await refreshProjectHealth();
-      } catch (error) {
-        showToast({ kind: 'error', title: zhCN.projectHealth.toasts.fixFailed, message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage });
-      }
-    },
-    [refreshProjectHealth]
-  );
-
-  const queueProxyFromHealth = useCallback(
-    async (issue: ProxyMissingIssue) => {
-      const asset = useEditorStore.getState().project.media.find((item) => item.id === issue.assetId);
-      if (!asset) {
-        return;
-      }
-      try {
-        useMediaJobStore.getState().enqueueProxyJobsForMedia([asset], useProxySettingsStore.getState().settings);
-        void ensureMediaJobRunner();
-        showToast({ kind: 'success', title: zhCN.projectHealth.toasts.proxyQueued, message: issue.name });
-        await refreshProjectHealth();
-      } catch (error) {
-        showToast({ kind: 'error', title: zhCN.projectHealth.toasts.fixFailed, message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage });
-      }
-    },
-    [refreshProjectHealth]
-  );
-
-  const autoRepairProjectHealth = useCallback(async () => {
-    try {
-      const state = useEditorStore.getState();
-      const report = projectHealthReport ?? (await scanProjectHealth(state.project, useProxySettingsStore.getState().settings));
-      const input = await buildProjectHealthAutoRepairInput(state.project, report);
-      let duplicateIssues = input.duplicateIssues ?? [];
-      const manualEntries = [...(input.manualEntries ?? [])];
-      if (duplicateIssues.length > 0) {
-        const confirmed = await bridgeConfirm(zhCN.projectHealth.autoRepairDuplicateConfirm(duplicateIssues.length), {
-          title: zhCN.projectHealth.actions.autoRepair
-        });
-        if (!confirmed) {
-          manualEntries.push(
-            ...duplicateIssues.map((issue) => ({
-              type: 'duplicate-media' as const,
-              status: 'manual' as const,
-              assetId: issue.keepAssetId,
-              message: `${issue.id}: ${zhCN.common.cancel}`
-            }))
-          );
-          duplicateIssues = [];
-        }
-      }
-
-      const current = useEditorStore.getState();
-      const proxyAssets = current.project.media.filter((asset) => (input.proxyAssetIds ?? []).includes(asset.id));
-      if (proxyAssets.length > 0) {
-        useMediaJobStore.getState().enqueueProxyJobsForMedia(proxyAssets, useProxySettingsStore.getState().settings, { force: true });
-      }
-      const frameRateAssets = current.project.media.filter((asset) => asset.type === 'video' && (asset.variableFrameRate || isFrameRateMismatch(asset.frameRate, current.project.settings.fps)));
-      for (const asset of frameRateAssets) {
-        const cfrFrameRate = getProjectFrameRateConversionTarget(current.project.settings.fps, getCfrTargetFrameRate({ avgFrameRate: asset.avgFrameRate, realFrameRate: asset.realFrameRate }, asset.frameRate ?? 30));
-        useMediaJobStore.getState().enqueueProxyJobsForMedia([asset], useProxySettingsStore.getState().settings, { force: true, cfrFrameRate });
-      }
-      if (proxyAssets.length > 0 || frameRateAssets.length > 0) {
-        void ensureMediaJobRunner();
-      }
-
-      const command = new AutoRepairProjectHealthCommand(projectAccessor, {
-        ...input,
-        duplicateIssues,
-        manualEntries,
-        proxyAssetIds: proxyAssets.map((asset) => asset.id),
-        frameRateProxyAssetIds: frameRateAssets.map((asset) => asset.id),
-        unusedFolderName: zhCN.projectHealth.unusedFolder
-      });
-      commandManager.execute(command);
-      setProjectHealthRepairReport(command.report);
-      showToast({
-        kind: command.report?.successCount ? 'success' : 'warning',
-        title: zhCN.projectHealth.toasts.autoRepairComplete,
-        message: command.report ? zhCN.projectHealth.repairReportSummary(command.report.successCount, command.report.skippedCount, command.report.manualCount) : undefined
-      });
-      await refreshProjectHealth();
-    } catch (error) {
-      showToast({ kind: 'error', title: zhCN.projectHealth.toasts.fixFailed, message: error instanceof Error ? error.message : zhCN.projectHealth.toasts.fixFailedMessage });
-    }
-  }, [projectHealthReport, refreshProjectHealth]);
-
-  const repairFromMediaHealthDashboard = useCallback(async () => {
-    await autoRepairProjectHealth();
-    await refreshMediaHealthDashboard();
-  }, [autoRepairProjectHealth, refreshMediaHealthDashboard]);
-
-  const separateSelectedAudio = useCallback(async () => {
-    if (!selectedClip || (selectedClip.type !== 'audio' && selectedClip.type !== 'video') || !selectedClipMedia) {
-      showToast({ kind: 'warning', title: zhCN.demucs.unavailableTitle, message: zhCN.demucs.noClipSelected });
-      return;
-    }
-    if (!demucsAvailability.ready) {
-      showToast({ kind: 'warning', title: zhCN.demucs.unavailableTitle, message: demucsAvailability.error ?? zhCN.demucs.notConfigured });
-      return;
-    }
-    setAudioSeparationClipId(selectedClip.id);
-    setAudioSeparationProgress(0);
-    showToast({ kind: 'info', title: zhCN.demucs.runningTitle, message: zhCN.demucs.runningMessage(0) });
-    try {
-      const separation = await separateAudioForClip(selectedClip, selectedClipMedia, { executablePath: demucsExecutablePath });
-      addMedia(separation.media);
-      for (const track of separation.tracks) {
-        commandManager.execute(new AddTrackCommand(timelineAccessor, track));
-      }
-      const separatedClipIds = separation.tracks.flatMap((track) => track.clips.map((clip) => clip.id));
-      setSelectedClipIds(separatedClipIds);
-      showToast({ kind: 'success', title: zhCN.demucs.completeTitle, message: zhCN.demucs.completeMessage(separation.media.length) });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : zhCN.demucs.failedMessage;
-      const canceled = message.toLowerCase().includes('canceled') || message.includes('取消');
-      showToast({ kind: canceled ? 'warning' : 'error', title: canceled ? zhCN.demucs.canceledTitle : zhCN.demucs.failedTitle, message });
-    } finally {
-      setAudioSeparationClipId(undefined);
-      setAudioSeparationProgress(undefined);
-    }
-  }, [addMedia, demucsAvailability, demucsExecutablePath, selectedClip, selectedClipMedia, setSelectedClipIds]);
-
-  const runSpeakerDiarization = useCallback(async () => {
-    const target = speakerDiarizationTarget;
-    if (!target) {
-      showToast({ kind: 'warning', title: zhCN.speakerDiarization.unavailableTitle, message: zhCN.speakerDiarization.unavailableMessage });
-      return;
-    }
-    setSpeakerDiarizationRunning(true);
-    showToast({ kind: 'info', title: zhCN.speakerDiarization.runningTitle, message: zhCN.speakerDiarization.runningMessage });
-    try {
-      const dialogueIntervals = collectSpeakerDiarizationDialogueIntervals(project, target.clip);
-      const analysis = await analyzeSpeakerDiarizationForClip(target.clip, target.asset, dialogueIntervals);
-      if (analysis.segments.length === 0 || analysis.tracks.length === 0) {
-        setSpeakerDiarizationResult(undefined);
-        showToast({ kind: 'warning', title: zhCN.speakerDiarization.noResultsTitle, message: zhCN.speakerDiarization.noResultsMessage });
-        return;
-      }
-      setSelectedClipId(target.clip.id);
-      setSpeakerDiarizationResult({
-        sourceName: target.clip.name || target.asset.name,
-        segments: analysis.segments,
-        tracks: analysis.tracks
-      });
-    } catch (error) {
-      showToast({ kind: 'error', title: zhCN.speakerDiarization.failedTitle, message: error instanceof Error ? error.message : zhCN.speakerDiarization.failedMessage });
-    } finally {
-      setSpeakerDiarizationRunning(false);
-    }
-  }, [project, setSelectedClipId, speakerDiarizationTarget]);
-
-  const applySpeakerDiarization = useCallback(async () => {
-    if (!speakerDiarizationResult) {
-      return;
-    }
-    if (hasLowConfidenceSpeakerSegments(speakerDiarizationResult.segments)) {
-      const lowCount = speakerDiarizationResult.segments.filter((segment) => segment.confidenceLabel === 'low').length;
-      const accepted = await bridgeConfirm(zhCN.speakerDiarization.lowConfidenceConfirm(lowCount), {
-        title: zhCN.speakerDiarization.title,
-        kind: 'warning'
-      });
-      if (!accepted) {
-        return;
-      }
-    }
-    try {
-      commandManager.execute(new AddSpeakerDiarizationTracksCommand(timelineAccessor, speakerDiarizationResult.tracks));
-      setSelectedClipIds(speakerDiarizationResult.tracks.flatMap((track) => track.clips.map((clip) => clip.id)));
-      showToast({
-        kind: 'success',
-        title: zhCN.speakerDiarization.completeTitle,
-        message: zhCN.speakerDiarization.completeMessage(speakerDiarizationResult.tracks.length, speakerDiarizationResult.segments.length)
-      });
-      setSpeakerDiarizationResult(undefined);
-    } catch (error) {
-      showToast({ kind: 'error', title: zhCN.speakerDiarization.failedTitle, message: error instanceof Error ? error.message : zhCN.speakerDiarization.failedMessage });
-    }
-  }, [setSelectedClipIds, speakerDiarizationResult]);
-
-  const openAutoAudioSync = useCallback(() => {
-    if (autoAudioSyncTargets.length < 2 || autoAudioSyncTargets.length > 5) {
-      showToast({ kind: 'warning', title: zhCN.autoAudioSync.unavailableTitle, message: zhCN.autoAudioSync.unavailableMessage });
-      return;
-    }
-    setAutoAudioSyncPrimaryClipId((current) => (current && autoAudioSyncTargets.some((target) => target.clip.id === current) ? current : autoAudioSyncTargets[0].clip.id));
-    setAutoAudioSyncResults([]);
-    setAutoAudioSyncOpen(true);
-  }, [autoAudioSyncTargets]);
-
-  const runAutoAudioSync = useCallback(async () => {
-    const primary = autoAudioSyncTargets.find((target) => target.clip.id === resolvedAutoAudioSyncPrimaryClipId);
-    const secondaryTargets = autoAudioSyncTargets.filter((target) => target.clip.id !== resolvedAutoAudioSyncPrimaryClipId).slice(0, 4);
-    if (!primary || secondaryTargets.length === 0) {
-      showToast({ kind: 'warning', title: zhCN.autoAudioSync.unavailableTitle, message: zhCN.autoAudioSync.notEnoughTracksMessage });
-      return;
-    }
-    setAutoAudioSyncRunning(true);
-    showToast({ kind: 'info', title: zhCN.autoAudioSync.runningTitle, message: zhCN.autoAudioSync.runningMessage });
-    try {
-      const analysis = await analyzeAutoAudioSyncTargets(primary, secondaryTargets);
-      setAutoAudioSyncResults(analysis.results);
-      const lowCount = analysis.results.filter((result) => result.confidence === 'low' || !result.applied).length;
-      if (lowCount > 0) {
-        showToast({ kind: 'warning', title: zhCN.autoAudioSync.unavailableTitle, message: zhCN.autoAudioSync.skippedLowConfidence(lowCount) });
-      }
-    } catch (error) {
-      showToast({ kind: 'error', title: zhCN.autoAudioSync.failedTitle, message: error instanceof Error ? error.message : zhCN.autoAudioSync.failedMessage });
-    } finally {
-      setAutoAudioSyncRunning(false);
-    }
-  }, [autoAudioSyncTargets, resolvedAutoAudioSyncPrimaryClipId]);
-
-  const applyAutoAudioSync = useCallback(() => {
-    const route = resolveAutoAudioSyncApplyRoute(resolvedAutoAudioSyncPrimaryClipId, autoAudioSyncResults, autoAudioSyncMode);
-    const shiftedClipIds = Object.keys(route.offsetsByClipId);
-    if (shiftedClipIds.length === 0) {
-      showToast({ kind: 'warning', title: zhCN.autoAudioSync.unavailableTitle, message: zhCN.autoAudioSync.noApplicableResults });
-      return;
-    }
-    try {
-      commandManager.execute(new BatchShiftClipsCommand(timelineAccessor, route.offsetsByClipId));
-      if (route.mutePrimaryClipId) {
-        commandManager.execute(new UpdateClipCommand(timelineAccessor, route.mutePrimaryClipId, { muted: true }));
-      }
-      setSelectedClipIds(shiftedClipIds);
-      showToast({ kind: 'success', title: zhCN.autoAudioSync.completeTitle, message: zhCN.autoAudioSync.completeMessage(shiftedClipIds.length) });
-      if (route.skippedLowConfidenceClipIds.length > 0) {
-        showToast({ kind: 'warning', title: zhCN.autoAudioSync.unavailableTitle, message: zhCN.autoAudioSync.skippedLowConfidence(route.skippedLowConfidenceClipIds.length) });
-      }
-      setAutoAudioSyncOpen(false);
-    } catch (error) {
-      showToast({ kind: 'error', title: zhCN.autoAudioSync.failedTitle, message: error instanceof Error ? error.message : zhCN.autoAudioSync.failedMessage });
-    }
-  }, [autoAudioSyncMode, autoAudioSyncResults, resolvedAutoAudioSyncPrimaryClipId, setSelectedClipIds]);
-
-  const cancelAudioSeparation = useCallback(async () => {
-    if (!audioSeparationClipId) {
-      return;
-    }
-    try {
-      await cancelDemucs(audioSeparationClipId);
-    } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.demucs.cancelFailedTitle, message: error instanceof Error ? error.message : zhCN.demucs.failedMessage });
-    }
-  }, [audioSeparationClipId]);
-
-  const startEditorRecording = useCallback(
-    async (source: RecordingSource) => {
-      if (recordingTask) {
-        return;
-      }
-      const taskId = createId('recording');
-      try {
-        const result = await startRecording({
-          taskId,
-          source,
-          width: recordingSettings.width,
-          height: recordingSettings.height,
-          frameRate: recordingSettings.frameRate
-        });
-        setRecordingTask({ taskId: result.taskId, source, outputPath: result.outputPath, startedAt: Date.now() });
-        showToast({ kind: 'info', title: zhCN.recording.startedTitle, message: zhCN.recording.startedMessage(source) });
-      } catch (error) {
-        showToast({ kind: 'error', title: zhCN.recording.startFailedTitle, message: error instanceof Error ? error.message : zhCN.recording.failedMessage });
-      }
-    },
-    [recordingSettings, recordingTask]
-  );
-
-  const stopEditorRecording = useCallback(async () => {
-    const task = recordingTask;
-    if (!task) {
-      return;
-    }
-    try {
-      const result = await stopRecording(task.taskId);
-      const imported = await probeMediaPaths([result.outputPath], useEditorStore.getState().project.media);
-      if (imported.media.length > 0) {
-        addMedia(imported.media);
-        await persistMediaFingerprints(imported.media);
-      }
-      showToast({ kind: 'success', title: zhCN.recording.stoppedTitle, message: zhCN.recording.importedMessage(imported.media.length) });
-    } catch (error) {
-      showToast({ kind: 'error', title: zhCN.recording.stopFailedTitle, message: error instanceof Error ? error.message : zhCN.recording.failedMessage });
-    } finally {
-      setRecordingTask(undefined);
-      setRecordingElapsedSeconds(0);
-    }
-  }, [addMedia, persistMediaFingerprints, recordingTask]);
 
   const executeNewProject = useCallback(
     (nextProject: ReturnType<typeof createProject>, nextTemplatePreset?: ExportPreset) => {
@@ -2739,99 +2408,26 @@ export function EditorShell() {
     [project.timeline, selectedClip, setPlayheadTime, setSelectedClipId]
   );
 
-  const detectSelectedBeats = useCallback(async () => {
-    if (!selectedClip || !selectedClipMedia || (selectedClip.type !== 'audio' && selectedClip.type !== 'video') || (selectedClipMedia.type !== 'audio' && !selectedClipMedia.hasAudio)) {
-      showToast({ kind: 'warning', title: zhCN.editorToasts.beatDetectFailed, message: zhCN.editorToasts.beatDetectNoClip });
-      return;
-    }
-    showToast({ kind: 'info', title: zhCN.editorToasts.beatDetectRunning, message: selectedClip.name });
-    try {
-      const sourceBeatTimes = await detectBeats(selectedClipMedia.path, beatSensitivity);
-      const speed = getClipSpeed(selectedClip);
-      const localBeatMarkers = sourceBeatTimes
-        .map((sourceTime) => {
-          const localTime = (sourceTime - selectedClip.trimStart) / speed;
-          if (!Number.isFinite(localTime) || localTime < -0.000001 || localTime > selectedClip.duration + 0.000001) {
-            return undefined;
-          }
-          return createBeatMarker(Math.min(selectedClip.duration, Math.max(0, localTime)));
-        })
-        .filter((marker): marker is ReturnType<typeof createBeatMarker> => Boolean(marker));
-      if (localBeatMarkers.length === 0) {
-        showToast({ kind: 'warning', title: zhCN.editorToasts.beatDetectFailed, message: zhCN.editorToasts.beatDetectNoMarkers });
-        return;
-      }
-      const detectedBpm = estimateBpmFromBeatMarkers(localBeatMarkers);
-      commandManager.execute(new UpdateClipCommand(timelineAccessor, selectedClip.id, { beatMarkers: localBeatMarkers, detectedBpm }));
-      const clipStart = selectedClip.start;
-      const clipEnd = selectedClip.start + selectedClip.duration;
-      const preserved = (project.beatMarkers ?? []).filter((marker) => marker.time < clipStart - 0.000001 || marker.time > clipEnd + 0.000001);
-      const timelineMarkers = localBeatMarkers.map((marker, index) => createBeatMarker(selectedClip.start + marker.time, `${selectedClip.id}-beat-${index + 1}`));
-      commandManager.execute(new UpdateProjectBeatMarkersCommand(projectAccessor, [...preserved, ...timelineMarkers]));
-      showToast({ kind: 'success', title: zhCN.editorToasts.beatDetectComplete(localBeatMarkers.length), message: detectedBpm ? zhCN.editorToasts.beatDetectBpm(detectedBpm) : undefined });
-    } catch (error) {
-      showToast({ kind: 'error', title: zhCN.editorToasts.beatDetectFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.beatDetectNoMarkers });
-    }
-  }, [beatSensitivity, project.beatMarkers, selectedClip, selectedClipMedia]);
+  const {
+    detectSelectedBeats,
+    snapSelectedToBeats,
+    splitSelectedToBeats,
+    applyManualBeatBpm,
+  } = useBeatSyncCallbacks({
+    selectedClip,
+    selectedClipMedia,
+    selectedClipId,
+    selectedClipIds,
+    beatSyncBeatTimes,
+    beatSyncSpeedEnabled,
+    beatSyncManualBpm,
+    beatSensitivity,
+    projectBeatMarkers: project.beatMarkers,
+    setSelectedClipIds,
+    clearSelectedClipIds,
+  });
 
-  const snapSelectedToBeats = useCallback(() => {
-    const ids = selectedClipIds.length > 0 ? selectedClipIds : selectedClipId ? [selectedClipId] : [];
-    if (ids.length === 0) {
-      showToast({ kind: 'warning', title: zhCN.editorToasts.beatSnapUnavailable, message: zhCN.editorToasts.beatSnapNoSelection });
-      return;
-    }
-    const beatTimes = beatSyncBeatTimes;
-    if (beatTimes.length === 0) {
-      showToast({ kind: 'warning', title: zhCN.editorToasts.beatSnapUnavailable, message: zhCN.editorToasts.beatSnapNoMarkers });
-      return;
-    }
-    try {
-      const command = new BatchAlignToBeatCommand(timelineAccessor, ids, beatTimes, { maxDistance: 0.05, syncSpeed: beatSyncSpeedEnabled });
-      commandManager.execute(command);
-      setSelectedClipIds(ids);
-      showToast({ kind: 'success', title: zhCN.editorToasts.beatSnapComplete(command.appliedUpdates.length) });
-    } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.editorToasts.beatSnapUnavailable, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
-    }
-  }, [beatSyncBeatTimes, beatSyncSpeedEnabled, selectedClipId, selectedClipIds, setSelectedClipIds]);
 
-  const splitSelectedToBeats = useCallback(() => {
-    if (!selectedClip) {
-      showToast({ kind: 'warning', title: zhCN.editorToasts.beatSplitUnavailable, message: zhCN.editorToasts.beatSplitNoSelection });
-      return;
-    }
-    const beatTimes = beatSyncBeatTimes;
-    if (beatTimes.length === 0) {
-      showToast({ kind: 'warning', title: zhCN.editorToasts.beatSplitUnavailable, message: zhCN.editorToasts.beatSnapNoMarkers });
-      return;
-    }
-    const splitTimes = calculateBeatSplitTimesForClip(selectedClip, beatTimes);
-    if (splitTimes.length === 0) {
-      showToast({ kind: 'warning', title: zhCN.editorToasts.beatSplitUnavailable, message: zhCN.editorToasts.beatSplitNoMarkers });
-      return;
-    }
-    try {
-      commandManager.execute(new SplitClipAtTimesCommand(timelineAccessor, selectedClip.id, splitTimes));
-      clearSelectedClipIds();
-      showToast({ kind: 'success', title: zhCN.editorToasts.beatSplitComplete(splitTimes.length + 1), message: zhCN.editorToasts.beatSplitCompleteMessage(splitTimes.length) });
-    } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.editorToasts.beatSplitUnavailable, message: error instanceof Error ? error.message : zhCN.timeline.timelineRejectedMessage });
-    }
-  }, [beatSyncBeatTimes, clearSelectedClipIds, selectedClip]);
-
-  const applyManualBeatBpm = useCallback(() => {
-    if (!selectedClip) {
-      showToast({ kind: 'warning', title: zhCN.editorToasts.beatSnapUnavailable, message: zhCN.editorToasts.beatSnapNoSelection });
-      return;
-    }
-    const bpm = Number(beatSyncManualBpm);
-    if (!Number.isFinite(bpm) || bpm <= 0) {
-      showToast({ kind: 'warning', title: zhCN.editorToasts.beatDetectFailed, message: zhCN.editorToasts.beatBpmInvalid });
-      return;
-    }
-    commandManager.execute(new UpdateClipCommand(timelineAccessor, selectedClip.id, { detectedBpm: bpm }));
-    showToast({ kind: 'success', title: zhCN.editorToasts.beatBpmUpdated(Math.round(bpm)) });
-  }, [beatSyncManualBpm, selectedClip]);
 
   const createMulticamSequence = useCallback(() => {
     try {
