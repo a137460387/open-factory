@@ -185,6 +185,7 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
         await persistMediaFingerprints(importedMedia);
         await queueFrameRateConversionForImportedMedia(importedMedia);
         void runAutomationForMedia('on-import', importedMedia);
+        useEditorSettingsStore.getState().setTutorialSignals((current) => ({ ...current, mediaImported: true }));
         showToast({ kind: 'success', title: zhCN.editorToasts.mediaImported, message: zhCN.editorToasts.mediaImportedMessage(result.media.length) });
       }
     } catch (error) {

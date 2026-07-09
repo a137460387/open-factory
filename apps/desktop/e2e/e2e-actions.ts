@@ -8,6 +8,14 @@ export async function waitForE2eActions(page: Page): Promise<void> {
     .toBe(true);
 }
 
+export async function waitForAppStore(page: Page): Promise<void> {
+  await expect
+    .poll(() => page.evaluate(() => Boolean((window as any).__APP_STORE__)), {
+      timeout: 15_000
+    })
+    .toBe(true);
+}
+
 export async function addMediaCardToTimeline(page: Page, index = 0): Promise<void> {
   await page.locator('[data-testid^="media-card-"]').nth(index).locator('[data-testid^="add-to-timeline-"]').click();
 }
