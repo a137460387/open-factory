@@ -1,53 +1,37 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, type PointerEvent as ReactPointerEvent } from 'react';
 import {
-  AddAdjustmentLayerCommand,
   AutoRepairProjectHealthCommand,
   AddClipCommand,
-  AddMotionGraphicCommand,
   AddMediaFolderCommand,
   AddProjectAnnotationCommand,
   AddReviewAnnotationCommand,
   AddSpeakerDiarizationTracksCommand,
   AddProjectBookmarkCommand,
   AddSubclipCommand,
-  ApplyEffectPresetCommand,
-  ApplySplitLayoutCommand,
   BatchImportSubtitleCommand,
   BatchAlignToBeatCommand,
   BatchRenameMediaCommand,
   BatchShiftClipsCommand,
-  BatchUpdateClipCommand,
   BatchUpdateMetadataCommand,
   AddTrackCommand,
   AddTransitionCommand,
   buildConformMediaReplacements,
   buildConformPreflight,
   buildConformReport,
-  analyzeColorFrameSample,
-  buildColorAlignmentUpdates,
-  buildTimelineColorHeatmapData,
-  CreateMulticamSequenceCommand,
-  detectSceneColorJumps,
   ConformMediaCommand,
   UpdateProjectMediaCollectionsCommand,
   DEFAULT_TIMELINE_GRID_SETTINGS,
   DEFAULT_PROJECT_ANNOTATION_COLOR,
   DEFAULT_REVIEW_ANNOTATION_COLOR,
-  DeleteGroupCommand,
-  DeleteClipsCommand,
   DeleteMediaFolderCommand,
   DeleteSubclipCommand,
-  ImportEDLCommand,
   LoadProjectCommand,
   MergeMediaCommand,
   NewProjectCommand,
   RemoveMediaCommand,
   MoveMediaToFolderCommand,
-  RippleDeleteCommand,
   RenameMediaFolderCommand,
-  PiPLayoutCommand,
   SetMediaFolderCollapsedCommand,
-  SplitClipCommand,
   SplitClipAtTimesCommand,
   UpdateProjectBeatMarkersCommand,
   UpdateProjectBookmarksCommand,
@@ -67,30 +51,24 @@ import {
   buildVideoStitchSequence,
   buildCoverFrameBatchTasks,
   buildTimelineNavigationPoints,
-  createMainSideSplitLayout,
   detectSubtitleDataOverlaps,
   dirname,
   round,
   replaceMediaPathBasename,
-  getSplitLayoutDefinition,
   getClipSpeed,
-  getClipSourceVisibleDuration,
   getCfrTargetFrameRate,
   getColorSpaceDisplayName,
   getProjectFrameRateConversionTarget,
   getTimelineDuration,
   isFrameRateMismatch,
-  findCompleteClipGroup,
   findSyncCompareClipRefs,
   findTimelineNavigationPoint,
-  normalizeClipGroups,
   normalizeProjectWorkingColorSpace,
   normalizeProjectSpeakers,
   normalizeExportRanges,
   resolveAutoAudioSyncApplyRoute,
   applyTimelineVersionDiffSelection,
   instantiateProjectTemplate,
-  instantiateTitleTemplate,
   mergeImportedTimelineBookmarks,
   addMediaVersion as appendMediaVersion,
   buildMediaVersionCompareRequest,
@@ -131,10 +109,6 @@ import {
   type TitleTemplateId,
   type ExportTask,
   type EffectPreset,
-  type ColorAnalysisClipSample,
-  type SceneColorDifference,
-  type TimelineColorAnalysisResult,
-  type TimelineColorHeatmapPoint,
   type AutoAudioSyncApplyMode,
   type AutoAudioSyncResult,
   type MediaVersionCompareRequest,
@@ -144,15 +118,9 @@ import {
   hasLowConfidenceSpeakerSegments,
 } from '@open-factory/editor-core';
 import {
-  matchFrameFromClip,
-  revealInTimeline as coreRevealInTimeline,
-  navigateToNextInstance as coreNavigateToNextInstance,
-  getMediaInstanceNavigation,
   type ClipboardKeyframeGroup,
   type PasteMode,
   PasteKeyframesCommand,
-  computeTimelineGaps,
-  navigateGap
 } from '@open-factory/editor-core';
 import { Toolbar } from './Toolbar';
 import { runConfiguredAutomationForMedia, type AutomationActionDependencies } from '../automation/automation-rules';
@@ -175,6 +143,8 @@ import { useEditorShellViewSettingsCallbacks } from '../hooks/useEditorShellView
 import { useEditorShellPlaybackCallbacks } from '../hooks/useEditorShellPlaybackCallbacks';
 import { useEditorShellProjectCallbacks } from '../hooks/useEditorShellProjectCallbacks';
 import { useEditorShellMediaCallbacks } from '../hooks/useEditorShellMediaCallbacks';
+import { useEditorShellTimelineCallbacks } from '../hooks/useEditorShellTimelineCallbacks';
+import { useEditorShellMiscCallbacks } from '../hooks/useEditorShellMiscCallbacks';
 import { useShortcuts } from '../hooks/useShortcuts';
 import { readCustomKeybindings } from '../shortcuts/keybindings';
 import type { TimelineShortcutBindings } from '../shortcuts/timeline-shortcuts';
@@ -182,8 +152,7 @@ import { isEditableKeyboardTarget, isShortcutCheatsheetKey } from '../accessibil
 import type { ExportQueueRecoveryCandidate } from '../export/export-queue-persistence';
 import { useExportQueueStore } from '../export/export-queue-store';
 import { revealExport } from '../lib/exportVideo';
-import { clearMediaCache } from '../cache/cache-service';
-import { createAdjustmentLayerClip, createClipFromAsset, createMotionGraphicClip, findPreferredTrack } from '../lib/clipFactory';
+import { createClipFromAsset } from '../lib/clipFactory';
 import { zhCN, t } from '../i18n/strings';
 import { usePerformanceMonitorStore } from '../store/performanceMonitorStore';
 import { PerformanceAlertIcon } from './PerformanceAlertIcon';
@@ -213,7 +182,6 @@ import {
   readSubtitleText
 } from '../lib/subtitles';
 import { createProjectArchivePlan, writeProjectArchive, type ArchiveProgress } from '../lib/projectArchive';
-import { collectProjectArchivePreflight, saveClipReport, saveOfflineMediaReport } from '../lib/mediaReport';
 import { saveProjectSnapshot } from '../lib/projectSnapshots';
 import { buildProjectHealthAutoRepairInput, scanProjectHealth } from '../lib/projectHealth';
 import { readMediaHealthAutoShowEnabled, scanMediaHealthDashboard, writeMediaHealthAutoShowEnabled } from '../lib/mediaHealthDashboard';
@@ -260,7 +228,6 @@ import {
   removeFile as bridgeRemoveFile,
   trashFile as bridgeTrashFile,
   readFile as bridgeReadFile,
-  readColorMatchFrameSample,
   saveFileDialog as bridgeSaveFileDialog,
   sendNotification,
   startRecording,
@@ -270,7 +237,6 @@ import {
   type PreviewWindowState,
   type RecordingSource
 } from '../lib/tauri-bridge';
-import { renderPreviewCache } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
 import {
   createPreviewWindowPlaybackState,
@@ -292,7 +258,6 @@ import {
   DEFAULT_COLLABORATION_IDENTITY_SETTINGS,
   DEFAULT_TIMELINE_INTERACTION_SETTINGS,
   normalizeTimelineHeatmapViewSettings,
-  saveCustomSplitLayouts,
   saveLayoutSettings,
   savePreviewPerformanceSettings,
   saveTutorialProgressSettings,
@@ -335,7 +300,6 @@ import { useRecordingSettingsStore } from '../store/recordingSettingsStore';
 import { useEditorUIStore } from '../store/editorUIStore';
 import { useEditorSettingsStore } from '../store/editorSettingsStore';
 import { useEditorFeatureStore } from '../store/editorFeatureStore';
-import { useEditorMiscStore } from '../store/editorMiscStore';
 import type { VideoStitchWizardSettings } from '../video-stitching/VideoStitchWizardDialog';
 
 const AudioMixer = lazy(() => import('./AudioMixer/AudioMixer').then((module) => ({ default: module.AudioMixer })));
@@ -397,11 +361,8 @@ import { ShellFloatingDialogs } from './layout/ShellFloatingDialogs';
 import { ShellMainArea } from './layout/ShellMainArea';
 import {
   getSubtitleDataImportTargetTrackId,
-  findTimelineClipForMediaSourceTime,
   isPiPVisualClip,
   isSceneReorderClip,
-  getClipSourceDimensions,
-  collectClipKeyframeRefs,
 } from '../lib/timeline-clip-helpers';
 import {
   isContentAnalysisClip,
@@ -876,6 +837,18 @@ export function EditorShell() {
     updateProjectReleaseVersion,
   } = useEditorShellMediaCallbacks({ runAutomationForMedia });
 
+  // --- 提取到 useEditorShellMiscCallbacks hook ---
+  const {
+    createMediaReport,
+    createClipReport,
+    openMediaVersionCompare,
+    openSyncCompare,
+    clearCache,
+    handleToggleFavorite,
+    handlePinToSession,
+    handleRevealFromMediaBin,
+  } = useEditorShellMiscCallbacks();
+
   const {
     undo,
     switchToPreviousHistoryBranch,
@@ -952,6 +925,51 @@ export function EditorShell() {
       .sort((left, right) => left.trackIndex - right.trackIndex || left.selectedIndex - right.selectedIndex);
   }, [project.timeline.tracks, selectedClipIds]);
   const canApplySplitLayout = selectedSplitLayoutClips.length >= 2 && selectedSplitLayoutClips.length <= 4;
+
+  // --- 提取到 useEditorShellTimelineCallbacks hook ---
+  const {
+    addAssetToTimeline,
+    handleAddSubclipToTimeline,
+    addAdjustmentLayer,
+    applyEffectPresetToSelectedClip,
+    addMotionGraphic,
+    openColorNodeEditor,
+    runTimelineColorAnalysis,
+    alignTimelineColorToReference,
+    openColorAnalysis,
+    addTitleTemplate,
+    splitSelected,
+    seekSpectrumTime,
+    setSpectrumSelectionRange,
+    splitSpectrumAtTime,
+    createMulticamSequence,
+    applyPiPLayout,
+    applySplitLayout,
+    saveCustomSplitLayout,
+    importEdlTimeline,
+    deleteSelected,
+    rippleDeleteSelected,
+    selectAllTimelineItems,
+    matchFrameToSource,
+    revealMediaInTimeline,
+    navigateToNextInstance,
+    renderInOutRegion,
+    navigatePrevGap,
+    navigateNextGap,
+  } = useEditorShellTimelineCallbacks({
+    colorAnalysisBusy,
+    colorAnalysisResults,
+    colorAnalysisSamples,
+    pipLayoutPosition,
+    customSplitLayouts,
+    canApplySplitLayout,
+    selectedPiPClips,
+    selectedSplitLayoutClips,
+    visualTimelineClipRefs,
+    projectPath: projectPath ?? null,
+    setCustomSplitLayouts,
+  });
+
   const syncCompareClipRefs = useMemo(() => findSyncCompareClipRefs(project.timeline, selectedClipIds), [project.timeline, selectedClipIds]);
   const canOpenSyncCompare = syncCompareClipRefs.length === 2;
   const canOpenSceneDetection = Boolean(selectedClip && selectedClipMedia && selectedClip.type === 'video');
@@ -1056,40 +1074,6 @@ export function EditorShell() {
     const interval = window.setInterval(update, 500);
     return () => window.clearInterval(interval);
   }, [recordingTask]);
-
-  const createMediaReport = useCallback(async () => {
-    try {
-      const outputPath = await saveOfflineMediaReport(project);
-      if (outputPath) {
-        showToast({ kind: 'success', title: zhCN.mediaReport.success, message: outputPath });
-      }
-    } catch (error) {
-      showToast({ kind: 'error', title: zhCN.mediaReport.failed, message: error instanceof Error ? error.message : zhCN.mediaReport.failedMessage });
-    }
-  }, [project]);
-
-  const createClipReport = useCallback(async () => {
-    try {
-      const outputPath = await saveClipReport(project);
-      if (outputPath) {
-        showToast({ kind: 'success', title: zhCN.clipReport.success, message: outputPath });
-      }
-    } catch (error) {
-      showToast({ kind: 'error', title: zhCN.clipReport.failed, message: error instanceof Error ? error.message : zhCN.clipReport.failedMessage });
-    }
-  }, [project]);
-
-  const openMediaVersionCompare = useCallback(
-    (assetId: string) => {
-      const request = buildMediaVersionCompareRequest(useEditorStore.getState().project, assetId, undefined, undefined, playheadTime);
-      if (!request) {
-        showToast({ kind: 'warning', title: zhCN.editorToasts.mediaVersionCompareUnavailable, message: zhCN.editorToasts.mediaVersionCompareUnavailableMessage });
-        return;
-      }
-      setMediaVersionCompare(request);
-    },
-    [playheadTime]
-  );
 
   const importVideosForStitchWizard = useCallback(async (): Promise<string[]> => {
     try {
@@ -1200,17 +1184,6 @@ export function EditorShell() {
     [selectedClipIds]
   );
 
-  const openSyncCompare = useCallback(() => {
-    const state = useEditorStore.getState();
-    const refs = findSyncCompareClipRefs(state.project.timeline, state.selectedClipIds);
-    if (refs.length !== 2) {
-      showToast({ kind: 'warning', title: zhCN.syncCompare.unavailableTitle, message: zhCN.syncCompare.unavailableMessage });
-      return;
-    }
-    setPlayheadTime(Math.min(refs[0].clip.start, refs[1].clip.start));
-    setSyncCompareOpen(true);
-  }, [setPlayheadTime]);
-
   // --- 提取到 useContentAnalysisCallbacks hook ---
   const {
     runSingleContentAnalysis,
@@ -1218,197 +1191,6 @@ export function EditorShell() {
     analyzePreferredContentTargets,
     exportContentAnalysis,
   } = useContentAnalysisCallbacks({ setContentAnalysisRunningClipId });
-
-  const addAssetToTimeline = useCallback(
-    (assetId: string) => {
-      const asset = project.media.find((item) => item.id === assetId);
-      const track = asset ? findPreferredTrack(project.timeline, asset) : undefined;
-      if (!asset || !track) {
-        showToast({ kind: 'error', title: zhCN.editorToasts.noCompatibleTrack, message: zhCN.editorToasts.noCompatibleTrackMessage });
-        return;
-      }
-      try {
-        const clip = createClipFromAsset(asset, track, project.timeline);
-        commandManager.execute(new AddClipCommand(timelineAccessor, clip));
-        if (asset.type === 'video') {
-          useMediaJobStore.getState().enqueueProxyJobsForMedia([asset], useProxySettingsStore.getState().settings, {
-            force: true,
-            priority: 'high',
-            sourceStart: clip.trimStart,
-            sourceDuration: getClipSourceVisibleDuration(clip)
-          });
-          void ensureMediaJobRunner();
-        }
-        setSelectedClipId(clip.id);
-      } catch (error) {
-        showToast({ kind: 'error', title: zhCN.editorToasts.addClipFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.addClipFailedMessage });
-      }
-    },
-    [project, setSelectedClipId]
-  );
-
-
-
-  const handleAddSubclipToTimeline = useCallback((assetId: string, subclip: Subclip) => {
-    const asset = project.media.find((item) => item.id === assetId);
-    const track = asset ? findPreferredTrack(project.timeline, asset) : undefined;
-    if (!asset || !track) {
-      showToast({ kind: 'error', title: zhCN.editorToasts.noCompatibleTrack, message: zhCN.editorToasts.noCompatibleTrackMessage });
-      return;
-    }
-    try {
-      const clip = createClipFromAsset(asset, track, project.timeline, { subclip, subclipName: subclip.name });
-      commandManager.execute(new AddClipCommand(timelineAccessor, clip));
-      setSelectedClipId(clip.id);
-    } catch (error) {
-      showToast({ kind: 'error', title: zhCN.editorToasts.addClipFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.addClipFailedMessage });
-    }
-  }, [project, setSelectedClipId]);
-
-  const addAdjustmentLayer = useCallback(() => {
-    try {
-      const adjustmentTrackCount = project.timeline.tracks.filter((track) => track.type === 'video' && track.clips.some((clip) => clip.type === 'adjustment')).length;
-      const track = createTrack({
-        id: createId('track'),
-        type: 'video',
-        name: zhCN.timeline.adjustmentTrackName(adjustmentTrackCount + 1),
-        clips: []
-      });
-      const clip = createAdjustmentLayerClip(track, project.timeline);
-      commandManager.execute(new AddAdjustmentLayerCommand(timelineAccessor, track, clip));
-      setSelectedClipId(clip.id);
-    } catch (error) {
-      showToast({ kind: 'error', title: zhCN.editorToasts.addClipFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.addClipFailedMessage });
-    }
-  }, [project.timeline, setSelectedClipId]);
-
-  const applyEffectPresetToSelectedClip = useCallback(
-    (preset: EffectPreset) => {
-      if (!selectedClip) {
-        showToast({ kind: 'warning', title: zhCN.effectPresetLibrary.noClipSelected, message: zhCN.effectPresetLibrary.noClipSelectedMessage });
-        return;
-      }
-      try {
-        commandManager.execute(new ApplyEffectPresetCommand(timelineAccessor, selectedClip.id, preset));
-        showToast({ kind: 'success', title: zhCN.effectPresetLibrary.applied, message: preset.name });
-      } catch (error) {
-        showToast({ kind: 'error', title: zhCN.effectPresetLibrary.applyFailed, message: error instanceof Error ? error.message : zhCN.effectPresetLibrary.applyFailedMessage });
-      }
-    },
-    [selectedClip]
-  );
-
-  const addMotionGraphic = useCallback(() => {
-    try {
-      const trackCount = project.timeline.tracks.filter((track) => track.type === 'video').length;
-      const track = createTrack({
-        id: createId('track'),
-        type: 'video',
-        name: zhCN.motionGraphics.trackName(trackCount + 1),
-        clips: []
-      });
-      const clip = createMotionGraphicClip(track, project.timeline, playheadTime);
-      commandManager.execute(new AddMotionGraphicCommand(timelineAccessor, track, clip));
-      setSelectedClipId(clip.id);
-    } catch (error) {
-      showToast({ kind: 'error', title: zhCN.editorToasts.addClipFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.addClipFailedMessage });
-    }
-  }, [playheadTime, project.timeline, setSelectedClipId]);
-
-  const openColorNodeEditor = useCallback(() => {
-    if (!selectedClip || selectedClip.type === 'audio') {
-      showToast({ kind: 'warning', title: zhCN.colorNodeEditor.unavailableTitle, message: zhCN.colorNodeEditor.unavailableMessage });
-      return;
-    }
-    setColorNodeEditorOpen(true);
-  }, [selectedClip]);
-
-  const runTimelineColorAnalysis = useCallback(async () => {
-    if (colorAnalysisBusy) {
-      return;
-    }
-    setColorAnalysisBusy(true);
-    const results: TimelineColorAnalysisResult[] = [];
-    const samples: ColorAnalysisClipSample[] = [];
-    for (const item of visualTimelineClipRefs) {
-      try {
-        const sample = await readColorMatchFrameSample(item.media.path);
-        if (!sample) {
-          continue;
-        }
-        const metrics = analyzeColorFrameSample(sample);
-        results.push({
-          clipId: item.clip.id,
-          trackId: item.trackId,
-          mediaId: item.media.id,
-          name: item.clip.name || item.media.name,
-          start: item.clip.start,
-          duration: item.clip.duration,
-          metrics
-        });
-        samples.push({ clipId: item.clip.id, sample });
-      } catch {
-        // Skip unreadable clips so one failed background sample cannot block the whole analysis.
-      }
-    }
-    const jumps = detectSceneColorJumps(results);
-    setColorAnalysisResults(results);
-    setColorAnalysisSamples(samples);
-    setColorAnalysisJumps(jumps);
-    setColorHeatmapPoints(buildTimelineColorHeatmapData(results));
-    setColorAnalysisBusy(false);
-    showToast({ kind: 'success', title: zhCN.colorAnalysis.completedTitle, message: zhCN.colorAnalysis.completedMessage(results.length, jumps.length) });
-  }, [colorAnalysisBusy, visualTimelineClipRefs]);
-
-  const alignTimelineColorToReference = useCallback(
-    (referenceClipId: string) => {
-      const updates = buildColorAlignmentUpdates(colorAnalysisSamples, referenceClipId);
-      if (updates.length === 0) {
-        showToast({ kind: 'warning', title: zhCN.colorAnalysis.title, message: zhCN.colorAnalysis.alignSkipped });
-        return;
-      }
-      commandManager.execute(
-        new BatchUpdateClipCommand(
-          timelineAccessor,
-          updates.map((update) => ({
-            clipId: update.clipId,
-            patch: { colorCorrection: update.colorCorrection }
-          }))
-        )
-      );
-      showToast({ kind: 'success', title: zhCN.colorAnalysis.title, message: zhCN.colorAnalysis.alignApplied(updates.length) });
-    },
-    [colorAnalysisSamples]
-  );
-
-  const openColorAnalysis = useCallback(() => {
-    setColorAnalysisOpen(true);
-    if (colorAnalysisResults.length === 0) {
-      void runTimelineColorAnalysis();
-    }
-  }, [colorAnalysisResults.length, runTimelineColorAnalysis]);
-
-  const addTitleTemplate = useCallback(
-    (templateId: TitleTemplateId) => {
-      const track = project.timeline.tracks.find((item) => item.type === 'text');
-      if (!track) {
-        showToast({ kind: 'warning', title: zhCN.timeline.noTextTrackTitle, message: zhCN.timeline.noTextTrackMessage });
-        return;
-      }
-      try {
-        const label = zhCN.titleTemplates[templateId];
-        const clip = instantiateTitleTemplate(templateId, track, project.timeline, {
-          name: label.name,
-          text: label.defaultText
-        });
-        commandManager.execute(new AddClipCommand(timelineAccessor, clip));
-        setSelectedClipId(clip.id);
-      } catch (error) {
-        showToast({ kind: 'error', title: zhCN.editorToasts.addClipFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.addClipFailedMessage });
-      }
-    },
-    [project.timeline, setSelectedClipId]
-  );
 
   // --- 提取到 useEditorShellCallbacks hook ---
   const {
@@ -1462,58 +1244,6 @@ export function EditorShell() {
     recordingSettings,
   });
 
-
-
-  const splitSelected = useCallback(() => {
-    if (!selectedClip) {
-      return;
-    }
-    try {
-      commandManager.execute(new SplitClipCommand(timelineAccessor, selectedClip.id, playheadTime));
-    } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.editorToasts.splitUnavailable, message: error instanceof Error ? error.message : zhCN.editorToasts.splitUnavailableMessage });
-    }
-  }, [playheadTime, selectedClip]);
-
-  const seekSpectrumTime = useCallback(
-    (asset: MediaAsset, sourceTime: number) => {
-      const match = findTimelineClipForMediaSourceTime(project.timeline, asset.id, sourceTime, selectedClip);
-      if (match) {
-        setSelectedClipId(match.clip.id);
-        setPlayheadTime(match.timelineTime);
-        return;
-      }
-      setPlayheadTime(sourceTime);
-    },
-    [project.timeline, selectedClip, setPlayheadTime, setSelectedClipId]
-  );
-
-  const setSpectrumSelectionRange = useCallback(
-    (range: { inPoint: number; outPoint: number }) => {
-      setInPoint(range.inPoint);
-      setOutPoint(range.outPoint);
-    },
-    [setInPoint, setOutPoint]
-  );
-
-  const splitSpectrumAtTime = useCallback(
-    (asset: MediaAsset, sourceTime: number) => {
-      const match = findTimelineClipForMediaSourceTime(project.timeline, asset.id, sourceTime, selectedClip);
-      if (!match) {
-        showToast({ kind: 'warning', title: zhCN.mediaBin.spectrum.splitFailedTitle, message: zhCN.mediaBin.spectrum.splitFailedMessage });
-        return;
-      }
-      try {
-        setSelectedClipId(match.clip.id);
-        setPlayheadTime(match.timelineTime);
-        commandManager.execute(new SplitClipCommand(timelineAccessor, match.clip.id, match.timelineTime));
-      } catch (error) {
-        showToast({ kind: 'warning', title: zhCN.editorToasts.splitUnavailable, message: error instanceof Error ? error.message : zhCN.editorToasts.splitUnavailableMessage });
-      }
-    },
-    [project.timeline, selectedClip, setPlayheadTime, setSelectedClipId]
-  );
-
   const {
     detectSelectedBeats,
     snapSelectedToBeats,
@@ -1533,139 +1263,6 @@ export function EditorShell() {
     clearSelectedClipIds,
   });
 
-
-
-  const createMulticamSequence = useCallback(() => {
-    try {
-      const command = new CreateMulticamSequenceCommand(projectAccessor, selectedClipIds, zhCN.timeline.multicamSequenceName(project.sequences.length));
-      commandManager.execute(command);
-      if (command.multicamClipId) {
-        setSelectedClipId(command.multicamClipId);
-        setSelectedClipIds([command.multicamClipId]);
-      }
-      showToast({ kind: 'success', title: zhCN.editorToasts.multicamCreated });
-    } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.editorToasts.multicamCreateFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.multicamCreateFailedMessage });
-    }
-  }, [project.sequences.length, selectedClipIds, setSelectedClipId, setSelectedClipIds]);
-
-  const applyPiPLayout = useCallback(() => {
-    if (selectedPiPClips.length !== 2) {
-      showToast({ kind: 'warning', title: zhCN.editorToasts.pipApplyFailed, message: zhCN.editorToasts.pipApplyFailedMessage });
-      return;
-    }
-    const [main, pip] = selectedPiPClips;
-    const pipSource = getClipSourceDimensions(project, pip.clip);
-    try {
-      commandManager.execute(
-        new PiPLayoutCommand(timelineAccessor, main.clip.id, pip.clip.id, {
-          position: pipLayoutPosition,
-          canvasWidth: project.settings.width,
-          canvasHeight: project.settings.height,
-          pipSourceWidth: pipSource.width,
-          pipSourceHeight: pipSource.height
-        })
-      );
-      setSelectedClipIds([pip.clip.id]);
-      showToast({ kind: 'success', title: zhCN.editorToasts.pipApplied });
-    } catch (error) {
-      showToast({ kind: 'warning', title: zhCN.editorToasts.pipApplyFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.pipApplyFailedMessage });
-    }
-  }, [pipLayoutPosition, project, selectedPiPClips, setSelectedClipIds]);
-
-  const applySplitLayout = useCallback(
-    (layoutId: string) => {
-      if (!canApplySplitLayout) {
-        showToast({ kind: 'warning', title: zhCN.editorToasts.splitLayoutApplyFailed, message: zhCN.editorToasts.splitLayoutApplyFailedMessage });
-        return;
-      }
-      const layout = getSplitLayoutDefinition(layoutId, customSplitLayouts);
-      if (!layout) {
-        showToast({ kind: 'warning', title: zhCN.editorToasts.splitLayoutApplyFailed, message: zhCN.editorToasts.splitLayoutMissingMessage });
-        return;
-      }
-      const sources = Object.fromEntries(
-        selectedSplitLayoutClips.map((item) => {
-          const dimensions = getClipSourceDimensions(project, item.clip);
-          return [item.clip.id, dimensions];
-        })
-      );
-      try {
-        commandManager.execute(
-          new ApplySplitLayoutCommand(
-            timelineAccessor,
-            selectedSplitLayoutClips.map((item) => item.clip.id),
-            {
-              layout,
-              canvasWidth: project.settings.width,
-              canvasHeight: project.settings.height,
-              sources
-            }
-          )
-        );
-        setSelectedClipIds(selectedSplitLayoutClips.map((item) => item.clip.id));
-        showToast({ kind: 'success', title: zhCN.editorToasts.splitLayoutApplied });
-      } catch (error) {
-        showToast({ kind: 'warning', title: zhCN.editorToasts.splitLayoutApplyFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.splitLayoutApplyFailedMessage });
-      }
-    },
-    [canApplySplitLayout, customSplitLayouts, project, selectedSplitLayoutClips, setSelectedClipIds]
-  );
-
-  const saveCustomSplitLayout = useCallback(
-    async (ratio: number) => {
-      const layout = createMainSideSplitLayout(createId('split-layout'), zhCN.toolbar.customSplitLayoutName(customSplitLayouts.length + 1), ratio);
-      const next = await saveCustomSplitLayouts([...customSplitLayouts, layout]);
-      setCustomSplitLayouts(next);
-      return layout.id;
-    },
-    [customSplitLayouts]
-  );
-
-  const importEdlTimeline = useCallback(
-    (contents: string, path: string) => {
-      const fileName = path.split(/[\\/]/).pop()?.replace(/\.edl$/i, '') || undefined;
-      const command = new ImportEDLCommand(projectAccessor, contents, { sequenceName: fileName });
-      commandManager.execute(command);
-      clearSelectedClipIds();
-      setPlayheadTime(0);
-      const result = command.result;
-      return {
-        title: result?.title ?? fileName ?? zhCN.timelineExport.importEdl,
-        matchedCount: result?.matchedCount ?? 0,
-        missingCount: result?.missingCount ?? 0
-      };
-    },
-    [clearSelectedClipIds, setPlayheadTime]
-  );
-
-  const deleteSelected = useCallback(() => {
-    const state = useEditorStore.getState();
-    const ids = state.selectedClipIds;
-    if (ids.length === 0) {
-      return;
-    }
-    const groups = normalizeClipGroups(state.project.clipGroups, state.project.timeline.tracks.flatMap((track) => track.clips.map((clip) => clip.id)));
-    const group = findCompleteClipGroup(groups, ids);
-    if (group) {
-      commandManager.execute(new DeleteGroupCommand(projectAccessor, group.id));
-      clearSelectedClipIds();
-      return;
-    }
-    commandManager.execute(new DeleteClipsCommand(timelineAccessor, ids));
-    clearSelectedClipIds();
-  }, [clearSelectedClipIds]);
-
-  const rippleDeleteSelected = useCallback(() => {
-    const state = useEditorStore.getState();
-    const ids = state.selectedClipIds;
-    if (ids.length === 0) {
-      return;
-    }
-    commandManager.execute(new RippleDeleteCommand(timelineAccessor, ids, state.project.protectedRanges));
-    clearSelectedClipIds();
-  }, [clearSelectedClipIds]);
-
   // --- 提取到 useProxyCallbacks hook ---
   const {
     generateProxyForMedia,
@@ -1674,128 +1271,6 @@ export function EditorShell() {
     migrateProxiesToDirectory,
     convertVfrMediaToCfr,
   } = useProxyCallbacks({ proxySettings, projectFps: project.settings.fps });
-
-  const clearCache = useCallback(async () => {
-    try {
-      await clearMediaCache();
-      showToast({ kind: 'success', title: zhCN.editorToasts.cacheCleared });
-    } catch (error) {
-      showToast({ kind: 'error', title: zhCN.editorToasts.cacheClearFailed, message: error instanceof Error ? error.message : zhCN.editorToasts.cacheClearFailedMessage });
-    }
-  }, []);
-
-  const selectAllTimelineItems = useCallback(() => {
-    const state = useEditorStore.getState();
-    const clip = selectClipById(state.project, state.selectedClipId);
-    const keyframes = clip ? collectClipKeyframeRefs(clip) : [];
-    if (keyframes.length > 0) {
-      setSelectedKeyframes(keyframes);
-      return;
-    }
-    setSelectedClipIds(state.project.timeline.tracks.flatMap((track) => track.clips.map((item) => item.id)));
-  }, [setSelectedClipIds, setSelectedKeyframes]);
-
-  const matchFrameToSource = useCallback(() => {
-    if (!selectedClipId) return;
-    const result = matchFrameFromClip({
-      timeline: project.timeline,
-      clipId: selectedClipId,
-      playheadTime,
-      sequences: project.sequences,
-      activeSequenceId: project.activeSequenceId,
-      penetrationMode: 'source'
-    });
-    if (result) {
-      const asset = project.media.find((m) => m.id === result.mediaId);
-      if (asset) {
-        showToast({ kind: 'info', title: t('matchFrame.matchFrame'), message: `${asset.name} @ ${result.sourceTime.toFixed(1)}s` });
-      }
-    }
-  }, [selectedClipId, project, playheadTime, showToast]);
-
-  const revealMediaInTimeline = useCallback(() => {
-    if (!selectedClipMedia) return;
-    const result = coreRevealInTimeline(project.timeline, selectedClipMedia.id, project.sequences);
-    if (result.instances.length > 0) {
-      setSelectedClipIds(result.instances.map((inst) => inst.clipId));
-      if (result.instances[0]) {
-        setSelectedClipId(result.instances[0].clipId);
-        setPlayheadTime(result.instances[0].startTime);
-      }
-      showToast({ kind: 'info', title: t('matchFrame.revealInTimeline'), message: `找到 ${result.instances.length} 个实例` });
-    } else {
-      showToast({ kind: 'warning', title: t('matchFrame.revealInTimeline'), message: t('matchFrame.noSourceFound') });
-    }
-  }, [selectedClipMedia, project, setSelectedClipIds, setSelectedClipId, setPlayheadTime, showToast]);
-
-  const navigateToNextInstance = useCallback(() => {
-    if (!selectedClipMedia || !selectedClipId) return;
-    const nextId = coreNavigateToNextInstance(project.timeline, selectedClipMedia.id, selectedClipId, project.sequences);
-    if (nextId) {
-      setSelectedClipId(nextId);
-      const nav = getMediaInstanceNavigation(project.timeline, selectedClipMedia.id, nextId, project.sequences);
-      showToast({ kind: 'info', title: t('matchFrame.navigateNext'), message: `${nav.currentIndex + 1}/${nav.total}` });
-    }
-  }, [selectedClipMedia, selectedClipId, project, setSelectedClipId, showToast]);
-
-  const renderInOutRegion = useCallback(async () => {
-    const startSec = inPoint ?? 0;
-    const endSec = outPoint ?? getTimelineDuration(project.timeline);
-    if (endSec <= startSec) {
-      showToast({ kind: 'warning', title: t('renderCache.renderInOut'), message: t('renderCache.noInOutPoint') });
-      return;
-    }
-    try {
-      const result = await renderPreviewCache({
-        projectId: project.name,
-        startSec,
-        endSec,
-        sourcePath: projectPath ?? '',
-        width: project.settings.width,
-        height: project.settings.height
-      });
-      if (result.success) {
-        showToast({ kind: 'success', title: t('renderCache.renderInOut'), message: t('renderCache.renderComplete') });
-      } else {
-        showToast({ kind: 'warning', title: t('renderCache.renderInOut'), message: result.error ?? t('renderCache.renderFailed') });
-      }
-    } catch {
-      showToast({ kind: 'warning', title: t('renderCache.renderInOut'), message: t('renderCache.renderFailed') });
-    }
-  }, [inPoint, outPoint, project, projectPath, showToast]);
-
-  const favoriteIds = useEditorMiscStore((s) => s.favoriteIds);
-
-
-  const setFavoriteIds = useEditorMiscStore((s) => s.setFavoriteIds);
-  const pinnedIds = useEditorMiscStore((s) => s.pinnedIds);
-  const setPinnedIds = useEditorMiscStore((s) => s.setPinnedIds);
-  const recentMediaIds = useEditorMiscStore((s) => s.recentMediaIds);
-
-  const setRecentMediaIds = useEditorMiscStore((s) => s.setRecentMediaIds);
-
-  const handleToggleFavorite = useCallback((assetId: string) => {
-    setFavoriteIds((prev) => prev.includes(assetId) ? prev.filter((id) => id !== assetId) : [...prev, assetId]);
-  }, []);
-
-  const handlePinToSession = useCallback((assetId: string) => {
-    setPinnedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(assetId)) next.delete(assetId);
-      else next.add(assetId);
-      return next;
-    });
-  }, []);
-
-  const handleRevealFromMediaBin = useCallback((assetId: string) => {
-    const result = coreRevealInTimeline(project.timeline, assetId, project.sequences);
-    if (result.instances.length > 0) {
-      setSelectedClipIds(result.instances.map((inst) => inst.clipId));
-      showToast({ kind: 'info', title: t('matchFrame.revealInTimeline'), message: 'Found ' + result.instances.length + ' instances' });
-    } else {
-      showToast({ kind: 'warning', title: t('matchFrame.revealInTimeline'), message: t('matchFrame.noSourceFound') });
-    }
-  }, [project, t, setSelectedClipIds, showToast]);
 
   const shortcutHandlers = useMemo(
     () => ({
@@ -1827,16 +1302,8 @@ export function EditorShell() {
       matchFrame: () => void matchFrameToSource(),
       revealInTimeline: () => void revealMediaInTimeline(),
       navigateNextInstance: () => void navigateToNextInstance(),
-      navigatePrevGap: () => {
-        const gaps = computeTimelineGaps(project.timeline);
-        const target = navigateGap(gaps, playheadTime, -1);
-        if (target) setPlayheadTime(target.start);
-      },
-      navigateNextGap: () => {
-        const gaps = computeTimelineGaps(project.timeline);
-        const target = navigateGap(gaps, playheadTime, 1);
-        if (target) setPlayheadTime(target.start);
-      },
+      navigatePrevGap,
+      navigateNextGap,
       renderInOut: () => void renderInOutRegion()
     }),
     [
@@ -1851,26 +1318,21 @@ export function EditorShell() {
       markMultiRangeInPoint,
       markMultiRangeOutPoint,
       markOutPoint,
+      navigateNextGap,
+      navigatePrevGap,
       pausePlayback,
       redo,
+      renderInOutRegion,
       reversePlayback,
       rippleDeleteSelected,
       saveProject,
       selectAllTimelineItems,
-      setSelectedClipIds,
       splitSelected,
       stepFrame,
       switchToPreviousHistoryBranch,
       togglePlayback,
       toggleTimelineGridSnap,
       undo,
-      matchFrameToSource,
-      revealMediaInTimeline,
-      navigateToNextInstance,
-      renderInOutRegion,
-      project,
-      playheadTime,
-      setPlayheadTime
     ]
   );
 
