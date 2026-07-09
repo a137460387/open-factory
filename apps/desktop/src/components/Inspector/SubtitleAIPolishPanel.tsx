@@ -194,7 +194,7 @@ export function SubtitleAIPolishPanel({
             <div className="space-y-2">
               <label className="block text-xs text-[var(--color-text-secondary)]">{t.selectProvider}</label>
               <select
-                className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1 text-sm"
+                className="w-full rounded-lg border border-line bg-[var(--color-bg-elevated)] px-2 py-1 text-sm outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-bg-primary)]"
                 value={selectedProviderId}
                 onChange={(e) => setSelectedProviderId(e.target.value)}
                 disabled={enabledProviders.length === 0}
