@@ -146,7 +146,7 @@ export function AISubtitleStylePanel({
 
   return (
     <details className="mb-4" data-testid="ai-subtitle-style-section">
-      <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-slate-500">
+      <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">
         {t.title}
       </summary>
       <div className="space-y-2 p-1">
@@ -156,9 +156,9 @@ export function AISubtitleStylePanel({
 
         {!loading && results.length === 0 && (
           <div className="mb-2">
-            <label className="block text-xs text-slate-600">{t.selectProvider}</label>
+            <label className="block text-xs text-[var(--color-text-secondary)]">{t.selectProvider}</label>
             <select
-              className="w-full rounded-md border border-line bg-white px-2 py-1 text-sm"
+              className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1 text-sm"
               value={selectedProvider?.id ?? ''}
               disabled
               data-testid="ai-subtitle-style-provider-select"
@@ -173,7 +173,7 @@ export function AISubtitleStylePanel({
 
         {!loading && results.length === 0 && (
           <button
-            className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-50"
             type="button"
             disabled={!available || selectedClipLocked || !subtitleTrack}
             onClick={() => void handleAnalyze()}
@@ -185,11 +185,11 @@ export function AISubtitleStylePanel({
         )}
 
         {!subtitleTrack && !loading && results.length === 0 && (
-          <p className="text-xs text-slate-400" data-testid="ai-subtitle-style-no-track">{t.noSubtitleTrack}</p>
+          <p className="text-xs text-[var(--color-text-muted)]" data-testid="ai-subtitle-style-no-track">{t.noSubtitleTrack}</p>
         )}
 
         {loading && (
-          <div className="flex items-center gap-2 py-3 text-sm text-slate-500" data-testid="ai-subtitle-style-loading">
+          <div className="flex items-center gap-2 py-3 text-sm text-[var(--color-text-muted)]" data-testid="ai-subtitle-style-loading">
             <Loader2 size={16} className="animate-spin" />
             {t.analyzing}
           </div>
@@ -219,12 +219,12 @@ export function AISubtitleStylePanel({
                   />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between">
-                      <span className="truncate font-medium text-slate-800">{card.template.name}</span>
+                      <span className="truncate font-medium text-ink">{card.template.name}</span>
                       <span className="shrink-0 rounded bg-brand/20 px-1 py-0.5 text-[10px] text-brand">
                         {Math.round(card.confidence * 100)}%
                       </span>
                     </div>
-                    <div className="mt-0.5 text-slate-500 line-clamp-2">{card.reason}</div>
+                    <div className="mt-0.5 text-[var(--color-text-muted)] line-clamp-2">{card.reason}</div>
                   </div>
                 </div>
               </div>

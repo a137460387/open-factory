@@ -215,9 +215,9 @@ export function AIColorGradingPanel({
       {phase === 'idle' && (
         <>
           <div className="mb-2">
-            <label className="block text-xs text-slate-600">{t.selectProvider}</label>
+            <label className="block text-xs text-[var(--color-text-secondary)]">{t.selectProvider}</label>
             <select
-              className="w-full rounded-md border border-line bg-white px-2 py-1 text-sm"
+              className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1 text-sm"
               value={selectedProviderId}
               onChange={(e) => setSelectedProviderId(e.target.value)}
               disabled={visionProviders.length === 0}
@@ -230,7 +230,7 @@ export function AIColorGradingPanel({
             </select>
           </div>
           <button
-            className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-50"
             type="button"
             disabled={!selectedProvider || selectedClipLocked}
             onClick={() => void startAnalysis()}
@@ -240,12 +240,12 @@ export function AIColorGradingPanel({
           </button>
           {aiColorHistory.length > 0 && (
             <div className="mt-2">
-              <div className="text-xs font-semibold text-slate-700 mb-1">{t.historyTitle}</div>
+              <div className="text-xs font-semibold text-[var(--color-text-secondary)] mb-1">{t.historyTitle}</div>
               <div className="space-y-1">
                 {aiColorHistory.map((entry, idx) => (
                   <button
                     key={entry.timestamp}
-                    className="w-full rounded-md border border-line bg-white px-2 py-1 text-xs text-left hover:bg-panel"
+                    className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1 text-xs text-left hover:bg-panel"
                     type="button"
                     onClick={() => showHistory(idx)}
                     data-testid={`ai-color-suggestion-history-${idx}`}
@@ -260,14 +260,14 @@ export function AIColorGradingPanel({
       )}
       {(phase === 'extracting' || phase === 'analyzing') && (
         <div className="space-y-2">
-          <div className="text-xs text-slate-600" data-testid="ai-color-suggestion-progress">
+          <div className="text-xs text-[var(--color-text-secondary)]" data-testid="ai-color-suggestion-progress">
             {phase === 'extracting' ? t.extractingFrame : t.analyzing}
           </div>
-          <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
-            <div className="h-full bg-blue-600 animate-pulse" style={{ width: '60%' }} />
+          <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--color-bg-elevated)]">
+            <div className="h-full bg-[var(--color-accent)] animate-pulse" style={{ width: '60%' }} />
           </div>
           <button
-            className="w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel"
+            className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel"
             type="button"
             onClick={cancelAnalysis}
             data-testid="ai-color-suggestion-cancel-button"
@@ -278,14 +278,14 @@ export function AIColorGradingPanel({
       )}
       {phase === 'preview' && suggestion && (
         <div className="space-y-2" data-testid="ai-color-suggestion-preview">
-          <div className="text-xs font-semibold text-slate-700">{t.previewTitle}</div>
+          <div className="text-xs font-semibold text-[var(--color-text-secondary)]">{t.previewTitle}</div>
           {suggestion.style && (
-            <div className="text-xs text-slate-600">
+            <div className="text-xs text-[var(--color-text-secondary)]">
               <span className="font-medium">{t.style}: </span>{suggestion.style}
             </div>
           )}
           {suggestion.issues.length > 0 && (
-            <div className="text-xs text-slate-600">
+            <div className="text-xs text-[var(--color-text-secondary)]">
               <span className="font-medium">{t.issues}: </span>{suggestion.issues.join('、')}
             </div>
           )}
@@ -304,21 +304,21 @@ export function AIColorGradingPanel({
                   data-testid={`ai-color-suggestion-toggle-${item.parameter}`}
                 />
                 <div className="min-w-0 flex-1">
-                  <div className="font-medium text-slate-800">{item.parameter}</div>
-                  <div className="text-slate-500">
+                  <div className="font-medium text-ink">{item.parameter}</div>
+                  <div className="text-[var(--color-text-muted)]">
                     {item.currentValue !== undefined && (
                       <span>{t.currentValue}: {item.currentValue} → </span>
                     )}
                     <span>{t.recommendedValue}: {item.recommendedValue}</span>
                   </div>
-                  {item.reason && <div className="mt-0.5 text-slate-400">{item.reason}</div>}
+                  {item.reason && <div className="mt-0.5 text-[var(--color-text-muted)]">{item.reason}</div>}
                 </div>
               </label>
             ))}
           </div>
           <div className="grid grid-cols-2 gap-2">
             <button
-              className="rounded-md border border-line bg-white px-2 py-1 text-xs font-medium hover:bg-panel"
+              className="rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1 text-xs font-medium hover:bg-panel"
               type="button"
               onClick={selectAll}
               data-testid="ai-color-suggestion-select-all"
@@ -326,7 +326,7 @@ export function AIColorGradingPanel({
               {t.selectAll}
             </button>
             <button
-              className="rounded-md border border-line bg-white px-2 py-1 text-xs font-medium hover:bg-panel"
+              className="rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1 text-xs font-medium hover:bg-panel"
               type="button"
               onClick={deselectAll}
               data-testid="ai-color-suggestion-deselect-all"
@@ -335,7 +335,7 @@ export function AIColorGradingPanel({
             </button>
           </div>
           <button
-            className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+            className="w-full rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--color-accent)]"
             type="button"
             onClick={applySelected}
             data-testid="ai-color-suggestion-apply"
@@ -346,12 +346,12 @@ export function AIColorGradingPanel({
       )}
       {phase === 'history' && aiColorHistory[historyIndex] && (
         <div className="space-y-2" data-testid="ai-color-suggestion-history-view">
-          <div className="text-xs font-semibold text-slate-700">{t.historyTitle}</div>
-          <div className="text-xs text-slate-600">
+          <div className="text-xs font-semibold text-[var(--color-text-secondary)]">{t.historyTitle}</div>
+          <div className="text-xs text-[var(--color-text-secondary)]">
             <span className="font-medium">{t.style}: </span>{aiColorHistory[historyIndex].style}
           </div>
           {aiColorHistory[historyIndex].issues.length > 0 && (
-            <div className="text-xs text-slate-600">
+            <div className="text-xs text-[var(--color-text-secondary)]">
               <span className="font-medium">{t.issues}: </span>{aiColorHistory[historyIndex].issues.join('、')}
             </div>
           )}
@@ -362,17 +362,17 @@ export function AIColorGradingPanel({
                 className="flex items-start gap-2 rounded-md border border-line p-2 text-xs"
               >
                 <div className="min-w-0 flex-1">
-                  <div className="font-medium text-slate-800">{item.parameter}</div>
-                  <div className="text-slate-500">
+                  <div className="font-medium text-ink">{item.parameter}</div>
+                  <div className="text-[var(--color-text-muted)]">
                     {item.currentValue !== undefined && (
                       <span>{t.currentValue}: {item.currentValue} → </span>
                     )}
                     <span>{t.recommendedValue}: {item.recommendedValue}</span>
                   </div>
-                  {item.reason && <div className="mt-0.5 text-slate-400">{item.reason}</div>}
+                  {item.reason && <div className="mt-0.5 text-[var(--color-text-muted)]">{item.reason}</div>}
                 </div>
                 <button
-                  className="shrink-0 rounded bg-blue-100 px-2 py-0.5 text-[11px] font-medium text-blue-700 hover:bg-blue-200"
+                  className="shrink-0 rounded bg-[var(--color-accent)]/15 px-2 py-0.5 text-[11px] font-medium text-[var(--color-accent)] hover:bg-[var(--color-accent)]/20"
                   type="button"
                   onClick={() => applyHistoryItem(item.parameter, item.recommendedValue)}
                   data-testid={`ai-color-suggestion-history-apply-${item.parameter}`}
@@ -383,7 +383,7 @@ export function AIColorGradingPanel({
             ))}
           </div>
           <button
-            className="w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel"
+            className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel"
             type="button"
             onClick={() => setPhase('idle')}
             data-testid="ai-color-suggestion-history-back"
@@ -406,11 +406,11 @@ export function AILookMatchPanel({ clip }: { clip: Clip }) {
   };
   return (
     <div className="mt-2 space-y-2" data-testid="ai-look-match-panel">
-      <div className="text-xs font-semibold text-slate-700">{zhCN.inspector.aiLookMatch.title}</div>
-      <div className="text-xs text-slate-500">
+      <div className="text-xs font-semibold text-[var(--color-text-secondary)]">{zhCN.inspector.aiLookMatch.title}</div>
+      <div className="text-xs text-[var(--color-text-muted)]">
         {zhCN.inspector.aiLookMatch.reason}: {lookMatch.confidence > 0 ? `置信度 ${(lookMatch.confidence * 100).toFixed(0)}%` : ''}
       </div>
-      <label className="block text-xs text-slate-600">
+      <label className="block text-xs text-[var(--color-text-secondary)]">
         <span>{zhCN.inspector.aiLookMatch.blendStrength} ({lookMatch.blendStrength}%)</span>
         <input
           type="range"
@@ -423,11 +423,11 @@ export function AILookMatchPanel({ clip }: { clip: Clip }) {
           onChange={(e) => updateBlend(Number(e.target.value))}
         />
       </label>
-      <div className="text-xs text-slate-500" data-testid="ai-look-match-preview">
+      <div className="text-xs text-[var(--color-text-muted)]" data-testid="ai-look-match-preview">
         {zhCN.inspector.aiLookMatch.before} → {zhCN.inspector.aiLookMatch.after}
       </div>
       <button
-        className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+        className="w-full rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--color-accent)]"
         type="button"
         data-testid="ai-look-match-apply"
         onClick={() => { /* colorCorrection already reflects the look */ }}

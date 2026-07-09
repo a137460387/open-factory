@@ -283,7 +283,7 @@ export function Inspector({ clip, selectedClips = [], selectedCount, selectedCli
     }
     if (selectedSubtitleClips.length === selectedCount) {
       return (
-        <aside className="flex min-h-0 flex-col bg-white">
+        <aside className="flex min-h-0 flex-col bg-panel">
           <PanelTitle />
           <div className="min-h-0 flex-1 overflow-y-auto p-3">
             <SubtitleProofreadingPanel selectedSubtitleClips={selectedSubtitleClips} selectedClipLocked={selectedClipLocked} projectSettings={projectSettings} />
@@ -304,18 +304,18 @@ export function Inspector({ clip, selectedClips = [], selectedCount, selectedCli
       );
     }
     return (
-      <aside className="flex min-h-0 flex-col bg-white">
+      <aside className="flex min-h-0 flex-col bg-panel">
         <PanelTitle />
-        <div className="flex flex-1 items-center justify-center p-6 text-center text-sm text-slate-500" data-testid="inspector-multiple-selection-state">{zhCN.inspector.multipleSelected(selectedCount)}</div>
+        <div className="flex flex-1 items-center justify-center p-6 text-center text-sm text-[var(--color-text-muted)]" data-testid="inspector-multiple-selection-state">{zhCN.inspector.multipleSelected(selectedCount)}</div>
       </aside>
     );
   }
 
   if (!clip) {
     return (
-      <aside className="flex min-h-0 flex-col bg-white">
+      <aside className="flex min-h-0 flex-col bg-panel">
         <PanelTitle />
-        <div className="flex flex-1 items-center justify-center p-6 text-center text-sm text-slate-500" data-testid="inspector-empty-state">{zhCN.inspector.empty}</div>
+        <div className="flex flex-1 items-center justify-center p-6 text-center text-sm text-[var(--color-text-muted)]" data-testid="inspector-empty-state">{zhCN.inspector.empty}</div>
       </aside>
     );
   }
@@ -350,13 +350,13 @@ function ClipGroupInspectorPanel({ group, clips, selectedClipLocked }: { group: 
   };
 
   return (
-    <aside className="flex min-h-0 flex-col bg-white">
+    <aside className="flex min-h-0 flex-col bg-panel">
       <PanelTitle />
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3" data-testid="inspector-clip-group-panel">
         <Section title={t.title}>
-          <div className="rounded-md border border-line bg-panel p-3 text-sm text-slate-700" data-testid="inspector-clip-group-state">
+          <div className="rounded-md border border-line bg-panel p-3 text-sm text-[var(--color-text-secondary)]" data-testid="inspector-clip-group-state">
             <div className="font-semibold">{t.summary(clips.length)}</div>
-            <div className="mt-1 truncate text-xs text-slate-500">{group.name}</div>
+            <div className="mt-1 truncate text-xs text-[var(--color-text-muted)]">{group.name}</div>
           </div>
         </Section>
         {volumeClip ? (
@@ -1296,7 +1296,7 @@ function ClipInspector({
   };
 
   return (
-    <aside className="flex min-h-0 flex-col bg-white">
+    <aside className="flex min-h-0 flex-col bg-panel">
       <PanelTitle />
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
         <Section title={zhCN.inspector.sections.clip}>
@@ -1305,8 +1305,8 @@ function ClipInspector({
           <NumberField label={zhCN.inspector.fields.start} value={clip.start} min={0} step={0.033} onCommit={(start) => commit({ start })} />
           <NumberField label={zhCN.inspector.fields.duration} value={clip.duration} min={0.033} step={0.033} onCommit={(duration) => commit({ duration })} />
           {asset ? (
-            <div className="rounded-md bg-panel p-2 text-xs text-slate-600">
-              <div className="truncate font-medium text-slate-700">{asset.name}</div>
+            <div className="rounded-md bg-panel p-2 text-xs text-[var(--color-text-secondary)]">
+              <div className="truncate font-medium text-[var(--color-text-secondary)]">{asset.name}</div>
               <div>{asset.missing ? zhCN.inspector.missingFile : `${asset.width || '-'} x ${asset.height || '-'} | ${assetDurationTimecode}`}</div>
             </div>
           ) : null}
@@ -1316,7 +1316,7 @@ function ClipInspector({
 
         {clip.type === 'video' || clip.type === 'audio' ? (
           <Section title={zhCN.inspector.sections.speed}>
-            <div className="rounded-md bg-panel p-2 text-xs text-slate-600">
+            <div className="rounded-md bg-panel p-2 text-xs text-[var(--color-text-secondary)]">
               {zhCN.inspector.timecodeSummary(clipStartTimecode, clipDurationTimecode)} / {zhCN.inspector.speedSummary(getClipSpeed(clip).toFixed(2))}
             </div>
             <AnimatedField label={zhCN.inspector.fields.speed} onAddKeyframe={() => addKeyframe('speed')} testId="add-speed-keyframe-button">
@@ -1332,10 +1332,10 @@ function ClipInspector({
               />
             </AnimatedField>
             {showSlowMotionMode ? (
-              <label className="block text-xs font-medium text-slate-600">
+              <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                 {zhCN.inspector.fields.slowMotionMode}
                 <select
-                  className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                  className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
                   value={slowMotionMode}
                   data-testid="clip-slow-motion-mode-select"
                   onChange={(event) => commit({ slowMotionMode: event.target.value as ClipSlowMotionMode })}
@@ -1453,12 +1453,12 @@ function ClipInspector({
 
         {clip.type === 'video' || clip.type === 'image' ? (
           <details className="mb-4" open data-testid="clip-blend-section">
-            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-slate-500">{t('inspector.sections.blend')}</summary>
+            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">{t('inspector.sections.blend')}</summary>
             <div className="space-y-3">
-              <label className="block text-xs font-medium text-slate-600">
+              <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                 {t('inspector.fields.blendMode')}
                 <select
-                  className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                  className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
                   value={blendMode}
                   data-testid="clip-blend-mode-select"
                   onChange={(event) => commit({ blendMode: event.target.value as ClipBlendMode })}
@@ -1489,12 +1489,12 @@ function ClipInspector({
 
         {clip.type === 'video' ? (
           <details className="mb-4" open>
-            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-slate-500">{zhCN.inspector.sections.projection}</summary>
+            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">{zhCN.inspector.sections.projection}</summary>
             <div className="space-y-3">
-              <label className="block text-xs font-medium text-slate-600">
+              <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                 {zhCN.inspector.fields.projection}
                 <select
-                  className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                  className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
                   value={projection}
                   data-testid="clip-projection-select"
                   onChange={(event) => commit({ projection: event.target.value as ClipProjection, panorama })}
@@ -1506,10 +1506,10 @@ function ClipInspector({
               </label>
               {projection !== 'flat' ? (
                 <>
-                  <label className="block text-xs font-medium text-slate-600">
+                  <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                     {zhCN.inspector.fields.panoramaOutput}
                     <select
-                      className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                      className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
                       value={panorama.outputProjection}
                       data-testid="clip-panorama-output-select"
                       onChange={(event) => updatePanorama({ outputProjection: event.target.value as ClipPanoramaOutputProjection })}
@@ -1572,10 +1572,10 @@ function ClipInspector({
 
         {clip.type === 'video' || clip.type === 'image' || clip.type === 'nested-sequence' ? (
           <Section title={zhCN.inspector.sections.chromaKey}>
-            <label className="block text-xs font-medium text-slate-600">
+            <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
               {zhCN.inspector.fields.keyingMode}
               <select
-                className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
                 value={keyingMode}
                 data-testid="keying-mode-select"
                 onChange={(event) => {
@@ -1593,10 +1593,10 @@ function ClipInspector({
               <>
             <div className="space-y-2" data-testid="chroma-key-color-list">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs font-semibold text-slate-600">{zhCN.inspector.fields.chromaKeyColor}</span>
+                <span className="text-xs font-semibold text-[var(--color-text-secondary)]">{zhCN.inspector.fields.chromaKeyColor}</span>
                 <div className="flex items-center gap-1">
                   <button
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-white text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
                     type="button"
                     title={zhCN.inspector.chromaKey.addSampleColor}
                     aria-label={zhCN.inspector.chromaKey.addSampleColor}
@@ -1607,8 +1607,8 @@ function ClipInspector({
                     <Plus size={15} />
                   </button>
                   <button
-                    className={`inline-flex h-8 w-8 items-center justify-center rounded-md border border-line text-slate-700 hover:bg-panel ${
-                      chromaKeyPickActive ? 'bg-emerald-50 ring-1 ring-emerald-300' : 'bg-white'
+                    className={`inline-flex h-8 w-8 items-center justify-center rounded-md border border-line text-[var(--color-text-secondary)] hover:bg-panel ${
+                      chromaKeyPickActive ? 'bg-emerald-50 ring-1 ring-emerald-300' : 'bg-[var(--color-bg-elevated)]'
                     }`}
                     type="button"
                     title={zhCN.inspector.chromaKey.pickFromPreview}
@@ -1632,7 +1632,7 @@ function ClipInspector({
                     />
                   </div>
                   <button
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-white text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
                     type="button"
                     title={zhCN.inspector.chromaKey.removeSampleColor}
                     aria-label={zhCN.inspector.chromaKey.removeSampleColor}
@@ -1756,11 +1756,11 @@ function ClipInspector({
             <MasksEditor masks={masks} onAdd={addMask} onUpdate={updateMask} onRemove={removeMask} />
             {privacyRedactions.length > 0 || true ? (
               <div className="mt-2 space-y-2" data-testid="privacy-redaction-panel">
-                <div className="text-xs font-semibold text-slate-700">{zhCN.inspector.privacyRedaction.title}</div>
+                <div className="text-xs font-semibold text-[var(--color-text-secondary)]">{zhCN.inspector.privacyRedaction.title}</div>
                 {privacyRedactions.map((r) => (
                   <div key={r.id} className="rounded-md border border-line p-2 space-y-1" data-testid={`privacy-redaction-item-${r.id}`}>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-medium text-slate-800">{zhCN.inspector.privacyRedaction.regions[r.type] ?? r.type}</span>
+                      <span className="text-xs font-medium text-ink">{zhCN.inspector.privacyRedaction.regions[r.type] ?? r.type}</span>
                       <div className="flex items-center gap-1">
                         <button
                           className="rounded p-1 text-xs hover:bg-panel"
@@ -1778,7 +1778,7 @@ function ClipInspector({
                         ><Trash2 size={12} /></button>
                       </div>
                     </div>
-                    <label className="block text-xs text-slate-600">
+                    <label className="block text-xs text-[var(--color-text-secondary)]">
                       <span>{zhCN.inspector.privacyRedaction.blurStrength}</span>
                       <input
                         type="range"
@@ -1794,7 +1794,7 @@ function ClipInspector({
                   </div>
                 ))}
                 <button
-                  className="w-full rounded-md border border-dashed border-line px-2 py-1.5 text-xs text-slate-500 hover:border-brand hover:text-brand"
+                  className="w-full rounded-md border border-dashed border-line px-2 py-1.5 text-xs text-[var(--color-text-muted)] hover:border-brand hover:text-brand"
                   type="button"
                   data-testid="privacy-redaction-add"
                   onClick={() => { commit({ privacyRedactions: [...privacyRedactions, { id: createId('redaction'), type: 'face', keyframes: [{ time: 0, x: 0.25, y: 0.25, w: 0.2, h: 0.25 }], blurStrength: 1, enabled: true }] }); }}
@@ -1813,10 +1813,10 @@ function ClipInspector({
               onCommit={(enabled) => commit({ frameInterpolation: { ...frameInterpolation, enabled } })}
               testId="frame-interpolation-toggle"
             />
-            <label className="block text-xs font-medium text-slate-600">
+            <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
               <span>{zhCN.inspector.fields.targetFrameRate}</span>
               <select
-                className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60"
                 value={frameInterpolation.targetFps}
                 disabled={frameInterpolationUnavailable || !frameInterpolation.enabled}
                 onChange={(event) => commit({ frameInterpolation: { ...frameInterpolation, targetFps: Number(event.target.value) as typeof frameInterpolation.targetFps } })}
@@ -1827,10 +1827,10 @@ function ClipInspector({
                 ))}
               </select>
             </label>
-            <label className="block text-xs font-medium text-slate-600">
+            <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
               <span>{zhCN.inspector.frameInterpolationCompare.modeLabel}</span>
               <select
-                className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60"
                 value={frameInterpolation.mode}
                 disabled={frameInterpolationUnavailable || !frameInterpolation.enabled}
                 onChange={(event) => commit({ frameInterpolation: { ...frameInterpolation, mode: event.target.value as FrameInterpolationMode } })}
@@ -1851,18 +1851,18 @@ function ClipInspector({
               onCommit={(protectionFrames) => commit({ frameInterpolation: { ...frameInterpolation, protectionFrames } })}
               testId="frame-interpolation-protection-input"
             />
-            <div className="rounded-md border border-line bg-panel p-2 text-xs text-slate-700" data-testid="frame-interpolation-quality-status">
+            <div className="rounded-md border border-line bg-panel p-2 text-xs text-[var(--color-text-secondary)]" data-testid="frame-interpolation-quality-status">
               <div className="font-semibold text-ink">
                 {zhCN.inspector.frameInterpolationCompare.qualityLabel}：{frameInterpolation.quality ? zhCN.inspector.frameInterpolationCompare.qualityGrades[frameInterpolation.quality.grade] : zhCN.inspector.frameInterpolationCompare.qualityNotEvaluated}
               </div>
               {frameInterpolation.quality ? (
-                <div className="mt-1 text-slate-600" data-testid="frame-interpolation-quality-ssim">
+                <div className="mt-1 text-[var(--color-text-secondary)]" data-testid="frame-interpolation-quality-ssim">
                   {zhCN.inspector.frameInterpolationCompare.qualitySsim(frameInterpolation.quality.ssim, frameInterpolation.quality.sampleCount)}
                 </div>
               ) : null}
             </div>
             <button
-              className="w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium text-ink hover:bg-panel disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium text-ink hover:bg-panel disabled:cursor-not-allowed disabled:opacity-60"
               type="button"
               data-testid="frame-interpolation-quality-button"
               disabled={frameInterpolationQualityRunning || frameInterpolationUnavailable || !frameInterpolation.enabled || !asset}
@@ -1881,7 +1881,7 @@ function ClipInspector({
               </div>
             ) : null}
             <button
-              className="w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium text-ink hover:bg-panel disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium text-ink hover:bg-panel disabled:cursor-not-allowed disabled:opacity-60"
               type="button"
               data-testid="frame-interpolation-compare-button"
               disabled={frameInterpolationCompareRunning || frameInterpolationUnavailable || !asset}
@@ -1899,7 +1899,7 @@ function ClipInspector({
                 {frameInterpolationCompareItems.map((item) => (
                   <div
                     key={item.mode}
-                    className="overflow-hidden rounded-md border border-line bg-white"
+                    className="overflow-hidden rounded-md border border-line bg-[var(--color-bg-elevated)]"
                     data-testid={`frame-interpolation-compare-tile-${item.mode}`}
                   >
                     <button
@@ -1918,11 +1918,11 @@ function ClipInspector({
                     <div className="space-y-1 p-2">
                       <div className="flex items-center justify-between gap-2 text-xs font-semibold text-ink">
                         <span>{item.label}</span>
-                        <span className="text-slate-500">{formatEstimatedDuration(item.estimatedMs)}</span>
+                        <span className="text-[var(--color-text-muted)]">{formatEstimatedDuration(item.estimatedMs)}</span>
                       </div>
                       <button
                         type="button"
-                        className="w-full rounded-md border border-line bg-panel px-2 py-1 text-xs font-medium text-ink hover:bg-white"
+                        className="w-full rounded-md border border-line bg-panel px-2 py-1 text-xs font-medium text-ink hover:bg-[var(--color-bg-elevated)]"
                         data-testid={`frame-interpolation-select-${item.mode}`}
                         onClick={() => commit({ slowMotionMode: frameInterpolationCompareModeToSlowMotionMode(item.mode) })}
                       >
@@ -1940,7 +1940,7 @@ function ClipInspector({
                 role="dialog"
                 aria-modal="true"
               >
-                <div className="max-h-full max-w-5xl rounded-md bg-white p-3 shadow-xl">
+                <div className="max-h-full max-w-5xl rounded-md bg-[var(--color-bg-elevated)] p-3 shadow-xl">
                   <div className="mb-2 flex items-center justify-between gap-3 text-sm font-semibold text-ink">
                     <span>{frameInterpolationExpandedItem.label}</span>
                     <button
@@ -1971,7 +1971,7 @@ function ClipInspector({
               onCommit={(enabled) => commit({ stabilization: { ...stabilization, enabled } })}
               testId="stabilization-toggle"
             />
-            <div className="rounded-md border border-line bg-panel p-2 text-xs text-slate-600" data-testid="stabilization-status">
+            <div className="rounded-md border border-line bg-panel p-2 text-xs text-[var(--color-text-secondary)]" data-testid="stabilization-status">
               {analysisProgress !== undefined && analysisProgress < 1
                 ? zhCN.inspector.fields.stabilizationProgress(analysisProgress)
                 : stabilization.analyzed
@@ -1979,7 +1979,7 @@ function ClipInspector({
                   : zhCN.inspector.fields.stabilizationNotAnalyzed}
             </div>
             <button
-              className="w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel"
+              className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel"
               type="button"
               data-testid="analyze-stabilization-button"
               onClick={() => void runStabilizationAnalysis()}
@@ -2011,11 +2011,11 @@ function ClipInspector({
 
         {clip.type === 'video' && (clip.stabilization?.shakeScore ?? 0) > 50 ? (
           <Section title={zhCN.preview.shakeAnalysisTitle}>
-            <div className="rounded-md border border-line bg-panel p-2 text-xs text-slate-600" data-testid="shake-analysis-panel">
+            <div className="rounded-md border border-line bg-panel p-2 text-xs text-[var(--color-text-secondary)]" data-testid="shake-analysis-panel">
               <span data-testid="shake-analysis-severity">{zhCN.preview.shakeAnalysisScore(clip.stabilization?.shakeScore ?? 0)}</span>
             </div>
             <button
-              className="w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel"
+              className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel"
               type="button"
               data-testid="apply-shake-stabilization"
               onClick={() => {
@@ -2030,11 +2030,11 @@ function ClipInspector({
 
         {clip.type === 'video' && clip.aiPipSuggestion ? (
           <Section title={zhCN.preview.pipAvoidanceTitle}>
-            <div className="rounded-md border border-line bg-panel p-2 text-xs text-slate-600" data-testid="pip-avoidance-panel">
+            <div className="rounded-md border border-line bg-panel p-2 text-xs text-[var(--color-text-secondary)]" data-testid="pip-avoidance-panel">
               <span>{zhCN.preview.pipAvoidanceWarning}</span>
             </div>
             <button
-              className="w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel"
+              className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel"
               type="button"
               data-testid="apply-pip-placement"
               onClick={() => {
@@ -2049,7 +2049,7 @@ function ClipInspector({
 
         {clip.type === 'video' ? (
           <Section title={zhCN.inspector.sections.motionTrack}>
-            <div className="rounded-md border border-line bg-panel p-2 text-xs text-slate-600" data-testid="motion-track-status">
+            <div className="rounded-md border border-line bg-panel p-2 text-xs text-[var(--color-text-secondary)]" data-testid="motion-track-status">
               {motionTrackProgress !== undefined && motionTrackProgress < 1
                 ? zhCN.inspector.motionTrack.progress(motionTrackProgress)
                 : motionTrack.length > 0
@@ -2058,7 +2058,7 @@ function ClipInspector({
             </div>
             <div className="grid grid-cols-2 gap-2">
               <button
-                className="rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
                 type="button"
                 disabled={motionTrackingBusy}
                 data-testid="analyze-motion-track-button"
@@ -2067,7 +2067,7 @@ function ClipInspector({
                 {zhCN.inspector.motionTrack.analyze}
               </button>
               <button
-                className="rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
                 type="button"
                 disabled={!motionTrackingBusy}
                 data-testid="cancel-motion-track-button"
@@ -2077,7 +2077,7 @@ function ClipInspector({
               </button>
             </div>
             <button
-              className="w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+              className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
               type="button"
               disabled={motionTrack.length === 0}
               data-testid="bind-motion-track-button"
@@ -2090,10 +2090,10 @@ function ClipInspector({
 
         {clip.type === 'video' || clip.type === 'image' ? (
           <Section title={zhCN.inspector.sections.colorMatch}>
-            <label className="block text-xs font-medium text-slate-600">
+            <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
               <span>{zhCN.inspector.fields.referenceClip}</span>
               <select
-                className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60"
                 value={colorMatchReferenceClipId}
                 disabled={colorMatchReferenceClips.length === 0 || colorMatchBusy}
                 onChange={(event) => setColorMatchReferenceClipId(event.target.value)}
@@ -2106,7 +2106,7 @@ function ClipInspector({
               </select>
             </label>
             <button
-              className="w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-60"
               type="button"
               disabled={!colorMatchReferenceClipId || colorMatchBusy}
               onClick={() => void applyColorMatch()}
@@ -2119,7 +2119,7 @@ function ClipInspector({
 
         {clip.type === 'image' && asset?.imageSequence ? (
           <Section title={zhCN.inspector.sections.imageSequence}>
-            <div className="rounded-md bg-panel p-2 text-xs text-slate-600">
+            <div className="rounded-md bg-panel p-2 text-xs text-[var(--color-text-secondary)]">
               {asset.imageSequence.frameCount} PNG · {asset.imageSequence.pattern}
             </div>
             <RangeNumberField
@@ -2137,9 +2137,9 @@ function ClipInspector({
 
         {batchKeyframesSelected ? (
           <Section title={zhCN.inspector.sections.keyframe}>
-            <div className="rounded-md border border-line bg-panel p-2 text-xs text-slate-600" data-testid="batch-keyframe-editor">
+            <div className="rounded-md border border-line bg-panel p-2 text-xs text-[var(--color-text-secondary)]" data-testid="batch-keyframe-editor">
               <div className="mb-2 flex items-center justify-between gap-2">
-                <span className="font-semibold text-slate-700">{zhCN.inspector.batchKeyframes.title}</span>
+                <span className="font-semibold text-[var(--color-text-secondary)]">{zhCN.inspector.batchKeyframes.title}</span>
                 <span className="tabular-nums" data-testid="batch-keyframe-count">{zhCN.inspector.batchKeyframes.count(selectedKeyframeEntries.length)}</span>
               </div>
               <div className="grid grid-cols-[1fr_auto] items-end gap-2">
@@ -2153,7 +2153,7 @@ function ClipInspector({
                   testId="batch-keyframe-shift-input"
                 />
                 <button
-                  className="mb-0.5 rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel"
+                  className="mb-0.5 rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel"
                   type="button"
                   data-testid="batch-keyframe-shift-button"
                   onClick={shiftSelectedKeyframes}
@@ -2172,7 +2172,7 @@ function ClipInspector({
                   testId="batch-keyframe-scale-input"
                 />
                 <button
-                  className="mb-0.5 rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel"
+                  className="mb-0.5 rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel"
                   type="button"
                   data-testid="batch-keyframe-scale-button"
                   onClick={scaleSelectedKeyframes}
@@ -2180,10 +2180,10 @@ function ClipInspector({
                   {zhCN.inspector.batchKeyframes.applyScale}
                 </button>
               </div>
-              <label className="mt-2 block text-xs font-medium text-slate-600">
+              <label className="mt-2 block text-xs font-medium text-[var(--color-text-secondary)]">
                 {zhCN.inspector.fields.easing}
                 <select
-                  className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                  className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
                   value={batchEasing}
                   data-testid="batch-keyframe-easing-select"
                   onChange={(event) => setBatchEasing(event.target.value as KeyframeEasing)}
@@ -2198,7 +2198,7 @@ function ClipInspector({
               </label>
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <button
-                  className="rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel"
+                  className="rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel"
                   type="button"
                   data-testid="batch-keyframe-easing-button"
                   onClick={updateSelectedKeyframeEasing}
@@ -2206,7 +2206,7 @@ function ClipInspector({
                   {zhCN.inspector.batchKeyframes.applyEasing}
                 </button>
                 <button
-                  className="rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel"
+                  className="rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel"
                   type="button"
                   data-testid="batch-keyframe-distribute-time-button"
                   onClick={distributeSelectedKeyframes}
@@ -2214,7 +2214,7 @@ function ClipInspector({
                   {zhCN.inspector.batchKeyframes.distributeTime}
                 </button>
                 <button
-                  className="rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel"
+                  className="rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel"
                   type="button"
                   data-testid="batch-keyframe-align-value-button"
                   onClick={alignSelectedKeyframeValues}
@@ -2236,9 +2236,9 @@ function ClipInspector({
 
         {selectedKeyframe && selectedKeyframeFrame ? (
           <Section title={zhCN.inspector.sections.keyframe}>
-            <div className="rounded-md border border-line bg-panel p-2 text-xs text-slate-600" data-testid="selected-keyframe-editor">
+            <div className="rounded-md border border-line bg-panel p-2 text-xs text-[var(--color-text-secondary)]" data-testid="selected-keyframe-editor">
               <div className="mb-2 flex items-center justify-between gap-2">
-                <span className="font-semibold text-slate-700">{formatKeyframeProperty(selectedKeyframe.property)}</span>
+                <span className="font-semibold text-[var(--color-text-secondary)]">{formatKeyframeProperty(selectedKeyframe.property)}</span>
                 <span className="tabular-nums">{selectedKeyframeFrame.time.toFixed(2)}s</span>
               </div>
               <RangeNumberField
@@ -2275,10 +2275,10 @@ function ClipInspector({
                   testId="selected-keyframe-value-expression"
                 />
               </div>
-              <label className="mt-2 block text-xs font-medium text-slate-600">
+              <label className="mt-2 block text-xs font-medium text-[var(--color-text-secondary)]">
                 {zhCN.inspector.fields.easing}
                 <select
-                  className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                  className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
                   value={selectedKeyframeFrame.easing}
                   data-testid="selected-keyframe-easing"
                   onChange={(event) => updateSelectedKeyframe({ easing: event.target.value as KeyframeEasing })}
@@ -2305,10 +2305,10 @@ function ClipInspector({
 
         {keyframeProperties.length > 0 ? (
           <Section title={zhCN.inspector.sections.curves}>
-            <label className="block text-xs font-medium text-slate-600">
+            <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
               {zhCN.inspector.fields.property}
               <select
-                className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
                 value={curveProperty}
                 data-testid="keyframe-curve-property-select"
                 onChange={(event) => setCurveProperty(event.target.value as KeyframeProperty)}
@@ -2335,11 +2335,11 @@ function ClipInspector({
             <ToggleField label={zhCN.inspector.sections.kenBurns} checked={Boolean(clip.kenBurns)} onCommit={setKenBurns} testId="ken-burns-toggle" />
             {clip.kenBurns ? (
               <div className="grid grid-cols-2 gap-2">
-                <div className="rounded-md border border-line bg-panel p-2 text-xs text-slate-600">
+                <div className="rounded-md border border-line bg-panel p-2 text-xs text-[var(--color-text-secondary)]">
                   <div className="mb-1 font-semibold">{zhCN.inspector.fields.startScale}</div>
                   <div>{Math.round((clip.keyframes?.scaleX?.[0]?.value ?? clip.transform.scale) * 100)}%</div>
                 </div>
-                <div className="rounded-md border border-line bg-panel p-2 text-xs text-slate-600">
+                <div className="rounded-md border border-line bg-panel p-2 text-xs text-[var(--color-text-secondary)]">
                   <div className="mb-1 font-semibold">{zhCN.inspector.fields.endScale}</div>
                   <RangeNumberField
                     label={zhCN.inspector.fields.endScaleControl}
@@ -2358,7 +2358,7 @@ function ClipInspector({
 
         {clip.type === 'video' ? (
           <details className="mb-4" open data-testid="video-restoration-section">
-            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-slate-500">{zhCN.inspector.sections.videoRestoration}</summary>
+            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">{zhCN.inspector.sections.videoRestoration}</summary>
             <div className="space-y-3">
               <div className="rounded-md border border-line bg-panel p-2">
                 <ToggleField
@@ -2367,10 +2367,10 @@ function ClipInspector({
                   onCommit={(enabled) => updateVideoRestoration({ deinterlace: { ...videoRestoration.deinterlace, enabled } })}
                   testId="video-restoration-deinterlace-toggle"
                 />
-                <label className="mt-2 block text-xs font-medium text-slate-600">
+                <label className="mt-2 block text-xs font-medium text-[var(--color-text-secondary)]">
                   {zhCN.inspector.fields.deinterlaceMode}
                   <select
-                    className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                    className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
                     value={videoRestoration.deinterlace.mode}
                     data-testid="video-restoration-deinterlace-mode"
                     onChange={(event) =>
@@ -2387,7 +2387,7 @@ function ClipInspector({
                   <div className="mt-2 rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800" data-testid="video-restoration-deinterlace-suggestion">
                     <div>{zhCN.inspector.videoRestoration.deinterlaceSuggestion(asset?.fieldOrder ?? '')}</div>
                     <button
-                      className="mt-2 rounded-md border border-amber-300 bg-white px-2 py-1 text-xs font-semibold text-amber-900 hover:bg-amber-100"
+                      className="mt-2 rounded-md border border-amber-300 bg-[var(--color-bg-elevated)] px-2 py-1 text-xs font-semibold text-amber-900 hover:bg-amber-100"
                       type="button"
                       data-testid="video-restoration-apply-deinterlace-suggestion"
                       onClick={() => updateVideoRestoration({ deinterlace: { enabled: true, mode: deinterlaceSuggestion } })}
@@ -2399,10 +2399,10 @@ function ClipInspector({
               </div>
 
               <div className="rounded-md border border-line bg-panel p-2">
-                <label className="block text-xs font-medium text-slate-600">
+                <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                   {zhCN.inspector.fields.temporalDenoisePreset}
                   <select
-                    className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                    className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
                     value={videoRestoration.temporalDenoise.preset}
                     data-testid="video-restoration-temporal-preset"
                     onChange={(event) =>
@@ -2503,7 +2503,7 @@ function ClipInspector({
 
         {clip.type === 'video' ? (
           <details className="mb-4" open data-testid="quality-enhancement-section">
-            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-slate-500">{zhCN.inspector.sections.qualityEnhancement}</summary>
+            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">{zhCN.inspector.sections.qualityEnhancement}</summary>
             <div className="space-y-3 rounded-md border border-line bg-panel p-2">
               <ToggleField
                 label={zhCN.inspector.qualityEnhancement.superResolution}
@@ -2535,12 +2535,12 @@ function ClipInspector({
 
         {clip.type !== 'audio' ? (
           <details className="mb-4" open>
-            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-slate-500">{zhCN.inspector.fields.colorCorrection}</summary>
+            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">{zhCN.inspector.fields.colorCorrection}</summary>
             <div className="space-y-3">
-              <label className="block rounded-md border border-line bg-panel p-2 text-xs font-medium text-slate-600">
+              <label className="block rounded-md border border-line bg-panel p-2 text-xs font-medium text-[var(--color-text-secondary)]">
                 <span>{zhCN.inspector.fields.inputColorSpace}</span>
                 <select
-                  className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5"
+                  className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5"
                   value={colorCorrection.inputColorSpace ?? 'rec709'}
                   onChange={(event) => commit({ colorCorrection: { inputColorSpace: event.target.value as InputColorSpace } })}
                   data-testid="clip-input-color-space-select"
@@ -2589,12 +2589,12 @@ function ClipInspector({
                 format={(value) => `${Math.round(value)}°`}
                 onCommit={(hue) => commit({ colorCorrection: { hue } })}
               />
-              <div className="rounded-md border border-line bg-panel p-2 text-xs text-slate-600" data-testid="clip-lut-control">
+              <div className="rounded-md border border-line bg-panel p-2 text-xs text-[var(--color-text-secondary)]" data-testid="clip-lut-control">
                 <div className="mb-2 flex items-center justify-between gap-2">
-                  <span className="font-semibold text-slate-700">LUT</span>
+                  <span className="font-semibold text-[var(--color-text-secondary)]">LUT</span>
                   {colorCorrection.lutPath ? (
                     <button
-                      className="rounded border border-line bg-white p-1 hover:bg-white"
+                      className="rounded border border-line bg-[var(--color-bg-elevated)] p-1 hover:bg-[var(--color-bg-elevated)]"
                       type="button"
                       title={zhCN.inspector.fields.clearLut}
                       data-testid="clear-lut-button"
@@ -2608,7 +2608,7 @@ function ClipInspector({
                   {formatLutPath(colorCorrection.lutPath)}
                 </div>
                 <button
-                  className="flex w-full items-center justify-center gap-2 rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-white"
+                  className="flex w-full items-center justify-center gap-2 rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-[var(--color-bg-elevated)]"
                   type="button"
                   data-testid="choose-lut-button"
                   onClick={() => void chooseLut()}
@@ -2636,7 +2636,7 @@ function ClipInspector({
 
         {clip.type !== 'audio' ? (
           <details className="mb-4" open>
-            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-slate-500">{zhCN.inspector.sections.curves}</summary>
+            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">{zhCN.inspector.sections.curves}</summary>
             <CurveEditor
               curves={colorCurves}
               onCommit={(nextCurves) => commit({ colorCorrection: { colorCurves: nextCurves } })}
@@ -2646,14 +2646,14 @@ function ClipInspector({
 
         {clip.type !== 'audio' ? (
           <details className="mb-4">
-            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-slate-500">{zhCN.inspector.sections.colorWheels}</summary>
+            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">{zhCN.inspector.sections.colorWheels}</summary>
             <ThreeWayColorEditor threeWayColor={threeWayColor} onCommit={(nextColor) => commit({ colorCorrection: { threeWayColor: nextColor } })} />
           </details>
         ) : null}
 
         {clip.type !== 'audio' ? (
           <details className="mb-4">
-            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-slate-500">{zhCN.inspector.sections.effects}</summary>
+            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">{zhCN.inspector.sections.effects}</summary>
             <EffectsEditor
               effects={clip.effects ?? []}
               onAdd={(type) => runEffectCommand(new AddEffectCommand(timelineAccessor, clip.id, { type, params: DEFAULT_EFFECT_PARAMS[type] }))}
@@ -2680,8 +2680,8 @@ function ClipInspector({
               testId="clip-pitch-input"
             />
             <ToggleField label={zhCN.inspector.fields.reverseAudio} checked={reverseAudio} onCommit={(nextReverseAudio) => commit({ reverseAudio: nextReverseAudio })} testId="clip-reverse-audio-toggle" />
-            <details className="rounded-md border border-line bg-white" data-testid="audio-advanced-restoration-section" open>
-              <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-slate-700">{t('inspector.sections.audioRestoration')}</summary>
+            <details className="rounded-md border border-line bg-[var(--color-bg-elevated)]" data-testid="audio-advanced-restoration-section" open>
+              <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">{t('inspector.sections.audioRestoration')}</summary>
               <div className="space-y-3 border-t border-line p-2">
                 <ToggleField
                   label={t('inspector.fields.audioRestorationDeclip')}
@@ -2721,13 +2721,13 @@ function ClipInspector({
                 <AudioRestorationWaveformPreview before={audioRestorationComparison.before} after={audioRestorationComparison.after} />
               </div>
             </details>
-            <details className="rounded-md border border-line bg-white" data-testid="audio-channel-routing-section" open>
-              <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-slate-700">{zhCN.inspector.fields.audioChannelRouting}</summary>
+            <details className="rounded-md border border-line bg-[var(--color-bg-elevated)]" data-testid="audio-channel-routing-section" open>
+              <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">{zhCN.inspector.fields.audioChannelRouting}</summary>
               <div className="border-t border-line p-2">
-                <label className="block text-xs font-medium text-slate-600">
+                <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                   {zhCN.inspector.fields.audioChannelRoutingMode}
                   <select
-                    className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                    className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
                     value={audioChannelRoutingOptions.includes(audioChannelRouting) ? audioChannelRouting : 'normal'}
                     data-testid="clip-audio-channel-routing-select"
                     onChange={(event) => commit({ audioChannelRouting: event.target.value as AudioChannelRoutingMode })}
@@ -2741,28 +2741,28 @@ function ClipInspector({
                 </label>
               </div>
             </details>
-            <details className="rounded-md border border-line bg-white" data-testid="pitch-analysis-section" open>
-              <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-slate-700">{zhCN.inspector.sections.pitchAnalysis}</summary>
+            <details className="rounded-md border border-line bg-[var(--color-bg-elevated)]" data-testid="pitch-analysis-section" open>
+              <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">{zhCN.inspector.sections.pitchAnalysis}</summary>
               <div className="space-y-2 border-t border-line p-2">
                 <div className="grid grid-cols-3 gap-2 text-xs">
                   <div className="rounded bg-panel p-2">
-                    <div className="text-slate-500">{zhCN.inspector.fields.primaryPitchNote}</div>
+                    <div className="text-[var(--color-text-muted)]">{zhCN.inspector.fields.primaryPitchNote}</div>
                     <div className="font-semibold text-ink" data-testid="clip-pitch-primary-note">{pitchSummary.primaryNote ?? zhCN.inspector.pitchAnalysis.noData}</div>
                   </div>
                   <div className="rounded bg-panel p-2">
-                    <div className="text-slate-500">{zhCN.inspector.fields.pitchRange}</div>
+                    <div className="text-[var(--color-text-muted)]">{zhCN.inspector.fields.pitchRange}</div>
                     <div className="font-semibold text-ink" data-testid="clip-pitch-range">
                       {pitchSummary.minHz !== undefined && pitchSummary.maxHz !== undefined ? `${Math.round(pitchSummary.minHz)}-${Math.round(pitchSummary.maxHz)} Hz` : zhCN.inspector.pitchAnalysis.noData}
                     </div>
                   </div>
                   <div className="rounded bg-panel p-2">
-                    <div className="text-slate-500">{zhCN.inspector.fields.pitchStability}</div>
+                    <div className="text-[var(--color-text-muted)]">{zhCN.inspector.fields.pitchStability}</div>
                     <div className="font-semibold text-ink" data-testid="clip-pitch-stability">{`${Math.round(pitchSummary.stability * 100)}%`}</div>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <button
-                    className="rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
                     type="button"
                     disabled={selectedClipLocked || pitchAnalyzing || !asset}
                     onClick={runPitchAnalysis}
@@ -2771,7 +2771,7 @@ function ClipInspector({
                     {pitchAnalyzing ? zhCN.inspector.pitchAnalysis.analyzing : zhCN.inspector.pitchAnalysis.analyze}
                   </button>
                   <button
-                    className="rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+                    className="rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
                     type="button"
                     disabled={!clip.pitchData || clip.pitchData.length === 0}
                     onClick={exportPitchCsv}
@@ -2782,13 +2782,13 @@ function ClipInspector({
                 </div>
               </div>
             </details>
-            <details className="rounded-md border border-line bg-white" data-testid="spatial-audio-section" open>
-              <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-slate-700">{t('inspector.sections.spatialAudio')}</summary>
+            <details className="rounded-md border border-line bg-[var(--color-bg-elevated)]" data-testid="spatial-audio-section" open>
+              <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">{t('inspector.sections.spatialAudio')}</summary>
               <div className="space-y-3 border-t border-line p-2">
-                <label className="block text-xs font-medium text-slate-600">
+                <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                   {t('inspector.fields.spatialRenderMode')}
                   <select
-                    className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                    className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
                     value={spatialAudio.renderMode}
                     data-testid="clip-spatial-render-mode-select"
                     onChange={(event) => commit({ spatialAudio: { ...spatialAudio, renderMode: event.target.value as SpatialAudioRenderMode } })}
@@ -2836,10 +2836,10 @@ function ClipInspector({
                   onCommit={(z) => commit({ spatialAudio: { ...spatialAudio, z } })}
                   testId="clip-spatial-z-input"
                 />
-                <label className="block text-xs font-medium text-slate-600">
+                <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                   {t('inspector.fields.spatialDistance')}
                   <select
-                    className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                    className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
                     value={spatialAudio.distance}
                     data-testid="clip-spatial-distance-select"
                     onChange={(event) => commit({ spatialAudio: { ...spatialAudio, distance: event.target.value as SpatialAudioDistance } })}
@@ -2889,10 +2889,10 @@ function ClipInspector({
                     testId="clip-spatial-distance-meters-input"
                   />
                 </AnimatedField>
-                <label className="block text-xs font-medium text-slate-600">
+                <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                   {t('inspector.fields.spatialRoomModel')}
                   <select
-                    className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                    className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
                     value={spatialAudio.roomModel}
                     data-testid="clip-spatial-room-model-select"
                     onChange={(event) => commit({ spatialAudio: { ...spatialAudio, roomModel: event.target.value as SpatialAudioRoomModel } })}
@@ -2929,10 +2929,10 @@ function ClipInspector({
               />
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <label className="block text-xs font-medium text-slate-600">
+              <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                 {zhCN.inspector.fields.fadeInCurve}
                 <select
-                  className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                  className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
                   value={fadeInCurve}
                   onChange={(event) => commit({ fadeInCurve: event.target.value as AudioFadeCurve })}
                   data-testid="clip-fade-in-curve-select"
@@ -2942,10 +2942,10 @@ function ClipInspector({
                   <option value="ease-out">{zhCN.inspector.easing.easeOut}</option>
                 </select>
               </label>
-              <label className="block text-xs font-medium text-slate-600">
+              <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                 {zhCN.inspector.fields.fadeOutCurve}
                 <select
-                  className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                  className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
                   value={fadeOutCurve}
                   onChange={(event) => commit({ fadeOutCurve: event.target.value as AudioFadeCurve })}
                   data-testid="clip-fade-out-curve-select"
@@ -2993,8 +2993,8 @@ function ClipInspector({
             ) : null}
             {clip.type === 'subtitle' ? (
               <>
-                <div className="space-y-3 rounded-md border border-line bg-white p-2" data-testid="subtitle-cc-panel">
-                  <label className="block text-xs font-medium text-slate-600">
+                <div className="space-y-3 rounded-md border border-line bg-[var(--color-bg-elevated)] p-2" data-testid="subtitle-cc-panel">
+                  <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                     {zhCN.inspector.closedCaptions.kind}
                     <select
                       className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink"
@@ -3008,7 +3008,7 @@ function ClipInspector({
                   </label>
                   {subtitleType === 'cc' ? (
                     <>
-                      <label className="block text-xs font-medium text-slate-600">
+                      <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                         {zhCN.inspector.closedCaptions.speaker}
                         <input
                           className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink"
@@ -3026,7 +3026,7 @@ function ClipInspector({
                       </label>
                       {projectSpeakers.length > 0 ? (
                         <div className="space-y-1" data-testid="subtitle-speaker-library">
-                          <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{zhCN.inspector.closedCaptions.speakerLibrary}</div>
+                          <div className="text-[11px] font-semibold uppercase tracking-wide text-[var(--color-text-muted)]">{zhCN.inspector.closedCaptions.speakerLibrary}</div>
                           <div className="flex flex-wrap gap-1">
                             {projectSpeakers.map((speaker) => (
                               <button
@@ -3044,7 +3044,7 @@ function ClipInspector({
                       ) : null}
                       <div className="grid grid-cols-2 gap-2">
                         <button
-                          className="rounded-md border border-line bg-white px-2 py-1.5 text-xs font-semibold text-slate-700 hover:bg-panel disabled:opacity-40"
+                          className="rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)] hover:bg-panel disabled:opacity-40"
                           type="button"
                           disabled={!activeSpeaker || Boolean(activeSpeakerEntry)}
                           data-testid="subtitle-add-speaker-button"
@@ -3053,7 +3053,7 @@ function ClipInspector({
                           {zhCN.inspector.closedCaptions.addSpeaker}
                         </button>
                         <button
-                          className="rounded-md border border-line bg-white px-2 py-1.5 text-xs font-semibold text-slate-700 hover:bg-panel disabled:opacity-40"
+                          className="rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)] hover:bg-panel disabled:opacity-40"
                           type="button"
                           disabled={!activeSpeakerEntry}
                           data-testid="subtitle-remove-speaker-button"
@@ -3063,7 +3063,7 @@ function ClipInspector({
                         </button>
                       </div>
                       {activeSpeakerEntry ? (
-                        <label className="block text-xs font-medium text-slate-600">
+                        <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                           {zhCN.inspector.closedCaptions.speakerColor}
                           <input
                             className="mt-1 h-9 w-full rounded-md border border-line px-2 py-1"
@@ -3074,7 +3074,7 @@ function ClipInspector({
                           />
                         </label>
                       ) : null}
-                      <label className="block text-xs font-medium text-slate-600">
+                      <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                         {zhCN.inspector.closedCaptions.soundDesc}
                         <select
                           className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink"
@@ -3113,8 +3113,8 @@ function ClipInspector({
                     </>
                   ) : null}
                 </div>
-                <details className="rounded-md border border-line bg-white" data-testid="data-subtitle-section" open>
-                  <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-slate-700">{zhCN.inspector.sections.dataSubtitle}</summary>
+                <details className="rounded-md border border-line bg-[var(--color-bg-elevated)]" data-testid="data-subtitle-section" open>
+                  <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">{zhCN.inspector.sections.dataSubtitle}</summary>
                   <div className="space-y-2 border-t border-line p-2">
                     <TextAreaField
                       label={zhCN.inspector.fields.dataSubtitleTemplate}
@@ -3122,12 +3122,12 @@ function ClipInspector({
                       testId="data-subtitle-template-input"
                       onCommit={updateDataSubtitleTemplate}
                     />
-                    <div className="rounded bg-panel p-2 text-xs text-slate-600" data-testid="data-subtitle-source-summary">
+                    <div className="rounded bg-panel p-2 text-xs text-[var(--color-text-secondary)]" data-testid="data-subtitle-source-summary">
                       {clip.dataSubtitle ? zhCN.inspector.dataSubtitle.summary(clip.dataSubtitle.sourceType, clip.dataSubtitle.rows.length) : zhCN.inspector.dataSubtitle.notBound}
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <button
-                        className="rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+                        className="rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
                         type="button"
                         disabled={selectedClipLocked}
                         onClick={() => void bindDataSubtitleSource()}
@@ -3136,7 +3136,7 @@ function ClipInspector({
                         {zhCN.inspector.dataSubtitle.bind}
                       </button>
                       <button
-                        className="rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+                        className="rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
                         type="button"
                         disabled={selectedClipLocked || !clip.dataSubtitle}
                         onClick={clearDataSubtitleSource}
@@ -3165,7 +3165,7 @@ function ClipInspector({
                 <ColorField label={zhCN.inspector.fields.shadowColor} value={clip.style.shadowColor} onCommit={(shadowColor) => commit({ style: { shadowColor } })} testId="subtitle-shadow-color-input" />
                 <NumberField label={zhCN.inspector.fields.shadowOffset} value={clip.style.shadowOffset} min={0} max={24} step={1} onCommit={(shadowOffset) => commit({ style: { shadowOffset } })} testId="subtitle-shadow-offset-input" />
                 <button
-                  className="w-full rounded-md border border-line bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-3 py-1.5 text-sm font-semibold text-[var(--color-text-secondary)] hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
                   type="button"
                   disabled={!isTranslationConfigured(translationSettings) || Boolean(subtitleTranslationProgress)}
                   data-testid="subtitle-translate-button"
@@ -3179,12 +3179,12 @@ function ClipInspector({
                   </div>
                 ) : null}
                 {subtitleTranslationProgress ? (
-                  <div className="rounded-md bg-panel p-2 text-xs text-slate-600" data-testid="subtitle-translation-progress">
+                  <div className="rounded-md bg-panel p-2 text-xs text-[var(--color-text-secondary)]" data-testid="subtitle-translation-progress">
                     {zhCN.inspector.translation.progress(subtitleTranslationProgress.completed, subtitleTranslationProgress.total)}
                   </div>
                 ) : null}
                 <NumberField label={zhCN.inspector.fields.bottomMargin} value={clip.style.yOffset} min={0} step={1} onCommit={(yOffset) => commit({ style: { yOffset } })} />
-                <label className="block text-xs font-medium text-slate-600">
+                <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                   {zhCN.inspector.fields.exportMode}
                   <select
                     className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink"
@@ -3203,13 +3203,13 @@ function ClipInspector({
               </>
             ) : null}
             {clip.type === 'text' ? (
-              <details className="rounded-md border border-line bg-white" data-testid="advanced-text-layout-section" open>
-                <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-slate-700">{zhCN.inspector.sections.typography}</summary>
+              <details className="rounded-md border border-line bg-[var(--color-bg-elevated)]" data-testid="advanced-text-layout-section" open>
+                <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">{zhCN.inspector.sections.typography}</summary>
                 <div className="space-y-3 border-t border-line p-2">
-                  <label className="block text-xs font-medium text-slate-600">
+                  <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                     {zhCN.inspector.fields.textFitMode}
                     <select
-                      className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                      className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
                       value={textLayout?.fitMode ?? DEFAULT_TEXT_LAYOUT.fitMode}
                       disabled={selectedClipLocked}
                       data-testid="text-fit-mode-select"
@@ -3244,8 +3244,8 @@ function ClipInspector({
               </details>
             ) : null}
             {clip.type === 'text' ? (
-              <details className="rounded-md border border-line bg-white" data-testid="path-text-section" open>
-                <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-slate-700">{zhCN.inspector.sections.pathText}</summary>
+              <details className="rounded-md border border-line bg-[var(--color-bg-elevated)]" data-testid="path-text-section" open>
+                <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">{zhCN.inspector.sections.pathText}</summary>
                 <div className="space-y-3 border-t border-line p-2">
                   <ToggleField label={zhCN.inspector.fields.pathTextMode} checked={textPath?.enabled ?? false} onCommit={(enabled) => updateTextPath({ enabled })} testId="path-text-toggle" />
                   <RangeNumberField
@@ -3269,11 +3269,11 @@ function ClipInspector({
                     testId="path-text-letter-spacing-input"
                   />
                   <ToggleField label={zhCN.inspector.fields.pathTextRotateCharacters} checked={textPath?.rotateCharacters ?? true} onCommit={(rotateCharacters) => updateTextPath({ rotateCharacters })} testId="path-text-rotate-toggle" />
-                  <div className="rounded-md bg-panel p-2 text-xs text-slate-600" data-testid="path-text-point-summary">
+                  <div className="rounded-md bg-panel p-2 text-xs text-[var(--color-text-secondary)]" data-testid="path-text-point-summary">
                     {zhCN.inspector.fields.pathPointCount(textPath?.path.length ?? DEFAULT_TEXT_PATH.path.length)}
                   </div>
                   <button
-                    className="w-full rounded-md border border-line bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-panel"
+                    className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-3 py-1.5 text-sm font-semibold text-[var(--color-text-secondary)] hover:bg-panel"
                     type="button"
                     data-testid="path-text-offset-keyframe-button"
                     onClick={() => addKeyframe('pathStartOffset', textPath?.startOffset ?? DEFAULT_TEXT_PATH.startOffset)}
@@ -3284,13 +3284,13 @@ function ClipInspector({
               </details>
             ) : null}
             {clip.type === 'text' ? (
-              <details className="rounded-md border border-line bg-white" data-testid="text-animation-section" open>
-                <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-slate-700">{zhCN.inspector.sections.textAnimation}</summary>
+              <details className="rounded-md border border-line bg-[var(--color-bg-elevated)]" data-testid="text-animation-section" open>
+                <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">{zhCN.inspector.sections.textAnimation}</summary>
                 <div className="space-y-3 border-t border-line p-2">
-                  <label className="block text-xs font-medium text-slate-600">
+                  <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                     {zhCN.inspector.fields.animationPreset}
                     <select
-                      className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                      className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
                       value={textAnimationPreset}
                       data-testid="text-animation-preset-select"
                       onChange={(event) => setTextAnimationPreset(event.target.value as TextAnimationPreset)}
@@ -3312,10 +3312,10 @@ function ClipInspector({
                     onCommit={setTextAnimationDuration}
                     testId="text-animation-duration-input"
                   />
-                  <label className="block text-xs font-medium text-slate-600">
+                  <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                     {zhCN.inspector.fields.animationDirection}
                     <select
-                      className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                      className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
                       value={textAnimationDirection}
                       data-testid="text-animation-direction-select"
                       onChange={(event) => setTextAnimationDirection(event.target.value as TextAnimationDirection)}
@@ -3327,11 +3327,11 @@ function ClipInspector({
                       ))}
                     </select>
                   </label>
-                  <div className="rounded-md bg-panel p-2 text-xs text-slate-600" data-testid="text-animation-keyframe-summary">
+                  <div className="rounded-md bg-panel p-2 text-xs text-[var(--color-text-secondary)]" data-testid="text-animation-keyframe-summary">
                     {zhCN.inspector.textAnimation.keyframeCount(textAnimationKeyframeCount)}
                   </div>
                   <button
-                    className="w-full rounded-md border border-line bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-panel"
+                    className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-3 py-1.5 text-sm font-semibold text-[var(--color-text-secondary)] hover:bg-panel"
                     type="button"
                     data-testid="apply-text-animation-button"
                     onClick={applyTextAnimation}
@@ -3345,7 +3345,7 @@ function ClipInspector({
             <ToggleField label={zhCN.inspector.fields.italic} checked={clip.style.italic} onCommit={(italic) => commit({ style: { italic } })} />
             {(clip.type === 'text' || clip.type === 'subtitle') ? (
               <button
-                className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md border border-line bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-panel"
+                className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md border border-line bg-[var(--color-bg-elevated)] px-3 py-1.5 text-sm font-semibold text-[var(--color-text-secondary)] hover:bg-panel"
                 type="button"
                 data-testid="text-clip-tts-voiceover"
                 onClick={() => generateTtsVoiceover([{ id: clip.id, text: clip.text, start: clip.start, duration: clip.duration }])}
@@ -3444,7 +3444,7 @@ function PanelTitle() {
       <SlidersHorizontal size={16} />
       <div>
         <div className="text-sm font-semibold">{zhCN.inspector.title}</div>
-        <div className="text-xs text-slate-500">{zhCN.inspector.subtitle}</div>
+        <div className="text-xs text-[var(--color-text-muted)]">{zhCN.inspector.subtitle}</div>
       </div>
     </div>
   );
@@ -3453,7 +3453,7 @@ function PanelTitle() {
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="mb-4">
-      <h2 className="mb-2 text-xs font-semibold uppercase tracking-normal text-slate-500">{title}</h2>
+      <h2 className="mb-2 text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">{title}</h2>
       <div className="space-y-3">{children}</div>
     </section>
   );
@@ -3468,14 +3468,14 @@ function AudioRestorationWaveformPreview({ before, after }: { before: number[]; 
 
   return (
     <div className="space-y-1.5" data-testid="audio-restoration-waveform-preview">
-      <div className="flex items-center gap-3 text-[11px] font-medium text-slate-500">
-        <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-slate-300" />{t('inspector.fields.audioRestorationBefore')}</span>
+      <div className="flex items-center gap-3 text-[11px] font-medium text-[var(--color-text-muted)]">
+        <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-[var(--color-border)]" />{t('inspector.fields.audioRestorationBefore')}</span>
         <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-500" />{t('inspector.fields.audioRestorationAfter')}</span>
       </div>
       <div className="flex h-14 items-end gap-0.5 rounded border border-line bg-panel px-1.5 py-1.5">
         {bars.map((bar, index) => (
           <div key={index} className="relative h-full min-w-0 flex-1">
-            <div className="absolute bottom-0 left-0 right-0 rounded-sm bg-slate-300" style={{ height: `${Math.max(4, Math.round(bar.before * 100))}%` }} />
+            <div className="absolute bottom-0 left-0 right-0 rounded-sm bg-[var(--color-border)]" style={{ height: `${Math.max(4, Math.round(bar.before * 100))}%` }} />
             <div className="absolute bottom-0 left-1/4 right-1/4 rounded-sm bg-emerald-500/80" style={{ height: `${Math.max(4, Math.round(bar.after * 100))}%` }} />
           </div>
         ))}
@@ -3510,11 +3510,11 @@ function SubtitleStyleTemplatesPanel({
 }) {
   const t = zhCN.inspector.subtitleStyleTemplates;
   return (
-    <details className="rounded-md border border-line bg-white" data-testid="subtitle-style-template-section" open>
-      <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-slate-700">{t.title}</summary>
+    <details className="rounded-md border border-line bg-[var(--color-bg-elevated)]" data-testid="subtitle-style-template-section" open>
+      <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">{t.title}</summary>
       <div className="space-y-3 border-t border-line p-2">
         <button
-          className="w-full rounded-md border border-line bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-panel"
+          className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-3 py-1.5 text-sm font-semibold text-[var(--color-text-secondary)] hover:bg-panel"
           type="button"
           data-testid="subtitle-style-template-save-button"
           onClick={onSave}
@@ -3527,7 +3527,7 @@ function SubtitleStyleTemplatesPanel({
             return (
               <div key={template.id} className="min-w-0 rounded-md border border-line bg-panel p-1.5">
                 <button
-                  className="block w-full overflow-hidden rounded border border-line bg-white text-left text-xs font-semibold text-slate-700 hover:border-brand"
+                  className="block w-full overflow-hidden rounded border border-line bg-[var(--color-bg-elevated)] text-left text-xs font-semibold text-[var(--color-text-secondary)] hover:border-brand"
                   type="button"
                   data-testid={`subtitle-style-template-${template.id}`}
                   onClick={() => onApply(template)}
@@ -3535,11 +3535,11 @@ function SubtitleStyleTemplatesPanel({
                   <img className="block h-12 w-full object-cover" src={makeSvgDataUri(renderSubtitleStyleTemplatePreview(template))} alt={label} loading="lazy" />
                   <span className="flex min-h-8 items-center justify-between gap-1 px-1.5 py-1">
                     <span className="min-w-0 truncate">{label}</span>
-                    {template.kind === 'custom' ? <span className="shrink-0 rounded-sm bg-white px-1 text-[10px] font-medium text-slate-500">{template.id.startsWith('shared-') ? t.sharedBadge : t.customBadge}</span> : null}
+                    {template.kind === 'custom' ? <span className="shrink-0 rounded-sm bg-[var(--color-bg-elevated)] px-1 text-[10px] font-medium text-[var(--color-text-muted)]">{template.id.startsWith('shared-') ? t.sharedBadge : t.customBadge}</span> : null}
                   </span>
                 </button>
                 <button
-                  className="mt-1 flex w-full items-center justify-center gap-1 rounded border border-line bg-white px-2 py-1 text-xs font-medium text-slate-600 hover:bg-panel"
+                  className="mt-1 flex w-full items-center justify-center gap-1 rounded border border-line bg-[var(--color-bg-elevated)] px-2 py-1 text-xs font-medium text-[var(--color-text-secondary)] hover:bg-panel"
                   type="button"
                   data-testid={`subtitle-style-template-share-${template.id}`}
                   aria-label={`${t.addToShared}: ${label}`}
@@ -3549,7 +3549,7 @@ function SubtitleStyleTemplatesPanel({
                 </button>
                 {template.kind === 'custom' ? (
                   <button
-                    className="mt-1 flex w-full items-center justify-center gap-1 rounded border border-line bg-white px-2 py-1 text-xs font-medium text-slate-600 hover:bg-rose-50 hover:text-rose-700"
+                    className="mt-1 flex w-full items-center justify-center gap-1 rounded border border-line bg-[var(--color-bg-elevated)] px-2 py-1 text-xs font-medium text-[var(--color-text-secondary)] hover:bg-rose-50 hover:text-rose-700"
                     type="button"
                     data-testid={`subtitle-style-template-delete-${template.id}`}
                     aria-label={`${t.deleteCustom}: ${label}`}
@@ -3649,10 +3649,10 @@ function SubtitleProofreadingPanel({
   };
 
   return (
-    <details className="rounded-md border border-line bg-white" data-testid="subtitle-proofreading-section" open>
-      <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-slate-700">{t.title}</summary>
+    <details className="rounded-md border border-line bg-[var(--color-bg-elevated)]" data-testid="subtitle-proofreading-section" open>
+      <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">{t.title}</summary>
       <div className="space-y-3 border-t border-line p-2">
-        <div className="rounded-md bg-panel p-2 text-xs text-slate-600" data-testid="subtitle-proofreading-summary">
+        <div className="rounded-md bg-panel p-2 text-xs text-[var(--color-text-secondary)]" data-testid="subtitle-proofreading-summary">
           {t.summary(trackSubtitleClips.length, issues.length)}
         </div>
         <div className="grid grid-cols-2 gap-2">
@@ -3680,12 +3680,12 @@ function SubtitleProofreadingPanel({
                 </div>
               </div>
             ))}
-            {issues.length > 10 ? <div className="text-xs text-slate-500">{t.moreIssues(issues.length - 10)}</div> : null}
+            {issues.length > 10 ? <div className="text-xs text-[var(--color-text-muted)]">{t.moreIssues(issues.length - 10)}</div> : null}
           </div>
         )}
         <div className="grid grid-cols-2 gap-2">
           <button
-            className="rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
             type="button"
             disabled={selectedClipLocked || fixes.length === 0}
             onClick={applyFixes}
@@ -3694,7 +3694,7 @@ function SubtitleProofreadingPanel({
             {t.fix}
           </button>
           <button
-            className="rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
             type="button"
             disabled={issues.length === 0}
             onClick={() => void exportCsv()}
@@ -3790,32 +3790,32 @@ function SubtitleRetimingPanel({
   };
 
   return (
-    <details className="rounded-md border border-line bg-white" data-testid="subtitle-retiming-section" open>
-      <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-slate-700">{t.title}</summary>
+    <details className="rounded-md border border-line bg-[var(--color-bg-elevated)]" data-testid="subtitle-retiming-section" open>
+      <summary className="cursor-pointer px-2 py-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">{t.title}</summary>
       <div className="space-y-3 border-t border-line p-2">
-        <div className="rounded-md bg-panel p-2 text-xs text-slate-600" data-testid="subtitle-retiming-summary">
+        <div className="rounded-md bg-panel p-2 text-xs text-[var(--color-text-secondary)]" data-testid="subtitle-retiming-summary">
           {t.summary(fullTrackTargets.length, selectedTargets.length)}
         </div>
         <div className="grid grid-cols-[1fr_auto] items-end gap-2">
           <NumberField label={t.shiftSeconds} value={shiftSeconds} step={0.1} onCommit={setShiftSeconds} testId="subtitle-shift-input" />
-          <button className="rounded-md border border-line bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-panel" type="button" data-testid="subtitle-shift-apply-button" onClick={applyShift}>
+          <button className="rounded-md border border-line bg-[var(--color-bg-elevated)] px-3 py-1.5 text-sm font-semibold text-[var(--color-text-secondary)] hover:bg-panel" type="button" data-testid="subtitle-shift-apply-button" onClick={applyShift}>
             {t.apply}
           </button>
         </div>
         <div className="grid grid-cols-[1fr_auto] items-end gap-2">
           <NumberField label={t.scaleFactor} value={scaleFactor} min={0.01} step={0.01} onCommit={setScaleFactor} testId="subtitle-scale-input" />
-          <button className="rounded-md border border-line bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-panel" type="button" data-testid="subtitle-scale-apply-button" onClick={applyScale}>
+          <button className="rounded-md border border-line bg-[var(--color-bg-elevated)] px-3 py-1.5 text-sm font-semibold text-[var(--color-text-secondary)] hover:bg-panel" type="button" data-testid="subtitle-scale-apply-button" onClick={applyScale}>
             {t.apply}
           </button>
         </div>
-        <button className="w-full rounded-md border border-line bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-panel" type="button" data-testid="subtitle-peak-align-button" onClick={applyPeakAlign}>
+        <button className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-3 py-1.5 text-sm font-semibold text-[var(--color-text-secondary)] hover:bg-panel" type="button" data-testid="subtitle-peak-align-button" onClick={applyPeakAlign}>
           {t.alignToPeak}
         </button>
         <div className="grid grid-cols-2 gap-2">
           <NumberField label={t.startDelta} value={batchStartDelta} step={0.1} onCommit={setBatchStartDelta} testId="subtitle-batch-start-delta-input" />
           <NumberField label={t.endDelta} value={batchEndDelta} step={0.1} onCommit={setBatchEndDelta} testId="subtitle-batch-end-delta-input" />
         </div>
-        <button className="w-full rounded-md border border-line bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-panel" type="button" data-testid="subtitle-batch-adjust-button" onClick={applyBatchAdjust}>
+        <button className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-3 py-1.5 text-sm font-semibold text-[var(--color-text-secondary)] hover:bg-panel" type="button" data-testid="subtitle-batch-adjust-button" onClick={applyBatchAdjust}>
           {t.batchAdjust}
         </button>
       </div>
@@ -3904,7 +3904,7 @@ function SpeedCurveEditor({ clip, onCommit }: { clip: Clip; onCommit(frames: Spe
 
   return (
     <div className="rounded-md border border-line bg-panel p-2" data-testid="speed-curve-editor">
-      <div className="mb-1 flex items-center justify-between text-[11px] font-medium text-slate-500">
+      <div className="mb-1 flex items-center justify-between text-[11px] font-medium text-[var(--color-text-muted)]">
         <span>{zhCN.inspector.fields.speedCurve}</span>
         <span>
           {zhCN.inspector.fields.speedCurveMin} - {zhCN.inspector.fields.speedCurveMax}
@@ -4091,7 +4091,7 @@ function KeyframeCurveEditor({
 
   return (
     <div className="rounded-md border border-line bg-panel p-2" data-testid="keyframe-curve-editor">
-      <div className="mb-1 flex items-center justify-between text-[11px] font-medium text-slate-500">
+      <div className="mb-1 flex items-center justify-between text-[11px] font-medium text-[var(--color-text-muted)]">
         <span>{zhCN.inspector.fields.speedDerivative}</span>
         <span className="tabular-nums">{draft.length}</span>
       </div>
@@ -4102,7 +4102,7 @@ function KeyframeCurveEditor({
         height={64}
         data-testid="keyframe-speed-curve-canvas"
       />
-      <div className="mb-1 flex items-center justify-between text-[11px] font-medium text-slate-500">
+      <div className="mb-1 flex items-center justify-between text-[11px] font-medium text-[var(--color-text-muted)]">
         <span>{formatKeyframeProperty(property)}</span>
         <span>{formatKeyframeValue(property, KEYFRAME_PROPERTY_LIMITS[property].min)} - {formatKeyframeValue(property, KEYFRAME_PROPERTY_LIMITS[property].max)}</span>
       </div>
@@ -4619,7 +4619,7 @@ function CurveEditor({ curves, onCommit }: { curves: ColorCurves; onCommit(curve
           <button
             key={channel.key}
             className={`rounded-md border px-2 py-1 text-xs font-semibold ${
-              activeChannel === channel.key ? 'border-brand bg-white text-brand' : 'border-line bg-white text-slate-600 hover:bg-panel'
+              activeChannel === channel.key ? 'border-brand bg-[var(--color-bg-elevated)] text-brand' : 'border-line bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:bg-panel'
             }`}
             type="button"
             data-testid={`curve-tab-${channel.key}`}
@@ -4642,7 +4642,7 @@ function CurveEditor({ curves, onCommit }: { curves: ColorCurves; onCommit(curve
         onDoubleClick={handleDoubleClick}
       />
       <button
-        className="w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel"
+        className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel"
         type="button"
         data-testid="reset-curves-button"
         onClick={() => {
@@ -4682,7 +4682,7 @@ function ThreeWayColorEditor({ threeWayColor, onCommit }: { threeWayColor: Three
         <ColorWheelControl key={channel.key} label={channel.label} value={normalized[channel.key]} onCommit={(patch) => updateWheel(channel.key, patch)} testId={`color-wheel-${channel.key}`} />
       ))}
       <button
-        className="w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel"
+        className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel"
         type="button"
         data-testid="reset-three-way-color-button"
         onClick={() => onCommit(DEFAULT_THREE_WAY_COLOR)}
@@ -4722,8 +4722,8 @@ function ColorWheelControl({
   };
 
   return (
-    <div className="rounded-md border border-line bg-white p-2" data-testid={testId}>
-      <div className="mb-2 text-xs font-semibold text-slate-700">{label}</div>
+    <div className="rounded-md border border-line bg-[var(--color-bg-elevated)] p-2" data-testid={testId}>
+      <div className="mb-2 text-xs font-semibold text-[var(--color-text-secondary)]">{label}</div>
       <div className="flex items-start gap-3">
         <canvas
           ref={canvasRef}
@@ -4813,11 +4813,11 @@ function PrivacyBlurPanel({
   const t = zhCN.inspector.privacyBlur;
   return (
     <div className="mb-3 space-y-2 rounded-md border border-line bg-panel p-2" data-testid="privacy-blur-panel">
-      <div className="text-xs font-semibold text-slate-700">{t.title}</div>
-      <label className="block text-xs font-medium text-slate-600">
+      <div className="text-xs font-semibold text-[var(--color-text-secondary)]">{t.title}</div>
+      <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
         {zhCN.inspector.fields.privacyBlurEffect}
         <select
-          className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+          className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
           value={effect}
           data-testid="privacy-blur-effect-select"
           onChange={(event) => onEffectChange(normalizePrivacyBlurEffect(event.target.value as PrivacyBlurEffect))}
@@ -4829,7 +4829,7 @@ function PrivacyBlurPanel({
       </label>
       {!modelConfigured ? <div className="text-xs font-medium text-amber-700" data-testid="privacy-blur-model-required">{t.modelRequired}</div> : null}
       <button
-        className="w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
+        className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50"
         type="button"
         disabled={!modelConfigured || busy || disabled}
         data-testid="privacy-blur-detect-button"
@@ -4890,7 +4890,7 @@ function RichTextEditor({
     <div className="space-y-2" data-testid="rich-text-editor">
       <div className="flex flex-wrap items-center gap-1">
         <button
-          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-white text-slate-700 hover:bg-panel disabled:opacity-40"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:bg-panel disabled:opacity-40"
           type="button"
           title={zhCN.inspector.richText.bold}
           aria-label={zhCN.inspector.richText.bold}
@@ -4904,7 +4904,7 @@ function RichTextEditor({
           <Bold size={15} />
         </button>
         <button
-          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-white text-slate-700 hover:bg-panel disabled:opacity-40"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:bg-panel disabled:opacity-40"
           type="button"
           title={zhCN.inspector.richText.italic}
           aria-label={zhCN.inspector.richText.italic}
@@ -4918,7 +4918,7 @@ function RichTextEditor({
           <Italic size={15} />
         </button>
         <button
-          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-white text-slate-700 hover:bg-panel disabled:opacity-40"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-line bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:bg-panel disabled:opacity-40"
           type="button"
           title={zhCN.inspector.richText.underline}
           aria-label={zhCN.inspector.richText.underline}
@@ -4932,7 +4932,7 @@ function RichTextEditor({
           <Underline size={15} />
         </button>
         <input
-          className="h-8 w-10 rounded-md border border-line bg-white p-1 disabled:opacity-40"
+          className="h-8 w-10 rounded-md border border-line bg-[var(--color-bg-elevated)] p-1 disabled:opacity-40"
           type="color"
           defaultValue={clip.style.color}
           title={zhCN.inspector.richText.color}
@@ -4942,7 +4942,7 @@ function RichTextEditor({
           onChange={(event) => applyColor(event.target.value)}
         />
         <input
-          className="h-8 w-16 rounded-md border border-line px-2 text-xs text-slate-700 disabled:opacity-40"
+          className="h-8 w-16 rounded-md border border-line px-2 text-xs text-[var(--color-text-secondary)] disabled:opacity-40"
           type="number"
           min={8}
           max={512}
@@ -4957,7 +4957,7 @@ function RichTextEditor({
       </div>
       <div
         ref={editorRef}
-        className="min-h-24 w-full rounded-md border border-line bg-white px-2 py-2 text-sm text-ink outline-none focus:border-brand disabled:opacity-40"
+        className="min-h-24 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-2 text-sm text-ink outline-none focus:border-brand disabled:opacity-40"
         contentEditable={!disabled}
         suppressContentEditableWarning
         data-testid="clip-text-input"
@@ -5107,10 +5107,10 @@ function MotionGraphicPanel({
   return (
     <Section title={motionGraphicsText.title}>
       {selectedClipLocked ? <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs font-medium text-amber-800">{zhCN.inspector.locked}</div> : null}
-      <label className="block text-xs font-medium text-slate-600">
+      <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
         {motionGraphicsText.template}
         <select
-          className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60"
+          className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60"
           value={motionGraphic.templateType}
           disabled={selectedClipLocked}
           data-testid="motion-graphic-template-select"
@@ -5122,7 +5122,7 @@ function MotionGraphicPanel({
             </option>
           ))}
         </select>
-        <div className="mt-1 text-[11px] text-slate-500">{motionGraphicsText.templates[motionGraphic.templateType].description}</div>
+        <div className="mt-1 text-[11px] text-[var(--color-text-muted)]">{motionGraphicsText.templates[motionGraphic.templateType].description}</div>
       </label>
       <div className="space-y-3">
         {definition.params.map((param) => {
@@ -5197,10 +5197,10 @@ function MotionGraphicPanel({
           if (param.type === 'select') {
             const value = typeof currentValue === 'string' ? currentValue : String(param.defaultValue ?? '');
             return (
-              <label key={param.key} className="block text-xs font-medium text-slate-600">
+              <label key={param.key} className="block text-xs font-medium text-[var(--color-text-secondary)]">
                 {label}
                 <select
-                  className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60"
+                  className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60"
                   value={value}
                   disabled={selectedClipLocked}
                   data-testid={testId}
@@ -5246,7 +5246,7 @@ function MasksEditor({
   return (
     <div className="space-y-3" data-testid="masks-editor">
       <button
-        className="flex w-full items-center justify-center gap-2 rounded-md border border-line bg-white px-2 py-1.5 text-sm font-medium hover:bg-panel"
+        className="flex w-full items-center justify-center gap-2 rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium hover:bg-panel"
         type="button"
         data-testid="add-mask-button"
         onClick={onAdd}
@@ -5256,9 +5256,9 @@ function MasksEditor({
       </button>
       {masks.map((mask, index) => (
         <details key={mask.id} className="rounded-md border border-line bg-panel" open data-testid={`mask-item-${mask.id}`}>
-          <summary className="flex cursor-pointer items-center gap-2 px-2 py-2 text-sm font-semibold text-slate-700">
+          <summary className="flex cursor-pointer items-center gap-2 px-2 py-2 text-sm font-semibold text-[var(--color-text-secondary)]">
             <span className="min-w-0 flex-1 truncate">{`${zhCN.inspector.sections.masks} ${index + 1}`}</span>
-            <label className="flex items-center gap-1 text-xs font-medium text-slate-500" onClick={(event) => event.stopPropagation()}>
+            <label className="flex items-center gap-1 text-xs font-medium text-[var(--color-text-muted)]" onClick={(event) => event.stopPropagation()}>
               {zhCN.inspector.fields.enabled}
               <input
                 className="h-4 w-4 accent-brand"
@@ -5270,10 +5270,10 @@ function MasksEditor({
             </label>
           </summary>
           <div className="space-y-3 border-t border-line p-2">
-            <label className="block text-xs font-medium text-slate-600">
+            <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
               {zhCN.inspector.fields.maskType}
               <select
-                className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+                className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
                 value={mask.type}
                 data-testid={`mask-type-${mask.id}`}
                 onChange={(event) => onUpdate(mask.id, { type: event.target.value as ClipMask['type'] })}
@@ -5284,7 +5284,7 @@ function MasksEditor({
               </select>
             </label>
             {mask.type === 'path' ? (
-              <div className="rounded-md border border-dashed border-line bg-white px-2 py-1.5 text-xs text-slate-500" data-testid={`path-mask-help-${mask.id}`}>
+              <div className="rounded-md border border-dashed border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-xs text-[var(--color-text-muted)]" data-testid={`path-mask-help-${mask.id}`}>
                 <div>{zhCN.inspector.fields.pathPointCount(Math.max(0, (mask.path?.length ?? 0) - (mask.path && mask.path.length > 1 && mask.path[0].x === mask.path.at(-1)?.x && mask.path[0].y === mask.path.at(-1)?.y ? 1 : 0)))}</div>
                 <div>{zhCN.inspector.fields.editPathInPreview}</div>
               </div>
@@ -5306,7 +5306,7 @@ function MasksEditor({
               testId={`mask-feather-${mask.id}`}
             />
             <ToggleField label={zhCN.inspector.fields.inverted} checked={mask.inverted} onCommit={(inverted) => onUpdate(mask.id, { inverted })} testId={`mask-inverted-${mask.id}`} />
-            <div className="space-y-2 rounded-md border border-line bg-white p-2" data-testid={`mask-privacy-blur-${mask.id}`}>
+            <div className="space-y-2 rounded-md border border-line bg-[var(--color-bg-elevated)] p-2" data-testid={`mask-privacy-blur-${mask.id}`}>
               <ToggleField
                 label={zhCN.inspector.fields.privacyBlurEnabled}
                 checked={mask.privacyBlur?.enabled === true}
@@ -5321,10 +5321,10 @@ function MasksEditor({
                 }
                 testId={`mask-privacy-blur-enabled-${mask.id}`}
               />
-              <label className="block text-xs font-medium text-slate-600">
+              <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                 {zhCN.inspector.fields.privacyBlurEffect}
                 <select
-                  className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60"
+                  className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60"
                   value={normalizePrivacyBlurEffect(mask.privacyBlur?.effect)}
                   disabled={mask.privacyBlur?.enabled !== true}
                   data-testid={`mask-privacy-blur-effect-${mask.id}`}
@@ -5344,10 +5344,10 @@ function MasksEditor({
                 </select>
               </label>
               {normalizePrivacyBlurEffect(mask.privacyBlur?.effect) === 'solid' ? (
-                <label className="block text-xs font-medium text-slate-600">
+                <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                   {zhCN.inspector.fields.privacyBlurSolidColor}
                   <input
-                    className="mt-1 h-8 w-full rounded-md border border-line bg-white px-2 text-sm text-ink"
+                    className="mt-1 h-8 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 text-sm text-ink"
                     type="color"
                     value={mask.privacyBlur?.color ?? '#000000'}
                     disabled={mask.privacyBlur?.enabled !== true}
@@ -5366,7 +5366,7 @@ function MasksEditor({
               ) : null}
             </div>
             <button
-              className="flex w-full items-center justify-center gap-2 rounded-md border border-rose-300 bg-white px-2 py-1.5 text-sm font-medium text-rose-700 hover:bg-rose-50"
+              className="flex w-full items-center justify-center gap-2 rounded-md border border-rose-300 bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm font-medium text-rose-700 hover:bg-rose-50"
               type="button"
               data-testid={`remove-mask-${mask.id}`}
               onClick={() => onRemove(mask.id)}
@@ -5426,10 +5426,10 @@ function EffectsEditor({
   return (
     <div className="space-y-3 rounded-md border border-line bg-panel p-2" data-testid="effects-editor">
       <div className="flex items-end gap-2">
-        <label className="min-w-0 flex-1 text-xs font-medium text-slate-600">
+        <label className="min-w-0 flex-1 text-xs font-medium text-[var(--color-text-secondary)]">
           {zhCN.inspector.fields.effectType}
           <select
-            className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+            className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
             value={selectedType}
             data-testid="effect-type-select"
             onChange={(event) => setSelectedType(event.target.value as EffectType)}
@@ -5442,7 +5442,7 @@ function EffectsEditor({
           </select>
         </label>
         <button
-          className="flex h-9 items-center gap-2 rounded-md border border-line bg-white px-2 text-sm font-medium hover:bg-panel"
+          className="flex h-9 items-center gap-2 rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 text-sm font-medium hover:bg-panel"
           type="button"
           data-testid="add-effect-button"
           onClick={() => onAdd(selectedType)}
@@ -5455,7 +5455,7 @@ function EffectsEditor({
         {effects.map((effect, index) => (
           <details
             key={effect.id}
-            className="rounded-md border border-line bg-white"
+            className="rounded-md border border-line bg-[var(--color-bg-elevated)]"
             open
             data-testid={`effect-item-${effect.type}`}
             draggable
@@ -5464,10 +5464,10 @@ function EffectsEditor({
             onDrop={() => dropEffect(effect.id)}
             onDragEnd={() => setDraggedEffectId(null)}
           >
-            <summary className="flex cursor-pointer items-center gap-2 px-2 py-2 text-sm font-semibold text-slate-700">
-              <GripVertical size={14} className="shrink-0 text-slate-400" />
+            <summary className="flex cursor-pointer items-center gap-2 px-2 py-2 text-sm font-semibold text-[var(--color-text-secondary)]">
+              <GripVertical size={14} className="shrink-0 text-[var(--color-text-muted)]" />
               <span className="min-w-0 flex-1 truncate">{zhCN.inspector.effectNames[effect.type]}</span>
-              <label className="flex items-center gap-1 text-xs font-medium text-slate-500" onClick={(event) => event.stopPropagation()}>
+              <label className="flex items-center gap-1 text-xs font-medium text-[var(--color-text-muted)]" onClick={(event) => event.stopPropagation()}>
                 {zhCN.inspector.fields.enabled}
                 <input
                   className="h-4 w-4 accent-brand"
@@ -5502,7 +5502,7 @@ function EffectsEditor({
               )}
               <div className="flex justify-end gap-2">
                 <button
-                  className="h-8 w-8 rounded-md border border-line bg-white p-1 hover:bg-panel disabled:opacity-40"
+                  className="h-8 w-8 rounded-md border border-line bg-[var(--color-bg-elevated)] p-1 hover:bg-panel disabled:opacity-40"
                   type="button"
                   title={zhCN.inspector.fields.moveEffectUp}
                   disabled={index === 0}
@@ -5511,7 +5511,7 @@ function EffectsEditor({
                   <ArrowUp size={14} />
                 </button>
                 <button
-                  className="h-8 w-8 rounded-md border border-line bg-white p-1 hover:bg-panel disabled:opacity-40"
+                  className="h-8 w-8 rounded-md border border-line bg-[var(--color-bg-elevated)] p-1 hover:bg-panel disabled:opacity-40"
                   type="button"
                   title={zhCN.inspector.fields.moveEffectDown}
                   disabled={index === effects.length - 1}
@@ -5520,7 +5520,7 @@ function EffectsEditor({
                   <ArrowDown size={14} />
                 </button>
                 <button
-                  className="h-8 w-8 rounded-md border border-rose-300 bg-white p-1 text-rose-700 hover:bg-rose-50"
+                  className="h-8 w-8 rounded-md border border-rose-300 bg-[var(--color-bg-elevated)] p-1 text-rose-700 hover:bg-rose-50"
                   type="button"
                   title={zhCN.inspector.fields.removeEffect}
                   data-testid={`remove-effect-${effect.id}`}
@@ -5549,7 +5549,7 @@ function formatMotionGraphicNumberValue(param: MotionGraphicParamDefinition, val
 
 function TextField({ label, value, onCommit, disabled, testId }: { label: string; value: string; onCommit(value: string): void; disabled?: boolean; testId?: string }) {
   return (
-    <label className="block text-xs font-medium text-slate-600">
+    <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
       {label}
       <input className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60" defaultValue={value} disabled={disabled} data-testid={testId} onBlur={(event) => onCommit(event.target.value)} />
     </label>
@@ -5558,7 +5558,7 @@ function TextField({ label, value, onCommit, disabled, testId }: { label: string
 
 function TextAreaField({ label, value, onCommit, disabled, testId }: { label: string; value: string; onCommit(value: string): void; disabled?: boolean; testId?: string }) {
   return (
-    <label className="block text-xs font-medium text-slate-600">
+    <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
       {label}
       <textarea className="mt-1 min-h-20 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink disabled:cursor-not-allowed disabled:opacity-60" defaultValue={value} disabled={disabled} onBlur={(event) => onCommit(event.target.value)} data-testid={testId} />
     </label>
@@ -5613,10 +5613,10 @@ function CustomShaderEffectFields({
 
   return (
     <div className="space-y-3">
-      <label className="block text-xs font-medium text-slate-600">
+      <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
         {zhCN.inspector.fields.shaderExample}
         <select
-          className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+          className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
           value={params.preset}
           data-testid="custom-shader-example-select"
           onChange={(event) => applyExample(event.target.value)}
@@ -5629,7 +5629,7 @@ function CustomShaderEffectFields({
           <option value="custom">{zhCN.inspector.customShader.custom}</option>
         </select>
       </label>
-      <label className="block text-xs font-medium text-slate-600">
+      <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
         {zhCN.inspector.fields.shaderCode}
         <textarea
           className="mt-1 min-h-48 w-full resize-y rounded-md border border-line bg-slate-950 px-2 py-2 font-mono text-xs leading-5 text-slate-50 outline-none focus:ring-2 focus:ring-brand"
@@ -5690,7 +5690,7 @@ function NumberField({
     onCommit(clamped);
   };
   return (
-    <label className="block text-xs font-medium text-slate-600">
+    <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
       {hideLabel ? <span className="sr-only">{label}</span> : label}
       <input
         className="mt-1 w-full rounded-md border border-line px-2 py-1.5 text-sm text-ink"
@@ -5723,10 +5723,10 @@ function AudioSpectrumEffectFields({
   const params = normalizeAudioSpectrumParams(effect.params);
   return (
     <div className="space-y-3">
-      <label className="block text-xs font-medium text-slate-600">
+      <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
         {zhCN.inspector.fields.style}
         <select
-          className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+          className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
           value={getEffectStringParam(effect.params, 'style', params.style)}
           data-testid={`effect-param-${effect.id}-style`}
           onChange={(event) => onUpdate(effect.id, { params: { style: event.target.value } })}
@@ -5738,10 +5738,10 @@ function AudioSpectrumEffectFields({
           ))}
         </select>
       </label>
-      <label className="block text-xs font-medium text-slate-600">
+      <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
         {zhCN.exportDialog.audioVisualization.theme}
         <select
-          className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+          className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
           value={getEffectStringParam(effect.params, 'themeId', params.themeId)}
           data-testid={`effect-param-${effect.id}-theme`}
           onChange={(event) => onUpdate(effect.id, { params: { themeId: event.target.value } })}
@@ -5776,10 +5776,10 @@ function AudioSpectrumEffectFields({
         onCommit={(height) => onUpdate(effect.id, { params: { height } })}
         testId={`effect-param-${effect.id}-height`}
       />
-      <label className="block text-xs font-medium text-slate-600">
+      <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
         {zhCN.inspector.fields.position}
         <select
-          className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+          className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
           value={getEffectStringParam(effect.params, 'position', params.position)}
           data-testid={`effect-param-${effect.id}-position`}
           onChange={(event) => onUpdate(effect.id, { params: { position: event.target.value } })}
@@ -5841,10 +5841,10 @@ function MotionBlurEffectFields({
         onCommit={(angle) => onUpdate(effect.id, { params: { angle } })}
         testId={`effect-param-${effect.id}-angle`}
       />
-      <label className="block text-xs font-medium text-slate-600">
+      <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
         {zhCN.inspector.fields.samples}
         <select
-          className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+          className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
           value={params.samples}
           data-testid={`effect-param-${effect.id}-samples`}
           onChange={(event) => onUpdate(effect.id, { params: { samples: Number(event.target.value) } })}
@@ -5896,7 +5896,7 @@ function RangeField({
   testId?: string;
 }) {
   return (
-    <label className="block text-xs font-medium text-slate-600">
+    <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
       <span className="flex justify-between">
         <span className={hideLabel ? 'sr-only' : undefined}>{label}</span>
         <span className="tabular-nums">{format(value)}</span>
@@ -5951,7 +5951,7 @@ function RangeNumberField({
     onCommit(Math.min(max, Math.max(min, nextValue)));
   };
   return (
-    <label className="block text-xs font-medium text-slate-600">
+    <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
       <span className="flex items-center justify-between gap-2">
         <span>{label}</span>
         <input
@@ -5986,7 +5986,7 @@ function RangeNumberField({
             commitClamped(next);
           }}
         />
-        <span className="w-14 text-right text-xs tabular-nums text-slate-500">{format(value)}</span>
+        <span className="w-14 text-right text-xs tabular-nums text-[var(--color-text-muted)]">{format(value)}</span>
       </span>
     </label>
   );
@@ -6019,13 +6019,13 @@ function ExpressionNumberField({
     setDraft(formatNumberInputValue(value));
   };
   return (
-    <label className="block text-xs font-medium text-slate-600">
+    <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
       <span className="flex items-center justify-between gap-2">
         <span>{label}</span>
-        <span className="text-[11px] font-normal tabular-nums text-slate-500">{format(value)}</span>
+        <span className="text-[11px] font-normal tabular-nums text-[var(--color-text-muted)]">{format(value)}</span>
       </span>
       <input
-        className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-xs tabular-nums text-ink"
+        className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-xs tabular-nums text-ink"
         type="text"
         value={draft}
         data-testid={testId}
@@ -6043,7 +6043,7 @@ function ExpressionNumberField({
 
 function ColorField({ label, value, onCommit, disabled, testId }: { label: string; value: string; onCommit(value: string): void; disabled?: boolean; testId?: string }) {
   return (
-    <label className="flex items-center justify-between text-xs font-medium text-slate-600">
+    <label className="flex items-center justify-between text-xs font-medium text-[var(--color-text-secondary)]">
       {label}
       <input className="h-8 w-12 rounded border border-line disabled:cursor-not-allowed disabled:opacity-60" type="color" value={value} disabled={disabled} onChange={(event) => onCommit(event.target.value)} data-testid={testId} />
     </label>
@@ -6052,7 +6052,7 @@ function ColorField({ label, value, onCommit, disabled, testId }: { label: strin
 
 function ToggleField({ label, checked, disabled, onCommit, testId }: { label: string; checked: boolean; disabled?: boolean; onCommit(value: boolean): void; testId?: string }) {
   return (
-    <label className="flex items-center justify-between text-xs font-medium text-slate-600">
+    <label className="flex items-center justify-between text-xs font-medium text-[var(--color-text-secondary)]">
       {label}
       <input className="h-4 w-4 accent-brand disabled:cursor-not-allowed disabled:opacity-60" type="checkbox" checked={checked} disabled={disabled} onChange={(event) => onCommit(event.target.checked)} data-testid={testId} />
     </label>
@@ -6298,11 +6298,11 @@ function AnimatedField({ label, children, onAddKeyframe, disabled, testId }: { l
   return (
     <div className="grid grid-cols-[1fr_auto] items-end gap-2">
       <div>
-        <div className="mb-1 text-xs font-medium text-slate-600">{label}</div>
+        <div className="mb-1 text-xs font-medium text-[var(--color-text-secondary)]">{label}</div>
         {children}
       </div>
       <button
-        className="mb-0.5 h-8 w-8 rounded-md border border-line bg-white text-xs font-semibold text-brand hover:bg-panel"
+        className="mb-0.5 h-8 w-8 rounded-md border border-line bg-[var(--color-bg-elevated)] text-xs font-semibold text-brand hover:bg-panel"
         type="button"
         title={zhCN.inspector.addKeyframeTitle(label)}
         disabled={disabled}

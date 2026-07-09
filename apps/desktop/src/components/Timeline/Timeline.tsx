@@ -2868,7 +2868,7 @@ function addProjectBookmark(time = playheadTime): void {
   return (
     <section
       ref={rootRef}
-      className={clsx('relative flex h-full min-h-0 min-w-0 max-w-full flex-col border-t border-line bg-white focus:outline-none', reduceMotion && 'timeline-reduce-motion')}
+      className={clsx('relative flex h-full min-h-0 min-w-0 max-w-full flex-col border-t border-line bg-panel focus:outline-none', reduceMotion && 'timeline-reduce-motion')}
       tabIndex={0}
       data-testid="timeline-root"
       data-reduce-motion={reduceMotion ? 'true' : 'false'}
@@ -2886,8 +2886,8 @@ function addProjectBookmark(time = playheadTime): void {
       <div className="flex shrink-0 items-center gap-2 overflow-x-auto border-b border-line px-3 py-2">
         <div className="mr-auto min-w-[170px] shrink-0">
           <div className="text-sm font-semibold">{zhCN.timeline.title}</div>
-          <div className="whitespace-nowrap text-xs text-slate-500">{zhCN.timeline.subtitle}</div>
-          <div className="mt-1 flex items-center gap-1 text-[11px] text-slate-500" data-testid="sequence-breadcrumb">
+          <div className="whitespace-nowrap text-xs text-[var(--color-text-muted)]">{zhCN.timeline.subtitle}</div>
+          <div className="mt-1 flex items-center gap-1 text-[11px] text-[var(--color-text-muted)]" data-testid="sequence-breadcrumb">
             {isMainSequence ? (
               <span>{zhCN.timeline.mainSequence}</span>
             ) : (
@@ -2896,7 +2896,7 @@ function addProjectBookmark(time = playheadTime): void {
                   {zhCN.timeline.backToMainSequence}
                 </button>
                 <span>/</span>
-                <span className="font-medium text-slate-700">{activeSequence?.name ?? zhCN.timeline.mainSequence}</span>
+                <span className="font-medium text-[var(--color-text-secondary)]">{activeSequence?.name ?? zhCN.timeline.mainSequence}</span>
               </>
             )}
             <button className="ml-2 rounded p-0.5 hover:bg-panel" type="button" title={zhCN.timeline.sequenceSettingsButton} data-testid="sequence-settings-button" onClick={() => setSequenceSettingsDialogOpen(true)}><Settings2 size={12} /></button>
@@ -3063,9 +3063,9 @@ function addProjectBookmark(time = playheadTime): void {
           data-testid="timeline-zoom-slider"
         />
         <div className="ml-1 flex items-center gap-1 border-l border-line pl-2" data-testid="timeline-color-filter-bar">
-          <span className="text-[11px] font-medium text-slate-500">{zhCN.timeline.timelineColorFilter}</span>
+          <span className="text-[11px] font-medium text-[var(--color-text-muted)]">{zhCN.timeline.timelineColorFilter}</span>
           <button
-            className={`rounded border px-2 py-1 text-[11px] font-medium ${timelineColorFilter === null ? 'border-brand text-brand' : 'border-line text-slate-600 hover:bg-panel'}`}
+            className={`rounded border px-2 py-1 text-[11px] font-medium ${timelineColorFilter === null ? 'border-brand text-brand' : 'border-line text-[var(--color-text-secondary)] hover:bg-panel'}`}
             type="button"
             data-testid="timeline-color-filter-all"
             onClick={() => setTimelineColorFilter(null)}
@@ -3075,7 +3075,7 @@ function addProjectBookmark(time = playheadTime): void {
           {TIMELINE_LABEL_COLORS.map((color) => (
             <button
               key={color}
-              className={`h-5 w-5 rounded-full border ${timelineColorFilter === color ? 'border-slate-900 ring-2 ring-slate-300' : 'border-white'}`}
+              className={`h-5 w-5 rounded-full border ${timelineColorFilter === color ? 'border-line ring-2 ring-[var(--color-border)]' : 'border-white'}`}
               style={{ backgroundColor: getTimelineLabelColorHex(color) }}
               type="button"
               title={zhCN.timeline.timelineLabelColorNames[color]}
@@ -3132,7 +3132,7 @@ function addProjectBookmark(time = playheadTime): void {
             {gridLines.map((line) => (
               <div
                 key={`${line.time}-${line.major ? 'major' : 'minor'}`}
-                className={line.major ? 'pointer-events-none absolute bottom-0 top-0 z-[1] border-l border-slate-300/80' : 'pointer-events-none absolute bottom-0 top-0 z-[1] border-l border-slate-200/70'}
+                className={line.major ? 'pointer-events-none absolute bottom-0 top-0 z-[1] border-l border-line/80' : 'pointer-events-none absolute bottom-0 top-0 z-[1] border-l border-line/70'}
                 style={{ left: LABEL_WIDTH + line.time * zoom }}
                 data-testid="timeline-grid-line"
                 data-grid-major={line.major ? 'true' : 'false'}
@@ -3227,7 +3227,7 @@ function addProjectBookmark(time = playheadTime): void {
                   {pa.slowSegments.map((seg, si) => (
                     <div
                       key={si}
-                      className="absolute top-0 bottom-0 bg-blue-500/15 cursor-pointer"
+                      className="absolute top-0 bottom-0 bg-[var(--color-accent)]/15 cursor-pointer"
                       style={{ left: seg.start * zoom, width: Math.max(2, (seg.end - seg.start) * zoom) }}
                       title={zhCN.pacingAnalysis.slowSegment + ' ' + seg.start.toFixed(1) + 's-' + seg.end.toFixed(1) + 's: ' + zhCN.pacingAnalysis.suggestion}
                       data-testid={`pacing-slow-segment-${si}`}
@@ -3236,7 +3236,7 @@ function addProjectBookmark(time = playheadTime): void {
                   {pa.fastSegments.map((seg, fi) => (
                     <div
                       key={fi}
-                      className="absolute top-0 bottom-0 bg-red-500/15"
+                      className="absolute top-0 bottom-0 bg-[var(--color-danger)]/15"
                       style={{ left: seg.start * zoom, width: Math.max(2, (seg.end - seg.start) * zoom) }}
                       title={zhCN.pacingAnalysis.fastSegment + ' ' + seg.start.toFixed(1) + 's-' + seg.end.toFixed(1) + 's'}
                       data-testid={`pacing-fast-segment-${fi}`}
@@ -3389,9 +3389,9 @@ function addProjectBookmark(time = playheadTime): void {
 
 {equalHeightPrompt ? (
   <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/30" data-testid="equal-height-dialog" onClick={() => setEqualHeightPrompt(false)}>
-    <div className="w-72 rounded-lg bg-white p-4 shadow-lg" onClick={(e) => e.stopPropagation()}>
+    <div className="w-72 rounded-lg bg-[var(--color-bg-elevated)] p-4 shadow-lg" onClick={(e) => e.stopPropagation()}>
       <h3 className="mb-3 text-sm font-semibold">{zhCN.timeline.trackBatchSetEqualHeight}</h3>
-      <label className="mb-3 block text-xs text-slate-600">
+      <label className="mb-3 block text-xs text-[var(--color-text-secondary)]">
         <span>px</span>
         <input
           className="mt-1 w-full rounded border border-line px-2 py-1 text-sm"
@@ -3596,9 +3596,9 @@ function addProjectBookmark(time = playheadTime): void {
       ) : null}
       {reframeDialog ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" data-testid="reframe-dialog">
-          <div className="w-[320px] rounded-lg border border-line bg-white p-4 shadow-soft">
+          <div className="w-[320px] rounded-lg border border-line bg-[var(--color-bg-elevated)] p-4 shadow-soft">
             <h3 className="mb-3 text-sm font-semibold">{zhCN.aiReframe.title}</h3>
-            <p className="mb-3 text-xs text-slate-500">{zhCN.aiReframe.chooseAspect}</p>
+            <p className="mb-3 text-xs text-[var(--color-text-muted)]">{zhCN.aiReframe.chooseAspect}</p>
             <div className="grid grid-cols-2 gap-2">
               {(['16:9', '9:16', '1:1', '4:5'] as const).map((aspect) => (
                 <button
@@ -3623,7 +3623,7 @@ function addProjectBookmark(time = playheadTime): void {
       ) : null}
       {transitionDialog ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" data-testid="transition-dialog">
-          <div className="w-[360px] rounded-lg border border-line bg-white p-4 shadow-soft">
+          <div className="w-[360px] rounded-lg border border-line bg-[var(--color-bg-elevated)] p-4 shadow-soft">
             <h3 className="mb-3 text-sm font-semibold">{zhCN.aiTransitionRecommend.title}</h3>
             <div className="space-y-2">
               {transitionDialog.recommendations.map((rec, index) => (
@@ -3634,7 +3634,7 @@ function addProjectBookmark(time = playheadTime): void {
                   onClick={() => applyAiTransition(transitionDialog.clipId, transitionDialog.adjacentClipId, rec)}
                 >
                   <span className="font-medium">{rec.transitionType}</span>
-                  <span className="text-slate-400">{rec.duration}s · {rec.reason}</span>
+                  <span className="text-[var(--color-text-muted)]">{rec.duration}s · {rec.reason}</span>
                 </button>
               ))}
             </div>
@@ -3845,12 +3845,12 @@ function TrackBatchMenu({
   const hasEmptyTrack = selectedTracks.some((track) => track.clips.length === 0);
   return (
     <div
-      className="fixed z-50 w-[220px] rounded-md border border-line bg-white p-2 text-xs shadow-soft"
+      className="fixed z-50 w-[220px] rounded-md border border-line bg-[var(--color-bg-elevated)] p-2 text-xs shadow-soft"
       style={{ left: menu.x, top: menu.y }}
       data-testid="track-batch-menu"
       onPointerDown={(event) => event.stopPropagation()}
     >
-      <div className="mb-2 px-2 text-[11px] font-semibold text-slate-500">{zhCN.timeline.trackBatchSelectedCount(selectedTracks.length)}</div>
+      <div className="mb-2 px-2 text-[11px] font-semibold text-[var(--color-text-muted)]">{zhCN.timeline.trackBatchSelectedCount(selectedTracks.length)}</div>
       <div className="grid grid-cols-2 gap-1">
         <button className="rounded px-2 py-1.5 text-left hover:bg-panel disabled:opacity-40" type="button" data-testid="track-batch-mute" disabled={disabled} onClick={() => onPatch(() => ({ muted: true }))}>
           {zhCN.timeline.trackBatchMute}
@@ -3881,7 +3881,7 @@ function TrackBatchMenu({
         {zhCN.timeline.trackBatchDeleteEmpty}
       </button>
       <div className="mt-2 border-t border-line pt-2">
-        <div className="mb-1 px-2 text-[11px] font-semibold text-slate-500">{zhCN.timeline.trackBatchSetColor}</div>
+        <div className="mb-1 px-2 text-[11px] font-semibold text-[var(--color-text-muted)]">{zhCN.timeline.trackBatchSetColor}</div>
         <div className="grid grid-cols-6 gap-1 px-2">
           {TIMELINE_LABEL_COLORS.map((color) => (
             <button
@@ -3897,7 +3897,7 @@ function TrackBatchMenu({
             />
           ))}
         </div>
-        <button className="mt-2 block w-full rounded px-2 py-1.5 text-left text-slate-500 hover:bg-panel disabled:opacity-40" type="button" data-testid="track-batch-color-default" disabled={disabled} onClick={() => onPatch(() => ({ color: null }))}>
+        <button className="mt-2 block w-full rounded px-2 py-1.5 text-left text-[var(--color-text-muted)] hover:bg-panel disabled:opacity-40" type="button" data-testid="track-batch-color-default" disabled={disabled} onClick={() => onPatch(() => ({ color: null }))}>
           {zhCN.timeline.defaultLabelColor}
         </button>
       </div>
@@ -3910,7 +3910,7 @@ function TrackBatchMenu({
       >
         {zhCN.timeline.trackBatchSetEqualHeight}
       </button>
-      <button className="mt-1 block w-full rounded px-2 py-1.5 text-left text-slate-500 hover:bg-panel" type="button" onClick={onClose}>
+      <button className="mt-1 block w-full rounded px-2 py-1.5 text-left text-[var(--color-text-muted)] hover:bg-panel" type="button" onClick={onClose}>
         {zhCN.timeline.close}
       </button>
     </div>
@@ -3985,8 +3985,8 @@ function TimelineNoteLayer({
   }
 
   return (
-    <div className="flex h-6 border-b border-line bg-slate-50/80" data-testid="timeline-note-row" style={{ width: LABEL_WIDTH + width }}>
-      <div className="flex h-6 shrink-0 items-center border-r border-line px-2 text-[11px] font-semibold text-slate-500" style={{ width: LABEL_WIDTH }}>
+    <div className="flex h-6 border-b border-line bg-[var(--color-bg-secondary)]/80" data-testid="timeline-note-row" style={{ width: LABEL_WIDTH + width }}>
+      <div className="flex h-6 shrink-0 items-center border-r border-line px-2 text-[11px] font-semibold text-[var(--color-text-muted)]" style={{ width: LABEL_WIDTH }}>
         {zhCN.timeline.timelineNoteLayer}
       </div>
       <div
@@ -4003,7 +4003,7 @@ function TimelineNoteLayer({
           return (
             <button
               key={layout.note.id}
-              className={`absolute top-[3px] h-[18px] overflow-hidden rounded-[3px] border border-white/80 px-1 text-left text-[10px] font-semibold text-slate-900 shadow-sm ${layout.overlaps ? 'ring-1 ring-slate-900/20' : ''}`}
+              className={`absolute top-[3px] h-[18px] overflow-hidden rounded-[3px] border border-white/80 px-1 text-left text-[10px] font-semibold text-ink shadow-sm ${layout.overlaps ? 'ring-1 ring-[var(--color-border)]/20' : ''}`}
               style={{ left, width: noteWidth, backgroundColor: layout.note.color, zIndex: createdOrder.get(layout.note.id) ?? 1 }}
               type="button"
               title={`${layout.note.text} (${layout.note.start.toFixed(2)}s - ${layout.note.end.toFixed(2)}s)`}
@@ -4024,7 +4024,7 @@ function TimelineNoteLayer({
         })}
         {draft ? (
           <div
-            className="pointer-events-none absolute top-[3px] h-[18px] rounded-[3px] border border-dashed border-slate-700 bg-slate-300/60"
+            className="pointer-events-none absolute top-[3px] h-[18px] rounded-[3px] border border-dashed border-line bg-[var(--color-bg-elevated)]/60"
             style={{ left: draft.start * zoom, width: Math.max(8, (draft.end - draft.start) * zoom) }}
             data-testid="timeline-note-draft"
           />
@@ -4056,24 +4056,24 @@ function TimelineNoteListPanel({
   onExportCsv(): void;
 }) {
   return (
-    <aside className="absolute bottom-3 right-3 top-16 z-50 flex w-80 flex-col overflow-hidden rounded-md border border-line bg-white shadow-soft" data-testid="timeline-note-panel">
+    <aside className="absolute bottom-3 right-3 top-16 z-50 flex w-80 flex-col overflow-hidden rounded-md border border-line bg-[var(--color-bg-elevated)] shadow-soft" data-testid="timeline-note-panel">
       <div className="border-b border-line px-3 py-2">
         <div className="text-sm font-semibold text-ink">{zhCN.timeline.timelineNoteList}</div>
         <div className="mt-2 flex gap-2">
           <input
-            className="h-8 min-w-0 flex-1 rounded border border-line bg-white px-2 text-xs text-ink"
+            className="h-8 min-w-0 flex-1 rounded border border-line bg-[var(--color-bg-elevated)] px-2 text-xs text-ink"
             value={search}
             placeholder={zhCN.timeline.timelineNoteSearchPlaceholder}
             data-testid="timeline-note-search"
             onChange={(event) => onSearch(event.target.value)}
           />
-          <button className="rounded border border-line bg-white px-2 text-xs font-medium hover:bg-panel" type="button" data-testid="timeline-note-export-csv" onClick={onExportCsv}>
+          <button className="rounded border border-line bg-[var(--color-bg-elevated)] px-2 text-xs font-medium hover:bg-panel" type="button" data-testid="timeline-note-export-csv" onClick={onExportCsv}>
             {zhCN.timeline.timelineNoteExportCsv}
           </button>
         </div>
       </div>
       {notes.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center px-3 py-6 text-sm text-slate-500" data-testid="timeline-note-list-empty">
+        <div className="flex flex-1 items-center justify-center px-3 py-6 text-sm text-[var(--color-text-muted)]" data-testid="timeline-note-list-empty">
           {zhCN.timeline.timelineNoteListEmpty}
         </div>
       ) : (
@@ -4081,7 +4081,7 @@ function TimelineNoteListPanel({
           {notes.map((note) => (
             <div key={note.id} className="mb-2 rounded-md border border-line bg-panel p-2 text-xs" data-testid={`timeline-note-list-row-${note.id}`}>
               <button
-                className="flex w-full items-start gap-2 rounded text-left hover:bg-white"
+                className="flex w-full items-start gap-2 rounded text-left hover:bg-[var(--color-bg-elevated)]"
                 type="button"
                 data-testid={`timeline-note-list-item-${note.id}`}
                 onClick={() => onSeek(note.start)}
@@ -4090,16 +4090,16 @@ function TimelineNoteListPanel({
                 <span className="mt-1 h-3 w-3 shrink-0 rounded-[3px]" style={{ backgroundColor: note.color }} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold text-ink">{note.text}</span>
-                  <span className="mt-0.5 block tabular-nums text-slate-500">
+                  <span className="mt-0.5 block tabular-nums text-[var(--color-text-muted)]">
                     {secondsToTimecode(note.start, fps, timecodeFormat)} - {secondsToTimecode(note.end, fps, timecodeFormat)}
                   </span>
                 </span>
               </button>
               <div className="mt-2 flex justify-end gap-2">
-                <button className="rounded border border-line bg-white px-2 py-1 hover:bg-panel" type="button" data-testid={`timeline-note-edit-${note.id}`} onClick={() => onEdit(note)}>
+                <button className="rounded border border-line bg-[var(--color-bg-elevated)] px-2 py-1 hover:bg-panel" type="button" data-testid={`timeline-note-edit-${note.id}`} onClick={() => onEdit(note)}>
                   {zhCN.timeline.timelineNoteEditTitle}
                 </button>
-                <button className="rounded border border-rose-200 bg-white px-2 py-1 text-rose-700 hover:bg-rose-50" type="button" data-testid={`timeline-note-delete-${note.id}`} onClick={() => onRemove(note.id)}>
+                <button className="rounded border border-rose-200 bg-[var(--color-bg-elevated)] px-2 py-1 text-rose-700 hover:bg-rose-50" type="button" data-testid={`timeline-note-delete-${note.id}`} onClick={() => onRemove(note.id)}>
                   {zhCN.timeline.timelineNoteDelete}
                 </button>
               </div>
@@ -4126,7 +4126,7 @@ function AnnotationBubble({
 }) {
   return (
     <button
-      className="absolute top-2 z-40 flex max-w-[180px] -translate-x-3 items-center gap-1 rounded-full border border-white bg-white px-2 py-1 text-[11px] font-medium text-slate-700 shadow-soft hover:border-line"
+      className="absolute top-2 z-40 flex max-w-[180px] -translate-x-3 items-center gap-1 rounded-full border border-white bg-[var(--color-bg-elevated)] px-2 py-1 text-[11px] font-medium text-[var(--color-text-secondary)] shadow-soft hover:border-line"
       style={{ left }}
       type="button"
       title={`${annotation.text} (${annotation.time.toFixed(2)}s)`}
@@ -4158,10 +4158,10 @@ function AnnotationListPanel({
   onRemove(annotationId: string): void;
 }) {
   return (
-    <aside className="absolute bottom-3 right-3 top-16 z-50 flex w-72 flex-col overflow-hidden rounded-md border border-line bg-white shadow-soft" data-testid="annotation-list-panel">
+    <aside className="absolute bottom-3 right-3 top-16 z-50 flex w-72 flex-col overflow-hidden rounded-md border border-line bg-[var(--color-bg-elevated)] shadow-soft" data-testid="annotation-list-panel">
       <div className="border-b border-line px-3 py-2 text-sm font-semibold text-ink">{zhCN.timeline.annotationList}</div>
       {annotations.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center px-3 py-6 text-sm text-slate-500" data-testid="annotation-list-empty">
+        <div className="flex flex-1 items-center justify-center px-3 py-6 text-sm text-[var(--color-text-muted)]" data-testid="annotation-list-empty">
           {zhCN.timeline.annotationListEmpty}
         </div>
       ) : (
@@ -4169,7 +4169,7 @@ function AnnotationListPanel({
           {annotations.map((annotation) => (
             <div key={annotation.id} className="mb-2 rounded-md border border-line bg-panel p-2 text-xs" data-testid={`annotation-list-row-${annotation.id}`}>
               <button
-                className="flex w-full items-start gap-2 rounded text-left hover:bg-white"
+                className="flex w-full items-start gap-2 rounded text-left hover:bg-[var(--color-bg-elevated)]"
                 type="button"
                 data-testid={`annotation-list-item-${annotation.id}`}
                 onClick={() => onSeek(annotation.time)}
@@ -4177,14 +4177,14 @@ function AnnotationListPanel({
                 <span className="mt-1 h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: annotation.color }} />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-semibold text-ink">{annotation.text}</span>
-                  <span className="mt-0.5 block tabular-nums text-slate-500">{annotation.time.toFixed(2)}s</span>
+                  <span className="mt-0.5 block tabular-nums text-[var(--color-text-muted)]">{annotation.time.toFixed(2)}s</span>
                 </span>
               </button>
               <div className="mt-2 flex justify-end gap-2">
-                <button className="rounded border border-line bg-white px-2 py-1 hover:bg-panel" type="button" data-testid={`annotation-edit-${annotation.id}`} onClick={() => onEdit(annotation)}>
+                <button className="rounded border border-line bg-[var(--color-bg-elevated)] px-2 py-1 hover:bg-panel" type="button" data-testid={`annotation-edit-${annotation.id}`} onClick={() => onEdit(annotation)}>
                   {zhCN.timeline.annotationEditTitle}
                 </button>
-                <button className="rounded border border-rose-200 bg-white px-2 py-1 text-rose-700 hover:bg-rose-50" type="button" data-testid={`annotation-delete-${annotation.id}`} onClick={() => onRemove(annotation.id)}>
+                <button className="rounded border border-rose-200 bg-[var(--color-bg-elevated)] px-2 py-1 text-rose-700 hover:bg-rose-50" type="button" data-testid={`annotation-delete-${annotation.id}`} onClick={() => onRemove(annotation.id)}>
                   {zhCN.timeline.annotationDelete}
                 </button>
               </div>
@@ -4216,10 +4216,10 @@ function BookmarkListPanel({
   onRemove(bookmarkId: string): void;
 }) {
   return (
-    <aside className="absolute bottom-3 right-3 top-16 z-50 flex w-72 flex-col overflow-hidden rounded-md border border-line bg-white shadow-soft" data-testid="bookmark-panel">
+    <aside className="absolute bottom-3 right-3 top-16 z-50 flex w-72 flex-col overflow-hidden rounded-md border border-line bg-[var(--color-bg-elevated)] shadow-soft" data-testid="bookmark-panel">
       <div className="border-b border-line px-3 py-2 text-sm font-semibold text-ink">{zhCN.timeline.bookmarkList}</div>
       {bookmarks.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center px-3 py-6 text-sm text-slate-500" data-testid="bookmark-list-empty">
+        <div className="flex flex-1 items-center justify-center px-3 py-6 text-sm text-[var(--color-text-muted)]" data-testid="bookmark-list-empty">
           {zhCN.timeline.bookmarkListEmpty}
         </div>
       ) : (
@@ -4229,7 +4229,7 @@ function BookmarkListPanel({
               {editing?.id === bookmark.id ? (
                 <div className="space-y-2">
                   <input
-                    className="h-8 w-full rounded border border-line bg-white px-2 text-xs text-ink"
+                    className="h-8 w-full rounded border border-line bg-[var(--color-bg-elevated)] px-2 text-xs text-ink"
                     value={editing.note}
                     maxLength={120}
                     autoFocus
@@ -4245,7 +4245,7 @@ function BookmarkListPanel({
                     }}
                   />
                   <div className="flex justify-end gap-2">
-                    <button className="rounded border border-line bg-white px-2 py-1 hover:bg-panel" type="button" onClick={onCancelRename}>
+                    <button className="rounded border border-line bg-[var(--color-bg-elevated)] px-2 py-1 hover:bg-panel" type="button" onClick={onCancelRename}>
                       {zhCN.common.cancel}
                     </button>
                     <button className="rounded bg-brand px-2 py-1 font-medium text-white hover:bg-[#176858]" type="button" data-testid={`bookmark-rename-save-${bookmark.id}`} onClick={() => onSaveRename(bookmark.id, editing.note)}>
@@ -4256,7 +4256,7 @@ function BookmarkListPanel({
               ) : (
                 <>
                   <button
-                    className="flex w-full items-start gap-2 rounded text-left hover:bg-white"
+                    className="flex w-full items-start gap-2 rounded text-left hover:bg-[var(--color-bg-elevated)]"
                     type="button"
                     data-testid={`bookmark-list-item-${bookmark.id}`}
                     onClick={() => onSeek(bookmark.time)}
@@ -4265,14 +4265,14 @@ function BookmarkListPanel({
                     <span className="mt-1 h-3 w-3 shrink-0 bg-yellow-400" style={{ clipPath: 'polygon(50% 0, 0 100%, 100% 100%)' }} />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-semibold text-ink">{bookmark.note}</span>
-                      <span className="mt-0.5 block tabular-nums text-slate-500">{bookmark.time.toFixed(2)}s</span>
+                      <span className="mt-0.5 block tabular-nums text-[var(--color-text-muted)]">{bookmark.time.toFixed(2)}s</span>
                     </span>
                   </button>
                   <div className="mt-2 flex justify-end gap-2">
-                    <button className="rounded border border-line bg-white px-2 py-1 hover:bg-panel" type="button" data-testid={`bookmark-rename-${bookmark.id}`} onClick={() => onBeginRename(bookmark)}>
+                    <button className="rounded border border-line bg-[var(--color-bg-elevated)] px-2 py-1 hover:bg-panel" type="button" data-testid={`bookmark-rename-${bookmark.id}`} onClick={() => onBeginRename(bookmark)}>
                       {zhCN.timeline.bookmarkRename}
                     </button>
-                    <button className="rounded border border-rose-200 bg-white px-2 py-1 text-rose-700 hover:bg-rose-50" type="button" data-testid={`bookmark-delete-${bookmark.id}`} onClick={() => onRemove(bookmark.id)}>
+                    <button className="rounded border border-rose-200 bg-[var(--color-bg-elevated)] px-2 py-1 text-rose-700 hover:bg-rose-50" type="button" data-testid={`bookmark-delete-${bookmark.id}`} onClick={() => onRemove(bookmark.id)}>
                       {zhCN.timeline.bookmarkDelete}
                     </button>
                   </div>
@@ -4299,13 +4299,13 @@ function AnnotationEditorDialog({
 }) {
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/35 p-4" data-testid="annotation-editor">
-      <section className="w-full max-w-sm rounded-md border border-line bg-white shadow-soft">
+      <section className="w-full max-w-sm rounded-md border border-line bg-[var(--color-bg-elevated)] shadow-soft">
         <div className="border-b border-line px-4 py-3">
           <h2 className="text-sm font-semibold">{value.id ? zhCN.timeline.annotationEditTitle : zhCN.timeline.annotationNewTitle}</h2>
-          <div className="mt-1 text-xs tabular-nums text-slate-500">{value.time.toFixed(2)}s</div>
+          <div className="mt-1 text-xs tabular-nums text-[var(--color-text-muted)]">{value.time.toFixed(2)}s</div>
         </div>
         <div className="space-y-3 px-4 py-3">
-          <label className="block text-xs font-medium text-slate-600">
+          <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
             {zhCN.timeline.annotationText}
             <textarea
               className="mt-1 h-20 w-full resize-none rounded-md border border-line px-2 py-1.5 text-sm text-ink"
@@ -4316,7 +4316,7 @@ function AnnotationEditorDialog({
             />
           </label>
           <div>
-            <div className="mb-1 text-xs font-medium text-slate-600">{zhCN.timeline.annotationColor}</div>
+            <div className="mb-1 text-xs font-medium text-[var(--color-text-secondary)]">{zhCN.timeline.annotationColor}</div>
             <div className="flex gap-2">
               {PROJECT_ANNOTATION_COLORS.map((color) => (
                 <button
@@ -4359,16 +4359,16 @@ function TimelineNoteEditorDialog({
 }) {
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/35 p-4" data-testid="timeline-note-editor">
-      <section className="w-full max-w-sm rounded-md border border-line bg-white shadow-soft">
+      <section className="w-full max-w-sm rounded-md border border-line bg-[var(--color-bg-elevated)] shadow-soft">
         <div className="border-b border-line px-4 py-3">
           <h2 className="text-sm font-semibold">{value.id ? zhCN.timeline.timelineNoteEditTitle : zhCN.timeline.timelineNoteNewTitle}</h2>
-          <div className="mt-1 text-xs tabular-nums text-slate-500">
+          <div className="mt-1 text-xs tabular-nums text-[var(--color-text-muted)]">
             {value.start.toFixed(2)}s - {value.end.toFixed(2)}s
           </div>
         </div>
         <div className="space-y-3 px-4 py-3">
           <div className="grid grid-cols-2 gap-2">
-            <label className="block text-xs font-medium text-slate-600">
+            <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
               {zhCN.timeline.timelineNoteStart}
               <input
                 className="mt-1 h-8 w-full rounded-md border border-line px-2 text-sm text-ink"
@@ -4380,7 +4380,7 @@ function TimelineNoteEditorDialog({
                 onChange={(event) => onChange({ ...value, start: Number(event.target.value) })}
               />
             </label>
-            <label className="block text-xs font-medium text-slate-600">
+            <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
               {zhCN.timeline.timelineNoteEnd}
               <input
                 className="mt-1 h-8 w-full rounded-md border border-line px-2 text-sm text-ink"
@@ -4393,7 +4393,7 @@ function TimelineNoteEditorDialog({
               />
             </label>
           </div>
-          <label className="block text-xs font-medium text-slate-600">
+          <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
             {zhCN.timeline.timelineNoteText}
             <textarea
               className="mt-1 h-20 w-full resize-none rounded-md border border-line px-2 py-1.5 text-sm text-ink"
@@ -4404,7 +4404,7 @@ function TimelineNoteEditorDialog({
             />
           </label>
           <div>
-            <div className="mb-1 text-xs font-medium text-slate-600">{zhCN.timeline.timelineNoteColor}</div>
+            <div className="mb-1 text-xs font-medium text-[var(--color-text-secondary)]">{zhCN.timeline.timelineNoteColor}</div>
             <div className="flex gap-2">
               {TIMELINE_NOTE_COLORS.map((color) => (
                 <button
@@ -4597,13 +4597,13 @@ function TransitionMenu({
 
   return (
     <div
-      className="fixed z-50 w-[360px] rounded-md border border-line bg-white p-3 text-xs shadow-soft"
+      className="fixed z-50 w-[360px] rounded-md border border-line bg-[var(--color-bg-elevated)] p-3 text-xs shadow-soft"
       style={{ left: menu.x, top: menu.y }}
       data-testid="transition-menu"
       onPointerDown={(event) => event.stopPropagation()}
     >
-      <div className="mb-2 font-semibold text-slate-700">{zhCN.timeline.transitionPicker}</div>
-      <label className="mb-2 block text-slate-600">
+      <div className="mb-2 font-semibold text-[var(--color-text-secondary)]">{zhCN.timeline.transitionPicker}</div>
+      <label className="mb-2 block text-[var(--color-text-secondary)]">
         {zhCN.timeline.transitionType}
         <select
           className="mt-1 w-full rounded border border-line px-2 py-1"
@@ -4628,7 +4628,7 @@ function TransitionMenu({
               tabIndex={0}
               className={clsx(
                 'group relative min-w-0 rounded-md border p-1 text-left hover:border-brand hover:bg-sky-50',
-                menu.type === type ? 'border-brand bg-sky-50' : 'border-line bg-white'
+                menu.type === type ? 'border-brand bg-sky-50' : 'border-line bg-[var(--color-bg-elevated)]'
               )}
               data-testid={`transition-preset-${type}`}
               data-favorite={favorite ? 'true' : 'false'}
@@ -4641,11 +4641,11 @@ function TransitionMenu({
               }}
             >
               <TransitionPreviewCanvas type={type} active={menu.type === type} />
-              <span className="mt-1 block truncate text-[11px] font-medium text-slate-700">{zhCN.timeline.transitionNames[type]}</span>
+              <span className="mt-1 block truncate text-[11px] font-medium text-[var(--color-text-secondary)]">{zhCN.timeline.transitionNames[type]}</span>
               {index === 0 && favorite ? <span className="sr-only">{zhCN.timeline.transitionFavorites}</span> : null}
               <button
                 type="button"
-                className={clsx('absolute right-1 top-1 inline-flex h-6 w-6 items-center justify-center rounded bg-white/90 shadow-sm', favorite ? 'text-amber-500' : 'text-slate-400')}
+                className={clsx('absolute right-1 top-1 inline-flex h-6 w-6 items-center justify-center rounded bg-[var(--color-bg-elevated)]/90 shadow-sm', favorite ? 'text-amber-500' : 'text-[var(--color-text-muted)]')}
                 aria-label={zhCN.timeline.transitionFavoriteToggle}
                 data-testid={`transition-favorite-${type}`}
                 onClick={(event) => {
@@ -4666,7 +4666,7 @@ function TransitionMenu({
           );
         })}
       </div>
-      <label className="mb-3 block text-slate-600">
+      <label className="mb-3 block text-[var(--color-text-secondary)]">
         {zhCN.timeline.transitionDuration}
         <input
           className="mt-1 w-full rounded border border-line px-2 py-1"
@@ -4765,7 +4765,7 @@ function TransitionPreviewCanvas({ type, active }: { type: TransitionType; activ
     }
   }, [active, type]);
 
-  return <canvas ref={ref} className="block h-12 w-full rounded bg-slate-200" width={144} height={72} aria-hidden="true" />;
+  return <canvas ref={ref} className="block h-12 w-full rounded bg-[var(--color-bg-elevated)]" width={144} height={72} aria-hidden="true" />;
 }
 
 function drawPreviewShape(context: CanvasRenderingContext2D, type: TransitionType, width: number, height: number) {
@@ -4812,7 +4812,7 @@ function GapActionMenu({
 }) {
   return (
     <div
-      className="fixed z-50 w-[210px] rounded-md border border-line bg-white p-2 text-xs shadow-soft"
+      className="fixed z-50 w-[210px] rounded-md border border-line bg-[var(--color-bg-elevated)] p-2 text-xs shadow-soft"
       style={{ left: menu.x, top: menu.y }}
       data-testid="gap-action-menu"
       onPointerDown={(event) => event.stopPropagation()}
@@ -4836,7 +4836,7 @@ function GapActionMenu({
       <button className="block w-full rounded px-2 py-2 text-left hover:bg-panel" type="button" data-testid="gap-action-crossfade" onClick={() => onFillGap('crossfade')}>
         {zhCN.timeline.smartGapFillCrossfadeAction}
       </button>
-      <button className="mt-1 block w-full rounded px-2 py-1.5 text-left text-slate-500 hover:bg-panel" type="button" onClick={onClose}>
+      <button className="mt-1 block w-full rounded px-2 py-1.5 text-left text-[var(--color-text-muted)] hover:bg-panel" type="button" onClick={onClose}>
         {zhCN.timeline.close}
       </button>
     </div>
@@ -4856,7 +4856,7 @@ function VolumeEnvelopeMenu({
 }) {
   return (
     <div
-      className="fixed z-50 w-[180px] rounded-md border border-line bg-white p-2 text-xs shadow-soft"
+      className="fixed z-50 w-[180px] rounded-md border border-line bg-[var(--color-bg-elevated)] p-2 text-xs shadow-soft"
       style={{ left: menu.x, top: menu.y }}
       data-testid="volume-envelope-menu"
       onPointerDown={(event) => event.stopPropagation()}
@@ -4870,7 +4870,7 @@ function VolumeEnvelopeMenu({
       <button className="block w-full rounded px-2 py-2 text-left hover:bg-panel" type="button" data-testid="volume-envelope-reset" onClick={onReset}>
         {zhCN.timeline.volumeEnvelopeReset}
       </button>
-      <button className="mt-1 block w-full rounded px-2 py-1.5 text-left text-slate-500 hover:bg-panel" type="button" onClick={onClose}>
+      <button className="mt-1 block w-full rounded px-2 py-1.5 text-left text-[var(--color-text-muted)] hover:bg-panel" type="button" onClick={onClose}>
         {zhCN.timeline.close}
       </button>
     </div>
@@ -4893,7 +4893,7 @@ function RulerContextMenu({
   const items = buildRulerContextMenuItems();
   return (
     <div
-      className="fixed z-50 w-[220px] rounded-md border border-line bg-white p-2 text-xs shadow-soft"
+      className="fixed z-50 w-[220px] rounded-md border border-line bg-[var(--color-bg-elevated)] p-2 text-xs shadow-soft"
       style={{ left: menu.x, top: menu.y }}
       data-testid="ruler-context-menu"
       onPointerDown={(event) => event.stopPropagation()}
@@ -4907,7 +4907,7 @@ function RulerContextMenu({
         ))}
       <div className="my-1 border-t border-line" />
       <div className="px-2 py-1" data-testid="ruler-context-jump-timecode">
-        <label className="block text-[11px] font-semibold text-slate-500">
+        <label className="block text-[11px] font-semibold text-[var(--color-text-muted)]">
           {zhCN.timeline.rulerJumpToTimecode}
           <input
             className="mt-1 h-7 w-full rounded border border-line px-2 font-mono text-xs tabular-nums text-ink"
@@ -4926,7 +4926,7 @@ function RulerContextMenu({
           {zhCN.timeline.rulerJump}
         </button>
       </div>
-      <button className="mt-1 block w-full rounded px-2 py-1.5 text-left text-slate-500 hover:bg-panel" type="button" onClick={onClose}>
+      <button className="mt-1 block w-full rounded px-2 py-1.5 text-left text-[var(--color-text-muted)] hover:bg-panel" type="button" onClick={onClose}>
         {zhCN.timeline.close}
       </button>
     </div>
@@ -5003,7 +5003,7 @@ function ClipActionMenu({
   const currentMediaId = clip && 'mediaId' in clip ? clip.mediaId : undefined;
   return (
     <div
-      className="fixed z-50 max-h-[80vh] w-[230px] overflow-y-auto rounded-md border border-line bg-white p-2 text-xs shadow-soft"
+      className="fixed z-50 max-h-[80vh] w-[230px] overflow-y-auto rounded-md border border-line bg-[var(--color-bg-elevated)] p-2 text-xs shadow-soft"
       style={{ left: menu.x, top: menu.y }}
       data-testid="clip-action-menu"
       onPointerDown={(event) => event.stopPropagation()}
@@ -5101,14 +5101,14 @@ function ClipActionMenu({
       </button>
       {versionEntries.length > 1 ? (
         <div className="rounded-md border border-line bg-panel px-2 py-2" data-testid="clip-media-version-menu">
-          <div className="mb-1 text-[11px] font-semibold text-slate-500">{zhCN.timeline.switchMediaVersionAction}</div>
+          <div className="mb-1 text-[11px] font-semibold text-[var(--color-text-muted)]">{zhCN.timeline.switchMediaVersionAction}</div>
           <div className="grid gap-1">
             {versionEntries.map((entry) => (
               <button
                 key={entry.id}
                 className={clsx(
-                  'flex min-w-0 items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-[11px] hover:bg-white disabled:opacity-60',
-                  currentMediaId === entry.assetId ? 'bg-white font-semibold text-brand' : 'text-slate-700'
+                  'flex min-w-0 items-center justify-between gap-2 rounded px-2 py-1.5 text-left text-[11px] hover:bg-[var(--color-bg-elevated)] disabled:opacity-60',
+                  currentMediaId === entry.assetId ? 'bg-[var(--color-bg-elevated)] font-semibold text-brand' : 'text-[var(--color-text-secondary)]'
                 )}
                 type="button"
                 disabled={currentMediaId === entry.assetId}
@@ -5170,12 +5170,12 @@ function ClipActionMenu({
       </button>
       {clip ? (
         <div className="px-2 pb-1 pt-2" data-testid="clip-label-color-options">
-          <div className="mb-1 text-[11px] font-semibold text-slate-500">{zhCN.timeline.clipLabelColor}</div>
+          <div className="mb-1 text-[11px] font-semibold text-[var(--color-text-muted)]">{zhCN.timeline.clipLabelColor}</div>
           <div className="flex flex-wrap gap-1">
             {TIMELINE_LABEL_COLORS.map((color) => (
               <button
                 key={color}
-                className={`h-5 w-5 rounded-full border ${clip.colorLabel === color ? 'border-slate-900 ring-2 ring-slate-300' : 'border-white'}`}
+                className={`h-5 w-5 rounded-full border ${clip.colorLabel === color ? 'border-line ring-2 ring-[var(--color-border)]' : 'border-white'}`}
                 type="button"
                 title={zhCN.timeline.timelineLabelColorNames[color]}
                 style={{ backgroundColor: getTimelineLabelColorHex(color) }}
@@ -5184,19 +5184,19 @@ function ClipActionMenu({
               />
             ))}
           </div>
-          <button className="mt-1 rounded border border-line px-2 py-1 text-[11px] text-slate-600 hover:bg-panel" type="button" data-testid="clip-label-color-clear" onClick={() => onClipColor(clip.id, null)}>
+          <button className="mt-1 rounded border border-line px-2 py-1 text-[11px] text-[var(--color-text-secondary)] hover:bg-panel" type="button" data-testid="clip-label-color-clear" onClick={() => onClipColor(clip.id, null)}>
             {zhCN.timeline.defaultLabelColor}
           </button>
         </div>
       ) : null}
       {group ? (
         <div className="px-2 pb-1 pt-2" data-testid="clip-group-color-options">
-          <div className="mb-1 text-[11px] font-semibold text-slate-500">{zhCN.timeline.clipGroupColor}</div>
+          <div className="mb-1 text-[11px] font-semibold text-[var(--color-text-muted)]">{zhCN.timeline.clipGroupColor}</div>
           <div className="flex gap-1">
             {CLIP_GROUP_COLORS.map((color) => (
               <button
                 key={color}
-                className={`h-5 w-5 rounded-full border ${group.color === color ? 'border-slate-900 ring-2 ring-slate-300' : 'border-white'}`}
+                className={`h-5 w-5 rounded-full border ${group.color === color ? 'border-line ring-2 ring-[var(--color-border)]' : 'border-white'}`}
                 type="button"
                 title={zhCN.timeline.clipGroupColorNames[color]}
                 style={{ backgroundColor: CLIP_GROUP_COLOR_HEX[color] }}
@@ -5207,7 +5207,7 @@ function ClipActionMenu({
           </div>
         </div>
       ) : null}
-      <button className="mt-1 block w-full rounded px-2 py-1.5 text-left text-slate-500 hover:bg-panel" type="button" onClick={onClose}>
+      <button className="mt-1 block w-full rounded px-2 py-1.5 text-left text-[var(--color-text-muted)] hover:bg-panel" type="button" onClick={onClose}>
         {zhCN.timeline.close}
       </button>
     </div>
@@ -5227,15 +5227,15 @@ function ReplaceMediaDialog({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 p-4" data-testid="replace-media-dialog">
-      <div className="w-full max-w-sm rounded-md border border-line bg-white p-4 shadow-soft">
+      <div className="w-full max-w-sm rounded-md border border-line bg-[var(--color-bg-elevated)] p-4 shadow-soft">
         <div className="mb-3">
-          <div className="text-sm font-semibold text-slate-900">{zhCN.timeline.replaceMediaTitle}</div>
-          <div className="mt-1 truncate text-xs text-slate-500">{value.media.name}</div>
+          <div className="text-sm font-semibold text-ink">{zhCN.timeline.replaceMediaTitle}</div>
+          <div className="mt-1 truncate text-xs text-[var(--color-text-muted)]">{value.media.name}</div>
         </div>
-        <label className="block text-xs font-medium text-slate-600">
+        <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
           {zhCN.timeline.replaceMediaDurationMode}
           <select
-            className="mt-1 w-full rounded-md border border-line bg-white px-2 py-1.5 text-sm text-ink"
+            className="mt-1 w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm text-ink"
             value={value.durationMode}
             data-testid="replace-media-duration-mode"
             onChange={(event) => onChange({ ...value, durationMode: event.target.value as ReplaceMediaDurationMode })}
@@ -5308,19 +5308,19 @@ function SilenceDetectionDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" data-testid="silence-dialog">
-      <section className="w-full max-w-md rounded-md border border-line bg-white shadow-soft">
+      <section className="w-full max-w-md rounded-md border border-line bg-[var(--color-bg-elevated)] shadow-soft">
         <div className="border-b border-line px-4 py-3">
           <h2 className="text-sm font-semibold">{zhCN.timeline.silenceDialogTitle}</h2>
-          <div className="mt-1 truncate text-xs text-slate-500">{clip.name}</div>
+          <div className="mt-1 truncate text-xs text-[var(--color-text-muted)]">{clip.name}</div>
         </div>
         <div className="space-y-3 px-4 py-3 text-sm">
           {status === 'detecting' ? (
-            <div className="rounded border border-line bg-panel px-3 py-6 text-center text-sm text-slate-600" data-testid="silence-loading">
+            <div className="rounded border border-line bg-panel px-3 py-6 text-center text-sm text-[var(--color-text-secondary)]" data-testid="silence-loading">
               {zhCN.timeline.silenceScanning}
             </div>
           ) : (
             <>
-              <label className="block text-xs font-medium text-slate-600">
+              <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                 {zhCN.timeline.silenceThreshold}
                 <input
                   className="mt-1 w-full rounded border border-line px-2 py-1.5 text-sm"
@@ -5331,7 +5331,7 @@ function SilenceDetectionDialog({
                   onChange={(event) => setThresholdDb(Number(event.target.value))}
                 />
               </label>
-              <label className="block text-xs font-medium text-slate-600">
+              <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                 {zhCN.timeline.silenceMinDuration}
                 <input
                   className="mt-1 w-full rounded border border-line px-2 py-1.5 text-sm"
@@ -5343,7 +5343,7 @@ function SilenceDetectionDialog({
                   onChange={(event) => setMinSilenceDuration(Number(event.target.value))}
                 />
               </label>
-              <label className="block text-xs font-medium text-slate-600">
+              <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
                 {zhCN.timeline.silenceMargin}
                 <input
                   className="mt-1 w-full rounded border border-line px-2 py-1.5 text-sm"
@@ -5356,7 +5356,7 @@ function SilenceDetectionDialog({
                 />
               </label>
               {status === 'preview' ? (
-                <div className="rounded border border-line bg-panel px-3 py-2 text-xs text-slate-700" data-testid="silence-preview">
+                <div className="rounded border border-line bg-panel px-3 py-2 text-xs text-[var(--color-text-secondary)]" data-testid="silence-preview">
                   <div className="font-semibold">{zhCN.timeline.silencePreview(ranges.length, totalDuration.toFixed(2))}</div>
                   {ranges.length > 0 ? (
                     <div className="mt-2 max-h-24 overflow-auto">
@@ -5367,7 +5367,7 @@ function SilenceDetectionDialog({
                       ))}
                     </div>
                   ) : (
-                    <div className="mt-1 text-slate-500">{zhCN.timeline.noSilenceFound}</div>
+                    <div className="mt-1 text-[var(--color-text-muted)]">{zhCN.timeline.noSilenceFound}</div>
                   )}
                 </div>
               ) : null}
@@ -5425,18 +5425,18 @@ function SceneDetectionDialog({
   const running = state.status === 'running';
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" data-testid="scene-detect-dialog">
-      <section className="w-full max-w-lg rounded-md border border-line bg-white shadow-soft">
+      <section className="w-full max-w-lg rounded-md border border-line bg-[var(--color-bg-elevated)] shadow-soft">
         <div className="flex items-start justify-between gap-3 border-b border-line px-4 py-3">
           <div className="min-w-0">
             <h2 className="text-sm font-semibold">{zhCN.timeline.sceneDialogTitle}</h2>
-            <div className="mt-1 truncate text-xs text-slate-500">{state.clip.name}</div>
+            <div className="mt-1 truncate text-xs text-[var(--color-text-muted)]">{state.clip.name}</div>
           </div>
           <button className="rounded-md border border-line px-3 py-1.5 text-xs font-medium hover:bg-panel disabled:cursor-not-allowed disabled:opacity-50" type="button" disabled={running} onClick={onClose} data-testid="scene-detect-close-button">
             {zhCN.common.close}
           </button>
         </div>
         <div className="space-y-4 px-4 py-4">
-          <label className="block text-xs font-medium text-slate-600">
+          <label className="block text-xs font-medium text-[var(--color-text-secondary)]">
             <span className="flex items-center justify-between gap-2">
               <span>{zhCN.timeline.sceneThreshold}</span>
               <span className="tabular-nums">{Math.round(state.threshold)}</span>
@@ -5453,16 +5453,16 @@ function SceneDetectionDialog({
               onChange={(event) => onChange({ ...state, threshold: Number(event.target.value) })}
             />
           </label>
-          <div className="rounded-md border border-line bg-panel px-3 py-2 text-xs text-slate-600" data-testid="scene-estimate">
+          <div className="rounded-md border border-line bg-panel px-3 py-2 text-xs text-[var(--color-text-secondary)]" data-testid="scene-estimate">
             {zhCN.timeline.sceneEstimate(estimatedCount)}
           </div>
           {running ? (
-            <div className="rounded-md border border-line bg-white p-3" data-testid="scene-progress">
-              <div className="mb-2 flex items-center justify-between gap-2 text-xs text-slate-600">
+            <div className="rounded-md border border-line bg-[var(--color-bg-elevated)] p-3" data-testid="scene-progress">
+              <div className="mb-2 flex items-center justify-between gap-2 text-xs text-[var(--color-text-secondary)]">
                 <span>{zhCN.timeline.sceneScanning}</span>
                 <span className="tabular-nums">{progressText}</span>
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+              <div className="h-2 overflow-hidden rounded-full bg-[var(--color-bg-elevated)]">
                 <div className="h-full bg-brand transition-all" style={{ width: `${Math.round(Math.max(0, Math.min(1, state.progress)) * 100)}%` }} />
               </div>
             </div>
@@ -5477,12 +5477,12 @@ function SceneDetectionDialog({
               {zhCN.timeline.sceneDetectedCount(state.scenecuts.length, filteredCuts.length)}
             </div>
           ) : null}
-          <div className="grid gap-3 rounded-md border border-line bg-white p-3 text-sm text-slate-700">
+          <div className="grid gap-3 rounded-md border border-line bg-[var(--color-bg-elevated)] p-3 text-sm text-[var(--color-text-secondary)]">
             <label className="flex items-center justify-between gap-3">
               <span>{zhCN.timeline.sceneFilterShort}</span>
               <input type="checkbox" checked={state.filterShortScenes} disabled={running} data-testid="scene-filter-short-checkbox" onChange={(event) => onChange({ ...state, filterShortScenes: event.target.checked })} />
             </label>
-            <label className="flex items-center justify-between gap-3 text-xs text-slate-600">
+            <label className="flex items-center justify-between gap-3 text-xs text-[var(--color-text-secondary)]">
               <span>{zhCN.timeline.sceneMinDuration}</span>
               <input
                 className="h-8 w-20 rounded-md border border-line px-2 text-right tabular-nums"
@@ -5539,11 +5539,11 @@ function CoverFramePickerDialog({
 }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" data-testid="cover-frame-picker">
-      <section className="flex max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-md border border-line bg-white shadow-soft">
+      <section className="flex max-h-[86vh] w-full max-w-3xl flex-col overflow-hidden rounded-md border border-line bg-[var(--color-bg-elevated)] shadow-soft">
         <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
           <div className="min-w-0">
             <h2 className="text-sm font-semibold">{zhCN.timeline.coverFrameDialogTitle}</h2>
-            <div className="mt-1 truncate text-xs text-slate-500">{state.clip.name}</div>
+            <div className="mt-1 truncate text-xs text-[var(--color-text-muted)]">{state.clip.name}</div>
           </div>
           <button className="rounded-md border border-line px-3 py-1.5 text-xs font-medium hover:bg-panel" type="button" onClick={onClose} data-testid="cover-frame-close">
             {zhCN.timeline.close}
@@ -5551,9 +5551,9 @@ function CoverFramePickerDialog({
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-4">
           {state.loading ? (
-            <div className="rounded-md border border-line bg-panel p-4 text-sm text-slate-600" data-testid="cover-frame-loading">
+            <div className="rounded-md border border-line bg-panel p-4 text-sm text-[var(--color-text-secondary)]" data-testid="cover-frame-loading">
               <div className="mb-2">{zhCN.timeline.coverFrameGenerating}</div>
-              <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+              <div className="h-2 overflow-hidden rounded-full bg-[var(--color-bg-elevated)]">
                 <div className="h-full bg-brand transition-all" style={{ width: `${Math.round(Math.max(0, Math.min(1, state.progress)) * 100)}%` }} />
               </div>
             </div>
@@ -5570,7 +5570,7 @@ function CoverFramePickerDialog({
                   onClick={() => onSelect(frame)}
                 >
                   <img className="aspect-video w-full object-cover" src={convertLocalFileSrc(frame.path)} alt="" />
-                  <div className="flex items-center justify-between gap-2 px-2 py-1.5 text-xs text-slate-600">
+                  <div className="flex items-center justify-between gap-2 px-2 py-1.5 text-xs text-[var(--color-text-secondary)]">
                     <span>{zhCN.timeline.coverFrameCandidate(index + 1)}</span>
                     <span className="tabular-nums">{frame.timestamp === undefined ? '' : `${frame.timestamp.toFixed(2)}s`}</span>
                   </div>
@@ -5592,14 +5592,14 @@ function CoverFramePickerDialog({
 function WhisperGenerationDialog({ progress, clipName }: { progress: number; clipName: string }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/35 p-4" data-testid="whisper-dialog">
-      <section className="w-full max-w-sm rounded-md border border-line bg-white shadow-soft">
+      <section className="w-full max-w-sm rounded-md border border-line bg-[var(--color-bg-elevated)] shadow-soft">
         <div className="border-b border-line px-4 py-3">
           <h2 className="text-sm font-semibold">{zhCN.timeline.whisperRunningTitle}</h2>
-          <div className="mt-1 truncate text-xs text-slate-500">{clipName}</div>
+          <div className="mt-1 truncate text-xs text-[var(--color-text-muted)]">{clipName}</div>
         </div>
         <div className="px-4 py-5">
-          <div className="mb-2 text-sm text-slate-600">{zhCN.timeline.whisperRunningMessage(progress)}</div>
-          <div className="h-2 overflow-hidden rounded-full bg-slate-200">
+          <div className="mb-2 text-sm text-[var(--color-text-secondary)]">{zhCN.timeline.whisperRunningMessage(progress)}</div>
+          <div className="h-2 overflow-hidden rounded-full bg-[var(--color-bg-elevated)]">
             <div className="h-full bg-brand transition-all" style={{ width: `${Math.round(Math.max(0, Math.min(1, progress)) * 100)}%` }} />
           </div>
         </div>
@@ -5634,21 +5634,21 @@ function DialogueDetectionPanel({
   }
 
   return (
-    <aside className="absolute bottom-3 right-3 top-16 z-50 flex w-80 flex-col overflow-hidden rounded-md border border-line bg-white shadow-soft" data-testid="dialogue-detection-panel">
+    <aside className="absolute bottom-3 right-3 top-16 z-50 flex w-80 flex-col overflow-hidden rounded-md border border-line bg-[var(--color-bg-elevated)] shadow-soft" data-testid="dialogue-detection-panel">
       <div className="flex items-center justify-between gap-2 border-b border-line px-3 py-2">
         <div>
           <div className="text-sm font-semibold">{zhCN.timeline.dialogueDetectionTitle}</div>
-          <div className="text-[11px] text-slate-500">{zhCN.timeline.dialogueDetectionSubtitle}</div>
+          <div className="text-[11px] text-[var(--color-text-muted)]">{zhCN.timeline.dialogueDetectionSubtitle}</div>
         </div>
         <button className="rounded border border-line px-2 py-1 text-xs hover:bg-panel" type="button" onClick={onClose} data-testid="dialogue-detection-close">
           {zhCN.timeline.close}
         </button>
       </div>
       <div className="space-y-3 border-b border-line px-3 py-3 text-xs">
-        <label className="block font-medium text-slate-600">
+        <label className="block font-medium text-[var(--color-text-secondary)]">
           {zhCN.timeline.dialogueDetectionSensitivity}
           <select
-            className="mt-1 w-full rounded border border-line bg-white px-2 py-1.5 text-sm"
+            className="mt-1 w-full rounded border border-line bg-[var(--color-bg-elevated)] px-2 py-1.5 text-sm"
             value={sensitivity}
             data-testid="dialogue-detection-sensitivity"
             onChange={(event) => setSensitivity(event.target.value as DialogueSensitivity)}
@@ -5670,11 +5670,11 @@ function DialogueDetectionPanel({
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 text-xs">
         <div className="mb-2 flex items-center justify-between">
-          <span className="font-semibold text-slate-700">{zhCN.timeline.dialogueDetectionResults}</span>
-          <span className="tabular-nums text-slate-500">{markers.length}</span>
+          <span className="font-semibold text-[var(--color-text-secondary)]">{zhCN.timeline.dialogueDetectionResults}</span>
+          <span className="tabular-nums text-[var(--color-text-muted)]">{markers.length}</span>
         </div>
         {markers.length === 0 ? (
-          <div className="rounded border border-dashed border-line px-3 py-6 text-center text-slate-500" data-testid="dialogue-detection-empty">
+          <div className="rounded border border-dashed border-line px-3 py-6 text-center text-[var(--color-text-muted)]" data-testid="dialogue-detection-empty">
             {zhCN.timeline.dialogueDetectionNoResults}
           </div>
         ) : (
@@ -5685,7 +5685,7 @@ function DialogueDetectionPanel({
                   <span>{zhCN.timeline.dialogueDetectionRangeLabel(index + 1)}</span>
                   <span>{zhCN.timeline.dialogueDetectionConfidence(marker.confidence)}</span>
                 </div>
-                <div className="mt-1 font-mono tabular-nums text-slate-700">
+                <div className="mt-1 font-mono tabular-nums text-[var(--color-text-secondary)]">
                   {marker.start.toFixed(2)}s - {marker.end.toFixed(2)}s
                 </div>
               </div>
@@ -5724,7 +5724,7 @@ function SelectionMarquee({ rect }: { rect: SelectionRect }) {
   const { left, top, width, height } = getSelectionMarqueeBox(rect);
   return (
     <div
-      className="pointer-events-none fixed z-50 border border-blue-500 bg-blue-500/20"
+      className="pointer-events-none fixed z-50 border border-[var(--color-accent)] bg-[var(--color-accent)]/20"
       style={{ left, top, width, height }}
       data-testid="timeline-selection-marquee"
       data-left={left}
@@ -5783,7 +5783,7 @@ function TimelineMinimap({
 
   return (
     <aside
-      className="relative shrink-0 overflow-hidden border-l border-line bg-slate-50"
+      className="relative shrink-0 overflow-hidden border-l border-line bg-[var(--color-bg-secondary)]"
       style={{ width: 120, height }}
       aria-label={zhCN.toolbar.timelineMinimap}
       data-testid="timeline-minimap"
@@ -5976,7 +5976,7 @@ function SequenceSettingsDialog({
   const [height, setHeight] = useState(String(seqSettings?.height ?? projectSettings.height));
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" data-testid="sequence-settings-dialog" onPointerDown={(e) => { e.stopPropagation(); }}>
-      <div className="w-[360px] rounded-lg border border-line bg-white p-4 shadow-lg" onPointerDown={(e) => e.stopPropagation()}>
+      <div className="w-[360px] rounded-lg border border-line bg-[var(--color-bg-elevated)] p-4 shadow-lg" onPointerDown={(e) => e.stopPropagation()}>
         <div className="mb-3 flex items-center justify-between">
           <span className="text-sm font-semibold">{zhCN.timeline.sequenceSettingsTitle}</span>
           <button className="rounded p-1 hover:bg-panel" type="button" onClick={onClose}><X size={14} /></button>
@@ -5989,17 +5989,17 @@ function SequenceSettingsDialog({
           <label className="flex items-center gap-2">
             <span className="w-16 shrink-0">{zhCN.timeline.sequenceSettingsFps}</span>
             <input className="w-20 rounded border border-line px-2 py-1 disabled:opacity-50" type="number" step="0.001" min="1" max="240" value={fps} disabled={!override} onChange={(e) => setFps(e.target.value)} data-testid="sequence-settings-fps" />
-            {!override && <span className="text-slate-400">{zhCN.timeline.sequenceSettingsInherit}</span>}
+            {!override && <span className="text-[var(--color-text-muted)]">{zhCN.timeline.sequenceSettingsInherit}</span>}
           </label>
           <label className="flex items-center gap-2">
             <span className="w-16 shrink-0">{zhCN.timeline.sequenceSettingsWidth}</span>
             <input className="w-20 rounded border border-line px-2 py-1 disabled:opacity-50" type="number" step="1" min="1" max="16384" value={width} disabled={!override} onChange={(e) => setWidth(e.target.value)} data-testid="sequence-settings-width" />
-            {!override && <span className="text-slate-400">{zhCN.timeline.sequenceSettingsInherit}</span>}
+            {!override && <span className="text-[var(--color-text-muted)]">{zhCN.timeline.sequenceSettingsInherit}</span>}
           </label>
           <label className="flex items-center gap-2">
             <span className="w-16 shrink-0">{zhCN.timeline.sequenceSettingsHeight}</span>
             <input className="w-20 rounded border border-line px-2 py-1 disabled:opacity-50" type="number" step="1" min="1" max="16384" value={height} disabled={!override} onChange={(e) => setHeight(e.target.value)} data-testid="sequence-settings-height" />
-            {!override && <span className="text-slate-400">{zhCN.timeline.sequenceSettingsInherit}</span>}
+            {!override && <span className="text-[var(--color-text-muted)]">{zhCN.timeline.sequenceSettingsInherit}</span>}
           </label>
         </div>
         <div className="mt-4 flex justify-end gap-2">
@@ -6023,7 +6023,7 @@ function GapStatsPanel({ timeline, tracks, onClose }: { timeline: { tracks: Trac
   const stats = getGapStats(gaps);
   return (
     <div
-      className="fixed z-50 w-[260px] rounded-md border border-line bg-white p-3 text-xs shadow-soft"
+      className="fixed z-50 w-[260px] rounded-md border border-line bg-[var(--color-bg-elevated)] p-3 text-xs shadow-soft"
       style={{ right: 16, top: 120 }}
       data-testid="gap-stats-panel"
       onPointerDown={(event) => event.stopPropagation()}
@@ -6033,7 +6033,7 @@ function GapStatsPanel({ timeline, tracks, onClose }: { timeline: { tracks: Trac
         <button className="rounded p-1 hover:bg-panel" type="button" data-testid="gap-stats-close" onClick={onClose}><X size={14} /></button>
       </div>
       {stats.totalCount === 0 ? (
-        <div className="py-4 text-center text-slate-500">{zhCN.timeline.gapPanel.noGaps}</div>
+        <div className="py-4 text-center text-[var(--color-text-muted)]">{zhCN.timeline.gapPanel.noGaps}</div>
       ) : (
         <div className="space-y-2">
           <div className="flex justify-between"><span>{zhCN.timeline.gapPanel.totalCount}</span><span className="font-medium">{stats.totalCount}</span></div>
@@ -6047,7 +6047,7 @@ function GapStatsPanel({ timeline, tracks, onClose }: { timeline: { tracks: Trac
                 const track = tracks.find((t) => t.id === trackId);
                 return (
                   <div key={trackId} className="flex justify-between py-0.5">
-                    <span className="text-slate-600">{track?.name ?? trackId}</span>
+                    <span className="text-[var(--color-text-secondary)]">{track?.name ?? trackId}</span>
                     <span>{entry.count}{zhCN.timeline.gapPanel.count} / {zhCN.timeline.gapPanel.seconds(entry.totalDuration)}</span>
                   </div>
                 );

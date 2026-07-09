@@ -132,21 +132,21 @@ export function AIDenoisePanel({
 
   const renderNoiseBar = (label: string, key: string, score: number) => (
     <div className="flex items-center gap-2 text-xs" data-testid={`ai-denoise-bar-${key}`}>
-      <span className="w-10 text-slate-600">{label}</span>
-      <div className="flex-1 h-2 rounded-full bg-slate-200 overflow-hidden">
+      <span className="w-10 text-[var(--color-text-secondary)]">{label}</span>
+      <div className="flex-1 h-2 rounded-full bg-[var(--color-bg-elevated)] overflow-hidden">
         <div className="h-full rounded-full bg-orange-400" style={{ width: `${Math.min(score * 100, 100)}%` }} />
       </div>
-      <span className="w-10 text-right text-slate-500">{(score * 100).toFixed(0)}%</span>
+      <span className="w-10 text-right text-[var(--color-text-muted)]">{(score * 100).toFixed(0)}%</span>
     </div>
   );
 
   const renderFilter = (filter: DenoiseFilterRecommendation, index: number) => (
     <div key={index} className="rounded-md border border-brand/30 bg-brand/5 p-2 text-xs" data-testid={`ai-denoise-filter-${filter.filter}`}>
       <div className="flex items-center justify-between">
-        <span className="font-semibold text-slate-800">{filter.filter}</span>
-        <span className="text-slate-500">{filter.reason}</span>
+        <span className="font-semibold text-ink">{filter.filter}</span>
+        <span className="text-[var(--color-text-muted)]">{filter.reason}</span>
       </div>
-      <div className="mt-1 text-[10px] text-slate-500">
+      <div className="mt-1 text-[10px] text-[var(--color-text-muted)]">
         {Object.entries(filter.params).map(([k, v]) => `${k}=${v}`).join(' · ')}
       </div>
     </div>
@@ -157,7 +157,7 @@ export function AIDenoisePanel({
 
   return (
     <details className="mb-4" data-testid="ai-denoise-section">
-      <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-slate-500">
+      <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">
         {t.title}
       </summary>
       <div className="space-y-2 p-1">
@@ -167,9 +167,9 @@ export function AIDenoisePanel({
 
         {!loading && !hasResults && (
           <div className="mb-2">
-            <label className="block text-xs text-slate-600">{t.selectProvider}</label>
+            <label className="block text-xs text-[var(--color-text-secondary)]">{t.selectProvider}</label>
             <select
-              className="w-full rounded-md border border-line bg-white px-2 py-1 text-sm"
+              className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1 text-sm"
               value={selectedProvider?.id ?? ''}
               disabled
               data-testid="ai-denoise-provider-select"
@@ -184,7 +184,7 @@ export function AIDenoisePanel({
 
         {!loading && !hasResults && (
           <button
-            className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-50"
             type="button"
             disabled={!available}
             onClick={() => void handleAnalyze()}
@@ -196,7 +196,7 @@ export function AIDenoisePanel({
         )}
 
         {loading && (
-          <div className="flex items-center gap-2 py-3 text-sm text-slate-500" data-testid="ai-denoise-loading">
+          <div className="flex items-center gap-2 py-3 text-sm text-[var(--color-text-muted)]" data-testid="ai-denoise-loading">
             <Loader2 size={16} className="animate-spin" />
             {t.analyzing}
           </div>
@@ -211,15 +211,15 @@ export function AIDenoisePanel({
         {hasResults && profile && (
           <div className="space-y-3" data-testid="ai-denoise-results">
             <div>
-              <div className="text-xs font-semibold text-slate-700 mb-1">{t.noiseProfile}</div>
+              <div className="text-xs font-semibold text-[var(--color-text-secondary)] mb-1">{t.noiseProfile}</div>
               {renderNoiseBar(t.hum, 'hum', profile.humScore)}
               {renderNoiseBar(t.hiss, 'hiss', profile.hissScore)}
               {renderNoiseBar(t.wind, 'wind', profile.windScore)}
-              <div className="mt-1 text-xs text-slate-500">{t.snr}: {profile.snrEstimate.toFixed(1)} dB</div>
+              <div className="mt-1 text-xs text-[var(--color-text-muted)]">{t.snr}: {profile.snrEstimate.toFixed(1)} dB</div>
             </div>
 
             <div>
-              <div className="text-xs font-semibold text-slate-700 mb-1">{t.recommendedFilters}</div>
+              <div className="text-xs font-semibold text-[var(--color-text-secondary)] mb-1">{t.recommendedFilters}</div>
               <div className="space-y-1">
                 {recommendation!.recommendedFilters.map((f, i) => renderFilter(f, i))}
               </div>
@@ -227,7 +227,7 @@ export function AIDenoisePanel({
 
             <div className="flex gap-2">
               <button
-                className="flex-1 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+                className="flex-1 rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--color-accent)]"
                 type="button"
                 onClick={handleApply}
                 data-testid="ai-denoise-apply"
@@ -235,7 +235,7 @@ export function AIDenoisePanel({
                 {t.apply}
               </button>
               <button
-                className={`flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium border ${abEnabled ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-line bg-white text-slate-700 hover:bg-panel'}`}
+                className={`flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium border ${abEnabled ? 'border-[var(--color-accent)] bg-[var(--color-accent)]/10 text-[var(--color-accent)]' : 'border-line bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:bg-panel'}`}
                 type="button"
                 onClick={toggleAb}
                 data-testid="ai-denoise-ab-toggle"

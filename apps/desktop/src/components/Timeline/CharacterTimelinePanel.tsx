@@ -64,7 +64,7 @@ export function CharacterTimelinePanel() {
                 }
               }}
             >
-              <span className="inline-block w-2 h-2 rounded-full bg-blue-400 flex-shrink-0" />
+              <span className="inline-block w-2 h-2 rounded-full bg-[var(--color-accent)] flex-shrink-0" />
               {isEditing ? (
                 <input
                   className="flex-1 bg-surface border border-line rounded px-1 py-0.5 text-xs outline-none"

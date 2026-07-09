@@ -164,7 +164,7 @@ export function AISemanticSearchPanel({ media, onSelectMedia }: AISemanticSearch
     <div className="space-y-2" data-testid="ai-semantic-search-panel">
       <form onSubmit={handleSubmit} className="relative">
         <input
-          className="w-full rounded-md border border-brand bg-white py-2 pl-3 pr-16 text-sm text-ink"
+          className="w-full rounded-md border border-brand bg-[var(--color-bg-elevated)] py-2 pl-3 pr-16 text-sm text-ink"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={t.searchPlaceholder}
@@ -188,10 +188,10 @@ export function AISemanticSearchPanel({ media, onSelectMedia }: AISemanticSearch
       )}
 
       {showHistory && history.length > 0 && (
-        <div className="rounded-md border border-line bg-white shadow-sm" data-testid="ai-search-history">
+        <div className="rounded-md border border-line bg-[var(--color-bg-elevated)] shadow-sm" data-testid="ai-search-history">
           <div className="flex items-center justify-between px-2 py-1">
-            <span className="text-xs text-slate-500">{t.historyLabel}</span>
-            <button onClick={handleClearHistory} className="text-xs text-slate-400 hover:text-red-500">{t.clearHistory}</button>
+            <span className="text-xs text-[var(--color-text-muted)]">{t.historyLabel}</span>
+            <button onClick={handleClearHistory} className="text-xs text-[var(--color-text-muted)] hover:text-red-500">{t.clearHistory}</button>
           </div>
           {history.map((h, i) => (
             <button
@@ -199,16 +199,16 @@ export function AISemanticSearchPanel({ media, onSelectMedia }: AISemanticSearch
               className="flex w-full items-center gap-2 px-2 py-1 text-left text-xs hover:bg-panel"
               onMouseDown={() => handleHistorySelect(h.query)}
             >
-              <History size={12} className="text-slate-400" />
+              <History size={12} className="text-[var(--color-text-muted)]" />
               <span className="flex-1 truncate">{h.query}</span>
-              <span className="text-slate-400">{h.resultCount}</span>
+              <span className="text-[var(--color-text-muted)]">{h.resultCount}</span>
             </button>
           ))}
         </div>
       )}
 
       {loading && (
-        <div className="flex items-center gap-2 py-4 text-sm text-slate-500" data-testid="ai-search-loading">
+        <div className="flex items-center gap-2 py-4 text-sm text-[var(--color-text-muted)]" data-testid="ai-search-loading">
           <Loader2 size={16} className="animate-spin" />
           {t.searching}
         </div>
@@ -221,12 +221,12 @@ export function AISemanticSearchPanel({ media, onSelectMedia }: AISemanticSearch
       )}
 
       {!loading && !error && results.length === 0 && query.trim() && (
-        <p className="py-2 text-center text-xs text-slate-400" data-testid="ai-search-no-results">{t.noResults}</p>
+        <p className="py-2 text-center text-xs text-[var(--color-text-muted)]" data-testid="ai-search-no-results">{t.noResults}</p>
       )}
 
       {results.length > 0 && (
         <div className="space-y-1" data-testid="ai-search-results">
-          <p className="text-xs text-slate-500">{t.resultCount(results.length)}</p>
+          <p className="text-xs text-[var(--color-text-muted)]">{t.resultCount(results.length)}</p>
           {results.map((r) => (
             <button
               key={r.mediaId}
@@ -246,8 +246,8 @@ export function AISemanticSearchPanel({ media, onSelectMedia }: AISemanticSearch
 
       {unanalyzedIds.length > 0 && (
         <div className="mt-2 rounded-md border border-dashed border-slate-300 p-2" data-testid="ai-search-unanalyzed">
-          <p className="text-xs font-medium text-slate-500">{t.unanalyzedGroup} ({unanalyzedIds.length})</p>
-          <p className="text-[11px] text-slate-400">{t.unanalyzedHint}</p>
+          <p className="text-xs font-medium text-[var(--color-text-muted)]">{t.unanalyzedGroup} ({unanalyzedIds.length})</p>
+          <p className="text-[11px] text-[var(--color-text-muted)]">{t.unanalyzedHint}</p>
         </div>
       )}
     </div>

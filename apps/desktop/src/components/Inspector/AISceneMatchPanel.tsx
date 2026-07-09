@@ -169,8 +169,8 @@ export function AISceneMatchPanel({
           <img src={thumbnailSrc} alt="" className="h-10 w-14 rounded object-cover shrink-0" loading="lazy" />
         )}
         <div className="min-w-0 flex-1">
-          <div className="truncate font-medium text-slate-800">{card.name}</div>
-          <div className="mt-0.5 text-slate-500 line-clamp-2">{card.reason}</div>
+          <div className="truncate font-medium text-ink">{card.name}</div>
+          <div className="mt-0.5 text-[var(--color-text-muted)] line-clamp-2">{card.reason}</div>
         </div>
         <span className="shrink-0 rounded bg-brand/20 px-1 py-0.5 text-[10px] text-brand">
           {Math.round(card.score * 100)}%
@@ -181,9 +181,9 @@ export function AISceneMatchPanel({
 
   const renderGroup = (title: string, cards: SceneMatchCard[], testId: string) => (
     <div className="space-y-1" data-testid={testId}>
-      <div className="text-xs font-semibold text-slate-700">{title}</div>
+      <div className="text-xs font-semibold text-[var(--color-text-secondary)]">{title}</div>
       {cards.length === 0 ? (
-        <p className="text-xs text-slate-400">{t.noResults}</p>
+        <p className="text-xs text-[var(--color-text-muted)]">{t.noResults}</p>
       ) : (
         <div className="space-y-1">
           {cards.map(renderCard)}
@@ -196,7 +196,7 @@ export function AISceneMatchPanel({
 
   return (
     <details className="mb-4" data-testid="ai-scene-match-section">
-      <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-slate-500">
+      <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">
         {t.title}
       </summary>
       <div className="space-y-2 p-1">
@@ -209,9 +209,9 @@ export function AISceneMatchPanel({
 
         {!loading && !hasResults && (
           <div className="mb-2">
-            <label className="block text-xs text-slate-600">{t.selectProvider}</label>
+            <label className="block text-xs text-[var(--color-text-secondary)]">{t.selectProvider}</label>
             <select
-              className="w-full rounded-md border border-line bg-white px-2 py-1 text-sm"
+              className="w-full rounded-md border border-line bg-[var(--color-bg-elevated)] px-2 py-1 text-sm"
               value={selectedProvider?.id ?? ''}
               disabled
               data-testid="ai-scene-match-provider-select"
@@ -226,7 +226,7 @@ export function AISceneMatchPanel({
 
         {!loading && !hasResults && (
           <button
-            className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full rounded-md bg-[var(--color-accent)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--color-accent)] disabled:cursor-not-allowed disabled:opacity-50"
             type="button"
             disabled={!available || selectedClipLocked}
             onClick={() => void handleAnalyze()}
@@ -238,7 +238,7 @@ export function AISceneMatchPanel({
         )}
 
         {loading && (
-          <div className="flex items-center gap-2 py-3 text-sm text-slate-500" data-testid="ai-scene-match-loading">
+          <div className="flex items-center gap-2 py-3 text-sm text-[var(--color-text-muted)]" data-testid="ai-scene-match-loading">
             <Loader2 size={16} className="animate-spin" />
             {t.analyzing}
           </div>

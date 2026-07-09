@@ -152,7 +152,7 @@ export function AIMediaOrganizePanel({ media, existingCollections, onCollections
         </h3>
         <button
           type="button"
-          className="rounded p-1 text-slate-400 hover:bg-white hover:text-slate-600"
+          className="rounded p-1 text-[var(--color-text-muted)] hover:bg-[var(--color-bg-elevated)] hover:text-[var(--color-text-secondary)]"
           onClick={onClose}
           data-testid="media-organize-close"
         >
@@ -179,7 +179,7 @@ export function AIMediaOrganizePanel({ media, existingCollections, onCollections
       )}
 
       {loading && (
-        <div className="flex items-center gap-2 py-4 text-sm text-slate-500" data-testid="media-organize-loading">
+        <div className="flex items-center gap-2 py-4 text-sm text-[var(--color-text-muted)]" data-testid="media-organize-loading">
           <Loader2 size={16} className="animate-spin" />
           {t.analyzing}
         </div>
@@ -192,12 +192,12 @@ export function AIMediaOrganizePanel({ media, existingCollections, onCollections
       )}
 
       {!loading && !error && executed && suggestions.length === 0 && (
-        <p className="py-2 text-center text-xs text-slate-400" data-testid="media-organize-empty">{t.empty}</p>
+        <p className="py-2 text-center text-xs text-[var(--color-text-muted)]" data-testid="media-organize-empty">{t.empty}</p>
       )}
 
       {suggestions.length > 0 && (
         <div className="space-y-2" data-testid="media-organize-suggestions">
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-[var(--color-text-muted)]">
             {suggestions.length} 个建议 ({acceptedCount} 已采纳, {pendingCount} 待处理)
           </p>
           {suggestions.map((suggestion, index) => (
@@ -206,8 +206,8 @@ export function AIMediaOrganizePanel({ media, existingCollections, onCollections
               className={clsx(
                 'rounded-md border p-2',
                 suggestion.status === 'accepted' && 'border-green-300 bg-green-50',
-                suggestion.status === 'rejected' && 'border-slate-200 bg-slate-50 opacity-50',
-                suggestion.status === 'pending' && 'border-brand/20 bg-white'
+                suggestion.status === 'rejected' && 'border-[var(--color-border)] bg-[var(--color-bg-secondary)] opacity-50',
+                suggestion.status === 'pending' && 'border-brand/20 bg-[var(--color-bg-elevated)]'
               )}
               data-testid={`media-organize-suggestion-${index}`}
             >
@@ -216,12 +216,12 @@ export function AIMediaOrganizePanel({ media, existingCollections, onCollections
                   <div className="flex items-center gap-1.5">
                     <FolderPlus size={12} className={suggestion.status === 'accepted' ? 'text-green-600' : 'text-brand'} />
                     <span className="text-xs font-semibold text-ink">{suggestion.name}</span>
-                    <span className="rounded bg-slate-100 px-1 py-0.5 text-[10px] text-slate-500">
+                    <span className="rounded bg-[var(--color-bg-elevated)] px-1 py-0.5 text-[10px] text-[var(--color-text-muted)]">
                       {suggestion.mediaIds.length} 素材
                     </span>
                   </div>
                   {suggestion.reason && (
-                    <p className="mt-0.5 text-[11px] text-slate-400" data-testid={`media-organize-reason-${index}`}>
+                    <p className="mt-0.5 text-[11px] text-[var(--color-text-muted)]" data-testid={`media-organize-reason-${index}`}>
                       {suggestion.reason}
                     </p>
                   )}
@@ -238,7 +238,7 @@ export function AIMediaOrganizePanel({ media, existingCollections, onCollections
                     </button>
                     <button
                       type="button"
-                      className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600 hover:bg-slate-200"
+                      className="rounded bg-[var(--color-bg-elevated)] px-2 py-0.5 text-[10px] font-semibold text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-secondary)]"
                       onClick={() => handleReject(index)}
                       data-testid={`media-organize-reject-${index}`}
                     >
