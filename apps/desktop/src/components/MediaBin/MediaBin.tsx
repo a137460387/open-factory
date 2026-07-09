@@ -577,7 +577,7 @@ export function MediaBin({
         </div>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
-        <div className="mb-3 space-y-2">
+        <div className="mb-3 space-y-1.5">
           <label className="relative block">
             <span className="sr-only">{t.searchPlaceholder}</span>
             <Search className="pointer-events-none absolute left-2 top-2.5 text-[var(--color-text-muted)]" size={15} />
@@ -1833,7 +1833,7 @@ function MediaCardGrid({
       },
       pendingFocusRef
     }}>
-    <div ref={containerRef} className="grid gap-3" style={GRID_COLUMN_STYLES[gridSize]} data-testid={`media-folder-grid-${folderId}`} data-grid-size={gridSize} data-media-card-grid="true">
+    <div ref={containerRef} className="grid gap-2" style={GRID_COLUMN_STYLES[gridSize]} data-testid={`media-folder-grid-${folderId}`} data-grid-size={gridSize} data-media-card-grid="true">
       {media.map((asset, index) => (
         <MediaCard
           key={asset.id}
@@ -1965,7 +1965,7 @@ function VirtualMediaCardGrid({
       data-media-card-grid="true"
     >
       <div
-        className="grid gap-3"
+        className="grid gap-2"
         style={{ gridTemplateColumns: 'repeat(' + columnCount + ', 1fr)', paddingTop, paddingBottom }}
       >
         {virtualItems.map((virtualRow) => {
@@ -2305,7 +2305,7 @@ function MediaCard({
   const versionCount = 1 + mediaVersions.length;
   return (
     <div
-      className={clsx('relative overflow-hidden rounded-md border bg-[var(--color-bg-elevated)] shadow-sm outline-none focus:ring-2 focus:ring-brand', asset.missing ? 'border-rose-300' : 'border-line')}
+      className={clsx('relative overflow-hidden rounded-lg border bg-[var(--color-bg-elevated)] shadow-sm outline-none focus:ring-2 focus:ring-brand', asset.missing ? 'border-rose-300' : 'border-line')}
       data-testid={`media-card-${asset.id}`}
       data-media-card="true"
       data-media-index={mediaIndex}

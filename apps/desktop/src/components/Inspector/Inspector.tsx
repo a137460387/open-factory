@@ -3452,9 +3452,9 @@ function PanelTitle() {
 
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="mb-4">
-      <h2 className="mb-2 text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">{title}</h2>
-      <div className="space-y-3">{children}</div>
+    <section className="mb-3">
+      <h2 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--color-text-muted)]">{title}</h2>
+      <div className="space-y-2.5">{children}</div>
     </section>
   );
 }
