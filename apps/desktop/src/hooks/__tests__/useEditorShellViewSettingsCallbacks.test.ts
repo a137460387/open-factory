@@ -209,13 +209,13 @@ describe('useEditorShellViewSettingsCallbacks', () => {
       })
     );
 
-    result.current.updateTimelineGridSettings({ unit: 'seconds' });
+    result.current.updateTimelineGridSettings({ unit: 'second' });
 
     expect(mockSetTimelineGridSettings).toHaveBeenCalledTimes(1);
     // 验证乐观更新使用了 updater 函数
     const updater = mockSetTimelineGridSettings.mock.calls[0][0];
     const result2 = updater({ unit: 'frames', enabled: true });
-    expect(result2).toEqual({ unit: 'seconds', enabled: true });
+    expect(result2).toEqual({ unit: 'second', enabled: true });
   });
 
   // --- toggleTimelineGridSnap ---
@@ -244,12 +244,12 @@ describe('useEditorShellViewSettingsCallbacks', () => {
       })
     );
 
-    result.current.changeTimelineGridUnit('seconds');
+    result.current.changeTimelineGridUnit('second');
 
     expect(mockSetTimelineGridSettings).toHaveBeenCalledTimes(1);
     const updater = mockSetTimelineGridSettings.mock.calls[0][0];
     const gridResult = updater({ unit: 'frames', enabled: false });
-    expect(gridResult.unit).toBe('seconds');
+    expect(gridResult.unit).toBe('second');
   });
 
   // --- persistPreviewWindowState ---
@@ -315,12 +315,12 @@ describe('useEditorShellViewSettingsCallbacks', () => {
       })
     );
 
-    result.current.updatePreviewPerformance({ quality: 'high' });
+    result.current.updatePreviewPerformance({ qualityMode: 'half' });
 
     expect(mockSetPreviewPerformance).toHaveBeenCalledTimes(1);
     const updater = mockSetPreviewPerformance.mock.calls[0][0];
-    const perfResult = updater({ quality: 'low', fps: 30 });
-    expect(perfResult).toEqual({ quality: 'high', fps: 30 });
+    const perfResult = updater({ qualityMode: 'full', skipFrames: 1 });
+    expect(perfResult).toEqual({ qualityMode: 'half', skipFrames: 1 });
   });
 
   // --- updateTimelineInteractionSettings ---
@@ -332,11 +332,11 @@ describe('useEditorShellViewSettingsCallbacks', () => {
       })
     );
 
-    result.current.updateTimelineInteractionSettings({ snapToClips: true });
+    result.current.updateTimelineInteractionSettings({ reduceMotion: true });
 
     expect(mockSetTimelineInteractionSettings).toHaveBeenCalledTimes(1);
     const updater = mockSetTimelineInteractionSettings.mock.calls[0][0];
-    const interactionResult = updater({ snapToClips: false, scrubOnHover: true });
-    expect(interactionResult).toEqual({ snapToClips: true, scrubOnHover: true });
+    const interactionResult = updater({ reduceMotion: false, audioScrubEnabled: true });
+    expect(interactionResult).toEqual({ reduceMotion: true, audioScrubEnabled: true });
   });
 });

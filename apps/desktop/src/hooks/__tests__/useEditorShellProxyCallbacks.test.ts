@@ -8,10 +8,10 @@ const mockSetMedia = vi.fn();
 const mockCommandExecute = vi.fn();
 const mockMoveFile = vi.fn();
 const mockRemoveFile = vi.fn();
-const mockCreateProxyForAsset = vi.fn();
-const mockBuildProxyMigration = vi.fn(() => []);
-const mockGetProjectFrameRateConversionTarget = vi.fn(() => 30);
-const mockGetCfrTargetFrameRate = vi.fn(() => 30);
+const mockCreateProxyForAsset = vi.fn() as any;
+const mockBuildProxyMigration = vi.fn(() => []) as any;
+const mockGetProjectFrameRateConversionTarget = vi.fn(() => 30) as any;
+const mockGetCfrTargetFrameRate = vi.fn(() => 30) as any;
 
 let mockEditorState: Record<string, any>;
 
@@ -65,6 +65,8 @@ import { showToast } from '../../lib/toast';
 
 // ── 测试 ─────────────────────────────────────────────────────
 
+const DEFAULT_PROXY_SETTINGS = { maxWidth: 1920, maxHeight: 1080, videoBitrate: '5M', triggerShortEdge: 640 };
+
 describe('useProxyCallbacks', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -84,7 +86,7 @@ describe('useProxyCallbacks', () => {
   it('导出所有预期的函数', () => {
     const { result } = renderHook(() =>
       useProxyCallbacks({
-        proxySettings: {},
+        proxySettings: DEFAULT_PROXY_SETTINGS,
         projectFps: 30,
       })
     );
@@ -99,7 +101,7 @@ describe('useProxyCallbacks', () => {
   // --- generateProxyForMedia ---
   it('generateProxyForMedia 对非 video 类型资产不执行操作', async () => {
     const { result } = renderHook(() =>
-      useProxyCallbacks({ proxySettings: {}, projectFps: 30 })
+      useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 })
     );
 
     await result.current.generateProxyForMedia('audio-1');
@@ -109,7 +111,7 @@ describe('useProxyCallbacks', () => {
 
   it('generateProxyForMedia 对不存在的资产 ID 不执行操作', async () => {
     const { result } = renderHook(() =>
-      useProxyCallbacks({ proxySettings: {}, projectFps: 30 })
+      useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 })
     );
 
     await result.current.generateProxyForMedia('nonexistent-id');
@@ -122,7 +124,7 @@ describe('useProxyCallbacks', () => {
     mockCreateProxyForAsset.mockResolvedValue(proxyAsset);
 
     const { result } = renderHook(() =>
-      useProxyCallbacks({ proxySettings: {}, projectFps: 30 })
+      useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 })
     );
 
     await result.current.generateProxyForMedia('video-1');
@@ -140,7 +142,7 @@ describe('useProxyCallbacks', () => {
     mockCreateProxyForAsset.mockRejectedValue(new Error('FFmpeg failed'));
 
     const { result } = renderHook(() =>
-      useProxyCallbacks({ proxySettings: {}, projectFps: 30 })
+      useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 })
     );
 
     await result.current.generateProxyForMedia('video-1');
@@ -158,7 +160,7 @@ describe('useProxyCallbacks', () => {
     mockRemoveFile.mockResolvedValue(undefined);
 
     const { result } = renderHook(() =>
-      useProxyCallbacks({ proxySettings: {}, projectFps: 30 })
+      useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 })
     );
 
     await result.current.deleteProxiesForMedia(['video-2']);
@@ -170,7 +172,7 @@ describe('useProxyCallbacks', () => {
 
   it('deleteProxiesForMedia 在无代理路径时不调用 removeFile', async () => {
     const { result } = renderHook(() =>
-      useProxyCallbacks({ proxySettings: {}, projectFps: 30 })
+      useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 })
     );
 
     await result.current.deleteProxiesForMedia(['video-1']);
@@ -183,7 +185,7 @@ describe('useProxyCallbacks', () => {
     mockRemoveFile.mockRejectedValue(new Error('Permission denied'));
 
     const { result } = renderHook(() =>
-      useProxyCallbacks({ proxySettings: {}, projectFps: 30 })
+      useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 })
     );
 
     await result.current.deleteProxiesForMedia(['video-2']);
@@ -199,7 +201,7 @@ describe('useProxyCallbacks', () => {
     mockBuildProxyMigration.mockReturnValue([]);
 
     const { result } = renderHook(() =>
-      useProxyCallbacks({ proxySettings: {}, projectFps: 30 })
+      useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 })
     );
 
     await result.current.migrateProxiesToDirectory('/new/path');
@@ -216,7 +218,7 @@ describe('useProxyCallbacks', () => {
     mockMoveFile.mockResolvedValue(undefined);
 
     const { result } = renderHook(() =>
-      useProxyCallbacks({ proxySettings: {}, projectFps: 30 })
+      useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 })
     );
 
     await result.current.migrateProxiesToDirectory('/new/path');
@@ -235,7 +237,7 @@ describe('useProxyCallbacks', () => {
     mockMoveFile.mockRejectedValue(new Error('Disk full'));
 
     const { result } = renderHook(() =>
-      useProxyCallbacks({ proxySettings: {}, projectFps: 30 })
+      useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 })
     );
 
     await result.current.migrateProxiesToDirectory('/new/path');
@@ -249,7 +251,7 @@ describe('useProxyCallbacks', () => {
   // --- convertVfrMediaToCfr ---
   it('convertVfrMediaToCfr 对非 video 类型资产不执行操作', () => {
     const { result } = renderHook(() =>
-      useProxyCallbacks({ proxySettings: {}, projectFps: 30 })
+      useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 })
     );
 
     result.current.convertVfrMediaToCfr('audio-1');
@@ -259,7 +261,7 @@ describe('useProxyCallbacks', () => {
 
   it('convertVfrMediaToCfr 对不存在的资产不执行操作', () => {
     const { result } = renderHook(() =>
-      useProxyCallbacks({ proxySettings: {}, projectFps: 30 })
+      useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 })
     );
 
     result.current.convertVfrMediaToCfr('nonexistent');
@@ -272,7 +274,7 @@ describe('useProxyCallbacks', () => {
     mockCreateProxyForAsset.mockResolvedValue({ id: 'video-1', proxyStatus: 'ready' });
 
     const { result } = renderHook(() =>
-      useProxyCallbacks({ proxySettings: {}, projectFps: 30 })
+      useProxyCallbacks({ proxySettings: DEFAULT_PROXY_SETTINGS, projectFps: 30 })
     );
 
     result.current.convertVfrMediaToCfr('video-1');

@@ -89,7 +89,7 @@ describe('useContentAnalysisCallbacks', () => {
 
   // --- runSingleContentAnalysis ---
   it('runSingleContentAnalysis 成功时返回 true 并执行 UpdateClipCommand', async () => {
-    const mockAnalysis = { scenes: [], labels: [] };
+    const mockAnalysis = { scenes: [], labels: [] } as any;
     vi.mocked(analyzeClipContentLocally).mockResolvedValue(mockAnalysis);
 
     const { result } = renderHook(() =>
@@ -132,7 +132,7 @@ describe('useContentAnalysisCallbacks', () => {
   });
 
   it('runSingleContentAnalysis 始终在 finally 中清除 runningClipId', async () => {
-    vi.mocked(analyzeClipContentLocally).mockResolvedValue({});
+    vi.mocked(analyzeClipContentLocally).mockResolvedValue({} as any);
 
     const { result } = renderHook(() =>
       useContentAnalysisCallbacks({ setContentAnalysisRunningClipId: mockSetContentAnalysisRunningClipId })
@@ -170,7 +170,7 @@ describe('useContentAnalysisCallbacks', () => {
       asset: { id: 'media-1' },
     };
     vi.mocked(findContentAnalysisTarget).mockReturnValue(target as any);
-    vi.mocked(analyzeClipContentLocally).mockResolvedValue({});
+    vi.mocked(analyzeClipContentLocally).mockResolvedValue({} as any);
 
     const { result } = renderHook(() =>
       useContentAnalysisCallbacks({ setContentAnalysisRunningClipId: mockSetContentAnalysisRunningClipId })
@@ -201,7 +201,7 @@ describe('useContentAnalysisCallbacks', () => {
     const target2 = { clip: { id: 'clip-2' }, asset: { id: 'media-2' } };
     vi.mocked(collectContentAnalysisTargets).mockReturnValue([target1, target2] as any);
     mockEditorState.selectedClipIds = ['clip-2'];
-    vi.mocked(analyzeClipContentLocally).mockResolvedValue({});
+    vi.mocked(analyzeClipContentLocally).mockResolvedValue({} as any);
 
     const { result } = renderHook(() =>
       useContentAnalysisCallbacks({ setContentAnalysisRunningClipId: mockSetContentAnalysisRunningClipId })
@@ -219,7 +219,7 @@ describe('useContentAnalysisCallbacks', () => {
     const target2 = { clip: { id: 'clip-2' }, asset: { id: 'media-2' } };
     vi.mocked(collectContentAnalysisTargets).mockReturnValue([target1, target2] as any);
     mockEditorState.selectedClipIds = [];
-    vi.mocked(analyzeClipContentLocally).mockResolvedValue({});
+    vi.mocked(analyzeClipContentLocally).mockResolvedValue({} as any);
 
     const { result } = renderHook(() =>
       useContentAnalysisCallbacks({ setContentAnalysisRunningClipId: mockSetContentAnalysisRunningClipId })
