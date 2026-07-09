@@ -5,6 +5,9 @@ test('utility functions produce expected output after P1-4 extraction', async ({
   await page.goto('/');
   await waitForE2eActions(page);
 
+  // Wait for the editor-shell to be attached to the DOM before querying
+  await page.waitForSelector('[data-testid="editor-shell"]', { timeout: 15_000 });
+
   // Verify sanitizeFileName works in the E2E environment
   const result = await page.evaluate(() => {
     // Access the editor-core module through the app's bundled code
@@ -14,7 +17,6 @@ test('utility functions produce expected output after P1-4 extraction', async ({
   expect(result).toBe(true);
 
   // The extraction of utility functions should not break the main layout
-  // Wait for React to finish rendering after waitForE2eActions
   await expect(page.getByTestId('left-panel')).toBeVisible({ timeout: 10_000 });
   await expect(page.getByTestId('timeline-panel')).toBeVisible({ timeout: 10_000 });
 });

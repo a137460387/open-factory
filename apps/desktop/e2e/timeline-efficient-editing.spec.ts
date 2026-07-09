@@ -33,7 +33,7 @@ test('rolling trim keeps adjacent clip duration sum unchanged', async ({ page })
 
   await page.keyboard.down('r');
   // Allow React to batch-apply rollingTrimActive state before drag starts
-  await page.waitForTimeout(100);
+  await page.waitForTimeout(500);
   await dragHandleBy(page.getByTestId('timeline-trim-right-clip-edit-a'), page, 80);
   await page.keyboard.up('r');
 
@@ -55,7 +55,7 @@ test('slip edit changes source trims while keeping clip position and duration', 
   const before = await getClip(page, 'clip-edit-a');
   await page.keyboard.down('s');
   // Allow React to batch-apply slipEditActive state before drag starts
-  await page.waitForTimeout(100);
+  await page.waitForTimeout(500);
   await dragHandleBy(page.getByTestId('timeline-clip-clip-edit-a'), page, 80);
   await page.keyboard.up('s');
 
@@ -77,7 +77,7 @@ test('slide edit keeps the three-clip total duration unchanged', async ({ page }
 
   await page.keyboard.down('d');
   // Allow React to batch-apply slideEditActive state before drag starts
-  await page.waitForTimeout(100);
+  await page.waitForTimeout(500);
   await dragHandleBy(page.getByTestId('timeline-clip-clip-edit-b'), page, 80);
   await page.keyboard.up('d');
 
