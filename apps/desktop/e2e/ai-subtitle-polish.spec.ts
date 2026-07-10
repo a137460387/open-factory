@@ -27,11 +27,10 @@ test('polish subtitles via AI and verify timeline update with undo', async ({ pa
   expect(texts).toContain('今天天气真好。');
 
   await page.getByTestId('toolbar-undo-button').click();
-  await page.waitForTimeout(500);
 
-  const snapshot2 = await page.evaluate(() => window.__E2E_ACTIONS__!.getTimelineSnapshot!());
-  const subTrack2 = snapshot2.tracks.find((t: { type: string }) => t.type === 'subtitle');
-  expect(subTrack2).toBeDefined();
-  const texts2 = subTrack2!.clips.map((c: { text: string }) => c.text);
-  expect(texts2).toContain('你好，世界');
+  await expect.poll(() => page.evaluate(() => {
+    const snapshot = window.__E2E_ACTIONS__!.getTimelineSnapshot!();
+    const subTrack = snapshot.tracks.find((t: { type: string }) => t.type === 'subtitle');
+    return subTrack?.clips?.map((c: { text: string }) => c.text);
+  })).toContain('你好，世界');
 });

@@ -38,7 +38,6 @@ test('AI B-roll: no gaps shows info message', async ({ page }) => {
   await page.getByTestId('ai-broll-analyze').click();
 
   // Short clip (2s) is below 3s threshold — should show no-gaps toast
-  // Wait a bit then verify no results appear
-  await page.waitForTimeout(2000);
-  await expect(page.getByTestId('ai-broll-results')).not.toBeVisible();
+  // Verify no results appear (polling instead of fixed timeout)
+  await expect(page.getByTestId('ai-broll-results')).not.toBeVisible({ timeout: 5_000 });
 });

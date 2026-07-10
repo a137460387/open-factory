@@ -51,19 +51,15 @@ test('music structure: snap clip boundary to nearest structure marker', async ({
 
   // Snap clip end to nearest structure point (within 0.3s tolerance)
   await page.evaluate(() => window.__E2E_ACTIONS__!.snapClipToStructure!('clip-music-1', 'track-music'));
-  await page.waitForTimeout(300);
 
   // After snap, duration should change to align with nearest structure point
-  const durationAfter = await page.evaluate(() => {
+  await expect.poll(() => page.evaluate(() => {
     const project = window.__E2E_ACTIONS__!.getProjectSnapshot!() as {
       timeline: { tracks: Array<{ clips: Array<{ id: string; duration: number }> }> };
     };
     const c = project.timeline.tracks.flatMap((t) => t.clips).find((item) => item.id === 'clip-music-1');
     return c?.duration ?? 0;
-  });
+  })).toBe(30);
   // Structure points at t=8, 16, 24. Clip start=0, end=30. Closest to end=30 is t=24 (dist=6, >0.3 tolerance)
   // So snap should NOT happen (distance > tolerance). Duration stays 30.
-  // Actually let's check: snapClipToStructure uses boundaryTime = start + duration = 30
-  // Distances: |30-8|=22, |30-16|=14, |30-24|=6 -- all > 0.3, so snap does nothing
-  expect(durationAfter).toBe(30);
 });

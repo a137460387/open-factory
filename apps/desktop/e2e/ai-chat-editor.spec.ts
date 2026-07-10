@@ -33,18 +33,15 @@ test('AI chat editor executes setSpeed command and supports undo', async ({ page
 
   // Undo — speed should revert to 1
   await page.getByTestId('toolbar-undo-button').click();
-  await page.waitForTimeout(300);
 
-  const speedAfterUndo = await page.evaluate(() => {
+  await expect.poll(() => page.evaluate(() => {
     const timeline = window.__E2E_ACTIONS__!.getTimelineSnapshot!() as {
       tracks: Array<{ clips: Array<{ id: string; speed: number }> }>;
     };
-    const clip = timeline.tracks
+    return timeline.tracks
       .flatMap((t) => t.clips)
-      .find((c) => c.id === 'clip-chat-video');
-    return clip?.speed;
-  });
-  expect(speedAfterUndo).toBe(1);
+      .find((c) => c.id === 'clip-chat-video')?.speed;
+  })).toBe(1);
 });
 
 test('AI chat editor rejects unknown action gracefully', async ({ page }) => {

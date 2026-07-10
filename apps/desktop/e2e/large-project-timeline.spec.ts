@@ -4,7 +4,10 @@ import { waitForE2eActions } from './e2e-actions';
 test('renders a 500 clip timeline project in under one second', async ({ page }) => {
   await page.goto('/');
   await waitForE2eActions(page);
-  await page.waitForTimeout(1_000);
+  // Wait for app store to be fully initialized before large fixture setup
+  await expect
+    .poll(() => page.evaluate(() => Boolean((window as any).__APP_STORE__)), { timeout: 15_000 })
+    .toBe(true);
 
   await page.evaluate((project) => {
     window.__E2E_ACTIONS__!.setupLargeTimelineFixture!(project);

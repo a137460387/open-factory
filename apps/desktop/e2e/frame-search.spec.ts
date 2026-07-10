@@ -6,7 +6,6 @@ test('jumps to an exact frame from preview timecode search', async ({ page }) =>
   await waitForE2eActions(page);
   await page.evaluate(() => window.__E2E_ACTIONS__!.setupFrameSearchFixture!());
   await expect(page.getByTestId('frame-search-input')).toBeVisible();
-  await page.waitForTimeout(50);
 
   await page.evaluate(() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'g', ctrlKey: true, bubbles: true, cancelable: true })));
   await expect(page.getByTestId('frame-search-input')).toBeFocused();

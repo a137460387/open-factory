@@ -50,8 +50,8 @@ test('color consistency: malformed warnings do not crash timeline', async ({ pag
     }
   });
 
-  // Wait a tick for re-render
-  await page.waitForTimeout(300);
+  // Wait a tick for re-render — poll until DOM is stable
+  await expect(page.getByTestId('timeline-clip-clip-cc-a')).toBeVisible();
 
   // Timeline clips should still be visible (no crash)
   await expect(page.getByTestId('timeline-clip-clip-cc-a')).toBeVisible();
@@ -78,7 +78,6 @@ test('color consistency: empty warnings array renders cleanly', async ({ page })
 
   // Apply compensation to remove warnings cleanly
   await page.evaluate(() => window.__E2E_ACTIONS__!.applyColorCompensation!());
-  await page.waitForTimeout(300);
 
   // Warning should be gone
   await expect(warningIcon).not.toBeVisible();

@@ -73,4 +73,48 @@ playwright.config.ts
   virtual filesystem, and `window.__E2E_ACTIONS__` test helpers
 - `e2e/e2e-actions.ts` — shared Playwright helpers (`waitForE2eActions`,
   `addMediaCardToTimeline`, etc.)
+- `e2e/fixtures.ts` — Playwright 自定义 fixtures，自动注入页面对象
+- `e2e/pages/` — 页面对象模型（POM），封装核心组件交互
 - `e2e/*.spec.ts` — test specs; none import Tauri APIs directly
+
+## Page Object Model (POM)
+
+页面对象封装了 UI 组件的选择器和操作，测试用例通过 fixtures 自动获取：
+
+```typescript
+import { test, expect } from './fixtures';
+
+test('示例', async ({ toolbar, mediaBin, timeline, exportDialog }) => {
+  await toolbar.goto();           // 导航 + 等待 mock 层
+  await mediaBin.importMedia();   // 点击导入按钮
+  await mediaBin.addToTimeline(0); // 添加到时间线
+  await toolbar.openExport();     // 打开导出对话框
+  await exportDialog.enqueue();   // 入队导出
+  await exportDialog.expectTaskStatus(0, 'success');
+});
+```
+
+### 可用页面对象
+
+| Fixture | 类型 | 核心方法 |
+|---------|------|---------|
+| `toolbar` | `ToolbarPage` | `goto()`, `importMedia()`, `openExport()`, `openSettings()`, `undo()` |
+| `mediaBin` | `MediaBinPage` | `importMedia()`, `addToTimeline(n)`, `search()`, `createFolder()` |
+| `timeline` | `TimelinePage` | `selectClip()`, `dragClipBy()`, `markIn()`, `markOut()`, `getSnapshot()` |
+| `inspector` | `InspectorPage` | `fillTransformX()`, `fillScaleX()`, `addEffect()` |
+| `exportDialog` | `ExportDialogPage` | `selectPreset()`, `enqueue()`, `expectTaskStatus()`, `cancelTask()` |
+| `settingsDialog` | `SettingsDialogPage` | `switchTab()`, `enableLowPowerExport()`, `setLanguage()` |
+| `aiPanel` | `AIPanelPage` | `openRoughCut()`, `generateNarration()`, `measureLoudness()` |
+
+### 等待机制规范
+
+- ✅ Playwright 自动等待（`click()`, `fill()` 等内置等待）
+- ✅ `expect(locator).toBeVisible({ timeout })` 显式等待元素状态
+- ✅ `expect.poll(() => page.evaluate(...))` 轮询等待状态变化
+- ❌ `page.waitForTimeout()` 硬编码等待（禁止使用）
+
+### 选择器规范
+
+- 首选 `getByTestId('test-id')` — 最稳定
+- 动态 ID 使用 `locator('[data-testid^="prefix-"]')` 前缀匹配
+- 仅在内容断言时使用 `getByText()`

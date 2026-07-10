@@ -42,7 +42,6 @@ test('flash warning: apply reduction removes low severity warning', async ({ pag
 
   // Apply reduction: should remove low severity warnings
   await page.evaluate(() => window.__E2E_ACTIONS__!.applyFlashReduction!('clip-flash-reduce'));
-  await page.waitForTimeout(300);
 
   // Badge should disappear (low warning was removed)
   await expect(page.getByTestId('flash-warning-badge-clip-flash-reduce')).toHaveCount(0);

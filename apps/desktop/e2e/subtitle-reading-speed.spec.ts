@@ -37,17 +37,15 @@ test('subtitle reading speed: auto split clears warning on split clip', async ({
 
   // Auto split the critical clip
   await page.evaluate(() => window.__E2E_ACTIONS__!.autoSplitSubtitle!('clip-sub-rs-1', 'track-sub-rs'));
-  await page.waitForTimeout(300);
 
   // Warning should be cleared after split
-  const warning = await page.evaluate(() => {
+  await expect.poll(() => page.evaluate(() => {
     const project = window.__E2E_ACTIONS__!.getProjectSnapshot!() as {
       timeline: { tracks: Array<{ clips: Array<{ id: string; readingSpeedWarning?: { severity: string } | null }> }> };
     };
     const c = project.timeline.tracks.flatMap((t) => t.clips).find((item) => item.id === 'clip-sub-rs-1');
     return c?.readingSpeedWarning;
-  });
-  expect(warning).toBeNull();
+  })).toBeNull();
 });
 
 test('subtitle reading speed: extend duration clears warning', async ({ page }) => {
@@ -61,15 +59,13 @@ test('subtitle reading speed: extend duration clears warning', async ({ page }) 
   // clip-sub-rs-2 text = '另一段速度偏快的字幕' (10 chars), safe duration = 10/6 ≈ 1.667s
   // New end = 1 + 1.667 = 2.667. nextStart = 999 (no overlap concern)
   await page.evaluate(() => window.__E2E_ACTIONS__!.extendSubtitleDuration!('clip-sub-rs-2', 'track-sub-rs', 999));
-  await page.waitForTimeout(300);
 
   // Warning should be cleared after extension
-  const warning = await page.evaluate(() => {
+  await expect.poll(() => page.evaluate(() => {
     const project = window.__E2E_ACTIONS__!.getProjectSnapshot!() as {
       timeline: { tracks: Array<{ clips: Array<{ id: string; readingSpeedWarning?: { severity: string } | null }> }> };
     };
     const c = project.timeline.tracks.flatMap((t) => t.clips).find((item) => item.id === 'clip-sub-rs-2');
     return c?.readingSpeedWarning;
-  });
-  expect(warning).toBeNull();
+  })).toBeNull();
 });
