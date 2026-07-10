@@ -32,9 +32,11 @@ test('rolling trim keeps adjacent clip duration sum unchanged', async ({ page })
   });
 
   await page.keyboard.down('r');
-  // Wait for React to batch-apply rollingTrimActive state before drag starts
-  // Two rAF ticks ensure the keydown event is processed and state is committed
-  await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+  // Allow React to batch-apply rollingTrimActive state before drag starts.
+  // This is a UI mode toggle triggered by keydown; the state must propagate
+  // before the subsequent mouse drag interprets it. CI runners are slower
+  // than local dev machines, so a short explicit wait is the pragmatic choice.
+  await page.waitForTimeout(200);
   await dragHandleBy(page.getByTestId('timeline-trim-right-clip-edit-a'), page, 80);
   await page.keyboard.up('r');
 
@@ -55,9 +57,9 @@ test('slip edit changes source trims while keeping clip position and duration', 
 
   const before = await getClip(page, 'clip-edit-a');
   await page.keyboard.down('s');
-  // Wait for React to batch-apply slipEditActive state before drag starts
-  // Two rAF ticks ensure the keydown event is processed and state is committed
-  await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+  // Allow React to batch-apply slipEditActive state before drag starts.
+  // See rolling trim comment above for rationale.
+  await page.waitForTimeout(200);
   await dragHandleBy(page.getByTestId('timeline-clip-clip-edit-a'), page, 80);
   await page.keyboard.up('s');
 
@@ -78,9 +80,9 @@ test('slide edit keeps the three-clip total duration unchanged', async ({ page }
   const beforeEnd = before.at(-1)!.start + before.at(-1)!.duration;
 
   await page.keyboard.down('d');
-  // Wait for React to batch-apply slideEditActive state before drag starts
-  // Two rAF ticks ensure the keydown event is processed and state is committed
-  await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+  // Allow React to batch-apply slideEditActive state before drag starts.
+  // See rolling trim comment above for rationale.
+  await page.waitForTimeout(200);
   await dragHandleBy(page.getByTestId('timeline-clip-clip-edit-b'), page, 80);
   await page.keyboard.up('d');
 
