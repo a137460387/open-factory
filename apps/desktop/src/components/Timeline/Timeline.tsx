@@ -2872,6 +2872,7 @@ function addProjectBookmark(time = playheadTime): void {
       tabIndex={0}
       data-testid="timeline-root"
       data-reduce-motion={reduceMotion ? 'true' : 'false'}
+      data-editing-mode={slideEditActive ? 'slide' : slipEditActive ? 'slip' : rollingTrimActive ? 'rolling-trim' : 'none'}
       data-timeline-shortcuts-root="true"
       onPointerDown={(event) => {
         const target = event.target as HTMLElement | null;

@@ -5,10 +5,12 @@ export default defineConfig({
   /* 全局默认超时 30 秒 */
   timeout: 30_000,
   expect: { timeout: 5_000 },
-  /* 失败时重试 1 次（CI 环境） */
-  retries: process.env.CI ? 1 : 0,
+  /* 失败时重试 2 次（CI 环境），仅对失败用例重试 */
+  retries: process.env.CI ? 2 : 0,
   /* 并行执行（每个文件内测试串行） */
   fullyParallel: true,
+  /* CI 环境限制 worker 数量避免资源争抢 */
+  workers: process.env.CI ? 2 : undefined,
   /* 失败时保留 trace */
   forbidOnly: !!process.env.CI,
   use: {

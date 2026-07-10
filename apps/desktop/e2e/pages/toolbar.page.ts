@@ -88,4 +88,9 @@ export class ToolbarPage extends BasePage {
   async newProject(): Promise<void> {
     await this.safeClick('toolbar-new-project-button');
   }
+
+  /** 点击项目文档按钮 */
+  async openDocumentation(): Promise<void> {
+    await this.safeClick('toolbar-project-documentation-button');
+  }
 }
