@@ -181,4 +181,9 @@ export class TimelinePage extends BasePage {
   async waitForGridLine(timeout = 5_000): Promise<void> {
     await expect(this.gridLine.first()).toBeVisible({ timeout });
   }
+
+  /** 等待时间线进入指定编辑模式 */
+  async waitForEditingMode(mode: 'rolling-trim' | 'slip' | 'slide', timeout = 5_000): Promise<void> {
+    await expect(this.root).toHaveAttribute('data-editing-mode', mode, { timeout });
+  }
 }
