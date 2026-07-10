@@ -31,13 +31,11 @@ test('color consistency: apply compensation removes warning', async ({ page }) =
   await expect(page.getByTestId('timeline-clip-clip-cc-a')).toBeVisible({ timeout: 10_000 });
 
   await page.evaluate(() => window.__E2E_ACTIONS__!.applyColorCompensation!());
-  await page.waitForTimeout(300);
 
-  const warnings = await page.evaluate(() => {
+  await expect.poll(() => page.evaluate(() => {
     const project = window.__E2E_ACTIONS__!.getProjectSnapshot!() as {
       timeline: { colorConsistencyWarnings?: Array<{ type: string }> };
     };
-    return project.timeline.colorConsistencyWarnings ?? [];
-  });
-  expect(warnings).toHaveLength(0);
+    return project.timeline.colorConsistencyWarnings?.length ?? 0;
+  })).toBe(0);
 });

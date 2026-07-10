@@ -37,14 +37,12 @@ test('continuity check: insert transition clears warnings', async ({ page }) => 
 
   // Insert transition (simulate via E2E action)
   await page.evaluate(() => window.__E2E_ACTIONS__!.insertContinuityTransition!());
-  await page.waitForTimeout(300);
 
-  // Verify warnings cleared
-  const warnings = await page.evaluate(() => {
+  // Verify warnings cleared via polling
+  await expect.poll(() => page.evaluate(() => {
     const project = window.__E2E_ACTIONS__!.getProjectSnapshot!() as {
       timeline: { continuityWarnings?: Array<{ type: string }> };
     };
-    return project.timeline.continuityWarnings ?? [];
-  });
-  expect(warnings).toHaveLength(0);
+    return project.timeline.continuityWarnings?.length ?? 0;
+  })).toBe(0);
 });

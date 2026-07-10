@@ -1,29 +1,27 @@
-import { expect, test } from '@playwright/test';
-import { addMediaCardToTimeline, expectExportTaskStatus, openExportDialog, waitForE2eActions } from './e2e-actions';
+import { test, expect } from './fixtures';
 
-test('builds a multitrack FFmpeg plan with text artifacts and runs mocked export', async ({ page }) => {
-  await page.goto('/');
-  await waitForE2eActions(page);
+test('builds a multitrack FFmpeg plan with text artifacts and runs mocked export', async ({ page, toolbar, mediaBin, timeline, exportDialog }) => {
+  await toolbar.goto();
   await page.evaluate(() => window.__E2E_ACTIONS__!.holdExportGate!());
-  await page.getByTestId('import-media-button').click();
-  await addMediaCardToTimeline(page, 0);
-  await page.getByTestId('add-text-clip-button').click();
+  await mediaBin.importMedia();
+  await mediaBin.addToTimeline(0);
+  await timeline.addTextClip();
 
-  await openExportDialog(page);
-  await expect(page.getByTestId('export-dialog')).toBeVisible();
-  await page.getByTestId('export-preset-select').selectOption('web-1080p');
-  await page.getByTestId('export-max-concurrent-select').selectOption('1');
-  await page.getByTestId('export-fps-select').selectOption('60');
-  await page.getByTestId('export-batch-paths').fill('C:/Exports/e2e-output.mp4\nC:/Exports/e2e-output-2.mp4');
-  await page.getByTestId('export-enqueue-button').click();
-  await expectExportTaskStatus(page, 0, 'running');
-  await expectExportTaskStatus(page, 1, 'pending');
-  await page.getByTestId('export-task-cancel-button').nth(1).click();
-  await expectExportTaskStatus(page, 1, 'canceled');
+  await toolbar.openExport();
+  await exportDialog.waitForOpen();
+  await exportDialog.selectPreset('web-1080p');
+  await exportDialog.setMaxConcurrent('1');
+  await exportDialog.selectFps('60');
+  await exportDialog.fillBatchPaths('C:/Exports/e2e-output.mp4\nC:/Exports/e2e-output-2.mp4');
+  await exportDialog.enqueue();
+  await exportDialog.expectTaskStatus(0, 'running');
+  await exportDialog.expectTaskStatus(1, 'pending');
+  await exportDialog.cancelTask(1);
+  await exportDialog.expectTaskStatus(1, 'canceled');
   await page.evaluate(() => window.__E2E_ACTIONS__!.releaseExportGate!());
-  await expectExportTaskStatus(page, 0, 'success');
-  await page.getByTestId('export-task-retry-button').click();
-  await expectExportTaskStatus(page, 1, 'success');
+  await exportDialog.expectTaskStatus(0, 'success');
+  await exportDialog.retryTask(0);
+  await exportDialog.expectTaskStatus(1, 'success');
 
   const plan = await page.evaluate(() => window.__E2E_ACTIONS__!.getLastExportPlan!() as { fullArgs: string[]; filterComplex: string; textArtifacts: unknown[] });
   expect(plan.fullArgs).toContain('-filter_complex');
@@ -36,85 +34,81 @@ test('builds a multitrack FFmpeg plan with text artifacts and runs mocked export
   expect(plan.fullArgs.at(-1)).toBe('C:/Exports/e2e-output-2.mp4');
 });
 
-test('updates export cost estimate when switching presets', async ({ page }) => {
-  await page.goto('/');
-  await waitForE2eActions(page);
-  await page.getByTestId('import-media-button').click();
-  await addMediaCardToTimeline(page, 0);
+test('updates export cost estimate when switching presets', async ({ toolbar, mediaBin, exportDialog }) => {
+  await toolbar.goto();
+  await mediaBin.importMedia();
+  await mediaBin.addToTimeline(0);
 
-  await openExportDialog(page);
-  await expect(page.getByTestId('export-cost-estimate-panel')).toBeVisible();
-  await page.getByTestId('export-preset-select').selectOption('web-1080p');
-  const initialDuration = (await page.getByTestId('export-cost-duration').textContent())?.trim();
-  await page.getByTestId('export-preset-select').selectOption('4k');
+  await toolbar.openExport();
+  await expect(exportDialog.costEstimatePanel).toBeVisible();
+  await exportDialog.selectPreset('web-1080p');
+  const initialDuration = await exportDialog.getCostDuration();
+  await exportDialog.selectPreset('4k');
 
-  await expect.poll(async () => (await page.getByTestId('export-cost-duration').textContent())?.trim()).not.toBe(initialDuration);
-  await expect(page.getByTestId('export-cost-size')).toContainText('MB');
+  await expect.poll(async () => await exportDialog.getCostDuration()).not.toBe(initialDuration);
+  await expect(exportDialog.costSize).toContainText('MB');
 });
 
-test('exports the marked in/out range with frame-aligned duration', async ({ page }) => {
-  await page.goto('/');
-  await waitForE2eActions(page);
+test('exports the marked in/out range with frame-aligned duration', async ({ page, toolbar, mediaBin, timeline, exportDialog }) => {
+  await toolbar.goto();
   await page.evaluate(() => window.__E2E_ACTIONS__!.setSavePath!('C:/Exports/range-export.mp4'));
-  await page.getByTestId('import-media-button').click();
-  await addMediaCardToTimeline(page, 0);
+  await mediaBin.importMedia();
+  await mediaBin.addToTimeline(0);
 
-  await page.getByTestId('timeline-root').click();
-  await page.evaluate(() => window.__E2E_ACTIONS__!.setPlayheadTime!(1));
-  await page.keyboard.press('I');
-  await page.evaluate(() => window.__E2E_ACTIONS__!.setPlayheadTime!(3.033));
-  await page.keyboard.press('O');
+  await timeline.focus();
+  await timeline.setPlayheadTime(1);
+  await timeline.markIn();
+  await timeline.setPlayheadTime(3.033);
+  await timeline.markOut();
 
-  await expect(page.getByTestId('timeline-export-range-highlight')).toBeVisible();
+  await expect(timeline.exportRangeHighlight).toBeVisible();
   await expect
     .poll(() => page.evaluate(() => window.__E2E_ACTIONS__!.getExportRanges!() as Array<{ start: number; end: number }>))
     .toEqual([{ id: expect.any(String), label: '导出区间 1', start: 1, end: 3.033 }]);
 
-  await openExportDialog(page);
-  await page.getByTestId('export-range-select').selectOption('in-out');
-  await page.getByTestId('export-enqueue-button').click();
-  await expectExportTaskStatus(page, 0, 'success');
+  await toolbar.openExport();
+  await exportDialog.setRange('in-out');
+  await exportDialog.enqueue();
+  await exportDialog.expectTaskStatus(0, 'success');
 
   const plan = await page.evaluate(() => window.__E2E_ACTIONS__!.getLastExportPlan!() as { outputArgs: string[]; duration: number });
   expect(plan.outputArgs).toEqual(expect.arrayContaining(['-ss', '1', '-t', '2.033']));
   expect(Math.abs(plan.duration - 61 / 30)).toBeLessThanOrEqual(1 / 30);
 });
 
-test('runs export queue with two concurrent tasks and starts the third after a slot frees', async ({ page }) => {
-  await page.goto('/');
-  await waitForE2eActions(page);
+test('runs export queue with two concurrent tasks and starts the third after a slot frees', async ({ page, toolbar, mediaBin, exportDialog }) => {
+  await toolbar.goto();
   await page.evaluate(() => window.__E2E_ACTIONS__!.holdExportGate!());
-  await page.getByTestId('import-media-button').click();
-  await addMediaCardToTimeline(page, 0);
+  await mediaBin.importMedia();
+  await mediaBin.addToTimeline(0);
 
-  await openExportDialog(page);
-  await page.getByTestId('export-preset-select').selectOption('web-1080p');
-  await page.getByTestId('export-max-concurrent-select').selectOption('2');
-  await page.getByTestId('export-batch-paths').fill('C:/Exports/queue-a.mp4\nC:/Exports/queue-b.mp4\nC:/Exports/queue-c.mp4');
-  await page.getByTestId('export-enqueue-button').click();
+  await toolbar.openExport();
+  await exportDialog.selectPreset('web-1080p');
+  await exportDialog.setMaxConcurrent('2');
+  await exportDialog.fillBatchPaths('C:/Exports/queue-a.mp4\nC:/Exports/queue-b.mp4\nC:/Exports/queue-c.mp4');
+  await exportDialog.enqueue();
 
-  await expectExportTaskStatus(page, 0, 'running');
-  await expectExportTaskStatus(page, 1, 'running');
-  await expectExportTaskStatus(page, 2, 'pending');
+  await exportDialog.expectTaskStatus(0, 'running');
+  await exportDialog.expectTaskStatus(1, 'running');
+  await exportDialog.expectTaskStatus(2, 'pending');
 
   await page.evaluate(() => window.__E2E_ACTIONS__!.releaseExportGate!());
 
-  await expectExportTaskStatus(page, 0, 'success');
-  await expectExportTaskStatus(page, 1, 'running');
-  await expectExportTaskStatus(page, 2, 'running');
+  await exportDialog.expectTaskStatus(0, 'success');
+  await exportDialog.expectTaskStatus(1, 'running');
+  await exportDialog.expectTaskStatus(2, 'running');
   await page.evaluate(() => window.__E2E_ACTIONS__!.releaseAllExportGates!());
-  await expectExportTaskStatus(page, 1, 'success');
-  await expectExportTaskStatus(page, 2, 'success');
+  await exportDialog.expectTaskStatus(1, 'success');
+  await exportDialog.expectTaskStatus(2, 'success');
 });
 
-test('starts a scheduled export after the selected start time', async ({ page }) => {
-  await page.goto('/');
-  await waitForE2eActions(page);
+test('starts a scheduled export after the selected start time', async ({ page, toolbar, mediaBin, exportDialog }) => {
+  await toolbar.goto();
   await page.evaluate(() => window.__E2E_ACTIONS__!.holdExportGate!());
-  await page.getByTestId('import-media-button').click();
-  await addMediaCardToTimeline(page, 0);
+  await mediaBin.importMedia();
+  await mediaBin.addToTimeline(0);
 
-  await openExportDialog(page);
+  await toolbar.openExport();
   const startValue = await page.evaluate(() => {
     const date = new Date(Date.now() + 4_000);
     if (date.getSeconds() === 0) {
@@ -123,49 +117,48 @@ test('starts a scheduled export after the selected start time', async ({ page })
     const pad = (value: number) => String(value).padStart(2, '0');
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
   });
-  await page.getByTestId('export-schedule-toggle').check();
-  await page.getByTestId('export-schedule-start-input').fill(startValue);
-  await page.getByTestId('export-batch-paths').fill('C:/Exports/scheduled.mp4');
-  await page.getByTestId('export-enqueue-button').click();
+  await exportDialog.enableSchedule();
+  await exportDialog.setScheduleTime(startValue);
+  await exportDialog.fillBatchPaths('C:/Exports/scheduled.mp4');
+  await exportDialog.enqueue();
 
-  await expectExportTaskStatus(page, 0, 'scheduled');
-  await expectExportTaskStatus(page, 0, 'running');
+  await exportDialog.expectTaskStatus(0, 'scheduled');
+  await exportDialog.expectTaskStatus(0, 'running');
   const trayProgress = await page.evaluate(() => window.__E2E_ACTIONS__!.getLastTrayProgress!() as { runningCount: number } | undefined);
   expect(trayProgress?.runningCount).toBe(1);
   await page.evaluate(() => window.__E2E_ACTIONS__!.releaseAllExportGates!());
-  await expectExportTaskStatus(page, 0, 'success');
+  await exportDialog.expectTaskStatus(0, 'success');
 });
 
-test('starts high priority export before queued low priority work and writes log history', async ({ page }) => {
-  await page.goto('/');
-  await waitForE2eActions(page);
+test('starts high priority export before queued low priority work and writes log history', async ({ page, toolbar, mediaBin, exportDialog }) => {
+  await toolbar.goto();
   await page.evaluate(() => {
     window.__E2E_ACTIONS__!.holdExportGate!();
     window.__E2E_ACTIONS__!.setAvailableMemoryBytes!(1024 * 1024 * 1024);
   });
-  await page.getByTestId('import-media-button').click();
-  await addMediaCardToTimeline(page, 0);
+  await mediaBin.importMedia();
+  await mediaBin.addToTimeline(0);
 
-  await openExportDialog(page);
-  await page.getByTestId('export-max-concurrent-select').selectOption('1');
-  await page.getByTestId('export-priority-select').selectOption('low');
-  await page.getByTestId('export-batch-paths').fill('C:/Exports/priority-low.mp4');
-  await page.getByTestId('export-enqueue-button').click();
-  await expect(page.getByTestId('export-queue-list')).toContainText('可用内存低于 2GB');
-  await expectExportTaskStatus(page, 0, 'pending');
+  await toolbar.openExport();
+  await exportDialog.setMaxConcurrent('1');
+  await exportDialog.setPriority('low');
+  await exportDialog.fillBatchPaths('C:/Exports/priority-low.mp4');
+  await exportDialog.enqueue();
+  await expect(exportDialog.queueList).toContainText('可用内存低于 2GB');
+  await exportDialog.expectTaskStatus(0, 'pending');
 
-  await page.getByTestId('export-priority-select').selectOption('high');
-  await page.getByTestId('export-batch-paths').fill('C:/Exports/priority-high.mp4');
-  await page.getByTestId('export-enqueue-button').click();
+  await exportDialog.setPriority('high');
+  await exportDialog.fillBatchPaths('C:/Exports/priority-high.mp4');
+  await exportDialog.enqueue();
 
-  await expect(page.getByTestId('export-task-priority').nth(0)).toHaveText('高');
-  await expectExportTaskStatus(page, 0, 'pending');
+  await expect(exportDialog.getTaskPriority(0)).toHaveText('高');
+  await exportDialog.expectTaskStatus(0, 'pending');
   await page.evaluate(() => window.__E2E_ACTIONS__!.setAvailableMemoryBytes!(8 * 1024 * 1024 * 1024));
-  await expectExportTaskStatus(page, 0, 'running');
-  await expectExportTaskStatus(page, 1, 'pending');
+  await exportDialog.expectTaskStatus(0, 'running');
+  await exportDialog.expectTaskStatus(1, 'pending');
 
   await page.evaluate(() => window.__E2E_ACTIONS__!.releaseExportGate!());
-  await expectExportTaskStatus(page, 0, 'success');
+  await exportDialog.expectTaskStatus(0, 'success');
 
   const historyPath = 'C:/Users/E2E/AppData/Roaming/open-factory/export-history.json';
   await expect.poll(() => page.evaluate((path) => window.__E2E_ACTIONS__!.getWrittenFile!(path) as string | undefined, historyPath)).not.toBeUndefined();
@@ -173,47 +166,45 @@ test('starts high priority export before queued low priority work and writes log
   const high = history.find((entry) => entry.outputPath === 'C:/Exports/priority-high.mp4');
   expect(high?.logPath).toBeTruthy();
   await expect.poll(() => page.evaluate((path) => window.__E2E_ACTIONS__!.getWrittenFileSize!(path) as number, high!.logPath!)).toBeGreaterThan(0);
-  await expect(page.getByTestId('export-history-list')).toContainText('priority-high.mp4');
+  await expect(exportDialog.historyList).toContainText('priority-high.mp4');
 
   await page.evaluate(() => window.__E2E_ACTIONS__!.releaseAllExportGates!());
-  await expectExportTaskStatus(page, 1, 'success');
+  await exportDialog.expectTaskStatus(1, 'success');
 });
 
-test('uses detected NVENC hardware encoder when hardware encoding is enabled', async ({ page }) => {
-  await page.goto('/');
-  await waitForE2eActions(page);
-  await page.getByTestId('import-media-button').click();
-  await addMediaCardToTimeline(page, 0);
+test('uses detected NVENC hardware encoder when hardware encoding is enabled', async ({ page, toolbar, mediaBin, exportDialog }) => {
+  await toolbar.goto();
+  await mediaBin.importMedia();
+  await mediaBin.addToTimeline(0);
 
-  await openExportDialog(page);
-  await page.getByTestId('export-preset-select').selectOption('web-1080p');
+  await toolbar.openExport();
+  await exportDialog.selectPreset('web-1080p');
   await expect(page.getByTestId('export-hardware-encoding-toggle')).toBeEnabled();
-  await page.getByTestId('export-hardware-encoding-toggle').check();
-  await page.getByTestId('export-enqueue-button').click();
-  await expectExportTaskStatus(page, 0, 'success');
+  await exportDialog.enableHardwareEncoding();
+  await exportDialog.enqueue();
+  await exportDialog.expectTaskStatus(0, 'success');
 
   const plan = await page.evaluate(() => window.__E2E_ACTIONS__!.getLastExportPlan!() as { fullArgs: string[] });
   expect(plan.fullArgs).toEqual(expect.arrayContaining(['-c:v', 'h264_nvenc', '-preset', 'p4', '-cq', '23']));
 });
 
-test('limits FFmpeg threads when low-power export mode is enabled', async ({ page }) => {
-  await page.goto('/');
-  await waitForE2eActions(page);
+test('limits FFmpeg threads when low-power export mode is enabled', async ({ page, toolbar, mediaBin, settingsDialog, exportDialog }) => {
+  await toolbar.goto();
   await page.evaluate(() => window.__E2E_ACTIONS__!.clearE2eFiles!());
-  await page.getByTestId('toolbar-settings-button').click();
-  await expect(page.getByTestId('settings-dialog')).toBeVisible();
-  await page.getByTestId('settings-export-low-power-toggle').check();
+  await toolbar.openSettings();
+  await settingsDialog.waitForOpen();
+  await settingsDialog.enableLowPowerExport();
   await expect
     .poll(() => page.evaluate(() => window.__E2E_ACTIONS__!.getWrittenFile!('C:/Users/E2E/AppData/Roaming/open-factory/settings.json') as string | undefined))
     .toContain('"lowPowerMode": true');
-  await page.getByTestId('settings-close-button').click();
+  await settingsDialog.close();
 
-  await page.getByTestId('import-media-button').click();
-  await addMediaCardToTimeline(page, 0);
-  await openExportDialog(page);
-  await page.getByTestId('export-preset-select').selectOption('web-1080p');
-  await page.getByTestId('export-enqueue-button').click();
-  await expectExportTaskStatus(page, 0, 'success');
+  await mediaBin.importMedia();
+  await mediaBin.addToTimeline(0);
+  await toolbar.openExport();
+  await exportDialog.selectPreset('web-1080p');
+  await exportDialog.enqueue();
+  await exportDialog.expectTaskStatus(0, 'success');
 
   const plan = await page.evaluate(() => window.__E2E_ACTIONS__!.getLastExportPlan!() as { fullArgs: string[] });
   const threadsIndex = plan.fullArgs.lastIndexOf('-threads');
@@ -221,24 +212,23 @@ test('limits FFmpeg threads when low-power export mode is enabled', async ({ pag
   expect(Number(plan.fullArgs[threadsIndex + 1])).toBeGreaterThanOrEqual(1);
 });
 
-test('blocks export when preflight finds missing media and allows export after relink', async ({ page }) => {
-  await page.goto('/');
-  await waitForE2eActions(page);
+test('blocks export when preflight finds missing media and allows export after relink', async ({ page, toolbar, mediaBin, exportDialog }) => {
+  await toolbar.goto();
   await page.evaluate(() => window.__E2E_ACTIONS__!.setMissingProjectNext!());
-  await page.getByTestId('toolbar-open-project-button').click();
+  await toolbar.openProject();
   await expect(page.locator('[data-testid^="media-card-"][data-missing="true"]')).toBeVisible();
 
-  await openExportDialog(page);
-  await page.getByTestId('export-enqueue-button').click();
-  await expect(page.getByTestId('export-preflight-panel')).toBeVisible();
-  await expect(page.getByTestId('export-preflight-issue')).toHaveAttribute('data-type', 'missing-media');
-  await expect(page.getByTestId('export-preflight-panel')).toContainText('tiny-video.mp4');
+  await toolbar.openExport();
+  await exportDialog.enqueue();
+  await expect(exportDialog.preflightPanel).toBeVisible();
+  await expect(exportDialog.preflightIssue).toHaveAttribute('data-type', 'missing-media');
+  await expect(exportDialog.preflightPanel).toContainText('tiny-video.mp4');
   await expect(page.getByTestId('export-task-status')).toHaveCount(0);
 
-  await page.getByTestId('export-preflight-relink-button').click();
+  await exportDialog.preflightRelink();
   await expect(page.locator('[data-testid^="media-card-"][data-missing="true"]')).toHaveCount(0);
 
-  await openExportDialog(page);
-  await page.getByTestId('export-enqueue-button').click();
-  await expectExportTaskStatus(page, 0, 'success');
+  await toolbar.openExport();
+  await exportDialog.enqueue();
+  await exportDialog.expectTaskStatus(0, 'success');
 });

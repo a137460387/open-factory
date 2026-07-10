@@ -28,7 +28,6 @@ test('AI loudness: measure shows suggestion, apply gain updates audio chain', as
   await page.getByTestId('ai-loudness-apply').click();
 
   // After applying, "applied" text should appear in the summary
-  await page.waitForTimeout(500);
   // The apply button should no longer be clickable (applied state)
   await expect(page.getByTestId('ai-loudness-apply')).not.toBeVisible();
 });
@@ -46,7 +45,6 @@ test('AI loudness: switching to broadcast platform shows no suggestion when gain
   // Switch to broadcast (-23 LUFS) — measured is -24, gain = 1dB which equals threshold
   // shouldSuggestGain uses > not >= so 1dB is NOT a suggestion
   await page.getByTestId('ai-loudness-platform-select').selectOption('broadcast');
-  await page.waitForTimeout(300);
 
   // Apply button should not be visible (gain not > 1dB)
   await expect(page.getByTestId('ai-loudness-apply')).not.toBeVisible();

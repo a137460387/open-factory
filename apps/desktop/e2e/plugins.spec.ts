@@ -101,9 +101,13 @@ test('reloads dev plugins after local file changes without restarting the app', 
   await expect(pluginEntry(page, 'e2e.dev-reload')).toBeVisible();
   await closeSettings(page);
 
-  await page.waitForTimeout(900);
+  // Allow plugin registration to stabilize, then trigger file change
+  await expect(page.getByTestId('import-media-button')).toBeVisible();
   await page.evaluate(() => window.__E2E_ACTIONS__!.updateDevReloadPlugin!('v2'));
-  await page.waitForTimeout(1200);
+
+  // Wait for HMR file-change watcher to detect and reload the plugin.
+  // This is inherently timing-dependent (file watcher + module hot-swap cycle).
+  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 1_500)));
 
   await page.getByTestId('import-media-button').click();
   await addMediaCardToTimeline(page, 0);

@@ -32,7 +32,6 @@ test('AI multicam cut: 3 suggestions visible, apply all, manual override, undo',
 
   // Manual override: move playhead to time 5 (no switch there) and switch to angle-b
   await page.evaluate(() => window.__E2E_ACTIONS__!.setPlayheadTime!(5));
-  await page.waitForTimeout(100);
   await page.getByTestId('multicam-angle-button-angle-b').click();
 
   await expect.poll(async () => getSwitchCount(page)).toBeGreaterThanOrEqual(5);

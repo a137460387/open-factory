@@ -35,10 +35,8 @@ test('sfx match: insert matched SFX changes status to accepted', async ({ page }
   await expect(page.getByTestId('timeline-clip-clip-sfx-1')).toBeVisible({ timeout: 10_000 });
 
   await page.evaluate(() => window.__E2E_ACTIONS__!.insertSfx!(0));
-  await page.waitForTimeout(300);
 
-  const sfx0 = page.getByTestId('sfx-suggestion-track-sfx-video-0');
-  await expect(sfx0).toHaveAttribute('data-sfx-status', 'accepted');
+  await expect(page.getByTestId('sfx-suggestion-track-sfx-video-0')).toHaveAttribute('data-sfx-status', 'accepted');
 
   const sfxData = await page.evaluate(() => {
     const project = window.__E2E_ACTIONS__!.getProjectSnapshot!() as {
