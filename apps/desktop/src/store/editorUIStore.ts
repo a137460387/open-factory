@@ -75,6 +75,7 @@ export interface EditorUIState {
   proxyVerifyOpen: boolean;
   formatConverterOpen: boolean;
   emotionAnalysisOpen: boolean;
+  aiSubtitleWorkflowOpen: boolean;
   exportHistoryClassifierOpen: boolean;
 
   // Layout setters
@@ -141,6 +142,7 @@ export interface EditorUIState {
   setProxyVerifyOpen: (updater: Updater<boolean>) => void;
   setFormatConverterOpen: (updater: Updater<boolean>) => void;
   setEmotionAnalysisOpen: (updater: Updater<boolean>) => void;
+  setAiSubtitleWorkflowOpen: (updater: Updater<boolean>) => void;
   setExportHistoryClassifierOpen: (updater: Updater<boolean>) => void;
 }
 
@@ -206,6 +208,7 @@ export const useEditorUIStore = create<EditorUIState>((set, get) => ({
   proxyVerifyOpen: false,
   formatConverterOpen: false,
   emotionAnalysisOpen: false,
+  aiSubtitleWorkflowOpen: false,
   exportHistoryClassifierOpen: false,
 
   setLayoutSettings(updater) {
@@ -301,5 +304,6 @@ export const useEditorUIStore = create<EditorUIState>((set, get) => ({
   setProxyVerifyOpen(updater) { set((s) => ({ proxyVerifyOpen: applyUpdater(s.proxyVerifyOpen, updater) })); },
   setFormatConverterOpen(updater) { set((s) => ({ formatConverterOpen: applyUpdater(s.formatConverterOpen, updater) })); },
   setEmotionAnalysisOpen(updater) { set((s) => ({ emotionAnalysisOpen: applyUpdater(s.emotionAnalysisOpen, updater) })); },
+  setAiSubtitleWorkflowOpen(updater) { set((s) => ({ aiSubtitleWorkflowOpen: applyUpdater(s.aiSubtitleWorkflowOpen, updater) })); },
   setExportHistoryClassifierOpen(updater) { set((s) => ({ exportHistoryClassifierOpen: applyUpdater(s.exportHistoryClassifierOpen, updater) })); },
 }));

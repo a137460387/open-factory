@@ -4821,6 +4821,121 @@ window.__E2E_ACTIONS__ = {
     });
     commandManager.clear();
   },
+  setupAISubtitleWorkflowFixture: () => {
+    const project = createProject('AISubtitleWorkflow E2E');
+    const asset: MediaAsset = {
+      id: 'media-subtitle-workflow-video',
+      type: 'video',
+      name: 'subtitle-workflow-video.mp4',
+      path: tinyVideo,
+      duration: 8,
+      width: 1920,
+      height: 1080,
+      size: 8192,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 2,
+      audioSampleRate: 44_100,
+      audioCodec: 'aac'
+    };
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({
+          id: 'track-subtitle-workflow-video',
+          type: 'video',
+          name: 'Video 1',
+          clips: [
+            {
+              id: 'clip-subtitle-workflow-video',
+              type: 'video',
+              name: 'subtitle-workflow-video.mp4',
+              mediaId: 'media-subtitle-workflow-video',
+              trackId: 'track-subtitle-workflow-video',
+              start: 0,
+              duration: 8,
+              trimStart: 0,
+              trimEnd: 0,
+              speed: DEFAULT_CLIP_SPEED,
+              colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+              transform: { ...DEFAULT_TRANSFORM },
+              volume: 1,
+            },
+          ]
+        }),
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
+    useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(0);
+    useEditorUIStore.getState().setAiSubtitleWorkflowOpen(true);
+    commandManager.clear();
+  },
+  setupAISubtitleWorkflowFixtureWithClip: () => {
+    const project = createProject('AISubtitleWorkflow E2E');
+    const asset: MediaAsset = {
+      id: 'media-subtitle-workflow-video',
+      type: 'video',
+      name: 'subtitle-workflow-video.mp4',
+      path: tinyVideo,
+      duration: 8,
+      width: 1920,
+      height: 1080,
+      size: 8192,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 2,
+      audioSampleRate: 44_100,
+      audioCodec: 'aac'
+    };
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({
+          id: 'track-subtitle-workflow-video',
+          type: 'video',
+          name: 'Video 1',
+          clips: [
+            {
+              id: 'clip-subtitle-workflow-video',
+              type: 'video',
+              name: 'subtitle-workflow-video.mp4',
+              mediaId: 'media-subtitle-workflow-video',
+              trackId: 'track-subtitle-workflow-video',
+              start: 0,
+              duration: 8,
+              trimStart: 0,
+              trimEnd: 0,
+              speed: DEFAULT_CLIP_SPEED,
+              colorCorrection: { ...DEFAULT_COLOR_CORRECTION },
+              transform: { ...DEFAULT_TRANSFORM },
+              volume: 1,
+            },
+          ]
+        }),
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [asset],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID,
+    });
+    useEditorStore.getState().setSelectedClipIds(['clip-subtitle-workflow-video']);
+    useEditorStore.getState().setSelectedClipId('clip-subtitle-workflow-video');
+    useEditorStore.getState().setPlayheadTime(0);
+    useEditorUIStore.getState().setAiSubtitleWorkflowOpen(true);
+    commandManager.clear();
+  },
 };
 
 function makeWhisperVideoClip(): Extract<import('@open-factory/editor-core').Clip, { type: 'video' }> {
