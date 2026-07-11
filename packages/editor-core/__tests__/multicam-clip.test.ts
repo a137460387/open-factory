@@ -170,4 +170,53 @@ describe('MulticamClip', () => {
     expect(clip.angles[1].colorCorrection).toBeUndefined();
     expect(clip.angles[1].transform).toBeUndefined();
   });
+
+  it('should deep copy nested colorCorrection and transform objects', () => {
+    const colorCorrection = {
+      brightness: 0.1,
+      contrast: 1.2,
+      saturation: 1,
+      hue: 0
+    };
+    const transform = {
+      x: 10,
+      y: 20,
+      scale: 1,
+      rotation: 5,
+      opacity: 1
+    };
+    const angles: MulticamClipAngle[] = [
+      {
+        id: 'angle-1',
+        mediaId: 'media-1',
+        name: 'Camera 1',
+        offset: 0,
+        volume: 1,
+        muted: false,
+        colorCorrection,
+        transform
+      },
+      {
+        id: 'angle-2',
+        mediaId: 'media-2',
+        name: 'Camera 2',
+        offset: 0,
+        volume: 1,
+        muted: false
+      }
+    ];
+
+    const clip = createMulticamClip(angles, 'manual', 0);
+
+    // Mutating the original nested objects should NOT affect the clip
+    colorCorrection.brightness = 0.9;
+    colorCorrection.contrast = 2.0;
+    transform.x = 999;
+    transform.y = 888;
+
+    expect(clip.angles[0].colorCorrection?.brightness).toBe(0.1);
+    expect(clip.angles[0].colorCorrection?.contrast).toBe(1.2);
+    expect(clip.angles[0].transform?.x).toBe(10);
+    expect(clip.angles[0].transform?.y).toBe(20);
+  });
 });

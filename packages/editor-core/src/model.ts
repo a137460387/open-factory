@@ -1055,7 +1055,11 @@ export function createMulticamClip(
   return {
     ...baseClip,
     type: 'multicam',
-    angles: angles.map(a => ({ ...a })),
+    angles: angles.map(a => ({
+      ...a,
+      ...(a.colorCorrection ? { colorCorrection: { ...a.colorCorrection } } : {}),
+      ...(a.transform ? { transform: { ...a.transform } } : {})
+    })),
     activeAngle: 0,
     switchPoints: [],
     syncMode,
