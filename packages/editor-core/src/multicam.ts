@@ -509,6 +509,11 @@ export function getActiveAngleAtTime(multicamClip: MulticamClip, time: number): 
     throw new Error('MulticamClip has no angles');
   }
 
+  // Validate activeAngle range
+  if (activeAngle < 0 || activeAngle >= angles.length) {
+    throw new Error('activeAngle out of range');
+  }
+
   // No switch points: return the default active angle
   if (switchPoints.length === 0) {
     return angles[activeAngle];

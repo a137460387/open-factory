@@ -313,6 +313,94 @@ describe('getActiveAngleAtTime', () => {
     const result = getActiveAngleAtTime(clip, 10);
     expect(result.id).toBe('angle-1');
   });
+
+  it('should throw when activeAngle is negative', () => {
+    const clip: MulticamClip = {
+      id: 'test',
+      name: 'test',
+      trackId: 'track-1',
+      type: 'multicam',
+      start: 0,
+      duration: 10,
+      trimStart: 0,
+      trimEnd: 0,
+      speed: 1,
+      colorCorrection: { brightness: 0, contrast: 1, saturation: 1, hue: 0 },
+      transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
+      angles: testAngles,
+      activeAngle: -1,
+      switchPoints: [],
+      syncMode: 'audio',
+      syncReferenceAngle: 0
+    };
+    expect(() => getActiveAngleAtTime(clip, 0)).toThrow('activeAngle out of range');
+  });
+
+  it('should throw when activeAngle is >= angles.length', () => {
+    const clip: MulticamClip = {
+      id: 'test',
+      name: 'test',
+      trackId: 'track-1',
+      type: 'multicam',
+      start: 0,
+      duration: 10,
+      trimStart: 0,
+      trimEnd: 0,
+      speed: 1,
+      colorCorrection: { brightness: 0, contrast: 1, saturation: 1, hue: 0 },
+      transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
+      angles: testAngles,
+      activeAngle: 5,
+      switchPoints: [],
+      syncMode: 'audio',
+      syncReferenceAngle: 0
+    };
+    expect(() => getActiveAngleAtTime(clip, 0)).toThrow('activeAngle out of range');
+  });
+
+  it('should throw when activeAngle is negative even with switch points', () => {
+    const clip: MulticamClip = {
+      id: 'test',
+      name: 'test',
+      trackId: 'track-1',
+      type: 'multicam',
+      start: 0,
+      duration: 10,
+      trimStart: 0,
+      trimEnd: 0,
+      speed: 1,
+      colorCorrection: { brightness: 0, contrast: 1, saturation: 1, hue: 0 },
+      transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
+      angles: testAngles,
+      activeAngle: -1,
+      switchPoints: [{ time: 10, targetAngle: 1, transition: 'cut' }],
+      syncMode: 'audio',
+      syncReferenceAngle: 0
+    };
+    expect(() => getActiveAngleAtTime(clip, 5)).toThrow('activeAngle out of range');
+  });
+
+  it('should throw when activeAngle equals angles.length', () => {
+    const clip: MulticamClip = {
+      id: 'test',
+      name: 'test',
+      trackId: 'track-1',
+      type: 'multicam',
+      start: 0,
+      duration: 10,
+      trimStart: 0,
+      trimEnd: 0,
+      speed: 1,
+      colorCorrection: { brightness: 0, contrast: 1, saturation: 1, hue: 0 },
+      transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
+      angles: testAngles,
+      activeAngle: 3,
+      switchPoints: [],
+      syncMode: 'audio',
+      syncReferenceAngle: 0
+    };
+    expect(() => getActiveAngleAtTime(clip, 0)).toThrow('activeAngle out of range');
+  });
 });
 
 // ── addSwitchPoint ──
