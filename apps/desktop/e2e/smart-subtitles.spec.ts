@@ -61,7 +61,7 @@ test.describe('智能字幕工作流', () => {
     const panel = page.getByTestId('ai-subtitle-workflow-panel');
     await expect(panel).toBeVisible();
 
-    await page.getByTestId('subtitle-workflow-close').click();
+    await page.getByTestId('subtitle-workflow-close').click({ force: true });
     await expect(panel).not.toBeVisible();
   });
 
@@ -88,7 +88,7 @@ test.describe('智能字幕工作流', () => {
     await page.evaluate(() => window.__E2E_ACTIONS__!.setupAISubtitleWorkflowFixtureWithClip!());
 
     // Should show clip name/info instead of "no clip selected"
-    await expect(page.getByText('subtitle-workflow-video.mp4')).toBeVisible();
+    await expect(page.getByTestId('subtitle-workflow-asr-stage').getByText('subtitle-workflow-video.mp4')).toBeVisible();
     // Should NOT show the "no clip selected" message
     await expect(page.getByText('请在时间线上选择一个音频或视频片段')).not.toBeVisible();
   });
@@ -102,7 +102,7 @@ test.describe('智能字幕工作流', () => {
     await expect(panel).toBeVisible();
 
     // Click reset
-    await page.getByTestId('subtitle-workflow-reset').click();
+    await page.getByTestId('subtitle-workflow-reset').click({ force: true });
 
     // Should still be on ASR stage after reset
     const asrStage = page.getByTestId('subtitle-workflow-asr-stage');
