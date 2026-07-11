@@ -185,7 +185,7 @@ import {
 } from '@open-factory/editor-core';
 import { zoomTimelineByGesture, LONG_PRESS_PAN_THRESHOLD_MS, computeTimelineGaps, getGapStats, BatchUpdateTrackHeightCommand, UpdateSequenceSettingsCommand } from '@open-factory/editor-core';
 import { clsx } from 'clsx';
-import { ArrowLeftRight, AudioWaveform, Bookmark, Captions, CircleDot, Flag, Group, Magnet, MessageSquarePlus, MessageSquareText, Mic2, Music2, MoveHorizontal, Plus, Scissors, Settings2, Star, Trash2, Type, Ungroup, Wand2, X } from 'lucide-react';
+import { ArrowLeftRight, AudioWaveform, Bookmark, Captions, CircleDot, Eraser, Flag, Group, Magnet, MessageSquarePlus, MessageSquareText, Mic2, Music2, MoveHorizontal, Plus, Scissors, Settings2, Star, Trash2, Type, Ungroup, Wand2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createCreditsClip, createTextClip } from '../../lib/clipFactory';
 import { probeMediaPath } from '../../lib/media';
@@ -3064,6 +3064,14 @@ function addProjectBookmark(time = playheadTime): void {
         </button>
         <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.deleteSelectedClip} onClick={deleteSelected}>
           <Trash2 size={16} />
+        </button>
+        <button
+          className="rounded-md border border-line p-2 hover:bg-panel"
+          title={`${zhCN.timeline.rippleDeleteClip} (Shift+Delete)`}
+          data-testid="ripple-delete-button"
+          onClick={rippleDeleteSelected}
+        >
+          <Eraser size={16} />
         </button>
         {(slipEditActive || slideEditActive || rollingTrimActive) && (
           <div
