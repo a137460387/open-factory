@@ -6,3 +6,4 @@ export { InspectorPage } from './inspector.page';
 export { ExportDialogPage, type ExportTaskStatus } from './export-dialog.page';
 export { SettingsDialogPage } from './settings-dialog.page';
 export { AIPanelPage } from './ai-panel.page';
+export { MulticamEditorPage, type MulticamClipState } from './multicam-editor.page';
