@@ -185,7 +185,7 @@ import {
 } from '@open-factory/editor-core';
 import { zoomTimelineByGesture, LONG_PRESS_PAN_THRESHOLD_MS, computeTimelineGaps, getGapStats, BatchUpdateTrackHeightCommand, UpdateSequenceSettingsCommand } from '@open-factory/editor-core';
 import { clsx } from 'clsx';
-import { AudioWaveform, Bookmark, Captions, CircleDot, Flag, Group, Magnet, MessageSquarePlus, MessageSquareText, Mic2, Music2, Plus, Scissors, Settings2, Star, Trash2, Type, Ungroup, Wand2, X } from 'lucide-react';
+import { ArrowLeftRight, AudioWaveform, Bookmark, Captions, CircleDot, Flag, Group, Magnet, MessageSquarePlus, MessageSquareText, Mic2, Music2, MoveHorizontal, Plus, Scissors, Settings2, Star, Trash2, Type, Ungroup, Wand2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createCreditsClip, createTextClip } from '../../lib/clipFactory';
 import { probeMediaPath } from '../../lib/media';
@@ -3053,6 +3053,29 @@ function addProjectBookmark(time = playheadTime): void {
         <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.deleteSelectedClip} onClick={deleteSelected}>
           <Trash2 size={16} />
         </button>
+        {(slipEditActive || slideEditActive || rollingTrimActive) && (
+          <div
+            className="flex items-center gap-1.5 rounded-md border border-brand/30 bg-brand/10 px-2.5 py-1.5 text-xs font-medium text-brand"
+            data-testid="editing-mode-indicator"
+          >
+            {rollingTrimActive ? (
+              <>
+                <Scissors size={14} />
+                <span>{zhCN.timeline.rollingTrimMode}</span>
+              </>
+            ) : slipEditActive ? (
+              <>
+                <ArrowLeftRight size={14} />
+                <span>{zhCN.timeline.slipMode}</span>
+              </>
+            ) : (
+              <>
+                <MoveHorizontal size={14} />
+                <span>{zhCN.timeline.slideMode}</span>
+              </>
+            )}
+          </div>
+        )}
         <input
           className="w-28 accent-brand"
           title={zhCN.timeline.zoom}
