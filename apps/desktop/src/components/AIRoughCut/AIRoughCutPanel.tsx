@@ -7,7 +7,9 @@ import {
   parseRoughCutAIResponse,
   ROUGH_CUT_TEMPLATES,
   isProviderConfigured,
-  type AIRoughCutClip
+  runAlgorithmPipeline,
+  type AIRoughCutClip,
+  type AlgorithmStep
 } from '@open-factory/editor-core';
 import { zhCN } from '../../i18n/strings';
 import { useAISettingsStore } from '../../store/aiSettingsStore';
@@ -20,7 +22,7 @@ import { createId, createBaseClip } from '@open-factory/editor-core';
 const t = zhCN.aiRoughCut;
 
 type WizardPhase = 'input' | 'generating' | 'preview' | 'done';
-type InputMode = 'text' | 'template';
+type InputMode = 'text' | 'template' | 'algorithm';
 
 interface StoryboardClip {
   mediaId: string;
@@ -59,6 +61,7 @@ export function AIRoughCutPanel({
 
   const [phase, setPhase] = useState<WizardPhase>('input');
   const [storyboard, setStoryboard] = useState<StoryboardClip[]>([]);
+  const [selectedSteps, setSelectedSteps] = useState<Set<AlgorithmStep>>(new Set(['highlight']));
   const abortRef = useRef(false);
 
   const hasAiAnalysis = media.some((m) => m.aiAnalysis);
@@ -76,7 +79,58 @@ export function AIRoughCutPanel({
     return `按照以下结构制作视频：${segments.join(' → ')}`;
   }, [inputMode, textDescription, selectedTemplateId, templateDurations]);
 
+  const toggleStep = useCallback((step: AlgorithmStep) => {
+    setSelectedSteps((prev) => {
+      const next = new Set(prev);
+      if (next.has(step)) {
+        next.delete(step);
+      } else {
+        next.add(step);
+      }
+      return next;
+    });
+  }, []);
+
+  const startAlgorithmGeneration = useCallback(async () => {
+    if (media.length === 0) {
+      showToast({ kind: 'info', title: t.algorithmNoMedia });
+      return;
+    }
+    const steps = Array.from(selectedSteps);
+    if (steps.length === 0) return;
+
+    setPhase('generating');
+    try {
+      const parsed = runAlgorithmPipeline(media, { steps });
+      if (parsed.length === 0) {
+        showToast({ kind: 'info', title: t.storyboardEmpty });
+        setPhase('input');
+        return;
+      }
+
+      const mediaMap = new Map(media.map((m) => [m.id, m]));
+      const storyItems: StoryboardClip[] = parsed.map((clip) => ({
+        ...clip,
+        mediaName: mediaMap.get(clip.mediaId)?.name ?? clip.mediaId,
+        deleted: false
+      }));
+      setStoryboard(storyItems);
+      setPhase('preview');
+    } catch (error) {
+      showToast({
+        kind: 'error',
+        title: t.failedTitle,
+        message: error instanceof Error ? error.message : t.failedMessage
+      });
+      setPhase('input');
+    }
+  }, [media, selectedSteps]);
+
   const startGeneration = useCallback(async () => {
+    if (inputMode === 'algorithm') {
+      await startAlgorithmGeneration();
+      return;
+    }
     const description = buildDescription();
     if (!description || !selectedProvider) return;
     abortRef.current = false;
@@ -250,6 +304,7 @@ export function AIRoughCutPanel({
       <div className="flex-1 overflow-y-auto p-3 space-y-3">
         {phase === 'input' && (
           <>
+            {inputMode !== 'algorithm' && (
             <div>
               <label className="block text-xs text-slate-600 mb-1">{t.selectProvider}</label>
               <select
@@ -265,6 +320,7 @@ export function AIRoughCutPanel({
                 ))}
               </select>
             </div>
+            )}
 
             <div>
               <label className="block text-xs text-slate-600 mb-1">{t.inputMode}</label>
@@ -284,6 +340,14 @@ export function AIRoughCutPanel({
                   data-testid="ai-rough-cut-mode-template"
                 >
                   {t.template}
+                </button>
+                <button
+                  className={`rounded-md px-3 py-1.5 text-xs font-medium ${inputMode === 'algorithm' ? 'bg-blue-600 text-white' : 'bg-white border border-line text-slate-700 hover:bg-panel'}`}
+                  type="button"
+                  onClick={() => setInputMode('algorithm')}
+                  data-testid="ai-rough-cut-mode-algorithm"
+                >
+                  {t.algorithmMode}
                 </button>
               </div>
             </div>
@@ -341,7 +405,38 @@ export function AIRoughCutPanel({
               </div>
             )}
 
-            {!hasAiAnalysis && (
+            {inputMode === 'algorithm' && (
+              <div className="space-y-2">
+                <div className="text-xs text-slate-500">{t.algorithmModeHint}</div>
+                <div className="space-y-1.5">
+                  {([
+                    { step: 'highlight' as AlgorithmStep, label: t.stepHighlight, desc: t.stepHighlightDesc },
+                    { step: 'scene' as AlgorithmStep, label: t.stepScene, desc: t.stepSceneDesc },
+                    { step: 'silence' as AlgorithmStep, label: t.stepSilence, desc: t.stepSilenceDesc },
+                    { step: 'dialogue' as AlgorithmStep, label: t.stepDialogue, desc: t.stepDialogueDesc }
+                  ]).map((item) => (
+                    <label
+                      key={item.step}
+                      className="flex items-start gap-2 rounded-md border border-line bg-white p-2 text-xs cursor-pointer hover:bg-panel"
+                      data-testid={`ai-rough-cut-algo-${item.step}`}
+                    >
+                      <input
+                        type="checkbox"
+                        className="mt-0.5"
+                        checked={selectedSteps.has(item.step)}
+                        onChange={() => toggleStep(item.step)}
+                      />
+                      <div>
+                        <div className="font-medium text-slate-800">{item.label}</div>
+                        <div className="text-slate-500">{item.desc}</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {!hasAiAnalysis && inputMode !== 'algorithm' && (
               <div className="rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-700" data-testid="ai-rough-cut-no-analysis-hint">
                 {t.mediaMatchNoAnalysis}
               </div>
@@ -350,7 +445,11 @@ export function AIRoughCutPanel({
             <button
               className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
               type="button"
-              disabled={!selectedProvider || (!textDescription.trim() && inputMode === 'text')}
+              disabled={
+                inputMode === 'algorithm'
+                  ? selectedSteps.size === 0
+                  : !selectedProvider || (!textDescription.trim() && inputMode === 'text')
+              }
               onClick={() => void startGeneration()}
               data-testid="ai-rough-cut-start"
             >
@@ -362,7 +461,7 @@ export function AIRoughCutPanel({
         {phase === 'generating' && (
           <div className="space-y-2">
             <div className="text-xs text-slate-600" data-testid="ai-rough-cut-generating">
-              {t.generating}
+              {inputMode === 'algorithm' ? t.algorithmGenerating : t.generating}
             </div>
             <div className="h-2 w-full overflow-hidden rounded-full bg-slate-200">
               <div className="h-full bg-blue-600 animate-pulse" style={{ width: '60%' }} />
