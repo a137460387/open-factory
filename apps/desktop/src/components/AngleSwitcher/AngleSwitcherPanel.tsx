@@ -5,7 +5,6 @@ import { MulticamPreviewGrid } from './MulticamPreviewGrid';
 interface AngleSwitcherPanelProps {
   multicamClip: MulticamClip;
   currentTime: number;
-  isPlaying: boolean;
   onAngleSwitch: (angleIndex: number, time: number) => void;
   onSyncRequest: (mode: MulticamSyncMode) => void;
   onSwitchPointAdd: (time: number, targetAngle: number) => void;
@@ -15,7 +14,6 @@ interface AngleSwitcherPanelProps {
 export const AngleSwitcherPanel: React.FC<AngleSwitcherPanelProps> = ({
   multicamClip,
   currentTime,
-  isPlaying,
   onAngleSwitch,
   onSyncRequest,
   onSwitchPointAdd,
@@ -92,6 +90,24 @@ export const AngleSwitcherPanel: React.FC<AngleSwitcherPanelProps> = ({
             >
               添加切换点
             </button>
+            {multicamClip.switchPoints.length > 0 && (
+              <div className="switch-points-list" data-testid="switch-points-list">
+                {multicamClip.switchPoints.map((point, index) => (
+                  <div key={index} className="switch-point-item">
+                    <span>
+                      #{index + 1} - {point.time.toFixed(2)}s → 机位 {point.targetAngle + 1}
+                    </span>
+                    <button
+                      onClick={() => onSwitchPointDelete(index)}
+                      data-testid={`delete-switch-point-${index}`}
+                      title="删除切换点"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
