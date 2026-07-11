@@ -1,26 +1,35 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import type { MulticamClip, MulticamSyncMode } from '@open-factory/editor-core';
+import type { MulticamClip, MulticamSyncMode, SwitchPoint } from '@open-factory/editor-core';
 import { MulticamPreviewGrid } from './MulticamPreviewGrid';
+import { SyncControls } from './SyncControls';
+import { SwitchPointEditor } from './SwitchPointEditor';
 
 interface AngleSwitcherPanelProps {
   multicamClip: MulticamClip;
   currentTime: number;
+  isPlaying: boolean;
   onAngleSwitch: (angleIndex: number, time: number) => void;
   onSyncRequest: (mode: MulticamSyncMode) => void;
   onSwitchPointAdd: (time: number, targetAngle: number) => void;
   onSwitchPointDelete: (index: number) => void;
+  onSwitchPointUpdate: (index: number, updates: Partial<SwitchPoint>) => void;
+  onDriftDetection: () => void;
+  isSyncing: boolean;
 }
 
 export const AngleSwitcherPanel: React.FC<AngleSwitcherPanelProps> = ({
   multicamClip,
   currentTime,
+  isPlaying,
   onAngleSwitch,
   onSyncRequest,
   onSwitchPointAdd,
-  onSwitchPointDelete
+  onSwitchPointDelete,
+  onSwitchPointUpdate,
+  onDriftDetection,
+  isSyncing
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
-  const [syncMode, setSyncMode] = useState<MulticamSyncMode>('audio');
 
   // 键盘快捷键处理
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
@@ -33,9 +42,6 @@ export const AngleSwitcherPanel: React.FC<AngleSwitcherPanelProps> = ({
         onAngleSwitch(angleIndex, currentTime);
       }
     }
-
-    // 空格键播放/暂停（由父组件处理）
-    // 左右箭头逐帧移动（由父组件处理）
   }, [multicamClip.angles.length, currentTime, onAngleSwitch]);
 
   useEffect(() => {
@@ -56,22 +62,6 @@ export const AngleSwitcherPanel: React.FC<AngleSwitcherPanelProps> = ({
         >
           {isExpanded ? '▼' : '▶'} 多机位
         </button>
-        <div className="sync-controls">
-          <select
-            value={syncMode}
-            onChange={(e) => setSyncMode(e.target.value as MulticamSyncMode)}
-          >
-            <option value="audio">音频同步</option>
-            <option value="timecode">时间码同步</option>
-            <option value="manual">手动标记</option>
-          </select>
-          <button
-            onClick={() => onSyncRequest(syncMode)}
-            data-testid="sync-button"
-          >
-            同步
-          </button>
-        </div>
       </div>
 
       {isExpanded && (
@@ -82,33 +72,20 @@ export const AngleSwitcherPanel: React.FC<AngleSwitcherPanelProps> = ({
             onAngleSwitch={(angleIndex) => onAngleSwitch(angleIndex, currentTime)}
           />
 
-          <div className="switch-points-info">
-            <span>切换点: {multicamClip.switchPoints.length}</span>
-            <button
-              onClick={() => onSwitchPointAdd(currentTime, multicamClip.activeAngle)}
-              data-testid="add-switch-point"
-            >
-              添加切换点
-            </button>
-            {multicamClip.switchPoints.length > 0 && (
-              <div className="switch-points-list" data-testid="switch-points-list">
-                {multicamClip.switchPoints.map((point, index) => (
-                  <div key={index} className="switch-point-item">
-                    <span>
-                      #{index + 1} - {point.time.toFixed(2)}s → 机位 {point.targetAngle + 1}
-                    </span>
-                    <button
-                      onClick={() => onSwitchPointDelete(index)}
-                      data-testid={`delete-switch-point-${index}`}
-                      title="删除切换点"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <SyncControls
+            onSyncRequest={onSyncRequest}
+            onDriftDetection={onDriftDetection}
+            isSyncing={isSyncing}
+          />
+
+          <SwitchPointEditor
+            switchPoints={multicamClip.switchPoints}
+            angles={multicamClip.angles}
+            currentTime={currentTime}
+            onSwitchPointAdd={onSwitchPointAdd}
+            onSwitchPointDelete={onSwitchPointDelete}
+            onSwitchPointUpdate={onSwitchPointUpdate}
+          />
         </div>
       )}
     </div>
