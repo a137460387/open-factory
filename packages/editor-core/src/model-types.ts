@@ -39,7 +39,7 @@ export type AssetType = 'video' | 'audio' | 'image';
 
 export type TrackType = 'video' | 'audio' | 'text' | 'subtitle';
 
-export type ClipType = 'video' | 'audio' | 'image' | 'text' | 'subtitle' | 'credits' | 'nested-sequence' | 'adjustment' | 'motion-graphic';
+export type ClipType = 'video' | 'audio' | 'image' | 'text' | 'subtitle' | 'credits' | 'nested-sequence' | 'adjustment' | 'motion-graphic' | 'multicam';
 
 export type TransitionType =
   | 'fade-black'
@@ -642,7 +642,7 @@ export interface TrackCompressor {
   makeupGain: number;
 }
 
-export type Clip = VideoClip | AudioClip | ImageClip | TextClip | SubtitleClip | CreditsClip | NestedSequenceClip | AdjustmentClip | MotionGraphicClip;
+export type Clip = VideoClip | AudioClip | ImageClip | TextClip | SubtitleClip | CreditsClip | NestedSequenceClip | AdjustmentClip | MotionGraphicClip | MulticamClip;
 
 export type AudioChannelRoutingMode =
   | 'normal'
@@ -913,6 +913,49 @@ export interface AdjustmentClip extends BaseClip {
 export interface MotionGraphicClip extends BaseClip {
   type: 'motion-graphic';
   motionGraphic: MotionGraphic;
+}
+
+/** 多机位同步模式 */
+export type MulticamSyncMode = 'audio' | 'timecode' | 'manual';
+
+/** 多机位切换过渡类型 */
+export type SwitchTransition = 'cut' | 'dissolve' | 'wipe';
+
+/** 多机位切换点 */
+export interface SwitchPoint {
+  /** 切换时间点（相对于MulticamClip起始位置，秒） */
+  time: number;
+  /** 目标机位索引 */
+  targetAngle: number;
+  /** 过渡类型 */
+  transition: SwitchTransition;
+}
+
+/** 多机位机位定义（独立MulticamClip使用） */
+export interface MulticamClipAngle {
+  id: string;
+  mediaId: string;
+  name: string;
+  /** 相对于同步点的时间偏移（秒） */
+  offset: number;
+  volume: number;
+  muted: boolean;
+  colorCorrection?: ColorCorrection;
+  transform?: Transform;
+}
+
+/** 独立多机位片段 */
+export interface MulticamClip extends BaseClip {
+  type: 'multicam';
+  angles: MulticamClipAngle[];
+  /** 当前激活的机位索引 */
+  activeAngle: number;
+  /** 切换点关键帧 */
+  switchPoints: SwitchPoint[];
+  /** 同步方式 */
+  syncMode: MulticamSyncMode;
+  /** 同步参考机位索引 */
+  syncReferenceAngle: number;
 }
 
 export interface MulticamSequence {
