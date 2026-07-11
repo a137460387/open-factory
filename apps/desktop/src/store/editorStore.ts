@@ -78,7 +78,7 @@ export interface EditorState {
   deleteMulticamSwitchPoint: (index: number) => void;
   updateMulticamSwitchPoint: (index: number, updates: Partial<SwitchPoint>) => void;
   syncMulticamClip: (mode: MulticamSyncMode) => Promise<void>;
-  detectMulticamDrift: () => Promise<void>;
+  detectMulticamDrift: () => Promise<{ driftDetected: boolean; driftRate: number } | undefined>;
   setMulticamPreviewLayout: (layout: string) => void;
 }
 
@@ -337,15 +337,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   },
   detectMulticamDrift: async () => {
     const { activeMulticamClipId, project } = get();
-    if (!activeMulticamClipId || !project) return;
+    if (!activeMulticamClipId || !project) return undefined;
     const multicamClip = findMulticamClipInProject(project, activeMulticamClipId);
-    if (!multicamClip) return;
-    const driftResult = await detectMulticamDrift(multicamClip.angles);
-    if (driftResult.driftDetected) {
-      alert(`检测到时钟漂移: ${driftResult.driftRate?.toFixed(2)} 秒/小时`);
-    } else {
-      alert('未检测到时钟漂移');
-    }
+    if (!multicamClip) return undefined;
+    return await detectMulticamDrift(multicamClip.angles);
   },
   setMulticamPreviewLayout: (layout) => {
     set({ multicamPreviewLayout: layout as '1x1' | '1x2' | '2x2' | '2x3' | '3x3' });

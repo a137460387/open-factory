@@ -13,7 +13,7 @@ interface AngleSwitcherPanelProps {
   onSwitchPointAdd: (time: number, targetAngle: number) => void;
   onSwitchPointDelete: (index: number) => void;
   onSwitchPointUpdate: (index: number, updates: Partial<SwitchPoint>) => void;
-  onDriftDetection: () => void;
+  onDriftDetection: () => Promise<{ driftDetected: boolean; driftRate: number } | undefined>;
   isSyncing: boolean;
 }
 

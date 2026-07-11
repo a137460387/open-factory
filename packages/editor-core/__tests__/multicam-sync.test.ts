@@ -3,7 +3,7 @@ import {
   syncMulticamByAudio,
   syncMulticamByTimecode,
   syncMulticamByManual,
-  detectDrift,
+  detectMulticamDrift,
   type MulticamSyncResult,
   type ManualSyncMarker,
 } from '../src/multicam-sync';
@@ -204,9 +204,9 @@ describe('MulticamSync', () => {
     });
   });
 
-  describe('detectDrift', () => {
+  describe('detectMulticamDrift', () => {
     it('应该返回漂移检测结果', async () => {
-      const result = await detectDrift(angles);
+      const result = await detectMulticamDrift(angles);
       expect(typeof result.driftDetected).toBe('boolean');
     });
 
@@ -214,19 +214,19 @@ describe('MulticamSync', () => {
       const singleAngle: MulticamClipAngle[] = [
         { id: 'a1', mediaId: 'm1', name: 'Cam 1', offset: 0, volume: 1, muted: false },
       ];
-      const result = await detectDrift(singleAngle);
+      const result = await detectMulticamDrift(singleAngle);
       expect(result.driftDetected).toBe(false);
       expect(result.driftRate).toBe(0);
     });
 
     it('空机位列表应返回无漂移', async () => {
-      const result = await detectDrift([]);
+      const result = await detectMulticamDrift([]);
       expect(result.driftDetected).toBe(false);
       expect(result.driftRate).toBe(0);
     });
 
     it('无漂移时driftRate应为0', async () => {
-      const result = await detectDrift(angles);
+      const result = await detectMulticamDrift(angles);
       // Mock returns hasDrift: false, so driftRate should be 0
       expect(result.driftRate).toBe(0);
     });
@@ -258,7 +258,7 @@ describe('MulticamSync', () => {
         atempoSegments: [],
       });
 
-      const result = await detectDrift(angles);
+      const result = await detectMulticamDrift(angles);
       expect(result.driftDetected).toBe(true);
       expect(result.driftRate).toBeCloseTo(3.6, 5);
     });
