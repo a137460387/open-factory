@@ -148,7 +148,7 @@ export class MulticamEditorPage extends BasePage {
 
   /** 选择同步模式 */
   async selectSyncMode(mode: 'audio' | 'timecode' | 'manual'): Promise<void> {
-    await this.page.locator(`input[name][value="${mode}"]`).click();
+    await this.getByTestId(`sync-mode-${mode}`).click();
   }
 
   // -----------------------------------------------------------------------

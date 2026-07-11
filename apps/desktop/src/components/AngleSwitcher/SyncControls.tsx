@@ -40,6 +40,7 @@ export const SyncControls: React.FC<SyncControlsProps> = ({
             value="audio"
             checked={selectedMode === 'audio'}
             onChange={(e) => setSelectedMode(e.target.value as MulticamSyncMode)}
+            data-testid="sync-mode-audio"
           />
           音频波形
         </label>
@@ -49,6 +50,7 @@ export const SyncControls: React.FC<SyncControlsProps> = ({
             value="timecode"
             checked={selectedMode === 'timecode'}
             onChange={(e) => setSelectedMode(e.target.value as MulticamSyncMode)}
+            data-testid="sync-mode-timecode"
           />
           时间码
         </label>
@@ -58,6 +60,7 @@ export const SyncControls: React.FC<SyncControlsProps> = ({
             value="manual"
             checked={selectedMode === 'manual'}
             onChange={(e) => setSelectedMode(e.target.value as MulticamSyncMode)}
+            data-testid="sync-mode-manual"
           />
           手动标记
         </label>
