@@ -32,6 +32,11 @@ export class MulticamEditorPage extends BasePage {
     await this.evaluateAction('window.__E2E_ACTIONS__.setupMulticamAiCutFixture()');
   }
 
+  /** 加载独立多机位夹具（三个机位的独立多机位片段，已进入编辑模式） */
+  async setupIndependentMulticamFixture(): Promise<void> {
+    await this.evaluateAction('window.__E2E_ACTIONS__.setupIndependentMulticamFixture()');
+  }
+
   /** 进入多机位编辑模式 */
   async enterMulticamEditMode(clipId: string): Promise<void> {
     await this.page.evaluate(
@@ -186,7 +191,7 @@ export class MulticamEditorPage extends BasePage {
 
   /** 获取切换点编辑器 */
   get switchPointEditor(): Locator {
-    return this.getByTestId('switch-point-editor');
+    return this.getByTestId('multicam-switch-point-editor');
   }
 
   /** 获取添加切换点按钮 */

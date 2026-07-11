@@ -1,8 +1,8 @@
 import type { Clip, HistoryMeta, KeyframeProperty, MediaAsset, MediaMetadata, Project, Timeline, TimelineDiffRange, ClipboardKeyframeGroup, MulticamClip, MulticamSyncMode, SwitchPoint } from '@open-factory/editor-core';
-import { clampTimelineZoom, createProject, getTimelineDuration, normalizeMediaMetadataEntry, replaceProjectActiveTimeline, switchProjectActiveSequence, resolveZoomForContext, saveZoomMemoryEntry, type ZoomEditMode, SwitchMulticamAngleCommand, DeleteSwitchPointCommand, SyncMulticamClipCommand, syncMulticamByAudio, syncMulticamByTimecode, detectMulticamDrift } from '@open-factory/editor-core';
+import { clampTimelineZoom, createProject, getTimelineDuration, normalizeMediaMetadataEntry, replaceProjectActiveTimeline, switchProjectActiveSequence, resolveZoomForContext, saveZoomMemoryEntry, type ZoomEditMode, SwitchMulticamAngleCommand, DeleteSwitchPointCommand, UpdateSwitchPointCommand, SyncMulticamClipCommand, syncMulticamByAudio, syncMulticamByTimecode, detectMulticamDrift } from '@open-factory/editor-core';
 import { create } from 'zustand';
 import { zhCN } from '../i18n/strings';
-import { commandManager, projectAccessor } from './commandManager';
+import { commandManager, projectAccessor, setEditorStoreGetter } from './commandManager';
 
 export interface SelectedKeyframeRef {
   clipId: string;
@@ -298,8 +298,11 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     const command = new DeleteSwitchPointCommand(projectAccessor, activeMulticamClipId, index);
     commandManager.execute(command);
   },
-  updateMulticamSwitchPoint: (_index, _updates) => {
-    // UpdateSwitchPointCommand not yet implemented; placeholder for future use
+  updateMulticamSwitchPoint: (index, updates) => {
+    const { activeMulticamClipId } = get();
+    if (!activeMulticamClipId) return;
+    const command = new UpdateSwitchPointCommand(projectAccessor, activeMulticamClipId, index, updates);
+    commandManager.execute(command);
   },
   syncMulticamClip: async (mode) => {
     const { activeMulticamClipId, project } = get();
@@ -346,6 +349,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     set({ multicamPreviewLayout: layout as '1x1' | '1x2' | '2x2' | '2x3' | '3x3' });
   },
 }));
+
+// Register the store getter to break circular dependency with commandManager
+setEditorStoreGetter(() => useEditorStore);
 
 export function selectClipById(project: Project, clipId?: string): Clip | undefined {
   if (!clipId) {
