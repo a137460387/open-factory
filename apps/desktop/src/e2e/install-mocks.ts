@@ -3940,6 +3940,30 @@ window.__E2E_ACTIONS__ = {
     commandManager.clear();
   },
   setupMulticamAiCutFixture: () => setupMulticamAiCutFixtureInner(),
+  enterMulticamEditMode: (clipId: unknown) => {
+    if (typeof clipId === 'string') {
+      useEditorStore.getState().enterMulticamEditMode(clipId);
+    }
+  },
+  exitMulticamEditMode: () => {
+    useEditorStore.getState().exitMulticamEditMode();
+  },
+  getMulticamClipState: () => {
+    const state = useEditorStore.getState();
+    const project = state.project;
+    const clipId = state.activeMulticamClipId;
+    if (!clipId) return undefined;
+    const clip = project.timeline.tracks.flatMap((t) => t.clips).find((c) => c.id === clipId);
+    if (!clip || !(clip as any).multicam) return undefined;
+    const mc = (clip as any).multicam;
+    return {
+      angleCount: mc.angles?.length ?? 0,
+      switchCount: mc.switches?.length ?? 0,
+      switches: mc.switches ?? [],
+      activeAngle: mc.activeAngle,
+      angles: mc.angles?.map((a: any) => ({ id: a.id, name: a.name, offset: a.offset })) ?? [],
+    };
+  },
   setupShakeAnalysisFixture: () => {
     const project = createProject('Shake Analysis E2E');
     const asset: MediaAsset = {
