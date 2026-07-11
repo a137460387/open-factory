@@ -23,6 +23,7 @@ const AIVideoSummaryPanel = lazy(() => import('../AIVideoSummary/AIVideoSummaryP
 const AINarrationPanel = lazy(() => import('../AINarration/AINarrationPanel').then((m) => ({ default: m.AINarrationPanel })));
 const HistoryPanel = lazy(() => import('../History/HistoryPanel').then((m) => ({ default: m.HistoryPanel })));
 const ProjectDocumentationPanel = lazy(() => import('../ProjectDocumentationPanel').then((m) => ({ default: m.ProjectDocumentationPanel })));
+const AISubtitleWorkflowPanel = lazy(() => import('../AISubtitleWorkflow/AISubtitleWorkflowPanel').then((m) => ({ default: m.AISubtitleWorkflowPanel })));
 
 export function ShellRightPanel() {
   const project = useEditorStore((s) => s.project);
@@ -58,6 +59,8 @@ export function ShellRightPanel() {
   const narrationOpen = useEditorUIStore((s) => s.narrationOpen);
   const setNarrationOpen = useEditorUIStore((s) => s.setNarrationOpen);
   const smartRoughCutOpen = useEditorUIStore((s) => s.smartRoughCutOpen);
+  const aiSubtitleWorkflowOpen = useEditorUIStore((s) => s.aiSubtitleWorkflowOpen);
+  const setAiSubtitleWorkflowOpen = useEditorUIStore((s) => s.setAiSubtitleWorkflowOpen);
   const storyboardOpen = useEditorUIStore((s) => s.storyboardOpen);
 
   const selectedClip = useMemo(() => selectClipById(project, selectedClipId), [project, selectedClipId]);
@@ -93,9 +96,11 @@ export function ShellRightPanel() {
                     ? zhCN.aiVideoSummary.title
                     : narrationOpen
                       ? zhCN.aiNarration.title
-                      : smartRoughCutOpen
-                        ? zhCN.panels.smartRoughCut
-                        : zhCN.panels.inspector;
+                      : aiSubtitleWorkflowOpen
+                        ? zhCN.aiSubtitleWorkflow.title
+                        : smartRoughCutOpen
+                          ? zhCN.panels.smartRoughCut
+                          : zhCN.panels.inspector;
 
   const rightPanelRows =
     effectivePanels.rightPrimaryPanelVisible && effectivePanels.audioMixerVisible
@@ -156,6 +161,12 @@ export function ShellRightPanel() {
               <AIVideoSummaryPanel project={project} onClose={() => setVideoSummaryOpen(false)} />
             ) : narrationOpen ? (
               <AINarrationPanel project={project} onClose={() => setNarrationOpen(false)} />
+            ) : aiSubtitleWorkflowOpen ? (
+              <AISubtitleWorkflowPanel
+                selectedClip={selectedClip}
+                media={project.media}
+                onClose={() => setAiSubtitleWorkflowOpen(false)}
+              />
             ) : smartRoughCutOpen ? (
               <SmartRoughCutPanel selectedClip={selectedClip} media={project.media} />
             ) : layoutSettings.panels.inspector ? (
