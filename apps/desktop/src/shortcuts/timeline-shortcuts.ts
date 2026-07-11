@@ -59,7 +59,7 @@ export const TIMELINE_SHORTCUT_DEFINITIONS: TimelineShortcutDefinition[] = [
   { action: 'set-out-point', defaultBindings: ['O'] },
   { action: 'add-export-range-in', defaultBindings: ['Shift+I'] },
   { action: 'add-export-range-out', defaultBindings: ['Shift+O'] },
-  { action: 'split-selected', defaultBindings: ['T', 'S'] },
+  { action: 'split-selected', defaultBindings: ['T'] },
   { action: 'delete-selected', defaultBindings: ['Delete', 'Backspace'] },
   { action: 'ripple-delete', defaultBindings: ['Shift+Delete'] },
   { action: 'select-all', defaultBindings: ['Ctrl+A'] },
