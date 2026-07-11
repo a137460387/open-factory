@@ -1,7 +1,8 @@
-import type { Clip, HistoryMeta, KeyframeProperty, MediaAsset, MediaMetadata, Project, Timeline, TimelineDiffRange, ClipboardKeyframeGroup } from '@open-factory/editor-core';
-import { clampTimelineZoom, createProject, getTimelineDuration, normalizeMediaMetadataEntry, replaceProjectActiveTimeline, switchProjectActiveSequence, resolveZoomForContext, saveZoomMemoryEntry, type ZoomEditMode } from '@open-factory/editor-core';
+import type { Clip, HistoryMeta, KeyframeProperty, MediaAsset, MediaMetadata, Project, Timeline, TimelineDiffRange, ClipboardKeyframeGroup, MulticamClip, MulticamSyncMode, SwitchPoint } from '@open-factory/editor-core';
+import { clampTimelineZoom, createProject, getTimelineDuration, normalizeMediaMetadataEntry, replaceProjectActiveTimeline, switchProjectActiveSequence, resolveZoomForContext, saveZoomMemoryEntry, type ZoomEditMode, SwitchMulticamAngleCommand, DeleteSwitchPointCommand, SyncMulticamClipCommand, syncMulticamByAudio, syncMulticamByTimecode, detectMulticamDrift } from '@open-factory/editor-core';
 import { create } from 'zustand';
 import { zhCN } from '../i18n/strings';
+import { commandManager, projectAccessor } from './commandManager';
 
 export interface SelectedKeyframeRef {
   clipId: string;
@@ -31,6 +32,11 @@ export interface EditorState {
   timelineCompareRanges: TimelineDiffRange[];
   chromaKeyPickClipId?: string;
   clipboardKeyframes?: ClipboardKeyframeGroup[];
+  // 多机位相关状态
+  multicamEditMode: boolean;
+  activeMulticamClipId: string | null;
+  multicamPreviewLayout: '1x1' | '1x2' | '2x2' | '2x3' | '3x3';
+  isMulticamSyncing: boolean;
   setClipboardKeyframes: (groups?: ClipboardKeyframeGroup[]) => void;
   replaceProject: (project: Project) => void;
   replaceTimeline: (timeline: Timeline) => void;
@@ -64,6 +70,16 @@ export interface EditorState {
   setPreviewTimeline: (timeline?: Timeline) => void;
   setTimelineCompareRanges: (ranges: TimelineDiffRange[]) => void;
   setChromaKeyPickClipId: (clipId?: string) => void;
+  // 多机位操作
+  enterMulticamEditMode: (clipId: string) => void;
+  exitMulticamEditMode: () => void;
+  switchMulticamAngle: (angleIndex: number) => void;
+  addMulticamSwitchPoint: (time: number, targetAngle: number) => void;
+  deleteMulticamSwitchPoint: (index: number) => void;
+  updateMulticamSwitchPoint: (index: number, updates: Partial<SwitchPoint>) => void;
+  syncMulticamClip: (mode: MulticamSyncMode) => Promise<void>;
+  detectMulticamDrift: () => Promise<{ driftDetected: boolean; driftRate: number } | undefined>;
+  setMulticamPreviewLayout: (layout: string) => void;
 }
 
 export const useEditorStore = create<EditorState>((set, get) => ({
@@ -79,6 +95,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   isExporting: false,
   historyMeta: { canUndo: false, canRedo: false, cursor: -1, entries: [], position: 0, total: 0 },
   timelineCompareRanges: [],
+  multicamEditMode: false,
+  activeMulticamClipId: null,
+  multicamPreviewLayout: '2x2',
+  isMulticamSyncing: false,
   replaceProject: (project) =>
     set({
       project: { ...project, updatedAt: new Date().toISOString() },
@@ -242,6 +262,89 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   setChromaKeyPickClipId: (chromaKeyPickClipId) => set({ chromaKeyPickClipId })
   ,
   setClipboardKeyframes: (clipboardKeyframes) => set({ clipboardKeyframes }),
+  enterMulticamEditMode: (clipId) => {
+    set({ multicamEditMode: true, activeMulticamClipId: clipId });
+  },
+  exitMulticamEditMode: () => {
+    set({ multicamEditMode: false, activeMulticamClipId: null });
+  },
+  switchMulticamAngle: (angleIndex) => {
+    const { activeMulticamClipId, playheadTime } = get();
+    if (!activeMulticamClipId) return;
+    const command = new SwitchMulticamAngleCommand(
+      projectAccessor,
+      activeMulticamClipId,
+      playheadTime,
+      angleIndex,
+      'cut'
+    );
+    commandManager.execute(command);
+  },
+  addMulticamSwitchPoint: (time, targetAngle) => {
+    const { activeMulticamClipId } = get();
+    if (!activeMulticamClipId) return;
+    const command = new SwitchMulticamAngleCommand(
+      projectAccessor,
+      activeMulticamClipId,
+      time,
+      targetAngle,
+      'cut'
+    );
+    commandManager.execute(command);
+  },
+  deleteMulticamSwitchPoint: (index) => {
+    const { activeMulticamClipId } = get();
+    if (!activeMulticamClipId) return;
+    const command = new DeleteSwitchPointCommand(projectAccessor, activeMulticamClipId, index);
+    commandManager.execute(command);
+  },
+  updateMulticamSwitchPoint: (_index, _updates) => {
+    // UpdateSwitchPointCommand not yet implemented; placeholder for future use
+  },
+  syncMulticamClip: async (mode) => {
+    const { activeMulticamClipId, project } = get();
+    if (!activeMulticamClipId || !project) return;
+    set({ isMulticamSyncing: true });
+    try {
+      const multicamClip = findMulticamClipInProject(project, activeMulticamClipId);
+      if (!multicamClip) return;
+      let syncResult;
+      switch (mode) {
+        case 'audio':
+          syncResult = await syncMulticamByAudio(multicamClip.angles, project.media);
+          break;
+        case 'timecode':
+          syncResult = syncMulticamByTimecode(multicamClip.angles, project.mediaMetadata);
+          break;
+        case 'manual':
+          // Manual sync requires UI interaction
+          break;
+      }
+      if (syncResult) {
+        const command = new SyncMulticamClipCommand(
+          projectAccessor,
+          activeMulticamClipId,
+          mode,
+          syncResult.offsets
+        );
+        commandManager.execute(command);
+      }
+    } catch (error) {
+      console.error('Multicam sync failed:', error);
+    } finally {
+      set({ isMulticamSyncing: false });
+    }
+  },
+  detectMulticamDrift: async () => {
+    const { activeMulticamClipId, project } = get();
+    if (!activeMulticamClipId || !project) return undefined;
+    const multicamClip = findMulticamClipInProject(project, activeMulticamClipId);
+    if (!multicamClip) return undefined;
+    return await detectMulticamDrift(multicamClip.angles);
+  },
+  setMulticamPreviewLayout: (layout) => {
+    set({ multicamPreviewLayout: layout as '1x1' | '1x2' | '2x2' | '2x3' | '3x3' });
+  },
 }));
 
 export function selectClipById(project: Project, clipId?: string): Clip | undefined {
@@ -249,6 +352,14 @@ export function selectClipById(project: Project, clipId?: string): Clip | undefi
     return undefined;
   }
   return project.timeline.tracks.flatMap((track) => track.clips).find((clip) => clip.id === clipId);
+}
+
+export function findMulticamClipInProject(project: Project, clipId: string): MulticamClip | undefined {
+  const clip = project.timeline.tracks.flatMap((track) => track.clips).find((c) => c.id === clipId);
+  if (clip && clip.type === 'multicam') {
+    return clip as MulticamClip;
+  }
+  return undefined;
 }
 
 function uniqueSelectedKeyframes(keyframes: SelectedKeyframeRef[]): SelectedKeyframeRef[] {

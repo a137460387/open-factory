@@ -96,8 +96,11 @@ import type {
   MotionGraphicClip,
   MulticamAngle,
   MulticamAiCutSuggestion,
+  MulticamClip,
+  MulticamClipAngle,
   MulticamSequence,
   MulticamSwitch,
+  MulticamSyncMode,
   NestedSequenceClip,
   PathPoint,
   PathPointHandle,
@@ -125,6 +128,8 @@ import type {
   SubtitleMode,
   SubtitleStyle,
   SubtitleTrackType,
+  SwitchPoint,
+  SwitchTransition,
   TextArcOptions,
   TextBoxFitMode,
   TextClip,
@@ -223,8 +228,11 @@ export type {
   MotionTrackPoint,
   MotionGraphicClip,
   MulticamAngle,
+  MulticamClip,
+  MulticamClipAngle,
   MulticamSequence,
   MulticamSwitch,
+  MulticamSyncMode,
   NestedSequenceClip,
   PathPoint,
   PathPointHandle,
@@ -249,6 +257,8 @@ export type {
   SubtitleMode,
   SubtitleStyle,
   SubtitleTrackType,
+  SwitchPoint,
+  SwitchTransition,
   TextArcOptions,
   TextBoxFitMode,
   TextClip,
@@ -1022,6 +1032,38 @@ export function createCreditsClip(
     rows: normalizeCreditsRows(input.rows, text),
     rollSpeed: normalizeCreditsRollSpeed(input.rollSpeed),
     style: normalizeCreditsStyle(input.style)
+  };
+}
+
+export function createMulticamClip(
+  angles: MulticamClipAngle[],
+  syncMode: MulticamSyncMode,
+  syncReferenceAngle: number
+): MulticamClip {
+  if (syncReferenceAngle < 0 || syncReferenceAngle >= angles.length) {
+    throw new Error('syncReferenceAngle out of range');
+  }
+
+  const baseClip = createBaseClip({
+    name: 'Multicam Clip',
+    trackId: '',
+    start: 0,
+    duration: 0,
+    trimStart: 0,
+    trimEnd: 0
+  });
+  return {
+    ...baseClip,
+    type: 'multicam',
+    angles: angles.map(a => ({
+      ...a,
+      ...(a.colorCorrection ? { colorCorrection: { ...a.colorCorrection } } : {}),
+      ...(a.transform ? { transform: { ...a.transform } } : {})
+    })),
+    activeAngle: 0,
+    switchPoints: [],
+    syncMode,
+    syncReferenceAngle
   };
 }
 

@@ -16,7 +16,7 @@ export function addOnExecuteListener(listener: CommandExecuteListener): () => vo
 }
 
 commandManager.setOnChange((historyMeta) => {
-  useEditorStore.getState().setHistoryMeta(historyMeta);
+  useEditorStore?.getState()?.setHistoryMeta(historyMeta);
 });
 
 commandManager.setOnExecute((command) => {

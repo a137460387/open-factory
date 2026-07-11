@@ -381,7 +381,7 @@ export interface ExportCreditsStyle extends ExportTextStyle {
   horizontalMargin: number;
 }
 
-export type ExportClipType = 'video' | 'audio' | 'image' | 'text' | 'subtitle' | 'credits' | 'nested-sequence' | 'adjustment' | 'motion-graphic';
+export type ExportClipType = 'video' | 'audio' | 'image' | 'text' | 'subtitle' | 'credits' | 'nested-sequence' | 'adjustment' | 'motion-graphic' | 'multicam';
 export type ExportTrackType = 'video' | 'audio' | 'text' | 'subtitle';
 export type ExportTransitionType = TransitionType;
 

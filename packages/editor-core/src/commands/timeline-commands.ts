@@ -1,5 +1,6 @@
 import {
   createId,
+  createMulticamClip,
   createMask,
   createCollaborationNote,
   createNestedSequenceClip,
@@ -113,7 +114,7 @@ import {
   type TransitionType,
   type Transform
 } from '../model';
-import type { BeatSnapSuggestion, MediaCollection, ProjectPlatformFitSuggestion, SequenceSettings } from '../model-types';
+import type { BeatSnapSuggestion, MediaCollection, MulticamClip, MulticamClipAngle, MulticamSyncMode, ProjectPlatformFitSuggestion, SequenceSettings, SwitchPoint, SwitchTransition } from '../model-types';
 import { recalculateClipStartsForFrameRate } from '../sequence-settings';
 import { clampTrackHeight } from '../track-height';
 import {
@@ -177,7 +178,7 @@ import { buildDialogueRoughCutClips, buildRhythmAssembleClips, type SmartDialogu
 import { normalizeTimelineLabelColor, type TimelineLabelColor } from '../timeline-color-labels';
 import { applyProtectedRippleDeleteToTrack, canMoveClipWithProtectedRanges } from '../timeline-protection';
 import { buildCrossfadeGapFillTransition, buildRepeatedGapFillClip, findTimelineGapAtTime, type FillGapOperation } from '../timeline-gap-fill';
-import { createMulticamSequenceProject, setMulticamSwitch, trimMulticamSwitch } from '../multicam';
+import { createMulticamSequenceProject, setMulticamSwitch, trimMulticamSwitch, addSwitchPoint, deleteSwitchPoint, updateSwitchPoint } from '../multicam';
 import { normalizeMotionGraphic } from '../motion-graphics';
 import { applyCmx3600EdlImport, buildCmx3600EdlImport, type Cmx3600EdlImportOptions, type Cmx3600EdlImportResult } from '../export/timeline-import';
 import {
@@ -5980,6 +5981,216 @@ export class UpdateProjectMediaCollectionsCommand implements Command {
     this.before ??= this.accessor.getProject();
     const project = this.accessor.getProject();
     this.accessor.setProject(touchProject({ ...project, mediaCollections: [...this.collections] }));
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+// ── Independent MulticamClip commands ──
+
+/**
+ * 创建独立多机位片段命令
+ */
+export class CreateMulticamClipCommand implements Command {
+  readonly description = 'Create multicam clip';
+  private before?: Project;
+  private _result?: MulticamClip;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly trackId: string,
+    private readonly angles: MulticamClipAngle[],
+    private readonly syncMode: MulticamSyncMode,
+    private readonly syncReferenceAngle: number,
+    private readonly start = 0,
+    private readonly duration = 10
+  ) {}
+
+  get result(): MulticamClip {
+    if (!this._result) {
+      throw new Error('Command not executed');
+    }
+    return this._result;
+  }
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    if (!this._result) {
+      const clip = createMulticamClip(this.angles, this.syncMode, this.syncReferenceAngle);
+      this._result = { ...clip, trackId: this.trackId, start: this.start, duration: this.duration };
+    }
+    const project = this.accessor.getProject();
+    const syncedProject = replaceProjectActiveTimeline(project, project.timeline);
+    const timeline = syncedProject.timeline;
+    const nextTimeline = insertClip(timeline, this._result as unknown as Clip);
+    this.accessor.setProject(touchProject(replaceProjectActiveTimeline(syncedProject, nextTimeline)));
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+/**
+ * 切换多机位角度命令（添加切换点）
+ */
+export class SwitchMulticamAngleCommand implements Command {
+  readonly description = 'Switch multicam angle';
+  private before?: Project;
+  private after?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly clipId: string,
+    private readonly time: number,
+    private readonly targetAngle: number,
+    private readonly transition: SwitchTransition = 'cut'
+  ) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    if (!this.after) {
+      const project = this.accessor.getProject();
+      const syncedProject = replaceProjectActiveTimeline(project, project.timeline);
+      const timeline = syncedProject.timeline;
+      const clip = findClip(timeline, this.clipId);
+      if (clip.type !== 'multicam') {
+        throw new Error('Clip is not a MulticamClip');
+      }
+      const newSwitchPoint: SwitchPoint = { time: this.time, targetAngle: this.targetAngle, transition: this.transition };
+      const updatedClip: MulticamClip = { ...clip, switchPoints: addSwitchPoint(clip.switchPoints, newSwitchPoint) };
+      this.after = touchProject(replaceProjectActiveTimeline(syncedProject, replaceClip(timeline, updatedClip as unknown as Clip)));
+    }
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+/**
+ * 删除切换点命令
+ */
+export class DeleteSwitchPointCommand implements Command {
+  readonly description = 'Delete switch point';
+  private before?: Project;
+  private after?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly clipId: string,
+    private readonly switchPointIndex: number
+  ) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    if (!this.after) {
+      const project = this.accessor.getProject();
+      const syncedProject = replaceProjectActiveTimeline(project, project.timeline);
+      const timeline = syncedProject.timeline;
+      const clip = findClip(timeline, this.clipId);
+      if (clip.type !== 'multicam') {
+        throw new Error('Clip is not a MulticamClip');
+      }
+      const updatedClip: MulticamClip = { ...clip, switchPoints: deleteSwitchPoint(clip.switchPoints, this.switchPointIndex) };
+      this.after = touchProject(replaceProjectActiveTimeline(syncedProject, replaceClip(timeline, updatedClip as unknown as Clip)));
+    }
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+/**
+ * 同步多机位片段命令（更新同步模式和机位偏移量）
+ */
+export class SyncMulticamClipCommand implements Command {
+  readonly description = 'Sync multicam clip';
+  private before?: Project;
+  private after?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly clipId: string,
+    private readonly syncMode: MulticamSyncMode,
+    private readonly offsets: Map<string, number>
+  ) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    if (!this.after) {
+      const project = this.accessor.getProject();
+      const syncedProject = replaceProjectActiveTimeline(project, project.timeline);
+      const timeline = syncedProject.timeline;
+      const clip = findClip(timeline, this.clipId);
+      if (clip.type !== 'multicam') {
+        throw new Error('Clip is not a MulticamClip');
+      }
+      const updatedAngles = clip.angles.map((angle) => {
+        const newOffset = this.offsets.get(angle.id);
+        return newOffset !== undefined ? { ...angle, offset: newOffset } : angle;
+      });
+      const updatedClip: MulticamClip = { ...clip, angles: updatedAngles, syncMode: this.syncMode };
+      this.after = touchProject(replaceProjectActiveTimeline(syncedProject, replaceClip(timeline, updatedClip as unknown as Clip)));
+    }
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+/**
+ * 更新多机位角度属性命令
+ */
+export class UpdateMulticamAngleCommand implements Command {
+  readonly description = 'Update multicam angle';
+  private before?: Project;
+  private after?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly clipId: string,
+    private readonly angleIndex: number,
+    private readonly updates: Partial<MulticamClipAngle>
+  ) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    if (!this.after) {
+      const project = this.accessor.getProject();
+      const syncedProject = replaceProjectActiveTimeline(project, project.timeline);
+      const timeline = syncedProject.timeline;
+      const clip = findClip(timeline, this.clipId);
+      if (clip.type !== 'multicam') {
+        throw new Error('Clip is not a MulticamClip');
+      }
+      if (this.angleIndex < 0 || this.angleIndex >= clip.angles.length) {
+        throw new Error('Angle index out of range');
+      }
+      const updatedAngles = clip.angles.map((angle, index) =>
+        index === this.angleIndex ? { ...angle, ...this.updates } : angle
+      );
+      const updatedClip: MulticamClip = { ...clip, angles: updatedAngles };
+      this.after = touchProject(replaceProjectActiveTimeline(syncedProject, replaceClip(timeline, updatedClip as unknown as Clip)));
+    }
+    this.accessor.setProject(this.after);
   }
 
   undo(): void {
