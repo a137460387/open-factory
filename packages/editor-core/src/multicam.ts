@@ -17,9 +17,12 @@ import {
   replaceProjectActiveTimeline,
   type Clip,
   type MulticamAngle,
+  type MulticamClip,
+  type MulticamClipAngle,
   type MulticamSequence,
   type MulticamSwitch,
   type Project,
+  type SwitchPoint,
   type Timeline,
   type Track
 } from './model';
@@ -491,4 +494,110 @@ function cloneAngleSegment(
     volume: 'volume' in source ? source.volume : 1,
     muted: 'muted' in source ? source.muted : undefined
   } as Extract<Clip, { mediaId: string }>;
+}
+
+// ── MulticamClip (independent multicam) algorithms ──
+
+/**
+ * Get the active angle at a given time for a MulticamClip.
+ * Switch points are assumed to be sorted by time.
+ */
+export function getActiveAngleAtTime(multicamClip: MulticamClip, time: number): MulticamClipAngle {
+  const { angles, switchPoints, activeAngle } = multicamClip;
+
+  if (angles.length === 0) {
+    throw new Error('MulticamClip has no angles');
+  }
+
+  // No switch points: return the default active angle
+  if (switchPoints.length === 0) {
+    return angles[activeAngle];
+  }
+
+  // Find the last switch point at or before the given time.
+  // Switch points are sorted by time.
+  let targetAngle = activeAngle;
+  for (const switchPoint of switchPoints) {
+    if (switchPoint.time <= time) {
+      targetAngle = switchPoint.targetAngle;
+    } else {
+      break;
+    }
+  }
+
+  // Validate targetAngle range
+  if (targetAngle < 0 || targetAngle >= angles.length) {
+    return angles[activeAngle];
+  }
+
+  return angles[targetAngle];
+}
+
+/**
+ * Add a switch point to the array, maintaining sorted order by time.
+ * If a switch point at the same time already exists, it is replaced.
+ * Returns a new array (immutable).
+ */
+export function addSwitchPoint(switchPoints: SwitchPoint[], switchPoint: SwitchPoint): SwitchPoint[] {
+  // Find insertion index to maintain sorted order
+  let insertIndex = switchPoints.length;
+  for (let i = 0; i < switchPoints.length; i++) {
+    if (switchPoints[i].time >= switchPoint.time) {
+      insertIndex = i;
+      break;
+    }
+  }
+
+  // If there's already a switch point at the same time, replace it
+  if (insertIndex < switchPoints.length && switchPoints[insertIndex].time === switchPoint.time) {
+    const result = [...switchPoints];
+    result[insertIndex] = switchPoint;
+    return result;
+  }
+
+  // Insert at the correct position
+  const result = [...switchPoints];
+  result.splice(insertIndex, 0, switchPoint);
+  return result;
+}
+
+/**
+ * Delete a switch point by index.
+ * Returns a new array (immutable).
+ * Throws if the index is out of range.
+ */
+export function deleteSwitchPoint(switchPoints: SwitchPoint[], index: number): SwitchPoint[] {
+  if (index < 0 || index >= switchPoints.length) {
+    throw new Error('Switch point index out of range');
+  }
+
+  const result = [...switchPoints];
+  result.splice(index, 1);
+  return result;
+}
+
+/**
+ * Update a switch point at the given index with partial updates.
+ * If the time is changed, the array is re-sorted.
+ * Returns a new array (immutable).
+ * Throws if the index is out of range.
+ */
+export function updateSwitchPoint(
+  switchPoints: SwitchPoint[],
+  index: number,
+  updates: Partial<SwitchPoint>
+): SwitchPoint[] {
+  if (index < 0 || index >= switchPoints.length) {
+    throw new Error('Switch point index out of range');
+  }
+
+  const result = [...switchPoints];
+  result[index] = { ...result[index], ...updates };
+
+  // If time was updated, re-sort to maintain order
+  if (updates.time !== undefined) {
+    result.sort((a, b) => a.time - b.time);
+  }
+
+  return result;
 }
