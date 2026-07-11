@@ -182,6 +182,14 @@ export class TimelinePage extends BasePage {
     await expect(this.gridLine.first()).toBeVisible({ timeout });
   }
 
+  /** 添加 3 个连续片段到时间线（用于高级编辑工具测试） */
+  async addThreeConsecutiveClips(): Promise<void> {
+    await this.page.evaluate(() => {
+      window.__E2E_ACTIONS__!.setupEfficientEditingFixture!();
+    });
+    await this.waitForClips();
+  }
+
   /** 等待时间线进入指定编辑模式 */
   async waitForEditingMode(mode: 'rolling-trim' | 'slip' | 'slide', timeout = 5_000): Promise<void> {
     await expect(this.root).toHaveAttribute('data-editing-mode', mode, { timeout });

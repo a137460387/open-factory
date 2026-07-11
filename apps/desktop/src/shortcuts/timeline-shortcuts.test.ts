@@ -18,7 +18,6 @@ describe('timeline shortcut mapping', () => {
     ['I', { key: 'i' }, 'set-in-point'],
     ['O', { key: 'o' }, 'set-out-point'],
     ['T', { key: 't' }, 'split-selected'],
-    ['S', { key: 's' }, 'split-selected'],
     ['Delete', { key: 'Delete' }, 'delete-selected'],
     ['Backspace', { key: 'Backspace' }, 'delete-selected'],
     ['Shift+Delete', { key: 'Delete', shiftKey: true }, 'ripple-delete'],

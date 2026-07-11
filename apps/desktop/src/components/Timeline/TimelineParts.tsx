@@ -1019,7 +1019,15 @@ function ClipBlock({
         'group absolute top-2 flex h-10 select-none items-center overflow-hidden rounded-md border px-2.5 text-xs font-medium shadow-sm',
         getClipToneClass(clip.type),
         asset?.missing ? 'border-rose-500 bg-[repeating-linear-gradient(135deg,rgba(244,63,94,0.18)_0,rgba(244,63,94,0.18)_6px,transparent_6px,transparent_12px)]' : selected ? 'border-coral ring-2 ring-coral/30' : 'border-white/80',
-        locked ? 'cursor-not-allowed opacity-70' : 'cursor-grab',
+        locked
+          ? 'cursor-not-allowed opacity-70'
+          : slipEditActive
+            ? 'cursor-ew-resize'
+            : slideEditActive
+              ? 'cursor-grab'
+              : rollingTrimActive
+                ? 'cursor-col-resize'
+                : 'cursor-grab',
         isMoveDragging && 'opacity-80 shadow-[0_12px_22px_rgba(15,23,42,0.24)] ring-2 ring-brand/30',
         !reduceMotion && !largeProjectMode.disableAnimations && 'transition-all duration-150 ease-out',
         clip.type === 'video' && clip.platformFitRemoved && 'opacity-40 grayscale'

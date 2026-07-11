@@ -185,7 +185,7 @@ import {
 } from '@open-factory/editor-core';
 import { zoomTimelineByGesture, LONG_PRESS_PAN_THRESHOLD_MS, computeTimelineGaps, getGapStats, BatchUpdateTrackHeightCommand, UpdateSequenceSettingsCommand } from '@open-factory/editor-core';
 import { clsx } from 'clsx';
-import { AudioWaveform, Bookmark, Captions, CircleDot, Flag, Group, Magnet, MessageSquarePlus, MessageSquareText, Mic2, Music2, Plus, Scissors, Settings2, Star, Trash2, Type, Ungroup, Wand2, X } from 'lucide-react';
+import { ArrowLeftRight, AudioWaveform, Bookmark, Captions, CircleDot, Eraser, Flag, Group, Magnet, MessageSquarePlus, MessageSquareText, Mic2, Music2, MoveHorizontal, Plus, Scissors, Settings2, Star, Trash2, Type, Ungroup, Wand2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createCreditsClip, createTextClip } from '../../lib/clipFactory';
 import { probeMediaPath } from '../../lib/media';
@@ -1264,6 +1264,18 @@ function addProjectBookmark(time = playheadTime): void {
       return;
     }
     commandManager.execute(new DeleteClipsCommand(timelineAccessor, selectedClipIds));
+    clearSelectedClipIds();
+  }
+
+  function rippleDeleteSelected(): void {
+    if (selectedClipIds.length === 0) {
+      return;
+    }
+    if (selectedGroup) {
+      deleteGroup(selectedGroup);
+      return;
+    }
+    commandManager.execute(new RippleDeleteCommand(timelineAccessor, selectedClipIds, project.protectedRanges));
     clearSelectedClipIds();
   }
 
@@ -3053,6 +3065,37 @@ function addProjectBookmark(time = playheadTime): void {
         <button className="rounded-md border border-line p-2 hover:bg-panel" title={zhCN.timeline.deleteSelectedClip} onClick={deleteSelected}>
           <Trash2 size={16} />
         </button>
+        <button
+          className="rounded-md border border-line p-2 hover:bg-panel"
+          title={`${zhCN.timeline.rippleDeleteClip} (Shift+Delete)`}
+          data-testid="ripple-delete-button"
+          onClick={rippleDeleteSelected}
+        >
+          <Eraser size={16} />
+        </button>
+        {(slipEditActive || slideEditActive || rollingTrimActive) && (
+          <div
+            className="flex items-center gap-1.5 rounded-md border border-brand/30 bg-brand/10 px-2.5 py-1.5 text-xs font-medium text-brand"
+            data-testid="editing-mode-indicator"
+          >
+            {rollingTrimActive ? (
+              <>
+                <Scissors size={14} />
+                <span>{zhCN.timeline.rollingTrimMode}</span>
+              </>
+            ) : slipEditActive ? (
+              <>
+                <ArrowLeftRight size={14} />
+                <span>{zhCN.timeline.slipMode}</span>
+              </>
+            ) : (
+              <>
+                <MoveHorizontal size={14} />
+                <span>{zhCN.timeline.slideMode}</span>
+              </>
+            )}
+          </div>
+        )}
         <input
           className="w-28 accent-brand"
           title={zhCN.timeline.zoom}
@@ -3374,6 +3417,8 @@ function addProjectBookmark(time = playheadTime): void {
                 onDeleteGroup={deleteGroup}
                 onGroupColor={updateGroupColor}
                 onClipColor={updateClipColor}
+                onDelete={() => { deleteSelected(); setClipMenu(undefined); }}
+                onRippleDelete={() => { rippleDeleteSelected(); setClipMenu(undefined); }}
                 onClose={() => setClipMenu(undefined)}
               />
             ) : null}
@@ -4962,6 +5007,8 @@ function ClipActionMenu({
   onDeleteGroup,
   onGroupColor,
   onClipColor,
+  onDelete,
+  onRippleDelete,
   onClose
 }: {
   menu: ClipMenuState;
@@ -4991,6 +5038,8 @@ function ClipActionMenu({
   onDeleteGroup(group: ClipGroup): void;
   onGroupColor(group: ClipGroup, color: ClipGroupColor): void;
   onClipColor(clipId: string, color: TimelineLabelColor | null): void;
+  onDelete(): void;
+  onRippleDelete(): void;
   onClose(): void;
 }) {
   const canDetectSilence = Boolean(clip && (clip.type === 'audio' || (clip.type === 'video' && asset?.hasAudio)));
@@ -5140,6 +5189,22 @@ function ClipActionMenu({
         onClick={onPack}
       >
         {zhCN.timeline.packNestedSequence}
+      </button>
+      <button
+        className="block w-full rounded px-2 py-2 text-left hover:bg-panel disabled:opacity-40"
+        type="button"
+        data-testid="clip-action-delete"
+        onClick={onDelete}
+      >
+        {zhCN.timeline.deleteSelectedClip}
+      </button>
+      <button
+        className="block w-full rounded px-2 py-2 text-left hover:bg-panel disabled:opacity-40"
+        type="button"
+        data-testid="clip-action-ripple-delete"
+        onClick={onRippleDelete}
+      >
+        {zhCN.timeline.rippleDeleteClip}
       </button>
       <div className="my-1 border-t border-line" />
       <button
