@@ -1267,6 +1267,18 @@ function addProjectBookmark(time = playheadTime): void {
     clearSelectedClipIds();
   }
 
+  function rippleDeleteSelected(): void {
+    if (selectedClipIds.length === 0) {
+      return;
+    }
+    if (selectedGroup) {
+      deleteGroup(selectedGroup);
+      return;
+    }
+    commandManager.execute(new RippleDeleteCommand(timelineAccessor, selectedClipIds, project.protectedRanges));
+    clearSelectedClipIds();
+  }
+
   function onPointerMove(event: React.PointerEvent<HTMLDivElement>): void {
     if (selectionStart) {
       setSelectionRect(buildSelectionMarqueeRect(selectionStart, { x: event.clientX, y: event.clientY }));
@@ -3397,6 +3409,8 @@ function addProjectBookmark(time = playheadTime): void {
                 onDeleteGroup={deleteGroup}
                 onGroupColor={updateGroupColor}
                 onClipColor={updateClipColor}
+                onDelete={() => { deleteSelected(); setClipMenu(undefined); }}
+                onRippleDelete={() => { rippleDeleteSelected(); setClipMenu(undefined); }}
                 onClose={() => setClipMenu(undefined)}
               />
             ) : null}
@@ -4985,6 +4999,8 @@ function ClipActionMenu({
   onDeleteGroup,
   onGroupColor,
   onClipColor,
+  onDelete,
+  onRippleDelete,
   onClose
 }: {
   menu: ClipMenuState;
@@ -5014,6 +5030,8 @@ function ClipActionMenu({
   onDeleteGroup(group: ClipGroup): void;
   onGroupColor(group: ClipGroup, color: ClipGroupColor): void;
   onClipColor(clipId: string, color: TimelineLabelColor | null): void;
+  onDelete(): void;
+  onRippleDelete(): void;
   onClose(): void;
 }) {
   const canDetectSilence = Boolean(clip && (clip.type === 'audio' || (clip.type === 'video' && asset?.hasAudio)));
@@ -5163,6 +5181,22 @@ function ClipActionMenu({
         onClick={onPack}
       >
         {zhCN.timeline.packNestedSequence}
+      </button>
+      <button
+        className="block w-full rounded px-2 py-2 text-left hover:bg-panel disabled:opacity-40"
+        type="button"
+        data-testid="clip-action-delete"
+        onClick={onDelete}
+      >
+        {zhCN.timeline.deleteSelectedClip}
+      </button>
+      <button
+        className="block w-full rounded px-2 py-2 text-left hover:bg-panel disabled:opacity-40"
+        type="button"
+        data-testid="clip-action-ripple-delete"
+        onClick={onRippleDelete}
+      >
+        {zhCN.timeline.rippleDeleteClip}
       </button>
       <div className="my-1 border-t border-line" />
       <button
