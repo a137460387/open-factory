@@ -6115,6 +6115,44 @@ export class DeleteSwitchPointCommand implements Command {
 }
 
 /**
+ * 更新切换点命令
+ */
+export class UpdateSwitchPointCommand implements Command {
+  readonly description = 'Update switch point';
+  private before?: Project;
+  private after?: Project;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly clipId: string,
+    private readonly switchPointIndex: number,
+    private readonly updates: Partial<SwitchPoint>
+  ) {}
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    if (!this.after) {
+      const project = this.accessor.getProject();
+      const syncedProject = replaceProjectActiveTimeline(project, project.timeline);
+      const timeline = syncedProject.timeline;
+      const clip = findClip(timeline, this.clipId);
+      if (clip.type !== 'multicam') {
+        throw new Error('Clip is not a MulticamClip');
+      }
+      const updatedClip: MulticamClip = { ...clip, switchPoints: updateSwitchPoint(clip.switchPoints, this.switchPointIndex, this.updates) };
+      this.after = touchProject(replaceProjectActiveTimeline(syncedProject, replaceClip(timeline, updatedClip as unknown as Clip)));
+    }
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+/**
  * 同步多机位片段命令（更新同步模式和机位偏移量）
  */
 export class SyncMulticamClipCommand implements Command {

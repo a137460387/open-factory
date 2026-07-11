@@ -16,7 +16,8 @@ import {
   type DenoiseFilterRecommendation,
   type MediaAsset,
   type Project,
-  type ProjectFileV2
+  type ProjectFileV2,
+  createMulticamClip
 } from '@open-factory/editor-core';
 import { commandManager, timelineAccessor } from '../store/commandManager';
 import { useEditorUIStore } from '../store/editorUIStore';
@@ -2201,6 +2202,87 @@ window.__E2E_ACTIONS__ = {
     useEditorStore.getState().setPlayheadTime(1);
     commandManager.clear();
   },
+  setupIndependentMulticamFixture: () => {
+    const project = createProject('Independent Multicam E2E');
+    const media: MediaAsset[] = [
+      {
+        id: 'media-cam-1',
+        type: 'video',
+        name: 'cam-1.mp4',
+        path: tinyVideo,
+        duration: 10,
+        width: 1280,
+        height: 720,
+        size: 4096,
+        mtimeMs: 1_000,
+        hasAudio: true,
+        audioChannels: 2,
+        audioSampleRate: 44_100,
+        audioCodec: 'aac'
+      },
+      {
+        id: 'media-cam-2',
+        type: 'video',
+        name: 'cam-2.mp4',
+        path: tinyVideoB,
+        duration: 10,
+        width: 1280,
+        height: 720,
+        size: 4096,
+        mtimeMs: 1_000,
+        hasAudio: true,
+        audioChannels: 2,
+        audioSampleRate: 44_100,
+        audioCodec: 'aac'
+      },
+      {
+        id: 'media-cam-3',
+        type: 'video',
+        name: 'cam-3.mp4',
+        path: tinyVideo,
+        duration: 10,
+        width: 1280,
+        height: 720,
+        size: 4096,
+        mtimeMs: 1_000,
+        hasAudio: true,
+        audioChannels: 2,
+        audioSampleRate: 44_100,
+        audioCodec: 'aac'
+      }
+    ];
+    const multicamClip = createMulticamClip(
+      [
+        { id: 'angle-1', mediaId: 'media-cam-1', name: 'Camera 1', offset: 0, volume: 1, muted: false },
+        { id: 'angle-2', mediaId: 'media-cam-2', name: 'Camera 2', offset: 0, volume: 1, muted: false },
+        { id: 'angle-3', mediaId: 'media-cam-3', name: 'Camera 3', offset: 0, volume: 1, muted: false }
+      ],
+      'audio',
+      0
+    );
+    multicamClip.start = 0;
+    multicamClip.duration = 10;
+    multicamClip.trackId = 'track-main';
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({ id: 'track-main', type: 'video', name: 'Video 1', clips: [multicamClip] }),
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media,
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    useEditorStore.getState().setSelectedClipIds([multicamClip.id]);
+    useEditorStore.getState().enterMulticamEditMode(multicamClip.id);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  },
   setupWhisperFixture: () => {
     const project = createProject('Whisper E2E');
     const asset: MediaAsset = {
@@ -3951,10 +4033,24 @@ window.__E2E_ACTIONS__ = {
   getMulticamClipState: () => {
     const state = useEditorStore.getState();
     const project = state.project;
-    const clipId = state.activeMulticamClipId;
+    // Try activeMulticamClipId first, then fall back to selectedClipId
+    const clipId = state.activeMulticamClipId ?? state.selectedClipId;
     if (!clipId) return undefined;
     const clip = project.timeline.tracks.flatMap((t) => t.clips).find((c) => c.id === clipId);
-    if (!clip || !(clip as any).multicam) return undefined;
+    if (!clip) return undefined;
+    // Handle independent MulticamClip (type: 'multicam')
+    if (clip.type === 'multicam') {
+      const mc = clip as any;
+      return {
+        angleCount: mc.angles?.length ?? 0,
+        switchCount: mc.switchPoints?.length ?? 0,
+        switches: mc.switchPoints?.map((sp: any) => ({ time: sp.time, angleId: mc.angles?.[sp.targetAngle]?.id ?? '' })) ?? [],
+        activeAngle: mc.angles?.[mc.activeAngle]?.id,
+        angles: mc.angles?.map((a: any) => ({ id: a.id, name: a.name, offset: a.offset })) ?? [],
+      };
+    }
+    // Handle NestedSequenceClip with multicam property (legacy)
+    if (!(clip as any).multicam) return undefined;
     const mc = (clip as any).multicam;
     return {
       angleCount: mc.angles?.length ?? 0,

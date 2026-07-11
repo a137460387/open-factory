@@ -26,7 +26,7 @@ export const SwitchPointEditor: React.FC<SwitchPointEditorProps> = ({
   };
 
   return (
-    <div className="switch-point-editor" data-testid="switch-point-editor">
+    <div className="switch-point-editor" data-testid="multicam-switch-point-editor">
       <div className="editor-header">
         <h4>切换点</h4>
         <button

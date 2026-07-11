@@ -1,6 +1,18 @@
 import { CommandManager, type ProjectAccessor, type TimelineAccessor } from '@open-factory/editor-core';
 import { collaborationController } from '../collaboration/local-network';
-import { useEditorStore } from './editorStore';
+import type { EditorState } from './editorStore';
+
+// Use a getter to break circular dependency with editorStore
+// editorStore imports commandManager, so we cannot statically import useEditorStore here
+let _editorStoreGetter: (() => { getState: () => EditorState }) | undefined;
+
+export function setEditorStoreGetter(getter: () => { getState: () => EditorState }) {
+  _editorStoreGetter = getter;
+}
+
+function getEditorStore() {
+  return _editorStoreGetter?.();
+}
 
 export const commandManager = new CommandManager();
 
@@ -16,7 +28,7 @@ export function addOnExecuteListener(listener: CommandExecuteListener): () => vo
 }
 
 commandManager.setOnChange((historyMeta) => {
-  useEditorStore?.getState()?.setHistoryMeta(historyMeta);
+  getEditorStore()?.getState().setHistoryMeta(historyMeta);
 });
 
 commandManager.setOnExecute((command) => {
@@ -27,11 +39,11 @@ commandManager.setOnExecute((command) => {
 });
 
 export const timelineAccessor: TimelineAccessor = {
-  getTimeline: () => useEditorStore.getState().project.timeline,
-  setTimeline: (timeline) => useEditorStore.getState().replaceTimeline(timeline)
+  getTimeline: () => getEditorStore()!.getState().project.timeline,
+  setTimeline: (timeline) => getEditorStore()!.getState().replaceTimeline(timeline)
 };
 
 export const projectAccessor: ProjectAccessor = {
-  getProject: () => useEditorStore.getState().project,
-  setProject: (project) => useEditorStore.getState().replaceProject(project)
+  getProject: () => getEditorStore()!.getState().project,
+  setProject: (project) => getEditorStore()!.getState().replaceProject(project)
 };
