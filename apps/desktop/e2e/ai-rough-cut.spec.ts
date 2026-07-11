@@ -24,3 +24,32 @@ test('AI rough cut generates storyboard and confirms clips to timeline', async (
     return snapshot.tracks.reduce((sum, t) => sum + t.clips.length, 0);
   }).toBeGreaterThanOrEqual(3);
 });
+
+test('AI rough cut algorithm mode generates storyboard without AI provider', async ({ page, toolbar, aiPanel, timeline }) => {
+  await toolbar.goto();
+  await page.evaluate(() => window.__E2E_ACTIONS__!.setupAIRoughCutFixture!());
+
+  await aiPanel.openRoughCut();
+
+  // Switch to algorithm mode
+  await page.getByTestId('ai-rough-cut-mode-algorithm').click();
+
+  // Select highlight step (default) and start
+  await page.getByTestId('ai-rough-cut-start').click();
+
+  // Wait for storyboard preview
+  await aiPanel.waitForStoryboard();
+
+  // Verify clips appear in storyboard
+  const storyItems = page.locator('[data-testid^="ai-rough-cut-clip-"]');
+  await expect(storyItems).toHaveCount(3);
+
+  // Confirm clips to timeline
+  await aiPanel.confirmRoughCut();
+
+  // Verify clips were added to timeline
+  await expect.poll(async () => {
+    const snapshot = await timeline.getSnapshot();
+    return snapshot.tracks.reduce((sum, t) => sum + t.clips.length, 0);
+  }).toBeGreaterThanOrEqual(3);
+});
