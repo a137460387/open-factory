@@ -175,7 +175,7 @@ export function syncMulticamByManual(
  * 检测时钟漂移
  * 对前两个机位进行音频同步分析，检测是否存在时钟漂移。
  */
-export async function detectDrift(
+export async function detectMulticamDrift(
   angles: MulticamClipAngle[],
 ): Promise<{ driftDetected: boolean; driftRate: number }> {
   if (angles.length < 2) {

@@ -91,6 +91,7 @@ export * from './ai-look-match';
 export * from './ai-beat-snap';
 export * from './ai-media-organize';
 export * from './multicam';
+export * from './multicam-sync';
 export * from './multicam-ai-cut';
 export * from './shake-analysis';
 export * from './pip-avoidance';
