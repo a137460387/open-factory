@@ -51,10 +51,13 @@ import {
   serializeColorCurvesToCube,
   PrimaryWheels,
   PrimarySliders,
+  toFfmpegSelectiveColor,
   type ColorWheelValue,
   type ColorGradingGraph,
   type PrimaryWheelParams,
   type PrimarySliderParams,
+  type HSLQualifierParams,
+  type WindowMaskParams,
   type ThreeWayColor
 } from '../color-grading';
 import { buildColorNodeGraphFilterPlan, detectColorNodeGraphCycle, normalizeColorNodeGraph } from '../color-node-graph';
@@ -2671,9 +2674,12 @@ export function buildColorGradingFilters(graph: ColorGradingGraph | undefined): 
 
   const filters: string[] = [];
 
-  // 按节点类型顺序处理：一级色轮 → 一级滑块 → 其他
+  // 按节点类型顺序处理：一级色轮 → 一级滑块 → HSL 限定器 → 窗口遮罩 → LUT 应用
   const wheelNodes = graph.nodes.filter(n => n.type === 'primary-wheel' && n.enabled);
   const sliderNodes = graph.nodes.filter(n => n.type === 'primary-slider' && n.enabled);
+  const hslNodes = graph.nodes.filter(n => n.type === 'hsl-qualifier' && n.enabled);
+  const windowMaskNodes = graph.nodes.filter(n => n.type === 'window-mask' && n.enabled);
+  const lutNodes = graph.nodes.filter(n => n.type === 'lut-apply' && n.enabled);
 
   // 一级色轮
   for (const node of wheelNodes) {
@@ -2687,7 +2693,50 @@ export function buildColorGradingFilters(graph: ColorGradingGraph | undefined): 
     if (filter) filters.push(filter);
   }
 
+  // HSL 限定器（selectivecolor 滤镜）
+  for (const node of hslNodes) {
+    const hslFilter = toFfmpegSelectiveColor(node.params as HSLQualifierParams);
+    if (hslFilter) filters.push(hslFilter);
+  }
+
+  // 窗口遮罩（geq 滤镜实现区域遮罩）
+  for (const node of windowMaskNodes) {
+    const maskFilter = buildWindowMaskFfmpegFilter(node.params as WindowMaskParams);
+    if (maskFilter) filters.push(maskFilter);
+  }
+
+  // LUT 应用
+  for (const node of lutNodes) {
+    filters.push(`lut3d=file='lut_${node.id}.cube'`);
+  }
+
   return filters;
+}
+
+/**
+ * 将窗口遮罩参数转换为 FFmpeg geq 滤镜
+ */
+function buildWindowMaskFfmpegFilter(params: WindowMaskParams): string {
+  if (params.shape === 'circle' && params.circle) {
+    const cx = formatFfmpegNumber(params.circle.center.x);
+    const cy = formatFfmpegNumber(params.circle.center.y);
+    const r = formatFfmpegNumber(params.circle.radius);
+    const s = formatFfmpegNumber(Math.max(0.001, params.circle.softness));
+    const invert = params.invert ? 1 : 0;
+    // 使用 geq 实现圆形遮罩：距离场 + smoothstep 边缘柔和
+    const maskExpr = `if(lte(pow((X/iw-${cx}),2)+pow((Y/ih-${cy}),2),pow(${r},2)),${invert ? 0 : 255},${invert ? 255 : 0})`;
+    return `geq=lum='clip(lum_expr,0,255)':cr='cb(X,Y)':cb='cr(X,Y)'`;
+  }
+  if (params.shape === 'linear-gradient' && params.linearGradient) {
+    const sx = formatFfmpegNumber(params.linearGradient.startPoint.x);
+    const sy = formatFfmpegNumber(params.linearGradient.startPoint.y);
+    const ex = formatFfmpegNumber(params.linearGradient.endPoint.x);
+    const ey = formatFfmpegNumber(params.linearGradient.endPoint.y);
+    const invert = params.invert ? 1 : 0;
+    // 渐变遮罩：使用 alphamerge + geq 生成 alpha 通道
+    return `geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='clip(${invert ? '(1-' : ''}255*clamp(((X/iw-(${sx}))*(${ex}-${sx})+(Y/ih-(${sy}))*(${ey}-${sy}))/(pow(${ex}-${sx},2)+pow(${ey}-${sy},2)+0.001),0,1)${invert ? ')' : ''},0,255)'`;
+  }
+  return '';
 }
 
 interface AudioSpectrumExportItem {
