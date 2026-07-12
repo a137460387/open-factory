@@ -1,16 +1,24 @@
-import type { ColorGradingGraph, ColorGradingNode, ColorGradingNodeParams } from './types';
+import type { ColorGradingGraph, ColorGradingNode, ColorGradingNodeParams, CurvesNodeParams, LUTApplyNodeParams, TrackingMaskNodeParams } from './types';
+import { sampleCurve } from './color-curves';
+
+/** Uniform value that can be a scalar, array, or structured descriptor */
+export type UniformValue =
+  | number
+  | number[]
+  | Float32Array
+  | { type: string; value: number | number[] | Float32Array | null; [key: string]: unknown };
 
 /** Node execution result */
 export interface NodeExecutionResult {
   nodeId: string;
-  uniforms: Record<string, number | number[]>;
+  uniforms: Record<string, UniformValue>;
   fragmentSnippets: string[];
 }
 
 /** Graph execution result */
 export interface GraphExecutionResult {
   nodeResults: NodeExecutionResult[];
-  combinedUniforms: Record<string, number | number[]>;
+  combinedUniforms: Record<string, UniformValue>;
 }
 
 /** Graph validation error */
@@ -88,7 +96,7 @@ export class NodeGraphEngine {
 
     const sorted = this.topologicalSort(enabledGraph);
     const nodeResults: NodeExecutionResult[] = [];
-    const combinedUniforms: Record<string, number | number[]> = {};
+    const combinedUniforms: Record<string, UniformValue> = {};
 
     for (const node of sorted) {
       const result = this.executeNode(node, nodeResults);
@@ -117,6 +125,17 @@ export class NodeGraphEngine {
         return this.executeHSLQualifier(node);
       case 'window-mask':
         return this.executeWindowMask(node);
+      case 'curves':
+        return this.executeCurves(node);
+      case 'lut-apply':
+        return this.executeLUTApply(node);
+      case 'tracking-mask':
+        return this.executeTrackingMask(node);
+      case 'output':
+      case 'color-space':
+      case 'mixer-node':
+        // Auxiliary nodes do not generate shader code
+        return { nodeId: node.id, uniforms: {}, fragmentSnippets: [] };
       default:
         return { nodeId: node.id, uniforms: {}, fragmentSnippets: [] };
     }
@@ -227,6 +246,59 @@ export class NodeGraphEngine {
 
     // Polygon mask not yet supported in WebGL
     return { nodeId: node.id, uniforms: {}, fragmentSnippets: [] };
+  }
+
+  /**
+   * Execute a curves node - generates a 256-entry LUT from curve control points.
+   */
+  private static executeCurves(node: ColorGradingNode): NodeExecutionResult {
+    const p = node.params as CurvesNodeParams;
+    const lutData = new Float32Array(256 * 4);
+    for (let i = 0; i < 256; i++) {
+      const x = i / 255;
+      lutData[i * 4] = sampleCurve(p.red, x);
+      lutData[i * 4 + 1] = sampleCurve(p.green, x);
+      lutData[i * 4 + 2] = sampleCurve(p.blue, x);
+      lutData[i * 4 + 3] = sampleCurve(p.master, x);
+    }
+    return {
+      nodeId: node.id,
+      uniforms: {
+        [`u_curvesLUT_${node.id}`]: { type: 'sampler2D', value: lutData, width: 256, height: 1 },
+      },
+      fragmentSnippets: [`color = applyCurves_${node.id}(color);`],
+    };
+  }
+
+  /**
+   * Execute a LUT apply node - returns sampler3D reference and intensity.
+   */
+  private static executeLUTApply(node: ColorGradingNode): NodeExecutionResult {
+    const p = node.params as LUTApplyNodeParams;
+    return {
+      nodeId: node.id,
+      uniforms: {
+        [`u_lut3D_${node.id}`]: { type: 'sampler3D', value: null, lutId: p.lutId },
+        [`u_lutIntensity_${node.id}`]: { type: '1f', value: p.intensity },
+      },
+      fragmentSnippets: [`color = applyLUT_${node.id}(color);`],
+    };
+  }
+
+  /**
+   * Execute a tracking mask node - returns feather, expand, and invert uniforms.
+   */
+  private static executeTrackingMask(node: ColorGradingNode): NodeExecutionResult {
+    const p = node.params as TrackingMaskNodeParams;
+    return {
+      nodeId: node.id,
+      uniforms: {
+        [`u_trackingMaskFeather_${node.id}`]: { type: '1f', value: p.feather },
+        [`u_trackingMaskExpand_${node.id}`]: { type: '1f', value: p.expand },
+        [`u_trackingMaskInvert_${node.id}`]: { type: '1i', value: p.invert ? 1 : 0 },
+      },
+      fragmentSnippets: [`color = applyTrackingMask_${node.id}(color, v_texCoord);`],
+    };
   }
 
   /**
