@@ -5,6 +5,7 @@ import { ErrorBoundary } from '../common/ErrorBoundary';
 import { PanelLoading } from '../PanelLoading';
 import { CollapsedPanelRail } from '../CollapsedPanelRail';
 import { zhCN } from '../../i18n/strings';
+import { featureStrings } from '../../i18n/featureStrings';
 import { selectClipById, useEditorStore } from '../../store/editorStore';
 import { useEditorUIStore } from '../../store/editorUIStore';
 import { getEffectivePanelState } from '../../layout/layoutSettings';
@@ -21,6 +22,7 @@ const ContextualTranslationPanel = lazy(() => import('../ContextualTranslation/C
 const AIChatEditorPanel = lazy(() => import('../AIChatEditor/AIChatEditorPanel').then((m) => ({ default: m.AIChatEditorPanel })));
 const AIVideoSummaryPanel = lazy(() => import('../AIVideoSummary/AIVideoSummaryPanel').then((m) => ({ default: m.AIVideoSummaryPanel })));
 const AINarrationPanel = lazy(() => import('../AINarration/AINarrationPanel').then((m) => ({ default: m.AINarrationPanel })));
+const SmartCreationPanel = lazy(() => import('../SmartCreation/SmartCreationPanel').then((m) => ({ default: m.SmartCreationPanel })));
 const HistoryPanel = lazy(() => import('../History/HistoryPanel').then((m) => ({ default: m.HistoryPanel })));
 const ProjectDocumentationPanel = lazy(() => import('../ProjectDocumentationPanel').then((m) => ({ default: m.ProjectDocumentationPanel })));
 const AISubtitleWorkflowPanel = lazy(() => import('../AISubtitleWorkflow/AISubtitleWorkflowPanel').then((m) => ({ default: m.AISubtitleWorkflowPanel })));
@@ -58,6 +60,8 @@ export function ShellRightPanel() {
   const setVideoSummaryOpen = useEditorUIStore((s) => s.setVideoSummaryOpen);
   const narrationOpen = useEditorUIStore((s) => s.narrationOpen);
   const setNarrationOpen = useEditorUIStore((s) => s.setNarrationOpen);
+  const smartCreationOpen = useEditorUIStore((s) => s.smartCreationOpen);
+  const setSmartCreationOpen = useEditorUIStore((s) => s.setSmartCreationOpen);
   const smartRoughCutOpen = useEditorUIStore((s) => s.smartRoughCutOpen);
   const aiSubtitleWorkflowOpen = useEditorUIStore((s) => s.aiSubtitleWorkflowOpen);
   const setAiSubtitleWorkflowOpen = useEditorUIStore((s) => s.setAiSubtitleWorkflowOpen);
@@ -96,11 +100,13 @@ export function ShellRightPanel() {
                     ? zhCN.aiVideoSummary.title
                     : narrationOpen
                       ? zhCN.aiNarration.title
-                      : aiSubtitleWorkflowOpen
-                        ? zhCN.aiSubtitleWorkflow.title
-                        : smartRoughCutOpen
-                          ? zhCN.panels.smartRoughCut
-                          : zhCN.panels.inspector;
+                      : smartCreationOpen
+                        ? featureStrings.smartCreation.title
+                        : aiSubtitleWorkflowOpen
+                          ? zhCN.aiSubtitleWorkflow.title
+                          : smartRoughCutOpen
+                            ? zhCN.panels.smartRoughCut
+                            : zhCN.panels.inspector;
 
   const rightPanelRows =
     effectivePanels.rightPrimaryPanelVisible && effectivePanels.audioMixerVisible
@@ -169,6 +175,8 @@ export function ShellRightPanel() {
               />
             ) : smartRoughCutOpen ? (
               <SmartRoughCutPanel selectedClip={selectedClip} media={project.media} />
+            ) : smartCreationOpen ? (
+              <SmartCreationPanel open={smartCreationOpen} onClose={() => setSmartCreationOpen(false)} media={project.media} />
             ) : layoutSettings.panels.inspector ? (
               <Inspector
                 clip={selectedClip}

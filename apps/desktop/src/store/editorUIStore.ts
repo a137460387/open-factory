@@ -77,6 +77,7 @@ export interface EditorUIState {
   emotionAnalysisOpen: boolean;
   aiSubtitleWorkflowOpen: boolean;
   exportHistoryClassifierOpen: boolean;
+  smartCreationOpen: boolean;
 
   // Layout setters
   setLayoutSettings: (updater: Updater<EditorLayoutSettings>) => void;
@@ -144,6 +145,7 @@ export interface EditorUIState {
   setEmotionAnalysisOpen: (updater: Updater<boolean>) => void;
   setAiSubtitleWorkflowOpen: (updater: Updater<boolean>) => void;
   setExportHistoryClassifierOpen: (updater: Updater<boolean>) => void;
+  setSmartCreationOpen: (updater: Updater<boolean>) => void;
 }
 
 export const useEditorUIStore = create<EditorUIState>((set, get) => ({
@@ -210,6 +212,7 @@ export const useEditorUIStore = create<EditorUIState>((set, get) => ({
   emotionAnalysisOpen: false,
   aiSubtitleWorkflowOpen: false,
   exportHistoryClassifierOpen: false,
+  smartCreationOpen: false,
 
   setLayoutSettings(updater) {
     set((state) => ({ layoutSettings: applyUpdater(state.layoutSettings, updater) }));
@@ -306,4 +309,5 @@ export const useEditorUIStore = create<EditorUIState>((set, get) => ({
   setEmotionAnalysisOpen(updater) { set((s) => ({ emotionAnalysisOpen: applyUpdater(s.emotionAnalysisOpen, updater) })); },
   setAiSubtitleWorkflowOpen(updater) { set((s) => ({ aiSubtitleWorkflowOpen: applyUpdater(s.aiSubtitleWorkflowOpen, updater) })); },
   setExportHistoryClassifierOpen(updater) { set((s) => ({ exportHistoryClassifierOpen: applyUpdater(s.exportHistoryClassifierOpen, updater) })); },
+  setSmartCreationOpen(updater) { set((s) => ({ smartCreationOpen: applyUpdater(s.smartCreationOpen, updater) })); },
 }));
