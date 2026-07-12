@@ -52,8 +52,11 @@ import {
   PrimaryWheels,
   PrimarySliders,
   toFfmpegSelectiveColor,
+  normalizeColorGradingGraph,
   type ColorWheelValue,
   type ColorGradingGraph,
+  type CurvesNodeParams,
+  type LUTApplyNodeParams,
   type PrimaryWheelParams,
   type PrimarySliderParams,
   type HSLQualifierParams,
@@ -335,6 +338,7 @@ function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project[
             border: normalizeClipBorder(clip.border),
             colorCorrection: normalizeColorCorrection(clip.colorCorrection),
             ...(clip.colorNodeGraph ? { colorNodeGraph: normalizeColorNodeGraph(clip.colorNodeGraph, clip.colorCorrection) } : {}),
+            ...(clip.colorGradingGraph ? { colorGradingGraph: normalizeColorGradingGraph(clip.colorGradingGraph) } : {}),
             chromaKey: normalizeChromaKey(clip.chromaKey),
             stabilization: normalizeStabilization(clip.stabilization),
             frameInterpolation: normalizeFrameInterpolation(clip.frameInterpolation),
@@ -1826,6 +1830,12 @@ function buildVisualClipFilter(
   if (hasPrivacyBlurMasks(clip)) {
     return buildPrivacyBlurClipFilter(inputIndex, clip, label, settings, textArtifacts, warnings, capabilities, trim);
   }
+  if (clip.colorGradingGraph?.nodes?.length) {
+    const gradingFilter = buildColorGradingGraphVisualFilter(inputIndex, clip, label, settings, textArtifacts, warnings, capabilities, trim);
+    if (gradingFilter) {
+      return gradingFilter;
+    }
+  }
   if (clip.colorNodeGraph) {
     const graphFilter = buildColorNodeGraphVisualFilter(inputIndex, clip, label, settings, textArtifacts, warnings, capabilities, trim);
     if (graphFilter) {
@@ -1883,6 +1893,37 @@ function buildColorNodeGraphVisualFilter(
     `[${graphOutputLabel}]${buildVisualPostColorFilters(clip, settings, textArtifacts, label, false).join(',')}`
   ];
   return [`${baseFilters.join(',')}[${baseLabel}]`, ...graphFilters, ...postFilters].join(',');
+}
+
+function buildColorGradingGraphVisualFilter(
+  inputIndex: number,
+  clip: ExportClip,
+  label: string,
+  settings: ExportSettings,
+  textArtifacts: TextArtifact[],
+  warnings: string[],
+  capabilities: FfmpegCapabilities | undefined,
+  trim: string
+): string | null {
+  const gradingFilters = buildColorGradingFilters(clip.colorGradingGraph);
+  if (gradingFilters.length === 0) return null;
+
+  const baseLabel = `${safeLabel(label)}_grading_base`;
+  const gradingOutputLabel = `${safeLabel(label)}_grading_output`;
+  const baseFilters = [
+    `[${inputIndex}:v]${trim}`,
+    ...buildChromaKeyFilters(clip),
+    ...buildVisualPreColorFilters(clip, settings, warnings, capabilities)
+  ];
+  const gradingChain = gradingFilters.join(',');
+  const postFilters = [
+    `[${gradingOutputLabel}]${buildVisualPostColorFilters(clip, settings, textArtifacts, label, false).join(',')}`
+  ];
+  return [
+    `${baseFilters.join(',')}[${baseLabel}]`,
+    `[${baseLabel}]${gradingChain}[${gradingOutputLabel}]`,
+    ...postFilters
+  ].join(';');
 }
 
 function buildVisualPreColorFilters(
@@ -2674,9 +2715,10 @@ export function buildColorGradingFilters(graph: ColorGradingGraph | undefined): 
 
   const filters: string[] = [];
 
-  // 按节点类型顺序处理：一级色轮 → 一级滑块 → HSL 限定器 → 窗口遮罩 → LUT 应用
+  // 按节点类型顺序处理：一级色轮 → 一级滑块 → 曲线 → HSL 限定器 → 窗口遮罩 → LUT 应用
   const wheelNodes = graph.nodes.filter(n => n.type === 'primary-wheel' && n.enabled);
   const sliderNodes = graph.nodes.filter(n => n.type === 'primary-slider' && n.enabled);
+  const curvesNodes = graph.nodes.filter(n => n.type === 'curves' && n.enabled);
   const hslNodes = graph.nodes.filter(n => n.type === 'hsl-qualifier' && n.enabled);
   const windowMaskNodes = graph.nodes.filter(n => n.type === 'window-mask' && n.enabled);
   const lutNodes = graph.nodes.filter(n => n.type === 'lut-apply' && n.enabled);
@@ -2693,6 +2735,15 @@ export function buildColorGradingFilters(graph: ColorGradingGraph | undefined): 
     if (filter) filters.push(filter);
   }
 
+  // 曲线
+  for (const node of curvesNodes) {
+    const p = node.params as CurvesNodeParams;
+    const rStr = p.red.map(pt => `${pt.x}/${pt.y}`).join(' ');
+    const gStr = p.green.map(pt => `${pt.x}/${pt.y}`).join(' ');
+    const bStr = p.blue.map(pt => `${pt.x}/${pt.y}`).join(' ');
+    filters.push(`curves=r='${rStr}':g='${gStr}':b='${bStr}'`);
+  }
+
   // HSL 限定器（selectivecolor 滤镜）
   for (const node of hslNodes) {
     const hslFilter = toFfmpegSelectiveColor(node.params as HSLQualifierParams);
@@ -2707,7 +2758,10 @@ export function buildColorGradingFilters(graph: ColorGradingGraph | undefined): 
 
   // LUT 应用
   for (const node of lutNodes) {
-    filters.push(`lut3d=file='lut_${node.id}.cube'`);
+    const p = node.params as LUTApplyNodeParams;
+    if (p.lutId) {
+      filters.push(`lut3d=file='${escapeDrawtextValue(p.lutId)}'`);
+    }
   }
 
   return filters;

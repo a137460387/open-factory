@@ -30,6 +30,8 @@ import {
   createDefaultHSLQualifierParams,
   createDefaultCircleMask,
   createDefaultGradientMask,
+  createEmptyColorGradingGraph,
+  createColorGradingNode,
   type Clip,
   type ColorGradingGraph,
   type Project
@@ -4286,7 +4288,7 @@ describe('buildColorGradingFilters', () => {
         id: 'n1',
         type: 'lut-apply',
         enabled: true,
-        params: {},
+        params: { lutId: '/path/to/lut.cube', intensity: 1.0 },
         inputs: [],
         output: null,
         position: { x: 0, y: 0 },
@@ -4298,7 +4300,91 @@ describe('buildColorGradingFilters', () => {
     const filters = buildColorGradingFilters(graph);
     expect(filters.length).toBe(1);
     expect(filters[0]).toContain('lut3d');
-    expect(filters[0]).toContain('lut_n1.cube');
+    expect(filters[0]).toContain('/path/to/lut.cube');
+  });
+
+  it('should skip lut-apply node with empty lutId', () => {
+    const graph: ColorGradingGraph = {
+      nodes: [{
+        id: 'n1',
+        type: 'lut-apply',
+        enabled: true,
+        params: { lutId: '', intensity: 1.0 },
+        inputs: [],
+        output: null,
+        position: { x: 0, y: 0 },
+      }],
+      connections: [],
+      activeNodeId: 'n1',
+    };
+
+    const filters = buildColorGradingFilters(graph);
+    expect(filters).toEqual([]);
+  });
+
+  it('should build curves filter for curves node', () => {
+    const graph: ColorGradingGraph = {
+      nodes: [{
+        id: 'n1',
+        type: 'curves',
+        enabled: true,
+        params: {
+          master: [{ x: 0, y: 0 }, { x: 1, y: 1 }],
+          red: [{ x: 0, y: 0 }, { x: 0.5, y: 0.6 }, { x: 1, y: 1 }],
+          green: [{ x: 0, y: 0 }, { x: 1, y: 1 }],
+          blue: [{ x: 0, y: 0 }, { x: 1, y: 1 }],
+        },
+        inputs: [],
+        output: null,
+        position: { x: 0, y: 0 },
+      }],
+      connections: [],
+      activeNodeId: 'n1',
+    };
+
+    const filters = buildColorGradingFilters(graph);
+    expect(filters.length).toBe(1);
+    expect(filters[0]).toContain('curves=');
+    expect(filters[0]).toContain('r=');
+    expect(filters[0]).toContain('0.5/0.6');
+  });
+
+  it('should build combined curves and lut3d filters', () => {
+    const graph: ColorGradingGraph = {
+      nodes: [
+        {
+          id: 'n1',
+          type: 'curves',
+          enabled: true,
+          params: {
+            master: [{ x: 0, y: 0 }, { x: 1, y: 1 }],
+            red: [{ x: 0, y: 0 }, { x: 0.5, y: 0.7 }, { x: 1, y: 1 }],
+            green: [{ x: 0, y: 0 }, { x: 1, y: 1 }],
+            blue: [{ x: 0, y: 0 }, { x: 1, y: 1 }],
+          },
+          inputs: [],
+          output: null,
+          position: { x: 0, y: 0 },
+        },
+        {
+          id: 'n2',
+          type: 'lut-apply',
+          enabled: true,
+          params: { lutId: '/path/to/cinematic.cube', intensity: 0.8 },
+          inputs: [],
+          output: null,
+          position: { x: 0, y: 0 },
+        },
+      ],
+      connections: [],
+      activeNodeId: 'n1',
+    };
+
+    const filters = buildColorGradingFilters(graph);
+    expect(filters.length).toBe(2);
+    expect(filters[0]).toContain('curves=');
+    expect(filters[1]).toContain('lut3d=');
+    expect(filters[1]).toContain('cinematic.cube');
   });
 
   it('should build geq filter for circle window mask', () => {
@@ -4369,7 +4455,7 @@ describe('buildColorGradingFilters', () => {
           id: 'n3',
           type: 'lut-apply',
           enabled: true,
-          params: {},
+          params: { lutId: '/path/to/lut.cube', intensity: 1.0 },
           inputs: [],
           output: null,
           position: { x: 0, y: 0 },
@@ -4386,6 +4472,54 @@ describe('buildColorGradingFilters', () => {
     const lutIndex = filters.findIndex(f => f.includes('lut3d'));
     expect(hslIndex).toBeGreaterThanOrEqual(0);
     expect(lutIndex).toBeGreaterThan(hslIndex);
+  });
+});
+
+describe('colorGradingGraph export integration', () => {
+  it('exports colorGradingGraph with curves node to FFmpeg curves filter', () => {
+    const graph = createEmptyColorGradingGraph();
+    const node = createColorGradingNode('curves');
+    (node.params as any).red = [{ x: 0, y: 0 }, { x: 0.5, y: 0.6 }, { x: 1, y: 1 }];
+    graph.nodes.push(node);
+
+    const project = makeProject();
+    (project.timeline.tracks[0].clips[0] as any).colorGradingGraph = graph;
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+    expect(plan.filterComplex).toContain('curves=');
+  });
+
+  it('exports colorGradingGraph with lut-apply node to FFmpeg lut3d filter', () => {
+    const graph = createEmptyColorGradingGraph();
+    const node = createColorGradingNode('lut-apply');
+    (node.params as any).lutId = '/path/to/lut.cube';
+    graph.nodes.push(node);
+
+    const project = makeProject();
+    (project.timeline.tracks[0].clips[0] as any).colorGradingGraph = graph;
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+    expect(plan.filterComplex).toContain('lut3d=');
+    expect(plan.filterComplex).toContain('/path/to/lut.cube');
+  });
+
+  it('prioritizes colorGradingGraph over colorCorrection', () => {
+    const graph = createEmptyColorGradingGraph();
+    const node = createColorGradingNode('primary-slider');
+    (node.params as any).contrast = 30;
+    (node.params as any).saturation = 120;
+    graph.nodes.push(node);
+
+    const project = makeProject();
+    const clip = project.timeline.tracks[0].clips[0] as any;
+    clip.colorGradingGraph = graph;
+    clip.colorCorrection = { brightness: 0.5, contrast: 1.2, saturation: 1, hue: 0 };
+
+    const plan = buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
+    // colorGradingGraph should take priority, so no eq=brightness from colorCorrection
+    expect(plan.filterComplex).not.toContain('eq=brightness=');
+    // But should contain eq from the grading graph's primary-slider
+    expect(plan.filterComplex).toContain('eq=');
   });
 });
 

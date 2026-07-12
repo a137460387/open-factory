@@ -1,4 +1,4 @@
-import type { ColorCurves, ThreeWayColor } from '../color-grading';
+import type { ColorCurves, ColorGradingGraph, ThreeWayColor } from '../color-grading';
 import type { ColorNodeGraph } from '../color-node-graph';
 import type { InputColorSpace } from '../color-log-luts';
 import type { ClipBlendMode } from '../blend-modes';
@@ -403,6 +403,7 @@ export interface ExportClip {
   border: ClipBorder;
   colorCorrection: ExportColorCorrection;
   colorNodeGraph?: ColorNodeGraph;
+  colorGradingGraph?: ColorGradingGraph;
   chromaKey: ExportChromaKey;
   stabilization: ExportStabilization;
   frameInterpolation: ExportFrameInterpolation;
