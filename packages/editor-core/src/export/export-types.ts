@@ -1,9 +1,10 @@
-import type { ColorCurves, ThreeWayColor } from '../color-grading';
+import type { ColorCurves, ColorGradingGraph, ThreeWayColor } from '../color-grading';
 import type { ColorNodeGraph } from '../color-node-graph';
 import type { InputColorSpace } from '../color-log-luts';
 import type { ClipBlendMode } from '../blend-modes';
 import type { ProjectColorPipeline } from '../color-pipeline';
 import type { Effect } from '../effects';
+import type { AudioEffectSlot, ChannelAutomation } from '../audio/mixer-types';
 import type { AudioVisualizationThemeDefinition } from '../audio-visualization-themes';
 import type { ExportColorManagementSettings, MediaColorProfile, ProjectWorkingColorSpace } from '../color-management';
 import type { PostExportQualityAssuranceResult } from './post-export-quality';
@@ -403,6 +404,7 @@ export interface ExportClip {
   border: ClipBorder;
   colorCorrection: ExportColorCorrection;
   colorNodeGraph?: ColorNodeGraph;
+  colorGradingGraph?: ColorGradingGraph;
   chromaKey: ExportChromaKey;
   stabilization: ExportStabilization;
   frameInterpolation: ExportFrameInterpolation;
@@ -420,6 +422,8 @@ export interface ExportClip {
   imageSequence: ExportImageSequence | null;
   sequenceFrameRate?: number;
   effects: Effect[];
+  effectsChain?: AudioEffectSlot[];
+  automation?: ChannelAutomation;
   blendMode: ClipBlendMode;
   keyframes: ExportClipKeyframes | null;
   kenBurns: boolean;

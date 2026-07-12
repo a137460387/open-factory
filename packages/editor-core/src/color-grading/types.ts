@@ -1,3 +1,4 @@
+import type { CurvePoint } from './color-curves';
 import type { HSLQualifierParams } from './hsl-qualifier';
 import { createDefaultHSLQualifierParams, validateHSLQualifierParams } from './hsl-qualifier';
 import type { WindowMaskParams } from './window-mask';
@@ -38,12 +39,43 @@ export interface PrimarySliderParams {
   hue: number;
 }
 
+/** 曲线节点参数 */
+export interface CurvesNodeParams {
+  master: CurvePoint[];
+  red: CurvePoint[];
+  green: CurvePoint[];
+  blue: CurvePoint[];
+}
+
+/** LUT 应用节点参数 */
+export interface LUTApplyNodeParams {
+  lutId: string;
+  intensity: number; // 0-1
+}
+
+/** 跟踪遮罩节点参数 */
+export interface TrackingMaskNodeParams {
+  trackingData: Array<{
+    time: number;
+    position: { x: number; y: number };
+    scale: number;
+    rotation: number;
+    confidence: number;
+  }>;
+  feather: number;
+  expand: number;
+  invert: boolean;
+}
+
 /** 节点参数联合类型 */
 export type ColorGradingNodeParams =
   | PrimaryWheelParams
   | PrimarySliderParams
   | HSLQualifierParams
   | WindowMaskParams
+  | CurvesNodeParams
+  | LUTApplyNodeParams
+  | TrackingMaskNodeParams
   | Record<string, unknown>;
 
 /** 调色节点 */
@@ -128,6 +160,30 @@ export function createColorGradingNode(
       break;
     case 'window-mask':
       params = createDefaultCircleMask();
+      break;
+    case 'curves':
+      params = {
+        master: [{ x: 0, y: 0 }, { x: 1, y: 1 }],
+        red: [{ x: 0, y: 0 }, { x: 1, y: 1 }],
+        green: [{ x: 0, y: 0 }, { x: 1, y: 1 }],
+        blue: [{ x: 0, y: 0 }, { x: 1, y: 1 }],
+      } as CurvesNodeParams;
+      break;
+    case 'lut-apply':
+      params = { lutId: '', intensity: 1.0 } as LUTApplyNodeParams;
+      break;
+    case 'tracking-mask':
+      params = {
+        trackingData: [],
+        feather: 10,
+        expand: 0,
+        invert: false,
+      } as TrackingMaskNodeParams;
+      break;
+    case 'output':
+    case 'color-space':
+    case 'mixer-node':
+      params = {};
       break;
     default:
       params = {};
@@ -236,6 +292,28 @@ function normalizeColorNode(node: unknown): ColorGradingNode {
     params = validateWindowMaskParams(
       (n.params as WindowMaskParams) ?? createDefaultCircleMask()
     );
+  } else if (type === 'curves') {
+    const p = n.params as CurvesNodeParams;
+    params = {
+      master: Array.isArray(p?.master) ? p.master : [{ x: 0, y: 0 }, { x: 1, y: 1 }],
+      red: Array.isArray(p?.red) ? p.red : [{ x: 0, y: 0 }, { x: 1, y: 1 }],
+      green: Array.isArray(p?.green) ? p.green : [{ x: 0, y: 0 }, { x: 1, y: 1 }],
+      blue: Array.isArray(p?.blue) ? p.blue : [{ x: 0, y: 0 }, { x: 1, y: 1 }],
+    };
+  } else if (type === 'lut-apply') {
+    const p = n.params as LUTApplyNodeParams;
+    params = {
+      lutId: typeof p?.lutId === 'string' ? p.lutId : '',
+      intensity: clampValue(typeof p?.intensity === 'number' ? p.intensity : 1, 0, 1),
+    };
+  } else if (type === 'tracking-mask') {
+    const p = n.params as TrackingMaskNodeParams;
+    params = {
+      trackingData: Array.isArray(p?.trackingData) ? p.trackingData : [],
+      feather: clampValue(typeof p?.feather === 'number' ? p.feather : 10, 0, 100),
+      expand: clampValue(typeof p?.expand === 'number' ? p.expand : 0, -100, 100),
+      invert: !!p?.invert,
+    };
   } else {
     params = (n.params as Record<string, unknown>) ?? {};
   }
@@ -255,6 +333,10 @@ function isValidPosition(pos: unknown): boolean {
   if (!pos || typeof pos !== 'object') return false;
   const p = pos as Record<string, unknown>;
   return typeof p.x === 'number' && typeof p.y === 'number';
+}
+
+function clampValue(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
 }
 
 function isValidConnection(conn: unknown): boolean {

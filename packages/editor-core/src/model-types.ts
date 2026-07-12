@@ -13,6 +13,7 @@ import type { ProjectColorPipeline } from './color-pipeline';
 import type { MediaColorProfile, ProjectWorkingColorSpace } from './color-management';
 import type { ClipSpatialAudio } from './spatial-audio';
 import type { Effect } from './effects';
+import type { MixerState } from './audio/mixer-types';
 import type { TimecodeFormat } from './time';
 import type { MotionGraphic } from './motion-graphics';
 import type { CharacterTimeline } from './ai-character-timeline';
@@ -369,6 +370,8 @@ export interface Project {
   preflightReport?: import('./ai-preflight-checklist').PreflightReport;
   /** AI配音时长适配建议 */
   ttsSegments?: TtsSegment[];
+  /** 音频混音器状态 */
+  mixerState?: MixerState;
 }
 
 /** 虚拟子剪辑：对源媒体特定区间的命名引用，不生成实际文件 */

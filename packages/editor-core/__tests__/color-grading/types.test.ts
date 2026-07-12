@@ -7,6 +7,9 @@ import {
   validatePrimaryWheelParams,
   validatePrimarySliderParams,
   normalizeColorGradingGraph,
+  type CurvesNodeParams,
+  type LUTApplyNodeParams,
+  type TrackingMaskNodeParams,
 } from '../../src/color-grading/types';
 
 describe('createDefaultPrimaryWheelParams', () => {
@@ -166,5 +169,153 @@ describe('normalizeColorGradingGraph', () => {
     };
     const result = normalizeColorGradingGraph(input);
     expect((result.nodes[0].params as any).lift.r).toBe(1);
+  });
+});
+
+describe('createColorGradingNode - new types', () => {
+  it('creates curves node with default params', () => {
+    const node = createColorGradingNode('curves');
+    expect(node.type).toBe('curves');
+    expect(node.params).toHaveProperty('master');
+    expect(node.params).toHaveProperty('red');
+    expect((node.params as CurvesNodeParams).master).toEqual([{ x: 0, y: 0 }, { x: 1, y: 1 }]);
+    expect((node.params as CurvesNodeParams).red).toEqual([{ x: 0, y: 0 }, { x: 1, y: 1 }]);
+    expect((node.params as CurvesNodeParams).green).toEqual([{ x: 0, y: 0 }, { x: 1, y: 1 }]);
+    expect((node.params as CurvesNodeParams).blue).toEqual([{ x: 0, y: 0 }, { x: 1, y: 1 }]);
+  });
+
+  it('creates lut-apply node with default params', () => {
+    const node = createColorGradingNode('lut-apply');
+    expect(node.type).toBe('lut-apply');
+    expect((node.params as LUTApplyNodeParams).lutId).toBe('');
+    expect((node.params as LUTApplyNodeParams).intensity).toBe(1.0);
+  });
+
+  it('creates tracking-mask node with default params', () => {
+    const node = createColorGradingNode('tracking-mask');
+    expect(node.type).toBe('tracking-mask');
+    expect((node.params as TrackingMaskNodeParams).trackingData).toEqual([]);
+    expect((node.params as TrackingMaskNodeParams).feather).toBe(10);
+    expect((node.params as TrackingMaskNodeParams).expand).toBe(0);
+    expect((node.params as TrackingMaskNodeParams).invert).toBe(false);
+  });
+
+  it('creates output node with empty params', () => {
+    const node = createColorGradingNode('output');
+    expect(node.type).toBe('output');
+    expect(node.params).toEqual({});
+  });
+
+  it('creates color-space node with empty params', () => {
+    const node = createColorGradingNode('color-space');
+    expect(node.type).toBe('color-space');
+    expect(node.params).toEqual({});
+  });
+
+  it('creates mixer-node with empty params', () => {
+    const node = createColorGradingNode('mixer-node');
+    expect(node.type).toBe('mixer-node');
+    expect(node.params).toEqual({});
+  });
+});
+
+describe('normalizeColorNode - new types', () => {
+  it('normalizes curves node with missing arrays', () => {
+    const input = {
+      nodes: [{ id: '1', type: 'curves', params: {} }],
+      connections: [],
+      activeNodeId: null,
+    };
+    const result = normalizeColorGradingGraph(input);
+    const params = result.nodes[0].params as CurvesNodeParams;
+    expect(params.master).toEqual([{ x: 0, y: 0 }, { x: 1, y: 1 }]);
+    expect(params.red).toEqual([{ x: 0, y: 0 }, { x: 1, y: 1 }]);
+    expect(params.green).toEqual([{ x: 0, y: 0 }, { x: 1, y: 1 }]);
+    expect(params.blue).toEqual([{ x: 0, y: 0 }, { x: 1, y: 1 }]);
+  });
+
+  it('preserves valid curves data during normalization', () => {
+    const customCurve = [{ x: 0, y: 0 }, { x: 0.5, y: 0.8 }, { x: 1, y: 1 }];
+    const input = {
+      nodes: [{
+        id: '1',
+        type: 'curves',
+        params: { master: customCurve, red: customCurve, green: customCurve, blue: customCurve },
+      }],
+      connections: [],
+      activeNodeId: null,
+    };
+    const result = normalizeColorGradingGraph(input);
+    const params = result.nodes[0].params as CurvesNodeParams;
+    expect(params.master).toEqual(customCurve);
+  });
+
+  it('clamps lut-apply intensity to 0-1', () => {
+    const input = {
+      nodes: [{ id: '1', type: 'lut-apply', params: { lutId: 'test', intensity: 2 } }],
+      connections: [],
+      activeNodeId: null,
+    };
+    const result = normalizeColorGradingGraph(input);
+    expect((result.nodes[0].params as LUTApplyNodeParams).intensity).toBe(1);
+  });
+
+  it('clamps lut-apply intensity to 0-1 (negative)', () => {
+    const input = {
+      nodes: [{ id: '1', type: 'lut-apply', params: { lutId: 'test', intensity: -0.5 } }],
+      connections: [],
+      activeNodeId: null,
+    };
+    const result = normalizeColorGradingGraph(input);
+    expect((result.nodes[0].params as LUTApplyNodeParams).intensity).toBe(0);
+  });
+
+  it('defaults lut-apply params when missing', () => {
+    const input = {
+      nodes: [{ id: '1', type: 'lut-apply', params: {} }],
+      connections: [],
+      activeNodeId: null,
+    };
+    const result = normalizeColorGradingGraph(input);
+    expect((result.nodes[0].params as LUTApplyNodeParams).lutId).toBe('');
+    expect((result.nodes[0].params as LUTApplyNodeParams).intensity).toBe(1);
+  });
+
+  it('normalizes tracking-mask with defaults', () => {
+    const input = {
+      nodes: [{ id: '1', type: 'tracking-mask', params: {} }],
+      connections: [],
+      activeNodeId: null,
+    };
+    const result = normalizeColorGradingGraph(input);
+    const params = result.nodes[0].params as TrackingMaskNodeParams;
+    expect(params.trackingData).toEqual([]);
+    expect(params.feather).toBe(10);
+    expect(params.expand).toBe(0);
+    expect(params.invert).toBe(false);
+  });
+
+  it('clamps tracking-mask feather to 0-100', () => {
+    const input = {
+      nodes: [{ id: '1', type: 'tracking-mask', params: { feather: 150, expand: -200, invert: true } }],
+      connections: [],
+      activeNodeId: null,
+    };
+    const result = normalizeColorGradingGraph(input);
+    const params = result.nodes[0].params as TrackingMaskNodeParams;
+    expect(params.feather).toBe(100);
+    expect(params.expand).toBe(-100);
+    expect(params.invert).toBe(true);
+  });
+
+  it('normalizes output node with empty params', () => {
+    const input = {
+      nodes: [{ id: '1', type: 'output', params: { foo: 'bar' } }],
+      connections: [],
+      activeNodeId: null,
+    };
+    const result = normalizeColorGradingGraph(input);
+    expect(result.nodes[0].type).toBe('output');
+    expect(result.nodes[0].params).toEqual({ foo: 'bar' });
   });
 });

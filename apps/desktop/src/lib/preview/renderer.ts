@@ -1,4 +1,4 @@
-import type { AudioSpectrumParams, Clip, Effect, EffectType, MediaAsset, ProjectColorPipeline, Sequence, Timeline, Transition } from '@open-factory/editor-core';
+import type { AudioSpectrumParams, Clip, Effect, EffectType, MediaAsset, MixerState, ProjectColorPipeline, Sequence, Timeline, Transition } from '@open-factory/editor-core';
 import {
   DEFAULT_COLOR_CORRECTION,
   DEFAULT_TRANSFORM,
@@ -113,8 +113,8 @@ export class PreviewRenderer {
     return { frame: options.captureFrame ? read2dFrameSafely(context, canvas) : undefined };
   }
 
-  syncAudio(timeline: Timeline, media: MediaAsset[], playheadTime: number, isPlaying: boolean, masterVolume = 1): void {
-    this.audioRenderer.syncAudio(timeline, media, playheadTime, isPlaying, masterVolume);
+  syncAudio(timeline: Timeline, media: MediaAsset[], playheadTime: number, isPlaying: boolean, masterVolume = 1, mixerState?: MixerState): void {
+    this.audioRenderer.syncAudio(timeline, media, playheadTime, isPlaying, masterVolume, mixerState);
   }
 
   getAudioLevels(nowMs = performance.now()) {
