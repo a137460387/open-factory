@@ -18,12 +18,14 @@ import { normalizeSpatialAudio } from './spatial-audio';
 import { normalizeClipPitchData } from './audio-pitch';
 import { normalizeAudioRestoration } from './audio-restoration';
 import { normalizeDataSubtitleSource } from './data-subtitle';
+import type { MixerState, MixerChannel, AudioBus } from './audio/mixer-types';
+import { createDefaultMixerState, createMixerChannel, createBus } from './audio/mixer-types';
 import { cloneEffects } from './effects';
 import { normalizePathPoints } from './masks/path-mask';
 import type { ProjectFile } from './project/project-types';
 import { normalizeCreditsRollSpeed, normalizeCreditsRows, normalizeCreditsStyle } from './credits-roll';
 import { normalizeTimelineLabelColor } from './timeline-color-labels';
-import { normalizeProjectFps, normalizeTimecodeFormat, round } from './time';
+import { normalizeProjectFps, normalizeTimecodeFormat, round, clamp } from './time';
 import { normalizeMediaVersions } from './media-versions';
 import { normalizeSceneCutTimes } from './scene-cuts';
 import type {
@@ -2310,4 +2312,49 @@ function normalizeContinuityWarnings(input: unknown): import('./continuity-check
     typeof (w as Record<string, unknown>).confidence === 'number' &&
     typeof (w as Record<string, unknown>).reason === 'string'
   );
+}
+
+/** 规范化混音器总线 */
+function normalizeBus(raw: any): AudioBus {
+  return {
+    id: typeof raw?.id === 'string' && raw.id.trim() ? raw.id : createId('bus'),
+    name: typeof raw?.name === 'string' && raw.name.trim() ? raw.name.trim() : 'Bus',
+    type: raw?.type === 'submix' || raw?.type === 'send' || raw?.type === 'aux' || raw?.type === 'master' ? raw.type : 'submix',
+    effectsChain: Array.isArray(raw?.effectsChain) ? raw.effectsChain : [],
+    volume: typeof raw?.volume === 'number' && Number.isFinite(raw.volume) ? raw.volume : 0,
+    pan: typeof raw?.pan === 'number' && Number.isFinite(raw.pan) ? clamp(raw.pan, -100, 100) : 0,
+    muted: !!raw?.muted,
+    outputBusId: raw?.outputBusId ?? null,
+  };
+}
+
+/** 规范化混音器通道 */
+function normalizeMixerChannel(raw: any): MixerChannel {
+  return {
+    trackId: typeof raw?.trackId === 'string' ? raw.trackId : '',
+    name: typeof raw?.name === 'string' ? raw.name : '',
+    volume: typeof raw?.volume === 'number' && Number.isFinite(raw.volume) ? raw.volume : 0,
+    pan: typeof raw?.pan === 'number' && Number.isFinite(raw.pan) ? clamp(raw.pan, -100, 100) : 0,
+    muted: !!raw?.muted,
+    solo: !!raw?.solo,
+    busAssignments: Array.isArray(raw?.busAssignments) ? raw.busAssignments : [],
+    inputBus: typeof raw?.inputBus === 'string' ? raw.inputBus : null,
+    effectsChain: Array.isArray(raw?.effectsChain) ? raw.effectsChain : [],
+    automation: raw?.automation ?? {},
+    metering: raw?.metering ?? { peakLevel: -60, rmsLevel: -60, clipCount: 0 },
+  };
+}
+
+/** 规范化混音器状态 */
+export function normalizeMixerState(raw: any): MixerState | undefined {
+  if (!raw) return undefined;
+  return {
+    channels: Array.isArray(raw.channels)
+      ? raw.channels.map(normalizeMixerChannel)
+      : [],
+    buses: Array.isArray(raw.buses)
+      ? raw.buses.map(normalizeBus)
+      : [],
+    masterBus: raw.masterBus ? normalizeBus(raw.masterBus) : createBus('Master', 'master'),
+  };
 }

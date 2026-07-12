@@ -51,11 +51,13 @@ import {
   , normalizeClipAIReframe,
   normalizeAnomalyIntervals,
   normalizeSubtitleSpeakerId,
-  normalizeSpeakerLabels
+  normalizeSpeakerLabels,
+  normalizeMixerState
 } from '../model';
 import { normalizeColorNodeGraph } from '../color-node-graph';
 import type { Clip, ImageSequenceInfo, MediaAsset, MediaFolder, MediaMetadata, Project, Sequence, Subclip, Timeline, Transition } from '../model-types';
 import type { TimingAdaptation, TtsSegment, DubbingAdaptationType } from '../model-types';
+import type { MixerState } from '../audio/mixer-types';
 import type { CharacterTimeline } from '../ai-character-timeline';
 import type { PreflightReport } from '../ai-preflight-checklist';
 import type { EmotionAnalysis, EmotionTone } from '../ai-emotion-tone';
@@ -227,6 +229,7 @@ export function serializeProjectFile(project: Project, projectPath?: string): Pr
       , ttsSegments: project.ttsSegments ?? []
       , characterTimeline: project.characterTimeline
       , preflightReport: project.preflightReport
+      , mixerState: project.mixerState
     },
     warnings: warnings.length > 0 ? warnings : undefined
   };
@@ -283,6 +286,7 @@ export function migrateProjectFile(file: ProjectFile, projectPath?: string): Mig
         , ttsSegments: normalizeTtsSegments(file.project.ttsSegments)
         , characterTimeline: normalizeCharacterTimeline(file.project.characterTimeline)
         , preflightReport: normalizePreflightReport(file.project.preflightReport)
+        , mixerState: normalizeMixerState(file.project.mixerState)
       },
       warnings: [...(file.warnings ?? [])]
     };

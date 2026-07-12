@@ -1744,4 +1744,85 @@ describe('project schema migration', () => {
     expect(migrated.project.ttsSegments).toHaveLength(1);
     expect(migrated.project.ttsSegments![0].timingAdaptation).toBeUndefined();
   });
+
+  it('serializes and migrates mixerState with channels buses and masterBus', () => {
+    const project = makeProject();
+    (project as any).mixerState = {
+      channels: [
+        { trackId: 'track-1', name: 'Video 1', volume: -6, pan: -50, muted: false, solo: false, busAssignments: [], inputBus: null, effectsChain: [], automation: {}, metering: { peakLevel: -12, rmsLevel: -18, clipCount: 0 } },
+        { trackId: 'track-2', name: 'Audio 1', volume: 0, pan: 0, muted: true, solo: false, busAssignments: [], inputBus: null, effectsChain: [], automation: {}, metering: { peakLevel: -60, rmsLevel: -60, clipCount: 0 } },
+      ],
+      buses: [
+        { id: 'bus-fx', name: 'FX Send', type: 'send', effectsChain: [], volume: 0, pan: 0, muted: false, outputBusId: null },
+      ],
+      masterBus: { id: 'bus-master', name: 'Master', type: 'master', effectsChain: [], volume: 0, pan: 0, muted: false, outputBusId: null },
+    };
+
+    const file = serializeProject(project);
+    expect(file.project.mixerState?.channels).toHaveLength(2);
+    expect(file.project.mixerState?.channels[0].volume).toBe(-6);
+    expect(file.project.mixerState?.channels[0].pan).toBe(-50);
+    expect(file.project.mixerState?.buses).toHaveLength(1);
+    expect(file.project.mixerState?.buses[0].type).toBe('send');
+    expect(file.project.mixerState?.masterBus.type).toBe('master');
+
+    const migrated = migrateProjectFile(file);
+    expect(migrated.project.mixerState?.channels).toHaveLength(2);
+    expect(migrated.project.mixerState?.channels[0].volume).toBe(-6);
+    expect(migrated.project.mixerState?.channels[1].muted).toBe(true);
+    expect(migrated.project.mixerState?.buses).toHaveLength(1);
+    expect(migrated.project.mixerState?.masterBus.name).toBe('Master');
+  });
+
+  it('preserves existing mixerState during migration with clamped values', () => {
+    const project = makeProject();
+    (project as any).mixerState = {
+      channels: [
+        { trackId: 'track-1', name: 'Video 1', volume: 999, pan: -200, muted: false, solo: true, busAssignments: [], inputBus: null, effectsChain: [], automation: {}, metering: { peakLevel: -12, rmsLevel: -18, clipCount: 0 } },
+      ],
+      buses: [],
+      masterBus: { id: 'bus-master', name: 'Master', type: 'master', effectsChain: [], volume: 0, pan: 0, muted: false, outputBusId: null },
+    };
+
+    const file = serializeProject(project);
+    const migrated = migrateProjectFile(file);
+
+    expect(migrated.project.mixerState?.channels[0].volume).toBe(999);
+    expect(migrated.project.mixerState?.channels[0].pan).toBe(-100);
+    expect(migrated.project.mixerState?.channels[0].solo).toBe(true);
+  });
+
+  it('old project without mixerState remains undefined after migration', () => {
+    const project = makeProject();
+    const file = serializeProject(project);
+    delete (file.project as any).mixerState;
+
+    const migrated = migrateProjectFile(file);
+    expect(migrated.project.mixerState).toBeUndefined();
+  });
+
+  it('normalizes mixerState with invalid channel data during migration', () => {
+    const project = makeProject();
+    (project as any).mixerState = {
+      channels: [
+        { trackId: 123, name: null, volume: 'loud', pan: 'left', muted: 'yes', solo: 0, busAssignments: 'invalid', effectsChain: null },
+        { trackId: 'track-2', name: 'Audio 1' },
+      ],
+      buses: null,
+      masterBus: null,
+    };
+
+    const file = serializeProject(project);
+    const migrated = migrateProjectFile(file);
+
+    expect(migrated.project.mixerState).toBeDefined();
+    expect(migrated.project.mixerState?.channels).toHaveLength(2);
+    expect(migrated.project.mixerState?.channels[0].trackId).toBe('');
+    expect(migrated.project.mixerState?.channels[0].volume).toBe(0);
+    expect(migrated.project.mixerState?.channels[0].pan).toBe(0);
+    expect(migrated.project.mixerState?.channels[0].muted).toBe(true); // !!'yes' === true
+    expect(migrated.project.mixerState?.channels[1].trackId).toBe('track-2');
+    expect(migrated.project.mixerState?.buses).toEqual([]);
+    expect(migrated.project.mixerState?.masterBus.type).toBe('master');
+  });
 });

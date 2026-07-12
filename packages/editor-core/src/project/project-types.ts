@@ -20,6 +20,7 @@ import type {
   TimelineNote,
   TtsSegment
 } from '../model-types';
+import type { MixerState } from '../audio/mixer-types';
 import type { CharacterTimeline } from '../ai-character-timeline';
 import type { PreflightReport } from '../ai-preflight-checklist';
 
@@ -71,6 +72,7 @@ export interface ProjectFileV2 {
     ttsSegments?: TtsSegment[];
     characterTimeline?: CharacterTimeline;
     preflightReport?: PreflightReport;
+    mixerState?: MixerState;
   };
   warnings?: string[];
 }
