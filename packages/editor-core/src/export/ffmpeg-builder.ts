@@ -47,7 +47,12 @@ import {
   isNeutralThreeWayColor,
   normalizeThreeWayColor,
   serializeColorCurvesToCube,
+  PrimaryWheels,
+  PrimarySliders,
   type ColorWheelValue,
+  type ColorGradingGraph,
+  type PrimaryWheelParams,
+  type PrimarySliderParams,
   type ThreeWayColor
 } from '../color-grading';
 import { buildColorNodeGraphFilterPlan, detectColorNodeGraphCycle, normalizeColorNodeGraph } from '../color-node-graph';
@@ -2654,6 +2659,33 @@ function buildEffectFilters(effects: Effect[], fps = 30): string[] {
     }
     return [];
   });
+}
+
+/**
+ * 构建调色节点图的 FFmpeg 滤镜链
+ */
+export function buildColorGradingFilters(graph: ColorGradingGraph | undefined): string[] {
+  if (!graph || graph.nodes.length === 0) return [];
+
+  const filters: string[] = [];
+
+  // 按节点类型顺序处理：一级色轮 → 一级滑块 → 其他
+  const wheelNodes = graph.nodes.filter(n => n.type === 'primary-wheel' && n.enabled);
+  const sliderNodes = graph.nodes.filter(n => n.type === 'primary-slider' && n.enabled);
+
+  // 一级色轮
+  for (const node of wheelNodes) {
+    const filter = PrimaryWheels.toFfmpegFilter(node.params as PrimaryWheelParams);
+    if (filter) filters.push(filter);
+  }
+
+  // 一级滑块
+  for (const node of sliderNodes) {
+    const filter = PrimarySliders.toFfmpegFilter(node.params as PrimarySliderParams);
+    if (filter) filters.push(filter);
+  }
+
+  return filters;
 }
 
 interface AudioSpectrumExportItem {

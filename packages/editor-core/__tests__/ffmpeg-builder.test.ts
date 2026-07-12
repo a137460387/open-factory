@@ -24,7 +24,9 @@ import {
   mapTransitionType,
   buildStemExportPlans,
   buildStemOutputFileName,
+  buildColorGradingFilters,
   type Clip,
+  type ColorGradingGraph,
   type Project
 } from '../src';
 import { makeAdjustmentClip, makeAudioClip, makeCreditsClip, makeMotionGraphicClip, makeProject, makeSubtitleClip, makeTextClip, makeTimeline, makeVideoClip } from './test-utils';
@@ -4133,3 +4135,96 @@ function buildKenBurnsScalePlan({ scaleXEnd, scaleYEnd }: { scaleXEnd: number; s
 
   return buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
 }
+
+describe('buildColorGradingFilters', () => {
+  it('should return empty array for undefined graph', () => {
+    expect(buildColorGradingFilters(undefined)).toEqual([]);
+  });
+
+  it('should return empty array for empty graph', () => {
+    expect(buildColorGradingFilters({ nodes: [], connections: [], activeNodeId: null })).toEqual([]);
+  });
+
+  it('should build colorbalance filter for primary wheel', () => {
+    const graph: ColorGradingGraph = {
+      nodes: [{
+        id: 'n1',
+        type: 'primary-wheel',
+        enabled: true,
+        params: {
+          lift: { r: 0.3, g: 0, b: 0, y: 0 },
+          liftMaster: 0,
+          gamma: { r: 0, g: 0, b: 0, y: 0 },
+          gammaMaster: 0,
+          gain: { r: 0, g: 0, b: 0, y: 0 },
+          gainMaster: 0,
+          offset: { r: 0, g: 0, b: 0, y: 0 },
+          offsetMaster: 0,
+        },
+        inputs: [],
+        output: null,
+        position: { x: 0, y: 0 },
+      }],
+      connections: [],
+      activeNodeId: 'n1',
+    };
+
+    const filters = buildColorGradingFilters(graph);
+    expect(filters.length).toBeGreaterThan(0);
+    expect(filters[0]).toContain('colorbalance');
+  });
+
+  it('should build eq filter for contrast/saturation', () => {
+    const graph: ColorGradingGraph = {
+      nodes: [{
+        id: 'n1',
+        type: 'primary-slider',
+        enabled: true,
+        params: {
+          temperature: 0,
+          tint: 0,
+          contrast: 30,
+          pivot: 0.5,
+          saturation: 120,
+          hue: 0,
+        },
+        inputs: [],
+        output: null,
+        position: { x: 0, y: 0 },
+      }],
+      connections: [],
+      activeNodeId: 'n1',
+    };
+
+    const filters = buildColorGradingFilters(graph);
+    expect(filters.some(f => f.includes('eq='))).toBe(true);
+  });
+
+  it('should skip disabled nodes', () => {
+    const graph: ColorGradingGraph = {
+      nodes: [{
+        id: 'n1',
+        type: 'primary-wheel',
+        enabled: false,
+        params: {
+          lift: { r: 0.5, g: 0, b: 0, y: 0 },
+          liftMaster: 0,
+          gamma: { r: 0, g: 0, b: 0, y: 0 },
+          gammaMaster: 0,
+          gain: { r: 0, g: 0, b: 0, y: 0 },
+          gainMaster: 0,
+          offset: { r: 0, g: 0, b: 0, y: 0 },
+          offsetMaster: 0,
+        },
+        inputs: [],
+        output: null,
+        position: { x: 0, y: 0 },
+      }],
+      connections: [],
+      activeNodeId: 'n1',
+    };
+
+    const filters = buildColorGradingFilters(graph);
+    expect(filters).toEqual([]);
+  });
+});
