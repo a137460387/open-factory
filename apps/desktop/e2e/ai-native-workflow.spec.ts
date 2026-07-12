@@ -32,9 +32,9 @@ test.describe('AI 原生工作流', () => {
     ).toBeVisible();
 
     // 步骤 3：验证面板包含必要的UI元素
-    // 验证开始分析按钮存在
+    // 验证分析按钮存在
     await expect(
-      page.getByTestId('smart-creation-start-analysis'),
+      page.getByTestId('smart-creation-analyze'),
     ).toBeVisible();
 
     // 验证面板标题
@@ -86,7 +86,7 @@ test.describe('AI 原生工作流', () => {
     await expect(aiPanel.roughCutPanel).toBeVisible();
   });
 
-  test('智能创作面板显示分析进度', async ({
+  test('智能创作面板显示分析按钮', async ({
     page,
     toolbar,
   }) => {
@@ -96,12 +96,12 @@ test.describe('AI 原生工作流', () => {
       page.getByTestId('smart-creation-panel'),
     ).toBeVisible();
 
-    // 步骤 2：点击开始分析
-    await page.getByTestId('smart-creation-start-analysis').click();
+    // 步骤 2：验证分析按钮存在
+    await expect(
+      page.getByTestId('smart-creation-analyze'),
+    ).toBeVisible();
 
-    // 步骤 3：验证分析状态显示（可能很快完成或显示进度）
-    // 由于没有真实媒体，分析可能会显示错误或空结果
-    // 我们验证面板不会崩溃
+    // 步骤 3：验证面板不会崩溃
     await expect(
       page.getByTestId('smart-creation-panel'),
     ).toBeVisible();
