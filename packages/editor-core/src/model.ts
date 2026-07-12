@@ -4,11 +4,11 @@ import {
   isDefaultColorCurves,
   isNeutralThreeWayColor,
   normalizeColorCurves,
+  normalizeColorGradingGraph,
   normalizeThreeWayColor
 } from './color-grading';
 import { normalizeClipBlendMode } from './blend-modes';
 import { normalizeColorNodeGraph } from './color-node-graph';
-import { normalizeColorGradingGraph } from './color-grading/types';
 import { REC709_INPUT_COLOR_SPACE, normalizeInputColorSpace } from './color-log-luts';
 import { normalizeClipContentAnalysis } from './content-analysis';
 import { DEFAULT_PROJECT_COLOR_PIPELINE, normalizeProjectColorPipeline } from './color-pipeline';

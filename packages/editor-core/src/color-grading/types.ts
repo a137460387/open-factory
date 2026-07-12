@@ -183,10 +183,16 @@ export function normalizeColorGradingGraph(
     ? (g.connections as unknown[]).filter(isValidConnection)
     : [];
 
+  const nodeIds = new Set(nodes.map((n) => n.id));
+  const activeNodeId =
+    typeof g.activeNodeId === 'string' && nodeIds.has(g.activeNodeId)
+      ? g.activeNodeId
+      : null;
+
   return {
     nodes,
     connections: connections as ColorConnection[],
-    activeNodeId: typeof g.activeNodeId === 'string' ? g.activeNodeId : null,
+    activeNodeId,
   };
 }
 

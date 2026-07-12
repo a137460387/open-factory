@@ -4,7 +4,7 @@ import type { VersionDiffSummary } from './ai-version-diff';
 import type { LoudnessSuggestion } from './ai-loudness-suggestion';
 import type { MediaAIAnalysis, AIColorGradingSuggestionItem } from './ai-service';
 import type { ColorCurves, ThreeWayColor } from './color-grading';
-import type { ColorGradingGraph } from './color-grading/types';
+import type { ColorGradingGraph } from './color-grading';
 import type { InputColorSpace } from './color-log-luts';
 import type { ClipBlendMode } from './blend-modes';
 import type { ClipContentAnalysis } from './content-analysis';
