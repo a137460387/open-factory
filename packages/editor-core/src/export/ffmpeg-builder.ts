@@ -364,6 +364,7 @@ function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project[
             sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
             effects: cloneEffects(clip.effects) ?? [],
             effectsChain: mixerState?.channels?.find(c => c.trackId === track.id)?.effectsChain,
+            automation: mixerState?.channels?.find(c => c.trackId === track.id)?.automation,
             blendMode: normalizeClipBlendMode(clip.blendMode),
             keyframes: buildExportClipKeyframes(clip.keyframes, clip.duration, trackVolume),
             kenBurns: clip.type === 'image' ? Boolean(clip.kenBurns) : false,
@@ -3916,12 +3917,13 @@ function buildAudioFilters(
     const restorationFilters = buildAudioRestorationFilters(clip);
     const trackProcessingFilters = buildTrackAudioFilters(clip);
     const effectsChainFilters = clip.effectsChain?.length ? buildAudioEffectChainFilters(clip.effectsChain) : [];
+    const automationFilters = buildAutomationFilters(clip);
     filters.push(
       `[${inputIndex}:a:0]atrim=start=0:duration=${formatFfmpegSeconds(
         getExportClipSourceDuration(clip)
       )},asetpts=PTS-STARTPTS${pitchAndReverseFilters.length > 0 ? `,${pitchAndReverseFilters.join(',')}` : ''}${speedFilters.length > 0 ? `,${speedFilters.join(',')}` : ''}${fadeFilters}${restorationFilters}${denoiseFilters}${trackProcessingFilters}${effectsChainFilters.length > 0 ? `,${effectsChainFilters.join(',')}` : ''},adelay=${delay}:all=1,${buildVolumeFilter(
         clip
-      )}${buildAudioChannelRoutingFilter(clip)}${buildPanFilter(clip)}${buildSpatialAudioFilter(clip, settings)},aformat=channel_layouts=stereo,aresample=${settings.sampleRate}[${label}]`
+      )}${buildAudioChannelRoutingFilter(clip)}${buildPanFilter(clip)}${buildSpatialAudioFilter(clip, settings)}${automationFilters},aformat=channel_layouts=stereo,aresample=${settings.sampleRate}[${label}]`
     );
     labels.push(label);
   }
@@ -4035,6 +4037,57 @@ function buildPanFilter(clip: ExportClip): string {
     return '';
   }
   return `,stereopan=pan=${formatPan(clip.pan)}`;
+}
+
+function buildAutomationFilters(clip: ExportClip): string {
+  const automation = clip.automation;
+  if (!automation) {
+    return '';
+  }
+  const filters: string[] = [];
+
+  // Apply automation volume curve
+  if (automation.volume?.points?.length && automation.volume.points.length >= 2) {
+    const points = automation.volume.points;
+    const duration = clip.duration;
+    // Build FFmpeg volume keyframe expression using stepwise linear interpolation
+    let expr = '';
+    for (let i = points.length - 1; i >= 0; i--) {
+      const p = points[i];
+      const linearGain = Math.pow(10, p.value / 20);
+      if (i === points.length - 1) {
+        expr = formatFfmpegNumber(linearGain);
+      } else {
+        const nextTime = points[i + 1].time;
+        expr = `if(between(t,${formatFfmpegSeconds(p.time)},${formatFfmpegSeconds(nextTime)}),${formatFfmpegNumber(linearGain)},${expr})`;
+      }
+    }
+    // Handle time before first point
+    const firstGain = Math.pow(10, points[0].value / 20);
+    expr = `if(lt(t,${formatFfmpegSeconds(points[0].time)}),${formatFfmpegNumber(firstGain)},${expr})`;
+    filters.push(`volume='${expr}':eval=frame`);
+  }
+
+  // Apply automation pan curve
+  if (automation.pan?.points?.length && automation.pan.points.length >= 2) {
+    const points = automation.pan.points;
+    let expr = '';
+    for (let i = points.length - 1; i >= 0; i--) {
+      const p = points[i];
+      const panValue = Math.max(-1, Math.min(1, p.value / 100));
+      if (i === points.length - 1) {
+        expr = formatFfmpegNumber(panValue);
+      } else {
+        const nextTime = points[i + 1].time;
+        expr = `if(between(t,${formatFfmpegSeconds(p.time)},${formatFfmpegSeconds(nextTime)}),${formatFfmpegNumber(panValue)},${expr})`;
+      }
+    }
+    const firstPan = Math.max(-1, Math.min(1, points[0].value / 100));
+    expr = `if(lt(t,${formatFfmpegSeconds(points[0].time)}),${formatFfmpegNumber(firstPan)},${expr})`;
+    filters.push(`stereopan=pan='${expr}'`);
+  }
+
+  return filters.length > 0 ? `,${filters.join(',')}` : '';
 }
 
 function buildSpatialAudioFilter(clip: ExportClip, settings: ExportSettings): string {

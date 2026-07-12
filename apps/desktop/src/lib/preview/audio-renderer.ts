@@ -1,7 +1,8 @@
-import type { Clip, MediaAsset, Timeline } from '@open-factory/editor-core';
+import type { Clip, MediaAsset, MixerState, Timeline } from '@open-factory/editor-core';
 import {
   calculateSpeedCurveSourceDuration,
   createVuMeterState,
+  evaluateAutomation,
   getActiveClipsAtTime,
   getClipSpeed,
   getClipSpeedAtTime,
@@ -49,7 +50,7 @@ export class PreviewAudioRenderer {
   private activeTrackIdsByClipId = new Map<string, string>();
   private lastAudioCalibration = 0;
 
-  syncAudio(timeline: Timeline, media: MediaAsset[], playheadTime: number, isPlaying: boolean, masterVolume = 1): void {
+  syncAudio(timeline: Timeline, media: MediaAsset[], playheadTime: number, isPlaying: boolean, masterVolume = 1, mixerState?: MixerState): void {
     const mediaById = new Map(media.map((asset) => [asset.id, asset]));
     const trackById = new Map(timeline.tracks.map((track) => [track.id, track]));
     const activeAudioClips = getActiveClipsAtTime(timeline, playheadTime).filter((clip) => {
@@ -76,7 +77,7 @@ export class PreviewAudioRenderer {
     }
 
     for (const clip of activeAudioClips) {
-      this.syncClipAudio(clip, trackById.get(clip.trackId), mediaById, playheadTime, isPlaying);
+      this.syncClipAudio(clip, trackById.get(clip.trackId), mediaById, playheadTime, isPlaying, mixerState);
     }
   }
 
@@ -139,7 +140,7 @@ export class PreviewAudioRenderer {
     return data;
   }
 
-  private syncClipAudio(clip: Clip, track: Track | undefined, mediaById: Map<string, MediaAsset>, playheadTime: number, isPlaying: boolean): void {
+  private syncClipAudio(clip: Clip, track: Track | undefined, mediaById: Map<string, MediaAsset>, playheadTime: number, isPlaying: boolean, mixerState?: MixerState): void {
     if (clip.type !== 'audio' && clip.type !== 'video') {
       return;
     }
@@ -179,6 +180,22 @@ export class PreviewAudioRenderer {
     if (node.panner) {
       node.panner.pan.value = node.spatialPanner ? (track ? getTrackPan(track) : 0) : Math.min(1, Math.max(-1, spatial.x + (track ? getTrackPan(track) : 0)));
     }
+
+    // Apply mixer automation curves
+    if (mixerState && track) {
+      const mixerChannel = mixerState.channels.find(c => c.trackId === track.id);
+      if (mixerChannel?.automation) {
+        const localTimeSeconds = Math.max(0, playheadTime - clip.start);
+        const autoResult = evaluateAutomation(mixerChannel.automation, localTimeSeconds);
+        if (autoResult.volume !== 0) {
+          node.gain.gain.value *= Math.pow(10, autoResult.volume / 20);
+        }
+        if (autoResult.pan !== 0 && node.panner) {
+          node.panner.pan.value = Math.max(-1, Math.min(1, node.panner.pan.value + autoResult.pan / 100));
+        }
+      }
+    }
+
     recordAudioMix(clip.type, node.gain.gain.value);
     audio.volume = 1;
     audio.playbackRate = speed * 2 ** (normalizeAudioPitchSemitones(clip.pitchSemitones) / 12);
