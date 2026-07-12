@@ -27,6 +27,9 @@ import {
   buildColorGradingFilters,
   buildAudioEffectChainFilters,
   buildMixerChannelAudioFilters,
+  createDefaultHSLQualifierParams,
+  createDefaultCircleMask,
+  createDefaultGradientMask,
   type Clip,
   type ColorGradingGraph,
   type Project
@@ -4229,6 +4232,160 @@ describe('buildColorGradingFilters', () => {
 
     const filters = buildColorGradingFilters(graph);
     expect(filters).toEqual([]);
+  });
+
+  it('should build selectivecolor filter for HSL qualifier', () => {
+    const graph: ColorGradingGraph = {
+      nodes: [{
+        id: 'n1',
+        type: 'hsl-qualifier',
+        enabled: true,
+        params: createDefaultHSLQualifierParams(),
+        inputs: [],
+        output: null,
+        position: { x: 0, y: 0 },
+      }],
+      connections: [],
+      activeNodeId: 'n1',
+    };
+
+    const filters = buildColorGradingFilters(graph);
+    // 默认参数 hueShift=0, saturation=0, brightness=0 => toFfmpegSelectiveColor 返回空字符串
+    // 用非默认参数测试
+    const graphWithAdjustments: ColorGradingGraph = {
+      nodes: [{
+        id: 'n1',
+        type: 'hsl-qualifier',
+        enabled: true,
+        params: {
+          ...createDefaultHSLQualifierParams(),
+          adjustments: {
+            hueShift: 30,
+            saturation: 20,
+            brightness: 0,
+            contrast: 0,
+            temperature: 0,
+            tint: 0,
+          },
+        },
+        inputs: [],
+        output: null,
+        position: { x: 0, y: 0 },
+      }],
+      connections: [],
+      activeNodeId: 'n1',
+    };
+
+    const adjustedFilters = buildColorGradingFilters(graphWithAdjustments);
+    expect(adjustedFilters.some(f => f.includes('selectivecolor'))).toBe(true);
+  });
+
+  it('should build lut3d filter for LUT apply', () => {
+    const graph: ColorGradingGraph = {
+      nodes: [{
+        id: 'n1',
+        type: 'lut-apply',
+        enabled: true,
+        params: {},
+        inputs: [],
+        output: null,
+        position: { x: 0, y: 0 },
+      }],
+      connections: [],
+      activeNodeId: 'n1',
+    };
+
+    const filters = buildColorGradingFilters(graph);
+    expect(filters.length).toBe(1);
+    expect(filters[0]).toContain('lut3d');
+    expect(filters[0]).toContain('lut_n1.cube');
+  });
+
+  it('should build geq filter for circle window mask', () => {
+    const graph: ColorGradingGraph = {
+      nodes: [{
+        id: 'n1',
+        type: 'window-mask',
+        enabled: true,
+        params: createDefaultCircleMask(),
+        inputs: [],
+        output: null,
+        position: { x: 0, y: 0 },
+      }],
+      connections: [],
+      activeNodeId: 'n1',
+    };
+
+    const filters = buildColorGradingFilters(graph);
+    expect(filters.length).toBe(1);
+    expect(filters[0]).toContain('geq');
+  });
+
+  it('should build geq filter for gradient window mask', () => {
+    const graph: ColorGradingGraph = {
+      nodes: [{
+        id: 'n1',
+        type: 'window-mask',
+        enabled: true,
+        params: createDefaultGradientMask(),
+        inputs: [],
+        output: null,
+        position: { x: 0, y: 0 },
+      }],
+      connections: [],
+      activeNodeId: 'n1',
+    };
+
+    const filters = buildColorGradingFilters(graph);
+    expect(filters.length).toBe(1);
+    expect(filters[0]).toContain('geq');
+  });
+
+  it('should combine multiple node types in correct order', () => {
+    const graph: ColorGradingGraph = {
+      nodes: [
+        {
+          id: 'n1',
+          type: 'primary-slider',
+          enabled: true,
+          params: { temperature: 0, tint: 0, contrast: 30, pivot: 0.5, saturation: 100, hue: 0 },
+          inputs: [],
+          output: null,
+          position: { x: 0, y: 0 },
+        },
+        {
+          id: 'n2',
+          type: 'hsl-qualifier',
+          enabled: true,
+          params: {
+            ...createDefaultHSLQualifierParams(),
+            adjustments: { hueShift: 10, saturation: 0, brightness: 0, contrast: 0, temperature: 0, tint: 0 },
+          },
+          inputs: [],
+          output: null,
+          position: { x: 0, y: 0 },
+        },
+        {
+          id: 'n3',
+          type: 'lut-apply',
+          enabled: true,
+          params: {},
+          inputs: [],
+          output: null,
+          position: { x: 0, y: 0 },
+        },
+      ],
+      connections: [],
+      activeNodeId: 'n1',
+    };
+
+    const filters = buildColorGradingFilters(graph);
+    expect(filters.length).toBeGreaterThanOrEqual(3);
+    // 顺序：primary-slider -> hsl-qualifier -> lut-apply
+    const hslIndex = filters.findIndex(f => f.includes('selectivecolor'));
+    const lutIndex = filters.findIndex(f => f.includes('lut3d'));
+    expect(hslIndex).toBeGreaterThanOrEqual(0);
+    expect(lutIndex).toBeGreaterThan(hslIndex);
   });
 });
 

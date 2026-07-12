@@ -1,3 +1,8 @@
+import type { HSLQualifierParams } from './hsl-qualifier';
+import { createDefaultHSLQualifierParams, validateHSLQualifierParams } from './hsl-qualifier';
+import type { WindowMaskParams } from './window-mask';
+import { createDefaultCircleMask, validateWindowMaskParams } from './window-mask';
+
 /** 调色节点类型 */
 export type ColorGradingNodeType =
   | 'primary-wheel'
@@ -37,6 +42,8 @@ export interface PrimarySliderParams {
 export type ColorGradingNodeParams =
   | PrimaryWheelParams
   | PrimarySliderParams
+  | HSLQualifierParams
+  | WindowMaskParams
   | Record<string, unknown>;
 
 /** 调色节点 */
@@ -115,6 +122,12 @@ export function createColorGradingNode(
       break;
     case 'primary-slider':
       params = createDefaultPrimarySliderParams();
+      break;
+    case 'hsl-qualifier':
+      params = createDefaultHSLQualifierParams();
+      break;
+    case 'window-mask':
+      params = createDefaultCircleMask();
       break;
     default:
       params = {};
@@ -214,6 +227,14 @@ function normalizeColorNode(node: unknown): ColorGradingNode {
   } else if (type === 'primary-slider') {
     params = validatePrimarySliderParams(
       (n.params as PrimarySliderParams) ?? createDefaultPrimarySliderParams()
+    );
+  } else if (type === 'hsl-qualifier') {
+    params = validateHSLQualifierParams(
+      (n.params as HSLQualifierParams) ?? createDefaultHSLQualifierParams()
+    );
+  } else if (type === 'window-mask') {
+    params = validateWindowMaskParams(
+      (n.params as WindowMaskParams) ?? createDefaultCircleMask()
     );
   } else {
     params = (n.params as Record<string, unknown>) ?? {};
