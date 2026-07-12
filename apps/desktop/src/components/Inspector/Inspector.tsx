@@ -218,6 +218,7 @@ import { generateTtsVoiceover } from '../../lib/ttsVoiceover';
 import { SubtitleAIPolishPanel } from './SubtitleAIPolishPanel';
 import { ChapterTitleAIPanel } from './ChapterTitleAIPanel';
 import { AIColorGradingPanel, AILookMatchPanel } from './AIColorGradingPanel';
+import { ColorGradingWorkspace } from '../ColorGrading/ColorGradingWorkspace';
 import { AISceneMatchPanel } from './AISceneMatchPanel';
 import { AIDenoisePanel } from './AIDenoisePanel';
 import { AIBrollSuggestionPanel } from './AIBrollSuggestionPanel';
@@ -2648,6 +2649,16 @@ function ClipInspector({
           <details className="mb-4">
             <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">{zhCN.inspector.sections.colorWheels}</summary>
             <ThreeWayColorEditor threeWayColor={threeWayColor} onCommit={(nextColor) => commit({ colorCorrection: { threeWayColor: nextColor } })} />
+          </details>
+        ) : null}
+
+        {clip.type !== 'audio' ? (
+          <details className="mb-4">
+            <summary className="mb-2 cursor-pointer text-xs font-semibold uppercase tracking-normal text-[var(--color-text-muted)]">调色</summary>
+            <ColorGradingWorkspace
+              graph={clip.colorGradingGraph}
+              onGraphChange={(graph) => commit({ colorGradingGraph: graph })}
+            />
           </details>
         ) : null}
 
