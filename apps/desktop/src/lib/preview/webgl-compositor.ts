@@ -20,6 +20,7 @@ import {
   triangulatePathMask,
   sampleColorCurves,
   clipBlendModeToShaderIndex,
+  NodeGraphEngine,
   type ChromaKey,
   type ClipBlendMode,
   type ClipPanoramaView,
@@ -37,7 +38,10 @@ import {
   type Transform
 } from '@open-factory/editor-core';
 
+import type { ColorGradingGraph } from '@open-factory/editor-core';
+
 import { zhCN } from '../../i18n/strings';
+import { ColorGradingRenderer } from '../color-grading/color-grading-renderer';
 import {
   DEFAULT_GPU_PREVIEW_METRICS,
   GPU_TEXTURE_POOL_MAX_BYTES,
@@ -117,6 +121,7 @@ export interface WebGlResolvedSourceProcessing {
   key: ChromaKey;
   maskUniforms: ReturnType<typeof buildMaskUniforms>;
   effectParams: ReturnType<typeof buildPreviewEffectParams>;
+  colorGradingGraph?: ColorGradingGraph;
 }
 
 export interface ColorNodeGraphPreviewPass {
@@ -140,6 +145,7 @@ export class WebGlPreviewCompositor {
   private drawCalls = 0;
   private readonly timerQuerySupported: boolean;
   private lastMetrics: GpuPreviewMetrics = DEFAULT_GPU_PREVIEW_METRICS;
+  private colorGradingRenderer?: ColorGradingRenderer;
 
   constructor(canvas: HTMLCanvasElement) {
     const gl = canvas.getContext('webgl', {
@@ -267,7 +273,8 @@ export class WebGlPreviewCompositor {
     effects?: Effect[],
     chromaKey?: Partial<ChromaKey>,
     masks?: ClipMask[],
-    options: WebGlSourceProcessingOptions = {}
+    options: WebGlSourceProcessingOptions = {},
+    colorGradingGraph?: ColorGradingGraph
   ): boolean {
     if (options.bypassProcessing || !colorNodeGraph) {
       this.drawSource(source, mediaWidth, mediaHeight, transform, fallbackColorCorrection, effects, chromaKey, masks, options);
@@ -316,6 +323,12 @@ export class WebGlPreviewCompositor {
       bypassProcessing: true,
       blendMode: options.blendMode
     });
+
+    // Apply color grading graph as a post-processing pass if present
+    if (colorGradingGraph && colorGradingGraph.nodes.length > 0 && !options.bypassProcessing) {
+      this.applyColorGradingPass(colorGradingGraph, width, height);
+    }
+
     return true;
   }
 
@@ -484,7 +497,7 @@ export class WebGlPreviewCompositor {
     this.drawSource(canvas, frame.width, frame.height, DEFAULT_TRANSFORM, colorCorrection, effects, undefined, undefined, options);
   }
 
-  applyColorNodeGraph(colorNodeGraph: Partial<ColorNodeGraph> | undefined, fallbackColorCorrection?: Partial<ColorCorrection>, effects?: Effect[], options: WebGlSourceProcessingOptions = {}): boolean {
+  applyColorNodeGraph(colorNodeGraph: Partial<ColorNodeGraph> | undefined, fallbackColorCorrection?: Partial<ColorCorrection>, effects?: Effect[], options: WebGlSourceProcessingOptions = {}, colorGradingGraph?: ColorGradingGraph): boolean {
     if (options.bypassProcessing || !colorNodeGraph) {
       this.applyAdjustmentLayer(fallbackColorCorrection, effects, options);
       return true;
@@ -504,6 +517,12 @@ export class WebGlPreviewCompositor {
     }
     if ((effects?.length ?? 0) > 0 || options.colorPipeline) {
       this.applyAdjustmentLayer(undefined, effects, { disabledEffectTypes: options.disabledEffectTypes, colorPipeline: options.colorPipeline });
+    }
+    if (colorGradingGraph && colorGradingGraph.nodes.length > 0 && !options.bypassProcessing) {
+      const gl = this.gl;
+      const w = Math.max(1, Number(gl.canvas.width));
+      const h = Math.max(1, Number(gl.canvas.height));
+      this.applyColorGradingPass(colorGradingGraph, w, h);
     }
     return true;
   }
@@ -632,6 +651,105 @@ export class WebGlPreviewCompositor {
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     this.drawCalls += 1;
   }
+
+  /**
+   * Apply a color grading graph as a post-processing pass.
+   *
+   * Copies the current framebuffer content into a texture, runs it through
+   * the {@link ColorGradingRenderer} ping-pong pipeline, and draws the
+   * result back as a full-screen quad.
+   */
+  private applyColorGradingPass(graph: ColorGradingGraph, width: number, height: number): void {
+    const gl = this.gl;
+
+    if (!this.colorGradingRenderer) {
+      this.colorGradingRenderer = new ColorGradingRenderer(gl);
+    }
+
+    // Copy current framebuffer into a temporary texture
+    const inputTexture = gl.createTexture();
+    if (!inputTexture) return;
+
+    gl.bindTexture(gl.TEXTURE_2D, inputTexture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 0, 0, width, height, 0);
+
+    // Run color grading
+    const outputTexture = this.colorGradingRenderer.render(graph, inputTexture, width, height);
+
+    // Draw the output texture back to the current framebuffer
+    if (outputTexture !== inputTexture) {
+      const savedProgram = this.program;
+      const savedViewport = gl.getParameter(gl.VIEWPORT);
+
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.viewport(0, 0, width, height);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, outputTexture);
+
+      // Use a minimal passthrough shader to blit the result
+      const blitProgram = this.getBlitProgram();
+      if (blitProgram) {
+        gl.useProgram(blitProgram.program);
+        if (blitProgram.texture) gl.uniform1i(blitProgram.texture, 0);
+        this.drawQuad(buildFullscreenQuadPoints(width, height), blitProgram);
+      }
+
+      gl.viewport(savedViewport[0], savedViewport[1], savedViewport[2], savedViewport[3]);
+      gl.useProgram(savedProgram?.program ?? null);
+    }
+
+    gl.deleteTexture(inputTexture);
+  }
+
+  private blitProgram?: CustomShaderProgramInfo | null;
+
+  private getBlitProgram(): CustomShaderProgramInfo | null {
+    if (this.blitProgram !== undefined) {
+      return this.blitProgram;
+    }
+    try {
+      const gl = this.gl;
+      const vs = compileShader(gl, gl.VERTEX_SHADER, VERTEX_SHADER_SOURCE);
+      const fs = compileShader(
+        gl,
+        gl.FRAGMENT_SHADER,
+        `precision mediump float;
+         uniform sampler2D u_texture;
+         varying vec2 v_texCoord;
+         void main() {
+           gl_FragColor = texture2D(u_texture, v_texCoord);
+         }`
+      );
+      const program = gl.createProgram();
+      if (!program) { this.blitProgram = null; return null; }
+      gl.attachShader(program, vs);
+      gl.attachShader(program, fs);
+      gl.linkProgram(program);
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        gl.deleteProgram(program);
+        this.blitProgram = null;
+        return null;
+      }
+      this.blitProgram = {
+        program,
+        position: gl.getAttribLocation(program, 'a_position'),
+        texCoord: gl.getAttribLocation(program, 'a_texCoord'),
+        resolution: gl.getUniformLocation(program, 'u_resolution'),
+        texture: gl.getUniformLocation(program, 'u_texture'),
+        time: null,
+        progress: null
+      };
+      return this.blitProgram;
+    } catch {
+      this.blitProgram = null;
+      return null;
+    }
+  }
 }
 
 export function resolveWebGlSourceProcessing(
@@ -639,7 +757,8 @@ export function resolveWebGlSourceProcessing(
   effects?: Effect[],
   chromaKey?: Partial<ChromaKey>,
   masks?: ClipMask[],
-  options: WebGlSourceProcessingOptions = {}
+  options: WebGlSourceProcessingOptions = {},
+  colorGradingGraph?: ColorGradingGraph
 ): WebGlResolvedSourceProcessing {
   if (options.bypassProcessing) {
     return {
@@ -655,7 +774,8 @@ export function resolveWebGlSourceProcessing(
     colorPipeline: normalizeProjectColorPipeline(options.colorPipeline),
     key: normalizeChromaKey(chromaKey),
     maskUniforms: buildMaskUniforms(masks),
-    effectParams: buildPreviewEffectParams(effects, options.disabledEffectTypes)
+    effectParams: buildPreviewEffectParams(effects, options.disabledEffectTypes, colorGradingGraph),
+    colorGradingGraph
   };
 }
 
@@ -674,6 +794,10 @@ export function resolveColorNodeGraphPreviewPasses(
         lutPath: node.type === 'lut' ? node.lutPath ?? node.correction.lutPath : node.correction.lutPath
       })
     }));
+}
+
+function buildFullscreenQuadPoints(width: number, height: number): number[] {
+  return [0, 0, width, 0, 0, height, 0, height, width, 0, width, height];
 }
 
 function buildChromaKeyColorUniforms(chromaKey: ChromaKey): Float32Array {
@@ -766,8 +890,8 @@ function colorPipelineIndex(value: ProjectColorPipeline | undefined): number {
   }
 }
 
-function buildPreviewEffectParams(effects: Effect[] | undefined, disabledEffectTypes: EffectType[] = []): { blur: number; grain: number; vignette: number; chromatic: number; sharpen: number; motionX: number; motionY: number; motionSamples: number; motionJitter: number } {
-  const params = { blur: 0, grain: 0, vignette: 0, chromatic: 0, sharpen: 0, motionX: 0, motionY: 0, motionSamples: 0, motionJitter: 0 };
+function buildPreviewEffectParams(effects: Effect[] | undefined, disabledEffectTypes: EffectType[] = [], colorGradingGraph?: ColorGradingGraph): { blur: number; grain: number; vignette: number; chromatic: number; sharpen: number; motionX: number; motionY: number; motionSamples: number; motionJitter: number; colorGradingUniforms?: Record<string, number | number[]> } {
+  const params: { blur: number; grain: number; vignette: number; chromatic: number; sharpen: number; motionX: number; motionY: number; motionSamples: number; motionJitter: number; colorGradingUniforms?: Record<string, number | number[]> } = { blur: 0, grain: 0, vignette: 0, chromatic: 0, sharpen: 0, motionX: 0, motionY: 0, motionSamples: 0, motionJitter: 0 };
   const disabled = new Set(disabledEffectTypes);
   for (const effect of effects ?? []) {
     if (!effect.enabled || disabled.has(effect.type)) {
@@ -793,6 +917,15 @@ function buildPreviewEffectParams(effects: Effect[] | undefined, disabledEffectT
       params.motionJitter = Math.max(params.motionJitter, motion.jitter);
     }
   }
+
+  // Merge color grading graph uniforms
+  if (colorGradingGraph && colorGradingGraph.nodes.length > 0) {
+    const execution = NodeGraphEngine.execute(colorGradingGraph);
+    if (execution.nodeResults.length > 0) {
+      params.colorGradingUniforms = execution.combinedUniforms;
+    }
+  }
+
   return params;
 }
 
