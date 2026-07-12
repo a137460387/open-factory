@@ -1,12 +1,12 @@
 import React, { useCallback, useState, useRef } from 'react';
-import type { LUTLayer, LUTLibraryEntry } from '@open-factory/editor-core/color-grading/lut';
-import { createLUTLayer } from '@open-factory/editor-core/color-grading/lut';
+import type { ColorGradingLUTLayer, LUTLibraryEntry } from '@open-factory/editor-core/color-grading/lut';
+import { createColorGradingLUTLayer } from '@open-factory/editor-core/color-grading/lut';
 import { parseCubeFile, parse3dlFile } from '@open-factory/editor-core/color-grading/lut-parser';
 
 interface LUTManagerProps {
-  layers: LUTLayer[];
+  layers: ColorGradingLUTLayer[];
   library: LUTLibraryEntry[];
-  onLayersChange: (layers: LUTLayer[]) => void;
+  onLayersChange: (layers: ColorGradingLUTLayer[]) => void;
   onLibraryChange: (library: LUTLibraryEntry[]) => void;
   onImportLUT?: (file: File) => void;
 }
@@ -62,7 +62,7 @@ export const LUTManager: React.FC<LUTManagerProps> = ({
   }, [library, onLibraryChange]);
 
   const handleApplyLUT = useCallback((lutId: string) => {
-    const newLayer = createLUTLayer(lutId);
+    const newLayer = createColorGradingLUTLayer(lutId);
     onLayersChange([...layers, newLayer]);
   }, [layers, onLayersChange]);
 

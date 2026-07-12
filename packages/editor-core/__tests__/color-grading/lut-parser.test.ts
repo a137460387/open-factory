@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parseCubeFile, parse3dlFile, exportToCube, generateLUTPreview } from '../../src/color-grading/lut-parser';
-import { validateLUTData, normalizeLUTLayer, createLUTLayer } from '../../src/color-grading/lut';
+import { validateLUTData, normalizeColorGradingLUTLayer, createColorGradingLUTLayer } from '../../src/color-grading/lut';
 
 describe('parseCubeFile', () => {
   it('should parse a standard 3D .cube file', () => {
@@ -287,9 +287,9 @@ describe('validateLUTData', () => {
   });
 });
 
-describe('normalizeLUTLayer', () => {
+describe('normalizeColorGradingLUTLayer', () => {
   it('should normalize a valid layer object', () => {
-    const result = normalizeLUTLayer({
+    const result = normalizeColorGradingLUTLayer({
       id: 'test-id',
       lutId: 'lut-1',
       intensity: 0.8,
@@ -304,49 +304,49 @@ describe('normalizeLUTLayer', () => {
   });
 
   it('should return null for null/undefined input', () => {
-    expect(normalizeLUTLayer(null)).toBeNull();
-    expect(normalizeLUTLayer(undefined)).toBeNull();
+    expect(normalizeColorGradingLUTLayer(null)).toBeNull();
+    expect(normalizeColorGradingLUTLayer(undefined)).toBeNull();
   });
 
   it('should return null for non-object input', () => {
-    expect(normalizeLUTLayer('string')).toBeNull();
-    expect(normalizeLUTLayer(42)).toBeNull();
+    expect(normalizeColorGradingLUTLayer('string')).toBeNull();
+    expect(normalizeColorGradingLUTLayer(42)).toBeNull();
   });
 
   it('should return null when lutId is missing', () => {
-    expect(normalizeLUTLayer({ id: 'test' })).toBeNull();
+    expect(normalizeColorGradingLUTLayer({ id: 'test' })).toBeNull();
   });
 
   it('should clamp intensity to 0-1', () => {
-    const result = normalizeLUTLayer({ lutId: 'lut-1', intensity: 1.5 });
+    const result = normalizeColorGradingLUTLayer({ lutId: 'lut-1', intensity: 1.5 });
     expect(result!.intensity).toBe(1);
 
-    const result2 = normalizeLUTLayer({ lutId: 'lut-1', intensity: -0.5 });
+    const result2 = normalizeColorGradingLUTLayer({ lutId: 'lut-1', intensity: -0.5 });
     expect(result2!.intensity).toBe(0);
   });
 
   it('should default intensity to 1 when missing', () => {
-    const result = normalizeLUTLayer({ lutId: 'lut-1' });
+    const result = normalizeColorGradingLUTLayer({ lutId: 'lut-1' });
     expect(result!.intensity).toBe(1);
   });
 
   it('should default enabled to true when not explicitly false', () => {
-    const result = normalizeLUTLayer({ lutId: 'lut-1' });
+    const result = normalizeColorGradingLUTLayer({ lutId: 'lut-1' });
     expect(result!.enabled).toBe(true);
 
-    const result2 = normalizeLUTLayer({ lutId: 'lut-1', enabled: false });
+    const result2 = normalizeColorGradingLUTLayer({ lutId: 'lut-1', enabled: false });
     expect(result2!.enabled).toBe(false);
   });
 
   it('should generate id when missing', () => {
-    const result = normalizeLUTLayer({ lutId: 'lut-1' });
+    const result = normalizeColorGradingLUTLayer({ lutId: 'lut-1' });
     expect(result!.id).toMatch(/^lut-layer-/);
   });
 });
 
-describe('createLUTLayer', () => {
+describe('createColorGradingLUTLayer', () => {
   it('should create a layer with correct defaults', () => {
-    const layer = createLUTLayer('my-lut');
+    const layer = createColorGradingLUTLayer('my-lut');
     expect(layer.lutId).toBe('my-lut');
     expect(layer.intensity).toBe(1);
     expect(layer.enabled).toBe(true);
@@ -354,8 +354,8 @@ describe('createLUTLayer', () => {
   });
 
   it('should generate unique ids', () => {
-    const layer1 = createLUTLayer('lut-1');
-    const layer2 = createLUTLayer('lut-1');
+    const layer1 = createColorGradingLUTLayer('lut-1');
+    const layer2 = createColorGradingLUTLayer('lut-1');
     expect(layer1.id).not.toBe(layer2.id);
   });
 });

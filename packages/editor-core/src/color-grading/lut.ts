@@ -9,7 +9,7 @@ export interface LUTData {
 }
 
 /** LUT 图层 */
-export interface LUTLayer {
+export interface ColorGradingLUTLayer {
   id: string;
   lutId: string;        // 引用 LUTLibrary 中的ID
   intensity: number;    // 0 ~ 1 混合强度
@@ -29,7 +29,7 @@ export interface LUTLibraryEntry {
 }
 
 /** 创建 LUT 图层 */
-export function createLUTLayer(lutId: string): LUTLayer {
+export function createColorGradingLUTLayer(lutId: string): ColorGradingLUTLayer {
   return {
     id: `lut-layer-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     lutId,
@@ -49,7 +49,7 @@ export function validateLUTData(data: LUTData): boolean {
 }
 
 /** 归一化 LUT 图层 */
-export function normalizeLUTLayer(layer: unknown): LUTLayer | null {
+export function normalizeColorGradingLUTLayer(layer: unknown): ColorGradingLUTLayer | null {
   if (!layer || typeof layer !== 'object') return null;
   const l = layer as Record<string, unknown>;
   if (typeof l.lutId !== 'string') return null;
