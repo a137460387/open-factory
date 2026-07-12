@@ -113,6 +113,10 @@ export class NodeGraphEngine {
         return this.executePrimaryWheel(node);
       case 'primary-slider':
         return this.executePrimarySlider(node);
+      case 'hsl-qualifier':
+        return this.executeHSLQualifier(node);
+      case 'window-mask':
+        return this.executeWindowMask(node);
       default:
         return { nodeId: node.id, uniforms: {}, fragmentSnippets: [] };
     }
@@ -159,6 +163,70 @@ export class NodeGraphEngine {
         `color = applyHueRotation(color, ${prefix}_hue);`,
       ],
     };
+  }
+
+  private static executeHSLQualifier(node: ColorGradingNode): NodeExecutionResult {
+    const p = node.params as any;
+    const prefix = `cg_${node.id.replace(/-/g, '_')}`;
+
+    return {
+      nodeId: node.id,
+      uniforms: {
+        [`${prefix}_hueRange`]: [p.hueRange.center, p.hueRange.width, p.hueRange.softness],
+        [`${prefix}_satRange`]: [p.saturationRange.min, p.saturationRange.max, p.saturationRange.softness],
+        [`${prefix}_lumRange`]: [p.luminanceRange.min, p.luminanceRange.max, p.luminanceRange.softness],
+        [`${prefix}_adjustments1`]: [p.adjustments.hueShift, p.adjustments.saturation, p.adjustments.brightness],
+        [`${prefix}_adjustments2`]: [p.adjustments.contrast, p.adjustments.temperature, p.adjustments.tint],
+        [`${prefix}_matteClean`]: p.matteClean,
+      },
+      fragmentSnippets: [
+        `// HSL Qualifier: ${node.id}`,
+        `{`,
+        `  vec3 hsl = rgbToHsl(color.rgb);`,
+        `  color = applyHSLQualifier(color, hsl);`,
+        `}`,
+      ],
+    };
+  }
+
+  private static executeWindowMask(node: ColorGradingNode): NodeExecutionResult {
+    const p = node.params as any;
+    const prefix = `cg_${node.id.replace(/-/g, '_')}`;
+
+    if (p.shape === 'circle') {
+      return {
+        nodeId: node.id,
+        uniforms: {
+          [`${prefix}_center`]: [p.circle.center.x, p.circle.center.y],
+          [`${prefix}_radius`]: p.circle.radius,
+          [`${prefix}_softness`]: p.circle.softness,
+          [`${prefix}_invert`]: p.invert ? 1.0 : 0.0,
+        },
+        fragmentSnippets: [
+          `// Circle Mask: ${node.id}`,
+          `color *= circleMask(v_uv);`,
+        ],
+      };
+    }
+
+    if (p.shape === 'linear-gradient') {
+      return {
+        nodeId: node.id,
+        uniforms: {
+          [`${prefix}_start`]: [p.linearGradient.startPoint.x, p.linearGradient.startPoint.y],
+          [`${prefix}_end`]: [p.linearGradient.endPoint.x, p.linearGradient.endPoint.y],
+          [`${prefix}_softness`]: p.linearGradient.softness,
+          [`${prefix}_invert`]: p.invert ? 1.0 : 0.0,
+        },
+        fragmentSnippets: [
+          `// Gradient Mask: ${node.id}`,
+          `color *= gradientMask(v_uv);`,
+        ],
+      };
+    }
+
+    // Polygon mask not yet supported in WebGL
+    return { nodeId: node.id, uniforms: {}, fragmentSnippets: [] };
   }
 
   /**
