@@ -13,10 +13,14 @@ test.describe('Color Grading', () => {
     });
     await page.getByTestId('import-media-button').click();
     await addMediaCardToTimeline(page, 0);
-    // 使用 force click 绕过 timeline-note-layer 拦截
-    await page.locator('[data-testid^="timeline-clip-"]').first().click({ force: true });
+    // 等待时间线片段出现，然后点击选择
+    const clip = page.locator('[data-testid^="timeline-clip-"]').first();
+    await expect(clip).toBeVisible({ timeout: 10_000 });
+    await clip.click({ force: true });
     // 等待 Inspector 面板加载
     await expect(page.getByTestId('clip-brightness-input')).toBeVisible({ timeout: 10_000 });
+    // 展开"调色"折叠面板
+    await page.locator('summary', { hasText: '调色' }).click();
   });
 
   test('should open color grading workspace and add primary wheel node', async ({ colorGradingPage }) => {
