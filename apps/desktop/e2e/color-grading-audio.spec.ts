@@ -40,6 +40,8 @@ test.describe('Color Grading', () => {
 
   test('should display curves editor', async ({ colorGradingPage }) => {
     await expect(colorGradingPage.workspace).toBeVisible({ timeout: 10_000 });
+    // 添加曲线节点以显示曲线编辑器
+    await colorGradingPage.addNode('curves');
     await expect(colorGradingPage.curvesEditor('rgb')).toBeVisible();
   });
 
@@ -57,6 +59,8 @@ test.describe('Color Grading', () => {
 
   test('should display LUT manager', async ({ colorGradingPage }) => {
     await expect(colorGradingPage.workspace).toBeVisible({ timeout: 10_000 });
+    // 添加 LUT 节点以显示 LUT 管理器
+    await colorGradingPage.addNode('lut');
     await expect(colorGradingPage.lutManager).toBeVisible();
   });
 });
