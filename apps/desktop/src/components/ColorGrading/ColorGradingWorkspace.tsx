@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo } from 'react';
-import type { ColorGradingGraph, ColorNode, PrimaryWheelParams, PrimarySliderParams } from '@open-factory/editor-core';
-import { createEmptyColorGradingGraph, createColorNode } from '@open-factory/editor-core';
+import type { ColorGradingGraph, ColorGradingNode, PrimaryWheelParams, PrimarySliderParams } from '@open-factory/editor-core';
+import { createEmptyColorGradingGraph, createColorGradingNode } from '@open-factory/editor-core';
 import { ColorWheelPanel } from './ColorWheelPanel';
 import { PrimarySlidersPanel } from './PrimarySlidersPanel';
 import { NodeGraphView } from './NodeGraphView';
@@ -19,7 +19,7 @@ export const ColorGradingWorkspace: React.FC<ColorGradingWorkspaceProps> = ({
     [graph]
   );
 
-  const handleAddNode = useCallback((node: ColorNode) => {
+  const handleAddNode = useCallback((node: ColorGradingNode) => {
     onGraphChange({
       ...graph,
       nodes: [...graph.nodes, node],

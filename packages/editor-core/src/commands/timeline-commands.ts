@@ -180,7 +180,7 @@ import { applyProtectedRippleDeleteToTrack, canMoveClipWithProtectedRanges } fro
 import { buildCrossfadeGapFillTransition, buildRepeatedGapFillClip, findTimelineGapAtTime, type FillGapOperation } from '../timeline-gap-fill';
 import { createMulticamSequenceProject, setMulticamSwitch, trimMulticamSwitch, addSwitchPoint, deleteSwitchPoint, updateSwitchPoint } from '../multicam';
 import { normalizeMotionGraphic } from '../motion-graphics';
-import type { ColorGradingGraph, ColorNode, ColorConnection } from '../color-grading/types';
+import type { ColorGradingGraph, ColorGradingNode, ColorGradingConnection } from '../color-grading/types';
 import { createEmptyColorGradingGraph } from '../color-grading/types';
 import { applyCmx3600EdlImport, buildCmx3600EdlImport, type Cmx3600EdlImportOptions, type Cmx3600EdlImportResult } from '../export/timeline-import';
 import {
@@ -6268,7 +6268,7 @@ export class AddColorNodeCommand implements Command {
   constructor(
     private readonly accessor: ProjectAccessor,
     private readonly clipId: string,
-    private readonly node: ColorNode
+    private readonly node: ColorGradingNode
   ) {}
 
   execute(): void {
@@ -6331,7 +6331,7 @@ export class RemoveColorNodeCommand implements Command {
   }
 }
 
-export type ColorNodePatch = Partial<Pick<ColorNode, 'enabled' | 'params' | 'position' | 'inputs' | 'output'>>;
+export type ColorGradingNodePatch = Partial<Pick<ColorGradingNode, 'enabled' | 'params' | 'position' | 'inputs' | 'output'>>;
 
 /** 更新调色节点参数 */
 export class UpdateColorNodeCommand implements Command {
@@ -6343,7 +6343,7 @@ export class UpdateColorNodeCommand implements Command {
     private readonly accessor: ProjectAccessor,
     private readonly clipId: string,
     private readonly nodeId: string,
-    private readonly patch: ColorNodePatch
+    private readonly patch: ColorGradingNodePatch
   ) {}
 
   execute(): void {
@@ -6380,7 +6380,7 @@ export class ConnectColorNodesCommand implements Command {
   constructor(
     private readonly accessor: ProjectAccessor,
     private readonly clipId: string,
-    private readonly connection: ColorConnection,
+    private readonly connection: ColorGradingConnection,
     private readonly isConnect: boolean
   ) {
     this.description = isConnect ? 'Connect color grading nodes' : 'Disconnect color grading nodes';

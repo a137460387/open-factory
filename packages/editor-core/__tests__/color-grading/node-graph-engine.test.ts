@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { NodeGraphEngine } from '../../src/color-grading/node-graph-engine';
-import { createColorNode, createEmptyColorGradingGraph } from '../../src/color-grading/types';
+import { createColorGradingNode, createEmptyColorGradingGraph } from '../../src/color-grading/types';
 import type { ColorGradingGraph } from '../../src/color-grading/types';
 
 describe('NodeGraphEngine.topologicalSort', () => {
@@ -11,7 +11,7 @@ describe('NodeGraphEngine.topologicalSort', () => {
   });
 
   it('should sort single node', () => {
-    const node = createColorNode('primary-wheel');
+    const node = createColorGradingNode('primary-wheel');
     const graph: ColorGradingGraph = {
       nodes: [node],
       connections: [],
@@ -23,9 +23,9 @@ describe('NodeGraphEngine.topologicalSort', () => {
   });
 
   it('should sort nodes in dependency order', () => {
-    const node1 = createColorNode('primary-wheel', { x: 0, y: 0 });
-    const node2 = createColorNode('primary-slider', { x: 200, y: 0 });
-    const node3 = createColorNode('output', { x: 400, y: 0 });
+    const node1 = createColorGradingNode('primary-wheel', { x: 0, y: 0 });
+    const node2 = createColorGradingNode('primary-slider', { x: 200, y: 0 });
+    const node3 = createColorGradingNode('output', { x: 400, y: 0 });
 
     const graph: ColorGradingGraph = {
       nodes: [node3, node1, node2], // intentionally out of order
@@ -43,8 +43,8 @@ describe('NodeGraphEngine.topologicalSort', () => {
   });
 
   it('should detect cycles', () => {
-    const node1 = createColorNode('primary-wheel');
-    const node2 = createColorNode('primary-slider');
+    const node1 = createColorGradingNode('primary-wheel');
+    const node2 = createColorGradingNode('primary-slider');
 
     const graph: ColorGradingGraph = {
       nodes: [node1, node2],
@@ -68,7 +68,7 @@ describe('NodeGraphEngine.execute', () => {
   });
 
   it('should execute single primary-wheel node', () => {
-    const node = createColorNode('primary-wheel');
+    const node = createColorGradingNode('primary-wheel');
     (node.params as any).lift.r = 0.5;
 
     const graph: ColorGradingGraph = {
@@ -84,8 +84,8 @@ describe('NodeGraphEngine.execute', () => {
   });
 
   it('should chain multiple nodes', () => {
-    const node1 = createColorNode('primary-wheel');
-    const node2 = createColorNode('primary-slider');
+    const node1 = createColorGradingNode('primary-wheel');
+    const node2 = createColorGradingNode('primary-slider');
 
     const graph: ColorGradingGraph = {
       nodes: [node1, node2],
@@ -100,7 +100,7 @@ describe('NodeGraphEngine.execute', () => {
   });
 
   it('should skip disabled nodes', () => {
-    const node = createColorNode('primary-wheel');
+    const node = createColorGradingNode('primary-wheel');
     node.enabled = false;
 
     const graph: ColorGradingGraph = {
@@ -116,7 +116,7 @@ describe('NodeGraphEngine.execute', () => {
 
 describe('NodeGraphEngine.validateGraph', () => {
   it('should validate correct graph', () => {
-    const node = createColorNode('primary-wheel');
+    const node = createColorGradingNode('primary-wheel');
     const graph: ColorGradingGraph = {
       nodes: [node],
       connections: [],
@@ -139,7 +139,7 @@ describe('NodeGraphEngine.validateGraph', () => {
   });
 
   it('should detect duplicate node IDs', () => {
-    const node = createColorNode('primary-wheel');
+    const node = createColorGradingNode('primary-wheel');
     const graph: ColorGradingGraph = {
       nodes: [node, { ...node }], // same ID
       connections: [],

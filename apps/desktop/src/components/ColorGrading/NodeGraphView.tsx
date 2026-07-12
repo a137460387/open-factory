@@ -1,15 +1,15 @@
 import React, { useCallback } from 'react';
-import type { ColorGradingGraph, ColorNode, ColorNodeType } from '@open-factory/editor-core';
-import { createColorNode } from '@open-factory/editor-core';
+import type { ColorGradingGraph, ColorGradingNode, ColorGradingNodeType } from '@open-factory/editor-core';
+import { createColorGradingNode } from '@open-factory/editor-core';
 
 interface NodeGraphViewProps {
   graph: ColorGradingGraph;
-  onAddNode: (node: ColorNode) => void;
+  onAddNode: (node: ColorGradingNode) => void;
   onRemoveNode: (nodeId: string) => void;
   onSelectNode: (nodeId: string | null) => void;
 }
 
-const NODE_COLORS: Record<ColorNodeType, string> = {
+const NODE_COLORS: Record<ColorGradingNodeType, string> = {
   'primary-wheel': '#3b82f6',
   'primary-slider': '#10b981',
   'curves': '#f59e0b',
@@ -22,7 +22,7 @@ const NODE_COLORS: Record<ColorNodeType, string> = {
   'output': '#6b7280',
 };
 
-const NODE_LABELS: Record<ColorNodeType, string> = {
+const NODE_LABELS: Record<ColorGradingNodeType, string> = {
   'primary-wheel': '色轮',
   'primary-slider': '滑块',
   'curves': '曲线',
@@ -41,8 +41,8 @@ export const NodeGraphView: React.FC<NodeGraphViewProps> = ({
   onRemoveNode,
   onSelectNode,
 }) => {
-  const handleAddNode = useCallback((type: ColorNodeType) => {
-    const node = createColorNode(type, { x: 100 + graph.nodes.length * 150, y: 100 });
+  const handleAddNode = useCallback((type: ColorGradingNodeType) => {
+    const node = createColorGradingNode(type, { x: 100 + graph.nodes.length * 150, y: 100 });
     onAddNode(node);
   }, [graph.nodes.length, onAddNode]);
 

@@ -1,4 +1,4 @@
-import type { ColorGradingGraph, ColorNode, ColorNodeParams } from './types';
+import type { ColorGradingGraph, ColorGradingNode, ColorGradingNodeParams } from './types';
 
 /** Node execution result */
 export interface NodeExecutionResult {
@@ -21,7 +21,7 @@ export class NodeGraphEngine {
    * Topological sort of nodes using Kahn's algorithm.
    * @throws if a cycle is detected
    */
-  static topologicalSort(graph: ColorGradingGraph): ColorNode[] {
+  static topologicalSort(graph: ColorGradingGraph): ColorGradingNode[] {
     const { nodes, connections } = graph;
     if (nodes.length === 0) return [];
 
@@ -49,7 +49,7 @@ export class NodeGraphEngine {
       if (degree === 0) queue.push(id);
     }
 
-    const sorted: ColorNode[] = [];
+    const sorted: ColorGradingNode[] = [];
     while (queue.length > 0) {
       const id = queue.shift()!;
       sorted.push(nodeMap.get(id)!);
@@ -105,7 +105,7 @@ export class NodeGraphEngine {
    * Execute a single node.
    */
   private static executeNode(
-    node: ColorNode,
+    node: ColorGradingNode,
     _previousResults: NodeExecutionResult[]
   ): NodeExecutionResult {
     switch (node.type) {
@@ -118,7 +118,7 @@ export class NodeGraphEngine {
     }
   }
 
-  private static executePrimaryWheel(node: ColorNode): NodeExecutionResult {
+  private static executePrimaryWheel(node: ColorGradingNode): NodeExecutionResult {
     const p = node.params as any;
     const prefix = `cg_${node.id.replace(/-/g, '_')}`;
 
@@ -137,7 +137,7 @@ export class NodeGraphEngine {
     };
   }
 
-  private static executePrimarySlider(node: ColorNode): NodeExecutionResult {
+  private static executePrimarySlider(node: ColorGradingNode): NodeExecutionResult {
     const p = node.params as any;
     const prefix = `cg_${node.id.replace(/-/g, '_')}`;
 

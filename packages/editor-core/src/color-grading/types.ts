@@ -1,5 +1,5 @@
 /** 调色节点类型 */
-export type ColorNodeType =
+export type ColorGradingNodeType =
   | 'primary-wheel'
   | 'primary-slider'
   | 'curves'
@@ -34,24 +34,24 @@ export interface PrimarySliderParams {
 }
 
 /** 节点参数联合类型 */
-export type ColorNodeParams =
+export type ColorGradingNodeParams =
   | PrimaryWheelParams
   | PrimarySliderParams
   | Record<string, unknown>;
 
 /** 调色节点 */
-export interface ColorNode {
+export interface ColorGradingNode {
   id: string;
-  type: ColorNodeType;
+  type: ColorGradingNodeType;
   enabled: boolean;
-  params: ColorNodeParams;
+  params: ColorGradingNodeParams;
   inputs: string[];
   output: string | null;
   position: { x: number; y: number };
 }
 
 /** 节点连接 */
-export interface ColorConnection {
+export interface ColorGradingConnection {
   id: string;
   fromNodeId: string;
   fromOutput: string;
@@ -61,8 +61,8 @@ export interface ColorConnection {
 
 /** 节点图 */
 export interface ColorGradingGraph {
-  nodes: ColorNode[];
-  connections: ColorConnection[];
+  nodes: ColorGradingNode[];
+  connections: ColorGradingConnection[];
   activeNodeId: string | null;
 }
 
@@ -102,12 +102,12 @@ export function createEmptyColorGradingGraph(): ColorGradingGraph {
 }
 
 /** 创建调色节点 */
-export function createColorNode(
-  type: ColorNodeType,
+export function createColorGradingNode(
+  type: ColorGradingNodeType,
   position: { x: number; y: number } = { x: 0, y: 0 }
-): ColorNode {
+): ColorGradingNode {
   const id = `color-node-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  let params: ColorNodeParams;
+  let params: ColorGradingNodeParams;
 
   switch (type) {
     case 'primary-wheel':
@@ -191,7 +191,7 @@ export function normalizeColorGradingGraph(
 
   return {
     nodes,
-    connections: connections as ColorConnection[],
+    connections: connections as ColorGradingConnection[],
     activeNodeId,
   };
 }
@@ -202,11 +202,11 @@ function isValidColorNode(node: unknown): boolean {
   return typeof n.id === 'string' && typeof n.type === 'string';
 }
 
-function normalizeColorNode(node: unknown): ColorNode {
+function normalizeColorNode(node: unknown): ColorGradingNode {
   const n = node as Record<string, unknown>;
-  const type = n.type as ColorNodeType;
+  const type = n.type as ColorGradingNodeType;
 
-  let params: ColorNodeParams;
+  let params: ColorGradingNodeParams;
   if (type === 'primary-wheel') {
     params = validatePrimaryWheelParams(
       (n.params as PrimaryWheelParams) ?? createDefaultPrimaryWheelParams()

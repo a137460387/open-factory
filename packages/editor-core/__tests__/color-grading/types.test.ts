@@ -3,7 +3,7 @@ import {
   createDefaultPrimaryWheelParams,
   createDefaultPrimarySliderParams,
   createEmptyColorGradingGraph,
-  createColorNode,
+  createColorGradingNode,
   validatePrimaryWheelParams,
   validatePrimarySliderParams,
   normalizeColorGradingGraph,
@@ -44,9 +44,9 @@ describe('createEmptyColorGradingGraph', () => {
   });
 });
 
-describe('createColorNode', () => {
+describe('createColorGradingNode', () => {
   it('should create primary-wheel node with default params', () => {
-    const node = createColorNode('primary-wheel');
+    const node = createColorGradingNode('primary-wheel');
     expect(node.type).toBe('primary-wheel');
     expect(node.enabled).toBe(true);
     expect(node.params).toEqual(createDefaultPrimaryWheelParams());
@@ -54,13 +54,13 @@ describe('createColorNode', () => {
   });
 
   it('should create primary-slider node with default params', () => {
-    const node = createColorNode('primary-slider');
+    const node = createColorGradingNode('primary-slider');
     expect(node.type).toBe('primary-slider');
     expect(node.params).toEqual(createDefaultPrimarySliderParams());
   });
 
   it('should set custom position', () => {
-    const node = createColorNode('primary-wheel', { x: 100, y: 200 });
+    const node = createColorGradingNode('primary-wheel', { x: 100, y: 200 });
     expect(node.position).toEqual({ x: 100, y: 200 });
   });
 });
