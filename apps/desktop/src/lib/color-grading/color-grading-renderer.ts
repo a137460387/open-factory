@@ -95,12 +95,26 @@ export class ColorGradingRenderer {
       for (const [name, value] of Object.entries(result.uniforms)) {
         const loc = gl.getUniformLocation(this.program!, name);
         if (loc === null) continue;
-        if (Array.isArray(value)) {
-          if (value.length === 4) gl.uniform4fv(loc, value);
-          else if (value.length === 3) gl.uniform3fv(loc, value);
-          else if (value.length === 2) gl.uniform2fv(loc, value);
-        } else {
-          gl.uniform1f(loc, value);
+
+        // Unwrap structured descriptors (e.g. { type: 'lut', value: ... })
+        let v: unknown = value;
+        if (v !== null && typeof v === 'object' && !Array.isArray(v) && 'value' in v && !('buffer' in v)) {
+          v = (v as { value: unknown }).value;
+        }
+        if (v === null || v === undefined) continue;
+
+        if (v instanceof Float32Array) {
+          if (v.length === 4) gl.uniform4fv(loc, Array.from(v));
+          else if (v.length === 3) gl.uniform3fv(loc, Array.from(v));
+          else if (v.length === 2) gl.uniform2fv(loc, Array.from(v));
+          else if (v.length >= 1) gl.uniform1f(loc, v[0]);
+        } else if (Array.isArray(v)) {
+          if (v.length === 4) gl.uniform4fv(loc, v);
+          else if (v.length === 3) gl.uniform3fv(loc, v);
+          else if (v.length === 2) gl.uniform2fv(loc, v);
+          else if (v.length === 1) gl.uniform1f(loc, v[0]);
+        } else if (typeof v === 'number') {
+          gl.uniform1f(loc, v);
         }
       }
 

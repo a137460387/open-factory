@@ -38,7 +38,7 @@ import {
   type Transform
 } from '@open-factory/editor-core';
 
-import type { ColorGradingGraph } from '@open-factory/editor-core';
+import type { ColorGradingGraph, UniformValue } from '@open-factory/editor-core';
 
 import { zhCN } from '../../i18n/strings';
 import { ColorGradingRenderer } from '../color-grading/color-grading-renderer';
@@ -890,8 +890,8 @@ function colorPipelineIndex(value: ProjectColorPipeline | undefined): number {
   }
 }
 
-function buildPreviewEffectParams(effects: Effect[] | undefined, disabledEffectTypes: EffectType[] = [], colorGradingGraph?: ColorGradingGraph): { blur: number; grain: number; vignette: number; chromatic: number; sharpen: number; motionX: number; motionY: number; motionSamples: number; motionJitter: number; colorGradingUniforms?: Record<string, number | number[]> } {
-  const params: { blur: number; grain: number; vignette: number; chromatic: number; sharpen: number; motionX: number; motionY: number; motionSamples: number; motionJitter: number; colorGradingUniforms?: Record<string, number | number[]> } = { blur: 0, grain: 0, vignette: 0, chromatic: 0, sharpen: 0, motionX: 0, motionY: 0, motionSamples: 0, motionJitter: 0 };
+function buildPreviewEffectParams(effects: Effect[] | undefined, disabledEffectTypes: EffectType[] = [], colorGradingGraph?: ColorGradingGraph): { blur: number; grain: number; vignette: number; chromatic: number; sharpen: number; motionX: number; motionY: number; motionSamples: number; motionJitter: number; colorGradingUniforms?: Record<string, UniformValue> } {
+  const params: { blur: number; grain: number; vignette: number; chromatic: number; sharpen: number; motionX: number; motionY: number; motionSamples: number; motionJitter: number; colorGradingUniforms?: Record<string, UniformValue> } = { blur: 0, grain: 0, vignette: 0, chromatic: 0, sharpen: 0, motionX: 0, motionY: 0, motionSamples: 0, motionJitter: 0 };
   const disabled = new Set(disabledEffectTypes);
   for (const effect of effects ?? []) {
     if (!effect.enabled || disabled.has(effect.type)) {
