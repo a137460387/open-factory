@@ -188,6 +188,7 @@ export * from './audio/multicam-audio-sync';
 export * from './audio/mixer-types';
 export * from './audio/effect-chain';
 export * from './audio/audio-mix-presets';
+export * from './audio/automation-evaluator';
 export * from './export/export-preset-diff';
 export * from './export/preset-compatibility';
 export * from './annotation-sync';

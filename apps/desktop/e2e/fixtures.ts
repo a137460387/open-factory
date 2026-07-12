@@ -6,7 +6,9 @@ import {
   InspectorPage,
   ExportDialogPage,
   SettingsDialogPage,
-  AIPanelPage
+  AIPanelPage,
+  ColorGradingPage,
+  AudioMixerPage
 } from './pages';
 
 /** 自定义 fixtures 类型 */
@@ -18,6 +20,8 @@ type PageFixtures = {
   exportDialog: ExportDialogPage;
   settingsDialog: SettingsDialogPage;
   aiPanel: AIPanelPage;
+  colorGradingPage: ColorGradingPage;
+  audioMixerPage: AudioMixerPage;
 };
 
 /**
@@ -55,6 +59,12 @@ export const test = base.extend<PageFixtures>({
   },
   aiPanel: async ({ page }, use) => {
     await use(new AIPanelPage(page));
+  },
+  colorGradingPage: async ({ page }, use) => {
+    await use(new ColorGradingPage(page));
+  },
+  audioMixerPage: async ({ page }, use) => {
+    await use(new AudioMixerPage(page));
   }
 });
 
