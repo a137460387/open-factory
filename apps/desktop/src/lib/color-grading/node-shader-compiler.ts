@@ -100,11 +100,30 @@ vec3 rgb2hsl(vec3 c) {
       uniforms.push(`uniform vec3 ${prefix}_adjustments2;`);
       uniforms.push(`uniform float ${prefix}_matteClean;`);
       calls.push(`color = applyHSLQualifier(color, rgb2hsl(color.rgb));`);
+    } else if (node.type === 'curves') {
+      // 曲线节点 - 256x1 纹理查找表
+      uniforms.push(`uniform sampler2D u_curvesLUT_${node.id};`);
+      functions.push(`
+vec4 applyCurves_${node.id}(vec4 color) {
+  float r = texture2D(u_curvesLUT_${node.id}, vec2(color.r, 0.5)).r;
+  float g = texture2D(u_curvesLUT_${node.id}, vec2(color.g, 0.5)).g;
+  float b = texture2D(u_curvesLUT_${node.id}, vec2(color.b, 0.5)).b;
+  float m = texture2D(u_curvesLUT_${node.id}, vec2(
+    dot(color.rgb, vec3(0.2126, 0.7152, 0.0722)), 0.5
+  )).a;
+  return vec4(r + m - 0.5, g + m - 0.5, b + m - 0.5, color.a);
+}`.trim());
+      calls.push(`color = applyCurves_${node.id}(color);`);
     } else if (node.type === 'lut-apply') {
       // LUT 3D 纹理采样
-      uniforms.push(`uniform sampler3D ${prefix}_lutTexture;`);
-      uniforms.push(`uniform float ${prefix}_intensity;`);
-      calls.push(`color = mix(color, texture(${prefix}_lutTexture, color.rgb), ${prefix}_intensity);`);
+      uniforms.push(`uniform sampler3D u_lut3D_${node.id};`);
+      uniforms.push(`uniform float u_lutIntensity_${node.id};`);
+      functions.push(`
+vec4 applyLUT_${node.id}(vec4 color) {
+  vec3 lutColor = texture3D(u_lut3D_${node.id}, color.rgb).rgb;
+  return vec4(mix(color.rgb, lutColor, u_lutIntensity_${node.id}), color.a);
+}`.trim());
+      calls.push(`color = applyLUT_${node.id}(color);`);
     } else if (node.type === 'window-mask') {
       // 窗口遮罩着色器
       const params = node.params as WindowMaskParams;
