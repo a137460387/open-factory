@@ -25,10 +25,13 @@ import {
   buildStemExportPlans,
   buildStemOutputFileName,
   buildColorGradingFilters,
+  buildAudioEffectChainFilters,
+  buildMixerChannelAudioFilters,
   type Clip,
   type ColorGradingGraph,
   type Project
 } from '../src';
+import type { AudioEffectSlot } from '../src/audio/mixer-types';
 import { makeAdjustmentClip, makeAudioClip, makeCreditsClip, makeMotionGraphicClip, makeProject, makeSubtitleClip, makeTextClip, makeTimeline, makeVideoClip } from './test-utils';
 
 function makeAudioVisualizationProject(): Project {
@@ -4226,5 +4229,62 @@ describe('buildColorGradingFilters', () => {
 
     const filters = buildColorGradingFilters(graph);
     expect(filters).toEqual([]);
+  });
+});
+
+describe('buildAudioEffectChainFilters', () => {
+  it('should return empty for no effects', () => {
+    expect(buildAudioEffectChainFilters([])).toEqual([]);
+  });
+
+  it('should build compressor filter', () => {
+    const effects: AudioEffectSlot[] = [{
+      id: 'test',
+      effectType: 'compressor',
+      enabled: true,
+      params: { threshold: -20, ratio: 4, attack: 10, release: 100, makeup: 0 },
+      wetDry: 1,
+      order: 0,
+    }];
+    const filters = buildAudioEffectChainFilters(effects);
+    expect(filters.length).toBe(1);
+    expect(filters[0]).toContain('acompressor');
+  });
+
+  it('should build multiple effect filters', () => {
+    const effects: AudioEffectSlot[] = [
+      { id: 'eq', effectType: 'eq-4band', enabled: true, params: { lowFreq: 80, lowGain: -3 }, wetDry: 1, order: 0 },
+      { id: 'comp', effectType: 'compressor', enabled: true, params: { threshold: -20, ratio: 4 }, wetDry: 1, order: 1 },
+    ];
+    const filters = buildAudioEffectChainFilters(effects);
+    expect(filters.length).toBe(2);
+  });
+
+  it('should skip disabled effects', () => {
+    const effects: AudioEffectSlot[] = [
+      { id: 'test', effectType: 'compressor', enabled: false, params: { threshold: -20 }, wetDry: 1, order: 0 },
+    ];
+    const filters = buildAudioEffectChainFilters(effects);
+    expect(filters).toEqual([]);
+  });
+});
+
+describe('buildMixerChannelAudioFilters', () => {
+  it('should include volume filter', () => {
+    const filters = buildMixerChannelAudioFilters(-6, 0, []);
+    expect(filters.some(f => f.includes('volume'))).toBe(true);
+  });
+
+  it('should include pan filter', () => {
+    const filters = buildMixerChannelAudioFilters(0, 50, []);
+    expect(filters.some(f => f.includes('stereopan'))).toBe(true);
+  });
+
+  it('should combine volume, pan, and effects', () => {
+    const effects: AudioEffectSlot[] = [
+      { id: 'test', effectType: 'limiter', enabled: true, params: { threshold: -1, release: 100 }, wetDry: 1, order: 0 },
+    ];
+    const filters = buildMixerChannelAudioFilters(-3, -25, effects);
+    expect(filters.length).toBe(3); // volume + pan + limiter
   });
 });

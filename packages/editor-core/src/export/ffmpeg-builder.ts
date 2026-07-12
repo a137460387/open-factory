@@ -42,6 +42,8 @@ import {
   type ClipPrivacyRedaction
 } from '../model';
 import { buildAudioRestorationFilterChain, normalizeAudioRestoration } from '../audio-restoration';
+import { EffectChainEngine } from '../audio/effect-chain';
+import type { AudioEffectSlot } from '../audio/mixer-types';
 import {
   isDefaultColorCurves,
   isNeutralThreeWayColor,
@@ -3740,6 +3742,48 @@ function buildSoftSubtitleCodec(format: ExportSubtitleFormat, settings: ExportSe
 
 function normalizeSubtitleFormat(format: ExportSettings['subtitleFormat']): ExportSubtitleFormat {
   return format === 'vtt' || format === 'ass' || format === 'ssa' ? format : 'srt';
+}
+
+/**
+ * 构建音频效果链的 FFmpeg 滤镜
+ */
+export function buildAudioEffectChainFilters(effects: AudioEffectSlot[]): string[] {
+  if (effects.length === 0) return [];
+
+  const ffmpegFilters = EffectChainEngine.toFfmpegFilters(effects);
+  return ffmpegFilters.map(f => {
+    const params = Object.entries(f.params)
+      .map(([k, v]) => `${k}=${v}`)
+      .join(':');
+    return params ? `${f.filterName}=${params}` : f.filterName;
+  });
+}
+
+/**
+ * 构建混音器通道的完整音频滤镜链
+ */
+export function buildMixerChannelAudioFilters(
+  channelVolume: number,
+  channelPan: number,
+  effects: AudioEffectSlot[]
+): string[] {
+  const filters: string[] = [];
+
+  // 音量
+  if (channelVolume !== 0) {
+    filters.push(`volume=${channelVolume}dB`);
+  }
+
+  // 声像
+  if (channelPan !== 0) {
+    const panValue = channelPan / 100; // -1 to 1
+    filters.push(`stereopan=stereo=${panValue < 0 ? `l=${1 + panValue}+${Math.abs(panValue)}*c0|r=${Math.abs(panValue)}*c0+${1 + panValue}*c1` : `l=${1 - panValue}*c0+${panValue}*c1|r=${panValue}*c0+${1 - panValue}*c1`}`);
+  }
+
+  // 效果链
+  filters.push(...buildAudioEffectChainFilters(effects));
+
+  return filters;
 }
 
 function buildAudioFilters(
