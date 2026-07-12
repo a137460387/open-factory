@@ -43,7 +43,7 @@ import {
 } from '../model';
 import { buildAudioRestorationFilterChain, normalizeAudioRestoration } from '../audio-restoration';
 import { EffectChainEngine } from '../audio/effect-chain';
-import type { AudioEffectSlot } from '../audio/mixer-types';
+import type { AudioEffectSlot, MixerState } from '../audio/mixer-types';
 import {
   isDefaultColorCurves,
   isNeutralThreeWayColor,
@@ -283,14 +283,14 @@ export function buildExportProjectFromProject(project: Project, options: BuildEx
     settings,
     masterVolume: normalizeMasterVolume(exportSourceProject.masterVolume),
     metadata: mergeExportMetadata(collectExportMediaMetadata(exportSourceProject), options.metadata),
-    timeline: buildExportTimeline(primaryTimeline, mediaById, options),
+    timeline: buildExportTimeline(primaryTimeline, mediaById, options, exportSourceProject.mixerState),
     sequences: getProjectSequences(exportSourceProject)
       .filter((sequence) => sequence.id !== 'sequence-main')
-      .map((sequence) => ({ id: sequence.id, name: sequence.name, timeline: buildExportTimeline(sequence.timeline, mediaById, options) }))
+      .map((sequence) => ({ id: sequence.id, name: sequence.name, timeline: buildExportTimeline(sequence.timeline, mediaById, options, exportSourceProject.mixerState) }))
   };
 }
 
-function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project['media'][number]>, options: BuildExportProjectOptions): ExportTimeline {
+function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project['media'][number]>, options: BuildExportProjectOptions, mixerState?: MixerState): ExportTimeline {
   return {
     duration: getTimelinePlaybackDuration(timeline),
     transitions: (timeline.transitions ?? []).map(
@@ -363,6 +363,7 @@ function buildExportTimeline(timeline: Timeline, mediaById: Map<string, Project[
                 : null,
             sequenceFrameRate: normalizeSequenceFrameRate(clip.sequenceFrameRate),
             effects: cloneEffects(clip.effects) ?? [],
+            effectsChain: mixerState?.channels?.find(c => c.trackId === track.id)?.effectsChain,
             blendMode: normalizeClipBlendMode(clip.blendMode),
             keyframes: buildExportClipKeyframes(clip.keyframes, clip.duration, trackVolume),
             kenBurns: clip.type === 'image' ? Boolean(clip.kenBurns) : false,
@@ -3914,10 +3915,11 @@ function buildAudioFilters(
     const denoiseFilters = buildAudioDenoiseFilters(clip, capabilities, warnings);
     const restorationFilters = buildAudioRestorationFilters(clip);
     const trackProcessingFilters = buildTrackAudioFilters(clip);
+    const effectsChainFilters = clip.effectsChain?.length ? buildAudioEffectChainFilters(clip.effectsChain) : [];
     filters.push(
       `[${inputIndex}:a:0]atrim=start=0:duration=${formatFfmpegSeconds(
         getExportClipSourceDuration(clip)
-      )},asetpts=PTS-STARTPTS${pitchAndReverseFilters.length > 0 ? `,${pitchAndReverseFilters.join(',')}` : ''}${speedFilters.length > 0 ? `,${speedFilters.join(',')}` : ''}${fadeFilters}${restorationFilters}${denoiseFilters}${trackProcessingFilters},adelay=${delay}:all=1,${buildVolumeFilter(
+      )},asetpts=PTS-STARTPTS${pitchAndReverseFilters.length > 0 ? `,${pitchAndReverseFilters.join(',')}` : ''}${speedFilters.length > 0 ? `,${speedFilters.join(',')}` : ''}${fadeFilters}${restorationFilters}${denoiseFilters}${trackProcessingFilters}${effectsChainFilters.length > 0 ? `,${effectsChainFilters.join(',')}` : ''},adelay=${delay}:all=1,${buildVolumeFilter(
         clip
       )}${buildAudioChannelRoutingFilter(clip)}${buildPanFilter(clip)}${buildSpatialAudioFilter(clip, settings)},aformat=channel_layouts=stereo,aresample=${settings.sampleRate}[${label}]`
     );

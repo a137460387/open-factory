@@ -4,6 +4,7 @@ import type { InputColorSpace } from '../color-log-luts';
 import type { ClipBlendMode } from '../blend-modes';
 import type { ProjectColorPipeline } from '../color-pipeline';
 import type { Effect } from '../effects';
+import type { AudioEffectSlot } from '../audio/mixer-types';
 import type { AudioVisualizationThemeDefinition } from '../audio-visualization-themes';
 import type { ExportColorManagementSettings, MediaColorProfile, ProjectWorkingColorSpace } from '../color-management';
 import type { PostExportQualityAssuranceResult } from './post-export-quality';
@@ -421,6 +422,7 @@ export interface ExportClip {
   imageSequence: ExportImageSequence | null;
   sequenceFrameRate?: number;
   effects: Effect[];
+  effectsChain?: AudioEffectSlot[];
   blendMode: ClipBlendMode;
   keyframes: ExportClipKeyframes | null;
   kenBurns: boolean;

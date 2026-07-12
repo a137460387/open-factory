@@ -36,7 +36,8 @@ import {
   type ColorGradingGraph,
   type Project
 } from '../src';
-import type { AudioEffectSlot } from '../src/audio/mixer-types';
+import type { AudioEffectSlot, MixerState } from '../src/audio/mixer-types';
+import { createDefaultMixerState, createMixerChannel } from '../src/audio/mixer-types';
 import { makeAdjustmentClip, makeAudioClip, makeCreditsClip, makeMotionGraphicClip, makeProject, makeSubtitleClip, makeTextClip, makeTimeline, makeVideoClip } from './test-utils';
 
 function makeAudioVisualizationProject(): Project {
@@ -4577,5 +4578,114 @@ describe('buildMixerChannelAudioFilters', () => {
     ];
     const filters = buildMixerChannelAudioFilters(-3, -25, effects);
     expect(filters.length).toBe(3); // volume + pan + limiter
+  });
+});
+
+describe('effects chain export integration', () => {
+  it('passes effectsChain from mixerState to ExportClip', () => {
+    const project = makeProject();
+    const effects: AudioEffectSlot[] = [
+      { id: 'fx-1', effectType: 'compressor', enabled: true, params: { threshold: -20, ratio: 4, attack: 10, release: 100, makeup: 0 }, wetDry: 1, order: 0 },
+    ];
+    project.mixerState = {
+      ...createDefaultMixerState(),
+      channels: [
+        { ...createMixerChannel('track-video', 'Video 1'), effectsChain: effects },
+      ],
+    };
+    const exportProject = buildExportProjectFromProject(project, { outputPath: 'out.mp4' });
+    const clip = exportProject.timeline.tracks[0].clips[0];
+    expect(clip.effectsChain).toBeDefined();
+    expect(clip.effectsChain).toHaveLength(1);
+    expect(clip.effectsChain![0].effectType).toBe('compressor');
+  });
+
+  it('sets effectsChain to undefined when mixerState has no matching channel', () => {
+    const project = makeProject();
+    project.mixerState = {
+      ...createDefaultMixerState(),
+      channels: [
+        { ...createMixerChannel('track-other', 'Other'), effectsChain: [
+          { id: 'fx-1', effectType: 'limiter', enabled: true, params: { threshold: -1, release: 100 }, wetDry: 1, order: 0 },
+        ] },
+      ],
+    };
+    const exportProject = buildExportProjectFromProject(project, { outputPath: 'out.mp4' });
+    const clip = exportProject.timeline.tracks[0].clips[0];
+    expect(clip.effectsChain).toBeUndefined();
+  });
+
+  it('sets effectsChain to undefined when mixerState is absent', () => {
+    const project = makeProject();
+    delete project.mixerState;
+    const exportProject = buildExportProjectFromProject(project, { outputPath: 'out.mp4' });
+    const clip = exportProject.timeline.tracks[0].clips[0];
+    expect(clip.effectsChain).toBeUndefined();
+  });
+
+  it('includes effects chain filters in FFmpeg filter complex', () => {
+    const project = makeProject();
+    project.mixerState = {
+      ...createDefaultMixerState(),
+      channels: [
+        { ...createMixerChannel('track-video', 'Video 1'), effectsChain: [
+          { id: 'fx-comp', effectType: 'compressor', enabled: true, params: { threshold: -20, ratio: 4, attack: 10, release: 100, makeup: 0 }, wetDry: 1, order: 0 },
+        ] },
+      ],
+    };
+    const exportProject = buildExportProjectFromProject(project, { outputPath: 'out.mp4' });
+    const plan = buildFfmpegExportPlan(exportProject);
+    expect(plan.filterComplex).toContain('acompressor');
+  });
+
+  it('includes multiple effects chain filters in correct order', () => {
+    const project = makeProject();
+    project.mixerState = {
+      ...createDefaultMixerState(),
+      channels: [
+        { ...createMixerChannel('track-video', 'Video 1'), effectsChain: [
+          { id: 'fx-eq', effectType: 'eq-4band', enabled: true, params: { lowFreq: 80, lowGain: 3, lowMidFreq: 500, lowMidGain: 0, highMidFreq: 2000, highMidGain: 0, highFreq: 8000, highGain: 0 }, wetDry: 1, order: 0 },
+          { id: 'fx-comp', effectType: 'compressor', enabled: true, params: { threshold: -20, ratio: 4, attack: 10, release: 100, makeup: 0 }, wetDry: 1, order: 1 },
+        ] },
+      ],
+    };
+    const exportProject = buildExportProjectFromProject(project, { outputPath: 'out.mp4' });
+    const plan = buildFfmpegExportPlan(exportProject);
+    expect(plan.filterComplex).toContain('equalizer');
+    expect(plan.filterComplex).toContain('acompressor');
+    // EQ should come before compressor in the filter chain
+    const eqPos = plan.filterComplex.indexOf('equalizer');
+    const compPos = plan.filterComplex.indexOf('acompressor');
+    expect(eqPos).toBeLessThan(compPos);
+  });
+
+  it('skips disabled effects in the chain', () => {
+    const project = makeProject();
+    project.mixerState = {
+      ...createDefaultMixerState(),
+      channels: [
+        { ...createMixerChannel('track-video', 'Video 1'), effectsChain: [
+          { id: 'fx-off', effectType: 'compressor', enabled: false, params: { threshold: -20, ratio: 4, attack: 10, release: 100, makeup: 0 }, wetDry: 1, order: 0 },
+        ] },
+      ],
+    };
+    const exportProject = buildExportProjectFromProject(project, { outputPath: 'out.mp4' });
+    const plan = buildFfmpegExportPlan(exportProject);
+    // Disabled effects should not appear in the filter complex
+    expect(plan.filterComplex).not.toContain('acompressor');
+  });
+
+  it('does not include effects chain filters when effectsChain is empty', () => {
+    const project = makeProject();
+    project.mixerState = {
+      ...createDefaultMixerState(),
+      channels: [
+        { ...createMixerChannel('track-video', 'Video 1'), effectsChain: [] },
+      ],
+    };
+    const exportProject = buildExportProjectFromProject(project, { outputPath: 'out.mp4' });
+    // Should not throw and plan should be valid
+    const plan = buildFfmpegExportPlan(exportProject);
+    expect(plan.filterComplex).toBeTruthy();
   });
 });
