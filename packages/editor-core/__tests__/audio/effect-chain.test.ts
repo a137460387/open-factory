@@ -288,15 +288,17 @@ describe('EffectChainEngine.toFfmpegFilters', () => {
     expect(filters[0].params.volume).toBe('6dB');
   });
 
-  it('generates anull for unsupported effect types', () => {
+  it('generates chorus filter for chorus', () => {
     const chain = [makeSlot({
-      effectType: 'chorus' as AudioEffectType,
+      effectType: 'chorus',
       params: {},
       order: 1,
     })];
     const filters = EffectChainEngine.toFfmpegFilters(chain);
-    expect(filters[0].filterName).toBe('anull');
-    expect(filters[0].params).toEqual({});
+    expect(filters).toHaveLength(1);
+    expect(filters[0].filterName).toBe('chorus');
+    expect(filters[0].params.in_gain).toBe(0.5);
+    expect(filters[0].params.delays).toBe('50|60');
   });
 
   it('processes multiple effects in order', () => {
@@ -310,6 +312,164 @@ describe('EffectChainEngine.toFfmpegFilters', () => {
     expect(filters[0].filterName).toBe('highpass');
     expect(filters[1].filterName).toBe('acompressor');
     expect(filters[2].filterName).toBe('volume');
+  });
+
+  it('generates eq-8band with 8 equalizer filters', () => {
+    const chain = [makeSlot({
+      effectType: 'eq-8band',
+      params: { band1: 3, band2: -2, band5: 6 },
+      order: 1,
+    })];
+    const filters = EffectChainEngine.toFfmpegFilters(chain);
+    expect(filters).toHaveLength(8);
+    for (const f of filters) {
+      expect(f.filterName).toBe('equalizer');
+      expect(f.params.width_type).toBe('h');
+    }
+    expect(filters[0].params.f).toBe(32);
+    expect(filters[0].params.g).toBe(3);
+    expect(filters[1].params.f).toBe(64);
+    expect(filters[1].params.g).toBe(-2);
+    expect(filters[4].params.f).toBe(500);
+    expect(filters[4].params.g).toBe(6);
+    // bands with no explicit param default to 0
+    expect(filters[2].params.g).toBe(0);
+  });
+
+  it('generates acompressor for expander with ratio < 1', () => {
+    const chain = [makeSlot({
+      effectType: 'expander',
+      params: { threshold: -30, ratio: 0.5, attack: 5, release: 200 },
+      order: 1,
+    })];
+    const filters = EffectChainEngine.toFfmpegFilters(chain);
+    expect(filters).toHaveLength(1);
+    expect(filters[0].filterName).toBe('acompressor');
+    expect(filters[0].params.threshold).toBe(-30);
+    expect(filters[0].params.ratio).toBe(0.5);
+    expect(filters[0].params.attack).toBe(5);
+    expect(filters[0].params.release).toBe(200);
+  });
+
+  it('generates flanger filter for flanger', () => {
+    const chain = [makeSlot({
+      effectType: 'flanger',
+      params: { delay: 10, depth: 3, regen: 20, speed: 1 },
+      order: 1,
+    })];
+    const filters = EffectChainEngine.toFfmpegFilters(chain);
+    expect(filters).toHaveLength(1);
+    expect(filters[0].filterName).toBe('flanger');
+    expect(filters[0].params.delay).toBe(10);
+    expect(filters[0].params.depth).toBe(3);
+    expect(filters[0].params.regen).toBe(20);
+    expect(filters[0].params.speed).toBe(1);
+  });
+
+  it('generates aeval for distortion', () => {
+    const chain = [makeSlot({
+      effectType: 'distortion',
+      params: { gain: 5 },
+      order: 1,
+    })];
+    const filters = EffectChainEngine.toFfmpegFilters(chain);
+    expect(filters).toHaveLength(1);
+    expect(filters[0].filterName).toBe('aeval');
+    expect(filters[0].params.exprs).toBe('val(0)*clip(5, -1, 1)');
+    expect(filters[0].params.c).toBe('same');
+  });
+
+  it('generates equalizer + acompressor for de-esser', () => {
+    const chain = [makeSlot({
+      effectType: 'de-esser',
+      params: { threshold: -25, reduction: 12 },
+      order: 1,
+    })];
+    const filters = EffectChainEngine.toFfmpegFilters(chain);
+    expect(filters).toHaveLength(2);
+    expect(filters[0].filterName).toBe('equalizer');
+    expect(filters[0].params.f).toBe(6000);
+    expect(filters[0].params.g).toBe(-12);
+    expect(filters[1].filterName).toBe('acompressor');
+    expect(filters[1].params.threshold).toBe(-25);
+    expect(filters[1].params.ratio).toBe(4);
+  });
+
+  it('generates afftdn for noise-reduction', () => {
+    const chain = [makeSlot({
+      effectType: 'noise-reduction',
+      params: { reduction: -30 },
+      order: 1,
+    })];
+    const filters = EffectChainEngine.toFfmpegFilters(chain);
+    expect(filters).toHaveLength(1);
+    expect(filters[0].filterName).toBe('afftdn');
+    expect(filters[0].params.nf).toBe(-30);
+  });
+
+  it('generates asetrate + aresample for pitch-shift', () => {
+    const chain = [makeSlot({
+      effectType: 'pitch-shift',
+      params: { semitones: 2 },
+      order: 1,
+    })];
+    const filters = EffectChainEngine.toFfmpegFilters(chain);
+    expect(filters).toHaveLength(2);
+    expect(filters[0].filterName).toBe('asetrate');
+    expect(filters[1].filterName).toBe('aresample');
+    expect(filters[1].params.r).toBe(48000);
+    // ratio = 2^(2/12) ~= 1.12246
+    const expectedRatio = Math.pow(2, 2 / 12);
+    expect(filters[0].params.r).toBe(`${expectedRatio}*48000`);
+  });
+
+  it('generates stereotools for stereo-widener', () => {
+    const chain = [makeSlot({
+      effectType: 'stereo-widener',
+      params: { width: 1.5 },
+      order: 1,
+    })];
+    const filters = EffectChainEngine.toFfmpegFilters(chain);
+    expect(filters).toHaveLength(1);
+    expect(filters[0].filterName).toBe('stereotools');
+    expect(filters[0].params.mlev).toBe(1);
+    expect(filters[0].params.slev).toBe(1.5);
+  });
+
+  it('generates stereotools with ms mode for mid-side', () => {
+    const chain = [makeSlot({
+      effectType: 'mid-side',
+      params: {},
+      order: 1,
+    })];
+    const filters = EffectChainEngine.toFfmpegFilters(chain);
+    expect(filters).toHaveLength(1);
+    expect(filters[0].filterName).toBe('stereotools');
+    expect(filters[0].params.mode).toBe('ms');
+  });
+
+  it('generates aeval for phase-invert', () => {
+    const chain = [makeSlot({
+      effectType: 'phase-invert',
+      params: {},
+      order: 1,
+    })];
+    const filters = EffectChainEngine.toFfmpegFilters(chain);
+    expect(filters).toHaveLength(1);
+    expect(filters[0].filterName).toBe('aeval');
+    expect(filters[0].params.exprs).toBe('-val(0)');
+    expect(filters[0].params.c).toBe('same');
+  });
+
+  it('generates anull for truly unknown effect types', () => {
+    const chain = [makeSlot({
+      effectType: 'unknown-effect' as AudioEffectType,
+      params: {},
+      order: 1,
+    })];
+    const filters = EffectChainEngine.toFfmpegFilters(chain);
+    expect(filters[0].filterName).toBe('anull');
+    expect(filters[0].params).toEqual({});
   });
 
   it('validates params before generating filters (clamping)', () => {
