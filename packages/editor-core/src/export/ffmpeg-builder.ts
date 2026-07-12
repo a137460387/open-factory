@@ -42,12 +42,19 @@ import {
   type ClipPrivacyRedaction
 } from '../model';
 import { buildAudioRestorationFilterChain, normalizeAudioRestoration } from '../audio-restoration';
+import { EffectChainEngine } from '../audio/effect-chain';
+import type { AudioEffectSlot } from '../audio/mixer-types';
 import {
   isDefaultColorCurves,
   isNeutralThreeWayColor,
   normalizeThreeWayColor,
   serializeColorCurvesToCube,
+  PrimaryWheels,
+  PrimarySliders,
   type ColorWheelValue,
+  type ColorGradingGraph,
+  type PrimaryWheelParams,
+  type PrimarySliderParams,
   type ThreeWayColor
 } from '../color-grading';
 import { buildColorNodeGraphFilterPlan, detectColorNodeGraphCycle, normalizeColorNodeGraph } from '../color-node-graph';
@@ -2656,6 +2663,33 @@ function buildEffectFilters(effects: Effect[], fps = 30): string[] {
   });
 }
 
+/**
+ * 构建调色节点图的 FFmpeg 滤镜链
+ */
+export function buildColorGradingFilters(graph: ColorGradingGraph | undefined): string[] {
+  if (!graph || graph.nodes.length === 0) return [];
+
+  const filters: string[] = [];
+
+  // 按节点类型顺序处理：一级色轮 → 一级滑块 → 其他
+  const wheelNodes = graph.nodes.filter(n => n.type === 'primary-wheel' && n.enabled);
+  const sliderNodes = graph.nodes.filter(n => n.type === 'primary-slider' && n.enabled);
+
+  // 一级色轮
+  for (const node of wheelNodes) {
+    const filter = PrimaryWheels.toFfmpegFilter(node.params as PrimaryWheelParams);
+    if (filter) filters.push(filter);
+  }
+
+  // 一级滑块
+  for (const node of sliderNodes) {
+    const filter = PrimarySliders.toFfmpegFilter(node.params as PrimarySliderParams);
+    if (filter) filters.push(filter);
+  }
+
+  return filters;
+}
+
 interface AudioSpectrumExportItem {
   clipId: string;
   start: number;
@@ -3708,6 +3742,48 @@ function buildSoftSubtitleCodec(format: ExportSubtitleFormat, settings: ExportSe
 
 function normalizeSubtitleFormat(format: ExportSettings['subtitleFormat']): ExportSubtitleFormat {
   return format === 'vtt' || format === 'ass' || format === 'ssa' ? format : 'srt';
+}
+
+/**
+ * 构建音频效果链的 FFmpeg 滤镜
+ */
+export function buildAudioEffectChainFilters(effects: AudioEffectSlot[]): string[] {
+  if (effects.length === 0) return [];
+
+  const ffmpegFilters = EffectChainEngine.toFfmpegFilters(effects);
+  return ffmpegFilters.map(f => {
+    const params = Object.entries(f.params)
+      .map(([k, v]) => `${k}=${v}`)
+      .join(':');
+    return params ? `${f.filterName}=${params}` : f.filterName;
+  });
+}
+
+/**
+ * 构建混音器通道的完整音频滤镜链
+ */
+export function buildMixerChannelAudioFilters(
+  channelVolume: number,
+  channelPan: number,
+  effects: AudioEffectSlot[]
+): string[] {
+  const filters: string[] = [];
+
+  // 音量
+  if (channelVolume !== 0) {
+    filters.push(`volume=${channelVolume}dB`);
+  }
+
+  // 声像
+  if (channelPan !== 0) {
+    const panValue = channelPan / 100; // -1 to 1
+    filters.push(`stereopan=stereo=${panValue < 0 ? `l=${1 + panValue}+${Math.abs(panValue)}*c0|r=${Math.abs(panValue)}*c0+${1 + panValue}*c1` : `l=${1 - panValue}*c0+${panValue}*c1|r=${panValue}*c0+${1 - panValue}*c1`}`);
+  }
+
+  // 效果链
+  filters.push(...buildAudioEffectChainFilters(effects));
+
+  return filters;
 }
 
 function buildAudioFilters(

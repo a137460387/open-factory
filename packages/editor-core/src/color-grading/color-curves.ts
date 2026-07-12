@@ -1,4 +1,4 @@
-import { clamp, round } from './time';
+import { clamp, round } from '../time';
 
 export interface CurvePoint {
   x: number;

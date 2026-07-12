@@ -1,76 +1,49 @@
-## Task 2 完成报告
+## Task 2 Report: Node Graph Execution Engine
 
-### 状态
-DONE
+**Status**: COMPLETE
 
-### 提交记录
-- `4391ac0c` feat: implement multicam core algorithms (getActiveAngleAtTime, switch point management)
+**Commit**: `feat: add color grading node graph execution engine` (74670219)
 
-### 测试结果
+### Files Created/Modified
 
-```
-$ npx vitest run packages/editor-core/__tests__/multicam-clip.test.ts
+| File | Action |
+|------|--------|
+| `packages/editor-core/src/color-grading/node-graph-engine.ts` | Created |
+| `packages/editor-core/__tests__/color-grading/node-graph-engine.test.ts` | Created |
+| `packages/editor-core/src/color-grading/index.ts` | Modified (added barrel export) |
 
- ✓ packages/editor-core/__tests__/multicam-clip.test.ts (34 tests) 9ms
+### Implementation Summary
 
- Test Files  1 passed (1)
-      Tests  34 passed (34)
-   Duration  1.00s
-```
+**`NodeGraphEngine`** class with three public static methods:
 
-Function coverage for `multicam.ts`: 100%
+1. **`topologicalSort(graph)`** - Kahn's algorithm for topological sorting. Builds an adjacency list and in-degree map from connections, then processes nodes in dependency order. Throws `'Cycle detected'` if the graph contains cycles.
 
-Typecheck: 通过 (`tsc --noEmit`)
+2. **`execute(graph)`** - Executes the node graph:
+   - Filters out disabled nodes and their connections
+   - Topologically sorts enabled nodes
+   - Executes each node in order (primary-wheel and primary-slider types produce GLSL uniforms and fragment snippets)
+   - Merges all uniforms into `combinedUniforms`
+   - Returns `GraphExecutionResult` with per-node results and combined uniforms
 
-### 自我发现的问题
-- `addSwitchPoint` 的插入循环中比较运算符需使用 `>=` 而非 `>`，否则相同时间的替换逻辑无法命中。已修复。
-- `createMulticamClip([] , 'audio', 0)` 在空 angles 时会抛出 `syncReferenceAngle out of range` 而非预期的 `MulticamClip has no angles`，因此空数组测试改为手动构造 MulticamClip 对象。
+3. **`validateGraph(graph)`** - Validates graph structure:
+   - Detects duplicate node IDs
+   - Detects dangling connections (references to non-existent nodes)
+   - Detects self-connections
 
-### 覆盖的接口
-- `getActiveAngleAtTime(multicamClip: MulticamClip, time: number): MulticamClipAngle`
-- `addSwitchPoint(switchPoints: SwitchPoint[], switchPoint: SwitchPoint): SwitchPoint[]`
-- `deleteSwitchPoint(switchPoints: SwitchPoint[], index: number): SwitchPoint[]`
-- `updateSwitchPoint(switchPoints: SwitchPoint[], index: number, updates: Partial<SwitchPoint>): SwitchPoint[]`
+### Deviation from Brief
 
-### 改动的文件
-- `packages/editor-core/src/multicam.ts` -- 新增 4 个函数及类型导入
-- `packages/editor-core/__tests__/multicam-clip.test.ts` -- 新增 27 个测试用例
+- Test file placed at `packages/editor-core/__tests__/color-grading/node-graph-engine.test.ts` instead of `packages/editor-core/src/color-grading/__tests__/node-graph-engine.test.ts` because the vitest config only includes `__tests__/**/*.test.ts`.
+- Import paths in test file adjusted accordingly (`../../src/color-grading/...` instead of `../...`).
+- Changed error message casing from `'Duplicate'` to `'duplicate'` to match the test expectation `errors.some(e => e.includes('duplicate'))`.
 
----
+### Test Results
 
-## 修复报告
+- **Task tests**: 11/11 passed
+- **Full suite**: 339 files, 4555 tests passed, 0 failures, no regressions
 
-### 修复的问题
-`getActiveAngleAtTime` 函数中 `activeAngle` 未做越界校验。当 `switchPoints` 为空时，直接返回 `angles[activeAngle]`，如果 `activeAngle` 为负数或 >= `angles.length`，将返回 `undefined` 而非抛错。
+### Exported Types
 
-### 修复方案
-在 `getActiveAngleAtTime` 函数入口处（`angles.length === 0` 校验之后、`switchPoints.length === 0` 判断之前）添加了 `activeAngle` 范围校验：
-
-```typescript
-if (activeAngle < 0 || activeAngle >= angles.length) {
-  throw new Error('activeAngle out of range');
-}
-```
-
-该校验确保在函数使用 `activeAngle` 之前（包括无 switch points 时直接返回 `angles[activeAngle]`、以及有 switch points 但 `targetAngle` 越界时回退到 `angles[activeAngle]`）其值始终合法。
-
-### 测试结果
-
-```
-$ npx vitest run packages/editor-core/__tests__/multicam-clip.test.ts
-
- ✓ packages/editor-core/__tests__/multicam-clip.test.ts (38 tests) 9ms
-
- Test Files  1 passed (1)
-      Tests  38 passed (38)
-   Duration  1.05s
-```
-
-新增 4 个测试用例：
-- `should throw when activeAngle is negative` -- 无 switch points，activeAngle = -1
-- `should throw when activeAngle is >= angles.length` -- 无 switch points，activeAngle = 5
-- `should throw when activeAngle is negative even with switch points` -- 有 switch points，activeAngle = -1
-- `should throw when activeAngle equals angles.length` -- 无 switch points，activeAngle = 3（等于边界）
-
-### 提交记录
-`f06b3084` fix: validate activeAngle bounds in getActiveAngleAtTime
+- `NodeExecutionResult` - per-node execution output (uniforms + fragment snippets)
+- `GraphExecutionResult` - full graph execution output
+- `GraphValidationError` - string alias for validation errors
+- `NodeGraphEngine` - the engine class itself

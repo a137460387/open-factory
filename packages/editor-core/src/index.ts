@@ -185,6 +185,8 @@ export * from './subtitles/sync-monitor';
 export * from './proxy/proxy-batch-verify';
 
 export * from './audio/multicam-audio-sync';
+export * from './audio/mixer-types';
+export * from './audio/effect-chain';
 export * from './export/export-preset-diff';
 export * from './export/preset-compatibility';
 export * from './annotation-sync';

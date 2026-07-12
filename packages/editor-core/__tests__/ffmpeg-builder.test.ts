@@ -24,9 +24,14 @@ import {
   mapTransitionType,
   buildStemExportPlans,
   buildStemOutputFileName,
+  buildColorGradingFilters,
+  buildAudioEffectChainFilters,
+  buildMixerChannelAudioFilters,
   type Clip,
+  type ColorGradingGraph,
   type Project
 } from '../src';
+import type { AudioEffectSlot } from '../src/audio/mixer-types';
 import { makeAdjustmentClip, makeAudioClip, makeCreditsClip, makeMotionGraphicClip, makeProject, makeSubtitleClip, makeTextClip, makeTimeline, makeVideoClip } from './test-utils';
 
 function makeAudioVisualizationProject(): Project {
@@ -4133,3 +4138,153 @@ function buildKenBurnsScalePlan({ scaleXEnd, scaleYEnd }: { scaleXEnd: number; s
 
   return buildFfmpegExportPlan(buildExportProjectFromProject(project, { outputPath: 'out.mp4' }));
 }
+
+describe('buildColorGradingFilters', () => {
+  it('should return empty array for undefined graph', () => {
+    expect(buildColorGradingFilters(undefined)).toEqual([]);
+  });
+
+  it('should return empty array for empty graph', () => {
+    expect(buildColorGradingFilters({ nodes: [], connections: [], activeNodeId: null })).toEqual([]);
+  });
+
+  it('should build colorbalance filter for primary wheel', () => {
+    const graph: ColorGradingGraph = {
+      nodes: [{
+        id: 'n1',
+        type: 'primary-wheel',
+        enabled: true,
+        params: {
+          lift: { r: 0.3, g: 0, b: 0, y: 0 },
+          liftMaster: 0,
+          gamma: { r: 0, g: 0, b: 0, y: 0 },
+          gammaMaster: 0,
+          gain: { r: 0, g: 0, b: 0, y: 0 },
+          gainMaster: 0,
+          offset: { r: 0, g: 0, b: 0, y: 0 },
+          offsetMaster: 0,
+        },
+        inputs: [],
+        output: null,
+        position: { x: 0, y: 0 },
+      }],
+      connections: [],
+      activeNodeId: 'n1',
+    };
+
+    const filters = buildColorGradingFilters(graph);
+    expect(filters.length).toBeGreaterThan(0);
+    expect(filters[0]).toContain('colorbalance');
+  });
+
+  it('should build eq filter for contrast/saturation', () => {
+    const graph: ColorGradingGraph = {
+      nodes: [{
+        id: 'n1',
+        type: 'primary-slider',
+        enabled: true,
+        params: {
+          temperature: 0,
+          tint: 0,
+          contrast: 30,
+          pivot: 0.5,
+          saturation: 120,
+          hue: 0,
+        },
+        inputs: [],
+        output: null,
+        position: { x: 0, y: 0 },
+      }],
+      connections: [],
+      activeNodeId: 'n1',
+    };
+
+    const filters = buildColorGradingFilters(graph);
+    expect(filters.some(f => f.includes('eq='))).toBe(true);
+  });
+
+  it('should skip disabled nodes', () => {
+    const graph: ColorGradingGraph = {
+      nodes: [{
+        id: 'n1',
+        type: 'primary-wheel',
+        enabled: false,
+        params: {
+          lift: { r: 0.5, g: 0, b: 0, y: 0 },
+          liftMaster: 0,
+          gamma: { r: 0, g: 0, b: 0, y: 0 },
+          gammaMaster: 0,
+          gain: { r: 0, g: 0, b: 0, y: 0 },
+          gainMaster: 0,
+          offset: { r: 0, g: 0, b: 0, y: 0 },
+          offsetMaster: 0,
+        },
+        inputs: [],
+        output: null,
+        position: { x: 0, y: 0 },
+      }],
+      connections: [],
+      activeNodeId: 'n1',
+    };
+
+    const filters = buildColorGradingFilters(graph);
+    expect(filters).toEqual([]);
+  });
+});
+
+describe('buildAudioEffectChainFilters', () => {
+  it('should return empty for no effects', () => {
+    expect(buildAudioEffectChainFilters([])).toEqual([]);
+  });
+
+  it('should build compressor filter', () => {
+    const effects: AudioEffectSlot[] = [{
+      id: 'test',
+      effectType: 'compressor',
+      enabled: true,
+      params: { threshold: -20, ratio: 4, attack: 10, release: 100, makeup: 0 },
+      wetDry: 1,
+      order: 0,
+    }];
+    const filters = buildAudioEffectChainFilters(effects);
+    expect(filters.length).toBe(1);
+    expect(filters[0]).toContain('acompressor');
+  });
+
+  it('should build multiple effect filters', () => {
+    const effects: AudioEffectSlot[] = [
+      { id: 'eq', effectType: 'eq-4band', enabled: true, params: { lowFreq: 80, lowGain: -3 }, wetDry: 1, order: 0 },
+      { id: 'comp', effectType: 'compressor', enabled: true, params: { threshold: -20, ratio: 4 }, wetDry: 1, order: 1 },
+    ];
+    const filters = buildAudioEffectChainFilters(effects);
+    expect(filters.length).toBe(2);
+  });
+
+  it('should skip disabled effects', () => {
+    const effects: AudioEffectSlot[] = [
+      { id: 'test', effectType: 'compressor', enabled: false, params: { threshold: -20 }, wetDry: 1, order: 0 },
+    ];
+    const filters = buildAudioEffectChainFilters(effects);
+    expect(filters).toEqual([]);
+  });
+});
+
+describe('buildMixerChannelAudioFilters', () => {
+  it('should include volume filter', () => {
+    const filters = buildMixerChannelAudioFilters(-6, 0, []);
+    expect(filters.some(f => f.includes('volume'))).toBe(true);
+  });
+
+  it('should include pan filter', () => {
+    const filters = buildMixerChannelAudioFilters(0, 50, []);
+    expect(filters.some(f => f.includes('stereopan'))).toBe(true);
+  });
+
+  it('should combine volume, pan, and effects', () => {
+    const effects: AudioEffectSlot[] = [
+      { id: 'test', effectType: 'limiter', enabled: true, params: { threshold: -1, release: 100 }, wetDry: 1, order: 0 },
+    ];
+    const filters = buildMixerChannelAudioFilters(-3, -25, effects);
+    expect(filters.length).toBe(3); // volume + pan + limiter
+  });
+});

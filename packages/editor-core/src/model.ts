@@ -4,6 +4,7 @@ import {
   isDefaultColorCurves,
   isNeutralThreeWayColor,
   normalizeColorCurves,
+  normalizeColorGradingGraph,
   normalizeThreeWayColor
 } from './color-grading';
 import { normalizeClipBlendMode } from './blend-modes';
@@ -945,6 +946,7 @@ export function createBaseClip(
     speed: clampClipSpeed(input.speed),
     colorCorrection: normalizeColorCorrection(input.colorCorrection),
     ...(input.colorNodeGraph ? { colorNodeGraph: normalizeColorNodeGraph(input.colorNodeGraph, input.colorCorrection) } : {}),
+    ...(input.colorGradingGraph ? { colorGradingGraph: normalizeColorGradingGraph(input.colorGradingGraph) } : {}),
     transform: normalizeTransform(input.transform),
     chromaKey: normalizeChromaKey(input.chromaKey),
     stabilization: normalizeStabilization(input.stabilization),
