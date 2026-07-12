@@ -1,4 +1,5 @@
 export * from './color-curves';
+export * from './color-grading-presets';
 export * from './hsl-qualifier';
 export * from './lut';
 export * from './lut-parser';
