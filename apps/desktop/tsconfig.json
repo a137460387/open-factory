@@ -18,6 +18,7 @@
     "paths": {
       "@/*": ["./src/*"],
       "@open-factory/editor-core": ["../../packages/editor-core/src/index.ts"],
+      "@open-factory/editor-core/*": ["../../packages/editor-core/src/*"],
       "@open-factory/plugin-sdk": ["../../packages/plugin-sdk/src/index.ts"]
     }
   },
