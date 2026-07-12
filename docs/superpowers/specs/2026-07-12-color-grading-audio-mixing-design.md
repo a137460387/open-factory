@@ -1,832 +1,614 @@
-# 高级调色与音频混音系统 — 架构设计文档
+# 调色与音频混音系统增强 — 集成优先设计文档
 
-> **日期**：2026-07-12
-> **方案**：混合架构 — 节点图调色 + 线性效果链音频 + 共享抽象层
-> **范围**：DaVinci Resolve 级别调色UI + 专业音频混音系统
+> **日期**：2026-07-12（修订）
+> **方案**：集成优先 — 连接已有但断开的代码，补全缺失节点和效果映射
+> **范围**：补全节点图引擎、接通 FFmpeg 导出、持久化混音状态、集成效果链、增强 E2E 测试
 
 ---
 
 ## 1. 概述
 
-### 1.1 目标
+### 1.1 背景
 
-为 open-factory 视频编辑器添加专业级调色和音频混音能力：
+项目已有完整的调色和音频混音系统（PR #47-#50），但存在关键缺口：
+- 节点图引擎只处理 4/10 种节点类型
+- `colorGradingGraph` 未接入 FFmpeg 导出管线
+- `MixerState` 无持久化路径
+- 音频效果链未连接到预览渲染和导出
+- 自动化曲线是死代码
+- E2E 测试覆盖薄弱
 
-- **调色系统**：一级调色（色轮/滑块）、二级调色（HSL限定器/窗口遮罩/跟踪遮罩）、LUT管理、节点图流程、示波器
-- **音频系统**：多轨混音器控制台、音频效果链（20+效果类型）、参数自动化曲线、总线路由系统
+### 1.2 目标
 
-### 1.2 现有能力
+以最小改动量连接已有代码，使现有功能真正可用：
 
-项目已有以下基础：
-- `ColorCorrection` 类型：亮度、对比度、饱和度、色调、LUT图层、色彩曲线、三路色轮
-- 音频处理：音量、声像、4频段EQ、压缩器、空间音频(HRTF)、淡入淡出、变调
-- 效果系统：模糊、锐化、暗角、胶片颗粒、色差、运动模糊、自定义着色器
-- WebGL 渲染管线：完整 GLSL 着色器，支持所有效果
-- FFmpeg 导出管线：所有效果和音频处理的完整滤镜链
-- 效果预设系统：`.ofeffect.json` 格式
+1. **调色节点图**：补全 6 种缺失节点类型，接通 FFmpeg 导出
+2. **音频混音**：持久化 MixerState，连接效果链到预览和导出
+3. **自动化**：实现曲线评估，连接到播放和导出
+4. **测试**：强化 E2E 测试，添加 Page Objects
 
 ### 1.3 设计原则
 
-1. **数据模型在 `editor-core`**：类型定义、序列化逻辑不依赖 DOM
-2. **UI组件在 `desktop`**：React 组件、WebGL 渲染、Web Audio
-3. **命令模式**：所有状态变更通过 Command 对象，支持撤销/重做
+1. **复用优先**：优先使用已有的 `color-curves.ts`、`lut.ts`、`effect-chain.ts` 等模块
+2. **命令模式**：所有状态变更通过 Command 对象，支持撤销/重做
+3. **向后兼容**：新系统与现有 `colorCorrection` 共存，渐进迁移
 4. **双渲染路径**：预览用 WebGL + Web Audio，导出用 FFmpeg
-5. **向后兼容**：新系统与现有 `ColorCorrection` 共存，渐进迁移
 
 ---
 
-## 2. 整体架构
+## 2. 调色节点图引擎增强
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    共享抽象层 (Shared Layer)                   │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐    │
-│  │ 参数管理  │  │ 预设系统  │  │ 自动化引擎│  │ 序列化   │    │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘    │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  ┌──────────────────────┐  ┌──────────────────────────┐    │
-│  │   调色系统 (Color)    │  │   音频系统 (Audio)        │    │
-│  │  ┌─────────────────┐ │  │  ┌──────────────────┐    │    │
-│  │  │  节点图引擎       │ │  │  │  效果链引擎       │    │    │
-│  │  │  NodeGraphEngine │ │  │  │  EffectChainEngine│    │    │
-│  │  └─────────────────┘ │  │  └──────────────────┘    │    │
-│  │  ┌─────────────────┐ │  │  ┌──────────────────┐    │    │
-│  │  │  一级调色节点     │ │  │  │  混音器控制台     │    │    │
-│  │  │  ColorWheels     │ │  │  │  MixerConsole    │    │    │
-│  │  └─────────────────┘ │  │  └──────────────────┘    │    │
-│  │  ┌─────────────────┐ │  │  ┌──────────────────┐    │    │
-│  │  │  二级调色节点     │ │  │  │  效果链面板       │    │    │
-│  │  │  HSLQualifier   │ │  │  │  EffectsRack     │    │    │
-│  │  └─────────────────┘ │  │  └──────────────────┘    │    │
-│  │  ┌─────────────────┐ │  │  ┌──────────────────┐    │    │
-│  │  │  LUT管理器       │ │  │  │  总线路由         │    │    │
-│  │  │  LUTManager     │ │  │  │  BusRouter       │    │    │
-│  │  └─────────────────┘ │  │  └──────────────────┘    │    │
-│  │  ┌─────────────────┐ │  │  ┌──────────────────┐    │    │
-│  │  │  示波器          │ │  │  │  自动化曲线编辑器  │    │    │
-│  │  │  Scopes         │ │  │  │  AutomationEditor│    │    │
-│  │  └─────────────────┘ │  │  └──────────────────┘    │    │
-│  └──────────────────────┘  └──────────────────────────┘    │
-│                                                             │
-├─────────────────────────────────────────────────────────────┤
-│                    渲染后端 (Render Backends)                 │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐                  │
-│  │  WebGL   │  │  FFmpeg  │  │ Web Audio│                  │
-│  │ (预览)   │  │ (导出)   │  │ (预览)   │                  │
-│  └──────────┘  └──────────┘  └──────────┘                  │
-└─────────────────────────────────────────────────────────────┘
-```
+### 2.1 问题分析
 
----
+`NodeGraphEngine.executeNode()`（node-graph-engine.ts:107-122）只处理 4 种节点：
+- `primary-wheel` ✅
+- `primary-slider` ✅
+- `hsl-qualifier` ✅
+- `window-mask` ✅
+- `curves` ❌ 空操作
+- `lut-apply` ❌ 空操作
+- `tracking-mask` ❌ 空操作
+- `color-space` ❌ 空操作
+- `mixer-node` ❌ 空操作
+- `output` ❌ 空操作
 
-## 3. 调色系统
+### 2.2 新增节点实现
 
-### 3.1 节点图引擎
+#### 2.2.1 曲线节点（`curves`）
 
-#### 3.1.1 节点类型定义
+复用 `color-grading/color-curves.ts` 的 `sampleColorCurves()`。
 
+**参数类型**（types.ts 新增）：
 ```typescript
-// packages/editor-core/src/color-grading/types.ts
-
-/** 调色节点类型 */
-type ColorNodeType =
-  | 'primary-wheel'      // 一级色轮（Lift/Gamma/Gain）
-  | 'primary-slider'     // 一级滑块（亮度/对比度/饱和度/色温/色调）
-  | 'curves'             // RGB/色相/亮度曲线
-  | 'hsl-qualifier'      // HSL限定器（二级调色）
-  | 'window-mask'        // 窗口遮罩（圆形/线性渐变/多边形）
-  | 'tracking-mask'      // 跟踪遮罩
-  | 'lut-apply'          // LUT应用节点
-  | 'color-space'        // 色彩空间转换
-  | 'mixer-node'         // 节点混合（串联/并联）
-  | 'output';            // 输出节点
-
-/** 调色节点 */
-interface ColorNode {
-  id: string;
-  type: ColorNodeType;
-  enabled: boolean;
-  params: ColorNodeParams;
-  inputs: string[];        // 连接的上游节点ID
-  output: string | null;   // 连接的下游节点ID
-  position: { x: number; y: number };  // 节点图中的位置
-}
-
-/** 节点图 */
-interface ColorGradingGraph {
-  nodes: ColorNode[];
-  connections: ColorConnection[];
-  activeNodeId: string | null;
-}
-
-/** 节点连接 */
-interface ColorConnection {
-  id: string;
-  fromNodeId: string;
-  fromOutput: string;
-  toNodeId: string;
-  toInput: string;
-}
-```
-
-#### 3.1.2 数据模型集成
-
-```typescript
-interface BaseClip {
-  // ... 现有字段保持不变
-  colorCorrection: ColorCorrection;     // 保持向后兼容
-  colorGradingGraph?: ColorGradingGraph; // 新增：节点图调色
-}
-```
-
-**兼容策略**：如果 `colorGradingGraph` 存在且非空，优先使用节点图渲染；否则回退到现有 `colorCorrection`。
-
-### 3.2 一级调色
-
-#### 3.2.1 色轮参数（Primary Wheels）
-
-```typescript
-interface PrimaryWheelParams {
-  // Lift（暗部）- 低亮度区域
-  lift: { r: number; g: number; b: number; y: number };  // -1 ~ 1
-  liftMaster: number;  // -1 ~ 1
-
-  // Gamma（中间调）- 中亮度区域
-  gamma: { r: number; g: number; b: number; y: number };
-  gammaMaster: number;
-
-  // Gain（高光）- 高亮度区域
-  gain: { r: number; g: number; b: number; y: number };
-  gainMaster: number;
-
-  // Offset（整体偏移）
-  offset: { r: number; g: number; b: number; y: number };
-  offsetMaster: number;
-}
-```
-
-#### 3.2.2 滑块参数（Primary Sliders）
-
-```typescript
-interface PrimarySliderParams {
-  temperature: number;   // 色温 -100 ~ 100 (冷→暖)
-  tint: number;          // 色调 -100 ~ 100 (绿→品红)
-  contrast: number;      // 对比度 -100 ~ 100
-  pivot: number;         // 对比度轴心 0 ~ 1
-  saturation: number;    // 饱和度 0 ~ 200
-  hue: number;           // 色相旋转 -180 ~ 180
-}
-```
-
-### 3.3 曲线编辑器
-
-```typescript
-interface CurvesParams {
-  // 主曲线
+interface CurvesNodeParams {
   master: CurvePoint[];
-  // RGB通道
   red: CurvePoint[];
   green: CurvePoint[];
   blue: CurvePoint[];
-  // HSL曲线
-  hueVsHue: CurvePoint[];        // 色相→色相
-  hueVsSaturation: CurvePoint[]; // 色相→饱和度
-  hueVsLuminance: CurvePoint[];  // 色相→亮度
-  satVsSaturation: CurvePoint[]; // 饱和度→饱和度
-  lumVsSaturation: CurvePoint[]; // 亮度→饱和度
-}
-
-interface CurvePoint {
-  x: number;  // 0 ~ 1
-  y: number;  // 0 ~ 1
-  handleIn?: { x: number; y: number };
-  handleOut?: { x: number; y: number };
 }
 ```
 
-### 3.4 二级调色
+**GLSL 实现**：生成 256x1 查找纹理，使用 `sampler2D` 采样。
+```glsl
+uniform sampler2D u_curvesLUT_{nodeId};
+vec4 applyCurves_{nodeId}(vec4 color) {
+  float r = texture2D(u_curvesLUT_{nodeId}, vec2(color.r, 0.5)).r;
+  float g = texture2D(u_curvesLUT_{nodeId}, vec2(color.g, 0.5)).g;
+  float b = texture2D(u_curvesLUT_{nodeId}, vec2(color.b, 0.5)).b;
+  return vec4(r, g, b, color.a);
+}
+```
 
-#### 3.4.1 HSL限定器
+**FFmpeg 映射**：`curves=r='0/0 0.5/0.6 1/1':g='...':b='...'`
 
+#### 2.2.2 LUT 应用节点（`lut-apply`）
+
+复用 `color-grading/lut.ts` 的 `LUTData` 和 `lut-parser.ts`。
+
+**参数类型**（types.ts 新增）：
 ```typescript
-interface HSLQualifierParams {
-  // 选中范围
-  hueRange: { center: number; width: number; softness: number };     // 0-360
-  saturationRange: { min: number; max: number; softness: number };   // 0-100
-  luminanceRange: { min: number; max: number; softness: number };    // 0-100
-
-  // 选中区域的调色调整
-  adjustments: {
-    hueShift: number;        // -180 ~ 180
-    saturation: number;      // -100 ~ 100
-    brightness: number;      // -100 ~ 100
-    contrast: number;        // -100 ~ 100
-    temperature: number;     // -100 ~ 100
-    tint: number;            // -100 ~ 100
-  };
-
-  // 显示模式
-  viewMode: 'final' | 'matte' | 'overlay';
-  matteClean: number;  // 遮罩清理（去噪）0 ~ 100
+interface LUTApplyNodeParams {
+  lutId: string;
+  intensity: number;  // 0-1
 }
 ```
 
-#### 3.4.2 窗口遮罩
-
-```typescript
-interface WindowMaskParams {
-  shape: 'circle' | 'linear-gradient' | 'polygon';
-
-  circle?: {
-    center: { x: number; y: number };   // 归一化坐标 0~1
-    radius: number;
-    softness: number;   // 边缘柔和度 0~1
-    rotation: number;
-  };
-
-  linearGradient?: {
-    startPoint: { x: number; y: number };
-    endPoint: { x: number; y: number };
-    softness: number;
-  };
-
-  polygon?: {
-    points: { x: number; y: number }[];
-    softness: number;
-  };
-
-  adjustments: HSLQualifierParams['adjustments'];
-  invert: boolean;
-  feather: number;  // 像素
+**GLSL 实现**：使用 `sampler3D` 纹理查找 + `mix()` 混合。
+```glsl
+uniform sampler3D u_lut3D_{nodeId};
+uniform float u_lutIntensity_{nodeId};
+vec4 applyLUT_{nodeId}(vec4 color) {
+  vec3 lutColor = texture3D(u_lut3D_{nodeId}, color.rgb).rgb;
+  return vec4(mix(color.rgb, lutColor, u_lutIntensity_{nodeId}), color.a);
 }
 ```
 
-#### 3.4.3 跟踪遮罩
+**FFmpeg 映射**：`lut3d=file='path.cube':interp=tetrahedral`
 
-```typescript
-interface TrackingMaskParams {
-  mask: WindowMaskParams;
-  trackingData: TrackingKeyframe[];
-  trackingMode: 'point' | 'area';
-  searchArea: number;  // 搜索范围倍数
-  confidence: number;  // 置信度阈值 0~1
-}
+#### 2.2.3 跟踪遮罩节点（`tracking-mask`）
 
-interface TrackingKeyframe {
-  time: number;
-  position: { x: number; y: number };
-  scale: number;
-  rotation: number;
-  confidence: number;
-}
-```
+参数类型已有定义。GLSL 实现基于跟踪点生成贝塞尔遮罩，与 `window-mask` 类似。
+FFmpeg 不支持（仅预览）。
 
-**跟踪算法**：基于特征点的光流跟踪（Lucas-Kanade），在 Web Worker 中运行。
+#### 2.2.4 辅助节点
 
-### 3.5 LUT管理
+- `output`：标记图终点，不生成着色器代码
+- `color-space`：记录输入/输出色彩空间元数据
+- `mixer-node`：混合多个输入的 alpha 通道
 
-#### 3.5.1 数据类型
+### 2.3 Shader 编译器更新
 
-```typescript
-// packages/editor-core/src/color-grading/lut.ts
+`node-shader-compiler.ts` 的 `compileColorGradingShader()` 需要：
+- 为 `curves` 节点生成 256x1 纹理 uniform 声明
+- 为 `lut-apply` 节点生成 `sampler3D` uniform 声明
+- 修复多 HSL 限定器节点共享 GLSL 函数定义的问题
 
-interface LUTData {
-  size: number;         // 3D LUT 尺寸（如 17, 33, 65）
-  domainMin: [number, number, number];
-  domainMax: [number, number, number];
-  data: Float32Array;   // RGB 值数组，size^3 * 3
-}
+### 2.4 修改文件清单
 
-interface LUTLayer {
-  id: string;
-  lutId: string;        // 引用 LUTLibrary 中的ID
-  intensity: number;    // 0 ~ 1 混合强度
-  enabled: boolean;
-}
-
-interface LUTLibraryEntry {
-  id: string;
-  name: string;
-  filePath: string;
-  format: 'cube' | '3dl';
-  size: number;
-  thumbnail?: string;   // 预览缩略图
-  tags: string[];
-  createdAt: string;
-}
-```
-
-#### 3.5.2 LUT文件解析
-
-- `.cube` 格式：解析 `LUT_3D_SIZE`、`DOMAIN_MIN`/`DOMAIN_MAX` 和数据行
-- `.3dl` 格式：解析 Mesh3d 格式的 3D LUT 数据
-- 支持 1D LUT（仅亮度映射）和 3D LUT（完整色彩映射）
-
-#### 3.5.3 LUT导出
-
-将当前调色设置采样为 3D 网格，输出标准 `.cube` 格式。
-
-#### 3.5.4 LUT WebGL渲染
-
-- LUT 数据上传为 WebGL 3D Texture（`TEXTURE_3D`）
-- 着色器中通过三维坐标采样实现色彩映射
-- 纹理格式：`RGBA16F` 或 `RGBA8`，尺寸 = LUT size³
-
-### 3.6 示波器（Scopes）
-
-```typescript
-type ScopeType = 'waveform' | 'vectorscope' | 'histogram' | 'parade';
-
-interface ScopeConfig {
-  type: ScopeType;
-  channel: 'rgb' | 'red' | 'green' | 'blue' | 'luma';
-  intensity: number;  // 显示亮度
-  graticule: boolean; // 刻度线
-}
-```
-
-**实现**：使用 Canvas 2D 从 WebGL 渲染结果读取像素数据，实时绘制示波器。
-
-### 3.7 WebGL渲染管线
-
-```
-原始帧纹理 → [节点1: 一级调色] → [节点2: LUT] → [节点3: HSL限定器] → [节点4: 遮罩] → 输出
-```
-
-**实现策略**：
-- 每个调色节点编译为独立的 GLSL 片段着色器
-- 使用乒乓缓冲（Ping-Pong Buffer）：节点链每步渲染到临时纹理
-- 简单一级调色可合并到现有 `webgl-compositor.ts` 主着色器
-- 复杂节点（HSL限定器、遮罩、LUT）使用独立渲染通道
-
-### 3.8 FFmpeg导出映射
-
-| 节点类型 | FFmpeg 滤镜 |
-|---------|------------|
-| 一级色轮 (Lift/Gamma/Gain) | `curves` 或 `colorbalance` |
-| 色温/色调 | `colortemperature` + `hue` |
-| 对比度/饱和度 | `eq=contrast=N:saturation=N` |
-| HSL限定器 | `selectivecolor` 或自定义 `geq` |
-| 窗口遮罩 | `maskmerge` + 生成遮罩帧 |
-| LUT应用 | `lut3d=file='xxx.cube'` |
-| 曲线 | `curves=r='...':g='...':b='...'` |
+| 文件 | 改动 |
+|------|------|
+| `color-grading/types.ts` | 添加 `CurvesNodeParams`、`LUTApplyNodeParams`、`TrackingMaskNodeParams`；更新 `createColorGradingNode()` 和 `normalizeColorNode()` |
+| `color-grading/node-graph-engine.ts` | 添加 curves/lut-apply/tracking-mask/output 执行器 |
+| `lib/color-grading/node-shader-compiler.ts` | 添加曲线纹理和 LUT 3D 纹理的 GLSL 代码生成；修复多 HSL 节点问题 |
+| `color-grading/color-grading-presets.ts` | 添加 6+ 内置预设展示新节点类型 |
 
 ---
 
-## 4. 音频混音系统
+## 3. 调色 FFmpeg 导出集成
 
-### 4.1 混音器控制台
+### 3.1 问题分析
+
+- `ExportClip` 类型缺少 `colorGradingGraph` 字段
+- `buildExportTimeline()` 不传递该字段
+- `buildColorGradingFilters()` 是死代码（已导出但从未调用）
+
+### 3.2 设计
+
+#### 3.2.1 扩展 ExportClip
 
 ```typescript
-// packages/editor-core/src/audio/mixer-types.ts
+// export/export-types.ts
+interface ExportClip {
+  // ... existing fields ...
+  colorGradingGraph?: ColorGradingGraph;  // 新增
+}
+```
 
-/** 混音器通道条 */
-interface MixerChannel {
-  trackId: string;
-  name: string;
+#### 3.2.2 传递数据
 
-  // 基本控制
-  volume: number;        // dB (-∞ ~ +12)
-  pan: number;           // -100 ~ 100 (L/R)
-  muted: boolean;
-  solo: boolean;
+```typescript
+// ffmpeg-builder.ts - buildExportTimeline()
+const exportClip: ExportClip = {
+  // ... existing mappings ...
+  colorGradingGraph: clip.colorGradingGraph,  // 新增
+};
+```
 
-  // 信号路由
-  busAssignments: BusAssignment[];
-  inputBus: string | null;
+#### 3.2.3 激活导出过滤器
 
-  // 效果链
-  effectsChain: AudioEffectSlot[];
+在 `buildVideoFilters()` 中，优先级链：
+```
+1. colorGradingGraph（最高优先级 - 新节点图系统）
+2. colorNodeGraph（旧节点图系统）
+3. colorCorrection（传统调色）
+```
 
-  // 自动化
-  automation: ChannelAutomation;
+如果 `colorGradingGraph` 存在且非空，调用 `buildColorGradingFilters()`；否则回退到现有逻辑。
 
-  // 计量
-  metering: {
-    peakLevel: number;    // dB
-    rmsLevel: number;     // dB
-    clipCount: number;
+#### 3.2.4 补全 buildColorGradingFilters
+
+当前只处理 5 种节点类型，需补全：
+- `curves` → `curves=r='...':g='...':b='...'`
+- `lut-apply` → `lut3d=file=path`
+- `tracking-mask` → 跳过（仅预览）
+- `output`/`color-space`/`mixer-node` → 元数据，不生成过滤器
+
+### 3.3 修改文件清单
+
+| 文件 | 改动 |
+|------|------|
+| `export/export-types.ts` | 添加 `colorGradingGraph` 字段 |
+| `export/ffmpeg-builder.ts` | 传递字段 + 激活 `buildColorGradingFilters` + 补全节点类型 |
+| `export/ffmpeg-builder.test.ts` | 添加 colorGradingGraph 导出测试 |
+
+---
+
+## 4. 音频混音状态持久化
+
+### 4.1 问题分析
+
+`MixerState`（包含效果链、总线路由、自动化）定义在 `mixer-types.ts`，但 `Project` 模型上没有 `mixerState` 属性，数据无法保存到项目文件。
+
+### 4.2 设计
+
+#### 4.2.1 Project 模型扩展
+
+```typescript
+// model-types.ts
+interface Project {
+  // ... existing fields ...
+  mixerState?: MixerState;  // 新增
+}
+```
+
+#### 4.2.2 模型规范化
+
+```typescript
+// model.ts
+function normalizeMixerState(raw: any): MixerState | undefined {
+  if (!raw) return undefined;
+  return {
+    channels: (raw.channels ?? []).map(normalizeMixerChannel),
+    buses: (raw.buses ?? []).map(normalizeBus),
+    masterBus: normalizeBus(raw.masterBus),
   };
 }
 ```
 
-### 4.2 音频效果链
+#### 4.2.3 项目迁移
 
 ```typescript
-/** 音频效果槽 */
-interface AudioEffectSlot {
-  id: string;
-  effectType: AudioEffectType;
-  enabled: boolean;
-  params: Record<string, number>;
-  wetDry: number;  // 0 ~ 1 干湿比
-  order: number;   // 在效果链中的顺序
-}
-
-type AudioEffectType =
-  | 'eq-4band'           // 4频段参量EQ
-  | 'eq-8band'           // 8频段参量EQ
-  | 'compressor'         // 压缩器
-  | 'limiter'            // 限制器
-  | 'gate'               // 噪声门
-  | 'expander'           // 扩展器
-  | 'reverb'             // 混响
-  | 'delay'              // 延迟
-  | 'chorus'             // 合唱
-  | 'flanger'            // 镶边
-  | 'distortion'         // 失真
-  | 'de-esser'           // 齿音消除
-  | 'noise-reduction'    // 降噪
-  | 'pitch-shift'        // 变调
-  | 'stereo-widener'     // 立体声增强
-  | 'mid-side'           // M/S处理
-  | 'gain'               // 增益
-  | 'phase-invert'       // 相位反转
-  | 'high-pass'          // 高通滤波
-  | 'low-pass';          // 低通滤波
-```
-
-**效果链执行顺序**：
-1. 增益/相位（信号调理）
-2. EQ/滤波器（频率处理）
-3. 动态处理（压缩/门/扩展）
-4. 时间效果（混响/延迟/合唱）
-5. 立体声处理（M/S/声像/增强）
-6. 限制器（最终保护）
-
-### 4.3 总线路由系统
-
-```typescript
-/** 总线类型 */
-type BusType = 'submix' | 'send' | 'aux' | 'master';
-
-/** 总线 */
-interface AudioBus {
-  id: string;
-  name: string;
-  type: BusType;
-
-  effectsChain: AudioEffectSlot[];
-  volume: number;
-  pan: number;
-  muted: boolean;
-
-  sendLevel?: number;    // 发送电平 0~1（发送总线特有）
-  sendPrePost?: 'pre' | 'post';
-
-  outputBusId: string | null;  // 输出到哪条总线（master为null）
-}
-
-/** 总线分配 */
-interface BusAssignment {
-  busId: string;
-  level: number;   // 0 ~ 1
-  enabled: boolean;
+// project-migration.ts
+function migrateV6ToV7(project: any): any {
+  return {
+    ...project,
+    schemaVersion: 7,
+    mixerState: project.mixerState ?? createDefaultMixerState(
+      project.timeline?.tracks?.length ?? 0
+    ),
+  };
 }
 ```
 
-**默认总线配置**：
-- **Master**：主输出总线（不可删除）
-- **Music**：音乐/背景音乐子混音
-- **Dialogue**：对白子混音
-- **SFX**：音效子混音
-- **Send 1/2**：辅助发送（用于混响/延迟等共享效果）
+#### 4.2.4 UI 连接
 
-### 4.4 参数自动化曲线
+`AudioMixer.tsx` 需要：
+- 从 `project.mixerState` 读取初始状态
+- 通过 `UpdateProjectCommand` 保存变更（支持撤销/重做）
+- 移除本地状态管理，改用 project 状态
 
-```typescript
-/** 自动化通道 */
-interface ChannelAutomation {
-  volume?: AutomationCurve;
-  pan?: AutomationCurve;
-  [effectParam: string]: AutomationCurve | undefined;  // effectId.paramName
-}
+### 4.3 修改文件清单
 
-/** 自动化曲线 */
-interface AutomationCurve {
-  points: AutomationPoint[];
-  mode: 'read' | 'write' | 'touch' | 'latch';
-}
-
-interface AutomationPoint {
-  time: number;
-  value: number;
-  curve: 'linear' | 'bezier' | 'step' | 'smooth';
-  handleIn?: { time: number; value: number };
-  handleOut?: { time: number; value: number };
-}
-```
-
-### 4.5 Web Audio渲染管线
-
-```
-源音频 → [效果链] → [总线路由] → [Master效果] → 输出
-```
-
-每个效果使用对应的 Web Audio API 节点：
-- `BiquadFilterNode`：EQ/滤波
-- `DynamicsCompressorNode`：压缩/限制
-- `ConvolverNode`：混响（使用脉冲响应）
-- `DelayNode`：延迟/回声
-- `StereoPannerNode`：声像
-
-### 4.6 FFmpeg导出映射
-
-| 音频效果 | FFmpeg 滤镜 |
-|---------|------------|
-| EQ 4/8频段 | `equalizer` 链 |
-| 压缩器 | `acompressor` |
-| 限制器 | `alimiter` |
-| 噪声门 | `agate` |
-| 混响 | `aecho` 或 `areverb` |
-| 延迟 | `aecho` |
-| 合唱 | `chorus` |
-| 镶边 | `flanger` |
-| 齿音消除 | `adeclick` |
-| 降噪 | `arnndn` |
-| 变调 | `asetrate` + `aresample` |
-| 立体声增强 | `stereotools` |
-| M/S处理 | `stereotools=mode=ms` |
-| 高通/低通 | `highpass` / `lowpass` |
+| 文件 | 改动 |
+|------|------|
+| `model-types.ts` | 添加 `mixerState?: MixerState` |
+| `model.ts` | 添加 `normalizeMixerState()` |
+| `project-migration.ts` | v6→v7 迁移 |
+| `project-migration.test.ts` | 迁移测试 |
+| `AudioMixer.tsx` | 连接到 project.mixerState |
 
 ---
 
-## 5. 共享抽象层
+## 5. 音频效果链集成
 
-### 5.1 参数管理
+### 5.1 问题分析
+
+- 预览只支持 4/20 种效果（音量/声像/EQ/压缩器）
+- 导出不使用效果链（`buildAudioEffectChainFilters` 是死代码）
+- 11/20 种效果类型生成 `anull` 空操作
+
+### 5.2 补全 FFmpeg 效果映射
+
+在 `EffectChainEngine.effectToFfmpeg()` 中补全：
+
+| 效果类型 | FFmpeg 过滤器 | 参数 |
+|----------|--------------|------|
+| `eq-8band` | 8x `equalizer` | f=Hz:width_type=h:width=W:g=G |
+| `expander` | `acompressor` | ratio < 1 实现扩展 |
+| `chorus` | `chorus` | inGain:outGain:delays:decays:speeds:depths |
+| `flanger` | `flanger` | delay:depth:regen:speed |
+| `distortion` | `aeval` | clip 函数实现削波 |
+| `de-esser` | `equalizer` + `acompressor` | 频段压缩 |
+| `noise-reduction` | `afftdn` | nf=降噪量 |
+| `pitch-shift` | `asetrate` + `aresample` | 比率 = 2^(semitones/12) |
+| `stereo-widener` | `stereotools` | mlev:slev |
+| `mid-side` | `stereotools` | mode=ms |
+| `phase-invert` | `aeval` | -val(0) |
+
+### 5.3 预览渲染器扩展
+
+在 `PreviewAudioRenderer.getAudioNode()` 中添加效果链节点：
 
 ```typescript
-// packages/editor-core/src/shared/param-manager.ts
+private createEffectChainNodes(
+  effects: AudioEffectSlot[],
+  context: AudioContext
+): AudioNode[] {
+  const nodes: AudioNode[] = [];
+  const sorted = effects
+    .filter(e => e.enabled)
+    .sort((a, b) => a.order - b.order);
 
-interface ParamDefinition {
-  key: string;
-  label: string;
-  type: 'number' | 'boolean' | 'enum' | 'color' | 'curve';
-  min?: number;
-  max?: number;
-  step?: number;
-  default: unknown;
-  unit?: string;
+  for (const effect of sorted) {
+    switch (effect.effectType) {
+      case 'reverb':
+        // ConvolverNode + 生成简单脉冲响应
+        break;
+      case 'delay':
+        // DelayNode + FeedbackGainNode
+        break;
+      case 'high-pass':
+      case 'low-pass':
+        // BiquadFilterNode
+        break;
+      case 'gain':
+        // GainNode
+        break;
+      // 其他效果在预览中跳过，导出时生效
+    }
+  }
+  return nodes;
 }
 ```
 
-### 5.2 预设系统扩展
+优先实现高频效果（reverb、delay、high-pass、low-pass、gain），其余在预览中跳过但在导出中生效。
 
-扩展现有 `EffectPreset` 以支持调色预设和音频效果预设：
+### 5.4 导出集成
 
 ```typescript
-interface ColorGradingPreset {
-  id: string;
-  name: string;
-  author: string;
-  description?: string;
-  tags: string[];
-  graph: ColorGradingGraph;
-  thumbnail?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+// ffmpeg-builder.ts - buildAudioFilters()
+function buildAudioFilters(clip: ExportClip): string[] {
+  const filters: string[] = [];
 
-interface AudioEffectPreset {
-  id: string;
-  name: string;
-  author: string;
-  description?: string;
-  tags: string[];
-  chain: AudioEffectSlot[];
-  createdAt: string;
-  updatedAt: string;
+  // 现有：基本音量/声像/EQ/压缩器
+  filters.push(...buildBasicAudioFilters(clip));
+
+  // 新增：效果链
+  if (clip.effectsChain?.length) {
+    const chainEngine = new EffectChainEngine();
+    const chainFilters = chainEngine.toFfmpegFilters(clip.effectsChain);
+    filters.push(...chainFilters.map(f => buildFfmpegFilterString(f)));
+  }
+
+  return filters;
 }
 ```
 
-### 5.3 自动化引擎
+### 5.5 修改文件清单
 
-共享的自动化引擎，支持调色参数和音频参数的动态变化：
+| 文件 | 改动 |
+|------|------|
+| `audio/effect-chain.ts` | 补全 11 种效果的 FFmpeg 映射 + 参数范围 |
+| `lib/preview/audio-renderer.ts` | 添加效果链 Web Audio 节点创建 |
+| `export/ffmpeg-builder.ts` | 在 `buildAudioFilters` 中调用效果链 |
+| `export/export-types.ts` | 添加 `effectsChain` 字段到 ExportClip |
+| `audio/effect-chain.test.ts` | 补全 11 种效果的测试 |
+
+---
+
+## 6. 自动化曲线集成
+
+### 6.1 问题分析
+
+`AutomationCurve` 和 `ChannelAutomation` 类型已定义但从未被评估。`AutomationEditor` 组件是死代码。
+
+### 6.2 设计
+
+#### 6.2.1 自动化曲线评估器
+
+新文件 `audio/automation-evaluator.ts`：
 
 ```typescript
-// packages/editor-core/src/shared/automation-engine.ts
+interface AutomationEvaluationResult {
+  volume: number;    // dB
+  pan: number;       // -1 to 1
+  effectParams: Record<string, number>;
+}
 
-interface AutomationEngine {
-  evaluate(curve: AutomationCurve, time: number): number;
-  addPoint(curve: AutomationCurve, point: AutomationPoint): void;
-  removePoint(curve: AutomationCurve, pointId: string): void;
-  interpolate(points: AutomationPoint[], time: number): number;
+function evaluateAutomation(
+  automation: ChannelAutomation,
+  timeSeconds: number
+): AutomationEvaluationResult;
+
+function evaluateCurve(
+  points: AutomationPoint[],
+  time: number,
+  curveType: 'linear' | 'bezier' | 'step' | 'smooth'
+): number;
+```
+
+插值算法：
+- `linear`：线性插值
+- `bezier`：贝塞尔曲线（使用 handleIn/handleOut）
+- `step`：阶跃（取前一个点的值）
+- `smooth`：Catmull-Rom 样条
+
+#### 6.2.2 预览集成
+
+```typescript
+// audio-renderer.ts - syncClipAudio()
+const automation = mixerState?.channels
+  ?.find(c => c.trackId === track.id)?.automation;
+if (automation) {
+  const auto = evaluateAutomation(automation, currentTimeSeconds);
+  gainNode.gain.value *= dbToLinear(auto.volume);
+  pannerNode.pan.value = clamp(
+    pannerNode.pan.value + auto.pan, -1, 1
+  );
 }
 ```
 
----
+#### 6.2.3 导出集成
 
-## 6. UI工作区布局
-
-```
-┌──────────────────────────────────────────────────────────┐
-│  工具栏  │  [调色] [混音器] [效果] [自动化] [LUT]        │
-├──────────────┬───────────────────────┬───────────────────┤
-│              │                       │                   │
-│   媒体库     │     预览画面          │   调色/混音面板    │
-│              │                       │                   │
-│              │                       │  ┌─────────────┐  │
-│              │                       │  │ 色轮 / 曲线  │  │
-│              │                       │  │ HSL限定器    │  │
-│              │                       │  │ LUT管理器    │  │
-│              │                       │  │ 混音器控制台  │  │
-│              │                       │  │ 效果链面板    │  │
-│              │                       │  │ 示波器       │  │
-│              │                       │  └─────────────┘  │
-├──────────────┴───────────────────────┴───────────────────┤
-│                      时间线                               │
-│  [自动化曲线编辑器]                                       │
-└──────────────────────────────────────────────────────────┘
+自动化曲线转换为 FFmpeg `volume` 关键帧表达式：
+```typescript
+function buildAutomationKeyframes(
+  automation: ChannelAutomation,
+  duration: number
+): string {
+  // 采样自动化曲线，生成 volume='if(between(t,0,1), -6, 0)' 表达式
+}
 ```
 
-**Tab切换**：调色/混音面板采用 Tab 模式：
-- **调色Tab**：色轮 + 曲线 + HSL限定器 + 窗口遮罩
-- **混音器Tab**：多轨道推子 + VU表 + 声像
-- **效果Tab**：选中片段的效果链
-- **自动化Tab**：参数自动化曲线编辑
-- **LUTTab**：LUT库 + 预览 + 管理
+### 6.3 修改文件清单
+
+| 文件 | 改动 |
+|------|------|
+| `audio/automation-evaluator.ts` | 新建：曲线评估逻辑 |
+| `audio/automation-evaluator.test.ts` | 新建：评估器测试 |
+| `lib/preview/audio-renderer.ts` | 在 syncClipAudio 中调用评估器 |
+| `export/ffmpeg-builder.ts` | 自动化曲线转 FFmpeg 关键帧 |
 
 ---
 
-## 7. 文件结构
+## 7. E2E 测试增强
 
-### 7.1 新增文件（editor-core）
+### 7.1 问题分析
 
-```
-packages/editor-core/src/color-grading/
-  types.ts                    # 节点图、节点类型定义
-  node-graph-engine.ts        # 节点图执行引擎
-  primary-wheels.ts           # 一级色轮参数和逻辑
-  primary-sliders.ts          # 一级滑块参数
-  curves.ts                   # 曲线编辑器参数
-  hsl-qualifier.ts            # HSL限定器
-  window-mask.ts              # 窗口遮罩
-  tracking-mask.ts            # 跟踪遮罩（光流算法）
-  lut.ts                      # LUT数据解析/导出
-  lut-parser.ts               # .cube/.3dl文件解析器
-  lut-exporter.ts             # LUT导出器
-  scopes.ts                   # 示波器数据计算
-  color-grading-presets.ts    # 调色预设
+- 音频 E2E 测试仅是条件可见性检查（`if (await ...isVisible())`）
+- 调色测试只覆盖 Lift 色轮，无曲线/HSL/LUT 节点测试
+- 无 Page Object，测试使用散落的 `page.getByTestId()`
 
-packages/editor-core/src/audio/
-  mixer-types.ts              # 混音器类型定义
-  effect-chain.ts             # 效果链引擎
-  audio-effects.ts            # 音频效果参数定义
-  bus-router.ts               # 总线路由
-  audio-mix-presets.ts        # 音频预设
-
-packages/editor-core/src/shared/
-  param-manager.ts            # 参数管理
-  automation-engine.ts        # 自动化引擎
-```
-
-### 7.2 新增文件（desktop）
-
-```
-apps/desktop/src/components/ColorGrading/
-  ColorGradingWorkspace.tsx   # 调色工作区主组件
-  ColorWheelPanel.tsx         # 色轮面板
-  CurvesEditor.tsx            # 曲线编辑器
-  HSLQualifierPanel.tsx       # HSL限定器面板
-  WindowMaskPanel.tsx         # 窗口遮罩面板
-  TrackingMaskPanel.tsx       # 跟踪遮罩面板
-  LUTManager.tsx              # LUT管理器
-  LUTImporter.tsx             # LUT导入对话框
-  NodeGraphView.tsx           # 节点图可视化
-  ScopesPanel.tsx             # 示波器面板
-
-apps/desktop/src/components/AudioMixer/
-  MixerConsole.tsx            # 混音器控制台
-  ChannelStrip.tsx            # 通道条
-  BusPanel.tsx                # 总线面板
-  EffectsRack.tsx             # 效果链面板
-  AutomationEditor.tsx        # 自动化曲线编辑器
-  VUMeter.tsx                 # VU表组件
-
-apps/desktop/src/lib/color-grading/
-  color-grading-renderer.ts   # WebGL调色渲染器
-  lut-texture-manager.ts      # LUT纹理管理
-  node-shader-compiler.ts     # 节点着色器编译器
-  scope-renderer.ts           # 示波器渲染器
-
-apps/desktop/src/lib/audio/
-  mixer-engine.ts             # 混音器引擎（Web Audio）
-  effect-chain-processor.ts   # 效果链处理器
-  bus-router-processor.ts     # 总线路由处理器
-  automation-player.ts        # 自动化播放器
-```
-
-### 7.3 修改文件
-
-```
-packages/editor-core/src/model-types.ts     # 添加 colorGradingGraph, AudioBus 等类型
-packages/editor-core/src/model.ts           # 更新工厂函数和归一化
-packages/editor-core/src/commands/
-  timeline-commands.ts                      # 新增调色/音频命令
-packages/editor-core/src/export/
-  ffmpeg-builder.ts                         # 添加调色节点和音频效果的FFmpeg映射
-apps/desktop/src/lib/preview/
-  webgl-compositor.ts                       # 集成调色节点渲染
-  audio-renderer.ts                         # 集成效果链和总线路由
-apps/desktop/src/components/Inspector/
-  Inspector.tsx                             # 添加调色/音频面板入口
-```
-
----
-
-## 8. 命令系统
-
-所有状态变更通过 Command 对象：
+### 7.2 新增 Page Objects
 
 ```typescript
-// 调色命令
-class AddColorNodeCommand implements Command { ... }
-class RemoveColorNodeCommand implements Command { ... }
-class UpdateColorNodeCommand implements Command { ... }
-class ConnectColorNodesCommand implements Command { ... }
-class ApplyLUTCommand implements Command { ... }
-class ImportLUTCommand implements Command { ... }
+// e2e/pages/color-grading.page.ts
+class ColorGradingPage {
+  readonly workspace: Locator;
+  readonly nodeGraph: Locator;
+  readonly curvesEditor: Locator;
+  readonly lutManager: Locator;
 
-// 音频命令
-class AddAudioEffectCommand implements Command { ... }
-class RemoveAudioEffectCommand implements Command { ... }
-class UpdateAudioEffectCommand implements Command { ... }
-class ReorderAudioEffectsCommand implements Command { ... }
-class UpdateMixerChannelCommand implements Command { ... }
-class AddBusCommand implements Command { ... }
-class RemoveBusCommand implements Command { ... }
-class UpdateAutomationCommand implements Command { ... }
+  async addNode(type: string): Promise<void>;
+  async adjustSlider(name: string, value: number): Promise<void>;
+  async selectNode(index: number): Promise<void>;
+  async removeNode(index: number): Promise<void>;
+}
+
+// e2e/pages/audio-mixer.page.ts
+class AudioMixerPage {
+  readonly mixer: Locator;
+  channelStrip(index: number): ChannelStripLocators;
+
+  async setVolume(trackIndex: number, db: number): Promise<void>;
+  async setPan(trackIndex: number, value: number): Promise<void>;
+  async toggleMute(trackIndex: number): Promise<void>;
+  async toggleSolo(trackIndex: number): Promise<void>;
+}
 ```
 
----
+### 7.3 更新 fixtures.ts
 
-## 9. 实现阶段划分
+```typescript
+export const test = base.extend<{
+  colorGradingPage: ColorGradingPage;
+  audioMixerPage: AudioMixerPage;
+}>({ ... });
+```
 
-### 阶段 1：基础框架（调色节点图 + 一级调色）
-- 数据模型扩展
-- 节点图引擎
-- 一级色轮/滑块 UI
-- WebGL 集成
-- 基础 FFmpeg 映射
+### 7.4 增强测试用例
 
-### 阶段 2：高级调色（二级调色 + LUT）
-- HSL限定器
-- 窗口遮罩
-- LUT 解析/应用/导出
-- 曲线编辑器
-- 示波器
+**调色测试（移除条件守卫，添加真实交互）：**
+- 曲线节点：添加 → 编辑 RGB 曲线 → 验证预览更新
+- LUT 节点：添加 → 选择 LUT → 验证应用
+- HSL 限定器：添加 → 选择色相范围 → 验证隔离效果
+- 导出验证：应用调色图 → 导出 → 验证 FFmpeg 参数
 
-### 阶段 3：音频混音器
-- 混音器控制台 UI
-- 效果链引擎
-- 总线路由
-- Web Audio 集成
+**音频测试（移除条件守卫，添加真实交互）：**
+- 音量调整：拖动滑块到 -6dB → 验证状态更新
+- 静音/独奏：切换 → 验证状态
+- EQ 调整：修改频段 → 导出 → 验证 `equalizer` 过滤器
+- 效果链：添加压缩器 → 导出 → 验证 `acompressor` 过滤器
 
-### 阶段 4：自动化与集成
-- 自动化曲线编辑器
-- 参数自动化播放
-- 完整 FFmpeg 映射
-- 预设系统
+### 7.5 修改文件清单
 
-### 阶段 5：跟踪与优化
-- 跟踪遮罩（光流算法）
-- 性能优化
-- E2E 测试
-- 文档
+| 文件 | 改动 |
+|------|------|
+| `e2e/pages/color-grading.page.ts` | 新建 Page Object |
+| `e2e/pages/audio-mixer.page.ts` | 新建 Page Object |
+| `e2e/fixtures.ts` | 添加新 fixtures |
+| `e2e/color-grading-audio.spec.ts` | 重写为强测试 |
 
 ---
 
-## 10. 测试策略
+## 8. 内置预设扩展
 
-### 10.1 单元测试（Vitest）
+### 8.1 调色预设
 
-- LUT 解析器：测试 .cube/.3dl 文件解析
-- 节点图引擎：测试节点连接、执行顺序、参数传递
-- 自动化引擎：测试插值算法、曲线求值
-- 效果链：测试效果排序、参数归一化
+当前仅 2 个内置预设（Cinematic、Vintage）。新增：
 
-### 10.2 集成测试
+| 预设名 | 节点组合 | 效果 |
+|--------|---------|------|
+| Teal & Orange | wheel + slider + hsl-qualifier | 阴影偏青，高光偏橙 |
+| Bleach Bypass | slider + curves | 低饱和度，高对比度 |
+| Day for Night | wheel + slider + window-mask | 整体压暗，蓝色偏移 |
+| Black & White | slider + curves | 去饱和，调对比度 |
+| Cross Process | wheel + slider + curves | 跨冲洗色彩偏移 |
+| Film Print | slider + lut-apply | 胶片打印模拟 |
 
-- WebGL 调色渲染：像素级比对
-- Web Audio 效果链：信号流验证
-- FFmpeg 映射：滤镜图生成验证
+### 8.2 音频预设
 
-### 10.3 E2E 测试（Playwright）
+当前仅 2 个内置预设（Podcast、Music）。新增：
 
-- 应用调色预设 → 断言效果正确应用
-- 调整混音器参数 → 断言音量/声像正确
-- 导入 LUT → 断言 LUT 正确应用
-- 绘制自动化曲线 → 断言参数动态变化
+| 预设名 | 效果链 | 用途 |
+|--------|--------|------|
+| Cinematic Trailer | compressor + eq + reverb + limiter | 电影预告片 |
+| Voice Over | high-pass + compressor + eq + de-esser + limiter | 旁白配音 |
+| Live Concert | gate + eq + compressor + reverb + limiter | 现场音乐会 |
+
+### 8.3 修改文件清单
+
+| 文件 | 改动 |
+|------|------|
+| `color-grading/color-grading-presets.ts` | 添加 6 个内置预设 |
+| `audio/audio-mix-presets.ts` | 添加 3 个内置预设 |
 
 ---
 
-## 11. 风险与缓解
+## 9. 完整修改文件清单
 
-| 风险 | 影响 | 缓解措施 |
-|------|------|---------|
-| WebGL 3D Texture 兼容性 | LUT 无法在旧设备上渲染 | 提供 Canvas 2D 回退路径 |
-| Web Audio 节点数量限制 | 复杂效果链可能断音 | 优化节点连接，减少不必要的中间节点 |
-| 跟踪算法性能 | Web Worker 中光流计算可能太慢 | 降低跟踪分辨率，提供"快速跟踪"模式 |
-| FFmpeg 滤镜兼容性 | 某些高级调色难以精确映射 | 逐帧渲染回退（类似自定义着色器） |
-| 项目文件大小增长 | 节点图和自动化数据增加体积 | 压缩存储、延迟加载 |
+### editor-core（纯逻辑层）
+
+| 文件 | 改动类型 | 描述 |
+|------|---------|------|
+| `color-grading/types.ts` | 修改 | 添加 CurvesNodeParams、LUTApplyNodeParams、TrackingMaskNodeParams |
+| `color-grading/node-graph-engine.ts` | 修改 | 补全 6 种节点执行器 |
+| `color-grading/color-grading-presets.ts` | 修改 | 添加 6 个内置预设 |
+| `audio/effect-chain.ts` | 修改 | 补全 11 种效果的 FFmpeg 映射 |
+| `audio/automation-evaluator.ts` | **新建** | 自动化曲线评估器 |
+| `audio/audio-mix-presets.ts` | 修改 | 添加 3 个内置预设 |
+| `model-types.ts` | 修改 | 添加 mixerState 字段 |
+| `model.ts` | 修改 | 添加 normalizeMixerState |
+| `project-migration.ts` | 修改 | v6→v7 迁移 |
+| `export/export-types.ts` | 修改 | 添加 colorGradingGraph、effectsChain 字段 |
+| `export/ffmpeg-builder.ts` | 修改 | 传递新字段 + 激活导出过滤器 |
+
+### desktop（UI + 渲染层）
+
+| 文件 | 改动类型 | 描述 |
+|------|---------|------|
+| `lib/color-grading/node-shader-compiler.ts` | 修改 | 补全曲线/LUT GLSL 生成 |
+| `lib/preview/audio-renderer.ts` | 修改 | 添加效果链和自动化集成 |
+| `components/AudioMixer/AudioMixer.tsx` | 修改 | 连接到 project.mixerState |
+| `e2e/pages/color-grading.page.ts` | **新建** | Page Object |
+| `e2e/pages/audio-mixer.page.ts` | **新建** | Page Object |
+| `e2e/fixtures.ts` | 修改 | 添加新 fixtures |
+| `e2e/color-grading-audio.spec.ts` | 修改 | 重写为强测试 |
+
+### 测试文件
+
+| 文件 | 改动类型 | 描述 |
+|------|---------|------|
+| `__tests__/color-grading/node-graph-engine.test.ts` | 修改 | 补全新节点类型测试 |
+| `__tests__/audio/effect-chain.test.ts` | 修改 | 补全 11 种效果测试 |
+| `__tests__/audio/automation-evaluator.test.ts` | **新建** | 评估器测试 |
+| `__tests__/project-migration.test.ts` | 修改 | v6→v7 迁移测试 |
+| `__tests__/export/ffmpeg-builder.test.ts` | 修改 | colorGradingGraph 导出测试 |
+
+---
+
+## 10. 实现顺序
+
+1. **调色节点图引擎** → types.ts + node-graph-engine.ts + node-shader-compiler.ts
+2. **调色 FFmpeg 导出** → export-types.ts + ffmpeg-builder.ts
+3. **音频状态持久化** → model-types.ts + model.ts + project-migration.ts
+4. **音频效果链** → effect-chain.ts + audio-renderer.ts + ffmpeg-builder.ts
+5. **自动化曲线** → automation-evaluator.ts + audio-renderer.ts + ffmpeg-builder.ts
+6. **内置预设** → color-grading-presets.ts + audio-mix-presets.ts
+7. **E2E 测试** → Page Objects + fixtures + 测试重写
+
+---
+
+## 11. 验收标准
+
+### 调色系统
+- [ ] 节点图引擎处理全部 10 种节点类型
+- [ ] 曲线节点在预览中正确渲染
+- [ ] LUT 节点在预览中正确应用
+- [ ] `colorGradingGraph` 正确导出为 FFmpeg 过滤器
+- [ ] 6+ 内置预设可加载和应用
+
+### 音频系统
+- [ ] MixerState 保存到项目文件并正确恢复
+- [ ] 效果链连接到预览渲染（至少 reverb/delay/high-pass/low-pass/gain）
+- [ ] 效果链正确导出为 FFmpeg 过滤器
+- [ ] 11 种缺失效果类型不再生成 `anull`
+- [ ] 自动化曲线在播放时正确评估
+- [ ] 3+ 内置音频预设可加载
+
+### 测试
+- [ ] E2E 测试移除所有条件守卫
+- [ ] Page Objects 覆盖调色和音频混音
+- [ ] 所有新代码有单元测试覆盖
+- [ ] `pnpm typecheck` 无报错
+- [ ] `pnpm test` 全部通过
