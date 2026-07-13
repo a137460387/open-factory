@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use tauri::AppHandle;
 
-use crate::commands::media_index::{add_tag_internal, chrono_now, MediaIndexAsset};
+use crate::commands::media_index::add_tag_internal;
 use crate::db;
 
 /// 自动打标请求

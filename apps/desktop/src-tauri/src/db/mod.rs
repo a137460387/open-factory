@@ -4,9 +4,7 @@ use rusqlite::Connection;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Mutex;
-use tauri::AppHandle;
-
-use schema::SCHEMA_VERSION;
+use tauri::{AppHandle, Manager};
 
 /// 获取媒体索引数据库路径
 fn db_path(app: &AppHandle, project_path: &str) -> Result<PathBuf, String> {
