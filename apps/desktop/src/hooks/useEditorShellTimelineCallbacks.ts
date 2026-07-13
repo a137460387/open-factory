@@ -10,6 +10,7 @@ import {
   DeleteClipsCommand,
   DeleteGroupCommand,
   ImportEDLCommand,
+  ImportFCPXMLCommand,
   PiPLayoutCommand,
   RippleDeleteCommand,
   SplitClipCommand,
@@ -548,6 +549,23 @@ export function useEditorShellTimelineCallbacks(deps: TimelineCallbacksDeps) {
     []
   );
 
+  const importFcpXmlTimeline = useCallback(
+    (contents: string, path: string) => {
+      const fileName = path.split(/[\\/]/).pop()?.replace(/\.xml$/i, '') || undefined;
+      const command = new ImportFCPXMLCommand(projectAccessor, contents, { sequenceName: fileName });
+      commandManager.execute(command);
+      useEditorStore.getState().clearSelectedClipIds();
+      useEditorStore.getState().setPlayheadTime(0);
+      const result = command.result;
+      return {
+        title: result?.title ?? fileName ?? zhCN.timelineExport.importFcpXml,
+        matchedCount: result?.matchedCount ?? 0,
+        missingCount: result?.missingCount ?? 0
+      };
+    },
+    []
+  );
+
   // -----------------------------------------------------------------------
   // Match Frame / Reveal / Navigate
   // -----------------------------------------------------------------------
@@ -672,6 +690,7 @@ export function useEditorShellTimelineCallbacks(deps: TimelineCallbacksDeps) {
     applySplitLayout,
     saveCustomSplitLayout,
     importEdlTimeline,
+    importFcpXmlTimeline,
     matchFrameToSource,
     revealMediaInTimeline,
     navigateToNextInstance,

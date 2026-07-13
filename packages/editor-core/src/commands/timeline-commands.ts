@@ -183,6 +183,7 @@ import { normalizeMotionGraphic } from '../motion-graphics';
 import type { ColorGradingGraph, ColorGradingNode, ColorGradingConnection } from '../color-grading/types';
 import { createEmptyColorGradingGraph } from '../color-grading/types';
 import { applyCmx3600EdlImport, buildCmx3600EdlImport, type Cmx3600EdlImportOptions, type Cmx3600EdlImportResult } from '../export/timeline-import';
+import { applyFcpXmlImport, buildFcpXmlImport, type FcpXmlImportOptions, type FcpXmlImportResult } from '../export/fcpxml-import';
 import {
   calculateSpeedCurveSourceDuration,
   clampTransitionDuration,
@@ -618,6 +619,38 @@ export class ImportEDLCommand implements Command {
     if (!this.after) {
       this.importResult = buildCmx3600EdlImport(this.before, this.contents, this.options);
       this.after = applyCmx3600EdlImport(this.before, this.importResult);
+    }
+    this.accessor.setProject(this.after);
+  }
+
+  undo(): void {
+    if (this.before) {
+      this.accessor.setProject(this.before);
+    }
+  }
+}
+
+export class ImportFCPXMLCommand implements Command {
+  readonly description = 'Import FCPXML';
+  private before?: Project;
+  private after?: Project;
+  private importResult?: FcpXmlImportResult;
+
+  constructor(
+    private readonly accessor: ProjectAccessor,
+    private readonly contents: string,
+    private readonly options: FcpXmlImportOptions = {}
+  ) {}
+
+  get result(): FcpXmlImportResult | undefined {
+    return this.importResult;
+  }
+
+  execute(): void {
+    this.before ??= this.accessor.getProject();
+    if (!this.after) {
+      this.importResult = buildFcpXmlImport(this.before, this.contents, this.options);
+      this.after = applyFcpXmlImport(this.before, this.importResult);
     }
     this.accessor.setProject(this.after);
   }

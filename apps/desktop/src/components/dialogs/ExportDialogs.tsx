@@ -44,6 +44,7 @@ export interface ExportDialogsProps {
   onExportCompleted: (path: string) => void;
   onRelinkMissing: () => void;
   onImportEdl: (contents: string, path: string) => TimelineImportSummary;
+  onImportFcpXml: (contents: string, path: string) => TimelineImportSummary;
   onAddMedia: (media: MediaAsset[]) => void;
 }
 
@@ -60,6 +61,7 @@ export function ExportDialogs({
   onExportCompleted,
   onRelinkMissing,
   onImportEdl,
+  onImportFcpXml,
   onAddMedia,
 }: ExportDialogsProps) {
   const professionalNleExportOpen = useEditorUIStore((s) => s.professionalNleExportOpen);
@@ -94,6 +96,7 @@ export function ExportDialogs({
           project={project}
           onClose={() => setTimelineExportDialogOpen(false)}
           onImportEdl={onImportEdl}
+          onImportFcpXml={onImportFcpXml}
         />
       ) : null}
       {professionalNleExportOpen ? (

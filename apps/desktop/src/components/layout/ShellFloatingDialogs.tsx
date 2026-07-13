@@ -64,6 +64,7 @@ export interface ShellFloatingDialogsProps {
   onExportCompleted: (path: string) => void;
   onRelinkMissing: () => void;
   importEdlTimeline: (contents: string, path: string) => any;
+  importFcpXmlTimeline: (contents: string, path: string) => any;
   addMedia: (media: MediaAsset[]) => void;
   lastExportPath: string | undefined;
   // Template
@@ -217,6 +218,7 @@ export function ShellFloatingDialogs(props: ShellFloatingDialogsProps) {
           }}
           onRelinkMissing={() => void props.onRelinkMissing()}
           onImportEdl={props.importEdlTimeline}
+          onImportFcpXml={props.importFcpXmlTimeline}
           onAddMedia={props.addMedia}
         />
         {projectTemplateOpen ? <ProjectTemplateDialog onSelect={(templateId) => void props.createProjectFromTemplate(templateId)} onClose={() => setProjectTemplateOpen(false)} /> : null}
