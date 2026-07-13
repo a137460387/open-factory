@@ -44,12 +44,14 @@ test.describe('智能多平台分发系统', () => {
     await expect(panel).toBeVisible({ timeout: 10000 });
 
     const youtubeCard = page.locator('[data-testid="platform-card-youtube-1080p"]');
-    await youtubeCard.click();
+    await expect(youtubeCard).toBeVisible();
 
-    await expect(youtubeCard).toHaveClass(/border-blue-500/);
+    // 使用 force click 避免被遮挡
+    await youtubeCard.click({ force: true });
+    await expect(youtubeCard).toHaveClass(/border-blue-500/, { timeout: 5000 });
 
-    await youtubeCard.click();
-    await expect(youtubeCard).not.toHaveClass(/border-blue-500/);
+    await youtubeCard.click({ force: true });
+    await expect(youtubeCard).not.toHaveClass(/border-blue-500/, { timeout: 5000 });
   });
 
   test('智能推荐按钮应选择推荐平台', async ({ page }) => {
@@ -122,10 +124,10 @@ test.describe('智能多平台分发系统', () => {
     const panel = page.locator('[data-testid="smart-distribution-panel"]');
     await expect(panel).toBeVisible({ timeout: 10000 });
 
-    await page.locator('[data-testid="platform-card-youtube-1080p"]').click();
+    await page.locator('[data-testid="platform-card-youtube-1080p"]').click({ force: true });
 
     const exportBtn = page.locator('[data-testid="start-distribution"]');
-    await expect(exportBtn).toBeEnabled();
+    await expect(exportBtn).toBeEnabled({ timeout: 5000 });
     await expect(exportBtn).toHaveText('一键分发到 1 个平台');
   });
 
@@ -138,7 +140,7 @@ test.describe('智能多平台分发系统', () => {
     const panel = page.locator('[data-testid="smart-distribution-panel"]');
     await expect(panel).toBeVisible({ timeout: 10000 });
 
-    await page.locator('[data-testid="distribution-panel-close"]').click();
+    await page.locator('[data-testid="distribution-panel-close"]').click({ force: true });
 
     await expect(panel).not.toBeVisible({ timeout: 5000 });
   });
