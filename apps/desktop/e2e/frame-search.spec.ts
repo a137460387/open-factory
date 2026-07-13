@@ -29,7 +29,8 @@ test('jumps to a direct frame number and reuses persisted history', async ({ pag
   await page.reload();
   await waitForE2eActions(page);
   await page.evaluate(() => window.__E2E_ACTIONS__!.setupFrameSearchFixture!());
-  await page.getByTestId('frame-search-input').click();
+  await page.getByTestId('frame-search-input').focus();
+  await expect(page.getByTestId('frame-search-history')).toBeVisible();
   await expect(page.getByTestId('frame-search-history')).toContainText('第 36 帧');
   await page.getByTestId('frame-search-history-frame-0').click();
 

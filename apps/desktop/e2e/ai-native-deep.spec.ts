@@ -76,17 +76,22 @@ test.describe('AI Native Workflow Deep', () => {
     await page.getByTestId('smart-creation-analyze').click();
     await expect(page.getByTestId('smart-creation-results')).toBeVisible({ timeout: 30_000 });
 
-    // Toggle scenes section
+    // Sections are expanded by default — content wrapper should be present
+    const sectionScenes = page.getByTestId('section-scenes');
+    const contentWrapper = sectionScenes.locator(':scope > div:nth-child(2)');
+    await expect(contentWrapper).toBeVisible();
+
+    // Toggle scenes section (collapse)
     await page.getByTestId('section-scenes-toggle').click();
 
-    // Verify the section content is hidden (toggle collapsed)
-    // The SceneTimeline should not be visible when collapsed
-    const scenesContent = page.locator('[data-testid="section-scenes"] [data-testid="scene-timeline"]');
-    await expect(scenesContent).not.toBeVisible();
+    // Content wrapper should be removed when collapsed
+    await expect(contentWrapper).not.toBeAttached();
 
-    // Toggle back
+    // Toggle back (expand)
     await page.getByTestId('section-scenes-toggle').click();
-    await expect(scenesContent).toBeVisible();
+
+    // Content wrapper should reappear
+    await expect(contentWrapper).toBeVisible();
   });
 
   test('closes smart creation panel', async ({ page }) => {
