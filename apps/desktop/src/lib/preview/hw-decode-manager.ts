@@ -15,10 +15,16 @@ import {
   type DecoderHandle,
   type HardwareBackend,
   type HardwareCapabilities,
+  type HwDecodeSettings,
+  type VideoInfo,
   decodeVideoFrame,
+  decodeVideoFrames,
+  getDecoderVideoInfo,
   getHwDecodeCapabilities,
+  getHwDecodeSettings,
   initHardwareDecoder,
   releaseDecoder,
+  setHwDecodeSettings,
 } from '../tauri-bridge';
 
 export interface HardwareDecodeOptions {
@@ -65,8 +71,10 @@ export class HardwareDecodeManager {
   private handle: DecoderHandle | null = null;
   private capabilities: HardwareCapabilities | null = null;
   private config: HardwareDecodeOptions | null = null;
+  private videoInfo: VideoInfo | null = null;
   private frameCache: Map<number, DecodeFrameResult> = new Map();
   private maxCacheSize = 30; // 缓存最近30帧
+  private settings: HwDecodeSettings | null = null;
 
   /**
    * 获取系统硬件加速能力
@@ -95,6 +103,17 @@ export class HardwareDecodeManager {
   }
 
   /**
+   * 加载硬件解码设置
+   */
+  async loadSettings(): Promise<HwDecodeSettings> {
+    if (!this.settings) {
+      this.settings = await getHwDecodeSettings();
+      this.maxCacheSize = this.settings.frameCacheSize;
+    }
+    return this.settings;
+  }
+
+  /**
    * 初始化硬件解码器
    */
   async initialize(options: HardwareDecodeOptions): Promise<void> {
@@ -106,6 +125,9 @@ export class HardwareDecodeManager {
     this.config = options;
     this.frameCache.clear();
 
+    // 加载设置
+    await this.loadSettings();
+
     const config: DecoderConfig = {
       path: options.path,
       preferredBackend: options.preferredBackend,
@@ -114,6 +136,21 @@ export class HardwareDecodeManager {
     };
 
     this.handle = await initHardwareDecoder(config);
+
+    // 获取视频信息
+    try {
+      this.videoInfo = await getDecoderVideoInfo(this.handle);
+    } catch {
+      // 视频信息获取失败不影响解码功能
+      this.videoInfo = null;
+    }
+  }
+
+  /**
+   * 获取视频信息
+   */
+  getVideoInfo(): VideoInfo | null {
+    return this.videoInfo;
   }
 
   /**
@@ -125,9 +162,11 @@ export class HardwareDecodeManager {
     }
 
     // 检查缓存
-    const cached = this.frameCache.get(timestamp);
-    if (cached) {
-      return cached;
+    if (this.settings?.enableFrameCache !== false) {
+      const cached = this.frameCache.get(timestamp);
+      if (cached) {
+        return cached;
+      }
     }
 
     const startTime = performance.now();
@@ -147,7 +186,9 @@ export class HardwareDecodeManager {
     };
 
     // 更新缓存
-    this.addToCache(timestamp, result);
+    if (this.settings?.enableFrameCache !== false) {
+      this.addToCache(timestamp, result);
+    }
 
     return result;
   }
@@ -156,27 +197,69 @@ export class HardwareDecodeManager {
    * 批量解码多个时间戳的帧
    */
   async decodeFrames(timestamps: number[]): Promise<DecodeFrameResult[]> {
-    const results: DecodeFrameResult[] = [];
-
-    for (const timestamp of timestamps) {
-      const frame = await this.decodeFrame(timestamp);
-      results.push(frame);
+    if (!this.handle) {
+      throw new Error('解码器未初始化，请先调用 initialize()');
     }
 
-    return results;
+    // 过滤出缓存中没有的帧
+    const uncachedTimestamps: number[] = [];
+    const uncachedIndices: number[] = [];
+    const results: (DecodeFrameResult | null)[] = new Array(timestamps.length).fill(null);
+
+    if (this.settings?.enableFrameCache !== false) {
+      for (let i = 0; i < timestamps.length; i++) {
+        const cached = this.frameCache.get(timestamps[i]);
+        if (cached) {
+          results[i] = cached;
+        } else {
+          uncachedTimestamps.push(timestamps[i]);
+          uncachedIndices.push(i);
+        }
+      }
+    } else {
+      uncachedTimestamps.push(...timestamps);
+      uncachedIndices.push(...timestamps.map((_, i) => i));
+    }
+
+    // 批量解码未缓存的帧
+    if (uncachedTimestamps.length > 0) {
+      const startTime = performance.now();
+      const frames = await decodeVideoFrames(this.handle, uncachedTimestamps);
+      const _totalDecodeTime = performance.now() - startTime;
+
+      for (let i = 0; i < frames.length; i++) {
+        const frame = frames[i];
+        const imageData = this.base64ToImageData(frame);
+        const result: DecodeFrameResult = {
+          imageData,
+          timestamp: frame.timestamp,
+          decodeTimeMs: _totalDecodeTime / frames.length,
+        };
+
+        const originalIndex = uncachedIndices[i];
+        results[originalIndex] = result;
+
+        if (this.settings?.enableFrameCache !== false) {
+          this.addToCache(frame.timestamp, result);
+        }
+      }
+    }
+
+    return results as DecodeFrameResult[];
   }
 
   /**
    * 预解码未来帧（用于减少卡顿）
    */
-  async preDecode(currentTimestamp: number, frameRate: number, count: number = 5): Promise<void> {
-    if (!this.handle) {
+  async preDecode(currentTimestamp: number, frameRate: number, count?: number): Promise<void> {
+    if (!this.handle || this.settings?.enablePreDecode === false) {
       return;
     }
 
+    const preDecodeCount = count ?? this.settings?.preDecodeFrameCount ?? 5;
     const frameDuration = 1 / frameRate;
 
-    for (let i = 1; i <= count; i++) {
+    for (let i = 1; i <= preDecodeCount; i++) {
       const timestamp = currentTimestamp + frameDuration * i;
 
       // 异步解码，不等待完成
@@ -196,6 +279,7 @@ export class HardwareDecodeManager {
     }
     this.frameCache.clear();
     this.config = null;
+    this.videoInfo = null;
   }
 
   /**
