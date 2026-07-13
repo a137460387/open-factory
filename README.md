@@ -1,79 +1,285 @@
-# 开源工厂 (open-factory)
+# 开源工厂 (Open Factory)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![CI](https://github.com/a137460387/open-factory/actions/workflows/ci.yml/badge.svg)
-[![Version](https://img.shields.io/badge/version-v3.10.0-brightgreen)](https://github.com/a137460387/open-factory/releases/tag/v3.10.0)
+[![Version](https://img.shields.io/badge/version-v4.21.0-brightgreen)](https://github.com/a137460387/open-factory/releases)
 [![Bun](https://img.shields.io/badge/Bun-%3E%3D%201.3-fb923c)](https://bun.sh)
 [![Rust](https://img.shields.io/badge/Rust-%3E%3D%201.77-dea584)](https://www.rust-lang.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue)](https://www.typescriptlang.org)
+[![Tauri](https://img.shields.io/badge/Tauri-2.0-ffc131)](https://tauri.app)
 
-本地优先的桌面视频编辑器，基于 Tauri 2、Rust、React、TypeScript 构建。无登录、无遥测、无云端上传，所有媒体文件保留在本地。
+**本地优先的专业桌面视频编辑器** — 基于 Tauri 2、Rust、React、TypeScript 构建。零登录、零遥测、零云端上传，所有媒体文件与项目数据始终保留在您的本地设备上。
 
 ![Open Factory](open-factory-screenshot.png)
 
-## 功能特性
+---
 
-- 多轨时间线：视频、音频、图片、文字 clip，移动、裁剪、分割、删除
-- 撤销/重做：所有编辑操作通过 command objects 实现
-- WebGL 预览合成器（含 2D canvas 降级）+ Web Audio 混音
-- FFmpeg 导出：MP4、GIF、WebP、APNG、PNG 序列、当前帧
-- 关键帧动画：不透明度、音量、位置、缩放、变速曲线
-- 色彩校正：亮度/对比度/饱和度/色相、RGB 曲线、三向色轮、LUT 支持
-- 视频特效栈：模糊、锐化、暗角、胶片颗粒、色散、GLSL 自定义着色器
-- 抠像（色度键/亮度键/差值遮罩）、形状遮罩、路径遮罩
-- 音频混音器：EQ 均衡器、压缩器、声像、VU 电平表、音频闪避
-- 嵌套序列、多机位剪辑、分屏布局、画中画
-- GPU 硬件编码（NVENC/VideoToolbox）
-- Whisper 本地字幕生成、SRT/ASS/VTT 导出
-- 自动保存与崩溃恢复、项目归档、快照版本管理
-- 场景检测、静音检测、节拍检测、智能粗剪面板
-- 插件系统、宏录制与回放、批量自动化规则
+## 🎯 项目定位
 
-## 文档
+Open Factory 是一款面向专业创作者的**本地化优先**视频编辑器，提供从剪辑、调色、混音到导出的完整后期制作工作流。项目以隐私保护为核心设计原则，不收集任何用户数据，所有处理均在本地完成。
+
+---
+
+## ✨ 核心特性
+
+### 🎬 专业剪辑引擎
+
+- **多轨时间线** — 视频、音频、图片、文字 Clip，支持移动、裁剪、分割、删除
+- **高级剪辑操作** — 波纹删除、滑移（Slip）、滑行（Slide）、嵌套序列、多机位剪辑
+- **撤销/重做系统** — 所有编辑操作通过 Command Objects 实现，支持完整操作历史
+- **关键帧动画** — 不透明度、音量、位置、缩放、变速曲线，支持贝塞尔/线性/步进插值
+- **分屏布局与画中画** — 灵活的多画面组合方式
+- **故事板模式** — 快速排列素材，生成粗剪序列
+
+### 🎨 专业调色系统
+
+- **节点式调色引擎** — 基于 Kahn 拓扑排序的节点图，支持 WebGL 片段着色器生成
+- **一级校色** — Lift/Gamma/Gain 三向色轮 + 滑块控制
+- **曲线编辑器** — RGB 分通道曲线调整
+- **HSL 限定器** — 精准的二级调色，基于色相/饱和度/亮度选取
+- **LUT 管理** — `.cube` 文件解析与加载，内置 Camera Log → Rec.709 转换 LUT
+- **窗口遮罩** — 形状遮罩与路径遮罩，支持局部调色
+- **色彩示波器** — 波形图、矢量示波器、直方图
+
+### 🎵 专业音频混音
+
+- **完整混音器架构** — 多通道 Mixer，支持 Submix/Send/Aux/Master 总线路由
+- **20 种音频效果** — 4/8 段参数 EQ、压缩器、限制器、噪声门、混响、延迟、合唱、镶边、去齿音、降噪等
+- **自动化曲线** — 支持 Read/Write/Touch/Latch 模式，线性/贝塞尔/步进插值
+- **VU 电平表** — 峰值/RMS 电平监测
+- **音频闪避** — 侧链压缩实现自动闪避
+- **3D 空间音频** — KEMAR HRTF 支持，房间模型（小房间/大厅/户外），双耳渲染
+- **对白检测** — 自动识别对白/音乐/静音段落
+- **说话人分离** — 基于音频特征的说话人识别
+
+### 🤖 AI 创作引擎
+
+- **本地字幕生成** — Whisper.cpp 集成，支持 SRT/ASS/VTT 导出，带进度报告
+- **AI 场景检测** — 色彩直方图 + 运动矢量的自适应阈值场景分析
+- **智能粗剪** — AI 驱动的粗剪编排，支持算法模式与一键应用
+- **多模型 AI 代理** — 支持 15+ AI 提供商（OpenAI、Anthropic、Gemini、DeepSeek、GLM、Qwen、Kimi、Ollama 等）
+- **智能推荐** — 转场推荐、B-roll 建议、节奏分析、音量标准化建议
+- **叙事分析** — 故事结构分析、情感检测、角色时间线追踪
+- **AI 重构图** — 智能适配不同平台的画幅比例
+- **语音理解** — 语音转文字、情感分析、语调检测
+- **智能色彩** — 色彩一致性校正、Look 匹配、降噪建议
+- **AI 媒体管理** — 自动标签、语义搜索、媒体智能整理
+
+### 🔄 专业互操作性
+
+- **FCPXML 导入/导出** — 完整的 Final Cut Pro XML (xmeml v4) 格式支持
+- **CMX 3600 EDL** — 标准 EDL 格式导入/导出，支持溶解转场与时间码解析
+- **AAF/OMF 导出** — 与 Avid、Pro Tools 等专业工具的项目交换
+- **智能媒体匹配** — 精确路径匹配 + 模糊名称匹配（Token 重叠评分）
+- **色彩校正元数据** — FCP XML 导出中嵌入调色信息
+
+### 🎥 视频特效栈
+
+- **内置特效** — 模糊、锐化、暗角、胶片颗粒、色散、运动模糊
+- **自定义 GLSL 着色器** — 支持 `u_texture`、`u_resolution`、`u_time`、`u_progress` Uniform
+- **混合模式** — 多种图层混合模式合成
+- **抠像系统** — 色度键、亮度键、差值遮罩
+- **帧插值** — FFmpeg minterpolate 集成
+
+### 📦 导出与分发
+
+- **多格式导出** — MP4、GIF、WebP、APNG、PNG 序列、当前帧
+- **DAG 导出管线** — 节点式导出流水线（质量检查、脚本钩子、WebDAV 上传、通知、平台发布）
+- **GPU 硬件编码** — NVENC (NVIDIA) / VideoToolbox (macOS) 加速
+- **硬件加速解码** — CUDA / VAAPI / QuickSync / D3D11VA / VideoToolbox，自动检测与软件降级
+- **渲染农场** — 分布式渲染支持
+- **渐进式导出** — 边渲染边预览
+- **批量导出** — 序列批量导出与版本化批处理
+- **多平台分发** — 平台预设、智能裁切、发布调度器
+- **质量评估** — VMAF 导出后质量检测
+
+### 🔌 插件与自动化
+
+- **插件系统** — Worker 隔离沙箱执行，权限守卫，插件市场
+- **宏录制与回放** — 记录编辑操作序列，批量回放
+- **自动化规则** — 条件触发的自动化工作流
+- **脚本支持** — 导出前后脚本钩子
+
+### 🛡️ 项目管理
+
+- **自动保存与崩溃恢复** — 项目状态自动持久化
+- **快照版本管理** — 项目历史快照，随时回溯
+- **项目归档** — 完整项目打包与分享
+- **项目健康检查** — 项目完整性诊断
+- **SQLite 媒体索引** — 本地媒体数据库，支持快速检索
+- **项目加密** — AES-GCM 加密保护敏感项目
+- **WebDAV 备份** — 远程备份与同步
+
+### 🎙️ 媒体工具
+
+- **屏幕录制** — 通过 FFmpeg 实现屏幕与摄像头录制
+- **人声分离** — Demucs 集成，分离人声与伴奏
+- **波形生成** — 音频波形可视化
+- **静音检测** — 自动识别静音段落
+- **节拍检测** — 音乐节拍分析，支持节奏对齐剪辑
+- **媒体转码** — 批量媒体格式转换
+
+### 🌐 协作与安全
+
+- **实时协作** — WebSocket 基础的多人协作
+- **共享媒体库** — 团队素材共享
+- **SSRF 防护** — 网络请求安全校验
+- **路径验证** — 文件路径安全检查
+- **隐私区域检测** — 自动识别敏感区域
+
+---
+
+## 🚀 版本亮点
+
+### v4.21.0 — 专业互操作性
+
+- ✅ **FCPXML 导入/导出** — 与 Final Cut Pro 无缝项目交换
+- ✅ **CMX 3600 EDL** — 标准 EDL 格式完整支持
+- ✅ **AAF/OMF 导出** — 与 Avid、Pro Tools 专业工具互操作
+- ✅ **智能媒体匹配** — 自动关联缺失素材文件
+- ✅ **全面 E2E 测试** — 互操作性端到端测试覆盖
+
+### 🔜 即将到来 — 硬件加速解码
+
+- 🔄 **多后端支持** — CUDA / VAAPI / QuickSync / D3D11VA / VideoToolbox
+- 🔄 **自动检测** — 智能识别可用 GPU 硬件
+- 🔄 **软件降级** — 硬件解码失败时自动回退到软件解码
+- 🔄 **批量帧解码** — 预览管线集成的批量解码优化
+
+---
+
+## 📐 项目架构
+
+```
+open-factory/
+├── apps/
+│   └── desktop/              # Tauri 桌面应用
+│       ├── src/              # React + TypeScript 前端
+│       └── src-tauri/        # Rust 后端 (Tauri Commands)
+├── packages/
+│   ├── editor-core/          # 纯 TypeScript 核心编辑逻辑
+│   │   ├── src/
+│   │   │   ├── audio/        # 音频混音与效果
+│   │   │   ├── color-grading/# 调色引擎
+│   │   │   ├── commands/     # 撤销/重做系统
+│   │   │   ├── distribution/ # 多平台分发
+│   │   │   ├── export/       # 导出管线
+│   │   │   ├── subtitles/    # 字幕处理
+│   │   │   └── ...           # 200+ 功能模块
+│   │   └── __tests__/        # 单元测试 (≥80% 覆盖率)
+│   └── plugin-sdk/           # 插件 API 类型定义
+├── tools/
+│   └── create-plugin/        # 插件脚手架工具
+├── docs/                     # 架构文档、路线图、设计目标
+├── scripts/                  # 媒体兼容性测试、性能基准
+└── e2e/                      # Playwright 端到端测试
+```
+
+**技术栈：**
+
+| 层级 | 技术 |
+|------|------|
+| 前端框架 | React + TypeScript |
+| 桌面运行时 | Tauri 2 (WebView2) |
+| 后端语言 | Rust |
+| 包管理器 | Bun |
+| 预览渲染 | WebGL + Web Audio |
+| 视频处理 | FFmpeg |
+| 本地 AI | Whisper.cpp + Ollama |
+| 数据库 | SQLite |
+| 测试框架 | Vitest + Playwright |
+
+---
+
+## 📚 文档
 
 - [架构设计](docs/architecture.md)
 - [开发路线图](docs/roadmap.md)
 - [设计目标](docs/design-goals.md)
 - [产品计划](docs/product-plan.md)
-- [插件 API](docs/plugin-api/index.html)
 
-## 环境要求
+---
 
-- Rust stable >= 1.77
-- Bun >= 1.3
-- FFmpeg（需在 PATH 中）
-- Windows：WebView2 Runtime + Visual Studio C++ Build Tools
+## 🛠️ 环境要求
 
-## 安装依赖
+- **Rust** stable >= 1.77
+- **Bun** >= 1.3
+- **FFmpeg** — 需在 PATH 中
+- **Windows** — WebView2 Runtime + Visual Studio C++ Build Tools
+- **macOS** — Xcode Command Line Tools
+- **Linux** — WebKitGTK 开发库
+
+## 📥 安装依赖
 
 ```bash
 bun install
 ```
 
-## 开发
+## 🚀 开发
 
 ```bash
+# 启动开发服务器
 bun run tauri:dev
-```
 
-## 测试
-
-```bash
+# 类型检查
 bun run typecheck
+
+# 运行单元测试
 bun run test
+
+# 运行端到端测试
 bun run e2e
+
+# 发布检查
 bun run check:release
 ```
 
-## 构建
+## 📦 构建
 
 ```bash
+# 构建生产版本
 bun run tauri:build
+
+# 原生冒烟测试
+bun run smoke:tauri
 ```
 
-## About
+## 🔌 创建插件
 
-Open Factory is a local-first desktop video editor built with Tauri, Bun, TypeScript, and Rust. It keeps all media on your machine with zero telemetry, zero logins, and zero cloud uploads. The project is designed for creators who want full control over their editing workflow without sacrificing performance or privacy.
+```bash
+bun run create-plugin
+```
 
-## License
+---
 
-MIT
+## 🤝 贡献
+
+欢迎贡献！请遵循以下流程：
+
+1. Fork 本仓库
+2. 创建功能分支 (`git checkout -b feature/amazing-feature`)
+3. 提交更改 (`git commit -m 'feat: add amazing feature'`)
+4. 推送到远程 (`git push origin feature/amazing-feature`)
+5. 创建 Pull Request
+
+**开发规范：**
+
+- 所有 Tauri invoke/listen/dialog/shell 调用必须通过 `tauri-bridge.ts`
+- FFmpeg 执行必须使用参数数组，禁止 shell 字符串拼接
+- 核心算法必须有 Vitest 覆盖，`packages/editor-core` 覆盖率不低于 80%
+- 大文件处理必须保持异步，不得阻塞 UI 线程
+- Timeline 修改必须通过 Command Objects
+
+---
+
+## 📄 许可证
+
+[MIT License](LICENSE) — Copyright (c) 2024 Contributors
+
+---
+
+## 🔗 链接
+
+- [GitHub 仓库](https://github.com/a137460387/open-factory)
+- [问题反馈](https://github.com/a137460387/open-factory/issues)
+- [版本发布](https://github.com/a137460387/open-factory/releases)
