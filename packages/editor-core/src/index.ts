@@ -209,6 +209,7 @@ export * from './performance-monitor';
 export * from './format-converter';
 export * from './subtitles/emotion-analysis';
 export * from './export/export-history-classifier';
+export * from './distribution';
 export * from './audio-scrub';
 export * from './sequence-settings';
 export * from './track-height';
