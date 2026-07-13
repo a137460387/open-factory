@@ -1,5 +1,6 @@
 import { calculateSpeedCurveSourceDuration, getClipSpeed, type Clip, type EffectType, type MediaAsset, type ProjectColorPipeline } from '@open-factory/editor-core';
 import { recordPreviewDraw, recordPreviewError } from './debug';
+import type { HardwareDecodeManager } from './hw-decode-manager';
 import { drawTransformedSource2d } from './transform-2d';
 import type { WebGlPreviewCompositor } from './webgl-compositor';
 
@@ -15,9 +16,31 @@ export async function drawVideo2d(
   seekVideo: (video: HTMLVideoElement, time: number) => Promise<void>,
   loadThumbnail: (asset: MediaAsset) => Promise<HTMLImageElement | undefined>,
   bypassProcessing = false,
-  disabledEffectTypes: EffectType[] = []
+  disabledEffectTypes: EffectType[] = [],
+  hwDecodeManager?: HardwareDecodeManager | null
 ): Promise<void> {
   const sourceTime = getPreviewSourceTime(clip, playheadTime);
+
+  // 尝试硬件加速解码
+  if (hwDecodeManager?.isInitialized()) {
+    try {
+      const frame = await hwDecodeManager.decodeFrame(sourceTime);
+      // 将 ImageData 转换为可用的 CanvasImageSource
+      const bitmap = await createImageBitmap(frame.imageData);
+      try {
+        drawVideoSource2d(context, canvas, bitmap, asset, clip, bypassProcessing);
+        recordPreviewDraw('video', 'hw-decode');
+        return;
+      } finally {
+        bitmap.close();
+      }
+    } catch (error) {
+      // 硬件解码失败，回退到标准视频元素
+      recordPreviewError(error instanceof Error ? error.message : 'HW decode failed, falling back to video element.');
+    }
+  }
+
+  // 标准视频元素解码路径
   try {
     await seekVideo(video, sourceTime);
     drawVideoSource2d(context, canvas, video, asset, clip, bypassProcessing);
@@ -42,9 +65,42 @@ export async function drawVideoWebGl(
   loadThumbnail: (asset: MediaAsset) => Promise<HTMLImageElement | undefined>,
   bypassProcessing = false,
   disabledEffectTypes: EffectType[] = [],
-  colorPipeline?: ProjectColorPipeline
+  colorPipeline?: ProjectColorPipeline,
+  hwDecodeManager?: HardwareDecodeManager | null
 ): Promise<void> {
   const sourceTime = getPreviewSourceTime(clip, playheadTime);
+
+  // 尝试硬件加速解码
+  if (hwDecodeManager?.isInitialized()) {
+    try {
+      const frame = await hwDecodeManager.decodeFrame(sourceTime);
+      const bitmap = await createImageBitmap(frame.imageData);
+      try {
+        if (clip.projection === 'equirectangular' && clip.panorama) {
+          const drawn = compositor.drawPanoramaSource(bitmap, asset.width || 1280, asset.height || 720, clip.transform, clip.panorama, { bypassProcessing, blendMode: clip.blendMode, textureCacheKey: `${asset.path}:hw` });
+          if (drawn) {
+            recordPreviewDraw('video', 'hw-decode');
+            return;
+          }
+        }
+        compositor.drawSourceWithColorNodeGraph(bitmap, asset.width || 1280, asset.height || 720, clip.transform, clip.colorNodeGraph, clip.colorCorrection, clip.effects, clip.chromaKey, clip.masks, {
+          bypassProcessing,
+          disabledEffectTypes,
+          colorPipeline,
+          blendMode: clip.blendMode,
+          textureCacheKey: `${asset.path}:hw`
+        });
+        recordPreviewDraw('video', 'hw-decode');
+        return;
+      } finally {
+        bitmap.close();
+      }
+    } catch (error) {
+      recordPreviewError(error instanceof Error ? error.message : 'HW decode failed, falling back to video element.');
+    }
+  }
+
+  // 标准视频元素解码路径
   try {
     await seekVideo(video, sourceTime);
     if (clip.projection === 'equirectangular' && clip.panorama) {

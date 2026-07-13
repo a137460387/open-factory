@@ -1,4 +1,4 @@
-export type PreviewSourceKind = 'video' | 'image' | 'thumbnail' | 'text' | 'subtitle' | 'missing';
+export type PreviewSourceKind = 'video' | 'image' | 'thumbnail' | 'text' | 'subtitle' | 'missing' | 'hw-decode';
 
 export interface PreviewGpuDebugMetrics {
   gpuFrameMs: number;

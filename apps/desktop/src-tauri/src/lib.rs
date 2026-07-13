@@ -181,7 +181,15 @@ pub fn run() {
             commands::media_index::add_manual_tag,
             commands::media_index::remove_manual_tag,
             commands::auto_tag::auto_tag_asset,
-            commands::auto_tag::batch_auto_tag_assets
+            commands::auto_tag::batch_auto_tag_assets,
+            commands::hw_decode::get_hw_decode_capabilities,
+            commands::hw_decode::init_hardware_decoder,
+            commands::hw_decode::decode_video_frame,
+            commands::hw_decode::decode_video_frames,
+            commands::hw_decode::get_decoder_video_info,
+            commands::hw_decode::release_decoder,
+            commands::hw_decode::get_hw_decode_settings,
+            commands::hw_decode::set_hw_decode_settings
         ])
         .setup(|app| {
             let window_exists = app.get_webview_window("main").is_some();
