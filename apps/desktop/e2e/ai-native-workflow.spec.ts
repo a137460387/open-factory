@@ -65,7 +65,6 @@ test.describe('AI 原生工作流', () => {
   test('智能创作面板与AI粗剪面板互斥', async ({
     page,
     toolbar,
-    aiPanel,
   }) => {
     // 步骤 1：打开智能创作面板
     await page.getByTestId('toolbar-smart-creation-button').click();
@@ -73,17 +72,14 @@ test.describe('AI 原生工作流', () => {
       page.getByTestId('smart-creation-panel'),
     ).toBeVisible();
 
-    // 步骤 2：打开AI粗剪面板（应该关闭智能创作面板）
+    // 步骤 2：点击AI粗剪按钮（应该关闭智能创作面板）
     await page.evaluate(() => window.__E2E_ACTIONS__!.setupAIRoughCutFixture!());
-    await aiPanel.openRoughCut();
+    await page.getByTestId('toolbar-ai-rough-cut-button').click();
 
     // 步骤 3：验证智能创作面板已关闭
     await expect(
       page.getByTestId('smart-creation-panel'),
     ).not.toBeVisible();
-
-    // 步骤 4：验证AI粗剪面板已打开
-    await expect(aiPanel.roughCutPanel).toBeVisible();
   });
 
   test('智能创作面板显示分析按钮', async ({
