@@ -601,9 +601,7 @@ export function MediaBin({
               <Sparkles size={14} />
             </button>
           </label>
-          {projectPath && (
-            <AdvancedSearchPanel projectPath={projectPath} className="mb-1" />
-          )}
+          <AdvancedSearchPanel projectPath={projectPath || ''} className="mb-1" />
           {aiSearchMode && (
             <AISemanticSearchPanel media={media} onSelectMedia={(id) => { setAiSearchMode(false); setSearch(''); }} />
           )}

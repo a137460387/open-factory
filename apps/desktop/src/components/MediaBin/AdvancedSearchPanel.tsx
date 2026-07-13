@@ -92,14 +92,18 @@ export function AdvancedSearchPanel({ projectPath, className }: AdvancedSearchPa
       {/* 搜索栏 */}
       <div className="flex items-center gap-2 px-3 py-2">
         <Filter size={14} className="shrink-0 text-[var(--color-text-muted)]" />
-        <input
-          type="text"
-          className="flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-[var(--color-text-muted)]"
-          placeholder="搜索媒体资产..."
-          defaultValue={searchQuery.text || ''}
-          onChange={(e) => handleTextChange(e.target.value)}
-          data-testid="advanced-search-input"
-        />
+        {!projectPath ? (
+          <span className="flex-1 text-xs text-[var(--color-text-muted)]">打开项目后启用高级检索</span>
+        ) : (
+          <input
+            type="text"
+            className="flex-1 bg-transparent text-sm text-ink outline-none placeholder:text-[var(--color-text-muted)]"
+            placeholder="搜索媒体资产..."
+            defaultValue={searchQuery.text || ''}
+            onChange={(e) => handleTextChange(e.target.value)}
+            data-testid="advanced-search-input"
+          />
+        )}
         {isSearching && <Loader2 size={14} className="animate-spin text-brand" />}
         {searchResults && (
           <span className="shrink-0 text-xs text-[var(--color-text-muted)]">
