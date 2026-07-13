@@ -39,16 +39,22 @@ export function HardwareAccelerationSettingsPanel({ onSettingsChange }: Hardware
   useEffect(() => {
     void (async () => {
       try {
-        const [savedSettings, caps] = await Promise.all([
-          readHardwareAccelerationSettings(),
-          getHwDecodeCapabilities(),
-        ]);
+        const savedSettings = await readHardwareAccelerationSettings();
         setSettings(savedSettings);
-        setCapabilities(caps);
       } catch (err) {
         setError(err instanceof Error ? err.message : '无法加载硬件加速设置');
       } finally {
         setLoading(false);
+      }
+    })();
+
+    // 独立加载硬件能力（失败不影响设置显示）
+    void (async () => {
+      try {
+        const caps = await getHwDecodeCapabilities();
+        setCapabilities(caps);
+      } catch {
+        // 硬件能力检测失败不影响设置面板显示
       }
     })();
   }, []);
@@ -115,6 +121,7 @@ export function HardwareAccelerationSettingsPanel({ onSettingsChange }: Hardware
               className="mt-0.5 h-4 w-4 accent-brand"
               type="radio"
               name="hw-accel-mode"
+              value="auto"
               checked={settings.mode === 'auto'}
               onChange={() => void updateSettings({ mode: 'auto' })}
             />
@@ -128,6 +135,7 @@ export function HardwareAccelerationSettingsPanel({ onSettingsChange }: Hardware
               className="mt-0.5 h-4 w-4 accent-brand"
               type="radio"
               name="hw-accel-mode"
+              value="enabled"
               checked={settings.mode === 'enabled'}
               onChange={() => void updateSettings({ mode: 'enabled' })}
             />
@@ -141,6 +149,7 @@ export function HardwareAccelerationSettingsPanel({ onSettingsChange }: Hardware
               className="mt-0.5 h-4 w-4 accent-brand"
               type="radio"
               name="hw-accel-mode"
+              value="disabled"
               checked={settings.mode === 'disabled'}
               onChange={() => void updateSettings({ mode: 'disabled' })}
             />
