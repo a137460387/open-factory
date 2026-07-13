@@ -179,6 +179,7 @@ vi.mock('@open-factory/editor-core', async (importOriginal) => {
     DeleteClipsCommand: vi.fn(),
     DeleteGroupCommand: vi.fn(),
     ImportEDLCommand: vi.fn(),
+    ImportFCPXMLCommand: vi.fn(),
     PiPLayoutCommand: vi.fn(),
     RippleDeleteCommand: vi.fn(),
     SplitClipCommand: vi.fn(),
@@ -509,6 +510,26 @@ describe('useEditorShellTimelineCallbacks', () => {
       expect(edlResult.title).toBe('Test EDL');
       expect(edlResult.matchedCount).toBe(3);
       expect(edlResult.missingCount).toBe(1);
+      expect(mockClearSelectedClipIds).toHaveBeenCalled();
+      expect(mockSetPlayheadTime).toHaveBeenCalledWith(0);
+    });
+  });
+
+  // ── importFcpXmlTimeline ─────────────────────────────────────
+
+  describe('importFcpXmlTimeline', () => {
+    it('导入 FCPXML 内容并返回结果', async () => {
+      const { ImportFCPXMLCommand } = await import('@open-factory/editor-core');
+      vi.mocked(ImportFCPXMLCommand).mockImplementation(function (this: any) {
+        this.result = { title: 'Test FCPXML', matchedCount: 5, missingCount: 2 };
+      } as any);
+
+      const { result } = renderHook(() => useEditorShellTimelineCallbacks(defaultDeps));
+      const fcpxmlResult = result.current.importFcpXmlTimeline('<xmeml>...</xmeml>', '/mock/test.xml');
+
+      expect(fcpxmlResult.title).toBe('Test FCPXML');
+      expect(fcpxmlResult.matchedCount).toBe(5);
+      expect(fcpxmlResult.missingCount).toBe(2);
       expect(mockClearSelectedClipIds).toHaveBeenCalled();
       expect(mockSetPlayheadTime).toHaveBeenCalledWith(0);
     });
