@@ -8,7 +8,8 @@ edition = "2021"
 rust-version = "1.77"
 
 [features]
-default = []
+default = ["hw-decode"]
+hw-decode = []
 
 [lib]
 name = "open_factory_desktop_lib"

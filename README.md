@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 ![CI](https://github.com/a137460387/open-factory/actions/workflows/ci.yml/badge.svg)
-[![Version](https://img.shields.io/badge/version-v4.21.0-brightgreen)](https://github.com/a137460387/open-factory/releases)
+[![Version](https://img.shields.io/badge/version-v4.23.0-brightgreen)](https://github.com/a137460387/open-factory/releases)
 [![Bun](https://img.shields.io/badge/Bun-%3E%3D%201.3-fb923c)](https://bun.sh)
 [![Rust](https://img.shields.io/badge/Rust-%3E%3D%201.77-dea584)](https://www.rust-lang.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue)](https://www.typescriptlang.org)
@@ -139,12 +139,12 @@ Open Factory 是一款面向专业创作者的**本地化优先**视频编辑器
 - ✅ **智能媒体匹配** — 自动关联缺失素材文件
 - ✅ **全面 E2E 测试** — 互操作性端到端测试覆盖
 
-### 🔜 即将到来 — 硬件加速解码
+### v4.23.0 — 硬件加速解码
 
-- 🔄 **多后端支持** — CUDA / VAAPI / QuickSync / D3D11VA / VideoToolbox
-- 🔄 **自动检测** — 智能识别可用 GPU 硬件
-- 🔄 **软件降级** — 硬件解码失败时自动回退到软件解码
-- 🔄 **批量帧解码** — 预览管线集成的批量解码优化
+- ✅ **多后端支持** — CUDA / VAAPI / QuickSync / D3D11VA / VideoToolbox
+- ✅ **自动检测** — 智能识别可用 GPU 硬件
+- ✅ **软件降级** — 硬件解码失败时自动回退到软件解码
+- ✅ **批量帧解码** — 预览管线集成的批量解码优化
 
 ---
 

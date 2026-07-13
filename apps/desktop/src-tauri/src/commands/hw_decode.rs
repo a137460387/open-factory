@@ -232,25 +232,11 @@ impl FFmpegHardwareDecoder {
         args.push("-vframes".to_string());
         args.push("1".to_string());
 
-        // 输出格式
+        // 输出格式和像素格式
         args.push("-f".to_string());
         args.push("rawvideo".to_string());
-
-        // 如果使用硬件加速，需要将帧从 GPU 拷回 CPU
-        if self.backend != HardwareBackend::Software {
-            let hwaccel = self.backend.to_ffmpeg_hwaccel();
-            if !hwaccel.is_empty() {
-                // 使用 format 滤镜将硬件帧转换为 rgba
-                args.push("-pix_fmt".to_string());
-                args.push("rgba".to_string());
-            } else {
-                args.push("-pix_fmt".to_string());
-                args.push("rgba".to_string());
-            }
-        } else {
-            args.push("-pix_fmt".to_string());
-            args.push("rgba".to_string());
-        }
+        args.push("-pix_fmt".to_string());
+        args.push("rgba".to_string());
 
         // 如果指定了目标尺寸，添加缩放滤镜
         if self.width != self.video_info.width || self.height != self.video_info.height {
@@ -271,7 +257,7 @@ impl HardwareDecoder for FFmpegHardwareDecoder {
         let args = self.build_decode_args(timestamp);
 
         // 尝试使用硬件加速解码
-        let output = std::process::Command::new("ffmpeg")
+        let output = std::process::Command::new(super::binaries::ffmpeg_binary())
             .args(&args)
             .output()
             .map_err(|e| format!("FFmpeg 执行失败: {}", e))?;
@@ -282,10 +268,11 @@ impl HardwareDecoder for FFmpegHardwareDecoder {
             if self.backend != HardwareBackend::Software {
                 // 回退到软件解码
                 let fallback_args = self.build_software_fallback_args(timestamp);
-                let fallback_output = std::process::Command::new("ffmpeg")
-                    .args(&fallback_args)
-                    .output()
-                    .map_err(|e| format!("FFmpeg 软件解码也失败: {}", e))?;
+                let fallback_output =
+                    std::process::Command::new(super::binaries::ffmpeg_binary())
+                        .args(&fallback_args)
+                        .output()
+                        .map_err(|e| format!("FFmpeg 软件解码也失败: {}", e))?;
 
                 if !fallback_output.status.success() {
                     let fallback_stderr = String::from_utf8_lossy(&fallback_output.stderr);
@@ -373,7 +360,7 @@ impl FFmpegHardwareDecoder {
 
 /// 探测视频信息
 fn probe_video_info(path: &str) -> Result<VideoInfo, String> {
-    let output = std::process::Command::new("ffprobe")
+    let output = std::process::Command::new(super::binaries::ffprobe_binary())
         .args([
             "-v",
             "error",
