@@ -60,6 +60,7 @@ import { useProxySettingsStore } from '../store/proxySettingsStore';
 import { useMediaJobStore } from '../media/media-job-store';
 import { ensureMediaJobRunner } from '../media/media-job-runner';
 import { probeMediaPaths, pickMediaPaths } from '../lib/media';
+import { indexAndTagImportedMedia } from '../media/media-index-integration';
 import { generateMediaFingerprint, scanDuplicateMediaGroups } from '../lib/duplicateMedia';
 import {
   buildArchiveDestinationPath,
@@ -182,6 +183,7 @@ export function useEditorShellMediaCallbacks(deps: MediaCallbacksDeps) {
       if (result.media.length > 0) {
         const importedMedia = await applyImportedMediaColorConversionChoice(result.media);
         useEditorStore.getState().addMedia(importedMedia);
+        void indexAndTagImportedMedia(importedMedia, useEditorStore.getState().projectPath || '');
         await persistMediaFingerprints(importedMedia);
         await queueFrameRateConversionForImportedMedia(importedMedia);
         void runAutomationForMedia('on-import', importedMedia);

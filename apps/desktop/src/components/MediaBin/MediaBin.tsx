@@ -45,6 +45,7 @@ import { TITLE_TEMPLATE_DRAG_MIME } from '../../lib/titleTemplates';
 import { analyzeMedia, callAiApi, convertLocalFileSrc, listenDragDrop, readAiApiKey, type MediaAnalysis } from '../../lib/tauri-bridge';
 import { useMediaJobStore } from '../../media/media-job-store';
 import { useEditorStore } from '../../store/editorStore';
+import { useMediaIndexStore, hasActiveIndexFilters } from '../../store/mediaIndexStore';
 import { DEFAULT_MEDIA_LIBRARY_VIEW_SETTINGS, normalizeMediaLibraryViewSettings, sortMediaLibraryAssets, type MediaLibraryGridSize, type MediaLibrarySortKey, type MediaLibraryViewMode, type MediaLibraryViewSettings } from '../../media/mediaLibraryView';
 import { readViewSettings, saveViewSettings } from '../../settings/appSettings';
 import type { SharedLibraryResource } from '../../shared-library/sharedLibrary';
@@ -204,6 +205,13 @@ export function MediaBin({
 }: MediaBinProps) {
   const t = zhCN.mediaBin;
   const projectPath = useEditorStore((s) => s.projectPath);
+  const searchResults = useMediaIndexStore((s) => s.searchResults);
+  const searchQuery = useMediaIndexStore((s) => s.searchQuery);
+  const indexFilterActive = hasActiveIndexFilters(searchQuery) && searchResults !== null;
+  const indexResultIds = useMemo(
+    () => indexFilterActive ? new Set(searchResults!.assets.map((a) => a.id)) : null,
+    [indexFilterActive, searchResults],
+  );
   const [dragOver, setDragOver] = useState(false);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<MediaBinView>('all');
@@ -262,7 +270,8 @@ export function MediaBin({
         })
           .filter((asset) => sceneFilter === 'all' || mediaContentAnalysis[asset.id]?.sceneTypes.includes(sceneFilter))
           .filter((asset) => !smartAlbumIds || smartAlbumIds.has(asset.id))
-          .filter((asset) => !_searchFilterSet || _searchFilterSet.has(asset.id));
+          .filter((asset) => !_searchFilterSet || _searchFilterSet.has(asset.id))
+          .filter((asset) => !indexResultIds || indexResultIds.has(asset.id));
   const sortedVisibleMedia = useMemo(
     () => {
       const sorted = sortMediaLibraryAssets(visibleMedia, mediaLibraryView);

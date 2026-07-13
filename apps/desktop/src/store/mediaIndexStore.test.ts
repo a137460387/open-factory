@@ -6,7 +6,7 @@ vi.mock('../lib/tauri-bridge', () => ({
   getAllTags: vi.fn(),
 }));
 
-import { useMediaIndexStore } from './mediaIndexStore';
+import { useMediaIndexStore, hasActiveIndexFilters } from './mediaIndexStore';
 import { searchMediaAssets, getAllTags } from '../lib/tauri-bridge';
 
 const mockSearchMediaAssets = vi.mocked(searchMediaAssets);
@@ -238,6 +238,40 @@ describe('mediaIndexStore', () => {
 
       const state = useMediaIndexStore.getState();
       expect(state.tagsLoading).toBe(false);
+    });
+  });
+
+  describe('hasActiveIndexFilters', () => {
+    it('无筛选条件时返回 false', () => {
+      expect(hasActiveIndexFilters({ projectPath: '/test' })).toBe(false);
+    });
+
+    it('有标签时返回 true', () => {
+      expect(hasActiveIndexFilters({ projectPath: '/test', tags: ['4K'] })).toBe(true);
+    });
+
+    it('有类型筛选时返回 true', () => {
+      expect(hasActiveIndexFilters({ projectPath: '/test', assetTypes: ['video'] })).toBe(true);
+    });
+
+    it('有分辨率范围时返回 true', () => {
+      expect(hasActiveIndexFilters({ projectPath: '/test', minWidth: 1920 })).toBe(true);
+    });
+
+    it('有时长范围时返回 true', () => {
+      expect(hasActiveIndexFilters({ projectPath: '/test', minDurationMs: 10000 })).toBe(true);
+    });
+
+    it('有文本搜索时返回 true', () => {
+      expect(hasActiveIndexFilters({ projectPath: '/test', text: 'test' })).toBe(true);
+    });
+
+    it('空文本搜索时返回 false', () => {
+      expect(hasActiveIndexFilters({ projectPath: '/test', text: '' })).toBe(false);
+    });
+
+    it('有评分筛选时返回 true', () => {
+      expect(hasActiveIndexFilters({ projectPath: '/test', minRating: 3 })).toBe(true);
     });
   });
 });

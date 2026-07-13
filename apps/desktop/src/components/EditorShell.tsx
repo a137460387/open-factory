@@ -169,6 +169,7 @@ import {
 } from '../layout/layoutSettings';
 import type { ExportPreset } from '../export/export-presets';
 import { pickMediaPaths, probeMediaPaths } from '../lib/media';
+import { indexAndTagImportedMedia } from '../media/media-index-integration';
 import { generateMediaFingerprint, scanDuplicateMediaGroups } from '../lib/duplicateMedia';
 import { buildArchiveDestinationPath, buildRenameDestinationPath, scanMediaCleanupReport, scanSmartDuplicateMediaGroups } from '../lib/mediaOrganizer';
 import {
@@ -235,7 +236,8 @@ import {
   writeFile as bridgeWriteFile,
   type DemucsProgressEvent,
   type PreviewWindowState,
-  type RecordingSource
+  type RecordingSource,
+  initMediaIndexDb
 } from '../lib/tauri-bridge';
 import { showToast } from '../lib/toast';
 import {
@@ -653,6 +655,15 @@ export function EditorShell() {
   const tutorialSignals = useEditorSettingsStore((s) => s.tutorialSignals);
 
   const setTutorialSignals = useEditorSettingsStore((s) => s.setTutorialSignals);
+
+  // 项目加载时初始化媒体索引数据库
+  useEffect(() => {
+    if (projectPath) {
+      void initMediaIndexDb(projectPath).catch((error) => {
+        console.warn('媒体索引数据库初始化失败:', error);
+      });
+    }
+  }, [projectPath]);
 
   // Advance tutorial when signals change
   useEffect(() => {
@@ -1104,6 +1115,7 @@ export function EditorShell() {
       const result = await probeMediaPaths(paths, useEditorStore.getState().project.media);
       if (result.media.length > 0) {
         addMedia(result.media);
+        void indexAndTagImportedMedia(result.media, projectPath || '');
         await persistMediaFingerprints(result.media);
         await queueFrameRateConversionForImportedMedia(result.media);
         void runAutomationForMedia('on-import', result.media);
@@ -1933,6 +1945,7 @@ export function EditorShell() {
         }
         const importedMedia = await applyImportedMediaColorConversionChoice(result.media);
         addMedia(importedMedia);
+        void indexAndTagImportedMedia(importedMedia, projectPath || '');
         await persistMediaFingerprints(importedMedia);
         await queueFrameRateConversionForImportedMedia(importedMedia);
         void runAutomationForMedia('on-import', importedMedia);

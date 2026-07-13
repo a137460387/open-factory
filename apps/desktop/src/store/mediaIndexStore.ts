@@ -9,6 +9,24 @@ import {
   getAllTags,
 } from '../lib/tauri-bridge';
 
+/** 是否有任何活跃的筛选条件 */
+export function hasActiveIndexFilters(query: MediaSearchQuery): boolean {
+  return !!(
+    (query.tags && query.tags.length > 0) ||
+    (query.assetTypes && query.assetTypes.length > 0) ||
+    query.minWidth !== undefined ||
+    query.maxWidth !== undefined ||
+    query.minHeight !== undefined ||
+    query.maxHeight !== undefined ||
+    query.minDurationMs !== undefined ||
+    query.maxDurationMs !== undefined ||
+    query.minRating !== undefined ||
+    query.labelColor ||
+    query.flag ||
+    (query.text && query.text.trim().length > 0)
+  );
+}
+
 export interface MediaIndexState {
   // 搜索状态
   searchQuery: MediaSearchQuery;
@@ -62,6 +80,12 @@ export const useMediaIndexStore = create<MediaIndexState>((set, get) => ({
   executeSearch: async () => {
     const { searchQuery } = get();
     if (!searchQuery.projectPath) return;
+
+    // 无筛选条件时清除结果（使用内存过滤）
+    if (!hasActiveIndexFilters(searchQuery)) {
+      set({ searchResults: null, isSearching: false });
+      return;
+    }
 
     set({ isSearching: true });
     try {
