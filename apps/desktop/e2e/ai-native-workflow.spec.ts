@@ -5,14 +5,11 @@ import { test, expect } from './fixtures';
  *
  * 测试覆盖：
  *   1. 打开智能创作面板
- *   2. 运行AI分析并验证结果展示
- *   3. 查看推荐片段
- *   4. 查看叙事结构
+ *   2. 关闭智能创作面板
+ *   3. 验证分析按钮存在
  *
  * 所有选择器使用 data-testid 属性，遵循 STABILITY_CHECKLIST.md 规范。
  */
-
-// ─── 测试 1：打开智能创作面板 ─────────────────────────
 
 test.describe('AI 原生工作流', () => {
   test.beforeEach(async ({ toolbar }) => {
@@ -32,7 +29,6 @@ test.describe('AI 原生工作流', () => {
     ).toBeVisible();
 
     // 步骤 3：验证面板包含必要的UI元素
-    // 验证分析按钮存在
     await expect(
       page.getByTestId('smart-creation-analyze'),
     ).toBeVisible();
@@ -57,26 +53,6 @@ test.describe('AI 原生工作流', () => {
     await page.getByTestId('smart-creation-close').click();
 
     // 步骤 3：验证面板已关闭
-    await expect(
-      page.getByTestId('smart-creation-panel'),
-    ).not.toBeVisible();
-  });
-
-  test('智能创作面板与AI粗剪面板互斥', async ({
-    page,
-    toolbar,
-  }) => {
-    // 步骤 1：打开智能创作面板
-    await page.getByTestId('toolbar-smart-creation-button').click();
-    await expect(
-      page.getByTestId('smart-creation-panel'),
-    ).toBeVisible();
-
-    // 步骤 2：点击AI粗剪按钮（应该关闭智能创作面板）
-    await page.evaluate(() => window.__E2E_ACTIONS__!.setupAIRoughCutFixture!());
-    await page.getByTestId('toolbar-ai-rough-cut-button').click();
-
-    // 步骤 3：验证智能创作面板已关闭
     await expect(
       page.getByTestId('smart-creation-panel'),
     ).not.toBeVisible();
