@@ -27,3 +27,4 @@ pub mod whisper;
 pub mod ai;
 pub mod auto_tag;
 pub mod media_index;
+pub mod hw_decode;
