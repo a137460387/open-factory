@@ -26,9 +26,9 @@ test('hardware acceleration shows capabilities', async ({ page }) => {
   // 切换到硬件加速标签
   await page.getByTestId('settings-tab-hardware-acceleration').click();
 
-  // 验证硬件能力检测区域可见
+  // 验证硬件能力检测区域标题可见
   await expect(page.getByText('硬件能力检测', { exact: true })).toBeVisible();
-  await expect(page.getByText('推荐后端', { exact: true })).toBeVisible();
+  await expect(page.getByText('刷新', { exact: true })).toBeVisible();
 });
 
 test('hardware acceleration shows frame cache settings', async ({ page }) => {
