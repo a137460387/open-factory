@@ -6,7 +6,7 @@ test('hardware acceleration settings tab is accessible', async ({ page }) => {
   await waitForE2eActions(page);
 
   // 打开设置对话框
-  await page.getByTestId('settings-button').click();
+  await page.getByTestId('toolbar-settings-button').click();
 
   // 切换到硬件加速标签
   await page.getByTestId('settings-tab-hardware-acceleration').click();
@@ -21,7 +21,7 @@ test('hardware acceleration mode can be changed', async ({ page }) => {
   await waitForE2eActions(page);
 
   // 打开设置对话框
-  await page.getByTestId('settings-button').click();
+  await page.getByTestId('toolbar-settings-button').click();
 
   // 切换到硬件加速标签
   await page.getByTestId('settings-tab-hardware-acceleration').click();
@@ -43,7 +43,7 @@ test('hardware acceleration shows capabilities', async ({ page }) => {
   await waitForE2eActions(page);
 
   // 打开设置对话框
-  await page.getByTestId('settings-button').click();
+  await page.getByTestId('toolbar-settings-button').click();
 
   // 切换到硬件加速标签
   await page.getByTestId('settings-tab-hardware-acceleration').click();
@@ -58,7 +58,7 @@ test('hardware acceleration frame cache settings', async ({ page }) => {
   await waitForE2eActions(page);
 
   // 打开设置对话框
-  await page.getByTestId('settings-button').click();
+  await page.getByTestId('toolbar-settings-button').click();
 
   // 切换到硬件加速标签
   await page.getByTestId('settings-tab-hardware-acceleration').click();
@@ -77,7 +77,7 @@ test('hardware acceleration pre-decode settings', async ({ page }) => {
   await waitForE2eActions(page);
 
   // 打开设置对话框
-  await page.getByTestId('settings-button').click();
+  await page.getByTestId('toolbar-settings-button').click();
 
   // 切换到硬件加速标签
   await page.getByTestId('settings-tab-hardware-acceleration').click();
