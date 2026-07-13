@@ -14,7 +14,7 @@ test('hardware acceleration settings tab is accessible', async ({ page }) => {
   await page.getByTestId('settings-tab-hardware-acceleration').click();
 
   // 验证硬件加速设置面板已显示
-  await expect(page.locator('text=硬件加速解码')).toBeVisible();
+  await expect(page.getByRole('heading', { name: '硬件加速解码' })).toBeVisible();
 });
 
 test('hardware acceleration mode can be changed', async ({ page }) => {
@@ -29,7 +29,7 @@ test('hardware acceleration mode can be changed', async ({ page }) => {
   await page.getByTestId('settings-tab-hardware-acceleration').click();
 
   // 选择"始终启用"模式
-  await page.locator('input[value="enabled"]').click();
+  await page.getByLabel('始终启用').click();
 
   // 验证设置已持久化
   await expect
@@ -67,7 +67,7 @@ test('hardware acceleration settings persist across reloads', async ({ page }) =
   // 打开设置对话框并修改设置
   await page.getByTestId('toolbar-settings-button').click();
   await page.getByTestId('settings-tab-hardware-acceleration').click();
-  await page.locator('input[value="disabled"]').click();
+  await page.getByLabel('禁用').click();
 
   // 重新加载页面
   await page.reload();
@@ -78,5 +78,5 @@ test('hardware acceleration settings persist across reloads', async ({ page }) =
   await page.getByTestId('settings-tab-hardware-acceleration').click();
 
   // 验证"禁用"选项仍然被选中
-  await expect(page.locator('input[value="disabled"]')).toBeChecked();
+  await expect(page.getByLabel('禁用')).toBeChecked();
 });

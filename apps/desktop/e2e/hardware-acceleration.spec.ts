@@ -12,8 +12,8 @@ test('hardware acceleration settings tab is accessible', async ({ page }) => {
   await page.getByTestId('settings-tab-hardware-acceleration').click();
 
   // 验证硬件加速设置面板可见
-  await expect(page.getByText('硬件加速解码')).toBeVisible();
-  await expect(page.getByText('加速模式')).toBeVisible();
+  await expect(page.getByRole('heading', { name: '硬件加速解码' })).toBeVisible();
+  await expect(page.getByText('加速模式', { exact: true })).toBeVisible();
 });
 
 test('hardware acceleration mode can be changed', async ({ page }) => {
@@ -35,7 +35,7 @@ test('hardware acceleration mode can be changed', async ({ page }) => {
   await disabledRadio.click();
 
   // 验证禁用模式下不显示后端选择
-  await expect(page.getByText('首选后端')).not.toBeVisible();
+  await expect(page.getByText('首选后端', { exact: true })).not.toBeVisible();
 });
 
 test('hardware acceleration shows capabilities', async ({ page }) => {
@@ -49,8 +49,8 @@ test('hardware acceleration shows capabilities', async ({ page }) => {
   await page.getByTestId('settings-tab-hardware-acceleration').click();
 
   // 验证硬件能力检测区域可见
-  await expect(page.getByText('硬件能力检测')).toBeVisible();
-  await expect(page.getByText('推荐后端')).toBeVisible();
+  await expect(page.getByText('硬件能力检测', { exact: true })).toBeVisible();
+  await expect(page.getByText('推荐后端', { exact: true })).toBeVisible();
 });
 
 test('hardware acceleration frame cache settings', async ({ page }) => {
@@ -64,8 +64,8 @@ test('hardware acceleration frame cache settings', async ({ page }) => {
   await page.getByTestId('settings-tab-hardware-acceleration').click();
 
   // 验证帧缓存设置可见
-  await expect(page.getByText('帧缓存')).toBeVisible();
-  await expect(page.getByText('启用帧缓存')).toBeVisible();
+  await expect(page.getByText('帧缓存', { exact: true })).toBeVisible();
+  await expect(page.getByText('启用帧缓存', { exact: true })).toBeVisible();
 
   // 验证缓存帧数输入框可见
   const cacheSizeInput = page.locator('input[type="number"][min="5"]');
@@ -83,8 +83,8 @@ test('hardware acceleration pre-decode settings', async ({ page }) => {
   await page.getByTestId('settings-tab-hardware-acceleration').click();
 
   // 验证预解码设置可见
-  await expect(page.getByText('预解码')).toBeVisible();
-  await expect(page.getByText('启用预解码')).toBeVisible();
+  await expect(page.getByText('预解码', { exact: true })).toBeVisible();
+  await expect(page.getByText('启用预解码', { exact: true })).toBeVisible();
 
   // 验证预解码帧数输入框可见
   const preDecodeInput = page.locator('input[type="number"][min="1"]');
