@@ -1,3 +1,5 @@
+#![cfg(feature = "hw-decode")]
+
 use base64::Engine;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};

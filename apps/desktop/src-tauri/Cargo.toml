@@ -7,6 +7,9 @@ authors = ["open-factory"]
 edition = "2021"
 rust-version = "1.77"
 
+[features]
+default = []
+
 [lib]
 name = "open_factory_desktop_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
@@ -39,5 +42,4 @@ tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 rusqlite = { version = "0.31", features = ["bundled"] }
 trash = "5"
-ffmpeg-next = "6"
 once_cell = "1"
