@@ -1,7 +1,7 @@
 {
   "name": "open-factory",
   "license": "MIT",
-  "version": "4.21.0",
+  "version": "4.22.0",
   "private": true,
   "packageManager": "bun@1.3.14",
   "description": "Local-first desktop video editor with AI-powered editing and plugin extensibility.",
