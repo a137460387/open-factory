@@ -1,6 +1,7 @@
 import { lazy, Suspense, useMemo } from 'react';
 import type { Clip, Project } from '@open-factory/editor-core';
-import { getTimelinePlaybackDuration } from '@open-factory/editor-core';
+import { getTimelinePlaybackDuration, AddClipCommand } from '@open-factory/editor-core';
+import type { NarrativeGenerationResult } from '@open-factory/editor-core';
 import { ChevronRight } from 'lucide-react';
 import { ErrorBoundary } from '../common/ErrorBoundary';
 import { PanelLoading } from '../PanelLoading';
@@ -8,6 +9,7 @@ import { CollapsedPanelRail } from '../CollapsedPanelRail';
 import { zhCN } from '../../i18n/strings';
 import { featureStrings } from '../../i18n/featureStrings';
 import { selectClipById, useEditorStore } from '../../store/editorStore';
+import { commandManager, timelineAccessor } from '../../store/commandManager';
 import { useEditorUIStore } from '../../store/editorUIStore';
 import { getEffectivePanelState } from '../../layout/layoutSettings';
 import { getReviewModeShellVisibility } from '../../review/reviewMode';
@@ -182,7 +184,82 @@ export function ShellRightPanel() {
             ) : smartRoughCutOpen ? (
               <SmartRoughCutPanel selectedClip={selectedClip} media={project.media} />
             ) : smartCreationOpen ? (
-              <SmartCreationPanel open={smartCreationOpen} onClose={() => setSmartCreationOpen(false)} media={project.media} />
+              <SmartCreationPanel
+                open={smartCreationOpen}
+                onClose={() => setSmartCreationOpen(false)}
+                media={project.media}
+                onApplyRecommendations={(clipIds) => {
+                  const store = useEditorStore.getState();
+                  const { project } = store;
+                  const firstVideoTrack = project.timeline.tracks.find((t) => t.type === 'video');
+                  if (!firstVideoTrack) return;
+
+                  const clipsToAdd = clipIds
+                    .map((id) => project.media.find((m) => m.id === id))
+                    .filter((m): m is NonNullable<typeof m> => Boolean(m));
+
+                  if (clipsToAdd.length === 0) return;
+
+                  const lastClipEnd = firstVideoTrack.clips.length > 0
+                    ? Math.max(...firstVideoTrack.clips.map((c) => c.start + c.duration))
+                    : 0;
+
+                  let currentTime = lastClipEnd;
+                  for (const media of clipsToAdd) {
+                    const clip = {
+                      id: `clip-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                      mediaId: media.id,
+                      name: media.name,
+                      type: 'video' as const,
+                      trackId: firstVideoTrack.id,
+                      start: currentTime,
+                      duration: media.duration,
+                      trimStart: 0,
+                      trimEnd: 0,
+                      speed: 1,
+                      volume: 1,
+                      colorCorrection: { brightness: 0, contrast: 0, saturation: 0, hue: 0 },
+                      transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
+                    };
+                    commandManager.execute(new AddClipCommand(timelineAccessor, clip));
+                    currentTime += media.duration;
+                  }
+                }}
+                onApplyStoryline={(storyline) => {
+                  const store = useEditorStore.getState();
+                  const { project } = store;
+                  const firstVideoTrack = project.timeline.tracks.find((t) => t.type === 'video');
+                  if (!firstVideoTrack || !storyline.storyline.length) return;
+
+                  let currentTime = 0;
+                  for (const segment of storyline.storyline) {
+                    const matchingMedia = project.media.find((m) => {
+                      const scene = m.aiAnalysis?.scene?.toLowerCase() ?? '';
+                      return scene.includes(segment.sceneType) || segment.suggestedClips.includes(m.id);
+                    }) ?? project.media[0];
+
+                    if (!matchingMedia) continue;
+
+                    const clip = {
+                      id: `clip-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+                      mediaId: matchingMedia.id,
+                      name: `${segment.purpose} - ${matchingMedia.name}`,
+                      type: 'video' as const,
+                      trackId: firstVideoTrack.id,
+                      start: currentTime,
+                      duration: segment.duration,
+                      trimStart: 0,
+                      trimEnd: Math.max(0, matchingMedia.duration - segment.duration),
+                      speed: 1,
+                      volume: 1,
+                      colorCorrection: { brightness: 0, contrast: 0, saturation: 0, hue: 0 },
+                      transform: { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 },
+                    };
+                    commandManager.execute(new AddClipCommand(timelineAccessor, clip));
+                    currentTime += segment.duration;
+                  }
+                }}
+              />
             ) : smartDistributionOpen ? (
               <SmartDistributionPanel
                 projectWidth={project.settings.width}

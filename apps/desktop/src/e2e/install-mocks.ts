@@ -4936,6 +4936,84 @@ window.__E2E_ACTIONS__ = {
     useEditorUIStore.getState().setAiSubtitleWorkflowOpen(true);
     commandManager.clear();
   },
+  setupSmartCreationDeepFixture: () => {
+    const project = createProject('Smart Creation Deep E2E');
+    const assetA: MediaAsset = {
+      id: 'media-scene-outdoor',
+      type: 'video',
+      name: 'outdoor-sunny.mp4',
+      path: tinyVideo,
+      duration: 12,
+      width: 1920,
+      height: 1080,
+      size: 16384,
+      mtimeMs: 1_000,
+      hasAudio: true,
+      audioChannels: 2,
+      audioSampleRate: 48_000,
+      audioCodec: 'aac',
+      videoCodec: 'h264',
+      frameRate: 30,
+      colorProfile: { sourceColorSpace: 'rec709', label: 'SDR', colorPrimaries: 'bt709', colorTransfer: 'bt709' },
+      aiAnalysis: { tags: ['户外', '阳光'], scene: 'outdoor sunny', mood: 'energetic', objects: ['天空', '草地'], analysisTime: '2026-01-01T00:00:00Z', providerId: 'mock' }
+    };
+    const assetB: MediaAsset = {
+      id: 'media-scene-indoor',
+      type: 'video',
+      name: 'indoor-calm.mp4',
+      path: tinyVideoB,
+      duration: 8,
+      width: 1280,
+      height: 720,
+      size: 8192,
+      mtimeMs: 2_000,
+      hasAudio: true,
+      audioChannels: 2,
+      audioSampleRate: 44_100,
+      audioCodec: 'aac',
+      videoCodec: 'h264',
+      frameRate: 24,
+      aiAnalysis: { tags: ['室内', '平静'], scene: 'indoor calm', mood: 'calm', objects: ['家具', '灯光'], analysisTime: '2026-01-01T00:00:00Z', providerId: 'mock' }
+    };
+    const assetC: MediaAsset = {
+      id: 'media-scene-night',
+      type: 'video',
+      name: 'night-city.mp4',
+      path: fourKHevcVideo,
+      duration: 10,
+      width: 3840,
+      height: 2160,
+      size: 32768,
+      mtimeMs: 3_000,
+      hasAudio: true,
+      audioChannels: 6,
+      audioSampleRate: 48_000,
+      audioCodec: 'aac',
+      videoCodec: 'hevc',
+      frameRate: 60,
+      colorProfile: { sourceColorSpace: 'rec2020', label: 'HDR', colorPrimaries: 'bt2020', colorTransfer: 'smpte2084' },
+      aiAnalysis: { tags: ['夜景', '城市'], scene: 'night action', mood: 'exciting', objects: ['霓虹灯', '街道'], analysisTime: '2026-01-01T00:00:00Z', providerId: 'mock' }
+    };
+    const timeline = {
+      transitions: [],
+      markers: [],
+      tracks: [
+        createTrack({ id: 'track-video', type: 'video', name: 'Video 1', clips: [] }),
+        createTrack({ id: 'track-audio', type: 'audio', name: 'Audio 1', clips: [] }),
+        createTrack({ id: 'track-text', type: 'text', name: 'Text 1', clips: [] })
+      ]
+    };
+    useEditorStore.getState().setProject({
+      ...project,
+      media: [assetA, assetB, assetC],
+      timeline,
+      sequences: [{ id: PRIMARY_SEQUENCE_ID, name: DEFAULT_PRIMARY_SEQUENCE_NAME, timeline }],
+      activeSequenceId: PRIMARY_SEQUENCE_ID
+    });
+    useEditorStore.getState().setSelectedClipIds([]);
+    useEditorStore.getState().setPlayheadTime(0);
+    commandManager.clear();
+  }
 };
 
 function makeWhisperVideoClip(): Extract<import('@open-factory/editor-core').Clip, { type: 'video' }> {
