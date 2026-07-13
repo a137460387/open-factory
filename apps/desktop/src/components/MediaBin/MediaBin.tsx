@@ -44,6 +44,7 @@ import { isTauriRuntime } from '../../lib/tauri';
 import { TITLE_TEMPLATE_DRAG_MIME } from '../../lib/titleTemplates';
 import { analyzeMedia, callAiApi, convertLocalFileSrc, listenDragDrop, readAiApiKey, type MediaAnalysis } from '../../lib/tauri-bridge';
 import { useMediaJobStore } from '../../media/media-job-store';
+import { useEditorStore } from '../../store/editorStore';
 import { DEFAULT_MEDIA_LIBRARY_VIEW_SETTINGS, normalizeMediaLibraryViewSettings, sortMediaLibraryAssets, type MediaLibraryGridSize, type MediaLibrarySortKey, type MediaLibraryViewMode, type MediaLibraryViewSettings } from '../../media/mediaLibraryView';
 import { readViewSettings, saveViewSettings } from '../../settings/appSettings';
 import type { SharedLibraryResource } from '../../shared-library/sharedLibrary';
@@ -54,6 +55,7 @@ import { getMediaKeyboardNavigationIndex } from './media-keyboard';
 import { MediaAIAnalysisDialog } from './MediaAIAnalysisDialog';
 import { AISemanticSearchPanel } from './AISemanticSearchPanel';
 import { AIMediaOrganizePanel } from './AIMediaOrganizePanel';
+import { AdvancedSearchPanel } from './AdvancedSearchPanel';
 import type { MediaCollection } from '@open-factory/editor-core';
 
 
@@ -201,6 +203,7 @@ export function MediaBin({
   onUpdateMediaCollections = () => {}
 }: MediaBinProps) {
   const t = zhCN.mediaBin;
+  const projectPath = useEditorStore((s) => s.projectPath);
   const [dragOver, setDragOver] = useState(false);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<MediaBinView>('all');
@@ -598,6 +601,7 @@ export function MediaBin({
               <Sparkles size={14} />
             </button>
           </label>
+          <AdvancedSearchPanel projectPath={projectPath || ''} className="mb-1" />
           {aiSearchMode && (
             <AISemanticSearchPanel media={media} onSelectMedia={(id) => { setAiSearchMode(false); setSearch(''); }} />
           )}

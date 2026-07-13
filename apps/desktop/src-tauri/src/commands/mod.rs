@@ -25,3 +25,5 @@ pub mod spatial_audio;
 pub mod transcode;
 pub mod whisper;
 pub mod ai;
+pub mod auto_tag;
+pub mod media_index;

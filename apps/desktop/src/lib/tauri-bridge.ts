@@ -788,6 +788,16 @@ export type TauriMocks = Partial<{
   getCancelSmokeConfig(): Promise<CancelSmokeConfig | undefined> | CancelSmokeConfig | undefined;
   listen<T>(event: string, handler: (payload: T) => void): Promise<() => void> | (() => void);
   emit<T>(event: string, payload: T): Promise<void> | void;
+  initMediaIndexDb(projectPath: string): Promise<void> | void;
+  upsertMediaAsset(projectPath: string, asset: MediaIndexAsset): Promise<void> | void;
+  batchUpsertMediaAssets(projectPath: string, assets: MediaIndexAsset[]): Promise<number> | number;
+  deleteMediaAsset(projectPath: string, id: string): Promise<void> | void;
+  searchMediaAssets(query: MediaSearchQuery): Promise<MediaSearchResult> | MediaSearchResult;
+  autoTagAsset(request: AutoTagRequest): Promise<AutoTagResult> | AutoTagResult;
+  batchAutoTagAssets(projectPath: string, requests: AutoTagRequest[]): Promise<AutoTagResult[]> | AutoTagResult[];
+  getAllTags(projectPath: string): Promise<TagWithCount[]> | TagWithCount[];
+  addManualTag(projectPath: string, assetId: string, tagName: string): Promise<void> | void;
+  removeManualTag(projectPath: string, assetId: string, tagName: string): Promise<void> | void;
 }>;
 
 export function getTauriMocks(): TauriMocks | undefined {
@@ -2043,4 +2053,194 @@ export async function writeVideoSummary(path: string, html: string): Promise<voi
     return;
   }
   await invoke('write_video_summary', { path, html });
+}
+
+// ========== 媒体索引与高级检索 ==========
+
+export interface MediaIndexAsset {
+  id: string;
+  path: string;
+  name: string;
+  assetType: string;
+  fileSize?: number;
+  durationMs?: number;
+  width?: number;
+  height?: number;
+  frameRate?: number;
+  videoCodec?: string;
+  audioCodec?: string;
+  colorSpace?: string;
+  labelColor?: string;
+  rating?: number;
+  flag?: string;
+  importedAt: string;
+  thumbnailPath?: string;
+  proxyPath?: string;
+}
+
+export interface MediaSearchQuery {
+  projectPath: string;
+  text?: string;
+  assetTypes?: string[];
+  tags?: string[];
+  minWidth?: number;
+  maxWidth?: number;
+  minHeight?: number;
+  maxHeight?: number;
+  minDurationMs?: number;
+  maxDurationMs?: number;
+  minRating?: number;
+  labelColor?: string;
+  flag?: string;
+  sortBy?: 'name' | 'duration' | 'size' | 'importedAt' | 'rating';
+  sortDesc?: boolean;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface MediaSearchResult {
+  assets: MediaIndexAsset[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface TagWithCount {
+  id: number;
+  name: string;
+  count: number;
+}
+
+export interface AutoTagRequest {
+  projectPath: string;
+  assetId: string;
+  name: string;
+  assetType: string;
+  durationMs?: number;
+  width?: number;
+  height?: number;
+  frameRate?: number;
+  videoCodec?: string;
+  audioCodec?: string;
+  colorSpace?: string;
+  fileSize?: number;
+}
+
+export interface AutoTagResult {
+  tags: string[];
+}
+
+export async function initMediaIndexDb(projectPath: string): Promise<void> {
+  const mock = getTauriMocks()?.initMediaIndexDb;
+  if (mock) {
+    await mock(projectPath);
+    return;
+  }
+  if (!isTauriRuntime()) {
+    return;
+  }
+  await invoke('init_media_index_db', { projectPath });
+}
+
+export async function upsertMediaAsset(projectPath: string, asset: MediaIndexAsset): Promise<void> {
+  const mock = getTauriMocks()?.upsertMediaAsset;
+  if (mock) {
+    await mock(projectPath, asset);
+    return;
+  }
+  if (!isTauriRuntime()) {
+    return;
+  }
+  await invoke('upsert_media_asset', { projectPath, asset });
+}
+
+export async function batchUpsertMediaAssets(projectPath: string, assets: MediaIndexAsset[]): Promise<number> {
+  const mock = getTauriMocks()?.batchUpsertMediaAssets;
+  if (mock) {
+    return mock(projectPath, assets);
+  }
+  if (!isTauriRuntime()) {
+    return 0;
+  }
+  return invoke<number>('batch_upsert_media_assets', { projectPath, assets });
+}
+
+export async function deleteMediaAsset(projectPath: string, id: string): Promise<void> {
+  const mock = getTauriMocks()?.deleteMediaAsset;
+  if (mock) {
+    await mock(projectPath, id);
+    return;
+  }
+  if (!isTauriRuntime()) {
+    return;
+  }
+  await invoke('delete_media_asset', { projectPath, id });
+}
+
+export async function searchMediaAssets(query: MediaSearchQuery): Promise<MediaSearchResult> {
+  const mock = getTauriMocks()?.searchMediaAssets;
+  if (mock) {
+    return mock(query);
+  }
+  if (!isTauriRuntime()) {
+    return { assets: [], total: 0, page: 1, pageSize: 50 };
+  }
+  return invoke<MediaSearchResult>('search_media_assets', { query });
+}
+
+export async function autoTagAsset(request: AutoTagRequest): Promise<AutoTagResult> {
+  const mock = getTauriMocks()?.autoTagAsset;
+  if (mock) {
+    return mock(request);
+  }
+  if (!isTauriRuntime()) {
+    return { tags: [] };
+  }
+  return invoke<AutoTagResult>('auto_tag_asset', { request });
+}
+
+export async function batchAutoTagAssets(projectPath: string, requests: AutoTagRequest[]): Promise<AutoTagResult[]> {
+  const mock = getTauriMocks()?.batchAutoTagAssets;
+  if (mock) {
+    return mock(projectPath, requests);
+  }
+  if (!isTauriRuntime()) {
+    return requests.map(() => ({ tags: [] }));
+  }
+  return invoke<AutoTagResult[]>('batch_auto_tag_assets', { projectPath, requests });
+}
+
+export async function getAllTags(projectPath: string): Promise<TagWithCount[]> {
+  const mock = getTauriMocks()?.getAllTags;
+  if (mock) {
+    return mock(projectPath);
+  }
+  if (!isTauriRuntime()) {
+    return [];
+  }
+  return invoke<TagWithCount[]>('get_all_tags', { projectPath });
+}
+
+export async function addManualTag(projectPath: string, assetId: string, tagName: string): Promise<void> {
+  const mock = getTauriMocks()?.addManualTag;
+  if (mock) {
+    await mock(projectPath, assetId, tagName);
+    return;
+  }
+  if (!isTauriRuntime()) {
+    return;
+  }
+  await invoke('add_manual_tag', { projectPath, assetId, tagName });
+}
+
+export async function removeManualTag(projectPath: string, assetId: string, tagName: string): Promise<void> {
+  const mock = getTauriMocks()?.removeManualTag;
+  if (mock) {
+    await mock(projectPath, assetId, tagName);
+    return;
+  }
+  if (!isTauriRuntime()) {
+    return;
+  }
+  await invoke('remove_manual_tag', { projectPath, assetId, tagName });
 }
