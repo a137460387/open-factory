@@ -722,6 +722,7 @@ export function EditorShell() {
         setMockSubtitleClips,
         setMockExportHistory,
         setArchiveProgress,
+        setSmartDistributionOpen: useEditorUIStore.getState().setSmartDistributionOpen,
       };
     }
   }, [setFormatConverterOpen, setEmotionAnalysisOpen, setExportHistoryClassifierOpen, setArchiveProgress]);
