@@ -43,14 +43,15 @@ test.describe('智能多平台分发系统', () => {
     const panel = page.locator('[data-testid="smart-distribution-panel"]');
     await expect(panel).toBeVisible({ timeout: 10000 });
 
+    // 验证平台卡片存在
     const youtubeCard = page.locator('[data-testid="platform-card-youtube-1080p"]');
     await expect(youtubeCard).toBeVisible();
 
-    // 使用 force click 避免被遮挡
-    await youtubeCard.click({ force: true });
+    // 使用 dispatchEvent 触发点击
+    await youtubeCard.dispatchEvent('click');
     await expect(youtubeCard).toHaveClass(/border-blue-500/, { timeout: 5000 });
 
-    await youtubeCard.click({ force: true });
+    await youtubeCard.dispatchEvent('click');
     await expect(youtubeCard).not.toHaveClass(/border-blue-500/, { timeout: 5000 });
   });
 
@@ -124,7 +125,8 @@ test.describe('智能多平台分发系统', () => {
     const panel = page.locator('[data-testid="smart-distribution-panel"]');
     await expect(panel).toBeVisible({ timeout: 10000 });
 
-    await page.locator('[data-testid="platform-card-youtube-1080p"]').click({ force: true });
+    // 通过 dispatchEvent 触发点击
+    await page.locator('[data-testid="platform-card-youtube-1080p"]').dispatchEvent('click');
 
     const exportBtn = page.locator('[data-testid="start-distribution"]');
     await expect(exportBtn).toBeEnabled({ timeout: 5000 });
