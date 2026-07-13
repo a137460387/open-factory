@@ -253,33 +253,39 @@ export function HardwareAccelerationSettingsPanel({ onSettingsChange }: Hardware
       )}
 
       {/* 硬件能力检测结果 */}
-      {capabilities && (
-        <div className="rounded-md border border-line bg-panel p-3">
-          <div className="mb-2 flex items-center justify-between">
-            <h4 className="text-xs font-semibold text-slate-700">{t.capabilitiesTitle}</h4>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-6 text-xs"
-              onClick={() => void refreshCapabilities()}
-            >
-              <RefreshCw className="mr-1 h-3 w-3" />
-              {t.refresh}
-            </Button>
-          </div>
-
-          <div className="mb-2 rounded-md bg-slate-50 p-2 text-xs">
-            <span className="font-semibold text-slate-700">{t.recommendedBackend}: </span>
-            <span className="text-slate-600">{getBackendDisplayName(capabilities.recommendedBackend)}</span>
-          </div>
-
-          <div className="space-y-2">
-            {capabilities.availableBackends.map((backend) => (
-              <BackendStatus key={backend.backend} backend={backend} />
-            ))}
-          </div>
+      <div className="rounded-md border border-line bg-panel p-3">
+        <div className="mb-2 flex items-center justify-between">
+          <h4 className="text-xs font-semibold text-slate-700">{t.capabilitiesTitle}</h4>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-6 text-xs"
+            onClick={() => void refreshCapabilities()}
+          >
+            <RefreshCw className="mr-1 h-3 w-3" />
+            {t.refresh}
+          </Button>
         </div>
-      )}
+
+        {capabilities ? (
+          <>
+            <div className="mb-2 rounded-md bg-slate-50 p-2 text-xs">
+              <span className="font-semibold text-slate-700">{t.recommendedBackend}: </span>
+              <span className="text-slate-600">{getBackendDisplayName(capabilities.recommendedBackend)}</span>
+            </div>
+
+            <div className="space-y-2">
+              {capabilities.availableBackends.map((backend) => (
+                <BackendStatus key={backend.backend} backend={backend} />
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="rounded-md bg-slate-50 p-2 text-xs text-slate-500">
+            {error || '正在检测硬件能力...'}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
