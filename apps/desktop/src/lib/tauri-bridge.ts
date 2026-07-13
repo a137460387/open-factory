@@ -801,6 +801,10 @@ export type TauriMocks = Partial<{
   getHwDecodeCapabilities(): Promise<HardwareCapabilities> | HardwareCapabilities;
   initHardwareDecoder(config: DecoderConfig): Promise<DecoderHandle> | DecoderHandle;
   decodeVideoFrame(handle: DecoderHandle, timestamp: number): Promise<DecodedFrame> | DecodedFrame;
+  decodeVideoFrames(handle: DecoderHandle, timestamps: number[]): Promise<DecodedFrame[]> | DecodedFrame[];
+  getDecoderVideoInfo(handle: DecoderHandle): Promise<VideoInfo> | VideoInfo;
+  getHwDecodeSettings(): Promise<HwDecodeSettings> | HwDecodeSettings;
+  setHwDecodeSettings(settings: HwDecodeSettings): Promise<void> | void;
   releaseDecoder(handle: DecoderHandle): Promise<void> | void;
 }>;
 
@@ -2332,4 +2336,73 @@ export async function releaseDecoder(handle: DecoderHandle): Promise<void> {
     return;
   }
   await invoke('release_decoder', { handle });
+}
+
+export interface VideoInfo {
+  width: number;
+  height: number;
+  duration: number;
+  codec: string;
+  frameRate: number;
+}
+
+export interface HwDecodeSettings {
+  mode: string;
+  preferredBackend: HardwareBackend;
+  enableFrameCache: boolean;
+  frameCacheSize: number;
+  enablePreDecode: boolean;
+  preDecodeFrameCount: number;
+}
+
+export async function decodeVideoFrames(handle: DecoderHandle, timestamps: number[]): Promise<DecodedFrame[]> {
+  const mock = getTauriMocks()?.decodeVideoFrames;
+  if (mock) {
+    return mock(handle, timestamps);
+  }
+  if (!isTauriRuntime()) {
+    throw new Error('decodeVideoFrames 需要 Tauri 运行时。');
+  }
+  return invoke<DecodedFrame[]>('decode_video_frames', { handle, timestamps });
+}
+
+export async function getDecoderVideoInfo(handle: DecoderHandle): Promise<VideoInfo> {
+  const mock = getTauriMocks()?.getDecoderVideoInfo;
+  if (mock) {
+    return mock(handle);
+  }
+  if (!isTauriRuntime()) {
+    throw new Error('getDecoderVideoInfo 需要 Tauri 运行时。');
+  }
+  return invoke<VideoInfo>('get_decoder_video_info', { handle });
+}
+
+export async function getHwDecodeSettings(): Promise<HwDecodeSettings> {
+  const mock = getTauriMocks()?.getHwDecodeSettings;
+  if (mock) {
+    return mock();
+  }
+  if (!isTauriRuntime()) {
+    return {
+      mode: 'auto',
+      preferredBackend: 'Auto',
+      enableFrameCache: true,
+      frameCacheSize: 30,
+      enablePreDecode: true,
+      preDecodeFrameCount: 5,
+    };
+  }
+  return invoke<HwDecodeSettings>('get_hw_decode_settings');
+}
+
+export async function setHwDecodeSettings(settings: HwDecodeSettings): Promise<void> {
+  const mock = getTauriMocks()?.setHwDecodeSettings;
+  if (mock) {
+    await mock(settings);
+    return;
+  }
+  if (!isTauriRuntime()) {
+    return;
+  }
+  await invoke('set_hw_decode_settings', { settings });
 }
