@@ -43,7 +43,17 @@ import type { ClipSpatialAudio } from '../spatial-audio';
 import type { MotionGraphic } from '../motion-graphics';
 
 export type ExportLoudnessNormalization = 'off' | 'youtube' | 'ebu-r128';
-export type ExportPlatformPreset = 'youtube-1080p' | 'youtube-shorts' | 'tiktok' | 'instagram-reels' | 'twitter-x' | 'bilibili';
+export type ExportPlatformPreset =
+  | 'youtube-1080p'
+  | 'youtube-shorts'
+  | 'tiktok'
+  | 'instagram-reels'
+  | 'instagram-feed'
+  | 'twitter-x'
+  | 'bilibili'
+  | 'weixin-channels'
+  | 'kuaishou'
+  | 'pinterest';
 export type ExportVideoProfile = 'baseline' | 'main' | 'high';
 export type ExportAudioVisualizationStyle = 'waveform-line' | 'spectrum-bars' | 'circular-spectrum';
 export type ExportAudioVisualizationBackground =

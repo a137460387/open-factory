@@ -1,5 +1,6 @@
 import { lazy, Suspense, useMemo } from 'react';
 import type { Clip, Project } from '@open-factory/editor-core';
+import { getTimelinePlaybackDuration } from '@open-factory/editor-core';
 import { ChevronRight } from 'lucide-react';
 import { ErrorBoundary } from '../common/ErrorBoundary';
 import { PanelLoading } from '../PanelLoading';
@@ -26,6 +27,7 @@ const SmartCreationPanel = lazy(() => import('../SmartCreation/SmartCreationPane
 const HistoryPanel = lazy(() => import('../History/HistoryPanel').then((m) => ({ default: m.HistoryPanel })));
 const ProjectDocumentationPanel = lazy(() => import('../ProjectDocumentationPanel').then((m) => ({ default: m.ProjectDocumentationPanel })));
 const AISubtitleWorkflowPanel = lazy(() => import('../AISubtitleWorkflow/AISubtitleWorkflowPanel').then((m) => ({ default: m.AISubtitleWorkflowPanel })));
+const SmartDistributionPanel = lazy(() => import('../SmartDistribution/SmartDistributionPanel').then((m) => ({ default: m.SmartDistributionPanel })));
 
 export function ShellRightPanel() {
   const project = useEditorStore((s) => s.project);
@@ -62,6 +64,8 @@ export function ShellRightPanel() {
   const setNarrationOpen = useEditorUIStore((s) => s.setNarrationOpen);
   const smartCreationOpen = useEditorUIStore((s) => s.smartCreationOpen);
   const setSmartCreationOpen = useEditorUIStore((s) => s.setSmartCreationOpen);
+  const smartDistributionOpen = useEditorUIStore((s) => s.smartDistributionOpen);
+  const setSmartDistributionOpen = useEditorUIStore((s) => s.setSmartDistributionOpen);
   const smartRoughCutOpen = useEditorUIStore((s) => s.smartRoughCutOpen);
   const aiSubtitleWorkflowOpen = useEditorUIStore((s) => s.aiSubtitleWorkflowOpen);
   const setAiSubtitleWorkflowOpen = useEditorUIStore((s) => s.setAiSubtitleWorkflowOpen);
@@ -102,7 +106,9 @@ export function ShellRightPanel() {
                       ? zhCN.aiNarration.title
                       : smartCreationOpen
                         ? featureStrings.smartCreation.title
-                        : aiSubtitleWorkflowOpen
+                        : smartDistributionOpen
+                          ? '智能分发'
+                          : aiSubtitleWorkflowOpen
                           ? zhCN.aiSubtitleWorkflow.title
                           : smartRoughCutOpen
                             ? zhCN.panels.smartRoughCut
@@ -177,6 +183,14 @@ export function ShellRightPanel() {
               <SmartRoughCutPanel selectedClip={selectedClip} media={project.media} />
             ) : smartCreationOpen ? (
               <SmartCreationPanel open={smartCreationOpen} onClose={() => setSmartCreationOpen(false)} media={project.media} />
+            ) : smartDistributionOpen ? (
+              <SmartDistributionPanel
+                projectWidth={project.settings.width}
+                projectHeight={project.settings.height}
+                projectDuration={getTimelinePlaybackDuration(project.timeline)}
+                hasSubtitles={project.timeline?.tracks?.some((t) => t.type === 'subtitle') ?? false}
+                onClose={() => setSmartDistributionOpen(false)}
+              />
             ) : layoutSettings.panels.inspector ? (
               <Inspector
                 clip={selectedClip}
