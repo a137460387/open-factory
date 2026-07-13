@@ -313,6 +313,7 @@ const ContextualTranslationPanel = lazy(() => import('./ContextualTranslation/Co
 const AIChatEditorPanel = lazy(() => import('./AIChatEditor/AIChatEditorPanel').then((module) => ({ default: module.AIChatEditorPanel })));
 const AIVideoSummaryPanel = lazy(() => import('./AIVideoSummary/AIVideoSummaryPanel').then((module) => ({ default: module.AIVideoSummaryPanel })));
 const AINarrationPanel = lazy(() => import('./AINarration/AINarrationPanel').then((module) => ({ default: module.AINarrationPanel })));
+const SmartCreationPanel = lazy(() => import('./SmartCreation/SmartCreationPanel').then((module) => ({ default: module.SmartCreationPanel })));
 const HistoryPanel = lazy(() => import('./History/HistoryPanel').then((module) => ({ default: module.HistoryPanel })));
 const ProjectDocumentationPanel = lazy(() => import('./ProjectDocumentationPanel').then((module) => ({ default: module.ProjectDocumentationPanel })));
 const MediaPrecheckPanel = lazy(() => import('../media/MediaPrecheckPanel').then((module) => ({ default: module.MediaPrecheckPanel })));
@@ -535,6 +536,8 @@ export function EditorShell() {
   const setVideoSummaryOpen = useEditorUIStore((s) => s.setVideoSummaryOpen);
   const narrationOpen = useEditorUIStore((s) => s.narrationOpen);
   const setNarrationOpen = useEditorUIStore((s) => s.setNarrationOpen);
+  const smartCreationOpen = useEditorUIStore((s) => s.smartCreationOpen);
+  const setSmartCreationOpen = useEditorUIStore((s) => s.setSmartCreationOpen);
   const historyPanelOpen = useEditorUIStore((s) => s.historyPanelOpen);
   const setHistoryPanelOpen = useEditorUIStore((s) => s.setHistoryPanelOpen);
   const projectDocumentationOpen = useEditorUIStore((s) => s.projectDocumentationOpen);
@@ -1717,6 +1720,20 @@ export function EditorShell() {
             setNarrationOpen(false);
             setAiChatEditorOpen((open) => !open);
           }}
+          onToggleSmartCreation={() => {
+            setHistoryPanelOpen(false);
+            setProjectDocumentationOpen(false);
+            setSmartRoughCutOpen(false);
+            setAiRoughCutOpen(false);
+            setDirectorModeOpen(false);
+            setMusicMatchOpen(false);
+            setHighlightReelOpen(false);
+            setContextualTranslationOpen(false);
+            setAiChatEditorOpen(false);
+            setVideoSummaryOpen(false);
+            setNarrationOpen(false);
+            setSmartCreationOpen((open) => !open);
+          }}
           onSeparateAudio={() => void separateSelectedAudio()}
           onCancelAudioSeparation={() => void cancelAudioSeparation()}
           onRunSpeakerDiarization={() => void runSpeakerDiarization()}
@@ -1756,6 +1773,7 @@ export function EditorShell() {
           highlightReelOpen={highlightReelOpen}
           contextualTranslationOpen={contextualTranslationOpen}
           aiChatEditorOpen={aiChatEditorOpen}
+          smartCreationOpen={smartCreationOpen}
           historyPanelOpen={historyPanelOpen}
           projectDocumentationOpen={projectDocumentationOpen}
           storyboardOpen={storyboardOpen}
