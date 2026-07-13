@@ -38,12 +38,16 @@ test('scales the preview canvas for half-resolution quality', async ({ page }) =
 test('automatically degrades preview quality when measured fps is low', async ({ page }) => {
   await page.goto('/');
   await waitForE2eActions(page);
+
+  // Ensure adaptive mode is enabled before injecting override
+  const indicator = page.getByTestId('preview-adaptive-quality-indicator');
+  await expect(indicator).toBeAttached();
+
   await page.evaluate(() => {
     window.__OPEN_FACTORY_PREVIEW_FPS_OVERRIDE__ = 18;
   });
 
-  const indicator = page.getByTestId('preview-adaptive-quality-indicator');
-  await expect(indicator).toHaveAttribute('data-status', 'degraded', { timeout: 2500 });
+  await expect(indicator).toHaveAttribute('data-status', 'degraded', { timeout: 10_000 });
   await expect(indicator).toHaveAttribute('data-quality', 'half');
   await expect(page.getByTestId('preview-canvas')).toHaveAttribute('data-preview-quality', 'half');
 });

@@ -18,8 +18,7 @@ test('AI subtitle style: display recommendations and apply', async ({ page }) =>
   await expect(analyzeBtn).toBeVisible();
   await analyzeBtn.click();
 
-  // Wait for loading to appear then results
-  await expect(page.getByTestId('ai-subtitle-style-loading')).toBeVisible();
+  // Wait for results (loading state may be instantaneous with mocks)
   await expect(page.getByTestId('ai-subtitle-style-results')).toBeVisible({ timeout: 10_000 });
 
   // Verify 3 recommendation cards

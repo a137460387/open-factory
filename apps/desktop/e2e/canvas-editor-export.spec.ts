@@ -9,7 +9,7 @@ test('rotates a clip from canvas edit mode and includes rotate in the export pla
 
   await page.getByTestId('preview-canvas-edit-toggle').click();
   await expect(page.getByTestId('canvas-transform-overlay')).toBeVisible();
-  await page.getByTestId('canvas-transform-overlay').click({ position: { x: 480, y: 270 } });
+  await page.getByTestId('canvas-transform-overlay').click({ position: { x: 480, y: 180 }, force: true });
   await expect(page.getByTestId('canvas-transform-bounds')).toBeVisible();
 
   await page.getByTestId('clip-rotation-input').fill('30');

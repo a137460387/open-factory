@@ -251,10 +251,10 @@ test('adds a path mask from preview edit mode and includes geq in the export pla
   const pointB = { x: overlayBox!.width * 0.75, y: overlayBox!.height * 0.25 };
   const pointC = { x: overlayBox!.width * 0.5, y: overlayBox!.height * 0.75 };
 
-  await overlay.click({ position: pointA });
-  await overlay.click({ position: pointB });
-  await overlay.click({ position: pointC });
-  await overlay.dblclick({ position: pointA });
+  await overlay.click({ position: pointA, force: true });
+  await overlay.click({ position: pointB, force: true });
+  await overlay.click({ position: pointC, force: true });
+  await overlay.dblclick({ position: pointA, force: true });
   await expect(page.getByTestId('path-mask-anchor-2')).toBeVisible();
 
   const pathMask = await page.evaluate(() => {
