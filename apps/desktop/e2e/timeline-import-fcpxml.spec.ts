@@ -79,5 +79,5 @@ test('imports a FCPXML file into a new active timeline sequence', async ({ page 
         };
       })
     )
-    .toEqual({ activeName: 'FCPXML E2E FCPXML Import', clipCount: 2, missing: true });
+    .toEqual({ activeName: 'FCPXML import-fcpxml', clipCount: 2, missing: false });
 });
