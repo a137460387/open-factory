@@ -17,6 +17,7 @@ import {
 import { PreviewAudioRenderer } from './audio-renderer';
 import { recordPreviewError, recordPreviewGpuMetrics, recordPreviewMode, recordPreviewReadback } from './debug';
 import type { GpuPreviewMetrics } from './gpu-acceleration';
+import { HardwareDecodeManager } from './hw-decode-manager';
 import { drawImage2d, drawImage2dBypass, drawImageWebGl } from './image-renderer';
 import { createVideoElement, loadImage, loadThumbnail, seekVideo } from './media-elements';
 import { drawCreditsRoll2d, drawCreditsRollWebGl, drawMissing2d, drawMissingWebGl, drawText2d, drawTextWebGl } from './text-renderer';
@@ -50,6 +51,8 @@ export class PreviewRenderer {
   private webgl?: WebGlPreviewCompositor | null;
   private renderToken = 0;
   private readonly audioRenderer = new PreviewAudioRenderer();
+  private hwDecodeManager: HardwareDecodeManager | null = null;
+  private hwDecodeEnabled = false;
 
   async render(
     canvas: HTMLCanvasElement,
@@ -146,6 +149,55 @@ export class PreviewRenderer {
     this.audioRenderer.pauseAllAudio();
   }
 
+  /**
+   * 启用硬件加速解码
+   */
+  async enableHardwareDecode(options: { path: string; preferredBackend?: string }): Promise<boolean> {
+    try {
+      if (!this.hwDecodeManager) {
+        this.hwDecodeManager = new HardwareDecodeManager();
+      }
+      const hasHw = await this.hwDecodeManager.hasHardwareAcceleration();
+      if (!hasHw) {
+        return false;
+      }
+      await this.hwDecodeManager.initialize({
+        path: options.path,
+        preferredBackend: options.preferredBackend as never,
+      });
+      this.hwDecodeEnabled = true;
+      return true;
+    } catch (error) {
+      recordPreviewError(error instanceof Error ? error.message : 'Failed to enable hardware decode.');
+      this.hwDecodeEnabled = false;
+      return false;
+    }
+  }
+
+  /**
+   * 禁用硬件加速解码
+   */
+  async disableHardwareDecode(): Promise<void> {
+    this.hwDecodeEnabled = false;
+    if (this.hwDecodeManager) {
+      await this.hwDecodeManager.release();
+    }
+  }
+
+  /**
+   * 获取当前硬件解码管理器
+   */
+  getHardwareDecodeManager(): HardwareDecodeManager | null {
+    return this.hwDecodeManager;
+  }
+
+  /**
+   * 检查硬件解码是否启用
+   */
+  isHardwareDecodeEnabled(): boolean {
+    return this.hwDecodeEnabled && this.hwDecodeManager?.isInitialized() === true;
+  }
+
   async preloadMediaTexture(canvas: HTMLCanvasElement, asset: MediaAsset): Promise<boolean> {
     if (asset.missing || (asset.type !== 'video' && asset.type !== 'image')) {
       return false;
@@ -224,7 +276,7 @@ export class PreviewRenderer {
         drawMissingWebGl(compositor, renderClip.name, renderClip.type);
         return;
       }
-      await drawVideoWebGl(compositor, renderClip, asset, this.getVideo(asset), playheadTime, seekVideo, loadThumbnail, bypassProcessing, disabledEffectTypes, colorPipeline);
+      await drawVideoWebGl(compositor, renderClip, asset, this.getVideo(asset), playheadTime, seekVideo, loadThumbnail, bypassProcessing, disabledEffectTypes, colorPipeline, this.hwDecodeEnabled ? this.hwDecodeManager : null);
       return;
     }
 
@@ -282,7 +334,7 @@ export class PreviewRenderer {
         drawMissing2d(context, canvas, renderClip.name, renderClip.type);
         return;
       }
-      await drawVideo2d(context, canvas, renderClip, asset, this.getVideo(asset), playheadTime, seekVideo, loadThumbnail, bypassProcessing);
+      await drawVideo2d(context, canvas, renderClip, asset, this.getVideo(asset), playheadTime, seekVideo, loadThumbnail, bypassProcessing, disabledEffectTypes, this.hwDecodeEnabled ? this.hwDecodeManager : null);
       return;
     }
 
