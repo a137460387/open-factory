@@ -95,6 +95,43 @@ export interface PreviewWindowSettings {
   resolutionScale: PreviewWindowResolutionScale;
 }
 
+export type HardwareAccelerationMode = 'auto' | 'enabled' | 'disabled';
+export type HardwareAccelerationBackend = 'cuda' | 'vaapi' | 'quicksync' | 'videotoolbox' | 'd3d11va' | 'auto';
+
+export interface HardwareAccelerationSettings {
+  mode: HardwareAccelerationMode;
+  preferredBackend: HardwareAccelerationBackend;
+  enableFrameCache: boolean;
+  frameCacheSize: number;
+  enablePreDecode: boolean;
+  preDecodeFrameCount: number;
+}
+
+export const DEFAULT_HARDWARE_ACCELERATION_SETTINGS: HardwareAccelerationSettings = {
+  mode: 'auto',
+  preferredBackend: 'auto',
+  enableFrameCache: true,
+  frameCacheSize: 30,
+  enablePreDecode: true,
+  preDecodeFrameCount: 5,
+};
+
+export function normalizeHardwareAccelerationSettings(
+  settings: Partial<HardwareAccelerationSettings> | undefined
+): HardwareAccelerationSettings {
+  if (!settings) {
+    return { ...DEFAULT_HARDWARE_ACCELERATION_SETTINGS };
+  }
+  return {
+    mode: settings.mode ?? DEFAULT_HARDWARE_ACCELERATION_SETTINGS.mode,
+    preferredBackend: settings.preferredBackend ?? DEFAULT_HARDWARE_ACCELERATION_SETTINGS.preferredBackend,
+    enableFrameCache: settings.enableFrameCache ?? DEFAULT_HARDWARE_ACCELERATION_SETTINGS.enableFrameCache,
+    frameCacheSize: settings.frameCacheSize ?? DEFAULT_HARDWARE_ACCELERATION_SETTINGS.frameCacheSize,
+    enablePreDecode: settings.enablePreDecode ?? DEFAULT_HARDWARE_ACCELERATION_SETTINGS.enablePreDecode,
+    preDecodeFrameCount: settings.preDecodeFrameCount ?? DEFAULT_HARDWARE_ACCELERATION_SETTINGS.preDecodeFrameCount,
+  };
+}
+
 export interface TimelineInteractionSettings {
   reduceMotion: boolean;
   audioScrubEnabled?: boolean;
@@ -275,6 +312,7 @@ export interface AppSettings {
   view?: ViewSettings;
   previewPerformance?: PreviewPerformanceSettings;
   previewWindow?: PreviewWindowSettings;
+  hardwareAcceleration?: HardwareAccelerationSettings;
   timelineInteraction?: TimelineInteractionSettings;
   display?: DisplaySettings;
   collaborationIdentity?: CollaborationIdentitySettings;
@@ -514,6 +552,23 @@ export async function savePreviewPerformanceSettings(previewPerformance: Partial
   const nextPreviewPerformance = normalizePreviewPerformanceSettings({ ...settings.previewPerformance, ...previewPerformance });
   await writeAppSettings({ ...settings, previewPerformance: nextPreviewPerformance });
   return nextPreviewPerformance;
+}
+
+export async function readHardwareAccelerationSettings(): Promise<HardwareAccelerationSettings> {
+  const settings = await readAppSettings();
+  return normalizeHardwareAccelerationSettings(settings.hardwareAcceleration);
+}
+
+export async function saveHardwareAccelerationSettings(
+  hardwareAcceleration: Partial<HardwareAccelerationSettings>
+): Promise<HardwareAccelerationSettings> {
+  const settings = await readAppSettings();
+  const nextHwAccel = normalizeHardwareAccelerationSettings({
+    ...settings.hardwareAcceleration,
+    ...hardwareAcceleration,
+  });
+  await writeAppSettings({ ...settings, hardwareAcceleration: nextHwAccel });
+  return nextHwAccel;
 }
 
 export async function readTimelineInteractionSettings(): Promise<TimelineInteractionSettings> {

@@ -798,6 +798,10 @@ export type TauriMocks = Partial<{
   getAllTags(projectPath: string): Promise<TagWithCount[]> | TagWithCount[];
   addManualTag(projectPath: string, assetId: string, tagName: string): Promise<void> | void;
   removeManualTag(projectPath: string, assetId: string, tagName: string): Promise<void> | void;
+  getHwDecodeCapabilities(): Promise<HardwareCapabilities> | HardwareCapabilities;
+  initHardwareDecoder(config: DecoderConfig): Promise<DecoderHandle> | DecoderHandle;
+  decodeVideoFrame(handle: DecoderHandle, timestamp: number): Promise<DecodedFrame> | DecodedFrame;
+  releaseDecoder(handle: DecoderHandle): Promise<void> | void;
 }>;
 
 export function getTauriMocks(): TauriMocks | undefined {
@@ -2243,4 +2247,89 @@ export async function removeManualTag(projectPath: string, assetId: string, tagN
     return;
   }
   await invoke('remove_manual_tag', { projectPath, assetId, tagName });
+}
+
+// ==================== 硬件加速解码 ====================
+
+export type HardwareBackend = 'Cuda' | 'Vaapi' | 'QuickSync' | 'VideoToolbox' | 'D3d11va' | 'Auto' | 'Software';
+
+export interface HardwareBackendInfo {
+  backend: HardwareBackend;
+  available: boolean;
+  deviceName?: string;
+  supportedCodecs: string[];
+}
+
+export interface HardwareCapabilities {
+  availableBackends: HardwareBackendInfo[];
+  recommendedBackend: HardwareBackend;
+  supportedCodecs: string[];
+}
+
+export interface DecoderConfig {
+  path: string;
+  preferredBackend?: HardwareBackend;
+  targetWidth?: number;
+  targetHeight?: number;
+}
+
+export interface DecoderHandle {
+  0: number;
+}
+
+export interface DecodedFrame {
+  width: number;
+  height: number;
+  dataBase64: string;
+  timestamp: number;
+  format: string;
+}
+
+export async function getHwDecodeCapabilities(): Promise<HardwareCapabilities> {
+  const mock = getTauriMocks()?.getHwDecodeCapabilities;
+  if (mock) {
+    return mock();
+  }
+  if (!isTauriRuntime()) {
+    return {
+      availableBackends: [],
+      recommendedBackend: 'Software',
+      supportedCodecs: [],
+    };
+  }
+  return invoke<HardwareCapabilities>('get_hw_decode_capabilities');
+}
+
+export async function initHardwareDecoder(config: DecoderConfig): Promise<DecoderHandle> {
+  const mock = getTauriMocks()?.initHardwareDecoder;
+  if (mock) {
+    return mock(config);
+  }
+  if (!isTauriRuntime()) {
+    throw new Error('initHardwareDecoder 需要 Tauri 运行时。');
+  }
+  return invoke<DecoderHandle>('init_hardware_decoder', { config });
+}
+
+export async function decodeVideoFrame(handle: DecoderHandle, timestamp: number): Promise<DecodedFrame> {
+  const mock = getTauriMocks()?.decodeVideoFrame;
+  if (mock) {
+    return mock(handle, timestamp);
+  }
+  if (!isTauriRuntime()) {
+    throw new Error('decodeVideoFrame 需要 Tauri 运行时。');
+  }
+  return invoke<DecodedFrame>('decode_video_frame', { handle, timestamp });
+}
+
+export async function releaseDecoder(handle: DecoderHandle): Promise<void> {
+  const mock = getTauriMocks()?.releaseDecoder;
+  if (mock) {
+    await mock(handle);
+    return;
+  }
+  if (!isTauriRuntime()) {
+    return;
+  }
+  await invoke('release_decoder', { handle });
 }
