@@ -1,4 +1,5 @@
 mod commands;
+pub mod db;
 pub mod net_guard;
 pub mod path_validator;
 
@@ -170,7 +171,17 @@ pub fn run() {
             commands::ai::check_ollama_reachable,
             commands::ai::list_ollama_models,
             commands::ai::extract_ai_frames,
-            commands::ai::call_tts_api
+            commands::ai::call_tts_api,
+            commands::media_index::init_media_index_db,
+            commands::media_index::upsert_media_asset,
+            commands::media_index::batch_upsert_media_assets,
+            commands::media_index::delete_media_asset,
+            commands::media_index::search_media_assets,
+            commands::media_index::get_all_tags,
+            commands::media_index::add_manual_tag,
+            commands::media_index::remove_manual_tag,
+            commands::auto_tag::auto_tag_asset,
+            commands::auto_tag::batch_auto_tag_assets
         ])
         .setup(|app| {
             let window_exists = app.get_webview_window("main").is_some();
