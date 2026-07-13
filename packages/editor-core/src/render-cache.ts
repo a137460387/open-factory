@@ -141,9 +141,13 @@ export class TimelineRenderFrameCache<TBitmap> {
   }
 
   private pruneToBudget(): void {
-    while (this.bytes > this.maxBytes && this.entries.size > 0) {
-      const oldest = [...this.entries.values()].sort((left, right) => left.ts - right.ts)[0];
-      this.delete(oldest.key);
+    if (this.bytes <= this.maxBytes) return;
+    // 收集所有条目并按时间戳排序（最旧的优先淘汰）
+    const entries = [...this.entries.values()];
+    entries.sort((a, b) => a.ts - b.ts);
+    for (const entry of entries) {
+      if (this.bytes <= this.maxBytes) break;
+      this.delete(entry.key);
     }
   }
 
