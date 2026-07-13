@@ -73,6 +73,11 @@ export const useMediaIndexStore = create<MediaIndexState>((set, get) => ({
     const current = get().searchQuery;
     const next = { ...current, ...partial };
     set({ searchQuery: next });
+    // 无筛选条件时清除结果（使用内存过滤）
+    if (!hasActiveIndexFilters(next)) {
+      set({ searchResults: null, isSearching: false });
+      return;
+    }
     // 自动触发搜索
     get().executeSearch();
   },
@@ -80,12 +85,6 @@ export const useMediaIndexStore = create<MediaIndexState>((set, get) => ({
   executeSearch: async () => {
     const { searchQuery } = get();
     if (!searchQuery.projectPath) return;
-
-    // 无筛选条件时清除结果（使用内存过滤）
-    if (!hasActiveIndexFilters(searchQuery)) {
-      set({ searchResults: null, isSearching: false });
-      return;
-    }
 
     set({ isSearching: true });
     try {
