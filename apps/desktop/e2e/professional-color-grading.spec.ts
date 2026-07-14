@@ -110,3 +110,4 @@ test.describe('Professional Color Grading Panel', () => {
     await expect(page.getByTestId('curve-editor-master')).toBeVisible();
   });
 });
+# trigger CI
