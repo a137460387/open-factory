@@ -50,6 +50,15 @@
         "depends": ["libwebkit2gtk-4.1-0", "libssl3"]
       }
     },
+    "windows": {
+      "nsis": {
+        "languages": ["SimpChinese"],
+        "displayLanguageSelector": false
+      },
+      "wix": {
+        "language": "zh-CN"
+      }
+    },
     "macOS": {
       "minimumSystemVersion": "11.0",
       "signingIdentity": null,
