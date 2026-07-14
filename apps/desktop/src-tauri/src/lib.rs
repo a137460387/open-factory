@@ -63,6 +63,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::ffmpeg::detect_ffmpeg,
             commands::ffmpeg::get_ffmpeg_capabilities,
+            commands::ffmpeg::list_hardware_encoders,
             commands::ffmpeg::get_available_memory_bytes,
             commands::ffmpeg::get_system_resource_snapshot,
             commands::ffmpeg::analyze_clip,

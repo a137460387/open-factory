@@ -1292,6 +1292,10 @@ export async function getFfmpegCapabilities(): Promise<FfmpegCapabilities> {
   return invoke<FfmpegCapabilities>('get_ffmpeg_capabilities');
 }
 
+export async function listHardwareEncoders(): Promise<import('@open-factory/editor-core').HardwareEncoderInfo[]> {
+  return invoke<import('@open-factory/editor-core').HardwareEncoderInfo[]>('list_hardware_encoders');
+}
+
 export async function getAvailableMemoryBytes(): Promise<number> {
   const mock = getTauriMocks()?.getAvailableMemoryBytes;
   if (mock) {
