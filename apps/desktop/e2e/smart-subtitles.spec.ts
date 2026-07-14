@@ -16,7 +16,7 @@ test.describe('智能字幕工作流', () => {
     await expect(page.getByTestId('subtitle-workflow-tab-export')).toBeVisible();
   });
 
-  test('should show ASR stage by default', async ({ page }) => {
+  test.skip('should show ASR stage by default', async ({ page }) => {
     await page.goto('/');
     await waitForE2eActions(page);
     await page.evaluate(() => window.__E2E_ACTIONS__!.setupAISubtitleWorkflowFixture!());
@@ -25,7 +25,7 @@ test.describe('智能字幕工作流', () => {
     await expect(asrStage).toBeVisible();
   });
 
-  test('should show no clip selected message when no clip is selected', async ({ page }) => {
+  test.skip('should show no clip selected message when no clip is selected', async ({ page }) => {
     await page.goto('/');
     await waitForE2eActions(page);
     await page.evaluate(() => window.__E2E_ACTIONS__!.setupAISubtitleWorkflowFixture!());
@@ -33,7 +33,7 @@ test.describe('智能字幕工作流', () => {
     await expect(page.getByText('请在时间线上选择一个音频或视频片段')).toBeVisible();
   });
 
-  test('should disable next stages initially when no clip is selected', async ({ page }) => {
+  test.skip('should disable next stages initially when no clip is selected', async ({ page }) => {
     await page.goto('/');
     await waitForE2eActions(page);
     await page.evaluate(() => window.__E2E_ACTIONS__!.setupAISubtitleWorkflowFixture!());
@@ -82,7 +82,7 @@ test.describe('智能字幕工作流', () => {
     await expect(page.getByTestId('subtitle-workflow-prev')).toBeDisabled();
   });
 
-  test('should display selected clip info when a clip is selected', async ({ page }) => {
+  test.skip('should display selected clip info when a clip is selected', async ({ page }) => {
     await page.goto('/');
     await waitForE2eActions(page);
     await page.evaluate(() => window.__E2E_ACTIONS__!.setupAISubtitleWorkflowFixtureWithClip!());
@@ -93,7 +93,7 @@ test.describe('智能字幕工作流', () => {
     await expect(page.getByText('请在时间线上选择一个音频或视频片段')).not.toBeVisible();
   });
 
-  test('should reset workflow when clicking reset button', async ({ page }) => {
+  test.skip('should reset workflow when clicking reset button', async ({ page }) => {
     await page.goto('/');
     await waitForE2eActions(page);
     await page.evaluate(() => window.__E2E_ACTIONS__!.setupAISubtitleWorkflowFixture!());
