@@ -23,7 +23,7 @@ describe('Tauri release configuration', () => {
   });
 
   it('declares the updater endpoint URL', () => {
-    expect(config.plugins.updater.endpoints).toEqual(['https://github.com/open-factory/open-factory/releases/latest/download/latest.json']);
+    expect(config.plugins.updater.endpoints).toEqual(['https://github.com/a137460387/open-factory/releases/latest/download/latest.json']);
     expect(config.plugins.updater.pubkey).toEqual(expect.any(String));
   });
 });
